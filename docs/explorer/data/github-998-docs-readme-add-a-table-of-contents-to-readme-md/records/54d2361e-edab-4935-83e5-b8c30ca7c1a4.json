@@ -1,0 +1,39 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "b6a7d84516891ff68b08aa2546049da62e63e1258199949b13b6c8910b0b23f4",
+    "event_id": "e9f61556-0178-4648-af61-989609df7533",
+    "seq": 59
+  },
+  "previous": {
+    "digest": "f48c19363581011e527887e676cb582943c92e5ce96b28abf7345794b888152e",
+    "event_id": "ae79d82c-7442-4e26-8fa4-d04ca69ca486",
+    "seq": 55
+  },
+  "project_id": "9692abab-ace3-4ee0-ac59-3ea42484b817",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "0face8bc-aa17-546b-b5de-e16e759738e6",
+    "cycle": 1,
+    "digest": "a8953483315590fd533e0b123fc13f1f5421299f5136aa734e50832e963eb649",
+    "engine_id": "gptossloop",
+    "event_id": "54d2361e-edab-4935-83e5-b8c30ca7c1a4",
+    "job_id": "c2b75c18-fd15-4e79-ad4e-cf489356ad57",
+    "kind": "AnswerGiven",
+    "payload": {
+      "answer": "scripts/toc_generator.py",
+      "item_id": "q20"
+    },
+    "phase": "design",
+    "produced_at": "2026-09-29T18:54:25.790234+00:00",
+    "project_id": "9692abab-ace3-4ee0-ac59-3ea42484b817",
+    "provenance": "trusted",
+    "seq": 58
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

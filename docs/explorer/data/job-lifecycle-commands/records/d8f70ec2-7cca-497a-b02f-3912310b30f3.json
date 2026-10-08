@@ -1,0 +1,39 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "10a84c56c20244256040ee2bd40835493361b83ee77206de0df9d8c187679568",
+    "event_id": "d95f3661-41da-43d3-92cd-7fb9b6ef10a1",
+    "seq": 50
+  },
+  "previous": {
+    "digest": "6db896ba6c362fe2bddfa8c38bcc21cc26261f2c5c37be383f07a6b0dfaa1486",
+    "event_id": "04d2a9b5-0a88-4217-9d18-4a686da5a652",
+    "seq": 48
+  },
+  "project_id": "2f6a93b6-2d73-4aff-bc94-16539841133f",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "a49efc1e-df06-4be4-ae13-55c27f25cc8f",
+    "cycle": 1,
+    "digest": "21eaf75687adb1cca899e5d7431a573558af8163088dc66518a6fc70e2ca5174",
+    "engine_id": "claudeloop",
+    "event_id": "d8f70ec2-7cca-497a-b02f-3912310b30f3",
+    "job_id": "334db377-8cb0-4a72-9cc0-78b45fc9bb38",
+    "kind": "AnswerGiven",
+    "payload": {
+      "answer": "Must: 2000ms (p99), Plan: 500ms (p95), Wish: 200ms (p50) \u2014 operator-facing commands should feel immediate, but DB round-trip plus potential lease coordination makes sub-second reasonable",
+      "item_id": "command_latency"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-22T03:48:49.074394+00:00",
+    "project_id": "2f6a93b6-2d73-4aff-bc94-16539841133f",
+    "provenance": "trusted",
+    "seq": 49
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

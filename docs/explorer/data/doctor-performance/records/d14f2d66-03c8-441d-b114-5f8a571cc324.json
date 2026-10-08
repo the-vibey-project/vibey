@@ -1,0 +1,43 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "2c813e64ea559f24ff2844ca2f8b399c2470abe3d6efc541dd27ea6853e5ec01",
+    "event_id": "4273430a-c6b5-409a-b42b-d13a4bb5838b",
+    "seq": 57
+  },
+  "previous": {
+    "digest": "7e82c0b4b85cf80a8661d8446bfb60ae5df54f5e78962e742f727f87b26d941b",
+    "event_id": "2e9c857c-8643-4e0a-8681-ed5377d61b27",
+    "seq": 55
+  },
+  "project_id": "5ea01f61-8536-4ace-90cb-18700a12e410",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "dbd06e58-9e3b-4877-9819-39c7b2742f11",
+    "cycle": 1,
+    "digest": "ef95e77144efda8f45514c3292e737144de3c6268e471e4e404b02e8f75bf8a4",
+    "engine_id": "claudeloop",
+    "event_id": "d14f2d66-03c8-441d-b114-5f8a571cc324",
+    "job_id": "4c2ec03f-d670-44f9-9f05-47597984ab20",
+    "kind": "QuestionAsked",
+    "payload": {
+      "blocking": true,
+      "cycle": 1,
+      "default": "Timeout or failure in one engine gets swallowed during asyncio.gather; exit code only reflects partial results or doesn't aggregate all engine statuses correctly",
+      "item_id": "exit_code_edge_case",
+      "stage": "premortem",
+      "text": "A CI pipeline fails because `vibey doctor` exits 0 when it should exit 1. What edge case in the concurrent failure handling caused this?"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-22T03:49:51.679457+00:00",
+    "project_id": "5ea01f61-8536-4ace-90cb-18700a12e410",
+    "provenance": "agent",
+    "seq": 56
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

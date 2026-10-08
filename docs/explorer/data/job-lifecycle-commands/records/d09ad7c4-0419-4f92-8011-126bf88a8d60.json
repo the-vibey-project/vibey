@@ -1,0 +1,39 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "ee0259a7a88a144725a23a38d1ff46ab490ca93d51bc82507057a74bcff24d50",
+    "event_id": "05de4ef4-bc57-4092-9785-f95aaf46f624",
+    "seq": 45
+  },
+  "previous": {
+    "digest": "1c3e81f982f0e4146c91df23f282ab9f500f9980b4f879ba286888ce5b31cd96",
+    "event_id": "f52d3b4a-5fbe-44f0-abea-35382cc2089b",
+    "seq": 42
+  },
+  "project_id": "2f6a93b6-2d73-4aff-bc94-16539841133f",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "65764e0b-cd27-49e5-98f1-63ae4c8e99bb",
+    "cycle": 1,
+    "digest": "fe88af27f61191f3fc1bcf91dcc27bc553e9c7223a3d78d7e4b50cff9e6cbdb6",
+    "engine_id": "claudeloop",
+    "event_id": "d09ad7c4-0419-4f92-8011-126bf88a8d60",
+    "job_id": "334db377-8cb0-4a72-9cc0-78b45fc9bb38",
+    "kind": "AnswerGiven",
+    "payload": {
+      "answer": "Integration test with real Postgres: enqueue job \u2192 worker leases it \u2192 CLI calls `vibey stop \u003cjob-id\u003e` \u2192 worker's next heartbeat sees stop_requested \u2192 worker drains and releases with CANCELLED \u2192 verify job.state=CANCELLED and JobCancelled event at final ledger seq. Proves command \u2192 flag \u2192 worker drain \u2192 ledger write.",
+      "item_id": "skeleton_test"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-22T03:47:18.526947+00:00",
+    "project_id": "2f6a93b6-2d73-4aff-bc94-16539841133f",
+    "provenance": "trusted",
+    "seq": 43
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

@@ -1,0 +1,39 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "705f7686492221de9f692fef4d573ab04e7459673028f7d8c233f1114b40f87b",
+    "event_id": "a9ba5281-e34e-4484-96e6-9122f237229c",
+    "seq": 14
+  },
+  "previous": {
+    "digest": "57917b78ba07947f08f98b3f1b9c81202e16fda9e8412ca32f3f03f7477aa576",
+    "event_id": "6cbcb55e-af94-4c1a-b4d0-41572db86d34",
+    "seq": 12
+  },
+  "project_id": "ab0b06f9-55a4-4b47-ac08-254e7fdd9036",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "f614d13f-cd7c-4641-b57a-057499260fb3",
+    "cycle": 1,
+    "digest": "693b236500d7fcbdd4eccf1f5bcecff5af3aa41c289184025ca6b3a408f8ff03",
+    "engine_id": "claudeloop",
+    "event_id": "6950a2ba-6907-4e2a-b6ff-5d9e2725f8b6",
+    "job_id": "48f9ef01-8b95-4709-adde-ed0ece390f8d",
+    "kind": "AnswerGiven",
+    "payload": {
+      "answer": "Recorded in the ledger as a first-class relationship -- origin job id plus origin seq on the new job -- and surfaced two ways: in `vibey status` alongside the job, and in whatever the fork command prints on creation. Without lineage a forked run is indistinguishable from an unrelated one, which defeats the exploration case entirely: comparing two approaches requires knowing they share an origin. Provenance is not a nice-to-have here, it is the feature.",
+      "item_id": "fork_lineage"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-22T02:58:27.165759+00:00",
+    "project_id": "ab0b06f9-55a4-4b47-ac08-254e7fdd9036",
+    "provenance": "trusted",
+    "seq": 13
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

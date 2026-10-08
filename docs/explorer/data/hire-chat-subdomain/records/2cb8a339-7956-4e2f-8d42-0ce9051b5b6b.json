@@ -1,0 +1,43 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "53d86ff532f818299978d628729c7bb651433ae0148d663a143f0c11b0666ab4",
+    "event_id": "11b23ee0-587e-4afc-bf4e-50d404f71fee",
+    "seq": 37
+  },
+  "previous": {
+    "digest": "e3dfe92c87d118ebebc0ec1a9b6c1fec5f6a2ba3c67ad1bbd12ad21af0edabec",
+    "event_id": "31d8a42c-5851-431f-9928-14f3bc2efe73",
+    "seq": 35
+  },
+  "project_id": "0ee95624-eec4-4e8e-9a14-6ad9a37dcff4",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "193624e9-eb41-46e4-9113-a0b9bf5493b8",
+    "cycle": 1,
+    "digest": "68ac5b72772f8f208906da243200735acea7f0a73c39593c256f872e4aa3b965",
+    "engine_id": "claudeloop",
+    "event_id": "2cb8a339-7956-4e2f-8d42-0ce9051b5b6b",
+    "job_id": "1343d0fd-bf3f-4739-8c21-cbf7693c673e",
+    "kind": "QuestionAsked",
+    "payload": {
+      "blocking": false,
+      "cycle": 1,
+      "default": "Nothing - the walking skeleton IS the full scope: [path] page, AskAdam variant prop, host-aware routing, discoverability links (widget header, footer, sitemap entry, kb-sources chunk), tests, AGENTS.md docs. It's already minimal; splitting further creates dead intermediate states (e.g., page exists but not discoverable, or discoverable but redirects break)",
+      "item_id": "deferrable_scope",
+      "stage": "walking_skeleton",
+      "text": "What can safely ship in a follow-up PR without blocking the walking skeleton?"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-20T20:14:22.405778+00:00",
+    "project_id": "0ee95624-eec4-4e8e-9a14-6ad9a37dcff4",
+    "provenance": "agent",
+    "seq": 36
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 1
+  }
+}

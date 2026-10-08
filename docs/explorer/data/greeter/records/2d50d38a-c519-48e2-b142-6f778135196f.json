@@ -1,0 +1,39 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "1d82949b0f8b460fff6e794779d177d40eb575d3e428cbca95e2186df7e4634e",
+    "event_id": "efa27cf1-2c0f-4eb3-a1ec-1615f7c140ba",
+    "seq": 1079
+  },
+  "previous": {
+    "digest": "2d2df7f5990ee086f8b8faf47612de08e35e973a053dd6c9d6c591a5c65d4e3d",
+    "event_id": "6c4a78f8-91de-4aaa-ad4e-4deb18b327cb",
+    "seq": 1077
+  },
+  "project_id": "26f89c38-c86b-4ddf-be75-c579a118e40e",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "637ddc67-d2df-4612-811a-60a37bd3687a",
+    "cycle": 1,
+    "digest": "c05ad5dfd6b1684e1ad915e7bd17572cb35e61a1be7400cc2f444f781b3ed16b",
+    "engine_id": null,
+    "event_id": "2d50d38a-c519-48e2-b142-6f778135196f",
+    "job_id": null,
+    "kind": "FindingResolved",
+    "payload": {
+      "finding_id": "f_integrate_lint-readme_9d274416",
+      "resolution": "resolved by operator: the merge conflicts were caused by committed generated artifacts (pycache/.coverage/egg-info); branches were scrubbed and the integration branch now passes every item gate"
+    },
+    "phase": "build",
+    "produced_at": "2026-08-19T15:02:56.346663+00:00",
+    "project_id": "26f89c38-c86b-4ddf-be75-c579a118e40e",
+    "provenance": "trusted",
+    "seq": 1078
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

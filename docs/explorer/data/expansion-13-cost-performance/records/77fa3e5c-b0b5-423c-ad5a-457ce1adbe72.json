@@ -1,0 +1,43 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "5a27359a40700569c2b6dad355ced9184593baf94efe5a71e8b7765002248428",
+    "event_id": "53a59117-a17e-4322-9938-1c7796c70cc7",
+    "seq": 19
+  },
+  "previous": {
+    "digest": "394091b0e67a631ba617c753e2568016d1a06fd0f712649e796661a90e15c1f2",
+    "event_id": "74e3a33c-8311-418c-8565-1c9955676759",
+    "seq": 17
+  },
+  "project_id": "a1d6b837-46f3-40c0-b6a2-8b3babb7fe15",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "2e641631-eb2c-432e-835a-1fd638b28816",
+    "cycle": 1,
+    "digest": "96f0e37c3427ee735b2bc1d4b3a04256eb67d61139f953fba199b060d2385ec8",
+    "engine_id": "claudeloop",
+    "event_id": "77fa3e5c-b0b5-423c-ad5a-457ce1adbe72",
+    "job_id": "dd8513f6-0d76-49a5-8bdc-75167dea5385",
+    "kind": "QuestionAsked",
+    "payload": {
+      "blocking": true,
+      "cycle": 1,
+      "default": "1. Commit hook speed, 2. Full local suite speed, 3. CI pipeline speed",
+      "item_id": "optimization_priority",
+      "stage": "laddering",
+      "text": "If optimization choices create tension between commit hook speed, full local suite speed, and CI speed, what's your priority order?"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-20T20:43:08.801656+00:00",
+    "project_id": "a1d6b837-46f3-40c0-b6a2-8b3babb7fe15",
+    "provenance": "agent",
+    "seq": 18
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

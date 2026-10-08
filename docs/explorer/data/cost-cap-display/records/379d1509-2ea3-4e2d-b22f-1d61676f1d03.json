@@ -1,0 +1,43 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "48c2058c5157d881a7277c883a83f32abaa4a4e7f0f4601c973b71d4164c67f2",
+    "event_id": "afe39a5e-b3b0-458d-933d-041040ecffa9",
+    "seq": 38
+  },
+  "previous": {
+    "digest": "cef23ba4f8b51a41b6823aed30c2461faace060f84ad62716d7568360c3aa205",
+    "event_id": "7ed09a86-7506-4d71-be7e-1ed08161eaa5",
+    "seq": 36
+  },
+  "project_id": "b43d1fcb-fb7b-42d6-9f80-220292c73389",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "463082eb-64e6-4b8a-ae42-e281584c9fd5",
+    "cycle": 1,
+    "digest": "c239f05bd38ea9c0a9c1e4d3113709fe8e9b0528b40ada320f1b9522f991fecc",
+    "engine_id": "claudeloop",
+    "event_id": "379d1509-2ea3-4e2d-b22f-1d61676f1d03",
+    "job_id": "64ea0fea-cd4f-4b3b-bf19-112c18a7c58d",
+    "kind": "QuestionAsked",
+    "payload": {
+      "blocking": false,
+      "cycle": 1,
+      "default": "Write resolver + tests first, then wire to both display and brake in single PR - ensures both consumers correct from the start",
+      "item_id": "implementation_order",
+      "stage": "walking_skeleton",
+      "text": "What's the implementation sequence: write resolver + tests first, then wire to display and brake; or fix display first, extract resolver, then retrofit brake?"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-22T03:42:56.313857+00:00",
+    "project_id": "b43d1fcb-fb7b-42d6-9f80-220292c73389",
+    "provenance": "agent",
+    "seq": 37
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

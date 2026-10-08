@@ -1,0 +1,39 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "5ed86addb22813b11292b5a7c0d178a665ff142a7d88d40693a98e265ecf944d",
+    "event_id": "7b17860c-fae0-4190-866d-5c36e77ac32b",
+    "seq": 23
+  },
+  "previous": {
+    "digest": "732e44f059b43a37adfadb5d96a8612543353256f24ba5075cafd33267bf8593",
+    "event_id": "4cdff1cc-7181-4a4a-9947-b26e85db3b5c",
+    "seq": 21
+  },
+  "project_id": "ab0b06f9-55a4-4b47-ac08-254e7fdd9036",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "23b35f22-6711-47f4-8330-e248cc9e8f66",
+    "cycle": 1,
+    "digest": "7e796a9fad70a17d4c0adca1e49e1f14760bc4e49d129d3ebf3bb98281bf6218",
+    "engine_id": "claudeloop",
+    "event_id": "a17c3576-5823-45ca-8613-81f0dc022ccc",
+    "job_id": "48f9ef01-8b95-4709-adde-ed0ece390f8d",
+    "kind": "AnswerGiven",
+    "payload": {
+      "answer": "Fork from the most recent commit at or before target seq; if no commits exist yet, fail with a clear error message",
+      "item_id": "seq_to_commit_mapping"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-22T03:34:34.636746+00:00",
+    "project_id": "ab0b06f9-55a4-4b47-ac08-254e7fdd9036",
+    "provenance": "trusted",
+    "seq": 22
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

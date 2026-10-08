@@ -1,0 +1,43 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "8d802b4c9673455bb26d47eb7ce501f32340660b8401a15e6092d6ad9eff09f9",
+    "event_id": "cb0063fd-cc7f-4fc9-8b84-ad4e6bd6a094",
+    "seq": 50
+  },
+  "previous": {
+    "digest": "59e9b4897a47982ea9827d11b13bae930b82f4adce8079934fbf9db287df97e7",
+    "event_id": "64d12dfa-e3e2-4b9f-af54-571154244c9f",
+    "seq": 48
+  },
+  "project_id": "8ab823c9-89e4-4050-884c-9008c8b14ef8",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "038860f0-991d-44fe-91c5-79a015267f0d",
+    "cycle": 1,
+    "digest": "055bcb7078a78e93d5f7a0c2f595caa461d81097c3e7b7840dfdeee7049a659d",
+    "engine_id": "claudeloop",
+    "event_id": "1aaadadd-e28d-4106-97c2-4b5f2f33de50",
+    "job_id": "705692f1-69a1-4cc2-ade7-8aa3d1407b67",
+    "kind": "QuestionAsked",
+    "payload": {
+      "blocking": true,
+      "cycle": 1,
+      "default": "Database connection pool exhaustion causing both redirects AND creation to fail; cache (Redis) becomes single point of failure if not properly sized",
+      "item_id": "catastrophic_failure_mode",
+      "stage": "premortem",
+      "text": "What's the most likely catastrophic failure mode during a 10x viral traffic spike?"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-20T02:36:20.039415+00:00",
+    "project_id": "8ab823c9-89e4-4050-884c-9008c8b14ef8",
+    "provenance": "agent",
+    "seq": 49
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

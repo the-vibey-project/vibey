@@ -1,0 +1,39 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "a79ce745064a686328d3e3829c338ccfa422be0efefedc8b7bbddf55dd1b4d2d",
+    "event_id": "a6e561b8-c8bb-4bcd-a5f1-2e9f98eb49f0",
+    "seq": 24
+  },
+  "previous": {
+    "digest": "9b68cc8784ad7a5099289000190f518f2cc265ebd47dee868104332bb4ab38f6",
+    "event_id": "c1520985-132a-454d-bb00-6415eef0382b",
+    "seq": 22
+  },
+  "project_id": "5e76341f-ba5f-4272-8355-3df5d489bbcd",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "e164acac-f019-4dc7-a750-3497b9a3e64d",
+    "cycle": 1,
+    "digest": "4cafe95b2b1a25e3e36eb37e54013e2c0726afe3279dca7f9fa2fceb756b0839",
+    "engine_id": "claudeloop",
+    "event_id": "2135d3b4-6d84-4916-8e50-fa3309d64444",
+    "job_id": "e58deb6b-5356-4a39-8acf-5dc898bba380",
+    "kind": "AnswerGiven",
+    "payload": {
+      "answer": "Sets a friendly tone that encourages continued use and exploration of features",
+      "item_id": "business_value"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-20T00:48:33.501271+00:00",
+    "project_id": "5e76341f-ba5f-4272-8355-3df5d489bbcd",
+    "provenance": "trusted",
+    "seq": 23
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

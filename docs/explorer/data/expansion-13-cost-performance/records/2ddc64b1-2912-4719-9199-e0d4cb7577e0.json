@@ -1,0 +1,40 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "81c7b1e95158395e07cd9da7413ac1948ff94fcf4acd4970c748d621c4dde375",
+    "event_id": "aecf4858-86ff-4b29-8c54-e41c7e56720b",
+    "seq": 1200
+  },
+  "previous": {
+    "digest": "81c7b1e95158395e07cd9da7413ac1948ff94fcf4acd4970c748d621c4dde375",
+    "event_id": "4b979b34-a963-4187-a2ea-f32c89d12940",
+    "seq": 1164
+  },
+  "project_id": "a1d6b837-46f3-40c0-b6a2-8b3babb7fe15",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "0d931131-ff7f-4313-a769-0f1f1dfafc1e",
+    "cycle": 1,
+    "digest": "85dc3697de3924828498532d4f1b31ec53a83eaf9e6435aaf994e9a05d6a49c5",
+    "engine_id": null,
+    "event_id": "2ddc64b1-2912-4719-9199-e0d4cb7577e0",
+    "job_id": "63eaa3a2-896f-4e30-b53b-a93dbe026180",
+    "kind": "FindingRaised",
+    "payload": {
+      "finding_id": "f_integrate_xdist-parallel_06611632",
+      "severity": "high",
+      "text": "merge conflict integrating 'xdist-parallel': Auto-merging CLAUDE.md\nAuto-merging pyproject.toml\nCONFLICT (content): Merge conflict in pyproject.toml\nAuto-merging tests/conftest.py\nCONFLICT (add/add): Merge conflict in tests/conftest.py\nAuto-merging tests/system/test_full_worker_faked.py\nAuto-merging uv.lock\nCONFLICT (content): Merge conflict in uv.lock\nAutomatic merge failed; fix conflicts and then commit the result."
+    },
+    "phase": "build",
+    "produced_at": "2026-08-22T19:49:35.091695+00:00",
+    "project_id": "a1d6b837-46f3-40c0-b6a2-8b3babb7fe15",
+    "provenance": "agent",
+    "seq": 1165
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

@@ -1,0 +1,39 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "31151f418678c95642ea9c4f71754925ee8d9908d9cb99bfc4a23b8f7f98385f",
+    "event_id": "e8ff9667-58fd-4c2e-9854-0a114fb90e24",
+    "seq": 9
+  },
+  "previous": {
+    "digest": "48d5431b5ac4b5c19e2cb15cce8d1cbc81230583698d5ab4031e09c409ccfd0a",
+    "event_id": "385d2ede-7977-40e1-aed2-8db723622b84",
+    "seq": 7
+  },
+  "project_id": "8ab823c9-89e4-4050-884c-9008c8b14ef8",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "82017459-9f2c-429d-b7e1-113ecac86a29",
+    "cycle": 1,
+    "digest": "f70bf6b20ef4f2002d54e841659f4e023c9cf00a7f6d92eb770c765ae6d94638",
+    "engine_id": "claudeloop",
+    "event_id": "be93d437-f8e1-41c9-a647-cd9c4a3ca383",
+    "job_id": "705692f1-69a1-4cc2-ade7-8aa3d1407b67",
+    "kind": "AnswerGiven",
+    "payload": {
+      "answer": "Standard: \u003c100ms p99 latency, 99.9% availability, eventual consistency acceptable",
+      "item_id": "constraints"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-20T02:32:11.416706+00:00",
+    "project_id": "8ab823c9-89e4-4050-884c-9008c8b14ef8",
+    "provenance": "trusted",
+    "seq": 8
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

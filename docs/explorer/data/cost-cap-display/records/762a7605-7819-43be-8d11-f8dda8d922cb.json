@@ -1,0 +1,43 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "2d4925455ba480017e4cf55688e200c5dde6eb35d2b99fd8a7bf24f5ce018c5d",
+    "event_id": "e2f7aa6f-6c5b-4d1e-bb22-5dd2d1f27d8d",
+    "seq": 19
+  },
+  "previous": {
+    "digest": "25288f933d2f3ca1dad97050c987b1268a1f2357a8fdf8afe08de31930964736",
+    "event_id": "57f777b2-88b8-4373-810d-b9e2f9f76d8f",
+    "seq": 17
+  },
+  "project_id": "b43d1fcb-fb7b-42d6-9f80-220292c73389",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "849b5a9b-3b86-4180-845d-11d92a63dfbf",
+    "cycle": 1,
+    "digest": "3efe617e98caa85be2d32829c9e141a60fd907a6710818011ce6440650b8668c",
+    "engine_id": "claudeloop",
+    "event_id": "762a7605-7819-43be-8d11-f8dda8d922cb",
+    "job_id": "64ea0fea-cd4f-4b3b-bf19-112c18a7c58d",
+    "kind": "QuestionAsked",
+    "payload": {
+      "blocking": false,
+      "cycle": 1,
+      "default": "Fail fast at config load time in bootstrap.py validation; invalid caps are a fatal misconfiguration, not a runtime decision",
+      "item_id": "invalid_configs",
+      "stage": "laddering",
+      "text": "How should the resolver handle invalid cap configurations (negative values, cycle cap exceeding total cap, non-numeric values)?"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-22T02:59:50.867346+00:00",
+    "project_id": "b43d1fcb-fb7b-42d6-9f80-220292c73389",
+    "provenance": "agent",
+    "seq": 18
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

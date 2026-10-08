@@ -1,0 +1,39 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "7f818d2d9d8f0d67efee839e67253d71b26e242da9caf39d9cd03f0373f59ae9",
+    "event_id": "e39d289c-4f28-4e65-8491-96c286acc7c5",
+    "seq": 41
+  },
+  "previous": {
+    "digest": "76c5233b1a35594d1072b17fbddfd8410f0320f9ace8f87896c29d8c63781c78",
+    "event_id": "5b11c460-a25e-4287-bf7c-2e4bf485109e",
+    "seq": 39
+  },
+  "project_id": "893c4fc1-542e-411e-a10a-3aef784b1540",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "d1405050-7bbf-5034-b04a-11a1570aca97",
+    "cycle": 1,
+    "digest": "709da8d74153f0d8bad91b146d24fdddf5e0a29e9befd6c6e3408b87d5a94a25",
+    "engine_id": "gptossloop",
+    "event_id": "ac488856-081b-47ee-99e2-101e4fbadcad",
+    "job_id": "51910618-3d0b-44a5-a6bd-12647d4dccac",
+    "kind": "ResearchGapRecorded",
+    "payload": {
+      "cycle": 1,
+      "topic": "libraries"
+    },
+    "phase": "design",
+    "produced_at": "2026-09-30T04:16:56.972784+00:00",
+    "project_id": "893c4fc1-542e-411e-a10a-3aef784b1540",
+    "provenance": "trusted",
+    "seq": 40
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 1,
+    "paths": 0
+  }
+}

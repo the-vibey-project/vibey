@@ -1,0 +1,43 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "32ceb7adade1655dd74d05b764ac035d9545320b08b54959d91eb1c07ddff206",
+    "event_id": "6b77d6c6-20d6-4358-a32d-ae98ac1815d8",
+    "seq": 21
+  },
+  "previous": {
+    "digest": "6ea878dc3f2e02fdac40ca5aa834832f283a1a823dd0d38199eb30dcdb9a78fb",
+    "event_id": "dd8cafbf-552d-4244-8186-41271dd7d62d",
+    "seq": 19
+  },
+  "project_id": "8ab823c9-89e4-4050-884c-9008c8b14ef8",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "52784ead-f1d2-442c-8b12-a2e51bdb30a4",
+    "cycle": 1,
+    "digest": "717b35c2df0c14176f9c22df1f5f704414dad14cf62253b020361c4f5b0cef1a",
+    "engine_id": "claudeloop",
+    "event_id": "970249d0-4b3f-4428-a956-ba1cff49b8ce",
+    "job_id": "705692f1-69a1-4cc2-ade7-8aa3d1407b67",
+    "kind": "QuestionAsked",
+    "payload": {
+      "blocking": false,
+      "cycle": 1,
+      "default": "3-5x growth in steady state, with potential 10x viral spikes during marketing campaigns",
+      "item_id": "growth_trajectory",
+      "stage": "laddering",
+      "text": "What's the expected growth trajectory over the next 1-2 years?"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-20T02:33:10.444774+00:00",
+    "project_id": "8ab823c9-89e4-4050-884c-9008c8b14ef8",
+    "provenance": "agent",
+    "seq": 20
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

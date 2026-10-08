@@ -1,0 +1,43 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "e9da2334b9957eca8273319773c68f5dd6253b0fa5f675d3d8b82d0955751069",
+    "event_id": "b178aad5-edbb-4592-9c75-70b5e0e521f7",
+    "seq": 45
+  },
+  "previous": {
+    "digest": "000a242e5a29c8de84972046f18b56652e33abfc4c59974786ab39e708747cbd",
+    "event_id": "566c2387-ae02-4ae0-a77c-688ec2b852b7",
+    "seq": 42
+  },
+  "project_id": "b43d1fcb-fb7b-42d6-9f80-220292c73389",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "33cbca29-84d1-45e1-b3e4-9e612df9dae3",
+    "cycle": 1,
+    "digest": "dffb7a00d448cea032e161180d5ee47aae100c54ba58452979b9a6624c7d353c",
+    "engine_id": "claudeloop",
+    "event_id": "d5abf00b-bf42-43f0-b41e-209499358747",
+    "job_id": "64ea0fea-cd4f-4b3b-bf19-112c18a7c58d",
+    "kind": "QuestionAsked",
+    "payload": {
+      "blocking": true,
+      "cycle": 1,
+      "default": "0% - displayed values must match config exactly, no rounding or approximation",
+      "item_id": "correctness_tolerance",
+      "stage": "nfr_planguage",
+      "text": "What's the acceptable error margin between displayed caps and actual config values (scale: % deviation; past: 500% error on $40 vs $200 config)?"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-22T03:44:23.200482+00:00",
+    "project_id": "b43d1fcb-fb7b-42d6-9f80-220292c73389",
+    "provenance": "agent",
+    "seq": 44
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

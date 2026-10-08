@@ -1,0 +1,39 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "e0b77212e060b71420377d4c2d217aa5879fde304577ea46ea06c6a0d31f6ac3",
+    "event_id": "9b4276bd-96e3-417f-a8f5-32e01b46f03f",
+    "seq": 31
+  },
+  "previous": {
+    "digest": "ae056b9c1bdf2890663c12b74ee2a3dad85d8b202cad2a09bd2c41fa09459b6d",
+    "event_id": "2553d9d7-2833-449c-8870-c37f6abd9f52",
+    "seq": 29
+  },
+  "project_id": "5e76341f-ba5f-4272-8355-3df5d489bbcd",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "34215884-5b62-45d8-af36-ec8c8a4c00b5",
+    "cycle": 1,
+    "digest": "6c081ca7f2c4da44f665bfad61513353a0ee27df81f38f1f2be793c20364ffba",
+    "engine_id": "claudeloop",
+    "event_id": "6717d9fa-fa1f-47de-a7dc-a18c8041ec67",
+    "job_id": "e58deb6b-5356-4a39-8acf-5dc898bba380",
+    "kind": "AnswerGiven",
+    "payload": {
+      "answer": "Morning: 5am-11:59am, Afternoon: 12pm-5pm, Evening: 5:01pm-4:59am",
+      "item_id": "time_rules"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-20T00:49:39.388688+00:00",
+    "project_id": "5e76341f-ba5f-4272-8355-3df5d489bbcd",
+    "provenance": "trusted",
+    "seq": 30
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

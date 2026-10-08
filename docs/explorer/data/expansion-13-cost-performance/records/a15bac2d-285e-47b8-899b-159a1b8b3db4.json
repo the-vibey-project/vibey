@@ -1,0 +1,39 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "705a4c9f7bb3cf6cdebe2ddb4a9be4910f3b0876b4a1ca4ca6489fa983869c6b",
+    "event_id": "fb0baad5-b1f4-4ad4-bb3f-d8b02aa87e2d",
+    "seq": 24
+  },
+  "previous": {
+    "digest": "37e73a501d18e7968c24481a9abe9769e061e427157205c21e398eb679bfe874",
+    "event_id": "a076dab9-91ab-41ab-8983-7713ae265c7d",
+    "seq": 22
+  },
+  "project_id": "a1d6b837-46f3-40c0-b6a2-8b3babb7fe15",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "3dde6b5f-02b0-4aa7-ac89-20d42444fc2e",
+    "cycle": 1,
+    "digest": "40c51e77d6bab8b59ceee0f2512240b41c1f519e8855b5bbd4c58402cfeb968f",
+    "engine_id": "claudeloop",
+    "event_id": "a15bac2d-285e-47b8-899b-159a1b8b3db4",
+    "job_id": "dd8513f6-0d76-49a5-8bdc-75167dea5385",
+    "kind": "AnswerGiven",
+    "payload": {
+      "answer": "Conservative: prioritize test stability and zero regressions over maximum speed gains",
+      "item_id": "risk_tolerance"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-20T20:43:10.963970+00:00",
+    "project_id": "a1d6b837-46f3-40c0-b6a2-8b3babb7fe15",
+    "provenance": "trusted",
+    "seq": 23
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

@@ -1,0 +1,39 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "13809cd811e43e9a0bcac6e66f46b45770ae12204af99ccae8af20b9b391e92f",
+    "event_id": "4efd8f04-1380-44be-bd9b-b3065ee11b8f",
+    "seq": 18
+  },
+  "previous": {
+    "digest": "97711a58b34e6c938952c986803caa4319f751bddcd467ac30a95cc7d7219842",
+    "event_id": "e10afeef-c0e1-4e97-980a-1ccf08e7e72b",
+    "seq": 15
+  },
+  "project_id": "5ea01f61-8536-4ace-90cb-18700a12e410",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "e6ab952b-391e-46ff-8138-ff60809b5d55",
+    "cycle": 1,
+    "digest": "b23ba359d17185d4824276c719ffa6461b6ca588d0781a782e9a9c7f97922574",
+    "engine_id": "claudeloop",
+    "event_id": "386a1ac1-8cde-46be-89d2-178a3695ce4d",
+    "job_id": "4c2ec03f-d670-44f9-9f05-47597984ab20",
+    "kind": "AnswerGiven",
+    "payload": {
+      "answer": "As fast as the slowest engine (~15-17 seconds) is sufficient; no hard SLO needed",
+      "item_id": "timing_requirement"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-22T03:34:35.614876+00:00",
+    "project_id": "5ea01f61-8536-4ace-90cb-18700a12e410",
+    "provenance": "trusted",
+    "seq": 16
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

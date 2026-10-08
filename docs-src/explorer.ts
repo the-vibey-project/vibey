@@ -22,6 +22,11 @@
     id: string;
     label?: string;
     sample?: boolean;
+    /** A sealed copy of the whole database (`vibey state sync`), opened with the holder's key. */
+    sealed?: { url: string };
+    /** The project this public ledger is of; the sealed copy holds the rest of the same id. */
+    project_id?: string;
+    stats?: { phase: string; updated: string; events: number; records: number; withheld: number };
   }
   interface ProjectListing {
     projects?: ProjectEntry[];
@@ -85,6 +90,9 @@
     base: string;
     manifest: Manifest;
     records: IndexEntry[]; // newest first
+    /** Present for a decrypted ledger, whose records are already in memory. */
+    docs?: Map<string, RecordDocument>;
+    sealed?: boolean;
   }
   interface View {
     project: string;
@@ -265,9 +273,157 @@
         return `${pick("title", "artifact_id") ?? "An artifact"}${asText(p["artifact_type"]) ? ` (${asText(p["artifact_type"])})` : ""}`;
       case "VerdictRendered":
         return p["complete"] === true ? (p["success"] === true ? "Complete, and it succeeded" : "Complete, but not successful") : "Not complete yet";
+      case "BudgetSpent":
+        return asText(p["usd"]) ?? (typeof p["usd"] === "number" || p["usd"] instanceof Num ? `$${String(p["usd"])} spent` : "Spend was recorded");
       default:
-        return pick("choice", "text", "title") ?? "";
+        return pick("choice", "text", "title", "prompt", "message", "tool", "name", "path", "file", "detail", "reason", "summary") ?? "";
     }
+  };
+
+
+  // ---- numbers that remember how they were written --------------------------------------------
+  // A digest is the hash of Python's text for a payload, so `1.0`, `0.1` and `1e-05` must be
+  // reproduced as Python wrote them, not as `JSON.parse` would re-spell them (`1`, `0.1`,
+  // `0.00001`). A number with a fraction or exponent, or an integer too big for a double, is
+  // kept as the text it arrived in; every other number is an ordinary one.
+  class Num {
+    constructor(readonly text: string) {}
+    toString(): string {
+      return this.text;
+    }
+    toJSON(): number {
+      return Number(this.text);
+    }
+  }
+
+  // Python's `repr(float)` for the float `text` denotes: the shortest digits that round-trip,
+  // positional between 1e-4 and 1e16, scientific outside it, and ".0" on a whole number.
+  const pythonFloat = (text: string): string => {
+    const x = Number(text);
+    if (!Number.isFinite(x)) {
+      return text;
+    }
+    if (x === 0) {
+      return Object.is(x, -0) ? "-0.0" : "0.0";
+    }
+    const [mantissa = "", exponentText = "0"] = x.toExponential().split("e");
+    const exponent = Number(exponentText);
+    const sign = mantissa.startsWith("-") ? "-" : "";
+    const digits = mantissa.replace("-", "").replace(".", "");
+    if (exponent < -4 || exponent >= 16) {
+      const lead = digits.length > 1 ? `${digits.slice(0, 1)}.${digits.slice(1)}` : digits;
+      const power = Math.abs(exponent);
+      return `${sign}${lead}e${exponent < 0 ? "-" : "+"}${power < 10 ? `0${power}` : power}`;
+    }
+    if (exponent >= 0) {
+      return `${sign}${digits.slice(0, exponent + 1).padEnd(exponent + 1, "0")}.${digits.slice(exponent + 1) || "0"}`;
+    }
+    return `${sign}0.${"0".repeat(-exponent - 1)}${digits}`;
+  };
+
+  // JSON, with every number that is not a plain safe integer kept as a `Num`.
+  const parseJson = (text: string): unknown => {
+    let at = 0;
+    const NUMBER = /-?(?:0|[1-9]\d*)(?:\.\d+)?(?:[eE][+-]?\d+)?/y;
+    const fail = (what: string): never => {
+      throw new SyntaxError(`${what} at character ${at}`);
+    };
+    const space = (): void => {
+      while (at < text.length) {
+        const c = text.charCodeAt(at);
+        if (c === 32 || c === 10 || c === 13 || c === 9) at += 1;
+        else break;
+      }
+    };
+    const string = (): string => {
+      const start = at;
+      at += 1;
+      for (;;) {
+        const quote = text.indexOf('"', at);
+        if (quote < 0) fail("an unterminated string");
+        let back = quote - 1;
+        let slashes = 0;
+        while (text.charCodeAt(back) === 92) {
+          slashes += 1;
+          back -= 1;
+        }
+        at = quote + 1;
+        if (slashes % 2 === 0) break;
+      }
+      const raw = text.slice(start, at);
+      return raw.includes("\\") ? (JSON.parse(raw) as string) : raw.slice(1, -1);
+    };
+    const value = (): unknown => {
+      space();
+      const c = text[at];
+      if (c === "{") {
+        at += 1;
+        const object: Record<string, unknown> = Object.create(null) as Record<string, unknown>;
+        space();
+        if (text[at] === "}") {
+          at += 1;
+          return object;
+        }
+        for (;;) {
+          space();
+          if (text[at] !== '"') fail("a key was expected");
+          const key = string();
+          space();
+          if (text[at] !== ":") fail("a colon was expected");
+          at += 1;
+          object[key] = value();
+          space();
+          if (text[at] === ",") {
+            at += 1;
+          } else if (text[at] === "}") {
+            at += 1;
+            return object;
+          } else fail("a comma or a closing brace was expected");
+        }
+      }
+      if (c === "[") {
+        at += 1;
+        const list: unknown[] = [];
+        space();
+        if (text[at] === "]") {
+          at += 1;
+          return list;
+        }
+        for (;;) {
+          list.push(value());
+          space();
+          if (text[at] === ",") {
+            at += 1;
+          } else if (text[at] === "]") {
+            at += 1;
+            return list;
+          } else fail("a comma or a closing bracket was expected");
+        }
+      }
+      if (c === '"') return string();
+      if (text.startsWith("true", at)) {
+        at += 4;
+        return true;
+      }
+      if (text.startsWith("false", at)) {
+        at += 5;
+        return false;
+      }
+      if (text.startsWith("null", at)) {
+        at += 4;
+        return null;
+      }
+      NUMBER.lastIndex = at;
+      const found = NUMBER.exec(text);
+      if (!found) return fail("a value was expected");
+      const token = found[0];
+      at += token.length;
+      return /[.eE]/.test(token) || !Number.isSafeInteger(Number(token)) ? new Num(token) : Number(token);
+    };
+    const result = value();
+    space();
+    if (at < text.length) fail("unexpected text after the value");
+    return result;
   };
 
   // The same bytes `vibey.domain.ledger.canonical_bytes` hashes: sorted keys, no spaces, and
@@ -275,6 +431,9 @@
   const canonical = (value: unknown): string => {
     if (value === null) {
       return "null";
+    }
+    if (value instanceof Num) {
+      return /[.eE]/.test(value.text) ? pythonFloat(value.text) : value.text;
     }
     if (Array.isArray(value)) {
       return `[${value.map(canonical).join(",")}]`;
@@ -296,18 +455,285 @@
     return Array.from(new Uint8Array(digest), (b) => b.toString(16).padStart(2, "0")).join("");
   };
 
+
+  // ---- the sealed copy: what `vibey state sync` keeps on the vibey-state branch -------------
+  // One file, `VBYSTAT1` + a 12-byte nonce + AES-256-GCM(gzip(canonical JSON)), the magic as the
+  // associated data (src/vibey/infrastructure/state/aes_gcm_cipher.py, ADR-0086). The browser
+  // opens it with WebCrypto: the key is typed here, held in memory and never sent anywhere.
+  interface SealedProject {
+    id: string;
+    name: string;
+    phase: string;
+    created_at: string;
+    updated_at: string;
+  }
+  interface SealedEvent {
+    event_id: string;
+    project_id: string;
+    seq: number;
+    cycle: number;
+    phase: string;
+    kind: string;
+    engine_id: string | null;
+    job_id: string | null;
+    causation_id: string | null;
+    correlation_id: string;
+    provenance: string;
+    produced_at: string;
+    payload: unknown;
+    digest: string;
+  }
+  interface StateDocument {
+    format: string;
+    tables: Record<string, unknown[] | undefined>;
+  }
+  interface SealedListing {
+    id: string;
+    name: string;
+    phase: string;
+    events: number;
+    updated: string;
+  }
+  interface ChainResult {
+    ok: boolean;
+    head: string;
+    events: number;
+    problem?: string;
+  }
+  type SealedFailure = "key" | "missing" | "fetch" | "format";
+  class SealedError extends Error {
+    constructor(
+      message: string,
+      readonly failure: SealedFailure,
+    ) {
+      super(message);
+    }
+  }
+
+  const MAGIC = new TextEncoder().encode("VBYSTAT1");
+  const NONCE_BYTES = 12;
+  const KEY_BYTES = 32;
+  const STATE_FORMAT = "vibey-state/1";
+  const CHAIN_SCHEME = "vibey-ledger-chain/v1";
+  const NOTHING_REMOVED: TrimCounts = { fields: 0, paths: 0, emails: 0, credentials: 0 };
+
+  const bufferOf = (bytes: Uint8Array): ArrayBuffer => bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength) as ArrayBuffer;
+  const decodeKey = (text: string): Uint8Array | null => {
+    try {
+      const clean = text.trim().replace(/-/g, "+").replace(/_/g, "/");
+      const binary = atob(clean + "=".repeat((4 - (clean.length % 4)) % 4));
+      const bytes = Uint8Array.from(binary, (c) => c.charCodeAt(0));
+      return bytes.length === KEY_BYTES ? bytes : null;
+    } catch {
+      return null;
+    }
+  };
+
+  // The words a search can match in a payload, as the exporter indexes them (lower-cased runs of
+  // letters, digits and underscores from every string and number, two characters or more).
+  const tokensOf = (value: unknown, into: Set<string>): Set<string> => {
+    if (value === null || value === undefined || typeof value === "boolean") {
+      return into;
+    }
+    if (value instanceof Num) {
+      return tokensOf(value.text, into);
+    }
+    if (Array.isArray(value)) {
+      value.forEach((item) => tokensOf(item, into));
+    } else if (typeof value === "object") {
+      Object.values(value as Record<string, unknown>).forEach((item) => tokensOf(item, into));
+    } else {
+      for (const word of String(value).toLowerCase().matchAll(/[\p{L}\p{N}_]+/gu)) {
+        if (word[0].length >= 2) into.add(word[0]);
+      }
+    }
+    return into;
+  };
+
+  // A timestamp in the form the chain hashes: UTC, to the microsecond. Null when it is not UTC.
+  const instant = (stamp: string): string | null => {
+    const m = /^(\d{4}-\d\d-\d\dT\d\d:\d\d:\d\d)(?:\.(\d+))?(?:Z|\+00:00|\+00)$/.exec(stamp);
+    return m ? `${m[1]}.${(m[2] ?? "").padEnd(6, "0").slice(0, 6)}+00:00` : null;
+  };
+
+  class SealedVault {
+    private readonly projects = new Map<string, SealedProject>();
+    private readonly events = new Map<string, SealedEvent[]>();
+    private readonly built = new Map<string, Ledger>();
+    private opened = false;
+
+    get unlocked(): boolean {
+      return this.opened;
+    }
+
+    lock(): void {
+      this.projects.clear();
+      this.events.clear();
+      this.built.clear();
+      this.opened = false;
+    }
+
+    has(projectId: string): boolean {
+      return this.projects.has(projectId);
+    }
+
+    name(projectId: string): string {
+      return this.projects.get(projectId)?.name ?? projectId;
+    }
+
+    async open(url: string, keyText: string): Promise<void> {
+      const key = decodeKey(keyText);
+      if (!key) {
+        throw new SealedError("That is not a vibey state key. It is 32 bytes written as base64url; `vibey state key --show` prints yours.", "key");
+      }
+      let response: Response;
+      try {
+        response = await fetch(url, { cache: "no-store" });
+      } catch {
+        throw new SealedError("The sealed copy could not be downloaded. Check your connection and try again.", "fetch");
+      }
+      if (response.status === 404) {
+        throw new SealedError("Nothing has been uploaded yet. On the machine that holds the database, run `vibey state sync`.", "missing");
+      }
+      if (!response.ok) {
+        throw new SealedError(`GitHub answered ${response.status} for the sealed copy. Try again in a minute.`, "fetch");
+      }
+      const sealed = new Uint8Array(await response.arrayBuffer());
+      if (sealed.length <= MAGIC.length + NONCE_BYTES || !MAGIC.every((byte, at) => sealed[at] === byte)) {
+        throw new SealedError("That file is not a sealed vibey state.", "format");
+      }
+      const nonce = sealed.slice(MAGIC.length, MAGIC.length + NONCE_BYTES);
+      const body = sealed.slice(MAGIC.length + NONCE_BYTES);
+      const aes = await window.crypto.subtle.importKey("raw", bufferOf(key), "AES-GCM", false, ["decrypt"]);
+      let packed: ArrayBuffer;
+      try {
+        packed = await window.crypto.subtle.decrypt({ name: "AES-GCM", iv: bufferOf(nonce), additionalData: bufferOf(MAGIC) }, aes, bufferOf(body));
+      } catch {
+        throw new SealedError("That key does not open this file. It was sealed under another key, or changed after it was sealed.", "key");
+      }
+      const text = await new Response(new Blob([packed]).stream().pipeThrough(new DecompressionStream("gzip"))).text();
+      const state = parseJson(text) as StateDocument;
+      if (state.format !== STATE_FORMAT) {
+        throw new SealedError(`This file is ${String(state.format)}; this explorer reads ${STATE_FORMAT}.`, "format");
+      }
+      this.lock();
+      for (const project of (state.tables["project"] ?? []) as SealedProject[]) {
+        this.projects.set(project.id, project);
+      }
+      for (const event of (state.tables["event"] ?? []) as SealedEvent[]) {
+        const rows = this.events.get(event.project_id);
+        if (rows) rows.push(event);
+        else this.events.set(event.project_id, [event]);
+      }
+      this.events.forEach((rows) => rows.sort((a, b) => a.seq - b.seq));
+      this.opened = true;
+    }
+
+    listing(): SealedListing[] {
+      return [...this.projects.values()]
+        .map((p) => ({ id: p.id, name: p.name, phase: p.phase, events: this.events.get(p.id)?.length ?? 0, updated: p.updated_at }))
+        .sort((a, b) => b.updated.localeCompare(a.updated));
+    }
+
+    // A project's whole ledger, in the shape the published pages use, so one view serves both.
+    ledger(projectId: string): Ledger {
+      const known = this.built.get(projectId);
+      if (known) {
+        return known;
+      }
+      const rows = this.events.get(projectId) ?? [];
+      const docs = new Map<string, RecordDocument>();
+      const records: IndexEntry[] = [];
+      rows.forEach((e, at) => {
+        const before = rows[at - 1];
+        const after = rows[at + 1];
+        records.push({ id: e.event_id, seq: e.seq, kind: e.kind, phase: e.phase, actor: e.engine_id ?? "vibey", time: e.produced_at, digest: e.digest, tokens: [...tokensOf(e.payload, new Set<string>())].sort() });
+        docs.set(e.event_id, {
+          record: { event_id: e.event_id, cycle: e.cycle, phase: e.phase, seq: e.seq, kind: e.kind, engine_id: e.engine_id, causation_id: e.causation_id, correlation_id: e.correlation_id, provenance: e.provenance, produced_at: e.produced_at, payload: e.payload, digest: e.digest },
+          withheld: NOTHING_REMOVED,
+          previous: before ? { event_id: before.event_id, seq: before.seq } : null,
+          next: after ? { event_id: after.event_id, seq: after.seq } : null,
+        });
+      });
+      const first = rows[0]?.seq ?? null;
+      const last = rows[rows.length - 1]?.seq ?? null;
+      const ledger: Ledger = {
+        base: "",
+        sealed: true,
+        docs,
+        records: records.reverse(),
+        manifest: {
+          format: SITE_FORMAT,
+          project: { project_id: projectId, name: this.name(projectId) },
+          holds: "full",
+          tier: "private",
+          seq_range: { first, last, events: rows.length },
+          published: { records: rows.length, first_seq: first, last_seq: last },
+          chain: { scheme: CHAIN_SCHEME, head: "", head_seq: last, verified: false, findings: 0 },
+          policy: { scheme: "none: this is the full ledger", fingerprint: "" },
+          withheld: { ...NOTHING_REMOVED, events: 0, by_reason: {} },
+          statement: "nothing is withheld from this view",
+        },
+      };
+      this.built.set(projectId, ledger);
+      return ledger;
+    }
+
+    // Walk the chain exactly as the exporter does (src/vibey/domain/ledger_chain.py): each link
+    // is the SHA-256 of the one before it and every stored field of the event.
+    async chain(projectId: string): Promise<ChainResult> {
+      const rows = this.events.get(projectId) ?? [];
+      let link = await sha256(canonical({ scheme: CHAIN_SCHEME, genesis: projectId }));
+      let expected: number | null = null;
+      let problem: string | undefined;
+      for (const e of rows) {
+        if (expected !== null && e.seq !== expected) {
+          problem ??= `seq ${e.seq} follows seq ${expected - 1}: ${Math.max(0, e.seq - expected)} event(s) missing`;
+        }
+        const digest = await sha256(canonical(e.payload));
+        if (digest !== e.digest) {
+          problem ??= `event ${e.event_id} (seq ${e.seq}) stores a digest its payload does not produce here; a decimal number can serialise differently in a browser than in Python, otherwise it was altered`;
+        }
+        const at = instant(e.produced_at);
+        if (at === null) {
+          return { ok: false, head: link, events: rows.length, problem: `event ${e.event_id} has a time that is not UTC, so its link cannot be recomputed here` };
+        }
+        link = await sha256(canonical({ scheme: CHAIN_SCHEME, prev: link, project_id: e.project_id, seq: e.seq, event_id: e.event_id, cycle: e.cycle, phase: e.phase, kind: e.kind, engine_id: e.engine_id, job_id: e.job_id, causation_id: e.causation_id, correlation_id: e.correlation_id, provenance: e.provenance, produced_at: at, digest: e.digest }));
+        expected = e.seq + 1;
+      }
+      const result: ChainResult = { ok: problem === undefined, head: link, events: rows.length };
+      if (problem !== undefined) result.problem = problem;
+      return result;
+    }
+  }
+
+  // A test seam: the compiled script can be loaded under Node with a stub page, and handed this
+  // class, so the sealed-state format is tested against the code that ships (tests/meta).
+  const seam = (window as unknown as { __vibeyExplorerTest?: Record<string, unknown> }).__vibeyExplorerTest;
+  if (seam) {
+    seam["SealedVault"] = SealedVault;
+  }
+
   // ---- reading the published files, once each ---------------------------------------------
   class LedgerStore {
     private readonly ledgers = new Map<string, Promise<Ledger>>();
     private readonly documents = new Map<string, Promise<RecordDocument>>();
 
-    constructor(private readonly base: string) {}
+    constructor(
+      private readonly base: string,
+      private readonly vault: SealedVault,
+    ) {}
 
     async projects(): Promise<ProjectEntry[]> {
       return (await this.json<ProjectListing>(`${this.base}projects.json`)).projects ?? [];
     }
 
     ledger(id: string): Promise<Ledger> {
+      // A sealed project is `<source>/<project id>`; its events are already in memory.
+      const slash = id.indexOf("/");
+      if (slash >= 0) {
+        return Promise.resolve(this.vault.ledger(id.slice(slash + 1)));
+      }
       let known = this.ledgers.get(id);
       if (!known) {
         known = this.load(id);
@@ -318,6 +744,10 @@
     }
 
     document(ledger: Ledger, id: string): Promise<RecordDocument> {
+      const inMemory = ledger.docs?.get(id);
+      if (inMemory) {
+        return Promise.resolve(inMemory);
+      }
       const key = `${ledger.base}${id}`;
       let known = this.documents.get(key);
       if (!known) {
@@ -342,7 +772,7 @@
       if (!response.ok) {
         throw new Error(`${url} answered ${response.status}`);
       }
-      return (await response.json()) as T;
+      return parseJson(await response.text()) as T;
     }
   }
 
@@ -357,6 +787,7 @@
     constructor(
       private readonly root: HTMLElement,
       private readonly store: LedgerStore,
+      private readonly vault: SealedVault,
       private readonly guide: string,
     ) {
       window.addEventListener("hashchange", () => void this.route());
@@ -382,10 +813,14 @@
     // ---- routing: #/<project>[/<event id>][?q=&kind=&phase=&page=&order=] ------------------
     private parse(): View {
       const [path = "", query = ""] = window.location.hash.replace(/^#\/?/, "").split("?");
-      const [project, record] = path.split("/").filter(Boolean);
+      const parts = path.split("/").filter(Boolean);
       const params = new URLSearchParams(query);
+      // A sealed source holds many projects: #/<source>/<project id>[/<event id>].
+      const sealedSource = this.projects.find((p) => p.sealed && p.id === parts[0]);
+      const project = sealedSource && parts[1] ? `${sealedSource.id}/${parts[1]}` : parts[0];
+      const record = sealedSource ? parts[2] : parts[1];
       return {
-        project: project ?? this.projects[0]?.id ?? "",
+        project: project ?? "",
         record: record ?? null,
         q: (params.get("q") ?? "").trim(),
         kind: params.get("kind") ?? "",
@@ -413,7 +848,28 @@
 
     private async route(): Promise<void> {
       const view = this.parse();
-      const entry = this.projects.find((p) => p.id === view.project);
+      if (view.project === "" || view.project === "projects") {
+        this.root.replaceChildren(this.home(), this.toast);
+        this.current = null;
+        this.arrive("record");
+        return;
+      }
+      const source = this.sealedSourceOf(view.project);
+      if (source?.sealed && (!this.vault.unlocked || view.project === source.id)) {
+        this.root.replaceChildren(this.vault.unlocked ? this.chooser(source) : this.unlock(source), this.toast);
+        this.current = null;
+        this.arrive("record");
+        return;
+      }
+      if (source?.sealed && this.vault.unlocked && !this.entryFor(view.project)) {
+        this.root.replaceChildren(
+          el("div", { class: "lx-page" }, this.empty("That project is not in the sealed copy", "The sealed copy only holds what `vibey state sync` had uploaded when it last ran. Sync again on the machine that holds the database, then reload.", `#/${source.id}`, "All private projects")),
+          this.toast,
+        );
+        this.current = null;
+        return;
+      }
+      const entry = this.entryFor(view.project);
       if (!entry) {
         this.problem(`There is no published ledger called “${view.project}”.`, "Choose one of the ledgers listed on this page.", this.href({ project: this.projects[0]?.id ?? "" }));
         return;
@@ -435,6 +891,20 @@
       }
       this.root.replaceChildren(body, this.toast);
       this.arrive(view.record ? "record" : "list");
+    }
+
+    // The sealed source a project key belongs to: `private` itself, or `private/<project id>`.
+    private sealedSourceOf(project: string): ProjectEntry | undefined {
+      const id = project.split("/")[0];
+      return this.projects.find((p) => p.sealed && p.id === id);
+    }
+
+    private entryFor(project: string): ProjectEntry | undefined {
+      if (!project.includes("/")) {
+        return this.projects.find((p) => p.id === project);
+      }
+      const id = project.slice(project.indexOf("/") + 1);
+      return this.sealedSourceOf(project) && this.vault.has(id) ? { id: project, label: this.vault.name(id) } : undefined;
     }
 
     // After a route change: a screen reader hears the new heading, a sighted person sees the top.
@@ -544,17 +1014,271 @@
       );
     }
 
+
+
+    // ---- the library of public ledgers, and the key that opens the rest of each -------------------
+    private sealedSource(): ProjectEntry | undefined {
+      return this.projects.find((p) => p.sealed);
+    }
+
+    // On a sealed project: the way back to what the public sees of it.
+    private publicVersion(ledger: Ledger): HTMLElement | null {
+      const open = this.projects.find((p) => p.project_id === ledger.manifest.project.project_id);
+      return open ? el("a", { class: "lx-pill", href: `#/${open.id}` }, icon("eye"), " See what the public sees") : null;
+    }
+
+    // On a public ledger: the key, if you have it, opens what the policy withheld, in place.
+    private unlockOffer(ledger: Ledger): HTMLElement | null {
+      const source = this.sealedSource();
+      if (!source || ledger.sealed || ledger.manifest.withheld.events === 0) {
+        return null;
+      }
+      const target = `#/${source.id}/${ledger.manifest.project.project_id}`;
+      const panel = el("div", { class: "lx-offer-panel", hidden: true }, this.keyPanel(source, () => void (window.location.hash = target)));
+      const toggle = el(
+        "button",
+        {
+          type: "button",
+          class: "lx-button lx-button-quiet",
+          "aria-expanded": "false",
+          onclick: () => {
+            if (this.vault.unlocked) {
+              window.location.hash = target;
+              return;
+            }
+            const showing = panel.hasAttribute("hidden");
+            panel.toggleAttribute("hidden", !showing);
+            toggle.setAttribute("aria-expanded", String(showing));
+            if (showing) panel.querySelector("input")?.focus();
+          },
+        },
+        icon("lock"),
+        `Have the key? Unlock the ${plural(ledger.manifest.withheld.events, "withheld event", "withheld events")}`,
+      );
+      return el("div", { class: "lx-offer" }, toggle, panel);
+    }
+
+    // The key field, shared by the unlock screen and the offer on a public ledger.
+    private keyPanel(source: ProjectEntry, opened: () => void): HTMLElement {
+      const url = source.sealed?.url ?? "";
+      const field = el("input", { type: "password", autocomplete: "off", spellcheck: "false", placeholder: "Paste your state key", "aria-label": "State key" });
+      const button = el("button", { type: "submit", class: "lx-button" }, icon("lock"), "Unlock");
+      const message = el("p", { class: "lx-error", role: "alert", hidden: true });
+      const fail = (text: string): void => {
+        message.textContent = text;
+        message.hidden = false;
+        button.disabled = false;
+        button.replaceChildren(icon("lock"), "Unlock");
+        field.focus();
+      };
+      const submit = (event: Event): void => {
+        event.preventDefault();
+        const typed = field.value.trim();
+        if (!typed) {
+          fail("Paste your state key first.");
+          return;
+        }
+        button.disabled = true;
+        button.textContent = "Opening…";
+        message.hidden = true;
+        this.vault.open(url, typed).then(
+          () => {
+            field.value = "";
+            opened();
+          },
+          (error: unknown) => fail(error instanceof Error ? error.message : String(error)),
+        );
+      };
+      return el(
+        "div",
+        { class: "lx-keypanel" },
+        el("form", { class: "lx-keyform", onsubmit: submit }, field, button),
+        message,
+        el("p", { class: "lx-note" }, "Your key is on the machine that holds the database: ", el("code", {}, "vibey state key --show"), ". It stays in this tab's memory and is never sent anywhere."),
+      );
+    }
+
+    private home(): HTMLElement {
+      const ledgers = this.projects.filter((p) => p.project_id && p.stats);
+      const sample = this.projects.filter((p) => p.sample);
+      const sealed = this.sealedSource();
+      const records = ledgers.reduce((n, p) => n + (p.stats?.records ?? 0), 0);
+      const hidden = ledgers.reduce((n, p) => n + (p.stats?.withheld ?? 0), 0);
+      const tbody = el("tbody", {});
+      const count = el("p", { class: "lx-result-line", "aria-live": "polite" });
+      const show = (needle: string): void => {
+        const q = needle.trim().toLowerCase();
+        const rows = [...ledgers, ...sample].filter((p) => !q || (p.label ?? p.id).toLowerCase().includes(q) || (p.stats?.phase ?? "").includes(q));
+        tbody.replaceChildren(
+          ...rows.map((p) => {
+            const link = `#/${p.id}`;
+            return el(
+              "tr",
+              { class: "lx-row", onclick: (event: Event) => ((event.target as HTMLElement).closest("a") ? undefined : (window.location.hash = link)) },
+              el("td", { class: "lx-what", "data-label": "Project" }, el("a", { href: link }, p.label ?? p.id), p.sample ? el("span", { class: "lx-badge" }, "sample") : null),
+              el("td", { "data-label": "Phase" }, el("span", { class: "lx-phase-name" }, (p.stats?.phase ?? "sample").replace(/_/g, " "))),
+              el("td", { class: "lx-num", "data-label": "Public records" }, p.stats ? number(p.stats.records) : "—"),
+              el("td", { class: "lx-num", "data-label": "Withheld" }, p.stats ? number(p.stats.withheld) : "—"),
+              el("td", { class: "lx-when", "data-label": "Last changed" }, p.stats ? el("time", { datetime: p.stats.updated, title: utc(p.stats.updated) }, relative(p.stats.updated)) : "—"),
+            );
+          }),
+        );
+        count.textContent = rows.length === 0 ? "No project matches." : `Showing ${plural(rows.length, "project", "projects")}${q ? ` for “${needle.trim()}”` : ", most recently changed first"}`;
+      };
+      const input = el("input", { id: "lx-q", type: "search", placeholder: "Filter projects by name or phase", autocomplete: "off", spellcheck: "false", oninput: () => show(input.value) });
+      show("");
+      return el(
+        "div",
+        { class: "lx-page" },
+        el(
+          "section",
+          { class: "lx-hero", "aria-labelledby": "lx-title" },
+          el("p", { class: "lx-eyebrow" }, icon("lock"), "Open ledgers · append-only · checkable"),
+          el("h2", { id: "lx-title", class: "lx-title", "data-lx-heading": true }, "Every project, in the open"),
+          el(
+            "p",
+            { class: "lx-lede" },
+            ledgers.length > 0
+              ? `${plural(ledgers.length, "project", "projects")} and ${plural(records, "public record", "public records")}. ${number(hidden)} more events are withheld by policy and counted, never silently dropped.`
+              : "No project has published its ledger here yet.",
+          ),
+          el("div", { class: "lx-search" }, icon("search"), el("label", { for: "lx-q", class: "lx-sr" }, "Filter projects"), input),
+          sealed ? el("p", { class: "lx-try" }, icon("lock"), el("span", {}, " Hold the key? "), el("a", { class: "lx-chip", href: `#/${sealed.id}` }, "Open the whole encrypted ledger")) : null,
+        ),
+        el(
+          "section",
+          { class: "lx-card lx-records", "aria-labelledby": "lx-projects-title" },
+          el("div", { class: "lx-card-head" }, el("h2", { id: "lx-projects-title" }, "Projects")),
+          count,
+          el("div", { class: "lx-scroll" }, el("table", { class: "lx-table" }, el("caption", { class: "lx-sr" }, "Projects with a public ledger"), el("thead", {}, el("tr", {}, ["Project", "Phase", "Public records", "Withheld", "Last changed"].map((h) => el("th", { scope: "col" }, h)))), tbody)),
+        ),
+      );
+    }
+
+    // ---- the sealed copy: a notice, the honesty card, unlock, and choosing a project -------------
+    private privateNotice(entry: ProjectEntry): HTMLElement {
+      const source = this.sealedSourceOf(entry.id);
+      return el(
+        "p",
+        { class: "lx-sample lx-private", role: "note" },
+        icon("lock"),
+        el(
+          "span",
+          {},
+          el("strong", {}, "Private view. "),
+          "This is the whole ledger, decrypted here with your key, so nothing is hidden from you. Do not screen-share it or send its links to anyone without the key. ",
+          source ? el("a", { href: `#/${source.id}` }, "All private projects") : null,
+          " · ",
+          el("button", { type: "button", class: "lx-link", onclick: () => this.relock(source) }, "Lock"),
+        ),
+      );
+    }
+
+    private relock(source: ProjectEntry | undefined): void {
+      this.vault.lock();
+      window.location.hash = `#/${source?.id ?? ""}`;
+      void this.route();
+    }
+
+    private privateHonesty(ledger: Ledger): HTMLElement {
+      const { manifest } = ledger;
+      const status = el("span", { class: "lx-status lx-pending" }, el("span", { class: "lx-spin", "aria-hidden": "true" }), "Checking the hash chain in your browser…");
+      const head = el("code", {}, "…");
+      void this.vault.chain(manifest.project.project_id).then((result) => {
+        head.textContent = short(result.head);
+        head.title = result.head;
+        status.replaceWith(
+          el(
+            "span",
+            { class: `lx-status ${result.ok ? "lx-ok" : "lx-bad"}`, role: result.ok ? "status" : "alert" },
+            icon(result.ok ? "shield" : "alert"),
+            result.ok ? `Chain recomputed here: ${plural(result.events, "link", "links")}, no gaps, every digest matches` : (result.problem ?? "The hash chain does not check out"),
+          ),
+        );
+      });
+      return el(
+        "section",
+        { class: "lx-card lx-honesty", "aria-labelledby": "lx-honesty-title" },
+        el("div", { class: "lx-card-head" }, el("h2", { id: "lx-honesty-title" }, "What you are looking at"), status),
+        el("div", { class: "lx-bar", role: "img", "aria-label": `Every one of ${number(manifest.seq_range.events)} events is shown` }, el("span", { class: "lx-seg lx-seg-public", style: "flex-grow:1" })),
+        el("ul", { class: "lx-legend" }, el("li", {}, el("span", { class: "lx-swatch lx-seg-public", "aria-hidden": "true" }), el("strong", {}, number(manifest.seq_range.events)), " Every event", el("span", { class: "lx-why" }, " — the complete ledger, nothing hidden or removed. You can see it because you hold the key."))),
+        el("p", { class: "lx-proof" }, "This copy was downloaded sealed from GitHub and opened in this tab; nothing you do here is sent anywhere. The chain head below is recomputed from the events on screen: ", el("span", { class: "lx-hash" }, head)),
+      );
+    }
+
+    private unlock(source: ProjectEntry): HTMLElement {
+      return el(
+        "div",
+        { class: "lx-page" },
+        el(
+          "section",
+          { class: "lx-card lx-unlock", "aria-labelledby": "lx-unlock-title" },
+          icon("lock"),
+          el("h2", { id: "lx-unlock-title", "data-lx-heading": true }, "Open the encrypted ledger"),
+          el("p", {}, "This is the whole vibey database, sealed with AES-256 and kept on GitHub. Your browser downloads the sealed file and opens it here with your key. The key stays in this tab's memory, and nothing you type is sent anywhere."),
+          this.keyPanel(source, () => void this.route()),
+          el("p", { class: "lx-note" }, "Anyone can download the sealed file; only the key opens it. Everyone else can still read each project's ", el("a", { href: "#/" }, "public, scrubbed ledger"), "."),
+        ),
+      );
+    }
+
+    private chooser(source: ProjectEntry): HTMLElement {
+      const all = this.vault.listing();
+      const total = all.reduce((sum, p) => sum + p.events, 0);
+      const tbody = el("tbody", {});
+      const count = el("p", { class: "lx-result-line", "aria-live": "polite" });
+      const show = (needle: string): void => {
+        const q = needle.trim().toLowerCase();
+        const shown = all.filter((p) => !q || p.name.toLowerCase().includes(q) || p.phase.includes(q) || p.id.startsWith(q));
+        tbody.replaceChildren(
+          ...shown.map((p) => {
+            const link = `#/${source.id}/${p.id}`;
+            return el(
+              "tr",
+              { class: "lx-row", onclick: (event: Event) => ((event.target as HTMLElement).closest("a") ? undefined : (window.location.hash = link)) },
+              el("td", { class: "lx-what", "data-label": "Project" }, el("a", { href: link }, p.name)),
+              el("td", { "data-label": "Phase" }, el("span", { class: "lx-phase-name" }, p.phase.replace(/_/g, " "))),
+              el("td", { class: "lx-num", "data-label": "Events" }, number(p.events)),
+              el("td", { class: "lx-when", "data-label": "Last changed" }, el("time", { datetime: p.updated, title: utc(p.updated) }, relative(p.updated))),
+            );
+          }),
+        );
+        count.textContent = shown.length === 0 ? "No project matches." : `Showing ${plural(shown.length, "project", "projects")}${q ? ` for “${needle.trim()}”` : ", most recently changed first"}`;
+      };
+      const input = el("input", { id: "lx-q", type: "search", placeholder: "Filter projects by name or phase", autocomplete: "off", spellcheck: "false", oninput: () => show(input.value) });
+      show("");
+      return el(
+        "div",
+        { class: "lx-page" },
+        el(
+          "section",
+          { class: "lx-hero", "aria-labelledby": "lx-title" },
+          this.privateNotice({ id: `${source.id}/`, label: "" }),
+          el("p", { class: "lx-eyebrow" }, icon("lock"), "Private ledger · decrypted in your browser"),
+          el("h2", { id: "lx-title", class: "lx-title", "data-lx-heading": true }, "Every project"),
+          el("p", { class: "lx-lede" }, `${plural(all.length, "project", "projects")} and ${plural(total, "event", "events")}, all of it from the sealed copy on GitHub.`),
+          el("div", { class: "lx-search" }, icon("search"), el("label", { for: "lx-q", class: "lx-sr" }, "Filter projects"), input),
+        ),
+        el(
+          "section",
+          { class: "lx-card lx-records", "aria-labelledby": "lx-projects-title" },
+          el("div", { class: "lx-card-head" }, el("h2", { id: "lx-projects-title" }, "Projects")),
+          count,
+          el("div", { class: "lx-scroll" }, el("table", { class: "lx-table" }, el("caption", { class: "lx-sr" }, "Projects in the sealed copy"), el("thead", {}, el("tr", {}, ["Project", "Phase", "Events", "Last changed"].map((h) => el("th", { scope: "col" }, h)))), tbody)),
+        ),
+      );
+    }
+
     // ---- the list view: hero, honesty bar, phase strip, filters, rows -----------------------
     private listView(entry: ProjectEntry, ledger: Ledger, view: View): HTMLElement {
-      const { manifest } = ledger;
       return el(
         "div",
         { class: "lx-page" },
         this.hero(entry, ledger, view),
-        this.honesty(manifest),
+        this.honesty(ledger),
         this.tiles(ledger),
         this.records(entry, ledger, view),
-        this.footnote(manifest),
+        this.footnote(ledger),
       );
     }
 
@@ -583,13 +1307,7 @@
       const latest = ledger.records[0];
       const picker =
         this.projects.length > 1
-          ? el(
-              "div",
-              { class: "lx-projects", role: "group", "aria-label": "Published ledgers" },
-              this.projects.map((p) =>
-                el("a", { class: "lx-pill", href: this.href({ project: p.id }), "aria-current": p.id === entry.id ? "page" : null }, p.label?.replace(/\s*\(.*\)$/, "") ?? p.id),
-              ),
-            )
+          ? el("div", { class: "lx-projects" }, el("a", { class: "lx-pill", href: "#/" }, icon("arrowLeft"), " All projects"), ledger.sealed ? this.publicVersion(ledger) : null)
           : null;
       return el(
         "section",
@@ -597,13 +1315,16 @@
         entry.sample
           ? el("p", { class: "lx-sample", role: "note" }, icon("eye"), el("span", {}, el("strong", {}, "Sample data. "), "This ledger is invented to show how the explorer reads a project; it describes no real project."))
           : null,
-        el("p", { class: "lx-eyebrow" }, icon("lock"), "Open ledger · append-only · checkable"),
+        ledger.sealed ? this.privateNotice(entry) : null,
+        el("p", { class: "lx-eyebrow" }, icon("lock"), ledger.sealed ? "Private ledger · decrypted in your browser" : "Open ledger · append-only · checkable"),
         el("h2", { id: "lx-title", class: "lx-title", "data-lx-heading": true }, manifest.project.name),
         el(
           "p",
           { class: "lx-lede" },
-          `${plural(manifest.published.records, "record", "records")} of ${number(manifest.seq_range.events)} events are public. `,
-          "Open any one, read what happened in plain words, and check it yourself.",
+          ledger.sealed
+            ? `${plural(manifest.seq_range.events, "event", "events")}: the complete ledger, with nothing removed. It is on screen because you hold the key.`
+            : `${plural(manifest.published.records, "record", "records")} of ${number(manifest.seq_range.events)} events are public. `,
+          ledger.sealed ? null : "Open any one, read what happened in plain words, and check it yourself.",
         ),
         picker,
         el("form", { class: "lx-search", role: "search", onsubmit: submit }, icon("search"), el("label", { for: "lx-q", class: "lx-sr" }, "Search this ledger"), input, el("kbd", { class: "lx-key", "aria-hidden": "true" }, "/"), el("button", { type: "submit" }, "Search")),
@@ -618,7 +1339,11 @@
     }
 
     // What was published and what was not, as one bar: the honesty of the ledger at a glance.
-    private honesty(manifest: Manifest): HTMLElement {
+    private honesty(ledger: Ledger): HTMLElement {
+      if (ledger.sealed) {
+        return this.privateHonesty(ledger);
+      }
+      const manifest = ledger.manifest;
       const total = Math.max(1, manifest.seq_range.events);
       const segments: Array<{ label: string; count: number; tone: string; why: string }> = [
         { label: "Public", count: manifest.published.records, tone: "public", why: "Published and open to everyone on this page." },
@@ -644,6 +1369,7 @@
           "The chain head covers every event, the hidden ones included, so anyone holding the full ledger can recompute it and confirm this is a true slice of it. ",
           el("span", { class: "lx-hash" }, el("code", { title: chain.head }, short(chain.head)), this.copyButton(chain.head, "chain head")),
         ),
+        this.unlockOffer(ledger),
       );
     }
 
@@ -658,7 +1384,9 @@
         "dl",
         { class: "lx-tiles" },
         tile("Public records", number(manifest.published.records), `sequence #${manifest.published.first_seq ?? "—"} to #${manifest.published.last_seq ?? "—"}`, "eye"),
-        tile("Kept private", number(manifest.withheld.events), manifest.withheld.events ? "counted, never silently dropped" : "nothing withheld", "lock"),
+        ledger.sealed
+          ? tile("Removed from view", "0", "nothing: this is the full ledger", "lock")
+          : tile("Kept private", number(manifest.withheld.events), manifest.withheld.events ? "counted, never silently dropped" : "nothing withheld", "lock"),
         tile("Time covered", first && last ? span(first.time, last.time) : "—", first ? `from ${utc(first.time).slice(0, 10)}` : "", "clock"),
         tile("Who acted", number(actors.size), [...actors].slice(0, 3).join(", ") + (actors.size > 3 ? "…" : ""), "users"),
       );
@@ -817,8 +1545,16 @@
       );
     }
 
-    private footnote(manifest: Manifest): HTMLElement {
-      const w = manifest.withheld;
+    private footnote(ledger: Ledger): HTMLElement {
+      if (ledger.sealed) {
+        return el(
+          "section",
+          { class: "lx-foot" },
+          el("p", {}, "Nothing was removed from this view: it is the complete ledger, decrypted in your browser and held only in this tab's memory. Close the tab, or press Lock, and it is gone."),
+          el("p", { class: "lx-keys" }, el("kbd", {}, "/"), " search"),
+        );
+      }
+      const w = ledger.manifest.withheld;
       return el(
         "section",
         { class: "lx-foot" },
@@ -904,6 +1640,7 @@
       const render = (v: unknown): Child => {
         if (v === null || v === undefined) return el("span", { class: "lx-dim" }, "none");
         if (typeof v === "boolean") return el("span", { class: `lx-tag ${v ? "lx-ok" : "lx-bad"}` }, v ? "yes" : "no");
+        if (v instanceof Num) return v.text;
         if (typeof v === "number") return String(v);
         if (typeof v === "string") return el("span", { class: "lx-text" }, v);
         if (Array.isArray(v)) return v.length === 0 ? el("span", { class: "lx-dim" }, "empty") : el("ul", { class: "lx-list" }, v.map((x) => el("li", {}, render(x))));
@@ -937,6 +1674,7 @@
     document.body.classList.add("lx-wide");
     const base = (mount.dataset.base ?? "data/").replace(/\/?$/, "/");
     const guide = mount.dataset.guide ?? "../guides/ledger-publication/";
-    void new LedgerExplorer(mount, new LedgerStore(base), guide).start();
+    const vault = new SealedVault();
+    void new LedgerExplorer(mount, new LedgerStore(base, vault), vault, guide).start();
   }
 })();

@@ -1,0 +1,43 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "0806067a39216edfe887448b2fa3bd8623db2a54974989d98b295d020d6e65fc",
+    "event_id": "18b3759c-1bb0-49fe-b505-7137ccc4f335",
+    "seq": 21
+  },
+  "previous": {
+    "digest": "dca876473ca03cbe7aeff850f97e82522edca5364a43a9623d2726056e483961",
+    "event_id": "fda685d7-42b9-492c-9a95-9484010e003b",
+    "seq": 19
+  },
+  "project_id": "26f89c38-c86b-4ddf-be75-c579a118e40e",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "6e279756-eeab-4b35-b27e-d587eda538a9",
+    "cycle": 1,
+    "digest": "6c742ebbd005893b7cdcdf477bf768e083fd9bee827eafaa760985ec524443e7",
+    "engine_id": "claudeloop",
+    "event_id": "476b85f2-569d-469b-bde3-175e51f2f5c2",
+    "job_id": "2bdd2b5e-b4f1-4004-9dbf-78d267fea803",
+    "kind": "QuestionAsked",
+    "payload": {
+      "blocking": false,
+      "cycle": 1,
+      "default": "Yes - include -h/--help for usage and --version for version info",
+      "item_id": "standard_flags",
+      "stage": "laddering",
+      "text": "Should the tool support standard CLI flags like --help and --version?"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-19T12:31:57.716733+00:00",
+    "project_id": "26f89c38-c86b-4ddf-be75-c579a118e40e",
+    "provenance": "agent",
+    "seq": 20
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

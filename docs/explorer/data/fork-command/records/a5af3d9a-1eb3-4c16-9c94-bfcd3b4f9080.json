@@ -1,0 +1,43 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "c5ea297f02916d2769f6c5de339e3b9b06c3d35ba792574d2edf2389d9c80a78",
+    "event_id": "457cd760-d55a-4a9d-8e76-6d6669f93d41",
+    "seq": 5
+  },
+  "previous": {
+    "digest": "dc8d5792d3c11adf43e90333ac7dab79a33c04efbed8fa027c5bd73705b5404d",
+    "event_id": "5b0ca363-fe23-4b43-a3ac-17771f094816",
+    "seq": 3
+  },
+  "project_id": "ab0b06f9-55a4-4b47-ac08-254e7fdd9036",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "48894f01-a0e8-4d79-b036-335a2ea2bd08",
+    "cycle": 1,
+    "digest": "a105cb837818e331e866515985a18ef61c6f9ecedf37e3bd21af482a0cb7a383",
+    "engine_id": "claudeloop",
+    "event_id": "a5af3d9a-1eb3-4c16-9c94-bfcd3b4f9080",
+    "job_id": "48f9ef01-8b95-4709-adde-ed0ece390f8d",
+    "kind": "QuestionAsked",
+    "payload": {
+      "blocking": false,
+      "cycle": 1,
+      "default": "None beyond existing architectural patterns",
+      "item_id": "constraints",
+      "stage": "context_free",
+      "text": "Are there any technical constraints, deadlines, or specific requirements?"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-22T02:43:32.049557+00:00",
+    "project_id": "ab0b06f9-55a4-4b47-ac08-254e7fdd9036",
+    "provenance": "agent",
+    "seq": 4
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

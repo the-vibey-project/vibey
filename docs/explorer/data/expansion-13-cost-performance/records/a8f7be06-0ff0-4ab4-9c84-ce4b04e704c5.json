@@ -1,0 +1,43 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "389da02784678e4968c6ce637a42507287d972d0849ca3499faad7b35206b233",
+    "event_id": "221011d7-5022-4ce9-a945-a31e795d8603",
+    "seq": 21
+  },
+  "previous": {
+    "digest": "5a27359a40700569c2b6dad355ced9184593baf94efe5a71e8b7765002248428",
+    "event_id": "53a59117-a17e-4322-9938-1c7796c70cc7",
+    "seq": 19
+  },
+  "project_id": "a1d6b837-46f3-40c0-b6a2-8b3babb7fe15",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "c88215bb-4827-4fef-8b39-b6ef9fefbae3",
+    "cycle": 1,
+    "digest": "c3e2beadf9fa17062ed2287cd4290536c46ac75409f99f4fd16e75c80124d564",
+    "engine_id": "claudeloop",
+    "event_id": "a8f7be06-0ff0-4ab4-9c84-ce4b04e704c5",
+    "job_id": "dd8513f6-0d76-49a5-8bdc-75167dea5385",
+    "kind": "QuestionAsked",
+    "payload": {
+      "blocking": false,
+      "cycle": 1,
+      "default": "Measure on this machine (the spec requirement) plus CI for documentation; local measurement is authoritative",
+      "item_id": "measurement_baseline",
+      "stage": "laddering",
+      "text": "Should before/after measurements be captured on this specific machine only, or also in CI to establish a portable baseline?"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-20T20:43:08.801656+00:00",
+    "project_id": "a1d6b837-46f3-40c0-b6a2-8b3babb7fe15",
+    "provenance": "agent",
+    "seq": 20
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

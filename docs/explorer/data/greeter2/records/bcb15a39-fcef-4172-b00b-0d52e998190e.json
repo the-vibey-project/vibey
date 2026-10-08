@@ -1,0 +1,39 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "ec560d6f8ae5a3f4264cf322d00798cec33e0fc8b480cb6398105e758740957f",
+    "event_id": "834a6ef1-3c9b-4f71-9f97-227cd0ff06ae",
+    "seq": 717
+  },
+  "previous": {
+    "digest": "b37180f06d81c5276b861bdf5e6ab58b226bba4d8a5a4b72530599c797b6b021",
+    "event_id": "a1c65190-a8a4-4e92-a0f7-79ee43e1f288",
+    "seq": 715
+  },
+  "project_id": "8f254b4c-df0a-4056-8937-6eba30efcfa6",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "1adab76b-ecae-4064-adbb-69b610d8f97c",
+    "cycle": 1,
+    "digest": "2aa8c852bc8391c8fb667c3f8907a072b62e72d40d38dce89ba7383ed3ed3723",
+    "engine_id": null,
+    "event_id": "bcb15a39-fcef-4172-b00b-0d52e998190e",
+    "job_id": null,
+    "kind": "FindingResolved",
+    "payload": {
+      "finding_id": "f_integrate_time-boundaries_e0b55e67",
+      "resolution": "superseded by operator: these repair rounds ran before the bounded, merge-instructed repair loop (PR #52) existed and could never converge; the item retries under the fixed loop"
+    },
+    "phase": "build",
+    "produced_at": "2026-08-19T21:46:33.698479+00:00",
+    "project_id": "8f254b4c-df0a-4056-8937-6eba30efcfa6",
+    "provenance": "trusted",
+    "seq": 716
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

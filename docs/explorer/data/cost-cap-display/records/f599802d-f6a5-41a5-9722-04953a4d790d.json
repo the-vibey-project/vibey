@@ -1,0 +1,43 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "2e83184cf52540238877d54cb54410383222eea7867d9ff6b279c1e9106c99f6",
+    "event_id": "1a101dcf-dd7d-4245-a9e1-5a41d7381ebd",
+    "seq": 10
+  },
+  "previous": {
+    "digest": "a7697ebb76eb50a4f7d2962bef6c138d624e892d226ab822425a2c33d7c54f4d",
+    "event_id": "330934a7-788e-484f-a548-49d0a1ea64bf",
+    "seq": 8
+  },
+  "project_id": "b43d1fcb-fb7b-42d6-9f80-220292c73389",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "e1d587bc-ca14-4cf7-9f50-3e8411ce8dde",
+    "cycle": 1,
+    "digest": "8be33c1cd3bc189597fb969029f55e808bfe05e454f31b90799969640b3ef2bb",
+    "engine_id": "claudeloop",
+    "event_id": "f599802d-f6a5-41a5-9722-04953a4d790d",
+    "job_id": "64ea0fea-cd4f-4b3b-bf19-112c18a7c58d",
+    "kind": "QuestionAsked",
+    "payload": {
+      "blocking": true,
+      "cycle": 1,
+      "default": "When a job parks at budget_exhausted gate and operator needs to decide whether to grant more budget",
+      "item_id": "user_trigger",
+      "stage": "job_story",
+      "text": "When/why does an operator invoke `vibey cost` \u2014 what event or decision prompts them to check the budget display?"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-22T02:57:14.953692+00:00",
+    "project_id": "b43d1fcb-fb7b-42d6-9f80-220292c73389",
+    "provenance": "agent",
+    "seq": 9
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

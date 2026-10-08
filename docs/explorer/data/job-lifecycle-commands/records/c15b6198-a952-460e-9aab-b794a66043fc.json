@@ -1,0 +1,39 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "39fdd9bd369f5cff8735d7fa22ba14ac1be5cbfe8ee4822fe01ef61d3e36eca1",
+    "event_id": "8c99d394-465c-4d5f-8124-a60f868d673e",
+    "seq": 24
+  },
+  "previous": {
+    "digest": "22ad01501fe69f33324c2e52f9df29db2f174d8624e21c592d5dc50fcb975014",
+    "event_id": "d34e1365-0e99-4f7d-9162-7f03bb772b19",
+    "seq": 22
+  },
+  "project_id": "2f6a93b6-2d73-4aff-bc94-16539841133f",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "8fd6719e-e91a-419f-a97a-e732ea950971",
+    "cycle": 1,
+    "digest": "a2363994919fe0b89df5f127b75392daeea246c942465d243dc058f03c653475",
+    "engine_id": "claudeloop",
+    "event_id": "c15b6198-a952-460e-9aab-b794a66043fc",
+    "job_id": "334db377-8cb0-4a72-9cc0-78b45fc9bb38",
+    "kind": "AnswerGiven",
+    "payload": {
+      "answer": "All commands succeed quietly as no-ops: stopping a CANCELLED job, winding back to current seq, continuing an already READY job, restarting an already CANCELLED job all return success without error or double-action",
+      "item_id": "idempotency_handling"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-22T03:41:56.495111+00:00",
+    "project_id": "2f6a93b6-2d73-4aff-bc94-16539841133f",
+    "provenance": "trusted",
+    "seq": 23
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

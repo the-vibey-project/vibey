@@ -1,0 +1,43 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "11db21a8aefdcd471a669b4e166439c12138be8c8cc7a2a7b8ce93ac8181e406",
+    "event_id": "a7e5f48a-0633-46c6-a428-5069768b8730",
+    "seq": 4
+  },
+  "previous": {
+    "digest": "9b7c166899b94a2fc356ac123745866564a1fcb7daec55f6fe5aa71e8c68b97d",
+    "event_id": "90556d5c-4ae3-4991-8ab9-3f54af2a793f",
+    "seq": 2
+  },
+  "project_id": "a1d6b837-46f3-40c0-b6a2-8b3babb7fe15",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "152b57e7-f016-4f2c-b9c3-6214a2821374",
+    "cycle": 1,
+    "digest": "4a5fae83d47b201b074fe724de143bfb1af3db34e8b3eec9f5f7762f1349914f",
+    "engine_id": "claudeloop",
+    "event_id": "2613bd1a-cb45-4e42-9b11-d9c3be687f63",
+    "job_id": "dd8513f6-0d76-49a5-8bdc-75167dea5385",
+    "kind": "QuestionAsked",
+    "payload": {
+      "blocking": false,
+      "cycle": 1,
+      "default": "Feature works as intended, passes all tests, and follows project quality gates",
+      "item_id": "success_criteria",
+      "stage": "context_free",
+      "text": "How will you know this change is complete and successful?"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-20T20:39:40.061146+00:00",
+    "project_id": "a1d6b837-46f3-40c0-b6a2-8b3babb7fe15",
+    "provenance": "agent",
+    "seq": 3
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

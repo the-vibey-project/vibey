@@ -1,0 +1,39 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "1205317a077613f9d92a24165677d9162b23e6c7d5edabaf373e9155bb44c99b",
+    "event_id": "5c57400a-01c4-4bda-9f2b-97dde11ff453",
+    "seq": 13
+  },
+  "previous": {
+    "digest": "f56457b5ccacb4ae98d94de5bf772f1c33367ca1f8d3aa24c0806913643e83af",
+    "event_id": "b2531875-6b33-47cf-b547-f86637eb8e2e",
+    "seq": 11
+  },
+  "project_id": "e631c00a-e1a1-4ed4-b99a-0fa2d388d240",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "3765a192-2f05-4117-a742-a55fc209dcea",
+    "cycle": 1,
+    "digest": "6f1aafb0b628ebc9b8f3da226e592e6598ef3e4cd6e910306904f689b4a00c7f",
+    "engine_id": "claudeloop",
+    "event_id": "8be5a7cc-7946-4820-af6f-bb2b122bd796",
+    "job_id": "d73f236e-a7b4-4748-b075-3900a75af324",
+    "kind": "AnswerGiven",
+    "payload": {
+      "answer": "Architectural hygiene immediately before the codebase grows. Runbooks 16-21 add an operator, a shared-library extraction, two new products and several new modules, and every one of them is a chance to land outside the floors. Closing the gap after that expansion is strictly more work than closing it now. There is also a live example of why uncovered code hides defects: `vibey cost` reads its caps from config['budget']['max_dollars_per_cycle'], a key nothing writes, so it silently displays hardcoded $40/$250 defaults instead of the project's real configured cap. Fixing that is OUT OF SCOPE here -- it is named only as evidence that unexercised code drifts.",
+      "item_id": "motivating_scenario"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-22T02:37:45.506643+00:00",
+    "project_id": "e631c00a-e1a1-4ed4-b99a-0fa2d388d240",
+    "provenance": "trusted",
+    "seq": 12
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

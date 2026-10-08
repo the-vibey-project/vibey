@@ -1,0 +1,39 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "1df855087d7f97fbd039546ab5de06bda6f462b7a105eb524ea843b31d2a4063",
+    "event_id": "6c1bfd86-3ad3-4841-a52a-9da18bc18e17",
+    "seq": 16
+  },
+  "previous": {
+    "digest": "78a898bd13b0e53886f1ee231eb110d79f03298ddcb452946e87569adb9440df",
+    "event_id": "ebafa699-04a9-48a2-bfb9-f54868f7d9ab",
+    "seq": 14
+  },
+  "project_id": "d482c3e2-029e-4bb8-a9a1-de411816c6ae",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "3b6cc289-164d-48f7-be74-544ac3d09aff",
+    "cycle": 1,
+    "digest": "77bf0774cc7fd3e03f027149563a4b906d46999d04b4a89206243be2c48b358c",
+    "engine_id": "claudeloop",
+    "event_id": "19cfd38d-9f33-4e68-864d-49dac0ca1d39",
+    "job_id": "d2626f25-d550-454e-bacd-7a7e6c9b52cd",
+    "kind": "AnswerGiven",
+    "payload": {
+      "answer": "Implementing end-to-end encryption and compliance with GDPR standards.",
+      "item_id": "7"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-31T02:03:53.803955+00:00",
+    "project_id": "d482c3e2-029e-4bb8-a9a1-de411816c6ae",
+    "provenance": "trusted",
+    "seq": 15
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

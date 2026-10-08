@@ -1,0 +1,43 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "42896c391e2188294299c64be9171fe09db041e7476c9047a2d7a6c8ffacd736",
+    "event_id": "8f1e0dac-db51-47eb-a590-38119aebdd81",
+    "seq": 53
+  },
+  "previous": {
+    "digest": "ecdab7185d24ac8f00fd3c43d277d685ddab2bc95a165cda367f69395513c2cd",
+    "event_id": "3ced8f55-a797-4e88-9ae9-d2b664a8d97d",
+    "seq": 51
+  },
+  "project_id": "8ab823c9-89e4-4050-884c-9008c8b14ef8",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "9d0fc216-e6a6-4088-8ec9-17ee14d176a2",
+    "cycle": 1,
+    "digest": "d7cdde84ba99c4ab12811b4ef8d2095db91ec692811f967c56849f4f2fafdf03",
+    "engine_id": "claudeloop",
+    "event_id": "a0231f1a-8fce-4e43-a2df-4214932eded6",
+    "job_id": "705692f1-69a1-4cc2-ade7-8aa3d1407b67",
+    "kind": "QuestionAsked",
+    "payload": {
+      "blocking": false,
+      "cycle": 1,
+      "default": "Assumption that eventual consistency is acceptable for analytics \u2014 if business requires real-time accurate click counts for fraud detection or billing, current design fails",
+      "item_id": "invalid_assumption",
+      "stage": "premortem",
+      "text": "Which core assumption, if wrong, would require a complete redesign?"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-20T02:36:20.039415+00:00",
+    "project_id": "8ab823c9-89e4-4050-884c-9008c8b14ef8",
+    "provenance": "agent",
+    "seq": 52
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

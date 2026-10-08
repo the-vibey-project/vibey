@@ -1,0 +1,39 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "f7804847e607ed3d1a7c950d63b52f3a93a2fc4d416c34ecf319551f5d333445",
+    "event_id": "c8f35ee5-f5df-4029-9c84-6b4f3560007e",
+    "seq": 33
+  },
+  "previous": {
+    "digest": "e0b77212e060b71420377d4c2d217aa5879fde304577ea46ea06c6a0d31f6ac3",
+    "event_id": "9b4276bd-96e3-417f-a8f5-32e01b46f03f",
+    "seq": 31
+  },
+  "project_id": "5e76341f-ba5f-4272-8355-3df5d489bbcd",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "a5b7b0df-066d-4f37-b315-78dd64103cad",
+    "cycle": 1,
+    "digest": "245b5bdbb0f3de3a095c7bcfa173ca6d645f21b3b333e04453dea998f3aa139b",
+    "engine_id": "claudeloop",
+    "event_id": "db0a2163-8244-4917-8aac-d71232d134a7",
+    "job_id": "e58deb6b-5356-4a39-8acf-5dc898bba380",
+    "kind": "AnswerGiven",
+    "payload": {
+      "answer": "Show consistent greeting based on time-of-day; no randomization needed",
+      "item_id": "variation_rule"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-20T00:49:39.388688+00:00",
+    "project_id": "5e76341f-ba5f-4272-8355-3df5d489bbcd",
+    "provenance": "trusted",
+    "seq": 32
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

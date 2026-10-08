@@ -1,0 +1,40 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "7842517003d3188110f0f465954b0ecff589806cb8cb54badeb558d03aad338d",
+    "event_id": "03a2dcf8-00d1-4072-ab25-1059a754dd18",
+    "seq": 1776
+  },
+  "previous": {
+    "digest": "888aece64281d7166b3150b9be0e0a2b4b07fe0fd150ff710f1403d57401f4dd",
+    "event_id": "3cf6cbc3-2479-4619-83a9-3ad166a19cdc",
+    "seq": 1721
+  },
+  "project_id": "8ab823c9-89e4-4050-884c-9008c8b14ef8",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "4dfe4dbc-cbdd-427a-8388-16243242b006",
+    "cycle": 1,
+    "digest": "7fc91d7e0cce3b8e6f28e986517ed9856dab9a81d15ce13ab0870f43c4b798fe",
+    "engine_id": null,
+    "event_id": "292d4773-301c-4dfc-9065-f7f05a7cef59",
+    "job_id": "9a91fbbd-fe8c-4fe6-a865-8ddca00fde92",
+    "kind": "FindingRaised",
+    "payload": {
+      "finding_id": "f_integrate_malicious-url-check_d024f99b",
+      "severity": "high",
+      "text": "gate failed after merging 'malicious-url-check': python -m pytest tests/ -x: [path] StarletteDeprecationWarning: Using `httpx` with `starlette.testclient` is deprecated; install `httpx2` instead.\n  from starlette.testclient import TestClient as TestClient  # noqa\n[stdout] ===============================\nFAILURES\n============================================================\n__________________ tests/test_code_filtering.py::TestAPIEndpointCodeFiltering::test_api_generated_codes_are_safe __________________\nTraceback (most recent call last):\n  File \"[path]\", line 303, in _run_tests\n    func(instance, **call_args)\nTypeError: TestAPIEndpointCodeFiltering.test_api_generated_codes_are_safe() missing 1 required positional argument: 'client'\n\n__________________ tests/test_malicious_url_check.py::TestAcceptanceCriterion5::test_all_blocklisted_urls_rejected_at_creation[http://paypa1.com] __________________\nTraceback (most recent call last):\n  File \"[path]\", line 303, in _run_tests\n    func(instance, **call_args)\nTypeError: TestAcceptanceCriterion5.test_all_blocklisted_urls_rejected_at_creation() missing 1 required positional argument: 'client'\n\n__________________ tests/test_walking_skeleton.py::test_create_and_redirect_loop __________________\nTraceback (most recent call last):\n  File \"[path]\", line 315, in _run_tests\n    func(**call_args)\nTypeError: test_create_and_redirect_loop() missing 1 required positional argument: 'client'\n\n============================================================\n36 passed, 3 failed in 0.31s\n============================================================"
+    },
+    "phase": "build",
+    "produced_at": "2026-08-20T06:47:26.063594+00:00",
+    "project_id": "8ab823c9-89e4-4050-884c-9008c8b14ef8",
+    "provenance": "agent",
+    "seq": 1761
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 4
+  }
+}

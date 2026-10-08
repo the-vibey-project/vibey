@@ -1,0 +1,43 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "a75159b4d3c6be046b7d5301a0ee90ff3e696b034c2d47d45fd0d2641cb656d0",
+    "event_id": "4f30d7a1-12fc-4e0c-9c72-19cc79e4b4a6",
+    "seq": 10
+  },
+  "previous": {
+    "digest": "985c06d490be45ecae3272f879f8e4d65dc36fd394cecead4c3b71a075e6b585",
+    "event_id": "761ba9b7-4808-4b79-8904-c1e8538beb95",
+    "seq": 8
+  },
+  "project_id": "e631c00a-e1a1-4ed4-b99a-0fa2d388d240",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "2f682843-d38f-412a-97f3-7357240252b1",
+    "cycle": 1,
+    "digest": "8f62b5d7b610501fb4d0d3ce9936d7702311c5b8fea14bc336bae3f81cc575a3",
+    "engine_id": "claudeloop",
+    "event_id": "d94c2d82-49f1-4a5b-85af-c588352b40be",
+    "job_id": "d73f236e-a7b4-4748-b075-3900a75af324",
+    "kind": "QuestionAsked",
+    "payload": {
+      "blocking": false,
+      "cycle": 1,
+      "default": "Developers adding new modules and PR reviewers verifying coverage completeness",
+      "item_id": "primary_beneficiary",
+      "stage": "job_story",
+      "text": "Who primarily benefits from this coverage floor\u2014developers adding new modules, CI maintainers, PR reviewers, or new contributors onboarding?"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-22T02:36:36.812205+00:00",
+    "project_id": "e631c00a-e1a1-4ed4-b99a-0fa2d388d240",
+    "provenance": "agent",
+    "seq": 9
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

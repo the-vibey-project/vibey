@@ -1,0 +1,40 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "5332ea3f246acab935351834ba7d69b54e6dd0e458c169665ca91ea385a74fcd",
+    "event_id": "5717d51e-6ff0-45c9-b35b-462763f1d75a",
+    "seq": 332
+  },
+  "previous": {
+    "digest": "7842517003d3188110f0f465954b0ecff589806cb8cb54badeb558d03aad338d",
+    "event_id": "66f9bf41-51e9-4ec8-85a6-201c417adacc",
+    "seq": 203
+  },
+  "project_id": "44c06a64-c8ed-4153-96af-b49db29c39e3",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "c4e27f7a-7b1d-44ba-8cfc-01611da257ca",
+    "cycle": 1,
+    "digest": "d1192609495719e030760d2fe7f41d4a1079b5528ac40a74be4117d42d8c74e9",
+    "engine_id": null,
+    "event_id": "683db19b-2979-48d6-902a-2498598bb392",
+    "job_id": "f200b11d-022b-4c2e-ac76-336f91ea0768",
+    "kind": "FindingRaised",
+    "payload": {
+      "finding_id": "f_verify_ws_1eb76e82",
+      "severity": "high",
+      "text": "gate failed: uv run pytest tests/ -q -p no:cacheprovider --cov=vibey --cov-branch --cov-report=: arget(*self._args, **self._kwargs)\n  File \"[path]\", line 1424, in _do_waitpid\n    logger.warning(\"Loop %r that handles pid %r is closed\", loop, pid)\nMessage: 'Loop %r that handles pid %r is closed'\nArguments: (\u003c_UnixSelectorEventLoop running=False closed=True debug=False\u003e, 39698)\n--- Logging error ---\nTraceback (most recent call last):\n  File \"[path]\", line 1163, in emit\n    stream.write(msg + self.terminator)\nValueError: I/O operation on closed file.\nCall stack:\n  File \"[path]\", line 1032, in _bootstrap\n    self._bootstrap_inner()\n  File \"[path]\", line 1075, in _bootstrap_inner\n    self.run()\n  File \"[path]\", line 1012, in run\n    self._target(*self._args, **self._kwargs)\n  File \"[path]\", line 1424, in _do_waitpid\n    logger.warning(\"Loop %r that handles pid %r is closed\", loop, pid)\nMessage: 'Loop %r that handles pid %r is closed'\nArguments: (\u003c_UnixSelectorEventLoop running=False closed=True debug=False\u003e, 39698)\n[stdout] eback where the object was allocated.\n  See https://docs.pytest.org/en/stable/how-to/capture-warnings.html#resource-warnings for more info.\n\n-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html\n=========================== short test summary info ============================\nFAILED tests/infrastructure/test_cluster_preflight.py::test_migrations_report_applied_versions_after_bootstrap\nFAILED tests/infrastructure/db/test_ledger_repository.py::test_for_project_cycle_kinds_scales_with_constant_cycle_slice\nERROR tests/system/test_full_worker_faked.py::test_full_worker_drives_the_deploy_stage_set_to_done_deployed\nERROR tests/system/test_full_worker_faked.py::test_full_worker_survives_a_forced_wind_down_rotation\nERROR tests/infrastructure/db/test_ledger_repository.py::test_for_project_cycle_kinds_multi_cycle_boundary\nERROR tests/infrastructure/db/test_ledger_repository.py::test_for_project_cycle_kinds_concurrent_reads_with_active_writer\nERROR tests/infrastructure/db/test_migrator.py::test_apply_all_real_migrations_to_a_fresh_database\nERROR tests/infrastructure/db/test_migrator.py::test_applying_migrations_twice_is_a_no_op\nERROR tests/infrastructure/db/test_migrator.py::test_applying_migrations_over_seeded_fixture_data\nERROR tests/infrastructure/db/test_migrator.py::test_edited_migration_fails_the_checksum_guard\nERROR tests/cli/test_operational_commands.py::test_doctor_specific_engine - a...\n2 failed, 1438 passed, 1 xfailed, 3 warnings, 9 errors in 116.74s (0:01:56)"
+    },
+    "phase": "build",
+    "produced_at": "2026-08-22T04:42:23.019897+00:00",
+    "project_id": "44c06a64-c8ed-4153-96af-b49db29c39e3",
+    "provenance": "agent",
+    "seq": 228
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 6
+  }
+}

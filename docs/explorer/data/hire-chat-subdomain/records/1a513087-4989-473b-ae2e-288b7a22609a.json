@@ -1,0 +1,39 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "aaebf35b918ab0f9822c51a07e044f375abd616511272a63dec2a7015b0e17aa",
+    "event_id": "045a5187-c859-41e9-b336-34377ee219e4",
+    "seq": 2
+  },
+  "previous": null,
+  "project_id": "0ee95624-eec4-4e8e-9a14-6ad9a37dcff4",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "baba94ee-e9f9-4dd4-8b4f-b75d358f73cf",
+    "cycle": 1,
+    "digest": "8ada9dd770b9a7365a0229f2bf105be3943eff77a2552ce041c5e300048a2b0a",
+    "engine_id": "claudeloop",
+    "event_id": "1a513087-4989-473b-ae2e-288b7a22609a",
+    "job_id": "1343d0fd-bf3f-4739-8c21-cbf7693c673e",
+    "kind": "QuestionAsked",
+    "payload": {
+      "blocking": true,
+      "cycle": 1,
+      "default": "Enhanced real-time version of the existing 'Ask my r\u00e9sum\u00e9' bot for interactive conversations with site visitors",
+      "item_id": "chat_scope",
+      "stage": "context_free",
+      "text": "What is the primary purpose of this chat feature? (e.g., real-time visitor support, async Q\u0026A widget enhancement, community discussion)"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-20T20:07:23.889219+00:00",
+    "project_id": "0ee95624-eec4-4e8e-9a14-6ad9a37dcff4",
+    "provenance": "agent",
+    "seq": 1
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

@@ -1,0 +1,39 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "cb756a6bf7bdf8d7e1375a8aea41cbb6ceffb1a24df5ba9a58e79460c659a00f",
+    "event_id": "a1548cfb-1f75-4b2d-aef5-5900db48dd54",
+    "seq": 7
+  },
+  "previous": {
+    "digest": "07d463f18f359127d5cce74d5d53d05abfad7fc5f71a9cd43a7a00a64587ca78",
+    "event_id": "624f8282-d41f-4a67-bc31-950a48549993",
+    "seq": 5
+  },
+  "project_id": "5e76341f-ba5f-4272-8355-3df5d489bbcd",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "f200db4c-8fc0-4438-a160-899dfc6a1022",
+    "cycle": 1,
+    "digest": "0c9586754dbe8caf9a98d415b1407289f7e1a56705a50aa4935aa01f34a53779",
+    "engine_id": "claudeloop",
+    "event_id": "93fa5111-958c-4b8c-9809-092df3711cae",
+    "job_id": "e58deb6b-5356-4a39-8acf-5dc898bba380",
+    "kind": "AnswerGiven",
+    "payload": {
+      "answer": "End users interacting with the greeter application",
+      "item_id": "users"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-20T00:47:10.293193+00:00",
+    "project_id": "5e76341f-ba5f-4272-8355-3df5d489bbcd",
+    "provenance": "trusted",
+    "seq": 6
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

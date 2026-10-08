@@ -1,0 +1,43 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "394006f72b5b31a9162db8aae735e000e978a0894b0442bfc1790d2ec1f089ae",
+    "event_id": "ae93a8f1-ab34-405c-ac03-db6273f08371",
+    "seq": 11
+  },
+  "previous": {
+    "digest": "31151f418678c95642ea9c4f71754925ee8d9908d9cb99bfc4a23b8f7f98385f",
+    "event_id": "e8ff9667-58fd-4c2e-9854-0a114fb90e24",
+    "seq": 9
+  },
+  "project_id": "8ab823c9-89e4-4050-884c-9008c8b14ef8",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "1216d21c-b58c-4086-8321-28f806a634cb",
+    "cycle": 1,
+    "digest": "02cdf4d73626a69c1efc85ed1944ab12f3940deb2af2eb4c394493618fc47ce9",
+    "engine_id": "claudeloop",
+    "event_id": "cae108fa-edea-4dc5-800a-8da3573047e3",
+    "job_id": "705692f1-69a1-4cc2-ade7-8aa3d1407b67",
+    "kind": "QuestionAsked",
+    "payload": {
+      "blocking": false,
+      "cycle": 1,
+      "default": "1) User creates short URL from long URL, 2) End user clicks short URL and gets redirected, 3) User views analytics/stats for their links",
+      "item_id": "core_workflows",
+      "stage": "job_story",
+      "text": "What are the main user workflows or journeys?"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-20T02:32:38.468713+00:00",
+    "project_id": "8ab823c9-89e4-4050-884c-9008c8b14ef8",
+    "provenance": "agent",
+    "seq": 10
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

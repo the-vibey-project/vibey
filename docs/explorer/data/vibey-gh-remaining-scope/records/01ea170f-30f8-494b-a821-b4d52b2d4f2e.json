@@ -1,0 +1,43 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "6a57965f671f5c8cf53a9bbcc9c0b9d4a85778babb492b2354e9e278fbe40810",
+    "event_id": "a132c5b6-dd8a-4dd2-90c3-4462f0b0ef54",
+    "seq": 12
+  },
+  "previous": {
+    "digest": "966910931a1bcd26c980364cc0252fc86874d8ccbec83a1fbb24e5b383a60801",
+    "event_id": "137aa7be-beb8-4216-adc1-efd186888ef1",
+    "seq": 10
+  },
+  "project_id": "d482c3e2-029e-4bb8-a9a1-de411816c6ae",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "e172735e-aa23-47d6-826f-29b4e3dfdfef",
+    "cycle": 1,
+    "digest": "682c8152a0be827a8b72eed905f7285774b12f2ecb57e5e260399352c04c71c5",
+    "engine_id": "claudeloop",
+    "event_id": "01ea170f-30f8-494b-a821-b4d52b2d4f2e",
+    "job_id": "d2626f25-d550-454e-bacd-7a7e6c9b52cd",
+    "kind": "QuestionAsked",
+    "payload": {
+      "blocking": false,
+      "cycle": 1,
+      "default": "Implementing end-to-end encryption and compliance with GDPR standards.",
+      "item_id": "7",
+      "stage": "job_story",
+      "text": "How will the software handle data privacy and security for the users?"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-31T02:03:38.167628+00:00",
+    "project_id": "d482c3e2-029e-4bb8-a9a1-de411816c6ae",
+    "provenance": "agent",
+    "seq": 11
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

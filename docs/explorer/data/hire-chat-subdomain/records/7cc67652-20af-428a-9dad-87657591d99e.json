@@ -1,0 +1,39 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "45ca1ae3b05743ba3c6d7588d47dd19cbeff5f4207b4d3a955b750a5a837be58",
+    "event_id": "f7c28d59-0f46-49ff-8337-c1731339e8c9",
+    "seq": 55
+  },
+  "previous": {
+    "digest": "9a66ae2c1a1c502ea2482ea195f97e8d52f6c0a9686c272acceddb7c5720752f",
+    "event_id": "4c0b7107-d06d-42f5-a4d2-5fe0d3d76b9e",
+    "seq": 53
+  },
+  "project_id": "0ee95624-eec4-4e8e-9a14-6ad9a37dcff4",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "c2adcaa4-5dd1-4abd-ab8b-a4c62f79ecf9",
+    "cycle": 1,
+    "digest": "71c848ab2ba14a17da5f4a688e16af930018925c16979ea81a4f4ee93964f45e",
+    "engine_id": "claudeloop",
+    "event_id": "7cc67652-20af-428a-9dad-87657591d99e",
+    "job_id": "1343d0fd-bf3f-4739-8c21-cbf7693c673e",
+    "kind": "AnswerGiven",
+    "payload": {
+      "answer": "The 'resting' notice (already required for feature-flag-off state) serves as the fallback with [path] and [path] CTAs, so a false-positive is not a blank page but a graceful degradation; monitor GA4 events post-launch for unexpectedly high disabled-state renders; accept that perfect bot detection is unsolvable and the current heuristic (user-agent only, no fingerprinting) errs on the side of privacy",
+      "item_id": "bot_detection_false_positive"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-20T20:21:17.352913+00:00",
+    "project_id": "0ee95624-eec4-4e8e-9a14-6ad9a37dcff4",
+    "provenance": "trusted",
+    "seq": 54
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 2
+  }
+}

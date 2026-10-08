@@ -1,0 +1,40 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "7842517003d3188110f0f465954b0ecff589806cb8cb54badeb558d03aad338d",
+    "event_id": "5bf352b1-2bd0-44f8-80cb-b61184ce0472",
+    "seq": 1403
+  },
+  "previous": {
+    "digest": "7842517003d3188110f0f465954b0ecff589806cb8cb54badeb558d03aad338d",
+    "event_id": "6789fa97-01bd-4099-9260-b05a8274e7fb",
+    "seq": 1354
+  },
+  "project_id": "8ab823c9-89e4-4050-884c-9008c8b14ef8",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "13e5675e-415c-47a0-ad6b-20c35968bb64",
+    "cycle": 1,
+    "digest": "cc63ad4742a6d5fbefa27eb7ddc1308f96385ec10861c728f3f0c56cf01dee29",
+    "engine_id": null,
+    "event_id": "9727bd31-c2cd-43fd-ac8b-99827119769b",
+    "job_id": "c719f8b3-2f15-49ce-9c5d-8c857466bbbd",
+    "kind": "FindingRaised",
+    "payload": {
+      "finding_id": "f_verify_ws_1c5987b5",
+      "severity": "high",
+      "text": "gate failed: python -m pytest tests/ -x: [stdout] ========================\nplatform darwin -- Python 3.12.13, pytest-9.1.1, pluggy-1.6.0\nrootdir: [path]\nconfigfile: pyproject.toml\nplugins: hypothesis-6.165.7, cov-7.1.0, asyncio-1.4.0\nasyncio: mode=Mode.STRICT, debug=False, asyncio_default_fixture_loop_scope=None, asyncio_default_test_loop_scope=function\ncollected 0 items / 1 error\n\n==================================== ERRORS ====================================\n_______________ ERROR collecting tests/test_walking_skeleton.py ________________\nImportError while importing test module '[path]'.\nHint: make sure your test modules/packages have valid Python names.\nTraceback:\n[path] in import_module\n    return _bootstrap._gcd_import(name[level:], package, level)\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\ntests/test_walking_skeleton.py:3: in \u003cmodule\u003e\n    from fastapi.testclient import TestClient\nE   ModuleNotFoundError: No module named 'fastapi'\n=========================== short test summary info ============================\nERROR tests/test_walking_skeleton.py\n!!!!!!!!!!!!!!!!!!!!!!!!!! stopping after 1 failures !!!!!!!!!!!!!!!!!!!!!!!!!!!\n!!!!!!!!!!!!!!!!!!!! Interrupted: 1 error during collection !!!!!!!!!!!!!!!!!!!!\n=============================== 1 error in 0.10s ==============================="
+    },
+    "phase": "build",
+    "produced_at": "2026-08-20T06:18:47.083405+00:00",
+    "project_id": "8ab823c9-89e4-4050-884c-9008c8b14ef8",
+    "provenance": "agent",
+    "seq": 1355
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 3
+  }
+}

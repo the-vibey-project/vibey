@@ -1,0 +1,43 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "059dcafe57b6401fa9df459d566287280dfb12e54adee3897b018494c51f8772",
+    "event_id": "35c0f1de-678e-433e-968c-736c095778b6",
+    "seq": 39
+  },
+  "previous": {
+    "digest": "74825d134eba9c61a8d393bc721a6dfe298715d41a4dec438ba3ee9efa62cf46",
+    "event_id": "2eb3981b-3ecc-446c-a508-e9cce4eeb445",
+    "seq": 37
+  },
+  "project_id": "ab0b06f9-55a4-4b47-ac08-254e7fdd9036",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "f0043285-a930-450a-8fa2-d8f10a6897bb",
+    "cycle": 1,
+    "digest": "689cf71e8c453b6b4f190edeac26a89e79b64a6d3747dfdbe1b4eefda1cb1fa0",
+    "engine_id": "claudeloop",
+    "event_id": "da6f7fb6-3f57-4f6f-8bba-36035f74a4a8",
+    "job_id": "48f9ef01-8b95-4709-adde-ed0ece390f8d",
+    "kind": "QuestionAsked",
+    "payload": {
+      "blocking": true,
+      "cycle": 1,
+      "default": "CLI integration test: create job, advance to terminal state with commits, fork it, verify new job has independent branch/worktree, correct provenance in ledger (JobForked event), and can be leased and worked without affecting origin",
+      "item_id": "acceptance_test",
+      "stage": "walking_skeleton",
+      "text": "What's the single acceptance test that proves the walking skeleton works end-to-end?"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-22T03:42:48.069300+00:00",
+    "project_id": "ab0b06f9-55a4-4b47-ac08-254e7fdd9036",
+    "provenance": "agent",
+    "seq": 38
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

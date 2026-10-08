@@ -1,0 +1,43 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "c4b17c140500d8657e66a65ac12a0405f3830dec6b908b59becf7dd5a5c29ebb",
+    "event_id": "c40c178f-bd89-4715-926f-6d069747978d",
+    "seq": 29
+  },
+  "previous": {
+    "digest": "e8a8683f10333ac51491c177bbb79ee092d433dd83df8567aa64f507a463dfbe",
+    "event_id": "eb1c583f-03b7-492a-9055-54d1453324bc",
+    "seq": 27
+  },
+  "project_id": "44c06a64-c8ed-4153-96af-b49db29c39e3",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "4439cb43-2147-4e91-9998-a80eb2bfa1bc",
+    "cycle": 1,
+    "digest": "0241f8a6ba1aabee0655fca362f1ed37edbeaaf5dd866e7d4786fb3e1424373c",
+    "engine_id": "claudeloop",
+    "event_id": "2575ff97-fb6a-4016-bf23-0fcd506f5743",
+    "job_id": "bcd8e0b1-385d-43dc-ad1f-cad988f80cc9",
+    "kind": "QuestionAsked",
+    "payload": {
+      "blocking": true,
+      "cycle": 1,
+      "default": "Multi-cycle projects where a job spans cycles, and concurrent budget checks during active event writes \u2014 both must see consistent snapshots",
+      "item_id": "edge_cases",
+      "stage": "example_mapping",
+      "text": "Are there ledger edge cases (multi-cycle jobs, empty projects, concurrent writes, cycle rollover) that the optimized query must handle correctly?"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-22T03:42:46.929466+00:00",
+    "project_id": "44c06a64-c8ed-4153-96af-b49db29c39e3",
+    "provenance": "agent",
+    "seq": 28
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

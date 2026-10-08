@@ -1,0 +1,39 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "265e6a13d213f53a51af7b021ecf49d172059982bfaa87a7873be8e02ad272dc",
+    "event_id": "3ef44135-3df1-41fd-aee5-fd54bc90783d",
+    "seq": 7
+  },
+  "previous": {
+    "digest": "425ed24a6971da081f8fc35ad54a6ca12c1475f7e82f30983b3d785962f4bc90",
+    "event_id": "490d7ff7-cdde-435c-8909-24d1fd32f8a8",
+    "seq": 5
+  },
+  "project_id": "44c06a64-c8ed-4153-96af-b49db29c39e3",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "4c6c6354-0c87-4f3c-85d3-4f9f8c1a68f7",
+    "cycle": 1,
+    "digest": "9dcf8a9551f30495cfbb1b6bc38443e537c80f4701cdcfd869fba9adf429a079",
+    "engine_id": "claudeloop",
+    "event_id": "5cfe6377-ae93-43ab-9fdd-42994690b848",
+    "job_id": "bcd8e0b1-385d-43dc-ad1f-cad988f80cc9",
+    "kind": "AnswerGiven",
+    "payload": {
+      "answer": "A committed benchmark harness that anyone can re-run, with baseline numbers recorded before any change. Claim-path budget checks no longer scan full project history -- demonstrated by a test with a large synthetic ledger where time stays flat as history grows, rather than by a stopwatch. build_app no longer re-applies migrations on every call. Each landed change names its measured improvement. All 7 gates green.",
+      "item_id": "success_criteria"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-22T02:59:30.272316+00:00",
+    "project_id": "44c06a64-c8ed-4153-96af-b49db29c39e3",
+    "provenance": "trusted",
+    "seq": 6
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

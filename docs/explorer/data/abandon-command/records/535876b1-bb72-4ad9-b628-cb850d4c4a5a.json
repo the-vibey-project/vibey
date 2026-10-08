@@ -1,0 +1,42 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "5ac5c339e0a6b6c39e8fdc1183ef405f237b00bba3f7ee6d71f9e66b9a07be5c",
+    "event_id": "e87a15ca-a4b4-4bde-9e79-1e3224f53a40",
+    "seq": 987
+  },
+  "previous": {
+    "digest": "49aebf2a30510c1192f124058d0b2f70fed1c540c232bd0e5ea7e9aeb3eed6e1",
+    "event_id": "81dc72af-5032-4e78-a804-f5379b038a4d",
+    "seq": 856
+  },
+  "project_id": "d733035f-e0f9-4f67-aba2-270068d6a9c6",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "8c8de81c-9663-4389-a399-61d14c1bfe55",
+    "cycle": 1,
+    "digest": "909eefadbb3f5b7f51802c47fcd76f7911375e22b728c63de5b0d58445a16fae",
+    "engine_id": "codexloop",
+    "event_id": "535876b1-bb72-4ad9-b628-cb850d4c4a5a",
+    "job_id": "5706813e-b91a-41c2-b6c0-ca872d97adf4",
+    "kind": "VerdictRendered",
+    "payload": {
+      "complete": false,
+      "remaining_work": [
+        "Implement work item guard-done-leased: DONE and LEASED guards with --force override and drain marker"
+      ],
+      "success": false
+    },
+    "phase": "build",
+    "produced_at": "2026-08-22T19:43:27.766929+00:00",
+    "project_id": "d733035f-e0f9-4f67-aba2-270068d6a9c6",
+    "provenance": "agent",
+    "seq": 928
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 2,
+    "paths": 0
+  }
+}

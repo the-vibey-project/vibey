@@ -1,0 +1,43 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "179dcbdf0fee64831849a3f2414cf435ab80367f4067ca997890e5a99560e132",
+    "event_id": "5130f180-d862-434c-b070-436befce2ebe",
+    "seq": 54
+  },
+  "previous": {
+    "digest": "e4315bb92cf9090ca37c549948fe0534bfd200df20355761e70ac76c2d6aac27",
+    "event_id": "521de1e0-7c2a-434b-b378-caa1fb9911d4",
+    "seq": 51
+  },
+  "project_id": "ab0b06f9-55a4-4b47-ac08-254e7fdd9036",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "71659ab0-5c1c-4e8b-a41b-ead226f8ff66",
+    "cycle": 1,
+    "digest": "0273d112c01a4cd618df28d2a5a5e74e29e4a2c95911712b079349aa42edf367",
+    "engine_id": "claudeloop",
+    "event_id": "7fef631c-d887-4c9d-86d2-4354f36278cc",
+    "job_id": "48f9ef01-8b95-4709-adde-ed0ece390f8d",
+    "kind": "QuestionAsked",
+    "payload": {
+      "blocking": true,
+      "cycle": 1,
+      "default": "Disk space exhaustion from accumulated fork worktrees; mitigated by `vibey doctor` cleanup of terminal forks older than N days, plus alerts when .vibey/worktrees/ exceeds size threshold",
+      "item_id": "operational_hazard",
+      "stage": "premortem",
+      "text": "What's the biggest operational hazard once fork is in production (abandoned worktrees, disk exhaustion, orphaned branches)?"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-22T03:45:54.358554+00:00",
+    "project_id": "ab0b06f9-55a4-4b47-ac08-254e7fdd9036",
+    "provenance": "agent",
+    "seq": 53
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

@@ -1,0 +1,43 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "ddc3b5452f62148d751853bba3a9f6eba20291b79c454ce1186b784e0c921e55",
+    "event_id": "60c47a8f-ac18-4fd1-ae30-0d213dffe812",
+    "seq": 40
+  },
+  "previous": {
+    "digest": "574b4d3ab5e49f3c8297b85f69a426b3bc0fe2ea6a94ea645c7d7b77ee7e9dae",
+    "event_id": "c542ac12-02a7-4e74-ba51-e16f58c25c70",
+    "seq": 38
+  },
+  "project_id": "bed522a2-0b3e-4bff-9cd6-7c13fe40779a",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "fb579d46-323f-486d-8b4f-ffffb94f662e",
+    "cycle": 1,
+    "digest": "6d43a4ba0f159b3f323f7c0a795515c6a3823c595d118523d39b40a09a120208",
+    "engine_id": "claudeloop",
+    "event_id": "81d2c599-f827-495d-b08c-94f8b6aebedd",
+    "job_id": "92d834a4-4bf2-4699-9354-adbea7936d77",
+    "kind": "QuestionAsked",
+    "payload": {
+      "blocking": false,
+      "cycle": 1,
+      "default": "The claiming mechanism: can we atomically claim multiple specific jobs (by ID) using the existing FOR UPDATE SKIP LOCKED machinery? If that doesn't work cleanly, the feature may not be viable without deeper changes.",
+      "item_id": "riskiest_assumption",
+      "stage": "walking_skeleton",
+      "text": "What's the riskiest assumption or hardest technical question that the skeleton must answer? Should it validate the claiming mechanism, prove the output multiplexing works, test the coordination under contention, or something else?"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-22T03:44:20.823316+00:00",
+    "project_id": "bed522a2-0b3e-4bff-9cd6-7c13fe40779a",
+    "provenance": "agent",
+    "seq": 39
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

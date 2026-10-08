@@ -1,0 +1,39 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a",
+    "event_id": "d0a490aa-f354-443c-8a28-afc4e39b6bdb",
+    "seq": 69
+  },
+  "previous": {
+    "digest": "f324f0b3b7a799ee7720c0e06ceedf73db9a22b2d67c0b604896b457d2d70a31",
+    "event_id": "2bf27ef3-4b6c-4a17-a35c-73a5ca396a90",
+    "seq": 60
+  },
+  "project_id": "d733035f-e0f9-4f67-aba2-270068d6a9c6",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "0eb51b12-b364-404f-8dcf-c777501b6cfe",
+    "cycle": 1,
+    "digest": "7c43b69085938dad12022e0c722889bb6977394703c311656488ccd6aa35d009",
+    "engine_id": "claudeloop",
+    "event_id": "5c2294ad-7789-40f5-9bcb-6faa4deb971b",
+    "job_id": "44e282ee-55b1-4cf9-afc3-c84870a14a5c",
+    "kind": "AnswerGiven",
+    "payload": {
+      "answer": "None anticipated\u2014ABANDONED is already a valid Phase enum value, and projects table schema is stable. If a future migration adds a NOT NULL column requiring phase-specific data, handle ABANDONED same as DONE (terminal state with nullable fields).",
+      "item_id": "database_migration_risk"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-22T03:51:04.709603+00:00",
+    "project_id": "d733035f-e0f9-4f67-aba2-270068d6a9c6",
+    "provenance": "trusted",
+    "seq": 61
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

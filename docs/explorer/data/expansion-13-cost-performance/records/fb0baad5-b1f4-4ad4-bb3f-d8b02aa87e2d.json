@@ -1,0 +1,39 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "962dbab80b65f413d6a21c0889ee8550b1f6d38fdec1dff0398807005062e175",
+    "event_id": "6acb9b08-4a1d-4242-a514-48d3bd5bbfa1",
+    "seq": 25
+  },
+  "previous": {
+    "digest": "40c51e77d6bab8b59ceee0f2512240b41c1f519e8855b5bbd4c58402cfeb968f",
+    "event_id": "a15bac2d-285e-47b8-899b-159a1b8b3db4",
+    "seq": 23
+  },
+  "project_id": "a1d6b837-46f3-40c0-b6a2-8b3babb7fe15",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "189ddb7c-4dc2-4a6f-b875-47ddb6e84880",
+    "cycle": 1,
+    "digest": "705a4c9f7bb3cf6cdebe2ddb4a9be4910f3b0876b4a1ca4ca6489fa983869c6b",
+    "engine_id": "claudeloop",
+    "event_id": "fb0baad5-b1f4-4ad4-bb3f-d8b02aa87e2d",
+    "job_id": "dd8513f6-0d76-49a5-8bdc-75167dea5385",
+    "kind": "AnswerGiven",
+    "payload": {
+      "answer": "Measure on this machine (the spec requirement) plus CI for documentation; local measurement is authoritative",
+      "item_id": "measurement_baseline"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-20T20:43:10.963970+00:00",
+    "project_id": "a1d6b837-46f3-40c0-b6a2-8b3babb7fe15",
+    "provenance": "trusted",
+    "seq": 24
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

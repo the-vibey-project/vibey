@@ -1,0 +1,43 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "23a4130c2a819ad4b55d9e997438dd35af253cca6d17dd8a29cb60c15de686dc",
+    "event_id": "7f9ae1b0-6858-4c09-af47-706fcf7dbe5f",
+    "seq": 44
+  },
+  "previous": {
+    "digest": "e0497c604ebb1a5c9bb73ab4d6e55d294f68c8f461143417a612f602e43308a3",
+    "event_id": "e23403b3-773a-4708-acc3-96b90558d253",
+    "seq": 42
+  },
+  "project_id": "26f89c38-c86b-4ddf-be75-c579a118e40e",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "7b7da8b5-f90c-4610-9aa9-196719488807",
+    "cycle": 1,
+    "digest": "205537cd3624cbac7a0b43084d55ada6f72eb014f171ba9c0fe23d8e7a064661",
+    "engine_id": "claudeloop",
+    "event_id": "cd6ddc7c-89cc-4f2e-b48d-0c03cb98f05e",
+    "job_id": "2bdd2b5e-b4f1-4004-9dbf-78d267fea803",
+    "kind": "QuestionAsked",
+    "payload": {
+      "blocking": false,
+      "cycle": 1,
+      "default": "Brief README with installation and usage examples; module/function docstrings; no inline comments unless complex logic",
+      "item_id": "documentation_requirements",
+      "stage": "nfr_planguage",
+      "text": "What documentation is required (README, docstrings, inline comments, examples)?"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-19T12:34:27.820232+00:00",
+    "project_id": "26f89c38-c86b-4ddf-be75-c579a118e40e",
+    "provenance": "agent",
+    "seq": 43
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

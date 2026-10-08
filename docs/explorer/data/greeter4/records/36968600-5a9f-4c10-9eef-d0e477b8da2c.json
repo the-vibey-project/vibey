@@ -1,0 +1,43 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "2c6e10cb4a887ba0f295e265a541e973590e587d64394d097dde8f871f4aff4d",
+    "event_id": "5a909a44-df68-4309-a0d5-cabcc62625a3",
+    "seq": 5
+  },
+  "previous": {
+    "digest": "d0a0c51f90c0cbf6bbc1aa8613829a39cc857c1c8cfff42f85d6269e87d12446",
+    "event_id": "0a32028d-d412-41a2-98dc-55038e06270f",
+    "seq": 3
+  },
+  "project_id": "8ab823c9-89e4-4050-884c-9008c8b14ef8",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "5768b8ff-6a91-4f65-9f0a-75e3f659f246",
+    "cycle": 1,
+    "digest": "417a206b1c6c1bcbacd1e6699870b535323d877074007a7017ad76cb71a9596e",
+    "engine_id": "claudeloop",
+    "event_id": "36968600-5a9f-4c10-9eef-d0e477b8da2c",
+    "job_id": "705692f1-69a1-4cc2-ade7-8aa3d1407b67",
+    "kind": "QuestionAsked",
+    "payload": {
+      "blocking": false,
+      "cycle": 1,
+      "default": "Standard: \u003c100ms p99 latency, 99.9% availability, eventual consistency acceptable",
+      "item_id": "constraints",
+      "stage": "context_free",
+      "text": "Any specific constraints or non-functional requirements (latency, availability, consistency, budget)?"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-20T02:32:10.424710+00:00",
+    "project_id": "8ab823c9-89e4-4050-884c-9008c8b14ef8",
+    "provenance": "agent",
+    "seq": 4
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

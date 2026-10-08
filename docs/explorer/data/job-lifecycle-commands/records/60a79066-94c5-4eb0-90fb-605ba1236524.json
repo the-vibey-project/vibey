@@ -1,0 +1,43 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "6db896ba6c362fe2bddfa8c38bcc21cc26261f2c5c37be383f07a6b0dfaa1486",
+    "event_id": "04d2a9b5-0a88-4217-9d18-4a686da5a652",
+    "seq": 48
+  },
+  "previous": {
+    "digest": "9bdb7686fbd9de6ddc4097181df28731631ab40e3141157febeb094b7dbbd066",
+    "event_id": "08e34b8a-d153-4bc9-932a-17f13b55cd2f",
+    "seq": 46
+  },
+  "project_id": "2f6a93b6-2d73-4aff-bc94-16539841133f",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "9c69552a-40b2-499c-9e4d-f0d6c551b763",
+    "cycle": 1,
+    "digest": "75bac6d01a86cb7343453f954223742190691e0d2988dcb0227cfd164d967aa2",
+    "engine_id": "claudeloop",
+    "event_id": "60a79066-94c5-4eb0-90fb-605ba1236524",
+    "job_id": "334db377-8cb0-4a72-9cc0-78b45fc9bb38",
+    "kind": "QuestionAsked",
+    "payload": {
+      "blocking": true,
+      "cycle": 1,
+      "default": "wind-back and restart require --force (they discard uncommitted work or reset progress). stop and continue are safe to run without confirmation (stop is reversible via continue, continue only resumes stuck work). All four succeed as idempotent no-ops when already in target state.",
+      "item_id": "safety_confirmations",
+      "stage": "nfr_planguage",
+      "text": "Which commands require explicit confirmation (--force flag or interactive prompt) to prevent accidental data loss or work destruction?"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-22T03:48:35.239267+00:00",
+    "project_id": "2f6a93b6-2d73-4aff-bc94-16539841133f",
+    "provenance": "agent",
+    "seq": 47
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

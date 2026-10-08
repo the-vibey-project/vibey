@@ -1,0 +1,39 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "e455099dbd0ab3b82ce0fcf7d913441082b2b764ee2ef2f63e6d2b88f651888e",
+    "event_id": "70241fda-5827-4a32-96e9-d4a05bd7c763",
+    "seq": 15
+  },
+  "previous": {
+    "digest": "c290dadfbcf8653ec5cd679eed221ce4d58d180ffc1991674b36edb2ae576a17",
+    "event_id": "bfd61a07-07c2-43be-a346-4b163732f35f",
+    "seq": 13
+  },
+  "project_id": "8ab823c9-89e4-4050-884c-9008c8b14ef8",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "fa65ebc9-51ac-4727-8fde-4ab74a9ebf01",
+    "cycle": 1,
+    "digest": "d8aa173e8ebf4b690f19d0045e8991a07c89a3ecfd6bf547ff5b4aebf2f0dbd9",
+    "engine_id": "claudeloop",
+    "event_id": "186d911a-999c-4f5d-9a3e-169da6970025",
+    "job_id": "705692f1-69a1-4cc2-ade7-8aa3d1407b67",
+    "kind": "AnswerGiven",
+    "payload": {
+      "answer": "1) User creates short URL from long URL, 2) End user clicks short URL and gets redirected, 3) User views analytics/stats for their links",
+      "item_id": "core_workflows"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-20T02:32:40.917723+00:00",
+    "project_id": "8ab823c9-89e4-4050-884c-9008c8b14ef8",
+    "provenance": "trusted",
+    "seq": 14
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

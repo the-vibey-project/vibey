@@ -1,0 +1,39 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "8d83deba725a6960a983fc928a89416747784219e008c92da67ddbb78f2c72eb",
+    "event_id": "61c8a80c-3695-4d4b-98a7-cac6c052769e",
+    "seq": 1108
+  },
+  "previous": {
+    "digest": "1322f747ab599af28fa0bb08eed3632b390089dd168f8ef230f881f37ce32157",
+    "event_id": "2a9d25be-0c2d-4568-aea0-a43f28a6db99",
+    "seq": 1102
+  },
+  "project_id": "26f89c38-c86b-4ddf-be75-c579a118e40e",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "5eccfd8a-44d7-4439-8f85-17ec4a30925b",
+    "cycle": 2,
+    "digest": "b13c8fb0cc145369a3acf66c311aa777b614a8f1eeb137045114c928e2adabbd",
+    "engine_id": null,
+    "event_id": "318888f9-9b79-4398-b2dd-cf5056f3fb3c",
+    "job_id": null,
+    "kind": "FindingResolved",
+    "payload": {
+      "finding_id": "f_code_2_9c0f9ac8",
+      "resolution": "resolved by operator: the flagged file lived in a stale cycle-2 worktree that has been removed; the integrated code is ruff-clean"
+    },
+    "phase": "review",
+    "produced_at": "2026-08-19T15:05:25.846908+00:00",
+    "project_id": "26f89c38-c86b-4ddf-be75-c579a118e40e",
+    "provenance": "trusted",
+    "seq": 1107
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

@@ -1,0 +1,39 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "2d81794902d2c84c071b799238655519c32925a84f67e9ac9e16c0e6fe7aceb3",
+    "event_id": "dea69a5d-c6e5-47f7-bc28-3ce0ce7f3ae0",
+    "seq": 17
+  },
+  "previous": {
+    "digest": "d3f100e7270753d684598c24ebae09313fd0e622333645f586956ee5bc9956cf",
+    "event_id": "59098bda-545c-413a-bcc9-559294b0726e",
+    "seq": 15
+  },
+  "project_id": "d733035f-e0f9-4f67-aba2-270068d6a9c6",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "25f36d01-4921-4730-9261-85760e40df0e",
+    "cycle": 1,
+    "digest": "db65d1d7b400d35306c66a0e2ee9710e82facbe9acf89742404e517b8849627b",
+    "engine_id": "claudeloop",
+    "event_id": "eec67dfe-2f2a-404e-aaf5-c28a46b4bbaf",
+    "job_id": "44e282ee-55b1-4cf9-afc3-c84870a14a5c",
+    "kind": "AnswerGiven",
+    "payload": {
+      "answer": "When a project is wedged or its work already shipped by another route, I want to release its repo_path claim so I can start a new project in that repository -- without hand-editing Postgres. Live example: expansion-13-cost-performance has held [path] in BUILD since 2026-08-20 while its actual work merged as PR #70, and every `vibey new --repo [path]` since has failed on project_repo_uniq. The outcome I need is that the next `vibey new` succeeds.",
+      "item_id": "primary_job_story"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-22T02:57:57.033945+00:00",
+    "project_id": "d733035f-e0f9-4f67-aba2-270068d6a9c6",
+    "provenance": "trusted",
+    "seq": 16
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 2
+  }
+}

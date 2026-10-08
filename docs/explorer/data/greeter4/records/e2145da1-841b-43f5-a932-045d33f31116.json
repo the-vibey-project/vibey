@@ -1,0 +1,39 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "4affaf134892eb896c9db2c5711259755ca1edba7873dd997c588d1a811c8ad8",
+    "event_id": "4c796a52-6321-496d-af54-a251f87efc8d",
+    "seq": 40
+  },
+  "previous": {
+    "digest": "6a0216dfbcd6ecdfc78395f8c62426e3c81f38ceb9325a7cc0a3667c86711c39",
+    "event_id": "7c8ad2e4-9327-4633-a86a-25356e315bef",
+    "seq": 38
+  },
+  "project_id": "8ab823c9-89e4-4050-884c-9008c8b14ef8",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "6c5b62dd-1f96-44c3-9f6f-ce432956938d",
+    "cycle": 1,
+    "digest": "971549c3b4b0466bffbecb6f20d21c52d53033d6e0599c70fe14da9296969e69",
+    "engine_id": "claudeloop",
+    "event_id": "e2145da1-841b-43f5-a932-045d33f31116",
+    "job_id": "705692f1-69a1-4cc2-ade7-8aa3d1407b67",
+    "kind": "AnswerGiven",
+    "payload": {
+      "answer": "Single containerized service (Docker) on a simple host (AWS EC2/ECS, Heroku, or Render) with managed Postgres",
+      "item_id": "deployment_target"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-20T02:34:45.761160+00:00",
+    "project_id": "8ab823c9-89e4-4050-884c-9008c8b14ef8",
+    "provenance": "trusted",
+    "seq": 39
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

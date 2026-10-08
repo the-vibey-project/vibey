@@ -1,0 +1,39 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "490a49c9a849ec21fdc2d9d63d262492c758deffaedecced09a723ff3dedc007",
+    "event_id": "a49b02f0-ac7e-4385-a7fc-45089ef8b5fc",
+    "seq": 1109
+  },
+  "previous": {
+    "digest": "b13c8fb0cc145369a3acf66c311aa777b614a8f1eeb137045114c928e2adabbd",
+    "event_id": "318888f9-9b79-4398-b2dd-cf5056f3fb3c",
+    "seq": 1107
+  },
+  "project_id": "26f89c38-c86b-4ddf-be75-c579a118e40e",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "34a1928e-e0dc-4351-ac7b-02214ae4d09f",
+    "cycle": 3,
+    "digest": "8d83deba725a6960a983fc928a89416747784219e008c92da67ddbb78f2c72eb",
+    "engine_id": null,
+    "event_id": "61c8a80c-3695-4d4b-98a7-cac6c052769e",
+    "job_id": "ef085cce-0df1-461d-84c1-4375c744c0ba",
+    "kind": "ArtifactProduced",
+    "payload": {
+      "artifact_id": "review-demo-c3",
+      "cycle": 3
+    },
+    "phase": "review",
+    "produced_at": "2026-08-19T15:06:28.296510+00:00",
+    "project_id": "26f89c38-c86b-4ddf-be75-c579a118e40e",
+    "provenance": "trusted",
+    "seq": 1108
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 1,
+    "paths": 0
+  }
+}

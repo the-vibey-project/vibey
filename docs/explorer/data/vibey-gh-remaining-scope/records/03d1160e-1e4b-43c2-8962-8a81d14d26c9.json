@@ -1,0 +1,43 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "966910931a1bcd26c980364cc0252fc86874d8ccbec83a1fbb24e5b383a60801",
+    "event_id": "137aa7be-beb8-4216-adc1-efd186888ef1",
+    "seq": 10
+  },
+  "previous": {
+    "digest": "b2229b28d5ff094bc195b952bc633c56907b478bb50bd3027c17ef7a14956d98",
+    "event_id": "3fd2f524-bcb3-4730-b824-588483724959",
+    "seq": 8
+  },
+  "project_id": "d482c3e2-029e-4bb8-a9a1-de411816c6ae",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "54a304e0-7cba-4b72-be41-c442870e08df",
+    "cycle": 1,
+    "digest": "f8e792ca57b61167bad1be4f085eea3c57ed27e3fbcb2ed1d6123d644f31b24f",
+    "engine_id": "claudeloop",
+    "event_id": "03d1160e-1e4b-43c2-8962-8a81d14d26c9",
+    "job_id": "d2626f25-d550-454e-bacd-7a7e6c9b52cd",
+    "kind": "QuestionAsked",
+    "payload": {
+      "blocking": false,
+      "cycle": 1,
+      "default": "Scheduling and tracking the delivery of packages for a small business.",
+      "item_id": "5",
+      "stage": "job_story",
+      "text": "Can you provide a specific example of a task that the software will help the target users manage more efficiently?"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-31T02:03:38.167628+00:00",
+    "project_id": "d482c3e2-029e-4bb8-a9a1-de411816c6ae",
+    "provenance": "agent",
+    "seq": 9
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

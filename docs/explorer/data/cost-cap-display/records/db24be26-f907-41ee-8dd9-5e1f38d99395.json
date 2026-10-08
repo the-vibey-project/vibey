@@ -1,0 +1,43 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "b539bcde21a8b1da1e2eda49502e88d00a3e2387f768b004b5090f2b92ec0d85",
+    "event_id": "c2493a32-4698-4c18-b842-48d02aebf52b",
+    "seq": 56
+  },
+  "previous": {
+    "digest": "09cc248e3962d4f7a0bf4f3496e64ac9cb011e6c1b1b367d7d5e39fd81f0d28c",
+    "event_id": "a27ab0f1-11fe-4167-9b94-ca033c133e71",
+    "seq": 54
+  },
+  "project_id": "b43d1fcb-fb7b-42d6-9f80-220292c73389",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "c3cdbaf5-2d89-4537-8ae7-ec5c2e8fc220",
+    "cycle": 1,
+    "digest": "6f91db80f7e94bf6bcebf92e4d4950e6e90ca7e8db7d92cb30189e63677ce8d8",
+    "engine_id": "claudeloop",
+    "event_id": "db24be26-f907-41ee-8dd9-5e1f38d99395",
+    "job_id": "64ea0fea-cd4f-4b3b-bf19-112c18a7c58d",
+    "kind": "QuestionAsked",
+    "payload": {
+      "blocking": false,
+      "cycle": 1,
+      "default": "Fail fast at config load with clear error showing line number and expected schema; operator fixes manually and retries command",
+      "item_id": "corrupted_config_handling",
+      "stage": "premortem",
+      "text": "What happens if an operator manually corrupts config.toml (wrong types, malformed TOML, negative caps) after the resolver is deployed to production?"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-22T03:46:07.235056+00:00",
+    "project_id": "b43d1fcb-fb7b-42d6-9f80-220292c73389",
+    "provenance": "agent",
+    "seq": 55
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

@@ -1,0 +1,39 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "400745544849d0e4ba5665251996b9ba8fa4ab62f0e8b3945c0357dab87ff029",
+    "event_id": "8e74b99d-4daa-47e5-a4f3-f7efc8ff9bdb",
+    "seq": 7
+  },
+  "previous": {
+    "digest": "c09053bf6abc355aeb052cc25835fd5144e5980914d736b87d78d9068e922f3c",
+    "event_id": "c1546198-926d-48be-bd4b-5e4503d8c5b0",
+    "seq": 5
+  },
+  "project_id": "e631c00a-e1a1-4ed4-b99a-0fa2d388d240",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "a9dd6bb8-c89c-4c4b-abf9-73b5e0c14407",
+    "cycle": 1,
+    "digest": "778a2cc9aaaecf81e45aebfa4f0115d13226028c10ad0b133e03c4d13d5e1a66",
+    "engine_id": "claudeloop",
+    "event_id": "05639044-6279-4e00-9bf8-2ebdadf03a62",
+    "job_id": "d73f236e-a7b4-4748-b075-3900a75af324",
+    "kind": "AnswerGiven",
+    "payload": {
+      "answer": "A coverage floor that silently excludes part of the tree is worse than no floor, because it reports green while real code goes unchecked. The four existing gates were added per layer and nothing ever covered what fell between them, so this gap has been invisible since tui/ was created. The total gate is the part that matters most: it makes the property self-maintaining, so a new top-level module cannot be added outside a floor by accident. Without it, closing today's gap just resets the same clock.",
+      "item_id": "problem_value"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-22T02:35:55.006438+00:00",
+    "project_id": "e631c00a-e1a1-4ed4-b99a-0fa2d388d240",
+    "provenance": "trusted",
+    "seq": 6
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

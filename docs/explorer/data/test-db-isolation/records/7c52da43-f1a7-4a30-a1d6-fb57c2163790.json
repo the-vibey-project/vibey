@@ -1,0 +1,43 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "1073b504967a597bc24db48255ef2ad0aafd58a430af67a4ab59cd5dfa770cc2",
+    "event_id": "d9e4571d-d260-487f-95a9-17a5b2d4b1a1",
+    "seq": 15
+  },
+  "previous": {
+    "digest": "9a9449c5777c329675fe65f1776e9aecb1db86404ecd71cb2a6088309ffa6268",
+    "event_id": "53945060-e74e-457e-aa75-b3e687476c1d",
+    "seq": 13
+  },
+  "project_id": "df7e868b-1fbf-451b-8ceb-126359b7588e",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "f3c9d505-c09d-4bd7-bb6c-02906dbd7097",
+    "cycle": 1,
+    "digest": "f0c7c8d13546d515a35680c81554499e48f0912274beedb1e94db394caa4f376",
+    "engine_id": "claudeloop",
+    "event_id": "7c52da43-f1a7-4a30-a1d6-fb57c2163790",
+    "job_id": "3a3b336c-c2aa-4400-a762-ae12246358d3",
+    "kind": "QuestionAsked",
+    "payload": {
+      "blocking": false,
+      "cycle": 1,
+      "default": "Handle validation errors gracefully; support concurrent edits; provide clear feedback on operations",
+      "item_id": "edge_scenarios",
+      "stage": "job_story",
+      "text": "Are there important edge cases, error scenarios, or alternate flows to consider?"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-22T04:42:28.684044+00:00",
+    "project_id": "df7e868b-1fbf-451b-8ceb-126359b7588e",
+    "provenance": "agent",
+    "seq": 14
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

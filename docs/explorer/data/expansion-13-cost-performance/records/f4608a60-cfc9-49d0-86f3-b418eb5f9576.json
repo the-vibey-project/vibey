@@ -1,0 +1,43 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "66a0b9e65e90d72b7150f019dff58b16237b4c1fb59fdb6824a1e97467868514",
+    "event_id": "a2e76d98-ef2e-4d21-91fc-5048b7cff2f2",
+    "seq": 51
+  },
+  "previous": {
+    "digest": "9745fed90082b49afcc0ac2896fad009c66c41e6b27afe067187aeb3654b7a24",
+    "event_id": "8b530c80-f176-4dd3-aa82-0e3f922ee96c",
+    "seq": 49
+  },
+  "project_id": "a1d6b837-46f3-40c0-b6a2-8b3babb7fe15",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "df1d1d98-63ec-4cb8-9913-508f616e0366",
+    "cycle": 1,
+    "digest": "9cb2dae08b6db3fb6c5eeda0d13d55367439f1522d51b0eeba8ad31a048568f4",
+    "engine_id": "claudeloop",
+    "event_id": "f4608a60-cfc9-49d0-86f3-b418eb5f9576",
+    "job_id": "dd8513f6-0d76-49a5-8bdc-75167dea5385",
+    "kind": "QuestionAsked",
+    "payload": {
+      "blocking": true,
+      "cycle": 1,
+      "default": "Template database cloning overhead at session start; mitigate by creating template once and reusing across test runs",
+      "item_id": "performance_bottlenecks",
+      "stage": "premortem",
+      "text": "If the suite doesn't reach 90s after adding xdist, what's the most likely bottleneck: template database cloning overhead, slow property tests serializing workers, or I/O-bound infrastructure tests?"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-20T20:46:42.714772+00:00",
+    "project_id": "a1d6b837-46f3-40c0-b6a2-8b3babb7fe15",
+    "provenance": "agent",
+    "seq": 50
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

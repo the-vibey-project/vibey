@@ -1,0 +1,39 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "7f703cd3daa86539e6b597f007e670db9ee39aa133953024f70541b19c1900b9",
+    "event_id": "48a1151d-6a8b-4436-a6f5-c97095fbe180",
+    "seq": 8
+  },
+  "previous": {
+    "digest": "34a7f5a376f057ac6c44e6137eb0c717dbec790dcaf6376b673d1962197aba9a",
+    "event_id": "529108f0-903f-4807-a85f-44495cd16148",
+    "seq": 6
+  },
+  "project_id": "5ea01f61-8536-4ace-90cb-18700a12e410",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "e7f3c53d-646c-4fcf-8c16-91552c6e3747",
+    "cycle": 1,
+    "digest": "ebed982737c6d75ea0824e629fb21411c0ace02d4f42ee375f639372167005a8",
+    "engine_id": "claudeloop",
+    "event_id": "75c91168-e064-400c-8661-2911f23f403a",
+    "job_id": "4c2ec03f-d670-44f9-9f05-47597984ab20",
+    "kind": "AnswerGiven",
+    "payload": {
+      "answer": "[hard] Concurrency changes failure semantics, and that is the actual work rather than the asyncio.gather. Today a hanging engine blocks everything visibly and in order; concurrently, one hung engine among four must not silently reduce the report to three. Per-engine timeout, and partial results that SAY they are partial. [hard] Output must stay deterministic -- engines reported in a stable order regardless of completion order, or the command becomes untestable and diffs become noise. [hard] One engine failing must not fail the others. [hard] Do not weaken any check to make it fast; correctness of the verdict is the point of the command. [hard] 100% branch coverage including the timeout and partial-result paths. [hard] Conventional Commits, feature branch into develop.",
+      "item_id": "constraints"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-22T02:59:00.626706+00:00",
+    "project_id": "5ea01f61-8536-4ace-90cb-18700a12e410",
+    "provenance": "trusted",
+    "seq": 7
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

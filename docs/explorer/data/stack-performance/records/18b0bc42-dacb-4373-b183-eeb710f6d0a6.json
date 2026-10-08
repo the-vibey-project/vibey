@@ -1,0 +1,43 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "fdebbb2bb13336a251666037093383372ab2aae43e7c7a133104caae7a26d504",
+    "event_id": "6b0ad917-331b-4ba7-bc74-e322a75b7fa4",
+    "seq": 55
+  },
+  "previous": {
+    "digest": "fb3d9698615da5670faee64a96a6b7292669397037a93f5e8e7f611174fcfd8d",
+    "event_id": "e5bbd5b9-3f34-4734-9851-a55e0e5d932c",
+    "seq": 52
+  },
+  "project_id": "44c06a64-c8ed-4153-96af-b49db29c39e3",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "03689097-9d8c-49a8-9899-159256ed585f",
+    "cycle": 1,
+    "digest": "a3de5977816bdf5a4ee6856ce0b789ff9843b09b9e1444593a752c35a1b2215d",
+    "engine_id": "claudeloop",
+    "event_id": "18b0bc42-dacb-4373-b183-eeb710f6d0a6",
+    "job_id": "bcd8e0b1-385d-43dc-ad1f-cad988f80cc9",
+    "kind": "QuestionAsked",
+    "payload": {
+      "blocking": true,
+      "cycle": 1,
+      "default": "A correctness bug where budget checks return stale data under concurrent load, caught too late because we didn't test multi-worker scenarios",
+      "item_id": "revert_scenario",
+      "stage": "premortem",
+      "text": "If we had to revert this optimization in production, what would be the most likely cause?"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-22T03:47:29.727015+00:00",
+    "project_id": "44c06a64-c8ed-4153-96af-b49db29c39e3",
+    "provenance": "agent",
+    "seq": 54
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

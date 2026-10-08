@@ -1,0 +1,43 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "e60a8b4de478318a5f871293e007ea4cb30eb37f787a4d5447869254d0d07d81",
+    "event_id": "a9ee93f0-cad6-4910-bbdd-3229678ccf55",
+    "seq": 29
+  },
+  "previous": {
+    "digest": "817ed538d5fb942c103ddd30aa3c5e9fa46dcebfbe86ac6cd4eeb488ebfb797d",
+    "event_id": "eea7d777-d9a6-4ae8-9356-3259c3ae06e7",
+    "seq": 27
+  },
+  "project_id": "8ab823c9-89e4-4050-884c-9008c8b14ef8",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "d8926e35-9a0c-4d2c-b733-479a790392fe",
+    "cycle": 1,
+    "digest": "1bd6cf23d20239294529ab3f17e8549901db86f0d6da1f29ca4f9b65cc84b057",
+    "engine_id": "claudeloop",
+    "event_id": "77734c08-71b7-4561-a455-f097c1592018",
+    "job_id": "705692f1-69a1-4cc2-ade7-8aa3d1407b67",
+    "kind": "QuestionAsked",
+    "payload": {
+      "blocking": false,
+      "cycle": 1,
+      "default": "Known phishing domain (e.g., paypa1.com) \u2192 reject at creation time with error message; existing malicious links \u2192 return warning page before redirect",
+      "item_id": "malicious_url_handling",
+      "stage": "example_mapping",
+      "text": "What's an example of a malicious URL and how should the system respond?"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-20T02:34:00.250964+00:00",
+    "project_id": "8ab823c9-89e4-4050-884c-9008c8b14ef8",
+    "provenance": "agent",
+    "seq": 28
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

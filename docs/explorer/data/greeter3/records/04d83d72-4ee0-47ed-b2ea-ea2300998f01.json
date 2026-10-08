@@ -1,0 +1,39 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "1db6fcdb6393ac8c489f36b0e8428e7f7e599d7fc05ae92bc07a02d5bb208315",
+    "event_id": "ae46b69f-d9a6-47f4-a502-5abfd76ef839",
+    "seq": 41
+  },
+  "previous": {
+    "digest": "becbbe6b8f7b1004a011910a165d0d6ac8c9966e3f7ee23c16389ff41a5aa527",
+    "event_id": "4e134759-dc1c-4d1f-8dc7-1e059ff815d1",
+    "seq": 39
+  },
+  "project_id": "5e76341f-ba5f-4272-8355-3df5d489bbcd",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "4bdf9e07-cffb-4808-ac59-105ae9592ceb",
+    "cycle": 1,
+    "digest": "772e2a9c8e1fd1ada493412ac50b00f298e63ba7af5a73f626be34dc0ee859a9",
+    "engine_id": "claudeloop",
+    "event_id": "04d83d72-4ee0-47ed-b2ea-ea2300998f01",
+    "job_id": "e58deb6b-5356-4a39-8acf-5dc898bba380",
+    "kind": "AnswerGiven",
+    "payload": {
+      "answer": "Configuration options, internationalization, custom greeting templates, logging",
+      "item_id": "deferred_features"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-20T00:50:21.042037+00:00",
+    "project_id": "5e76341f-ba5f-4272-8355-3df5d489bbcd",
+    "provenance": "trusted",
+    "seq": 40
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

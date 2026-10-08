@@ -1,0 +1,39 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "2083d66e8947578ab479be065edb59b5c39889df9e4b78dec1d50afc4fc17ab5",
+    "event_id": "cfb2d1a6-9762-45e7-8b3f-4384545adf6c",
+    "seq": 46
+  },
+  "previous": {
+    "digest": "a94852b69fd55e880734f877bdcb19e308d157c6e2d05b9c237c2b3845c7b009",
+    "event_id": "30ef31fd-a619-4e2d-9efc-5da3d5c999bb",
+    "seq": 44
+  },
+  "project_id": "0ee95624-eec4-4e8e-9a14-6ad9a37dcff4",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "8daf1826-3726-4a6a-b17b-a49284a347f9",
+    "cycle": 1,
+    "digest": "6eff3e11275e9bfa92d2a101a790ad8de0346565ae691279fd52ebb03bff748a",
+    "engine_id": "claudeloop",
+    "event_id": "55ca8eb4-2a42-43d3-99db-6a9f401543bb",
+    "job_id": "1343d0fd-bf3f-4739-8c21-cbf7693c673e",
+    "kind": "AnswerGiven",
+    "payload": {
+      "answer": "Must: WCAG 2.1 AA (matching existing site standard per semantic HTML + aria-label on the region); Plan: zero axe violations on the page variant; Wish: AAA color contrast on the 'resting' notice",
+      "item_id": "accessibility_wcag"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-20T20:19:32.968998+00:00",
+    "project_id": "0ee95624-eec4-4e8e-9a14-6ad9a37dcff4",
+    "provenance": "trusted",
+    "seq": 45
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

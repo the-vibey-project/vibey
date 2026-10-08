@@ -1,0 +1,43 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "6fd77b789a58a597b8af38f734ff9dec3af8212a9e6ffd8294a4534e3e1b158e",
+    "event_id": "77ad8fc8-4e86-4dbb-ba3f-4a205a851096",
+    "seq": 36
+  },
+  "previous": {
+    "digest": "3dd87c032dbadf8bd27692f5b3ec7d00d79c4a08604a3babcd1a7b81a6caaf27",
+    "event_id": "b27809af-5dc7-489b-94f8-d373542ae2c3",
+    "seq": 34
+  },
+  "project_id": "a1d6b837-46f3-40c0-b6a2-8b3babb7fe15",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "f5a39f99-5441-4aea-a977-cfcbb8e81180",
+    "cycle": 1,
+    "digest": "cd693c0da73dd3feb1d40478aee2f4ae09150c587c30b8e2abecdb874b15c0d8",
+    "engine_id": "claudeloop",
+    "event_id": "1004e8a5-e12d-498c-b81d-73f0d9eec30f",
+    "job_id": "dd8513f6-0d76-49a5-8bdc-75167dea5385",
+    "kind": "QuestionAsked",
+    "payload": {
+      "blocking": false,
+      "cycle": 1,
+      "default": "Full suite green under pytest-xdist with per-worker databases and all four coverage floors passing; speed optimization comes after stability",
+      "item_id": "minimal_success_checkpoint",
+      "stage": "walking_skeleton",
+      "text": "What's the minimal 'it works' checkpoint before optimizing: full suite green under xdist, or also hitting the 90s target?"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-20T20:45:01.245448+00:00",
+    "project_id": "a1d6b837-46f3-40c0-b6a2-8b3babb7fe15",
+    "provenance": "agent",
+    "seq": 35
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

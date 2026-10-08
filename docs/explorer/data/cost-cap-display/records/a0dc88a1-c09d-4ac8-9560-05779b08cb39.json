@@ -1,0 +1,39 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "b699ff4ebaf935ba1123c4865a46cf4d20b9382826c2e8d167ae9d2931e9083a",
+    "event_id": "8d959c02-9379-4c48-b60b-9b5900ee8144",
+    "seq": 15
+  },
+  "previous": {
+    "digest": "9bb79767e14adef1ae5f64f47fdf99f3fa5f2b868f66b67d445a5c73e708e6ef",
+    "event_id": "096955e9-4f41-410b-a042-a15f5a023ed2",
+    "seq": 13
+  },
+  "project_id": "b43d1fcb-fb7b-42d6-9f80-220292c73389",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "8139f1e3-6d40-4d71-8bd9-f66978e3da09",
+    "cycle": 1,
+    "digest": "7800a47344fe8eb809b7a9c0df1178f2560dfbf7c393347d7023be792656cc07",
+    "engine_id": "claudeloop",
+    "event_id": "a0dc88a1-c09d-4ac8-9560-05779b08cb39",
+    "job_id": "64ea0fea-cd4f-4b3b-bf19-112c18a7c58d",
+    "kind": "AnswerGiven",
+    "payload": {
+      "answer": "All four -- cycle-only, total-only, both, and none -- and the none case is the important one. A project with no cap configured must display as unbounded, not as a fabricated default. Printing an invented $40 for a project that has no ceiling at all is the defect in its purest form, and it is the state every project created without --max-cycle-dollars is in.",
+      "item_id": "cap_scenarios"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-22T02:59:00.469742+00:00",
+    "project_id": "b43d1fcb-fb7b-42d6-9f80-220292c73389",
+    "provenance": "trusted",
+    "seq": 14
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

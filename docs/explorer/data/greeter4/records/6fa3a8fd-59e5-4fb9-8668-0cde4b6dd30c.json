@@ -1,0 +1,39 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "94793bb30d2f62f694ee15da2ed901dcefaec5dc8b2aebb52873c1f66e0bc254",
+    "event_id": "b8a1e50a-7f9a-4e19-8737-250af75791ca",
+    "seq": 1212
+  },
+  "previous": {
+    "digest": "b4ae7a6c427134877712f8107f8123f3dfffda795c7b745d2302d871e10748db",
+    "event_id": "2aae2b36-3e9f-43d9-b374-1e3bb9588195",
+    "seq": 1210
+  },
+  "project_id": "8ab823c9-89e4-4050-884c-9008c8b14ef8",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "337c9bd6-68c1-4c1d-a26d-ec1957de2b8e",
+    "cycle": 1,
+    "digest": "c7de0308990fa2858341ee4527c16ebcb359ccf02b3806dbe4ec7bd32d06a176",
+    "engine_id": null,
+    "event_id": "6fa3a8fd-59e5-4fb9-8668-0cde4b6dd30c",
+    "job_id": "830db0de-b149-4e74-9838-b9035269263e",
+    "kind": "FindingResolved",
+    "payload": {
+      "finding_id": "f_verify_malicious-url-check_5b3eefd2",
+      "resolution": "repair session completed; awaiting re-verification (operator cleanup: pre-PR#59 repairs never recorded resolution; see the greeter4 validation report)"
+    },
+    "phase": "build",
+    "produced_at": "2026-08-20T05:57:02.316236+00:00",
+    "project_id": "8ab823c9-89e4-4050-884c-9008c8b14ef8",
+    "provenance": "agent",
+    "seq": 1211
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

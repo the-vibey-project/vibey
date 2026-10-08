@@ -1,0 +1,43 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "ea0bd8202e89bd9cf6bd971bf9142f256517fd988700d321da5fef5746097b25",
+    "event_id": "c3b18c9b-6f35-4d2a-beb6-c8aad26c21b9",
+    "seq": 11
+  },
+  "previous": {
+    "digest": "659e3e8e00baec311fe39b83862b7bb8c29a3ba7b4b86726ce9a3665fe814232",
+    "event_id": "3bf0ef48-fc3a-4da7-8311-4a6f797f99a2",
+    "seq": 9
+  },
+  "project_id": "5e76341f-ba5f-4272-8355-3df5d489bbcd",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "327e46ec-5d37-47c0-836a-b46729f8d14f",
+    "cycle": 1,
+    "digest": "310ca6588f7fed20747332b417b47851ec2e83446ad631073385b8eab21505a8",
+    "engine_id": "claudeloop",
+    "event_id": "0618cc29-28b0-427b-84d8-36c5c4102a99",
+    "job_id": "e58deb6b-5356-4a39-8acf-5dc898bba380",
+    "kind": "QuestionAsked",
+    "payload": {
+      "blocking": true,
+      "cycle": 1,
+      "default": "Get a personalized greeting or welcome message that acknowledges them",
+      "item_id": "user_motivation",
+      "stage": "job_story",
+      "text": "What are users trying to accomplish when they use this feature?"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-20T00:47:43.356337+00:00",
+    "project_id": "5e76341f-ba5f-4272-8355-3df5d489bbcd",
+    "provenance": "agent",
+    "seq": 10
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

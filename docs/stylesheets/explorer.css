@@ -251,3 +251,25 @@ body.lx-wide .col-md-9 > :is(h1, p, details) { max-width: 46rem; }
 @media (prefers-reduced-motion: reduce) {
   .lx *, .lx *::before, .lx *::after { animation: none !important; transition: none !important; }
 }
+
+/* ---- the sealed copy: the private notice, the unlock screen ---------------------------- */
+.lx .lx-private { border-left: var(--v-space-1) solid var(--v-accent-default); background: color-mix(in srgb, var(--v-accent-default) 12%, var(--v-bg-surface)); border-color: var(--v-accent-default); }
+.lx .lx-private .lx-link { font-size: inherit; }
+.lx .lx-unlock { display: grid; justify-items: center; gap: var(--v-space-3); max-width: 38rem; margin-inline: auto; padding: var(--v-space-10) var(--v-space-6); text-align: center; background: radial-gradient(40rem 16rem at 50% 0%, color-mix(in srgb, var(--v-accent-default) 16%, transparent), transparent 70%), var(--v-bg-surface); }
+.lx .lx-unlock > .lx-icon { width: var(--v-space-12); height: var(--v-space-12); color: var(--v-accent-default); }
+.lx .lx-unlock h2 { margin: 0; font-size: var(--v-font-size-2xl); }
+.lx .lx-unlock p { margin: 0; color: var(--v-text-secondary); }
+.lx .lx-keyform { display: flex; gap: var(--v-space-2); width: 100%; margin-top: var(--v-space-2); }
+.lx .lx-keyform input { flex: 1; min-width: 0; padding: var(--v-space-3) var(--v-space-4); font: inherit; font-family: var(--v-font-family-mono); color: var(--v-text-primary); background: var(--v-bg-canvas); border: var(--v-border-width-thick) solid var(--v-border-subtle); border-radius: var(--v-radius-pill); }
+.lx .lx-keyform input:focus-visible { border-color: var(--v-accent-default); }
+.lx .lx-error { margin: 0; padding: var(--v-space-2) var(--v-space-4); color: var(--v-status-danger); background: color-mix(in srgb, var(--v-status-danger) 10%, var(--v-bg-surface)); border: var(--v-border-width-hairline) solid currentcolor; border-radius: var(--v-radius-md); }
+.lx .lx-button:disabled { opacity: .6; cursor: progress; }
+@media (max-width: 760px) { .lx .lx-keyform { flex-direction: column; } }
+
+/* ---- the key, offered where the withheld events are --------------------------------------- */
+.lx .lx-offer { display: grid; gap: var(--v-space-3); margin-top: var(--v-space-4); padding-top: var(--v-space-4); border-top: var(--v-border-width-hairline) solid var(--v-border-subtle); justify-items: start; }
+.lx .lx-offer-panel { width: 100%; max-width: 34rem; animation: lx-rise var(--v-motion-duration-base) var(--v-motion-easing-enter) both; }
+.lx .lx-keypanel { display: grid; gap: var(--v-space-2); }
+.lx .lx-keypanel .lx-note { margin: 0; }
+.lx .lx-unlock .lx-keypanel { width: 100%; }
+.lx .lx-what .lx-badge { font-weight: var(--v-font-weight-medium); }

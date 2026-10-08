@@ -1,0 +1,49 @@
+{
+  "chain": {
+    "findings": 0,
+    "head": "7d409263e02fb24c9f49d3779c253d9e3abb951b47311977074979a40c15fac4",
+    "head_seq": 1071,
+    "scheme": "vibey-ledger-chain/v1",
+    "verified": true
+  },
+  "digest_range": "512df1aef5b3bace79959eb97e7d4ca9696a011d294f9f2cfd542677650224bb",
+  "documents": {
+    "index": "index.json",
+    "records": "records/{event_id}.json"
+  },
+  "format": "vibey-ledger-site/v1",
+  "holds": "full",
+  "policy": {
+    "fingerprint": "20c0e83ba268bd901344a690af4afac1b0433c0e279a476d954f31f9cb7fc5e8",
+    "scheme": "vibey-publication-policy/v1"
+  },
+  "project": {
+    "name": "abandon-command",
+    "project_id": "d733035f-e0f9-4f67-aba2-270068d6a9c6"
+  },
+  "published": {
+    "first_seq": 1,
+    "last_seq": 1070,
+    "records": 71
+  },
+  "seq_range": {
+    "events": 1071,
+    "first": 1,
+    "last": 1071
+  },
+  "shard_format": "vibey-ledger-shard/v1",
+  "statement": "1000 events withheld by policy",
+  "tier": "standard (untiered)",
+  "withheld": {
+    "by_reason": {
+      "engine_chatter": 925,
+      "kind_not_allowlisted": 72,
+      "untrusted_provenance": 3
+    },
+    "credentials": 0,
+    "emails": 0,
+    "events": 1000,
+    "fields": 22,
+    "paths": 12
+  }
+}

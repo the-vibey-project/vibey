@@ -1,0 +1,39 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "db157cd12bab2e0bd3b94ba468e6e4f6cd7a515160107d10da9e5c22df71e31f",
+    "event_id": "0eafd018-5773-42cd-9d5d-81eb2b619aa8",
+    "seq": 52
+  },
+  "previous": {
+    "digest": "73727576ca352bfe4ffd5605319a17eb0168c9b0f6b2a63fa6166ae30c04c50e",
+    "event_id": "2adf1110-2e89-4144-8b9c-45005d8b35ea",
+    "seq": 50
+  },
+  "project_id": "5ea01f61-8536-4ace-90cb-18700a12e410",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "7bdede3a-f9c3-46ed-9d65-8a2b4720f516",
+    "cycle": 1,
+    "digest": "d292af0ce99b3e24eb1c8775ecf349e44fb71ce3161a880fcea7e1fc09b63573",
+    "engine_id": "claudeloop",
+    "event_id": "9905f780-ca69-4fe2-9a09-5d7503cf01cc",
+    "job_id": "4c2ec03f-d670-44f9-9f05-47597984ab20",
+    "kind": "AnswerGiven",
+    "payload": {
+      "answer": "Total wall-clock time, per-engine completion time in verbose mode; no additional instrumentation needed for this iteration",
+      "item_id": "observability_meter"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-22T03:46:33.171681+00:00",
+    "project_id": "5ea01f61-8536-4ace-90cb-18700a12e410",
+    "provenance": "trusted",
+    "seq": 51
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

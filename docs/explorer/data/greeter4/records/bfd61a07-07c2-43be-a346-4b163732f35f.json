@@ -1,0 +1,39 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "d8aa173e8ebf4b690f19d0045e8991a07c89a3ecfd6bf547ff5b4aebf2f0dbd9",
+    "event_id": "186d911a-999c-4f5d-9a3e-169da6970025",
+    "seq": 14
+  },
+  "previous": {
+    "digest": "a1e438efff4085418226842dfba8671e7a0d6e62ab3c70dd537ed12f51fa3748",
+    "event_id": "31585d72-251b-4b41-94cf-7e4343ffc346",
+    "seq": 12
+  },
+  "project_id": "8ab823c9-89e4-4050-884c-9008c8b14ef8",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "e33a863d-e1f9-433b-93dd-0e875a012f37",
+    "cycle": 1,
+    "digest": "c290dadfbcf8653ec5cd679eed221ce4d58d180ffc1991674b36edb2ae576a17",
+    "engine_id": "claudeloop",
+    "event_id": "bfd61a07-07c2-43be-a346-4b163732f35f",
+    "job_id": "705692f1-69a1-4cc2-ade7-8aa3d1407b67",
+    "kind": "AnswerGiven",
+    "payload": {
+      "answer": "End users (link clickers), link creators (registered users), system admins",
+      "item_id": "primary_actors"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-20T02:32:40.917723+00:00",
+    "project_id": "8ab823c9-89e4-4050-884c-9008c8b14ef8",
+    "provenance": "trusted",
+    "seq": 13
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

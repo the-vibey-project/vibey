@@ -1,0 +1,38 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": null,
+  "previous": {
+    "digest": "d1192609495719e030760d2fe7f41d4a1079b5528ac40a74be4117d42d8c74e9",
+    "event_id": "683db19b-2979-48d6-902a-2498598bb392",
+    "seq": 228
+  },
+  "project_id": "44c06a64-c8ed-4153-96af-b49db29c39e3",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "64f75521-e51e-4805-a72e-a7474dbded2f",
+    "cycle": 1,
+    "digest": "5332ea3f246acab935351834ba7d69b54e6dd0e458c169665ca91ea385a74fcd",
+    "engine_id": "codexloop",
+    "event_id": "5717d51e-6ff0-45c9-b35b-462763f1d75a",
+    "job_id": "374b9063-60b5-41db-9871-dcaa7b4e0b15",
+    "kind": "VerdictRendered",
+    "payload": {
+      "complete": false,
+      "remaining_work": [
+        "Implement work item ws: Walking skeleton: ledger scan elimination with filtered SQL query"
+      ],
+      "success": false
+    },
+    "phase": "build",
+    "produced_at": "2026-08-22T19:19:02.626185+00:00",
+    "project_id": "44c06a64-c8ed-4153-96af-b49db29c39e3",
+    "provenance": "agent",
+    "seq": 332
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 2,
+    "paths": 0
+  }
+}

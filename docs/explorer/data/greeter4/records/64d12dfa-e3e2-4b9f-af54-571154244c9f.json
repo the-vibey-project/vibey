@@ -1,0 +1,39 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "055bcb7078a78e93d5f7a0c2f595caa461d81097c3e7b7840dfdeee7049a659d",
+    "event_id": "1aaadadd-e28d-4106-97c2-4b5f2f33de50",
+    "seq": 49
+  },
+  "previous": {
+    "digest": "4cbe12d830aa83a50313a538299b9f1a2cb0cf59eb728f481499769c5033c448",
+    "event_id": "3ce3d44e-f4f8-45aa-b6bc-44c9fc5cecde",
+    "seq": 47
+  },
+  "project_id": "8ab823c9-89e4-4050-884c-9008c8b14ef8",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "b5eb9b9f-fac3-41a4-81f2-94976cd9fb00",
+    "cycle": 1,
+    "digest": "59e9b4897a47982ea9827d11b13bae930b82f4adce8079934fbf9db287df97e7",
+    "engine_id": "claudeloop",
+    "event_id": "64d12dfa-e3e2-4b9f-af54-571154244c9f",
+    "job_id": "705692f1-69a1-4cc2-ade7-8aa3d1407b67",
+    "kind": "AnswerGiven",
+    "payload": {
+      "answer": "Raw click events: 90 days; Aggregated hourly stats: 1 year; Aggregated daily stats: indefinite; URLs never deleted unless user requests",
+      "item_id": "data_retention_nfr"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-20T02:35:27.397310+00:00",
+    "project_id": "8ab823c9-89e4-4050-884c-9008c8b14ef8",
+    "provenance": "trusted",
+    "seq": 48
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

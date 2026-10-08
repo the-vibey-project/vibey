@@ -1,0 +1,39 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "3f8e1cb7c4f5632af82cec95fad2c373ca4d2e6a6dd7939addaec2527b4cc116",
+    "event_id": "b5e132cc-697d-404f-9e38-963a032c88e8",
+    "seq": 9
+  },
+  "previous": {
+    "digest": "265e6a13d213f53a51af7b021ecf49d172059982bfaa87a7873be8e02ad272dc",
+    "event_id": "3ef44135-3df1-41fd-aee5-fd54bc90783d",
+    "seq": 7
+  },
+  "project_id": "44c06a64-c8ed-4153-96af-b49db29c39e3",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "ef78520f-ea22-4fcb-b2c1-ec8a022e1c6c",
+    "cycle": 1,
+    "digest": "cfdc7a3f1f131f6222f927160c7d7054c1c2918a6f3bc3cecff0da93138c75b8",
+    "engine_id": "claudeloop",
+    "event_id": "daa2b5a3-8cc6-4bb2-9cd6-cacd8dbeb718",
+    "job_id": "bcd8e0b1-385d-43dc-ad1f-cad988f80cc9",
+    "kind": "AnswerGiven",
+    "payload": {
+      "answer": "A measurement-first performance campaign across the vibey stack, executing runbook 13's Front 2 'orchestration hot paths' (items 5-8) rather than inventing a parallel agenda. Those items are already scoped: ledger scan elimination, claim batching, event-tail latency, connection discipline. Do not duplicate two things: doctor's sequential engine checks are a SEPARATE project already running, and runbook 13 Front 1 (test-suite parallelism, template databases) already shipped as PR #70.",
+      "item_id": "feature_description"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-22T02:59:30.272316+00:00",
+    "project_id": "44c06a64-c8ed-4153-96af-b49db29c39e3",
+    "provenance": "trusted",
+    "seq": 8
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

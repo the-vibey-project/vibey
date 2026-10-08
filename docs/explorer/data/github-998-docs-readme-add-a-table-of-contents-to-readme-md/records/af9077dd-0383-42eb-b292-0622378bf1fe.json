@@ -1,0 +1,43 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "341776b13b6437da13f4bcc55f5e86faadd2af0e51f65c99938b8b36e8144f91",
+    "event_id": "7398c4d5-e7ad-44de-9aef-caee73969ca7",
+    "seq": 16
+  },
+  "previous": {
+    "digest": "ac914341b5e6f92e697b82eaf742593c9cb061893942c5ca7206da44e09621cd",
+    "event_id": "3126c308-aa17-48cc-ab10-895f74119fa1",
+    "seq": 12
+  },
+  "project_id": "9692abab-ace3-4ee0-ac59-3ea42484b817",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "0face8bc-aa17-546b-b5de-e16e759738e6",
+    "cycle": 1,
+    "digest": "200aa462efe682aba19ab4ae73a49ceab4a09982528cbb186ce886ae251d7245",
+    "engine_id": "gptossloop",
+    "event_id": "af9077dd-0383-42eb-b292-0622378bf1fe",
+    "job_id": "c2b75c18-fd15-4e79-ad4e-cf489356ad57",
+    "kind": "QuestionAsked",
+    "payload": {
+      "blocking": false,
+      "cycle": 1,
+      "default": "Yes",
+      "item_id": "q6",
+      "stage": "job_story",
+      "text": "Should we commit the TOC generation script into the repository for future use?"
+    },
+    "phase": "design",
+    "produced_at": "2026-09-29T18:41:32.210106+00:00",
+    "project_id": "9692abab-ace3-4ee0-ac59-3ea42484b817",
+    "provenance": "agent",
+    "seq": 13
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

@@ -1,0 +1,43 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "8d425a942a5470e88307c8f4167f7772d487c7cb26ac3498bc9e12e319427b81",
+    "event_id": "6a08c507-5f64-4258-bc64-996ca61d6edb",
+    "seq": 29
+  },
+  "previous": {
+    "digest": "f9b9ea5e91125b68cab80afb337d5749fe0b67fcdf342331a796fd482f63bf5f",
+    "event_id": "ca1b8dc0-e9f4-4a29-8f6c-a0a1a681a99e",
+    "seq": 27
+  },
+  "project_id": "ab0b06f9-55a4-4b47-ac08-254e7fdd9036",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "12eb538e-2945-4b95-a289-9449bfb3e40c",
+    "cycle": 1,
+    "digest": "e45bbec43b7bf2ec00dc27afd8d01ab6d45ed9607e9508a5a27c66d1a9e9c631",
+    "engine_id": "claudeloop",
+    "event_id": "01820d9c-a522-42ca-ae71-39318ad00dc8",
+    "job_id": "48f9ef01-8b95-4709-adde-ed0ece390f8d",
+    "kind": "QuestionAsked",
+    "payload": {
+      "blocking": false,
+      "cycle": 1,
+      "default": "Job #10 reaches BUILD phase with scaffold. 'vibey fork 10' creates job #11 (React path, continues job #10). 'vibey fork 10' again creates job #12 (Vue path). Both start from same seq, operator adds different prompts to each fork's intake",
+      "item_id": "exploration_example",
+      "stage": "example_mapping",
+      "text": "Give a concrete exploration scenario: operator wants to try both a React and a Vue implementation from the same starting point. What does the command sequence look like?"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-22T03:35:46.048963+00:00",
+    "project_id": "ab0b06f9-55a4-4b47-ac08-254e7fdd9036",
+    "provenance": "agent",
+    "seq": 28
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

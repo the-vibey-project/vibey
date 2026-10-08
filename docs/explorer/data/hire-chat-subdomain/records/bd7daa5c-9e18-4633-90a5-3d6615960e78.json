@@ -1,0 +1,43 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "f53615037ee5485f2fc689900197dd78d8e3c208fefe41eb480a4b3783f99519",
+    "event_id": "c6760bb6-2874-4797-b316-9ba3b314c314",
+    "seq": 19
+  },
+  "previous": {
+    "digest": "4b1996cc6ad006b73bb70883aeabfd11f3a4a3563d1e6dca9701b7bcc5547b44",
+    "event_id": "5b4a03ee-e8e5-47a6-b834-7a3a6d7311d1",
+    "seq": 17
+  },
+  "project_id": "0ee95624-eec4-4e8e-9a14-6ad9a37dcff4",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "019d7a35-9261-456e-bb74-e960d5e7e107",
+    "cycle": 1,
+    "digest": "f0f83be3ca977f0ace791b1e59573548d2cf2a85581eb8eec655736b1cfcdfa0",
+    "engine_id": "claudeloop",
+    "event_id": "bd7daa5c-9e18-4633-90a5-3d6615960e78",
+    "job_id": "1343d0fd-bf3f-4739-8c21-cbf7693c673e",
+    "kind": "QuestionAsked",
+    "payload": {
+      "blocking": true,
+      "cycle": 1,
+      "default": "Specific and cited (links to relevant case study/blog post/expertise page) \u003e comprehensive; visitor can dive deeper via the source link. Honest 'not covered on the site' \u003e hallucinated credentials",
+      "item_id": "answer_quality",
+      "stage": "laddering",
+      "text": "What makes a bot answer 'good enough' versus needing human follow-up?"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-20T20:11:06.183484+00:00",
+    "project_id": "0ee95624-eec4-4e8e-9a14-6ad9a37dcff4",
+    "provenance": "agent",
+    "seq": 18
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

@@ -1,0 +1,38 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": null,
+  "previous": {
+    "digest": "e057510c624247ace2ea5801b6c9c33691e344acb7c9d129b6bf6ab5ffa846ab",
+    "event_id": "29d9e39f-e079-4b59-9126-a8d96eced46b",
+    "seq": 636
+  },
+  "project_id": "b43d1fcb-fb7b-42d6-9f80-220292c73389",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "ef98357f-951d-432b-95e1-cd28a5ea4b8c",
+    "cycle": 1,
+    "digest": "7454ec23af027515ba84596de5243330e41737383b2283f690c94db2ccb03161",
+    "engine_id": "codexloop",
+    "event_id": "f5d46d9b-522e-40d5-9d78-0520a75373b3",
+    "job_id": "b907fcf7-9279-42fa-ae8f-0905c3471719",
+    "kind": "VerdictRendered",
+    "payload": {
+      "complete": false,
+      "remaining_work": [
+        "Implement work item resolver: Create config_resolver.py with BudgetCaps domain type, validation, and unit tests"
+      ],
+      "success": false
+    },
+    "phase": "build",
+    "produced_at": "2026-08-22T19:19:20.341570+00:00",
+    "project_id": "b43d1fcb-fb7b-42d6-9f80-220292c73389",
+    "provenance": "agent",
+    "seq": 666
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 2,
+    "paths": 0
+  }
+}

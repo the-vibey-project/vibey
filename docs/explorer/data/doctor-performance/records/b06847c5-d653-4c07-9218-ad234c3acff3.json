@@ -1,0 +1,39 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "97711a58b34e6c938952c986803caa4319f751bddcd467ac30a95cc7d7219842",
+    "event_id": "e10afeef-c0e1-4e97-980a-1ccf08e7e72b",
+    "seq": 15
+  },
+  "previous": {
+    "digest": "276071e7a035b609319ad35af11c73da0c41edc4415433dc5d716f553030f444",
+    "event_id": "8bb306f3-e8c9-4c45-8ab4-1b6e20e9a457",
+    "seq": 13
+  },
+  "project_id": "5ea01f61-8536-4ace-90cb-18700a12e410",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "46ebdbf6-d497-4193-bee6-79bd3a84cce1",
+    "cycle": 1,
+    "digest": "4afd37308a5f29ef02992e354f09537a86e215013eef49b8e9da23bdf08bae5e",
+    "engine_id": "claudeloop",
+    "event_id": "b06847c5-d653-4c07-9218-ad234c3acff3",
+    "job_id": "4c2ec03f-d670-44f9-9f05-47597984ab20",
+    "kind": "AnswerGiven",
+    "payload": {
+      "answer": "During rapid iteration when checking engine health repeatedly, and in CI where it extends feedback loops",
+      "item_id": "situation"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-22T03:34:35.614876+00:00",
+    "project_id": "5ea01f61-8536-4ace-90cb-18700a12e410",
+    "provenance": "trusted",
+    "seq": 14
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

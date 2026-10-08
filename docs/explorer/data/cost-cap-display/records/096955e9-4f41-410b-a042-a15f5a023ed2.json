@@ -1,0 +1,39 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "7800a47344fe8eb809b7a9c0df1178f2560dfbf7c393347d7023be792656cc07",
+    "event_id": "a0dc88a1-c09d-4ac8-9560-05779b08cb39",
+    "seq": 14
+  },
+  "previous": {
+    "digest": "ef9631515f615f0c344e4519ff639517ffa3b32142607d7a96c29e56f7c0af9d",
+    "event_id": "36c0bc7a-286e-423a-b66e-22d6824c337e",
+    "seq": 12
+  },
+  "project_id": "b43d1fcb-fb7b-42d6-9f80-220292c73389",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "6796d793-0ebb-4345-8f3f-4dea5625238b",
+    "cycle": 1,
+    "digest": "9bb79767e14adef1ae5f64f47fdf99f3fa5f2b868f66b67d445a5c73e708e6ef",
+    "engine_id": "claudeloop",
+    "event_id": "096955e9-4f41-410b-a042-a15f5a023ed2",
+    "job_id": "64ea0fea-cd4f-4b3b-bf19-112c18a7c58d",
+    "kind": "AnswerGiven",
+    "payload": {
+      "answer": "Chiefly at a parked budget_exhausted gate, deciding whether to grant more. Also mid-run, checking headroom before letting an expensive phase start, and after a run when reconciling what it cost. The gate case is the one that matters, because it is the moment the number changes a decision.",
+      "item_id": "user_trigger"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-22T02:59:00.469742+00:00",
+    "project_id": "b43d1fcb-fb7b-42d6-9f80-220292c73389",
+    "provenance": "trusted",
+    "seq": 13
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

@@ -1,0 +1,43 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "d89280f36773799c0bd8e7a2866cd8652889039bc8954a259561f2bae0acbc8f",
+    "event_id": "39972318-45bc-4591-bde4-b27a27241437",
+    "seq": 13
+  },
+  "previous": {
+    "digest": "e4f9daa7b13eae82943e15883ab935720afcb468aa587a84d75ec912ef07bd57",
+    "event_id": "97f1dad8-6e4e-477a-b95a-8aece85c5ebc",
+    "seq": 11
+  },
+  "project_id": "bed522a2-0b3e-4bff-9cd6-7c13fe40779a",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "2fde1286-83e5-491c-b3e4-8558cca9c544",
+    "cycle": 1,
+    "digest": "285dfb7e5ff33b0a7a82fa7e3cb178f0411d56956bd0e66c7c1cb23390c44f2e",
+    "engine_id": "claudeloop",
+    "event_id": "b76d6414-55c3-4c4a-aa6e-d22ee3416512",
+    "job_id": "92d834a4-4bf2-4699-9354-adbea7936d77",
+    "kind": "QuestionAsked",
+    "payload": {
+      "blocking": false,
+      "cycle": 1,
+      "default": "Show a live multiplexed view (job1: line, job2: line, ...) while running, then a summary table on completion showing each job's status, duration, and outcome. Similar to `docker-compose up` or `concurrently`.",
+      "item_id": "success_output",
+      "stage": "job_story",
+      "text": "What should the command output look like while running and on completion? A single aggregated view, separate streams, or something else?"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-22T02:57:10.599326+00:00",
+    "project_id": "bed522a2-0b3e-4bff-9cd6-7c13fe40779a",
+    "provenance": "agent",
+    "seq": 12
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

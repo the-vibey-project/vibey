@@ -1,0 +1,43 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "700f57922380b16b4f4c1223e492570abf139d6054387d52c52b15f2824fa9ba",
+    "event_id": "67a785a1-0d87-41b7-883e-d0919326dbf6",
+    "seq": 42
+  },
+  "previous": {
+    "digest": "772e2a9c8e1fd1ada493412ac50b00f298e63ba7af5a73f626be34dc0ee859a9",
+    "event_id": "04d83d72-4ee0-47ed-b2ea-ea2300998f01",
+    "seq": 40
+  },
+  "project_id": "5e76341f-ba5f-4272-8355-3df5d489bbcd",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "3b134e41-4a34-41eb-a177-057a3563b7a6",
+    "cycle": 1,
+    "digest": "1db6fcdb6393ac8c489f36b0e8428e7f7e599d7fc05ae92bc07a02d5bb208315",
+    "engine_id": "claudeloop",
+    "event_id": "ae46b69f-d9a6-47f4-a502-5abfd76ef839",
+    "job_id": "e58deb6b-5356-4a39-8acf-5dc898bba380",
+    "kind": "QuestionAsked",
+    "payload": {
+      "blocking": false,
+      "cycle": 1,
+      "default": "100ms on standard hardware - greeting should feel instant",
+      "item_id": "response_time",
+      "stage": "nfr_planguage",
+      "text": "What is the maximum acceptable response time from launch to greeting display?"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-20T00:50:56.962653+00:00",
+    "project_id": "5e76341f-ba5f-4272-8355-3df5d489bbcd",
+    "provenance": "agent",
+    "seq": 41
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

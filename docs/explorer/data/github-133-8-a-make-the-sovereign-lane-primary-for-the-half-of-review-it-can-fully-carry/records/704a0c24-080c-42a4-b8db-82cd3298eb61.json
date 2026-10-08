@@ -1,0 +1,39 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "71614244670c489ee55990da42921dacd9ec54837a48d5556f37f2d3e8edca28",
+    "event_id": "2f410e94-c10a-4d5f-845a-6adb3e59e711",
+    "seq": 17
+  },
+  "previous": {
+    "digest": "206adc185a9d764325c5a9d39d98bd48c69beaa25da11718bead81c37fee5e5f",
+    "event_id": "903ba60b-e61a-4f0e-8e22-ccbb3b432180",
+    "seq": 15
+  },
+  "project_id": "f4cfe576-55c7-4f79-80ad-485f85ddca8b",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "4bb7ecc1-ea40-5364-bed9-45c048157678",
+    "cycle": 1,
+    "digest": "5274405b5e96140be84f9108eb57f076538daba5dfb05f7e05cd51407e56ce01",
+    "engine_id": "gptossloop",
+    "event_id": "704a0c24-080c-42a4-b8db-82cd3298eb61",
+    "job_id": "5057b798-907c-4039-9690-3992212dc0b2",
+    "kind": "AnswerGiven",
+    "payload": {
+      "answer": "Run the sovereign lane first; only after it completes do we trigger the paid lane for the remaining half.",
+      "item_id": "Q6"
+    },
+    "phase": "design",
+    "produced_at": "2026-09-27T21:31:09.142576+00:00",
+    "project_id": "f4cfe576-55c7-4f79-80ad-485f85ddca8b",
+    "provenance": "trusted",
+    "seq": 16
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

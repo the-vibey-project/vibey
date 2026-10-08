@@ -1,0 +1,43 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "a851c1f4440b01e41f89fc0f06d2d25f18278ec8488ed056a2f0b2b3c8944a1a",
+    "event_id": "d2fe4e75-7ee6-491a-8a8a-5bed184679e7",
+    "seq": 50
+  },
+  "previous": {
+    "digest": "9974e9669666cc46c26ad72c5316387bc5a0d3bb3b5327db935d1bc438f5c312",
+    "event_id": "00ac8eea-35c8-4a61-9c6b-8f07bff15153",
+    "seq": 48
+  },
+  "project_id": "bed522a2-0b3e-4bff-9cd6-7c13fe40779a",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "9fca6093-3a39-49d0-be76-b98921e3a1af",
+    "cycle": 1,
+    "digest": "86a2d668c8fcfbf6cc09102d86b5eb511131396f4bf24d3b27e6ff467277f0d8",
+    "engine_id": "claudeloop",
+    "event_id": "aede8b00-b21c-4698-84da-d8ac75905014",
+    "job_id": "92d834a4-4bf2-4699-9354-adbea7936d77",
+    "kind": "QuestionAsked",
+    "payload": {
+      "blocking": false,
+      "cycle": 1,
+      "default": "Reliability [claim_failure_rate]: target \u003c1% transient failures, retry up to 3 times with 1s exponential backoff. Permanent failures (job not found, already claimed) fail immediately without retry. Rationale: database contention may cause occasional lock timeouts; retries handle transients, fast-fail handles logic errors.",
+      "item_id": "claim_atomicity",
+      "stage": "nfr_planguage",
+      "text": "What is the acceptable probability of a transient failure when atomically claiming N jobs? (Planguage: Reliability [claim_failure_rate, retry_policy])"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-22T03:45:53.279715+00:00",
+    "project_id": "bed522a2-0b3e-4bff-9cd6-7c13fe40779a",
+    "provenance": "agent",
+    "seq": 49
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

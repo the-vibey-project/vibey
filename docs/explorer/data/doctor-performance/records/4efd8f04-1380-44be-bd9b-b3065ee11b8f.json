@@ -1,0 +1,43 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "a2a48cdddfada134d6683e5d9c21a09f007701651ab5f88753be1000457d468f",
+    "event_id": "c17d02bb-a56f-40e0-acbb-f1415c087af1",
+    "seq": 19
+  },
+  "previous": {
+    "digest": "b23ba359d17185d4824276c719ffa6461b6ca588d0781a782e9a9c7f97922574",
+    "event_id": "386a1ac1-8cde-46be-89d2-178a3695ce4d",
+    "seq": 16
+  },
+  "project_id": "5ea01f61-8536-4ace-90cb-18700a12e410",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "d2c06d2c-60fa-426e-930f-fe7ed22ac3b1",
+    "cycle": 1,
+    "digest": "13809cd811e43e9a0bcac6e66f46b45770ae12204af99ccae8af20b9b391e92f",
+    "engine_id": "claudeloop",
+    "event_id": "4efd8f04-1380-44be-bd9b-b3065ee11b8f",
+    "job_id": "4c2ec03f-d670-44f9-9f05-47597984ab20",
+    "kind": "QuestionAsked",
+    "payload": {
+      "blocking": true,
+      "cycle": 1,
+      "default": "Non-zero exit code, with each engine reported in deterministic order showing success/failure/timeout status clearly",
+      "item_id": "failure_output",
+      "stage": "laddering",
+      "text": "When one or more engines time out or fail during concurrent checks, what should the command's exit code and output format be?"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-22T03:35:28.766467+00:00",
+    "project_id": "5ea01f61-8536-4ace-90cb-18700a12e410",
+    "provenance": "agent",
+    "seq": 18
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

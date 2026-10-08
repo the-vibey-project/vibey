@@ -1,0 +1,39 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "8be33c1cd3bc189597fb969029f55e808bfe05e454f31b90799969640b3ef2bb",
+    "event_id": "f599802d-f6a5-41a5-9722-04953a4d790d",
+    "seq": 9
+  },
+  "previous": {
+    "digest": "d1f71d60f1c2c75900f02de21525feb870ccbc73f8dd016a4f40e777e49f0d92",
+    "event_id": "cdcce64a-2e77-48aa-82a8-80100875de73",
+    "seq": 7
+  },
+  "project_id": "b43d1fcb-fb7b-42d6-9f80-220292c73389",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "bc652184-3f38-4fb2-935d-86ad492a0f4c",
+    "cycle": 1,
+    "digest": "a7697ebb76eb50a4f7d2962bef6c138d624e892d226ab822425a2c33d7c54f4d",
+    "engine_id": "claudeloop",
+    "event_id": "330934a7-788e-484f-a548-49d0a1ea64bf",
+    "job_id": "64ea0fea-cd4f-4b3b-bf19-112c18a7c58d",
+    "kind": "AnswerGiven",
+    "payload": {
+      "answer": "`vibey cost` on a project created with --max-cycle-dollars 200 prints 200. A project with no cap prints 'none' or equivalent rather than 40. A regression test asserts display and brake read the same resolved value from the same helper, so they cannot diverge again. All 7 gates green.",
+      "item_id": "success_criteria"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-22T02:56:42.441138+00:00",
+    "project_id": "b43d1fcb-fb7b-42d6-9f80-220292c73389",
+    "provenance": "trusted",
+    "seq": 8
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

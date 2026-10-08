@@ -1,0 +1,39 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "69f0240590d5e9943480f0304b4e646f238ae937780b6f3e0df6d5cc9b002cc5",
+    "event_id": "1e885db7-5ca4-4f7c-8b6e-8223ccfa377a",
+    "seq": 55
+  },
+  "previous": {
+    "digest": "cd0a308c1df8f42a45801da74c0eed38144337bb3bbca865411440a431226460",
+    "event_id": "b4d4d8eb-b668-4a73-8397-dd7bcfaee5a4",
+    "seq": 53
+  },
+  "project_id": "e631c00a-e1a1-4ed4-b99a-0fa2d388d240",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "1add0d79-5ca7-4529-b8d9-90a4a1a5a7b7",
+    "cycle": 1,
+    "digest": "8967a80ce156211cd47d82e05d2024282107929251454c93832f361004dcf73b",
+    "engine_id": "claudeloop",
+    "event_id": "645dc4e3-5d14-440e-906f-5f07044b5f98",
+    "job_id": "d73f236e-a7b4-4748-b075-3900a75af324",
+    "kind": "AnswerGiven",
+    "payload": {
+      "answer": "Terminal resize events, async widget updates, or event loop timing\u2014mitigate by using Pilot's deterministic pause() between actions and avoiding time.sleep()",
+      "item_id": "tui_test_brittleness"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-22T03:44:59.097632+00:00",
+    "project_id": "e631c00a-e1a1-4ed4-b99a-0fa2d388d240",
+    "provenance": "trusted",
+    "seq": 54
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

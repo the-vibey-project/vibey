@@ -1,0 +1,43 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "cd29bdf634a68b95c0b82b59918f2d81cd5bb13ea7fd37833d27e88f6d7fbd2a",
+    "event_id": "fba1cf9b-b16b-4a5f-8ce8-27ffa237c22f",
+    "seq": 20
+  },
+  "previous": {
+    "digest": "676d9cd21a40c0e698c74af2b261575ddb170ce64ee9cd2ecb2f4334f8345053",
+    "event_id": "1295b750-c394-497b-b568-f011842ee7b7",
+    "seq": 18
+  },
+  "project_id": "44c06a64-c8ed-4153-96af-b49db29c39e3",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "f098ac91-9ce8-436d-88de-7eeb419b3fc9",
+    "cycle": 1,
+    "digest": "e3f4bd4577e7a3913742476283c164f1d8e38d48c6c068d90018da53fc13e7e0",
+    "engine_id": "claudeloop",
+    "event_id": "38636031-0620-448e-842c-14e0408da6fa",
+    "job_id": "bcd8e0b1-385d-43dc-ad1f-cad988f80cc9",
+    "kind": "QuestionAsked",
+    "payload": {
+      "blocking": true,
+      "cycle": 1,
+      "default": "New indexes are fine; avoid schema changes that require migration downtime or break old client versions",
+      "item_id": "schema_changes_allowed",
+      "stage": "laddering",
+      "text": "Are backward-compatible schema changes (new indexes, materialized columns) acceptable, or must optimizations stay query-only?"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-22T03:35:19.848756+00:00",
+    "project_id": "44c06a64-c8ed-4153-96af-b49db29c39e3",
+    "provenance": "agent",
+    "seq": 19
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

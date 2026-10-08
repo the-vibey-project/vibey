@@ -1,0 +1,43 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "729579f1b103572b409ffa889836cd573fff75a1fcc75830b1fa2cbef3dd9976",
+    "event_id": "ebd3165b-4f4d-4b50-994d-9b7b22a27978",
+    "seq": 31
+  },
+  "previous": {
+    "digest": "2bdc224d54ae2b4b9239e4f68e178b21e29b48f6e08d1d1825ad44a0d7df3d3f",
+    "event_id": "e823035f-15b1-449e-87ab-d103ce4a08ff",
+    "seq": 29
+  },
+  "project_id": "2f6a93b6-2d73-4aff-bc94-16539841133f",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "3e2de452-3520-4648-9aff-2892b690d7a7",
+    "cycle": 1,
+    "digest": "2389940374e937bf0864d59e280eaf6a97ee01709d6772e92156aeee498057c9",
+    "engine_id": "claudeloop",
+    "event_id": "27eea52a-fb1c-40ee-ba15-5a95c5a34395",
+    "job_id": "334db377-8cb0-4a72-9cc0-78b45fc9bb38",
+    "kind": "QuestionAsked",
+    "payload": {
+      "blocking": false,
+      "cycle": 1,
+      "default": "Job in state=LEASED (actively being worked): continue should fail with 'job is currently running, cannot continue' rather than silently no-op or racing with the worker. Also: job in SUCCEEDED\u2014continuing a done job is likely operator error, warn 'job already succeeded' and require --force to re-enqueue.",
+      "item_id": "continue_edge_example",
+      "stage": "example_mapping",
+      "text": "Give an example where continue should fail or warn rather than silently no-op: what job state/situation makes `vibey continue \u003cjob-id\u003e` inappropriate or ambiguous?"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-22T03:43:11.386375+00:00",
+    "project_id": "2f6a93b6-2d73-4aff-bc94-16539841133f",
+    "provenance": "agent",
+    "seq": 30
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

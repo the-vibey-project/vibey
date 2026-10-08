@@ -1,0 +1,39 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "339165d407737946dd32556f850e4b4aa6d7814cd82c4a773614d597941f3ee0",
+    "event_id": "117113ba-161f-4199-97cd-7fa09f103531",
+    "seq": 25
+  },
+  "previous": {
+    "digest": "a2363994919fe0b89df5f127b75392daeea246c942465d243dc058f03c653475",
+    "event_id": "c15b6198-a952-460e-9aab-b794a66043fc",
+    "seq": 23
+  },
+  "project_id": "2f6a93b6-2d73-4aff-bc94-16539841133f",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "c1a42779-2484-4328-ae93-6c6f656d1cdf",
+    "cycle": 1,
+    "digest": "39fdd9bd369f5cff8735d7fa22ba14ac1be5cbfe8ee4822fe01ef61d3e36eca1",
+    "engine_id": "claudeloop",
+    "event_id": "8c99d394-465c-4d5f-8124-a60f868d673e",
+    "job_id": "334db377-8cb0-4a72-9cc0-78b45fc9bb38",
+    "kind": "AnswerGiven",
+    "payload": {
+      "answer": "Both set a flag checked on next heartbeat; worker sees it like SIGTERM and drains gracefully (completes current turn, writes no more, releases lease). Stop sets stop_requested flag \u2192 worker acks CANCELLED on release. Wind-back sets rewind_requested + target_seq \u2192 worker releases cleanly for coordinator to rewind.",
+      "item_id": "lease_coordination"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-22T03:41:56.495111+00:00",
+    "project_id": "2f6a93b6-2d73-4aff-bc94-16539841133f",
+    "provenance": "trusted",
+    "seq": 24
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

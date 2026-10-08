@@ -1,0 +1,39 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "ae8d0aca128ca1992b66960876d7b813e4dca40b19014802f568d0b01f6549c8",
+    "event_id": "44d5b519-fa95-44ab-8807-16effcfbdc59",
+    "seq": 6
+  },
+  "previous": {
+    "digest": "0de859f5e723e6f4f777dbc3f24e6626064fff1826d7d07b550910ed53c75926",
+    "event_id": "c06b6f36-15a1-43f6-8d75-1e3e7f103562",
+    "seq": 4
+  },
+  "project_id": "d733035f-e0f9-4f67-aba2-270068d6a9c6",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "49f613b9-b5ef-4b21-a972-c8d533218d4e",
+    "cycle": 1,
+    "digest": "5858c984d35567fb49231df2b4e73d721b40fabce899deb504b5e43985ddc6fc",
+    "engine_id": "claudeloop",
+    "event_id": "ab6d98ed-31ce-4415-9a5c-24eba6a44327",
+    "job_id": "44e282ee-55b1-4cf9-afc3-c84870a14a5c",
+    "kind": "AnswerGiven",
+    "payload": {
+      "answer": "Implementation-ready specification with acceptance criteria. Small, well-bounded command; the design work is in the in-flight-jobs question and the interaction with CANCELLED, not in the transition itself.",
+      "item_id": "scope"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-22T02:55:30.118419+00:00",
+    "project_id": "d733035f-e0f9-4f67-aba2-270068d6a9c6",
+    "provenance": "trusted",
+    "seq": 5
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

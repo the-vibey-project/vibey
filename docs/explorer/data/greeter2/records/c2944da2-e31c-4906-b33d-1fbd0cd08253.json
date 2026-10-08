@@ -1,0 +1,43 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "c030ab1f95590bbc07fdc05788f41e0ca6d95b0fc4758ad5c7824b82f55cbb4f",
+    "event_id": "1c6a53b5-6f96-4d82-aedf-3e494600c898",
+    "seq": 11
+  },
+  "previous": {
+    "digest": "ef6a10b9a56385b3414361c202f16a37733ee0bcacf84b5b682310d4613021be",
+    "event_id": "6623ae31-5118-4aa4-93e1-cac45abc04a1",
+    "seq": 9
+  },
+  "project_id": "8f254b4c-df0a-4056-8937-6eba30efcfa6",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "b297f938-881e-485e-a0e2-bd4c21a61587",
+    "cycle": 1,
+    "digest": "0ae771a1e9b9af756090bb446a0947b18291ba3cfc86464a2c9bcdd65f411ce2",
+    "engine_id": "claudeloop",
+    "event_id": "c2944da2-e31c-4906-b33d-1fbd0cd08253",
+    "job_id": "40fb97d9-4ab1-4fa8-9ae2-693c2b7a7fc9",
+    "kind": "QuestionAsked",
+    "payload": {
+      "blocking": false,
+      "cycle": 1,
+      "default": "Morning (5am-12pm): 'Good morning, Alice!', Afternoon (12pm-5pm): 'Good afternoon, Alice!', Evening (5pm-5am): 'Good evening, Alice!'",
+      "item_id": "time_based_context",
+      "stage": "job_story",
+      "text": "When should the time-of-day greeting variant be used? What makes morning/afternoon/evening greetings different?"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-19T18:27:38.312483+00:00",
+    "project_id": "8f254b4c-df0a-4056-8937-6eba30efcfa6",
+    "provenance": "agent",
+    "seq": 10
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

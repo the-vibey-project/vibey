@@ -1,0 +1,39 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a",
+    "event_id": "1e597c2a-d3a2-476e-b266-582e18afa308",
+    "seq": 69
+  },
+  "previous": {
+    "digest": "caeb6d57f4d714364736a68e1e661b37d52d1d4b7159c4d7170b2921ca7bfa15",
+    "event_id": "ec94186b-8da5-4553-b408-255cdfbfd18c",
+    "seq": 60
+  },
+  "project_id": "44c06a64-c8ed-4153-96af-b49db29c39e3",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "a5a3c45d-11e5-4812-80f2-55eb1ee0ecdd",
+    "cycle": 1,
+    "digest": "36a018959baed1ac2a1e04a45ddb4b7d320e3e9894f41f46d116f531ed728f5e",
+    "engine_id": "claudeloop",
+    "event_id": "c23cbb9b-b672-4801-90a5-ff14d85bffa7",
+    "job_id": "bcd8e0b1-385d-43dc-ad1f-cad988f80cc9",
+    "kind": "AnswerGiven",
+    "payload": {
+      "answer": "No production observability for claim latency \u2014 we'd have no telemetry to verify real-world impact beyond synthetic tests",
+      "item_id": "measurement_blindspot"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-22T03:48:03.775552+00:00",
+    "project_id": "44c06a64-c8ed-4153-96af-b49db29c39e3",
+    "provenance": "trusted",
+    "seq": 61
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

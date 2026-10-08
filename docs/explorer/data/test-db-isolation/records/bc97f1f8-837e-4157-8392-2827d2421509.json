@@ -1,0 +1,43 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "90b2c172155f72f3580b4be35cfa506d36822be76cc2cd315c83a88fd535ddd3",
+    "event_id": "642fc066-83f7-42ae-88c3-bf8b732ba2e8",
+    "seq": 21
+  },
+  "previous": {
+    "digest": "1599091e32cb3db95f7411c56b32a5a0e93b0a5d9ea8c95b53a3e4f338a253f3",
+    "event_id": "8f468984-d673-4bc5-ac16-2ce1715a5f02",
+    "seq": 18
+  },
+  "project_id": "df7e868b-1fbf-451b-8ceb-126359b7588e",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "58447b3e-ca1d-4f56-859e-63c0dbc98847",
+    "cycle": 1,
+    "digest": "862c9b7b112d7da57f1dc912a8b5685a9e4a33705601cc1168b64ec3cd66874c",
+    "engine_id": "claudeloop",
+    "event_id": "bc97f1f8-837e-4157-8392-2827d2421509",
+    "job_id": "3a3b336c-c2aa-4400-a762-ae12246358d3",
+    "kind": "QuestionAsked",
+    "payload": {
+      "blocking": true,
+      "cycle": 1,
+      "default": "Reduces manual data entry errors and time spent managing records across disconnected systems",
+      "item_id": "business_problem",
+      "stage": "laddering",
+      "text": "What business problem or operational pain point does this CRUD feature solve?"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-22T04:43:39.112172+00:00",
+    "project_id": "df7e868b-1fbf-451b-8ceb-126359b7588e",
+    "provenance": "agent",
+    "seq": 20
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

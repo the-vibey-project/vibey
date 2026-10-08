@@ -1,0 +1,39 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "7e796a9fad70a17d4c0adca1e49e1f14760bc4e49d129d3ebf3bb98281bf6218",
+    "event_id": "a17c3576-5823-45ca-8613-81f0dc022ccc",
+    "seq": 22
+  },
+  "previous": {
+    "digest": "11e88ef29f7dba4f0869685d4e609b73b938d459932ef91ac96dd45a336e0ba2",
+    "event_id": "88d95004-7ccd-4d0f-8611-5fe7fc22b870",
+    "seq": 20
+  },
+  "project_id": "ab0b06f9-55a4-4b47-ac08-254e7fdd9036",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "0966b4d9-4510-4e64-a393-b4f560983e17",
+    "cycle": 1,
+    "digest": "732e44f059b43a37adfadb5d96a8612543353256f24ba5075cafd33267bf8593",
+    "engine_id": "claudeloop",
+    "event_id": "4cdff1cc-7181-4a4a-9947-b26e85db3b5c",
+    "job_id": "48f9ef01-8b95-4709-adde-ed0ece390f8d",
+    "kind": "AnswerGiven",
+    "payload": {
+      "answer": "Git state only; the fork starts fresh in DESIGN phase with default engine rotation and retry count at zero, as if it were a new job seeded with that tree",
+      "item_id": "state_restoration"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-22T03:34:34.636746+00:00",
+    "project_id": "ab0b06f9-55a4-4b47-ac08-254e7fdd9036",
+    "provenance": "trusted",
+    "seq": 21
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

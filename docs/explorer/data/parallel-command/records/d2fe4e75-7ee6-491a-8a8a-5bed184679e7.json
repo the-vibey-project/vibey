@@ -1,0 +1,39 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "d56b97655526de1c16aa920a731313bd7c3ffb62de7126a9ce859e09eb7359be",
+    "event_id": "5b056df1-21c8-41fd-a261-3d050d188be9",
+    "seq": 51
+  },
+  "previous": {
+    "digest": "86a2d668c8fcfbf6cc09102d86b5eb511131396f4bf24d3b27e6ff467277f0d8",
+    "event_id": "aede8b00-b21c-4698-84da-d8ac75905014",
+    "seq": 49
+  },
+  "project_id": "bed522a2-0b3e-4bff-9cd6-7c13fe40779a",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "d76be048-6e3e-4ab6-b4ba-ff0d43025822",
+    "cycle": 1,
+    "digest": "a851c1f4440b01e41f89fc0f06d2d25f18278ec8488ed056a2f0b2b3c8944a1a",
+    "engine_id": "claudeloop",
+    "event_id": "d2fe4e75-7ee6-491a-8a8a-5bed184679e7",
+    "job_id": "92d834a4-4bf2-4699-9354-adbea7936d77",
+    "kind": "AnswerGiven",
+    "payload": {
+      "answer": "Scale [max_jobs]: minimum 2, target 10, stretch 50. Rationale: most batch operations involve 2-5 jobs; 10 covers realistic multi-module builds; 50 is an upper bound to prevent resource exhaustion and keep output readable.",
+      "item_id": "max_parallel_jobs"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-22T03:46:32.042194+00:00",
+    "project_id": "bed522a2-0b3e-4bff-9cd6-7c13fe40779a",
+    "provenance": "trusted",
+    "seq": 50
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

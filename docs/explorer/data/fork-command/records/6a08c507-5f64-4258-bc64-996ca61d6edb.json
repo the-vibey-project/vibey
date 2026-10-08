@@ -1,0 +1,43 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "82c6ff7e761f4c6248f16f8b5be09abd0eb673087c867f9c3754d775c0ed42ed",
+    "event_id": "b104ae19-4393-4645-ad9a-356576fef5a8",
+    "seq": 30
+  },
+  "previous": {
+    "digest": "e45bbec43b7bf2ec00dc27afd8d01ab6d45ed9607e9508a5a27c66d1a9e9c631",
+    "event_id": "01820d9c-a522-42ca-ae71-39318ad00dc8",
+    "seq": 28
+  },
+  "project_id": "ab0b06f9-55a4-4b47-ac08-254e7fdd9036",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "37f9135e-2d34-4746-accc-f81f13a32a32",
+    "cycle": 1,
+    "digest": "8d425a942a5470e88307c8f4167f7772d487c7cb26ac3498bc9e12e319427b81",
+    "engine_id": "claudeloop",
+    "event_id": "6a08c507-5f64-4258-bc64-996ca61d6edb",
+    "job_id": "48f9ef01-8b95-4709-adde-ed0ece390f8d",
+    "kind": "QuestionAsked",
+    "payload": {
+      "blocking": false,
+      "cycle": 1,
+      "default": "1. 'vibey fork 999' where job 999 doesn't exist: 'job not found'. 2. 'vibey fork 42 --at-seq 10' where seq 10 is mid-phase with no commit: 'no commit at or before seq 10'. 3. 'vibey fork 42' where job 42 is brand new with no events: 'cannot fork job with no history'",
+      "item_id": "invalid_fork_targets",
+      "stage": "example_mapping",
+      "text": "List 3 specific examples of invalid fork operations that should fail fast with clear error messages."
+    },
+    "phase": "design",
+    "produced_at": "2026-08-22T03:35:46.048963+00:00",
+    "project_id": "ab0b06f9-55a4-4b47-ac08-254e7fdd9036",
+    "provenance": "agent",
+    "seq": 29
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

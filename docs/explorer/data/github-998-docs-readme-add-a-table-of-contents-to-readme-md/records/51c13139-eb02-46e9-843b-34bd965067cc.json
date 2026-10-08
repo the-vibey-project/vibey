@@ -1,0 +1,41 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "9368ca925e6dc3f31c7bb64db4a13fdbe1ee0b27faee76c707fc35123748490a",
+    "event_id": "86e29366-88f9-4f9c-afc8-ebabb667ed7d",
+    "seq": 64
+  },
+  "previous": {
+    "digest": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a",
+    "event_id": "b0167972-035a-49fb-aaf3-0b2cc148e73d",
+    "seq": 61
+  },
+  "project_id": "9692abab-ace3-4ee0-ac59-3ea42484b817",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "0face8bc-aa17-546b-b5de-e16e759738e6",
+    "cycle": 1,
+    "digest": "c51b1884b29a4d73fca90b6666835db0d6b7aa80a61499d5d23c469b7398ba99",
+    "engine_id": null,
+    "event_id": "51c13139-eb02-46e9-843b-34bd965067cc",
+    "job_id": null,
+    "kind": "PhaseTransitioned",
+    "payload": {
+      "cycle": 1,
+      "from": "design",
+      "guard": null,
+      "to": "build"
+    },
+    "phase": "build",
+    "produced_at": "2026-09-29T18:54:27.412858+00:00",
+    "project_id": "9692abab-ace3-4ee0-ac59-3ea42484b817",
+    "provenance": "trusted",
+    "seq": 62
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

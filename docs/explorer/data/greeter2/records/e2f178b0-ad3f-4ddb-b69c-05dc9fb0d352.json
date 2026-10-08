@@ -1,0 +1,43 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "b053f766e54f28188cf1262893950a385bbe0e17f9bf15f7e76c281414d2e870",
+    "event_id": "5e50195b-7f61-45f3-a0a0-3050b2ba94a3",
+    "seq": 17
+  },
+  "previous": {
+    "digest": "4552d788baf209060d185195a22fb37274bfa9350e3b9fd6046b36a285fcaeba",
+    "event_id": "9993ca0a-267e-452a-9929-2b641616cbea",
+    "seq": 15
+  },
+  "project_id": "8f254b4c-df0a-4056-8937-6eba30efcfa6",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "345a2c09-6188-4f6e-8d4d-187f53497c3b",
+    "cycle": 1,
+    "digest": "0f9d044d03d8196f1e2188e0d3b4f9ba9c570afa2a2541111b98f9f57b642730",
+    "engine_id": "claudeloop",
+    "event_id": "e2f178b0-ad3f-4ddb-b69c-05dc9fb0d352",
+    "job_id": "40fb97d9-4ab1-4fa8-9ae2-693c2b7a7fc9",
+    "kind": "QuestionAsked",
+    "payload": {
+      "blocking": false,
+      "cycle": 1,
+      "default": "Always use system time - no override needed for this simple tool",
+      "item_id": "time_source",
+      "stage": "laddering",
+      "text": "Should -t/--time always use system time, or allow an override (e.g., for testing different times of day)?"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-19T18:28:22.269541+00:00",
+    "project_id": "8f254b4c-df0a-4056-8937-6eba30efcfa6",
+    "provenance": "agent",
+    "seq": 16
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

@@ -1,0 +1,40 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "780c12f213aab033551a75490304659b1fcc76db38964a4dfd29dbc78adb617b",
+    "event_id": "5874c09e-45f5-493d-bd7a-688034318b1b",
+    "seq": 1017
+  },
+  "previous": {
+    "digest": "55387b124af01bc805f727c7317becc868f4c730a4b27622c57bdf9ff835774f",
+    "event_id": "f188dd40-9487-42f0-993c-41b3c4d3453d",
+    "seq": 998
+  },
+  "project_id": "a1d6b837-46f3-40c0-b6a2-8b3babb7fe15",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "ab030e69-7523-4800-bae8-8b3de9b0a4df",
+    "cycle": 1,
+    "digest": "95ecb03a88275e3c8dac5ea4272c88a85951ae0bb0be348a832c6c1609cd4ff5",
+    "engine_id": null,
+    "event_id": "4dfba8c4-6276-49f2-ad65-d15bf18fa52e",
+    "job_id": "aebe098c-e267-4c38-9917-ea04de827fa5",
+    "kind": "FindingRaised",
+    "payload": {
+      "finding_id": "f_verify_ci-coverage_f08006a8",
+      "severity": "high",
+      "text": "gate failed: diff \u003c(git show develop:.github/workflows/ci.yml | grep -oP \"(?\u003c=name: ).*\") \u003c(grep -oP '(?\u003c=name: ).*' .github/workflows/ci.yml) | grep '^\u003c' || true: diff: invalid option -- o\nusage: diff [-aBbdilpTtw] [-c | -e | -f | -n | -q | -u] [--ignore-case]\n            [--no-ignore-case] [--normal] [--strip-trailing-cr] [--tabsize]\n            [-I pattern] [-F pattern] [-L label] file1 file2\n       diff [-aBbdilpTtw] [-I pattern] [-L label] [--ignore-case]\n            [--no-ignore-case] [--normal] [--strip-trailing-cr] [--tabsize]\n            [-F pattern] -C number file1 file2\n       diff [-aBbdiltw] [-I pattern] [--ignore-case] [--no-ignore-case]\n            [--normal] [--strip-trailing-cr] [--tabsize] -D string file1 file2\n       diff [-aBbdilpTtw] [-I pattern] [-L label] [--ignore-case]\n            [--no-ignore-case] [--normal] [--tabsize] [--strip-trailing-cr]\n            [-F pattern] -U number file1 file2\n       diff [-aBbdilNPprsTtw] [-c | -e | -f | -n | -q | -u] [--ignore-case]\n            [--no-ignore-case] [--normal] [--tabsize] [-I pattern] [-L label]\n            [-F pattern] [-S name] [-X file] [-x pattern] dir1 dir2\n       diff [-aBbditwW] [--expand-tabs] [--ignore-all-space]\n            [--ignore-blank-lines] [--ignore-case] [--minimal]\n            [--no-ignore-file-name-case] [--strip-trailing-cr]\n            [--suppress-common-lines] [--tabsize] [--text] [--width]\n            -y | --side-by-side file1 file2\n       diff [--help] [--version]"
+    },
+    "phase": "build",
+    "produced_at": "2026-08-22T18:55:48.534752+00:00",
+    "project_id": "a1d6b837-46f3-40c0-b6a2-8b3babb7fe15",
+    "provenance": "agent",
+    "seq": 999
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

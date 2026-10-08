@@ -1,0 +1,43 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "63bbcf326d9c75f911503b31cf593788b71b1b18ed71baf633974246905ac0a3",
+    "event_id": "eb4eda8d-4087-4a4a-af27-ee218510cce0",
+    "seq": 44
+  },
+  "previous": {
+    "digest": "e869c8246102bfd6b4e5d7ea08ca32f29bec469cf133c9355a410c547bc65f83",
+    "event_id": "d4887bae-8feb-41a7-9dff-4f7dc26e04f0",
+    "seq": 42
+  },
+  "project_id": "a1d6b837-46f3-40c0-b6a2-8b3babb7fe15",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "881301b3-1e22-45b5-9bfc-f10b220d92d9",
+    "cycle": 1,
+    "digest": "ca2830fbddebd5c154af8016452f13a57c82abc19c7f616a32c820508fc4e5d2",
+    "engine_id": "claudeloop",
+    "event_id": "ce16f855-53b6-45f9-ba09-1a2906df2255",
+    "job_id": "dd8513f6-0d76-49a5-8bdc-75167dea5385",
+    "kind": "QuestionAsked",
+    "payload": {
+      "blocking": false,
+      "cycle": 1,
+      "default": "Auto-detect with -n auto; cap at 8 workers max to avoid diminishing returns and resource contention",
+      "item_id": "worker_count_policy",
+      "stage": "nfr_planguage",
+      "text": "Should pytest-xdist worker count be auto-detected (-n auto), capped at a maximum, or fixed for reproducible timing?"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-20T20:45:52.666294+00:00",
+    "project_id": "a1d6b837-46f3-40c0-b6a2-8b3babb7fe15",
+    "provenance": "agent",
+    "seq": 43
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

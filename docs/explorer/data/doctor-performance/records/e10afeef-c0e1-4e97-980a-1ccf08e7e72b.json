@@ -1,0 +1,39 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "b23ba359d17185d4824276c719ffa6461b6ca588d0781a782e9a9c7f97922574",
+    "event_id": "386a1ac1-8cde-46be-89d2-178a3695ce4d",
+    "seq": 16
+  },
+  "previous": {
+    "digest": "4afd37308a5f29ef02992e354f09537a86e215013eef49b8e9da23bdf08bae5e",
+    "event_id": "b06847c5-d653-4c07-9218-ad234c3acff3",
+    "seq": 14
+  },
+  "project_id": "5ea01f61-8536-4ace-90cb-18700a12e410",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "4a57238d-cd50-44f4-aebf-7ff977b8f525",
+    "cycle": 1,
+    "digest": "97711a58b34e6c938952c986803caa4319f751bddcd467ac30a95cc7d7219842",
+    "engine_id": "claudeloop",
+    "event_id": "e10afeef-c0e1-4e97-980a-1ccf08e7e72b",
+    "job_id": "4c2ec03f-d670-44f9-9f05-47597984ab20",
+    "kind": "AnswerGiven",
+    "payload": {
+      "answer": "Tight iteration loops where developers can check all engines between code changes without context-switching",
+      "item_id": "outcome"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-22T03:34:35.614876+00:00",
+    "project_id": "5ea01f61-8536-4ace-90cb-18700a12e410",
+    "provenance": "trusted",
+    "seq": 15
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

@@ -1,0 +1,38 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": null,
+  "previous": {
+    "digest": "050fe3c6ab191e4c509c7714f43684b01da5ddd32acf4542e10b12c3cd12bf8a",
+    "event_id": "c70334e5-85d8-41a6-b9c0-480a37545528",
+    "seq": 1042
+  },
+  "project_id": "d733035f-e0f9-4f67-aba2-270068d6a9c6",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "9b7f24b6-3d09-4d9e-9faf-2e45800be6cd",
+    "cycle": 1,
+    "digest": "125013121ebe3802ba293164637691c593137e62a7bd9f0d102bf6a390c0df85",
+    "engine_id": "codexloop",
+    "event_id": "7deb70fb-8e70-475a-9383-7a599add5c2b",
+    "job_id": "f7c6d4b4-0815-4a31-9613-ed0c84744ab9",
+    "kind": "VerdictRendered",
+    "payload": {
+      "complete": false,
+      "remaining_work": [
+        "Implement work item ws: Walking skeleton: abandon a zero-job project end-to-end"
+      ],
+      "success": false
+    },
+    "phase": "build",
+    "produced_at": "2026-08-22T19:53:38.146283+00:00",
+    "project_id": "d733035f-e0f9-4f67-aba2-270068d6a9c6",
+    "provenance": "agent",
+    "seq": 1070
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 2,
+    "paths": 0
+  }
+}

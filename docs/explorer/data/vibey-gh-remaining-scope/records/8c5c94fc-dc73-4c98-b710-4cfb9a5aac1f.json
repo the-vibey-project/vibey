@@ -1,0 +1,43 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "d1ce096823d54032fbda8108dfda5b5345a6124a06d46b5c8ec7966ea45e4374",
+    "event_id": "9e9fafca-30c3-4156-91eb-597939564931",
+    "seq": 43
+  },
+  "previous": {
+    "digest": "9ae2f0951d78b8903a3a7359810d8c1598fef9b1f48d5e2149b6cc85140af34c",
+    "event_id": "c1b270bd-cfe1-4b23-b89d-0caa2d8d9315",
+    "seq": 41
+  },
+  "project_id": "d482c3e2-029e-4bb8-a9a1-de411816c6ae",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "680be73a-2383-4760-996d-aa6b747d10c9",
+    "cycle": 1,
+    "digest": "635782b83297a74d1c5177bc87da37d3f0769e1ddd4af9b52a8c43a84ce6c717",
+    "engine_id": "claudeloop",
+    "event_id": "8c5c94fc-dc73-4c98-b710-4cfb9a5aac1f",
+    "job_id": "d2626f25-d550-454e-bacd-7a7e6c9b52cd",
+    "kind": "QuestionAsked",
+    "payload": {
+      "blocking": false,
+      "cycle": 1,
+      "default": "React and TypeScript.",
+      "item_id": "22",
+      "stage": "nfr_planguage",
+      "text": "What programming languages are you considering for the frontend development of the software?"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-31T02:06:05.909431+00:00",
+    "project_id": "d482c3e2-029e-4bb8-a9a1-de411816c6ae",
+    "provenance": "agent",
+    "seq": 42
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

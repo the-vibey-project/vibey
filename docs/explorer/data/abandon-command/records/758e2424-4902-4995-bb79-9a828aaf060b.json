@@ -1,0 +1,43 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "2fa3d104977b2cbbc6fd797caf4cf9808545e8621f7540ad68fc5a491ea6b436",
+    "event_id": "8c7cf95f-e174-4f64-ac89-e3f3ce20ff71",
+    "seq": 47
+  },
+  "previous": {
+    "digest": "e9220c3ddacebba18e4deb7bd902bf51355392b56ba757f5292d58014aa8dfd9",
+    "event_id": "bbab00d8-dc88-48f7-bc22-80deb8a99a4f",
+    "seq": 45
+  },
+  "project_id": "d733035f-e0f9-4f67-aba2-270068d6a9c6",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "b8d9dd4f-5bd7-456a-bf84-c6ef24a96ca5",
+    "cycle": 1,
+    "digest": "9ea067bd408371dfc58a78399c84df50bf8f01a40ee0c943b1ff24ffe24969ab",
+    "engine_id": "claudeloop",
+    "event_id": "758e2424-4902-4995-bb79-9a828aaf060b",
+    "job_id": "44e282ee-55b1-4cf9-afc3-c84870a14a5c",
+    "kind": "QuestionAsked",
+    "payload": {
+      "blocking": false,
+      "cycle": 1,
+      "default": "Fail immediately with the underlying error. Idempotency makes manual retry safe, and auto-retry risks masking real issues during initial rollout.",
+      "item_id": "transaction_retry_policy",
+      "stage": "nfr_planguage",
+      "text": "If the abandon transaction fails (serialization error, transient network issue), should the CLI retry automatically or fail immediately?"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-22T03:45:10.448603+00:00",
+    "project_id": "d733035f-e0f9-4f67-aba2-270068d6a9c6",
+    "provenance": "agent",
+    "seq": 46
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

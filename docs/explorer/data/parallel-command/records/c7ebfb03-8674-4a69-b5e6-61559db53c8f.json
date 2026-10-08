@@ -1,0 +1,39 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "789ff3d4d69a5c5742bb1f439d75b40f68aca332e13897185e42b25e6ac40c25",
+    "event_id": "034c85ae-2fb8-467e-97ab-9ed3552a53f8",
+    "seq": 62
+  },
+  "previous": {
+    "digest": "e821a356c29b5ffe2591eacd469f25e1b0e30814f06b63a5a6101be15fb1e995",
+    "event_id": "3054d34f-4899-4269-9e17-ccd162f9f7c5",
+    "seq": 60
+  },
+  "project_id": "bed522a2-0b3e-4bff-9cd6-7c13fe40779a",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "d4a5ba6b-1ba8-455b-89ea-b6f759317e5f",
+    "cycle": 1,
+    "digest": "199a02d42dde4cee3d198c3cdc7d73deed9f70cff5aee2b034b94f1383fc159f",
+    "engine_id": "claudeloop",
+    "event_id": "c7ebfb03-8674-4a69-b5e6-61559db53c8f",
+    "job_id": "92d834a4-4bf2-4699-9354-adbea7936d77",
+    "kind": "AnswerGiven",
+    "payload": {
+      "answer": "Each job's integrate attempt includes a timeout (e.g., 60s) on the advisory lock acquisition. If the lock isn't acquired within the timeout, the job fails with a clear error. The hung job's lease eventually expires, its lock is released, and the job becomes claimable again. The operator sees 1 hung (then failed), 2 lock-timeout failures in the summary, can investigate the hung job, kill it if needed, and re-run.",
+      "item_id": "integrate_lock_contention"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-22T03:51:49.961126+00:00",
+    "project_id": "bed522a2-0b3e-4bff-9cd6-7c13fe40779a",
+    "provenance": "trusted",
+    "seq": 61
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

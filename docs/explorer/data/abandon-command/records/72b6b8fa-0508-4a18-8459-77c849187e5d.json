@@ -1,0 +1,43 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "94e5bbb692380c6f89c7886c425791a464936ed4c82ada562d4e8df6ec8b2267",
+    "event_id": "6af0ec46-415e-42c5-9ef1-7afe660226ca",
+    "seq": 28
+  },
+  "previous": {
+    "digest": "61575c53f90e2368d0800b2acd9ff345a4ad9b21b2139c1cb5098a0b007b1860",
+    "event_id": "3a7801da-cf7a-4dfb-9855-2028dcb528e5",
+    "seq": 26
+  },
+  "project_id": "d733035f-e0f9-4f67-aba2-270068d6a9c6",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "44d75121-d93c-4c0d-8ac0-786635c9d250",
+    "cycle": 1,
+    "digest": "5c1f3713f0d674b628a451d37ddecd37811ee9edc6915ace337b7cd28741f00c",
+    "engine_id": "claudeloop",
+    "event_id": "72b6b8fa-0508-4a18-8459-77c849187e5d",
+    "job_id": "44e282ee-55b1-4cf9-afc3-c84870a14a5c",
+    "kind": "QuestionAsked",
+    "payload": {
+      "blocking": true,
+      "cycle": 1,
+      "default": "Without --force: error 'Project \u003cid\u003e is DONE. Use --force to abandon completed work.' With --force: proceeds silently, stdout notes 'Abandoning DONE project \u003cid\u003e.' No interactive prompt\u2014the flag is the confirmation.",
+      "item_id": "done_force_example",
+      "stage": "example_mapping",
+      "text": "What does the confirmation interaction look like when abandoning a DONE project? (exact prompt text, how user confirms, what --force does)"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-22T03:35:25.757013+00:00",
+    "project_id": "d733035f-e0f9-4f67-aba2-270068d6a9c6",
+    "provenance": "agent",
+    "seq": 27
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

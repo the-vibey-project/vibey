@@ -1,0 +1,43 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "717b35c2df0c14176f9c22df1f5f704414dad14cf62253b020361c4f5b0cef1a",
+    "event_id": "970249d0-4b3f-4428-a956-ba1cff49b8ce",
+    "seq": 20
+  },
+  "previous": {
+    "digest": "43f541677cef5f3975912d1633fbcbda049cd436096a875fcf9b13bc30ed493d",
+    "event_id": "a8a2b9dc-d8df-4a82-bb4f-f0529a023ba2",
+    "seq": 18
+  },
+  "project_id": "8ab823c9-89e4-4050-884c-9008c8b14ef8",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "4e2dcdce-eeca-4902-906a-0e4bba608bf0",
+    "cycle": 1,
+    "digest": "6ea878dc3f2e02fdac40ca5aa834832f283a1a823dd0d38199eb30dcdb9a78fb",
+    "engine_id": "claudeloop",
+    "event_id": "dd8cafbf-552d-4244-8186-41271dd7d62d",
+    "job_id": "705692f1-69a1-4cc2-ade7-8aa3d1407b67",
+    "kind": "QuestionAsked",
+    "payload": {
+      "blocking": false,
+      "cycle": 1,
+      "default": "Existing short links must continue redirecting (critical), but new link creation can be delayed (acceptable)",
+      "item_id": "downtime_impact",
+      "stage": "laddering",
+      "text": "What's the acceptable impact if the service experiences downtime or degradation?"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-20T02:33:10.444774+00:00",
+    "project_id": "8ab823c9-89e4-4050-884c-9008c8b14ef8",
+    "provenance": "agent",
+    "seq": 19
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

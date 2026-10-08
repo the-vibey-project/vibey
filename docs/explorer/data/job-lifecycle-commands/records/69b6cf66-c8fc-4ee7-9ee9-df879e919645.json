@@ -1,0 +1,43 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "38ea1aac366ed854776ab0e350edb2ccf3e286fceb21d721f8582a8a86558603",
+    "event_id": "51c397a3-e63d-4ca5-a580-e1a19937929a",
+    "seq": 60
+  },
+  "previous": {
+    "digest": "abb339f2b70074fb44d95c1e4872b0223eda02d2e86fb929e55c50d1978a1555",
+    "event_id": "c5843fb0-232c-48b2-90ff-fa992ecee7be",
+    "seq": 58
+  },
+  "project_id": "2f6a93b6-2d73-4aff-bc94-16539841133f",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "3b2c9be2-ebef-4932-b82c-91964018d9b1",
+    "cycle": 1,
+    "digest": "8991d886449e584aab70fdaad0919362623bf5afd39acea4c8e00ca85c62f61d",
+    "engine_id": "claudeloop",
+    "event_id": "69b6cf66-c8fc-4ee7-9ee9-df879e919645",
+    "job_id": "334db377-8cb0-4a72-9cc0-78b45fc9bb38",
+    "kind": "QuestionAsked",
+    "payload": {
+      "blocking": false,
+      "cycle": 1,
+      "default": "They become orphaned: restart only writes DB state, does not clean up filesystem or cloud resources. Worktrees/rundirs are cleaned by separate reaper process based on job state. Azure resources require manual cleanup or separate garbage collection. Document this in restart command help: 'restart does not clean up resources from original job'.",
+      "item_id": "restart_orphan_resources",
+      "stage": "premortem",
+      "text": "When restart closes job abc-123 and creates abc-124, what happens to abc-123's git worktree, engine rundir, and any cloud resources (Azure deployments) that were provisioned during its execution?"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-22T03:54:38.338860+00:00",
+    "project_id": "2f6a93b6-2d73-4aff-bc94-16539841133f",
+    "provenance": "agent",
+    "seq": 59
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

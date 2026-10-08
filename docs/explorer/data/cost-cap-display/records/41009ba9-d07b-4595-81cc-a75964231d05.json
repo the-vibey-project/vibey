@@ -1,0 +1,39 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "a9e4e0a8492106b08be87946a26f621e517be03a77c6b79f065c292ef3275063",
+    "event_id": "63ea583e-de40-43c2-8bf0-fa0560f35751",
+    "seq": 51
+  },
+  "previous": {
+    "digest": "472e815b5a683da59bad183cdc6b1b2527e0f0b3257796bf0e40998ce13a5bd9",
+    "event_id": "133fd043-963e-4c11-b5b9-7020d5c315bc",
+    "seq": 49
+  },
+  "project_id": "b43d1fcb-fb7b-42d6-9f80-220292c73389",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "c346d440-4e82-492f-8e7f-d97af7a6c7e2",
+    "cycle": 1,
+    "digest": "d6b9a0a0c53bf4b0bc65f8280df5fcf6a89c6778218a9d657a61881b51f773b5",
+    "engine_id": "claudeloop",
+    "event_id": "41009ba9-d07b-4595-81cc-a75964231d05",
+    "job_id": "64ea0fea-cd4f-4b3b-bf19-112c18a7c58d",
+    "kind": "AnswerGiven",
+    "payload": {
+      "answer": "1 - exactly one resolver used by all consumers (display, brake, TUI, status), enforced by integration test",
+      "item_id": "resolver_uniqueness"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-22T03:44:59.636442+00:00",
+    "project_id": "b43d1fcb-fb7b-42d6-9f80-220292c73389",
+    "provenance": "trusted",
+    "seq": 50
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

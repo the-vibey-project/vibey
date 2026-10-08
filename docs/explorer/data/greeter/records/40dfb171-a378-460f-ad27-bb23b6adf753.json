@@ -1,0 +1,43 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "25a460f608298f1c0c23da03f018f47795880674ef7c11bcc1be518929c2d719",
+    "event_id": "098666eb-b880-4dbd-a6c3-32720a05d79e",
+    "seq": 36
+  },
+  "previous": {
+    "digest": "06acff5e5e93bcaa175e7a1a11cce8e5cc2c5306c3201e5c6606a794c25fe8e2",
+    "event_id": "14af909f-7829-41d9-9cc3-5f9b9458109f",
+    "seq": 34
+  },
+  "project_id": "26f89c38-c86b-4ddf-be75-c579a118e40e",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "ed384bf0-ad3c-4885-879c-8494846e2373",
+    "cycle": 1,
+    "digest": "c5a05e27309c77b597f0f63370e739c15609220c21dbf1cf3fc3665fcd30df3d",
+    "engine_id": "claudeloop",
+    "event_id": "40dfb171-a378-460f-ad27-bb23b6adf753",
+    "job_id": "2bdd2b5e-b4f1-4004-9dbf-78d267fea803",
+    "kind": "QuestionAsked",
+    "payload": {
+      "blocking": false,
+      "cycle": 1,
+      "default": "Subprocess test that invokes `greet Alice` and asserts stdout contains 'Hello, Alice!' with exit code 0",
+      "item_id": "first_test_case",
+      "stage": "walking_skeleton",
+      "text": "What should the minimal first test case be to prove the walking skeleton works end-to-end?"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-19T12:33:39.714177+00:00",
+    "project_id": "26f89c38-c86b-4ddf-be75-c579a118e40e",
+    "provenance": "agent",
+    "seq": 35
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

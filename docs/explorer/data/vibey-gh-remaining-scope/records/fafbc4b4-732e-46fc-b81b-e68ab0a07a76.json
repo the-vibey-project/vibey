@@ -1,0 +1,43 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "ba808e6425bf7f9b39e978d401ded83c5662c5e2fd0894a6c286a6fc2827dcc7",
+    "event_id": "f722eaa5-b7e9-4272-9f15-531673c16685",
+    "seq": 36
+  },
+  "previous": {
+    "digest": "29d929d44de05efbbfa95e61d2d0a8a7d7ab55b9fc152c6a444cd79739d0e793",
+    "event_id": "566c02a7-6505-4f28-ad21-36c96bd182d5",
+    "seq": 34
+  },
+  "project_id": "d482c3e2-029e-4bb8-a9a1-de411816c6ae",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "6f0fc2e9-d241-4122-a85a-65c1d52708e7",
+    "cycle": 1,
+    "digest": "46f12c9c9f21eace34ba0dea407e3df428a9e7cefb70cc0e2a67c3408c9a2a8c",
+    "engine_id": "claudeloop",
+    "event_id": "fafbc4b4-732e-46fc-b81b-e68ab0a07a76",
+    "job_id": "d2626f25-d550-454e-bacd-7a7e6c9b52cd",
+    "kind": "QuestionAsked",
+    "payload": {
+      "blocking": false,
+      "cycle": 1,
+      "default": "Collecting feedback through surveys and user support channels, and implementing changes in bi-weekly sprints.",
+      "item_id": "19",
+      "stage": "walking_skeleton",
+      "text": "What is the planned approach for handling user feedback and incorporating it into future updates?"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-31T02:05:28.291909+00:00",
+    "project_id": "d482c3e2-029e-4bb8-a9a1-de411816c6ae",
+    "provenance": "agent",
+    "seq": 35
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

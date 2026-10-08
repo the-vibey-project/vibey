@@ -1,0 +1,40 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "7ef644ce255e983aa66ca9d5668cee130131b169397e4b2848176d70828da243",
+    "event_id": "a56ff09e-759b-4ee8-b8dd-241acc48962e",
+    "seq": 1216
+  },
+  "previous": {
+    "digest": "ac3052d3be9790726699c4f0b1943a61d86bd54841cf332197262e9021b16db8",
+    "event_id": "46286680-f3b3-4bdf-9905-046278d0f58f",
+    "seq": 1214
+  },
+  "project_id": "8ab823c9-89e4-4050-884c-9008c8b14ef8",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "b4be2123-90f7-460b-94a3-2115618d141e",
+    "cycle": 1,
+    "digest": "7ea6a3d73126c94f88a2fa501d166c2aaa1a3f774dd043d7729b447c78e28218",
+    "engine_id": null,
+    "event_id": "6090e3a9-fcea-4641-88ed-d6957c32ea23",
+    "job_id": "3c8ef10f-1d28-4b13-902d-b9390b95df60",
+    "kind": "FindingRaised",
+    "payload": {
+      "finding_id": "f_integrate_click-analytics_f7f6f8e2",
+      "severity": "high",
+      "text": "merge conflict integrating 'click-analytics': Auto-merging IMPLEMENTATION_SUMMARY.md\nCONFLICT (content): Merge conflict in IMPLEMENTATION_SUMMARY.md\nAuto-merging README.md\nCONFLICT (content): Merge conflict in README.md\nAuto-merging run_tests.py\nCONFLICT (content): Merge conflict in run_tests.py\nAuto-merging shortener/alias_manager.py\nCONFLICT (content): Merge conflict in shortener/alias_manager.py\nAutomatic merge failed; fix conflicts and then commit the result."
+    },
+    "phase": "build",
+    "produced_at": "2026-08-20T06:02:42.456421+00:00",
+    "project_id": "8ab823c9-89e4-4050-884c-9008c8b14ef8",
+    "provenance": "agent",
+    "seq": 1215
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

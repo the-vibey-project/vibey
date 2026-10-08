@@ -1,0 +1,39 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "fd4780da930488ab748efa72637cdbecf49b2ed5b97ae0c676941164609083cc",
+    "event_id": "1d41b08b-7493-4d0f-bf1d-ea5624659552",
+    "seq": 58
+  },
+  "previous": {
+    "digest": "b6cd163ca358a1c03cd9852ae37d5aeb21564070a6e341d4a7ba51d431ccbbf3",
+    "event_id": "df6bf999-41e7-4eb1-8a90-cd1b528b8a97",
+    "seq": 56
+  },
+  "project_id": "ab0b06f9-55a4-4b47-ac08-254e7fdd9036",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "6272f0c1-b2f5-46a0-89f0-48c7fdb809fd",
+    "cycle": 1,
+    "digest": "95d02d0a0480ffa78d226d10ff0b07e365d1a965b0f74c36656bd4032de82647",
+    "engine_id": "claudeloop",
+    "event_id": "0cf86122-282e-4d31-a5a4-018d34d974a1",
+    "job_id": "48f9ef01-8b95-4709-adde-ed0ece390f8d",
+    "kind": "AnswerGiven",
+    "payload": {
+      "answer": "Disk space exhaustion from accumulated fork worktrees; mitigated by `vibey doctor` cleanup of terminal forks older than N days, plus alerts when .vibey/worktrees/ exceeds size threshold",
+      "item_id": "operational_hazard"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-22T03:46:31.561806+00:00",
+    "project_id": "ab0b06f9-55a4-4b47-ac08-254e7fdd9036",
+    "provenance": "trusted",
+    "seq": 57
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

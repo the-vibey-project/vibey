@@ -1,0 +1,43 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "5949449726ea6edcc98223bf1291d01c8826167303c6b09ce3c18015376df1b0",
+    "event_id": "a13d0307-7fff-4ed5-85da-0ff73a19cce1",
+    "seq": 11
+  },
+  "previous": {
+    "digest": "240c84549f2313de4497dcf3c7ea1f607b8acb725dc7b77408f101633b0ae7e2",
+    "event_id": "dc081998-c9ba-4166-87b1-c974f93ad918",
+    "seq": 9
+  },
+  "project_id": "0ee95624-eec4-4e8e-9a14-6ad9a37dcff4",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "47e32ae3-b21b-490e-9653-17303d087b7e",
+    "cycle": 1,
+    "digest": "707241cbed9c034a548e239fa44342985213745a948ae44e19fe7085456e811f",
+    "engine_id": "claudeloop",
+    "event_id": "cf49ec8d-6e78-4e6e-96be-58221d8de41c",
+    "job_id": "1343d0fd-bf3f-4739-8c21-cbf7693c673e",
+    "kind": "QuestionAsked",
+    "payload": {
+      "blocking": true,
+      "cycle": 1,
+      "default": "Direct link from [path] CTA ('Ask questions about my experience'), social media bio links (LinkedIn/GitHub), and included in job application cover letters as an interactive supplement",
+      "item_id": "discovery_path",
+      "stage": "job_story",
+      "text": "How do visitors discover and arrive at the chat subdomain?"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-20T20:09:33.786887+00:00",
+    "project_id": "0ee95624-eec4-4e8e-9a14-6ad9a37dcff4",
+    "provenance": "agent",
+    "seq": 10
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 1
+  }
+}

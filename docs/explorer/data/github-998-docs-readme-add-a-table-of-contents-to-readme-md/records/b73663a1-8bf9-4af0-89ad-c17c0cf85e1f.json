@@ -1,0 +1,43 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "17307ddad00cf72f34cdaab0f2cbe705984a0ad82b1c0af500a6d177884795df",
+    "event_id": "668745f5-b650-4736-a415-53cb74890bdf",
+    "seq": 38
+  },
+  "previous": {
+    "digest": "00f082709d0ac64fab4fa50dea9569898554c65117b61c0abed050a5bb375b94",
+    "event_id": "c632324f-cb24-4a03-b99b-3e60160202e1",
+    "seq": 36
+  },
+  "project_id": "9692abab-ace3-4ee0-ac59-3ea42484b817",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "0face8bc-aa17-546b-b5de-e16e759738e6",
+    "cycle": 1,
+    "digest": "682537a54f01fd6262750942dc6e29182dd1e666b276dffc705aa1baa213871b",
+    "engine_id": "gptossloop",
+    "event_id": "b73663a1-8bf9-4af0-89ad-c17c0cf85e1f",
+    "job_id": "c2b75c18-fd15-4e79-ad4e-cf489356ad57",
+    "kind": "QuestionAsked",
+    "payload": {
+      "blocking": false,
+      "cycle": 1,
+      "default": "Yes",
+      "item_id": "q15",
+      "stage": "walking_skeleton",
+      "text": "Should the generated TOC be formatted with a leading comment block indicating it is auto\u2011generated?"
+    },
+    "phase": "design",
+    "produced_at": "2026-09-29T18:48:37.194487+00:00",
+    "project_id": "9692abab-ace3-4ee0-ac59-3ea42484b817",
+    "provenance": "agent",
+    "seq": 37
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

@@ -1,0 +1,39 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "f4562e25f7b1559174a8705efc2c65b76d4a4c419235fb7d53619aa1cdc1cb28",
+    "event_id": "f680f91f-ca3c-4661-90bb-bfa90ce81517",
+    "seq": 35
+  },
+  "previous": {
+    "digest": "cc824ac9fcadf55c1ac059de4dfca073fd86ed7fcb887fb654c12519b3d9dc60",
+    "event_id": "84cad02d-87f7-4b16-913a-731bbd6efab1",
+    "seq": 33
+  },
+  "project_id": "bed522a2-0b3e-4bff-9cd6-7c13fe40779a",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "ebd929e7-0eb2-4ab2-ae52-12d07ae98ca9",
+    "cycle": 1,
+    "digest": "f67220f457452aba0dff54e58ab3bb42bccb48f857c3c91b2278618a40661887",
+    "engine_id": "claudeloop",
+    "event_id": "fd0b78bc-14be-44b3-b6fb-0da3b7ba6560",
+    "job_id": "92d834a4-4bf2-4699-9354-adbea7936d77",
+    "kind": "AnswerGiven",
+    "payload": {
+      "answer": "Validate all IDs before claiming any. If any are invalid/unclaimable, show 'Error: jobs [j999] not found, [j5] already complete' and exit immediately without starting the others. No partial execution.",
+      "item_id": "invalid_job_handling"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-22T03:43:28.050975+00:00",
+    "project_id": "bed522a2-0b3e-4bff-9cd6-7c13fe40779a",
+    "provenance": "trusted",
+    "seq": 34
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

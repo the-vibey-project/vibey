@@ -1,0 +1,43 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "6d43a4ba0f159b3f323f7c0a795515c6a3823c595d118523d39b40a09a120208",
+    "event_id": "81d2c599-f827-495d-b08c-94f8b6aebedd",
+    "seq": 39
+  },
+  "previous": {
+    "digest": "81a391fffced7a111ecc87e07856cbe44e401e444ccbecd34285883c1d485605",
+    "event_id": "61862859-45c5-4b4f-a4c3-0a162aac8d48",
+    "seq": 37
+  },
+  "project_id": "bed522a2-0b3e-4bff-9cd6-7c13fe40779a",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "0833d0b9-c70c-4b29-ace3-a3cb503d6629",
+    "cycle": 1,
+    "digest": "574b4d3ab5e49f3c8297b85f69a426b3bc0fe2ea6a94ea645c7d7b77ee7e9dae",
+    "engine_id": "claudeloop",
+    "event_id": "c542ac12-02a7-4e74-ba51-e16f58c25c70",
+    "job_id": "92d834a4-4bf2-4699-9354-adbea7936d77",
+    "kind": "QuestionAsked",
+    "payload": {
+      "blocking": true,
+      "cycle": 1,
+      "default": "Defer live streaming (show buffered output after each job completes), defer most validation (assume valid job IDs for skeleton), defer fancy output formatting (plain text table is fine). Focus skeleton on: claim multiple jobs atomically, run them, report combined result.",
+      "item_id": "what_to_defer",
+      "stage": "walking_skeleton",
+      "text": "What parts can be faked, stubbed, or deferred past the walking skeleton? For example: live streaming (just show logs after completion), error handling beyond happy path, validation logic, output formatting?"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-22T03:44:20.823316+00:00",
+    "project_id": "bed522a2-0b3e-4bff-9cd6-7c13fe40779a",
+    "provenance": "agent",
+    "seq": 38
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

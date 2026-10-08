@@ -1,0 +1,43 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "37ffe16aa6f7d0428a56875995ebe8a4f59034118a87b480a8fd36750b20f694",
+    "event_id": "9bc9876a-58fc-4398-bff8-86f31d274b6d",
+    "seq": 12
+  },
+  "previous": {
+    "digest": "42b783a064bc6feccd435b38d5898be11c2e400fb1f669664bddcec860cdf0b4",
+    "event_id": "9ad714aa-41cd-4faf-bf88-f5c5d32a8fa1",
+    "seq": 10
+  },
+  "project_id": "5ea01f61-8536-4ace-90cb-18700a12e410",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "3fa6a49e-17fa-4f12-877d-5221821fa499",
+    "cycle": 1,
+    "digest": "88294f15a30147c03ca46a108f02879c6a35e349066d9daf73edbcaa20598b2a",
+    "engine_id": "claudeloop",
+    "event_id": "8eef0cb5-3b04-435c-ab25-81f936f31940",
+    "job_id": "4c2ec03f-d670-44f9-9f05-47597984ab20",
+    "kind": "QuestionAsked",
+    "payload": {
+      "blocking": false,
+      "cycle": 1,
+      "default": "Tight iteration loops where developers can check all engines between code changes without context-switching",
+      "item_id": "outcome",
+      "stage": "job_story",
+      "text": "What workflow improvement does sub-20-second execution enable?"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-22T02:59:58.717746+00:00",
+    "project_id": "5ea01f61-8536-4ace-90cb-18700a12e410",
+    "provenance": "agent",
+    "seq": 11
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

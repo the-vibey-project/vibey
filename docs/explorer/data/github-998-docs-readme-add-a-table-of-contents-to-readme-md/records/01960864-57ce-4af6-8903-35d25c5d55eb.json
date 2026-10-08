@@ -1,0 +1,43 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "91117223f7d56aac12e446da47644cc00939d5b55006a5d5fe72028556a6f6b2",
+    "event_id": "43140d64-a3a0-405d-9ee6-9be72cdcfed8",
+    "seq": 28
+  },
+  "previous": {
+    "digest": "02b1f8b6f1a53437836a1a7fbc9eb694ccf5da533ab99d6c2423f054445db023",
+    "event_id": "faaa2d9a-cf21-4653-af8f-03774a444fb6",
+    "seq": 26
+  },
+  "project_id": "9692abab-ace3-4ee0-ac59-3ea42484b817",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "0face8bc-aa17-546b-b5de-e16e759738e6",
+    "cycle": 1,
+    "digest": "3b0cdd48a6fe285654b1c04c4a1b865a773ad0cbf60f5ee6082bbc112518d67e",
+    "engine_id": "gptossloop",
+    "event_id": "01960864-57ce-4af6-8903-35d25c5d55eb",
+    "job_id": "c2b75c18-fd15-4e79-ad4e-cf489356ad57",
+    "kind": "QuestionAsked",
+    "payload": {
+      "blocking": true,
+      "cycle": 1,
+      "default": "Yes",
+      "item_id": "q10",
+      "stage": "example_mapping",
+      "text": "Should the TOC generation script be included in the repository\u2019s CI configuration to enforce the TOC insertion automatically on every push?"
+    },
+    "phase": "design",
+    "produced_at": "2026-09-29T18:45:59.065393+00:00",
+    "project_id": "9692abab-ace3-4ee0-ac59-3ea42484b817",
+    "provenance": "agent",
+    "seq": 27
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

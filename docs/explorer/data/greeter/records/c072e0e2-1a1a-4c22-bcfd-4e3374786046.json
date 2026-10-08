@@ -1,0 +1,43 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "06acff5e5e93bcaa175e7a1a11cce8e5cc2c5306c3201e5c6606a794c25fe8e2",
+    "event_id": "14af909f-7829-41d9-9cc3-5f9b9458109f",
+    "seq": 34
+  },
+  "previous": {
+    "digest": "fdea8ed48be374f2f86c851d9598dc435f94c53591ec8b623ec8e262e1dada97",
+    "event_id": "8c2c4b27-9704-4a28-9696-73d914cd6824",
+    "seq": 32
+  },
+  "project_id": "26f89c38-c86b-4ddf-be75-c579a118e40e",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "f3137e6f-4cc5-4873-a3dd-d2dbbf3eaaad",
+    "cycle": 1,
+    "digest": "01f26f08febdf1276dc954b8e24861644da7780f6c2f406a58574a7a22cb29e5",
+    "engine_id": "claudeloop",
+    "event_id": "c072e0e2-1a1a-4c22-bcfd-4e3374786046",
+    "job_id": "2bdd2b5e-b4f1-4004-9dbf-78d267fea803",
+    "kind": "QuestionAsked",
+    "payload": {
+      "blocking": true,
+      "cycle": 1,
+      "default": "Both - single `greet.py` module that can run directly AND be installed as `greet` command via setuptools entry point",
+      "item_id": "entry_point_mechanism",
+      "stage": "walking_skeleton",
+      "text": "How should the CLI be invoked - direct Python script (`python greet.py`), installed console script (`greet` command), or both?"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-19T12:33:39.714177+00:00",
+    "project_id": "26f89c38-c86b-4ddf-be75-c579a118e40e",
+    "provenance": "agent",
+    "seq": 33
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

@@ -1,0 +1,39 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "7c43b69085938dad12022e0c722889bb6977394703c311656488ccd6aa35d009",
+    "event_id": "5c2294ad-7789-40f5-9bcb-6faa4deb971b",
+    "seq": 61
+  },
+  "previous": {
+    "digest": "1f730e7c287306087326574cc33cf25a6304336b16b0d12029fefd4026561437",
+    "event_id": "805c08e7-dda0-4518-b04e-631b34a5bcc6",
+    "seq": 59
+  },
+  "project_id": "d733035f-e0f9-4f67-aba2-270068d6a9c6",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "69f97dc6-69f1-461c-a160-0ab2e0ae0de4",
+    "cycle": 1,
+    "digest": "f324f0b3b7a799ee7720c0e06ceedf73db9a22b2d67c0b604896b457d2d70a31",
+    "engine_id": "claudeloop",
+    "event_id": "2bf27ef3-4b6c-4a17-a35c-73a5ca396a90",
+    "job_id": "44e282ee-55b1-4cf9-afc3-c84870a14a5c",
+    "kind": "AnswerGiven",
+    "payload": {
+      "answer": "Accept orphans as evidence, don't auto-cleanup: GitHub branch/PR stays (already decided), engine worktree warned but not deleted, any webhook deliveries or notifications in flight are harmless noise. Document in stdout that operator may need manual cleanup.",
+      "item_id": "external_system_orphans"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-22T03:51:04.709603+00:00",
+    "project_id": "d733035f-e0f9-4f67-aba2-270068d6a9c6",
+    "provenance": "trusted",
+    "seq": 60
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

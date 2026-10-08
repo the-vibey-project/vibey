@@ -1,0 +1,43 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "6ab87f3d8a81444d38d6bc0bf116b649b15254c66e210d9906f90caecd48da71",
+    "event_id": "397634a0-f4b0-4571-b9ac-54c2b7b374e3",
+    "seq": 20
+  },
+  "previous": {
+    "digest": "13809cd811e43e9a0bcac6e66f46b45770ae12204af99ccae8af20b9b391e92f",
+    "event_id": "4efd8f04-1380-44be-bd9b-b3065ee11b8f",
+    "seq": 18
+  },
+  "project_id": "5ea01f61-8536-4ace-90cb-18700a12e410",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "7731a4a3-8fdd-4004-b1b2-8de1845860b5",
+    "cycle": 1,
+    "digest": "a2a48cdddfada134d6683e5d9c21a09f007701651ab5f88753be1000457d468f",
+    "engine_id": "claudeloop",
+    "event_id": "c17d02bb-a56f-40e0-acbb-f1415c087af1",
+    "job_id": "4c2ec03f-d670-44f9-9f05-47597984ab20",
+    "kind": "QuestionAsked",
+    "payload": {
+      "blocking": false,
+      "cycle": 1,
+      "default": "30 seconds - approximately double the expected slowest engine to handle variance without blocking indefinitely",
+      "item_id": "timeout_value",
+      "stage": "laddering",
+      "text": "What timeout (in seconds) should apply to individual engine health checks?"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-22T03:35:28.766467+00:00",
+    "project_id": "5ea01f61-8536-4ace-90cb-18700a12e410",
+    "provenance": "agent",
+    "seq": 19
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

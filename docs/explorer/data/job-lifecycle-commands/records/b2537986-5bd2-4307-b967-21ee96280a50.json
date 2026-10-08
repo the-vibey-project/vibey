@@ -1,0 +1,43 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "14c40e0a24b3b1010827e75805d3bb9a2ba719a65a01d2321c18ea7427bdb0c6",
+    "event_id": "ba550a10-8e8f-4236-94cb-d9d898b9ef42",
+    "seq": 28
+  },
+  "previous": {
+    "digest": "339165d407737946dd32556f850e4b4aa6d7814cd82c4a773614d597941f3ee0",
+    "event_id": "117113ba-161f-4199-97cd-7fa09f103531",
+    "seq": 25
+  },
+  "project_id": "2f6a93b6-2d73-4aff-bc94-16539841133f",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "2ac4283a-1c50-4acc-a69e-c15983a29e12",
+    "cycle": 1,
+    "digest": "e6486ac032d9859211dbad5d0ab0c6790432c9f9b79cfa3e2f56f259f5a2defe",
+    "engine_id": "claudeloop",
+    "event_id": "b2537986-5bd2-4307-b967-21ee96280a50",
+    "job_id": "334db377-8cb0-4a72-9cc0-78b45fc9bb38",
+    "kind": "QuestionAsked",
+    "payload": {
+      "blocking": true,
+      "cycle": 1,
+      "default": "Command writes stop_requested=true to job row. Worker's next heartbeat sees flag, finishes current turn, writes final ledger event, releases lease with state=CANCELLED. Job row transitions: LEASED \u2192 CANCELLED, lease_expires_at cleared. No forced interruption, no lease yanked.",
+      "item_id": "stop_concrete_example",
+      "stage": "example_mapping",
+      "text": "Walk through a concrete stop scenario: job in BUILD phase, state=LEASED, worker actively processing. Operator runs `vibey stop \u003cjob-id\u003e`. What exact sequence of DB writes, flag checks, and state transitions occurs from command to final CANCELLED?"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-22T03:43:11.386375+00:00",
+    "project_id": "2f6a93b6-2d73-4aff-bc94-16539841133f",
+    "provenance": "agent",
+    "seq": 27
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

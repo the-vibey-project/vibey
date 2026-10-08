@@ -1,0 +1,40 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "85adefd75dd8020fa11a8f280f924fd33bb0f0fe975a4bebaaf44e23d9ab3c4d",
+    "event_id": "23dc2763-73e2-4877-9657-c5e648376e49",
+    "seq": 628
+  },
+  "previous": {
+    "digest": "a633d05b82ff84bbd690d469e66e3c5cd4235668f1dcc346a6239921099371b1",
+    "event_id": "7297555c-3dbc-48e8-b5b7-bb4f2c658879",
+    "seq": 600
+  },
+  "project_id": "26f89c38-c86b-4ddf-be75-c579a118e40e",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "6f9bcbd8-8a8e-47d0-b20c-746170f30340",
+    "cycle": 1,
+    "digest": "f527e06ea1dbd7ccc8180bb5091c195f63c61779ba75a9ab1d9fa1ee084003b5",
+    "engine_id": null,
+    "event_id": "744bdb70-d2fe-4439-9fe0-b9a1a92eded7",
+    "job_id": "e776ef68-1d83-455c-9b76-4a1c2d88d1ad",
+    "kind": "FindingRaised",
+    "payload": {
+      "finding_id": "f_integrate_cli-args_4e33c505",
+      "severity": "high",
+      "text": "merge conflict integrating 'cli-args': warning: Cannot merge binary files: .coverage (HEAD vs. vibey/1/cli-args)\nAuto-merging .coverage\nCONFLICT (add/add): Merge conflict in .coverage\nAuto-merging greet.egg-info/PKG-INFO\nCONFLICT (add/add): Merge conflict in greet.egg-info/PKG-INFO\nAuto-merging greet.py\nCONFLICT (add/add): Merge conflict in greet.py\nAuto-merging pyproject.toml\nCONFLICT (add/add): Merge conflict in pyproject.toml\nAuto-merging tests/test_greet.py\nCONFLICT (add/add): Merge conflict in tests/test_greet.py\nAutomatic merge failed; fix conflicts and then commit the result."
+    },
+    "phase": "build",
+    "produced_at": "2026-08-19T13:41:44.375857+00:00",
+    "project_id": "26f89c38-c86b-4ddf-be75-c579a118e40e",
+    "provenance": "agent",
+    "seq": 627
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

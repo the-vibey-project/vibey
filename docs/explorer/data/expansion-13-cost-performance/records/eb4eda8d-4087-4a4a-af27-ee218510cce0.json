@@ -1,0 +1,43 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "640d27686d40479e0f426eada7f6a5b7cec3712d917ee5ba30abc8d34e43dcff",
+    "event_id": "3baa3851-8171-44b5-ade7-74fd3691d56b",
+    "seq": 45
+  },
+  "previous": {
+    "digest": "ca2830fbddebd5c154af8016452f13a57c82abc19c7f616a32c820508fc4e5d2",
+    "event_id": "ce16f855-53b6-45f9-ba09-1a2906df2255",
+    "seq": 43
+  },
+  "project_id": "a1d6b837-46f3-40c0-b6a2-8b3babb7fe15",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "19108a98-7f6e-495f-a363-6484717cc6c2",
+    "cycle": 1,
+    "digest": "63bbcf326d9c75f911503b31cf593788b71b1b18ed71baf633974246905ac0a3",
+    "engine_id": "claudeloop",
+    "event_id": "eb4eda8d-4087-4a4a-af27-ee218510cce0",
+    "job_id": "dd8513f6-0d76-49a5-8bdc-75167dea5385",
+    "kind": "QuestionAsked",
+    "payload": {
+      "blocking": true,
+      "cycle": 1,
+      "default": "Fix all flakes before merging; zero tolerance for non-deterministic test behavior under parallelism",
+      "item_id": "flakiness_tolerance",
+      "stage": "nfr_planguage",
+      "text": "If parallel execution reveals flaky or timing-sensitive tests, what's acceptable: fix all before merging, document known flakes with retries, or allow bounded non-determinism?"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-20T20:45:52.666294+00:00",
+    "project_id": "a1d6b837-46f3-40c0-b6a2-8b3babb7fe15",
+    "provenance": "agent",
+    "seq": 44
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

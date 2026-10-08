@@ -1,0 +1,42 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "125013121ebe3802ba293164637691c593137e62a7bd9f0d102bf6a390c0df85",
+    "event_id": "8e234011-9879-4ade-a7f5-2c7d02176ff9",
+    "seq": 812
+  },
+  "previous": {
+    "digest": "49aebf2a30510c1192f124058d0b2f70fed1c540c232bd0e5ea7e9aeb3eed6e1",
+    "event_id": "70e74ca3-2203-47cd-a8cc-e32fb090f9a3",
+    "seq": 683
+  },
+  "project_id": "d733035f-e0f9-4f67-aba2-270068d6a9c6",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "73392302-cbfd-44d4-8b90-2a84737b5edd",
+    "cycle": 1,
+    "digest": "5ac5c339e0a6b6c39e8fdc1183ef405f237b00bba3f7ee6d71f9e66b9a07be5c",
+    "engine_id": "codexloop",
+    "event_id": "ab6cf3b7-188b-42a5-be95-839e38e73f37",
+    "job_id": "661afa83-19dc-414d-89c0-7c246d74750d",
+    "kind": "VerdictRendered",
+    "payload": {
+      "complete": false,
+      "remaining_work": [
+        "Implement work item job-cancel: Cancel READY/AWAITING_HUMAN/AWAITING_CAPACITY jobs with provenance"
+      ],
+      "success": false
+    },
+    "phase": "build",
+    "produced_at": "2026-08-22T19:28:09.520248+00:00",
+    "project_id": "d733035f-e0f9-4f67-aba2-270068d6a9c6",
+    "provenance": "agent",
+    "seq": 726
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 2,
+    "paths": 0
+  }
+}

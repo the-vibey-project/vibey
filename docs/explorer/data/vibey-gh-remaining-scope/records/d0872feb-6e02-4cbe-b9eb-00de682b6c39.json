@@ -1,0 +1,39 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "03bf36bf3b479e0bc18cc768066e47f605e39422a449fabb7d62ba7c1e54f165",
+    "event_id": "08863e5b-7a62-44a0-8085-7055da61fbca",
+    "seq": 48
+  },
+  "previous": {
+    "digest": "842bb8f8873748faeaae9410824cfaec74a5b33bd62cb4d3fe05ee598b5a5c02",
+    "event_id": "bc9e542c-68eb-4089-9ac2-f3ecce0f022b",
+    "seq": 46
+  },
+  "project_id": "d482c3e2-029e-4bb8-a9a1-de411816c6ae",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "3de2a173-d265-4c70-ae08-36676263aaff",
+    "cycle": 1,
+    "digest": "bbb83b968d4e257cc85bcf05cfdc1844a5108f9f359da61f617502c424a5b893",
+    "engine_id": "claudeloop",
+    "event_id": "d0872feb-6e02-4cbe-b9eb-00de682b6c39",
+    "job_id": "d2626f25-d550-454e-bacd-7a7e6c9b52cd",
+    "kind": "AnswerGiven",
+    "payload": {
+      "answer": "PostgreSQL and Python.",
+      "item_id": "23"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-31T02:06:06.324487+00:00",
+    "project_id": "d482c3e2-029e-4bb8-a9a1-de411816c6ae",
+    "provenance": "trusted",
+    "seq": 47
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

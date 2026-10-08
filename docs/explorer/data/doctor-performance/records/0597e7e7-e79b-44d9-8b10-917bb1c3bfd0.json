@@ -1,0 +1,43 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "24d2d12c60813b51563310e68f666f64e4bfc2bab7600bdca792306f78f6f874",
+    "event_id": "30bba220-8a4d-4cc6-aa7b-b1edd1db7599",
+    "seq": 4
+  },
+  "previous": {
+    "digest": "69fa6327ca4143524b460377bf73391baf6a87f077c5c4c2df7cfe59759fdc9f",
+    "event_id": "59579e3c-e670-4c89-96ea-0d89dfe4639a",
+    "seq": 2
+  },
+  "project_id": "5ea01f61-8536-4ace-90cb-18700a12e410",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "10c91714-f745-4c6a-b72b-5486952a110c",
+    "cycle": 1,
+    "digest": "cd8c62ba1b6f30a577b6d5c55e1be6f6a99a6b4950c1a186d022fcaef737f4e9",
+    "engine_id": "claudeloop",
+    "event_id": "0597e7e7-e79b-44d9-8b10-917bb1c3bfd0",
+    "job_id": "4c2ec03f-d670-44f9-9f05-47597984ab20",
+    "kind": "QuestionAsked",
+    "payload": {
+      "blocking": false,
+      "cycle": 1,
+      "default": "Follow existing patterns and architecture in the codebase",
+      "item_id": "constraints",
+      "stage": "context_free",
+      "text": "Are there any specific technical constraints, dependencies, or requirements?"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-22T02:54:24.007754+00:00",
+    "project_id": "5ea01f61-8536-4ace-90cb-18700a12e410",
+    "provenance": "agent",
+    "seq": 3
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

@@ -1,0 +1,39 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a",
+    "event_id": "f634925c-1177-4294-beb8-a2e150b257ee",
+    "seq": 71
+  },
+  "previous": {
+    "digest": "56c686a669e9bb897a9a395f4e03fe2c173f6129c5cfff91e40594a96c866abb",
+    "event_id": "918c9f6d-2c42-469e-8abf-37373fdbf86c",
+    "seq": 62
+  },
+  "project_id": "2f6a93b6-2d73-4aff-bc94-16539841133f",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "638e2330-8289-4de2-91ed-96fd111be4f3",
+    "cycle": 1,
+    "digest": "ab2b31af99cfb2eba5935a3dc0a7ad3e4565bfa648156c748775b9c659700e0d",
+    "engine_id": "claudeloop",
+    "event_id": "5b4dd471-6f09-4a0b-b3ec-89a7882dea7f",
+    "job_id": "334db377-8cb0-4a72-9cc0-78b45fc9bb38",
+    "kind": "AnswerGiven",
+    "payload": {
+      "answer": "They become orphaned: restart only writes DB state, does not clean up filesystem or cloud resources. Worktrees/rundirs are cleaned by separate reaper process based on job state. Azure resources require manual cleanup or separate garbage collection. Document this in restart command help: 'restart does not clean up resources from original job'.",
+      "item_id": "restart_orphan_resources"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-22T03:54:50.487138+00:00",
+    "project_id": "2f6a93b6-2d73-4aff-bc94-16539841133f",
+    "provenance": "trusted",
+    "seq": 63
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

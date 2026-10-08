@@ -1,0 +1,39 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "a3de5977816bdf5a4ee6856ce0b789ff9843b09b9e1444593a752c35a1b2215d",
+    "event_id": "18b0bc42-dacb-4373-b183-eeb710f6d0a6",
+    "seq": 54
+  },
+  "previous": {
+    "digest": "2f3a8a701b52bb26c39c0eb410d7b784bab3ee302dd69c02667df5a689cd235c",
+    "event_id": "94455f0d-6cce-4b78-9a34-04130522a9d3",
+    "seq": 51
+  },
+  "project_id": "44c06a64-c8ed-4153-96af-b49db29c39e3",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "bc5e2d38-91cf-4ca1-91fc-80ee54b2bf12",
+    "cycle": 1,
+    "digest": "fb3d9698615da5670faee64a96a6b7292669397037a93f5e8e7f611174fcfd8d",
+    "engine_id": "claudeloop",
+    "event_id": "e5bbd5b9-3f34-4734-9851-a55e0e5d932c",
+    "job_id": "bcd8e0b1-385d-43dc-ad1f-cad988f80cc9",
+    "kind": "AnswerGiven",
+    "payload": {
+      "answer": "Any statistically significant regression over 10% fails the build \u2014 performance is a correctness requirement, not a nice-to-have",
+      "item_id": "regression_detection"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-22T03:46:32.434563+00:00",
+    "project_id": "44c06a64-c8ed-4153-96af-b49db29c39e3",
+    "provenance": "trusted",
+    "seq": 52
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

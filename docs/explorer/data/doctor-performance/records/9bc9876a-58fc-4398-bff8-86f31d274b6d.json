@@ -1,0 +1,43 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "276071e7a035b609319ad35af11c73da0c41edc4415433dc5d716f553030f444",
+    "event_id": "8bb306f3-e8c9-4c45-8ab4-1b6e20e9a457",
+    "seq": 13
+  },
+  "previous": {
+    "digest": "88294f15a30147c03ca46a108f02879c6a35e349066d9daf73edbcaa20598b2a",
+    "event_id": "8eef0cb5-3b04-435c-ab25-81f936f31940",
+    "seq": 11
+  },
+  "project_id": "5ea01f61-8536-4ace-90cb-18700a12e410",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "ba8d89dd-75e0-49bd-94b2-f1f9b34348cf",
+    "cycle": 1,
+    "digest": "37ffe16aa6f7d0428a56875995ebe8a4f59034118a87b480a8fd36750b20f694",
+    "engine_id": "claudeloop",
+    "event_id": "9bc9876a-58fc-4398-bff8-86f31d274b6d",
+    "job_id": "4c2ec03f-d670-44f9-9f05-47597984ab20",
+    "kind": "QuestionAsked",
+    "payload": {
+      "blocking": false,
+      "cycle": 1,
+      "default": "As fast as the slowest engine (~15-17 seconds) is sufficient; no hard SLO needed",
+      "item_id": "timing_requirement",
+      "stage": "job_story",
+      "text": "Is there a specific target wall-clock time, or is 'as fast as the slowest engine' sufficient?"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-22T02:59:58.717746+00:00",
+    "project_id": "5ea01f61-8536-4ace-90cb-18700a12e410",
+    "provenance": "agent",
+    "seq": 12
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

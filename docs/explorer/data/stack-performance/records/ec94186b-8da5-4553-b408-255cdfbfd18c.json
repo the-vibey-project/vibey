@@ -1,0 +1,39 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "36a018959baed1ac2a1e04a45ddb4b7d320e3e9894f41f46d116f531ed728f5e",
+    "event_id": "c23cbb9b-b672-4801-90a5-ff14d85bffa7",
+    "seq": 61
+  },
+  "previous": {
+    "digest": "55fb8007cf32990aa8421757a12558175860b11801c1eb10ccab2ce2d4fba25e",
+    "event_id": "10f5d1b3-c256-4f72-b593-f6418c3d7044",
+    "seq": 59
+  },
+  "project_id": "44c06a64-c8ed-4153-96af-b49db29c39e3",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "b9ac1d0f-a5d6-4fad-839b-58d8dac3c707",
+    "cycle": 1,
+    "digest": "caeb6d57f4d714364736a68e1e661b37d52d1d4b7159c4d7170b2921ca7bfa15",
+    "engine_id": "claudeloop",
+    "event_id": "ec94186b-8da5-4553-b408-255cdfbfd18c",
+    "job_id": "bcd8e0b1-385d-43dc-ad1f-cad988f80cc9",
+    "kind": "AnswerGiven",
+    "payload": {
+      "answer": "Benchmark suite only tests small ledgers (under 10k events), missing pathological cases at 100k+ where query plans degrade",
+      "item_id": "testing_gap"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-22T03:48:03.775552+00:00",
+    "project_id": "44c06a64-c8ed-4153-96af-b49db29c39e3",
+    "provenance": "trusted",
+    "seq": 60
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

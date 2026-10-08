@@ -1,0 +1,39 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "38624ad40d51a66e121feb52f0de20a4a45b616591ec91823478cea1133902e8",
+    "event_id": "01afb628-94dc-4bf3-9c3c-a3456ac27608",
+    "seq": 63
+  },
+  "previous": {
+    "digest": "199a02d42dde4cee3d198c3cdc7d73deed9f70cff5aee2b034b94f1383fc159f",
+    "event_id": "c7ebfb03-8674-4a69-b5e6-61559db53c8f",
+    "seq": 61
+  },
+  "project_id": "bed522a2-0b3e-4bff-9cd6-7c13fe40779a",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "2a868ba5-e4c0-4be6-ac03-62c3e82e2fbc",
+    "cycle": 1,
+    "digest": "789ff3d4d69a5c5742bb1f439d75b40f68aca332e13897185e42b25e6ac40c25",
+    "engine_id": "claudeloop",
+    "event_id": "034c85ae-2fb8-467e-97ab-9ed3552a53f8",
+    "job_id": "92d834a4-4bf2-4699-9354-adbea7936d77",
+    "kind": "AnswerGiven",
+    "payload": {
+      "answer": "Each job's output stream is capped at a reasonable limit (e.g., last 10,000 lines or 10MB in memory). If a job exceeds this, older output is discarded (ring buffer), and a warning is injected into the stream: 'j2 | [WARNING: output truncated, showing last 10K lines]'. Full output is always written to the job's worktree log file, with the summary table showing a link to the full log.",
+      "item_id": "output_buffer_exhaustion"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-22T03:51:49.961126+00:00",
+    "project_id": "bed522a2-0b3e-4bff-9cd6-7c13fe40779a",
+    "provenance": "trusted",
+    "seq": 62
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

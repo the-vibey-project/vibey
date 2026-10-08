@@ -1,0 +1,43 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "cbef87bf102d6e1221f2c091377795087193b15fee00c3c95ba0763c752c4de6",
+    "event_id": "5d7c71f4-ff17-4a7c-acf3-a883ff723cdd",
+    "seq": 44
+  },
+  "previous": {
+    "digest": "00434a50a2eaffac1f780b4cdc025d4335f18b62d4344be2deeb15f2149d8c03",
+    "event_id": "00bd3775-6dbc-4e75-99d9-18f7c4e142e8",
+    "seq": 42
+  },
+  "project_id": "e631c00a-e1a1-4ed4-b99a-0fa2d388d240",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "7689c95c-c492-433d-af52-ceef569ccf39",
+    "cycle": 1,
+    "digest": "2f882b5573592f978bb5b7cf4198ced7efac19fc01b8f5468cdba1052c095228",
+    "engine_id": "claudeloop",
+    "event_id": "33d44b1f-0743-4865-a9f5-09ed1efbb97a",
+    "job_id": "d73f236e-a7b4-4748-b075-3900a75af324",
+    "kind": "QuestionAsked",
+    "payload": {
+      "blocking": true,
+      "cycle": 1,
+      "default": "Zero tolerance: every new test must be deterministic and pass 100 consecutive local runs before merge; no retry logic",
+      "item_id": "test_flakiness_tolerance",
+      "stage": "nfr_planguage",
+      "text": "What flakiness rate is acceptable for the new TUI tests using Textual's Pilot harness\u2014especially rendering/timing-sensitive tests?"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-22T03:42:49.769899+00:00",
+    "project_id": "e631c00a-e1a1-4ed4-b99a-0fa2d388d240",
+    "provenance": "agent",
+    "seq": 43
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

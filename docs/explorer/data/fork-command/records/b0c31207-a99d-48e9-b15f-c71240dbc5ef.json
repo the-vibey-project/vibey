@@ -1,0 +1,42 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "3e2481cf7311c2dd79596c76976e30cb9d1707be68d0f2ec73651dc5d2c5f2b4",
+    "event_id": "be7fde59-af9c-4e4c-a409-1631b9391966",
+    "seq": 747
+  },
+  "previous": {
+    "digest": "951363211977b8154a3ac2d5ebaeab3bafaf4d12dd0da619d77ba619102e97f5",
+    "event_id": "f8f16e40-cfb9-44e2-aa7a-04caeaa872d4",
+    "seq": 637
+  },
+  "project_id": "ab0b06f9-55a4-4b47-ac08-254e7fdd9036",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "df85400f-d880-43d4-bf79-926fc8989eaa",
+    "cycle": 1,
+    "digest": "1f1674b7d948cb4a1227375538ea2a9bf57fb822ccf5fc2062f9f3737a4eebef",
+    "engine_id": "codexloop",
+    "event_id": "b0c31207-a99d-48e9-b15f-c71240dbc5ef",
+    "job_id": "9e33e317-125d-4f15-bf9c-3943e61f2eff",
+    "kind": "VerdictRendered",
+    "payload": {
+      "complete": false,
+      "remaining_work": [
+        "Implement work item ws: Walking skeleton: vibey fork \u003cjob_id\u003e at current position"
+      ],
+      "success": false
+    },
+    "phase": "build",
+    "produced_at": "2026-08-22T19:33:49.637953+00:00",
+    "project_id": "ab0b06f9-55a4-4b47-ac08-254e7fdd9036",
+    "provenance": "agent",
+    "seq": 688
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 2,
+    "paths": 0
+  }
+}

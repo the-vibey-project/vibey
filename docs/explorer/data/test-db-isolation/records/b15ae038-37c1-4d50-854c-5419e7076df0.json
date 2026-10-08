@@ -1,0 +1,39 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "1599091e32cb3db95f7411c56b32a5a0e93b0a5d9ea8c95b53a3e4f338a253f3",
+    "event_id": "8f468984-d673-4bc5-ac16-2ce1715a5f02",
+    "seq": 18
+  },
+  "previous": {
+    "digest": "079a7c4e242eb540f5031489c2364082e102d8ca34a390fd5d6f37aca5ea01b9",
+    "event_id": "b561a762-6575-4723-b3e4-599cd324c195",
+    "seq": 16
+  },
+  "project_id": "df7e868b-1fbf-451b-8ceb-126359b7588e",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "e1d7eb0f-e3d7-44bb-b538-d25738b56c59",
+    "cycle": 1,
+    "digest": "2bd707aca053c4386f453e4d3959dcb945c26ac876ae429b0f8302a6f62ef03d",
+    "engine_id": "claudeloop",
+    "event_id": "b15ae038-37c1-4d50-854c-5419e7076df0",
+    "job_id": "3a3b336c-c2aa-4400-a762-ae12246358d3",
+    "kind": "AnswerGiven",
+    "payload": {
+      "answer": "So they can maintain accurate, up-to-date information without manual overhead",
+      "item_id": "user_value"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-22T04:42:56.541867+00:00",
+    "project_id": "df7e868b-1fbf-451b-8ceb-126359b7588e",
+    "provenance": "trusted",
+    "seq": 17
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

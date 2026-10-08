@@ -1,0 +1,39 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "c9fc58e0cf1b3f7a3236acbd6cd3d5d398aabfc31cf64f85088c470fe8b93efa",
+    "event_id": "8cdda5aa-e257-4b37-9cbd-869fadab44d6",
+    "seq": 14
+  },
+  "previous": {
+    "digest": "77fc196eccb61e91273327b6b07a1217e2ad95ea0c059d91001e7488abb5862d",
+    "event_id": "fba015e9-f38b-4fb3-aa73-92f62de80333",
+    "seq": 12
+  },
+  "project_id": "2f6a93b6-2d73-4aff-bc94-16539841133f",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "6ee19af0-7326-4ca0-9558-19d657b58db9",
+    "cycle": 1,
+    "digest": "57dbd196f0f97eed42ac3b1c2fdc6dc733226aa93650e0a443d56663ff40ae05",
+    "engine_id": "claudeloop",
+    "event_id": "8aae7e70-b5f9-4ff0-9020-b21a76342e29",
+    "job_id": "334db377-8cb0-4a72-9cc0-78b45fc9bb38",
+    "kind": "AnswerGiven",
+    "payload": {
+      "answer": "When a job is stuck, mis-aimed, or burning credits on the wrong thing -- the operator watching a session go somewhere useless and having no button. Stop marks it CANCELLED so it will not be retried, and lets the current lease drain rather than yanking it: the worker finishes the turn in hand and claims no more. That is not a new mechanism to invent -- the SIGTERM drain added for Kubernetes scale-in already does exactly this, and stop should reuse the concept rather than grow a second one. The job stays in history; the ledger is append-only and a stopped job is evidence, not an embarrassment to erase.",
+      "item_id": "stop_job_story"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-22T03:00:39.168035+00:00",
+    "project_id": "2f6a93b6-2d73-4aff-bc94-16539841133f",
+    "provenance": "trusted",
+    "seq": 13
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

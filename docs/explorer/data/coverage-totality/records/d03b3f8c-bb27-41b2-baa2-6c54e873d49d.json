@@ -1,0 +1,39 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "40f0062f6163c8ce7b45278c32b85cba38ed5a600aae3513fc87a912e57b55f7",
+    "event_id": "90e97dd6-d84c-4d9d-88bb-450fc4fedb1b",
+    "seq": 30
+  },
+  "previous": {
+    "digest": "7478d8c0e657adff5a15c9aa437ca897873608b64330797e93e024893d0438e6",
+    "event_id": "61525740-05ca-45a4-9d71-89bff521b6ca",
+    "seq": 28
+  },
+  "project_id": "e631c00a-e1a1-4ed4-b99a-0fa2d388d240",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "7194dd8b-16d1-4b81-b16b-66eb2b8f84d0",
+    "cycle": 1,
+    "digest": "538ea942f3a96be736398d0bf517f3b51d60a46bbd86d4725e4f7b8be3d612cd",
+    "engine_id": "claudeloop",
+    "event_id": "d03b3f8c-bb27-41b2-baa2-6c54e873d49d",
+    "job_id": "d73f236e-a7b4-4748-b075-3900a75af324",
+    "kind": "AnswerGiven",
+    "payload": {
+      "answer": "Three project states plus one error case. (1) Brand new project: no jobs ever queued, no engine_health rows, no worktree directory -- exercises empty queue_depth, empty circuits, and the managed_root.exists() false arm at line 114. (2) Active project with jobs and recorded circuits but no worktree directory on disk -- separates 'no worktrees' from 'new project', which the first case conflates. (3) Project with a populated worktree root, covering the iterdir/sorted arm. (4) fetch_dashboard_state against an unknown project id, asserting ValueError -- line 87. Drive rendering through Textual's Pilot harness rather than asserting on widget internals, so the tests survive a layout change.",
+      "item_id": "tui_empty_state_examples"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-22T02:55:07.437057+00:00",
+    "project_id": "e631c00a-e1a1-4ed4-b99a-0fa2d388d240",
+    "provenance": "trusted",
+    "seq": 29
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

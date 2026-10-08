@@ -1,0 +1,39 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "ff4539ef68b81f51f65cab631124e1ee78b88184836c08ba50a04801650e3771",
+    "event_id": "4379b404-9fef-4ae7-9b96-692ec573b122",
+    "seq": 45
+  },
+  "previous": {
+    "digest": "7af0be5c3cc760522f22a344d58eab505096c01a6178cda504f57a13df516052",
+    "event_id": "8910a73f-6060-4f05-85ff-b5659ab45a09",
+    "seq": 43
+  },
+  "project_id": "8f254b4c-df0a-4056-8937-6eba30efcfa6",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "9d6af37e-0805-484e-91d3-0bef79546c40",
+    "cycle": 1,
+    "digest": "16ef276981be7d899fea63cdbf96409ecb1aa26a647be8744a72f506396577fc",
+    "engine_id": "claudeloop",
+    "event_id": "73714b84-c1fd-446c-af3d-50c1fc6dab0f",
+    "job_id": "40fb97d9-4ab1-4fa8-9ae2-693c2b7a7fc9",
+    "kind": "AnswerGiven",
+    "payload": {
+      "answer": "Must: \u003c100ms, Plan: \u003c50ms, Wish: \u003c10ms (measured on typical 2020+ laptop, cold start)",
+      "item_id": "startup_latency_nfr"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-19T18:31:40.929529+00:00",
+    "project_id": "8f254b4c-df0a-4056-8937-6eba30efcfa6",
+    "provenance": "trusted",
+    "seq": 44
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

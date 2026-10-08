@@ -1,0 +1,39 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "ebed982737c6d75ea0824e629fb21411c0ace02d4f42ee375f639372167005a8",
+    "event_id": "75c91168-e064-400c-8661-2911f23f403a",
+    "seq": 7
+  },
+  "previous": {
+    "digest": "f96fc9cf753990e90fc0deed0eab8509cf45da20c805622ca1aa84a4fe678dc7",
+    "event_id": "e3791bfe-0778-4009-97c2-b2e73919eb92",
+    "seq": 5
+  },
+  "project_id": "5ea01f61-8536-4ace-90cb-18700a12e410",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "7ccb5530-620e-4a12-9ed2-5ec58558c454",
+    "cycle": 1,
+    "digest": "34a7f5a376f057ac6c44e6137eb0c717dbec790dcaf6376b673d1962197aba9a",
+    "engine_id": "claudeloop",
+    "event_id": "529108f0-903f-4807-a85f-44495cd16148",
+    "job_id": "4c2ec03f-d670-44f9-9f05-47597984ab20",
+    "kind": "AnswerGiven",
+    "payload": {
+      "answer": "Make `vibey doctor` fast. Measured on this machine: 6.26s user CPU, 1.52s system, 11% CPU, 1:06.81 wall. Roughly 90% of that minute is spent waiting, not computing. The cause is structural -- doctor iterates engines in a plain `for desc in descriptors:` loop and awaits each engine's preflight subprocess in turn. Four independent engines that share no state are checked strictly one after another. `--conformance` is far worse, since each engine then spawns a real session; that is where cursorloop hung earlier and never returned.",
+      "item_id": "objective"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-22T02:59:00.626706+00:00",
+    "project_id": "5ea01f61-8536-4ace-90cb-18700a12e410",
+    "provenance": "trusted",
+    "seq": 6
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

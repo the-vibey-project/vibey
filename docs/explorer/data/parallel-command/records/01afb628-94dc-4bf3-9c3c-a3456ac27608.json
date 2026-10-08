@@ -1,0 +1,39 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a",
+    "event_id": "88bb30e1-4d2c-4ce0-a937-7b6a5b79b1f5",
+    "seq": 71
+  },
+  "previous": {
+    "digest": "789ff3d4d69a5c5742bb1f439d75b40f68aca332e13897185e42b25e6ac40c25",
+    "event_id": "034c85ae-2fb8-467e-97ab-9ed3552a53f8",
+    "seq": 62
+  },
+  "project_id": "bed522a2-0b3e-4bff-9cd6-7c13fe40779a",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "9d53c565-fa99-4499-958e-0ab926c1663d",
+    "cycle": 1,
+    "digest": "38624ad40d51a66e121feb52f0de20a4a45b616591ec91823478cea1133902e8",
+    "engine_id": "claudeloop",
+    "event_id": "01afb628-94dc-4bf3-9c3c-a3456ac27608",
+    "job_id": "92d834a4-4bf2-4699-9354-adbea7936d77",
+    "kind": "AnswerGiven",
+    "payload": {
+      "answer": "The entire atomic claim operation is in a single database transaction. If ANY job in the set cannot be claimed (due to race, state change, etc.), the transaction rolls back completely - none of the jobs are claimed. The user sees an error: 'Failed to claim all jobs atomically: j3 was claimed by another worker. No jobs were claimed.' Exit code 1. User can retry the command or adjust the job set.",
+      "item_id": "atomic_claim_partial_failure"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-22T03:51:49.961126+00:00",
+    "project_id": "bed522a2-0b3e-4bff-9cd6-7c13fe40779a",
+    "provenance": "trusted",
+    "seq": 63
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

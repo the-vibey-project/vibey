@@ -1,0 +1,39 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "52b2a2920d6a0a76fd5062f613935933c322e2f0e3261fff7969fed0199d2ef3",
+    "event_id": "f1f5dbf8-7e34-4a37-8ae3-8e5b7570b068",
+    "seq": 47
+  },
+  "previous": {
+    "digest": "ff4539ef68b81f51f65cab631124e1ee78b88184836c08ba50a04801650e3771",
+    "event_id": "4379b404-9fef-4ae7-9b96-692ec573b122",
+    "seq": 45
+  },
+  "project_id": "8f254b4c-df0a-4056-8937-6eba30efcfa6",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "b53e5d67-ec3c-46e3-b386-a4624084767d",
+    "cycle": 1,
+    "digest": "c21d87b981ce9d2897e5c9ba70a3de247e0ca9da0c545fb94e8ce6539074b34e",
+    "engine_id": "claudeloop",
+    "event_id": "06aa29e0-e6f6-42e2-84fb-c14d0dd79966",
+    "job_id": "40fb97d9-4ab1-4fa8-9ae2-693c2b7a7fc9",
+    "kind": "AnswerGiven",
+    "payload": {
+      "answer": "Must: state what's wrong; Plan: include corrective action (e.g., show usage); Wish: suggest most likely fix",
+      "item_id": "error_message_usability_nfr"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-19T18:31:40.929529+00:00",
+    "project_id": "8f254b4c-df0a-4056-8937-6eba30efcfa6",
+    "provenance": "trusted",
+    "seq": 46
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

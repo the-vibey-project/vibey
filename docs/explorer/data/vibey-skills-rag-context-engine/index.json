@@ -1,0 +1,16 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "project_id": "bfd47902-96a6-4846-9330-d8efd7c8c56d",
+  "records": [
+    {
+      "actor": "vibey",
+      "digest": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a",
+      "id": "3a599781-13a0-42ba-9436-418efb6094a4",
+      "kind": "VisualDesignDeclined",
+      "phase": "design",
+      "seq": 1,
+      "time": "2026-08-22T21:44:02.536933+00:00",
+      "tokens": []
+    }
+  ]
+}

@@ -1,0 +1,39 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "07a36dfc5c1f4e8d1b7dc153799e48b5398170f29e61abada4c93c4cb8216650",
+    "event_id": "fa6c78e5-ecd6-493f-a35f-7078ab8ff90e",
+    "seq": 7
+  },
+  "previous": {
+    "digest": "5d6834da8377e486c0937513016a12d925238b4b4678767bf2dc30e954884e86",
+    "event_id": "38b2e6bd-3112-467f-a791-aca7cfa28927",
+    "seq": 5
+  },
+  "project_id": "df7e868b-1fbf-451b-8ceb-126359b7588e",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "c45a9f5e-838a-416d-9c1e-84751f6ba0c5",
+    "cycle": 1,
+    "digest": "467ec36aaac27e682b70c211b6efaa966b4a9d55d06fb1322065bd57e87554a8",
+    "engine_id": "claudeloop",
+    "event_id": "af3f27cb-bb55-4801-810f-c2055822171a",
+    "job_id": "3a3b336c-c2aa-4400-a762-ae12246358d3",
+    "kind": "AnswerGiven",
+    "payload": {
+      "answer": "A new application feature with standard CRUD operations",
+      "item_id": "feature_description"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-22T04:41:25.481404+00:00",
+    "project_id": "df7e868b-1fbf-451b-8ceb-126359b7588e",
+    "provenance": "trusted",
+    "seq": 6
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

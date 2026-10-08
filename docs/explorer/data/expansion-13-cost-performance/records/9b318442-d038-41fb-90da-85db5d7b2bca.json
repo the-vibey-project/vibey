@@ -1,0 +1,39 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "cb06f2f4f567c348414584ed640a0614680bc73b327ef67963ab276b7a9c4021",
+    "event_id": "d961027e-1429-4117-973d-d9f7341755a3",
+    "seq": 41
+  },
+  "previous": {
+    "digest": "85c82effbc885d59c7a95ad95f8656eaad0447aeb5313370eb5de408f03e1801",
+    "event_id": "6abd5608-bd5b-4f83-a9e1-5a5ecc903bbb",
+    "seq": 39
+  },
+  "project_id": "a1d6b837-46f3-40c0-b6a2-8b3babb7fe15",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "95465c4b-fa41-4f64-8126-0b8a8071faf0",
+    "cycle": 1,
+    "digest": "d0a8c17cef6e3a2d64c8381b45ee4266bb6031fe552d6f947d1f4f3b84c0f393",
+    "engine_id": "claudeloop",
+    "event_id": "9b318442-d038-41fb-90da-85db5d7b2bca",
+    "job_id": "dd8513f6-0d76-49a5-8bdc-75167dea5385",
+    "kind": "AnswerGiven",
+    "payload": {
+      "answer": "New worker-aware fixture that wraps/replaces existing db fixture; migrate all tests to use it in one change for consistency",
+      "item_id": "fixture_migration_scope"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-20T20:45:10.481212+00:00",
+    "project_id": "a1d6b837-46f3-40c0-b6a2-8b3babb7fe15",
+    "provenance": "trusted",
+    "seq": 40
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

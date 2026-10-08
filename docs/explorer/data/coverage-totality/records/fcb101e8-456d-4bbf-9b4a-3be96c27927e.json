@@ -1,0 +1,40 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "89ff7f7c51e2148e6bb7e8e0ecc04716882543b541d143b7df33d7bd4292f14f",
+    "event_id": "e27ef91a-a79b-440b-a3d4-14b81ae9a981",
+    "seq": 458
+  },
+  "previous": {
+    "digest": "8eb1720bb678732202552cf65d5a0b14591b40ffdf5f1f2ce966c7d56a16d57b",
+    "event_id": "4c68c3e5-fc22-4f2b-a30d-ad8df84c7162",
+    "seq": 432
+  },
+  "project_id": "e631c00a-e1a1-4ed4-b99a-0fa2d388d240",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "fd9fdac9-7605-42fd-9561-fbb1b52406e7",
+    "cycle": 1,
+    "digest": "81df9872a2648fe6aa20104ad202f24bacaaaaaaa99032c1cf6f854770790fe7",
+    "engine_id": null,
+    "event_id": "fcb101e8-456d-4bbf-9b4a-3be96c27927e",
+    "job_id": "8a5ec15e-bf04-4193-a222-c2cbb1524cb3",
+    "kind": "FindingRaised",
+    "payload": {
+      "finding_id": "f_integrate_bootstrap-budget-brake_76140f03",
+      "severity": "high",
+      "text": "gate failed after merging 'bootstrap-budget-brake': uv run coverage report --include='src/vibey/bootstrap.py': warning: `VIRTUAL_ENV=[path]` does not match the project environment path `.venv` and will be ignored; use `--active` to target the active environment instead\n[stdout] No data to report."
+    },
+    "phase": "build",
+    "produced_at": "2026-08-22T17:34:22.593072+00:00",
+    "project_id": "e631c00a-e1a1-4ed4-b99a-0fa2d388d240",
+    "provenance": "agent",
+    "seq": 433
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 1
+  }
+}

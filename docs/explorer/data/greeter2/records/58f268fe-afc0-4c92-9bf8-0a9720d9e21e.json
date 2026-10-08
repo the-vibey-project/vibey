@@ -1,0 +1,39 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "07fabeb47292ece32d4fe588372cf2db823d8c446ab917e543503d6e98ffbca2",
+    "event_id": "58fc6c65-24fa-4aab-a707-13b26f5608c7",
+    "seq": 7
+  },
+  "previous": {
+    "digest": "ba0b86fba224f6bb6081f8e85c9139a3aa1bb28bfced7129ce5ba34348d1e38b",
+    "event_id": "ecc885f3-7a65-4555-b34e-a8384bc84a95",
+    "seq": 5
+  },
+  "project_id": "8f254b4c-df0a-4056-8937-6eba30efcfa6",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "5e1de19a-8746-4e58-b9e6-0585a745077e",
+    "cycle": 1,
+    "digest": "256e9f2eefe28b99c5beeb2a044ce84723436184798ba87cfdf62f028c6ea569",
+    "engine_id": "claudeloop",
+    "event_id": "58f268fe-afc0-4c92-9bf8-0a9720d9e21e",
+    "job_id": "40fb97d9-4ab1-4fa8-9ae2-693c2b7a7fc9",
+    "kind": "AnswerGiven",
+    "payload": {
+      "answer": "None - single local user, instant response; performance is a non-issue",
+      "item_id": "scale_requirements"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-19T18:26:12.491708+00:00",
+    "project_id": "8f254b4c-df0a-4056-8937-6eba30efcfa6",
+    "provenance": "trusted",
+    "seq": 6
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

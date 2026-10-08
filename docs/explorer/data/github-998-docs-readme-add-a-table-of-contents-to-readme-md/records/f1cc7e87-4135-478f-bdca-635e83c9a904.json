@@ -1,0 +1,43 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "2d32693961d6704a40a10ed3e9b62859e19a7e0365b3129670d4c4f57a15df3d",
+    "event_id": "911068d5-4606-4aaa-a926-e6998b7873e2",
+    "seq": 50
+  },
+  "previous": {
+    "digest": "d87f4adcc8e58346499cf94d2fa8568667d3017d531b589e7c21872c9250e98c",
+    "event_id": "1920b374-8f9f-423b-9769-aa147bb1a55e",
+    "seq": 46
+  },
+  "project_id": "9692abab-ace3-4ee0-ac59-3ea42484b817",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "0face8bc-aa17-546b-b5de-e16e759738e6",
+    "cycle": 1,
+    "digest": "8e835eaacb3452abb462ce8e09c64d4272e9206d4361afa0afc048f54783e178",
+    "engine_id": "gptossloop",
+    "event_id": "f1cc7e87-4135-478f-bdca-635e83c9a904",
+    "job_id": "c2b75c18-fd15-4e79-ad4e-cf489356ad57",
+    "kind": "QuestionAsked",
+    "payload": {
+      "blocking": false,
+      "cycle": 1,
+      "default": "No",
+      "item_id": "q19",
+      "stage": "nfr_planguage",
+      "text": "Should the TOC insertion be performed as part of a pre-commit hook in addition to the CI pipeline to catch missing TOC locally?"
+    },
+    "phase": "design",
+    "produced_at": "2026-09-29T18:51:08.930819+00:00",
+    "project_id": "9692abab-ace3-4ee0-ac59-3ea42484b817",
+    "provenance": "agent",
+    "seq": 47
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

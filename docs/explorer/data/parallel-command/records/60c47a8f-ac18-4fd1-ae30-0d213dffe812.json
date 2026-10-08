@@ -1,0 +1,43 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "6b1e5ec7f7513bb2887d1e54dc3ca593aa6931a3447d62982cf7de78db3a90d8",
+    "event_id": "0a8bb26d-f3d0-4148-a24d-8042db3d6248",
+    "seq": 41
+  },
+  "previous": {
+    "digest": "6d43a4ba0f159b3f323f7c0a795515c6a3823c595d118523d39b40a09a120208",
+    "event_id": "81d2c599-f827-495d-b08c-94f8b6aebedd",
+    "seq": 39
+  },
+  "project_id": "bed522a2-0b3e-4bff-9cd6-7c13fe40779a",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "874dbed1-eaa4-44aa-9588-4e3b10496987",
+    "cycle": 1,
+    "digest": "ddc3b5452f62148d751853bba3a9f6eba20291b79c454ce1186b784e0c921e55",
+    "engine_id": "claudeloop",
+    "event_id": "60c47a8f-ac18-4fd1-ae30-0d213dffe812",
+    "job_id": "92d834a4-4bf2-4699-9354-adbea7936d77",
+    "kind": "QuestionAsked",
+    "payload": {
+      "blocking": false,
+      "cycle": 1,
+      "default": "One test passes: `vibey work --parallel j1,j2` where j1 and j2 are real claimable jobs, both complete successfully, output shows both ran, exit code 0. No error handling, no validation, no polish - just proof the core loop works.",
+      "item_id": "skeleton_done_when",
+      "stage": "walking_skeleton",
+      "text": "What's the definition of done for the walking skeleton? What's the minimal demonstration that proves 'this can work' so you can decide whether to invest in the full feature?"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-22T03:44:20.823316+00:00",
+    "project_id": "bed522a2-0b3e-4bff-9cd6-7c13fe40779a",
+    "provenance": "agent",
+    "seq": 40
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

@@ -1,0 +1,39 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "e1905e5b93c911db4e857e92d4a803802cbe93e88f821ff8ad7b6e942f2a0af3",
+    "event_id": "870a0c58-dae9-46fd-8a00-b8632141679a",
+    "seq": 16
+  },
+  "previous": {
+    "digest": "a99c4c114c904bb8093beb500141be8189e901da2773e47382e1b2b9dba67db8",
+    "event_id": "f13eaa45-ef9a-4e43-bd24-5fa7c46aa8ff",
+    "seq": 14
+  },
+  "project_id": "a1d6b837-46f3-40c0-b6a2-8b3babb7fe15",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "5fbf1494-8dbb-416f-a0f9-14a3ceb978c6",
+    "cycle": 1,
+    "digest": "89df8c03ebed22d5085cf8dcfec607b98b33ffc1d9afb97260d82f6ca202bd8c",
+    "engine_id": "claudeloop",
+    "event_id": "d323d1a9-e01c-40b9-8d8a-fecb657ccfa0",
+    "job_id": "dd8513f6-0d76-49a5-8bdc-75167dea5385",
+    "kind": "AnswerGiven",
+    "payload": {
+      "answer": "Enable frequent, confident commits with sub-2-minute feedback loops while maintaining all quality gates",
+      "item_id": "desired_outcome"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-20T20:41:40.929853+00:00",
+    "project_id": "a1d6b837-46f3-40c0-b6a2-8b3babb7fe15",
+    "provenance": "trusted",
+    "seq": 15
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

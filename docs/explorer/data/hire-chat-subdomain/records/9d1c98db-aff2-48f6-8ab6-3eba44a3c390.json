@@ -1,0 +1,43 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "fa5948ac3c8163f6951d51667002debf9fceefc0633796a1fb5b53d77c926535",
+    "event_id": "4413cdea-94ab-4f47-a2b5-2c1c2d807145",
+    "seq": 43
+  },
+  "previous": {
+    "digest": "223509c6a9d05b19b187bd90d5524a5d063476234331cfbd37f242ef48b47ff8",
+    "event_id": "95c6e2cd-bdb3-49f8-af4c-73b205116f7c",
+    "seq": 41
+  },
+  "project_id": "0ee95624-eec4-4e8e-9a14-6ad9a37dcff4",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "97257f94-3740-499f-b8b7-8e27aba73987",
+    "cycle": 1,
+    "digest": "0bdc132a931a4f5a23aeaa20b486b094476b46ba5dcdd915ce097e61a1f8b362",
+    "engine_id": "claudeloop",
+    "event_id": "9d1c98db-aff2-48f6-8ab6-3eba44a3c390",
+    "job_id": "1343d0fd-bf3f-4739-8c21-cbf7693c673e",
+    "kind": "QuestionAsked",
+    "payload": {
+      "blocking": false,
+      "cycle": 1,
+      "default": "Must: \u003c3000ms TTI (matching main site's server-rendered pages); Plan: \u003c2000ms; Wish: \u003c1500ms. FCP/LCP targets inherited from existing Netlify + Next.js defaults; no new performance budget beyond keeping the page server-rendered.",
+      "item_id": "page_load_performance",
+      "stage": "nfr_planguage",
+      "text": "What initial page load time targets apply to https://chat.adam.matthewsteinberger.com/? [Scale: Time to Interactive (TTI) in ms on 4G; Meter: Lighthouse CI or WebPageTest; Must/Plan/Wish]"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-20T20:19:05.488622+00:00",
+    "project_id": "0ee95624-eec4-4e8e-9a14-6ad9a37dcff4",
+    "provenance": "agent",
+    "seq": 42
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

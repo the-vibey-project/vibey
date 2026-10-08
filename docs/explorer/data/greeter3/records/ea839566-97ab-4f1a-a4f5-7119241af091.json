@@ -1,0 +1,43 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "355a77900a57bd2912bd15cf7303d4e13e8025902f4512337e393a93f4e8aec3",
+    "event_id": "0448716f-3893-4dac-8c4b-3502a94f7375",
+    "seq": 19
+  },
+  "previous": {
+    "digest": "ebb29fcab5bf6678e7a01b027a418a682e0ab7833809ee4ceca19e1cc1fa3e6b",
+    "event_id": "ea60c9ee-6d45-467b-b044-4b4c8126ecb7",
+    "seq": 17
+  },
+  "project_id": "5e76341f-ba5f-4272-8355-3df5d489bbcd",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "b6199451-abaf-40eb-87aa-a6b2ced61e2e",
+    "cycle": 1,
+    "digest": "d28260b748b05f26d0f4e8d09d9805350abd15919a6cd30a90b2a6df62494373",
+    "engine_id": "claudeloop",
+    "event_id": "ea839566-97ab-4f1a-a4f5-7119241af091",
+    "job_id": "e58deb6b-5356-4a39-8acf-5dc898bba380",
+    "kind": "QuestionAsked",
+    "payload": {
+      "blocking": true,
+      "cycle": 1,
+      "default": "Include the user's name and possibly time-of-day awareness (morning/afternoon/evening)",
+      "item_id": "personalization_depth",
+      "stage": "laddering",
+      "text": "What specific elements make a greeting feel 'personalized' in this context?"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-20T00:48:27.268761+00:00",
+    "project_id": "5e76341f-ba5f-4272-8355-3df5d489bbcd",
+    "provenance": "agent",
+    "seq": 18
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

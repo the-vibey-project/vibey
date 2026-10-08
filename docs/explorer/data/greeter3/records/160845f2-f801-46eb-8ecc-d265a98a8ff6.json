@@ -1,0 +1,39 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "9b68cc8784ad7a5099289000190f518f2cc265ebd47dee868104332bb4ab38f6",
+    "event_id": "c1520985-132a-454d-bb00-6415eef0382b",
+    "seq": 22
+  },
+  "previous": {
+    "digest": "e8093bde12c3cc962cb71b0ccaa686450c662d80bdfc0964aa20731fc61dc8cd",
+    "event_id": "45d45a83-d4c7-4c06-a841-999e474b6432",
+    "seq": 20
+  },
+  "project_id": "5e76341f-ba5f-4272-8355-3df5d489bbcd",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "e331b97e-d847-491e-ab13-11c2b70f8551",
+    "cycle": 1,
+    "digest": "75720c47daac1cf4b75221220d084eba857ed8f3125677ec23e2e04871c9bb82",
+    "engine_id": "claudeloop",
+    "event_id": "160845f2-f801-46eb-8ecc-d265a98a8ff6",
+    "job_id": "e58deb6b-5356-4a39-8acf-5dc898bba380",
+    "kind": "AnswerGiven",
+    "payload": {
+      "answer": "Use system username or other locally available user information",
+      "item_id": "personalization_mechanism"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-20T00:48:33.501271+00:00",
+    "project_id": "5e76341f-ba5f-4272-8355-3df5d489bbcd",
+    "provenance": "trusted",
+    "seq": 21
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

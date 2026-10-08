@@ -1,0 +1,39 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "af399154e5b80aa174bb43b23e481a509fa184cefe38fa346d004a6c668f52b8",
+    "event_id": "4fb3e732-3214-4fbf-8813-e98df23f1ab1",
+    "seq": 46
+  },
+  "previous": {
+    "digest": "7b7ebf1563b930dacbd76173e69125b5c77cceffd0b9329fe927406383c26a62",
+    "event_id": "294d5117-baee-4662-9935-fb66e5fc2595",
+    "seq": 44
+  },
+  "project_id": "5e76341f-ba5f-4272-8355-3df5d489bbcd",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "75a8a633-3d01-4c6d-9f16-279cc297cc97",
+    "cycle": 1,
+    "digest": "e8d33bdf7957f43b4d47d152ecc181aa5f8096c5db9fd111147e04fd506bcb0b",
+    "engine_id": "claudeloop",
+    "event_id": "924bc324-58fc-4eaf-96f0-07f6531b2a60",
+    "job_id": "e58deb6b-5356-4a39-8acf-5dc898bba380",
+    "kind": "AnswerGiven",
+    "payload": {
+      "answer": "100ms on standard hardware - greeting should feel instant",
+      "item_id": "response_time"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-20T00:51:02.663112+00:00",
+    "project_id": "5e76341f-ba5f-4272-8355-3df5d489bbcd",
+    "provenance": "trusted",
+    "seq": 45
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

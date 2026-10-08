@@ -1,0 +1,42 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "125013121ebe3802ba293164637691c593137e62a7bd9f0d102bf6a390c0df85",
+    "event_id": "7deb70fb-8e70-475a-9383-7a599add5c2b",
+    "seq": 1070
+  },
+  "previous": {
+    "digest": "5ac5c339e0a6b6c39e8fdc1183ef405f237b00bba3f7ee6d71f9e66b9a07be5c",
+    "event_id": "e87a15ca-a4b4-4bde-9e79-1e3224f53a40",
+    "seq": 987
+  },
+  "project_id": "d733035f-e0f9-4f67-aba2-270068d6a9c6",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "90c7eec0-bf7e-471e-b924-4b939e2bc986",
+    "cycle": 1,
+    "digest": "050fe3c6ab191e4c509c7714f43684b01da5ddd32acf4542e10b12c3cd12bf8a",
+    "engine_id": "codexloop",
+    "event_id": "c70334e5-85d8-41a6-b9c0-480a37545528",
+    "job_id": "f36bd3ae-d5af-458f-8fa0-b82ff12dc380",
+    "kind": "VerdictRendered",
+    "payload": {
+      "complete": false,
+      "remaining_work": [
+        "Implement work item tx-rollback: Full transaction rollback on mid-cancel fault injection"
+      ],
+      "success": false
+    },
+    "phase": "build",
+    "produced_at": "2026-08-22T19:51:56.474058+00:00",
+    "project_id": "d733035f-e0f9-4f67-aba2-270068d6a9c6",
+    "provenance": "agent",
+    "seq": 1042
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 2,
+    "paths": 0
+  }
+}

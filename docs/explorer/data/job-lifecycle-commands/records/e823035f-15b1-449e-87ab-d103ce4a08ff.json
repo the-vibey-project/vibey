@@ -1,0 +1,43 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "2389940374e937bf0864d59e280eaf6a97ee01709d6772e92156aeee498057c9",
+    "event_id": "27eea52a-fb1c-40ee-ba15-5a95c5a34395",
+    "seq": 30
+  },
+  "previous": {
+    "digest": "14c40e0a24b3b1010827e75805d3bb9a2ba719a65a01d2321c18ea7427bdb0c6",
+    "event_id": "ba550a10-8e8f-4236-94cb-d9d898b9ef42",
+    "seq": 28
+  },
+  "project_id": "2f6a93b6-2d73-4aff-bc94-16539841133f",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "36a9c9df-de31-4437-b71c-2892b04c8477",
+    "cycle": 1,
+    "digest": "2bdc224d54ae2b4b9239e4f68e178b21e29b48f6e08d1d1825ad44a0d7df3d3f",
+    "engine_id": "claudeloop",
+    "event_id": "e823035f-15b1-449e-87ab-d103ce4a08ff",
+    "job_id": "334db377-8cb0-4a72-9cc0-78b45fc9bb38",
+    "kind": "QuestionAsked",
+    "payload": {
+      "blocking": true,
+      "cycle": 1,
+      "default": "Writes JobCancelled event to abc-123's ledger (seq 9), sets abc-123 state=CANCELLED. Creates new job_id=abc-124 (or similar) with state=READY in INTAKE phase, enqueued. New job gets original intake spec from abc-123's ledger seq 1, starts fresh ledger. Both jobs visible in `vibey status`\u2014old CANCELLED, new READY.",
+      "item_id": "restart_concrete_example",
+      "stage": "example_mapping",
+      "text": "Walk through a concrete restart scenario: job_id=abc-123 is in state=FAILED with 8 ledger events. Operator runs `vibey restart \u003cjob-id\u003e`. What job_ids, states, and ledger events result? Where does the new job's context come from?"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-22T03:43:11.386375+00:00",
+    "project_id": "2f6a93b6-2d73-4aff-bc94-16539841133f",
+    "provenance": "agent",
+    "seq": 29
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

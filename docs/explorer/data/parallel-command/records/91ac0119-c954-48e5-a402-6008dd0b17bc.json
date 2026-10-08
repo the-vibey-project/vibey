@@ -1,0 +1,43 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "2a8e8e7ba6443de33f6b26abe94ddfb0816af71e98fe5eca024284fdff18dbce",
+    "event_id": "368dbeee-fe91-469a-ac9f-9ef0e98ce77a",
+    "seq": 10
+  },
+  "previous": {
+    "digest": "743599ad2519bdb819f72627275a3b390466aa2fd884e14a7f929e40bec8b56c",
+    "event_id": "877d1954-c807-4507-acf3-3c5fd88b3a20",
+    "seq": 8
+  },
+  "project_id": "bed522a2-0b3e-4bff-9cd6-7c13fe40779a",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "a457e57b-b33f-4c57-8908-70ddc352efe2",
+    "cycle": 1,
+    "digest": "27ce9411c27b44542a4693ae7338bedf887b6fd1ac5c7b2aa51e37193a9807ea",
+    "engine_id": "claudeloop",
+    "event_id": "91ac0119-c954-48e5-a402-6008dd0b17bc",
+    "job_id": "92d834a4-4bf2-4699-9354-adbea7936d77",
+    "kind": "QuestionAsked",
+    "payload": {
+      "blocking": true,
+      "cycle": 1,
+      "default": "I have three interdependent jobs (e.g., frontend build, backend build, integration test) that I want to explicitly coordinate as a batch, rather than relying on the worker pool to eventually pick them up in some order.",
+      "item_id": "concrete_scenario",
+      "stage": "job_story",
+      "text": "Describe a concrete scenario where you would use `vibey work --parallel j1,j2,j3` instead of `vibey worker -j N`. What are j1, j2, j3 doing, and why must they run together as a named set rather than letting the worker pool claim them?"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-22T02:57:10.599326+00:00",
+    "project_id": "bed522a2-0b3e-4bff-9cd6-7c13fe40779a",
+    "provenance": "agent",
+    "seq": 9
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

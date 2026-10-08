@@ -1,0 +1,39 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "51ef01a6a520098e0dc46f501655c540656d778d7eba240f28ce451043a228b6",
+    "event_id": "a4de3485-bdaf-4223-b575-a05346e229ec",
+    "seq": 26
+  },
+  "previous": {
+    "digest": "3e30668b1a8d897fda419e20fe66a38676ec8cf19e7f1fe2b7bd682d32c258fb",
+    "event_id": "101dfe87-1786-412f-8470-5671788d0b8f",
+    "seq": 24
+  },
+  "project_id": "f4cfe576-55c7-4f79-80ad-485f85ddca8b",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "4bb7ecc1-ea40-5364-bed9-45c048157678",
+    "cycle": 1,
+    "digest": "d37b4700c1756f57cbdeb47b47ab8aad920a0671c0625a120839783e33f28bda",
+    "engine_id": "gptossloop",
+    "event_id": "3d3b050c-50c1-498d-aa7b-b9bcd96068bf",
+    "job_id": "5057b798-907c-4039-9690-3992212dc0b2",
+    "kind": "AnswerGiven",
+    "payload": {
+      "answer": "Add a top\u2011level `paid_executed` boolean that is true when the paid lane ran and false when it was skipped.",
+      "item_id": "Q10"
+    },
+    "phase": "design",
+    "produced_at": "2026-09-27T21:32:36.861316+00:00",
+    "project_id": "f4cfe576-55c7-4f79-80ad-485f85ddca8b",
+    "provenance": "trusted",
+    "seq": 25
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

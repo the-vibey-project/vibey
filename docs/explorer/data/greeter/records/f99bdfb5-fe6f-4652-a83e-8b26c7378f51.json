@@ -1,0 +1,39 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "0b11a2e64ae21807976f7de2a2f3847abf4c721e734fc1eb9052dc7d75df45c9",
+    "event_id": "edb41d7b-0123-4434-8906-565bf2d269e5",
+    "seq": 48
+  },
+  "previous": {
+    "digest": "3a48a70f6a776c7fcff443d036941ac378fb9fb4bd85446cfe439a18cf5287ae",
+    "event_id": "86e0a8fb-1786-496d-b157-4001da642b22",
+    "seq": 46
+  },
+  "project_id": "26f89c38-c86b-4ddf-be75-c579a118e40e",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "62d61106-e305-4d73-89a7-a7d3989da1bc",
+    "cycle": 1,
+    "digest": "45447cc105b32c0c3d6607238fe5d92643c8374ca08afdee47cd5a10cc06dd04",
+    "engine_id": "claudeloop",
+    "event_id": "f99bdfb5-fe6f-4652-a83e-8b26c7378f51",
+    "job_id": "2bdd2b5e-b4f1-4004-9dbf-78d267fea803",
+    "kind": "AnswerGiven",
+    "payload": {
+      "answer": "Pytest with \u003e80% line coverage; unit tests for time logic, integration tests for CLI invocation; no CI required",
+      "item_id": "test_coverage_requirement"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-19T12:34:35.087803+00:00",
+    "project_id": "26f89c38-c86b-4ddf-be75-c579a118e40e",
+    "provenance": "trusted",
+    "seq": 47
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

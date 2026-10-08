@@ -1,0 +1,39 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "3a27cd0cc8ce2d1997094c528b19fdb8a2770bf49c7888d01dc18352dfa2a530",
+    "event_id": "ce338004-ad5d-47e0-bade-6d3d679de281",
+    "seq": 38
+  },
+  "previous": {
+    "digest": "68ac5b72772f8f208906da243200735acea7f0a73c39593c256f872e4aa3b965",
+    "event_id": "2cb8a339-7956-4e2f-8d42-0ce9051b5b6b",
+    "seq": 36
+  },
+  "project_id": "0ee95624-eec4-4e8e-9a14-6ad9a37dcff4",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "b2dd5b25-85b6-4bbc-a622-9d9119cf3d64",
+    "cycle": 1,
+    "digest": "53d86ff532f818299978d628729c7bb651433ae0148d663a143f0c11b0666ab4",
+    "engine_id": "claudeloop",
+    "event_id": "11b23ee0-587e-4afc-bf4e-50d404f71fee",
+    "job_id": "1343d0fd-bf3f-4739-8c21-cbf7693c673e",
+    "kind": "AnswerGiven",
+    "payload": {
+      "answer": "Nothing is deferred to a follow-up PR \u2014 the accepted spec (AC-01\u2026AC-09) ships as one feature. BUILD may still decompose it into dependency-ordered items: the walking skeleton (page + variant + routing + their tests) first, then discoverability (widget link, footer link, sitemap, llms.txt, kb-sources chunk + tests), then AGENTS.md docs \u2014 chained with depends_on because they touch the same files (AskAdam.tsx, Footer.tsx, AGENTS.md).",
+      "item_id": "deferrable_scope"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-20T20:14:54.754799+00:00",
+    "project_id": "0ee95624-eec4-4e8e-9a14-6ad9a37dcff4",
+    "provenance": "trusted",
+    "seq": 37
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

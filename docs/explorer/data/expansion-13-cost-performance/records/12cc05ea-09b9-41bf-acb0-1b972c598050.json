@@ -1,0 +1,39 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "6251d1c077cca0839e9867771348296de2e0d93809622da90033e039e981dbdf",
+    "event_id": "79600994-9a38-4fb9-9ce0-6e511a4afa3c",
+    "seq": 55
+  },
+  "previous": {
+    "digest": "91ea9e3168fc58bd83ae8d0b3ce62cfc711d53570954f68ca8799d49a9032235",
+    "event_id": "c6baa063-8447-4767-96f6-6188022afd40",
+    "seq": 53
+  },
+  "project_id": "a1d6b837-46f3-40c0-b6a2-8b3babb7fe15",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "0b91547e-7bd3-4436-bfa6-0411f9535b5c",
+    "cycle": 1,
+    "digest": "06fd3d47b9ed8861dc05346f13764cf0ef4a9b9e4ceffa5cb708ccb862c25ca4",
+    "engine_id": "claudeloop",
+    "event_id": "12cc05ea-09b9-41bf-acb0-1b972c598050",
+    "job_id": "dd8513f6-0d76-49a5-8bdc-75167dea5385",
+    "kind": "AnswerGiven",
+    "payload": {
+      "answer": "Template database cloning overhead at session start; mitigate by creating template once and reusing across test runs",
+      "item_id": "performance_bottlenecks"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-20T20:46:45.802224+00:00",
+    "project_id": "a1d6b837-46f3-40c0-b6a2-8b3babb7fe15",
+    "provenance": "trusted",
+    "seq": 54
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

@@ -1,0 +1,40 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "7842517003d3188110f0f465954b0ecff589806cb8cb54badeb558d03aad338d",
+    "event_id": "49f00cc2-8bd7-48cf-936c-29fe363150ef",
+    "seq": 601
+  },
+  "previous": {
+    "digest": "7842517003d3188110f0f465954b0ecff589806cb8cb54badeb558d03aad338d",
+    "event_id": "44c42f90-eabf-4497-a88f-157f06defa65",
+    "seq": 590
+  },
+  "project_id": "b43d1fcb-fb7b-42d6-9f80-220292c73389",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "7205942c-4599-49c8-9472-5c675769190e",
+    "cycle": 1,
+    "digest": "fa20907e98db89dbb365877a8f74af6e8d9af267ba13fa89afcc40e49553604a",
+    "engine_id": null,
+    "event_id": "3d9db9c3-ec37-4f76-ae0f-cb94bf851415",
+    "job_id": "a645e8c2-d2ba-4232-8e5f-2ab646e97f33",
+    "kind": "FindingRaised",
+    "payload": {
+      "finding_id": "f_integrate_resolver_535942f6",
+      "severity": "high",
+      "text": "merge conflict integrating 'resolver': fatal: refusing to merge unrelated histories"
+    },
+    "phase": "build",
+    "produced_at": "2026-08-22T17:30:58.245660+00:00",
+    "project_id": "b43d1fcb-fb7b-42d6-9f80-220292c73389",
+    "provenance": "agent",
+    "seq": 591
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

@@ -1,0 +1,43 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "25a403a12363442ece5ad445ab713016940a60dd1c96d6f37c3bae2761174a69",
+    "event_id": "bc85985a-1362-45bd-979c-d5f49b0e2339",
+    "seq": 36
+  },
+  "previous": {
+    "digest": "3fe0bba00438ea66257db7f4ea60b4796b3f6b320841c1e1981d054412cb4265",
+    "event_id": "2927a64b-f8c9-4329-93e6-623476d4978c",
+    "seq": 34
+  },
+  "project_id": "5e76341f-ba5f-4272-8355-3df5d489bbcd",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "b72fab69-a9cd-4bd1-9580-871c084914dd",
+    "cycle": 1,
+    "digest": "48841d4a8b239214a9258e0d818be8b5db82fe522011b5c84b4dd0d389b58201",
+    "engine_id": "claudeloop",
+    "event_id": "34e29bb9-844d-4307-849f-dd143cb71293",
+    "job_id": "e58deb6b-5356-4a39-8acf-5dc898bba380",
+    "kind": "QuestionAsked",
+    "payload": {
+      "blocking": false,
+      "cycle": 1,
+      "default": "Run the script manually at different times of day and verify correct greeting appears",
+      "item_id": "skeleton_validation",
+      "stage": "walking_skeleton",
+      "text": "How will you validate the walking skeleton works end-to-end?"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-20T00:50:15.948560+00:00",
+    "project_id": "5e76341f-ba5f-4272-8355-3df5d489bbcd",
+    "provenance": "agent",
+    "seq": 35
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

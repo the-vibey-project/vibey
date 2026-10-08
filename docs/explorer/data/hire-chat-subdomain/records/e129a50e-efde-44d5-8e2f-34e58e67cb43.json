@@ -1,0 +1,43 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "6054bac4713a182f3476b9f132b8cedd7953f060c13626fed4a4f8eec972fc3c",
+    "event_id": "ab01be54-14cb-45f7-bfb4-9e9849e81e82",
+    "seq": 21
+  },
+  "previous": {
+    "digest": "f53615037ee5485f2fc689900197dd78d8e3c208fefe41eb480a4b3783f99519",
+    "event_id": "c6760bb6-2874-4797-b316-9ba3b314c314",
+    "seq": 19
+  },
+  "project_id": "0ee95624-eec4-4e8e-9a14-6ad9a37dcff4",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "31a06b20-ae5b-4a7a-bbab-9a0cafb95f4e",
+    "cycle": 1,
+    "digest": "e3289f94bad17168ef761e6f83df23c1d51d5584e47f57c6e6acc30d9da936af",
+    "engine_id": "claudeloop",
+    "event_id": "e129a50e-efde-44d5-8e2f-34e58e67cb43",
+    "job_id": "1343d0fd-bf3f-4739-8c21-cbf7693c673e",
+    "kind": "QuestionAsked",
+    "payload": {
+      "blocking": true,
+      "cycle": 1,
+      "default": "Bot invents credentials/metrics not on the site, page looks broken/unfinished when disabled, or experience feels like a gimmick rather than a legitimate research tool - any of these undermine Staff-level positioning",
+      "item_id": "failure_signals",
+      "stage": "laddering",
+      "text": "What visitor experience would indicate the chat page is actively harmful to hiring prospects?"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-20T20:11:06.183484+00:00",
+    "project_id": "0ee95624-eec4-4e8e-9a14-6ad9a37dcff4",
+    "provenance": "agent",
+    "seq": 20
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

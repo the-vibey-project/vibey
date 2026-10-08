@@ -1,0 +1,43 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "9ba840a374c04ad62f82043a73422f6a9f6fa593da1034670a5aeb6b2a14df1b",
+    "event_id": "a76b930b-9188-452a-995c-44af21769c37",
+    "seq": 36
+  },
+  "previous": {
+    "digest": "f98f14b3f72c65a39ad3681b2d431265f31650d059034d99db8a54a53eb86be9",
+    "event_id": "d1c5ddb7-5215-4634-bf03-9aa83264130b",
+    "seq": 33
+  },
+  "project_id": "ab0b06f9-55a4-4b47-ac08-254e7fdd9036",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "255ca108-cc5c-4587-aa97-ff12f1d8e279",
+    "cycle": 1,
+    "digest": "5460a9980253c8b7e0763fa691143879b15d08851e30a4698fec740bd5aa9cee",
+    "engine_id": "claudeloop",
+    "event_id": "395d9866-5aa8-4ca6-92ff-00a4250cccdc",
+    "job_id": "48f9ef01-8b95-4709-adde-ed0ece390f8d",
+    "kind": "QuestionAsked",
+    "payload": {
+      "blocking": true,
+      "cycle": 1,
+      "default": "Fork from current position only (no --at-seq selector), terminal states only (completed/failed/exhausted), single command 'vibey fork \u003cjob_id\u003e' that creates new job + worktree + branch and prints the new job_id",
+      "item_id": "minimal_fork_operation",
+      "stage": "walking_skeleton",
+      "text": "What's the minimal viable fork operation to implement first, before adding --at-seq or other options?"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-22T03:42:48.069300+00:00",
+    "project_id": "ab0b06f9-55a4-4b47-ac08-254e7fdd9036",
+    "provenance": "agent",
+    "seq": 35
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

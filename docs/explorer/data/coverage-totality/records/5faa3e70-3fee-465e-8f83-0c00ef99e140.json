@@ -1,0 +1,39 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "67a22aedc6f9a507552fb9f7e684c41b8dc4343dbd5072a818ec9811b2ed6084",
+    "event_id": "d6c2df61-f6f8-4f54-bbde-32ec55e52922",
+    "seq": 57
+  },
+  "previous": {
+    "digest": "69f0240590d5e9943480f0304b4e646f238ae937780b6f3e0df6d5cc9b002cc5",
+    "event_id": "1e885db7-5ca4-4f7c-8b6e-8223ccfa377a",
+    "seq": 55
+  },
+  "project_id": "e631c00a-e1a1-4ed4-b99a-0fa2d388d240",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "11531205-430b-4102-a61c-e51132b9a329",
+    "cycle": 1,
+    "digest": "db06cff7e552d5b6a03267894f7d23660ab1e31abb9f3f5bb2195583b063480e",
+    "engine_id": "claudeloop",
+    "event_id": "5faa3e70-3fee-465e-8f83-0c00ef99e140",
+    "job_id": "d73f236e-a7b4-4748-b075-3900a75af324",
+    "kind": "AnswerGiven",
+    "payload": {
+      "answer": "Delete the unreachable code per zero-exemptions rule; if deletion breaks something, the branch wasn't unreachable and the discovery is valuable",
+      "item_id": "unreachable_branch_discovery"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-22T03:44:59.097632+00:00",
+    "project_id": "e631c00a-e1a1-4ed4-b99a-0fa2d388d240",
+    "provenance": "trusted",
+    "seq": 56
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

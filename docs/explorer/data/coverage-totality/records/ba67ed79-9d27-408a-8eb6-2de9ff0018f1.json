@@ -1,0 +1,43 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "2108bea600bd2047ce273804de88395cb509d619e13fd8235a8d35130b1c706a",
+    "event_id": "b3754716-e394-4acd-8b67-e4015a8d4730",
+    "seq": 52
+  },
+  "previous": {
+    "digest": "1ea58fc0fff78e8c8e17f6ade7595dc0d982efe71d872c6fdc855792de30541b",
+    "event_id": "7bb9c8f5-f40d-48d5-b2ef-544db2a59c78",
+    "seq": 50
+  },
+  "project_id": "e631c00a-e1a1-4ed4-b99a-0fa2d388d240",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "953cb195-515c-4b4d-ab35-6c06a3af9fc4",
+    "cycle": 1,
+    "digest": "6862eefdc53b36177fb7119996ffc95ec9ab434518784cc52069fb6f237f72b2",
+    "engine_id": "claudeloop",
+    "event_id": "ba67ed79-9d27-408a-8eb6-2de9ff0018f1",
+    "job_id": "d73f236e-a7b4-4748-b075-3900a75af324",
+    "kind": "QuestionAsked",
+    "payload": {
+      "blocking": false,
+      "cycle": 1,
+      "default": "New top-level package outside src/vibey/ (e.g., src/vibey_plugins/), or coverage config changes that weaken --include glob\u2014prevented by code review vigilance",
+      "item_id": "future_gate_bypass",
+      "stage": "premortem",
+      "text": "What could cause a future PR to add uncovered code that passes the new total gate at --include='src/vibey/*' --fail-under=100?"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-22T03:44:53.556640+00:00",
+    "project_id": "e631c00a-e1a1-4ed4-b99a-0fa2d388d240",
+    "provenance": "agent",
+    "seq": 51
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

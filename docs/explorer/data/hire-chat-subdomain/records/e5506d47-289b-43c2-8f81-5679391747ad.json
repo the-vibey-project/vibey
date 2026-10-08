@@ -1,0 +1,39 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "a8a9523a974dc1dc738ccb0ebe532082713a9a61d5797549e1c49ef5546fca9d",
+    "event_id": "cbe135d3-02ff-4cb4-8039-55077788a1e4",
+    "seq": 15
+  },
+  "previous": {
+    "digest": "e2188f7a6da1db3680bc6172aba7af7fcba144236abf6d8914ae3215a81b15fd",
+    "event_id": "66f8e896-3db8-4138-a306-32a9f780c908",
+    "seq": 13
+  },
+  "project_id": "0ee95624-eec4-4e8e-9a14-6ad9a37dcff4",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "6309336b-db5d-4f3e-ab45-0f9276ea90e6",
+    "cycle": 1,
+    "digest": "01cb5ce4407cc45c5b164c6710effc1970ec4510796964999045c38e83de992c",
+    "engine_id": "claudeloop",
+    "event_id": "e5506d47-289b-43c2-8f81-5679391747ad",
+    "job_id": "1343d0fd-bf3f-4739-8c21-cbf7693c673e",
+    "kind": "AnswerGiven",
+    "payload": {
+      "answer": "Hiring managers and technical recruiters doing pre-interview research on Adam (Staff Software Architect \u0026 AI Automation Engineer, available September 2026), plus engineers evaluating how he builds. Secondary: anyone who was sent the link by Adam directly.",
+      "item_id": "primary_persona"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-20T20:10:06.063857+00:00",
+    "project_id": "0ee95624-eec4-4e8e-9a14-6ad9a37dcff4",
+    "provenance": "trusted",
+    "seq": 14
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

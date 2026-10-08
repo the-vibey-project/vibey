@@ -1,0 +1,40 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "fc8c7238e8a00b243a3b4f285c0fcee38f837c44d8e6f52549f8d51569ac7eda",
+    "event_id": "116176de-b92c-4f19-a641-b0d071008619",
+    "seq": 1217
+  },
+  "previous": {
+    "digest": "7ea6a3d73126c94f88a2fa501d166c2aaa1a3f774dd043d7729b447c78e28218",
+    "event_id": "6090e3a9-fcea-4641-88ed-d6957c32ea23",
+    "seq": 1215
+  },
+  "project_id": "8ab823c9-89e4-4050-884c-9008c8b14ef8",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "57ba0584-6872-47da-a4f0-929b59918c57",
+    "cycle": 1,
+    "digest": "7ef644ce255e983aa66ca9d5668cee130131b169397e4b2848176d70828da243",
+    "engine_id": null,
+    "event_id": "a56ff09e-759b-4ee8-b8dd-241acc48962e",
+    "job_id": "1dcf841e-c8d5-4725-8a27-e294e06dabf3",
+    "kind": "FindingRaised",
+    "payload": {
+      "finding_id": "f_integrate_rate-limiting_69c7d9e4",
+      "severity": "high",
+      "text": "merge conflict integrating 'rate-limiting': Auto-merging README.md\nCONFLICT (content): Merge conflict in README.md\nAuto-merging pytest.py\nCONFLICT (content): Merge conflict in pytest.py\nAuto-merging run_tests.py\nCONFLICT (content): Merge conflict in run_tests.py\nAutomatic merge failed; fix conflicts and then commit the result."
+    },
+    "phase": "build",
+    "produced_at": "2026-08-20T06:03:07.604512+00:00",
+    "project_id": "8ab823c9-89e4-4050-884c-9008c8b14ef8",
+    "provenance": "agent",
+    "seq": 1216
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

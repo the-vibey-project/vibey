@@ -1,0 +1,40 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "55387b124af01bc805f727c7317becc868f4c730a4b27622c57bdf9ff835774f",
+    "event_id": "f188dd40-9487-42f0-993c-41b3c4d3453d",
+    "seq": 998
+  },
+  "previous": {
+    "digest": "7842517003d3188110f0f465954b0ecff589806cb8cb54badeb558d03aad338d",
+    "event_id": "24b9bbfd-4258-4e73-9e7b-4eb13d06a69f",
+    "seq": 996
+  },
+  "project_id": "a1d6b837-46f3-40c0-b6a2-8b3babb7fe15",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "4e80eb6f-38b6-4c66-b6ba-8f088f60bd25",
+    "cycle": 1,
+    "digest": "1dce7321a63eae16db5622ababae8de5ff62d71f3e505ba3012e7c41504c1e56",
+    "engine_id": null,
+    "event_id": "3a747deb-423c-4b73-9285-5a80dbb0ec95",
+    "job_id": "a0010503-e657-47cd-b64c-2ad93c9b43a7",
+    "kind": "FindingRaised",
+    "payload": {
+      "finding_id": "f_verify_unified-coverage_f91f9827",
+      "severity": "high",
+      "text": "gate failed: uv run pytest -q -p no:cacheprovider -n auto --maxprocesses=8 --cov=vibey --cov-branch: warning: `VIRTUAL_ENV=[path]` does not match the project environment path `.venv` and will be ignored; use `--active` to target the active environment instead\n[stdout] ts/infrastructure/db/test_rotation_cursor_repository.py::test_list_for_project_returns_ordered\nERROR tests/infrastructure/db/test_rotation_cursor_repository.py::test_list_for_project_returns_empty_when_no_cursors\nERROR tests/infrastructure/db/test_rotation_cursor_repository.py::test_update_many_updates_all_atomically\nERROR tests/infrastructure/db/test_end_to_end_forced_rotation.py::test_forced_rotation_asserts_result_would_fail_if_an_item_were_dropped\nERROR tests/infrastructure/db/test_engine_health_repository.py::test_probe_scheduling_round_trip_for_credits_exhausted_never_persists_a_deadline\nERROR tests/infrastructure/db/test_engine_health_repository.py::test_row_engine_id_is_a_real_engine_id_enum\nERROR tests/system/test_full_worker_faked.py::test_full_worker_drives_a_project_to_done_local\nERROR tests/system/test_full_worker_faked.py::test_full_worker_survives_a_forced_wind_down_rotation\nERROR tests/infrastructure/db/test_engine_health_repository.py::test_health_engine_id_survives_rotation_cursor_round_trip\nERROR tests/infrastructure/db/test_handoff_repository.py::test_record_and_get_round_trips\nERROR tests/infrastructure/db/test_handoff_repository.py::test_every_attempts_violations_are_recorded\nERROR tests/infrastructure/db/test_handoff_repository.py::test_list_for_pair_is_queryable_and_ordered\nERROR tests/infrastructure/db/test_handoff_repository.py::test_get_returns_none_for_nonexistent_handoff\n15 failed, 1270 passed, 2 xfailed, 3 warnings, 89 errors in 102.07s (0:01:42)"
+    },
+    "phase": "build",
+    "produced_at": "2026-08-22T18:54:37.953050+00:00",
+    "project_id": "a1d6b837-46f3-40c0-b6a2-8b3babb7fe15",
+    "provenance": "agent",
+    "seq": 997
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 1
+  }
+}

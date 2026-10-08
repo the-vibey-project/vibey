@@ -1,0 +1,39 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "b56511b2610d9f006dcfc90c40722150c550343b78f331a8f4d91cfa8a9dd086",
+    "event_id": "7bf4b961-62d7-4dc7-940d-2565ac3c402d",
+    "seq": 31
+  },
+  "previous": {
+    "digest": "e60a8b4de478318a5f871293e007ea4cb30eb37f787a4d5447869254d0d07d81",
+    "event_id": "a9ee93f0-cad6-4910-bbdd-3229678ccf55",
+    "seq": 29
+  },
+  "project_id": "8ab823c9-89e4-4050-884c-9008c8b14ef8",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "6f27ea26-c637-4be8-9907-25a34a3662e1",
+    "cycle": 1,
+    "digest": "f479a3978f13f495a55813ad743de6057395499a864409dbc838e299e6086b42",
+    "engine_id": "claudeloop",
+    "event_id": "074ff729-fad7-4057-834a-3d0a491a6954",
+    "job_id": "705692f1-69a1-4cc2-ade7-8aa3d1407b67",
+    "kind": "AnswerGiven",
+    "payload": {
+      "answer": "First write wins; second user gets an error and must choose a different alias",
+      "item_id": "collision_resolution"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-20T02:34:04.152258+00:00",
+    "project_id": "8ab823c9-89e4-4050-884c-9008c8b14ef8",
+    "provenance": "trusted",
+    "seq": 30
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

@@ -1,0 +1,43 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "9b124ee2781e71cba6747c4f65d07761a2e8536b4c06efae308fd09b46308ee5",
+    "event_id": "61fb859f-789f-48d6-922d-b650ee6acd12",
+    "seq": 28
+  },
+  "previous": {
+    "digest": "64bb030ae4ff4a5aabd265b1d8872f110b599cad56211517ac54e5995d1e351e",
+    "event_id": "cf5ee849-9825-488f-bd23-1851762aa3a8",
+    "seq": 26
+  },
+  "project_id": "b43d1fcb-fb7b-42d6-9f80-220292c73389",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "ddffc1f7-581f-4f07-be5f-af5b783d412d",
+    "cycle": 1,
+    "digest": "fe804fb303b7e16af7b0b4079109b01f6710b628c38c769d6a01e663011b3ec4",
+    "engine_id": "claudeloop",
+    "event_id": "54f612ab-44e4-437e-8b12-edad68a3661c",
+    "job_id": "64ea0fea-cd4f-4b3b-bf19-112c18a7c58d",
+    "kind": "QuestionAsked",
+    "payload": {
+      "blocking": true,
+      "cycle": 1,
+      "default": "Cycle Budget Cap: none | Total Budget Cap: none (spent $5.67)",
+      "item_id": "display_no_caps",
+      "stage": "example_mapping",
+      "text": "What exact output should `vibey cost` display for a project created with `vibey new` (no cap flags) that has spent $5.67?"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-22T03:35:25.809462+00:00",
+    "project_id": "b43d1fcb-fb7b-42d6-9f80-220292c73389",
+    "provenance": "agent",
+    "seq": 27
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

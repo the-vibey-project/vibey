@@ -1,0 +1,43 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "e2188f7a6da1db3680bc6172aba7af7fcba144236abf6d8914ae3215a81b15fd",
+    "event_id": "66f8e896-3db8-4138-a306-32a9f780c908",
+    "seq": 13
+  },
+  "previous": {
+    "digest": "5949449726ea6edcc98223bf1291d01c8826167303c6b09ce3c18015376df1b0",
+    "event_id": "a13d0307-7fff-4ed5-85da-0ff73a19cce1",
+    "seq": 11
+  },
+  "project_id": "0ee95624-eec4-4e8e-9a14-6ad9a37dcff4",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "00c6f1ef-b3ab-42c7-b398-a420304b54ed",
+    "cycle": 1,
+    "digest": "c16be436a9f91bc4df64c3cde3e739bd6e455cd6fcaf469c411f5e51c6d66f21",
+    "engine_id": "claudeloop",
+    "event_id": "20748c1f-2c6a-4945-8ad3-fbcf54b23b78",
+    "job_id": "1343d0fd-bf3f-4739-8c21-cbf7693c673e",
+    "kind": "QuestionAsked",
+    "payload": {
+      "blocking": true,
+      "cycle": 1,
+      "default": "Static page with heading/intro explaining the feature is temporarily unavailable, plus prominent CTAs to [path] (primary) and back to main site (secondary) - no broken experience",
+      "item_id": "disabled_fallback",
+      "stage": "job_story",
+      "text": "When the bot is disabled (feature-flagged off), what should the chat subdomain show?"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-20T20:09:33.786887+00:00",
+    "project_id": "0ee95624-eec4-4e8e-9a14-6ad9a37dcff4",
+    "provenance": "agent",
+    "seq": 12
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 1
+  }
+}

@@ -1,0 +1,43 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "14b3105e760be1e9edd3ae84039d962ae6d98f6e5f9fa8fc5185f2b4ea88424e",
+    "event_id": "44b6e209-5115-434a-8b3f-302ab0746995",
+    "seq": 4
+  },
+  "previous": {
+    "digest": "198b27dec4ca69df3d6726871d795574e7ab133e8b81e9ed01564fdba663ff80",
+    "event_id": "6d64ed28-f43f-43d2-a9d9-79ab67976c0f",
+    "seq": 2
+  },
+  "project_id": "44c06a64-c8ed-4153-96af-b49db29c39e3",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "292f3398-43e3-47d3-9dc1-a04d443fc1e7",
+    "cycle": 1,
+    "digest": "0603d0a5992bb2a1da3a51d8ed5b7511ed309833ada3f6d35783a20e5af23154",
+    "engine_id": "claudeloop",
+    "event_id": "574eb2c5-3a1e-4674-bb90-b0c7b3fa9369",
+    "job_id": "bcd8e0b1-385d-43dc-ad1f-cad988f80cc9",
+    "kind": "QuestionAsked",
+    "payload": {
+      "blocking": false,
+      "cycle": 1,
+      "default": "Must maintain backward compatibility and follow existing architectural patterns",
+      "item_id": "constraints",
+      "stage": "context_free",
+      "text": "Are there hard constraints (performance, compatibility, security, dependencies)?"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-22T02:56:46.218050+00:00",
+    "project_id": "44c06a64-c8ed-4153-96af-b49db29c39e3",
+    "provenance": "agent",
+    "seq": 3
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

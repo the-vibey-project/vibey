@@ -1,0 +1,43 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "c290dadfbcf8653ec5cd679eed221ce4d58d180ffc1991674b36edb2ae576a17",
+    "event_id": "bfd61a07-07c2-43be-a346-4b163732f35f",
+    "seq": 13
+  },
+  "previous": {
+    "digest": "394006f72b5b31a9162db8aae735e000e978a0894b0442bfc1790d2ec1f089ae",
+    "event_id": "ae93a8f1-ab34-405c-ac03-db6273f08371",
+    "seq": 11
+  },
+  "project_id": "8ab823c9-89e4-4050-884c-9008c8b14ef8",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "cafad5b2-0354-40c7-8b98-07038e2025e8",
+    "cycle": 1,
+    "digest": "a1e438efff4085418226842dfba8671e7a0d6e62ab3c70dd537ed12f51fa3748",
+    "engine_id": "claudeloop",
+    "event_id": "31585d72-251b-4b41-94cf-7e4343ffc346",
+    "job_id": "705692f1-69a1-4cc2-ade7-8aa3d1407b67",
+    "kind": "QuestionAsked",
+    "payload": {
+      "blocking": false,
+      "cycle": 1,
+      "default": "Custom aliases, link expiration, malicious URL detection, rate limiting for abuse prevention",
+      "item_id": "edge_cases",
+      "stage": "job_story",
+      "text": "Any important edge cases or special scenarios to handle?"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-20T02:32:38.468713+00:00",
+    "project_id": "8ab823c9-89e4-4050-884c-9008c8b14ef8",
+    "provenance": "agent",
+    "seq": 12
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

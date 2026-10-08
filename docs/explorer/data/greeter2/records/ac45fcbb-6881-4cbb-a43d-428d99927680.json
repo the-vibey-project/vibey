@@ -1,0 +1,43 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "130333f1ba771986d22935f163298f6f620354f298724a9056a8fe67e67cbbf9",
+    "event_id": "edc3f30f-e6aa-43c6-9dcd-0215fc139e28",
+    "seq": 27
+  },
+  "previous": {
+    "digest": "83356742556c9baf42cfea676727e3ef4367579f8d16853881f3a3f25ebb7fa0",
+    "event_id": "a4a524af-375a-473f-90cf-94d8c52eb0f2",
+    "seq": 25
+  },
+  "project_id": "8f254b4c-df0a-4056-8937-6eba30efcfa6",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "7a2ffcee-c297-4d2d-aabf-823807564284",
+    "cycle": 1,
+    "digest": "a6519a8389f2e77c580a4d4d8b9f5ca9317650733b369588c0810a21c4207b3d",
+    "engine_id": "claudeloop",
+    "event_id": "ac45fcbb-6881-4cbb-a43d-428d99927680",
+    "job_id": "40fb97d9-4ab1-4fa8-9ae2-693c2b7a7fc9",
+    "kind": "QuestionAsked",
+    "payload": {
+      "blocking": false,
+      "cycle": 1,
+      "default": "12:00 \u2192 \"Good afternoon, Alice!\" (afternoon starts at noon), 17:00 \u2192 \"Good evening, Alice!\" (evening starts at 5pm)",
+      "item_id": "boundary_time_examples",
+      "stage": "example_mapping",
+      "text": "What greeting at exactly 12:00 noon and exactly 17:00 (5pm)?"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-19T18:29:05.583707+00:00",
+    "project_id": "8f254b4c-df0a-4056-8937-6eba30efcfa6",
+    "provenance": "agent",
+    "seq": 26
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

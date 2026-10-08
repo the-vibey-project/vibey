@@ -1,0 +1,39 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "1693e764d0167bd667b9650fba9760d5006b45bb9b5bcfc1c4627dd199af37e9",
+    "event_id": "abebe803-2925-4940-baf6-04000bca50bb",
+    "seq": 38
+  },
+  "previous": {
+    "digest": "8537810c4b53953130191402b72049bd85cbec86c6b82cdff24f7b5d54a5d090",
+    "event_id": "cef8b34a-0135-4d68-ac48-ef40af3bffab",
+    "seq": 36
+  },
+  "project_id": "e631c00a-e1a1-4ed4-b99a-0fa2d388d240",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "07fc4fd9-79de-427b-828b-932b2edaed6c",
+    "cycle": 1,
+    "digest": "550a29c780f4aff864c890dd2a5989e16cba4494f07980fc1231a7d1f05b9476",
+    "engine_id": "claudeloop",
+    "event_id": "6fe84893-8185-4ba6-9a2c-d64175ce812d",
+    "job_id": "d73f236e-a7b4-4748-b075-3900a75af324",
+    "kind": "AnswerGiven",
+    "payload": {
+      "answer": "Same PR\u2014gate and fixes together ensure the floor lands enforced, not as a future TODO that could be forgotten",
+      "item_id": "gate_timing"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-22T03:41:55.327719+00:00",
+    "project_id": "e631c00a-e1a1-4ed4-b99a-0fa2d388d240",
+    "provenance": "trusted",
+    "seq": 37
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

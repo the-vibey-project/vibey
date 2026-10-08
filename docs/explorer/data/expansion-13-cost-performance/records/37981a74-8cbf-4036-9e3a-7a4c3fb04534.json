@@ -1,0 +1,39 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "5165edd3820a3ab4d8f6ca5d8e49fb6c971e31c89e78070f038e959996be6fc5",
+    "event_id": "a66ce1a4-8e9d-4acc-98b3-dccea33ecd71",
+    "seq": 30
+  },
+  "previous": {
+    "digest": "06f2eca6d05b01d58a6d52fdfdc2fa38f0f0278358ee105363b66a021acd852c",
+    "event_id": "adc2c299-cf05-49c3-b571-b2f3af52f105",
+    "seq": 28
+  },
+  "project_id": "a1d6b837-46f3-40c0-b6a2-8b3babb7fe15",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "050634a0-5340-4647-9b71-05d836c82a44",
+    "cycle": 1,
+    "digest": "443a904e07a0fb1fcadbb2631f60a69dc8986a921b831c4b9579b6469e21f913",
+    "engine_id": "claudeloop",
+    "event_id": "37981a74-8cbf-4036-9e3a-7a4c3fb04534",
+    "job_id": "dd8513f6-0d76-49a5-8bdc-75167dea5385",
+    "kind": "AnswerGiven",
+    "payload": {
+      "answer": "Database fixtures may assume exclusive access to vibey_test; tests likely use transaction rollback for cleanup",
+      "item_id": "isolation_patterns"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-20T20:44:16.772049+00:00",
+    "project_id": "a1d6b837-46f3-40c0-b6a2-8b3babb7fe15",
+    "provenance": "trusted",
+    "seq": 29
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

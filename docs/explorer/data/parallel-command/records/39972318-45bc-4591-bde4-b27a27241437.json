@@ -1,0 +1,39 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "7fe10bde2e0a208a88cac2cede03143f768c185c9e9a0d1d3a49c6506e42cee4",
+    "event_id": "b574365b-289d-4185-87a5-d33464354742",
+    "seq": 14
+  },
+  "previous": {
+    "digest": "285dfb7e5ff33b0a7a82fa7e3cb178f0411d56956bd0e66c7c1cb23390c44f2e",
+    "event_id": "b76d6414-55c3-4c4a-aa6e-d22ee3416512",
+    "seq": 12
+  },
+  "project_id": "bed522a2-0b3e-4bff-9cd6-7c13fe40779a",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "6d1b0c54-0e12-4808-8267-a43f1312a4fd",
+    "cycle": 1,
+    "digest": "d89280f36773799c0bd8e7a2866cd8652889039bc8954a259561f2bae0acbc8f",
+    "engine_id": "claudeloop",
+    "event_id": "39972318-45bc-4591-bde4-b27a27241437",
+    "job_id": "92d834a4-4bf2-4699-9354-adbea7936d77",
+    "kind": "AnswerGiven",
+    "payload": {
+      "answer": "Jobs are created by the existing intake/design/build flow; the operator names ids explicitly. The part needing a real decision is failure: if one job of a named set fails, do the others continue, get cancelled, or finish and report? Do NOT default to killing siblings -- these jobs are independent units of work that happen to have been named together, and destroying completed work because a sibling failed is a bad trade. Default: let the others run to completion, report a consolidated result naming which failed. Anything stronger needs a stated reason.",
+      "item_id": "user_workflow"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-22T02:58:27.426984+00:00",
+    "project_id": "bed522a2-0b3e-4bff-9cd6-7c13fe40779a",
+    "provenance": "trusted",
+    "seq": 13
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

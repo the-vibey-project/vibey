@@ -1,0 +1,43 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "f79d8bc75d5488485f0f363672973a7d805037d9a8eb21ec640f170756bd42ac",
+    "event_id": "f5946ac3-cd5a-4f7f-bfbd-5a41ce9e467f",
+    "seq": 47
+  },
+  "previous": {
+    "digest": "a43cec077fa30c62275f3be0da6f8bdfd01378c91e2339b115b44e951b4e00e6",
+    "event_id": "bc9b2871-3413-4d22-ac07-25696bca206f",
+    "seq": 45
+  },
+  "project_id": "ab0b06f9-55a4-4b47-ac08-254e7fdd9036",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "57472390-ebe2-4943-8ba2-250de09dbb94",
+    "cycle": 1,
+    "digest": "976f53baef02a30184e2a1994321064f19a64b12cf2c0ffdab547ca09ee5e098",
+    "engine_id": "claudeloop",
+    "event_id": "c60451c4-797d-4f5b-a6b9-299febc36855",
+    "job_id": "48f9ef01-8b95-4709-adde-ed0ece390f8d",
+    "kind": "QuestionAsked",
+    "payload": {
+      "blocking": true,
+      "cycle": 1,
+      "default": "Atomic at ledger level: JobForked event commits only after worktree + branch verified; orphaned worktrees cleaned up on next `vibey doctor` run; \u003c 0.1% failure rate under normal conditions",
+      "item_id": "fork_failure_handling",
+      "stage": "nfr_planguage",
+      "text": "If fork creation fails partway through (worktree created but ledger write fails, or vice versa), what's the recovery strategy and acceptable failure rate?"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-22T03:44:18.262225+00:00",
+    "project_id": "ab0b06f9-55a4-4b47-ac08-254e7fdd9036",
+    "provenance": "agent",
+    "seq": 46
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

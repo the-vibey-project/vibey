@@ -1,0 +1,39 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "dd5d1a7062e2fdcba0f470669bfcc8dd287410c06d0ae82c7b4beb20cbe0275c",
+    "event_id": "82751fb5-5a54-4d9f-9976-429fbd62465f",
+    "seq": 37
+  },
+  "previous": {
+    "digest": "b243f080930e7260c1b660c2134c7a82ef405e4383c0a8b5e5f90c00864c6ed4",
+    "event_id": "2b898393-a3d8-4743-b107-6974f349dfc8",
+    "seq": 35
+  },
+  "project_id": "df7e868b-1fbf-451b-8ceb-126359b7588e",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "377e0a9b-258f-4096-804a-f7818b49cf03",
+    "cycle": 1,
+    "digest": "cd3d298db0c8b5a7908c5047ba93f67830402615a94e0ef51d0dafd32db7ff6c",
+    "engine_id": "claudeloop",
+    "event_id": "0e15806d-ec6d-4d97-b2c2-2b4b713ddbc2",
+    "job_id": "3a3b336c-c2aa-4400-a762-ae12246358d3",
+    "kind": "AnswerGiven",
+    "payload": {
+      "answer": "No audit history/versioning, no soft deletes (hard delete only), no bulk import from files, no advanced search/filtering beyond basic field matching",
+      "item_id": "out_of_scope_examples"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-22T17:05:48.956987+00:00",
+    "project_id": "df7e868b-1fbf-451b-8ceb-126359b7588e",
+    "provenance": "trusted",
+    "seq": 36
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

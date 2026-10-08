@@ -1,0 +1,40 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "7842517003d3188110f0f465954b0ecff589806cb8cb54badeb558d03aad338d",
+    "event_id": "7aa6d1ac-dee3-4edd-90fa-172283ba9efb",
+    "seq": 974
+  },
+  "previous": {
+    "digest": "7842517003d3188110f0f465954b0ecff589806cb8cb54badeb558d03aad338d",
+    "event_id": "75b7301b-3a5f-44d0-ad7f-dc3fae4a7052",
+    "seq": 907
+  },
+  "project_id": "8ab823c9-89e4-4050-884c-9008c8b14ef8",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "aff9a21a-92dc-44c9-bb45-b634087d2c9e",
+    "cycle": 1,
+    "digest": "994840547de406a743d0446d9e91d5fc7cc413d7a5335897cd8bd127efc65988",
+    "engine_id": null,
+    "event_id": "7b451bbd-fbab-4943-b397-59472f2632b3",
+    "job_id": "401a0504-a697-4f50-8cdf-7e73f25761e1",
+    "kind": "FindingRaised",
+    "payload": {
+      "finding_id": "f_integrate_malicious-interstitial_ea2a4732",
+      "severity": "high",
+      "text": "merge conflict integrating 'malicious-interstitial': Auto-merging README.md\nCONFLICT (content): Merge conflict in README.md\nAutomatic merge failed; fix conflicts and then commit the result."
+    },
+    "phase": "build",
+    "produced_at": "2026-08-20T03:29:32.607791+00:00",
+    "project_id": "8ab823c9-89e4-4050-884c-9008c8b14ef8",
+    "provenance": "agent",
+    "seq": 908
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

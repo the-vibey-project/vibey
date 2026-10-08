@@ -1,0 +1,39 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "a29f4cd1cb2c7da5f9c1b0230db35f58ac141027a5eea761f7e9c0cb734a2c9c",
+    "event_id": "09b60a2e-84d6-434a-91e4-9d6d7723ef4d",
+    "seq": 60
+  },
+  "previous": {
+    "digest": "a77837c9c23147df1b562b1a32bd245f9eee1725d88a56f18187da635b168090",
+    "event_id": "02857731-1ae1-45f5-adac-cb6e52b65d16",
+    "seq": 58
+  },
+  "project_id": "5ea01f61-8536-4ace-90cb-18700a12e410",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "323d5c2f-3513-4d78-a85b-14cc3061beff",
+    "cycle": 1,
+    "digest": "4881be031cc4ce4d5c2ecfea64310b5d5e7448970aa209a6a089dc9223cc8f89",
+    "engine_id": "claudeloop",
+    "event_id": "cf122bb2-a532-4ee6-9976-728aa2c295a2",
+    "job_id": "4c2ec03f-d670-44f9-9f05-47597984ab20",
+    "kind": "AnswerGiven",
+    "payload": {
+      "answer": "Race condition in result collection or display ordering; engines completing in different orders but output not being properly sorted before display",
+      "item_id": "determinism_failure"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-22T03:50:19.448891+00:00",
+    "project_id": "5ea01f61-8536-4ace-90cb-18700a12e410",
+    "provenance": "trusted",
+    "seq": 59
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

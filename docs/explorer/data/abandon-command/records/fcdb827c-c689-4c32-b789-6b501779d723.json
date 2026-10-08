@@ -1,0 +1,39 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "a260f1e7e6e7bde965871a5ce9525726ebed137346c1f84c9c2c4911dfeb19c5",
+    "event_id": "9e077e0e-2d35-4238-8503-f6964df04410",
+    "seq": 41
+  },
+  "previous": {
+    "digest": "f18a75893725b36a47debcb8a5ad6df5ca0eec1939c7180fb065dada687b134b",
+    "event_id": "5b09d9c7-01cf-4616-bdd6-26c8da22220c",
+    "seq": 39
+  },
+  "project_id": "d733035f-e0f9-4f67-aba2-270068d6a9c6",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "2b95e67e-d81e-451c-90c4-770b3d79fa2c",
+    "cycle": 1,
+    "digest": "801808a47c511ce69b51a7c176e755d5b484b9895cbc934d10b92d608f071a28",
+    "engine_id": "claudeloop",
+    "event_id": "fcdb827c-c689-4c32-b789-6b501779d723",
+    "job_id": "44e282ee-55b1-4cf9-afc3-c84870a14a5c",
+    "kind": "AnswerGiven",
+    "payload": {
+      "answer": "Job cancellation first (READY/AWAITING_HUMAN only), then guards (DONE/LEASED/race), then worktree warning. Each increment keeps the transaction atomic.",
+      "item_id": "increment_order"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-22T03:44:13.821551+00:00",
+    "project_id": "d733035f-e0f9-4f67-aba2-270068d6a9c6",
+    "provenance": "trusted",
+    "seq": 40
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

@@ -1,0 +1,43 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "493bf6d5bea7d510f58da2024278fde148ab9684300925103970aaf395312e33",
+    "event_id": "f2a507cb-7d3f-46bb-b2a3-0df35ad70e47",
+    "seq": 37
+  },
+  "previous": {
+    "digest": "c5a05e27309c77b597f0f63370e739c15609220c21dbf1cf3fc3665fcd30df3d",
+    "event_id": "40dfb171-a378-460f-ad27-bb23b6adf753",
+    "seq": 35
+  },
+  "project_id": "26f89c38-c86b-4ddf-be75-c579a118e40e",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "93baaa97-3357-484d-b2ef-0d97eb290150",
+    "cycle": 1,
+    "digest": "25a460f608298f1c0c23da03f018f47795880674ef7c11bcc1be518929c2d719",
+    "engine_id": "claudeloop",
+    "event_id": "098666eb-b880-4dbd-a6c3-32720a05d79e",
+    "job_id": "2bdd2b5e-b4f1-4004-9dbf-78d267fea803",
+    "kind": "QuestionAsked",
+    "payload": {
+      "blocking": false,
+      "cycle": 1,
+      "default": "greet 0.1.0",
+      "item_id": "version_string",
+      "stage": "walking_skeleton",
+      "text": "What should `greet --version` output?"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-19T12:33:39.714177+00:00",
+    "project_id": "26f89c38-c86b-4ddf-be75-c579a118e40e",
+    "provenance": "agent",
+    "seq": 36
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

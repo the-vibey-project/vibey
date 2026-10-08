@@ -1,0 +1,43 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "f0c7c8d13546d515a35680c81554499e48f0912274beedb1e94db394caa4f376",
+    "event_id": "7c52da43-f1a7-4a30-a1d6-fb57c2163790",
+    "seq": 14
+  },
+  "previous": {
+    "digest": "a3757c3a94a72544dd36fc680e017198eac97152b51ef8c08c1184dbc4df1f7a",
+    "event_id": "29c0b2c7-99c1-4533-a6b5-bb4c82cbdf01",
+    "seq": 12
+  },
+  "project_id": "df7e868b-1fbf-451b-8ceb-126359b7588e",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "c378bfed-e03d-41f2-b0a8-8ac308c79fec",
+    "cycle": 1,
+    "digest": "9a9449c5777c329675fe65f1776e9aecb1db86404ecd71cb2a6088309ffa6268",
+    "engine_id": "claudeloop",
+    "event_id": "53945060-e74e-457e-aa75-b3e687476c1d",
+    "job_id": "3a3b336c-c2aa-4400-a762-ae12246358d3",
+    "kind": "QuestionAsked",
+    "payload": {
+      "blocking": false,
+      "cycle": 1,
+      "default": "So they can maintain accurate, up-to-date information without manual overhead",
+      "item_id": "user_value",
+      "stage": "job_story",
+      "text": "What value or benefit does this provide? Why does the user care?"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-22T04:42:28.684044+00:00",
+    "project_id": "df7e868b-1fbf-451b-8ceb-126359b7588e",
+    "provenance": "agent",
+    "seq": 13
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

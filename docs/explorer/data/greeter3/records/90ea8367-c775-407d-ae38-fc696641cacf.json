@@ -1,0 +1,43 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "c11447ae8b490b9098e7d80b555313c706f4af817de59524051c26909668390b",
+    "event_id": "652a36e0-22bf-41e8-999e-47ddcfe7e754",
+    "seq": 13
+  },
+  "previous": {
+    "digest": "ea0bd8202e89bd9cf6bd971bf9142f256517fd988700d321da5fef5746097b25",
+    "event_id": "c3b18c9b-6f35-4d2a-beb6-c8aad26c21b9",
+    "seq": 11
+  },
+  "project_id": "5e76341f-ba5f-4272-8355-3df5d489bbcd",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "9bb3dbe6-341f-45eb-9f76-bf467c6490cb",
+    "cycle": 1,
+    "digest": "debef31f32eb0f79ffe2e7ab8fd3a2450f3dddfa9ec6407940d654cbb05a6dc3",
+    "engine_id": "claudeloop",
+    "event_id": "90ea8367-c775-407d-ae38-fc696641cacf",
+    "job_id": "e58deb6b-5356-4a39-8acf-5dc898bba380",
+    "kind": "QuestionAsked",
+    "payload": {
+      "blocking": false,
+      "cycle": 1,
+      "default": "No major pain points; this is an enhancement to improve engagement",
+      "item_id": "current_pain_points",
+      "stage": "job_story",
+      "text": "What problems or frustrations exist with the current approach (if any)?"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-20T00:47:43.356337+00:00",
+    "project_id": "5e76341f-ba5f-4272-8355-3df5d489bbcd",
+    "provenance": "agent",
+    "seq": 12
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

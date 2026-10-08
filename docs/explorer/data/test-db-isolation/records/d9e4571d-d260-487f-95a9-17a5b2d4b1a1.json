@@ -1,0 +1,39 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "079a7c4e242eb540f5031489c2364082e102d8ca34a390fd5d6f37aca5ea01b9",
+    "event_id": "b561a762-6575-4723-b3e4-599cd324c195",
+    "seq": 16
+  },
+  "previous": {
+    "digest": "f0c7c8d13546d515a35680c81554499e48f0912274beedb1e94db394caa4f376",
+    "event_id": "7c52da43-f1a7-4a30-a1d6-fb57c2163790",
+    "seq": 14
+  },
+  "project_id": "df7e868b-1fbf-451b-8ceb-126359b7588e",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "5dba088f-e64b-4a9e-a21c-2bef288e0afc",
+    "cycle": 1,
+    "digest": "1073b504967a597bc24db48255ef2ad0aafd58a430af67a4ab59cd5dfa770cc2",
+    "engine_id": "claudeloop",
+    "event_id": "d9e4571d-d260-487f-95a9-17a5b2d4b1a1",
+    "job_id": "3a3b336c-c2aa-4400-a762-ae12246358d3",
+    "kind": "AnswerGiven",
+    "payload": {
+      "answer": "When a user needs to manage data records in the system",
+      "item_id": "user_scenario"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-22T04:42:56.541867+00:00",
+    "project_id": "df7e868b-1fbf-451b-8ceb-126359b7588e",
+    "provenance": "trusted",
+    "seq": 15
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

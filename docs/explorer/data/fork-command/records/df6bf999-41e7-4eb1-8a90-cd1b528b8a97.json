@@ -1,0 +1,43 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "95d02d0a0480ffa78d226d10ff0b07e365d1a965b0f74c36656bd4032de82647",
+    "event_id": "0cf86122-282e-4d31-a5a4-018d34d974a1",
+    "seq": 57
+  },
+  "previous": {
+    "digest": "7ede2cd03f660893317656d18a7fa495f7878bee0ff65e612427e5a598499f94",
+    "event_id": "84f1f1e1-97b9-46ca-8f83-481401d8fae6",
+    "seq": 55
+  },
+  "project_id": "ab0b06f9-55a4-4b47-ac08-254e7fdd9036",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "8b71f57b-f676-433b-b411-aefe3f95cc0f",
+    "cycle": 1,
+    "digest": "b6cd163ca358a1c03cd9852ae37d5aeb21564070a6e341d4a7ba51d431ccbbf3",
+    "engine_id": "claudeloop",
+    "event_id": "df6bf999-41e7-4eb1-8a90-cd1b528b8a97",
+    "job_id": "48f9ef01-8b95-4709-adde-ed0ece390f8d",
+    "kind": "QuestionAsked",
+    "payload": {
+      "blocking": false,
+      "cycle": 1,
+      "default": "Forking repeatedly instead of fixing the root cause (bad prompt, wrong engine selection). Guardrail: `vibey status` shows fork count per origin job and warns at \u003e 5 forks with 'consider revising original job instead'",
+      "item_id": "misuse_confusion",
+      "stage": "premortem",
+      "text": "What's the most likely way fork will be misused, and what guardrails prevent it from becoming a footgun?"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-22T03:45:54.358554+00:00",
+    "project_id": "ab0b06f9-55a4-4b47-ac08-254e7fdd9036",
+    "provenance": "agent",
+    "seq": 56
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

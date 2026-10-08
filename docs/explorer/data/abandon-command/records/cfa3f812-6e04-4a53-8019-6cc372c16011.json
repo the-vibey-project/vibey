@@ -1,0 +1,43 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "390625ecbdd23eef58343f501530c181859438fd414f1009d002af64b0005a62",
+    "event_id": "7310ba2d-6092-45ac-b638-2cfd7ff54bce",
+    "seq": 55
+  },
+  "previous": {
+    "digest": "b94ed12e00a161528235c0324c4493bb09b727a2b1e8d3e1ee20bad390023839",
+    "event_id": "f9e2fe37-c509-4809-bc65-32e8a6069fad",
+    "seq": 51
+  },
+  "project_id": "d733035f-e0f9-4f67-aba2-270068d6a9c6",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "df0c1c67-a325-4ec1-ac9c-ae58a48d9693",
+    "cycle": 1,
+    "digest": "2a0ea2e4c7a7bae201a81e34cd3eb1f2b335e8f6d98fd8f26c8e48fd06d6ddd9",
+    "engine_id": "claudeloop",
+    "event_id": "cfa3f812-6e04-4a53-8019-6cc372c16011",
+    "job_id": "44e282ee-55b1-4cf9-afc3-c84870a14a5c",
+    "kind": "QuestionAsked",
+    "payload": {
+      "blocking": true,
+      "cycle": 1,
+      "default": "Nothing breaks\u2014ledger is append-only, worker's write commits independently, and CANCELLED status takes precedence over any subsequent event because the job becomes non-claimable. Worker may log a lease-lost warning but continues safely.",
+      "item_id": "worker_ledger_race",
+      "stage": "premortem",
+      "text": "What breaks if a worker is mid-ledger-write (appending events) for a job when abandon cancels that job?"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-22T03:50:26.153640+00:00",
+    "project_id": "d733035f-e0f9-4f67-aba2-270068d6a9c6",
+    "provenance": "agent",
+    "seq": 54
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

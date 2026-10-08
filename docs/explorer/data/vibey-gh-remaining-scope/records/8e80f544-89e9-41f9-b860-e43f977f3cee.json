@@ -1,0 +1,43 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "40f6dfa5ea2695f9616b25848b2c7bb1a28a87b8ee33f0427d337905f025929a",
+    "event_id": "0f3c4c92-f9c4-497e-961d-eb36a284f18d",
+    "seq": 28
+  },
+  "previous": {
+    "digest": "bc021a20c34e30e238f62c037aa5df3b43c544f112fb518f1d1c258e43bffe5c",
+    "event_id": "0837c8bf-c4aa-4d44-8ffd-5336b5255030",
+    "seq": 26
+  },
+  "project_id": "d482c3e2-029e-4bb8-a9a1-de411816c6ae",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "f03d7ab9-0113-40bd-8640-2d1a8a3bf914",
+    "cycle": 1,
+    "digest": "cf3e225be37aee842ff0878713f99314880cb66df64d44261928228f51ded0e9",
+    "engine_id": "claudeloop",
+    "event_id": "8e80f544-89e9-41f9-b860-e43f977f3cee",
+    "job_id": "d2626f25-d550-454e-bacd-7a7e6c9b52cd",
+    "kind": "QuestionAsked",
+    "payload": {
+      "blocking": false,
+      "cycle": 1,
+      "default": "Providing language translation tools and supporting multiple date and time formats.",
+      "item_id": "15",
+      "stage": "example_mapping",
+      "text": "How will the software support localization and internationalization to cater to a global user base?"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-31T02:04:52.000504+00:00",
+    "project_id": "d482c3e2-029e-4bb8-a9a1-de411816c6ae",
+    "provenance": "agent",
+    "seq": 27
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

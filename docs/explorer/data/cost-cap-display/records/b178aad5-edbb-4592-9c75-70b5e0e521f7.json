@@ -1,0 +1,43 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "bd046db0758594cee55ca0e98358a0342a71d7a0eed5389a75df32fcb7a1247c",
+    "event_id": "08bd9df6-3265-4a27-b958-0dca32e66290",
+    "seq": 46
+  },
+  "previous": {
+    "digest": "dffb7a00d448cea032e161180d5ee47aae100c54ba58452979b9a6624c7d353c",
+    "event_id": "d5abf00b-bf42-43f0-b41e-209499358747",
+    "seq": 44
+  },
+  "project_id": "b43d1fcb-fb7b-42d6-9f80-220292c73389",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "cf2fce9c-9db4-429b-9ae0-d4d3342280ce",
+    "cycle": 1,
+    "digest": "e9da2334b9957eca8273319773c68f5dd6253b0fa5f675d3d8b82d0955751069",
+    "engine_id": "claudeloop",
+    "event_id": "b178aad5-edbb-4592-9c75-70b5e0e521f7",
+    "job_id": "64ea0fea-cd4f-4b3b-bf19-112c18a7c58d",
+    "kind": "QuestionAsked",
+    "payload": {
+      "blocking": false,
+      "cycle": 1,
+      "default": "100ms - config read is disk I/O but file is small, sub-100ms keeps command snappy",
+      "item_id": "config_read_latency",
+      "stage": "nfr_planguage",
+      "text": "What's the maximum acceptable latency for cap resolution in `vibey cost` (scale: milliseconds; past: unmeasured)?"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-22T03:44:23.200482+00:00",
+    "project_id": "b43d1fcb-fb7b-42d6-9f80-220292c73389",
+    "provenance": "agent",
+    "seq": 45
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

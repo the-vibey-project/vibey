@@ -1,0 +1,39 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a",
+    "event_id": "6063c85f-f4f3-431f-a383-8830f7e16cf2",
+    "seq": 42
+  },
+  "previous": {
+    "digest": "709da8d74153f0d8bad91b146d24fdddf5e0a29e9befd6c6e3408b87d5a94a25",
+    "event_id": "ac488856-081b-47ee-99e2-101e4fbadcad",
+    "seq": 40
+  },
+  "project_id": "893c4fc1-542e-411e-a10a-3aef784b1540",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "d1405050-7bbf-5034-b04a-11a1570aca97",
+    "cycle": 1,
+    "digest": "7f818d2d9d8f0d67efee839e67253d71b26e242da9caf39d9cd03f0373f59ae9",
+    "engine_id": "gptossloop",
+    "event_id": "e39d289c-4f28-4e65-8491-96c286acc7c5",
+    "job_id": "877b5d78-267f-4ca6-8c65-03a7d5a8ac28",
+    "kind": "ResearchGapRecorded",
+    "payload": {
+      "cycle": 1,
+      "topic": "api-docs"
+    },
+    "phase": "design",
+    "produced_at": "2026-09-30T04:18:10.844279+00:00",
+    "project_id": "893c4fc1-542e-411e-a10a-3aef784b1540",
+    "provenance": "trusted",
+    "seq": 41
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 1,
+    "paths": 0
+  }
+}

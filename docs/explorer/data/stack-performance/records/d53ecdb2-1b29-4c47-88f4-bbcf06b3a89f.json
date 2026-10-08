@@ -1,0 +1,43 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "37edd31340b75e2cc46ba2b1391db0945e5e5728662615e97a532bca1e29d8a5",
+    "event_id": "d039c51b-8403-4678-a409-399a96f8a489",
+    "seq": 48
+  },
+  "previous": {
+    "digest": "1c8fce972fcc956c7091156f0cd19ee5e2cdb0e83eec3e9f65e9bb5168409218",
+    "event_id": "17559df3-9d8d-425b-ba51-016db6fac922",
+    "seq": 46
+  },
+  "project_id": "44c06a64-c8ed-4153-96af-b49db29c39e3",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "3b8b3af0-a122-4e58-975a-26a21dcd14cc",
+    "cycle": 1,
+    "digest": "e496322cf0644f33625e3174bc7c297179e9924be48a7e4d7e7f3f97d355c4a2",
+    "engine_id": "claudeloop",
+    "event_id": "d53ecdb2-1b29-4c47-88f4-bbcf06b3a89f",
+    "job_id": "bcd8e0b1-385d-43dc-ad1f-cad988f80cc9",
+    "kind": "QuestionAsked",
+    "payload": {
+      "blocking": false,
+      "cycle": 1,
+      "default": "CV under 5% over 100+ iterations with outlier rejection (drop top/bottom 5%), or explicit note if measurement is noisy",
+      "item_id": "measurement_stability",
+      "stage": "nfr_planguage",
+      "text": "What coefficient of variation (CV) threshold makes a benchmark measurement stable enough to commit as evidence?"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-22T03:46:03.537654+00:00",
+    "project_id": "44c06a64-c8ed-4153-96af-b49db29c39e3",
+    "provenance": "agent",
+    "seq": 47
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

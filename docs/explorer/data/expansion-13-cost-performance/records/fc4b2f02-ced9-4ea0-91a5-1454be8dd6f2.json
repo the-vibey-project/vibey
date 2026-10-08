@@ -1,0 +1,43 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "8afd229cd5c9a567a070debb4ff343ff89afd8c26117d72b925e38ecc11eca45",
+    "event_id": "3cbc06d3-b638-4dd0-b1bb-6e3c23aa95a8",
+    "seq": 10
+  },
+  "previous": {
+    "digest": "dd15f478ff2bc8bf5f1ed248fea60bc3a69e22ecf38100d799a11e485a1572c3",
+    "event_id": "3be826af-aac7-45f0-82bf-dbd764bf1bcd",
+    "seq": 8
+  },
+  "project_id": "a1d6b837-46f3-40c0-b6a2-8b3babb7fe15",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "2b43063c-68a2-400a-b005-063d80986e39",
+    "cycle": 1,
+    "digest": "7bbf2c044361c0d879695575255ecaff9f4c746543b253f268c57cd562a331d4",
+    "engine_id": "claudeloop",
+    "event_id": "fc4b2f02-ced9-4ea0-91a5-1454be8dd6f2",
+    "job_id": "dd8513f6-0d76-49a5-8bdc-75167dea5385",
+    "kind": "QuestionAsked",
+    "payload": {
+      "blocking": true,
+      "cycle": 1,
+      "default": "When committing changes during iterative development, waiting 13+ minutes for the pre-commit hook blocks flow",
+      "item_id": "situation",
+      "stage": "job_story",
+      "text": "When does the slow test/CI runtime create the most friction?"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-20T20:41:28.691914+00:00",
+    "project_id": "a1d6b837-46f3-40c0-b6a2-8b3babb7fe15",
+    "provenance": "agent",
+    "seq": 9
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

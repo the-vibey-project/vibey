@@ -1,0 +1,43 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "c09053bf6abc355aeb052cc25835fd5144e5980914d736b87d78d9068e922f3c",
+    "event_id": "c1546198-926d-48be-bd4b-5e4503d8c5b0",
+    "seq": 5
+  },
+  "previous": {
+    "digest": "028e842f7a0014deb99f0ada21102653cc195183615cead7d70e6ca48d4ba859",
+    "event_id": "80071adf-f476-41d7-a298-f00cf558ea71",
+    "seq": 3
+  },
+  "project_id": "e631c00a-e1a1-4ed4-b99a-0fa2d388d240",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "7b007e24-ca7f-4881-a008-579f99aa431d",
+    "cycle": 1,
+    "digest": "07b10cd19fba2fe04f9c39ebe4a9fe2db7bd0a9e9f98f3ce26bc52fc6ed2330d",
+    "engine_id": "claudeloop",
+    "event_id": "9ca91ef7-2093-41e0-8fb5-12bde4bfeb70",
+    "job_id": "d73f236e-a7b4-4748-b075-3900a75af324",
+    "kind": "QuestionAsked",
+    "payload": {
+      "blocking": false,
+      "cycle": 1,
+      "default": "Follow project conventions and architecture; no hard deadline",
+      "item_id": "constraints",
+      "stage": "context_free",
+      "text": "Any technical constraints, preferences, or timeline considerations?"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-22T02:34:46.347494+00:00",
+    "project_id": "e631c00a-e1a1-4ed4-b99a-0fa2d388d240",
+    "provenance": "agent",
+    "seq": 4
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

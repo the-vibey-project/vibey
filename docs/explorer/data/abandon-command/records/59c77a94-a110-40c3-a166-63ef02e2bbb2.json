@@ -1,0 +1,39 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "b94ed12e00a161528235c0324c4493bb09b727a2b1e8d3e1ee20bad390023839",
+    "event_id": "f9e2fe37-c509-4809-bc65-32e8a6069fad",
+    "seq": 51
+  },
+  "previous": {
+    "digest": "a02ec8217e6d0894058706981cbb72cf50b4ec5b387f358d0b56d104867f019e",
+    "event_id": "735cd18b-e33e-4f81-9e70-4e24bbcc7c3a",
+    "seq": 49
+  },
+  "project_id": "d733035f-e0f9-4f67-aba2-270068d6a9c6",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "d363f024-319c-4dd1-bc8e-c1df31a0678b",
+    "cycle": 1,
+    "digest": "923c08aa1a7e06ed70bd30bd58f6d37e88916c0053e9f21921e954ccf8cd77a7",
+    "engine_id": "claudeloop",
+    "event_id": "59c77a94-a110-40c3-a166-63ef02e2bbb2",
+    "job_id": "44e282ee-55b1-4cf9-afc3-c84870a14a5c",
+    "kind": "AnswerGiven",
+    "payload": {
+      "answer": "Fail immediately with the underlying error. Idempotency makes manual retry safe, and auto-retry risks masking real issues during initial rollout.",
+      "item_id": "transaction_retry_policy"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-22T03:45:45.534381+00:00",
+    "project_id": "d733035f-e0f9-4f67-aba2-270068d6a9c6",
+    "provenance": "trusted",
+    "seq": 50
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

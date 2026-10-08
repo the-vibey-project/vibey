@@ -1,0 +1,43 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "5be1a594eee66a5bfd4c36f2ec5b454faeade50e21f6a537e782af22246b9088",
+    "event_id": "4559de9f-ae7d-4e21-b20f-96b349db3334",
+    "seq": 38
+  },
+  "previous": {
+    "digest": "86509907426807acb4a98cb531ba67a78ba1ecaae75b1d44f83740b580ce8f0c",
+    "event_id": "d0645b63-021f-4211-94da-13dbd373e682",
+    "seq": 36
+  },
+  "project_id": "5ea01f61-8536-4ace-90cb-18700a12e410",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "298deef9-ec7d-4462-9800-c5643d81d0b9",
+    "cycle": 1,
+    "digest": "14c119f9eb2c4e7541586762eec4ce929c37bf61d15b5b5eb05e8e11e7a06c3f",
+    "engine_id": "claudeloop",
+    "event_id": "680f2a97-2fdb-4c6b-8f08-a213510a9e8f",
+    "job_id": "4c2ec03f-d670-44f9-9f05-47597984ab20",
+    "kind": "QuestionAsked",
+    "payload": {
+      "blocking": true,
+      "cycle": 1,
+      "default": "src/vibey/cli/doctor.py - likely a function that iterates engines sequentially in a `for desc in descriptors:` loop",
+      "item_id": "entry_point",
+      "stage": "walking_skeleton",
+      "text": "Which file/function is the current entry point for doctor's engine iteration that needs to become concurrent?"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-22T03:44:52.181413+00:00",
+    "project_id": "5ea01f61-8536-4ace-90cb-18700a12e410",
+    "provenance": "agent",
+    "seq": 37
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

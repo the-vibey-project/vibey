@@ -1,0 +1,43 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "c3e2beadf9fa17062ed2287cd4290536c46ac75409f99f4fd16e75c80124d564",
+    "event_id": "a8f7be06-0ff0-4ab4-9c84-ce4b04e704c5",
+    "seq": 20
+  },
+  "previous": {
+    "digest": "96f0e37c3427ee735b2bc1d4b3a04256eb67d61139f953fba199b060d2385ec8",
+    "event_id": "77fa3e5c-b0b5-423c-ad5a-457ce1adbe72",
+    "seq": 18
+  },
+  "project_id": "a1d6b837-46f3-40c0-b6a2-8b3babb7fe15",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "603c2e47-c357-4d8d-88bb-8c1d86d095f1",
+    "cycle": 1,
+    "digest": "5a27359a40700569c2b6dad355ced9184593baf94efe5a71e8b7765002248428",
+    "engine_id": "claudeloop",
+    "event_id": "53a59117-a17e-4322-9938-1c7796c70cc7",
+    "job_id": "dd8513f6-0d76-49a5-8bdc-75167dea5385",
+    "kind": "QuestionAsked",
+    "payload": {
+      "blocking": false,
+      "cycle": 1,
+      "default": "Conservative: prioritize test stability and zero regressions over maximum speed gains",
+      "item_id": "risk_tolerance",
+      "stage": "laddering",
+      "text": "What's your risk tolerance: aggressive optimization (faster results, may need iteration to stabilize isolated tests) or conservative approach (slower gains, guaranteed stability)?"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-20T20:43:08.801656+00:00",
+    "project_id": "a1d6b837-46f3-40c0-b6a2-8b3babb7fe15",
+    "provenance": "agent",
+    "seq": 19
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

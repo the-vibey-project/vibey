@@ -1,0 +1,43 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "82ebdffd612056bad8f30c46c9ba5271d7cfd6c379598273e1dd2d1f192feca3",
+    "event_id": "afea031c-e909-40bf-a66e-87f27174c4a9",
+    "seq": 5
+  },
+  "previous": {
+    "digest": "d60318e95cf56c999918c5d69e6e08ed0615c99e496f0f680ba00a75fc255087",
+    "event_id": "e559f85f-c2bf-4a77-a317-c2efb898b0c5",
+    "seq": 3
+  },
+  "project_id": "2f6a93b6-2d73-4aff-bc94-16539841133f",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "19a4aeba-a1e7-4d19-9d75-1cc378fcd6f9",
+    "cycle": 1,
+    "digest": "22ddbe429cc9cddd0a448e76accf47ebae6765520030b11679993969b7547333",
+    "engine_id": "claudeloop",
+    "event_id": "019f4755-e328-4299-a730-113dce146309",
+    "job_id": "334db377-8cb0-4a72-9cc0-78b45fc9bb38",
+    "kind": "QuestionAsked",
+    "payload": {
+      "blocking": false,
+      "cycle": 1,
+      "default": "Must respect vibey's non-negotiables: pure domain layer, 100% coverage, never block workers on humans, idempotent jobs",
+      "item_id": "constraints",
+      "stage": "context_free",
+      "text": "Are there any critical constraints, dependencies, or non-negotiables for this design?"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-22T02:51:35.333462+00:00",
+    "project_id": "2f6a93b6-2d73-4aff-bc94-16539841133f",
+    "provenance": "agent",
+    "seq": 4
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

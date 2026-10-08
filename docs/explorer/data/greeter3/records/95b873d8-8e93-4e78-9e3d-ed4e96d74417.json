@@ -1,0 +1,39 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "dacf7d72c504ef604191b4f39632b39742bb3e186f4e8c34dce7bf17a08c3ade",
+    "event_id": "d7a20f6d-c506-4314-ad6c-c892d9aca771",
+    "seq": 49
+  },
+  "previous": {
+    "digest": "d77ee21cd78d0c37b59d1a986e24de01b62457da8c1111c445c11bc1cd77e4b2",
+    "event_id": "93a698dd-fb0b-4ae6-92f7-8ba743fae4ef",
+    "seq": 47
+  },
+  "project_id": "5e76341f-ba5f-4272-8355-3df5d489bbcd",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "c04c946f-a4af-4e78-85f8-40da245dead9",
+    "cycle": 1,
+    "digest": "f9e332faac43e8c2dc522b4833c53a1bd15a0845fbce39e570485a27d9536817",
+    "engine_id": "claudeloop",
+    "event_id": "95b873d8-8e93-4e78-9e3d-ed4e96d74417",
+    "job_id": "e58deb6b-5356-4a39-8acf-5dc898bba380",
+    "kind": "AnswerGiven",
+    "payload": {
+      "answer": "Plain text output compatible with screen readers; English only for initial version",
+      "item_id": "accessibility"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-20T00:51:02.663112+00:00",
+    "project_id": "5e76341f-ba5f-4272-8355-3df5d489bbcd",
+    "provenance": "trusted",
+    "seq": 48
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

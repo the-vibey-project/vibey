@@ -1,0 +1,39 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "4c41a5597f2becf8902baa9ab53d2482857b3d6b8d98424ea9b394f6e1c08435",
+    "event_id": "b60d2336-681f-4d1f-9312-cc7cba83cb52",
+    "seq": 32
+  },
+  "previous": {
+    "digest": "0abbf26464167b2e703f97e2fc3e08cbe43139bce8b5b6447a48ba377c5d7060",
+    "event_id": "e09a9bb9-bf12-48b7-86bd-9cb09eb58cd5",
+    "seq": 30
+  },
+  "project_id": "5ea01f61-8536-4ace-90cb-18700a12e410",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "bf8230ec-2661-4e26-b02e-a4034a887df8",
+    "cycle": 1,
+    "digest": "47abee8130a47ecb3886233f9f48e0761858942083a444cdf379da52f4b8a136",
+    "engine_id": "claudeloop",
+    "event_id": "f110edf2-b53c-46c7-a707-a175dd78d808",
+    "job_id": "4c2ec03f-d670-44f9-9f05-47597984ab20",
+    "kind": "AnswerGiven",
+    "payload": {
+      "answer": "Four engine status lines in alphabetical order (agyloop, claudeloop, codexloop, cursorloop), each showing '\u2713 [engine]: healthy' or similar, followed by summary timing, exit code 0",
+      "item_id": "happy_path_example"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-22T03:44:13.652838+00:00",
+    "project_id": "5ea01f61-8536-4ace-90cb-18700a12e410",
+    "provenance": "trusted",
+    "seq": 31
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

@@ -1,0 +1,39 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "778a2cc9aaaecf81e45aebfa4f0115d13226028c10ad0b133e03c4d13d5e1a66",
+    "event_id": "05639044-6279-4e00-9bf8-2ebdadf03a62",
+    "seq": 6
+  },
+  "previous": {
+    "digest": "07b10cd19fba2fe04f9c39ebe4a9fe2db7bd0a9e9f98f3ce26bc52fc6ed2330d",
+    "event_id": "9ca91ef7-2093-41e0-8fb5-12bde4bfeb70",
+    "seq": 4
+  },
+  "project_id": "e631c00a-e1a1-4ed4-b99a-0fa2d388d240",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "e0cd71fb-5a99-4822-9f92-ae3d48baf747",
+    "cycle": 1,
+    "digest": "c09053bf6abc355aeb052cc25835fd5144e5980914d736b87d78d9068e922f3c",
+    "engine_id": "claudeloop",
+    "event_id": "c1546198-926d-48be-bd4b-5e4503d8c5b0",
+    "job_id": "d73f236e-a7b4-4748-b075-3900a75af324",
+    "kind": "AnswerGiven",
+    "payload": {
+      "answer": "[hard] Never weaken a gate to reach the number: no pragma, omit, exclude, or include narrowing. If a line is genuinely unreachable, delete it rather than exempt it. [hard] Existing CI job and step names must stay byte-identical because branch protections match on them; the total-coverage gate is an additional step. [hard] Postgres integration tests stay real and are never mocked; PostgreSQL only, never SQLite. [hard] domain/ stays pure stdlib, enforced by import-linter. [hard] Conventional Commits; work on a feature branch off develop and open a PR into develop; never commit to main. [soft] tui/dashboard.py is Textual-based -- prefer Textual's own test harness (run_test/Pilot) over mocking the framework, since mocking a TUI framework tends to test the mock. [soft] Prefer a small number of focused tests per uncovered branch over one large test that sweeps many.",
+      "item_id": "constraints"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-22T02:35:55.006438+00:00",
+    "project_id": "e631c00a-e1a1-4ed4-b99a-0fa2d388d240",
+    "provenance": "trusted",
+    "seq": 5
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

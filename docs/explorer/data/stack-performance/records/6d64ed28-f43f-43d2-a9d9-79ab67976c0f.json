@@ -1,0 +1,43 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "0603d0a5992bb2a1da3a51d8ed5b7511ed309833ada3f6d35783a20e5af23154",
+    "event_id": "574eb2c5-3a1e-4674-bb90-b0c7b3fa9369",
+    "seq": 3
+  },
+  "previous": {
+    "digest": "a33ea63d2d7a60bfaf9e68c1b0ddb54db908ec458008cd32864feb2996618064",
+    "event_id": "a19d76dc-f441-4298-a45f-6cb7b5d285b3",
+    "seq": 1
+  },
+  "project_id": "44c06a64-c8ed-4153-96af-b49db29c39e3",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "5d6e6222-fc62-4062-928b-3d228812d5a3",
+    "cycle": 1,
+    "digest": "198b27dec4ca69df3d6726871d795574e7ab133e8b81e9ed01564fdba663ff80",
+    "engine_id": "claudeloop",
+    "event_id": "6d64ed28-f43f-43d2-a9d9-79ab67976c0f",
+    "job_id": "bcd8e0b1-385d-43dc-ad1f-cad988f80cc9",
+    "kind": "QuestionAsked",
+    "payload": {
+      "blocking": true,
+      "cycle": 1,
+      "default": "Improves user experience or system capability in a measurable way",
+      "item_id": "problem_statement",
+      "stage": "context_free",
+      "text": "What problem does this solve, or what value does it add?"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-22T02:56:46.218050+00:00",
+    "project_id": "44c06a64-c8ed-4153-96af-b49db29c39e3",
+    "provenance": "agent",
+    "seq": 2
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

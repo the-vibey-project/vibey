@@ -1,0 +1,39 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "c7d6f44cf10cbf3b1e629ab7ad3212684bb9494a2bde8df794ce74581a05d416",
+    "event_id": "9ce91f51-a378-4884-b511-38453ec1b69a",
+    "seq": 24
+  },
+  "previous": {
+    "digest": "b4f5e56cfbb1085d08126b47394307e31746617010dd1ad5696bd2b3e3b91ca5",
+    "event_id": "99e4323d-89dd-45d6-b1e5-4b8370477236",
+    "seq": 22
+  },
+  "project_id": "8ab823c9-89e4-4050-884c-9008c8b14ef8",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "79c8fba7-380f-4e2e-aca6-0f581205a0a4",
+    "cycle": 1,
+    "digest": "3a6ed9056653be4927f449b94ae415de5b601fe4473ef938e9ed7a76b7dd07c6",
+    "engine_id": "claudeloop",
+    "event_id": "fbf7c83e-4f5b-4b7f-b06f-b0da1d4899bf",
+    "job_id": "705692f1-69a1-4cc2-ade7-8aa3d1407b67",
+    "kind": "AnswerGiven",
+    "payload": {
+      "answer": "Existing short links must continue redirecting (critical), but new link creation can be delayed (acceptable)",
+      "item_id": "downtime_impact"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-20T02:33:22.528147+00:00",
+    "project_id": "8ab823c9-89e4-4050-884c-9008c8b14ef8",
+    "provenance": "trusted",
+    "seq": 23
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

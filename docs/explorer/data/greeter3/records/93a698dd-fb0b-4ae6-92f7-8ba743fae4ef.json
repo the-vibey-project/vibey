@@ -1,0 +1,39 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "f9e332faac43e8c2dc522b4833c53a1bd15a0845fbce39e570485a27d9536817",
+    "event_id": "95b873d8-8e93-4e78-9e3d-ed4e96d74417",
+    "seq": 48
+  },
+  "previous": {
+    "digest": "af399154e5b80aa174bb43b23e481a509fa184cefe38fa346d004a6c668f52b8",
+    "event_id": "4fb3e732-3214-4fbf-8813-e98df23f1ab1",
+    "seq": 46
+  },
+  "project_id": "5e76341f-ba5f-4272-8355-3df5d489bbcd",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "b46b7bc8-e681-4820-b7e1-94e8cba5d894",
+    "cycle": 1,
+    "digest": "d77ee21cd78d0c37b59d1a986e24de01b62457da8c1111c445c11bc1cd77e4b2",
+    "engine_id": "claudeloop",
+    "event_id": "93a698dd-fb0b-4ae6-92f7-8ba743fae4ef",
+    "job_id": "e58deb6b-5356-4a39-8acf-5dc898bba380",
+    "kind": "AnswerGiven",
+    "payload": {
+      "answer": "macOS, Linux, Windows - any platform with Node.js 18+ or Python 3.8+",
+      "item_id": "platform_support"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-20T00:51:02.663112+00:00",
+    "project_id": "5e76341f-ba5f-4272-8355-3df5d489bbcd",
+    "provenance": "trusted",
+    "seq": 47
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

@@ -1,0 +1,40 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "f76571cd880a660e17812d0c498bcbbbde83d35ff98bb94e23829e25fcaa3ea0",
+    "event_id": "1b5a2494-36c6-4727-b7a1-eacea7214fb0",
+    "seq": 583
+  },
+  "previous": {
+    "digest": "7842517003d3188110f0f465954b0ecff589806cb8cb54badeb558d03aad338d",
+    "event_id": "d29cca07-7458-430a-9019-dc0fa5174023",
+    "seq": 310
+  },
+  "project_id": "ab0b06f9-55a4-4b47-ac08-254e7fdd9036",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "73a671cc-7e08-488c-a9e5-349435661eae",
+    "cycle": 1,
+    "digest": "d79f68b420f015be0f12902ae23553f5e8186ed492d821285ccfffa002681d83",
+    "engine_id": null,
+    "event_id": "fe0fe9a4-e9a6-428b-924d-8d01afa7c59a",
+    "job_id": "4843a02a-18ce-4181-8493-97a439921a7b",
+    "kind": "FindingRaised",
+    "payload": {
+      "finding_id": "f_verify_ws_c000fba6",
+      "severity": "high",
+      "text": "gate failed: uv run pytest tests/ -k fork --tb=short -q: warning: `VIRTUAL_ENV=[path]` does not match the project environment path `.venv` and will be ignored; use `--active` to target the active environment instead\n[stdout] s._connect(\n.venv/lib/python3.12/site-packages/asyncpg/connect_utils.py:1218: in _connect\n    conn = await _connect_addr(\n.venv/lib/python3.12/site-packages/asyncpg/connect_utils.py:1054: in _connect_addr\n    return await __connect_addr(params, True, *args)\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n.venv/lib/python3.12/site-packages/asyncpg/connect_utils.py:1102: in __connect_addr\n    await connected\nE   asyncpg.exceptions.InvalidCatalogNameError: database \"vibey_test_gw0\" does not exist\n=========================== short test summary info ============================\nERROR tests/domain/test_briefing.py - ImportError while importing test module...\nERROR tests/domain/test_circuit.py - ImportError while importing test module ...\nERROR tests/domain/test_effort.py - ImportError while importing test module '...\nERROR tests/domain/test_job.py - ImportError while importing test module '[path]\nERROR tests/domain/test_ledger.py - ImportError while importing test module '...\nERROR tests/domain/test_media.py - ImportError while importing test module '[path]\nERROR tests/domain/test_noloss.py - ImportError while importing test module '...\nERROR tests/domain/test_phase.py - ImportError while importing test module '[path]\nERROR tests/domain/test_rotation.py - ImportError while importing test module...\nERROR tests/infrastructure/test_operator_handlers.py - ImportError while impo...\nERROR tests/cli/test_fork.py::test_fork_creates_new_job_from_terminal_origin\n5 passed, 11 errors in 7.98s"
+    },
+    "phase": "build",
+    "produced_at": "2026-08-22T06:39:10.075440+00:00",
+    "project_id": "ab0b06f9-55a4-4b47-ac08-254e7fdd9036",
+    "provenance": "agent",
+    "seq": 450
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 4
+  }
+}

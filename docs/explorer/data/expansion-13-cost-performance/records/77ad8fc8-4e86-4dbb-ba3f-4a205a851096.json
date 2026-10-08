@@ -1,0 +1,43 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "130ac05f55f4dcc8e1a3bc4e18293f2951fe7ababb849495a7364cc849a44288",
+    "event_id": "badaa9fe-90cc-4f75-8436-04f445238170",
+    "seq": 37
+  },
+  "previous": {
+    "digest": "cd693c0da73dd3feb1d40478aee2f4ae09150c587c30b8e2abecdb874b15c0d8",
+    "event_id": "1004e8a5-e12d-498c-b81d-73f0d9eec30f",
+    "seq": 35
+  },
+  "project_id": "a1d6b837-46f3-40c0-b6a2-8b3babb7fe15",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "cfdc3e72-698a-419e-bfa4-f6aa72772772",
+    "cycle": 1,
+    "digest": "6fd77b789a58a597b8af38f734ff9dec3af8212a9e6ffd8294a4534e3e1b158e",
+    "engine_id": "claudeloop",
+    "event_id": "77ad8fc8-4e86-4dbb-ba3f-4a205a851096",
+    "job_id": "dd8513f6-0d76-49a5-8bdc-75167dea5385",
+    "kind": "QuestionAsked",
+    "payload": {
+      "blocking": false,
+      "cycle": 1,
+      "default": "New worker-aware fixture that wraps/replaces existing db fixture; migrate all tests to use it in one change for consistency",
+      "item_id": "fixture_migration_scope",
+      "stage": "walking_skeleton",
+      "text": "Should the template database setup be a new fixture alongside existing ones, or replace current database fixtures entirely in the first iteration?"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-20T20:45:01.245448+00:00",
+    "project_id": "a1d6b837-46f3-40c0-b6a2-8b3babb7fe15",
+    "provenance": "agent",
+    "seq": 36
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

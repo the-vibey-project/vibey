@@ -1,0 +1,39 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "2d1bd5b951dad31387aa807b4755a98911a48141add38799f9086163f3ef224d",
+    "event_id": "a47e9f5a-d0c8-47e7-97ac-94ed5fb091e6",
+    "seq": 44
+  },
+  "previous": {
+    "digest": "d1a3b0e1ce932494b81063f9d2f608145c2e70e88abef461cf3673cafbe69b33",
+    "event_id": "507f6726-f7c8-44d3-9b0c-745f2dc7542d",
+    "seq": 41
+  },
+  "project_id": "ab0b06f9-55a4-4b47-ac08-254e7fdd9036",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "87c560b8-5840-46d2-8a6a-0bdf3aa2b473",
+    "cycle": 1,
+    "digest": "dab55fd4390ea7b27e622051ae992b673e4fd0c1e685557e38075dabcdcf5376",
+    "engine_id": "claudeloop",
+    "event_id": "f4c95fe7-7314-42cb-8b62-6788ad76b357",
+    "job_id": "48f9ef01-8b95-4709-adde-ed0ece390f8d",
+    "kind": "AnswerGiven",
+    "payload": {
+      "answer": "CLI integration test: create job, advance to terminal state with commits, fork it, verify new job has independent branch/worktree, correct provenance in ledger (JobForked event), and can be leased and worked without affecting origin",
+      "item_id": "acceptance_test"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-22T03:43:27.608330+00:00",
+    "project_id": "ab0b06f9-55a4-4b47-ac08-254e7fdd9036",
+    "provenance": "trusted",
+    "seq": 42
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

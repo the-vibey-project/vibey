@@ -1,0 +1,43 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "11e88ef29f7dba4f0869685d4e609b73b938d459932ef91ac96dd45a336e0ba2",
+    "event_id": "88d95004-7ccd-4d0f-8611-5fe7fc22b870",
+    "seq": 20
+  },
+  "previous": {
+    "digest": "2d79bf0780bfed9b775715af539b063af8951a7d5f8770397c30268e16a9c7b2",
+    "event_id": "3729904c-8d9f-49d8-981e-1352a9ce52bc",
+    "seq": 18
+  },
+  "project_id": "ab0b06f9-55a4-4b47-ac08-254e7fdd9036",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "9e830c9b-300d-4307-835d-9fcbeb61f677",
+    "cycle": 1,
+    "digest": "3922e5627586dda57d89e6814761eaab9e4c926449928ebfd972b3d813183b17",
+    "engine_id": "claudeloop",
+    "event_id": "a2d58278-7abd-4b21-9005-2737bac4bdad",
+    "job_id": "48f9ef01-8b95-4709-adde-ed0ece390f8d",
+    "kind": "QuestionAsked",
+    "payload": {
+      "blocking": true,
+      "cycle": 1,
+      "default": "Yes for terminal states (failed, exhausted, completed); no for currently-leased jobs to avoid race conditions, unless the operator understands the risk",
+      "item_id": "lifecycle_interaction",
+      "stage": "laddering",
+      "text": "Can you fork a job that's currently leased (actively running), paused, or in a terminal state (failed/completed)?"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-22T03:02:27.256337+00:00",
+    "project_id": "ab0b06f9-55a4-4b47-ac08-254e7fdd9036",
+    "provenance": "agent",
+    "seq": 19
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

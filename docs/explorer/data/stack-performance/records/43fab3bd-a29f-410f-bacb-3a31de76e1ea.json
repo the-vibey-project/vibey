@@ -1,0 +1,43 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "1c7048492a2a74c6db995f4b8262f98fb473ce516309ce7eb334a63dce6285ec",
+    "event_id": "f3224245-f0c2-4d6e-ae7d-bf0305087da3",
+    "seq": 40
+  },
+  "previous": {
+    "digest": "d28638c4d66c74009542f4b3d066ea89d45399f359e5c75c8b7057fa14332897",
+    "event_id": "9c66bafc-c9c5-4d0f-bad4-61f16d5a95cc",
+    "seq": 38
+  },
+  "project_id": "44c06a64-c8ed-4153-96af-b49db29c39e3",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "10352343-1186-4f76-ae0a-63e5c2410df1",
+    "cycle": 1,
+    "digest": "b12a52ae51a11f0662c1bbf0fe0c807627b0ba9a86bedf3622873dc084925f52",
+    "engine_id": "claudeloop",
+    "event_id": "43fab3bd-a29f-410f-bacb-3a31de76e1ea",
+    "job_id": "bcd8e0b1-385d-43dc-ad1f-cad988f80cc9",
+    "kind": "QuestionAsked",
+    "payload": {
+      "blocking": false,
+      "cycle": 1,
+      "default": "None \u2014 this is the first measured optimization; we'll build lightweight tooling (pytest-benchmark or time.perf_counter loops) as we go",
+      "item_id": "existing_perf_infrastructure",
+      "stage": "walking_skeleton",
+      "text": "What performance testing infrastructure already exists (profiling, load generation, metrics collection)?"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-22T03:44:17.531877+00:00",
+    "project_id": "44c06a64-c8ed-4153-96af-b49db29c39e3",
+    "provenance": "agent",
+    "seq": 39
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

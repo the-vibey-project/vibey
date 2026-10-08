@@ -1,0 +1,43 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "689cf71e8c453b6b4f190edeac26a89e79b64a6d3747dfdbe1b4eefda1cb1fa0",
+    "event_id": "da6f7fb6-3f57-4f6f-8bba-36035f74a4a8",
+    "seq": 38
+  },
+  "previous": {
+    "digest": "9ba840a374c04ad62f82043a73422f6a9f6fa593da1034670a5aeb6b2a14df1b",
+    "event_id": "a76b930b-9188-452a-995c-44af21769c37",
+    "seq": 36
+  },
+  "project_id": "ab0b06f9-55a4-4b47-ac08-254e7fdd9036",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "2b0254b0-b51f-4577-9362-cdb03af2cea6",
+    "cycle": 1,
+    "digest": "74825d134eba9c61a8d393bc721a6dfe298715d41a4dec438ba3ee9efa62cf46",
+    "engine_id": "claudeloop",
+    "event_id": "2eb3981b-3ecc-446c-a508-e9cce4eeb445",
+    "job_id": "48f9ef01-8b95-4709-adde-ed0ece390f8d",
+    "kind": "QuestionAsked",
+    "payload": {
+      "blocking": false,
+      "cycle": 1,
+      "default": "Defer: multiple-fork limits, fork-of-fork depth checks, branch name collision recovery. Keep only: job exists, job is in terminal state, origin seq has at least one commit",
+      "item_id": "deferred_validation",
+      "stage": "walking_skeleton",
+      "text": "What validation and edge case handling can be safely deferred beyond the walking skeleton?"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-22T03:42:48.069300+00:00",
+    "project_id": "ab0b06f9-55a4-4b47-ac08-254e7fdd9036",
+    "provenance": "agent",
+    "seq": 37
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

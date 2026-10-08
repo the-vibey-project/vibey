@@ -1,0 +1,39 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "c677788a369ac977984c9dfce0064285f87f3013c7390fdb5fb4526d80f4818c",
+    "event_id": "bbb1c29a-2430-4f16-b623-fde99a3438ea",
+    "seq": 23
+  },
+  "previous": {
+    "digest": "6054bac4713a182f3476b9f132b8cedd7953f060c13626fed4a4f8eec972fc3c",
+    "event_id": "ab01be54-14cb-45f7-bfb4-9e9849e81e82",
+    "seq": 21
+  },
+  "project_id": "0ee95624-eec4-4e8e-9a14-6ad9a37dcff4",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "4f9c779c-5fc0-4cc5-8375-1eed9881ccf7",
+    "cycle": 1,
+    "digest": "d421a938a633e832d1e17596b6c6d905fa741f6923dede67e70a0858f051fd40",
+    "engine_id": "claudeloop",
+    "event_id": "20a90d80-8219-4b4c-b77e-4fbfd65f9d51",
+    "job_id": "1343d0fd-bf3f-4739-8c21-cbf7693c673e",
+    "kind": "AnswerGiven",
+    "payload": {
+      "answer": "Unchanged from today \u2014 the system prompt in src/app/api/ask/route.ts already enforces this (answers only from retrieved site context, cite the page path, say plainly when the site does not cover it, never invent employment facts, under 120 words). No prompt or retrieval changes are in scope; the page variant must render the existing citations list exactly as the widget does.",
+      "item_id": "answer_quality"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-20T20:11:24.112412+00:00",
+    "project_id": "0ee95624-eec4-4e8e-9a14-6ad9a37dcff4",
+    "provenance": "trusted",
+    "seq": 22
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

@@ -1,0 +1,40 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "460e001b5673537c10be4b5baf77bae25b470d57e3b918f7d01c94582bd39ba2",
+    "event_id": "6e5a5006-329c-403e-be98-fd145dbc53e1",
+    "seq": 571
+  },
+  "previous": {
+    "digest": "7842517003d3188110f0f465954b0ecff589806cb8cb54badeb558d03aad338d",
+    "event_id": "7f1dcc89-2532-42bd-a318-a5cf420bd6a3",
+    "seq": 353
+  },
+  "project_id": "d733035f-e0f9-4f67-aba2-270068d6a9c6",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "610f5782-0d56-48a0-b8b2-5089d28e3284",
+    "cycle": 1,
+    "digest": "6b7f31d1866eb94d90b8138ec748ede571e869982b3df5a443b354966f2cba72",
+    "engine_id": null,
+    "event_id": "ed17d9f7-2c10-4f55-a481-6889cc61f593",
+    "job_id": "5a6372d2-5973-47d2-8759-9ad2e0cf560d",
+    "kind": "FindingRaised",
+    "payload": {
+      "finding_id": "f_verify_operator-wiring_387f021c",
+      "severity": "high",
+      "text": "gate failed: uv run coverage report --include='src/vibey/infrastructure/*' --fail-under=100: warning: `VIRTUAL_ENV=[path]` does not match the project environment path `.venv` and will be ignored; use `--active` to target the active environment instead\n[stdout]   4      0    35%\nsrc/vibey/infrastructure/ledger/redact.py                       25     15     10      0    29%\nsrc/vibey/infrastructure/logging.py                             75     23      6      2    69%\nsrc/vibey/infrastructure/notify/__init__.py                      5      0      0      0   100%\nsrc/vibey/infrastructure/notify/desktop.py                      29     20      8      0    24%\nsrc/vibey/infrastructure/notify/events.py                       20      1      0      0    95%\nsrc/vibey/infrastructure/notify/service.py                      25     16      6      0    29%\nsrc/vibey/infrastructure/notify/webhook.py                      30     17      6      0    36%\nsrc/vibey/infrastructure/operator/__init__.py                    2      0      0      0   100%\nsrc/vibey/infrastructure/operator/handlers.py                   69      0     18      0   100%\nsrc/vibey/infrastructure/otel.py                               125     80     22      0    31%\nsrc/vibey/infrastructure/provision/__init__.py                   0      0      0      0   100%\nsrc/vibey/infrastructure/provision/agent_surface.py             47     33     14      0    23%\nsrc/vibey/infrastructure/review_artifact_writer.py              27     19      8      0    23%\n----------------------------------------------------------------------------------------------\nTOTAL                                                         2324   1328    498     11    37%\nCoverage failure: total of 37 is less than fail-under=100"
+    },
+    "phase": "build",
+    "produced_at": "2026-08-22T04:40:24.350630+00:00",
+    "project_id": "d733035f-e0f9-4f67-aba2-270068d6a9c6",
+    "provenance": "agent",
+    "seq": 454
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 1
+  }
+}

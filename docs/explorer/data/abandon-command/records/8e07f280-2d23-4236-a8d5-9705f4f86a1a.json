@@ -1,0 +1,39 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "d3f100e7270753d684598c24ebae09313fd0e622333645f586956ee5bc9956cf",
+    "event_id": "59098bda-545c-413a-bcc9-559294b0726e",
+    "seq": 15
+  },
+  "previous": {
+    "digest": "b7739f8e9a582a923dcd0e2c67edf8ca94d290de4e8a27602d3871bd7c3c4b83",
+    "event_id": "4a4e697b-67a4-407c-b1f3-548744062f0b",
+    "seq": 13
+  },
+  "project_id": "d733035f-e0f9-4f67-aba2-270068d6a9c6",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "88708e34-ac9b-4ee3-bedf-8e9db40ee76b",
+    "cycle": 1,
+    "digest": "8edd4c964622b5a54210ba101dfc679583585bf056f9c35e959738c3d97d1c8c",
+    "engine_id": "claudeloop",
+    "event_id": "8e07f280-2d23-4236-a8d5-9705f4f86a1a",
+    "job_id": "44e282ee-55b1-4cf9-afc3-c84870a14a5c",
+    "kind": "AnswerGiven",
+    "payload": {
+      "answer": "`vibey new --repo \u003csame path\u003e` succeeds immediately afterwards. The project reads as ABANDONED in `vibey status`. A ledger event records the transition with who and when. No job for that project is left in a claimable state. Running abandon twice is a quiet no-op. Branches, PRs and worktree directories are all still present on disk and on GitHub.",
+      "item_id": "success_criteria"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-22T02:57:57.033945+00:00",
+    "project_id": "d733035f-e0f9-4f67-aba2-270068d6a9c6",
+    "provenance": "trusted",
+    "seq": 14
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

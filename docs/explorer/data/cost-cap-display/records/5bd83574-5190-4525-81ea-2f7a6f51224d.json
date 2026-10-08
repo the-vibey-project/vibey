@@ -1,0 +1,39 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "25288f933d2f3ca1dad97050c987b1268a1f2357a8fdf8afe08de31930964736",
+    "event_id": "57f777b2-88b8-4373-810d-b9e2f9f76d8f",
+    "seq": 17
+  },
+  "previous": {
+    "digest": "b699ff4ebaf935ba1123c4865a46cf4d20b9382826c2e8d167ae9d2931e9083a",
+    "event_id": "8d959c02-9379-4c48-b60b-9b5900ee8144",
+    "seq": 15
+  },
+  "project_id": "b43d1fcb-fb7b-42d6-9f80-220292c73389",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "e8c46fc8-39b0-4063-b43d-a8df56b3e865",
+    "cycle": 1,
+    "digest": "6426c5affb0956e18877429a6ca80e54311bcbba2e25f66e52e5243dcbb21899",
+    "engine_id": "claudeloop",
+    "event_id": "5bd83574-5190-4525-81ea-2f7a6f51224d",
+    "job_id": "64ea0fea-cd4f-4b3b-bf19-112c18a7c58d",
+    "kind": "AnswerGiven",
+    "payload": {
+      "answer": "Asymmetric, and currently biased toward the expensive error. The display hardcodes $40/$250, so a project configured at $200 reads as though it were near a much lower ceiling. An operator sees '$12 of $40' and grants more, believing they are topping up a small budget, when the real cap is five times that. The failure is not merely a wrong number -- it is a wrong number in the reassuring direction at exactly the moment money is authorised. The opposite error, denying a run with real headroom, wastes the work already paid for.",
+      "item_id": "decision_consequence"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-22T02:59:00.469742+00:00",
+    "project_id": "b43d1fcb-fb7b-42d6-9f80-220292c73389",
+    "provenance": "trusted",
+    "seq": 16
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

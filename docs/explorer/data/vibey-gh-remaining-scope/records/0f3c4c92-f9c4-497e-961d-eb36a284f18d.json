@@ -1,0 +1,43 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "e278b0c9f21897b486357758d1dc865b60f4d96a04a6b21b605ddb7f95964f1d",
+    "event_id": "7f65f87b-98d7-4844-860a-76d2ba96bec1",
+    "seq": 29
+  },
+  "previous": {
+    "digest": "cf3e225be37aee842ff0878713f99314880cb66df64d44261928228f51ded0e9",
+    "event_id": "8e80f544-89e9-41f9-b860-e43f977f3cee",
+    "seq": 27
+  },
+  "project_id": "d482c3e2-029e-4bb8-a9a1-de411816c6ae",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "807da042-d098-42b1-a56a-ac9f1248ceed",
+    "cycle": 1,
+    "digest": "40f6dfa5ea2695f9616b25848b2c7bb1a28a87b8ee33f0427d337905f025929a",
+    "engine_id": "claudeloop",
+    "event_id": "0f3c4c92-f9c4-497e-961d-eb36a284f18d",
+    "job_id": "d2626f25-d550-454e-bacd-7a7e6c9b52cd",
+    "kind": "QuestionAsked",
+    "payload": {
+      "blocking": false,
+      "cycle": 1,
+      "default": "Offering online tutorials, video guides, and a dedicated customer support team.",
+      "item_id": "16",
+      "stage": "example_mapping",
+      "text": "What is the planned approach for user training and support to help users effectively utilize the software?"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-31T02:04:52.000504+00:00",
+    "project_id": "d482c3e2-029e-4bb8-a9a1-de411816c6ae",
+    "provenance": "agent",
+    "seq": 28
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

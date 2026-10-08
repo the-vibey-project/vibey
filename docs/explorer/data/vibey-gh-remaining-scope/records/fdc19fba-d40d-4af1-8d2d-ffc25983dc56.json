@@ -1,0 +1,43 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "6cd7ba75b07dbc4d865608de85e74eaa52d1f77a567aa26610f58a3694f9b95f",
+    "event_id": "8d6b8538-102f-455f-9c1c-9147cd4e7b6e",
+    "seq": 5
+  },
+  "previous": {
+    "digest": "d9826f4f3964f3e74bdd07ebad81238d433a71b731ef3c73d40e69dc5dc2768b",
+    "event_id": "b8a3ba11-65ee-4143-a3ac-4ef93ce50133",
+    "seq": 3
+  },
+  "project_id": "d482c3e2-029e-4bb8-a9a1-de411816c6ae",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "74bfcbea-9337-462f-8704-726e58c69e8f",
+    "cycle": 1,
+    "digest": "e68a9e4f08afa3e3c402bd1033b46919c8d1e57bbfbfeee983a56a819ac77566",
+    "engine_id": "claudeloop",
+    "event_id": "fdc19fba-d40d-4af1-8d2d-ffc25983dc56",
+    "job_id": "d2626f25-d550-454e-bacd-7a7e6c9b52cd",
+    "kind": "QuestionAsked",
+    "payload": {
+      "blocking": false,
+      "cycle": 1,
+      "default": "Budget constraints, timeline limitations, and the need to support multiple devices and platforms.",
+      "item_id": "4",
+      "stage": "context_free",
+      "text": "What are the main constraints or limitations that you need to consider during the development process?"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-31T02:02:11.489826+00:00",
+    "project_id": "d482c3e2-029e-4bb8-a9a1-de411816c6ae",
+    "provenance": "agent",
+    "seq": 4
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

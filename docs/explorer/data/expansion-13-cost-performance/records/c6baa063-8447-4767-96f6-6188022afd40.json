@@ -1,0 +1,39 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "06fd3d47b9ed8861dc05346f13764cf0ef4a9b9e4ceffa5cb708ccb862c25ca4",
+    "event_id": "12cc05ea-09b9-41bf-acb0-1b972c598050",
+    "seq": 54
+  },
+  "previous": {
+    "digest": "fc0be01b8a39fb9d030def29eb67cce2c5639671709292b16d4b477c85fd4949",
+    "event_id": "0a833794-f8b9-47f1-8fb0-28b22fa1f759",
+    "seq": 52
+  },
+  "project_id": "a1d6b837-46f3-40c0-b6a2-8b3babb7fe15",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "01457050-c965-4e08-9e81-803b3621b0ff",
+    "cycle": 1,
+    "digest": "91ea9e3168fc58bd83ae8d0b3ce62cfc711d53570954f68ca8799d49a9032235",
+    "engine_id": "claudeloop",
+    "event_id": "c6baa063-8447-4767-96f6-6188022afd40",
+    "job_id": "dd8513f6-0d76-49a5-8bdc-75167dea5385",
+    "kind": "AnswerGiven",
+    "payload": {
+      "answer": "Database connection pool exhaustion if workers exceed available connections; fixture teardown races if cleanup isn't transaction-scoped",
+      "item_id": "parallel_failure_modes"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-20T20:46:45.802224+00:00",
+    "project_id": "a1d6b837-46f3-40c0-b6a2-8b3babb7fe15",
+    "provenance": "trusted",
+    "seq": 53
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

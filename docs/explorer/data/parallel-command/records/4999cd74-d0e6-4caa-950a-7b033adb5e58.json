@@ -1,0 +1,39 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "cc824ac9fcadf55c1ac059de4dfca073fd86ed7fcb887fb654c12519b3d9dc60",
+    "event_id": "84cad02d-87f7-4b16-913a-731bbd6efab1",
+    "seq": 33
+  },
+  "previous": {
+    "digest": "636ec59d10a515b112e42106d514d7f6bc013ae18c423fcef675fb307d7bcd5a",
+    "event_id": "ca4549bc-d63c-4d3d-8aae-0fe940b6c2ba",
+    "seq": 31
+  },
+  "project_id": "bed522a2-0b3e-4bff-9cd6-7c13fe40779a",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "860c8b29-21fd-4605-88e6-8a650dd67a67",
+    "cycle": 1,
+    "digest": "a9d5d71e8c54ff34bfeb51badbc36c52f2a31d3757403db043f7f524e7c87517",
+    "engine_id": "claudeloop",
+    "event_id": "4999cd74-d0e6-4caa-950a-7b033adb5e58",
+    "job_id": "92d834a4-4bf2-4699-9354-adbea7936d77",
+    "kind": "AnswerGiven",
+    "payload": {
+      "answer": "Jobs j1, j2, j3 all start within 1s. Live view shows interleaved lines prefixed by job ID (e.g., 'j1 | Building...', 'j2 | Running tests...'). Final summary: table with columns [Job ID, Status, Duration, Phase], all showing \u2713 SUCCESS, with total elapsed time.",
+      "item_id": "golden_path_example"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-22T03:43:28.050975+00:00",
+    "project_id": "bed522a2-0b3e-4bff-9cd6-7c13fe40779a",
+    "provenance": "trusted",
+    "seq": 32
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

@@ -1,0 +1,40 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "7842517003d3188110f0f465954b0ecff589806cb8cb54badeb558d03aad338d",
+    "event_id": "3eda6988-a8a5-4b74-9e4f-557d8b817970",
+    "seq": 431
+  },
+  "previous": {
+    "digest": "7842517003d3188110f0f465954b0ecff589806cb8cb54badeb558d03aad338d",
+    "event_id": "6021b8dd-9518-4f38-bb46-dccc2c7374be",
+    "seq": 420
+  },
+  "project_id": "e631c00a-e1a1-4ed4-b99a-0fa2d388d240",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "a6119a21-3ea9-4510-b545-d09119d8f8ee",
+    "cycle": 1,
+    "digest": "e298e2612a4ae823bcae1f999db0d31d5dcc3e68858974520767640f311827e4",
+    "engine_id": null,
+    "event_id": "72cbc5a5-61da-4536-8b47-bcf7dfed5186",
+    "job_id": "8a5ec15e-bf04-4193-a222-c2cbb1524cb3",
+    "kind": "FindingRaised",
+    "payload": {
+      "finding_id": "f_integrate_bootstrap-budget-brake_0b9c1c2d",
+      "severity": "high",
+      "text": "merge conflict integrating 'bootstrap-budget-brake': fatal: refusing to merge unrelated histories"
+    },
+    "phase": "build",
+    "produced_at": "2026-08-22T17:24:13.642987+00:00",
+    "project_id": "e631c00a-e1a1-4ed4-b99a-0fa2d388d240",
+    "provenance": "agent",
+    "seq": 421
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

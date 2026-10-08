@@ -1,0 +1,39 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "451a279fef645419fb9b6b399c4e6a422914751e09cd50f41b987d3f99d27242",
+    "event_id": "8041dd80-1273-4032-81d1-161ca7de99b0",
+    "seq": 8
+  },
+  "previous": {
+    "digest": "e8975190f1085bf080279225bbf973c5135f8cb00ef57138aad3c232db102246",
+    "event_id": "6ffceef7-cc5f-4b4a-9d08-8886471e29e9",
+    "seq": 6
+  },
+  "project_id": "2f6a93b6-2d73-4aff-bc94-16539841133f",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "626cdc46-abc8-4ab0-a519-45c22db6b610",
+    "cycle": 1,
+    "digest": "0af7961fa3c4772517dc733a3717131f89b4cc042939b2089f052dae323224fa",
+    "engine_id": "claudeloop",
+    "event_id": "20ed117c-b2e8-4491-9ad8-86365d6095fc",
+    "job_id": "334db377-8cb0-4a72-9cc0-78b45fc9bb38",
+    "kind": "AnswerGiven",
+    "payload": {
+      "answer": "None of the four exist today, and the gap has a smoking gun: CANCELLED is declared in the JobState enum at domain/job.py line 14 and is NEVER WRITTEN by anything in the codebase. `vibey status` prints a 'CANCELLED: 0' line -- a counter for a state that cannot occur. JobRepository exposes enqueue, claim, heartbeat, ack, nack, defer, park, reap, assign_engine, count_unsettled, queue_depth, get: no stop, no rewind, no restart. 'Continue' partially exists but only by accident of other features -- answering a human gate flips awaiting_human back to ready, and `vibey design resume` re-enqueues the interview -- so there is no way to continue a job that failed out its max_attempts. The practical consequence is that a job going wrong can only be watched until it fails.",
+      "item_id": "problem_statement"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-22T02:57:10.227649+00:00",
+    "project_id": "2f6a93b6-2d73-4aff-bc94-16539841133f",
+    "provenance": "trusted",
+    "seq": 7
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

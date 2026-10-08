@@ -1,0 +1,39 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "f479a3978f13f495a55813ad743de6057395499a864409dbc838e299e6086b42",
+    "event_id": "074ff729-fad7-4057-834a-3d0a491a6954",
+    "seq": 30
+  },
+  "previous": {
+    "digest": "1bd6cf23d20239294529ab3f17e8549901db86f0d6da1f29ca4f9b65cc84b057",
+    "event_id": "77734c08-71b7-4561-a455-f097c1592018",
+    "seq": 28
+  },
+  "project_id": "8ab823c9-89e4-4050-884c-9008c8b14ef8",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "14c20d8d-b35d-42aa-a4b6-fd42f8a3d683",
+    "cycle": 1,
+    "digest": "e60a8b4de478318a5f871293e007ea4cb30eb37f787a4d5447869254d0d07d81",
+    "engine_id": "claudeloop",
+    "event_id": "a9ee93f0-cad6-4910-bbdd-3229678ccf55",
+    "job_id": "705692f1-69a1-4cc2-ade7-8aa3d1407b67",
+    "kind": "AnswerGiven",
+    "payload": {
+      "answer": "https://example.com/blog/2026/08/my-very-long-article-title \u2192 ex.co/aB3xZ (6-char base62), with optional custom aliases like ex.co/summer-sale",
+      "item_id": "url_shortening_examples"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-20T02:34:04.152258+00:00",
+    "project_id": "8ab823c9-89e4-4050-884c-9008c8b14ef8",
+    "provenance": "trusted",
+    "seq": 29
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

@@ -1,0 +1,43 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "e5e2180f6b0d3ddafd9c46e3e362c000d4b690839d4b123134ce21ae47ff8df4",
+    "event_id": "0b179bca-64e3-432e-8072-a064d16f4fd1",
+    "seq": 40
+  },
+  "previous": {
+    "digest": "5be1a594eee66a5bfd4c36f2ec5b454faeade50e21f6a537e782af22246b9088",
+    "event_id": "4559de9f-ae7d-4e21-b20f-96b349db3334",
+    "seq": 38
+  },
+  "project_id": "5ea01f61-8536-4ace-90cb-18700a12e410",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "5285eca7-0c96-492d-902d-e86ed4174649",
+    "cycle": 1,
+    "digest": "2918eb3b37ec3859618b0385b27c349b9e16284266c8e5c93b874240d6235799",
+    "engine_id": "claudeloop",
+    "event_id": "86481532-1176-4069-87a8-c736f0802560",
+    "job_id": "4c2ec03f-d670-44f9-9f05-47597984ab20",
+    "kind": "QuestionAsked",
+    "payload": {
+      "blocking": false,
+      "cycle": 1,
+      "default": "Tests for: all engines healthy, single timeout, multiple timeouts, single failure, mixed timeout+failure, ordering guarantee, exit code validation per scenario",
+      "item_id": "test_coverage_gaps",
+      "stage": "walking_skeleton",
+      "text": "What new test scenarios are needed to hit 100% branch coverage for timeout and partial-result paths?"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-22T03:44:52.181413+00:00",
+    "project_id": "5ea01f61-8536-4ace-90cb-18700a12e410",
+    "provenance": "agent",
+    "seq": 39
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

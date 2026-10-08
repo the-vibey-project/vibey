@@ -1,0 +1,43 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "e496322cf0644f33625e3174bc7c297179e9924be48a7e4d7e7f3f97d355c4a2",
+    "event_id": "d53ecdb2-1b29-4c47-88f4-bbcf06b3a89f",
+    "seq": 47
+  },
+  "previous": {
+    "digest": "da7b9ecdca1e0bee218e2e00ed03579b58ae22883393ad37b11056e52c9662fc",
+    "event_id": "edb1e21b-92b3-4053-8dcb-b877f5e8dcb9",
+    "seq": 45
+  },
+  "project_id": "44c06a64-c8ed-4153-96af-b49db29c39e3",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "62343b18-4f09-4477-adf6-2a133991a5ec",
+    "cycle": 1,
+    "digest": "1c8fce972fcc956c7091156f0cd19ee5e2cdb0e83eec3e9f65e9bb5168409218",
+    "engine_id": "claudeloop",
+    "event_id": "17559df3-9d8d-425b-ba51-016db6fac922",
+    "job_id": "bcd8e0b1-385d-43dc-ad1f-cad988f80cc9",
+    "kind": "QuestionAsked",
+    "payload": {
+      "blocking": true,
+      "cycle": 1,
+      "default": "O(1) constant time \u2014 indexed SQL queries must not scan history; latency stays flat regardless of project age",
+      "item_id": "scalability_complexity",
+      "stage": "nfr_planguage",
+      "text": "What's the acceptable time complexity as ledger size grows from 1,000 to 100,000 events?"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-22T03:46:03.537654+00:00",
+    "project_id": "44c06a64-c8ed-4153-96af-b49db29c39e3",
+    "provenance": "agent",
+    "seq": 46
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

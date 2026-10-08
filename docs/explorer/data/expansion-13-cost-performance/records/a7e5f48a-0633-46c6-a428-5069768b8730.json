@@ -1,0 +1,43 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "13902bf982981e68645fd7eb78ed9237159674a8abb1ca3f980778e2356d2afa",
+    "event_id": "5cc36070-b1a3-49f7-8384-ad25f3e13604",
+    "seq": 5
+  },
+  "previous": {
+    "digest": "4a5fae83d47b201b074fe724de143bfb1af3db34e8b3eec9f5f7762f1349914f",
+    "event_id": "2613bd1a-cb45-4e42-9b11-d9c3be687f63",
+    "seq": 3
+  },
+  "project_id": "a1d6b837-46f3-40c0-b6a2-8b3babb7fe15",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "17b4de85-0ed2-4494-87fa-265e0a528f30",
+    "cycle": 1,
+    "digest": "11db21a8aefdcd471a669b4e166439c12138be8c8cc7a2a7b8ce93ac8181e406",
+    "engine_id": "claudeloop",
+    "event_id": "a7e5f48a-0633-46c6-a428-5069768b8730",
+    "job_id": "dd8513f6-0d76-49a5-8bdc-75167dea5385",
+    "kind": "QuestionAsked",
+    "payload": {
+      "blocking": false,
+      "cycle": 1,
+      "default": "Full-featured implementation following project standards",
+      "item_id": "scope",
+      "stage": "context_free",
+      "text": "What's the intended scope: minimal viable change, full-featured implementation, or exploratory prototype?"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-20T20:39:40.061146+00:00",
+    "project_id": "a1d6b837-46f3-40c0-b6a2-8b3babb7fe15",
+    "provenance": "agent",
+    "seq": 4
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

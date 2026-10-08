@@ -1,0 +1,39 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "eb9b75f6f356e202387ef95ae30b7981853828ed9d6a62aff1e9b4d96d0b44ba",
+    "event_id": "fe57c111-2674-48b4-aadc-3f30937bf773",
+    "seq": 43
+  },
+  "previous": {
+    "digest": "6b1e5ec7f7513bb2887d1e54dc3ca593aa6931a3447d62982cf7de78db3a90d8",
+    "event_id": "0a8bb26d-f3d0-4148-a24d-8042db3d6248",
+    "seq": 41
+  },
+  "project_id": "bed522a2-0b3e-4bff-9cd6-7c13fe40779a",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "66cd4cbb-9dc3-4693-b115-fb0f140c640b",
+    "cycle": 1,
+    "digest": "42b168f909676b8a453ae2c43004a94a2f96ffc7fa93cd9ae3b2e74bee96e869",
+    "engine_id": "claudeloop",
+    "event_id": "84425669-bab5-417a-992a-a580a03ba7fc",
+    "job_id": "92d834a4-4bf2-4699-9354-adbea7936d77",
+    "kind": "AnswerGiven",
+    "payload": {
+      "answer": "Defer live streaming (show buffered output after each job completes), defer most validation (assume valid job IDs for skeleton), defer fancy output formatting (plain text table is fine). Focus skeleton on: claim multiple jobs atomically, run them, report combined result.",
+      "item_id": "what_to_defer"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-22T03:44:59.429951+00:00",
+    "project_id": "bed522a2-0b3e-4bff-9cd6-7c13fe40779a",
+    "provenance": "trusted",
+    "seq": 42
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

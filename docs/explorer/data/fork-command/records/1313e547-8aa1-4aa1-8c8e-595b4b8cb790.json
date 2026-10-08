@@ -1,0 +1,39 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "f98f14b3f72c65a39ad3681b2d431265f31650d059034d99db8a54a53eb86be9",
+    "event_id": "d1c5ddb7-5215-4634-bf03-9aa83264130b",
+    "seq": 33
+  },
+  "previous": {
+    "digest": "e9562a3d68a47f67c84aed0377bdf9302ed05cfa7b91a72b3ec7058a395e21f1",
+    "event_id": "61151db1-ce14-4266-be34-18cfedf2a095",
+    "seq": 31
+  },
+  "project_id": "ab0b06f9-55a4-4b47-ac08-254e7fdd9036",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "d539546d-91d2-424c-a252-dc001195d751",
+    "cycle": 1,
+    "digest": "a437d39b2ad405e623d49013aff3dac4b1c784bdfd0ae8bc4fc2622be8866c6d",
+    "engine_id": "claudeloop",
+    "event_id": "1313e547-8aa1-4aa1-8c8e-595b4b8cb790",
+    "job_id": "48f9ef01-8b95-4709-adde-ed0ece390f8d",
+    "kind": "AnswerGiven",
+    "payload": {
+      "answer": "Job #10 reaches BUILD phase with scaffold. 'vibey fork 10' creates job #11 (React path, continues job #10). 'vibey fork 10' again creates job #12 (Vue path). Both start from same seq, operator adds different prompts to each fork's intake",
+      "item_id": "exploration_example"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-22T03:41:56.843585+00:00",
+    "project_id": "ab0b06f9-55a4-4b47-ac08-254e7fdd9036",
+    "provenance": "trusted",
+    "seq": 32
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

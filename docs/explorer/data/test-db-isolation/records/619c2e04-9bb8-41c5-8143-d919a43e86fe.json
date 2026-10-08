@@ -1,0 +1,43 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "015a0a7f7dd9a7555c3dd62ec412efdad4f1b9e97e80ffc4604405375b42d2b8",
+    "event_id": "fe8be497-fc5f-458d-819f-fd8afac5ca27",
+    "seq": 31
+  },
+  "previous": {
+    "digest": "dfb8ef455a6cc6ca94ec7101bd95d85bf18618dca0763ed50be79f124984314a",
+    "event_id": "582fab25-6c87-4a53-a867-625011d76ee3",
+    "seq": 29
+  },
+  "project_id": "df7e868b-1fbf-451b-8ceb-126359b7588e",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "a123748e-d114-435e-bc4a-8fa5f9e78b5e",
+    "cycle": 1,
+    "digest": "d676c05cc96c83bdade102fc5dcbfb670afb4e065e961f1f5a5861c757808867",
+    "engine_id": "claudeloop",
+    "event_id": "619c2e04-9bb8-41c5-8143-d919a43e86fe",
+    "job_id": "3a3b336c-c2aa-4400-a762-ae12246358d3",
+    "kind": "QuestionAsked",
+    "payload": {
+      "blocking": true,
+      "cycle": 1,
+      "default": "Empty required fields (name cannot be blank), invalid data types (quantity must be positive integer), duplicate constraint violations (name must be unique within category)",
+      "item_id": "validation_examples",
+      "stage": "example_mapping",
+      "text": "What are 2-3 specific examples of invalid input that should be rejected?"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-22T04:44:19.116940+00:00",
+    "project_id": "df7e868b-1fbf-451b-8ceb-126359b7588e",
+    "provenance": "agent",
+    "seq": 30
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

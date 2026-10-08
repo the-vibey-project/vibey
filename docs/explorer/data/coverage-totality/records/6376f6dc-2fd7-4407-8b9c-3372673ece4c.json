@@ -1,0 +1,42 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "ad3c1ab216993898ca1108be8cc72694befc1fa4c3dda71008320baa26771ab7",
+    "event_id": "5dd1650f-bb32-4ff1-84b9-687fdf6a741d",
+    "seq": 490
+  },
+  "previous": {
+    "digest": "89ff7f7c51e2148e6bb7e8e0ecc04716882543b541d143b7df33d7bd4292f14f",
+    "event_id": "e27ef91a-a79b-440b-a3d4-14b81ae9a981",
+    "seq": 458
+  },
+  "project_id": "e631c00a-e1a1-4ed4-b99a-0fa2d388d240",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "456a94f1-170f-49a4-9aa5-7a11b6763b29",
+    "cycle": 1,
+    "digest": "a151f1466227402c18c9f1eae4df9e670d65dcd12dcab0e0160c071a729bee1e",
+    "engine_id": "codexloop",
+    "event_id": "6376f6dc-2fd7-4407-8b9c-3372673ece4c",
+    "job_id": "2a513727-a766-4568-8f6c-4e81baf95c11",
+    "kind": "VerdictRendered",
+    "payload": {
+      "complete": true,
+      "remaining_work": [
+        "Implement work item bootstrap-budget-brake: Five budget-brake predicate tests for bootstrap.py line 279"
+      ],
+      "success": true
+    },
+    "phase": "build",
+    "produced_at": "2026-08-22T19:19:29.322378+00:00",
+    "project_id": "e631c00a-e1a1-4ed4-b99a-0fa2d388d240",
+    "provenance": "agent",
+    "seq": 489
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 3,
+    "paths": 0
+  }
+}

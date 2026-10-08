@@ -1,0 +1,43 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "14c119f9eb2c4e7541586762eec4ce929c37bf61d15b5b5eb05e8e11e7a06c3f",
+    "event_id": "680f2a97-2fdb-4c6b-8f08-a213510a9e8f",
+    "seq": 37
+  },
+  "previous": {
+    "digest": "f3787b4fa9e9a54c9a9a9c96d630ec1177a9b5fc0d6548084333f69c63755730",
+    "event_id": "9cdabd74-1e01-4c83-a2f4-80c12e68de33",
+    "seq": 34
+  },
+  "project_id": "5ea01f61-8536-4ace-90cb-18700a12e410",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "eafc3e55-bdc9-49e1-9309-438e5daae7bb",
+    "cycle": 1,
+    "digest": "86509907426807acb4a98cb531ba67a78ba1ecaae75b1d44f83740b580ce8f0c",
+    "engine_id": "claudeloop",
+    "event_id": "d0645b63-021f-4211-94da-13dbd373e682",
+    "job_id": "4c2ec03f-d670-44f9-9f05-47597984ab20",
+    "kind": "QuestionAsked",
+    "payload": {
+      "blocking": true,
+      "cycle": 1,
+      "default": "Run `vibey doctor` with all 4 engines, verify output shows all engines in alphabetical order with timing under 20s, then force one timeout and verify partial results display correctly",
+      "item_id": "minimal_proof",
+      "stage": "walking_skeleton",
+      "text": "What's the simplest end-to-end proof that concurrent checks work correctly?"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-22T03:44:52.181413+00:00",
+    "project_id": "5ea01f61-8536-4ace-90cb-18700a12e410",
+    "provenance": "agent",
+    "seq": 36
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

@@ -1,0 +1,42 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "d2ef5baed0bcd65de43c77a6082877f71de7e80fa2a1062e9b0ee59746cae4b8",
+    "event_id": "97f55766-648d-4dcb-b844-280cf5def542",
+    "seq": 1142
+  },
+  "previous": {
+    "digest": "81c7b1e95158395e07cd9da7413ac1948ff94fcf4acd4970c748d621c4dde375",
+    "event_id": "1113f73b-a05c-463b-a01b-3df4660525e2",
+    "seq": 1120
+  },
+  "project_id": "a1d6b837-46f3-40c0-b6a2-8b3babb7fe15",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "1cdd4637-b50d-421a-87de-1d020f3af946",
+    "cycle": 1,
+    "digest": "8ebf77761ba7dd2020acc0230cc57f8af4dea9ab4d414ef9b6b7a7d8e739144d",
+    "engine_id": "codexloop",
+    "event_id": "689c3765-2fc1-416a-94a4-c9ec9b9954d0",
+    "job_id": "7827eb95-40ee-4281-9e3c-a7483e0981c9",
+    "kind": "VerdictRendered",
+    "payload": {
+      "complete": true,
+      "remaining_work": [
+        "Review work item xdist-parallel against acceptance criteria: Each xdist worker gets its own vibey_test_gwN database, no sharing (AC-03), 3 consecutive parallel runs all pass with identical collected/passed/skipped/deselected counts (AC-04), Skipped and deselected counts exactly equal to baseline on develop; no new skip/xfail markers (AC-05), Protected test files byte-untouched (AC-13)"
+      ],
+      "success": true
+    },
+    "phase": "build",
+    "produced_at": "2026-08-22T19:46:24.446143+00:00",
+    "project_id": "a1d6b837-46f3-40c0-b6a2-8b3babb7fe15",
+    "provenance": "agent",
+    "seq": 1141
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 3,
+    "paths": 0
+  }
+}

@@ -1,0 +1,43 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "7ede2cd03f660893317656d18a7fa495f7878bee0ff65e612427e5a598499f94",
+    "event_id": "84f1f1e1-97b9-46ca-8f83-481401d8fae6",
+    "seq": 55
+  },
+  "previous": {
+    "digest": "0273d112c01a4cd618df28d2a5a5e74e29e4a2c95911712b079349aa42edf367",
+    "event_id": "7fef631c-d887-4c9d-86d2-4354f36278cc",
+    "seq": 53
+  },
+  "project_id": "ab0b06f9-55a4-4b47-ac08-254e7fdd9036",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "8a57843c-1cab-497b-b975-1367bcae5669",
+    "cycle": 1,
+    "digest": "179dcbdf0fee64831849a3f2414cf435ab80367f4067ca997890e5a99560e132",
+    "engine_id": "claudeloop",
+    "event_id": "5130f180-d862-434c-b070-436befce2ebe",
+    "job_id": "48f9ef01-8b95-4709-adde-ed0ece390f8d",
+    "kind": "QuestionAsked",
+    "payload": {
+      "blocking": true,
+      "cycle": 1,
+      "default": "Manual git operations outside vibey (branch renames, worktree moves) breaking the origin_job_id \u2192 branch relationship; mitigated by storing git commit SHA in JobForked event alongside seq",
+      "item_id": "provenance_failure",
+      "stage": "premortem",
+      "text": "What could cause fork provenance tracking to fail, become misleading, or create untraceable job lineages?"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-22T03:45:54.358554+00:00",
+    "project_id": "ab0b06f9-55a4-4b47-ac08-254e7fdd9036",
+    "provenance": "agent",
+    "seq": 54
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

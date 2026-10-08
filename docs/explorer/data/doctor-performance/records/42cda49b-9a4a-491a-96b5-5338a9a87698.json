@@ -1,0 +1,43 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "46654aa89b24027d04b7b684c716ad5a314a69363e210f4450c2edbf456acdfb",
+    "event_id": "bfb022be-2bb5-42e2-91f8-cab60edc25cb",
+    "seq": 48
+  },
+  "previous": {
+    "digest": "14b412ae2072a1fe7bf3f0755edb3c85b206fea63d45efdd0095d782afe8e55b",
+    "event_id": "1ee1893f-99ee-411f-80ea-4a2fb554c3a8",
+    "seq": 46
+  },
+  "project_id": "5ea01f61-8536-4ace-90cb-18700a12e410",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "b112aae7-5d9b-4dbe-ac6a-390c8846ba03",
+    "cycle": 1,
+    "digest": "4b63dbb4cf1c5b73344ba0ae1b89428dd18c5479b12c9deba424da6181b0fa4b",
+    "engine_id": "claudeloop",
+    "event_id": "42cda49b-9a4a-491a-96b5-5338a9a87698",
+    "job_id": "4c2ec03f-d670-44f9-9f05-47597984ab20",
+    "kind": "QuestionAsked",
+    "payload": {
+      "blocking": false,
+      "cycle": 1,
+      "default": "Total wall-clock time, per-engine completion time in verbose mode; no additional instrumentation needed for this iteration",
+      "item_id": "observability_meter",
+      "stage": "nfr_planguage",
+      "text": "What timing/diagnostic information should doctor report to enable performance troubleshooting?"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-22T03:45:52.039259+00:00",
+    "project_id": "5ea01f61-8536-4ace-90cb-18700a12e410",
+    "provenance": "agent",
+    "seq": 47
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

@@ -1,0 +1,39 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "fadf03473bcb80058e2e7ac7f5d91ad77413cbf30b25c264e95df4178d9c9c57",
+    "event_id": "95b95b46-185d-4bfa-a1d1-682e9b4a200b",
+    "seq": 48
+  },
+  "previous": {
+    "digest": "ab8c7a703afe243f5c777f2ef83886b62846a2fe105870609bfb48a92bca81d0",
+    "event_id": "856c879f-13c1-411d-a1e7-a9ebb48bf02c",
+    "seq": 46
+  },
+  "project_id": "e631c00a-e1a1-4ed4-b99a-0fa2d388d240",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "1d6e925d-1b31-4d9c-9184-96bec4684b9a",
+    "cycle": 1,
+    "digest": "a477811a8f9133124e92aa45bd8e8c10c476a869877866d01ebeac3757dfd297",
+    "engine_id": "claudeloop",
+    "event_id": "79231713-ee41-4854-8e11-d3436013453a",
+    "job_id": "d73f236e-a7b4-4748-b075-3900a75af324",
+    "kind": "AnswerGiven",
+    "payload": {
+      "answer": "Zero tolerance: every new test must be deterministic and pass 100 consecutive local runs before merge; no retry logic",
+      "item_id": "test_flakiness_tolerance"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-22T03:43:27.263936+00:00",
+    "project_id": "e631c00a-e1a1-4ed4-b99a-0fa2d388d240",
+    "provenance": "trusted",
+    "seq": 47
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

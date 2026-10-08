@@ -1,0 +1,43 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "43babcb6dfaa83eddbebe90a398ca0a474a55e22fc7fe7e204487d67b07a79e5",
+    "event_id": "a75db656-f98d-4f6e-8fd1-055516b0b3f0",
+    "seq": 4
+  },
+  "previous": {
+    "digest": "6d0d005254878aeac32dc5ca8cf2c38bf1954fd80fefdb86597de33ab4938dea",
+    "event_id": "70406e49-7dc3-4edf-a856-e96468a591d2",
+    "seq": 2
+  },
+  "project_id": "9692abab-ace3-4ee0-ac59-3ea42484b817",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "0face8bc-aa17-546b-b5de-e16e759738e6",
+    "cycle": 1,
+    "digest": "13f7906d0580e697da69ea9f898daf6271a0ad65c0e1af3bbb5f8db8b91ec7cb",
+    "engine_id": "gptossloop",
+    "event_id": "c5ff7d1e-f4f4-44ea-bbed-5ea7007cfb02",
+    "job_id": "c2b75c18-fd15-4e79-ad4e-cf489356ad57",
+    "kind": "QuestionAsked",
+    "payload": {
+      "blocking": true,
+      "cycle": 1,
+      "default": "CI pipeline",
+      "item_id": "q1",
+      "stage": "context_free",
+      "text": "Should the TOC generation run automatically in the CI pipeline or as a pre\u2011commit hook?"
+    },
+    "phase": "design",
+    "produced_at": "2026-09-29T18:39:35.991096+00:00",
+    "project_id": "9692abab-ace3-4ee0-ac59-3ea42484b817",
+    "provenance": "agent",
+    "seq": 3
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

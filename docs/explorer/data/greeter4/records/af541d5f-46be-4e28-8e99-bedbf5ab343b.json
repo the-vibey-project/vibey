@@ -1,0 +1,40 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "7842517003d3188110f0f465954b0ecff589806cb8cb54badeb558d03aad338d",
+    "event_id": "6789fa97-01bd-4099-9260-b05a8274e7fb",
+    "seq": 1354
+  },
+  "previous": {
+    "digest": "ab104c67a099cbf249cf294d02b0a907d72fe30d9a6560c9e9a1e96d5b632c76",
+    "event_id": "8292e943-2d8e-484e-a31d-bc8c3e7925b0",
+    "seq": 1305
+  },
+  "project_id": "8ab823c9-89e4-4050-884c-9008c8b14ef8",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "00355f98-36ae-489c-9f9c-0b892ba2e9f4",
+    "cycle": 1,
+    "digest": "39cb1c386c7498034090c7db07fcc9d5a5619731bf05651e53e7d3a7624db925",
+    "engine_id": null,
+    "event_id": "af541d5f-46be-4e28-8e99-bedbf5ab343b",
+    "job_id": "d63ace2f-e620-493d-a288-8cf51dd77899",
+    "kind": "FindingRaised",
+    "payload": {
+      "finding_id": "f_integrate_analytics-api_1c6592df",
+      "severity": "high",
+      "text": "merge conflict integrating 'analytics-api': Auto-merging .gitignore\nAuto-merging IMPLEMENTATION_SUMMARY.md\nCONFLICT (content): Merge conflict in IMPLEMENTATION_SUMMARY.md\nAuto-merging README.md\nCONFLICT (content): Merge conflict in README.md\nAuto-merging run_tests.py\nCONFLICT (content): Merge conflict in run_tests.py\nAuto-merging setup.py\nCONFLICT (content): Merge conflict in setup.py\nAuto-merging shortener/__init__.py\nCONFLICT (content): Merge conflict in shortener/__init__.py\nAuto-merging shortener/alias_manager.py\nCONFLICT (content): Merge conflict in shortener/alias_manager.py\nAuto-merging shortener/click_analytics.py\nCONFLICT (add/add): Merge conflict in shortener/click_analytics.py\nAuto-merging tests/test_click_analytics.py\nCONFLICT (add/add): Merge conflict in tests/test_click_analytics.py\nAuto-merging verify_ac4.py\nCONFLICT (add/add): Merge conflict in verify_ac4.py\nAutomatic merge failed; fix conflicts and then commit the result."
+    },
+    "phase": "build",
+    "produced_at": "2026-08-20T06:16:38.852104+00:00",
+    "project_id": "8ab823c9-89e4-4050-884c-9008c8b14ef8",
+    "provenance": "agent",
+    "seq": 1306
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

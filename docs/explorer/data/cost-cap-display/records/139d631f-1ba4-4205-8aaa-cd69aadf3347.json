@@ -1,0 +1,39 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "64bb030ae4ff4a5aabd265b1d8872f110b599cad56211517ac54e5995d1e351e",
+    "event_id": "cf5ee849-9825-488f-bd23-1851762aa3a8",
+    "seq": 26
+  },
+  "previous": {
+    "digest": "f153488ee547fce7eaba914e7862ce5de2146942b590e3b6274972048898ba3b",
+    "event_id": "439048d0-e20d-44c2-aad5-c323a6c66c11",
+    "seq": 23
+  },
+  "project_id": "b43d1fcb-fb7b-42d6-9f80-220292c73389",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "ac0dbe88-a579-4ab4-966c-d2a5407f006f",
+    "cycle": 1,
+    "digest": "ac08d94a225d9cc6eb08268f9b6faebb2bbcacc8354087f4a2e8d5bc3679abde",
+    "engine_id": "claudeloop",
+    "event_id": "139d631f-1ba4-4205-8aaa-cd69aadf3347",
+    "job_id": "64ea0fea-cd4f-4b3b-bf19-112c18a7c58d",
+    "kind": "AnswerGiven",
+    "payload": {
+      "answer": "No separate audit; display reads are observational only, enforcement at the brake is already logged in the ledger as budget events",
+      "item_id": "observability"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-22T03:34:35.067119+00:00",
+    "project_id": "b43d1fcb-fb7b-42d6-9f80-220292c73389",
+    "provenance": "trusted",
+    "seq": 24
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

@@ -1,0 +1,11 @@
+# Made with ❤️ by [Vibey](https://the-vibey-project.github.io/vibey/), Developed by [Adam Matthew Steinberger](https://vibewithadam.matthewsteinberger.com/) ([@adammatthewsteinberger](https://github.com/adammatthewsteinberger/)).
+#
+# The one declared source for scripts/explorer_publish.py (ADR-0051: configuration is declared in
+# TOML, never written into a source file). It decides which projects the public explorer lists;
+# what is *shown* of each is the publication policy's decision (sub-doctrine 7.a), never this
+# file's, and nothing here can widen it.
+
+[explorer_publish]
+# A project whose name matches any of these regular expressions is not listed: test fixtures
+# that a visitor would only have to scroll past.
+exclude_names = ["^test-project-[0-9a-f]{8}$"]

@@ -1,0 +1,39 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "a780eb0eb0340afd00eb9e9599671364d2e691fffc654c2a1fad1fafb3ec5a6d",
+    "event_id": "f875499c-db82-407f-8401-34b155d73735",
+    "seq": 41
+  },
+  "previous": {
+    "digest": "971549c3b4b0466bffbecb6f20d21c52d53033d6e0599c70fe14da9296969e69",
+    "event_id": "e2145da1-841b-43f5-a932-045d33f31116",
+    "seq": 39
+  },
+  "project_id": "8ab823c9-89e4-4050-884c-9008c8b14ef8",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "70c63cab-b6f8-4bba-b42c-4b380e7626fd",
+    "cycle": 1,
+    "digest": "4affaf134892eb896c9db2c5711259755ca1edba7873dd997c588d1a811c8ad8",
+    "engine_id": "claudeloop",
+    "event_id": "4c796a52-6321-496d-af54-a251f87efc8d",
+    "job_id": "705692f1-69a1-4cc2-ade7-8aa3d1407b67",
+    "kind": "AnswerGiven",
+    "payload": {
+      "answer": "Create a short URL via POST, immediately GET that short code, verify 302 redirect to the original long URL with correct Location header",
+      "item_id": "first_integration_test"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-20T02:34:45.761160+00:00",
+    "project_id": "8ab823c9-89e4-4050-884c-9008c8b14ef8",
+    "provenance": "trusted",
+    "seq": 40
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

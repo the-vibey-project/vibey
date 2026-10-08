@@ -1,0 +1,39 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "8bf0ca41f7f77588df50cecb0b0eb9a14fa8230c064868c41f522039fdb481c3",
+    "event_id": "5e033282-bc14-4890-88c2-9e8f33fb1073",
+    "seq": 9
+  },
+  "previous": {
+    "digest": "0af7961fa3c4772517dc733a3717131f89b4cc042939b2089f052dae323224fa",
+    "event_id": "20ed117c-b2e8-4491-9ad8-86365d6095fc",
+    "seq": 7
+  },
+  "project_id": "2f6a93b6-2d73-4aff-bc94-16539841133f",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "16dd3bdc-de8e-4a33-a7c5-c62f30877e74",
+    "cycle": 1,
+    "digest": "451a279fef645419fb9b6b399c4e6a422914751e09cd50f41b987d3f99d27242",
+    "engine_id": "claudeloop",
+    "event_id": "8041dd80-1273-4032-81d1-161ca7de99b0",
+    "job_id": "334db377-8cb0-4a72-9cc0-78b45fc9bb38",
+    "kind": "AnswerGiven",
+    "payload": {
+      "answer": "Four CLI commands over ONE job state machine: stop a job, wind a job back to an earlier point, continue a job, and restart a job from scratch. They are deliberately one piece of work rather than four, because they cannot be designed independently -- stop and restart must agree on what CANCELLED means before either can be written, and wind-back and continue must agree on what a restored point contains. Design the state machine first, then the four verbs fall out of it.",
+      "item_id": "feature_description"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-22T02:57:10.227649+00:00",
+    "project_id": "2f6a93b6-2d73-4aff-bc94-16539841133f",
+    "provenance": "trusted",
+    "seq": 8
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

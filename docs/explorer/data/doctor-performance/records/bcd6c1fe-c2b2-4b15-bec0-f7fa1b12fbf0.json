@@ -1,0 +1,39 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "f3787b4fa9e9a54c9a9a9c96d630ec1177a9b5fc0d6548084333f69c63755730",
+    "event_id": "9cdabd74-1e01-4c83-a2f4-80c12e68de33",
+    "seq": 34
+  },
+  "previous": {
+    "digest": "4c41a5597f2becf8902baa9ab53d2482857b3d6b8d98424ea9b394f6e1c08435",
+    "event_id": "b60d2336-681f-4d1f-9312-cc7cba83cb52",
+    "seq": 32
+  },
+  "project_id": "5ea01f61-8536-4ace-90cb-18700a12e410",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "224c3494-04b3-4d02-bcb7-f2a6546e6da6",
+    "cycle": 1,
+    "digest": "cbb44dab6331faae719cd540d7cc9a5f19aa867e348b01f14fad60af7c890ec2",
+    "engine_id": "claudeloop",
+    "event_id": "bcd6c1fe-c2b2-4b15-bec0-f7fa1b12fbf0",
+    "job_id": "4c2ec03f-d670-44f9-9f05-47597984ab20",
+    "kind": "AnswerGiven",
+    "payload": {
+      "answer": "Status lines show distinct failure modes: '\u2717 [engine]: timed out after 30s' vs '\u2717 [engine]: failed (error message)', both contribute to failure count, exit code 1",
+      "item_id": "multiple_failure_example"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-22T03:44:13.652838+00:00",
+    "project_id": "5ea01f61-8536-4ace-90cb-18700a12e410",
+    "provenance": "trusted",
+    "seq": 33
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

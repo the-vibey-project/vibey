@@ -1,0 +1,43 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "c559e246e2782e3c0cb2bd5f0bc59fda2f7beea87a5c7f98ac973840207f3aa6",
+    "event_id": "6a88202a-fa62-4f63-b4e6-c0d6b94c8b0e",
+    "seq": 27
+  },
+  "previous": {
+    "digest": "4a0328741eaefa2dc3606cb2026071ba2172b49170dd07931511ac7c2fb89a86",
+    "event_id": "47834444-2a3c-42dc-a96e-cc57548ce689",
+    "seq": 25
+  },
+  "project_id": "5e76341f-ba5f-4272-8355-3df5d489bbcd",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "b39c479b-a1f3-4c18-a7b9-6fa4afda36e9",
+    "cycle": 1,
+    "digest": "acc031dbc9cd92552adb1173d1a461bdf713a1d1b37a10ebf23663f8347e0ab9",
+    "engine_id": "claudeloop",
+    "event_id": "958b082c-1177-4538-9745-785233a7cc43",
+    "job_id": "e58deb6b-5356-4a39-8acf-5dc898bba380",
+    "kind": "QuestionAsked",
+    "payload": {
+      "blocking": false,
+      "cycle": 1,
+      "default": "Morning: 5am-11:59am, Afternoon: 12pm-5pm, Evening: 5:01pm-4:59am",
+      "item_id": "time_rules",
+      "stage": "example_mapping",
+      "text": "What are the time-of-day boundaries that change the greeting (morning/afternoon/evening)?"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-20T00:49:31.420364+00:00",
+    "project_id": "5e76341f-ba5f-4272-8355-3df5d489bbcd",
+    "provenance": "agent",
+    "seq": 26
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

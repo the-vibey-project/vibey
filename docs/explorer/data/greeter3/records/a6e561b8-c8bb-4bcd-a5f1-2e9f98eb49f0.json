@@ -1,0 +1,39 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "4a0328741eaefa2dc3606cb2026071ba2172b49170dd07931511ac7c2fb89a86",
+    "event_id": "47834444-2a3c-42dc-a96e-cc57548ce689",
+    "seq": 25
+  },
+  "previous": {
+    "digest": "4cafe95b2b1a25e3e36eb37e54013e2c0726afe3279dca7f9fa2fceb756b0839",
+    "event_id": "2135d3b4-6d84-4916-8e50-fa3309d64444",
+    "seq": 23
+  },
+  "project_id": "5e76341f-ba5f-4272-8355-3df5d489bbcd",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "bcad9a9a-35d8-4cb6-8f8d-9b70defe447d",
+    "cycle": 1,
+    "digest": "a79ce745064a686328d3e3829c338ccfa422be0efefedc8b7bbddf55dd1b4d2d",
+    "engine_id": "claudeloop",
+    "event_id": "a6e561b8-c8bb-4bcd-a5f1-2e9f98eb49f0",
+    "job_id": "e58deb6b-5356-4a39-8acf-5dc898bba380",
+    "kind": "AnswerGiven",
+    "payload": {
+      "answer": "Regular, friendly interactions that make the application feel approachable and user-centric",
+      "item_id": "engagement_pattern"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-20T00:48:33.501271+00:00",
+    "project_id": "5e76341f-ba5f-4272-8355-3df5d489bbcd",
+    "provenance": "trusted",
+    "seq": 24
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

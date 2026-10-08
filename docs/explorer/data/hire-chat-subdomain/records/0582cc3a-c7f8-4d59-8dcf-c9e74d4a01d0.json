@@ -1,0 +1,39 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "5838ac53c11c69b219717a1793a95150f2488d2e698b3cdececa4c371c41c832",
+    "event_id": "d735c954-82b7-4627-acc1-6bf51e9d175c",
+    "seq": 31
+  },
+  "previous": {
+    "digest": "63594796841408b58dee6184ecefbab9bee70d3f459b52805bca46d689a9904c",
+    "event_id": "7f07f4cc-16a9-4eeb-82ed-fdf366932be4",
+    "seq": 29
+  },
+  "project_id": "0ee95624-eec4-4e8e-9a14-6ad9a37dcff4",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "2f9ec745-82e8-4273-80de-85c6b71d9631",
+    "cycle": 1,
+    "digest": "0531257ece01e7c89725fd15b5e1e72a6d9fe71cfe23ef389ac0fdce3a45184a",
+    "engine_id": "claudeloop",
+    "event_id": "0582cc3a-c7f8-4d59-8dcf-c9e74d4a01d0",
+    "job_id": "1343d0fd-bf3f-4739-8c21-cbf7693c673e",
+    "kind": "AnswerGiven",
+    "payload": {
+      "answer": "One prop drives both: AskAdam accepts variant?: 'widget' | 'page' (default 'widget'); [path] renders \u003cAskAdam variant=\"page\" /\u003e, the homepage keeps \u003cAskAdam /\u003e. The existing call becomes track('ask_message', { turn: userTurns + 1, surface: variant }). No separate surface prop, no new analytics helper.",
+      "item_id": "surface_tracking"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-20T20:12:52.004321+00:00",
+    "project_id": "0ee95624-eec4-4e8e-9a14-6ad9a37dcff4",
+    "provenance": "trusted",
+    "seq": 30
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 1
+  }
+}

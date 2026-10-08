@@ -1,0 +1,39 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "709da8d74153f0d8bad91b146d24fdddf5e0a29e9befd6c6e3408b87d5a94a25",
+    "event_id": "ac488856-081b-47ee-99e2-101e4fbadcad",
+    "seq": 40
+  },
+  "previous": {
+    "digest": "8c792af5e42877b37c9e0b819f972eacafbc471f95cef59e0a39c5eba8991bd1",
+    "event_id": "67bc6727-f214-4eb8-a3fc-a0b283843871",
+    "seq": 38
+  },
+  "project_id": "893c4fc1-542e-411e-a10a-3aef784b1540",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "d1405050-7bbf-5034-b04a-11a1570aca97",
+    "cycle": 1,
+    "digest": "76c5233b1a35594d1072b17fbddfd8410f0320f9ace8f87896c29d8c63781c78",
+    "engine_id": "gptossloop",
+    "event_id": "5b11c460-a25e-4287-bf7c-2e4bf485109e",
+    "job_id": "07a9ff2b-8ffc-4fa5-b3a8-8f0a17221843",
+    "kind": "ResearchGapRecorded",
+    "payload": {
+      "cycle": 1,
+      "topic": "prior-art"
+    },
+    "phase": "design",
+    "produced_at": "2026-09-30T04:15:42.944684+00:00",
+    "project_id": "893c4fc1-542e-411e-a10a-3aef784b1540",
+    "provenance": "trusted",
+    "seq": 39
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 1,
+    "paths": 0
+  }
+}

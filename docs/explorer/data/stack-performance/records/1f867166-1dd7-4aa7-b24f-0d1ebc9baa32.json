@@ -1,0 +1,39 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "1587b9ee4da95ef433470eb5551a738a25d9152ac69431c09e68c6bcdd749835",
+    "event_id": "f58ccc35-e813-4b41-861d-02363c394739",
+    "seq": 24
+  },
+  "previous": {
+    "digest": "f23f99cda9e2a4f93e4ebb6b14a61dd7707f546e7e1baf0921f2f68a7df2077a",
+    "event_id": "72fad0de-448a-469a-a7e2-1268754bddb1",
+    "seq": 22
+  },
+  "project_id": "44c06a64-c8ed-4153-96af-b49db29c39e3",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "e41ee7f3-4541-4e76-a97e-26718ae38140",
+    "cycle": 1,
+    "digest": "a5af50071c11f574ab56ed24c05d7484682ca38ec975a1de0eea3af560f5a380",
+    "engine_id": "claudeloop",
+    "event_id": "1f867166-1dd7-4aa7-b24f-0d1ebc9baa32",
+    "job_id": "bcd8e0b1-385d-43dc-ad1f-cad988f80cc9",
+    "kind": "AnswerGiven",
+    "payload": {
+      "answer": "New indexes are fine; avoid schema changes that require migration downtime or break old client versions",
+      "item_id": "schema_changes_allowed"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-22T03:41:55.509649+00:00",
+    "project_id": "44c06a64-c8ed-4153-96af-b49db29c39e3",
+    "provenance": "trusted",
+    "seq": 23
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

@@ -1,0 +1,39 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "1ea58fc0fff78e8c8e17f6ade7595dc0d982efe71d872c6fdc855792de30541b",
+    "event_id": "7bb9c8f5-f40d-48d5-b2ef-544db2a59c78",
+    "seq": 50
+  },
+  "previous": {
+    "digest": "a477811a8f9133124e92aa45bd8e8c10c476a869877866d01ebeac3757dfd297",
+    "event_id": "79231713-ee41-4854-8e11-d3436013453a",
+    "seq": 47
+  },
+  "project_id": "e631c00a-e1a1-4ed4-b99a-0fa2d388d240",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "b71a60a9-792a-40b4-969c-f988940f34b3",
+    "cycle": 1,
+    "digest": "fadf03473bcb80058e2e7ac7f5d91ad77413cbf30b25c264e95df4178d9c9c57",
+    "engine_id": "claudeloop",
+    "event_id": "95b95b46-185d-4bfa-a1d1-682e9b4a200b",
+    "job_id": "d73f236e-a7b4-4748-b075-3900a75af324",
+    "kind": "AnswerGiven",
+    "payload": {
+      "answer": "Branch coverage with partial-branch detection required (already enforced via --cov-branch); 100% means zero partial branches reported",
+      "item_id": "coverage_measurement_precision"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-22T03:43:27.263936+00:00",
+    "project_id": "e631c00a-e1a1-4ed4-b99a-0fa2d388d240",
+    "provenance": "trusted",
+    "seq": 48
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

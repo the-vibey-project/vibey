@@ -1,0 +1,39 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "34a7f5a376f057ac6c44e6137eb0c717dbec790dcaf6376b673d1962197aba9a",
+    "event_id": "529108f0-903f-4807-a85f-44495cd16148",
+    "seq": 6
+  },
+  "previous": {
+    "digest": "24d2d12c60813b51563310e68f666f64e4bfc2bab7600bdca792306f78f6f874",
+    "event_id": "30bba220-8a4d-4cc6-aa7b-b1edd1db7599",
+    "seq": 4
+  },
+  "project_id": "5ea01f61-8536-4ace-90cb-18700a12e410",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "03bae509-3dc7-4b43-8b63-17e2d636bc2a",
+    "cycle": 1,
+    "digest": "f96fc9cf753990e90fc0deed0eab8509cf45da20c805622ca1aa84a4fe678dc7",
+    "engine_id": "claudeloop",
+    "event_id": "e3791bfe-0778-4009-97c2-b2e73919eb92",
+    "job_id": "4c2ec03f-d670-44f9-9f05-47597984ab20",
+    "kind": "AnswerGiven",
+    "payload": {
+      "answer": "One PR. Two changes plus their failure semantics. (1) Check engines concurrently. (2) Stop rebuilding the world per engine: doctor opens build_app() three times in one invocation, and once MORE per engine when --record is passed. build_app creates an asyncpg pool AND applies migrations -- discovering 11 files, hashing each, querying schema_migration -- so a four-engine `doctor --conformance --record` runs the migration machinery five times to write four rows.",
+      "item_id": "scope"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-22T02:59:00.626706+00:00",
+    "project_id": "5ea01f61-8536-4ace-90cb-18700a12e410",
+    "provenance": "trusted",
+    "seq": 5
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

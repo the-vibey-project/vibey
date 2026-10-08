@@ -1,0 +1,43 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "b12a52ae51a11f0662c1bbf0fe0c807627b0ba9a86bedf3622873dc084925f52",
+    "event_id": "43fab3bd-a29f-410f-bacb-3a31de76e1ea",
+    "seq": 39
+  },
+  "previous": {
+    "digest": "5dbfcc4a5c882dcbb99c00f21a0283005e0d443b05675f3c44a1c8f5bd8bcbad",
+    "event_id": "247a9873-a59b-4e28-830c-44e2968528dd",
+    "seq": 37
+  },
+  "project_id": "44c06a64-c8ed-4153-96af-b49db29c39e3",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "775dbc01-c2e9-454d-b0fd-baff86fdb759",
+    "cycle": 1,
+    "digest": "d28638c4d66c74009542f4b3d066ea89d45399f359e5c75c8b7057fa14332897",
+    "engine_id": "claudeloop",
+    "event_id": "9c66bafc-c9c5-4d0f-bad4-61f16d5a95cc",
+    "job_id": "bcd8e0b1-385d-43dc-ad1f-cad988f80cc9",
+    "kind": "QuestionAsked",
+    "payload": {
+      "blocking": false,
+      "cycle": 1,
+      "default": "All three \u2014 walking skeleton is just the ledger scan fix plus baseline measurements; the rest follow once the pattern is proven",
+      "item_id": "deferrable_items",
+      "stage": "walking_skeleton",
+      "text": "Which runbook 13 items (claim batching, event-tail latency, connection discipline) can be deferred until after the walking skeleton proves the measurement-first approach?"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-22T03:44:17.531877+00:00",
+    "project_id": "44c06a64-c8ed-4153-96af-b49db29c39e3",
+    "provenance": "agent",
+    "seq": 38
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

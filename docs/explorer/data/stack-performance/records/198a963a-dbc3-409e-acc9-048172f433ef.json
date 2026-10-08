@@ -1,0 +1,43 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "f23f99cda9e2a4f93e4ebb6b14a61dd7707f546e7e1baf0921f2f68a7df2077a",
+    "event_id": "72fad0de-448a-469a-a7e2-1268754bddb1",
+    "seq": 22
+  },
+  "previous": {
+    "digest": "cd29bdf634a68b95c0b82b59918f2d81cd5bb13ea7fd37833d27e88f6d7fbd2a",
+    "event_id": "fba1cf9b-b16b-4a5f-8ce8-27ffa237c22f",
+    "seq": 20
+  },
+  "project_id": "44c06a64-c8ed-4153-96af-b49db29c39e3",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "4e925b90-1781-4163-9ec3-bcdd1fa31011",
+    "cycle": 1,
+    "digest": "f8f35a66c1ca563749820fa05aef04b8ac20d110f6b5e009d43f42a45edf4e8f",
+    "engine_id": "claudeloop",
+    "event_id": "198a963a-dbc3-409e-acc9-048172f433ef",
+    "job_id": "bcd8e0b1-385d-43dc-ad1f-cad988f80cc9",
+    "kind": "QuestionAsked",
+    "payload": {
+      "blocking": false,
+      "cycle": 1,
+      "default": "Revert immediately \u2014 the 7 gates are non-negotiable, and main/develop must stay green",
+      "item_id": "regression_response",
+      "stage": "laddering",
+      "text": "If an optimization breaks a gate (test, coverage, correctness), do you revert the PR or fix-forward with a follow-up?"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-22T03:35:19.848756+00:00",
+    "project_id": "44c06a64-c8ed-4153-96af-b49db29c39e3",
+    "provenance": "agent",
+    "seq": 21
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

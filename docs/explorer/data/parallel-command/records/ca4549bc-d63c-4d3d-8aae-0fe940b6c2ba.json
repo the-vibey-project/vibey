@@ -1,0 +1,43 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "a9d5d71e8c54ff34bfeb51badbc36c52f2a31d3757403db043f7f524e7c87517",
+    "event_id": "4999cd74-d0e6-4caa-950a-7b033adb5e58",
+    "seq": 32
+  },
+  "previous": {
+    "digest": "fe32ec32449c1bf2c0021ca6f027b54b65707a140b75328d5e96d4fc44270994",
+    "event_id": "5a42f451-d9fd-4f17-8258-10a9e1fc1c66",
+    "seq": 30
+  },
+  "project_id": "bed522a2-0b3e-4bff-9cd6-7c13fe40779a",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "423f68b4-5f5f-4b40-8cf3-78ee60556acb",
+    "cycle": 1,
+    "digest": "636ec59d10a515b112e42106d514d7f6bc013ae18c423fcef675fb307d7bcd5a",
+    "engine_id": "claudeloop",
+    "event_id": "ca4549bc-d63c-4d3d-8aae-0fe940b6c2ba",
+    "job_id": "92d834a4-4bf2-4699-9354-adbea7936d77",
+    "kind": "QuestionAsked",
+    "payload": {
+      "blocking": false,
+      "cycle": 1,
+      "default": "Not allowed - two jobs on the same cycle+phase would contend for the same worktree and integrate lock. Validate upfront: if same cycle+phase detected in the set, fail fast with clear error before claiming any jobs.",
+      "item_id": "resource_contention_rule",
+      "stage": "example_mapping",
+      "text": "Can two jobs in the same --parallel set be from the same cycle and phase (e.g., both BUILD jobs on cycle 1)? If not, should this be validated upfront or discovered at runtime?"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-22T03:43:10.784198+00:00",
+    "project_id": "bed522a2-0b3e-4bff-9cd6-7c13fe40779a",
+    "provenance": "agent",
+    "seq": 31
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

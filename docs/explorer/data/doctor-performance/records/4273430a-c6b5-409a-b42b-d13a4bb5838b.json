@@ -1,0 +1,43 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "a77837c9c23147df1b562b1a32bd245f9eee1725d88a56f18187da635b168090",
+    "event_id": "02857731-1ae1-45f5-adac-cb6e52b65d16",
+    "seq": 58
+  },
+  "previous": {
+    "digest": "ef95e77144efda8f45514c3292e737144de3c6268e471e4e404b02e8f75bf8a4",
+    "event_id": "d14f2d66-03c8-441d-b114-5f8a571cc324",
+    "seq": 56
+  },
+  "project_id": "5ea01f61-8536-4ace-90cb-18700a12e410",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "018b8e94-acc6-40a4-b67b-9c63b2186319",
+    "cycle": 1,
+    "digest": "2c813e64ea559f24ff2844ca2f8b399c2470abe3d6efc541dd27ea6853e5ec01",
+    "engine_id": "claudeloop",
+    "event_id": "4273430a-c6b5-409a-b42b-d13a4bb5838b",
+    "job_id": "4c2ec03f-d670-44f9-9f05-47597984ab20",
+    "kind": "QuestionAsked",
+    "payload": {
+      "blocking": true,
+      "cycle": 1,
+      "default": "Some code path depends on fresh pool creation or migration re-checking per engine; or cleanup/teardown wasn't properly centralized causing resource leaks",
+      "item_id": "build_app_breakage",
+      "stage": "premortem",
+      "text": "The build_app() optimization inadvertently broke something. What did consolidating those calls break?"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-22T03:49:51.679457+00:00",
+    "project_id": "5ea01f61-8536-4ace-90cb-18700a12e410",
+    "provenance": "agent",
+    "seq": 57
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

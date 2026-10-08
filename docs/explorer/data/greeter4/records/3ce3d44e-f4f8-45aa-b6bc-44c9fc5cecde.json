@@ -1,0 +1,39 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "59e9b4897a47982ea9827d11b13bae930b82f4adce8079934fbf9db287df97e7",
+    "event_id": "64d12dfa-e3e2-4b9f-af54-571154244c9f",
+    "seq": 48
+  },
+  "previous": {
+    "digest": "7ca36464d412be0490269cac0ddb8d6732ede30fc4389dd38d9d1f1d552475e0",
+    "event_id": "5b9367ce-6ecb-41fa-ba2f-e2da8699744c",
+    "seq": 46
+  },
+  "project_id": "8ab823c9-89e4-4050-884c-9008c8b14ef8",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "e2ea5a0a-9fcd-4aef-b863-3e1dc2c0d3df",
+    "cycle": 1,
+    "digest": "4cbe12d830aa83a50313a538299b9f1a2cb0cf59eb728f481499769c5033c448",
+    "engine_id": "claudeloop",
+    "event_id": "3ce3d44e-f4f8-45aa-b6bc-44c9fc5cecde",
+    "job_id": "705692f1-69a1-4cc2-ade7-8aa3d1407b67",
+    "kind": "AnswerGiven",
+    "payload": {
+      "answer": "Target: 5,000 redirects/sec sustained, 10,000/sec peak (10x current baseline); Stretch: 20,000/sec; Creation: 500/sec sustained",
+      "item_id": "throughput_capacity_nfr"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-20T02:35:27.397310+00:00",
+    "project_id": "8ab823c9-89e4-4050-884c-9008c8b14ef8",
+    "provenance": "trusted",
+    "seq": 47
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

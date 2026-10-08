@@ -1,0 +1,28 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": null,
+  "previous": null,
+  "project_id": "bfd47902-96a6-4846-9330-d8efd7c8c56d",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "449adffe-4127-4ddc-b199-a3ba469259e2",
+    "cycle": 1,
+    "digest": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a",
+    "engine_id": null,
+    "event_id": "3a599781-13a0-42ba-9436-418efb6094a4",
+    "job_id": null,
+    "kind": "VisualDesignDeclined",
+    "payload": {},
+    "phase": "design",
+    "produced_at": "2026-08-22T21:44:02.536933+00:00",
+    "project_id": "bfd47902-96a6-4846-9330-d8efd7c8c56d",
+    "provenance": "trusted",
+    "seq": 1
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

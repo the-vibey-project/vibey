@@ -1,0 +1,43 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "d28638c4d66c74009542f4b3d066ea89d45399f359e5c75c8b7057fa14332897",
+    "event_id": "9c66bafc-c9c5-4d0f-bad4-61f16d5a95cc",
+    "seq": 38
+  },
+  "previous": {
+    "digest": "39d8a7132c6cf75229556c5ba961c5d9b28d39dc1c9bb88b6ad05a3b042d4822",
+    "event_id": "be44a053-6027-4b5c-a17c-f5135ef49a27",
+    "seq": 36
+  },
+  "project_id": "44c06a64-c8ed-4153-96af-b49db29c39e3",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "bacc8924-f7ac-47ad-9df7-7ecb84415ac6",
+    "cycle": 1,
+    "digest": "5dbfcc4a5c882dcbb99c00f21a0283005e0d443b05675f3c44a1c8f5bd8bcbad",
+    "engine_id": "claudeloop",
+    "event_id": "247a9873-a59b-4e28-830c-44e2968528dd",
+    "job_id": "bcd8e0b1-385d-43dc-ad1f-cad988f80cc9",
+    "kind": "QuestionAsked",
+    "payload": {
+      "blocking": true,
+      "cycle": 1,
+      "default": "After \u2014 the first PR can measure manually and commit numbers as evidence; the harness lands in PR 2 so subsequent optimizations have a regression suite",
+      "item_id": "benchmark_harness_timing",
+      "stage": "walking_skeleton",
+      "text": "Does the reusable benchmark harness need to land before the first optimization, or can it follow?"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-22T03:44:17.531877+00:00",
+    "project_id": "44c06a64-c8ed-4153-96af-b49db29c39e3",
+    "provenance": "agent",
+    "seq": 37
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

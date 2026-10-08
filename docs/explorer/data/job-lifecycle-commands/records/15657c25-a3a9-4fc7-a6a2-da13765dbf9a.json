@@ -1,0 +1,43 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "3892c89c18be36249acb58f0311ccbbc286025b0b1e5541e15ea83091b044365",
+    "event_id": "20b32222-1029-4666-bb04-fa9655766e27",
+    "seq": 20
+  },
+  "previous": {
+    "digest": "4fc22dc9079e465d5b1c9fcb7e2084a13e4d885e2f7285998fd0598c98d4cf8f",
+    "event_id": "b6d1ce76-cd0b-4bae-a699-9d8d5a343b41",
+    "seq": 18
+  },
+  "project_id": "2f6a93b6-2d73-4aff-bc94-16539841133f",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "fa7be9b1-ae6d-4fd6-9817-9640a68014e8",
+    "cycle": 1,
+    "digest": "dc328bcf83801a4d9b4aa5a513af4a6bca17cc695e885545359489f36ef6b85c",
+    "engine_id": "claudeloop",
+    "event_id": "15657c25-a3a9-4fc7-a6a2-da13765dbf9a",
+    "job_id": "334db377-8cb0-4a72-9cc0-78b45fc9bb38",
+    "kind": "QuestionAsked",
+    "payload": {
+      "blocking": true,
+      "cycle": 1,
+      "default": "All commands succeed quietly as no-ops: stopping a CANCELLED job, winding back to current seq, continuing an already READY job, restarting an already CANCELLED job all return success without error or double-action",
+      "item_id": "idempotency_handling",
+      "stage": "laddering",
+      "text": "What should happen when a command is applied to a job already in the target state (e.g., stopping an already CANCELLED job)?"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-22T03:35:35.129643+00:00",
+    "project_id": "2f6a93b6-2d73-4aff-bc94-16539841133f",
+    "provenance": "agent",
+    "seq": 19
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

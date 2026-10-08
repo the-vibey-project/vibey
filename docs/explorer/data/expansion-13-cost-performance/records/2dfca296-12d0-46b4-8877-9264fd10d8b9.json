@@ -1,0 +1,43 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "06f2eca6d05b01d58a6d52fdfdc2fa38f0f0278358ee105363b66a021acd852c",
+    "event_id": "adc2c299-cf05-49c3-b571-b2f3af52f105",
+    "seq": 28
+  },
+  "previous": {
+    "digest": "0c9329b4a5cfc256115d1703ee1cba8f78c3be0be289f6e75fe2842eeef9867c",
+    "event_id": "2911c2a2-5870-4451-816b-f0be92f0aad3",
+    "seq": 26
+  },
+  "project_id": "a1d6b837-46f3-40c0-b6a2-8b3babb7fe15",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "def52944-239c-413b-831d-896533b8a950",
+    "cycle": 1,
+    "digest": "01cf734da75eebd4ce635e052e82f6f2c1b12288568e119c677065661637cb20",
+    "engine_id": "claudeloop",
+    "event_id": "2dfca296-12d0-46b4-8877-9264fd10d8b9",
+    "job_id": "dd8513f6-0d76-49a5-8bdc-75167dea5385",
+    "kind": "QuestionAsked",
+    "payload": {
+      "blocking": false,
+      "cycle": 1,
+      "default": "Acceptable: modify conftest.py to add worker-specific DB fixtures. Prohibited: any edits to tests/system/test_delivery_stage_set.py or other protected test_*.py files",
+      "item_id": "fixture_scope",
+      "stage": "example_mapping",
+      "text": "What's a concrete example of an acceptable conftest/fixture change vs. a prohibited change to protected test files?"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-20T20:44:04.546112+00:00",
+    "project_id": "a1d6b837-46f3-40c0-b6a2-8b3babb7fe15",
+    "provenance": "agent",
+    "seq": 27
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

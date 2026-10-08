@@ -1,0 +1,40 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "7842517003d3188110f0f465954b0ecff589806cb8cb54badeb558d03aad338d",
+    "event_id": "2aa9d6c1-387b-4eb6-a536-52b2fef2d376",
+    "seq": 621
+  },
+  "previous": {
+    "digest": "7842517003d3188110f0f465954b0ecff589806cb8cb54badeb558d03aad338d",
+    "event_id": "139f9574-97b3-473c-9d71-5cce9dbe0fd1",
+    "seq": 601
+  },
+  "project_id": "8ab823c9-89e4-4050-884c-9008c8b14ef8",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "9e5eb83c-50a6-4053-ac1b-f580fc749161",
+    "cycle": 1,
+    "digest": "88b8051a3b25d149ca191e012a095e286cb37d56341d5cb982ad5a1d31b26862",
+    "engine_id": null,
+    "event_id": "25fb1af0-d239-4feb-a5e6-96de38724a81",
+    "job_id": "9ec96f89-abfe-46d7-8c58-bfe8cdc2e8da",
+    "kind": "FindingRaised",
+    "payload": {
+      "finding_id": "f_integrate_code-filtering_0486f6e1",
+      "severity": "high",
+      "text": "merge conflict integrating 'code-filtering': Auto-merging README.md\nCONFLICT (add/add): Merge conflict in README.md\nAuto-merging requirements.txt\nCONFLICT (add/add): Merge conflict in requirements.txt\nAuto-merging tests/__init__.py\nAutomatic merge failed; fix conflicts and then commit the result."
+    },
+    "phase": "build",
+    "produced_at": "2026-08-20T03:14:44.842683+00:00",
+    "project_id": "8ab823c9-89e4-4050-884c-9008c8b14ef8",
+    "provenance": "agent",
+    "seq": 602
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

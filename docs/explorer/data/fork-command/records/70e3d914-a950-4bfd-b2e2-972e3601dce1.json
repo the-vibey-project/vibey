@@ -1,0 +1,39 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "7db5377e570def22009bea2bfcb1281427a73111a630f06dd070e4b637a7323c",
+    "event_id": "7d45e033-911c-437f-9c13-f4106494aabe",
+    "seq": 60
+  },
+  "previous": {
+    "digest": "fd4780da930488ab748efa72637cdbecf49b2ed5b97ae0c676941164609083cc",
+    "event_id": "1d41b08b-7493-4d0f-bf1d-ea5624659552",
+    "seq": 58
+  },
+  "project_id": "ab0b06f9-55a4-4b47-ac08-254e7fdd9036",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "630c25c0-6332-4ad2-88fd-b45b01ca2155",
+    "cycle": 1,
+    "digest": "1725bfa07eef5c1c151d9ea49200d2db34d9d36a505741c0b8f52e4f5dbf38a8",
+    "engine_id": "claudeloop",
+    "event_id": "70e3d914-a950-4bfd-b2e2-972e3601dce1",
+    "job_id": "48f9ef01-8b95-4709-adde-ed0ece390f8d",
+    "kind": "AnswerGiven",
+    "payload": {
+      "answer": "Fork again from the correct seq; the wrong fork becomes an abandoned terminal job cleaned up by doctor. No undo/rewind of fork operation itself - treat it like any other failed job",
+      "item_id": "wrong_seq_recovery"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-22T03:46:31.561806+00:00",
+    "project_id": "ab0b06f9-55a4-4b47-ac08-254e7fdd9036",
+    "provenance": "trusted",
+    "seq": 59
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

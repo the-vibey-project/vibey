@@ -1,0 +1,42 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "5ac5c339e0a6b6c39e8fdc1183ef405f237b00bba3f7ee6d71f9e66b9a07be5c",
+    "event_id": "ab6cf3b7-188b-42a5-be95-839e38e73f37",
+    "seq": 726
+  },
+  "previous": {
+    "digest": "460e001b5673537c10be4b5baf77bae25b470d57e3b918f7d01c94582bd39ba2",
+    "event_id": "6e5a5006-329c-403e-be98-fd145dbc53e1",
+    "seq": 571
+  },
+  "project_id": "d733035f-e0f9-4f67-aba2-270068d6a9c6",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "8bfb1df6-feaa-4f7f-bef2-4d09bdef47e9",
+    "cycle": 1,
+    "digest": "49aebf2a30510c1192f124058d0b2f70fed1c540c232bd0e5ea7e9aeb3eed6e1",
+    "engine_id": "codexloop",
+    "event_id": "70e74ca3-2203-47cd-a8cc-e32fb090f9a3",
+    "job_id": "540c9474-cf56-4e0d-b86f-c2891c0825b8",
+    "kind": "VerdictRendered",
+    "payload": {
+      "complete": false,
+      "remaining_work": [
+        "Implement work item operator-wiring: Wire kopf deleted-CR reconciler to the abandon service"
+      ],
+      "success": false
+    },
+    "phase": "build",
+    "produced_at": "2026-08-22T19:19:33.420184+00:00",
+    "project_id": "d733035f-e0f9-4f67-aba2-270068d6a9c6",
+    "provenance": "agent",
+    "seq": 683
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 2,
+    "paths": 0
+  }
+}

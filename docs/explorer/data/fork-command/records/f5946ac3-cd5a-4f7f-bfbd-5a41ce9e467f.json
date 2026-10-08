@@ -1,0 +1,43 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "fe49e70e4d21d1b344a7cf0a37e05e459c2abca27300b47e43d3f7449346d840",
+    "event_id": "d747fe39-5aac-4d8c-a5da-faf06625ff4d",
+    "seq": 48
+  },
+  "previous": {
+    "digest": "976f53baef02a30184e2a1994321064f19a64b12cf2c0ffdab547ca09ee5e098",
+    "event_id": "c60451c4-797d-4f5b-a6b9-299febc36855",
+    "seq": 46
+  },
+  "project_id": "ab0b06f9-55a4-4b47-ac08-254e7fdd9036",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "28a42458-ea51-47c6-b3fb-62b70288deef",
+    "cycle": 1,
+    "digest": "f79d8bc75d5488485f0f363672973a7d805037d9a8eb21ec640f170756bd42ac",
+    "engine_id": "claudeloop",
+    "event_id": "f5946ac3-cd5a-4f7f-bfbd-5a41ce9e467f",
+    "job_id": "48f9ef01-8b95-4709-adde-ed0ece390f8d",
+    "kind": "QuestionAsked",
+    "payload": {
+      "blocking": false,
+      "cycle": 1,
+      "default": "Metrics: fork operation duration, fork success/failure rate, active fork count per origin job. Logs: each fork records origin job_id + seq in structured output; `vibey status --forks \u003cjob_id\u003e` lists all forks of a given job",
+      "item_id": "fork_observability",
+      "stage": "nfr_planguage",
+      "text": "What fork-specific metrics and logs must be surfaced to operators for debugging and capacity planning?"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-22T03:44:18.262225+00:00",
+    "project_id": "ab0b06f9-55a4-4b47-ac08-254e7fdd9036",
+    "provenance": "agent",
+    "seq": 47
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

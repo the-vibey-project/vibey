@@ -1,0 +1,39 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "ef6a10b9a56385b3414361c202f16a37733ee0bcacf84b5b682310d4613021be",
+    "event_id": "6623ae31-5118-4aa4-93e1-cac45abc04a1",
+    "seq": 9
+  },
+  "previous": {
+    "digest": "07fabeb47292ece32d4fe588372cf2db823d8c446ab917e543503d6e98ffbca2",
+    "event_id": "58fc6c65-24fa-4aab-a707-13b26f5608c7",
+    "seq": 7
+  },
+  "project_id": "8f254b4c-df0a-4056-8937-6eba30efcfa6",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "e0794ad0-440e-429e-a7e5-93d5a8ec1a7c",
+    "cycle": 1,
+    "digest": "00c2655396746884c6752bb26f2c429587252a264feb31193f895510b51de38e",
+    "engine_id": "claudeloop",
+    "event_id": "11af5333-e51c-4a81-b078-6c98b82777ec",
+    "job_id": "40fb97d9-4ab1-4fa8-9ae2-693c2b7a7fc9",
+    "kind": "AnswerGiven",
+    "payload": {
+      "answer": "A small command-line tool (CLI) that greets the user by name",
+      "item_id": "system_description"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-19T18:26:57.552786+00:00",
+    "project_id": "8f254b4c-df0a-4056-8937-6eba30efcfa6",
+    "provenance": "trusted",
+    "seq": 8
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

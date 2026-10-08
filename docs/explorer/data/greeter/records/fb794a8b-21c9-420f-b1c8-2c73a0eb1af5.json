@@ -1,0 +1,39 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "335967ec59d1a1dd2fef91c2aee205095d79154232ab1097be6ef02225d867e7",
+    "event_id": "ff4cd7b3-d844-4f73-b38e-f00ed046a550",
+    "seq": 2
+  },
+  "previous": null,
+  "project_id": "26f89c38-c86b-4ddf-be75-c579a118e40e",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "ed8318fa-a8c1-4c93-bdde-2d670dac5864",
+    "cycle": 1,
+    "digest": "3e1c99976d661cbfec5e0f1ceb88a3623864e63457f785165a923d7c1d948929",
+    "engine_id": "claudeloop",
+    "event_id": "fb794a8b-21c9-420f-b1c8-2c73a0eb1af5",
+    "job_id": "2bdd2b5e-b4f1-4004-9dbf-78d267fea803",
+    "kind": "QuestionAsked",
+    "payload": {
+      "blocking": true,
+      "cycle": 1,
+      "default": "A greeting service API that returns personalized greetings",
+      "item_id": "design_goal",
+      "stage": "context_free",
+      "text": "What system or feature are you designing?"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-19T08:28:34.268185+00:00",
+    "project_id": "26f89c38-c86b-4ddf-be75-c579a118e40e",
+    "provenance": "agent",
+    "seq": 1
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

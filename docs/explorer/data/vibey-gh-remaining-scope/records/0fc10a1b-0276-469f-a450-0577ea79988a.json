@@ -1,0 +1,39 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "f327588f3699475838f49bc46c892b26984eeb34abf279f274225a3208062e00",
+    "event_id": "10adab7f-43bd-4de9-9746-552c0fc81869",
+    "seq": 38
+  },
+  "previous": {
+    "digest": "ba808e6425bf7f9b39e978d401ded83c5662c5e2fd0894a6c286a6fc2827dcc7",
+    "event_id": "f722eaa5-b7e9-4272-9f15-531673c16685",
+    "seq": 36
+  },
+  "project_id": "d482c3e2-029e-4bb8-a9a1-de411816c6ae",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "680bede8-1c87-4c70-9bd2-3226bcd65859",
+    "cycle": 1,
+    "digest": "27bbea80b797cdf2b0eb3ea8d5062a82742b16af4753021ae10ce67f6572b3fc",
+    "engine_id": "claudeloop",
+    "event_id": "0fc10a1b-0276-469f-a450-0577ea79988a",
+    "job_id": "d2626f25-d550-454e-bacd-7a7e6c9b52cd",
+    "kind": "AnswerGiven",
+    "payload": {
+      "answer": "Node.js, React, and PostgreSQL.",
+      "item_id": "17"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-31T02:05:28.732531+00:00",
+    "project_id": "d482c3e2-029e-4bb8-a9a1-de411816c6ae",
+    "provenance": "trusted",
+    "seq": 37
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

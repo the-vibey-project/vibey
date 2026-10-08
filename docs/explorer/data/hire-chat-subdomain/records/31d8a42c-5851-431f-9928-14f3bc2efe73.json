@@ -1,0 +1,43 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "68ac5b72772f8f208906da243200735acea7f0a73c39593c256f872e4aa3b965",
+    "event_id": "2cb8a339-7956-4e2f-8d42-0ce9051b5b6b",
+    "seq": 36
+  },
+  "previous": {
+    "digest": "2c377296b63dead3b08021442c967237954f0ca0b78050c9d636f02029fcea8d",
+    "event_id": "70ef4962-8208-455c-ad4a-f4c23aab20d6",
+    "seq": 34
+  },
+  "project_id": "0ee95624-eec4-4e8e-9a14-6ad9a37dcff4",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "fe971bf0-e8db-4709-b914-d5ba1a932571",
+    "cycle": 1,
+    "digest": "e3dfe92c87d118ebebc0ec1a9b6c1fec5f6a2ba3c67ad1bbd12ad21af0edabec",
+    "engine_id": "claudeloop",
+    "event_id": "31d8a42c-5851-431f-9928-14f3bc2efe73",
+    "job_id": "1343d0fd-bf3f-4739-8c21-cbf7693c673e",
+    "kind": "QuestionAsked",
+    "payload": {
+      "blocking": true,
+      "cycle": 1,
+      "default": "AskAdam.tsx: test both variant='widget' (existing behavior unchanged) and variant='page' (no close button, renders inline notice when disabled, calls track with surface: 'page'); [path] page.tsx is in src/app/** so excluded from coverage requirement per vitest.config.ts; next.config.ts routing rules verified manually via curl, not unit-tested",
+      "item_id": "coverage_strategy",
+      "stage": "walking_skeleton",
+      "text": "What test coverage is required to keep the 100% threshold passing?"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-20T20:14:22.405778+00:00",
+    "project_id": "0ee95624-eec4-4e8e-9a14-6ad9a37dcff4",
+    "provenance": "agent",
+    "seq": 35
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 1
+  }
+}

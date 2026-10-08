@@ -1,0 +1,43 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "02cdf4d73626a69c1efc85ed1944ab12f3940deb2af2eb4c394493618fc47ce9",
+    "event_id": "cae108fa-edea-4dc5-800a-8da3573047e3",
+    "seq": 10
+  },
+  "previous": {
+    "digest": "f70bf6b20ef4f2002d54e841659f4e023c9cf00a7f6d92eb770c765ae6d94638",
+    "event_id": "be93d437-f8e1-41c9-a647-cd9c4a3ca383",
+    "seq": 8
+  },
+  "project_id": "8ab823c9-89e4-4050-884c-9008c8b14ef8",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "ce508a40-fc94-4127-b73a-e1d69086eafc",
+    "cycle": 1,
+    "digest": "31151f418678c95642ea9c4f71754925ee8d9908d9cb99bfc4a23b8f7f98385f",
+    "engine_id": "claudeloop",
+    "event_id": "e8ff9667-58fd-4c2e-9854-0a114fb90e24",
+    "job_id": "705692f1-69a1-4cc2-ade7-8aa3d1407b67",
+    "kind": "QuestionAsked",
+    "payload": {
+      "blocking": true,
+      "cycle": 1,
+      "default": "End users (link clickers), link creators (registered users), system admins",
+      "item_id": "primary_actors",
+      "stage": "job_story",
+      "text": "Who are the primary actors/users of this system?"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-20T02:32:38.468713+00:00",
+    "project_id": "8ab823c9-89e4-4050-884c-9008c8b14ef8",
+    "provenance": "agent",
+    "seq": 9
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

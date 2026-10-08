@@ -1,0 +1,43 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "f3750272db8d5df60fab66e86c3d08075cc5e07b6ef6a2e1f7fc2933f139cdba",
+    "event_id": "05433f8c-8210-4294-9fd3-81e383b04b1d",
+    "seq": 57
+  },
+  "previous": {
+    "digest": "de55c50e27592a183d62dcdc3cca99831d8169327c5a9ec8b9c476440c0044d3",
+    "event_id": "f5762659-bca4-4adf-a5f0-b23721fa3b85",
+    "seq": 53
+  },
+  "project_id": "bed522a2-0b3e-4bff-9cd6-7c13fe40779a",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "f9fc8731-282e-4350-95c7-9a972a1a32db",
+    "cycle": 1,
+    "digest": "a6d067772ba5cf551608afe5052d0cbface5caf5df0560d6a6e2059b2a5d8324",
+    "engine_id": "claudeloop",
+    "event_id": "1b0a39ce-e51b-4eae-a82d-64cc1fe39ad6",
+    "job_id": "92d834a4-4bf2-4699-9354-adbea7936d77",
+    "kind": "QuestionAsked",
+    "payload": {
+      "blocking": true,
+      "cycle": 1,
+      "default": "Each job has its own lease with independent expiry. j1's lease is already released (completed). j2's lease expires after the timeout, making it claimable again - another worker can pick it up and resume from the beginning (idempotent). j3's lease also expires and becomes claimable. The crashed worker's process tree is cleaned up by the OS. No special recovery needed beyond existing lease expiry.",
+      "item_id": "worker_crash_recovery",
+      "stage": "premortem",
+      "text": "Imagine the worker process running `vibey work --parallel j1,j2,j3` crashes 2 minutes in. j1 has completed and integrated, j2 is mid-execution, j3 hasn't started. Walk through exactly what happens to each job's lease, worktree, and status. Can another worker safely resume the incomplete work?"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-22T03:51:38.817524+00:00",
+    "project_id": "bed522a2-0b3e-4bff-9cd6-7c13fe40779a",
+    "provenance": "agent",
+    "seq": 56
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

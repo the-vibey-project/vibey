@@ -1,0 +1,40 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "7842517003d3188110f0f465954b0ecff589806cb8cb54badeb558d03aad338d",
+    "event_id": "6cadd548-b577-492a-a0c7-4349e347ff74",
+    "seq": 577
+  },
+  "previous": {
+    "digest": "03a56d2e8cf278c5af0dff613da50260d9f103a178cb7c2d8a4b4ba3c253bb87",
+    "event_id": "5afa0ab3-bf2e-4183-b56d-f0045bf9dc8f",
+    "seq": 529
+  },
+  "project_id": "26f89c38-c86b-4ddf-be75-c579a118e40e",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "5c6182cc-d50f-4ccd-98cb-a0e0a8cb91b5",
+    "cycle": 1,
+    "digest": "f0ccbdc1df26bbcd70ef0412558f780082a0821afb48fc814aa9e0917e316ee0",
+    "engine_id": null,
+    "event_id": "607b2177-0e7e-4090-8b7a-b5e7c42974cb",
+    "job_id": "15aacce3-b768-4959-878e-1d2a78b927b9",
+    "kind": "FindingRaised",
+    "payload": {
+      "finding_id": "f_integrate_lint-readme_c29ba4e7",
+      "severity": "high",
+      "text": "merge conflict integrating 'lint-readme': warning: Cannot merge binary files: .coverage (HEAD vs. vibey/1/lint-readme)\nAuto-merging .coverage\nCONFLICT (add/add): Merge conflict in .coverage\nAuto-merging greet.egg-info/PKG-INFO\nCONFLICT (add/add): Merge conflict in greet.egg-info/PKG-INFO\nAuto-merging greet.egg-info/SOURCES.txt\nCONFLICT (add/add): Merge conflict in greet.egg-info/SOURCES.txt\nAuto-merging greet.py\nCONFLICT (add/add): Merge conflict in greet.py\nAuto-merging pyproject.toml\nCONFLICT (add/add): Merge conflict in pyproject.toml\nAuto-merging tests/test_greet.py\nCONFLICT (add/add): Merge conflict in tests/test_greet.py\nAutomatic merge failed; fix conflicts and then commit the result."
+    },
+    "phase": "build",
+    "produced_at": "2026-08-19T13:40:02.887355+00:00",
+    "project_id": "26f89c38-c86b-4ddf-be75-c579a118e40e",
+    "provenance": "agent",
+    "seq": 539
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

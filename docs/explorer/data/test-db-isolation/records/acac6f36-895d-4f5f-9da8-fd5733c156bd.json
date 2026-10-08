@@ -1,0 +1,39 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "fc060a1669f0c583a7232e410552d23bc383ab17aaa1b7c5dea53cf9aef4ea7f",
+    "event_id": "93bab075-01a5-4396-be96-fa4d6f39d403",
+    "seq": 34
+  },
+  "previous": {
+    "digest": "6b40cd62df0f13c4659e93e04bc788ce147a0d1879c56388fcc0853b78a6dc06",
+    "event_id": "e1071967-55b5-4f13-a5fe-38327f87f596",
+    "seq": 32
+  },
+  "project_id": "df7e868b-1fbf-451b-8ceb-126359b7588e",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "119cc72c-4dd5-4e49-8276-71ee48003839",
+    "cycle": 1,
+    "digest": "a6e53f4526154213d69dd021cc385d795502243d9e14e66221bbebc09813eba5",
+    "engine_id": "claudeloop",
+    "event_id": "acac6f36-895d-4f5f-9da8-fd5733c156bd",
+    "job_id": "3a3b336c-c2aa-4400-a762-ae12246358d3",
+    "kind": "AnswerGiven",
+    "payload": {
+      "answer": "User creates a record with name='Widget A', quantity=10, status='active'; system validates required fields are present, saves to database with auto-generated ID and timestamp, returns confirmation",
+      "item_id": "happy_path_example"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-22T17:05:48.956987+00:00",
+    "project_id": "df7e868b-1fbf-451b-8ceb-126359b7588e",
+    "provenance": "trusted",
+    "seq": 33
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

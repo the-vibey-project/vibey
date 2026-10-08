@@ -1,0 +1,39 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "94df820b3aec3871a1aa5606f98c52881889f8910a1d41a55bad0f7b581d2970",
+    "event_id": "6786679c-8806-4523-94e3-ce04fbf683ea",
+    "seq": 50
+  },
+  "previous": {
+    "digest": "37edd31340b75e2cc46ba2b1391db0945e5e5728662615e97a532bca1e29d8a5",
+    "event_id": "d039c51b-8403-4678-a409-399a96f8a489",
+    "seq": 48
+  },
+  "project_id": "44c06a64-c8ed-4153-96af-b49db29c39e3",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "6bddfaac-3dde-4455-95c5-246b6cc787ff",
+    "cycle": 1,
+    "digest": "780a1ef674d945b401c4dbafb5c598ad5f1ec86490b77e67a1502ca93f92cac3",
+    "engine_id": "claudeloop",
+    "event_id": "2ad5e359-b911-4561-a272-54059bb97866",
+    "job_id": "bcd8e0b1-385d-43dc-ad1f-cad988f80cc9",
+    "kind": "AnswerGiven",
+    "payload": {
+      "answer": "Past: unmeasured (establish in PR 1), Must: 100ms, Plan: 50ms, Stretch: 20ms \u2014 measured p99 over 100 iterations",
+      "item_id": "latency_planguage"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-22T03:46:32.434563+00:00",
+    "project_id": "44c06a64-c8ed-4153-96af-b49db29c39e3",
+    "provenance": "trusted",
+    "seq": 49
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

@@ -1,0 +1,43 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "f7415616f8eb7938c48b33dd9db2d764eba46103606e027fccc44858e781b55e",
+    "event_id": "f4fba32d-52d2-4ab6-a675-47d0142ff1d8",
+    "seq": 18
+  },
+  "previous": {
+    "digest": "30178f6a50fa7bafc9a1810a7031fdad9c3d60ed5e23c79f1d7c56060c162ede",
+    "event_id": "048f2917-12cf-417f-8c66-0983f9591f50",
+    "seq": 16
+  },
+  "project_id": "bed522a2-0b3e-4bff-9cd6-7c13fe40779a",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "9fa169f0-2640-4e7f-8ba5-b40b9d4938a3",
+    "cycle": 1,
+    "digest": "e569932650b400f48f72b1715cf63da67599ef6acbc2a47ff42b606d4bf467f8",
+    "engine_id": "claudeloop",
+    "event_id": "332a69fd-dff5-451b-b679-84f276bb8b20",
+    "job_id": "92d834a4-4bf2-4699-9354-adbea7936d77",
+    "kind": "QuestionAsked",
+    "payload": {
+      "blocking": true,
+      "cycle": 1,
+      "default": "I wanted to run a specific set of related jobs (e.g., build + test + deploy-design) together and see their combined progress, rather than running them separately or hoping the worker pool picks them up in the right order.",
+      "item_id": "operational_pain",
+      "stage": "laddering",
+      "text": "What specific operational pain are you experiencing right now that prompted this request? Describe the last time you wished you had this capability."
+    },
+    "phase": "design",
+    "produced_at": "2026-08-22T02:59:05.967096+00:00",
+    "project_id": "bed522a2-0b3e-4bff-9cd6-7c13fe40779a",
+    "provenance": "agent",
+    "seq": 17
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

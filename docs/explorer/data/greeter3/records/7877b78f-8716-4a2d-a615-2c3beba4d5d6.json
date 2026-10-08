@@ -1,0 +1,43 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "07d463f18f359127d5cce74d5d53d05abfad7fc5f71a9cd43a7a00a64587ca78",
+    "event_id": "624f8282-d41f-4a67-bc31-950a48549993",
+    "seq": 5
+  },
+  "previous": {
+    "digest": "64fa12e8181d4de1489e52bec4d2dc29cd1ce2f1d80d284df63de6ec5313d434",
+    "event_id": "92f10220-4ada-4ab0-86a2-39bdfa4541ce",
+    "seq": 3
+  },
+  "project_id": "5e76341f-ba5f-4272-8355-3df5d489bbcd",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "d2fceba7-9ec9-475e-922d-fec071f1a258",
+    "cycle": 1,
+    "digest": "1903a15392c4df77a20dfa33f5f3fc5a0d265d19c731dba9df8d38014002d7fd",
+    "engine_id": "claudeloop",
+    "event_id": "7877b78f-8716-4a2d-a615-2c3beba4d5d6",
+    "job_id": "e58deb6b-5356-4a39-8acf-5dc898bba380",
+    "kind": "QuestionAsked",
+    "payload": {
+      "blocking": false,
+      "cycle": 1,
+      "default": "Must work with existing codebase architecture and dependencies",
+      "item_id": "constraints",
+      "stage": "context_free",
+      "text": "Are there any critical constraints (performance, compatibility, scale, tech stack)?"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-20T00:47:09.559292+00:00",
+    "project_id": "5e76341f-ba5f-4272-8355-3df5d489bbcd",
+    "provenance": "agent",
+    "seq": 4
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

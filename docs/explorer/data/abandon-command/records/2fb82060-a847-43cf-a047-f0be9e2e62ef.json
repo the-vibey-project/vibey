@@ -1,0 +1,43 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "1aab309cf96b059572964db16cdf5542ca6e74951c62afc57a9e3a6badc77209",
+    "event_id": "3fb2b456-1e1a-4544-92ce-d43dc95c7ccd",
+    "seq": 37
+  },
+  "previous": {
+    "digest": "2a75a6e207c0f494bbad8c7b96dc29bb4110c045c6226f1bfa16c4893f788b99",
+    "event_id": "22a47d3d-57f2-4c57-b19a-c387b4a8ec1d",
+    "seq": 35
+  },
+  "project_id": "d733035f-e0f9-4f67-aba2-270068d6a9c6",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "b8bc8571-d4ce-4a72-b4c4-96959c785a34",
+    "cycle": 1,
+    "digest": "c4e519bf89b0f64f2991afbab4da5d8813e4cfed56bd5771762e26a3ea62f36f",
+    "engine_id": "claudeloop",
+    "event_id": "2fb82060-a847-43cf-a047-f0be9e2e62ef",
+    "job_id": "44e282ee-55b1-4cf9-afc3-c84870a14a5c",
+    "kind": "QuestionAsked",
+    "payload": {
+      "blocking": true,
+      "cycle": 1,
+      "default": "Job cancellation first (READY/AWAITING_HUMAN only), then guards (DONE/LEASED/race), then worktree warning. Each increment keeps the transaction atomic.",
+      "item_id": "increment_order",
+      "stage": "walking_skeleton",
+      "text": "After the minimal slice works, what's the order for adding complexity: guards (DONE/LEASED checks) first, job cancellation first, or both together?"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-22T03:43:57.958753+00:00",
+    "project_id": "d733035f-e0f9-4f67-aba2-270068d6a9c6",
+    "provenance": "agent",
+    "seq": 36
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

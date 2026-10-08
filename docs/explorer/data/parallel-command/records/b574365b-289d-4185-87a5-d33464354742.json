@@ -1,0 +1,39 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "a66bf390c0e3e8df374f838a9d5b7b215eb5fcffa0129f174b7e19f8f18aa208",
+    "event_id": "d791611a-c85f-4c7a-b339-e70d66d3d67f",
+    "seq": 15
+  },
+  "previous": {
+    "digest": "d89280f36773799c0bd8e7a2866cd8652889039bc8954a259561f2bae0acbc8f",
+    "event_id": "39972318-45bc-4591-bde4-b27a27241437",
+    "seq": 13
+  },
+  "project_id": "bed522a2-0b3e-4bff-9cd6-7c13fe40779a",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "7c19ffde-a64e-4918-a88d-4e2c74af6289",
+    "cycle": 1,
+    "digest": "7fe10bde2e0a208a88cac2cede03143f768c185c9e9a0d1d3a49c6506e42cee4",
+    "engine_id": "claudeloop",
+    "event_id": "b574365b-289d-4185-87a5-d33464354742",
+    "job_id": "92d834a4-4bf2-4699-9354-adbea7936d77",
+    "kind": "AnswerGiven",
+    "payload": {
+      "answer": "I should be honest: I am not certain a compelling one exists, and that is the most useful thing I can tell this design. The stated want is running several named jobs together on one branch. But vibey ALREADY does concurrent work -- FOR UPDATE SKIP LOCKED claiming, per-kind leases, a worktree per job, and advisory-locked integrates -- and the worker pool already picks up whatever is claimable. The scenario I can defend is narrow: an operator who wants THESE THREE specific jobs run now, together, as a named batch, with one consolidated result, instead of hoping the pool reaches them in some order. That is an ergonomics and observability gap, not a concurrency gap. If the investigation finds no scenario stronger than that, the honest deliverable is a small batch-selection command -- or a written recommendation NOT to build it. A spec that invents a justification for a feature is worse than a spec that declines one.",
+      "item_id": "concrete_scenario"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-22T02:58:27.426984+00:00",
+    "project_id": "bed522a2-0b3e-4bff-9cd6-7c13fe40779a",
+    "provenance": "trusted",
+    "seq": 14
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

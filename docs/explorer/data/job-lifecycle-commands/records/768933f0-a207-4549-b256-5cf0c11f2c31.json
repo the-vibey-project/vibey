@@ -1,0 +1,39 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "56c686a669e9bb897a9a395f4e03fe2c173f6129c5cfff91e40594a96c866abb",
+    "event_id": "918c9f6d-2c42-469e-8abf-37373fdbf86c",
+    "seq": 62
+  },
+  "previous": {
+    "digest": "38ea1aac366ed854776ab0e350edb2ccf3e286fceb21d721f8582a8a86558603",
+    "event_id": "51c397a3-e63d-4ca5-a580-e1a19937929a",
+    "seq": 60
+  },
+  "project_id": "2f6a93b6-2d73-4aff-bc94-16539841133f",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "b51df7df-ac25-4de1-b095-1573c8ccd77e",
+    "cycle": 1,
+    "digest": "d45a21e4dcdba6763ed5758eeb3a3976709d47030ab32500234348ae657ffa98",
+    "engine_id": "claudeloop",
+    "event_id": "768933f0-a207-4549-b256-5cf0c11f2c31",
+    "job_id": "334db377-8cb0-4a72-9cc0-78b45fc9bb38",
+    "kind": "AnswerGiven",
+    "payload": {
+      "answer": "Nothing prevents it by design: ledger is append-only, events 8-12 stay visible as history. Job row's current_seq field determines worker's view; worker rebuilds from ledger 1-7 only. If seq 8-12 reference git commits or rundir state, those are orphaned but harmless\u2014operator owns cleanup if needed.",
+      "item_id": "wind_back_corruption"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-22T03:54:50.487138+00:00",
+    "project_id": "2f6a93b6-2d73-4aff-bc94-16539841133f",
+    "provenance": "trusted",
+    "seq": 61
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

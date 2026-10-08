@@ -1,0 +1,39 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "801808a47c511ce69b51a7c176e755d5b484b9895cbc934d10b92d608f071a28",
+    "event_id": "fcdb827c-c689-4c32-b789-6b501779d723",
+    "seq": 40
+  },
+  "previous": {
+    "digest": "730240d0e03d60a0056757150adf9cca5ddb2118f6463c503cd78a9fb976fa39",
+    "event_id": "9e3801a0-a956-434d-8c52-870e261bea47",
+    "seq": 38
+  },
+  "project_id": "d733035f-e0f9-4f67-aba2-270068d6a9c6",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "bc78cd81-4889-44f1-a7e0-9d5d7a3bb38f",
+    "cycle": 1,
+    "digest": "f18a75893725b36a47debcb8a5ad6df5ca0eec1939c7180fb065dada687b134b",
+    "engine_id": "claudeloop",
+    "event_id": "5b09d9c7-01cf-4616-bdd6-26c8da22220c",
+    "job_id": "44e282ee-55b1-4cf9-afc3-c84870a14a5c",
+    "kind": "AnswerGiven",
+    "payload": {
+      "answer": "Abandon a non-DONE project with zero in-flight jobs: phase transition to ABANDONED, ledger event, repo_path released, idempotent on retry. All guards and job cancellation deferred to increment 2.",
+      "item_id": "minimal_slice"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-22T03:44:13.821551+00:00",
+    "project_id": "d733035f-e0f9-4f67-aba2-270068d6a9c6",
+    "provenance": "trusted",
+    "seq": 39
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

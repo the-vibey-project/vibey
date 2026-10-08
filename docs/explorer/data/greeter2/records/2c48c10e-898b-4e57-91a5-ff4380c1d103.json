@@ -1,0 +1,43 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "1bc790afc1ca90b6150fb30ba8d79a31b90a760c0dcc3e303192bb9dd0aeaabf",
+    "event_id": "e7ea9505-640e-4413-a1a1-3d6c71206eb8",
+    "seq": 34
+  },
+  "previous": {
+    "digest": "bb3ced318d5ec508ca3c986ee82c180a5a1a3fe0809ba8cd9aebeae16873e0c9",
+    "event_id": "f70fedd9-5046-46ec-8b5c-aa8f438b7745",
+    "seq": 32
+  },
+  "project_id": "8f254b4c-df0a-4056-8937-6eba30efcfa6",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "84e1c162-69b9-4fe0-8d98-c53df381a58a",
+    "cycle": 1,
+    "digest": "54b8b9a510cfd0485772d3a92a87818f1a959e656a9f7948836e05bf1f87629f",
+    "engine_id": "claudeloop",
+    "event_id": "2c48c10e-898b-4e57-91a5-ff4380c1d103",
+    "job_id": "40fb97d9-4ab1-4fa8-9ae2-693c2b7a7fc9",
+    "kind": "QuestionAsked",
+    "payload": {
+      "blocking": false,
+      "cycle": 1,
+      "default": "Manual testing with 4-5 representative invocations - defer test framework until skeleton proven",
+      "item_id": "validation_approach",
+      "stage": "walking_skeleton",
+      "text": "How will you verify the skeleton works: manual invocations, simple shell test script, or pytest from the start?"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-19T18:30:10.111161+00:00",
+    "project_id": "8f254b4c-df0a-4056-8937-6eba30efcfa6",
+    "provenance": "agent",
+    "seq": 33
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

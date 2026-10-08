@@ -1,0 +1,43 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "200aa462efe682aba19ab4ae73a49ceab4a09982528cbb186ce886ae251d7245",
+    "event_id": "af9077dd-0383-42eb-b292-0622378bf1fe",
+    "seq": 13
+  },
+  "previous": {
+    "digest": "c1b6f1e70e1bbf2a9a7856b1c142c0323d7a270665aa514c02a5f6295c20aeec",
+    "event_id": "51536693-5a93-4a70-9e77-d6163d1b383a",
+    "seq": 11
+  },
+  "project_id": "9692abab-ace3-4ee0-ac59-3ea42484b817",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "0face8bc-aa17-546b-b5de-e16e759738e6",
+    "cycle": 1,
+    "digest": "ac914341b5e6f92e697b82eaf742593c9cb061893942c5ca7206da44e09621cd",
+    "engine_id": "gptossloop",
+    "event_id": "3126c308-aa17-48cc-ab10-895f74119fa1",
+    "job_id": "c2b75c18-fd15-4e79-ad4e-cf489356ad57",
+    "kind": "QuestionAsked",
+    "payload": {
+      "blocking": true,
+      "cycle": 1,
+      "default": "Yes",
+      "item_id": "q5",
+      "stage": "job_story",
+      "text": "Should we add a unit test to verify the TOC is up-to-date and all anchors resolve?"
+    },
+    "phase": "design",
+    "produced_at": "2026-09-29T18:41:32.210106+00:00",
+    "project_id": "9692abab-ace3-4ee0-ac59-3ea42484b817",
+    "provenance": "agent",
+    "seq": 12
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

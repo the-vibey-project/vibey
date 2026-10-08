@@ -1,0 +1,39 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "5c0095fc4a38df3cc8f4f058802d9cfa1c9f75347c953750e91eff0c18ee2855",
+    "event_id": "6f842a7c-ba8b-4601-b9b3-449d880cc8f3",
+    "seq": 3
+  },
+  "previous": null,
+  "project_id": "df7e868b-1fbf-451b-8ceb-126359b7588e",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "e8cb037f-1786-44e2-b878-8a1fd6b324c7",
+    "cycle": 1,
+    "digest": "63ec707fe25e6445ac04653e35bc056c02efe2ae37374ea3cee6799a75885df0",
+    "engine_id": "claudeloop",
+    "event_id": "cbf17d83-0311-4a2e-b429-8ed60d445dac",
+    "job_id": "3a3b336c-c2aa-4400-a762-ae12246358d3",
+    "kind": "QuestionAsked",
+    "payload": {
+      "blocking": true,
+      "cycle": 1,
+      "default": "A new application feature with standard CRUD operations",
+      "item_id": "feature_description",
+      "stage": "context_free",
+      "text": "What feature or system should be built?"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-22T04:41:02.373026+00:00",
+    "project_id": "df7e868b-1fbf-451b-8ceb-126359b7588e",
+    "provenance": "agent",
+    "seq": 2
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

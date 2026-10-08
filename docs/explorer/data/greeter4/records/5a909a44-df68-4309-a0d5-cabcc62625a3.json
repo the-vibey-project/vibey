@@ -1,0 +1,39 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "ce1155bf813025b64b963325499fd6153617cf44d5d6fd1a80e81d16c85b9f1e",
+    "event_id": "72783f19-e76a-48ea-b408-f491edba2af9",
+    "seq": 6
+  },
+  "previous": {
+    "digest": "417a206b1c6c1bcbacd1e6699870b535323d877074007a7017ad76cb71a9596e",
+    "event_id": "36968600-5a9f-4c10-9eef-d0e477b8da2c",
+    "seq": 4
+  },
+  "project_id": "8ab823c9-89e4-4050-884c-9008c8b14ef8",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "635ecf42-10bd-424d-85fd-a00270949e1f",
+    "cycle": 1,
+    "digest": "2c6e10cb4a887ba0f295e265a541e973590e587d64394d097dde8f871f4aff4d",
+    "engine_id": "claudeloop",
+    "event_id": "5a909a44-df68-4309-a0d5-cabcc62625a3",
+    "job_id": "705692f1-69a1-4cc2-ade7-8aa3d1407b67",
+    "kind": "AnswerGiven",
+    "payload": {
+      "answer": "A URL shortening service",
+      "item_id": "design_target"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-20T02:32:11.416706+00:00",
+    "project_id": "8ab823c9-89e4-4050-884c-9008c8b14ef8",
+    "provenance": "trusted",
+    "seq": 5
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

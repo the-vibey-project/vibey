@@ -1,0 +1,43 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "ce37fef91ba89f6b0dc6c24b5c6e19eb4747e108203fd59267d6c5bb9706f5cb",
+    "event_id": "dabe27a9-0dc3-4d9d-a3bf-f8887d764972",
+    "seq": 29
+  },
+  "previous": {
+    "digest": "0ad04ccea67fe4bd4d4b78bf24264cb2be2fb367cf1a11759aadfb6cfed645df",
+    "event_id": "ecc7611f-ccd2-4dae-8b8f-66ead69a99d7",
+    "seq": 27
+  },
+  "project_id": "26f89c38-c86b-4ddf-be75-c579a118e40e",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "025d5a52-a3f7-4168-bf74-c0d01edb23a2",
+    "cycle": 1,
+    "digest": "a32c9d926bff7c3a2f1b9c524f217b9e27e2c6b48e1dd71cd1cd4476345e3dac",
+    "engine_id": "claudeloop",
+    "event_id": "e4a9c973-f254-4141-8827-079c3d8fe335",
+    "job_id": "2bdd2b5e-b4f1-4004-9dbf-78d267fea803",
+    "kind": "QuestionAsked",
+    "payload": {
+      "blocking": false,
+      "cycle": 1,
+      "default": "Join all positional arguments with spaces (e.g., `greet John Doe` \u2192 'Hello, John Doe!')",
+      "item_id": "multiple_name_args",
+      "stage": "example_mapping",
+      "text": "Should multiple positional arguments be treated as first name only, joined with spaces, or rejected as an error?"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-19T12:32:43.572643+00:00",
+    "project_id": "26f89c38-c86b-4ddf-be75-c579a118e40e",
+    "provenance": "agent",
+    "seq": 28
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

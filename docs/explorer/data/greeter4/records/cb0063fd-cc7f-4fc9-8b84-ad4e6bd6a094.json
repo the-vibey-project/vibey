@@ -1,0 +1,43 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "ecdab7185d24ac8f00fd3c43d277d685ddab2bc95a165cda367f69395513c2cd",
+    "event_id": "3ced8f55-a797-4e88-9ae9-d2b664a8d97d",
+    "seq": 51
+  },
+  "previous": {
+    "digest": "055bcb7078a78e93d5f7a0c2f595caa461d81097c3e7b7840dfdeee7049a659d",
+    "event_id": "1aaadadd-e28d-4106-97c2-4b5f2f33de50",
+    "seq": 49
+  },
+  "project_id": "8ab823c9-89e4-4050-884c-9008c8b14ef8",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "165f9699-5721-4ba6-9184-81ca512236bf",
+    "cycle": 1,
+    "digest": "8d802b4c9673455bb26d47eb7ce501f32340660b8401a15e6092d6ad9eff09f9",
+    "engine_id": "claudeloop",
+    "event_id": "cb0063fd-cc7f-4fc9-8b84-ad4e6bd6a094",
+    "job_id": "705692f1-69a1-4cc2-ade7-8aa3d1407b67",
+    "kind": "QuestionAsked",
+    "payload": {
+      "blocking": false,
+      "cycle": 1,
+      "default": "Random generation creates offensive words (base62 'fU\u003ck3D'), collision with reserved words ([path], [path]), or codes that look like existing popular links causing user confusion",
+      "item_id": "shortcode_collision_issues",
+      "stage": "premortem",
+      "text": "What problematic shortCode scenarios could break user trust or create legal issues?"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-20T02:36:20.039415+00:00",
+    "project_id": "8ab823c9-89e4-4050-884c-9008c8b14ef8",
+    "provenance": "agent",
+    "seq": 50
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 2
+  }
+}

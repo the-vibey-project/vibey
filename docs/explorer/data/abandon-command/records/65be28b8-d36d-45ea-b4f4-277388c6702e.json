@@ -1,0 +1,39 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "a02ec8217e6d0894058706981cbb72cf50b4ec5b387f358d0b56d104867f019e",
+    "event_id": "735cd18b-e33e-4f81-9e70-4e24bbcc7c3a",
+    "seq": 49
+  },
+  "previous": {
+    "digest": "2fa3d104977b2cbbc6fd797caf4cf9808545e8621f7540ad68fc5a491ea6b436",
+    "event_id": "8c7cf95f-e174-4f64-ac89-e3f3ce20ff71",
+    "seq": 47
+  },
+  "project_id": "d733035f-e0f9-4f67-aba2-270068d6a9c6",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "23550223-dda2-44c5-a632-3e41ff112110",
+    "cycle": 1,
+    "digest": "1f413b6295871c4ecd64117b6d2dff7c7fe650a3f9ee880babce99ef683a8f78",
+    "engine_id": "claudeloop",
+    "event_id": "65be28b8-d36d-45ea-b4f4-277388c6702e",
+    "job_id": "44e282ee-55b1-4cf9-afc3-c84870a14a5c",
+    "kind": "AnswerGiven",
+    "payload": {
+      "answer": "Complete within 2 seconds for projects with up to 100 in-flight jobs. No hard limit\u2014trust Postgres to handle larger sets, but log a warning if transaction exceeds 5 seconds.",
+      "item_id": "perf_transaction_limit"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-22T03:45:45.534381+00:00",
+    "project_id": "d733035f-e0f9-4f67-aba2-270068d6a9c6",
+    "provenance": "trusted",
+    "seq": 48
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

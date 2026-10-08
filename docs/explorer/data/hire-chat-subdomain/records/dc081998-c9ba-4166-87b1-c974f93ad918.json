@@ -1,0 +1,43 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "707241cbed9c034a548e239fa44342985213745a948ae44e19fe7085456e811f",
+    "event_id": "cf49ec8d-6e78-4e6e-96be-58221d8de41c",
+    "seq": 10
+  },
+  "previous": {
+    "digest": "ded4ff44ccb71ec242fa525eb63e54872eb17d934c36b6eb0c7af7fb3e7d3561",
+    "event_id": "0f9d191b-2426-4cd2-ba6a-354a58323c5e",
+    "seq": 8
+  },
+  "project_id": "0ee95624-eec4-4e8e-9a14-6ad9a37dcff4",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "6fdcec7a-a1ec-4117-bb97-49317e86d765",
+    "cycle": 1,
+    "digest": "240c84549f2313de4497dcf3c7ea1f607b8acb725dc7b77408f101633b0ae7e2",
+    "engine_id": "claudeloop",
+    "event_id": "dc081998-c9ba-4166-87b1-c974f93ad918",
+    "job_id": "1343d0fd-bf3f-4739-8c21-cbf7693c673e",
+    "kind": "QuestionAsked",
+    "payload": {
+      "blocking": true,
+      "cycle": 1,
+      "default": "Hiring managers and technical recruiters doing pre-interview research on Adam's background, expertise, and project experience",
+      "item_id": "primary_persona",
+      "stage": "job_story",
+      "text": "Who is the primary visitor persona for chat.adam.matthewsteinberger.com?"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-20T20:09:33.786887+00:00",
+    "project_id": "0ee95624-eec4-4e8e-9a14-6ad9a37dcff4",
+    "provenance": "agent",
+    "seq": 9
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

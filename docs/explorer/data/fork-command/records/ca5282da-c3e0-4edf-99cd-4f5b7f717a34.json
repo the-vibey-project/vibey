@@ -1,0 +1,39 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "80504524fb937a6d8f5fd8b6d72d6b5f57643eac87915919edbc0be854c9b633",
+    "event_id": "f7cce960-31cd-4473-86eb-86646baaef51",
+    "seq": 26
+  },
+  "previous": {
+    "digest": "5ed86addb22813b11292b5a7c0d178a665ff142a7d88d40693a98e265ecf944d",
+    "event_id": "7b17860c-fae0-4190-866d-5c36e77ac32b",
+    "seq": 23
+  },
+  "project_id": "ab0b06f9-55a4-4b47-ac08-254e7fdd9036",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "785a7678-c626-4ca6-b735-bc6afe7bcec7",
+    "cycle": 1,
+    "digest": "6546382ea01b4d78f6a74a11dadeff49a65de0128ee8edd1e9c446681c88b8df",
+    "engine_id": "claudeloop",
+    "event_id": "ca5282da-c3e0-4edf-99cd-4f5b7f717a34",
+    "job_id": "48f9ef01-8b95-4709-adde-ed0ece390f8d",
+    "kind": "AnswerGiven",
+    "payload": {
+      "answer": "If origin branch is 'feature/foo', fork branches are 'feature/foo-fork-1', 'feature/foo-fork-2', etc., numbered sequentially by creation order",
+      "item_id": "branch_naming"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-22T03:34:34.636746+00:00",
+    "project_id": "ab0b06f9-55a4-4b47-ac08-254e7fdd9036",
+    "provenance": "trusted",
+    "seq": 24
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

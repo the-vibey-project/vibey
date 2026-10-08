@@ -1,0 +1,39 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a",
+    "event_id": "c950b690-8f66-446b-9e5b-b33d2db83e40",
+    "seq": 60
+  },
+  "previous": {
+    "digest": "45ca1ae3b05743ba3c6d7588d47dd19cbeff5f4207b4d3a955b750a5a837be58",
+    "event_id": "f7c28d59-0f46-49ff-8337-c1731339e8c9",
+    "seq": 55
+  },
+  "project_id": "0ee95624-eec4-4e8e-9a14-6ad9a37dcff4",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "fbb59c56-ec66-45f4-b3a5-259dbf409f40",
+    "cycle": 1,
+    "digest": "dc090676a906f65a873e7f858b4793b1adc611ab1fbb301574ba8dc3768ee758",
+    "engine_id": "claudeloop",
+    "event_id": "15ed2491-2f2e-41f8-b0b8-4b444f2cb6ce",
+    "job_id": "1343d0fd-bf3f-4739-8c21-cbf7693c673e",
+    "kind": "AnswerGiven",
+    "payload": {
+      "answer": "The [path] page is server-rendered with heading, intro and [path] + [path] links even when the bot is disabled, so the URL never 404s or goes blank. Keeping the subdomain resolvable long-term (and any future static landing page if the stack changes) is an owner commitment recorded as an assumption, not a deliverable of this build.",
+      "item_id": "long_term_url_commitment"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-20T20:21:17.352913+00:00",
+    "project_id": "0ee95624-eec4-4e8e-9a14-6ad9a37dcff4",
+    "provenance": "trusted",
+    "seq": 56
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 3
+  }
+}

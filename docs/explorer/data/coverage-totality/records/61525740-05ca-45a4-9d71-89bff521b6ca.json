@@ -1,0 +1,39 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "538ea942f3a96be736398d0bf517f3b51d60a46bbd86d4725e4f7b8be3d612cd",
+    "event_id": "d03b3f8c-bb27-41b2-baa2-6c54e873d49d",
+    "seq": 29
+  },
+  "previous": {
+    "digest": "14cd56c2a5902838a043e6157ce17c3f11222a211a9967e968413d6240c0e712",
+    "event_id": "6da9cbff-d833-475a-b4cb-571ceb029b7b",
+    "seq": 27
+  },
+  "project_id": "e631c00a-e1a1-4ed4-b99a-0fa2d388d240",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "7d46c9e3-c601-43ba-aeff-bce0bd3c8b4f",
+    "cycle": 1,
+    "digest": "7478d8c0e657adff5a15c9aa437ca897873608b64330797e93e024893d0438e6",
+    "engine_id": "claudeloop",
+    "event_id": "61525740-05ca-45a4-9d71-89bff521b6ca",
+    "job_id": "d73f236e-a7b4-4748-b075-3900a75af324",
+    "kind": "AnswerGiven",
+    "payload": {
+      "answer": "One focused test per decision kind -- six tests: VISUAL_DESIGN opted_in / declined / accepted / waived, and DEPLOYMENT opted_in / declined. Each builds the minimal ledger that reaches that state and asserts the resulting banner value. Composite scenarios are the wrong shape here: the branches are a single elif chain, so a composite test passes as long as ANY arm fires and tells you nothing about which. Add one seventh test for the chain's implicit else -- a ledger containing only unrelated event kinds, where both banners must stay None. That arm has no elif of its own, which is exactly why it is easy to leave uncovered.",
+      "item_id": "phase_banner_examples"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-22T02:55:07.437057+00:00",
+    "project_id": "e631c00a-e1a1-4ed4-b99a-0fa2d388d240",
+    "provenance": "trusted",
+    "seq": 28
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

@@ -1,0 +1,43 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "0f9d044d03d8196f1e2188e0d3b4f9ba9c570afa2a2541111b98f9f57b642730",
+    "event_id": "e2f178b0-ad3f-4ddb-b69c-05dc9fb0d352",
+    "seq": 16
+  },
+  "previous": {
+    "digest": "3cc02bbbf366e77ea000747b5a3698fcb5f0a273f71a24b30cb07e07d1ea91bf",
+    "event_id": "47bfcb25-f974-4253-8a20-a8b0eba0e2f9",
+    "seq": 14
+  },
+  "project_id": "8f254b4c-df0a-4056-8937-6eba30efcfa6",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "b652c0b2-6998-4abc-b94f-b955e3f63888",
+    "cycle": 1,
+    "digest": "4552d788baf209060d185195a22fb37274bfa9350e3b9fd6046b36a285fcaeba",
+    "engine_id": "claudeloop",
+    "event_id": "9993ca0a-267e-452a-9929-2b641616cbea",
+    "job_id": "40fb97d9-4ab1-4fa8-9ae2-693c2b7a7fc9",
+    "kind": "QuestionAsked",
+    "payload": {
+      "blocking": true,
+      "cycle": 1,
+      "default": "Empty name: print usage and exit 1; special chars: accept all UTF-8; long names: accept up to 255 chars, no truncation",
+      "item_id": "name_edge_cases",
+      "stage": "laddering",
+      "text": "How should the tool handle edge cases: empty name, names with special characters, very long names (100+ chars)?"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-19T18:28:22.269541+00:00",
+    "project_id": "8f254b4c-df0a-4056-8937-6eba30efcfa6",
+    "provenance": "agent",
+    "seq": 15
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

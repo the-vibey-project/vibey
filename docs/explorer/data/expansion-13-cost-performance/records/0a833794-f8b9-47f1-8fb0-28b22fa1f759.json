@@ -1,0 +1,43 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "91ea9e3168fc58bd83ae8d0b3ce62cfc711d53570954f68ca8799d49a9032235",
+    "event_id": "c6baa063-8447-4767-96f6-6188022afd40",
+    "seq": 53
+  },
+  "previous": {
+    "digest": "66a0b9e65e90d72b7150f019dff58b16237b4c1fb59fdb6824a1e97467868514",
+    "event_id": "a2e76d98-ef2e-4d21-91fc-5048b7cff2f2",
+    "seq": 51
+  },
+  "project_id": "a1d6b837-46f3-40c0-b6a2-8b3babb7fe15",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "0ad594ae-bc55-4a6e-849a-94a9588aff5d",
+    "cycle": 1,
+    "digest": "fc0be01b8a39fb9d030def29eb67cce2c5639671709292b16d4b477c85fd4949",
+    "engine_id": "claudeloop",
+    "event_id": "0a833794-f8b9-47f1-8fb0-28b22fa1f759",
+    "job_id": "dd8513f6-0d76-49a5-8bdc-75167dea5385",
+    "kind": "QuestionAsked",
+    "payload": {
+      "blocking": false,
+      "cycle": 1,
+      "default": "New tests added without understanding worker isolation; prevent with CI enforcement of -n auto and documentation in CLAUDE.md/contributing guide",
+      "item_id": "regression_prevention",
+      "stage": "premortem",
+      "text": "What would cause performance to regress after this work: new tests without isolation discipline, dependency updates changing pytest/xdist behavior, or template database schema drift?"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-20T20:46:42.714772+00:00",
+    "project_id": "a1d6b837-46f3-40c0-b6a2-8b3babb7fe15",
+    "provenance": "agent",
+    "seq": 52
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

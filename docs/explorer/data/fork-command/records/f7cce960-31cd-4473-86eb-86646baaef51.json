@@ -1,0 +1,43 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "f9b9ea5e91125b68cab80afb337d5749fe0b67fcdf342331a796fd482f63bf5f",
+    "event_id": "ca1b8dc0-e9f4-4a29-8f6c-a0a1a681a99e",
+    "seq": 27
+  },
+  "previous": {
+    "digest": "6546382ea01b4d78f6a74a11dadeff49a65de0128ee8edd1e9c446681c88b8df",
+    "event_id": "ca5282da-c3e0-4edf-99cd-4f5b7f717a34",
+    "seq": 24
+  },
+  "project_id": "ab0b06f9-55a4-4b47-ac08-254e7fdd9036",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "21f49662-9eee-4b4c-85bd-1baa54521bc9",
+    "cycle": 1,
+    "digest": "80504524fb937a6d8f5fd8b6d72d6b5f57643eac87915919edbc0be854c9b633",
+    "engine_id": "claudeloop",
+    "event_id": "f7cce960-31cd-4473-86eb-86646baaef51",
+    "job_id": "48f9ef01-8b95-4709-adde-ed0ece390f8d",
+    "kind": "QuestionAsked",
+    "payload": {
+      "blocking": true,
+      "cycle": 1,
+      "default": "Operator runs 'vibey fork 42 --at-seq 15' (seq 15 being the last good commit). Fork creates job #43 with branch 'feature/original-fork-1', starts in DESIGN phase from that commit, and 'vibey status 43' shows 'forked from job #42 at seq 15'",
+      "item_id": "salvage_example",
+      "stage": "example_mapping",
+      "text": "Walk through a concrete salvage scenario: job #42 made 3 good commits, then started rewriting the scheduler. What exact commands does the operator run, what seq do they target, and what does the resulting fork look like?"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-22T03:35:46.048963+00:00",
+    "project_id": "ab0b06f9-55a4-4b47-ac08-254e7fdd9036",
+    "provenance": "agent",
+    "seq": 26
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

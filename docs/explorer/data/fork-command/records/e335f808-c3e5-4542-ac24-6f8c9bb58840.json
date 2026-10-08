@@ -1,0 +1,39 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "2d63f717485f3e864569f7581f161e601bae18f25e317795e595f55594ca02ec",
+    "event_id": "61d41672-5dc5-4c38-aff5-17a58808d4de",
+    "seq": 9
+  },
+  "previous": {
+    "digest": "b98007fd67820bad7ca90ecef02e256e4cf1ee89d1c84d709e77e9688e57b827",
+    "event_id": "d9f01ff4-3824-45b3-ab55-61eaba3b3408",
+    "seq": 7
+  },
+  "project_id": "ab0b06f9-55a4-4b47-ac08-254e7fdd9036",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "6712afc5-5009-4c5b-a987-e5bcb74a1d3d",
+    "cycle": 1,
+    "digest": "c41590f575fe6f1e488f12bcd865000a4c85ddc67fac3db872fc0fb3d29a503d",
+    "engine_id": "claudeloop",
+    "event_id": "e335f808-c3e5-4542-ac24-6f8c9bb58840",
+    "job_id": "48f9ef01-8b95-4709-adde-ed0ece390f8d",
+    "kind": "AnswerGiven",
+    "payload": {
+      "answer": "[hard] The ledger is append-only: a fork is a NEW job plus new events that reference the origin job and the fork point. It never rewrites, truncates, or replays over existing history. [hard] The origin job is not disturbed in any way -- not its state, not its lease, not its branch, not its worktree. If forking requires mutating the origin, the design is wrong. [hard] The fork gets its own git worktree and its own branch; vibey already manages worktrees under .vibey/worktrees/\u003ccycle\u003e/, so follow that layout rather than a parallel one. [hard] Idempotent under replay, like every job. [hard] Provenance is not optional: the new job must record which job and which point it came from, or a forked run becomes untraceable in the ledger. [hard] 100% branch coverage, domain purity, Conventional Commits, feature branch into develop. [soft] Forking a job that never ran, or one already succeeded, should fail with a clear message rather than producing an empty fork.",
+      "item_id": "constraints"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-22T02:55:55.014043+00:00",
+    "project_id": "ab0b06f9-55a4-4b47-ac08-254e7fdd9036",
+    "provenance": "trusted",
+    "seq": 8
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

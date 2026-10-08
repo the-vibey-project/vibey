@@ -1,0 +1,39 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "13f76798f28dbd832de21f1d56de330a7a4910a9a1762c5dcc44b72b9bbfc236",
+    "event_id": "62174a40-02b6-4e2a-8d47-a658d8de9436",
+    "seq": 39
+  },
+  "previous": {
+    "digest": "27bbea80b797cdf2b0eb3ea8d5062a82742b16af4753021ae10ce67f6572b3fc",
+    "event_id": "0fc10a1b-0276-469f-a450-0577ea79988a",
+    "seq": 37
+  },
+  "project_id": "d482c3e2-029e-4bb8-a9a1-de411816c6ae",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "17de6698-c461-4b11-8150-72609aebc375",
+    "cycle": 1,
+    "digest": "f327588f3699475838f49bc46c892b26984eeb34abf279f274225a3208062e00",
+    "engine_id": "claudeloop",
+    "event_id": "10adab7f-43bd-4de9-9746-552c0fc81869",
+    "job_id": "d2626f25-d550-454e-bacd-7a7e6c9b52cd",
+    "kind": "AnswerGiven",
+    "payload": {
+      "answer": "Using tools like Jenkins or GitHub Actions to automate testing and deployment.",
+      "item_id": "18"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-31T02:05:28.732531+00:00",
+    "project_id": "d482c3e2-029e-4bb8-a9a1-de411816c6ae",
+    "provenance": "trusted",
+    "seq": 38
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

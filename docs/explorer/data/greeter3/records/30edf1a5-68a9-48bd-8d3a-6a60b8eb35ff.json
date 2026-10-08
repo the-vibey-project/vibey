@@ -1,0 +1,39 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "54afa06ec396947d1b9c861eb5197b0492f14991a5a5f510d68b7499060fdd9e",
+    "event_id": "8701b05a-4a44-4ace-b6ab-a5daa2163daf",
+    "seq": 56
+  },
+  "previous": {
+    "digest": "a4c1c1e9c599a99e2c10ff5cc001d7b64c39fa4f2a6f46ff86634a6fdf371433",
+    "event_id": "a78157f5-5c75-41a2-b334-06fe5260ef6e",
+    "seq": 54
+  },
+  "project_id": "5e76341f-ba5f-4272-8355-3df5d489bbcd",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "cdd1d8d6-480d-4c41-a1b9-95c45029a108",
+    "cycle": 1,
+    "digest": "8407481580a3c704e8e2d5f4534b46c0aa8342a6c47075730d2c8f1a9c1a37d8",
+    "engine_id": "claudeloop",
+    "event_id": "30edf1a5-68a9-48bd-8d3a-6a60b8eb35ff",
+    "job_id": "e58deb6b-5356-4a39-8acf-5dc898bba380",
+    "kind": "AnswerGiven",
+    "payload": {
+      "answer": "Assuming local system time matches user's actual timezone (e.g., remote workers, travelers)",
+      "item_id": "wrong_assumption"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-20T00:51:44.217432+00:00",
+    "project_id": "5e76341f-ba5f-4272-8355-3df5d489bbcd",
+    "provenance": "trusted",
+    "seq": 55
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

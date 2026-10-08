@@ -1,0 +1,39 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "dad19ff3ad7dec93f9db2562ae992cfb28b22c8fa764c82c7541a4183d3e34db",
+    "event_id": "96536164-9107-4bb8-b8d9-600634c5a280",
+    "seq": 6
+  },
+  "previous": {
+    "digest": "58576635b909a92d80db0184602bc0a70e9bed728eb3929c3f98906eb1770c32",
+    "event_id": "f108ec2e-3ded-4cef-8708-0769fd62437a",
+    "seq": 4
+  },
+  "project_id": "b43d1fcb-fb7b-42d6-9f80-220292c73389",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "4d704914-305b-44cd-ac93-c2b3492ed58a",
+    "cycle": 1,
+    "digest": "33f3a4d2ae6af8d820d5886acb5faa19041a84490b6071964df4e3e8af6336ce",
+    "engine_id": "claudeloop",
+    "event_id": "2a13971f-7708-4086-8c73-ec8101a1ff90",
+    "job_id": "64ea0fea-cd4f-4b3b-bf19-112c18a7c58d",
+    "kind": "AnswerGiven",
+    "payload": {
+      "answer": "[hard] Do NOT change the brake. bootstrap.py line 275 reads config['max_cycle_dollars'] correctly and constructs LedgerBudgetSource from it -- enforcement is right, only the DISPLAY is wrong. Confirm that with a test before touching anything, and do not 'fix' the brake to match the display. [hard] One source of truth: after this change there must be exactly one place that resolves a project's caps from config, used by both the brake and the display. The bug exists because there are two readers and only one of them was ever exercised. [hard] Do not invent a new config schema or migrate existing projects to a 'budget' sub-table to make the old code correct -- the top-level key is what `vibey new` writes and what the brake reads; the display should follow it. [hard] A project with no cap configured must display honestly as 'no cap' rather than a fabricated default; printing an invented number is the whole defect. [hard] 100% branch coverage -- this function's cap-reading branch is currently unexercised, which is precisely why it drifted. [hard] Conventional Commits, feature branch into develop.",
+      "item_id": "constraints"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-22T02:56:42.441138+00:00",
+    "project_id": "b43d1fcb-fb7b-42d6-9f80-220292c73389",
+    "provenance": "trusted",
+    "seq": 5
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

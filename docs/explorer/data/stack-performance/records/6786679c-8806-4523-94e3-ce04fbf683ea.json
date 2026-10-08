@@ -1,0 +1,39 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "2f3a8a701b52bb26c39c0eb410d7b784bab3ee302dd69c02667df5a689cd235c",
+    "event_id": "94455f0d-6cce-4b78-9a34-04130522a9d3",
+    "seq": 51
+  },
+  "previous": {
+    "digest": "780a1ef674d945b401c4dbafb5c598ad5f1ec86490b77e67a1502ca93f92cac3",
+    "event_id": "2ad5e359-b911-4561-a272-54059bb97866",
+    "seq": 49
+  },
+  "project_id": "44c06a64-c8ed-4153-96af-b49db29c39e3",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "652d7757-c1ee-4bd9-acd8-b4a9a66b7e57",
+    "cycle": 1,
+    "digest": "94df820b3aec3871a1aa5606f98c52881889f8910a1d41a55bad0f7b581d2970",
+    "engine_id": "claudeloop",
+    "event_id": "6786679c-8806-4523-94e3-ce04fbf683ea",
+    "job_id": "bcd8e0b1-385d-43dc-ad1f-cad988f80cc9",
+    "kind": "AnswerGiven",
+    "payload": {
+      "answer": "O(1) constant time \u2014 indexed SQL queries must not scan history; latency stays flat regardless of project age",
+      "item_id": "scalability_complexity"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-22T03:46:32.434563+00:00",
+    "project_id": "44c06a64-c8ed-4153-96af-b49db29c39e3",
+    "provenance": "trusted",
+    "seq": 50
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

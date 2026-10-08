@@ -1,0 +1,43 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "91ef93f91d0d9a791719150544e800f4ccfa0073ecb838e927324410000d25ad",
+    "event_id": "be5f9a67-68af-45c2-9fd8-476f1867f4dd",
+    "seq": 38
+  },
+  "previous": {
+    "digest": "a27c0833e8beafcd276fc419c684f5aeac1bec980d4264a4ee23b3f12fd42a6f",
+    "event_id": "6c6cacff-09f3-47d7-91a4-1d87c4da453c",
+    "seq": 36
+  },
+  "project_id": "2f6a93b6-2d73-4aff-bc94-16539841133f",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "5906a683-0240-4c8a-ac6f-cef6b16a18e0",
+    "cycle": 1,
+    "digest": "2f528fc10777db921153956a57bf0b14c57adbf46d56f3c7bccd10edddca3310",
+    "engine_id": "claudeloop",
+    "event_id": "568a9316-5883-4398-9e98-40bd547ea966",
+    "job_id": "334db377-8cb0-4a72-9cc0-78b45fc9bb38",
+    "kind": "QuestionAsked",
+    "payload": {
+      "blocking": true,
+      "cycle": 1,
+      "default": "One pure function can_stop(current_state: JobState) -\u003e bool that returns True for non-terminal states, and one transition function request_stop() that returns CANCELLED or no-ops if already terminal. Worker heartbeat logic checks stop_requested flag and returns a drain signal.",
+      "item_id": "skeleton_state_machine",
+      "stage": "walking_skeleton",
+      "text": "What's the minimal state machine logic needed in domain/ to support just that skeleton command?"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-22T03:46:42.140360+00:00",
+    "project_id": "2f6a93b6-2d73-4aff-bc94-16539841133f",
+    "provenance": "agent",
+    "seq": 37
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

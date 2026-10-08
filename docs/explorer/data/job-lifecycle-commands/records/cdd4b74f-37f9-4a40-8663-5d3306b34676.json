@@ -1,0 +1,43 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "d60318e95cf56c999918c5d69e6e08ed0615c99e496f0f680ba00a75fc255087",
+    "event_id": "e559f85f-c2bf-4a77-a317-c2efb898b0c5",
+    "seq": 3
+  },
+  "previous": {
+    "digest": "46c3c73dcbcfe77261bed985c9b427452d7576f63f38b51391cda0e342fa3e1e",
+    "event_id": "703b44c1-5ad5-4d18-83d8-6d7122c60ef2",
+    "seq": 1
+  },
+  "project_id": "2f6a93b6-2d73-4aff-bc94-16539841133f",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "5899e05c-3745-4bd1-869b-19b9e9233713",
+    "cycle": 1,
+    "digest": "8cb9c77833ce59e7001ebf89d22ed44a157cd4288bafa21dd1939b3864307e0c",
+    "engine_id": "claudeloop",
+    "event_id": "cdd4b74f-37f9-4a40-8663-5d3306b34676",
+    "job_id": "334db377-8cb0-4a72-9cc0-78b45fc9bb38",
+    "kind": "QuestionAsked",
+    "payload": {
+      "blocking": true,
+      "cycle": 1,
+      "default": "Improve automation coverage or extend pipeline capabilities",
+      "item_id": "problem_statement",
+      "stage": "context_free",
+      "text": "What problem does this solve, or what user need does it address?"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-22T02:51:35.333462+00:00",
+    "project_id": "2f6a93b6-2d73-4aff-bc94-16539841133f",
+    "provenance": "agent",
+    "seq": 2
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

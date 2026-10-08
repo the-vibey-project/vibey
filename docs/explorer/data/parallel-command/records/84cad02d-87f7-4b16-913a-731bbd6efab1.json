@@ -1,0 +1,39 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "f67220f457452aba0dff54e58ab3bb42bccb48f857c3c91b2278618a40661887",
+    "event_id": "fd0b78bc-14be-44b3-b6fb-0da3b7ba6560",
+    "seq": 34
+  },
+  "previous": {
+    "digest": "a9d5d71e8c54ff34bfeb51badbc36c52f2a31d3757403db043f7f524e7c87517",
+    "event_id": "4999cd74-d0e6-4caa-950a-7b033adb5e58",
+    "seq": 32
+  },
+  "project_id": "bed522a2-0b3e-4bff-9cd6-7c13fe40779a",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "bc6c3384-37a0-4a76-897c-70271ceb3c0b",
+    "cycle": 1,
+    "digest": "cc824ac9fcadf55c1ac059de4dfca073fd86ed7fcb887fb654c12519b3d9dc60",
+    "engine_id": "claudeloop",
+    "event_id": "84cad02d-87f7-4b16-913a-731bbd6efab1",
+    "job_id": "92d834a4-4bf2-4699-9354-adbea7936d77",
+    "kind": "AnswerGiven",
+    "payload": {
+      "answer": "At failure: 'j2 | \u2717 FAILED: \u003cerror excerpt\u003e' appears in stream. j1 and j3 continue. Final summary: table shows j1 \u2713, j2 \u2717 with error line, j3 \u2713, overall status 'PARTIAL SUCCESS (2/3)', exit code 1.",
+      "item_id": "failure_example"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-22T03:43:28.050975+00:00",
+    "project_id": "bed522a2-0b3e-4bff-9cd6-7c13fe40779a",
+    "provenance": "trusted",
+    "seq": 33
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

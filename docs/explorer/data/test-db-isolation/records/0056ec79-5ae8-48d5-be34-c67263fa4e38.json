@@ -1,0 +1,43 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "a3757c3a94a72544dd36fc680e017198eac97152b51ef8c08c1184dbc4df1f7a",
+    "event_id": "29c0b2c7-99c1-4533-a6b5-bb4c82cbdf01",
+    "seq": 12
+  },
+  "previous": {
+    "digest": "580dd7a7bd0dbe6140449e946ada3cbdba8e267d01ad2ef913be75074c242b04",
+    "event_id": "cb409314-75aa-4999-a887-a7245cfb889b",
+    "seq": 9
+  },
+  "project_id": "df7e868b-1fbf-451b-8ceb-126359b7588e",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "b5821599-4a38-4ac3-a504-0fda22794a1b",
+    "cycle": 1,
+    "digest": "7584ab64e630927450549dbf6d798c4d24fca680c0281924c6cfcaf2f2d89838",
+    "engine_id": "claudeloop",
+    "event_id": "0056ec79-5ae8-48d5-be34-c67263fa4e38",
+    "job_id": "3a3b336c-c2aa-4400-a762-ae12246358d3",
+    "kind": "QuestionAsked",
+    "payload": {
+      "blocking": true,
+      "cycle": 1,
+      "default": "When a user needs to manage data records in the system",
+      "item_id": "user_scenario",
+      "stage": "job_story",
+      "text": "When does the user need this feature? What triggers or prompts them to use it?"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-22T04:42:28.684044+00:00",
+    "project_id": "df7e868b-1fbf-451b-8ceb-126359b7588e",
+    "provenance": "agent",
+    "seq": 11
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

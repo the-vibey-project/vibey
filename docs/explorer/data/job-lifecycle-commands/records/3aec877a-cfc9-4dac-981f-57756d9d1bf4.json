@@ -1,0 +1,36 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": null,
+  "previous": {
+    "digest": "7842517003d3188110f0f465954b0ecff589806cb8cb54badeb558d03aad338d",
+    "event_id": "f47000b0-9b64-4304-a14c-24037220818e",
+    "seq": 200
+  },
+  "project_id": "2f6a93b6-2d73-4aff-bc94-16539841133f",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "dd4e28cd-d53d-41f5-bb88-3682cc23d0f9",
+    "cycle": 1,
+    "digest": "bf49fca3b22ccf678c783ac0d13fe4052f47ce565dedb7685d31766e60b4df9c",
+    "engine_id": null,
+    "event_id": "3aec877a-cfc9-4dac-981f-57756d9d1bf4",
+    "job_id": "3d6c39e8-de41-4614-aaea-616479e27d3c",
+    "kind": "FindingRaised",
+    "payload": {
+      "finding_id": "f_verify_ws_1df72711",
+      "severity": "high",
+      "text": "gate failed: uv run pytest tests/ -q -p no:cacheprovider --cov=vibey --cov-branch --cov-report=: arget(*self._args, **self._kwargs)\n  File \"[path]\", line 1424, in _do_waitpid\n    logger.warning(\"Loop %r that handles pid %r is closed\", loop, pid)\nMessage: 'Loop %r that handles pid %r is closed'\nArguments: (\u003c_UnixSelectorEventLoop running=False closed=True debug=False\u003e, 18770)\n--- Logging error ---\nTraceback (most recent call last):\n  File \"[path]\", line 1163, in emit\n    stream.write(msg + self.terminator)\nValueError: I/O operation on closed file.\nCall stack:\n  File \"[path]\", line 1032, in _bootstrap\n    self._bootstrap_inner()\n  File \"[path]\", line 1075, in _bootstrap_inner\n    self.run()\n  File \"[path]\", line 1012, in run\n    self._target(*self._args, **self._kwargs)\n  File \"[path]\", line 1424, in _do_waitpid\n    logger.warning(\"Loop %r that handles pid %r is closed\", loop, pid)\nMessage: 'Loop %r that handles pid %r is closed'\nArguments: (\u003c_UnixSelectorEventLoop running=False closed=True debug=False\u003e, 18770)\n[stdout] sts/infrastructure/test_operator_handlers.py::test_ensure_project_recreates_when_status_names_a_missing_project\nERROR tests/infrastructure/test_operator_handlers.py::test_answers_from_the_cr_go_through_the_shared_gate_service\nERROR tests/infrastructure/test_operator_handlers.py::test_creating_a_project_enqueues_its_design_interview\nERROR tests/infrastructure/test_operator_handlers.py::test_reapplying_an_unchanged_cr_answers_nothing_twice\nERROR tests/infrastructure/test_operator_handlers.py::test_on_create_patches_status_with_the_new_project\nERROR tests/infrastructure/test_operator_handlers.py::test_open_gates_are_listed_oldest_first_and_exclude_answered\nERROR tests/infrastructure/test_operator_handlers.py::test_reconcile_applies_answers_and_reports_the_ones_it_ignored\nERROR tests/infrastructure/test_operator_handlers.py::test_reconcile_without_answers_leaves_no_ignored_key\nERROR tests/infrastructure/test_operator_handlers.py::test_run_delegates_to_kopf_cluster_wide_by_default\nERROR tests/system/test_full_worker_faked.py::test_full_worker_survives_a_forced_wind_down_rotation\nERROR tests/cli/test_operational_commands.py::test_doctor_specific_engine - a...\nERROR tests/cli/test_operational_commands.py::test_doctor_unknown_engine - as...\nERROR tests/cli/test_operational_commands.py::test_doctor_no_detail_skips_detail_line\nERROR tests/cli/test_operational_commands.py::test_doctor_shows_detail_when_present\n18 failed, 1431 passed, 1 xfailed, 3 warnings, 20 errors in 106.69s (0:01:46)"
+    },
+    "phase": "build",
+    "produced_at": "2026-08-22T04:33:50.151722+00:00",
+    "project_id": "2f6a93b6-2d73-4aff-bc94-16539841133f",
+    "provenance": "agent",
+    "seq": 233
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 6
+  }
+}

@@ -1,0 +1,39 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "da7b9ecdca1e0bee218e2e00ed03579b58ae22883393ad37b11056e52c9662fc",
+    "event_id": "edb1e21b-92b3-4053-8dcb-b877f5e8dcb9",
+    "seq": 45
+  },
+  "previous": {
+    "digest": "95a9105d5f5bf91e6285f21bfa60d828f11867ced058e42d1a4b8bab57f974ab",
+    "event_id": "b60ec54f-cbd8-4c1a-aeff-a973cccd59c2",
+    "seq": 42
+  },
+  "project_id": "44c06a64-c8ed-4153-96af-b49db29c39e3",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "f83d5240-8fbd-41ca-8e8f-0faf0cd20019",
+    "cycle": 1,
+    "digest": "3e90fc2a2499e2d0e4200e83346c835cdbbf57d6717028f1ff21dc79ef2a7ab1",
+    "engine_id": "claudeloop",
+    "event_id": "acf68caf-9273-462a-b212-8539c804601b",
+    "job_id": "bcd8e0b1-385d-43dc-ad1f-cad988f80cc9",
+    "kind": "AnswerGiven",
+    "payload": {
+      "answer": "None \u2014 this is the first measured optimization; we'll build lightweight tooling (pytest-benchmark or time.perf_counter loops) as we go",
+      "item_id": "existing_perf_infrastructure"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-22T03:45:00.226417+00:00",
+    "project_id": "44c06a64-c8ed-4153-96af-b49db29c39e3",
+    "provenance": "trusted",
+    "seq": 43
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

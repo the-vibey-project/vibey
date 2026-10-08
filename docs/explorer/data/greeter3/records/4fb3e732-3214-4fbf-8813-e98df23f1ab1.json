@@ -1,0 +1,39 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "d77ee21cd78d0c37b59d1a986e24de01b62457da8c1111c445c11bc1cd77e4b2",
+    "event_id": "93a698dd-fb0b-4ae6-92f7-8ba743fae4ef",
+    "seq": 47
+  },
+  "previous": {
+    "digest": "e8d33bdf7957f43b4d47d152ecc181aa5f8096c5db9fd111147e04fd506bcb0b",
+    "event_id": "924bc324-58fc-4eaf-96f0-07f6531b2a60",
+    "seq": 45
+  },
+  "project_id": "5e76341f-ba5f-4272-8355-3df5d489bbcd",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "d654e9fc-72ba-4f4d-8361-843182c83d8b",
+    "cycle": 1,
+    "digest": "af399154e5b80aa174bb43b23e481a509fa184cefe38fa346d004a6c668f52b8",
+    "engine_id": "claudeloop",
+    "event_id": "4fb3e732-3214-4fbf-8813-e98df23f1ab1",
+    "job_id": "e58deb6b-5356-4a39-8acf-5dc898bba380",
+    "kind": "AnswerGiven",
+    "payload": {
+      "answer": "99.9% - should gracefully fall back to generic greeting on any error",
+      "item_id": "reliability_target"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-20T00:51:02.663112+00:00",
+    "project_id": "5e76341f-ba5f-4272-8355-3df5d489bbcd",
+    "provenance": "trusted",
+    "seq": 46
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

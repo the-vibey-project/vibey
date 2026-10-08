@@ -1,0 +1,39 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "def74892721418919ef289958c3498303ad4044c7f059a72696b9393a99d9a18",
+    "event_id": "197e8d03-70d0-42f8-ad11-0f5a00c9de7f",
+    "seq": 22
+  },
+  "previous": {
+    "digest": "5d881185902a96f8dee19bb01db53589bbe385df261e6e998f7ce91e8c563392",
+    "event_id": "2ab723c6-4fd9-4bfe-949d-52cbb84e8d1d",
+    "seq": 20
+  },
+  "project_id": "d733035f-e0f9-4f67-aba2-270068d6a9c6",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "d8c26e44-7d6d-4bb7-ae48-a492f5b572e1",
+    "cycle": 1,
+    "digest": "ad71aa0f71eaf664a3a28c122e799806898fc8dc544a99f68f50bc46257f2e27",
+    "engine_id": "claudeloop",
+    "event_id": "2a606c76-d305-4ba1-b94a-391aeb563003",
+    "job_id": "44e282ee-55b1-4cf9-afc3-c84870a14a5c",
+    "kind": "AnswerGiven",
+    "payload": {
+      "answer": "Treat them differently, because they differ in whether anything is running. READY and AWAITING_HUMAN are inert: transition straight to CANCELLED, no race, no worker to consider. AWAITING_CAPACITY likewise. LEASED is the only hard one -- a live worker holds it and may be minutes into a paid session. Do not yank the row out from under it. Behind --force, mark the intent and let the lease drain, exactly as the SIGTERM drain already does for scale-in: the worker finishes the job in hand and claims no more. Without --force, refuse and name the leased jobs. SUCCEEDED and FAILED are terminal history and must not be rewritten -- the ledger is append-only, and retroactively cancelling a job that already succeeded would falsify the record.",
+      "item_id": "mixed_job_states"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-22T03:00:07.098197+00:00",
+    "project_id": "d733035f-e0f9-4f67-aba2-270068d6a9c6",
+    "provenance": "trusted",
+    "seq": 21
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

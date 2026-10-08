@@ -1,0 +1,39 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "18d337ae40eb9d15de4fa16d8a7cb35ae53368b79bf1a875642290c49c6567d0",
+    "event_id": "9cabee23-8f8d-4a3f-b874-2c2bf04c0dde",
+    "seq": 22
+  },
+  "previous": {
+    "digest": "6c742ebbd005893b7cdcdf477bf768e083fd9bee827eafaa760985ec524443e7",
+    "event_id": "476b85f2-569d-469b-bde3-175e51f2f5c2",
+    "seq": 20
+  },
+  "project_id": "26f89c38-c86b-4ddf-be75-c579a118e40e",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "29d34b3d-3cf0-4bef-a8ac-a70c997d0b97",
+    "cycle": 1,
+    "digest": "0806067a39216edfe887448b2fa3bd8623db2a54974989d98b295d020d6e65fc",
+    "engine_id": "claudeloop",
+    "event_id": "18b3759c-1bb0-49fe-b505-7137ccc4f335",
+    "job_id": "2bdd2b5e-b4f1-4004-9dbf-78d267fea803",
+    "kind": "AnswerGiven",
+    "payload": {
+      "answer": "Yes - include -h/--help for usage and --version for version info",
+      "item_id": "standard_flags"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-19T12:32:07.810897+00:00",
+    "project_id": "26f89c38-c86b-4ddf-be75-c579a118e40e",
+    "provenance": "trusted",
+    "seq": 21
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

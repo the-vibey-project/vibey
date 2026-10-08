@@ -1,0 +1,43 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "e8093bde12c3cc962cb71b0ccaa686450c662d80bdfc0964aa20731fc61dc8cd",
+    "event_id": "45d45a83-d4c7-4c06-a841-999e474b6432",
+    "seq": 20
+  },
+  "previous": {
+    "digest": "d28260b748b05f26d0f4e8d09d9805350abd15919a6cd30a90b2a6df62494373",
+    "event_id": "ea839566-97ab-4f1a-a4f5-7119241af091",
+    "seq": 18
+  },
+  "project_id": "5e76341f-ba5f-4272-8355-3df5d489bbcd",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "7e1d5f9c-3d8c-42ff-99e8-19654c2919a0",
+    "cycle": 1,
+    "digest": "355a77900a57bd2912bd15cf7303d4e13e8025902f4512337e393a93f4e8aec3",
+    "engine_id": "claudeloop",
+    "event_id": "0448716f-3893-4dac-8c4b-3502a94f7375",
+    "job_id": "e58deb6b-5356-4a39-8acf-5dc898bba380",
+    "kind": "QuestionAsked",
+    "payload": {
+      "blocking": false,
+      "cycle": 1,
+      "default": "Sets a friendly tone that encourages continued use and exploration of features",
+      "item_id": "business_value",
+      "stage": "laddering",
+      "text": "Why is a positive first impression critical for this application's success?"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-20T00:48:27.268761+00:00",
+    "project_id": "5e76341f-ba5f-4272-8355-3df5d489bbcd",
+    "provenance": "agent",
+    "seq": 19
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

@@ -1,0 +1,39 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "4b1996cc6ad006b73bb70883aeabfd11f3a4a3563d1e6dca9701b7bcc5547b44",
+    "event_id": "5b4a03ee-e8e5-47a6-b834-7a3a6d7311d1",
+    "seq": 17
+  },
+  "previous": {
+    "digest": "a8a9523a974dc1dc738ccb0ebe532082713a9a61d5797549e1c49ef5546fca9d",
+    "event_id": "cbe135d3-02ff-4cb4-8039-55077788a1e4",
+    "seq": 15
+  },
+  "project_id": "0ee95624-eec4-4e8e-9a14-6ad9a37dcff4",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "9da36eb0-53c2-43cb-abc9-9a491cc50dd4",
+    "cycle": 1,
+    "digest": "f63c5a694c1a8033a14af13416771f5facaaba6b87bc30898c78c53887c3fb83",
+    "engine_id": "claudeloop",
+    "event_id": "e94f01ba-2aaf-409b-9416-5539ec560b57",
+    "job_id": "1343d0fd-bf3f-4739-8c21-cbf7693c673e",
+    "kind": "AnswerGiven",
+    "payload": {
+      "answer": "The [path] page is always server-rendered with its h1 'Ask my r\u00e9sum\u00e9', a short intro (answers only from what is on the site; six questions per session), and links to [path] and [path] When GET [path] reports enabled:false (or fetch fails, or a bot user agent is detected), the page variant of AskAdam renders a visible notice inside the same card \u2014 'Ask my r\u00e9sum\u00e9 is resting right now' with links to [path] and [path] \u2014 instead of rendering null as the homepage widget does. Never a blank page; locally and in tests the bot is disabled so this state must look intentional.",
+      "item_id": "disabled_fallback"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-20T20:10:06.063857+00:00",
+    "project_id": "0ee95624-eec4-4e8e-9a14-6ad9a37dcff4",
+    "provenance": "trusted",
+    "seq": 16
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 6
+  }
+}

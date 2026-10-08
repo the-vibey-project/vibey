@@ -1,0 +1,43 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "9a9449c5777c329675fe65f1776e9aecb1db86404ecd71cb2a6088309ffa6268",
+    "event_id": "53945060-e74e-457e-aa75-b3e687476c1d",
+    "seq": 13
+  },
+  "previous": {
+    "digest": "7584ab64e630927450549dbf6d798c4d24fca680c0281924c6cfcaf2f2d89838",
+    "event_id": "0056ec79-5ae8-48d5-be34-c67263fa4e38",
+    "seq": 11
+  },
+  "project_id": "df7e868b-1fbf-451b-8ceb-126359b7588e",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "52989caa-2a5e-45c3-b323-b7baf7549924",
+    "cycle": 1,
+    "digest": "a3757c3a94a72544dd36fc680e017198eac97152b51ef8c08c1184dbc4df1f7a",
+    "engine_id": "claudeloop",
+    "event_id": "29c0b2c7-99c1-4533-a6b5-bb4c82cbdf01",
+    "job_id": "3a3b336c-c2aa-4400-a762-ae12246358d3",
+    "kind": "QuestionAsked",
+    "payload": {
+      "blocking": true,
+      "cycle": 1,
+      "default": "They want to create, view, update, and delete records efficiently",
+      "item_id": "user_goal",
+      "stage": "job_story",
+      "text": "What specific action or outcome does the user want to accomplish?"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-22T04:42:28.684044+00:00",
+    "project_id": "df7e868b-1fbf-451b-8ceb-126359b7588e",
+    "provenance": "agent",
+    "seq": 12
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

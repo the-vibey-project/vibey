@@ -1,0 +1,43 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "976f53baef02a30184e2a1994321064f19a64b12cf2c0ffdab547ca09ee5e098",
+    "event_id": "c60451c4-797d-4f5b-a6b9-299febc36855",
+    "seq": 46
+  },
+  "previous": {
+    "digest": "2d1bd5b951dad31387aa807b4755a98911a48141add38799f9086163f3ef224d",
+    "event_id": "a47e9f5a-d0c8-47e7-97ac-94ed5fb091e6",
+    "seq": 44
+  },
+  "project_id": "ab0b06f9-55a4-4b47-ac08-254e7fdd9036",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "2448f8f9-7f79-43ca-9a5b-2f4d1c977446",
+    "cycle": 1,
+    "digest": "a43cec077fa30c62275f3be0da6f8bdfd01378c91e2339b115b44e951b4e00e6",
+    "engine_id": "claudeloop",
+    "event_id": "bc9b2871-3413-4d22-ac07-25696bca206f",
+    "job_id": "48f9ef01-8b95-4709-adde-ed0ece390f8d",
+    "kind": "QuestionAsked",
+    "payload": {
+      "blocking": true,
+      "cycle": 1,
+      "default": "No hard limit (forks of forks are first-class), but `vibey status` shows fork depth and warns at depth \u003e 3 as potentially confusing",
+      "item_id": "fork_depth_limit",
+      "stage": "nfr_planguage",
+      "text": "What's the maximum fork-of-fork chain depth before the system warns or rejects further forks?"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-22T03:44:18.262225+00:00",
+    "project_id": "ab0b06f9-55a4-4b47-ac08-254e7fdd9036",
+    "provenance": "agent",
+    "seq": 45
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

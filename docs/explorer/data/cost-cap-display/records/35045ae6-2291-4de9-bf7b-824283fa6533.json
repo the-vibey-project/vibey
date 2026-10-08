@@ -1,0 +1,43 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "09cc248e3962d4f7a0bf4f3496e64ac9cb011e6c1b1b367d7d5e39fd81f0d28c",
+    "event_id": "a27ab0f1-11fe-4167-9b94-ca033c133e71",
+    "seq": 54
+  },
+  "previous": {
+    "digest": "a9e4e0a8492106b08be87946a26f621e517be03a77c6b79f065c292ef3275063",
+    "event_id": "63ea583e-de40-43c2-8bf0-fa0560f35751",
+    "seq": 51
+  },
+  "project_id": "b43d1fcb-fb7b-42d6-9f80-220292c73389",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "4490d4b2-fc74-4930-b19a-ea784d9ccf18",
+    "cycle": 1,
+    "digest": "b749d94c97ace7617977e4f5295dc8e2dfe70223e0e6b32bfd320b22b7187e6f",
+    "engine_id": "claudeloop",
+    "event_id": "35045ae6-2291-4de9-bf7b-824283fa6533",
+    "job_id": "64ea0fea-cd4f-4b3b-bf19-112c18a7c58d",
+    "kind": "QuestionAsked",
+    "payload": {
+      "blocking": true,
+      "cycle": 1,
+      "default": "Grep for all config access patterns before implementation; any unidentified cap-reading path is a regression waiting to happen, must be found and migrated",
+      "item_id": "incomplete_touchpoints",
+      "stage": "premortem",
+      "text": "What if there are other cap-displaying code paths (TUI dashboard, status command, parked gate prompts) that weren't identified in the walking skeleton and never get updated to use the new resolver?"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-22T03:46:07.235056+00:00",
+    "project_id": "b43d1fcb-fb7b-42d6-9f80-220292c73389",
+    "provenance": "agent",
+    "seq": 53
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

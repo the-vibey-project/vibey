@@ -1,0 +1,39 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "fdea8ed48be374f2f86c851d9598dc435f94c53591ec8b623ec8e262e1dada97",
+    "event_id": "8c2c4b27-9704-4a28-9696-73d914cd6824",
+    "seq": 32
+  },
+  "previous": {
+    "digest": "f9d617d0aaeeef15354cbfd4decddf48f3aee4e6f9ecf78a577ecca1819d0286",
+    "event_id": "7ada1547-3292-436e-9247-3d09659dfa2b",
+    "seq": 30
+  },
+  "project_id": "26f89c38-c86b-4ddf-be75-c579a118e40e",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "7379e5f6-4ef9-4b0a-b711-89a14a65e9d4",
+    "cycle": 1,
+    "digest": "914033f404a4456b792d2bcc5688900d9c8ceacc6c2dde3f0e14bda305743977",
+    "engine_id": "claudeloop",
+    "event_id": "e407920a-ac7d-4a47-8cd1-5caccfa5c0a7",
+    "job_id": "2bdd2b5e-b4f1-4004-9dbf-78d267fea803",
+    "kind": "AnswerGiven",
+    "payload": {
+      "answer": "Use inclusive lower bound: 5:00am is morning, 12:00pm is afternoon, 6:00pm is evening",
+      "item_id": "time_boundary_handling"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-19T12:32:53.520928+00:00",
+    "project_id": "26f89c38-c86b-4ddf-be75-c579a118e40e",
+    "provenance": "trusted",
+    "seq": 31
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

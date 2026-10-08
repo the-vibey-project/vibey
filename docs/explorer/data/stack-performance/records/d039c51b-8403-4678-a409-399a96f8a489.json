@@ -1,0 +1,43 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "780a1ef674d945b401c4dbafb5c598ad5f1ec86490b77e67a1502ca93f92cac3",
+    "event_id": "2ad5e359-b911-4561-a272-54059bb97866",
+    "seq": 49
+  },
+  "previous": {
+    "digest": "e496322cf0644f33625e3174bc7c297179e9924be48a7e4d7e7f3f97d355c4a2",
+    "event_id": "d53ecdb2-1b29-4c47-88f4-bbcf06b3a89f",
+    "seq": 47
+  },
+  "project_id": "44c06a64-c8ed-4153-96af-b49db29c39e3",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "181a6fad-2171-40b2-9047-b9dddd511fe3",
+    "cycle": 1,
+    "digest": "37edd31340b75e2cc46ba2b1391db0945e5e5728662615e97a532bca1e29d8a5",
+    "engine_id": "claudeloop",
+    "event_id": "d039c51b-8403-4678-a409-399a96f8a489",
+    "job_id": "bcd8e0b1-385d-43dc-ad1f-cad988f80cc9",
+    "kind": "QuestionAsked",
+    "payload": {
+      "blocking": false,
+      "cycle": 1,
+      "default": "Any statistically significant regression over 10% fails the build \u2014 performance is a correctness requirement, not a nice-to-have",
+      "item_id": "regression_detection",
+      "stage": "nfr_planguage",
+      "text": "What percentage slowdown in the benchmark suite should fail CI and block a PR?"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-22T03:46:03.537654+00:00",
+    "project_id": "44c06a64-c8ed-4153-96af-b49db29c39e3",
+    "provenance": "agent",
+    "seq": 48
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

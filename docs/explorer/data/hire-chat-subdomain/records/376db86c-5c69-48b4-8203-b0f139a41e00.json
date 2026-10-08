@@ -1,0 +1,39 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "6d55a9e3a1839e3c669d6e532cfbae8c9c4714e1c3b0796aa99ec609c138e82c",
+    "event_id": "fdc7610c-8119-4de7-8997-08013ed9012b",
+    "seq": 40
+  },
+  "previous": {
+    "digest": "3a27cd0cc8ce2d1997094c528b19fdb8a2770bf49c7888d01dc18352dfa2a530",
+    "event_id": "ce338004-ad5d-47e0-bade-6d3d679de281",
+    "seq": 38
+  },
+  "project_id": "0ee95624-eec4-4e8e-9a14-6ad9a37dcff4",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "d3f93132-4c71-4a6f-9233-241addbd7ac2",
+    "cycle": 1,
+    "digest": "3ec501f0b4630b39b5b817432ab4e121d65305bc49d4ea96d02a24c6aa389a39",
+    "engine_id": "claudeloop",
+    "event_id": "376db86c-5c69-48b4-8203-b0f139a41e00",
+    "job_id": "1343d0fd-bf3f-4739-8c21-cbf7693c673e",
+    "kind": "AnswerGiven",
+    "payload": {
+      "answer": "src/components/AskAdam.tsx and src/components/layout/Footer.tsx are inside the 100% coverage include globs, so every new branch (variant wrapper/header/disabled notice, the Open-full-page link, surface param) needs both sides tested; src/app/chat/page.tsx is excluded from thresholds but still gets a colocated test for the heading, links and metadata (mock @/components/AskAdam); next.config.ts IS unit-tested: src/__tests__/next.config.test.ts imports the config, awaits rewrites()/redirects(), and asserts the four host rules exactly and that the three redirects come first. src/data/kb-sources.ts is covered by its existing tests under src/data/__tests__ \u2014 extend them for the new chunk. Tests stay colocated under __tests__/; never a root tests/ dir.",
+      "item_id": "coverage_strategy"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-20T20:14:54.754799+00:00",
+    "project_id": "0ee95624-eec4-4e8e-9a14-6ad9a37dcff4",
+    "provenance": "trusted",
+    "seq": 39
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

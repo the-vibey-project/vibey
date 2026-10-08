@@ -1,0 +1,39 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "e4315bb92cf9090ca37c549948fe0534bfd200df20355761e70ac76c2d6aac27",
+    "event_id": "521de1e0-7c2a-434b-b378-caa1fb9911d4",
+    "seq": 51
+  },
+  "previous": {
+    "digest": "35ea3990522ce0ab536aecf07f2cc583e050bf23247481f89ae88b0853a945a4",
+    "event_id": "b07fd2c3-9bc7-4d14-a383-cb1f2abc23bd",
+    "seq": 49
+  },
+  "project_id": "ab0b06f9-55a4-4b47-ac08-254e7fdd9036",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "b5105794-ba0d-4c61-944f-8654781497a8",
+    "cycle": 1,
+    "digest": "d1f1960be90d7a247858d3ee5e2b16a7af33aa05bcc92bcc92fea5a5b5a941b9",
+    "engine_id": "claudeloop",
+    "event_id": "a3dd9b33-5f86-43d8-9511-9903292f0b31",
+    "job_id": "48f9ef01-8b95-4709-adde-ed0ece390f8d",
+    "kind": "AnswerGiven",
+    "payload": {
+      "answer": "Atomic at ledger level: JobForked event commits only after worktree + branch verified; orphaned worktrees cleaned up on next `vibey doctor` run; \u003c 0.1% failure rate under normal conditions",
+      "item_id": "fork_failure_handling"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-22T03:44:59.256776+00:00",
+    "project_id": "ab0b06f9-55a4-4b47-ac08-254e7fdd9036",
+    "provenance": "trusted",
+    "seq": 50
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

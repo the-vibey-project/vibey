@@ -1,0 +1,39 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "48d5431b5ac4b5c19e2cb15cce8d1cbc81230583698d5ab4031e09c409ccfd0a",
+    "event_id": "385d2ede-7977-40e1-aed2-8db723622b84",
+    "seq": 7
+  },
+  "previous": {
+    "digest": "2c6e10cb4a887ba0f295e265a541e973590e587d64394d097dde8f871f4aff4d",
+    "event_id": "5a909a44-df68-4309-a0d5-cabcc62625a3",
+    "seq": 5
+  },
+  "project_id": "8ab823c9-89e4-4050-884c-9008c8b14ef8",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "e43dc775-0f1e-43a9-beef-b3ed1b0f16d7",
+    "cycle": 1,
+    "digest": "ce1155bf813025b64b963325499fd6153617cf44d5d6fd1a80e81d16c85b9f1e",
+    "engine_id": "claudeloop",
+    "event_id": "72783f19-e76a-48ea-b408-f491edba2af9",
+    "job_id": "705692f1-69a1-4cc2-ade7-8aa3d1407b67",
+    "kind": "AnswerGiven",
+    "payload": {
+      "answer": "Medium scale: ~1M users, ~1000 requests/sec, ~100GB data",
+      "item_id": "scale"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-20T02:32:11.416706+00:00",
+    "project_id": "8ab823c9-89e4-4050-884c-9008c8b14ef8",
+    "provenance": "trusted",
+    "seq": 6
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

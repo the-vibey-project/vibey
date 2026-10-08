@@ -1,0 +1,39 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "73265c4acb7fba071c070c6b8b18747f31ca193a6aa4a0b5829a74d546e5f6b0",
+    "event_id": "9e3e6ce7-4382-40d5-b033-806d7ba74663",
+    "seq": 33
+  },
+  "previous": {
+    "digest": "6667d4370a56b8cdc16d852c96bee61170be8e69cf2233cfd07de21edd00bdff",
+    "event_id": "a1e08e01-40f3-4c6e-be5c-fbed7dfd5555",
+    "seq": 31
+  },
+  "project_id": "a1d6b837-46f3-40c0-b6a2-8b3babb7fe15",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "54b7e94e-799f-4716-a0b8-9628d8ce6468",
+    "cycle": 1,
+    "digest": "711e2123b6d71d07e0d635e408171f34a41e6106a2a0bdc427869bb62615fc93",
+    "engine_id": "claudeloop",
+    "event_id": "d9763ba3-1c28-4e59-ac2e-19ce49c758fc",
+    "job_id": "dd8513f6-0d76-49a5-8bdc-75167dea5385",
+    "kind": "AnswerGiven",
+    "payload": {
+      "answer": "No known failures yet; assume tests are isolated but validate all pass under pytest-xdist before committing",
+      "item_id": "known_failures"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-20T20:44:16.772049+00:00",
+    "project_id": "a1d6b837-46f3-40c0-b6a2-8b3babb7fe15",
+    "provenance": "trusted",
+    "seq": 32
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

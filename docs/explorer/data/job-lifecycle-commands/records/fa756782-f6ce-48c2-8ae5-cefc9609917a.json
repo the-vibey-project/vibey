@@ -1,0 +1,39 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "7742d800f132cb27715cd84468f1ab7f80d08c41250c2a6c0665fd8155a5966e",
+    "event_id": "2bc1025d-faae-40d1-bab9-3406aa32bbba",
+    "seq": 52
+  },
+  "previous": {
+    "digest": "10a84c56c20244256040ee2bd40835493361b83ee77206de0df9d8c187679568",
+    "event_id": "d95f3661-41da-43d3-92cd-7fb9b6ef10a1",
+    "seq": 50
+  },
+  "project_id": "2f6a93b6-2d73-4aff-bc94-16539841133f",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "7bb8eb0a-aaa0-4dcc-bc3f-fa919a89e1fd",
+    "cycle": 1,
+    "digest": "0ea2520adc699549102d7c1984cc5863804a4930e0e66e4cf2cacf7dd8175bd9",
+    "engine_id": "claudeloop",
+    "event_id": "fa756782-f6ce-48c2-8ae5-cefc9609917a",
+    "job_id": "334db377-8cb0-4a72-9cc0-78b45fc9bb38",
+    "kind": "AnswerGiven",
+    "payload": {
+      "answer": "wind-back and restart require --force (they discard uncommitted work or reset progress). stop and continue are safe to run without confirmation (stop is reversible via continue, continue only resumes stuck work). All four succeed as idempotent no-ops when already in target state.",
+      "item_id": "safety_confirmations"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-22T03:48:49.074394+00:00",
+    "project_id": "2f6a93b6-2d73-4aff-bc94-16539841133f",
+    "provenance": "trusted",
+    "seq": 51
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

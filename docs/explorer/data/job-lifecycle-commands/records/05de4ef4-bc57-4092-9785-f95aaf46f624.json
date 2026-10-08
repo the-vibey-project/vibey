@@ -1,0 +1,43 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "9bdb7686fbd9de6ddc4097181df28731631ab40e3141157febeb094b7dbbd066",
+    "event_id": "08e34b8a-d153-4bc9-932a-17f13b55cd2f",
+    "seq": 46
+  },
+  "previous": {
+    "digest": "fe88af27f61191f3fc1bcf91dcc27bc553e9c7223a3d78d7e4b50cff9e6cbdb6",
+    "event_id": "d09ad7c4-0419-4f92-8011-126bf88a8d60",
+    "seq": 43
+  },
+  "project_id": "2f6a93b6-2d73-4aff-bc94-16539841133f",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "7a989cef-bb24-4511-acfe-c0feababded0",
+    "cycle": 1,
+    "digest": "ee0259a7a88a144725a23a38d1ff46ab490ca93d51bc82507057a74bcff24d50",
+    "engine_id": "claudeloop",
+    "event_id": "05de4ef4-bc57-4092-9785-f95aaf46f624",
+    "job_id": "334db377-8cb0-4a72-9cc0-78b45fc9bb38",
+    "kind": "QuestionAsked",
+    "payload": {
+      "blocking": true,
+      "cycle": 1,
+      "default": "Must: 2000ms (p99), Plan: 500ms (p95), Wish: 200ms (p50) \u2014 operator-facing commands should feel immediate, but DB round-trip plus potential lease coordination makes sub-second reasonable",
+      "item_id": "command_latency",
+      "stage": "nfr_planguage",
+      "text": "What is the maximum acceptable response time for stop/continue/restart/wind-back commands from CLI invocation to confirmation shown to operator?"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-22T03:48:35.239267+00:00",
+    "project_id": "2f6a93b6-2d73-4aff-bc94-16539841133f",
+    "provenance": "agent",
+    "seq": 45
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

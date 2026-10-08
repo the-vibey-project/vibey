@@ -1,0 +1,40 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "e569932650b400f48f72b1715cf63da67599ef6acbc2a47ff42b606d4bf467f8",
+    "event_id": "332a69fd-dff5-451b-b679-84f276bb8b20",
+    "seq": 17
+  },
+  "previous": {
+    "digest": "a66bf390c0e3e8df374f838a9d5b7b215eb5fcffa0129f174b7e19f8f18aa208",
+    "event_id": "d791611a-c85f-4c7a-b339-e70d66d3d67f",
+    "seq": 15
+  },
+  "project_id": "bed522a2-0b3e-4bff-9cd6-7c13fe40779a",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "cc40efd5-09b6-4424-9b74-1ae851d0e1e3",
+    "cycle": 1,
+    "digest": "30178f6a50fa7bafc9a1810a7031fdad9c3d60ed5e23c79f1d7c56060c162ede",
+    "engine_id": "claudeloop",
+    "event_id": "048f2917-12cf-417f-8c66-0983f9591f50",
+    "job_id": "92d834a4-4bf2-4699-9354-adbea7936d77",
+    "kind": "AssumptionStated",
+    "payload": {
+      "item_id": "success_output",
+      "question": "What should the command output look like while running and on completion? A single aggregated view, separate streams, or something else?",
+      "text": "Show a live multiplexed view (job1: line, job2: line, ...) while running, then a summary table on completion showing each job's status, duration, and outcome. Similar to `docker-compose up` or `concurrently`."
+    },
+    "phase": "design",
+    "produced_at": "2026-08-22T02:58:27.429494+00:00",
+    "project_id": "bed522a2-0b3e-4bff-9cd6-7c13fe40779a",
+    "provenance": "trusted",
+    "seq": 16
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

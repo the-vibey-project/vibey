@@ -1,0 +1,43 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "c10059f0150de50fc13652b607a751b6832a34a763c41eb400f3b0a570794708",
+    "event_id": "bb038f0c-f2b2-44f0-91d6-7ee824c0d6c0",
+    "seq": 7
+  },
+  "previous": {
+    "digest": "412b6dc698b0cdd5a7d67c4fb3090920141f369757ce813b63d9424770815ad9",
+    "event_id": "0ba9c4f9-3a6f-40a9-a795-5e86789f1d0d",
+    "seq": 4
+  },
+  "project_id": "f4cfe576-55c7-4f79-80ad-485f85ddca8b",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "4bb7ecc1-ea40-5364-bed9-45c048157678",
+    "cycle": 1,
+    "digest": "2e3c7d0712c6d77ffbda62057e5cf7ad151ed7016fe6e7ff179cc55d98f1e51a",
+    "engine_id": "gptossloop",
+    "event_id": "8a57e25c-3544-4752-a4d0-960c11e6dddc",
+    "job_id": "5057b798-907c-4039-9690-3992212dc0b2",
+    "kind": "QuestionAsked",
+    "payload": {
+      "blocking": false,
+      "cycle": 1,
+      "default": "Update the launchd plists to use the new repo URL and re\u2011register the runners; this is the simplest, most reliable fix for the current 404 issue.",
+      "item_id": "Q3",
+      "stage": "context_free",
+      "text": "What is the preferred strategy for re\u2011registering sovereign runners that are currently failing the heartbeat probe (404 on the pre\u2011transfer repo URL)? Should we update the launchd plists to point to the new repo URL and re\u2011register the runners, or is there a more automated approach?"
+    },
+    "phase": "design",
+    "produced_at": "2026-09-27T21:23:47.481939+00:00",
+    "project_id": "f4cfe576-55c7-4f79-80ad-485f85ddca8b",
+    "provenance": "agent",
+    "seq": 5
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

@@ -1,0 +1,43 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "5fc50ecf07398260b57698e029936120c731f3675c70b248ac99774440fa11ff",
+    "event_id": "8562e676-73f0-4fd6-8971-29ccc2ae22b1",
+    "seq": 3
+  },
+  "previous": {
+    "digest": "20afb65b8542ad1221bac306fa185b5ee4c6efbb11ad459f9436e86148dfabe4",
+    "event_id": "8c960a96-a192-440f-8034-344d8c2be70d",
+    "seq": 1
+  },
+  "project_id": "bed522a2-0b3e-4bff-9cd6-7c13fe40779a",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "562f8e04-c1c8-4958-b5bb-bcc3886f6497",
+    "cycle": 1,
+    "digest": "3e1aeaea46758b56949f24a51789f6035ca98a4251773325ac4c102a79828cd5",
+    "engine_id": "claudeloop",
+    "event_id": "c832a2bc-82a0-4cac-afdd-029fbf6d3f14",
+    "job_id": "92d834a4-4bf2-4699-9354-adbea7936d77",
+    "kind": "QuestionAsked",
+    "payload": {
+      "blocking": false,
+      "cycle": 1,
+      "default": "Improves system capability or user experience",
+      "item_id": "why",
+      "stage": "context_free",
+      "text": "What problem does this solve or what value does it provide?"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-22T02:43:31.292601+00:00",
+    "project_id": "bed522a2-0b3e-4bff-9cd6-7c13fe40779a",
+    "provenance": "agent",
+    "seq": 2
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

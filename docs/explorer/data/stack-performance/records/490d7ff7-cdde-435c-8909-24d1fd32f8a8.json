@@ -1,0 +1,39 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "9dcf8a9551f30495cfbb1b6bc38443e537c80f4701cdcfd869fba9adf429a079",
+    "event_id": "5cfe6377-ae93-43ab-9fdd-42994690b848",
+    "seq": 6
+  },
+  "previous": {
+    "digest": "14b3105e760be1e9edd3ae84039d962ae6d98f6e5f9fa8fc5185f2b4ea88424e",
+    "event_id": "44b6e209-5115-434a-8b3f-302ab0746995",
+    "seq": 4
+  },
+  "project_id": "44c06a64-c8ed-4153-96af-b49db29c39e3",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "d2db2b53-5b45-4d11-b6ee-ed2d326fa4c1",
+    "cycle": 1,
+    "digest": "425ed24a6971da081f8fc35ad54a6ca12c1475f7e82f30983b3d785962f4bc90",
+    "engine_id": "claudeloop",
+    "event_id": "490d7ff7-cdde-435c-8909-24d1fd32f8a8",
+    "job_id": "bcd8e0b1-385d-43dc-ad1f-cad988f80cc9",
+    "kind": "AnswerGiven",
+    "payload": {
+      "answer": "[hard] Every change carries a before/after measurement committed as evidence. A performance change with no number attached is not a performance change. [hard] Correctness is never traded for speed. All 7 gates stay green, including 100% branch coverage per layer -- a faster system that drops a job or double-counts spend is a regression regardless of the benchmark. [hard] The ledger stays append-only and the queue stays PostgreSQL; no caching layer that can serve stale budget data, since the budget brake is a safety mechanism and a stale read there spends real money. [hard] domain/ stays pure. [hard] No micro-optimisation without a measured win -- if it does not move a number, it does not land. This is a deliberate optimisation push, not licence to churn. [soft] Prefer pushing filters into SQL over adding indexes; prefer adding an index over adding a cache. [hard] Conventional Commits, feature branch into develop.",
+      "item_id": "constraints"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-22T02:59:30.272316+00:00",
+    "project_id": "44c06a64-c8ed-4153-96af-b49db29c39e3",
+    "provenance": "trusted",
+    "seq": 5
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

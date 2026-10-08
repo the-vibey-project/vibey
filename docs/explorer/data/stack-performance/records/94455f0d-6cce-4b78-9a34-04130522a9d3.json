@@ -1,0 +1,39 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "fb3d9698615da5670faee64a96a6b7292669397037a93f5e8e7f611174fcfd8d",
+    "event_id": "e5bbd5b9-3f34-4734-9851-a55e0e5d932c",
+    "seq": 52
+  },
+  "previous": {
+    "digest": "94df820b3aec3871a1aa5606f98c52881889f8910a1d41a55bad0f7b581d2970",
+    "event_id": "6786679c-8806-4523-94e3-ce04fbf683ea",
+    "seq": 50
+  },
+  "project_id": "44c06a64-c8ed-4153-96af-b49db29c39e3",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "ce71845a-8377-468d-8d75-f876fc258b02",
+    "cycle": 1,
+    "digest": "2f3a8a701b52bb26c39c0eb410d7b784bab3ee302dd69c02667df5a689cd235c",
+    "engine_id": "claudeloop",
+    "event_id": "94455f0d-6cce-4b78-9a34-04130522a9d3",
+    "job_id": "bcd8e0b1-385d-43dc-ad1f-cad988f80cc9",
+    "kind": "AnswerGiven",
+    "payload": {
+      "answer": "CV under 5% over 100+ iterations with outlier rejection (drop top/bottom 5%), or explicit note if measurement is noisy",
+      "item_id": "measurement_stability"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-22T03:46:32.434563+00:00",
+    "project_id": "44c06a64-c8ed-4153-96af-b49db29c39e3",
+    "provenance": "trusted",
+    "seq": 51
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

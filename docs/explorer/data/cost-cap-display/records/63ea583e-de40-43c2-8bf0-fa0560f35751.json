@@ -1,0 +1,39 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "b749d94c97ace7617977e4f5295dc8e2dfe70223e0e6b32bfd320b22b7187e6f",
+    "event_id": "35045ae6-2291-4de9-bf7b-824283fa6533",
+    "seq": 53
+  },
+  "previous": {
+    "digest": "d6b9a0a0c53bf4b0bc65f8280df5fcf6a89c6778218a9d657a61881b51f773b5",
+    "event_id": "41009ba9-d07b-4595-81cc-a75964231d05",
+    "seq": 50
+  },
+  "project_id": "b43d1fcb-fb7b-42d6-9f80-220292c73389",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "9317a6dc-9885-4fc9-8a9c-506b78696867",
+    "cycle": 1,
+    "digest": "a9e4e0a8492106b08be87946a26f621e517be03a77c6b79f065c292ef3275063",
+    "engine_id": "claudeloop",
+    "event_id": "63ea583e-de40-43c2-8bf0-fa0560f35751",
+    "job_id": "64ea0fea-cd4f-4b3b-bf19-112c18a7c58d",
+    "kind": "AnswerGiven",
+    "payload": {
+      "answer": "100% - matches existing infrastructure layer gate, exercises both cap-present and cap-absent branches",
+      "item_id": "coverage_gate"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-22T03:44:59.636442+00:00",
+    "project_id": "b43d1fcb-fb7b-42d6-9f80-220292c73389",
+    "provenance": "trusted",
+    "seq": 51
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

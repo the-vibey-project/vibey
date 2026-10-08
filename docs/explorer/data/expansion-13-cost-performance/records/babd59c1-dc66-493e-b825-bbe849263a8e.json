@@ -1,0 +1,39 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "93aff1cba8a808c36bb909935423abbcfe857fb72dc28fb7e22280af9c107bc9",
+    "event_id": "6cf13c59-85c2-471b-8d09-c5725c1d3186",
+    "seq": 47
+  },
+  "previous": {
+    "digest": "640d27686d40479e0f426eada7f6a5b7cec3712d917ee5ba30abc8d34e43dcff",
+    "event_id": "3baa3851-8171-44b5-ade7-74fd3691d56b",
+    "seq": 45
+  },
+  "project_id": "a1d6b837-46f3-40c0-b6a2-8b3babb7fe15",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "3b151398-e9c6-454e-b39e-0a5938ff6adc",
+    "cycle": 1,
+    "digest": "50534113e9502937cfa9760e36fbce9348c764f505a8244b18bc29d650895e82",
+    "engine_id": "claudeloop",
+    "event_id": "babd59c1-dc66-493e-b825-bbe849263a8e",
+    "job_id": "dd8513f6-0d76-49a5-8bdc-75167dea5385",
+    "kind": "AnswerGiven",
+    "payload": {
+      "answer": "Worst acceptable: 180s (3min), Target: 120s (2min), Ideal: 90s",
+      "item_id": "hook_performance_scale"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-20T20:46:04.197678+00:00",
+    "project_id": "a1d6b837-46f3-40c0-b6a2-8b3babb7fe15",
+    "provenance": "trusted",
+    "seq": 46
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

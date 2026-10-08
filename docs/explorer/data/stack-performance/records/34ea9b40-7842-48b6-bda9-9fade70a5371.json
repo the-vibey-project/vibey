@@ -1,0 +1,39 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "39d8a7132c6cf75229556c5ba961c5d9b28d39dc1c9bb88b6ad05a3b042d4822",
+    "event_id": "be44a053-6027-4b5c-a17c-f5135ef49a27",
+    "seq": 36
+  },
+  "previous": {
+    "digest": "afe9fb7d8b38b08fbedbee1ade8e38e5aeb384a9d38ac87ff8b52316d67148eb",
+    "event_id": "52a9866c-d994-4a32-a010-43df5b5abb9d",
+    "seq": 33
+  },
+  "project_id": "44c06a64-c8ed-4153-96af-b49db29c39e3",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "2c47f1b7-0e88-46dc-b89d-a64f035f093d",
+    "cycle": 1,
+    "digest": "7035cd991c84280853e9c42dd337fe42b9b0ef7fd75ce84f4499b86cee2341be",
+    "engine_id": "claudeloop",
+    "event_id": "34ea9b40-7842-48b6-bda9-9fade70a5371",
+    "job_id": "bcd8e0b1-385d-43dc-ad1f-cad988f80cc9",
+    "kind": "AnswerGiven",
+    "payload": {
+      "answer": "A claim succeeds when budget is exhausted, or two workers claim the same job, or a budget check returns stale cycle data \u2014 any correctness violation",
+      "item_id": "broken_optimization_example"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-22T03:43:27.429990+00:00",
+    "project_id": "44c06a64-c8ed-4153-96af-b49db29c39e3",
+    "provenance": "trusted",
+    "seq": 34
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

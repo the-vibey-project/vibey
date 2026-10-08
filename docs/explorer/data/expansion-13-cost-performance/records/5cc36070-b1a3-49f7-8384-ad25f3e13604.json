@@ -1,0 +1,39 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "d00ada3410e16dca0fcc48bbb605f472df0675a910916bee472d18f3e209822f",
+    "event_id": "255ecfe5-b76b-4105-8f79-d6a81d440e41",
+    "seq": 6
+  },
+  "previous": {
+    "digest": "11db21a8aefdcd471a669b4e166439c12138be8c8cc7a2a7b8ce93ac8181e406",
+    "event_id": "a7e5f48a-0633-46c6-a428-5069768b8730",
+    "seq": 4
+  },
+  "project_id": "a1d6b837-46f3-40c0-b6a2-8b3babb7fe15",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "b5fe7587-393e-4d74-8a1a-66850d049a88",
+    "cycle": 1,
+    "digest": "13902bf982981e68645fd7eb78ed9237159674a8abb1ca3f980778e2356d2afa",
+    "engine_id": "claudeloop",
+    "event_id": "5cc36070-b1a3-49f7-8384-ad25f3e13604",
+    "job_id": "dd8513f6-0d76-49a5-8bdc-75167dea5385",
+    "kind": "AnswerGiven",
+    "payload": {
+      "answer": "Front 1 only (items 1-4 of the runbook's test/CI list). Do not start Front 2 (runtime cost work) in this cycle. Minimal, surgical changes to conftest/test fixtures, pyproject, the pre-commit config, and .github/workflows/ci.yml.",
+      "item_id": "scope"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-20T20:40:21.178400+00:00",
+    "project_id": "a1d6b837-46f3-40c0-b6a2-8b3babb7fe15",
+    "provenance": "trusted",
+    "seq": 5
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

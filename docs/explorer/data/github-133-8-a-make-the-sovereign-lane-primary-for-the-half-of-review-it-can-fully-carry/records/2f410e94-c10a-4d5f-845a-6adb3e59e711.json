@@ -1,0 +1,43 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "4bb77301e028dcc123a845379f3b23281c457965f080dcdb5783031576476e96",
+    "event_id": "480b93a6-0711-4f76-bcc6-d6752f1c3256",
+    "seq": 18
+  },
+  "previous": {
+    "digest": "5274405b5e96140be84f9108eb57f076538daba5dfb05f7e05cd51407e56ce01",
+    "event_id": "704a0c24-080c-42a4-b8db-82cd3298eb61",
+    "seq": 16
+  },
+  "project_id": "f4cfe576-55c7-4f79-80ad-485f85ddca8b",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "4bb7ecc1-ea40-5364-bed9-45c048157678",
+    "cycle": 1,
+    "digest": "71614244670c489ee55990da42921dacd9ec54837a48d5556f37f2d3e8edca28",
+    "engine_id": "gptossloop",
+    "event_id": "2f410e94-c10a-4d5f-845a-6adb3e59e711",
+    "job_id": "5057b798-907c-4039-9690-3992212dc0b2",
+    "kind": "QuestionAsked",
+    "payload": {
+      "blocking": true,
+      "cycle": 1,
+      "default": "Run the paid lane as a fallback when the sovereign lane fails or times out, ensuring the review still completes.",
+      "item_id": "Q7",
+      "stage": "laddering",
+      "text": "If the sovereign lane fails or times out, should the paid lane still run as a fallback, or should the entire review be marked as failed?"
+    },
+    "phase": "design",
+    "produced_at": "2026-09-27T21:31:33.948491+00:00",
+    "project_id": "f4cfe576-55c7-4f79-80ad-485f85ddca8b",
+    "provenance": "agent",
+    "seq": 17
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

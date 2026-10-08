@@ -1,0 +1,43 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "7a84e8ca827bd5d3085fd20281bbb65cc2e11316a6e0b6a794e88b4b335eddfd",
+    "event_id": "ee58283b-ae27-49a5-a10e-6e1fa473142a",
+    "seq": 26
+  },
+  "previous": {
+    "digest": "34c49d0e724f7c4b23e2e55adbb06779db5f7c98f3b2eb905fcf26e179dd1dca",
+    "event_id": "4ace4ed1-b153-4f6f-bc04-c66838ad21f5",
+    "seq": 24
+  },
+  "project_id": "26f89c38-c86b-4ddf-be75-c579a118e40e",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "533b18d6-9d97-4f3f-a145-a475f5765b9d",
+    "cycle": 1,
+    "digest": "862f3796e5bd8ffe877176cdaf3c7efd450cb76ef301950323a4ed3abacca371",
+    "engine_id": "claudeloop",
+    "event_id": "81935206-3272-4c2b-b6dd-30eb828bf6ff",
+    "job_id": "2bdd2b5e-b4f1-4004-9dbf-78d267fea803",
+    "kind": "QuestionAsked",
+    "payload": {
+      "blocking": true,
+      "cycle": 1,
+      "default": "`Hello, Alice!` / `Good morning, Alice!` / `Good evening, Bob!` (each printed to stdout)",
+      "item_id": "concrete_output_examples",
+      "stage": "example_mapping",
+      "text": "What should the exact output be for these concrete examples: `greet Alice`, `greet Alice --time` (at 9am), `greet Bob --time` (at 8pm)?"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-19T12:32:43.572643+00:00",
+    "project_id": "26f89c38-c86b-4ddf-be75-c579a118e40e",
+    "provenance": "agent",
+    "seq": 25
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

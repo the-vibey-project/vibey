@@ -1,0 +1,43 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "c44cb2dcb710cf26939d706a02741a81086695c0df140af71ac90b7fb98afc18",
+    "event_id": "74649ddb-1165-4f57-b994-3097f7524ee1",
+    "seq": 14
+  },
+  "previous": {
+    "digest": "a607ca7b6d7553fba4b21c065f556decb3fcd78395f6027a24c44b01b4fae447",
+    "event_id": "2e5cf349-fe6a-41b3-a862-a45399ed04d0",
+    "seq": 11
+  },
+  "project_id": "f4cfe576-55c7-4f79-80ad-485f85ddca8b",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "4bb7ecc1-ea40-5364-bed9-45c048157678",
+    "cycle": 1,
+    "digest": "2dfd1a26ae62067ef7dbe156bf5e6dd362239b39aa742a9668ea76045bd81a9c",
+    "engine_id": "gptossloop",
+    "event_id": "cf42125b-4f1e-4357-a6cd-a6cd62a86a2c",
+    "job_id": "5057b798-907c-4039-9690-3992212dc0b2",
+    "kind": "QuestionAsked",
+    "payload": {
+      "blocking": false,
+      "cycle": 1,
+      "default": "Run the sovereign lane first; only after it completes do we trigger the paid lane for the remaining half.",
+      "item_id": "Q6",
+      "stage": "job_story",
+      "text": "Do we enforce that the sovereign lane must finish before the paid lane starts, or can they run concurrently?"
+    },
+    "phase": "design",
+    "produced_at": "2026-09-27T21:30:06.391151+00:00",
+    "project_id": "f4cfe576-55c7-4f79-80ad-485f85ddca8b",
+    "provenance": "agent",
+    "seq": 12
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

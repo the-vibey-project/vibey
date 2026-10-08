@@ -1,0 +1,39 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "8af5f394c443325dc44dac41685bd398d266f18975ba4f0c9a819489f3c5c85b",
+    "event_id": "08edff4b-4eae-46f6-a56d-84aa1e5a791e",
+    "seq": 52
+  },
+  "previous": {
+    "digest": "a851c1f4440b01e41f89fc0f06d2d25f18278ec8488ed056a2f0b2b3c8944a1a",
+    "event_id": "d2fe4e75-7ee6-491a-8a8a-5bed184679e7",
+    "seq": 50
+  },
+  "project_id": "bed522a2-0b3e-4bff-9cd6-7c13fe40779a",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "cbd19faf-9338-4971-b995-1d3bff84232e",
+    "cycle": 1,
+    "digest": "d56b97655526de1c16aa920a731313bd7c3ffb62de7126a9ce859e09eb7359be",
+    "engine_id": "claudeloop",
+    "event_id": "5b056df1-21c8-41fd-a261-3d050d188be9",
+    "job_id": "92d834a4-4bf2-4699-9354-adbea7936d77",
+    "kind": "AnswerGiven",
+    "payload": {
+      "answer": "Reliability [timeout_seconds]: no overall timeout - inherit each job's individual phase timeout (typically 3600s for BUILD). Rationale: jobs are independent work units; a slow job shouldn't kill fast siblings, and phase-level timeouts already prevent runaway processes.",
+      "item_id": "overall_timeout"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-22T03:46:32.042194+00:00",
+    "project_id": "bed522a2-0b3e-4bff-9cd6-7c13fe40779a",
+    "provenance": "trusted",
+    "seq": 51
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

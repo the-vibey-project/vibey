@@ -1,0 +1,43 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "c4e519bf89b0f64f2991afbab4da5d8813e4cfed56bd5771762e26a3ea62f36f",
+    "event_id": "2fb82060-a847-43cf-a047-f0be9e2e62ef",
+    "seq": 36
+  },
+  "previous": {
+    "digest": "e09cdf2b3b6ec27bcf489df15ba6c5088226cd62d00d1cda0719e928180befef",
+    "event_id": "3b8cd59a-7e60-403e-92e9-361fbde5ace5",
+    "seq": 33
+  },
+  "project_id": "d733035f-e0f9-4f67-aba2-270068d6a9c6",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "079f2689-eacf-4cce-9e5d-ee443d519b02",
+    "cycle": 1,
+    "digest": "2a75a6e207c0f494bbad8c7b96dc29bb4110c045c6226f1bfa16c4893f788b99",
+    "engine_id": "claudeloop",
+    "event_id": "22a47d3d-57f2-4c57-b19a-c387b4a8ec1d",
+    "job_id": "44e282ee-55b1-4cf9-afc3-c84870a14a5c",
+    "kind": "QuestionAsked",
+    "payload": {
+      "blocking": true,
+      "cycle": 1,
+      "default": "Abandon a non-DONE project with zero in-flight jobs: phase transition to ABANDONED, ledger event, repo_path released, idempotent on retry. All guards and job cancellation deferred to increment 2.",
+      "item_id": "minimal_slice",
+      "stage": "walking_skeleton",
+      "text": "What's the absolute minimal case to design first\u2014the thinnest slice that proves abandon works end-to-end before adding guards and edge cases?"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-22T03:43:57.958753+00:00",
+    "project_id": "d733035f-e0f9-4f67-aba2-270068d6a9c6",
+    "provenance": "agent",
+    "seq": 35
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

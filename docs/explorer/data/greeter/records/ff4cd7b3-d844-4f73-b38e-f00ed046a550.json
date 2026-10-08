@@ -1,0 +1,43 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "a06ff534178690f912579b9a3d6915f2c0b4e0212fea5c624c67c86a2b63c69e",
+    "event_id": "92fa3809-829b-432e-ad31-72fdd92dbc13",
+    "seq": 3
+  },
+  "previous": {
+    "digest": "3e1c99976d661cbfec5e0f1ceb88a3623864e63457f785165a923d7c1d948929",
+    "event_id": "fb794a8b-21c9-420f-b1c8-2c73a0eb1af5",
+    "seq": 1
+  },
+  "project_id": "26f89c38-c86b-4ddf-be75-c579a118e40e",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "9d5df1dc-69bd-4efc-bcbf-a7b1b77a20a0",
+    "cycle": 1,
+    "digest": "335967ec59d1a1dd2fef91c2aee205095d79154232ab1097be6ef02225d867e7",
+    "engine_id": "claudeloop",
+    "event_id": "ff4cd7b3-d844-4f73-b38e-f00ed046a550",
+    "job_id": "2bdd2b5e-b4f1-4004-9dbf-78d267fea803",
+    "kind": "QuestionAsked",
+    "payload": {
+      "blocking": false,
+      "cycle": 1,
+      "default": "Web and mobile applications needing greeting functionality",
+      "item_id": "target_users",
+      "stage": "context_free",
+      "text": "Who are the primary users or clients of this system?"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-19T08:28:34.268185+00:00",
+    "project_id": "26f89c38-c86b-4ddf-be75-c579a118e40e",
+    "provenance": "agent",
+    "seq": 2
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

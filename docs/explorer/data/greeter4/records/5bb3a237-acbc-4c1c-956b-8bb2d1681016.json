@@ -1,0 +1,43 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "03a05bd54e914d2da0f5e36e21f3f951f5312510bcc8ba1ee70c3c088ddbd7b2",
+    "event_id": "5bb11069-aef6-4a58-a281-7d1220849d73",
+    "seq": 43
+  },
+  "previous": {
+    "digest": "a780eb0eb0340afd00eb9e9599671364d2e691fffc654c2a1fad1fafb3ec5a6d",
+    "event_id": "f875499c-db82-407f-8401-34b155d73735",
+    "seq": 41
+  },
+  "project_id": "8ab823c9-89e4-4050-884c-9008c8b14ef8",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "d08c54bf-8d13-4e2c-8d52-25b0b0d575e7",
+    "cycle": 1,
+    "digest": "93d9ca62d42463c0af42043df3b4ef47525d449b16b33024562cc65b98fa192f",
+    "engine_id": "claudeloop",
+    "event_id": "5bb3a237-acbc-4c1c-956b-8bb2d1681016",
+    "job_id": "705692f1-69a1-4cc2-ade7-8aa3d1407b67",
+    "kind": "QuestionAsked",
+    "payload": {
+      "blocking": false,
+      "cycle": 1,
+      "default": "Redirect service: 99.95% uptime (max 4.38hrs/year downtime); Creation service: 99.5% uptime (max 43.8hrs/year); measured per calendar year",
+      "item_id": "availability_nfr",
+      "stage": "nfr_planguage",
+      "text": "What are the availability/uptime requirements for the redirect service vs. creation service?"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-20T02:35:21.674775+00:00",
+    "project_id": "8ab823c9-89e4-4050-884c-9008c8b14ef8",
+    "provenance": "agent",
+    "seq": 42
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

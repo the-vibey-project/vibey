@@ -1,0 +1,40 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "e560b50a1d53e2d856804319f4493f13a7f9a542f728af1a811a20c77bf58589",
+    "event_id": "d2708e25-a142-49ab-b097-a86e46725ff6",
+    "seq": 719
+  },
+  "previous": {
+    "digest": "7842517003d3188110f0f465954b0ecff589806cb8cb54badeb558d03aad338d",
+    "event_id": "add2e939-8f7b-4aac-8add-7c06fb5fa15e",
+    "seq": 706
+  },
+  "project_id": "a1d6b837-46f3-40c0-b6a2-8b3babb7fe15",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "391685c2-c883-4cdc-a394-5027d4b9c210",
+    "cycle": 1,
+    "digest": "a3edf127fda0c7d2229a8257be4931ee9fc1ff26c795399120281e39333e3ad7",
+    "engine_id": null,
+    "event_id": "6157ca7d-6f5a-43cb-ba86-227219e2e77e",
+    "job_id": "e230cfcb-accf-4af4-ada0-4ef717f695d9",
+    "kind": "FindingRaised",
+    "payload": {
+      "finding_id": "f_integrate_ws_a311ddae",
+      "severity": "high",
+      "text": "gate failed after merging 'ws': uv run pytest -q -p no:cacheprovider: warning: `VIRTUAL_ENV=[path]` does not match the project environment path `.venv` and will be ignored; use `--active` to target the active environment instead\n[stdout] tation_cursor_repository.py::test_list_for_project_returns_ordered\nERROR tests/infrastructure/db/test_rotation_cursor_repository.py::test_list_for_project_returns_empty_when_no_cursors\nERROR tests/infrastructure/db/test_rotation_cursor_repository.py::test_update_many_updates_all_atomically\nERROR tests/infrastructure/db/test_rotation_cursor_repository.py::test_initialize_for_project_creates_cursors\nERROR tests/infrastructure/db/test_rotation_cursor_repository.py::test_initialize_for_project_is_idempotent\nERROR tests/infrastructure/db/test_rotation_cursor_repository.py::test_initialize_adds_new_engines_without_resetting_existing\nERROR tests/infrastructure/db/test_rotation_cursor_repository.py::test_fk_constraint_with_cascade_exists\nERROR tests/infrastructure/db/test_visual_inventory_end_to_end.py::test_scripted_visual_inventory_and_plan_run_end_to_end\nERROR tests/infrastructure/db/test_visual_inventory_repository.py::test_save_load_and_publish_visual_artifacts\nERROR tests/infrastructure/db/test_visual_inventory_repository.py::test_load_missing_inventory_returns_none_and_unknown_project_fails\nERROR tests/system/test_full_worker_faked.py::test_full_worker_drives_a_project_to_done_local\nERROR tests/system/test_full_worker_faked.py::test_full_worker_drives_the_deploy_stage_set_to_done_deployed\nERROR tests/system/test_full_worker_faked.py::test_full_worker_survives_a_forced_wind_down_rotation\n1 failed, 1240 passed, 9 deselected, 2 xfailed, 3 warnings, 133 errors in 377.61s (0:06:17)"
+    },
+    "phase": "build",
+    "produced_at": "2026-08-21T01:24:14.763181+00:00",
+    "project_id": "a1d6b837-46f3-40c0-b6a2-8b3babb7fe15",
+    "provenance": "agent",
+    "seq": 711
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 1
+  }
+}

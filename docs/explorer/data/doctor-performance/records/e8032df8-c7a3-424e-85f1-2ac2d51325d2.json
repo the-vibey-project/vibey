@@ -1,0 +1,39 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "7681046ea7699797e3109ac8324183990a51a71f7d0c2caa936b81b49d8ce146",
+    "event_id": "702b4bba-009c-44ef-a08c-2bcedba880f0",
+    "seq": 62
+  },
+  "previous": {
+    "digest": "a29f4cd1cb2c7da5f9c1b0230db35f58ac141027a5eea761f7e9c0cb734a2c9c",
+    "event_id": "09b60a2e-84d6-434a-91e4-9d6d7723ef4d",
+    "seq": 60
+  },
+  "project_id": "5ea01f61-8536-4ace-90cb-18700a12e410",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "532e67ce-ba52-4380-b6b5-35b666d4bf57",
+    "cycle": 1,
+    "digest": "34c7e444713b0a5aa13c8f951e928eb8cc87a81f04ea1d71a92dc73235167d64",
+    "engine_id": "claudeloop",
+    "event_id": "e8032df8-c7a3-424e-85f1-2ac2d51325d2",
+    "job_id": "4c2ec03f-d670-44f9-9f05-47597984ab20",
+    "kind": "AnswerGiven",
+    "payload": {
+      "answer": "Some code path depends on fresh pool creation or migration re-checking per engine; or cleanup/teardown wasn't properly centralized causing resource leaks",
+      "item_id": "build_app_breakage"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-22T03:50:19.448891+00:00",
+    "project_id": "5ea01f61-8536-4ace-90cb-18700a12e410",
+    "provenance": "trusted",
+    "seq": 61
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

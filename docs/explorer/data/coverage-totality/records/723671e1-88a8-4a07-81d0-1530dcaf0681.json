@@ -1,0 +1,39 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "aa5430442a385c385eb8e043742e09b4be6c522296c2cdd202629c249e7baa15",
+    "event_id": "bbb5d4b7-a2a8-4093-acab-fcaea0420b06",
+    "seq": 23
+  },
+  "previous": {
+    "digest": "1f3ae9b0c78e39bf7b4614c140c6bc41a741cb9d4255b9f1de2010d310df2bce",
+    "event_id": "c44ab532-2aa5-41e9-a5d8-0ce3fec77be6",
+    "seq": 21
+  },
+  "project_id": "e631c00a-e1a1-4ed4-b99a-0fa2d388d240",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "57c43bb7-7cdf-42dd-97c8-6d0bac84c370",
+    "cycle": 1,
+    "digest": "49531fc3de9a93ba11a3353a6394bf0a6af318a87e0a5c3588bcf2e51fcbcbf7",
+    "engine_id": "claudeloop",
+    "event_id": "723671e1-88a8-4a07-81d0-1530dcaf0681",
+    "job_id": "d73f236e-a7b4-4748-b075-3900a75af324",
+    "kind": "AnswerGiven",
+    "payload": {
+      "answer": "Keep all five. The per-layer gates are not made redundant by the total -- they carry ATTRIBUTION. A failing total gate says 'something regressed'; a failing 'Gate 4c - pytest infrastructure layer' says which layer, which is what makes the failure actionable at a glance. There is also a hard mechanical reason: the existing CI step names are matched by branch protection rules, so removing or renaming them breaks merge requirements. The total gate is an additional step, never a replacement.",
+      "item_id": "layer_gates_retention"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-22T02:39:42.429990+00:00",
+    "project_id": "e631c00a-e1a1-4ed4-b99a-0fa2d388d240",
+    "provenance": "trusted",
+    "seq": 22
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

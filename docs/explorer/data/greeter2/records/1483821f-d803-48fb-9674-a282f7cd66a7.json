@@ -1,0 +1,39 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "b1e5ba043889ed1bf65bf7bf754f633fb4ecb4d8343b6f69b5bf88c1b71ef23e",
+    "event_id": "ad859a54-efe5-4824-8342-ca5978c33daf",
+    "seq": 39
+  },
+  "previous": {
+    "digest": "ae01da4475d6a71707785e914445df1bd90db5c926d97c58176943d4d7e2fdcd",
+    "event_id": "87da31b4-4ce0-4d8e-bf97-71d2c8b73736",
+    "seq": 37
+  },
+  "project_id": "8f254b4c-df0a-4056-8937-6eba30efcfa6",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "2d92d2e3-ea92-49a1-9e71-b005da1544bb",
+    "cycle": 1,
+    "digest": "4aeb717d0090b890bf58b81c74638ad3acc99892b4f94e94ef2cccb4ce703023",
+    "engine_id": "claudeloop",
+    "event_id": "1483821f-d803-48fb-9674-a282f7cd66a7",
+    "job_id": "40fb97d9-4ab1-4fa8-9ae2-693c2b7a7fc9",
+    "kind": "AnswerGiven",
+    "payload": {
+      "answer": "Python script with shebang - `./greet.py Alice` after chmod +x - simplest for a single-module tool",
+      "item_id": "entry_point_mechanism"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-19T18:30:20.040653+00:00",
+    "project_id": "8f254b4c-df0a-4056-8937-6eba30efcfa6",
+    "provenance": "trusted",
+    "seq": 38
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

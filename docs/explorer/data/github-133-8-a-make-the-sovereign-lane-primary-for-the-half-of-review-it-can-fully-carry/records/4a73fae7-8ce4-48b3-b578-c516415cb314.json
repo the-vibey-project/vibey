@@ -1,0 +1,43 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "412b6dc698b0cdd5a7d67c4fb3090920141f369757ce813b63d9424770815ad9",
+    "event_id": "0ba9c4f9-3a6f-40a9-a795-5e86789f1d0d",
+    "seq": 4
+  },
+  "previous": {
+    "digest": "6d0d005254878aeac32dc5ca8cf2c38bf1954fd80fefdb86597de33ab4938dea",
+    "event_id": "0c5239fa-fedc-4b7b-87b7-8cd9a787c41f",
+    "seq": 2
+  },
+  "project_id": "f4cfe576-55c7-4f79-80ad-485f85ddca8b",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "4bb7ecc1-ea40-5364-bed9-45c048157678",
+    "cycle": 1,
+    "digest": "5353a8d11de2a7db233b5dc0fe16d46d7bad90cee8108dff0fbdc9cb13e07f19",
+    "engine_id": "gptossloop",
+    "event_id": "4a73fae7-8ce4-48b3-b578-c516415cb314",
+    "job_id": "5057b798-907c-4039-9690-3992212dc0b2",
+    "kind": "QuestionAsked",
+    "payload": {
+      "blocking": true,
+      "cycle": 1,
+      "default": "Mark the paid half as *not evaluated* so the sovereign lane carries the diff half alone and the wider half is reported as \u201cnot evaluated\u201d rather than failing.",
+      "item_id": "Q1",
+      "stage": "context_free",
+      "text": "When the paid key is out of credit, should the paid half of the split review be marked as *not evaluated* (i.e., omitted from the verdict) or should it still run and return a failure?"
+    },
+    "phase": "design",
+    "produced_at": "2026-09-27T21:23:47.481939+00:00",
+    "project_id": "f4cfe576-55c7-4f79-80ad-485f85ddca8b",
+    "provenance": "agent",
+    "seq": 3
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

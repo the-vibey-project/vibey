@@ -1,0 +1,43 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "3d735d7fabec1cbcb6a729e85c5adf935d90cd161e50e8f7e0312cb4dfbc493c",
+    "event_id": "2507b402-acc4-469a-905a-6a898d7d8195",
+    "seq": 28
+  },
+  "previous": {
+    "digest": "acc031dbc9cd92552adb1173d1a461bdf713a1d1b37a10ebf23663f8347e0ab9",
+    "event_id": "958b082c-1177-4538-9745-785233a7cc43",
+    "seq": 26
+  },
+  "project_id": "5e76341f-ba5f-4272-8355-3df5d489bbcd",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "86f7238a-4ff8-4e7d-bad0-7e9228053642",
+    "cycle": 1,
+    "digest": "c559e246e2782e3c0cb2bd5f0bc59fda2f7beea87a5c7f98ac973840207f3aa6",
+    "engine_id": "claudeloop",
+    "event_id": "6a88202a-fa62-4f63-b4e6-c0d6b94c8b0e",
+    "job_id": "e58deb6b-5356-4a39-8acf-5dc898bba380",
+    "kind": "QuestionAsked",
+    "payload": {
+      "blocking": true,
+      "cycle": 1,
+      "default": "Fall back to a generic greeting: 'Good morning! Welcome to greeter3.'",
+      "item_id": "edge_username",
+      "stage": "example_mapping",
+      "text": "What should happen if the system username cannot be determined or is empty?"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-20T00:49:31.420364+00:00",
+    "project_id": "5e76341f-ba5f-4272-8355-3df5d489bbcd",
+    "provenance": "agent",
+    "seq": 27
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

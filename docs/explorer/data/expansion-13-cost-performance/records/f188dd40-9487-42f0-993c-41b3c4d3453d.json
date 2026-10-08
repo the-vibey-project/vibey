@@ -1,0 +1,40 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "95ecb03a88275e3c8dac5ea4272c88a85951ae0bb0be348a832c6c1609cd4ff5",
+    "event_id": "4dfba8c4-6276-49f2-ad65-d15bf18fa52e",
+    "seq": 999
+  },
+  "previous": {
+    "digest": "1dce7321a63eae16db5622ababae8de5ff62d71f3e505ba3012e7c41504c1e56",
+    "event_id": "3a747deb-423c-4b73-9285-5a80dbb0ec95",
+    "seq": 997
+  },
+  "project_id": "a1d6b837-46f3-40c0-b6a2-8b3babb7fe15",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "38384535-c379-4e0b-8e6b-8828f183b9d6",
+    "cycle": 1,
+    "digest": "55387b124af01bc805f727c7317becc868f4c730a4b27622c57bdf9ff835774f",
+    "engine_id": null,
+    "event_id": "f188dd40-9487-42f0-993c-41b3c4d3453d",
+    "job_id": "7827eb95-40ee-4281-9e3c-a7483e0981c9",
+    "kind": "FindingRaised",
+    "payload": {
+      "finding_id": "f_verify_xdist-parallel_cba1e22c",
+      "severity": "high",
+      "text": "gate failed: uv run pytest -q -p no:cacheprovider -n auto --maxprocesses=8: impls.copy(), kwargs, firstresult)\n  File \"[path]\", line 120, in _hookexec\n    return self._inner_hookexec(hook_name, methods, kwargs, firstresult)\n  File \"[path]\", line 121, in _multicall\n    res = hook_impl.function(*args)\n  File \"[path]\", line 172, in pytest_unconfigure\n    gc_collect_harder(gc_collect_iterations)\n  File \"[path]\", line 33, in gc_collect_harder\n    gc.collect()\n  File \"[path]\", line 1859, in call_exception_handler\n    self.default_exception_handler(context)\n  File \"[path]\", line 1833, in default_exception_handler\n    logger.error('\\n'.join(log_lines), exc_info=exc_info)\nMessage: \"Task exception was never retrieved\\nfuture: \u003cTask finished name='Task-831' coro=\u003cworker.\u003clocals\u003e.run_worker() done, defined at [path]\u003e exception=KeyboardInterrupt()\u003e\"\nArguments: ()\n[stdout] es/test_loop_process_adapter.py::test_preflight_doctor_exception_falls_back_to_env\ntests/infrastructure/engines/test_loop_process_adapter.py::test_preflight_doctor_exception_no_env_reports_detail\n  [path] RuntimeWarning: coroutine 'Process.communicate' was never awaited\n  Enable tracemalloc to get traceback where the object was allocated.\n  See https://docs.pytest.org/en/stable/how-to/capture-warnings.html#resource-warnings for more info.\n\n-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html\n=========================== short test summary info ============================\nFAILED tests/infrastructure/db/test_handoff_repository.py::test_get_returns_none_for_nonexistent_handoff\nFAILED tests/system/test_full_worker_faked.py::test_full_worker_drives_a_project_to_done_local\nERROR tests/cli/test_operational_commands.py::test_watch_with_latest_project\nERROR tests/cli/test_operational_commands.py::test_watch_with_explicit_project\nERROR tests/cli/test_operational_commands.py::test_deploy_status_no_deployment_events\nERROR tests/cli/test_operational_commands.py::test_deploy_status_event_without_endpoint\nERROR tests/cli/test_operational_commands.py::test_deploy_inspect_no_spec_events\nERROR tests/system/test_full_worker_faked.py::test_full_worker_drives_the_deploy_stage_set_to_done_deployed\n2 failed, 1366 passed, 2 xfailed, 3 warnings, 6 errors in 70.31s (0:01:10)"
+    },
+    "phase": "build",
+    "produced_at": "2026-08-22T18:55:48.506259+00:00",
+    "project_id": "a1d6b837-46f3-40c0-b6a2-8b3babb7fe15",
+    "provenance": "agent",
+    "seq": 998
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 8
+  }
+}

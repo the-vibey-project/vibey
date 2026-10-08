@@ -1,0 +1,43 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "2d79bf0780bfed9b775715af539b063af8951a7d5f8770397c30268e16a9c7b2",
+    "event_id": "3729904c-8d9f-49d8-981e-1352a9ce52bc",
+    "seq": 18
+  },
+  "previous": {
+    "digest": "493251c7cac2808fc0e9f643b6f11664fea00654b87ea153939510d29a10cb5c",
+    "event_id": "3b65d765-d119-43aa-adb0-b7c901eee165",
+    "seq": 16
+  },
+  "project_id": "ab0b06f9-55a4-4b47-ac08-254e7fdd9036",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "b59613ea-0bb6-43a1-9fb4-75522708b949",
+    "cycle": 1,
+    "digest": "3db5241218712acecd8460a797b61954fd63b31a09dc47f7566091533c36f4e2",
+    "engine_id": "claudeloop",
+    "event_id": "3ad2e5d2-0133-4ead-a832-945e68c97564",
+    "job_id": "48f9ef01-8b95-4709-adde-ed0ece390f8d",
+    "kind": "QuestionAsked",
+    "payload": {
+      "blocking": true,
+      "cycle": 1,
+      "default": "Git state only; the fork starts fresh in DESIGN phase with default engine rotation and retry count at zero, as if it were a new job seeded with that tree",
+      "item_id": "state_restoration",
+      "stage": "laddering",
+      "text": "When forking from seq N, what state gets restored to the new job's worktree beyond the git tree? (phase, engine preference, retry count, other job metadata)"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-22T03:02:27.256337+00:00",
+    "project_id": "ab0b06f9-55a4-4b47-ac08-254e7fdd9036",
+    "provenance": "agent",
+    "seq": 17
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

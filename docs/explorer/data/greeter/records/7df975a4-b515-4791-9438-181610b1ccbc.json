@@ -1,0 +1,39 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "24ce233e291f6c6fc43d58fce72477bfabae06cb54dbf1ba20a78f3992f34827",
+    "event_id": "7622e729-c05d-4d3f-a1fc-16d5d5866290",
+    "seq": 41
+  },
+  "previous": {
+    "digest": "fbf6811f0ba7fba267cafe13eeae4a81a9b34682397c18803f8a2609a33a287a",
+    "event_id": "a0d3bf3f-c708-4a24-a2d9-cac2a48cdcd5",
+    "seq": 39
+  },
+  "project_id": "26f89c38-c86b-4ddf-be75-c579a118e40e",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "d9cbeaa3-8603-460b-b0ce-46e8264e2e12",
+    "cycle": 1,
+    "digest": "8dee9fb409a2101b4cdb372fc978d8e1248e4972c12e8ba6948a5cda183ac377",
+    "engine_id": "claudeloop",
+    "event_id": "7df975a4-b515-4791-9438-181610b1ccbc",
+    "job_id": "2bdd2b5e-b4f1-4004-9dbf-78d267fea803",
+    "kind": "AnswerGiven",
+    "payload": {
+      "answer": "Both - single `greet.py` module that can run directly AND be installed as `greet` command via setuptools entry point",
+      "item_id": "entry_point_mechanism"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-19T12:33:49.385681+00:00",
+    "project_id": "26f89c38-c86b-4ddf-be75-c579a118e40e",
+    "provenance": "trusted",
+    "seq": 40
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

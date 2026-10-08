@@ -1,0 +1,39 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "afe9fb7d8b38b08fbedbee1ade8e38e5aeb384a9d38ac87ff8b52316d67148eb",
+    "event_id": "52a9866c-d994-4a32-a010-43df5b5abb9d",
+    "seq": 33
+  },
+  "previous": {
+    "digest": "8b916df9e465dab19f2929d9a88d93de9e33f7c570d2b0e7e27b632cf7a7acc4",
+    "event_id": "5f2e4df7-3f05-4612-b5bd-57aa25152949",
+    "seq": 31
+  },
+  "project_id": "44c06a64-c8ed-4153-96af-b49db29c39e3",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "aec553b5-b81d-4888-a851-6119c188a131",
+    "cycle": 1,
+    "digest": "9c1317b36ddecf3859bfcff0f63f1b4218106288260457ba502b0f508cc84486",
+    "engine_id": "claudeloop",
+    "event_id": "94b9593b-22f6-4986-959c-1cf27925ac35",
+    "job_id": "bcd8e0b1-385d-43dc-ad1f-cad988f80cc9",
+    "kind": "AnswerGiven",
+    "payload": {
+      "answer": "Multi-cycle projects where a job spans cycles, and concurrent budget checks during active event writes \u2014 both must see consistent snapshots",
+      "item_id": "edge_cases"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-22T03:43:27.429990+00:00",
+    "project_id": "44c06a64-c8ed-4153-96af-b49db29c39e3",
+    "provenance": "trusted",
+    "seq": 32
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

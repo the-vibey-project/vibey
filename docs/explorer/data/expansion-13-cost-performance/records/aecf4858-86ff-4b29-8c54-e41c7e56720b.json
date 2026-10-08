@@ -1,0 +1,42 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "54df2d1e35635b4dee52c2fa349c233aec10938593027399971b10e84a22863f",
+    "event_id": "c074b838-90c7-4570-9bf2-b44900873253",
+    "seq": 1219
+  },
+  "previous": {
+    "digest": "85dc3697de3924828498532d4f1b31ec53a83eaf9e6435aaf994e9a05d6a49c5",
+    "event_id": "2ddc64b1-2912-4719-9199-e0d4cb7577e0",
+    "seq": 1165
+  },
+  "project_id": "a1d6b837-46f3-40c0-b6a2-8b3babb7fe15",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "f0ea5e98-8ed9-49e8-8a3b-73ec052067a8",
+    "cycle": 1,
+    "digest": "81c7b1e95158395e07cd9da7413ac1948ff94fcf4acd4970c748d621c4dde375",
+    "engine_id": "codexloop",
+    "event_id": "aecf4858-86ff-4b29-8c54-e41c7e56720b",
+    "job_id": "a0010503-e657-47cd-b64c-2ad93c9b43a7",
+    "kind": "VerdictRendered",
+    "payload": {
+      "complete": false,
+      "remaining_work": [
+        "Review work item unified-coverage against acceptance criteria: Parallel xdist fragments combined into one .coverage file, no stale fragments remain (AC-07), All four per-layer coverage report invocations exit 0 with 100% branch coverage (AC-06), Deliberately uncovered line in one layer fails only that layer's gate, others still pass (AC-08)"
+      ],
+      "success": false
+    },
+    "phase": "build",
+    "produced_at": "2026-08-22T19:52:36.507345+00:00",
+    "project_id": "a1d6b837-46f3-40c0-b6a2-8b3babb7fe15",
+    "provenance": "agent",
+    "seq": 1200
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 2,
+    "paths": 0
+  }
+}

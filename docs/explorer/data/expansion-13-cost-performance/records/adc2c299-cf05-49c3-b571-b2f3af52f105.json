@@ -1,0 +1,43 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "443a904e07a0fb1fcadbb2631f60a69dc8986a921b831c4b9579b6469e21f913",
+    "event_id": "37981a74-8cbf-4036-9e3a-7a4c3fb04534",
+    "seq": 29
+  },
+  "previous": {
+    "digest": "01cf734da75eebd4ce635e052e82f6f2c1b12288568e119c677065661637cb20",
+    "event_id": "2dfca296-12d0-46b4-8877-9264fd10d8b9",
+    "seq": 27
+  },
+  "project_id": "a1d6b837-46f3-40c0-b6a2-8b3babb7fe15",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "8a0461a1-3cae-4ccb-bb83-fb1535dad132",
+    "cycle": 1,
+    "digest": "06f2eca6d05b01d58a6d52fdfdc2fa38f0f0278358ee105363b66a021acd852c",
+    "engine_id": "claudeloop",
+    "event_id": "adc2c299-cf05-49c3-b571-b2f3af52f105",
+    "job_id": "dd8513f6-0d76-49a5-8bdc-75167dea5385",
+    "kind": "QuestionAsked",
+    "payload": {
+      "blocking": false,
+      "cycle": 1,
+      "default": "No known failures yet; assume tests are isolated but validate all pass under pytest-xdist before committing",
+      "item_id": "known_failures",
+      "stage": "example_mapping",
+      "text": "Are there specific tests you've observed fail or behave unpredictably under parallel execution or non-sequential ordering?"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-20T20:44:04.546112+00:00",
+    "project_id": "a1d6b837-46f3-40c0-b6a2-8b3babb7fe15",
+    "provenance": "agent",
+    "seq": 28
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

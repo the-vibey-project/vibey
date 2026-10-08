@@ -1,0 +1,39 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "3e90fc2a2499e2d0e4200e83346c835cdbbf57d6717028f1ff21dc79ef2a7ab1",
+    "event_id": "acf68caf-9273-462a-b212-8539c804601b",
+    "seq": 43
+  },
+  "previous": {
+    "digest": "2b4f7fa245dc346b37a3682b1926f56d1188e41ff2e81faa575ec826628fa2db",
+    "event_id": "c711e701-206a-41a2-a271-1f611500118b",
+    "seq": 41
+  },
+  "project_id": "44c06a64-c8ed-4153-96af-b49db29c39e3",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "ff7bdae7-5102-4b5d-8eb7-36ec7ede03a7",
+    "cycle": 1,
+    "digest": "95a9105d5f5bf91e6285f21bfa60d828f11867ced058e42d1a4b8bab57f974ab",
+    "engine_id": "claudeloop",
+    "event_id": "b60ec54f-cbd8-4c1a-aeff-a973cccd59c2",
+    "job_id": "bcd8e0b1-385d-43dc-ad1f-cad988f80cc9",
+    "kind": "AnswerGiven",
+    "payload": {
+      "answer": "All three \u2014 walking skeleton is just the ledger scan fix plus baseline measurements; the rest follow once the pattern is proven",
+      "item_id": "deferrable_items"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-22T03:45:00.226417+00:00",
+    "project_id": "44c06a64-c8ed-4153-96af-b49db29c39e3",
+    "provenance": "trusted",
+    "seq": 42
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

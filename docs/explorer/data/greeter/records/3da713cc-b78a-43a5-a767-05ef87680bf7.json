@@ -1,0 +1,43 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "caa130ffd956d334141348ed6661e481ff531b5969ee9beb7e8da36703ecb07d",
+    "event_id": "a96dee69-c4b6-4b1e-9b55-063c3064939d",
+    "seq": 5
+  },
+  "previous": {
+    "digest": "a06ff534178690f912579b9a3d6915f2c0b4e0212fea5c624c67c86a2b63c69e",
+    "event_id": "92fa3809-829b-432e-ad31-72fdd92dbc13",
+    "seq": 3
+  },
+  "project_id": "26f89c38-c86b-4ddf-be75-c579a118e40e",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "35344c9a-eb10-41e7-b235-81a6fb62be9a",
+    "cycle": 1,
+    "digest": "89ddbd9d18a5286773e5f691fdd591d8d91058748d34729578b93a41d93448b9",
+    "engine_id": "claudeloop",
+    "event_id": "3da713cc-b78a-43a5-a767-05ef87680bf7",
+    "job_id": "2bdd2b5e-b4f1-4004-9dbf-78d267fea803",
+    "kind": "QuestionAsked",
+    "payload": {
+      "blocking": false,
+      "cycle": 1,
+      "default": "No specific constraints; open to best practices for the use case",
+      "item_id": "key_constraints",
+      "stage": "context_free",
+      "text": "Are there any technical constraints or requirements (language, platform, existing systems to integrate with)?"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-19T08:28:34.268185+00:00",
+    "project_id": "26f89c38-c86b-4ddf-be75-c579a118e40e",
+    "provenance": "agent",
+    "seq": 4
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

@@ -1,0 +1,39 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "8bf9c4d2c8ee7dfcaf8723b2e42a86a47d7bbde729730d3f5898e461d07d43d7",
+    "event_id": "5f3b38e8-fbba-41b3-bc7b-12791870849c",
+    "seq": 26
+  },
+  "previous": {
+    "digest": "7eb7c38bf48ae5a4cb74e7beada561eddb756647cf010b8dee2d15398b2b4d70",
+    "event_id": "f6617b81-54ca-4a08-8779-72faf53e733c",
+    "seq": 24
+  },
+  "project_id": "bed522a2-0b3e-4bff-9cd6-7c13fe40779a",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "7499bdf0-cd69-47eb-b354-176bfa2fa7ed",
+    "cycle": 1,
+    "digest": "a4af7ab9edc4008871aff5c8c750ed160ef2b726cbe3ce824bd1919faa00eea0",
+    "engine_id": "claudeloop",
+    "event_id": "e1b833ca-1fc3-4ed3-86dd-0bfe8778bd6c",
+    "job_id": "92d834a4-4bf2-4699-9354-adbea7936d77",
+    "kind": "AnswerGiven",
+    "payload": {
+      "answer": "If I or my team would use this multiple times per day and it would save meaningful coordination overhead, it's worth building. If it's once a week or less, better to document the existing pattern and move on.",
+      "item_id": "build_threshold"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-22T03:41:55.164639+00:00",
+    "project_id": "bed522a2-0b3e-4bff-9cd6-7c13fe40779a",
+    "provenance": "trusted",
+    "seq": 25
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

@@ -1,0 +1,39 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "c1b6f1e70e1bbf2a9a7856b1c142c0323d7a270665aa514c02a5f6295c20aeec",
+    "event_id": "51536693-5a93-4a70-9e77-d6163d1b383a",
+    "seq": 11
+  },
+  "previous": {
+    "digest": "1a67b197c1b3024308b96926a128038681b673fce0f516ad77699fece5053931",
+    "event_id": "0c9e0248-4417-414f-9921-931a641a8ca0",
+    "seq": 9
+  },
+  "project_id": "9692abab-ace3-4ee0-ac59-3ea42484b817",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "0face8bc-aa17-546b-b5de-e16e759738e6",
+    "cycle": 1,
+    "digest": "3e1a939f66d915584cc790e486d17dc61086e9e5671e74311327a541212ecc1b",
+    "engine_id": "gptossloop",
+    "event_id": "eb8547ca-34a4-4910-beb6-fc9c7ba232b8",
+    "job_id": "c2b75c18-fd15-4e79-ad4e-cf489356ad57",
+    "kind": "AnswerGiven",
+    "payload": {
+      "answer": "GitHub\u2019s algorithm",
+      "item_id": "q3"
+    },
+    "phase": "design",
+    "produced_at": "2026-09-29T18:40:40.995680+00:00",
+    "project_id": "9692abab-ace3-4ee0-ac59-3ea42484b817",
+    "provenance": "trusted",
+    "seq": 10
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

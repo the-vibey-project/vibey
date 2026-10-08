@@ -1,0 +1,43 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "6ea878dc3f2e02fdac40ca5aa834832f283a1a823dd0d38199eb30dcdb9a78fb",
+    "event_id": "dd8cafbf-552d-4244-8186-41271dd7d62d",
+    "seq": 19
+  },
+  "previous": {
+    "digest": "b34d12ede073df91a494bdcc6ae87d2fc57489255b3021f11da206ff897d5c6d",
+    "event_id": "8586d116-b2ff-4122-9448-fd108f8b6730",
+    "seq": 17
+  },
+  "project_id": "8ab823c9-89e4-4050-884c-9008c8b14ef8",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "8208cd89-5cd6-4289-bf8d-da2e5c54be4f",
+    "cycle": 1,
+    "digest": "43f541677cef5f3975912d1633fbcbda049cd436096a875fcf9b13bc30ed493d",
+    "engine_id": "claudeloop",
+    "event_id": "a8a2b9dc-d8df-4a82-bb4f-f0529a023ba2",
+    "job_id": "705692f1-69a1-4cc2-ade7-8aa3d1407b67",
+    "kind": "QuestionAsked",
+    "payload": {
+      "blocking": false,
+      "cycle": 1,
+      "default": "Click-through rate, link creation volume, system uptime \u003e99.9%, p99 redirect latency \u003c50ms",
+      "item_id": "success_metrics",
+      "stage": "laddering",
+      "text": "What are the key business metrics or success criteria for this system?"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-20T02:33:10.444774+00:00",
+    "project_id": "8ab823c9-89e4-4050-884c-9008c8b14ef8",
+    "provenance": "agent",
+    "seq": 18
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

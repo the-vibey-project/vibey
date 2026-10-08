@@ -1,0 +1,43 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "4e325c87e12b99014b9e7d61be50dd88ca468d4a4b37dfc6d9b07fcc9df9b111",
+    "event_id": "6b6246e7-6e24-41d4-9bc6-0e209a276ab8",
+    "seq": 29
+  },
+  "previous": {
+    "digest": "8bf9c4d2c8ee7dfcaf8723b2e42a86a47d7bbde729730d3f5898e461d07d43d7",
+    "event_id": "5f3b38e8-fbba-41b3-bc7b-12791870849c",
+    "seq": 26
+  },
+  "project_id": "bed522a2-0b3e-4bff-9cd6-7c13fe40779a",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "0088408e-d186-4860-8e8a-92381f89d8ce",
+    "cycle": 1,
+    "digest": "a4ae02038bb06f5da5371f38925cf92c84c0deaae50b40f4d55137d77bc29f5b",
+    "engine_id": "claudeloop",
+    "event_id": "b0aefd1e-795e-48a5-93ac-6aae725eeea2",
+    "job_id": "92d834a4-4bf2-4699-9354-adbea7936d77",
+    "kind": "QuestionAsked",
+    "payload": {
+      "blocking": true,
+      "cycle": 1,
+      "default": "Jobs j1, j2, j3 all start within 1s. Live view shows interleaved lines prefixed by job ID (e.g., 'j1 | Building...', 'j2 | Running tests...'). Final summary: table with columns [Job ID, Status, Duration, Phase], all showing \u2713 SUCCESS, with total elapsed time.",
+      "item_id": "golden_path_example",
+      "stage": "example_mapping",
+      "text": "Walk through a concrete 3-job parallel run with specific timings: when does the first output appear, what does the multiplexed live view look like (exact format), and what's in the final summary table?"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-22T03:43:10.784198+00:00",
+    "project_id": "bed522a2-0b3e-4bff-9cd6-7c13fe40779a",
+    "provenance": "agent",
+    "seq": 28
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

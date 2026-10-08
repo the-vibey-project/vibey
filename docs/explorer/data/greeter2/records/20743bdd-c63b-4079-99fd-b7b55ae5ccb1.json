@@ -1,0 +1,43 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "42761b46c501640010bcea1149d8ff10bf9e6632740be49ca0b9535f609d1db2",
+    "event_id": "a651d927-8135-4dd5-a68c-9981c9caa911",
+    "seq": 24
+  },
+  "previous": {
+    "digest": "68cb2e1a3b1eb9dc75d25a5a03681844bf90087c8e900dd445cdc2f83fd8d397",
+    "event_id": "5332f5a4-fa4a-43f4-8727-2680128f0cc1",
+    "seq": 22
+  },
+  "project_id": "8f254b4c-df0a-4056-8937-6eba30efcfa6",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "eb91fda3-d194-4676-adc2-f744180ca0b6",
+    "cycle": 1,
+    "digest": "b002a0d0826682f33087032743df82a8bd8430c8f59fb2c4a6f8e144e7ea09a2",
+    "engine_id": "claudeloop",
+    "event_id": "20743bdd-c63b-4079-99fd-b7b55ae5ccb1",
+    "job_id": "40fb97d9-4ab1-4fa8-9ae2-693c2b7a7fc9",
+    "kind": "QuestionAsked",
+    "payload": {
+      "blocking": true,
+      "cycle": 1,
+      "default": "`greet Alice` \u2192 \"Hello, Alice!\", `greet Bob Smith` \u2192 \"Hello, Bob Smith!\", `greet Jos\u00e9` \u2192 \"Hello, Jos\u00e9!\"",
+      "item_id": "basic_greeting_examples",
+      "stage": "example_mapping",
+      "text": "What should `greet Alice`, `greet Bob Smith`, and `greet Jos\u00e9` output exactly?"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-19T18:29:05.583707+00:00",
+    "project_id": "8f254b4c-df0a-4056-8937-6eba30efcfa6",
+    "provenance": "agent",
+    "seq": 23
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

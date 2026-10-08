@@ -1,0 +1,43 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "e0497c604ebb1a5c9bb73ab4d6e55d294f68c8f461143417a612f602e43308a3",
+    "event_id": "e23403b3-773a-4708-acc3-96b90558d253",
+    "seq": 42
+  },
+  "previous": {
+    "digest": "8dee9fb409a2101b4cdb372fc978d8e1248e4972c12e8ba6948a5cda183ac377",
+    "event_id": "7df975a4-b515-4791-9438-181610b1ccbc",
+    "seq": 40
+  },
+  "project_id": "26f89c38-c86b-4ddf-be75-c579a118e40e",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "9653cfb8-a0d7-4845-b2f1-a298cd9a34c8",
+    "cycle": 1,
+    "digest": "24ce233e291f6c6fc43d58fce72477bfabae06cb54dbf1ba20a78f3992f34827",
+    "engine_id": "claudeloop",
+    "event_id": "7622e729-c05d-4d3f-a1fc-16d5d5866290",
+    "job_id": "2bdd2b5e-b4f1-4004-9dbf-78d267fea803",
+    "kind": "QuestionAsked",
+    "payload": {
+      "blocking": true,
+      "cycle": 1,
+      "default": "Pytest with \u003e80% line coverage; unit tests for time logic, integration tests for CLI invocation; no CI required",
+      "item_id": "test_coverage_requirement",
+      "stage": "nfr_planguage",
+      "text": "What testing requirements should be met (coverage threshold, test types, CI integration)?"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-19T12:34:27.820232+00:00",
+    "project_id": "26f89c38-c86b-4ddf-be75-c579a118e40e",
+    "provenance": "agent",
+    "seq": 41
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

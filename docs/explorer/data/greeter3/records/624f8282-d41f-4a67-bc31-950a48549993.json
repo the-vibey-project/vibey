@@ -1,0 +1,39 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "0c9586754dbe8caf9a98d415b1407289f7e1a56705a50aa4935aa01f34a53779",
+    "event_id": "93fa5111-958c-4b8c-9809-092df3711cae",
+    "seq": 6
+  },
+  "previous": {
+    "digest": "1903a15392c4df77a20dfa33f5f3fc5a0d265d19c731dba9df8d38014002d7fd",
+    "event_id": "7877b78f-8716-4a2d-a615-2c3beba4d5d6",
+    "seq": 4
+  },
+  "project_id": "5e76341f-ba5f-4272-8355-3df5d489bbcd",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "697ac245-33de-4a75-9635-c813add2e980",
+    "cycle": 1,
+    "digest": "07d463f18f359127d5cce74d5d53d05abfad7fc5f71a9cd43a7a00a64587ca78",
+    "engine_id": "claudeloop",
+    "event_id": "624f8282-d41f-4a67-bc31-950a48549993",
+    "job_id": "e58deb6b-5356-4a39-8acf-5dc898bba380",
+    "kind": "AnswerGiven",
+    "payload": {
+      "answer": "A new feature or enhancement to the greeter3 application",
+      "item_id": "design_target"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-20T00:47:10.293193+00:00",
+    "project_id": "5e76341f-ba5f-4272-8355-3df5d489bbcd",
+    "provenance": "trusted",
+    "seq": 5
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

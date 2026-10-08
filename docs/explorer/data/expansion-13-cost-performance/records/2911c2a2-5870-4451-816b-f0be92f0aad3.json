@@ -1,0 +1,43 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "01cf734da75eebd4ce635e052e82f6f2c1b12288568e119c677065661637cb20",
+    "event_id": "2dfca296-12d0-46b4-8877-9264fd10d8b9",
+    "seq": 27
+  },
+  "previous": {
+    "digest": "962dbab80b65f413d6a21c0889ee8550b1f6d38fdec1dff0398807005062e175",
+    "event_id": "6acb9b08-4a1d-4242-a514-48d3bd5bbfa1",
+    "seq": 25
+  },
+  "project_id": "a1d6b837-46f3-40c0-b6a2-8b3babb7fe15",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "b6f447c8-8276-4212-81bd-15d465a9f256",
+    "cycle": 1,
+    "digest": "0c9329b4a5cfc256115d1703ee1cba8f78c3be0be289f6e75fe2842eeef9867c",
+    "engine_id": "claudeloop",
+    "event_id": "2911c2a2-5870-4451-816b-f0be92f0aad3",
+    "job_id": "dd8513f6-0d76-49a5-8bdc-75167dea5385",
+    "kind": "QuestionAsked",
+    "payload": {
+      "blocking": true,
+      "cycle": 1,
+      "default": "One shared template database (vibey_template) cloned once per worker at session start (vibey_test_gw0, vibey_test_gw1, etc.)",
+      "item_id": "template_strategy",
+      "stage": "example_mapping",
+      "text": "Should the PostgreSQL template pattern create one shared template database cloned per xdist worker, or regenerate schema per worker?"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-20T20:44:04.546112+00:00",
+    "project_id": "a1d6b837-46f3-40c0-b6a2-8b3babb7fe15",
+    "provenance": "agent",
+    "seq": 26
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

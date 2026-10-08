@@ -1,0 +1,43 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "b6cd163ca358a1c03cd9852ae37d5aeb21564070a6e341d4a7ba51d431ccbbf3",
+    "event_id": "df6bf999-41e7-4eb1-8a90-cd1b528b8a97",
+    "seq": 56
+  },
+  "previous": {
+    "digest": "179dcbdf0fee64831849a3f2414cf435ab80367f4067ca997890e5a99560e132",
+    "event_id": "5130f180-d862-434c-b070-436befce2ebe",
+    "seq": 54
+  },
+  "project_id": "ab0b06f9-55a4-4b47-ac08-254e7fdd9036",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "f9d88261-a17b-47ef-9fa2-aee99cea9a3b",
+    "cycle": 1,
+    "digest": "7ede2cd03f660893317656d18a7fa495f7878bee0ff65e612427e5a598499f94",
+    "engine_id": "claudeloop",
+    "event_id": "84f1f1e1-97b9-46ca-8f83-481401d8fae6",
+    "job_id": "48f9ef01-8b95-4709-adde-ed0ece390f8d",
+    "kind": "QuestionAsked",
+    "payload": {
+      "blocking": true,
+      "cycle": 1,
+      "default": "Fork again from the correct seq; the wrong fork becomes an abandoned terminal job cleaned up by doctor. No undo/rewind of fork operation itself - treat it like any other failed job",
+      "item_id": "wrong_seq_recovery",
+      "stage": "premortem",
+      "text": "Operator forks at the wrong seq and only realizes after the forked job has run for hours. What's the recovery path?"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-22T03:45:54.358554+00:00",
+    "project_id": "ab0b06f9-55a4-4b47-ac08-254e7fdd9036",
+    "provenance": "agent",
+    "seq": 55
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

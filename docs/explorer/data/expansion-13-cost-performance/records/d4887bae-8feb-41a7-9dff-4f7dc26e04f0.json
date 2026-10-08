@@ -1,0 +1,43 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "ca2830fbddebd5c154af8016452f13a57c82abc19c7f616a32c820508fc4e5d2",
+    "event_id": "ce16f855-53b6-45f9-ba09-1a2906df2255",
+    "seq": 43
+  },
+  "previous": {
+    "digest": "cb06f2f4f567c348414584ed640a0614680bc73b327ef67963ab276b7a9c4021",
+    "event_id": "d961027e-1429-4117-973d-d9f7341755a3",
+    "seq": 41
+  },
+  "project_id": "a1d6b837-46f3-40c0-b6a2-8b3babb7fe15",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "0ee4f4c6-327c-41e4-972b-74d83e95ec3f",
+    "cycle": 1,
+    "digest": "e869c8246102bfd6b4e5d7ea08ca32f29bec469cf133c9355a410c547bc65f83",
+    "engine_id": "claudeloop",
+    "event_id": "d4887bae-8feb-41a7-9dff-4f7dc26e04f0",
+    "job_id": "dd8513f6-0d76-49a5-8bdc-75167dea5385",
+    "kind": "QuestionAsked",
+    "payload": {
+      "blocking": true,
+      "cycle": 1,
+      "default": "Worst acceptable: 180s (3min), Target: 120s (2min), Ideal: 90s",
+      "item_id": "hook_performance_scale",
+      "stage": "nfr_planguage",
+      "text": "What's the worst acceptable vs. target vs. ideal total time for the pre-commit hook including lints and tests (currently ~13m)?"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-20T20:45:52.666294+00:00",
+    "project_id": "a1d6b837-46f3-40c0-b6a2-8b3babb7fe15",
+    "provenance": "agent",
+    "seq": 42
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

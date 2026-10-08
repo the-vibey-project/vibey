@@ -1,0 +1,43 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "75d8370446863799838e6840d1ce69fd71519f95dad3019485bf817328530ae0",
+    "event_id": "5c630347-b2ab-4b4d-ad89-5bf541b2acd6",
+    "seq": 12
+  },
+  "previous": {
+    "digest": "0ae771a1e9b9af756090bb446a0947b18291ba3cfc86464a2c9bcdd65f411ce2",
+    "event_id": "c2944da2-e31c-4906-b33d-1fbd0cd08253",
+    "seq": 10
+  },
+  "project_id": "8f254b4c-df0a-4056-8937-6eba30efcfa6",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "2b0ef95c-d548-44bb-bf16-ac841b59cd25",
+    "cycle": 1,
+    "digest": "c030ab1f95590bbc07fdc05788f41e0ca6d95b0fc4758ad5c7824b82f55cbb4f",
+    "engine_id": "claudeloop",
+    "event_id": "1c6a53b5-6f96-4d82-aedf-3e494600c898",
+    "job_id": "40fb97d9-4ab1-4fa8-9ae2-693c2b7a7fc9",
+    "kind": "QuestionAsked",
+    "payload": {
+      "blocking": false,
+      "cycle": 1,
+      "default": "Warm and professional - friendly but not overly casual, appropriate for a work environment",
+      "item_id": "emotional_tone",
+      "stage": "job_story",
+      "text": "What emotional tone or personality should the greetings convey?"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-19T18:27:38.312483+00:00",
+    "project_id": "8f254b4c-df0a-4056-8937-6eba30efcfa6",
+    "provenance": "agent",
+    "seq": 11
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

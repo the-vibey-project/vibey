@@ -1,0 +1,39 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "985c06d490be45ecae3272f879f8e4d65dc36fd394cecead4c3b71a075e6b585",
+    "event_id": "761ba9b7-4808-4b79-8904-c1e8538beb95",
+    "seq": 8
+  },
+  "previous": {
+    "digest": "778a2cc9aaaecf81e45aebfa4f0115d13226028c10ad0b133e03c4d13d5e1a66",
+    "event_id": "05639044-6279-4e00-9bf8-2ebdadf03a62",
+    "seq": 6
+  },
+  "project_id": "e631c00a-e1a1-4ed4-b99a-0fa2d388d240",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "a51e8d9a-d4b4-4b3e-bfea-64ecede12014",
+    "cycle": 1,
+    "digest": "400745544849d0e4ba5665251996b9ba8fa4ab62f0e8b3945c0357dab87ff029",
+    "engine_id": "claudeloop",
+    "event_id": "8e74b99d-4daa-47e5-a4f3-f7efc8ff9bdb",
+    "job_id": "d73f236e-a7b4-4748-b075-3900a75af324",
+    "kind": "AnswerGiven",
+    "payload": {
+      "answer": "1) coverage report --include='src/vibey/*' --fail-under=100 passes on a single instrumented run of the full suite. 2) A NEW CI step enforces that total, and the four existing per-layer steps keep their exact current names. 3) Zero new coverage suppressions: no '# pragma: no cover', no omit= entries, no new exclude_lines, no narrowing of any --include. A reviewer must be able to diff the coverage config and see nothing weakened. 4) The new tests are real behavioural tests that would fail if the behaviour broke -- not calls that merely execute lines for the counter. 5) All seven existing gates still pass: ruff check, ruff format --check, mypy --strict, the four per-layer floors, import-linter, bandit, pip-audit.",
+      "item_id": "acceptance_criteria"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-22T02:35:55.006438+00:00",
+    "project_id": "e631c00a-e1a1-4ed4-b99a-0fa2d388d240",
+    "provenance": "trusted",
+    "seq": 7
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

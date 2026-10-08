@@ -1,0 +1,39 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "7584ab64e630927450549dbf6d798c4d24fca680c0281924c6cfcaf2f2d89838",
+    "event_id": "0056ec79-5ae8-48d5-be34-c67263fa4e38",
+    "seq": 11
+  },
+  "previous": {
+    "digest": "f92f61247243ad30d959c440aa477d449fac5bb74ce76efc6771430341fc65cd",
+    "event_id": "69e6e4a1-554f-438a-b4c8-950487ff021d",
+    "seq": 8
+  },
+  "project_id": "df7e868b-1fbf-451b-8ceb-126359b7588e",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "2dd866bd-5299-4eb9-a04d-b298dfc12509",
+    "cycle": 1,
+    "digest": "580dd7a7bd0dbe6140449e946ada3cbdba8e267d01ad2ef913be75074c242b04",
+    "engine_id": "claudeloop",
+    "event_id": "cb409314-75aa-4999-a887-a7245cfb889b",
+    "job_id": "3a3b336c-c2aa-4400-a762-ae12246358d3",
+    "kind": "AnswerGiven",
+    "payload": {
+      "answer": "Feature works correctly with automated test coverage and meets acceptance criteria",
+      "item_id": "success_criteria"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-22T04:41:25.481404+00:00",
+    "project_id": "df7e868b-1fbf-451b-8ceb-126359b7588e",
+    "provenance": "trusted",
+    "seq": 9
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

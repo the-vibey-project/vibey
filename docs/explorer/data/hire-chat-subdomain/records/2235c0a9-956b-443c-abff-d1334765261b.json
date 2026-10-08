@@ -1,0 +1,43 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "02b2a6f5443e57045a64168dd606207dee8470f044425e55d155f31287161c5f",
+    "event_id": "956373a6-7a85-4d37-a529-e5d24fc88117",
+    "seq": 26
+  },
+  "previous": {
+    "digest": "a9f660f136dec90ecdf3f4788036b3e1f9afd92ea9d1b6ec12958723dcb3aa2c",
+    "event_id": "f8e8690b-55a2-40e2-9169-647595d48b94",
+    "seq": 24
+  },
+  "project_id": "0ee95624-eec4-4e8e-9a14-6ad9a37dcff4",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "c46ca43e-7b96-4262-8d52-e220f781c031",
+    "cycle": 1,
+    "digest": "aff87654ad329df0e92b5a217d1b767e4189719cb6ff0b3010cb2dea3e875032",
+    "engine_id": "claudeloop",
+    "event_id": "2235c0a9-956b-443c-abff-d1334765261b",
+    "job_id": "1343d0fd-bf3f-4739-8c21-cbf7693c673e",
+    "kind": "QuestionAsked",
+    "payload": {
+      "blocking": true,
+      "cycle": 1,
+      "default": "Same card/input/messages/citations UI; page variant renders in main content area with max-w-3xl centering, removes the close button, and shows the 'resting' notice inline when disabled (instead of rendering null)",
+      "item_id": "variant_ui_diff",
+      "stage": "example_mapping",
+      "text": "What visual/layout differences distinguish the page variant from the homepage widget (beyond full-screen vs floating)?"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-20T20:12:08.684259+00:00",
+    "project_id": "0ee95624-eec4-4e8e-9a14-6ad9a37dcff4",
+    "provenance": "agent",
+    "seq": 25
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

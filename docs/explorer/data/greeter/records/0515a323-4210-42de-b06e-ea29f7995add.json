@@ -1,0 +1,40 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "c1b4bde9f845b73ec9ae373428d35f79628a691a35a54d58d60f4573ac6ace86",
+    "event_id": "919a4145-3997-40cb-955e-183f245689c2",
+    "seq": 866
+  },
+  "previous": {
+    "digest": "8f518ece48de7581807114ae1b9ca53996937d3852deeb7c87c9499638bce8a1",
+    "event_id": "79e98f8b-d03d-4ed7-9ac6-e1e9ffd8c5bd",
+    "seq": 847
+  },
+  "project_id": "26f89c38-c86b-4ddf-be75-c579a118e40e",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "8b4d213e-5206-4c46-9600-f4e2beb1f38c",
+    "cycle": 1,
+    "digest": "50755059ce761963fcb22e1d0ea044cb308d2166d434f27fa44fddddb6f063cc",
+    "engine_id": null,
+    "event_id": "0515a323-4210-42de-b06e-ea29f7995add",
+    "job_id": "1b893d2d-a996-4640-8a92-52ae2c2358c7",
+    "kind": "FindingRaised",
+    "payload": {
+      "finding_id": "f_integrate_lint-readme_72d386b4",
+      "severity": "high",
+      "text": "gate failed after merging 'lint-readme': pytest --cov=greet --cov-fail-under=80: [path] PytestDeprecationWarning: The configuration option \"asyncio_default_fixture_loop_scope\" is unset.\nThe event loop scope for asynchronous fixtures will default to the \"fixture\" caching scope. Future versions of pytest-asyncio will default the loop scope for asynchronous fixtures to \"function\" scope. Set the default fixture loop scope explicitly in order to avoid unexpected behavior in the future. Valid fixture loop scopes are: \"function\", \"class\", \"module\", \"package\", \"session\"\n\n  warnings.warn(PytestDeprecationWarning(_DEFAULT_FIXTURE_LOOP_SCOPE_UNSET))\n[path] CovFailUnderWarning: Coverage failure: total of 73 is less than fail-under=80\n  warnings.warn(CovFailUnderWarning(message), stacklevel=1)"
+    },
+    "phase": "build",
+    "produced_at": "2026-08-19T13:52:35.892366+00:00",
+    "project_id": "26f89c38-c86b-4ddf-be75-c579a118e40e",
+    "provenance": "agent",
+    "seq": 848
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 2
+  }
+}

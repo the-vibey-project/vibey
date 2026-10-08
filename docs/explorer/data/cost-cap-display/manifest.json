@@ -1,0 +1,49 @@
+{
+  "chain": {
+    "findings": 0,
+    "head": "19be2d2d318d028732a214f89324a1d4a72d33206bddfa690066d8cf23d6c82f",
+    "head_seq": 667,
+    "scheme": "vibey-ledger-chain/v1",
+    "verified": true
+  },
+  "digest_range": "6555cc57acf30fd341bd73caa34f657d9729159a358fbf9466ee3b5d814a30f9",
+  "documents": {
+    "index": "index.json",
+    "records": "records/{event_id}.json"
+  },
+  "format": "vibey-ledger-site/v1",
+  "holds": "full",
+  "policy": {
+    "fingerprint": "20c0e83ba268bd901344a690af4afac1b0433c0e279a476d954f31f9cb7fc5e8",
+    "scheme": "vibey-publication-policy/v1"
+  },
+  "project": {
+    "name": "cost-cap-display",
+    "project_id": "b43d1fcb-fb7b-42d6-9f80-220292c73389"
+  },
+  "published": {
+    "first_seq": 1,
+    "last_seq": 666,
+    "records": 73
+  },
+  "seq_range": {
+    "events": 667,
+    "first": 1,
+    "last": 667
+  },
+  "shard_format": "vibey-ledger-shard/v1",
+  "statement": "594 events withheld by policy",
+  "tier": "standard (untiered)",
+  "withheld": {
+    "by_reason": {
+      "engine_chatter": 507,
+      "kind_not_allowlisted": 84,
+      "untrusted_provenance": 3
+    },
+    "credentials": 0,
+    "emails": 0,
+    "events": 594,
+    "fields": 18,
+    "paths": 6
+  }
+}

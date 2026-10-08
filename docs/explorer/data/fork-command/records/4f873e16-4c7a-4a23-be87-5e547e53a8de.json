@@ -1,0 +1,42 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "ad0d6cb8b10f727e896317d9ba3ac31ad57b7af9c0e2f7dd2e520127241abcec",
+    "event_id": "adce99c3-cd97-424a-9a74-a23abfd365ea",
+    "seq": 921
+  },
+  "previous": {
+    "digest": "951363211977b8154a3ac2d5ebaeab3bafaf4d12dd0da619d77ba619102e97f5",
+    "event_id": "9da1fe5f-be47-423b-a091-cd7dcdb1eebb",
+    "seq": 795
+  },
+  "project_id": "ab0b06f9-55a4-4b47-ac08-254e7fdd9036",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "c00e1d56-e1dc-42cb-8eff-d441dd393bf3",
+    "cycle": 1,
+    "digest": "ce6e0202cd81b7602885e0b8b9a057b46f060a51ccf031e8e6504c6f0049a9d5",
+    "engine_id": "codexloop",
+    "event_id": "4f873e16-4c7a-4a23-be87-5e547e53a8de",
+    "job_id": "d7eec220-5987-43ab-b72b-5f0b2d338737",
+    "kind": "VerdictRendered",
+    "payload": {
+      "complete": true,
+      "remaining_work": [
+        "Implement work item seq-resolver: Pure seq-to-commit resolver in domain layer"
+      ],
+      "success": true
+    },
+    "phase": "build",
+    "produced_at": "2026-08-22T19:58:29.035683+00:00",
+    "project_id": "ab0b06f9-55a4-4b47-ac08-254e7fdd9036",
+    "provenance": "agent",
+    "seq": 874
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 3,
+    "paths": 0
+  }
+}

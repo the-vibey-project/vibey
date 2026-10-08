@@ -1,0 +1,49 @@
+{
+  "chain": {
+    "findings": 0,
+    "head": "b00c617a97b0d4bea41cb4e7164ace406d325eaa4942b6e5a9be01848cfba679",
+    "head_seq": 1109,
+    "scheme": "vibey-ledger-chain/v1",
+    "verified": true
+  },
+  "digest_range": "eb38a05ffb66fa94d92bac9e23b7266afa1e400cb3be267ee0eaa3292f4e408b",
+  "documents": {
+    "index": "index.json",
+    "records": "records/{event_id}.json"
+  },
+  "format": "vibey-ledger-site/v1",
+  "holds": "full",
+  "policy": {
+    "fingerprint": "20c0e83ba268bd901344a690af4afac1b0433c0e279a476d954f31f9cb7fc5e8",
+    "scheme": "vibey-publication-policy/v1"
+  },
+  "project": {
+    "name": "greeter",
+    "project_id": "26f89c38-c86b-4ddf-be75-c579a118e40e"
+  },
+  "published": {
+    "first_seq": 1,
+    "last_seq": 1109,
+    "records": 174
+  },
+  "seq_range": {
+    "events": 1109,
+    "first": 1,
+    "last": 1109
+  },
+  "shard_format": "vibey-ledger-shard/v1",
+  "statement": "935 events withheld by policy",
+  "tier": "standard (untiered)",
+  "withheld": {
+    "by_reason": {
+      "engine_chatter": 676,
+      "kind_not_allowlisted": 256,
+      "untrusted_provenance": 3
+    },
+    "credentials": 0,
+    "emails": 0,
+    "events": 935,
+    "fields": 70,
+    "paths": 22
+  }
+}

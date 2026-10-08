@@ -1,0 +1,43 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "8ac8e2de714676b07f0a53baa178405fd3d4ec6c69e09ad86100af307a4e5598",
+    "event_id": "0e8fc6d1-76c3-479f-8417-4a17d1d64e6c",
+    "seq": 10
+  },
+  "previous": {
+    "digest": "256e9f2eefe28b99c5beeb2a044ce84723436184798ba87cfdf62f028c6ea569",
+    "event_id": "1ef0e71b-13c5-4ebf-9263-d99e1afc7543",
+    "seq": 8
+  },
+  "project_id": "26f89c38-c86b-4ddf-be75-c579a118e40e",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "f24b584b-dc06-4782-b19b-d2ddc3ce3c52",
+    "cycle": 1,
+    "digest": "24329a33df0aef64efc90837b672761129da9eba7388c3d670abd769b497e731",
+    "engine_id": "claudeloop",
+    "event_id": "002b81a4-210c-4ad6-8e8c-b276a9fd9e5f",
+    "job_id": "2bdd2b5e-b4f1-4004-9dbf-78d267fea803",
+    "kind": "QuestionAsked",
+    "payload": {
+      "blocking": true,
+      "cycle": 1,
+      "default": "As a required command-line argument (e.g., `greet Alice`)",
+      "item_id": "name_input_method",
+      "stage": "job_story",
+      "text": "How should the CLI receive the user's name?"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-19T08:40:28.529482+00:00",
+    "project_id": "26f89c38-c86b-4ddf-be75-c579a118e40e",
+    "provenance": "agent",
+    "seq": 9
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

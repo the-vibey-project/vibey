@@ -1,0 +1,39 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "62407e600e6652c775a70b99ee6b40be56a065f04415c6e3e254627aab1cd4f3",
+    "event_id": "24caf5f6-225c-4ae0-86d1-e8479b97dab4",
+    "seq": 56
+  },
+  "previous": {
+    "digest": "f6e37ce0eed6733aacc52de11e925ea3642367a6db64e84ca36c0a4f653b1117",
+    "event_id": "f2ec720c-2668-4a85-b3fe-a88d370db5a9",
+    "seq": 54
+  },
+  "project_id": "8ab823c9-89e4-4050-884c-9008c8b14ef8",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "28d99e7a-1b86-4e4f-a484-36f987c2cf7c",
+    "cycle": 1,
+    "digest": "4017be533e47f35c84b09a41e1065f75ecbb657d6dc4f407f7cf058a88af0835",
+    "engine_id": "claudeloop",
+    "event_id": "7ff4c6bb-d502-4562-a15f-c94f7c5f8599",
+    "job_id": "705692f1-69a1-4cc2-ade7-8aa3d1407b67",
+    "kind": "AnswerGiven",
+    "payload": {
+      "answer": "Distributed link creation attack bypassing rate limits via residential proxies, filling storage with spam URLs; or using service to mask malware distribution at scale",
+      "item_id": "abuse_vector"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-20T02:36:21.135900+00:00",
+    "project_id": "8ab823c9-89e4-4050-884c-9008c8b14ef8",
+    "provenance": "trusted",
+    "seq": 55
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

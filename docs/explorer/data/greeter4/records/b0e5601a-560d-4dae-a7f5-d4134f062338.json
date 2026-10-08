@@ -1,0 +1,40 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "7842517003d3188110f0f465954b0ecff589806cb8cb54badeb558d03aad338d",
+    "event_id": "051d6564-271f-4ae3-b79e-b2dcf6fe6923",
+    "seq": 307
+  },
+  "previous": {
+    "digest": "7842517003d3188110f0f465954b0ecff589806cb8cb54badeb558d03aad338d",
+    "event_id": "4046ed18-95b8-4910-927c-1b8e1a184723",
+    "seq": 242
+  },
+  "project_id": "8ab823c9-89e4-4050-884c-9008c8b14ef8",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "8196c6f7-b9d1-4629-9bc3-649465f6e874",
+    "cycle": 1,
+    "digest": "c815a967c59d529d28584d8d1343db8c9ed04a70f749edd2076b5e02f652603b",
+    "engine_id": null,
+    "event_id": "b0e5601a-560d-4dae-a7f5-d4134f062338",
+    "job_id": "0dc58eea-6849-40be-91bd-5330e2a3c09b",
+    "kind": "FindingRaised",
+    "payload": {
+      "finding_id": "f_verify_code-filtering_906c8d74",
+      "severity": "high",
+      "text": "gate failed: python -m pytest tests/ -x: ImportError while loading conftest '[path]'.\ntests/conftest.py:3: in \u003cmodule\u003e\n    from fastapi.testclient import TestClient\nE   ModuleNotFoundError: No module named 'fastapi'"
+    },
+    "phase": "build",
+    "produced_at": "2026-08-20T02:54:20.801259+00:00",
+    "project_id": "8ab823c9-89e4-4050-884c-9008c8b14ef8",
+    "provenance": "agent",
+    "seq": 243
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 1
+  }
+}

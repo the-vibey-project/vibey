@@ -1,0 +1,39 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "34c7e444713b0a5aa13c8f951e928eb8cc87a81f04ea1d71a92dc73235167d64",
+    "event_id": "e8032df8-c7a3-424e-85f1-2ac2d51325d2",
+    "seq": 61
+  },
+  "previous": {
+    "digest": "4881be031cc4ce4d5c2ecfea64310b5d5e7448970aa209a6a089dc9223cc8f89",
+    "event_id": "cf122bb2-a532-4ee6-9976-728aa2c295a2",
+    "seq": 59
+  },
+  "project_id": "5ea01f61-8536-4ace-90cb-18700a12e410",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "8289e6cc-5891-45ff-ab7f-abc7e5dec666",
+    "cycle": 1,
+    "digest": "a29f4cd1cb2c7da5f9c1b0230db35f58ac141027a5eea761f7e9c0cb734a2c9c",
+    "engine_id": "claudeloop",
+    "event_id": "09b60a2e-84d6-434a-91e4-9d6d7723ef4d",
+    "job_id": "4c2ec03f-d670-44f9-9f05-47597984ab20",
+    "kind": "AnswerGiven",
+    "payload": {
+      "answer": "Timeout or failure in one engine gets swallowed during asyncio.gather; exit code only reflects partial results or doesn't aggregate all engine statuses correctly",
+      "item_id": "exit_code_edge_case"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-22T03:50:19.448891+00:00",
+    "project_id": "5ea01f61-8536-4ace-90cb-18700a12e410",
+    "provenance": "trusted",
+    "seq": 60
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

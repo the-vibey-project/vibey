@@ -1,0 +1,39 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "2a0ea2e4c7a7bae201a81e34cd3eb1f2b335e8f6d98fd8f26c8e48fd06d6ddd9",
+    "event_id": "cfa3f812-6e04-4a53-8019-6cc372c16011",
+    "seq": 54
+  },
+  "previous": {
+    "digest": "923c08aa1a7e06ed70bd30bd58f6d37e88916c0053e9f21921e954ccf8cd77a7",
+    "event_id": "59c77a94-a110-40c3-a166-63ef02e2bbb2",
+    "seq": 50
+  },
+  "project_id": "d733035f-e0f9-4f67-aba2-270068d6a9c6",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "98c45662-d166-4124-807f-042db252a0fe",
+    "cycle": 1,
+    "digest": "b94ed12e00a161528235c0324c4493bb09b727a2b1e8d3e1ee20bad390023839",
+    "engine_id": "claudeloop",
+    "event_id": "f9e2fe37-c509-4809-bc65-32e8a6069fad",
+    "job_id": "44e282ee-55b1-4cf9-afc3-c84870a14a5c",
+    "kind": "AnswerGiven",
+    "payload": {
+      "answer": "Log at WARN: LEASED job drain triggered, DONE override with --force, race-detected retry. Log at ERROR: transaction rollback. No custom metrics yet\u2014defer until usage patterns emerge.",
+      "item_id": "observability_failure_modes"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-22T03:45:45.534381+00:00",
+    "project_id": "d733035f-e0f9-4f67-aba2-270068d6a9c6",
+    "provenance": "trusted",
+    "seq": 51
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

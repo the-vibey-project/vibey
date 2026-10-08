@@ -1,0 +1,39 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "c41590f575fe6f1e488f12bcd865000a4c85ddc67fac3db872fc0fb3d29a503d",
+    "event_id": "e335f808-c3e5-4542-ac24-6f8c9bb58840",
+    "seq": 8
+  },
+  "previous": {
+    "digest": "aabe2eb85f318be1258c4ca5396401bd962721d20b323ed5a12265b6d5000b3c",
+    "event_id": "ef8daad6-a0a8-4e06-8892-cd5a3d527a2c",
+    "seq": 6
+  },
+  "project_id": "ab0b06f9-55a4-4b47-ac08-254e7fdd9036",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "667c9bf4-dadf-4e37-8fba-4c4e6cfb7a71",
+    "cycle": 1,
+    "digest": "b98007fd67820bad7ca90ecef02e256e4cf1ee89d1c84d709e77e9688e57b827",
+    "engine_id": "claudeloop",
+    "event_id": "d9f01ff4-3824-45b3-ab55-61eaba3b3408",
+    "job_id": "48f9ef01-8b95-4709-adde-ed0ece390f8d",
+    "kind": "AnswerGiven",
+    "payload": {
+      "answer": "Operators supervising autonomous runs, and later the plan-drift reconciler from runbook 17, whose corrective ladder would benefit from 'fork from before the drift' as an action.",
+      "item_id": "users"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-22T02:55:55.014043+00:00",
+    "project_id": "ab0b06f9-55a4-4b47-ac08-254e7fdd9036",
+    "provenance": "trusted",
+    "seq": 7
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

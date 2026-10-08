@@ -1,0 +1,39 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "426c5016156d220741ac30e8baafcf18e4a11003ff3aaf0d75df3d7fd53fbd9d",
+    "event_id": "c7ae7f77-1600-4a63-9141-9081a858a3dd",
+    "seq": 7
+  },
+  "previous": {
+    "digest": "faf99176d488b7ae7c1dcd0c396f1689e8ec833a8f78c7b8c9e271327cb8cf36",
+    "event_id": "2c4d3802-f326-49f6-bd3b-b99a5cf09cbd",
+    "seq": 5
+  },
+  "project_id": "bed522a2-0b3e-4bff-9cd6-7c13fe40779a",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "94dffd75-986d-4a6e-86d5-a950e172019e",
+    "cycle": 1,
+    "digest": "fb302e4d1bc6d576de4ce28ecc91995c77214cd35663771d212534a9436f916f",
+    "engine_id": "claudeloop",
+    "event_id": "860a8310-5eca-4ffd-946f-7b181ee4eea3",
+    "job_id": "92d834a4-4bf2-4699-9354-adbea7936d77",
+    "kind": "AnswerGiven",
+    "payload": {
+      "answer": "Add a way to run several named jobs concurrently -- e.g. `vibey work --parallel \u003cid\u003e,\u003cid\u003e,\u003cid\u003e` -- with a mechanism that stops them colliding while they work against the same branch. BEFORE designing any of that, resolve one question, because it determines whether this is a small feature or a hard one: vibey ALREADY runs jobs concurrently. Workers claim with FOR UPDATE SKIP LOCKED, hold per-kind leases, work in separate git worktrees under .vibey/worktrees/\u003ccycle\u003e/, and serialise the merge step behind an advisory lock (the 'advisory-locked integrates' in the architecture notes). So the honest first task is to state precisely what this command adds that `vibey worker -j N` does not.",
+      "item_id": "what"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-22T02:56:20.390380+00:00",
+    "project_id": "bed522a2-0b3e-4bff-9cd6-7c13fe40779a",
+    "provenance": "trusted",
+    "seq": 6
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

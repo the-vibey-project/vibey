@@ -1,0 +1,43 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "fc0be01b8a39fb9d030def29eb67cce2c5639671709292b16d4b477c85fd4949",
+    "event_id": "0a833794-f8b9-47f1-8fb0-28b22fa1f759",
+    "seq": 52
+  },
+  "previous": {
+    "digest": "9cb2dae08b6db3fb6c5eeda0d13d55367439f1522d51b0eeba8ad31a048568f4",
+    "event_id": "f4608a60-cfc9-49d0-86f3-b418eb5f9576",
+    "seq": 50
+  },
+  "project_id": "a1d6b837-46f3-40c0-b6a2-8b3babb7fe15",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "1d5b475f-6f41-4488-a2b3-a0e148b4b4ca",
+    "cycle": 1,
+    "digest": "66a0b9e65e90d72b7150f019dff58b16237b4c1fb59fdb6824a1e97467868514",
+    "engine_id": "claudeloop",
+    "event_id": "a2e76d98-ef2e-4d21-91fc-5048b7cff2f2",
+    "job_id": "dd8513f6-0d76-49a5-8bdc-75167dea5385",
+    "kind": "QuestionAsked",
+    "payload": {
+      "blocking": true,
+      "cycle": 1,
+      "default": "Workers produce separate .coverage.* files that require combine step; add pytest-cov with --cov-append and coverage combine to merge correctly",
+      "item_id": "coverage_reporting_failure",
+      "stage": "premortem",
+      "text": "What could break the unified coverage run: xdist workers producing separate .coverage files that don't combine, per-layer granularity lost in merge, or coverage.py configuration incompatible with parallel execution?"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-20T20:46:42.714772+00:00",
+    "project_id": "a1d6b837-46f3-40c0-b6a2-8b3babb7fe15",
+    "provenance": "agent",
+    "seq": 51
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

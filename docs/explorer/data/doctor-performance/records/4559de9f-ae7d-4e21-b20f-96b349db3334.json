@@ -1,0 +1,43 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "2918eb3b37ec3859618b0385b27c349b9e16284266c8e5c93b874240d6235799",
+    "event_id": "86481532-1176-4069-87a8-c736f0802560",
+    "seq": 39
+  },
+  "previous": {
+    "digest": "14c119f9eb2c4e7541586762eec4ce929c37bf61d15b5b5eb05e8e11e7a06c3f",
+    "event_id": "680f2a97-2fdb-4c6b-8f08-a213510a9e8f",
+    "seq": 37
+  },
+  "project_id": "5ea01f61-8536-4ace-90cb-18700a12e410",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "f0a522a4-4e53-454b-8d5a-8d41ea0d6264",
+    "cycle": 1,
+    "digest": "5be1a594eee66a5bfd4c36f2ec5b454faeade50e21f6a537e782af22246b9088",
+    "engine_id": "claudeloop",
+    "event_id": "4559de9f-ae7d-4e21-b20f-96b349db3334",
+    "job_id": "4c2ec03f-d670-44f9-9f05-47597984ab20",
+    "kind": "QuestionAsked",
+    "payload": {
+      "blocking": true,
+      "cycle": 1,
+      "default": "Doctor opens build_app() once at the command entry point (before engine iteration), passes the app/pool to engine check functions rather than rebuilding per engine",
+      "item_id": "build_app_call_sites",
+      "stage": "walking_skeleton",
+      "text": "Where are all the build_app() call sites that need consolidation, and what should the refactored structure look like?"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-22T03:44:52.181413+00:00",
+    "project_id": "5ea01f61-8536-4ace-90cb-18700a12e410",
+    "provenance": "agent",
+    "seq": 38
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

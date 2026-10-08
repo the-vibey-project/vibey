@@ -1,0 +1,43 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "29814277cdb2dc5c3f4149d48408fc39cb3e77c7acdcb386b68bab005946d51f",
+    "event_id": "dbdfdd1e-3163-4f17-b55b-d69914905688",
+    "seq": 45
+  },
+  "previous": {
+    "digest": "2f882b5573592f978bb5b7cf4198ced7efac19fc01b8f5468cdba1052c095228",
+    "event_id": "33d44b1f-0743-4865-a9f5-09ed1efbb97a",
+    "seq": 43
+  },
+  "project_id": "e631c00a-e1a1-4ed4-b99a-0fa2d388d240",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "cf71b82b-e14d-4da4-ad0a-9a2c6bb2d038",
+    "cycle": 1,
+    "digest": "cbef87bf102d6e1221f2c091377795087193b15fee00c3c95ba0763c752c4de6",
+    "engine_id": "claudeloop",
+    "event_id": "5d7c71f4-ff17-4a7c-acf3-a883ff723cdd",
+    "job_id": "d73f236e-a7b4-4748-b075-3900a75af324",
+    "kind": "QuestionAsked",
+    "payload": {
+      "blocking": true,
+      "cycle": 1,
+      "default": "Branch coverage with partial-branch detection required (already enforced via --cov-branch); 100% means zero partial branches reported",
+      "item_id": "coverage_measurement_precision",
+      "stage": "nfr_planguage",
+      "text": "Should coverage be measured at statement level only, or must branch coverage distinguish between partial branches (one arm taken) vs full coverage (both arms)?"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-22T03:42:49.769899+00:00",
+    "project_id": "e631c00a-e1a1-4ed4-b99a-0fa2d388d240",
+    "provenance": "agent",
+    "seq": 44
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

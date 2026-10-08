@@ -1,0 +1,43 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "38634e8ada5b892669399b62b35907696e94c86925a2d400707747458399e6e0",
+    "event_id": "ccaf8a41-e726-45fc-8f34-f119d31f7574",
+    "seq": 19
+  },
+  "previous": {
+    "digest": "8c9d9056125cb7329a0ac602c22193504ab000ea8da96458d9f1ca2b311a2d9e",
+    "event_id": "f2a10ccb-d0bc-470d-b112-93315d3c632e",
+    "seq": 17
+  },
+  "project_id": "e631c00a-e1a1-4ed4-b99a-0fa2d388d240",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "cae3a846-df15-4be4-b63f-d69f241b926b",
+    "cycle": 1,
+    "digest": "5fa4e1a8b5062810dcd4f57a87e9a263ac612fc7003ab255b00d74bdbcf1fca5",
+    "engine_id": "claudeloop",
+    "event_id": "485872cd-84bb-46ad-af19-2645ab8c4d37",
+    "job_id": "d73f236e-a7b4-4748-b075-3900a75af324",
+    "kind": "QuestionAsked",
+    "payload": {
+      "blocking": true,
+      "cycle": 1,
+      "default": "Fix the design first: delete unreachable code immediately, simplify before covering; coverage work is a design audit",
+      "item_id": "design_issue_priority",
+      "stage": "laddering",
+      "text": "If covering a branch reveals a design issue (unreachable code, overcomplicated conditionals), what's the priority\u2014fix the design first, cover current design then refactor separately, or flag for human review?"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-22T02:38:48.384326+00:00",
+    "project_id": "e631c00a-e1a1-4ed4-b99a-0fa2d388d240",
+    "provenance": "agent",
+    "seq": 18
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

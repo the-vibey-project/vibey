@@ -1,0 +1,39 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "f8e792ca57b61167bad1be4f085eea3c57ed27e3fbcb2ed1d6123d644f31b24f",
+    "event_id": "03d1160e-1e4b-43c2-8962-8a81d14d26c9",
+    "seq": 9
+  },
+  "previous": {
+    "digest": "aa1de1464aa3a94b7061f00d3806429fd673e82fbc41085b3ec2e32e35b0d410",
+    "event_id": "8ce28958-9006-42d7-90ba-6d88e31757ed",
+    "seq": 7
+  },
+  "project_id": "d482c3e2-029e-4bb8-a9a1-de411816c6ae",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "30c84a64-7c09-461e-aaaa-ff7749b1e69e",
+    "cycle": 1,
+    "digest": "b2229b28d5ff094bc195b952bc633c56907b478bb50bd3027c17ef7a14956d98",
+    "engine_id": "claudeloop",
+    "event_id": "3fd2f524-bcb3-4730-b824-588483724959",
+    "job_id": "d2626f25-d550-454e-bacd-7a7e6c9b52cd",
+    "kind": "AnswerGiven",
+    "payload": {
+      "answer": "Zero runtime dependencies (standard library only); 100 percent statement and branch coverage enforced; doctrine 8.a means the sovereign local path is always preferred over paid platforms; every managed file must match its template byte-for-byte; and at the hardware or capability floor the system must fail loudly to a human rather than silently degrade.",
+      "item_id": "4"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-31T02:03:18.523028+00:00",
+    "project_id": "d482c3e2-029e-4bb8-a9a1-de411816c6ae",
+    "provenance": "trusted",
+    "seq": 8
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

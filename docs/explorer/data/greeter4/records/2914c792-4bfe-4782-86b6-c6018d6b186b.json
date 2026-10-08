@@ -1,0 +1,40 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "7842517003d3188110f0f465954b0ecff589806cb8cb54badeb558d03aad338d",
+    "event_id": "fd95345a-1e24-41df-82fe-b3269ca38c02",
+    "seq": 1700
+  },
+  "previous": {
+    "digest": "7842517003d3188110f0f465954b0ecff589806cb8cb54badeb558d03aad338d",
+    "event_id": "9ecc9f2c-3a8f-496d-9806-4c7bb22b42da",
+    "seq": 1674
+  },
+  "project_id": "8ab823c9-89e4-4050-884c-9008c8b14ef8",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "99047930-5535-4a17-b382-e41bf3e90311",
+    "cycle": 1,
+    "digest": "472456633b3860bead110e68ebaf356a5100a52bbd8ad7365740eb739d0d32cd",
+    "engine_id": null,
+    "event_id": "2914c792-4bfe-4782-86b6-c6018d6b186b",
+    "job_id": "9a91fbbd-fe8c-4fe6-a865-8ddca00fde92",
+    "kind": "FindingRaised",
+    "payload": {
+      "finding_id": "f_integrate_malicious-url-check_04862f67",
+      "severity": "high",
+      "text": "merge conflict integrating 'malicious-url-check': Auto-merging README.md\nCONFLICT (content): Merge conflict in README.md\nAuto-merging shortener/__init__.py\nCONFLICT (add/add): Merge conflict in shortener/__init__.py\nAuto-merging shortener/alias_manager.py\nCONFLICT (add/add): Merge conflict in shortener/alias_manager.py\nAuto-merging tests/conftest.py\nAuto-merging tests/test_alias_manager.py\nCONFLICT (add/add): Merge conflict in tests/test_alias_manager.py\nAutomatic merge failed; fix conflicts and then commit the result."
+    },
+    "phase": "build",
+    "produced_at": "2026-08-20T06:37:21.563338+00:00",
+    "project_id": "8ab823c9-89e4-4050-884c-9008c8b14ef8",
+    "provenance": "agent",
+    "seq": 1686
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

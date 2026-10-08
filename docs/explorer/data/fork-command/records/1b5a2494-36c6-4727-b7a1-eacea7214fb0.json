@@ -1,0 +1,42 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "951363211977b8154a3ac2d5ebaeab3bafaf4d12dd0da619d77ba619102e97f5",
+    "event_id": "f8f16e40-cfb9-44e2-aa7a-04caeaa872d4",
+    "seq": 637
+  },
+  "previous": {
+    "digest": "d79f68b420f015be0f12902ae23553f5e8186ed492d821285ccfffa002681d83",
+    "event_id": "fe0fe9a4-e9a6-428b-924d-8d01afa7c59a",
+    "seq": 450
+  },
+  "project_id": "ab0b06f9-55a4-4b47-ac08-254e7fdd9036",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "b52869da-1e0c-41d8-abf2-40a5654ea3c7",
+    "cycle": 1,
+    "digest": "f76571cd880a660e17812d0c498bcbbbde83d35ff98bb94e23829e25fcaa3ea0",
+    "engine_id": "codexloop",
+    "event_id": "1b5a2494-36c6-4727-b7a1-eacea7214fb0",
+    "job_id": "69af5836-9acf-464b-bef5-e1d62b09145d",
+    "kind": "VerdictRendered",
+    "payload": {
+      "complete": false,
+      "remaining_work": [
+        "Implement work item doctor-cleanup: vibey doctor detects and removes orphaned fork worktrees"
+      ],
+      "success": false
+    },
+    "phase": "build",
+    "produced_at": "2026-08-22T19:26:09.616751+00:00",
+    "project_id": "ab0b06f9-55a4-4b47-ac08-254e7fdd9036",
+    "provenance": "agent",
+    "seq": 583
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 2,
+    "paths": 0
+  }
+}

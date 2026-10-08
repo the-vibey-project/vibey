@@ -1,0 +1,39 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "0b84a178243dc5760327d1f3e87b687c3aea8d9e7067ed40c012183b0d90bb1c",
+    "event_id": "c53876f5-b62e-4986-9072-de46c890cde2",
+    "seq": 9
+  },
+  "previous": {
+    "digest": "ebed982737c6d75ea0824e629fb21411c0ace02d4f42ee375f639372167005a8",
+    "event_id": "75c91168-e064-400c-8661-2911f23f403a",
+    "seq": 7
+  },
+  "project_id": "5ea01f61-8536-4ace-90cb-18700a12e410",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "08773c17-91df-4c6b-97cd-e1fe4874d523",
+    "cycle": 1,
+    "digest": "7f703cd3daa86539e6b597f007e670db9ee39aa133953024f70541b19c1900b9",
+    "engine_id": "claudeloop",
+    "event_id": "48a1151d-6a8b-4436-a6f5-c97095fbe180",
+    "job_id": "4c2ec03f-d670-44f9-9f05-47597984ab20",
+    "kind": "AnswerGiven",
+    "payload": {
+      "answer": "Wall-clock for `vibey doctor` approaches the slowest single engine rather than the sum -- roughly 4x on this machine. Before/after numbers committed as evidence. A hung engine yields a report naming it as timed out while the other three report normally. All 7 gates green.",
+      "item_id": "success_criteria"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-22T02:59:00.626706+00:00",
+    "project_id": "5ea01f61-8536-4ace-90cb-18700a12e410",
+    "provenance": "trusted",
+    "seq": 8
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

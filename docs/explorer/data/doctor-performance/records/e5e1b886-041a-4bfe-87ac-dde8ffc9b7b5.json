@@ -1,0 +1,39 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "2bf89b43640913b15763d794dfa05f6efa3baa2ebb42da428ac21019a4ecd5bf",
+    "event_id": "2ed1e9c1-55aa-462f-a5c4-e35dd0fd2811",
+    "seq": 25
+  },
+  "previous": {
+    "digest": "f4613ff86fcc34fce828662d11725d035de976370605bd39d268536d87869dc3",
+    "event_id": "16a64f9c-ed37-47ed-9fee-7877a3545471",
+    "seq": 23
+  },
+  "project_id": "5ea01f61-8536-4ace-90cb-18700a12e410",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "9e094fbe-736e-493a-8bc7-d10c066f2367",
+    "cycle": 1,
+    "digest": "f13db5d4aa212897134c1b8411fdc546ea99bd7e18177275534e39cd2acbbbcf",
+    "engine_id": "claudeloop",
+    "event_id": "e5e1b886-041a-4bfe-87ac-dde8ffc9b7b5",
+    "job_id": "4c2ec03f-d670-44f9-9f05-47597984ab20",
+    "kind": "AnswerGiven",
+    "payload": {
+      "answer": "All doctor invocations - the redundant pool creation and migration discovery affects every subcommand",
+      "item_id": "build_app_scope"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-22T03:41:56.208120+00:00",
+    "project_id": "5ea01f61-8536-4ace-90cb-18700a12e410",
+    "provenance": "trusted",
+    "seq": 24
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

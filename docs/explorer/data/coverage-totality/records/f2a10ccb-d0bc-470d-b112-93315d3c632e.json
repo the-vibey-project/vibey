@@ -1,0 +1,43 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "5fa4e1a8b5062810dcd4f57a87e9a263ac612fc7003ab255b00d74bdbcf1fca5",
+    "event_id": "485872cd-84bb-46ad-af19-2645ab8c4d37",
+    "seq": 18
+  },
+  "previous": {
+    "digest": "b7ebba9da795e58b83b211da0cd676d9c31da6031923bdb9bcdd240c4286f885",
+    "event_id": "50ea4a59-a1de-4805-8ff7-bb96713e2a76",
+    "seq": 16
+  },
+  "project_id": "e631c00a-e1a1-4ed4-b99a-0fa2d388d240",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "8bcd0a79-d704-438e-9119-9732a54c84a5",
+    "cycle": 1,
+    "digest": "8c9d9056125cb7329a0ac602c22193504ab000ea8da96458d9f1ca2b311a2d9e",
+    "engine_id": "claudeloop",
+    "event_id": "f2a10ccb-d0bc-470d-b112-93315d3c632e",
+    "job_id": "d73f236e-a7b4-4748-b075-3900a75af324",
+    "kind": "QuestionAsked",
+    "payload": {
+      "blocking": false,
+      "cycle": 1,
+      "default": "Keep all five: the per-layer gates provide faster feedback on which layer broke, while the total gate is the backstop",
+      "item_id": "layer_gates_retention",
+      "stage": "laddering",
+      "text": "Should the four existing per-layer gates remain after the total gate is added, or can they be removed since --include='src/vibey/*' is strictly more comprehensive?"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-22T02:38:48.384326+00:00",
+    "project_id": "e631c00a-e1a1-4ed4-b99a-0fa2d388d240",
+    "provenance": "agent",
+    "seq": 17
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

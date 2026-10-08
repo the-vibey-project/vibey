@@ -1,0 +1,43 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "edac4725c3fc84bfd7b3549414a56a6a0100d3894999b1e200eacdd29da8f1ab",
+    "event_id": "2e67a2cc-9eca-446f-9bb4-cf324feb5f0a",
+    "seq": 52
+  },
+  "previous": {
+    "digest": "a7c05616c6f5a07e9fb0292252d26eef06d0fb679f1ac4f90fef3a8beda034f7",
+    "event_id": "66534579-8e3c-40d3-bc47-e495ef19823f",
+    "seq": 50
+  },
+  "project_id": "0ee95624-eec4-4e8e-9a14-6ad9a37dcff4",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "de22f7fb-096c-41b9-8e52-1fea277496fe",
+    "cycle": 1,
+    "digest": "d36c67f2d0929892d98ef3e4777e8f69b7d799ca7530b48619a97fcb990edbf2",
+    "engine_id": "claudeloop",
+    "event_id": "8f588570-bd8e-4cf4-814d-66a1b659f4d0",
+    "job_id": "1343d0fd-bf3f-4739-8c21-cbf7693c673e",
+    "kind": "QuestionAsked",
+    "payload": {
+      "blocking": true,
+      "cycle": 1,
+      "default": "The 308 (permanent) + canonical meta + robots.txt Sitemap line are standard SEO hygiene and should prevent this; if it happens post-launch, add a \u003clink rel=\"canonical\" href=\"https://chat.adam.matthewsteinberger.com/\" /\u003e to the hire-host [path] route (rendered only during the brief 308 redirect before the browser follows it) and submit both URLs to Search Console; accept that short-term duplicate listings (1-2 indexing cycles) are cosmetic, not broken",
+      "item_id": "seo_duplicate_content",
+      "stage": "premortem",
+      "text": "What if Google/Bing index both hire.adam.../chat (before the 308) and chat.adam.../, splitting authority or flagging duplicate content despite the canonical URL and 308 redirect?"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-20T20:20:49.082224+00:00",
+    "project_id": "0ee95624-eec4-4e8e-9a14-6ad9a37dcff4",
+    "provenance": "agent",
+    "seq": 51
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 1
+  }
+}

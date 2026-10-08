@@ -1,0 +1,43 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "224b5ea65d430caffde1d255c1f2de1ef935325670144a8299dc2b64f517c111",
+    "event_id": "6f36da6f-32a3-41cb-a139-8f9052b0e736",
+    "seq": 13
+  },
+  "previous": {
+    "digest": "5a47b360c00bc72bd258883676df92e6a294b41e473f9a4922dee0e5235777e6",
+    "event_id": "ecd512bb-7a89-4598-b537-e34a997bd5f5",
+    "seq": 11
+  },
+  "project_id": "44c06a64-c8ed-4153-96af-b49db29c39e3",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "971621e8-8759-441c-94bd-87b4753836ac",
+    "cycle": 1,
+    "digest": "385a7ddab98786aa17e47406a51bb79a83ebe86044f448779dd1bb006fc30cd2",
+    "engine_id": "claudeloop",
+    "event_id": "66768e7d-cfe5-485d-95f0-1dcd6fcefc57",
+    "job_id": "bcd8e0b1-385d-43dc-ad1f-cad988f80cc9",
+    "kind": "QuestionAsked",
+    "payload": {
+      "blocking": false,
+      "cycle": 1,
+      "default": "10,000+ events per project, 10+ concurrent workers, with claim latency under 100ms regardless of history depth",
+      "item_id": "scale_target",
+      "stage": "job_story",
+      "text": "At what scale should this perform well (ledger events, concurrent workers, projects)?"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-22T03:00:03.956151+00:00",
+    "project_id": "44c06a64-c8ed-4153-96af-b49db29c39e3",
+    "provenance": "agent",
+    "seq": 12
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

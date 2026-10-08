@@ -1,0 +1,39 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "3ec501f0b4630b39b5b817432ab4e121d65305bc49d4ea96d02a24c6aa389a39",
+    "event_id": "376db86c-5c69-48b4-8203-b0f139a41e00",
+    "seq": 39
+  },
+  "previous": {
+    "digest": "53d86ff532f818299978d628729c7bb651433ae0148d663a143f0c11b0666ab4",
+    "event_id": "11b23ee0-587e-4afc-bf4e-50d404f71fee",
+    "seq": 37
+  },
+  "project_id": "0ee95624-eec4-4e8e-9a14-6ad9a37dcff4",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "6302a0f8-fcf6-4078-98cc-c6144b130ed7",
+    "cycle": 1,
+    "digest": "3a27cd0cc8ce2d1997094c528b19fdb8a2770bf49c7888d01dc18352dfa2a530",
+    "engine_id": "claudeloop",
+    "event_id": "ce338004-ad5d-47e0-bade-6d3d679de281",
+    "job_id": "1343d0fd-bf3f-4739-8c21-cbf7693c673e",
+    "kind": "AnswerGiven",
+    "payload": {
+      "answer": "1) src/app/chat/page.tsx (server component: h1, intro, links, \u003cAskAdam variant=\"page\" /\u003e, metadata with canonical https://chat.adam.matthewsteinberger.com/); 2) src/components/AskAdam.tsx with the variant prop; 3) next.config.ts with the beforeFiles rewrite + the three host redirects placed first; 4) tests: the AskAdam page-variant tests, src/app/chat/__tests__/page.test.tsx, and src/__tests__/next.config.test.ts asserting the four rules. Gates for every item: npm run worktree:deps, npm run typecheck, npm run lint, npm run test:coverage, npm run build (argv only, no shell).",
+      "item_id": "minimal_file_set"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-20T20:14:54.754799+00:00",
+    "project_id": "0ee95624-eec4-4e8e-9a14-6ad9a37dcff4",
+    "provenance": "trusted",
+    "seq": 38
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

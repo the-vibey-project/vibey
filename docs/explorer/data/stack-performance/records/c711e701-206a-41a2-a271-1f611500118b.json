@@ -1,0 +1,39 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "95a9105d5f5bf91e6285f21bfa60d828f11867ced058e42d1a4b8bab57f974ab",
+    "event_id": "b60ec54f-cbd8-4c1a-aeff-a973cccd59c2",
+    "seq": 42
+  },
+  "previous": {
+    "digest": "1c7048492a2a74c6db995f4b8262f98fb473ce516309ce7eb334a63dce6285ec",
+    "event_id": "f3224245-f0c2-4d6e-ae7d-bf0305087da3",
+    "seq": 40
+  },
+  "project_id": "44c06a64-c8ed-4153-96af-b49db29c39e3",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "c9ad4090-4f34-4aaa-8da3-daf7bc121a94",
+    "cycle": 1,
+    "digest": "2b4f7fa245dc346b37a3682b1926f56d1188e41ff2e81faa575ec826628fa2db",
+    "engine_id": "claudeloop",
+    "event_id": "c711e701-206a-41a2-a271-1f611500118b",
+    "job_id": "bcd8e0b1-385d-43dc-ad1f-cad988f80cc9",
+    "kind": "AnswerGiven",
+    "payload": {
+      "answer": "After \u2014 the first PR can measure manually and commit numbers as evidence; the harness lands in PR 2 so subsequent optimizations have a regression suite",
+      "item_id": "benchmark_harness_timing"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-22T03:45:00.226417+00:00",
+    "project_id": "44c06a64-c8ed-4153-96af-b49db29c39e3",
+    "provenance": "trusted",
+    "seq": 41
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

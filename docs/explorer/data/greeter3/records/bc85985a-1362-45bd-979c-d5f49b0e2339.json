@@ -1,0 +1,43 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "fe59ffde0c36b4da44a44b751f7d6676655c3cf93e2a22e6596992b5a8daeeb5",
+    "event_id": "098e2f82-883c-4ff6-8b1e-9b1888b6213e",
+    "seq": 37
+  },
+  "previous": {
+    "digest": "48841d4a8b239214a9258e0d818be8b5db82fe522011b5c84b4dd0d389b58201",
+    "event_id": "34e29bb9-844d-4307-849f-dd143cb71293",
+    "seq": 35
+  },
+  "project_id": "5e76341f-ba5f-4272-8355-3df5d489bbcd",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "abe92ae2-b832-4812-80ed-c839387b8024",
+    "cycle": 1,
+    "digest": "25a403a12363442ece5ad445ab713016940a60dd1c96d6f37c3bae2761174a69",
+    "engine_id": "claudeloop",
+    "event_id": "bc85985a-1362-45bd-979c-d5f49b0e2339",
+    "job_id": "e58deb6b-5356-4a39-8acf-5dc898bba380",
+    "kind": "QuestionAsked",
+    "payload": {
+      "blocking": false,
+      "cycle": 1,
+      "default": "Configuration options, internationalization, custom greeting templates, logging",
+      "item_id": "deferred_features",
+      "stage": "walking_skeleton",
+      "text": "What capabilities can be deferred until after the walking skeleton proves the core flow?"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-20T00:50:15.948560+00:00",
+    "project_id": "5e76341f-ba5f-4272-8355-3df5d489bbcd",
+    "provenance": "agent",
+    "seq": 36
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

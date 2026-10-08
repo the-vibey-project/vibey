@@ -1,0 +1,39 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "c413ce90b4a920a0b8910e764a00e6ac25edf3785bccd901dbb3bf73faf28cf9",
+    "event_id": "6f2e9463-b1b4-40ca-9ada-8c7f0c5a2667",
+    "seq": 30
+  },
+  "previous": {
+    "digest": "9d2125b9ec9b5459fe9f0da8ac46207019383588942dfc43954f893a30f4b566",
+    "event_id": "186340a2-5357-40c1-be9d-8b72dab71a4c",
+    "seq": 28
+  },
+  "project_id": "8f254b4c-df0a-4056-8937-6eba30efcfa6",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "60b0af74-325b-4c3a-bbc0-a11bf94e3d13",
+    "cycle": 1,
+    "digest": "14dc7e748449b9833aa0a334ef120231769b0f453e0cc802022d6fb7401689cd",
+    "engine_id": "claudeloop",
+    "event_id": "34ba69b1-11b6-4af3-acfa-661620c6f6ad",
+    "job_id": "40fb97d9-4ab1-4fa8-9ae2-693c2b7a7fc9",
+    "kind": "AnswerGiven",
+    "payload": {
+      "answer": "8am \u2192 \"Good morning, Alice!\", 2pm \u2192 \"Good afternoon, Alice!\", 7pm \u2192 \"Good evening, Alice!\"",
+      "item_id": "time_greeting_examples"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-19T18:29:14.252946+00:00",
+    "project_id": "8f254b4c-df0a-4056-8937-6eba30efcfa6",
+    "provenance": "trusted",
+    "seq": 29
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

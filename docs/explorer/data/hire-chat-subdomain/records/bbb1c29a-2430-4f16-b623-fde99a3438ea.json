@@ -1,0 +1,39 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "a9f660f136dec90ecdf3f4788036b3e1f9afd92ea9d1b6ec12958723dcb3aa2c",
+    "event_id": "f8e8690b-55a2-40e2-9169-647595d48b94",
+    "seq": 24
+  },
+  "previous": {
+    "digest": "d421a938a633e832d1e17596b6c6d905fa741f6923dede67e70a0858f051fd40",
+    "event_id": "20a90d80-8219-4b4c-b77e-4fbfd65f9d51",
+    "seq": 22
+  },
+  "project_id": "0ee95624-eec4-4e8e-9a14-6ad9a37dcff4",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "fe6d7df8-6855-47c5-83cd-5ef69c26b26d",
+    "cycle": 1,
+    "digest": "c677788a369ac977984c9dfce0064285f87f3013c7390fdb5fb4526d80f4818c",
+    "engine_id": "claudeloop",
+    "event_id": "bbb1c29a-2430-4f16-b623-fde99a3438ea",
+    "job_id": "1343d0fd-bf3f-4739-8c21-cbf7693c673e",
+    "kind": "AnswerGiven",
+    "payload": {
+      "answer": "When they need to share a direct link (email/LinkedIn message/application), want full-screen focus without portfolio distractions, or were sent the URL by Adam directly - not a feature difference, a context difference",
+      "item_id": "page_vs_widget"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-20T20:11:24.112412+00:00",
+    "project_id": "0ee95624-eec4-4e8e-9a14-6ad9a37dcff4",
+    "provenance": "trusted",
+    "seq": 23
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

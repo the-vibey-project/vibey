@@ -1,0 +1,39 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "fb302e4d1bc6d576de4ce28ecc91995c77214cd35663771d212534a9436f916f",
+    "event_id": "860a8310-5eca-4ffd-946f-7b181ee4eea3",
+    "seq": 6
+  },
+  "previous": {
+    "digest": "f5d68620bf904bdf8e3d89e8fb63c058240bfa374083879c3d55870e30e5136f",
+    "event_id": "802cc99b-2254-4475-b5cf-7c42dd4b3e46",
+    "seq": 4
+  },
+  "project_id": "bed522a2-0b3e-4bff-9cd6-7c13fe40779a",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "63c16457-439f-4120-a1ea-0e1b8051fd34",
+    "cycle": 1,
+    "digest": "faf99176d488b7ae7c1dcd0c396f1689e8ec833a8f78c7b8c9e271327cb8cf36",
+    "engine_id": "claudeloop",
+    "event_id": "2c4d3802-f326-49f6-bd3b-b99a5cf09cbd",
+    "job_id": "92d834a4-4bf2-4699-9354-adbea7936d77",
+    "kind": "AnswerGiven",
+    "payload": {
+      "answer": "Two readings, and the spec must pick one explicitly rather than blur them. (a) ERGONOMIC: the existing concurrency is per-project and implicit -- there is no way to say 'run these three specific jobs now, together'. That is a real gap and a modest feature over existing machinery. (b) LITERAL SAME-BRANCH CONCURRENCY: several jobs writing one working tree at once. That is a genuinely hard problem, and the existing worktree-plus-integrate-lock design exists precisely to avoid it. If (b) is wanted, the spec must say what it buys that (a) does not, because the cost is high and the current design is a deliberate answer to the same question.",
+      "item_id": "why"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-22T02:56:20.390380+00:00",
+    "project_id": "bed522a2-0b3e-4bff-9cd6-7c13fe40779a",
+    "provenance": "trusted",
+    "seq": 5
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

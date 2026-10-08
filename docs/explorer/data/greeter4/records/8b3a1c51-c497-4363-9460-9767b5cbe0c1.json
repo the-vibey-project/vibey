@@ -1,0 +1,39 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "f8fda7c86cca30df05cfd2c7a1d34b7c2c54b99cb6da8441549c480f6edac186",
+    "event_id": "d27820f4-af4d-4323-983b-ec42e7962a94",
+    "seq": 33
+  },
+  "previous": {
+    "digest": "b56511b2610d9f006dcfc90c40722150c550343b78f331a8f4d91cfa8a9dd086",
+    "event_id": "7bf4b961-62d7-4dc7-940d-2565ac3c402d",
+    "seq": 31
+  },
+  "project_id": "8ab823c9-89e4-4050-884c-9008c8b14ef8",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "a100a8ea-3dab-4567-88c7-c78227805877",
+    "cycle": 1,
+    "digest": "57537565f2ea3ba14be568336048e0fce137012f45f2bb9e0048ce0bc9ef9150",
+    "engine_id": "claudeloop",
+    "event_id": "8b3a1c51-c497-4363-9460-9767b5cbe0c1",
+    "job_id": "705692f1-69a1-4cc2-ade7-8aa3d1407b67",
+    "kind": "AnswerGiven",
+    "payload": {
+      "answer": "Known phishing domain (e.g., paypa1.com) \u2192 reject at creation time with error message; existing malicious links \u2192 return warning page before redirect",
+      "item_id": "malicious_url_handling"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-20T02:34:04.152258+00:00",
+    "project_id": "8ab823c9-89e4-4050-884c-9008c8b14ef8",
+    "provenance": "trusted",
+    "seq": 32
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

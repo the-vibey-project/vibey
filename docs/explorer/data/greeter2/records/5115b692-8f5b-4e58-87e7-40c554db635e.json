@@ -1,0 +1,43 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "0b29e11acb0a3e58d5145b3cf18fbc2a5e0332a0c03155720d8301792714f699",
+    "event_id": "3e107c02-eb9d-4fa7-9019-06dfba0bc2c5",
+    "seq": 51
+  },
+  "previous": {
+    "digest": "2263b6b0f958876886d76f2ab718b3dd4160ad8f4f4d34abd7588c71c45d39d9",
+    "event_id": "4859ec15-7710-494f-a2eb-fbfaf3267f10",
+    "seq": 49
+  },
+  "project_id": "8f254b4c-df0a-4056-8937-6eba30efcfa6",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "c3828124-982f-46d9-bba4-898164f8fa1a",
+    "cycle": 1,
+    "digest": "81ab4e96c138909136b1c4325701fa547a2691076f222bdf40b392115cd1871f",
+    "engine_id": "claudeloop",
+    "event_id": "5115b692-8f5b-4e58-87e7-40c554db635e",
+    "job_id": "40fb97d9-4ab1-4fa8-9ae2-693c2b7a7fc9",
+    "kind": "QuestionAsked",
+    "payload": {
+      "blocking": false,
+      "cycle": 1,
+      "default": "datetime.now() without UTC - bandit flags naive datetime; decision: accept for local tool or use timezone-aware datetime.now(tz=...)",
+      "item_id": "tooling_rejection",
+      "stage": "premortem",
+      "text": "What will make ruff or bandit fail: missing type hints, datetime.now() without UTC awareness, complexity in time-of-day logic, or bare except clauses?"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-19T18:32:32.899307+00:00",
+    "project_id": "8f254b4c-df0a-4056-8937-6eba30efcfa6",
+    "provenance": "agent",
+    "seq": 50
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

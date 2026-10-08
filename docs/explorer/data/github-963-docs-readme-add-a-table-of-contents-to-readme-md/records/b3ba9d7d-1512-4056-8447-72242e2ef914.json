@@ -1,0 +1,43 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "d8340aebe2f7a0e7d713af70cc48d2f9f4a90464b7cf4431de3406fe3f0ae810",
+    "event_id": "9217958b-8429-417e-b628-07461947aaa1",
+    "seq": 15
+  },
+  "previous": {
+    "digest": "45bca1bc5141df8158a527edecdebec93352809f2960f297c8cf022b7f447d78",
+    "event_id": "6b8b4655-104d-430d-9c86-70a2cea26ca4",
+    "seq": 11
+  },
+  "project_id": "893c4fc1-542e-411e-a10a-3aef784b1540",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "d1405050-7bbf-5034-b04a-11a1570aca97",
+    "cycle": 1,
+    "digest": "0f5c85bdcbeb63b2d66a243e16118e9968020d0ad72ebb8d0f4008725deb5c3f",
+    "engine_id": "gptossloop",
+    "event_id": "b3ba9d7d-1512-4056-8447-72242e2ef914",
+    "job_id": "f0b62bda-70b9-4e97-a9f7-8f5cda351d0a",
+    "kind": "QuestionAsked",
+    "payload": {
+      "blocking": false,
+      "cycle": 1,
+      "default": "No",
+      "item_id": "q5",
+      "stage": "job_story",
+      "text": "Should a comment be added above the new `## Contents` section explaining its purpose?"
+    },
+    "phase": "design",
+    "produced_at": "2026-09-30T03:56:48.201761+00:00",
+    "project_id": "893c4fc1-542e-411e-a10a-3aef784b1540",
+    "provenance": "agent",
+    "seq": 12
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

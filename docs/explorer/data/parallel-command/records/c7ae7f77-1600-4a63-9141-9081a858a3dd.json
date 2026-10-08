@@ -1,0 +1,39 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "743599ad2519bdb819f72627275a3b390466aa2fd884e14a7f929e40bec8b56c",
+    "event_id": "877d1954-c807-4507-acf3-3c5fd88b3a20",
+    "seq": 8
+  },
+  "previous": {
+    "digest": "fb302e4d1bc6d576de4ce28ecc91995c77214cd35663771d212534a9436f916f",
+    "event_id": "860a8310-5eca-4ffd-946f-7b181ee4eea3",
+    "seq": 6
+  },
+  "project_id": "bed522a2-0b3e-4bff-9cd6-7c13fe40779a",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "77fc8aec-9bad-4bbd-b64d-e656bc4312f4",
+    "cycle": 1,
+    "digest": "426c5016156d220741ac30e8baafcf18e4a11003ff3aaf0d75df3d7fd53fbd9d",
+    "engine_id": "claudeloop",
+    "event_id": "c7ae7f77-1600-4a63-9141-9081a858a3dd",
+    "job_id": "92d834a4-4bf2-4699-9354-adbea7936d77",
+    "kind": "AnswerGiven",
+    "payload": {
+      "answer": "A clear statement of what the command adds over `vibey worker -j N`; a coordination design that extends the existing lease/advisory-lock machinery rather than paralleling it; a test that actually forces contention (two jobs racing the same resource) and shows neither corrupts the other nor deadlocks; all 7 gates green.",
+      "item_id": "success"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-22T02:56:20.390380+00:00",
+    "project_id": "bed522a2-0b3e-4bff-9cd6-7c13fe40779a",
+    "provenance": "trusted",
+    "seq": 7
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

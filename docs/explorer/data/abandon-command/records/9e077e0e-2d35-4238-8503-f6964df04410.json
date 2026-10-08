@@ -1,0 +1,39 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "9e6e6e4634a5b4718e4388cf96036d52e2381528214f1732ab18d3ea363b44af",
+    "event_id": "01b5427a-7576-4abd-a760-d8c1650a471e",
+    "seq": 42
+  },
+  "previous": {
+    "digest": "801808a47c511ce69b51a7c176e755d5b484b9895cbc934d10b92d608f071a28",
+    "event_id": "fcdb827c-c689-4c32-b789-6b501779d723",
+    "seq": 40
+  },
+  "project_id": "d733035f-e0f9-4f67-aba2-270068d6a9c6",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "5320a7a5-f0dd-4bf0-ac31-e62192e7f4b8",
+    "cycle": 1,
+    "digest": "a260f1e7e6e7bde965871a5ce9525726ebed137346c1f84c9c2c4911dfeb19c5",
+    "engine_id": "claudeloop",
+    "event_id": "9e077e0e-2d35-4238-8503-f6964df04410",
+    "job_id": "44e282ee-55b1-4cf9-afc3-c84870a14a5c",
+    "kind": "AnswerGiven",
+    "payload": {
+      "answer": "`vibey abandon \u003cid\u003e` on a BUILD project with no jobs: returns success, `vibey status` shows ABANDONED, `vibey new --repo \u003csame_path\u003e` succeeds immediately\u2014no UniqueViolationError.",
+      "item_id": "skeleton_acceptance"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-22T03:44:13.821551+00:00",
+    "project_id": "d733035f-e0f9-4f67-aba2-270068d6a9c6",
+    "provenance": "trusted",
+    "seq": 41
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

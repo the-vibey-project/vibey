@@ -1,0 +1,39 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "50534113e9502937cfa9760e36fbce9348c764f505a8244b18bc29d650895e82",
+    "event_id": "babd59c1-dc66-493e-b825-bbe849263a8e",
+    "seq": 46
+  },
+  "previous": {
+    "digest": "63bbcf326d9c75f911503b31cf593788b71b1b18ed71baf633974246905ac0a3",
+    "event_id": "eb4eda8d-4087-4a4a-af27-ee218510cce0",
+    "seq": 44
+  },
+  "project_id": "a1d6b837-46f3-40c0-b6a2-8b3babb7fe15",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "0ee65860-ded8-4bf4-8724-3cbcc56c5cc8",
+    "cycle": 1,
+    "digest": "640d27686d40479e0f426eada7f6a5b7cec3712d917ee5ba30abc8d34e43dcff",
+    "engine_id": "claudeloop",
+    "event_id": "3baa3851-8171-44b5-ade7-74fd3691d56b",
+    "job_id": "dd8513f6-0d76-49a5-8bdc-75167dea5385",
+    "kind": "AnswerGiven",
+    "payload": {
+      "answer": "Worst acceptable: 120s, Target: 90s, Ideal: 60s",
+      "item_id": "suite_performance_scale"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-20T20:46:04.197678+00:00",
+    "project_id": "a1d6b837-46f3-40c0-b6a2-8b3babb7fe15",
+    "provenance": "trusted",
+    "seq": 45
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

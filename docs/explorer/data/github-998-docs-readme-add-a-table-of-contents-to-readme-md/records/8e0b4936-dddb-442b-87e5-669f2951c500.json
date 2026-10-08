@@ -1,0 +1,43 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "c81ffbf5c746040c0572f51180614d88f9782376234e779d52a20a8f4ddd546b",
+    "event_id": "26ae7046-5d9e-4e14-820e-9600644265ac",
+    "seq": 32
+  },
+  "previous": {
+    "digest": "91117223f7d56aac12e446da47644cc00939d5b55006a5d5fe72028556a6f6b2",
+    "event_id": "43140d64-a3a0-405d-9ee6-9be72cdcfed8",
+    "seq": 28
+  },
+  "project_id": "9692abab-ace3-4ee0-ac59-3ea42484b817",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "0face8bc-aa17-546b-b5de-e16e759738e6",
+    "cycle": 1,
+    "digest": "63ebe002ae2c23f3fdd308220ce75deb36b27b4f3a74ee840e15c9cccfd2e667",
+    "engine_id": "gptossloop",
+    "event_id": "8e0b4936-dddb-442b-87e5-669f2951c500",
+    "job_id": "c2b75c18-fd15-4e79-ad4e-cf489356ad57",
+    "kind": "QuestionAsked",
+    "payload": {
+      "blocking": false,
+      "cycle": 1,
+      "default": "Yes",
+      "item_id": "q12",
+      "stage": "example_mapping",
+      "text": "Should the TOC generation script be placed in a dedicated `scripts/` directory with a permissive license header?"
+    },
+    "phase": "design",
+    "produced_at": "2026-09-29T18:45:59.065393+00:00",
+    "project_id": "9692abab-ace3-4ee0-ac59-3ea42484b817",
+    "provenance": "agent",
+    "seq": 29
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

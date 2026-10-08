@@ -1,0 +1,39 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "1725bfa07eef5c1c151d9ea49200d2db34d9d36a505741c0b8f52e4f5dbf38a8",
+    "event_id": "70e3d914-a950-4bfd-b2e2-972e3601dce1",
+    "seq": 59
+  },
+  "previous": {
+    "digest": "95d02d0a0480ffa78d226d10ff0b07e365d1a965b0f74c36656bd4032de82647",
+    "event_id": "0cf86122-282e-4d31-a5a4-018d34d974a1",
+    "seq": 57
+  },
+  "project_id": "ab0b06f9-55a4-4b47-ac08-254e7fdd9036",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "a62142e8-bd23-4d95-91e9-4a717a96b5a6",
+    "cycle": 1,
+    "digest": "fd4780da930488ab748efa72637cdbecf49b2ed5b97ae0c676941164609083cc",
+    "engine_id": "claudeloop",
+    "event_id": "1d41b08b-7493-4d0f-bf1d-ea5624659552",
+    "job_id": "48f9ef01-8b95-4709-adde-ed0ece390f8d",
+    "kind": "AnswerGiven",
+    "payload": {
+      "answer": "Manual git operations outside vibey (branch renames, worktree moves) breaking the origin_job_id \u2192 branch relationship; mitigated by storing git commit SHA in JobForked event alongside seq",
+      "item_id": "provenance_failure"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-22T03:46:31.561806+00:00",
+    "project_id": "ab0b06f9-55a4-4b47-ac08-254e7fdd9036",
+    "provenance": "trusted",
+    "seq": 58
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

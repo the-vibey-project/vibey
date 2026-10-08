@@ -1,0 +1,43 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "246ad7bb89d24acbb43ee296890efb277f75c73673f9d570df98c2ae6e701e4f",
+    "event_id": "b2ed9783-fff6-4e30-9901-33f0c4129784",
+    "seq": 8
+  },
+  "previous": {
+    "digest": "43babcb6dfaa83eddbebe90a398ca0a474a55e22fc7fe7e204487d67b07a79e5",
+    "event_id": "a75db656-f98d-4f6e-8fd1-055516b0b3f0",
+    "seq": 4
+  },
+  "project_id": "9692abab-ace3-4ee0-ac59-3ea42484b817",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "0face8bc-aa17-546b-b5de-e16e759738e6",
+    "cycle": 1,
+    "digest": "559598d8a111598418f8ed15f79a4ea6b3daee66d10461b8d49ff13dd1c2bbdb",
+    "engine_id": "gptossloop",
+    "event_id": "4cb67c7f-3843-4222-b928-4768c29e69ab",
+    "job_id": "c2b75c18-fd15-4e79-ad4e-cf489356ad57",
+    "kind": "QuestionAsked",
+    "payload": {
+      "blocking": false,
+      "cycle": 1,
+      "default": "GitHub\u2019s algorithm",
+      "item_id": "q3",
+      "stage": "context_free",
+      "text": "Should the anchor generation follow GitHub\u2019s algorithm exactly, or use a custom slugging rule?"
+    },
+    "phase": "design",
+    "produced_at": "2026-09-29T18:39:35.991096+00:00",
+    "project_id": "9692abab-ace3-4ee0-ac59-3ea42484b817",
+    "provenance": "agent",
+    "seq": 5
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

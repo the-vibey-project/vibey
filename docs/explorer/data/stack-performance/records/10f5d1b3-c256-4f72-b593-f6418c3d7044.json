@@ -1,0 +1,39 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "caeb6d57f4d714364736a68e1e661b37d52d1d4b7159c4d7170b2921ca7bfa15",
+    "event_id": "ec94186b-8da5-4553-b408-255cdfbfd18c",
+    "seq": 60
+  },
+  "previous": {
+    "digest": "72fca61126cdd225950dc97068099a9b8be92f7854129adaa63b3c0694f58a15",
+    "event_id": "1e3c1bb9-c6c2-4979-8c7e-0c67ff3669aa",
+    "seq": 58
+  },
+  "project_id": "44c06a64-c8ed-4153-96af-b49db29c39e3",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "94cf2cdf-c91c-4721-99f0-768317b5a76e",
+    "cycle": 1,
+    "digest": "55fb8007cf32990aa8421757a12558175860b11801c1eb10ccab2ce2d4fba25e",
+    "engine_id": "claudeloop",
+    "event_id": "10f5d1b3-c256-4f72-b593-f6418c3d7044",
+    "job_id": "bcd8e0b1-385d-43dc-ad1f-cad988f80cc9",
+    "kind": "AnswerGiven",
+    "payload": {
+      "answer": "The existing index is optimal for the new query, or the query planner chooses it without hints \u2014 might need EXPLAIN ANALYZE and index tuning",
+      "item_id": "wrong_assumptions"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-22T03:48:03.775552+00:00",
+    "project_id": "44c06a64-c8ed-4153-96af-b49db29c39e3",
+    "provenance": "trusted",
+    "seq": 59
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

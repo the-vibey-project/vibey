@@ -1,0 +1,40 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "7842517003d3188110f0f465954b0ecff589806cb8cb54badeb558d03aad338d",
+    "event_id": "ba8bfeda-5275-4529-9dad-35cec7f50431",
+    "seq": 1081
+  },
+  "previous": {
+    "digest": "26aa26d639622e801ac6e01c4660ce3109e2e2947a28f21d2649a8d5cc1d3006",
+    "event_id": "13bca631-855a-44d0-a08e-bfb0fa0f278f",
+    "seq": 1051
+  },
+  "project_id": "8ab823c9-89e4-4050-884c-9008c8b14ef8",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "1c76fe36-220d-413a-90bd-98ca088d1565",
+    "cycle": 1,
+    "digest": "115acb2311b3763fa2ef37eb3a8b38883fae3bc2635681182a1a926629d0c363",
+    "engine_id": null,
+    "event_id": "3eb81760-41e2-4461-8198-20fb583c69c7",
+    "job_id": "9ca499c1-07db-4be2-822a-d22d6bf228cd",
+    "kind": "FindingRaised",
+    "payload": {
+      "finding_id": "f_integrate_click-analytics_870ce8bb",
+      "severity": "high",
+      "text": "merge conflict integrating 'click-analytics': Auto-merging .gitignore\nCONFLICT (add/add): Merge conflict in .gitignore\nAuto-merging README.md\nCONFLICT (content): Merge conflict in README.md\nAutomatic merge failed; fix conflicts and then commit the result."
+    },
+    "phase": "build",
+    "produced_at": "2026-08-20T03:35:43.956612+00:00",
+    "project_id": "8ab823c9-89e4-4050-884c-9008c8b14ef8",
+    "provenance": "agent",
+    "seq": 1052
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

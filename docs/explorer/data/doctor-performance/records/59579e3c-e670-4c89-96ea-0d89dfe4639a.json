@@ -1,0 +1,43 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "cd8c62ba1b6f30a577b6d5c55e1be6f6a99a6b4950c1a186d022fcaef737f4e9",
+    "event_id": "0597e7e7-e79b-44d9-8b10-917bb1c3bfd0",
+    "seq": 3
+  },
+  "previous": {
+    "digest": "15f6870bef6eda122cc5cd30fee904038e450cf119b368ce1ebc8cbab129127c",
+    "event_id": "32280f6c-8655-4e78-86b3-1dc61f6cd571",
+    "seq": 1
+  },
+  "project_id": "5ea01f61-8536-4ace-90cb-18700a12e410",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "c8fe8a15-6dac-45ff-95cf-006703e459be",
+    "cycle": 1,
+    "digest": "69fa6327ca4143524b460377bf73391baf6a87f077c5c4c2df7cfe59759fdc9f",
+    "engine_id": "claudeloop",
+    "event_id": "59579e3c-e670-4c89-96ea-0d89dfe4639a",
+    "job_id": "4c2ec03f-d670-44f9-9f05-47597984ab20",
+    "kind": "QuestionAsked",
+    "payload": {
+      "blocking": true,
+      "cycle": 1,
+      "default": "A focused change that can be completed in a single PR",
+      "item_id": "scope",
+      "stage": "context_free",
+      "text": "What's the scope of this work?"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-22T02:54:24.007754+00:00",
+    "project_id": "5ea01f61-8536-4ace-90cb-18700a12e410",
+    "provenance": "agent",
+    "seq": 2
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

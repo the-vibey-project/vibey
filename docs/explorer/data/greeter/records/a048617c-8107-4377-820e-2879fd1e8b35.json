@@ -1,0 +1,40 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "87763fb9e4d0df1b65fdb60d6c7339a83afb0ecc5006610448d6a3427c301607",
+    "event_id": "4426a95c-10f0-456c-b31a-388fd5f5fa41",
+    "seq": 294
+  },
+  "previous": {
+    "digest": "7842517003d3188110f0f465954b0ecff589806cb8cb54badeb558d03aad338d",
+    "event_id": "25f121b9-063b-42bd-be04-7de667605d9b",
+    "seq": 292
+  },
+  "project_id": "26f89c38-c86b-4ddf-be75-c579a118e40e",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "8667b861-a4bd-425d-b70b-d93d27342e6a",
+    "cycle": 1,
+    "digest": "8871d952c86f083ad57b89575c1685612e1c4b5f037f3a1007b35b9cc9e57f81",
+    "engine_id": null,
+    "event_id": "a048617c-8107-4377-820e-2879fd1e8b35",
+    "job_id": "f77add9c-b8d1-4797-a5eb-90e8fffe4316",
+    "kind": "FindingRaised",
+    "payload": {
+      "finding_id": "f_integrate_time-greeting_1351d863",
+      "severity": "high",
+      "text": "merge conflict integrating 'time-greeting': error: Your local changes to the following files would be overwritten by merge:\n\t__pycache__/greet.cpython-312.pyc\n\ttests/__pycache__/test_greet.cpython-312-pytest-8.3.4.pyc\nPlease commit your changes or stash them before you merge.\nAborting\nMerge with strategy ort failed."
+    },
+    "phase": "build",
+    "produced_at": "2026-08-19T13:16:32.153905+00:00",
+    "project_id": "26f89c38-c86b-4ddf-be75-c579a118e40e",
+    "provenance": "agent",
+    "seq": 293
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

@@ -1,0 +1,39 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "7bbf2c044361c0d879695575255ecaff9f4c746543b253f268c57cd562a331d4",
+    "event_id": "fc4b2f02-ced9-4ea0-91a5-1454be8dd6f2",
+    "seq": 9
+  },
+  "previous": {
+    "digest": "4494d7c69e17fa0a9d5a741d2dc5a09e40165b0e8f460aadbed135ea728ba8de",
+    "event_id": "48176e80-f419-4a1a-84c5-5fe727938fd8",
+    "seq": 7
+  },
+  "project_id": "a1d6b837-46f3-40c0-b6a2-8b3babb7fe15",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "766aebe9-e590-4a47-b93f-142a55e4092c",
+    "cycle": 1,
+    "digest": "dd15f478ff2bc8bf5f1ed248fea60bc3a69e22ecf38100d799a11e485a1572c3",
+    "engine_id": "claudeloop",
+    "event_id": "3be826af-aac7-45f0-82bf-dbd764bf1bcd",
+    "job_id": "dd8513f6-0d76-49a5-8bdc-75167dea5385",
+    "kind": "AnswerGiven",
+    "payload": {
+      "answer": "Measured before/after evidence committed with the change: full suite wall time at or under 90 seconds on this machine (from ~6m20s), commit hook at or under 2 minutes (from ~13m), all four per-layer coverage floors enforced from a single coverage run with each layer still reporting exactly 100 percent branch coverage, zero deselected or newly-skipped tests, and CI green on the branch.",
+      "item_id": "success_criteria"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-20T20:40:21.178400+00:00",
+    "project_id": "a1d6b837-46f3-40c0-b6a2-8b3babb7fe15",
+    "provenance": "trusted",
+    "seq": 8
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

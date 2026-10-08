@@ -1,0 +1,39 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "394091b0e67a631ba617c753e2568016d1a06fd0f712649e796661a90e15c1f2",
+    "event_id": "74e3a33c-8311-418c-8565-1c9955676759",
+    "seq": 17
+  },
+  "previous": {
+    "digest": "89df8c03ebed22d5085cf8dcfec607b98b33ffc1d9afb97260d82f6ca202bd8c",
+    "event_id": "d323d1a9-e01c-40b9-8d8a-fecb657ccfa0",
+    "seq": 15
+  },
+  "project_id": "a1d6b837-46f3-40c0-b6a2-8b3babb7fe15",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "c3ecdc2c-6b4c-4011-9fbd-dcfa4a40e491",
+    "cycle": 1,
+    "digest": "e1905e5b93c911db4e857e92d4a803802cbe93e88f821ff8ad7b6e942f2a0af3",
+    "engine_id": "claudeloop",
+    "event_id": "870a0c58-dae9-46fd-8a00-b8632141679a",
+    "job_id": "dd8513f6-0d76-49a5-8bdc-75167dea5385",
+    "kind": "AnswerGiven",
+    "payload": {
+      "answer": "Development velocity is blocked; the 13-minute hook discourages frequent commits and lengthens feedback cycles",
+      "item_id": "forcing_function"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-20T20:41:40.929853+00:00",
+    "project_id": "a1d6b837-46f3-40c0-b6a2-8b3babb7fe15",
+    "provenance": "trusted",
+    "seq": 16
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

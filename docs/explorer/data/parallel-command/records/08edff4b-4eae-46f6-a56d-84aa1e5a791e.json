@@ -1,0 +1,39 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "de55c50e27592a183d62dcdc3cca99831d8169327c5a9ec8b9c476440c0044d3",
+    "event_id": "f5762659-bca4-4adf-a5f0-b23721fa3b85",
+    "seq": 53
+  },
+  "previous": {
+    "digest": "d56b97655526de1c16aa920a731313bd7c3ffb62de7126a9ce859e09eb7359be",
+    "event_id": "5b056df1-21c8-41fd-a261-3d050d188be9",
+    "seq": 51
+  },
+  "project_id": "bed522a2-0b3e-4bff-9cd6-7c13fe40779a",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "7fb4b1b0-f40a-483c-a612-1ea0751fe0b0",
+    "cycle": 1,
+    "digest": "8af5f394c443325dc44dac41685bd398d266f18975ba4f0c9a819489f3c5c85b",
+    "engine_id": "claudeloop",
+    "event_id": "08edff4b-4eae-46f6-a56d-84aa1e5a791e",
+    "job_id": "92d834a4-4bf2-4699-9354-adbea7936d77",
+    "kind": "AnswerGiven",
+    "payload": {
+      "answer": "Performance [output_latency_ms]: target \u2264500ms, acceptable \u22642000ms. Rationale: near-real-time feedback for interactive use, but not strict real-time - batching output in ~500ms chunks balances responsiveness with system overhead.",
+      "item_id": "output_performance"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-22T03:46:32.042194+00:00",
+    "project_id": "bed522a2-0b3e-4bff-9cd6-7c13fe40779a",
+    "provenance": "trusted",
+    "seq": 52
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

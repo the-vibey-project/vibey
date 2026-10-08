@@ -1,0 +1,43 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "57917b78ba07947f08f98b3f1b9c81202e16fda9e8412ca32f3f03f7477aa576",
+    "event_id": "6cbcb55e-af94-4c1a-b4d0-41572db86d34",
+    "seq": 12
+  },
+  "previous": {
+    "digest": "7b87f05aeccd7e8c49f587f1b2074f1b3caf3e3158afb3b7f42a576ec5265eb1",
+    "event_id": "6eb26c8a-1462-4ab4-82a4-9e3b21ed7ba8",
+    "seq": 10
+  },
+  "project_id": "ab0b06f9-55a4-4b47-ac08-254e7fdd9036",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "ba27193f-dfaf-4f37-acf9-c2d5b771d4c6",
+    "cycle": 1,
+    "digest": "9600bb767b83ef67867beb265338dfbeaa7e1dc6e0e03d45ed681bdf17cc8af6",
+    "engine_id": "claudeloop",
+    "event_id": "81ae8580-ff80-4a6a-abec-bfc165ea6c86",
+    "job_id": "48f9ef01-8b95-4709-adde-ed0ece390f8d",
+    "kind": "QuestionAsked",
+    "payload": {
+      "blocking": false,
+      "cycle": 1,
+      "default": "Yes, allow multiple forks; each creates an independent job with its own branch and worktree, differentiated by job_id",
+      "item_id": "multiple_forks",
+      "stage": "job_story",
+      "text": "Should multiple forks from the same origin job be allowed, and if so, how are they differentiated?"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-22T02:56:34.677471+00:00",
+    "project_id": "ab0b06f9-55a4-4b47-ac08-254e7fdd9036",
+    "provenance": "agent",
+    "seq": 11
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

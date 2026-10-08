@@ -1,0 +1,43 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "77fc196eccb61e91273327b6b07a1217e2ad95ea0c059d91001e7488abb5862d",
+    "event_id": "fba015e9-f38b-4fb3-aa73-92f62de80333",
+    "seq": 12
+  },
+  "previous": {
+    "digest": "e975c682cab05a1c0a683f64fbcf16d980bc5313dedb8e559ee9f3ac7af24c9d",
+    "event_id": "91dfa0ad-296f-4ff4-b980-75a665434c7d",
+    "seq": 10
+  },
+  "project_id": "2f6a93b6-2d73-4aff-bc94-16539841133f",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "31561811-9d52-4d03-b94e-5dc8f90a7d85",
+    "cycle": 1,
+    "digest": "f50c778f9736ec2ef83eba5c866654eb95f67e213565f54f37815f92e8a01246",
+    "engine_id": "claudeloop",
+    "event_id": "ec9a0bdb-4627-4eb2-b8bc-4b8b18de9998",
+    "job_id": "334db377-8cb0-4a72-9cc0-78b45fc9bb38",
+    "kind": "QuestionAsked",
+    "payload": {
+      "blocking": true,
+      "cycle": 1,
+      "default": "When a job hit awaiting_human and the answer is provided, or when max_attempts exhausted but the underlying issue is now fixed (credentials restored, rate limit lifted), continue should transition back to READY and re-enqueue from current position while preserving all prior history.",
+      "item_id": "continue_job_story",
+      "stage": "job_story",
+      "text": "When would an operator need to continue a job that's currently stopped or stuck, and what state should it resume from?"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-22T02:57:46.446746+00:00",
+    "project_id": "2f6a93b6-2d73-4aff-bc94-16539841133f",
+    "provenance": "agent",
+    "seq": 11
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

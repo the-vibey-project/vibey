@@ -1,0 +1,40 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "7842517003d3188110f0f465954b0ecff589806cb8cb54badeb558d03aad338d",
+    "event_id": "ed08a8ad-a573-40c4-a71c-8ef3ea5133b2",
+    "seq": 267
+  },
+  "previous": {
+    "digest": "7842517003d3188110f0f465954b0ecff589806cb8cb54badeb558d03aad338d",
+    "event_id": "b60f0a00-c740-40b2-afc7-031025bc2ea6",
+    "seq": 154
+  },
+  "project_id": "8f254b4c-df0a-4056-8937-6eba30efcfa6",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "1c1bacab-39c9-42bc-8f39-a78bc1535136",
+    "cycle": 1,
+    "digest": "44be92e0e4125ff8426dce08da32866b77bbbe65db315f6c9f2f7149a9b3d413",
+    "engine_id": null,
+    "event_id": "0e5a2bf3-8db5-4e76-a26b-c32ae9e7a4d1",
+    "job_id": "619c36ca-83fc-49c1-be7e-0c27b9029220",
+    "kind": "FindingRaised",
+    "payload": {
+      "finding_id": "f_verify_utf8-support_17bab7cf",
+      "severity": "high",
+      "text": "gate failed: ./greet.py $(python3 -c \"print('A'*255)\"): usage: greet.py [-h] [-t] [name ...]\ngreet.py: error: unrecognized arguments: -c print('A'*255))"
+    },
+    "phase": "build",
+    "produced_at": "2026-08-19T18:48:46.722074+00:00",
+    "project_id": "8f254b4c-df0a-4056-8937-6eba30efcfa6",
+    "provenance": "agent",
+    "seq": 207
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

@@ -1,0 +1,43 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "1903a15392c4df77a20dfa33f5f3fc5a0d265d19c731dba9df8d38014002d7fd",
+    "event_id": "7877b78f-8716-4a2d-a615-2c3beba4d5d6",
+    "seq": 4
+  },
+  "previous": {
+    "digest": "bab943834f73ab952395e33580cc47d66443168f7770bb45b1e0ab35833c0175",
+    "event_id": "4948ae37-1c21-4c88-a085-6279eebbf2f7",
+    "seq": 2
+  },
+  "project_id": "5e76341f-ba5f-4272-8355-3df5d489bbcd",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "ae093520-eca4-45e4-9a0b-cea4a9e77037",
+    "cycle": 1,
+    "digest": "64fa12e8181d4de1489e52bec4d2dc29cd1ce2f1d80d284df63de6ec5313d434",
+    "engine_id": "claudeloop",
+    "event_id": "92f10220-4ada-4ab0-86a2-39bdfa4541ce",
+    "job_id": "e58deb6b-5356-4a39-8acf-5dc898bba380",
+    "kind": "QuestionAsked",
+    "payload": {
+      "blocking": true,
+      "cycle": 1,
+      "default": "Improve user experience, maintain simplicity, ensure reliability",
+      "item_id": "requirements",
+      "stage": "context_free",
+      "text": "What are the top 2-3 functional requirements or goals?"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-20T00:47:09.559292+00:00",
+    "project_id": "5e76341f-ba5f-4272-8355-3df5d489bbcd",
+    "provenance": "agent",
+    "seq": 3
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

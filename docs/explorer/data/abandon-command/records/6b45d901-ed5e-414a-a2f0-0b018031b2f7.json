@@ -1,0 +1,43 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "54e8e90cbdaf1ce8b878b78265abac58e7aa2f622f45b17db4689bdb5d26cb3b",
+    "event_id": "62df2f28-25cb-4747-90a9-08d3e2e3bfdb",
+    "seq": 30
+  },
+  "previous": {
+    "digest": "94e5bbb692380c6f89c7886c425791a464936ed4c82ada562d4e8df6ec8b2267",
+    "event_id": "6af0ec46-415e-42c5-9ef1-7afe660226ca",
+    "seq": 28
+  },
+  "project_id": "d733035f-e0f9-4f67-aba2-270068d6a9c6",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "2622842c-7c16-442e-9350-28f3fe389ffa",
+    "cycle": 1,
+    "digest": "449aec2913e26f0d7c6efb7bff3d33bf104764fa8756432a3aa14ce082b4c4f1",
+    "engine_id": "claudeloop",
+    "event_id": "6b45d901-ed5e-414a-a2f0-0b018031b2f7",
+    "job_id": "44e282ee-55b1-4cf9-afc3-c84870a14a5c",
+    "kind": "QuestionAsked",
+    "payload": {
+      "blocking": false,
+      "cycle": 1,
+      "default": "(1) 'Project \u003cid\u003e not found.' (2) 'Cannot abandon: project \u003cid\u003e transitioned to REVIEW. Current phase must be checked before retry.' (3) Silent success\u2014idempotent, same stdout as fresh abandon showing current state.",
+      "item_id": "error_message_examples",
+      "stage": "example_mapping",
+      "text": "What are the exact error messages for: (1) project not found, (2) race where project moved to REVIEW mid-abandon, (3) already ABANDONED?"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-22T03:35:25.757013+00:00",
+    "project_id": "d733035f-e0f9-4f67-aba2-270068d6a9c6",
+    "provenance": "agent",
+    "seq": 29
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

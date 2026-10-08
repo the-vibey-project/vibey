@@ -1,0 +1,43 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "817ed538d5fb942c103ddd30aa3c5e9fa46dcebfbe86ac6cd4eeb488ebfb797d",
+    "event_id": "eea7d777-d9a6-4ae8-9356-3259c3ae06e7",
+    "seq": 27
+  },
+  "previous": {
+    "digest": "3e42f21bab9e2c45dfc10917b22fd477cb6e2699935187ff97f671306dee3e2a",
+    "event_id": "3beb6ade-e5f0-49db-a421-cbc5e7409983",
+    "seq": 25
+  },
+  "project_id": "8ab823c9-89e4-4050-884c-9008c8b14ef8",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "5302d813-476a-4b48-8fee-6302e6ba50d9",
+    "cycle": 1,
+    "digest": "f61717d597a328548be222e790c089aa2d8814990b8774c0051c64c8c06d148d",
+    "engine_id": "claudeloop",
+    "event_id": "47c50a27-53b7-4269-a1cc-cc7d7d9fbe33",
+    "job_id": "705692f1-69a1-4cc2-ade7-8aa3d1407b67",
+    "kind": "QuestionAsked",
+    "payload": {
+      "blocking": false,
+      "cycle": 1,
+      "default": "First write wins; second user gets an error and must choose a different alias",
+      "item_id": "collision_resolution",
+      "stage": "example_mapping",
+      "text": "If two users request the same custom alias simultaneously, what should happen?"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-20T02:34:00.250964+00:00",
+    "project_id": "8ab823c9-89e4-4050-884c-9008c8b14ef8",
+    "provenance": "agent",
+    "seq": 26
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

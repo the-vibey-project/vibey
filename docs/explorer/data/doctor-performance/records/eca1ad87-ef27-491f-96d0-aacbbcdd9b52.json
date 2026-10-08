@@ -1,0 +1,43 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "0abbf26464167b2e703f97e2fc3e08cbe43139bce8b5b6447a48ba377c5d7060",
+    "event_id": "e09a9bb9-bf12-48b7-86bd-9cb09eb58cd5",
+    "seq": 30
+  },
+  "previous": {
+    "digest": "d2ca946bca67f1427a6db347043bd4867e31f004602360d816a4126796e7f25e",
+    "event_id": "e5049a25-f0c4-465e-9733-45a55fc36f23",
+    "seq": 28
+  },
+  "project_id": "5ea01f61-8536-4ace-90cb-18700a12e410",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "d23ef1aa-a978-4445-bf0d-14b897840894",
+    "cycle": 1,
+    "digest": "d8c0203889308dda281b5b3f34507b991f433bb60f77b018ba4847c0d0864cf4",
+    "engine_id": "claudeloop",
+    "event_id": "eca1ad87-ef27-491f-96d0-aacbbcdd9b52",
+    "job_id": "4c2ec03f-d670-44f9-9f05-47597984ab20",
+    "kind": "QuestionAsked",
+    "payload": {
+      "blocking": false,
+      "cycle": 1,
+      "default": "Status lines show distinct failure modes: '\u2717 [engine]: timed out after 30s' vs '\u2717 [engine]: failed (error message)', both contribute to failure count, exit code 1",
+      "item_id": "multiple_failure_example",
+      "stage": "example_mapping",
+      "text": "Describe a scenario where two engines fail in different ways (one timeout, one error) - how are these distinguished in the output?"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-22T03:43:34.933482+00:00",
+    "project_id": "5ea01f61-8536-4ace-90cb-18700a12e410",
+    "provenance": "agent",
+    "seq": 29
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

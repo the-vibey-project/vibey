@@ -1,0 +1,43 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "1a8beeb0f80b1a27db322c88759d4c76843793cec106320b822acd2e40d8fcb5",
+    "event_id": "febf51dd-fb37-4ce0-af81-2a5f280454ee",
+    "seq": 29
+  },
+  "previous": {
+    "digest": "f9e37c1437a634f120821335b6ed71e1ecbb645725e25ee4dca3a5190f501d39",
+    "event_id": "3a6e2e87-f728-45b7-95ec-166b8b16e044",
+    "seq": 25
+  },
+  "project_id": "893c4fc1-542e-411e-a10a-3aef784b1540",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "d1405050-7bbf-5034-b04a-11a1570aca97",
+    "cycle": 1,
+    "digest": "95673eefa4e05aed2f62c23f446058c7bc1fb9b3ccffaa28cca74c7f840fd877",
+    "engine_id": "gptossloop",
+    "event_id": "cd08cb8a-7bac-4785-8cc6-8de4ecc86a10",
+    "job_id": "f0b62bda-70b9-4e97-a9f7-8f5cda351d0a",
+    "kind": "QuestionAsked",
+    "payload": {
+      "blocking": true,
+      "cycle": 1,
+      "default": "No",
+      "item_id": "q9",
+      "stage": "walking_skeleton",
+      "text": "Should the lane run a markdown lint check on README.md after inserting the table of contents?"
+    },
+    "phase": "design",
+    "produced_at": "2026-09-30T04:08:02.220747+00:00",
+    "project_id": "893c4fc1-542e-411e-a10a-3aef784b1540",
+    "provenance": "agent",
+    "seq": 26
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

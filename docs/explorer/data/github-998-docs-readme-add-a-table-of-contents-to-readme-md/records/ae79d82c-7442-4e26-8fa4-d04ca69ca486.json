@@ -1,0 +1,43 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "a8953483315590fd533e0b123fc13f1f5421299f5136aa734e50832e963eb649",
+    "event_id": "54d2361e-edab-4935-83e5-b8c30ca7c1a4",
+    "seq": 58
+  },
+  "previous": {
+    "digest": "7f1bb2bdf5cb0514ed04a28c4245a160bbb819dff8a918921444b3f35b110bd1",
+    "event_id": "1841a8c7-14f7-4533-aa7b-dc4946bb7fa6",
+    "seq": 54
+  },
+  "project_id": "9692abab-ace3-4ee0-ac59-3ea42484b817",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "0face8bc-aa17-546b-b5de-e16e759738e6",
+    "cycle": 1,
+    "digest": "f48c19363581011e527887e676cb582943c92e5ce96b28abf7345794b888152e",
+    "engine_id": "gptossloop",
+    "event_id": "ae79d82c-7442-4e26-8fa4-d04ca69ca486",
+    "job_id": "c2b75c18-fd15-4e79-ad4e-cf489356ad57",
+    "kind": "QuestionAsked",
+    "payload": {
+      "blocking": false,
+      "cycle": 1,
+      "default": "Existing CI pipeline",
+      "item_id": "q22",
+      "stage": "premortem",
+      "text": "Should the script be executed as part of the existing CI pipeline or as a separate GitHub Action?"
+    },
+    "phase": "design",
+    "produced_at": "2026-09-29T18:53:20.936544+00:00",
+    "project_id": "9692abab-ace3-4ee0-ac59-3ea42484b817",
+    "provenance": "agent",
+    "seq": 55
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

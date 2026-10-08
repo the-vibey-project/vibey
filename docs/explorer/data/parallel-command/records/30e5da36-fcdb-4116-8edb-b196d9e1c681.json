@@ -1,0 +1,43 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "e9e4a04f64480e22f2942fe72a049209db6baaa04b30ffe8ba25b234e2dfdd61",
+    "event_id": "568b0865-e6ad-4d39-8c88-878e997b2edf",
+    "seq": 21
+  },
+  "previous": {
+    "digest": "b9bae945ab2b1273a7d17b95fbb1e4f58288804afb1f79d68841fff158ab6744",
+    "event_id": "1ce41e6f-f7cf-4fd3-83cf-94dca3f6a416",
+    "seq": 19
+  },
+  "project_id": "bed522a2-0b3e-4bff-9cd6-7c13fe40779a",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "8adecfa6-c5aa-4761-bb01-ccb74d30ef31",
+    "cycle": 1,
+    "digest": "0519ee1c44cf30f4b5978d0b26dc53678966706e285279758eccb552344dc39b",
+    "engine_id": "claudeloop",
+    "event_id": "30e5da36-fcdb-4116-8edb-b196d9e1c681",
+    "job_id": "92d834a4-4bf2-4699-9354-adbea7936d77",
+    "kind": "QuestionAsked",
+    "payload": {
+      "blocking": false,
+      "cycle": 1,
+      "default": "I lose the convenience of one-command batch execution with unified output, but I can still accomplish the same work by running jobs separately or letting the worker pool handle them. The cost is ergonomics, not capability.",
+      "item_id": "cost_of_not_building",
+      "stage": "laddering",
+      "text": "If this feature is never built, what do you lose? Be specific about workflows that would remain harder or impossible."
+    },
+    "phase": "design",
+    "produced_at": "2026-08-22T02:59:05.967096+00:00",
+    "project_id": "bed522a2-0b3e-4bff-9cd6-7c13fe40779a",
+    "provenance": "agent",
+    "seq": 20
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

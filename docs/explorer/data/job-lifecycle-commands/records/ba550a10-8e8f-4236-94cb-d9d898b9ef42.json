@@ -1,0 +1,43 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "2bdc224d54ae2b4b9239e4f68e178b21e29b48f6e08d1d1825ad44a0d7df3d3f",
+    "event_id": "e823035f-15b1-449e-87ab-d103ce4a08ff",
+    "seq": 29
+  },
+  "previous": {
+    "digest": "e6486ac032d9859211dbad5d0ab0c6790432c9f9b79cfa3e2f56f259f5a2defe",
+    "event_id": "b2537986-5bd2-4307-b967-21ee96280a50",
+    "seq": 27
+  },
+  "project_id": "2f6a93b6-2d73-4aff-bc94-16539841133f",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "1e88d0cb-47cf-40f9-9041-99e5138b934d",
+    "cycle": 1,
+    "digest": "14c40e0a24b3b1010827e75805d3bb9a2ba719a65a01d2321c18ea7427bdb0c6",
+    "engine_id": "claudeloop",
+    "event_id": "ba550a10-8e8f-4236-94cb-d9d898b9ef42",
+    "job_id": "334db377-8cb0-4a72-9cc0-78b45fc9bb38",
+    "kind": "QuestionAsked",
+    "payload": {
+      "blocking": true,
+      "cycle": 1,
+      "default": "New ledger event (seq 13) of kind JobRewound with target_seq=7 and restored phase/state from seq 7. Job row updates: restore phase to DESIGN, state stays or resets to READY, current_attempt resets to value at seq 7. Git worktree unchanged\u2014next claim rebuilds from ledger 1-7. Seqs 8-12 remain in ledger as history.",
+      "item_id": "wind_back_concrete_example",
+      "stage": "example_mapping",
+      "text": "Walk through a concrete wind-back scenario: job has ledger seqs 1-12 (currently at 12 in REVIEW phase, state=READY), operator runs `vibey wind-back \u003cjob-id\u003e 7` (end of DESIGN phase). What gets written to ledger, what changes in the job row, what happens to worktree?"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-22T03:43:11.386375+00:00",
+    "project_id": "2f6a93b6-2d73-4aff-bc94-16539841133f",
+    "provenance": "agent",
+    "seq": 28
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

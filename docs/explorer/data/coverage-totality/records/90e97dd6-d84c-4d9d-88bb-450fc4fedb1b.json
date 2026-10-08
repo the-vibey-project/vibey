@@ -1,0 +1,39 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "9a0e0f99d9a282eea9b3152c4118522f69a2e544fa7ccabb15b16a4ad724d846",
+    "event_id": "4dd921dd-1bcb-45bd-82a6-81a7a9f4fced",
+    "seq": 32
+  },
+  "previous": {
+    "digest": "538ea942f3a96be736398d0bf517f3b51d60a46bbd86d4725e4f7b8be3d612cd",
+    "event_id": "d03b3f8c-bb27-41b2-baa2-6c54e873d49d",
+    "seq": 29
+  },
+  "project_id": "e631c00a-e1a1-4ed4-b99a-0fa2d388d240",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "30942c99-f353-4099-8600-c22176f57bac",
+    "cycle": 1,
+    "digest": "40f0062f6163c8ce7b45278c32b85cba38ed5a600aae3513fc87a912e57b55f7",
+    "engine_id": "claudeloop",
+    "event_id": "90e97dd6-d84c-4d9d-88bb-450fc4fedb1b",
+    "job_id": "d73f236e-a7b4-4748-b075-3900a75af324",
+    "kind": "AnswerGiven",
+    "payload": {
+      "answer": "bootstrap.py line 501: asyncpg.create_pool returning None, guarding the 'asyncpg did not create a pool' RuntimeError. Test it by monkeypatching asyncpg.create_pool to return None and asserting build_app raises that RuntimeError with that message. It is a real defensive branch -- create_pool is typed as returning Pool | None -- so it cannot be deleted as unreachable, and a mock is legitimate here precisely because the condition cannot be produced by a healthy database. Keep the assertion on the message, not just the type: the message is the only thing that tells an operator what failed.",
+      "item_id": "asyncpg_none_scenario"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-22T03:34:25.829257+00:00",
+    "project_id": "e631c00a-e1a1-4ed4-b99a-0fa2d388d240",
+    "provenance": "trusted",
+    "seq": 30
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

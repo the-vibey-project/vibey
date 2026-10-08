@@ -1,0 +1,39 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "b4f5e56cfbb1085d08126b47394307e31746617010dd1ad5696bd2b3e3b91ca5",
+    "event_id": "99e4323d-89dd-45d6-b1e5-4b8370477236",
+    "seq": 22
+  },
+  "previous": {
+    "digest": "717b35c2df0c14176f9c22df1f5f704414dad14cf62253b020361c4f5b0cef1a",
+    "event_id": "970249d0-4b3f-4428-a956-ba1cff49b8ce",
+    "seq": 20
+  },
+  "project_id": "8ab823c9-89e4-4050-884c-9008c8b14ef8",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "aecad2f4-223c-49ae-9d46-1f7c736800cb",
+    "cycle": 1,
+    "digest": "32ceb7adade1655dd74d05b764ac035d9545320b08b54959d91eb1c07ddff206",
+    "engine_id": "claudeloop",
+    "event_id": "6b77d6c6-20d6-4358-a32d-ae98ac1815d8",
+    "job_id": "705692f1-69a1-4cc2-ade7-8aa3d1407b67",
+    "kind": "AnswerGiven",
+    "payload": {
+      "answer": "Need for data ownership, custom branding, integration with internal systems, or compliance requirements",
+      "item_id": "why_build_vs_existing"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-20T02:33:22.528147+00:00",
+    "project_id": "8ab823c9-89e4-4050-884c-9008c8b14ef8",
+    "provenance": "trusted",
+    "seq": 21
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

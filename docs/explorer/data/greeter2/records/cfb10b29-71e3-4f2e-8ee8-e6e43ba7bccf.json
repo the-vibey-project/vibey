@@ -1,0 +1,43 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "d5bc0a78f98143d4193f10fb2da28132a2536a1c4a27def415ece8414bcd152e",
+    "event_id": "eed50f48-f0cf-4123-83ef-3ebdd743e633",
+    "seq": 42
+  },
+  "previous": {
+    "digest": "7989a54394f9ad7307987f3f3061a21f804764c3de42090cff10f7697240b38a",
+    "event_id": "81610138-5c48-41e9-813c-67847280cfec",
+    "seq": 40
+  },
+  "project_id": "8f254b4c-df0a-4056-8937-6eba30efcfa6",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "f84b58e6-520e-4c72-8b02-102460ba2a37",
+    "cycle": 1,
+    "digest": "db2e70b0fabedd65506455fd578b66a6772db9f7136c1dc68ff94fa7196a02dc",
+    "engine_id": "claudeloop",
+    "event_id": "cfb10b29-71e3-4f2e-8ee8-e6e43ba7bccf",
+    "job_id": "40fb97d9-4ab1-4fa8-9ae2-693c2b7a7fc9",
+    "kind": "QuestionAsked",
+    "payload": {
+      "blocking": true,
+      "cycle": 1,
+      "default": "ruff: default rules + line-length=88; bandit: all checks at medium+ severity; cyclomatic complexity \u003c5 per function",
+      "item_id": "code_quality_nfr",
+      "stage": "nfr_planguage",
+      "text": "What code quality thresholds must be maintained? (ruff/bandit config, complexity limits)"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-19T18:31:25.667818+00:00",
+    "project_id": "8f254b4c-df0a-4056-8937-6eba30efcfa6",
+    "provenance": "agent",
+    "seq": 41
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

@@ -1,0 +1,43 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "82843ebcdbb16b8c3ae7796109b250e3a6c8159f98405ea1d25b12b69eef3c5c",
+    "event_id": "8d8de76f-20b2-4263-baaf-a82ea54327f0",
+    "seq": 53
+  },
+  "previous": {
+    "digest": "521d0cdb9808df87cb9bc447ccefcb4f0e8437e26d02f357644f7fe561f1e765",
+    "event_id": "4c5b0840-f3d6-4532-a251-7670fe66bf8b",
+    "seq": 51
+  },
+  "project_id": "5e76341f-ba5f-4272-8355-3df5d489bbcd",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "57ceafe3-b1e7-4512-8042-7af89ac90cc0",
+    "cycle": 1,
+    "digest": "b1b6f865dfdcd16fe13b0681b7d4223bf490c310fa90bf2b90b4fb6cbd9b9da4",
+    "engine_id": "claudeloop",
+    "event_id": "78a39941-ee6a-4313-9567-17c3efbcfce7",
+    "job_id": "e58deb6b-5356-4a39-8acf-5dc898bba380",
+    "kind": "QuestionAsked",
+    "payload": {
+      "blocking": false,
+      "cycle": 1,
+      "default": "No mechanism to customize or extend greeting logic without code changes",
+      "item_id": "future_regret",
+      "stage": "premortem",
+      "text": "What maintenance or evolution challenge will hurt us 6 months from now?"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-20T00:51:37.818191+00:00",
+    "project_id": "5e76341f-ba5f-4272-8355-3df5d489bbcd",
+    "provenance": "agent",
+    "seq": 52
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

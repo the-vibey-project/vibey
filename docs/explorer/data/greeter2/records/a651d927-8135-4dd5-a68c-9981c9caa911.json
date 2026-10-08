@@ -1,0 +1,43 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "83356742556c9baf42cfea676727e3ef4367579f8d16853881f3a3f25ebb7fa0",
+    "event_id": "a4a524af-375a-473f-90cf-94d8c52eb0f2",
+    "seq": 25
+  },
+  "previous": {
+    "digest": "b002a0d0826682f33087032743df82a8bd8430c8f59fb2c4a6f8e144e7ea09a2",
+    "event_id": "20743bdd-c63b-4079-99fd-b7b55ae5ccb1",
+    "seq": 23
+  },
+  "project_id": "8f254b4c-df0a-4056-8937-6eba30efcfa6",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "d7e8a22d-c6d2-429e-8353-e44bf898ebda",
+    "cycle": 1,
+    "digest": "42761b46c501640010bcea1149d8ff10bf9e6632740be49ca0b9535f609d1db2",
+    "engine_id": "claudeloop",
+    "event_id": "a651d927-8135-4dd5-a68c-9981c9caa911",
+    "job_id": "40fb97d9-4ab1-4fa8-9ae2-693c2b7a7fc9",
+    "kind": "QuestionAsked",
+    "payload": {
+      "blocking": true,
+      "cycle": 1,
+      "default": "8am \u2192 \"Good morning, Alice!\", 2pm \u2192 \"Good afternoon, Alice!\", 7pm \u2192 \"Good evening, Alice!\"",
+      "item_id": "time_greeting_examples",
+      "stage": "example_mapping",
+      "text": "What should `greet Alice -t` output at 8am, 2pm, and 7pm?"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-19T18:29:05.583707+00:00",
+    "project_id": "8f254b4c-df0a-4056-8937-6eba30efcfa6",
+    "provenance": "agent",
+    "seq": 24
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

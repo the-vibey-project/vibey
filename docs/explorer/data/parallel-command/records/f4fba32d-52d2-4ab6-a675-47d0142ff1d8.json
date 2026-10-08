@@ -1,0 +1,43 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "b9bae945ab2b1273a7d17b95fbb1e4f58288804afb1f79d68841fff158ab6744",
+    "event_id": "1ce41e6f-f7cf-4fd3-83cf-94dca3f6a416",
+    "seq": 19
+  },
+  "previous": {
+    "digest": "e569932650b400f48f72b1715cf63da67599ef6acbc2a47ff42b606d4bf467f8",
+    "event_id": "332a69fd-dff5-451b-b679-84f276bb8b20",
+    "seq": 17
+  },
+  "project_id": "bed522a2-0b3e-4bff-9cd6-7c13fe40779a",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "f36232f1-e2ef-4ec4-86bd-9ef85f5f6a60",
+    "cycle": 1,
+    "digest": "f7415616f8eb7938c48b33dd9db2d764eba46103606e027fccc44858e781b55e",
+    "engine_id": "claudeloop",
+    "event_id": "f4fba32d-52d2-4ab6-a675-47d0142ff1d8",
+    "job_id": "92d834a4-4bf2-4699-9354-adbea7936d77",
+    "kind": "QuestionAsked",
+    "payload": {
+      "blocking": true,
+      "cycle": 1,
+      "default": "Yes, option (c) - a wait command that lets me track specific jobs without actually changing how they're executed - would solve 80% of the observability need without adding concurrency complexity.",
+      "item_id": "simpler_alternative",
+      "stage": "laddering",
+      "text": "Would a simpler alternative address the core need? For example: (a) a read-only dashboard showing live worker activity across the pool, (b) a way to tag jobs as a 'batch' for later filtering/reporting, or (c) a `vibey wait --jobs j1,j2,j3` that just blocks until those specific jobs complete?"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-22T02:59:05.967096+00:00",
+    "project_id": "bed522a2-0b3e-4bff-9cd6-7c13fe40779a",
+    "provenance": "agent",
+    "seq": 18
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

@@ -1,0 +1,43 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "a6e53f4526154213d69dd021cc385d795502243d9e14e66221bbebc09813eba5",
+    "event_id": "acac6f36-895d-4f5f-9da8-fd5733c156bd",
+    "seq": 33
+  },
+  "previous": {
+    "digest": "015a0a7f7dd9a7555c3dd62ec412efdad4f1b9e97e80ffc4604405375b42d2b8",
+    "event_id": "fe8be497-fc5f-458d-819f-fd8afac5ca27",
+    "seq": 31
+  },
+  "project_id": "df7e868b-1fbf-451b-8ceb-126359b7588e",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "f783d47a-bf57-47d3-8779-59abe0c1e8fa",
+    "cycle": 1,
+    "digest": "6b40cd62df0f13c4659e93e04bc788ce147a0d1879c56388fcc0853b78a6dc06",
+    "engine_id": "claudeloop",
+    "event_id": "e1071967-55b5-4f13-a5fe-38327f87f596",
+    "job_id": "3a3b336c-c2aa-4400-a762-ae12246358d3",
+    "kind": "QuestionAsked",
+    "payload": {
+      "blocking": false,
+      "cycle": 1,
+      "default": "No audit history/versioning, no soft deletes (hard delete only), no bulk import from files, no advanced search/filtering beyond basic field matching",
+      "item_id": "out_of_scope_examples",
+      "stage": "example_mapping",
+      "text": "What are examples of operations or scenarios explicitly NOT included in this iteration?"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-22T04:44:19.116940+00:00",
+    "project_id": "df7e868b-1fbf-451b-8ceb-126359b7588e",
+    "provenance": "agent",
+    "seq": 32
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

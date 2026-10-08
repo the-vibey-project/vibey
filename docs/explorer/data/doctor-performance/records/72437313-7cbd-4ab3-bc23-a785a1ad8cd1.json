@@ -1,0 +1,43 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "4096eedd220bbf467fe721cca9ea47f6f877495f5a26fddad94f369481848680",
+    "event_id": "9c873577-5a5e-4adb-a47d-6c210cf0e8e7",
+    "seq": 22
+  },
+  "previous": {
+    "digest": "6ab87f3d8a81444d38d6bc0bf116b649b15254c66e210d9906f90caecd48da71",
+    "event_id": "397634a0-f4b0-4571-b9ac-54c2b7b374e3",
+    "seq": 20
+  },
+  "project_id": "5ea01f61-8536-4ace-90cb-18700a12e410",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "0e61b146-c40e-41a9-9163-eda24f288d8e",
+    "cycle": 1,
+    "digest": "f32613c0a50b373098975c0e5a504a4c27f882a64736f6de65611d23cc9b1239",
+    "engine_id": "claudeloop",
+    "event_id": "72437313-7cbd-4ab3-bc23-a785a1ad8cd1",
+    "job_id": "4c2ec03f-d670-44f9-9f05-47597984ab20",
+    "kind": "QuestionAsked",
+    "payload": {
+      "blocking": false,
+      "cycle": 1,
+      "default": "Two commits: first the build_app optimization (simpler, affects all invocations), then concurrent checks (changes failure semantics)",
+      "item_id": "commit_strategy",
+      "stage": "laddering",
+      "text": "Should concurrent engine checks and build_app optimization be separate commits within the PR, or combined?"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-22T03:35:28.766467+00:00",
+    "project_id": "5ea01f61-8536-4ace-90cb-18700a12e410",
+    "provenance": "agent",
+    "seq": 21
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

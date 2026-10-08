@@ -1,0 +1,39 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "d37b4700c1756f57cbdeb47b47ab8aad920a0671c0625a120839783e33f28bda",
+    "event_id": "3d3b050c-50c1-498d-aa7b-b9bcd96068bf",
+    "seq": 25
+  },
+  "previous": {
+    "digest": "f2abd6367b2fbc59ddd464e51325b5e87c24d9c44ff349c2c3389dc3135a48be",
+    "event_id": "bcf95888-f06b-49e5-8bb1-e9e2d93f091c",
+    "seq": 23
+  },
+  "project_id": "f4cfe576-55c7-4f79-80ad-485f85ddca8b",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "4bb7ecc1-ea40-5364-bed9-45c048157678",
+    "cycle": 1,
+    "digest": "3e30668b1a8d897fda419e20fe66a38676ec8cf19e7f1fe2b7bd682d32c258fb",
+    "engine_id": "gptossloop",
+    "event_id": "101dfe87-1786-412f-8470-5671788d0b8f",
+    "job_id": "5057b798-907c-4039-9690-3992212dc0b2",
+    "kind": "AnswerGiven",
+    "payload": {
+      "answer": "Yes \u2013 the paid lane should only be invoked with the narrowed schema if the sovereign lane completed successfully; otherwise it should be omitted or run with the full schema.",
+      "item_id": "Q9"
+    },
+    "phase": "design",
+    "produced_at": "2026-09-27T21:32:36.861316+00:00",
+    "project_id": "f4cfe576-55c7-4f79-80ad-485f85ddca8b",
+    "provenance": "trusted",
+    "seq": 24
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

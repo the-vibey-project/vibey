@@ -1,0 +1,39 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "db34f0e33d3b004d521c60e074e5a0c78b350fa1c5c8f3255216ef24ca19530e",
+    "event_id": "a692f857-6446-4902-85db-73927bcb1602",
+    "seq": 2
+  },
+  "previous": null,
+  "project_id": "8f254b4c-df0a-4056-8937-6eba30efcfa6",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "ead9364b-9169-4b9a-aae2-a67839a7f1d9",
+    "cycle": 1,
+    "digest": "cb24e804819982b695b16ee0ba8a46b50ff9588bf6168998212cd534ae32c344",
+    "engine_id": "claudeloop",
+    "event_id": "e545b6ad-d9ab-485c-a8ff-ea7ecfebf73c",
+    "job_id": "40fb97d9-4ab1-4fa8-9ae2-693c2b7a7fc9",
+    "kind": "QuestionAsked",
+    "payload": {
+      "blocking": true,
+      "cycle": 1,
+      "default": "A greeting service that provides personalized greetings to users",
+      "item_id": "system_description",
+      "stage": "context_free",
+      "text": "What system are you designing today?"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-19T18:26:10.378323+00:00",
+    "project_id": "8f254b4c-df0a-4056-8937-6eba30efcfa6",
+    "provenance": "agent",
+    "seq": 1
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

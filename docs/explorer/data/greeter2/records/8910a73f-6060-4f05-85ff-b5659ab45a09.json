@@ -1,0 +1,39 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "16ef276981be7d899fea63cdbf96409ecb1aa26a647be8744a72f506396577fc",
+    "event_id": "73714b84-c1fd-446c-af3d-50c1fc6dab0f",
+    "seq": 44
+  },
+  "previous": {
+    "digest": "d5bc0a78f98143d4193f10fb2da28132a2536a1c4a27def415ece8414bcd152e",
+    "event_id": "eed50f48-f0cf-4123-83ef-3ebdd743e633",
+    "seq": 42
+  },
+  "project_id": "8f254b4c-df0a-4056-8937-6eba30efcfa6",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "ca6d2c5a-c14a-4d01-8854-2c3d6e8eb42a",
+    "cycle": 1,
+    "digest": "7af0be5c3cc760522f22a344d58eab505096c01a6178cda504f57a13df516052",
+    "engine_id": "claudeloop",
+    "event_id": "8910a73f-6060-4f05-85ff-b5659ab45a09",
+    "job_id": "40fb97d9-4ab1-4fa8-9ae2-693c2b7a7fc9",
+    "kind": "AnswerGiven",
+    "payload": {
+      "answer": "ruff: default rules + line-length=88; bandit: all checks at medium+ severity; cyclomatic complexity \u003c5 per function",
+      "item_id": "code_quality_nfr"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-19T18:31:40.929529+00:00",
+    "project_id": "8f254b4c-df0a-4056-8937-6eba30efcfa6",
+    "provenance": "trusted",
+    "seq": 43
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

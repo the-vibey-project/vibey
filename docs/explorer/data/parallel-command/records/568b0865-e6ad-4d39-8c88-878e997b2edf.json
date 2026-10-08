@@ -1,0 +1,39 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "5f2ad326d1369aabcef551c64bf14e3241775c71f4725e50495826cb35f2c73a",
+    "event_id": "cbfc0277-f62c-4ba7-9934-76912b37a066",
+    "seq": 22
+  },
+  "previous": {
+    "digest": "0519ee1c44cf30f4b5978d0b26dc53678966706e285279758eccb552344dc39b",
+    "event_id": "30e5da36-fcdb-4116-8edb-b196d9e1c681",
+    "seq": 20
+  },
+  "project_id": "bed522a2-0b3e-4bff-9cd6-7c13fe40779a",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "13eabaf7-d084-46a9-8149-018c7827be8c",
+    "cycle": 1,
+    "digest": "e9e4a04f64480e22f2942fe72a049209db6baaa04b30ffe8ba25b234e2dfdd61",
+    "engine_id": "claudeloop",
+    "event_id": "568b0865-e6ad-4d39-8c88-878e997b2edf",
+    "job_id": "92d834a4-4bf2-4699-9354-adbea7936d77",
+    "kind": "AnswerGiven",
+    "payload": {
+      "answer": "Each job works in its own worktree (existing behavior), serializes on the final integrate step behind the advisory lock (existing behavior), and the --parallel flag just ensures these specific jobs are all claimed and started together rather than waiting in the queue.",
+      "item_id": "coordination_model"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-22T03:34:34.860851+00:00",
+    "project_id": "bed522a2-0b3e-4bff-9cd6-7c13fe40779a",
+    "provenance": "trusted",
+    "seq": 21
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

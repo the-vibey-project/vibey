@@ -1,0 +1,43 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "a94852b69fd55e880734f877bdcb19e308d157c6e2d05b9c237c2b3845c7b009",
+    "event_id": "30ef31fd-a619-4e2d-9efc-5da3d5c999bb",
+    "seq": 44
+  },
+  "previous": {
+    "digest": "0bdc132a931a4f5a23aeaa20b486b094476b46ba5dcdd915ce097e61a1f8b362",
+    "event_id": "9d1c98db-aff2-48f6-8ab6-3eba44a3c390",
+    "seq": 42
+  },
+  "project_id": "0ee95624-eec4-4e8e-9a14-6ad9a37dcff4",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "f7ced0c6-ba5d-435c-b8fb-eb8d69f0b764",
+    "cycle": 1,
+    "digest": "fa5948ac3c8163f6951d51667002debf9fceefc0633796a1fb5b53d77c926535",
+    "engine_id": "claudeloop",
+    "event_id": "4413cdea-94ab-4f47-a2b5-2c1c2d807145",
+    "job_id": "1343d0fd-bf3f-4739-8c21-cbf7693c673e",
+    "kind": "QuestionAsked",
+    "payload": {
+      "blocking": true,
+      "cycle": 1,
+      "default": "Must: 0% routing errors on the six verified paths (chat-host /, [path], [path], hire-host [path], both hosts [path], [path]) after Netlify deploy; Plan: monitor for 48h post-launch via Netlify Analytics; Wish: automated curl CI check in Netlify build (out of scope, manual verification acceptable)",
+      "item_id": "routing_reliability",
+      "stage": "nfr_planguage",
+      "text": "What error rate is acceptable for the host-aware routing rules (chat/hire subdomain redirects)? [Scale: % of requests returning wrong status/host; Meter: post-deploy curl checklist + production logs; Must/Plan/Wish]"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-20T20:19:05.488622+00:00",
+    "project_id": "0ee95624-eec4-4e8e-9a14-6ad9a37dcff4",
+    "provenance": "agent",
+    "seq": 43
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 5
+  }
+}

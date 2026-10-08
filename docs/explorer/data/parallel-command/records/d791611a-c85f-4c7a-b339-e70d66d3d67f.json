@@ -1,0 +1,40 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "30178f6a50fa7bafc9a1810a7031fdad9c3d60ed5e23c79f1d7c56060c162ede",
+    "event_id": "048f2917-12cf-417f-8c66-0983f9591f50",
+    "seq": 16
+  },
+  "previous": {
+    "digest": "7fe10bde2e0a208a88cac2cede03143f768c185c9e9a0d1d3a49c6506e42cee4",
+    "event_id": "b574365b-289d-4185-87a5-d33464354742",
+    "seq": 14
+  },
+  "project_id": "bed522a2-0b3e-4bff-9cd6-7c13fe40779a",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "607cb5a4-0617-48ac-9ce8-b00bcc57d5b3",
+    "cycle": 1,
+    "digest": "a66bf390c0e3e8df374f838a9d5b7b215eb5fcffa0129f174b7e19f8f18aa208",
+    "engine_id": "claudeloop",
+    "event_id": "d791611a-c85f-4c7a-b339-e70d66d3d67f",
+    "job_id": "92d834a4-4bf2-4699-9354-adbea7936d77",
+    "kind": "AssumptionStated",
+    "payload": {
+      "item_id": "coordination_model",
+      "question": "When multiple jobs in the parallel set need to touch shared resources (the same branch, the database, etc.), what coordination behavior do you expect? Should they serialize, fail fast, or something else?",
+      "text": "Each job works in its own worktree (existing behavior), serializes on the final integrate step behind the advisory lock (existing behavior), and the --parallel flag just ensures these specific jobs are all claimed and started together rather than waiting in the queue."
+    },
+    "phase": "design",
+    "produced_at": "2026-08-22T02:58:27.429494+00:00",
+    "project_id": "bed522a2-0b3e-4bff-9cd6-7c13fe40779a",
+    "provenance": "trusted",
+    "seq": 15
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

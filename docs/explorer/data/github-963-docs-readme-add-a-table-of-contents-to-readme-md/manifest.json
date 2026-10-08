@@ -1,0 +1,49 @@
+{
+  "chain": {
+    "findings": 0,
+    "head": "72e7ac007ef072f0ad05672c0e8fe187a8e5da8817101c87d5650711c8c4bfef",
+    "head_seq": 197,
+    "scheme": "vibey-ledger-chain/v1",
+    "verified": true
+  },
+  "digest_range": "1873afdd3bf4734609135b82eba9d15c84db677c4f5f99453d27ce4d224bd6dc",
+  "documents": {
+    "index": "index.json",
+    "records": "records/{event_id}.json"
+  },
+  "format": "vibey-ledger-site/v1",
+  "holds": "full",
+  "policy": {
+    "fingerprint": "20c0e83ba268bd901344a690af4afac1b0433c0e279a476d954f31f9cb7fc5e8",
+    "scheme": "vibey-publication-policy/v1"
+  },
+  "project": {
+    "name": "github#963: docs(readme): add a table of contents to README.md",
+    "project_id": "893c4fc1-542e-411e-a10a-3aef784b1540"
+  },
+  "published": {
+    "first_seq": 2,
+    "last_seq": 197,
+    "records": 31
+  },
+  "seq_range": {
+    "events": 197,
+    "first": 1,
+    "last": 197
+  },
+  "shard_format": "vibey-ledger-shard/v1",
+  "statement": "166 events withheld by policy",
+  "tier": "standard (untiered)",
+  "withheld": {
+    "by_reason": {
+      "engine_chatter": 135,
+      "kind_not_allowlisted": 30,
+      "untrusted_provenance": 1
+    },
+    "credentials": 0,
+    "emails": 0,
+    "events": 166,
+    "fields": 14,
+    "paths": 0
+  }
+}

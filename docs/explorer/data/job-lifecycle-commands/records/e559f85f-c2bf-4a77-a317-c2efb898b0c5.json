@@ -1,0 +1,43 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "22ddbe429cc9cddd0a448e76accf47ebae6765520030b11679993969b7547333",
+    "event_id": "019f4755-e328-4299-a730-113dce146309",
+    "seq": 4
+  },
+  "previous": {
+    "digest": "8cb9c77833ce59e7001ebf89d22ed44a157cd4288bafa21dd1939b3864307e0c",
+    "event_id": "cdd4b74f-37f9-4a40-8663-5d3306b34676",
+    "seq": 2
+  },
+  "project_id": "2f6a93b6-2d73-4aff-bc94-16539841133f",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "89f3a7c5-d3c4-435f-b7e9-3d5a2fcffa3b",
+    "cycle": 1,
+    "digest": "d60318e95cf56c999918c5d69e6e08ed0615c99e496f0f680ba00a75fc255087",
+    "engine_id": "claudeloop",
+    "event_id": "e559f85f-c2bf-4a77-a317-c2efb898b0c5",
+    "job_id": "334db377-8cb0-4a72-9cc0-78b45fc9bb38",
+    "kind": "QuestionAsked",
+    "payload": {
+      "blocking": false,
+      "cycle": 1,
+      "default": "Clear acceptance criteria defined, architectural fit validated, implementation path identified",
+      "item_id": "success_criteria",
+      "stage": "context_free",
+      "text": "How will you know this design is successful?"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-22T02:51:35.333462+00:00",
+    "project_id": "2f6a93b6-2d73-4aff-bc94-16539841133f",
+    "provenance": "agent",
+    "seq": 3
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

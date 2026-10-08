@@ -1,0 +1,39 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "d1a3b0e1ce932494b81063f9d2f608145c2e70e88abef461cf3673cafbe69b33",
+    "event_id": "507f6726-f7c8-44d3-9b0c-745f2dc7542d",
+    "seq": 41
+  },
+  "previous": {
+    "digest": "059dcafe57b6401fa9df459d566287280dfb12e54adee3897b018494c51f8772",
+    "event_id": "35c0f1de-678e-433e-968c-736c095778b6",
+    "seq": 39
+  },
+  "project_id": "ab0b06f9-55a4-4b47-ac08-254e7fdd9036",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "b2791a9c-cb34-44bf-bd1f-19c7895a30dd",
+    "cycle": 1,
+    "digest": "11db5835f6689cb8210755507e060698b06b48b4b698a5f476678d9a13157f55",
+    "engine_id": "claudeloop",
+    "event_id": "1ce64a23-81f1-4b84-987e-5497a0bc75dd",
+    "job_id": "48f9ef01-8b95-4709-adde-ed0ece390f8d",
+    "kind": "AnswerGiven",
+    "payload": {
+      "answer": "JobForked event with origin_job_id, origin_seq, new_job_id fields; extend Job entity with optional forked_from_job_id and forked_from_seq; everything else reuses existing job creation and worktree management",
+      "item_id": "essential_events"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-22T03:43:27.608330+00:00",
+    "project_id": "ab0b06f9-55a4-4b47-ac08-254e7fdd9036",
+    "provenance": "trusted",
+    "seq": 40
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

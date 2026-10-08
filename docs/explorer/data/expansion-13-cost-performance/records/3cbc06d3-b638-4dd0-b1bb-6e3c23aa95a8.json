@@ -1,0 +1,43 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "8e6213c3f7a1df1a6e58315b602c5c5e62b369361028880e04509f6f710b9e5c",
+    "event_id": "a8c7fba6-2d03-4249-9a8f-59765b2499ca",
+    "seq": 11
+  },
+  "previous": {
+    "digest": "7bbf2c044361c0d879695575255ecaff9f4c746543b253f268c57cd562a331d4",
+    "event_id": "fc4b2f02-ced9-4ea0-91a5-1454be8dd6f2",
+    "seq": 9
+  },
+  "project_id": "a1d6b837-46f3-40c0-b6a2-8b3babb7fe15",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "4b1c83d6-b1d5-4a8a-8dfb-680f0e27e883",
+    "cycle": 1,
+    "digest": "8afd229cd5c9a567a070debb4ff343ff89afd8c26117d72b925e38ecc11eca45",
+    "engine_id": "claudeloop",
+    "event_id": "3cbc06d3-b638-4dd0-b1bb-6e3c23aa95a8",
+    "job_id": "dd8513f6-0d76-49a5-8bdc-75167dea5385",
+    "kind": "QuestionAsked",
+    "payload": {
+      "blocking": false,
+      "cycle": 1,
+      "default": "Core contributors running the full test suite and quality gates locally before push",
+      "item_id": "actor",
+      "stage": "job_story",
+      "text": "Who is most impacted by the current test performance?"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-20T20:41:28.691914+00:00",
+    "project_id": "a1d6b837-46f3-40c0-b6a2-8b3babb7fe15",
+    "provenance": "agent",
+    "seq": 10
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

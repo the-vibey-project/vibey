@@ -1,0 +1,40 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "7842517003d3188110f0f465954b0ecff589806cb8cb54badeb558d03aad338d",
+    "event_id": "35d2b6f3-a2c8-4681-ba4b-7cd4a5d2d1ca",
+    "seq": 623
+  },
+  "previous": {
+    "digest": "6a7483f7190f6851189555adf2bf5083f002f619f7545af3d93dc7dcd9fb47be",
+    "event_id": "0b88f34b-457d-479c-ab0d-8d0603940206",
+    "seq": 602
+  },
+  "project_id": "b43d1fcb-fb7b-42d6-9f80-220292c73389",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "5f779977-4071-4752-b032-edeae4c345b1",
+    "cycle": 1,
+    "digest": "cef7071a78a708bf72468f0f4586b59bafa34804dbc6a00a21c14a987f1ebd7b",
+    "engine_id": null,
+    "event_id": "28597bef-1f92-4f6a-a342-8c72392addd0",
+    "job_id": "9935db21-125b-41ad-bec0-26b607f10395",
+    "kind": "FindingRaised",
+    "payload": {
+      "finding_id": "f_integrate_wire-bootstrap_7e90265f",
+      "severity": "high",
+      "text": "gate failed after merging 'wire-bootstrap': uv run pytest tests/test_brake_characterisation.py tests/test_bootstrap_wiring.py -v: warning: `VIRTUAL_ENV=[path]` does not match the project environment path `.venv` and will be ignored; use `--active` to target the active environment instead\nUsing CPython 3.12.13\nCreating virtual environment at: .venv\n   Building vibey @ [path]\n      Built vibey @ [path]\nInstalled 17 packages in 17ms\n[stdout]     rotation_handoff=None,\n            engine_adapters={},\n            handoffs=None,\n            clock=None,\n            integration_lock=None,\n        )\n    \n        ProjectRecord(\n            project_id=project_id,\n            name=\"brake-test\",\n            repo_path=tmp_path,\n            phase=Phase.BUILD,\n            cycle=1,\n            max_cycles=10,\n            config=config,\n            created_at=datetime.now(UTC),\n            updated_at=datetime.now(UTC),\n        )\n    \n        # The worker construction builds the brake internally; we extract the\n        # budget_source from the BuildImplementHandler closure which is where\n        # the brake is actually used. Since we're just checking construction,\n        # we can verify it directly through the resolver path.\n\u003e       from vibey.infrastructure.config_resolver import resolve_budget_caps\nE       ModuleNotFoundError: No module named 'vibey.infrastructure.config_resolver'\n\ntests/test_brake_characterisation.py:80: ModuleNotFoundError\n=========================== short test summary info ============================\nFAILED tests/test_brake_characterisation.py::test_brake_constructs_with_both_caps\nFAILED tests/test_brake_characterisation.py::test_brake_constructs_without_caps\nFAILED tests/test_brake_characterisation.py::test_brake_constructs_from_max_cycle_dollars\nERROR tests/test_bootstrap_wiring.py - ImportError while importing test modul...\n========================== 3 failed, 1 error in 1.10s =========================="
+    },
+    "phase": "build",
+    "produced_at": "2026-08-22T17:38:35.894155+00:00",
+    "project_id": "b43d1fcb-fb7b-42d6-9f80-220292c73389",
+    "provenance": "agent",
+    "seq": 613
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 3
+  }
+}

@@ -1,0 +1,43 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "c9b6d6c455272ba2b5e052a0881bdc5bdd16fd5a92c09759d63357b3b756a95a",
+    "event_id": "a598d1b5-d54a-46b9-8745-a7e3426cb1cf",
+    "seq": 36
+  },
+  "previous": {
+    "digest": "c29e5a18a0ae442060e90201da63a296d8d4ff106fdfb51ae772da30090900b6",
+    "event_id": "23171695-89d5-4896-b279-5a2481e59fb2",
+    "seq": 34
+  },
+  "project_id": "8ab823c9-89e4-4050-884c-9008c8b14ef8",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "a36e7cdd-adf7-42a3-8834-2564b2e0124e",
+    "cycle": 1,
+    "digest": "0a81cecaf69764bc39e63932c7d47f5420c10c89e4d29f79ee450375502632fd",
+    "engine_id": "claudeloop",
+    "event_id": "0df83fd4-c8a9-44a3-bf0e-a9d1decf875d",
+    "job_id": "705692f1-69a1-4cc2-ade7-8aa3d1407b67",
+    "kind": "QuestionAsked",
+    "payload": {
+      "blocking": false,
+      "cycle": 1,
+      "default": "Single containerized service (Docker) on a simple host (AWS EC2/ECS, Heroku, or Render) with managed Postgres",
+      "item_id": "deployment_target",
+      "stage": "walking_skeleton",
+      "text": "Where should the walking skeleton be deployed?"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-20T02:34:42.269967+00:00",
+    "project_id": "8ab823c9-89e4-4050-884c-9008c8b14ef8",
+    "provenance": "agent",
+    "seq": 35
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

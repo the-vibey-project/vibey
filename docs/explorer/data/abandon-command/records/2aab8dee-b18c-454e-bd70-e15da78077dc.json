@@ -1,0 +1,43 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "e9220c3ddacebba18e4deb7bd902bf51355392b56ba757f5292d58014aa8dfd9",
+    "event_id": "bbab00d8-dc88-48f7-bc22-80deb8a99a4f",
+    "seq": 45
+  },
+  "previous": {
+    "digest": "9e6e6e4634a5b4718e4388cf96036d52e2381528214f1732ab18d3ea363b44af",
+    "event_id": "01b5427a-7576-4abd-a760-d8c1650a471e",
+    "seq": 42
+  },
+  "project_id": "d733035f-e0f9-4f67-aba2-270068d6a9c6",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "2332dd50-251a-4814-a238-ec63bed91955",
+    "cycle": 1,
+    "digest": "17e3402633fe1c3767e2717e8d58e92f23b150073f7e4edd84b938ad1f9e0b11",
+    "engine_id": "claudeloop",
+    "event_id": "2aab8dee-b18c-454e-bd70-e15da78077dc",
+    "job_id": "44e282ee-55b1-4cf9-afc3-c84870a14a5c",
+    "kind": "QuestionAsked",
+    "payload": {
+      "blocking": true,
+      "cycle": 1,
+      "default": "Complete within 2 seconds for projects with up to 100 in-flight jobs. No hard limit\u2014trust Postgres to handle larger sets, but log a warning if transaction exceeds 5 seconds.",
+      "item_id": "perf_transaction_limit",
+      "stage": "nfr_planguage",
+      "text": "What's the maximum acceptable transaction duration for abandon? (affects whether to impose job-count limits or batch cancellations)"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-22T03:45:10.448603+00:00",
+    "project_id": "d733035f-e0f9-4f67-aba2-270068d6a9c6",
+    "provenance": "agent",
+    "seq": 44
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

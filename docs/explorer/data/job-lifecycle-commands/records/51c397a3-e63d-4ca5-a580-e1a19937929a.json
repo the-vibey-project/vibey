@@ -1,0 +1,39 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "d45a21e4dcdba6763ed5758eeb3a3976709d47030ab32500234348ae657ffa98",
+    "event_id": "768933f0-a207-4549-b256-5cf0c11f2c31",
+    "seq": 61
+  },
+  "previous": {
+    "digest": "8991d886449e584aab70fdaad0919362623bf5afd39acea4c8e00ca85c62f61d",
+    "event_id": "69b6cf66-c8fc-4ee7-9ee9-df879e919645",
+    "seq": 59
+  },
+  "project_id": "2f6a93b6-2d73-4aff-bc94-16539841133f",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "e82a1e1e-74c9-40ec-9b24-c61bd6f0ecbc",
+    "cycle": 1,
+    "digest": "38ea1aac366ed854776ab0e350edb2ccf3e286fceb21d721f8582a8a86558603",
+    "engine_id": "claudeloop",
+    "event_id": "51c397a3-e63d-4ca5-a580-e1a19937929a",
+    "job_id": "334db377-8cb0-4a72-9cc0-78b45fc9bb38",
+    "kind": "AnswerGiven",
+    "payload": {
+      "answer": "The lease expires normally, reaper finds job in stop_requested state, writes JobCancelled event and transitions to CANCELLED during reap. Stop is eventually consistent: flag guarantees no further work, reaper guarantees state convergence.",
+      "item_id": "stop_lease_race"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-22T03:54:50.487138+00:00",
+    "project_id": "2f6a93b6-2d73-4aff-bc94-16539841133f",
+    "provenance": "trusted",
+    "seq": 60
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

@@ -1,0 +1,39 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "98f5cdba26672c8c65c96773764c863b943424cc8247cc7c95bf6de76f59573a",
+    "event_id": "79030977-213c-4208-a026-033d8e057fae",
+    "seq": 15
+  },
+  "previous": {
+    "digest": "224b5ea65d430caffde1d255c1f2de1ef935325670144a8299dc2b64f517c111",
+    "event_id": "6f36da6f-32a3-41cb-a139-8f9052b0e736",
+    "seq": 13
+  },
+  "project_id": "44c06a64-c8ed-4153-96af-b49db29c39e3",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "0e3e1338-5a99-4a62-b097-8be111327f62",
+    "cycle": 1,
+    "digest": "dd26e7d7a11877697b49e48184e543e04e432d40decbb0748973ad2b94c9c7b5",
+    "engine_id": "claudeloop",
+    "event_id": "a3271754-0cc2-432e-9eaf-62bf4de2fb8c",
+    "job_id": "bcd8e0b1-385d-43dc-ad1f-cad988f80cc9",
+    "kind": "AnswerGiven",
+    "payload": {
+      "answer": "During frequent claim operations as the ledger grows, and when running CLI commands that rebuild the app multiple times",
+      "item_id": "when_it_hurts"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-22T03:34:36.393773+00:00",
+    "project_id": "44c06a64-c8ed-4153-96af-b49db29c39e3",
+    "provenance": "trusted",
+    "seq": 14
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

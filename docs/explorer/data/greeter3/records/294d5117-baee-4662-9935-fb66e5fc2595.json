@@ -1,0 +1,43 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "e8d33bdf7957f43b4d47d152ecc181aa5f8096c5db9fd111147e04fd506bcb0b",
+    "event_id": "924bc324-58fc-4eaf-96f0-07f6531b2a60",
+    "seq": 45
+  },
+  "previous": {
+    "digest": "0d98a99e43f724d7e1c888d8de775dd7b5f80e48c19afaf424614c33eb03779b",
+    "event_id": "f7fc62f7-d705-4732-abe4-74e263365a0d",
+    "seq": 43
+  },
+  "project_id": "5e76341f-ba5f-4272-8355-3df5d489bbcd",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "f0915960-fa04-465b-8aec-6c11d70a177b",
+    "cycle": 1,
+    "digest": "7b7ebf1563b930dacbd76173e69125b5c77cceffd0b9329fe927406383c26a62",
+    "engine_id": "claudeloop",
+    "event_id": "294d5117-baee-4662-9935-fb66e5fc2595",
+    "job_id": "e58deb6b-5356-4a39-8acf-5dc898bba380",
+    "kind": "QuestionAsked",
+    "payload": {
+      "blocking": false,
+      "cycle": 1,
+      "default": "Plain text output compatible with screen readers; English only for initial version",
+      "item_id": "accessibility",
+      "stage": "nfr_planguage",
+      "text": "What accessibility or localization requirements apply to the greeting output?"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-20T00:50:56.962653+00:00",
+    "project_id": "5e76341f-ba5f-4272-8355-3df5d489bbcd",
+    "provenance": "agent",
+    "seq": 44
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

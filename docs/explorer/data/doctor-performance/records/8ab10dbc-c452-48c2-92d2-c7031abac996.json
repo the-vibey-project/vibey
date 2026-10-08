@@ -1,0 +1,39 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "73727576ca352bfe4ffd5605319a17eb0168c9b0f6b2a63fa6166ae30c04c50e",
+    "event_id": "2adf1110-2e89-4144-8b9c-45005d8b35ea",
+    "seq": 50
+  },
+  "previous": {
+    "digest": "46654aa89b24027d04b7b684c716ad5a314a69363e210f4450c2edbf456acdfb",
+    "event_id": "bfb022be-2bb5-42e2-91f8-cab60edc25cb",
+    "seq": 48
+  },
+  "project_id": "5ea01f61-8536-4ace-90cb-18700a12e410",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "76fdf9f4-3396-4e92-a2d3-b7c43d98c7a5",
+    "cycle": 1,
+    "digest": "f6cdecaf8e569b6dedfa65e19bf860e1d27540107fafffd9df373dd751256d82",
+    "engine_id": "claudeloop",
+    "event_id": "8ab10dbc-c452-48c2-92d2-c7031abac996",
+    "job_id": "4c2ec03f-d670-44f9-9f05-47597984ab20",
+    "kind": "AnswerGiven",
+    "payload": {
+      "answer": "MUST: under 35s (better than 50% reduction from 67s). PLAN: under 20s (approaching slowest single engine). WISH: under 15s (true parallelism with minimal overhead).",
+      "item_id": "perf_must_plan_wish"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-22T03:46:33.171681+00:00",
+    "project_id": "5ea01f61-8536-4ace-90cb-18700a12e410",
+    "provenance": "trusted",
+    "seq": 49
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

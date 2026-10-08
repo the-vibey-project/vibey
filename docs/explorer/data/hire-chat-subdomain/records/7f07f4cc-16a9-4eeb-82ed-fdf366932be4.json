@@ -1,0 +1,39 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "0531257ece01e7c89725fd15b5e1e72a6d9fe71cfe23ef389ac0fdce3a45184a",
+    "event_id": "0582cc3a-c7f8-4d59-8dcf-c9e74d4a01d0",
+    "seq": 30
+  },
+  "previous": {
+    "digest": "00bce51e433b04e7fbb36a2433ffb2cef3aecaca41e76c5c2eef15b849781ddb",
+    "event_id": "a0c4e0ae-e1b5-4360-b413-eb213839d4f5",
+    "seq": 28
+  },
+  "project_id": "0ee95624-eec4-4e8e-9a14-6ad9a37dcff4",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "b5338831-5721-41cb-aea6-66e73f21ec9e",
+    "cycle": 1,
+    "digest": "63594796841408b58dee6184ecefbab9bee70d3f459b52805bca46d689a9904c",
+    "engine_id": "claudeloop",
+    "event_id": "7f07f4cc-16a9-4eeb-82ed-fdf366932be4",
+    "job_id": "1343d0fd-bf3f-4739-8c21-cbf7693c673e",
+    "kind": "AnswerGiven",
+    "payload": {
+      "answer": "Same card/input/messages/citations/suggested-questions UI and theme tokens. Page variant: always open (no 'Ask my r\u00e9sum\u00e9' launcher button), no close (\u2715) button, not fixed-positioned \u2014 rendered in the main content area inside the [path] page's max-w-3xl container as a labelled region (role='region', aria-label='Ask my r\u00e9sum\u00e9') with min-h-[60vh] and a taller scroll area (min-h-[320px]); shows the 'resting' notice inline (links to [path] and [path]) when disabled/bot-detected instead of rendering null. Widget variant is unchanged except for the new 'Open full page' header link.",
+      "item_id": "variant_ui_diff"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-20T20:12:52.004321+00:00",
+    "project_id": "0ee95624-eec4-4e8e-9a14-6ad9a37dcff4",
+    "provenance": "trusted",
+    "seq": 29
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 3
+  }
+}

@@ -1,0 +1,39 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "b2229b28d5ff094bc195b952bc633c56907b478bb50bd3027c17ef7a14956d98",
+    "event_id": "3fd2f524-bcb3-4730-b824-588483724959",
+    "seq": 8
+  },
+  "previous": {
+    "digest": "a93774b3cddb280b1a5e07841d9fea9fed4077f5d17f66afb68f1dd9fb6d0c5b",
+    "event_id": "a1e71a6c-6fe6-4b5a-8b8e-86c9bda8da53",
+    "seq": 6
+  },
+  "project_id": "d482c3e2-029e-4bb8-a9a1-de411816c6ae",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "e4b92187-deea-4680-beca-5360675cc6a8",
+    "cycle": 1,
+    "digest": "aa1de1464aa3a94b7061f00d3806429fd673e82fbc41085b3ec2e32e35b0d410",
+    "engine_id": "claudeloop",
+    "event_id": "8ce28958-9006-42d7-90ba-6d88e31757ed",
+    "job_id": "d2626f25-d550-454e-bacd-7a7e6c9b52cd",
+    "kind": "AnswerGiven",
+    "payload": {
+      "answer": "A cost/duration/feasibility engine that can say whether a job can finish at all; a forge-state ledger capturing every artifact losslessly so the system is reconstructible and transferable; an Etherscan-grade public explorer over that ledger; git-platform adapters behind one interface; and sovereign-first review routing.",
+      "item_id": "3"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-31T02:03:18.523028+00:00",
+    "project_id": "d482c3e2-029e-4bb8-a9a1-de411816c6ae",
+    "provenance": "trusted",
+    "seq": 7
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

@@ -1,0 +1,39 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "01cb5ce4407cc45c5b164c6710effc1970ec4510796964999045c38e83de992c",
+    "event_id": "e5506d47-289b-43c2-8f81-5679391747ad",
+    "seq": 14
+  },
+  "previous": {
+    "digest": "c16be436a9f91bc4df64c3cde3e739bd6e455cd6fcaf469c411f5e51c6d66f21",
+    "event_id": "20748c1f-2c6a-4945-8ad3-fbcf54b23b78",
+    "seq": 12
+  },
+  "project_id": "0ee95624-eec4-4e8e-9a14-6ad9a37dcff4",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "32fec90c-738d-4c5c-be97-b9d0eaef9b71",
+    "cycle": 1,
+    "digest": "e2188f7a6da1db3680bc6172aba7af7fcba144236abf6d8914ae3215a81b15fd",
+    "engine_id": "claudeloop",
+    "event_id": "66f8e896-3db8-4138-a306-32a9f780c908",
+    "job_id": "1343d0fd-bf3f-4739-8c21-cbf7693c673e",
+    "kind": "AnswerGiven",
+    "payload": {
+      "answer": "A memorable URL Adam can put in applications, LinkedIn/GitHub bios, and emails (https://chat.adam.matthewsteinberger.com). On-site: an 'Open full page' link in the existing homepage widget header, a footer link 'Ask my r\u00e9sum\u00e9' -\u003e [path], the sitemap entry, and public/llms.txt. hire.adam.matthewsteinberger.com/chat 308-redirects to the chat host so there is exactly one canonical URL. No new CTA copy on [path] is required.",
+      "item_id": "discovery_path"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-20T20:10:06.063857+00:00",
+    "project_id": "0ee95624-eec4-4e8e-9a14-6ad9a37dcff4",
+    "provenance": "trusted",
+    "seq": 13
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 2
+  }
+}

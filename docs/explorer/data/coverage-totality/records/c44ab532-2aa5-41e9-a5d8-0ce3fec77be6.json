@@ -1,0 +1,39 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "49531fc3de9a93ba11a3353a6394bf0a6af318a87e0a5c3588bcf2e51fcbcbf7",
+    "event_id": "723671e1-88a8-4a07-81d0-1530dcaf0681",
+    "seq": 22
+  },
+  "previous": {
+    "digest": "f55142c86ce66562ba024a1d37ef2d5c0515c91addc136ef9cfb94e8290087b7",
+    "event_id": "bcef28c3-c8f1-4509-9aa9-19d18e34daa7",
+    "seq": 20
+  },
+  "project_id": "e631c00a-e1a1-4ed4-b99a-0fa2d388d240",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "c3cc828c-4c6e-43a0-8ab1-670db637b32c",
+    "cycle": 1,
+    "digest": "1f3ae9b0c78e39bf7b4614c140c6bc41a741cb9d4255b9f1de2010d310df2bce",
+    "engine_id": "claudeloop",
+    "event_id": "c44ab532-2aa5-41e9-a5d8-0ce3fec77be6",
+    "job_id": "d73f236e-a7b4-4748-b075-3900a75af324",
+    "kind": "AnswerGiven",
+    "payload": {
+      "answer": "It depends on which kind of issue, and the distinction is important. If covering a branch shows the branch is UNREACHABLE, deleting it is the fix, not a refactor -- that is the zero-exemptions rule working as intended, and covering it is impossible by definition. If the code is merely awkward -- an overcomplicated conditional that is reachable and correct -- cover the design as it stands and raise the refactor as a separate item. Refactoring under a coverage mandate is how a coverage task quietly becomes an unreviewed redesign, and it makes the diff impossible to review against its stated purpose. The one thing never acceptable is changing production behaviour to make a test easier to write.",
+      "item_id": "design_issue_priority"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-22T02:39:42.429990+00:00",
+    "project_id": "e631c00a-e1a1-4ed4-b99a-0fa2d388d240",
+    "provenance": "trusted",
+    "seq": 21
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

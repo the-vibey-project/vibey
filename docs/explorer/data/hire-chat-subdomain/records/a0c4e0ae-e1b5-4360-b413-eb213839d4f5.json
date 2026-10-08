@@ -1,0 +1,43 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "63594796841408b58dee6184ecefbab9bee70d3f459b52805bca46d689a9904c",
+    "event_id": "7f07f4cc-16a9-4eeb-82ed-fdf366932be4",
+    "seq": 29
+  },
+  "previous": {
+    "digest": "b437212d218fb730b535a21a9eec0691cfc74ed67ed28c710c0757425b351d20",
+    "event_id": "829f77b3-0ce6-4225-aa8d-7e0c4d1e79a8",
+    "seq": 27
+  },
+  "project_id": "0ee95624-eec4-4e8e-9a14-6ad9a37dcff4",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "c61bfec0-6afd-4eaa-96d0-cccce1ac4083",
+    "cycle": 1,
+    "digest": "00bce51e433b04e7fbb36a2433ffb2cef3aecaca41e76c5c2eef15b849781ddb",
+    "engine_id": "claudeloop",
+    "event_id": "a0c4e0ae-e1b5-4360-b413-eb213839d4f5",
+    "job_id": "1343d0fd-bf3f-4739-8c21-cbf7693c673e",
+    "kind": "QuestionAsked",
+    "payload": {
+      "blocking": false,
+      "cycle": 1,
+      "default": "AskAdam component accepts optional surface prop (defaults to 'widget'); [path] page passes surface=\"page\"; homepage renders \u003cAskAdam /\u003e with default; both variants call track('ask_message', { turn, surface })",
+      "item_id": "surface_tracking",
+      "stage": "example_mapping",
+      "text": "Where in the component tree should the surface: 'page' | 'widget' param be determined for the GA4 track() call?"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-20T20:12:08.684259+00:00",
+    "project_id": "0ee95624-eec4-4e8e-9a14-6ad9a37dcff4",
+    "provenance": "agent",
+    "seq": 28
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 1
+  }
+}

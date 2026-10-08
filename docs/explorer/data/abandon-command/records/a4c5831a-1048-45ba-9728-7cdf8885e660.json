@@ -1,0 +1,43 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "9b20380815313658ba11c710707e03ef6231954c448301f6d97fefa0811acac3",
+    "event_id": "174f0d2f-01b0-4752-9557-c909922d1ad3",
+    "seq": 10
+  },
+  "previous": {
+    "digest": "32cda1306e5c4fe01c9f66e54332ffc5bc33d6936faa1560f6574318ff241b7b",
+    "event_id": "f75a240a-e85c-4dab-b184-59e3d1fff295",
+    "seq": 8
+  },
+  "project_id": "d733035f-e0f9-4f67-aba2-270068d6a9c6",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "9a66656a-77ed-47a1-87ad-fd1f717a589f",
+    "cycle": 1,
+    "digest": "6cfc96fa5a1a140da761ca8a5b2f07d9ee4b1092ddceaa687b3a8e3e6c335262",
+    "engine_id": "claudeloop",
+    "event_id": "a4c5831a-1048-45ba-9728-7cdf8885e660",
+    "job_id": "44e282ee-55b1-4cf9-afc3-c84870a14a5c",
+    "kind": "QuestionAsked",
+    "payload": {
+      "blocking": true,
+      "cycle": 1,
+      "default": "When a project is stuck or its work shipped through other means, I want to release its repo_path claim, so I can create a new project in that repository without manual database edits",
+      "item_id": "primary_job_story",
+      "stage": "job_story",
+      "text": "When [situation] would you abandon a project, what do you want to accomplish, and what outcome enables your next action?"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-22T02:56:08.783376+00:00",
+    "project_id": "d733035f-e0f9-4f67-aba2-270068d6a9c6",
+    "provenance": "agent",
+    "seq": 9
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

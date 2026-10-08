@@ -1,0 +1,39 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "8b88b278e12de66ea02dd364b8291f6d9c00f3942e3ab7ff704dda134933c700",
+    "event_id": "3e96f6b3-7211-47f1-b528-73d8333cb4f6",
+    "seq": 48
+  },
+  "previous": {
+    "digest": "2083d66e8947578ab479be065edb59b5c39889df9e4b78dec1d50afc4fc17ab5",
+    "event_id": "cfb2d1a6-9762-45e7-8b3f-4384545adf6c",
+    "seq": 46
+  },
+  "project_id": "0ee95624-eec4-4e8e-9a14-6ad9a37dcff4",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "612a562b-f659-47d7-adfd-0e46bc21b13a",
+    "cycle": 1,
+    "digest": "d3d1e4db76ee08a8b4ccbb83d8bd87e3ff28ff3c942748485d1c6e7712711f7f",
+    "engine_id": "claudeloop",
+    "event_id": "95ac5816-d74e-411c-9c5c-8721c0057b9a",
+    "job_id": "1343d0fd-bf3f-4739-8c21-cbf7693c673e",
+    "kind": "AnswerGiven",
+    "payload": {
+      "answer": "Must: 0% wrong status/host on the verified checklist (chat-host /, [path], [path], [path]\u003cslug\u003e, [path], [path], [path], [path], [path], [path], [path]; hire-host [path], /, [path]; localhost [path]) \u2014 verified locally with next build + next start + spoofed Host headers before merge, and re-run manually after the Netlify alias + DNS exist. Meter: the curl checklist plus src/__tests__/next.config.test.ts asserting the four rules. No 48h analytics monitoring commitment and no CI curl job.",
+      "item_id": "routing_reliability"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-20T20:19:32.968998+00:00",
+    "project_id": "0ee95624-eec4-4e8e-9a14-6ad9a37dcff4",
+    "provenance": "trusted",
+    "seq": 47
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 13
+  }
+}

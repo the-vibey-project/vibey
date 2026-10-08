@@ -1,0 +1,39 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "717e54134bf11358062232711e545376c2ec65e847d0d565fbe9253c7695212f",
+    "event_id": "98b0bf0a-35ca-4105-8bc6-a8529e354a4b",
+    "seq": 46
+  },
+  "previous": {
+    "digest": "eb9b75f6f356e202387ef95ae30b7981853828ed9d6a62aff1e9b4d96d0b44ba",
+    "event_id": "fe57c111-2674-48b4-aadc-3f30937bf773",
+    "seq": 43
+  },
+  "project_id": "bed522a2-0b3e-4bff-9cd6-7c13fe40779a",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "28fd8292-d44c-4849-a5d2-d8b1aec1843e",
+    "cycle": 1,
+    "digest": "9ea827c4e49d74d7dbd195be141c1111d75b16a9753cc1b29838171bc33af900",
+    "engine_id": "claudeloop",
+    "event_id": "fe4430b8-56b0-4819-a392-f466134e4642",
+    "job_id": "92d834a4-4bf2-4699-9354-adbea7936d77",
+    "kind": "AnswerGiven",
+    "payload": {
+      "answer": "One test passes: `vibey work --parallel j1,j2` where j1 and j2 are real claimable jobs, both complete successfully, output shows both ran, exit code 0. No error handling, no validation, no polish - just proof the core loop works.",
+      "item_id": "skeleton_done_when"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-22T03:44:59.429951+00:00",
+    "project_id": "bed522a2-0b3e-4bff-9cd6-7c13fe40779a",
+    "provenance": "trusted",
+    "seq": 44
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

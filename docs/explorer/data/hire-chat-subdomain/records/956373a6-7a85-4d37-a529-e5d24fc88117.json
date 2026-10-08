@@ -1,0 +1,43 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "b437212d218fb730b535a21a9eec0691cfc74ed67ed28c710c0757425b351d20",
+    "event_id": "829f77b3-0ce6-4225-aa8d-7e0c4d1e79a8",
+    "seq": 27
+  },
+  "previous": {
+    "digest": "aff87654ad329df0e92b5a217d1b767e4189719cb6ff0b3010cb2dea3e875032",
+    "event_id": "2235c0a9-956b-443c-abff-d1334765261b",
+    "seq": 25
+  },
+  "project_id": "0ee95624-eec4-4e8e-9a14-6ad9a37dcff4",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "5da6f023-85ed-46ff-a7e8-e1907ced0252",
+    "cycle": 1,
+    "digest": "02b2a6f5443e57045a64168dd606207dee8470f044425e55d155f31287161c5f",
+    "engine_id": "claudeloop",
+    "event_id": "956373a6-7a85-4d37-a529-e5d24fc88117",
+    "job_id": "1343d0fd-bf3f-4739-8c21-cbf7693c673e",
+    "kind": "QuestionAsked",
+    "payload": {
+      "blocking": true,
+      "cycle": 1,
+      "default": "Opens https://chat.adam.matthewsteinberger.com/ in a new tab (target=\"_blank\" rel=\"noopener\") so the visitor doesn't lose their place on the main site",
+      "item_id": "widget_link_behavior",
+      "stage": "example_mapping",
+      "text": "How should the new 'Open full page' link in the widget header behave when clicked?"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-20T20:12:08.684259+00:00",
+    "project_id": "0ee95624-eec4-4e8e-9a14-6ad9a37dcff4",
+    "provenance": "agent",
+    "seq": 26
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

@@ -1,0 +1,36 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "7842517003d3188110f0f465954b0ecff589806cb8cb54badeb558d03aad338d",
+    "event_id": "d29cca07-7458-430a-9019-dc0fa5174023",
+    "seq": 310
+  },
+  "previous": {
+    "digest": "7db5377e570def22009bea2bfcb1281427a73111a630f06dd070e4b637a7323c",
+    "event_id": "7d45e033-911c-437f-9c13-f4106494aabe",
+    "seq": 60
+  },
+  "project_id": "ab0b06f9-55a4-4b47-ac08-254e7fdd9036",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "f9404130-0066-4a1c-999c-119efd7acb79",
+    "cycle": 1,
+    "digest": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a",
+    "engine_id": null,
+    "event_id": "0dd88ffe-c709-4d5b-8879-dbd99c91f9dd",
+    "job_id": null,
+    "kind": "VisualDesignDeclined",
+    "payload": {},
+    "phase": "design",
+    "produced_at": "2026-08-22T04:11:54.543455+00:00",
+    "project_id": "ab0b06f9-55a4-4b47-ac08-254e7fdd9036",
+    "provenance": "trusted",
+    "seq": 68
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

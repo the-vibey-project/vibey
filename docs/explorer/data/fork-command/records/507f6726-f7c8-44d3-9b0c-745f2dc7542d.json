@@ -1,0 +1,39 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "dab55fd4390ea7b27e622051ae992b673e4fd0c1e685557e38075dabcdcf5376",
+    "event_id": "f4c95fe7-7314-42cb-8b62-6788ad76b357",
+    "seq": 42
+  },
+  "previous": {
+    "digest": "11db5835f6689cb8210755507e060698b06b48b4b698a5f476678d9a13157f55",
+    "event_id": "1ce64a23-81f1-4b84-987e-5497a0bc75dd",
+    "seq": 40
+  },
+  "project_id": "ab0b06f9-55a4-4b47-ac08-254e7fdd9036",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "f3873663-881d-46ab-89ab-1f8f4b17fd59",
+    "cycle": 1,
+    "digest": "d1a3b0e1ce932494b81063f9d2f608145c2e70e88abef461cf3673cafbe69b33",
+    "engine_id": "claudeloop",
+    "event_id": "507f6726-f7c8-44d3-9b0c-745f2dc7542d",
+    "job_id": "48f9ef01-8b95-4709-adde-ed0ece390f8d",
+    "kind": "AnswerGiven",
+    "payload": {
+      "answer": "Defer: multiple-fork limits, fork-of-fork depth checks, branch name collision recovery. Keep only: job exists, job is in terminal state, origin seq has at least one commit",
+      "item_id": "deferred_validation"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-22T03:43:27.608330+00:00",
+    "project_id": "ab0b06f9-55a4-4b47-ac08-254e7fdd9036",
+    "provenance": "trusted",
+    "seq": 41
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

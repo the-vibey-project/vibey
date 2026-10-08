@@ -1,0 +1,39 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "972b0021382473a62d56dc9c0179d339e3f19dfaf579136de567a11c3eca4299",
+    "event_id": "5574c8fc-d6bc-4b3d-8f02-3ff2bf274aad",
+    "seq": 16
+  },
+  "previous": {
+    "digest": "dd26e7d7a11877697b49e48184e543e04e432d40decbb0748973ad2b94c9c7b5",
+    "event_id": "a3271754-0cc2-432e-9eaf-62bf4de2fb8c",
+    "seq": 14
+  },
+  "project_id": "44c06a64-c8ed-4153-96af-b49db29c39e3",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "22c22369-33db-4757-baf3-a0aef57394d0",
+    "cycle": 1,
+    "digest": "98f5cdba26672c8c65c96773764c863b943424cc8247cc7c95bf6de76f59573a",
+    "engine_id": "claudeloop",
+    "event_id": "79030977-213c-4208-a026-033d8e057fae",
+    "job_id": "bcd8e0b1-385d-43dc-ad1f-cad988f80cc9",
+    "kind": "AnswerGiven",
+    "payload": {
+      "answer": "Claim-path budget checks complete in constant time regardless of ledger size, and CLI commands that call build_app multiple times skip redundant migration passes",
+      "item_id": "current_vs_desired"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-22T03:34:36.393773+00:00",
+    "project_id": "44c06a64-c8ed-4153-96af-b49db29c39e3",
+    "provenance": "trusted",
+    "seq": 15
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

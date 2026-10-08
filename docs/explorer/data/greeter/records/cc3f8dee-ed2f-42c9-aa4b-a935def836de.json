@@ -1,0 +1,39 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "123bf6e175ad48668850548e34bf643dbc3491bbc59926ce08be6c15bc3e8568",
+    "event_id": "09ca8a84-bd56-4d4a-9420-22c0f6b7a28a",
+    "seq": 14
+  },
+  "previous": {
+    "digest": "914f8f735df028d4d31f9a536fc7b2f9fe40c7b9a7a06fa5e68050a0dfa41eb9",
+    "event_id": "40178c20-f7c2-4f90-bacf-f3ee9332fdcf",
+    "seq": 12
+  },
+  "project_id": "26f89c38-c86b-4ddf-be75-c579a118e40e",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "23a1d938-9512-4637-9e81-a21abae1f8ca",
+    "cycle": 1,
+    "digest": "161449b834db2a192bc08083a0dab58d777112874a96cbe566f7be8954f4fb82",
+    "engine_id": "claudeloop",
+    "event_id": "cc3f8dee-ed2f-42c9-aa4b-a935def836de",
+    "job_id": "2bdd2b5e-b4f1-4004-9dbf-78d267fea803",
+    "kind": "AnswerGiven",
+    "payload": {
+      "answer": "Simple format: 'Hello, {name}!' with optional time-of-day variants (Good morning/afternoon/evening)",
+      "item_id": "greeting_format"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-19T12:16:09.825733+00:00",
+    "project_id": "26f89c38-c86b-4ddf-be75-c579a118e40e",
+    "provenance": "trusted",
+    "seq": 13
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

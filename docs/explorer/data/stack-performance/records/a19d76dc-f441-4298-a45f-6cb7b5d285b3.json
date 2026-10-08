@@ -1,0 +1,39 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "198b27dec4ca69df3d6726871d795574e7ab133e8b81e9ed01564fdba663ff80",
+    "event_id": "6d64ed28-f43f-43d2-a9d9-79ab67976c0f",
+    "seq": 2
+  },
+  "previous": null,
+  "project_id": "44c06a64-c8ed-4153-96af-b49db29c39e3",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "960cb4a1-9810-43ef-9882-95237d0c225e",
+    "cycle": 1,
+    "digest": "a33ea63d2d7a60bfaf9e68c1b0ddb54db908ec458008cd32864feb2996618064",
+    "engine_id": "claudeloop",
+    "event_id": "a19d76dc-f441-4298-a45f-6cb7b5d285b3",
+    "job_id": "bcd8e0b1-385d-43dc-ad1f-cad988f80cc9",
+    "kind": "QuestionAsked",
+    "payload": {
+      "blocking": true,
+      "cycle": 1,
+      "default": "A new module or component that extends existing functionality",
+      "item_id": "feature_description",
+      "stage": "context_free",
+      "text": "What feature or change do you want to design?"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-22T02:56:46.218050+00:00",
+    "project_id": "44c06a64-c8ed-4153-96af-b49db29c39e3",
+    "provenance": "agent",
+    "seq": 1
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

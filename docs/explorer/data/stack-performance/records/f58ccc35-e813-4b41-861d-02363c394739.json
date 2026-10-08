@@ -1,0 +1,39 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "fcef911a7b44aa0f1f9a8d600d42e1cb1cb42681222612ecc1df281d8ffae86a",
+    "event_id": "26008b79-19ff-4484-9fa3-27f116c30b93",
+    "seq": 25
+  },
+  "previous": {
+    "digest": "a5af50071c11f574ab56ed24c05d7484682ca38ec975a1de0eea3af560f5a380",
+    "event_id": "1f867166-1dd7-4aa7-b24f-0d1ebc9baa32",
+    "seq": 23
+  },
+  "project_id": "44c06a64-c8ed-4153-96af-b49db29c39e3",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "dad7d229-ee6c-404e-a15a-051925f3ccf2",
+    "cycle": 1,
+    "digest": "1587b9ee4da95ef433470eb5551a738a25d9152ac69431c09e68c6bcdd749835",
+    "engine_id": "claudeloop",
+    "event_id": "f58ccc35-e813-4b41-861d-02363c394739",
+    "job_id": "bcd8e0b1-385d-43dc-ad1f-cad988f80cc9",
+    "kind": "AnswerGiven",
+    "payload": {
+      "answer": "Both \u2014 component microbenchmarks for regression detection, plus end-to-end claim and build_app scenarios for user-facing impact",
+      "item_id": "benchmark_scope"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-22T03:41:55.509649+00:00",
+    "project_id": "44c06a64-c8ed-4153-96af-b49db29c39e3",
+    "provenance": "trusted",
+    "seq": 24
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

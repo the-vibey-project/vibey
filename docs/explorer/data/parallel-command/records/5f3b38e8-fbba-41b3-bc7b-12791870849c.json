@@ -1,0 +1,39 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "a4ae02038bb06f5da5371f38925cf92c84c0deaae50b40f4d55137d77bc29f5b",
+    "event_id": "b0aefd1e-795e-48a5-93ac-6aae725eeea2",
+    "seq": 28
+  },
+  "previous": {
+    "digest": "a4af7ab9edc4008871aff5c8c750ed160ef2b726cbe3ce824bd1919faa00eea0",
+    "event_id": "e1b833ca-1fc3-4ed3-86dd-0bfe8778bd6c",
+    "seq": 25
+  },
+  "project_id": "bed522a2-0b3e-4bff-9cd6-7c13fe40779a",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "1cb392ef-c469-4af1-be05-49deb65ec6c6",
+    "cycle": 1,
+    "digest": "8bf9c4d2c8ee7dfcaf8723b2e42a86a47d7bbde729730d3f5898e461d07d43d7",
+    "engine_id": "claudeloop",
+    "event_id": "5f3b38e8-fbba-41b3-bc7b-12791870849c",
+    "job_id": "92d834a4-4bf2-4699-9354-adbea7936d77",
+    "kind": "AnswerGiven",
+    "payload": {
+      "answer": "I lose the convenience of one-command batch execution with unified output, but I can still accomplish the same work by running jobs separately or letting the worker pool handle them. The cost is ergonomics, not capability.",
+      "item_id": "cost_of_not_building"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-22T03:41:55.164639+00:00",
+    "project_id": "bed522a2-0b3e-4bff-9cd6-7c13fe40779a",
+    "provenance": "trusted",
+    "seq": 26
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

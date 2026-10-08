@@ -1,0 +1,43 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "d36c67f2d0929892d98ef3e4777e8f69b7d799ca7530b48619a97fcb990edbf2",
+    "event_id": "8f588570-bd8e-4cf4-814d-66a1b659f4d0",
+    "seq": 51
+  },
+  "previous": {
+    "digest": "15c88b6eddef6a7ccf7e719a4e266eac1f129508ab38e1ff7f6a3a25fcb80804",
+    "event_id": "031cd0e6-903f-4a65-95dc-4156ef03eb73",
+    "seq": 49
+  },
+  "project_id": "0ee95624-eec4-4e8e-9a14-6ad9a37dcff4",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "e2f9ec4f-965f-4527-a1d2-4e27d14abaf9",
+    "cycle": 1,
+    "digest": "a7c05616c6f5a07e9fb0292252d26eef06d0fb679f1ac4f90fef3a8beda034f7",
+    "engine_id": "claudeloop",
+    "event_id": "66534579-8e3c-40d3-bc47-e495ef19823f",
+    "job_id": "1343d0fd-bf3f-4739-8c21-cbf7693c673e",
+    "kind": "QuestionAsked",
+    "payload": {
+      "blocking": true,
+      "cycle": 1,
+      "default": "The 'resting' notice (already required for feature-flag-off state) serves as the fallback with [path] and [path] CTAs, so a false-positive is not a blank page but a graceful degradation; monitor GA4 events post-launch for unexpectedly high disabled-state renders; accept that perfect bot detection is unsolvable and the current heuristic (user-agent only, no fingerprinting) errs on the side of privacy",
+      "item_id": "bot_detection_false_positive",
+      "stage": "premortem",
+      "text": "What if the existing useBotDetection hook false-positives on recruiter VPNs/privacy tools/corporate proxies, disabling the chat page for legitimate hiring prospects?"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-20T20:20:49.082224+00:00",
+    "project_id": "0ee95624-eec4-4e8e-9a14-6ad9a37dcff4",
+    "provenance": "agent",
+    "seq": 50
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 2
+  }
+}

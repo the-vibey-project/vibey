@@ -1,0 +1,39 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "574eadb4659eb2be48b604e1f09e99cfafa1d78cf54a5f58e3c9e3e62fc66575",
+    "event_id": "99dc8c9e-9a35-4f09-89b0-b98851f9fb1f",
+    "seq": 14
+  },
+  "previous": {
+    "digest": "6f1aafb0b628ebc9b8f3da226e592e6598ef3e4cd6e910306904f689b4a00c7f",
+    "event_id": "8be5a7cc-7946-4820-af6f-bb2b122bd796",
+    "seq": 12
+  },
+  "project_id": "e631c00a-e1a1-4ed4-b99a-0fa2d388d240",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "f12abf04-e34a-4843-b3ac-f0b65697f4a4",
+    "cycle": 1,
+    "digest": "1205317a077613f9d92a24165677d9162b23e6c7d5edabaf373e9155bb44c99b",
+    "engine_id": "claudeloop",
+    "event_id": "5c57400a-01c4-4bda-9f2b-97dde11ff453",
+    "job_id": "d73f236e-a7b4-4748-b075-3900a75af324",
+    "kind": "AnswerGiven",
+    "payload": {
+      "answer": "Developers adding a new top-level module, and PR reviewers. The failure this prevents is specific: someone creates src/vibey/\u003cnewthing\u003e/ and it lands outside all four per-layer gates, so CI reports 100% while the module is untested. That already happened once -- it is how tui/ reached 84% unnoticed. Reviewers benefit because 'coverage is green' becomes a statement about the whole tree instead of four subdirectories of it.",
+      "item_id": "primary_beneficiary"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-22T02:37:45.506643+00:00",
+    "project_id": "e631c00a-e1a1-4ed4-b99a-0fa2d388d240",
+    "provenance": "trusted",
+    "seq": 13
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

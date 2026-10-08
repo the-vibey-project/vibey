@@ -1,0 +1,39 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "6b31e8fe2089c8c924765adfe5c0ba3af3ff72fb6a4ece862d6e41aa6b9eecd4",
+    "event_id": "1ae1f19a-0501-420d-9eba-2e898943cd22",
+    "seq": 31
+  },
+  "previous": {
+    "digest": "e278b0c9f21897b486357758d1dc865b60f4d96a04a6b21b605ddb7f95964f1d",
+    "event_id": "7f65f87b-98d7-4844-860a-76d2ba96bec1",
+    "seq": 29
+  },
+  "project_id": "d482c3e2-029e-4bb8-a9a1-de411816c6ae",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "1fdf2f51-6297-45d7-a46d-8b30c601a247",
+    "cycle": 1,
+    "digest": "3b5bd36cc082b8bc6cb6a5f36e0d7a5029188f945aab0e3ddb92e3e4957cdf9f",
+    "engine_id": "claudeloop",
+    "event_id": "ff83bda6-b7bf-4da5-8c13-d66b0b7592eb",
+    "job_id": "d2626f25-d550-454e-bacd-7a7e6c9b52cd",
+    "kind": "AnswerGiven",
+    "payload": {
+      "answer": "User satisfaction, system uptime, and number of tasks completed per user per day.",
+      "item_id": "14"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-31T02:04:52.433269+00:00",
+    "project_id": "d482c3e2-029e-4bb8-a9a1-de411816c6ae",
+    "provenance": "trusted",
+    "seq": 30
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

@@ -1,0 +1,39 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "223509c6a9d05b19b187bd90d5524a5d063476234331cfbd37f242ef48b47ff8",
+    "event_id": "95c6e2cd-bdb3-49f8-af4c-73b205116f7c",
+    "seq": 41
+  },
+  "previous": {
+    "digest": "3ec501f0b4630b39b5b817432ab4e121d65305bc49d4ea96d02a24c6aa389a39",
+    "event_id": "376db86c-5c69-48b4-8203-b0f139a41e00",
+    "seq": 39
+  },
+  "project_id": "0ee95624-eec4-4e8e-9a14-6ad9a37dcff4",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "db6157cc-e0a8-4369-9978-f316fea3d434",
+    "cycle": 1,
+    "digest": "6d55a9e3a1839e3c669d6e532cfbae8c9c4714e1c3b0796aa99ec609c138e82c",
+    "engine_id": "claudeloop",
+    "event_id": "fdc7610c-8119-4de7-8997-08013ed9012b",
+    "job_id": "1343d0fd-bf3f-4739-8c21-cbf7693c673e",
+    "kind": "AnswerGiven",
+    "payload": {
+      "answer": "Locally (already done once, repeatable): next build \u0026\u0026 next start, then curl with spoofed Host headers \u2014 chat-host / \u2192 200 chat page; chat-host [path] \u2192 308 chat root; chat-host [path] and [path]\u003cslug\u003e \u2192 308 hire host with query; chat-host [path], [path], [path], [path], [path], [path], [path] \u2192 200; hire-host [path] \u2192 308 chat root; hire-host / and [path] \u2192 200; localhost [path] \u2192 200. In production the same curl checklist runs after the manual Netlify domain alias + Porkbun CNAME are added; Playwright stays localhost-only and is not a gate.",
+      "item_id": "deployment_verification"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-20T20:14:54.754799+00:00",
+    "project_id": "0ee95624-eec4-4e8e-9a14-6ad9a37dcff4",
+    "provenance": "trusted",
+    "seq": 40
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 13
+  }
+}

@@ -1,0 +1,43 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "205537cd3624cbac7a0b43084d55ada6f72eb014f171ba9c0fe23d8e7a064661",
+    "event_id": "cd6ddc7c-89cc-4f2e-b48d-0c03cb98f05e",
+    "seq": 43
+  },
+  "previous": {
+    "digest": "24ce233e291f6c6fc43d58fce72477bfabae06cb54dbf1ba20a78f3992f34827",
+    "event_id": "7622e729-c05d-4d3f-a1fc-16d5d5866290",
+    "seq": 41
+  },
+  "project_id": "26f89c38-c86b-4ddf-be75-c579a118e40e",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "0a6777f3-e90a-40d5-a05d-213dc190c426",
+    "cycle": 1,
+    "digest": "e0497c604ebb1a5c9bb73ab4d6e55d294f68c8f461143417a612f602e43308a3",
+    "engine_id": "claudeloop",
+    "event_id": "e23403b3-773a-4708-acc3-96b90558d253",
+    "job_id": "2bdd2b5e-b4f1-4004-9dbf-78d267fea803",
+    "kind": "QuestionAsked",
+    "payload": {
+      "blocking": false,
+      "cycle": 1,
+      "default": "Minimal - validate non-empty name, catch standard exceptions with clean error messages to stderr, no logging",
+      "item_id": "error_handling_rigor",
+      "stage": "nfr_planguage",
+      "text": "How defensive should error handling be (input sanitization, exception handling, logging)?"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-19T12:34:27.820232+00:00",
+    "project_id": "26f89c38-c86b-4ddf-be75-c579a118e40e",
+    "provenance": "agent",
+    "seq": 42
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

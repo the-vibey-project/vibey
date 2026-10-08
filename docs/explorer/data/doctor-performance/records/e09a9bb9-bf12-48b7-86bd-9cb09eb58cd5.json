@@ -1,0 +1,43 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "47abee8130a47ecb3886233f9f48e0761858942083a444cdf379da52f4b8a136",
+    "event_id": "f110edf2-b53c-46c7-a707-a175dd78d808",
+    "seq": 31
+  },
+  "previous": {
+    "digest": "d8c0203889308dda281b5b3f34507b991f433bb60f77b018ba4847c0d0864cf4",
+    "event_id": "eca1ad87-ef27-491f-96d0-aacbbcdd9b52",
+    "seq": 29
+  },
+  "project_id": "5ea01f61-8536-4ace-90cb-18700a12e410",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "eb084f3f-69a7-41c4-b55e-9a643fb24299",
+    "cycle": 1,
+    "digest": "0abbf26464167b2e703f97e2fc3e08cbe43139bce8b5b6447a48ba377c5d7060",
+    "engine_id": "claudeloop",
+    "event_id": "e09a9bb9-bf12-48b7-86bd-9cb09eb58cd5",
+    "job_id": "4c2ec03f-d670-44f9-9f05-47597984ab20",
+    "kind": "QuestionAsked",
+    "payload": {
+      "blocking": true,
+      "cycle": 1,
+      "default": "Results are sorted by engine name before display, regardless of completion order - always agyloop, claudeloop, codexloop, cursorloop in output",
+      "item_id": "ordering_guarantee",
+      "stage": "example_mapping",
+      "text": "If engines complete out of order (e.g., cursorloop finishes before agyloop), what ensures the output remains deterministic across runs?"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-22T03:43:34.933482+00:00",
+    "project_id": "5ea01f61-8536-4ace-90cb-18700a12e410",
+    "provenance": "agent",
+    "seq": 30
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

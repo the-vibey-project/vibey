@@ -1,0 +1,43 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "7af0be5c3cc760522f22a344d58eab505096c01a6178cda504f57a13df516052",
+    "event_id": "8910a73f-6060-4f05-85ff-b5659ab45a09",
+    "seq": 43
+  },
+  "previous": {
+    "digest": "db2e70b0fabedd65506455fd578b66a6772db9f7136c1dc68ff94fa7196a02dc",
+    "event_id": "cfb10b29-71e3-4f2e-8ee8-e6e43ba7bccf",
+    "seq": 41
+  },
+  "project_id": "8f254b4c-df0a-4056-8937-6eba30efcfa6",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "d2eeb72d-5a42-41ee-8a24-7a303395a364",
+    "cycle": 1,
+    "digest": "d5bc0a78f98143d4193f10fb2da28132a2536a1c4a27def415ece8414bcd152e",
+    "engine_id": "claudeloop",
+    "event_id": "eed50f48-f0cf-4123-83ef-3ebdd743e633",
+    "job_id": "40fb97d9-4ab1-4fa8-9ae2-693c2b7a7fc9",
+    "kind": "QuestionAsked",
+    "payload": {
+      "blocking": false,
+      "cycle": 1,
+      "default": "Must: state what's wrong; Plan: include corrective action (e.g., show usage); Wish: suggest most likely fix",
+      "item_id": "error_message_usability_nfr",
+      "stage": "nfr_planguage",
+      "text": "How clear must error messages be? (Planguage: must they explain what went wrong AND how to fix it?)"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-19T18:31:25.667818+00:00",
+    "project_id": "8f254b4c-df0a-4056-8937-6eba30efcfa6",
+    "provenance": "agent",
+    "seq": 42
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

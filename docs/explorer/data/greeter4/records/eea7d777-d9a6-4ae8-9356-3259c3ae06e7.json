@@ -1,0 +1,43 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "1bd6cf23d20239294529ab3f17e8549901db86f0d6da1f29ca4f9b65cc84b057",
+    "event_id": "77734c08-71b7-4561-a455-f097c1592018",
+    "seq": 28
+  },
+  "previous": {
+    "digest": "f61717d597a328548be222e790c089aa2d8814990b8774c0051c64c8c06d148d",
+    "event_id": "47c50a27-53b7-4269-a1cc-cc7d7d9fbe33",
+    "seq": 26
+  },
+  "project_id": "8ab823c9-89e4-4050-884c-9008c8b14ef8",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "71da5708-03f9-400a-be3e-d37763bac3c0",
+    "cycle": 1,
+    "digest": "817ed538d5fb942c103ddd30aa3c5e9fa46dcebfbe86ac6cd4eeb488ebfb797d",
+    "engine_id": "claudeloop",
+    "event_id": "eea7d777-d9a6-4ae8-9356-3259c3ae06e7",
+    "job_id": "705692f1-69a1-4cc2-ade7-8aa3d1407b67",
+    "kind": "QuestionAsked",
+    "payload": {
+      "blocking": false,
+      "cycle": 1,
+      "default": "Timestamp, IP address (hashed), user agent, referrer, geographic location (country/city), device type",
+      "item_id": "analytics_datapoints",
+      "stage": "example_mapping",
+      "text": "What specific data points should be captured on each click event?"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-20T02:34:00.250964+00:00",
+    "project_id": "8ab823c9-89e4-4050-884c-9008c8b14ef8",
+    "provenance": "agent",
+    "seq": 27
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

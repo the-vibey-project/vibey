@@ -1,0 +1,43 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "5a47b360c00bc72bd258883676df92e6a294b41e473f9a4922dee0e5235777e6",
+    "event_id": "ecd512bb-7a89-4598-b537-e34a997bd5f5",
+    "seq": 11
+  },
+  "previous": {
+    "digest": "3f8e1cb7c4f5632af82cec95fad2c373ca4d2e6a6dd7939addaec2527b4cc116",
+    "event_id": "b5e132cc-697d-404f-9e38-963a032c88e8",
+    "seq": 9
+  },
+  "project_id": "44c06a64-c8ed-4153-96af-b49db29c39e3",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "3c183cf9-2be2-4b52-9c5d-8798a654c7f5",
+    "cycle": 1,
+    "digest": "c9f899368945d74dcf5eb1dcdec8e94813e00844df6554e01cde6a284665da15",
+    "engine_id": "claudeloop",
+    "event_id": "2ca1a959-aff6-4d5a-9b8e-564649688713",
+    "job_id": "bcd8e0b1-385d-43dc-ad1f-cad988f80cc9",
+    "kind": "QuestionAsked",
+    "payload": {
+      "blocking": true,
+      "cycle": 1,
+      "default": "During frequent claim operations as the ledger grows, and when running CLI commands that rebuild the app multiple times",
+      "item_id": "when_it_hurts",
+      "stage": "job_story",
+      "text": "In what scenario does the slow performance become painful or blocking?"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-22T03:00:03.956151+00:00",
+    "project_id": "44c06a64-c8ed-4153-96af-b49db29c39e3",
+    "provenance": "agent",
+    "seq": 10
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

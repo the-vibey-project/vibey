@@ -1,0 +1,43 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "a105cb837818e331e866515985a18ef61c6f9ecedf37e3bd21af482a0cb7a383",
+    "event_id": "a5af3d9a-1eb3-4c16-9c94-bfcd3b4f9080",
+    "seq": 4
+  },
+  "previous": {
+    "digest": "e7936f127b16474f11d1bf8bd688456f4f2ed8a504abc61f8f42630b319494a2",
+    "event_id": "b92194da-fc96-400f-9dd1-ca62ece54bf6",
+    "seq": 2
+  },
+  "project_id": "ab0b06f9-55a4-4b47-ac08-254e7fdd9036",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "bf2d8f55-5846-4ea6-8518-24500f885382",
+    "cycle": 1,
+    "digest": "dc8d5792d3c11adf43e90333ac7dab79a33c04efbed8fa027c5bd73705b5404d",
+    "engine_id": "claudeloop",
+    "event_id": "5b0ca363-fe23-4b43-a3ac-17771f094816",
+    "job_id": "48f9ef01-8b95-4709-adde-ed0ece390f8d",
+    "kind": "QuestionAsked",
+    "payload": {
+      "blocking": false,
+      "cycle": 1,
+      "default": "End users of the system",
+      "item_id": "users",
+      "stage": "context_free",
+      "text": "Who are the primary users or stakeholders for this work?"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-22T02:43:32.049557+00:00",
+    "project_id": "ab0b06f9-55a4-4b47-ac08-254e7fdd9036",
+    "provenance": "agent",
+    "seq": 3
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

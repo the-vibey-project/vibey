@@ -1,0 +1,39 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "1f730e7c287306087326574cc33cf25a6304336b16b0d12029fefd4026561437",
+    "event_id": "805c08e7-dda0-4518-b04e-631b34a5bcc6",
+    "seq": 59
+  },
+  "previous": {
+    "digest": "7bf36aabb2cac6326bd7c55ff51fec7e8354e19723356f3999fbea5c6efb858a",
+    "event_id": "c2553041-74d8-4b57-92ba-07d83a485082",
+    "seq": 57
+  },
+  "project_id": "d733035f-e0f9-4f67-aba2-270068d6a9c6",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "a198a9f6-288d-41d0-8992-766a6edb6670",
+    "cycle": 1,
+    "digest": "26b217412adca6c9619c8e0bbd6ea1ff895b74a61b101464370b5cd2b9cf85d7",
+    "engine_id": "claudeloop",
+    "event_id": "471cfb57-a3fc-4e09-bef7-2af599e3b51c",
+    "job_id": "44e282ee-55b1-4cf9-afc3-c84870a14a5c",
+    "kind": "AnswerGiven",
+    "payload": {
+      "answer": "Nothing breaks\u2014ledger is append-only, worker's write commits independently, and CANCELLED status takes precedence over any subsequent event because the job becomes non-claimable. Worker may log a lease-lost warning but continues safely.",
+      "item_id": "worker_ledger_race"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-22T03:51:04.709603+00:00",
+    "project_id": "d733035f-e0f9-4f67-aba2-270068d6a9c6",
+    "provenance": "trusted",
+    "seq": 58
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

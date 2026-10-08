@@ -1,0 +1,39 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "ac3052d3be9790726699c4f0b1943a61d86bd54841cf332197262e9021b16db8",
+    "event_id": "46286680-f3b3-4bdf-9905-046278d0f58f",
+    "seq": 1214
+  },
+  "previous": {
+    "digest": "94793bb30d2f62f694ee15da2ed901dcefaec5dc8b2aebb52873c1f66e0bc254",
+    "event_id": "b8a1e50a-7f9a-4e19-8737-250af75791ca",
+    "seq": 1212
+  },
+  "project_id": "8ab823c9-89e4-4050-884c-9008c8b14ef8",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "419bc913-7bed-4197-bb37-bb34bf40004b",
+    "cycle": 1,
+    "digest": "219aebe63a710b71e23fef000f11d0769b25ad560e400bf1f2d6498679cb2b7e",
+    "engine_id": null,
+    "event_id": "2c650034-f5c0-4043-8531-a53ff1ed895e",
+    "job_id": "d965f1ec-4300-48c6-99ed-bff334a7a37d",
+    "kind": "FindingResolved",
+    "payload": {
+      "finding_id": "f_integrate_analytics-api_be35cab5",
+      "resolution": "repair session completed; awaiting re-verification (operator cleanup: pre-PR#59 repairs never recorded resolution; see the greeter4 validation report)"
+    },
+    "phase": "build",
+    "produced_at": "2026-08-20T05:57:02.316236+00:00",
+    "project_id": "8ab823c9-89e4-4050-884c-9008c8b14ef8",
+    "provenance": "agent",
+    "seq": 1213
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

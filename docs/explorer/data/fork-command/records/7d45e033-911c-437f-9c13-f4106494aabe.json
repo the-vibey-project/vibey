@@ -1,0 +1,39 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a",
+    "event_id": "0dd88ffe-c709-4d5b-8879-dbd99c91f9dd",
+    "seq": 68
+  },
+  "previous": {
+    "digest": "1725bfa07eef5c1c151d9ea49200d2db34d9d36a505741c0b8f52e4f5dbf38a8",
+    "event_id": "70e3d914-a950-4bfd-b2e2-972e3601dce1",
+    "seq": 59
+  },
+  "project_id": "ab0b06f9-55a4-4b47-ac08-254e7fdd9036",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "464af439-4a69-4714-ad9b-3c3cc31b6717",
+    "cycle": 1,
+    "digest": "7db5377e570def22009bea2bfcb1281427a73111a630f06dd070e4b637a7323c",
+    "engine_id": "claudeloop",
+    "event_id": "7d45e033-911c-437f-9c13-f4106494aabe",
+    "job_id": "48f9ef01-8b95-4709-adde-ed0ece390f8d",
+    "kind": "AnswerGiven",
+    "payload": {
+      "answer": "Forking repeatedly instead of fixing the root cause (bad prompt, wrong engine selection). Guardrail: `vibey status` shows fork count per origin job and warns at \u003e 5 forks with 'consider revising original job instead'",
+      "item_id": "misuse_confusion"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-22T03:46:31.561806+00:00",
+    "project_id": "ab0b06f9-55a4-4b47-ac08-254e7fdd9036",
+    "provenance": "trusted",
+    "seq": 60
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

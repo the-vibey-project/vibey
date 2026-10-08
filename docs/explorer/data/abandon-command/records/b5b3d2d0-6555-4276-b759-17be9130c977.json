@@ -1,0 +1,43 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "5d881185902a96f8dee19bb01db53589bbe385df261e6e998f7ce91e8c563392",
+    "event_id": "2ab723c6-4fd9-4bfe-949d-52cbb84e8d1d",
+    "seq": 20
+  },
+  "previous": {
+    "digest": "49364a9e8db392ac7fbb8b8f14c5d4c9a123bea6c7083416df672e3a04d0ec57",
+    "event_id": "43cfa548-308a-4b58-93ed-61ab5fa56252",
+    "seq": 18
+  },
+  "project_id": "d733035f-e0f9-4f67-aba2-270068d6a9c6",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "754b6bcd-7d8d-454c-a978-b40f0a2149c4",
+    "cycle": 1,
+    "digest": "e40bf6733282d801751efa616c02708ad46a3c7d70ec7ec03727e76d2ed1b846",
+    "engine_id": "claudeloop",
+    "event_id": "b5b3d2d0-6555-4276-b759-17be9130c977",
+    "job_id": "44e282ee-55b1-4cf9-afc3-c84870a14a5c",
+    "kind": "QuestionAsked",
+    "payload": {
+      "blocking": false,
+      "cycle": 1,
+      "default": "Print a summary to stdout: project ID, old phase \u2192 ABANDONED, count of jobs cancelled by state, worktree warning if present. Emit structured log at INFO. No metrics yet\u2014defer until usage patterns emerge.",
+      "item_id": "observability",
+      "stage": "laddering",
+      "text": "Beyond the ledger event, what observability is needed (stdout feedback, structured logging, metrics)?"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-22T02:58:43.570123+00:00",
+    "project_id": "d733035f-e0f9-4f67-aba2-270068d6a9c6",
+    "provenance": "agent",
+    "seq": 19
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

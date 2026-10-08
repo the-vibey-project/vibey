@@ -1,0 +1,35 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": null,
+  "previous": {
+    "digest": "a151f1466227402c18c9f1eae4df9e670d65dcd12dcab0e0160c071a729bee1e",
+    "event_id": "6376f6dc-2fd7-4407-8b9c-3372673ece4c",
+    "seq": 489
+  },
+  "project_id": "e631c00a-e1a1-4ed4-b99a-0fa2d388d240",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "fb12669b-058c-4661-b951-50cf6e9a4abe",
+    "cycle": 1,
+    "digest": "ad3c1ab216993898ca1108be8cc72694befc1fa4c3dda71008320baa26771ab7",
+    "engine_id": "codexloop",
+    "event_id": "5dd1650f-bb32-4ff1-84b9-687fdf6a741d",
+    "job_id": "2a513727-a766-4568-8f6c-4e81baf95c11",
+    "kind": "FindingResolved",
+    "payload": {
+      "finding_id": "f_integrate_bootstrap-budget-brake_76140f03",
+      "resolution": "repair session completed; awaiting re-verification"
+    },
+    "phase": "build",
+    "produced_at": "2026-08-22T19:19:30.327578+00:00",
+    "project_id": "e631c00a-e1a1-4ed4-b99a-0fa2d388d240",
+    "provenance": "agent",
+    "seq": 490
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

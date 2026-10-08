@@ -1,0 +1,43 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "7d6541071fe66b9dff1eed2d42aa238180d22109ed40619683c626c5ed36008d",
+    "event_id": "a890a5c4-8a75-40b4-bf87-8d6b0af06f30",
+    "seq": 13
+  },
+  "previous": {
+    "digest": "8e6213c3f7a1df1a6e58315b602c5c5e62b369361028880e04509f6f710b9e5c",
+    "event_id": "a8c7fba6-2d03-4249-9a8f-59765b2499ca",
+    "seq": 11
+  },
+  "project_id": "a1d6b837-46f3-40c0-b6a2-8b3babb7fe15",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "14105785-dc94-42d5-9c60-a7fb1446b7c5",
+    "cycle": 1,
+    "digest": "bab998c7c90dd3fc00a00bb934ee659ad2912a6fdddc9c86d88ef3c1940897e8",
+    "engine_id": "claudeloop",
+    "event_id": "9932f2d4-f426-4e78-9388-3889a40920a4",
+    "job_id": "dd8513f6-0d76-49a5-8bdc-75167dea5385",
+    "kind": "QuestionAsked",
+    "payload": {
+      "blocking": false,
+      "cycle": 1,
+      "default": "Development velocity is blocked; the 13-minute hook discourages frequent commits and lengthens feedback cycles",
+      "item_id": "forcing_function",
+      "stage": "job_story",
+      "text": "What makes this optimization urgent now?"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-20T20:41:28.691914+00:00",
+    "project_id": "a1d6b837-46f3-40c0-b6a2-8b3babb7fe15",
+    "provenance": "agent",
+    "seq": 12
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

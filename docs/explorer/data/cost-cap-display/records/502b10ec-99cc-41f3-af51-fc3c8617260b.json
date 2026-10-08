@@ -1,0 +1,39 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "0d6a11fb4c33e48999a7e8f58a25f4fbdf3c52b785d7b4dc4a54bbb79f90fd54",
+    "event_id": "bd468434-3211-45d0-adf3-f31319c58c56",
+    "seq": 41
+  },
+  "previous": {
+    "digest": "9981643e5960752b26512487586f1e760d8c9b46ea1083adebb78399b5c988e5",
+    "event_id": "9c559a3d-ed88-40a2-ba09-005d1ff15328",
+    "seq": 39
+  },
+  "project_id": "b43d1fcb-fb7b-42d6-9f80-220292c73389",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "585d31ed-5acf-4b9b-8484-48f8992685fd",
+    "cycle": 1,
+    "digest": "69ba1765fd814e912f0ca8904de5cfb5bfc9a43efa4c678c56892f2fcf6f1515",
+    "engine_id": "claudeloop",
+    "event_id": "502b10ec-99cc-41f3-af51-fc3c8617260b",
+    "job_id": "64ea0fea-cd4f-4b3b-bf19-112c18a7c58d",
+    "kind": "AnswerGiven",
+    "payload": {
+      "answer": "Both: unit test that resolver reads correct config keys, integration test that `vibey cost` displays correct caps from a real project config",
+      "item_id": "minimal_test"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-22T03:43:27.791362+00:00",
+    "project_id": "b43d1fcb-fb7b-42d6-9f80-220292c73389",
+    "provenance": "trusted",
+    "seq": 40
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

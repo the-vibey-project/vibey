@@ -1,0 +1,39 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "7e82c0b4b85cf80a8661d8446bfb60ae5df54f5e78962e742f727f87b26d941b",
+    "event_id": "2e9c857c-8643-4e0a-8681-ed5377d61b27",
+    "seq": 55
+  },
+  "previous": {
+    "digest": "d292af0ce99b3e24eb1c8775ecf349e44fb71ce3161a880fcea7e1fc09b63573",
+    "event_id": "9905f780-ca69-4fe2-9a09-5d7503cf01cc",
+    "seq": 51
+  },
+  "project_id": "5ea01f61-8536-4ace-90cb-18700a12e410",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "9e79baa0-5466-4317-af82-dd057c3aecad",
+    "cycle": 1,
+    "digest": "db157cd12bab2e0bd3b94ba468e6e4f6cd7a515160107d10da9e5c22df71e31f",
+    "engine_id": "claudeloop",
+    "event_id": "0eafd018-5773-42cd-9d5d-81eb2b619aa8",
+    "job_id": "4c2ec03f-d670-44f9-9f05-47597984ab20",
+    "kind": "AnswerGiven",
+    "payload": {
+      "answer": "No - output is human-readable only, not machine-parsed; changing format is safe as long as exit codes remain 0=success, non-zero=failure",
+      "item_id": "output_compatibility"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-22T03:46:33.171681+00:00",
+    "project_id": "5ea01f61-8536-4ace-90cb-18700a12e410",
+    "provenance": "trusted",
+    "seq": 52
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

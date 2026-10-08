@@ -1,0 +1,43 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "64fa12e8181d4de1489e52bec4d2dc29cd1ce2f1d80d284df63de6ec5313d434",
+    "event_id": "92f10220-4ada-4ab0-86a2-39bdfa4541ce",
+    "seq": 3
+  },
+  "previous": {
+    "digest": "1f919718aa26b14198abbefc33044b35859f35f92eab6e99c543c3fb6c57ddde",
+    "event_id": "fc03ce03-ae71-4193-9c9e-1f6d5dbe97b6",
+    "seq": 1
+  },
+  "project_id": "5e76341f-ba5f-4272-8355-3df5d489bbcd",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "c4be1f94-40aa-436d-b6f7-e0c04510bc9e",
+    "cycle": 1,
+    "digest": "bab943834f73ab952395e33580cc47d66443168f7770bb45b1e0ab35833c0175",
+    "engine_id": "claudeloop",
+    "event_id": "4948ae37-1c21-4c88-a085-6279eebbf2f7",
+    "job_id": "e58deb6b-5356-4a39-8acf-5dc898bba380",
+    "kind": "QuestionAsked",
+    "payload": {
+      "blocking": false,
+      "cycle": 1,
+      "default": "End users interacting with the greeter application",
+      "item_id": "users",
+      "stage": "context_free",
+      "text": "Who are the primary users or consumers of this design?"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-20T00:47:09.559292+00:00",
+    "project_id": "5e76341f-ba5f-4272-8355-3df5d489bbcd",
+    "provenance": "agent",
+    "seq": 2
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

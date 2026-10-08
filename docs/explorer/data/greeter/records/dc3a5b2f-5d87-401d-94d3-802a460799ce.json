@@ -1,0 +1,39 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "0cc73013799811009fd269020361b5dbd554ba4fa90eaba633a90671becb0c82",
+    "event_id": "add46fe4-15d8-4082-babc-8a11e428a495",
+    "seq": 17
+  },
+  "previous": {
+    "digest": "b5a8d78733955d861a0639bdff8b3f11c5bd451985f175835be8f7a7dde954eb",
+    "event_id": "208bd418-7d9e-4df9-b0d2-42c3aa56e053",
+    "seq": 15
+  },
+  "project_id": "26f89c38-c86b-4ddf-be75-c579a118e40e",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "b0709b19-987b-4fae-b130-9be391f7b131",
+    "cycle": 1,
+    "digest": "1c372825d839286f602d4d5f15faebe2fbf53d66eec3708847fc5dc95218ad8a",
+    "engine_id": "claudeloop",
+    "event_id": "dc3a5b2f-5d87-401d-94d3-802a460799ce",
+    "job_id": "2bdd2b5e-b4f1-4004-9dbf-78d267fea803",
+    "kind": "AnswerGiven",
+    "payload": {
+      "answer": "As a required command-line argument (e.g., `greet Alice`)",
+      "item_id": "name_input_method"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-19T12:31:13.325935+00:00",
+    "project_id": "26f89c38-c86b-4ddf-be75-c579a118e40e",
+    "provenance": "trusted",
+    "seq": 16
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

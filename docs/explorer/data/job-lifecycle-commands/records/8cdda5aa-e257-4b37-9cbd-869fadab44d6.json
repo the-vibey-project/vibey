@@ -1,0 +1,39 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "c3a2ec73fc142687b894a2d50a483fceb75e9072d3c72c5dcff19c0f6651c0a3",
+    "event_id": "30e9f188-0bff-4d00-8940-f0605b209ec1",
+    "seq": 15
+  },
+  "previous": {
+    "digest": "57dbd196f0f97eed42ac3b1c2fdc6dc733226aa93650e0a443d56663ff40ae05",
+    "event_id": "8aae7e70-b5f9-4ff0-9020-b21a76342e29",
+    "seq": 13
+  },
+  "project_id": "2f6a93b6-2d73-4aff-bc94-16539841133f",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "af1728bc-6ea2-4cca-9ef7-06341ac1c607",
+    "cycle": 1,
+    "digest": "c9fc58e0cf1b3f7a3236acbd6cd3d5d398aabfc31cf64f85088c470fe8b93efa",
+    "engine_id": "claudeloop",
+    "event_id": "8cdda5aa-e257-4b37-9cbd-869fadab44d6",
+    "job_id": "334db377-8cb0-4a72-9cc0-78b45fc9bb38",
+    "kind": "AnswerGiven",
+    "payload": {
+      "answer": "When a job went off-track partway and the work before that point is still good -- a wrong design direction, a bad review verdict, a deploy that failed for a reason since fixed. Specify the point by ledger seq: the ledger is append-only, project-scoped, totally ordered, and already indexed as event_project_seq, so a seq is stable across worker restarts and machines. Crucially the fork-command project has independently landed on the same answer for the same reason -- do not let the two invent different addressing schemes, or an operator will have to learn both. Wind-back RECORDS a new position; it never rewrites or truncates history. The open design question worth real thought is what 'restoring' means beyond the queue row: the git worktree and the engine's own rundir state are not in the ledger, so be explicit about what is restored and what is merely re-derivable, rather than implying a completeness the mechanism cannot deliver.",
+      "item_id": "wind_back_job_story"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-22T03:00:39.168035+00:00",
+    "project_id": "2f6a93b6-2d73-4aff-bc94-16539841133f",
+    "provenance": "trusted",
+    "seq": 14
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

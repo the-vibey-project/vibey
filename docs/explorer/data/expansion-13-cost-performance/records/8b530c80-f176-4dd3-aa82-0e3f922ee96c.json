@@ -1,0 +1,43 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "9cb2dae08b6db3fb6c5eeda0d13d55367439f1522d51b0eeba8ad31a048568f4",
+    "event_id": "f4608a60-cfc9-49d0-86f3-b418eb5f9576",
+    "seq": 50
+  },
+  "previous": {
+    "digest": "a8ab82ba3f1624c80a636d249f6d161e07858f68440562866aa067aef6785c70",
+    "event_id": "df628b3e-522a-4c2a-8fea-9d565d21a39a",
+    "seq": 48
+  },
+  "project_id": "a1d6b837-46f3-40c0-b6a2-8b3babb7fe15",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "34541094-6b2a-462a-816d-ee70530579a7",
+    "cycle": 1,
+    "digest": "9745fed90082b49afcc0ac2896fad009c66c41e6b27afe067187aeb3654b7a24",
+    "engine_id": "claudeloop",
+    "event_id": "8b530c80-f176-4dd3-aa82-0e3f922ee96c",
+    "job_id": "dd8513f6-0d76-49a5-8bdc-75167dea5385",
+    "kind": "QuestionAsked",
+    "payload": {
+      "blocking": true,
+      "cycle": 1,
+      "default": "Database connection pool exhaustion if workers exceed available connections; fixture teardown races if cleanup isn't transaction-scoped",
+      "item_id": "parallel_failure_modes",
+      "stage": "premortem",
+      "text": "What specific failure modes are most likely when tests run in parallel: database connection exhaustion, fixture teardown races, hard-coded table/schema names, or global state in domain objects?"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-20T20:46:42.714772+00:00",
+    "project_id": "a1d6b837-46f3-40c0-b6a2-8b3babb7fe15",
+    "provenance": "agent",
+    "seq": 49
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

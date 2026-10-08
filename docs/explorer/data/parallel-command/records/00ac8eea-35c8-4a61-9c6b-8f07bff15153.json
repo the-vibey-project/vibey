@@ -1,0 +1,43 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "86a2d668c8fcfbf6cc09102d86b5eb511131396f4bf24d3b27e6ff467277f0d8",
+    "event_id": "aede8b00-b21c-4698-84da-d8ac75905014",
+    "seq": 49
+  },
+  "previous": {
+    "digest": "a3fe0b3679047b33dc94683541e8c2a40dbc827430dc3ea27a918738efca64c3",
+    "event_id": "1b9de860-504c-41de-a431-06341e3ca3a1",
+    "seq": 47
+  },
+  "project_id": "bed522a2-0b3e-4bff-9cd6-7c13fe40779a",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "159e93b9-381e-49b2-8a7a-867a20a01469",
+    "cycle": 1,
+    "digest": "9974e9669666cc46c26ad72c5316387bc5a0d3bb3b5327db935d1bc438f5c312",
+    "engine_id": "claudeloop",
+    "event_id": "00ac8eea-35c8-4a61-9c6b-8f07bff15153",
+    "job_id": "92d834a4-4bf2-4699-9354-adbea7936d77",
+    "kind": "QuestionAsked",
+    "payload": {
+      "blocking": false,
+      "cycle": 1,
+      "default": "Performance [output_latency_ms]: target \u2264500ms, acceptable \u22642000ms. Rationale: near-real-time feedback for interactive use, but not strict real-time - batching output in ~500ms chunks balances responsiveness with system overhead.",
+      "item_id": "output_performance",
+      "stage": "nfr_planguage",
+      "text": "What is the acceptable latency between a job producing output and that output appearing in the multiplexed stream? (Planguage: Performance [output_latency_ms])"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-22T03:45:53.279715+00:00",
+    "project_id": "bed522a2-0b3e-4bff-9cd6-7c13fe40779a",
+    "provenance": "agent",
+    "seq": 48
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

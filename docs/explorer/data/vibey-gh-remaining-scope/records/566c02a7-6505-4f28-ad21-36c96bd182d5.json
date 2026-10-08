@@ -1,0 +1,43 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "46f12c9c9f21eace34ba0dea407e3df428a9e7cefb70cc0e2a67c3408c9a2a8c",
+    "event_id": "fafbc4b4-732e-46fc-b81b-e68ab0a07a76",
+    "seq": 35
+  },
+  "previous": {
+    "digest": "84742c126bc225e4a5a9d25058ecd76bac2e1188515b391f2b45bff2bafc55f8",
+    "event_id": "bad75186-faf2-478c-b4c0-4ef97ee95ebc",
+    "seq": 33
+  },
+  "project_id": "d482c3e2-029e-4bb8-a9a1-de411816c6ae",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "b1614929-92b9-480e-a3c6-6d96c05b437f",
+    "cycle": 1,
+    "digest": "29d929d44de05efbbfa95e61d2d0a8a7d7ab55b9fc152c6a444cd79739d0e793",
+    "engine_id": "claudeloop",
+    "event_id": "566c02a7-6505-4f28-ad21-36c96bd182d5",
+    "job_id": "d2626f25-d550-454e-bacd-7a7e6c9b52cd",
+    "kind": "QuestionAsked",
+    "payload": {
+      "blocking": false,
+      "cycle": 1,
+      "default": "Using tools like Jenkins or GitHub Actions to automate testing and deployment.",
+      "item_id": "18",
+      "stage": "walking_skeleton",
+      "text": "How will you ensure continuous integration and continuous deployment (CI/CD) for the software?"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-31T02:05:28.291909+00:00",
+    "project_id": "d482c3e2-029e-4bb8-a9a1-de411816c6ae",
+    "provenance": "agent",
+    "seq": 34
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

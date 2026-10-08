@@ -1,0 +1,39 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "68cb2e1a3b1eb9dc75d25a5a03681844bf90087c8e900dd445cdc2f83fd8d397",
+    "event_id": "5332f5a4-fa4a-43f4-8727-2680128f0cc1",
+    "seq": 22
+  },
+  "previous": {
+    "digest": "0cf7496d02fa33347dce55147513210ec8d629c1aa43eea5a5bf0ea80bbe4112",
+    "event_id": "cbbea139-d943-4d7b-ad96-d3f40381314e",
+    "seq": 20
+  },
+  "project_id": "8f254b4c-df0a-4056-8937-6eba30efcfa6",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "b77a6fa4-7dbc-4097-9c1a-161ef082b37e",
+    "cycle": 1,
+    "digest": "aba1e799a9bc50a4d6e61c39d5c06fcf2561c8c826b740f8aef449770dfc4b43",
+    "engine_id": "claudeloop",
+    "event_id": "19635c2f-52f0-4101-9f44-2bc27e343ace",
+    "job_id": "40fb97d9-4ab1-4fa8-9ae2-693c2b7a7fc9",
+    "kind": "AnswerGiven",
+    "payload": {
+      "answer": "Strict for invalid arguments (exit 1 with clear message), permissive for name content (accept as-is)",
+      "item_id": "error_handling_philosophy"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-19T18:28:23.612333+00:00",
+    "project_id": "8f254b4c-df0a-4056-8937-6eba30efcfa6",
+    "provenance": "trusted",
+    "seq": 21
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

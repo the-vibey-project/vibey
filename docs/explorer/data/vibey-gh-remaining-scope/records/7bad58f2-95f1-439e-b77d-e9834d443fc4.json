@@ -1,0 +1,39 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "78a898bd13b0e53886f1ee231eb110d79f03298ddcb452946e87569adb9440df",
+    "event_id": "ebafa699-04a9-48a2-bfb9-f54868f7d9ab",
+    "seq": 14
+  },
+  "previous": {
+    "digest": "6a57965f671f5c8cf53a9bbcc9c0b9d4a85778babb492b2354e9e278fbe40810",
+    "event_id": "a132c5b6-dd8a-4dd2-90c3-4462f0b0ef54",
+    "seq": 12
+  },
+  "project_id": "d482c3e2-029e-4bb8-a9a1-de411816c6ae",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "31a3de5e-5a83-44d4-8fe9-5511a180fe3b",
+    "cycle": 1,
+    "digest": "ee204e9137805c69d7f2630ce546ebf88c58194f22caf27f2125cfac0e4be961",
+    "engine_id": "claudeloop",
+    "event_id": "7bad58f2-95f1-439e-b77d-e9834d443fc4",
+    "job_id": "d2626f25-d550-454e-bacd-7a7e6c9b52cd",
+    "kind": "AnswerGiven",
+    "payload": {
+      "answer": "Scheduling and tracking the delivery of packages for a small business.",
+      "item_id": "5"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-31T02:03:53.803955+00:00",
+    "project_id": "d482c3e2-029e-4bb8-a9a1-de411816c6ae",
+    "provenance": "trusted",
+    "seq": 13
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

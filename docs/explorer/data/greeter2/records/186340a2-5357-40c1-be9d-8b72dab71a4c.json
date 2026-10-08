@@ -1,0 +1,39 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "14dc7e748449b9833aa0a334ef120231769b0f453e0cc802022d6fb7401689cd",
+    "event_id": "34ba69b1-11b6-4af3-acfa-661620c6f6ad",
+    "seq": 29
+  },
+  "previous": {
+    "digest": "130333f1ba771986d22935f163298f6f620354f298724a9056a8fe67e67cbbf9",
+    "event_id": "edc3f30f-e6aa-43c6-9dcd-0215fc139e28",
+    "seq": 27
+  },
+  "project_id": "8f254b4c-df0a-4056-8937-6eba30efcfa6",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "d4527ecd-4b78-4af1-9759-2813ea96991c",
+    "cycle": 1,
+    "digest": "9d2125b9ec9b5459fe9f0da8ac46207019383588942dfc43954f893a30f4b566",
+    "engine_id": "claudeloop",
+    "event_id": "186340a2-5357-40c1-be9d-8b72dab71a4c",
+    "job_id": "40fb97d9-4ab1-4fa8-9ae2-693c2b7a7fc9",
+    "kind": "AnswerGiven",
+    "payload": {
+      "answer": "12:00 \u2192 \"Good afternoon, Alice!\" (afternoon starts at noon), 17:00 \u2192 \"Good evening, Alice!\" (evening starts at 5pm)",
+      "item_id": "boundary_time_examples"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-19T18:29:14.252946+00:00",
+    "project_id": "8f254b4c-df0a-4056-8937-6eba30efcfa6",
+    "provenance": "trusted",
+    "seq": 28
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

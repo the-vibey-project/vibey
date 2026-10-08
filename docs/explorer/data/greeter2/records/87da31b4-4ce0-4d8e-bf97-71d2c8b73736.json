@@ -1,0 +1,39 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "4aeb717d0090b890bf58b81c74638ad3acc99892b4f94e94ef2cccb4ce703023",
+    "event_id": "1483821f-d803-48fb-9674-a282f7cd66a7",
+    "seq": 38
+  },
+  "previous": {
+    "digest": "84c24839ba7c453cd9680876c7e0e55890757eb8166cefb64bac6b4b73f52ee6",
+    "event_id": "ba98ffa4-6cd7-4ae7-9128-6f852ec1db7d",
+    "seq": 36
+  },
+  "project_id": "8f254b4c-df0a-4056-8937-6eba30efcfa6",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "b5b0978a-ea29-46a1-8a37-fb6527447bf0",
+    "cycle": 1,
+    "digest": "ae01da4475d6a71707785e914445df1bd90db5c926d97c58176943d4d7e2fdcd",
+    "engine_id": "claudeloop",
+    "event_id": "87da31b4-4ce0-4d8e-bf97-71d2c8b73736",
+    "job_id": "40fb97d9-4ab1-4fa8-9ae2-693c2b7a7fc9",
+    "kind": "AnswerGiven",
+    "payload": {
+      "answer": "Manual testing with 4-5 representative invocations - defer test framework until skeleton proven",
+      "item_id": "validation_approach"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-19T18:30:20.040653+00:00",
+    "project_id": "8f254b4c-df0a-4056-8937-6eba30efcfa6",
+    "provenance": "trusted",
+    "seq": 37
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

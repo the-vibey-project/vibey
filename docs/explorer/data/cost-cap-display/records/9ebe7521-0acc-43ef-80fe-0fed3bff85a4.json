@@ -1,0 +1,39 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "e98ad2af652d26a1da2fa821e6216020f82aed93cb17995a16cb491c823c1097",
+    "event_id": "7182dc72-a79d-4fd7-a741-8e1bd679b44b",
+    "seq": 22
+  },
+  "previous": {
+    "digest": "3855571aff0b9f7796167310b89cff2d9ab7ade539f1b93321f5f8e6288149d3",
+    "event_id": "21289d76-05ce-4236-9fbb-91384d22c362",
+    "seq": 20
+  },
+  "project_id": "b43d1fcb-fb7b-42d6-9f80-220292c73389",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "94e23c1e-94cb-4c19-a870-6fb5f0c2419b",
+    "cycle": 1,
+    "digest": "c241a38c5df15ea6adb7a5694eebcafdcf07a0cc1ae5cb8f0966d8cfd1582390",
+    "engine_id": "claudeloop",
+    "event_id": "9ebe7521-0acc-43ef-80fe-0fed3bff85a4",
+    "job_id": "64ea0fea-cd4f-4b3b-bf19-112c18a7c58d",
+    "kind": "AnswerGiven",
+    "payload": {
+      "answer": "Re-read config each time caps are consulted; the new values take effect immediately for the next enforcement check",
+      "item_id": "cap_mutation"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-22T03:34:35.067119+00:00",
+    "project_id": "b43d1fcb-fb7b-42d6-9f80-220292c73389",
+    "provenance": "trusted",
+    "seq": 21
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

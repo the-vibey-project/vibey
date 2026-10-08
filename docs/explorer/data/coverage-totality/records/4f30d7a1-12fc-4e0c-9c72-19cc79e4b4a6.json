@@ -1,0 +1,43 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "f56457b5ccacb4ae98d94de5bf772f1c33367ca1f8d3aa24c0806913643e83af",
+    "event_id": "b2531875-6b33-47cf-b547-f86637eb8e2e",
+    "seq": 11
+  },
+  "previous": {
+    "digest": "8f62b5d7b610501fb4d0d3ce9936d7702311c5b8fea14bc336bae3f81cc575a3",
+    "event_id": "d94c2d82-49f1-4a5b-85af-c588352b40be",
+    "seq": 9
+  },
+  "project_id": "e631c00a-e1a1-4ed4-b99a-0fa2d388d240",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "76b9acd1-ea1a-471e-8c8d-547b66a72a03",
+    "cycle": 1,
+    "digest": "a75159b4d3c6be046b7d5301a0ee90ff3e696b034c2d47d45fd0d2641cb656d0",
+    "engine_id": "claudeloop",
+    "event_id": "4f30d7a1-12fc-4e0c-9c72-19cc79e4b4a6",
+    "job_id": "d73f236e-a7b4-4748-b075-3900a75af324",
+    "kind": "QuestionAsked",
+    "payload": {
+      "blocking": false,
+      "cycle": 1,
+      "default": "Architectural hygiene: closing a known gap before expanding the codebase further",
+      "item_id": "motivating_scenario",
+      "stage": "job_story",
+      "text": "What scenario most motivates closing this gap now\u2014a recent incident where uncovered code had a bug, preparing for team/codebase growth, or architectural hygiene before a milestone?"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-22T02:36:36.812205+00:00",
+    "project_id": "e631c00a-e1a1-4ed4-b99a-0fa2d388d240",
+    "provenance": "agent",
+    "seq": 10
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

@@ -1,0 +1,39 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "aba1e799a9bc50a4d6e61c39d5c06fcf2561c8c826b740f8aef449770dfc4b43",
+    "event_id": "19635c2f-52f0-4101-9f44-2bc27e343ace",
+    "seq": 21
+  },
+  "previous": {
+    "digest": "fa479fca79d97542eecbfc6bc7d815fc282873735aef6d8d54772710ae3bc5ae",
+    "event_id": "d54ed9b8-e02a-4345-8ef3-5dc62e5ab828",
+    "seq": 19
+  },
+  "project_id": "8f254b4c-df0a-4056-8937-6eba30efcfa6",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "26b2e201-cc17-4728-a581-83459a38e713",
+    "cycle": 1,
+    "digest": "0cf7496d02fa33347dce55147513210ec8d629c1aa43eea5a5bf0ea80bbe4112",
+    "engine_id": "claudeloop",
+    "event_id": "cbbea139-d943-4d7b-ad96-d3f40381314e",
+    "job_id": "40fb97d9-4ab1-4fa8-9ae2-693c2b7a7fc9",
+    "kind": "AnswerGiven",
+    "payload": {
+      "answer": "Empty name: print usage and exit 1; special chars: accept all UTF-8; long names: accept up to 255 chars, no truncation",
+      "item_id": "name_edge_cases"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-19T18:28:23.612333+00:00",
+    "project_id": "8f254b4c-df0a-4056-8937-6eba30efcfa6",
+    "provenance": "trusted",
+    "seq": 20
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

@@ -1,0 +1,39 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "86087e8d5cbcec2e0d3ccd03778724b81541d30140a5e6be66d5a4489396f675",
+    "event_id": "3afe7343-8b79-400e-b927-28b998cdcba6",
+    "seq": 32
+  },
+  "previous": {
+    "digest": "54e8e90cbdaf1ce8b878b78265abac58e7aa2f622f45b17db4689bdb5d26cb3b",
+    "event_id": "62df2f28-25cb-4747-90a9-08d3e2e3bfdb",
+    "seq": 30
+  },
+  "project_id": "d733035f-e0f9-4f67-aba2-270068d6a9c6",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "8f16ca6e-1841-4623-8d57-96c5014eecb5",
+    "cycle": 1,
+    "digest": "88b9ad4435591d49129a41814060740210d4aad7e6564a4a0f41f626d692ea8d",
+    "engine_id": "claudeloop",
+    "event_id": "fa483c51-3c9b-47b6-a4cd-724265bbe3e9",
+    "job_id": "44e282ee-55b1-4cf9-afc3-c84870a14a5c",
+    "kind": "AnswerGiven",
+    "payload": {
+      "answer": "Without --force: error 'Project \u003cid\u003e is DONE. Use --force to abandon completed work.' With --force: proceeds silently, stdout notes 'Abandoning DONE project \u003cid\u003e.' No interactive prompt\u2014the flag is the confirmation.",
+      "item_id": "done_force_example"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-22T03:41:55.702139+00:00",
+    "project_id": "d733035f-e0f9-4f67-aba2-270068d6a9c6",
+    "provenance": "trusted",
+    "seq": 31
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

@@ -1,0 +1,39 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "17e3402633fe1c3767e2717e8d58e92f23b150073f7e4edd84b938ad1f9e0b11",
+    "event_id": "2aab8dee-b18c-454e-bd70-e15da78077dc",
+    "seq": 44
+  },
+  "previous": {
+    "digest": "a260f1e7e6e7bde965871a5ce9525726ebed137346c1f84c9c2c4911dfeb19c5",
+    "event_id": "9e077e0e-2d35-4238-8503-f6964df04410",
+    "seq": 41
+  },
+  "project_id": "d733035f-e0f9-4f67-aba2-270068d6a9c6",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "60cacc97-e048-491a-92cc-69a9f66856f5",
+    "cycle": 1,
+    "digest": "9e6e6e4634a5b4718e4388cf96036d52e2381528214f1732ab18d3ea363b44af",
+    "engine_id": "claudeloop",
+    "event_id": "01b5427a-7576-4abd-a760-d8c1650a471e",
+    "job_id": "44e282ee-55b1-4cf9-afc3-c84870a14a5c",
+    "kind": "AnswerGiven",
+    "payload": {
+      "answer": "Atomic from increment 1\u2014even the no-jobs case wraps phase transition + job scan in a single transaction. Partial abandonment is undefined state and must never be observable, even during bootstrapping.",
+      "item_id": "atomic_boundary"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-22T03:44:13.821551+00:00",
+    "project_id": "d733035f-e0f9-4f67-aba2-270068d6a9c6",
+    "provenance": "trusted",
+    "seq": 42
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

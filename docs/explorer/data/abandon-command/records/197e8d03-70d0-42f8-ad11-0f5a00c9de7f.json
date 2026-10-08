@@ -1,0 +1,39 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "3c1ac7053459109b4b4a58639f4fed57ffb0becb299f658d859adf9ac60a317b",
+    "event_id": "a617153f-9fa7-4473-868d-59c27062a064",
+    "seq": 23
+  },
+  "previous": {
+    "digest": "ad71aa0f71eaf664a3a28c122e799806898fc8dc544a99f68f50bc46257f2e27",
+    "event_id": "2a606c76-d305-4ba1-b94a-391aeb563003",
+    "seq": 21
+  },
+  "project_id": "d733035f-e0f9-4f67-aba2-270068d6a9c6",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "5001a108-65be-4712-a357-536a9a99cfd6",
+    "cycle": 1,
+    "digest": "def74892721418919ef289958c3498303ad4044c7f059a72696b9393a99d9a18",
+    "engine_id": "claudeloop",
+    "event_id": "197e8d03-70d0-42f8-ad11-0f5a00c9de7f",
+    "job_id": "44e282ee-55b1-4cf9-afc3-c84870a14a5c",
+    "kind": "AnswerGiven",
+    "payload": {
+      "answer": "Proceed independently on TIMING, but not on MEANING. Blocking this project until job-lifecycle-commands lands would stall a fix that is currently blocking real work, so build now. But do not define a private CANCELLED: the state has exactly one meaning -- this job will not run again -- and what differs is only how it got there. Record that as provenance on the transition event (abandoned_with_project versus a direct operator stop), never as a second flavour of the state. The test that keeps the two honest is that a CANCELLED job is not claimable regardless of which path produced it. If job-lifecycle-commands later adds a state machine in domain/, this code should move onto it rather than keep a parallel implementation -- say so in the PR so the follow-up is visible instead of forgotten.",
+      "item_id": "cancelled_coordination"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-22T03:00:07.098197+00:00",
+    "project_id": "d733035f-e0f9-4f67-aba2-270068d6a9c6",
+    "provenance": "trusted",
+    "seq": 22
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

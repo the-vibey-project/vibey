@@ -1,0 +1,39 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "ab2b31af99cfb2eba5935a3dc0a7ad3e4565bfa648156c748775b9c659700e0d",
+    "event_id": "5b4dd471-6f09-4a0b-b3ec-89a7882dea7f",
+    "seq": 63
+  },
+  "previous": {
+    "digest": "d45a21e4dcdba6763ed5758eeb3a3976709d47030ab32500234348ae657ffa98",
+    "event_id": "768933f0-a207-4549-b256-5cf0c11f2c31",
+    "seq": 61
+  },
+  "project_id": "2f6a93b6-2d73-4aff-bc94-16539841133f",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "756d7eaf-c94d-4136-90c9-e3c191fe9b24",
+    "cycle": 1,
+    "digest": "56c686a669e9bb897a9a395f4e03fe2c173f6129c5cfff91e40594a96c866abb",
+    "engine_id": "claudeloop",
+    "event_id": "918c9f6d-2c42-469e-8abf-37373fdbf86c",
+    "job_id": "334db377-8cb0-4a72-9cc0-78b45fc9bb38",
+    "kind": "AnswerGiven",
+    "payload": {
+      "answer": "Both commands use optimistic locking on job row version. First commit wins, second sees stale version and retries with fresh state. If stop commits first, wind-back sees CANCELLED state and fails ('cannot wind back cancelled job'). If wind-back commits first, stop sees rewound state and succeeds, setting stop_requested. No partial state observable; each command is atomic.",
+      "item_id": "concurrent_command_chaos"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-22T03:54:50.487138+00:00",
+    "project_id": "2f6a93b6-2d73-4aff-bc94-16539841133f",
+    "provenance": "trusted",
+    "seq": 62
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

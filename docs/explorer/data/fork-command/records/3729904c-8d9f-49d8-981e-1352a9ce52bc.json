@@ -1,0 +1,43 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "3922e5627586dda57d89e6814761eaab9e4c926449928ebfd972b3d813183b17",
+    "event_id": "a2d58278-7abd-4b21-9005-2737bac4bdad",
+    "seq": 19
+  },
+  "previous": {
+    "digest": "3db5241218712acecd8460a797b61954fd63b31a09dc47f7566091533c36f4e2",
+    "event_id": "3ad2e5d2-0133-4ead-a832-945e68c97564",
+    "seq": 17
+  },
+  "project_id": "ab0b06f9-55a4-4b47-ac08-254e7fdd9036",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "e5d43a3b-0126-47df-9161-ee3c90a76e2c",
+    "cycle": 1,
+    "digest": "2d79bf0780bfed9b775715af539b063af8951a7d5f8770397c30268e16a9c7b2",
+    "engine_id": "claudeloop",
+    "event_id": "3729904c-8d9f-49d8-981e-1352a9ce52bc",
+    "job_id": "48f9ef01-8b95-4709-adde-ed0ece390f8d",
+    "kind": "QuestionAsked",
+    "payload": {
+      "blocking": true,
+      "cycle": 1,
+      "default": "Fork from the most recent commit at or before target seq; if no commits exist yet, fail with a clear error message",
+      "item_id": "seq_to_commit_mapping",
+      "stage": "laddering",
+      "text": "What happens if the target seq doesn't correspond to a clean git commit (e.g., mid-phase event, or an event that didn't touch the tree)?"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-22T03:02:27.256337+00:00",
+    "project_id": "ab0b06f9-55a4-4b47-ac08-254e7fdd9036",
+    "provenance": "agent",
+    "seq": 18
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

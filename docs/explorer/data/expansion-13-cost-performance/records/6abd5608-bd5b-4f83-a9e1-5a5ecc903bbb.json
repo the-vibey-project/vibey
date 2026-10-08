@@ -1,0 +1,39 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "d0a8c17cef6e3a2d64c8381b45ee4266bb6031fe552d6f947d1f4f3b84c0f393",
+    "event_id": "9b318442-d038-41fb-90da-85db5d7b2bca",
+    "seq": 40
+  },
+  "previous": {
+    "digest": "05b01f8187e3546d21cff497419769840393ab2556490b625792cb60ebbcfb9d",
+    "event_id": "9163fbbb-2d8c-430c-abcd-2adfa99f8d4d",
+    "seq": 38
+  },
+  "project_id": "a1d6b837-46f3-40c0-b6a2-8b3babb7fe15",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "c1fe376f-30a3-49c1-906e-e1ce926f89c0",
+    "cycle": 1,
+    "digest": "85c82effbc885d59c7a95ad95f8656eaad0447aeb5313370eb5de408f03e1801",
+    "engine_id": "claudeloop",
+    "event_id": "6abd5608-bd5b-4f83-a9e1-5a5ecc903bbb",
+    "job_id": "dd8513f6-0d76-49a5-8bdc-75167dea5385",
+    "kind": "AnswerGiven",
+    "payload": {
+      "answer": "Full suite green under pytest-xdist with per-worker databases and all four coverage floors passing; speed optimization comes after stability",
+      "item_id": "minimal_success_checkpoint"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-20T20:45:10.481212+00:00",
+    "project_id": "a1d6b837-46f3-40c0-b6a2-8b3babb7fe15",
+    "provenance": "trusted",
+    "seq": 39
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

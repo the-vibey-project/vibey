@@ -1,0 +1,49 @@
+{
+  "chain": {
+    "findings": 0,
+    "head": "e6711fecb0df1e72c2b26b23fa8a12454e783cb1ec4ee424e913fce7a1f6b9d3",
+    "head_seq": 1221,
+    "scheme": "vibey-ledger-chain/v1",
+    "verified": true
+  },
+  "digest_range": "2c7a84bcc9113822f5c07ec220214493a36eeee647e89dd62423f7c732d48092",
+  "documents": {
+    "index": "index.json",
+    "records": "records/{event_id}.json"
+  },
+  "format": "vibey-ledger-site/v1",
+  "holds": "full",
+  "policy": {
+    "fingerprint": "20c0e83ba268bd901344a690af4afac1b0433c0e279a476d954f31f9cb7fc5e8",
+    "scheme": "vibey-publication-policy/v1"
+  },
+  "project": {
+    "name": "expansion-13-cost-performance",
+    "project_id": "a1d6b837-46f3-40c0-b6a2-8b3babb7fe15"
+  },
+  "published": {
+    "first_seq": 1,
+    "last_seq": 1220,
+    "records": 92
+  },
+  "seq_range": {
+    "events": 1221,
+    "first": 1,
+    "last": 1221
+  },
+  "shard_format": "vibey-ledger-shard/v1",
+  "statement": "1129 events withheld by policy",
+  "tier": "standard (untiered)",
+  "withheld": {
+    "by_reason": {
+      "engine_chatter": 1017,
+      "kind_not_allowlisted": 109,
+      "untrusted_provenance": 3
+    },
+    "credentials": 0,
+    "emails": 0,
+    "events": 1129,
+    "fields": 46,
+    "paths": 20
+  }
+}

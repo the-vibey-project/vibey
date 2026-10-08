@@ -1,0 +1,39 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "86509907426807acb4a98cb531ba67a78ba1ecaae75b1d44f83740b580ce8f0c",
+    "event_id": "d0645b63-021f-4211-94da-13dbd373e682",
+    "seq": 36
+  },
+  "previous": {
+    "digest": "cbb44dab6331faae719cd540d7cc9a5f19aa867e348b01f14fad60af7c890ec2",
+    "event_id": "bcd6c1fe-c2b2-4b15-bec0-f7fa1b12fbf0",
+    "seq": 33
+  },
+  "project_id": "5ea01f61-8536-4ace-90cb-18700a12e410",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "43cc89f0-2ed3-4563-8407-c9f509ff795f",
+    "cycle": 1,
+    "digest": "f3787b4fa9e9a54c9a9a9c96d630ec1177a9b5fc0d6548084333f69c63755730",
+    "engine_id": "claudeloop",
+    "event_id": "9cdabd74-1e01-4c83-a2f4-80c12e68de33",
+    "job_id": "4c2ec03f-d670-44f9-9f05-47597984ab20",
+    "kind": "AnswerGiven",
+    "payload": {
+      "answer": "Results are sorted by engine name before display, regardless of completion order - always agyloop, claudeloop, codexloop, cursorloop in output",
+      "item_id": "ordering_guarantee"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-22T03:44:13.652838+00:00",
+    "project_id": "5ea01f61-8536-4ace-90cb-18700a12e410",
+    "provenance": "trusted",
+    "seq": 34
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

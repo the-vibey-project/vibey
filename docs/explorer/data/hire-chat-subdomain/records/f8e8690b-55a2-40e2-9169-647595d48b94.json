@@ -1,0 +1,39 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "aff87654ad329df0e92b5a217d1b767e4189719cb6ff0b3010cb2dea3e875032",
+    "event_id": "2235c0a9-956b-443c-abff-d1334765261b",
+    "seq": 25
+  },
+  "previous": {
+    "digest": "c677788a369ac977984c9dfce0064285f87f3013c7390fdb5fb4526d80f4818c",
+    "event_id": "bbb1c29a-2430-4f16-b623-fde99a3438ea",
+    "seq": 23
+  },
+  "project_id": "0ee95624-eec4-4e8e-9a14-6ad9a37dcff4",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "7c2e4d2e-1700-4955-860d-9e35a05f14d7",
+    "cycle": 1,
+    "digest": "a9f660f136dec90ecdf3f4788036b3e1f9afd92ea9d1b6ec12958723dcb3aa2c",
+    "engine_id": "claudeloop",
+    "event_id": "f8e8690b-55a2-40e2-9169-647595d48b94",
+    "job_id": "1343d0fd-bf3f-4739-8c21-cbf7693c673e",
+    "kind": "AnswerGiven",
+    "payload": {
+      "answer": "(1) Invented credentials/metrics \u2014 prevented by leaving the prompt/guardrails untouched; (2) a blank or broken page when the bot is disabled \u2014 prevented by the server-rendered heading/intro plus the visible 'resting' notice; (3) duplicate-content or dead routes across the two hosts \u2014 prevented by the verified host rules (chat-host root serves [path]; other chat-host pages 308 to the hire host; hire-host [path] 308s to the chat root) and the canonical URL https://chat.adam.matthewsteinberger.com/; (4) assets or [path] failing on the chat host \u2014 prevented by the redirect regex excluding [path], [path] and file-extension paths.",
+      "item_id": "failure_signals"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-20T20:11:24.112412+00:00",
+    "project_id": "0ee95624-eec4-4e8e-9a14-6ad9a37dcff4",
+    "provenance": "trusted",
+    "seq": 24
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 5
+  }
+}

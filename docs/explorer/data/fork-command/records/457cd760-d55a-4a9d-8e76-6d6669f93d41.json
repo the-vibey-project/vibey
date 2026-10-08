@@ -1,0 +1,39 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "aabe2eb85f318be1258c4ca5396401bd962721d20b323ed5a12265b6d5000b3c",
+    "event_id": "ef8daad6-a0a8-4e06-8892-cd5a3d527a2c",
+    "seq": 6
+  },
+  "previous": {
+    "digest": "a105cb837818e331e866515985a18ef61c6f9ecedf37e3bd21af482a0cb7a383",
+    "event_id": "a5af3d9a-1eb3-4c16-9c94-bfcd3b4f9080",
+    "seq": 4
+  },
+  "project_id": "ab0b06f9-55a4-4b47-ac08-254e7fdd9036",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "cfc7ddb6-507a-4efd-8c9e-c3c60bbd9378",
+    "cycle": 1,
+    "digest": "c5ea297f02916d2769f6c5de339e3b9b06c3d35ba792574d2edf2389d9c80a78",
+    "engine_id": "claudeloop",
+    "event_id": "457cd760-d55a-4a9d-8e76-6d6669f93d41",
+    "job_id": "48f9ef01-8b95-4709-adde-ed0ece390f8d",
+    "kind": "AnswerGiven",
+    "payload": {
+      "answer": "Today when a build goes wrong partway through, the options are let it fail out its attempts or start over. Neither preserves the good work that preceded the wrong turn. Forking makes exploration cheap: branch an alternative approach from the last known-good point, keep the original intact for comparison, and let the better one win. It is also the natural substrate for a human saying 'that was going fine until it decided to rewrite the scheduler' -- which is a thing that happens with autonomous sessions and currently costs the whole run.",
+      "item_id": "why"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-22T02:55:55.014043+00:00",
+    "project_id": "ab0b06f9-55a4-4b47-ac08-254e7fdd9036",
+    "provenance": "trusted",
+    "seq": 5
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

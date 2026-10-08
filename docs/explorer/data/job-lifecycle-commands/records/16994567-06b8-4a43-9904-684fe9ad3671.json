@@ -1,0 +1,39 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "4fc22dc9079e465d5b1c9fcb7e2084a13e4d885e2f7285998fd0598c98d4cf8f",
+    "event_id": "b6d1ce76-cd0b-4bae-a699-9d8d5a343b41",
+    "seq": 18
+  },
+  "previous": {
+    "digest": "c3a2ec73fc142687b894a2d50a483fceb75e9072d3c72c5dcff19c0f6651c0a3",
+    "event_id": "30e9f188-0bff-4d00-8940-f0605b209ec1",
+    "seq": 15
+  },
+  "project_id": "2f6a93b6-2d73-4aff-bc94-16539841133f",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "e9bb806e-f638-46a3-a9c3-88ded2d046a0",
+    "cycle": 1,
+    "digest": "f677cd24159efe779caa0d5afe05fe9c32827ec2eb67b704095c4b7e7451f984",
+    "engine_id": "claudeloop",
+    "event_id": "16994567-06b8-4a43-9904-684fe9ad3671",
+    "job_id": "334db377-8cb0-4a72-9cc0-78b45fc9bb38",
+    "kind": "AnswerGiven",
+    "payload": {
+      "answer": "When the original intake spec or requirements have fundamentally changed, restart should create a fresh job run while keeping the old ledger for audit. This is a new job_id, not a state transition on the old one\u2014it closes the prior job as CANCELLED and enqueues a new one with updated context.",
+      "item_id": "restart_job_story"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-22T03:34:35.293603+00:00",
+    "project_id": "2f6a93b6-2d73-4aff-bc94-16539841133f",
+    "provenance": "trusted",
+    "seq": 16
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

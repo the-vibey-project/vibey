@@ -1,0 +1,43 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "89ddbd9d18a5286773e5f691fdd591d8d91058748d34729578b93a41d93448b9",
+    "event_id": "3da713cc-b78a-43a5-a767-05ef87680bf7",
+    "seq": 4
+  },
+  "previous": {
+    "digest": "335967ec59d1a1dd2fef91c2aee205095d79154232ab1097be6ef02225d867e7",
+    "event_id": "ff4cd7b3-d844-4f73-b38e-f00ed046a550",
+    "seq": 2
+  },
+  "project_id": "26f89c38-c86b-4ddf-be75-c579a118e40e",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "2feda391-3de0-45c1-b6b4-0cfea144e514",
+    "cycle": 1,
+    "digest": "a06ff534178690f912579b9a3d6915f2c0b4e0212fea5c624c67c86a2b63c69e",
+    "engine_id": "claudeloop",
+    "event_id": "92fa3809-829b-432e-ad31-72fdd92dbc13",
+    "job_id": "2bdd2b5e-b4f1-4004-9dbf-78d267fea803",
+    "kind": "QuestionAsked",
+    "payload": {
+      "blocking": false,
+      "cycle": 1,
+      "default": "Low to moderate traffic (\u003c 100 requests/second), standard latency expectations",
+      "item_id": "scale_requirements",
+      "stage": "context_free",
+      "text": "What scale or performance requirements should we consider?"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-19T08:28:34.268185+00:00",
+    "project_id": "26f89c38-c86b-4ddf-be75-c579a118e40e",
+    "provenance": "agent",
+    "seq": 3
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

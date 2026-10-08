@@ -1,0 +1,43 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "6862eefdc53b36177fb7119996ffc95ec9ab434518784cc52069fb6f237f72b2",
+    "event_id": "ba67ed79-9d27-408a-8eb6-2de9ff0018f1",
+    "seq": 51
+  },
+  "previous": {
+    "digest": "fadf03473bcb80058e2e7ac7f5d91ad77413cbf30b25c264e95df4178d9c9c57",
+    "event_id": "95b95b46-185d-4bfa-a1d1-682e9b4a200b",
+    "seq": 48
+  },
+  "project_id": "e631c00a-e1a1-4ed4-b99a-0fa2d388d240",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "e7bd9a7c-87a0-4fb1-be1d-5b22cbcf435a",
+    "cycle": 1,
+    "digest": "1ea58fc0fff78e8c8e17f6ade7595dc0d982efe71d872c6fdc855792de30541b",
+    "engine_id": "claudeloop",
+    "event_id": "7bb9c8f5-f40d-48d5-b2ef-544db2a59c78",
+    "job_id": "d73f236e-a7b4-4748-b075-3900a75af324",
+    "kind": "QuestionAsked",
+    "payload": {
+      "blocking": true,
+      "cycle": 1,
+      "default": "Terminal resize events, async widget updates, or event loop timing\u2014mitigate by using Pilot's deterministic pause() between actions and avoiding time.sleep()",
+      "item_id": "tui_test_brittleness",
+      "stage": "premortem",
+      "text": "What could cause the Textual Pilot harness tests to become flaky or timing-dependent despite the zero-tolerance flakiness requirement?"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-22T03:44:53.556640+00:00",
+    "project_id": "e631c00a-e1a1-4ed4-b99a-0fa2d388d240",
+    "provenance": "agent",
+    "seq": 50
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

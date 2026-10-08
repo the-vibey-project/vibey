@@ -1,0 +1,43 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "afc722ffce9ff037b9490d762b2b94512f84778a44d7a3f6a057749b97b37642",
+    "event_id": "c261967f-fc4c-4b09-a861-bc84a4fa4d89",
+    "seq": 18
+  },
+  "previous": {
+    "digest": "1c372825d839286f602d4d5f15faebe2fbf53d66eec3708847fc5dc95218ad8a",
+    "event_id": "dc3a5b2f-5d87-401d-94d3-802a460799ce",
+    "seq": 16
+  },
+  "project_id": "26f89c38-c86b-4ddf-be75-c579a118e40e",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "164389b6-aa8f-419c-a877-3bcec99b40ea",
+    "cycle": 1,
+    "digest": "0cc73013799811009fd269020361b5dbd554ba4fa90eaba633a90671becb0c82",
+    "engine_id": "claudeloop",
+    "event_id": "add46fe4-15d8-4082-babc-8a11e428a495",
+    "job_id": "2bdd2b5e-b4f1-4004-9dbf-78d267fea803",
+    "kind": "QuestionAsked",
+    "payload": {
+      "blocking": true,
+      "cycle": 1,
+      "default": "Via optional flag (e.g., `greet Alice --time` or `greet Alice -t`)",
+      "item_id": "time_variant_activation",
+      "stage": "laddering",
+      "text": "How should time-of-day greeting variants be activated?"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-19T12:31:57.716733+00:00",
+    "project_id": "26f89c38-c86b-4ddf-be75-c579a118e40e",
+    "provenance": "agent",
+    "seq": 17
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

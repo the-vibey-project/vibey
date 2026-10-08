@@ -1,0 +1,43 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "fbd3daa30827dc8cae04584f16583ea59930497599b5f6dcc51d3ec2bbb631aa",
+    "event_id": "02ad82b3-bea5-4d7f-bacb-43190ca613e4",
+    "seq": 22
+  },
+  "previous": {
+    "digest": "1da972cfe1b9dee51b065ef6232be7e939812dcdc50f1bd4eefd1b51d70c7095",
+    "event_id": "03e320d9-a30d-4e76-950a-fdcf75299e5b",
+    "seq": 19
+  },
+  "project_id": "f4cfe576-55c7-4f79-80ad-485f85ddca8b",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "4bb7ecc1-ea40-5364-bed9-45c048157678",
+    "cycle": 1,
+    "digest": "c7de728e3a948c6bb484e4a0d9b0cfccf2afc5c00601f691695f07fbbe4a72e1",
+    "engine_id": "gptossloop",
+    "event_id": "f3973791-413a-408b-bd04-a2b0d295a60b",
+    "job_id": "5057b798-907c-4039-9690-3992212dc0b2",
+    "kind": "QuestionAsked",
+    "payload": {
+      "blocking": false,
+      "cycle": 1,
+      "default": "Add a top\u2011level `paid_executed` boolean that is true when the paid lane ran and false when it was skipped.",
+      "item_id": "Q10",
+      "stage": "laddering",
+      "text": "Should the gate summary include a boolean flag indicating whether the paid lane was actually executed?"
+    },
+    "phase": "design",
+    "produced_at": "2026-09-27T21:31:33.948491+00:00",
+    "project_id": "f4cfe576-55c7-4f79-80ad-485f85ddca8b",
+    "provenance": "agent",
+    "seq": 20
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

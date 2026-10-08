@@ -1,0 +1,43 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "7cb05ecf595105c6f4bb812ae6560bff9ead76c600d72b2407a4ed4d8607d5cd",
+    "event_id": "c5a57ab6-713d-40d8-9ecf-56181218f95d",
+    "seq": 4
+  },
+  "previous": {
+    "digest": "db34f0e33d3b004d521c60e074e5a0c78b350fa1c5c8f3255216ef24ca19530e",
+    "event_id": "a692f857-6446-4902-85db-73927bcb1602",
+    "seq": 2
+  },
+  "project_id": "8f254b4c-df0a-4056-8937-6eba30efcfa6",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "7057e1e6-1fa0-4125-8977-e95cda733419",
+    "cycle": 1,
+    "digest": "2c106275d4b82ea65e27d7637d7c7bce91134b513a3a6c6373b78fb462e1b44d",
+    "engine_id": "claudeloop",
+    "event_id": "707bef32-ab0d-45e9-92ad-2e070cdcd9cf",
+    "job_id": "40fb97d9-4ab1-4fa8-9ae2-693c2b7a7fc9",
+    "kind": "QuestionAsked",
+    "payload": {
+      "blocking": false,
+      "cycle": 1,
+      "default": "High availability (99.9% uptime), low latency (\u003c100ms p95), cost-efficient",
+      "item_id": "key_constraints",
+      "stage": "context_free",
+      "text": "What are the key constraints or requirements (performance, availability, consistency, cost)?"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-19T18:26:10.378323+00:00",
+    "project_id": "8f254b4c-df0a-4056-8937-6eba30efcfa6",
+    "provenance": "agent",
+    "seq": 3
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

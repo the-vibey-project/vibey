@@ -1,0 +1,39 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "f324f0b3b7a799ee7720c0e06ceedf73db9a22b2d67c0b604896b457d2d70a31",
+    "event_id": "2bf27ef3-4b6c-4a17-a35c-73a5ca396a90",
+    "seq": 60
+  },
+  "previous": {
+    "digest": "26b217412adca6c9619c8e0bbd6ea1ff895b74a61b101464370b5cd2b9cf85d7",
+    "event_id": "471cfb57-a3fc-4e09-bef7-2af599e3b51c",
+    "seq": 58
+  },
+  "project_id": "d733035f-e0f9-4f67-aba2-270068d6a9c6",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "8ed039bd-15f7-404d-8a6d-24321fd06062",
+    "cycle": 1,
+    "digest": "1f730e7c287306087326574cc33cf25a6304336b16b0d12029fefd4026561437",
+    "engine_id": "claudeloop",
+    "event_id": "805c08e7-dda0-4518-b04e-631b34a5bcc6",
+    "job_id": "44e282ee-55b1-4cf9-afc3-c84870a14a5c",
+    "kind": "AnswerGiven",
+    "payload": {
+      "answer": "Both call the same application service, Postgres row lock serializes them, second caller sees idempotent success. No distinct failure mode\u2014the shared service layer is the protection.",
+      "item_id": "operator_cli_collision"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-22T03:51:04.709603+00:00",
+    "project_id": "d733035f-e0f9-4f67-aba2-270068d6a9c6",
+    "provenance": "trusted",
+    "seq": 59
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

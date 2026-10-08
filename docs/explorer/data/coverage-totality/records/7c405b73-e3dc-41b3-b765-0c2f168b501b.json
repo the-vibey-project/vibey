@@ -1,0 +1,40 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "7842517003d3188110f0f465954b0ecff589806cb8cb54badeb558d03aad338d",
+    "event_id": "cc727729-e642-4f0e-a975-215973a60b34",
+    "seq": 267
+  },
+  "previous": {
+    "digest": "7842517003d3188110f0f465954b0ecff589806cb8cb54badeb558d03aad338d",
+    "event_id": "80fe4a62-ba04-40c4-9c51-58c9b8f2a286",
+    "seq": 161
+  },
+  "project_id": "e631c00a-e1a1-4ed4-b99a-0fa2d388d240",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "346043ac-6ee4-4c1a-a8cc-88ac5f7c6785",
+    "cycle": 1,
+    "digest": "aa33b261bbc24900d310c4e15dd218a49e270519a06a8bd87d399d2b94b325af",
+    "engine_id": null,
+    "event_id": "7c405b73-e3dc-41b3-b765-0c2f168b501b",
+    "job_id": "f734e250-9aff-45c7-88bf-5b9a6f70d577",
+    "kind": "FindingRaised",
+    "payload": {
+      "finding_id": "f_verify_ws_cac4f2ef",
+      "severity": "high",
+      "text": "gate failed: uv run pytest -q -p no:cacheprovider --cov=vibey --cov-branch --cov-report=term-missing 2\u003e\u00261 | tail -20: warning: `VIRTUAL_ENV=[path]` does not match the project environment path `.venv` and will be ignored; use `--active` to target the active environment instead\n[stdout]   0     0%   3-8\nsrc/vibey/infrastructure/notify/desktop.py                      29     29      8      0     0%   3-48\nsrc/vibey/infrastructure/notify/events.py                       20     20      0      0     0%   3-27\nsrc/vibey/infrastructure/notify/service.py                      25     25      6      0     0%   3-43\nsrc/vibey/infrastructure/notify/webhook.py                      30     30      6      0     0%   3-61\nsrc/vibey/infrastructure/operator/__init__.py                    2      2      0      0     0%   3-13\nsrc/vibey/infrastructure/operator/handlers.py                   60     60     16      0     0%   16-175\nsrc/vibey/infrastructure/otel.py                               125    125     22      0     0%   3-239\nsrc/vibey/infrastructure/provision/__init__.py                   0      0      0      0   100%\nsrc/vibey/infrastructure/provision/agent_surface.py             47     33     14      0    23%   38-40, 66, 69-87, 90-101, 104-109\nsrc/vibey/infrastructure/review_artifact_writer.py              27     19      8      0    23%   14, 17-22, 32-43\nsrc/vibey/tui/__init__.py                                        2      2      0      0     0%   3-11\nsrc/vibey/tui/dashboard.py                                     250    250     70      0     0%   3-465\n--------------------------------------------------------------------------------------------------------\nTOTAL                                                         7807   5400   1908      2    25%\nno tests ran in 1.74s"
+    },
+    "phase": "build",
+    "produced_at": "2026-08-22T04:28:51.054472+00:00",
+    "project_id": "e631c00a-e1a1-4ed4-b99a-0fa2d388d240",
+    "provenance": "agent",
+    "seq": 162
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 1
+  }
+}

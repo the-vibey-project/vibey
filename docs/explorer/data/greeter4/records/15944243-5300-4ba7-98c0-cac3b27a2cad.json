@@ -1,0 +1,39 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "7842517003d3188110f0f465954b0ecff589806cb8cb54badeb558d03aad338d",
+    "event_id": "39e4fb2a-9ebc-4cba-9f99-937d259ef9d1",
+    "seq": 1654
+  },
+  "previous": {
+    "digest": "7842517003d3188110f0f465954b0ecff589806cb8cb54badeb558d03aad338d",
+    "event_id": "a0205462-1cce-4313-87fb-c8bd316dc718",
+    "seq": 1636
+  },
+  "project_id": "8ab823c9-89e4-4050-884c-9008c8b14ef8",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "15291fe4-795e-47e8-a23e-40bdd101ca07",
+    "cycle": 1,
+    "digest": "905f99055172c75cdad0deb4432d6c3186b90ede89782578555e09d3fe846d9e",
+    "engine_id": "claudeloop",
+    "event_id": "15944243-5300-4ba7-98c0-cac3b27a2cad",
+    "job_id": "f193e1b2-f1d3-42be-8358-2bbbcf18cfbf",
+    "kind": "FindingResolved",
+    "payload": {
+      "finding_id": "f_verify_malicious-url-check_e97e2a46",
+      "resolution": "repair session completed; awaiting re-verification"
+    },
+    "phase": "build",
+    "produced_at": "2026-08-20T06:35:05.507863+00:00",
+    "project_id": "8ab823c9-89e4-4050-884c-9008c8b14ef8",
+    "provenance": "agent",
+    "seq": 1637
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

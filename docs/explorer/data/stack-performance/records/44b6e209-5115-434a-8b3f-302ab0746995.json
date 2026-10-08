@@ -1,0 +1,43 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "425ed24a6971da081f8fc35ad54a6ca12c1475f7e82f30983b3d785962f4bc90",
+    "event_id": "490d7ff7-cdde-435c-8909-24d1fd32f8a8",
+    "seq": 5
+  },
+  "previous": {
+    "digest": "0603d0a5992bb2a1da3a51d8ed5b7511ed309833ada3f6d35783a20e5af23154",
+    "event_id": "574eb2c5-3a1e-4674-bb90-b0c7b3fa9369",
+    "seq": 3
+  },
+  "project_id": "44c06a64-c8ed-4153-96af-b49db29c39e3",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "e7062531-273b-4c4a-984a-5075696af231",
+    "cycle": 1,
+    "digest": "14b3105e760be1e9edd3ae84039d962ae6d98f6e5f9fa8fc5185f2b4ea88424e",
+    "engine_id": "claudeloop",
+    "event_id": "44b6e209-5115-434a-8b3f-302ab0746995",
+    "job_id": "bcd8e0b1-385d-43dc-ad1f-cad988f80cc9",
+    "kind": "QuestionAsked",
+    "payload": {
+      "blocking": false,
+      "cycle": 1,
+      "default": "Passes tests, meets acceptance criteria, and can be deployed without breaking changes",
+      "item_id": "success_criteria",
+      "stage": "context_free",
+      "text": "How will you know if this design succeeds?"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-22T02:56:46.218050+00:00",
+    "project_id": "44c06a64-c8ed-4153-96af-b49db29c39e3",
+    "provenance": "agent",
+    "seq": 4
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

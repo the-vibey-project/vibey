@@ -1,0 +1,39 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "442e57b76fdb328434ae722b247010cd5be7c9e5f90fff8a0bb7b0cf994f379b",
+    "event_id": "f87fdb34-4c8f-4dcf-9d77-62379e6da92f",
+    "seq": 13
+  },
+  "previous": {
+    "digest": "c030ab1f95590bbc07fdc05788f41e0ca6d95b0fc4758ad5c7824b82f55cbb4f",
+    "event_id": "1c6a53b5-6f96-4d82-aedf-3e494600c898",
+    "seq": 11
+  },
+  "project_id": "8f254b4c-df0a-4056-8937-6eba30efcfa6",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "a1a42ac2-a0ff-41c6-a046-e0eda82bd1f4",
+    "cycle": 1,
+    "digest": "75d8370446863799838e6840d1ce69fd71519f95dad3019485bf817328530ae0",
+    "engine_id": "claudeloop",
+    "event_id": "5c630347-b2ab-4b4d-ad89-5bf541b2acd6",
+    "job_id": "40fb97d9-4ab1-4fa8-9ae2-693c2b7a7fc9",
+    "kind": "AnswerGiven",
+    "payload": {
+      "answer": "Warm and professional - friendly but not overly casual, appropriate for a work environment",
+      "item_id": "emotional_tone"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-19T18:27:48.146827+00:00",
+    "project_id": "8f254b4c-df0a-4056-8937-6eba30efcfa6",
+    "provenance": "trusted",
+    "seq": 12
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

@@ -1,0 +1,43 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "7e226f0a8637b11aee226bd14196425b689fa3d0f71ab4b28b08c65d42cc4bf1",
+    "event_id": "843327be-8876-40f2-a07e-a2e9cdd0f36b",
+    "seq": 34
+  },
+  "previous": {
+    "digest": "9a0e0f99d9a282eea9b3152c4118522f69a2e544fa7ccabb15b16a4ad724d846",
+    "event_id": "4dd921dd-1bcb-45bd-82a6-81a7a9f4fced",
+    "seq": 32
+  },
+  "project_id": "e631c00a-e1a1-4ed4-b99a-0fa2d388d240",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "69cf36d5-dd46-4906-a84a-0accff314acd",
+    "cycle": 1,
+    "digest": "d049949710f91c1d2cc7b7f74bb9b57fff21d14cc45fa2a917beee6c9fec4add",
+    "engine_id": "claudeloop",
+    "event_id": "99aced40-d9cb-49dc-afd2-05166de9f36e",
+    "job_id": "d73f236e-a7b4-4748-b075-3900a75af324",
+    "kind": "QuestionAsked",
+    "payload": {
+      "blocking": true,
+      "cycle": 1,
+      "default": "Same PR\u2014gate and fixes together ensure the floor lands enforced, not as a future TODO that could be forgotten",
+      "item_id": "gate_timing",
+      "stage": "walking_skeleton",
+      "text": "Should the new total coverage gate be added in the same PR that closes the gaps, or as a follow-up PR after gaps are confirmed closed?"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-22T03:35:08.795877+00:00",
+    "project_id": "e631c00a-e1a1-4ed4-b99a-0fa2d388d240",
+    "provenance": "agent",
+    "seq": 33
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

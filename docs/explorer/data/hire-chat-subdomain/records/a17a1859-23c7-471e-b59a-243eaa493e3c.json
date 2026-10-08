@@ -1,0 +1,39 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "f2436720f59c05e4cbe23d8ebe7ef8c8b9f59b6f9fff901dc723031acd47023b",
+    "event_id": "b2de3ee0-74f7-41fc-82bd-ff21bc993d35",
+    "seq": 7
+  },
+  "previous": {
+    "digest": "1a9bf33591a6609e46b51059cc52266acc458e6dbc20e6f78bfe79e9a6bdf67a",
+    "event_id": "ea8ba13e-b718-4dc1-964e-4cef126a753e",
+    "seq": 5
+  },
+  "project_id": "0ee95624-eec4-4e8e-9a14-6ad9a37dcff4",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "71e46f09-4704-4a9f-ae9b-12778b0a26c2",
+    "cycle": 1,
+    "digest": "f0f6db5b6bff626d4d6f7967417d94fd9bc4134a079c8d1dee13573424867e22",
+    "engine_id": "claudeloop",
+    "event_id": "a17a1859-23c7-471e-b59a-243eaa493e3c",
+    "job_id": "1343d0fd-bf3f-4739-8c21-cbf7693c673e",
+    "kind": "AnswerGiven",
+    "payload": {
+      "answer": "No infrastructure change: same Netlify site (hire-adam-steinberger, @netlify/plugin-nextjs v5 running the Next server), same [path] Node route streaming SSE. Routing is Next-native in next.config.ts: rewrites() { beforeFiles: [ { source: '/', has: [{ type: 'host', value: 'chat.adam.matthewsteinberger.com' }], destination: '[path]' } ] } plus three redirects placed first: chat-host [path] -\u003e https://chat.adam.matthewsteinberger.com/ (308); chat-host '[path]((?!api/|_next/|.*\\.[a-zA-Z0-9]+$).+)' -\u003e https://hire.adam.matthewsteinberger.com/:path (308, query preserved); hire-host [path] -\u003e https://chat.adam.matthewsteinberger.com/ (308). These rules are already verified with next build + curl. No middleware.ts, no proxy.ts, no Netlify _redirects/netlify.toml rules. The subdomain itself is a Netlify domain alias plus one Porkbun DNS CNAME (chat.adam -\u003e hire-adam-steinberger.netlify.app) \u2014 manual steps documented in AGENTS.md, not automated.",
+      "item_id": "deployment"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-20T20:08:47.695659+00:00",
+    "project_id": "0ee95624-eec4-4e8e-9a14-6ad9a37dcff4",
+    "provenance": "trusted",
+    "seq": 6
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 5
+  }
+}

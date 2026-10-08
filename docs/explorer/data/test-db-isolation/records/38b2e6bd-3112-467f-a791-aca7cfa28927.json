@@ -1,0 +1,43 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "467ec36aaac27e682b70c211b6efaa966b4a9d55d06fb1322065bd57e87554a8",
+    "event_id": "af3f27cb-bb55-4801-810f-c2055822171a",
+    "seq": 6
+  },
+  "previous": {
+    "digest": "8e8f87a667c3ceeaf1e950699253a570c58bbcd489184e085edbc59f210989f4",
+    "event_id": "a6ec703c-ef70-4ab7-b259-8c4dadbb1369",
+    "seq": 4
+  },
+  "project_id": "df7e868b-1fbf-451b-8ceb-126359b7588e",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "7a664fd3-ada0-44b0-9401-18e4c2b3fd38",
+    "cycle": 1,
+    "digest": "5d6834da8377e486c0937513016a12d925238b4b4678767bf2dc30e954884e86",
+    "engine_id": "claudeloop",
+    "event_id": "38b2e6bd-3112-467f-a791-aca7cfa28927",
+    "job_id": "3a3b336c-c2aa-4400-a762-ae12246358d3",
+    "kind": "QuestionAsked",
+    "payload": {
+      "blocking": false,
+      "cycle": 1,
+      "default": "Feature works correctly with automated test coverage and meets acceptance criteria",
+      "item_id": "success_criteria",
+      "stage": "context_free",
+      "text": "What defines success for this work?"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-22T04:41:02.373026+00:00",
+    "project_id": "df7e868b-1fbf-451b-8ceb-126359b7588e",
+    "provenance": "agent",
+    "seq": 5
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

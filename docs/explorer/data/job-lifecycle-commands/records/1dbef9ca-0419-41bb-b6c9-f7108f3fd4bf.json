@@ -1,0 +1,39 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "996c3f8328569b3b0538a5922d155195845b7402059588c9ee223f324b06f010",
+    "event_id": "73bcbe55-28d3-4d0c-9355-d895f9165469",
+    "seq": 33
+  },
+  "previous": {
+    "digest": "729579f1b103572b409ffa889836cd573fff75a1fcc75830b1fa2cbef3dd9976",
+    "event_id": "ebd3165b-4f4d-4b50-994d-9b7b22a27978",
+    "seq": 31
+  },
+  "project_id": "2f6a93b6-2d73-4aff-bc94-16539841133f",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "e07b7bd5-d154-4e77-8a17-2d29a0e18e4a",
+    "cycle": 1,
+    "digest": "cf77490068b4a1f5fa04a7a8a06bf0994e4d15deb7ec05e264c557dd81d1d6e5",
+    "engine_id": "claudeloop",
+    "event_id": "1dbef9ca-0419-41bb-b6c9-f7108f3fd4bf",
+    "job_id": "334db377-8cb0-4a72-9cc0-78b45fc9bb38",
+    "kind": "AnswerGiven",
+    "payload": {
+      "answer": "New ledger event (seq 13) of kind JobRewound with target_seq=7 and restored phase/state from seq 7. Job row updates: restore phase to DESIGN, state stays or resets to READY, current_attempt resets to value at seq 7. Git worktree unchanged\u2014next claim rebuilds from ledger 1-7. Seqs 8-12 remain in ledger as history.",
+      "item_id": "wind_back_concrete_example"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-22T03:43:28.355576+00:00",
+    "project_id": "2f6a93b6-2d73-4aff-bc94-16539841133f",
+    "provenance": "trusted",
+    "seq": 32
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

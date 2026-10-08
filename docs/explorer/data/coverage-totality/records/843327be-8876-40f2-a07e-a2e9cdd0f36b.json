@@ -1,0 +1,43 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "e5f1dfbc81d8f149f0cb8e7c3769f713cf27c4fac133c17759d0fb887fcade05",
+    "event_id": "1b08082e-bed0-4716-841d-2e3e0e1b65a8",
+    "seq": 35
+  },
+  "previous": {
+    "digest": "d049949710f91c1d2cc7b7f74bb9b57fff21d14cc45fa2a917beee6c9fec4add",
+    "event_id": "99aced40-d9cb-49dc-afd2-05166de9f36e",
+    "seq": 33
+  },
+  "project_id": "e631c00a-e1a1-4ed4-b99a-0fa2d388d240",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "94ff96cf-0f37-4948-aae8-c65a2956146e",
+    "cycle": 1,
+    "digest": "7e226f0a8637b11aee226bd14196425b689fa3d0f71ab4b28b08c65d42cc4bf1",
+    "engine_id": "claudeloop",
+    "event_id": "843327be-8876-40f2-a07e-a2e9cdd0f36b",
+    "job_id": "d73f236e-a7b4-4748-b075-3900a75af324",
+    "kind": "QuestionAsked",
+    "payload": {
+      "blocking": false,
+      "cycle": 1,
+      "default": "Run `coverage report --include='src/vibey/\u003cmodule\u003e[path]'` locally after each test to confirm branches hit; full validation before commit",
+      "item_id": "incremental_verification",
+      "stage": "walking_skeleton",
+      "text": "How should coverage increases be validated during development\u2014run coverage report after each new test, batch-verify at module completion, or only at PR time?"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-22T03:35:08.795877+00:00",
+    "project_id": "e631c00a-e1a1-4ed4-b99a-0fa2d388d240",
+    "provenance": "agent",
+    "seq": 34
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 1
+  }
+}

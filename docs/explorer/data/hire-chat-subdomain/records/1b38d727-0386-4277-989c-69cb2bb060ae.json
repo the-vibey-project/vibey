@@ -1,0 +1,43 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "2c377296b63dead3b08021442c967237954f0ca0b78050c9d636f02029fcea8d",
+    "event_id": "70ef4962-8208-455c-ad4a-f4c23aab20d6",
+    "seq": 34
+  },
+  "previous": {
+    "digest": "9f0a4e8417d092174d62214df5cf6450baf013899114b1f86617d13e69c07ec2",
+    "event_id": "255f8aa1-6a53-414f-b23b-ad773dbc7149",
+    "seq": 32
+  },
+  "project_id": "0ee95624-eec4-4e8e-9a14-6ad9a37dcff4",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "ac701f58-2e24-46ee-8bb6-16e4047aed09",
+    "cycle": 1,
+    "digest": "481217c4a23a642c24e4359cd5defa6cbbc4cfc38cc20cec1b1d3045cbd444b9",
+    "engine_id": "claudeloop",
+    "event_id": "1b38d727-0386-4277-989c-69cb2bb060ae",
+    "job_id": "1343d0fd-bf3f-4739-8c21-cbf7693c673e",
+    "kind": "QuestionAsked",
+    "payload": {
+      "blocking": true,
+      "cycle": 1,
+      "default": "1) src/app/chat/page.tsx (server component rendering \u003cAskAdam variant=\"page\" /\u003e), 2) AskAdam.tsx modified to accept variant prop and render accordingly, 3) next.config.ts with the three chat-host redirects + beforeFiles rewrite verified via curl localhost:3000, 4) one test file proving the variant prop changes render behavior - everything else (sitemap, footer link, kb-sources chunk, widget header link) deferred to polish pass",
+      "item_id": "minimal_file_set",
+      "stage": "walking_skeleton",
+      "text": "What is the absolute minimum file set to get a locally testable [path] page working?"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-20T20:14:22.405778+00:00",
+    "project_id": "0ee95624-eec4-4e8e-9a14-6ad9a37dcff4",
+    "provenance": "agent",
+    "seq": 33
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 1
+  }
+}

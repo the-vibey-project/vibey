@@ -1,0 +1,39 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "7ca36464d412be0490269cac0ddb8d6732ede30fc4389dd38d9d1f1d552475e0",
+    "event_id": "5b9367ce-6ecb-41fa-ba2f-e2da8699744c",
+    "seq": 46
+  },
+  "previous": {
+    "digest": "3d6dfca1237e47a6f8671eb9418741575a32374913c1783c30784c0bae6c3110",
+    "event_id": "e76bb7e7-1ea9-4bce-aa46-cc868586b86d",
+    "seq": 44
+  },
+  "project_id": "8ab823c9-89e4-4050-884c-9008c8b14ef8",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "4ae7997c-4e03-4049-811b-343530d3454a",
+    "cycle": 1,
+    "digest": "2d2c1224dee69d5a359771f402b3c285fd3cbf335fbe2baf8c0a461f26375e65",
+    "engine_id": "claudeloop",
+    "event_id": "b9803542-c026-4645-a7d5-c67447697432",
+    "job_id": "705692f1-69a1-4cc2-ade7-8aa3d1407b67",
+    "kind": "AnswerGiven",
+    "payload": {
+      "answer": "Target: p50 \u003c20ms, p95 \u003c50ms, p99 \u003c100ms (measured server-side, excluding network); Stretch: p99 \u003c50ms; Acceptable: p99 \u003c200ms",
+      "item_id": "redirect_latency_nfr"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-20T02:35:27.397310+00:00",
+    "project_id": "8ab823c9-89e4-4050-884c-9008c8b14ef8",
+    "provenance": "trusted",
+    "seq": 45
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

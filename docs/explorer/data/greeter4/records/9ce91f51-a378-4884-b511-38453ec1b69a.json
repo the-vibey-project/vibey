@@ -1,0 +1,39 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "3e42f21bab9e2c45dfc10917b22fd477cb6e2699935187ff97f671306dee3e2a",
+    "event_id": "3beb6ade-e5f0-49db-a421-cbc5e7409983",
+    "seq": 25
+  },
+  "previous": {
+    "digest": "3a6ed9056653be4927f449b94ae415de5b601fe4473ef938e9ed7a76b7dd07c6",
+    "event_id": "fbf7c83e-4f5b-4b7f-b06f-b0da1d4899bf",
+    "seq": 23
+  },
+  "project_id": "8ab823c9-89e4-4050-884c-9008c8b14ef8",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "ad847c81-cd54-4080-9bb7-e7a2c0de37bc",
+    "cycle": 1,
+    "digest": "c7d6f44cf10cbf3b1e629ab7ad3212684bb9494a2bde8df794ce74581a05d416",
+    "engine_id": "claudeloop",
+    "event_id": "9ce91f51-a378-4884-b511-38453ec1b69a",
+    "job_id": "705692f1-69a1-4cc2-ade7-8aa3d1407b67",
+    "kind": "AnswerGiven",
+    "payload": {
+      "answer": "3-5x growth in steady state, with potential 10x viral spikes during marketing campaigns",
+      "item_id": "growth_trajectory"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-20T02:33:22.528147+00:00",
+    "project_id": "8ab823c9-89e4-4050-884c-9008c8b14ef8",
+    "provenance": "trusted",
+    "seq": 24
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

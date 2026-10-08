@@ -1,0 +1,43 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "9ea067bd408371dfc58a78399c84df50bf8f01a40ee0c943b1ff24ffe24969ab",
+    "event_id": "758e2424-4902-4995-bb79-9a828aaf060b",
+    "seq": 46
+  },
+  "previous": {
+    "digest": "17e3402633fe1c3767e2717e8d58e92f23b150073f7e4edd84b938ad1f9e0b11",
+    "event_id": "2aab8dee-b18c-454e-bd70-e15da78077dc",
+    "seq": 44
+  },
+  "project_id": "d733035f-e0f9-4f67-aba2-270068d6a9c6",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "df22d049-6232-47d7-8f3f-7ad4fcc6b375",
+    "cycle": 1,
+    "digest": "e9220c3ddacebba18e4deb7bd902bf51355392b56ba757f5292d58014aa8dfd9",
+    "engine_id": "claudeloop",
+    "event_id": "bbab00d8-dc88-48f7-bc22-80deb8a99a4f",
+    "job_id": "44e282ee-55b1-4cf9-afc3-c84870a14a5c",
+    "kind": "QuestionAsked",
+    "payload": {
+      "blocking": true,
+      "cycle": 1,
+      "default": "Second attempt blocks on Postgres row lock until first completes, then succeeds idempotently (same stdout, no error). Natural serialization via FOR UPDATE.",
+      "item_id": "concurrent_abandon_behavior",
+      "stage": "nfr_planguage",
+      "text": "If two operators run `vibey abandon \u003cproject_id\u003e` simultaneously on the same project, what should happen?"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-22T03:45:10.448603+00:00",
+    "project_id": "d733035f-e0f9-4f67-aba2-270068d6a9c6",
+    "provenance": "agent",
+    "seq": 45
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

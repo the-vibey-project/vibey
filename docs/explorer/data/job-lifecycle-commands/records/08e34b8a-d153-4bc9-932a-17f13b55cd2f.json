@@ -1,0 +1,43 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "75bac6d01a86cb7343453f954223742190691e0d2988dcb0227cfd164d967aa2",
+    "event_id": "60a79066-94c5-4eb0-90fb-605ba1236524",
+    "seq": 47
+  },
+  "previous": {
+    "digest": "ee0259a7a88a144725a23a38d1ff46ab490ca93d51bc82507057a74bcff24d50",
+    "event_id": "05de4ef4-bc57-4092-9785-f95aaf46f624",
+    "seq": 45
+  },
+  "project_id": "2f6a93b6-2d73-4aff-bc94-16539841133f",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "bba4449a-d98f-479d-b4a9-b269449c8ffb",
+    "cycle": 1,
+    "digest": "9bdb7686fbd9de6ddc4097181df28731631ab40e3141157febeb094b7dbbd066",
+    "engine_id": "claudeloop",
+    "event_id": "08e34b8a-d153-4bc9-932a-17f13b55cd2f",
+    "job_id": "334db377-8cb0-4a72-9cc0-78b45fc9bb38",
+    "kind": "QuestionAsked",
+    "payload": {
+      "blocking": true,
+      "cycle": 1,
+      "default": "Record successful command invocations as ledger events (JobStopped, JobRewound, JobContinued, JobRestarted) with operator identity, timestamp, and command args. Failed attempts (validation errors, idempotent no-ops) logged to stderr but NOT written to ledger \u2014 ledger records state changes, not failed attempts",
+      "item_id": "audit_requirements",
+      "stage": "nfr_planguage",
+      "text": "What must be recorded in the ledger when each command is invoked, and should failed command attempts (validation failures, already-in-target-state) also be recorded?"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-22T03:48:35.239267+00:00",
+    "project_id": "2f6a93b6-2d73-4aff-bc94-16539841133f",
+    "provenance": "agent",
+    "seq": 46
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

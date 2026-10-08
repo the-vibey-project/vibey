@@ -1,0 +1,43 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "8b916df9e465dab19f2929d9a88d93de9e33f7c570d2b0e7e27b632cf7a7acc4",
+    "event_id": "5f2e4df7-3f05-4612-b5bd-57aa25152949",
+    "seq": 31
+  },
+  "previous": {
+    "digest": "c4b17c140500d8657e66a65ac12a0405f3830dec6b908b59becf7dd5a5c29ebb",
+    "event_id": "c40c178f-bd89-4715-926f-6d069747978d",
+    "seq": 29
+  },
+  "project_id": "44c06a64-c8ed-4153-96af-b49db29c39e3",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "9e0e4df8-4021-4f21-b110-ec8762100c0d",
+    "cycle": 1,
+    "digest": "7393cce430ccf898021c31f76a2aeb1f0370b4106bda73f08f887608686b5c27",
+    "engine_id": "claudeloop",
+    "event_id": "f0ceed18-f78c-4850-b74c-28efac997fdf",
+    "job_id": "bcd8e0b1-385d-43dc-ad1f-cad988f80cc9",
+    "kind": "QuestionAsked",
+    "payload": {
+      "blocking": false,
+      "cycle": 1,
+      "default": "A claim succeeds when budget is exhausted, or two workers claim the same job, or a budget check returns stale cycle data \u2014 any correctness violation",
+      "item_id": "broken_optimization_example",
+      "stage": "example_mapping",
+      "text": "What would a 'broken' optimization look like \u2014 a concrete bug that would make you revert?"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-22T03:42:46.929466+00:00",
+    "project_id": "44c06a64-c8ed-4153-96af-b49db29c39e3",
+    "provenance": "agent",
+    "seq": 30
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

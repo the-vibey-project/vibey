@@ -1,0 +1,39 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "e57c66bce4baf927c2847bd1971222cb123f392add19e3ff09d96e9358d4115b",
+    "event_id": "cb9fb842-a273-4bcf-8397-32ca195e9061",
+    "seq": 25
+  },
+  "previous": {
+    "digest": "a77a1d78b35397a914d4137857a4ccb90d0801da4cde6d05770401e9475f0f6d",
+    "event_id": "816227c3-3b4f-4e61-8aad-f09821054a8b",
+    "seq": 23
+  },
+  "project_id": "df7e868b-1fbf-451b-8ceb-126359b7588e",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "adb2acf4-4050-4446-90b5-ab7cf3d89391",
+    "cycle": 1,
+    "digest": "37d89266fb9cba05a55dde6b1bd2e47cd85609d991609ce93025915f5f0d69b7",
+    "engine_id": "claudeloop",
+    "event_id": "abc9cfb2-c8e5-48eb-97c2-7230b317d063",
+    "job_id": "3a3b336c-c2aa-4400-a762-ae12246358d3",
+    "kind": "AnswerGiven",
+    "payload": {
+      "answer": "Reduces manual data entry errors and time spent managing records across disconnected systems",
+      "item_id": "business_problem"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-22T04:43:42.820422+00:00",
+    "project_id": "df7e868b-1fbf-451b-8ceb-126359b7588e",
+    "provenance": "trusted",
+    "seq": 24
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

@@ -1,0 +1,43 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "a77a1d78b35397a914d4137857a4ccb90d0801da4cde6d05770401e9475f0f6d",
+    "event_id": "816227c3-3b4f-4e61-8aad-f09821054a8b",
+    "seq": 23
+  },
+  "previous": {
+    "digest": "90b2c172155f72f3580b4be35cfa506d36822be76cc2cd315c83a88fd535ddd3",
+    "event_id": "642fc066-83f7-42ae-88c3-bf8b732ba2e8",
+    "seq": 21
+  },
+  "project_id": "df7e868b-1fbf-451b-8ceb-126359b7588e",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "5184dcc8-e64b-4196-b6e7-52bdc51e9ca2",
+    "cycle": 1,
+    "digest": "ff0196c660b8bad208d4d45313c70cc17577695d88ab2fa3641c03301daf0d3b",
+    "engine_id": "claudeloop",
+    "event_id": "9c14a31c-c6f4-4817-9449-a81f3cb72a34",
+    "job_id": "3a3b336c-c2aa-4400-a762-ae12246358d3",
+    "kind": "QuestionAsked",
+    "payload": {
+      "blocking": false,
+      "cycle": 1,
+      "default": "Supports operational efficiency and data quality improvement efforts across the organization",
+      "item_id": "strategic_alignment",
+      "stage": "laddering",
+      "text": "How does this feature connect to broader organizational goals or initiatives?"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-22T04:43:39.112172+00:00",
+    "project_id": "df7e868b-1fbf-451b-8ceb-126359b7588e",
+    "provenance": "agent",
+    "seq": 22
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

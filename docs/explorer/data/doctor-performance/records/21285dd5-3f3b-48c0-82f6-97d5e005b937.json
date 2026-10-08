@@ -1,0 +1,43 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "14b412ae2072a1fe7bf3f0755edb3c85b206fea63d45efdd0095d782afe8e55b",
+    "event_id": "1ee1893f-99ee-411f-80ea-4a2fb554c3a8",
+    "seq": 46
+  },
+  "previous": {
+    "digest": "dc33af57e96dd38d9ff23d266632836456dfa9684e7e222f3ded6b9193e05d28",
+    "event_id": "175dd7f5-c431-4eb5-8556-45c8fdc97b62",
+    "seq": 43
+  },
+  "project_id": "5ea01f61-8536-4ace-90cb-18700a12e410",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "ac02c5cd-9686-48ef-bd64-4f66af66680a",
+    "cycle": 1,
+    "digest": "f39c567937d95512509073f350d2b56766fb94f097c5b61add719b2eb1f6d3b2",
+    "engine_id": "claudeloop",
+    "event_id": "21285dd5-3f3b-48c0-82f6-97d5e005b937",
+    "job_id": "4c2ec03f-d670-44f9-9f05-47597984ab20",
+    "kind": "QuestionAsked",
+    "payload": {
+      "blocking": true,
+      "cycle": 1,
+      "default": "MUST: under 35s (better than 50% reduction from 67s). PLAN: under 20s (approaching slowest single engine). WISH: under 15s (true parallelism with minimal overhead).",
+      "item_id": "perf_must_plan_wish",
+      "stage": "nfr_planguage",
+      "text": "What are the MUST (minimum acceptable), PLAN (target), and WISH (ideal) wall-clock times for `vibey doctor` with 4 engines?"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-22T03:45:52.039259+00:00",
+    "project_id": "5ea01f61-8536-4ace-90cb-18700a12e410",
+    "provenance": "agent",
+    "seq": 45
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

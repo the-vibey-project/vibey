@@ -1,0 +1,39 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "493251c7cac2808fc0e9f643b6f11664fea00654b87ea153939510d29a10cb5c",
+    "event_id": "3b65d765-d119-43aa-adb0-b7c901eee165",
+    "seq": 16
+  },
+  "previous": {
+    "digest": "705f7686492221de9f692fef4d573ab04e7459673028f7d8c233f1114b40f87b",
+    "event_id": "a9ba5281-e34e-4484-96e6-9122f237229c",
+    "seq": 14
+  },
+  "project_id": "ab0b06f9-55a4-4b47-ac08-254e7fdd9036",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "ab32517c-e9d6-49c9-bf7a-fb375ebe15a9",
+    "cycle": 1,
+    "digest": "c2a0497561842cb4a42a5e63123e882af71a73a4e65dac617e03e14d79373fec",
+    "engine_id": "claudeloop",
+    "event_id": "fe5274b0-e9a6-465b-81c5-896453de645c",
+    "job_id": "48f9ef01-8b95-4709-adde-ed0ece390f8d",
+    "kind": "AnswerGiven",
+    "payload": {
+      "answer": "Yes, and it must be cheap. The exploration trigger is worthless if you can only branch once. Each fork is an independent job with its own branch and worktree, differentiated by job_id, and forks of forks must work too -- if the addressing scheme is ledger seq, that falls out for free rather than needing a special case.",
+      "item_id": "multiple_forks"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-22T02:58:27.165759+00:00",
+    "project_id": "ab0b06f9-55a4-4b47-ac08-254e7fdd9036",
+    "provenance": "trusted",
+    "seq": 15
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

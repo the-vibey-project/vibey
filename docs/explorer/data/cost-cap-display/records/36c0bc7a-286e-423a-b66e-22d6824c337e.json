@@ -1,0 +1,43 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "9bb79767e14adef1ae5f64f47fdf99f3fa5f2b868f66b67d445a5c73e708e6ef",
+    "event_id": "096955e9-4f41-410b-a042-a15f5a023ed2",
+    "seq": 13
+  },
+  "previous": {
+    "digest": "af964e0741ccf3918cb72102f482f9f084db0f20241c35f24af13cdd5786e487",
+    "event_id": "ab96ac5f-d946-4ad4-91e0-7a3a0a3ed1ee",
+    "seq": 11
+  },
+  "project_id": "b43d1fcb-fb7b-42d6-9f80-220292c73389",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "59bfa49c-30e6-4606-9044-d15ba3883da3",
+    "cycle": 1,
+    "digest": "ef9631515f615f0c344e4519ff639517ffa3b32142607d7a96c29e56f7c0af9d",
+    "engine_id": "claudeloop",
+    "event_id": "36c0bc7a-286e-423a-b66e-22d6824c337e",
+    "job_id": "64ea0fea-cd4f-4b3b-bf19-112c18a7c58d",
+    "kind": "QuestionAsked",
+    "payload": {
+      "blocking": false,
+      "cycle": 1,
+      "default": "No other display paths identified yet; the brake reads correctly from bootstrap.py:275, but haven't audited TUI or other commands",
+      "item_id": "other_touchpoints",
+      "stage": "job_story",
+      "text": "Besides `vibey cost`, are there other places in the system where these caps are displayed or referenced that might have the same bug?"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-22T02:57:14.953692+00:00",
+    "project_id": "b43d1fcb-fb7b-42d6-9f80-220292c73389",
+    "provenance": "agent",
+    "seq": 12
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

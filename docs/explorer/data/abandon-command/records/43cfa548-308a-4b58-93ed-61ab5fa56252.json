@@ -1,0 +1,43 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "e40bf6733282d801751efa616c02708ad46a3c7d70ec7ec03727e76d2ed1b846",
+    "event_id": "b5b3d2d0-6555-4276-b759-17be9130c977",
+    "seq": 19
+  },
+  "previous": {
+    "digest": "2d81794902d2c84c071b799238655519c32925a84f67e9ac9e16c0e6fe7aceb3",
+    "event_id": "dea69a5d-c6e5-47f7-bc28-3ce0ce7f3ae0",
+    "seq": 17
+  },
+  "project_id": "d733035f-e0f9-4f67-aba2-270068d6a9c6",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "f5cf3f78-5c6a-4357-9770-a125c8621248",
+    "cycle": 1,
+    "digest": "49364a9e8db392ac7fbb8b8f14c5d4c9a123bea6c7083416df672e3a04d0ec57",
+    "engine_id": "claudeloop",
+    "event_id": "43cfa548-308a-4b58-93ed-61ab5fa56252",
+    "job_id": "44e282ee-55b1-4cf9-afc3-c84870a14a5c",
+    "kind": "QuestionAsked",
+    "payload": {
+      "blocking": true,
+      "cycle": 1,
+      "default": "Atomic within a transaction\u2014either all in-flight jobs transition to CANCELLED and the project transitions to ABANDONED, or the entire operation rolls back. A partially-abandoned project is undefined state.",
+      "item_id": "mixed_job_states",
+      "stage": "laddering",
+      "text": "When abandoning transitions multiple jobs to CANCELLED (READY, AWAITING_HUMAN, and LEASED with --force), should this be atomic, or can partial cancellation leave the project in a valid but incomplete state?"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-22T02:58:43.570123+00:00",
+    "project_id": "d733035f-e0f9-4f67-aba2-270068d6a9c6",
+    "provenance": "agent",
+    "seq": 18
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

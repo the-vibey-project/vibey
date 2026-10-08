@@ -1,0 +1,43 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "ae056b9c1bdf2890663c12b74ee2a3dad85d8b202cad2a09bd2c41fa09459b6d",
+    "event_id": "2553d9d7-2833-449c-8870-c37f6abd9f52",
+    "seq": 29
+  },
+  "previous": {
+    "digest": "c559e246e2782e3c0cb2bd5f0bc59fda2f7beea87a5c7f98ac973840207f3aa6",
+    "event_id": "6a88202a-fa62-4f63-b4e6-c0d6b94c8b0e",
+    "seq": 27
+  },
+  "project_id": "5e76341f-ba5f-4272-8355-3df5d489bbcd",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "fc977d83-ef68-4056-8d58-db7c96ec35b9",
+    "cycle": 1,
+    "digest": "3d735d7fabec1cbcb6a729e85c5adf935d90cd161e50e8f7e0312cb4dfbc493c",
+    "engine_id": "claudeloop",
+    "event_id": "2507b402-acc4-469a-905a-6a898d7d8195",
+    "job_id": "e58deb6b-5356-4a39-8acf-5dc898bba380",
+    "kind": "QuestionAsked",
+    "payload": {
+      "blocking": false,
+      "cycle": 1,
+      "default": "Show consistent greeting based on time-of-day; no randomization needed",
+      "item_id": "variation_rule",
+      "stage": "example_mapping",
+      "text": "Should greetings vary on repeat visits, or show the same message consistently?"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-20T00:49:31.420364+00:00",
+    "project_id": "5e76341f-ba5f-4272-8355-3df5d489bbcd",
+    "provenance": "agent",
+    "seq": 28
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

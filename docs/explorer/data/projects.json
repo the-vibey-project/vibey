@@ -1,9 +1,280 @@
 {
   "projects": [
     {
+      "id": "github-963-docs-readme-add-a-table-of-contents-to-readme-md",
+      "label": "github#963: docs(readme): add a table of contents to README.md",
+      "project_id": "893c4fc1-542e-411e-a10a-3aef784b1540",
+      "stats": {
+        "phase": "abandoned",
+        "updated": "2026-09-30T09:04:11.070482+00:00",
+        "events": 197,
+        "records": 31,
+        "withheld": 166
+      }
+    },
+    {
+      "id": "github-998-docs-readme-add-a-table-of-contents-to-readme-md",
+      "label": "github#998: docs(readme): add a table of contents to README.md",
+      "project_id": "9692abab-ace3-4ee0-ac59-3ea42484b817",
+      "stats": {
+        "phase": "abandoned",
+        "updated": "2026-09-30T03:48:40.395396+00:00",
+        "events": 65,
+        "records": 48,
+        "withheld": 17
+      }
+    },
+    {
+      "id": "github-133-8-a-make-the-sovereign-lane-primary-for-the-half-of-review-it-can-fully-carry",
+      "label": "github#133: 8.a: make the sovereign lane primary for the half of review it can fully carry",
+      "project_id": "f4cfe576-55c7-4f79-80ad-485f85ddca8b",
+      "stats": {
+        "phase": "build",
+        "updated": "2026-09-27T21:49:36.227305+00:00",
+        "events": 49,
+        "records": 27,
+        "withheld": 22
+      }
+    },
+    {
+      "id": "hello-mobile",
+      "label": "hello-mobile",
+      "project_id": "ccd34e28-3118-4d76-be22-6dadf7736f41",
+      "stats": {
+        "phase": "design",
+        "updated": "2026-09-26T13:42:39.091597+00:00",
+        "events": 2,
+        "records": 1,
+        "withheld": 1
+      }
+    },
+    {
+      "id": "hello-world",
+      "label": "hello-world",
+      "project_id": "0fb9875e-d4e5-4fd8-bab7-b116b19089e0",
+      "stats": {
+        "phase": "design",
+        "updated": "2026-09-26T13:20:22.275276+00:00",
+        "events": 2,
+        "records": 1,
+        "withheld": 1
+      }
+    },
+    {
+      "id": "vibey-gh-remaining-scope",
+      "label": "vibey-gh remaining scope",
+      "project_id": "d482c3e2-029e-4bb8-a9a1-de411816c6ae",
+      "stats": {
+        "phase": "design",
+        "updated": "2026-08-30T22:35:33.284149+00:00",
+        "events": 61,
+        "records": 56,
+        "withheld": 5
+      }
+    },
+    {
+      "id": "vibey-skills-rag-context-engine",
+      "label": "vibey-skills-rag-context-engine",
+      "project_id": "bfd47902-96a6-4846-9330-d8efd7c8c56d",
+      "stats": {
+        "phase": "build",
+        "updated": "2026-08-22T21:44:02.547869+00:00",
+        "events": 2,
+        "records": 1,
+        "withheld": 1
+      }
+    },
+    {
+      "id": "test-db-isolation",
+      "label": "test-db-isolation",
+      "project_id": "df7e868b-1fbf-451b-8ceb-126359b7588e",
+      "stats": {
+        "phase": "design",
+        "updated": "2026-08-22T04:36:05.729705+00:00",
+        "events": 37,
+        "records": 33,
+        "withheld": 4
+      }
+    },
+    {
+      "id": "stack-performance",
+      "label": "stack-performance",
+      "project_id": "44c06a64-c8ed-4153-96af-b49db29c39e3",
+      "stats": {
+        "phase": "build",
+        "updated": "2026-08-22T04:11:56.125787+00:00",
+        "events": 333,
+        "records": 60,
+        "withheld": 273
+      }
+    },
+    {
+      "id": "doctor-performance",
+      "label": "doctor-performance",
+      "project_id": "5ea01f61-8536-4ace-90cb-18700a12e410",
+      "stats": {
+        "phase": "build",
+        "updated": "2026-08-22T04:11:55.688908+00:00",
+        "events": 290,
+        "records": 59,
+        "withheld": 231
+      }
+    },
+    {
+      "id": "job-lifecycle-commands",
+      "label": "job-lifecycle-commands",
+      "project_id": "2f6a93b6-2d73-4aff-bc94-16539841133f",
+      "stats": {
+        "phase": "build",
+        "updated": "2026-08-22T04:11:55.358269+00:00",
+        "events": 374,
+        "records": 59,
+        "withheld": 315
+      }
+    },
+    {
+      "id": "cost-cap-display",
+      "label": "cost-cap-display",
+      "project_id": "b43d1fcb-fb7b-42d6-9f80-220292c73389",
+      "stats": {
+        "phase": "build",
+        "updated": "2026-08-22T04:11:55.094785+00:00",
+        "events": 667,
+        "records": 73,
+        "withheld": 594
+      }
+    },
+    {
+      "id": "parallel-command",
+      "label": "parallel-command",
+      "project_id": "bed522a2-0b3e-4bff-9cd6-7c13fe40779a",
+      "stats": {
+        "phase": "build",
+        "updated": "2026-08-22T04:11:54.810981+00:00",
+        "events": 534,
+        "records": 67,
+        "withheld": 467
+      }
+    },
+    {
+      "id": "fork-command",
+      "label": "fork-command",
+      "project_id": "ab0b06f9-55a4-4b47-ac08-254e7fdd9036",
+      "stats": {
+        "phase": "build",
+        "updated": "2026-08-22T04:11:54.578396+00:00",
+        "events": 948,
+        "records": 67,
+        "withheld": 881
+      }
+    },
+    {
+      "id": "abandon-command",
+      "label": "abandon-command",
+      "project_id": "d733035f-e0f9-4f67-aba2-270068d6a9c6",
+      "stats": {
+        "phase": "build",
+        "updated": "2026-08-22T04:11:54.347741+00:00",
+        "events": 1071,
+        "records": 71,
+        "withheld": 1000
+      }
+    },
+    {
+      "id": "coverage-totality",
+      "label": "coverage-totality",
+      "project_id": "e631c00a-e1a1-4ed4-b99a-0fa2d388d240",
+      "stats": {
+        "phase": "build",
+        "updated": "2026-08-22T04:11:54.147657+00:00",
+        "events": 491,
+        "records": 66,
+        "withheld": 425
+      }
+    },
+    {
+      "id": "expansion-13-cost-performance",
+      "label": "expansion-13-cost-performance",
+      "project_id": "a1d6b837-46f3-40c0-b6a2-8b3babb7fe15",
+      "stats": {
+        "phase": "build",
+        "updated": "2026-08-20T20:50:11.757709+00:00",
+        "events": 1221,
+        "records": 92,
+        "withheld": 1129
+      }
+    },
+    {
+      "id": "hire-chat-subdomain",
+      "label": "hire-chat-subdomain",
+      "project_id": "0ee95624-eec4-4e8e-9a14-6ad9a37dcff4",
+      "stats": {
+        "phase": "done",
+        "updated": "2026-08-20T20:49:01.921325+00:00",
+        "events": 215,
+        "records": 69,
+        "withheld": 146
+      }
+    },
+    {
+      "id": "greeter4",
+      "label": "greeter4",
+      "project_id": "8ab823c9-89e4-4050-884c-9008c8b14ef8",
+      "stats": {
+        "phase": "build",
+        "updated": "2026-08-20T02:40:04.642062+00:00",
+        "events": 1780,
+        "records": 141,
+        "withheld": 1639
+      }
+    },
+    {
+      "id": "greeter3",
+      "label": "greeter3",
+      "project_id": "5e76341f-ba5f-4272-8355-3df5d489bbcd",
+      "stats": {
+        "phase": "design",
+        "updated": "2026-08-20T00:45:38.399221+00:00",
+        "events": 59,
+        "records": 56,
+        "withheld": 3
+      }
+    },
+    {
+      "id": "greeter2",
+      "label": "greeter2",
+      "project_id": "8f254b4c-df0a-4056-8937-6eba30efcfa6",
+      "stats": {
+        "phase": "done",
+        "updated": "2026-08-19T21:50:35.393384+00:00",
+        "events": 719,
+        "records": 101,
+        "withheld": 618
+      }
+    },
+    {
+      "id": "greeter",
+      "label": "greeter",
+      "project_id": "26f89c38-c86b-4ddf-be75-c579a118e40e",
+      "stats": {
+        "phase": "done",
+        "updated": "2026-08-19T15:06:43.255365+00:00",
+        "events": 1109,
+        "records": 174,
+        "withheld": 935
+      }
+    },
+    {
       "id": "sample-shift-signup",
       "label": "Sample: a volunteer shift sign-up (invented)",
       "sample": true
+    },
+    {
+      "id": "private",
+      "label": "Private: the whole database (encrypted)",
+      "sealed": {
+        "url": "https://raw.githubusercontent.com/the-vibey-project/vibey/vibey-state/state.vibey"
+      }
     }
   ]
 }

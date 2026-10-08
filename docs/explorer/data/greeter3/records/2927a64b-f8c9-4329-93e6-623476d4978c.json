@@ -1,0 +1,43 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "48841d4a8b239214a9258e0d818be8b5db82fe522011b5c84b4dd0d389b58201",
+    "event_id": "34e29bb9-844d-4307-849f-dd143cb71293",
+    "seq": 35
+  },
+  "previous": {
+    "digest": "f7804847e607ed3d1a7c950d63b52f3a93a2fc4d416c34ecf319551f5d333445",
+    "event_id": "c8f35ee5-f5df-4029-9c84-6b4f3560007e",
+    "seq": 33
+  },
+  "project_id": "5e76341f-ba5f-4272-8355-3df5d489bbcd",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "3b2ee9db-1ec7-4224-9963-8ea9fe542bbd",
+    "cycle": 1,
+    "digest": "3fe0bba00438ea66257db7f4ea60b4796b3f6b320841c1e1981d054412cb4265",
+    "engine_id": "claudeloop",
+    "event_id": "2927a64b-f8c9-4329-93e6-623476d4978c",
+    "job_id": "e58deb6b-5356-4a39-8acf-5dc898bba380",
+    "kind": "QuestionAsked",
+    "payload": {
+      "blocking": true,
+      "cycle": 1,
+      "default": "Single script that gets system username, determines time of day, and prints formatted greeting",
+      "item_id": "minimal_components",
+      "stage": "walking_skeleton",
+      "text": "What are the essential technical components for the thinnest working slice?"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-20T00:50:15.948560+00:00",
+    "project_id": "5e76341f-ba5f-4272-8355-3df5d489bbcd",
+    "provenance": "agent",
+    "seq": 34
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

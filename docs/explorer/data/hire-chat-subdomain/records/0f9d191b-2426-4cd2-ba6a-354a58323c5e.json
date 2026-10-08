@@ -1,0 +1,39 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "240c84549f2313de4497dcf3c7ea1f607b8acb725dc7b77408f101633b0ae7e2",
+    "event_id": "dc081998-c9ba-4166-87b1-c974f93ad918",
+    "seq": 9
+  },
+  "previous": {
+    "digest": "f2436720f59c05e4cbe23d8ebe7ef8c8b9f59b6f9fff901dc723031acd47023b",
+    "event_id": "b2de3ee0-74f7-41fc-82bd-ff21bc993d35",
+    "seq": 7
+  },
+  "project_id": "0ee95624-eec4-4e8e-9a14-6ad9a37dcff4",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "89a68eb4-ba3a-49ab-a429-f9bc3fa02197",
+    "cycle": 1,
+    "digest": "ded4ff44ccb71ec242fa525eb63e54872eb17d934c36b6eb0c7af7fb3e7d3561",
+    "engine_id": "claudeloop",
+    "event_id": "0f9d191b-2426-4cd2-ba6a-354a58323c5e",
+    "job_id": "1343d0fd-bf3f-4739-8c21-cbf7693c673e",
+    "kind": "AnswerGiven",
+    "payload": {
+      "answer": "None \u2014 exactly as today: in-memory React state for the browser tab only; 6 user turns per session enforced client- and server-side, then a pointer to [path] No storage, no cookies, no history, no accounts.",
+      "item_id": "persistence"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-20T20:08:47.695659+00:00",
+    "project_id": "0ee95624-eec4-4e8e-9a14-6ad9a37dcff4",
+    "provenance": "trusted",
+    "seq": 8
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 1
+  }
+}

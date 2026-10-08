@@ -1,0 +1,39 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "c2255d321c82b65f0f2a04b5fef8c2f2a7449fc618090636950cbf463ce07f21",
+    "event_id": "2ddc3c34-13dd-45cd-97d9-7077ae1d18e5",
+    "seq": 16
+  },
+  "previous": {
+    "digest": "3a9182f8be245936d0e5c77b93b1db3a783f10b3c4bc4b7b9199682928bb73a9",
+    "event_id": "ac348912-65eb-43e6-954f-3c7bc1df8f90",
+    "seq": 14
+  },
+  "project_id": "5e76341f-ba5f-4272-8355-3df5d489bbcd",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "5f336b72-f6df-4059-b0be-7a2aa8e6f99e",
+    "cycle": 1,
+    "digest": "ed6f3397377b87e4e0174d6b5e66c96472cd65afc916bb8255256a69279ebd40",
+    "engine_id": "claudeloop",
+    "event_id": "8c67e950-b852-4d75-8db6-005ad7eeed4b",
+    "job_id": "e58deb6b-5356-4a39-8acf-5dc898bba380",
+    "kind": "AnswerGiven",
+    "payload": {
+      "answer": "Feel welcomed and have a positive first impression of the application",
+      "item_id": "desired_outcome"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-20T00:47:51.903567+00:00",
+    "project_id": "5e76341f-ba5f-4272-8355-3df5d489bbcd",
+    "provenance": "trusted",
+    "seq": 15
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

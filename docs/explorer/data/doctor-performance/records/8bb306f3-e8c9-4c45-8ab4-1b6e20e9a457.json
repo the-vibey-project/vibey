@@ -1,0 +1,39 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "4afd37308a5f29ef02992e354f09537a86e215013eef49b8e9da23bdf08bae5e",
+    "event_id": "b06847c5-d653-4c07-9218-ad234c3acff3",
+    "seq": 14
+  },
+  "previous": {
+    "digest": "37ffe16aa6f7d0428a56875995ebe8a4f59034118a87b480a8fd36750b20f694",
+    "event_id": "9bc9876a-58fc-4398-bff8-86f31d274b6d",
+    "seq": 12
+  },
+  "project_id": "5ea01f61-8536-4ace-90cb-18700a12e410",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "01bbad61-a483-4b62-9b50-55f8feea5e1a",
+    "cycle": 1,
+    "digest": "276071e7a035b609319ad35af11c73da0c41edc4415433dc5d716f553030f444",
+    "engine_id": "claudeloop",
+    "event_id": "8bb306f3-e8c9-4c45-8ab4-1b6e20e9a457",
+    "job_id": "4c2ec03f-d670-44f9-9f05-47597984ab20",
+    "kind": "AnswerGiven",
+    "payload": {
+      "answer": "Developers running it locally during development, and CI running it on every PR",
+      "item_id": "persona"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-22T03:34:35.614876+00:00",
+    "project_id": "5ea01f61-8536-4ace-90cb-18700a12e410",
+    "provenance": "trusted",
+    "seq": 13
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

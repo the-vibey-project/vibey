@@ -1,0 +1,39 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "d292af0ce99b3e24eb1c8775ecf349e44fb71ce3161a880fcea7e1fc09b63573",
+    "event_id": "9905f780-ca69-4fe2-9a09-5d7503cf01cc",
+    "seq": 51
+  },
+  "previous": {
+    "digest": "f6cdecaf8e569b6dedfa65e19bf860e1d27540107fafffd9df373dd751256d82",
+    "event_id": "8ab10dbc-c452-48c2-92d2-c7031abac996",
+    "seq": 49
+  },
+  "project_id": "5ea01f61-8536-4ace-90cb-18700a12e410",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "1cc96cbb-1ac5-4c87-ad8f-f8a6876ae3de",
+    "cycle": 1,
+    "digest": "73727576ca352bfe4ffd5605319a17eb0168c9b0f6b2a63fa6166ae30c04c50e",
+    "engine_id": "claudeloop",
+    "event_id": "2adf1110-2e89-4144-8b9c-45005d8b35ea",
+    "job_id": "4c2ec03f-d670-44f9-9f05-47597984ab20",
+    "kind": "AnswerGiven",
+    "payload": {
+      "answer": "0% - any timeout or failure should be investigated; doctor is a diagnostic tool where false negatives undermine trust",
+      "item_id": "reliability_threshold"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-22T03:46:33.171681+00:00",
+    "project_id": "5ea01f61-8536-4ace-90cb-18700a12e410",
+    "provenance": "trusted",
+    "seq": 50
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

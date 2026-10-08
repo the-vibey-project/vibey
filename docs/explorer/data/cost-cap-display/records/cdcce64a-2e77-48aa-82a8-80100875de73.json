@@ -1,0 +1,39 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "a7697ebb76eb50a4f7d2962bef6c138d624e892d226ab822425a2c33d7c54f4d",
+    "event_id": "330934a7-788e-484f-a548-49d0a1ea64bf",
+    "seq": 8
+  },
+  "previous": {
+    "digest": "dad19ff3ad7dec93f9db2562ae992cfb28b22c8fa764c82c7541a4183d3e34db",
+    "event_id": "96536164-9107-4bb8-b8d9-600634c5a280",
+    "seq": 6
+  },
+  "project_id": "b43d1fcb-fb7b-42d6-9f80-220292c73389",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "e21a4506-194d-4082-bb11-b714446c576b",
+    "cycle": 1,
+    "digest": "d1f71d60f1c2c75900f02de21525feb870ccbc73f8dd016a4f40e777e49f0d92",
+    "engine_id": "claudeloop",
+    "event_id": "cdcce64a-2e77-48aa-82a8-80100875de73",
+    "job_id": "64ea0fea-cd4f-4b3b-bf19-112c18a7c58d",
+    "kind": "AnswerGiven",
+    "payload": {
+      "answer": "Operators deciding whether to grant more budget at a parked budget_exhausted gate. This is the worst possible place for a wrong number: the decision is 'is this run worth more money', and the display is off by 5x in the reassuring direction.",
+      "item_id": "target_users"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-22T02:56:42.441138+00:00",
+    "project_id": "b43d1fcb-fb7b-42d6-9f80-220292c73389",
+    "provenance": "trusted",
+    "seq": 7
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

@@ -1,0 +1,43 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "574b4d3ab5e49f3c8297b85f69a426b3bc0fe2ea6a94ea645c7d7b77ee7e9dae",
+    "event_id": "c542ac12-02a7-4e74-ba51-e16f58c25c70",
+    "seq": 38
+  },
+  "previous": {
+    "digest": "f4562e25f7b1559174a8705efc2c65b76d4a4c419235fb7d53619aa1cdc1cb28",
+    "event_id": "f680f91f-ca3c-4661-90bb-bfa90ce81517",
+    "seq": 35
+  },
+  "project_id": "bed522a2-0b3e-4bff-9cd6-7c13fe40779a",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "d2ee3b17-5237-47ff-ae79-91fdbdc99559",
+    "cycle": 1,
+    "digest": "81a391fffced7a111ecc87e07856cbe44e401e444ccbecd34285883c1d485605",
+    "engine_id": "claudeloop",
+    "event_id": "61862859-45c5-4b4f-a4c3-0a162aac8d48",
+    "job_id": "92d834a4-4bf2-4699-9354-adbea7936d77",
+    "kind": "QuestionAsked",
+    "payload": {
+      "blocking": true,
+      "cycle": 1,
+      "default": "Two real jobs from the queue, claimed together, run concurrently via separate worker subprocesses, with simple prefixed output (no fancy multiplexing), finishing with a basic status table. Enough to prove claiming and coordination work, defer polish.",
+      "item_id": "minimal_scope",
+      "stage": "walking_skeleton",
+      "text": "What's the absolute minimum viable skeleton that proves the core mechanism? For example: exactly 2 jobs (not N), plain sequential output (no multiplexing yet), jobs that just echo lines (not real phases)?"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-22T03:44:20.823316+00:00",
+    "project_id": "bed522a2-0b3e-4bff-9cd6-7c13fe40779a",
+    "provenance": "agent",
+    "seq": 37
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

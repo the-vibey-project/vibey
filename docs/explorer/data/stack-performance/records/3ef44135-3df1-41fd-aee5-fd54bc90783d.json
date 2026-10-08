@@ -1,0 +1,39 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "cfdc7a3f1f131f6222f927160c7d7054c1c2918a6f3bc3cecff0da93138c75b8",
+    "event_id": "daa2b5a3-8cc6-4bb2-9cd6-cacd8dbeb718",
+    "seq": 8
+  },
+  "previous": {
+    "digest": "9dcf8a9551f30495cfbb1b6bc38443e537c80f4701cdcfd869fba9adf429a079",
+    "event_id": "5cfe6377-ae93-43ab-9fdd-42994690b848",
+    "seq": 6
+  },
+  "project_id": "44c06a64-c8ed-4153-96af-b49db29c39e3",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "82488f21-7d80-42b5-a5f6-40fe82d30013",
+    "cycle": 1,
+    "digest": "265e6a13d213f53a51af7b021ecf49d172059982bfaa87a7873be8e02ad272dc",
+    "engine_id": "claudeloop",
+    "event_id": "3ef44135-3df1-41fd-aee5-fd54bc90783d",
+    "job_id": "bcd8e0b1-385d-43dc-ad1f-cad988f80cc9",
+    "kind": "AnswerGiven",
+    "payload": {
+      "answer": "The largest measured defect is in the claim path. LedgerBudgetSource.current() calls all_for_project() and then filters IN PYTHON -- `for event in ...: if event.cycle != cycle: continue`. That is a full-history scan on every budget check, on every claim. greeter4 already carries 1,778 events; the scan grows without bound for the life of a project while the useful slice stays roughly constant. The database is already indexed for the fix -- event_kind on (project_id, kind, seq) exists and this path never reaches it, because the filtering never gets to SQL. A second, unlisted defect: build_app() creates a pool AND re-applies migrations on every call, so any command opening it repeatedly pays the migration machinery each time.",
+      "item_id": "problem_statement"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-22T02:59:30.272316+00:00",
+    "project_id": "44c06a64-c8ed-4153-96af-b49db29c39e3",
+    "provenance": "trusted",
+    "seq": 7
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

@@ -1,0 +1,39 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "ffa3ae26b66e1f878ea14f793e93d05b6eb438f71f1ef5645e7131f58c731ce9",
+    "event_id": "b1f853d2-7039-4b38-9b53-ad2319ee9b71",
+    "seq": 2
+  },
+  "previous": null,
+  "project_id": "8ab823c9-89e4-4050-884c-9008c8b14ef8",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "c7a50b99-be29-4026-b568-9be4e9e3f05e",
+    "cycle": 1,
+    "digest": "1c1981eda4ca553385e3b6692c3d2d43aff3dc988f701ccf1d4a84b1e6d5701f",
+    "engine_id": "claudeloop",
+    "event_id": "1ddbfdf4-2c62-43fa-bc89-09a8558225ac",
+    "job_id": "705692f1-69a1-4cc2-ade7-8aa3d1407b67",
+    "kind": "QuestionAsked",
+    "payload": {
+      "blocking": true,
+      "cycle": 1,
+      "default": "A URL shortening service",
+      "item_id": "design_target",
+      "stage": "context_free",
+      "text": "What system or feature would you like to design?"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-20T02:32:10.424710+00:00",
+    "project_id": "8ab823c9-89e4-4050-884c-9008c8b14ef8",
+    "provenance": "agent",
+    "seq": 1
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

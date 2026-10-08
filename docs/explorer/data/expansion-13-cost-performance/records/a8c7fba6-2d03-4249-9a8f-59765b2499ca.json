@@ -1,0 +1,43 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "bab998c7c90dd3fc00a00bb934ee659ad2912a6fdddc9c86d88ef3c1940897e8",
+    "event_id": "9932f2d4-f426-4e78-9388-3889a40920a4",
+    "seq": 12
+  },
+  "previous": {
+    "digest": "8afd229cd5c9a567a070debb4ff343ff89afd8c26117d72b925e38ecc11eca45",
+    "event_id": "3cbc06d3-b638-4dd0-b1bb-6e3c23aa95a8",
+    "seq": 10
+  },
+  "project_id": "a1d6b837-46f3-40c0-b6a2-8b3babb7fe15",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "8ab6c819-1d76-4557-91f4-bd09abae6857",
+    "cycle": 1,
+    "digest": "8e6213c3f7a1df1a6e58315b602c5c5e62b369361028880e04509f6f710b9e5c",
+    "engine_id": "claudeloop",
+    "event_id": "a8c7fba6-2d03-4249-9a8f-59765b2499ca",
+    "job_id": "dd8513f6-0d76-49a5-8bdc-75167dea5385",
+    "kind": "QuestionAsked",
+    "payload": {
+      "blocking": false,
+      "cycle": 1,
+      "default": "Enable frequent, confident commits with sub-2-minute feedback loops while maintaining all quality gates",
+      "item_id": "desired_outcome",
+      "stage": "job_story",
+      "text": "What outcome are you seeking beyond faster wall time?"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-20T20:41:28.691914+00:00",
+    "project_id": "a1d6b837-46f3-40c0-b6a2-8b3babb7fe15",
+    "provenance": "agent",
+    "seq": 11
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

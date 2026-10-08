@@ -1,0 +1,43 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "2263b6b0f958876886d76f2ab718b3dd4160ad8f4f4d34abd7588c71c45d39d9",
+    "event_id": "4859ec15-7710-494f-a2eb-fbfaf3267f10",
+    "seq": 49
+  },
+  "previous": {
+    "digest": "52b2a2920d6a0a76fd5062f613935933c322e2f0e3261fff7969fed0199d2ef3",
+    "event_id": "f1f5dbf8-7e34-4a37-8ae3-8e5b7570b068",
+    "seq": 47
+  },
+  "project_id": "8f254b4c-df0a-4056-8937-6eba30efcfa6",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "ef0e781a-6336-45b7-b2fa-030fa8ea082f",
+    "cycle": 1,
+    "digest": "671c8214c42cfcccc9a9265d4265808e5e03813f7533f8ec61c22a4050fc40d4",
+    "engine_id": "claudeloop",
+    "event_id": "9cf5c902-e5bf-47ee-8f65-778ebd23f538",
+    "job_id": "40fb97d9-4ab1-4fa8-9ae2-693c2b7a7fc9",
+    "kind": "QuestionAsked",
+    "payload": {
+      "blocking": true,
+      "cycle": 1,
+      "default": "`greet -t Alice` - argparse might consume 'Alice' as flag value instead of positional; fix by making -t a boolean action",
+      "item_id": "argument_parsing_failure",
+      "stage": "premortem",
+      "text": "What argument pattern will most likely break the parser: `greet -t Alice` (flag before name), `greet Alice Bob -t` (multi-word name with flag), or `greet --time=Alice` (malformed flag)?"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-19T18:32:32.899307+00:00",
+    "project_id": "8f254b4c-df0a-4056-8937-6eba30efcfa6",
+    "provenance": "agent",
+    "seq": 48
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

@@ -1,0 +1,43 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "56385c851b22d35e09159724df0299fbcd9eaf457d83238c87261dbd76b387cf",
+    "event_id": "d2750142-1f6e-4c1b-bfa0-c54ef72de8bb",
+    "seq": 37
+  },
+  "previous": {
+    "digest": "0a81cecaf69764bc39e63932c7d47f5420c10c89e4d29f79ee450375502632fd",
+    "event_id": "0df83fd4-c8a9-44a3-bf0e-a9d1decf875d",
+    "seq": 35
+  },
+  "project_id": "8ab823c9-89e4-4050-884c-9008c8b14ef8",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "ad5c331a-c326-48dd-9d44-190dbe8aa578",
+    "cycle": 1,
+    "digest": "c9b6d6c455272ba2b5e052a0881bdc5bdd16fd5a92c09759d63357b3b756a95a",
+    "engine_id": "claudeloop",
+    "event_id": "a598d1b5-d54a-46b9-8745-a7e3426cb1cf",
+    "job_id": "705692f1-69a1-4cc2-ade7-8aa3d1407b67",
+    "kind": "QuestionAsked",
+    "payload": {
+      "blocking": false,
+      "cycle": 1,
+      "default": "Create a short URL via POST, immediately GET that short code, verify 302 redirect to the original long URL with correct Location header",
+      "item_id": "first_integration_test",
+      "stage": "walking_skeleton",
+      "text": "What should the first end-to-end integration test verify?"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-20T02:34:42.269967+00:00",
+    "project_id": "8ab823c9-89e4-4050-884c-9008c8b14ef8",
+    "provenance": "agent",
+    "seq": 36
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

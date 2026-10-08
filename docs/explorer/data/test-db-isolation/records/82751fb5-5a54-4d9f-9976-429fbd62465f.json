@@ -1,0 +1,39 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": null,
+  "previous": {
+    "digest": "cd3d298db0c8b5a7908c5047ba93f67830402615a94e0ef51d0dafd32db7ff6c",
+    "event_id": "0e15806d-ec6d-4d97-b2c2-2b4b713ddbc2",
+    "seq": 36
+  },
+  "project_id": "df7e868b-1fbf-451b-8ceb-126359b7588e",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "d0f0b288-8789-465e-bd4e-fcef7ae8b2b4",
+    "cycle": 1,
+    "digest": "dd5d1a7062e2fdcba0f470669bfcc8dd287410c06d0ae82c7b4beb20cbe0275c",
+    "engine_id": "claudeloop",
+    "event_id": "82751fb5-5a54-4d9f-9976-429fbd62465f",
+    "job_id": "3a3b336c-c2aa-4400-a762-ae12246358d3",
+    "kind": "QuestionAsked",
+    "payload": {
+      "blocking": false,
+      "cycle": 1,
+      "default": "scripted-default-5",
+      "item_id": "q-5",
+      "stage": "walking_skeleton",
+      "text": "Scripted walking_skeleton question?"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-22T17:05:48.962616+00:00",
+    "project_id": "df7e868b-1fbf-451b-8ceb-126359b7588e",
+    "provenance": "agent",
+    "seq": 37
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

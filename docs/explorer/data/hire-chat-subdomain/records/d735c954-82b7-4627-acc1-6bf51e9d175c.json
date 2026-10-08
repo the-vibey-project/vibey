@@ -1,0 +1,39 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "9f0a4e8417d092174d62214df5cf6450baf013899114b1f86617d13e69c07ec2",
+    "event_id": "255f8aa1-6a53-414f-b23b-ad773dbc7149",
+    "seq": 32
+  },
+  "previous": {
+    "digest": "0531257ece01e7c89725fd15b5e1e72a6d9fe71cfe23ef389ac0fdce3a45184a",
+    "event_id": "0582cc3a-c7f8-4d59-8dcf-c9e74d4a01d0",
+    "seq": 30
+  },
+  "project_id": "0ee95624-eec4-4e8e-9a14-6ad9a37dcff4",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "24deaeaa-491f-4850-9815-ff192467fee9",
+    "cycle": 1,
+    "digest": "5838ac53c11c69b219717a1793a95150f2488d2e698b3cdececa4c371c41c832",
+    "engine_id": "claudeloop",
+    "event_id": "d735c954-82b7-4627-acc1-6bf51e9d175c",
+    "job_id": "1343d0fd-bf3f-4739-8c21-cbf7693c673e",
+    "kind": "AnswerGiven",
+    "payload": {
+      "answer": "Exactly that: 308 to https://hire.adam.matthewsteinberger.com/blog/some-post (query string preserved) via the chat-host '[path]((?!api/|_next/|.*\\.[a-zA-Z0-9]+$).+)' rule. The chat host serves only '/' (rewritten to [path]), plus [path], [path], and file-extension assets (favicon.ico, robots.txt, sitemap.xml, feed.xml, images/*), which the negative lookahead excludes from the redirect. chat-host [path] 308s to the chat root.",
+      "item_id": "deep_link_redirect"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-20T20:12:52.004321+00:00",
+    "project_id": "0ee95624-eec4-4e8e-9a14-6ad9a37dcff4",
+    "provenance": "trusted",
+    "seq": 31
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 5
+  }
+}

@@ -1,0 +1,39 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "a4c1c1e9c599a99e2c10ff5cc001d7b64c39fa4f2a6f46ff86634a6fdf371433",
+    "event_id": "a78157f5-5c75-41a2-b334-06fe5260ef6e",
+    "seq": 54
+  },
+  "previous": {
+    "digest": "b1b6f865dfdcd16fe13b0681b7d4223bf490c310fa90bf2b90b4fb6cbd9b9da4",
+    "event_id": "78a39941-ee6a-4313-9567-17c3efbcfce7",
+    "seq": 52
+  },
+  "project_id": "5e76341f-ba5f-4272-8355-3df5d489bbcd",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "70b0c1b7-c0b5-480f-9cc0-5f98874ecdc3",
+    "cycle": 1,
+    "digest": "82843ebcdbb16b8c3ae7796109b250e3a6c8159f98405ea1d25b12b69eef3c5c",
+    "engine_id": "claudeloop",
+    "event_id": "8d8de76f-20b2-4263-baaf-a82ea54327f0",
+    "job_id": "e58deb6b-5356-4a39-8acf-5dc898bba380",
+    "kind": "AnswerGiven",
+    "payload": {
+      "answer": "Greeting felt impersonal or time-of-day detection was inaccurate for users in different timezones",
+      "item_id": "failure_scenario"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-20T00:51:44.217432+00:00",
+    "project_id": "5e76341f-ba5f-4272-8355-3df5d489bbcd",
+    "provenance": "trusted",
+    "seq": 53
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

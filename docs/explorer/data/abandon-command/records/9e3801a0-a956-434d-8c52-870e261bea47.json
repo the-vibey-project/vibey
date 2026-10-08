@@ -1,0 +1,43 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "f18a75893725b36a47debcb8a5ad6df5ca0eec1939c7180fb065dada687b134b",
+    "event_id": "5b09d9c7-01cf-4616-bdd6-26c8da22220c",
+    "seq": 39
+  },
+  "previous": {
+    "digest": "1aab309cf96b059572964db16cdf5542ca6e74951c62afc57a9e3a6badc77209",
+    "event_id": "3fb2b456-1e1a-4544-92ce-d43dc95c7ccd",
+    "seq": 37
+  },
+  "project_id": "d733035f-e0f9-4f67-aba2-270068d6a9c6",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "57ec9f5d-7fd6-4ee9-a684-6b582da8769e",
+    "cycle": 1,
+    "digest": "730240d0e03d60a0056757150adf9cca5ddb2118f6463c503cd78a9fb976fa39",
+    "engine_id": "claudeloop",
+    "event_id": "9e3801a0-a956-434d-8c52-870e261bea47",
+    "job_id": "44e282ee-55b1-4cf9-afc3-c84870a14a5c",
+    "kind": "QuestionAsked",
+    "payload": {
+      "blocking": true,
+      "cycle": 1,
+      "default": "Atomic from increment 1\u2014even the no-jobs case wraps phase transition + job scan in a single transaction. Partial abandonment is undefined state and must never be observable, even during bootstrapping.",
+      "item_id": "atomic_boundary",
+      "stage": "walking_skeleton",
+      "text": "In the minimal slice, can phase transition and job cancellation live in separate transactions (relaxed for the skeleton), or must atomicity hold from increment 1?"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-22T03:43:57.958753+00:00",
+    "project_id": "d733035f-e0f9-4f67-aba2-270068d6a9c6",
+    "provenance": "agent",
+    "seq": 38
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

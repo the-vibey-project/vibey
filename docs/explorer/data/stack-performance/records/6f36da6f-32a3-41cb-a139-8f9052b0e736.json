@@ -1,0 +1,39 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "dd26e7d7a11877697b49e48184e543e04e432d40decbb0748973ad2b94c9c7b5",
+    "event_id": "a3271754-0cc2-432e-9eaf-62bf4de2fb8c",
+    "seq": 14
+  },
+  "previous": {
+    "digest": "385a7ddab98786aa17e47406a51bb79a83ebe86044f448779dd1bb006fc30cd2",
+    "event_id": "66768e7d-cfe5-485d-95f0-1dcd6fcefc57",
+    "seq": 12
+  },
+  "project_id": "44c06a64-c8ed-4153-96af-b49db29c39e3",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "dbc0a7b3-9a6b-466d-9f8f-adbc225053f4",
+    "cycle": 1,
+    "digest": "224b5ea65d430caffde1d255c1f2de1ef935325670144a8299dc2b64f517c111",
+    "engine_id": "claudeloop",
+    "event_id": "6f36da6f-32a3-41cb-a139-8f9052b0e736",
+    "job_id": "bcd8e0b1-385d-43dc-ad1f-cad988f80cc9",
+    "kind": "AnswerGiven",
+    "payload": {
+      "answer": "Developers running vibey commands and workers claiming jobs from the queue",
+      "item_id": "who_experiences"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-22T03:34:36.393773+00:00",
+    "project_id": "44c06a64-c8ed-4153-96af-b49db29c39e3",
+    "provenance": "trusted",
+    "seq": 13
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

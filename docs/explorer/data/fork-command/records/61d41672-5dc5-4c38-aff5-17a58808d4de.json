@@ -1,0 +1,43 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "7b87f05aeccd7e8c49f587f1b2074f1b3caf3e3158afb3b7f42a576ec5265eb1",
+    "event_id": "6eb26c8a-1462-4ab4-82a4-9e3b21ed7ba8",
+    "seq": 10
+  },
+  "previous": {
+    "digest": "c41590f575fe6f1e488f12bcd865000a4c85ddc67fac3db872fc0fb3d29a503d",
+    "event_id": "e335f808-c3e5-4542-ac24-6f8c9bb58840",
+    "seq": 8
+  },
+  "project_id": "ab0b06f9-55a4-4b47-ac08-254e7fdd9036",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "e61f125f-c93b-47c9-b4f0-6f2549b6ae61",
+    "cycle": 1,
+    "digest": "2d63f717485f3e864569f7581f161e601bae18f25e317795e595f55594ca02ec",
+    "engine_id": "claudeloop",
+    "event_id": "61d41672-5dc5-4c38-aff5-17a58808d4de",
+    "job_id": "48f9ef01-8b95-4709-adde-ed0ece390f8d",
+    "kind": "QuestionAsked",
+    "payload": {
+      "blocking": true,
+      "cycle": 1,
+      "default": "When a job is going off track but earlier work was good, or when exploring multiple approaches to the same problem",
+      "item_id": "fork_trigger",
+      "stage": "job_story",
+      "text": "When exactly does an operator decide to fork a job? Describe the trigger moment or condition."
+    },
+    "phase": "design",
+    "produced_at": "2026-08-22T02:56:34.677471+00:00",
+    "project_id": "ab0b06f9-55a4-4b47-ac08-254e7fdd9036",
+    "provenance": "agent",
+    "seq": 9
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

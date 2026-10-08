@@ -1,0 +1,39 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "dc090676a906f65a873e7f858b4793b1adc611ab1fbb301574ba8dc3768ee758",
+    "event_id": "15ed2491-2f2e-41f8-b0b8-4b444f2cb6ce",
+    "seq": 56
+  },
+  "previous": {
+    "digest": "71c848ab2ba14a17da5f4a688e16af930018925c16979ea81a4f4ee93964f45e",
+    "event_id": "7cc67652-20af-428a-9dad-87657591d99e",
+    "seq": 54
+  },
+  "project_id": "0ee95624-eec4-4e8e-9a14-6ad9a37dcff4",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "2ff6ddd4-acf2-41d6-aebb-359ae4efe971",
+    "cycle": 1,
+    "digest": "45ca1ae3b05743ba3c6d7588d47dd19cbeff5f4207b4d3a955b750a5a837be58",
+    "engine_id": "claudeloop",
+    "event_id": "f7c28d59-0f46-49ff-8337-c1731339e8c9",
+    "job_id": "1343d0fd-bf3f-4739-8c21-cbf7693c673e",
+    "kind": "AnswerGiven",
+    "payload": {
+      "answer": "A 308 has no rendered body, so nothing can be added to the hire-host [path] response \u2014 the permanent redirect itself plus the canonical metadata on the chat page are the complete, standard signal. No extra work; if a stale duplicate listing appears it resolves on the next crawl cycle.",
+      "item_id": "seo_duplicate_content"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-20T20:21:17.352913+00:00",
+    "project_id": "0ee95624-eec4-4e8e-9a14-6ad9a37dcff4",
+    "provenance": "trusted",
+    "seq": 55
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 1
+  }
+}

@@ -1,0 +1,39 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "a93774b3cddb280b1a5e07841d9fea9fed4077f5d17f66afb68f1dd9fb6d0c5b",
+    "event_id": "a1e71a6c-6fe6-4b5a-8b8e-86c9bda8da53",
+    "seq": 6
+  },
+  "previous": {
+    "digest": "e68a9e4f08afa3e3c402bd1033b46919c8d1e57bbfbfeee983a56a819ac77566",
+    "event_id": "fdc19fba-d40d-4af1-8d2d-ffc25983dc56",
+    "seq": 4
+  },
+  "project_id": "d482c3e2-029e-4bb8-a9a1-de411816c6ae",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "fed0e750-2253-4556-87fb-44f428e0cbe5",
+    "cycle": 1,
+    "digest": "6cd7ba75b07dbc4d865608de85e74eaa52d1f77a567aa26610f58a3694f9b95f",
+    "engine_id": "claudeloop",
+    "event_id": "8d6b8538-102f-455f-9c1c-9147cd4e7b6e",
+    "job_id": "d2626f25-d550-454e-bacd-7a7e6c9b52cd",
+    "kind": "AnswerGiven",
+    "payload": {
+      "answer": "Finish the remaining scope of vibey-gh: the autonomous billing and feasibility engine (#269), the lossless forge-state ledger (#261) and its human-first search engine (#247), platform abstraction so GitLab is first-class and Forgejo enables fully-local zero-cloud operation (#243), and making the sovereign review lane primary for the half of review it can fully carry (#278).",
+      "item_id": "1"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-31T02:03:18.523028+00:00",
+    "project_id": "d482c3e2-029e-4bb8-a9a1-de411816c6ae",
+    "provenance": "trusted",
+    "seq": 5
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

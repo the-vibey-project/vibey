@@ -1,0 +1,43 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "d8c0203889308dda281b5b3f34507b991f433bb60f77b018ba4847c0d0864cf4",
+    "event_id": "eca1ad87-ef27-491f-96d0-aacbbcdd9b52",
+    "seq": 29
+  },
+  "previous": {
+    "digest": "d5c8db8608067fa5d8993972a7021ed197eef58b3b52fa1a6af290dc348c863b",
+    "event_id": "5a23be62-8ec0-4cf0-a79f-b3b5c19c15d4",
+    "seq": 27
+  },
+  "project_id": "5ea01f61-8536-4ace-90cb-18700a12e410",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "73c47c19-d000-441a-86a5-d00625c6f685",
+    "cycle": 1,
+    "digest": "d2ca946bca67f1427a6db347043bd4867e31f004602360d816a4126796e7f25e",
+    "engine_id": "claudeloop",
+    "event_id": "e5049a25-f0c4-465e-9733-45a55fc36f23",
+    "job_id": "4c2ec03f-d670-44f9-9f05-47597984ab20",
+    "kind": "QuestionAsked",
+    "payload": {
+      "blocking": true,
+      "cycle": 1,
+      "default": "Four engine status lines in alphabetical order, three showing success, cursorloop showing '\u2717 cursorloop: timed out after 30s', summary indicates partial results (3/4 healthy), exit code 1",
+      "item_id": "timeout_example",
+      "stage": "example_mapping",
+      "text": "Describe the exact output when cursorloop times out after 30 seconds but the other three engines pass - what does the user see and what exit code?"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-22T03:43:34.933482+00:00",
+    "project_id": "5ea01f61-8536-4ace-90cb-18700a12e410",
+    "provenance": "agent",
+    "seq": 28
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

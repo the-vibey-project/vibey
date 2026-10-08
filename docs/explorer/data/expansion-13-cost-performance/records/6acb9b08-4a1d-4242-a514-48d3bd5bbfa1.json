@@ -1,0 +1,43 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "0c9329b4a5cfc256115d1703ee1cba8f78c3be0be289f6e75fe2842eeef9867c",
+    "event_id": "2911c2a2-5870-4451-816b-f0be92f0aad3",
+    "seq": 26
+  },
+  "previous": {
+    "digest": "705a4c9f7bb3cf6cdebe2ddb4a9be4910f3b0876b4a1ca4ca6489fa983869c6b",
+    "event_id": "fb0baad5-b1f4-4ad4-bb3f-d8b02aa87e2d",
+    "seq": 24
+  },
+  "project_id": "a1d6b837-46f3-40c0-b6a2-8b3babb7fe15",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "af38c338-031f-40c9-b331-510e2652be55",
+    "cycle": 1,
+    "digest": "962dbab80b65f413d6a21c0889ee8550b1f6d38fdec1dff0398807005062e175",
+    "engine_id": "claudeloop",
+    "event_id": "6acb9b08-4a1d-4242-a514-48d3bd5bbfa1",
+    "job_id": "dd8513f6-0d76-49a5-8bdc-75167dea5385",
+    "kind": "QuestionAsked",
+    "payload": {
+      "blocking": true,
+      "cycle": 1,
+      "default": "Database fixtures may assume exclusive access to vibey_test; tests likely use transaction rollback for cleanup",
+      "item_id": "isolation_patterns",
+      "stage": "example_mapping",
+      "text": "What types of test isolation issues are most likely in the current suite (shared database state, transaction rollback assumptions, ordering dependencies)?"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-20T20:44:04.546112+00:00",
+    "project_id": "a1d6b837-46f3-40c0-b6a2-8b3babb7fe15",
+    "provenance": "agent",
+    "seq": 25
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

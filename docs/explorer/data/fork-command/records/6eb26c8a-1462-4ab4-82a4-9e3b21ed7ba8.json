@@ -1,0 +1,43 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "9600bb767b83ef67867beb265338dfbeaa7e1dc6e0e03d45ed681bdf17cc8af6",
+    "event_id": "81ae8580-ff80-4a6a-abec-bfc165ea6c86",
+    "seq": 11
+  },
+  "previous": {
+    "digest": "2d63f717485f3e864569f7581f161e601bae18f25e317795e595f55594ca02ec",
+    "event_id": "61d41672-5dc5-4c38-aff5-17a58808d4de",
+    "seq": 9
+  },
+  "project_id": "ab0b06f9-55a4-4b47-ac08-254e7fdd9036",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "03a4a13a-debf-476c-8d32-554ed1fd62c3",
+    "cycle": 1,
+    "digest": "7b87f05aeccd7e8c49f587f1b2074f1b3caf3e3158afb3b7f42a576ec5265eb1",
+    "engine_id": "claudeloop",
+    "event_id": "6eb26c8a-1462-4ab4-82a4-9e3b21ed7ba8",
+    "job_id": "48f9ef01-8b95-4709-adde-ed0ece390f8d",
+    "kind": "QuestionAsked",
+    "payload": {
+      "blocking": true,
+      "cycle": 1,
+      "default": "Ledger seq, because it provides a stable, total-ordered identifier that survives across restarts and is already indexed, whereas rundir savepoints are filesystem artifacts tied to a specific worker's execution",
+      "item_id": "point_selector",
+      "stage": "job_story",
+      "text": "Which addressing scheme should be used for past-position forks: ledger seq (event_project_seq index) or rundir savepoints? State your choice and why."
+    },
+    "phase": "design",
+    "produced_at": "2026-08-22T02:56:34.677471+00:00",
+    "project_id": "ab0b06f9-55a4-4b47-ac08-254e7fdd9036",
+    "provenance": "agent",
+    "seq": 10
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

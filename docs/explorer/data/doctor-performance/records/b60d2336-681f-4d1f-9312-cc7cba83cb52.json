@@ -1,0 +1,39 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "cbb44dab6331faae719cd540d7cc9a5f19aa867e348b01f14fad60af7c890ec2",
+    "event_id": "bcd6c1fe-c2b2-4b15-bec0-f7fa1b12fbf0",
+    "seq": 33
+  },
+  "previous": {
+    "digest": "47abee8130a47ecb3886233f9f48e0761858942083a444cdf379da52f4b8a136",
+    "event_id": "f110edf2-b53c-46c7-a707-a175dd78d808",
+    "seq": 31
+  },
+  "project_id": "5ea01f61-8536-4ace-90cb-18700a12e410",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "281a0598-4466-4c54-a796-ff46e4cdf03b",
+    "cycle": 1,
+    "digest": "4c41a5597f2becf8902baa9ab53d2482857b3d6b8d98424ea9b394f6e1c08435",
+    "engine_id": "claudeloop",
+    "event_id": "b60d2336-681f-4d1f-9312-cc7cba83cb52",
+    "job_id": "4c2ec03f-d670-44f9-9f05-47597984ab20",
+    "kind": "AnswerGiven",
+    "payload": {
+      "answer": "Four engine status lines in alphabetical order, three showing success, cursorloop showing '\u2717 cursorloop: timed out after 30s', summary indicates partial results (3/4 healthy), exit code 1",
+      "item_id": "timeout_example"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-22T03:44:13.652838+00:00",
+    "project_id": "5ea01f61-8536-4ace-90cb-18700a12e410",
+    "provenance": "trusted",
+    "seq": 32
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

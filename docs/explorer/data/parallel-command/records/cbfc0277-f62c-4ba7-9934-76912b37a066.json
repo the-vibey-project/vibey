@@ -1,0 +1,39 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "ccb2c5b61363fd9a1e572ea34e33b3f781d3d717cd6ebf616e6eb5d50bf6256b",
+    "event_id": "be6e2cd1-2ae3-45da-a65c-8b8dd2f7f265",
+    "seq": 23
+  },
+  "previous": {
+    "digest": "e9e4a04f64480e22f2942fe72a049209db6baaa04b30ffe8ba25b234e2dfdd61",
+    "event_id": "568b0865-e6ad-4d39-8c88-878e997b2edf",
+    "seq": 21
+  },
+  "project_id": "bed522a2-0b3e-4bff-9cd6-7c13fe40779a",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "3fd929bb-1a96-433d-a7f1-25b89021aa6a",
+    "cycle": 1,
+    "digest": "5f2ad326d1369aabcef551c64bf14e3241775c71f4725e50495826cb35f2c73a",
+    "engine_id": "claudeloop",
+    "event_id": "cbfc0277-f62c-4ba7-9934-76912b37a066",
+    "job_id": "92d834a4-4bf2-4699-9354-adbea7936d77",
+    "kind": "AnswerGiven",
+    "payload": {
+      "answer": "Show a live multiplexed view (job1: line, job2: line, ...) while running, then a summary table on completion showing each job's status, duration, and outcome. Similar to `docker-compose up` or `concurrently`.",
+      "item_id": "success_output"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-22T03:34:34.860851+00:00",
+    "project_id": "bed522a2-0b3e-4bff-9cd6-7c13fe40779a",
+    "provenance": "trusted",
+    "seq": 22
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

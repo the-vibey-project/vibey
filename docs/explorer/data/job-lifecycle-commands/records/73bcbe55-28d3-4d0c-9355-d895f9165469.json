@@ -1,0 +1,39 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "860bd08795fa38fee5bdbda81f8c11e097da64b1cdee19aa2c1c70f9defd9733",
+    "event_id": "7df233e7-3626-4f2b-90d2-95e20cb8d9cf",
+    "seq": 34
+  },
+  "previous": {
+    "digest": "cf77490068b4a1f5fa04a7a8a06bf0994e4d15deb7ec05e264c557dd81d1d6e5",
+    "event_id": "1dbef9ca-0419-41bb-b6c9-f7108f3fd4bf",
+    "seq": 32
+  },
+  "project_id": "2f6a93b6-2d73-4aff-bc94-16539841133f",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "72d778a5-474a-4027-b9e2-c79d67c6a413",
+    "cycle": 1,
+    "digest": "996c3f8328569b3b0538a5922d155195845b7402059588c9ee223f324b06f010",
+    "engine_id": "claudeloop",
+    "event_id": "73bcbe55-28d3-4d0c-9355-d895f9165469",
+    "job_id": "334db377-8cb0-4a72-9cc0-78b45fc9bb38",
+    "kind": "AnswerGiven",
+    "payload": {
+      "answer": "Writes JobCancelled event to abc-123's ledger (seq 9), sets abc-123 state=CANCELLED. Creates new job_id=abc-124 (or similar) with state=READY in INTAKE phase, enqueued. New job gets original intake spec from abc-123's ledger seq 1, starts fresh ledger. Both jobs visible in `vibey status`\u2014old CANCELLED, new READY.",
+      "item_id": "restart_concrete_example"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-22T03:43:28.355576+00:00",
+    "project_id": "2f6a93b6-2d73-4aff-bc94-16539841133f",
+    "provenance": "trusted",
+    "seq": 33
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

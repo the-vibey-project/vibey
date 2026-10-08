@@ -1,0 +1,43 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "0d98a99e43f724d7e1c888d8de775dd7b5f80e48c19afaf424614c33eb03779b",
+    "event_id": "f7fc62f7-d705-4732-abe4-74e263365a0d",
+    "seq": 43
+  },
+  "previous": {
+    "digest": "1db6fcdb6393ac8c489f36b0e8428e7f7e599d7fc05ae92bc07a02d5bb208315",
+    "event_id": "ae46b69f-d9a6-47f4-a502-5abfd76ef839",
+    "seq": 41
+  },
+  "project_id": "5e76341f-ba5f-4272-8355-3df5d489bbcd",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "8f416184-9f87-4224-b37a-37d977d8d8bf",
+    "cycle": 1,
+    "digest": "700f57922380b16b4f4c1223e492570abf139d6054387d52c52b15f2824fa9ba",
+    "engine_id": "claudeloop",
+    "event_id": "67a785a1-0d87-41b7-883e-d0919326dbf6",
+    "job_id": "e58deb6b-5356-4a39-8acf-5dc898bba380",
+    "kind": "QuestionAsked",
+    "payload": {
+      "blocking": false,
+      "cycle": 1,
+      "default": "99.9% - should gracefully fall back to generic greeting on any error",
+      "item_id": "reliability_target",
+      "stage": "nfr_planguage",
+      "text": "What is the minimum acceptable success rate for greeting generation (handle missing username, timezone failures)?"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-20T00:50:56.962653+00:00",
+    "project_id": "5e76341f-ba5f-4272-8355-3df5d489bbcd",
+    "provenance": "agent",
+    "seq": 42
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

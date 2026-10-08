@@ -1,0 +1,43 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "bbe3f74914475589a450e3737baa5309f17635107e1274244d8c0c98d6026636",
+    "event_id": "74006f15-0ddf-4b3f-9c10-25c2439f8f8c",
+    "seq": 26
+  },
+  "previous": {
+    "digest": "b8a076110defcbe951a6717b473a1683c4d1be42664e0edcd6f027279c6e6482",
+    "event_id": "8365859c-0331-462e-8736-e190a061a4a7",
+    "seq": 24
+  },
+  "project_id": "e631c00a-e1a1-4ed4-b99a-0fa2d388d240",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "ab297748-e83e-42bc-a75d-41d8adcac9ca",
+    "cycle": 1,
+    "digest": "49a8995a83b94e8fd257699bd4373110df28025b25a103ab2ccf7b381ab2cc5a",
+    "engine_id": "claudeloop",
+    "event_id": "633b274b-7034-412e-9725-848ebb88e761",
+    "job_id": "d73f236e-a7b4-4748-b075-3900a75af324",
+    "kind": "QuestionAsked",
+    "payload": {
+      "blocking": true,
+      "cycle": 1,
+      "default": "Three states: brand new project (no jobs ever queued), active project with empty queue (all jobs completed/cleared), project without managed worktrees directory created yet",
+      "item_id": "tui_empty_state_examples",
+      "stage": "example_mapping",
+      "text": "For TUI rendering edge cases (empty circuits, empty queue, no worktrees), what concrete project states should tests set up\u2014brand new project, project with completed jobs cleared, or specific database fixtures?"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-22T02:40:45.961431+00:00",
+    "project_id": "e631c00a-e1a1-4ed4-b99a-0fa2d388d240",
+    "provenance": "agent",
+    "seq": 25
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

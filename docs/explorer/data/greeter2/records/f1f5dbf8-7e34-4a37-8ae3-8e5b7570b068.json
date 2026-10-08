@@ -1,0 +1,43 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "671c8214c42cfcccc9a9265d4265808e5e03813f7533f8ec61c22a4050fc40d4",
+    "event_id": "9cf5c902-e5bf-47ee-8f65-778ebd23f538",
+    "seq": 48
+  },
+  "previous": {
+    "digest": "c21d87b981ce9d2897e5c9ba70a3de247e0ca9da0c545fb94e8ce6539074b34e",
+    "event_id": "06aa29e0-e6f6-42e2-84fb-c14d0dd79966",
+    "seq": 46
+  },
+  "project_id": "8f254b4c-df0a-4056-8937-6eba30efcfa6",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "eb517677-4a40-4c55-943a-25121e4298b7",
+    "cycle": 1,
+    "digest": "52b2a2920d6a0a76fd5062f613935933c322e2f0e3261fff7969fed0199d2ef3",
+    "engine_id": "claudeloop",
+    "event_id": "f1f5dbf8-7e34-4a37-8ae3-8e5b7570b068",
+    "job_id": "40fb97d9-4ab1-4fa8-9ae2-693c2b7a7fc9",
+    "kind": "QuestionAsked",
+    "payload": {
+      "blocking": true,
+      "cycle": 1,
+      "default": "Off-by-one in hour comparison (e.g., `hour \u003c 12` vs `hour \u003c= 12` at noon boundary) - test all three boundaries explicitly",
+      "item_id": "time_boundary_failure",
+      "stage": "premortem",
+      "text": "Imagine the time-of-day logic fails in production at exactly noon, 5pm, or midnight. What's the most likely bug: off-by-one in hour comparison, timezone assumptions, or 12/24-hour format confusion?"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-19T18:32:32.899307+00:00",
+    "project_id": "8f254b4c-df0a-4056-8937-6eba30efcfa6",
+    "provenance": "agent",
+    "seq": 47
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

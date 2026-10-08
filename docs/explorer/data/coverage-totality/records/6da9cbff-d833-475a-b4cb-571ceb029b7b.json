@@ -1,0 +1,39 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "7478d8c0e657adff5a15c9aa437ca897873608b64330797e93e024893d0438e6",
+    "event_id": "61525740-05ca-45a4-9d71-89bff521b6ca",
+    "seq": 28
+  },
+  "previous": {
+    "digest": "bbe3f74914475589a450e3737baa5309f17635107e1274244d8c0c98d6026636",
+    "event_id": "74006f15-0ddf-4b3f-9c10-25c2439f8f8c",
+    "seq": 26
+  },
+  "project_id": "e631c00a-e1a1-4ed4-b99a-0fa2d388d240",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "77b60430-138a-498a-9770-858832956ee3",
+    "cycle": 1,
+    "digest": "14cd56c2a5902838a043e6157ce17c3f11222a211a9967e968413d6240c0e712",
+    "engine_id": "claudeloop",
+    "event_id": "6da9cbff-d833-475a-b4cb-571ceb029b7b",
+    "job_id": "d73f236e-a7b4-4748-b075-3900a75af324",
+    "kind": "AnswerGiven",
+    "payload": {
+      "answer": "All four combinations, because line 279 is an OR over two isinstance checks and each arm needs both outcomes: {max_cycle_turns: 10} alone, {max_cycle_dollars: 50.0} alone, both together, and neither (budget_source stays None). Add a fifth that is not a combination but the reason the isinstance guards exist at all: a config carrying a NON-NUMERIC value, e.g. {max_cycle_dollars: '50'} as a string or None. That must be treated as absent rather than crashing or silently coercing -- a project whose cap is a string must not end up with no brake while appearing to have one. That case is the one most likely to occur in real life, via hand-edited config or a bad import.",
+      "item_id": "budget_brake_examples"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-22T02:55:07.437057+00:00",
+    "project_id": "e631c00a-e1a1-4ed4-b99a-0fa2d388d240",
+    "provenance": "trusted",
+    "seq": 27
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

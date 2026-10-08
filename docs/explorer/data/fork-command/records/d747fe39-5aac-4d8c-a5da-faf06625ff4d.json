@@ -1,0 +1,39 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "35ea3990522ce0ab536aecf07f2cc583e050bf23247481f89ae88b0853a945a4",
+    "event_id": "b07fd2c3-9bc7-4d14-a383-cb1f2abc23bd",
+    "seq": 49
+  },
+  "previous": {
+    "digest": "f79d8bc75d5488485f0f363672973a7d805037d9a8eb21ec640f170756bd42ac",
+    "event_id": "f5946ac3-cd5a-4f7f-bfbd-5a41ce9e467f",
+    "seq": 47
+  },
+  "project_id": "ab0b06f9-55a4-4b47-ac08-254e7fdd9036",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "54b28ef8-de76-4cb4-9a38-920b76f0df6c",
+    "cycle": 1,
+    "digest": "fe49e70e4d21d1b344a7cf0a37e05e459c2abca27300b47e43d3f7449346d840",
+    "engine_id": "claudeloop",
+    "event_id": "d747fe39-5aac-4d8c-a5da-faf06625ff4d",
+    "job_id": "48f9ef01-8b95-4709-adde-ed0ece390f8d",
+    "kind": "AnswerGiven",
+    "payload": {
+      "answer": "\u003c 5 seconds for jobs with \u003c 1000 commits, \u003c 15 seconds for larger histories; fail fast if git operations exceed 30 seconds",
+      "item_id": "fork_latency"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-22T03:44:59.256776+00:00",
+    "project_id": "ab0b06f9-55a4-4b47-ac08-254e7fdd9036",
+    "provenance": "trusted",
+    "seq": 48
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

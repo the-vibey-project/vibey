@@ -1,0 +1,43 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "636ec59d10a515b112e42106d514d7f6bc013ae18c423fcef675fb307d7bcd5a",
+    "event_id": "ca4549bc-d63c-4d3d-8aae-0fe940b6c2ba",
+    "seq": 31
+  },
+  "previous": {
+    "digest": "4e325c87e12b99014b9e7d61be50dd88ca468d4a4b37dfc6d9b07fcc9df9b111",
+    "event_id": "6b6246e7-6e24-41d4-9bc6-0e209a276ab8",
+    "seq": 29
+  },
+  "project_id": "bed522a2-0b3e-4bff-9cd6-7c13fe40779a",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "d086a58c-a9dc-439d-b538-ee5d7074e44a",
+    "cycle": 1,
+    "digest": "fe32ec32449c1bf2c0021ca6f027b54b65707a140b75328d5e96d4fc44270994",
+    "engine_id": "claudeloop",
+    "event_id": "5a42f451-d9fd-4f17-8258-10a9e1fc1c66",
+    "job_id": "92d834a4-4bf2-4699-9354-adbea7936d77",
+    "kind": "QuestionAsked",
+    "payload": {
+      "blocking": false,
+      "cycle": 1,
+      "default": "Validate all IDs before claiming any. If any are invalid/unclaimable, show 'Error: jobs [j999] not found, [j5] already complete' and exit immediately without starting the others. No partial execution.",
+      "item_id": "invalid_job_handling",
+      "stage": "example_mapping",
+      "text": "What happens if one or more job IDs in the --parallel set don't exist or aren't in a claimable state (already DONE, already RUNNING, etc.)?"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-22T03:43:10.784198+00:00",
+    "project_id": "bed522a2-0b3e-4bff-9cd6-7c13fe40779a",
+    "provenance": "agent",
+    "seq": 30
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

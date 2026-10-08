@@ -1,0 +1,566 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "project_id": "893c4fc1-542e-411e-a10a-3aef784b1540",
+  "records": [
+    {
+      "actor": "vibey",
+      "digest": "6d0d005254878aeac32dc5ca8cf2c38bf1954fd80fefdb86597de33ab4938dea",
+      "id": "16a9608c-2419-4d66-8448-174573ab1d35",
+      "kind": "PhaseTransitioned",
+      "phase": "design",
+      "seq": 2,
+      "time": "2026-09-30T03:49:04.930044+00:00",
+      "tokens": [
+        "design",
+        "intake"
+      ]
+    },
+    {
+      "actor": "gptossloop",
+      "digest": "c44e3c2e03b127b5c5fe2117a84565836adf2d72dd1a977ee102ccf680d79987",
+      "id": "71dcb070-93f3-4552-8eec-cfb8c8bed96d",
+      "kind": "QuestionAsked",
+      "phase": "design",
+      "seq": 3,
+      "time": "2026-09-30T03:51:14.542698+00:00",
+      "tokens": [
+        "33",
+        "35",
+        "after",
+        "and",
+        "be",
+        "before",
+        "contents",
+        "context_free",
+        "inserted",
+        "line",
+        "md",
+        "of",
+        "q1",
+        "readme",
+        "should",
+        "table",
+        "the",
+        "yes"
+      ]
+    },
+    {
+      "actor": "gptossloop",
+      "digest": "d21504ede2019cda4418b70f2c6be8e3ce03e4cd42eeff6c6c398abbdb27da42",
+      "id": "712962bc-12f4-4822-a34c-55d641ef65c1",
+      "kind": "QuestionAsked",
+      "phase": "design",
+      "seq": 4,
+      "time": "2026-09-30T03:51:14.542698+00:00",
+      "tokens": [
+        "context_free",
+        "create",
+        "exists",
+        "file",
+        "for",
+        "if",
+        "in",
+        "md",
+        "meta",
+        "new",
+        "no",
+        "none",
+        "q2",
+        "readme",
+        "should",
+        "test",
+        "tests",
+        "we"
+      ]
+    },
+    {
+      "actor": "gptossloop",
+      "digest": "a5f75e7d3ba381c2faa4414fc138a764d6fc2797dbc9b9d968bcd51c1fc25f58",
+      "id": "b69a96d7-a189-4990-8949-005c399b9bcb",
+      "kind": "QuestionAsked",
+      "phase": "design",
+      "seq": 5,
+      "time": "2026-09-30T03:51:14.542698+00:00",
+      "tokens": [
+        "anchor",
+        "as",
+        "be",
+        "context_free",
+        "executed",
+        "lane",
+        "of",
+        "part",
+        "q3",
+        "script",
+        "should",
+        "the",
+        "this",
+        "verification",
+        "yes"
+      ]
+    },
+    {
+      "actor": "gptossloop",
+      "digest": "ac20039d834061d752e38926f6f481245b11df16fe3d3cd57050296ffbb02a0d",
+      "id": "15986d68-bc83-4765-bf1e-52d782b487d1",
+      "kind": "AnswerGiven",
+      "phase": "design",
+      "seq": 8,
+      "time": "2026-09-30T03:52:19.978015+00:00",
+      "tokens": [
+        "q1",
+        "yes"
+      ]
+    },
+    {
+      "actor": "gptossloop",
+      "digest": "60e5fe55c85e9646e7965a4a21d7a1f2da06f295be9a9b729c4e63ccc5a70cfe",
+      "id": "c6745587-98e2-47c2-93e4-dd6053f06df8",
+      "kind": "AnswerGiven",
+      "phase": "design",
+      "seq": 9,
+      "time": "2026-09-30T03:52:19.978015+00:00",
+      "tokens": [
+        "no",
+        "q2"
+      ]
+    },
+    {
+      "actor": "gptossloop",
+      "digest": "fe6b15d659d099672810d05995889099d55ce96657e9791e9775aa9a344371b7",
+      "id": "d40c2688-77b6-4057-92e7-5c8f95be1c3c",
+      "kind": "AnswerGiven",
+      "phase": "design",
+      "seq": 10,
+      "time": "2026-09-30T03:52:19.978015+00:00",
+      "tokens": [
+        "q3",
+        "yes"
+      ]
+    },
+    {
+      "actor": "gptossloop",
+      "digest": "45bca1bc5141df8158a527edecdebec93352809f2960f297c8cf022b7f447d78",
+      "id": "6b8b4655-104d-430d-9c86-70a2cea26ca4",
+      "kind": "QuestionAsked",
+      "phase": "design",
+      "seq": 11,
+      "time": "2026-09-30T03:56:48.201761+00:00",
+      "tokens": [
+        "after",
+        "build",
+        "contents",
+        "insertion",
+        "job_story",
+        "lane",
+        "links",
+        "no",
+        "of",
+        "properdocs",
+        "q4",
+        "run",
+        "should",
+        "strict",
+        "table",
+        "the",
+        "to",
+        "verify"
+      ]
+    },
+    {
+      "actor": "gptossloop",
+      "digest": "0f5c85bdcbeb63b2d66a243e16118e9968020d0ad72ebb8d0f4008725deb5c3f",
+      "id": "b3ba9d7d-1512-4056-8447-72242e2ef914",
+      "kind": "QuestionAsked",
+      "phase": "design",
+      "seq": 12,
+      "time": "2026-09-30T03:56:48.201761+00:00",
+      "tokens": [
+        "above",
+        "added",
+        "be",
+        "comment",
+        "contents",
+        "explaining",
+        "its",
+        "job_story",
+        "new",
+        "no",
+        "purpose",
+        "q5",
+        "section",
+        "should",
+        "the"
+      ]
+    },
+    {
+      "actor": "gptossloop",
+      "digest": "d8340aebe2f7a0e7d713af70cc48d2f9f4a90464b7cf4431de3406fe3f0ae810",
+      "id": "9217958b-8429-417e-b628-07461947aaa1",
+      "kind": "AnswerGiven",
+      "phase": "design",
+      "seq": 15,
+      "time": "2026-09-30T03:57:53.371804+00:00",
+      "tokens": [
+        "no",
+        "q4"
+      ]
+    },
+    {
+      "actor": "gptossloop",
+      "digest": "7c4f8ca4c6df9b4dc8e5b14840b68cb20f370f06decd2d79f062ea273ba2efdd",
+      "id": "11c6e1a2-b29f-4cc7-9768-ccad0bffdbd1",
+      "kind": "AnswerGiven",
+      "phase": "design",
+      "seq": 16,
+      "time": "2026-09-30T03:57:53.371804+00:00",
+      "tokens": [
+        "no",
+        "q5"
+      ]
+    },
+    {
+      "actor": "gptossloop",
+      "digest": "66da8b8d6e0f9f6612f25a1040170559661a16a3639a2444c11980a7addb2fe1",
+      "id": "0b8828a4-1ccf-4e5c-83da-61d267cbe836",
+      "kind": "QuestionAsked",
+      "phase": "design",
+      "seq": 17,
+      "time": "2026-09-30T03:59:31.463909+00:00",
+      "tokens": [
+        "after",
+        "check",
+        "contents",
+        "inserting",
+        "laddering",
+        "lane",
+        "lint",
+        "markdown",
+        "md",
+        "no",
+        "of",
+        "on",
+        "q6",
+        "readme",
+        "run",
+        "should",
+        "table",
+        "the"
+      ]
+    },
+    {
+      "actor": "gptossloop",
+      "digest": "0326aa049bb41f433f4bd299249aa7a40770e84347f36eee92edd2fb64fc1b17",
+      "id": "e612fe9b-6a09-4725-a06e-b61a9deb9a06",
+      "kind": "AnswerGiven",
+      "phase": "design",
+      "seq": 20,
+      "time": "2026-09-30T04:00:40.512514+00:00",
+      "tokens": [
+        "no",
+        "q6"
+      ]
+    },
+    {
+      "actor": "gptossloop",
+      "digest": "961e5e7e756bc0cd3b42e0257a1f253a84e2bcb4c645f5c35954a78b390f0a07",
+      "id": "10ceb62e-851b-44a9-a02a-cbe036825523",
+      "kind": "QuestionAsked",
+      "phase": "design",
+      "seq": 21,
+      "time": "2026-09-30T04:05:27.165155+00:00",
+      "tokens": [
+        "change",
+        "commit",
+        "example_mapping",
+        "lane",
+        "md",
+        "no",
+        "q7",
+        "readme",
+        "should",
+        "the",
+        "to"
+      ]
+    },
+    {
+      "actor": "gptossloop",
+      "digest": "eea7d6f1a79d85d4c01802c8e5140bd7396aabb10094985ce6c8b36340d4171a",
+      "id": "92f23440-5e86-4e44-b4cd-7f7ea3aae674",
+      "kind": "AnswerGiven",
+      "phase": "design",
+      "seq": 24,
+      "time": "2026-09-30T04:06:32.358184+00:00",
+      "tokens": [
+        "no",
+        "q7"
+      ]
+    },
+    {
+      "actor": "gptossloop",
+      "digest": "f9e37c1437a634f120821335b6ed71e1ecbb645725e25ee4dca3a5190f501d39",
+      "id": "3a6e2e87-f728-45b7-95ec-166b8b16e044",
+      "kind": "QuestionAsked",
+      "phase": "design",
+      "seq": 25,
+      "time": "2026-09-30T04:08:02.220747+00:00",
+      "tokens": [
+        "alter",
+        "any",
+        "beyond",
+        "contents",
+        "does",
+        "existing",
+        "in",
+        "inserted",
+        "insertion",
+        "lane",
+        "lines",
+        "md",
+        "no",
+        "not",
+        "q8",
+        "readme",
+        "section",
+        "should",
+        "that",
+        "the",
+        "verify",
+        "walking_skeleton"
+      ]
+    },
+    {
+      "actor": "gptossloop",
+      "digest": "95673eefa4e05aed2f62c23f446058c7bc1fb9b3ccffaa28cca74c7f840fd877",
+      "id": "cd08cb8a-7bac-4785-8cc6-8de4ecc86a10",
+      "kind": "QuestionAsked",
+      "phase": "design",
+      "seq": 26,
+      "time": "2026-09-30T04:08:02.220747+00:00",
+      "tokens": [
+        "after",
+        "check",
+        "contents",
+        "inserting",
+        "lane",
+        "lint",
+        "markdown",
+        "md",
+        "no",
+        "of",
+        "on",
+        "q9",
+        "readme",
+        "run",
+        "should",
+        "table",
+        "the",
+        "walking_skeleton"
+      ]
+    },
+    {
+      "actor": "gptossloop",
+      "digest": "1a8beeb0f80b1a27db322c88759d4c76843793cec106320b822acd2e40d8fcb5",
+      "id": "febf51dd-fb37-4ce0-af81-2a5f280454ee",
+      "kind": "AnswerGiven",
+      "phase": "design",
+      "seq": 29,
+      "time": "2026-09-30T04:09:07.353092+00:00",
+      "tokens": [
+        "no",
+        "q8"
+      ]
+    },
+    {
+      "actor": "gptossloop",
+      "digest": "e55cd94723a91925304bc385a9db39053c7ff90a9391645543f0b71e5ce7dee4",
+      "id": "d7b5c687-ccdb-433f-8682-bf2f02bcb921",
+      "kind": "AnswerGiven",
+      "phase": "design",
+      "seq": 30,
+      "time": "2026-09-30T04:09:07.353092+00:00",
+      "tokens": [
+        "no",
+        "q9"
+      ]
+    },
+    {
+      "actor": "gptossloop",
+      "digest": "7bb4dbdaf32ea1b509dd4d5a084891391cd53e9f49e5076671df9adda6d590c0",
+      "id": "e62891a4-68c2-42f0-947e-ad8bab5c4b9f",
+      "kind": "QuestionAsked",
+      "phase": "design",
+      "seq": 31,
+      "time": "2026-09-30T04:10:43.870052+00:00",
+      "tokens": [
+        "contents",
+        "generate",
+        "hardcode",
+        "lane",
+        "list",
+        "nfr_planguage",
+        "no",
+        "of",
+        "or",
+        "provided",
+        "python",
+        "q10",
+        "script",
+        "should",
+        "table",
+        "the",
+        "using"
+      ]
+    },
+    {
+      "actor": "gptossloop",
+      "digest": "3a70fffe7eaece8f52d18c5d21f15e3007ed4abb47e7373480fe5140763cded2",
+      "id": "6980966b-3277-471a-a88c-3e29e9a68fd4",
+      "kind": "AnswerGiven",
+      "phase": "design",
+      "seq": 34,
+      "time": "2026-09-30T04:11:48.813068+00:00",
+      "tokens": [
+        "no",
+        "q10"
+      ]
+    },
+    {
+      "actor": "gptossloop",
+      "digest": "ebccfc1b3c993b67e9219fc30f214a78d5937f7a3f19d8ccb948a0a60550cfc4",
+      "id": "81e3df7d-409d-4a1e-9df0-ac800ce85deb",
+      "kind": "QuestionAsked",
+      "phase": "design",
+      "seq": 35,
+      "time": "2026-09-30T04:13:23.100326+00:00",
+      "tokens": [
+        "after",
+        "build",
+        "contents",
+        "insertion",
+        "lane",
+        "links",
+        "no",
+        "of",
+        "premortem",
+        "properdocs",
+        "q11",
+        "run",
+        "should",
+        "strict",
+        "table",
+        "the",
+        "to",
+        "verify"
+      ]
+    },
+    {
+      "actor": "gptossloop",
+      "digest": "8c792af5e42877b37c9e0b819f972eacafbc471f95cef59e0a39c5eba8991bd1",
+      "id": "67bc6727-f214-4eb8-a3fc-a0b283843871",
+      "kind": "AnswerGiven",
+      "phase": "design",
+      "seq": 38,
+      "time": "2026-09-30T04:14:28.036860+00:00",
+      "tokens": [
+        "no",
+        "q11"
+      ]
+    },
+    {
+      "actor": "gptossloop",
+      "digest": "76c5233b1a35594d1072b17fbddfd8410f0320f9ace8f87896c29d8c63781c78",
+      "id": "5b11c460-a25e-4287-bf7c-2e4bf485109e",
+      "kind": "ResearchGapRecorded",
+      "phase": "design",
+      "seq": 39,
+      "time": "2026-09-30T04:15:42.944684+00:00",
+      "tokens": [
+        "art",
+        "prior"
+      ]
+    },
+    {
+      "actor": "gptossloop",
+      "digest": "709da8d74153f0d8bad91b146d24fdddf5e0a29e9befd6c6e3408b87d5a94a25",
+      "id": "ac488856-081b-47ee-99e2-101e4fbadcad",
+      "kind": "ResearchGapRecorded",
+      "phase": "design",
+      "seq": 40,
+      "time": "2026-09-30T04:16:56.972784+00:00",
+      "tokens": [
+        "libraries"
+      ]
+    },
+    {
+      "actor": "gptossloop",
+      "digest": "7f818d2d9d8f0d67efee839e67253d71b26e242da9caf39d9cd03f0373f59ae9",
+      "id": "e39d289c-4f28-4e65-8491-96c286acc7c5",
+      "kind": "ResearchGapRecorded",
+      "phase": "design",
+      "seq": 41,
+      "time": "2026-09-30T04:18:10.844279+00:00",
+      "tokens": [
+        "api",
+        "docs"
+      ]
+    },
+    {
+      "actor": "vibey",
+      "digest": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a",
+      "id": "6063c85f-f4f3-431f-a383-8830f7e16cf2",
+      "kind": "VisualDesignDeclined",
+      "phase": "design",
+      "seq": 42,
+      "time": "2026-09-30T04:22:16.570294+00:00",
+      "tokens": []
+    },
+    {
+      "actor": "vibey",
+      "digest": "c51b1884b29a4d73fca90b6666835db0d6b7aa80a61499d5d23c469b7398ba99",
+      "id": "2581e545-2eb5-45e0-9616-82bf4b1de1d7",
+      "kind": "PhaseTransitioned",
+      "phase": "build",
+      "seq": 43,
+      "time": "2026-09-30T04:22:16.580879+00:00",
+      "tokens": [
+        "build",
+        "design"
+      ]
+    },
+    {
+      "actor": "gptossloop",
+      "digest": "484d6acf1a08b7b0f196ad73f7f2bddfb98d5ab86e9318d63c6bb717dc8b85a4",
+      "id": "c7aeb8e4-b534-4a77-97d3-c1a6b2ffd6c0",
+      "kind": "VerdictRendered",
+      "phase": "build",
+      "seq": 78,
+      "time": "2026-09-30T04:27:37.410818+00:00",
+      "tokens": []
+    },
+    {
+      "actor": "gptossloop",
+      "digest": "484d6acf1a08b7b0f196ad73f7f2bddfb98d5ab86e9318d63c6bb717dc8b85a4",
+      "id": "d16f14ab-60f1-48a2-a8aa-cf8d829a3433",
+      "kind": "VerdictRendered",
+      "phase": "build",
+      "seq": 176,
+      "time": "2026-09-30T04:48:32.683203+00:00",
+      "tokens": []
+    },
+    {
+      "actor": "vibey",
+      "digest": "9368ca925e6dc3f31c7bb64db4a13fdbe1ee0b27faee76c707fc35123748490a",
+      "id": "aa6a2755-850e-4744-aed2-55e7c4700225",
+      "kind": "PhaseTransitioned",
+      "phase": "abandoned",
+      "seq": 197,
+      "time": "2026-09-30T09:04:11.070482+00:00",
+      "tokens": [
+        "abandoned",
+        "build",
+        "operator"
+      ]
+    }
+  ]
+}

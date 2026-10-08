@@ -1,0 +1,43 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "00bce51e433b04e7fbb36a2433ffb2cef3aecaca41e76c5c2eef15b849781ddb",
+    "event_id": "a0c4e0ae-e1b5-4360-b413-eb213839d4f5",
+    "seq": 28
+  },
+  "previous": {
+    "digest": "02b2a6f5443e57045a64168dd606207dee8470f044425e55d155f31287161c5f",
+    "event_id": "956373a6-7a85-4d37-a529-e5d24fc88117",
+    "seq": 26
+  },
+  "project_id": "0ee95624-eec4-4e8e-9a14-6ad9a37dcff4",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "3b5dcb10-c771-43c9-aada-f2853d37eb0d",
+    "cycle": 1,
+    "digest": "b437212d218fb730b535a21a9eec0691cfc74ed67ed28c710c0757425b351d20",
+    "engine_id": "claudeloop",
+    "event_id": "829f77b3-0ce6-4225-aa8d-7e0c4d1e79a8",
+    "job_id": "1343d0fd-bf3f-4739-8c21-cbf7693c673e",
+    "kind": "QuestionAsked",
+    "payload": {
+      "blocking": true,
+      "cycle": 1,
+      "default": "308 redirect to https://hire.adam.matthewsteinberger.com/blog/some-post (caught by the chat-host '[path](...)' rule) - chat subdomain serves ONLY the root, everything else redirects to main site",
+      "item_id": "deep_link_redirect",
+      "stage": "example_mapping",
+      "text": "Example: visitor navigates to chat.adam.matthewsteinberger.com/blog/some-post - what happens?"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-20T20:12:08.684259+00:00",
+    "project_id": "0ee95624-eec4-4e8e-9a14-6ad9a37dcff4",
+    "provenance": "agent",
+    "seq": 27
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 1
+  }
+}

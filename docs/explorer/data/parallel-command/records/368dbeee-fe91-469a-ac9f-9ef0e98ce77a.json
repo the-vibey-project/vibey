@@ -1,0 +1,43 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "e4f9daa7b13eae82943e15883ab935720afcb468aa587a84d75ec912ef07bd57",
+    "event_id": "97f1dad8-6e4e-477a-b95a-8aece85c5ebc",
+    "seq": 11
+  },
+  "previous": {
+    "digest": "27ce9411c27b44542a4693ae7338bedf887b6fd1ac5c7b2aa51e37193a9807ea",
+    "event_id": "91ac0119-c954-48e5-a402-6008dd0b17bc",
+    "seq": 9
+  },
+  "project_id": "bed522a2-0b3e-4bff-9cd6-7c13fe40779a",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "82493825-e4a8-4a6b-873c-de23342e186d",
+    "cycle": 1,
+    "digest": "2a8e8e7ba6443de33f6b26abe94ddfb0816af71e98fe5eca024284fdff18dbce",
+    "engine_id": "claudeloop",
+    "event_id": "368dbeee-fe91-469a-ac9f-9ef0e98ce77a",
+    "job_id": "92d834a4-4bf2-4699-9354-adbea7936d77",
+    "kind": "QuestionAsked",
+    "payload": {
+      "blocking": true,
+      "cycle": 1,
+      "default": "I create jobs via the existing intake \u2192 design \u2192 build flow, then manually select specific job IDs to run together. If all succeed, I see aggregated results. If one fails, the others are killed or marked as superseded, and I get a consolidated failure report.",
+      "item_id": "user_workflow",
+      "stage": "job_story",
+      "text": "Walk through the end-to-end workflow: how do you create the jobs, how do you identify which ones to run in parallel, and what happens after they all complete or one fails?"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-22T02:57:10.599326+00:00",
+    "project_id": "bed522a2-0b3e-4bff-9cd6-7c13fe40779a",
+    "provenance": "agent",
+    "seq": 10
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

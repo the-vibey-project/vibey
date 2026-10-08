@@ -1,0 +1,39 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "256e9f2eefe28b99c5beeb2a044ce84723436184798ba87cfdf62f028c6ea569",
+    "event_id": "58f268fe-afc0-4c92-9bf8-0a9720d9e21e",
+    "seq": 6
+  },
+  "previous": {
+    "digest": "7cb05ecf595105c6f4bb812ae6560bff9ead76c600d72b2407a4ed4d8607d5cd",
+    "event_id": "c5a57ab6-713d-40d8-9ecf-56181218f95d",
+    "seq": 4
+  },
+  "project_id": "8f254b4c-df0a-4056-8937-6eba30efcfa6",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "c8a611e9-92cf-4286-9a9e-d1d2efd8075d",
+    "cycle": 1,
+    "digest": "ba0b86fba224f6bb6081f8e85c9139a3aa1bb28bfced7129ce5ba34348d1e38b",
+    "engine_id": "claudeloop",
+    "event_id": "ecc885f3-7a65-4555-b34e-a8384bc84a95",
+    "job_id": "40fb97d9-4ab1-4fa8-9ae2-693c2b7a7fc9",
+    "kind": "AnswerGiven",
+    "payload": {
+      "answer": "Python 3.12, stdlib only, single module; must pass ruff and bandit",
+      "item_id": "key_constraints"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-19T18:26:12.491708+00:00",
+    "project_id": "8f254b4c-df0a-4056-8937-6eba30efcfa6",
+    "provenance": "trusted",
+    "seq": 5
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

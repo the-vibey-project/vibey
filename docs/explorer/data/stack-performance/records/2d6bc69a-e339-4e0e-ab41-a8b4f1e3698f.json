@@ -1,0 +1,43 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "72fca61126cdd225950dc97068099a9b8be92f7854129adaa63b3c0694f58a15",
+    "event_id": "1e3c1bb9-c6c2-4979-8c7e-0c67ff3669aa",
+    "seq": 58
+  },
+  "previous": {
+    "digest": "7ca4bab065a77c3edabf3627772c70e17e4c30e220fea27860af5f4280ea44fb",
+    "event_id": "dfef0009-dc70-4ffc-b4dc-4d3e7d12b612",
+    "seq": 56
+  },
+  "project_id": "44c06a64-c8ed-4153-96af-b49db29c39e3",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "ed5eabb3-2c9d-4a61-9179-9358d4e260b8",
+    "cycle": 1,
+    "digest": "998b1b65779c98b85730d12a540300abe601e11b153a9e42f7bbe8e1379e79b7",
+    "engine_id": "claudeloop",
+    "event_id": "2d6bc69a-e339-4e0e-ab41-a8b4f1e3698f",
+    "job_id": "bcd8e0b1-385d-43dc-ad1f-cad988f80cc9",
+    "kind": "QuestionAsked",
+    "payload": {
+      "blocking": false,
+      "cycle": 1,
+      "default": "No production observability for claim latency \u2014 we'd have no telemetry to verify real-world impact beyond synthetic tests",
+      "item_id": "measurement_blindspot",
+      "stage": "premortem",
+      "text": "What would prevent us from confirming the optimization works in production, not just benchmarks?"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-22T03:47:29.727015+00:00",
+    "project_id": "44c06a64-c8ed-4153-96af-b49db29c39e3",
+    "provenance": "agent",
+    "seq": 57
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

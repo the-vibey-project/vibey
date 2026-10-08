@@ -1,0 +1,43 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "74e85993a135c0af3e3430787669a3510a172fa75f303e320d69b3b96d5b41f8",
+    "event_id": "fd90a7e2-5ee0-4aea-a4d4-f8307927fa60",
+    "seq": 51
+  },
+  "previous": {
+    "digest": "2040ad07ee4866b5a870a9f6d5fe27fb89ed70d60b3054224f36668e3cd0954e",
+    "event_id": "7a477240-6705-4e8d-9153-396d4d02fcc8",
+    "seq": 49
+  },
+  "project_id": "d482c3e2-029e-4bb8-a9a1-de411816c6ae",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "6c1bd880-935d-4381-918c-316fd2498d9f",
+    "cycle": 1,
+    "digest": "058590b90ca4fe5b0199a6c0732a20e1f97acc5856d4ccebcf3f5ea287772064",
+    "engine_id": "claudeloop",
+    "event_id": "f6c4f884-3b52-4ada-b4e8-eac97c9d582f",
+    "job_id": "d2626f25-d550-454e-bacd-7a7e6c9b52cd",
+    "kind": "QuestionAsked",
+    "payload": {
+      "blocking": false,
+      "cycle": 1,
+      "default": "Implementing a clear data retention and deletion policy, and providing tools for users to manage their data.",
+      "item_id": "26",
+      "stage": "premortem",
+      "text": "How will the software handle user data retention and deletion requests in compliance with data protection regulations?"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-31T02:06:53.671233+00:00",
+    "project_id": "d482c3e2-029e-4bb8-a9a1-de411816c6ae",
+    "provenance": "agent",
+    "seq": 50
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

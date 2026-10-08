@@ -1,0 +1,40 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "7842517003d3188110f0f465954b0ecff589806cb8cb54badeb558d03aad338d",
+    "event_id": "f279b94d-3d90-450c-9a39-2ee51ed81142",
+    "seq": 342
+  },
+  "previous": {
+    "digest": "7842517003d3188110f0f465954b0ecff589806cb8cb54badeb558d03aad338d",
+    "event_id": "1ebd1b25-a0f1-4e22-9241-b4ab17215844",
+    "seq": 193
+  },
+  "project_id": "d733035f-e0f9-4f67-aba2-270068d6a9c6",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "8aa58040-3de7-443f-ac55-c31d0545ad4d",
+    "cycle": 1,
+    "digest": "9584075b9920f39a59e01f23f2613aeb51fe3df0595e456ec5c79fb8ac29844c",
+    "engine_id": null,
+    "event_id": "6cea106a-5ee6-4121-8457-5ff6c172f0cf",
+    "job_id": "419bc662-13d4-41ef-ba85-bc59dd3403e8",
+    "kind": "FindingRaised",
+    "payload": {
+      "finding_id": "f_verify_ws_c6d6dd23",
+      "severity": "high",
+      "text": "gate failed: uv run pytest tests/ -k 'abandon' -q -p no:cacheprovider --cov=vibey --cov-branch --cov-report=: warning: `VIRTUAL_ENV=[path]` does not match the project environment path `.venv` and will be ignored; use `--active` to target the active environment instead\n[stdout] ting tests/domain/test_rotation.py ________________\nImportError while importing test module '[path]'.\nHint: make sure your test modules/packages have valid Python names.\nTraceback:\n[path] in import_module\n    return _bootstrap._gcd_import(name[level:], package, level)\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\ntests/domain/test_rotation.py:4: in \u003cmodule\u003e\n    from hypothesis import given, settings\nE   ModuleNotFoundError: No module named 'hypothesis'\n=========================== short test summary info ============================\nERROR tests/domain/test_briefing.py - ImportError while importing test module...\nERROR tests/domain/test_circuit.py - ImportError while importing test module ...\nERROR tests/domain/test_effort.py - ImportError while importing test module '...\nERROR tests/domain/test_job.py - ImportError while importing test module '[path]\nERROR tests/domain/test_ledger.py - ImportError while importing test module '...\nERROR tests/domain/test_media.py - ImportError while importing test module '[path]\nERROR tests/domain/test_noloss.py - ImportError while importing test module '...\nERROR tests/domain/test_phase.py - ImportError while importing test module '[path]\nERROR tests/domain/test_rotation.py - ImportError while importing test module...\n11 passed, 9 errors in 3.25s"
+    },
+    "phase": "build",
+    "produced_at": "2026-08-22T04:25:50.183193+00:00",
+    "project_id": "d733035f-e0f9-4f67-aba2-270068d6a9c6",
+    "provenance": "agent",
+    "seq": 198
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 6
+  }
+}

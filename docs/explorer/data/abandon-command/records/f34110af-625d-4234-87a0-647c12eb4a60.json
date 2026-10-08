@@ -1,0 +1,39 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "32cda1306e5c4fe01c9f66e54332ffc5bc33d6936faa1560f6574318ff241b7b",
+    "event_id": "f75a240a-e85c-4dab-b184-59e3d1fff295",
+    "seq": 8
+  },
+  "previous": {
+    "digest": "ae8d0aca128ca1992b66960876d7b813e4dca40b19014802f568d0b01f6549c8",
+    "event_id": "44d5b519-fa95-44ab-8807-16effcfbdc59",
+    "seq": 6
+  },
+  "project_id": "d733035f-e0f9-4f67-aba2-270068d6a9c6",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "d71d13c4-9ad9-4ee8-b936-01aa613ec48f",
+    "cycle": 1,
+    "digest": "81c19ecf0f81d4fccd4ff00ae790116375df83ff4063a00098c1d71d51b80347",
+    "engine_id": "claudeloop",
+    "event_id": "f34110af-625d-4234-87a0-647c12eb4a60",
+    "job_id": "44e282ee-55b1-4cf9-afc3-c84870a14a5c",
+    "kind": "AnswerGiven",
+    "payload": {
+      "answer": "Add `vibey abandon \u003cproject_id\u003e`: transition a project to the ABANDONED phase, releasing its repo_path so a new project can be created against that repository. This is not hypothetical -- it is currently blocking real work. The project table has a `project_repo_uniq` constraint (one project per repo_path), and a stale project (expansion-13-cost-performance, stuck in BUILD since 2026-08-20, whose work actually shipped as PR #70) permanently holds [path] `vibey new --repo [path]` fails with UniqueViolationError and there is no supported way to release it. The only current escape is hand-editing the database, which is exactly what a CLI should prevent. ABANDONED is already a legal value in the Phase enum, so this finishes an existing concept rather than inventing one.",
+      "item_id": "objective"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-22T02:55:30.118419+00:00",
+    "project_id": "d733035f-e0f9-4f67-aba2-270068d6a9c6",
+    "provenance": "trusted",
+    "seq": 7
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 2
+  }
+}

@@ -1,0 +1,43 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "dc328bcf83801a4d9b4aa5a513af4a6bca17cc695e885545359489f36ef6b85c",
+    "event_id": "15657c25-a3a9-4fc7-a6a2-da13765dbf9a",
+    "seq": 19
+  },
+  "previous": {
+    "digest": "f677cd24159efe779caa0d5afe05fe9c32827ec2eb67b704095c4b7e7451f984",
+    "event_id": "16994567-06b8-4a43-9904-684fe9ad3671",
+    "seq": 16
+  },
+  "project_id": "2f6a93b6-2d73-4aff-bc94-16539841133f",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "8254cd5a-d73f-493d-aa08-45b5c123091b",
+    "cycle": 1,
+    "digest": "4fc22dc9079e465d5b1c9fcb7e2084a13e4d885e2f7285998fd0598c98d4cf8f",
+    "engine_id": "claudeloop",
+    "event_id": "b6d1ce76-cd0b-4bae-a699-9d8d5a343b41",
+    "job_id": "334db377-8cb0-4a72-9cc0-78b45fc9bb38",
+    "kind": "QuestionAsked",
+    "payload": {
+      "blocking": true,
+      "cycle": 1,
+      "default": "stop: any non-terminal state \u2192 CANCELLED; wind-back: any state \u2192 same state but at earlier ledger seq; continue: awaiting_human or failed (with attempts exhausted) \u2192 READY; restart: any state \u2192 close as CANCELLED + new job_id enqueued as READY",
+      "item_id": "state_transitions",
+      "stage": "laddering",
+      "text": "What are the valid state transitions for each command, and which states should each command be callable from?"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-22T03:35:35.129643+00:00",
+    "project_id": "2f6a93b6-2d73-4aff-bc94-16539841133f",
+    "provenance": "agent",
+    "seq": 18
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

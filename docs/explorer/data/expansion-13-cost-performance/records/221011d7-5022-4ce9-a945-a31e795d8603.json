@@ -1,0 +1,39 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "37e73a501d18e7968c24481a9abe9769e061e427157205c21e398eb679bfe874",
+    "event_id": "a076dab9-91ab-41ab-8983-7713ae265c7d",
+    "seq": 22
+  },
+  "previous": {
+    "digest": "c3e2beadf9fa17062ed2287cd4290536c46ac75409f99f4fd16e75c80124d564",
+    "event_id": "a8f7be06-0ff0-4ab4-9c84-ce4b04e704c5",
+    "seq": 20
+  },
+  "project_id": "a1d6b837-46f3-40c0-b6a2-8b3babb7fe15",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "aa1ec755-de32-4ae6-98b6-96471ba9b48f",
+    "cycle": 1,
+    "digest": "389da02784678e4968c6ce637a42507287d972d0849ca3499faad7b35206b233",
+    "engine_id": "claudeloop",
+    "event_id": "221011d7-5022-4ce9-a945-a31e795d8603",
+    "job_id": "dd8513f6-0d76-49a5-8bdc-75167dea5385",
+    "kind": "AnswerGiven",
+    "payload": {
+      "answer": "2-3 minutes is acceptable; keep full suite in hook for comprehensive pre-commit feedback",
+      "item_id": "hook_floor_flexibility"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-20T20:43:10.963970+00:00",
+    "project_id": "a1d6b837-46f3-40c0-b6a2-8b3babb7fe15",
+    "provenance": "trusted",
+    "seq": 21
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

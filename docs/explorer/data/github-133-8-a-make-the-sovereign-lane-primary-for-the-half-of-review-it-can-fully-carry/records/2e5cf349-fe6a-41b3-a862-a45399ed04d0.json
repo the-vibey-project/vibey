@@ -1,0 +1,43 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "2dfd1a26ae62067ef7dbe156bf5e6dd362239b39aa742a9668ea76045bd81a9c",
+    "event_id": "cf42125b-4f1e-4357-a6cd-a6cd62a86a2c",
+    "seq": 12
+  },
+  "previous": {
+    "digest": "5f0de094036085b354a9496363d807d2b5abae57196e36ad26f421534a3b79b3",
+    "event_id": "8cb405c5-1d00-4b05-93ea-e9f36db62cff",
+    "seq": 10
+  },
+  "project_id": "f4cfe576-55c7-4f79-80ad-485f85ddca8b",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "4bb7ecc1-ea40-5364-bed9-45c048157678",
+    "cycle": 1,
+    "digest": "a607ca7b6d7553fba4b21c065f556decb3fcd78395f6027a24c44b01b4fae447",
+    "engine_id": "gptossloop",
+    "event_id": "2e5cf349-fe6a-41b3-a862-a45399ed04d0",
+    "job_id": "5057b798-907c-4039-9690-3992212dc0b2",
+    "kind": "QuestionAsked",
+    "payload": {
+      "blocking": false,
+      "cycle": 1,
+      "default": "Yes \u2013 add a `cost` sub\u2011object under the paid half that includes `tokens_used` and `cost_usd` (or equivalent).",
+      "item_id": "Q5",
+      "stage": "job_story",
+      "text": "Should the gate summary record token usage or cost metrics for the paid lane, and if so, where?"
+    },
+    "phase": "design",
+    "produced_at": "2026-09-27T21:30:06.391151+00:00",
+    "project_id": "f4cfe576-55c7-4f79-80ad-485f85ddca8b",
+    "provenance": "agent",
+    "seq": 11
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

@@ -1,0 +1,43 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "ff0196c660b8bad208d4d45313c70cc17577695d88ab2fa3641c03301daf0d3b",
+    "event_id": "9c14a31c-c6f4-4817-9449-a81f3cb72a34",
+    "seq": 22
+  },
+  "previous": {
+    "digest": "862c9b7b112d7da57f1dc912a8b5685a9e4a33705601cc1168b64ec3cd66874c",
+    "event_id": "bc97f1f8-837e-4157-8392-2827d2421509",
+    "seq": 20
+  },
+  "project_id": "df7e868b-1fbf-451b-8ceb-126359b7588e",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "f3bc4743-d5d8-42a3-8a4b-68452adf8119",
+    "cycle": 1,
+    "digest": "90b2c172155f72f3580b4be35cfa506d36822be76cc2cd315c83a88fd535ddd3",
+    "engine_id": "claudeloop",
+    "event_id": "642fc066-83f7-42ae-88c3-bf8b732ba2e8",
+    "job_id": "3a3b336c-c2aa-4400-a762-ae12246358d3",
+    "kind": "QuestionAsked",
+    "payload": {
+      "blocking": false,
+      "cycle": 1,
+      "default": "Users fall back to manual processes (spreadsheets, emails) with higher error rates and slower turnaround",
+      "item_id": "absence_impact",
+      "stage": "laddering",
+      "text": "What happens if this feature doesn't exist or becomes unavailable? What breaks or degrades?"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-22T04:43:39.112172+00:00",
+    "project_id": "df7e868b-1fbf-451b-8ceb-126359b7588e",
+    "provenance": "agent",
+    "seq": 21
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

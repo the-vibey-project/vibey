@@ -1,0 +1,43 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "8c792af5e42877b37c9e0b819f972eacafbc471f95cef59e0a39c5eba8991bd1",
+    "event_id": "67bc6727-f214-4eb8-a3fc-a0b283843871",
+    "seq": 38
+  },
+  "previous": {
+    "digest": "3a70fffe7eaece8f52d18c5d21f15e3007ed4abb47e7373480fe5140763cded2",
+    "event_id": "6980966b-3277-471a-a88c-3e29e9a68fd4",
+    "seq": 34
+  },
+  "project_id": "893c4fc1-542e-411e-a10a-3aef784b1540",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "d1405050-7bbf-5034-b04a-11a1570aca97",
+    "cycle": 1,
+    "digest": "ebccfc1b3c993b67e9219fc30f214a78d5937f7a3f19d8ccb948a0a60550cfc4",
+    "engine_id": "gptossloop",
+    "event_id": "81e3df7d-409d-4a1e-9df0-ac800ce85deb",
+    "job_id": "f0b62bda-70b9-4e97-a9f7-8f5cda351d0a",
+    "kind": "QuestionAsked",
+    "payload": {
+      "blocking": false,
+      "cycle": 1,
+      "default": "No",
+      "item_id": "q11",
+      "stage": "premortem",
+      "text": "Should the lane run `properdocs build --strict` to verify the table of contents links after insertion?"
+    },
+    "phase": "design",
+    "produced_at": "2026-09-30T04:13:23.100326+00:00",
+    "project_id": "893c4fc1-542e-411e-a10a-3aef784b1540",
+    "provenance": "agent",
+    "seq": 35
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

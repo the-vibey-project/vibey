@@ -1,0 +1,39 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a",
+    "event_id": "b0167972-035a-49fb-aaf3-0b2cc148e73d",
+    "seq": 61
+  },
+  "previous": {
+    "digest": "b6a7d84516891ff68b08aa2546049da62e63e1258199949b13b6c8910b0b23f4",
+    "event_id": "e9f61556-0178-4648-af61-989609df7533",
+    "seq": 59
+  },
+  "project_id": "9692abab-ace3-4ee0-ac59-3ea42484b817",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "0face8bc-aa17-546b-b5de-e16e759738e6",
+    "cycle": 1,
+    "digest": "f8dd93231df5d3cb3266214ff6da1ec8e52c1a5b5f1bac43230f227f5a338213",
+    "engine_id": "gptossloop",
+    "event_id": "e053dd62-bb28-4aca-9098-e6ad9551297e",
+    "job_id": "c2b75c18-fd15-4e79-ad4e-cf489356ad57",
+    "kind": "AnswerGiven",
+    "payload": {
+      "answer": "Existing CI pipeline",
+      "item_id": "q22"
+    },
+    "phase": "design",
+    "produced_at": "2026-09-29T18:54:25.790234+00:00",
+    "project_id": "9692abab-ace3-4ee0-ac59-3ea42484b817",
+    "provenance": "trusted",
+    "seq": 60
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

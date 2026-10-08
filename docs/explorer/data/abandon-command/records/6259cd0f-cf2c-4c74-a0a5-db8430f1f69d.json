@@ -1,0 +1,39 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "61575c53f90e2368d0800b2acd9ff345a4ad9b21b2139c1cb5098a0b007b1860",
+    "event_id": "3a7801da-cf7a-4dfb-9855-2028dcb528e5",
+    "seq": 26
+  },
+  "previous": {
+    "digest": "3c1ac7053459109b4b4a58639f4fed57ffb0becb299f658d859adf9ac60a317b",
+    "event_id": "a617153f-9fa7-4473-868d-59c27062a064",
+    "seq": 23
+  },
+  "project_id": "d733035f-e0f9-4f67-aba2-270068d6a9c6",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "0e067887-00e0-46d6-831d-37ea8592a25a",
+    "cycle": 1,
+    "digest": "e4242e576edfa53a53168190f84a249e5ecf42db73b283beddbd8780af61a864",
+    "engine_id": "claudeloop",
+    "event_id": "6259cd0f-cf2c-4c74-a0a5-db8430f1f69d",
+    "job_id": "44e282ee-55b1-4cf9-afc3-c84870a14a5c",
+    "kind": "AnswerGiven",
+    "payload": {
+      "answer": "Fail with a clear message showing the current phase\u2014abandoning is explicitly operator-driven and should never silently override an autonomous transition. The operator can retry if still warranted.",
+      "item_id": "race_with_natural_transition"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-22T03:34:34.469528+00:00",
+    "project_id": "d733035f-e0f9-4f67-aba2-270068d6a9c6",
+    "provenance": "trusted",
+    "seq": 24
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

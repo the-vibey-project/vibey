@@ -1,0 +1,39 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "7eb7c38bf48ae5a4cb74e7beada561eddb756647cf010b8dee2d15398b2b4d70",
+    "event_id": "f6617b81-54ca-4a08-8779-72faf53e733c",
+    "seq": 24
+  },
+  "previous": {
+    "digest": "5f2ad326d1369aabcef551c64bf14e3241775c71f4725e50495826cb35f2c73a",
+    "event_id": "cbfc0277-f62c-4ba7-9934-76912b37a066",
+    "seq": 22
+  },
+  "project_id": "bed522a2-0b3e-4bff-9cd6-7c13fe40779a",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "e833eea4-98fc-48b3-a1c8-22327478382e",
+    "cycle": 1,
+    "digest": "ccb2c5b61363fd9a1e572ea34e33b3f781d3d717cd6ebf616e6eb5d50bf6256b",
+    "engine_id": "claudeloop",
+    "event_id": "be6e2cd1-2ae3-45da-a65c-8b8dd2f7f265",
+    "job_id": "92d834a4-4bf2-4699-9354-adbea7936d77",
+    "kind": "AnswerGiven",
+    "payload": {
+      "answer": "I wanted to run a specific set of related jobs (e.g., build + test + deploy-design) together and see their combined progress, rather than running them separately or hoping the worker pool picks them up in the right order.",
+      "item_id": "operational_pain"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-22T03:41:55.164639+00:00",
+    "project_id": "bed522a2-0b3e-4bff-9cd6-7c13fe40779a",
+    "provenance": "trusted",
+    "seq": 23
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

@@ -1,0 +1,43 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "7b7ebf1563b930dacbd76173e69125b5c77cceffd0b9329fe927406383c26a62",
+    "event_id": "294d5117-baee-4662-9935-fb66e5fc2595",
+    "seq": 44
+  },
+  "previous": {
+    "digest": "700f57922380b16b4f4c1223e492570abf139d6054387d52c52b15f2824fa9ba",
+    "event_id": "67a785a1-0d87-41b7-883e-d0919326dbf6",
+    "seq": 42
+  },
+  "project_id": "5e76341f-ba5f-4272-8355-3df5d489bbcd",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "96a8144c-4418-43f0-af0f-f5d8dfa5ddf5",
+    "cycle": 1,
+    "digest": "0d98a99e43f724d7e1c888d8de775dd7b5f80e48c19afaf424614c33eb03779b",
+    "engine_id": "claudeloop",
+    "event_id": "f7fc62f7-d705-4732-abe4-74e263365a0d",
+    "job_id": "e58deb6b-5356-4a39-8acf-5dc898bba380",
+    "kind": "QuestionAsked",
+    "payload": {
+      "blocking": true,
+      "cycle": 1,
+      "default": "macOS, Linux, Windows - any platform with Node.js 18+ or Python 3.8+",
+      "item_id": "platform_support",
+      "stage": "nfr_planguage",
+      "text": "Which platforms and runtime environments must the application support?"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-20T00:50:56.962653+00:00",
+    "project_id": "5e76341f-ba5f-4272-8355-3df5d489bbcd",
+    "provenance": "agent",
+    "seq": 43
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

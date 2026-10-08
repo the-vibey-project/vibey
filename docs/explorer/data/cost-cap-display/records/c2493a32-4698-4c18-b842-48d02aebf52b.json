@@ -1,0 +1,43 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "55b924406e576c1a1a45d6ad46e98ccd7716a85daa45514dc667e659204c5cab",
+    "event_id": "e0dab065-c293-4a88-b895-42a75f3a3966",
+    "seq": 57
+  },
+  "previous": {
+    "digest": "6f91db80f7e94bf6bcebf92e4d4950e6e90ca7e8db7d92cb30189e63677ce8d8",
+    "event_id": "db24be26-f907-41ee-8dd9-5e1f38d99395",
+    "seq": 55
+  },
+  "project_id": "b43d1fcb-fb7b-42d6-9f80-220292c73389",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "4d8a7ebe-7a10-49e4-9a23-fffc51b8f829",
+    "cycle": 1,
+    "digest": "b539bcde21a8b1da1e2eda49502e88d00a3e2387f768b004b5090f2b92ec0d85",
+    "engine_id": "claudeloop",
+    "event_id": "c2493a32-4698-4c18-b842-48d02aebf52b",
+    "job_id": "64ea0fea-cd4f-4b3b-bf19-112c18a7c58d",
+    "kind": "QuestionAsked",
+    "payload": {
+      "blocking": true,
+      "cycle": 1,
+      "default": "No migration needed - old projects already have correct top-level max_cycle_dollars key that brake reads; new resolver reads same key, no schema change",
+      "item_id": "migration_safety",
+      "stage": "premortem",
+      "text": "What happens to existing projects created before this fix ships - do they need config migration, and what breaks if they run the new code with old config structure?"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-22T03:46:07.235056+00:00",
+    "project_id": "b43d1fcb-fb7b-42d6-9f80-220292c73389",
+    "provenance": "agent",
+    "seq": 56
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

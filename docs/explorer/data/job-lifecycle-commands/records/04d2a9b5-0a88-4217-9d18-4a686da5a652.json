@@ -1,0 +1,43 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "21eaf75687adb1cca899e5d7431a573558af8163088dc66518a6fc70e2ca5174",
+    "event_id": "d8f70ec2-7cca-497a-b02f-3912310b30f3",
+    "seq": 49
+  },
+  "previous": {
+    "digest": "75bac6d01a86cb7343453f954223742190691e0d2988dcb0227cfd164d967aa2",
+    "event_id": "60a79066-94c5-4eb0-90fb-605ba1236524",
+    "seq": 47
+  },
+  "project_id": "2f6a93b6-2d73-4aff-bc94-16539841133f",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "85f78e46-3f7d-4141-8c36-ad666767c1e9",
+    "cycle": 1,
+    "digest": "6db896ba6c362fe2bddfa8c38bcc21cc26261f2c5c37be383f07a6b0dfaa1486",
+    "engine_id": "claudeloop",
+    "event_id": "04d2a9b5-0a88-4217-9d18-4a686da5a652",
+    "job_id": "334db377-8cb0-4a72-9cc0-78b45fc9bb38",
+    "kind": "QuestionAsked",
+    "payload": {
+      "blocking": false,
+      "cycle": 1,
+      "default": "Last-write-wins with optimistic locking: use job row version/updated_at for compare-and-swap. Second command sees conflict, re-reads current state, re-validates preconditions, then either succeeds (if still valid) or fails fast with clear error. Each command is a single atomic transaction; no partial states observable.",
+      "item_id": "concurrent_operation_safety",
+      "stage": "nfr_planguage",
+      "text": "What consistency guarantee is required when two operators invoke conflicting commands on the same job simultaneously (e.g., stop + wind-back, or two wind-backs to different seqs)?"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-22T03:48:35.239267+00:00",
+    "project_id": "2f6a93b6-2d73-4aff-bc94-16539841133f",
+    "provenance": "agent",
+    "seq": 48
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

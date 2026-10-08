@@ -1,0 +1,43 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "42b783a064bc6feccd435b38d5898be11c2e400fb1f669664bddcec860cdf0b4",
+    "event_id": "9ad714aa-41cd-4faf-bf88-f5c5d32a8fa1",
+    "seq": 10
+  },
+  "previous": {
+    "digest": "7f703cd3daa86539e6b597f007e670db9ee39aa133953024f70541b19c1900b9",
+    "event_id": "48a1151d-6a8b-4436-a6f5-c97095fbe180",
+    "seq": 8
+  },
+  "project_id": "5ea01f61-8536-4ace-90cb-18700a12e410",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "21d77ac1-baa4-4486-b302-924ea5b50e8d",
+    "cycle": 1,
+    "digest": "0b84a178243dc5760327d1f3e87b687c3aea8d9e7067ed40c012183b0d90bb1c",
+    "engine_id": "claudeloop",
+    "event_id": "c53876f5-b62e-4986-9072-de46c890cde2",
+    "job_id": "4c2ec03f-d670-44f9-9f05-47597984ab20",
+    "kind": "QuestionAsked",
+    "payload": {
+      "blocking": true,
+      "cycle": 1,
+      "default": "Developers running it locally during development, and CI running it on every PR",
+      "item_id": "persona",
+      "stage": "job_story",
+      "text": "Who runs `vibey doctor` and in what context?"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-22T02:59:58.717746+00:00",
+    "project_id": "5ea01f61-8536-4ace-90cb-18700a12e410",
+    "provenance": "agent",
+    "seq": 9
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

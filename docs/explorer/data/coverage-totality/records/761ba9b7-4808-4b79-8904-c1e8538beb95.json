@@ -1,0 +1,39 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "8f62b5d7b610501fb4d0d3ce9936d7702311c5b8fea14bc336bae3f81cc575a3",
+    "event_id": "d94c2d82-49f1-4a5b-85af-c588352b40be",
+    "seq": 9
+  },
+  "previous": {
+    "digest": "400745544849d0e4ba5665251996b9ba8fa4ab62f0e8b3945c0357dab87ff029",
+    "event_id": "8e74b99d-4daa-47e5-a4f3-f7efc8ff9bdb",
+    "seq": 7
+  },
+  "project_id": "e631c00a-e1a1-4ed4-b99a-0fa2d388d240",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "79984f2e-1edf-440f-984c-eea21f5af8b6",
+    "cycle": 1,
+    "digest": "985c06d490be45ecae3272f879f8e4d65dc36fd394cecead4c3b71a075e6b585",
+    "engine_id": "claudeloop",
+    "event_id": "761ba9b7-4808-4b79-8904-c1e8538beb95",
+    "job_id": "d73f236e-a7b4-4748-b075-3900a75af324",
+    "kind": "AnswerGiven",
+    "payload": {
+      "answer": "Bring every line and branch under src/vibey to 100% branch coverage, and add a CI gate that covers ALL of src/vibey so no module can sit outside a floor again. Today four per-layer gates cover domain/, application/, infrastructure/ and cli/ and all four pass at 100%. Two modules sit outside every one of them and are therefore invisible to CI: src/vibey/tui/dashboard.py at 84% (23 uncovered statements, 15 partial branches) and src/vibey/bootstrap.py at 98% (2 statements, 2 partial branches, lines 279 and 501). The real total is 99%, not 100%. Close both gaps with genuine tests, then add a fifth gate: coverage report --include='src/vibey/*' --fail-under=100.",
+      "item_id": "feature_description"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-22T02:35:55.006438+00:00",
+    "project_id": "e631c00a-e1a1-4ed4-b99a-0fa2d388d240",
+    "provenance": "trusted",
+    "seq": 8
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

@@ -1,0 +1,43 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "f5d68620bf904bdf8e3d89e8fb63c058240bfa374083879c3d55870e30e5136f",
+    "event_id": "802cc99b-2254-4475-b5cf-7c42dd4b3e46",
+    "seq": 4
+  },
+  "previous": {
+    "digest": "3e1aeaea46758b56949f24a51789f6035ca98a4251773325ac4c102a79828cd5",
+    "event_id": "c832a2bc-82a0-4cac-afdd-029fbf6d3f14",
+    "seq": 2
+  },
+  "project_id": "bed522a2-0b3e-4bff-9cd6-7c13fe40779a",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "308d9aee-c0b8-4a6f-88d0-6c8fb4f5fc90",
+    "cycle": 1,
+    "digest": "5fc50ecf07398260b57698e029936120c731f3675c70b248ac99774440fa11ff",
+    "engine_id": "claudeloop",
+    "event_id": "8562e676-73f0-4fd6-8971-29ccc2ae22b1",
+    "job_id": "92d834a4-4bf2-4699-9354-adbea7936d77",
+    "kind": "QuestionAsked",
+    "payload": {
+      "blocking": false,
+      "cycle": 1,
+      "default": "Follow existing architecture patterns and maintain 100% per-layer coverage",
+      "item_id": "constraints",
+      "stage": "context_free",
+      "text": "Are there any specific constraints, requirements, or integrations to consider?"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-22T02:43:31.292601+00:00",
+    "project_id": "bed522a2-0b3e-4bff-9cd6-7c13fe40779a",
+    "provenance": "agent",
+    "seq": 3
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

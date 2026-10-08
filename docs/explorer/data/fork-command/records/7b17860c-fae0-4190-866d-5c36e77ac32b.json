@@ -1,0 +1,39 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "6546382ea01b4d78f6a74a11dadeff49a65de0128ee8edd1e9c446681c88b8df",
+    "event_id": "ca5282da-c3e0-4edf-99cd-4f5b7f717a34",
+    "seq": 24
+  },
+  "previous": {
+    "digest": "7e796a9fad70a17d4c0adca1e49e1f14760bc4e49d129d3ebf3bb98281bf6218",
+    "event_id": "a17c3576-5823-45ca-8613-81f0dc022ccc",
+    "seq": 22
+  },
+  "project_id": "ab0b06f9-55a4-4b47-ac08-254e7fdd9036",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "80a81eb9-80f8-4f8a-8775-b340be53a01a",
+    "cycle": 1,
+    "digest": "5ed86addb22813b11292b5a7c0d178a665ff142a7d88d40693a98e265ecf944d",
+    "engine_id": "claudeloop",
+    "event_id": "7b17860c-fae0-4190-866d-5c36e77ac32b",
+    "job_id": "48f9ef01-8b95-4709-adde-ed0ece390f8d",
+    "kind": "AnswerGiven",
+    "payload": {
+      "answer": "Yes for terminal states (failed, exhausted, completed); no for currently-leased jobs to avoid race conditions, unless the operator understands the risk",
+      "item_id": "lifecycle_interaction"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-22T03:34:34.636746+00:00",
+    "project_id": "ab0b06f9-55a4-4b47-ac08-254e7fdd9036",
+    "provenance": "trusted",
+    "seq": 23
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

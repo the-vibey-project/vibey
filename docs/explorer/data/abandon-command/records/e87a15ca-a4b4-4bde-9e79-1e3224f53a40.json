@@ -1,0 +1,42 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "050fe3c6ab191e4c509c7714f43684b01da5ddd32acf4542e10b12c3cd12bf8a",
+    "event_id": "c70334e5-85d8-41a6-b9c0-480a37545528",
+    "seq": 1042
+  },
+  "previous": {
+    "digest": "909eefadbb3f5b7f51802c47fcd76f7911375e22b728c63de5b0d58445a16fae",
+    "event_id": "535876b1-bb72-4ad9-b628-cb850d4c4a5a",
+    "seq": 928
+  },
+  "project_id": "d733035f-e0f9-4f67-aba2-270068d6a9c6",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "1206b165-91f9-488c-bd47-8d92133c9011",
+    "cycle": 1,
+    "digest": "5ac5c339e0a6b6c39e8fdc1183ef405f237b00bba3f7ee6d71f9e66b9a07be5c",
+    "engine_id": "codexloop",
+    "event_id": "e87a15ca-a4b4-4bde-9e79-1e3224f53a40",
+    "job_id": "661afa83-19dc-414d-89c0-7c246d74750d",
+    "kind": "VerdictRendered",
+    "payload": {
+      "complete": false,
+      "remaining_work": [
+        "Implement work item job-cancel: Cancel READY/AWAITING_HUMAN/AWAITING_CAPACITY jobs with provenance"
+      ],
+      "success": false
+    },
+    "phase": "build",
+    "produced_at": "2026-08-22T19:47:55.412648+00:00",
+    "project_id": "d733035f-e0f9-4f67-aba2-270068d6a9c6",
+    "provenance": "agent",
+    "seq": 987
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 2,
+    "paths": 0
+  }
+}

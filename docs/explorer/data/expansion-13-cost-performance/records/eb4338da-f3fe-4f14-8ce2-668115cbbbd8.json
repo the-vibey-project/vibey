@@ -1,0 +1,39 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a",
+    "event_id": "e74be1d3-1d13-47f6-b8cd-ce76eedd5678",
+    "seq": 60
+  },
+  "previous": {
+    "digest": "6251d1c077cca0839e9867771348296de2e0d93809622da90033e039e981dbdf",
+    "event_id": "79600994-9a38-4fb9-9ce0-6e511a4afa3c",
+    "seq": 55
+  },
+  "project_id": "a1d6b837-46f3-40c0-b6a2-8b3babb7fe15",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "bd2dda0d-bdc2-49c9-b023-78b493bd2885",
+    "cycle": 1,
+    "digest": "e772f8dad7d92bb631b6b97c9a82bf2d64399e497659aa104e09acbe16cd0781",
+    "engine_id": "claudeloop",
+    "event_id": "eb4338da-f3fe-4f14-8ce2-668115cbbbd8",
+    "job_id": "dd8513f6-0d76-49a5-8bdc-75167dea5385",
+    "kind": "AnswerGiven",
+    "payload": {
+      "answer": "New tests added without understanding worker isolation; prevent with CI enforcement of -n auto and documentation in CLAUDE.md/contributing guide",
+      "item_id": "regression_prevention"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-20T20:46:45.802224+00:00",
+    "project_id": "a1d6b837-46f3-40c0-b6a2-8b3babb7fe15",
+    "provenance": "trusted",
+    "seq": 56
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

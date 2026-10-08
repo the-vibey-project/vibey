@@ -1,0 +1,33 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": null,
+  "previous": null,
+  "project_id": "ccd34e28-3118-4d76-be22-6dadf7736f41",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "87a350dc-641d-5c15-9b8e-f4b7fae32ba2",
+    "cycle": 1,
+    "digest": "6d0d005254878aeac32dc5ca8cf2c38bf1954fd80fefdb86597de33ab4938dea",
+    "engine_id": null,
+    "event_id": "135f7d81-c1c9-45ed-9398-5f85e41b7946",
+    "job_id": null,
+    "kind": "PhaseTransitioned",
+    "payload": {
+      "cycle": 1,
+      "from": "intake",
+      "guard": null,
+      "to": "design"
+    },
+    "phase": "design",
+    "produced_at": "2026-09-26T13:42:39.091597+00:00",
+    "project_id": "ccd34e28-3118-4d76-be22-6dadf7736f41",
+    "provenance": "trusted",
+    "seq": 1
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

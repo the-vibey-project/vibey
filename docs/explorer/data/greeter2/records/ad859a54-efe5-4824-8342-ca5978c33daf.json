@@ -1,0 +1,43 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "7989a54394f9ad7307987f3f3061a21f804764c3de42090cff10f7697240b38a",
+    "event_id": "81610138-5c48-41e9-813c-67847280cfec",
+    "seq": 40
+  },
+  "previous": {
+    "digest": "4aeb717d0090b890bf58b81c74638ad3acc99892b4f94e94ef2cccb4ce703023",
+    "event_id": "1483821f-d803-48fb-9674-a282f7cd66a7",
+    "seq": 38
+  },
+  "project_id": "8f254b4c-df0a-4056-8937-6eba30efcfa6",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "bc1e64a7-1ccf-4a30-828a-485d0fb8ce77",
+    "cycle": 1,
+    "digest": "b1e5ba043889ed1bf65bf7bf754f633fb4ecb4d8343b6f69b5bf88c1b71ef23e",
+    "engine_id": "claudeloop",
+    "event_id": "ad859a54-efe5-4824-8342-ca5978c33daf",
+    "job_id": "40fb97d9-4ab1-4fa8-9ae2-693c2b7a7fc9",
+    "kind": "QuestionAsked",
+    "payload": {
+      "blocking": false,
+      "cycle": 1,
+      "default": "Must: \u003c100ms, Plan: \u003c50ms, Wish: \u003c10ms (measured on typical 2020+ laptop, cold start)",
+      "item_id": "startup_latency_nfr",
+      "stage": "nfr_planguage",
+      "text": "What's the maximum acceptable latency from invocation to output? (Planguage format: Must/Plan/Wish in milliseconds)"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-19T18:31:25.667818+00:00",
+    "project_id": "8f254b4c-df0a-4056-8937-6eba30efcfa6",
+    "provenance": "agent",
+    "seq": 39
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

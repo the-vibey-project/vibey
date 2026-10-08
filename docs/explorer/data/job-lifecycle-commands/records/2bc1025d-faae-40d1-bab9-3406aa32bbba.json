@@ -1,0 +1,39 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "64254a56134c7419f54efdfd241c98abc3ee317f7030c8c3b0f6e4b7ca888783",
+    "event_id": "858669aa-9145-45d8-9baa-1c974b9f64e1",
+    "seq": 56
+  },
+  "previous": {
+    "digest": "0ea2520adc699549102d7c1984cc5863804a4930e0e66e4cf2cacf7dd8175bd9",
+    "event_id": "fa756782-f6ce-48c2-8ae5-cefc9609917a",
+    "seq": 51
+  },
+  "project_id": "2f6a93b6-2d73-4aff-bc94-16539841133f",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "4891ead2-e175-4a25-b3a3-1b0917cd8806",
+    "cycle": 1,
+    "digest": "7742d800f132cb27715cd84468f1ab7f80d08c41250c2a6c0665fd8155a5966e",
+    "engine_id": "claudeloop",
+    "event_id": "2bc1025d-faae-40d1-bab9-3406aa32bbba",
+    "job_id": "334db377-8cb0-4a72-9cc0-78b45fc9bb38",
+    "kind": "AnswerGiven",
+    "payload": {
+      "answer": "Last-write-wins with optimistic locking: use job row version/updated_at for compare-and-swap. Second command sees conflict, re-reads current state, re-validates preconditions, then either succeeds (if still valid) or fails fast with clear error. Each command is a single atomic transaction; no partial states observable.",
+      "item_id": "concurrent_operation_safety"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-22T03:48:49.074394+00:00",
+    "project_id": "2f6a93b6-2d73-4aff-bc94-16539841133f",
+    "provenance": "trusted",
+    "seq": 52
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

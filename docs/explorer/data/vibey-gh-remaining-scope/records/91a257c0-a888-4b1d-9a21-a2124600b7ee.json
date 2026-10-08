@@ -1,0 +1,43 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "651f5f69d311d233689c846a2a31b888911ba35441d66225eb761fda5d0c9fc9",
+    "event_id": "6b5397b8-ddfe-499a-bc69-0c865fbd7f16",
+    "seq": 21
+  },
+  "previous": {
+    "digest": "810c7714840c45ac4811c0e8661a544a6079221bdf5bffd9bc4c2cee055ebb74",
+    "event_id": "4bb7319e-ccb7-481b-9932-29fc3fe3df4c",
+    "seq": 19
+  },
+  "project_id": "d482c3e2-029e-4bb8-a9a1-de411816c6ae",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "41f0d1e1-b2c9-41d1-83be-cf67801b2321",
+    "cycle": 1,
+    "digest": "c0a2b14270bf9d65b5ab1f16a2ec2edeaf8715374fc91aa48f569a4163d50e15",
+    "engine_id": "claudeloop",
+    "event_id": "91a257c0-a888-4b1d-9a21-a2124600b7ee",
+    "job_id": "d2626f25-d550-454e-bacd-7a7e6c9b52cd",
+    "kind": "QuestionAsked",
+    "payload": {
+      "blocking": false,
+      "cycle": 1,
+      "default": "By using cloud-based infrastructure and microservices architecture to ensure flexibility and performance.",
+      "item_id": "12",
+      "stage": "laddering",
+      "text": "How will the software handle scalability to accommodate growth in user base and functionality?"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-31T02:04:19.085206+00:00",
+    "project_id": "d482c3e2-029e-4bb8-a9a1-de411816c6ae",
+    "provenance": "agent",
+    "seq": 20
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

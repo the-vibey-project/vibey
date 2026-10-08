@@ -1,0 +1,43 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "e6667920485cd9f25cd2773986ac02aae871ae6feb25574a4ad21e69e137e2e8",
+    "event_id": "1502b6e4-ee1d-4569-9b17-fa982638ae98",
+    "seq": 52
+  },
+  "previous": {
+    "digest": "058590b90ca4fe5b0199a6c0732a20e1f97acc5856d4ccebcf3f5ea287772064",
+    "event_id": "f6c4f884-3b52-4ada-b4e8-eac97c9d582f",
+    "seq": 50
+  },
+  "project_id": "d482c3e2-029e-4bb8-a9a1-de411816c6ae",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "108b87a4-4d29-4678-9814-be50772f0168",
+    "cycle": 1,
+    "digest": "74e85993a135c0af3e3430787669a3510a172fa75f303e320d69b3b96d5b41f8",
+    "engine_id": "claudeloop",
+    "event_id": "fd90a7e2-5ee0-4aea-a4d4-f8307927fa60",
+    "job_id": "d2626f25-d550-454e-bacd-7a7e6c9b52cd",
+    "kind": "QuestionAsked",
+    "payload": {
+      "blocking": false,
+      "cycle": 1,
+      "default": "Setting up monitoring tools to track system performance and user feedback, and conducting regular maintenance updates.",
+      "item_id": "27",
+      "stage": "premortem",
+      "text": "What is the planned approach for monitoring and maintaining the software after its launch?"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-31T02:06:53.671233+00:00",
+    "project_id": "d482c3e2-029e-4bb8-a9a1-de411816c6ae",
+    "provenance": "agent",
+    "seq": 51
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

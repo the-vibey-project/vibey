@@ -1,0 +1,43 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "a6519a8389f2e77c580a4d4d8b9f5ca9317650733b369588c0810a21c4207b3d",
+    "event_id": "ac45fcbb-6881-4cbb-a43d-428d99927680",
+    "seq": 26
+  },
+  "previous": {
+    "digest": "42761b46c501640010bcea1149d8ff10bf9e6632740be49ca0b9535f609d1db2",
+    "event_id": "a651d927-8135-4dd5-a68c-9981c9caa911",
+    "seq": 24
+  },
+  "project_id": "8f254b4c-df0a-4056-8937-6eba30efcfa6",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "7c7efd4b-ef23-4eac-9c3d-59309b01dc41",
+    "cycle": 1,
+    "digest": "83356742556c9baf42cfea676727e3ef4367579f8d16853881f3a3f25ebb7fa0",
+    "engine_id": "claudeloop",
+    "event_id": "a4a524af-375a-473f-90cf-94d8c52eb0f2",
+    "job_id": "40fb97d9-4ab1-4fa8-9ae2-693c2b7a7fc9",
+    "kind": "QuestionAsked",
+    "payload": {
+      "blocking": true,
+      "cycle": 1,
+      "default": "All three \u2192 print \"Usage: greet \u003cname\u003e [-t|--time]\" to stderr and exit 1",
+      "item_id": "error_case_examples",
+      "stage": "example_mapping",
+      "text": "What should `greet` (no name), `greet \"\"` (empty string), and `greet -t` (flag without name) output and to which stream?"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-19T18:29:05.583707+00:00",
+    "project_id": "8f254b4c-df0a-4056-8937-6eba30efcfa6",
+    "provenance": "agent",
+    "seq": 25
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

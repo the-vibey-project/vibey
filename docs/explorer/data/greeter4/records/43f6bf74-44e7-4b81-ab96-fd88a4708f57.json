@@ -1,0 +1,40 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "7842517003d3188110f0f465954b0ecff589806cb8cb54badeb558d03aad338d",
+    "event_id": "c70dfabb-42d0-4533-a6c3-853d4e86a21f",
+    "seq": 1720
+  },
+  "previous": {
+    "digest": "7842517003d3188110f0f465954b0ecff589806cb8cb54badeb558d03aad338d",
+    "event_id": "fd95345a-1e24-41df-82fe-b3269ca38c02",
+    "seq": 1700
+  },
+  "project_id": "8ab823c9-89e4-4050-884c-9008c8b14ef8",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "bcf39b76-08bd-4328-9079-1daf4e062de3",
+    "cycle": 1,
+    "digest": "1573050ff1f403e614b517d8c48d8e4e3393084b8a4c55089fa53d84693fe4fc",
+    "engine_id": null,
+    "event_id": "43f6bf74-44e7-4b81-ab96-fd88a4708f57",
+    "job_id": "a85db460-680b-4e98-8290-94845d1a5edb",
+    "kind": "FindingRaised",
+    "payload": {
+      "finding_id": "f_integrate_ws_2e793e0f",
+      "severity": "high",
+      "text": "merge conflict integrating 'ws': Auto-merging app/database.py\nCONFLICT (content): Merge conflict in app/database.py\nAuto-merging app/main.py\nCONFLICT (content): Merge conflict in app/main.py\nAuto-merging pyproject.toml\nCONFLICT (add/add): Merge conflict in pyproject.toml\nAuto-merging uv.lock\nCONFLICT (add/add): Merge conflict in uv.lock\nAutomatic merge failed; fix conflicts and then commit the result."
+    },
+    "phase": "build",
+    "produced_at": "2026-08-20T06:41:17.886681+00:00",
+    "project_id": "8ab823c9-89e4-4050-884c-9008c8b14ef8",
+    "provenance": "agent",
+    "seq": 1701
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

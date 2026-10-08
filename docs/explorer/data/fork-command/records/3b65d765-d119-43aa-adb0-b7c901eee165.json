@@ -1,0 +1,39 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "3db5241218712acecd8460a797b61954fd63b31a09dc47f7566091533c36f4e2",
+    "event_id": "3ad2e5d2-0133-4ead-a832-945e68c97564",
+    "seq": 17
+  },
+  "previous": {
+    "digest": "c2a0497561842cb4a42a5e63123e882af71a73a4e65dac617e03e14d79373fec",
+    "event_id": "fe5274b0-e9a6-465b-81c5-896453de645c",
+    "seq": 15
+  },
+  "project_id": "ab0b06f9-55a4-4b47-ac08-254e7fdd9036",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "55bd0194-3bce-4a79-815d-1ca0c48bf2e2",
+    "cycle": 1,
+    "digest": "493251c7cac2808fc0e9f643b6f11664fea00654b87ea153939510d29a10cb5c",
+    "engine_id": "claudeloop",
+    "event_id": "3b65d765-d119-43aa-adb0-b7c901eee165",
+    "job_id": "48f9ef01-8b95-4709-adde-ed0ece390f8d",
+    "kind": "AnswerGiven",
+    "payload": {
+      "answer": "Ledger seq, and the reasoning matters more than the choice. The ledger is append-only and project-scoped with a total order already indexed as event_project_seq, so a seq is a stable address that survives worker restarts, machine changes and replays -- and it is the same substrate the job-lifecycle wind-back command needs, so the two must not invent different schemes. Rundir savepoints are filesystem artifacts owned by whichever engine ran, on whichever machine, and they vanish with the worktree. Use them as an OPTIMISATION for restoring engine-side state when they happen to be present, never as the address.",
+      "item_id": "point_selector"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-22T02:58:27.165759+00:00",
+    "project_id": "ab0b06f9-55a4-4b47-ac08-254e7fdd9036",
+    "provenance": "trusted",
+    "seq": 16
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

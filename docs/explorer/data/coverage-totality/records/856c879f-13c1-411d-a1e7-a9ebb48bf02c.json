@@ -1,0 +1,39 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "a477811a8f9133124e92aa45bd8e8c10c476a869877866d01ebeac3757dfd297",
+    "event_id": "79231713-ee41-4854-8e11-d3436013453a",
+    "seq": 47
+  },
+  "previous": {
+    "digest": "29814277cdb2dc5c3f4149d48408fc39cb3e77c7acdcb386b68bab005946d51f",
+    "event_id": "dbdfdd1e-3163-4f17-b55b-d69914905688",
+    "seq": 45
+  },
+  "project_id": "e631c00a-e1a1-4ed4-b99a-0fa2d388d240",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "c4e2cca5-4119-4dbd-84e0-19eee4a034de",
+    "cycle": 1,
+    "digest": "ab8c7a703afe243f5c777f2ef83886b62846a2fe105870609bfb48a92bca81d0",
+    "engine_id": "claudeloop",
+    "event_id": "856c879f-13c1-411d-a1e7-a9ebb48bf02c",
+    "job_id": "d73f236e-a7b4-4748-b075-3900a75af324",
+    "kind": "AnswerGiven",
+    "payload": {
+      "answer": "\u226460s total increase end-to-end (new tests + gate step); current 7-gate sweep is the baseline to measure against",
+      "item_id": "ci_build_time_limit"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-22T03:43:27.263936+00:00",
+    "project_id": "e631c00a-e1a1-4ed4-b99a-0fa2d388d240",
+    "provenance": "trusted",
+    "seq": 46
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

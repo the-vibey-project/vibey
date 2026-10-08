@@ -1,0 +1,39 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "923c08aa1a7e06ed70bd30bd58f6d37e88916c0053e9f21921e954ccf8cd77a7",
+    "event_id": "59c77a94-a110-40c3-a166-63ef02e2bbb2",
+    "seq": 50
+  },
+  "previous": {
+    "digest": "1f413b6295871c4ecd64117b6d2dff7c7fe650a3f9ee880babce99ef683a8f78",
+    "event_id": "65be28b8-d36d-45ea-b4f4-277388c6702e",
+    "seq": 48
+  },
+  "project_id": "d733035f-e0f9-4f67-aba2-270068d6a9c6",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "c3c475e2-ceff-453c-b6cc-dc88154b1e83",
+    "cycle": 1,
+    "digest": "a02ec8217e6d0894058706981cbb72cf50b4ec5b387f358d0b56d104867f019e",
+    "engine_id": "claudeloop",
+    "event_id": "735cd18b-e33e-4f81-9e70-4e24bbcc7c3a",
+    "job_id": "44e282ee-55b1-4cf9-afc3-c84870a14a5c",
+    "kind": "AnswerGiven",
+    "payload": {
+      "answer": "Second attempt blocks on Postgres row lock until first completes, then succeeds idempotently (same stdout, no error). Natural serialization via FOR UPDATE.",
+      "item_id": "concurrent_abandon_behavior"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-22T03:45:45.534381+00:00",
+    "project_id": "d733035f-e0f9-4f67-aba2-270068d6a9c6",
+    "provenance": "trusted",
+    "seq": 49
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

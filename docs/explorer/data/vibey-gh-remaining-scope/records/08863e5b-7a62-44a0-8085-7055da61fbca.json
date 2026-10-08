@@ -1,0 +1,39 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "2040ad07ee4866b5a870a9f6d5fe27fb89ed70d60b3054224f36668e3cd0954e",
+    "event_id": "7a477240-6705-4e8d-9153-396d4d02fcc8",
+    "seq": 49
+  },
+  "previous": {
+    "digest": "bbb83b968d4e257cc85bcf05cfdc1844a5108f9f359da61f617502c424a5b893",
+    "event_id": "d0872feb-6e02-4cbe-b9eb-00de682b6c39",
+    "seq": 47
+  },
+  "project_id": "d482c3e2-029e-4bb8-a9a1-de411816c6ae",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "8991cb52-5f88-4c1b-9f67-5364237b4079",
+    "cycle": 1,
+    "digest": "03bf36bf3b479e0bc18cc768066e47f605e39422a449fabb7d62ba7c1e54f165",
+    "engine_id": "claudeloop",
+    "event_id": "08863e5b-7a62-44a0-8085-7055da61fbca",
+    "job_id": "d2626f25-d550-454e-bacd-7a7e6c9b52cd",
+    "kind": "AnswerGiven",
+    "payload": {
+      "answer": "Swift for iOS and Kotlin for Android.",
+      "item_id": "24"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-31T02:06:06.324487+00:00",
+    "project_id": "d482c3e2-029e-4bb8-a9a1-de411816c6ae",
+    "provenance": "trusted",
+    "seq": 48
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

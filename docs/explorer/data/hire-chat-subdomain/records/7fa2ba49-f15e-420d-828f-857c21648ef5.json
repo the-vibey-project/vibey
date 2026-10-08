@@ -1,0 +1,43 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "e0b086bd2bc66972c6a7c438a8c5c1a755f286d78b1a24f6680789345a794a6c",
+    "event_id": "e0d23dd4-79a3-4677-918d-893d966c2d46",
+    "seq": 4
+  },
+  "previous": {
+    "digest": "aaebf35b918ab0f9822c51a07e044f375abd616511272a63dec2a7015b0e17aa",
+    "event_id": "045a5187-c859-41e9-b336-34377ee219e4",
+    "seq": 2
+  },
+  "project_id": "0ee95624-eec4-4e8e-9a14-6ad9a37dcff4",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "a506530a-3d3b-4cac-a8ca-a1fb09187040",
+    "cycle": 1,
+    "digest": "71c4e02cceed3e95665f8493efc3ba71764e94b122a0960276b6a70353014e1f",
+    "engine_id": "claudeloop",
+    "event_id": "7fa2ba49-f15e-420d-828f-857c21648ef5",
+    "job_id": "1343d0fd-bf3f-4739-8c21-cbf7693c673e",
+    "kind": "QuestionAsked",
+    "payload": {
+      "blocking": false,
+      "cycle": 1,
+      "default": "Low traffic (~10-50 concurrent visitors, \u003c1000 messages/day) - matches personal portfolio site scale",
+      "item_id": "concurrency",
+      "stage": "context_free",
+      "text": "Expected concurrent chat sessions and message volume?"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-20T20:07:23.889219+00:00",
+    "project_id": "0ee95624-eec4-4e8e-9a14-6ad9a37dcff4",
+    "provenance": "agent",
+    "seq": 3
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

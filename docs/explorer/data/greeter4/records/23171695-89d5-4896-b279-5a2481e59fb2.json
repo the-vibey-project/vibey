@@ -1,0 +1,43 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "0a81cecaf69764bc39e63932c7d47f5420c10c89e4d29f79ee450375502632fd",
+    "event_id": "0df83fd4-c8a9-44a3-bf0e-a9d1decf875d",
+    "seq": 35
+  },
+  "previous": {
+    "digest": "f8fda7c86cca30df05cfd2c7a1d34b7c2c54b99cb6da8441549c480f6edac186",
+    "event_id": "d27820f4-af4d-4323-983b-ec42e7962a94",
+    "seq": 33
+  },
+  "project_id": "8ab823c9-89e4-4050-884c-9008c8b14ef8",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "333e4f0b-3f50-4e74-8351-28e16266ec9b",
+    "cycle": 1,
+    "digest": "c29e5a18a0ae442060e90201da63a296d8d4ff106fdfb51ae772da30090900b6",
+    "engine_id": "claudeloop",
+    "event_id": "23171695-89d5-4896-b279-5a2481e59fb2",
+    "job_id": "705692f1-69a1-4cc2-ade7-8aa3d1407b67",
+    "kind": "QuestionAsked",
+    "payload": {
+      "blocking": false,
+      "cycle": 1,
+      "default": "Single PostgreSQL instance with one table (short_code, long_url, created_at) - no caching, no partitioning yet",
+      "item_id": "initial_data_store",
+      "stage": "walking_skeleton",
+      "text": "What data storage approach for the initial walking skeleton?"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-20T02:34:42.269967+00:00",
+    "project_id": "8ab823c9-89e4-4050-884c-9008c8b14ef8",
+    "provenance": "agent",
+    "seq": 34
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

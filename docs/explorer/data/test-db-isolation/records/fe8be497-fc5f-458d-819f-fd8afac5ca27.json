@@ -1,0 +1,43 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "6b40cd62df0f13c4659e93e04bc788ce147a0d1879c56388fcc0853b78a6dc06",
+    "event_id": "e1071967-55b5-4f13-a5fe-38327f87f596",
+    "seq": 32
+  },
+  "previous": {
+    "digest": "d676c05cc96c83bdade102fc5dcbfb670afb4e065e961f1f5a5861c757808867",
+    "event_id": "619c2e04-9bb8-41c5-8143-d919a43e86fe",
+    "seq": 30
+  },
+  "project_id": "df7e868b-1fbf-451b-8ceb-126359b7588e",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "3b7bf7e6-d2a0-4384-9834-0589d8da4516",
+    "cycle": 1,
+    "digest": "015a0a7f7dd9a7555c3dd62ec412efdad4f1b9e97e80ffc4604405375b42d2b8",
+    "engine_id": "claudeloop",
+    "event_id": "fe8be497-fc5f-458d-819f-fd8afac5ca27",
+    "job_id": "3a3b336c-c2aa-4400-a762-ae12246358d3",
+    "kind": "QuestionAsked",
+    "payload": {
+      "blocking": false,
+      "cycle": 1,
+      "default": "Cannot delete a record referenced by other entities; cannot update status from 'archived' to 'active' directly; bulk operations limited to 100 records per request",
+      "item_id": "boundary_examples",
+      "stage": "example_mapping",
+      "text": "Give examples of boundary conditions or business rules: what separates valid from invalid beyond basic validation?"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-22T04:44:19.116940+00:00",
+    "project_id": "df7e868b-1fbf-451b-8ceb-126359b7588e",
+    "provenance": "agent",
+    "seq": 31
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

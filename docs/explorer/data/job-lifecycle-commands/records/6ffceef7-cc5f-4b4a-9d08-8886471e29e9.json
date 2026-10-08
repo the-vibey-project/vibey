@@ -1,0 +1,39 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "0af7961fa3c4772517dc733a3717131f89b4cc042939b2089f052dae323224fa",
+    "event_id": "20ed117c-b2e8-4491-9ad8-86365d6095fc",
+    "seq": 7
+  },
+  "previous": {
+    "digest": "82ebdffd612056bad8f30c46c9ba5271d7cfd6c379598273e1dd2d1f192feca3",
+    "event_id": "afea031c-e909-40bf-a66e-87f27174c4a9",
+    "seq": 5
+  },
+  "project_id": "2f6a93b6-2d73-4aff-bc94-16539841133f",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "830dfed0-d5c9-4819-9103-2f661e6d7806",
+    "cycle": 1,
+    "digest": "e8975190f1085bf080279225bbf973c5135f8cb00ef57138aad3c232db102246",
+    "engine_id": "claudeloop",
+    "event_id": "6ffceef7-cc5f-4b4a-9d08-8886471e29e9",
+    "job_id": "334db377-8cb0-4a72-9cc0-78b45fc9bb38",
+    "kind": "AnswerGiven",
+    "payload": {
+      "answer": "A written state machine covering every legal transition among ready, leased, succeeded, failed, awaiting_human, awaiting_capacity and cancelled, including which are reachable by operator command and which only by the worker. Four commands implemented against it. CANCELLED is written by exactly one path and observable in `vibey status`. Each command is idempotent: stopping a stopped job, continuing a running job, restarting a fresh job all succeed quietly rather than erroring or double-acting. All 7 gates green including 100% branch coverage of the new transitions.",
+      "item_id": "success_criteria"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-22T02:57:10.227649+00:00",
+    "project_id": "2f6a93b6-2d73-4aff-bc94-16539841133f",
+    "provenance": "trusted",
+    "seq": 6
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

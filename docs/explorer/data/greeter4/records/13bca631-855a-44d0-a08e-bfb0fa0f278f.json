@@ -1,0 +1,40 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "115acb2311b3763fa2ef37eb3a8b38883fae3bc2635681182a1a926629d0c363",
+    "event_id": "3eb81760-41e2-4461-8198-20fb583c69c7",
+    "seq": 1052
+  },
+  "previous": {
+    "digest": "7842517003d3188110f0f465954b0ecff589806cb8cb54badeb558d03aad338d",
+    "event_id": "686f22a4-b4af-423e-ac27-45ba36d3e13e",
+    "seq": 1032
+  },
+  "project_id": "8ab823c9-89e4-4050-884c-9008c8b14ef8",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "a10e736a-702a-49ae-bed4-95761885efc6",
+    "cycle": 1,
+    "digest": "26aa26d639622e801ac6e01c4660ce3109e2e2947a28f21d2649a8d5cc1d3006",
+    "engine_id": null,
+    "event_id": "13bca631-855a-44d0-a08e-bfb0fa0f278f",
+    "job_id": "0742fa0d-fac0-4682-8c93-fd6987117a24",
+    "kind": "FindingRaised",
+    "payload": {
+      "finding_id": "f_integrate_analytics-api_be35cab5",
+      "severity": "high",
+      "text": "merge conflict integrating 'analytics-api': Auto-merging .gitignore\nCONFLICT (add/add): Merge conflict in .gitignore\nAuto-merging README.md\nCONFLICT (content): Merge conflict in README.md\nAuto-merging pytest.py\nCONFLICT (add/add): Merge conflict in pytest.py\nAutomatic merge failed; fix conflicts and then commit the result."
+    },
+    "phase": "build",
+    "produced_at": "2026-08-20T03:35:43.888264+00:00",
+    "project_id": "8ab823c9-89e4-4050-884c-9008c8b14ef8",
+    "provenance": "agent",
+    "seq": 1051
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

@@ -1,0 +1,39 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "9c1317b36ddecf3859bfcff0f63f1b4218106288260457ba502b0f508cc84486",
+    "event_id": "94b9593b-22f6-4986-959c-1cf27925ac35",
+    "seq": 32
+  },
+  "previous": {
+    "digest": "7393cce430ccf898021c31f76a2aeb1f0370b4106bda73f08f887608686b5c27",
+    "event_id": "f0ceed18-f78c-4850-b74c-28efac997fdf",
+    "seq": 30
+  },
+  "project_id": "44c06a64-c8ed-4153-96af-b49db29c39e3",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "00988cc2-3b5d-42a2-9aa5-d73f6d63a604",
+    "cycle": 1,
+    "digest": "8b916df9e465dab19f2929d9a88d93de9e33f7c570d2b0e7e27b632cf7a7acc4",
+    "engine_id": "claudeloop",
+    "event_id": "5f2e4df7-3f05-4612-b5bd-57aa25152949",
+    "job_id": "bcd8e0b1-385d-43dc-ad1f-cad988f80cc9",
+    "kind": "AnswerGiven",
+    "payload": {
+      "answer": "greeter4 with its 1,778 events: measure time for a single claim-path budget check, repeated 100 times to get a stable mean",
+      "item_id": "baseline_measurement"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-22T03:43:27.429990+00:00",
+    "project_id": "44c06a64-c8ed-4153-96af-b49db29c39e3",
+    "provenance": "trusted",
+    "seq": 31
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

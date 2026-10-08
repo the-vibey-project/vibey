@@ -1,0 +1,43 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "00f082709d0ac64fab4fa50dea9569898554c65117b61c0abed050a5bb375b94",
+    "event_id": "c632324f-cb24-4a03-b99b-3e60160202e1",
+    "seq": 36
+  },
+  "previous": {
+    "digest": "c8c69e86613ad39844859d4087e324304a257245710d5518980bf9cee96d8745",
+    "event_id": "745fc68a-65ab-4d50-a5e8-f86a6231c705",
+    "seq": 34
+  },
+  "project_id": "9692abab-ace3-4ee0-ac59-3ea42484b817",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "0face8bc-aa17-546b-b5de-e16e759738e6",
+    "cycle": 1,
+    "digest": "fc87d8d714be9cec45855881503fd3a7928dc85700564acfd5eb997c86bf55f8",
+    "engine_id": "gptossloop",
+    "event_id": "5f73237e-c5c8-4958-aad6-3af94bb58bd6",
+    "job_id": "c2b75c18-fd15-4e79-ad4e-cf489356ad57",
+    "kind": "QuestionAsked",
+    "payload": {
+      "blocking": false,
+      "cycle": 1,
+      "default": "No",
+      "item_id": "q13",
+      "stage": "walking_skeleton",
+      "text": "Should the TOC generation script be executed as a pre\u2011commit hook to catch missing TOC before commits are made?"
+    },
+    "phase": "design",
+    "produced_at": "2026-09-29T18:48:37.194487+00:00",
+    "project_id": "9692abab-ace3-4ee0-ac59-3ea42484b817",
+    "provenance": "agent",
+    "seq": 35
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

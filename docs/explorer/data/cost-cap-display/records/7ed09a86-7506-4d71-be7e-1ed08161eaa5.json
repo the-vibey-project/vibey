@@ -1,0 +1,43 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "c239f05bd38ea9c0a9c1e4d3113709fe8e9b0528b40ada320f1b9522f991fecc",
+    "event_id": "379d1509-2ea3-4e2d-b22f-1d61676f1d03",
+    "seq": 37
+  },
+  "previous": {
+    "digest": "40ceb1795272393e25c7923f63cfeaf261ac58908db97f94d1489603548c057b",
+    "event_id": "47fe2fe3-2c44-4cd5-9a9e-e4cdf08f5615",
+    "seq": 35
+  },
+  "project_id": "b43d1fcb-fb7b-42d6-9f80-220292c73389",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "f863a004-e46f-41d7-986c-ded9e9daa86d",
+    "cycle": 1,
+    "digest": "cef23ba4f8b51a41b6823aed30c2461faace060f84ad62716d7568360c3aa205",
+    "engine_id": "claudeloop",
+    "event_id": "7ed09a86-7506-4d71-be7e-1ed08161eaa5",
+    "job_id": "64ea0fea-cd4f-4b3b-bf19-112c18a7c58d",
+    "kind": "QuestionAsked",
+    "payload": {
+      "blocking": true,
+      "cycle": 1,
+      "default": "Both: unit test that resolver reads correct config keys, integration test that `vibey cost` displays correct caps from a real project config",
+      "item_id": "minimal_test",
+      "stage": "walking_skeleton",
+      "text": "What's the minimal test that proves the bug is fixed: a unit test of the resolver, an integration test of `vibey cost`, or both?"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-22T03:42:56.313857+00:00",
+    "project_id": "b43d1fcb-fb7b-42d6-9f80-220292c73389",
+    "provenance": "agent",
+    "seq": 36
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

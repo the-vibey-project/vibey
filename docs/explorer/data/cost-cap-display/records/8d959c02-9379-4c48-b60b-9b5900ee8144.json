@@ -1,0 +1,39 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "6426c5affb0956e18877429a6ca80e54311bcbba2e25f66e52e5243dcbb21899",
+    "event_id": "5bd83574-5190-4525-81ea-2f7a6f51224d",
+    "seq": 16
+  },
+  "previous": {
+    "digest": "7800a47344fe8eb809b7a9c0df1178f2560dfbf7c393347d7023be792656cc07",
+    "event_id": "a0dc88a1-c09d-4ac8-9560-05779b08cb39",
+    "seq": 14
+  },
+  "project_id": "b43d1fcb-fb7b-42d6-9f80-220292c73389",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "e74dcc28-437b-4beb-bf54-c0b2fd4d1ebe",
+    "cycle": 1,
+    "digest": "b699ff4ebaf935ba1123c4865a46cf4d20b9382826c2e8d167ae9d2931e9083a",
+    "engine_id": "claudeloop",
+    "event_id": "8d959c02-9379-4c48-b60b-9b5900ee8144",
+    "job_id": "64ea0fea-cd4f-4b3b-bf19-112c18a7c58d",
+    "kind": "AnswerGiven",
+    "payload": {
+      "answer": "Find them before deciding the fix, because a second reader is how this bug happened. Known: bootstrap.py line 275 constructs LedgerBudgetSource from config['max_cycle_dollars'] and is CORRECT -- it is the enforcement path and must not be changed to match the display. The parked budget_exhausted gate prompt is the other place a cap plausibly reaches a human, and if it renders one it must come from the same resolver. `vibey status` and the TUI dashboard should be checked too. The deliverable is one resolver used by every reader, so display and enforcement cannot diverge again.",
+      "item_id": "other_touchpoints"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-22T02:59:00.469742+00:00",
+    "project_id": "b43d1fcb-fb7b-42d6-9f80-220292c73389",
+    "provenance": "trusted",
+    "seq": 15
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

@@ -1,0 +1,39 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "ab8c7a703afe243f5c777f2ef83886b62846a2fe105870609bfb48a92bca81d0",
+    "event_id": "856c879f-13c1-411d-a1e7-a9ebb48bf02c",
+    "seq": 46
+  },
+  "previous": {
+    "digest": "cbef87bf102d6e1221f2c091377795087193b15fee00c3c95ba0763c752c4de6",
+    "event_id": "5d7c71f4-ff17-4a7c-acf3-a883ff723cdd",
+    "seq": 44
+  },
+  "project_id": "e631c00a-e1a1-4ed4-b99a-0fa2d388d240",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "67c69dd7-1044-4e35-99ad-6de848f88ef0",
+    "cycle": 1,
+    "digest": "29814277cdb2dc5c3f4149d48408fc39cb3e77c7acdcb386b68bab005946d51f",
+    "engine_id": "claudeloop",
+    "event_id": "dbdfdd1e-3163-4f17-b55b-d69914905688",
+    "job_id": "d73f236e-a7b4-4748-b075-3900a75af324",
+    "kind": "AnswerGiven",
+    "payload": {
+      "answer": "Individual tests \u22645s each; total new test time \u226430s added to suite (TUI tests may use Pilot harness which can be slower than unit tests)",
+      "item_id": "test_execution_time"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-22T03:43:27.263936+00:00",
+    "project_id": "e631c00a-e1a1-4ed4-b99a-0fa2d388d240",
+    "provenance": "trusted",
+    "seq": 45
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

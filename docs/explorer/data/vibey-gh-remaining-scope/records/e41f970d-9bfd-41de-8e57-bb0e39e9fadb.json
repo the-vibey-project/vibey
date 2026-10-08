@@ -1,0 +1,39 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "fd6055e06787064ed7a26c1cd03d64efab348a6a1e7b1532d00dfe6fa3d6dc03",
+    "event_id": "b004faaa-4a26-4f08-ba65-8ce45e1cdfa9",
+    "seq": 54
+  },
+  "previous": {
+    "digest": "e6667920485cd9f25cd2773986ac02aae871ae6feb25574a4ad21e69e137e2e8",
+    "event_id": "1502b6e4-ee1d-4569-9b17-fa982638ae98",
+    "seq": 52
+  },
+  "project_id": "d482c3e2-029e-4bb8-a9a1-de411816c6ae",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "681d2623-3975-4336-8871-d702950f8ac6",
+    "cycle": 1,
+    "digest": "357180243a762be91974786804940d12dc33c3807e1d0f01ca68998a7fb07baf",
+    "engine_id": "claudeloop",
+    "event_id": "e41f970d-9bfd-41de-8e57-bb0e39e9fadb",
+    "job_id": "d2626f25-d550-454e-bacd-7a7e6c9b52cd",
+    "kind": "AnswerGiven",
+    "payload": {
+      "answer": "Technical difficulties, unexpected changes in requirements, and resource constraints.",
+      "item_id": "25"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-31T02:06:54.259474+00:00",
+    "project_id": "d482c3e2-029e-4bb8-a9a1-de411816c6ae",
+    "provenance": "trusted",
+    "seq": 53
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

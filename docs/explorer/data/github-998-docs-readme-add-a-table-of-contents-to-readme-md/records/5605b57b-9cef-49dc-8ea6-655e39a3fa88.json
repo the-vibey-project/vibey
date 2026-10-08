@@ -1,0 +1,43 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "d87f4adcc8e58346499cf94d2fa8568667d3017d531b589e7c21872c9250e98c",
+    "event_id": "1920b374-8f9f-423b-9769-aa147bb1a55e",
+    "seq": 46
+  },
+  "previous": {
+    "digest": "6512b48256b8220e95d22404917fe4edb966471eb0f855fbd0fe9e85dc23df7a",
+    "event_id": "b07d1109-8e35-4f29-99f9-a9eb4bb8c783",
+    "seq": 44
+  },
+  "project_id": "9692abab-ace3-4ee0-ac59-3ea42484b817",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "0face8bc-aa17-546b-b5de-e16e759738e6",
+    "cycle": 1,
+    "digest": "c5f293fdea73bb3a270b1e1974b4dcd47c71a4d676acc2511b87b790c773b9b9",
+    "engine_id": "gptossloop",
+    "event_id": "5605b57b-9cef-49dc-8ea6-655e39a3fa88",
+    "job_id": "c2b75c18-fd15-4e79-ad4e-cf489356ad57",
+    "kind": "QuestionAsked",
+    "payload": {
+      "blocking": true,
+      "cycle": 1,
+      "default": "Yes",
+      "item_id": "q17",
+      "stage": "nfr_planguage",
+      "text": "Should the TOC generation script be idempotent and safe to run multiple times without duplicating the TOC section?"
+    },
+    "phase": "design",
+    "produced_at": "2026-09-29T18:51:08.930819+00:00",
+    "project_id": "9692abab-ace3-4ee0-ac59-3ea42484b817",
+    "provenance": "agent",
+    "seq": 45
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

@@ -1,0 +1,49 @@
+{
+  "chain": {
+    "findings": 0,
+    "head": "55f7907ec0d557cbaa11e5e2377f9facb88c54ebe9ef5e1b720fd522890eb9a3",
+    "head_seq": 290,
+    "scheme": "vibey-ledger-chain/v1",
+    "verified": true
+  },
+  "digest_range": "547a707afcb36dcd999da29d3acc82713ab2629c9e4b542571947528e0fc4dcd",
+  "documents": {
+    "index": "index.json",
+    "records": "records/{event_id}.json"
+  },
+  "format": "vibey-ledger-site/v1",
+  "holds": "full",
+  "policy": {
+    "fingerprint": "20c0e83ba268bd901344a690af4afac1b0433c0e279a476d954f31f9cb7fc5e8",
+    "scheme": "vibey-publication-policy/v1"
+  },
+  "project": {
+    "name": "doctor-performance",
+    "project_id": "5ea01f61-8536-4ace-90cb-18700a12e410"
+  },
+  "published": {
+    "first_seq": 1,
+    "last_seq": 164,
+    "records": 59
+  },
+  "seq_range": {
+    "events": 290,
+    "first": 1,
+    "last": 290
+  },
+  "shard_format": "vibey-ledger-shard/v1",
+  "statement": "231 events withheld by policy",
+  "tier": "standard (untiered)",
+  "withheld": {
+    "by_reason": {
+      "engine_chatter": 203,
+      "kind_not_allowlisted": 25,
+      "untrusted_provenance": 3
+    },
+    "credentials": 0,
+    "emails": 0,
+    "events": 231,
+    "fields": 4,
+    "paths": 0
+  }
+}

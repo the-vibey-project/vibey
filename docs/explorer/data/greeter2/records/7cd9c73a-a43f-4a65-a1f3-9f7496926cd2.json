@@ -1,0 +1,40 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "7842517003d3188110f0f465954b0ecff589806cb8cb54badeb558d03aad338d",
+    "event_id": "4cd06061-be82-4262-ad08-6bc42cc3909b",
+    "seq": 503
+  },
+  "previous": {
+    "digest": "9f8e049f2abe44644ce3d6177090bfcfd7829037e1dd80cf9a37628a18e8efcb",
+    "event_id": "4ec30056-7212-4d5c-aab4-3dd165dc325a",
+    "seq": 415
+  },
+  "project_id": "8f254b4c-df0a-4056-8937-6eba30efcfa6",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "6f02ebc2-03d9-4cff-885d-208bc69aa2e8",
+    "cycle": 1,
+    "digest": "3c8cf56cfd8507839ec4d7df69124a993d68615fef7f4b0b59880c678e45dbfb",
+    "engine_id": null,
+    "event_id": "7cd9c73a-a43f-4a65-a1f3-9f7496926cd2",
+    "job_id": "ed1a0476-5e3a-47da-a947-5f6ae84e84b7",
+    "kind": "FindingRaised",
+    "payload": {
+      "finding_id": "f_integrate_time-boundaries_44478c24",
+      "severity": "high",
+      "text": "merge conflict integrating 'time-boundaries': Auto-merging greet.py\nCONFLICT (add/add): Merge conflict in greet.py\nAutomatic merge failed; fix conflicts and then commit the result."
+    },
+    "phase": "build",
+    "produced_at": "2026-08-19T21:00:41.027251+00:00",
+    "project_id": "8f254b4c-df0a-4056-8937-6eba30efcfa6",
+    "provenance": "agent",
+    "seq": 471
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

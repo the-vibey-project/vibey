@@ -1,0 +1,43 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "8537810c4b53953130191402b72049bd85cbec86c6b82cdff24f7b5d54a5d090",
+    "event_id": "cef8b34a-0135-4d68-ac48-ef40af3bffab",
+    "seq": 36
+  },
+  "previous": {
+    "digest": "7e226f0a8637b11aee226bd14196425b689fa3d0f71ab4b28b08c65d42cc4bf1",
+    "event_id": "843327be-8876-40f2-a07e-a2e9cdd0f36b",
+    "seq": 34
+  },
+  "project_id": "e631c00a-e1a1-4ed4-b99a-0fa2d388d240",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "065c95c3-4189-4680-a702-a69a954c30b0",
+    "cycle": 1,
+    "digest": "e5f1dfbc81d8f149f0cb8e7c3769f713cf27c4fac133c17759d0fb887fcade05",
+    "engine_id": "claudeloop",
+    "event_id": "1b08082e-bed0-4716-841d-2e3e0e1b65a8",
+    "job_id": "d73f236e-a7b4-4748-b075-3900a75af324",
+    "kind": "QuestionAsked",
+    "payload": {
+      "blocking": false,
+      "cycle": 1,
+      "default": "After per-layer gates (as Gate 4e)\u2014preserves layer attribution for failures; total gate is the comprehensive backstop",
+      "item_id": "ci_step_order",
+      "stage": "walking_skeleton",
+      "text": "Should the new total gate run before the four per-layer gates (fail-fast), after them (backstop), or does order not matter?"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-22T03:35:08.795877+00:00",
+    "project_id": "e631c00a-e1a1-4ed4-b99a-0fa2d388d240",
+    "provenance": "agent",
+    "seq": 35
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

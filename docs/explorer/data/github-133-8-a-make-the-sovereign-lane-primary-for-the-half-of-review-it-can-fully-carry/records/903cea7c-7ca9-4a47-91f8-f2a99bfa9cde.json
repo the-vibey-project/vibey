@@ -1,0 +1,39 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "5f0de094036085b354a9496363d807d2b5abae57196e36ad26f421534a3b79b3",
+    "event_id": "8cb405c5-1d00-4b05-93ea-e9f36db62cff",
+    "seq": 10
+  },
+  "previous": {
+    "digest": "110cfa70ea9619f339a6b5268779532707d43c83e00047c33276ada51ccdb61c",
+    "event_id": "bd1089ee-1981-45ac-b74b-8bd217ac0188",
+    "seq": 8
+  },
+  "project_id": "f4cfe576-55c7-4f79-80ad-485f85ddca8b",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "4bb7ecc1-ea40-5364-bed9-45c048157678",
+    "cycle": 1,
+    "digest": "70c4d23d6a19b79f53fae512b39d4190b509f267cd05f631a4553a6ab35c88b9",
+    "engine_id": "gptossloop",
+    "event_id": "903cea7c-7ca9-4a47-91f8-f2a99bfa9cde",
+    "job_id": "5057b798-907c-4039-9690-3992212dc0b2",
+    "kind": "AnswerGiven",
+    "payload": {
+      "answer": "Update the launchd plists to use the new repo URL and re\u2011register the runners; this is the simplest, most reliable fix for the current 404 issue.",
+      "item_id": "Q3"
+    },
+    "phase": "design",
+    "produced_at": "2026-09-27T21:29:39.851076+00:00",
+    "project_id": "f4cfe576-55c7-4f79-80ad-485f85ddca8b",
+    "provenance": "trusted",
+    "seq": 9
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

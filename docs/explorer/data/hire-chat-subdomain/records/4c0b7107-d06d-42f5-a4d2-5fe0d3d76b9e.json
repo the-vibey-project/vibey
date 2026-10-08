@@ -1,0 +1,39 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "71c848ab2ba14a17da5f4a688e16af930018925c16979ea81a4f4ee93964f45e",
+    "event_id": "7cc67652-20af-428a-9dad-87657591d99e",
+    "seq": 54
+  },
+  "previous": {
+    "digest": "edac4725c3fc84bfd7b3549414a56a6a0100d3894999b1e200eacdd29da8f1ab",
+    "event_id": "2e67a2cc-9eca-446f-9bb4-cf324feb5f0a",
+    "seq": 52
+  },
+  "project_id": "0ee95624-eec4-4e8e-9a14-6ad9a37dcff4",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "2f625bd3-f8a4-4e90-bcaa-a4134849e03e",
+    "cycle": 1,
+    "digest": "9a66ae2c1a1c502ea2482ea195f97e8d52f6c0a9686c272acceddb7c5720752f",
+    "engine_id": "claudeloop",
+    "event_id": "4c0b7107-d06d-42f5-a4d2-5fe0d3d76b9e",
+    "job_id": "1343d0fd-bf3f-4739-8c21-cbf7693c673e",
+    "kind": "AnswerGiven",
+    "payload": {
+      "answer": "Two layers: (1) src/__tests__/next.config.test.ts pins the exact shape/order of the four host rules, so a refactor or merge that drops or reorders them fails npm run test:coverage; (2) behavioral drift from a Next.js/@netlify/plugin-nextjs upgrade is caught by the curl checklist documented in AGENTS.md ('Chat subdomain' section), run locally with next build + next start before merging dependency bumps. Add a short comment above the rules in next.config.ts pointing at that section. No CI curl job.",
+      "item_id": "routing_upgrade_risk"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-20T20:21:17.352913+00:00",
+    "project_id": "0ee95624-eec4-4e8e-9a14-6ad9a37dcff4",
+    "provenance": "trusted",
+    "seq": 53
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

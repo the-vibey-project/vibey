@@ -1,0 +1,39 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "f4613ff86fcc34fce828662d11725d035de976370605bd39d268536d87869dc3",
+    "event_id": "16a64f9c-ed37-47ed-9fee-7877a3545471",
+    "seq": 23
+  },
+  "previous": {
+    "digest": "f32613c0a50b373098975c0e5a504a4c27f882a64736f6de65611d23cc9b1239",
+    "event_id": "72437313-7cbd-4ab3-bc23-a785a1ad8cd1",
+    "seq": 21
+  },
+  "project_id": "5ea01f61-8536-4ace-90cb-18700a12e410",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "b9568f02-ed2e-4a68-b2af-7f026746bbbb",
+    "cycle": 1,
+    "digest": "4096eedd220bbf467fe721cca9ea47f6f877495f5a26fddad94f369481848680",
+    "engine_id": "claudeloop",
+    "event_id": "9c873577-5a5e-4adb-a47d-6c210cf0e8e7",
+    "job_id": "4c2ec03f-d670-44f9-9f05-47597984ab20",
+    "kind": "AnswerGiven",
+    "payload": {
+      "answer": "Non-zero exit code, with each engine reported in deterministic order showing success/failure/timeout status clearly",
+      "item_id": "failure_output"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-22T03:41:56.208120+00:00",
+    "project_id": "5ea01f61-8536-4ace-90cb-18700a12e410",
+    "provenance": "trusted",
+    "seq": 22
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

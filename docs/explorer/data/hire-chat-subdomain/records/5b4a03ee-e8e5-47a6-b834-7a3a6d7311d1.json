@@ -1,0 +1,43 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "f0f83be3ca977f0ace791b1e59573548d2cf2a85581eb8eec655736b1cfcdfa0",
+    "event_id": "bd7daa5c-9e18-4633-90a5-3d6615960e78",
+    "seq": 18
+  },
+  "previous": {
+    "digest": "f63c5a694c1a8033a14af13416771f5facaaba6b87bc30898c78c53887c3fb83",
+    "event_id": "e94f01ba-2aaf-409b-9416-5539ec560b57",
+    "seq": 16
+  },
+  "project_id": "0ee95624-eec4-4e8e-9a14-6ad9a37dcff4",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "4028b394-776b-4d85-8f39-8ce5fb74becb",
+    "cycle": 1,
+    "digest": "4b1996cc6ad006b73bb70883aeabfd11f3a4a3563d1e6dca9701b7bcc5547b44",
+    "engine_id": "claudeloop",
+    "event_id": "5b4a03ee-e8e5-47a6-b834-7a3a6d7311d1",
+    "job_id": "1343d0fd-bf3f-4739-8c21-cbf7693c673e",
+    "kind": "QuestionAsked",
+    "payload": {
+      "blocking": true,
+      "cycle": 1,
+      "default": "Adam is technically sophisticated (built this himself), transparent (answers cite real work), and accessible (easier to ask than read 100+ pages) - reinforcing 'hire this person' for Staff-level roles",
+      "item_id": "visitor_perception",
+      "stage": "laddering",
+      "text": "What impression should a visitor have after successfully using the chat page?"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-20T20:11:06.183484+00:00",
+    "project_id": "0ee95624-eec4-4e8e-9a14-6ad9a37dcff4",
+    "provenance": "agent",
+    "seq": 17
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

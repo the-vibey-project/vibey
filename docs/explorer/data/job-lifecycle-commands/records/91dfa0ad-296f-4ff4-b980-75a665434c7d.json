@@ -1,0 +1,43 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "f50c778f9736ec2ef83eba5c866654eb95f67e213565f54f37815f92e8a01246",
+    "event_id": "ec9a0bdb-4627-4eb2-b8bc-4b8b18de9998",
+    "seq": 11
+  },
+  "previous": {
+    "digest": "8bf0ca41f7f77588df50cecb0b0eb9a14fa8230c064868c41f522039fdb481c3",
+    "event_id": "5e033282-bc14-4890-88c2-9e8f33fb1073",
+    "seq": 9
+  },
+  "project_id": "2f6a93b6-2d73-4aff-bc94-16539841133f",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "a4b0a101-7906-40b8-b992-ce49ea4db4dd",
+    "cycle": 1,
+    "digest": "e975c682cab05a1c0a683f64fbcf16d980bc5313dedb8e559ee9f3ac7af24c9d",
+    "engine_id": "claudeloop",
+    "event_id": "91dfa0ad-296f-4ff4-b980-75a665434c7d",
+    "job_id": "334db377-8cb0-4a72-9cc0-78b45fc9bb38",
+    "kind": "QuestionAsked",
+    "payload": {
+      "blocking": true,
+      "cycle": 1,
+      "default": "When a job went off-track mid-way through (wrong design direction, bad review, failed deploy), wind-back should restore to a named phase boundary (e.g., 'after design approved') by appending a ledger event that resets phase/state without deleting history. Coordinate addressing scheme with abandon/fork commands.",
+      "item_id": "wind_back_job_story",
+      "stage": "job_story",
+      "text": "When would an operator need to wind a job back to an earlier point, and how should they specify which point?"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-22T02:57:46.446746+00:00",
+    "project_id": "2f6a93b6-2d73-4aff-bc94-16539841133f",
+    "provenance": "agent",
+    "seq": 10
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

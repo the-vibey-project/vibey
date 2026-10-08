@@ -1,0 +1,43 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "682537a54f01fd6262750942dc6e29182dd1e666b276dffc705aa1baa213871b",
+    "event_id": "b73663a1-8bf9-4af0-89ad-c17c0cf85e1f",
+    "seq": 37
+  },
+  "previous": {
+    "digest": "fc87d8d714be9cec45855881503fd3a7928dc85700564acfd5eb997c86bf55f8",
+    "event_id": "5f73237e-c5c8-4958-aad6-3af94bb58bd6",
+    "seq": 35
+  },
+  "project_id": "9692abab-ace3-4ee0-ac59-3ea42484b817",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "0face8bc-aa17-546b-b5de-e16e759738e6",
+    "cycle": 1,
+    "digest": "00f082709d0ac64fab4fa50dea9569898554c65117b61c0abed050a5bb375b94",
+    "engine_id": "gptossloop",
+    "event_id": "c632324f-cb24-4a03-b99b-3e60160202e1",
+    "job_id": "c2b75c18-fd15-4e79-ad4e-cf489356ad57",
+    "kind": "QuestionAsked",
+    "payload": {
+      "blocking": false,
+      "cycle": 1,
+      "default": "No",
+      "item_id": "q14",
+      "stage": "walking_skeleton",
+      "text": "Do we need to generate a separate TOC for the MkDocs documentation in addition to README.md?"
+    },
+    "phase": "design",
+    "produced_at": "2026-09-29T18:48:37.194487+00:00",
+    "project_id": "9692abab-ace3-4ee0-ac59-3ea42484b817",
+    "provenance": "agent",
+    "seq": 36
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

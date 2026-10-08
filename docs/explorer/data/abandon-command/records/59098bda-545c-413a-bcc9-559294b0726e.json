@@ -1,0 +1,39 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "db65d1d7b400d35306c66a0e2ee9710e82facbe9acf89742404e517b8849627b",
+    "event_id": "eec67dfe-2f2a-404e-aaf5-c28a46b4bbaf",
+    "seq": 16
+  },
+  "previous": {
+    "digest": "8edd4c964622b5a54210ba101dfc679583585bf056f9c35e959738c3d97d1c8c",
+    "event_id": "8e07f280-2d23-4236-a8d5-9705f4f86a1a",
+    "seq": 14
+  },
+  "project_id": "d733035f-e0f9-4f67-aba2-270068d6a9c6",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "e4a5d377-d233-4309-8711-c97a448a4839",
+    "cycle": 1,
+    "digest": "d3f100e7270753d684598c24ebae09313fd0e622333645f586956ee5bc9956cf",
+    "engine_id": "claudeloop",
+    "event_id": "59098bda-545c-413a-bcc9-559294b0726e",
+    "job_id": "44e282ee-55b1-4cf9-afc3-c84870a14a5c",
+    "kind": "AnswerGiven",
+    "payload": {
+      "answer": "Leave everything intact and delete nothing. Branches and PRs are evidence and may be the only record of what the run produced -- an abandon command that removes them converts a tidy-up into data loss. Warn if a worktree directory still exists, and print its path so the operator can remove it deliberately, but never remove it automatically: vibey's worktrees are real git worktrees and deleting one out from under a live worker is a corruption, not a cleanup.",
+      "item_id": "artifact_handling"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-22T02:57:57.033945+00:00",
+    "project_id": "d733035f-e0f9-4f67-aba2-270068d6a9c6",
+    "provenance": "trusted",
+    "seq": 15
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

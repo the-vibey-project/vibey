@@ -1,0 +1,39 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "fa754fe119a2d7c5126f9ddca4714acb474aedf95de2656b958a56a1eb1a998a",
+    "event_id": "54b585c3-1530-478b-8a0b-0213203ecd93",
+    "seq": 24
+  },
+  "previous": {
+    "digest": "3356ab2c97f0a06ecd8f57f14d5672f52601c33b9453eeeeb2a3365e2fc06b2b",
+    "event_id": "b3b10ea1-80f8-45ac-92a6-00773af3c877",
+    "seq": 22
+  },
+  "project_id": "d482c3e2-029e-4bb8-a9a1-de411816c6ae",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "67de5b32-b00f-4f60-9c35-455d80022254",
+    "cycle": 1,
+    "digest": "d4b6826edb8a681bb8f4cbb3eedf66e4686da1de6ae1211685ff2094f01a3319",
+    "engine_id": "claudeloop",
+    "event_id": "4b0fad9a-d336-4a0b-b5c5-cadcff74b244",
+    "job_id": "d2626f25-d550-454e-bacd-7a7e6c9b52cd",
+    "kind": "AnswerGiven",
+    "payload": {
+      "answer": "10,000 active users within the first year.",
+      "item_id": "11"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-31T02:04:19.509461+00:00",
+    "project_id": "d482c3e2-029e-4bb8-a9a1-de411816c6ae",
+    "provenance": "trusted",
+    "seq": 23
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

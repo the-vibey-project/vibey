@@ -1,0 +1,43 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "a5f75e7d3ba381c2faa4414fc138a764d6fc2797dbc9b9d968bcd51c1fc25f58",
+    "event_id": "b69a96d7-a189-4990-8949-005c399b9bcb",
+    "seq": 5
+  },
+  "previous": {
+    "digest": "c44e3c2e03b127b5c5fe2117a84565836adf2d72dd1a977ee102ccf680d79987",
+    "event_id": "71dcb070-93f3-4552-8eec-cfb8c8bed96d",
+    "seq": 3
+  },
+  "project_id": "893c4fc1-542e-411e-a10a-3aef784b1540",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "d1405050-7bbf-5034-b04a-11a1570aca97",
+    "cycle": 1,
+    "digest": "d21504ede2019cda4418b70f2c6be8e3ce03e4cd42eeff6c6c398abbdb27da42",
+    "engine_id": "gptossloop",
+    "event_id": "712962bc-12f4-4822-a34c-55d641ef65c1",
+    "job_id": "f0b62bda-70b9-4e97-a9f7-8f5cda351d0a",
+    "kind": "QuestionAsked",
+    "payload": {
+      "blocking": false,
+      "cycle": 1,
+      "default": "No",
+      "item_id": "q2",
+      "stage": "context_free",
+      "text": "Should we create a new test file if none exists in tests/meta for README.md?"
+    },
+    "phase": "design",
+    "produced_at": "2026-09-30T03:51:14.542698+00:00",
+    "project_id": "893c4fc1-542e-411e-a10a-3aef784b1540",
+    "provenance": "agent",
+    "seq": 4
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

@@ -1,0 +1,43 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "0241f8a6ba1aabee0655fca362f1ed37edbeaaf5dd866e7d4786fb3e1424373c",
+    "event_id": "2575ff97-fb6a-4016-bf23-0fcd506f5743",
+    "seq": 28
+  },
+  "previous": {
+    "digest": "fcef911a7b44aa0f1f9a8d600d42e1cb1cb42681222612ecc1df281d8ffae86a",
+    "event_id": "26008b79-19ff-4484-9fa3-27f116c30b93",
+    "seq": 25
+  },
+  "project_id": "44c06a64-c8ed-4153-96af-b49db29c39e3",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "0b6493ce-5efc-4b2c-bf15-b7dba849ebf9",
+    "cycle": 1,
+    "digest": "e8a8683f10333ac51491c177bbb79ee092d433dd83df8567aa64f507a463dfbe",
+    "engine_id": "claudeloop",
+    "event_id": "eb1c583f-03b7-492a-9055-54d1453324bc",
+    "job_id": "bcd8e0b1-385d-43dc-ad1f-cad988f80cc9",
+    "kind": "QuestionAsked",
+    "payload": {
+      "blocking": true,
+      "cycle": 1,
+      "default": "greeter4 with its 1,778 events: measure time for a single claim-path budget check, repeated 100 times to get a stable mean",
+      "item_id": "baseline_measurement",
+      "stage": "example_mapping",
+      "text": "What's a concrete 'before' scenario you can measure right now \u2014 a specific project, command, or ledger size \u2014 to establish the baseline?"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-22T03:42:46.929466+00:00",
+    "project_id": "44c06a64-c8ed-4153-96af-b49db29c39e3",
+    "provenance": "agent",
+    "seq": 27
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

@@ -1,0 +1,39 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "55fb8007cf32990aa8421757a12558175860b11801c1eb10ccab2ce2d4fba25e",
+    "event_id": "10f5d1b3-c256-4f72-b593-f6418c3d7044",
+    "seq": 59
+  },
+  "previous": {
+    "digest": "998b1b65779c98b85730d12a540300abe601e11b153a9e42f7bbe8e1379e79b7",
+    "event_id": "2d6bc69a-e339-4e0e-ab41-a8b4f1e3698f",
+    "seq": 57
+  },
+  "project_id": "44c06a64-c8ed-4153-96af-b49db29c39e3",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "fa25fc20-7002-4a0e-a5ab-f7e25413ed8e",
+    "cycle": 1,
+    "digest": "72fca61126cdd225950dc97068099a9b8be92f7854129adaa63b3c0694f58a15",
+    "engine_id": "claudeloop",
+    "event_id": "1e3c1bb9-c6c2-4979-8c7e-0c67ff3669aa",
+    "job_id": "bcd8e0b1-385d-43dc-ad1f-cad988f80cc9",
+    "kind": "AnswerGiven",
+    "payload": {
+      "answer": "A correctness bug where budget checks return stale data under concurrent load, caught too late because we didn't test multi-worker scenarios",
+      "item_id": "revert_scenario"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-22T03:48:03.775552+00:00",
+    "project_id": "44c06a64-c8ed-4153-96af-b49db29c39e3",
+    "provenance": "trusted",
+    "seq": 58
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

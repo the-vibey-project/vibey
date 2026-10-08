@@ -1,0 +1,39 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "aa1de1464aa3a94b7061f00d3806429fd673e82fbc41085b3ec2e32e35b0d410",
+    "event_id": "8ce28958-9006-42d7-90ba-6d88e31757ed",
+    "seq": 7
+  },
+  "previous": {
+    "digest": "6cd7ba75b07dbc4d865608de85e74eaa52d1f77a567aa26610f58a3694f9b95f",
+    "event_id": "8d6b8538-102f-455f-9c1c-9147cd4e7b6e",
+    "seq": 5
+  },
+  "project_id": "d482c3e2-029e-4bb8-a9a1-de411816c6ae",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "481ee88f-1542-45bd-a0ff-0a8050cf6982",
+    "cycle": 1,
+    "digest": "a93774b3cddb280b1a5e07841d9fea9fed4077f5d17f66afb68f1dd9fb6d0c5b",
+    "engine_id": "claudeloop",
+    "event_id": "a1e71a6c-6fe6-4b5a-8b8e-86c9bda8da53",
+    "job_id": "d2626f25-d550-454e-bacd-7a7e6c9b52cd",
+    "kind": "AnswerGiven",
+    "payload": {
+      "answer": "The operator running autonomous delivery across their own repositories on their own hardware, and any adopter of vibey-gh who needs the release path to keep working when paid credits are unavailable.",
+      "item_id": "2"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-31T02:03:18.523028+00:00",
+    "project_id": "d482c3e2-029e-4bb8-a9a1-de411816c6ae",
+    "provenance": "trusted",
+    "seq": 6
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

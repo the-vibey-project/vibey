@@ -1,0 +1,43 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "5e4d0df1a1187fe59c18bc3bb1cbc408f199a0120fded25df3b576106a2ec47b",
+    "event_id": "da487f74-ae73-4025-a22f-7ddcedb3d63e",
+    "seq": 51
+  },
+  "previous": {
+    "digest": "856f2011a03e1a97ba4a890aa291b6fa5233ee9105193a802cd12c7da9fdbee9",
+    "event_id": "0843873f-478d-4c23-a807-25a5fdc8823d",
+    "seq": 49
+  },
+  "project_id": "26f89c38-c86b-4ddf-be75-c579a118e40e",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "acd5a18a-b05e-4d46-9cbf-32f1463e11a3",
+    "cycle": 1,
+    "digest": "5dabbda7af01e8514302ccb91b1cba04844fb5021861790ee3f52f5aa04187b3",
+    "engine_id": "claudeloop",
+    "event_id": "7e136538-b90e-4860-aa38-e966d90e0aef",
+    "job_id": "2bdd2b5e-b4f1-4004-9dbf-78d267fea803",
+    "kind": "QuestionAsked",
+    "payload": {
+      "blocking": false,
+      "cycle": 1,
+      "default": "Require Python \u003e=3.12 in pyproject.toml; if entry point fails, document fallback to `python greet.py` direct invocation",
+      "item_id": "installation_failure_modes",
+      "stage": "premortem",
+      "text": "What should happen if the entry point installation fails or the user's environment doesn't have Python 3.12?"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-19T12:35:11.645438+00:00",
+    "project_id": "26f89c38-c86b-4ddf-be75-c579a118e40e",
+    "provenance": "agent",
+    "seq": 50
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

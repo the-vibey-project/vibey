@@ -1,0 +1,43 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "acc031dbc9cd92552adb1173d1a461bdf713a1d1b37a10ebf23663f8347e0ab9",
+    "event_id": "958b082c-1177-4538-9745-785233a7cc43",
+    "seq": 26
+  },
+  "previous": {
+    "digest": "a79ce745064a686328d3e3829c338ccfa422be0efefedc8b7bbddf55dd1b4d2d",
+    "event_id": "a6e561b8-c8bb-4bcd-a5f1-2e9f98eb49f0",
+    "seq": 24
+  },
+  "project_id": "5e76341f-ba5f-4272-8355-3df5d489bbcd",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "f5008b1d-b6d4-4787-929b-d970e80e17d4",
+    "cycle": 1,
+    "digest": "4a0328741eaefa2dc3606cb2026071ba2172b49170dd07931511ac7c2fb89a86",
+    "engine_id": "claudeloop",
+    "event_id": "47834444-2a3c-42dc-a96e-cc57548ce689",
+    "job_id": "e58deb6b-5356-4a39-8acf-5dc898bba380",
+    "kind": "QuestionAsked",
+    "payload": {
+      "blocking": true,
+      "cycle": 1,
+      "default": "Good morning, alice! Welcome to greeter3.",
+      "item_id": "example_success",
+      "stage": "example_mapping",
+      "text": "Give a concrete example: what exact greeting should the user 'alice' see at 9am?"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-20T00:49:31.420364+00:00",
+    "project_id": "5e76341f-ba5f-4272-8355-3df5d489bbcd",
+    "provenance": "agent",
+    "seq": 25
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

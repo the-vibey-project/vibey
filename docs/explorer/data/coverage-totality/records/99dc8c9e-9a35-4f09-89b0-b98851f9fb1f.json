@@ -1,0 +1,39 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "bd54aa0f2020141419f28b63fc6a345e5302fb547ecab2cc637f17440f1aa912",
+    "event_id": "c15fc131-c4a4-4402-8101-d5e4bf43e9ec",
+    "seq": 15
+  },
+  "previous": {
+    "digest": "1205317a077613f9d92a24165677d9162b23e6c7d5edabaf373e9155bb44c99b",
+    "event_id": "5c57400a-01c4-4bda-9f2b-97dde11ff453",
+    "seq": 13
+  },
+  "project_id": "e631c00a-e1a1-4ed4-b99a-0fa2d388d240",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "51cc480c-a4de-46cb-a27a-94fe4c23ace6",
+    "cycle": 1,
+    "digest": "574eadb4659eb2be48b604e1f09e99cfafa1d78cf54a5f58e3c9e3e62fc66575",
+    "engine_id": "claudeloop",
+    "event_id": "99dc8c9e-9a35-4f09-89b0-b98851f9fb1f",
+    "job_id": "d73f236e-a7b4-4748-b075-3900a75af324",
+    "kind": "AnswerGiven",
+    "payload": {
+      "answer": "Concretely, from the current report. bootstrap.py line 279: the branch where a project configures max_cycle_turns but NOT max_cycle_dollars (and the neither-configured case) -- the budget brake's construction predicate. bootstrap.py line 501: the asyncpg pool returning None, which is the guard before 'did not create a pool'. tui/dashboard.py line 87: fetch_dashboard_state against an unknown project id, which raises ValueError. Lines 99-108: the ledger-scan branches for every phase-decision event kind -- VISUAL_DESIGN opted_in/declined/accepted/waived and DEPLOYMENT opted_in/declined -- each of which sets a different banner value and none of which any current test produces. Line 114: a project whose managed worktree root does not exist yet, versus one with worktrees present. The remaining partial branches around lines 278-295, 342-348 and 422-465 are render and refresh paths: empty circuits, empty queue, and the exit arms of loops that today only ever run with data. Prefer driving these through Textual's own Pilot harness so they exercise real rendering rather than a mock of it.",
+      "item_id": "uncovered_behavior_scenarios"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-22T02:37:45.506643+00:00",
+    "project_id": "e631c00a-e1a1-4ed4-b99a-0fa2d388d240",
+    "provenance": "trusted",
+    "seq": 14
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

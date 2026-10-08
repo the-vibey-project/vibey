@@ -1,0 +1,43 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "49a8995a83b94e8fd257699bd4373110df28025b25a103ab2ccf7b381ab2cc5a",
+    "event_id": "633b274b-7034-412e-9725-848ebb88e761",
+    "seq": 25
+  },
+  "previous": {
+    "digest": "aa5430442a385c385eb8e043742e09b4be6c522296c2cdd202629c249e7baa15",
+    "event_id": "bbb5d4b7-a2a8-4093-acab-fcaea0420b06",
+    "seq": 23
+  },
+  "project_id": "e631c00a-e1a1-4ed4-b99a-0fa2d388d240",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "8282b550-56dd-47df-a82d-87487128cebc",
+    "cycle": 1,
+    "digest": "b8a076110defcbe951a6717b473a1683c4d1be42664e0edcd6f027279c6e6482",
+    "engine_id": "claudeloop",
+    "event_id": "8365859c-0331-462e-8736-e190a061a4a7",
+    "job_id": "d73f236e-a7b4-4748-b075-3900a75af324",
+    "kind": "QuestionAsked",
+    "payload": {
+      "blocking": true,
+      "cycle": 1,
+      "default": "One focused test per decision kind: separate tests for VISUAL_DESIGN opted_in, declined, accepted, waived, and DEPLOYMENT opted_in, declined\u2014each builds minimal ledger to reach that state",
+      "item_id": "phase_banner_examples",
+      "stage": "example_mapping",
+      "text": "For tui/dashboard.py phase decision banners (lines 99-108), what example ledger sequences should tests construct\u2014one test per decision kind (opted_in, declined, etc.), or composite scenarios with multiple decisions?"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-22T02:40:45.961431+00:00",
+    "project_id": "e631c00a-e1a1-4ed4-b99a-0fa2d388d240",
+    "provenance": "agent",
+    "seq": 24
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

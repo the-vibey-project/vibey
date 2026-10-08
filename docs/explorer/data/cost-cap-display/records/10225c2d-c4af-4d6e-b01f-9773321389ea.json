@@ -1,0 +1,39 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "40ceb1795272393e25c7923f63cfeaf261ac58908db97f94d1489603548c057b",
+    "event_id": "47fe2fe3-2c44-4cd5-9a9e-e4cdf08f5615",
+    "seq": 35
+  },
+  "previous": {
+    "digest": "3ed817e722218c0aefec6cc5155387bf3d7c69e2d23caafe7144cb21b7d775a2",
+    "event_id": "6f9f0308-45cf-46e0-9cba-6741a2d52549",
+    "seq": 32
+  },
+  "project_id": "b43d1fcb-fb7b-42d6-9f80-220292c73389",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "fca4e2f2-8ed1-4c89-85d5-09c4a559f386",
+    "cycle": 1,
+    "digest": "6281ef41582f23b99ffb0aec6b0b7f5a4592a7aac90c0c34c30ba7d6b62c720c",
+    "engine_id": "claudeloop",
+    "event_id": "10225c2d-c4af-4d6e-b01f-9773321389ea",
+    "job_id": "64ea0fea-cd4f-4b3b-bf19-112c18a7c58d",
+    "kind": "AnswerGiven",
+    "payload": {
+      "answer": "Test constructs a config with known caps, calls both the cap resolver and LedgerBudgetSource constructor, asserts they return identical values",
+      "item_id": "regression_test"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-22T03:41:55.928448+00:00",
+    "project_id": "b43d1fcb-fb7b-42d6-9f80-220292c73389",
+    "provenance": "trusted",
+    "seq": 33
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

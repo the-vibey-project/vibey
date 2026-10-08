@@ -1,0 +1,39 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "cf77490068b4a1f5fa04a7a8a06bf0994e4d15deb7ec05e264c557dd81d1d6e5",
+    "event_id": "1dbef9ca-0419-41bb-b6c9-f7108f3fd4bf",
+    "seq": 32
+  },
+  "previous": {
+    "digest": "2389940374e937bf0864d59e280eaf6a97ee01709d6772e92156aeee498057c9",
+    "event_id": "27eea52a-fb1c-40ee-ba15-5a95c5a34395",
+    "seq": 30
+  },
+  "project_id": "2f6a93b6-2d73-4aff-bc94-16539841133f",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "d6e1081d-e9e6-4ee0-81bd-5e56f1975739",
+    "cycle": 1,
+    "digest": "729579f1b103572b409ffa889836cd573fff75a1fcc75830b1fa2cbef3dd9976",
+    "engine_id": "claudeloop",
+    "event_id": "ebd3165b-4f4d-4b50-994d-9b7b22a27978",
+    "job_id": "334db377-8cb0-4a72-9cc0-78b45fc9bb38",
+    "kind": "AnswerGiven",
+    "payload": {
+      "answer": "Command writes stop_requested=true to job row. Worker's next heartbeat sees flag, finishes current turn, writes final ledger event, releases lease with state=CANCELLED. Job row transitions: LEASED \u2192 CANCELLED, lease_expires_at cleared. No forced interruption, no lease yanked.",
+      "item_id": "stop_concrete_example"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-22T03:43:28.355576+00:00",
+    "project_id": "2f6a93b6-2d73-4aff-bc94-16539841133f",
+    "provenance": "trusted",
+    "seq": 31
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

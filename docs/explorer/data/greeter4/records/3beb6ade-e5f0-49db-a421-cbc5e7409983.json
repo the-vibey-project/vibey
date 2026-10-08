@@ -1,0 +1,43 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "f61717d597a328548be222e790c089aa2d8814990b8774c0051c64c8c06d148d",
+    "event_id": "47c50a27-53b7-4269-a1cc-cc7d7d9fbe33",
+    "seq": 26
+  },
+  "previous": {
+    "digest": "c7d6f44cf10cbf3b1e629ab7ad3212684bb9494a2bde8df794ce74581a05d416",
+    "event_id": "9ce91f51-a378-4884-b511-38453ec1b69a",
+    "seq": 24
+  },
+  "project_id": "8ab823c9-89e4-4050-884c-9008c8b14ef8",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "874086de-a259-478f-a3eb-8072e15496a8",
+    "cycle": 1,
+    "digest": "3e42f21bab9e2c45dfc10917b22fd477cb6e2699935187ff97f671306dee3e2a",
+    "engine_id": "claudeloop",
+    "event_id": "3beb6ade-e5f0-49db-a421-cbc5e7409983",
+    "job_id": "705692f1-69a1-4cc2-ade7-8aa3d1407b67",
+    "kind": "QuestionAsked",
+    "payload": {
+      "blocking": true,
+      "cycle": 1,
+      "default": "https://example.com/blog/2026/08/my-very-long-article-title \u2192 ex.co/aB3xZ (6-char base62), with optional custom aliases like ex.co/summer-sale",
+      "item_id": "url_shortening_examples",
+      "stage": "example_mapping",
+      "text": "Give 2-3 concrete examples of long URLs \u2192 short URLs (including format/structure of short codes)"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-20T02:34:00.250964+00:00",
+    "project_id": "8ab823c9-89e4-4050-884c-9008c8b14ef8",
+    "provenance": "agent",
+    "seq": 25
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

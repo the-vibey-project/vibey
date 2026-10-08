@@ -1,0 +1,43 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "732e44f059b43a37adfadb5d96a8612543353256f24ba5075cafd33267bf8593",
+    "event_id": "4cdff1cc-7181-4a4a-9947-b26e85db3b5c",
+    "seq": 21
+  },
+  "previous": {
+    "digest": "3922e5627586dda57d89e6814761eaab9e4c926449928ebfd972b3d813183b17",
+    "event_id": "a2d58278-7abd-4b21-9005-2737bac4bdad",
+    "seq": 19
+  },
+  "project_id": "ab0b06f9-55a4-4b47-ac08-254e7fdd9036",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "6218a99f-f115-4440-9c64-a4f647831bb3",
+    "cycle": 1,
+    "digest": "11e88ef29f7dba4f0869685d4e609b73b938d459932ef91ac96dd45a336e0ba2",
+    "engine_id": "claudeloop",
+    "event_id": "88d95004-7ccd-4d0f-8611-5fe7fc22b870",
+    "job_id": "48f9ef01-8b95-4709-adde-ed0ece390f8d",
+    "kind": "QuestionAsked",
+    "payload": {
+      "blocking": false,
+      "cycle": 1,
+      "default": "If origin branch is 'feature/foo', fork branches are 'feature/foo-fork-1', 'feature/foo-fork-2', etc., numbered sequentially by creation order",
+      "item_id": "branch_naming",
+      "stage": "laddering",
+      "text": "How should the fork's feature branch be named relative to the origin branch?"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-22T03:02:27.256337+00:00",
+    "project_id": "ab0b06f9-55a4-4b47-ac08-254e7fdd9036",
+    "provenance": "agent",
+    "seq": 20
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

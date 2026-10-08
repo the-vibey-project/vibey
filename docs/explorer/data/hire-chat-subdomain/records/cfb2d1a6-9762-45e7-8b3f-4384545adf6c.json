@@ -1,0 +1,39 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "d3d1e4db76ee08a8b4ccbb83d8bd87e3ff28ff3c942748485d1c6e7712711f7f",
+    "event_id": "95ac5816-d74e-411c-9c5c-8721c0057b9a",
+    "seq": 47
+  },
+  "previous": {
+    "digest": "6eff3e11275e9bfa92d2a101a790ad8de0346565ae691279fd52ebb03bff748a",
+    "event_id": "55ca8eb4-2a42-43d3-99db-6a9f401543bb",
+    "seq": 45
+  },
+  "project_id": "0ee95624-eec4-4e8e-9a14-6ad9a37dcff4",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "5677c2f7-435c-4529-a4fb-a21d3c6c4609",
+    "cycle": 1,
+    "digest": "2083d66e8947578ab479be065edb59b5c39889df9e4b78dec1d50afc4fc17ab5",
+    "engine_id": "claudeloop",
+    "event_id": "cfb2d1a6-9762-45e7-8b3f-4384545adf6c",
+    "job_id": "1343d0fd-bf3f-4739-8c21-cbf7693c673e",
+    "kind": "AnswerGiven",
+    "payload": {
+      "answer": "Must: \u003c3000ms TTI (matching main site's server-rendered pages); Plan: \u003c2000ms; Wish: \u003c1500ms. FCP/LCP targets inherited from existing Netlify + Next.js defaults; no new performance budget beyond keeping the page server-rendered.",
+      "item_id": "page_load_performance"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-20T20:19:32.968998+00:00",
+    "project_id": "0ee95624-eec4-4e8e-9a14-6ad9a37dcff4",
+    "provenance": "trusted",
+    "seq": 46
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

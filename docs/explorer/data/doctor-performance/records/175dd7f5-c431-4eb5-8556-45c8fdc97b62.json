@@ -1,0 +1,39 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "f39c567937d95512509073f350d2b56766fb94f097c5b61add719b2eb1f6d3b2",
+    "event_id": "21285dd5-3f3b-48c0-82f6-97d5e005b937",
+    "seq": 45
+  },
+  "previous": {
+    "digest": "b5d01a147bb4890ff9d958ae982b15bcf6216449f7cf86b2bcca7b0a598afa40",
+    "event_id": "6abdd114-0b13-4398-aa68-3c4069b8957f",
+    "seq": 42
+  },
+  "project_id": "5ea01f61-8536-4ace-90cb-18700a12e410",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "80bb1109-1965-4321-b96c-f2b29bd620c5",
+    "cycle": 1,
+    "digest": "dc33af57e96dd38d9ff23d266632836456dfa9684e7e222f3ded6b9193e05d28",
+    "engine_id": "claudeloop",
+    "event_id": "175dd7f5-c431-4eb5-8556-45c8fdc97b62",
+    "job_id": "4c2ec03f-d670-44f9-9f05-47597984ab20",
+    "kind": "AnswerGiven",
+    "payload": {
+      "answer": "Tests for: all engines healthy, single timeout, multiple timeouts, single failure, mixed timeout+failure, ordering guarantee, exit code validation per scenario",
+      "item_id": "test_coverage_gaps"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-22T03:44:59.924783+00:00",
+    "project_id": "5ea01f61-8536-4ace-90cb-18700a12e410",
+    "provenance": "trusted",
+    "seq": 43
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

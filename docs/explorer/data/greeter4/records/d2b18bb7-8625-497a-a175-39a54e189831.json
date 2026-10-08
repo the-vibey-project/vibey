@@ -1,0 +1,39 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "b34d12ede073df91a494bdcc6ae87d2fc57489255b3021f11da206ff897d5c6d",
+    "event_id": "8586d116-b2ff-4122-9448-fd108f8b6730",
+    "seq": 17
+  },
+  "previous": {
+    "digest": "e455099dbd0ab3b82ce0fcf7d913441082b2b764ee2ef2f63e6d2b88f651888e",
+    "event_id": "70241fda-5827-4a32-96e9-d4a05bd7c763",
+    "seq": 15
+  },
+  "project_id": "8ab823c9-89e4-4050-884c-9008c8b14ef8",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "b83b647f-f5e1-4af1-ad02-cee9e5db2625",
+    "cycle": 1,
+    "digest": "fb80399f799c0965875743043687338196f41d6d7969cc1e5e3f845b947c07cb",
+    "engine_id": "claudeloop",
+    "event_id": "d2b18bb7-8625-497a-a175-39a54e189831",
+    "job_id": "705692f1-69a1-4cc2-ade7-8aa3d1407b67",
+    "kind": "AnswerGiven",
+    "payload": {
+      "answer": "Custom aliases, link expiration, malicious URL detection, rate limiting for abuse prevention",
+      "item_id": "edge_cases"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-20T02:32:40.917723+00:00",
+    "project_id": "8ab823c9-89e4-4050-884c-9008c8b14ef8",
+    "provenance": "trusted",
+    "seq": 16
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

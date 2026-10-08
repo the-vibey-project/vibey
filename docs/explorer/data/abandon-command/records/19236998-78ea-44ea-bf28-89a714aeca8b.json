@@ -1,0 +1,43 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "20628d42dd835dfb8f43c67157185f4814d63a114fa7a9113c51d250d8c5b33e",
+    "event_id": "9c4ee4ee-52f2-44d7-9707-74720576008e",
+    "seq": 3
+  },
+  "previous": {
+    "digest": "a5e426d1dd6098dfe22b68edaa9adab2860deb0f2927819816cd0a3a1c94ccb4",
+    "event_id": "87543e4d-b2e3-4c70-ba4f-71cd570a24b7",
+    "seq": 1
+  },
+  "project_id": "d733035f-e0f9-4f67-aba2-270068d6a9c6",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "0f8be3d9-1185-4cbc-ae79-d39ae3d69417",
+    "cycle": 1,
+    "digest": "d3b7be97e77082304d79c3b88a8ec7f35db2077e9d58cfc6b52d834bd5d57ac2",
+    "engine_id": "claudeloop",
+    "event_id": "19236998-78ea-44ea-bf28-89a714aeca8b",
+    "job_id": "44e282ee-55b1-4cf9-afc3-c84870a14a5c",
+    "kind": "QuestionAsked",
+    "payload": {
+      "blocking": false,
+      "cycle": 1,
+      "default": "Internal engineering team with full technical access",
+      "item_id": "users",
+      "stage": "context_free",
+      "text": "Who are the intended users and what's their technical context?"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-22T02:44:08.499389+00:00",
+    "project_id": "d733035f-e0f9-4f67-aba2-270068d6a9c6",
+    "provenance": "agent",
+    "seq": 2
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

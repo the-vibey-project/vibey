@@ -1,0 +1,34 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": null,
+  "previous": {
+    "digest": "8d83deba725a6960a983fc928a89416747784219e008c92da67ddbb78f2c72eb",
+    "event_id": "61c8a80c-3695-4d4b-98a7-cac6c052769e",
+    "seq": 1108
+  },
+  "project_id": "26f89c38-c86b-4ddf-be75-c579a118e40e",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "58f889a4-c935-4eef-8673-d7a813cc95a2",
+    "cycle": 3,
+    "digest": "490a49c9a849ec21fdc2d9d63d262492c758deffaedecced09a723ff3dedc007",
+    "engine_id": null,
+    "event_id": "a49b02f0-ac7e-4385-a7fc-45089ef8b5fc",
+    "job_id": "dd652bd1-5797-4e75-bdc4-685d01b0ae13",
+    "kind": "DeploymentDeclined",
+    "payload": {
+      "choice": "local_only"
+    },
+    "phase": "review",
+    "produced_at": "2026-08-19T15:06:43.254319+00:00",
+    "project_id": "26f89c38-c86b-4ddf-be75-c579a118e40e",
+    "provenance": "trusted",
+    "seq": 1109
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

@@ -1,0 +1,43 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "1da972cfe1b9dee51b065ef6232be7e939812dcdc50f1bd4eefd1b51d70c7095",
+    "event_id": "03e320d9-a30d-4e76-950a-fdcf75299e5b",
+    "seq": 19
+  },
+  "previous": {
+    "digest": "71614244670c489ee55990da42921dacd9ec54837a48d5556f37f2d3e8edca28",
+    "event_id": "2f410e94-c10a-4d5f-845a-6adb3e59e711",
+    "seq": 17
+  },
+  "project_id": "f4cfe576-55c7-4f79-80ad-485f85ddca8b",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "4bb7ecc1-ea40-5364-bed9-45c048157678",
+    "cycle": 1,
+    "digest": "4bb77301e028dcc123a845379f3b23281c457965f080dcdb5783031576476e96",
+    "engine_id": "gptossloop",
+    "event_id": "480b93a6-0711-4f76-bcc6-d6752f1c3256",
+    "job_id": "5057b798-907c-4039-9690-3992212dc0b2",
+    "kind": "QuestionAsked",
+    "payload": {
+      "blocking": false,
+      "cycle": 1,
+      "default": "Yes \u2013 include a `lane` key on each verdict field so the source lane is explicit at the field level.",
+      "item_id": "Q8",
+      "stage": "laddering",
+      "text": "Should the lane name be recorded on every individual verdict field (e.g., each finding) in addition to the top\u2011level `halves` mapping?"
+    },
+    "phase": "design",
+    "produced_at": "2026-09-27T21:31:33.948491+00:00",
+    "project_id": "f4cfe576-55c7-4f79-80ad-485f85ddca8b",
+    "provenance": "agent",
+    "seq": 18
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

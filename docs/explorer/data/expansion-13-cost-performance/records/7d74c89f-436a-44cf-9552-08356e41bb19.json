@@ -1,0 +1,40 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "7842517003d3188110f0f465954b0ecff589806cb8cb54badeb558d03aad338d",
+    "event_id": "0c618ec1-fd29-456c-9467-6bdc59124bbb",
+    "seq": 594
+  },
+  "previous": {
+    "digest": "4dcf927b20ea7aac0d7bf9366ebf40b290c7a1e2ccfbaa74a9c20574ce0928bd",
+    "event_id": "8b0a3b88-606e-40fd-a4a4-c6ae81171673",
+    "seq": 568
+  },
+  "project_id": "a1d6b837-46f3-40c0-b6a2-8b3babb7fe15",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "c1051db9-3da4-45e7-b6ef-021f2dbc1173",
+    "cycle": 1,
+    "digest": "cb3d2833e413955ca08a4e88f2520fbb78778e5435c2be82a88cf7204ac2a9d0",
+    "engine_id": null,
+    "event_id": "7d74c89f-436a-44cf-9552-08356e41bb19",
+    "job_id": "e230cfcb-accf-4af4-ada0-4ef717f695d9",
+    "kind": "FindingRaised",
+    "payload": {
+      "finding_id": "f_integrate_ws_ad1dbb04",
+      "severity": "high",
+      "text": "gate failed after merging 'ws': uv run pytest -q -p no:cacheprovider: warning: `VIRTUAL_ENV=[path]` does not match the project environment path `.venv` and will be ignored; use `--active` to target the active environment instead\n   Building vibey @ [path]\n      Built vibey @ [path]\nUninstalled 1 package in 1ms\nInstalled 1 package in 2ms\nERROR: usage: pytest [options] [file_or_dir] [file_or_dir] [...]\npytest: error: unrecognized arguments: -n --maxprocesses=8\n  inifile: [path]\n  rootdir: [path]"
+    },
+    "phase": "build",
+    "produced_at": "2026-08-21T00:25:17.889870+00:00",
+    "project_id": "a1d6b837-46f3-40c0-b6a2-8b3babb7fe15",
+    "provenance": "agent",
+    "seq": 569
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 5
+  }
+}

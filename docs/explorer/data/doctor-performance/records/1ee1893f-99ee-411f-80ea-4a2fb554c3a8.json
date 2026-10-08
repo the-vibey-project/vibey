@@ -1,0 +1,43 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "4b63dbb4cf1c5b73344ba0ae1b89428dd18c5479b12c9deba424da6181b0fa4b",
+    "event_id": "42cda49b-9a4a-491a-96b5-5338a9a87698",
+    "seq": 47
+  },
+  "previous": {
+    "digest": "f39c567937d95512509073f350d2b56766fb94f097c5b61add719b2eb1f6d3b2",
+    "event_id": "21285dd5-3f3b-48c0-82f6-97d5e005b937",
+    "seq": 45
+  },
+  "project_id": "5ea01f61-8536-4ace-90cb-18700a12e410",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "84bea9e4-156e-40be-8e0b-378446406015",
+    "cycle": 1,
+    "digest": "14b412ae2072a1fe7bf3f0755edb3c85b206fea63d45efdd0095d782afe8e55b",
+    "engine_id": "claudeloop",
+    "event_id": "1ee1893f-99ee-411f-80ea-4a2fb554c3a8",
+    "job_id": "4c2ec03f-d670-44f9-9f05-47597984ab20",
+    "kind": "QuestionAsked",
+    "payload": {
+      "blocking": false,
+      "cycle": 1,
+      "default": "0% - any timeout or failure should be investigated; doctor is a diagnostic tool where false negatives undermine trust",
+      "item_id": "reliability_threshold",
+      "stage": "nfr_planguage",
+      "text": "If network/system issues cause sporadic engine check failures, what's the acceptable failure rate before investigation is required?"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-22T03:45:52.039259+00:00",
+    "project_id": "5ea01f61-8536-4ace-90cb-18700a12e410",
+    "provenance": "agent",
+    "seq": 46
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

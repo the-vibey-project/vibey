@@ -1,0 +1,39 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "4494d7c69e17fa0a9d5a741d2dc5a09e40165b0e8f460aadbed135ea728ba8de",
+    "event_id": "48176e80-f419-4a1a-84c5-5fe727938fd8",
+    "seq": 7
+  },
+  "previous": {
+    "digest": "13902bf982981e68645fd7eb78ed9237159674a8abb1ca3f980778e2356d2afa",
+    "event_id": "5cc36070-b1a3-49f7-8384-ad25f3e13604",
+    "seq": 5
+  },
+  "project_id": "a1d6b837-46f3-40c0-b6a2-8b3babb7fe15",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "85b8de79-13c1-43d0-a0e5-c35955f0101b",
+    "cycle": 1,
+    "digest": "d00ada3410e16dca0fcc48bbb605f472df0675a910916bee472d18f3e209822f",
+    "engine_id": "claudeloop",
+    "event_id": "255ecfe5-b76b-4105-8f79-d6a81d440e41",
+    "job_id": "dd8513f6-0d76-49a5-8bdc-75167dea5385",
+    "kind": "AnswerGiven",
+    "payload": {
+      "answer": "Execute Front 1 (the test/CI loop) of docs/runbooks/expansion/13-cost-performance.md: (1) per-worker test databases via the PostgreSQL template-database pattern so suites never contend on vibey_test, (2) pytest-xdist parallelism (-n auto) across the whole suite, (3) a single full-coverage run that enforces all four per-layer 100 percent branch floors from one .coverage file instead of four sequential suite runs, (4) a commit-hook diet: hook runs changed-file lints plus the single parallel suite once; the pre-push/CI stage owns the full sweep. Read the runbook file first - it is the spec.",
+      "item_id": "objective"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-20T20:40:21.178400+00:00",
+    "project_id": "a1d6b837-46f3-40c0-b6a2-8b3babb7fe15",
+    "provenance": "trusted",
+    "seq": 6
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

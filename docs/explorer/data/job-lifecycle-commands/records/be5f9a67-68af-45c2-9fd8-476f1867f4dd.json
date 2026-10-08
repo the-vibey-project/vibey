@@ -1,0 +1,43 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "ee9ed76bd97a73481e29141859892d797f4afe3e20adf5af8fe1a4dba2fe4605",
+    "event_id": "d5c913c2-8fc9-4704-97a3-35b8e03ff102",
+    "seq": 39
+  },
+  "previous": {
+    "digest": "2f528fc10777db921153956a57bf0b14c57adbf46d56f3c7bccd10edddca3310",
+    "event_id": "568a9316-5883-4398-9e98-40bd547ea966",
+    "seq": 37
+  },
+  "project_id": "2f6a93b6-2d73-4aff-bc94-16539841133f",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "8a7f5eb7-58e0-445f-8ee8-a2f4b8126836",
+    "cycle": 1,
+    "digest": "91ef93f91d0d9a791719150544e800f4ccfa0073ecb838e927324410000d25ad",
+    "engine_id": "claudeloop",
+    "event_id": "be5f9a67-68af-45c2-9fd8-476f1867f4dd",
+    "job_id": "334db377-8cb0-4a72-9cc0-78b45fc9bb38",
+    "kind": "QuestionAsked",
+    "payload": {
+      "blocking": true,
+      "cycle": 1,
+      "default": "One new method request_stop(job_id: str) that sets stop_requested=true on the job row, and modify existing heartbeat(job_id, lease_token) to return stop_requested in its response so worker knows to drain. Write JobCancelled ledger event on lease release.",
+      "item_id": "skeleton_repository",
+      "stage": "walking_skeleton",
+      "text": "What minimal repository method(s) are needed in infrastructure/ to persist the skeleton command's effects?"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-22T03:46:42.140360+00:00",
+    "project_id": "2f6a93b6-2d73-4aff-bc94-16539841133f",
+    "provenance": "agent",
+    "seq": 38
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

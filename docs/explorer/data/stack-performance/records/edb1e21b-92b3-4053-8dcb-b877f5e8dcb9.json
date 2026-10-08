@@ -1,0 +1,43 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "1c8fce972fcc956c7091156f0cd19ee5e2cdb0e83eec3e9f65e9bb5168409218",
+    "event_id": "17559df3-9d8d-425b-ba51-016db6fac922",
+    "seq": 46
+  },
+  "previous": {
+    "digest": "3e90fc2a2499e2d0e4200e83346c835cdbbf57d6717028f1ff21dc79ef2a7ab1",
+    "event_id": "acf68caf-9273-462a-b212-8539c804601b",
+    "seq": 43
+  },
+  "project_id": "44c06a64-c8ed-4153-96af-b49db29c39e3",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "bd15876b-7b74-4244-bf2e-b85c5f4014cf",
+    "cycle": 1,
+    "digest": "da7b9ecdca1e0bee218e2e00ed03579b58ae22883393ad37b11056e52c9662fc",
+    "engine_id": "claudeloop",
+    "event_id": "edb1e21b-92b3-4053-8dcb-b877f5e8dcb9",
+    "job_id": "bcd8e0b1-385d-43dc-ad1f-cad988f80cc9",
+    "kind": "QuestionAsked",
+    "payload": {
+      "blocking": true,
+      "cycle": 1,
+      "default": "Past: unmeasured (establish in PR 1), Must: 100ms, Plan: 50ms, Stretch: 20ms \u2014 measured p99 over 100 iterations",
+      "item_id": "latency_planguage",
+      "stage": "nfr_planguage",
+      "text": "What are the Planguage performance targets for claim-path budget checks: Past (current baseline), Must (minimum acceptable), Plan (target), and Stretch (ideal) \u2014 all as p99 latency in milliseconds at 10,000 events?"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-22T03:46:03.537654+00:00",
+    "project_id": "44c06a64-c8ed-4153-96af-b49db29c39e3",
+    "provenance": "agent",
+    "seq": 45
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

@@ -1,0 +1,39 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "206adc185a9d764325c5a9d39d98bd48c69beaa25da11718bead81c37fee5e5f",
+    "event_id": "903ba60b-e61a-4f0e-8e22-ccbb3b432180",
+    "seq": 15
+  },
+  "previous": {
+    "digest": "2dfd1a26ae62067ef7dbe156bf5e6dd362239b39aa742a9668ea76045bd81a9c",
+    "event_id": "cf42125b-4f1e-4357-a6cd-a6cd62a86a2c",
+    "seq": 12
+  },
+  "project_id": "f4cfe576-55c7-4f79-80ad-485f85ddca8b",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "4bb7ecc1-ea40-5364-bed9-45c048157678",
+    "cycle": 1,
+    "digest": "c44cb2dcb710cf26939d706a02741a81086695c0df140af71ac90b7fb98afc18",
+    "engine_id": "gptossloop",
+    "event_id": "74649ddb-1165-4f57-b994-3097f7524ee1",
+    "job_id": "5057b798-907c-4039-9690-3992212dc0b2",
+    "kind": "AnswerGiven",
+    "payload": {
+      "answer": "Include a top\u2011level field `halves` that maps each half (`diff`, `wider`) to an object containing a `lane` key with values `sovereign` or `paid`, and optionally a `status` key (`evaluated`, `not_evaluated`).",
+      "item_id": "Q4"
+    },
+    "phase": "design",
+    "produced_at": "2026-09-27T21:31:09.142576+00:00",
+    "project_id": "f4cfe576-55c7-4f79-80ad-485f85ddca8b",
+    "provenance": "trusted",
+    "seq": 14
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

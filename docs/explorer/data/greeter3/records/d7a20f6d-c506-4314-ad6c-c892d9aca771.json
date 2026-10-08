@@ -1,0 +1,43 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "784e154ee18078ea87f11f99ae3ef5c1097e8840038baf195a6adc065e6d9be9",
+    "event_id": "bd714f83-3556-4709-a84a-f3ebc20db424",
+    "seq": 50
+  },
+  "previous": {
+    "digest": "f9e332faac43e8c2dc522b4833c53a1bd15a0845fbce39e570485a27d9536817",
+    "event_id": "95b873d8-8e93-4e78-9e3d-ed4e96d74417",
+    "seq": 48
+  },
+  "project_id": "5e76341f-ba5f-4272-8355-3df5d489bbcd",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "341253f4-3800-4d63-913d-8ad33070fd12",
+    "cycle": 1,
+    "digest": "dacf7d72c504ef604191b4f39632b39742bb3e186f4e8c34dce7bf17a08c3ade",
+    "engine_id": "claudeloop",
+    "event_id": "d7a20f6d-c506-4314-ad6c-c892d9aca771",
+    "job_id": "e58deb6b-5356-4a39-8acf-5dc898bba380",
+    "kind": "QuestionAsked",
+    "payload": {
+      "blocking": true,
+      "cycle": 1,
+      "default": "Greeting felt impersonal or time-of-day detection was inaccurate for users in different timezones",
+      "item_id": "failure_scenario",
+      "stage": "premortem",
+      "text": "Imagine this feature launches and users complain within the first week - what went wrong?"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-20T00:51:37.818191+00:00",
+    "project_id": "5e76341f-ba5f-4272-8355-3df5d489bbcd",
+    "provenance": "agent",
+    "seq": 49
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

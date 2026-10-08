@@ -1,0 +1,43 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "ba0b86fba224f6bb6081f8e85c9139a3aa1bb28bfced7129ce5ba34348d1e38b",
+    "event_id": "ecc885f3-7a65-4555-b34e-a8384bc84a95",
+    "seq": 5
+  },
+  "previous": {
+    "digest": "2c106275d4b82ea65e27d7637d7c7bce91134b513a3a6c6373b78fb462e1b44d",
+    "event_id": "707bef32-ab0d-45e9-92ad-2e070cdcd9cf",
+    "seq": 3
+  },
+  "project_id": "8f254b4c-df0a-4056-8937-6eba30efcfa6",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "cfa097db-46c1-4262-ba21-ce39e826b8b8",
+    "cycle": 1,
+    "digest": "7cb05ecf595105c6f4bb812ae6560bff9ead76c600d72b2407a4ed4d8607d5cd",
+    "engine_id": "claudeloop",
+    "event_id": "c5a57ab6-713d-40d8-9ecf-56181218f95d",
+    "job_id": "40fb97d9-4ab1-4fa8-9ae2-693c2b7a7fc9",
+    "kind": "QuestionAsked",
+    "payload": {
+      "blocking": true,
+      "cycle": 1,
+      "default": "1) Generate personalized greetings based on user context, 2) Store and retrieve user preferences, 3) Support multiple languages",
+      "item_id": "core_functionality",
+      "stage": "context_free",
+      "text": "What are the 2-3 most critical features or operations this system must support?"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-19T18:26:10.378323+00:00",
+    "project_id": "8f254b4c-df0a-4056-8937-6eba30efcfa6",
+    "provenance": "agent",
+    "seq": 4
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

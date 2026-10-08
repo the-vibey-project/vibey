@@ -1,0 +1,39 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "472e815b5a683da59bad183cdc6b1b2527e0f0b3257796bf0e40998ce13a5bd9",
+    "event_id": "133fd043-963e-4c11-b5b9-7020d5c315bc",
+    "seq": 49
+  },
+  "previous": {
+    "digest": "c4ab4f5819d143b7ac9c98f8a3384945cf124fde37b614f6f346a7a55c665c64",
+    "event_id": "0f36adaa-b678-4791-8e97-77d66119ca91",
+    "seq": 47
+  },
+  "project_id": "b43d1fcb-fb7b-42d6-9f80-220292c73389",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "94659441-ceee-45e6-87e7-44f0056cab72",
+    "cycle": 1,
+    "digest": "942ab1fdb5ac033fe0c5520c6f24f2783d277f2bf2764f8fd2ae05bcece0b058",
+    "engine_id": "claudeloop",
+    "event_id": "0c23a1a7-d326-4f32-b966-d436e88324ed",
+    "job_id": "64ea0fea-cd4f-4b3b-bf19-112c18a7c58d",
+    "kind": "AnswerGiven",
+    "payload": {
+      "answer": "0% - displayed values must match config exactly, no rounding or approximation",
+      "item_id": "correctness_tolerance"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-22T03:44:59.636442+00:00",
+    "project_id": "b43d1fcb-fb7b-42d6-9f80-220292c73389",
+    "provenance": "trusted",
+    "seq": 48
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

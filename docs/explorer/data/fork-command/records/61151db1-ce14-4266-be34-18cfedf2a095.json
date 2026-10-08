@@ -1,0 +1,39 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "a437d39b2ad405e623d49013aff3dac4b1c784bdfd0ae8bc4fc2622be8866c6d",
+    "event_id": "1313e547-8aa1-4aa1-8c8e-595b4b8cb790",
+    "seq": 32
+  },
+  "previous": {
+    "digest": "82c6ff7e761f4c6248f16f8b5be09abd0eb673087c867f9c3754d775c0ed42ed",
+    "event_id": "b104ae19-4393-4645-ad9a-356576fef5a8",
+    "seq": 30
+  },
+  "project_id": "ab0b06f9-55a4-4b47-ac08-254e7fdd9036",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "eb55355f-f9c7-4ed2-b860-25f0df0b5546",
+    "cycle": 1,
+    "digest": "e9562a3d68a47f67c84aed0377bdf9302ed05cfa7b91a72b3ec7058a395e21f1",
+    "engine_id": "claudeloop",
+    "event_id": "61151db1-ce14-4266-be34-18cfedf2a095",
+    "job_id": "48f9ef01-8b95-4709-adde-ed0ece390f8d",
+    "kind": "AnswerGiven",
+    "payload": {
+      "answer": "seq 0: fail with 'no commits at seq 0' (git tree doesn't exist yet). seq \u003e current: fail with 'seq 45 not found in job #42'. seq from wrong project: impossible, seq is scoped to job's project_id by query filter",
+      "item_id": "boundary_cases"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-22T03:41:56.843585+00:00",
+    "project_id": "ab0b06f9-55a4-4b47-ac08-254e7fdd9036",
+    "provenance": "trusted",
+    "seq": 31
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

@@ -1,0 +1,43 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "6c742ebbd005893b7cdcdf477bf768e083fd9bee827eafaa760985ec524443e7",
+    "event_id": "476b85f2-569d-469b-bde3-175e51f2f5c2",
+    "seq": 20
+  },
+  "previous": {
+    "digest": "afc722ffce9ff037b9490d762b2b94512f84778a44d7a3f6a057749b97b37642",
+    "event_id": "c261967f-fc4c-4b09-a861-bc84a4fa4d89",
+    "seq": 18
+  },
+  "project_id": "26f89c38-c86b-4ddf-be75-c579a118e40e",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "814392f3-e4d2-400c-a16b-6936e1e7c8bc",
+    "cycle": 1,
+    "digest": "dca876473ca03cbe7aeff850f97e82522edca5364a43a9623d2726056e483961",
+    "engine_id": "claudeloop",
+    "event_id": "fda685d7-42b9-492c-9a95-9484010e003b",
+    "job_id": "2bdd2b5e-b4f1-4004-9dbf-78d267fea803",
+    "kind": "QuestionAsked",
+    "payload": {
+      "blocking": false,
+      "cycle": 1,
+      "default": "Accept any non-empty string; allow unicode, spaces, and special characters with no length limit",
+      "item_id": "input_validation",
+      "stage": "laddering",
+      "text": "How strict should input validation be for names (unicode, special characters, length limits)?"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-19T12:31:57.716733+00:00",
+    "project_id": "26f89c38-c86b-4ddf-be75-c579a118e40e",
+    "provenance": "agent",
+    "seq": 19
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

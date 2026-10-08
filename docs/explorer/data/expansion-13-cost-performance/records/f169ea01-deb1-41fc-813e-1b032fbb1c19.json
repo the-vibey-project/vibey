@@ -1,0 +1,39 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "9b7c166899b94a2fc356ac123745866564a1fcb7daec55f6fe5aa71e8c68b97d",
+    "event_id": "90556d5c-4ae3-4991-8ab9-3f54af2a793f",
+    "seq": 2
+  },
+  "previous": null,
+  "project_id": "a1d6b837-46f3-40c0-b6a2-8b3babb7fe15",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "8557f108-dde6-4202-8279-12fad127a494",
+    "cycle": 1,
+    "digest": "340eb97701a5f26befc929c4f873be5403c27ea71702639648b88c358b8af477",
+    "engine_id": "claudeloop",
+    "event_id": "f169ea01-deb1-41fc-813e-1b032fbb1c19",
+    "job_id": "dd8513f6-0d76-49a5-8bdc-75167dea5385",
+    "kind": "QuestionAsked",
+    "payload": {
+      "blocking": true,
+      "cycle": 1,
+      "default": "Add a new feature to improve the system",
+      "item_id": "objective",
+      "stage": "context_free",
+      "text": "What feature, fix, or change would you like to implement?"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-20T20:39:40.061146+00:00",
+    "project_id": "a1d6b837-46f3-40c0-b6a2-8b3babb7fe15",
+    "provenance": "agent",
+    "seq": 1
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

@@ -1,0 +1,39 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "7035cd991c84280853e9c42dd337fe42b9b0ef7fd75ce84f4499b86cee2341be",
+    "event_id": "34ea9b40-7842-48b6-bda9-9fade70a5371",
+    "seq": 34
+  },
+  "previous": {
+    "digest": "9c1317b36ddecf3859bfcff0f63f1b4218106288260457ba502b0f508cc84486",
+    "event_id": "94b9593b-22f6-4986-959c-1cf27925ac35",
+    "seq": 32
+  },
+  "project_id": "44c06a64-c8ed-4153-96af-b49db29c39e3",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "dca6f4df-f0ba-43f3-ad06-ae651d45767d",
+    "cycle": 1,
+    "digest": "afe9fb7d8b38b08fbedbee1ade8e38e5aeb384a9d38ac87ff8b52316d67148eb",
+    "engine_id": "claudeloop",
+    "event_id": "52a9866c-d994-4a32-a010-43df5b5abb9d",
+    "job_id": "bcd8e0b1-385d-43dc-ad1f-cad988f80cc9",
+    "kind": "AnswerGiven",
+    "payload": {
+      "answer": "Under 50ms for a budget check on a 10,000-event project, measured p99 not mean, stable as history grows to 100,000 events",
+      "item_id": "fast_enough_threshold"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-22T03:43:27.429990+00:00",
+    "project_id": "44c06a64-c8ed-4153-96af-b49db29c39e3",
+    "provenance": "trusted",
+    "seq": 33
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

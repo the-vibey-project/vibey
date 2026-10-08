@@ -1,0 +1,43 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "0f5c85bdcbeb63b2d66a243e16118e9968020d0ad72ebb8d0f4008725deb5c3f",
+    "event_id": "b3ba9d7d-1512-4056-8447-72242e2ef914",
+    "seq": 12
+  },
+  "previous": {
+    "digest": "fe6b15d659d099672810d05995889099d55ce96657e9791e9775aa9a344371b7",
+    "event_id": "d40c2688-77b6-4057-92e7-5c8f95be1c3c",
+    "seq": 10
+  },
+  "project_id": "893c4fc1-542e-411e-a10a-3aef784b1540",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "d1405050-7bbf-5034-b04a-11a1570aca97",
+    "cycle": 1,
+    "digest": "45bca1bc5141df8158a527edecdebec93352809f2960f297c8cf022b7f447d78",
+    "engine_id": "gptossloop",
+    "event_id": "6b8b4655-104d-430d-9c86-70a2cea26ca4",
+    "job_id": "f0b62bda-70b9-4e97-a9f7-8f5cda351d0a",
+    "kind": "QuestionAsked",
+    "payload": {
+      "blocking": false,
+      "cycle": 1,
+      "default": "No",
+      "item_id": "q4",
+      "stage": "job_story",
+      "text": "Should the lane run `properdocs build --strict` to verify the table of contents links after insertion?"
+    },
+    "phase": "design",
+    "produced_at": "2026-09-30T03:56:48.201761+00:00",
+    "project_id": "893c4fc1-542e-411e-a10a-3aef784b1540",
+    "provenance": "agent",
+    "seq": 11
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

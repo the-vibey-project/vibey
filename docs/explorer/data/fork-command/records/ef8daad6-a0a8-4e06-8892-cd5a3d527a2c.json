@@ -1,0 +1,39 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "b98007fd67820bad7ca90ecef02e256e4cf1ee89d1c84d709e77e9688e57b827",
+    "event_id": "d9f01ff4-3824-45b3-ab55-61eaba3b3408",
+    "seq": 7
+  },
+  "previous": {
+    "digest": "c5ea297f02916d2769f6c5de339e3b9b06c3d35ba792574d2edf2389d9c80a78",
+    "event_id": "457cd760-d55a-4a9d-8e76-6d6669f93d41",
+    "seq": 5
+  },
+  "project_id": "ab0b06f9-55a4-4b47-ac08-254e7fdd9036",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "f2970196-4bff-49d7-b87f-de0712b17bcc",
+    "cycle": 1,
+    "digest": "aabe2eb85f318be1258c4ca5396401bd962721d20b323ed5a12265b6d5000b3c",
+    "engine_id": "claudeloop",
+    "event_id": "ef8daad6-a0a8-4e06-8892-cd5a3d527a2c",
+    "job_id": "48f9ef01-8b95-4709-adde-ed0ece390f8d",
+    "kind": "AnswerGiven",
+    "payload": {
+      "answer": "Add `vibey fork \u003cjob_id\u003e`: create a new job that continues from another job's state -- either its current state or a named earlier point -- and work it on a NEW feature branch, leaving the original job and its branch untouched. Two selectors: fork from now, and fork from a past position. The past-position selector needs a concrete addressing scheme, and there are two candidates already in the system: the ledger's per-project `seq` (a total order over events, already indexed as event_project_seq) and the *loop runners' own rundir savepoints. Pick one and say why; do not invent a third.",
+      "item_id": "what"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-22T02:55:55.014043+00:00",
+    "project_id": "ab0b06f9-55a4-4b47-ac08-254e7fdd9036",
+    "provenance": "trusted",
+    "seq": 6
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

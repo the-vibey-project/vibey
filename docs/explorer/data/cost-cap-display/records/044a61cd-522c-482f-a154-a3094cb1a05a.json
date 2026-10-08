@@ -1,0 +1,39 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a",
+    "event_id": "9a2ea6f7-2c58-4d0a-969a-e8848771df9c",
+    "seq": 68
+  },
+  "previous": {
+    "digest": "850eb5dfa9359994ec2496b36adec47a427e649d8834fe91d62bd43cc3a2fd0e",
+    "event_id": "f67c8bb2-a8a0-4747-ae9b-40838a7edaf7",
+    "seq": 59
+  },
+  "project_id": "b43d1fcb-fb7b-42d6-9f80-220292c73389",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "0bc3e776-6d6e-4157-8037-287cba9a2b6b",
+    "cycle": 1,
+    "digest": "f73159532fe1629c6a8ad59aa0aff8a618a3756bd52332ee824a2ba16021bef6",
+    "engine_id": "claudeloop",
+    "event_id": "044a61cd-522c-482f-a154-a3094cb1a05a",
+    "job_id": "64ea0fea-cd4f-4b3b-bf19-112c18a7c58d",
+    "kind": "AnswerGiven",
+    "payload": {
+      "answer": "No migration needed - old projects already have correct top-level max_cycle_dollars key that brake reads; new resolver reads same key, no schema change",
+      "item_id": "migration_safety"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-22T03:46:31.309454+00:00",
+    "project_id": "b43d1fcb-fb7b-42d6-9f80-220292c73389",
+    "provenance": "trusted",
+    "seq": 60
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

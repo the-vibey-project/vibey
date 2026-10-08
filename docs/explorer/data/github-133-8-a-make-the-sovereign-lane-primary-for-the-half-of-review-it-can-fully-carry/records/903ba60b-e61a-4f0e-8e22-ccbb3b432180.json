@@ -1,0 +1,39 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "5274405b5e96140be84f9108eb57f076538daba5dfb05f7e05cd51407e56ce01",
+    "event_id": "704a0c24-080c-42a4-b8db-82cd3298eb61",
+    "seq": 16
+  },
+  "previous": {
+    "digest": "c44cb2dcb710cf26939d706a02741a81086695c0df140af71ac90b7fb98afc18",
+    "event_id": "74649ddb-1165-4f57-b994-3097f7524ee1",
+    "seq": 14
+  },
+  "project_id": "f4cfe576-55c7-4f79-80ad-485f85ddca8b",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "4bb7ecc1-ea40-5364-bed9-45c048157678",
+    "cycle": 1,
+    "digest": "206adc185a9d764325c5a9d39d98bd48c69beaa25da11718bead81c37fee5e5f",
+    "engine_id": "gptossloop",
+    "event_id": "903ba60b-e61a-4f0e-8e22-ccbb3b432180",
+    "job_id": "5057b798-907c-4039-9690-3992212dc0b2",
+    "kind": "AnswerGiven",
+    "payload": {
+      "answer": "Yes \u2013 add a `cost` sub\u2011object under the paid half that includes `tokens_used` and `cost_usd` (or equivalent).",
+      "item_id": "Q5"
+    },
+    "phase": "design",
+    "produced_at": "2026-09-27T21:31:09.142576+00:00",
+    "project_id": "f4cfe576-55c7-4f79-80ad-485f85ddca8b",
+    "provenance": "trusted",
+    "seq": 15
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

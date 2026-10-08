@@ -1,0 +1,43 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "2c106275d4b82ea65e27d7637d7c7bce91134b513a3a6c6373b78fb462e1b44d",
+    "event_id": "707bef32-ab0d-45e9-92ad-2e070cdcd9cf",
+    "seq": 3
+  },
+  "previous": {
+    "digest": "cb24e804819982b695b16ee0ba8a46b50ff9588bf6168998212cd534ae32c344",
+    "event_id": "e545b6ad-d9ab-485c-a8ff-ea7ecfebf73c",
+    "seq": 1
+  },
+  "project_id": "8f254b4c-df0a-4056-8937-6eba30efcfa6",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "80df1613-e424-4f84-a5e2-43d8620b99e2",
+    "cycle": 1,
+    "digest": "db34f0e33d3b004d521c60e074e5a0c78b350fa1c5c8f3255216ef24ca19530e",
+    "engine_id": "claudeloop",
+    "event_id": "a692f857-6446-4902-85db-73927bcb1602",
+    "job_id": "40fb97d9-4ab1-4fa8-9ae2-693c2b7a7fc9",
+    "kind": "QuestionAsked",
+    "payload": {
+      "blocking": false,
+      "cycle": 1,
+      "default": "Medium scale: ~1000 requests/second, ~100K daily active users",
+      "item_id": "scale_requirements",
+      "stage": "context_free",
+      "text": "What scale should this system handle (requests/users/data volume)?"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-19T18:26:10.378323+00:00",
+    "project_id": "8f254b4c-df0a-4056-8937-6eba30efcfa6",
+    "provenance": "agent",
+    "seq": 2
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

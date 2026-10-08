@@ -1,0 +1,43 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "abb339f2b70074fb44d95c1e4872b0223eda02d2e86fb929e55c50d1978a1555",
+    "event_id": "c5843fb0-232c-48b2-90ff-fa992ecee7be",
+    "seq": 58
+  },
+  "previous": {
+    "digest": "64254a56134c7419f54efdfd241c98abc3ee317f7030c8c3b0f6e4b7ca888783",
+    "event_id": "858669aa-9145-45d8-9baa-1c974b9f64e1",
+    "seq": 56
+  },
+  "project_id": "2f6a93b6-2d73-4aff-bc94-16539841133f",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "f558f6df-a1d2-444a-a61c-b88f38cdd714",
+    "cycle": 1,
+    "digest": "72861f53f8c608498d4fcfced39de26957254dbf9a395c3e0ff932192250b0f3",
+    "engine_id": "claudeloop",
+    "event_id": "5bad0ae0-1552-4e75-8baf-28d11ba8dcb0",
+    "job_id": "334db377-8cb0-4a72-9cc0-78b45fc9bb38",
+    "kind": "QuestionAsked",
+    "payload": {
+      "blocking": true,
+      "cycle": 1,
+      "default": "Nothing prevents it by design: ledger is append-only, events 8-12 stay visible as history. Job row's current_seq field determines worker's view; worker rebuilds from ledger 1-7 only. If seq 8-12 reference git commits or rundir state, those are orphaned but harmless\u2014operator owns cleanup if needed.",
+      "item_id": "wind_back_corruption",
+      "stage": "premortem",
+      "text": "What prevents wind-back from creating an inconsistent state where the job row points to seq 7 but the ledger has events 8-12 that reference objects or state that would be unreachable after the rewind?"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-22T03:54:38.338860+00:00",
+    "project_id": "2f6a93b6-2d73-4aff-bc94-16539841133f",
+    "provenance": "agent",
+    "seq": 57
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

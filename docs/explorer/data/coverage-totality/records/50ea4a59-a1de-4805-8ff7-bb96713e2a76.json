@@ -1,0 +1,43 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "8c9d9056125cb7329a0ac602c22193504ab000ea8da96458d9f1ca2b311a2d9e",
+    "event_id": "f2a10ccb-d0bc-470d-b112-93315d3c632e",
+    "seq": 17
+  },
+  "previous": {
+    "digest": "bd54aa0f2020141419f28b63fc6a345e5302fb547ecab2cc637f17440f1aa912",
+    "event_id": "c15fc131-c4a4-4402-8101-d5e4bf43e9ec",
+    "seq": 15
+  },
+  "project_id": "e631c00a-e1a1-4ed4-b99a-0fa2d388d240",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "bfa1cf93-786d-4955-9415-2104754d6a4f",
+    "cycle": 1,
+    "digest": "b7ebba9da795e58b83b211da0cd676d9c31da6031923bdb9bcdd240c4286f885",
+    "engine_id": "claudeloop",
+    "event_id": "50ea4a59-a1de-4805-8ff7-bb96713e2a76",
+    "job_id": "d73f236e-a7b4-4748-b075-3900a75af324",
+    "kind": "QuestionAsked",
+    "payload": {
+      "blocking": true,
+      "cycle": 1,
+      "default": "Integrated into existing test files alongside related tests, matching the current test layout per layer",
+      "item_id": "test_organization",
+      "stage": "laddering",
+      "text": "How should the new tests be organized\u2014integrated into existing test_*.py files alongside related tests, in new dedicated test files per uncovered module, or in a single coverage-gap test suite?"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-22T02:38:48.384326+00:00",
+    "project_id": "e631c00a-e1a1-4ed4-b99a-0fa2d388d240",
+    "provenance": "agent",
+    "seq": 16
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

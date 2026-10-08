@@ -1,0 +1,39 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "f55142c86ce66562ba024a1d37ef2d5c0515c91addc136ef9cfb94e8290087b7",
+    "event_id": "bcef28c3-c8f1-4509-9aa9-19d18e34daa7",
+    "seq": 20
+  },
+  "previous": {
+    "digest": "5fa4e1a8b5062810dcd4f57a87e9a263ac612fc7003ab255b00d74bdbcf1fca5",
+    "event_id": "485872cd-84bb-46ad-af19-2645ab8c4d37",
+    "seq": 18
+  },
+  "project_id": "e631c00a-e1a1-4ed4-b99a-0fa2d388d240",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "297d4451-86db-4e1c-8b0c-8f8079fdbfc9",
+    "cycle": 1,
+    "digest": "38634e8ada5b892669399b62b35907696e94c86925a2d400707747458399e6e0",
+    "engine_id": "claudeloop",
+    "event_id": "ccaf8a41-e726-45fc-8f34-f119d31f7574",
+    "job_id": "d73f236e-a7b4-4748-b075-3900a75af324",
+    "kind": "AnswerGiven",
+    "payload": {
+      "answer": "Making every path intentional, with a second-order property that matters more here: the total gate is SELF-MAINTAINING. Four per-layer gates depend on somebody remembering to add a fifth when they create a new top-level package. --include='src/vibey/*' removes that dependency on memory, which is the actual defect being fixed -- the current 84% in tui/ is not a testing failure, it is a gate-topology failure. The zero-exemptions rule carries the corollary that dead code becomes visible: if a line genuinely cannot be reached, the honest resolution is to delete it, and a pragma would hide exactly the signal worth having.",
+      "item_id": "quality_principle"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-22T02:39:42.429990+00:00",
+    "project_id": "e631c00a-e1a1-4ed4-b99a-0fa2d388d240",
+    "provenance": "trusted",
+    "seq": 19
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

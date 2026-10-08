@@ -1,0 +1,39 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "94e6e22becde6d7698ab8996e64884795989f4bd31fe4426eccb4591dd8f2b84",
+    "event_id": "ed2d8fb7-54cd-457c-80bb-3231593efa27",
+    "seq": 40
+  },
+  "previous": {
+    "digest": "f327588f3699475838f49bc46c892b26984eeb34abf279f274225a3208062e00",
+    "event_id": "10adab7f-43bd-4de9-9746-552c0fc81869",
+    "seq": 38
+  },
+  "project_id": "d482c3e2-029e-4bb8-a9a1-de411816c6ae",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "add1d679-74dd-4331-833d-aa2f96e3de8f",
+    "cycle": 1,
+    "digest": "13f76798f28dbd832de21f1d56de330a7a4910a9a1762c5dcc44b72b9bbfc236",
+    "engine_id": "claudeloop",
+    "event_id": "62174a40-02b6-4e2a-8d47-a658d8de9436",
+    "job_id": "d2626f25-d550-454e-bacd-7a7e6c9b52cd",
+    "kind": "AnswerGiven",
+    "payload": {
+      "answer": "Collecting feedback through surveys and user support channels, and implementing changes in bi-weekly sprints.",
+      "item_id": "19"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-31T02:05:28.732531+00:00",
+    "project_id": "d482c3e2-029e-4bb8-a9a1-de411816c6ae",
+    "provenance": "trusted",
+    "seq": 39
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

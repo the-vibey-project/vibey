@@ -1,0 +1,39 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "914033f404a4456b792d2bcc5688900d9c8ceacc6c2dde3f0e14bda305743977",
+    "event_id": "e407920a-ac7d-4a47-8cd1-5caccfa5c0a7",
+    "seq": 31
+  },
+  "previous": {
+    "digest": "ce37fef91ba89f6b0dc6c24b5c6e19eb4747e108203fd59267d6c5bb9706f5cb",
+    "event_id": "dabe27a9-0dc3-4d9d-a3bf-f8887d764972",
+    "seq": 29
+  },
+  "project_id": "26f89c38-c86b-4ddf-be75-c579a118e40e",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "8e3ee8b7-3fc8-401e-9068-8e31d458ea0c",
+    "cycle": 1,
+    "digest": "f9d617d0aaeeef15354cbfd4decddf48f3aee4e6f9ecf78a577ecca1819d0286",
+    "engine_id": "claudeloop",
+    "event_id": "7ada1547-3292-436e-9247-3d09659dfa2b",
+    "job_id": "2bdd2b5e-b4f1-4004-9dbf-78d267fea803",
+    "kind": "AnswerGiven",
+    "payload": {
+      "answer": "Print 'Usage: greet \u003cname\u003e [-t|--time] [-h|--help] [--version]' to stderr, then exit code 1",
+      "item_id": "error_message_format"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-19T12:32:53.520928+00:00",
+    "project_id": "26f89c38-c86b-4ddf-be75-c579a118e40e",
+    "provenance": "trusted",
+    "seq": 30
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

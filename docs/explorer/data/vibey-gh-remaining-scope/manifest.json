@@ -1,0 +1,49 @@
+{
+  "chain": {
+    "findings": 0,
+    "head": "f845691b95081f3a1bc5b0c84b1a2c057eacccfb28b2e19877d58f5bcc29eddb",
+    "head_seq": 61,
+    "scheme": "vibey-ledger-chain/v1",
+    "verified": true
+  },
+  "digest_range": "10feacc1a7f47e8bd8e155fc7aaf773dcf584230abad39b3c7a35a8821797af8",
+  "documents": {
+    "index": "index.json",
+    "records": "records/{event_id}.json"
+  },
+  "format": "vibey-ledger-site/v1",
+  "holds": "full",
+  "policy": {
+    "fingerprint": "20c0e83ba268bd901344a690af4afac1b0433c0e279a476d954f31f9cb7fc5e8",
+    "scheme": "vibey-publication-policy/v1"
+  },
+  "project": {
+    "name": "vibey-gh remaining scope",
+    "project_id": "d482c3e2-029e-4bb8-a9a1-de411816c6ae"
+  },
+  "published": {
+    "first_seq": 1,
+    "last_seq": 56,
+    "records": 56
+  },
+  "seq_range": {
+    "events": 61,
+    "first": 1,
+    "last": 61
+  },
+  "shard_format": "vibey-ledger-shard/v1",
+  "statement": "5 events withheld by policy",
+  "tier": "standard (untiered)",
+  "withheld": {
+    "by_reason": {
+      "engine_chatter": 0,
+      "kind_not_allowlisted": 2,
+      "untrusted_provenance": 3
+    },
+    "credentials": 0,
+    "emails": 0,
+    "events": 5,
+    "fields": 0,
+    "paths": 0
+  }
+}

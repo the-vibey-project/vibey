@@ -1,0 +1,39 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "862f3796e5bd8ffe877176cdaf3c7efd450cb76ef301950323a4ed3abacca371",
+    "event_id": "81935206-3272-4c2b-b6dd-30eb828bf6ff",
+    "seq": 25
+  },
+  "previous": {
+    "digest": "12feabc9b820a6fe9270e4979b3c21bc0f6c8eda8e10ccf748eb9aaed81cb23c",
+    "event_id": "e7c3e55b-8312-4a64-b1f5-3d1dbc713420",
+    "seq": 23
+  },
+  "project_id": "26f89c38-c86b-4ddf-be75-c579a118e40e",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "10bc2e0f-b5e5-435a-9db3-5aa36432d310",
+    "cycle": 1,
+    "digest": "34c49d0e724f7c4b23e2e55adbb06779db5f7c98f3b2eb905fcf26e179dd1dca",
+    "engine_id": "claudeloop",
+    "event_id": "4ace4ed1-b153-4f6f-bc04-c66838ad21f5",
+    "job_id": "2bdd2b5e-b4f1-4004-9dbf-78d267fea803",
+    "kind": "AnswerGiven",
+    "payload": {
+      "answer": "Via optional flag (e.g., `greet Alice --time` or `greet Alice -t`)",
+      "item_id": "time_variant_activation"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-19T12:32:07.810897+00:00",
+    "project_id": "26f89c38-c86b-4ddf-be75-c579a118e40e",
+    "provenance": "trusted",
+    "seq": 24
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

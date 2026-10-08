@@ -1,0 +1,43 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "b7739f8e9a582a923dcd0e2c67edf8ca94d290de4e8a27602d3871bd7c3c4b83",
+    "event_id": "4a4e697b-67a4-407c-b1f3-548744062f0b",
+    "seq": 13
+  },
+  "previous": {
+    "digest": "0d9e24cfecb8168f8f82581a0ed0c007e37945b81617b241892247ef507072fa",
+    "event_id": "3e03295d-aaa0-461c-bbac-d5210abef779",
+    "seq": 11
+  },
+  "project_id": "d733035f-e0f9-4f67-aba2-270068d6a9c6",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "362741e3-4553-4c68-91d6-f4d949d8bacc",
+    "cycle": 1,
+    "digest": "2199e417b266f465dc0a641c36938621fdde5e272c75f7d1a06e17828e65bcea",
+    "engine_id": "claudeloop",
+    "event_id": "6eaf530b-5b9c-468d-9c16-1d4a1c0bec40",
+    "job_id": "44e282ee-55b1-4cf9-afc3-c84870a14a5c",
+    "kind": "QuestionAsked",
+    "payload": {
+      "blocking": true,
+      "cycle": 1,
+      "default": "Project record shows ABANDONED phase, in-flight jobs show CANCELLED status, and `vibey new --repo \u003csame_path\u003e` succeeds without UniqueViolationError",
+      "item_id": "success_criteria",
+      "stage": "job_story",
+      "text": "What observable outcomes confirm that abandonment succeeded?"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-22T02:56:08.783376+00:00",
+    "project_id": "d733035f-e0f9-4f67-aba2-270068d6a9c6",
+    "provenance": "agent",
+    "seq": 12
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

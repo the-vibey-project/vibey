@@ -1,0 +1,43 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "b8a076110defcbe951a6717b473a1683c4d1be42664e0edcd6f027279c6e6482",
+    "event_id": "8365859c-0331-462e-8736-e190a061a4a7",
+    "seq": 24
+  },
+  "previous": {
+    "digest": "49531fc3de9a93ba11a3353a6394bf0a6af318a87e0a5c3588bcf2e51fcbcbf7",
+    "event_id": "723671e1-88a8-4a07-81d0-1530dcaf0681",
+    "seq": 22
+  },
+  "project_id": "e631c00a-e1a1-4ed4-b99a-0fa2d388d240",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "ff207bb2-08b3-4275-add5-481875eb8ca4",
+    "cycle": 1,
+    "digest": "aa5430442a385c385eb8e043742e09b4be6c522296c2cdd202629c249e7baa15",
+    "engine_id": "claudeloop",
+    "event_id": "bbb5d4b7-a2a8-4093-acab-fcaea0420b06",
+    "job_id": "d73f236e-a7b4-4748-b075-3900a75af324",
+    "kind": "QuestionAsked",
+    "payload": {
+      "blocking": true,
+      "cycle": 1,
+      "default": "All four combinations: {max_cycle_turns: 10}, {max_cycle_dollars: 50.0}, both configured, neither (falls back to defaults)",
+      "item_id": "budget_brake_examples",
+      "stage": "example_mapping",
+      "text": "For bootstrap.py line 279 (budget brake construction predicate), what concrete config examples should be tested\u2014max_cycle_turns only, max_cycle_dollars only, both, or neither?"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-22T02:40:45.961431+00:00",
+    "project_id": "e631c00a-e1a1-4ed4-b99a-0fa2d388d240",
+    "provenance": "agent",
+    "seq": 23
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

@@ -1,0 +1,43 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "2f528fc10777db921153956a57bf0b14c57adbf46d56f3c7bccd10edddca3310",
+    "event_id": "568a9316-5883-4398-9e98-40bd547ea966",
+    "seq": 37
+  },
+  "previous": {
+    "digest": "860bd08795fa38fee5bdbda81f8c11e097da64b1cdee19aa2c1c70f9defd9733",
+    "event_id": "7df233e7-3626-4f2b-90d2-95e20cb8d9cf",
+    "seq": 34
+  },
+  "project_id": "2f6a93b6-2d73-4aff-bc94-16539841133f",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "2f1b060b-d075-4828-9b25-e6a1a7273f9a",
+    "cycle": 1,
+    "digest": "a27c0833e8beafcd276fc419c684f5aeac1bec980d4264a4ee23b3f12fd42a6f",
+    "engine_id": "claudeloop",
+    "event_id": "6c6cacff-09f3-47d7-91a4-1d87c4da453c",
+    "job_id": "334db377-8cb0-4a72-9cc0-78b45fc9bb38",
+    "kind": "QuestionAsked",
+    "payload": {
+      "blocking": true,
+      "cycle": 1,
+      "default": "stop - it's the simplest state transition (any non-terminal \u2192 CANCELLED), proves the flag-based lease coordination pattern that wind-back will reuse, and addresses the most immediate operator pain (no way to halt a mis-aimed job)",
+      "item_id": "skeleton_command",
+      "stage": "walking_skeleton",
+      "text": "Which single command should be implemented first as the walking skeleton to prove the core mechanism works end-to-end?"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-22T03:46:42.140360+00:00",
+    "project_id": "2f6a93b6-2d73-4aff-bc94-16539841133f",
+    "provenance": "agent",
+    "seq": 36
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

@@ -1,0 +1,39 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "e23520414496a4b3163d9da13965b6f0421cad542a22db34e8bf045729e9b833",
+    "event_id": "83e5e708-2922-4fd7-ad95-1ba6873f420e",
+    "seq": 2
+  },
+  "previous": null,
+  "project_id": "e631c00a-e1a1-4ed4-b99a-0fa2d388d240",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "3da4a0ae-7d33-46d4-88f1-0115c984f6af",
+    "cycle": 1,
+    "digest": "fdc69a705af6497f2f2c117b6ed48f89250ff1a0b32c3b83f078caea5213baa1",
+    "engine_id": "claudeloop",
+    "event_id": "11f8a2e5-01ed-4ea1-a27d-af3b9f8ba02a",
+    "job_id": "d73f236e-a7b4-4748-b075-3900a75af324",
+    "kind": "QuestionAsked",
+    "payload": {
+      "blocking": true,
+      "cycle": 1,
+      "default": "A new feature to extend the application",
+      "item_id": "feature_description",
+      "stage": "context_free",
+      "text": "What feature, fix, or change do you want built?"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-22T02:34:46.347494+00:00",
+    "project_id": "e631c00a-e1a1-4ed4-b99a-0fa2d388d240",
+    "provenance": "agent",
+    "seq": 1
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

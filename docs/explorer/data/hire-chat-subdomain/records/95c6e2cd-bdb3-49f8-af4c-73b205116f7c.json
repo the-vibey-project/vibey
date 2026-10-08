@@ -1,0 +1,43 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "0bdc132a931a4f5a23aeaa20b486b094476b46ba5dcdd915ce097e61a1f8b362",
+    "event_id": "9d1c98db-aff2-48f6-8ab6-3eba44a3c390",
+    "seq": 42
+  },
+  "previous": {
+    "digest": "6d55a9e3a1839e3c669d6e532cfbae8c9c4714e1c3b0796aa99ec609c138e82c",
+    "event_id": "fdc7610c-8119-4de7-8997-08013ed9012b",
+    "seq": 40
+  },
+  "project_id": "0ee95624-eec4-4e8e-9a14-6ad9a37dcff4",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "7630b769-af13-4c1c-b131-b18d8a626161",
+    "cycle": 1,
+    "digest": "223509c6a9d05b19b187bd90d5524a5d063476234331cfbd37f242ef48b47ff8",
+    "engine_id": "claudeloop",
+    "event_id": "95c6e2cd-bdb3-49f8-af4c-73b205116f7c",
+    "job_id": "1343d0fd-bf3f-4739-8c21-cbf7693c673e",
+    "kind": "QuestionAsked",
+    "payload": {
+      "blocking": true,
+      "cycle": 1,
+      "default": "Must: WCAG 2.1 AA (matching existing site standard per semantic HTML + aria-label on the region); Plan: zero axe violations on the page variant; Wish: AAA color contrast on the 'resting' notice",
+      "item_id": "accessibility_wcag",
+      "stage": "nfr_planguage",
+      "text": "What WCAG conformance level must the [path] page variant achieve? [Scale: WCAG 2.1 levels A/AA/AAA; Meter: axe DevTools + manual keyboard/screen-reader test; Must/Plan/Wish]"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-20T20:19:05.488622+00:00",
+    "project_id": "0ee95624-eec4-4e8e-9a14-6ad9a37dcff4",
+    "provenance": "agent",
+    "seq": 41
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 1
+  }
+}

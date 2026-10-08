@@ -1,0 +1,39 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "fbf6811f0ba7fba267cafe13eeae4a81a9b34682397c18803f8a2609a33a287a",
+    "event_id": "a0d3bf3f-c708-4a24-a2d9-cac2a48cdcd5",
+    "seq": 39
+  },
+  "previous": {
+    "digest": "493bf6d5bea7d510f58da2024278fde148ab9684300925103970aaf395312e33",
+    "event_id": "f2a507cb-7d3f-46bb-b2a3-0df35ad70e47",
+    "seq": 37
+  },
+  "project_id": "26f89c38-c86b-4ddf-be75-c579a118e40e",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "c3d20ce0-f787-4fc9-b302-4ce2a62ef60b",
+    "cycle": 1,
+    "digest": "63490ed52786ccafc84dff4b03594f9dc3b7971ebe0ac0ef470078a9d80e4145",
+    "engine_id": "claudeloop",
+    "event_id": "f5f5cf46-5d84-41d1-abb6-32cc43a47669",
+    "job_id": "2bdd2b5e-b4f1-4004-9dbf-78d267fea803",
+    "kind": "AnswerGiven",
+    "payload": {
+      "answer": "Subprocess test that invokes `greet Alice` and asserts stdout contains 'Hello, Alice!' with exit code 0",
+      "item_id": "first_test_case"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-19T12:33:49.385681+00:00",
+    "project_id": "26f89c38-c86b-4ddf-be75-c579a118e40e",
+    "provenance": "trusted",
+    "seq": 38
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

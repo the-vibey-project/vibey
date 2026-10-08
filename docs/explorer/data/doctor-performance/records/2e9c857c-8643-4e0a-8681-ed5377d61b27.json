@@ -1,0 +1,43 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "ef95e77144efda8f45514c3292e737144de3c6268e471e4e404b02e8f75bf8a4",
+    "event_id": "d14f2d66-03c8-441d-b114-5f8a571cc324",
+    "seq": 56
+  },
+  "previous": {
+    "digest": "db157cd12bab2e0bd3b94ba468e6e4f6cd7a515160107d10da9e5c22df71e31f",
+    "event_id": "0eafd018-5773-42cd-9d5d-81eb2b619aa8",
+    "seq": 52
+  },
+  "project_id": "5ea01f61-8536-4ace-90cb-18700a12e410",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "52f23134-7da7-4b73-bfa6-57f4d68870a7",
+    "cycle": 1,
+    "digest": "7e82c0b4b85cf80a8661d8446bfb60ae5df54f5e78962e742f727f87b26d941b",
+    "engine_id": "claudeloop",
+    "event_id": "2e9c857c-8643-4e0a-8681-ed5377d61b27",
+    "job_id": "4c2ec03f-d670-44f9-9f05-47597984ab20",
+    "kind": "QuestionAsked",
+    "payload": {
+      "blocking": true,
+      "cycle": 1,
+      "default": "Race condition in result collection or display ordering; engines completing in different orders but output not being properly sorted before display",
+      "item_id": "determinism_failure",
+      "stage": "premortem",
+      "text": "It's 6 months from now and developers are complaining that `vibey doctor` sometimes reports different results on identical runs. What went wrong?"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-22T03:49:51.679457+00:00",
+    "project_id": "5ea01f61-8536-4ace-90cb-18700a12e410",
+    "provenance": "agent",
+    "seq": 55
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

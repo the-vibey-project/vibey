@@ -1,0 +1,43 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "ef9631515f615f0c344e4519ff639517ffa3b32142607d7a96c29e56f7c0af9d",
+    "event_id": "36c0bc7a-286e-423a-b66e-22d6824c337e",
+    "seq": 12
+  },
+  "previous": {
+    "digest": "2e83184cf52540238877d54cb54410383222eea7867d9ff6b279c1e9106c99f6",
+    "event_id": "1a101dcf-dd7d-4245-a9e1-5a41d7381ebd",
+    "seq": 10
+  },
+  "project_id": "b43d1fcb-fb7b-42d6-9f80-220292c73389",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "5dde8cce-9b56-4b43-b8af-b3aeb6e5a3d6",
+    "cycle": 1,
+    "digest": "af964e0741ccf3918cb72102f482f9f084db0f20241c35f24af13cdd5786e487",
+    "engine_id": "claudeloop",
+    "event_id": "ab96ac5f-d946-4ad4-91e0-7a3a0a3ed1ee",
+    "job_id": "64ea0fea-cd4f-4b3b-bf19-112c18a7c58d",
+    "kind": "QuestionAsked",
+    "payload": {
+      "blocking": false,
+      "cycle": 1,
+      "default": "All four: cycle cap only, total cap only, both caps configured, and projects with no cap (unbounded for trusted contexts)",
+      "item_id": "cap_scenarios",
+      "stage": "job_story",
+      "text": "What are the valid cap configurations operators need to see correctly: cycle-only cap, total-only cap, both caps, or no cap at all?"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-22T02:57:14.953692+00:00",
+    "project_id": "b43d1fcb-fb7b-42d6-9f80-220292c73389",
+    "provenance": "agent",
+    "seq": 11
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

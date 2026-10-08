@@ -1,0 +1,43 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "fe32ec32449c1bf2c0021ca6f027b54b65707a140b75328d5e96d4fc44270994",
+    "event_id": "5a42f451-d9fd-4f17-8258-10a9e1fc1c66",
+    "seq": 30
+  },
+  "previous": {
+    "digest": "a4ae02038bb06f5da5371f38925cf92c84c0deaae50b40f4d55137d77bc29f5b",
+    "event_id": "b0aefd1e-795e-48a5-93ac-6aae725eeea2",
+    "seq": 28
+  },
+  "project_id": "bed522a2-0b3e-4bff-9cd6-7c13fe40779a",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "d94c96f8-7259-4200-8054-3dd69041827a",
+    "cycle": 1,
+    "digest": "4e325c87e12b99014b9e7d61be50dd88ca468d4a4b37dfc6d9b07fcc9df9b111",
+    "engine_id": "claudeloop",
+    "event_id": "6b6246e7-6e24-41d4-9bc6-0e209a276ab8",
+    "job_id": "92d834a4-4bf2-4699-9354-adbea7936d77",
+    "kind": "QuestionAsked",
+    "payload": {
+      "blocking": true,
+      "cycle": 1,
+      "default": "At failure: 'j2 | \u2717 FAILED: \u003cerror excerpt\u003e' appears in stream. j1 and j3 continue. Final summary: table shows j1 \u2713, j2 \u2717 with error line, j3 \u2713, overall status 'PARTIAL SUCCESS (2/3)', exit code 1.",
+      "item_id": "failure_example",
+      "stage": "example_mapping",
+      "text": "Show the exact output when j2 fails 90 seconds in while j1 and j3 are still running - what appears immediately at failure time, and what's in the final summary after j1 and j3 complete?"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-22T03:43:10.784198+00:00",
+    "project_id": "bed522a2-0b3e-4bff-9cd6-7c13fe40779a",
+    "provenance": "agent",
+    "seq": 29
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

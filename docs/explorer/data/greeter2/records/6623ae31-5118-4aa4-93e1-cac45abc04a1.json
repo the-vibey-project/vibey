@@ -1,0 +1,43 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "0ae771a1e9b9af756090bb446a0947b18291ba3cfc86464a2c9bcdd65f411ce2",
+    "event_id": "c2944da2-e31c-4906-b33d-1fbd0cd08253",
+    "seq": 10
+  },
+  "previous": {
+    "digest": "00c2655396746884c6752bb26f2c429587252a264feb31193f895510b51de38e",
+    "event_id": "11af5333-e51c-4a81-b078-6c98b82777ec",
+    "seq": 8
+  },
+  "project_id": "8f254b4c-df0a-4056-8937-6eba30efcfa6",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "4a4d8984-75de-4a7a-a17e-6ba1c8b57acb",
+    "cycle": 1,
+    "digest": "ef6a10b9a56385b3414361c202f16a37733ee0bcacf84b5b682310d4613021be",
+    "engine_id": "claudeloop",
+    "event_id": "6623ae31-5118-4aa4-93e1-cac45abc04a1",
+    "job_id": "40fb97d9-4ab1-4fa8-9ae2-693c2b7a7fc9",
+    "kind": "QuestionAsked",
+    "payload": {
+      "blocking": true,
+      "cycle": 1,
+      "default": "When I start my workday in the terminal, I want to receive a friendly personalized greeting, so I can feel welcomed and set a positive tone",
+      "item_id": "primary_job_story",
+      "stage": "job_story",
+      "text": "What's the primary job story? Format: 'When [situation], I want to [motivation], so I can [outcome]'"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-19T18:27:38.312483+00:00",
+    "project_id": "8f254b4c-df0a-4056-8937-6eba30efcfa6",
+    "provenance": "agent",
+    "seq": 9
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

@@ -1,0 +1,43 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "00434a50a2eaffac1f780b4cdc025d4335f18b62d4344be2deeb15f2149d8c03",
+    "event_id": "00bd3775-6dbc-4e75-99d9-18f7c4e142e8",
+    "seq": 42
+  },
+  "previous": {
+    "digest": "2f2551980435d11e22f7364ac3600969c18cbd88e3f340fb444625788940027d",
+    "event_id": "b24c465c-2286-41d9-8101-a136573a7175",
+    "seq": 39
+  },
+  "project_id": "e631c00a-e1a1-4ed4-b99a-0fa2d388d240",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "d08c157c-82bb-4295-a0d9-ecae7e56fb96",
+    "cycle": 1,
+    "digest": "17c1cc3bfd28a932e1aa4e6ea15ecb7c7da17524962bd83ba5d57b49292cef7d",
+    "engine_id": "claudeloop",
+    "event_id": "85097509-5a86-4c7a-913c-74796825db50",
+    "job_id": "d73f236e-a7b4-4748-b075-3900a75af324",
+    "kind": "QuestionAsked",
+    "payload": {
+      "blocking": false,
+      "cycle": 1,
+      "default": "Individual tests \u22645s each; total new test time \u226430s added to suite (TUI tests may use Pilot harness which can be slower than unit tests)",
+      "item_id": "test_execution_time",
+      "stage": "nfr_planguage",
+      "text": "What's the maximum acceptable execution time for the new coverage tests\u2014individual test timeout and total suite time added?"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-22T03:42:49.769899+00:00",
+    "project_id": "e631c00a-e1a1-4ed4-b99a-0fa2d388d240",
+    "provenance": "agent",
+    "seq": 41
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

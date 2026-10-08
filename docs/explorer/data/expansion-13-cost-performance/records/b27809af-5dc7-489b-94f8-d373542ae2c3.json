@@ -1,0 +1,43 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "cd693c0da73dd3feb1d40478aee2f4ae09150c587c30b8e2abecdb874b15c0d8",
+    "event_id": "1004e8a5-e12d-498c-b81d-73f0d9eec30f",
+    "seq": 35
+  },
+  "previous": {
+    "digest": "73265c4acb7fba071c070c6b8b18747f31ca193a6aa4a0b5829a74d546e5f6b0",
+    "event_id": "9e3e6ce7-4382-40d5-b033-806d7ba74663",
+    "seq": 33
+  },
+  "project_id": "a1d6b837-46f3-40c0-b6a2-8b3babb7fe15",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "58d70f8a-6231-4cac-b563-325d3a66e6a6",
+    "cycle": 1,
+    "digest": "3dd87c032dbadf8bd27692f5b3ec7d00d79c4a08604a3babcd1a7b81a6caaf27",
+    "engine_id": "claudeloop",
+    "event_id": "b27809af-5dc7-489b-94f8-d373542ae2c3",
+    "job_id": "dd8513f6-0d76-49a5-8bdc-75167dea5385",
+    "kind": "QuestionAsked",
+    "payload": {
+      "blocking": true,
+      "cycle": 1,
+      "default": "Validate separately: (1) template pattern with sequential tests, (2) add xdist parallelism, (3) unified coverage, (4) hook diet last",
+      "item_id": "integration_sequence",
+      "stage": "walking_skeleton",
+      "text": "Should we validate each piece separately (template pattern \u2192 xdist \u2192 unified coverage \u2192 hook diet) or combine template+xdist from the start?"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-20T20:45:01.245448+00:00",
+    "project_id": "a1d6b837-46f3-40c0-b6a2-8b3babb7fe15",
+    "provenance": "agent",
+    "seq": 34
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

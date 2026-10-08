@@ -1,0 +1,43 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "ac20039d834061d752e38926f6f481245b11df16fe3d3cd57050296ffbb02a0d",
+    "event_id": "15986d68-bc83-4765-bf1e-52d782b487d1",
+    "seq": 8
+  },
+  "previous": {
+    "digest": "d21504ede2019cda4418b70f2c6be8e3ce03e4cd42eeff6c6c398abbdb27da42",
+    "event_id": "712962bc-12f4-4822-a34c-55d641ef65c1",
+    "seq": 4
+  },
+  "project_id": "893c4fc1-542e-411e-a10a-3aef784b1540",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "d1405050-7bbf-5034-b04a-11a1570aca97",
+    "cycle": 1,
+    "digest": "a5f75e7d3ba381c2faa4414fc138a764d6fc2797dbc9b9d968bcd51c1fc25f58",
+    "engine_id": "gptossloop",
+    "event_id": "b69a96d7-a189-4990-8949-005c399b9bcb",
+    "job_id": "f0b62bda-70b9-4e97-a9f7-8f5cda351d0a",
+    "kind": "QuestionAsked",
+    "payload": {
+      "blocking": true,
+      "cycle": 1,
+      "default": "Yes",
+      "item_id": "q3",
+      "stage": "context_free",
+      "text": "Should the anchor verification script be executed as part of this lane?"
+    },
+    "phase": "design",
+    "produced_at": "2026-09-30T03:51:14.542698+00:00",
+    "project_id": "893c4fc1-542e-411e-a10a-3aef784b1540",
+    "provenance": "agent",
+    "seq": 5
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

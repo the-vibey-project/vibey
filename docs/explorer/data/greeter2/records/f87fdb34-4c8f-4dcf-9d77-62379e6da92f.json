@@ -1,0 +1,39 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "3cc02bbbf366e77ea000747b5a3698fcb5f0a273f71a24b30cb07e07d1ea91bf",
+    "event_id": "47bfcb25-f974-4253-8a20-a8b0eba0e2f9",
+    "seq": 14
+  },
+  "previous": {
+    "digest": "75d8370446863799838e6840d1ce69fd71519f95dad3019485bf817328530ae0",
+    "event_id": "5c630347-b2ab-4b4d-ad89-5bf541b2acd6",
+    "seq": 12
+  },
+  "project_id": "8f254b4c-df0a-4056-8937-6eba30efcfa6",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "b71539b9-3c68-4de9-88e2-577bf11e0c8e",
+    "cycle": 1,
+    "digest": "442e57b76fdb328434ae722b247010cd5be7c9e5f90fff8a0bb7b0cf994f379b",
+    "engine_id": "claudeloop",
+    "event_id": "f87fdb34-4c8f-4dcf-9d77-62379e6da92f",
+    "job_id": "40fb97d9-4ab1-4fa8-9ae2-693c2b7a7fc9",
+    "kind": "AnswerGiven",
+    "payload": {
+      "answer": "When I start my workday in the terminal, I want to receive a friendly personalized greeting, so I can feel welcomed and set a positive tone",
+      "item_id": "primary_job_story"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-19T18:27:48.146827+00:00",
+    "project_id": "8f254b4c-df0a-4056-8937-6eba30efcfa6",
+    "provenance": "trusted",
+    "seq": 13
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

@@ -1,0 +1,43 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "77614af50452dd729d7088f11f699d6187ebf7907dc36407619a164b3b899d9e",
+    "event_id": "86eebec5-a8ef-446c-8eaa-631975ad5315",
+    "seq": 56
+  },
+  "previous": {
+    "digest": "2a0ea2e4c7a7bae201a81e34cd3eb1f2b335e8f6d98fd8f26c8e48fd06d6ddd9",
+    "event_id": "cfa3f812-6e04-4a53-8019-6cc372c16011",
+    "seq": 54
+  },
+  "project_id": "d733035f-e0f9-4f67-aba2-270068d6a9c6",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "33335cc9-58b7-49a5-814c-3812d22e3482",
+    "cycle": 1,
+    "digest": "390625ecbdd23eef58343f501530c181859438fd414f1009d002af64b0005a62",
+    "engine_id": "claudeloop",
+    "event_id": "7310ba2d-6092-45ac-b638-2cfd7ff54bce",
+    "job_id": "44e282ee-55b1-4cf9-afc3-c84870a14a5c",
+    "kind": "QuestionAsked",
+    "payload": {
+      "blocking": true,
+      "cycle": 1,
+      "default": "Both call the same application service, Postgres row lock serializes them, second caller sees idempotent success. No distinct failure mode\u2014the shared service layer is the protection.",
+      "item_id": "operator_cli_collision",
+      "stage": "premortem",
+      "text": "If the kopf operator reconciles a deleted VibeyProject CR while a human runs `vibey abandon` on the same project, what failure mode emerges?"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-22T03:50:26.153640+00:00",
+    "project_id": "d733035f-e0f9-4f67-aba2-270068d6a9c6",
+    "provenance": "agent",
+    "seq": 55
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

@@ -1,0 +1,40 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "7842517003d3188110f0f465954b0ecff589806cb8cb54badeb558d03aad338d",
+    "event_id": "20b43c3c-fd03-487e-b957-f2e3ea6db6f6",
+    "seq": 1620
+  },
+  "previous": {
+    "digest": "7842517003d3188110f0f465954b0ecff589806cb8cb54badeb558d03aad338d",
+    "event_id": "4ef00e7d-863c-4b2e-81d8-5f3539462f95",
+    "seq": 1573
+  },
+  "project_id": "8ab823c9-89e4-4050-884c-9008c8b14ef8",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "e4805e6a-0e20-43b2-81ed-5e3ba0e3e82e",
+    "cycle": 1,
+    "digest": "d8e31e9c910d36e70ea48b80f3eefb9286c6a1d4929c604b8efc2559a9bb5f3e",
+    "engine_id": null,
+    "event_id": "c9bbd39a-6848-4857-970b-94f3fc6edead",
+    "job_id": "a85db460-680b-4e98-8290-94845d1a5edb",
+    "kind": "FindingRaised",
+    "payload": {
+      "finding_id": "f_integrate_ws_944760e1",
+      "severity": "high",
+      "text": "merge conflict integrating 'ws': Auto-merging app/database.py\nCONFLICT (content): Merge conflict in app/database.py\nAuto-merging tests/test_walking_skeleton.py\nCONFLICT (content): Merge conflict in tests/test_walking_skeleton.py\nAutomatic merge failed; fix conflicts and then commit the result."
+    },
+    "phase": "build",
+    "produced_at": "2026-08-20T06:31:17.228585+00:00",
+    "project_id": "8ab823c9-89e4-4050-884c-9008c8b14ef8",
+    "provenance": "agent",
+    "seq": 1575
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

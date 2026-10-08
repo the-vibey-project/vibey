@@ -1,0 +1,43 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "e975c682cab05a1c0a683f64fbcf16d980bc5313dedb8e559ee9f3ac7af24c9d",
+    "event_id": "91dfa0ad-296f-4ff4-b980-75a665434c7d",
+    "seq": 10
+  },
+  "previous": {
+    "digest": "451a279fef645419fb9b6b399c4e6a422914751e09cd50f41b987d3f99d27242",
+    "event_id": "8041dd80-1273-4032-81d1-161ca7de99b0",
+    "seq": 8
+  },
+  "project_id": "2f6a93b6-2d73-4aff-bc94-16539841133f",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "b8d72ad8-6e4f-43f1-97c2-3892ebd0f59b",
+    "cycle": 1,
+    "digest": "8bf0ca41f7f77588df50cecb0b0eb9a14fa8230c064868c41f522039fdb481c3",
+    "engine_id": "claudeloop",
+    "event_id": "5e033282-bc14-4890-88c2-9e8f33fb1073",
+    "job_id": "334db377-8cb0-4a72-9cc0-78b45fc9bb38",
+    "kind": "QuestionAsked",
+    "payload": {
+      "blocking": true,
+      "cycle": 1,
+      "default": "When a job is stuck, mis-configured, or consuming credits on the wrong task, stop should mark it CANCELLED and let the current lease drain gracefully (worker sees SIGTERM-like behavior). The job stays in history but won't be retried.",
+      "item_id": "stop_job_story",
+      "stage": "job_story",
+      "text": "When would an operator need to stop a job, and what should happen to the work in progress?"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-22T02:57:46.446746+00:00",
+    "project_id": "2f6a93b6-2d73-4aff-bc94-16539841133f",
+    "provenance": "agent",
+    "seq": 9
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

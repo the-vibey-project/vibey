@@ -1,0 +1,39 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "481217c4a23a642c24e4359cd5defa6cbbc4cfc38cc20cec1b1d3045cbd444b9",
+    "event_id": "1b38d727-0386-4277-989c-69cb2bb060ae",
+    "seq": 33
+  },
+  "previous": {
+    "digest": "5838ac53c11c69b219717a1793a95150f2488d2e698b3cdececa4c371c41c832",
+    "event_id": "d735c954-82b7-4627-acc1-6bf51e9d175c",
+    "seq": 31
+  },
+  "project_id": "0ee95624-eec4-4e8e-9a14-6ad9a37dcff4",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "a95b966e-98ff-4b92-b038-269d46438874",
+    "cycle": 1,
+    "digest": "9f0a4e8417d092174d62214df5cf6450baf013899114b1f86617d13e69c07ec2",
+    "engine_id": "claudeloop",
+    "event_id": "255f8aa1-6a53-414f-b23b-ad773dbc7149",
+    "job_id": "1343d0fd-bf3f-4739-8c21-cbf7693c673e",
+    "kind": "AnswerGiven",
+    "payload": {
+      "answer": "A plain anchor \u003ca href=\"[path]\" target=\"_blank\" rel=\"noopener noreferrer\"\u003eOpen full page\u003c/a\u003e in the widget dialog header next to the close button. Relative href on purpose: on hire.adam.matthewsteinberger.com it 308s to https://chat.adam.matthewsteinberger.com/ via the next.config rule, while localhost/preview deploys serve [path] directly (no hard-coded production host in dev). New tab so the visitor keeps their place on the main site.",
+      "item_id": "widget_link_behavior"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-20T20:12:52.004321+00:00",
+    "project_id": "0ee95624-eec4-4e8e-9a14-6ad9a37dcff4",
+    "provenance": "trusted",
+    "seq": 32
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 2
+  }
+}

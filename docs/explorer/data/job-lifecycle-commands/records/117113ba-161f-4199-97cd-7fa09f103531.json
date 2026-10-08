@@ -1,0 +1,39 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "e6486ac032d9859211dbad5d0ab0c6790432c9f9b79cfa3e2f56f259f5a2defe",
+    "event_id": "b2537986-5bd2-4307-b967-21ee96280a50",
+    "seq": 27
+  },
+  "previous": {
+    "digest": "39fdd9bd369f5cff8735d7fa22ba14ac1be5cbfe8ee4822fe01ef61d3e36eca1",
+    "event_id": "8c99d394-465c-4d5f-8124-a60f868d673e",
+    "seq": 24
+  },
+  "project_id": "2f6a93b6-2d73-4aff-bc94-16539841133f",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "0b787e8f-786c-459b-8e46-d8acab789f51",
+    "cycle": 1,
+    "digest": "339165d407737946dd32556f850e4b4aa6d7814cd82c4a773614d597941f3ee0",
+    "engine_id": "claudeloop",
+    "event_id": "117113ba-161f-4199-97cd-7fa09f103531",
+    "job_id": "334db377-8cb0-4a72-9cc0-78b45fc9bb38",
+    "kind": "AnswerGiven",
+    "payload": {
+      "answer": "Only the queue row fields: phase, state, current_attempt counter reset to values at target seq. Git worktree and engine rundir are NOT auto-restored by wind-back\u2014the next worker re-derives them from ledger on claim, or operator manually resets git. This keeps wind-back pure: it records a position, workers interpret it.",
+      "item_id": "wind_back_scope"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-22T03:41:56.495111+00:00",
+    "project_id": "2f6a93b6-2d73-4aff-bc94-16539841133f",
+    "provenance": "trusted",
+    "seq": 25
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

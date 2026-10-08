@@ -1,0 +1,39 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "e4242e576edfa53a53168190f84a249e5ecf42db73b283beddbd8780af61a864",
+    "event_id": "6259cd0f-cf2c-4c74-a0a5-db8430f1f69d",
+    "seq": 24
+  },
+  "previous": {
+    "digest": "def74892721418919ef289958c3498303ad4044c7f059a72696b9393a99d9a18",
+    "event_id": "197e8d03-70d0-42f8-ad11-0f5a00c9de7f",
+    "seq": 22
+  },
+  "project_id": "d733035f-e0f9-4f67-aba2-270068d6a9c6",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "065bd88c-01c7-4c1c-8a61-92e368585e78",
+    "cycle": 1,
+    "digest": "3c1ac7053459109b4b4a58639f4fed57ffb0becb299f658d859adf9ac60a317b",
+    "engine_id": "claudeloop",
+    "event_id": "a617153f-9fa7-4473-868d-59c27062a064",
+    "job_id": "44e282ee-55b1-4cf9-afc3-c84870a14a5c",
+    "kind": "AnswerGiven",
+    "payload": {
+      "answer": "Print a summary to stdout: project ID, old phase \u2192 ABANDONED, count of jobs cancelled by state, worktree warning if present. Emit structured log at INFO. No metrics yet\u2014defer until usage patterns emerge.",
+      "item_id": "observability"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-22T03:34:34.469528+00:00",
+    "project_id": "d733035f-e0f9-4f67-aba2-270068d6a9c6",
+    "provenance": "trusted",
+    "seq": 23
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

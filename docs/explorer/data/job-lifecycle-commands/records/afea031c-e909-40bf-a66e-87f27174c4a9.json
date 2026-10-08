@@ -1,0 +1,39 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "e8975190f1085bf080279225bbf973c5135f8cb00ef57138aad3c232db102246",
+    "event_id": "6ffceef7-cc5f-4b4a-9d08-8886471e29e9",
+    "seq": 6
+  },
+  "previous": {
+    "digest": "22ddbe429cc9cddd0a448e76accf47ebae6765520030b11679993969b7547333",
+    "event_id": "019f4755-e328-4299-a730-113dce146309",
+    "seq": 4
+  },
+  "project_id": "2f6a93b6-2d73-4aff-bc94-16539841133f",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "4ebc1492-01e9-4abb-8fac-6a27f396d0b6",
+    "cycle": 1,
+    "digest": "82ebdffd612056bad8f30c46c9ba5271d7cfd6c379598273e1dd2d1f192feca3",
+    "engine_id": "claudeloop",
+    "event_id": "afea031c-e909-40bf-a66e-87f27174c4a9",
+    "job_id": "334db377-8cb0-4a72-9cc0-78b45fc9bb38",
+    "kind": "AnswerGiven",
+    "payload": {
+      "answer": "[hard] The ledger is append-only: every transition is a recorded event; wind-back NEVER rewrites or deletes history, it records a new position. [hard] A leased job cannot be stopped by mutating the row out from under a live worker -- decide explicitly how stop interacts with an in-flight lease (cooperative via the lease, or stop-after-current), and note the worker now drains on SIGTERM, which is the same class of problem already solved once. [hard] Never block a worker on a human. [hard] Every job stays idempotent under replay. [hard] Domain purity: the state machine belongs in domain/ as pure functions, with the repository and CLI as thin shells over it. [hard] Coordinate with two sibling projects: abandon-command also needs to settle in-flight jobs when a project is abandoned, and fork-command also needs a way to address a past point in a job's history -- do not invent a third addressing scheme. [hard] Conventional Commits, feature branch into develop.",
+      "item_id": "constraints"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-22T02:57:10.227649+00:00",
+    "project_id": "2f6a93b6-2d73-4aff-bc94-16539841133f",
+    "provenance": "trusted",
+    "seq": 5
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

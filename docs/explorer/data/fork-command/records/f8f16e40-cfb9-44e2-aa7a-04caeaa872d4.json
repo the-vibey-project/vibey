@@ -1,0 +1,42 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "1f1674b7d948cb4a1227375538ea2a9bf57fb822ccf5fc2062f9f3737a4eebef",
+    "event_id": "b0c31207-a99d-48e9-b15f-c71240dbc5ef",
+    "seq": 688
+  },
+  "previous": {
+    "digest": "f76571cd880a660e17812d0c498bcbbbde83d35ff98bb94e23829e25fcaa3ea0",
+    "event_id": "1b5a2494-36c6-4727-b7a1-eacea7214fb0",
+    "seq": 583
+  },
+  "project_id": "ab0b06f9-55a4-4b47-ac08-254e7fdd9036",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "83ee376c-db9f-419d-9697-a0ac90dcd5cb",
+    "cycle": 1,
+    "digest": "951363211977b8154a3ac2d5ebaeab3bafaf4d12dd0da619d77ba619102e97f5",
+    "engine_id": "codexloop",
+    "event_id": "f8f16e40-cfb9-44e2-aa7a-04caeaa872d4",
+    "job_id": "75b0f023-98ad-426b-8e81-a24504bf5974",
+    "kind": "VerdictRendered",
+    "payload": {
+      "complete": false,
+      "remaining_work": [
+        "Implement work item idempotent-replay: Chaos test: fork idempotency under mid-operation worker death"
+      ],
+      "success": false
+    },
+    "phase": "build",
+    "produced_at": "2026-08-22T19:30:56.410310+00:00",
+    "project_id": "ab0b06f9-55a4-4b47-ac08-254e7fdd9036",
+    "provenance": "agent",
+    "seq": 637
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 2,
+    "paths": 0
+  }
+}

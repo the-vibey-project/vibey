@@ -1,0 +1,39 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "6cfc96fa5a1a140da761ca8a5b2f07d9ee4b1092ddceaa687b3a8e3e6c335262",
+    "event_id": "a4c5831a-1048-45ba-9728-7cdf8885e660",
+    "seq": 9
+  },
+  "previous": {
+    "digest": "81c19ecf0f81d4fccd4ff00ae790116375df83ff4063a00098c1d71d51b80347",
+    "event_id": "f34110af-625d-4234-87a0-647c12eb4a60",
+    "seq": 7
+  },
+  "project_id": "d733035f-e0f9-4f67-aba2-270068d6a9c6",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "92e9b907-1093-4aa6-b0a5-c0b4e2bb41e0",
+    "cycle": 1,
+    "digest": "32cda1306e5c4fe01c9f66e54332ffc5bc33d6936faa1560f6574318ff241b7b",
+    "engine_id": "claudeloop",
+    "event_id": "f75a240a-e85c-4dab-b184-59e3d1fff295",
+    "job_id": "44e282ee-55b1-4cf9-afc3-c84870a14a5c",
+    "kind": "AnswerGiven",
+    "payload": {
+      "answer": "[hard] The ledger is append-only: abandoning is a recorded phase transition emitting an event, never a delete or an update-in-place of history. [hard] Go through the same application service the CLI and the operator both call -- a single choke point. [hard] Decide and implement what happens to the project's in-flight work: jobs in ready/leased/awaiting_human must not be left claimable, or a worker will keep picking up work for an abandoned project. Cancelling them is the natural answer, and CANCELLED is currently a dead enum value never written by anything -- but note the job-lifecycle-commands project is separately defining stop/restart semantics over that same state, so coordinate rather than inventing a conflicting meaning. [hard] Idempotent: abandoning an already-abandoned project succeeds quietly rather than erroring. [hard] Refuse to abandon a DONE project silently -- require confirmation or a flag, since DONE carries evidence. [hard] 100% branch coverage, domain purity, Conventional Commits, feature branch into develop.",
+      "item_id": "constraints"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-22T02:55:30.118419+00:00",
+    "project_id": "d733035f-e0f9-4f67-aba2-270068d6a9c6",
+    "provenance": "trusted",
+    "seq": 8
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

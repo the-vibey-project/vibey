@@ -1,0 +1,39 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "f677cd24159efe779caa0d5afe05fe9c32827ec2eb67b704095c4b7e7451f984",
+    "event_id": "16994567-06b8-4a43-9904-684fe9ad3671",
+    "seq": 16
+  },
+  "previous": {
+    "digest": "c9fc58e0cf1b3f7a3236acbd6cd3d5d398aabfc31cf64f85088c470fe8b93efa",
+    "event_id": "8cdda5aa-e257-4b37-9cbd-869fadab44d6",
+    "seq": 14
+  },
+  "project_id": "2f6a93b6-2d73-4aff-bc94-16539841133f",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "21673a8d-14cf-420e-b771-67eaa589e096",
+    "cycle": 1,
+    "digest": "c3a2ec73fc142687b894a2d50a483fceb75e9072d3c72c5dcff19c0f6651c0a3",
+    "engine_id": "claudeloop",
+    "event_id": "30e9f188-0bff-4d00-8940-f0605b209ec1",
+    "job_id": "334db377-8cb0-4a72-9cc0-78b45fc9bb38",
+    "kind": "AnswerGiven",
+    "payload": {
+      "answer": "When a job hit awaiting_human and the answer is provided, or when max_attempts exhausted but the underlying issue is now fixed (credentials restored, rate limit lifted), continue should transition back to READY and re-enqueue from current position while preserving all prior history.",
+      "item_id": "continue_job_story"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-22T03:34:35.293603+00:00",
+    "project_id": "2f6a93b6-2d73-4aff-bc94-16539841133f",
+    "provenance": "trusted",
+    "seq": 15
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

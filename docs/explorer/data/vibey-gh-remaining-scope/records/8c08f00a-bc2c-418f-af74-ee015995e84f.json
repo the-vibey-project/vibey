@@ -1,0 +1,39 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "84742c126bc225e4a5a9d25058ecd76bac2e1188515b391f2b45bff2bafc55f8",
+    "event_id": "bad75186-faf2-478c-b4c0-4ef97ee95ebc",
+    "seq": 33
+  },
+  "previous": {
+    "digest": "6b31e8fe2089c8c924765adfe5c0ba3af3ff72fb6a4ece862d6e41aa6b9eecd4",
+    "event_id": "1ae1f19a-0501-420d-9eba-2e898943cd22",
+    "seq": 31
+  },
+  "project_id": "d482c3e2-029e-4bb8-a9a1-de411816c6ae",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "17d08dcd-f61d-4b8c-aaf6-5136c86e42f1",
+    "cycle": 1,
+    "digest": "7a4ca2ec20f5f65e04c0bf3ee70d2766cd79fb71a813cc1f996c41fd29af139e",
+    "engine_id": "claudeloop",
+    "event_id": "8c08f00a-bc2c-418f-af74-ee015995e84f",
+    "job_id": "d2626f25-d550-454e-bacd-7a7e6c9b52cd",
+    "kind": "AnswerGiven",
+    "payload": {
+      "answer": "Offering online tutorials, video guides, and a dedicated customer support team.",
+      "item_id": "16"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-31T02:04:52.433269+00:00",
+    "project_id": "d482c3e2-029e-4bb8-a9a1-de411816c6ae",
+    "provenance": "trusted",
+    "seq": 32
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

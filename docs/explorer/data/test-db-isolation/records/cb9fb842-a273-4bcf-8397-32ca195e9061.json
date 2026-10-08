@@ -1,0 +1,39 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "856660861cbf3cca6f933c5970d8f4c8581207cb7387a0141977200d547263b1",
+    "event_id": "7a0e07a3-4583-40d6-a69f-3ed165ec892c",
+    "seq": 26
+  },
+  "previous": {
+    "digest": "37d89266fb9cba05a55dde6b1bd2e47cd85609d991609ce93025915f5f0d69b7",
+    "event_id": "abc9cfb2-c8e5-48eb-97c2-7230b317d063",
+    "seq": 24
+  },
+  "project_id": "df7e868b-1fbf-451b-8ceb-126359b7588e",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "ad11ceee-914a-4527-ba97-76d405a9dff2",
+    "cycle": 1,
+    "digest": "e57c66bce4baf927c2847bd1971222cb123f392add19e3ff09d96e9358d4115b",
+    "engine_id": "claudeloop",
+    "event_id": "cb9fb842-a273-4bcf-8397-32ca195e9061",
+    "job_id": "3a3b336c-c2aa-4400-a762-ae12246358d3",
+    "kind": "AnswerGiven",
+    "payload": {
+      "answer": "Users fall back to manual processes (spreadsheets, emails) with higher error rates and slower turnaround",
+      "item_id": "absence_impact"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-22T04:43:42.820422+00:00",
+    "project_id": "df7e868b-1fbf-451b-8ceb-126359b7588e",
+    "provenance": "trusted",
+    "seq": 25
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

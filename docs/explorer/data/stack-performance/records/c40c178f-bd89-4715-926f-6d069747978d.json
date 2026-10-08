@@ -1,0 +1,43 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "7393cce430ccf898021c31f76a2aeb1f0370b4106bda73f08f887608686b5c27",
+    "event_id": "f0ceed18-f78c-4850-b74c-28efac997fdf",
+    "seq": 30
+  },
+  "previous": {
+    "digest": "0241f8a6ba1aabee0655fca362f1ed37edbeaaf5dd866e7d4786fb3e1424373c",
+    "event_id": "2575ff97-fb6a-4016-bf23-0fcd506f5743",
+    "seq": 28
+  },
+  "project_id": "44c06a64-c8ed-4153-96af-b49db29c39e3",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "93b04975-04a3-4309-8e3a-a8181f33fb84",
+    "cycle": 1,
+    "digest": "c4b17c140500d8657e66a65ac12a0405f3830dec6b908b59becf7dd5a5c29ebb",
+    "engine_id": "claudeloop",
+    "event_id": "c40c178f-bd89-4715-926f-6d069747978d",
+    "job_id": "bcd8e0b1-385d-43dc-ad1f-cad988f80cc9",
+    "kind": "QuestionAsked",
+    "payload": {
+      "blocking": false,
+      "cycle": 1,
+      "default": "Under 50ms for a budget check on a 10,000-event project, measured p99 not mean, stable as history grows to 100,000 events",
+      "item_id": "fast_enough_threshold",
+      "stage": "example_mapping",
+      "text": "What's a concrete example of 'fast enough' \u2014 a specific latency number at a specific ledger size?"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-22T03:42:46.929466+00:00",
+    "project_id": "44c06a64-c8ed-4153-96af-b49db29c39e3",
+    "provenance": "agent",
+    "seq": 29
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

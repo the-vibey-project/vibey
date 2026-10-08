@@ -1,0 +1,39 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "3a6ed9056653be4927f449b94ae415de5b601fe4473ef938e9ed7a76b7dd07c6",
+    "event_id": "fbf7c83e-4f5b-4b7f-b06f-b0da1d4899bf",
+    "seq": 23
+  },
+  "previous": {
+    "digest": "32ceb7adade1655dd74d05b764ac035d9545320b08b54959d91eb1c07ddff206",
+    "event_id": "6b77d6c6-20d6-4358-a32d-ae98ac1815d8",
+    "seq": 21
+  },
+  "project_id": "8ab823c9-89e4-4050-884c-9008c8b14ef8",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "2f9c089f-538f-4649-afae-6aea451f8886",
+    "cycle": 1,
+    "digest": "b4f5e56cfbb1085d08126b47394307e31746617010dd1ad5696bd2b3e3b91ca5",
+    "engine_id": "claudeloop",
+    "event_id": "99e4323d-89dd-45d6-b1e5-4b8370477236",
+    "job_id": "705692f1-69a1-4cc2-ade7-8aa3d1407b67",
+    "kind": "AnswerGiven",
+    "payload": {
+      "answer": "Click-through rate, link creation volume, system uptime \u003e99.9%, p99 redirect latency \u003c50ms",
+      "item_id": "success_metrics"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-20T02:33:22.528147+00:00",
+    "project_id": "8ab823c9-89e4-4050-884c-9008c8b14ef8",
+    "provenance": "trusted",
+    "seq": 22
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

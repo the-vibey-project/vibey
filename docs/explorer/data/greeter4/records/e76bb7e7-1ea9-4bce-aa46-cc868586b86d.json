@@ -1,0 +1,43 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "2d2c1224dee69d5a359771f402b3c285fd3cbf335fbe2baf8c0a461f26375e65",
+    "event_id": "b9803542-c026-4645-a7d5-c67447697432",
+    "seq": 45
+  },
+  "previous": {
+    "digest": "03a05bd54e914d2da0f5e36e21f3f951f5312510bcc8ba1ee70c3c088ddbd7b2",
+    "event_id": "5bb11069-aef6-4a58-a281-7d1220849d73",
+    "seq": 43
+  },
+  "project_id": "8ab823c9-89e4-4050-884c-9008c8b14ef8",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "88a272c2-4375-424c-b445-dc5c5ea5559e",
+    "cycle": 1,
+    "digest": "3d6dfca1237e47a6f8671eb9418741575a32374913c1783c30784c0bae6c3110",
+    "engine_id": "claudeloop",
+    "event_id": "e76bb7e7-1ea9-4bce-aa46-cc868586b86d",
+    "job_id": "705692f1-69a1-4cc2-ade7-8aa3d1407b67",
+    "kind": "QuestionAsked",
+    "payload": {
+      "blocking": false,
+      "cycle": 1,
+      "default": "Raw click events: 90 days; Aggregated hourly stats: 1 year; Aggregated daily stats: indefinite; URLs never deleted unless user requests",
+      "item_id": "data_retention_nfr",
+      "stage": "nfr_planguage",
+      "text": "How long should analytics/click data be retained, and at what granularity over time?"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-20T02:35:21.674775+00:00",
+    "project_id": "8ab823c9-89e4-4050-884c-9008c8b14ef8",
+    "provenance": "agent",
+    "seq": 44
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

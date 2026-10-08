@@ -1,0 +1,39 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "3ed817e722218c0aefec6cc5155387bf3d7c69e2d23caafe7144cb21b7d775a2",
+    "event_id": "6f9f0308-45cf-46e0-9cba-6741a2d52549",
+    "seq": 32
+  },
+  "previous": {
+    "digest": "94701fce8a2788458c081cef36d1c63d5fef535a3b60ca60ef6efd437ce0ef2b",
+    "event_id": "cc93cbb6-254e-46ba-8a05-661e3c6d6abe",
+    "seq": 30
+  },
+  "project_id": "b43d1fcb-fb7b-42d6-9f80-220292c73389",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "0f0b815e-d4d1-4518-881e-fcd82319910f",
+    "cycle": 1,
+    "digest": "764009acbda916d7d81a040b1fbb0afc59b6014794d50fb1322338c4fae1689a",
+    "engine_id": "claudeloop",
+    "event_id": "79266f0c-e44d-40d6-8e6e-4ad688d73945",
+    "job_id": "64ea0fea-cd4f-4b3b-bf19-112c18a7c58d",
+    "kind": "AnswerGiven",
+    "payload": {
+      "answer": "Cycle Budget Cap: none | Total Budget Cap: none (spent $5.67)",
+      "item_id": "display_no_caps"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-22T03:41:55.928448+00:00",
+    "project_id": "b43d1fcb-fb7b-42d6-9f80-220292c73389",
+    "provenance": "trusted",
+    "seq": 31
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

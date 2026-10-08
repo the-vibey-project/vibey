@@ -1,0 +1,39 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "f0f6db5b6bff626d4d6f7967417d94fd9bc4134a079c8d1dee13573424867e22",
+    "event_id": "a17a1859-23c7-471e-b59a-243eaa493e3c",
+    "seq": 6
+  },
+  "previous": {
+    "digest": "e0b086bd2bc66972c6a7c438a8c5c1a755f286d78b1a24f6680789345a794a6c",
+    "event_id": "e0d23dd4-79a3-4677-918d-893d966c2d46",
+    "seq": 4
+  },
+  "project_id": "0ee95624-eec4-4e8e-9a14-6ad9a37dcff4",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "997fb8e9-43ae-46a4-ae94-78437834b75b",
+    "cycle": 1,
+    "digest": "1a9bf33591a6609e46b51059cc52266acc458e6dbc20e6f78bfe79e9a6bdf67a",
+    "engine_id": "claudeloop",
+    "event_id": "ea8ba13e-b718-4dc1-964e-4cef126a753e",
+    "job_id": "1343d0fd-bf3f-4739-8c21-cbf7693c673e",
+    "kind": "AnswerGiven",
+    "payload": {
+      "answer": "NOT a new chat system and NOT real-time. Scope: host the EXISTING 'Ask my r\u00e9sum\u00e9' RAG Q\u0026A (src/components/AskAdam.tsx + the [path] SSE-streaming Node route: Claude via @anthropic-ai/sdk + MiniSearch BM25 over src/generated/kb.json) as a full-page experience at https://chat.adam.matthewsteinberger.com, served by this same Next.js 16 App Router app on the existing Netlify site. Deliverables: a [path] route (server-rendered heading/intro + \u003cAskAdam variant=\"page\" /\u003e rendering the existing panel inline instead of as a floating dialog, with a visible 'resting' notice when the bot is disabled), host-aware routing in next.config.ts, discoverability links (widget header link, footer link, sitemap, llms.txt, one curated kb-sources chunk), AGENTS.md docs, colocated vitest tests keeping coverage at 100%. No new backend, no WebSockets, no persistence, no accounts.",
+      "item_id": "chat_scope"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-20T20:08:47.695659+00:00",
+    "project_id": "0ee95624-eec4-4e8e-9a14-6ad9a37dcff4",
+    "provenance": "trusted",
+    "seq": 5
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 2
+  }
+}

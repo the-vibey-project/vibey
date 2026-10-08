@@ -1,0 +1,43 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "a7c05616c6f5a07e9fb0292252d26eef06d0fb679f1ac4f90fef3a8beda034f7",
+    "event_id": "66534579-8e3c-40d3-bc47-e495ef19823f",
+    "seq": 50
+  },
+  "previous": {
+    "digest": "8b88b278e12de66ea02dd364b8291f6d9c00f3942e3ab7ff704dda134933c700",
+    "event_id": "3e96f6b3-7211-47f1-b528-73d8333cb4f6",
+    "seq": 48
+  },
+  "project_id": "0ee95624-eec4-4e8e-9a14-6ad9a37dcff4",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "4fa59c68-4c4d-42de-93d3-43dc9d079996",
+    "cycle": 1,
+    "digest": "15c88b6eddef6a7ccf7e719a4e266eac1f129508ab38e1ff7f6a3a25fcb80804",
+    "engine_id": "claudeloop",
+    "event_id": "031cd0e6-903f-4a65-95dc-4156ef03eb73",
+    "job_id": "1343d0fd-bf3f-4739-8c21-cbf7693c673e",
+    "kind": "QuestionAsked",
+    "payload": {
+      "blocking": true,
+      "cycle": 1,
+      "default": "The manual curl checklist becomes a required gate for every Next.js/plugin upgrade (run locally before merging dependabot PRs); add a code comment in next.config.ts linking to the verification commands; accept that automated CI detection is out of scope but the rules are simple enough to verify in \u003c5 minutes",
+      "item_id": "routing_upgrade_risk",
+      "stage": "premortem",
+      "text": "What happens if a Next.js or @netlify/plugin-nextjs upgrade changes redirect/rewrite evaluation order or edge-case behavior, breaking the host-aware routing?"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-20T20:20:49.082224+00:00",
+    "project_id": "0ee95624-eec4-4e8e-9a14-6ad9a37dcff4",
+    "provenance": "agent",
+    "seq": 49
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

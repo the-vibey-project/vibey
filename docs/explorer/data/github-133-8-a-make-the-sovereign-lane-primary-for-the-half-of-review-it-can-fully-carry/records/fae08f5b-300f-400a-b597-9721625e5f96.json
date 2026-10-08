@@ -1,0 +1,43 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "1f9088fb65ee81ba76a71af0e59c9459f3eb7b3cc28c4d46f2a19aaecfbb2c25",
+    "event_id": "554d3f41-2393-4d29-8e0a-5ccb5f9fdda3",
+    "seq": 29
+  },
+  "previous": {
+    "digest": "51ef01a6a520098e0dc46f501655c540656d778d7eba240f28ce451043a228b6",
+    "event_id": "a4de3485-bdaf-4223-b575-a05346e229ec",
+    "seq": 26
+  },
+  "project_id": "f4cfe576-55c7-4f79-80ad-485f85ddca8b",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "4bb7ecc1-ea40-5364-bed9-45c048157678",
+    "cycle": 1,
+    "digest": "9e023744a7fb5af5ea4c3883e871da6ebb41a801761f78c8b91f88567aefeb59",
+    "engine_id": "gptossloop",
+    "event_id": "fae08f5b-300f-400a-b597-9721625e5f96",
+    "job_id": "5057b798-907c-4039-9690-3992212dc0b2",
+    "kind": "QuestionAsked",
+    "payload": {
+      "blocking": false,
+      "cycle": 1,
+      "default": "Yes \u2013 include a `cost` sub\u2011object under the sovereign half mirroring the paid lane\u2019s cost structure (e.g., `tokens_used`, `cost_usd`).",
+      "item_id": "Q12",
+      "stage": "example_mapping",
+      "text": "Should we record cost metrics for the sovereign lane in the gate summary, and if so, how should they be structured?"
+    },
+    "phase": "design",
+    "produced_at": "2026-09-27T21:38:09.148319+00:00",
+    "project_id": "f4cfe576-55c7-4f79-80ad-485f85ddca8b",
+    "provenance": "agent",
+    "seq": 27
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

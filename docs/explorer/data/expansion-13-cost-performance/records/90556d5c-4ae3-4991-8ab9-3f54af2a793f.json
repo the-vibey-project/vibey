@@ -1,0 +1,43 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "4a5fae83d47b201b074fe724de143bfb1af3db34e8b3eec9f5f7762f1349914f",
+    "event_id": "2613bd1a-cb45-4e42-9b11-d9c3be687f63",
+    "seq": 3
+  },
+  "previous": {
+    "digest": "340eb97701a5f26befc929c4f873be5403c27ea71702639648b88c358b8af477",
+    "event_id": "f169ea01-deb1-41fc-813e-1b032fbb1c19",
+    "seq": 1
+  },
+  "project_id": "a1d6b837-46f3-40c0-b6a2-8b3babb7fe15",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "d091b747-0016-4b34-9d10-b62e95d74a0a",
+    "cycle": 1,
+    "digest": "9b7c166899b94a2fc356ac123745866564a1fcb7daec55f6fe5aa71e8c68b97d",
+    "engine_id": "claudeloop",
+    "event_id": "90556d5c-4ae3-4991-8ab9-3f54af2a793f",
+    "job_id": "dd8513f6-0d76-49a5-8bdc-75167dea5385",
+    "kind": "QuestionAsked",
+    "payload": {
+      "blocking": false,
+      "cycle": 1,
+      "default": "Follow existing project patterns and architecture",
+      "item_id": "constraints",
+      "stage": "context_free",
+      "text": "Are there specific architectural constraints, patterns, or technologies that must be followed?"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-20T20:39:40.061146+00:00",
+    "project_id": "a1d6b837-46f3-40c0-b6a2-8b3babb7fe15",
+    "provenance": "agent",
+    "seq": 2
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

@@ -1,0 +1,39 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "81c19ecf0f81d4fccd4ff00ae790116375df83ff4063a00098c1d71d51b80347",
+    "event_id": "f34110af-625d-4234-87a0-647c12eb4a60",
+    "seq": 7
+  },
+  "previous": {
+    "digest": "5858c984d35567fb49231df2b4e73d721b40fabce899deb504b5e43985ddc6fc",
+    "event_id": "ab6d98ed-31ce-4415-9a5c-24eba6a44327",
+    "seq": 5
+  },
+  "project_id": "d733035f-e0f9-4f67-aba2-270068d6a9c6",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "17a232e1-3935-41b0-b78f-022d5b5b276f",
+    "cycle": 1,
+    "digest": "ae8d0aca128ca1992b66960876d7b813e4dca40b19014802f568d0b01f6549c8",
+    "engine_id": "claudeloop",
+    "event_id": "44d5b519-fa95-44ab-8807-16effcfbdc59",
+    "job_id": "44e282ee-55b1-4cf9-afc3-c84870a14a5c",
+    "kind": "AnswerGiven",
+    "payload": {
+      "answer": "Operators running vibey locally and, once the kopf operator lands, the operator reconciling a VibeyProject whose CR has been deleted. Both need the same service, not two code paths -- runbook 05 names that as a real risk.",
+      "item_id": "users"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-22T02:55:30.118419+00:00",
+    "project_id": "d733035f-e0f9-4f67-aba2-270068d6a9c6",
+    "provenance": "trusted",
+    "seq": 6
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

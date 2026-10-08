@@ -1,0 +1,43 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "e3289f94bad17168ef761e6f83df23c1d51d5584e47f57c6e6acc30d9da936af",
+    "event_id": "e129a50e-efde-44d5-8e2f-34e58e67cb43",
+    "seq": 20
+  },
+  "previous": {
+    "digest": "f0f83be3ca977f0ace791b1e59573548d2cf2a85581eb8eec655736b1cfcdfa0",
+    "event_id": "bd7daa5c-9e18-4633-90a5-3d6615960e78",
+    "seq": 18
+  },
+  "project_id": "0ee95624-eec4-4e8e-9a14-6ad9a37dcff4",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "aef241d3-1e06-4989-88c9-fb16a59f0d82",
+    "cycle": 1,
+    "digest": "f53615037ee5485f2fc689900197dd78d8e3c208fefe41eb480a4b3783f99519",
+    "engine_id": "claudeloop",
+    "event_id": "c6760bb6-2874-4797-b316-9ba3b314c314",
+    "job_id": "1343d0fd-bf3f-4739-8c21-cbf7693c673e",
+    "kind": "QuestionAsked",
+    "payload": {
+      "blocking": false,
+      "cycle": 1,
+      "default": "When they need to share a direct link (email/LinkedIn message/application), want full-screen focus without portfolio distractions, or were sent the URL by Adam directly - not a feature difference, a context difference",
+      "item_id": "page_vs_widget",
+      "stage": "laddering",
+      "text": "When should someone use chat.adam.matthewsteinberger.com instead of the homepage widget?"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-20T20:11:06.183484+00:00",
+    "project_id": "0ee95624-eec4-4e8e-9a14-6ad9a37dcff4",
+    "provenance": "agent",
+    "seq": 19
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

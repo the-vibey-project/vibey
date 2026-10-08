@@ -1,0 +1,40 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "f2d822ea1aa0083fe6d8a9f3c284cd68ebbd20a06521ec1e10d01243a1e1c04d",
+    "event_id": "dedae8c9-beb4-4570-990d-ffd9560907ba",
+    "seq": 438
+  },
+  "previous": {
+    "digest": "7842517003d3188110f0f465954b0ecff589806cb8cb54badeb558d03aad338d",
+    "event_id": "a8c58644-0a69-4569-a39d-8aba73150047",
+    "seq": 436
+  },
+  "project_id": "26f89c38-c86b-4ddf-be75-c579a118e40e",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "5a9dc6d6-9950-48b3-97ed-44cf611e36eb",
+    "cycle": 1,
+    "digest": "d4e7b4bff8bf4a6b9a8713dd07299e612a30fde262d0a1f84590528aa8ee4911",
+    "engine_id": null,
+    "event_id": "392b2f71-724f-428a-b08c-5615e55f394b",
+    "job_id": "c3d3dab6-3a71-46aa-a445-162489d26166",
+    "kind": "FindingRaised",
+    "payload": {
+      "finding_id": "f_integrate_time-fallback_ec7e8c9d",
+      "severity": "high",
+      "text": "merge conflict integrating 'time-fallback': warning: Cannot merge binary files: __pycache__/greet.cpython-312.pyc (HEAD vs. vibey/1/time-fallback)\nAuto-merging __pycache__/greet.cpython-312.pyc\nCONFLICT (add/add): Merge conflict in __pycache__/greet.cpython-312.pyc\nwarning: Cannot merge binary files: tests/__pycache__/test_greet.cpython-312-pytest-8.3.4.pyc (HEAD vs. vibey/1/time-fallback)\nAuto-merging tests/__pycache__/test_greet.cpython-312-pytest-8.3.4.pyc\nCONFLICT (add/add): Merge conflict in tests/__pycache__/test_greet.cpython-312-pytest-8.3.4.pyc\nAutomatic merge failed; fix conflicts and then commit the result."
+    },
+    "phase": "build",
+    "produced_at": "2026-08-19T13:24:56.414938+00:00",
+    "project_id": "26f89c38-c86b-4ddf-be75-c579a118e40e",
+    "provenance": "agent",
+    "seq": 437
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

@@ -1,0 +1,39 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "00c2655396746884c6752bb26f2c429587252a264feb31193f895510b51de38e",
+    "event_id": "11af5333-e51c-4a81-b078-6c98b82777ec",
+    "seq": 8
+  },
+  "previous": {
+    "digest": "256e9f2eefe28b99c5beeb2a044ce84723436184798ba87cfdf62f028c6ea569",
+    "event_id": "58f268fe-afc0-4c92-9bf8-0a9720d9e21e",
+    "seq": 6
+  },
+  "project_id": "8f254b4c-df0a-4056-8937-6eba30efcfa6",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "3a0b21ba-7493-4977-abec-b18030b56a65",
+    "cycle": 1,
+    "digest": "07fabeb47292ece32d4fe588372cf2db823d8c446ab917e543503d6e98ffbca2",
+    "engine_id": "claudeloop",
+    "event_id": "58fc6c65-24fa-4aab-a707-13b26f5608c7",
+    "job_id": "40fb97d9-4ab1-4fa8-9ae2-693c2b7a7fc9",
+    "kind": "AnswerGiven",
+    "payload": {
+      "answer": "1) greet by name: `greet Alice` prints 'Hello, Alice!', 2) optional -t/--time flag for a time-of-day variant; nothing else",
+      "item_id": "core_functionality"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-19T18:26:57.552786+00:00",
+    "project_id": "8f254b4c-df0a-4056-8937-6eba30efcfa6",
+    "provenance": "trusted",
+    "seq": 7
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

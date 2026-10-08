@@ -1,0 +1,43 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "72861f53f8c608498d4fcfced39de26957254dbf9a395c3e0ff932192250b0f3",
+    "event_id": "5bad0ae0-1552-4e75-8baf-28d11ba8dcb0",
+    "seq": 57
+  },
+  "previous": {
+    "digest": "7742d800f132cb27715cd84468f1ab7f80d08c41250c2a6c0665fd8155a5966e",
+    "event_id": "2bc1025d-faae-40d1-bab9-3406aa32bbba",
+    "seq": 52
+  },
+  "project_id": "2f6a93b6-2d73-4aff-bc94-16539841133f",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "fadc6fd7-e1df-4088-8c47-c71c655021aa",
+    "cycle": 1,
+    "digest": "64254a56134c7419f54efdfd241c98abc3ee317f7030c8c3b0f6e4b7ca888783",
+    "engine_id": "claudeloop",
+    "event_id": "858669aa-9145-45d8-9baa-1c974b9f64e1",
+    "job_id": "334db377-8cb0-4a72-9cc0-78b45fc9bb38",
+    "kind": "QuestionAsked",
+    "payload": {
+      "blocking": true,
+      "cycle": 1,
+      "default": "The lease expires normally, reaper finds job in stop_requested state, writes JobCancelled event and transitions to CANCELLED during reap. Stop is eventually consistent: flag guarantees no further work, reaper guarantees state convergence.",
+      "item_id": "stop_lease_race",
+      "stage": "premortem",
+      "text": "What happens if a worker crashes or loses connectivity between seeing the stop_requested flag and writing the final JobCancelled ledger event?"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-22T03:54:38.338860+00:00",
+    "project_id": "2f6a93b6-2d73-4aff-bc94-16539841133f",
+    "provenance": "agent",
+    "seq": 56
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

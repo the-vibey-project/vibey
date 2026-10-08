@@ -1,0 +1,43 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "5dbfcc4a5c882dcbb99c00f21a0283005e0d443b05675f3c44a1c8f5bd8bcbad",
+    "event_id": "247a9873-a59b-4e28-830c-44e2968528dd",
+    "seq": 37
+  },
+  "previous": {
+    "digest": "7035cd991c84280853e9c42dd337fe42b9b0ef7fd75ce84f4499b86cee2341be",
+    "event_id": "34ea9b40-7842-48b6-bda9-9fade70a5371",
+    "seq": 34
+  },
+  "project_id": "44c06a64-c8ed-4153-96af-b49db29c39e3",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "189a9add-ff9f-49b0-adcf-e87b65aade4a",
+    "cycle": 1,
+    "digest": "39d8a7132c6cf75229556c5ba961c5d9b28d39dc1c9bb88b6ad05a3b042d4822",
+    "engine_id": "claudeloop",
+    "event_id": "be44a053-6027-4b5c-a17c-f5135ef49a27",
+    "job_id": "bcd8e0b1-385d-43dc-ad1f-cad988f80cc9",
+    "kind": "QuestionAsked",
+    "payload": {
+      "blocking": true,
+      "cycle": 1,
+      "default": "Fix LedgerBudgetSource.current() to filter in SQL, add a property test with 10k synthetic events showing constant time, record before/after numbers in the PR description",
+      "item_id": "minimal_proof",
+      "stage": "walking_skeleton",
+      "text": "What's the absolute minimum to prove the ledger scan fix works and land the first win?"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-22T03:44:17.531877+00:00",
+    "project_id": "44c06a64-c8ed-4153-96af-b49db29c39e3",
+    "provenance": "agent",
+    "seq": 36
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

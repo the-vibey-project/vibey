@@ -1,0 +1,43 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "14cd56c2a5902838a043e6157ce17c3f11222a211a9967e968413d6240c0e712",
+    "event_id": "6da9cbff-d833-475a-b4cb-571ceb029b7b",
+    "seq": 27
+  },
+  "previous": {
+    "digest": "49a8995a83b94e8fd257699bd4373110df28025b25a103ab2ccf7b381ab2cc5a",
+    "event_id": "633b274b-7034-412e-9725-848ebb88e761",
+    "seq": 25
+  },
+  "project_id": "e631c00a-e1a1-4ed4-b99a-0fa2d388d240",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "07a845e6-5c64-468f-aeae-f549e69a04da",
+    "cycle": 1,
+    "digest": "bbe3f74914475589a450e3737baa5309f17635107e1274244d8c0c98d6026636",
+    "engine_id": "claudeloop",
+    "event_id": "74006f15-0ddf-4b3f-9c10-25c2439f8f8c",
+    "job_id": "d73f236e-a7b4-4748-b075-3900a75af324",
+    "kind": "QuestionAsked",
+    "payload": {
+      "blocking": true,
+      "cycle": 1,
+      "default": "Mock _bootstrap_postgres to return None in test\u2014this exercises the guard even if the condition is rare in production; validates error message clarity",
+      "item_id": "asyncpg_none_scenario",
+      "stage": "example_mapping",
+      "text": "For bootstrap.py line 501 (asyncpg pool returning None), what scenario should the test use\u2014mocked _bootstrap_postgres returning None, actual connection failure, or skip this branch as unreachable dead code?"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-22T02:40:45.961431+00:00",
+    "project_id": "e631c00a-e1a1-4ed4-b99a-0fa2d388d240",
+    "provenance": "agent",
+    "seq": 26
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

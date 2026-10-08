@@ -1,0 +1,42 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "ccc3581a19414972a82b0a0edcc7abdf60b17739e4971b3ac97b2902ef4aa1ef",
+    "event_id": "9b1f19c4-a1ab-491e-a36c-6f36d79eddee",
+    "seq": 947
+  },
+  "previous": {
+    "digest": "ce6e0202cd81b7602885e0b8b9a057b46f060a51ccf031e8e6504c6f0049a9d5",
+    "event_id": "4f873e16-4c7a-4a23-be87-5e547e53a8de",
+    "seq": 874
+  },
+  "project_id": "ab0b06f9-55a4-4b47-ac08-254e7fdd9036",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "9d70552c-a382-4a8a-8350-e2767d5e47ae",
+    "cycle": 1,
+    "digest": "ad0d6cb8b10f727e896317d9ba3ac31ad57b7af9c0e2f7dd2e520127241abcec",
+    "engine_id": "codexloop",
+    "event_id": "adce99c3-cd97-424a-9a74-a23abfd365ea",
+    "job_id": "471eeac1-7719-4874-989b-82aa2fddde52",
+    "kind": "VerdictRendered",
+    "payload": {
+      "complete": false,
+      "remaining_work": [
+        "Implement work item fork-of-fork: Fork-of-fork with depth and chain computation"
+      ],
+      "success": false
+    },
+    "phase": "build",
+    "produced_at": "2026-08-22T20:02:57.007560+00:00",
+    "project_id": "ab0b06f9-55a4-4b47-ac08-254e7fdd9036",
+    "provenance": "agent",
+    "seq": 921
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 2,
+    "paths": 0
+  }
+}

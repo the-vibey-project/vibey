@@ -1,0 +1,43 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "7bf36aabb2cac6326bd7c55ff51fec7e8354e19723356f3999fbea5c6efb858a",
+    "event_id": "c2553041-74d8-4b57-92ba-07d83a485082",
+    "seq": 57
+  },
+  "previous": {
+    "digest": "390625ecbdd23eef58343f501530c181859438fd414f1009d002af64b0005a62",
+    "event_id": "7310ba2d-6092-45ac-b638-2cfd7ff54bce",
+    "seq": 55
+  },
+  "project_id": "d733035f-e0f9-4f67-aba2-270068d6a9c6",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "58c336a8-1aba-4800-b721-732eef22bb5f",
+    "cycle": 1,
+    "digest": "77614af50452dd729d7088f11f699d6187ebf7907dc36407619a164b3b899d9e",
+    "engine_id": "claudeloop",
+    "event_id": "86eebec5-a8ef-446c-8eaa-631975ad5315",
+    "job_id": "44e282ee-55b1-4cf9-afc3-c84870a14a5c",
+    "kind": "QuestionAsked",
+    "payload": {
+      "blocking": false,
+      "cycle": 1,
+      "default": "Accept orphans as evidence, don't auto-cleanup: GitHub branch/PR stays (already decided), engine worktree warned but not deleted, any webhook deliveries or notifications in flight are harmless noise. Document in stdout that operator may need manual cleanup.",
+      "item_id": "external_system_orphans",
+      "stage": "premortem",
+      "text": "What external state becomes orphaned when a project is abandoned (GitHub webhooks, pending notifications, engine session artifacts)?"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-22T03:50:26.153640+00:00",
+    "project_id": "d733035f-e0f9-4f67-aba2-270068d6a9c6",
+    "provenance": "agent",
+    "seq": 56
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

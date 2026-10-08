@@ -1,0 +1,43 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "d676c05cc96c83bdade102fc5dcbfb670afb4e065e961f1f5a5861c757808867",
+    "event_id": "619c2e04-9bb8-41c5-8143-d919a43e86fe",
+    "seq": 30
+  },
+  "previous": {
+    "digest": "1bae68b9926705169763da0c2da04e7560467f846d09fb93ae2bace1d5f5556b",
+    "event_id": "9ae9ddfe-9574-419b-a9e0-4009b3ffe935",
+    "seq": 27
+  },
+  "project_id": "df7e868b-1fbf-451b-8ceb-126359b7588e",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "ab85bf50-f04e-404b-9bce-848eecb73255",
+    "cycle": 1,
+    "digest": "dfb8ef455a6cc6ca94ec7101bd95d85bf18618dca0763ed50be79f124984314a",
+    "engine_id": "claudeloop",
+    "event_id": "582fab25-6c87-4a53-a867-625011d76ee3",
+    "job_id": "3a3b336c-c2aa-4400-a762-ae12246358d3",
+    "kind": "QuestionAsked",
+    "payload": {
+      "blocking": true,
+      "cycle": 1,
+      "default": "User creates a record with name='Widget A', quantity=10, status='active'; system validates required fields are present, saves to database with auto-generated ID and timestamp, returns confirmation",
+      "item_id": "happy_path_example",
+      "stage": "example_mapping",
+      "text": "Give a concrete example of a successful create operation: what data goes in, what validation passes, what gets stored?"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-22T04:44:19.116940+00:00",
+    "project_id": "df7e868b-1fbf-451b-8ceb-126359b7588e",
+    "provenance": "agent",
+    "seq": 29
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

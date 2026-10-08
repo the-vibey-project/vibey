@@ -1,0 +1,43 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "23c8a6aedc7313b317903a96215140ade8814005a78bcff63bef88da3a1e4ceb",
+    "event_id": "990ad8af-8407-4b16-b91c-2c275d2c1002",
+    "seq": 18
+  },
+  "previous": {
+    "digest": "0f9d044d03d8196f1e2188e0d3b4f9ba9c570afa2a2541111b98f9f57b642730",
+    "event_id": "e2f178b0-ad3f-4ddb-b69c-05dc9fb0d352",
+    "seq": 16
+  },
+  "project_id": "8f254b4c-df0a-4056-8937-6eba30efcfa6",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "f6e81257-31c3-4778-a4d8-4e790580d526",
+    "cycle": 1,
+    "digest": "b053f766e54f28188cf1262893950a385bbe0e17f9bf15f7e76c281414d2e870",
+    "engine_id": "claudeloop",
+    "event_id": "5e50195b-7f61-45f3-a0a0-3050b2ba94a3",
+    "job_id": "40fb97d9-4ab1-4fa8-9ae2-693c2b7a7fc9",
+    "kind": "QuestionAsked",
+    "payload": {
+      "blocking": false,
+      "cycle": 1,
+      "default": "Strict for invalid arguments (exit 1 with clear message), permissive for name content (accept as-is)",
+      "item_id": "error_handling_philosophy",
+      "stage": "laddering",
+      "text": "What's the error handling philosophy: strict (exit on any issue) or permissive (best-effort output)?"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-19T18:28:22.269541+00:00",
+    "project_id": "8f254b4c-df0a-4056-8937-6eba30efcfa6",
+    "provenance": "agent",
+    "seq": 17
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

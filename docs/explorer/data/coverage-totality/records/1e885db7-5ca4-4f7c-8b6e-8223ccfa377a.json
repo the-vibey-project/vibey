@@ -1,0 +1,39 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "db06cff7e552d5b6a03267894f7d23660ab1e31abb9f3f5bb2195583b063480e",
+    "event_id": "5faa3e70-3fee-465e-8f83-0c00ef99e140",
+    "seq": 56
+  },
+  "previous": {
+    "digest": "8967a80ce156211cd47d82e05d2024282107929251454c93832f361004dcf73b",
+    "event_id": "645dc4e3-5d14-440e-906f-5f07044b5f98",
+    "seq": 54
+  },
+  "project_id": "e631c00a-e1a1-4ed4-b99a-0fa2d388d240",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "44a0c5ee-1f2c-43fd-9be2-9653a759ffbb",
+    "cycle": 1,
+    "digest": "69f0240590d5e9943480f0304b4e646f238ae937780b6f3e0df6d5cc9b002cc5",
+    "engine_id": "claudeloop",
+    "event_id": "1e885db7-5ca4-4f7c-8b6e-8223ccfa377a",
+    "job_id": "d73f236e-a7b4-4748-b075-3900a75af324",
+    "kind": "AnswerGiven",
+    "payload": {
+      "answer": "New top-level package outside src/vibey/ (e.g., src/vibey_plugins/), or coverage config changes that weaken --include glob\u2014prevented by code review vigilance",
+      "item_id": "future_gate_bypass"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-22T03:44:59.097632+00:00",
+    "project_id": "e631c00a-e1a1-4ed4-b99a-0fa2d388d240",
+    "provenance": "trusted",
+    "seq": 55
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

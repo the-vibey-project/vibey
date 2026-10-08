@@ -1,0 +1,39 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "a8ab82ba3f1624c80a636d249f6d161e07858f68440562866aa067aef6785c70",
+    "event_id": "df628b3e-522a-4c2a-8fea-9d565d21a39a",
+    "seq": 48
+  },
+  "previous": {
+    "digest": "50534113e9502937cfa9760e36fbce9348c764f505a8244b18bc29d650895e82",
+    "event_id": "babd59c1-dc66-493e-b825-bbe849263a8e",
+    "seq": 46
+  },
+  "project_id": "a1d6b837-46f3-40c0-b6a2-8b3babb7fe15",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "d69a1b64-d7df-498d-b93e-bb5aa540b1c8",
+    "cycle": 1,
+    "digest": "93aff1cba8a808c36bb909935423abbcfe857fb72dc28fb7e22280af9c107bc9",
+    "engine_id": "claudeloop",
+    "event_id": "6cf13c59-85c2-471b-8d09-c5725c1d3186",
+    "job_id": "dd8513f6-0d76-49a5-8bdc-75167dea5385",
+    "kind": "AnswerGiven",
+    "payload": {
+      "answer": "Auto-detect with -n auto; cap at 8 workers max to avoid diminishing returns and resource contention",
+      "item_id": "worker_count_policy"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-20T20:46:04.197678+00:00",
+    "project_id": "a1d6b837-46f3-40c0-b6a2-8b3babb7fe15",
+    "provenance": "trusted",
+    "seq": 47
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

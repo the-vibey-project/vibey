@@ -1,0 +1,43 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "58576635b909a92d80db0184602bc0a70e9bed728eb3929c3f98906eb1770c32",
+    "event_id": "f108ec2e-3ded-4cef-8708-0769fd62437a",
+    "seq": 4
+  },
+  "previous": {
+    "digest": "e77ab4096dacdc00447aa95b11b0150a17ddb9151085e750169ba13a5ba83f68",
+    "event_id": "c18e41d6-6dd0-4873-ab0d-585241fefe3f",
+    "seq": 2
+  },
+  "project_id": "b43d1fcb-fb7b-42d6-9f80-220292c73389",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "facf811a-cefb-42e3-865a-3134cb888ce3",
+    "cycle": 1,
+    "digest": "23b610137b1e942b9d7cfe8ff2b63883618e9f025f12e13c764ff6b251ebd3aa",
+    "engine_id": "claudeloop",
+    "event_id": "18d9a45e-a5d7-4939-a891-b4d7850fc905",
+    "job_id": "64ea0fea-cd4f-4b3b-bf19-112c18a7c58d",
+    "kind": "QuestionAsked",
+    "payload": {
+      "blocking": false,
+      "cycle": 1,
+      "default": "None beyond existing vibey architecture constraints (PostgreSQL, onion layers, domain purity)",
+      "item_id": "constraints",
+      "stage": "context_free",
+      "text": "Are there any hard constraints (performance targets, scale requirements, required integrations, technology restrictions)?"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-22T02:43:05.848993+00:00",
+    "project_id": "b43d1fcb-fb7b-42d6-9f80-220292c73389",
+    "provenance": "agent",
+    "seq": 3
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

@@ -1,0 +1,43 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "e869c8246102bfd6b4e5d7ea08ca32f29bec469cf133c9355a410c547bc65f83",
+    "event_id": "d4887bae-8feb-41a7-9dff-4f7dc26e04f0",
+    "seq": 42
+  },
+  "previous": {
+    "digest": "d0a8c17cef6e3a2d64c8381b45ee4266bb6031fe552d6f947d1f4f3b84c0f393",
+    "event_id": "9b318442-d038-41fb-90da-85db5d7b2bca",
+    "seq": 40
+  },
+  "project_id": "a1d6b837-46f3-40c0-b6a2-8b3babb7fe15",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "b6201f85-ca68-4582-b83a-119b857ffaa5",
+    "cycle": 1,
+    "digest": "cb06f2f4f567c348414584ed640a0614680bc73b327ef67963ab276b7a9c4021",
+    "engine_id": "claudeloop",
+    "event_id": "d961027e-1429-4117-973d-d9f7341755a3",
+    "job_id": "dd8513f6-0d76-49a5-8bdc-75167dea5385",
+    "kind": "QuestionAsked",
+    "payload": {
+      "blocking": true,
+      "cycle": 1,
+      "default": "Worst acceptable: 120s, Target: 90s, Ideal: 60s",
+      "item_id": "suite_performance_scale",
+      "stage": "nfr_planguage",
+      "text": "What's the worst acceptable wall time vs. target vs. ideal for the full local test suite (currently ~6m20s)?"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-20T20:45:52.666294+00:00",
+    "project_id": "a1d6b837-46f3-40c0-b6a2-8b3babb7fe15",
+    "provenance": "agent",
+    "seq": 41
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

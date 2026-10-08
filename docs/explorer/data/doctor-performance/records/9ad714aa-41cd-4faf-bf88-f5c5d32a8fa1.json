@@ -1,0 +1,43 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "88294f15a30147c03ca46a108f02879c6a35e349066d9daf73edbcaa20598b2a",
+    "event_id": "8eef0cb5-3b04-435c-ab25-81f936f31940",
+    "seq": 11
+  },
+  "previous": {
+    "digest": "0b84a178243dc5760327d1f3e87b687c3aea8d9e7067ed40c012183b0d90bb1c",
+    "event_id": "c53876f5-b62e-4986-9072-de46c890cde2",
+    "seq": 9
+  },
+  "project_id": "5ea01f61-8536-4ace-90cb-18700a12e410",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "83075f46-2c23-4cb6-bcfb-01469e71ced4",
+    "cycle": 1,
+    "digest": "42b783a064bc6feccd435b38d5898be11c2e400fb1f669664bddcec860cdf0b4",
+    "engine_id": "claudeloop",
+    "event_id": "9ad714aa-41cd-4faf-bf88-f5c5d32a8fa1",
+    "job_id": "4c2ec03f-d670-44f9-9f05-47597984ab20",
+    "kind": "QuestionAsked",
+    "payload": {
+      "blocking": true,
+      "cycle": 1,
+      "default": "During rapid iteration when checking engine health repeatedly, and in CI where it extends feedback loops",
+      "item_id": "situation",
+      "stage": "job_story",
+      "text": "When does the current 67-second runtime become a blocking problem?"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-22T02:59:58.717746+00:00",
+    "project_id": "5ea01f61-8536-4ace-90cb-18700a12e410",
+    "provenance": "agent",
+    "seq": 10
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

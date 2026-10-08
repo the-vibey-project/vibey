@@ -1,0 +1,43 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "13c9b861929dfacc69af76a45a25e8b8e4110aebaa5a0cd03f572ac823cf6437",
+    "event_id": "e396c803-063b-469f-ade4-d9827277332c",
+    "seq": 41
+  },
+  "previous": {
+    "digest": "682537a54f01fd6262750942dc6e29182dd1e666b276dffc705aa1baa213871b",
+    "event_id": "b73663a1-8bf9-4af0-89ad-c17c0cf85e1f",
+    "seq": 37
+  },
+  "project_id": "9692abab-ace3-4ee0-ac59-3ea42484b817",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "0face8bc-aa17-546b-b5de-e16e759738e6",
+    "cycle": 1,
+    "digest": "17307ddad00cf72f34cdaab0f2cbe705984a0ad82b1c0af500a6d177884795df",
+    "engine_id": "gptossloop",
+    "event_id": "668745f5-b650-4736-a415-53cb74890bdf",
+    "job_id": "c2b75c18-fd15-4e79-ad4e-cf489356ad57",
+    "kind": "QuestionAsked",
+    "payload": {
+      "blocking": true,
+      "cycle": 1,
+      "default": "Yes",
+      "item_id": "q16",
+      "stage": "walking_skeleton",
+      "text": "Do we want to enforce that the TOC insertion does not alter any existing README.md content beyond adding the new section?"
+    },
+    "phase": "design",
+    "produced_at": "2026-09-29T18:48:37.194487+00:00",
+    "project_id": "9692abab-ace3-4ee0-ac59-3ea42484b817",
+    "provenance": "agent",
+    "seq": 38
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

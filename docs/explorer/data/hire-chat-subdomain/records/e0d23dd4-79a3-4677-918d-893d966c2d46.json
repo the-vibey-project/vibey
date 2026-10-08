@@ -1,0 +1,43 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "1a9bf33591a6609e46b51059cc52266acc458e6dbc20e6f78bfe79e9a6bdf67a",
+    "event_id": "ea8ba13e-b718-4dc1-964e-4cef126a753e",
+    "seq": 5
+  },
+  "previous": {
+    "digest": "71c4e02cceed3e95665f8493efc3ba71764e94b122a0960276b6a70353014e1f",
+    "event_id": "7fa2ba49-f15e-420d-828f-857c21648ef5",
+    "seq": 3
+  },
+  "project_id": "0ee95624-eec4-4e8e-9a14-6ad9a37dcff4",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "ccb2d1fe-99fb-45a6-bffa-810ce367ba1c",
+    "cycle": 1,
+    "digest": "e0b086bd2bc66972c6a7c438a8c5c1a755f286d78b1a24f6680789345a794a6c",
+    "engine_id": "claudeloop",
+    "event_id": "e0d23dd4-79a3-4677-918d-893d966c2d46",
+    "job_id": "1343d0fd-bf3f-4739-8c21-cbf7693c673e",
+    "kind": "QuestionAsked",
+    "payload": {
+      "blocking": true,
+      "cycle": 1,
+      "default": "Serverless-compatible (Netlify Functions + polling) to avoid infrastructure changes; WebSocket upgrade only if latency requirements demand it",
+      "item_id": "deployment",
+      "stage": "context_free",
+      "text": "Preferred deployment model for real-time features given current Netlify hosting?"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-20T20:07:23.889219+00:00",
+    "project_id": "0ee95624-eec4-4e8e-9a14-6ad9a37dcff4",
+    "provenance": "agent",
+    "seq": 4
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

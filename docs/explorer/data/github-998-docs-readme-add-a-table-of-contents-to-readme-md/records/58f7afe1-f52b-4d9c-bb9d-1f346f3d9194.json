@@ -1,0 +1,43 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "5a1d6be28d7ffa22a50770eae0556064f3ba93438e005e625b41fef50cf4bb02",
+    "event_id": "1d50daf0-a5a4-4509-9e09-7a8421a9e22f",
+    "seq": 21
+  },
+  "previous": {
+    "digest": "f3a1f969163a9d6b0f6c2119657262f1c87353b85d9ef4e7dbda41855aa98535",
+    "event_id": "f8ce5504-522f-403a-8bb7-715bea39ef0b",
+    "seq": 19
+  },
+  "project_id": "9692abab-ace3-4ee0-ac59-3ea42484b817",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "0face8bc-aa17-546b-b5de-e16e759738e6",
+    "cycle": 1,
+    "digest": "5e74ba5cb86cdaf75ab121d7fd26c668b03e733d2c8e3db25a47e28e1caaa908",
+    "engine_id": "gptossloop",
+    "event_id": "58f7afe1-f52b-4d9c-bb9d-1f346f3d9194",
+    "job_id": "c2b75c18-fd15-4e79-ad4e-cf489356ad57",
+    "kind": "QuestionAsked",
+    "payload": {
+      "blocking": true,
+      "cycle": 1,
+      "default": "Yes",
+      "item_id": "q8",
+      "stage": "laddering",
+      "text": "Should we add a unit test to verify that the TOC generation script correctly handles headings with special characters and duplicate names?"
+    },
+    "phase": "design",
+    "produced_at": "2026-09-29T18:43:25.915018+00:00",
+    "project_id": "9692abab-ace3-4ee0-ac59-3ea42484b817",
+    "provenance": "agent",
+    "seq": 20
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

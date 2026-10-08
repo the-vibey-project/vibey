@@ -1,0 +1,43 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "71c4e02cceed3e95665f8493efc3ba71764e94b122a0960276b6a70353014e1f",
+    "event_id": "7fa2ba49-f15e-420d-828f-857c21648ef5",
+    "seq": 3
+  },
+  "previous": {
+    "digest": "8ada9dd770b9a7365a0229f2bf105be3943eff77a2552ce041c5e300048a2b0a",
+    "event_id": "1a513087-4989-473b-ae2e-288b7a22609a",
+    "seq": 1
+  },
+  "project_id": "0ee95624-eec4-4e8e-9a14-6ad9a37dcff4",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "c48a97bf-7b1f-48fa-b7b6-53acc13900a7",
+    "cycle": 1,
+    "digest": "aaebf35b918ab0f9822c51a07e044f375abd616511272a63dec2a7015b0e17aa",
+    "engine_id": "claudeloop",
+    "event_id": "045a5187-c859-41e9-b336-34377ee219e4",
+    "job_id": "1343d0fd-bf3f-4739-8c21-cbf7693c673e",
+    "kind": "QuestionAsked",
+    "payload": {
+      "blocking": true,
+      "cycle": 1,
+      "default": "Session-only (no persistence beyond browser tab lifetime, similar to current bot's 6-turn session cap)",
+      "item_id": "persistence",
+      "stage": "context_free",
+      "text": "Should chat conversations persist across sessions, and if so, for how long?"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-20T20:07:23.889219+00:00",
+    "project_id": "0ee95624-eec4-4e8e-9a14-6ad9a37dcff4",
+    "provenance": "agent",
+    "seq": 2
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

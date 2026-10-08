@@ -1,0 +1,43 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "93d9ca62d42463c0af42043df3b4ef47525d449b16b33024562cc65b98fa192f",
+    "event_id": "5bb3a237-acbc-4c1c-956b-8bb2d1681016",
+    "seq": 42
+  },
+  "previous": {
+    "digest": "4affaf134892eb896c9db2c5711259755ca1edba7873dd997c588d1a811c8ad8",
+    "event_id": "4c796a52-6321-496d-af54-a251f87efc8d",
+    "seq": 40
+  },
+  "project_id": "8ab823c9-89e4-4050-884c-9008c8b14ef8",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "488eefaf-15b0-4d94-b85e-eb3b399960e8",
+    "cycle": 1,
+    "digest": "a780eb0eb0340afd00eb9e9599671364d2e691fffc654c2a1fad1fafb3ec5a6d",
+    "engine_id": "claudeloop",
+    "event_id": "f875499c-db82-407f-8401-34b155d73735",
+    "job_id": "705692f1-69a1-4cc2-ade7-8aa3d1407b67",
+    "kind": "QuestionAsked",
+    "payload": {
+      "blocking": true,
+      "cycle": 1,
+      "default": "Target: p50 \u003c20ms, p95 \u003c50ms, p99 \u003c100ms (measured server-side, excluding network); Stretch: p99 \u003c50ms; Acceptable: p99 \u003c200ms",
+      "item_id": "redirect_latency_nfr",
+      "stage": "nfr_planguage",
+      "text": "What are the specific latency requirements for redirect operations?"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-20T02:35:21.674775+00:00",
+    "project_id": "8ab823c9-89e4-4050-884c-9008c8b14ef8",
+    "provenance": "agent",
+    "seq": 41
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

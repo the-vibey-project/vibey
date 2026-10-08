@@ -1,0 +1,43 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "635782b83297a74d1c5177bc87da37d3f0769e1ddd4af9b52a8c43a84ce6c717",
+    "event_id": "8c5c94fc-dc73-4c98-b710-4cfb9a5aac1f",
+    "seq": 42
+  },
+  "previous": {
+    "digest": "94e6e22becde6d7698ab8996e64884795989f4bd31fe4426eccb4591dd8f2b84",
+    "event_id": "ed2d8fb7-54cd-457c-80bb-3231593efa27",
+    "seq": 40
+  },
+  "project_id": "d482c3e2-029e-4bb8-a9a1-de411816c6ae",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "211cc21e-542e-441d-a7f1-c3ab9ce1d172",
+    "cycle": 1,
+    "digest": "9ae2f0951d78b8903a3a7359810d8c1598fef9b1f48d5e2149b6cc85140af34c",
+    "engine_id": "claudeloop",
+    "event_id": "c1b270bd-cfe1-4b23-b89d-0caa2d8d9315",
+    "job_id": "d2626f25-d550-454e-bacd-7a7e6c9b52cd",
+    "kind": "QuestionAsked",
+    "payload": {
+      "blocking": false,
+      "cycle": 1,
+      "default": "Node.js and Python.",
+      "item_id": "21",
+      "stage": "nfr_planguage",
+      "text": "What programming languages are you considering for the backend development of the software?"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-31T02:06:05.909431+00:00",
+    "project_id": "d482c3e2-029e-4bb8-a9a1-de411816c6ae",
+    "provenance": "agent",
+    "seq": 41
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

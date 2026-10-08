@@ -1,0 +1,43 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "9a66ae2c1a1c502ea2482ea195f97e8d52f6c0a9686c272acceddb7c5720752f",
+    "event_id": "4c0b7107-d06d-42f5-a4d2-5fe0d3d76b9e",
+    "seq": 53
+  },
+  "previous": {
+    "digest": "d36c67f2d0929892d98ef3e4777e8f69b7d799ca7530b48619a97fcb990edbf2",
+    "event_id": "8f588570-bd8e-4cf4-814d-66a1b659f4d0",
+    "seq": 51
+  },
+  "project_id": "0ee95624-eec4-4e8e-9a14-6ad9a37dcff4",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "b45fee65-68de-4075-ad8f-f0dae0ba2b83",
+    "cycle": 1,
+    "digest": "edac4725c3fc84bfd7b3549414a56a6a0100d3894999b1e200eacdd29da8f1ab",
+    "engine_id": "claudeloop",
+    "event_id": "2e67a2cc-9eca-446f-9bb4-cf324feb5f0a",
+    "job_id": "1343d0fd-bf3f-4739-8c21-cbf7693c673e",
+    "kind": "QuestionAsked",
+    "payload": {
+      "blocking": true,
+      "cycle": 1,
+      "default": "The [path] page is server-rendered with heading/intro/links even when disabled, so the URL never 404s; if the Next.js app is replaced entirely, the simplest migration is a static chat.adam.../index.html with the same heading and [path] + [path] links (no bot, just a landing page); commit to keeping chat.adam... resolvable for at least 24 months from first public use (Sept 2026 \u2192 Sept 2028 minimum), matching typical job-search cycle length",
+      "item_id": "long_term_url_commitment",
+      "stage": "premortem",
+      "text": "If the bot is permanently disabled or the site is rebuilt on a different stack, what happens to https://chat.adam.matthewsteinberger.com/ links already sent in job applications, LinkedIn bio, GitHub profile?"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-20T20:20:49.082224+00:00",
+    "project_id": "0ee95624-eec4-4e8e-9a14-6ad9a37dcff4",
+    "provenance": "agent",
+    "seq": 52
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 3
+  }
+}

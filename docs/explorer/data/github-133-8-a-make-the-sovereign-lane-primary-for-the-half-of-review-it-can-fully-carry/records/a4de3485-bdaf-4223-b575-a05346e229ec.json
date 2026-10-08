@@ -1,0 +1,43 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "9e023744a7fb5af5ea4c3883e871da6ebb41a801761f78c8b91f88567aefeb59",
+    "event_id": "fae08f5b-300f-400a-b597-9721625e5f96",
+    "seq": 27
+  },
+  "previous": {
+    "digest": "d37b4700c1756f57cbdeb47b47ab8aad920a0671c0625a120839783e33f28bda",
+    "event_id": "3d3b050c-50c1-498d-aa7b-b9bcd96068bf",
+    "seq": 25
+  },
+  "project_id": "f4cfe576-55c7-4f79-80ad-485f85ddca8b",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "4bb7ecc1-ea40-5364-bed9-45c048157678",
+    "cycle": 1,
+    "digest": "51ef01a6a520098e0dc46f501655c540656d778d7eba240f28ce451043a228b6",
+    "engine_id": "gptossloop",
+    "event_id": "a4de3485-bdaf-4223-b575-a05346e229ec",
+    "job_id": "5057b798-907c-4039-9690-3992212dc0b2",
+    "kind": "QuestionAsked",
+    "payload": {
+      "blocking": true,
+      "cycle": 1,
+      "default": "Mark the overall review as failed if the paid lane fails, even when the sovereign lane succeeds.",
+      "item_id": "Q11",
+      "stage": "example_mapping",
+      "text": "If the sovereign lane passes but the paid lane fails (e.g., due to credit exhaustion or an internal error), should the overall review verdict be marked as failed or still considered successful?"
+    },
+    "phase": "design",
+    "produced_at": "2026-09-27T21:38:09.148319+00:00",
+    "project_id": "f4cfe576-55c7-4f79-80ad-485f85ddca8b",
+    "provenance": "agent",
+    "seq": 26
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

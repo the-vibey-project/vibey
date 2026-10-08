@@ -1,0 +1,39 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "6c081ca7f2c4da44f665bfad61513353a0ee27df81f38f1f2be793c20364ffba",
+    "event_id": "6717d9fa-fa1f-47de-a7dc-a18c8041ec67",
+    "seq": 30
+  },
+  "previous": {
+    "digest": "3d735d7fabec1cbcb6a729e85c5adf935d90cd161e50e8f7e0312cb4dfbc493c",
+    "event_id": "2507b402-acc4-469a-905a-6a898d7d8195",
+    "seq": 28
+  },
+  "project_id": "5e76341f-ba5f-4272-8355-3df5d489bbcd",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "44cba174-ee6b-4087-ad81-044496cc94bd",
+    "cycle": 1,
+    "digest": "ae056b9c1bdf2890663c12b74ee2a3dad85d8b202cad2a09bd2c41fa09459b6d",
+    "engine_id": "claudeloop",
+    "event_id": "2553d9d7-2833-449c-8870-c37f6abd9f52",
+    "job_id": "e58deb6b-5356-4a39-8acf-5dc898bba380",
+    "kind": "AnswerGiven",
+    "payload": {
+      "answer": "Good morning, alice! Welcome to greeter3.",
+      "item_id": "example_success"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-20T00:49:39.388688+00:00",
+    "project_id": "5e76341f-ba5f-4272-8355-3df5d489bbcd",
+    "provenance": "trusted",
+    "seq": 29
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

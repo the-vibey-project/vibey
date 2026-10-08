@@ -1,0 +1,43 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "37d89266fb9cba05a55dde6b1bd2e47cd85609d991609ce93025915f5f0d69b7",
+    "event_id": "abc9cfb2-c8e5-48eb-97c2-7230b317d063",
+    "seq": 24
+  },
+  "previous": {
+    "digest": "ff0196c660b8bad208d4d45313c70cc17577695d88ab2fa3641c03301daf0d3b",
+    "event_id": "9c14a31c-c6f4-4817-9449-a81f3cb72a34",
+    "seq": 22
+  },
+  "project_id": "df7e868b-1fbf-451b-8ceb-126359b7588e",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "9c2569b3-606e-4927-981f-95d39e45559b",
+    "cycle": 1,
+    "digest": "a77a1d78b35397a914d4137857a4ccb90d0801da4cde6d05770401e9475f0f6d",
+    "engine_id": "claudeloop",
+    "event_id": "816227c3-3b4f-4e61-8aad-f09821054a8b",
+    "job_id": "3a3b336c-c2aa-4400-a762-ae12246358d3",
+    "kind": "QuestionAsked",
+    "payload": {
+      "blocking": false,
+      "cycle": 1,
+      "default": "Reduction in data entry time, fewer validation errors, increased user adoption of the system",
+      "item_id": "success_metrics",
+      "stage": "laddering",
+      "text": "What measurable outcomes or KPIs would indicate this feature is delivering value?"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-22T04:43:39.112172+00:00",
+    "project_id": "df7e868b-1fbf-451b-8ceb-126359b7588e",
+    "provenance": "agent",
+    "seq": 23
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

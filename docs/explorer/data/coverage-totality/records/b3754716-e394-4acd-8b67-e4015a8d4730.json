@@ -1,0 +1,43 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "cd0a308c1df8f42a45801da74c0eed38144337bb3bbca865411440a431226460",
+    "event_id": "b4d4d8eb-b668-4a73-8397-dd7bcfaee5a4",
+    "seq": 53
+  },
+  "previous": {
+    "digest": "6862eefdc53b36177fb7119996ffc95ec9ab434518784cc52069fb6f237f72b2",
+    "event_id": "ba67ed79-9d27-408a-8eb6-2de9ff0018f1",
+    "seq": 51
+  },
+  "project_id": "e631c00a-e1a1-4ed4-b99a-0fa2d388d240",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "1beebe86-51f1-4325-ab00-171579c4e320",
+    "cycle": 1,
+    "digest": "2108bea600bd2047ce273804de88395cb509d619e13fd8235a8d35130b1c706a",
+    "engine_id": "claudeloop",
+    "event_id": "b3754716-e394-4acd-8b67-e4015a8d4730",
+    "job_id": "d73f236e-a7b4-4748-b075-3900a75af324",
+    "kind": "QuestionAsked",
+    "payload": {
+      "blocking": true,
+      "cycle": 1,
+      "default": "Delete the unreachable code per zero-exemptions rule; if deletion breaks something, the branch wasn't unreachable and the discovery is valuable",
+      "item_id": "unreachable_branch_discovery",
+      "stage": "premortem",
+      "text": "What if covering a branch in tui/dashboard.py or bootstrap.py reveals it's genuinely unreachable due to framework guarantees or invariants?"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-22T03:44:53.556640+00:00",
+    "project_id": "e631c00a-e1a1-4ed4-b99a-0fa2d388d240",
+    "provenance": "agent",
+    "seq": 52
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

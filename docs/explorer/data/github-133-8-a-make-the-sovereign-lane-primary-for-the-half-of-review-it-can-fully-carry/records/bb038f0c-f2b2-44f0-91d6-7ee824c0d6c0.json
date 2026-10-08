@@ -1,0 +1,39 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "110cfa70ea9619f339a6b5268779532707d43c83e00047c33276ada51ccdb61c",
+    "event_id": "bd1089ee-1981-45ac-b74b-8bd217ac0188",
+    "seq": 8
+  },
+  "previous": {
+    "digest": "2e3c7d0712c6d77ffbda62057e5cf7ad151ed7016fe6e7ff179cc55d98f1e51a",
+    "event_id": "8a57e25c-3544-4752-a4d0-960c11e6dddc",
+    "seq": 5
+  },
+  "project_id": "f4cfe576-55c7-4f79-80ad-485f85ddca8b",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "4bb7ecc1-ea40-5364-bed9-45c048157678",
+    "cycle": 1,
+    "digest": "c10059f0150de50fc13652b607a751b6832a34a763c41eb400f3b0a570794708",
+    "engine_id": "gptossloop",
+    "event_id": "bb038f0c-f2b2-44f0-91d6-7ee824c0d6c0",
+    "job_id": "5057b798-907c-4039-9690-3992212dc0b2",
+    "kind": "AnswerGiven",
+    "payload": {
+      "answer": "Mark the paid half as *not evaluated* so the sovereign lane carries the diff half alone and the wider half is reported as \u201cnot evaluated\u201d rather than failing.",
+      "item_id": "Q1"
+    },
+    "phase": "design",
+    "produced_at": "2026-09-27T21:29:39.851076+00:00",
+    "project_id": "f4cfe576-55c7-4f79-80ad-485f85ddca8b",
+    "provenance": "trusted",
+    "seq": 7
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

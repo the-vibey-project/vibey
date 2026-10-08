@@ -1,0 +1,43 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "b1b6f865dfdcd16fe13b0681b7d4223bf490c310fa90bf2b90b4fb6cbd9b9da4",
+    "event_id": "78a39941-ee6a-4313-9567-17c3efbcfce7",
+    "seq": 52
+  },
+  "previous": {
+    "digest": "784e154ee18078ea87f11f99ae3ef5c1097e8840038baf195a6adc065e6d9be9",
+    "event_id": "bd714f83-3556-4709-a84a-f3ebc20db424",
+    "seq": 50
+  },
+  "project_id": "5e76341f-ba5f-4272-8355-3df5d489bbcd",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "f1616cf9-d350-4121-8e66-3e1840d1d478",
+    "cycle": 1,
+    "digest": "521d0cdb9808df87cb9bc447ccefcb4f0e8437e26d02f357644f7fe561f1e765",
+    "engine_id": "claudeloop",
+    "event_id": "4c5b0840-f3d6-4532-a251-7670fe66bf8b",
+    "job_id": "e58deb6b-5356-4a39-8acf-5dc898bba380",
+    "kind": "QuestionAsked",
+    "payload": {
+      "blocking": false,
+      "cycle": 1,
+      "default": "Assuming local system time matches user's actual timezone (e.g., remote workers, travelers)",
+      "item_id": "wrong_assumption",
+      "stage": "premortem",
+      "text": "What incorrect assumption about user context could make greetings feel wrong or inappropriate?"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-20T00:51:37.818191+00:00",
+    "project_id": "5e76341f-ba5f-4272-8355-3df5d489bbcd",
+    "provenance": "agent",
+    "seq": 51
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

@@ -1,0 +1,39 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "842bb8f8873748faeaae9410824cfaec74a5b33bd62cb4d3fe05ee598b5a5c02",
+    "event_id": "bc9e542c-68eb-4089-9ac2-f3ecce0f022b",
+    "seq": 46
+  },
+  "previous": {
+    "digest": "80ca5d78be76a9472a8dde1b58e800e26c9e509ba8746d5f47bf293d4b17461d",
+    "event_id": "88fbece7-1b11-4304-98d3-c79a2a55f47c",
+    "seq": 44
+  },
+  "project_id": "d482c3e2-029e-4bb8-a9a1-de411816c6ae",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "614d1f00-c7ae-468c-a965-f2cfdfa92281",
+    "cycle": 1,
+    "digest": "26c2276d37a7ec371021fb790c09f4e780479d44eb6eeb7a8b6bd88d7b13a406",
+    "engine_id": "claudeloop",
+    "event_id": "58145c98-4b65-4feb-83c1-eae4c933628b",
+    "job_id": "d2626f25-d550-454e-bacd-7a7e6c9b52cd",
+    "kind": "AnswerGiven",
+    "payload": {
+      "answer": "Node.js and Python.",
+      "item_id": "21"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-31T02:06:06.324487+00:00",
+    "project_id": "d482c3e2-029e-4bb8-a9a1-de411816c6ae",
+    "provenance": "trusted",
+    "seq": 45
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

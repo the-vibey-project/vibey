@@ -1,0 +1,39 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "676d9cd21a40c0e698c74af2b261575ddb170ce64ee9cd2ecb2f4334f8345053",
+    "event_id": "1295b750-c394-497b-b568-f011842ee7b7",
+    "seq": 18
+  },
+  "previous": {
+    "digest": "98f5cdba26672c8c65c96773764c863b943424cc8247cc7c95bf6de76f59573a",
+    "event_id": "79030977-213c-4208-a026-033d8e057fae",
+    "seq": 15
+  },
+  "project_id": "44c06a64-c8ed-4153-96af-b49db29c39e3",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "db3cca39-6010-4a70-bfe3-2844f587a4cf",
+    "cycle": 1,
+    "digest": "972b0021382473a62d56dc9c0179d339e3f19dfaf579136de567a11c3eca4299",
+    "engine_id": "claudeloop",
+    "event_id": "5574c8fc-d6bc-4b3d-8f02-3ff2bf274aad",
+    "job_id": "bcd8e0b1-385d-43dc-ad1f-cad988f80cc9",
+    "kind": "AnswerGiven",
+    "payload": {
+      "answer": "10,000+ events per project, 10+ concurrent workers, with claim latency under 100ms regardless of history depth",
+      "item_id": "scale_target"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-22T03:34:36.393773+00:00",
+    "project_id": "44c06a64-c8ed-4153-96af-b49db29c39e3",
+    "provenance": "trusted",
+    "seq": 16
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

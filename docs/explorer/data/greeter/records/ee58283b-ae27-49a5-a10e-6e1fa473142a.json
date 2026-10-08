@@ -1,0 +1,43 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "0ad04ccea67fe4bd4d4b78bf24264cb2be2fb367cf1a11759aadfb6cfed645df",
+    "event_id": "ecc7611f-ccd2-4dae-8b8f-66ead69a99d7",
+    "seq": 27
+  },
+  "previous": {
+    "digest": "862f3796e5bd8ffe877176cdaf3c7efd450cb76ef301950323a4ed3abacca371",
+    "event_id": "81935206-3272-4c2b-b6dd-30eb828bf6ff",
+    "seq": 25
+  },
+  "project_id": "26f89c38-c86b-4ddf-be75-c579a118e40e",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "1ec0c17e-c931-4f41-9457-f28210c63b33",
+    "cycle": 1,
+    "digest": "7a84e8ca827bd5d3085fd20281bbb65cc2e11316a6e0b6a794e88b4b335eddfd",
+    "engine_id": "claudeloop",
+    "event_id": "ee58283b-ae27-49a5-a10e-6e1fa473142a",
+    "job_id": "2bdd2b5e-b4f1-4004-9dbf-78d267fea803",
+    "kind": "QuestionAsked",
+    "payload": {
+      "blocking": false,
+      "cycle": 1,
+      "default": "Use inclusive lower bound: 5:00am is morning, 12:00pm is afternoon, 6:00pm is evening",
+      "item_id": "time_boundary_handling",
+      "stage": "example_mapping",
+      "text": "How should the tool handle time boundary edge cases (exactly 5:00am, 11:59am, 6:00pm)?"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-19T12:32:43.572643+00:00",
+    "project_id": "26f89c38-c86b-4ddf-be75-c579a118e40e",
+    "provenance": "agent",
+    "seq": 26
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

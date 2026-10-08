@@ -1,0 +1,40 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "7842517003d3188110f0f465954b0ecff589806cb8cb54badeb558d03aad338d",
+    "event_id": "139c4151-72f2-4431-b803-be16ca85fac2",
+    "seq": 567
+  },
+  "previous": {
+    "digest": "7842517003d3188110f0f465954b0ecff589806cb8cb54badeb558d03aad338d",
+    "event_id": "37351296-5bec-4db0-bc04-b7b66819a47b",
+    "seq": 507
+  },
+  "project_id": "a1d6b837-46f3-40c0-b6a2-8b3babb7fe15",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "e213d285-57f9-430c-852a-edc75fb80305",
+    "cycle": 1,
+    "digest": "47d9ff3fa2eff290efed3d7075c4a230b6ecac3569557f4fc5da69c2d21194ed",
+    "engine_id": null,
+    "event_id": "48e51c08-2c9c-4905-83dd-48833f2b6907",
+    "job_id": "e230cfcb-accf-4af4-ada0-4ef717f695d9",
+    "kind": "FindingRaised",
+    "payload": {
+      "finding_id": "f_integrate_ws_e10ab4b1",
+      "severity": "high",
+      "text": "merge conflict integrating 'ws': ruff (legacy alias)..................................(no files to check)Skipped\nruff format..........................................(no files to check)Skipped\nparallel test suite......................................................Failed\n- hook id: test-suite\n- exit code: 4\n\nwarning: `VIRTUAL_ENV=[path]` does not match the project environment path `.venv` and will be ignored; use `--active` to target the active environment instead\nUsing CPython 3.12.13\nCreating virtual environment at: .venv\n   Building vibey @ [path]\n      Built vibey @ [path]\nInstalled 17 packages in 41ms\nERROR: usage: pytest [options] [file_or_dir] [file_or_dir] [...]\npytest: error: unrecognized arguments: -n --maxprocesses=8\n  inifile: [path]\n  rootdir: [path]\n\nConventional Commit......................................................Failed\n- hook id: conventional-pre-commit\n- exit code: 1\n\n\u001b[01;31m[Bad Commit message] \u003e\u003e\u001b[0m Merge branch 'vibey/1/ws' into vibey/1/integration\n        \u001b[00;33mYour commit message does not follow Conventional Commits formatting\n        \u001b[00;34mhttps://www.conventionalcommits.org/\u001b[00;33m\n\n        Conventional Commits start with one of the below types, followed by a colon,\n        followed by the commit subject and an optional body seperated by a blank line:\u001b[0m\n\n            build chore ci docs feat fix perf refactor revert style test\n\n        \u001b[00;33mExample commit message adding a feature:\u001b[0m\n\n            feat: implement new API\n\n        \u001b[00;33mExample commit message fixing an issue:\u001b[0m\n\n            fix: remove infinite loop\n\n        \u001b[00;33mExample commit with scope in parentheses after the type for more context:\u001b[0m\n\n            fix(account): remove infinite loop\n\n        \u001b[00;33mExample commit with a body:\u001b[0m\n\n            fix: remove infinite loop\n\n            Additional information on the issue caused by the infinite loop\n\nNot committing merge; use 'git commit' to complete the merge."
+    },
+    "phase": "build",
+    "produced_at": "2026-08-21T00:08:30.793130+00:00",
+    "project_id": "a1d6b837-46f3-40c0-b6a2-8b3babb7fe15",
+    "provenance": "agent",
+    "seq": 508
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 5
+  }
+}

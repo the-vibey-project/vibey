@@ -1,0 +1,39 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "0cf7496d02fa33347dce55147513210ec8d629c1aa43eea5a5bf0ea80bbe4112",
+    "event_id": "cbbea139-d943-4d7b-ad96-d3f40381314e",
+    "seq": 20
+  },
+  "previous": {
+    "digest": "23c8a6aedc7313b317903a96215140ade8814005a78bcff63bef88da3a1e4ceb",
+    "event_id": "990ad8af-8407-4b16-b91c-2c275d2c1002",
+    "seq": 18
+  },
+  "project_id": "8f254b4c-df0a-4056-8937-6eba30efcfa6",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "defc8148-1549-4685-b25d-cb95f4d09112",
+    "cycle": 1,
+    "digest": "fa479fca79d97542eecbfc6bc7d815fc282873735aef6d8d54772710ae3bc5ae",
+    "engine_id": "claudeloop",
+    "event_id": "d54ed9b8-e02a-4345-8ef3-5dc62e5ab828",
+    "job_id": "40fb97d9-4ab1-4fa8-9ae2-693c2b7a7fc9",
+    "kind": "AnswerGiven",
+    "payload": {
+      "answer": "Always use system time - no override needed for this simple tool",
+      "item_id": "time_source"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-19T18:28:23.612333+00:00",
+    "project_id": "8f254b4c-df0a-4056-8937-6eba30efcfa6",
+    "provenance": "trusted",
+    "seq": 19
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

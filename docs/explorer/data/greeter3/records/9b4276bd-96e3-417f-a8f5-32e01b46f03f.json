@@ -1,0 +1,39 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "245b5bdbb0f3de3a095c7bcfa173ca6d645f21b3b333e04453dea998f3aa139b",
+    "event_id": "db0a2163-8244-4917-8aac-d71232d134a7",
+    "seq": 32
+  },
+  "previous": {
+    "digest": "6c081ca7f2c4da44f665bfad61513353a0ee27df81f38f1f2be793c20364ffba",
+    "event_id": "6717d9fa-fa1f-47de-a7dc-a18c8041ec67",
+    "seq": 30
+  },
+  "project_id": "5e76341f-ba5f-4272-8355-3df5d489bbcd",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "23256f10-5432-44c0-8fb8-d7c730fc70dc",
+    "cycle": 1,
+    "digest": "e0b77212e060b71420377d4c2d217aa5879fde304577ea46ea06c6a0d31f6ac3",
+    "engine_id": "claudeloop",
+    "event_id": "9b4276bd-96e3-417f-a8f5-32e01b46f03f",
+    "job_id": "e58deb6b-5356-4a39-8acf-5dc898bba380",
+    "kind": "AnswerGiven",
+    "payload": {
+      "answer": "Fall back to a generic greeting: 'Good morning! Welcome to greeter3.'",
+      "item_id": "edge_username"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-20T00:49:39.388688+00:00",
+    "project_id": "5e76341f-ba5f-4272-8355-3df5d489bbcd",
+    "provenance": "trusted",
+    "seq": 31
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

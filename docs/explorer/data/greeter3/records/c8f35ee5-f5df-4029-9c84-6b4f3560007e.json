@@ -1,0 +1,43 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "3fe0bba00438ea66257db7f4ea60b4796b3f6b320841c1e1981d054412cb4265",
+    "event_id": "2927a64b-f8c9-4329-93e6-623476d4978c",
+    "seq": 34
+  },
+  "previous": {
+    "digest": "245b5bdbb0f3de3a095c7bcfa173ca6d645f21b3b333e04453dea998f3aa139b",
+    "event_id": "db0a2163-8244-4917-8aac-d71232d134a7",
+    "seq": 32
+  },
+  "project_id": "5e76341f-ba5f-4272-8355-3df5d489bbcd",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "64b70b93-3077-4286-a940-a68661391ddf",
+    "cycle": 1,
+    "digest": "f7804847e607ed3d1a7c950d63b52f3a93a2fc4d416c34ecf319551f5d333445",
+    "engine_id": "claudeloop",
+    "event_id": "c8f35ee5-f5df-4029-9c84-6b4f3560007e",
+    "job_id": "e58deb6b-5356-4a39-8acf-5dc898bba380",
+    "kind": "QuestionAsked",
+    "payload": {
+      "blocking": true,
+      "cycle": 1,
+      "default": "Console output - simplest approach for a command-line greeter application",
+      "item_id": "delivery_mechanism",
+      "stage": "walking_skeleton",
+      "text": "How should the greeting be delivered to the user (console output, web UI, GUI, file, etc.)?"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-20T00:50:15.948560+00:00",
+    "project_id": "5e76341f-ba5f-4272-8355-3df5d489bbcd",
+    "provenance": "agent",
+    "seq": 33
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

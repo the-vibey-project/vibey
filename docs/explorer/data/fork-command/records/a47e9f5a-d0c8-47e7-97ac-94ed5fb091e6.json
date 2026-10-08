@@ -1,0 +1,43 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "a43cec077fa30c62275f3be0da6f8bdfd01378c91e2339b115b44e951b4e00e6",
+    "event_id": "bc9b2871-3413-4d22-ac07-25696bca206f",
+    "seq": 45
+  },
+  "previous": {
+    "digest": "dab55fd4390ea7b27e622051ae992b673e4fd0c1e685557e38075dabcdcf5376",
+    "event_id": "f4c95fe7-7314-42cb-8b62-6788ad76b357",
+    "seq": 42
+  },
+  "project_id": "ab0b06f9-55a4-4b47-ac08-254e7fdd9036",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "a103b231-21e3-4807-96de-971ea7617824",
+    "cycle": 1,
+    "digest": "2d1bd5b951dad31387aa807b4755a98911a48141add38799f9086163f3ef224d",
+    "engine_id": "claudeloop",
+    "event_id": "a47e9f5a-d0c8-47e7-97ac-94ed5fb091e6",
+    "job_id": "48f9ef01-8b95-4709-adde-ed0ece390f8d",
+    "kind": "QuestionAsked",
+    "payload": {
+      "blocking": true,
+      "cycle": 1,
+      "default": "\u003c 5 seconds for jobs with \u003c 1000 commits, \u003c 15 seconds for larger histories; fail fast if git operations exceed 30 seconds",
+      "item_id": "fork_latency",
+      "stage": "nfr_planguage",
+      "text": "What's the maximum acceptable latency for `vibey fork \u003cjob_id\u003e` to complete (worktree creation + branch setup + ledger write)?"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-22T03:44:18.262225+00:00",
+    "project_id": "ab0b06f9-55a4-4b47-ac08-254e7fdd9036",
+    "provenance": "agent",
+    "seq": 44
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

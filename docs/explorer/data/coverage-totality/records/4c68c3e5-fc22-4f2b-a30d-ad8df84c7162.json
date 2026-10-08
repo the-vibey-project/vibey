@@ -1,0 +1,39 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "81df9872a2648fe6aa20104ad202f24bacaaaaaaa99032c1cf6f854770790fe7",
+    "event_id": "fcb101e8-456d-4bbf-9b4a-3be96c27927e",
+    "seq": 433
+  },
+  "previous": {
+    "digest": "7842517003d3188110f0f465954b0ecff589806cb8cb54badeb558d03aad338d",
+    "event_id": "3eda6988-a8a5-4b74-9e4f-557d8b817970",
+    "seq": 431
+  },
+  "project_id": "e631c00a-e1a1-4ed4-b99a-0fa2d388d240",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "a4bdaaad-05c8-41e3-8cfb-a8a788de7699",
+    "cycle": 1,
+    "digest": "8eb1720bb678732202552cf65d5a0b14591b40ffdf5f1f2ce966c7d56a16d57b",
+    "engine_id": "agyloop",
+    "event_id": "4c68c3e5-fc22-4f2b-a30d-ad8df84c7162",
+    "job_id": "97397ff0-6cb5-4877-a5e5-45eb22f69bff",
+    "kind": "FindingResolved",
+    "payload": {
+      "finding_id": "f_integrate_bootstrap-budget-brake_0b9c1c2d",
+      "resolution": "repair session completed; awaiting re-verification"
+    },
+    "phase": "build",
+    "produced_at": "2026-08-22T17:26:50.796083+00:00",
+    "project_id": "e631c00a-e1a1-4ed4-b99a-0fa2d388d240",
+    "provenance": "agent",
+    "seq": 432
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

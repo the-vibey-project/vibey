@@ -1,0 +1,43 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "e3f4bd4577e7a3913742476283c164f1d8e38d48c6c068d90018da53fc13e7e0",
+    "event_id": "38636031-0620-448e-842c-14e0408da6fa",
+    "seq": 19
+  },
+  "previous": {
+    "digest": "972b0021382473a62d56dc9c0179d339e3f19dfaf579136de567a11c3eca4299",
+    "event_id": "5574c8fc-d6bc-4b3d-8f02-3ff2bf274aad",
+    "seq": 16
+  },
+  "project_id": "44c06a64-c8ed-4153-96af-b49db29c39e3",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "6df8c53f-1eb6-463f-af1e-6656e7b04c0d",
+    "cycle": 1,
+    "digest": "676d9cd21a40c0e698c74af2b261575ddb170ce64ee9cd2ecb2f4334f8345053",
+    "engine_id": "claudeloop",
+    "event_id": "1295b750-c394-497b-b568-f011842ee7b7",
+    "job_id": "bcd8e0b1-385d-43dc-ad1f-cad988f80cc9",
+    "kind": "QuestionAsked",
+    "payload": {
+      "blocking": true,
+      "cycle": 1,
+      "default": "Ledger scan elimination \u2014 it's on the worker hot path and grows unbounded, while build_app affects CLI responsiveness but not runtime throughput",
+      "item_id": "optimization_priority",
+      "stage": "laddering",
+      "text": "Which optimization should land first: the ledger scan elimination (claim-path budget checks) or the build_app migration caching?"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-22T03:35:19.848756+00:00",
+    "project_id": "44c06a64-c8ed-4153-96af-b49db29c39e3",
+    "provenance": "agent",
+    "seq": 18
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

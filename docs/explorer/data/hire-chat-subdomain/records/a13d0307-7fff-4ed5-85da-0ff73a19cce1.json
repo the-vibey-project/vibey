@@ -1,0 +1,43 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "c16be436a9f91bc4df64c3cde3e739bd6e455cd6fcaf469c411f5e51c6d66f21",
+    "event_id": "20748c1f-2c6a-4945-8ad3-fbcf54b23b78",
+    "seq": 12
+  },
+  "previous": {
+    "digest": "707241cbed9c034a548e239fa44342985213745a948ae44e19fe7085456e811f",
+    "event_id": "cf49ec8d-6e78-4e6e-96be-58221d8de41c",
+    "seq": 10
+  },
+  "project_id": "0ee95624-eec4-4e8e-9a14-6ad9a37dcff4",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "db19b476-9337-45ea-894f-815ccb65952d",
+    "cycle": 1,
+    "digest": "5949449726ea6edcc98223bf1291d01c8826167303c6b09ce3c18015376df1b0",
+    "engine_id": "claudeloop",
+    "event_id": "a13d0307-7fff-4ed5-85da-0ff73a19cce1",
+    "job_id": "1343d0fd-bf3f-4739-8c21-cbf7693c673e",
+    "kind": "QuestionAsked",
+    "payload": {
+      "blocking": false,
+      "cycle": 1,
+      "default": "Visitor completes 3+ conversation turns learning about specific expertise areas, then proceeds to [path] or [path] to initiate employment conversation",
+      "item_id": "success_outcome",
+      "stage": "job_story",
+      "text": "What visitor action indicates a successful chat session from the portfolio owner's perspective?"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-20T20:09:33.786887+00:00",
+    "project_id": "0ee95624-eec4-4e8e-9a14-6ad9a37dcff4",
+    "provenance": "agent",
+    "seq": 11
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 2
+  }
+}

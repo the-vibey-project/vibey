@@ -1,0 +1,43 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "27bbea80b797cdf2b0eb3ea8d5062a82742b16af4753021ae10ce67f6572b3fc",
+    "event_id": "0fc10a1b-0276-469f-a450-0577ea79988a",
+    "seq": 37
+  },
+  "previous": {
+    "digest": "46f12c9c9f21eace34ba0dea407e3df428a9e7cefb70cc0e2a67c3408c9a2a8c",
+    "event_id": "fafbc4b4-732e-46fc-b81b-e68ab0a07a76",
+    "seq": 35
+  },
+  "project_id": "d482c3e2-029e-4bb8-a9a1-de411816c6ae",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "aaee93ec-3885-41a5-8a98-302e1231717e",
+    "cycle": 1,
+    "digest": "ba808e6425bf7f9b39e978d401ded83c5662c5e2fd0894a6c286a6fc2827dcc7",
+    "engine_id": "claudeloop",
+    "event_id": "f722eaa5-b7e9-4272-9f15-531673c16685",
+    "job_id": "d2626f25-d550-454e-bacd-7a7e6c9b52cd",
+    "kind": "QuestionAsked",
+    "payload": {
+      "blocking": false,
+      "cycle": 1,
+      "default": "Following WCAG 2.1 guidelines and conducting accessibility audits during development.",
+      "item_id": "20",
+      "stage": "walking_skeleton",
+      "text": "How will you ensure the software is accessible to users with disabilities?"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-31T02:05:28.291909+00:00",
+    "project_id": "d482c3e2-029e-4bb8-a9a1-de411816c6ae",
+    "provenance": "agent",
+    "seq": 36
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

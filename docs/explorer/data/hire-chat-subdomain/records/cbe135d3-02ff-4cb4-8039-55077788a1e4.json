@@ -1,0 +1,39 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "f63c5a694c1a8033a14af13416771f5facaaba6b87bc30898c78c53887c3fb83",
+    "event_id": "e94f01ba-2aaf-409b-9416-5539ec560b57",
+    "seq": 16
+  },
+  "previous": {
+    "digest": "01cb5ce4407cc45c5b164c6710effc1970ec4510796964999045c38e83de992c",
+    "event_id": "e5506d47-289b-43c2-8f81-5679391747ad",
+    "seq": 14
+  },
+  "project_id": "0ee95624-eec4-4e8e-9a14-6ad9a37dcff4",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "e624771e-cf13-4815-a4c7-7d0058480393",
+    "cycle": 1,
+    "digest": "a8a9523a974dc1dc738ccb0ebe532082713a9a61d5797549e1c49ef5546fca9d",
+    "engine_id": "claudeloop",
+    "event_id": "cbe135d3-02ff-4cb4-8039-55077788a1e4",
+    "job_id": "1343d0fd-bf3f-4739-8c21-cbf7693c673e",
+    "kind": "AnswerGiven",
+    "payload": {
+      "answer": "The visitor gets a grounded, cited answer (source page paths from the site, never invented facts) within the six-question cap and clicks through to [path] or [path] Measurement stays as today: the existing track('ask_message', { turn }) GA4 event, extended with surface: 'page' | 'widget' \u2014 no new analytics plumbing.",
+      "item_id": "success_outcome"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-20T20:10:06.063857+00:00",
+    "project_id": "0ee95624-eec4-4e8e-9a14-6ad9a37dcff4",
+    "provenance": "trusted",
+    "seq": 15
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 2
+  }
+}

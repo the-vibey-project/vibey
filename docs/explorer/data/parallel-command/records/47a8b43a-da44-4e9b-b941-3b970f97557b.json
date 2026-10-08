@@ -1,0 +1,38 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": null,
+  "previous": {
+    "digest": "65c10acf189d01f69e1292c54444de2517e6bc833e5b3992a5efc90eeee7e1a7",
+    "event_id": "841c183f-9055-459e-b320-a47b68d3e23e",
+    "seq": 470
+  },
+  "project_id": "bed522a2-0b3e-4bff-9cd6-7c13fe40779a",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "1f812c34-41b2-45f5-a145-ab45c26f16e4",
+    "cycle": 1,
+    "digest": "ef54e6bab1d88cdf25b0eab4c7a2ef9446f89a51528dbdf43a3509e3d97fed0e",
+    "engine_id": "codexloop",
+    "event_id": "47a8b43a-da44-4e9b-b941-3b970f97557b",
+    "job_id": "0bc2c455-03ab-4db7-9e6b-e92fc419ebbd",
+    "kind": "VerdictRendered",
+    "payload": {
+      "complete": false,
+      "remaining_work": [
+        "Implement work item ws: Walking skeleton: claim_many, validate_batch, summarise, BatchRunner, CLI wiring, happy-path integration test"
+      ],
+      "success": false
+    },
+    "phase": "build",
+    "produced_at": "2026-08-22T19:27:12.577159+00:00",
+    "project_id": "bed522a2-0b3e-4bff-9cd6-7c13fe40779a",
+    "provenance": "agent",
+    "seq": 533
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 2,
+    "paths": 0
+  }
+}

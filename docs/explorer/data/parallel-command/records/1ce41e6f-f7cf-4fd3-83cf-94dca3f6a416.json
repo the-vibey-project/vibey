@@ -1,0 +1,43 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "0519ee1c44cf30f4b5978d0b26dc53678966706e285279758eccb552344dc39b",
+    "event_id": "30e5da36-fcdb-4116-8edb-b196d9e1c681",
+    "seq": 20
+  },
+  "previous": {
+    "digest": "f7415616f8eb7938c48b33dd9db2d764eba46103606e027fccc44858e781b55e",
+    "event_id": "f4fba32d-52d2-4ab6-a675-47d0142ff1d8",
+    "seq": 18
+  },
+  "project_id": "bed522a2-0b3e-4bff-9cd6-7c13fe40779a",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "caea197a-bdcf-4b31-8861-792f79396acb",
+    "cycle": 1,
+    "digest": "b9bae945ab2b1273a7d17b95fbb1e4f58288804afb1f79d68841fff158ab6744",
+    "engine_id": "claudeloop",
+    "event_id": "1ce41e6f-f7cf-4fd3-83cf-94dca3f6a416",
+    "job_id": "92d834a4-4bf2-4699-9354-adbea7936d77",
+    "kind": "QuestionAsked",
+    "payload": {
+      "blocking": false,
+      "cycle": 1,
+      "default": "If I or my team would use this multiple times per day and it would save meaningful coordination overhead, it's worth building. If it's once a week or less, better to document the existing pattern and move on.",
+      "item_id": "build_threshold",
+      "stage": "laddering",
+      "text": "What would make this worth building versus documenting 'use vibey worker -j N' as the answer? What frequency of use, or what benefit, would justify the engineering cost?"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-22T02:59:05.967096+00:00",
+    "project_id": "bed522a2-0b3e-4bff-9cd6-7c13fe40779a",
+    "provenance": "agent",
+    "seq": 19
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

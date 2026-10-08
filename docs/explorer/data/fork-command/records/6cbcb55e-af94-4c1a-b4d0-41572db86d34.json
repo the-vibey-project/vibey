@@ -1,0 +1,43 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "693b236500d7fcbdd4eccf1f5bcecff5af3aa41c289184025ca6b3a408f8ff03",
+    "event_id": "6950a2ba-6907-4e2a-b6ff-5d9e2725f8b6",
+    "seq": 13
+  },
+  "previous": {
+    "digest": "9600bb767b83ef67867beb265338dfbeaa7e1dc6e0e03d45ed681bdf17cc8af6",
+    "event_id": "81ae8580-ff80-4a6a-abec-bfc165ea6c86",
+    "seq": 11
+  },
+  "project_id": "ab0b06f9-55a4-4b47-ac08-254e7fdd9036",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "1af5a47c-5745-40f2-a7a4-2c9635f18ea8",
+    "cycle": 1,
+    "digest": "57917b78ba07947f08f98b3f1b9c81202e16fda9e8412ca32f3f03f7477aa576",
+    "engine_id": "claudeloop",
+    "event_id": "6cbcb55e-af94-4c1a-b4d0-41572db86d34",
+    "job_id": "48f9ef01-8b95-4709-adde-ed0ece390f8d",
+    "kind": "QuestionAsked",
+    "payload": {
+      "blocking": false,
+      "cycle": 1,
+      "default": "Show fork provenance in job status output (e.g., 'forked from job #123 at seq 45') and allow querying all forks of a given origin job",
+      "item_id": "fork_lineage",
+      "stage": "job_story",
+      "text": "How should fork lineage be surfaced to the operator (in CLI output, status commands, or logs)?"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-22T02:56:34.677471+00:00",
+    "project_id": "ab0b06f9-55a4-4b47-ac08-254e7fdd9036",
+    "provenance": "agent",
+    "seq": 12
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

@@ -1,0 +1,43 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "d28260b748b05f26d0f4e8d09d9805350abd15919a6cd30a90b2a6df62494373",
+    "event_id": "ea839566-97ab-4f1a-a4f5-7119241af091",
+    "seq": 18
+  },
+  "previous": {
+    "digest": "c2255d321c82b65f0f2a04b5fef8c2f2a7449fc618090636950cbf463ce07f21",
+    "event_id": "2ddc3c34-13dd-45cd-97d9-7077ae1d18e5",
+    "seq": 16
+  },
+  "project_id": "5e76341f-ba5f-4272-8355-3df5d489bbcd",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "5e70931f-1fb1-4742-a14e-4d4aed449bd3",
+    "cycle": 1,
+    "digest": "ebb29fcab5bf6678e7a01b027a418a682e0ab7833809ee4ceca19e1cc1fa3e6b",
+    "engine_id": "claudeloop",
+    "event_id": "ea60c9ee-6d45-467b-b044-4b4c8126ecb7",
+    "job_id": "e58deb6b-5356-4a39-8acf-5dc898bba380",
+    "kind": "QuestionAsked",
+    "payload": {
+      "blocking": true,
+      "cycle": 1,
+      "default": "Use system username or other locally available user information",
+      "item_id": "personalization_mechanism",
+      "stage": "laddering",
+      "text": "How will the system identify or learn about users to personalize their greeting?"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-20T00:48:27.268761+00:00",
+    "project_id": "5e76341f-ba5f-4272-8355-3df5d489bbcd",
+    "provenance": "agent",
+    "seq": 17
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

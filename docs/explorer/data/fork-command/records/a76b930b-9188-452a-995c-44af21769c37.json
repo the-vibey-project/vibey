@@ -1,0 +1,43 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "74825d134eba9c61a8d393bc721a6dfe298715d41a4dec438ba3ee9efa62cf46",
+    "event_id": "2eb3981b-3ecc-446c-a508-e9cce4eeb445",
+    "seq": 37
+  },
+  "previous": {
+    "digest": "5460a9980253c8b7e0763fa691143879b15d08851e30a4698fec740bd5aa9cee",
+    "event_id": "395d9866-5aa8-4ca6-92ff-00a4250cccdc",
+    "seq": 35
+  },
+  "project_id": "ab0b06f9-55a4-4b47-ac08-254e7fdd9036",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "7072d7d8-b9d8-4d70-a76f-20bc80fc4789",
+    "cycle": 1,
+    "digest": "9ba840a374c04ad62f82043a73422f6a9f6fa593da1034670a5aeb6b2a14df1b",
+    "engine_id": "claudeloop",
+    "event_id": "a76b930b-9188-452a-995c-44af21769c37",
+    "job_id": "48f9ef01-8b95-4709-adde-ed0ece390f8d",
+    "kind": "QuestionAsked",
+    "payload": {
+      "blocking": true,
+      "cycle": 1,
+      "default": "JobForked event with origin_job_id, origin_seq, new_job_id fields; extend Job entity with optional forked_from_job_id and forked_from_seq; everything else reuses existing job creation and worktree management",
+      "item_id": "essential_events",
+      "stage": "walking_skeleton",
+      "text": "Which domain events and data model changes are essential for the walking skeleton?"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-22T03:42:48.069300+00:00",
+    "project_id": "ab0b06f9-55a4-4b47-ac08-254e7fdd9036",
+    "provenance": "agent",
+    "seq": 36
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

@@ -1,0 +1,39 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "89df8c03ebed22d5085cf8dcfec607b98b33ffc1d9afb97260d82f6ca202bd8c",
+    "event_id": "d323d1a9-e01c-40b9-8d8a-fecb657ccfa0",
+    "seq": 15
+  },
+  "previous": {
+    "digest": "7d6541071fe66b9dff1eed2d42aa238180d22109ed40619683c626c5ed36008d",
+    "event_id": "a890a5c4-8a75-40b4-bf87-8d6b0af06f30",
+    "seq": 13
+  },
+  "project_id": "a1d6b837-46f3-40c0-b6a2-8b3babb7fe15",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "a634bce6-183b-4d65-b40b-ecadc944ae81",
+    "cycle": 1,
+    "digest": "a99c4c114c904bb8093beb500141be8189e901da2773e47382e1b2b9dba67db8",
+    "engine_id": "claudeloop",
+    "event_id": "f13eaa45-ef9a-4e43-bd24-5fa7c46aa8ff",
+    "job_id": "dd8513f6-0d76-49a5-8bdc-75167dea5385",
+    "kind": "AnswerGiven",
+    "payload": {
+      "answer": "Core contributors running the full test suite and quality gates locally before push",
+      "item_id": "actor"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-20T20:41:40.929853+00:00",
+    "project_id": "a1d6b837-46f3-40c0-b6a2-8b3babb7fe15",
+    "provenance": "trusted",
+    "seq": 14
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

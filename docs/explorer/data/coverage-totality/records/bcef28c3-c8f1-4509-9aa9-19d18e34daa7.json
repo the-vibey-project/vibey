@@ -1,0 +1,39 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "1f3ae9b0c78e39bf7b4614c140c6bc41a741cb9d4255b9f1de2010d310df2bce",
+    "event_id": "c44ab532-2aa5-41e9-a5d8-0ce3fec77be6",
+    "seq": 21
+  },
+  "previous": {
+    "digest": "38634e8ada5b892669399b62b35907696e94c86925a2d400707747458399e6e0",
+    "event_id": "ccaf8a41-e726-45fc-8f34-f119d31f7574",
+    "seq": 19
+  },
+  "project_id": "e631c00a-e1a1-4ed4-b99a-0fa2d388d240",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "76ca1ff9-0825-4bb9-a291-ff41fe8fc3fc",
+    "cycle": 1,
+    "digest": "f55142c86ce66562ba024a1d37ef2d5c0515c91addc136ef9cfb94e8290087b7",
+    "engine_id": "claudeloop",
+    "event_id": "bcef28c3-c8f1-4509-9aa9-19d18e34daa7",
+    "job_id": "d73f236e-a7b4-4748-b075-3900a75af324",
+    "kind": "AnswerGiven",
+    "payload": {
+      "answer": "Integrated into the existing files, matching the current layout. tests/tui/test_dashboard.py and tests/test_bootstrap.py both already exist, so the new tests belong beside their neighbours rather than in a parallel structure. A dedicated 'coverage gap' suite is the wrong shape twice over: it decays into a junk drawer nobody maintains, and its very name announces that the tests were written for the counter rather than for the behaviour, which invites exactly the line-touching non-tests the acceptance criteria forbid.",
+      "item_id": "test_organization"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-22T02:39:42.429990+00:00",
+    "project_id": "e631c00a-e1a1-4ed4-b99a-0fa2d388d240",
+    "provenance": "trusted",
+    "seq": 20
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}

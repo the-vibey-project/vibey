@@ -1,0 +1,43 @@
+{
+  "format": "vibey-ledger-site/v1",
+  "next": {
+    "digest": "3855571aff0b9f7796167310b89cff2d9ab7ade539f1b93321f5f8e6288149d3",
+    "event_id": "21289d76-05ce-4236-9fbb-91384d22c362",
+    "seq": 20
+  },
+  "previous": {
+    "digest": "3efe617e98caa85be2d32829c9e141a60fd907a6710818011ce6440650b8668c",
+    "event_id": "762a7605-7819-43be-8d11-f8dda8d922cb",
+    "seq": 18
+  },
+  "project_id": "b43d1fcb-fb7b-42d6-9f80-220292c73389",
+  "record": {
+    "causation_id": null,
+    "correlation_id": "01685e9e-600a-4cc0-9189-0505b55a1322",
+    "cycle": 1,
+    "digest": "2d4925455ba480017e4cf55688e200c5dde6eb35d2b99fd8a7bf24f5ce018c5d",
+    "engine_id": "claudeloop",
+    "event_id": "e2f7aa6f-6c5b-4d1e-bb22-5dd2d1f27d8d",
+    "job_id": "64ea0fea-cd4f-4b3b-bf19-112c18a7c58d",
+    "kind": "QuestionAsked",
+    "payload": {
+      "blocking": false,
+      "cycle": 1,
+      "default": "Infrastructure layer - it reads from config files and translates to domain types, fitting the onion architecture pattern",
+      "item_id": "resolver_location",
+      "stage": "laddering",
+      "text": "Which layer should own the cap resolver: domain (pure logic), application (orchestration), or infrastructure (config reading)?"
+    },
+    "phase": "design",
+    "produced_at": "2026-08-22T02:59:50.867346+00:00",
+    "project_id": "b43d1fcb-fb7b-42d6-9f80-220292c73389",
+    "provenance": "agent",
+    "seq": 19
+  },
+  "withheld": {
+    "credentials": 0,
+    "emails": 0,
+    "fields": 0,
+    "paths": 0
+  }
+}
