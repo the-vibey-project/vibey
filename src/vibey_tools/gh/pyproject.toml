@@ -51,6 +51,8 @@ packages = ["vibey_gh"]
 "docs/stylesheets/vibey.css" = "vibey_gh/templates/release/vibey.css"
 "docs/javascripts/channel.js" = "vibey_gh/templates/release/channel.js"
 "docs/javascripts/math.js" = "vibey_gh/templates/release/math.js"
+"docs/javascripts/analytics.js" = "vibey_gh/templates/release/analytics.js"
+"docs/javascripts/consent.js" = "vibey_gh/templates/release/consent.js"
 
 [tool.hatch.build.targets.sdist]
 include = [

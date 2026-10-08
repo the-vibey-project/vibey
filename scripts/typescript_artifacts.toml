@@ -41,6 +41,26 @@ targets = [
   "src/vibey_tools/gh/.github/vibey-gh/release/math.js",
 ]
 
+# Google Analytics and the cookie-consent banner, inlined into every published page by the
+# release-surfaces workflow (vibey-gh's managed release assets, packaged beside math.js).
+[[artifact]]
+source = "src/vibey_tools/gh/web/analytics.ts"
+module = "script"
+targets = [
+  "src/vibey_tools/gh/docs/javascripts/analytics.js",
+  ".github/vibey-gh/release/analytics.js",
+  "src/vibey_tools/gh/.github/vibey-gh/release/analytics.js",
+]
+
+[[artifact]]
+source = "src/vibey_tools/gh/web/consent.ts"
+module = "script"
+targets = [
+  "src/vibey_tools/gh/docs/javascripts/consent.js",
+  ".github/vibey-gh/release/consent.js",
+  "src/vibey_tools/gh/.github/vibey-gh/release/consent.js",
+]
+
 # The ledger explorer (docs/explorer/).
 [[artifact]]
 source = "docs-src/explorer.ts"

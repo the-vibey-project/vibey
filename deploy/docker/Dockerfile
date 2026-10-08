@@ -147,6 +147,8 @@ COPY src/vibey_tools/skills/.claude-plugin/marketplace.json ./src/vibey_tools/sk
 COPY src/vibey_tools/gh/docs/stylesheets/vibey.css ./src/vibey_tools/gh/docs/stylesheets/
 COPY src/vibey_tools/gh/docs/javascripts/channel.js ./src/vibey_tools/gh/docs/javascripts/
 COPY src/vibey_tools/gh/docs/javascripts/math.js ./src/vibey_tools/gh/docs/javascripts/
+COPY src/vibey_tools/gh/docs/javascripts/analytics.js ./src/vibey_tools/gh/docs/javascripts/
+COPY src/vibey_tools/gh/docs/javascripts/consent.js ./src/vibey_tools/gh/docs/javascripts/
 RUN uv sync --frozen --no-dev --extra operator --extra skills
 
 

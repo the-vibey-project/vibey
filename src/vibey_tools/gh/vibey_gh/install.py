@@ -122,11 +122,15 @@ def _release_assets(cfg: GhConfig) -> list[tuple[Path, str]]:
             (PACKAGED_RELEASE_ASSETS / "vibey.css", "vibey.css"),
             (PACKAGED_RELEASE_ASSETS / "channel.js", "channel.js"),
             (PACKAGED_RELEASE_ASSETS / "math.js", "math.js"),
+            (PACKAGED_RELEASE_ASSETS / "analytics.js", "analytics.js"),
+            (PACKAGED_RELEASE_ASSETS / "consent.js", "consent.js"),
         ]
     return [
         (SOURCE_RELEASE_ASSETS / "stylesheets" / "vibey.css", "vibey.css"),
         (SOURCE_RELEASE_ASSETS / "javascripts" / "channel.js", "channel.js"),
         (SOURCE_RELEASE_ASSETS / "javascripts" / "math.js", "math.js"),
+        (SOURCE_RELEASE_ASSETS / "javascripts" / "analytics.js", "analytics.js"),
+        (SOURCE_RELEASE_ASSETS / "javascripts" / "consent.js", "consent.js"),
     ]
 
 

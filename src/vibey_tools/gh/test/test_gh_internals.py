@@ -210,12 +210,16 @@ def test_release_assets_are_found_inside_an_installed_wheel(repo, tmp_path, monk
     (packaged / "vibey.css").write_text("theme")
     (packaged / "channel.js").write_text("provenance")
     (packaged / "math.js").write_text("latex")
+    (packaged / "analytics.js").write_text("analytics")
+    (packaged / "consent.js").write_text("consent")
     monkeypatch.setattr(install, "PACKAGED_RELEASE_ASSETS", packaged)
 
     assert install._release_assets(GhConfig(root=repo)) == [
         (packaged / "vibey.css", "vibey.css"),
         (packaged / "channel.js", "channel.js"),
         (packaged / "math.js", "math.js"),
+        (packaged / "analytics.js", "analytics.js"),
+        (packaged / "consent.js", "consent.js"),
     ]
 
 

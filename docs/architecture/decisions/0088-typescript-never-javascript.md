@@ -18,7 +18,10 @@ was the gap. Measured on `develop` at `ae15cc72b`, before this change, `git ls-f
 - the VS Code task panel's webview page, `clients/vscode/media/panel.js`, held to a type
   checker only by `// @ts-check` comments;
 - two build scripts and two smoke-test files in `clients/vscode/`, plain Node;
-- `babel.config.js` and `metro.config.js` for the krypton app.
+- `babel.config.js` and `metro.config.js` for the krypton app;
+- and JavaScript no file listing could see: the cookie-consent banner and the analytics start-up,
+  written as Python string literals inside the release-surfaces workflow, in three managed copies
+  (the repository's, the vibey-gh tenant's, and the template both render from).
 
 None of it was checked by the compiler that checks everything beside it. The panel's own
 comments say as much: a JSDoc type is a request to be checked, and a build that does not run
@@ -46,24 +49,27 @@ the check does not grant it.
    ignored `.js` beside their sources.
 5. **The design generator no longer owns scripts.** It keeps tokens, stylesheets and icons;
    the compiled scripts are this mechanism's, so no file has two writers.
+6. **A workflow carries configuration, never JavaScript.** The release-surfaces workflow reads
+   the managed assets `analytics.js` and `consent.js` (compiled from `analytics.ts` and
+   `consent.ts`) and inlines them as it always inlined its snippets, so the published pages are
+   unchanged in shape. The two settings travel as attributes on the script tag:
+   `<script data-ga-id="G-…" data-consent="true">`. A meta test fails on a workflow that
+   writes an inline `<script>` body any other way.
 
 ## Consequences
 
-- Twenty hand-written JavaScript files became seven TypeScript sources, one declared list and
-  fifteen generated artifacts. The compiled `channel.js`, `math.js`, `panel.js` and the two
+- Twenty hand-written JavaScript files, and the JavaScript in the workflow's strings, became
+  nine TypeScript sources, one declared list and twenty-one generated artifacts. The compiled `channel.js`, `math.js`, `panel.js` and the two
   app configs are the same programs; the types are new. `explorer.ts` (the ledger explorer) is
   born typed.
 - The panel's message protocol, the ledger site format and the release `surfaces` object are
   now interfaces, so a field renamed on one side is a compile error on the other.
 - Editing a source and forgetting to regenerate fails the build and names the command.
 - Contributors need Node to change a script, as they already do to change a client.
-- **Not converted, and named so it is not forgotten.** The release-surfaces workflow builds
-  the consent banner and the analytics snippet as JavaScript inside Python string literals,
-  in three managed copies (`.github/workflows/`, the vibey-gh tenant's copy and its
-  template). That is authored JavaScript in a file this change's test cannot see. Converting
-  it means moving the logic into TypeScript, serving it as an artifact and changing the
-  markup the workflow emits into every published page; it cannot be exercised without a
-  release run, so it is its own change. Until then 9.f is not yet true of the tree.
+- The two inlined snippets were checked against their old behaviour in Node with a stubbed browser:
+  the same `gtag` calls in the same order, `Arguments` objects as gtag.js reads, the consent default
+  only when consent is on, and the same banner flow. They have not run on a live Pages deploy; the
+  first release after this change is where that is seen.
 
 ## Alternatives rejected
 

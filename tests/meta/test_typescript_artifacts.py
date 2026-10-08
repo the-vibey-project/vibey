@@ -79,3 +79,35 @@ def test_the_committed_javascript_is_what_the_typescript_compiles_to() -> None:
     assert not stale, (
         f"stale: {[str(p) for p in stale]}; run `python3 scripts/typescript_artifacts.py`"
     )
+
+
+WORKFLOW_FILES = (
+    "src/vibey_tools/gh/vibey_gh/templates/workflows",
+    ".github/workflows",
+    "src/vibey_tools/gh/.github/workflows",
+)
+
+
+def test_no_workflow_writes_inline_javascript() -> None:
+    """A workflow carries configuration, never JavaScript (9.f, ADR-0088).
+
+    Every inline `<script>` a workflow's Python emits must take its body from a compiled
+    asset (`read_text()` on the next lines), or be JSON-LD or an external `src=`. A script
+    body written out as string literals is JavaScript nobody type-checks.
+    """
+    import re
+
+    opener = re.compile(r"""<script(?P<attrs>[^>]*)>""")
+    offenders = []
+    for folder in WORKFLOW_FILES:
+        for path in sorted((REPO / folder).glob("*.yml")):
+            lines = path.read_text(encoding="utf-8").splitlines()
+            for at, line in enumerate(lines):
+                for found in opener.finditer(line):
+                    attrs = found.group("attrs")
+                    if "ld+json" in attrs or " src=" in attrs:
+                        continue
+                    following = "\n".join(lines[at : at + 4])
+                    if "read_text()" not in following:
+                        offenders.append(f"{path.relative_to(REPO)}:{at + 1}")
+    assert not offenders, f"inline JavaScript written in a workflow: {offenders}"

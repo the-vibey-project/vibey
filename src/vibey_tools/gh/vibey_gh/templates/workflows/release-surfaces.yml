@@ -613,28 +613,16 @@ jobs:
           # markup is duplicated in the channel-picker step below; keep the two copies
           # identical, since each step renders its own page from its own environment.
           consent = os.environ.get("COOKIE_CONSENT", "") == "true"
+          # The script bodies are the managed release assets analytics.js and consent.js,
+          # compiled from TypeScript (sub-doctrine 9.f); this step supplies only the two
+          # settings, as attributes, so the workflow carries configuration and no JavaScript.
+          assets = pathlib.Path(".github/vibey-gh/release")
           ga_snippet = (
-              f'<script async src="https://www.googletagmanager.com/gtag/js?id={ga_id}"></script>\n'
-              "<script>\n"
-              "window.dataLayer = window.dataLayer || [];\n"
-              "function gtag(){dataLayer.push(arguments);}\n"
-              "gtag('js', new Date());\n"
-              f"gtag('config', '{ga_id}');\n"
-              "</script>\n"
+              f'<script async src="https://www.googletagmanager.com/gtag/js?id={html.escape(ga_id)}"></script>\n'
+              f'<script data-ga-id="{html.escape(ga_id)}" data-consent="{str(consent).lower()}">\n'
+              + (assets / "analytics.js").read_text()
+              + "</script>\n"
           ) if ga_id else ""
-          if ga_id and consent:
-              ga_snippet = (
-                  f'<script async src="https://www.googletagmanager.com/gtag/js?id={ga_id}"></script>\n'
-                  "<script>\n"
-                  "window.dataLayer = window.dataLayer || [];\n"
-                  "function gtag(){dataLayer.push(arguments);}\n"
-                  "gtag('consent', 'default', {'ad_storage': 'denied',"
-                  " 'ad_user_data': 'denied', 'ad_personalization': 'denied',"
-                  " 'analytics_storage': 'denied'});\n"
-                  "gtag('js', new Date());\n"
-                  f"gtag('config', '{ga_id}');\n"
-                  "</script>\n"
-              )
           consent_banner = (
               '<div id="vibey-consent" role="dialog" aria-label="Cookie consent"'
               ' style="position:fixed;left:0;right:0;bottom:0;z-index:9999;display:none;'
@@ -652,22 +640,8 @@ jobs:
               "Decline</button>\n"
               "</div>\n"
               "<script>\n"
-              "(function(){\n"
-              "var key='vibey-docs-consent';\n"
-              "function grant(v){if(typeof gtag!=='function')return;"
-              "gtag('consent','update',{'ad_storage':v,'ad_user_data':v,"
-              "'ad_personalization':v,'analytics_storage':v});}\n"
-              "function hide(){var b=document.getElementById('vibey-consent');"
-              "if(b)b.style.display='none';}\n"
-              "function choose(v){try{localStorage.setItem(key,v);}catch(e){}grant(v);hide();}\n"
-              "var stored=null;try{stored=localStorage.getItem(key);}catch(e){}\n"
-              "if(stored==='granted'||stored==='denied'){grant(stored);return;}\n"
-              "var bar=document.getElementById('vibey-consent');if(!bar)return;\n"
-              "bar.style.display='block';\n"
-              "document.getElementById('vibey-consent-accept').onclick=function(){choose('granted');};\n"
-              "document.getElementById('vibey-consent-decline').onclick=function(){choose('denied');};\n"
-              "})();\n"
-              "</script>\n"
+              + (assets / "consent.js").read_text()
+              + "</script>\n"
           ) if ga_id and consent else ""
 
           title_of = re.compile(r"<title>(.*?)</title>", re.S)
@@ -1283,6 +1257,7 @@ jobs:
           SEO_OG_IMAGE='__VIBEY_GH_DOC_OG_IMAGE__' \
           python - <<'PY'
           import os
+          import html
           import pathlib
 
           path = pathlib.Path("pages/index.html")
@@ -1292,28 +1267,16 @@ jobs:
           # by default and show the banner until the reader chooses. The two copies stay
           # identical on purpose -- each step renders its own page from its own env.
           consent = os.environ.get("COOKIE_CONSENT", "") == "true"
+          # The script bodies are the managed release assets analytics.js and consent.js,
+          # compiled from TypeScript (sub-doctrine 9.f); this step supplies only the two
+          # settings, as attributes, so the workflow carries configuration and no JavaScript.
+          assets = pathlib.Path(".github/vibey-gh/release")
           ga_snippet = (
-              f'<script async src="https://www.googletagmanager.com/gtag/js?id={ga_id}"></script>\n'
-              "<script>\n"
-              "window.dataLayer = window.dataLayer || [];\n"
-              "function gtag(){dataLayer.push(arguments);}\n"
-              "gtag('js', new Date());\n"
-              f"gtag('config', '{ga_id}');\n"
-              "</script>"
+              f'<script async src="https://www.googletagmanager.com/gtag/js?id={html.escape(ga_id)}"></script>\n'
+              f'<script data-ga-id="{html.escape(ga_id)}" data-consent="{str(consent).lower()}">\n'
+              + (assets / "analytics.js").read_text()
+              + "</script>\n"
           ) if ga_id else ""
-          if ga_id and consent:
-              ga_snippet = (
-                  f'<script async src="https://www.googletagmanager.com/gtag/js?id={ga_id}"></script>\n'
-                  "<script>\n"
-                  "window.dataLayer = window.dataLayer || [];\n"
-                  "function gtag(){dataLayer.push(arguments);}\n"
-                  "gtag('consent', 'default', {'ad_storage': 'denied',"
-                  " 'ad_user_data': 'denied', 'ad_personalization': 'denied',"
-                  " 'analytics_storage': 'denied'});\n"
-                  "gtag('js', new Date());\n"
-                  f"gtag('config', '{ga_id}');\n"
-                  "</script>"
-              )
           consent_banner = (
               '<div id="vibey-consent" role="dialog" aria-label="Cookie consent"'
               ' style="position:fixed;left:0;right:0;bottom:0;z-index:9999;display:none;'
@@ -1331,22 +1294,8 @@ jobs:
               "Decline</button>\n"
               "</div>\n"
               "<script>\n"
-              "(function(){\n"
-              "var key='vibey-docs-consent';\n"
-              "function grant(v){if(typeof gtag!=='function')return;"
-              "gtag('consent','update',{'ad_storage':v,'ad_user_data':v,"
-              "'ad_personalization':v,'analytics_storage':v});}\n"
-              "function hide(){var b=document.getElementById('vibey-consent');"
-              "if(b)b.style.display='none';}\n"
-              "function choose(v){try{localStorage.setItem(key,v);}catch(e){}grant(v);hide();}\n"
-              "var stored=null;try{stored=localStorage.getItem(key);}catch(e){}\n"
-              "if(stored==='granted'||stored==='denied'){grant(stored);return;}\n"
-              "var bar=document.getElementById('vibey-consent');if(!bar)return;\n"
-              "bar.style.display='block';\n"
-              "document.getElementById('vibey-consent-accept').onclick=function(){choose('granted');};\n"
-              "document.getElementById('vibey-consent-decline').onclick=function(){choose('denied');};\n"
-              "})();\n"
-              "</script>\n"
+              + (assets / "consent.js").read_text()
+              + "</script>\n"
           ) if ga_id and consent else ""
           # The paper and the book, per channel, from the files that were actually
           # deployed under pages/<channel>/ -- present on the chooser only when they exist.

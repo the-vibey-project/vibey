@@ -3448,7 +3448,7 @@ def test_cookie_consent_denies_analytics_until_accepted(tmp_path):
     on both the channel pages and the channel picker. Consent off renders the plain
     gtag snippet, and with no measurement ID nothing renders either way."""
     from vibey_gh.config import DocumentationConfig, GhConfig
-    from vibey_gh.install import render_workflow
+    from vibey_gh.install import SOURCE_RELEASE_ASSETS, render_workflow
 
     source = WORKFLOWS / "release-surfaces.yml"
     assert DocumentationConfig().cookie_consent is True
@@ -3463,8 +3463,18 @@ def test_cookie_consent_denies_analytics_until_accepted(tmp_path):
     assert "__VIBEY_GH_DOC_COOKIE_CONSENT__" not in on
     assert "COOKIE_CONSENT=true" in on
     assert 'COOKIE_CONSENT: "true"' in on
-    assert "gtag('consent', 'default'" in on
-    assert "'analytics_storage': 'denied'" in on
+    # The workflow carries configuration, not JavaScript (sub-doctrine 9.f): it inlines the
+    # managed assets and hands them the two settings as attributes on the script tag.
+    assert '(assets / "analytics.js").read_text()' in on
+    assert '(assets / "consent.js").read_text()' in on
+    assert 'data-consent="{str(consent).lower()}"' in on
+    assert "gtag('consent'" not in on and "localStorage" not in on
+    # The behaviour itself is in the compiled assets: denied by default, choice remembered.
+    analytics = (SOURCE_RELEASE_ASSETS / "javascripts" / "analytics.js").read_text(encoding="utf-8")
+    consent_js = (SOURCE_RELEASE_ASSETS / "javascripts" / "consent.js").read_text(encoding="utf-8")
+    assert 'gtag("consent", "default"' in analytics
+    assert 'analytics_storage: "denied"' in analytics
+    assert '"vibey-docs-consent"' in consent_js and "localStorage.setItem" in consent_js
     assert 'id="vibey-consent"' in on
     # The chooser heredoc keeps its deploy-time placeholder, which the chooser
     # step substitutes from the same banner string.
@@ -3486,7 +3496,8 @@ def test_cookie_consent_denies_analytics_until_accepted(tmp_path):
     assert 'os.environ.get("COOKIE_CONSENT", "") == "true"' in off
     # The measurement ID travels by environment; the snippet interpolates it at
     # deploy time, so the render carries the variable, not the value.
-    assert "gtag('config', '{ga_id}')" in off
+    assert 'data-ga-id="{html.escape(ga_id)}"' in off
+    assert 'gtag("config", id)' in analytics
     assert 'GA_ID: "G-XXXXXXXXXX"' in off
 
     neither = render_workflow(source, GhConfig(root=tmp_path))

@@ -291,6 +291,8 @@ packages = [
 "src/vibey_tools/gh/docs/stylesheets/vibey.css" = "vibey_gh/templates/release/vibey.css"
 "src/vibey_tools/gh/docs/javascripts/channel.js" = "vibey_gh/templates/release/channel.js"
 "src/vibey_tools/gh/docs/javascripts/math.js" = "vibey_gh/templates/release/math.js"
+"src/vibey_tools/gh/docs/javascripts/analytics.js" = "vibey_gh/templates/release/analytics.js"
+"src/vibey_tools/gh/docs/javascripts/consent.js" = "vibey_gh/templates/release/consent.js"
 
 [tool.hatch.metadata]
 allow-direct-references = true
