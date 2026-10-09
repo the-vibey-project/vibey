@@ -49,7 +49,15 @@ Your working directory is a clone of the integration branch. Assume you remember
    documentation the issue needs, one defect it describes. Most backlog items are larger
    than one run: do not attempt the whole issue, and do not start what you cannot finish.
 3. Make that slice with the test that proves it, and run the gate for what you touched
-   (CLAUDE.md, "Commands worth memorizing"). A slice whose test does not pass is not
+   (CLAUDE.md, "Commands worth memorizing"). Your shell has no `python`, `pytest` or `uv` on
+   its PATH: use the project's own environment, `./.venv/bin/python -m pytest -q <test file>`
+   and `./.venv/bin/ruff check <path>`, as one plain command (a command with `;`, `|`, `&&` or
+   a redirect is not read as a test run). The repository's test session wants a PostgreSQL this
+   machine does not give you, so add `--noconftest` for anything under tests/scripts or
+   tests/meta, and for the tools under src/vibey_tools/gh use `-c src/vibey_tools/gh/pyproject.toml
+   --no-cov <test file>`. A test that needs the database (most of tests/domain, application and
+   infrastructure) cannot run here: say so. Say only what you ran and saw: never that tests pass
+   if you did not run them. A slice whose test does not pass is not
    handed over.
 4. Write a changelog fragment when the slice reaches a shipped path, and keep every change
    inside src/, tests/, docs/, scripts/ or research/.

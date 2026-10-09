@@ -1475,3 +1475,130 @@ def test_the_hand_over_uploads_the_hidden_run_store() -> None:
     copying = text[hand_over:upload]
     assert "find .qwenloop/runs -name events.jsonl" in copying
     assert "the agent left no run store" in copying
+
+
+def test_a_test_run_is_recognised_the_way_the_agent_actually_sends_it() -> None:
+    # The agent's shell tool takes an argv, and the agent always sends `bash -lc '<command>'`:
+    # a guard that only read the argv as typed would refuse a genuine passing run, and one that
+    # read the script loosely would believe `pytest || true`.
+    settings = cp.Settings.load(cp.REPO)
+    rule = cp.GroundingRule(["backlog"], settings.test_runs, reader=FakePaths([]))
+
+    def ran(*argv: str, ok: bool = True) -> bool:
+        return rule.ran_a_test(rule.calls(record(("shell", {"argv": list(argv)}, ok))))
+
+    # Real runs, as sent.
+    assert ran("bash", "-lc", "./.venv/bin/python -m pytest -q tests/scripts/test_x.py")
+    assert ran("bash", "-lc", ".venv/bin/pytest -q tests/x.py -k 'a and b'")
+    assert ran("bash", "-lc", "python3 -m pytest -q")
+    assert ran("bash", "-c", "pytest tests/test_x.py")
+    assert ran("./.venv/bin/python", "-m", "pytest", "-q")
+    assert ran("uv", "run", "pytest", "-q")
+    # Not runs, however they are dressed.
+    assert not ran("bash", "-lc", "pytest -q", ok=False)  # failed: command not found
+    assert not ran("bash", "-lc", "pytest -q || true")  # exits 0 whatever the tests did
+    assert not ran("bash", "-lc", "pytest -q; echo done")
+    assert not ran("bash", "-lc", "pytest -q | tee out.txt")  # the exit is tee's
+    assert not ran("bash", "-lc", "echo pytest")
+    assert not ran("bash", "-lc", "true && pytest")
+    assert not ran("bash", "-lc", "python - <<'PY'\nprint('pytest')\nPY")
+    assert not ran("bash", "-lc", "pytest --collect-only")  # collects, runs nothing
+    assert not ran("bash", "-lc", "cat tests/test_pytest_x.py")
+    assert not ran("bash", "-lc", "pytest -q", "extra")  # not the 3-element form we judge
+
+
+def test_the_agent_is_given_a_python_its_shell_can_run_and_told_where() -> None:
+    # 2026-10-09, three runs: "libpython3.12.so.1.0: cannot open shared object file". The agent's
+    # shell has a filtered environment, `setup-python`'s Python needs LD_LIBRARY_PATH, so no
+    # `python` ran and `pytest` was nowhere. It could edit and write tests but never run one.
+    text = (cp.REPO / ".github/workflows/continuation-prompts.yml").read_text()
+    install = text.index("name: Install vibey (the runner and its tools)")
+    venv = text.index("name: Give the agent a Python and test tools its shell can run")
+    agent = text.index("name: Run the prompt with gptossloop")
+    assert install < venv < agent
+    step = text[venv:agent]
+    assert "/usr/bin/python3 -m venv .venv" in step  # the system Python needs no environment
+    assert '.venv/bin/python -m pip install --quiet -e ".[dev]"' in step
+    assert "env -i .venv/bin/python -m pytest --version" in step  # proved with NO environment
+    assert ".venv/" in (cp.REPO / ".gitignore").read_text().splitlines()  # never staged
+    # ...and the prompt says where the tools are, in the words the guard recognises.
+    page = (cp.REPO / "docs/continuation/backlog.md").read_text()
+    flat = " ".join(page.split())  # the page is hard-wrapped
+    assert "./.venv/bin/python -m pytest -q" in flat
+    assert "never that tests pass if you did not run them" in flat
+    # Tested in the runner image with an empty environment and no Postgres: the root conftest
+    # connects to PostgreSQL for ANY session under tests/, so the page says how around it.
+    assert "--noconftest" in flat and "cannot run here: say so" in flat
+    assert "-c src/vibey_tools/gh/pyproject.toml --no-cov" in flat
+    settings = cp.Settings.load(cp.REPO)
+    assert any(
+        __import__("re").match(pattern, "./.venv/bin/python -m pytest -q")
+        for pattern in settings.test_runs
+    )
+
+
+def test_the_host_prompt_has_the_turns_the_overnight_runs_showed_it_needs() -> None:
+    host = cp.Settings.load(cp.REPO).run["sovereign"]
+    assert host["max_turns"] >= 100  # three runs ended at turn 40 of 40, mid-edit
+    assert host["timeout_minutes"] >= 60
+
+
+TESTS_RE = [r"^tests/.*(^|/)test_[^/]+\.py$"]
+
+
+def run_verdict(command: str, patch: list[tuple[str, str]] | None = None) -> list[str]:
+    """What the guard says about a patch whose run record holds this one `bash -lc` command."""
+    patch = patch or [("A", "tests/scripts/test_new_thing.py"), ("M", "scripts/thing.py")]
+    settings = cp.Settings.load(cp.REPO)
+    rule = cp.GroundingRule(
+        ["backlog"], settings.test_runs, reader=FakePaths(patch), test_paths=TESTS_RE
+    )
+    tools = record(
+        ("open_file", {"path": "scripts/thing.py"}, True),
+        ("shell", {"argv": ["bash", "-lc", command]}, True),
+    )
+    return list(rule.ungrounded(Path("p"), "backlog", tools))
+
+
+def test_a_passing_run_must_be_about_the_tests_this_patch_adds() -> None:
+    # A passing test elsewhere says nothing about the change: found by a security review.
+    py = "./.venv/bin/python -m pytest --noconftest -q"
+    assert run_verdict(f"{py} tests/scripts/test_new_thing.py") == []
+    assert run_verdict(f"{py} tests/scripts") == []  # a directory above it
+    assert run_verdict(f"{py} tests/scripts/test_new_thing.py::test_a") == []  # a node id
+    assert run_verdict(py) == []  # the whole suite names nothing and runs everything
+    unrelated = "(no passing test run targeted a test this patch adds or changes)"
+    assert run_verdict(f"{py} tests/meta/test_daily_lanes.py") == [unrelated]
+    assert run_verdict(f"{py} tests/scripts/test_other.py tests/meta") == [unrelated]
+
+
+def test_options_that_make_a_run_prove_nothing_do_not_count_as_a_run() -> None:
+    py = "./.venv/bin/python -m pytest -q tests/scripts/test_new_thing.py"
+    no_test = ["(no passing test command ran)"]
+    assert run_verdict(py.replace("-q", "--setup-only -q")) == no_test
+    assert run_verdict(py.replace("-q", "-p myplugin -q")) == no_test  # a plugin the patch wrote
+    assert run_verdict(py.replace("-q", "-pmyplugin -q")) == no_test
+    assert run_verdict(py.replace("-q", "-o addopts=-k\\ nothing -q")) == no_test
+    assert run_verdict(py.replace("-q", "--override-ini=testpaths=x -q")) == no_test
+    assert run_verdict(py.replace("-q", "-c evil.ini -q")) == no_test
+    assert run_verdict(py.replace("-q", "--rootdir=/tmp -q")) == no_test
+    # What stays fine: turning a plugin OFF, and the tools' own config.
+    assert run_verdict(py.replace("-q", "-p no:cacheprovider -q")) == []
+    tool_test = [("A", "tests/gh/test_new.py")]
+    own = "pytest -c src/vibey_tools/gh/pyproject.toml --no-cov tests/gh/test_new.py"
+    assert run_verdict(own, tool_test) == []
+
+
+def test_the_paths_a_test_command_names_are_read_after_the_runner() -> None:
+    targets = cp.GroundingRule._targets
+    assert targets("./.venv/bin/python -m pytest --noconftest -q") == []  # not the interpreter
+    assert targets("pytest -q tests/a/test_x.py::test_y tests/b") == [
+        "tests/a/test_x.py",
+        "tests/b",
+    ]
+    cfg = "pytest -c src/vibey_tools/gh/pyproject.toml --no-cov src/vibey_tools/gh/test/test_x.py"
+    assert targets(cfg) == ["src/vibey_tools/gh/test/test_x.py"]  # a config is not a target
+    assert targets("npm test") == [] and targets("npx vitest run src/a.test.ts") == [
+        "src/a.test.ts"
+    ]
+    assert targets("something -q ./tests/a.py") == ["tests/a.py"]  # no runner word: all words
