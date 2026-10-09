@@ -200,6 +200,27 @@ def test_runners_registration_is_declared_or_derived(runners, platform, expected
         ("image", ""),
         ("runner_version", "latest"),
         ("container_model_url", "host.docker.internal:11434"),
+        ("egress_gate", "yes"),
+        ("egress_gate", 1),
+        ("egress_name", ""),
+        ("egress_name", "has space"),
+        ("egress_network", "-bad"),
+        ("egress_allow", []),
+        ("egress_allow", ["*"]),
+        ("egress_allow", ["*.com"]),
+        ("egress_allow", ["com"]),
+        ("egress_allow", ["a.*.example.com"]),
+        ("egress_allow", ["bad host.com"]),
+        ("egress_allow", ["UPPER.com"]),
+        # A wildcard over hosts anyone can register is an exfiltration channel.
+        ("egress_allow", ["productionresultssa*.blob.core.windows.net"]),
+        ("egress_allow", ["*.blob.core.windows.net"]),
+        ("egress_allow", ["*.windows.net"]),
+        ("egress_allow", ["*.github.io"]),
+        ("egress_allow", ["*.amazonaws.com"]),
+        ("egress_allow", ["*.co.uk"]),
+        ("egress_allow", ["*.com.au"]),
+        ("egress_allow", ["x*.example.com"]),
         ("throttle_seconds", 5),
         ("throttle_seconds", 3601),
         ("max_failures", 0),
@@ -305,8 +326,10 @@ def test_the_plan_renders_the_supervisor_and_a_launch_agent_from_config(tmp_path
         install / "Dockerfile",
         install / "entrypoint.sh",
         install / "vibey-runner.sh",
+        install / "egress" / "egress_gate.py",
+        install / "egress" / "interfaces" / "egress_gate_interface.py",
     ]
-    assert [f.executable for f in plan.files] == [False, False, True, True]
+    assert [f.executable for f in plan.files] == [False, False, True, True, False, False]
     agent = plistlib.loads(plan.files[0].text.encode("utf-8"))
     assert agent["Label"] == "org.vibey.runner-r"
     assert agent["ProgramArguments"] == [str(install / "vibey-runner.sh")]
@@ -316,7 +339,14 @@ def test_the_plan_renders_the_supervisor_and_a_launch_agent_from_config(tmp_path
         "VIBEY_RUNNER_LABEL": "vibey-local-r",
         "VIBEY_RUNNER_IMAGE": "vibey-runner:latest",
         "VIBEY_OLLAMA_URL": "http://127.0.0.1:11434",
-        "VIBEY_CONTAINER_OLLAMA_URL": "http://host.docker.internal:11434",
+        # With the gate on, the container's model URL is the gate's forwarder, not the host.
+        "VIBEY_CONTAINER_OLLAMA_URL": "http://vibey-egress:11434",
+        "VIBEY_EGRESS_GATE": "1",
+        "VIBEY_EGRESS_NAME": "vibey-egress",
+        "VIBEY_EGRESS_NETWORK": "vibey-runner-net",
+        "VIBEY_EGRESS_ALLOW": ",".join(RunnersConfig().egress_allow),
+        "VIBEY_EGRESS_DIR": str(install / "egress"),
+        "VIBEY_MODEL_UPSTREAM": "host.docker.internal:11434",
         "VIBEY_REQUIRE_AC": "1",
         "VIBEY_MAX_FAILURES": "5",
         "GH_CONFIG_DIR": str(home / ".config/gh-runner"),
@@ -343,7 +373,9 @@ def test_absolute_paths_are_kept_as_declared(tmp_path):
     cfg = _cfg(tmp_path, install_dir=str(tmp_path / "opt"), launch_agents_dir=str(tmp_path / "la"))
     plan = _plan(_runner(tmp_path, cfg))
     assert plan.plist == tmp_path / "la/org.vibey.runner-r.plist"
-    assert plan.files[-1].path == tmp_path / "opt/vibey-runner.sh"
+    (supervisor,) = [f for f in plan.files if f.path.name == "vibey-runner.sh"]
+    assert supervisor.path == tmp_path / "opt/vibey-runner.sh"
+    assert (tmp_path / "opt/egress/egress_gate.py") in [f.path for f in plan.files]
 
 
 def test_the_repository_s_own_plan_names_the_live_repository(tmp_path):
@@ -405,7 +437,9 @@ def test_the_image_installs_the_noble_names_the_runner_itself_asks_for():
 
 def test_no_template_names_a_repository_or_a_person():
     """Nothing hard-coded (12.c): the supervisor reads everything from its unit."""
-    for template in TEMPLATES.iterdir():
+    for template in (
+        t for t in TEMPLATES.rglob("*") if t.is_file() and "__pycache__" not in str(t)
+    ):
         text = template.read_text(encoding="utf-8")
         body = "\n".join(text.splitlines()[2:])  # past the shebang and provenance line
         assert "adammatthewsteinberger" not in body, template.name
@@ -512,10 +546,11 @@ def test_check_reports_missing_drift_and_the_credential_then_passes(tmp_path):
     _login(home)
     assert runner.check(plan) == []
     plan.files[0].path.write_text(plan.files[0].text + " ", encoding="utf-8")
-    plan.files[-1].path.chmod(0o644)
+    (supervisor,) = [f for f in plan.files if f.path.name == "vibey-runner.sh"]
+    supervisor.path.chmod(0o644)
     assert runner.check(plan) == [
         f"drift: {plan.files[0].path}",
-        f"not executable: {plan.files[-1].path}",
+        f"not executable: {supervisor.path}",
     ]
 
 
@@ -668,7 +703,9 @@ def test_uninstall_removes_the_declared_unit_and_only_the_files_it_wrote(tmp_pat
     runner = _runner(tmp_path, launchctl=launchctl)
     plan = _plan(runner)
     runner.install(plan, load=False)
-    keep = plan.files[-1].path.parent / "heartbeat-r"
+    keep = (
+        next(f for f in plan.files if f.path.name == "vibey-runner.sh").path.parent / "heartbeat-r"
+    )
     keep.write_text("", encoding="utf-8")
     dry = runner.uninstall(plan, apply=False)
     assert dry[0].startswith("would unload org.vibey.runner-r")
@@ -852,7 +889,24 @@ case "$name $1" in
   "docker info") exit "$(cat "$FAKE_DIR/docker_rc" 2>/dev/null || echo 0)" ;;
   "docker image") exit 0 ;;
   "docker ps") exit 0 ;;
+  "docker network")
+    if [ "$2" = "inspect" ]; then
+      # `-f {{.Internal}}` answers what the network IS; a plain inspect says whether it exists
+      # (missing unless a test says otherwise).
+      case " $* " in *" -f "*) cat "$FAKE_DIR/net_internal" 2>/dev/null || echo true; exit 0 ;; esac
+      exit "$(cat "$FAKE_DIR/net_rc" 2>/dev/null || echo 1)"
+    fi
+    exit 0 ;;
+  "docker rm") exit 0 ;;
+  "docker inspect")
+    # "<running> <network> <network> ...", as the supervisor's format string prints it.
+    printf '%s %s\n' "$(cat "$FAKE_DIR/gate_running" 2>/dev/null || echo true)" \
+      "$(cat "$FAKE_DIR/gate_networks" 2>/dev/null || echo "vibey-runner-net bridge")"
+    exit 0 ;;
+  "docker logs") cat "$FAKE_DIR/gate_logs" 2>/dev/null || echo "egress gate up: allow=[]"; exit 0 ;;
   "docker run")
+    # The gate is started detached; only the job's own run records a token and honours run_mode.
+    case " $* " in *" -d "*) exit "$(cat "$FAKE_DIR/gate_rc" 2>/dev/null || echo 0)" ;; esac
     printf 'RUNNER_TOKEN=%s\n' "${RUNNER_TOKEN:-}" >> "$FAKE_DIR/calls"
     case "$(cat "$FAKE_DIR/run_mode" 2>/dev/null)" in
       hang) exec sleep 30 ;;
@@ -873,6 +927,8 @@ _ENV = {
     "VIBEY_REQUIRE_AC": "1",
     "VIBEY_MAX_FAILURES": "1",
     "VIBEY_CAFFEINATED": "1",
+    # The legacy tests below drive the ungated path; the gate has tests of its own.
+    "VIBEY_EGRESS_GATE": "0",
 }
 
 
@@ -1248,3 +1304,185 @@ def test_cleanup_never_retires_the_declared_heartbeat_timer(tmp_path):
     assert SovereignRunner.heartbeat_label("org.vibey.runner", "o/r") == (
         "org.vibey.runner-heartbeat-r"
     )
+
+
+# --- the egress gate: the job container has no route out but the gate --------------------
+
+
+def _gated(tmp_path: Path, **env: str):
+    """A supervised run with the gate on, its script installed, and a job that fails once."""
+    egress = tmp_path / "egress"
+    egress.mkdir(exist_ok=True)
+    (egress / "egress_gate.py").write_text("# gate\n", encoding="utf-8")
+    gh_dir = _login(tmp_path)
+    (tmp_path / "fake").mkdir(exist_ok=True)
+    (tmp_path / "fake/token").write_text("REGTOKEN123\n", encoding="utf-8")
+    settings = {
+        "VIBEY_EGRESS_GATE": "1",
+        "VIBEY_EGRESS_NAME": "vibey-egress",
+        "VIBEY_EGRESS_NETWORK": "vibey-runner-net",
+        "VIBEY_EGRESS_ALLOW": "github.com,pypi.org",
+        "VIBEY_EGRESS_DIR": str(egress),
+        "VIBEY_MODEL_UPSTREAM": "host.docker.internal:11434",
+        "VIBEY_EGRESS_WAIT": "1",
+        **env,
+    }
+    return _supervise(tmp_path, gh_dir=gh_dir, **settings)
+
+
+def _docker_lines(calls: str, prefix: str) -> list[str]:
+    return [line for line in calls.splitlines() if line.startswith(prefix)]
+
+
+def test_with_the_gate_on_the_job_has_a_network_with_no_route_out_and_no_host_gateway(tmp_path):
+    code, out, calls, _ = _gated(tmp_path)
+    assert code == 1 and "1 consecutive failures -- stopping" in out
+    (job,) = [c for c in _docker_lines(calls, "docker run") if "--rm" in c]
+    assert "--network vibey-runner-net" in job
+    assert "--security-opt no-new-privileges" in job
+    # The host is not on offer: not by name, not by gateway.
+    assert "--add-host" not in job and "host-gateway" not in job
+    # Everything outbound goes to the gate by name, and the model URL stays off the proxy.
+    for variable in ("HTTPS_PROXY", "https_proxy", "HTTP_PROXY", "http_proxy"):
+        assert f"{variable}=http://vibey-egress:3128" in job
+    assert "NO_PROXY=vibey-egress,localhost,127.0.0.1" in job
+    assert "VIBEY_OLLAMA_URL=" not in job.replace("-e VIBEY_OLLAMA_URL", "")  # from the plist
+    assert "REGTOKEN123" not in job
+
+
+def test_the_gate_is_a_read_only_container_on_an_internal_network_that_joins_both(tmp_path):
+    _, _, calls, _ = _gated(tmp_path)
+    assert any(
+        line.startswith("docker network create --internal") and "vibey-runner-net" in line
+        for line in calls.splitlines()
+    )
+    (gate,) = [c for c in _docker_lines(calls, "docker run") if " -d " in f" {c} "]
+    for flag in (
+        "--name vibey-egress",
+        "--read-only",
+        "--cap-drop ALL",
+        "--security-opt no-new-privileges",
+        "--pids-limit 256",
+        "--add-host host.docker.internal:host-gateway",
+        f"-v {tmp_path / 'egress'}:/egress:ro",
+        "-e EGRESS_ALLOW=github.com,pypi.org",
+        "-e EGRESS_MODEL_UPSTREAM=host.docker.internal:11434",
+        "--entrypoint python3 vibey-runner:test /egress/egress_gate.py",
+    ):
+        assert flag in gate, flag
+    # It starts on the default network and is then joined to the internal one.
+    assert "--network" not in gate
+    assert "docker network connect vibey-runner-net vibey-egress" in calls
+    # And it is removed when the supervisor stops.
+    assert calls.rstrip().splitlines()[-1].startswith("docker rm -f vibey-egress") or any(
+        line.startswith("docker rm -f vibey-egress") for line in calls.splitlines()[-4:]
+    )
+
+
+def test_an_existing_internal_network_is_reused_not_recreated(tmp_path):
+    (tmp_path / "fake").mkdir()
+    (tmp_path / "fake/net_rc").write_text("0", encoding="utf-8")
+    _, _, calls, _ = _gated(tmp_path)
+    assert not any(line.startswith("docker network create") for line in calls.splitlines())
+
+
+def test_a_gate_that_stopped_between_jobs_is_started_again(tmp_path):
+    (tmp_path / "fake").mkdir()
+    (tmp_path / "fake/gate_running").write_text("false", encoding="utf-8")
+    _, out, calls, _ = _gated(tmp_path)
+    assert "the egress gate stopped; starting it again" in out
+    assert len([c for c in _docker_lines(calls, "docker run") if " -d " in f" {c} "]) == 2
+
+
+@pytest.mark.parametrize(
+    ("fake", "expected"),
+    [
+        ({"gate_rc": "1"}, "could not start the egress gate container vibey-egress"),
+        ({"gate_logs": "Traceback: boom"}, "the egress gate did not come up: Traceback: boom"),
+    ],
+)
+def test_the_supervisor_refuses_to_run_jobs_without_a_working_gate(tmp_path, fake, expected):
+    (tmp_path / "fake").mkdir()
+    for name, value in fake.items():
+        (tmp_path / "fake" / name).write_text(value, encoding="utf-8")
+    code, out, calls, _ = _gated(tmp_path)
+    assert code == 1 and f"REFUSING TO START: {expected}" in out
+    assert not [c for c in _docker_lines(calls, "docker run") if "--rm" in c]  # no job ran
+
+
+def test_the_supervisor_refuses_a_gate_that_is_not_installed(tmp_path):
+    code, out, calls, _ = _gated(tmp_path, VIBEY_EGRESS_DIR=str(tmp_path / "nowhere"))
+    assert code == 1 and "the egress gate is not installed at" in out
+    assert "gh " not in calls  # refused before it asked anything
+
+
+def test_the_supervisor_names_the_missing_gate_setting(tmp_path):
+    code, out, _, _ = _gated(tmp_path, VIBEY_EGRESS_ALLOW="")
+    assert code == 1 and "VIBEY_EGRESS_ALLOW is not set while the egress gate is on" in out
+
+
+def test_with_the_gate_off_the_job_is_ungated_and_says_so(tmp_path):
+    gh_dir = _login(tmp_path)
+    (tmp_path / "fake").mkdir(exist_ok=True)
+    (tmp_path / "fake/token").write_text("REGTOKEN123\n", encoding="utf-8")
+    _, _, calls, _ = _supervise(tmp_path, gh_dir=gh_dir)
+    (job,) = _docker_lines(calls, "docker run")
+    assert "--add-host host.docker.internal:host-gateway" in job
+    assert "--network" not in job and "HTTPS_PROXY" not in job
+    assert not any(line.startswith("docker network") for line in calls.splitlines())
+
+
+def test_the_gate_settings_validate_and_default_to_the_hosts_a_job_needs():
+    cfg = RunnersConfig()
+    assert cfg.egress_gate is True and cfg.egress_name == "vibey-egress"
+    assert cfg.model_url_in_container == "http://vibey-egress:11434"
+    for host in ("github.com", "api.github.com", "*.githubusercontent.com", "pypi.org"):
+        assert host in cfg.egress_allow
+    # Nothing in the default list is a wildcard over a whole domain family or the host itself.
+    for pattern in cfg.egress_allow:
+        assert pattern.count("*") <= 1 and "docker" not in pattern and "localhost" not in pattern
+    ungated = RunnersConfig(egress_gate=False)
+    assert ungated.model_url_in_container == ungated.container_model_url
+    # TOML hands a list through; it is held as a tuple.
+    assert RunnersConfig(egress_allow=["a.example.com"]).egress_allow == ("a.example.com",)
+
+
+def test_a_network_that_exists_but_is_not_internal_is_refused(tmp_path):
+    # The isolation IS `--internal`; a network of the same name made by hand, or by an older
+    # install, must not be trusted because it exists.
+    (tmp_path / "fake").mkdir()
+    (tmp_path / "fake/net_rc").write_text("0", encoding="utf-8")
+    (tmp_path / "fake/net_internal").write_text("false", encoding="utf-8")
+    code, out, calls, _ = _gated(tmp_path)
+    assert code == 1 and "the docker network vibey-runner-net is not --internal" in out
+    assert not [c for c in _docker_lines(calls, "docker run") if "--rm" in c]  # no job ran
+
+
+def test_a_network_that_stops_being_internal_between_jobs_stops_the_jobs(tmp_path):
+    # Checked again before every job, not only when the gate starts: here the first check
+    # passes (the network is created) and the job-time check fails.
+    (tmp_path / "fake").mkdir()
+    (tmp_path / "fake/net_internal").write_text("false", encoding="utf-8")
+    code, out, calls, _ = _gated(tmp_path)
+    assert code == 1 and "is not --internal" in out
+    assert not [c for c in _docker_lines(calls, "docker run") if "--rm" in c]
+
+
+def test_a_gate_that_is_up_but_not_on_the_internal_network_is_started_again(tmp_path):
+    (tmp_path / "fake").mkdir()
+    (tmp_path / "fake/gate_networks").write_text("bridge", encoding="utf-8")
+    _, out, calls, _ = _gated(tmp_path)
+    assert "the egress gate stopped; starting it again" in out
+    assert len([c for c in _docker_lines(calls, "docker run") if " -d " in f" {c} "]) == 2
+
+
+def test_the_default_allowlist_has_no_name_an_attacker_can_register():
+    # Found by a security review of #1496: `productionresultssa*.blob.core.windows.net` also
+    # matched `productionresultssaz...`, a storage account name anyone can claim.
+    allow = RunnersConfig().egress_allow
+    assert not [p for p in allow if "*" in p and "blob" in p]
+    assert all(f"productionresultssa{n}.blob.core.windows.net" in allow for n in range(20))
+    # Every wildcard left is a whole first label over a domain that is not shared hosting.
+    for pattern in (p for p in allow if "*" in p):
+        assert pattern.startswith("*.") and pattern.count("*") == 1
+    assert RunnersConfig(egress_allow=["*.githubusercontent.com", "*.example.org"]).egress_allow

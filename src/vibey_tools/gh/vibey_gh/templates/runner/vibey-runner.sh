@@ -16,7 +16,11 @@
 #   - the sovereign job never runs for a fork PR (`trusted_only`, enforced in the workflow),
 #   - the review workflow is `pull_request_target`, so a PR cannot alter what reviews it,
 #   - the job never executes repository code -- the diff reaches the model as text,
-#   - the runner runs in a container, so a checkout never touches the host filesystem.
+#   - the runner runs in a container, so a checkout never touches the host filesystem,
+#   - and that container has NO route out except an egress gate (egress/egress_gate.py): the
+#     model server's four endpoints, and HTTPS to a short list of hosts. Without it
+#     `--add-host host-gateway` exposes every port on this machine to a job's shell, which
+#     is how an agent's shell reached the host's Postgres and RabbitMQ (2026-10-09).
 #
 # Every setting arrives from the LaunchAgent, which `vibey-gh runner install` renders from
 # the repository's `[runners]` table. None has a default here: a default in this file is a
@@ -34,7 +38,7 @@ refuse() {
 }
 
 for setting in VIBEY_REPO_URL VIBEY_RUNNER_LABEL VIBEY_RUNNER_IMAGE VIBEY_OLLAMA_URL \
-  VIBEY_CONTAINER_OLLAMA_URL VIBEY_REQUIRE_AC VIBEY_MAX_FAILURES; do
+  VIBEY_CONTAINER_OLLAMA_URL VIBEY_REQUIRE_AC VIBEY_MAX_FAILURES VIBEY_EGRESS_GATE; do
   [ -n "${!setting:-}" ] || refuse "$setting is not set -- this script is started by the \
 LaunchAgent 'vibey-gh runner install' renders, which sets it from [runners]"
 done
@@ -46,6 +50,22 @@ OLLAMA_URL="$VIBEY_OLLAMA_URL"
 CONTAINER_OLLAMA_URL="$VIBEY_CONTAINER_OLLAMA_URL"
 REQUIRE_AC="$VIBEY_REQUIRE_AC"
 MAX_FAILURES="$VIBEY_MAX_FAILURES"
+EGRESS_GATE="$VIBEY_EGRESS_GATE"
+EGRESS_NAME="" EGRESS_NETWORK="" EGRESS_ALLOW="" EGRESS_DIR="" MODEL_UPSTREAM=""
+if [ "$EGRESS_GATE" = "1" ]; then
+  for setting in VIBEY_EGRESS_NAME VIBEY_EGRESS_NETWORK VIBEY_EGRESS_ALLOW VIBEY_EGRESS_DIR \
+    VIBEY_MODEL_UPSTREAM; do
+    [ -n "${!setting:-}" ] || refuse "$setting is not set while the egress gate is on -- \
+'vibey-gh runner install' sets it from [runners]"
+  done
+  EGRESS_NAME="$VIBEY_EGRESS_NAME"
+  EGRESS_NETWORK="$VIBEY_EGRESS_NETWORK"
+  EGRESS_ALLOW="$VIBEY_EGRESS_ALLOW"
+  EGRESS_DIR="$VIBEY_EGRESS_DIR"
+  MODEL_UPSTREAM="$VIBEY_MODEL_UPSTREAM"
+  [ -f "$EGRESS_DIR/egress_gate.py" ] || refuse "the egress gate is not installed at \
+$EGRESS_DIR -- run 'vibey-gh runner install'"
+fi
 GH_HOSTNAME="${REPO_URL#https://}"
 GH_HOSTNAME="${GH_HOSTNAME%%/*}"
 REPO_SLUG="${REPO_URL#https://"$GH_HOSTNAME"/}"
@@ -154,6 +174,64 @@ runner is a container)"
 docker image inspect "$RUNNER_IMAGE" > /dev/null 2>&1 || refuse "the image $RUNNER_IMAGE is \
 not built -- run the 'docker build' command 'vibey-gh runner install' printed"
 
+# The egress gate (see the header): a container on the default network AND on an internal one
+# with no route out. The job container joins only the internal one, so the gate is the only
+# thing it can reach. Started here, once per supervisor, and checked before every job.
+# Running AND on the internal network: a gate that is up but not joined gives a job nothing to
+# reach, and one on the wrong network would be a gate in name only.
+gate_running() {
+  local state
+  state=$(docker inspect -f '{{.State.Running}} {{range $k, $v := .NetworkSettings.Networks}}{{$k}} {{end}}' \
+    "$EGRESS_NAME" 2> /dev/null) || return 1
+  state=" $state "
+  # Two separate tests: one pattern cannot match " true " and then " <network> ", because the
+  # space between them is a single character.
+  case "$state" in " true "*) ;; *) return 1 ;; esac
+  case "$state" in *" $EGRESS_NETWORK "*) return 0 ;; esac
+  return 1
+}
+# `--internal` is the whole isolation, so it is VERIFIED, never assumed: a network of this name
+# that already exists and is not internal (made by hand, or by an older install) would give
+# the job a route to the host and the internet.
+network_internal() {
+  [ "$(docker network inspect -f '{{.Internal}}' "$EGRESS_NETWORK" 2> /dev/null)" = "true" ]
+}
+require_internal_network() {
+  network_internal || refuse "the docker network $EGRESS_NETWORK is not --internal, so a job on \
+it would have a route out. Remove it ('docker network rm $EGRESS_NETWORK', with no container on \
+it) and the supervisor will create it correctly, or name another in [runners] egress_network"
+}
+start_gate() {
+  [ "$EGRESS_GATE" = "1" ] || return 0
+  docker network inspect "$EGRESS_NETWORK" > /dev/null 2>&1 \
+    || docker network create --internal --label "vibey-egress=${RUNNER_LABEL}" \
+      "$EGRESS_NETWORK" > /dev/null 2>&1 \
+    || refuse "could not create the internal docker network $EGRESS_NETWORK"
+  require_internal_network
+  docker rm -f "$EGRESS_NAME" > /dev/null 2>&1 || true
+  # The gate holds no credential and writes nothing: a read-only root, no capabilities, its
+  # script mounted read-only. It reaches the host only to forward the model server's port.
+  docker run -d --name "$EGRESS_NAME" --label "vibey-egress=${RUNNER_LABEL}" \
+    --restart on-failure:5 --read-only --cap-drop ALL --security-opt no-new-privileges \
+    --pids-limit 256 --memory 256m \
+    --add-host host.docker.internal:host-gateway \
+    -v "${EGRESS_DIR}:/egress:ro" \
+    -e PYTHONDONTWRITEBYTECODE=1 -e EGRESS_ALLOW="$EGRESS_ALLOW" \
+    -e EGRESS_MODEL_UPSTREAM="$MODEL_UPSTREAM" \
+    --entrypoint python3 "$RUNNER_IMAGE" /egress/egress_gate.py > /dev/null 2>&1 \
+    || refuse "could not start the egress gate container $EGRESS_NAME"
+  docker network connect "$EGRESS_NETWORK" "$EGRESS_NAME" > /dev/null 2>&1 \
+    || refuse "could not join the egress gate to $EGRESS_NETWORK"
+  local _
+  # 30 seconds is plenty for a Python process to bind two ports; VIBEY_EGRESS_WAIT is the
+  # tests' knob, not a setting (nothing in [runners] sets it).
+  for _ in $(seq 1 "${VIBEY_EGRESS_WAIT:-30}"); do
+    docker logs "$EGRESS_NAME" 2>&1 | grep -q 'egress gate up' && { log "egress gate up on $EGRESS_NETWORK"; return 0; }
+    sleep 1
+  done
+  refuse "the egress gate did not come up: $(docker logs --tail 5 "$EGRESS_NAME" 2>&1 | tr '\n' ' ')"
+}
+
 # Every gh call names the host: `gh api` otherwise talks to github.com, and a GitHub
 # Enterprise runner would mint and reap against the wrong forge.
 mint_token() {
@@ -203,6 +281,7 @@ on_signal() {
 cleanup() {
   log "supervisor stopping; sleep assertions released"
   reap_offline
+  if [ "$EGRESS_GATE" = "1" ]; then docker rm -f "$EGRESS_NAME" > /dev/null 2>&1 || true; fi
 }
 trap cleanup EXIT
 trap 'on_signal 130' INT
@@ -221,6 +300,7 @@ if [ -n "$stray" ]; then
 fi
 
 log "supervisor starting: label=${RUNNER_LABEL} repo=${REPO_URL} gh-config=${GH_CONFIG_DIR}"
+start_gate
 log "sleep assertions held -- verify with: pmset -g assertions | grep -i caffeinate"
 
 failures=0
@@ -233,15 +313,29 @@ ${GH_CONFIG_DIR} -- its token needs Administration: Read and write on that repos
   fi
 
   reap_offline
+  if [ "$EGRESS_GATE" = "1" ]; then
+    gate_running || { log "the egress gate stopped; starting it again"; start_gate; }
+    # Re-checked before EVERY job: the network could have been replaced since the last one.
+    require_internal_network
+    # The internal network has no route out: the job reaches only the gate, by name, for HTTPS
+    # to the declared hosts (the proxy) and for the model server (its own port). NO_PROXY keeps
+    # the model URL off the proxy, which would refuse a plain GET.
+    proxy="http://${EGRESS_NAME}:3128"
+    net_args=(--network "$EGRESS_NETWORK" --security-opt no-new-privileges
+      -e "HTTPS_PROXY=$proxy" -e "https_proxy=$proxy" -e "HTTP_PROXY=$proxy" -e "http_proxy=$proxy"
+      -e "NO_PROXY=${EGRESS_NAME},localhost,127.0.0.1" -e "no_proxy=${EGRESS_NAME},localhost,127.0.0.1")
+  else
+    # UNGATED: every port on this machine is reachable from the job. Only for a runner whose
+    # host holds nothing a job's shell could read ([runners] egress_gate = false).
+    net_args=(--add-host host.docker.internal:host-gateway)
+  fi
   log "registering an ephemeral runner (one job, then exit)"
-  # --rm and --ephemeral together are what make this single-use. --add-host lets the
-  # container reach Ollama on the host; that port is the one hole through the isolation,
-  # so keep Ollama bound to loopback and treat it as the trust boundary. The registration
-  # token goes over the environment (`-e RUNNER_TOKEN` with no value copies it from this
-  # process), never the argv, where any local user's `ps` could read it.
+  # --rm and --ephemeral together are what make this single-use. The registration token goes
+  # over the environment (`-e RUNNER_TOKEN` with no value copies it from this process),
+  # never the argv, where any local user's `ps` could read it.
   if RUNNER_TOKEN="$token" run_child docker run --rm \
     --label "vibey-runner-label=${RUNNER_LABEL}" \
-    --add-host host.docker.internal:host-gateway \
+    "${net_args[@]}" \
     -e RUNNER_REPOSITORY_URL="$REPO_URL" \
     -e RUNNER_TOKEN \
     -e RUNNER_LABELS="$RUNNER_LABEL" \

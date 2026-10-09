@@ -981,6 +981,18 @@ class ContinuationPrompts:
                 f"[run.sovereign] runs_on must be ['self-hosted', {label!r}], the runner "
                 "[pr_automation.fallback] runner_label declares"
             )
+        # The agent has a shell and reads untrusted text: its container must have no route to the
+        # host's other services (2026-10-09: Postgres and RabbitMQ were reachable). So the host
+        # path exists only while the egress gate does, and its model URL IS the gate's.
+        runners = config.get("runners", {})
+        if runners.get("egress_gate", True) is not True:
+            out.append(
+                "[run.sovereign] needs [runners] egress_gate = true: an ungated container "
+                "reaches every port on the host"
+            )
+        gate = f"http://{runners.get('egress_name', 'vibey-egress')}:11434/v1"
+        if host.get("base_url") != gate:
+            out.append(f"[run.sovereign] base_url must be the egress gate's, {gate!r}")
         ref = str(fallback.get("heartbeat_ref", "refs/vibey-gh/sovereign-heartbeat"))
         if host.get("heartbeat_ref") != ref:
             out.append(f"[run.sovereign] heartbeat_ref must be {ref!r}, the one the host writes")

@@ -935,6 +935,36 @@ _RUNNER_LABEL_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]*$")
 _OLLAMA_MODEL_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._/-]*(:[A-Za-z0-9._-]+)?$")
 _RUNNER_PREFIX_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9.-]*$")
 _RUNNER_VERSION_RE = re.compile(r"^\d+\.\d+\.\d+$")
+_EGRESS_HOST_RE = re.compile(r"^[a-z0-9*][a-z0-9*.-]*$")
+# What a job container may reach through the egress gate, on port 443 (ADR-0083, 2026-10-09):
+# GitHub and the stores it serves artifacts and releases from, and PyPI. Nothing here is a host
+# the agent could write to without a credential it does not hold.
+# Domains whose subdomains are handed out to anyone, so a wildcard over them allows hosts an
+# attacker controls. Not a public-suffix list: a guard against the obvious overbroad entry,
+# not against every one (a country-code second level like `co.uk` is caught by shape).
+_SHARED_HOSTING = frozenset(
+    {
+        "windows.net", "azurewebsites.net", "azureedge.net", "amazonaws.com", "cloudfront.net",
+        "appspot.com", "googleusercontent.com", "web.app", "firebaseapp.com", "github.io",
+        "gitlab.io", "herokuapp.com", "vercel.app", "netlify.app", "pages.dev", "workers.dev",
+        "onrender.com", "fly.dev", "glitch.me", "repl.co", "replit.app", "ngrok.io",
+        "ngrok-free.app", "trycloudflare.com", "blogspot.com", "wordpress.com", "s3.amazonaws.com",
+    }
+)  # fmt: skip
+_EGRESS_ALLOW = (
+    "github.com",
+    "api.github.com",
+    "codeload.github.com",
+    "*.githubusercontent.com",
+    "*.pkg.github.com",
+    "ghcr.io",
+    # GitHub's own artifact storage accounts, named exactly: a wildcard here would also match
+    # `productionresultssaz.blob.core.windows.net`, an account name anyone can register, and
+    # so be a place for a job's shell to send data.
+    *(f"productionresultssa{n}.blob.core.windows.net" for n in range(20)),
+    "pypi.org",
+    "files.pythonhosted.org",
+)
 
 
 @dataclass(frozen=True)
@@ -970,6 +1000,19 @@ class RunnersConfig:
     # The model endpoint as the CONTAINER sees it. The host side is
     # `[pr_automation.fallback] base_url`; only the name of the host differs.
     container_model_url: str = "http://host.docker.internal:11434"
+    # The egress gate (ADR-0083, 2026-10-09). On, the job container sits on a Docker network
+    # with no route out, and the only things it can reach are a gate container that forwards
+    # the model server's four endpoints and `CONNECT`s to `egress_allow` on 443. Off, it
+    # reaches every port on the host through `host-gateway` -- which is how an agent's shell
+    # reached the host's Postgres and RabbitMQ, because the agent's `allow_network=False` is an
+    # environment variable, not a boundary. Turn it off only for a runner that holds nothing.
+    egress_gate: bool = True
+    # The gate's container name, which is also its DNS name on the internal network and the
+    # host the job's proxy and model URL point at; and the network's name.
+    egress_name: str = "vibey-egress"
+    egress_network: str = "vibey-runner-net"
+    # Host patterns the gate will tunnel to on 443 (`fnmatch`; `*` only in the first label).
+    egress_allow: tuple[str, ...] = _EGRESS_ALLOW
     # Refuse to hold a laptop awake on battery just to idle-poll for a job.
     require_ac: bool = True
     # launchd's ThrottleInterval: every refusal resolves on a human timescale.
@@ -1003,6 +1046,37 @@ class RunnersConfig:
     heartbeat_clone_dir: str = ""
     # Where the systemd user units are written.
     systemd_user_dir: str = "~/.config/systemd/user"
+
+    @staticmethod
+    def _egress_problem(pattern: str) -> str:
+        """Why an allowlist entry is refused, or "". An entry is an exact host name, or `*.`
+        and a domain: the wildcard is the WHOLE first label (never `prefix*`, which matches a
+        name anyone can register), and the domain must not be a shared-hosting one or a
+        country-code second level, where the wildcard would allow hosts an attacker controls."""
+        if _EGRESS_HOST_RE.fullmatch(pattern) is None:
+            return "must be lower-case letters, digits, dots, dashes and one leading `*.`"
+        labels = pattern.split(".")
+        if len(labels) < 2 or "" in labels:
+            return "must be a host name with at least two labels"
+        if any("*" in label for label in labels[1:]) or ("*" in labels[0] and labels[0] != "*"):
+            return "a wildcard may only be a whole first label (`*.example.com`)"
+        if labels[0] == "*":
+            base = labels[1:]
+            domain = ".".join(base)
+            if len(base) < 2:
+                return "a wildcard over a whole top-level domain allows every host under it"
+            if len(base[-1]) == 2 and len(base[-2]) <= 3:
+                return "a wildcard over a country-code second level (`co.uk`) allows every host"
+            if any(domain == shared or domain.endswith("." + shared) for shared in _SHARED_HOSTING):
+                return f"a wildcard over {domain} allows hosts anyone can register"
+        return ""
+
+    @property
+    def model_url_in_container(self) -> str:
+        """The model endpoint as the job container sees it: the gate's forwarder while the
+        gate is on (the host's own address is unreachable from the internal network), else
+        `container_model_url`. One answer, so the URL is never declared twice (10.e)."""
+        return f"http://{self.egress_name}:11434" if self.egress_gate else self.container_model_url
 
     def __post_init__(self) -> None:
         if self.repository and not _RUNNER_SLUG_RE.fullmatch(self.repository):
@@ -1050,6 +1124,24 @@ class RunnersConfig:
                 raise ValueError(f"runners.{name} must not be empty")
         if not _RUNNER_VERSION_RE.fullmatch(self.runner_version):
             raise ValueError(f"runners.runner_version must be X.Y.Z: {self.runner_version!r}")
+        if type(self.egress_gate) is not bool:
+            raise ValueError("runners.egress_gate must be true or false")
+        for name in ("egress_name", "egress_network"):
+            if not _RUNNER_PREFIX_RE.fullmatch(getattr(self, name)):
+                raise ValueError(
+                    f"runners.{name} must be letters, digits, dots and dashes:"
+                    f" {getattr(self, name)!r}"
+                )
+        # TOML hands a list through; a frozen dataclass is rebuilt, not edited.
+        object.__setattr__(self, "egress_allow", tuple(self.egress_allow))
+        if self.egress_gate and not self.egress_allow:
+            raise ValueError(
+                "runners.egress_allow must name at least one host while the gate is on"
+            )
+        for pattern in self.egress_allow:
+            problem = self._egress_problem(str(pattern))
+            if problem:
+                raise ValueError(f"runners.egress_allow {pattern!r}: {problem}")
         if not self.container_model_url.startswith(("http://", "https://")):
             url = self.container_model_url
             raise ValueError(f"runners.container_model_url must be an http(s) URL: {url!r}")

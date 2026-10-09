@@ -42,6 +42,18 @@
     <string>__MODEL_URL__</string>
     <key>VIBEY_CONTAINER_OLLAMA_URL</key>
     <string>__CONTAINER_MODEL_URL__</string>
+    <key>VIBEY_EGRESS_GATE</key>
+    <string>__EGRESS_GATE__</string>
+    <key>VIBEY_EGRESS_NAME</key>
+    <string>__EGRESS_NAME__</string>
+    <key>VIBEY_EGRESS_NETWORK</key>
+    <string>__EGRESS_NETWORK__</string>
+    <key>VIBEY_EGRESS_ALLOW</key>
+    <string>__EGRESS_ALLOW__</string>
+    <key>VIBEY_EGRESS_DIR</key>
+    <string>__EGRESS_DIR__</string>
+    <key>VIBEY_MODEL_UPSTREAM</key>
+    <string>__MODEL_UPSTREAM__</string>
     <key>VIBEY_REQUIRE_AC</key>
     <string>__REQUIRE_AC__</string>
     <key>VIBEY_MAX_FAILURES</key>

@@ -1250,7 +1250,7 @@ SOVEREIGN = """
 prompts = ["resume"]
 runs_on = ["self-hosted", "vibey-local-vibey"]
 model = "gpt-oss:20b"
-base_url = "http://host.docker.internal:11434/v1"
+base_url = "http://vibey-egress:11434/v1"
 max_turns = 40
 timeout_minutes = 120
 heartbeat_ref = "refs/vibey-gh/sovereign-heartbeat"
@@ -1276,7 +1276,10 @@ def host_world(tmp_path: Path, label: str = "vibey-local-vibey") -> Path:
     marker = "[authority]"
     assert marker in text
     toml.write_text(text.replace(marker, SOVEREIGN + "\n" + marker, 1))
-    (root / ".vibey-gh.toml").write_text(f'[pr_automation.fallback]\nrunner_label = "{label}"\n')
+    (root / ".vibey-gh.toml").write_text(
+        f'[pr_automation.fallback]\nrunner_label = "{label}"\n'
+        '[runners]\negress_gate = true\negress_name = "vibey-egress"\n'
+    )
     (root / ".github/workflows/continuation-prompts.yml").write_text(HOST_LANE)
     return root
 
@@ -1289,7 +1292,7 @@ def test_a_prompt_for_the_host_machine_runs_there_and_is_skipped_when_it_is_down
     assert up["resume"]["runs_on"] == ["self-hosted", "vibey-local-vibey"]
     assert up["resume"]["runs_on_json"] == '["self-hosted", "vibey-local-vibey"]'
     assert up["resume"]["sovereign"] is True
-    assert up["resume"]["base_url"] == "http://host.docker.internal:11434/v1"
+    assert up["resume"]["base_url"] == "http://vibey-egress:11434/v1"
     assert (up["resume"]["model"], up["resume"]["models"]) == ("gpt-oss:20b", "gpt-oss:20b")
     assert (up["resume"]["max_turns"], up["resume"]["timeout_minutes"]) == (40, 120)
     assert up["rebuild"]["sovereign"] is False and up["rebuild"]["runs_on"] == "ubuntu-24.04-arm"
@@ -1429,3 +1432,29 @@ def test_the_real_lane_runs_the_host_prompt_on_gptossloop_and_skips_when_it_is_d
     config = tomllib.loads((cp.REPO / ".vibey-gh.toml").read_text())
     label = config["pr_automation"]["fallback"]["runner_label"]
     assert cp.Settings.load(cp.REPO).run["sovereign"]["runs_on"] == ["self-hosted", label]
+
+
+def test_the_host_path_exists_only_while_the_egress_gate_does(tmp_path: Path) -> None:
+    # 2026-10-09: from the runner container the host's Postgres (5432) and RabbitMQ (5672,
+    # 15672) accepted connections, and the agent's shell had full egress.
+    root = host_world(tmp_path / "ungated")
+    config = root / ".vibey-gh.toml"
+    config.write_text(config.read_text().replace("egress_gate = true", "egress_gate = false"))
+    assert any("needs [runners] egress_gate = true" in p for p in prompts(root).problems())
+    root = host_world(tmp_path / "wrong-url")
+    toml = root / "scripts/continuation_prompts.toml"
+    direct = "http://host.docker.internal:11434/v1"
+    toml.write_text(toml.read_text().replace("http://vibey-egress:11434/v1", direct))
+    assert any("base_url must be the egress gate's" in p for p in prompts(root).problems())
+    renamed = host_world(tmp_path / "renamed")
+    config = renamed / ".vibey-gh.toml"
+    config.write_text(config.read_text().replace('"vibey-egress"', '"gate"'))
+    assert any("'http://gate:11434/v1'" in p for p in prompts(renamed).problems())
+
+
+def test_the_real_host_model_url_is_the_gates() -> None:
+    runners = tomllib.loads((cp.REPO / ".vibey-gh.toml").read_text())["runners"]
+    assert runners["egress_gate"] is True
+    assert cp.Settings.load(cp.REPO).run["sovereign"]["base_url"] == (
+        f"http://{runners['egress_name']}:11434/v1"
+    )
