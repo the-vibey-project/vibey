@@ -264,3 +264,37 @@ The prompt asked and nothing checked, so two layers now do.
 
 Neither layer makes a small model good. They make a run that did not look at the code unable to
 land a change to it, and a run that did start with what it would otherwise have had to find.
+
+## Amendment, 2026-10-09 (the operator's decision): the backlog prompt runs on the operator's machine
+
+Four hours of watching the backlog lane on a hosted runner settled it: qwen3:8b on four vCPUs
+called tools that do not exist, edited files that do not exist, and wrote a ledger of invented
+records, and every guard held while nothing useful landed. No free GPU exists to fix that on
+GitHub: GPU runners are larger runners, "always charged for, even when used by public
+repositories" (about $0.05 a minute for the 4-core Linux one), and the free inference services
+checked (GitHub Models, Cloudflare Workers AI, Hugging Face ZeroGPU, Kaggle, Colab, the Groq and
+Cerebras free tiers) are token- or minute-capped, interactive-only, or not sovereign. The
+operator's own machine already serves gpt-oss:20b and already registers a runner for it.
+
+- **`[run.sovereign]` in `scripts/continuation_prompts.toml`** is now the one declared exception
+  to "hosted CPU only". The prompts it names (`backlog`) run on `[self-hosted,
+  vibey-local-vibey]`, through gptossloop (`GPTOSSLOOP_BASE_URL`, `GPTOSSLOOP_MODEL`), on
+  gpt-oss:20b at the host's Ollama, with 40 turns and a 120-minute ceiling. `check` holds its
+  runner label and heartbeat to `.vibey-gh.toml`, so the two cannot drift.
+- **An offline host skips the job; it never queues it and never falls back.** Before the matrix
+  exists, a hosted `refresh` step reads the machine's heartbeat ref
+  (`refs/vibey-gh/sovereign-heartbeat`, at most 15 minutes old). Stale or unreadable, the prompt
+  is left out of the matrix, the `run` and `report` jobs are skipped on an empty matrix, and the
+  summary says why. A job queued for a runner that is not there would wait a day holding the
+  lane's concurrency group.
+- **What the agent can reach.** The runner is one Docker container per job: non-root, no sudo,
+  no host mount, no secret, a read-only token. It can still reach the host's loopback services
+  through `host.docker.internal` (the Ollama server is one), and that is the cost of this
+  decision; the hosted VM it replaces gave the agent sudo and a disposable machine, but nothing
+  of the operator's. The workflow is dispatch- and schedule-only, so no fork's code or pull
+  request ever reaches the machine, and the backlog pick takes issues only from trusted authors.
+- **What a heartbeat does not promise.** It says the machine was up within 15 minutes, not that
+  Ollama is serving the model: the job checks that first and fails loudly. And a machine that
+  goes down in the minutes between the heartbeat and the job leaves the job queued.
+- **Reversible by one key.** Remove `[run.sovereign]` and the prompt runs hosted again.
+

@@ -117,18 +117,34 @@ jobs:
           set -euo pipefail
           python scripts/continuation_prompts.py render
           python scripts/continuation_prompts.py check
+      # Is the operator's own machine up? Its heartbeat ref is read HERE, on a hosted runner,
+      # before the matrix exists: a job queued for an offline self-hosted runner waits a day
+      # and holds the lane's concurrency group, so a prompt for that machine is not scheduled
+      # at all while the heartbeat is stale or unreadable (`[run.sovereign]`).
+      - name: Is the host machine up
+        id: host
+        run: |
+          set -euo pipefail
+          python scripts/continuation_prompts.py heartbeat | tee -a "$GITHUB_OUTPUT"
       - name: The prompts, for the run
         id: matrix
         env:
           # Through env:, never interpolated into the script; split into ids on purpose, and
           # every id must name a declared prompt or `matrix` refuses the run.
           PROMPTS: ${{ inputs.prompts }}
+          HOST_UP: ${{ steps.host.outputs.host_up }}
+          HOST_AGE: ${{ steps.host.outputs.host_age_minutes }}
         run: |
           set -euo pipefail
+          flag=--host-down
+          [ "$HOST_UP" = "true" ] && flag=--host-up
           # Assigned first: inside `echo "$(...)"` a refused id would not fail the step.
           # shellcheck disable=SC2086
-          matrix=$(python scripts/continuation_prompts.py matrix $PROMPTS)
+          matrix=$(python scripts/continuation_prompts.py matrix $flag $PROMPTS)
           echo "matrix=$matrix" >> "$GITHUB_OUTPUT"
+          if [ "$HOST_UP" != "true" ]; then
+            echo "The host machine is offline (heartbeat age: ${HOST_AGE} minutes): the prompts that run on it were skipped, not queued." >> "$GITHUB_STEP_SUMMARY"
+          fi
       - name: Open a pull request when the pages moved
         if: ${{ !inputs.prompts }}
         # The push carries the automation token's identity, so the pull request's own checks
@@ -164,18 +180,21 @@ jobs:
   run:
     name: Run the prompt — ${{ matrix.prompt.title }} (${{ matrix.prompt.mode }})
     needs: refresh
+    # An empty matrix (every prompt was for a host that is down) is a skipped job, not an error.
+    if: needs.refresh.outputs.matrix != '[]'
     strategy:
       fail-fast: false
       matrix:
         prompt: ${{ fromJSON(needs.refresh.outputs.matrix) }}
-    runs-on: ${{ matrix.prompt.runs_on }}
+    # A hosted runner, or for a `[run.sovereign]` prompt the operator's own machine.
+    runs-on: ${{ fromJSON(matrix.prompt.runs_on_json) }}
     # 360 is the most a GitHub-hosted job may run. The agent's own budget (`timeout_minutes`
     # in scripts/continuation_prompts.toml, 350) leaves ten minutes for the model pull, the
     # evidence and the hand-over, which must finish inside the job or the log is lost.
     timeout-minutes: 360
-    # The agent reads untrusted text (issue titles and bodies) and has sudo on this VM, so
-    # this job holds no write permission and no secret: it only hands over its log and its
-    # patch. A fresh runner, where no agent ran, acts on them (`report`).
+    # The agent reads untrusted text (issue titles and bodies) and has a shell (sudo on a hosted
+    # VM; on the host machine a non-root, no-sudo container made for this one job), so this job
+    # holds no write permission and no secret: it only hands over its log and its patch. A fresh runner, where no agent ran, acts on them (`report`).
     permissions:
       contents: read
       actions: read
@@ -194,7 +213,23 @@ jobs:
           python-version: "3.12"
       - name: Install vibey (the runner and its tools)
         run: python -m pip install --quiet -e . -e src/vibey_tools/gh
+      # The host machine already serves the model: check it answers and has the model, and
+      # say so loudly if not -- the heartbeat says the machine is up, not that Ollama is.
+      - name: Reach the host machine's model
+        if: ${{ matrix.prompt.sovereign }}
+        id: hostmodel
+        env:
+          HOST_URL: ${{ matrix.prompt.base_url }}
+          WANT: ${{ matrix.prompt.model }}
+        run: |
+          set -euo pipefail
+          api="${HOST_URL%/v1}"
+          curl -sf --max-time 20 "$api/api/version" > /dev/null || { echo "::error::the host machine's model server did not answer at $api"; exit 1; }
+          curl -sf --max-time 20 "$api/api/tags" | python3 -c "import json,os,sys; names=[m['name'] for m in json.load(sys.stdin)['models']]; want=os.environ['WANT']; sys.exit(0 if want in names else 'the host machine does not serve ' + want + '; it has: ' + ', '.join(names))"
+          echo "model=$WANT" >> "$GITHUB_OUTPUT"
+          echo "using $WANT on the host machine"
       - name: Start an open-weights model, with every declared fallback
+        if: ${{ !matrix.prompt.sovereign }}
         id: model
         env:
           MODELS: ${{ matrix.prompt.models }}
@@ -227,8 +262,11 @@ jobs:
       - name: Run the prompt with gptossloop
         id: agent
         env:
-          PULLED: ${{ steps.model.outputs.model }}
+          PULLED: ${{ steps.model.outputs.model || steps.hostmodel.outputs.model }}
           MODELS: ${{ matrix.prompt.models }}
+          # Set only for a prompt that runs on the host machine, where the server is the host's
+          # (empty means: this runner starts its own, as every hosted run does).
+          HOST_URL: ${{ matrix.prompt.base_url }}
           GH_TOKEN: ${{ github.token }}
         run: |
           set -uo pipefail
@@ -245,13 +283,18 @@ jobs:
           code=0
           tried=""
           : > "$RUNNER_TEMP/agent.log"
+          # gptossloop's own endpoint setting; unset on a hosted runner, where it uses its default
+          # (this runner's own server). `${VAR:+NAME=x} cmd` would not work: an assignment that
+          # comes out of an expansion is run as a command.
+          if [ -n "$HOST_URL" ]; then export GPTOSSLOOP_BASE_URL="$HOST_URL"; fi
           for m in $PULLED $MODELS; do
             case " $tried " in *" $m "*) continue ;; esac
             tried="$tried $m"
             # A server that dropped the connection is usually dead, and `ollama pull` against a
             # dead server fails at once: bring it back first (2026-10-09, the first fallback
-            # never reached its model because the pull came before the restart).
-            if ! curl -sf http://127.0.0.1:11434/api/version > /dev/null; then
+            # never reached its model because the pull came before the restart). Not on the host
+            # machine: its server is not this runner's to start, pull to, or restart.
+            if [ -z "$HOST_URL" ] && ! curl -sf http://127.0.0.1:11434/api/version > /dev/null; then
               echo "::group::the model server is down; its last words"
               free -m || true
               tail -n 40 "$RUNNER_TEMP/ollama.log" 2>/dev/null || true
@@ -259,7 +302,7 @@ jobs:
               (ollama serve >> "$RUNNER_TEMP/ollama.log" 2>&1 &)
               for _ in $(seq 1 30); do curl -sf http://127.0.0.1:11434/api/version > /dev/null && break; sleep 2; done
             fi
-            if [ "$m" != "$PULLED" ] && ! ollama pull "$m"; then
+            if [ -z "$HOST_URL" ] && [ "$m" != "$PULLED" ] && ! ollama pull "$m"; then
               echo "::warning::could not pull $m; trying the next declared model"
               continue
             fi
@@ -319,7 +362,7 @@ jobs:
   report:
     name: Report — ${{ matrix.prompt.title }} (${{ matrix.prompt.mode }})
     needs: [refresh, run]
-    if: always() && needs.refresh.result == 'success'
+    if: always() && needs.refresh.result == 'success' && needs.refresh.outputs.matrix != '[]'
     strategy:
       fail-fast: false
       matrix:

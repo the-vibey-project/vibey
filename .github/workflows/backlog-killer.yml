@@ -1,7 +1,8 @@
 # Made with ❤️ by [Vibey](https://the-vibey-project.github.io/vibey/), Developed by [Adam Matthew Steinberger](https://vibewithadam.matthewsteinberger.com/) ([@adammatthewsteinberger](https://github.com/adammatthewsteinberger/)).
 name: Backlog killer
 
-# Every 60 minutes, on GitHub-hosted CPU runners only (ADR-0083): pick one open issue an
+# Every 60 minutes, on GitHub-hosted CPU runners (ADR-0083); the agent it dispatches runs on the
+# operator's own machine while that is up, and is skipped while it is not (`[run.sovereign]`): pick one open issue an
 # agent can work now (`scripts/backlog_killer.py pick`, declared in scripts/daily_lanes.toml
 # [backlog_killer]) and run the `backlog` continuation prompt on it, which lands the issue's
 # smallest shippable, tested slice as at most one draft pull request through the continuation

@@ -12,6 +12,7 @@ pytest collects `test_*` functions, and the rule is about production code.
 from __future__ import annotations
 
 import json
+import tomllib
 from pathlib import Path
 from typing import Any
 
@@ -300,6 +301,9 @@ def test_the_matrix_carries_the_declared_run_settings(tmp_path: Path) -> None:
         "mode": "act",
         "title": "Resume",
         "runs_on": "ubuntu-24.04-arm",
+        "runs_on_json": '"ubuntu-24.04-arm"',
+        "sovereign": False,
+        "base_url": "",
         "model": "gpt-oss:20b",
         "models": "gpt-oss:20b",
         "max_turns": 7,
@@ -1239,3 +1243,189 @@ def test_an_agent_may_not_add_a_file_that_shadows_the_test_runner() -> None:
     assert not cp.PatchGuard(
         settings.protected, reader=FakePaths([("A", "tests/test_pytest_x.py")])
     ).refused(Path("p"))
+
+
+SOVEREIGN = """
+[run.sovereign]
+prompts = ["resume"]
+runs_on = ["self-hosted", "vibey-local-vibey"]
+model = "gpt-oss:20b"
+base_url = "http://host.docker.internal:11434/v1"
+max_turns = 40
+timeout_minutes = 120
+heartbeat_ref = "refs/vibey-gh/sovereign-heartbeat"
+heartbeat_max_age_minutes = 15
+"""
+HOST_LANE = (
+    "name: Lane\non:\n  schedule:\n    - cron: '0 3 * * 1'\n  workflow_dispatch:\njobs:\n"
+    "  refresh:\n    runs-on: ubuntu-latest\n    steps:\n"
+    "      - run: python scripts/continuation_prompts.py matrix --host-up --host-down\n"
+    "  run:\n    needs: refresh\n    if: needs.refresh.outputs.matrix != '[]'\n"
+    "    runs-on: ${{ fromJSON(matrix.prompt.runs_on_json) }}\n    steps:\n      - run: x\n"
+    "  report:\n    needs: [refresh, run]\n"
+    "    if: always() && needs.refresh.outputs.matrix != '[]'\n    runs-on: ubuntu-latest\n"
+    "    steps:\n      - run: x\n"
+)
+
+
+def host_world(tmp_path: Path, label: str = "vibey-local-vibey") -> Path:
+    tmp_path.mkdir(parents=True, exist_ok=True)
+    root = world(tmp_path)
+    toml = root / "scripts/continuation_prompts.toml"
+    text = toml.read_text()
+    marker = "[authority]"
+    assert marker in text
+    toml.write_text(text.replace(marker, SOVEREIGN + "\n" + marker, 1))
+    (root / ".vibey-gh.toml").write_text(f'[pr_automation.fallback]\nrunner_label = "{label}"\n')
+    (root / ".github/workflows/continuation-prompts.yml").write_text(HOST_LANE)
+    return root
+
+
+def test_a_prompt_for_the_host_machine_runs_there_and_is_skipped_when_it_is_down(
+    tmp_path: Path,
+) -> None:
+    root = host_world(tmp_path)
+    up = {m["id"]: m for m in prompts(root).matrix(host_up=True)}
+    assert up["resume"]["runs_on"] == ["self-hosted", "vibey-local-vibey"]
+    assert up["resume"]["runs_on_json"] == '["self-hosted", "vibey-local-vibey"]'
+    assert up["resume"]["sovereign"] is True
+    assert up["resume"]["base_url"] == "http://host.docker.internal:11434/v1"
+    assert (up["resume"]["model"], up["resume"]["models"]) == ("gpt-oss:20b", "gpt-oss:20b")
+    assert (up["resume"]["max_turns"], up["resume"]["timeout_minutes"]) == (40, 120)
+    assert up["rebuild"]["sovereign"] is False and up["rebuild"]["runs_on"] == "ubuntu-24.04-arm"
+    # Down: it is LEFT OUT, never moved to a hosted runner.
+    down = prompts(root).matrix(host_up=False)
+    assert [m["id"] for m in down] == ["rebuild"]
+
+
+def test_the_cli_builds_the_matrix_for_a_host_that_is_up_or_down(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    cli = cp.ContinuationCli(host_world(tmp_path))
+    assert cli.run(["matrix", "--host-down"]) == 0
+    assert [m["id"] for m in json.loads(capsys.readouterr().out)] == ["rebuild"]
+    assert cli.run(["matrix", "--host-up"]) == 0
+    assert [m["id"] for m in json.loads(capsys.readouterr().out)] == ["resume", "rebuild"]
+    assert cli.run(["matrix", "--host-up", "--host-down"]) == 2
+    assert cli.run(["matrix", "--nope"]) == 2
+
+
+class FakeGit:
+    def __init__(self, fetch: int, stamp: str) -> None:
+        self.fetch, self.stamp, self.commands = fetch, stamp, []
+
+    def run(self, command: str, timeout_s: float) -> tuple[int, str]:
+        self.commands.append(command)
+        if command.startswith("git fetch"):
+            return self.fetch, ""
+        return 0, self.stamp
+
+
+def test_a_host_is_up_only_while_its_heartbeat_is_fresh_and_readable() -> None:
+    now = 1_000_000.0
+
+    def beat(fetch: int, stamp: str) -> cp.HostHeartbeat:
+        return cp.HostHeartbeat(FakeGit(fetch, stamp), "refs/h", 15, clock=lambda: now)
+
+    assert beat(0, str(int(now) - 5 * 60)).is_up()
+    assert beat(0, str(int(now) - 15 * 60)).is_up()  # exactly at the limit
+    assert not beat(0, str(int(now) - 16 * 60)).is_up()
+    assert not beat(1, str(int(now))).is_up()  # the ref could not be fetched
+    assert beat(1, str(int(now))).age_minutes() is None
+    assert not beat(0, "not a time").is_up()  # an unreadable heartbeat is a down host
+    assert beat(0, str(int(now) + 600)).age_minutes() == 0.0  # a clock ahead of ours
+    git = FakeGit(0, str(int(now)))
+    cp.HostHeartbeat(git, "refs/h", 15, clock=lambda: now).age_minutes()
+    assert git.commands == [
+        "git fetch --quiet origin +refs/h:refs/h",
+        "git log -1 --format=%ct refs/h",
+    ]
+
+
+def test_the_cli_reads_a_real_heartbeat_ref(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    import subprocess
+
+    def git(where: Path, *args: str, **env: str) -> None:
+        subprocess.run(
+            ["git", "-c", "user.name=t", "-c", "user.email=t@t", *args],
+            cwd=where,
+            check=True,
+            capture_output=True,
+            env={**__import__("os").environ, **env},
+        )
+
+    root = host_world(tmp_path / "work")
+    remote = tmp_path / "remote"
+    remote.mkdir()
+    git(remote, "init", "-q")
+    (remote / "f").write_text("x")
+    git(remote, "add", "-A")
+    git(remote, "commit", "-qm", "beat")
+    git(remote, "update-ref", "refs/vibey-gh/sovereign-heartbeat", "HEAD")
+    git_repo(root)
+    git(root, "remote", "add", "origin", str(remote))
+    cli = cp.ContinuationCli(root)
+    assert cli.run(["heartbeat"]) == 0
+    assert "host_up=true" in capsys.readouterr().out
+    # The same ref, an hour old.
+    git(
+        remote,
+        "commit",
+        "-q",
+        "--allow-empty",
+        "-m",
+        "old",
+        GIT_COMMITTER_DATE="2020-01-01T00:00:00",
+    )
+    git(remote, "update-ref", "refs/vibey-gh/sovereign-heartbeat", "HEAD")
+    assert cli.run(["heartbeat"]) == 0
+    assert "host_up=false" in capsys.readouterr().out
+    # No remote at all: down, never an error.
+    git(root, "remote", "remove", "origin")
+    assert cli.run(["heartbeat"]) == 0
+    out = capsys.readouterr().out
+    assert "host_up=false" in out and "host_age_minutes=unknown" in out
+
+
+def test_the_one_host_exception_is_held_to_what_the_repository_declares(tmp_path: Path) -> None:
+    assert not [p for p in prompts(host_world(tmp_path / "a")).problems() if "sovereign" in p]
+    wrong = host_world(tmp_path / "b", label="somebody-elses-runner")
+    assert any(
+        "runs_on must be ['self-hosted', 'somebody-elses-runner']" in p
+        for p in prompts(wrong).problems()
+    )
+    root = host_world(tmp_path / "c")
+    lane = root / ".github/workflows/continuation-prompts.yml"
+    lane.write_text(lane.read_text().replace("if: needs.refresh.outputs.matrix != '[]'\n", "", 1))
+    assert any("must skip its run and report jobs" in p for p in prompts(root).problems())
+    lane.write_text(HOST_LANE.replace("--host-up --host-down", ""))
+    assert any("--host-up or --host-down" in p for p in prompts(root).problems())
+    toml = root / "scripts/continuation_prompts.toml"
+    toml.write_text(toml.read_text().replace('prompts = ["resume"]', 'prompts = ["nope"]', 1))
+    assert any("does not exist: 'nope'" in p for p in prompts(root).problems())
+
+
+def test_the_real_lane_runs_the_host_prompt_on_gptossloop_and_skips_when_it_is_down() -> None:
+    text = (cp.REPO / ".github/workflows/continuation-prompts.yml").read_text()
+    run = text[text.index("\n  run:\n") : text.index("\n  report:\n")]
+    assert "runs-on: ${{ fromJSON(matrix.prompt.runs_on_json) }}" in run
+    assert "if: needs.refresh.outputs.matrix != '[]'" in run
+    # Hosted runs start their own server; the host's is not this runner's to start or pull to.
+    assert "if: ${{ !matrix.prompt.sovereign }}" in run
+    assert "if: ${{ matrix.prompt.sovereign }}" in run
+    assert run.count('[ -z "$HOST_URL" ]') == 2  # the restart, and the pull
+    # The endpoint is exported only for the host prompt, and the engine is still gptossloop.
+    assert 'if [ -n "$HOST_URL" ]; then export GPTOSSLOOP_BASE_URL="$HOST_URL"; fi' in run
+    assert "gptossloop run" in run
+    # The skip is decided on a hosted runner before the matrix exists.
+    refresh = text[text.index("\n  refresh:\n") : text.index("\n  run:\n")]
+    assert "runs-on: ubuntu-latest" in refresh and "continuation_prompts.py heartbeat" in refresh
+    assert "--host-down" in refresh and "--host-up" in refresh
+    report = text[text.index("\n  report:\n") :]
+    assert "needs.refresh.outputs.matrix != '[]'" in report.split("steps:")[0]
+    # The real table agrees with the repository's own declaration of the machine.
+    config = tomllib.loads((cp.REPO / ".vibey-gh.toml").read_text())
+    label = config["pr_automation"]["fallback"]["runner_label"]
+    assert cp.Settings.load(cp.REPO).run["sovereign"]["runs_on"] == ["self-hosted", label]

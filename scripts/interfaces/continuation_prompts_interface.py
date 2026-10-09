@@ -89,6 +89,18 @@ class PatchTestRuleInterface(Protocol):
         ...
 
 
+class HostHeartbeatInterface(Protocol):
+    """Says whether the operator's own machine has reported in recently."""
+
+    def age_minutes(self) -> float | None:
+        """Minutes since the host last wrote its heartbeat, or None when it cannot be read."""
+        ...
+
+    def is_up(self) -> bool:
+        """True only when the heartbeat is readable and no older than the declared limit."""
+        ...
+
+
 class GroundingRuleInterface(Protocol):
     """Says whether a run read what it changed and ran a passing test, from the runner's record."""
 

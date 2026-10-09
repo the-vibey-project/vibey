@@ -3,7 +3,8 @@
 
     python scripts/continuation_prompts.py render     # rewrite every generated block
     python scripts/continuation_prompts.py check      # exit 1 on any broken guarantee
-    python scripts/continuation_prompts.py matrix [ID...]  # the prompts (or only those), as JSON
+    python scripts/continuation_prompts.py matrix [--host-up|--host-down] [ID...]  # the prompts, as JSON
+    python scripts/continuation_prompts.py heartbeat  # host_up=true|false: is the operator's machine up
     python scripts/continuation_prompts.py extract ID # one prompt's text
     python scripts/continuation_prompts.py plan ID    # the prompt plus its gathered evidence
     python scripts/continuation_prompts.py models     # the declared model fallback chain
@@ -28,8 +29,9 @@ import re
 import subprocess
 import sys
 import tempfile
+import time
 import tomllib
-from collections.abc import Mapping, Sequence
+from collections.abc import Callable, Mapping, Sequence
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
@@ -39,6 +41,7 @@ try:
         CommandRunnerInterface,
         FactSourceInterface,
         GroundingRuleInterface,
+        HostHeartbeatInterface,
         PageRendererInterface,
         PatchGuardInterface,
         PatchPathsInterface,
@@ -54,6 +57,7 @@ except ImportError:  # run as `python scripts/continuation_prompts.py`
         CommandRunnerInterface,
         FactSourceInterface,
         GroundingRuleInterface,
+        HostHeartbeatInterface,
         PageRendererInterface,
         PatchGuardInterface,
         PatchPathsInterface,
@@ -712,6 +716,44 @@ class GroundingRule(GroundingRuleInterface):
         return found
 
 
+class HostHeartbeat(HostHeartbeatInterface):
+    """Whether the operator's machine says it is up: the age of its heartbeat ref.
+
+    The machine that serves the sovereign model commits to a ref on a timer
+    (`[pr_automation.fallback] heartbeat_ref`); a job aimed at it is only offered while that is
+    fresh. A job queued for an offline self-hosted runner waits a day and holds the lane's
+    concurrency group the whole time, so "offline" must mean "not scheduled at all", decided on
+    a hosted runner before the matrix is built. Anything unreadable counts as down.
+    """
+
+    def __init__(
+        self,
+        runner: CommandRunnerInterface,
+        ref: str,
+        max_age_minutes: float,
+        clock: Callable[[], float] = time.time,
+    ) -> None:
+        self._runner = runner
+        self._ref = ref
+        self._max_age = max_age_minutes
+        self._clock = clock
+
+    def age_minutes(self) -> float | None:
+        fetch = f"git fetch --quiet origin +{self._ref}:{self._ref}"
+        code, _ = self._runner.run(fetch, timeout_s=60)
+        if code:
+            return None
+        code, out = self._runner.run(f"git log -1 --format=%ct {self._ref}", timeout_s=30)
+        if code or not out.strip().isdigit():
+            return None
+        # A clock a little ahead of ours is a fresh heartbeat, not a negative age.
+        return max((self._clock() - int(out.strip())) / 60, 0.0)
+
+    def is_up(self) -> bool:
+        age = self.age_minutes()
+        return age is not None and age <= self._max_age
+
+
 class RunReceipt(RunReceiptInterface):
     """What a run must leave behind before its patch is believed.
 
@@ -912,6 +954,47 @@ class ContinuationPrompts:
         out += self._lane_problems(lanes)
         out += self._chat_problems(lanes)
         out += self._hosted_cpu_problems(lanes)
+        out += self._sovereign_problems()
+        return out
+
+    MATRIX_RUNS_ON = "${{ fromJSON(matrix.prompt.runs_on_json) }}"
+
+    def _sovereign_problems(self) -> list[str]:
+        """`[run.sovereign]` is the ONE declared exception to "hosted CPU only": the operator's
+        own machine, for the prompts it names, and only while it says it is up. So it must name
+        real prompts, the very runner label and heartbeat `.vibey-gh.toml` declares for that
+        machine, and the workflow must leave the prompt out of the matrix (skip it) rather than
+        queue it when the machine is down."""
+        host = dict(self._settings.run.get("sovereign", {}))
+        if not host:
+            return []
+        out: list[str] = []
+        known = {p.id for p in self._settings.prompts}
+        for name in host.get("prompts", ()):
+            if name not in known:
+                out.append(f"[run.sovereign] names a prompt that does not exist: {name!r}")
+        config = tomllib.loads((self._root / ".vibey-gh.toml").read_text(encoding="utf-8"))
+        fallback = config.get("pr_automation", {}).get("fallback", {})
+        label = str(fallback.get("runner_label", ""))
+        if list(host.get("runs_on", ())) != ["self-hosted", label]:
+            out.append(
+                f"[run.sovereign] runs_on must be ['self-hosted', {label!r}], the runner "
+                "[pr_automation.fallback] runner_label declares"
+            )
+        ref = str(fallback.get("heartbeat_ref", "refs/vibey-gh/sovereign-heartbeat"))
+        if host.get("heartbeat_ref") != ref:
+            out.append(f"[run.sovereign] heartbeat_ref must be {ref!r}, the one the host writes")
+        if not 1 <= int(host.get("heartbeat_max_age_minutes", 0)) <= 60:
+            out.append("[run.sovereign] heartbeat_max_age_minutes must be between 1 and 60")
+        workflow = self._root / str(self._settings.lane.get("workflow", ""))
+        text = workflow.read_text(encoding="utf-8") if workflow.is_file() else ""
+        if text.count("needs.refresh.outputs.matrix != '[]'") < 2:
+            out.append(
+                f"{workflow.name} must skip its run and report jobs when the matrix is empty "
+                "(a host that is down)"
+            )
+        if "--host-up" not in text or "--host-down" not in text:
+            out.append(f"{workflow.name} must build the matrix with --host-up or --host-down")
         return out
 
     def _hosted_cpu_problems(self, lanes: Mapping[str, Mapping[str, Any]]) -> list[str]:
@@ -941,7 +1024,11 @@ class ContinuationPrompts:
                 out.append(f"{file} is declared hosted_cpu_only but does not exist")
                 continue
             for value in lane["runs_on"]:
-                resolved = run_on if value == "${{ matrix.prompt.runs_on }}" else value
+                resolved = (
+                    run_on
+                    if value in ("${{ matrix.prompt.runs_on }}", self.MATRIX_RUNS_ON)
+                    else value
+                )
                 if resolved not in allowed:
                     out.append(
                         f"{file} runs a job on {value!r}, which is not a declared "
@@ -993,34 +1080,60 @@ class ContinuationPrompts:
             problems.append(f"{file} must run on GitHub-hosted runners, not a self-hosted one")
         return problems
 
-    def matrix(self, only: Sequence[str] = ()) -> list[dict[str, Any]]:
+    def matrix(self, only: Sequence[str] = (), host_up: bool = True) -> list[dict[str, Any]]:
         """One entry per prompt, carrying the declared run settings, so the lane reads them
         from the TOML rather than compiling them into the workflow (12.h).
 
         `only` narrows it to the named prompts -- how a daily lane (the self-healer, the
         backlog killer) runs one prompt through this lane's guards instead of its own. A
-        name that is no prompt is refused, never silently matched to nothing."""
+        name that is no prompt is refused, never silently matched to nothing.
+
+        A prompt `[run.sovereign] prompts` names runs on the operator's own machine, with the
+        model it serves. When that machine is not up (`host_up` False) the prompt is left OUT
+        of the matrix, not moved to a hosted runner: it is skipped, and says so in the summary."""
         unknown = [name for name in only if name not in {p.id for p in self._settings.prompts}]
         if unknown:
             raise KeyError(f"no continuation prompt named {', '.join(map(repr, unknown))}")
         run = self._settings.run
-        return [
-            {
-                "id": p.id,
-                "mode": p.mode,
-                "title": p.title,
-                "runs_on": run.get("runs_on", "ubuntu-24.04-arm"),
-                "model": self._settings.models()[0],
-                "models": " ".join(self._settings.models()),
-                "max_turns": int(run.get("max_turns", 12)),
-                "timeout_minutes": int(run.get("timeout_minutes", 340)),
-            }
-            for p in self._settings.prompts
-            if p.mode != "chat"  # the chat runs when someone speaks to it, not weekly
+        host = dict(run.get("sovereign", {}))
+        on_host = {str(i) for i in host.get("prompts", ())}
+        entries: list[dict[str, Any]] = []
+        for p in self._settings.prompts:
+            if p.mode == "chat":  # the chat runs when someone speaks to it, not weekly
+                continue
             # Named, a prompt runs whatever its cadence; unnamed, the weekly run takes only
             # the weekly ones.
-            and (p.id in only if only else p.cadence == "weekly")
-        ]
+            if not (p.id in only if only else p.cadence == "weekly"):
+                continue
+            local = p.id in on_host
+            if local and not host_up:
+                continue
+            runs_on: Any = (
+                list(host["runs_on"]) if local else run.get("runs_on", "ubuntu-24.04-arm")
+            )
+            model = str(host["model"]) if local else self._settings.models()[0]
+            entries.append(
+                {
+                    "id": p.id,
+                    "mode": p.mode,
+                    "title": p.title,
+                    "runs_on": runs_on,
+                    "runs_on_json": json.dumps(runs_on),
+                    "sovereign": local,
+                    "base_url": str(host["base_url"]) if local else "",
+                    "model": model,
+                    "models": model if local else " ".join(self._settings.models()),
+                    "max_turns": int(
+                        host.get("max_turns", 12) if local else run.get("max_turns", 12)
+                    ),
+                    "timeout_minutes": int(
+                        host.get("timeout_minutes", 340)
+                        if local
+                        else run.get("timeout_minutes", 340)
+                    ),
+                }
+            )
+        return entries
 
     def extract(self, prompt_id: str) -> str:
         p = self._settings.prompt(prompt_id)
@@ -1125,6 +1238,7 @@ class ContinuationCli:
             "defuse",
             "transcript",
             "tools",
+            "heartbeat",
             "receipt",
         }
         if not argv or argv[0] not in commands:
@@ -1154,9 +1268,31 @@ class ContinuationCli:
                 f"{SCRIPT}: {len(settings.prompts)} prompts hold, every lane and skill is covered"
             )
             return 0
+        if command == "heartbeat":
+            host = dict(settings.run.get("sovereign", {}))
+            limit = float(host.get("heartbeat_max_age_minutes", 15))
+            beat = HostHeartbeat(
+                SubprocessRunner(self._root), str(host.get("heartbeat_ref", "")), limit
+            )
+            age = beat.age_minutes() if host else None
+            up = age is not None and age <= limit
+            print(f"host_up={'true' if up else 'false'}")
+            print(f"host_age_minutes={'unknown' if age is None else round(age, 1)}")
+            return 0
         if command == "matrix":
+            flags = {a for a in argv[1:] if a.startswith("--")}
+            if not flags <= {"--host-up", "--host-down"} or flags == {"--host-up", "--host-down"}:
+                print(f"{SCRIPT}: matrix [--host-up|--host-down] [ID...]", file=sys.stderr)
+                return 2
             try:
-                print(json.dumps(prompts.matrix(argv[1:])))
+                print(
+                    json.dumps(
+                        prompts.matrix(
+                            [a for a in argv[1:] if not a.startswith("--")],
+                            host_up="--host-down" not in flags,
+                        )
+                    )
+                )
             except KeyError as unknown:
                 print(f"{SCRIPT}: {unknown.args[0]}", file=sys.stderr)
                 return 2
