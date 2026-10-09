@@ -296,6 +296,9 @@ jobs:
           # store under --cwd. Export that as the log, or an act run has no evidence to be
           # believed by and a drill has no verdict to read (#1416).
           python3 scripts/continuation_prompts.py transcript . >> "$RUNNER_TEMP/out/agent.log" || true
+          # The runner's own record of each tool call and its answer, not the model's prose: it is
+          # what `guard --tools` believes about what the run read and ran.
+          python3 scripts/continuation_prompts.py tools . > "$RUNNER_TEMP/out/tools.jsonl" || : > "$RUNNER_TEMP/out/tools.jsonl"
           echo "${{ steps.agent.outputs.code }}" > "$RUNNER_TEMP/out/code"
           git add -A
           git diff --cached --binary > "$RUNNER_TEMP/out/change.patch"
@@ -396,7 +399,7 @@ jobs:
           python3 scripts/continuation_prompts.py receipt "$RUNNER_TEMP/out"
           # One guard for every lane that applies an agent's patch: [authority] protected and
           # allowed_new (no scratch file at the root).
-          python3 scripts/continuation_prompts.py guard "$patch" --prompt "${{ matrix.prompt.id }}" --log "$RUNNER_TEMP/out/agent.log"
+          python3 scripts/continuation_prompts.py guard "$patch" --prompt "${{ matrix.prompt.id }}" --tools "$RUNNER_TEMP/out/tools.jsonl"
           # The agent's own report closes the description -- defused, because it is model
           # output, and marked unverified, because a person checks it. Built BEFORE the patch
           # is applied: the patch may change scripts/, and nothing it wrote may run here.

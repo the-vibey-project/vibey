@@ -8,7 +8,7 @@
     python scripts/continuation_prompts.py plan ID    # the prompt plus its gathered evidence
     python scripts/continuation_prompts.py models     # the declared model fallback chain
     python scripts/continuation_prompts.py chat MODE REQUEST THREAD   # a chat turn's plan
-    python scripts/continuation_prompts.py guard PATCH [--prompt ID] [--log LOG]   # exit 1 if a patch touches a protected path
+    python scripts/continuation_prompts.py guard PATCH [--prompt ID] [--tools JSONL]   # exit 1 if a patch touches a protected path
     python scripts/continuation_prompts.py defuse FILE [--fenced]   # a reply made safe to post
 
 `check` holds four guarantees on every pull request: every file, glob, `vibey-gh` command and
@@ -20,7 +20,6 @@ prompts exists, is scheduled, and still runs on GitHub. Everything it reads is d
 
 from __future__ import annotations
 
-import ast
 import glob
 import json
 import os
@@ -562,31 +561,30 @@ class PatchTestRule(PatchTestRuleInterface):
 
 
 class GroundingRule(GroundingRuleInterface):
-    """Refuses a patch whose run did not read what it changed, or never ran a test.
+    """Refuses a patch whose run did not read what it changed, or never ran a passing test.
 
-    The weekly run's agent log records every tool call (`[tool] NAME {arguments}`), so "did it
-    look before it wrote?" is a question the lane can answer without a model. On 2026-10-09 a
-    run that emptied the 331-line paper had called `find` on it and nothing else: no read, no
-    test, a shell script it wrote itself as the "test". A `find` or a search locates a file; it
-    does not read it, so only `read_file`/`open_file`, or a shell command that names the path
-    (`cat`, `head`, `sed`, `git show`...), counts. A file the patch adds needs no read.
+    The evidence is `tools.jsonl`, built by `RunReceipt.tools` from the runner's own structured
+    events (a `tool.call` and the `tool_result` that answered it), never from the agent's prose:
+    a model can write `[tool] read_file ...` in its answer, and cannot make the runner record
+    it. On 2026-10-09 a run that emptied the 331-line paper had called `find` on it and nothing
+    else: no read, no test, and a shell script it wrote itself as the "test".
+
+    What counts is narrow on purpose. A read is `read_file`/`open_file`, or a shell command that
+    only displays a file (`cat`, `head`, `tail`, `less`, `more`, `nl`, `sed` without `-i`,
+    `git show`, `git cat-file`) -- and it must have succeeded. `find` and `search` locate a
+    file; `git rm`, `sed -i` and `awk` change one. A test is a command that STARTS with a
+    runner (`pytest`, `npm test`, `vitest`, optionally behind `uv run`), is not a dry run
+    (`--collect-only`, `--help`), and exited 0: `echo pytest` is not a test. A file the patch
+    adds needs no read. The run store must hold exactly one run, the one the runner made.
+
+    This holds against a model that skips its steps. It does not hold against an agent that
+    writes into its own run store from a shell; the store belongs outside the agent's tree,
+    which is a change to the runner, not to this lane.
     """
 
-    TOOL_LINE = re.compile(r"^\[tool\] (\w+) (\{.*\})$", re.MULTILINE)
     READERS = {"read_file", "open_file"}
-    SHELL_READERS = {
-        "cat",
-        "head",
-        "tail",
-        "sed",
-        "less",
-        "more",
-        "bat",
-        "nl",
-        "awk",
-        "git",
-        "grep",
-    }
+    DISPLAYERS = {"cat", "head", "tail", "less", "more", "nl"}
+    DRY_RUN = re.compile(r"--collect-only|--co\b|--help|(^|\s)-h(\s|$)|--version")
 
     def __init__(
         self,
@@ -602,42 +600,85 @@ class GroundingRule(GroundingRuleInterface):
     def _norm(path: str) -> str:
         return path.removeprefix("./")
 
-    def calls(self, log: str) -> list[tuple[str, dict[str, Any]]]:
-        found: list[tuple[str, dict[str, Any]]] = []
-        for name, raw in self.TOOL_LINE.findall(log):
+    def calls(self, tools: str) -> list[dict[str, Any]]:
+        """The recorded calls: JSON lines of {name, arguments, ok}; a line that is not one is
+        ignored, and a header line {"runs": N} is read by `run_count`."""
+        found: list[dict[str, Any]] = []
+        for raw in tools.splitlines():
             try:
-                arguments = ast.literal_eval(raw)
-            except (ValueError, SyntaxError):
+                record = json.loads(raw)
+            except json.JSONDecodeError:
                 continue
-            if isinstance(arguments, dict):
-                found.append((name, arguments))
+            if isinstance(record, dict) and isinstance(record.get("name"), str):
+                found.append(record)
         return found
 
-    def read_paths(self, calls: Sequence[tuple[str, dict[str, Any]]]) -> set[str]:
+    def run_count(self, tools: str) -> int:
+        for raw in tools.splitlines():
+            try:
+                record = json.loads(raw)
+            except json.JSONDecodeError:
+                continue
+            if isinstance(record, dict) and "runs" in record:
+                return int(record["runs"])
+        return -1
+
+    def _argv(self, call: dict[str, Any]) -> list[str]:
+        arguments = call.get("arguments")
+        argv = arguments.get("argv") if isinstance(arguments, dict) else None
+        return [str(a) for a in argv] if isinstance(argv, list) else []
+
+    def read_paths(self, calls: Sequence[dict[str, Any]]) -> set[str]:
         seen: set[str] = set()
-        for name, arguments in calls:
-            if name in self.READERS and isinstance(arguments.get("path"), str):
-                seen.add(self._norm(arguments["path"]))
-            elif name == "shell" and isinstance(arguments.get("argv"), list):
-                argv = [str(a) for a in arguments["argv"]]
-                if argv and argv[0] in self.SHELL_READERS:
-                    seen.update(self._norm(a) for a in argv[1:])
+        for call in calls:
+            if call.get("ok") is not True:
+                continue
+            arguments = call.get("arguments")
+            if call["name"] in self.READERS and isinstance(arguments, dict):
+                if isinstance(arguments.get("path"), str):
+                    seen.add(self._norm(arguments["path"]))
+            elif call["name"] == "shell":
+                argv = self._argv(call)
+                if not argv:
+                    continue
+                rest = argv[1:]
+                if (
+                    argv[0] in self.DISPLAYERS
+                    or argv[0] == "sed"
+                    and not any(
+                        a.startswith("--in-place") or re.match(r"^-[A-Za-z]*i", a) for a in rest
+                    )
+                ):
+                    pass
+                elif argv[0] == "git" and rest[:1] in (["show"], ["cat-file"]):
+                    rest = rest[1:]
+                else:
+                    continue
+                for arg in rest:
+                    # `git show REV:path` reads `path`; a flag or a sed script is no path.
+                    seen.add(self._norm(arg.split(":", 1)[-1]))
         return seen
 
-    def ran_a_test(self, calls: Sequence[tuple[str, dict[str, Any]]]) -> bool:
-        for name, arguments in calls:
-            if name == "shell" and isinstance(arguments.get("argv"), list):
-                line = " ".join(str(a) for a in arguments["argv"])
-                if any(rx.search(line) for rx in self._runs):
-                    return True
+    def ran_a_test(self, calls: Sequence[dict[str, Any]]) -> bool:
+        for call in calls:
+            if call["name"] != "shell" or call.get("ok") is not True:
+                continue
+            line = " ".join(self._argv(call))
+            if self.DRY_RUN.search(line):
+                continue
+            if any(rx.match(line) for rx in self._runs):
+                return True
         return False
 
-    def ungrounded(self, patch: Path, prompt: str, log: str | None) -> Sequence[str]:
+    def ungrounded(self, patch: Path, prompt: str, tools: str | None) -> Sequence[str]:
         if prompt not in self._prompts:
             return []
-        if log is None or not log.strip():
-            return ["(no transcript: a run with no evidence is not believed)"]
-        calls = self.calls(log)
+        if tools is None or not tools.strip():
+            return ["(no tool record: a run with no evidence is not believed)"]
+        runs = self.run_count(tools)
+        if runs != 1:
+            return [f"(the run store held {runs} runs, not the one the runner made)"]
+        calls = self.calls(tools)
         read = self.read_paths(calls)
         touched = self._reader.touched(patch) or []
         found = sorted(
@@ -646,7 +687,7 @@ class GroundingRule(GroundingRuleInterface):
             if status != "A" and path not in read
         )
         if not self.ran_a_test(calls):
-            found.append("(no test command ran)")
+            found.append("(no passing test command ran)")
         return found
 
 
@@ -674,6 +715,37 @@ class RunReceipt(RunReceiptInterface):
                 elif kind == "completed":
                     lines.append("\n[completed]\n")
         return "".join(lines)
+
+    def tools(self, cwd: Path) -> str:
+        """JSON lines for `guard --tools`: a header {"runs": N}, then one {name, arguments, ok}
+        per tool call, from the runner's own `tool.call` and `tool_result` events and nothing the
+        model said. `ok` is False for a call with no answer, an error, or a non-zero exit."""
+        stores = sorted((cwd / ".qwenloop" / "runs").glob("*/events.jsonl"))
+        lines = [json.dumps({"runs": len(stores)})]
+        for events in stores:
+            pending: list[dict[str, Any]] = []
+            for raw in events.read_text(encoding="utf-8", errors="replace").splitlines():
+                try:
+                    event = json.loads(raw)
+                except json.JSONDecodeError:
+                    continue
+                kind = event.get("type")
+                if kind == "tool.call":
+                    pending.append(
+                        {
+                            "name": event.get("name"),
+                            "arguments": event.get("arguments"),
+                            "ok": False,
+                        }
+                    )
+                elif kind == "tool_result" and pending:
+                    result = event.get("result")
+                    failed = isinstance(result, dict) and (
+                        bool(result.get("error")) or result.get("exit_code") not in (0, None)
+                    )
+                    pending[-1]["ok"] = not failed
+            lines += [json.dumps(call) for call in pending]
+        return "\n".join(lines)
 
     def problems(self, out: Path) -> list[str]:
         code = out / "code"
@@ -1023,6 +1095,7 @@ class ContinuationCli:
             "guard",
             "defuse",
             "transcript",
+            "tools",
             "receipt",
         }
         if not argv or argv[0] not in commands:
@@ -1075,11 +1148,12 @@ class ContinuationCli:
             if (
                 len(argv) < 2
                 or len(argv) % 2 != 0
-                or not set(options) <= {"--prompt", "--log"}
+                or not set(options) <= {"--prompt", "--tools"}
                 or len(options) != (len(argv) - 2) // 2
             ):
                 print(
-                    f"{SCRIPT}: guard PATCH_FILE [--prompt ID] [--log AGENT_LOG]", file=sys.stderr
+                    f"{SCRIPT}: guard PATCH_FILE [--prompt ID] [--tools TOOLS_JSONL]",
+                    file=sys.stderr,
                 )
                 return 2
             prompt = options.get("--prompt")
@@ -1099,24 +1173,27 @@ class ContinuationCli:
                 untested = PatchTestRule(
                     settings.require_test_prompts, settings.test_paths, reader
                 ).missing(patch, prompt)
-                log_path = options.get("--log")
-                log = None
-                if log_path and Path(log_path).is_file():
-                    log = Path(log_path).read_text(encoding="utf-8", errors="replace")
+                tools_path = options.get("--tools")
+                record = None
+                if tools_path and Path(tools_path).is_file():
+                    record = Path(tools_path).read_text(encoding="utf-8", errors="replace")
                 ungrounded = GroundingRule(
                     settings.require_test_prompts, settings.test_runs, reader
-                ).ungrounded(patch, prompt, log)
+                ).ungrounded(patch, prompt, record)
             for line in untested:
                 print(f"::error::the {prompt} prompt promises a tested change: {line}")
             for line in ungrounded:
                 print(f"::error::the {prompt} run is not grounded: {line}")
             return 1 if refused or untested or shrunk or ungrounded else 0
-        if command in {"transcript", "receipt"}:
+        if command in {"transcript", "receipt", "tools"}:
             if len(argv) != 2:
                 print(f"{SCRIPT}: {command} DIRECTORY", file=sys.stderr)
                 return 2
             if command == "transcript":
                 print(RunReceipt().transcript(Path(argv[1])))
+                return 0
+            if command == "tools":
+                print(RunReceipt().tools(Path(argv[1])))
                 return 0
             problems = RunReceipt().problems(Path(argv[1]))
             for line in problems:

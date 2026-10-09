@@ -90,17 +90,21 @@ class PatchTestRuleInterface(Protocol):
 
 
 class GroundingRuleInterface(Protocol):
-    """Says whether a run read what it changed and ran a test, from its own transcript."""
+    """Says whether a run read what it changed and ran a passing test, from the runner's record."""
 
-    def ungrounded(self, patch: Path, prompt: str, log: str | None) -> Sequence[str]:
-        """What the transcript does not show: a changed or deleted file nobody read, and a test
-        command that never ran. Empty for a prompt the rule does not cover; a covered prompt
-        with no transcript is refused, never waved through."""
+    def ungrounded(self, patch: Path, prompt: str, tools: str | None) -> Sequence[str]:
+        """What the runner's own tool record does not show: a changed or deleted file nobody
+        read, and a test command that never passed. Empty for a prompt the rule does not cover;
+        a covered prompt with no record is refused, never waved through."""
         ...
 
 
 class RunReceiptInterface(Protocol):
     """Says what a run left behind, and whether that is enough to believe its patch."""
+
+    def tools(self, cwd: Path) -> str:
+        """The run's tool calls as JSON lines, from the runner's structured events only."""
+        ...
 
     def transcript(self, cwd: Path) -> str:
         """The run's recorded words and tool calls, read from the run store under `cwd`."""

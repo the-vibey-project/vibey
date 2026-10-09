@@ -215,14 +215,15 @@ paths = [
   '^tests/.*(^|/)test_[^/]+\.py$',
   '(^|/)[^/]+\.test\.tsx?$',
 ]
-# The same prompts must also show, in the run's own transcript, that the agent READ each file
-# its patch changes or deletes (a find or a search only locates one) and RAN a test: a shell
-# command whose joined argv matches one of these. Checked on the runner where no agent ran.
+# The same prompts must also show, in the runner's own record of the run (`continuation_prompts.py
+# tools`, never the agent's prose), that the agent READ each file its patch changes or deletes
+# (a find or a search only locates one) and RAN a passing test: a command that STARTS with one
+# of these (anchored: `echo pytest` is not a test) and exited 0. Checked on a runner where no
+# agent ran.
 runs = [
-  '(^|\s)(python3?\s+-m\s+)?pytest(\s|$)',
-  '(^|\s)uv\s+run\s+.*pytest',
-  '(^|\s)(npm|pnpm|yarn)\s+(run\s+)?test',
-  '(^|\s)vitest(\s|$)',
+  '^(uv\s+run\s+(--?\S+\s+)*)?(python3?\s+-m\s+)?pytest(\s|$)',
+  '^(npm|pnpm|yarn)\s+(run\s+)?test(\s|$)',
+  '^(npx\s+)?vitest(\s|$)',
 ]
 
 # The lane that refreshes and runs the prompts. `check` fails if it is missing, unscheduled,

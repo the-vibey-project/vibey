@@ -224,13 +224,24 @@ codebase. The run that emptied the paper made seven tool calls, one of them a `f
 read `CLAUDE.md`, the files the issue named, or ran a test, though its prompt asks for all three.
 The prompt asked and nothing checked, so two layers now do.
 
-- **After the run, the lane reads its transcript.** `continuation_prompts.py guard PATCH
-  --prompt ID --log AGENT_LOG` refuses a patch for a tested prompt unless the log shows a
-  `read_file` (or a shell `cat`/`sed`/`head`/`git show` naming the path) for every file the
-  patch changes or deletes, and a shell command matching `[authority.require_test] runs`.
-  A `find` or a search locates a file; it does not read it. A covered prompt with no
-  transcript is refused. Run against the 2026-10-09 artifact it refuses all three of that
-  patch's defects: the unread paper, the unread site definition, the missing test.
+- **After the run, the lane reads the runner's record of it.** `continuation_prompts.py guard
+  PATCH --prompt ID --tools TOOLS_JSONL` refuses a patch for a tested prompt unless the record
+  shows a successful `read_file` (or a shell command that only displays the path: `cat`, `head`,
+  `tail`, `less`, `more`, `nl`, `sed` without `-i`, `git show`) for every file the patch changes
+  or deletes, and a successful test command: one that starts with a runner such as `pytest`,
+  `npm test` or `vitest` and is not a dry run. The record (`continuation_prompts.py tools`) is
+  built from the runner's structured `tool.call` and `tool_result` events and never from the
+  agent's prose; the store must hold exactly one run; a covered prompt with no record is refused.
+  Run against the 2026-10-09 artifact it refuses all three of that patch's defects.
+- **A security review of the first version found three ways round it, all confirmed and
+  closed.** `git`, `sed -i` and `awk` were counted as readers, so `git rm paper.md` "read" the
+  paper; the evidence was parsed from `agent.log`, which also holds the model's own words, so
+  a model could print `[tool] read_file ...`; and any argv that mentioned `pytest` counted as a
+  test, so `echo pytest` did, whatever its exit code.
+- **What this does not stop.** An agent with a shell can still write into its own
+  `.qwenloop/` run store, and the lane cannot tell. The check holds against a model that skips
+  its steps, not against one that forges its record; closing that needs the run store outside
+  the agent's tree, which is a change to the runner, not to this lane.
 - **Before the run, the evidence is the codebase.** `scripts/backlog_grounding.py` is a second
   `gather` command of the `backlog` prompt: it quotes the first lines of every tracked file the
   issue names, where the identifiers the issue puts in backticks occur, and the headline of each
