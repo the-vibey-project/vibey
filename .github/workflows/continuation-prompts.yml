@@ -220,7 +220,8 @@ jobs:
       - name: Run the prompt with gptossloop
         id: agent
         env:
-          GPTOSSLOOP_MODEL: ${{ steps.model.outputs.model }}
+          PULLED: ${{ steps.model.outputs.model }}
+          MODELS: ${{ matrix.prompt.models }}
           GH_TOKEN: ${{ github.token }}
         run: |
           set -uo pipefail
@@ -228,15 +229,43 @@ jobs:
           # The runner's own shell is `bash -e`, which `set -uo` does not undo: capture the
           # exit with `||`, or a failing agent ends the step before its code is recorded and
           # the report can only say "did not exit 0" (2026-10-05, every prompt).
+          #
+          # A model server that drops the connection ("gptossloop unavailable") did no work at
+          # all: the first declared model (gpt-oss:20b) did exactly that on the 16 GB arm
+          # runner for hours on 2026-10-08, and every run was green with an empty patch. Try
+          # each declared model in turn; stop at the first that is reachable, whatever it then
+          # exits with. The exit that is recorded is the last attempt's.
           code=0
-          timeout "${minutes}m" gptossloop run "$RUNNER_TEMP/plan.md" --cwd . \
-            --max-turns ${{ matrix.prompt.max_turns }} > "$RUNNER_TEMP/agent.log" 2>&1 || code=$?
+          tried=""
+          : > "$RUNNER_TEMP/agent.log"
+          for m in $PULLED $MODELS; do
+            case " $tried " in *" $m "*) continue ;; esac
+            tried="$tried $m"
+            if [ "$m" != "$PULLED" ] && ! ollama pull "$m" > /dev/null 2>&1; then
+              echo "::warning::could not pull $m; trying the next declared model"
+              continue
+            fi
+            curl -sf http://127.0.0.1:11434/api/version > /dev/null || { (ollama serve >> "$RUNNER_TEMP/ollama.log" 2>&1 &); sleep 10; }
+            echo "::group::agent on $m" >> "$RUNNER_TEMP/agent.log"
+            code=0
+            GPTOSSLOOP_MODEL="$m" timeout "$((minutes * 60 - SECONDS))s" gptossloop run "$RUNNER_TEMP/plan.md" --cwd . \
+              --max-turns ${{ matrix.prompt.max_turns }} > "$RUNNER_TEMP/attempt.log" 2>&1 || code=$?
+            cat "$RUNNER_TEMP/attempt.log" >> "$RUNNER_TEMP/agent.log"
+            grep -q 'gptossloop unavailable' "$RUNNER_TEMP/attempt.log" || break
+            echo "::warning::$m was unavailable (exit $code); trying the next declared model"
+          done
           echo "code=$code" >> "$GITHUB_OUTPUT"
           {
-            echo "## ${{ matrix.prompt.title }} (${{ matrix.prompt.mode }}) — exit $code"
+            echo "## ${{ matrix.prompt.title }} (${{ matrix.prompt.mode }}) — exit $code (models tried:$tried)"
             echo '```'
             tail -c 30000 "$RUNNER_TEMP/agent.log"
             echo '```'
+            if [ "$code" -ne 0 ]; then
+              echo "### The model server's own log"
+              echo '```'
+              tail -c 8000 "$RUNNER_TEMP/ollama.log" 2>/dev/null || echo "(no ollama.log)"
+              echo '```'
+            fi
           } >> "$GITHUB_STEP_SUMMARY"
           # A run that timed out or failed is reported, never mistaken for "all holds".
           [ "$code" -eq 0 ] || echo "::warning::the agent run ended with exit $code"
@@ -335,6 +364,13 @@ jobs:
           set -euo pipefail
           patch="$RUNNER_TEMP/out/change.patch"
           if [ ! -s "$patch" ]; then
+            # An agent that never got going is not an agent that had nothing to do: green
+            # runs with an empty patch hid a dead model server for a day (2026-10-08).
+            code=$(cat "$RUNNER_TEMP/out/code" 2>/dev/null || echo unknown)
+            if [ "$code" != "0" ]; then
+              echo "::error::the ${{ matrix.prompt.id }} agent exited $code and changed nothing: a failed run, not a clean one"
+              exit 1
+            fi
             echo "the agent changed nothing"
             exit 0
           fi
