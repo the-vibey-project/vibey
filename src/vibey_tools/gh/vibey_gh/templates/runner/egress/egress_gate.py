@@ -24,6 +24,7 @@ import ipaddress
 import os
 import socket
 import sys
+import time
 from collections.abc import Callable, Sequence
 from pathlib import Path
 
@@ -97,19 +98,47 @@ class AccessLog(AccessLogInterface):
     """
 
     LIMIT = 120
+    # A job that makes endless connections must not make an endless log. Per kind, so a flood
+    # of ALLOWs cannot hide a DENY: past RATE lines in a WINDOW the rest are counted, and one
+    # line says how many when the next window opens.
+    WINDOW = 60.0
+    RATE = 600
 
-    def __init__(self, out: Callable[[str], None] | None = None) -> None:
+    def __init__(
+        self,
+        out: Callable[[str], None] | None = None,
+        clock: Callable[[], float] = time.monotonic,
+    ) -> None:
         self._out = out or (lambda line: print(line, flush=True))
+        self._clock = clock
+        self._start = {"allow": float("-inf"), "deny": float("-inf")}
+        self._count = {"allow": 0, "deny": 0}
+        self._dropped = {"allow": 0, "deny": 0}
+
+    def _say(self, kind: str, line: str) -> None:
+        now = self._clock()
+        if now - self._start[kind] >= self.WINDOW:
+            if self._dropped[kind]:
+                self._out(
+                    f"egress LIMIT {self._dropped[kind]} {kind.upper()} lines were not written"
+                    f" in the last {self.WINDOW:.0f}s (at most {self.RATE} a window)"
+                )
+            self._start[kind], self._count[kind], self._dropped[kind] = now, 0, 0
+        if self._count[kind] >= self.RATE:
+            self._dropped[kind] += 1
+            return
+        self._count[kind] += 1
+        self._out(line)
 
     @classmethod
     def clean(cls, text: str) -> str:
         return "".join(c if c.isprintable() else "?" for c in text)[: cls.LIMIT]
 
     def allow(self, what: str) -> None:
-        self._out(f"egress ALLOW {self.clean(what)}")
+        self._say("allow", f"egress ALLOW {self.clean(what)}")
 
     def deny(self, what: str, why: str) -> None:
-        self._out(f"egress DENY  {self.clean(what)} -- {why}")
+        self._say("deny", f"egress DENY  {self.clean(what)} -- {why}")
 
 
 class SystemResolver(ResolverInterface):

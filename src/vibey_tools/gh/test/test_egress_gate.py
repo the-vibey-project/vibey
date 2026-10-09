@@ -645,3 +645,34 @@ async def test_no_secret_in_a_request_target_reaches_the_log() -> None:
         "DENY DELETE /api/delete -- not one of the model requests allowed",
         "DENY GET h.example -- not one of the model requests allowed",
     ]
+
+
+def test_a_flood_of_connections_cannot_make_an_endless_log() -> None:
+    now = [0.0]
+    lines: list[str] = []
+    log = gate.AccessLog(lines.append, clock=lambda: now[0])
+    rate = gate.AccessLog.RATE
+    for n in range(rate + 250):
+        log.deny(f"h{n}.evil.example:443", "not on the allowlist")
+    assert len(lines) == rate  # the rest were counted, not written
+    # An allow flood has its own budget: it cannot hide a refusal, nor the other way round.
+    for n in range(rate + 5):
+        log.allow(f"ok{n}.github.com:443")
+    log.deny("later.evil.example:443", "still counted")
+    assert len(lines) == 2 * rate
+    # The next window says what was not written, then writes normally again.
+    now[0] += gate.AccessLog.WINDOW
+    log.deny("again.evil.example:443", "not on the allowlist")
+    assert lines[-2:] == [
+        "egress LIMIT 251 DENY lines were not written in the last 60s (at most 600 a window)",
+        "egress DENY  again.evil.example:443 -- not on the allowlist",
+    ]
+    log.allow("ok.github.com:443")
+    assert lines[-2] == (
+        "egress LIMIT 5 ALLOW lines were not written in the last 60s (at most 600 a window)"
+    )
+    # A quiet window prints no summary of nothing.
+    now[0] += gate.AccessLog.WINDOW
+    before = len(lines)
+    log.deny("quiet.evil.example:443", "x")
+    assert len(lines) == before + 1

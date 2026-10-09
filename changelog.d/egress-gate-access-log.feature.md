@@ -7,3 +7,6 @@
   request was going and why it was refused are written: a host and port, or a method and path,
   never a header, a body, URL credentials (`user:token@host`), a query string or a fragment,
   and client-supplied text is cleaned and cut so it cannot forge a line.
+  The log is capped (600 ALLOW and 600 DENY lines a minute, with one line saying how many were
+  dropped) and the gate container's log is rotated at 5 MB x 3 files, so a runaway job cannot
+  fill the disk.
