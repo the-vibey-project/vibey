@@ -9,15 +9,25 @@ name: Backlog killer
 # touches a ruleset or a secret (12.d). `scripts/continuation_prompts.py check` fails if this
 # file stops running daily, by hand, or on GitHub's own CPU runners.
 #
-# Once per `[backlog_killer] interval_minutes` slot (20): one `*/20` cron, at :03, :23 and :43
-# UTC, seventy-two runs a day (the off-the-hour minutes dodge GitHub's top-of-hour queue).
-# tests/meta/test_daily_lanes.py fails if the schedule stops firing once per declared interval.
-# A run that finds the lane busy waits in this workflow's own concurrency group, and GitHub
-# keeps only the newest waiting run, so a long agent run skips slots rather than piling them up.
+# GitHub's cron is best-effort (5 of 16 asked-for runs on 2026-10-08), so the clock is a chain:
+# the `chain` job waits for the next `[backlog_killer] interval_minutes` slot and dispatches
+# this workflow again. Bounds, all declared in scripts/daily_lanes.toml and read from develop
+# on every link: `chain = false` ends it at the next link; `chain_max_links` ends an unwatched
+# one; this workflow's concurrency group runs one link at a time (a waiting run is replaced by
+# a newer one, never queued behind it), so at most one dispatch per slot can ever be made; a
+# link dispatches nothing if the next slot already has a run. The cron below is only the watchdog that starts a chain again within
+# `watchdog_minutes` when none is alive, and a slot that already has a run does not work its
+# issue twice. A dispatch made with the workflow's own token starts a run; it can be nothing
+# but this workflow, and the run it starts has exactly this file's permissions.
 on:
   schedule:
-    - cron: "3,23,43 * * * *"
+    - cron: "13 * * * *"
   workflow_dispatch:
+    inputs:
+      link:
+        description: "Position in the chain; 0 starts one"
+        required: false
+        default: "0"
 
 permissions:
   contents: read
@@ -35,6 +45,7 @@ jobs:
       contents: read
       issues: read
       pull-requests: read
+      actions: read
     outputs:
       number: ${{ steps.pick.outputs.number }}
     steps:
@@ -52,9 +63,19 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
           GH_REPO: ${{ github.repository }}
+          RUN_ID: ${{ github.run_id }}
         run: |
           set -euo pipefail
           number=$(python scripts/backlog_killer.py pick --number)
+          # One slot, one issue worked: a run that finds an earlier run already in this slot
+          # (the watchdog and a chain link can land in the same one) works nothing.
+          slot_start=$(python scripts/backlog_killer.py clock | sed -n 's/^slot_start=//p')
+          earlier=$(gh run list --workflow backlog-killer.yml --limit 50 --json databaseId,createdAt \
+            --jq "[.[] | select(.createdAt >= \"$slot_start\" and .databaseId < $RUN_ID)] | length")
+          if [ "$earlier" != "0" ]; then
+            echo "This slot (from $slot_start) already has $earlier earlier run(s); not working its issue twice." >> "$GITHUB_STEP_SUMMARY"
+            number=""
+          fi
           echo "number=$number" >> "$GITHUB_OUTPUT"
           {
             echo "### This slot's backlog item"
@@ -89,3 +110,55 @@ jobs:
           prompt=$(python3 -c "import tomllib; print(tomllib.load(open('scripts/daily_lanes.toml','rb'))['backlog_killer']['prompt'])")
           gh workflow run continuation-prompts.yml --ref develop -f prompts="$prompt"
           echo "Dispatched the \`$prompt\` continuation prompt for #$NUMBER." >> "$GITHUB_STEP_SUMMARY"
+
+  chain:
+    name: Start the next link
+    needs: [pick, work]
+    # Whatever happened to the work, the chain goes on; only a cancelled run ends it.
+    if: ${{ !cancelled() }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: read
+      actions: write
+    steps:
+      - name: Check out the integration branch
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          ref: develop
+          persist-credentials: false
+      - name: Set up Python
+        uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5
+        with:
+          python-version: "3.12"
+      - name: May this link start the next
+        id: plan
+        env:
+          LINK: ${{ inputs.link || '0' }}
+        run: |
+          set -euo pipefail
+          python scripts/backlog_killer.py chain "$LINK" >> "$GITHUB_OUTPUT"
+          python scripts/backlog_killer.py clock >> "$GITHUB_OUTPUT"
+          grep -q '^proceed=true$' "$GITHUB_OUTPUT" || echo "The chain ends at link $LINK (switched off, or at its maximum); the watchdog cron starts it again." >> "$GITHUB_STEP_SUMMARY"
+      - name: Wait for the next slot
+        if: steps.plan.outputs.proceed == 'true'
+        env:
+          WAIT: ${{ steps.plan.outputs.sleep }}
+        run: sleep "$WAIT"
+      - name: Dispatch the next link
+        if: steps.plan.outputs.proceed == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          LINK: ${{ inputs.link || '0' }}
+        run: |
+          set -euo pipefail
+          slot_start=$(python scripts/backlog_killer.py clock | sed -n 's/^slot_start=//p')
+          already=$(gh run list --workflow backlog-killer.yml --limit 50 --json databaseId,createdAt \
+            --jq "[.[] | select(.createdAt >= \"$slot_start\" and .databaseId != ${{ github.run_id }})] | length")
+          if [ "$already" != "0" ]; then
+            echo "Slot $slot_start already has a run; this link dispatches nothing." >> "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
+          gh workflow run backlog-killer.yml --ref develop -f link="$((LINK + 1))"
+          echo "Dispatched link $((LINK + 1)) for the slot from $slot_start." >> "$GITHUB_STEP_SUMMARY"

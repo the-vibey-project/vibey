@@ -119,6 +119,26 @@ def test_the_slot_length_is_read_from_the_settings() -> None:
     assert killer([issue(1)]).slot(AT + SLOT) == killer([issue(1)]).slot(AT) + 1  # default 90
 
 
+def test_the_clock_names_the_slot_start_and_the_wait_to_the_next() -> None:
+    k = killer([issue(1)], interval_minutes=20)
+    at = datetime(2026, 10, 9, 3, 33, 30, tzinfo=UTC)
+    assert k.slot_start(at) == datetime(2026, 10, 9, 3, 20, tzinfo=UTC)
+    assert k.seconds_until_next_slot(at) == 6 * 60 + 30  # 03:40:00
+    # On a boundary the new slot has begun: a full interval to the next, never zero.
+    boundary = datetime(2026, 10, 9, 3, 40, tzinfo=UTC)
+    assert k.slot_start(boundary) == boundary
+    assert k.seconds_until_next_slot(boundary) == 20 * 60
+    assert k.slot(boundary) == k.slot(at) + 1
+
+
+def test_the_chain_is_off_unless_declared_and_bounded_when_it_is() -> None:
+    assert not killer([issue(1)]).may_chain(0)  # fails closed: no switch, no chain
+    on = killer([issue(1)], chain=True, chain_max_links=3)
+    assert [on.may_chain(n) for n in (0, 2, 3, 4)] == [True, True, False, False]
+    assert not on.may_chain(-1)  # an unreadable position never proceeds
+    assert not killer([issue(1)], chain=False, chain_max_links=3).may_chain(0)
+
+
 def test_a_window_larger_than_the_backlog_rotates_through_what_there_is() -> None:
     k = killer([issue(1), issue(2)], window=10)
     assert {k.pick(AT + i * SLOT)["number"] for i in range(4)} == {1, 2}  # type: ignore[index]
@@ -170,6 +190,14 @@ def test_the_cli(monkeypatch, capsys) -> None:
     assert "This run's backlog item: #5 — five" in capsys.readouterr().out
     assert bk.main(["candidates"]) == 0
     assert capsys.readouterr().out.strip() == "#5 five"
+    assert bk.main(["clock"]) == 0
+    clock = dict(line.split("=") for line in capsys.readouterr().out.split())
+    assert clock["slot_start"].endswith("Z") and 1 <= int(clock["sleep"]) <= 20 * 60
+    monkeypatch.setattr(bk, "load", lambda root: ({"chain": True, "chain_max_links": 2}, {}))
+    assert [bk.main(["chain", arg]) for arg in ("1", "2", "x", "")] == [0, 0, 0, 0]
+    assert capsys.readouterr().out.split() == ["proceed=true"] + ["proceed=false"] * 3
+    assert bk.main(["chain"]) == 0  # no position at all
+    assert capsys.readouterr().out.strip() == "proceed=false"
     monkeypatch.setattr(bk, "GhBacklogSource", lambda: FakeSource([]))
     assert bk.main(["pick", "--number"]) == 0
     assert capsys.readouterr().out.strip() == ""

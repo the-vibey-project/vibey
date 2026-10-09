@@ -113,3 +113,34 @@ same `window`. The workflow's concurrency group queues at most one waiting run, 
 longer than 20 minutes skips slots rather than stacking them. `tests/meta/test_daily_lanes.py`
 now parses minute lists and steps, and still fails if the crons stop firing once per declared
 interval. Every guard in this record and in the 2026-10-07 amendment stands.
+
+## Amendment, 2026-10-09: the backlog killer's clock is a chain, and the cron is its watchdog
+
+GitHub's `schedule:` is best-effort: on 2026-10-08 it delivered 5 of the 16 runs the 90-minute
+schedule asked for, some an hour late, and after the interval became 20 minutes it delivered
+one in the first three and a half hours. A clock that is delivered a third of the time is not a
+clock, so at the operator's request each run now ends with a `chain` job that waits for the
+next `[backlog_killer] interval_minutes` slot and dispatches the workflow again. A dispatch
+made with the workflow's own token starts a run, and it can only start this workflow.
+
+The chain is a loop that nothing outside it ends, so every bound is declared and tested
+(`tests/meta/test_daily_lanes.py`), by 12.d and the floor above it:
+
+1. **A switch.** `[backlog_killer] chain = false` ends it at the next link; the file is read
+   from `develop` on every link, so ending it is a pull request, not a runner setting.
+2. **A maximum.** `chain_max_links` ends a chain nobody is watching. The link number travels
+   in the dispatch, and a chain that stops waits for the watchdog.
+3. **One at a time.** The workflow's concurrency group runs a single link at once and replaces
+   a waiting run with a newer one instead of queueing it, so no more than one dispatch per slot
+   can be made, whatever else starts a run. A link also dispatches nothing when the next slot
+   already has a run, and a run that finds an earlier one in its slot works no issue.
+4. **A watchdog.** The cron stays, hourly (`watchdog_minutes`), to start a chain again when
+   none is alive: a cancelled run, a lost runner or the maximum all end a chain.
+5. **Nothing new may be done.** The chain job holds `contents: read` and `actions: write`, its
+   only write is `gh workflow run backlog-killer.yml`, and the guards in this record and in the
+   two earlier amendments (CPU runners only, at most one draft pull request per run, no merge,
+   approval, release or issue closed) apply to every link unchanged.
+
+The cost is a runner idle for up to one interval per link, which is free on a public repository
+and is not free on a private one. The chain does not make the agent succeed: that is
+`continuation-prompts.yml`'s concern (the same day's fix for an unavailable model server).

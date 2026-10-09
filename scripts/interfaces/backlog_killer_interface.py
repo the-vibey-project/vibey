@@ -32,6 +32,19 @@ class BacklogKillerInterface(Protocol):
         """The run slot `now` falls in: UTC minutes since the epoch over `interval_minutes`."""
         ...
 
+    def slot_start(self, now: datetime) -> datetime:
+        """The UTC instant the run slot `now` falls in began."""
+        ...
+
+    def seconds_until_next_slot(self, now: datetime) -> int:
+        """Whole seconds from `now` to the start of the next run slot; at least one."""
+        ...
+
+    def may_chain(self, link: int) -> bool:
+        """Whether the run at chain position `link` may start the next one: the declared switch
+        is on and the position is below the declared maximum."""
+        ...
+
     def pick(self, now: datetime) -> dict[str, Any] | None:
         """This slot's issue, rotating through the first `window` candidates; None when none."""
         ...

@@ -90,9 +90,11 @@ def _cron_minutes(cron: str) -> set[int]:
 
 def test_the_backlog_killer_fires_once_per_declared_slot() -> None:
     """Cron cannot say "every 90 minutes", so a schedule can drift from the interval the pick
-    rotates by; this holds the crons to `[backlog_killer] interval_minutes` (12.e)."""
+    rotates by; this holds the crons to `[backlog_killer] interval_minutes` (12.e). With the
+    chain on the crons are the watchdog instead, and are held to `watchdog_minutes`."""
     settings = tomllib.loads((WORKFLOWS.parents[1] / "scripts" / "daily_lanes.toml").read_text())
-    interval = int(settings["backlog_killer"]["interval_minutes"])
+    killer = settings["backlog_killer"]
+    interval = int(killer["watchdog_minutes" if killer.get("chain") else "interval_minutes"])
     text = (WORKFLOWS / "backlog-killer.yml").read_text(encoding="utf-8")
     crons = re.findall(r'^\s*-\s*cron:\s*"([^"]+)"', text, re.MULTILINE)
     fires = sorted(set().union(*(_cron_minutes(c) for c in crons)))
@@ -100,6 +102,27 @@ def test_the_backlog_killer_fires_once_per_declared_slot() -> None:
     assert gaps == {interval}, (
         f"backlog-killer.yml fires at gaps {sorted(gaps)}, not every {interval}"
     )
+
+
+def test_the_backlog_killer_chain_is_bounded_and_can_start_nothing_else() -> None:
+    """The chain re-dispatches its own workflow, so every bound on it is pinned here (12.d)."""
+    settings = tomllib.loads((WORKFLOWS.parents[1] / "scripts" / "daily_lanes.toml").read_text())
+    killer = settings["backlog_killer"]
+    assert killer["chain"] is True and 0 < killer["chain_max_links"] <= 144
+    assert killer["watchdog_minutes"] > killer["interval_minutes"]
+    lane = spec("backlog-killer.yml")
+    # One run at a time, and a waiting run is replaced rather than queued behind: links cannot pile up.
+    assert lane["concurrency"]["cancel-in-progress"] is False
+    chain = lane["jobs"]["chain"]
+    assert chain["needs"] == ["pick", "work"]
+    assert chain["permissions"] == {"contents": "read", "actions": "write"}
+    assert chain["timeout-minutes"] > killer["interval_minutes"]  # long enough to wait one slot
+    # The switch and the maximum gate both the wait and the dispatch.
+    assert step(chain, "Wait for the next slot")["if"] == "steps.plan.outputs.proceed == 'true'"
+    dispatch = step(chain, "Dispatch the next link")
+    assert dispatch["if"] == "steps.plan.outputs.proceed == 'true'"
+    assert re.findall(r"gh workflow run (\S+)", dispatch["run"]) == ["backlog-killer.yml"]  # itself
+    assert lane["jobs"]["pick"]["permissions"]["actions"] == "read"  # the pick only counts runs
 
 
 def test_the_continuation_lane_takes_a_prompt_list_without_interpolating_it() -> None:

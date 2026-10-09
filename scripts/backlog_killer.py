@@ -4,6 +4,8 @@
     python scripts/backlog_killer.py pick            # this slot's issue, as the agent's evidence
     python scripts/backlog_killer.py pick --number   # only its number; empty when there is none
     python scripts/backlog_killer.py candidates      # the ranked window, read-only
+    python scripts/backlog_killer.py clock           # this slot's start and the wait to the next
+    python scripts/backlog_killer.py chain N         # proceed=true while link N may start the next
 
 Which issues it skips and how it ranks them are declared in `scripts/daily_lanes.toml`
 `[backlog_killer]`. It never changes the forge: `.github/workflows/backlog-killer.yml` hands the
@@ -102,6 +104,9 @@ class BacklogKiller(BacklogKillerInterface):
         self._source = source
         self._window = max(1, int(settings.get("window", 7)))
         self._interval = max(1, int(settings.get("interval_minutes", 90)))
+        # The chain is off unless a committed file turns it on, and bounded when it is (12.d).
+        self._chain = bool(settings.get("chain", False))
+        self._chain_max_links = max(0, int(settings.get("chain_max_links", 72)))
         self._body_chars = int(settings.get("body_chars", 6000))
         self._priority = [str(x) for x in settings.get("priority_labels", [])]
         self._skip_labels = {str(x) for x in settings.get("skip_labels", [])}
@@ -162,6 +167,15 @@ class BacklogKiller(BacklogKillerInterface):
     def slot(self, now: datetime) -> int:
         return int(now.timestamp()) // 60 // self._interval
 
+    def slot_start(self, now: datetime) -> datetime:
+        return datetime.fromtimestamp(self.slot(now) * self._interval * 60, UTC)
+
+    def seconds_until_next_slot(self, now: datetime) -> int:
+        return (self.slot(now) + 1) * self._interval * 60 - int(now.timestamp())
+
+    def may_chain(self, link: int) -> bool:
+        return self._chain and 0 <= link < self._chain_max_links
+
     def pick(self, now: datetime) -> dict[str, Any] | None:
         window = self.candidates()[: self._window]
         if not window:
@@ -201,16 +215,25 @@ def load(root: Path) -> tuple[dict[str, Any], dict[str, Any]]:
 
 def main(argv: list[str]) -> int:
     """Entry point: `pick [--number]` or `candidates`. Module-level as every script's is."""
-    if not argv or argv[0] not in {"pick", "candidates"}:
+    if not argv or argv[0] not in {"pick", "candidates", "clock", "chain"}:
         print(__doc__, file=sys.stderr)
         return 2
     settings, expectations = load(REPO)
     killer = BacklogKiller(GhBacklogSource(), settings, expectations)
+    now = datetime.now(UTC)
+    if argv[0] == "clock":
+        print(f"slot_start={killer.slot_start(now).strftime('%Y-%m-%dT%H:%M:%SZ')}")
+        print(f"sleep={killer.seconds_until_next_slot(now)}")
+        return 0
+    if argv[0] == "chain":
+        link = int(argv[1]) if len(argv) == 2 and argv[1].isdigit() else -1
+        print(f"proceed={'true' if killer.may_chain(link) else 'false'}")
+        return 0
     if argv[0] == "candidates":
         for candidate in killer.candidates():
             print(f"#{candidate['number']} {candidate.get('title', '')}")
         return 0
-    issue = killer.pick(datetime.now(UTC))
+    issue = killer.pick(now)
     if argv[1:] == ["--number"]:
         print(issue["number"] if issue else "")
         return 0

@@ -128,6 +128,14 @@ allowed_paths = [
 # computations in the same slot agree. The workflow's schedule fires once per slot; a test
 # (tests/meta/test_daily_lanes.py) fails if its crons stop matching this interval.
 interval_minutes = 20
+# GitHub's cron is best-effort: on 2026-10-08 it delivered 5 of the 16 scheduled runs asked
+# of it. So each run ends by waiting for the next slot and dispatching the next run (the
+# `chain` job; ADR-0083, amended 2026-10-09), and the cron is only a watchdog that starts a
+# chain again within `watchdog_minutes` when none is alive. `chain = false` stops it at the
+# next link; `chain_max_links` bounds an unwatched chain, which then waits for the watchdog.
+chain = true
+chain_max_links = 72
+watchdog_minutes = 60
 window = 7
 body_chars = 6000
 prompt = "backlog"

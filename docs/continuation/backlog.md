@@ -24,7 +24,7 @@ operator (`never_act`), already named by an open pull request, filed by a lane's
 automation, a self-closing tracker, or labelled for a person or a storm lane. It ranks what is
 left by the operator's own priority label, oldest first, and rotates through the first
 `window` of them by run slot, one slot every `interval_minutes` (20; `scripts/daily_lanes.toml`
-`[backlog_killer]`), and `backlog-killer.yml` runs once per slot. Nothing is stored between
+`[backlog_killer]`), and `backlog-killer.yml` runs once per slot (each run waits for the next slot and dispatches the following one; the cron is only a watchdog, ADR-0083). Nothing is stored between
 runs: the pick is a function of the backlog and the slot, and an issue a run has opened a draft
 for is in flight and leaves the window.
 
