@@ -19,6 +19,7 @@ edit_uri: edit/main/docs/
 theme:
   name: mkdocs
   custom_dir: docs-theme
+  favicon: img/favicon.svg
 
 extra_css:
   - stylesheets/vibey.css
