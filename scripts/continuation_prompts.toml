@@ -187,6 +187,9 @@ protected = [
   '^src/vibey_tools/gh/corpus-index\.json$',
   '^\.vibey-gh\.toml$',
   '^scripts/continuation_prompts\.toml$',
+  # `python -m pytest` imports the working directory first: a file that shadows the runner
+  # would make any "passing test" the agent's own.
+  '(^|/)(pytest|_pytest|pluggy)(\.py|/)',
 ]
 # Where a patch written by an automated run may ADD files, as regular expressions over the
 # repository-relative path. A new file anywhere else (a scratch list or script at the root)

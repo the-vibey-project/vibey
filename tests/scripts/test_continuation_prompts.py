@@ -946,10 +946,12 @@ def subprocess_commit(root: Path) -> None:
     )
 
 
-def record(*calls: tuple[str, dict[str, Any], bool], runs: int = 1) -> str:
-    """The runner's tool record: a header, then {name, arguments, ok} per call."""
-    lines = [json.dumps({"runs": runs})]
-    lines += [json.dumps({"name": n, "arguments": a, "ok": ok}) for n, a, ok in calls]
+def record(
+    *calls: tuple[str, dict[str, Any], bool], runs: int = 1, root: str = "", size: int = 10
+) -> str:
+    """The runner's tool record: a header, then {name, arguments, ok, size} per call."""
+    lines = [json.dumps({"runs": runs, "root": root})]
+    lines += [json.dumps({"name": n, "arguments": a, "ok": ok, "size": size}) for n, a, ok in calls]
     return "\n".join(lines)
 
 
@@ -1091,14 +1093,14 @@ def test_the_receipt_builds_the_record_from_the_runners_events_only(tmp_path: Pa
     ]
     (run / "events.jsonl").write_text("\n".join(json.dumps(e) for e in events) + "\nnot json\n")
     lines = [json.loads(x) for x in cp.RunReceipt().tools(tmp_path).splitlines()]
-    assert lines[0] == {"runs": 1}
-    assert [(c["name"], c["ok"]) for c in lines[1:]] == [
-        ("read_file", True),
-        ("shell", False),  # exited 1
-        ("shell", False),  # never answered
+    assert lines[0] == {"runs": 1, "root": str(tmp_path.resolve())}
+    assert [(c["name"], c["ok"], c["size"]) for c in lines[1:]] == [
+        ("read_file", True, 1),  # {"content": "x"}
+        ("shell", False, 0),  # exited 1
+        ("shell", False, 0),  # never answered
     ]
     assert "forged" not in json.dumps(lines)
-    assert json.loads(cp.RunReceipt().tools(tmp_path / "none")) == {"runs": 0}
+    assert json.loads(cp.RunReceipt().tools(tmp_path / "none"))["runs"] == 0
 
 
 def test_the_cli_refuses_an_ungrounded_run_and_passes_a_grounded_one(
@@ -1151,5 +1153,64 @@ def test_the_cli_prints_the_tool_record(tmp_path: Path, capsys: pytest.CaptureFi
         json.dumps({"type": "tool.call", "name": "find", "arguments": {"pattern": "x"}}) + "\n"
     )
     assert cp.ContinuationCli(root).run(["tools", str(root)]) == 0
-    assert json.loads(capsys.readouterr().out.splitlines()[0]) == {"runs": 1}
+    assert json.loads(capsys.readouterr().out.splitlines()[0])["runs"] == 1
     assert cp.ContinuationCli(root).run(["tools"]) == 2
+
+
+def test_a_read_that_returned_nothing_read_nothing() -> None:
+    # `head -c 0 paper.md` succeeds, names the file, and displays none of it.
+    nominal = record(("shell", {"argv": ["head", "-c", "0", "a.py"]}, True), size=0)
+    nominal += "\n" + json.dumps(
+        {"name": "shell", "arguments": {"argv": ["pytest"]}, "ok": True, "size": 5}
+    )
+    assert grounding([("M", "a.py")]).ungrounded(Path("p"), "backlog", nominal) == [
+        "a.py (changed without being read)"
+    ]
+
+
+def test_paths_are_compared_as_the_patch_names_them() -> None:
+    root = "/home/runner/work/vibey/vibey"
+    run = record(
+        ("read_file", {"path": f"{root}/docs/a.md"}, True),
+        ("shell", {"argv": ["cat", "docs/sub/../b.md"]}, True),
+        ("read_file", {"path": "./c.md"}, True),
+        ("read_file", {"path": "/elsewhere/d.md"}, True),
+        ("shell", {"argv": ["pytest"]}, True),
+        root=root,
+    )
+    patch = [("M", "docs/a.md"), ("M", "docs/b.md"), ("M", "c.md"), ("M", "d.md")]
+    assert grounding(patch).ungrounded(Path("p"), "backlog", run) == [
+        "d.md (changed without being read)"
+    ]
+
+
+def test_a_dry_run_is_not_a_test() -> None:
+    for flag in ("--fixtures", "--setup-plan", "--markers", "--co", "--version"):
+        run = record(("shell", {"argv": ["pytest", flag]}, True))
+        assert not grounding([]).ran_a_test(grounding([]).calls(run)), flag
+
+
+def test_the_hand_over_runs_only_a_copy_made_before_the_agent_ran() -> None:
+    # A security review of #1494: the hand-over wrote the record the guard believes by running
+    # the repository's own script in the tree the agent had just edited.
+    text = (cp.REPO / ".github/workflows/continuation-prompts.yml").read_text()
+    export = text.index("git archive HEAD scripts")
+    agent = text.index("gptossloop run")
+    hand_over = text.index("name: Hand over the log and the patch")
+    assert export < agent < hand_over
+    after = text[hand_over : text.index("name: Upload")]
+    assert 'python3 "$RUNNER_TEMP/trusted/scripts/continuation_prompts.py" tools .' in after
+    assert 'python3 "$RUNNER_TEMP/trusted/scripts/continuation_prompts.py" transcript .' in after
+    assert "python3 scripts/continuation_prompts.py" not in after
+
+
+def test_an_agent_may_not_add_a_file_that_shadows_the_test_runner() -> None:
+    # `python -m pytest` imports the working directory first.
+    settings = cp.Settings.load(cp.REPO)
+    guard = cp.PatchGuard(settings.protected, reader=FakePaths([("A", "pytest.py")]))
+    assert guard.refused(Path("p")) == ["pytest.py"]
+    guard = cp.PatchGuard(settings.protected, reader=FakePaths([("A", "src/pytest/__init__.py")]))
+    assert guard.refused(Path("p")) == ["src/pytest/__init__.py"]
+    assert not cp.PatchGuard(
+        settings.protected, reader=FakePaths([("A", "tests/test_pytest_x.py")])
+    ).refused(Path("p"))

@@ -238,6 +238,15 @@ The prompt asked and nothing checked, so two layers now do.
   paper; the evidence was parsed from `agent.log`, which also holds the model's own words, so
   a model could print `[tool] read_file ...`; and any argv that mentioned `pytest` counted as a
   test, so `echo pytest` did, whatever its exit code.
+- **A second review round found four more, also confirmed and closed.** The hand-over ran
+  `continuation_prompts.py tools` from the working tree the agent had just edited, so an agent
+  that rewrote that script wrote its own record: the lane's scripts are now exported from
+  `HEAD` before the agent runs (`git archive`) and only that copy is executed at hand-over. A
+  read that returned nothing (`head -c 0 paper.md`) no longer counts, so each call records the
+  size of what it returned. Paths are compared as the patch names them (`./a/../b`, and a path
+  under the run's own directory). And a file named `pytest.py` or `pytest/`, which
+  `python -m pytest` would import from the working directory in place of the real runner, is now
+  a protected path, with more dry-run flags (`--fixtures`, `--setup-plan`) excluded from "a test".
 - **What this does not stop.** An agent with a shell can still write into its own
   `.qwenloop/` run store, and the lane cannot tell. The check holds against a model that skips
   its steps, not against one that forges its record; closing that needs the run store outside

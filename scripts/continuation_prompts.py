@@ -23,6 +23,7 @@ from __future__ import annotations
 import glob
 import json
 import os
+import posixpath
 import re
 import subprocess
 import sys
@@ -584,7 +585,10 @@ class GroundingRule(GroundingRuleInterface):
 
     READERS = {"read_file", "open_file"}
     DISPLAYERS = {"cat", "head", "tail", "less", "more", "nl"}
-    DRY_RUN = re.compile(r"--collect-only|--co\b|--help|(^|\s)-h(\s|$)|--version")
+    DRY_RUN = re.compile(
+        r"--collect-only|--co\b|--help|(^|\s)-h(\s|$)|--version|--fixtures|--setup-plan"
+        r"|--setup-show|--markers|--trace-config"
+    )
 
     def __init__(
         self,
@@ -597,8 +601,14 @@ class GroundingRule(GroundingRuleInterface):
         self._reader: PatchPathsInterface = reader or GitPatchPaths(Path.cwd())
 
     @staticmethod
-    def _norm(path: str) -> str:
-        return path.removeprefix("./")
+    def _norm(path: str, root: str = "") -> str:
+        """The path as the patch names it: `./a/../b` is `b`, and a path under the run's own
+        working directory (the header's `root`) is made relative to it."""
+        clean = posixpath.normpath(path)
+        base = root.rstrip("/")
+        if base and clean.startswith(base + "/"):
+            clean = clean[len(base) + 1 :]
+        return clean
 
     def calls(self, tools: str) -> list[dict[str, Any]]:
         """The recorded calls: JSON lines of {name, arguments, ok}; a line that is not one is
@@ -628,15 +638,26 @@ class GroundingRule(GroundingRuleInterface):
         argv = arguments.get("argv") if isinstance(arguments, dict) else None
         return [str(a) for a in argv] if isinstance(argv, list) else []
 
-    def read_paths(self, calls: Sequence[dict[str, Any]]) -> set[str]:
+    def root(self, tools: str) -> str:
+        for raw in tools.splitlines():
+            try:
+                record = json.loads(raw)
+            except json.JSONDecodeError:
+                continue
+            if isinstance(record, dict) and "runs" in record:
+                return str(record.get("root", ""))
+        return ""
+
+    def read_paths(self, calls: Sequence[dict[str, Any]], root: str = "") -> set[str]:
         seen: set[str] = set()
         for call in calls:
-            if call.get("ok") is not True:
+            # A read that failed, or that returned nothing (`head -c 0 paper.md`), read nothing.
+            if call.get("ok") is not True or not call.get("size"):
                 continue
             arguments = call.get("arguments")
             if call["name"] in self.READERS and isinstance(arguments, dict):
                 if isinstance(arguments.get("path"), str):
-                    seen.add(self._norm(arguments["path"]))
+                    seen.add(self._norm(arguments["path"], root))
             elif call["name"] == "shell":
                 argv = self._argv(call)
                 if not argv:
@@ -656,7 +677,7 @@ class GroundingRule(GroundingRuleInterface):
                     continue
                 for arg in rest:
                     # `git show REV:path` reads `path`; a flag or a sed script is no path.
-                    seen.add(self._norm(arg.split(":", 1)[-1]))
+                    seen.add(self._norm(arg.split(":", 1)[-1], root))
         return seen
 
     def ran_a_test(self, calls: Sequence[dict[str, Any]]) -> bool:
@@ -679,7 +700,7 @@ class GroundingRule(GroundingRuleInterface):
         if runs != 1:
             return [f"(the run store held {runs} runs, not the one the runner made)"]
         calls = self.calls(tools)
-        read = self.read_paths(calls)
+        read = self.read_paths(calls, self.root(tools))
         touched = self._reader.touched(patch) or []
         found = sorted(
             f"{path} (changed without being read)"
@@ -721,7 +742,7 @@ class RunReceipt(RunReceiptInterface):
         per tool call, from the runner's own `tool.call` and `tool_result` events and nothing the
         model said. `ok` is False for a call with no answer, an error, or a non-zero exit."""
         stores = sorted((cwd / ".qwenloop" / "runs").glob("*/events.jsonl"))
-        lines = [json.dumps({"runs": len(stores)})]
+        lines = [json.dumps({"runs": len(stores), "root": str(cwd.resolve())})]
         for events in stores:
             pending: list[dict[str, Any]] = []
             for raw in events.read_text(encoding="utf-8", errors="replace").splitlines():
@@ -736,6 +757,7 @@ class RunReceipt(RunReceiptInterface):
                             "name": event.get("name"),
                             "arguments": event.get("arguments"),
                             "ok": False,
+                            "size": 0,
                         }
                     )
                 elif kind == "tool_result" and pending:
@@ -744,6 +766,13 @@ class RunReceipt(RunReceiptInterface):
                         bool(result.get("error")) or result.get("exit_code") not in (0, None)
                     )
                     pending[-1]["ok"] = not failed
+                    # How much the call returned: a read that returned nothing read nothing.
+                    body = (
+                        str(result.get("content", result.get("output", "")))
+                        if isinstance(result, dict)
+                        else ""
+                    )
+                    pending[-1]["size"] = len(body)
             lines += [json.dumps(call) for call in pending]
         return "\n".join(lines)
 
