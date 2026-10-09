@@ -144,3 +144,28 @@ The chain is a loop that nothing outside it ends, so every bound is declared and
 The cost is a runner idle for up to one interval per link, which is free on a public repository
 and is not free on a private one. The chain does not make the agent succeed: that is
 `continuation-prompts.yml`'s concern (the same day's fix for an unavailable model server).
+
+## Amendment, 2026-10-09: the hosted CPU runners run qwen3:8b, not gpt-oss:20b
+
+The continuation lane's model chain (`scripts/continuation_prompts.toml` `[run] models`) and the
+sovereign repair's (`[pr_automation.sovereign_repair] models`) were `gpt-oss:20b`, then
+`qwen3:4b`. gpt-oss:20b is about 13 GB and the GitHub-hosted `ubuntu-24.04-arm` runner has 16 GB:
+across the backlog killer's runs of 2026-10-08 and 09 the agent log read `gptossloop
+unavailable: Remote end closed connection without response`, a dead model server, and the
+lane opened no pull request. At the operator's decision the chain is now `qwen3:8b` (about
+5 GB), then `qwen3:4b`, on every hosted CPU runner that runs an agent.
+
+What this does not do, and why:
+
+- **The sovereign default is unchanged** (8.d): gpt-oss:20b is still the model on the operator's
+  own device, in `[local_models]`, and in the review lane's own settings.
+- **The PR review and its canary are not changed here.** The review runs at a 65,536-token
+  context with a 16,384-token reasoning reserve; a dense 8B model's KV cache at that window is
+  several times gpt-oss's, so the same swap could exhaust the runner it was meant to spare, and
+  the canary's recall measurement vouches for nothing under another model
+  (`[pr_automation.review_canary]`). Moving the review is its own decision, with its own
+  measurement.
+- **qwen3:8b is unmeasured on this runner.** gpt-oss:20b is a mixture-of-experts model that
+  reads about 2 GB of weights per token; qwen3:8b is dense and reads about 5 GB, so on a
+  memory-bound CPU it may generate more slowly per token, not faster. The lane is bounded by
+  turns and by time, so a slow model costs runs, not safety.

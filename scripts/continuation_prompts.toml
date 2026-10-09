@@ -213,12 +213,16 @@ daily = ["self-healer.yml", "backlog-killer.yml", "docs-updater.yml", "release-b
 # CPU. The record measured gpt-oss:20b at 2.8 tokens/s generating and 44.5 tokens/s reading
 # on GitHub's aarch64 Ubuntu runner (docs/architecture/evidence/minimum-specs.json), so the
 # evidence handed to the model is bounded and the run is bounded by turns and by time.
+# That model is ~13 GB on a 16 GB runner, and on 2026-10-08/09 its server was killed
+# mid-run (the agent log read "gptossloop unavailable: Remote end closed connection") on
+# every backlog run that got that far. The operator's decision, 2026-10-09: hosted CPU
+# runners use qwen3:8b (~5 GB), with qwen3:4b behind it. It is unmeasured on that runner.
 [run]
 runs_on = "ubuntu-24.04-arm"
-model = "gpt-oss:20b"
+model = "qwen3:8b"
 # Tried in order: if the first cannot be pulled (a registry outage, a removed tag), the next
 # one is, and the run says which it used. A smaller second model keeps the lane answering.
-models = ["gpt-oss:20b", "qwen3:4b"]
+models = ["qwen3:8b", "qwen3:4b"]
 max_turns = 12
 timeout_minutes = 340
 evidence_chars = 12000

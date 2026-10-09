@@ -495,7 +495,9 @@ output_tokens_per_second = 2
 [pr_automation.sovereign_repair]
 enabled = true
 runs_on = "ubuntu-24.04-arm"
-models = ["gpt-oss:20b", "qwen3:4b"]
+# Hosted CPU runners use qwen3:8b, not gpt-oss:20b (~13 GB on a 16 GB runner, whose server
+# was killed mid-run on 2026-10-08/09): the operator's decision, 2026-10-09. Unmeasured there.
+models = ["qwen3:8b", "qwen3:4b"]
 max_turns = 30
 timeout_minutes = 150
 

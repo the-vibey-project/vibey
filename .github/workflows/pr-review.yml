@@ -1723,7 +1723,7 @@ jobs:
         id: model
         if: steps.budget.outputs.remaining != '0'
         env:
-          MODELS: gpt-oss:20b qwen3:4b
+          MODELS: qwen3:8b qwen3:4b
         run: |
           set -uo pipefail
           if ! curl -fsSL https://ollama.com/install.sh | sh; then
