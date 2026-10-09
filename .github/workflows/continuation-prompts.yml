@@ -345,6 +345,10 @@ jobs:
           if [ -d .qwenloop/runs ]; then
             find .qwenloop/runs -name events.jsonl -exec cp --parents {} "$RUNNER_TEMP/out/store/" \;
           fi
+          # Said out loud, because the report job can only refuse what it cannot see: a run
+          # with no store has no tool record, and a patch with no tool record is not believed.
+          [ -n "$(find "$RUNNER_TEMP/out/store" -name events.jsonl 2> /dev/null)" ] \
+            || echo "::warning::the agent left no run store (.qwenloop/runs): its patch will have no tool record"
           pwd > "$RUNNER_TEMP/out/root"
           echo "${{ steps.agent.outputs.code }}" > "$RUNNER_TEMP/out/code"
           git add -A
@@ -358,6 +362,11 @@ jobs:
           name: continuation-${{ matrix.prompt.id }}
           path: ${{ runner.temp }}/out/
           retention-days: 14
+          # The run store is `out/store/.qwenloop/...`, a HIDDEN directory, and upload-artifact
+          # skips hidden files unless told otherwise. Without this, the record `guard --tools`
+          # is built from never reached the report job (2026-10-09: "4 files uploaded", no
+          # store), so every patch was refused as having no tool record.
+          include-hidden-files: true
 
   report:
     name: Report — ${{ matrix.prompt.title }} (${{ matrix.prompt.mode }})

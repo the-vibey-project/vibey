@@ -1458,3 +1458,20 @@ def test_the_real_host_model_url_is_the_gates() -> None:
     assert cp.Settings.load(cp.REPO).run["sovereign"]["base_url"] == (
         f"http://{runners['egress_name']}:11434/v1"
     )
+
+
+def test_the_hand_over_uploads_the_hidden_run_store() -> None:
+    # 2026-10-09, run 37955959008: "include-hidden-files: false ... 4 files uploaded". The run
+    # store is out/store/.qwenloop/runs/*/events.jsonl, so the report job never received the
+    # events the tool record is built from and could not believe any patch.
+    text = (cp.REPO / ".github/workflows/continuation-prompts.yml").read_text()
+    hand_over = text.index("name: Hand over the log and the patch")
+    upload = text.index("uses: actions/upload-artifact", hand_over)
+    step = text[upload : text.index("\n  report:", upload)]
+    assert "path: ${{ runner.temp }}/out/" in step
+    assert "include-hidden-files: true" in step
+    # What it copies is hidden, which is why the flag is needed; and a run that left no store
+    # says so in the log instead of failing later for want of one.
+    copying = text[hand_over:upload]
+    assert "find .qwenloop/runs -name events.jsonl" in copying
+    assert "the agent left no run store" in copying
