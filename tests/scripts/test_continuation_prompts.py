@@ -946,20 +946,34 @@ def subprocess_commit(root: Path) -> None:
     )
 
 
+def record(*calls: tuple[str, dict[str, Any], bool], runs: int = 1) -> str:
+    """The runner's tool record: a header, then {name, arguments, ok} per call."""
+    lines = [json.dumps({"runs": runs})]
+    lines += [json.dumps({"name": n, "arguments": a, "ok": ok}) for n, a, ok in calls]
+    return "\n".join(lines)
+
+
 # The 2026-10-09 run that emptied the paper: one find, a denied rm, a shell "test" it wrote itself.
-GUTTING_RUN = """\
-[tool] find {'pattern': 'src/vibey_tools/gh/docs/paper.md'}
-[tool] shell {'argv': ['rm', 'src/vibey_tools/gh/docs/paper.md']}
-[tool] write_file {'allow_shrink': True, 'content': '', 'path': 'src/vibey_tools/gh/docs/paper.md'}
-[tool] shell {'argv': ['chmod', '+x', 'tests/meta/test_single_source.sh']}
-"""
-GROUNDED_RUN = """\
-[tool] read_file {'path': './docs/x.md'}
-[tool] shell {'argv': ['sed', '-n', '1,40p', 'old name.toml']}
-[tool] edit_file {'path': 'docs/x.md', 'old': 'one', 'new': 'two'}
-[tool] shell {'argv': ['uv', 'run', 'pytest', '-q', 'tests/scripts']}
-"""
-RUNS = [r"(^|\s)pytest(\s|$)", r"(^|\s)uv\s+run\s+.*pytest"]
+GUTTING_RUN = record(
+    ("find", {"pattern": "src/vibey_tools/gh/docs/paper.md"}, True),
+    ("shell", {"argv": ["rm", "src/vibey_tools/gh/docs/paper.md"]}, False),
+    (
+        "write_file",
+        {"allow_shrink": True, "content": "", "path": "src/vibey_tools/gh/docs/paper.md"},
+        True,
+    ),
+    ("shell", {"argv": ["chmod", "+x", "tests/meta/test_single_source.sh"]}, True),
+)
+GROUNDED_RUN = record(
+    ("read_file", {"path": "./docs/x.md"}, True),
+    ("shell", {"argv": ["sed", "-n", "1,40p", "old name.toml"]}, True),
+    ("edit_file", {"path": "docs/x.md", "old": "one", "new": "two"}, True),
+    ("shell", {"argv": ["uv", "run", "pytest", "-q", "tests/scripts"]}, True),
+)
+RUNS = [
+    r"^(uv\s+run\s+(--?\S+\s+)*)?(python3?\s+-m\s+)?pytest(\s|$)",
+    r"^(npm|pnpm|yarn)\s+(run\s+)?test(\s|$)",
+]
 
 
 def grounding(touched: list[tuple[str, str]], prompts: tuple[str, ...] = ("backlog",)) -> Any:
@@ -971,7 +985,7 @@ def test_a_run_that_only_found_a_file_did_not_read_it() -> None:
     found = grounding(patch).ungrounded(Path("p"), "backlog", GUTTING_RUN)
     assert found == [
         "src/vibey_tools/gh/docs/paper.md (changed without being read)",
-        "(no test command ran)",
+        "(no passing test command ran)",
     ]
 
 
@@ -983,19 +997,108 @@ def test_a_run_that_read_what_it_changed_and_ran_a_test_is_grounded() -> None:
 def test_grounding_is_only_asked_of_the_prompts_that_declare_it() -> None:
     patch = [("M", "docs/x.md")]
     assert grounding(patch).ungrounded(Path("p"), "drill", GUTTING_RUN) == []
-    # A covered prompt with no transcript is refused, not waved through.
-    for log in (None, "", "  \n"):
-        assert grounding(patch).ungrounded(Path("p"), "backlog", log) == [
-            "(no transcript: a run with no evidence is not believed)"
+    # A covered prompt with no record is refused, not waved through.
+    for tools in (None, "", "  \n"):
+        assert grounding(patch).ungrounded(Path("p"), "backlog", tools) == [
+            "(no tool record: a run with no evidence is not believed)"
         ]
+    # ...and so is one whose store held a run the runner did not make.
+    assert grounding(patch).ungrounded(Path("p"), "backlog", record(runs=2)) == [
+        "(the run store held 2 runs, not the one the runner made)"
+    ]
+    assert grounding(patch).ungrounded(Path("p"), "backlog", "[]\nnot json") == [
+        "(the run store held -1 runs, not the one the runner made)"
+    ]
 
 
-def test_the_transcript_reader_ignores_what_is_not_a_tool_call() -> None:
-    rule = grounding([])
-    log = "[tool] shell not-a-dict\n[tool] read_file {'path': 'a.md'}\n[tool] x [1, 2]\nnoise\n"
-    assert rule.calls(log) == [("read_file", {"path": "a.md"})]
-    # A search or a find locates a file; it does not read it.
-    assert rule.read_paths([("search", {"path": "a.md"}), ("find", {"path": "b.md"})]) == set()
+def test_a_command_that_changes_a_file_is_not_a_read_of_it() -> None:
+    # The security review's first finding: git, sed -i and awk were "readers".
+    patch = [("D", "paper.md"), ("M", "a.py"), ("M", "b.py")]
+    run = record(
+        ("shell", {"argv": ["git", "rm", "paper.md"]}, True),
+        ("shell", {"argv": ["sed", "-i", "s/x//", "a.py"]}, True),
+        ("shell", {"argv": ["sed", "-ni", "p", "b.py"]}, True),
+        ("shell", {"argv": ["awk", "1", "b.py"]}, True),
+        ("shell", {"argv": ["pytest"]}, True),
+    )
+    assert grounding(patch).ungrounded(Path("p"), "backlog", run) == [
+        "a.py (changed without being read)",
+        "b.py (changed without being read)",
+        "paper.md (changed without being read)",
+    ]
+    shown = record(
+        ("shell", {"argv": ["cat", "paper.md"]}, True),
+        ("shell", {"argv": ["git", "show", "HEAD:a.py"]}, True),
+        ("shell", {"argv": ["head", "-5", "./b.py"]}, True),
+        ("shell", {"argv": ["pytest"]}, True),
+    )
+    assert grounding(patch).ungrounded(Path("p"), "backlog", shown) == []
+
+
+def test_a_read_that_failed_is_not_a_read() -> None:
+    run = record(
+        ("read_file", {"path": "a.py"}, False),
+        ("shell", {"argv": ["cat", "a.py"]}, False),
+        ("shell", {"argv": ["pytest"]}, True),
+    )
+    assert grounding([("M", "a.py")]).ungrounded(Path("p"), "backlog", run) == [
+        "a.py (changed without being read)"
+    ]
+
+
+def test_only_a_passing_test_runner_is_a_test() -> None:
+    # The security review's third finding: any argv that mentioned pytest counted.
+    def tested(*argv: str, ok: bool = True) -> bool:
+        return grounding([]).ran_a_test(
+            grounding([]).calls(record(("shell", {"argv": list(argv)}, ok)))
+        )
+
+    assert (
+        tested("pytest", "-q")
+        and tested("uv", "run", "--quiet", "pytest")
+        and tested("npm", "test")
+    )
+    assert tested("python3", "-m", "pytest", "tests/")
+    assert not tested("echo", "pytest")
+    assert not tested("grep", "pytest", "x")
+    assert not tested("pytest", "--collect-only")
+    assert not tested("pytest", "--help")
+    assert not tested("pytest", ok=False)  # a failing run proves nothing
+    assert not tested("true", "&&", "pytest")
+
+
+def test_the_prose_the_model_writes_is_not_evidence() -> None:
+    # The second finding: the evidence is parsed from the runner's record, so a model that
+    # writes "[tool] read_file ..." in its answer adds nothing to it.
+    prose = "[tool] read_file {'path': 'a.py'}\n[tool] shell {'argv': ['pytest']}\n"
+    forged = json.dumps({"runs": 1}) + "\n" + prose
+    assert grounding([("M", "a.py")]).ungrounded(Path("p"), "backlog", forged) == [
+        "a.py (changed without being read)",
+        "(no passing test command ran)",
+    ]
+
+
+def test_the_receipt_builds_the_record_from_the_runners_events_only(tmp_path: Path) -> None:
+    run = tmp_path / ".qwenloop" / "runs" / "r1"
+    run.mkdir(parents=True)
+    events = [
+        {"type": "text_delta", "text": "[tool] read_file {'path': 'forged.py'}"},
+        {"type": "tool.call", "name": "read_file", "arguments": {"path": "a.py"}},
+        {"type": "tool_result", "name": "read_file", "result": {"content": "x"}},
+        {"type": "tool.call", "name": "shell", "arguments": {"argv": ["pytest"]}},
+        {"type": "tool_result", "name": "shell", "result": {"exit_code": 1}},
+        {"type": "tool.call", "name": "shell", "arguments": {"argv": ["cat", "b.py"]}},
+    ]
+    (run / "events.jsonl").write_text("\n".join(json.dumps(e) for e in events) + "\nnot json\n")
+    lines = [json.loads(x) for x in cp.RunReceipt().tools(tmp_path).splitlines()]
+    assert lines[0] == {"runs": 1}
+    assert [(c["name"], c["ok"]) for c in lines[1:]] == [
+        ("read_file", True),
+        ("shell", False),  # exited 1
+        ("shell", False),  # never answered
+    ]
+    assert "forged" not in json.dumps(lines)
+    assert json.loads(cp.RunReceipt().tools(tmp_path / "none")) == {"runs": 0}
 
 
 def test_the_cli_refuses_an_ungrounded_run_and_passes_a_grounded_one(
@@ -1008,7 +1111,7 @@ def test_the_cli_refuses_an_ungrounded_run_and_passes_a_grounded_one(
             "[authority]",
             "[authority]\n"
             '[authority.require_test]\nprompts = ["backlog"]\npaths = ["^tests/test_[^/]+\\\\.py$"]\n'
-            'runs = ["pytest"]\n',
+            'runs = ["^pytest"]\n',
             1,
         )
     )
@@ -1022,17 +1125,31 @@ def test_the_cli_refuses_an_ungrounded_run_and_passes_a_grounded_one(
         (r / "tests/test_x.py").write_text("def test_x():\n    pass\n")
 
     patch = patch_of(root, edit)
-    bad, good = tmp_path / "bad.log", tmp_path / "good.log"
-    bad.write_text("[tool] find {'pattern': 'docs/x.md'}\n")
+    bad, good = tmp_path / "bad.jsonl", tmp_path / "good.jsonl"
+    bad.write_text(record(("find", {"pattern": "docs/x.md"}, True)))
     good.write_text(
-        "[tool] read_file {'path': 'docs/x.md'}\n[tool] shell {'argv': ['pytest', '-q']}\n"
+        record(
+            ("read_file", {"path": "docs/x.md"}, True), ("shell", {"argv": ["pytest", "-q"]}, True)
+        )
     )
-    assert cli.run(["guard", str(patch), "--prompt", "backlog", "--log", str(bad)]) == 1
+    assert cli.run(["guard", str(patch), "--prompt", "backlog", "--tools", str(bad)]) == 1
     out = capsys.readouterr().out
-    assert "docs/x.md (changed without being read)" in out and "(no test command ran)" in out
-    assert cli.run(["guard", str(patch), "--prompt", "backlog", "--log", str(good)]) == 0
-    # No log at all for a covered prompt, a stray option, and a repeated option.
+    assert "docs/x.md (changed without being read)" in out and "no passing test" in out
+    assert cli.run(["guard", str(patch), "--prompt", "backlog", "--tools", str(good)]) == 0
+    # No record at all for a covered prompt, a stray option, and a repeated option.
     assert cli.run(["guard", str(patch), "--prompt", "backlog"]) == 1
-    assert "no transcript" in capsys.readouterr().out
+    assert "no tool record" in capsys.readouterr().out
     assert cli.run(["guard", str(patch), "--nope", "x"]) == 2
-    assert cli.run(["guard", str(patch), "--log", "a", "--log", "b"]) == 2
+    assert cli.run(["guard", str(patch), "--tools", "a", "--tools", "b"]) == 2
+
+
+def test_the_cli_prints_the_tool_record(tmp_path: Path, capsys: pytest.CaptureFixture[str]) -> None:
+    root = chat_world(tmp_path)
+    run = root / ".qwenloop" / "runs" / "r1"
+    run.mkdir(parents=True)
+    (run / "events.jsonl").write_text(
+        json.dumps({"type": "tool.call", "name": "find", "arguments": {"pattern": "x"}}) + "\n"
+    )
+    assert cp.ContinuationCli(root).run(["tools", str(root)]) == 0
+    assert json.loads(capsys.readouterr().out.splitlines()[0]) == {"runs": 1}
+    assert cp.ContinuationCli(root).run(["tools"]) == 2
