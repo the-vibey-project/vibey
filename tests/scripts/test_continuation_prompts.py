@@ -465,6 +465,27 @@ def test_the_guard_refuses_any_protected_path_and_passes_the_rest() -> None:
     assert guard([("M", "docs/x.md")]).refused(Path("p")) == []
 
 
+def test_a_tested_prompt_must_touch_a_test() -> None:
+    paths = ["^tests/", "(^|/)test_[^/]+\\.py$"]
+
+    def missing(touched: list[tuple[str, str]], prompt: str = "backlog") -> list[str]:
+        rule = cp.PatchTestRule(["backlog"], paths, reader=FakePaths(touched))
+        return list(rule.missing(Path("p"), prompt))
+
+    # #1488: a placeholder docs file and nothing to fail on it.
+    assert missing([("A", "docs/paper/review.md")]) == [cp.PatchTestRule.NO_TEST]
+    assert missing([("A", "docs/x.md"), ("A", "tests/scripts/test_x.py")]) == []
+    assert missing([("M", "src/pkg/test_helpers.py")]) == []
+    # Deleting a test is not adding one.
+    assert missing([("D", "tests/test_x.py")]) == [cp.PatchTestRule.NO_TEST]
+    # A prompt that does not promise a test is not held to one, and an unreadable patch is
+    # the PatchGuard's to refuse, not this rule's.
+    assert missing([("A", "docs/x.md")], prompt="drill") == []
+    assert cp.PatchTestRule(["backlog"], paths, reader=FakePaths(None)).missing(
+        Path("p"), "backlog"
+    ) == [cp.PatchTestRule.NO_TEST]
+
+
 def test_the_guard_fails_closed() -> None:
     unreadable = cp.PatchGuard([], reader=FakePaths(None)).refused(Path("p"))
     assert unreadable == ["(a patch git cannot apply to HEAD)"]

@@ -193,6 +193,18 @@ allowed_new = [
   '^(src|tests|docs|scripts|changelog\.d|research)/',
 ]
 
+# Prompts that promise a tested change, and what counts as a test. A patch for one of these
+# that adds or changes no test is refused (#1488: a 4b model invented a placeholder table for
+# reviewer feedback that exists nowhere, with nothing to fail on it).
+[authority.require_test]
+prompts = ["backlog"]
+paths = [
+  '^tests/',
+  '(^|/)test_[^/]+\.py$',
+  '(^|/)[^/]+\.test\.[jt]sx?$',
+  '(^|/)[^/]+_test\.(go|py)$',
+]
+
 # The lane that refreshes and runs the prompts. `check` fails if it is missing, unscheduled,
 # not dispatchable, or moved to a self-hosted runner: it must run on GitHub (#1384).
 [lane]
@@ -216,13 +228,15 @@ daily = ["self-healer.yml", "backlog-killer.yml", "docs-updater.yml", "release-b
 # That model is ~13 GB on a 16 GB runner, and on 2026-10-08/09 its server was killed
 # mid-run (the agent log read "gptossloop unavailable: Remote end closed connection") on
 # every backlog run that got that far. The operator's decision, 2026-10-09: hosted CPU
-# runners use qwen3:8b (~5 GB), with qwen3:4b behind it. It is unmeasured on that runner.
+# runners use qwen3:8b (~5 GB); qwen3:4b was withdrawn as its fallback the same day. It is unmeasured on that runner.
 [run]
 runs_on = "ubuntu-24.04-arm"
 model = "qwen3:8b"
 # Tried in order: if the first cannot be pulled (a registry outage, a removed tag), the next
-# one is, and the run says which it used. A smaller second model keeps the lane answering.
-models = ["qwen3:8b", "qwen3:4b"]
+# one is, and the run says which it used. There is no smaller second model: on 2026-10-09
+# qwen3:8b timed out and qwen3:4b answered with an invented placeholder file (#1488), so a
+# lane with only one model fails loudly instead.
+models = ["qwen3:8b"]
 max_turns = 12
 # The most a hosted job allows, less the ten minutes the job spends around the agent
 # (continuation-prompts.yml `timeout-minutes: 360`). The operator's decision, 2026-10-09.

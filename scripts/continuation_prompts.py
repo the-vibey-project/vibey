@@ -8,7 +8,7 @@
     python scripts/continuation_prompts.py plan ID    # the prompt plus its gathered evidence
     python scripts/continuation_prompts.py models     # the declared model fallback chain
     python scripts/continuation_prompts.py chat MODE REQUEST THREAD   # a chat turn's plan
-    python scripts/continuation_prompts.py guard PATCH   # exit 1 if a patch touches a protected path
+    python scripts/continuation_prompts.py guard PATCH [--prompt ID]   # exit 1 if a patch touches a protected path
     python scripts/continuation_prompts.py defuse FILE [--fenced]   # a reply made safe to post
 
 `check` holds four guarantees on every pull request: every file, glob, `vibey-gh` command and
@@ -40,6 +40,7 @@ try:
         PageRendererInterface,
         PatchGuardInterface,
         PatchPathsInterface,
+        PatchTestRuleInterface,
         ReferenceProbeInterface,
         ReplyDefuserInterface,
         RunReceiptInterface,
@@ -51,6 +52,7 @@ except ImportError:  # run as `python scripts/continuation_prompts.py`
         PageRendererInterface,
         PatchGuardInterface,
         PatchPathsInterface,
+        PatchTestRuleInterface,
         ReferenceProbeInterface,
         ReplyDefuserInterface,
         RunReceiptInterface,
@@ -95,6 +97,8 @@ class Settings:
     protected: tuple[str, ...]
     allowed_new: tuple[str, ...]
     chat: Mapping[str, Any]
+    require_test_prompts: tuple[str, ...] = ()
+    test_paths: tuple[str, ...] = ()
 
     @classmethod
     def load(cls, root: Path, relative: str = DEFAULT_CONFIG) -> Settings:
@@ -123,6 +127,10 @@ class Settings:
             protected=tuple(raw.get("authority", {}).get("protected", ())),
             allowed_new=tuple(raw.get("authority", {}).get("allowed_new", ())),
             chat=dict(raw.get("chat", {})),
+            require_test_prompts=tuple(
+                raw.get("authority", {}).get("require_test", {}).get("prompts", ())
+            ),
+            test_paths=tuple(raw.get("authority", {}).get("require_test", {}).get("paths", ())),
         )
 
     def models(self) -> list[str]:
@@ -431,6 +439,36 @@ class PatchGuard(PatchGuardInterface):
                 if status == "A" and not any(rx.search(p) for rx in self._allowed_new)
             }
         return sorted(protected | stray)
+
+
+class PatchTestRule(PatchTestRuleInterface):
+    """Refuses a patch for a prompt that promises a tested change when it touches no test.
+
+    The backlog prompt lands "the smallest shippable, tested slice". A model too small to
+    ground itself in the issue will still write a plausible file (2026-10-09: a placeholder
+    adoption table of invented reviewer feedback, #1488); it rarely writes a test that fails
+    for the invented thing. Declared in `[authority.require_test]`, so it is a key, not code.
+    """
+
+    NO_TEST = "(a patch for a tested prompt that changes no test)"
+
+    def __init__(
+        self,
+        prompts: Sequence[str],
+        test_paths: Sequence[str],
+        reader: PatchPathsInterface | None = None,
+    ) -> None:
+        self._prompts = set(prompts)
+        self._tests = [re.compile(p) for p in test_paths]
+        self._reader: PatchPathsInterface = reader or GitPatchPaths(Path.cwd())
+
+    def missing(self, patch: Path, prompt: str) -> Sequence[str]:
+        if prompt not in self._prompts:
+            return []
+        touched = self._reader.touched(patch) or []
+        if any(status != "D" and rx.search(path) for status, path in touched for rx in self._tests):
+            return []
+        return [self.NO_TEST]
 
 
 class RunReceipt(RunReceiptInterface):
@@ -854,15 +892,23 @@ class ContinuationCli:
             print(prompts.chat(argv[1], request, thread))
             return 0
         if command == "guard":
-            if len(argv) != 2:
-                print(f"{SCRIPT}: guard PATCH_FILE", file=sys.stderr)
+            if len(argv) not in {2, 4} or (len(argv) == 4 and argv[2] != "--prompt"):
+                print(f"{SCRIPT}: guard PATCH_FILE [--prompt ID]", file=sys.stderr)
                 return 2
-            refused = PatchGuard(
-                settings.protected, settings.allowed_new, GitPatchPaths(self._root)
-            ).refused(Path(argv[1]))
+            reader = GitPatchPaths(self._root)
+            refused = PatchGuard(settings.protected, settings.allowed_new, reader).refused(
+                Path(argv[1])
+            )
             for path in refused:
                 print(f"::error::an automated run may not change {path}")
-            return 1 if refused else 0
+            untested: Sequence[str] = []
+            if len(argv) == 4:
+                untested = PatchTestRule(
+                    settings.require_test_prompts, settings.test_paths, reader
+                ).missing(Path(argv[1]), argv[3])
+            for line in untested:
+                print(f"::error::the {argv[3]} prompt promises a tested change: {line}")
+            return 1 if refused or untested else 0
         if command in {"transcript", "receipt"}:
             if len(argv) != 2:
                 print(f"{SCRIPT}: {command} DIRECTORY", file=sys.stderr)

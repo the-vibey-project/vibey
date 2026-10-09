@@ -1,7 +1,7 @@
 # Made with ❤️ by [Vibey](https://the-vibey-project.github.io/vibey/), Developed by [Adam Matthew Steinberger](https://vibewithadam.matthewsteinberger.com/) ([@adammatthewsteinberger](https://github.com/adammatthewsteinberger/)).
 name: Backlog killer
 
-# Every 20 minutes, on GitHub-hosted CPU runners only (ADR-0083): pick one open issue an
+# Every 60 minutes, on GitHub-hosted CPU runners only (ADR-0083): pick one open issue an
 # agent can work now (`scripts/backlog_killer.py pick`, declared in scripts/daily_lanes.toml
 # [backlog_killer]) and run the `backlog` continuation prompt on it, which lands the issue's
 # smallest shippable, tested slice as at most one draft pull request through the continuation
@@ -21,7 +21,7 @@ name: Backlog killer
 # but this workflow, and the run it starts has exactly this file's permissions.
 on:
   schedule:
-    - cron: "13 * * * *"
+    - cron: "13 */2 * * *"
   workflow_dispatch:
     inputs:
       link:
@@ -117,7 +117,7 @@ jobs:
     # Whatever happened to the work, the chain goes on; only a cancelled run ends it.
     if: ${{ !cancelled() }}
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 90
     permissions:
       contents: read
       actions: write

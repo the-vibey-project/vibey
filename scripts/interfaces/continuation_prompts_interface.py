@@ -63,6 +63,15 @@ class PatchGuardInterface(Protocol):
         ...
 
 
+class PatchTestRuleInterface(Protocol):
+    """Says whether a patch for a prompt that promises a tested change carries a test."""
+
+    def missing(self, patch: Path, prompt: str) -> Sequence[str]:
+        """What is wrong with `patch` for `prompt`: empty when the prompt needs no test or the
+        patch adds or changes one, else one line saying no test was touched."""
+        ...
+
+
 class RunReceiptInterface(Protocol):
     """Says what a run left behind, and whether that is enough to believe its patch."""
 

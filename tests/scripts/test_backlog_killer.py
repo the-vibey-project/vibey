@@ -192,7 +192,7 @@ def test_the_cli(monkeypatch, capsys) -> None:
     assert capsys.readouterr().out.strip() == "#5 five"
     assert bk.main(["clock"]) == 0
     clock = dict(line.split("=") for line in capsys.readouterr().out.split())
-    assert clock["slot_start"].endswith("Z") and 1 <= int(clock["sleep"]) <= 20 * 60
+    assert clock["slot_start"].endswith("Z") and 1 <= int(clock["sleep"]) <= 60 * 60
     monkeypatch.setattr(bk, "load", lambda root: ({"chain": True, "chain_max_links": 2}, {}))
     assert [bk.main(["chain", arg]) for arg in ("1", "2", "x", "")] == [0, 0, 0, 0]
     assert capsys.readouterr().out.split() == ["proceed=true"] + ["proceed=false"] * 3

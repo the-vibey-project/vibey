@@ -392,7 +392,7 @@ jobs:
           python3 scripts/continuation_prompts.py receipt "$RUNNER_TEMP/out"
           # One guard for every lane that applies an agent's patch: [authority] protected and
           # allowed_new (no scratch file at the root).
-          python3 scripts/continuation_prompts.py guard "$patch"
+          python3 scripts/continuation_prompts.py guard "$patch" --prompt "${{ matrix.prompt.id }}"
           # The agent's own report closes the description -- defused, because it is model
           # output, and marked unverified, because a person checks it. Built BEFORE the patch
           # is applied: the patch may change scripts/, and nothing it wrote may run here.

@@ -179,3 +179,21 @@ sovereign repair's is 330, the most its validator allows. The runs that prompted
 timing out, so this buys a slow model time rather than speed. It costs the lane its slot: the
 continuation lane's concurrency group runs one agent at a time and holds a hung one for up to
 six hours, during which the backlog killer's dispatches are dropped or queued behind it.
+
+## Amendment, 2026-10-09: one model, a tested patch, and an hourly clock
+
+Three findings from watching the lane for four hours, none of them a crash.
+
+- **qwen3:4b is withdrawn as the continuation lane's fallback.** qwen3:8b timed out on the
+  hosted CPU runner, qwen3:4b answered, and its patch was a placeholder adoption table of
+  reviewer feedback that exists nowhere in the repository (#1488). A fallback that answers
+  with something plausible is worse than a run that fails loudly (10.f). The sovereign
+  repair's chain is unchanged here.
+- **A patch for the `backlog` prompt must add or change a test.** `[authority.require_test]`
+  declares the prompts and what counts as a test; `continuation_prompts.py guard PATCH
+  --prompt ID` refuses a patch for one of them that touches none. The prompt promises "a
+  tested slice", and a deterministic check is the part a small model cannot talk its way past.
+- **The backlog killer runs hourly, not every 20 minutes.** An agent run takes 40 to 80
+  minutes and the lane runs one at a time, so two of every three dispatches were replaced
+  unrun and showed as cancelled. `interval_minutes` is 60, the watchdog 120.
+
