@@ -939,6 +939,18 @@ _EGRESS_HOST_RE = re.compile(r"^[a-z0-9*][a-z0-9*.-]*$")
 # What a job container may reach through the egress gate, on port 443 (ADR-0083, 2026-10-09):
 # GitHub and the stores it serves artifacts and releases from, and PyPI. Nothing here is a host
 # the agent could write to without a credential it does not hold.
+# Domains whose subdomains are handed out to anyone, so a wildcard over them allows hosts an
+# attacker controls. Not a public-suffix list: a guard against the obvious overbroad entry,
+# not against every one (a country-code second level like `co.uk` is caught by shape).
+_SHARED_HOSTING = frozenset(
+    {
+        "windows.net", "azurewebsites.net", "azureedge.net", "amazonaws.com", "cloudfront.net",
+        "appspot.com", "googleusercontent.com", "web.app", "firebaseapp.com", "github.io",
+        "gitlab.io", "herokuapp.com", "vercel.app", "netlify.app", "pages.dev", "workers.dev",
+        "onrender.com", "fly.dev", "glitch.me", "repl.co", "replit.app", "ngrok.io",
+        "ngrok-free.app", "trycloudflare.com", "blogspot.com", "wordpress.com", "s3.amazonaws.com",
+    }
+)  # fmt: skip
 _EGRESS_ALLOW = (
     "github.com",
     "api.github.com",
@@ -946,7 +958,10 @@ _EGRESS_ALLOW = (
     "*.githubusercontent.com",
     "*.pkg.github.com",
     "ghcr.io",
-    "productionresultssa*.blob.core.windows.net",
+    # GitHub's own artifact storage accounts, named exactly: a wildcard here would also match
+    # `productionresultssaz.blob.core.windows.net`, an account name anyone can register, and
+    # so be a place for a job's shell to send data.
+    *(f"productionresultssa{n}.blob.core.windows.net" for n in range(20)),
     "pypi.org",
     "files.pythonhosted.org",
 )
@@ -1032,6 +1047,30 @@ class RunnersConfig:
     # Where the systemd user units are written.
     systemd_user_dir: str = "~/.config/systemd/user"
 
+    @staticmethod
+    def _egress_problem(pattern: str) -> str:
+        """Why an allowlist entry is refused, or "". An entry is an exact host name, or `*.`
+        and a domain: the wildcard is the WHOLE first label (never `prefix*`, which matches a
+        name anyone can register), and the domain must not be a shared-hosting one or a
+        country-code second level, where the wildcard would allow hosts an attacker controls."""
+        if _EGRESS_HOST_RE.fullmatch(pattern) is None:
+            return "must be lower-case letters, digits, dots, dashes and one leading `*.`"
+        labels = pattern.split(".")
+        if len(labels) < 2 or "" in labels:
+            return "must be a host name with at least two labels"
+        if any("*" in label for label in labels[1:]) or ("*" in labels[0] and labels[0] != "*"):
+            return "a wildcard may only be a whole first label (`*.example.com`)"
+        if labels[0] == "*":
+            base = labels[1:]
+            domain = ".".join(base)
+            if len(base) < 2:
+                return "a wildcard over a whole top-level domain allows every host under it"
+            if len(base[-1]) == 2 and len(base[-2]) <= 3:
+                return "a wildcard over a country-code second level (`co.uk`) allows every host"
+            if any(domain == shared or domain.endswith("." + shared) for shared in _SHARED_HOSTING):
+                return f"a wildcard over {domain} allows hosts anyone can register"
+        return ""
+
     @property
     def model_url_in_container(self) -> str:
         """The model endpoint as the job container sees it: the gate's forwarder while the
@@ -1100,19 +1139,9 @@ class RunnersConfig:
                 "runners.egress_allow must name at least one host while the gate is on"
             )
         for pattern in self.egress_allow:
-            labels = str(pattern).split(".")
-            ok = (
-                _EGRESS_HOST_RE.fullmatch(str(pattern)) is not None
-                and len(labels) >= 2
-                and not any("*" in label for label in labels[1:])
-                # `*.com` would allow a whole top-level domain: a wildcard needs two literal labels.
-                and (len(labels) >= 3 or "*" not in labels[0])
-            )
-            if not ok:
-                raise ValueError(
-                    f"runners.egress_allow entries must be host names with a wildcard only in"
-                    f" the first label and never over a whole TLD: {pattern!r}"
-                )
+            problem = self._egress_problem(str(pattern))
+            if problem:
+                raise ValueError(f"runners.egress_allow {pattern!r}: {problem}")
         if not self.container_model_url.startswith(("http://", "https://")):
             url = self.container_model_url
             raise ValueError(f"runners.container_model_url must be an http(s) URL: {url!r}")

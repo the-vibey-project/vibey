@@ -177,8 +177,29 @@ not built -- run the 'docker build' command 'vibey-gh runner install' printed"
 # The egress gate (see the header): a container on the default network AND on an internal one
 # with no route out. The job container joins only the internal one, so the gate is the only
 # thing it can reach. Started here, once per supervisor, and checked before every job.
+# Running AND on the internal network: a gate that is up but not joined gives a job nothing to
+# reach, and one on the wrong network would be a gate in name only.
 gate_running() {
-  [ "$(docker inspect -f '{{.State.Running}}' "$EGRESS_NAME" 2> /dev/null)" = "true" ]
+  local state
+  state=$(docker inspect -f '{{.State.Running}} {{range $k, $v := .NetworkSettings.Networks}}{{$k}} {{end}}' \
+    "$EGRESS_NAME" 2> /dev/null) || return 1
+  state=" $state "
+  # Two separate tests: one pattern cannot match " true " and then " <network> ", because the
+  # space between them is a single character.
+  case "$state" in " true "*) ;; *) return 1 ;; esac
+  case "$state" in *" $EGRESS_NETWORK "*) return 0 ;; esac
+  return 1
+}
+# `--internal` is the whole isolation, so it is VERIFIED, never assumed: a network of this name
+# that already exists and is not internal (made by hand, or by an older install) would give
+# the job a route to the host and the internet.
+network_internal() {
+  [ "$(docker network inspect -f '{{.Internal}}' "$EGRESS_NETWORK" 2> /dev/null)" = "true" ]
+}
+require_internal_network() {
+  network_internal || refuse "the docker network $EGRESS_NETWORK is not --internal, so a job on \
+it would have a route out. Remove it ('docker network rm $EGRESS_NETWORK', with no container on \
+it) and the supervisor will create it correctly, or name another in [runners] egress_network"
 }
 start_gate() {
   [ "$EGRESS_GATE" = "1" ] || return 0
@@ -186,6 +207,7 @@ start_gate() {
     || docker network create --internal --label "vibey-egress=${RUNNER_LABEL}" \
       "$EGRESS_NETWORK" > /dev/null 2>&1 \
     || refuse "could not create the internal docker network $EGRESS_NETWORK"
+  require_internal_network
   docker rm -f "$EGRESS_NAME" > /dev/null 2>&1 || true
   # The gate holds no credential and writes nothing: a read-only root, no capabilities, its
   # script mounted read-only. It reaches the host only to forward the model server's port.
@@ -293,6 +315,8 @@ ${GH_CONFIG_DIR} -- its token needs Administration: Read and write on that repos
   reap_offline
   if [ "$EGRESS_GATE" = "1" ]; then
     gate_running || { log "the egress gate stopped; starting it again"; start_gate; }
+    # Re-checked before EVERY job: the network could have been replaced since the last one.
+    require_internal_network
     # The internal network has no route out: the job reaches only the gate, by name, for HTTPS
     # to the declared hosts (the proxy) and for the model server (its own port). NO_PROXY keeps
     # the model URL off the proxy, which would refuse a plain GET.

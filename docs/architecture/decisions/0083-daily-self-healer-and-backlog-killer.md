@@ -302,6 +302,17 @@ operator's own machine already serves gpt-oss:20b and already registers a runner
   chat endpoint work and `DELETE /api/delete`, `POST /api/pull` and `POST /api/generate` return
   403. What remains is exfiltration to a host on the allowlist, which takes a credential the
   job does not hold, and the pre-existing exposure of the run record (below).
+- **A security review of the gate found its first version leaky, and three things were closed.**
+  The default allowlist's `productionresultssa*.blob.core.windows.net` also matched
+  `productionresultssaz.blob.core.windows.net`, a storage-account name anyone can register, so
+  a job's shell could have sent data to it: the default now names GitHub's twenty accounts
+  exactly, and a wildcard is only ever a whole first label, refused over a top-level domain, a
+  country-code second level or a shared-hosting domain (`windows.net`, `github.io`,
+  `amazonaws.com`). The supervisor reused a network of the right name without checking it was
+  `--internal`; it now verifies that before the gate starts and again before every job, and
+  that the gate is attached to it. And the check that the gate was running could never match
+  (a glob needing one space to be two), so it would have rebuilt the gate before each job; two
+  tests caught it.
 - **Who can reach the machine at all.** The workflow is dispatch- and schedule-only, so no
   fork's code or pull request ever reaches it, and the backlog pick takes issues only from
   trusted authors.

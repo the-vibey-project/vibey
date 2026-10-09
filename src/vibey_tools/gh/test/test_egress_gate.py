@@ -286,3 +286,23 @@ async def test_the_system_resolver_and_dialer_are_real() -> None:
 def test_the_gate_is_configured_from_the_environment() -> None:
     seen = gate.Gate({"EGRESS_ALLOW": "a.com, b.com", "EGRESS_MODEL_UPSTREAM": "m:1"})
     assert seen._env["EGRESS_ALLOW"] == "a.com, b.com"
+
+
+def test_the_shipped_default_reaches_githubs_storage_and_not_one_anyone_can_register() -> None:
+    from vibey_gh.config import RunnersConfig
+
+    policy = gate.HostPolicy(list(RunnersConfig().egress_allow))
+    for n in range(20):
+        assert policy.allows(f"productionresultssa{n}.blob.core.windows.net", 443)
+    for host in (
+        "productionresultssaz.blob.core.windows.net",
+        "productionresultssa.blob.core.windows.net",
+        "productionresultssa0.evil.blob.core.windows.net",
+        "productionresultssa20.blob.core.windows.net.evil.com",
+        "attacker.blob.core.windows.net",
+        "x.github.io",
+        "bucket.s3.amazonaws.com",
+    ):
+        assert not policy.allows(host, 443), host
+    assert policy.allows("pipelines.actions.githubusercontent.com", 443)
+    assert policy.allows("objects.githubusercontent.com", 443)

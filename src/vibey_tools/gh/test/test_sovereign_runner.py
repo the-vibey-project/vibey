@@ -212,6 +212,15 @@ def test_runners_registration_is_declared_or_derived(runners, platform, expected
         ("egress_allow", ["a.*.example.com"]),
         ("egress_allow", ["bad host.com"]),
         ("egress_allow", ["UPPER.com"]),
+        # A wildcard over hosts anyone can register is an exfiltration channel.
+        ("egress_allow", ["productionresultssa*.blob.core.windows.net"]),
+        ("egress_allow", ["*.blob.core.windows.net"]),
+        ("egress_allow", ["*.windows.net"]),
+        ("egress_allow", ["*.github.io"]),
+        ("egress_allow", ["*.amazonaws.com"]),
+        ("egress_allow", ["*.co.uk"]),
+        ("egress_allow", ["*.com.au"]),
+        ("egress_allow", ["x*.example.com"]),
         ("throttle_seconds", 5),
         ("throttle_seconds", 3601),
         ("max_failures", 0),
@@ -881,11 +890,19 @@ case "$name $1" in
   "docker image") exit 0 ;;
   "docker ps") exit 0 ;;
   "docker network")
-    # `inspect` says the network is missing unless a test says it exists; the rest succeeds.
-    [ "$2" = "inspect" ] && exit "$(cat "$FAKE_DIR/net_rc" 2>/dev/null || echo 1)"
+    if [ "$2" = "inspect" ]; then
+      # `-f {{.Internal}}` answers what the network IS; a plain inspect says whether it exists
+      # (missing unless a test says otherwise).
+      case " $* " in *" -f "*) cat "$FAKE_DIR/net_internal" 2>/dev/null || echo true; exit 0 ;; esac
+      exit "$(cat "$FAKE_DIR/net_rc" 2>/dev/null || echo 1)"
+    fi
     exit 0 ;;
   "docker rm") exit 0 ;;
-  "docker inspect") cat "$FAKE_DIR/gate_running" 2>/dev/null || echo true; exit 0 ;;
+  "docker inspect")
+    # "<running> <network> <network> ...", as the supervisor's format string prints it.
+    printf '%s %s\n' "$(cat "$FAKE_DIR/gate_running" 2>/dev/null || echo true)" \
+      "$(cat "$FAKE_DIR/gate_networks" 2>/dev/null || echo "vibey-runner-net bridge")"
+    exit 0 ;;
   "docker logs") cat "$FAKE_DIR/gate_logs" 2>/dev/null || echo "egress gate up: allow=[]"; exit 0 ;;
   "docker run")
     # The gate is started detached; only the job's own run records a token and honours run_mode.
@@ -1428,4 +1445,44 @@ def test_the_gate_settings_validate_and_default_to_the_hosts_a_job_needs():
     assert ungated.model_url_in_container == ungated.container_model_url
     # TOML hands a list through; it is held as a tuple.
     assert RunnersConfig(egress_allow=["a.example.com"]).egress_allow == ("a.example.com",)
-    assert RunnersConfig(egress_allow=["productionresultssa*.blob.core.windows.net"]).egress_allow
+
+
+def test_a_network_that_exists_but_is_not_internal_is_refused(tmp_path):
+    # The isolation IS `--internal`; a network of the same name made by hand, or by an older
+    # install, must not be trusted because it exists.
+    (tmp_path / "fake").mkdir()
+    (tmp_path / "fake/net_rc").write_text("0", encoding="utf-8")
+    (tmp_path / "fake/net_internal").write_text("false", encoding="utf-8")
+    code, out, calls, _ = _gated(tmp_path)
+    assert code == 1 and "the docker network vibey-runner-net is not --internal" in out
+    assert not [c for c in _docker_lines(calls, "docker run") if "--rm" in c]  # no job ran
+
+
+def test_a_network_that_stops_being_internal_between_jobs_stops_the_jobs(tmp_path):
+    # Checked again before every job, not only when the gate starts: here the first check
+    # passes (the network is created) and the job-time check fails.
+    (tmp_path / "fake").mkdir()
+    (tmp_path / "fake/net_internal").write_text("false", encoding="utf-8")
+    code, out, calls, _ = _gated(tmp_path)
+    assert code == 1 and "is not --internal" in out
+    assert not [c for c in _docker_lines(calls, "docker run") if "--rm" in c]
+
+
+def test_a_gate_that_is_up_but_not_on_the_internal_network_is_started_again(tmp_path):
+    (tmp_path / "fake").mkdir()
+    (tmp_path / "fake/gate_networks").write_text("bridge", encoding="utf-8")
+    _, out, calls, _ = _gated(tmp_path)
+    assert "the egress gate stopped; starting it again" in out
+    assert len([c for c in _docker_lines(calls, "docker run") if " -d " in f" {c} "]) == 2
+
+
+def test_the_default_allowlist_has_no_name_an_attacker_can_register():
+    # Found by a security review of #1496: `productionresultssa*.blob.core.windows.net` also
+    # matched `productionresultssaz...`, a storage account name anyone can claim.
+    allow = RunnersConfig().egress_allow
+    assert not [p for p in allow if "*" in p and "blob" in p]
+    assert all(f"productionresultssa{n}.blob.core.windows.net" in allow for n in range(20))
+    # Every wildcard left is a whole first label over a domain that is not shared hosting.
+    for pattern in (p for p in allow if "*" in p):
+        assert pattern.startswith("*.") and pattern.count("*") == 1
+    assert RunnersConfig(egress_allow=["*.githubusercontent.com", "*.example.org"]).egress_allow
