@@ -1363,6 +1363,7 @@ def test_the_gate_is_a_read_only_container_on_an_internal_network_that_joins_bot
         "--cap-drop ALL",
         "--security-opt no-new-privileges",
         "--pids-limit 256",
+        "--log-opt max-size=5m --log-opt max-file=3",
         "--add-host host.docker.internal:host-gateway",
         f"-v {tmp_path / 'egress'}:/egress:ro",
         "-e EGRESS_ALLOW=github.com,pypi.org",

@@ -210,10 +210,12 @@ start_gate() {
   require_internal_network
   docker rm -f "$EGRESS_NAME" > /dev/null 2>&1 || true
   # The gate holds no credential and writes nothing: a read-only root, no capabilities, its
-  # script mounted read-only. It reaches the host only to forward the model server's port.
+  # script mounted read-only. It reaches the host only to forward the model server's port. Its
+  # log is capped here (15 MB) as well as in the gate: Docker's default differs by setup.
   docker run -d --name "$EGRESS_NAME" --label "vibey-egress=${RUNNER_LABEL}" \
     --restart on-failure:5 --read-only --cap-drop ALL --security-opt no-new-privileges \
     --pids-limit 256 --memory 256m \
+    --log-opt max-size=5m --log-opt max-file=3 \
     --add-host host.docker.internal:host-gateway \
     -v "${EGRESS_DIR}:/egress:ro" \
     -e PYTHONDONTWRITEBYTECODE=1 -e EGRESS_ALLOW="$EGRESS_ALLOW" \

@@ -26,6 +26,18 @@ class DialerInterface(Protocol):
         ...
 
 
+class AccessLogInterface(Protocol):
+    """Where the gate says what it let through and what it refused, and why."""
+
+    def allow(self, what: str) -> None:
+        """One destination or request that was let through."""
+        ...
+
+    def deny(self, what: str, why: str) -> None:
+        """One destination or request that was refused, and the reason."""
+        ...
+
+
 class HostPolicyInterface(Protocol):
     """Says which outbound destinations the runner container may reach through the gate."""
 

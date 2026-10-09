@@ -24,11 +24,13 @@ import ipaddress
 import os
 import socket
 import sys
-from collections.abc import Sequence
+import time
+from collections.abc import Callable, Sequence
 from pathlib import Path
 
 try:
     from interfaces.egress_gate_interface import (  # type: ignore[import-not-found]
+        AccessLogInterface,
         DialerInterface,
         HostPolicyInterface,
         RequestPolicyInterface,
@@ -37,6 +39,7 @@ try:
 except ModuleNotFoundError:  # run from outside the directory that holds `interfaces/`
     sys.path.insert(0, str(Path(__file__).resolve().parent))
     from interfaces.egress_gate_interface import (  # type: ignore[import-not-found,no-redef]
+        AccessLogInterface,
         DialerInterface,
         HostPolicyInterface,
         RequestPolicyInterface,
@@ -46,6 +49,96 @@ except ModuleNotFoundError:  # run from outside the directory that holds `interf
 MAX_HEAD = 16 * 1024
 # A long prefill on a big context is silence for minutes; a hung peer is not worth a slot forever.
 IDLE_SECONDS = 1800
+
+
+class Destination:
+    """What of a client-supplied request target may be written to the log: where it was going,
+    and nothing it carried.
+
+    A target can hold a secret in three places: credentials before an `@` (`user:token@host`),
+    a query string (`?api_key=...`), and a fragment. None is needed to say where a request was
+    headed, so none is kept: a host and port, or a method and a path. This is the only way
+    the gate turns request text into log text, so a new listener cannot forget it.
+    """
+
+    METHOD_LIMIT = 16
+
+    @staticmethod
+    def host(target: str) -> str:
+        """`host[:port]` of a `scheme://user:pw@host:port/path?query` or a `user:pw@host:port`."""
+        text = target.split("://", 1)[-1]
+        text = text.split("/", 1)[0].split("?", 1)[0].split("#", 1)[0]
+        return text.rpartition("@")[2]
+
+    @staticmethod
+    def path(target: str) -> str:
+        """The path of `/path?query#fragment`, without the query or the fragment."""
+        return target.split("?", 1)[0].split("#", 1)[0]
+
+    @classmethod
+    def request(cls, parts: Sequence[str]) -> str:
+        """`METHOD where` for a request line already split on whitespace, safe to log."""
+        if not parts:
+            return "(request)"
+        method = parts[0][: cls.METHOD_LIMIT]
+        if len(parts) < 2:
+            return method
+        target = parts[1]
+        return f"{method} {cls.path(target) if target.startswith('/') else cls.host(target)}"
+
+
+class AccessLog(AccessLogInterface):
+    """One line per decision on the gate's standard output (`docker logs vibey-egress`).
+
+    A refusal used to be a bare 403 to the job and nothing here, so a step that failed on a
+    host nobody had listed gave no clue which. What is logged is the destination (a host and
+    port, or a method and path, reduced by `Destination`) and the reason: never a header, a
+    body, a credential or a query string. The destination is client-supplied text, so it is
+    cleaned and cut before it is written.
+    """
+
+    LIMIT = 120
+    # A job that makes endless connections must not make an endless log. Per kind, so a flood
+    # of ALLOWs cannot hide a DENY: past RATE lines in a WINDOW the rest are counted, and one
+    # line says how many when the next window opens.
+    WINDOW = 60.0
+    RATE = 600
+
+    def __init__(
+        self,
+        out: Callable[[str], None] | None = None,
+        clock: Callable[[], float] = time.monotonic,
+    ) -> None:
+        self._out = out or (lambda line: print(line, flush=True))
+        self._clock = clock
+        self._start = {"allow": float("-inf"), "deny": float("-inf")}
+        self._count = {"allow": 0, "deny": 0}
+        self._dropped = {"allow": 0, "deny": 0}
+
+    def _say(self, kind: str, line: str) -> None:
+        now = self._clock()
+        if now - self._start[kind] >= self.WINDOW:
+            if self._dropped[kind]:
+                self._out(
+                    f"egress LIMIT {self._dropped[kind]} {kind.upper()} lines were not written"
+                    f" in the last {self.WINDOW:.0f}s (at most {self.RATE} a window)"
+                )
+            self._start[kind], self._count[kind], self._dropped[kind] = now, 0, 0
+        if self._count[kind] >= self.RATE:
+            self._dropped[kind] += 1
+            return
+        self._count[kind] += 1
+        self._out(line)
+
+    @classmethod
+    def clean(cls, text: str) -> str:
+        return "".join(c if c.isprintable() else "?" for c in text)[: cls.LIMIT]
+
+    def allow(self, what: str) -> None:
+        self._say("allow", f"egress ALLOW {self.clean(what)}")
+
+    def deny(self, what: str, why: str) -> None:
+        self._say("deny", f"egress DENY  {self.clean(what)} -- {why}")
 
 
 class SystemResolver(ResolverInterface):
@@ -155,10 +248,12 @@ class ConnectProxy:
         policy: HostPolicyInterface,
         resolver: ResolverInterface | None = None,
         dialer: DialerInterface | None = None,
+        log: AccessLogInterface | None = None,
     ) -> None:
         self._policy = policy
         self._resolver = resolver or SystemResolver()
         self._dialer = dialer or TcpDialer()
+        self._log: AccessLogInterface = log or AccessLog()
 
     @staticmethod
     async def refuse(writer: asyncio.StreamWriter, status: str) -> None:
@@ -174,23 +269,40 @@ class ConnectProxy:
     async def handle(self, reader: asyncio.StreamReader, writer: asyncio.StreamWriter) -> None:
         head = await Head.read(reader)
         if head is None:
+            self._log.deny("(request)", "no complete request head")
             return await self.refuse(writer, "400 Bad Request")
         parts = head.split(b"\r\n", 1)[0].decode("latin-1").split()
-        if len(parts) != 3 or parts[0].upper() != "CONNECT":
+        if not parts or parts[0].upper() != "CONNECT":
+            self._log.deny(Destination.request(parts), "only CONNECT is supported")
+            return await self.refuse(writer, "405 Method Not Allowed")
+        if len(parts) != 3:
+            self._log.deny(Destination.request(parts), "a CONNECT request line needs a host:port")
             return await self.refuse(writer, "405 Method Not Allowed")
         host, _, port_text = parts[1].rpartition(":")
-        if not port_text.isdigit() or not self._policy.allows(host, int(port_text)):
+        if not port_text.isdigit():
+            # The "port" is whatever the client typed: say the host, not that text.
+            self._log.deny(Destination.host(host) or "(no host)", "the port is not a number")
+            return await self.refuse(writer, "403 Forbidden")
+        target = f"{Destination.host(host)}:{port_text}"
+        if not self._policy.allows(host, int(port_text)):
+            self._log.deny(target, "not on the allowlist (add the host to [runners] egress_allow)")
             return await self.refuse(writer, "403 Forbidden")
         port = int(port_text)
         everything = await self._resolver.resolve(host, port)
         addresses = [a for a in everything if self._policy.public(a)]
         # EVERY address must be public: a name that also points at the host is refused whole.
-        if not addresses or len(addresses) != len(everything):
+        if not everything:
+            self._log.deny(target, "the name does not resolve")
+            return await self.refuse(writer, "403 Forbidden")
+        if len(addresses) != len(everything):
+            self._log.deny(target, "resolves to an address that is not public")
             return await self.refuse(writer, "403 Forbidden")
         try:
             upstream = await self._dialer.open(addresses[0], port)
-        except (TimeoutError, OSError):
+        except (OSError, TimeoutError):
+            self._log.deny(target, "the upstream did not accept the connection")
             return await self.refuse(writer, "502 Bad Gateway")
+        self._log.allow(target)
         writer.write(b"HTTP/1.1 200 Connection Established\r\n\r\n")
         await writer.drain()
         await Pipe.both((reader, writer), upstream)
@@ -204,10 +316,12 @@ class ModelGate:
         upstream: tuple[str, int],
         policy: RequestPolicyInterface | None = None,
         dialer: DialerInterface | None = None,
+        log: AccessLogInterface | None = None,
     ) -> None:
         self._upstream = upstream
         self._policy = policy or RequestPolicy()
         self._dialer = dialer or TcpDialer()
+        self._log: AccessLogInterface = log or AccessLog()
 
     @staticmethod
     def one_request(head: bytes) -> bytes:
@@ -226,14 +340,21 @@ class ModelGate:
     async def handle(self, reader: asyncio.StreamReader, writer: asyncio.StreamWriter) -> None:
         head = await Head.read(reader)
         if head is None:
+            self._log.deny("(model request)", "no complete request head")
             return await ConnectProxy.refuse(writer, "400 Bad Request")
         line = head.split(b"\r\n", 1)[0].decode("latin-1").split()
         if len(line) != 3 or not self._policy.allows(line[0], line[1]):
+            self._log.deny(
+                Destination.request(line) if line else "(model request)",
+                "not one of the model requests allowed",
+            )
             return await ConnectProxy.refuse(writer, "403 Forbidden")
         try:
             upstream = await self._dialer.open(*self._upstream)
-        except (TimeoutError, OSError):
+        except (OSError, TimeoutError):
+            self._log.deny(Destination.request(line), "the host's model server did not answer")
             return await ConnectProxy.refuse(writer, "502 Bad Gateway")
+        self._log.allow(Destination.request(line))
         upstream[1].write(self.one_request(head))
         await upstream[1].drain()
         await Pipe.both((reader, writer), upstream)
