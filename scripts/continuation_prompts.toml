@@ -234,7 +234,9 @@ runs = [
 [lane]
 workflow = ".github/workflows/continuation-prompts.yml"
 # The lanes that run with nobody watching and must stay on GitHub's own CPU runners: never a
-# self-hosted machine, never a paid GPU runner (ADR-0083). `check` fails if one of them runs
+# self-hosted machine, never a paid GPU runner (ADR-0083) -- except the prompts `[run.sovereign]`
+# names, which run on the operator's machine while its heartbeat is fresh (and are skipped when
+# it is not). `check` fails if one of them runs
 # a job anywhere `cpu_runners` does not name.
 hosted_cpu_only = [
   "continuation-prompts.yml", "chat.yml", "self-healer.yml", "backlog-killer.yml",
@@ -267,6 +269,27 @@ max_turns = 12
 timeout_minutes = 350
 evidence_chars = 12000
 gather_timeout_s = 180
+
+# The ONE exception to "hosted CPU only" (ADR-0083, amended 2026-10-09; the operator's decision):
+# the prompts named here run on the operator's own machine, on the sovereign model it serves,
+# through gptossloop. A 8B model on a 4-vCPU runner could not do their work (it called tools
+# that do not exist and wrote files of invented records). The machine is a Docker Desktop
+# container per job under launchd (docs/runbooks/sovereign-review-runner.md): non-root, no sudo,
+# no host mount, and it reaches the host's Ollama at `base_url`. While the machine's heartbeat
+# is older than `heartbeat_max_age_minutes` (or unreadable) the prompt is LEFT OUT of the
+# matrix: it is skipped, never queued for a runner that is not there and never moved to a
+# hosted one. `check` holds runs_on and heartbeat_ref to `.vibey-gh.toml`.
+[run.sovereign]
+prompts = ["backlog"]
+runs_on = ["self-hosted", "vibey-local-vibey"]
+model = "gpt-oss:20b"
+# gptossloop's own endpoint setting ($GPTOSSLOOP_BASE_URL), /v1 included.
+base_url = "http://host.docker.internal:11434/v1"
+# More turns and a shorter ceiling than the CPU runner: the host reads at ~200 tok/s.
+max_turns = 40
+timeout_minutes = 120
+heartbeat_ref = "refs/vibey-gh/sovereign-heartbeat"
+heartbeat_max_age_minutes = 15
 
 # A workflow or skill no prompt covers, with the reason it needs none. Empty is the goal.
 [exempt]
