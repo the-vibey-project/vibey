@@ -306,3 +306,137 @@ def test_the_shipped_default_reaches_githubs_storage_and_not_one_anyone_can_regi
         assert not policy.allows(host, 443), host
     assert policy.allows("pipelines.actions.githubusercontent.com", 443)
     assert policy.allows("objects.githubusercontent.com", 443)
+
+
+class Sink:
+    """A writer that can fail the way a dead socket does."""
+
+    def __init__(self, drain_error: bool = False, close_error: bool = False) -> None:
+        self.drain_error, self.close_error = drain_error, close_error
+        self.written: list[bytes] = []
+        self.closed = False
+
+    def write(self, data: bytes) -> None:
+        self.written.append(data)
+
+    async def drain(self) -> None:
+        if self.drain_error:
+            raise ConnectionResetError
+
+    def close(self) -> None:
+        self.closed = True
+        if self.close_error:
+            raise OSError("already gone")
+
+
+class ResetReader:
+    async def read(self, n: int) -> bytes:
+        raise ConnectionResetError
+
+
+class EmptyReader:
+    async def read(self, n: int) -> bytes:
+        return b""
+
+
+@sync
+async def test_a_peer_that_resets_mid_copy_ends_the_copy_quietly() -> None:
+    sink = Sink()
+    await gate.Pipe.run(ResetReader(), sink)  # no exception escapes
+    assert sink.closed and sink.written == []
+
+
+@sync
+async def test_closing_a_writer_that_is_already_gone_is_not_an_error() -> None:
+    sink = Sink(close_error=True)
+    await gate.Pipe.run(EmptyReader(), sink)
+    assert sink.closed
+
+
+@sync
+async def test_a_request_head_that_never_completes_is_no_request() -> None:
+    reader = asyncio.StreamReader()
+    reader.feed_data(b"GET /api/version HTTP/1.1\r\nHost: x")  # the peer hangs up mid-head
+    reader.feed_eof()
+    assert await gate.Head.read(reader) is None
+    complete = asyncio.StreamReader()
+    complete.feed_data(b"GET / HTTP/1.1\r\n\r\n")
+    assert await gate.Head.read(complete) == b"GET / HTTP/1.1\r\n\r\n"
+
+
+@sync
+async def test_refusing_a_connection_that_is_already_dead_does_not_raise() -> None:
+    sink = Sink(drain_error=True)
+    await gate.ConnectProxy.refuse(sink, "403 Forbidden")
+    assert sink.closed and sink.written[0].startswith(b"HTTP/1.1 403")
+
+
+@sync
+async def test_the_model_gate_refuses_a_head_that_never_completes() -> None:
+    class Never:
+        async def open(self, address: str, port: int):
+            raise AssertionError("an incomplete request must not reach the host")
+
+    front, port = await serve(gate.ModelGate(("h", 1), dialer=Never()).handle)
+    try:
+        reader, writer = await asyncio.open_connection("127.0.0.1", port)
+        writer.write(b"POST /v1/chat/completions HTTP/1.1\r\nHost: g")  # no blank line
+        writer.write_eof()
+        answer = await asyncio.wait_for(reader.read(65536), timeout=5)
+        assert b"400" in answer.split(b"\r\n", 1)[0]
+        writer.close()
+    finally:
+        front.close()
+
+
+@sync
+async def test_the_gate_serves_both_listeners_from_its_environment(capsys) -> None:
+    def free_port() -> int:
+        import socket
+
+        with socket.socket() as probe:
+            probe.bind(("127.0.0.1", 0))
+            return probe.getsockname()[1]
+
+    proxy_port, model_port = free_port(), free_port()
+    env = {
+        "EGRESS_ALLOW": "github.com,pypi.org",
+        "EGRESS_MODEL_UPSTREAM": "host.docker.internal:11434",
+        "EGRESS_PROXY_PORT": str(proxy_port),
+        "EGRESS_MODEL_PORT": str(model_port),
+    }
+    task = asyncio.ensure_future(gate.Gate(env).serve())
+    try:
+        for _ in range(50):
+            await asyncio.sleep(0.05)
+            if "egress gate up" in capsys.readouterr().out:
+                break
+        else:
+            raise AssertionError("the gate never said it was up")
+        # Both listeners are really there, and the proxy enforces the allowlist it was given.
+        denied = await exchange(proxy_port, b"CONNECT example.com:443 HTTP/1.1\r\n\r\n")
+        assert b"403" in denied.split(b"\r\n", 1)[0]
+        refused = await exchange(model_port, b"DELETE /api/delete HTTP/1.1\r\nHost: g\r\n\r\n")
+        assert b"403" in refused.split(b"\r\n", 1)[0]
+    finally:
+        task.cancel()
+        await asyncio.gather(task, return_exceptions=True)
+
+
+def test_the_interface_import_falls_back_to_the_directory_beside_the_gate(monkeypatch) -> None:
+    # Run from anywhere (the container runs `python3 /egress/egress_gate.py`): when the
+    # `interfaces` package is not importable, the gate adds its own directory and imports it.
+    monkeypatch.setattr(
+        sys, "path", [p for p in sys.path if Path(p or ".").resolve() != GATE_DIR.resolve()]
+    )
+    for name in [n for n in sys.modules if n == "interfaces" or n.startswith("interfaces.")]:
+        monkeypatch.delitem(sys.modules, name)
+    spec = importlib.util.spec_from_file_location(
+        "egress_gate_fallback_import", GATE_DIR / "egress_gate.py"
+    )
+    assert spec and spec.loader
+    module = importlib.util.module_from_spec(spec)
+    monkeypatch.setitem(sys.modules, spec.name, module)
+    spec.loader.exec_module(module)
+    assert str(GATE_DIR) in sys.path
+    assert module.HostPolicy(["github.com"]).allows("github.com", 443)

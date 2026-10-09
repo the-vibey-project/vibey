@@ -710,6 +710,27 @@
         }
       ]
     },
+    "1470": {
+      "close_when_done": false,
+      "kind": "standalone",
+      "last_verdict": "OPEN",
+      "next": "operator scope decision: control the operator's public and private repositories from the vibey repository, so it manages a suite of repos as well as itself",
+      "probes": []
+    },
+    "1471": {
+      "close_when_done": false,
+      "kind": "standalone",
+      "last_verdict": "OPEN",
+      "next": "operator scope decision: an open academic journal gated by vibey-skills, with automated review, peer review by others, and monthly publication",
+      "probes": []
+    },
+    "1475": {
+      "close_when_done": false,
+      "kind": "standalone",
+      "last_verdict": "OPEN",
+      "next": "operator scope decision: a whitepaper hub on the docs site, reviewed by vibey-skills and by human peers; two PDFs attached to the issue are the first submissions",
+      "probes": []
+    },
     "155": {
       "close_when_done": false,
       "kind": "standalone",
