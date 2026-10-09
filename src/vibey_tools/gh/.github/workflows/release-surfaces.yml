@@ -424,6 +424,7 @@ jobs:
           )
           PY
           properdocs build --strict --config-file .properdocs-channel.yml --site-dir channel-site
+          python3 scripts/inject_docs_meta.py --site-dir channel-site
           # Search must demonstrably work at build time. A site can build --strict with a
           # search whose assets 404 or whose index is empty, and the failure is invisible
           # until a human types a query into a dead box — reported as exactly that.
