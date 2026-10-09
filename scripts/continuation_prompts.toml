@@ -121,6 +121,9 @@ cadence = "daily"
 purpose = "Take this run's backlog item and land its smallest shippable, tested slice."
 gather = [
   "python scripts/backlog_killer.py pick",
+  # The files the issue names, where its identifiers occur, and the non-negotiables, read for
+  # a model too small to go and look (2026-10-09: it emptied the paper having only `find`-ed it).
+  "python scripts/backlog_killer.py pick | python scripts/backlog_grounding.py",
 ]
 covers = ["backlog-killer.yml"]
 
@@ -211,6 +214,15 @@ prompts = ["backlog"]
 paths = [
   '^tests/.*(^|/)test_[^/]+\.py$',
   '(^|/)[^/]+\.test\.tsx?$',
+]
+# The same prompts must also show, in the run's own transcript, that the agent READ each file
+# its patch changes or deletes (a find or a search only locates one) and RAN a test: a shell
+# command whose joined argv matches one of these. Checked on the runner where no agent ran.
+runs = [
+  '(^|\s)(python3?\s+-m\s+)?pytest(\s|$)',
+  '(^|\s)uv\s+run\s+.*pytest',
+  '(^|\s)(npm|pnpm|yarn)\s+(run\s+)?test',
+  '(^|\s)vitest(\s|$)',
 ]
 
 # The lane that refreshes and runs the prompts. `check` fails if it is missing, unscheduled,

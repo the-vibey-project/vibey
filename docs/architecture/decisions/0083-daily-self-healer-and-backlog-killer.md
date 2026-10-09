@@ -216,3 +216,26 @@ reported the work as complete. The only thing that stopped it was a rejected pus
   it is refused outright instead of counted as nothing, and `max_removed_total = 120` bounds the
   whole patch, so forty lines from each of forty files is the same patch as forty from one. Both
   were found by probing the guard with a binary replacement and a spread-out patch.
+
+## Amendment, 2026-10-09 (later still): grounding, before and after the model runs
+
+The cause under the previous two amendments was one thing: the runs were not grounded in the
+codebase. The run that emptied the paper made seven tool calls, one of them a `find`; it never
+read `CLAUDE.md`, the files the issue named, or ran a test, though its prompt asks for all three.
+The prompt asked and nothing checked, so two layers now do.
+
+- **After the run, the lane reads its transcript.** `continuation_prompts.py guard PATCH
+  --prompt ID --log AGENT_LOG` refuses a patch for a tested prompt unless the log shows a
+  `read_file` (or a shell `cat`/`sed`/`head`/`git show` naming the path) for every file the
+  patch changes or deletes, and a shell command matching `[authority.require_test] runs`.
+  A `find` or a search locates a file; it does not read it. A covered prompt with no
+  transcript is refused. Run against the 2026-10-09 artifact it refuses all three of that
+  patch's defects: the unread paper, the unread site definition, the missing test.
+- **Before the run, the evidence is the codebase.** `scripts/backlog_grounding.py` is a second
+  `gather` command of the `backlog` prompt: it quotes the first lines of every tracked file the
+  issue names, where the identifiers the issue puts in backticks occur, and the headline of each
+  `CLAUDE.md` non-negotiable, each bounded and each cut with a note. The issue text only selects
+  which tracked files to quote; it is data, and an untracked path is never read.
+
+Neither layer makes a small model good. They make a run that did not look at the code unable to
+land a change to it, and a run that did start with what it would otherwise have had to find.

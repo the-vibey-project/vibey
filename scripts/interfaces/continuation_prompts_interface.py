@@ -89,6 +89,16 @@ class PatchTestRuleInterface(Protocol):
         ...
 
 
+class GroundingRuleInterface(Protocol):
+    """Says whether a run read what it changed and ran a test, from its own transcript."""
+
+    def ungrounded(self, patch: Path, prompt: str, log: str | None) -> Sequence[str]:
+        """What the transcript does not show: a changed or deleted file nobody read, and a test
+        command that never ran. Empty for a prompt the rule does not cover; a covered prompt
+        with no transcript is refused, never waved through."""
+        ...
+
+
 class RunReceiptInterface(Protocol):
     """Says what a run left behind, and whether that is enough to believe its patch."""
 

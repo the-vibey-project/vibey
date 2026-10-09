@@ -8,7 +8,7 @@
     python scripts/continuation_prompts.py plan ID    # the prompt plus its gathered evidence
     python scripts/continuation_prompts.py models     # the declared model fallback chain
     python scripts/continuation_prompts.py chat MODE REQUEST THREAD   # a chat turn's plan
-    python scripts/continuation_prompts.py guard PATCH [--prompt ID]   # exit 1 if a patch touches a protected path
+    python scripts/continuation_prompts.py guard PATCH [--prompt ID] [--log LOG]   # exit 1 if a patch touches a protected path
     python scripts/continuation_prompts.py defuse FILE [--fenced]   # a reply made safe to post
 
 `check` holds four guarantees on every pull request: every file, glob, `vibey-gh` command and
@@ -20,6 +20,7 @@ prompts exists, is scheduled, and still runs on GitHub. Everything it reads is d
 
 from __future__ import annotations
 
+import ast
 import glob
 import json
 import os
@@ -37,6 +38,7 @@ try:
     from scripts.interfaces.continuation_prompts_interface import (
         CommandRunnerInterface,
         FactSourceInterface,
+        GroundingRuleInterface,
         PageRendererInterface,
         PatchGuardInterface,
         PatchPathsInterface,
@@ -51,6 +53,7 @@ except ImportError:  # run as `python scripts/continuation_prompts.py`
     from interfaces.continuation_prompts_interface import (  # type: ignore[import-not-found,no-redef]
         CommandRunnerInterface,
         FactSourceInterface,
+        GroundingRuleInterface,
         PageRendererInterface,
         PatchGuardInterface,
         PatchPathsInterface,
@@ -105,6 +108,7 @@ class Settings:
     test_paths: tuple[str, ...] = ()
     max_removed_lines: int = 0
     max_removed_total: int = 0
+    test_runs: tuple[str, ...] = ()
 
     @classmethod
     def load(cls, root: Path, relative: str = DEFAULT_CONFIG) -> Settings:
@@ -139,6 +143,7 @@ class Settings:
             test_paths=tuple(raw.get("authority", {}).get("require_test", {}).get("paths", ())),
             max_removed_lines=int(raw.get("authority", {}).get("max_removed_lines", 0)),
             max_removed_total=int(raw.get("authority", {}).get("max_removed_total", 0)),
+            test_runs=tuple(raw.get("authority", {}).get("require_test", {}).get("runs", ())),
         )
 
     def models(self) -> list[str]:
@@ -554,6 +559,95 @@ class PatchTestRule(PatchTestRuleInterface):
         if any(status != "D" and rx.search(path) for status, path in touched for rx in self._tests):
             return []
         return [self.NO_TEST]
+
+
+class GroundingRule(GroundingRuleInterface):
+    """Refuses a patch whose run did not read what it changed, or never ran a test.
+
+    The weekly run's agent log records every tool call (`[tool] NAME {arguments}`), so "did it
+    look before it wrote?" is a question the lane can answer without a model. On 2026-10-09 a
+    run that emptied the 331-line paper had called `find` on it and nothing else: no read, no
+    test, a shell script it wrote itself as the "test". A `find` or a search locates a file; it
+    does not read it, so only `read_file`/`open_file`, or a shell command that names the path
+    (`cat`, `head`, `sed`, `git show`...), counts. A file the patch adds needs no read.
+    """
+
+    TOOL_LINE = re.compile(r"^\[tool\] (\w+) (\{.*\})$", re.MULTILINE)
+    READERS = {"read_file", "open_file"}
+    SHELL_READERS = {
+        "cat",
+        "head",
+        "tail",
+        "sed",
+        "less",
+        "more",
+        "bat",
+        "nl",
+        "awk",
+        "git",
+        "grep",
+    }
+
+    def __init__(
+        self,
+        prompts: Sequence[str],
+        test_runs: Sequence[str],
+        reader: PatchPathsInterface | None = None,
+    ) -> None:
+        self._prompts = set(prompts)
+        self._runs = [re.compile(p) for p in test_runs]
+        self._reader: PatchPathsInterface = reader or GitPatchPaths(Path.cwd())
+
+    @staticmethod
+    def _norm(path: str) -> str:
+        return path.removeprefix("./")
+
+    def calls(self, log: str) -> list[tuple[str, dict[str, Any]]]:
+        found: list[tuple[str, dict[str, Any]]] = []
+        for name, raw in self.TOOL_LINE.findall(log):
+            try:
+                arguments = ast.literal_eval(raw)
+            except (ValueError, SyntaxError):
+                continue
+            if isinstance(arguments, dict):
+                found.append((name, arguments))
+        return found
+
+    def read_paths(self, calls: Sequence[tuple[str, dict[str, Any]]]) -> set[str]:
+        seen: set[str] = set()
+        for name, arguments in calls:
+            if name in self.READERS and isinstance(arguments.get("path"), str):
+                seen.add(self._norm(arguments["path"]))
+            elif name == "shell" and isinstance(arguments.get("argv"), list):
+                argv = [str(a) for a in arguments["argv"]]
+                if argv and argv[0] in self.SHELL_READERS:
+                    seen.update(self._norm(a) for a in argv[1:])
+        return seen
+
+    def ran_a_test(self, calls: Sequence[tuple[str, dict[str, Any]]]) -> bool:
+        for name, arguments in calls:
+            if name == "shell" and isinstance(arguments.get("argv"), list):
+                line = " ".join(str(a) for a in arguments["argv"])
+                if any(rx.search(line) for rx in self._runs):
+                    return True
+        return False
+
+    def ungrounded(self, patch: Path, prompt: str, log: str | None) -> Sequence[str]:
+        if prompt not in self._prompts:
+            return []
+        if log is None or not log.strip():
+            return ["(no transcript: a run with no evidence is not believed)"]
+        calls = self.calls(log)
+        read = self.read_paths(calls)
+        touched = self._reader.touched(patch) or []
+        found = sorted(
+            f"{path} (changed without being read)"
+            for status, path in touched
+            if status != "A" and path not in read
+        )
+        if not self.ran_a_test(calls):
+            found.append("(no test command ran)")
+        return found
 
 
 class RunReceipt(RunReceiptInterface):
@@ -977,28 +1071,46 @@ class ContinuationCli:
             print(prompts.chat(argv[1], request, thread))
             return 0
         if command == "guard":
-            if len(argv) not in {2, 4} or (len(argv) == 4 and argv[2] != "--prompt"):
-                print(f"{SCRIPT}: guard PATCH_FILE [--prompt ID]", file=sys.stderr)
+            options = dict(zip(argv[2::2], argv[3::2], strict=False))
+            if (
+                len(argv) < 2
+                or len(argv) % 2 != 0
+                or not set(options) <= {"--prompt", "--log"}
+                or len(options) != (len(argv) - 2) // 2
+            ):
+                print(
+                    f"{SCRIPT}: guard PATCH_FILE [--prompt ID] [--log AGENT_LOG]", file=sys.stderr
+                )
                 return 2
+            prompt = options.get("--prompt")
+            patch = Path(argv[1])
             reader = GitPatchPaths(self._root)
-            refused = PatchGuard(settings.protected, settings.allowed_new, reader).refused(
-                Path(argv[1])
-            )
+            refused = PatchGuard(settings.protected, settings.allowed_new, reader).refused(patch)
             for path in refused:
                 print(f"::error::an automated run may not change {path}")
             shrunk = PatchShrinkRule(
                 settings.max_removed_lines, GitPatchStats(self._root), settings.max_removed_total
-            ).shrunk(Path(argv[1]))
+            ).shrunk(patch)
             for line in shrunk:
                 print(f"::error::an automated run may not gut a file: {line}")
             untested: Sequence[str] = []
-            if len(argv) == 4:
+            ungrounded: Sequence[str] = []
+            if prompt is not None:
                 untested = PatchTestRule(
                     settings.require_test_prompts, settings.test_paths, reader
-                ).missing(Path(argv[1]), argv[3])
+                ).missing(patch, prompt)
+                log_path = options.get("--log")
+                log = None
+                if log_path and Path(log_path).is_file():
+                    log = Path(log_path).read_text(encoding="utf-8", errors="replace")
+                ungrounded = GroundingRule(
+                    settings.require_test_prompts, settings.test_runs, reader
+                ).ungrounded(patch, prompt, log)
             for line in untested:
-                print(f"::error::the {argv[3]} prompt promises a tested change: {line}")
-            return 1 if refused or untested or shrunk else 0
+                print(f"::error::the {prompt} prompt promises a tested change: {line}")
+            for line in ungrounded:
+                print(f"::error::the {prompt} run is not grounded: {line}")
+            return 1 if refused or untested or shrunk or ungrounded else 0
         if command in {"transcript", "receipt"}:
             if len(argv) != 2:
                 print(f"{SCRIPT}: {command} DIRECTORY", file=sys.stderr)

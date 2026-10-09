@@ -944,3 +944,95 @@ def subprocess_commit(root: Path) -> None:
         cwd=root,
         check=True,
     )
+
+
+# The 2026-10-09 run that emptied the paper: one find, a denied rm, a shell "test" it wrote itself.
+GUTTING_RUN = """\
+[tool] find {'pattern': 'src/vibey_tools/gh/docs/paper.md'}
+[tool] shell {'argv': ['rm', 'src/vibey_tools/gh/docs/paper.md']}
+[tool] write_file {'allow_shrink': True, 'content': '', 'path': 'src/vibey_tools/gh/docs/paper.md'}
+[tool] shell {'argv': ['chmod', '+x', 'tests/meta/test_single_source.sh']}
+"""
+GROUNDED_RUN = """\
+[tool] read_file {'path': './docs/x.md'}
+[tool] shell {'argv': ['sed', '-n', '1,40p', 'old name.toml']}
+[tool] edit_file {'path': 'docs/x.md', 'old': 'one', 'new': 'two'}
+[tool] shell {'argv': ['uv', 'run', 'pytest', '-q', 'tests/scripts']}
+"""
+RUNS = [r"(^|\s)pytest(\s|$)", r"(^|\s)uv\s+run\s+.*pytest"]
+
+
+def grounding(touched: list[tuple[str, str]], prompts: tuple[str, ...] = ("backlog",)) -> Any:
+    return cp.GroundingRule(prompts, RUNS, reader=FakePaths(touched))
+
+
+def test_a_run_that_only_found_a_file_did_not_read_it() -> None:
+    patch = [("M", "src/vibey_tools/gh/docs/paper.md"), ("A", "tests/meta/test_single_source.sh")]
+    found = grounding(patch).ungrounded(Path("p"), "backlog", GUTTING_RUN)
+    assert found == [
+        "src/vibey_tools/gh/docs/paper.md (changed without being read)",
+        "(no test command ran)",
+    ]
+
+
+def test_a_run_that_read_what_it_changed_and_ran_a_test_is_grounded() -> None:
+    patch = [("M", "docs/x.md"), ("D", "old name.toml"), ("A", "docs/new.md")]
+    assert grounding(patch).ungrounded(Path("p"), "backlog", GROUNDED_RUN) == []
+
+
+def test_grounding_is_only_asked_of_the_prompts_that_declare_it() -> None:
+    patch = [("M", "docs/x.md")]
+    assert grounding(patch).ungrounded(Path("p"), "drill", GUTTING_RUN) == []
+    # A covered prompt with no transcript is refused, not waved through.
+    for log in (None, "", "  \n"):
+        assert grounding(patch).ungrounded(Path("p"), "backlog", log) == [
+            "(no transcript: a run with no evidence is not believed)"
+        ]
+
+
+def test_the_transcript_reader_ignores_what_is_not_a_tool_call() -> None:
+    rule = grounding([])
+    log = "[tool] shell not-a-dict\n[tool] read_file {'path': 'a.md'}\n[tool] x [1, 2]\nnoise\n"
+    assert rule.calls(log) == [("read_file", {"path": "a.md"})]
+    # A search or a find locates a file; it does not read it.
+    assert rule.read_paths([("search", {"path": "a.md"}), ("find", {"path": "b.md"})]) == set()
+
+
+def test_the_cli_refuses_an_ungrounded_run_and_passes_a_grounded_one(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    root = chat_world(tmp_path)
+    config = root / cp.DEFAULT_CONFIG
+    config.write_text(
+        config.read_text().replace(
+            "[authority]",
+            "[authority]\n"
+            '[authority.require_test]\nprompts = ["backlog"]\npaths = ["^tests/test_[^/]+\\\\.py$"]\n'
+            'runs = ["pytest"]\n',
+            1,
+        )
+    )
+    git_repo(root)
+    (root / "tests").mkdir()
+    capsys.readouterr()
+    cli = cp.ContinuationCli(root)
+
+    def edit(r: Path) -> None:
+        (r / "docs/x.md").write_text("two\n")
+        (r / "tests/test_x.py").write_text("def test_x():\n    pass\n")
+
+    patch = patch_of(root, edit)
+    bad, good = tmp_path / "bad.log", tmp_path / "good.log"
+    bad.write_text("[tool] find {'pattern': 'docs/x.md'}\n")
+    good.write_text(
+        "[tool] read_file {'path': 'docs/x.md'}\n[tool] shell {'argv': ['pytest', '-q']}\n"
+    )
+    assert cli.run(["guard", str(patch), "--prompt", "backlog", "--log", str(bad)]) == 1
+    out = capsys.readouterr().out
+    assert "docs/x.md (changed without being read)" in out and "(no test command ran)" in out
+    assert cli.run(["guard", str(patch), "--prompt", "backlog", "--log", str(good)]) == 0
+    # No log at all for a covered prompt, a stray option, and a repeated option.
+    assert cli.run(["guard", str(patch), "--prompt", "backlog"]) == 1
+    assert "no transcript" in capsys.readouterr().out
+    assert cli.run(["guard", str(patch), "--nope", "x"]) == 2
+    assert cli.run(["guard", str(patch), "--log", "a", "--log", "b"]) == 2
