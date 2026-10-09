@@ -321,3 +321,30 @@ operator's own machine already serves gpt-oss:20b and already registers a runner
   goes down in the minutes between the heartbeat and the job leaves the job queued.
 - **Reversible by one key.** Remove `[run.sovereign]` and the prompt runs hosted again.
 
+
+## Amendment, 2026-10-09 (night): the agent could write a test and never run one
+
+The first runs through the gated container (20:00, 21:00 and 22:00Z) were different in kind from
+every earlier one: `gpt-oss:20b` read real files, edited `config.py`, and wrote a real test
+(`tests/meta/test_one_book_one_paper.py`). All three ended at 40 turns of 40, mid-edit, and all
+three were refused, correctly, for want of a passing test. They could not have had one:
+
+- **No Python ran in the agent's shell.** Its environment is filtered, and `setup-python`'s
+  Python finds its libpython through `LD_LIBRARY_PATH`, which the filter drops:
+  `libpython3.12.so.1.0: cannot open shared object file`, 16 shell calls in one run spent
+  looking for a working interpreter. `pytest` and `uv` were not installed anywhere it could
+  find. One run's report said "all existing tests continue to pass" having run none.
+- **The fix gives it what needs no environment:** a venv from the SYSTEM Python in the worktree
+  (git-ignored), with the project's `[dev]` extras, built by a workflow step that proves it with
+  `env -i`. Replayed in the runner image behind the gate: 70 seconds, `pytest` and `ruff` run
+  with an empty environment.
+- **The test session needs PostgreSQL**, which the container does not have and must not reach:
+  the root `conftest.py` connects for any session under `tests/`. `--noconftest` runs
+  `tests/scripts` and `tests/meta` (tried: 15, 11 and 80 tests pass) and the vibey-gh suites
+  need none; the prompt says so, and says to report a database test as unrunnable.
+- **The guard read the agent's commands wrongly.** The agent sends every command as
+  `bash -lc '<command>'`, which my anchored pattern would have refused even for a real passing
+  run. It now judges the command inside, and only when it is one simple command: `pytest || true`,
+  `pytest | tee`, `echo pytest` and `pytest --collect-only` still do not count.
+- **`max_turns` 40 -> 120** for the host prompt (about 25 minutes at 12 s a turn, against a
+  120-minute ceiling). The guards, not the budget, decide whether a patch lands.

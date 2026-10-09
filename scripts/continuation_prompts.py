@@ -589,6 +589,10 @@ class GroundingRule(GroundingRuleInterface):
 
     READERS = {"read_file", "open_file"}
     DISPLAYERS = {"cat", "head", "tail", "less", "more", "nl"}
+    # A shell script that is more than one simple command cannot be judged from its argv:
+    # `pytest || true` exits 0 whatever the tests did.
+    SHELL_SYNTAX = re.compile(r"[;|&<>`$()\n\\]")
+    SHELL_FLAGS = frozenset({"-c", "-lc", "-cl", "-ec", "-xc"})
     DRY_RUN = re.compile(
         r"--collect-only|--co\b|--help|(^|\s)-h(\s|$)|--version|--fixtures|--setup-plan"
         r"|--setup-show|--markers|--trace-config"
@@ -688,7 +692,14 @@ class GroundingRule(GroundingRuleInterface):
         for call in calls:
             if call["name"] != "shell" or call.get("ok") is not True:
                 continue
-            line = " ".join(self._argv(call))
+            argv = self._argv(call)
+            # The agent runs every command as `bash -lc '<command>'`: judge the command, and only
+            # when it is ONE simple command.
+            if len(argv) == 3 and argv[0] in ("bash", "sh") and argv[1] in self.SHELL_FLAGS:
+                if self.SHELL_SYNTAX.search(argv[2]):
+                    continue
+                argv = argv[2].split()
+            line = " ".join(argv)
             if self.DRY_RUN.search(line):
                 continue
             if any(rx.match(line) for rx in self._runs):
