@@ -831,3 +831,83 @@ def test_the_cli_defuses_and_fences(tmp_path: Path, capsys) -> None:
     out = capsys.readouterr().out
     assert out.startswith("````text\n@\u200bsomeone") and out.rstrip().endswith("````")
     assert cp.ContinuationCli(root).run(["defuse", str(report), "--loose"]) == 2
+
+
+class FakeStats:
+    def __init__(self, stats: list[tuple[str, int, int]] | None) -> None:
+        self._stats = stats
+
+    def stats(self, patch: Path) -> list[tuple[str, int, int]] | None:
+        return self._stats
+
+
+def test_a_patch_that_guts_a_file_is_refused() -> None:
+    # 2026-10-09: the 331-line paper written to empty with allow_shrink.
+    gutted = [("docs/paper.md", 0, 331), ("docs/ok.md", 3, 10), ("site.yml", 0, 53)]
+    rule = cp.PatchShrinkRule(60, FakeStats(gutted))
+    assert rule.shrunk(Path("p")) == ["docs/paper.md (removes 331 lines; the limit is 60)"]
+    assert cp.PatchShrinkRule(0, FakeStats(gutted)).shrunk(Path("p")) == []  # disabled
+    assert cp.PatchShrinkRule(60, FakeStats(None)).shrunk(Path("p")) == [cp.PatchGuard.UNREADABLE]
+
+
+def test_git_counts_what_a_patch_removes_per_path(tmp_path: Path) -> None:
+    root = git_repo(tmp_path / "repo")
+
+    def empty(r: Path) -> None:
+        (r / "docs/x.md").write_text("")
+        (r / "docs/new.md").write_text("a\nb\n")
+
+    stats = cp.GitPatchStats(root).stats(patch_of(root, empty))
+    assert sorted(stats or []) == [("docs/new.md", 2, 0), ("docs/x.md", 0, 1)]
+    bad = tmp_path / "bad.patch"
+    bad.write_text("diff --git a/nope b/nope\n")
+    assert cp.GitPatchStats(root).stats(bad) is None
+
+
+def test_the_cli_guard_holds_the_shrink_and_test_rules(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    root = chat_world(tmp_path)
+    config = root / cp.DEFAULT_CONFIG
+    config.write_text(
+        config.read_text().replace(
+            "[authority]",
+            "[authority]\nmax_removed_lines = 1\n"
+            '[authority.require_test]\nprompts = ["backlog"]\npaths = ["^tests/test_[^/]+\\\\.py$"]\n'
+            "",
+            1,
+        )
+    )
+    git_repo(root)
+    (root / "tests").mkdir()
+    capsys.readouterr()
+    cli = cp.ContinuationCli(root)
+
+    (root / "docs/x.md").write_text("a\nb\nc\n")
+    subprocess_commit(root)
+
+    def empty(r: Path) -> None:
+        (r / "docs/x.md").write_text("")
+
+    assert cli.run(["guard", str(patch_of(root, empty))]) == 1
+    assert "may not gut a file: docs/x.md" in capsys.readouterr().out
+
+    def addition(r: Path) -> None:
+        (r / "docs/new.md").write_text("n\n")
+
+    assert cli.run(["guard", str(patch_of(root, addition))]) == 0
+    assert cli.run(["guard", str(patch_of(root, addition)), "--prompt", "backlog"]) == 1
+    assert "promises a tested change" in capsys.readouterr().out
+    assert cli.run(["guard", str(patch_of(root, addition)), "--prompt", "drill"]) == 0
+    assert cli.run(["guard", str(patch_of(root, addition)), "--prompt"]) == 2
+
+
+def subprocess_commit(root: Path) -> None:
+    import subprocess
+
+    subprocess.run(["git", "add", "-A"], cwd=root, check=True)
+    subprocess.run(
+        ["git", "-c", "user.name=t", "-c", "user.email=t@t", "commit", "-qm", "more"],
+        cwd=root,
+        check=True,
+    )

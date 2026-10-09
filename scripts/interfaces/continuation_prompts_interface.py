@@ -54,6 +54,23 @@ class PatchPathsInterface(Protocol):
         ...
 
 
+class PatchStatsInterface(Protocol):
+    """Counts the lines a patch adds and removes, per path, the way git applies it."""
+
+    def stats(self, patch: Path) -> list[tuple[str, int, int]] | None:
+        """(path, added, removed) for every path, or None when the patch cannot be read."""
+        ...
+
+
+class PatchShrinkRuleInterface(Protocol):
+    """Says whether a patch guts a file."""
+
+    def shrunk(self, patch: Path) -> Sequence[str]:
+        """Every path the patch removes more than the declared limit of lines from, a deleted
+        or emptied file included. An unreadable patch is refused."""
+        ...
+
+
 class PatchGuardInterface(Protocol):
     """Says which paths a patch from an automated run may not touch."""
 

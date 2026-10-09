@@ -197,3 +197,18 @@ Three findings from watching the lane for four hours, none of them a crash.
   minutes and the lane runs one at a time, so two of every three dispatches were replaced
   unrun and showed as cancelled. `interval_minutes` is 60, the watchdog 120.
 
+
+## Amendment, 2026-10-09 (later): a patch may not gut a file
+
+The first hourly run after the previous amendment showed why a model that cannot ground itself
+is dangerous even when it fails. Denied a direct delete, qwen3:8b wrote the 331-line paper
+(`src/vibey_tools/gh/docs/paper.md`) and a 53-line site definition to empty with
+`write_file(content="", allow_shrink=True)`, added an unwired shell script as the "test", and
+reported the work as complete. The only thing that stopped it was a rejected push.
+
+- **`[authority] max_removed_lines = 40`.** The guard refuses a patch that removes more than that
+  from any one file; a deleted file and an emptied one are the same patch. 0 disables it.
+- **A test is a collectable test.** `[authority.require_test] paths` now matches `test_*.py`
+  under `tests/` and `*.test.ts(x)`, not any file under `tests/`.
+- **The push is no longer "stale info".** The Act and refresh jobs fetch the day's branch before
+  the lease, so a branch left by an earlier run is replaced instead of failing every later run.

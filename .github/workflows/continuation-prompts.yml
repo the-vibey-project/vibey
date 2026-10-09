@@ -150,6 +150,10 @@ jobs:
           git add docs/continuation
           git commit -m "docs(continuation): refresh the continuation prompts" \
             -m "Made-With: Made with ❤️ by [Vibey](https://the-vibey-project.github.io/vibey/), Developed by [Adam Matthew Steinberger](https://vibewithadam.matthewsteinberger.com/) ([@adammatthewsteinberger](https://github.com/adammatthewsteinberger/))."
+          # The lease is checked against the remote-tracking ref, which this clean clone does not
+          # have: a branch left by an earlier run today made every later push "stale info"
+          # (2026-10-09, run 37914936947). Learn the remote's tip first, then replace it.
+          git fetch origin "+refs/heads/$branch:refs/remotes/origin/$branch" 2>/dev/null || true
           git push --force-with-lease="refs/heads/$branch" origin "HEAD:$branch"
           if [ -z "$(gh pr list --head "$branch" --base develop --state open --json number --jq '.[0].number')" ]; then
             gh pr create --base develop --head "$branch" --label no-changelog \
@@ -415,6 +419,8 @@ jobs:
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git commit -m "chore(continuation): ${{ matrix.prompt.id }} — agent run" \
             -m "Made-With: Made with ❤️ by [Vibey](https://the-vibey-project.github.io/vibey/), Developed by [Adam Matthew Steinberger](https://vibewithadam.matthewsteinberger.com/) ([@adammatthewsteinberger](https://github.com/adammatthewsteinberger/))."
+          # Learn the remote tip first, or an earlier run's branch makes the lease "stale info".
+          git fetch origin "+refs/heads/$branch:refs/remotes/origin/$branch" 2>/dev/null || true
           git push --force-with-lease="refs/heads/$branch" origin "HEAD:$branch"
           if [ -z "$(gh pr list --head "$branch" --state open --json number --jq '.[0].number')" ]; then
             gh pr create --draft --base develop --head "$branch" \

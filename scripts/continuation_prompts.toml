@@ -193,16 +193,21 @@ allowed_new = [
   '^(src|tests|docs|scripts|changelog\.d|research)/',
 ]
 
+# The most lines an automated run may remove from any one file. A file deleted or emptied
+# removes all of its lines, so this is also the rule against gutting one (2026-10-09: the
+# 331-line paper, written to empty with allow_shrink). 0 disables it.
+max_removed_lines = 40
+
 # Prompts that promise a tested change, and what counts as a test. A patch for one of these
 # that adds or changes no test is refused (#1488: a 4b model invented a placeholder table for
 # reviewer feedback that exists nowhere, with nothing to fail on it).
 [authority.require_test]
 prompts = ["backlog"]
+# Only what a runner collects: a shell script under tests/ is not run by anything, and the
+# 2026-10-09 patch that emptied the paper "tested" itself with one.
 paths = [
-  '^tests/',
-  '(^|/)test_[^/]+\.py$',
-  '(^|/)[^/]+\.test\.[jt]sx?$',
-  '(^|/)[^/]+_test\.(go|py)$',
+  '^tests/.*(^|/)test_[^/]+\.py$',
+  '(^|/)[^/]+\.test\.tsx?$',
 ]
 
 # The lane that refreshes and runs the prompts. `check` fails if it is missing, unscheduled,
