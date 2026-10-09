@@ -348,3 +348,17 @@ three were refused, correctly, for want of a passing test. They could not have h
   `pytest | tee`, `echo pytest` and `pytest --collect-only` still do not count.
 - **`max_turns` 40 -> 120** for the host prompt (about 25 minutes at 12 s a turn, against a
   120-minute ceiling). The guards, not the budget, decide whether a patch lands.
+- **Three ways round the test requirement were found by review, two closed here.** A passing
+  test elsewhere satisfied "a test ran": the run must now target a test the patch adds or
+  changes (the file, a directory above it, or the whole suite). `--setup-only` and `-p <module>`
+  ran no tests or loaded a plugin the patch could have written to skip them, and `-o`, `-c <ini>`
+  and `--rootdir` rewrite what a run means: none of those counts, while `-p no:<plugin>` and the
+  tools' own config do.
+- **What the guard still cannot do, and what would.** The agent's venv is in its own worktree, so
+  an agent that overwrites `.venv/bin/pytest` with a script that exits 0 leaves a record
+  identical to a real run. Reading commands cannot tell them apart; only running the tests
+  somewhere the agent never touched can. That means a job with no secrets (the report job holds
+  one) that applies the patch to a clean checkout, builds its own venv and runs the patch's test
+  files, with the report job requiring it to pass. Until it exists, a lane PR is a draft that a
+  person reviews and its description says the agent's report is unverified; the lane never merges.
+

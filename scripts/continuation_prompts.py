@@ -595,7 +595,17 @@ class GroundingRule(GroundingRuleInterface):
     SHELL_FLAGS = frozenset({"-c", "-lc", "-cl", "-ec", "-xc"})
     DRY_RUN = re.compile(
         r"--collect-only|--co\b|--help|(^|\s)-h(\s|$)|--version|--fixtures|--setup-plan"
-        r"|--setup-show|--markers|--trace-config"
+        r"|--setup-only|--setup-show|--markers|--trace-config"
+    )
+    # Options that let the command choose what a "run" means: another ini (`-c`, `-o`) can
+    # rewrite the collection, and `-p <module>` imports a plugin the patch may have written to
+    # skip everything. The one config allowed is the tools' own; `-p no:<plugin>` only turns
+    # one off.
+    REWRITES_THE_RUN = re.compile(
+        r"(^|\s)(-o|--override-ini)(\s|=)"
+        r"|(^|\s)-p\s*(?!no:)\S"
+        r"|(^|\s)(-c|--config-file)(\s|=)(?!src/vibey_tools/gh/pyproject\.toml(\s|$))"
+        r"|(^|\s)--rootdir"
     )
 
     def __init__(
@@ -603,9 +613,11 @@ class GroundingRule(GroundingRuleInterface):
         prompts: Sequence[str],
         test_runs: Sequence[str],
         reader: PatchPathsInterface | None = None,
+        test_paths: Sequence[str] = (),
     ) -> None:
         self._prompts = set(prompts)
         self._runs = [re.compile(p) for p in test_runs]
+        self._tests = [re.compile(p) for p in test_paths]
         self._reader: PatchPathsInterface = reader or GitPatchPaths(Path.cwd())
 
     @staticmethod
@@ -688,7 +700,32 @@ class GroundingRule(GroundingRuleInterface):
                     seen.add(self._norm(arg.split(":", 1)[-1], root))
         return seen
 
+    @staticmethod
+    def _targets(line: str) -> list[str]:
+        """The files and directories a pytest command line names: path-like words, without a
+        node id (`file.py::test`), an option, or a config file."""
+        found: list[str] = []
+        words = line.split()
+        # Only what follows the runner: `./.venv/bin/python` is the interpreter, not a target.
+        for at, word in enumerate(words):
+            if word.rsplit("/", 1)[-1] in ("pytest", "vitest", "test"):
+                words = words[at + 1 :]
+                break
+        for word in words:
+            word = word.split("::", 1)[0]
+            if word.startswith("-") or word.endswith((".toml", ".ini", ".cfg")):
+                continue
+            if "/" in word or word.endswith(".py"):
+                found.append(GroundingRule._norm(word))
+        return found
+
     def ran_a_test(self, calls: Sequence[dict[str, Any]]) -> bool:
+        return bool(self.passing_runs(calls))
+
+    def passing_runs(self, calls: Sequence[dict[str, Any]]) -> list[list[str]]:
+        """For every successful, real test command, the paths it targeted (empty when it named
+        none: a whole-suite run)."""
+        runs: list[list[str]] = []
         for call in calls:
             if call["name"] != "shell" or call.get("ok") is not True:
                 continue
@@ -700,10 +737,21 @@ class GroundingRule(GroundingRuleInterface):
                     continue
                 argv = argv[2].split()
             line = " ".join(argv)
-            if self.DRY_RUN.search(line):
+            if self.DRY_RUN.search(line) or self.REWRITES_THE_RUN.search(line):
                 continue
             if any(rx.match(line) for rx in self._runs):
+                runs.append(self._targets(line))
+        return runs
+
+    def covers(self, runs: Sequence[Sequence[str]], tests: Sequence[str]) -> bool:
+        """True when a passing run targeted a test the patch adds or changes: it named that
+        file or a directory above it, or named nothing (the whole suite)."""
+        for targets in runs:
+            if not targets:
                 return True
+            for test in tests:
+                if any(test == t or test.startswith(t.rstrip("/") + "/") for t in targets):
+                    return True
         return False
 
     def ungrounded(self, patch: Path, prompt: str, tools: str | None) -> Sequence[str]:
@@ -722,8 +770,18 @@ class GroundingRule(GroundingRuleInterface):
             for status, path in touched
             if status != "A" and path not in read
         )
-        if not self.ran_a_test(calls):
+        runs = self.passing_runs(calls)
+        if not runs:
             found.append("(no passing test command ran)")
+        elif self._tests:
+            # The run must be about THIS patch: a passing test elsewhere says nothing about it.
+            changed = [
+                self._norm(path)
+                for status, path in touched
+                if status != "D" and any(rx.search(path) for rx in self._tests)
+            ]
+            if changed and not self.covers(runs, changed):
+                found.append("(no passing test run targeted a test this patch adds or changes)")
         return found
 
 
@@ -1366,7 +1424,7 @@ class ContinuationCli:
                 if tools_path and Path(tools_path).is_file():
                     record = Path(tools_path).read_text(encoding="utf-8", errors="replace")
                 ungrounded = GroundingRule(
-                    settings.require_test_prompts, settings.test_runs, reader
+                    settings.require_test_prompts, settings.test_runs, reader, settings.test_paths
                 ).ungrounded(patch, prompt, record)
             for line in untested:
                 print(f"::error::the {prompt} prompt promises a tested change: {line}")

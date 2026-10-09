@@ -1541,3 +1541,64 @@ def test_the_host_prompt_has_the_turns_the_overnight_runs_showed_it_needs() -> N
     host = cp.Settings.load(cp.REPO).run["sovereign"]
     assert host["max_turns"] >= 100  # three runs ended at turn 40 of 40, mid-edit
     assert host["timeout_minutes"] >= 60
+
+
+TESTS_RE = [r"^tests/.*(^|/)test_[^/]+\.py$"]
+
+
+def run_verdict(command: str, patch: list[tuple[str, str]] | None = None) -> list[str]:
+    """What the guard says about a patch whose run record holds this one `bash -lc` command."""
+    patch = patch or [("A", "tests/scripts/test_new_thing.py"), ("M", "scripts/thing.py")]
+    settings = cp.Settings.load(cp.REPO)
+    rule = cp.GroundingRule(
+        ["backlog"], settings.test_runs, reader=FakePaths(patch), test_paths=TESTS_RE
+    )
+    tools = record(
+        ("open_file", {"path": "scripts/thing.py"}, True),
+        ("shell", {"argv": ["bash", "-lc", command]}, True),
+    )
+    return list(rule.ungrounded(Path("p"), "backlog", tools))
+
+
+def test_a_passing_run_must_be_about_the_tests_this_patch_adds() -> None:
+    # A passing test elsewhere says nothing about the change: found by a security review.
+    py = "./.venv/bin/python -m pytest --noconftest -q"
+    assert run_verdict(f"{py} tests/scripts/test_new_thing.py") == []
+    assert run_verdict(f"{py} tests/scripts") == []  # a directory above it
+    assert run_verdict(f"{py} tests/scripts/test_new_thing.py::test_a") == []  # a node id
+    assert run_verdict(py) == []  # the whole suite names nothing and runs everything
+    unrelated = "(no passing test run targeted a test this patch adds or changes)"
+    assert run_verdict(f"{py} tests/meta/test_daily_lanes.py") == [unrelated]
+    assert run_verdict(f"{py} tests/scripts/test_other.py tests/meta") == [unrelated]
+
+
+def test_options_that_make_a_run_prove_nothing_do_not_count_as_a_run() -> None:
+    py = "./.venv/bin/python -m pytest -q tests/scripts/test_new_thing.py"
+    no_test = ["(no passing test command ran)"]
+    assert run_verdict(py.replace("-q", "--setup-only -q")) == no_test
+    assert run_verdict(py.replace("-q", "-p myplugin -q")) == no_test  # a plugin the patch wrote
+    assert run_verdict(py.replace("-q", "-pmyplugin -q")) == no_test
+    assert run_verdict(py.replace("-q", "-o addopts=-k\\ nothing -q")) == no_test
+    assert run_verdict(py.replace("-q", "--override-ini=testpaths=x -q")) == no_test
+    assert run_verdict(py.replace("-q", "-c evil.ini -q")) == no_test
+    assert run_verdict(py.replace("-q", "--rootdir=/tmp -q")) == no_test
+    # What stays fine: turning a plugin OFF, and the tools' own config.
+    assert run_verdict(py.replace("-q", "-p no:cacheprovider -q")) == []
+    tool_test = [("A", "tests/gh/test_new.py")]
+    own = "pytest -c src/vibey_tools/gh/pyproject.toml --no-cov tests/gh/test_new.py"
+    assert run_verdict(own, tool_test) == []
+
+
+def test_the_paths_a_test_command_names_are_read_after_the_runner() -> None:
+    targets = cp.GroundingRule._targets
+    assert targets("./.venv/bin/python -m pytest --noconftest -q") == []  # not the interpreter
+    assert targets("pytest -q tests/a/test_x.py::test_y tests/b") == [
+        "tests/a/test_x.py",
+        "tests/b",
+    ]
+    cfg = "pytest -c src/vibey_tools/gh/pyproject.toml --no-cov src/vibey_tools/gh/test/test_x.py"
+    assert targets(cfg) == ["src/vibey_tools/gh/test/test_x.py"]  # a config is not a target
+    assert targets("npm test") == [] and targets("npx vitest run src/a.test.ts") == [
+        "src/a.test.ts"
+    ]
+    assert targets("something -q ./tests/a.py") == ["tests/a.py"]  # no runner word: all words
