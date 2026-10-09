@@ -197,6 +197,9 @@ allowed_new = [
 # removes all of its lines, so this is also the rule against gutting one (2026-10-09: the
 # 331-line paper, written to empty with allow_shrink). 0 disables it.
 max_removed_lines = 40
+# ...and from the whole patch, so forty lines from each of forty files is refused too. A binary
+# file cannot be counted and is refused outright. 0 disables it.
+max_removed_total = 120
 
 # Prompts that promise a tested change, and what counts as a test. A patch for one of these
 # that adds or changes no test is refused (#1488: a 4b model invented a placeholder table for

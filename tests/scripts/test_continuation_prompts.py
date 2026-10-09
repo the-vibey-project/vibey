@@ -848,6 +848,16 @@ def test_a_patch_that_guts_a_file_is_refused() -> None:
     assert rule.shrunk(Path("p")) == ["docs/paper.md (removes 331 lines; the limit is 60)"]
     assert cp.PatchShrinkRule(0, FakeStats(gutted)).shrunk(Path("p")) == []  # disabled
     assert cp.PatchShrinkRule(60, FakeStats(None)).shrunk(Path("p")) == [cp.PatchGuard.UNREADABLE]
+    # Forty lines from each of many files, and a binary file git cannot count.
+    many = [(f"f{n}.txt", 0, 39) for n in range(4)]
+    assert cp.PatchShrinkRule(40, FakeStats(many)).shrunk(Path("p")) == []
+    assert cp.PatchShrinkRule(40, FakeStats(many), total=120).shrunk(Path("p")) == [
+        "(the patch removes 156 lines in all; the limit is 120)"
+    ]
+    binary = FakeStats([("logo.png", 0, cp.GitPatchStats.UNMEASURABLE)])
+    assert cp.PatchShrinkRule(40, binary).shrunk(Path("p")) == [
+        "logo.png (a binary file: its lines cannot be counted)"
+    ]
 
 
 def test_git_counts_what_a_patch_removes_per_path(tmp_path: Path) -> None:
@@ -859,6 +869,13 @@ def test_git_counts_what_a_patch_removes_per_path(tmp_path: Path) -> None:
 
     stats = cp.GitPatchStats(root).stats(patch_of(root, empty))
     assert sorted(stats or []) == [("docs/new.md", 2, 0), ("docs/x.md", 0, 1)]
+
+    def binary(r: Path) -> None:
+        (r / "logo.png").write_bytes(bytes(range(256)) * 4)
+
+    assert cp.GitPatchStats(root).stats(patch_of(root, binary)) == [
+        ("logo.png", 0, cp.GitPatchStats.UNMEASURABLE)
+    ]
     bad = tmp_path / "bad.patch"
     bad.write_text("diff --git a/nope b/nope\n")
     assert cp.GitPatchStats(root).stats(bad) is None
@@ -872,7 +889,7 @@ def test_the_cli_guard_holds_the_shrink_and_test_rules(
     config.write_text(
         config.read_text().replace(
             "[authority]",
-            "[authority]\nmax_removed_lines = 1\n"
+            "[authority]\nmax_removed_lines = 1\nmax_removed_total = 2\n"
             '[authority.require_test]\nprompts = ["backlog"]\npaths = ["^tests/test_[^/]+\\\\.py$"]\n'
             "",
             1,
@@ -895,6 +912,22 @@ def test_the_cli_guard_holds_the_shrink_and_test_rules(
     def addition(r: Path) -> None:
         (r / "docs/new.md").write_text("n\n")
 
+    def spread(r: Path) -> None:
+        # One line from each of three files: under the per-file limit, over the total.
+        for name in ("a", "b", "c"):
+            (r / f"docs/{name}.md").write_text("1\n2\n")
+        (r / "docs/x.md").write_text("a\nb\n")
+
+    spread(root)
+    subprocess_commit(root)
+
+    def thin(r: Path) -> None:
+        for name in ("a", "b", "c"):
+            (r / f"docs/{name}.md").write_text("1\n")
+        (r / "docs/x.md").write_text("a\n")
+
+    assert cli.run(["guard", str(patch_of(root, thin))]) == 1
+    assert "removes 4 lines in all" in capsys.readouterr().out
     assert cli.run(["guard", str(patch_of(root, addition))]) == 0
     assert cli.run(["guard", str(patch_of(root, addition)), "--prompt", "backlog"]) == 1
     assert "promises a tested change" in capsys.readouterr().out

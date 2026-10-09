@@ -212,3 +212,7 @@ reported the work as complete. The only thing that stopped it was a rejected pus
   under `tests/` and `*.test.ts(x)`, not any file under `tests/`.
 - **The push is no longer "stale info".** The Act and refresh jobs fetch the day's branch before
   the lease, so a branch left by an earlier run is replaced instead of failing every later run.
+- **Two ways round the per-file limit are closed.** A binary file reports no line count (`-`), so
+  it is refused outright instead of counted as nothing, and `max_removed_total = 120` bounds the
+  whole patch, so forty lines from each of forty files is the same patch as forty from one. Both
+  were found by probing the guard with a binary replacement and a spread-out patch.
