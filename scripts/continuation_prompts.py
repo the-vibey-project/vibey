@@ -737,12 +737,12 @@ class RunReceipt(RunReceiptInterface):
                     lines.append("\n[completed]\n")
         return "".join(lines)
 
-    def tools(self, cwd: Path) -> str:
+    def tools(self, cwd: Path, root: str | None = None) -> str:
         """JSON lines for `guard --tools`: a header {"runs": N}, then one {name, arguments, ok}
         per tool call, from the runner's own `tool.call` and `tool_result` events and nothing the
         model said. `ok` is False for a call with no answer, an error, or a non-zero exit."""
         stores = sorted((cwd / ".qwenloop" / "runs").glob("*/events.jsonl"))
-        lines = [json.dumps({"runs": len(stores), "root": str(cwd.resolve())})]
+        lines = [json.dumps({"runs": len(stores), "root": root or str(cwd.resolve())})]
         for events in stores:
             pending: list[dict[str, Any]] = []
             for raw in events.read_text(encoding="utf-8", errors="replace").splitlines():
@@ -1215,14 +1215,17 @@ class ContinuationCli:
                 print(f"::error::the {prompt} run is not grounded: {line}")
             return 1 if refused or untested or shrunk or ungrounded else 0
         if command in {"transcript", "receipt", "tools"}:
-            if len(argv) != 2:
-                print(f"{SCRIPT}: {command} DIRECTORY", file=sys.stderr)
+            if len(argv) != (3 if command == "tools" and len(argv) == 3 else 2):
+                print(
+                    f"{SCRIPT}: {command} DIRECTORY" + (" [ROOT]" if command == "tools" else ""),
+                    file=sys.stderr,
+                )
                 return 2
             if command == "transcript":
                 print(RunReceipt().transcript(Path(argv[1])))
                 return 0
             if command == "tools":
-                print(RunReceipt().tools(Path(argv[1])))
+                print(RunReceipt().tools(Path(argv[1]), argv[2] if len(argv) == 3 else None))
                 return 0
             problems = RunReceipt().problems(Path(argv[1]))
             for line in problems:

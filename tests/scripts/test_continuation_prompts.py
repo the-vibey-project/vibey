@@ -1190,18 +1190,43 @@ def test_a_dry_run_is_not_a_test() -> None:
         assert not grounding([]).ran_a_test(grounding([]).calls(run)), flag
 
 
-def test_the_hand_over_runs_only_a_copy_made_before_the_agent_ran() -> None:
-    # A security review of #1494: the hand-over wrote the record the guard believes by running
-    # the repository's own script in the tree the agent had just edited.
+def test_no_repository_code_runs_where_the_agent_could_have_written() -> None:
+    # Security reviews of #1494: the hand-over built the record the guard believes by running
+    # the repository's script in the agent's runner -- first from its edited tree, then from a
+    # "trusted copy" the agent could equally overwrite. Anything run after the agent in its own
+    # job runs where it can write, so that job hands the run's store over as DATA, and a clean
+    # runner builds the record from it with the base branch's own code.
     text = (cp.REPO / ".github/workflows/continuation-prompts.yml").read_text()
-    export = text.index("git archive HEAD scripts")
-    agent = text.index("gptossloop run")
     hand_over = text.index("name: Hand over the log and the patch")
-    assert export < agent < hand_over
-    after = text[hand_over : text.index("name: Upload")]
-    assert 'python3 "$RUNNER_TEMP/trusted/scripts/continuation_prompts.py" tools .' in after
-    assert 'python3 "$RUNNER_TEMP/trusted/scripts/continuation_prompts.py" transcript .' in after
-    assert "python3 scripts/continuation_prompts.py" not in after
+    upload = text.index("name: Upload")
+    during = text[hand_over:upload]
+    assert "continuation_prompts.py" not in during and "RUNNER_TEMP/trusted" not in text
+    assert "find .qwenloop/runs -name events.jsonl" in during
+    report = text.index("  report:")
+    clean = text.index("name: Check out a clean copy, where no agent ran", report)
+    read = text.index("name: Read the agent's run", report)
+    drill = text.index("name: Drill", report)
+    guard = text.index("continuation_prompts.py guard", report)
+    assert clean < read < drill < guard
+    reading = text[read:drill]
+    assert "python3 clean/scripts/continuation_prompts.py transcript" in reading
+    assert "python3 clean/scripts/continuation_prompts.py tools" in reading
+
+
+def test_the_record_can_be_built_from_a_copy_of_the_store(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    root = chat_world(tmp_path)
+    store = tmp_path / "store" / ".qwenloop" / "runs" / "r1"
+    store.mkdir(parents=True)
+    (store / "events.jsonl").write_text(
+        json.dumps({"type": "tool.call", "name": "find", "arguments": {}}) + "\n"
+    )
+    cli = cp.ContinuationCli(root)
+    assert cli.run(["tools", str(tmp_path / "store"), "/home/runner/work/vibey/vibey"]) == 0
+    header = json.loads(capsys.readouterr().out.splitlines()[0])
+    assert header == {"runs": 1, "root": "/home/runner/work/vibey/vibey"}
+    assert cli.run(["tools", "a", "b", "c"]) == 2
 
 
 def test_an_agent_may_not_add_a_file_that_shadows_the_test_runner() -> None:

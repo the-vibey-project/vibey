@@ -224,16 +224,6 @@ jobs:
           git fetch --quiet origin main develop
           python scripts/continuation_prompts.py plan "${{ matrix.prompt.id }}" > "$RUNNER_TEMP/plan.md"
           wc -c "$RUNNER_TEMP/plan.md"
-      # The agent may edit anything under scripts/, and the hand-over below turns its run into
-      # the record the guard believes. So the scripts that read the run are exported from the
-      # commit as checked out NOW, before the agent has run, and only that copy is executed
-      # there (a security review of #1494: running `tools` from the agent's tree let it write
-      # its own record).
-      - name: Keep a trusted copy of the lane's scripts
-        run: |
-          set -euo pipefail
-          mkdir -p "$RUNNER_TEMP/trusted"
-          git archive HEAD scripts | tar -x -C "$RUNNER_TEMP/trusted"
       - name: Run the prompt with gptossloop
         id: agent
         env:
@@ -303,12 +293,16 @@ jobs:
           mkdir -p "$RUNNER_TEMP/out"
           cp "$RUNNER_TEMP/agent.log" "$RUNNER_TEMP/out/agent.log" 2>/dev/null || : > "$RUNNER_TEMP/out/agent.log"
           # gptossloop prints nothing when a run succeeds: what it said and did is in its run
-          # store under --cwd. Export that as the log, or an act run has no evidence to be
-          # believed by and a drill has no verdict to read (#1416).
-          python3 "$RUNNER_TEMP/trusted/scripts/continuation_prompts.py" transcript . >> "$RUNNER_TEMP/out/agent.log" || true
-          # The runner's own record of each tool call and its answer, not the model's prose: it is
-          # what `guard --tools` believes about what the run read and ran.
-          python3 "$RUNNER_TEMP/trusted/scripts/continuation_prompts.py" tools . > "$RUNNER_TEMP/out/tools.jsonl" || : > "$RUNNER_TEMP/out/tools.jsonl"
+          # store under --cwd (#1416). That store is handed over RAW, as data, and read on a
+          # clean runner by the `report` job. Nothing from the repository is executed here:
+          # everything this job runs after the agent runs in a place the agent could write to,
+          # so a script run here could be a script the agent rewrote (the record `guard --tools`
+          # believes is built in `report`, from this store, by the base branch's own code).
+          mkdir -p "$RUNNER_TEMP/out/store"
+          if [ -d .qwenloop/runs ]; then
+            find .qwenloop/runs -name events.jsonl -exec cp --parents {} "$RUNNER_TEMP/out/store/" \;
+          fi
+          pwd > "$RUNNER_TEMP/out/root"
           echo "${{ steps.agent.outputs.code }}" > "$RUNNER_TEMP/out/code"
           git add -A
           git diff --cached --binary > "$RUNNER_TEMP/out/change.patch"
@@ -348,6 +342,23 @@ jobs:
         run: |
           echo "::error::the ${{ matrix.prompt.id }} run handed over no log: it did not run, or died before the end"
           exit 1
+      # A clean copy of the base branch, where no agent ran: everything below that parses the
+      # agent's run is this branch's own code, reading the run's store as data.
+      - name: Check out a clean copy, where no agent ran
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          ref: develop
+          path: clean
+          persist-credentials: false
+      - name: Read the agent's run
+        run: |
+          set -euo pipefail
+          out="$RUNNER_TEMP/out"
+          # What it said and did, from the runner's events, appended to what it printed.
+          python3 clean/scripts/continuation_prompts.py transcript "$out/store" >> "$out/agent.log" || true
+          # The runner's own record of each tool call and its answer, not the model's prose:
+          # what `guard --tools` believes about what the run read and ran.
+          python3 clean/scripts/continuation_prompts.py tools "$out/store" "$(cat "$out/root" 2>/dev/null || echo /)" > "$out/tools.jsonl" || : > "$out/tools.jsonl"
       - name: Drill — report what no longer holds
         if: matrix.prompt.mode == 'drill'
         env:
@@ -377,13 +388,6 @@ jobs:
           else
             gh issue create --title "$TITLE" --body-file "$body"
           fi
-      - name: Check out a clean copy, where no agent ran
-        if: matrix.prompt.mode == 'act'
-        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
-        with:
-          ref: develop
-          path: clean
-          persist-credentials: false
       - name: Act — open one draft pull request with the checked patch
         if: matrix.prompt.mode == 'act'
         working-directory: clean

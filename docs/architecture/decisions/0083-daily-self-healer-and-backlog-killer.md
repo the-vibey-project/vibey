@@ -238,17 +238,22 @@ The prompt asked and nothing checked, so two layers now do.
   paper; the evidence was parsed from `agent.log`, which also holds the model's own words, so
   a model could print `[tool] read_file ...`; and any argv that mentioned `pytest` counted as a
   test, so `echo pytest` did, whatever its exit code.
-- **A second review round found four more, also confirmed and closed.** The hand-over ran
-  `continuation_prompts.py tools` from the working tree the agent had just edited, so an agent
-  that rewrote that script wrote its own record: the lane's scripts are now exported from
-  `HEAD` before the agent runs (`git archive`) and only that copy is executed at hand-over. A
-  read that returned nothing (`head -c 0 paper.md`) no longer counts, so each call records the
-  size of what it returned. Paths are compared as the patch names them (`./a/../b`, and a path
-  under the run's own directory). And a file named `pytest.py` or `pytest/`, which
-  `python -m pytest` would import from the working directory in place of the real runner, is now
-  a protected path, with more dry-run flags (`--fixtures`, `--setup-plan`) excluded from "a test".
-- **What this does not stop.** An agent with a shell can still write into its own
-  `.qwenloop/` run store, and the lane cannot tell. The check holds against a model that skips
+- **Later review rounds found more, also confirmed and closed.** The hand-over ran
+  `continuation_prompts.py tools` in the agent's own runner, from the tree the agent had edited,
+  so an agent that rewrote that script wrote its own record; a first fix, a "trusted copy"
+  exported there before the run, was a copy in a place the agent could equally overwrite. So
+  nothing from the repository now runs in that job after the agent: it hands its run store over
+  raw (`events.jsonl` files and the working directory's path), and the `report` job, on a clean
+  runner and a clean checkout of the base branch, builds the transcript and the tool record from
+  it (`transcript DIR`, `tools DIR ROOT`). A read that returned nothing (`head -c 0 paper.md`)
+  no longer counts, so each call records the size of what it returned. Paths are compared as the
+  patch names them (`./a/../b`, and a path under the run's own directory). And a file named
+  `pytest.py` or `pytest/`, which `python -m pytest` would import from the working directory in
+  place of the real runner, is a protected path, with more dry-run flags (`--fixtures`,
+  `--setup-plan`) excluded from "a test".
+- **What this does not stop.** An agent with a shell (it has `sudo` on its VM) can still write
+  into its own `.qwenloop/` run store, replace the events files it hands over, or tamper with
+  the tools that run after it in its job (`git`, the artifact upload), and the lane cannot tell. The check holds against a model that skips
   its steps, not against one that forges its record; closing that needs the run store outside
   the agent's tree, which is a change to the runner, not to this lane.
 - **Before the run, the evidence is the codebase.** `scripts/backlog_grounding.py` is a second

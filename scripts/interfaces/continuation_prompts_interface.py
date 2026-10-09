@@ -102,8 +102,9 @@ class GroundingRuleInterface(Protocol):
 class RunReceiptInterface(Protocol):
     """Says what a run left behind, and whether that is enough to believe its patch."""
 
-    def tools(self, cwd: Path) -> str:
-        """The run's tool calls as JSON lines, from the runner's structured events only."""
+    def tools(self, cwd: Path, root: str | None = None) -> str:
+        """The run's tool calls as JSON lines, from the runner's structured events only. `root` is
+        the directory the run worked in, when `cwd` is only a copy of its store."""
         ...
 
     def transcript(self, cwd: Path) -> str:
