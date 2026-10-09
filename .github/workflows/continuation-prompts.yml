@@ -241,11 +241,21 @@ jobs:
           for m in $PULLED $MODELS; do
             case " $tried " in *" $m "*) continue ;; esac
             tried="$tried $m"
-            if [ "$m" != "$PULLED" ] && ! ollama pull "$m" > /dev/null 2>&1; then
+            # A server that dropped the connection is usually dead, and `ollama pull` against a
+            # dead server fails at once: bring it back first (2026-10-09, the first fallback
+            # never reached its model because the pull came before the restart).
+            if ! curl -sf http://127.0.0.1:11434/api/version > /dev/null; then
+              echo "::group::the model server is down; its last words"
+              free -m || true
+              tail -n 40 "$RUNNER_TEMP/ollama.log" 2>/dev/null || true
+              echo "::endgroup::"
+              (ollama serve >> "$RUNNER_TEMP/ollama.log" 2>&1 &)
+              for _ in $(seq 1 30); do curl -sf http://127.0.0.1:11434/api/version > /dev/null && break; sleep 2; done
+            fi
+            if [ "$m" != "$PULLED" ] && ! ollama pull "$m"; then
               echo "::warning::could not pull $m; trying the next declared model"
               continue
             fi
-            curl -sf http://127.0.0.1:11434/api/version > /dev/null || { (ollama serve >> "$RUNNER_TEMP/ollama.log" 2>&1 &); sleep 10; }
             echo "::group::agent on $m" >> "$RUNNER_TEMP/agent.log"
             code=0
             GPTOSSLOOP_MODEL="$m" timeout "$((minutes * 60 - SECONDS))s" gptossloop run "$RUNNER_TEMP/plan.md" --cwd . \
