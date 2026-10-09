@@ -499,7 +499,9 @@ runs_on = "ubuntu-24.04-arm"
 # was killed mid-run on 2026-10-08/09): the operator's decision, 2026-10-09. Unmeasured there.
 models = ["qwen3:8b", "qwen3:4b"]
 max_turns = 30
-timeout_minutes = 150
+# The most the validator allows (330, to fit the job's 355 minutes): the operator asked for
+# the longest timeout available, 2026-10-09. Was 150.
+timeout_minutes = 330
 
 [runners]
 # The machine that serves the sovereign lane above, declared (12.c): `vibey-gh runner install`

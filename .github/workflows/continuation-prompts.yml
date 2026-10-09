@@ -165,7 +165,10 @@ jobs:
       matrix:
         prompt: ${{ fromJSON(needs.refresh.outputs.matrix) }}
     runs-on: ${{ matrix.prompt.runs_on }}
-    timeout-minutes: 355
+    # 360 is the most a GitHub-hosted job may run. The agent's own budget (`timeout_minutes`
+    # in scripts/continuation_prompts.toml, 350) leaves ten minutes for the model pull, the
+    # evidence and the hand-over, which must finish inside the job or the log is lost.
+    timeout-minutes: 360
     # The agent reads untrusted text (issue titles and bodies) and has sudo on this VM, so
     # this job holds no write permission and no secret: it only hands over its log and its
     # patch. A fresh runner, where no agent ran, acts on them (`report`).

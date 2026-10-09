@@ -169,3 +169,13 @@ What this does not do, and why:
   reads about 2 GB of weights per token; qwen3:8b is dense and reads about 5 GB, so on a
   memory-bound CPU it may generate more slowly per token, not faster. The lane is bounded by
   turns and by time, so a slow model costs runs, not safety.
+
+## Amendment, 2026-10-09: the agent runs get the longest timeout a hosted job allows
+
+At the operator's request the continuation lane's agent budget is 350 minutes inside a 360-minute
+job (360 is GitHub's ceiling for a hosted job; the ten minutes left cover the model pull, the
+evidence and the hand-over, which must finish inside the job or the log is lost), and the
+sovereign repair's is 330, the most its validator allows. The runs that prompted it were not
+timing out, so this buys a slow model time rather than speed. It costs the lane its slot: the
+continuation lane's concurrency group runs one agent at a time and holds a hung one for up to
+six hours, during which the backlog killer's dispatches are dropped or queued behind it.

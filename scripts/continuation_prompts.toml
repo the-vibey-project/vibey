@@ -224,7 +224,9 @@ model = "qwen3:8b"
 # one is, and the run says which it used. A smaller second model keeps the lane answering.
 models = ["qwen3:8b", "qwen3:4b"]
 max_turns = 12
-timeout_minutes = 340
+# The most a hosted job allows, less the ten minutes the job spends around the agent
+# (continuation-prompts.yml `timeout-minutes: 360`). The operator's decision, 2026-10-09.
+timeout_minutes = 350
 evidence_chars = 12000
 gather_timeout_s = 180
 
