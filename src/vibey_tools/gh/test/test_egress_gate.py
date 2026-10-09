@@ -522,10 +522,10 @@ async def test_every_decision_the_proxy_makes_is_logged_with_its_reason() -> Non
     assert log.lines[1:] == [
         "DENY example.com:443 -- not on the allowlist (add the host to [runners] egress_allow)",
         "DENY github.com:22 -- not on the allowlist (add the host to [runners] egress_allow)",
-        "DENY github.com:x -- not a host:port",
+        "DENY github.com -- the port is not a number",
         "DENY pypi.org:443 -- resolves to an address that is not public",
         "DENY api.github.com:443 -- the name does not resolve",
-        "DENY GET http://github.com/ -- only CONNECT is supported",
+        "DENY GET github.com -- only CONNECT is supported",
         "DENY CONNECT -- a CONNECT request line needs a host:port",
         "DENY (request) -- only CONNECT is supported",
         "DENY (request) -- no complete request head",
@@ -589,4 +589,59 @@ async def test_every_decision_the_model_gate_makes_is_logged_with_its_reason() -
         "DENY nonsense -- not one of the model requests allowed",
         "DENY (model request) -- no complete request head",
         "DENY GET /api/version -- the host's model server did not answer",
+    ]
+
+
+def test_a_log_line_says_where_a_request_was_going_and_nothing_it_carried() -> None:
+    host, path = gate.Destination.host, gate.Destination.path
+    assert host("github.com:443") == "github.com:443"
+    assert host("user:hunter2@evil.com:443") == "evil.com:443"
+    assert host("http://deploy:ghp_SECRET@internal.example/p?token=abc#frag") == "internal.example"
+    assert host("https://h.example:8443/a/b") == "h.example:8443"
+    assert host("a@b@c.example") == "c.example"  # the last @ ends the credentials
+    assert path("/v1/models?api_key=SECRET#x") == "/v1/models"
+    assert path("/api/tags") == "/api/tags"
+    request = gate.Destination.request
+    assert request([]) == "(request)"
+    assert request(["CONNECT"]) == "CONNECT"
+    assert request(["GET", "/api/version?x=1"]) == "GET /api/version"
+    assert request(["GET", "http://u:p@h.example/x?t=1"]) == "GET h.example"
+    assert request(["X" * 100, "h.example"]) == "X" * gate.Destination.METHOD_LIMIT + " h.example"
+
+
+@sync
+async def test_no_secret_in_a_request_target_reaches_the_log() -> None:
+    # Found by a security review: the log wrote client-supplied targets whole, so URL
+    # credentials and query-string tokens were written to `docker logs`.
+    log = Recorder()
+    proxy = gate.ConnectProxy(gate.HostPolicy(["github.com"]), FakeResolver({}), log=log)
+    model = gate.ModelGate(("h", 1), dialer=LocalDialer(1), log=log)
+    front, port = await serve(proxy.handle)
+    front_model, model_port = await serve(model.handle)
+    try:
+        for request in (
+            b"CONNECT user:hunter2@evil.com:443 HTTP/1.1\r\n\r\n",
+            b"CONNECT user:hunter2@evil.com:secretport HTTP/1.1\r\n\r\n",
+            b"CONNECT justaword HTTP/1.1\r\n\r\n",
+            b"GET http://deploy:ghp_SECRET@internal.example/p?token=abc123 HTTP/1.1\r\n\r\n",
+        ):
+            await exchange(port, request)
+        for request in (
+            b"DELETE /api/delete?api_key=sk-LIVE-KEY HTTP/1.1\r\nHost: g\r\n\r\n",
+            b"GET http://x:tok@h.example/api/version?k=v HTTP/1.1\r\nHost: g\r\n\r\n",
+        ):
+            await exchange(model_port, request)
+    finally:
+        front.close()
+        front_model.close()
+    joined = "\n".join(log.lines)
+    for secret in ("hunter2", "ghp_SECRET", "abc123", "sk-LIVE-KEY", "secretport", "tok@", "k=v"):
+        assert secret not in joined, secret
+    assert log.lines == [
+        "DENY evil.com:443 -- not on the allowlist (add the host to [runners] egress_allow)",
+        "DENY evil.com -- the port is not a number",
+        "DENY (no host) -- the port is not a number",
+        "DENY GET internal.example -- only CONNECT is supported",
+        "DENY DELETE /api/delete -- not one of the model requests allowed",
+        "DENY GET h.example -- not one of the model requests allowed",
     ]

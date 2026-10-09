@@ -50,13 +50,50 @@ MAX_HEAD = 16 * 1024
 IDLE_SECONDS = 1800
 
 
+class Destination:
+    """What of a client-supplied request target may be written to the log: where it was going,
+    and nothing it carried.
+
+    A target can hold a secret in three places: credentials before an `@` (`user:token@host`),
+    a query string (`?api_key=...`), and a fragment. None is needed to say where a request was
+    headed, so none is kept: a host and port, or a method and a path. This is the only way
+    the gate turns request text into log text, so a new listener cannot forget it.
+    """
+
+    METHOD_LIMIT = 16
+
+    @staticmethod
+    def host(target: str) -> str:
+        """`host[:port]` of a `scheme://user:pw@host:port/path?query` or a `user:pw@host:port`."""
+        text = target.split("://", 1)[-1]
+        text = text.split("/", 1)[0].split("?", 1)[0].split("#", 1)[0]
+        return text.rpartition("@")[2]
+
+    @staticmethod
+    def path(target: str) -> str:
+        """The path of `/path?query#fragment`, without the query or the fragment."""
+        return target.split("?", 1)[0].split("#", 1)[0]
+
+    @classmethod
+    def request(cls, parts: Sequence[str]) -> str:
+        """`METHOD where` for a request line already split on whitespace, safe to log."""
+        if not parts:
+            return "(request)"
+        method = parts[0][: cls.METHOD_LIMIT]
+        if len(parts) < 2:
+            return method
+        target = parts[1]
+        return f"{method} {cls.path(target) if target.startswith('/') else cls.host(target)}"
+
+
 class AccessLog(AccessLogInterface):
     """One line per decision on the gate's standard output (`docker logs vibey-egress`).
 
     A refusal used to be a bare 403 to the job and nothing here, so a step that failed on a
     host nobody had listed gave no clue which. What is logged is the destination (a host and
-    port, or a method and path) and the reason: never a header, a body or a credential. The
-    destination is client-supplied text, so it is cleaned and cut before it is written.
+    port, or a method and path, reduced by `Destination`) and the reason: never a header, a
+    body, a credential or a query string. The destination is client-supplied text, so it is
+    cleaned and cut before it is written.
     """
 
     LIMIT = 120
@@ -207,16 +244,17 @@ class ConnectProxy:
             return await self.refuse(writer, "400 Bad Request")
         parts = head.split(b"\r\n", 1)[0].decode("latin-1").split()
         if not parts or parts[0].upper() != "CONNECT":
-            self._log.deny(" ".join(parts[:2]) or "(request)", "only CONNECT is supported")
+            self._log.deny(Destination.request(parts), "only CONNECT is supported")
             return await self.refuse(writer, "405 Method Not Allowed")
         if len(parts) != 3:
-            self._log.deny(" ".join(parts[:2]), "a CONNECT request line needs a host:port")
+            self._log.deny(Destination.request(parts), "a CONNECT request line needs a host:port")
             return await self.refuse(writer, "405 Method Not Allowed")
         host, _, port_text = parts[1].rpartition(":")
-        target = f"{host}:{port_text}"
         if not port_text.isdigit():
-            self._log.deny(target, "not a host:port")
+            # The "port" is whatever the client typed: say the host, not that text.
+            self._log.deny(Destination.host(host) or "(no host)", "the port is not a number")
             return await self.refuse(writer, "403 Forbidden")
+        target = f"{Destination.host(host)}:{port_text}"
         if not self._policy.allows(host, int(port_text)):
             self._log.deny(target, "not on the allowlist (add the host to [runners] egress_allow)")
             return await self.refuse(writer, "403 Forbidden")
@@ -278,15 +316,16 @@ class ModelGate:
         line = head.split(b"\r\n", 1)[0].decode("latin-1").split()
         if len(line) != 3 or not self._policy.allows(line[0], line[1]):
             self._log.deny(
-                " ".join(line[:2]) or "(model request)", "not one of the model requests allowed"
+                Destination.request(line) if line else "(model request)",
+                "not one of the model requests allowed",
             )
             return await ConnectProxy.refuse(writer, "403 Forbidden")
         try:
             upstream = await self._dialer.open(*self._upstream)
         except (OSError, TimeoutError):
-            self._log.deny(" ".join(line[:2]), "the host's model server did not answer")
+            self._log.deny(Destination.request(line), "the host's model server did not answer")
             return await ConnectProxy.refuse(writer, "502 Bad Gateway")
-        self._log.allow(" ".join(line[:2]))
+        self._log.allow(Destination.request(line))
         upstream[1].write(self.one_request(head))
         await upstream[1].drain()
         await Pipe.both((reader, writer), upstream)
