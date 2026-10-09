@@ -33,6 +33,7 @@ import subprocess
 from collections.abc import Callable, Sequence
 from dataclasses import dataclass
 from pathlib import Path
+from urllib.parse import urlsplit
 from xml.sax.saxutils import escape
 
 from vibey_gh.config import GhConfig
@@ -182,7 +183,15 @@ class SovereignRunner:
             "__RUNNER_LABEL__": fallback.runner_label,
             "__IMAGE__": self._runners.image,
             "__MODEL_URL__": fallback.base_url,
-            "__CONTAINER_MODEL_URL__": self._runners.container_model_url,
+            "__CONTAINER_MODEL_URL__": self._runners.model_url_in_container,
+            "__EGRESS_GATE__": "1" if self._runners.egress_gate else "0",
+            "__EGRESS_NAME__": self._runners.egress_name,
+            "__EGRESS_NETWORK__": self._runners.egress_network,
+            "__EGRESS_ALLOW__": ",".join(self._runners.egress_allow),
+            "__EGRESS_DIR__": str(install / "egress"),
+            # The gate forwards to the host's model server: the host side is
+            # `[pr_automation.fallback] base_url`, seen from a container as the host gateway.
+            "__MODEL_UPSTREAM__": f"host.docker.internal:{urlsplit(fallback.base_url).port or 11434}",
             "__REQUIRE_AC__": "1" if self._runners.require_ac else "0",
             "__MAX_FAILURES__": str(self._runners.max_failures),
             "__GH_CONFIG_DIR__": str(self._gh_dir),
@@ -198,6 +207,11 @@ class SovereignRunner:
             RunnerFile(install / "Dockerfile", self._read("Dockerfile")),
             RunnerFile(install / "entrypoint.sh", self._read("entrypoint.sh"), True),
             RunnerFile(install / "vibey-runner.sh", self._read("vibey-runner.sh"), True),
+            RunnerFile(install / "egress" / "egress_gate.py", self._read("egress/egress_gate.py")),
+            RunnerFile(
+                install / "egress" / "interfaces" / "egress_gate_interface.py",
+                self._read("egress/interfaces/egress_gate_interface.py"),
+            ),
         )
         return RunnerPlan(label, slug, url, plist, files), ""
 

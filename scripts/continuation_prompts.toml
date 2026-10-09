@@ -275,7 +275,10 @@ gather_timeout_s = 180
 # through gptossloop. A 8B model on a 4-vCPU runner could not do their work (it called tools
 # that do not exist and wrote files of invented records). The machine is a Docker Desktop
 # container per job under launchd (docs/runbooks/sovereign-review-runner.md): non-root, no sudo,
-# no host mount, and it reaches the host's Ollama at `base_url`. While the machine's heartbeat
+# no host mount, on a Docker network with NO route out. Its only way out is the egress gate
+# (`[runners] egress_gate`): the model server's four endpoints, at `base_url`, and HTTPS to a
+# short list of hosts. The host's other ports (Postgres, RabbitMQ) are unreachable by
+# construction, not by a flag. While the machine's heartbeat
 # is older than `heartbeat_max_age_minutes` (or unreadable) the prompt is LEFT OUT of the
 # matrix: it is skipped, never queued for a runner that is not there and never moved to a
 # hosted one. `check` holds runs_on and heartbeat_ref to `.vibey-gh.toml`.
@@ -284,7 +287,7 @@ prompts = ["backlog"]
 runs_on = ["self-hosted", "vibey-local-vibey"]
 model = "gpt-oss:20b"
 # gptossloop's own endpoint setting ($GPTOSSLOOP_BASE_URL), /v1 included.
-base_url = "http://host.docker.internal:11434/v1"
+base_url = "http://vibey-egress:11434/v1"
 # More turns and a shorter ceiling than the CPU runner: the host reads at ~200 tok/s.
 max_turns = 40
 timeout_minutes = 120

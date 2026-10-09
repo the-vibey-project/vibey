@@ -287,12 +287,24 @@ operator's own machine already serves gpt-oss:20b and already registers a runner
   is left out of the matrix, the `run` and `report` jobs are skipped on an empty matrix, and the
   summary says why. A job queued for a runner that is not there would wait a day holding the
   lane's concurrency group.
-- **What the agent can reach.** The runner is one Docker container per job: non-root, no sudo,
-  no host mount, no secret, a read-only token. It can still reach the host's loopback services
-  through `host.docker.internal` (the Ollama server is one), and that is the cost of this
-  decision; the hosted VM it replaces gave the agent sudo and a disposable machine, but nothing
-  of the operator's. The workflow is dispatch- and schedule-only, so no fork's code or pull
-  request ever reaches the machine, and the backlog pick takes issues only from trusted authors.
+- **What the agent can reach: the gate, and nothing else.** The first version of this
+  decision let the container reach the host through `host-gateway`, and testing it showed the
+  host's Postgres (5432) and RabbitMQ (5672, 15672) accepting connections from inside, while the
+  agent runner's `allow_network=False` turned out to be an environment variable that enforces
+  nothing. So the runner container now has NO route out. It joins a Docker `--internal` network
+  whose only other member is an egress gate: a `CONNECT` proxy for a declared host list on 443
+  (GitHub and its stores, PyPI) that resolves names itself and refuses any address that is not
+  globally routable, and a forwarder that lets through four model-server requests, so the agent
+  cannot pull or delete a model on the operator's machine. `[run.sovereign]` is refused by
+  `check` unless `[runners] egress_gate = true`, and its model URL must be the gate's. Tested
+  with a throwaway network on the operator's machine: direct connections to the internet, the
+  host's Postgres and RabbitMQ, and Ollama all fail; through the gate, GitHub, PyPI and the
+  chat endpoint work and `DELETE /api/delete`, `POST /api/pull` and `POST /api/generate` return
+  403. What remains is exfiltration to a host on the allowlist, which takes a credential the
+  job does not hold, and the pre-existing exposure of the run record (below).
+- **Who can reach the machine at all.** The workflow is dispatch- and schedule-only, so no
+  fork's code or pull request ever reaches it, and the backlog pick takes issues only from
+  trusted authors.
 - **What a heartbeat does not promise.** It says the machine was up within 15 minutes, not that
   Ollama is serving the model: the job checks that first and fails loudly. And a machine that
   goes down in the minutes between the heartbeat and the job leaves the job queued.

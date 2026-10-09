@@ -521,6 +521,14 @@ unit_prefix = "com.adammatthewsteinberger.vibey-runner"
 # the timer refuses -- installs the heartbeat with it. Re-run that tool install after pulling
 # a vibey-gh change, or `heartbeat status` reports the gate refusing a heartbeat.
 heartbeat_python = "~/.local/share/uv/tools/vibey-engine/bin/python"
+# The egress gate (ADR-0083, 2026-10-09). The job container sits on a Docker network with no
+# route out; the only thing it reaches is a gate container that forwards the model server's four
+# endpoints and tunnels HTTPS to a short list of hosts. Without it `host-gateway` exposes every
+# port on this machine -- its Postgres and RabbitMQ included -- to a job's shell, which is how
+# an agent's shell reached them. `scripts/continuation_prompts.py check` refuses the host-run
+# backlog prompt while this is false.
+egress_gate = true
+egress_name = "vibey-egress"
 
 [issue_automation]
 # The issue path's counterpart, sharing the fallback runner and model: an exhausted API
