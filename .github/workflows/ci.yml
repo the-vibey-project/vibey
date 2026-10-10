@@ -112,7 +112,7 @@ jobs:
       # TypeScript is the only authored JavaScript (sub-doctrine 9.f): the committed `.js` the
       # sites and Expo need is compiled from it, and tests/meta/test_typescript_artifacts.py
       # recompiles it here. With no compiler that test fails in CI rather than skipping.
-      - uses: actions/setup-node@v7
+      - uses: actions/setup-node@v7.1.0
         with:
           node-version-file: .node-version
           cache: npm
@@ -748,7 +748,7 @@ jobs:
         working-directory: packages/vibey-core
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-node@v7
+      - uses: actions/setup-node@v7.1.0
         with:
           node-version-file: .node-version
           cache: npm
@@ -791,7 +791,7 @@ jobs:
         working-directory: clients/app
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-node@v7
+      - uses: actions/setup-node@v7.1.0
         with:
           node-version-file: .node-version
           cache: npm
@@ -831,7 +831,7 @@ jobs:
         working-directory: clients/vscode
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-node@v7
+      - uses: actions/setup-node@v7.1.0
         with:
           node-version-file: .node-version
           cache: npm

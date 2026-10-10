@@ -68,7 +68,7 @@ jobs:
             --title "Open VSX: the VS Code extension is not being published (OVSX_PAT is not set)" \
             --body "Every release on \`main\` skips the Open VSX channel because the repository has no \`OVSX_PAT\` secret (ADR-0059, #290). Creating the token needs the operator's Open VSX account. This issue closes itself after the first successful publish (openvsx.yml)."
 
-      - uses: actions/setup-node@v7
+      - uses: actions/setup-node@v7.1.0
         if: env.OVSX_PAT != ''
         with:
           node-version-file: .node-version
