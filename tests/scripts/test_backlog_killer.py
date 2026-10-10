@@ -183,6 +183,11 @@ def test_missing_expectations_are_no_holds(tmp_path: Path) -> None:
 def test_the_cli(monkeypatch, capsys) -> None:
     source = FakeSource([issue(5, "vibey-gh:priority-high", title="five")])
     monkeypatch.setattr(bk, "GhBacklogSource", lambda: source)
+    # The real file, but switched ON: whether the live lane is paused is not this test's business.
+    real = bk.load
+    monkeypatch.setattr(
+        bk, "load", lambda root: ({**real(root)[0], "enabled": True}, real(root)[1])
+    )
     assert bk.main([]) == 2
     assert bk.main(["pick", "--number"]) == 0
     assert capsys.readouterr().out.strip() == "5"
@@ -228,3 +233,35 @@ def test_an_issue_without_an_association_is_not_trusted() -> None:
 def test_the_declared_trust_is_the_chat_lanes() -> None:
     settings, _ = bk.load(Path(__file__).resolve().parents[2])
     assert settings["trusted_associations"] == ["OWNER", "MEMBER", "COLLABORATOR"]
+
+
+def test_a_switched_off_lane_picks_nothing_and_ends_the_chain() -> None:
+    # `chain = false` is not a pause: the watchdog cron would still start a link that picks an
+    # issue and dispatches the agent. `enabled = false` is.
+    issues = [issue(1, "p:high"), issue(2, "p:low")]
+    on = killer(issues, chain=True, chain_max_links=3)
+    off = killer(issues, chain=True, chain_max_links=3, enabled=False)
+    assert on.pick(AT) is not None and on.may_chain(0)
+    assert off.pick(AT) is None  # whatever the backlog holds
+    assert not off.may_chain(0) and not off.may_chain(2)
+    # Only the pick and the chain are switched: reading the backlog still works, so the lane
+    # can be inspected while paused.
+    assert [i["number"] for i in off.candidates()] == [1, 2]
+    # Unset means on: a repository that declares no switch keeps the old behaviour.
+    assert killer(issues).pick(AT) is not None
+    assert "switched off" in off.brief(off.pick(AT))
+    assert "enabled = false" in off.brief(None)
+    # With the lane ON and nothing workable, the old message stands.
+    assert "No open issue is workable" in killer([]).brief(None)
+
+
+def test_the_cli_of_a_switched_off_lane_prints_no_number(monkeypatch, capsys) -> None:
+    source = FakeSource([issue(5, "vibey-gh:priority-high", title="five")])
+    monkeypatch.setattr(bk, "GhBacklogSource", lambda: source)
+    monkeypatch.setattr(bk, "load", lambda root: ({"enabled": False, "chain": True}, {}))
+    assert bk.main(["pick", "--number"]) == 0
+    assert capsys.readouterr().out.strip() == ""  # the workflow's `work` job needs a number
+    assert bk.main(["pick"]) == 0
+    assert "switched off" in capsys.readouterr().out
+    assert bk.main(["chain", "0"]) == 0
+    assert capsys.readouterr().out.strip() == "proceed=false"

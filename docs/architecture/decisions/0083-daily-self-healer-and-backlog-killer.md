@@ -362,3 +362,19 @@ three were refused, correctly, for want of a passing test. They could not have h
   files, with the report job requiring it to pass. Until it exists, a lane PR is a draft that a
   person reviews and its description says the agent's report is unverified; the lane never merges.
 
+## Amendment, 2026-10-10: a real pause, and the lane is paused
+
+`chain = false` was documented as the way to stop the backlog killer. It is not: it ends the
+chaining, and the watchdog cron (`13 */2 * * *`) still starts a link, which picks an issue and
+dispatches the agent, so the lane would still have run every two hours. `[backlog_killer]
+enabled` is the master switch (default true): off, the pick finds nothing, so the `work` job is
+skipped, and the chain ends at its next link. Reading the backlog still works, so a paused lane
+can be inspected.
+
+It is set off, at the operator's request, because every run since 2026-10-09 was refused by the
+guards, correctly, and each cost about 17 minutes of the operator's machine: the pick ranks by
+priority label and so hands the agent the hardest items (a paper revision, a client-suite plan, a
+research programme) and none of the few that are one tested slice. It is switched back on once
+the pick is limited to issues an agent can finish. `tests/meta/test_daily_lanes.py` requires a
+paused lane to say why and what ends the pause.
+

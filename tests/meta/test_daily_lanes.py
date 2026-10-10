@@ -188,3 +188,15 @@ def test_the_book_is_only_ever_rebuilt_from_a_release_that_already_succeeded() -
     )
     assert "${{" not in run  # the run id reaches the shell from the script, never interpolated
     assert "vibey-engine.yml" not in run  # it never cuts or re-runs a release
+
+
+def test_the_backlog_killer_has_a_real_pause_and_it_says_why_it_is_used() -> None:
+    """`chain = false` does not pause (the watchdog cron still runs a link), so the lane has a
+    master switch; whichever way it is set, it is a declared boolean with its reason beside it."""
+    text = (WORKFLOWS.parents[1] / "scripts" / "daily_lanes.toml").read_text()
+    settings = tomllib.loads(text)["backlog_killer"]
+    assert isinstance(settings.get("enabled", True), bool)
+    if settings.get("enabled", True) is False:
+        # A paused lane records why and what ends the pause, or nobody remembers to end it.
+        block = text[text.index("[backlog_killer]") : text.index("interval_minutes")]
+        assert "Paused" in block and "Switch it back on" in block
