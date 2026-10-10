@@ -553,8 +553,16 @@ assigned engine are cleared.
 | `--project ID` | unset | Recover jobs for one project. |
 | `--all` | off | Recover jobs for every project. Wins if `--project` is also given. |
 
+| `--stop-workers` | off | First stop every `vibey worker` this user is running, and everything each started (an engine runner, a `uv run` or `caffeinate` wrapper), then reset the leases. The processes are listed before anything is signalled. SIGTERM, then SIGKILL for what is still there after `--grace`. It matches `vibey` command lines with `worker` in them, in this user's processes only, and never itself or what started it. If anything survives SIGKILL it exits 1 **without resetting a lease**, because a live worker holds its leases by heartbeat and resetting them would run its job twice. |
+| `--grace SECONDS` | `10` | How long `--stop-workers` waits after SIGTERM before SIGKILL. |
+| `--dry-run` | off | Change nothing: with `--stop-workers`, list the processes that would be stopped, and print `would recover N stuck job(s)` instead of resetting them. |
+
 One of `--project` or `--all` is required; with neither, it prints
 `Must specify either --project <id> or --all` and exits 1.
+
+A worker that died leaves its jobs `leased` until the lease expires, and a worker that is still
+alive keeps them; so the one command for a stuck queue is
+`vibey recover --project ID --stop-workers`, then start the worker again.
 
 Prints `Recovered N stuck job(s).`, where N is the number of rows actually
 reset, read from PostgreSQL's `UPDATE n` status tag.
