@@ -4,6 +4,7 @@ reason and the resume time and exits 75 -- paused, not failed."""
 
 from datetime import UTC, datetime
 from pathlib import Path
+from unittest.mock import AsyncMock
 
 import pytest
 import typer
@@ -80,3 +81,46 @@ def test_new_and_work_say_why_and_when_they_resume(
 def test_vibey_sabbath_prints_the_hosts_window() -> None:
     result = CliRunner().invoke(app, ["sabbath"])
     assert result.exit_code == 0 and "sabbath: enabled" in result.output
+
+
+def test_ignoring_swaps_in_a_gate_that_never_holds_but_keeps_the_hosts_other_answers() -> None:
+    command = SabbathCommand(lambda: _Gate(REST, resolved=False))
+    assert command.gate().hold() is REST
+    ignoring = command.gate(ignore=True)
+    assert ignoring.hold() is None
+    assert ignoring.location_resolved() is False
+    assert ignoring.describe()[:2] == ["sabbath: enabled", "location: somewhere"]
+    assert "--ignore-sabbath" in ignoring.describe()[-1]
+
+
+def test_ignore_runs_through_the_window_and_says_so_on_stderr(
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    SabbathCommand(lambda: _Gate(REST)).decline_if_resting("work", ignore=True)
+    captured = capsys.readouterr()
+    assert captured.out == ""
+    assert "--ignore-sabbath given" in captured.err
+    assert REST.resumes.isoformat() in captured.err
+
+
+def test_ignore_is_silent_when_nothing_would_have_rested(
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    SabbathCommand(lambda: _Gate(None)).decline_if_resting("work", ignore=True)
+    captured = capsys.readouterr()
+    assert captured.out == captured.err == ""
+
+
+@pytest.mark.sabbath
+def test_the_flag_is_a_choice_for_one_command_and_never_sticks(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(SABBATH, "_factory", lambda: _Gate(REST))
+    monkeypatch.setattr("vibey.cli.main._work_once", AsyncMock(return_value=False))
+    argv = ["work", "00000000-0000-0000-0000-000000000001"]
+    assert CliRunner().invoke(app, argv).exit_code == 75
+    ignored = CliRunner().invoke(app, [*argv, "--ignore-sabbath"])
+    assert ignored.exit_code == 0
+    assert "no ready job" in ignored.output
+    assert "resting for the Sabbath" not in ignored.output
+    assert CliRunner().invoke(app, argv).exit_code == 75

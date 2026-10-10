@@ -6,10 +6,12 @@ import subprocess
 import sys
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
-from uuid import UUID
+from unittest.mock import AsyncMock
+from uuid import UUID, uuid4
 
 import asyncpg
 import pytest
+from click.testing import Result
 from typer.testing import CliRunner
 
 from vibey.application.dto import EngineHealthRecord, EnqueueRequest
@@ -1322,6 +1324,98 @@ def test_doctor_with_conformance_failure() -> None:
     assert "timed out" in res.output
 
 
+def _doctor_conformance_with_poll_env(poll_env: str) -> tuple[Result, AsyncMock]:
+    """Run `doctor --conformance` against a faked engine with `VIBEY_CONFORMANCE_POLL_SECONDS`
+    set as given; returns the CLI result and the `run_conformance` mock it called."""
+    from unittest.mock import patch
+
+    from vibey.application.dto import ConformanceCheckResult, ConformanceReport, PreflightResult
+    from vibey.domain.engine import EngineId
+
+    conformance = AsyncMock(
+        return_value=ConformanceReport(
+            engine_id=EngineId.CLAUDELOOP,
+            checks=(ConformanceCheckResult(name="preflight", ok=True),),
+        )
+    )
+    with (
+        patch(
+            "vibey.infrastructure.engines.loop_process_adapter.LoopProcessAdapter.preflight",
+            new=AsyncMock(
+                return_value=PreflightResult(installed=True, version="0.5.5", auth_ok=True)
+            ),
+        ),
+        patch("vibey.application.conformance.run_conformance", new=conformance),
+    ):
+        res = runner.invoke(
+            app,
+            ["doctor", "--conformance", "--engine", "claudeloop"],
+            env={"VIBEY_CONFORMANCE_POLL_SECONDS": poll_env},
+        )
+    return res, conformance
+
+
+def test_doctor_conformance_waits_the_default_window_when_none_is_declared() -> None:
+    from vibey.application.conformance import DEFAULT_RUN_DIR_POLL_SECONDS
+
+    res, conformance = _doctor_conformance_with_poll_env("")
+    assert res.exit_code == 0, res.output
+    assert conformance.await_args is not None
+    assert conformance.await_args.kwargs["run_dir_poll_seconds"] == DEFAULT_RUN_DIR_POLL_SECONDS
+
+
+def test_doctor_conformance_waits_the_window_the_operator_declared() -> None:
+    res, conformance = _doctor_conformance_with_poll_env("420")
+    assert res.exit_code == 0, res.output
+    assert conformance.await_args is not None
+    assert conformance.await_args.kwargs["run_dir_poll_seconds"] == 420.0
+
+
+def test_doctor_conformance_refuses_a_bad_window_before_touching_an_engine() -> None:
+    res, conformance = _doctor_conformance_with_poll_env("soon")
+    assert res.exit_code == 2
+    assert "VIBEY_CONFORMANCE_POLL_SECONDS" in res.output
+    conformance.assert_not_awaited()
+
+
+def _doctor_with_ollama_line(env: dict[str, str]) -> tuple[Result, AsyncMock]:
+    """Run `doctor` against a faked engine and a faked Ollama residency line."""
+    from unittest.mock import patch
+
+    from vibey.application.dto import PreflightResult
+
+    residency = AsyncMock(return_value="ollama   WARN: sentinel residency line")
+    with (
+        patch(
+            "vibey.infrastructure.engines.loop_process_adapter.LoopProcessAdapter.preflight",
+            new=AsyncMock(
+                return_value=PreflightResult(installed=True, version="0.5.5", auth_ok=True)
+            ),
+        ),
+        patch("vibey.infrastructure.engines.ollama_residency.OllamaResidency.line", new=residency),
+    ):
+        res = runner.invoke(app, ["doctor", "--engine", "claudeloop"], env=env)
+    return res, residency
+
+
+def test_doctor_says_what_ollama_is_holding_when_a_local_engine_is_on() -> None:
+    res, residency = _doctor_with_ollama_line({"VIBEY_FEATURE_GPTOSSLOOP": "1"})
+    assert "ollama   WARN: sentinel residency line" in res.output
+    residency.assert_awaited_once()
+
+
+def test_doctor_says_nothing_of_ollama_when_every_local_engine_is_off() -> None:
+    res, residency = _doctor_with_ollama_line(
+        {
+            "VIBEY_FEATURE_GPTOSSLOOP": "0",
+            "VIBEY_FEATURE_QWENLOOP": "0",
+            "VIBEY_FEATURE_CLAUDELOOP_LOCAL": "0",
+        }
+    )
+    assert "sentinel residency line" not in res.output
+    residency.assert_not_awaited()
+
+
 # ── worker command ────────────────────────────────────────────────────────────
 
 
@@ -1355,6 +1449,110 @@ def test_worker_once_no_job(tmp_path: Path) -> None:
         res = runner.invoke(app, ["worker", "--once"])
     assert res.exit_code == 0, res.output
     assert "no ready job" in res.output
+
+
+@pytest.mark.usefixtures("_fast_engine_preflight")
+def test_worker_ignore_sabbath_says_so_and_runs_through_the_window(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    from vibey.cli.sabbath import SABBATH
+    from vibey.domain.sabbath import RestWindow
+
+    window = RestWindow(
+        datetime(2026, 9, 25, 23, 23, tzinfo=UTC),
+        datetime(2026, 9, 26, 23, 22, tzinfo=UTC),
+        True,
+        "computed sundown",
+    )
+
+    class _RestingGate:
+        def hold(self) -> RestWindow:
+            return window
+
+        def describe(self) -> list[str]:
+            return ["sabbath: enabled"]
+
+        def location_resolved(self) -> bool:
+            return True
+
+    monkeypatch.setattr(SABBATH, "_factory", lambda: _RestingGate())
+
+    async def seed_empty() -> None:
+        async with build_app() as resources:
+            await resources.projects.create("ignore-sabbath", tmp_path, max_cycles=1, config={})
+
+    asyncio.run(seed_empty())
+    from unittest.mock import AsyncMock, patch
+
+    with patch("vibey.infrastructure.db.notifier.PostgresJobReadyNotifier") as mock_notifier_cls:
+        mock_notifier_cls.return_value = AsyncMock()
+        res = runner.invoke(app, ["worker", "--once", "--ignore-sabbath"])
+    assert res.exit_code == 0, res.output
+    assert "--ignore-sabbath given" in res.output
+    assert window.resumes.isoformat() in res.output
+
+
+def test_worker_auto_answer_refuses_to_serve_every_project() -> None:
+    res = runner.invoke(app, ["worker", "--auto-answer", "--all-projects"])
+    assert res.exit_code == 2
+    assert "use --project, not --all-projects" in res.output
+
+
+def _run_worker_with_auto_answer(tmp_path: Path, sweep: AsyncMock, *args: str) -> Result:
+    from unittest.mock import patch
+
+    async def seed() -> None:
+        async with build_app() as resources:
+            await resources.projects.create("auto-answer", tmp_path, max_cycles=1, config={})
+
+    asyncio.run(seed())
+    with (
+        patch("vibey.infrastructure.db.notifier.PostgresJobReadyNotifier") as mock_notifier_cls,
+        patch("vibey.application.gate_auto_answers.GateAutoAnswerSweep.run", new=sweep),
+    ):
+        mock_notifier = AsyncMock()
+        mock_notifier.wait_for_job_ready = AsyncMock(side_effect=KeyboardInterrupt)
+        mock_notifier_cls.return_value = mock_notifier
+        return runner.invoke(app, ["worker", "--auto-answer", *args])
+
+
+@pytest.mark.usefixtures("_fast_engine_preflight")
+def test_worker_auto_answer_says_what_it_answered_and_when_its_limit_is_used(
+    tmp_path: Path,
+) -> None:
+    from vibey.application.dto import AutoAnsweredGate, GateAutoAnswerReport
+
+    gate_id = uuid4()
+    report = GateAutoAnswerReport(
+        project_id=None,
+        answered=(
+            AutoAnsweredGate(
+                project_id=uuid4(),
+                gate_id=gate_id,
+                gate_kind="escalation_exhausted",
+                answer={"max_attempts": 10},
+                waited_seconds=1.0,
+            ),
+        ),
+        limit_reached=True,
+    )
+    sweep = AsyncMock(return_value=report)
+
+    res = _run_worker_with_auto_answer(tmp_path, sweep, "--auto-answer-limit", "3")
+
+    assert "auto-answer: on, up to 3 answers" in res.output
+    assert f"auto-answer: answered escalation_exhausted gate {gate_id}" in res.output
+    assert "the limit of 3 answers is used up" in res.output
+    sweep.assert_awaited()
+
+
+@pytest.mark.usefixtures("_fast_engine_preflight")
+def test_worker_auto_answer_that_fails_is_reported_and_the_worker_keeps_going(
+    tmp_path: Path,
+) -> None:
+    sweep = AsyncMock(side_effect=RuntimeError("the gates went away"))
+    res = _run_worker_with_auto_answer(tmp_path, sweep)
+    assert "gate auto-answers failed: the gates went away" in res.output
 
 
 @pytest.mark.usefixtures("_fast_engine_preflight")

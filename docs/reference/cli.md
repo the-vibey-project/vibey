@@ -212,8 +212,9 @@ whether it is enabled, the zone, where the location came from and how accurate i
 when the current or next rest ends. It only reads, and is never held. From sundown Friday
 to sundown Saturday `vibey new` and `vibey work` decline with exit code `75`, the worker
 claims no lease, and `vibey doctor` reports the location source (FAIL when no source could
-place the host). See [`[sabbath]`](configuration.md#sabbath) and the
-[guide](../guides/sabbath.md).
+place the host). `--ignore-sabbath` on `vibey new`, `vibey work` and `vibey worker` runs
+that one command through the window and says so on stderr; no file can supply it. See
+[`[sabbath]`](configuration.md#sabbath) and the [guide](../guides/sabbath.md).
 
 ## `vibey projects`
 
@@ -527,6 +528,19 @@ id prints `unknown project <id>` and exits 1.
 
 Replay starts paused. Keys: Space play/pause, Right or `n` next step, Left or
 `p` previous step, `q` quit.
+
+## `vibey llm`
+
+The conversation with the local model, as it happens. It only reads.
+
+| Subcommand | Options | What it does |
+|---|---|---|
+| `llm tail` | `--file PATH`, `--all`, `--no-follow`, `--raw`, `--max-chars N` | Follows the [wire log](../guides/local-models-ollama.md#watching-the-model-think): each request the sovereign DESIGN and DECOMPOSE providers send (model, limits, the system and user messages), the reasoning and the answer as they stream back, and the model's own counts and speed (`prompt N tokens`, `output N tokens`, `N tokens/s`). Starts at the latest call and keeps following until interrupted; `--all` starts at the beginning of the file, `--no-follow` prints and exits (exit 1 when there is no log), `--raw` prints the JSON lines as written, `--max-chars` cuts each prompt message. |
+
+The log is written when a command runs with `-vvv`, or with `VIBEY_LLM_WIRE_LOG=path`
+(see [`VIBEY_LLM_WIRE_LOG`](configuration.md#environment-variables)). Without either, nothing is
+written and the model is asked exactly as before. The default file is
+`~/.local/state/vibey/llm-wire.jsonl`, readable by its owner alone.
 
 ## `vibey recover`
 
@@ -1142,6 +1156,15 @@ declares, `FAIL` on an undeclared one (the exit is then 1), and `UNKNOWN` when n
 running or its runtime record names a process that is gone. A `[hub]` table that cannot be
 read is a `FAIL`.
 
+When a local engine is switched on, the `ollama` line asks the server (`/api/ps`, three
+seconds, host and port only in what it prints) what it is holding. `WARN` when the configured
+model (`VIBEY_OLLAMA_MODEL`, default `gpt-oss:20b`) is loaded at a context above
+`VIBEY_OLLAMA_CONTEXT` (default `8192`): Ollama reloads a model whose context differs from a
+request's, so the first request pays for the reload and can time out, and a warm-up at a larger
+window is how that happens. The line names the fix, `ollama stop MODEL`. `OK` when the model is
+loaded within the ceiling or not loaded at all, `SKIP` when no server answered. Never a
+failure: the exit code is not changed.
+
 After the Sabbath lines, `gate-notices` counts the open gates in projects nobody will be
 told about -- `[notifications]` off (the default), on with desktop alerts off and no
 webhook, or a table that does not parse -- and prints them as `WARN gate-notices N gates
@@ -1214,8 +1237,11 @@ every phase for one project, or with `--all-projects` for every project.
 | `--max-dollars F` | `2.0` | Dollar cap per claudeloop DESIGN or decomposition session (0.01–10). |
 | `--ollama-model NAME` | `$VIBEY_OLLAMA_MODEL`, else `gpt-oss:20b` | Local model for `--provider gptossloop`, and the model the worker hands gptossloop (below); ignored by the other providers. |
 | `--project ID` | latest | Project to work on. |
-| `--all-projects` | off | Serve every project ([#1189](https://github.com/the-vibey-project/vibey/issues/1189)). Each pass asks the queue which projects have a job the claim would hand out now, ordered by each project's next job in the claim's own order (bump, priority, due time), and claims through that project's own loop — the same `FOR UPDATE SKIP LOCKED` claim, budgets, Sabbath gate, capacity circuits, phase gates and engine selection a single-project worker uses. A project's loops are built, and its engines preflighted, the first time it has work. A project that cannot be served (an unknown phase, an `--engines` list matching none of its engines, a forbidden `engine_environment`) prints `project <name> refused: its jobs stay queued for a worker that can serve them` and the worker goes on with the others. With nothing queued anywhere it waits on any project's `vibey_job_ready` instead of exiting, so a supervised worker never restart-loops. Parallel loops (`-j`) are clamped to the CPU count only. Exits 2 with `--project` or `--wait-for-project`. This is what `vibey supervisor install` runs. |
+| `--all-projects` | off | Serve every project ([#1189](https://github.com/the-vibey-project/vibey/issues/1189)). Each pass asks the queue which projects have a job the claim would hand out now, ordered by each project's next job in the claim's own order (bump, priority, due time), and claims through that project's own loop — the same `FOR UPDATE SKIP LOCKED` claim, budgets, Sabbath gate, capacity circuits, phase gates and engine selection a single-project worker uses. A project's loops are built, and its engines preflighted, the first time it has work. A project that cannot be served (an unknown phase, an `--engines` list matching none of its engines, a forbidden `engine_environment`) prints `project <name> refused: its jobs stay queued for a worker that can serve them` and the worker goes on with the others. With nothing queued anywhere it waits on any project's `vibey_job_ready` instead of exiting, so a supervised worker never restart-loops. Parallel loops (`-j`) are clamped to the CPU count only. Exits 2 with `--project`, `--wait-for-project` or `--auto-answer`. This is what `vibey supervisor install` runs. |
 | `--wait-for-project SECONDS` | unset (min 1.0) | Poll every N seconds for a project instead of exiting 1 when none exists yet — for long-lived deployments, where exiting means a restart loop. |
+| `--ignore-sabbath` | off | Claim jobs through a Sabbath window that would otherwise leave this worker claiming nothing. For this worker only, said on stderr when a window would have held, never stored (see the [Sabbath guide](../guides/sabbath.md#turning-it-off-for-one-run)). |
+| `--auto-answer` | off | Answer this project's waiting gates for you, so an unattended run keeps going: the DESIGN interview's questions with their own defaults (`accept_defaults`), `{"max_attempts": 10}` for an `escalation_exhausted` gate, `{"max_rounds": 6}` for `verify_repair_exhausted` and `integrate_repair_exhausted`, and `{}` to deliver a `delivery_exhausted` job once more. **Never** a spending gate (`budget_exhausted`), `engine_misconfigured`, `research_evidence`, an approval or a review: those wait for you, and each sweep names them. The consent is the flag, for this one worker and one project (exits 2 with `--all-projects`), and nothing is stored. Each answer is recorded on the ledger as `GateAnswered` by `auto-answer`, under a request id derived from the gate so a replay is a no-op. |
+| `--auto-answer-limit N` | `30` | The most answers `--auto-answer` gives before it says so and leaves every gate to a person (min 1), so a job that cannot finish does not retry for ever. |
 | `--azure {memory,az}` | `memory` | Azure client for the deploy stage set. `memory` is an in-memory adapter that touches no real infrastructure. `az` uses the real Azure CLI and mutates real resources on consented deploys; the worker runs `az account show` first and exits 1 if you are not logged in. Any other value exits 2. |
 
 The VISUAL_DESIGN stage always uses the scripted visual provider.

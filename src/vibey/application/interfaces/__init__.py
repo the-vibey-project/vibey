@@ -108,6 +108,7 @@ from vibey.application.interfaces.failover import (
 )
 from vibey.application.interfaces.files import FilesPort
 from vibey.application.interfaces.gate_answer import GateAnswerServiceInterface
+from vibey.application.interfaces.gate_auto_answers import GateAutoAnswerSweepInterface
 from vibey.application.interfaces.gate_notices import (
     GateNoticeServiceInterface,
     GateNoticeStore,
@@ -253,6 +254,7 @@ __all__ = [
     "GateNoticeServiceInterface",
     "GateNoticeStore",
     "GateReminderInterface",
+    "GateAutoAnswerSweepInterface",
     "GateTimeoutSweepInterface",
     "Logger",
     "NotificationSink",

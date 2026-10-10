@@ -33,16 +33,23 @@ This is the general form; that one can converge on it.
 import asyncio
 import json
 import pathlib
+import threading
+import time
 import urllib.parse
 import urllib.request
-from collections.abc import Callable, Mapping
+from collections.abc import AsyncGenerator, Callable, Iterator, Mapping
+from contextlib import aclosing
 from typing import Any
+from uuid import uuid4
 
 from vibey.domain.config import ConfigError
 from vibey.domain.errors import OutputBudgetExhausted
 from vibey.infrastructure.engines.interfaces.ollama_chat_interface import (
+    OllamaStreamTransportInterface,
     OllamaTransportInterface,
+    WireLogInterface,
 )
+from vibey.infrastructure.engines.wire_log import WIRE_LOG_ENV, JsonlWireLog, NullWireLog
 
 #: Environment keys, beside their defaults (ADR-0018). `VIBEY_OLLAMA_URL` is the name
 #: vibey-gh's local-review fallback already reads, so one setting points both at the
@@ -134,6 +141,63 @@ class UrllibOllamaTransport:
             raise ValueError("Ollama returned a non-object response")
         return result
 
+    async def stream_json(
+        self, url: str, payload: Mapping[str, object], *, timeout: int
+    ) -> AsyncGenerator[dict[str, object], None]:
+        """Each JSON line of a `stream: true` reply, as it arrives.
+
+        The blocking read runs on a worker thread and hands lines to the event loop through
+        a queue, so a slow generation still stalls nothing else. `timeout` bounds one read,
+        not the answer: a model that keeps producing is never cut off by it."""
+        loop = asyncio.get_running_loop()
+        lines: asyncio.Queue[tuple[str, Any]] = asyncio.Queue()
+        stop = threading.Event()
+
+        def pump() -> None:
+            try:
+                for line in self._read_lines(url, payload, timeout, stop):
+                    loop.call_soon_threadsafe(lines.put_nowait, ("line", line))
+            except Exception as exc:  # reported to the consumer, never lost on the thread
+                loop.call_soon_threadsafe(lines.put_nowait, ("error", exc))
+            else:
+                loop.call_soon_threadsafe(lines.put_nowait, ("end", None))
+
+        reader = loop.run_in_executor(None, pump)
+        try:
+            while True:
+                kind, value = await lines.get()
+                if kind == "line":
+                    yield value
+                elif kind == "error":
+                    raise value
+                else:
+                    return
+        finally:
+            stop.set()
+            await reader
+
+    def _read_lines(
+        self, url: str, payload: Mapping[str, object], timeout: int, stop: threading.Event
+    ) -> Iterator[dict[str, object]]:
+        if urllib.parse.urlsplit(url).scheme not in _HTTP_SCHEMES:
+            raise ValueError(f"refusing a non-HTTP model endpoint: {url!r}")
+        request = urllib.request.Request(  # nosec B310 - scheme checked above
+            url,
+            data=json.dumps(dict(payload)).encode(),
+            headers={"Content-Type": "application/json"},
+        )
+        with self._opener(request, timeout=timeout) as response:
+            for raw in response:
+                if stop.is_set():
+                    return
+                text = raw.strip()
+                if not text:
+                    continue
+                line = json.loads(text)
+                if not isinstance(line, dict):
+                    raise ValueError("Ollama streamed a non-object line")
+                yield line
+
 
 class OllamaChatClient:
     """One schema-constrained question to one model on one Ollama server."""
@@ -161,6 +225,8 @@ class OllamaChatClient:
         fit_prompt_chars: int | None = None,
         retry_think: str | bool | None = DEFAULT_OLLAMA_RETRY_THINK,
         transport: OllamaTransportInterface | None = None,
+        stream_transport: OllamaStreamTransportInterface | None = None,
+        wire_log: WireLogInterface | None = None,
     ) -> None:
         self._base_url = self._validated_base_url(base_url)
         if not model.strip():
@@ -186,6 +252,13 @@ class OllamaChatClient:
         self._fit_prompt_chars = fit_prompt_chars
         self._retry_think = retry_think
         self._transport = transport if transport is not None else UrllibOllamaTransport()
+        # A wire log is the operator asking to watch: only then is the reply streamed, so a
+        # run nobody is watching keeps its one blocking request, exactly as before.
+        self._streaming = wire_log is not None
+        self._wire_log: WireLogInterface = wire_log if wire_log is not None else NullWireLog()
+        self._stream_transport: OllamaStreamTransportInterface = (
+            stream_transport if stream_transport is not None else UrllibOllamaTransport()
+        )
 
     @classmethod
     def from_environment(
@@ -194,6 +267,8 @@ class OllamaChatClient:
         *,
         model: str | None = None,
         transport: OllamaTransportInterface | None = None,
+        stream_transport: OllamaStreamTransportInterface | None = None,
+        wire_log: WireLogInterface | None = None,
     ) -> "OllamaChatClient":
         """Endpoint, model and timeout from the environment, over today's defaults.
 
@@ -249,7 +324,15 @@ class OllamaChatClient:
             fit_prompt_chars=fit.get("max_prompt_chars") if fit is not None else None,
             retry_think=THINK_LEVELS[raw_think.lower()],
             transport=transport,
+            stream_transport=stream_transport,
+            wire_log=wire_log if wire_log is not None else cls._wire_log_from(environ),
         )
+
+    @staticmethod
+    def _wire_log_from(environ: Mapping[str, str]) -> WireLogInterface | None:
+        """The wire log `VIBEY_LLM_WIRE_LOG` names (`-vvv` sets it), or none."""
+        path = (environ.get(WIRE_LOG_ENV) or "").strip()
+        return JsonlWireLog(pathlib.Path(path).expanduser()) if path else None
 
     @property
     def base_url(self) -> str:
@@ -278,6 +361,7 @@ class OllamaChatClient:
     async def ask(
         self, system: str, user: str, schema: Mapping[str, object] | str
     ) -> dict[str, object]:
+        call = uuid4().hex[:8]
         bounded_user = self._bounded_user(user)
         prompt_chars = len(system) + len(bounded_user)
         fit_applies = self._fit_prompt_chars is None or prompt_chars <= self._fit_prompt_chars
@@ -288,8 +372,10 @@ class OllamaChatClient:
             max(self.CONTEXT_FLOOR, prompt_chars // self.CHARS_PER_TOKEN + self.CONTEXT_RESERVE),
         )
         endpoint = f"{self._base_url}/api/chat"
-        payload = self._payload(system, bounded_user, schema, num_ctx, num_predict)
-        body = await self._transport.post_json(endpoint, payload, timeout=self._timeout)
+        payload = self._payload(
+            system, bounded_user, schema, num_ctx, num_predict, stream=self._streaming
+        )
+        body = await self._post(endpoint, payload, call, 1)
         message = body.get("message")
         if self._cut_short(body):
             # The reasoning spent the budget before the answer began. At temperature 0 the
@@ -304,9 +390,15 @@ class OllamaChatClient:
             )
             num_ctx = min(context_ceiling, max(num_ctx, prompt_tokens + num_predict))
             payload = self._payload(
-                system, bounded_user, schema, num_ctx, num_predict, think=self._retry_think
+                system,
+                bounded_user,
+                schema,
+                num_ctx,
+                num_predict,
+                think=self._retry_think,
+                stream=self._streaming,
             )
-            body = await self._transport.post_json(endpoint, payload, timeout=self._timeout)
+            body = await self._post(endpoint, payload, call, 2)
             if self._cut_short(body):
                 raise OutputBudgetExhausted(
                     self._model, output_tokens=num_predict, context_tokens=num_ctx
@@ -317,7 +409,7 @@ class OllamaChatClient:
             # or grammar compilation cannot satisfy it. One bounded JSON-mode retry keeps
             # the transport live; callers still validate the decoded object.
             payload["format"] = "json"
-            body = await self._transport.post_json(endpoint, payload, timeout=self._timeout)
+            body = await self._post(endpoint, payload, call, 2)
             message = body.get("message")
         if not isinstance(message, dict) or not isinstance(message.get("content"), str):
             raise ValueError("Ollama response carried no message content")
@@ -331,6 +423,59 @@ class OllamaChatClient:
             raise ValueError(f"expected a JSON object, got {type(value).__name__}")
         return value
 
+    async def _post(
+        self, endpoint: str, payload: Mapping[str, object], call: str, attempt: int
+    ) -> dict[str, object]:
+        """One request, recorded on the wire log whichever way it ends."""
+        started = time.monotonic()
+        self._wire_log.request(call, attempt, endpoint, payload)
+        try:
+            if self._streaming:
+                body = await self._streamed_body(endpoint, payload, call, attempt)
+            else:
+                body = await self._transport.post_json(endpoint, payload, timeout=self._timeout)
+        except Exception as exc:
+            self._wire_log.error(call, attempt, exc, time.monotonic() - started)
+            raise
+        self._wire_log.response(call, attempt, body, time.monotonic() - started)
+        return body
+
+    async def _streamed_body(
+        self, endpoint: str, payload: Mapping[str, object], call: str, attempt: int
+    ) -> dict[str, object]:
+        """A `stream: true` reply put back together as the one body `stream: false` returns:
+        the final line's counts and timings, with the message the chunks spelled out."""
+        content: list[str] = []
+        thinking: list[str] = []
+        final: dict[str, object] | None = None
+        async with aclosing(
+            self._stream_transport.stream_json(endpoint, payload, timeout=self._timeout)
+        ) as lines:
+            async for line in lines:
+                if "error" in line:
+                    raise ValueError(f"Ollama stream error: {line['error']}")
+                message = line.get("message")
+                if isinstance(message, dict):
+                    said = message.get("content")
+                    reasoned = message.get("thinking")
+                    said = said if isinstance(said, str) else ""
+                    reasoned = reasoned if isinstance(reasoned, str) else ""
+                    if said or reasoned:
+                        content.append(said)
+                        thinking.append(reasoned)
+                        self._wire_log.chunk(call, attempt, content=said, thinking=reasoned)
+                if line.get("done") is True:
+                    final = line
+                    break
+        if final is None:
+            raise ValueError("Ollama stream ended before the answer was complete")
+        body = {key: value for key, value in final.items() if key != "message"}
+        assembled: dict[str, object] = {"role": "assistant", "content": "".join(content)}
+        if any(thinking):
+            assembled["thinking"] = "".join(thinking)
+        body["message"] = assembled
+        return body
+
     def _payload(
         self,
         system: str,
@@ -340,6 +485,7 @@ class OllamaChatClient:
         num_predict: int,
         *,
         think: str | bool | None = None,
+        stream: bool = False,
     ) -> dict[str, object]:
         payload: dict[str, object] = {
             "model": self._model,
@@ -349,7 +495,7 @@ class OllamaChatClient:
             ],
             # A schema is compiled to a grammar; "json" asks only for well-formed JSON.
             "format": dict(schema) if isinstance(schema, Mapping) else schema,
-            "stream": False,
+            "stream": stream,
             # temperature 0 because an answer that changes on unchanged input cannot be
             # reasoned about by the phase that consumes it.
             "options": {"temperature": 0, "num_ctx": num_ctx, "num_predict": num_predict},

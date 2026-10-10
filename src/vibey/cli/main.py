@@ -27,6 +27,8 @@ from vibey import __version__
 from vibey.application.design import DesignEvent
 from vibey.application.design_acceptance import DesignAcceptanceService
 from vibey.application.dto import GateAnswerOutcome, ProjectRecord
+from vibey.application.gate_auto_answers import GateAutoAnswerSweep
+from vibey.application.interfaces.gate_auto_answers import GateAutoAnswerSweepInterface
 from vibey.application.project_kickoff import enqueue_design_interview
 from vibey.application.visual_acceptance import VisualAcceptanceService
 from vibey.bootstrap import (
@@ -41,12 +43,14 @@ from vibey.cli.abandon import abandon as abandon_command
 from vibey.cli.budget import budget_app
 from vibey.cli.driver import driver_app
 from vibey.cli.errors import EXIT_USAGE, guard
+from vibey.cli.gate_auto_answer import auto_answer_lines
 from vibey.cli.gate_notices import GATE_NOTICE_DOCTOR, GATE_REMINDERS
 from vibey.cli.gates import GATES
 from vibey.cli.host_health import HOST_HEALTH
 from vibey.cli.hub_pair import hub_app
 from vibey.cli.ledger_publication import ledger_export, ledger_site
 from vibey.cli.ledger_search import PRESENTER, ledger_search
+from vibey.cli.llm import llm_app
 from vibey.cli.loops import LOOPS
 from vibey.cli.projects import PROJECTS
 from vibey.cli.queue import queue_app
@@ -67,6 +71,7 @@ from vibey.domain.errors import (
     VibeyError,
     WrongPhase,
 )
+from vibey.domain.gate_auto_answer import DEFAULT_AUTO_ANSWER_LIMIT, GateAutoAnswerPolicy
 from vibey.domain.job import JobState
 from vibey.domain.ledger import EventKind, LedgerEventKind, Provenance
 from vibey.domain.ledger_query import EVENT_KINDS, InvalidLedgerQuery
@@ -99,14 +104,33 @@ from vibey.infrastructure.engines.ollama_chat import (
     OLLAMA_URL_ENV,
     OllamaChatClient,
 )
+from vibey.infrastructure.engines.ollama_residency import OllamaResidency
 from vibey.infrastructure.engines.scripted_design import ScriptedDesignProvider
 from vibey.infrastructure.engines.scripted_visual import ScriptedVisualProvider
-from vibey.infrastructure.logging import configure_logging
+from vibey.infrastructure.engines.wire_log import WIRE_LOG_ENV, default_wire_log_path
+from vibey.infrastructure.logging import StructlogAppLogger, configure_logging
 from vibey.infrastructure.postgres import POSTGRES_MIN_MAJOR, PostgresLocalService, PostgresStatus
 
 app = typer.Typer(name="vibey", no_args_is_help=True)
+
+#: `--ignore-sabbath`, on the commands the Sabbath holds (`new`, `work`, `worker`). A
+#: per-command choice by the operator and nothing stored: it is not a `vibey.toml` key, so
+#: no file can switch the Sabbath off for a run nobody is watching.
+IgnoreSabbath = Annotated[
+    bool,
+    typer.Option(
+        "--ignore-sabbath",
+        help=(
+            "Run even while the Sabbath window (sub-doctrine 8.i) would rest this command. "
+            "For this one command only: it is said on stderr when it applies, and nothing is "
+            "stored. The environment alternative is VIBEY_SABBATH_ENABLED=0"
+        ),
+    ),
+]
+
 design_app = typer.Typer(name="design", invoke_without_command=True)
 app.add_typer(design_app, name="design")
+app.add_typer(llm_app, name="llm")
 visual_app = typer.Typer(name="visual", invoke_without_command=True)
 app.add_typer(visual_app, name="visual")
 deploy_app = typer.Typer(name="deploy", invoke_without_command=True)
@@ -139,7 +163,9 @@ def main(
         "--verbose",
         "-v",
         count=True,
-        help="More detail: -v debug, -vv also third-party libraries, -vvv full payloads.",
+        help="More detail: -v debug, -vv also third-party libraries, -vvv full payloads "
+        "(every request to the local model and its reply, streamed, in a wire log: "
+        "follow it with `vibey llm tail`).",
     ),
     quiet: bool = typer.Option(False, "--quiet", "-q", help="Warnings and errors only."),
     log_level: str | None = typer.Option(
@@ -170,6 +196,12 @@ def main(
         typer.echo(f"Error: {exc}", err=True)
         raise typer.Exit(code=2) from exc
     configure_logging(plan, log_file=log_file)
+    if plan.include_payloads and WIRE_LOG_ENV not in os.environ:
+        os.environ[WIRE_LOG_ENV] = str(default_wire_log_path())
+        typer.echo(
+            f"vibey: LLM wire log {os.environ[WIRE_LOG_ENV]} (follow it: vibey llm tail)",
+            err=True,
+        )
 
 
 async def _enqueue_design(project_id: UUID, *, priority: bool = False) -> str:
@@ -269,9 +301,10 @@ def new_project(
             "Overrides [design.interview] default_scope; unset keeps it (default narrowest)",
         ),
     ] = None,
+    ignore_sabbath: IgnoreSabbath = False,
 ) -> None:
     """Create a project and enqueue its first DESIGN interview."""
-    SABBATH.decline_if_resting("new")
+    SABBATH.decline_if_resting("new", ignore=ignore_sabbath)
 
     async def create() -> tuple[str, str]:
         if skills_context_mode not in {"off", "shadow", "inject"}:
@@ -712,9 +745,10 @@ def work_once(
         str | None,
         typer.Option("--ollama-model", help=_OLLAMA_MODEL_HELP),
     ] = None,
+    ignore_sabbath: IgnoreSabbath = False,
 ) -> None:
     """Process one ready DESIGN job; live ClaudeLoop use is explicit and capped."""
-    SABBATH.decline_if_resting("work")
+    SABBATH.decline_if_resting("work", ignore=ignore_sabbath)
     with guard():
         processed = asyncio.run(
             _work_once(project_id, provider, max_turns, max_dollars, ollama_model)
@@ -1460,14 +1494,25 @@ def doctor(
     ] = None,
 ) -> None:
     """Check local PostgreSQL, engine health, auth status, and conformance."""
-    from vibey.application.conformance import run_conformance
+    from vibey.application.conformance import DEFAULT_RUN_DIR_POLL_SECONDS, run_conformance
     from vibey.infrastructure.engines.classify import CREDITS_FIXTURES
+    from vibey.infrastructure.engines.conformance_window import conformance_poll_seconds
     from vibey.infrastructure.engines.descriptors import DEFAULT_DESCRIPTORS
     from vibey.infrastructure.engines.local_engines import LocalEndpointEnvironment
 
     if cluster and install_postgres:
         typer.echo("--install-postgres applies only to the local doctor")
         raise typer.Exit(EXIT_USAGE)
+
+    run_dir_poll_seconds = DEFAULT_RUN_DIR_POLL_SECONDS
+    if conformance:
+        try:
+            declared_poll_seconds = conformance_poll_seconds(os.environ)
+        except ValueError as exc:
+            typer.echo(str(exc))
+            raise typer.Exit(EXIT_USAGE) from exc
+        if declared_poll_seconds is not None:
+            run_dir_poll_seconds = declared_poll_seconds
 
     if cluster:
         postgres_status = None
@@ -1586,6 +1631,7 @@ def doctor(
                     adapter,
                     capacity_fixtures=capacity_fixtures,
                     trivial_worktree=unique_worktree,
+                    run_dir_poll_seconds=run_dir_poll_seconds,
                 )
                 for check in report.checks:
                     mark = "PASS" if check.ok else "FAIL"
@@ -1622,6 +1668,11 @@ def doctor(
         reach_ok = await _passwordless_reach_section()
         # A hub listening where vibey.toml does not declare it may is a FAIL (ADR-0067).
         hub_ok = SERVE.exposure_line()
+        # A model Ollama holds at a context far above the one vibey asks for is reloaded by
+        # the first request, which is how a warm-up becomes a timeout. Said as a WARN, never
+        # a failure, and only for a host that runs a local engine at all.
+        if local.any_enabled:
+            typer.echo(await OllamaResidency().line(os.environ))
         # Sub-doctrine 8.i: the window, the zone and where the location came from (10.f).
         # A host no source could place is a FAIL -- the fallback times then rule.
         sabbath_lines, sabbath_ok = SABBATH.doctor_lines()
@@ -1873,6 +1924,30 @@ def worker(
             ),
         ),
     ] = False,
+    ignore_sabbath: IgnoreSabbath = False,
+    auto_answer: Annotated[
+        bool,
+        typer.Option(
+            "--auto-answer",
+            help=(
+                "Answer this project's waiting gates for you, so the run keeps going: the "
+                "DESIGN interview's questions with their own defaults, and a grant of more "
+                "attempts or repair rounds when a job runs out, or a delivery its worker "
+                "dropped. Never a spending gate, an approval or a review. For this one "
+                "worker only, one project only (not with --all-projects), up to "
+                "--auto-answer-limit answers; each is recorded on the ledger as "
+                "'auto-answer'."
+            ),
+        ),
+    ] = False,
+    auto_answer_limit: Annotated[
+        int,
+        typer.Option(
+            "--auto-answer-limit",
+            min=1,
+            help="The most answers --auto-answer gives before every gate waits for a person.",
+        ),
+    ] = DEFAULT_AUTO_ANSWER_LIMIT,
 ) -> None:
     """Long-running worker: LISTEN vibey_job_ready, dispatch across all phases."""
     from datetime import timedelta
@@ -1902,6 +1977,9 @@ def worker(
         raise typer.Exit(2)
     if all_projects and (project_opt is not None or wait_for_project is not None):
         typer.echo("--all-projects serves every project: drop --project and --wait-for-project")
+        raise typer.Exit(EXIT_USAGE)
+    if auto_answer and all_projects:
+        typer.echo("--auto-answer answers one project's gates: use --project, not --all-projects")
         raise typer.Exit(EXIT_USAGE)
     azure_client = None
     if azure == "az":
@@ -1979,7 +2057,23 @@ def worker(
             provider = _resolve_provider(provider_opt)
             # 8.i: one gate for every loop. The worker keeps running through the window,
             # claiming nothing, and claims again on the first poll after it.
-            sabbath = SABBATH.gate()
+            if ignore_sabbath:
+                SABBATH.decline_if_resting("worker", ignore=True)
+            sabbath = SABBATH.gate(ignore=ignore_sabbath)
+            auto_answers: GateAutoAnswerSweepInterface | None = None
+            if auto_answer:
+                auto_answers = GateAutoAnswerSweep(
+                    gates=resources.gates,
+                    answers=resources.gate_answers,
+                    policy=GateAutoAnswerPolicy(limit=auto_answer_limit),
+                    clock=resources.clock,
+                    logger=StructlogAppLogger(owner="auto-answer"),
+                )
+                typer.echo(
+                    f"auto-answer: on, up to {auto_answer_limit} answers; spending gates,"
+                    " approvals and reviews still wait for you",
+                    err=True,
+                )
 
             async def loops_for(project: ProjectRecord, slots: int | None) -> list[WorkerLoop]:
                 """One project's loops, built exactly as a single-project worker builds
@@ -2261,6 +2355,16 @@ def worker(
                         await resources.gate_timeouts.run_if_due(remind_scope)
                     except Exception as exc:
                         typer.echo(f"drive[{idx}] gate timeouts failed: {exc}", err=True)
+                    # Only when the operator said `--auto-answer`: the retry and interview
+                    # gates this project's worker may answer, up to its limit.
+                    if auto_answers is not None:
+                        try:
+                            report = await auto_answers.run(remind_scope)
+                        except Exception as exc:
+                            typer.echo(f"drive[{idx}] gate auto-answers failed: {exc}", err=True)
+                        else:
+                            for line in auto_answer_lines(report, limit=auto_answer_limit):
+                                typer.echo(line, err=True)
                     typer.echo(
                         f"drive[{idx}] iter={iteration} reap done, waiting for notify", err=True
                     )
