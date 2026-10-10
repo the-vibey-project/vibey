@@ -125,7 +125,7 @@ gather = [
   # a model too small to go and look (2026-10-09: it emptied the paper having only `find`-ed it).
   "python scripts/backlog_killer.py pick | python scripts/backlog_grounding.py",
 ]
-covers = ["backlog-killer.yml"]
+covers = ["backlog-killer.yml", "backlog-splitter.yml"]
 
 [[prompt]]
 id = "research"

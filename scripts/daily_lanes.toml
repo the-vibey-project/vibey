@@ -182,5 +182,30 @@ skip_authors = ["app/github-actions", "github-actions[bot]"]
 # open an issue on a public repository, and the pick becomes an agent's task whose draft pull
 # request the delegated approver may approve unattended -- so a stranger may not set it.
 trusted_associations = ["OWNER", "MEMBER", "COLLABORATOR"]
+# A slice the backlog splitter cut from a trusted issue is workable without the opt-in label,
+# when all three hold: its author is one of these (a bot's login is not one a stranger can
+# bear), it carries this label (only someone with triage rights can apply a label), and its
+# marker names an open parent that a trusted person wrote. ADR-0083.
+split_label = "vibey-gh:split-child"
+split_authors = ["github-actions[bot]"]
 # Operator holds (`never_act`) and self-closing trackers are read from here.
 expectations = "scripts/backlog_expectations.json"
+
+# The backlog splitter (ADR-0083): cut an issue too large to hand an agent -- its body is longer
+# than `[backlog_killer] max_issue_chars`, or it carries one of `split_labels` -- along the
+# structure it already has (unchecked task items, then numbered steps, then `##` sections) into
+# slices filed as sub-issues, which the backlog killer then works one at a time. Scripted, no
+# model: an issue with no such structure is reported and left for a person. It files issues and
+# one comment; it never closes, merges or deletes. false pauses it.
+[backlog_splitter]
+enabled = true
+# At most this many parents are cut per run, and each into at most `max_children` slices (the
+# rest stay on the parent for a later split); fewer than `min_children` is not a structure.
+max_parents_per_run = 1
+max_children = 6
+min_children = 2
+# An epic is meant to be cut, though the backlog killer never works one.
+split_labels = ["epic"]
+allow_labels = ["epic"]
+# Marks a parent already cut.
+parent_label = "vibey-gh:split"

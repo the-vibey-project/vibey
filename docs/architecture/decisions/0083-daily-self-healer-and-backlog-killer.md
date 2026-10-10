@@ -389,3 +389,31 @@ trust, hold, in-flight or skip-label filters; they narrow what those leave. An e
 `agent_labels` keeps the old behaviour (every trusted issue), so the opt-in is a choice the
 configuration makes, not one the code assumes. The label is applied by the operator (or by an
 agent the operator has told to), never by the lane, so the lane cannot widen its own scope (12.d).
+
+## Amendment, 2026-10-10: the backlog splitter
+
+The backlog killer only works short issues the operator has labelled, so a large issue is never
+worked. `scripts/backlog_splitter.py` (`.github/workflows/backlog-splitter.yml`, every six hours,
+hosted CPU) makes it workable by cutting it along the structure it already has: its unchecked task
+items, else its numbered steps, else its `##` sections, each filed as a sub-issue of the original.
+It is scripted and runs no model: reading structure is toil, inventing a decomposition is
+judgement (12.e), so an issue with none is reported in the run summary and left for a person. It
+writes issues, one comment and one label on each parent, and nothing else (12.d).
+
+A parent is an open issue by a trusted author that is longer than `max_issue_chars` or carries a
+`split_labels` label (`epic`, which the killer itself never works), is not held, not for a person
+(`skip_labels`), not already cut (`vibey-gh:split`) and not itself a slice. Each run cuts
+`max_parents_per_run` of them into at most `max_children` slices; the rest stay on the parent.
+Each slice carries a marker with its parent and a hash of its title, and a slice already filed
+under that parent, open or closed, is not filed again, so a run that died midway is run again.
+The parent is labelled last, so it stays a candidate until all is filed.
+
+**Why a bot's issue is trusted.** The killer refuses machine-filed issues (`skip_authors`): the
+lane that filed them owns them. A slice is the one exception, and only when three things hold at
+once: its author is in `split_authors` (a bot's login cannot be borne by a stranger), it carries
+`split_label` (only someone with triage rights can apply a label to an issue), and its marker
+names an open parent that a trusted person wrote. Any one alone is forgeable or too broad. A
+slice therefore stands in for the opt-in label its parent never had, is as trusted as that
+parent, and is still subject to the holds, the size limit and the skip labels. A closed parent
+makes its slices unpickable. The slices are text from a trusted issue, cut, not written by a
+model, so the lane adds nothing the trusted author did not write.
