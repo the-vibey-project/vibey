@@ -164,6 +164,23 @@ real request pay for a reload with a key-value cache sized for that window, and 
 the request can time out. `vibey doctor` prints an `ollama` line that says so when the loaded
 model's context is above `VIBEY_OLLAMA_CONTEXT`, and names the fix: `ollama stop gpt-oss:20b`.
 
+**A prompt that fills the window cuts the answer off.** gpt-oss reasons before it answers, and
+its reasoning counts against the same window as the prompt. A DESIGN prompt grows with every
+question answered, and `response ... stopped: length` in `vibey llm tail` with
+`prompt N tokens + output M tokens` adding up to `VIBEY_OLLAMA_CONTEXT` means the window, not the
+output budget, ran out. Three settings meet it:
+
+```bash
+export VIBEY_OLLAMA_CONTEXT=16384
+export VIBEY_OLLAMA_THINK=low
+export VIBEY_OLLAMA_OUTPUT=6144
+```
+
+A bigger window stops the ledger being trimmed from the middle, `VIBEY_OLLAMA_THINK=low` keeps the
+first attempt from spending itself reasoning, and a larger output budget leaves room to write the
+design spec. The one retry also opens a larger window by itself, up to `VIBEY_OLLAMA_RETRY_CONTEXT`
+(32768 by default), but it costs a model reload, so prefer sizing the window right.
+
 **A local model is slow to its first turn.** Conformance starts a real run and waits 30
 seconds for its run directory. gpt-oss:20b on a laptop loads weights and answers a first turn
 well past that, so `run_dir_shape`, `snapshot_schema`, `done_marker` and

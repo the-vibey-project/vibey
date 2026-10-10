@@ -171,6 +171,12 @@ class WireFormatter:
             facts.append(f"{output / (duration / 1e9):.1f} tokens/s")
         if body.get("done_reason"):
             facts.append(f"stopped: {body['done_reason']}")
+        # Where the time went besides generating: a model reloaded from disk (`load`) or a long
+        # prompt read (`prompt eval`) can cost minutes the token rate never shows.
+        for key, label in (("load_duration", "load"), ("prompt_eval_duration", "prompt eval")):
+            nanoseconds = _number(body.get(key))
+            if nanoseconds is not None:
+                facts.append(f"{label} {nanoseconds / 1e9:.1f}s")
         out = f"[{_clock(record)}] <<< response {self._label(record)} - " + " - ".join(facts) + "\n"
         attempt = record.get("attempt")
         shown = (str(record.get("call")), attempt if isinstance(attempt, int) else 0)

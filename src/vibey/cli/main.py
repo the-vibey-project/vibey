@@ -54,6 +54,7 @@ from vibey.cli.llm import llm_app
 from vibey.cli.loops import LOOPS
 from vibey.cli.projects import PROJECTS
 from vibey.cli.queue import queue_app
+from vibey.cli.recover import stop_workers
 from vibey.cli.sabbath import SABBATH
 from vibey.cli.serve import SERVE
 from vibey.cli.serve import serve as serve_command
@@ -110,6 +111,7 @@ from vibey.infrastructure.engines.scripted_visual import ScriptedVisualProvider
 from vibey.infrastructure.engines.wire_log import WIRE_LOG_ENV, default_wire_log_path
 from vibey.infrastructure.logging import StructlogAppLogger, configure_logging
 from vibey.infrastructure.postgres import POSTGRES_MIN_MAJOR, PostgresLocalService, PostgresStatus
+from vibey.infrastructure.worker_processes import DEFAULT_GRACE_SECONDS, WorkerStopper
 
 app = typer.Typer(name="vibey", no_args_is_help=True)
 
@@ -927,6 +929,33 @@ def recover(
     all_projects: Annotated[
         bool, typer.Option("--all", help="Recover jobs for all projects")
     ] = False,
+    stop_workers_first: Annotated[
+        bool,
+        typer.Option(
+            "--stop-workers",
+            help=(
+                "First stop every `vibey worker` this user is running, and what each started: "
+                "SIGTERM, then SIGKILL after --grace. A live worker holds its leases, so the "
+                "jobs are only reset once none is left. The processes are listed first."
+            ),
+        ),
+    ] = False,
+    grace: Annotated[
+        float,
+        typer.Option(
+            "--grace",
+            min=0.0,
+            help="Seconds --stop-workers waits after SIGTERM before it uses SIGKILL.",
+        ),
+    ] = DEFAULT_GRACE_SECONDS,
+    dry_run: Annotated[
+        bool,
+        typer.Option(
+            "--dry-run",
+            help="Change nothing: list what --stop-workers would stop and count the jobs "
+            "that would be reset.",
+        ),
+    ] = False,
 ) -> None:
     """Recover stuck leased jobs, setting them back to ready state."""
     import re
@@ -940,8 +969,21 @@ def recover(
             typer.echo("Must specify either --project <id> or --all")
             raise typer.Exit(1)
 
+        if stop_workers_first and not stop_workers(
+            WorkerStopper(), grace_seconds=grace, dry_run=dry_run
+        ):
+            raise typer.Exit(1)
+
         conn = await asyncpg.connect(database_url())
         try:
+            if dry_run:
+                leased = "SELECT count(*) FROM job WHERE state = 'leased'"
+                if all_projects:
+                    count_now = await conn.fetchval(leased)
+                else:
+                    count_now = await conn.fetchval(leased + " AND project_id = $1", project_id)
+                typer.echo(f"would recover {count_now} stuck job(s)")
+                return
             if all_projects:
                 result = await conn.execute(
                     "UPDATE job SET state = 'ready', lease_owner = NULL, lease_expires_at = NULL, "

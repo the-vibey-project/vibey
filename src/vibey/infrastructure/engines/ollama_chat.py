@@ -14,7 +14,9 @@ Two replies are retried, once each, and never both:
   spends the whole `num_predict` Ollama returns ``done_reason == "length"`` with empty
   content and a full `thinking` channel. At temperature 0 the same request fails the
   same way, so the retry asks again with a larger budget (bounded by the context
-  ceiling) and lighter reasoning (`VIBEY_OLLAMA_RETRY_THINK`). If that is still cut
+  ceiling, which the retry may raise to `VIBEY_OLLAMA_RETRY_CONTEXT`) and lighter reasoning
+  (`VIBEY_OLLAMA_RETRY_THINK`). `VIBEY_OLLAMA_THINK` sets the reasoning level of the first
+  request too, so a run need not spend its first attempt reasoning at length. If that is still cut
   short, `OutputBudgetExhausted` says so -- a CAPACITY failure naming the knobs, not an
   anonymous "empty content".
 - **Empty for any other reason** (a grammar the build could not satisfy): one retry in
@@ -61,6 +63,8 @@ OLLAMA_CONTEXT_ENV = "VIBEY_OLLAMA_CONTEXT"
 OLLAMA_OUTPUT_ENV = "VIBEY_OLLAMA_OUTPUT"
 OLLAMA_FIT_ENV = "VIBEY_OLLAMA_FIT"
 OLLAMA_RETRY_THINK_ENV = "VIBEY_OLLAMA_RETRY_THINK"
+OLLAMA_THINK_ENV = "VIBEY_OLLAMA_THINK"
+OLLAMA_RETRY_CONTEXT_ENV = "VIBEY_OLLAMA_RETRY_CONTEXT"
 VIBEY_REVISION_ENV = "VIBEY_REVISION"
 
 DEFAULT_OLLAMA_URL = "http://127.0.0.1:11434"
@@ -68,6 +72,11 @@ DEFAULT_OLLAMA_MODEL = "gpt-oss:20b"
 DEFAULT_OLLAMA_TIMEOUT = 900
 DEFAULT_OLLAMA_CONTEXT = 8192
 DEFAULT_OLLAMA_OUTPUT = 2048
+#: The largest window the one retry may ask for when a reply was cut short: a prompt that
+#: leaves too little of `VIBEY_OLLAMA_CONTEXT` for the reasoning and the answer cannot be
+#: helped by asking again with the same window. Set it equal to `VIBEY_OLLAMA_CONTEXT` to
+#: keep the retry inside that ceiling.
+DEFAULT_OLLAMA_RETRY_CONTEXT = 32768
 #: The reasoning level asked for on the retry after a reply ran out of output budget.
 #: Ollama 0.34 accepts these for gpt-oss, and accepts (then ignores) a level for a model
 #: that only thinks on or off; "none" sends no `think` at all, keeping the model default.
@@ -224,6 +233,8 @@ class OllamaChatClient:
         output_ceiling: int = DEFAULT_OLLAMA_OUTPUT,
         fit_prompt_chars: int | None = None,
         retry_think: str | bool | None = DEFAULT_OLLAMA_RETRY_THINK,
+        think: str | bool | None = None,
+        retry_context: int = DEFAULT_OLLAMA_RETRY_CONTEXT,
         transport: OllamaTransportInterface | None = None,
         stream_transport: OllamaStreamTransportInterface | None = None,
         wire_log: WireLogInterface | None = None,
@@ -245,12 +256,24 @@ class OllamaChatClient:
                 OLLAMA_RETRY_THINK_ENV,
                 f"must be one of {', '.join(THINK_LEVELS)}, got {retry_think!r}",
             )
+        if think not in THINK_LEVELS.values():
+            raise ConfigError(
+                OLLAMA_THINK_ENV,
+                f"must be one of {', '.join(THINK_LEVELS)}, got {think!r}",
+            )
+        if retry_context < self.CONTEXT_FLOOR:
+            raise ConfigError(
+                OLLAMA_RETRY_CONTEXT_ENV,
+                f"must be at least {self.CONTEXT_FLOOR}, got {retry_context}",
+            )
         self._model = model.strip()
         self._timeout = timeout
         self._context_ceiling = context_ceiling
         self._output_ceiling = output_ceiling
         self._fit_prompt_chars = fit_prompt_chars
         self._retry_think = retry_think
+        self._think = think
+        self._retry_context = retry_context
         self._transport = transport if transport is not None else UrllibOllamaTransport()
         # A wire log is the operator asking to watch: only then is the reply streamed, so a
         # run nobody is watching keeps its one blocking request, exactly as before.
@@ -315,6 +338,22 @@ class OllamaChatClient:
                 OLLAMA_RETRY_THINK_ENV,
                 f"must be one of {', '.join(THINK_LEVELS)}, got {raw_think!r}",
             )
+        raw_first_think = (environ.get(OLLAMA_THINK_ENV) or "none").strip()
+        if raw_first_think.lower() not in THINK_LEVELS:
+            raise ConfigError(
+                OLLAMA_THINK_ENV,
+                f"must be one of {', '.join(THINK_LEVELS)}, got {raw_first_think!r}",
+            )
+        raw_retry_context = (
+            environ.get(OLLAMA_RETRY_CONTEXT_ENV) or str(DEFAULT_OLLAMA_RETRY_CONTEXT)
+        ).strip()
+        try:
+            retry_context = int(raw_retry_context)
+        except ValueError as exc:
+            raise ConfigError(
+                OLLAMA_RETRY_CONTEXT_ENV,
+                f"must be a whole number of tokens, got {raw_retry_context!r}",
+            ) from exc
         return cls(
             base_url=environ.get(OLLAMA_URL_ENV) or DEFAULT_OLLAMA_URL,
             model=model or environ.get(OLLAMA_MODEL_ENV) or DEFAULT_OLLAMA_MODEL,
@@ -323,6 +362,8 @@ class OllamaChatClient:
             output_ceiling=output_ceiling,
             fit_prompt_chars=fit.get("max_prompt_chars") if fit is not None else None,
             retry_think=THINK_LEVELS[raw_think.lower()],
+            think=THINK_LEVELS[raw_first_think.lower()],
+            retry_context=retry_context,
             transport=transport,
             stream_transport=stream_transport,
             wire_log=wire_log if wire_log is not None else cls._wire_log_from(environ),
@@ -373,22 +414,31 @@ class OllamaChatClient:
         )
         endpoint = f"{self._base_url}/api/chat"
         payload = self._payload(
-            system, bounded_user, schema, num_ctx, num_predict, stream=self._streaming
+            system,
+            bounded_user,
+            schema,
+            num_ctx,
+            num_predict,
+            think=self._think,
+            stream=self._streaming,
         )
         body = await self._post(endpoint, payload, call, 1)
         message = body.get("message")
         if self._cut_short(body):
             # The reasoning spent the budget before the answer began. At temperature 0 the
             # same request fails the same way, so ask once more with room to finish: a
-            # larger budget, bounded by the context ceiling, and lighter reasoning.
+            # larger budget, bounded by the retry ceiling, and lighter reasoning. The retry
+            # may open a larger window than the first request did: when the prompt left
+            # too little of the configured one, asking again inside it only fails again.
+            retry_ceiling = max(context_ceiling, self._retry_context)
             prompt_tokens = body.get("prompt_eval_count")
             if not isinstance(prompt_tokens, int) or prompt_tokens <= 0:
                 prompt_tokens = prompt_chars // self.CHARS_PER_TOKEN
             num_predict = min(
                 num_predict * self.OUTPUT_RETRY_FACTOR,
-                max(num_predict, context_ceiling - prompt_tokens),
+                max(num_predict, retry_ceiling - prompt_tokens),
             )
-            num_ctx = min(context_ceiling, max(num_ctx, prompt_tokens + num_predict))
+            num_ctx = min(retry_ceiling, max(num_ctx, prompt_tokens + num_predict))
             payload = self._payload(
                 system,
                 bounded_user,

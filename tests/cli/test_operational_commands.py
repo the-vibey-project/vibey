@@ -2703,6 +2703,117 @@ def test_recover_counts_the_jobs_it_put_back(tmp_path: Path) -> None:
     assert "Recovered 1 stuck job(s)." in result.stdout
 
 
+def _project_with_a_leased_job(tmp_path: Path, name: str) -> UUID:
+    """What a crashed worker leaves behind: a job in `leased` that nothing will heartbeat."""
+
+    async def seed() -> UUID:
+        async with build_app() as resources:
+            project = await resources.projects.create(name, tmp_path, max_cycles=1, config={})
+            await resources.jobs.enqueue(
+                EnqueueRequest(
+                    project_id=project.project_id,
+                    cycle=project.cycle,
+                    phase=Phase.INTAKE,
+                    kind="test.work",
+                    idempotency_key=idempotency_key(
+                        project.project_id, project.cycle, "test.work", "1"
+                    ),
+                    requirement={},
+                )
+            )
+            leased = await resources.jobs.claim(
+                project.project_id, owner="crashed-worker", lease=timedelta(minutes=5)
+            )
+            assert leased is not None
+            return project.project_id
+
+    return asyncio.run(seed())
+
+
+class _FakeWorkerStopper:
+    def __init__(self, *, survivors: tuple[int, ...] = (), workers: bool = True) -> None:
+        from vibey.infrastructure.worker_processes import ProcessInfo, StopPlan, StopReport
+
+        row = ProcessInfo(pid=4242, ppid=1, uid=501, state="S", argv=("vibey", "worker"))
+        self._plan = StopPlan((row,) if workers else (), ())
+        self._report = StopReport(
+            terminated=() if survivors else (4242,), killed=(), survivors=survivors
+        )
+        self.stopped = False
+
+    def plan(self):  # type: ignore[no-untyped-def]
+        return self._plan
+
+    def stop(self, plan, *, grace_seconds):  # type: ignore[no-untyped-def]
+        self.stopped = True
+        return self._report
+
+
+def test_recover_dry_run_counts_the_leased_jobs_and_changes_nothing(tmp_path: Path) -> None:
+    project_id = _project_with_a_leased_job(tmp_path, "recover-dry")
+
+    dry = runner.invoke(app, ["recover", "--project", str(project_id), "--dry-run"])
+    assert dry.exit_code == 0, dry.output
+    assert "would recover 1 stuck job(s)" in dry.output
+
+    everyone = runner.invoke(app, ["recover", "--all", "--dry-run"])
+    assert everyone.exit_code == 0 and "would recover" in everyone.output
+
+    real = runner.invoke(app, ["recover", "--project", str(project_id)])
+    assert "Recovered 1 stuck job(s)." in real.output  # the dry runs left it leased
+
+
+def test_recover_stop_workers_stops_them_first_and_then_resets_the_leases(
+    tmp_path: Path,
+) -> None:
+    from unittest.mock import MagicMock, patch
+
+    project_id = _project_with_a_leased_job(tmp_path, "recover-stop")
+    stopper = _FakeWorkerStopper()
+
+    with patch("vibey.cli.main.WorkerStopper", new=MagicMock(return_value=stopper)):
+        result = runner.invoke(
+            app, ["recover", "--project", str(project_id), "--stop-workers", "--grace", "3"]
+        )
+
+    assert result.exit_code == 0, result.output
+    assert stopper.stopped
+    assert "stopping these processes:" in result.output and "worker 4242" in result.output
+    assert "Recovered 1 stuck job(s)." in result.output
+
+
+def test_recover_stop_workers_refuses_to_reset_while_a_worker_survives(tmp_path: Path) -> None:
+    from unittest.mock import MagicMock, patch
+
+    project_id = _project_with_a_leased_job(tmp_path, "recover-survivor")
+    stopper = _FakeWorkerStopper(survivors=(4242,))
+
+    with patch("vibey.cli.main.WorkerStopper", new=MagicMock(return_value=stopper)):
+        refused = runner.invoke(app, ["recover", "--project", str(project_id), "--stop-workers"])
+
+    assert refused.exit_code == 1
+    assert "still running after SIGKILL: 4242" in refused.output
+    assert "Recovered" not in refused.output
+    again = runner.invoke(app, ["recover", "--project", str(project_id)])
+    assert "Recovered 1 stuck job(s)." in again.output  # nothing was reset
+
+
+def test_recover_stop_workers_dry_run_lists_the_workers_and_signals_none(tmp_path: Path) -> None:
+    from unittest.mock import MagicMock, patch
+
+    project_id = _project_with_a_leased_job(tmp_path, "recover-stop-dry")
+    stopper = _FakeWorkerStopper()
+
+    with patch("vibey.cli.main.WorkerStopper", new=MagicMock(return_value=stopper)):
+        result = runner.invoke(
+            app, ["recover", "--project", str(project_id), "--stop-workers", "--dry-run"]
+        )
+
+    assert result.exit_code == 0, result.output
+    assert "would stop these processes:" in result.output and not stopper.stopped
+    assert "would recover 1 stuck job(s)" in result.output
+
+
 def test_recover_with_project(tmp_path: Path) -> None:
     async def seed() -> None:
         async with build_app() as resources:

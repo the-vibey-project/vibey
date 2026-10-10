@@ -553,8 +553,16 @@ assigned engine are cleared.
 | `--project ID` | unset | Recover jobs for one project. |
 | `--all` | off | Recover jobs for every project. Wins if `--project` is also given. |
 
+| `--stop-workers` | off | First stop every `vibey worker` this user is running, and everything each started (an engine runner, a `uv run` or `caffeinate` wrapper), then reset the leases. The processes are listed before anything is signalled. SIGTERM, then SIGKILL for what is still there after `--grace`. It matches `vibey` command lines with `worker` in them, in this user's processes only, and never itself or what started it. If anything survives SIGKILL it exits 1 **without resetting a lease**, because a live worker holds its leases by heartbeat and resetting them would run its job twice. |
+| `--grace SECONDS` | `10` | How long `--stop-workers` waits after SIGTERM before SIGKILL. |
+| `--dry-run` | off | Change nothing: with `--stop-workers`, list the processes that would be stopped, and print `would recover N stuck job(s)` instead of resetting them. |
+
 One of `--project` or `--all` is required; with neither, it prints
 `Must specify either --project <id> or --all` and exits 1.
+
+A worker that died leaves its jobs `leased` until the lease expires, and a worker that is still
+alive keeps them; so the one command for a stuck queue is
+`vibey recover --project ID --stop-workers`, then start the worker again.
 
 Prints `Recovered N stuck job(s).`, where N is the number of rows actually
 reset, read from PostgreSQL's `UPDATE n` status tag.
@@ -1320,6 +1328,8 @@ Variables read by code under `src/vibey`:
 | `VIBEY_OLLAMA_TIMEOUT` | the sovereign DESIGN and DECOMPOSE providers | Seconds per request, default `900`. |
 | `VIBEY_OLLAMA_CONTEXT` | as `VIBEY_OLLAMA_TIMEOUT` | Context ceiling in tokens (`num_ctx`), default `8192`, at least `4096`. |
 | `VIBEY_OLLAMA_OUTPUT` | as `VIBEY_OLLAMA_TIMEOUT` | Output ceiling in tokens (`num_predict`), default `2048`. |
+| `VIBEY_OLLAMA_THINK` | as `VIBEY_OLLAMA_TIMEOUT` | The reasoning level asked for on the **first** request: `low`, `medium`, `high`, `max`, `true`, `false` or `none`. Unset or `none` sends no `think`, leaving it to the model, which for gpt-oss is a long reasoning pass that can spend the whole output budget before the answer begins. `low` makes the first attempt succeed where it would otherwise be cut short and retried. The retry has its own, `VIBEY_OLLAMA_RETRY_THINK` (default `low`). |
+| `VIBEY_OLLAMA_RETRY_CONTEXT` | as `VIBEY_OLLAMA_TIMEOUT` | The largest context window the one retry of a cut-short reply may ask for, default `32768`, at least `4096`. A prompt that leaves too little of `VIBEY_OLLAMA_CONTEXT` for the reasoning and the answer fills the window, and asking again inside the same window only fails again; the retry instead opens as much as it needs, up to this. A configured `VIBEY_OLLAMA_CONTEXT` above it is never lowered. Set it equal to `VIBEY_OLLAMA_CONTEXT` to keep the retry inside that ceiling. Ollama reloads a model whose context changes, so a retry that grows the window pays a reload: raise `VIBEY_OLLAMA_CONTEXT` itself when that is the usual case. |
 | `VIBEY_OLLAMA_FIT` | as `VIBEY_OLLAMA_TIMEOUT` | Path to a fit record written by `vibey doctor --sovereign-fit`. When it matches, its measured context and output replace the two ceilings above; see [Local models](../guides/local-models-ollama.md#measuring-a-capacity-fit). Unset, unreadable or mismatched means the configured ceilings. |
 | `VIBEY_REVISION` | as `VIBEY_OLLAMA_FIT` | When set, a fit record is used only if its `revision` equals this value. |
 | `VIBEY_FEATURE_QWENLOOP` | `doctor`, `worker`, `loops` | `1`, `true`, `yes`, or `on` (case-insensitive) enables qwenloop, the runner on a Qwen model; any other set value disables it. When set it overrides config. When unset, `doctor` and `loops` fall back to `[features] qwenloop` in `./vibey.toml` and `worker` falls back to the project's stored config; with neither, qwenloop is off. |
