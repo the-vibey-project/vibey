@@ -117,6 +117,14 @@ Run these from a checkout of this repository on `develop`, so `vibey-gh` reads i
    `uv run vibey-gh runner install --load` does steps 4 and 6 together, and exits non-zero
    if launchd refuses to load the agent.
 
+   The two manual commands above race: `bootout` returns while launchd is still stopping the
+   old supervisor (it removes the egress gate and reaps its runners), and a `bootstrap` in that
+   window fails with exit 5, "Input/output error". `--load` waits for the label to disappear and
+   retries exit 5, for at most `[runners] launchd_settle_seconds` (default 60). If you run the
+   commands by hand, wait until `launchctl print gui/$(id -u)/<label>` stops answering before
+   the `bootstrap`. Do not run the installer under `sudo`: root cannot bootstrap into your
+   login domain (exit 125).
+
 ## The egress gate
 
 The job container has no route out. `vibey-runner.sh` creates a Docker network with

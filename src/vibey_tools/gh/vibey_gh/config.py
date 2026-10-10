@@ -1019,6 +1019,11 @@ class RunnersConfig:
     throttle_seconds: int = 120
     # Consecutive runner failures before the supervisor stops rather than spins.
     max_failures: int = 5
+    # How long `runner install --load` waits for launchd to finish taking the old supervisor
+    # down before it loads the new one. `launchctl bootout` returns while the service is still
+    # being torn down (the supervisor traps TERM, removes the egress gate and reaps runners), and
+    # a `bootstrap` into that window fails with exit 5, "Input/output error". Seconds.
+    launchd_settle_seconds: int = 60
     # launchd starts a job with a near-empty PATH; docker and gh must be reachable from it.
     # The heartbeat timer runs with the same PATH, and git must be reachable from it too.
     path: str = "/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin"
@@ -1149,6 +1154,11 @@ class RunnersConfig:
             raise ValueError("runners.throttle_seconds must be between 10 and 3600")
         if not 1 <= self.max_failures <= 100:
             raise ValueError("runners.max_failures must be between 1 and 100")
+        if (
+            type(self.launchd_settle_seconds) is not int
+            or not 0 <= self.launchd_settle_seconds <= 600
+        ):
+            raise ValueError("runners.launchd_settle_seconds must be a whole number 0-600")
 
     def resolved_gh_config_dir(self, home: Path) -> Path:
         """`gh_config_dir` against `home`, with `..` and every symlink resolved."""

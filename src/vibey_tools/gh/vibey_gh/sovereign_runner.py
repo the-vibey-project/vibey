@@ -30,6 +30,7 @@ import re
 import shlex
 import stat
 import subprocess
+import time
 from collections.abc import Callable, Sequence
 from dataclasses import dataclass
 from pathlib import Path
@@ -61,6 +62,8 @@ _RUNNERS_JQ = ".runners[] | {name, status, busy, labels: [.labels[].name]}"
 # The same listing, one JSON object per line, for a program to read rather than a person.
 _RUNNER_LINES_JQ = f"{_RUNNERS_JQ} | tojson"
 _NO_AMBIENT_TOKEN = "env -u GH_TOKEN -u GITHUB_TOKEN"
+# launchctl's "Input/output error": the label is still being torn down, so try again.
+_LAUNCHD_BUSY = 5
 # A token gh wrote into hosts.yml itself (`--insecure-storage`). Without the flag gh writes
 # the user entry and keeps the token in the keyring, so this key is simply absent. The same
 # pattern the supervisor greps for.
@@ -127,6 +130,7 @@ class SovereignRunner:
         launchctl: Launchctl | None = None,
         gh: GhStatus | None = None,
         gh_read: GhRead | None = None,
+        sleep: Callable[[float], None] | None = None,
     ) -> None:
         self._cfg = cfg
         self._runners = cfg.runners
@@ -136,6 +140,7 @@ class SovereignRunner:
         self._launch = launchctl or self._launchctl
         self._gh = gh or self._gh_status
         self._gh_read = gh_read or self._gh_output
+        self._sleep = sleep or time.sleep
 
     # --- paths ----------------------------------------------------------------------------
 
@@ -230,10 +235,9 @@ class SovereignRunner:
         if load:
             # Unloading first makes a re-install pick up the new plist; "not loaded" is the
             # expected answer on a first install, so its status is not a failure.
-            self._launch(("launchctl", "bootout", f"gui/{self._uid}/{plan.label}"))
-            code, output = self._launch(
-                ("launchctl", "bootstrap", f"gui/{self._uid}", str(plan.plist))
-            )
+            service = f"gui/{self._uid}/{plan.label}"
+            self._launch(("launchctl", "bootout", service))
+            code, output = self._bootstrap_when_gone(service, plan)
             lines.append(
                 f"loaded {plan.label} from {plan.plist}"
                 if code == 0
@@ -241,6 +245,24 @@ class SovereignRunner:
             )
             return lines, code == 0
         return lines, True
+
+    def _bootstrap_when_gone(self, service: str, plan: RunnerPlan) -> tuple[int, str]:
+        """`bootout` returns while launchd is still stopping the service (the supervisor traps
+        TERM, removes the egress gate and reaps its runners); a `bootstrap` into that window
+        fails with exit 5. Wait for the label to disappear, then retry a load that still
+        answers 5, both for at most `launchd_settle_seconds`."""
+        budget = self._runners.launchd_settle_seconds
+        waited = 0
+        while waited < budget and self._launch(("launchctl", "print", service))[0] == 0:
+            self._sleep(1)
+            waited += 1
+        argv = ("launchctl", "bootstrap", f"gui/{self._uid}", str(plan.plist))
+        code, output = self._launch(argv)
+        while code == _LAUNCHD_BUSY and waited < budget:
+            self._sleep(1)
+            waited += 1
+            code, output = self._launch(argv)
+        return code, output
 
     def next_steps(self, plan: RunnerPlan) -> list[str]:
         """Shell commands, every path and value quoted: `[runners]` paths may hold spaces."""
