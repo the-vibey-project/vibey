@@ -114,6 +114,12 @@ class BacklogKiller(BacklogKillerInterface):
         self._body_chars = int(settings.get("body_chars", 6000))
         self._priority = [str(x) for x in settings.get("priority_labels", [])]
         self._skip_labels = {str(x) for x in settings.get("skip_labels", [])}
+        # Opt-in: when any are declared, only an issue carrying one is picked. The operator
+        # labels what an agent can finish; an unlabelled issue is never handed to the agent.
+        self._agent_labels = {str(x) for x in settings.get("agent_labels", [])}
+        # A labelled issue whose body is longer than this is still skipped (0 = no limit): a
+        # long brief is nearly always more than one tested slice.
+        self._max_issue_chars = max(0, int(settings.get("max_issue_chars", 0)))
         self._skip_authors = {str(x) for x in settings.get("skip_authors", [])}
         # On a public repository anyone can open an issue, and the pick becomes an agent's
         # brief whose draft may be approved unattended (`[[unattended_approval.lanes]]`):
@@ -162,6 +168,8 @@ class BacklogKiller(BacklogKillerInterface):
                 or author in self._skip_authors
                 or str(issue.get("authorAssociation", "")) not in self._trusted
                 or self._skip_labels.intersection(self._labels(issue))
+                or (self._agent_labels and not self._agent_labels.intersection(self._labels(issue)))
+                or (self._max_issue_chars and len(body) > self._max_issue_chars)
                 or any(marker in body for marker in self._self_closing)
             ):
                 continue
@@ -195,7 +203,10 @@ class BacklogKiller(BacklogKillerInterface):
                 "scripts/daily_lanes.toml): no issue is worked until it is switched back on."
             )
         if issue is None:
-            return "No open issue is workable now: every one is held, in flight, or skipped."
+            return (
+                "No open issue is workable now: every one is held, in flight, skipped, not "
+                "labelled for the agent, or too long."
+            )
         body = str(issue.get("body") or "").strip()
         cut = ""
         if len(body) > self._body_chars:
