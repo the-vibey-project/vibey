@@ -292,3 +292,55 @@ def test_a_labelled_issue_with_a_long_body_is_still_skipped() -> None:
 
 def test_the_brief_for_no_candidate_names_the_opt_in_and_the_size_limit() -> None:
     assert "not labelled" in killer([]).brief(None) and "too long" in killer([]).brief(None)
+
+
+SLICE = "<!-- vibey-gh:split-child parent=1 key=0123456789ab -->"
+SPLIT = {"split_label": "vibey-gh:split-child", "split_authors": ["github-actions[bot]"]}
+
+
+def slice_issue(number: int = 20, **extra: Any) -> dict[str, Any]:
+    extra.setdefault("author", "github-actions[bot]")
+    extra.setdefault("association", "NONE")
+    extra.setdefault("body", f"a slice\n{SLICE}")
+    return issue(number, "vibey-gh:split-child", **extra)
+
+
+def test_a_slice_cut_from_a_trusted_issue_is_workable_without_the_opt_in_label() -> None:
+    parent = issue(1)  # unlabelled: not itself an agent's issue
+    k = killer([parent, slice_issue()], agent_labels=["good first issue"], **SPLIT)
+    assert [i["number"] for i in k.candidates()] == [20]
+
+
+def test_a_slice_is_refused_unless_author_label_and_parent_all_hold() -> None:
+    labelled = ["good first issue"]
+    cases = {
+        "a stranger wrote it": slice_issue(author="stranger"),
+        "no slice label": issue(20, author="github-actions[bot]", association="NONE", body=SLICE),
+        "no marker": slice_issue(body="just a bot's issue"),
+        "its parent is not open": slice_issue(body=SLICE.replace("parent=1", "parent=99")),
+        "its parent is a stranger's": slice_issue(body=SLICE.replace("parent=1", "parent=2")),
+        "its parent is a bot's": slice_issue(body=SLICE.replace("parent=1", "parent=3")),
+    }
+    others = [
+        issue(1),
+        issue(2, author="stranger", association="NONE"),
+        issue(3, author="app/github-actions"),
+    ]
+    for why, child in cases.items():
+        k = killer([*others, child], agent_labels=labelled, **SPLIT)
+        assert 20 not in [i["number"] for i in k.candidates()], why
+
+
+def test_a_slice_still_obeys_the_holds_the_size_limit_and_the_skip_labels() -> None:
+    parent = issue(1)
+    held = slice_issue(7)  # never_act
+    long = slice_issue(21, body="x" * 60 + SLICE)
+    skipped = slice_issue(22)
+    skipped["labels"].append({"name": "operator"})
+    k = killer([parent, held, long, skipped], max_issue_chars=50, **SPLIT)
+    assert k.candidates() == [parent] or [i["number"] for i in k.candidates()] == [1]
+    assert not {7, 21, 22} & {i["number"] for i in k.candidates()}
+
+
+def test_the_slice_rule_is_off_when_no_label_is_declared() -> None:
+    assert 20 not in [i["number"] for i in killer([issue(1), slice_issue()]).candidates()]

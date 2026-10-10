@@ -1,0 +1,62 @@
+# Made with ❤️ by [Vibey](https://the-vibey-project.github.io/vibey/), Developed by [Adam Matthew Steinberger](https://vibewithadam.matthewsteinberger.com/) ([@adammatthewsteinberger](https://github.com/adammatthewsteinberger/)).
+name: Backlog splitter
+
+# Every six hours, on GitHub-hosted CPU runners (ADR-0083): cut each open issue too large for the
+# backlog killer (`scripts/backlog_splitter.py`, declared in scripts/daily_lanes.toml
+# [backlog_splitter]) into the slices its own task list, numbered steps or sections name, filed as
+# sub-issues the killer then works one at a time. No model runs here: the structure is read, not
+# invented, and an issue without any is reported and left for a person (12.e). The only writes
+# are new issues, one comment and one label on each parent; nothing is closed, merged,
+# released or deleted, and no secret or ruleset is touched (12.d). `enabled = false` in
+# [backlog_splitter] pauses it. Run by hand with `dry_run` to see the plan and file nothing.
+on:
+  schedule:
+    - cron: "37 */6 * * *"
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: "Print the plan and file nothing"
+        required: false
+        default: "false"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: backlog-splitter-${{ github.repository }}
+  cancel-in-progress: false
+
+jobs:
+  split:
+    name: Cut the issues that are too large
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: read
+      issues: write
+    steps:
+      - name: Check out the integration branch
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          ref: develop
+          persist-credentials: false
+      - name: Set up Python
+        uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5
+        with:
+          python-version: "3.12"
+      - name: Split
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          DRY_RUN: ${{ inputs.dry_run || 'false' }}
+        run: |
+          set -euo pipefail
+          mode=split
+          [ "$DRY_RUN" = "true" ] && mode=plan
+          {
+            echo "### Backlog splitter ($mode)"
+            echo
+            echo '```text'
+            python scripts/backlog_splitter.py "$mode"
+            echo '```'
+          } | tee -a "$GITHUB_STEP_SUMMARY"
