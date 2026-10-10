@@ -158,6 +158,26 @@ vibey doctor --conformance --record --engine gptossloop
 vibey doctor --conformance --record --engine qwenloop   # when switched on
 ```
 
+**Do not leave a model warmed up at a large window.** Ollama reloads a model whose context
+differs from a request's. A warm-up at a very large window, left resident, makes the first
+real request pay for a reload with a key-value cache sized for that window, and on a laptop
+the request can time out. `vibey doctor` prints an `ollama` line that says so when the loaded
+model's context is above `VIBEY_OLLAMA_CONTEXT`, and names the fix: `ollama stop gpt-oss:20b`.
+
+**A local model is slow to its first turn.** Conformance starts a real run and waits 30
+seconds for its run directory. gpt-oss:20b on a laptop loads weights and answers a first turn
+well past that, so `run_dir_shape`, `snapshot_schema`, `done_marker` and
+`structured_verdict` fail together for a reason that is the host's speed, not the engine's.
+Tell conformance how long this host needs:
+
+```bash
+VIBEY_CONFORMANCE_POLL_SECONDS=420 vibey doctor --conformance --record --engine gptossloop
+```
+
+Measure it rather than guessing: a window long enough to pass once is the number to keep,
+and one that is far longer than the check ever uses costs nothing, because the wait ends
+the moment the files appear.
+
 `vibey doctor` runs `claudeloop doctor --profile <name>` for claudeloop-local, so the
 health check probes the backend the run will use. The worker also re-runs each
 enabled local engine's `doctor` before every BUILD selection; a local engine whose
@@ -167,6 +187,47 @@ doctor fails is simply not eligible, and the job goes to the next engine.
 default. Set `structured_verdict = true` only for a model you intend to hold to it:
 conformance then requires a `VerdictRendered` event from the configured model, and a
 claim it cannot prove fails conformance and makes the engine ineligible.
+
+### Running unattended { #running-unattended }
+
+A local run parks on gates that are not decisions: an interview question whose default is the
+answer, an attempt budget you would grant again, a delivery that died with its worker. To let
+one worker keep going through those, tell it so, for that run:
+
+```bash
+caffeinate -i vibey -vvv worker --project PROJECT_ID --auto-answer
+```
+
+`--auto-answer` answers the interview with each question's own default, grants ten more
+attempts or six more repair rounds when a job runs out, and delivers a dropped job once more.
+It never answers a spending gate, an approval or a review, and says which gates it left. It
+stops after `--auto-answer-limit` answers (30) and says so. Each answer is on the ledger as
+`GateAnswered` by `auto-answer`. Defaults take the `narrowest` scope, so a question that
+proposes adding something the intake did not name is answered No: read the spec before
+`vibey design accept`.
+
+### Watching the model think { #watching-the-model-think }
+
+A DESIGN or DECOMPOSE call to a local model can run for many minutes, and by default it
+shows nothing until it returns. Ask for the conversation and follow it from a second
+terminal:
+
+```bash
+vibey -vvv worker --project PROJECT_ID
+vibey llm tail
+```
+
+`-vvv` makes the client stream Ollama's reply and write every request and every piece of
+the reply to the wire log, `~/.local/state/vibey/llm-wire.jsonl`. `vibey llm tail` shows the
+request (model, context, output budget, both messages), then the reasoning and the answer
+growing as they are generated, then the model's own counts and tokens per second. A call
+that stalls shows as a request with nothing after it, which is how a context window set too
+small or a model still loading looks from the outside.
+
+Text appears a word at a time, not a token at a time, because the log releases streamed text
+only at whitespace: a credential the model repeats cannot then be split across two pieces and
+escape redaction. The log holds your full prompts, so it is created readable by you alone;
+remove it when you no longer need it. To log without `-vvv`, set `VIBEY_LLM_WIRE_LOG=path`.
 
 ### Measuring a capacity fit
 

@@ -67,6 +67,14 @@ cluster-smoke step sets it so `vibey new` does not decline on a Friday evening. 
 it off anywhere else is a declared act -- prefer `enabled = false` in the file -- never a
 missing key.
 
+For a single command, `--ignore-sabbath` on `vibey new`, `vibey work` and `vibey worker`
+runs it through a window that would have rested it. It is the operator's choice for that
+one command and nothing more: no `vibey.toml` key can supply it, so a file cannot switch
+the Sabbath off for a run nobody is watching. When a window would have held, the command
+says so on stderr, naming when the rest would have ended; outside a window it is silent.
+`vibey worker --ignore-sabbath` claims jobs through the window for as long as that worker
+runs, and a worker started without the flag still rests.
+
 ## Settings
 
 All the keys are in [`[sabbath]`](../reference/configuration.md#sabbath). The design and

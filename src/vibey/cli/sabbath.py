@@ -21,6 +21,23 @@ from vibey.infrastructure.sabbath import HostSabbathGate
 EXIT_RESTING: Final = 75
 
 
+class _IgnoringGate(HostSabbathGateInterface):
+    """A host gate that never holds: what `--ignore-sabbath` swaps in for one command.
+    Everything but `hold` is the host's own answer."""
+
+    def __init__(self, inner: HostSabbathGateInterface) -> None:
+        self._inner = inner
+
+    def hold(self) -> None:
+        return None
+
+    def describe(self) -> list[str]:
+        return [*self._inner.describe(), "ignored: --ignore-sabbath was given for this command"]
+
+    def location_resolved(self) -> bool:
+        return self._inner.location_resolved()
+
+
 class SabbathCommand(SabbathCommandInterface):
     """Reads the host's Sabbath from `./vibey.toml` and answers for the command line."""
 
@@ -35,7 +52,7 @@ class SabbathCommand(SabbathCommandInterface):
         self._root = root
         self._environ = environ
 
-    def gate(self) -> HostSabbathGateInterface:
+    def _host_gate(self) -> HostSabbathGateInterface:
         if self._factory is not None:
             return self._factory()
         root = self._root if self._root is not None else Path.cwd()
@@ -45,10 +62,26 @@ class SabbathCommand(SabbathCommandInterface):
             environ=os.environ if self._environ is None else self._environ,
         )
 
-    def decline_if_resting(self, command: str) -> None:
-        """Exit 75 with the reason when 8.i holds; return when the command may run."""
-        held = self.gate().hold()
+    def gate(self, *, ignore: bool = False) -> HostSabbathGateInterface:
+        """The host's gate; with `ignore`, one that never holds -- the operator's explicit,
+        per-command `--ignore-sabbath`, never a stored setting."""
+        gate = self._host_gate()
+        return _IgnoringGate(gate) if ignore else gate
+
+    def decline_if_resting(self, command: str, *, ignore: bool = False) -> None:
+        """Exit 75 with the reason when 8.i holds; return when the command may run.
+
+        With `ignore` the command runs anyway, and says so on stderr -- naming the window
+        it is running through -- so a run that kept no Sabbath is never a silent one."""
+        held = self._host_gate().hold()
         if held is None:
+            return
+        if ignore:
+            typer.echo(
+                f"vibey {command}: --ignore-sabbath given; running through the Sabbath window"
+                f" that would rest until {held.resumes.isoformat()} ({held.basis}).",
+                err=True,
+            )
             return
         typer.echo(
             f"vibey {command}: resting for the Sabbath (sub-doctrine 8.i) until"

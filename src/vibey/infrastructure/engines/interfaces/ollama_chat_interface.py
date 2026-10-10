@@ -5,8 +5,44 @@ Mirrors `vibey/infrastructure/engines/ollama_chat.py` (ADR-0016). Interfaces dec
 they never consume.
 """
 
-from collections.abc import Mapping
+from collections.abc import AsyncGenerator, Mapping
 from typing import Protocol, runtime_checkable
+
+
+@runtime_checkable
+class OllamaStreamTransportInterface(Protocol):
+    """Sends one JSON body to one URL and yields each JSON line of the streamed reply."""
+
+    def stream_json(
+        self, url: str, payload: Mapping[str, object], *, timeout: int
+    ) -> AsyncGenerator[dict[str, object], None]:
+        """Yields objects as they arrive. `timeout` is how long one read may wait, not the
+        whole answer. Raises ValueError for a non-HTTP(S) URL or a line that is not a JSON
+        object."""
+        ...
+
+
+@runtime_checkable
+class WireLogInterface(Protocol):
+    """Records the lowest-level exchange with the model for an operator to follow live.
+
+    One `call` is one `ask`; `attempt` counts the requests it needed (the budget retry
+    and the empty-message retry are further attempts of the same call)."""
+
+    def request(self, call: str, attempt: int, url: str, payload: Mapping[str, object]) -> None: ...
+
+    def chunk(self, call: str, attempt: int, *, content: str, thinking: str) -> None:
+        """A streamed fragment of the answer (`content`) and/or of the reasoning
+        (`thinking`), as it arrived."""
+        ...
+
+    def response(
+        self, call: str, attempt: int, body: Mapping[str, object], elapsed_seconds: float
+    ) -> None: ...
+
+    def error(
+        self, call: str, attempt: int, error: BaseException, elapsed_seconds: float
+    ) -> None: ...
 
 
 @runtime_checkable
