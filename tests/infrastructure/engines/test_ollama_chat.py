@@ -495,7 +495,9 @@ async def test_the_widened_budget_never_outgrows_the_context_ceiling() -> None:
     transport = SequenceTransport(
         [_cut_short(prompt_tokens=None), {"message": {"content": '{"ok": true}'}}]
     )
-    client = OllamaChatClient(context_ceiling=8192, retry_think=None, transport=transport)
+    client = OllamaChatClient(
+        context_ceiling=8192, retry_context=8192, retry_think=None, transport=transport
+    )
 
     await client.ask("s", "x" * 18_000, "json")  # ~6000 estimated prompt tokens
 

@@ -200,6 +200,8 @@ def test_a_response_closes_the_stream_and_reports_speed_and_counts() -> None:
                 "prompt_eval_count": 1234,
                 "eval_count": 600,
                 "eval_duration": 30_000_000_000,
+                "load_duration": 120_157_747_041,
+                "prompt_eval_duration": 11_228_865_000,
                 "done_reason": "stop",
                 "message": {"content": "42"},
             },
@@ -207,7 +209,7 @@ def test_a_response_closes_the_stream_and_reports_speed_and_counts() -> None:
     )
     assert out.startswith("\n[")
     assert "<<< response c1 attempt 1 - 46.8s - prompt 1234 tokens - output 600 tokens" in out
-    assert "20.0 tokens/s - stopped: stop" in out
+    assert "20.0 tokens/s - stopped: stop - load 120.2s - prompt eval 11.2s" in out
     assert "answer:" not in out
 
 
