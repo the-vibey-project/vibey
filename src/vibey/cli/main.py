@@ -100,6 +100,7 @@ from vibey.infrastructure.engines.ollama_chat import (
     OLLAMA_URL_ENV,
     OllamaChatClient,
 )
+from vibey.infrastructure.engines.ollama_residency import OllamaResidency
 from vibey.infrastructure.engines.scripted_design import ScriptedDesignProvider
 from vibey.infrastructure.engines.scripted_visual import ScriptedVisualProvider
 from vibey.infrastructure.engines.wire_log import WIRE_LOG_ENV, default_wire_log_path
@@ -1663,6 +1664,11 @@ def doctor(
         reach_ok = await _passwordless_reach_section()
         # A hub listening where vibey.toml does not declare it may is a FAIL (ADR-0067).
         hub_ok = SERVE.exposure_line()
+        # A model Ollama holds at a context far above the one vibey asks for is reloaded by
+        # the first request, which is how a warm-up becomes a timeout. Said as a WARN, never
+        # a failure, and only for a host that runs a local engine at all.
+        if local.any_enabled:
+            typer.echo(await OllamaResidency().line(os.environ))
         # Sub-doctrine 8.i: the window, the zone and where the location came from (10.f).
         # A host no source could place is a FAIL -- the fallback times then rule.
         sabbath_lines, sabbath_ok = SABBATH.doctor_lines()

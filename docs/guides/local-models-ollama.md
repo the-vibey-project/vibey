@@ -158,6 +158,12 @@ vibey doctor --conformance --record --engine gptossloop
 vibey doctor --conformance --record --engine qwenloop   # when switched on
 ```
 
+**Do not leave a model warmed up at a large window.** Ollama reloads a model whose context
+differs from a request's. A warm-up at a very large window, left resident, makes the first
+real request pay for a reload with a key-value cache sized for that window, and on a laptop
+the request can time out. `vibey doctor` prints an `ollama` line that says so when the loaded
+model's context is above `VIBEY_OLLAMA_CONTEXT`, and names the fix: `ollama stop gpt-oss:20b`.
+
 **A local model is slow to its first turn.** Conformance starts a real run and waits 30
 seconds for its run directory. gpt-oss:20b on a laptop loads weights and answers a first turn
 well past that, so `run_dir_shape`, `snapshot_schema`, `done_marker` and

@@ -1378,6 +1378,44 @@ def test_doctor_conformance_refuses_a_bad_window_before_touching_an_engine() -> 
     conformance.assert_not_awaited()
 
 
+def _doctor_with_ollama_line(env: dict[str, str]) -> tuple[Result, AsyncMock]:
+    """Run `doctor` against a faked engine and a faked Ollama residency line."""
+    from unittest.mock import patch
+
+    from vibey.application.dto import PreflightResult
+
+    residency = AsyncMock(return_value="ollama   WARN: sentinel residency line")
+    with (
+        patch(
+            "vibey.infrastructure.engines.loop_process_adapter.LoopProcessAdapter.preflight",
+            new=AsyncMock(
+                return_value=PreflightResult(installed=True, version="0.5.5", auth_ok=True)
+            ),
+        ),
+        patch("vibey.infrastructure.engines.ollama_residency.OllamaResidency.line", new=residency),
+    ):
+        res = runner.invoke(app, ["doctor", "--engine", "claudeloop"], env=env)
+    return res, residency
+
+
+def test_doctor_says_what_ollama_is_holding_when_a_local_engine_is_on() -> None:
+    res, residency = _doctor_with_ollama_line({"VIBEY_FEATURE_GPTOSSLOOP": "1"})
+    assert "ollama   WARN: sentinel residency line" in res.output
+    residency.assert_awaited_once()
+
+
+def test_doctor_says_nothing_of_ollama_when_every_local_engine_is_off() -> None:
+    res, residency = _doctor_with_ollama_line(
+        {
+            "VIBEY_FEATURE_GPTOSSLOOP": "0",
+            "VIBEY_FEATURE_QWENLOOP": "0",
+            "VIBEY_FEATURE_CLAUDELOOP_LOCAL": "0",
+        }
+    )
+    assert "sentinel residency line" not in res.output
+    residency.assert_not_awaited()
+
+
 # ── worker command ────────────────────────────────────────────────────────────
 
 

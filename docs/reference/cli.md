@@ -1156,6 +1156,15 @@ declares, `FAIL` on an undeclared one (the exit is then 1), and `UNKNOWN` when n
 running or its runtime record names a process that is gone. A `[hub]` table that cannot be
 read is a `FAIL`.
 
+When a local engine is switched on, the `ollama` line asks the server (`/api/ps`, three
+seconds, host and port only in what it prints) what it is holding. `WARN` when the configured
+model (`VIBEY_OLLAMA_MODEL`, default `gpt-oss:20b`) is loaded at a context above
+`VIBEY_OLLAMA_CONTEXT` (default `8192`): Ollama reloads a model whose context differs from a
+request's, so the first request pays for the reload and can time out, and a warm-up at a larger
+window is how that happens. The line names the fix, `ollama stop MODEL`. `OK` when the model is
+loaded within the ceiling or not loaded at all, `SKIP` when no server answered. Never a
+failure: the exit code is not changed.
+
 After the Sabbath lines, `gate-notices` counts the open gates in projects nobody will be
 told about -- `[notifications]` off (the default), on with desktop alerts off and no
 webhook, or a table that does not parse -- and prints them as `WARN gate-notices N gates
