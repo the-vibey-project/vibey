@@ -12,10 +12,13 @@ if TYPE_CHECKING:
 class SabbathCommandInterface(Protocol):
     """Sub-doctrine 8.i at the command line (ADR-0070)."""
 
-    def gate(self) -> HostSabbathGateInterface: ...
+    def gate(self, *, ignore: bool = False) -> HostSabbathGateInterface:
+        """The host's gate; with `ignore`, one that never holds (`--ignore-sabbath`)."""
+        ...
 
-    def decline_if_resting(self, command: str) -> None:
-        """Exit 75 with the reason and the resume time when the Sabbath holds."""
+    def decline_if_resting(self, command: str, *, ignore: bool = False) -> None:
+        """Exit 75 with the reason and the resume time when the Sabbath holds; with
+        `ignore`, say on stderr that the window is being run through and return."""
         ...
 
     def status(self) -> list[str]: ...

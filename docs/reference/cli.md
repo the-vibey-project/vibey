@@ -212,8 +212,9 @@ whether it is enabled, the zone, where the location came from and how accurate i
 when the current or next rest ends. It only reads, and is never held. From sundown Friday
 to sundown Saturday `vibey new` and `vibey work` decline with exit code `75`, the worker
 claims no lease, and `vibey doctor` reports the location source (FAIL when no source could
-place the host). See [`[sabbath]`](configuration.md#sabbath) and the
-[guide](../guides/sabbath.md).
+place the host). `--ignore-sabbath` on `vibey new`, `vibey work` and `vibey worker` runs
+that one command through the window and says so on stderr; no file can supply it. See
+[`[sabbath]`](configuration.md#sabbath) and the [guide](../guides/sabbath.md).
 
 ## `vibey projects`
 

@@ -105,6 +105,22 @@ from vibey.infrastructure.logging import configure_logging
 from vibey.infrastructure.postgres import POSTGRES_MIN_MAJOR, PostgresLocalService, PostgresStatus
 
 app = typer.Typer(name="vibey", no_args_is_help=True)
+
+#: `--ignore-sabbath`, on the commands the Sabbath holds (`new`, `work`, `worker`). A
+#: per-command choice by the operator and nothing stored: it is not a `vibey.toml` key, so
+#: no file can switch the Sabbath off for a run nobody is watching.
+IgnoreSabbath = Annotated[
+    bool,
+    typer.Option(
+        "--ignore-sabbath",
+        help=(
+            "Run even while the Sabbath window (sub-doctrine 8.i) would rest this command. "
+            "For this one command only: it is said on stderr when it applies, and nothing is "
+            "stored. The environment alternative is VIBEY_SABBATH_ENABLED=0"
+        ),
+    ),
+]
+
 design_app = typer.Typer(name="design", invoke_without_command=True)
 app.add_typer(design_app, name="design")
 visual_app = typer.Typer(name="visual", invoke_without_command=True)
@@ -269,9 +285,10 @@ def new_project(
             "Overrides [design.interview] default_scope; unset keeps it (default narrowest)",
         ),
     ] = None,
+    ignore_sabbath: IgnoreSabbath = False,
 ) -> None:
     """Create a project and enqueue its first DESIGN interview."""
-    SABBATH.decline_if_resting("new")
+    SABBATH.decline_if_resting("new", ignore=ignore_sabbath)
 
     async def create() -> tuple[str, str]:
         if skills_context_mode not in {"off", "shadow", "inject"}:
@@ -712,9 +729,10 @@ def work_once(
         str | None,
         typer.Option("--ollama-model", help=_OLLAMA_MODEL_HELP),
     ] = None,
+    ignore_sabbath: IgnoreSabbath = False,
 ) -> None:
     """Process one ready DESIGN job; live ClaudeLoop use is explicit and capped."""
-    SABBATH.decline_if_resting("work")
+    SABBATH.decline_if_resting("work", ignore=ignore_sabbath)
     with guard():
         processed = asyncio.run(
             _work_once(project_id, provider, max_turns, max_dollars, ollama_model)
@@ -1885,6 +1903,7 @@ def worker(
             ),
         ),
     ] = False,
+    ignore_sabbath: IgnoreSabbath = False,
 ) -> None:
     """Long-running worker: LISTEN vibey_job_ready, dispatch across all phases."""
     from datetime import timedelta
@@ -1991,7 +2010,9 @@ def worker(
             provider = _resolve_provider(provider_opt)
             # 8.i: one gate for every loop. The worker keeps running through the window,
             # claiming nothing, and claims again on the first poll after it.
-            sabbath = SABBATH.gate()
+            if ignore_sabbath:
+                SABBATH.decline_if_resting("worker", ignore=True)
+            sabbath = SABBATH.gate(ignore=ignore_sabbath)
 
             async def loops_for(project: ProjectRecord, slots: int | None) -> list[WorkerLoop]:
                 """One project's loops, built exactly as a single-project worker builds

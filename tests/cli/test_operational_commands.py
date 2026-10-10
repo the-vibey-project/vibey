@@ -1414,6 +1414,47 @@ def test_worker_once_no_job(tmp_path: Path) -> None:
 
 
 @pytest.mark.usefixtures("_fast_engine_preflight")
+def test_worker_ignore_sabbath_says_so_and_runs_through_the_window(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    from vibey.cli.sabbath import SABBATH
+    from vibey.domain.sabbath import RestWindow
+
+    window = RestWindow(
+        datetime(2026, 9, 25, 23, 23, tzinfo=UTC),
+        datetime(2026, 9, 26, 23, 22, tzinfo=UTC),
+        True,
+        "computed sundown",
+    )
+
+    class _RestingGate:
+        def hold(self) -> RestWindow:
+            return window
+
+        def describe(self) -> list[str]:
+            return ["sabbath: enabled"]
+
+        def location_resolved(self) -> bool:
+            return True
+
+    monkeypatch.setattr(SABBATH, "_factory", lambda: _RestingGate())
+
+    async def seed_empty() -> None:
+        async with build_app() as resources:
+            await resources.projects.create("ignore-sabbath", tmp_path, max_cycles=1, config={})
+
+    asyncio.run(seed_empty())
+    from unittest.mock import AsyncMock, patch
+
+    with patch("vibey.infrastructure.db.notifier.PostgresJobReadyNotifier") as mock_notifier_cls:
+        mock_notifier_cls.return_value = AsyncMock()
+        res = runner.invoke(app, ["worker", "--once", "--ignore-sabbath"])
+    assert res.exit_code == 0, res.output
+    assert "--ignore-sabbath given" in res.output
+    assert window.resumes.isoformat() in res.output
+
+
+@pytest.mark.usefixtures("_fast_engine_preflight")
 def test_worker_once_with_job(tmp_path: Path) -> None:
     async def seed() -> UUID:
         async with build_app() as resources:
