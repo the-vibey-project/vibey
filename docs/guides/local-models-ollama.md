@@ -188,6 +188,24 @@ default. Set `structured_verdict = true` only for a model you intend to hold to 
 conformance then requires a `VerdictRendered` event from the configured model, and a
 claim it cannot prove fails conformance and makes the engine ineligible.
 
+### Running unattended { #running-unattended }
+
+A local run parks on gates that are not decisions: an interview question whose default is the
+answer, an attempt budget you would grant again, a delivery that died with its worker. To let
+one worker keep going through those, tell it so, for that run:
+
+```bash
+caffeinate -i vibey -vvv worker --project PROJECT_ID --auto-answer
+```
+
+`--auto-answer` answers the interview with each question's own default, grants ten more
+attempts or six more repair rounds when a job runs out, and delivers a dropped job once more.
+It never answers a spending gate, an approval or a review, and says which gates it left. It
+stops after `--auto-answer-limit` answers (30) and says so. Each answer is on the ledger as
+`GateAnswered` by `auto-answer`. Defaults take the `narrowest` scope, so a question that
+proposes adding something the intake did not name is answered No: read the spec before
+`vibey design accept`.
+
 ### Watching the model think { #watching-the-model-think }
 
 A DESIGN or DECOMPOSE call to a local model can run for many minutes, and by default it

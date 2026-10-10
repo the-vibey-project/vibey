@@ -7,7 +7,7 @@ import sys
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from unittest.mock import AsyncMock
-from uuid import UUID
+from uuid import UUID, uuid4
 
 import asyncpg
 import pytest
@@ -1490,6 +1490,69 @@ def test_worker_ignore_sabbath_says_so_and_runs_through_the_window(
     assert res.exit_code == 0, res.output
     assert "--ignore-sabbath given" in res.output
     assert window.resumes.isoformat() in res.output
+
+
+def test_worker_auto_answer_refuses_to_serve_every_project() -> None:
+    res = runner.invoke(app, ["worker", "--auto-answer", "--all-projects"])
+    assert res.exit_code == 2
+    assert "use --project, not --all-projects" in res.output
+
+
+def _run_worker_with_auto_answer(tmp_path: Path, sweep: AsyncMock, *args: str) -> Result:
+    from unittest.mock import patch
+
+    async def seed() -> None:
+        async with build_app() as resources:
+            await resources.projects.create("auto-answer", tmp_path, max_cycles=1, config={})
+
+    asyncio.run(seed())
+    with (
+        patch("vibey.infrastructure.db.notifier.PostgresJobReadyNotifier") as mock_notifier_cls,
+        patch("vibey.application.gate_auto_answers.GateAutoAnswerSweep.run", new=sweep),
+    ):
+        mock_notifier = AsyncMock()
+        mock_notifier.wait_for_job_ready = AsyncMock(side_effect=KeyboardInterrupt)
+        mock_notifier_cls.return_value = mock_notifier
+        return runner.invoke(app, ["worker", "--auto-answer", *args])
+
+
+@pytest.mark.usefixtures("_fast_engine_preflight")
+def test_worker_auto_answer_says_what_it_answered_and_when_its_limit_is_used(
+    tmp_path: Path,
+) -> None:
+    from vibey.application.dto import AutoAnsweredGate, GateAutoAnswerReport
+
+    gate_id = uuid4()
+    report = GateAutoAnswerReport(
+        project_id=None,
+        answered=(
+            AutoAnsweredGate(
+                project_id=uuid4(),
+                gate_id=gate_id,
+                gate_kind="escalation_exhausted",
+                answer={"max_attempts": 10},
+                waited_seconds=1.0,
+            ),
+        ),
+        limit_reached=True,
+    )
+    sweep = AsyncMock(return_value=report)
+
+    res = _run_worker_with_auto_answer(tmp_path, sweep, "--auto-answer-limit", "3")
+
+    assert "auto-answer: on, up to 3 answers" in res.output
+    assert f"auto-answer: answered escalation_exhausted gate {gate_id}" in res.output
+    assert "the limit of 3 answers is used up" in res.output
+    sweep.assert_awaited()
+
+
+@pytest.mark.usefixtures("_fast_engine_preflight")
+def test_worker_auto_answer_that_fails_is_reported_and_the_worker_keeps_going(
+    tmp_path: Path,
+) -> None:
+    sweep = AsyncMock(side_effect=RuntimeError("the gates went away"))
+    res = _run_worker_with_auto_answer(tmp_path, sweep)
+    assert "gate auto-answers failed: the gates went away" in res.output
 
 
 @pytest.mark.usefixtures("_fast_engine_preflight")

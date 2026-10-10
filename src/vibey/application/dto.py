@@ -616,6 +616,38 @@ class GateTimeoutReport:
 
 
 @dataclass(frozen=True, slots=True)
+class AutoAnsweredGate:
+    """One gate a `--auto-answer` worker answered, and with what."""
+
+    project_id: UUID
+    gate_id: UUID
+    gate_kind: str
+    answer: Mapping[str, object]
+    waited_seconds: float
+
+
+@dataclass(frozen=True, slots=True)
+class GateAutoAnswerReport:
+    """What one auto-answer sweep found and did.
+
+    ``answered`` holds every gate answered this sweep; ``left`` names each open gate whose kind
+    waits for a person (a spending gate among them, always). ``failed`` names every answer that
+    was attempted and failed -- the gate stays open and the next sweep tries again -- and
+    ``refused`` a read of the open gates that failed, after which nothing was answered (10.g).
+    ``limit_reached`` is true on the one sweep whose answer used the worker's last: after it,
+    every gate waits for a person.
+    """
+
+    project_id: UUID | None
+    waiting: int = 0
+    answered: tuple[AutoAnsweredGate, ...] = ()
+    left: tuple[str, ...] = ()
+    refused: tuple[str, ...] = ()
+    failed: tuple[str, ...] = ()
+    limit_reached: bool = False
+
+
+@dataclass(frozen=True, slots=True)
 class GateReminderReport:
     """What one reminder sweep found and did.
 

@@ -27,6 +27,8 @@ from vibey import __version__
 from vibey.application.design import DesignEvent
 from vibey.application.design_acceptance import DesignAcceptanceService
 from vibey.application.dto import GateAnswerOutcome, ProjectRecord
+from vibey.application.gate_auto_answers import GateAutoAnswerSweep
+from vibey.application.interfaces.gate_auto_answers import GateAutoAnswerSweepInterface
 from vibey.application.project_kickoff import enqueue_design_interview
 from vibey.application.visual_acceptance import VisualAcceptanceService
 from vibey.bootstrap import (
@@ -41,6 +43,7 @@ from vibey.cli.abandon import abandon as abandon_command
 from vibey.cli.budget import budget_app
 from vibey.cli.driver import driver_app
 from vibey.cli.errors import EXIT_USAGE, guard
+from vibey.cli.gate_auto_answer import auto_answer_lines
 from vibey.cli.gate_notices import GATE_NOTICE_DOCTOR, GATE_REMINDERS
 from vibey.cli.gates import GATES
 from vibey.cli.host_health import HOST_HEALTH
@@ -68,6 +71,7 @@ from vibey.domain.errors import (
     VibeyError,
     WrongPhase,
 )
+from vibey.domain.gate_auto_answer import DEFAULT_AUTO_ANSWER_LIMIT, GateAutoAnswerPolicy
 from vibey.domain.job import JobState
 from vibey.domain.ledger import EventKind, LedgerEventKind, Provenance
 from vibey.domain.ledger_query import EVENT_KINDS, InvalidLedgerQuery
@@ -104,7 +108,7 @@ from vibey.infrastructure.engines.ollama_residency import OllamaResidency
 from vibey.infrastructure.engines.scripted_design import ScriptedDesignProvider
 from vibey.infrastructure.engines.scripted_visual import ScriptedVisualProvider
 from vibey.infrastructure.engines.wire_log import WIRE_LOG_ENV, default_wire_log_path
-from vibey.infrastructure.logging import configure_logging
+from vibey.infrastructure.logging import StructlogAppLogger, configure_logging
 from vibey.infrastructure.postgres import POSTGRES_MIN_MAJOR, PostgresLocalService, PostgresStatus
 
 app = typer.Typer(name="vibey", no_args_is_help=True)
@@ -1921,6 +1925,29 @@ def worker(
         ),
     ] = False,
     ignore_sabbath: IgnoreSabbath = False,
+    auto_answer: Annotated[
+        bool,
+        typer.Option(
+            "--auto-answer",
+            help=(
+                "Answer this project's waiting gates for you, so the run keeps going: the "
+                "DESIGN interview's questions with their own defaults, and a grant of more "
+                "attempts or repair rounds when a job runs out, or a delivery its worker "
+                "dropped. Never a spending gate, an approval or a review. For this one "
+                "worker only, one project only (not with --all-projects), up to "
+                "--auto-answer-limit answers; each is recorded on the ledger as "
+                "'auto-answer'."
+            ),
+        ),
+    ] = False,
+    auto_answer_limit: Annotated[
+        int,
+        typer.Option(
+            "--auto-answer-limit",
+            min=1,
+            help="The most answers --auto-answer gives before every gate waits for a person.",
+        ),
+    ] = DEFAULT_AUTO_ANSWER_LIMIT,
 ) -> None:
     """Long-running worker: LISTEN vibey_job_ready, dispatch across all phases."""
     from datetime import timedelta
@@ -1950,6 +1977,9 @@ def worker(
         raise typer.Exit(2)
     if all_projects and (project_opt is not None or wait_for_project is not None):
         typer.echo("--all-projects serves every project: drop --project and --wait-for-project")
+        raise typer.Exit(EXIT_USAGE)
+    if auto_answer and all_projects:
+        typer.echo("--auto-answer answers one project's gates: use --project, not --all-projects")
         raise typer.Exit(EXIT_USAGE)
     azure_client = None
     if azure == "az":
@@ -2030,6 +2060,20 @@ def worker(
             if ignore_sabbath:
                 SABBATH.decline_if_resting("worker", ignore=True)
             sabbath = SABBATH.gate(ignore=ignore_sabbath)
+            auto_answers: GateAutoAnswerSweepInterface | None = None
+            if auto_answer:
+                auto_answers = GateAutoAnswerSweep(
+                    gates=resources.gates,
+                    answers=resources.gate_answers,
+                    policy=GateAutoAnswerPolicy(limit=auto_answer_limit),
+                    clock=resources.clock,
+                    logger=StructlogAppLogger(owner="auto-answer"),
+                )
+                typer.echo(
+                    f"auto-answer: on, up to {auto_answer_limit} answers; spending gates,"
+                    " approvals and reviews still wait for you",
+                    err=True,
+                )
 
             async def loops_for(project: ProjectRecord, slots: int | None) -> list[WorkerLoop]:
                 """One project's loops, built exactly as a single-project worker builds
@@ -2311,6 +2355,16 @@ def worker(
                         await resources.gate_timeouts.run_if_due(remind_scope)
                     except Exception as exc:
                         typer.echo(f"drive[{idx}] gate timeouts failed: {exc}", err=True)
+                    # Only when the operator said `--auto-answer`: the retry and interview
+                    # gates this project's worker may answer, up to its limit.
+                    if auto_answers is not None:
+                        try:
+                            report = await auto_answers.run(remind_scope)
+                        except Exception as exc:
+                            typer.echo(f"drive[{idx}] gate auto-answers failed: {exc}", err=True)
+                        else:
+                            for line in auto_answer_lines(report, limit=auto_answer_limit):
+                                typer.echo(line, err=True)
                     typer.echo(
                         f"drive[{idx}] iter={iteration} reap done, waiting for notify", err=True
                     )
