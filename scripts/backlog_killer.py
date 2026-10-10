@@ -102,6 +102,10 @@ class BacklogKiller(BacklogKillerInterface):
         expectations: dict[str, Any],
     ) -> None:
         self._source = source
+        # A real pause (default on): `chain = false` only stops the chaining, and the watchdog
+        # cron would still start a link that picks an issue and dispatches the agent. Off, the
+        # pick finds nothing and the chain ends, so nothing is worked until it is switched on.
+        self._enabled = bool(settings.get("enabled", True))
         self._window = max(1, int(settings.get("window", 7)))
         self._interval = max(1, int(settings.get("interval_minutes", 90)))
         # The chain is off unless a committed file turns it on, and bounded when it is (12.d).
@@ -174,15 +178,22 @@ class BacklogKiller(BacklogKillerInterface):
         return (self.slot(now) + 1) * self._interval * 60 - int(now.timestamp())
 
     def may_chain(self, link: int) -> bool:
-        return self._chain and 0 <= link < self._chain_max_links
+        return self._enabled and self._chain and 0 <= link < self._chain_max_links
 
     def pick(self, now: datetime) -> dict[str, Any] | None:
+        if not self._enabled:
+            return None
         window = self.candidates()[: self._window]
         if not window:
             return None
         return window[self.slot(now) % len(window)]
 
     def brief(self, issue: dict[str, Any] | None) -> str:
+        if issue is None and not self._enabled:
+            return (
+                "The backlog killer is switched off (`[backlog_killer] enabled = false` in "
+                "scripts/daily_lanes.toml): no issue is worked until it is switched back on."
+            )
         if issue is None:
             return "No open issue is workable now: every one is held, in flight, or skipped."
         body = str(issue.get("body") or "").strip()

@@ -122,6 +122,17 @@ allowed_paths = [
 ]
 
 [backlog_killer]
+# The master switch. false pauses the whole lane: the pick finds no issue (so nothing is
+# dispatched to the agent) and the chain ends at its next link, so the 2-hourly watchdog cron
+# works nothing either. `chain = false` alone is NOT a pause -- it only stops the chaining and
+# the watchdog would still run one link every two hours.
+#
+# Paused 2026-10-10 (the operator's decision). Every run since 2026-10-09 was refused by the
+# guards, correctly, and each cost ~17 minutes of the operator's machine: the pick ranks by
+# priority label, which hands the agent the hardest items (a paper revision, a client-suite
+# plan, a research programme) and none of the few that are one tested slice. Switch it back on
+# once the pick is limited to issues an agent can finish.
+enabled = false
 # The candidates are ranked, and each run picks one from the first `window` of them, in
 # rotation by run slot: the slot is the UTC time divided into `interval_minutes` intervals,
 # so there is no attempt ledger to keep, every candidate in the window gets a slot, and two

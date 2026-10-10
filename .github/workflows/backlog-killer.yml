@@ -13,7 +13,9 @@ name: Backlog killer
 # GitHub's cron is best-effort (5 of 16 asked-for runs on 2026-10-08), so the clock is a chain:
 # the `chain` job waits for the next `[backlog_killer] interval_minutes` slot and dispatches
 # this workflow again. Bounds, all declared in scripts/daily_lanes.toml and read from develop
-# on every link: `chain = false` ends it at the next link; `chain_max_links` ends an unwatched
+# on every link: `enabled = false` pauses the whole lane (the pick finds nothing, so nothing
+# is dispatched, and the chain ends); `chain = false` only ends the chaining, and the watchdog cron
+# below would still run a link every two hours; `chain_max_links` ends an unwatched
 # one; this workflow's concurrency group runs one link at a time (a waiting run is replaced by
 # a newer one, never queued behind it), so at most one dispatch per slot can ever be made; a
 # link dispatches nothing if the next slot already has a run. The cron below is only the watchdog that starts a chain again within

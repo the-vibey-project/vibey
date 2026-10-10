@@ -41,12 +41,13 @@ class BacklogKillerInterface(Protocol):
         ...
 
     def may_chain(self, link: int) -> bool:
-        """Whether the run at chain position `link` may start the next one: the declared switch
-        is on and the position is below the declared maximum."""
+        """Whether the run at chain position `link` may start the next one: the lane is
+        `enabled`, the chain switch is on and the position is below the declared maximum."""
         ...
 
     def pick(self, now: datetime) -> dict[str, Any] | None:
-        """This slot's issue, rotating through the first `window` candidates; None when none."""
+        """This slot's issue, rotating through the first `window` candidates; None when none,
+        and always None while the lane is switched off (`enabled = false`)."""
         ...
 
     def brief(self, issue: dict[str, Any] | None) -> str:
