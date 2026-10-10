@@ -1460,14 +1460,25 @@ def doctor(
     ] = None,
 ) -> None:
     """Check local PostgreSQL, engine health, auth status, and conformance."""
-    from vibey.application.conformance import run_conformance
+    from vibey.application.conformance import DEFAULT_RUN_DIR_POLL_SECONDS, run_conformance
     from vibey.infrastructure.engines.classify import CREDITS_FIXTURES
+    from vibey.infrastructure.engines.conformance_window import conformance_poll_seconds
     from vibey.infrastructure.engines.descriptors import DEFAULT_DESCRIPTORS
     from vibey.infrastructure.engines.local_engines import LocalEndpointEnvironment
 
     if cluster and install_postgres:
         typer.echo("--install-postgres applies only to the local doctor")
         raise typer.Exit(EXIT_USAGE)
+
+    run_dir_poll_seconds = DEFAULT_RUN_DIR_POLL_SECONDS
+    if conformance:
+        try:
+            declared_poll_seconds = conformance_poll_seconds(os.environ)
+        except ValueError as exc:
+            typer.echo(str(exc))
+            raise typer.Exit(EXIT_USAGE) from exc
+        if declared_poll_seconds is not None:
+            run_dir_poll_seconds = declared_poll_seconds
 
     if cluster:
         postgres_status = None
@@ -1586,6 +1597,7 @@ def doctor(
                     adapter,
                     capacity_fixtures=capacity_fixtures,
                     trivial_worktree=unique_worktree,
+                    run_dir_poll_seconds=run_dir_poll_seconds,
                 )
                 for check in report.checks:
                     mark = "PASS" if check.ok else "FAIL"

@@ -6,10 +6,12 @@ import subprocess
 import sys
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
+from unittest.mock import AsyncMock
 from uuid import UUID
 
 import asyncpg
 import pytest
+from click.testing import Result
 from typer.testing import CliRunner
 
 from vibey.application.dto import EngineHealthRecord, EnqueueRequest
@@ -1320,6 +1322,60 @@ def test_doctor_with_conformance_failure() -> None:
     assert res.exit_code == 1
     assert "FAIL" in res.output
     assert "timed out" in res.output
+
+
+def _doctor_conformance_with_poll_env(poll_env: str) -> tuple[Result, AsyncMock]:
+    """Run `doctor --conformance` against a faked engine with `VIBEY_CONFORMANCE_POLL_SECONDS`
+    set as given; returns the CLI result and the `run_conformance` mock it called."""
+    from unittest.mock import patch
+
+    from vibey.application.dto import ConformanceCheckResult, ConformanceReport, PreflightResult
+    from vibey.domain.engine import EngineId
+
+    conformance = AsyncMock(
+        return_value=ConformanceReport(
+            engine_id=EngineId.CLAUDELOOP,
+            checks=(ConformanceCheckResult(name="preflight", ok=True),),
+        )
+    )
+    with (
+        patch(
+            "vibey.infrastructure.engines.loop_process_adapter.LoopProcessAdapter.preflight",
+            new=AsyncMock(
+                return_value=PreflightResult(installed=True, version="0.5.5", auth_ok=True)
+            ),
+        ),
+        patch("vibey.application.conformance.run_conformance", new=conformance),
+    ):
+        res = runner.invoke(
+            app,
+            ["doctor", "--conformance", "--engine", "claudeloop"],
+            env={"VIBEY_CONFORMANCE_POLL_SECONDS": poll_env},
+        )
+    return res, conformance
+
+
+def test_doctor_conformance_waits_the_default_window_when_none_is_declared() -> None:
+    from vibey.application.conformance import DEFAULT_RUN_DIR_POLL_SECONDS
+
+    res, conformance = _doctor_conformance_with_poll_env("")
+    assert res.exit_code == 0, res.output
+    assert conformance.await_args is not None
+    assert conformance.await_args.kwargs["run_dir_poll_seconds"] == DEFAULT_RUN_DIR_POLL_SECONDS
+
+
+def test_doctor_conformance_waits_the_window_the_operator_declared() -> None:
+    res, conformance = _doctor_conformance_with_poll_env("420")
+    assert res.exit_code == 0, res.output
+    assert conformance.await_args is not None
+    assert conformance.await_args.kwargs["run_dir_poll_seconds"] == 420.0
+
+
+def test_doctor_conformance_refuses_a_bad_window_before_touching_an_engine() -> None:
+    res, conformance = _doctor_conformance_with_poll_env("soon")
+    assert res.exit_code == 2
+    assert "VIBEY_CONFORMANCE_POLL_SECONDS" in res.output
+    conformance.assert_not_awaited()
 
 
 # ── worker command ────────────────────────────────────────────────────────────

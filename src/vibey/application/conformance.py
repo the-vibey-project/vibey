@@ -10,6 +10,7 @@ import json
 import tempfile
 from collections.abc import Sequence
 from pathlib import Path
+from typing import Final
 from uuid import uuid4
 
 from vibey.application.dto import (
@@ -30,12 +31,18 @@ def _version_at_least(actual: str, minimum: str) -> bool:
     return parts(actual) >= parts(minimum)
 
 
+#: How long conformance waits for a real engine's run directory to appear. A hosted engine
+#: answers inside this; a local model on ordinary hardware may not, and
+#: `VIBEY_CONFORMANCE_POLL_SECONDS` raises it at the CLI.
+DEFAULT_RUN_DIR_POLL_SECONDS: Final[float] = 30.0
+
+
 async def run_conformance(
     adapter: EngineAdapter,
     *,
     capacity_fixtures: Sequence[tuple[str, dict[str, object], type[CapacityState]]] = (),
     trivial_worktree: str | None = None,
-    run_dir_poll_seconds: float = 30.0,
+    run_dir_poll_seconds: float = DEFAULT_RUN_DIR_POLL_SECONDS,
     verdict_poll_seconds: float = 10.0,
 ) -> ConformanceReport:
     descriptor: EngineDescriptor = adapter.descriptor

@@ -158,6 +158,20 @@ vibey doctor --conformance --record --engine gptossloop
 vibey doctor --conformance --record --engine qwenloop   # when switched on
 ```
 
+**A local model is slow to its first turn.** Conformance starts a real run and waits 30
+seconds for its run directory. gpt-oss:20b on a laptop loads weights and answers a first turn
+well past that, so `run_dir_shape`, `snapshot_schema`, `done_marker` and
+`structured_verdict` fail together for a reason that is the host's speed, not the engine's.
+Tell conformance how long this host needs:
+
+```bash
+VIBEY_CONFORMANCE_POLL_SECONDS=420 vibey doctor --conformance --record --engine gptossloop
+```
+
+Measure it rather than guessing: a window long enough to pass once is the number to keep,
+and one that is far longer than the check ever uses costs nothing, because the wait ends
+the moment the files appear.
+
 `vibey doctor` runs `claudeloop doctor --profile <name>` for claudeloop-local, so the
 health check probes the backend the run will use. The worker also re-runs each
 enabled local engine's `doctor` before every BUILD selection; a local engine whose
