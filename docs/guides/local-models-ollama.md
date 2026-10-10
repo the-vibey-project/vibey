@@ -182,6 +182,29 @@ default. Set `structured_verdict = true` only for a model you intend to hold to 
 conformance then requires a `VerdictRendered` event from the configured model, and a
 claim it cannot prove fails conformance and makes the engine ineligible.
 
+### Watching the model think { #watching-the-model-think }
+
+A DESIGN or DECOMPOSE call to a local model can run for many minutes, and by default it
+shows nothing until it returns. Ask for the conversation and follow it from a second
+terminal:
+
+```bash
+vibey -vvv worker --project PROJECT_ID
+vibey llm tail
+```
+
+`-vvv` makes the client stream Ollama's reply and write every request and every piece of
+the reply to the wire log, `~/.local/state/vibey/llm-wire.jsonl`. `vibey llm tail` shows the
+request (model, context, output budget, both messages), then the reasoning and the answer
+growing as they are generated, then the model's own counts and tokens per second. A call
+that stalls shows as a request with nothing after it, which is how a context window set too
+small or a model still loading looks from the outside.
+
+Text appears a word at a time, not a token at a time, because the log releases streamed text
+only at whitespace: a credential the model repeats cannot then be split across two pieces and
+escape redaction. The log holds your full prompts, so it is created readable by you alone;
+remove it when you no longer need it. To log without `-vvv`, set `VIBEY_LLM_WIRE_LOG=path`.
+
 ### Measuring a capacity fit
 
 The sovereign DESIGN and DECOMPOSE providers reach Ollama through one client with two

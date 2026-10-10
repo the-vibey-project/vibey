@@ -529,6 +529,19 @@ id prints `unknown project <id>` and exits 1.
 Replay starts paused. Keys: Space play/pause, Right or `n` next step, Left or
 `p` previous step, `q` quit.
 
+## `vibey llm`
+
+The conversation with the local model, as it happens. It only reads.
+
+| Subcommand | Options | What it does |
+|---|---|---|
+| `llm tail` | `--file PATH`, `--all`, `--no-follow`, `--raw`, `--max-chars N` | Follows the [wire log](../guides/local-models-ollama.md#watching-the-model-think): each request the sovereign DESIGN and DECOMPOSE providers send (model, limits, the system and user messages), the reasoning and the answer as they stream back, and the model's own counts and speed (`prompt N tokens`, `output N tokens`, `N tokens/s`). Starts at the latest call and keeps following until interrupted; `--all` starts at the beginning of the file, `--no-follow` prints and exits (exit 1 when there is no log), `--raw` prints the JSON lines as written, `--max-chars` cuts each prompt message. |
+
+The log is written when a command runs with `-vvv`, or with `VIBEY_LLM_WIRE_LOG=path`
+(see [`VIBEY_LLM_WIRE_LOG`](configuration.md#environment-variables)). Without either, nothing is
+written and the model is asked exactly as before. The default file is
+`~/.local/state/vibey/llm-wire.jsonl`, readable by its owner alone.
+
 ## `vibey recover`
 
 Recover stuck leased jobs (e.g. after a worker crash): every job in state

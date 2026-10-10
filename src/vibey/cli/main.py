@@ -47,6 +47,7 @@ from vibey.cli.host_health import HOST_HEALTH
 from vibey.cli.hub_pair import hub_app
 from vibey.cli.ledger_publication import ledger_export, ledger_site
 from vibey.cli.ledger_search import PRESENTER, ledger_search
+from vibey.cli.llm import llm_app
 from vibey.cli.loops import LOOPS
 from vibey.cli.projects import PROJECTS
 from vibey.cli.queue import queue_app
@@ -101,6 +102,7 @@ from vibey.infrastructure.engines.ollama_chat import (
 )
 from vibey.infrastructure.engines.scripted_design import ScriptedDesignProvider
 from vibey.infrastructure.engines.scripted_visual import ScriptedVisualProvider
+from vibey.infrastructure.engines.wire_log import WIRE_LOG_ENV, default_wire_log_path
 from vibey.infrastructure.logging import configure_logging
 from vibey.infrastructure.postgres import POSTGRES_MIN_MAJOR, PostgresLocalService, PostgresStatus
 
@@ -123,6 +125,7 @@ IgnoreSabbath = Annotated[
 
 design_app = typer.Typer(name="design", invoke_without_command=True)
 app.add_typer(design_app, name="design")
+app.add_typer(llm_app, name="llm")
 visual_app = typer.Typer(name="visual", invoke_without_command=True)
 app.add_typer(visual_app, name="visual")
 deploy_app = typer.Typer(name="deploy", invoke_without_command=True)
@@ -155,7 +158,9 @@ def main(
         "--verbose",
         "-v",
         count=True,
-        help="More detail: -v debug, -vv also third-party libraries, -vvv full payloads.",
+        help="More detail: -v debug, -vv also third-party libraries, -vvv full payloads "
+        "(every request to the local model and its reply, streamed, in a wire log: "
+        "follow it with `vibey llm tail`).",
     ),
     quiet: bool = typer.Option(False, "--quiet", "-q", help="Warnings and errors only."),
     log_level: str | None = typer.Option(
@@ -186,6 +191,12 @@ def main(
         typer.echo(f"Error: {exc}", err=True)
         raise typer.Exit(code=2) from exc
     configure_logging(plan, log_file=log_file)
+    if plan.include_payloads and WIRE_LOG_ENV not in os.environ:
+        os.environ[WIRE_LOG_ENV] = str(default_wire_log_path())
+        typer.echo(
+            f"vibey: LLM wire log {os.environ[WIRE_LOG_ENV]} (follow it: vibey llm tail)",
+            err=True,
+        )
 
 
 async def _enqueue_design(project_id: UUID, *, priority: bool = False) -> str:
