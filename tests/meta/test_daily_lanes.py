@@ -200,3 +200,13 @@ def test_the_backlog_killer_has_a_real_pause_and_it_says_why_it_is_used() -> Non
         # A paused lane records why and what ends the pause, or nobody remembers to end it.
         block = text[text.index("[backlog_killer]") : text.index("interval_minutes")]
         assert "Paused" in block and "Switch it back on" in block
+
+
+def test_a_running_backlog_killer_picks_only_what_the_operator_labelled() -> None:
+    """The unrestricted pick handed the agent epics and research programmes (2026-10-10), so a
+    lane that is on must be opt-in and size-bounded; turning that off is a visible edit here."""
+    text = (WORKFLOWS.parents[1] / "scripts" / "daily_lanes.toml").read_text()
+    settings = tomllib.loads(text)["backlog_killer"]
+    if settings.get("enabled", True):
+        assert settings.get("agent_labels"), "an enabled lane needs an opt-in label"
+        assert 0 < settings.get("max_issue_chars", 0) <= 6000

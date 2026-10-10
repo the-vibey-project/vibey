@@ -378,3 +378,14 @@ research programme) and none of the few that are one tested slice. It is switche
 the pick is limited to issues an agent can finish. `tests/meta/test_daily_lanes.py` requires a
 paused lane to say why and what ends the pause.
 
+
+## Amendment, 2026-10-10: the pick is opt-in, and the lane is switched back on
+
+The pause ended when the pick was limited to what an agent can finish. Two declared keys do it
+(`[backlog_killer]` in `scripts/daily_lanes.toml`): `agent_labels` (`good first issue`), so only
+an issue the operator has labelled is ever picked, and `max_issue_chars` (4000), so a labelled
+issue whose body reads like more than one tested slice is still skipped. Neither replaces the
+trust, hold, in-flight or skip-label filters; they narrow what those leave. An empty
+`agent_labels` keeps the old behaviour (every trusted issue), so the opt-in is a choice the
+configuration makes, not one the code assumes. The label is applied by the operator (or by an
+agent the operator has told to), never by the lane, so the lane cannot widen its own scope (12.d).

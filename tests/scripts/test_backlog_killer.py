@@ -183,10 +183,13 @@ def test_missing_expectations_are_no_holds(tmp_path: Path) -> None:
 def test_the_cli(monkeypatch, capsys) -> None:
     source = FakeSource([issue(5, "vibey-gh:priority-high", title="five")])
     monkeypatch.setattr(bk, "GhBacklogSource", lambda: source)
-    # The real file, but switched ON: whether the live lane is paused is not this test's business.
+    # The real file, but switched ON and with no opt-in label: whether the live lane is paused
+    # or labels its issues is not this test's business.
     real = bk.load
     monkeypatch.setattr(
-        bk, "load", lambda root: ({**real(root)[0], "enabled": True}, real(root)[1])
+        bk,
+        "load",
+        lambda root: ({**real(root)[0], "enabled": True, "agent_labels": []}, real(root)[1]),
     )
     assert bk.main([]) == 2
     assert bk.main(["pick", "--number"]) == 0
@@ -265,3 +268,27 @@ def test_the_cli_of_a_switched_off_lane_prints_no_number(monkeypatch, capsys) ->
     assert "switched off" in capsys.readouterr().out
     assert bk.main(["chain", "0"]) == 0
     assert capsys.readouterr().out.strip() == "proceed=false"
+
+
+def test_an_agent_label_is_an_opt_in_and_an_unlabelled_issue_is_never_picked() -> None:
+    issues = [issue(1), issue(2, "good first issue"), issue(3, "p:high")]
+    assert [i["number"] for i in killer(issues).candidates()] == [3, 1, 2]  # not declared: all
+    only = killer(issues, agent_labels=["good first issue"])
+    assert [i["number"] for i in only.candidates()] == [2]
+    assert only.pick(AT)["number"] == 2  # type: ignore[index]
+    assert killer([issue(1)], agent_labels=["good first issue"]).pick(AT) is None
+
+
+def test_a_labelled_issue_with_a_long_body_is_still_skipped() -> None:
+    issues = [
+        issue(1, "go", body="x" * 50),
+        issue(2, "go", body="x" * 51),
+        issue(3, "go", body="x" * 5000),
+    ]
+    k = killer(issues, agent_labels=["go"], max_issue_chars=50)
+    assert [i["number"] for i in k.candidates()] == [1]
+    assert [i["number"] for i in killer(issues, agent_labels=["go"]).candidates()] == [1, 2, 3]
+
+
+def test_the_brief_for_no_candidate_names_the_opt_in_and_the_size_limit() -> None:
+    assert "not labelled" in killer([]).brief(None) and "too long" in killer([]).brief(None)
