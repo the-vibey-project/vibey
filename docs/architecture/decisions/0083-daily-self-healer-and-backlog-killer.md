@@ -400,9 +400,12 @@ It is scripted and runs no model: reading structure is toil, inventing a decompo
 judgement (12.e), so an issue with none is reported in the run summary and left for a person. It
 writes issues, one comment and one label on each parent, and nothing else (12.d).
 
-A parent is an open issue by a trusted author that is longer than `max_issue_chars` or carries a
-`split_labels` label (`epic`, which the killer itself never works), is not held, not for a person
-(`skip_labels`), not already cut (`vibey-gh:split`) and not itself a slice. Each run cuts
+A parent is an open issue by a trusted author that the operator has labelled for the agent
+(`agent_labels`: the lane never widens what the agent may touch) and that is longer than
+`max_issue_chars`; it is not held, not for a person (`skip_labels`, except an `epic`, which
+`split_parent_allow_labels` lets an opted-in parent be), not already cut (`vibey-gh:split`) and
+not itself a slice. The outline reads only what a person looking at the issue sees: fenced code
+and HTML comments, closed or not, are dropped first. Each run cuts
 `max_parents_per_run` of them into at most `max_children` slices; the rest stay on the parent.
 Each slice carries a marker with its parent and a hash of its title, and a slice already filed
 under that parent, open or closed, is not filed again, so a run that died midway is run again.
@@ -412,7 +415,10 @@ The parent is labelled last, so it stays a candidate until all is filed.
 lane that filed them owns them. A slice is the one exception, and only when three things hold at
 once: its author is in `split_authors` (a bot's login cannot be borne by a stranger), it carries
 `split_label` (only someone with triage rights can apply a label to an issue), and its marker
-names an open parent that a trusted person wrote. Any one alone is forgeable or too broad. A
+names an open parent that is itself workable by the killer's own gates (trusted, held by no one, not
+for a person, opted in). The marker counts only as the last line of the body, and no comment
+opener survives into a slice, so text quoted from the parent cannot carry a second marker. Any one
+alone is forgeable or too broad. A
 slice therefore stands in for the opt-in label its parent never had, is as trusted as that
 parent, and is still subject to the holds, the size limit and the skip labels. A closed parent
 makes its slices unpickable. The slices are text from a trusted issue, cut, not written by a

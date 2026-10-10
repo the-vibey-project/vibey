@@ -188,11 +188,14 @@ trusted_associations = ["OWNER", "MEMBER", "COLLABORATOR"]
 # marker names an open parent that a trusted person wrote. ADR-0083.
 split_label = "vibey-gh:split-child"
 split_authors = ["github-actions[bot]"]
+# An opted-in issue carrying one of these (an epic) may be cut though the killer never works it.
+split_parent_allow_labels = ["epic"]
 # Operator holds (`never_act`) and self-closing trackers are read from here.
 expectations = "scripts/backlog_expectations.json"
 
 # The backlog splitter (ADR-0083): cut an issue too large to hand an agent -- its body is longer
-# than `[backlog_killer] max_issue_chars`, or it carries one of `split_labels` -- along the
+# than `[backlog_killer] max_issue_chars` and the operator has labelled it for the agent
+# (`agent_labels`: the lane never widens what the agent may touch) -- along the
 # structure it already has (unchecked task items, then numbered steps, then `##` sections) into
 # slices filed as sub-issues, which the backlog killer then works one at a time. Scripted, no
 # model: an issue with no such structure is reported and left for a person. It files issues and
@@ -204,8 +207,5 @@ enabled = true
 max_parents_per_run = 1
 max_children = 6
 min_children = 2
-# An epic is meant to be cut, though the backlog killer never works one.
-split_labels = ["epic"]
-allow_labels = ["epic"]
 # Marks a parent already cut.
 parent_label = "vibey-gh:split"

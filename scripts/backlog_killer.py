@@ -47,7 +47,9 @@ CONFIG = "scripts/daily_lanes.toml"
 # `#123` as a reference, not inside a longer token such as a colour or an anchor.
 REFERENCE = re.compile(r"(?<![\w/])#(\d+)\b")
 # What the backlog splitter writes into every slice it files: the parent and the slice's key.
-SPLIT_CHILD = re.compile(r"<!-- vibey-gh:split-child parent=(\d+) key=([0-9a-f]{12}) -->")
+# It counts only as the last thing in the body: text a slice quotes from its parent can never
+# carry a second one that wins a first-match search.
+SPLIT_CHILD = re.compile(r"<!-- vibey-gh:split-child parent=(\d+) key=([0-9a-f]{12}) -->\s*\Z")
 
 
 class GhBacklogSource(BacklogSourceInterface):
@@ -128,6 +130,8 @@ class BacklogKiller(BacklogKillerInterface):
         # triage rights can apply a label), and its marker names an open parent that a trusted
         # person wrote. Empty `split_label` turns the rule off.
         self._split_label = str(settings.get("split_label", ""))
+        # Labels a slice's parent may carry though the killer never works them itself (an epic).
+        self._split_parent_allow = {str(x) for x in settings.get("split_parent_allow_labels", [])}
         self._split_authors = {str(x) for x in settings.get("split_authors", [])}
         self._skip_authors = {str(x) for x in settings.get("skip_authors", [])}
         # On a public repository anyone can open an issue, and the pick becomes an agent's
@@ -167,11 +171,17 @@ class BacklogKiller(BacklogKillerInterface):
             for n in REFERENCE.findall(f"{pr.get('title', '')}\n{pr.get('body') or ''}")
         }
         issues = self._source.open_issues()
+        # A slice is as workable as its parent would be: open, written by a trusted person, not
+        # held, not for a person, and opted in to the agent.
+        barred = self._skip_labels - self._split_parent_allow
         parents = {
             int(i["number"])
             for i in issues
             if str(i.get("authorAssociation", "")) in self._trusted
             and str((i.get("author") or {}).get("login", "")) not in self._skip_authors
+            and int(i["number"]) not in self._held
+            and not barred.intersection(self._labels(i))
+            and (not self._agent_labels or self._agent_labels.intersection(self._labels(i)))
         }
         workable = []
         for issue in issues:

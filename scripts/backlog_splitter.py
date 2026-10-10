@@ -48,7 +48,10 @@ except ModuleNotFoundError:  # Direct execution keeps the script directory on sy
     )
 
 REPO = Path(__file__).resolve().parents[1]
-FENCE = re.compile(r"```.*?```", re.S)
+# What GitHub does not render as text: fenced code (an unclosed fence runs to the end) and HTML
+# comments. The outline must not read what a person looking at the issue cannot see.
+FENCE = re.compile(r"(```|~~~).*?(?:\1|\Z)", re.S)
+HIDDEN = re.compile(r"<!--.*?(?:-->|\Z)", re.S)
 TASK = re.compile(r"^ {0,3}[-*+]\s+\[ \]\s+(\S.*)$")
 NUMBERED = re.compile(r"^ {0,3}\d{1,2}[.)]\s+(\S.*)$")
 HEADING = re.compile(r"^#{2,3}\s+(\S.*?)\s*#*\s*$")
@@ -134,7 +137,9 @@ class BacklogSplitter(BacklogSplitterInterface):
         self._min = max(2, int(settings.get("min_children", 2)))
         self._max = max(self._min, int(settings.get("max_children", 8)))
         self._max_parents = max(1, int(settings.get("max_parents_per_run", 3)))
-        self._split_labels = {str(x) for x in settings.get("split_labels", [])}
+        # The operator's opt-in: only an issue already labelled for the agent is cut, so the
+        # lane never widens what the agent may touch (12.d).
+        self._agent_labels = {str(x) for x in killer.get("agent_labels", [])}
         self._parent_label = str(settings.get("parent_label", "vibey-gh:split"))
         self._child_label = str(killer.get("split_label", "vibey-gh:split-child"))
         self._limit = int(killer.get("max_issue_chars", 0))
@@ -143,7 +148,7 @@ class BacklogSplitter(BacklogSplitterInterface):
             str(x) for x in killer.get("trusted_associations", ["OWNER", "MEMBER", "COLLABORATOR"])
         }
         self._skip_authors = {str(x) for x in killer.get("skip_authors", [])}
-        allowed = {str(x) for x in settings.get("allow_labels", [])}
+        allowed = {str(x) for x in killer.get("split_parent_allow_labels", [])}
         self._skip_labels = {str(x) for x in killer.get("skip_labels", [])} - allowed
         entries = expectations.get("issues", {})
         self._held = {
@@ -157,6 +162,8 @@ class BacklogSplitter(BacklogSplitterInterface):
     @staticmethod
     def _plain(text: str) -> str:
         text = re.sub(r"\[([^\]]+)\]\([^)]*\)", r"\1", text)
+        # No comment opener or closer survives into a slice, so no marker can be quoted into one.
+        text = text.replace("<!--", "").replace("-->", "")
         return re.sub(r"[*_]{1,3}", "", text).strip()
 
     @staticmethod
@@ -198,7 +205,7 @@ class BacklogSplitter(BacklogSplitterInterface):
         return cls._plain(f"{title} {first.replace(chr(10), ' ')}".strip()), rest.strip()
 
     def outline(self, body: str) -> list[tuple[str, str]]:
-        lines = FENCE.sub("", body).splitlines()
+        lines = HIDDEN.sub("", FENCE.sub("", body)).splitlines()
         sections = [(self._plain(t), d) for t, d in self._sections(lines) if t.strip()]
         for found in (
             [self._slice(t, d) for t, d in self._list_items(lines, TASK) if t.strip()],
@@ -227,8 +234,8 @@ class BacklogSplitter(BacklogSplitterInterface):
                 or bk.SPLIT_CHILD.search(body)
             ):
                 continue
-            too_large = bool(self._limit) and len(body) > self._limit
-            if too_large or self._split_labels.intersection(labels):
+            opted_in = not self._agent_labels or bool(self._agent_labels.intersection(labels))
+            if opted_in and bool(self._limit) and len(body) > self._limit:
                 found.append(issue)
         return sorted(found, key=lambda i: (str(i.get("createdAt", "")), int(i["number"])))
 
@@ -243,7 +250,7 @@ class BacklogSplitter(BacklogSplitterInterface):
         head = title if len(title) <= TITLE_CHARS else title[: TITLE_CHARS - 1].rstrip() + "…"
         body = (
             f"Part of #{number} — {parent.get('title', '')}\n\n"
-            f"**This slice:** {title}\n\n{detail[:DETAIL_CHARS]}\n\n"
+            f"**This slice:** {title}\n\n{self._plain(detail)[:DETAIL_CHARS]}\n\n"
             f"Land only this slice, with a test that fails without it, and leave the rest of "
             f"#{number} alone.\n\n"
             f"<!-- vibey-gh:split-child parent={number} key={key} -->"
