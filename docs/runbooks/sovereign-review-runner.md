@@ -156,6 +156,28 @@ docker run --rm --network egress-test --entrypoint bash vibey-runner:latest -c '
 docker rm -f egress-test; docker network rm egress-test
 ```
 
+**When a job step fails on a host nobody listed**, the gate says so. Every decision is one line
+on its standard output:
+
+```bash
+docker logs --since 30m vibey-egress | grep DENY
+# egress DENY  example.com:443 -- not on the allowlist (add the host to [runners] egress_allow)
+```
+
+What the log does and does not hold. It records where a request was going (a host and port, or
+a method and path) and why it was refused, never a header, a body, URL credentials or a query
+string. The destination is logged as the job asked for it, cut at 120 characters, so a job
+that tries to smuggle data out inside a hostname (`<encoded data>.evil.example`) leaves that
+attempt in the log: that is the log doing its work, and it stays on this machine. It is capped
+so a runaway job cannot fill the disk: at most 600 ALLOW and 600 DENY lines a minute (a line
+says how many were dropped), and the container's log is rotated at 5 MB x 3 files.
+
+A `DENY ... not on the allowlist` line names the host to add to `[runners] egress_allow` (an
+exact name, or `*.` and a domain you trust; see `docs/configuration.md` for what is refused).
+The other reasons are not allowlist problems: `resolves to an address that is not public`
+means the name points at this machine or a private network, which is refused whatever the
+list says; `the host's model server did not answer` means Ollama is down.
+
 After changing `egress_gate`, `egress_allow` or the gate's template, re-run
 `uv run vibey-gh runner install --load` (the supervisor, and with it the gate, is restarted).
 

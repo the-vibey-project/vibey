@@ -440,3 +440,239 @@ def test_the_interface_import_falls_back_to_the_directory_beside_the_gate(monkey
     spec.loader.exec_module(module)
     assert str(GATE_DIR) in sys.path
     assert module.HostPolicy(["github.com"]).allows("github.com", 443)
+
+
+class Recorder:
+    """An access log that keeps what it is told, in order."""
+
+    def __init__(self) -> None:
+        self.lines: list[str] = []
+
+    def allow(self, what: str) -> None:
+        self.lines.append(f"ALLOW {what}")
+
+    def deny(self, what: str, why: str) -> None:
+        self.lines.append(f"DENY {what} -- {why}")
+
+
+def test_the_access_log_writes_one_clean_line_per_decision(capsys) -> None:
+    lines: list[str] = []
+    log = gate.AccessLog(lines.append)
+    log.allow("github.com:443")
+    log.deny("example.com:443", "not on the allowlist")
+    assert lines == [
+        "egress ALLOW github.com:443",
+        "egress DENY  example.com:443 -- not on the allowlist",
+    ]
+    # By default it speaks on standard output, which is what `docker logs` shows.
+    gate.AccessLog().deny("x.com:443", "why")
+    assert capsys.readouterr().out == "egress DENY  x.com:443 -- why\n"
+
+
+def test_client_supplied_text_cannot_forge_a_log_line_or_drive_a_terminal() -> None:
+    lines: list[str] = []
+    log = gate.AccessLog(lines.append)
+    log.deny("evil\r\negress ALLOW github.com:443\x1b[31m", "x")
+    assert len(lines) == 1 and "\n" not in lines[0] and "\r" not in lines[0]
+    assert "\x1b" not in lines[0] and "?" in lines[0]
+    log.deny("a" * 500, "x")
+    assert lines[1].count("a") == gate.AccessLog.LIMIT
+
+
+@sync
+async def test_every_decision_the_proxy_makes_is_logged_with_its_reason() -> None:
+    async def hold(reader, writer):
+        await reader.read(1)
+        writer.close()
+
+    upstream, upstream_port = await serve(hold)
+    resolver = FakeResolver(
+        {
+            "github.com": ["140.82.112.3"],
+            "pypi.org": ["151.101.0.223", "10.0.0.5"],
+            "api.github.com": [],
+        }
+    )
+    log = Recorder()
+    proxy = gate.ConnectProxy(gate.HostPolicy(ALLOW), resolver, LocalDialer(upstream_port), log=log)
+    front, port = await serve(proxy.handle)
+    try:
+        await exchange(port, b"CONNECT github.com:443 HTTP/1.1\r\n\r\n")
+        for request in (
+            b"CONNECT example.com:443 HTTP/1.1\r\n\r\n",
+            b"CONNECT github.com:22 HTTP/1.1\r\n\r\n",
+            b"CONNECT github.com:x HTTP/1.1\r\n\r\n",
+            b"CONNECT pypi.org:443 HTTP/1.1\r\n\r\n",
+            b"CONNECT api.github.com:443 HTTP/1.1\r\n\r\n",
+            b"GET http://github.com/ HTTP/1.1\r\n\r\n",
+            b"CONNECT\r\n\r\n",
+            b"\r\n\r\n",
+        ):
+            await exchange(port, request)
+        # A head the peer abandons half-way.
+        reader, writer = await asyncio.open_connection("127.0.0.1", port)
+        writer.write(b"CONNECT github.com:443 HTTP/1.1\r\nHost")
+        writer.write_eof()
+        await asyncio.wait_for(reader.read(65536), timeout=5)
+        writer.close()
+    finally:
+        front.close()
+        upstream.close()
+    assert log.lines[0] == "ALLOW github.com:443"
+    assert log.lines[1:] == [
+        "DENY example.com:443 -- not on the allowlist (add the host to [runners] egress_allow)",
+        "DENY github.com:22 -- not on the allowlist (add the host to [runners] egress_allow)",
+        "DENY github.com -- the port is not a number",
+        "DENY pypi.org:443 -- resolves to an address that is not public",
+        "DENY api.github.com:443 -- the name does not resolve",
+        "DENY GET github.com -- only CONNECT is supported",
+        "DENY CONNECT -- a CONNECT request line needs a host:port",
+        "DENY (request) -- only CONNECT is supported",
+        "DENY (request) -- no complete request head",
+    ]
+
+
+@sync
+async def test_a_failing_upstream_is_logged_as_the_upstreams_fault() -> None:
+    class Down:
+        async def open(self, address: str, port: int):
+            raise ConnectionRefusedError
+
+    log = Recorder()
+    proxy = gate.ConnectProxy(
+        gate.HostPolicy(ALLOW), FakeResolver({"github.com": ["140.82.112.3"]}), Down(), log=log
+    )
+    front, port = await serve(proxy.handle)
+    try:
+        await exchange(port, b"CONNECT github.com:443 HTTP/1.1\r\n\r\n")
+    finally:
+        front.close()
+    assert log.lines == ["DENY github.com:443 -- the upstream did not accept the connection"]
+
+
+@sync
+async def test_every_decision_the_model_gate_makes_is_logged_with_its_reason() -> None:
+    async def ollama(reader, writer):
+        await reader.readuntil(b"\r\n\r\n")
+        writer.write(b"HTTP/1.1 200 OK\r\nContent-Length: 0\r\nConnection: close\r\n\r\n")
+        await writer.drain()
+        writer.close()
+
+    upstream, upstream_port = await serve(ollama)
+
+    class Down:
+        async def open(self, address: str, port: int):
+            raise ConnectionRefusedError
+
+    log = Recorder()
+    up = gate.ModelGate(("h", 1), dialer=LocalDialer(upstream_port), log=log)
+    down = gate.ModelGate(("h", 1), dialer=Down(), log=log)
+    front, port = await serve(up.handle)
+    front_down, port_down = await serve(down.handle)
+    try:
+        await exchange(port, b"GET /api/version HTTP/1.1\r\nHost: g\r\n\r\n")
+        await exchange(port, b"DELETE /api/delete HTTP/1.1\r\nHost: g\r\n\r\n")
+        await exchange(port, b"nonsense\r\n\r\n")
+        reader, writer = await asyncio.open_connection("127.0.0.1", port)
+        writer.write(b"POST /v1/chat/completions HTTP/1.1\r\nHost")
+        writer.write_eof()
+        await asyncio.wait_for(reader.read(65536), timeout=5)
+        writer.close()
+        await exchange(port_down, b"GET /api/version HTTP/1.1\r\nHost: g\r\n\r\n")
+    finally:
+        front.close()
+        front_down.close()
+        upstream.close()
+    assert log.lines == [
+        "ALLOW GET /api/version",
+        "DENY DELETE /api/delete -- not one of the model requests allowed",
+        "DENY nonsense -- not one of the model requests allowed",
+        "DENY (model request) -- no complete request head",
+        "DENY GET /api/version -- the host's model server did not answer",
+    ]
+
+
+def test_a_log_line_says_where_a_request_was_going_and_nothing_it_carried() -> None:
+    host, path = gate.Destination.host, gate.Destination.path
+    assert host("github.com:443") == "github.com:443"
+    assert host("user:hunter2@evil.com:443") == "evil.com:443"
+    assert host("http://deploy:ghp_SECRET@internal.example/p?token=abc#frag") == "internal.example"
+    assert host("https://h.example:8443/a/b") == "h.example:8443"
+    assert host("a@b@c.example") == "c.example"  # the last @ ends the credentials
+    assert path("/v1/models?api_key=SECRET#x") == "/v1/models"
+    assert path("/api/tags") == "/api/tags"
+    request = gate.Destination.request
+    assert request([]) == "(request)"
+    assert request(["CONNECT"]) == "CONNECT"
+    assert request(["GET", "/api/version?x=1"]) == "GET /api/version"
+    assert request(["GET", "http://u:p@h.example/x?t=1"]) == "GET h.example"
+    assert request(["X" * 100, "h.example"]) == "X" * gate.Destination.METHOD_LIMIT + " h.example"
+
+
+@sync
+async def test_no_secret_in_a_request_target_reaches_the_log() -> None:
+    # Found by a security review: the log wrote client-supplied targets whole, so URL
+    # credentials and query-string tokens were written to `docker logs`.
+    log = Recorder()
+    proxy = gate.ConnectProxy(gate.HostPolicy(["github.com"]), FakeResolver({}), log=log)
+    model = gate.ModelGate(("h", 1), dialer=LocalDialer(1), log=log)
+    front, port = await serve(proxy.handle)
+    front_model, model_port = await serve(model.handle)
+    try:
+        for request in (
+            b"CONNECT user:hunter2@evil.com:443 HTTP/1.1\r\n\r\n",
+            b"CONNECT user:hunter2@evil.com:secretport HTTP/1.1\r\n\r\n",
+            b"CONNECT justaword HTTP/1.1\r\n\r\n",
+            b"GET http://deploy:ghp_SECRET@internal.example/p?token=abc123 HTTP/1.1\r\n\r\n",
+        ):
+            await exchange(port, request)
+        for request in (
+            b"DELETE /api/delete?api_key=sk-LIVE-KEY HTTP/1.1\r\nHost: g\r\n\r\n",
+            b"GET http://x:tok@h.example/api/version?k=v HTTP/1.1\r\nHost: g\r\n\r\n",
+        ):
+            await exchange(model_port, request)
+    finally:
+        front.close()
+        front_model.close()
+    joined = "\n".join(log.lines)
+    for secret in ("hunter2", "ghp_SECRET", "abc123", "sk-LIVE-KEY", "secretport", "tok@", "k=v"):
+        assert secret not in joined, secret
+    assert log.lines == [
+        "DENY evil.com:443 -- not on the allowlist (add the host to [runners] egress_allow)",
+        "DENY evil.com -- the port is not a number",
+        "DENY (no host) -- the port is not a number",
+        "DENY GET internal.example -- only CONNECT is supported",
+        "DENY DELETE /api/delete -- not one of the model requests allowed",
+        "DENY GET h.example -- not one of the model requests allowed",
+    ]
+
+
+def test_a_flood_of_connections_cannot_make_an_endless_log() -> None:
+    now = [0.0]
+    lines: list[str] = []
+    log = gate.AccessLog(lines.append, clock=lambda: now[0])
+    rate = gate.AccessLog.RATE
+    for n in range(rate + 250):
+        log.deny(f"h{n}.evil.example:443", "not on the allowlist")
+    assert len(lines) == rate  # the rest were counted, not written
+    # An allow flood has its own budget: it cannot hide a refusal, nor the other way round.
+    for n in range(rate + 5):
+        log.allow(f"ok{n}.github.com:443")
+    log.deny("later.evil.example:443", "still counted")
+    assert len(lines) == 2 * rate
+    # The next window says what was not written, then writes normally again.
+    now[0] += gate.AccessLog.WINDOW
+    log.deny("again.evil.example:443", "not on the allowlist")
+    assert lines[-2:] == [
+        "egress LIMIT 251 DENY lines were not written in the last 60s (at most 600 a window)",
+        "egress DENY  again.evil.example:443 -- not on the allowlist",
+    ]
+    log.allow("ok.github.com:443")
+    assert lines[-2] == (
+        "egress LIMIT 5 ALLOW lines were not written in the last 60s (at most 600 a window)"
+    )
+    # A quiet window prints no summary of nothing.
+    now[0] += gate.AccessLog.WINDOW
+    before = len(lines)
+    log.deny("quiet.evil.example:443", "x")
+    assert len(lines) == before + 1

@@ -224,6 +224,9 @@ paths = [
 # of these (anchored: `echo pytest` is not a test) and exited 0. Checked on a runner where no
 # agent ran.
 runs = [
+  # The runner may sit behind a venv path: `.venv/bin/python -m pytest`, `./.venv/bin/pytest`.
+  '^(\./)?(\.venv/bin/)?(python3?\s+-m\s+)?pytest(\s|$)',
+  '^(\./)?\.venv/bin/python3?\s+-m\s+pytest(\s|$)',
   '^(uv\s+run\s+(--?\S+\s+)*)?(python3?\s+-m\s+)?pytest(\s|$)',
   '^(npm|pnpm|yarn)\s+(run\s+)?test(\s|$)',
   '^(npx\s+)?vitest(\s|$)',
@@ -288,8 +291,11 @@ runs_on = ["self-hosted", "vibey-local-vibey"]
 model = "gpt-oss:20b"
 # gptossloop's own endpoint setting ($GPTOSSLOOP_BASE_URL), /v1 included.
 base_url = "http://vibey-egress:11434/v1"
-# More turns and a shorter ceiling than the CPU runner: the host reads at ~200 tok/s.
-max_turns = 40
+# More turns and a shorter ceiling than the CPU runner: the host reads at ~200 tok/s. 40 turns
+# took ~8 minutes (12 s a turn) and all three overnight runs on 2026-10-09 hit that limit in the
+# middle of real work -- an edit to config.py, a new test, a regex fix -- so 120 (~25 minutes)
+# against a 120-minute ceiling. The guards, not the budget, are what decide whether it lands.
+max_turns = 120
 timeout_minutes = 120
 heartbeat_ref = "refs/vibey-gh/sovereign-heartbeat"
 heartbeat_max_age_minutes = 15

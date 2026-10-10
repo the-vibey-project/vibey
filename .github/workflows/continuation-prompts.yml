@@ -213,6 +213,18 @@ jobs:
           python-version: "3.12"
       - name: Install vibey (the runner and its tools)
         run: python -m pip install --quiet -e . -e src/vibey_tools/gh
+      # The agent's shell runs with a filtered environment, and `setup-python`'s Python finds
+      # its libpython through LD_LIBRARY_PATH, which that filter drops: every `python` the
+      # agent ran died with "libpython3.12.so.1.0: cannot open shared object file", and
+      # `pytest` was not installed anywhere it could find (2026-10-09, three runs). So it is
+      # given what needs no environment: the SYSTEM Python in a venv in the worktree
+      # (git-ignored), with the project's test tools. The prompt names it.
+      - name: Give the agent a Python and test tools its shell can run
+        run: |
+          set -euo pipefail
+          /usr/bin/python3 -m venv .venv
+          .venv/bin/python -m pip install --quiet -e ".[dev]" -e src/vibey_tools/gh
+          env -i .venv/bin/python -m pytest --version
       # The host machine already serves the model: check it answers and has the model, and
       # say so loudly if not -- the heartbeat says the machine is up, not that Ollama is.
       - name: Reach the host machine's model
