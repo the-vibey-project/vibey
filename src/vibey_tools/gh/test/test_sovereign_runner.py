@@ -11,6 +11,7 @@ on `PATH`, the same way `test_templates.py` drives the workflow steps.
 from __future__ import annotations
 
 import argparse
+import dataclasses
 import json
 import os
 import plistlib
@@ -80,7 +81,9 @@ class _Launchctl:
 
     def __call__(self, argv: tuple[str, ...]) -> tuple[int, str]:
         self.calls.append(argv)
-        return self.answers.get(argv[1], (0, ""))
+        return self.answers.get(
+            argv[1], (113, "Could not find service") if argv[1] == "print" else (0, "")
+        )
 
 
 class _GhStatus:
@@ -224,6 +227,10 @@ def test_runners_registration_is_declared_or_derived(runners, platform, expected
         ("throttle_seconds", 5),
         ("throttle_seconds", 3601),
         ("max_failures", 0),
+        ("launchd_settle_seconds", -1),
+        ("launchd_settle_seconds", 601),
+        ("launchd_settle_seconds", 1.5),
+        ("launchd_settle_seconds", True),
         ("path", ""),
         ("systemd_user_dir", "units"),
         ("heartbeat_python", "bin/python"),
@@ -469,6 +476,7 @@ def test_install_with_load_replaces_the_running_agent(tmp_path):
     assert ok
     assert launchctl.calls == [
         ("launchctl", "bootout", f"gui/{UID}/org.vibey.runner-r"),
+        ("launchctl", "print", f"gui/{UID}/org.vibey.runner-r"),
         ("launchctl", "bootstrap", f"gui/{UID}", str(plan.plist)),
     ]
     assert lines[-1] == f"loaded org.vibey.runner-r from {plan.plist}"
@@ -480,6 +488,85 @@ def test_install_reports_a_load_that_launchd_refuses(tmp_path):
     lines, ok = runner.install(_plan(runner), load=True)
     assert not ok
     assert lines[-1] == "launchctl bootstrap failed (exit 5): Input/output error"
+
+
+class _Settling(_Launchctl):
+    """A service launchd is still tearing down for `stopping` polls, then a bootstrap that
+    answers 5 for `busy` attempts."""
+
+    def __init__(self, stopping: int = 0, busy: int = 0) -> None:
+        super().__init__()
+        self.stopping, self.busy = stopping, busy
+
+    def __call__(self, argv):
+        self.calls.append(argv)
+        if argv[1] == "print":
+            self.stopping, loaded = max(self.stopping - 1, 0), self.stopping > 0
+            return (0, "state = running") if loaded else (113, "Could not find service")
+        if argv[1] == "bootstrap":
+            self.busy, refused = max(self.busy - 1, 0), self.busy > 0
+            return (5, "Input/output error") if refused else (0, "")
+        return (0, "")
+
+
+def _slow(tmp_path, launchctl, seconds: int):
+    naps: list[float] = []
+    home = tmp_path / "home"
+    home.mkdir(exist_ok=True)
+    cfg = _cfg(tmp_path)
+    runners = dataclasses.replace(cfg.runners, launchd_settle_seconds=seconds)
+    runner = SovereignRunner(
+        dataclasses.replace(cfg, runners=runners),
+        home=home,
+        uid=UID,
+        launchctl=launchctl,
+        gh=_GhStatus(),
+        sleep=naps.append,
+    )
+    return runner, naps
+
+
+def test_install_waits_for_the_old_service_to_finish_stopping(tmp_path):
+    launchctl = _Settling(stopping=3)
+    runner, naps = _slow(tmp_path, launchctl, 60)
+    lines, ok = runner.install(_plan(runner), load=True)
+    assert ok and naps == [1, 1, 1]
+    kinds = [call[1] for call in launchctl.calls]
+    assert kinds == ["bootout", "print", "print", "print", "print", "bootstrap"]
+    assert lines[-1].startswith("loaded org.vibey.runner-r")
+
+
+def test_install_retries_a_bootstrap_that_answers_busy(tmp_path):
+    launchctl = _Settling(busy=2)
+    runner, naps = _slow(tmp_path, launchctl, 60)
+    _, ok = runner.install(_plan(runner), load=True)
+    assert ok and naps == [1, 1]
+    assert [c[1] for c in launchctl.calls].count("bootstrap") == 3
+
+
+def test_install_stops_waiting_when_the_settle_budget_is_spent(tmp_path):
+    launchctl = _Settling(stopping=99, busy=99)
+    runner, naps = _slow(tmp_path, launchctl, 4)
+    lines, ok = runner.install(_plan(runner), load=True)
+    assert not ok and naps == [1, 1, 1, 1]
+    assert lines[-1] == "launchctl bootstrap failed (exit 5): Input/output error"
+    assert [c[1] for c in launchctl.calls].count("bootstrap") == 1
+
+
+def test_install_with_no_settle_budget_tries_once(tmp_path):
+    launchctl = _Settling(stopping=5, busy=5)
+    runner, naps = _slow(tmp_path, launchctl, 0)
+    _, ok = runner.install(_plan(runner), load=True)
+    assert not ok and naps == []
+    assert [c[1] for c in launchctl.calls] == ["bootout", "bootstrap"]
+
+
+def test_install_does_not_retry_a_refusal_that_is_not_busy(tmp_path):
+    launchctl = _Launchctl({"bootstrap": (125, "Domain does not support specified action")})
+    runner, naps = _slow(tmp_path, launchctl, 60)
+    _, ok = runner.install(_plan(runner), load=True)
+    assert not ok and naps == []
+    assert [c[1] for c in launchctl.calls].count("bootstrap") == 1
 
 
 def test_next_steps_are_the_exact_commands_in_order(tmp_path):
@@ -865,6 +952,7 @@ def test_cli_apply_goes_through_the_launchctl_seam(tmp_path, monkeypatch, capsys
     args = argparse.Namespace(action="install", apply=False, load=True)
     assert cli._runner(args, launchctl=launchctl) == 0
     assert "loaded org.vibey.runner-r" in capsys.readouterr().out
+    monkeypatch.setattr("time.sleep", lambda _seconds: None)
     refused = _Launchctl({"bootstrap": (5, "Input/output error")})
     assert cli._runner(args, launchctl=refused) == 1
     assert "launchctl bootstrap failed (exit 5)" in capsys.readouterr().out

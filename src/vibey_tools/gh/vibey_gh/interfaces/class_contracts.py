@@ -447,6 +447,9 @@ class RunnersConfigInterface(_ConfigRecordInterface, Protocol):
     def max_failures(self) -> int: ...
 
     @property
+    def launchd_settle_seconds(self) -> int: ...
+
+    @property
     def path(self) -> str: ...
 
     @property
