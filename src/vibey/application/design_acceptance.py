@@ -61,7 +61,11 @@ class DesignAcceptanceService:
         self._clock = clock
 
     async def accept(
-        self, project_id: UUID, *, visual_choice: VisualDecision = VisualDecision.DECLINED
+        self,
+        project_id: UUID,
+        *,
+        visual_choice: VisualDecision = VisualDecision.DECLINED,
+        accepted_by: str | None = None,
     ) -> ProjectRecord:
         project = await self._projects.get(project_id)
         if project is None:
@@ -88,7 +92,7 @@ class DesignAcceptanceService:
         await self._specs.publish(project_id, project.cycle, spec)
         now = self._clock.now()
         await self._ledger.append(
-            project_id, project.cycle, None, None, _choice_event(visual_choice, now)
+            project_id, project.cycle, None, None, _choice_event(visual_choice, now, accepted_by)
         )
         accepted = await self._projects.transition(project_id, expected=Phase.DESIGN, to=target)
         if visual_choice is VisualDecision.OPTED_IN:
@@ -112,10 +116,13 @@ class DesignAcceptanceService:
         )
 
 
-def _choice_event(visual_choice: VisualDecision, now: datetime) -> DesignEvent:
+def _choice_event(
+    visual_choice: VisualDecision, now: datetime, accepted_by: str | None = None
+) -> DesignEvent:
     kind = (
         EventKind.VISUAL_DESIGN_OPTED_IN
         if visual_choice is VisualDecision.OPTED_IN
         else EventKind.VISUAL_DESIGN_DECLINED
     )
-    return DesignEvent(kind=kind, provenance=Provenance.TRUSTED, produced_at=now, payload={})
+    payload = {} if accepted_by is None else {"accepted_by": accepted_by}
+    return DesignEvent(kind=kind, provenance=Provenance.TRUSTED, produced_at=now, payload=payload)

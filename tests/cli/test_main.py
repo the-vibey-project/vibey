@@ -106,6 +106,49 @@ def test_load_spec_json(tmp_path: Path) -> None:
     assert spec.hard_constraints() == ("Offline",)
 
 
+def test_load_spec_json_keeps_the_research_gaps_it_was_given(tmp_path: Path) -> None:
+    """An edited spec that is imported must still say what was not researched."""
+    path = tmp_path / "spec.json"
+    criterion = {"criterion_id": "AC-1", "given": "g", "when": "w", "then": "t", "fit": "f"}
+    path.write_text(
+        json.dumps(
+            {
+                "objective": "Ship",
+                "criteria": [criterion],
+                "walking_skeleton": "one path",
+                "research_gaps": [{"topic": "prior-art", "reason": "no web access"}],
+            }
+        )
+    )
+    spec = cli_main._load_spec(path)
+    assert [gap.statement() for gap in spec.research_gaps] == [
+        "prior-art: not researched. no web access"
+    ]
+
+    path.write_text(
+        json.dumps({"objective": "Ship", "criteria": [criterion], "walking_skeleton": "one"})
+    )
+    assert cli_main._load_spec(path).research_gaps == ()
+
+
+def test_load_spec_json_refuses_a_research_gap_that_gives_no_reason(tmp_path: Path) -> None:
+    path = tmp_path / "spec.json"
+    path.write_text(
+        json.dumps(
+            {
+                "objective": "Ship",
+                "criteria": [
+                    {"criterion_id": "AC-1", "given": "g", "when": "w", "then": "t", "fit": "f"}
+                ],
+                "walking_skeleton": "one path",
+                "research_gaps": [{"topic": "prior-art", "reason": " "}],
+            }
+        )
+    )
+    with pytest.raises(ValueError, match="says why"):
+        cli_main._load_spec(path)
+
+
 def test_parse_question_answers_builds_the_handler_payload() -> None:
     assert cli_main._parse_question_answers(("q-1=Ship it", "q-2=default=allowed")) == {
         "answers": {"q-1": "Ship it", "q-2": "default=allowed"}

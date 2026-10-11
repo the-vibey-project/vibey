@@ -195,3 +195,16 @@ async def test_accept_proceeds_once_every_design_job_has_settled() -> None:
     assert accepted.phase is Phase.BUILD
     (decompose,) = await jobs.list_for_cycle(value.project_id, cycle=1, kind="build.decompose")
     assert decompose.state is JobState.READY
+
+
+async def test_accept_names_who_accepted_on_the_choice_event_only_when_told() -> None:
+    named, plain = Ledger(), Ledger()
+    for ledger, who in ((named, "auto-accept-design"), (plain, None)):
+        projects = Projects(project())
+        await _service(projects=projects, ledger=ledger, specs=Specs(spec())).accept(
+            projects.project.project_id,  # type: ignore[union-attr]
+            accepted_by=who,
+        )
+
+    assert named.appended[0].payload == {"accepted_by": "auto-accept-design"}
+    assert plain.appended[0].payload == {}

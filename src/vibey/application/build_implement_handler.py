@@ -340,7 +340,7 @@ class BuildImplementHandler:
             return Park(HumanGateRequest(kind=FOREIGN_BRANCH_GATE_KIND, prompt=str(refused)))
         await self._provisioner.provision(worktree_path, self._provision_spec)
 
-        prompt = _render_prompt(item, job.payload)
+        prompt = _render_prompt(item, job.payload, _house_rules_for(worktree_path))
         # A wind-down seed is a gate-verified no-loss brief and must reach the
         # next engine byte-for-byte. Retrieval resumes on ordinary and repair
         # jobs; it never mutates this handoff contract.
@@ -483,7 +483,34 @@ _HOUSE_RULES = (
 )
 
 
-def _render_prompt(item_id: str, payload: Mapping[str, object]) -> str:
+# The same rules for a repository that is not Python: the test directory and the
+# "pip install" wording above are Python's. An engine told to keep tests under a tests/
+# directory a Next.js repository does not have spent all sixteen turns looking for it.
+_NODE_HOUSE_RULES = (
+    "House rules:\n"
+    "- Put each test next to the code it covers, in the __tests__ directory the "
+    "repository already uses: look at an existing one first, and do not create a tests/ "
+    "directory or test files at the repo root.\n"
+    "- Verification must pass in a clean checkout of this branch: no network and no "
+    "reliance on your own environment. Run the repository's own npm scripts (see "
+    "package.json), not pytest.\n"
+    "- Never commit generated files (build output, caches, coverage data, "
+    ".next, node_modules) or scratch notes; the deliverable files only.\n"
+)
+
+
+def _house_rules_for(worktree_path: Path) -> str:
+    """Python's rules by default; the Node rules for a package.json repository with no
+    pyproject.toml, the same test the decompose prompt uses."""
+    is_node = (worktree_path / "package.json").exists() and not (
+        worktree_path / "pyproject.toml"
+    ).exists()
+    return _NODE_HOUSE_RULES if is_node else _HOUSE_RULES
+
+
+def _render_prompt(
+    item_id: str, payload: Mapping[str, object], house_rules: str = _HOUSE_RULES
+) -> str:
     seed = payload.get("seed_prompt")
     if isinstance(seed, str) and seed:
         # A wind-down follow-up: the seed prompt was rendered from the
@@ -503,7 +530,7 @@ def _render_prompt(item_id: str, payload: Mapping[str, object]) -> str:
     )
     return (
         f"Implement work item {item_id}: {title}\n\n"
-        f"{repair_note}{_HOUSE_RULES}\nVerify your work with:\n{checklist}\n"
+        f"{repair_note}{house_rules}\nVerify your work with:\n{checklist}\n"
     )
 
 

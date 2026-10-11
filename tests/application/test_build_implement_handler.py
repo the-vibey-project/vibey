@@ -943,3 +943,23 @@ async def test_a_session_past_its_wall_clock_limit_fails_as_the_engines(tmp_path
     assert outcome.failure_class is FailureClass.ENGINE
     assert "claudeloop" in outcome.detail
     assert "wall-clock limit" in outcome.detail
+
+
+def test_a_node_repository_gets_node_house_rules_and_any_other_the_python_ones(
+    tmp_path: Path,
+) -> None:
+    from vibey.application.build_implement_handler import _house_rules_for, _render_prompt
+
+    (tmp_path / "package.json").write_text("{}")
+    node = _house_rules_for(tmp_path)
+    (tmp_path / "pyproject.toml").write_text("")
+    mixed = _house_rules_for(tmp_path)
+
+    assert "__tests__" in node and "not pytest" in node and "tests/ directory" in node
+    assert "Keep every test under tests/" in mixed
+    assert "Keep every test under tests/" in _house_rules_for(tmp_path / "nothing-here")
+    rendered = _render_prompt(
+        "ws", {"title": "t", "verification": {"commands": ["npm test"]}}, node
+    )
+    assert "House rules:\n- Put each test next to the code" in rendered
+    assert rendered.endswith("- npm test\n")

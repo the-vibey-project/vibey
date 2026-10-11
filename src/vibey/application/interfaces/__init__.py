@@ -75,12 +75,17 @@ from vibey.application.interfaces.defect_triage import (
     JobFailureHistory,
 )
 from vibey.application.interfaces.design import (
+    ContextualResearchProvider,
     DesignProvider,
     DesignQuestionProvider,
     DesignSpecReader,
     DesignSpecRepository,
     ResearchProvider,
     SpecSynthesizer,
+)
+from vibey.application.interfaces.design_auto_accept import (
+    DesignAcceptorInterface,
+    DesignAutoAcceptInterface,
 )
 from vibey.application.interfaces.docs import DocsPort
 from vibey.application.interfaces.driver import (
@@ -178,6 +183,7 @@ from vibey.application.interfaces.projects import (
     ProjectStore,
     ProjectTransitioner,
 )
+from vibey.application.interfaces.publish import PublisherInterface
 from vibey.application.interfaces.queue import (
     Defer,
     Failure,
@@ -254,7 +260,10 @@ __all__ = [
     "GateNoticeServiceInterface",
     "GateNoticeStore",
     "GateReminderInterface",
+    "DesignAcceptorInterface",
+    "DesignAutoAcceptInterface",
     "GateAutoAnswerSweepInterface",
+    "PublisherInterface",
     "GateTimeoutSweepInterface",
     "Logger",
     "NotificationSink",
@@ -367,6 +376,7 @@ __all__ = [
     "ProjectRecordInterface",
     "ProjectTransitioner",
     "PreflightHealthServiceInterface",
+    "ContextualResearchProvider",
     "ResearchProvider",
     "RunFeasibilityEvaluatorInterface",
     "ReviewArtifactWriter",

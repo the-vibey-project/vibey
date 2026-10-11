@@ -157,3 +157,76 @@ async def test_parallel_drive_loops_cannot_spend_the_limit_twice_on_one_gate() -
     sweep = _sweep(repo, answers, limit=5)
     await asyncio.gather(*(sweep.run(PROJECT) for _ in range(4)))
     assert len(answers.calls) == 1
+
+
+def _with_options(gate, *options: str):  # type: ignore[no-untyped-def]
+    return replace(gate, options=options)
+
+
+async def test_a_review_and_the_deployment_choice_are_answered_only_when_their_flags_are_on() -> (
+    None
+):
+    review = _with_options(_kind("approval"), "accept", "changes", "cancel")
+    deploy = _with_options(_kind("choice"), "local_only", "deploy")
+    retry = _kind("escalation_exhausted")
+    answers = _Answers()
+    policy = GateAutoAnswerPolicy(
+        limit=10, answer_retries=False, accept_review=True, finish_local=True
+    )
+    sweep = GateAutoAnswerSweep(
+        gates=_gates(review, deploy, retry),
+        answers=answers,
+        policy=policy,
+        clock=_Clock(),
+        logger=_Logger(),
+    )
+
+    report = await sweep.run(PROJECT)
+
+    given = {gid: answer for gid, answer, _by, _rid in answers.calls}
+    assert given == {
+        review.gate_id: {"verdict": "accept"},
+        deploy.gate_id: {"choice": "local_only"},
+    }
+    assert [g.gate_kind for g in report.answered] == ["approval", "choice"]
+    assert report.left == (f"escalation_exhausted gate {retry.gate_id}",)
+
+
+async def test_with_no_acceptance_flag_the_same_gates_wait_for_a_person() -> None:
+    review = _with_options(_kind("approval"), "accept", "changes", "cancel")
+    deploy = _with_options(_kind("choice"), "local_only", "deploy")
+    answers = _Answers()
+
+    report = await _sweep(_gates(review, deploy), answers).run(PROJECT)
+
+    assert answers.calls == [] and report.answered == ()
+    assert len(report.left) == 2
+
+
+async def test_the_publish_interview_is_answered_as_proposed_only_with_its_own_flag() -> None:
+    publish = _with_options(_kind("publish_interview"), "accept_defaults", "custom", "skip")
+    answers_on, answers_off = _Answers(), _Answers()
+    on = GateAutoAnswerSweep(
+        gates=_gates(publish),
+        answers=answers_on,
+        policy=GateAutoAnswerPolicy(answer_retries=False, publish=True),
+        clock=_Clock(),
+        logger=_Logger(),
+    )
+    off = GateAutoAnswerSweep(
+        gates=_gates(publish),
+        answers=answers_off,
+        policy=GateAutoAnswerPolicy(answer_retries=False, accept_review=True, finish_local=True),
+        clock=_Clock(),
+        logger=_Logger(),
+    )
+
+    done = await on.run(PROJECT)
+    left = await off.run(PROJECT)
+
+    assert [(gid, answer) for gid, answer, _by, _rid in answers_on.calls] == [
+        (publish.gate_id, {"choice": "accept_defaults"})
+    ]
+    assert [g.gate_kind for g in done.answered] == ["publish_interview"]
+    assert answers_off.calls == [] and left.answered == ()
+    assert left.left == (f"publish_interview gate {publish.gate_id}",)

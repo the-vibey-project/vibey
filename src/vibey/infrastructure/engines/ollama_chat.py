@@ -33,8 +33,10 @@ This is the general form; that one can converge on it.
 """
 
 import asyncio
+import contextlib
 import json
 import pathlib
+import socket
 import threading
 import time
 import urllib.parse
@@ -64,6 +66,9 @@ OLLAMA_OUTPUT_ENV = "VIBEY_OLLAMA_OUTPUT"
 OLLAMA_FIT_ENV = "VIBEY_OLLAMA_FIT"
 OLLAMA_RETRY_THINK_ENV = "VIBEY_OLLAMA_RETRY_THINK"
 OLLAMA_THINK_ENV = "VIBEY_OLLAMA_THINK"
+OLLAMA_TEMPERATURE_ENV = "VIBEY_OLLAMA_TEMPERATURE"
+DEFAULT_OLLAMA_TEMPERATURE = 0.0
+MAX_OLLAMA_TEMPERATURE = 2.0
 OLLAMA_RETRY_CONTEXT_ENV = "VIBEY_OLLAMA_RETRY_CONTEXT"
 VIBEY_REVISION_ENV = "VIBEY_REVISION"
 
@@ -119,6 +124,19 @@ def _load_fit(
         return None
 
 
+def _abort(response: Any) -> None:
+    """End a blocked read on `response` from another thread.
+
+    `close()` alone can leave a thread blocked in `recv`, so the socket is shut down first;
+    both are best effort, because the response may already be done or be a test double."""
+    sock = getattr(getattr(getattr(response, "fp", None), "raw", None), "_sock", None)
+    if sock is not None:
+        with contextlib.suppress(Exception):
+            sock.shutdown(socket.SHUT_RDWR)
+    with contextlib.suppress(Exception):
+        response.close()
+
+
 class UrllibOllamaTransport:
     """Blocking `urllib`, kept off the event loop, and only ever over HTTP(S)."""
 
@@ -155,23 +173,34 @@ class UrllibOllamaTransport:
     ) -> AsyncGenerator[dict[str, object], None]:
         """Each JSON line of a `stream: true` reply, as it arrives.
 
-        The blocking read runs on a worker thread and hands lines to the event loop through
-        a queue, so a slow generation still stalls nothing else. `timeout` bounds one read,
-        not the answer: a model that keeps producing is never cut off by it."""
+        The blocking read runs on a thread and hands lines to the event loop through a queue,
+        so a slow generation still stalls nothing else. `timeout` bounds one read, not the
+        answer: a model that keeps producing is never cut off by it.
+
+        Stopping (the consumer was cancelled, or simply stopped reading) closes the open
+        connection, which ends the blocked read at once. It used to set a flag the thread only
+        looked at between lines, and wait for the thread: a model thinking silently kept a
+        Ctrl+C waiting for the whole read timeout. The thread is a daemon and is not waited
+        for, so nothing else keeps the process alive either."""
         loop = asyncio.get_running_loop()
         lines: asyncio.Queue[tuple[str, Any]] = asyncio.Queue()
         stop = threading.Event()
+        opened: list[Any] = []
+
+        def emit(kind: str, value: object) -> None:
+            with contextlib.suppress(RuntimeError):  # the loop closed while we were stopping
+                loop.call_soon_threadsafe(lines.put_nowait, (kind, value))
 
         def pump() -> None:
             try:
-                for line in self._read_lines(url, payload, timeout, stop):
-                    loop.call_soon_threadsafe(lines.put_nowait, ("line", line))
+                for line in self._read_lines(url, payload, timeout, stop, opened):
+                    emit("line", line)
             except Exception as exc:  # reported to the consumer, never lost on the thread
-                loop.call_soon_threadsafe(lines.put_nowait, ("error", exc))
+                emit("error", exc)
             else:
-                loop.call_soon_threadsafe(lines.put_nowait, ("end", None))
+                emit("end", None)
 
-        reader = loop.run_in_executor(None, pump)
+        threading.Thread(target=pump, name="ollama-stream", daemon=True).start()
         try:
             while True:
                 kind, value = await lines.get()
@@ -183,10 +212,16 @@ class UrllibOllamaTransport:
                     return
         finally:
             stop.set()
-            await reader
+            for response in opened:
+                _abort(response)
 
     def _read_lines(
-        self, url: str, payload: Mapping[str, object], timeout: int, stop: threading.Event
+        self,
+        url: str,
+        payload: Mapping[str, object],
+        timeout: int,
+        stop: threading.Event,
+        opened: list[Any],
     ) -> Iterator[dict[str, object]]:
         if urllib.parse.urlsplit(url).scheme not in _HTTP_SCHEMES:
             raise ValueError(f"refusing a non-HTTP model endpoint: {url!r}")
@@ -196,6 +231,9 @@ class UrllibOllamaTransport:
             headers={"Content-Type": "application/json"},
         )
         with self._opener(request, timeout=timeout) as response:
+            opened.append(response)
+            if stop.is_set():  # stopped while connecting: the abort has already come and gone
+                return
             for raw in response:
                 if stop.is_set():
                     return
@@ -235,6 +273,7 @@ class OllamaChatClient:
         retry_think: str | bool | None = DEFAULT_OLLAMA_RETRY_THINK,
         think: str | bool | None = None,
         retry_context: int = DEFAULT_OLLAMA_RETRY_CONTEXT,
+        temperature: float = DEFAULT_OLLAMA_TEMPERATURE,
         transport: OllamaTransportInterface | None = None,
         stream_transport: OllamaStreamTransportInterface | None = None,
         wire_log: WireLogInterface | None = None,
@@ -261,6 +300,12 @@ class OllamaChatClient:
                 OLLAMA_THINK_ENV,
                 f"must be one of {', '.join(THINK_LEVELS)}, got {think!r}",
             )
+        if not 0 <= temperature <= MAX_OLLAMA_TEMPERATURE:
+            raise ConfigError(
+                OLLAMA_TEMPERATURE_ENV,
+                f"must be between 0 and {MAX_OLLAMA_TEMPERATURE:g}, got {temperature}",
+            )
+        self._temperature = temperature
         if retry_context < self.CONTEXT_FLOOR:
             raise ConfigError(
                 OLLAMA_RETRY_CONTEXT_ENV,
@@ -354,6 +399,13 @@ class OllamaChatClient:
                 OLLAMA_RETRY_CONTEXT_ENV,
                 f"must be a whole number of tokens, got {raw_retry_context!r}",
             ) from exc
+        raw_temperature = (environ.get(OLLAMA_TEMPERATURE_ENV) or "").strip()
+        try:
+            temperature = float(raw_temperature) if raw_temperature else DEFAULT_OLLAMA_TEMPERATURE
+        except ValueError as exc:
+            raise ConfigError(
+                OLLAMA_TEMPERATURE_ENV, f"must be a number, got {raw_temperature!r}"
+            ) from exc
         return cls(
             base_url=environ.get(OLLAMA_URL_ENV) or DEFAULT_OLLAMA_URL,
             model=model or environ.get(OLLAMA_MODEL_ENV) or DEFAULT_OLLAMA_MODEL,
@@ -364,6 +416,7 @@ class OllamaChatClient:
             retry_think=THINK_LEVELS[raw_think.lower()],
             think=THINK_LEVELS[raw_first_think.lower()],
             retry_context=retry_context,
+            temperature=temperature,
             transport=transport,
             stream_transport=stream_transport,
             wire_log=wire_log if wire_log is not None else cls._wire_log_from(environ),
@@ -546,9 +599,15 @@ class OllamaChatClient:
             # A schema is compiled to a grammar; "json" asks only for well-formed JSON.
             "format": dict(schema) if isinstance(schema, Mapping) else schema,
             "stream": stream,
-            # temperature 0 because an answer that changes on unchanged input cannot be
-            # reasoned about by the phase that consumes it.
-            "options": {"temperature": 0, "num_ctx": num_ctx, "num_predict": num_predict},
+            # temperature 0 by default because an answer that changes on unchanged input
+            # cannot be reasoned about by the phase that consumes it. The cost is that a
+            # job's retries are the same request and fail the same way: an operator whose
+            # plan keeps being rejected raises VIBEY_OLLAMA_TEMPERATURE to make them differ.
+            "options": {
+                "temperature": self._temperature,
+                "num_ctx": num_ctx,
+                "num_predict": num_predict,
+            },
         }
         if think is not None:
             payload["think"] = think

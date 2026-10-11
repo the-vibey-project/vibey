@@ -15,7 +15,7 @@ ancestors, and the plan is shown before anything is signalled. A wrapper such as
 import os
 import shlex
 import signal
-import subprocess
+import subprocess  # nosec B404 - fixed argv, never shell=True
 import time
 from collections.abc import Callable, Sequence
 from dataclasses import dataclass

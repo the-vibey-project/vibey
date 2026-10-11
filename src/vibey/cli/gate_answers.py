@@ -149,6 +149,10 @@ ANSWER_RULES: Final[Mapping[str, AnswerRuleInterface]] = MappingProxyType(
         "choice": CHOICE,
         "deploy_interview": CHOICE,
         "deploy_failure_triage": CHOICE,
+        # The last step of a delivered project (review_publish_handler): `accept_defaults`
+        # publishes what the prompt shows, `skip` finishes locally, `custom` changes fields
+        # (--raw). Its declared default is `skip`, so that is what is suggested.
+        "publish_interview": CHOICE,
         BUS_DEAD_LETTER_GATE_KIND: CHOICE,
         # A defect (worker, in place of a grant): `requeue` once a fix has landed, or
         # `abandon`. Its options are printed first-first, so the suggestion is `requeue`.

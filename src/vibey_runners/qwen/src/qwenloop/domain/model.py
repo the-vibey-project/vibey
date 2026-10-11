@@ -21,6 +21,8 @@ CODING_TOOL_NAMES: tuple[str, ...] = (
     "search",
     "find",
     "open_file",
+    "web_search",
+    "web_fetch",
 )
 
 
