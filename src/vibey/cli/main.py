@@ -62,7 +62,9 @@ from vibey.cli.state import state_app
 from vibey.cli.status import STATUS_PRESENTER
 from vibey.cli.supervisor import SUPERVISOR, supervisor_app
 from vibey.cli.ultra import ultra_app
+from vibey.cli.web import fetch_command, search_command, vibey_command, web_search_line
 from vibey.cli.workflows import WORKFLOWS
+from vibey.domain.config import ConfigError
 from vibey.domain.design_default_scope import DefaultScope
 from vibey.domain.engine import EngineId
 from vibey.domain.errors import (
@@ -112,6 +114,8 @@ from vibey.infrastructure.engines.scripted_visual import ScriptedVisualProvider
 from vibey.infrastructure.engines.wire_log import WIRE_LOG_ENV, default_wire_log_path
 from vibey.infrastructure.logging import StructlogAppLogger, configure_logging
 from vibey.infrastructure.postgres import POSTGRES_MIN_MAJOR, PostgresLocalService, PostgresStatus
+from vibey.infrastructure.web.search import WebSearchSettings
+from vibey.infrastructure.web.session import COMMAND_VARIABLE
 from vibey.infrastructure.worker_processes import DEFAULT_GRACE_SECONDS, WorkerStopper
 
 app = typer.Typer(name="vibey", no_args_is_help=True)
@@ -205,6 +209,10 @@ def main(
             f"vibey: LLM wire log {os.environ[WIRE_LOG_ENV]} (follow it: vibey llm tail)",
             err=True,
         )
+
+
+app.command("search")(search_command)
+app.command("fetch")(fetch_command)
 
 
 async def _enqueue_design(project_id: UUID, *, priority: bool = False) -> str:
@@ -2110,6 +2118,15 @@ def worker(
             if ignore_sabbath:
                 SABBATH.decline_if_resting("worker", ignore=True)
             sabbath = SABBATH.gate(ignore=ignore_sabbath)
+            try:
+                web_settings = WebSearchSettings.from_environment(os.environ)
+            except ConfigError as exc:
+                typer.echo(f"error: {exc}", err=True)
+                raise typer.Exit(EXIT_USAGE) from exc
+            search_overlay = web_settings.session_environment() if web_settings else {}
+            if search_overlay:
+                search_overlay[COMMAND_VARIABLE] = vibey_command(sys.argv[0])
+            typer.echo(web_search_line(web_settings), err=True)
             auto_answers: GateAutoAnswerSweepInterface | None = None
             if auto_answer:
                 auto_answers = GateAutoAnswerSweep(
@@ -2142,9 +2159,9 @@ def worker(
                 if provider == "claudeloop":
                     claude_process = ClaudeLoopProcess(
                         executor=AsyncSubprocessExecutor(
-                            EngineEnvironmentPolicy.from_config(project.config).environment(
-                                CLAUDELOOP
-                            )
+                            EngineEnvironmentPolicy.from_config(project.config)
+                            .with_overlay(search_overlay)
+                            .environment(CLAUDELOOP)
                         ),
                         max_turns=max_turns,
                         max_dollars=max_dollars,
@@ -2200,7 +2217,9 @@ def worker(
                 # project declares (a vendor's service-account file, say) was invisible to the
                 # auth check, and the engine read "auth FAIL" although its sessions would
                 # authenticate.
-                engine_environment = EngineEnvironmentPolicy.from_config(project.config)
+                engine_environment = EngineEnvironmentPolicy.from_config(
+                    project.config
+                ).with_overlay(search_overlay)
                 adapters = {
                     engine_id: engine_environment.applied_to(adapter)
                     for engine_id, adapter in adapters.items()

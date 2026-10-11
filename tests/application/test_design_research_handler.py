@@ -229,3 +229,57 @@ async def test_record_gap_still_uses_evidence_that_exists() -> None:
     (event,) = ledger.events
     assert event.kind is EventKind.ARTIFACT_PRODUCED
     assert event.provenance is Provenance.UNTRUSTED
+
+
+class ContextualResearcher:
+    """A provider that can use what the project is about, like the sovereign one with search."""
+
+    def __init__(self) -> None:
+        self.seen: list[tuple[str, str]] = []
+
+    async def research(self, topic: str) -> ResearchResult:
+        raise AssertionError("a contextual provider is called with its context")
+
+    async def research_with_context(self, topic: str, context: str) -> ResearchResult:
+        self.seen.append((topic, context))
+        return ResearchResult("t", "web search (fake): https://a.example", "quoted")
+
+
+class UnreadableLedger(FakeLedger):
+    async def all_for_project(self, project_id: UUID) -> tuple[DesignEvent, ...]:
+        raise AssertionError(
+            "a provider that takes no context must not make the handler read the ledger"
+        )
+
+
+async def test_a_contextual_provider_is_told_the_projects_objective_from_the_intake() -> None:
+    ledger = FakeLedger()
+    ledger.events.append(
+        DesignEvent(
+            kind=EventKind.TRANSCRIPT_RECORDED,
+            provenance=Provenance.UNTRUSTED,
+            produced_at=FixedClock().now(),
+            payload={
+                "text": "# Intake\n\n## Objective\n\nBuild the ministry section. Reuse essays.\n"
+            },
+        )
+    )
+    researcher = ContextualResearcher()
+    handler = DesignResearchHandler(
+        ledger=ledger, researcher=researcher, clock=FixedClock(), engine_id=EngineId.GPTOSSLOOP
+    )
+
+    outcome = await handler.handle(_research_job("prior-art"))
+
+    assert isinstance(outcome, Success)
+    assert researcher.seen == [("prior-art", "Build the ministry section.")]
+
+
+async def test_a_provider_without_context_is_called_as_before_and_the_ledger_is_not_read() -> None:
+    handler = DesignResearchHandler(
+        ledger=UnreadableLedger(),
+        researcher=FixedResearcher(),
+        clock=FixedClock(),
+        engine_id=EngineId.CODEXLOOP,
+    )
+    assert isinstance(await handler.handle(_research_job("prior-art")), Success)

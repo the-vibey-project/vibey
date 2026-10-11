@@ -1556,6 +1556,39 @@ def test_worker_auto_answer_that_fails_is_reported_and_the_worker_keeps_going(
 
 
 @pytest.mark.usefixtures("_fast_engine_preflight")
+def test_worker_says_where_web_search_reaches_at_startup(tmp_path: Path) -> None:
+    async def seed_empty() -> None:
+        async with build_app() as resources:
+            await resources.projects.create("web-search-line", tmp_path, max_cycles=1, config={})
+
+    asyncio.run(seed_empty())
+    from unittest.mock import AsyncMock, patch
+
+    with patch("vibey.infrastructure.db.notifier.PostgresJobReadyNotifier") as mock_notifier_cls:
+        mock_notifier_cls.return_value = AsyncMock()
+        configured = runner.invoke(
+            app, ["worker", "--once"], env={"VIBEY_SEARXNG_URL": "http://127.0.0.1:8080"}
+        )
+        plain = runner.invoke(
+            app, ["worker", "--once"], env={"VIBEY_SEARXNG_URL": "", "VIBEY_BRAVE_API_KEY": ""}
+        )
+    assert (
+        "web search: searxng for DESIGN research and for every engine session" in configured.output
+    )
+    assert "web search: not configured" in plain.output
+
+
+def test_worker_refuses_to_start_with_a_web_search_setting_it_cannot_read() -> None:
+    result = runner.invoke(
+        app,
+        ["worker", "--once"],
+        env={"VIBEY_SEARCH_PROVIDER": "bing", "VIBEY_BRAVE_API_KEY": "k"},
+    )
+    assert result.exit_code == 2
+    assert "VIBEY_SEARCH_PROVIDER" in result.output
+
+
+@pytest.mark.usefixtures("_fast_engine_preflight")
 def test_worker_once_with_job(tmp_path: Path) -> None:
     async def seed() -> UUID:
         async with build_app() as resources:

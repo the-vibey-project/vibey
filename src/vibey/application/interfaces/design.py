@@ -72,5 +72,13 @@ class ResearchProvider(Protocol):
 
 
 @runtime_checkable
+class ContextualResearchProvider(Protocol):
+    """A research provider that is also told what the project is about (a web search needs
+    more than a topic label). A provider without it is called with the topic alone."""
+
+    async def research_with_context(self, topic: str, context: str) -> ResearchResult: ...
+
+
+@runtime_checkable
 class SpecSynthesizer(Protocol):
     async def synthesize(self, events: Sequence[DesignEvent]) -> DesignSpec: ...
