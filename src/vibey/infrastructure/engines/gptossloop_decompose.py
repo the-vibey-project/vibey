@@ -77,6 +77,25 @@ DECOMPOSE_SYSTEM = (
 )
 
 
+NODE_STACK_HINT = (
+    "\nThis repository is a Node project: it has a package.json and no pyproject.toml. "
+    "Verify with its own npm scripts (for example npm run typecheck, npm run lint, npm "
+    "test, npm run build), never with pytest, because its tests are TypeScript test files "
+    "run by npm, not Python. `node x.js` runs only plain JavaScript (.js or .mjs), never a "
+    ".ts file."
+)
+
+
+def stack_hint(checkout: CheckoutView | None) -> str:
+    """What the planner needs to know about the repository's tooling, from what the
+    checkout shows. The base prompt's "prefer one pytest suite" is right for a Python
+    repository and wrong for any other: a plan whose commands cannot run in the project
+    is accepted, built, and then fails verification for a reason that is the plan's."""
+    if checkout is None or not checkout.exists("package.json") or checkout.exists("pyproject.toml"):
+        return ""
+    return NODE_STACK_HINT
+
+
 class GptossloopWorkPlanProducer:
     """DECOMPOSE on a local model, over the shared Ollama client in JSON mode, checked."""
 
@@ -156,7 +175,7 @@ class GptossloopWorkPlanProducer:
             # map onto could never pass validate_decomposition's first rule anyway.
             raise ValueError("a spec with no acceptance criteria cannot be decomposed")
         return await self._ask.ask(
-            DECOMPOSE_SYSTEM,
+            DECOMPOSE_SYSTEM + stack_hint(checkout),
             f"Spec: {json.dumps(self._decoder.spec_json(spec), default=str)}",
             self.schema(criteria_ids),
             subject="the work plan",
