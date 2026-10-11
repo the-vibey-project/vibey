@@ -372,3 +372,12 @@ def test_the_producer_meets_its_declared_seams() -> None:
     assert isinstance(producer._chat, OllamaChatClientInterface)
     assert isinstance(producer._decoder, WorkPlanDecoderInterface)
     assert isinstance(producer._decoder, WorkPlanDecoder)
+
+
+def test_the_prompt_says_an_item_may_verify_with_a_script_it_creates_but_not_a_later_items() -> (
+    None
+):
+    assert "its verification runs AFTER that work" in DECOMPOSE_SYSTEM
+    assert "verify with a script it creates itself" in DECOMPOSE_SYSTEM
+    assert "only a LATER item creates" in DECOMPOSE_SYSTEM
+    assert "List each path once" in DECOMPOSE_SYSTEM
