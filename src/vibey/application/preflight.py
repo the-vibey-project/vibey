@@ -7,6 +7,10 @@ import asyncio
 from collections.abc import Mapping
 from uuid import UUID
 
+from vibey.application.bounded_preflight import (
+    DEFAULT_PREFLIGHT_TIMEOUT_SECONDS,
+    bounded_preflight,
+)
 from vibey.application.dto import StartupPreflightReport
 from vibey.application.interfaces.engines import EngineAdapter
 from vibey.application.interfaces.preflight_interface import (
@@ -30,9 +34,11 @@ class ConductorPreflight(ConductorPreflightInterface):
         *,
         health: PreflightHealthServiceInterface,
         feasibility: RunFeasibilityEvaluatorInterface,
+        timeout: float = DEFAULT_PREFLIGHT_TIMEOUT_SECONDS,
     ) -> None:
         self._health = health
         self._feasibility = feasibility
+        self._timeout = timeout
 
     async def run(
         self,
@@ -42,7 +48,10 @@ class ConductorPreflight(ConductorPreflightInterface):
     ) -> StartupPreflightReport:
         engine_ids = tuple(adapters)
         results = await asyncio.gather(
-            *(adapters[engine_id].preflight() for engine_id in engine_ids)
+            *(
+                bounded_preflight(adapters[engine_id], timeout=self._timeout)
+                for engine_id in engine_ids
+            )
         )
         preflights = dict(zip(engine_ids, results, strict=True))
         for engine_id, result in preflights.items():

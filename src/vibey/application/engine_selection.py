@@ -32,6 +32,10 @@ from dataclasses import dataclass
 from datetime import datetime, timedelta
 from uuid import UUID
 
+from vibey.application.bounded_preflight import (
+    DEFAULT_PREFLIGHT_TIMEOUT_SECONDS,
+    bounded_preflight,
+)
 from vibey.application.dto import EngineEvent, JobRecord
 from vibey.application.engine_health_service import EngineHealthService
 from vibey.application.engine_selector import AUTH_TTL, EngineSelector
@@ -186,7 +190,9 @@ class SelectingEngineProvider:
         auth_refresh_after: timedelta = AUTH_TTL / 2,
         auth_recheck_every: timedelta = timedelta(minutes=15),
         dispatch: EngineDispatchServiceInterface | None = None,
+        preflight_timeout: float = DEFAULT_PREFLIGHT_TIMEOUT_SECONDS,
     ) -> None:
+        self._preflight_timeout = preflight_timeout
         self._selector = selector
         # Hybrid engine dispatch (ADR-0079). None is today's selection, unconditionally.
         self._dispatch = dispatch
@@ -227,7 +233,9 @@ class SelectingEngineProvider:
             # call. That is what makes it eligible, and it is refreshed here because
             # nothing else would -- the price ADR-0015 accepted for qwenloop, now paid
             # for every local engine the operator switched on (ADR-0038).
-            preflight = await self._adapters[engine_id].preflight()
+            preflight = await bounded_preflight(
+                self._adapters[engine_id], timeout=self._preflight_timeout
+            )
             await self._health.update_from_preflight(
                 job.project_id,
                 engine_id,
@@ -329,7 +337,9 @@ class SelectingEngineProvider:
             self._auth_checked_at[(project_id, engine_id)] = now
             # record_preflight, not update_from_preflight: a login check refreshes the
             # login and never grants or revokes conformance, which is doctor's.
-            preflight = await self._adapters[engine_id].preflight()
+            preflight = await bounded_preflight(
+                self._adapters[engine_id], timeout=self._preflight_timeout
+            )
             await self._health.record_preflight(project_id, engine_id, preflight)
 
 

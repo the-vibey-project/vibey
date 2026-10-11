@@ -2,10 +2,12 @@
 """Streaming the local model's reply, so an operator can watch it arrive (the wire log)."""
 
 import json
+import threading
 import time
 import urllib.request
 from collections.abc import AsyncGenerator, Mapping
 from pathlib import Path
+from types import SimpleNamespace
 from typing import Any
 
 import pytest
@@ -13,7 +15,11 @@ import pytest
 from vibey.infrastructure.engines.interfaces.ollama_chat_interface import (
     OllamaStreamTransportInterface,
 )
-from vibey.infrastructure.engines.ollama_chat import OllamaChatClient, UrllibOllamaTransport
+from vibey.infrastructure.engines.ollama_chat import (
+    OllamaChatClient,
+    UrllibOllamaTransport,
+    _abort,
+)
 from vibey.infrastructure.engines.wire_log import WIRE_LOG_ENV
 
 Line = dict[str, object]
@@ -265,3 +271,83 @@ async def test_closing_early_stops_the_reader_thread_without_hanging() -> None:
     stream = transport.stream_json("http://h/x", {}, timeout=1)
     assert await stream.__anext__() == {"n": 1}
     await stream.aclose()
+
+
+class _Blocking(_Response):
+    """A model thinking silently: the read blocks until the connection is closed."""
+
+    def __init__(self) -> None:
+        self.released = threading.Event()
+        self.closed = False
+
+    def __iter__(self) -> Any:
+        yield b'{"n": 1}\n'
+        self.released.wait(10)
+
+    def close(self) -> None:
+        self.closed = True
+        self.released.set()
+
+
+async def test_stopping_closes_the_connection_instead_of_waiting_out_the_read() -> None:
+    response = _Blocking()
+    transport = UrllibOllamaTransport(opener=lambda *a, **k: response)
+    stream = transport.stream_json("http://h/x", {}, timeout=900)
+
+    assert await stream.__anext__() == {"n": 1}
+    started = time.monotonic()
+    await stream.aclose()
+
+    assert response.closed
+    assert time.monotonic() - started < 2
+
+
+def test_aborting_shuts_the_socket_down_before_closing() -> None:
+    calls: list[str] = []
+    sock = SimpleNamespace(shutdown=lambda how: calls.append("shutdown"))
+    response = SimpleNamespace(
+        fp=SimpleNamespace(raw=SimpleNamespace(_sock=sock)), close=lambda: calls.append("close")
+    )
+
+    _abort(response)
+
+    assert calls == ["shutdown", "close"]
+
+
+def test_aborting_survives_a_socket_and_a_response_that_will_not_close() -> None:
+    def refuse(*_: object) -> None:
+        raise OSError("already closed")
+
+    _abort(
+        SimpleNamespace(
+            fp=SimpleNamespace(raw=SimpleNamespace(_sock=SimpleNamespace(shutdown=refuse))),
+            close=refuse,
+        )
+    )
+    _abort(SimpleNamespace(close=refuse))
+
+
+def test_a_stop_that_came_while_connecting_reads_nothing() -> None:
+    class _Unread(_Response):
+        def __iter__(self) -> Any:
+            raise AssertionError("must not read after a stop")
+
+    stop = threading.Event()
+    stop.set()
+    opened: list[Any] = []
+    transport = UrllibOllamaTransport(opener=lambda *a, **k: _Unread([]))
+
+    assert list(transport._read_lines("http://h/x", {}, 1, stop, opened)) == []
+    assert len(opened) == 1
+
+
+def test_a_stop_between_lines_ends_the_read_without_the_next_line() -> None:
+    stop = threading.Event()
+    transport = UrllibOllamaTransport(
+        opener=lambda *a, **k: _Response([b'{"n": 1}\n', b'{"n": 2}\n'])
+    )
+    reading = transport._read_lines("http://h/x", {}, 1, stop, [])
+
+    assert next(reading) == {"n": 1}
+    stop.set()
+    assert next(reading, None) is None
