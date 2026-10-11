@@ -619,6 +619,27 @@ _CODING_TOOLS: list[dict[str, object]] = [
     {
         "type": "function",
         "function": {
+            "name": "outline",
+            "description": (
+                "List the declarations of one source file (functions, classes, types, "
+                "exports) with their line numbers, without their bodies. Use it to learn what "
+                "a file offers before importing from it, instead of reading the whole file. "
+                "exports_only keeps only what other files can import."
+            ),
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "path": {"type": "string"},
+                    "exports_only": {"type": "boolean"},
+                },
+                "required": ["path"],
+                "additionalProperties": False,
+            },
+        },
+    },
+    {
+        "type": "function",
+        "function": {
             "name": "search",
             "description": (
                 "Search file contents inside the assigned worktree and return matching lines "

@@ -3,7 +3,8 @@
 
 import json
 import re
-from collections.abc import AsyncIterator
+from collections.abc import AsyncIterator, Sequence
+from dataclasses import asdict
 from datetime import UTC, datetime
 from pathlib import Path
 
@@ -23,6 +24,16 @@ from qwenloop.domain.config import (
     DEFAULT_MAX_RECORDED_ARGUMENT_CHARS,
     DEFAULT_MAX_STALLED_TURNS,
     DEFAULT_MAX_TOOL_RESULT_CHARS,
+)
+from qwenloop.domain.context_economy import (
+    ContextEconomy,
+    ResultDeduper,
+    composition,
+    expected_files,
+    ledger_note,
+    mask_transcript,
+    shape_result,
+    tool_name,
 )
 from qwenloop.domain.interfaces import ChatChunkInterface
 from qwenloop.domain.model import (
@@ -185,7 +196,12 @@ class AutonomousRunner:
         self._host = host
 
     async def _chat(
-        self, run_id: str, turn: int, server_info: ServerInfo, state: RunState
+        self,
+        run_id: str,
+        turn: int,
+        server_info: ServerInfo,
+        state: RunState,
+        messages: Sequence[ChatMessage],
     ) -> AsyncIterator[ChatChunkInterface]:
         """One model call for this turn, retried when the server cannot parse the model's
         tool call (#386). The server answers before it yields anything, so a retry never
@@ -193,9 +209,9 @@ class AutonomousRunner:
         retries = 0
         while True:
             stream = (
-                self._dispatcher.dispatch(self._server, server_info, state.transcript)
+                self._dispatcher.dispatch(self._server, server_info, messages)
                 if self._dispatcher is not None
-                else self._server.chat_stream(server_info, state.transcript)
+                else self._server.chat_stream(server_info, messages)
             )
             try:
                 first = await anext(stream)
@@ -282,6 +298,7 @@ class AutonomousRunner:
         max_tool_result_chars: int = DEFAULT_MAX_TOOL_RESULT_CHARS,
         context_renewal_tokens: int = DEFAULT_CONTEXT_RENEWAL_TOKENS,
         max_stalled_turns: int = DEFAULT_MAX_STALLED_TURNS,
+        economy: ContextEconomy = ContextEconomy(),  # noqa: B008 - frozen, shared safely
     ) -> RunState:
         state = RunState(run_id=run_id, status=RunStatus.RUNNING)
         # Consecutive turns with no tool call and no text. Each retry is its own model call
@@ -290,6 +307,10 @@ class AutonomousRunner:
         # Why the run failed, when something other than the turn cap ended it.
         failure: dict[str, object] | None = None
         stall = StallDetector(max_stalled_turns)
+        deduper = ResultDeduper()
+        planned = expected_files(plan) if economy.ledger else ()
+        written: list[str] = []
+        last_check: str | None = None
         any_tool_called = False
         progress_tool_called = False
         saw_verdict = False
@@ -325,6 +346,7 @@ class AutonomousRunner:
                 "max_tool_result_chars": max_tool_result_chars,
                 "context_renewal_tokens": context_renewal_tokens,
                 "max_stalled_turns": max_stalled_turns,
+                "economy": asdict(economy),
             },
         )
         await self._notify("Qwen run started", f"Run {run_id} started.")
@@ -355,7 +377,17 @@ class AutonomousRunner:
                     run_id, {"type": "context.renewed", "turn": turn, "replaced_messages": renewed}
                 )
             state.transcript = _trim_transcript(state.transcript, profile.context_window)
+            state.transcript = mask_transcript(
+                state.transcript, economy.keep_full_results, economy.stub_written_arguments
+            )
             signatures: list[str] = []
+            outgoing: list[ChatMessage] = state.transcript
+            note = ledger_note(planned, written, last_check)
+            if note is not None:
+                outgoing = [*state.transcript, ChatMessage("user", note)]
+            self._store.append_event(
+                run_id, {"type": "context.composition", "turn": turn, **composition(outgoing)}
+            )
             text_parts: list[str] = []
             tool_calls: list[dict[str, object]] = []
             tool_results: list[ChatMessage] = []
@@ -369,7 +401,7 @@ class AutonomousRunner:
             server_timings: dict[str, float] | None = None
             finish_reason: str | None = None
             reasoning: str | None = None
-            async for chunk in self._chat(run_id, turn, server_info, state):
+            async for chunk in self._chat(run_id, turn, server_info, state, outgoing):
                 if answered is None:
                     answered = self._clock.monotonic()
                 if chunk.timings is not None:
@@ -434,13 +466,18 @@ class AutonomousRunner:
                     self._store.append_event(
                         run_id, {"type": "tool_result", "name": name, "result": result}
                     )
-                    tool_results.append(
-                        ChatMessage(
-                            "tool",
-                            _truncate_tool_result(str(result), max_tool_result_chars),
-                            tool_call_id=call_id,
-                        )
+                    shown = _truncate_tool_result(
+                        str(shape_result(tool_name(name), result, economy)), max_tool_result_chars
                     )
+                    if economy.fold_repeats:
+                        shown = deduper.check(name, arguments, shown, turn) or shown
+                        deduper.note_call(name)
+                    if tool_name(name) in {"write_file", "edit_file"} and "error" not in result:
+                        written.append(str(arguments.get("path", "")))
+                    if tool_name(name) == "shell" and "exit_code" in result:
+                        command = " ".join(map(str, arguments.get("argv") or []))[:100]
+                        last_check = f"`{command}` exited {result['exit_code']}"
+                    tool_results.append(ChatMessage("tool", shown, tool_call_id=call_id))
             if reasoning:
                 # What the model thought before it acted, for `vibey llm tail` to show beside
                 # the tool calls: the answer was always recorded (text_delta), the reasoning

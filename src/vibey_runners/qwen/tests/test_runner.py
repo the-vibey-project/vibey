@@ -21,6 +21,7 @@ from qwenloop.application.runner import (
     _truncate_tool_result,
 )
 from qwenloop.domain.config import DEFAULT_MAX_TOOL_RESULT_CHARS, QwenConfig
+from qwenloop.domain.context_economy import ContextEconomy
 from qwenloop.domain.interfaces import FollowUpInterface
 from qwenloop.domain.model import (
     CODING_TOOL_NAMES,
@@ -112,7 +113,7 @@ def test_the_default_cap_shows_a_whole_readme_read() -> None:
     line count, and gpt-oss:20b opened it 19 times over four attempts."""
     read = {"content": "x" * 8_730, "line_start": 1, "line_end": 435, "total_lines": 435}
     assert _truncate_tool_result(str(read)) == str(read)
-    assert DEFAULT_MAX_TOOL_RESULT_CHARS == QwenConfig().max_tool_result_chars == 24_000
+    assert DEFAULT_MAX_TOOL_RESULT_CHARS == QwenConfig().max_tool_result_chars == 12_000
 
 
 @pytest.mark.asyncio
@@ -1688,3 +1689,104 @@ async def test_a_long_session_is_renewed_and_the_event_says_so(tmp_path: Path) -
     assert len(renewed) == 1 and "big0.md" in renewed[0].content
     events = (tmp_path / ".qwenloop" / "runs" / "renew" / "events.jsonl").read_text()
     assert '"type": "context.renewed"' in events
+
+
+_BRIEF = "do it\n\nFiles you are expected to create or change (start there):\n- a.txt\n- b.txt\n"
+
+
+def _info() -> ServerInfo:
+    return ServerInfo(Backend.LLAMA_CPP, PORTABLE.name, "http://127.0.0.1", False, True)
+
+
+@pytest.mark.asyncio
+async def test_the_ledger_is_sent_each_turn_but_never_kept_in_the_conversation(
+    tmp_path: Path,
+) -> None:
+    server = ScriptedServer(
+        [
+            [
+                ChatChunk(
+                    tool_call={"name": "write_file", "arguments": {"path": "a.txt", "content": "x"}}
+                )
+            ],
+            [ChatChunk(tool_call={"name": "shell", "arguments": {"argv": ["true"]}})],
+            [ChatChunk(text=_DONE)],
+        ]
+    )
+
+    await AutonomousRunner(
+        server, FileRunStore(tmp_path), SandboxTools(tmp_path), clock=FakeClock()
+    ).run(
+        run_id="ledger",
+        plan=_BRIEF,
+        cwd=tmp_path,
+        profile=PORTABLE,
+        server_info=_info(),
+        max_turns=3,
+    )
+
+    first, second, third = (turn[-1].content for turn in server.seen)
+    assert "0 of 2 planned files written" in first and "Still to write: a.txt, b.txt" in first
+    assert "1 of 2" in second and "Still to write: b.txt" in second
+    assert "Last command: `true` exited 0" in third
+    assert not any("[Progress:" in m.content for m in server.seen[-1][:-1])
+
+
+@pytest.mark.asyncio
+async def test_the_economy_off_sends_exactly_the_conversation(tmp_path: Path) -> None:
+    server = ScriptedServer(
+        [
+            [ChatChunk(tool_call={"name": "shell", "arguments": {"argv": ["true"]}})],
+            [ChatChunk(text=_DONE)],
+        ]
+    )
+
+    await AutonomousRunner(
+        server, FileRunStore(tmp_path), SandboxTools(tmp_path), clock=FakeClock()
+    ).run(
+        run_id="off",
+        plan=_BRIEF,
+        cwd=tmp_path,
+        profile=PORTABLE,
+        server_info=_info(),
+        max_turns=2,
+        economy=ContextEconomy.off(),
+    )
+
+    assert all("[Progress:" not in m.content for turn in server.seen for m in turn)
+    meta = json.loads((tmp_path / ".qwenloop" / "runs" / "off" / "meta.json").read_text())
+    assert meta["economy"]["keep_full_results"] == 0 and meta["economy"]["ledger"] is False
+
+
+@pytest.mark.asyncio
+async def test_old_results_are_stubs_repeats_are_folded_and_the_composition_is_recorded(
+    tmp_path: Path,
+) -> None:
+    (tmp_path / "f.txt").write_text("y" * 900)
+    read = {"name": "read_file", "arguments": {"path": "f.txt"}}
+    server = ScriptedServer(
+        [[ChatChunk(tool_call=read)]] * 3
+        + [[ChatChunk(tool_call={"name": "shell", "arguments": {"argv": ["echo", "hi"]}})]] * 2
+        + [[ChatChunk(text=_DONE)]]
+    )
+
+    await AutonomousRunner(
+        server, FileRunStore(tmp_path), SandboxTools(tmp_path), clock=FakeClock()
+    ).run(
+        run_id="eco",
+        plan="do it",
+        cwd=tmp_path,
+        profile=PORTABLE,
+        server_info=_info(),
+        max_turns=6,
+        max_stalled_turns=0,
+        economy=ContextEconomy(keep_full_results=1),
+    )
+
+    tools = [m for m in server.seen[-1] if m.role == "tool"]
+    assert tools[1].content == "[same result as turn 1: nothing has changed since]"
+    assert tools[0].content.startswith("[earlier read_file f.txt: ")
+    events = (tmp_path / ".qwenloop" / "runs" / "eco" / "events.jsonl").read_text()
+    composition_events = [json.loads(x) for x in events.splitlines() if "context.composition" in x]
+    assert len(composition_events) == 6
+    assert composition_events[-1]["tool_results"]["read_file"] > 0

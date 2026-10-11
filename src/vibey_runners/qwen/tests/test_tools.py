@@ -46,6 +46,7 @@ def test_the_tool_catalogue_names_every_tool_the_model_is_given() -> None:
         "write_file",
         "edit_file",
         "shell",
+        "outline",
         "search",
         "find",
         "open_file",
@@ -596,3 +597,65 @@ async def test_a_web_request_that_hangs_is_cut_off(
     result = await _web_tools(tmp_path, "exec sleep 5").execute("web_search", {"query": "q"})
 
     assert result == {"error": "the web request timed out"}
+
+
+@pytest.mark.asyncio
+async def test_outline_lists_a_typescript_files_declarations_with_line_numbers(
+    tmp_path: Path,
+) -> None:
+    (tmp_path / "lib.ts").write_text(
+        "import x from 'y';\n"
+        "export interface Entry { slug: string }\n"
+        "export function getEntry(dir: string): Entry | null {\n  return null;\n}\n"
+        "const helper = () => 1;\n"
+        "export default class Loader {}\n"
+        "async function run() {}\n"
+    )
+    tools = SandboxTools(tmp_path)
+
+    everything = await tools.execute("outline", {"path": "lib.ts"})
+    exports = await tools.execute("outline", {"path": "lib.ts", "exports_only": True})
+
+    assert everything["total_lines"] == 8 and everything["truncated"] is False
+    assert everything["symbols"] == [
+        "2: export interface Entry { slug: string }",
+        "3: export function getEntry(dir: string): Entry | null {",
+        "6: const helper = () => 1;",
+        "7: export default class Loader {}",
+        "8: async function run() {}",
+    ]
+    assert exports["symbols"] == [
+        "2: export interface Entry { slug: string }",
+        "3: export function getEntry(dir: string): Entry | null {",
+        "7: export default class Loader {}",
+    ]
+
+
+@pytest.mark.asyncio
+async def test_outline_of_python_names_public_top_level_declarations_when_asked(
+    tmp_path: Path,
+) -> None:
+    (tmp_path / "m.py").write_text(
+        "def public():\n    pass\n\ndef _hidden():\n    pass\n\n"
+        "class Thing:\n    def method(self):\n        pass\n\n"
+        "async def go():\n    pass\n\nasync def _quiet():\n    pass\n"
+    )
+    tools = SandboxTools(tmp_path)
+
+    exports = await tools.execute("outline", {"path": "m.py", "exports_only": True})
+    everything = await tools.execute("outline", {"path": "m.py"})
+
+    assert exports["symbols"] == ["1: def public():", "7: class Thing:", "11: async def go():"]
+    assert "8: def method(self):" in everything["symbols"]
+    assert len(everything["symbols"]) == 6
+
+
+@pytest.mark.asyncio
+async def test_outline_errors_on_a_missing_file_and_caps_a_huge_one(tmp_path: Path) -> None:
+    (tmp_path / "big.ts").write_text("".join(f"export const a{n} = {n};\n" for n in range(200)))
+    tools = SandboxTools(tmp_path)
+
+    assert "error" in await tools.execute("outline", {"path": "nope.ts"})
+    big = await tools.execute("outline", {"path": "big.ts"})
+
+    assert len(big["symbols"]) == 80 and big["truncated"] is True  # type: ignore[arg-type]
