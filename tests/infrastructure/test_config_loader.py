@@ -432,3 +432,44 @@ def test_vibey_new_refuses_a_gate_timeout_it_cannot_honour(
 
     with pytest.raises(ConfigError, match=message):
         load_runtime_config_from_path(config_path)
+
+
+def test_a_publish_table_reaches_the_project_and_is_what_the_publisher_reads(
+    tmp_path: Path,
+) -> None:
+    """`vibey new` stores only the tables on the allow-list. Without `publish` there, a
+    `[publish]` the operator wrote would be dropped and nothing would ever publish."""
+    from vibey.domain.config import PublishConfig
+
+    config_path = tmp_path / "vibey.toml"
+    config_path.write_text(
+        '[project]\nname = "x"\n\n[publish]\nmode = "interview"\nbase = "develop"\n'
+        'visibility = "private"\ndraft = true\n'
+    )
+
+    stored = load_runtime_config_from_path(config_path)
+
+    assert "publish" in RUNTIME_CONFIG_KEYS
+    assert stored == {
+        "publish": {
+            "mode": "interview",
+            "base": "develop",
+            "visibility": "private",
+            "draft": True,
+        }
+    }
+    assert PublishConfig.from_data(stored) == PublishConfig(
+        mode="interview", visibility="private", draft=True, base="develop"
+    )
+
+
+def test_a_publish_table_that_is_wrong_is_refused_when_the_project_is_created(
+    tmp_path: Path,
+) -> None:
+    from vibey.domain.config import ConfigError
+
+    config_path = tmp_path / "vibey.toml"
+    config_path.write_text('[publish]\nmode = "sometimes"\n')
+
+    with pytest.raises(ConfigError, match="publish.mode"):
+        load_runtime_config_from_path(config_path)
