@@ -93,7 +93,10 @@ from vibey.domain.spec import (
     NonFunctionalRequirement,
 )
 from vibey.domain.verbosity import resolve_log_plan
-from vibey.infrastructure.config_loader import load_runtime_config_from_path
+from vibey.infrastructure.config_loader import (
+    DESIGN_RESEARCH_ON_UNAVAILABLE_ENV,
+    load_runtime_config_from_path,
+)
 from vibey.infrastructure.db.ledger_repository import PostgresLedgerRepository
 from vibey.infrastructure.engines.claudeloop_design import ClaudeLoopDesignProvider
 from vibey.infrastructure.engines.claudeloop_process import (
@@ -2095,6 +2098,31 @@ def worker(
             ),
         ),
     ] = None,
+    auto_record_research_gaps: Annotated[
+        bool,
+        typer.Option(
+            "--auto-record-research-gaps",
+            help=(
+                "DESIGN research that can obtain no evidence (no search backend, no "
+                "VIBEY_EVIDENCE_DIR) records the topic as not researched and goes on, instead of "
+                "parking a research_evidence gate; a gate already parked is answered so it runs "
+                "again. The spec then says what was not researched. Sets "
+                "VIBEY_DESIGN_RESEARCH_ON_UNAVAILABLE=record_gap for this worker. One project."
+            ),
+        ),
+    ] = False,
+    autonomous: Annotated[
+        bool,
+        typer.Option(
+            "--autonomous",
+            help=(
+                "Every switch that is safe to leave on for an unattended run: --auto-answer, "
+                "--auto-accept-all and --auto-record-research-gaps. Never --auto-publish (it "
+                "sends the work to GitHub, so it is its own flag), never a deployment, and never "
+                "a spending gate. One worker, one project."
+            ),
+        ),
+    ] = False,
     auto_accept_design: Annotated[
         bool,
         typer.Option(
@@ -2197,8 +2225,14 @@ def worker(
     if all_projects and (project_opt is not None or wait_for_project is not None):
         typer.echo("--all-projects serves every project: drop --project and --wait-for-project")
         raise typer.Exit(EXIT_USAGE)
-    if auto_answer and all_projects:
-        typer.echo("--auto-answer answers one project's gates: use --project, not --all-projects")
+    # `--autonomous` is the switches that are safe to leave on, together; each is still its own.
+    auto_answer_on = auto_answer or autonomous
+    record_gaps_on = auto_record_research_gaps or autonomous
+    if auto_answer_on and all_projects:
+        typer.echo(
+            "--auto-answer and --autonomous answer one project's gates: use --project, not "
+            "--all-projects"
+        )
         raise typer.Exit(EXIT_USAGE)
     if local_max_turns is not None:
         try:
@@ -2207,15 +2241,23 @@ def worker(
             typer.echo(f"--local-max-turns: {exc.message}", err=True)
             raise typer.Exit(EXIT_USAGE) from exc
         typer.echo(f"local engines: turn limit {local_max_turns.strip()} per session", err=True)
-    # `--auto-accept-all` is the three acceptances together, and nothing else.
-    accept_design_on = auto_accept_design or auto_accept_all
-    accept_review_on = auto_accept_review or auto_accept_all
-    finish_local_on = auto_finish_local or auto_accept_all
-    if (accept_design_on or accept_review_on or finish_local_on or auto_publish) and all_projects:
+    if record_gaps_on:
+        os.environ[DESIGN_RESEARCH_ON_UNAVAILABLE_ENV] = "record_gap"
         typer.echo(
-            "--auto-accept-design, --auto-accept-review, --auto-finish-local, --auto-publish "
-            "and --auto-accept-all accept one project's decisions: use --project, not "
-            "--all-projects"
+            "DESIGN research: a topic with no evidence is recorded as not researched, never a gate",
+            err=True,
+        )
+    # `--auto-accept-all` is the three acceptances together, and nothing else.
+    accept_design_on = auto_accept_design or auto_accept_all or autonomous
+    accept_review_on = auto_accept_review or auto_accept_all or autonomous
+    finish_local_on = auto_finish_local or auto_accept_all or autonomous
+    if (
+        accept_design_on or accept_review_on or finish_local_on or auto_publish or record_gaps_on
+    ) and all_projects:
+        typer.echo(
+            "--auto-accept-design, --auto-accept-review, --auto-finish-local, --auto-publish, "
+            "--auto-record-research-gaps, --auto-accept-all and --autonomous act on one "
+            "project's decisions: use --project, not --all-projects"
         )
         raise typer.Exit(EXIT_USAGE)
     if accept_spec_json is not None and not accept_design_on:
@@ -2317,13 +2359,20 @@ def worker(
                 search_overlay[COMMAND_VARIABLE] = vibey_command(sys.argv[0])
             typer.echo(web_search_line(web_settings), err=True)
             auto_answers: GateAutoAnswerSweepInterface | None = None
-            if auto_answer or accept_review_on or finish_local_on or auto_publish:
+            if (
+                auto_answer_on
+                or accept_review_on
+                or finish_local_on
+                or auto_publish
+                or record_gaps_on
+            ):
                 policy = GateAutoAnswerPolicy(
                     limit=auto_answer_limit,
-                    answer_retries=auto_answer,
+                    answer_retries=auto_answer_on,
                     accept_review=accept_review_on,
                     finish_local=finish_local_on,
                     publish=auto_publish,
+                    record_research_gaps=record_gaps_on,
                 )
                 auto_answers = GateAutoAnswerSweep(
                     gates=resources.gates,

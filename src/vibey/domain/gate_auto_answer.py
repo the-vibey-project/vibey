@@ -57,6 +57,11 @@ class GateAutoAnswerPolicy:
       is its own flag because it is the one acceptance that sends work off the machine; the
       other flags, `--auto-accept-all` included, never answer it.
 
+    - `record_research_gaps` (`--auto-record-research-gaps`): a `research_evidence` gate,
+      answered with nothing, which runs its research again; with the worker set to record a gap
+      when a topic has no evidence, that records the topic as not researched and DESIGN goes on.
+      The spec then says what was not researched, so nothing is invented.
+
     A deployment gate (`deploy_acceptance` is consent to change real infrastructure) and a
     spending gate have no flag and are never answered, whatever is set here.
     """
@@ -66,6 +71,7 @@ class GateAutoAnswerPolicy:
     accept_review: bool = False
     finish_local: bool = False
     publish: bool = False
+    record_research_gaps: bool = False
 
     def __post_init__(self) -> None:
         if isinstance(self.limit, bool) or self.limit < 1:
@@ -79,6 +85,8 @@ class GateAutoAnswerPolicy:
             return (
                 {"choice": "local_only"} if self.finish_local and "local_only" in options else None
             )
+        if kind == "research_evidence":
+            return {} if self.record_research_gaps else None
         if kind == "publish_interview":
             return (
                 {"choice": "accept_defaults"}
