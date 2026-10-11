@@ -33,8 +33,10 @@ This is the general form; that one can converge on it.
 """
 
 import asyncio
+import contextlib
 import json
 import pathlib
+import socket
 import threading
 import time
 import urllib.parse
@@ -119,6 +121,19 @@ def _load_fit(
         return None
 
 
+def _abort(response: Any) -> None:
+    """End a blocked read on `response` from another thread.
+
+    `close()` alone can leave a thread blocked in `recv`, so the socket is shut down first;
+    both are best effort, because the response may already be done or be a test double."""
+    sock = getattr(getattr(getattr(response, "fp", None), "raw", None), "_sock", None)
+    if sock is not None:
+        with contextlib.suppress(Exception):
+            sock.shutdown(socket.SHUT_RDWR)
+    with contextlib.suppress(Exception):
+        response.close()
+
+
 class UrllibOllamaTransport:
     """Blocking `urllib`, kept off the event loop, and only ever over HTTP(S)."""
 
@@ -155,23 +170,34 @@ class UrllibOllamaTransport:
     ) -> AsyncGenerator[dict[str, object], None]:
         """Each JSON line of a `stream: true` reply, as it arrives.
 
-        The blocking read runs on a worker thread and hands lines to the event loop through
-        a queue, so a slow generation still stalls nothing else. `timeout` bounds one read,
-        not the answer: a model that keeps producing is never cut off by it."""
+        The blocking read runs on a thread and hands lines to the event loop through a queue,
+        so a slow generation still stalls nothing else. `timeout` bounds one read, not the
+        answer: a model that keeps producing is never cut off by it.
+
+        Stopping (the consumer was cancelled, or simply stopped reading) closes the open
+        connection, which ends the blocked read at once. It used to set a flag the thread only
+        looked at between lines, and wait for the thread: a model thinking silently kept a
+        Ctrl+C waiting for the whole read timeout. The thread is a daemon and is not waited
+        for, so nothing else keeps the process alive either."""
         loop = asyncio.get_running_loop()
         lines: asyncio.Queue[tuple[str, Any]] = asyncio.Queue()
         stop = threading.Event()
+        opened: list[Any] = []
+
+        def emit(kind: str, value: object) -> None:
+            with contextlib.suppress(RuntimeError):  # the loop closed while we were stopping
+                loop.call_soon_threadsafe(lines.put_nowait, (kind, value))
 
         def pump() -> None:
             try:
-                for line in self._read_lines(url, payload, timeout, stop):
-                    loop.call_soon_threadsafe(lines.put_nowait, ("line", line))
+                for line in self._read_lines(url, payload, timeout, stop, opened):
+                    emit("line", line)
             except Exception as exc:  # reported to the consumer, never lost on the thread
-                loop.call_soon_threadsafe(lines.put_nowait, ("error", exc))
+                emit("error", exc)
             else:
-                loop.call_soon_threadsafe(lines.put_nowait, ("end", None))
+                emit("end", None)
 
-        reader = loop.run_in_executor(None, pump)
+        threading.Thread(target=pump, name="ollama-stream", daemon=True).start()
         try:
             while True:
                 kind, value = await lines.get()
@@ -183,10 +209,16 @@ class UrllibOllamaTransport:
                     return
         finally:
             stop.set()
-            await reader
+            for response in opened:
+                _abort(response)
 
     def _read_lines(
-        self, url: str, payload: Mapping[str, object], timeout: int, stop: threading.Event
+        self,
+        url: str,
+        payload: Mapping[str, object],
+        timeout: int,
+        stop: threading.Event,
+        opened: list[Any],
     ) -> Iterator[dict[str, object]]:
         if urllib.parse.urlsplit(url).scheme not in _HTTP_SCHEMES:
             raise ValueError(f"refusing a non-HTTP model endpoint: {url!r}")
@@ -196,6 +228,9 @@ class UrllibOllamaTransport:
             headers={"Content-Type": "application/json"},
         )
         with self._opener(request, timeout=timeout) as response:
+            opened.append(response)
+            if stop.is_set():  # stopped while connecting: the abort has already come and gone
+                return
             for raw in response:
                 if stop.is_set():
                     return
