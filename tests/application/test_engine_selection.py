@@ -205,14 +205,53 @@ def test_a_pool_that_does_not_contain_the_implementer_keeps_the_exclusion() -> N
     assert inputs.independence_waived is False
 
 
-def test_implement_jobs_never_waive_anything() -> None:
+def test_implement_jobs_never_waive_verify_independence() -> None:
     inputs = selection_inputs_for_job(
         _implement_job(attempts=3, assigned_engine="claudeloop"),
         pool=frozenset({EngineId.CLAUDELOOP}),
     )
 
-    assert inputs.requirement.excluded == frozenset({EngineId.CLAUDELOOP})
     assert inputs.independence_waived is False
+
+
+# ── a tier-crossing retry rotates only when there is somewhere to rotate to ──
+
+
+def test_a_one_engine_pool_cannot_rotate_so_the_escalated_retry_stays_on_it() -> None:
+    """Excluding the only engine emptied the eligible set, and the job was deferred every
+    five minutes for ever (a one-engine local pool, third attempt, effort low -> standard)."""
+    inputs = selection_inputs_for_job(
+        _implement_job(attempts=3, assigned_engine="gptossloop"),
+        pool=frozenset({EngineId.GPTOSSLOOP}),
+    )
+
+    assert inputs.requirement.effort is Effort.STANDARD  # the escalation still happens
+    assert inputs.requirement.excluded == frozenset()
+    assert inputs.affinity is EngineId.GPTOSSLOOP
+
+
+def test_a_pool_with_another_engine_still_rotates_the_escalated_retry() -> None:
+    inputs = selection_inputs_for_job(
+        _implement_job(attempts=3, assigned_engine="claudeloop"),
+        pool=frozenset({EngineId.CLAUDELOOP, EngineId.CODEXLOOP}),
+    )
+
+    assert inputs.requirement.excluded == frozenset({EngineId.CLAUDELOOP})
+    assert inputs.affinity is None
+
+
+def test_a_durable_exclusion_that_leaves_nobody_to_rotate_to_waives_the_rotation() -> None:
+    job = _implement_job(
+        attempts=3,
+        assigned_engine="claudeloop",
+        requirement={"excluded_engine_ids": ["codexloop"]},
+    )
+    inputs = selection_inputs_for_job(
+        job, pool=frozenset({EngineId.CLAUDELOOP, EngineId.CODEXLOOP})
+    )
+
+    assert inputs.requirement.excluded == frozenset({EngineId.CODEXLOOP})  # the durable one stays
+    assert inputs.affinity is EngineId.CLAUDELOOP
 
 
 # ── SelectingEngineProvider ──────────────────────────────────────────────────
