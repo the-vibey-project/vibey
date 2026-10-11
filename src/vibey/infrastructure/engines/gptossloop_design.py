@@ -72,7 +72,6 @@ QUESTIONS_SCHEMA: dict[str, object] = {
     "properties": {
         "questions": {
             "type": "array",
-            "minItems": 1,
             "maxItems": 4,
             "items": {
                 "type": "object",
@@ -149,8 +148,12 @@ SPEC_SCHEMA: dict[str, object] = {
 }
 
 QUESTION_SYSTEM = (
-    "You are conducting one bounded stage of a software DESIGN interview. Ask 1 to 4 "
-    "concise questions, each with a proposed default. "
+    "You are conducting one bounded stage of a software DESIGN interview. Ask 0 to 4 "
+    "concise questions, each with a proposed default. Ask NONE (an empty list) when the "
+    "ledger already settles this stage: the intake states the decision, or an earlier "
+    "question and answer covers it. Never ask a question to fill the stage, to restate "
+    "something already decided, or about something the ledger rules out; a question is for "
+    "what the ledger leaves genuinely open. "
     # Observed live on 2026-09-29 (issue #998, a README insertion): "a useful default a
     # reasonable team would accept" read as "Yes" to every "should we also add X?", and
     # the accepted design grew a generator script, tests and a CI step. The handler
@@ -245,8 +248,6 @@ class GptossloopDesignProvider:
 
     def _question_batch(self, stage: DesignStage, data: Mapping[str, object]) -> QuestionBatch:
         raw = as_object_list(data.get("questions"), "questions")
-        if not raw:
-            raise ValueError("DESIGN question output requires a non-empty questions list")
         questions = tuple(
             DesignQuestion(
                 question_id=str(item["question_id"]),

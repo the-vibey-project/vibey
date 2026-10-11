@@ -108,11 +108,23 @@ async def test_a_stage_of_questions_comes_back_shaped() -> None:
 
 
 @pytest.mark.asyncio
-async def test_a_stage_with_no_questions_is_refused() -> None:
+async def test_a_stage_with_nothing_left_to_ask_may_return_no_questions() -> None:
+    """The prompt used to demand 1 to 4, so a model with every decision already in the intake
+    reasoned for a minute and made up a question to fill the stage."""
     provider, sent = _provider({"questions": []})
-    with pytest.raises(errors.ModelAnswerRejected, match=r"\$.questions must have at least 1"):
-        await provider.batch(DesignStage.JOB_STORY, [])
-    assert len(sent) == 2  # asked, re-asked once, then refused
+
+    batch = await provider.batch(DesignStage.JOB_STORY, [])
+
+    assert batch.questions == ()
+    assert len(sent) == 1  # accepted at once: not re-asked, not refused
+
+
+def test_the_prompt_lets_a_stage_ask_nothing_and_forbids_filler() -> None:
+    from vibey.infrastructure.engines.gptossloop_design import QUESTION_SYSTEM
+
+    assert "Ask 0 to 4" in QUESTION_SYSTEM
+    assert "Ask NONE (an empty list)" in QUESTION_SYSTEM
+    assert "Never ask a question to fill the stage" in QUESTION_SYSTEM
 
 
 @pytest.mark.asyncio
@@ -371,9 +383,9 @@ async def test_the_spec_decoder_still_refuses_what_a_checker_let_through(
 
 
 @pytest.mark.asyncio
-async def test_the_question_decoder_still_refuses_an_empty_batch() -> None:
-    with pytest.raises(errors.ModelAnswerRejected, match="non-empty questions list"):
-        await _unchecked({"questions": []}).batch(DesignStage.JOB_STORY, [])
+async def test_the_question_decoder_accepts_an_empty_batch() -> None:
+    batch = await _unchecked({"questions": []}).batch(DesignStage.JOB_STORY, [])
+    assert batch.stage is DesignStage.JOB_STORY and batch.questions == ()
 
 
 @pytest.mark.asyncio

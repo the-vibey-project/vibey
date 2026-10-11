@@ -27,6 +27,10 @@ from vibey.infrastructure.interfaces.class_contracts import (
 # The tables `vibey new` copies from vibey.toml into the project record. `gates` and
 # `engine_environment` decide what a gate command and an engine session may see of the
 # worker's environment; they are declared here, never hand-edited into the record.
+DESIGN_RESEARCH_ON_UNAVAILABLE_ENV = "VIBEY_DESIGN_RESEARCH_ON_UNAVAILABLE"
+"""Overrides `[design.research] on_unavailable`; `vibey worker --auto-record-research-gaps` sets
+it to `record_gap` for that worker."""
+
 RUNTIME_CONFIG_KEYS = (
     "notifications",
     "telemetry",
@@ -119,7 +123,7 @@ _QUEUE_DEFECT_ENV_VARS: tuple[tuple[str, str, str, type], ...] = (
 # for a person (`gate`, the default) or record the topic as not researched (`record_gap`).
 # An unattended driver opts in here without writing a vibey.toml.
 _DESIGN_RESEARCH_ENV_VARS: tuple[tuple[str, str, str, type], ...] = (
-    ("design.research", "on_unavailable", "VIBEY_DESIGN_RESEARCH_ON_UNAVAILABLE", str),
+    ("design.research", "on_unavailable", DESIGN_RESEARCH_ON_UNAVAILABLE_ENV, str),
 )
 
 # `[engines]`'s dispatch keys (ADR-0079): the mode, the overflow threshold and the daily

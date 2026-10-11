@@ -96,6 +96,7 @@ DEFAULT_ALLOWLIST: Final[Mapping[EventKind, frozenset[str]]] = MappingProxyType(
         EventKind.QUESTION_ASKED: frozenset(
             {"item_id", "question_id", "text", "default", "blocking", "stage", "cycle"}
         ),
+        EventKind.STAGE_SETTLED: frozenset({"stage", "cycle"}),
         EventKind.ANSWER_GIVEN: frozenset({"item_id", "question_id", "answer"}),
         EventKind.ASSUMPTION_STATED: frozenset({"item_id", "assumption_id", "text", "question"}),
         EventKind.FINDING_RAISED: frozenset(

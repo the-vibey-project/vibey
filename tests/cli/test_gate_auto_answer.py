@@ -83,3 +83,11 @@ def test_publishing_with_the_retry_flag_is_not_the_original_line() -> None:
 
     assert line.startswith("auto-answer: on, up to 30 answers: the interview and retry gates, ")
     assert "PUSHES" in line
+
+
+def test_recording_research_gaps_is_named_and_leaves_the_original_wording_behind() -> None:
+    line = auto_answer_startup_line(GateAutoAnswerPolicy(record_research_gaps=True))
+
+    assert "DESIGN research gaps (the topic is recorded as not researched)" in line
+    assert "the interview and retry gates" in line
+    assert "spending gates and every deployment gate still wait for you" in line

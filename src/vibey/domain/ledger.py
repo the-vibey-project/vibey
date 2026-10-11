@@ -48,6 +48,10 @@ class EventKind(StrEnum):
     VERDICT_RENDERED = "VerdictRendered"
     CAPACITY_REJECTED = "CapacityRejected"
     QUESTION_ASKED = "QuestionAsked"
+    # A DESIGN stage that was considered and needs no question: the intake or an earlier answer
+    # already settles it. Without a record, a stage with nothing asked reads as "not asked yet"
+    # and is asked again for ever.
+    STAGE_SETTLED = "StageSettled"
     ANSWER_GIVEN = "AnswerGiven"
     DECISION_RECORDED = "DecisionRecorded"
     ASSUMPTION_STATED = "AssumptionStated"

@@ -126,3 +126,31 @@ def test_no_other_acceptance_flag_publishes_and_publishing_answers_nothing_else(
     assert everything_else.answer_for("publish_interview", PUBLISH_OPTIONS) is None
     for kind in ("approval", "choice", "escalation_exhausted", "question", "deploy_acceptance"):
         assert only_publish.answer_for(kind, ("accept", "local_only")) is None, kind
+
+
+def test_a_research_gap_is_recorded_only_when_asked_for() -> None:
+    on = GateAutoAnswerPolicy(answer_retries=False, record_research_gaps=True)
+
+    assert on.answer_for("research_evidence") == {}  # an empty answer, which retries the research
+    assert GateAutoAnswerPolicy().answer_for("research_evidence") is None
+    assert (
+        GateAutoAnswerPolicy(accept_review=True, finish_local=True, publish=True).answer_for(
+            "research_evidence"
+        )
+        is None
+    )
+
+
+def test_recording_research_gaps_answers_nothing_else() -> None:
+    only_gaps = GateAutoAnswerPolicy(answer_retries=False, record_research_gaps=True)
+
+    for kind in (
+        "approval",
+        "choice",
+        "publish_interview",
+        "escalation_exhausted",
+        "question",
+        "budget_exhausted",
+        "deploy_acceptance",
+    ):
+        assert only_gaps.answer_for(kind, ("accept", "local_only", "accept_defaults")) is None, kind

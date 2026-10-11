@@ -9,7 +9,7 @@ def auto_answer_startup_line(policy: GateAutoAnswerPolicy) -> str:
     """Said once at startup: exactly which gates this worker will answer, so it is never a
     surprise, and which it never will."""
     if policy.answer_retries and not (
-        policy.accept_review or policy.finish_local or policy.publish
+        policy.accept_review or policy.finish_local or policy.publish or policy.record_research_gaps
     ):
         # The original wording, for the original flag alone.
         return (
@@ -23,6 +23,8 @@ def auto_answer_startup_line(policy: GateAutoAnswerPolicy) -> str:
         parts.append("REVIEW approvals (accept)")
     if policy.finish_local:
         parts.append("the deployment choice (local_only, never deploy)")
+    if policy.record_research_gaps:
+        parts.append("DESIGN research gaps (the topic is recorded as not researched)")
     if policy.publish:
         parts.append("the publish interview as proposed (this PUSHES the finished work to GitHub)")
     return (
