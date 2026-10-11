@@ -58,6 +58,7 @@ from vibey.infrastructure.process.interfaces import (
     OrchestratorPythonEnvInterface,
     ProcessReaperInterface,
 )
+from vibey.infrastructure.web.session import web_access_note
 
 logger = structlog.get_logger(__name__)
 
@@ -90,8 +91,14 @@ _help_text_cache: dict[str, str] = {}
 _ANSI_ESCAPE = re.compile(r"\x1b(?:[@-Z\\-_]|\[[0-?]*[ -/]*[@-~])")
 
 
-def _render_plan(descriptor: EngineDescriptor, prompt: str) -> str:
-    """Render a vendor-compatible work plan without dropping prompt detail."""
+def _render_plan(
+    descriptor: EngineDescriptor, prompt: str, *, web_command: str | None = None
+) -> str:
+    """Render a vendor-compatible work plan without dropping prompt detail.
+
+    With `web_command`, the session can search the web through vibey, and the plan says how."""
+    if web_command is not None:
+        prompt = f"{prompt.rstrip()}\n\n{web_access_note(web_command)}\n"
     if descriptor.engine_id is not EngineId.CODEXLOOP:
         return prompt
 
@@ -359,7 +366,11 @@ class LoopProcessAdapter:
             plan_dir = spec.worktree_path / ".vibey" / "plans"
             plan_dir.mkdir(parents=True, exist_ok=True)
             plan_path = plan_dir / f"{spec.run_id}.md"
-            plan_path.write_text(_render_plan(self.descriptor, spec.prompt))
+            plan_path.write_text(
+                _render_plan(
+                    self.descriptor, spec.prompt, web_command=self.environment.web_search_command()
+                )
+            )
 
         # Build argv using existing argv.py
         argv = build_argv(self.descriptor, spec)

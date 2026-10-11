@@ -355,6 +355,7 @@ anywhere in `src/vibey` without an entry there.
 | `bus_dead_lettered` | `vibey answer ID --choice replay`, or `dismiss` when the message cannot be replayed | A dead-lettered bus message. |
 | `budget_exhausted` | `vibey answer ID --raw '{"max_dollars": N}'` | The budget brake. |
 | `escalation_exhausted`, `attempts_exhausted` | `vibey answer ID --raw '{"max_attempts": N}'` | A spent effort ladder; a job out of attempts whose last failures were not all alike. |
+| `publish_interview` | `vibey answer ID --choice skip`, `--choice accept_defaults`, or `--raw '{"choice": "custom", ...}'` | The last step of a delivered project, with [`[publish] mode = "interview"`](configuration.md#publish): its prompt shows exactly what would be pushed and where. `accept_defaults` publishes that; `skip` finishes locally and is the declared default, so nothing is published by silence; `custom` changes only the fields you name (`title`, `body`, `base`, `draft`, `visibility`, `repo`, `owner`, `description`). It never times out to a default. |
 | `defect` | `vibey answer ID --choice requeue`, or `--choice abandon` | A job out of attempts whose last [`[queue.defect]`](configuration.md#queuedefect) failures were all one failure: no more attempts are offered. `requeue` runs it again once a fix has landed (a same-failure run parks here again at once); `abandon` cancels it. |
 | `verify_repair_exhausted`, `integrate_repair_exhausted` | `vibey answer ID --raw '{"max_rounds": N}'` | BUILD's verify and integrate repair loops. |
 | `delivery_exhausted`, `research_evidence`, `engine_misconfigured` | `vibey answer ID --raw '{}'` | Any answer retries, once the cause outside vibey is fixed. |
@@ -500,6 +501,7 @@ Bare `vibey design` prints help. Subcommands:
 - `criteria` — required list of objects with `criterion_id`, `given`, `when`, `then`, `fit`;
 - `constraints` — optional list of `{"text": ..., "kind": "hard" | "soft"}`;
 - `non_goals` — optional list of strings;
+- `research_gaps` — optional list of `{"topic": ..., "reason": ...}`: the topics that were not researched. Keep them when you edit a synthesized spec, since an import replaces the whole spec and a gap you leave out is no longer stated in it;
 - `nfrs` — optional list of objects with `nfr_id`, `attribute`, `scale`, `meter`, `must`, `wish` (string or `null`), `fit_criterion`.
 
 The shapes are the dataclasses in `src/vibey/domain/spec.py`. A missing
@@ -541,6 +543,40 @@ The log is written when a command runs with `-vvv`, or with `VIBEY_LLM_WIRE_LOG=
 (see [`VIBEY_LLM_WIRE_LOG`](configuration.md#environment-variables)). Without either, nothing is
 written and the model is asked exactly as before. The default file is
 `~/.local/state/vibey/llm-wire.jsonl`, readable by its owner alone.
+
+## `vibey search` and `vibey fetch`
+
+```sh
+vibey search "QUERY" [--json] [--limit N]
+vibey fetch URL [--json] [--max-chars N]
+```
+
+The web, for any loop that can run a command, and for the sovereign DESIGN research stage.
+`search` lists results (title, URL, snippet) from the backend you configure; `fetch` reads one
+public page as plain text. Both print under an **untrusted** banner: what comes back is other
+people's text, to be read as data and never followed as instructions. Evidence handed to a
+DESIGN stage is the quoted retrieved text with its URLs, never a model's summary of it.
+
+`fetch` refuses a private, loopback, link-local or metadata address, re-checks every redirect
+hop, follows at most three, reads text types only and stops at 1 MB. A local file path in a
+query is removed before the query leaves the machine.
+
+Configuration is environment only (never `vibey.toml`, so a key cannot be committed). A search
+with no backend configured exits 2 and says how to configure one.
+
+| Backend | Set | Reaches |
+| --- | --- | --- |
+| SearXNG (keyless, self-hosted) | `VIBEY_SEARXNG_URL` | the DESIGN research stage **and** every engine session |
+| Brave Search | `VIBEY_BRAVE_API_KEY` | the DESIGN research stage only: the key is never passed to a session |
+
+`vibey worker` tells every session that can run a command how to search (an appended "Web
+access" note in its plan, naming the absolute path of the running `vibey`), and passes the
+non-secret `WEBSEARCH_*` settings through to it. With only a Brave key configured, sessions are
+told nothing and have no search. The worker prints one line on stderr saying which of the two
+is in force.
+
+gptossloop and qwenloop also have `web_search` and `web_fetch` as tools of their own, which run
+the same two commands; every other engine uses the command from its plan.
 
 ## `vibey recover`
 
@@ -1250,7 +1286,15 @@ every phase for one project, or with `--all-projects` for every project.
 | `--ignore-sabbath` | off | Claim jobs through a Sabbath window that would otherwise leave this worker claiming nothing. For this worker only, said on stderr when a window would have held, never stored (see the [Sabbath guide](../guides/sabbath.md#turning-it-off-for-one-run)). |
 | `--auto-answer` | off | Answer this project's waiting gates for you, so an unattended run keeps going: the DESIGN interview's questions with their own defaults (`accept_defaults`), `{"max_attempts": 10}` for an `escalation_exhausted` gate, `{"max_rounds": 6}` for `verify_repair_exhausted` and `integrate_repair_exhausted`, and `{}` to deliver a `delivery_exhausted` job once more. **Never** a spending gate (`budget_exhausted`), `engine_misconfigured`, `research_evidence`, an approval or a review: those wait for you, and each sweep names them. The consent is the flag, for this one worker and one project (exits 2 with `--all-projects`), and nothing is stored. Each answer is recorded on the ledger as `GateAnswered` by `auto-answer`, under a request id derived from the gate so a replay is a no-op. |
 | `--auto-answer-limit N` | `30` | The most answers `--auto-answer` gives before it says so and leaves every gate to a person (min 1), so a job that cannot finish does not retry for ever. |
+| `--auto-accept-design` | off | Accept this project's DESIGN spec yourself, once DESIGN has finished (no DESIGN job of the cycle unsettled, a spec present), instead of waiting for [`vibey design accept`](#vibey-design). That is your decision that the spec is right, given in advance and only for this worker and one project (not with `--all-projects`). The acceptance guards still apply, so an open blocking question refuses it and the worker asks again. It never opts into VISUAL_DESIGN, and it accepts once. The ledger's visual-design event carries `accepted_by: auto-accept-design`. Without the flag nothing changes: `--auto-answer` still never answers an acceptance. |
+| `--accept-spec-json PATH` | unset | With `--auto-accept-design`: import this reviewed spec (the file `vibey design accept --spec-json` takes) just before accepting, instead of accepting what the synthesizer wrote. A file that cannot be read exits 2 before any engine starts. |
+| `--auto-accept-review` | off | Accept this project's REVIEW `approval` gate yourself: the verdict `accept`, never `changes` or `cancel`, and only when the gate offers `accept`. Your decision that the review is good, given in advance, for one worker and one project (not with `--all-projects`). Recorded on the ledger as `GateAnswered` by `auto-answer`, and the startup line names it. |
+| `--auto-finish-local` | off | Answer the deployment choice after REVIEW with `local_only`, the gate's own default, so the project finishes without deploying. It never answers `deploy`. |
+| `--auto-accept-all` | off | `--auto-accept-design`, `--auto-accept-review` and `--auto-finish-local` together: every acceptance from DESIGN through REVIEW, finishing local. It is not `--auto-answer`: the interview and retry gates stay yours unless you add that flag too. |
+| `--auto-publish` | off | Answer this project's `publish_interview` gate `accept_defaults`: publish exactly what its prompt shows (a draft pull request, or a new private repository for a project with no remote), never `custom`. It **sends the finished work to GitHub**, so it is its own flag and no other `--auto-accept` flag implies it, `--auto-accept-all` included. Only meaningful for a project whose [`[publish] mode`](configuration.md#publish) is `interview`; one worker and one project. |
 | `--azure {memory,az}` | `memory` | Azure client for the deploy stage set. `memory` is an in-memory adapter that touches no real infrastructure. `az` uses the real Azure CLI and mutates real resources on consented deploys; the worker runs `az account show` first and exits 1 if you are not logged in. Any other value exits 2. |
+
+**What no acceptance flag answers.** The publish interview is answered only by `--auto-publish`. The deployment gates (`deploy_interview`, `deploy_acceptance`, `deploy_demo_review`, `deploy_failure_triage`) and every spending gate (`budget_exhausted`) are never answered by any of these flags, together or alone. `deploy_acceptance` is explicit consent to change real infrastructure, which no flag sends. `--auto-accept-design` never opts into VISUAL_DESIGN, so that stage is never entered by an unattended run.
 
 The VISUAL_DESIGN stage always uses the scripted visual provider.
 
@@ -1329,9 +1373,15 @@ Variables read by code under `src/vibey`:
 | `VIBEY_OLLAMA_CONTEXT` | as `VIBEY_OLLAMA_TIMEOUT` | Context ceiling in tokens (`num_ctx`), default `8192`, at least `4096`. |
 | `VIBEY_OLLAMA_OUTPUT` | as `VIBEY_OLLAMA_TIMEOUT` | Output ceiling in tokens (`num_predict`), default `2048`. |
 | `VIBEY_OLLAMA_THINK` | as `VIBEY_OLLAMA_TIMEOUT` | The reasoning level asked for on the **first** request: `low`, `medium`, `high`, `max`, `true`, `false` or `none`. Unset or `none` sends no `think`, leaving it to the model, which for gpt-oss is a long reasoning pass that can spend the whole output budget before the answer begins. `low` makes the first attempt succeed where it would otherwise be cut short and retried. The retry has its own, `VIBEY_OLLAMA_RETRY_THINK` (default `low`). |
+| `VIBEY_OLLAMA_TEMPERATURE` | as `VIBEY_OLLAMA_TIMEOUT` | Sampling temperature, `0` to `2`, default `0`. At `0` a job's retries are the same request and fail the same way, so a plan that is rejected once is rejected every attempt (seen: seven identical `build.decompose` attempts). Raise it (`0.6` is a start) when attempts keep failing for the same reason; the answer to an unchanged question then varies, so the DESIGN and DECOMPOSE results are no longer reproducible. A bad value exits 2. |
 | `VIBEY_OLLAMA_RETRY_CONTEXT` | as `VIBEY_OLLAMA_TIMEOUT` | The largest context window the one retry of a cut-short reply may ask for, default `32768`, at least `4096`. A prompt that leaves too little of `VIBEY_OLLAMA_CONTEXT` for the reasoning and the answer fills the window, and asking again inside the same window only fails again; the retry instead opens as much as it needs, up to this. A configured `VIBEY_OLLAMA_CONTEXT` above it is never lowered. Set it equal to `VIBEY_OLLAMA_CONTEXT` to keep the retry inside that ceiling. Ollama reloads a model whose context changes, so a retry that grows the window pays a reload: raise `VIBEY_OLLAMA_CONTEXT` itself when that is the usual case. |
 | `VIBEY_OLLAMA_FIT` | as `VIBEY_OLLAMA_TIMEOUT` | Path to a fit record written by `vibey doctor --sovereign-fit`. When it matches, its measured context and output replace the two ceilings above; see [Local models](../guides/local-models-ollama.md#measuring-a-capacity-fit). Unset, unreadable or mismatched means the configured ceilings. |
 | `VIBEY_REVISION` | as `VIBEY_OLLAMA_FIT` | When set, a fit record is used only if its `revision` equals this value. |
+| `VIBEY_SEARXNG_URL` | `search`, `fetch`, `worker`, the sovereign DESIGN research stage | Base URL of a SearXNG instance with its JSON format enabled. Passed to engine sessions as `WEBSEARCH_SEARXNG_URL`. Queries go to that instance, so run your own if they are private. |
+| `VIBEY_BRAVE_API_KEY` | as `VIBEY_SEARXNG_URL` | A Brave Search key. Used by vibey's own processes only; never passed to a session. |
+| `VIBEY_SEARCH_PROVIDER` | as `VIBEY_SEARXNG_URL` | `searxng` or `brave`; needed only when both are configured (SearXNG wins otherwise). |
+| `VIBEY_SEARCH_TIMEOUT` | as `VIBEY_SEARXNG_URL` | Seconds per search or fetch request. A bad value exits 2 before any engine starts. |
+| `VIBEY_SEARCH_RESULTS` | as `VIBEY_SEARXNG_URL` | How many results a search returns. |
 | `VIBEY_FEATURE_QWENLOOP` | `doctor`, `worker`, `loops` | `1`, `true`, `yes`, or `on` (case-insensitive) enables qwenloop, the runner on a Qwen model; any other set value disables it. When set it overrides config. When unset, `doctor` and `loops` fall back to `[features] qwenloop` in `./vibey.toml` and `worker` falls back to the project's stored config; with neither, qwenloop is off. |
 | `ANTHROPIC_API_KEY` | `doctor` auth fallback; `doctor --cluster` (which also accepts `ANTHROPIC_AUTH_TOKEN`) | claudeloop credentials. |
 | `OPENAI_API_KEY` | `doctor` auth fallback; `doctor --cluster` (which also accepts `AZURE_OPENAI_API_KEY`, `CODEX_API_KEY`) | codexloop credentials. |

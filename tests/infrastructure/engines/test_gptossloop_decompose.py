@@ -372,3 +372,51 @@ def test_the_producer_meets_its_declared_seams() -> None:
     assert isinstance(producer._chat, OllamaChatClientInterface)
     assert isinstance(producer._decoder, WorkPlanDecoderInterface)
     assert isinstance(producer._decoder, WorkPlanDecoder)
+
+
+def test_the_prompt_says_an_item_may_verify_with_a_script_it_creates_but_not_a_later_items() -> (
+    None
+):
+    assert "its verification runs AFTER that work" in DECOMPOSE_SYSTEM
+    assert "verify with a script it creates itself" in DECOMPOSE_SYSTEM
+    assert "only a LATER item creates" in DECOMPOSE_SYSTEM
+    assert "List each path once" in DECOMPOSE_SYSTEM
+
+
+@pytest.mark.parametrize(
+    ("present", "hinted"),
+    [
+        (("package.json",), True),
+        (("package.json", "pyproject.toml"), False),
+        (("pyproject.toml",), False),
+        ((), False),
+    ],
+)
+@pytest.mark.asyncio
+async def test_a_node_repository_is_told_to_verify_with_npm_and_never_pytest(
+    present: tuple[str, ...], hinted: bool
+) -> None:
+    chat = SequenceChat([VALID])
+    producer = GptossloopWorkPlanProducer(chat=chat)
+
+    await producer.decompose(_spec("AC-1", "AC-2"), checkout=_Checkout(*present))
+
+    system = chat.asked[0][0]
+    assert ("never with pytest" in system) is hinted
+    assert system.startswith(DECOMPOSE_SYSTEM)
+
+
+@pytest.mark.asyncio
+async def test_without_a_checkout_the_prompt_is_the_base_prompt() -> None:
+    chat = SequenceChat([VALID])
+
+    await GptossloopWorkPlanProducer(chat=chat).decompose(_spec("AC-1", "AC-2"))
+
+    assert "never with pytest" not in chat.asked[0][0]
+
+
+def test_the_prompt_caps_an_item_and_calls_the_skeleton_the_thinnest_slice() -> None:
+    assert "at most 12 paths" in DECOMPOSE_SYSTEM
+    assert "CHAIN of build pieces" in DECOMPOSE_SYSTEM
+    assert "the last piece runs the full verification" in DECOMPOSE_SYSTEM
+    assert "thinnest slice that works end to end" in DECOMPOSE_SYSTEM

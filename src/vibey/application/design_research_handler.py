@@ -7,14 +7,16 @@ person (`gate`, the default), or record the topic as not researched and succeed
 (`record_gap`) -- a `ResearchGapRecorded` event, never a fabricated `ResearchResult`.
 """
 
-from vibey.application.design import research_event
+from vibey.application.design import ResearchResult, research_event
 from vibey.application.design_handler import DesignLedger
 from vibey.application.dto import HumanGateRequest, JobRecord
 from vibey.application.interfaces import (
+    ContextualResearchProvider,
     ResearchProvider,
 )
 from vibey.application.interfaces.research_gaps import ResearchGapRecordsInterface
 from vibey.application.ports import Clock
+from vibey.application.research_context import research_context
 from vibey.application.research_gaps import RESEARCH_GAP_RECORDS
 from vibey.application.worker import Failure, Outcome, Park, Success
 from vibey.domain.engine import EngineId
@@ -63,7 +65,7 @@ class DesignResearchHandler:
         if not topic:
             return Failure(FailureClass.WORK, "design.research requires a topic")
         try:
-            result = await self._researcher.research(topic)
+            result = await self._research(job, topic)
         except SovereignResearchUnavailable as refusal:
             if self._records_gap(refusal):
                 return await self._record_gap(job, topic, refusal)
@@ -94,6 +96,17 @@ class DesignResearchHandler:
             self._on_unavailable is ResearchOnUnavailable.RECORD_GAP
             and not refusal.evidence_supplied
         )
+
+    async def _research(self, job: JobRecord, topic: str) -> ResearchResult:
+        """The provider's research, told what the project is about when it can use that.
+
+        A provider that takes context (a web search needs more than `prior-art`) is given the
+        intake's objective from the ledger; every other provider is called as before and the
+        ledger is not even read."""
+        if isinstance(self._researcher, ContextualResearchProvider):
+            events = await self._ledger.all_for_project(job.project_id)
+            return await self._researcher.research_with_context(topic, research_context(events))
+        return await self._researcher.research(topic)
 
     async def _record_gap(
         self, job: JobRecord, topic: str, refusal: SovereignResearchUnavailable

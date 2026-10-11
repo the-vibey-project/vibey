@@ -520,3 +520,23 @@ def test_the_retry_reasoning_level_is_configurable_and_checked() -> None:
         OllamaChatClient.from_environment({OLLAMA_RETRY_THINK_ENV: "loud"})
     with pytest.raises(ConfigError, match="VIBEY_OLLAMA_RETRY_THINK: must be one of"):
         OllamaChatClient(retry_think="loud")
+
+
+@pytest.mark.asyncio
+async def test_the_temperature_defaults_to_zero_and_follows_the_environment() -> None:
+    plain = SequenceTransport([{"message": {"content": '{"ok": 1}'}}])
+    warm = SequenceTransport([{"message": {"content": '{"ok": 1}'}}])
+
+    await OllamaChatClient.from_environment({}, transport=plain).ask("s", "u", "json")
+    await OllamaChatClient.from_environment(
+        {"VIBEY_OLLAMA_TEMPERATURE": " 0.6 "}, transport=warm
+    ).ask("s", "u", "json")
+
+    assert plain.calls[0][1]["options"]["temperature"] == 0
+    assert warm.calls[0][1]["options"]["temperature"] == 0.6
+
+
+@pytest.mark.parametrize("bad", ["hot", "-0.1", "2.5"])
+def test_a_temperature_that_is_not_a_number_in_range_is_refused(bad: str) -> None:
+    with pytest.raises(ConfigError, match="VIBEY_OLLAMA_TEMPERATURE"):
+        OllamaChatClient.from_environment({"VIBEY_OLLAMA_TEMPERATURE": bad})

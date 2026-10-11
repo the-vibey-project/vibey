@@ -113,6 +113,10 @@ DEFAULT_ALLOWLIST: Final[Mapping[EventKind, frozenset[str]]] = MappingProxyType(
         EventKind.VISUAL_DESIGN_WAIVED: frozenset({"choice"}),
         EventKind.DEPLOYMENT_OPTED_IN: frozenset({"choice"}),
         EventKind.DEPLOYMENT_DECLINED: frozenset({"choice"}),
+        # That a project was published, and how, is part of the record; the URL and branch are
+        # left out because a private repository's address is the operator's to share.
+        EventKind.PUBLISH_COMPLETED: frozenset({"kind", "draft", "visibility"}),
+        EventKind.PUBLISH_SKIPPED: frozenset({"reason"}),
         EventKind.DELIVERY_ESTIMATE_RECORDED: frozenset(
             {
                 "schema",

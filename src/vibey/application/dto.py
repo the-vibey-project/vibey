@@ -648,6 +648,20 @@ class GateAutoAnswerReport:
 
 
 @dataclass(frozen=True, slots=True)
+class DesignAutoAcceptReport:
+    """What one `--auto-accept-design` sweep found and did.
+
+    ``message`` is set only when there is something new to say: the worker prints it and
+    stays quiet about a state it has already reported. ``accepted`` is true on the one sweep
+    that accepted the design.
+    """
+
+    project_id: UUID | None
+    accepted: bool = False
+    message: str | None = None
+
+
+@dataclass(frozen=True, slots=True)
 class GateReminderReport:
     """What one reminder sweep found and did.
 

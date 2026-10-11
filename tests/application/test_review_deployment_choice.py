@@ -4,6 +4,8 @@ from datetime import UTC, datetime
 from pathlib import Path
 from uuid import UUID, uuid4
 
+import pytest
+
 from tests.application.fakes import FakeJobRepository
 from vibey.application.dto import HumanGateRecord, HumanGateRequest, JobRecord, ProjectRecord
 from vibey.application.ports import Clock, HumanGateRepository
@@ -391,3 +393,89 @@ async def test_review_deployment_choice_opt_out_skips_transition_no_method() -> 
     assert isinstance(outcome, Success)
     assert outcome.result.get("decision") == "declined"
     assert outcome.result.get("completion_mode") == "local"
+
+
+def _project(project_id: UUID, config: dict[str, object]) -> ProjectRecord:
+    return ProjectRecord(
+        project_id=project_id,
+        name="p1",
+        repo_path=Path("/tmp"),
+        phase=Phase.REVIEW,
+        cycle=1,
+        max_cycles=3,
+        config=config,
+        created_at=NOW,
+        updated_at=NOW,
+    )
+
+
+async def _decline_locally(config: dict[str, object]):  # type: ignore[no-untyped-def]
+    project_id = uuid4()
+    projects = FakeProjectRepo(_project(project_id, config))
+    jobs = FakeJobRepository()
+    handler = ReviewDeploymentChoiceHandler(
+        ledger=FakeReviewDeploymentLedger(),
+        gates=FakeGateRepo(answer={"choice": "local_only"}),
+        jobs=jobs,
+        projects=projects,
+        clock=FixedClock(),
+    )
+    job = _make_job(project_id=project_id)
+    assert isinstance(await handler.handle(job), Park)
+    return await handler.handle(job), projects, jobs
+
+
+@pytest.mark.parametrize("mode", ["interview", "auto"])
+async def test_a_project_that_publishes_hands_off_to_review_publish_instead_of_finishing(
+    mode: str,
+) -> None:
+    outcome, projects, jobs = await _decline_locally({"publish": {"mode": mode}})
+
+    assert isinstance(outcome, Success)
+    assert outcome.result == {"decision": "declined", "completion_mode": "local_then_publish"}
+    assert projects.transitions == []  # not DONE until the work has been published
+    (queued,) = [j for j in jobs._jobs.values() if j.kind == "review.publish"]
+    assert queued.phase is Phase.REVIEW
+
+
+@pytest.mark.parametrize("config", [{}, {"publish": {"mode": "off"}}])
+async def test_a_project_that_does_not_publish_finishes_locally_exactly_as_before(
+    config: dict[str, object],
+) -> None:
+    outcome, projects, jobs = await _decline_locally(config)
+
+    assert isinstance(outcome, Success)
+    assert outcome.result == {"decision": "declined", "completion_mode": "local"}
+    assert projects.transitions == [(Phase.REVIEW, Phase.DONE)]
+    assert not [j for j in jobs._jobs.values() if j.kind == "review.publish"]
+
+
+async def test_publish_settings_that_are_not_valid_fail_instead_of_silently_finishing() -> None:
+    outcome, projects, _jobs = await _decline_locally({"publish": {"mode": "sometimes"}})
+
+    assert isinstance(outcome, Failure)
+    assert outcome.failure_class is FailureClass.VIBEY and "publish.mode" in outcome.detail
+    assert projects.transitions == []
+
+
+async def test_a_project_that_has_gone_finishes_locally() -> None:
+    project_id = uuid4()
+    projects = FakeProjectRepo(_project(project_id, {"publish": {"mode": "auto"}}))
+
+    async def gone(_: UUID) -> ProjectRecord | None:
+        return None
+
+    projects.get = gone  # type: ignore[method-assign]
+    handler = ReviewDeploymentChoiceHandler(
+        ledger=FakeReviewDeploymentLedger(),
+        gates=FakeGateRepo(answer={"choice": "local_only"}),
+        jobs=FakeJobRepository(),
+        projects=projects,
+        clock=FixedClock(),
+    )
+    job = _make_job(project_id=project_id)
+    await handler.handle(job)
+
+    outcome = await handler.handle(job)
+
+    assert isinstance(outcome, Success) and outcome.result["completion_mode"] == "local"
