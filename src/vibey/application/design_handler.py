@@ -29,7 +29,7 @@ from vibey.domain.interfaces.design_default_scope_interface import (
     DesignDefaultScopeGuardInterface,
 )
 from vibey.domain.job import idempotency_key
-from vibey.domain.ledger import EventKind
+from vibey.domain.ledger import EventKind, Provenance
 from vibey.domain.phase import Phase
 
 
@@ -64,9 +64,23 @@ class DesignInterviewHandler:
         for stage in stages:
             questions = _questions_for_stage(events, stage, cycle=job.cycle)
             if not questions:
+                if _stage_settled(events, stage, cycle=job.cycle):
+                    continue
                 batch = await self._narrowed(
                     job, await self._questions.batch(stage, events), events
                 )
+                if not batch.questions:
+                    # Nothing left to ask at this stage. Say so on the ledger (or the stage
+                    # reads as not yet asked) and go on to the next one, with no gate.
+                    settled = DesignEvent(
+                        kind=EventKind.STAGE_SETTLED,
+                        provenance=Provenance.AGENT,
+                        produced_at=self._clock.now(),
+                        payload={"stage": stage.value, "cycle": job.cycle},
+                    )
+                    await self._append(job, settled)
+                    events.append(settled)
+                    continue
                 for event in batch.events(now=self._clock.now(), cycle=job.cycle):
                     await self._append(job, event)
                     events.append(event)
@@ -221,6 +235,16 @@ def _questions_for_stage(
         if event.kind is EventKind.QUESTION_ASKED
         and event.payload.get("stage") == stage.value
         and (cycle is None or event.payload.get("cycle", cycle) == cycle)
+    )
+
+
+def _stage_settled(events: Sequence[DesignEvent], stage: DesignStage, *, cycle: int) -> bool:
+    """Whether this cycle's `stage` was considered and found to need no question."""
+    return any(
+        event.kind is EventKind.STAGE_SETTLED
+        and event.payload.get("stage") == stage.value
+        and event.payload.get("cycle", cycle) == cycle
+        for event in events
     )
 
 

@@ -1,4 +1,5 @@
 # Made with ❤️ by [Vibey](https://the-vibey-project.github.io/vibey/), Developed by [Adam Matthew Steinberger](https://vibewithadam.matthewsteinberger.com/) ([@adammatthewsteinberger](https://github.com/adammatthewsteinberger/)).
+from dataclasses import replace
 from datetime import UTC, datetime
 from uuid import UUID, uuid4
 
@@ -368,3 +369,95 @@ async def test_an_interview_no_engine_ran_names_none_and_excludes_none() -> None
     assert set(ledger.engines) == {None}
     synth = next(record for record in jobs._jobs.values() if record.kind == "design.synthesize")
     assert synth.requirement["excluded"] == []
+
+
+# ── a stage with nothing left to ask is settled, not asked again ─────────────
+
+
+class QuietQuestionProvider:
+    """Asks one question at the first stage and has nothing to ask at any other."""
+
+    def __init__(self) -> None:
+        self.calls: list[object] = []
+
+    async def batch(self, stage, prior_events):  # type: ignore[no-untyped-def]
+        self.calls.append(stage)
+        if stage is DESIGN_STAGES[0]:
+            return QuestionBatch(
+                stage, (DesignQuestion("q-1", "Stage 1?", "default-1", blocking=False),)
+            )
+        return QuestionBatch(stage, ())
+
+
+def _design_job(project_id: UUID):  # type: ignore[no-untyped-def]
+    return replace(make_job(project_id), phase=Phase.DESIGN, kind="design.interview")
+
+
+def _quiet_handler(provider: object, ledger: FakeDesignLedger, gates: FakeHumanGateRepository):  # type: ignore[no-untyped-def]
+    return DesignInterviewHandler(
+        ledger=ledger,
+        jobs=FakeJobRepository(),
+        gates=gates,
+        questions=provider,  # type: ignore[arg-type]
+        clock=FixedClock(),
+        interviewer=EngineId.CLAUDELOOP,
+    )
+
+
+async def test_a_stage_with_nothing_to_ask_is_recorded_as_settled_with_no_gate() -> None:
+    project_id = uuid4()
+    job = _design_job(project_id)
+    provider = QuietQuestionProvider()
+    ledger, gates = FakeDesignLedger(), FakeHumanGateRepository()
+    handler = _quiet_handler(provider, ledger, gates)
+
+    first = await handler.handle(job)
+    assert isinstance(first, Park)  # stage 1 really has a question
+    raised = await gates.raise_gate(project_id, job.id, first.request)
+    await gates.answer(raised.gate_id, answer={"answers": {"q-1": "yes"}}, answered_by="user")
+
+    second = await handler.handle(job)
+
+    assert isinstance(second, Success)  # the six quiet stages never raised a gate
+    kinds = [event.kind for event in ledger.events]
+    assert kinds.count(EventKind.QUESTION_ASKED) == 1
+    assert kinds.count(EventKind.STAGE_SETTLED) == len(DESIGN_STAGES) - 1
+    settled = [e for e in ledger.events if e.kind is EventKind.STAGE_SETTLED]
+    assert {e.payload["stage"] for e in settled} == {s.value for s in DESIGN_STAGES[1:]}
+    assert all(e.payload["cycle"] == job.cycle for e in settled)
+    assert all(e.provenance is Provenance.AGENT for e in settled)
+
+
+async def test_a_settled_stage_is_not_asked_about_again_on_replay() -> None:
+    project_id = uuid4()
+    job = _design_job(project_id)
+    provider = QuietQuestionProvider()
+    ledger, gates = FakeDesignLedger(), FakeHumanGateRepository()
+    handler = _quiet_handler(provider, ledger, gates)
+    first = await handler.handle(job)
+    assert isinstance(first, Park)
+    raised = await gates.raise_gate(project_id, job.id, first.request)
+    await gates.answer(raised.gate_id, answer={"answers": {"q-1": "yes"}}, answered_by="user")
+    await handler.handle(job)
+    asked = len(provider.calls)
+
+    again = await handler.handle(job)
+
+    assert isinstance(again, Success)
+    assert len(provider.calls) == asked  # without the record, every replay asked them all again
+    assert asked == len(DESIGN_STAGES)  # once per stage, ever
+
+
+async def test_an_interview_with_nothing_to_ask_anywhere_finishes_without_a_gate() -> None:
+    class Silent:
+        async def batch(self, stage, prior_events):  # type: ignore[no-untyped-def]
+            return QuestionBatch(stage, ())
+
+    job = _design_job(uuid4())
+    ledger = FakeDesignLedger()
+    handler = _quiet_handler(Silent(), ledger, FakeHumanGateRepository())
+
+    outcome = await handler.handle(job)
+
+    assert isinstance(outcome, Success)
+    assert [e.kind for e in ledger.events] == [EventKind.STAGE_SETTLED] * len(DESIGN_STAGES)
