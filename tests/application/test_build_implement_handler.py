@@ -1068,3 +1068,123 @@ async def test_a_job_without_a_list_of_dependencies_does_not_wait(
     outcome = await handler.handle(_dependent(uuid4(), depends_on))
 
     assert isinstance(outcome, Success)
+
+
+# ── the prompt carries the brief ─────────────────────────────────────────────
+
+
+class _PromptRecordingEngine(ScriptedEngine):
+    """A scripted engine that keeps the RunSpec it was started with."""
+
+    def __init__(self, *args, **kwargs) -> None:  # type: ignore[no-untyped-def]
+        super().__init__(*args, **kwargs)
+        self.started: list[object] = []
+
+    async def start(self, spec):  # type: ignore[no-untyped-def]
+        self.started.append(spec)
+        return await super().start(spec)
+
+
+class _Specs:
+    def __init__(self, spec) -> None:  # type: ignore[no-untyped-def]
+        self._spec = spec
+        self.loaded: list[tuple[UUID, int]] = []
+
+    async def load(self, project_id: UUID, cycle: int):  # type: ignore[no-untyped-def]
+        self.loaded.append((project_id, cycle))
+        return self._spec
+
+
+def _brief_spec():  # type: ignore[no-untyped-def]
+    from vibey.domain.spec import AcceptanceCriterion, Constraint, ConstraintKind, DesignSpec
+
+    return DesignSpec(
+        objective="Fold the ministry into the site.",
+        constraints=(Constraint("Reuse collectionUtils.", ConstraintKind.HARD),),
+        non_goals=("Redirects.",),
+        criteria=(
+            AcceptanceCriterion("C1", "a post", "it builds", "it renders", "a test"),
+            AcceptanceCriterion("C2", "a feed", "it builds", "it lists", "a test"),
+        ),
+        nfrs=(),
+        walking_skeleton="one post",
+    )
+
+
+def _brief_payload(**extra: object) -> dict[str, object]:
+    return {
+        "title": "Walking skeleton",
+        "verification": {"commands": ["npm test"]},
+        "acceptance_ids": ["C1"],
+        "files_touched_hint": ["src/app/ministry/page.tsx"],
+        **extra,
+    }
+
+
+async def _prompt_for(tmp_path: Path, payload: dict[str, object], *, specs=None) -> str:  # type: ignore[no-untyped-def]
+    engine = _PromptRecordingEngine(descriptor=CLAUDELOOP, base_dir=tmp_path / "engine")
+    handler = BuildImplementHandler(
+        worktrees=FakeWorktrees(tmp_path),
+        provisioner=FakeProvisioner(),
+        engine=engine,
+        ledger=FakeLedger(),
+        jobs=FakeJobRepository(),
+        clock=FixedClock(),
+        specs=specs,
+    )
+    outcome = await handler.handle(_job(payload=payload))
+    assert isinstance(outcome, Success)
+    (started,) = engine.started
+    return str(started.prompt)  # type: ignore[attr-defined]
+
+
+async def test_the_engine_is_told_what_is_being_built_and_what_this_item_must_do(
+    tmp_path: Path,
+) -> None:
+    """The whole prompt used to be the item's title, generic rules and the verification
+    commands, so a local model spent its sessions searching for what the work was."""
+    specs = _Specs(_brief_spec())
+
+    prompt = await _prompt_for(tmp_path, _brief_payload(), specs=specs)
+
+    assert prompt.startswith("Implement work item item-1: Walking skeleton")
+    assert "Fold the ministry into the site." in prompt
+    assert "[must] Reuse collectionUtils." in prompt
+    assert "- C1: given a post, when it builds, then it renders" in prompt and "C2" not in prompt
+    assert "- src/app/ministry/page.tsx" in prompt
+    assert "Verify your work with:\n- npm test" in prompt  # what it always had
+    assert len(specs.loaded) == 1  # the project's spec, for the job's own cycle
+
+
+async def test_a_repair_keeps_the_brief_and_leads_with_the_failure_to_fix(tmp_path: Path) -> None:
+    prompt = await _prompt_for(
+        tmp_path,
+        _brief_payload(repair_detail="gate failed: npm run build"),
+        specs=_Specs(_brief_spec()),
+    )
+
+    assert "Fold the ministry into the site." in prompt
+    assert prompt.index("# Your task") < prompt.index("This item's verification is FAILING")
+    assert "gate failed: npm run build" in prompt
+
+
+async def test_without_a_spec_reader_the_prompt_is_what_it_always_was(tmp_path: Path) -> None:
+    prompt = await _prompt_for(tmp_path, {"title": "do it", "verification": {"commands": ["t"]}})
+
+    assert "# Your task" not in prompt
+    assert prompt.startswith("Implement work item item-1: do it\n\nHouse rules:")
+
+
+async def test_a_project_with_no_accepted_spec_still_gets_the_items_own_brief(
+    tmp_path: Path,
+) -> None:
+    prompt = await _prompt_for(tmp_path, _brief_payload(), specs=_Specs(None))
+
+    assert "## Your work item: Walking skeleton" in prompt
+    assert "What is being built" not in prompt
+
+
+def test_a_wind_down_seed_still_reaches_the_next_engine_verbatim_whatever_the_brief() -> None:
+    from vibey.application.build_implement_handler import _render_prompt
+
+    assert _render_prompt("i", {"seed_prompt": "the seed"}, brief="# Your task\n") == "the seed"

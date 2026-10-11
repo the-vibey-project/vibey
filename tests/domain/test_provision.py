@@ -110,3 +110,13 @@ def test_merge_router_handles_tail_without_leading_newline() -> None:
 
     assert "Tail without newline" in merged
     assert "no secrets in the repo" in merged
+
+
+def test_the_router_block_makes_the_task_prompt_win_over_the_published_context() -> None:
+    """`.vibey/context/` in a worktree is whatever was last committed there, which in a real
+    run was an earlier job's spec; the block must not send the engine to it as the authority."""
+    block = render_block(ProvisionSpec(non_negotiables=(), plugins=()))
+
+    assert "Your task prompt carries the brief for this work item" in block
+    assert "where it disagrees with your task prompt, follow the task prompt" in block
+    assert "See .vibey/context/ for the accepted spec" not in block

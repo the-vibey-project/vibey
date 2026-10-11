@@ -45,8 +45,10 @@ def render_block(spec: ProvisionSpec) -> str:
         "## Skill plugins\n\n"
         f"{plugins}\n\n"
         "## Full context\n\n"
-        "See .vibey/context/ for the accepted spec, acceptance criteria, "
-        "NFRs, decisions, and open items.\n"
+        "Your task prompt carries the brief for this work item: the objective, the rules, "
+        "its acceptance criteria and the files to write. .vibey/context/ holds the "
+        "project's published spec, decisions and open items, but it can describe earlier "
+        "work: where it disagrees with your task prompt, follow the task prompt.\n"
         f"{END_MARKER}\n"
     )
 

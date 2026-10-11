@@ -143,6 +143,10 @@ class BuildDecomposeHandler:
                 # jobs; the implement handler also waits until each is integrated, so this
                 # item's branch really does stack on their code.
                 "depends_on_items": list(item.depends_on),
+                # What this item is for and where it works: the engine's prompt is built from
+                # these and the accepted spec (`application/build_brief.py`).
+                "acceptance_ids": list(item.acceptance_ids),
+                "files_touched_hint": list(item.files_touched_hint),
                 # Item branches stack on already-integrated code when
                 # any exists (the worktree manager falls back to HEAD
                 # before the first integrate): every item branching

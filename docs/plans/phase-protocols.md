@@ -450,7 +450,23 @@ the batch commits. Each key is `idempotency_key(project, cycle,
   different subject, so it is never mistaken for the fan-out.
 
 Each item's branch is based on the project's integration branch for the cycle, so
-later items stack on already-integrated code.
+later items stack on already-integrated code. A dependent's implement job also waits, without
+spending an attempt, until each item it builds on has a succeeded `build.integrate` job, so that
+is true and not merely intended.
+
+**What the engine is told.** An implement job's prompt is built by
+`application/build_brief.py` from the accepted spec and the item's own payload, which the
+fan-out fills with the item's `acceptance_ids`, `files_touched_hint` and `depends_on_items`: the
+objective and the first slice, every constraint (hard ones marked *must*) and non-goal, this
+item's own criteria in full (given, when, then, how it is measured) and no other item's, the files
+it is expected to write, which earlier items are already in its branch, and four lines on how to
+work (read `AGENTS.md`, then the named files; trust the brief over `.vibey/context/`). It is
+then followed by the house rules and the verification commands, as before. The spec travels in
+the prompt because it is published to the checkout's working tree and a worktree is cut from a
+commit: the `.vibey/context/` a worktree sees is whatever was last committed there, which in
+a real run was an earlier job's spec. A brief is capped at 14,000 characters, cut at a line; an
+item planned before the payload carried these fields, or a project with no accepted spec, gets
+only what it has.
 
 ### 2.2 Parallel implementation
 

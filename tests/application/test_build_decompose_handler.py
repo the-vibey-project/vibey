@@ -334,6 +334,9 @@ async def test_fan_out_stamps_the_integration_base_ref_on_every_item() -> None:
         assert record.payload["base_ref"] == f"vibey/{job.project_id.hex[:8]}/1/integration"
         # What this item builds on, so its implement job can wait for it to be integrated.
         assert isinstance(record.payload["depends_on_items"], list)
+        # What it is for and where it works, for the engine's brief.
+        assert isinstance(record.payload["acceptance_ids"], list)
+        assert isinstance(record.payload["files_touched_hint"], list)
 
 
 class Checkout:
@@ -431,3 +434,23 @@ async def test_without_a_checkout_the_reference_rule_is_not_applied() -> None:
 
     assert await handler.handle(job) == Success({"work_items": 1})
     assert decomposer.checkout is None
+
+
+async def test_each_item_carries_its_criteria_and_files_for_the_engines_brief() -> None:
+    job = replace(make_job(uuid4()), kind="build.decompose")
+    items = (
+        _item("ws", acceptance_ids=("AC-1",), files_touched_hint=("src/a.ts", "src/b.ts")),
+        _item(
+            "more", acceptance_ids=("AC-2",), depends_on=("ws",), files_touched_hint=("src/c.ts",)
+        ),
+    )
+    jobs = FakeJobRepository()
+    handler = BuildDecomposeHandler(specs=Specs(spec()), decomposer=Decomposer(items), jobs=jobs)
+
+    await handler.handle(job)
+
+    payloads = {r.work_item_id: r.payload for r in jobs._jobs.values() if r.work_item_id}
+    assert payloads["ws"]["acceptance_ids"] == ["AC-1"]
+    assert payloads["ws"]["files_touched_hint"] == ["src/a.ts", "src/b.ts"]
+    assert payloads["more"]["acceptance_ids"] == ["AC-2"]
+    assert payloads["more"]["depends_on_items"] == ["ws"]
