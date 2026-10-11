@@ -156,8 +156,17 @@ def selection_inputs_for_job(
         previous = ENGINE_ID_PARSER.known(job.assigned_engine or "")
         if attempt > 1 and previous is not None:
             previous_effort = effort_for_attempt(base, min(attempt - 1, BUILD_LADDER_EXHAUSTED))
-            if forces_rotation(previous_effort, effort):
-                # Tier crossing: the escalated attempt must rotate away.
+            if forces_rotation(previous_effort, effort) and (
+                # Tier crossing: the escalated attempt must rotate away -- when there is
+                # somewhere to rotate to. On a pool with no other engine the exclusion
+                # would empty the eligible set, NoEligibleEngine would become a
+                # CapacityDeferred, and the job would be deferred every five minutes for
+                # ever with no park, no failure and nothing on the ledger (a one-engine
+                # sovereign pool did exactly that on its third attempt). It stays on the
+                # only engine it has, as a same-tier retry does. An unknown pool keeps
+                # the rotation absolute, as it does for verify independence.
+                pool is None or bool(pool - excluded - {previous})
+            ):
                 excluded.add(previous)
             elif previous not in excluded:
                 # Same-tier WORK retry: stickiness (affinity_factor 2.0).
