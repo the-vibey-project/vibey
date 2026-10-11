@@ -117,11 +117,20 @@ def _how_to_work(spec: DesignSpec | None, payload: Mapping[str, object]) -> list
     return [
         "## How to work\n\n"
         "1. Read AGENTS.md first: it holds the repository's own conventions.\n"
-        "2. Read the files above that already exist, then write the code and its tests.\n"
-        "3. Everything you need to know about the task is in this brief. `.vibey/context/` in "
+        "2. Read the files above that already exist. Then find the closest thing this "
+        "repository already has to what you are building (list the directory beside each "
+        "file you will write and its sibling directories) and read it: copy its structure, "
+        "its imports and its test style rather than inventing your own.\n"
+        "3. Import and call only what exists. Before you use a function, component or module "
+        "from another file, open that file or search for its export and use the name it "
+        "really has; if what you need does not exist, create it in a file listed above. "
+        "Use the framework the repository uses, not one you know from elsewhere.\n"
+        "4. Everything you need to know about the task is in this brief. `.vibey/context/` in "
         "this repository may describe earlier, unrelated work: do not follow it where it "
         "disagrees with this brief.\n"
-        "4. Run the verification commands below and fix what they report; do not weaken them."
+        "5. Run the verification commands below and fix what they report; do not weaken them. "
+        "If you are stuck, say exactly what is missing in plain text and stop calling tools: "
+        "do not write placeholder files or repeat commands that already ran."
     ]
 
 
