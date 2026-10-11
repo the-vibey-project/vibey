@@ -104,7 +104,7 @@ from vibey.infrastructure.engines.claudeloop_process import (
 from vibey.infrastructure.engines.descriptors import CLAUDELOOP
 from vibey.infrastructure.engines.engine_environment import EngineEnvironmentPolicy
 from vibey.infrastructure.engines.gptossloop_design import GptossloopDesignProvider
-from vibey.infrastructure.engines.local_engines import LocalEngineSettings
+from vibey.infrastructure.engines.local_engines import LocalEngineSettings, apply_local_max_turns
 from vibey.infrastructure.engines.loop_process_adapter import LoopProcessAdapter
 from vibey.infrastructure.engines.ollama_chat import (
     DEFAULT_OLLAMA_MODEL,
@@ -2082,6 +2082,19 @@ def worker(
             help="The most answers --auto-answer gives before every gate waits for a person.",
         ),
     ] = DEFAULT_AUTO_ANSWER_LIMIT,
+    local_max_turns: Annotated[
+        str | None,
+        typer.Option(
+            "--local-max-turns",
+            help=(
+                "The turn limit each local runner (gptossloop, qwenloop) session is started "
+                "with, in place of its per-effort 8, 16, 40, 64 or 96: a whole number, or "
+                "'unlimited' (a count no session reaches). A turn limit is a cost control and "
+                "a local model costs nothing per turn. A session still ends when it reports "
+                "the task done, is stopped, or fails. Same as VIBEY_LOCAL_MAX_TURNS."
+            ),
+        ),
+    ] = None,
     auto_accept_design: Annotated[
         bool,
         typer.Option(
@@ -2187,6 +2200,13 @@ def worker(
     if auto_answer and all_projects:
         typer.echo("--auto-answer answers one project's gates: use --project, not --all-projects")
         raise typer.Exit(EXIT_USAGE)
+    if local_max_turns is not None:
+        try:
+            apply_local_max_turns(local_max_turns, os.environ)
+        except ConfigError as exc:
+            typer.echo(f"--local-max-turns: {exc.message}", err=True)
+            raise typer.Exit(EXIT_USAGE) from exc
+        typer.echo(f"local engines: turn limit {local_max_turns.strip()} per session", err=True)
     # `--auto-accept-all` is the three acceptances together, and nothing else.
     accept_design_on = auto_accept_design or auto_accept_all
     accept_review_on = auto_accept_review or auto_accept_all

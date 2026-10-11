@@ -6,7 +6,7 @@ from pathlib import Path
 import pytest
 
 from vibey.domain.config import ConfigError
-from vibey.domain.engine import EngineId
+from vibey.domain.engine import Effort, EngineId
 from vibey.infrastructure.engines.descriptors import CLAUDELOOP, GPTOSSLOOP, QWENLOOP
 from vibey.infrastructure.engines.interfaces import (
     LocalEndpointEnvironmentInterface,
@@ -14,10 +14,14 @@ from vibey.infrastructure.engines.interfaces import (
 )
 from vibey.infrastructure.engines.local_engines import (
     LOCAL_ENGINE_SWITCHES,
+    LOCAL_MAX_TURNS_ENV,
     QWENLOOP_SWITCH_NOTICE,
     RUNNER_VARIABLES,
+    UNLIMITED_TURNS,
     LocalEndpointEnvironment,
     LocalEngineSettings,
+    apply_local_max_turns,
+    parse_local_max_turns,
 )
 from vibey.infrastructure.engines.loop_process_adapter import LoopProcessAdapter
 from vibey.infrastructure.interfaces import (
@@ -376,3 +380,62 @@ def test_a_malformed_endpoint_is_refused_even_when_a_runner_names_its_own_model(
 
     with pytest.raises(ConfigError, match="VIBEY_OLLAMA_URL"):
         LocalEndpointEnvironment(environ).model_for(EngineId.QWENLOOP)
+
+
+def _turns(settings: LocalEngineSettings, engine_id: EngineId) -> dict[Effort, tuple[str, ...]]:
+    return {e: i.argv for e, i in settings.descriptor(engine_id).effort_projection.items()}
+
+
+def test_with_no_setting_a_local_runner_keeps_its_per_effort_turn_limits() -> None:
+    settings = _settings()
+    assert settings.max_turns is None
+    assert settings.descriptor(EngineId.GPTOSSLOOP) is GPTOSSLOOP
+    assert _turns(settings, EngineId.GPTOSSLOOP)[Effort.LOW] == ("--max-turns", "16")
+
+
+def test_a_set_limit_replaces_every_efforts_turn_limit_on_the_local_runners() -> None:
+    settings = _settings({LOCAL_MAX_TURNS_ENV: "250"})
+    assert settings.max_turns == 250
+    for engine_id in (EngineId.GPTOSSLOOP, EngineId.QWENLOOP):
+        limits = _turns(settings, engine_id)
+        assert all(
+            argv == ("--max-turns", "250")
+            for effort, argv in limits.items()
+            if effort is not Effort.ULTRA
+        )
+        # ULTRA is "the runner's own limit, re-run pass after pass": it keeps no flag.
+        assert limits[Effort.ULTRA] == ()
+    # The adapter built from it carries the overridden descriptor.
+    adapter = settings.adapter(EngineId.GPTOSSLOOP, LocalEndpointEnvironment(environ={}))  # type: ignore[arg-type]
+    assert isinstance(adapter, LoopProcessAdapter)
+
+
+def test_unlimited_is_a_count_no_session_reaches() -> None:
+    settings = _settings({LOCAL_MAX_TURNS_ENV: " Unlimited "})
+    assert settings.max_turns == UNLIMITED_TURNS
+    assert _turns(settings, EngineId.GPTOSSLOOP)[Effort.HIGH] == (
+        "--max-turns",
+        str(UNLIMITED_TURNS),
+    )
+
+
+def test_the_setting_leaves_engines_that_are_not_local_runners_alone() -> None:
+    settings = _settings({LOCAL_MAX_TURNS_ENV: "250"})
+    assert settings.descriptor(EngineId.CLAUDELOOP) is CLAUDELOOP
+
+
+@pytest.mark.parametrize("bad", ["0", "-3", "many", "1.5", "unlimted"])
+def test_a_limit_that_is_not_a_positive_whole_number_or_unlimited_is_refused(bad: str) -> None:
+    with pytest.raises(ConfigError, match="whole number of turns or 'unlimited'"):
+        parse_local_max_turns(bad)
+    with pytest.raises(ConfigError):
+        _settings({LOCAL_MAX_TURNS_ENV: bad}).max_turns  # noqa: B018
+
+
+def test_applying_the_worker_flag_checks_the_value_then_sets_the_variable() -> None:
+    environ: dict[str, str] = {}
+    apply_local_max_turns(" unlimited ", environ)
+    assert environ == {LOCAL_MAX_TURNS_ENV: "unlimited"}
+    with pytest.raises(ConfigError):
+        apply_local_max_turns("0", environ)
+    assert environ == {LOCAL_MAX_TURNS_ENV: "unlimited"}  # a bad value changes nothing
