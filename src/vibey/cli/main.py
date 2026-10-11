@@ -31,7 +31,7 @@ from vibey.application.dto import GateAnswerOutcome, ProjectRecord
 from vibey.application.gate_auto_answers import GateAutoAnswerSweep
 from vibey.application.interfaces.design_auto_accept import DesignAutoAcceptInterface
 from vibey.application.interfaces.gate_auto_answers import GateAutoAnswerSweepInterface
-from vibey.application.project_kickoff import enqueue_design_interview
+from vibey.application.project_kickoff import accept_supplied_design, enqueue_design_interview
 from vibey.application.visual_acceptance import VisualAcceptanceService
 from vibey.bootstrap import (
     DesignProvider,
@@ -319,10 +319,30 @@ def new_project(
             "Overrides [design.interview] default_scope; unset keeps it (default narrowest)",
         ),
     ] = None,
+    accept_spec_json: Annotated[
+        Path | None,
+        typer.Option(
+            "--accept-spec-json",
+            help=(
+                "Skip DESIGN: this reviewed spec JSON (the file `vibey design accept --spec-json` "
+                "takes) is the design. The project is created, the spec accepted with visual "
+                "design declined, and BUILD's decomposition enqueued: no interview, no research "
+                "and no spec synthesis, so nothing waits for you or for a model."
+            ),
+        ),
+    ] = None,
     ignore_sabbath: IgnoreSabbath = False,
 ) -> None:
-    """Create a project and enqueue its first DESIGN interview."""
+    """Create a project and enqueue its first DESIGN interview (or, with a spec, skip DESIGN)."""
     SABBATH.decline_if_resting("new", ignore=ignore_sabbath)
+    supplied: DesignSpec | None = None
+    if accept_spec_json is not None:
+        try:
+            supplied = _load_spec(accept_spec_json)
+        except (OSError, ValueError, KeyError, TypeError) as exc:
+            # Before a project exists: a spec that cannot be read must not leave one behind.
+            typer.echo(f"--accept-spec-json {accept_spec_json}: {exc!r}", err=True)
+            raise typer.Exit(EXIT_USAGE) from exc
 
     async def create() -> tuple[str, str]:
         if skills_context_mode not in {"off", "shadow", "inject"}:
@@ -380,11 +400,26 @@ def new_project(
                         payload={"text": intake, "source": "github-issue"},
                     ),
                 )
-        return str(project.project_id), await _enqueue_design(project.project_id)
+            if supplied is not None:
+                accepted = await accept_supplied_design(
+                    projects=resources.projects,
+                    specs=resources.design_specs,
+                    acceptor=DesignAcceptanceService(
+                        projects=resources.projects,
+                        ledger=resources.design_ledger,
+                        specs=resources.design_specs,
+                        jobs=resources.jobs,
+                        clock=SystemClock(),
+                    ),
+                    project_id=project.project_id,
+                    spec=supplied,
+                )
+                return str(project.project_id), f"design skipped; entered {accepted.phase.value}"
+        return str(project.project_id), f"design job {await _enqueue_design(project.project_id)}"
 
     with guard():
-        project_id, job_id = asyncio.run(create())
-    typer.echo(f"project {project_id}\ndesign job {job_id}")
+        project_id, outcome = asyncio.run(create())
+    typer.echo(f"project {project_id}\n{outcome}")
 
 
 app.command("serve")(serve_command)
@@ -2191,7 +2226,8 @@ def worker(
             help=(
                 "With --auto-accept-design: import this reviewed spec JSON (the same file "
                 "`vibey design accept --spec-json` takes) just before accepting, instead of "
-                "accepting what the synthesizer wrote."
+                "accepting what the synthesizer wrote. It waits for DESIGN to finish first; to "
+                "skip DESIGN altogether, give the spec to `vibey new --accept-spec-json`."
             ),
         ),
     ] = None,

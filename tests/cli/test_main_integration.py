@@ -10,6 +10,7 @@ Postgres.
 """
 
 import asyncio
+import json
 import os
 from collections.abc import Mapping
 from pathlib import Path
@@ -107,6 +108,52 @@ def test_a_framed_intake_is_recorded_verbatim_and_untrusted(tmp_path: Path) -> N
     ]
     assert seeded.provenance.value == "untrusted"
     assert seeded.payload == {"text": intake, "source": "github-issue"}
+
+
+def test_new_with_a_reviewed_spec_skips_design_and_enters_build(tmp_path: Path) -> None:
+    spec = tmp_path / "spec.json"
+    spec.write_text(
+        json.dumps(
+            {
+                "objective": "a section",
+                "walking_skeleton": "one post end to end",
+                "criteria": [
+                    {
+                        "criterion_id": "C1",
+                        "given": "a post",
+                        "when": "it is built",
+                        "then": "it renders",
+                        "fit": "a test",
+                    }
+                ],
+            }
+        )
+    )
+
+    result = runner.invoke(
+        app, ["new", "widget", "--repo", str(tmp_path), "--accept-spec-json", str(spec)]
+    )
+
+    assert result.exit_code == 0, result.output
+    first, second = result.output.strip().splitlines()
+    project_id = UUID(first.removeprefix("project "))
+    assert second == "design skipped; entered build"
+
+    async def what_exists():  # type: ignore[no-untyped-def]
+        async with build_app() as resources:
+            project = await resources.projects.get(project_id)
+            interviews = await resources.jobs.list_for_cycle(
+                project_id, cycle=1, kind="design.interview"
+            )
+            decompose = await resources.jobs.list_for_cycle(
+                project_id, cycle=1, kind="build.decompose"
+            )
+            return project, interviews, decompose
+
+    project, interviews, decompose = asyncio.run(what_exists())
+    assert project is not None and project.phase.value == "build"
+    assert interviews == ()  # DESIGN never ran: no interview was ever enqueued
+    assert len(decompose) == 1
 
 
 async def _design_events(project_id: UUID):
