@@ -605,6 +605,33 @@ alive keeps them; so the one command for a stuck queue is
 Prints `Recovered N stuck job(s).`, where N is the number of rows actually
 reset, read from PostgreSQL's `UPDATE n` status tag.
 
+## `vibey retry PROJECT_ID`
+
+Get a stalled project moving again in one command. A project that stalls on a bad model answer
+parks its job on an `attempts_exhausted` gate; this does what used to be `recover --stop-workers`,
+`gates`, `answer --raw '{"max_attempts": N}'` and a hand-written worker restart, in that order.
+
+| Option | Default | What it does |
+|---|---|---|
+| `--max-attempts N` | `10` | Attempts to grant on each of the project's `attempts_exhausted` gates. |
+| `--keep-workers` | off | Do not stop this user's running workers first. |
+| `--start-worker` | off | Then start `vibey worker --project PROJECT_ID` detached, with every argument after `--` passed to it. |
+| `--log PATH` | `$XDG_STATE_HOME/vibey/worker-<project>.log` | Where the started worker's output is appended. |
+| `--grace SECONDS` | `10` | How long a worker gets after SIGTERM before SIGKILL. |
+| `--dry-run` | off | Change nothing: list the workers that would be stopped, the gates that would be granted and the worker that would be started. |
+
+```sh
+vibey retry 6b45e169-4653-4a8d-941c-7440249dc8ef --start-worker -- --engines gptossloop --auto-answer
+```
+
+Workers are stopped exactly as `recover --stop-workers` stops them, and if one survives SIGKILL
+nothing else is done (a live worker holds its leases). Only `attempts_exhausted` gates are
+answered, each as a named request (`retry-<gate>-<N>`, by `vibey retry`) so running the command
+twice answers a gate once. Any other open gate is a decision: it is counted and pointed at
+`vibey gates PROJECT_ID`, never answered. The started worker is its own session, so closing the
+terminal does not stop it, and `vibey recover --stop-workers` finds it by its command line.
+Updating vibey itself (`git pull`, `uv sync`) is not part of this.
+
 ## `vibey status [PROJECT_ID]`
 
 Show the project's name, phase, cycle, visual and deployment decisions,

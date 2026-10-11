@@ -58,6 +58,7 @@ from vibey.cli.loops import LOOPS
 from vibey.cli.projects import PROJECTS
 from vibey.cli.queue import queue_app
 from vibey.cli.recover import stop_workers
+from vibey.cli.retry import DEFAULT_MAX_ATTEMPTS, RETRY
 from vibey.cli.sabbath import SABBATH
 from vibey.cli.serve import SERVE
 from vibey.cli.serve import serve as serve_command
@@ -1028,6 +1029,78 @@ def recover(
             await conn.close()
 
     asyncio.run(run_recover())
+
+
+@app.command(
+    "retry",
+    context_settings={"allow_extra_args": True, "ignore_unknown_options": True},
+)
+def retry(
+    ctx: typer.Context,
+    project_id: UUID,
+    max_attempts: Annotated[
+        int,
+        typer.Option(
+            "--max-attempts",
+            min=1,
+            help="Attempts to grant on each of the project's exhausted-attempts gates.",
+        ),
+    ] = DEFAULT_MAX_ATTEMPTS,
+    keep_workers: Annotated[
+        bool,
+        typer.Option(
+            "--keep-workers",
+            help="Do not stop this user's running workers first.",
+        ),
+    ] = False,
+    start_worker: Annotated[
+        bool,
+        typer.Option(
+            "--start-worker",
+            help="Then start `vibey worker --project PROJECT` detached, with every argument "
+            "after `--` passed to it (for example `-- --engines gptossloop --auto-answer`).",
+        ),
+    ] = False,
+    log: Annotated[
+        Path | None,
+        typer.Option(
+            "--log",
+            help="Where the started worker's output is appended. Default: "
+            "$XDG_STATE_HOME/vibey/worker-<project>.log.",
+        ),
+    ] = None,
+    grace: Annotated[
+        float,
+        typer.Option(
+            "--grace",
+            min=0.0,
+            help="Seconds to wait after SIGTERM before a worker is sent SIGKILL.",
+        ),
+    ] = DEFAULT_GRACE_SECONDS,
+    dry_run: Annotated[
+        bool,
+        typer.Option("--dry-run", help="Change nothing: say what each step would do."),
+    ] = False,
+) -> None:
+    """Get a stalled project moving again: stop old workers, grant attempts, start a worker.
+
+    One command for what took `recover --stop-workers`, `gates`, `answer --raw
+    '{"max_attempts": N}'` and a worker restart. Only `attempts_exhausted` gates are
+    answered; any other open gate is a decision and is only named.
+    """
+    with guard():
+        asyncio.run(
+            RETRY.run(
+                project_id,
+                max_attempts=max_attempts,
+                keep_workers=keep_workers,
+                start_worker=start_worker,
+                worker_args=tuple(ctx.args),
+                log=log,
+                grace_seconds=grace,
+                dry_run=dry_run,
+            )
+        )
 
 
 @app.command("status")
