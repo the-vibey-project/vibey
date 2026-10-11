@@ -13,6 +13,7 @@ from vibey.domain.spec import AcceptanceCriterion, DesignSpec
 from vibey.infrastructure.engines.design_json import WorkPlanDecoder
 from vibey.infrastructure.engines.gptossloop_decompose import (
     DECOMPOSE_SYSTEM,
+    PLACE_SYSTEM,
     GptossloopWorkPlanProducer,
 )
 from vibey.infrastructure.engines.interfaces import (
@@ -198,10 +199,6 @@ def _broken(mutate: object) -> dict[str, object]:
     [
         # validate_decomposition's rules: every criterion mapped, skeleton first and alone.
         (
-            {"items": [_item("ws", acceptance=["AC-1"])]},
-            "1 acceptance criterion/criteria unmapped: AC-2",
-        ),
-        (
             _broken(lambda items: items[0].update(depends_on=["cli-parsing"])),
             "walking skeleton item 'ws' must have no dependencies",
         ),
@@ -281,14 +278,111 @@ def test_the_decoder_still_refuses_what_the_schema_check_now_catches_first() -> 
 
 @pytest.mark.asyncio
 async def test_a_plan_corrected_on_the_re_ask_is_accepted() -> None:
-    first = {"items": [_item("ws", acceptance=["AC-1"])]}  # AC-2 unmapped
+    first = _broken(lambda items: items[0].update(depends_on=["cli-parsing"]))
     chat = SequenceChat([first, VALID])
     producer = GptossloopWorkPlanProducer(chat=chat)
 
     items = await producer.decompose(_spec("AC-1", "AC-2"))
 
     assert [item.item_id for item in items] == ["ws", "cli-parsing"]
-    assert "AC-2" in chat.asked[1][1] and "rejected" in chat.asked[1][1]
+    assert "walking skeleton" in chat.asked[1][1] and "rejected" in chat.asked[1][1]
+
+
+class _PlaceChat(SequenceChat):
+    """Answers the plan, then each placement question in turn; a ValueError answer raises."""
+
+    async def ask(
+        self, system: str, user: str, schema: Mapping[str, object] | str
+    ) -> dict[str, object]:
+        answer = await super().ask(system, user, schema)
+        if answer.get("raise"):
+            raise ValueError("the model did not answer with a JSON object")
+        return answer
+
+
+def _missing_ac2() -> dict[str, object]:
+    return {
+        "items": [
+            _item("ws", acceptance=["AC-1"]),
+            _item("cli-parsing", acceptance=["AC-1"], depends_on=["ws"]),
+        ]
+    }
+
+
+@pytest.mark.asyncio
+async def test_a_criterion_no_item_claims_is_placed_by_one_short_question() -> None:
+    """The model drops criteria when it splits a plan. Regenerating the whole plan for
+    that was a seven-attempt loop; one enum-constrained question per criterion is not."""
+    chat = _PlaceChat([_missing_ac2(), {"item_id": "cli-parsing"}])
+    producer = GptossloopWorkPlanProducer(chat=chat)
+
+    items = await producer.decompose(_spec("AC-1", "AC-2"))
+
+    assert len(chat.asked) == 2  # the plan, then the one placement; no re-ask of the plan
+    placed = items[1]
+    assert placed.acceptance_ids == ("AC-1", "AC-2")
+    assert placed.verification.criteria_checked == ("AC-1", "AC-2")
+    assert items[0].acceptance_ids == ("AC-1",)  # nothing else moved
+    system, user, schema = chat.asked[1]
+    assert system == PLACE_SYSTEM
+    assert "Criterion AC-2" in user and "cli-parsing" in user
+    # A grammar this small compiles, so the answer must be one of this plan's own items.
+    assert schema == producer.place_schema(["ws", "cli-parsing"])
+    assert schema["properties"]["item_id"]["enum"] == ["ws", "cli-parsing"]  # type: ignore[index]
+
+
+@pytest.mark.asyncio
+async def test_each_unmapped_criterion_is_asked_about_and_may_land_on_different_items() -> None:
+    plan = {
+        "items": [
+            _item("ws", acceptance=["AC-1"]),
+            _item("docs", acceptance=["AC-1"], depends_on=["ws"]),
+        ]
+    }
+    chat = _PlaceChat([plan, {"item_id": "docs"}, {"item_id": "ws"}])
+    producer = GptossloopWorkPlanProducer(chat=chat)
+
+    items = await producer.decompose(_spec("AC-1", "AC-2", "AC-3"))
+
+    assert len(chat.asked) == 3
+    assert items[0].acceptance_ids == ("AC-1", "AC-3")
+    assert items[1].acceptance_ids == ("AC-1", "AC-2")
+
+
+@pytest.mark.asyncio
+async def test_a_criterion_an_item_checks_but_did_not_claim_is_claimed_not_asked_about() -> None:
+    plan = {
+        "items": [
+            _item("ws", acceptance=["AC-1"]),
+            _item("b", acceptance=["AC-1"], depends_on=["ws"], checked=["AC-1", "AC-2"]),
+        ]
+    }
+    chat = _PlaceChat([plan])
+
+    items = await GptossloopWorkPlanProducer(chat=chat).decompose(_spec("AC-1", "AC-2"))
+
+    assert len(chat.asked) == 1  # no re-ask of the plan and no placement question
+    assert items[1].acceptance_ids == ("AC-1", "AC-2")
+    assert items[1].verification.criteria_checked == ("AC-1", "AC-2")
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    "answer",
+    [{"item_id": "nowhere"}, {"item_id": 7}, {}, {"raise": True}],
+    ids=["not-an-item", "not-a-string", "no-key", "not-json"],
+)
+async def test_a_placement_that_names_no_item_leaves_the_criterion_unmapped_and_refuses(
+    answer: dict[str, object],
+) -> None:
+    chat = _PlaceChat([_missing_ac2(), answer])
+    producer = GptossloopWorkPlanProducer(chat=chat)
+
+    with pytest.raises(ModelAnswerRejected, match="the work plan was rejected") as caught:
+        await producer.decompose(_spec("AC-1", "AC-2"))
+
+    assert "1 acceptance criterion/criteria unmapped: AC-2" in str(caught.value)
+    assert len(chat.asked) == 2
 
 
 @pytest.mark.asyncio
