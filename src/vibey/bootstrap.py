@@ -17,6 +17,7 @@ from platformdirs import user_cache_path
 from vibey import __version__
 from vibey.application.budget_source import LedgerBudgetSource
 from vibey.application.build_decompose_handler import BuildDecomposeHandler
+from vibey.application.build_dependency_wait import DeferringHandler, DependencyWait
 from vibey.application.build_implement_handler import BuildImplementHandler
 from vibey.application.build_integrate_handler import BuildIntegrateHandler
 from vibey.application.build_verify_handler import (
@@ -678,7 +679,13 @@ def build_full_worker(
     # what the selected engine's session cost is charged to that engine's
     # health record when the job settles (issue #209). The ledger itself sees
     # every event unchanged.
+    dependency_wait = DependencyWait(jobs=resources.jobs, clock=clock)
+
     async def _implement(job: JobRecord) -> JobHandler:
+        # Before an engine is chosen: an item that only waits for what it builds on is not an
+        # engine selection, and counting each poll as one skewed the rotation's bookkeeping.
+        if (deferral := await dependency_wait.deferral(job)) is not None:
+            return DeferringHandler(deferral)
         adapter = await engine_provider.select_for(job)
         meter = SpendMeteringLedger(resources.build_ledger, metrics=metrics)
         handler = BuildImplementHandler(
