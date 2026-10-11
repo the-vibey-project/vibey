@@ -86,6 +86,42 @@ def eligible(
     return tuple(result)
 
 
+def rejections(
+    runtimes: Sequence[EngineRuntime],
+    *,
+    requirement: JobRequirement,
+    allow_list: frozenset[EngineId] | None = None,
+) -> tuple[str, ...]:
+    """Why each engine `eligible` turned down, one phrase per engine, in the order given.
+
+    `eligible` answers "which"; this answers "why not", for the message a job is deferred
+    with. Before it, a worker that could not place a job said only "No engines meet
+    requirements" and nothing about which requirement: an engine not conformant, a login that
+    had gone stale, an open circuit and the engine a retry must rotate away from all read the
+    same, and each needs a different fix. The rules are exactly `eligible`'s, in its order.
+    """
+    out = []
+    for runtime in runtimes:
+        reasons = []
+        if not runtime.installed:
+            reasons.append("not installed")
+        if not runtime.conformance_ok:
+            reasons.append("not conformant (run `vibey doctor --conformance`)")
+        if not runtime.auth_valid:
+            reasons.append("its login check is stale or failed")
+        if runtime.circuit.state is CircuitState.OPEN:
+            reasons.append("its circuit is open")
+        if runtime.engine_id in requirement.excluded:
+            reasons.append("excluded for this attempt (a retry that must rotate away)")
+        if allow_list is not None and runtime.engine_id not in allow_list:
+            reasons.append("not in this worker's --engines")
+        if not requirement.capabilities <= runtime.descriptor.capabilities:
+            reasons.append("lacks a capability the job needs")
+        if reasons:
+            out.append(f"{runtime.engine_id.value}: {', '.join(reasons)}")
+    return tuple(out)
+
+
 def preferred_tier(candidates: Sequence[Candidate]) -> tuple[Candidate, ...]:
     """The candidates of the most-preferred tier that can win a round (ADR-0038).
 

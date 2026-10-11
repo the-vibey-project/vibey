@@ -42,6 +42,7 @@ from vibey.domain.rotation import (
     fidelity_factor,
     health_factor,
     preferred_tier,
+    rejections,
     select,
 )
 
@@ -190,6 +191,7 @@ class EngineSelector:
         # Build EngineRuntime objects
         now = datetime.now(UTC)
         runtimes = []
+        unreadable: list[EngineId] = []
         for record in health_records:
             # A health row a newer vibey wrote for an engine this one does not know
             # (vibey#287; #281's `claudeloop-local` is the first) is not a candidate:
@@ -202,6 +204,7 @@ class EngineSelector:
                 continue
             state = self._circuit_state(record, now=now)
             if state is None:
+                unreadable.append(engine_id)
                 continue
 
             # Check auth TTL
@@ -229,7 +232,18 @@ class EngineSelector:
         # Filter to eligible engines
         eligible_runtimes = eligible(runtimes, requirement=requirement, allow_list=allow_list)
         if not eligible_runtimes:
-            raise NoEligibleEngine(f"No engines meet requirements for project {project_id}")
+            why = list(rejections(runtimes, requirement=requirement, allow_list=allow_list))
+            why += [f"{engine.value}: its circuit state could not be read" for engine in unreadable]
+            known = {runtime.engine_id for runtime in runtimes} | set(unreadable)
+            if allow_list is not None:
+                why += [
+                    f"{engine.value}: no health record for this project yet"
+                    for engine in sorted(allow_list - known, key=lambda e: e.value)
+                ]
+            raise NoEligibleEngine(
+                f"No engines meet requirements for project {project_id}"
+                + (f" ({'; '.join(why)})" if why else " (no engine has a health record)")
+            )
 
         # Get rotation cursors. A cursor a newer vibey keeps for an engine this one
         # does not know (vibey#287) is left out, so it neither counts toward "every

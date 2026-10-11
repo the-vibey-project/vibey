@@ -83,6 +83,10 @@ from vibey.application.interfaces.design import (
     ResearchProvider,
     SpecSynthesizer,
 )
+from vibey.application.interfaces.design_auto_accept import (
+    DesignAcceptorInterface,
+    DesignAutoAcceptInterface,
+)
 from vibey.application.interfaces.docs import DocsPort
 from vibey.application.interfaces.driver import (
     DriverFailoverServiceInterface,
@@ -179,6 +183,7 @@ from vibey.application.interfaces.projects import (
     ProjectStore,
     ProjectTransitioner,
 )
+from vibey.application.interfaces.publish import PublisherInterface
 from vibey.application.interfaces.queue import (
     Defer,
     Failure,
@@ -255,7 +260,10 @@ __all__ = [
     "GateNoticeServiceInterface",
     "GateNoticeStore",
     "GateReminderInterface",
+    "DesignAcceptorInterface",
+    "DesignAutoAcceptInterface",
     "GateAutoAnswerSweepInterface",
+    "PublisherInterface",
     "GateTimeoutSweepInterface",
     "Logger",
     "NotificationSink",

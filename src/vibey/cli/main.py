@@ -26,8 +26,10 @@ import typer
 from vibey import __version__
 from vibey.application.design import DesignEvent
 from vibey.application.design_acceptance import DesignAcceptanceService
+from vibey.application.design_auto_accept import DesignAutoAccept
 from vibey.application.dto import GateAnswerOutcome, ProjectRecord
 from vibey.application.gate_auto_answers import GateAutoAnswerSweep
+from vibey.application.interfaces.design_auto_accept import DesignAutoAcceptInterface
 from vibey.application.interfaces.gate_auto_answers import GateAutoAnswerSweepInterface
 from vibey.application.project_kickoff import enqueue_design_interview
 from vibey.application.visual_acceptance import VisualAcceptanceService
@@ -41,9 +43,10 @@ from vibey.bootstrap import (
 )
 from vibey.cli.abandon import abandon as abandon_command
 from vibey.cli.budget import budget_app
+from vibey.cli.design_auto_accept import auto_accept_design_lines, auto_accept_design_startup_line
 from vibey.cli.driver import driver_app
 from vibey.cli.errors import EXIT_USAGE, guard
-from vibey.cli.gate_auto_answer import auto_answer_lines
+from vibey.cli.gate_auto_answer import auto_answer_lines, auto_answer_startup_line
 from vibey.cli.gate_notices import GATE_NOTICE_DOCTOR, GATE_REMINDERS
 from vibey.cli.gates import GATES
 from vibey.cli.host_health import HOST_HEALTH
@@ -2006,6 +2009,78 @@ def worker(
             help="The most answers --auto-answer gives before every gate waits for a person.",
         ),
     ] = DEFAULT_AUTO_ANSWER_LIMIT,
+    auto_accept_design: Annotated[
+        bool,
+        typer.Option(
+            "--auto-accept-design",
+            help=(
+                "Accept this project's DESIGN spec yourself once DESIGN has finished, instead "
+                "of waiting for `vibey design accept`: your decision that the spec is right, "
+                "given in advance. For this one worker and one project (not with "
+                "--all-projects). It never opts into VISUAL_DESIGN, and the acceptance guards "
+                "still apply. The ledger names who accepted ('auto-accept-design')."
+            ),
+        ),
+    ] = False,
+    auto_accept_review: Annotated[
+        bool,
+        typer.Option(
+            "--auto-accept-review",
+            help=(
+                "Accept this project's REVIEW approval gate yourself (the verdict 'accept', "
+                "never 'changes' or 'cancel'). Your decision that the review is good, given in "
+                "advance, for this one worker and one project. Recorded on the ledger as "
+                "'auto-answer'."
+            ),
+        ),
+    ] = False,
+    auto_finish_local: Annotated[
+        bool,
+        typer.Option(
+            "--auto-finish-local",
+            help=(
+                "Answer the deployment choice after REVIEW with 'local_only', so the project "
+                "finishes without deploying. It never answers 'deploy': a deployment is a "
+                "separate decision, and consent to change real infrastructure has no flag."
+            ),
+        ),
+    ] = False,
+    auto_publish: Annotated[
+        bool,
+        typer.Option(
+            "--auto-publish",
+            help=(
+                "Answer this project's publish interview with 'accept_defaults': publish exactly "
+                "what its prompt shows, a draft pull request (or a new private repository for a "
+                "project with no remote), never 'custom'. This sends the finished work to "
+                "GitHub, so it is its own flag: no other --auto-accept flag implies it. Only "
+                "for a project whose `[publish] mode` is `interview`; one worker, one project."
+            ),
+        ),
+    ] = False,
+    auto_accept_all: Annotated[
+        bool,
+        typer.Option(
+            "--auto-accept-all",
+            help=(
+                "--auto-accept-design, --auto-accept-review and --auto-finish-local together: "
+                "every acceptance from DESIGN through REVIEW, finishing local. Not "
+                "--auto-answer (the retry and interview gates stay yours unless you add it), "
+                "and never a deployment or a spending gate."
+            ),
+        ),
+    ] = False,
+    accept_spec_json: Annotated[
+        Path | None,
+        typer.Option(
+            "--accept-spec-json",
+            help=(
+                "With --auto-accept-design: import this reviewed spec JSON (the same file "
+                "`vibey design accept --spec-json` takes) just before accepting, instead of "
+                "accepting what the synthesizer wrote."
+            ),
+        ),
+    ] = None,
 ) -> None:
     """Long-running worker: LISTEN vibey_job_ready, dispatch across all phases."""
     from datetime import timedelta
@@ -2039,6 +2114,27 @@ def worker(
     if auto_answer and all_projects:
         typer.echo("--auto-answer answers one project's gates: use --project, not --all-projects")
         raise typer.Exit(EXIT_USAGE)
+    # `--auto-accept-all` is the three acceptances together, and nothing else.
+    accept_design_on = auto_accept_design or auto_accept_all
+    accept_review_on = auto_accept_review or auto_accept_all
+    finish_local_on = auto_finish_local or auto_accept_all
+    if (accept_design_on or accept_review_on or finish_local_on or auto_publish) and all_projects:
+        typer.echo(
+            "--auto-accept-design, --auto-accept-review, --auto-finish-local, --auto-publish "
+            "and --auto-accept-all accept one project's decisions: use --project, not "
+            "--all-projects"
+        )
+        raise typer.Exit(EXIT_USAGE)
+    if accept_spec_json is not None and not accept_design_on:
+        typer.echo("--accept-spec-json belongs to --auto-accept-design: add that flag, or drop it")
+        raise typer.Exit(EXIT_USAGE)
+    accept_spec: DesignSpec | None = None
+    if accept_spec_json is not None:
+        try:
+            accept_spec = _load_spec(accept_spec_json)
+        except (OSError, ValueError, KeyError, TypeError) as exc:
+            typer.echo(f"--accept-spec-json {accept_spec_json}: cannot be read as a spec ({exc!r})")
+            raise typer.Exit(EXIT_USAGE) from exc
     azure_client = None
     if azure == "az":
         from vibey.infrastructure.azure.az_cli import AzCliClientAdapter
@@ -2128,17 +2224,43 @@ def worker(
                 search_overlay[COMMAND_VARIABLE] = vibey_command(sys.argv[0])
             typer.echo(web_search_line(web_settings), err=True)
             auto_answers: GateAutoAnswerSweepInterface | None = None
-            if auto_answer:
+            if auto_answer or accept_review_on or finish_local_on or auto_publish:
+                policy = GateAutoAnswerPolicy(
+                    limit=auto_answer_limit,
+                    answer_retries=auto_answer,
+                    accept_review=accept_review_on,
+                    finish_local=finish_local_on,
+                    publish=auto_publish,
+                )
                 auto_answers = GateAutoAnswerSweep(
                     gates=resources.gates,
                     answers=resources.gate_answers,
-                    policy=GateAutoAnswerPolicy(limit=auto_answer_limit),
+                    policy=policy,
                     clock=resources.clock,
                     logger=StructlogAppLogger(owner="auto-answer"),
                 )
+                typer.echo(auto_answer_startup_line(policy), err=True)
+
+            design_accept: DesignAutoAcceptInterface | None = None
+            if accept_design_on:
+                design_accept = DesignAutoAccept(
+                    projects=resources.projects,
+                    jobs=resources.jobs,
+                    specs=resources.design_specs,
+                    acceptor=DesignAcceptanceService(
+                        projects=resources.projects,
+                        ledger=resources.design_ledger,
+                        specs=resources.design_specs,
+                        jobs=resources.jobs,
+                        clock=SystemClock(),
+                    ),
+                    logger=StructlogAppLogger(owner="auto-accept-design"),
+                    spec=accept_spec,
+                )
                 typer.echo(
-                    f"auto-answer: on, up to {auto_answer_limit} answers; spending gates,"
-                    " approvals and reviews still wait for you",
+                    auto_accept_design_startup_line(
+                        str(accept_spec_json) if accept_spec_json is not None else None
+                    ),
                     err=True,
                 )
 
@@ -2433,6 +2555,16 @@ def worker(
                             typer.echo(f"drive[{idx}] gate auto-answers failed: {exc}", err=True)
                         else:
                             for line in auto_answer_lines(report, limit=auto_answer_limit):
+                                typer.echo(line, err=True)
+                    # Only when the operator said `--auto-accept-design`: accept this
+                    # project's DESIGN spec once DESIGN has settled, and say what it waits for.
+                    if design_accept is not None:
+                        try:
+                            accept_report = await design_accept.run(remind_scope)
+                        except Exception as exc:
+                            typer.echo(f"drive[{idx}] design auto-accept failed: {exc}", err=True)
+                        else:
+                            for line in auto_accept_design_lines(accept_report):
                                 typer.echo(line, err=True)
                     typer.echo(
                         f"drive[{idx}] iter={iteration} reap done, waiting for notify", err=True

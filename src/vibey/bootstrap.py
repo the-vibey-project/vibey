@@ -104,6 +104,7 @@ from vibey.application.queue_reaper import QueueReaper
 from vibey.application.review_collect_handler import ReviewCollectHandler
 from vibey.application.review_demo_handler import ReviewDemoHandler
 from vibey.application.review_deployment_choice_handler import ReviewDeploymentChoiceHandler
+from vibey.application.review_publish_handler import ReviewPublishHandler
 from vibey.application.review_triage_handler import ReviewTriageHandler
 from vibey.application.rotation_handoff import RotationHandoffService
 from vibey.application.ultra_control import UltraControlService
@@ -191,6 +192,7 @@ from vibey.infrastructure.otel import TelemetryMetrics, TelemetryTracer
 from vibey.infrastructure.postgres import POSTGRES_MIN_MAJOR, parse_postgres_server_version
 from vibey.infrastructure.preflight_feasibility import VibeyGhFeasibilityAdapter
 from vibey.infrastructure.provision.agent_surface import AgentSurfaceProvisioner
+from vibey.infrastructure.publish.github import GitHubPublisher
 from vibey.infrastructure.queue_priority_grant import ProcessCaller, ProjectPriorityGrantReader
 from vibey.infrastructure.review_artifact_writer import FileReviewArtifactWriter
 from vibey.infrastructure.secrets.in_memory import InMemorySecrets
@@ -444,6 +446,8 @@ _KIND_LEASES: Mapping[str, timedelta] = {
     "build.decompose": timedelta(minutes=15),
     "build.plan": timedelta(minutes=15),
     "build.integrate": timedelta(minutes=15),
+    # A push and a pull request are a handful of network calls, each bounded at three minutes.
+    "review.publish": timedelta(minutes=15),
 }
 
 
@@ -808,6 +812,15 @@ def build_full_worker(
             jobs=resources.jobs,
             projects=resources.projects,
             clock=clock,
+        ),
+        # The last step of a delivered project, and only for one whose `[publish] mode` is not
+        # `off`: the choice handler above enqueues it instead of finishing.
+        "review.publish": ReviewPublishHandler(
+            ledger=resources.review_ledger,
+            gates=resources.gates,
+            projects=resources.projects,
+            specs=resources.design_specs,
+            publisher=GitHubPublisher(),
         ),
         "deploy.design": DeployDesignBridgeHandler(
             jobs=resources.jobs,

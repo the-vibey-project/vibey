@@ -420,6 +420,26 @@ never estimating it ahead of time. Tripping either cap parks a
 Unlike `[budget]` above, this key **is** read at runtime, by
 `bootstrap.build_full_worker`.
 
+## `[publish]`
+
+What happens to a finished project's work after REVIEW. Nothing leaves the machine unless
+`mode` says so: the default finishes locally, as it always has. [The guide](../guides/publishing.md)
+walks through it.
+
+| Field | Type | Default | Notes |
+|---|---|---|---|
+| `mode` | `"off"`, `"interview"` or `"auto"` | `"off"` | `off` finishes locally. `interview` raises a `publish_interview` gate that shows exactly what would be pushed and where, and waits for you (or for a worker started with `--auto-publish`). `auto` publishes the proposal with no gate. |
+| `visibility` | `"private"` or `"public"` | `"private"` | For a new GitHub repository. A public repository is always an explicit choice, here or in the interview. |
+| `draft` | bool | `true` | Whether an opened pull request is a draft. |
+| `base` | string | the remote's default branch, else `main` | The branch a pull request targets, or the branch a new repository's first push becomes. |
+| `remote` | string | `"origin"` | The git remote to push to. |
+| `owner` | string | the logged-in `gh` user | The user or organisation a new repository is created under. |
+
+Names are checked: a `base`, `remote` or `owner` that could be read as a command-line option
+(leading `-`) or holds a space or shell character is refused, as is an unknown key (`visibilty`),
+and the project fails to start rather than publishing with a setting nobody meant. The table is
+read from the project's stored configuration, the same way `[verify]` is.
+
 ## `[engines]`
 
 | Field | Type | Default | Notes |
