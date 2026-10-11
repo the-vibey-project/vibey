@@ -413,3 +413,10 @@ async def test_without_a_checkout_the_prompt_is_the_base_prompt() -> None:
     await GptossloopWorkPlanProducer(chat=chat).decompose(_spec("AC-1", "AC-2"))
 
     assert "never with pytest" not in chat.asked[0][0]
+
+
+def test_the_prompt_caps_an_item_and_calls_the_skeleton_the_thinnest_slice() -> None:
+    assert "at most 12 paths" in DECOMPOSE_SYSTEM
+    assert "CHAIN of build pieces" in DECOMPOSE_SYSTEM
+    assert "the last piece runs the full verification" in DECOMPOSE_SYSTEM
+    assert "thinnest slice that works end to end" in DECOMPOSE_SYSTEM
