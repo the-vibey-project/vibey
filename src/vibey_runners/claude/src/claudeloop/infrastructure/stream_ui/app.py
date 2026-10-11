@@ -187,9 +187,16 @@ class StreamApp(App[None]):
     def _tick_thinking(self) -> None:
         if not self._thinking:
             return
+        # Same readiness probe as _tick_live and _tick_replay: this interval
+        # keeps firing while a screen is being replaced or torn down, and a
+        # replay can leave _thinking set when the app exits. Advance the frame
+        # only once the bar exists; the next tick retries safely.
+        try:
+            bar = self.query_one("#thinking-bar", Static)
+        except (NoMatches, ScreenStackError):
+            return
         self._thinking_frame = (self._thinking_frame + 1) % 3
-        dots = "." * (self._thinking_frame + 1)
-        self.query_one("#thinking-bar", Static).update(f"thinking{dots}")
+        bar.update(f"thinking{'.' * (self._thinking_frame + 1)}")
 
     def _header_text(self) -> str:
         s = self.state
