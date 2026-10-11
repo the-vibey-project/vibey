@@ -1,20 +1,23 @@
+# Made with ❤️ by [Vibey](https://the-vibey-project.github.io/vibey/), Developed by [Adam Matthew Steinberger](https://vibewithadam.matthewsteinberger.com/) ([@adammatthewsteinberger](https://github.com/adammatthewsteinberger/)).
+from datetime import UTC, datetime
+
 import pytest
 
-from vibey.infrastructure.aws.adapter import InMemoryAWSClientAdapter
 from vibey.domain.deployment import (
     AzureTargetScope,
-    DeploymentSpec,
-    DeploymentConsent,
-    IdentityAuthority,
-    TopologyConfig,
-    RecoveryPolicy,
-    VerificationContract,
     CostBoundary,
+    DeploymentConsent,
+    DeploymentSpec,
+    IdentityAuthority,
+    RecoveryPolicy,
+    TopologyConfig,
+    VerificationContract,
 )
-from datetime import datetime
+from vibey.infrastructure.aws.adapter import InMemoryAWSClientAdapter
+
 
 @pytest.mark.asyncio
-async def test_inmemory_aws_adapter_contract():
+async def test_inmemory_aws_adapter_contract() -> None:
     adapter = InMemoryAWSClientAdapter()
     scope = AzureTargetScope(
         tenant_id="t",
@@ -40,7 +43,7 @@ async def test_inmemory_aws_adapter_contract():
         consent_id="consent1",
         target_scope_digest=scope.digest(),
         granted_by="tester",
-        granted_at=datetime.utcnow(),
+        granted_at=datetime.now(UTC),
         explicit_mutation_authorized=True,
     )
     result = await adapter.execute_plan(spec, consent)
@@ -50,4 +53,3 @@ async def test_inmemory_aws_adapter_contract():
     await adapter.delete_resource(scope, "demo", consent)
     status2 = await adapter.get_resource_status(scope, "demo")
     assert status2.provisioning_state == "Succeeded"  # remains same, declared only
-
