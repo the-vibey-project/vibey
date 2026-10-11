@@ -1,6 +1,8 @@
 # Made with ❤️ by [Vibey](https://the-vibey-project.github.io/vibey/), Developed by [Adam Matthew Steinberger](https://vibewithadam.matthewsteinberger.com/) ([@adammatthewsteinberger](https://github.com/adammatthewsteinberger/)).
 """A plan's verification may only run or read files something provides (#963)."""
 
+from dataclasses import replace
+
 import pytest
 
 from vibey.domain.effort import Effort
@@ -261,3 +263,49 @@ def test_each_oversized_item_gets_its_own_message_next_to_other_violations() -> 
 
     assert [m.split()[1] for m in messages] == ["'big'", "'big'", "'also-big'"]
     assert "runs pytest on" in messages[0] and "lists 14 paths" in messages[1]
+
+
+def _claiming(item_id: str, *ids: str, hint: tuple[str, ...] = ()) -> WorkItem:
+    return replace(_item(item_id, "npm run build", hint=hint), acceptance_ids=ids)
+
+
+def test_an_item_claiming_every_criterion_with_no_paths_is_a_monolith_and_is_rejected() -> None:
+    """The ministry section's second plan: one item, `files_touched_hint: []`, C1..C11."""
+    from vibey.domain.plan_references import MAX_ITEM_CRITERIA
+
+    monolith = _claiming("ws", *(f"C{n}" for n in range(1, 12)))
+
+    (message,) = PLAN_REFERENCE_CHECKER.violations([monolith], exists=lambda path: True)
+
+    assert f"item 'ws' claims 11 acceptance criteria, more than the {MAX_ITEM_CRITERIA}" in message
+    assert "split it into a chain of build pieces" in message
+    assert "lists the piece before it in depends_on" in message
+    assert "claims only what its thin slice demonstrates" in message
+
+
+def test_an_item_at_the_criteria_limit_is_accepted_and_repeats_count_once() -> None:
+    from vibey.domain.plan_references import MAX_ITEM_CRITERIA
+
+    ids = tuple(f"C{n}" for n in range(1, MAX_ITEM_CRITERIA + 1))
+    at_limit = _claiming("a", *ids)
+    repeated = _claiming("b", *ids, *ids)
+
+    assert PLAN_REFERENCE_CHECKER.violations([at_limit, repeated], exists=lambda path: True) == ()
+
+
+def test_a_chain_that_spreads_the_criteria_is_accepted() -> None:
+    items = [
+        _claiming("ws", "C1", "C2", "C3", hint=_paths(4)),
+        replace(_claiming("pages", "C4", "C5", "C6", hint=_paths(5)), depends_on=("ws",)),
+        replace(_claiming("polish", "C7", "C8", "C9", "C10", "C11"), depends_on=("pages",)),
+    ]
+
+    assert PLAN_REFERENCE_CHECKER.violations(items, exists=lambda path: True) == ()
+
+
+def test_a_plan_can_be_wrong_in_paths_and_criteria_at_once_and_says_both() -> None:
+    big = _claiming("big", *(f"C{n}" for n in range(1, 9)), hint=_paths(14))
+
+    messages = PLAN_REFERENCE_CHECKER.violations([big], exists=lambda path: True)
+
+    assert [m.split()[2] for m in messages] == ["lists", "claims"]

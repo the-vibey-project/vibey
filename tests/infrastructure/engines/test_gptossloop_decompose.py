@@ -420,3 +420,11 @@ def test_the_prompt_caps_an_item_and_calls_the_skeleton_the_thinnest_slice() -> 
     assert "CHAIN of build pieces" in DECOMPOSE_SYSTEM
     assert "the last piece runs the full verification" in DECOMPOSE_SYSTEM
     assert "thinnest slice that works end to end" in DECOMPOSE_SYSTEM
+
+
+def test_the_prompt_caps_the_criteria_per_item_and_says_an_empty_path_list_is_for_checks_only() -> (
+    None
+):
+    assert "An item checks at most 6 acceptance criteria" in DECOMPOSE_SYSTEM
+    assert "an empty list is only for an item that changes nothing" in DECOMPOSE_SYSTEM
+    assert "One item that claims every criterion is a plan that was not made" in DECOMPOSE_SYSTEM

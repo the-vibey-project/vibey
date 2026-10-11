@@ -38,6 +38,9 @@ class ReferencingItemInterface(Protocol):
     def files_touched_hint(self) -> tuple[str, ...]: ...
 
     @property
+    def acceptance_ids(self) -> tuple[str, ...]: ...
+
+    @property
     def verification(self) -> VerificationCommandsInterface: ...
 
 
