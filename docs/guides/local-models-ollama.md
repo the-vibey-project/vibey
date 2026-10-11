@@ -248,6 +248,23 @@ growing as they are generated, then the model's own counts and tokens per second
 that stalls shows as a request with nothing after it, which is how a context window set too
 small or a model still loading looks from the outside.
 
+**BUILD and REVIEW too.** An engine session is a separate process, so the worker notes each one
+in the same log and the tail follows it: a banner naming the engine, the work item and the run,
+then every tool call (`turn 3 -> search {...}`) and a one-line result (`<- search: 3 found`,
+`<- shell: exit 1 - ...` with the end of the output, where the failure is), the model's streamed
+answer, its reasoning (`thinking: ...`), and each turn's time and tokens. When the next item
+starts, the tail moves to its run on its own, so one terminal shows the whole project:
+
+```text
+[22:35:08] === gptossloop session - work item ws - run fb316537 ===
+  turn 1 -> search {"glob": "*", "path": "", "query": "package.json"}
+    <- search: 10 found
+  turn 1 done - 3.1s (model 2.9s) - in 1346 tokens - out 58 tokens
+  thinking: The spec wants a /ministry section; check what exists first.
+  turn 2 -> shell {"argv": ["npm", "run", "typecheck"]}
+    <- shell: exit 1 - src/app/ministry/page.tsx(4,10): error TS2305 ...
+```
+
 Text appears a word at a time, not a token at a time, because the log releases streamed text
 only at whitespace: a credential the model repeats cannot then be split across two pieces and
 escape redaction. The log holds your full prompts, so it is created readable by you alone;

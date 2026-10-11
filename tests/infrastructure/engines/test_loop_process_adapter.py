@@ -2361,3 +2361,102 @@ async def test_a_reap_that_fails_is_reported_and_the_others_still_end(
     with contextlib.suppress(ProcessLookupError, PermissionError):
         os.killpg(process.pid, signal.SIGKILL)
     await process.wait()
+
+
+def _fake_spawn(monkeypatch: pytest.MonkeyPatch) -> None:
+    from unittest.mock import AsyncMock
+
+    from vibey.infrastructure.engines import loop_process_adapter as module
+
+    async def fake_exec(*argv, **kwargs):  # type: ignore[no-untyped-def]
+        process = AsyncMock()
+        process.pid = 4242
+        process.returncode = None
+        return process
+
+    monkeypatch.setattr(module.asyncio, "create_subprocess_exec", fake_exec)
+    monkeypatch.setattr(module.shutil, "which", lambda _: "/bin/claudeloop")
+
+
+class _RecordingSessionLog:
+    def __init__(self) -> None:
+        self.calls: list[dict[str, object]] = []
+
+    def started(self, **fields: object) -> None:
+        self.calls.append(fields)
+
+
+async def test_start_tells_the_session_log_where_the_run_writes_its_events(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    from vibey.application.dto import RunSpec
+    from vibey.domain.effort import Effort
+    from vibey.domain.engine import IsolationLevel
+
+    _fake_spawn(monkeypatch)
+    sessions = _RecordingSessionLog()
+    worktree = tmp_path / "ws"
+    worktree.mkdir()
+    adapter = LoopProcessAdapter(descriptor=CLAUDELOOP, session_log=sessions)
+    spec = RunSpec(
+        run_id=uuid4(),
+        worktree_path=worktree,
+        prompt="p",
+        effort=Effort.LOW,
+        isolation=IsolationLevel.WORKTREE,
+    )
+
+    handle = await adapter.start(spec)
+    _active_processes.pop(handle.run_id, None)
+
+    assert sessions.calls == [
+        {
+            "engine": "claudeloop",
+            "run_id": str(spec.run_id),
+            "events_path": worktree
+            / CLAUDELOOP.state_dir
+            / "runs"
+            / str(spec.run_id)
+            / "events.jsonl",
+            "work_item": "ws",
+        }
+    ]
+
+
+async def test_the_default_session_log_writes_to_the_wire_log_only_when_it_is_on(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    import json
+
+    from vibey.application.dto import RunSpec
+    from vibey.domain.effort import Effort
+    from vibey.domain.engine import IsolationLevel
+    from vibey.infrastructure.engines.wire_log import WIRE_LOG_ENV
+
+    _fake_spawn(monkeypatch)
+    wire = tmp_path / "wire.jsonl"
+
+    def spec_for(name: str) -> RunSpec:
+        worktree = tmp_path / name
+        worktree.mkdir()
+        return RunSpec(
+            run_id=uuid4(),
+            worktree_path=worktree,
+            prompt="p",
+            effort=Effort.LOW,
+            isolation=IsolationLevel.WORKTREE,
+        )
+
+    monkeypatch.delenv(WIRE_LOG_ENV, raising=False)
+    off = await LoopProcessAdapter(descriptor=CLAUDELOOP).start(spec_for("off"))
+    assert not wire.exists()
+
+    monkeypatch.setenv(WIRE_LOG_ENV, str(wire))
+    on = await LoopProcessAdapter(descriptor=CLAUDELOOP).start(spec_for("on"))
+    for handle in (off, on):
+        _active_processes.pop(handle.run_id, None)
+
+    (line,) = wire.read_text().splitlines()
+    record = json.loads(line)
+    assert record["kind"] == "session" and record["work_item"] == "on"
+    assert record["run_id"] == str(on.run_id)
