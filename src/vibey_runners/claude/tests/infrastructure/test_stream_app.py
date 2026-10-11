@@ -241,6 +241,33 @@ class TestStreamAppTickFollow:
             assert app._saw_delta is True
 
 
+class TestStreamAppTickThinking:
+    def test_tick_thinking_before_screen_is_inert(self, tmp_path: Path) -> None:
+        """A thinking tick racing with teardown must not query a missing screen."""
+        app = _make_app(_write_events(tmp_path, []), follow=False)
+        app._thinking = True
+
+        app._tick_thinking()
+
+        assert app._thinking_frame == 0
+
+    def test_tick_thinking_before_bar_is_inert(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """A thinking tick must wait until #thinking-bar is attached."""
+        app = _make_app(_write_events(tmp_path, []), follow=False)
+        app._thinking = True
+
+        def missing_widget(*_args: object, **_kwargs: object) -> None:
+            raise NoMatches("#thinking-bar")
+
+        monkeypatch.setattr(app, "query_one", missing_widget)
+
+        app._tick_thinking()
+
+        assert app._thinking_frame == 0
+
+
 class TestStreamAppTickLive:
     def test_tick_live_before_mount_is_inert(self, tmp_path: Path) -> None:
         """A timer racing with teardown must not query removed widgets."""
