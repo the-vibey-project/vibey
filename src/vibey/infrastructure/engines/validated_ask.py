@@ -17,7 +17,7 @@ client's own length retry beneath each).
 
 import json
 from collections.abc import Callable, Mapping, Sequence
-from typing import TypeVar
+from typing import TypeVar, cast
 
 from vibey.domain.errors import ModelAnswerRejected
 from vibey.infrastructure.engines.interfaces.ollama_chat_interface import (
@@ -39,6 +39,48 @@ REASK_INSTRUCTION = (
     "{violations}\n"
     "Answer again with one JSON object that satisfies the schema exactly."
 )
+
+
+def unwrap_encoded_objects(value: object, schema: Mapping[str, object]) -> object:
+    """Where the schema wants an object and the model wrote a string that is that object's JSON,
+    the object it meant.
+
+    Measured live on gpt-oss in JSON mode: a work plan of two items came back with its second
+    item as a string holding the whole item, encoded a second time with every quote escaped.
+    The plan was otherwise sound, but the schema check named it (`$.items[1] must be of JSON
+    type object, got string`) and the whole plan was regenerated for it. Nothing in the text is
+    wrong: parsing the string gives exactly the object that was meant, so this reads it as one.
+    It only ever replaces a string whose entire text parses as a JSON object, only where the
+    schema says `object`, and only by that parse; any other string stays, and the check names
+    it as before.
+    """
+    expected = schema.get("type")
+    if expected == "object":
+        if isinstance(value, str):
+            decoded = _object_in(value)
+            return value if decoded is None else unwrap_encoded_objects(decoded, schema)
+        if isinstance(value, dict):
+            properties = schema.get("properties")
+            known = properties if isinstance(properties, Mapping) else {}
+            return {
+                key: unwrap_encoded_objects(child, known[key])
+                if isinstance(known.get(key), Mapping)
+                else child
+                for key, child in value.items()
+            }
+    if expected == "array" and isinstance(value, list):
+        items = schema.get("items")
+        if isinstance(items, Mapping):
+            return [unwrap_encoded_objects(child, items) for child in value]
+    return value
+
+
+def _object_in(text: str) -> dict[str, object] | None:
+    try:
+        decoded = json.loads(text)
+    except ValueError:
+        return None
+    return decoded if isinstance(decoded, dict) else None
 
 
 class JsonShapeChecker:
@@ -169,7 +211,11 @@ class ValidatedAsk:
         prompt = user
         violations: tuple[str, ...] = ()
         for _ in range(1 + self._reasks):
-            answer = await self._chat.ask(instructed, prompt, "json")
+            # A string holding the object it should be is that object, encoded twice.
+            answer = cast(
+                dict[str, object],
+                unwrap_encoded_objects(await self._chat.ask(instructed, prompt, "json"), schema),
+            )
             violations = self._checker.violations(answer, schema)
             if not violations:
                 try:
