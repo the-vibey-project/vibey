@@ -78,6 +78,7 @@ from vibey.domain.ledger import EventKind, LedgerEventKind, Provenance
 from vibey.domain.ledger_query import EVENT_KINDS, InvalidLedgerQuery
 from vibey.domain.phase import Phase, StoredPhase, VisualDecision
 from vibey.domain.remote_command import WORKFLOWS_INVOCATION
+from vibey.domain.research_gap import ResearchGap
 from vibey.domain.spec import (
     AcceptanceCriterion,
     Constraint,
@@ -770,6 +771,13 @@ def _load_spec(path: Path) -> DesignSpec:
         criteria=tuple(AcceptanceCriterion(**item) for item in raw["criteria"]),
         nfrs=tuple(NonFunctionalRequirement(**item) for item in raw.get("nfrs", [])),
         walking_skeleton=str(raw["walking_skeleton"]),
+        # An imported spec keeps the topics that were not researched. They come from the ledger
+        # when the synthesizer writes a spec, so a spec edited and imported here must carry
+        # them through, or the "Research not performed" section would vanish from it.
+        research_gaps=tuple(
+            ResearchGap(topic=str(item["topic"]), reason=str(item["reason"]))
+            for item in raw.get("research_gaps", [])
+        ),
     )
 
 
