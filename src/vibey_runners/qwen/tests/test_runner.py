@@ -1626,3 +1626,65 @@ async def test_each_turns_reasoning_is_recorded_as_an_event_capped_to_a_few_thou
     # recorded before the turn's own boundary, so a reader sees thought, action, then timing
     types = [event["type"] for event in events]
     assert types.index("reasoning") < types.index("turn.completed")
+
+
+_STALL_CALL = ChatChunk(tool_call={"name": "read_file", "arguments": {"path": "missing.txt"}})
+
+
+@pytest.mark.asyncio
+async def test_a_run_that_repeats_itself_fails_as_stalled_before_the_turn_cap(
+    tmp_path: Path,
+) -> None:
+    server = ScriptedServer([[_STALL_CALL]] * 20)
+    info = ServerInfo(Backend.LLAMA_CPP, PORTABLE.name, "http://127.0.0.1", False, True)
+
+    result = await AutonomousRunner(
+        server, FileRunStore(tmp_path), SandboxTools(tmp_path), clock=FakeClock()
+    ).run(
+        run_id="stall",
+        plan="do it",
+        cwd=tmp_path,
+        profile=PORTABLE,
+        server_info=info,
+        max_turns=20,
+        max_stalled_turns=3,
+    )
+
+    assert result.status is RunStatus.FAILED
+    assert result.turns == 4  # one novel turn, then three with nothing new
+    events = (tmp_path / ".qwenloop" / "runs" / "stall" / "events.jsonl").read_text()
+    failed = [json.loads(line) for line in events.splitlines() if '"type": "failed"' in line]
+    assert failed[-1]["reason"] == "stalled" and failed[-1]["stalled_turns"] == 3
+    meta = json.loads((tmp_path / ".qwenloop" / "runs" / "stall" / "meta.json").read_text())
+    assert meta["max_stalled_turns"] == 3
+
+
+@pytest.mark.asyncio
+async def test_a_long_session_is_renewed_and_the_event_says_so(tmp_path: Path) -> None:
+    (tmp_path / "big.md").write_text("y" * 2000)
+    reads = [
+        [ChatChunk(tool_call={"name": "read_file", "arguments": {"path": f"big{n}.md"}})]
+        for n in range(8)
+    ]
+    for n in range(8):
+        (tmp_path / f"big{n}.md").write_text("y" * 2000)
+    server = ScriptedServer([*reads, [ChatChunk(text=_DONE)]])
+    info = ServerInfo(Backend.LLAMA_CPP, PORTABLE.name, "http://127.0.0.1", False, True)
+
+    result = await AutonomousRunner(
+        server, FileRunStore(tmp_path), SandboxTools(tmp_path), clock=FakeClock()
+    ).run(
+        run_id="renew",
+        plan="do it",
+        cwd=tmp_path,
+        profile=PORTABLE,
+        server_info=info,
+        max_turns=9,
+        context_renewal_tokens=1500,
+    )
+
+    assert result.status is RunStatus.COMPLETED
+    renewed = [m for m in server.seen[-1] if m.content.startswith("[This session was renewed")]
+    assert len(renewed) == 1 and "big0.md" in renewed[0].content
+    events = (tmp_path / ".qwenloop" / "runs" / "renew" / "events.jsonl").read_text()
+    assert '"type": "context.renewed"' in events

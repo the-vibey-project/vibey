@@ -17,9 +17,11 @@ from qwenloop.application.interfaces import (
     TurnDispatcherInterface,
 )
 from qwenloop.domain.config import (
+    DEFAULT_CONTEXT_RENEWAL_TOKENS,
     DEFAULT_EMPTY_REPLY_REASONING_EXCERPT_CHARS,
     DEFAULT_MAX_EMPTY_REPLY_RETRIES,
     DEFAULT_MAX_RECORDED_ARGUMENT_CHARS,
+    DEFAULT_MAX_STALLED_TURNS,
     DEFAULT_MAX_TOOL_RESULT_CHARS,
 )
 from qwenloop.domain.interfaces import ChatChunkInterface
@@ -33,6 +35,7 @@ from qwenloop.domain.model import (
     ServerInfo,
     ToolCallParseError,
 )
+from qwenloop.domain.session_health import StallDetector, call_signature, renew_transcript
 
 _CHARS_PER_TOKEN = 4
 _RESPONSE_TOKEN_RESERVE = 2048
@@ -277,6 +280,8 @@ class AutonomousRunner:
         max_recorded_argument_chars: int = DEFAULT_MAX_RECORDED_ARGUMENT_CHARS,
         empty_reply_reasoning_excerpt_chars: int = DEFAULT_EMPTY_REPLY_REASONING_EXCERPT_CHARS,
         max_tool_result_chars: int = DEFAULT_MAX_TOOL_RESULT_CHARS,
+        context_renewal_tokens: int = DEFAULT_CONTEXT_RENEWAL_TOKENS,
+        max_stalled_turns: int = DEFAULT_MAX_STALLED_TURNS,
     ) -> RunState:
         state = RunState(run_id=run_id, status=RunStatus.RUNNING)
         # Consecutive turns with no tool call and no text. Each retry is its own model call
@@ -284,6 +289,7 @@ class AutonomousRunner:
         empty_replies = 0
         # Why the run failed, when something other than the turn cap ended it.
         failure: dict[str, object] | None = None
+        stall = StallDetector(max_stalled_turns)
         any_tool_called = False
         progress_tool_called = False
         saw_verdict = False
@@ -317,6 +323,8 @@ class AutonomousRunner:
                 "max_recorded_argument_chars": max_recorded_argument_chars,
                 "empty_reply_reasoning_excerpt_chars": empty_reply_reasoning_excerpt_chars,
                 "max_tool_result_chars": max_tool_result_chars,
+                "context_renewal_tokens": context_renewal_tokens,
+                "max_stalled_turns": max_stalled_turns,
             },
         )
         await self._notify("Qwen run started", f"Run {run_id} started.")
@@ -341,7 +349,13 @@ class AutonomousRunner:
                     },
                 )
             state.turns = turn
+            state.transcript, renewed = renew_transcript(state.transcript, context_renewal_tokens)
+            if renewed:
+                self._store.append_event(
+                    run_id, {"type": "context.renewed", "turn": turn, "replaced_messages": renewed}
+                )
             state.transcript = _trim_transcript(state.transcript, profile.context_window)
+            signatures: list[str] = []
             text_parts: list[str] = []
             tool_calls: list[dict[str, object]] = []
             tool_results: list[ChatMessage] = []
@@ -383,6 +397,7 @@ class AutonomousRunner:
                         continue
                     tool_called = True
                     any_tool_called = True
+                    signatures.append(call_signature(name, arguments))
                     progress_tool_called = progress_tool_called or name in {
                         "write_file",
                         "edit_file",
@@ -488,6 +503,10 @@ class AutonomousRunner:
                 self._store.append_event(run_id, {"type": "completed", "turn": turn})
                 self._store.write_snapshot(run_id, _snapshot(state))
                 return state
+            if stall.observe(signatures):
+                state.status = RunStatus.FAILED
+                failure = {"reason": "stalled", "stalled_turns": stall.stalled_turns}
+                break
             if DONE_MARKER in answer:
                 invalid_completion_claims += 1
                 if invalid_completion_claims >= _MAX_INVALID_COMPLETION_CLAIMS:

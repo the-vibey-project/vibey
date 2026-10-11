@@ -98,6 +98,9 @@ def test_a_spec_with_a_payload_that_names_no_criteria_gives_the_rules_but_no_ite
     assert "Rules for all of this work" in brief
     assert "## Your work item" not in brief and "Make these acceptance criteria" not in brief
     assert "How to work" in brief
+    assert "closest thing this repository already has" in brief
+    assert "Import and call only what exists" in brief
+    assert "do not write placeholder files" in brief
 
 
 def test_a_title_is_optional() -> None:

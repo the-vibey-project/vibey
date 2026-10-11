@@ -41,6 +41,17 @@ DEFAULT_EMPTY_REPLY_REASONING_EXCERPT_CHARS = 400
 #: positive.
 DEFAULT_MAX_TOOL_RESULT_CHARS = 24_000
 
+#: Estimated tokens of conversation (a quarter of a character each) after which a run replaces
+#: its older turns with a summary of what it did, keeping the plan and the newest messages. A
+#: local model's answers degrade long before its window is full: gpt-oss:20b was reading ninety
+#: thousand tokens of its own history on turn 100 and had begun writing "Cannot finish". 0
+#: never renews.
+DEFAULT_CONTEXT_RENEWAL_TOKENS = 24_000
+#: How many consecutive turns without one tool call it has not made recently (only text, or the
+#: same calls again) a run allows before it fails as stalled, so a session that has run out of
+#: ideas stops instead of spending the rest of its turns. 0 never stalls.
+DEFAULT_MAX_STALLED_TURNS = 8
+
 
 class Effort(StrEnum):
     """Bounded execution policies for autonomous runs.

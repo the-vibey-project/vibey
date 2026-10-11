@@ -7,9 +7,11 @@ from pathlib import Path
 from typing import Protocol, runtime_checkable
 
 from qwenloop.domain.config import (
+    DEFAULT_CONTEXT_RENEWAL_TOKENS,
     DEFAULT_EMPTY_REPLY_REASONING_EXCERPT_CHARS,
     DEFAULT_MAX_EMPTY_REPLY_RETRIES,
     DEFAULT_MAX_RECORDED_ARGUMENT_CHARS,
+    DEFAULT_MAX_STALLED_TURNS,
     DEFAULT_MAX_TOOL_RESULT_CHARS,
 )
 from qwenloop.domain.model import ModelProfile, RunState, ServerInfo
@@ -30,4 +32,6 @@ class AutonomousRunnerInterface(Protocol):
         max_recorded_argument_chars: int = DEFAULT_MAX_RECORDED_ARGUMENT_CHARS,
         empty_reply_reasoning_excerpt_chars: int = DEFAULT_EMPTY_REPLY_REASONING_EXCERPT_CHARS,
         max_tool_result_chars: int = DEFAULT_MAX_TOOL_RESULT_CHARS,
+        context_renewal_tokens: int = DEFAULT_CONTEXT_RENEWAL_TOKENS,
+        max_stalled_turns: int = DEFAULT_MAX_STALLED_TURNS,
     ) -> RunState: ...
