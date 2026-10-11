@@ -18,6 +18,7 @@ CODING_TOOL_NAMES: tuple[str, ...] = (
     "write_file",
     "edit_file",
     "shell",
+    "outline",
     "search",
     "find",
     "open_file",

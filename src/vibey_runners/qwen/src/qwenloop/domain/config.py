@@ -39,7 +39,7 @@ DEFAULT_EMPTY_REPLY_REASONING_EXCERPT_CHARS = 400
 #: line count on every read, and gpt-oss:20b opened it 19 times over four attempts. 24,000
 #: is about 6,000 tokens, under a fifth of the default 32,768-token context window. Must be
 #: positive.
-DEFAULT_MAX_TOOL_RESULT_CHARS = 24_000
+DEFAULT_MAX_TOOL_RESULT_CHARS = 12_000
 
 #: Estimated tokens of conversation (a quarter of a character each) after which a run replaces
 #: its older turns with a summary of what it did, keeping the plan and the newest messages. A
@@ -105,11 +105,11 @@ class ToolLimits:
     # read_file / open_file: characters of file content one call returns.
     max_read_chars: int = 200_000
     # search: matching lines one call returns.
-    max_search_matches: int = 100
+    max_search_matches: int = 40
     # find: file paths one call returns.
-    max_find_results: int = 200
+    max_find_results: int = 60
     # search: characters kept of any one matching line.
-    max_line_chars: int = 240
+    max_line_chars: int = 160
     # search: a file larger than this is skipped rather than read.
     max_file_bytes: int = 2_000_000
     # search: skipped files named in an answer; the answer always counts all of them.

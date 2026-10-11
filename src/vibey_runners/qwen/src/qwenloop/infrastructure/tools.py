@@ -47,6 +47,21 @@ _SCANNER_ENTRY = (
     "from qwenloop.infrastructure.content_scanner import ContentScanner; ContentScanner.run_stdio()"
 )
 
+_MAX_OUTLINE_SYMBOLS = 80
+_PY_DECLARATION = re.compile(r"^\s*(async\s+def|def|class)\s+\w+")
+_JS_DECLARATION = re.compile(
+    r"^\s*(export\s+(default\s+)?)?(async\s+)?(function\*?|class|interface|type|enum|"
+    r"const|let|var)\s+\w+"
+)
+
+
+def _private(line: str) -> bool:
+    """A Python declaration whose name starts with an underscore."""
+    words = line.replace("(", " ").split()
+    if words[0] == "async":
+        words = words[1:]
+    return words[1].startswith("_")
+
 
 class ShellEnvironment:
     """What a model-chosen shell command may see of this process's environment.
@@ -183,6 +198,8 @@ class SandboxTools:
             return {"written": len(content)}
         if name == "edit_file":
             return self._edit(arguments)
+        if name == "outline":
+            return self._outline(arguments)
         if name in {"web_search", "web_fetch"}:
             return await self._web(name, arguments)
         if name == "shell":
@@ -277,6 +294,36 @@ class SandboxTools:
             return name
         bare = name.rpartition(".")[2]
         return bare if bare in self.tool_names else name
+
+    def _outline(self, arguments: Mapping[str, object]) -> dict[str, object]:
+        """The declarations of one source file, each with its line number: what it defines
+        without its body. With `exports_only`, just what other files can import (TypeScript and
+        JavaScript `export` lines, Python top-level names without a leading underscore). Reading
+        this instead of the file is how an engine learns what exists for a few dozen tokens."""
+        raw = str(self._first(arguments, _FILE_KEYS) or "")
+        path = self._path(raw)
+        try:
+            lines = path.read_text(encoding="utf-8").splitlines()
+        except (OSError, UnicodeDecodeError) as exc:
+            return {"error": str(exc)}
+        exports_only = self._flag(arguments.get("exports_only"))
+        python = path.suffix == ".py"
+        declaration = _PY_DECLARATION if python else _JS_DECLARATION
+        symbols: list[str] = []
+        for number, line in enumerate(lines, start=1):
+            if not declaration.match(line):
+                continue
+            if exports_only and (
+                (line[:1].isspace() or _private(line)) if python else not line.startswith("export")
+            ):
+                continue
+            symbols.append(f"{number}: {line.strip()[: self.limits.max_line_chars]}")
+        return {
+            "path": raw,
+            "total_lines": len(lines),
+            "symbols": symbols[:_MAX_OUTLINE_SYMBOLS],
+            "truncated": len(symbols) > _MAX_OUTLINE_SYMBOLS,
+        }
 
     def _read(self, arguments: Mapping[str, object]) -> dict[str, object]:
         """read_file, and open_file, its alias: a whole file, or the lines a range names.

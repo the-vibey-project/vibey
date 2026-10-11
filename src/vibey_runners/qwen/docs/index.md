@@ -109,7 +109,7 @@ Each engine reads its own environment variables: `GPTOSSLOOP_*` for `gptossloop`
 | Consecutive empty replies retried before a run fails | — | — | `max_empty_reply_retries` | `2` |
 | Characters of each tool-call argument value recorded in `events.jsonl` | — | — | `max_recorded_argument_chars` | `200` |
 | Characters of an empty reply's reasoning recorded as an excerpt | — | — | `empty_reply_reasoning_excerpt_chars` | `400` |
-| Characters of one tool result shown to the model (the rest is cut, and the cut named) | — | — | `max_tool_result_chars` | `24000` |
+| Characters of one tool result shown to the model (the rest is cut, and the cut named) | — | — | `max_tool_result_chars` | `12000` |
 | Server startup wait (seconds) | — | — | `startup_timeout_seconds` | `180` |
 | Context window (tokens) | — | — | `context_window` | `32768` |
 
@@ -127,7 +127,9 @@ validity, but nothing uses them yet.
 
 A run's model can call `read_file`, `write_file`, `edit_file`, `shell`, `search` (file
 contents, literal unless `regex` is true), `find` (file names, by glob or substring) and
-`open_file` (`read_file` by the name gpt-oss reaches for, with an optional line range).
+`open_file` (`read_file` by the name gpt-oss reaches for, with an optional line range), and
+`outline` (a source file's declarations with line numbers and no bodies; `exports_only` keeps just what
+other files can import, so an engine learns what exists without reading the file).
 Every path stays inside the run's worktree. An unknown tool name is answered with the list
 of the ones that exist. How much one call may read or return is set in the config file's
 `[tools]` table, and a limit the model asks for can only narrow these. A `search` that
@@ -138,9 +140,9 @@ at `search_timeout_seconds`, because a pattern can backtrack catastrophically:
 | `[tools]` key | Bounds | Default |
 |---|---|---|
 | `max_read_chars` | characters `read_file` / `open_file` return | `200000` |
-| `max_search_matches` | matching lines `search` returns | `100` |
-| `max_find_results` | paths `find` returns | `200` |
-| `max_line_chars` | characters kept of one matching line | `240` |
+| `max_search_matches` | matching lines `search` returns | `40` |
+| `max_find_results` | paths `find` returns | `60` |
+| `max_line_chars` | characters kept of one matching line | `160` |
 | `max_file_bytes` | larger files are skipped by `search` | `2000000` |
 | `max_skipped_examples` | skipped files `search` names (it always counts them all) | `5` |
 | `search_timeout_seconds` | how long a `regex` search may run before it is killed | `10` |

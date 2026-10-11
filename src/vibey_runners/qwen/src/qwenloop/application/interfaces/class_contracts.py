@@ -14,6 +14,7 @@ from qwenloop.domain.config import (
     DEFAULT_MAX_STALLED_TURNS,
     DEFAULT_MAX_TOOL_RESULT_CHARS,
 )
+from qwenloop.domain.context_economy import ContextEconomy
 from qwenloop.domain.model import ModelProfile, RunState, ServerInfo
 
 
@@ -34,4 +35,5 @@ class AutonomousRunnerInterface(Protocol):
         max_tool_result_chars: int = DEFAULT_MAX_TOOL_RESULT_CHARS,
         context_renewal_tokens: int = DEFAULT_CONTEXT_RENEWAL_TOKENS,
         max_stalled_turns: int = DEFAULT_MAX_STALLED_TURNS,
+        economy: ContextEconomy = ContextEconomy(),  # noqa: B008
     ) -> RunState: ...
