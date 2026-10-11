@@ -15,8 +15,6 @@ from vibey.application.interfaces.azure import (
     AzureExecutionResult,
     AzureResourceStatus,
     CloudClientPort,
-    DeploymentConsentStore,
-    DeploymentSpecStore,
 )
 from vibey.domain.deployment import AzureTargetScope, DeploymentConsent, DeploymentSpec
 
@@ -76,6 +74,7 @@ class InMemoryAWSClientAdapter:
     ) -> None:
         # Declared-only: no real deletion, just keep state.
         self.resources.pop(resource_id, None)
+
 
 # Expose the protocol alias used by the application layer
 AWSClientPort = CloudClientPort
