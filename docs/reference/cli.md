@@ -537,12 +537,14 @@ The conversation with the local model, as it happens. It only reads.
 
 | Subcommand | Options | What it does |
 |---|---|---|
-| `llm tail` | `--file PATH`, `--all`, `--no-follow`, `--raw`, `--max-chars N` | Follows the [wire log](../guides/local-models-ollama.md#watching-the-model-think): each request the sovereign DESIGN and DECOMPOSE providers send (model, limits, the system and user messages), the reasoning and the answer as they stream back, and the model's own counts and speed (`prompt N tokens`, `output N tokens`, `N tokens/s`). Starts at the latest call and keeps following until interrupted; `--all` starts at the beginning of the file, `--no-follow` prints and exits (exit 1 when there is no log), `--raw` prints the JSON lines as written, `--max-chars` cuts each prompt message. |
+| `llm tail` | `--file PATH`, `--all`, `--no-follow`, `--raw`, `--max-chars N` | Follows the [wire log](../guides/local-models-ollama.md#watching-the-model-think) in **every phase**: each request DESIGN and DECOMPOSE send the model, its reasoning and answer as they stream back, and the model's own counts and timings; and, for BUILD and REVIEW, each engine session the worker started: every tool call and its result, the streamed answer, the reasoning, and each turn's time and tokens. It starts at the latest call or session and **switches to each new session by itself** (a new run id means a new events file). `--all` starts from the beginning, with every session; `--raw` prints the JSON lines as written. |
 
 The log is written when a command runs with `-vvv`, or with `VIBEY_LLM_WIRE_LOG=path`
 (see [`VIBEY_LLM_WIRE_LOG`](configuration.md#environment-variables)). Without either, nothing is
 written and the model is asked exactly as before. The default file is
-`~/.local/state/vibey/llm-wire.jsonl`, readable by its owner alone.
+`~/.local/state/vibey/llm-wire.jsonl`, readable by its owner alone. With it on, the worker also
+notes each engine session in the log (a `session` record naming that run's `events.jsonl`), which
+is how the tail knows where BUILD and REVIEW write; the records hold ids and paths only.
 
 ## `vibey search` and `vibey fetch`
 

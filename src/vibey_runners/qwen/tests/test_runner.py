@@ -1579,3 +1579,50 @@ async def test_a_run_tells_the_model_its_host_and_records_it(tmp_path: Path) -> 
     assert "Shell commands run on Darwin 25.6.0 arm64" in server.seen[0][0].content
     meta = json.loads((tmp_path / ".qwenloop" / "runs" / "host" / "meta.json").read_text())
     assert meta["host"].startswith("Darwin 25.6.0 arm64")
+
+
+@pytest.mark.asyncio
+async def test_each_turns_reasoning_is_recorded_as_an_event_capped_to_a_few_thousand_chars(
+    tmp_path: Path,
+) -> None:
+    from qwenloop.application.runner import _MAX_RECORDED_REASONING_CHARS
+
+    server = ScriptedServer(
+        [
+            [
+                ChatChunk(reasoning="Look at the repository first."),
+                ChatChunk(tool_call={"name": "read_file", "arguments": {"path": "x"}}),
+            ],
+            [
+                ChatChunk(reasoning="r" * (_MAX_RECORDED_REASONING_CHARS + 500)),
+                ChatChunk(text=_DONE),
+            ],
+            [ChatChunk(text=_DONE)],
+        ]
+    )
+    info = ServerInfo(Backend.OPENAI_COMPAT, PORTABLE.name, "http://127.0.0.1", False, True)
+    await AutonomousRunner(
+        server, FileRunStore(tmp_path), SandboxTools(tmp_path), clock=FakeClock()
+    ).run(
+        run_id="thinks",
+        plan="do it",
+        cwd=tmp_path,
+        profile=PORTABLE,
+        server_info=info,
+        max_turns=5,
+    )
+
+    events = _events(tmp_path, "thinks")
+    reasoning = [event for event in events if event["type"] == "reasoning"]
+    assert reasoning[0] == {
+        "type": "reasoning",
+        "turn": 1,
+        "text": "Look at the repository first.",
+    }
+    assert (
+        reasoning[1]["turn"] == 2
+        and len(str(reasoning[1]["text"])) == _MAX_RECORDED_REASONING_CHARS
+    )
+    # recorded before the turn's own boundary, so a reader sees thought, action, then timing
+    types = [event["type"] for event in events]
+    assert types.index("reasoning") < types.index("turn.completed")

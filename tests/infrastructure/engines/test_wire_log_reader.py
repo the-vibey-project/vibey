@@ -252,3 +252,295 @@ def test_an_error_names_the_type_and_the_time_spent() -> None:
 
 def test_a_record_of_a_kind_it_does_not_know_is_shown_as_it_is() -> None:
     assert WireFormatter().render({"kind": "future", "x": 1}) == '{"kind": "future", "x": 1}\n'
+
+
+# -- following the wire log and the engine sessions together --------------------------------
+
+import json as _json  # noqa: E402
+
+from vibey.infrastructure.engines.wire_log_reader import (  # noqa: E402
+    LineTailer,
+    RunEventFormatter,
+    follow_live,
+    last_session_index,
+    session_events,
+)
+
+
+def _append(path: Path, *records: dict[str, object]) -> None:
+    with path.open("a", encoding="utf-8") as handle:
+        for record in records:
+            handle.write(_json.dumps(record) + "\n")
+
+
+def _session(events: Path, run: str = "fb316537aa", item: str | None = "ws") -> dict[str, object]:
+    return {
+        "v": 1,
+        "ts": "2026-10-11T02:35:00+00:00",
+        "kind": "session",
+        "engine": "gptossloop",
+        "run_id": run,
+        "events_path": str(events),
+        "work_item": item,
+    }
+
+
+def test_the_tailer_reads_whole_lines_once_and_holds_a_half_written_one(tmp_path: Path) -> None:
+    path = tmp_path / "f.jsonl"
+    tailer = LineTailer(path)
+    assert tailer.read_new() == []  # not there yet
+
+    path.write_text('{"a": 1}\n{"b"')
+    assert tailer.read_new() == [{"a": 1}]
+    assert tailer.read_new() == []  # nothing new, and the half line is not re-read
+
+    with path.open("a") as handle:
+        handle.write(': 2}\nnot json\n[1]\n{"c": 3}\n')
+    assert tailer.read_new() == [{"b": 2}, {"c": 3}]
+
+
+def test_a_file_that_shrinks_is_read_again_from_its_start(tmp_path: Path) -> None:
+    path = tmp_path / "f.jsonl"
+    path.write_text('{"a": 1}\n{"a": 2}\n')
+    tailer = LineTailer(path)
+    tailer.read_new()
+
+    path.write_text('{"z": 9}\n')
+
+    assert tailer.read_new() == [{"z": 9}]
+
+
+def test_the_newest_session_in_a_list_is_found_or_none() -> None:
+    records = [{"kind": "request"}, {"kind": "session"}, {"kind": "chunk"}, {"kind": "session"}]
+
+    assert last_session_index(records) == 3
+    assert last_session_index([{"kind": "request"}]) is None
+    assert last_session_index([]) is None
+
+
+def test_a_session_whose_runner_has_not_started_writing_has_no_events_yet(tmp_path: Path) -> None:
+    session = _session(tmp_path / "missing" / "events.jsonl")
+
+    assert session_events(session) == ([], 0)
+
+
+def test_a_session_that_has_begun_gives_what_it_wrote_and_where_to_follow_on(
+    tmp_path: Path,
+) -> None:
+    events = tmp_path / "events.jsonl"
+    _append(events, {"type": "tool.call", "name": "search"})
+
+    got, offset = session_events(_session(events))
+
+    assert got == [{"type": "tool.call", "name": "search"}] and offset == events.stat().st_size
+
+
+def test_the_wire_log_and_a_session_are_followed_together(tmp_path: Path) -> None:
+    wire, events = tmp_path / "wire.jsonl", tmp_path / "events.jsonl"
+    seen: list[tuple[str, str]] = []
+    ticks = iter(
+        [
+            lambda: _append(wire, _session(events)),
+            lambda: _append(events, {"type": "tool.call", "name": "find"}),
+            lambda: _append(wire, {"kind": "request", "call": "c1", "attempt": 1}),
+        ]
+    )
+
+    def sleep(_: float) -> None:
+        next(ticks)()
+
+    sessions: list[object] = []
+    for source, record, session in follow_live(wire, 0, sleep=sleep):
+        seen.append((source, str(record.get("kind") or record.get("type"))))
+        sessions.append(session["run_id"] if session else None)
+        if len(seen) == 3:
+            break
+
+    assert seen == [("wire", "session"), ("run", "tool.call"), ("wire", "request")]
+    assert sessions == [None, "fb316537aa", None]
+
+
+def test_a_new_session_takes_over_and_the_one_it_replaces_is_read_to_its_end_first(
+    tmp_path: Path,
+) -> None:
+    wire = tmp_path / "wire.jsonl"
+    first, second = tmp_path / "one.jsonl", tmp_path / "two.jsonl"
+    _append(wire, _session(first, "run-one"))
+    _append(first, {"type": "turn.completed", "turn": 1})
+    shown: list[tuple[str, object]] = []
+    moves = iter(
+        [
+            # the first session writes its last events, then the next session begins
+            lambda: (
+                _append(first, {"type": "failed", "reason": "turn_limit"}),
+                _append(wire, _session(second, "run-two")),
+                _append(second, {"type": "tool.call", "name": "shell"}),
+            ),
+        ]
+    )
+
+    def sleep(_: float) -> None:
+        next(moves)()
+
+    for source, record, session in follow_live(wire, 0, sleep=sleep):
+        shown.append((source, session["run_id"] if session else record.get("kind")))
+        if record.get("name") == "shell":
+            break
+
+    assert shown == [
+        ("wire", "session"),
+        ("run", "run-one"),
+        ("run", "run-one"),  # its last event, drained before the switch
+        ("wire", "session"),
+        ("run", "run-two"),
+    ]
+
+
+def test_a_session_the_caller_already_showed_is_picked_up_where_it_left_off(
+    tmp_path: Path,
+) -> None:
+    wire, events = tmp_path / "wire.jsonl", tmp_path / "events.jsonl"
+    _append(wire, _session(events))
+    _append(events, {"type": "tool.call", "n": 1}, {"type": "tool.call", "n": 2})
+    shown_so_far = events.stat().st_size
+    _append(events, {"type": "tool.call", "n": 3})
+
+    follower = follow_live(
+        wire, wire.stat().st_size, session=_session(events), session_offset=shown_so_far
+    )
+    source, record, _ = next(follower)
+
+    assert (source, record["n"]) == ("run", 3)
+
+
+def test_with_nothing_new_the_follower_waits_by_sleeping(tmp_path: Path) -> None:
+    sleeps: list[float] = []
+
+    def sleep(seconds: float) -> None:
+        sleeps.append(seconds)
+        raise KeyboardInterrupt
+
+    with pytest.raises(KeyboardInterrupt):
+        next(follow_live(tmp_path / "never.jsonl", 0, poll_seconds=0.5, sleep=sleep))
+
+    assert sleeps == [0.5]
+
+
+# -- how an engine session reads ----------------------------------------------------------
+
+
+def test_a_session_banner_names_the_engine_the_work_item_and_the_run() -> None:
+    text = WireFormatter().render(_session(Path("/x/events.jsonl")))
+
+    assert text.endswith("=== gptossloop session - work item ws - run fb316537 ===\n")
+    assert "[" in text and "--:--:--" not in text
+
+
+def test_a_session_with_no_work_item_says_no_work_item() -> None:
+    text = WireFormatter().render(_session(Path("/x"), item=None))
+
+    assert "work item" not in text and "gptossloop session - run fb316537" in text
+
+
+def test_the_model_s_answer_grows_on_one_line_and_any_other_event_closes_it() -> None:
+    fmt = RunEventFormatter()
+
+    out = [
+        fmt.render({"type": "text_delta", "text": "Hello"}),
+        fmt.render({"type": "text_delta", "text": " world"}),
+        fmt.render({"type": "tool.call", "turn": 2, "name": "search", "arguments": {"query": "x"}}),
+    ]
+
+    assert "".join(out) == '  answer: Hello world\n  turn 2 -> search {"query": "x"}\n'
+
+
+def test_a_stream_left_open_is_closed_when_output_moves_elsewhere() -> None:
+    fmt = RunEventFormatter()
+
+    assert fmt.close() == ""
+    fmt.render({"type": "text_delta", "text": "partial"})
+    assert fmt.close() == "\n"
+    assert fmt.close() == ""
+
+    wire = WireFormatter()
+    assert wire.close() == ""
+    wire.render({"kind": "chunk", "call": "c", "attempt": 1, "content": "words"})
+    assert wire.close() == "\n" and wire.close() == ""
+
+
+def test_the_models_reasoning_is_indented_under_its_label() -> None:
+    fmt = RunEventFormatter()
+
+    assert fmt.render({"type": "reasoning", "turn": 1, "text": " first\nsecond "}) == (
+        "  thinking: first\n    second\n"
+    )
+    assert RunEventFormatter(max_chars=5).render({"type": "reasoning", "text": "abcdefghij"}) == (
+        "  thinking: abcde\n"
+    )
+
+
+def test_a_turn_says_how_long_it_took_and_what_it_cost_in_tokens() -> None:
+    line = RunEventFormatter().render(
+        {
+            "type": "turn.completed",
+            "turn": 3,
+            "duration_ms": 14448,
+            "model_ms": 12712,
+            "input_tokens": 21890,
+            "output_tokens": 30,
+        }
+    )
+
+    assert line == ("  turn 3 done - 14.4s (model 12.7s) - in 21890 tokens - out 30 tokens\n")
+    assert "done - ? (model ?)" in RunEventFormatter().render({"type": "turn.completed"})
+
+
+@pytest.mark.parametrize(
+    ("result", "expected"),
+    [
+        ({"error": "no such file or directory: tests"}, "error: no such file or directory: tests"),
+        ({"exit_code": 0, "output": ""}, "exit 0"),
+        ({"exit_code": 1, "output": "x" * 50 + "\n boom"}, "exit 1 - " + "x" * 50 + " boom"),
+        ({"count": 33, "matches": ["a"]}, "33 found"),
+        ({"files": ["a", "b"]}, "2 found"),
+        ({"content": "abcd"}, "4 characters"),
+        ({"written": 120}, "wrote 120 characters"),
+        ({"odd": 1}, '{"odd": 1}'),
+        ("plain text", "plain text"),
+    ],
+)
+def test_each_kind_of_tool_result_is_summarised_not_dumped(result: object, expected: str) -> None:
+    line = RunEventFormatter().render({"type": "tool_result", "name": "t", "result": result})
+
+    assert line == f"    <- t: {expected}\n"
+
+
+def test_a_long_shell_output_shows_its_tail_where_the_failure_is() -> None:
+    result = {"exit_code": 1, "output": "start " + "." * 600 + " TypeError: boom"}
+
+    line = RunEventFormatter().render({"type": "tool_result", "name": "shell", "result": result})
+
+    assert line.endswith("TypeError: boom\n") and "start" not in line and len(line) < 400
+
+
+def test_failure_prompts_and_unknown_events_still_read_plainly() -> None:
+    fmt = RunEventFormatter()
+
+    assert fmt.render({"type": "failed", "reason": "turn_limit", "turn": 16, "max_turns": 16}) == (
+        "  !!! failed: turn_limit (turn 16 of 16)\n"
+    )
+    assert fmt.render({"type": "prompt.received", "text": "go on"}) == "  >>> prompt: go on\n"
+    assert fmt.render({"type": "weird", "a": 1}) == '  weird {"a": 1}\n'
+    assert fmt.render({"event_type": "tool.call", "turn": 1, "name": "x", "arguments": {}}) == (
+        "  turn 1 -> x {}\n"
+    )
+    assert fmt.render({"kind": "k", "v": 2}) == '  k {"kind": "k", "v": 2}\n'
+    assert fmt.render({}) == "  event {}\n"
+
+
+def test_an_argument_limit_follows_max_chars() -> None:
+    line = RunEventFormatter(max_chars=20).render(
+        {"type": "tool.call", "turn": 1, "name": "x", "arguments": {"q": "y" * 100}}
+    )
+
+    assert len(line.split("-> x ")[1].strip()) <= 20
