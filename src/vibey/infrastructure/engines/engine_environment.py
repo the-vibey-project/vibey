@@ -43,14 +43,16 @@ class EngineEnvironmentPolicy:
     Declared by `interfaces/engine_environment_interface.py`.
     """
 
-    __slots__ = ("_allow", "_per_engine")
+    __slots__ = ("_allow", "_overlay", "_per_engine")
 
     def __init__(
         self,
         *,
         allow: Sequence[str] = (),
         per_engine: Mapping[EngineId, Sequence[str]] | None = None,
+        overlay: Mapping[str, str] | None = None,
     ) -> None:
+        self._overlay = dict(overlay or {})
         self._allow = tuple(allow)
         self._per_engine = {
             engine: tuple(entries) for engine, entries in (per_engine or {}).items()
@@ -104,6 +106,24 @@ class EngineEnvironmentPolicy:
             raw, where=where, forbidden=MODEL_SESSION_FORBIDDEN
         ).entries()
 
+    def with_overlay(self, overlay: Mapping[str, str]) -> "EngineEnvironmentPolicy":
+        """This policy, plus variables vibey itself puts in every session (the non-secret web
+        search settings). They are vibey's to give, not the project's to declare, so they do
+        not pass through the allow-list; a session's own overlay wins over them."""
+        return EngineEnvironmentPolicy(
+            allow=self._allow, per_engine=self._per_engine, overlay={**self._overlay, **overlay}
+        )
+
+    def web_search_command(self) -> str | None:
+        """The `vibey` a session runs to search the web, or None when sessions have no search.
+
+        Only the worker's own overlay turns it on (SearXNG configured, and the path of the
+        running `vibey` known): a Brave key is never passed to a session, so Brave alone means
+        sessions have no search and must not be told they do."""
+        if "WEBSEARCH_PROVIDER" not in self._overlay:
+            return None
+        return self._overlay.get("WEBSEARCH_COMMAND", "vibey")
+
     def allow_list(self, descriptor: EngineDescriptor) -> EnvironmentAllowList:
         """Exactly what a `descriptor` session may receive."""
         return SYSTEM_ENVIRONMENT.extended(
@@ -127,7 +147,10 @@ class EngineEnvironmentPolicy:
     ) -> ChildEnvironment:
         """The builder every spawn of a `descriptor` session goes through."""
         return ChildEnvironment(
-            self.allow_list(descriptor), python_env=python_env, overlay=overlay, source=source
+            self.allow_list(descriptor),
+            python_env=python_env,
+            overlay={**self._overlay, **(overlay or {})},
+            source=source,
         )
 
     def applied_to(self, adapter: EngineAdapter) -> EngineAdapter:

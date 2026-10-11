@@ -27,6 +27,7 @@ What it cannot do is research, and that is stated rather than worked around — 
 `research()`.
 """
 
+import asyncio
 from collections.abc import Mapping, Sequence
 from pathlib import Path
 
@@ -58,6 +59,9 @@ from vibey.infrastructure.engines.interfaces.validated_ask_interface import (
 )
 from vibey.infrastructure.engines.ollama_chat import OllamaChatClient
 from vibey.infrastructure.engines.validated_ask import ValidatedAsk
+from vibey.infrastructure.web.fetch import PageFetcher
+from vibey.infrastructure.web.research import WebResearch
+from vibey.infrastructure.web.search import WebSearchError, WebSearchSettings, backend_for
 
 # Re-exported: the refusal moved to the domain so the research handler can catch it
 # without importing infrastructure, and this import path should not break.
@@ -205,10 +209,12 @@ class GptossloopDesignProvider:
         chat: OllamaChatClientInterface | None = None,
         evidence_dir: Path | None = None,
         asker: ValidatedAskInterface | None = None,
+        web: WebResearch | None = None,
     ) -> None:
         self._chat = chat if chat is not None else OllamaChatClient()
         self._ask = asker if asker is not None else ValidatedAsk(self._chat)
         self._evidence_dir = evidence_dir
+        self._web = web
 
     @classmethod
     def from_environment(
@@ -220,7 +226,13 @@ class GptossloopDesignProvider:
         inventing a source, and the research job parks a `research_evidence` gate.
         """
         evidence = environ.get(EVIDENCE_DIR_ENV)
-        return cls(chat=chat, evidence_dir=Path(evidence) if evidence else None)
+        settings = WebSearchSettings.from_environment(environ)
+        web = (
+            WebResearch(backend_for(settings), PageFetcher(), results=settings.results)
+            if settings is not None
+            else None
+        )
+        return cls(chat=chat, evidence_dir=Path(evidence) if evidence else None, web=web)
 
     async def batch(self, stage: DesignStage, prior_events: Sequence[DesignEvent]) -> QuestionBatch:
         return await self._ask.ask(
@@ -262,13 +274,38 @@ class GptossloopDesignProvider:
         `research_evidence` gate on the first attempt instead of a retry loop that could
         never succeed.
         """
+        return await self.research_with_context(topic, "")
+
+    async def research_with_context(self, topic: str, context: str) -> ResearchResult:
+        """`research`, told what the project is about so a web search can be about it.
+
+        The operator's own reading always wins. Only when there is none, and web search is
+        configured, vibey searches and quotes what it finds, with its URLs: never a model's
+        summary of it, and never from recollection."""
         document = self._evidence_for(topic)
+        web_note = ""
+        if document is None and self._web is not None:
+            try:
+                found = await asyncio.to_thread(self._web.research, topic, context)
+            except WebSearchError as exc:
+                web_note = f" Web search failed: {exc}."
+            else:
+                if found is not None:
+                    return ResearchResult(
+                        title=found.title, source=found.source, content=found.content
+                    )
+                web_note = " Web search found nothing usable for it."
+        elif document is None:
+            web_note = (
+                " Web search is not configured (VIBEY_SEARXNG_URL for a self-hosted SearXNG,"
+                " or VIBEY_BRAVE_API_KEY)."
+            )
         if document is None:
             raise SovereignResearchUnavailable(
                 topic,
                 f"The sovereign DESIGN provider cannot research {topic!r}: a local model has"
-                " no web access, and answering from recollection would put a fabricated"
-                f" source into the spec. {self._missing_evidence(topic)}",
+                " no web access of its own, and answering from recollection would put a"
+                f" fabricated source into the spec.{web_note} {self._missing_evidence(topic)}",
                 evidence_name=self._evidence_name(topic),
             )
         source, body = document

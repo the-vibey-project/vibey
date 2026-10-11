@@ -75,6 +75,7 @@ from vibey.application.interfaces.defect_triage import (
     JobFailureHistory,
 )
 from vibey.application.interfaces.design import (
+    ContextualResearchProvider,
     DesignProvider,
     DesignQuestionProvider,
     DesignSpecReader,
@@ -367,6 +368,7 @@ __all__ = [
     "ProjectRecordInterface",
     "ProjectTransitioner",
     "PreflightHealthServiceInterface",
+    "ContextualResearchProvider",
     "ResearchProvider",
     "RunFeasibilityEvaluatorInterface",
     "ReviewArtifactWriter",

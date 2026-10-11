@@ -543,6 +543,40 @@ The log is written when a command runs with `-vvv`, or with `VIBEY_LLM_WIRE_LOG=
 written and the model is asked exactly as before. The default file is
 `~/.local/state/vibey/llm-wire.jsonl`, readable by its owner alone.
 
+## `vibey search` and `vibey fetch`
+
+```sh
+vibey search "QUERY" [--json] [--limit N]
+vibey fetch URL [--json] [--max-chars N]
+```
+
+The web, for any loop that can run a command, and for the sovereign DESIGN research stage.
+`search` lists results (title, URL, snippet) from the backend you configure; `fetch` reads one
+public page as plain text. Both print under an **untrusted** banner: what comes back is other
+people's text, to be read as data and never followed as instructions. Evidence handed to a
+DESIGN stage is the quoted retrieved text with its URLs, never a model's summary of it.
+
+`fetch` refuses a private, loopback, link-local or metadata address, re-checks every redirect
+hop, follows at most three, reads text types only and stops at 1 MB. A local file path in a
+query is removed before the query leaves the machine.
+
+Configuration is environment only (never `vibey.toml`, so a key cannot be committed). A search
+with no backend configured exits 2 and says how to configure one.
+
+| Backend | Set | Reaches |
+| --- | --- | --- |
+| SearXNG (keyless, self-hosted) | `VIBEY_SEARXNG_URL` | the DESIGN research stage **and** every engine session |
+| Brave Search | `VIBEY_BRAVE_API_KEY` | the DESIGN research stage only: the key is never passed to a session |
+
+`vibey worker` tells every session that can run a command how to search (an appended "Web
+access" note in its plan, naming the absolute path of the running `vibey`), and passes the
+non-secret `WEBSEARCH_*` settings through to it. With only a Brave key configured, sessions are
+told nothing and have no search. The worker prints one line on stderr saying which of the two
+is in force.
+
+gptossloop and qwenloop also have `web_search` and `web_fetch` as tools of their own, which run
+the same two commands; every other engine uses the command from its plan.
+
 ## `vibey recover`
 
 Recover stuck leased jobs (e.g. after a worker crash): every job in state
@@ -1333,6 +1367,11 @@ Variables read by code under `src/vibey`:
 | `VIBEY_OLLAMA_RETRY_CONTEXT` | as `VIBEY_OLLAMA_TIMEOUT` | The largest context window the one retry of a cut-short reply may ask for, default `32768`, at least `4096`. A prompt that leaves too little of `VIBEY_OLLAMA_CONTEXT` for the reasoning and the answer fills the window, and asking again inside the same window only fails again; the retry instead opens as much as it needs, up to this. A configured `VIBEY_OLLAMA_CONTEXT` above it is never lowered. Set it equal to `VIBEY_OLLAMA_CONTEXT` to keep the retry inside that ceiling. Ollama reloads a model whose context changes, so a retry that grows the window pays a reload: raise `VIBEY_OLLAMA_CONTEXT` itself when that is the usual case. |
 | `VIBEY_OLLAMA_FIT` | as `VIBEY_OLLAMA_TIMEOUT` | Path to a fit record written by `vibey doctor --sovereign-fit`. When it matches, its measured context and output replace the two ceilings above; see [Local models](../guides/local-models-ollama.md#measuring-a-capacity-fit). Unset, unreadable or mismatched means the configured ceilings. |
 | `VIBEY_REVISION` | as `VIBEY_OLLAMA_FIT` | When set, a fit record is used only if its `revision` equals this value. |
+| `VIBEY_SEARXNG_URL` | `search`, `fetch`, `worker`, the sovereign DESIGN research stage | Base URL of a SearXNG instance with its JSON format enabled. Passed to engine sessions as `WEBSEARCH_SEARXNG_URL`. Queries go to that instance, so run your own if they are private. |
+| `VIBEY_BRAVE_API_KEY` | as `VIBEY_SEARXNG_URL` | A Brave Search key. Used by vibey's own processes only; never passed to a session. |
+| `VIBEY_SEARCH_PROVIDER` | as `VIBEY_SEARXNG_URL` | `searxng` or `brave`; needed only when both are configured (SearXNG wins otherwise). |
+| `VIBEY_SEARCH_TIMEOUT` | as `VIBEY_SEARXNG_URL` | Seconds per search or fetch request. A bad value exits 2 before any engine starts. |
+| `VIBEY_SEARCH_RESULTS` | as `VIBEY_SEARXNG_URL` | How many results a search returns. |
 | `VIBEY_FEATURE_QWENLOOP` | `doctor`, `worker`, `loops` | `1`, `true`, `yes`, or `on` (case-insensitive) enables qwenloop, the runner on a Qwen model; any other set value disables it. When set it overrides config. When unset, `doctor` and `loops` fall back to `[features] qwenloop` in `./vibey.toml` and `worker` falls back to the project's stored config; with neither, qwenloop is off. |
 | `ANTHROPIC_API_KEY` | `doctor` auth fallback; `doctor --cluster` (which also accepts `ANTHROPIC_AUTH_TOKEN`) | claudeloop credentials. |
 | `OPENAI_API_KEY` | `doctor` auth fallback; `doctor --cluster` (which also accepts `AZURE_OPENAI_API_KEY`, `CODEX_API_KEY`) | codexloop credentials. |
