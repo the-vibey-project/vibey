@@ -223,6 +223,13 @@ stops after `--auto-answer-limit` answers (30) and says so. Each answer is on th
 proposes adding something the intake did not name is answered No: read the spec before
 `vibey design accept`.
 
+To go on to BUILD without running `vibey design accept` yourself, add `--auto-accept-design`,
+and `--accept-spec-json PATH` to import a spec you reviewed first. It accepts once DESIGN has
+finished, through the same guards as the manual command, never opts into the visual stage, and
+says what it will do at startup. This is your decision that the spec is right, made in
+advance, so use it with a spec file you have read, not with whatever the model wrote. The
+ledger records `accepted_by: auto-accept-design`.
+
 ### Watching the model think { #watching-the-model-think }
 
 A DESIGN or DECOMPOSE call to a local model can run for many minutes, and by default it

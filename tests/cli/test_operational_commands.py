@@ -3073,3 +3073,93 @@ def test_doctor_says_it_could_not_check_without_a_dsn(monkeypatch: pytest.Monkey
     assert res.exit_code == 0, res.output
     assert "UNKNOWN db-passwordless" in res.output
     assert "VIBEY_PG_URL is not set" in res.output
+
+
+def test_worker_auto_accept_design_refuses_to_serve_every_project() -> None:
+    res = runner.invoke(app, ["worker", "--auto-accept-design", "--all-projects"])
+    assert res.exit_code == 2
+    assert "use --project, not --all-projects" in res.output
+
+
+def test_worker_accept_spec_json_needs_the_flag_it_belongs_to(tmp_path: Path) -> None:
+    res = runner.invoke(app, ["worker", "--accept-spec-json", str(tmp_path / "spec.json")])
+    assert res.exit_code == 2
+    assert "belongs to --auto-accept-design" in res.output
+
+
+def test_worker_auto_accept_design_refuses_a_spec_file_it_cannot_read(tmp_path: Path) -> None:
+    broken = tmp_path / "spec.json"
+    broken.write_text("{not json")
+    missing = tmp_path / "nowhere.json"
+
+    for path in (broken, missing):
+        res = runner.invoke(
+            app, ["worker", "--auto-accept-design", "--accept-spec-json", str(path)]
+        )
+        assert res.exit_code == 2
+        assert f"--accept-spec-json {path}: cannot be read as a spec" in res.output
+
+
+def _run_worker_with_auto_accept(tmp_path: Path, sweep: AsyncMock, *args: str) -> Result:
+    from unittest.mock import patch
+
+    async def seed() -> None:
+        async with build_app() as resources:
+            await resources.projects.create("auto-accept", tmp_path, max_cycles=1, config={})
+
+    asyncio.run(seed())
+    with (
+        patch("vibey.infrastructure.db.notifier.PostgresJobReadyNotifier") as mock_notifier_cls,
+        patch("vibey.application.design_auto_accept.DesignAutoAccept.run", new=sweep),
+    ):
+        mock_notifier = AsyncMock()
+        mock_notifier.wait_for_job_ready = AsyncMock(side_effect=KeyboardInterrupt)
+        mock_notifier_cls.return_value = mock_notifier
+        return runner.invoke(app, ["worker", "--auto-accept-design", *args])
+
+
+@pytest.mark.usefixtures("_fast_engine_preflight")
+def test_worker_auto_accept_design_says_what_it_will_do_and_what_it_did(tmp_path: Path) -> None:
+    from vibey.application.dto import DesignAutoAcceptReport
+
+    sweep = AsyncMock(
+        return_value=DesignAutoAcceptReport(
+            project_id=None, accepted=True, message="accepted the design; entered build"
+        )
+    )
+
+    res = _run_worker_with_auto_accept(tmp_path, sweep)
+
+    assert "auto-accept-design: on, accepting the synthesized spec" in res.output
+    assert "auto-accept-design: accepted the design; entered build" in res.output
+    sweep.assert_awaited()
+
+
+@pytest.mark.usefixtures("_fast_engine_preflight")
+def test_worker_auto_accept_design_imports_the_named_spec_and_survives_a_failed_sweep(
+    tmp_path: Path,
+) -> None:
+    spec_file = tmp_path / "reviewed.json"
+    spec_file.write_text(
+        json.dumps(
+            {
+                "objective": "Ship",
+                "walking_skeleton": "one path",
+                "criteria": [
+                    {
+                        "criterion_id": "C1",
+                        "given": "g",
+                        "when": "w",
+                        "then": "t",
+                        "fit": "f",
+                    }
+                ],
+            }
+        )
+    )
+    sweep = AsyncMock(side_effect=RuntimeError("the database went away"))
+
+    res = _run_worker_with_auto_accept(tmp_path, sweep, "--accept-spec-json", str(spec_file))
+
+    assert f"importing {spec_file} first" in res.output
+    assert "design auto-accept failed: the database went away" in res.output
