@@ -18,8 +18,8 @@ A sound plan is then put into dependency order here, so the order a producer
 happened to list its items in is never load-bearing.
 """
 
-from collections.abc import Sequence
-from dataclasses import dataclass
+from collections.abc import Iterable, Sequence
+from dataclasses import dataclass, replace
 from heapq import heapify, heappop, heappush
 
 from vibey.domain.effort import Effort
@@ -46,6 +46,70 @@ class WorkItem:
     est_effort: Effort
     files_touched_hint: tuple[str, ...]
     verification: VerificationSpec
+
+
+def fold_verification_only(
+    items: Sequence[WorkItem], *, max_criteria: int | None = None
+) -> tuple[WorkItem, ...]:
+    """Absorbs every item that builds nothing into the item it verifies.
+
+    An item whose `files_touched_hint` is empty writes no file: it can only restate checks
+    every item's own verification already runs (typecheck, lint, tests, build). Handed to an
+    engine it is a session with nothing to build and, for a dependent, nothing yet to look
+    at, which is how a local model spent 55 turns searching for routes the item before it
+    had not integrated. So its criteria and checks move to the dependency listed last, which
+    also inherits what the folded item waited for, and whatever depended on the folded item
+    depends on that dependency instead. An item with no file and no known dependency stays
+    (the plan check names it), and so does one that would push its dependency past
+    `max_criteria`, because a cap that folding could breach would only send the plan back.
+    """
+    kept: list[WorkItem] = []
+    folded_into: dict[str, str] = {}
+    for original in items:
+        depends_on = _unique(folded_into.get(dep, dep) for dep in original.depends_on)
+        item = (
+            original
+            if depends_on == original.depends_on
+            else replace(original, depends_on=depends_on)
+        )
+        target = _last_listed(kept, depends_on)
+        if any(path.strip() for path in item.files_touched_hint) or target is None:
+            kept.append(item)
+            continue
+        merged = _absorbing(target, item)
+        if max_criteria is not None and len(set(merged.acceptance_ids)) > max_criteria:
+            kept.append(item)
+            continue
+        folded_into[item.item_id] = target.item_id
+        kept[kept.index(target)] = merged
+    return tuple(kept)
+
+
+def _unique(values: Iterable[str]) -> tuple[str, ...]:
+    return tuple(dict.fromkeys(values))
+
+
+def _last_listed(kept: Sequence[WorkItem], depends_on: Sequence[str]) -> WorkItem | None:
+    """The item among `kept` that `depends_on` names and that was listed last."""
+    named = [item for item in kept if item.item_id in depends_on]
+    return named[-1] if named else None
+
+
+def _absorbing(target: WorkItem, folded: WorkItem) -> WorkItem:
+    waits_for = _unique(
+        dep for dep in (*target.depends_on, *folded.depends_on) if dep != target.item_id
+    )
+    return replace(
+        target,
+        acceptance_ids=_unique((*target.acceptance_ids, *folded.acceptance_ids)),
+        depends_on=waits_for,
+        verification=VerificationSpec(
+            commands=_unique((*target.verification.commands, *folded.verification.commands)),
+            criteria_checked=_unique(
+                (*target.verification.criteria_checked, *folded.verification.criteria_checked)
+            ),
+        ),
+    )
 
 
 class DecompositionPlanner:

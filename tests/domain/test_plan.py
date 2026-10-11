@@ -1,4 +1,6 @@
 # Made with ❤️ by [Vibey](https://the-vibey-project.github.io/vibey/), Developed by [Adam Matthew Steinberger](https://vibewithadam.matthewsteinberger.com/) ([@adammatthewsteinberger](https://github.com/adammatthewsteinberger/)).
+from dataclasses import replace
+
 import pytest
 
 from vibey.domain.effort import Effort
@@ -9,6 +11,7 @@ from vibey.domain.plan import (
     VerificationSpec,
     WorkItem,
     build_parallelism,
+    fold_verification_only,
     validate_decomposition,
 )
 
@@ -235,3 +238,91 @@ def test_build_parallelism_table(
 ) -> None:
     result = build_parallelism(config_parallelism=config, eligible_items=eligible, cpu_count=cpu)
     assert result == expected
+
+
+# ── fold_verification_only ───────────────────────────────────────────────────
+
+
+def _slice(
+    item_id: str, criteria: tuple[str, ...], *, files: bool, **overrides: object
+) -> WorkItem:
+    return _item(
+        item_id,
+        acceptance_ids=criteria,
+        files_touched_hint=("src/a.ts",) if files else (),
+        verification=VerificationSpec(commands=("npm test",), criteria_checked=criteria),
+        **overrides,
+    )
+
+
+def test_the_plan_that_prompted_it_folds_seven_items_into_four() -> None:
+    """ws builds the section; c4, c9 and c10 only restate checks; c7, c8 and c11 add files."""
+    items = [
+        _slice("ws", ("C1", "C2", "C3", "C5", "C6"), files=True),
+        _slice("c4", ("C4",), files=False, depends_on=("ws",)),
+        _slice("c7", ("C7",), files=True, depends_on=("ws",)),
+        _slice("c8", ("C8",), files=True, depends_on=("ws",)),
+        _slice("c9", ("C9",), files=False, depends_on=("ws", "c4", "c7", "c8")),
+        _slice("c10", ("C10",), files=False, depends_on=("c9",)),
+        _slice("c11", ("C11",), files=True, depends_on=("c10",)),
+    ]
+
+    folded = fold_verification_only(items, max_criteria=6)
+
+    assert [item.item_id for item in folded] == ["ws", "c7", "c8", "c11"]
+    by_id = {item.item_id: item for item in folded}
+    assert by_id["ws"].acceptance_ids == ("C1", "C2", "C3", "C5", "C6", "C4")
+    # c9 and c10 landed on c8, the dependency listed last, which now also waits for c7.
+    assert by_id["c8"].acceptance_ids == ("C8", "C9", "C10")
+    assert by_id["c8"].depends_on == ("ws", "c7")
+    assert by_id["c8"].verification.criteria_checked == ("C8", "C9", "C10")
+    assert by_id["c8"].verification.commands == ("npm test",)  # not repeated
+    # What waited on a folded item waits on what absorbed it.
+    assert by_id["c11"].depends_on == ("c8",)
+    # Every criterion is still claimed once somewhere.
+    assert {c for item in folded for c in item.acceptance_ids} == {f"C{n}" for n in range(1, 12)}
+    # And a folded plan is a sound one.
+    assert (
+        validate_decomposition(
+            folded, criteria_ids=[f"C{n}" for n in range(1, 12)], walking_skeleton_item_id="ws"
+        )
+        == ()
+    )
+
+
+def test_an_item_with_files_is_never_folded() -> None:
+    items = [_slice("a", ("C1",), files=True), _slice("b", ("C2",), files=True, depends_on=("a",))]
+    assert fold_verification_only(items) == tuple(items)
+
+
+def test_a_blank_path_is_not_a_file() -> None:
+    blank = replace(
+        _slice("check", ("C2",), files=False, depends_on=("a",)), files_touched_hint=("  ",)
+    )
+    folded = fold_verification_only([_slice("a", ("C1",), files=True), blank])
+    assert [item.item_id for item in folded] == ["a"]
+
+
+def test_an_item_with_no_files_and_nothing_to_fold_into_stays() -> None:
+    skeleton = _slice("a", ("C1",), files=False)  # the first item has no dependency
+    orphan = _slice("b", ("C2",), files=False, depends_on=("ghost",))  # an unknown one
+    assert fold_verification_only([skeleton, orphan]) == (skeleton, orphan)
+
+
+def test_folding_never_pushes_an_item_past_the_criteria_cap() -> None:
+    full = _slice("a", ("C1", "C2"), files=True)
+    check = _slice("b", ("C3",), files=False, depends_on=("a",))
+
+    assert [i.item_id for i in fold_verification_only([full, check], max_criteria=2)] == ["a", "b"]
+    assert [i.item_id for i in fold_verification_only([full, check], max_criteria=3)] == ["a"]
+    assert [i.item_id for i in fold_verification_only([full, check])] == ["a"]  # no cap given
+
+
+def test_a_dependency_on_a_folded_item_is_redirected_and_listed_once() -> None:
+    items = [
+        _slice("a", ("C1",), files=True),
+        _slice("check", ("C2",), files=False, depends_on=("a",)),
+        _slice("b", ("C3",), files=True, depends_on=("a", "check")),
+    ]
+    folded = fold_verification_only(items)
+    assert [(i.item_id, i.depends_on) for i in folded] == [("a", ()), ("b", ("a",))]

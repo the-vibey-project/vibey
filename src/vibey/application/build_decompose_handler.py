@@ -139,6 +139,10 @@ class BuildDecomposeHandler:
             payload={
                 "title": item.title,
                 "verification": asdict(item.verification),
+                # The items this one builds on. The queue only waits for their implement
+                # jobs; the implement handler also waits until each is integrated, so this
+                # item's branch really does stack on their code.
+                "depends_on_items": list(item.depends_on),
                 # Item branches stack on already-integrated code when
                 # any exists (the worktree manager falls back to HEAD
                 # before the first integrate): every item branching

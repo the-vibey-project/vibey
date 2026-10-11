@@ -516,9 +516,30 @@ def test_the_prompt_caps_an_item_and_calls_the_skeleton_the_thinnest_slice() -> 
     assert "thinnest slice that works end to end" in DECOMPOSE_SYSTEM
 
 
-def test_the_prompt_caps_the_criteria_per_item_and_says_an_empty_path_list_is_for_checks_only() -> (
-    None
-):
+def test_the_prompt_caps_the_criteria_per_item_and_says_a_check_is_not_an_item() -> None:
     assert "An item checks at most 6 acceptance criteria" in DECOMPOSE_SYSTEM
-    assert "an empty list is only for an item that changes nothing" in DECOMPOSE_SYSTEM
+    assert "at least one: an item is work that writes files" in DECOMPOSE_SYSTEM
+    assert "is NEVER an item of its own" in DECOMPOSE_SYSTEM
     assert "One item that claims every criterion is a plan that was not made" in DECOMPOSE_SYSTEM
+
+
+def test_the_prompt_asks_for_two_to_four_vertical_slices() -> None:
+    assert "Aim for 2 to 4 items" in DECOMPOSE_SYSTEM
+    assert "vertical slice" in DECOMPOSE_SYSTEM
+
+
+@pytest.mark.asyncio
+async def test_an_item_that_builds_nothing_is_folded_into_the_item_it_verifies() -> None:
+    """The plan #4 got: ws builds the section, then three items that only restate checks
+    (no files). A local model given one searched 55 turns for code that was not there."""
+    verify_only = _item("check", acceptance=["AC-2"], depends_on=["WS"])
+    verify_only["files_touched_hint"] = []
+    plan = {"items": [_item("WS", acceptance=["AC-1"]), verify_only]}
+    producer, chat = _producer(plan)
+
+    items = await producer.decompose(_spec("AC-1", "AC-2"))
+
+    assert [item.item_id for item in items] == ["ws"]
+    assert items[0].acceptance_ids == ("AC-1", "AC-2")
+    assert items[0].verification.criteria_checked == ("AC-1", "AC-2")
+    assert len(chat.asked) == 1  # nothing was re-asked: the fold is code's, not the model's
