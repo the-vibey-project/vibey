@@ -509,23 +509,29 @@ async def test_without_a_checkout_the_prompt_is_the_base_prompt() -> None:
     assert "never with pytest" not in chat.asked[0][0]
 
 
-def test_the_prompt_caps_an_item_and_calls_the_skeleton_the_thinnest_slice() -> None:
-    assert "at most 12 paths" in DECOMPOSE_SYSTEM
-    assert "CHAIN of build pieces" in DECOMPOSE_SYSTEM
-    assert "the last piece runs the full verification" in DECOMPOSE_SYSTEM
+def test_the_prompt_calls_the_skeleton_the_thinnest_slice_and_ends_on_full_verification() -> None:
     assert "thinnest slice that works end to end" in DECOMPOSE_SYSTEM
+    assert "the last one runs the full verification" in DECOMPOSE_SYSTEM
 
 
-def test_the_prompt_caps_the_criteria_per_item_and_says_a_check_is_not_an_item() -> None:
-    assert "An item checks at most 6 acceptance criteria" in DECOMPOSE_SYSTEM
+def test_the_prompt_says_a_check_is_not_an_item() -> None:
     assert "at least one: an item is work that writes files" in DECOMPOSE_SYSTEM
     assert "is NEVER an item of its own" in DECOMPOSE_SYSTEM
-    assert "One item that claims every criterion is a plan that was not made" in DECOMPOSE_SYSTEM
 
 
-def test_the_prompt_asks_for_two_to_four_vertical_slices() -> None:
-    assert "Aim for 2 to 4 items" in DECOMPOSE_SYSTEM
-    assert "vertical slice" in DECOMPOSE_SYSTEM
+def test_the_prompt_sets_no_item_count_size_cap_or_forced_chain() -> None:
+    """The spec decides how many items there are (the ministry section was re-asked into
+    shapes it did not need). No number may appear in the guidance on item size."""
+    assert "there is no target count" in DECOMPOSE_SYSTEM
+    for forced in (
+        "Aim for",
+        "at most 6",
+        "at most 12",
+        "CHAIN",
+        "2 to 4",
+        "One item that claims every criterion",
+    ):
+        assert forced not in DECOMPOSE_SYSTEM
 
 
 @pytest.mark.asyncio

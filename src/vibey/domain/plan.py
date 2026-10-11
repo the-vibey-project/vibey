@@ -48,9 +48,7 @@ class WorkItem:
     verification: VerificationSpec
 
 
-def fold_verification_only(
-    items: Sequence[WorkItem], *, max_criteria: int | None = None
-) -> tuple[WorkItem, ...]:
+def fold_verification_only(items: Sequence[WorkItem]) -> tuple[WorkItem, ...]:
     """Absorbs every item that builds nothing into the item it verifies.
 
     An item whose `files_touched_hint` is empty writes no file: it can only restate checks
@@ -60,8 +58,8 @@ def fold_verification_only(
     had not integrated. So its criteria and checks move to the dependency listed last, which
     also inherits what the folded item waited for, and whatever depended on the folded item
     depends on that dependency instead. An item with no file and no known dependency stays
-    (the plan check names it), and so does one that would push its dependency past
-    `max_criteria`, because a cap that folding could breach would only send the plan back.
+    (the plan check names it). How many criteria the absorbing item ends up with is not
+    limited: how many items a plan has is the planner's judgment of the spec.
     """
     kept: list[WorkItem] = []
     folded_into: dict[str, str] = {}
@@ -76,12 +74,8 @@ def fold_verification_only(
         if any(path.strip() for path in item.files_touched_hint) or target is None:
             kept.append(item)
             continue
-        merged = _absorbing(target, item)
-        if max_criteria is not None and len(set(merged.acceptance_ids)) > max_criteria:
-            kept.append(item)
-            continue
         folded_into[item.item_id] = target.item_id
-        kept[kept.index(target)] = merged
+        kept[kept.index(target)] = _absorbing(target, item)
     return tuple(kept)
 
 

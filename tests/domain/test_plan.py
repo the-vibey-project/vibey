@@ -267,7 +267,7 @@ def test_the_plan_that_prompted_it_folds_seven_items_into_four() -> None:
         _slice("c11", ("C11",), files=True, depends_on=("c10",)),
     ]
 
-    folded = fold_verification_only(items, max_criteria=6)
+    folded = fold_verification_only(items)
 
     assert [item.item_id for item in folded] == ["ws", "c7", "c8", "c11"]
     by_id = {item.item_id: item for item in folded}
@@ -309,20 +309,10 @@ def test_an_item_with_no_files_and_nothing_to_fold_into_stays() -> None:
     assert fold_verification_only([skeleton, orphan]) == (skeleton, orphan)
 
 
-def test_folding_never_pushes_an_item_past_the_criteria_cap() -> None:
-    full = _slice("a", ("C1", "C2"), files=True)
-    check = _slice("b", ("C3",), files=False, depends_on=("a",))
+def test_folding_has_no_criteria_limit() -> None:
+    full = _slice("a", tuple(f"C{n}" for n in range(1, 9)), files=True)
+    check = _slice("b", ("C9",), files=False, depends_on=("a",))
 
-    assert [i.item_id for i in fold_verification_only([full, check], max_criteria=2)] == ["a", "b"]
-    assert [i.item_id for i in fold_verification_only([full, check], max_criteria=3)] == ["a"]
-    assert [i.item_id for i in fold_verification_only([full, check])] == ["a"]  # no cap given
+    (folded,) = fold_verification_only([full, check])
 
-
-def test_a_dependency_on_a_folded_item_is_redirected_and_listed_once() -> None:
-    items = [
-        _slice("a", ("C1",), files=True),
-        _slice("check", ("C2",), files=False, depends_on=("a",)),
-        _slice("b", ("C3",), files=True, depends_on=("a", "check")),
-    ]
-    folded = fold_verification_only(items)
-    assert [(i.item_id, i.depends_on) for i in folded] == [("a", ()), ("b", ("a",))]
+    assert folded.acceptance_ids == tuple(f"C{n}" for n in range(1, 10))

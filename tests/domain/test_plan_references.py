@@ -229,68 +229,23 @@ def _paths(count: int) -> tuple[str, ...]:
     return tuple(f"src/file_{n}.ts" for n in range(count))
 
 
-def test_an_item_with_more_paths_than_the_limit_is_rejected_and_told_to_split() -> None:
-    from vibey.domain.plan_references import MAX_ITEM_PATHS
+def test_how_many_paths_an_item_lists_is_not_limited() -> None:
+    """Plan size follows the spec. A large item is the planner's call, so it is not re-asked."""
+    big = _item("ws", "npm run build", hint=_paths(40))
 
-    (message,) = PLAN_REFERENCE_CHECKER.violations(
-        [_item("ws", "npm run build", hint=_paths(MAX_ITEM_PATHS + 1))], exists=lambda path: True
-    )
-
-    assert f"item 'ws' lists {MAX_ITEM_PATHS + 1} paths in files_touched_hint" in message
-    assert f"more than the {MAX_ITEM_PATHS} one item may touch" in message
-    assert "split it into a chain of build pieces" in message
-    assert "lists the piece before it in depends_on" in message
-    assert "thinnest slice" in message
-
-
-def test_an_item_at_the_limit_is_accepted_and_repeats_and_blanks_are_not_counted() -> None:
-    from vibey.domain.plan_references import MAX_ITEM_PATHS
-
-    at_limit = _item("a", "npm run build", hint=_paths(MAX_ITEM_PATHS))
-    padded = _item("b", "npm run build", hint=(*_paths(MAX_ITEM_PATHS), *_paths(5), ""))
-
-    assert PLAN_REFERENCE_CHECKER.violations([at_limit, padded], exists=lambda path: True) == ()
-
-
-def test_each_oversized_item_gets_its_own_message_next_to_other_violations() -> None:
-    items = [
-        _item("big", "pytest src/a.test.ts", hint=(*_paths(13), "src/a.test.ts")),
-        _item("also-big", "npm run build", hint=_paths(20)),
-        _item("small", "npm run build", hint=_paths(3)),
-    ]
-
-    messages = PLAN_REFERENCE_CHECKER.violations(items, exists=lambda path: True)
-
-    assert [m.split()[1] for m in messages] == ["'big'", "'big'", "'also-big'"]
-    assert "runs pytest on" in messages[0] and "lists 14 paths" in messages[1]
+    assert PLAN_REFERENCE_CHECKER.violations([big], exists=lambda path: True) == ()
 
 
 def _claiming(item_id: str, *ids: str, hint: tuple[str, ...] = ()) -> WorkItem:
     return replace(_item(item_id, "npm run build", hint=hint), acceptance_ids=ids)
 
 
-def test_an_item_claiming_every_criterion_with_no_paths_is_a_monolith_and_is_rejected() -> None:
-    """The ministry section's second plan: one item, `files_touched_hint: []`, C1..C11."""
-    from vibey.domain.plan_references import MAX_ITEM_CRITERIA
+def test_how_many_criteria_an_item_claims_is_not_limited() -> None:
+    """One item may claim every criterion when its paths make them true; the ministry
+    section's plans were re-asked for it, and the re-ask dictated a chain of pieces."""
+    wide = _claiming("ws", *(f"C{n}" for n in range(1, 12)), hint=_paths(3))
 
-    monolith = _claiming("ws", *(f"C{n}" for n in range(1, 12)))
-
-    (message,) = PLAN_REFERENCE_CHECKER.violations([monolith], exists=lambda path: True)
-
-    assert f"item 'ws' claims 11 acceptance criteria, more than the {MAX_ITEM_CRITERIA}" in message
-    assert "split it into a chain of build pieces" in message
-    assert "lists the piece before it in depends_on" in message
-    assert "claims only what its thin slice demonstrates" in message
-
-
-def test_an_item_at_the_criteria_limit_is_accepted_and_repeats_count_once() -> None:
-    from vibey.domain.plan_references import MAX_ITEM_CRITERIA
-
-    ids = tuple(f"C{n}" for n in range(1, MAX_ITEM_CRITERIA + 1))
-    at_limit = _claiming("a", *ids)
-    repeated = _claiming("b", *ids, *ids)
-
-    assert PLAN_REFERENCE_CHECKER.violations([at_limit, repeated], exists=lambda path: True) == ()
+    assert PLAN_REFERENCE_CHECKER.violations([wide], exists=lambda path: True) == ()
 
 
 def test_a_chain_that_spreads_the_criteria_is_accepted() -> None:
@@ -301,11 +256,3 @@ def test_a_chain_that_spreads_the_criteria_is_accepted() -> None:
     ]
 
     assert PLAN_REFERENCE_CHECKER.violations(items, exists=lambda path: True) == ()
-
-
-def test_a_plan_can_be_wrong_in_paths_and_criteria_at_once_and_says_both() -> None:
-    big = _claiming("big", *(f"C{n}" for n in range(1, 9)), hint=_paths(14))
-
-    messages = PLAN_REFERENCE_CHECKER.violations([big], exists=lambda path: True)
-
-    assert [m.split()[2] for m in messages] == ["lists", "claims"]
