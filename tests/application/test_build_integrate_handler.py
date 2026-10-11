@@ -786,3 +786,104 @@ async def test_a_worktree_that_cannot_be_removed_never_fails_the_integration(
     assert isinstance(outcome, Success)
     assert outcome.result["worktree_removed"] is False
     assert "worktree is locked" in str(outcome.result["worktree_error"])
+
+
+# ── a repair that cannot change the failure parks instead of repairing again ─
+
+
+def _integrate_raised(cycle: int, finding_id: str, text: str, *, at=None):  # type: ignore[no-untyped-def]
+    from vibey.domain.ledger import EventKind
+
+    event = _integrate_finding(EventKind.FINDING_RAISED, finding_id, cycle=cycle)
+    return replace(
+        event, payload={"finding_id": finding_id, "text": text}, produced_at=at or event.produced_at
+    )
+
+
+async def _recorded_failure(tmp_path: Path) -> str:
+    """The text this handler records for a failed integration, so the tests need not guess it."""
+    ledger = FakeLedger()
+    await _repairing_handler(tmp_path, merge_ok=False, events=[], ledger=ledger).handle(_job())
+    (raised,) = [e for e in ledger.recorded if e.kind == "FindingRaised"]
+    return str(raised.payload["text"])
+
+
+def _unchanged(job, text: str, count: int = 2):  # type: ignore[no-untyped-def]
+    from vibey.domain.ledger import EventKind
+
+    history = []
+    for index in range(count):
+        finding_id = f"f_integrate_item-1_{index:08d}"
+        history.append(_integrate_raised(job.cycle, finding_id, text))
+        history.append(_integrate_finding(EventKind.FINDING_RESOLVED, finding_id, cycle=job.cycle))
+    return history
+
+
+async def test_an_integration_two_repairs_left_failing_the_same_way_parks(tmp_path: Path) -> None:
+    from vibey.application.worker import Park
+
+    job = _job()
+    text = await _recorded_failure(tmp_path)
+    ledger, jobs = FakeLedger(), FakeJobRepository()
+    handler = _repairing_handler(
+        tmp_path, merge_ok=False, events=_unchanged(job, text), jobs=jobs, ledger=ledger
+    )
+
+    outcome = await handler.handle(job)
+
+    assert isinstance(outcome, Park)
+    assert outcome.request.kind == "repair_not_converging"
+    assert "failed integration the same way 3 times running" in outcome.request.prompt
+    assert "conflict in greet.py" in outcome.request.prompt
+    assert not [e for e in ledger.recorded if e.kind == "FindingRaised"]
+    assert jobs._jobs == {}
+
+
+async def test_an_integration_failing_differently_each_time_is_still_repaired(
+    tmp_path: Path,
+) -> None:
+    from vibey.application.worker import Defer
+    from vibey.domain.ledger import EventKind
+
+    job = _job()
+    history = [
+        _integrate_raised(job.cycle, "f_integrate_item-1_00000000", "conflict in a.py"),
+        _integrate_finding(EventKind.FINDING_RESOLVED, "f_integrate_item-1_00000000", cycle=1),
+        _integrate_raised(job.cycle, "f_integrate_item-1_00000001", "build failed"),
+        _integrate_finding(EventKind.FINDING_RESOLVED, "f_integrate_item-1_00000001", cycle=1),
+    ]
+    handler = _repairing_handler(tmp_path, merge_ok=False, events=history)
+
+    outcome = await handler.handle(job)
+
+    assert isinstance(outcome, Defer) and "repair enqueued" in outcome.detail
+
+
+async def test_an_answer_resets_the_integration_count_too(tmp_path: Path) -> None:
+    from tests.application.fakes import FakeHumanGateRepository
+    from vibey.application.worker import Defer, Park
+
+    job = _job()
+    text = await _recorded_failure(tmp_path)
+    history = _unchanged(job, text)
+    gates = FakeHumanGateRepository()
+
+    def handler():  # type: ignore[no-untyped-def]
+        return BuildIntegrateHandler(
+            integration=FakeIntegration(
+                merge_outcome=MergeOutcome(ok=False, detail="conflict in greet.py"), path=tmp_path
+            ),
+            gates=FakeGateRunner(),
+            ledger=FakeLedger(),
+            jobs=FakeJobRepository(),
+            clock=FixedClock(),
+            ledger_reader=_EventReader(history),  # type: ignore[arg-type]
+            human_gates=gates,  # type: ignore[arg-type]
+        )
+
+    parked = await handler().handle(job)
+    assert isinstance(parked, Park) and parked.request.kind == "repair_not_converging"
+    gate = await gates.raise_gate(job.project_id, job.id, parked.request)
+    await gates.answer(gate.gate_id, answer={}, answered_by="operator")
+
+    assert isinstance(await handler().handle(job), Defer)

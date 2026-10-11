@@ -44,6 +44,7 @@ from vibey.domain.job import (
     ESCALATION_EXHAUSTED_GATE_KIND,
     FOREIGN_BRANCH_GATE_KIND,
 )
+from vibey.domain.repair_convergence import REPAIR_NOT_CONVERGING_GATE_KIND
 
 GRANT_PLACEHOLDER: Final = "N"
 """Where a grant's new bound goes. Not a JSON value, so it cannot be sent by accident."""
@@ -172,6 +173,9 @@ ANSWER_RULES: Final[Mapping[str, AnswerRuleInterface]] = MappingProxyType(
         RESEARCH_EVIDENCE_GATE_KIND: ANY_ANSWER,  # design_research_handler
         "engine_misconfigured": ANY_ANSWER,  # build_engine_run
         "ultra_needs_cap": ANY_ANSWER,  # build_implement_handler, after a cap or no-cap
+        # build_verify_handler and build_integrate_handler, when repairs stop changing the
+        # failure: look at the environment, then any answer resumes with a fresh count.
+        REPAIR_NOT_CONVERGING_GATE_KIND: ANY_ANSWER,
         # build_implement_handler and build_integrate_handler, after the branch is moved aside
         FOREIGN_BRANCH_GATE_KIND: ANY_ANSWER,
         # Nothing reads these answers (wind_down): answering re-queues a job that parks

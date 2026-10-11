@@ -18,7 +18,7 @@ branch for every other worker.
 import contextlib
 import shlex
 from collections.abc import Mapping
-from datetime import timedelta
+from datetime import datetime, timedelta
 from uuid import uuid4
 
 from vibey.application.build_engine_run import BuildLedger
@@ -42,6 +42,13 @@ from vibey.domain.interfaces.correlation_interface import DeliveryCorrelationInt
 from vibey.domain.job import FOREIGN_BRANCH_GATE_KIND, FailureClass, idempotency_key
 from vibey.domain.ledger import EventKind
 from vibey.domain.phase import Phase
+from vibey.domain.repair_convergence import (
+    IDENTICAL_FAILURES_BEFORE_PARKING,
+    REPAIR_NOT_CONVERGING_GATE_KIND,
+    failures_since,
+    is_not_converging,
+    not_converging_prompt,
+)
 from vibey.domain.review import Severity
 from vibey.domain.worktree import WorktreeNaming
 
@@ -252,6 +259,7 @@ class BuildIntegrateHandler:
 
         prefix = f"f_integrate_{work_item_id}_"
         raised: list[str] = []
+        history: list[tuple[datetime, str]] = []
         resolved: set[str] = set()
         for event in await self._ledger_reader.all_for_project(job.project_id):
             if not event.interpretable or event.cycle != job.cycle:
@@ -261,6 +269,7 @@ class BuildIntegrateHandler:
                 continue
             if event.kind is EventKind.FINDING_RAISED:
                 raised.append(finding_id)
+                history.append((event.produced_at, str(event.payload.get("text", ""))))
             elif event.kind is EventKind.FINDING_RESOLVED:
                 resolved.add(finding_id)
         retry_at = self._clock.now() + self._repair_backoff
@@ -271,12 +280,26 @@ class BuildIntegrateHandler:
                 detail=f"integration of {work_item_id!r} failing; repair in flight",
             )
         allowed = self._max_repair_rounds
-        if self._human_gates is not None:
-            gate = await self._human_gates.latest_for_job(job.id)
-            if gate is not None and gate.answer is not None:
-                granted = granted_max_rounds(gate.answer)
-                if granted is not None and granted > allowed:
-                    allowed = granted
+        gate = (
+            await self._human_gates.latest_for_job(job.id)
+            if self._human_gates is not None
+            else None
+        )
+        if gate is not None and gate.answer is not None:
+            granted = granted_max_rounds(gate.answer)
+            if granted is not None and granted > allowed:
+                allowed = granted
+        # A person's answer is a fresh start: only what was raised after it counts.
+        earlier = failures_since(history, gate.answered_at if gate is not None else None)
+        if is_not_converging(earlier, detail):
+            return Park(
+                HumanGateRequest(
+                    kind=REPAIR_NOT_CONVERGING_GATE_KIND,
+                    prompt=not_converging_prompt(
+                        work_item_id, "integration", IDENTICAL_FAILURES_BEFORE_PARKING, detail
+                    ),
+                )
+            )
         if len(raised) >= allowed:
             return Park(
                 HumanGateRequest(

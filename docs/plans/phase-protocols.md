@@ -533,6 +533,14 @@ raising another. After 3 rounds it parks a `verify_repair_exhausted` gate;
 answering `--raw '{"max_rounds": N}'` raises the bound. A passing verify
 resolves its item's open verify findings.
 
+A repair that cannot change the failure is not repaired again. When a new failure reads the
+same (paths, ids, numbers and whitespace aside, `domain/repair_convergence.py`) as the last two
+findings for the item, verify parks a `repair_not_converging` gate instead of raising a third:
+the repairs have changed nothing, which is almost never a code problem, so the gate quotes the
+failure and points at the environment. It is not auto-answered. Any answer resumes, and what was
+raised before the answer is no longer counted, so two more unchanged repairs are needed to park
+again. Integrate repairs follow the same rule.
+
 **Capacity and handoff.** A capacity rejection returns a capacity `Defer`
 (5 minutes). That opens the engine's circuit, so the next claim rotates;
 there is no handoff on capacity. Handoff (ADR-0004) is triggered only by the
@@ -613,6 +621,7 @@ integrate findings. Nothing is rolled back.
 | Engine capacity rejection | Job deferred 5 min; that engine's circuit opens, so the next claim rotates. |
 | Item hits attempt 7 | `escalation_exhausted` gate for that item only; the rest of the phase continues |
 | Verify or integrate repair rounds exhausted | `verify_repair_exhausted` / `integrate_repair_exhausted` gate for that item only |
+| Verify or integrate repairs leave the failure unchanged twice | `repair_not_converging` gate for that item only; never auto-answered |
 
 `max_dollars_per_cycle` and `max_turns_per_item` in `vibey.toml` are parsed
 but do not drive this brake; there is no per-item turn cap. A
