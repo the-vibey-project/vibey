@@ -16,7 +16,7 @@ not see the engine the worker was running).
   the variables each local engine's own process reads.
 """
 
-from collections.abc import Mapping
+from collections.abc import Mapping, MutableMapping
 from dataclasses import dataclass, replace
 from pathlib import Path
 
@@ -28,7 +28,7 @@ from vibey.domain.config import (
     ConfigError,
     parse_toml_string,
 )
-from vibey.domain.engine import EngineDescriptor, EngineId
+from vibey.domain.engine import EngineDescriptor, EngineId, EngineInvocation
 from vibey.infrastructure.engines.descriptors import BY_ENGINE_ID, ClaudeloopLocalDescriptors
 from vibey.infrastructure.engines.interfaces.descriptors_interface import (
     ClaudeloopLocalDescriptorsInterface,
@@ -49,6 +49,37 @@ GPTOSSLOOP_BASE_URL_ENV = "GPTOSSLOOP_BASE_URL"
 GPTOSSLOOP_MODEL_ENV = "GPTOSSLOOP_MODEL"
 QWENLOOP_BASE_URL_ENV = "QWENLOOP_BASE_URL"
 QWENLOOP_MODEL_ENV = "QWENLOOP_MODEL"
+
+
+#: Overrides the turn limit every local runner is started with, for every effort.
+LOCAL_MAX_TURNS_ENV = "VIBEY_LOCAL_MAX_TURNS"
+UNLIMITED = "unlimited"
+#: What "unlimited" is handed to a runner as. The runners only accept a positive count, so
+#: this is a count no session reaches (hours of turns on a local model), not a missing
+#: limit; a session still ends when it reports the task done, is stopped, or fails.
+UNLIMITED_TURNS = 100_000
+
+
+def parse_local_max_turns(raw: str) -> int:
+    """`unlimited`, or a whole number of turns of at least 1; `ConfigError` otherwise."""
+    text = raw.strip().lower()
+    if text == UNLIMITED:
+        return UNLIMITED_TURNS
+    try:
+        turns = int(text)
+    except ValueError:
+        turns = 0
+    if turns < 1:
+        raise ConfigError(
+            LOCAL_MAX_TURNS_ENV, f"must be a whole number of turns or '{UNLIMITED}', got {raw!r}"
+        )
+    return turns
+
+
+def apply_local_max_turns(value: str, environ: MutableMapping[str, str]) -> None:
+    """Checks `value` and sets `VIBEY_LOCAL_MAX_TURNS` to it: what `--local-max-turns` does."""
+    parse_local_max_turns(value)
+    environ[LOCAL_MAX_TURNS_ENV] = value.strip()
 
 
 @dataclass(frozen=True, slots=True)
@@ -169,6 +200,16 @@ class LocalEngineSettings:
         return bool(self.enabled_engines)
 
     @property
+    def max_turns(self) -> int | None:
+        """`VIBEY_LOCAL_MAX_TURNS` as a turn count, or None when it is unset.
+
+        A turn limit is a cost control, and a local model costs nothing per turn: a small
+        model that needs many tool calls to read a repository fails at 16 for a reason that
+        is the limit's, not the work's."""
+        raw = (self._environ.get(LOCAL_MAX_TURNS_ENV) or "").strip()
+        return parse_local_max_turns(raw) if raw else None
+
+    @property
     def claudeloop_local(self) -> ClaudeloopLocalConfig:
         """`[engines.claudeloop_local]`, validated, with the profile's environment override.
 
@@ -190,7 +231,25 @@ class LocalEngineSettings:
         from its configured profile, every other engine is its static descriptor."""
         if engine_id is EngineId.CLAUDELOOP_LOCAL:
             return self._descriptors.build(self.claudeloop_local)
-        return BY_ENGINE_ID[engine_id]
+        descriptor = BY_ENGINE_ID[engine_id]
+        turns = self.max_turns
+        if turns is None or engine_id not in RUNNER_VARIABLES:
+            return descriptor
+        return replace(
+            descriptor,
+            effort_projection={
+                effort: self._with_turns(invocation, turns)
+                for effort, invocation in descriptor.effort_projection.items()
+            },
+        )
+
+    @staticmethod
+    def _with_turns(invocation: EngineInvocation, turns: int) -> EngineInvocation:
+        """The invocation with its `--max-turns` replaced. ULTRA has none (the runner's own
+        limit, with the adapter re-invoking it pass after pass) and stays as it is."""
+        return (
+            replace(invocation, argv=("--max-turns", str(turns))) if invocation.argv else invocation
+        )
 
     def descriptors(self) -> tuple[EngineDescriptor, ...]:
         return tuple(self.descriptor(engine_id) for engine_id in self.enabled_engines)
