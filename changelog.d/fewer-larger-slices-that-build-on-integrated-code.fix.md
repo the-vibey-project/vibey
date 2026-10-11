@@ -5,9 +5,8 @@
   base and a local model spent 55 turns searching for routes that were not there. (1) The
   sovereign decomposer now folds an item that touches no file into the dependency it verifies: its
   criteria and checks move there, that item inherits what the folded one waited for, and anything
-  that waited on the folded item waits on it instead (not past the six-criteria cap, and an item
-  with no dependency to fold into stays for the plan check to name). The prompt asks for two to
-  four vertical slices and says a check is never an item. (2) A dependent `build.implement` job
+  that waited on the folded item waits on it instead (an item with no dependency to fold into
+  stays for the plan check to name). The prompt says a check is never an item. (2) A dependent `build.implement` job
   now defers, without using an attempt and without touching an engine circuit, until a succeeded
   `build.integrate` job covers each item it builds on, so its branch is cut from the integration
   branch with their code on it. The queue only waited for the dependency's implement job, which

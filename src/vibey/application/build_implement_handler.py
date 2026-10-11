@@ -41,6 +41,7 @@ from pathlib import Path
 from uuid import UUID, uuid4
 
 from vibey.application.build_brief import render_work_item_brief
+from vibey.application.build_dependency_wait import DEFAULT_DEPENDENCY_WAIT, DependencyWait
 from vibey.application.build_engine_run import BuildLedger, run_and_record
 from vibey.application.build_verify_handler import granted_amount, granted_limit
 from vibey.application.dto import EngineEvent, EnqueueRequest, HumanGateRequest, JobRecord, RunSpec
@@ -75,7 +76,6 @@ from vibey.domain.job import (
     ESCALATION_EXHAUSTED_GATE_KIND,
     FOREIGN_BRANCH_GATE_KIND,
     FailureClass,
-    JobState,
     idempotency_key,
 )
 from vibey.domain.ledger import EventKind
@@ -98,7 +98,7 @@ class BuildImplementHandler:
         clock: Clock,
         provision_spec: ProvisionSpec = _EMPTY_PROVISION_SPEC,
         capacity_backoff: timedelta = timedelta(minutes=5),
-        dependency_wait: timedelta = timedelta(seconds=60),
+        dependency_wait: timedelta = DEFAULT_DEPENDENCY_WAIT,
         specs: DesignSpecRepository | None = None,
         budget_source: BudgetSource | None = None,
         wind_down: WindDownOrchestrator | None = None,
@@ -138,19 +138,15 @@ class BuildImplementHandler:
         if job.work_item_id is None:
             return Failure(FailureClass.VIBEY, "build.implement job is missing work_item_id")
 
-        waiting_for = await self._unintegrated_dependencies(job)
-        if waiting_for:
-            # Not a failure and not an attempt (a defer hands the attempt back): the item
-            # starts when what it builds on is on the integration branch, so its worktree
-            # is cut from that code and not from the bare base a dependent otherwise got
-            # whenever the queue reached it before its dependency's verify and integrate.
-            return Defer(
-                retry_at=self._clock.now() + self._dependency_wait,
-                detail=(
-                    f"waiting for {', '.join(waiting_for)} to be integrated, so this item "
-                    "builds on their code"
-                ),
-            )
+        # Not a failure and not an attempt (a defer hands the attempt back): the item starts
+        # when what it builds on is on the integration branch, so its worktree is cut from that
+        # code. (The worker also asks before choosing an engine; this is the same answer for a
+        # handler used on its own.)
+        deferral = await DependencyWait(
+            jobs=self._jobs, clock=self._clock, wait=self._dependency_wait
+        ).deferral(job)
+        if deferral is not None:
+            return deferral
 
         base_effort = PHASE_BASE_EFFORT[Phase.BUILD]
         ultra_pass: UltraPassInterface | None = None
@@ -173,20 +169,6 @@ class BuildImplementHandler:
         if isinstance(outcome, Success) and ultra_pass is not None:
             await self._next_pass(job, ultra_pass, outcome)
         return outcome
-
-    async def _unintegrated_dependencies(self, job: JobRecord) -> tuple[str, ...]:
-        """The items this one builds on that no succeeded `build.integrate` job covers yet."""
-        raw = job.payload.get("depends_on_items")
-        if not isinstance(raw, list | tuple) or not raw:
-            return ()
-        integrated = {
-            record.work_item_id
-            for record in await self._jobs.list_for_cycle(
-                job.project_id, cycle=job.cycle, kind="build.integrate"
-            )
-            if record.state == JobState.SUCCEEDED
-        }
-        return tuple(str(dep) for dep in raw if str(dep) not in integrated)
 
     async def _ultra_gate(self, job: JobRecord, state: UltraState) -> Outcome | None:
         """Stop and the missing cap end or park the pass here; the brake parks it in

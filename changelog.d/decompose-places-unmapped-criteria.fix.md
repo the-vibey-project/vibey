@@ -9,4 +9,4 @@
   check then runs over the result as before, so an answer that names no item still refuses the
   plan, naming the criterion. An item that lists a criterion in its verification but forgot to
   claim it is now credited with it rather than re-asked. Every other rule (missing files,
-  dependency order, the size caps) re-asks as it did.
+  dependency order) re-asks as it did.

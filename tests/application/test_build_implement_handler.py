@@ -1005,7 +1005,7 @@ async def test_a_dependent_waits_until_its_dependency_is_integrated(tmp_path: Pa
 
     assert isinstance(outcome, Defer)
     assert outcome.capacity is False  # not an engine signal: no circuit may open on it
-    assert outcome.retry_at == FixedClock().now() + timedelta(seconds=60)
+    assert outcome.retry_at == FixedClock().now() + timedelta(seconds=5)
     assert "waiting for ws to be integrated" in outcome.detail
     assert worktrees.created == [] and ledger.recorded == []  # nothing was started
 
