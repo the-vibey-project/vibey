@@ -25,6 +25,7 @@ from vibey.infrastructure.engines.interfaces.ollama_chat_interface import (
     OllamaChatClientInterface,
     OllamaTransportInterface,
 )
+from vibey.infrastructure.engines.interfaces.session_log_interface import SessionLogInterface
 from vibey.infrastructure.engines.interfaces.validated_ask_interface import (
     JsonShapeCheckerInterface,
     ValidatedAskInterface,
@@ -37,6 +38,7 @@ __all__ = [
     "LocalEngineSettingsInterface",
     "OllamaChatClientInterface",
     "OllamaTransportInterface",
+    "SessionLogInterface",
     "GptossloopDesignProviderInterface",
     "GptossloopWorkPlanProducerInterface",
     "JsonShapeCheckerInterface",

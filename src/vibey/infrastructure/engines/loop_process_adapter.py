@@ -47,7 +47,9 @@ from vibey.infrastructure.engines.engine_environment import EngineEnvironmentPol
 from vibey.infrastructure.engines.interfaces.engine_environment_interface import (
     EngineEnvironmentPolicyInterface,
 )
+from vibey.infrastructure.engines.interfaces.session_log_interface import SessionLogInterface
 from vibey.infrastructure.engines.loop_events import translate_event_type
+from vibey.infrastructure.engines.session_log import SessionLog
 from vibey.infrastructure.process import (
     DEFAULT_KILL_GRACE_SECONDS,
     ChildEnvironment,
@@ -160,6 +162,13 @@ class LoopProcessAdapter:
     )
     """Where vibey's own Python environment lives, stripped from every engine
     session. Shared with the gate runner, so the two apply the same guard."""
+    session_log: SessionLogInterface = field(
+        default_factory=lambda: SessionLog.from_environment(os.environ),
+        compare=False,
+        repr=False,
+    )
+    """Tells the wire log where each session writes its events, so `vibey llm tail` follows
+    BUILD and REVIEW as it follows DESIGN. Does nothing unless the wire log is on."""
     _reaper: ProcessReaperInterface = field(init=False, compare=False, repr=False)
 
     def __post_init__(self) -> None:
@@ -434,6 +443,13 @@ class LoopProcessAdapter:
             run_id=str(spec.run_id),
             pid=process.pid,
             active_count=len(_active_processes),
+        )
+
+        self.session_log.started(
+            engine=self.descriptor.engine_id.value,
+            run_id=str(spec.run_id),
+            events_path=run_dir / "events.jsonl",
+            work_item=spec.worktree_path.name,
         )
 
         return RunHandle(

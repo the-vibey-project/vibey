@@ -1,9 +1,12 @@
 # Made with ❤️ by [Vibey](https://the-vibey-project.github.io/vibey/), Developed by [Adam Matthew Steinberger](https://vibewithadam.matthewsteinberger.com/) ([@adammatthewsteinberger](https://github.com/adammatthewsteinberger/)).
-"""`vibey llm`: the conversation with the local model, as it happens.
+"""`vibey llm`: the conversation with the local model, as it happens, in every phase.
 
-`vibey llm tail` follows the wire log (`-vvv`, or `VIBEY_LLM_WIRE_LOG=path`): each request
-the sovereign DESIGN and DECOMPOSE providers send, the answer and the reasoning as they
-stream back, and the model's own counts and timings. It only reads."""
+`vibey llm tail` follows the wire log (`-vvv`, or `VIBEY_LLM_WIRE_LOG=path`): each request the
+sovereign DESIGN and DECOMPOSE providers send, the answer and the reasoning as they stream
+back, and the model's own counts and timings. BUILD and REVIEW run in an engine's own process,
+so the worker notes each engine session in the same log, and the tail follows that session's
+events too (every tool call and its result, the streamed answer, the reasoning, each turn's
+time and tokens). It moves to the next session by itself when one starts. It only reads."""
 
 import json
 import os
@@ -14,8 +17,11 @@ import typer
 
 from vibey.infrastructure.engines.wire_log import WIRE_LOG_ENV, default_wire_log_path
 from vibey.infrastructure.engines.wire_log_reader import (
+    RunEventFormatter,
     WireFormatter,
-    follow_records,
+    follow_live,
+    last_session_index,
+    session_events,
     snapshot,
     start_of_latest_call,
 )
@@ -53,24 +59,40 @@ def tail(
         typer.Option("--max-chars", min=1, help="Cut each prompt message to this many characters"),
     ] = None,
 ) -> None:
-    """Follow the conversation with the local model, token by token.
+    """Follow the conversation with the local model, in every phase, as it happens.
 
-    Starts at the latest call and keeps going until interrupted. Run any `vibey` command
-    with -vvv (or VIBEY_LLM_WIRE_LOG=path) in another terminal to fill the log."""
+    Starts at the latest call or engine session and keeps going until interrupted, switching
+    to each new engine session by itself. Run any `vibey` command with -vvv (or
+    VIBEY_LLM_WIRE_LOG=path) in another terminal to fill the log."""
     path = wire_log_path(file)
-    formatter = WireFormatter(max_chars=max_chars)
+    wire = WireFormatter(max_chars=max_chars)
+    engine = RunEventFormatter(max_chars=max_chars)
+    last: list[str] = []  # which stream wrote last: "wire" or "run"
 
-    def show(record: dict[str, object]) -> None:
+    def show(source: str, record: dict[str, object]) -> None:
         if raw:
             typer.echo(json.dumps(record, ensure_ascii=False))
-        else:
-            typer.echo(formatter.render(record), nl=False)
+            return
+        if last and last[-1] != source:
+            # Output moves between streams: end the answer the other one left open.
+            typer.echo((wire if last[-1] == "wire" else engine).close(), nl=False)
+        last[:] = [source]
+        typer.echo((wire if source == "wire" else engine).render(record), nl=False)
 
     offset = 0
+    session: dict[str, object] | None = None
+    session_offset = 0
     if path.exists():
         records, offset = snapshot(path)
-        for record in records if all_calls else records[start_of_latest_call(records) :]:
-            show(record)
+        newest = last_session_index(records) or 0
+        first = 0 if all_calls else max(start_of_latest_call(records), newest)
+        for record in records[first:]:
+            show("wire", record)
+            if record.get("kind") == "session":
+                events, session_offset = session_events(record)
+                session = record
+                for event in events:
+                    show("run", event)
     elif follow:
         typer.echo(f"waiting for {path} (run a vibey command with -vvv)", err=True)
     else:
@@ -79,7 +101,9 @@ def tail(
     if not follow:
         return
     try:
-        for record in follow_records(path, offset):
-            show(record)
+        for source, record, _ in follow_live(
+            path, offset, session=session, session_offset=session_offset
+        ):
+            show(source, record)
     except KeyboardInterrupt:
         typer.echo("")

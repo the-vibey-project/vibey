@@ -38,6 +38,7 @@ _CHARS_PER_TOKEN = 4
 _RESPONSE_TOKEN_RESERVE = 2048
 _VERDICT_TOOL_NAME = "qwenloop-verdict"
 _MAX_INVALID_COMPLETION_CLAIMS = 3
+_MAX_RECORDED_REASONING_CHARS = 4000
 #: Consecutive unparseable tool calls one turn may retry before the run fails (#386).
 _MAX_TOOL_CALL_PARSE_RETRIES = 3
 #: The callable tools as every prompt names them: the same list the schema advertises.
@@ -425,6 +426,18 @@ class AutonomousRunner:
                             tool_call_id=call_id,
                         )
                     )
+            if reasoning:
+                # What the model thought before it acted, for `vibey llm tail` to show beside
+                # the tool calls: the answer was always recorded (text_delta), the reasoning
+                # only counted. Capped, because a long reasoning pass is megabytes of a run.
+                self._store.append_event(
+                    run_id,
+                    {
+                        "type": "reasoning",
+                        "turn": turn,
+                        "text": reasoning[:_MAX_RECORDED_REASONING_CHARS],
+                    },
+                )
             # One boundary per model call, once its stream has ended: the event a reader
             # counts turns from. text_delta fires once per streamed fragment, so counting
             # those overstated turns by the length of every answer (vibey's turn cap did).

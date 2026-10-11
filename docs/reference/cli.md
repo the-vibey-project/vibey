@@ -537,12 +537,14 @@ The conversation with the local model, as it happens. It only reads.
 
 | Subcommand | Options | What it does |
 |---|---|---|
-| `llm tail` | `--file PATH`, `--all`, `--no-follow`, `--raw`, `--max-chars N` | Follows the [wire log](../guides/local-models-ollama.md#watching-the-model-think): each request the sovereign DESIGN and DECOMPOSE providers send (model, limits, the system and user messages), the reasoning and the answer as they stream back, and the model's own counts and speed (`prompt N tokens`, `output N tokens`, `N tokens/s`). Starts at the latest call and keeps following until interrupted; `--all` starts at the beginning of the file, `--no-follow` prints and exits (exit 1 when there is no log), `--raw` prints the JSON lines as written, `--max-chars` cuts each prompt message. |
+| `llm tail` | `--file PATH`, `--all`, `--no-follow`, `--raw`, `--max-chars N` | Follows the [wire log](../guides/local-models-ollama.md#watching-the-model-think) in **every phase**: each request DESIGN and DECOMPOSE send the model, its reasoning and answer as they stream back, and the model's own counts and timings; and, for BUILD and REVIEW, each engine session the worker started: every tool call and its result, the streamed answer, the reasoning, and each turn's time and tokens. It starts at the latest call or session and **switches to each new session by itself** (a new run id means a new events file). `--all` starts from the beginning, with every session; `--raw` prints the JSON lines as written. |
 
 The log is written when a command runs with `-vvv`, or with `VIBEY_LLM_WIRE_LOG=path`
 (see [`VIBEY_LLM_WIRE_LOG`](configuration.md#environment-variables)). Without either, nothing is
 written and the model is asked exactly as before. The default file is
-`~/.local/state/vibey/llm-wire.jsonl`, readable by its owner alone.
+`~/.local/state/vibey/llm-wire.jsonl`, readable by its owner alone. With it on, the worker also
+notes each engine session in the log (a `session` record naming that run's `events.jsonl`), which
+is how the tail knows where BUILD and REVIEW write; the records hold ids and paths only.
 
 ## `vibey search` and `vibey fetch`
 
@@ -602,6 +604,33 @@ alive keeps them; so the one command for a stuck queue is
 
 Prints `Recovered N stuck job(s).`, where N is the number of rows actually
 reset, read from PostgreSQL's `UPDATE n` status tag.
+
+## `vibey retry PROJECT_ID`
+
+Get a stalled project moving again in one command. A project that stalls on a bad model answer
+parks its job on an `attempts_exhausted` gate; this does what used to be `recover --stop-workers`,
+`gates`, `answer --raw '{"max_attempts": N}'` and a hand-written worker restart, in that order.
+
+| Option | Default | What it does |
+|---|---|---|
+| `--max-attempts N` | `10` | Attempts to grant on each of the project's `attempts_exhausted` gates. |
+| `--keep-workers` | off | Do not stop this user's running workers first. |
+| `--start-worker` | off | Then start `vibey worker --project PROJECT_ID` detached, with every argument after `--` passed to it. |
+| `--log PATH` | `$XDG_STATE_HOME/vibey/worker-<project>.log` | Where the started worker's output is appended. |
+| `--grace SECONDS` | `10` | How long a worker gets after SIGTERM before SIGKILL. |
+| `--dry-run` | off | Change nothing: list the workers that would be stopped, the gates that would be granted and the worker that would be started. |
+
+```sh
+vibey retry 6b45e169-4653-4a8d-941c-7440249dc8ef --start-worker -- --engines gptossloop --auto-answer
+```
+
+Workers are stopped exactly as `recover --stop-workers` stops them, and if one survives SIGKILL
+nothing else is done (a live worker holds its leases). Only `attempts_exhausted` gates are
+answered, each as a named request (`retry-<gate>-<N>`, by `vibey retry`) so running the command
+twice answers a gate once. Any other open gate is a decision: it is counted and pointed at
+`vibey gates PROJECT_ID`, never answered. The started worker is its own session, so closing the
+terminal does not stop it, and `vibey recover --stop-workers` finds it by its command line.
+Updating vibey itself (`git pull`, `uv sync`) is not part of this.
 
 ## `vibey status [PROJECT_ID]`
 
