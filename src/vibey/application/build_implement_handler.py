@@ -40,6 +40,7 @@ from datetime import timedelta
 from pathlib import Path
 from uuid import UUID, uuid4
 
+from vibey.application.build_brief import render_work_item_brief
 from vibey.application.build_engine_run import BuildLedger, run_and_record
 from vibey.application.build_verify_handler import granted_amount, granted_limit
 from vibey.application.dto import EngineEvent, EnqueueRequest, HumanGateRequest, JobRecord, RunSpec
@@ -52,6 +53,7 @@ from vibey.application.interfaces import (
     SkillsContextCompiler,
     TelemetryTracer,
 )
+from vibey.application.interfaces.design import DesignSpecRepository
 from vibey.application.ports import Clock, EngineAdapter, HumanGateRepository, JobRepository
 from vibey.application.wind_down import WindDownOrchestrator
 from vibey.application.worker import Defer, Failure, Outcome, Park, Success
@@ -97,6 +99,7 @@ class BuildImplementHandler:
         provision_spec: ProvisionSpec = _EMPTY_PROVISION_SPEC,
         capacity_backoff: timedelta = timedelta(minutes=5),
         dependency_wait: timedelta = timedelta(seconds=60),
+        specs: DesignSpecRepository | None = None,
         budget_source: BudgetSource | None = None,
         wind_down: WindDownOrchestrator | None = None,
         human_gates: HumanGateRepository | None = None,
@@ -121,6 +124,7 @@ class BuildImplementHandler:
         self._provision_spec = provision_spec
         self._capacity_backoff = capacity_backoff
         self._dependency_wait = dependency_wait
+        self._specs = specs
         self._budget_source = budget_source
         self._wind_down = wind_down
         self._human_gates = human_gates
@@ -371,7 +375,15 @@ class BuildImplementHandler:
             return Park(HumanGateRequest(kind=FOREIGN_BRANCH_GATE_KIND, prompt=str(refused)))
         await self._provisioner.provision(worktree_path, self._provision_spec)
 
-        prompt = _render_prompt(item, job.payload, _house_rules_for(worktree_path))
+        # The accepted spec is published to the checkout's working tree, which a worktree cut
+        # from a commit never sees, so the brief travels in the prompt itself.
+        spec = await self._specs.load(job.project_id, job.cycle) if self._specs else None
+        prompt = _render_prompt(
+            item,
+            job.payload,
+            _house_rules_for(worktree_path),
+            render_work_item_brief(spec, job.payload),
+        )
         # A wind-down seed is a gate-verified no-loss brief and must reach the
         # next engine byte-for-byte. Retrieval resumes on ordinary and repair
         # jobs; it never mutates this handoff contract.
@@ -540,7 +552,10 @@ def _house_rules_for(worktree_path: Path) -> str:
 
 
 def _render_prompt(
-    item_id: str, payload: Mapping[str, object], house_rules: str = _HOUSE_RULES
+    item_id: str,
+    payload: Mapping[str, object],
+    house_rules: str = _HOUSE_RULES,
+    brief: str = "",
 ) -> str:
     seed = payload.get("seed_prompt")
     if isinstance(seed, str) and seed:
@@ -559,9 +574,10 @@ def _render_prompt(
         if isinstance(repair_detail, str) and repair_detail
         else ""
     )
+    framing = f"{brief}\n" if brief else ""
     return (
         f"Implement work item {item_id}: {title}\n\n"
-        f"{repair_note}{house_rules}\nVerify your work with:\n{checklist}\n"
+        f"{framing}{repair_note}{house_rules}\nVerify your work with:\n{checklist}\n"
     )
 
 

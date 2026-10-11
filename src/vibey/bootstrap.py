@@ -698,6 +698,7 @@ def build_full_worker(
             tracer=tracer,
             ultra_ledger=resources.ledger,
             checkpoint=GitCheckpoint(),
+            specs=resources.design_specs,
         )
         return _recording(handler, adapter, meter)
 
