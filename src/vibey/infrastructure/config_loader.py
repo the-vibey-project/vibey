@@ -36,6 +36,9 @@ RUNTIME_CONFIG_KEYS = (
     # Which gate kinds may resolve to their default after waiting (12.d: declared, never
     # assumed). Validated below so a kind that cannot time out is refused at `vibey new`.
     "human_gates",
+    # What happens to a finished project's work after REVIEW (off unless declared). Without this
+    # entry `[publish]` in vibey.toml is never copied into the project, and nothing publishes.
+    "publish",
 )
 
 # Every operational surface's environment overlay: (table, key, variable,
