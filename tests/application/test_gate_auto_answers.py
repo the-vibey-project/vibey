@@ -201,3 +201,32 @@ async def test_with_no_acceptance_flag_the_same_gates_wait_for_a_person() -> Non
 
     assert answers.calls == [] and report.answered == ()
     assert len(report.left) == 2
+
+
+async def test_the_publish_interview_is_answered_as_proposed_only_with_its_own_flag() -> None:
+    publish = _with_options(_kind("publish_interview"), "accept_defaults", "custom", "skip")
+    answers_on, answers_off = _Answers(), _Answers()
+    on = GateAutoAnswerSweep(
+        gates=_gates(publish),
+        answers=answers_on,
+        policy=GateAutoAnswerPolicy(answer_retries=False, publish=True),
+        clock=_Clock(),
+        logger=_Logger(),
+    )
+    off = GateAutoAnswerSweep(
+        gates=_gates(publish),
+        answers=answers_off,
+        policy=GateAutoAnswerPolicy(answer_retries=False, accept_review=True, finish_local=True),
+        clock=_Clock(),
+        logger=_Logger(),
+    )
+
+    done = await on.run(PROJECT)
+    left = await off.run(PROJECT)
+
+    assert [(gid, answer) for gid, answer, _by, _rid in answers_on.calls] == [
+        (publish.gate_id, {"choice": "accept_defaults"})
+    ]
+    assert [g.gate_kind for g in done.answered] == ["publish_interview"]
+    assert answers_off.calls == [] and left.answered == ()
+    assert left.left == (f"publish_interview gate {publish.gate_id}",)

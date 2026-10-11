@@ -3166,7 +3166,12 @@ def test_worker_auto_accept_design_imports_the_named_spec_and_survives_a_failed_
 
 
 def test_worker_acceptance_flags_refuse_to_serve_every_project() -> None:
-    for flag in ("--auto-accept-review", "--auto-finish-local", "--auto-accept-all"):
+    for flag in (
+        "--auto-accept-review",
+        "--auto-finish-local",
+        "--auto-accept-all",
+        "--auto-publish",
+    ):
         res = runner.invoke(app, ["worker", flag, "--all-projects"])
         assert res.exit_code == 2, flag
         assert "use --project, not --all-projects" in res.output

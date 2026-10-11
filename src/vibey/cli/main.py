@@ -2045,6 +2045,19 @@ def worker(
             ),
         ),
     ] = False,
+    auto_publish: Annotated[
+        bool,
+        typer.Option(
+            "--auto-publish",
+            help=(
+                "Answer this project's publish interview with 'accept_defaults': publish exactly "
+                "what its prompt shows, a draft pull request (or a new private repository for a "
+                "project with no remote), never 'custom'. This sends the finished work to "
+                "GitHub, so it is its own flag: no other --auto-accept flag implies it. Only "
+                "for a project whose `[publish] mode` is `interview`; one worker, one project."
+            ),
+        ),
+    ] = False,
     auto_accept_all: Annotated[
         bool,
         typer.Option(
@@ -2105,10 +2118,10 @@ def worker(
     accept_design_on = auto_accept_design or auto_accept_all
     accept_review_on = auto_accept_review or auto_accept_all
     finish_local_on = auto_finish_local or auto_accept_all
-    if (accept_design_on or accept_review_on or finish_local_on) and all_projects:
+    if (accept_design_on or accept_review_on or finish_local_on or auto_publish) and all_projects:
         typer.echo(
-            "--auto-accept-design, --auto-accept-review, --auto-finish-local and "
-            "--auto-accept-all accept one project's decisions: use --project, not "
+            "--auto-accept-design, --auto-accept-review, --auto-finish-local, --auto-publish "
+            "and --auto-accept-all accept one project's decisions: use --project, not "
             "--all-projects"
         )
         raise typer.Exit(EXIT_USAGE)
@@ -2211,12 +2224,13 @@ def worker(
                 search_overlay[COMMAND_VARIABLE] = vibey_command(sys.argv[0])
             typer.echo(web_search_line(web_settings), err=True)
             auto_answers: GateAutoAnswerSweepInterface | None = None
-            if auto_answer or accept_review_on or finish_local_on:
+            if auto_answer or accept_review_on or finish_local_on or auto_publish:
                 policy = GateAutoAnswerPolicy(
                     limit=auto_answer_limit,
                     answer_retries=auto_answer,
                     accept_review=accept_review_on,
                     finish_local=finish_local_on,
+                    publish=auto_publish,
                 )
                 auto_answers = GateAutoAnswerSweep(
                     gates=resources.gates,

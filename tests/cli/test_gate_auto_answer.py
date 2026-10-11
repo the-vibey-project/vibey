@@ -69,3 +69,17 @@ def test_finishing_local_alone_names_only_the_deployment_choice() -> None:
 
     assert "the deployment choice (local_only, never deploy)" in line
     assert "REVIEW approvals" not in line and "interview" not in line
+
+
+def test_publishing_is_named_loudly_because_it_pushes_the_work_to_github() -> None:
+    line = auto_answer_startup_line(GateAutoAnswerPolicy(answer_retries=False, publish=True))
+
+    assert "the publish interview as proposed (this PUSHES the finished work to GitHub)" in line
+    assert "spending gates and every deployment gate still wait for you" in line
+
+
+def test_publishing_with_the_retry_flag_is_not_the_original_line() -> None:
+    line = auto_answer_startup_line(GateAutoAnswerPolicy(publish=True))
+
+    assert line.startswith("auto-answer: on, up to 30 answers: the interview and retry gates, ")
+    assert "PUSHES" in line

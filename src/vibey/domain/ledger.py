@@ -65,6 +65,10 @@ class EventKind(StrEnum):
     VISUAL_DESIGN_WAIVED = "VisualDesignWaived"
     DEPLOYMENT_OPTED_IN = "DeploymentOptedIn"
     DEPLOYMENT_DECLINED = "DeploymentDeclined"
+    # The last step of a delivered project: its work was pushed (a pull request opened, or a new
+    # repository created), or the operator chose not to. Never a deployment.
+    PUBLISH_COMPLETED = "PublishCompleted"
+    PUBLISH_SKIPPED = "PublishSkipped"
     # A derived, append-only delivery forecast. It is not spend itself: the payload
     # carries measured usage, planned usage and the material/calculus basis.
     DELIVERY_ESTIMATE_RECORDED = "DeliveryEstimateRecorded"

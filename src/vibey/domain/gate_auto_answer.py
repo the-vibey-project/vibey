@@ -52,6 +52,10 @@ class GateAutoAnswerPolicy:
       (never `changes` or `cancel`), and only when the gate offers it.
     - `finish_local` (`--auto-finish-local`): the deployment choice after REVIEW, answered
       `local_only` -- the gate's own default -- and never `deploy`, and only when it offers it.
+    - `publish` (`--auto-publish`): the `publish_interview` gate, answered `accept_defaults`:
+      publish exactly what its prompt showed (never `custom`), and only when it offers it. It
+      is its own flag because it is the one acceptance that sends work off the machine; the
+      other flags, `--auto-accept-all` included, never answer it.
 
     A deployment gate (`deploy_acceptance` is consent to change real infrastructure) and a
     spending gate have no flag and are never answered, whatever is set here.
@@ -61,6 +65,7 @@ class GateAutoAnswerPolicy:
     answer_retries: bool = True
     accept_review: bool = False
     finish_local: bool = False
+    publish: bool = False
 
     def __post_init__(self) -> None:
         if isinstance(self.limit, bool) or self.limit < 1:
@@ -73,6 +78,12 @@ class GateAutoAnswerPolicy:
         if kind == "choice":
             return (
                 {"choice": "local_only"} if self.finish_local and "local_only" in options else None
+            )
+        if kind == "publish_interview":
+            return (
+                {"choice": "accept_defaults"}
+                if self.publish and "accept_defaults" in options
+                else None
             )
         if not self.answer_retries:
             return None

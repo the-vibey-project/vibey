@@ -183,6 +183,7 @@ from vibey.application.interfaces.projects import (
     ProjectStore,
     ProjectTransitioner,
 )
+from vibey.application.interfaces.publish import PublisherInterface
 from vibey.application.interfaces.queue import (
     Defer,
     Failure,
@@ -262,6 +263,7 @@ __all__ = [
     "DesignAcceptorInterface",
     "DesignAutoAcceptInterface",
     "GateAutoAnswerSweepInterface",
+    "PublisherInterface",
     "GateTimeoutSweepInterface",
     "Logger",
     "NotificationSink",

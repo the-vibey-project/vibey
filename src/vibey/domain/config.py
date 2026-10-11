@@ -6,6 +6,7 @@ either a validated ``VibeyConfig`` or a list of ``ConfigError``s. It never
 touches the filesystem — reading the file is an infrastructure concern.
 """
 
+import re
 import tomllib
 from collections.abc import Mapping
 from dataclasses import dataclass, field
@@ -780,6 +781,82 @@ class EngineDispatchConfig:
         return value
 
 
+PUBLISH_MODES = ("off", "interview", "auto")
+PUBLISH_VISIBILITIES = ("private", "public")
+_SAFE_NAME = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._/-]*$")
+"""A branch, remote or owner name that cannot be read as a command-line option and holds no
+space, quote or shell character: it is passed to `git` and `gh` as an argument."""
+
+
+@dataclass(frozen=True, slots=True)
+class PublishConfig:
+    """`[publish]`: what happens to a finished project's work after REVIEW.
+
+    Nothing leaves the machine unless `mode` says so. `off` (the default) finishes locally, as
+    before. `interview` raises a `publish_interview` gate showing exactly what would be pushed
+    and where, and waits for a person (or for a worker started with `--auto-publish`, which
+    accepts the proposal as written). `auto` publishes the proposal without a gate.
+
+    A project whose checkout has a remote gets its work pushed on its own branch and a pull
+    request opened (`draft` says whether as a draft); one with no remote gets a new GitHub
+    repository (`visibility`, under `owner`) and the work pushed to it. `private` and a draft
+    pull request are the defaults: a public repository or a pull request ready for review is
+    an explicit choice. Nothing here ever forces a push or touches the default branch.
+    """
+
+    mode: str = "off"
+    visibility: str = "private"
+    draft: bool = True
+    base: str | None = None
+    remote: str = "origin"
+    owner: str | None = None
+
+    @classmethod
+    def from_data(cls, data: Mapping[str, Any]) -> "PublishConfig":
+        """Read `[publish]` from a whole parsed document or a project's stored config."""
+        raw = data.get("publish")
+        if raw is None:
+            return cls()
+        if not isinstance(raw, Mapping):
+            raise ConfigError("publish", "must be a table")
+        table = dict(raw)
+        known = {"mode", "visibility", "draft", "base", "remote", "owner"}
+        unknown = sorted(set(table) - known)
+        if unknown:
+            raise ConfigError(
+                f"publish.{unknown[0]}", f"is not a setting (known: {', '.join(sorted(known))})"
+            )
+        mode = _optional(table, "mode", "publish.mode", str, "off")
+        if mode not in PUBLISH_MODES:
+            raise ConfigError("publish.mode", f"must be one of {PUBLISH_MODES}")
+        visibility = _optional(table, "visibility", "publish.visibility", str, "private")
+        if visibility not in PUBLISH_VISIBILITIES:
+            raise ConfigError("publish.visibility", f"must be one of {PUBLISH_VISIBILITIES}")
+        draft = table.get("draft", True)
+        if not isinstance(draft, bool):
+            raise ConfigError("publish.draft", "must be true or false")
+        return cls(
+            mode=mode,
+            visibility=visibility,
+            draft=draft,
+            base=cls._name(table, "base", None),
+            remote=cls._name(table, "remote", "origin") or "origin",
+            owner=cls._name(table, "owner", None),
+        )
+
+    @staticmethod
+    def _name(table: dict[str, Any], key: str, default: str | None) -> str | None:
+        value = table.get(key, default)
+        if value is None:
+            return None
+        if not isinstance(value, str) or not _SAFE_NAME.fullmatch(value):
+            raise ConfigError(
+                f"publish.{key}",
+                "must be a plain name (letters, digits, '.', '_', '-', '/'), not an option",
+            )
+        return value
+
+
 @dataclass(frozen=True, slots=True)
 class VibeyConfig:
     project: ProjectConfig
@@ -808,6 +885,7 @@ class VibeyConfig:
     queue: QueueConfig = field(default_factory=QueueConfig)
     design: DesignConfig = field(default_factory=DesignConfig)
     engine_dispatch: EngineDispatchConfig = field(default_factory=EngineDispatchConfig)
+    publish: PublishConfig = field(default_factory=PublishConfig)
 
 
 def parse_toml_string(text: str) -> dict[str, Any]:
@@ -1234,6 +1312,7 @@ def parse_config(data: dict[str, Any]) -> VibeyConfig:
         queue=QueueConfig.from_data(data),
         design=DesignConfig.from_data(data),
         engine_dispatch=EngineDispatchConfig.from_data(data),
+        publish=PublishConfig.from_data(data),
     )
 
 

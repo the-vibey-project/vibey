@@ -70,6 +70,12 @@ EVERY_KIND: list[tuple[str, tuple[str, ...], str | None, str]] = [
         "accept_defaults",
         "--choice accept_defaults",
     ),
+    (
+        "publish_interview",
+        ("accept_defaults", "custom", "skip"),
+        "skip",
+        "--choice skip",
+    ),
     ("deploy_acceptance", ("accept", "reject"), "reject", "--choice reject"),
     (
         "deploy_failure_triage",

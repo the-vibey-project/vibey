@@ -105,3 +105,24 @@ def test_no_acceptance_flag_widens_to_a_deployment_a_spend_or_a_retry() -> None:
 def test_retries_can_be_switched_off_and_stay_on_by_default() -> None:
     assert GateAutoAnswerPolicy().answer_retries is True
     assert GateAutoAnswerPolicy(answer_retries=False).answer_for("escalation_exhausted") is None
+
+
+PUBLISH_OPTIONS = ("accept_defaults", "custom", "skip")
+
+
+def test_the_publish_interview_is_answered_as_proposed_only_when_asked_for() -> None:
+    on = GateAutoAnswerPolicy(answer_retries=False, publish=True)
+
+    assert on.answer_for("publish_interview", PUBLISH_OPTIONS) == {"choice": "accept_defaults"}
+    assert on.answer_for("publish_interview", ("custom", "skip")) is None
+    assert on.answer_for("publish_interview") is None
+    assert GateAutoAnswerPolicy().answer_for("publish_interview", PUBLISH_OPTIONS) is None
+
+
+def test_no_other_acceptance_flag_publishes_and_publishing_answers_nothing_else() -> None:
+    everything_else = GateAutoAnswerPolicy(accept_review=True, finish_local=True)
+    only_publish = GateAutoAnswerPolicy(answer_retries=False, publish=True)
+
+    assert everything_else.answer_for("publish_interview", PUBLISH_OPTIONS) is None
+    for kind in ("approval", "choice", "escalation_exhausted", "question", "deploy_acceptance"):
+        assert only_publish.answer_for(kind, ("accept", "local_only")) is None, kind

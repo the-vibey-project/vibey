@@ -8,7 +8,9 @@ from vibey.domain.gate_auto_answer import GateAutoAnswerPolicy
 def auto_answer_startup_line(policy: GateAutoAnswerPolicy) -> str:
     """Said once at startup: exactly which gates this worker will answer, so it is never a
     surprise, and which it never will."""
-    if policy.answer_retries and not (policy.accept_review or policy.finish_local):
+    if policy.answer_retries and not (
+        policy.accept_review or policy.finish_local or policy.publish
+    ):
         # The original wording, for the original flag alone.
         return (
             f"auto-answer: on, up to {policy.limit} answers; spending gates,"
@@ -21,6 +23,8 @@ def auto_answer_startup_line(policy: GateAutoAnswerPolicy) -> str:
         parts.append("REVIEW approvals (accept)")
     if policy.finish_local:
         parts.append("the deployment choice (local_only, never deploy)")
+    if policy.publish:
+        parts.append("the publish interview as proposed (this PUSHES the finished work to GitHub)")
     return (
         f"auto-answer: on, up to {policy.limit} answers: {', '.join(parts)}; spending gates"
         " and every deployment gate still wait for you"
