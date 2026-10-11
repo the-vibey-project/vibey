@@ -42,6 +42,7 @@ from vibey.cli.interfaces.queue_interface import (
     QueueCommandInterface,
     QueuePresenterInterface,
 )
+from vibey.cli.interfaces.retry_interface import RetryCommandInterface
 
 __all__ = [
     "GateNoticeDoctorInterface",
@@ -51,6 +52,7 @@ __all__ = [
     "AnswerRuleInterface",
     "GateAnswerCommandsInterface",
     "GatesCommandInterface",
+    "RetryCommandInterface",
     "GatesPresenterInterface",
     "LedgerExportCommandInterface",
     "LedgerSearchCommandInterface",
