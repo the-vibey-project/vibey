@@ -500,6 +500,7 @@ Bare `vibey design` prints help. Subcommands:
 - `criteria` — required list of objects with `criterion_id`, `given`, `when`, `then`, `fit`;
 - `constraints` — optional list of `{"text": ..., "kind": "hard" | "soft"}`;
 - `non_goals` — optional list of strings;
+- `research_gaps` — optional list of `{"topic": ..., "reason": ...}`: the topics that were not researched. Keep them when you edit a synthesized spec, since an import replaces the whole spec and a gap you leave out is no longer stated in it;
 - `nfrs` — optional list of objects with `nfr_id`, `attribute`, `scale`, `meter`, `must`, `wish` (string or `null`), `fit_criterion`.
 
 The shapes are the dataclasses in `src/vibey/domain/spec.py`. A missing
