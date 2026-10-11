@@ -175,3 +175,49 @@ def test_a_file_created_by_an_earlier_command_of_the_same_item_is_provided() -> 
     item = _item("ws", "echo x > made.txt", "cat made.txt", "cat never.txt")
     unresolved = PLAN_REFERENCE_CHECKER.unresolved([item], exists=lambda path: False)
     assert [(ref.path, ref.use) for ref in unresolved] == [("never.txt", READS)]
+
+
+@pytest.mark.parametrize(
+    "command",
+    [
+        "pytest -q tests/__tests__/ministry.test.ts",
+        "python -m pytest src/x.test.tsx::case",
+        "py.test -x src/a.mjs",
+        "FOO=1 pytest src/app/page.js",
+    ],
+)
+def test_pytest_pointed_at_a_typescript_or_javascript_file_is_rejected(command: str) -> None:
+    (message,) = PLAN_REFERENCE_CHECKER.violations(
+        [_item("ws", command, hint=("src/a.mjs",))], exists=lambda path: True
+    )
+
+    assert "item 'ws' runs pytest on" in message
+    assert "is not a Python file" in message
+    assert "npm script" in message
+
+
+def test_pytest_on_python_files_and_other_runners_on_typescript_are_left_alone() -> None:
+    items = [
+        _item("a", "pytest -q tests/test_x.py::test_a", "python -m pytest tests/"),
+        _item("b", "npm test -- src/x.test.ts", "npx vitest run src/x.test.ts"),
+        _item("c", "python -m unittest", "echo pytest src/x.ts", "pytest"),
+    ]
+
+    assert PLAN_REFERENCE_CHECKER.violations(items, exists=lambda path: True) == ()
+
+
+def test_the_wrong_files_are_listed_once_per_item_next_to_any_missing_files() -> None:
+    item = _item("ws", "pytest src/a.test.ts", "pytest src/a.test.ts src/b.test.ts", "node gone.js")
+
+    missing, wrong = PLAN_REFERENCE_CHECKER.violations(
+        [item], exists=lambda path: path != "gone.js"
+    )
+
+    assert "needs files nothing provides" in missing
+    assert "runs pytest on src/a.test.ts, src/b.test.ts," in wrong
+
+
+def test_empty_segments_between_separators_are_skipped_by_the_pytest_check() -> None:
+    item = _item("ws", "; pytest tests/test_a.py ;; && echo done")
+
+    assert PLAN_REFERENCE_CHECKER.violations([item], exists=lambda path: True) == ()

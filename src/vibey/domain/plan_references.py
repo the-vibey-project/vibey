@@ -100,6 +100,10 @@ _RUNNERS: Final[frozenset[str]] = frozenset({"uv", "poetry", "pipenv", "pdm", "h
 _SEPARATOR_CHARACTERS: Final[frozenset[str]] = frozenset("();|&")
 _OUTPUT_REDIRECTS: Final[frozenset[str]] = frozenset({">", ">>", ">|", "&>", "&>>"})
 _UNRESOLVABLE: Final[frozenset[str]] = frozenset("$*?[{~`")
+_NON_PYTHON_SUFFIXES: Final[frozenset[str]] = frozenset(
+    {".ts", ".tsx", ".js", ".jsx", ".mjs", ".cjs"}
+)
+"""Files pytest cannot run: a plan that points it at one can never pass."""
 
 
 class PlanReferenceChecker:
@@ -156,6 +160,45 @@ class PlanReferenceChecker:
         grouped: dict[str, list[UnresolvedReference]] = {}
         for reference in self.unresolved(items, exists=exists):
             grouped.setdefault(reference.item_id, []).append(reference)
+        return self._missing_messages(grouped) + self._pytest_messages(items)
+
+    def _pytest_messages(self, items: Sequence[ReferencingItemInterface]) -> tuple[str, ...]:
+        """A plan whose pytest commands name a TypeScript or JavaScript file: pytest runs
+        Python, so the plan is accepted, built, and then fails verification however good
+        the work is (measured: `pytest -q tests/__tests__/x.test.ts` on a Next.js repository)."""
+        messages: list[str] = []
+        for item in items:
+            wrong = sorted(
+                {
+                    path
+                    for command in item.verification.commands
+                    for path in self._non_python_pytest_targets(command)
+                }
+            )
+            if wrong:
+                messages.append(
+                    f"item {item.item_id!r} runs pytest on {', '.join(wrong)}, which "
+                    "is not a Python file: pytest cannot run it. Verify with this "
+                    "repository's own test runner (an npm script, for example) instead"
+                )
+        return tuple(messages)
+
+    def _non_python_pytest_targets(self, command: str) -> Iterator[str]:
+        for words, _, _ in self._segments(command):
+            words = self._unwrapped(words)
+            if not words:
+                continue
+            name, arguments = posixpath.basename(words[0]), words[1:]
+            if self._interpreter(name) is not None and arguments[:2] == ["-m", "pytest"]:
+                arguments = arguments[2:]
+            elif name not in {"pytest", "py.test"}:
+                continue
+            for reference in self._pytest_targets(arguments):
+                if posixpath.splitext(reference.path)[1] in _NON_PYTHON_SUFFIXES:
+                    yield reference.path
+
+    @staticmethod
+    def _missing_messages(grouped: Mapping[str, list[UnresolvedReference]]) -> tuple[str, ...]:
         return tuple(
             f"item {item_id!r} verification needs files nothing provides: "
             + "; ".join(
