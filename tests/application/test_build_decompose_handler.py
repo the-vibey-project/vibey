@@ -332,6 +332,8 @@ async def test_fan_out_stamps_the_integration_base_ref_on_every_item() -> None:
         # project in the same repository shares.
         assert record.payload["base_ref"] == WorktreeNaming(job.project_id, 1).integration_branch
         assert record.payload["base_ref"] == f"vibey/{job.project_id.hex[:8]}/1/integration"
+        # What this item builds on, so its implement job can wait for it to be integrated.
+        assert isinstance(record.payload["depends_on_items"], list)
 
 
 class Checkout:

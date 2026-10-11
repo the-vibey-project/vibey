@@ -12,7 +12,7 @@ from vibey.application.dto import EngineEvent
 from vibey.application.interfaces import SkillsContextResult
 from vibey.application.worker import Defer, Failure, Park, Success
 from vibey.domain.errors import ForeignBranchRefused
-from vibey.domain.job import FOREIGN_BRANCH_GATE_KIND, FailureClass
+from vibey.domain.job import FOREIGN_BRANCH_GATE_KIND, FailureClass, JobState
 from vibey.domain.provision import ProvisionSpec
 from vibey.infrastructure.engines.descriptors import CLAUDELOOP
 from vibey.infrastructure.engines.scripted import ScriptedEngine
@@ -963,3 +963,108 @@ def test_a_node_repository_gets_node_house_rules_and_any_other_the_python_ones(
     )
     assert "House rules:\n- Put each test next to the code" in rendered
     assert rendered.endswith("- npm test\n")
+
+
+# ── a dependent item waits until what it builds on is integrated ─────────────
+
+
+def _integrate_job(project_id: UUID, work_item_id: str, state: JobState):  # type: ignore[no-untyped-def]
+    return replace(
+        make_job(project_id, state=state),
+        kind="build.integrate",
+        work_item_id=work_item_id,
+    )
+
+
+def _dependent(project_id: UUID, depends_on: object):  # type: ignore[no-untyped-def]
+    return replace(
+        make_job(project_id, attempts=1),
+        kind="build.implement",
+        work_item_id="c8",
+        payload={"title": "t", "verification": {}, "depends_on_items": depends_on},
+    )
+
+
+async def test_a_dependent_waits_until_its_dependency_is_integrated(tmp_path: Path) -> None:
+    """c4 started on the bare base because ws's verify and integrate jobs were last in the
+    queue; it then searched 55 turns for code that was not there."""
+    ledger = FakeLedger()
+    project = uuid4()
+    jobs = FakeJobRepository([_integrate_job(project, "ws", JobState.READY)])
+    worktrees = FakeWorktrees(tmp_path)
+    handler = BuildImplementHandler(
+        worktrees=worktrees,
+        provisioner=FakeProvisioner(),
+        engine=ScriptedEngine(descriptor=CLAUDELOOP, base_dir=tmp_path / "engine"),
+        ledger=ledger,
+        jobs=jobs,
+        clock=FixedClock(),
+    )
+
+    outcome = await handler.handle(_dependent(project, ["ws"]))
+
+    assert isinstance(outcome, Defer)
+    assert outcome.capacity is False  # not an engine signal: no circuit may open on it
+    assert outcome.retry_at == FixedClock().now() + timedelta(seconds=60)
+    assert "waiting for ws to be integrated" in outcome.detail
+    assert worktrees.created == [] and ledger.recorded == []  # nothing was started
+
+
+async def test_a_dependent_runs_once_every_dependency_is_integrated(tmp_path: Path) -> None:
+    project = uuid4()
+    jobs = FakeJobRepository(
+        [
+            _integrate_job(project, "ws", JobState.SUCCEEDED),
+            _integrate_job(project, "c7", JobState.SUCCEEDED),
+        ]
+    )
+    worktrees = FakeWorktrees(tmp_path)
+    handler = BuildImplementHandler(
+        worktrees=worktrees,
+        provisioner=FakeProvisioner(),
+        engine=ScriptedEngine(descriptor=CLAUDELOOP, base_dir=tmp_path / "engine"),
+        ledger=FakeLedger(),
+        jobs=jobs,
+        clock=FixedClock(),
+    )
+
+    outcome = await handler.handle(_dependent(project, ["ws", "c7"]))
+
+    assert isinstance(outcome, Success)
+    assert worktrees.created == ["c8"]
+
+
+async def test_the_wait_names_only_the_dependencies_still_to_integrate(tmp_path: Path) -> None:
+    project = uuid4()
+    jobs = FakeJobRepository([_integrate_job(project, "ws", JobState.SUCCEEDED)])
+    handler = BuildImplementHandler(
+        worktrees=FakeWorktrees(tmp_path),
+        provisioner=FakeProvisioner(),
+        engine=ScriptedEngine(descriptor=CLAUDELOOP, base_dir=tmp_path / "engine"),
+        ledger=FakeLedger(),
+        jobs=jobs,
+        clock=FixedClock(),
+    )
+
+    outcome = await handler.handle(_dependent(project, ["ws", "c7"]))
+
+    assert isinstance(outcome, Defer)
+    assert outcome.detail.startswith("waiting for c7 to be integrated")
+
+
+@pytest.mark.parametrize("depends_on", [None, "ws", [], 3])
+async def test_a_job_without_a_list_of_dependencies_does_not_wait(
+    tmp_path: Path, depends_on: object
+) -> None:
+    handler = BuildImplementHandler(
+        worktrees=FakeWorktrees(tmp_path),
+        provisioner=FakeProvisioner(),
+        engine=ScriptedEngine(descriptor=CLAUDELOOP, base_dir=tmp_path / "engine"),
+        ledger=FakeLedger(),
+        jobs=FakeJobRepository(),
+        clock=FixedClock(),
+    )
+
+    outcome = await handler.handle(_dependent(uuid4(), depends_on))
+
+    assert isinstance(outcome, Success)
