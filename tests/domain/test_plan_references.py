@@ -221,3 +221,43 @@ def test_empty_segments_between_separators_are_skipped_by_the_pytest_check() -> 
     item = _item("ws", "; pytest tests/test_a.py ;; && echo done")
 
     assert PLAN_REFERENCE_CHECKER.violations([item], exists=lambda path: True) == ()
+
+
+def _paths(count: int) -> tuple[str, ...]:
+    return tuple(f"src/file_{n}.ts" for n in range(count))
+
+
+def test_an_item_with_more_paths_than_the_limit_is_rejected_and_told_to_split() -> None:
+    from vibey.domain.plan_references import MAX_ITEM_PATHS
+
+    (message,) = PLAN_REFERENCE_CHECKER.violations(
+        [_item("ws", "npm run build", hint=_paths(MAX_ITEM_PATHS + 1))], exists=lambda path: True
+    )
+
+    assert f"item 'ws' lists {MAX_ITEM_PATHS + 1} paths in files_touched_hint" in message
+    assert f"more than the {MAX_ITEM_PATHS} one item may touch" in message
+    assert "split it into a chain of build pieces" in message
+    assert "lists the piece before it in depends_on" in message
+    assert "thinnest slice" in message
+
+
+def test_an_item_at_the_limit_is_accepted_and_repeats_and_blanks_are_not_counted() -> None:
+    from vibey.domain.plan_references import MAX_ITEM_PATHS
+
+    at_limit = _item("a", "npm run build", hint=_paths(MAX_ITEM_PATHS))
+    padded = _item("b", "npm run build", hint=(*_paths(MAX_ITEM_PATHS), *_paths(5), ""))
+
+    assert PLAN_REFERENCE_CHECKER.violations([at_limit, padded], exists=lambda path: True) == ()
+
+
+def test_each_oversized_item_gets_its_own_message_next_to_other_violations() -> None:
+    items = [
+        _item("big", "pytest src/a.test.ts", hint=(*_paths(13), "src/a.test.ts")),
+        _item("also-big", "npm run build", hint=_paths(20)),
+        _item("small", "npm run build", hint=_paths(3)),
+    ]
+
+    messages = PLAN_REFERENCE_CHECKER.violations(items, exists=lambda path: True)
+
+    assert [m.split()[1] for m in messages] == ["'big'", "'big'", "'also-big'"]
+    assert "runs pytest on" in messages[0] and "lists 14 paths" in messages[1]

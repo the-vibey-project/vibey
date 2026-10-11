@@ -3163,3 +3163,56 @@ def test_worker_auto_accept_design_imports_the_named_spec_and_survives_a_failed_
 
     assert f"importing {spec_file} first" in res.output
     assert "design auto-accept failed: the database went away" in res.output
+
+
+def test_worker_acceptance_flags_refuse_to_serve_every_project() -> None:
+    for flag in (
+        "--auto-accept-review",
+        "--auto-finish-local",
+        "--auto-accept-all",
+        "--auto-publish",
+    ):
+        res = runner.invoke(app, ["worker", flag, "--all-projects"])
+        assert res.exit_code == 2, flag
+        assert "use --project, not --all-projects" in res.output
+
+
+def test_worker_auto_accept_all_takes_the_reviewed_spec_file_a_lone_flag_cannot() -> None:
+    res = runner.invoke(app, ["worker", "--auto-accept-review", "--accept-spec-json", "x.json"])
+    assert res.exit_code == 2
+    assert "belongs to --auto-accept-design" in res.output
+
+
+@pytest.mark.usefixtures("_fast_engine_preflight")
+def test_worker_says_which_acceptances_it_will_give(tmp_path: Path) -> None:
+    from vibey.application.dto import GateAutoAnswerReport
+
+    sweep = AsyncMock(return_value=GateAutoAnswerReport(project_id=None))
+
+    res = _run_worker_with_acceptances(tmp_path, sweep, "--auto-accept-all")
+
+    assert (
+        "REVIEW approvals (accept), the deployment choice (local_only, never deploy)" in res.output
+    )
+    assert "auto-accept-design: on, accepting the synthesized spec" in res.output
+    assert "spending gates and every deployment gate still wait for you" in res.output
+    sweep.assert_awaited()
+
+
+def _run_worker_with_acceptances(tmp_path: Path, sweep: AsyncMock, *args: str) -> Result:
+    from unittest.mock import patch
+
+    async def seed() -> None:
+        async with build_app() as resources:
+            await resources.projects.create("acceptances", tmp_path, max_cycles=1, config={})
+
+    asyncio.run(seed())
+    with (
+        patch("vibey.infrastructure.db.notifier.PostgresJobReadyNotifier") as mock_notifier_cls,
+        patch("vibey.application.gate_auto_answers.GateAutoAnswerSweep.run", new=sweep),
+        patch("vibey.application.design_auto_accept.DesignAutoAccept.run", new=AsyncMock()),
+    ):
+        mock_notifier = AsyncMock()
+        mock_notifier.wait_for_job_ready = AsyncMock(side_effect=KeyboardInterrupt)
+        mock_notifier_cls.return_value = mock_notifier
+        return runner.invoke(app, ["worker", *args])

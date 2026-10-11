@@ -621,3 +621,111 @@ async def test_a_local_tier_decayed_to_zero_weight_does_not_strand_the_job() -> 
     engine_id, _ = await selector.select_engine(project_id, JobRequirement(effort=Effort.LOW))
 
     assert engine_id is EngineId.CODEXLOOP
+
+
+async def _why_none_fits(
+    records: list[EngineHealthRecord],
+    project_id: object,
+    *,
+    requirement: JobRequirement | None = None,
+    allow_list: frozenset[EngineId] | None = None,
+) -> str:
+    repo = FakeEngineHealthRepository()
+    for record in records:
+        await repo.upsert(record)
+    selector = EngineSelector(
+        health_service=EngineHealthService(repo),
+        cursor_repository=FakeRotationCursorRepository(),
+        descriptors=BY_ENGINE_ID,
+    )
+    with pytest.raises(NoEligibleEngine) as caught:
+        await selector.select_engine(
+            project_id, requirement or JobRequirement(effort=Effort.LOW), allow_list=allow_list
+        )
+    return str(caught.value)
+
+
+async def test_a_job_nothing_can_take_says_why_each_engine_was_turned_down() -> None:
+    project = uuid4()
+    stale = datetime(2020, 1, 1, tzinfo=UTC)
+
+    message = await _why_none_fits(
+        [
+            _healthy_record(project, EngineId.GPTOSSLOOP, conformance_ok=False),
+            _healthy_record(project, EngineId.CLAUDELOOP, installed=False, auth_ok_at=stale),
+            _healthy_record(project, EngineId.CODEXLOOP, circuit="open"),
+        ],
+        project,
+        requirement=JobRequirement(effort=Effort.LOW, excluded=frozenset({EngineId.GPTOSSLOOP})),
+        allow_list=frozenset({EngineId.GPTOSSLOOP, EngineId.CLAUDELOOP}),
+    )
+
+    assert message.startswith(f"No engines meet requirements for project {project} (")
+    assert (
+        "gptossloop: not conformant (run `vibey doctor --conformance`), excluded for this attempt"
+        in message
+    )
+    assert "claudeloop: not installed, its login check is stale or failed" in message
+    assert "codexloop: its circuit is open, not in this worker's --engines" in message
+
+
+async def test_an_engine_this_worker_may_use_but_has_no_health_record_for_is_named() -> None:
+    project = uuid4()
+
+    message = await _why_none_fits(
+        [_healthy_record(project, EngineId.CODEXLOOP)],
+        project,
+        allow_list=frozenset({EngineId.GPTOSSLOOP}),
+    )
+
+    assert "codexloop: not in this worker's --engines" in message
+    assert "gptossloop: no health record for this project yet" in message
+
+
+async def test_a_project_with_no_health_records_at_all_says_so() -> None:
+    message = await _why_none_fits([], uuid4())
+
+    assert message.endswith("(no engine has a health record)")
+
+
+async def test_a_circuit_state_this_vibey_cannot_read_is_named_not_swallowed(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    project = uuid4()
+    monkeypatch.setattr(EngineSelector, "_circuit_state", lambda self, record, *, now: None)
+
+    message = await _why_none_fits([_healthy_record(project, EngineId.CLAUDELOOP)], project)
+
+    assert "claudeloop: its circuit state could not be read" in message
+    assert "no health record" not in message
+
+
+def test_an_engine_that_lacks_a_capability_the_job_needs_is_said_to() -> None:
+    from vibey.domain.capacity import Available
+    from vibey.domain.circuit import Circuit, CircuitState
+    from vibey.domain.engine import Capability
+    from vibey.domain.rotation import EngineRuntime, rejections
+
+    descriptor = BY_ENGINE_ID[EngineId.GPTOSSLOOP]
+    runtime = EngineRuntime(
+        engine_id=EngineId.GPTOSSLOOP,
+        descriptor=descriptor,
+        circuit=Circuit(
+            state=CircuitState.CLOSED,
+            capacity=Available(),
+            probe=None,
+            consecutive_failures=0,
+            ewma_failure=0.0,
+        ),
+        installed=True,
+        conformance_ok=True,
+        auth_valid=True,
+    )
+    needs = JobRequirement(
+        effort=Effort.LOW, capabilities=frozenset(set(Capability) - set(descriptor.capabilities))
+    )
+
+    assert rejections([runtime], requirement=needs) == (
+        "gptossloop: lacks a capability the job needs",
+    )
+    assert rejections([runtime], requirement=JobRequirement(effort=Effort.LOW)) == ()

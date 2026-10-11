@@ -4,7 +4,10 @@
 Presents the explicit deployment opt-in / opt-out choice gate:
 - Default is explicitly ``local_only`` (silence / no default is never treated as consent).
 - If opted out: records ``DeploymentDeclined``, transitions project to ``Phase.DONE``
-  with ``completion_mode = "local"``, and enqueues zero deployment jobs.
+  with ``completion_mode = "local"``, and enqueues zero deployment jobs. A project whose
+  ``[publish] mode`` is not ``off`` is not DONE yet: it hands off to ``review.publish``
+  (``completion_mode = "local_then_publish"``), which gets the work onto GitHub first and
+  then finishes the project.
 - If opted in: records ``DeploymentOptedIn`` and hands off to Phase 4 (``deploy.design``).
 """
 
@@ -17,6 +20,7 @@ from vibey.application.interfaces import (
 )
 from vibey.application.ports import Clock, HumanGateRepository, JobRepository
 from vibey.application.worker import Failure, Outcome, Park, Success
+from vibey.domain.config import ConfigError, PublishConfig
 from vibey.domain.effort import Effort
 from vibey.domain.job import FailureClass, idempotency_key
 from vibey.domain.ledger import EventKind, LedgerEvent
@@ -130,6 +134,25 @@ class ReviewDeploymentChoiceHandler:
             payload={"choice": "local_only"},
         )
 
+        try:
+            publishing = await self._publishing(job)
+        except ConfigError as exc:
+            return Failure(FailureClass.VIBEY, f"the [publish] settings are not valid: {exc}")
+        if publishing:
+            await self._jobs.enqueue(
+                EnqueueRequest(
+                    project_id=job.project_id,
+                    cycle=job.cycle,
+                    phase=Phase.REVIEW,
+                    kind="review.publish",
+                    idempotency_key=idempotency_key(
+                        job.project_id, job.cycle, "review.publish", str(job.id)
+                    ),
+                    requirement={"effort": Effort.LOW.name.lower()},
+                )
+            )
+            return Success({"decision": "declined", "completion_mode": "local_then_publish"})
+
         if hasattr(self._projects, "transition"):
             await self._projects.transition(
                 job.project_id,
@@ -138,3 +161,10 @@ class ReviewDeploymentChoiceHandler:
             )
 
         return Success({"decision": "declined", "completion_mode": "local"})
+
+    async def _publishing(self, job: JobRecord) -> bool:
+        """Whether this project publishes its work before it is DONE (`[publish] mode`)."""
+        if not hasattr(self._projects, "get"):
+            return False
+        project = await self._projects.get(job.project_id)
+        return project is not None and PublishConfig.from_data(project.config).mode != "off"
