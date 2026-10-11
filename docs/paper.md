@@ -1944,7 +1944,7 @@ The curve is not evidence about another host, model or task class, and not evide
 that governance rather than the model is the scarce input in general. The host's own
 memory budget, measured in *Host benchmarks and context headroom*,
 confounds every timing here. One correction: the `vibey-gh` tenant paper once reported
-this experiment as 61 generations at a success rate of 1.00 with throughput held to
+this experiment as 61 generations at a success rate of 95.3% (9 rungs, N=2..32) with throughput held to
 $1.4 \pm 0.25$ per minute; neither survives comparison with the record, and that paper
 now carries a dated correction.
 
