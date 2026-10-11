@@ -36,6 +36,7 @@ def test_the_interview_and_the_retry_gates_get_the_answer_vibey_itself_suggests(
         "choice",
         "deploy_acceptance",
         "deploy_demo_review",
+        "repair_not_converging",
         "no_such_kind",
         "",
     ],

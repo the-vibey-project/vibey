@@ -34,7 +34,7 @@ idempotency key.
 import shlex
 from collections.abc import Iterable, Mapping
 from dataclasses import dataclass
-from datetime import timedelta
+from datetime import datetime, timedelta
 from uuid import uuid4
 
 from vibey.application.build_engine_run import BuildLedger, run_and_record
@@ -56,6 +56,13 @@ from vibey.domain.interfaces.correlation_interface import DeliveryCorrelationInt
 from vibey.domain.job import FailureClass, idempotency_key
 from vibey.domain.ledger import EventKind
 from vibey.domain.phase import Phase
+from vibey.domain.repair_convergence import (
+    IDENTICAL_FAILURES_BEFORE_PARKING,
+    REPAIR_NOT_CONVERGING_GATE_KIND,
+    failures_since,
+    is_not_converging,
+    not_converging_prompt,
+)
 from vibey.domain.review import Severity
 
 
@@ -387,10 +394,12 @@ class BuildVerifyHandler:
 
     async def _verify_findings(
         self, job: JobRecord, item_id: str, repair: VerifyRepairPolicy
-    ) -> tuple[list[str], list[str]]:
-        """(all f_verify finding ids for this item+cycle, the open subset)."""
+    ) -> tuple[list[str], list[str], list[tuple[datetime, str]]]:
+        """(all f_verify finding ids for this item+cycle, the open subset, and when each was
+        raised with the failure it recorded, oldest first)."""
         prefix = f"f_verify_{item_id}_"
         raised: list[str] = []
+        history: list[tuple[datetime, str]] = []
         resolved: set[str] = set()
         for event in await repair.ledger_reader.all_for_project(job.project_id):
             if not event.interpretable or event.cycle != job.cycle:
@@ -400,14 +409,19 @@ class BuildVerifyHandler:
                 continue
             if event.kind is EventKind.FINDING_RAISED:
                 raised.append(finding_id)
+                history.append((event.produced_at, str(event.payload.get("text", ""))))
             elif event.kind is EventKind.FINDING_RESOLVED:
                 resolved.add(finding_id)
-        return raised, [finding_id for finding_id in raised if finding_id not in resolved]
+        return (
+            raised,
+            [finding_id for finding_id in raised if finding_id not in resolved],
+            history,
+        )
 
     async def _repair_or_park(
         self, job: JobRecord, item_id: str, detail: str, repair: VerifyRepairPolicy
     ) -> Outcome:
-        raised, open_findings = await self._verify_findings(job, item_id, repair)
+        raised, open_findings, history = await self._verify_findings(job, item_id, repair)
         retry_at = repair.clock.now() + repair.backoff
 
         if open_findings:
@@ -418,12 +432,22 @@ class BuildVerifyHandler:
                 detail=f"verify gates failing for {item_id!r}; repair in flight",
             )
         allowed = repair.max_rounds
-        if repair.gates is not None:
-            gate = await repair.gates.latest_for_job(job.id)
-            if gate is not None and gate.answer is not None:
-                granted = granted_max_rounds(gate.answer)
-                if granted is not None and granted > allowed:
-                    allowed = granted
+        gate = await repair.gates.latest_for_job(job.id) if repair.gates is not None else None
+        if gate is not None and gate.answer is not None:
+            granted = granted_max_rounds(gate.answer)
+            if granted is not None and granted > allowed:
+                allowed = granted
+        # A person's answer is a fresh start: only what was raised after it counts.
+        earlier = failures_since(history, gate.answered_at if gate is not None else None)
+        if is_not_converging(earlier, detail):
+            return Park(
+                HumanGateRequest(
+                    kind=REPAIR_NOT_CONVERGING_GATE_KIND,
+                    prompt=not_converging_prompt(
+                        item_id, "verification", IDENTICAL_FAILURES_BEFORE_PARKING, detail
+                    ),
+                )
+            )
         if len(raised) >= allowed:
             return Park(
                 HumanGateRequest(
@@ -480,7 +504,7 @@ class BuildVerifyHandler:
     async def _resolve_open_findings(
         self, job: JobRecord, item_id: str, repair: VerifyRepairPolicy
     ) -> None:
-        _, open_findings = await self._verify_findings(job, item_id, repair)
+        _, open_findings, _ = await self._verify_findings(job, item_id, repair)
         for finding_id in open_findings:
             await self._ledger.record(
                 project_id=job.project_id,

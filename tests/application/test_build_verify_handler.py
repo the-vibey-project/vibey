@@ -833,3 +833,160 @@ async def test_a_review_past_its_wall_clock_limit_fails_as_the_reviewers(tmp_pat
     assert outcome.failure_class is FailureClass.ENGINE
     assert "codexloop" in outcome.detail
     assert "wall-clock limit" in outcome.detail
+
+
+# ── a repair that cannot change the failure parks instead of repairing again ─
+
+
+NEXT_MISSING = (
+    "Error: Could not find the Next.js package (next/package.json)\n"
+    "Resolved from: /Users/adam/git/portfolio/.vibey/worktrees/d77e39c4/1/ws/src/app 12 ms"
+)
+
+
+def _raised_with_text(cycle: int, finding_id: str, text: str, *, at: datetime | None = None):  # type: ignore[no-untyped-def]
+    from vibey.domain.ledger import EventKind
+
+    event = _finding_event(cycle, EventKind.FINDING_RAISED, finding_id)
+    payload = {"finding_id": finding_id, "text": text}
+    return replace(event, payload=payload, produced_at=at or event.produced_at)
+
+
+def _resolved(cycle: int, finding_id: str):  # type: ignore[no-untyped-def]
+    from vibey.domain.ledger import EventKind
+
+    return _finding_event(cycle, EventKind.FINDING_RESOLVED, finding_id)
+
+
+def _handler_for(tmp_path: Path, history: list, *, stderr: str, gates=None, ledger=None, jobs=None):  # type: ignore[no-untyped-def]
+    from vibey.application.build_verify_handler import VerifyRepairPolicy
+
+    class _Reader:
+        async def all_for_project(self, project_id):  # type: ignore[no-untyped-def]
+            return tuple(history)
+
+    class _Clock:
+        def now(self):  # type: ignore[no-untyped-def]
+            return datetime(2026, 8, 19, tzinfo=UTC)
+
+    return BuildVerifyHandler(
+        worktrees=FakeWorktrees(tmp_path),
+        gates=FakeGateRunner(returncode=1, stderr=stderr),
+        reviewer=ScriptedEngine(descriptor=CLAUDELOOP, base_dir=tmp_path / "r"),
+        ledger=ledger if ledger is not None else FakeLedger(),
+        jobs=jobs if jobs is not None else FakeJobRepository(),
+        clock=FixedClock(),
+        repair=VerifyRepairPolicy(
+            ledger_reader=_Reader(),
+            clock=_Clock(),
+            backoff=timedelta(minutes=10),
+            gates=gates,
+            max_rounds=9,
+        ),
+    )
+
+
+async def _failure_text(tmp_path: Path, stderr: str) -> str:
+    """The text this handler records for a gate failure, so the tests need not guess it."""
+    ledger = FakeLedger()
+    await _handler_for(tmp_path, [], stderr=stderr, ledger=ledger).handle(_job())
+    (raised,) = [e for e in ledger.recorded if e.kind == "FindingRaised"]
+    return str(raised.payload["text"])
+
+
+def _unchanged_history(job, text: str, count: int = 2):  # type: ignore[no-untyped-def]
+    history = []
+    for index in range(count):
+        finding_id = f"f_verify_item-1_{index:08d}"
+        # The same failure in a worktree with a different path and different numbers.
+        varied = text.replace("d77e39c4", f"{index:08x}").replace("12 ms", f"{index + 30} ms")
+        history.append(_raised_with_text(job.cycle, finding_id, varied))
+        history.append(_resolved(job.cycle, finding_id))
+    return history
+
+
+async def test_a_failure_two_repairs_left_unchanged_parks_instead_of_repairing_again(
+    tmp_path: Path,
+) -> None:
+    from vibey.application.worker import Park
+
+    job = _job()
+    text = await _failure_text(tmp_path, NEXT_MISSING)
+    ledger, jobs = FakeLedger(), FakeJobRepository()
+    handler = _handler_for(
+        tmp_path, _unchanged_history(job, text), stderr=NEXT_MISSING, ledger=ledger, jobs=jobs
+    )
+
+    outcome = await handler.handle(job)
+
+    assert isinstance(outcome, Park)
+    assert outcome.request.kind == "repair_not_converging"
+    assert "failed verification the same way 3 times running" in outcome.request.prompt
+    assert "Could not find the Next.js package" in outcome.request.prompt
+    # The third identical repair was not started.
+    assert not [e for e in ledger.recorded if e.kind == "FindingRaised"]
+    assert jobs._jobs == {}
+
+
+async def test_a_failure_that_keeps_changing_is_still_repaired(tmp_path: Path) -> None:
+    from vibey.application.worker import Defer
+
+    job = _job()
+    text = await _failure_text(tmp_path, NEXT_MISSING)
+    history = _unchanged_history(job, text, count=1) + [
+        _raised_with_text(job.cycle, "f_verify_item-1_00000009", "lint: 3 errors"),
+        _resolved(job.cycle, "f_verify_item-1_00000009"),
+    ]
+    ledger = FakeLedger()
+    handler = _handler_for(tmp_path, history, stderr=NEXT_MISSING, ledger=ledger)
+
+    outcome = await handler.handle(job)
+
+    assert isinstance(outcome, Defer) and "repair" in outcome.detail
+    assert [e for e in ledger.recorded if e.kind == "FindingRaised"]
+
+
+async def test_one_unchanged_repair_is_not_yet_a_reason_to_stop(tmp_path: Path) -> None:
+    from vibey.application.worker import Defer
+
+    job = _job()
+    text = await _failure_text(tmp_path, NEXT_MISSING)
+    handler = _handler_for(tmp_path, _unchanged_history(job, text, count=1), stderr=NEXT_MISSING)
+
+    assert isinstance(await handler.handle(job), Defer)
+
+
+async def test_a_persons_answer_gives_the_item_a_fresh_count(tmp_path: Path) -> None:
+    """After someone has looked (and fixed the environment), what was raised before their answer
+    is not held against the item; two more unchanged repairs are needed to park again."""
+    from tests.application.fakes import FakeHumanGateRepository
+    from vibey.application.worker import Defer, Park
+
+    job = _job()
+    text = await _failure_text(tmp_path, NEXT_MISSING)
+    history = _unchanged_history(job, text)
+    gates = FakeHumanGateRepository()
+
+    parked = await _handler_for(tmp_path, history, stderr=NEXT_MISSING, gates=gates).handle(job)
+    assert isinstance(parked, Park) and parked.request.kind == "repair_not_converging"
+
+    gate = await gates.raise_gate(job.project_id, job.id, parked.request)
+    await gates.answer(gate.gate_id, answer={}, answered_by="operator")
+
+    resumed = await _handler_for(tmp_path, history, stderr=NEXT_MISSING, gates=gates).handle(job)
+
+    assert isinstance(resumed, Defer) and "repair" in resumed.detail
+
+
+async def test_findings_with_no_recorded_text_never_count_as_unchanged(tmp_path: Path) -> None:
+    from vibey.application.worker import Park
+
+    job = _job()
+    history = []
+    for index in range(2):
+        finding_id = f"f_verify_item-1_{index:08d}"
+        history.append(_raised_with_text(job.cycle, finding_id, ""))
+        history.append(_resolved(job.cycle, finding_id))
+    outcome = await _handler_for(tmp_path, history, stderr="").handle(job)
+
+    assert not (isinstance(outcome, Park) and outcome.request.kind == "repair_not_converging")
