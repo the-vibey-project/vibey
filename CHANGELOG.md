@@ -15,6 +15,379 @@ published as a book — [PDF](https://the-vibey-project.github.io/vibey/main/boo
 
 ## [Unreleased]
 
+## [4.4.0] (2026-10-11)
+
+### Features
+
+* **`vibey worker --auto-record-research-gaps` and `--autonomous`:** DESIGN research on a local
+  model has no search backend and no evidence directory unless you set one, so it parked a
+  `research_evidence` gate per topic and an unattended run sat there (three at once on a real
+  project: `prior-art`, `libraries`, `api-docs`). `--auto-record-research-gaps` makes research
+  record the topic as not researched and go on, answers a gate already parked so it runs again,
+  and the spec says what was not researched, so nothing is invented. `--autonomous` is every
+  switch that is safe to leave on for an unattended run in one flag: `--auto-answer`,
+  `--auto-accept-all` and `--auto-record-research-gaps`. It never turns on `--auto-publish` (that
+  sends the work to GitHub), a deployment or a spending gate. Both act on one project.
+* **`vibey doctor --conformance`:** the wait for an engine's run directory is now set by
+  `VIBEY_CONFORMANCE_POLL_SECONDS` (seconds; default unchanged at 30). A local model on
+  ordinary hardware needs far longer than a hosted engine to answer a first turn, and the
+  fixed window failed `run_dir_shape`, `snapshot_schema`, `done_marker` and
+  `structured_verdict` together for a reason that was the host's speed, so the only way to
+  record conformance for gptossloop was to edit the installed package. A value that is not a
+  finite number above zero is refused with exit 2, naming the variable, before any engine is
+  started; unset keeps the default.
+* **`vibey doctor` says what Ollama is holding:** with a local engine switched on, an `ollama`
+  line asks the server which models are loaded and warns when the configured model sits at a
+  context above `VIBEY_OLLAMA_CONTEXT`. Ollama reloads a model whose context differs from a
+  request's, so a model warmed up at a very large window and left resident made the first real
+  DESIGN request pay for a reload and time out at 900 seconds, with nothing flagging it: the
+  server was healthy and the model was loaded. The line names the fix (`ollama stop MODEL`).
+  It prints host and port only, never a URL's credentials, is `SKIP` when no server answers,
+  and is never a failure.
+* **sovereign runner:** the egress gate now logs every decision on its standard output
+  (`docker logs vibey-egress`): `egress ALLOW github.com:443`, or `egress DENY example.com:443
+  -- not on the allowlist (add the host to [runners] egress_allow)`, with a reason for each of
+  its refusals (not listed, not a host:port, does not resolve, resolves to a non-public
+  address, upstream down, a model request that is not one of the four allowed). Before, a job
+  step that failed on an unlisted host got a bare 403 and the gate said nothing. Only where a
+  request was going and why it was refused are written: a host and port, or a method and path,
+  never a header, a body, URL credentials (`user:token@host`), a query string or a fragment,
+  and client-supplied text is cleaned and cut so it cannot forge a line.
+  The log is capped (600 ALLOW and 600 DENY lines a minute, with one line saying how many were
+  dropped) and the gate container's log is rotated at 5 MB x 3 files, so a runaway job cannot
+  fill the disk.
+* **`--ignore-sabbath`:** `vibey new`, `vibey work` and `vibey worker` take a flag that runs
+  that one command through the Sabbath window (sub-doctrine 8.i), which would otherwise
+  decline with exit 75 or leave the worker claiming nothing. It is the operator's choice
+  for one command and is never stored: there is no `vibey.toml` key for it. When a window
+  would have held, the command says so on stderr and names when the rest would have ended.
+  Before, the only way through was `VIBEY_SABBATH_ENABLED=0`, which switches the check off
+  silently for a whole shell.
+* **`vibey llm tail` shows every phase, and follows each new session by itself:** the tail
+  followed only the sovereign DESIGN and DECOMPOSE calls, so it went quiet exactly when BUILD
+  began, an hour into a run. The worker now notes each engine session in the wire log (a
+  `session` record naming that run's `events.jsonl`; ids and paths only), and the tail follows
+  the newest one: every tool call and a one-line result (a failing shell command shows the tail
+  of its output), the streamed answer, the model's reasoning, and each turn's time and tokens.
+  When a new run starts, it switches to it by itself, finishing the old one first. The runner
+  now records each turn's reasoning as an event (capped at 4000 characters), which it had only
+  counted. Nothing changes unless the wire log is on (`-vvv` or `VIBEY_LLM_WIRE_LOG`).
+* **`vibey llm tail` and the LLM wire log:** `-vvv` documented "full payloads" and the
+  sovereign DESIGN and DECOMPOSE providers' traffic to Ollama reached no log at all, so a call
+  that ran for fifteen minutes showed nothing until it returned. With `-vvv` (or
+  `VIBEY_LLM_WIRE_LOG=path`) the client now streams the reply and appends every request, every
+  streamed piece of reasoning and answer, and the model's counts and timings to a JSON-lines
+  wire log; `vibey llm tail` follows it live, starting at the latest call (`--all`,
+  `--no-follow`, `--raw` and `--max-chars` adjust it). The log is redacted by the ledger's
+  redactor, with streamed text held to a whitespace boundary so a credential cannot be split
+  across two pieces, and is created readable by its owner alone. Without the switch nothing
+  changes: one blocking request, no file.
+* **A local session's context stays small instead of growing with every turn:** measured on a
+  real 130-turn session, every token of growth was a tool result (search 45%, open_file 20%, find
+  15%, shell 14%) and the session read 3.8M tokens to make seven writes, because each turn resends
+  the whole history. `qwenloop` now keeps only the newest four tool results whole (plus the last
+  shell result, the freshest verdict) and reduces older long ones to a one-line stub the model can
+  re-ask; replaces the body of an older `write_file` / `edit_file` call, which is on disk, with a
+  note; folds long shell output to its first 20 and last 40 lines; answers an identical read whose
+  result has not changed with "same result as turn N"; and shows the model, at the end of every
+  request but never in its history, which of the item's planned files are written and how the
+  last command ended. A new `outline` tool lists a file's declarations (or only its exports) for a
+  few dozen tokens, so the engine need not read a file to learn what to import. Default limits are
+  tighter: `search` 40 matches, `find` 60 paths, 160 characters a line, 12,000 characters a tool
+  result (a whole 435-line README still fits). Every request's size is recorded by what it is in a
+  `context.composition` event. Replaying the recorded session through the new policy keeps the
+  context near 5,000 to 10,000 estimated tokens where it grew to 48,000, 75% fewer tokens read over
+  the run. Each lever is a field of `ContextEconomy`; `ContextEconomy.off()` restores the old
+  behaviour, and the limits are the existing `[tools]` settings.
+* **`vibey worker --local-max-turns N|unlimited` (and `VIBEY_LOCAL_MAX_TURNS`):** the turn limit
+  every local runner session (gptossloop, qwenloop) is started with. A BUILD piece runs at effort
+  `low`, which the engine table maps to `--max-turns 16`; a small local model that needs many tool
+  calls to read a repository hit it on the very first piece (`reason: turn_limit` at turn 16). A
+  turn limit is a cost control and a local model costs nothing per turn, so the setting replaces
+  every effort's limit with a number, or with `unlimited`, which is handed over as 100000, a count
+  no session reaches. A session still ends when it reports the task done, is stopped or fails.
+  Paid engines keep their limits and ULTRA (which has no flag) stays as it is. A bad value exits
+  with a usage error naming the setting. `vibey retry` passes it through after `--`.
+* **`vibey new --accept-spec-json FILE` skips DESIGN:** a spec an operator has already reviewed
+  makes the DESIGN interview, its research and its spec synthesis work whose output is thrown
+  away, and `vibey worker --accept-spec-json` could only act once every DESIGN job had settled, so
+  all of it ran first (a real run then hung on three research gates for evidence nobody needed).
+  Given the spec at creation, the project moves into DESIGN with no interview job, the spec is
+  saved and accepted at once through the same acceptance guards as `vibey design accept` (visual
+  design declined, the ledger naming `new-with-spec`), and BUILD's decomposition is enqueued. A
+  spec that cannot be read is a usage error before any project exists; one the acceptance refuses
+  leaves the project in DESIGN with the spec saved, so `vibey design accept PROJECT --spec-json
+  FILE` finishes it. The worker's `--accept-spec-json` keeps its meaning for a project already
+  interviewing, and its help now points here.
+* **`VIBEY_OLLAMA_TEMPERATURE`:** the sovereign DESIGN and DECOMPOSE client always sampled at
+  temperature 0, so every attempt of a job that failed was the same request and failed the same
+  way: a `build.decompose` whose plan was rejected (verification ran a script a later item
+  creates) used all seven attempts on the same two plans, and granting more would have repeated
+  them. The setting (`0` to `2`, default `0`, so nothing changes unless set) lets an operator
+  make attempts differ. A bad value exits 2 before any engine starts.
+* **`VIBEY_OLLAMA_THINK` and `VIBEY_OLLAMA_RETRY_CONTEXT`:** two settings for the sovereign
+  DESIGN and DECOMPOSE client. `VIBEY_OLLAMA_THINK` sets the reasoning level of the *first*
+  request, where before only the retry could be told to reason lightly, so a first attempt no
+  longer has to spend itself reasoning before it is retried. And a reply cut short because the
+  prompt filled the window now gets a retry that opens a larger one, up to
+  `VIBEY_OLLAMA_RETRY_CONTEXT` (default 32768), where before it asked again inside the same
+  window and failed the same way: live, a 6504-token prompt in an 8192 window left 1688 tokens for
+  the reasoning and the answer, and the retry was given the same 1688. `vibey llm tail` also
+  shows how long a response spent loading the model and reading the prompt, which a token rate
+  never reveals.
+* **Publishing a finished project:** the last step of a delivered project can now get its work
+  off the machine. With `[publish] mode = "interview"` or `"auto"`, declining deployment no
+  longer finishes the project: a `review.publish` job pushes the integration branch and opens a
+  pull request (a draft by default), or, for a project with no remote, creates a new GitHub
+  repository (private by default) and pushes to it, and only then is the project DONE. The
+  `interview` mode raises a `publish_interview` gate showing exactly what would be pushed and
+  where; `accept_defaults` publishes that, `skip` finishes locally (its declared default, and
+  it never times out to a default), and `custom` changes named fields. `vibey worker
+  --auto-publish` answers it `accept_defaults`; it is its own flag, never implied by
+  `--auto-accept-all`. Nothing is forced and the base branch is never pushed to. Because a work
+  item can write the repository's git config, publishing refuses one that sets a command git
+  would run (`core.sshCommand` and similar) and a remote that is not an https or ssh address,
+  and runs git with hooks off. It needs `gh` logged in; otherwise the job parks on an
+  `engine_misconfigured` gate. `[publish] mode` defaults to `off`, so nothing changes unless
+  set. Before, a run ended on a local branch and the push was by hand.
+* **`vibey recover --stop-workers`, `--grace` and `--dry-run`:** one command for a stuck queue.
+  `vibey recover` only reset the database rows, so a worker that was still alive (or whose
+  terminal had closed behind a hung runner) kept its jobs and had to be hunted down with `ps`
+  and `kill` first. `--stop-workers` lists every `vibey worker` this user is running, and
+  everything each started, signals them (SIGTERM, then SIGKILL after `--grace`), and only then
+  resets the leases. It never touches another user's processes, itself or what started it, and
+  if anything survives SIGKILL it exits 1 without resetting a lease, since resetting a live
+  worker's leases would run its job twice. `--dry-run` shows the plan and the count and changes
+  nothing.
+* **A repair that cannot change the failure parks a `repair_not_converging` gate instead of
+  repairing again:** a real run spent about four hours and twenty sessions on one work item whose
+  build failed the same way every time (a `node_modules` holding nothing but a Vitest cache, so
+  the Next.js package could not be found), because the repair rounds were only counted, and
+  `--auto-answer` granted more each time the count ran out. Verify and integrate now also compare
+  each failure with the last two raised for the item, reading paths, ids, numbers and whitespace
+  as the same. A failure that has survived two repairs unchanged parks the item with the failure
+  quoted and a pointer at the environment, where the old behavior raised a third identical
+  finding. The gate is never auto-answered, so `--autonomous` stops there. Any answer resumes the
+  repairs with a fresh count: what was raised before a person's answer is no longer held against
+  the item. A finding with no recorded text never counts as unchanged.
+* **`vibey retry PROJECT_ID`:** one command to get a stalled project moving again. It stops this
+  user's `vibey worker` processes as `recover --stop-workers` does, answers each of the project's
+  `attempts_exhausted` gates with a grant (`--max-attempts`, default 10), and with `--start-worker`
+  starts `vibey worker --project PROJECT_ID` detached, passing along every argument after `--`
+  and appending to a per-project log (`--log` to choose it). Before, that was `recover`, `gates`,
+  `answer --raw '{"max_attempts": N}'` and a hand-written restart script. Only exhausted-attempts
+  gates are answered; any other open gate is a decision and is only named. Each grant is a named
+  request, so running it twice answers a gate once, and `--dry-run` says what each step would do.
+* **`vibey search` and `vibey fetch`, and web search for every loop:** vibey now owns a web
+  search, so a DESIGN stage with no operator reading no longer ends in a `research_evidence`
+  gate for lack of evidence a search would have found, and any engine that can run a command can
+  look things up. Backends are SearXNG (`VIBEY_SEARXNG_URL`, keyless, reaches sessions) and
+  Brave (`VIBEY_BRAVE_API_KEY`, the research stage only; the key is never passed to a session).
+  `fetch` refuses private, loopback and metadata addresses on every redirect hop. Results carry
+  an untrusted banner and evidence is quoted text with its URLs, never a summary. `vibey worker`
+  adds a "Web access" note, with the absolute path of the running `vibey`, to every run's plan
+  and passes the non-secret `WEBSEARCH_*` settings to sessions (the qwenloop and gptossloop
+  runner's shell now admits them). gptossloop and qwenloop also get native `web_search` and
+  `web_fetch` tools, which run the same `vibey` commands. codexloop and claudeloop-local have no
+  engine-level search beyond the command in their plan. Before, the only way past a research gap was to write reading
+  material by hand.
+* **`vibey worker --auto-accept-design` and `--accept-spec-json`:** an unattended local run no
+  longer stops at `vibey design accept` once the operator has already decided. The flag accepts
+  the project's DESIGN spec when DESIGN has settled (no DESIGN job of the cycle unsettled, a
+  spec present), through the same acceptance service and guards as the manual command, so an
+  open blocking question still refuses it. With `--accept-spec-json PATH` it imports that
+  reviewed spec first, as `design accept --spec-json` does. It is the operator's consent for one
+  worker and one project (refused with `--all-projects`), says what it will do at startup, never
+  opts into VISUAL_DESIGN, accepts once, and the ledger's visual-design event records
+  `accepted_by: auto-accept-design`. `--auto-answer` is unchanged and still never answers an
+  acceptance. Before, an accepted-in-advance spec still waited for a person to run the command.
+* **`vibey worker --auto-accept-review`, `--auto-finish-local` and `--auto-accept-all`:** the
+  rest of the human decisions between DESIGN and a finished local project can be given in advance
+  too, each a separate flag for one worker and one project (refused with `--all-projects`).
+  `--auto-accept-review` answers the REVIEW approval gate `accept` (never `changes` or `cancel`),
+  `--auto-finish-local` answers the deployment choice `local_only` (never `deploy`), and
+  `--auto-accept-all` is those two with `--auto-accept-design`. They are not `--auto-answer`, so
+  the interview and retry gates stay yours unless you add it, and the startup line names exactly
+  what the worker will answer. A deployment gate (`deploy_acceptance` is consent to change real
+  infrastructure) and a spending gate are never answered by any flag. Before, an unattended run
+  stopped at every acceptance.
+* **`vibey worker --auto-answer`:** a worker the operator starts with the flag answers its
+  project's interview and retry gates itself, so an unattended local run is no longer stopped by
+  gates that are not decisions. The DESIGN interview's questions get their own defaults;
+  `escalation_exhausted` gets `{"max_attempts": 10}`, `verify_repair_exhausted` and
+  `integrate_repair_exhausted` get `{"max_rounds": 6}`, and `delivery_exhausted` is delivered
+  once more. A spending gate (`budget_exhausted`), `engine_misconfigured`, `research_evidence`,
+  an approval and a review are never answered, and each sweep names the ones it left. The
+  consent is the flag, for one worker and one project (`--all-projects` is refused) and nothing
+  is stored, so silence is never read as consent (sub-doctrine 12.d). Answers stop after
+  `--auto-answer-limit` (default 30), each is recorded on the ledger as `GateAnswered` by
+  `auto-answer`, and a replayed sweep is a no-op. Before, the only way through was a shell loop
+  around `vibey answer`.
+
+### Bug Fixes
+
+* **The in-memory AWS adapter and its test pass the lint and provenance gates:** two unused imports in
+  `vibey.infrastructure.aws.adapter`, an unsorted import block and a deprecated
+  `datetime.utcnow()` in `tests/unit/test_aws_client_port.py`, the formatting of both files, and the
+  fingerprint header that `aws/__init__.py` and that test were missing. They came in unchecked with
+  the continuation lane's backlog run and turned `ruff check`, `ruff format --check` and the
+  provenance check red on develop. No behaviour changes.
+* **The local DECOMPOSE prompt knows a Node repository:** its base prompt says "prefer one pytest
+  suite under tests/", which is right for Python and wrong elsewhere. On a Node project (a
+  `package.json` and no `pyproject.toml` in the checkout) the plan for the ministry section came
+  back verifying with `pytest -q tests/__tests__/*.test.ts` and `node -e "require('./src/lib/x')"`
+  on a TypeScript file, neither of which can pass, and the plan was accepted and built before
+  verification found out. The prompt now tells the planner to verify with the project's npm
+  scripts, never pytest, and that `node` runs only `.js` and `.mjs`. Python repositories and a
+  plan with no checkout see the unchanged prompt.
+* **`gptossloop` DECOMPOSE places a criterion no work item claims with one short question,
+  instead of regenerating the whole plan:** a local model that splits a plan into a chain of
+  build pieces drops acceptance criteria, and the plan check answered every drop by asking for
+  the entire plan again -- seven attempts and about eight minutes ending in an
+  `attempts_exhausted` gate, for the sake of two ids. Now each criterion nothing claims is put to
+  the model alone: which of this plan's items builds it, answered from an enum of those item
+  ids (a grammar small enough to compile, so it cannot be malformed or name an item that is not
+  there). The criterion is added to that item's acceptance and checked criteria, and the plan
+  check then runs over the result as before, so an answer that names no item still refuses the
+  plan, naming the criterion. An item that lists a criterion in its verification but forgot to
+  claim it is now credited with it rather than re-asked. Every other rule (missing files,
+  dependency order) re-asks as it did.
+* **The local DECOMPOSE prompt says an item may verify with a script it creates:** a
+  `build.decompose` for a content-import project was rejected seven times because the first item
+  verified with `node scripts/import-ministry.js`, a script a later item created. The model's own
+  reasoning (in the wire log) was that verification cannot create files, so it "must assume the
+  script exists", and it never planned the script in the item that ran it. The prompt now says an
+  item is work an engine performs, that its verification runs after that work, that a script it
+  creates and lists in `files_touched_hint` counts, and that no item may run a file only a later
+  item creates. It also tells the model to list each path once (one attempt repeated the same
+  four paths 504 times).
+* **A work item that is waiting for what it builds on no longer counts as an engine selection:**
+  the wait was decided after an engine was chosen, so every poll of a waiting dependent added one
+  to that engine's selection count (and so to the rotation's bookkeeping) with no session behind
+  it, and the 60-second retry left an item idle for up to a minute after its dependency had
+  integrated. The wait is now decided before an engine is chosen, and it polls every five seconds.
+* **A model's JSON object written as a string is read as the object, not re-asked:** gpt-oss in JSON
+  mode wrote the second item of a two-item work plan as a string holding the whole item, encoded a
+  second time with every quote escaped. The plan was otherwise sound, but the schema check named
+  `$.items[1] must be of JSON type object, got string` and the whole plan was regenerated, a second
+  model call and minutes on a local model. Parsing that string gives exactly the object that was
+  meant, so every sovereign producer (the interview questions, the spec, the research summary and
+  the work plan) now reads a string as an object where the schema says `object` and the string's
+  whole text is a JSON object. Any other string stays, and the check names it as before.
+* **A BUILD job's prompt now carries the work, not just its title:** the whole prompt an engine
+  got was the item's id and title, generic house rules and the verification commands. A local
+  20B model given that spent twenty sessions on one item producing nothing usable, searching the
+  repository for what it was meant to build; the spec was nowhere in what it was handed, and the
+  `.vibey/context/` it could find held an earlier, unrelated job's spec, because the accepted spec
+  is published to the checkout's working tree while a worktree is cut from a commit. The prompt
+  is now built from the accepted spec and the item's own payload: the objective and first slice,
+  every constraint and non-goal (several name the very files to reuse), this item's acceptance
+  criteria in full and no one else's, the files it is expected to write, which earlier items are
+  already in its branch, and how to start (read `AGENTS.md`, then the named files). The fan-out
+  records each item's criteria and files on its job for this. The router block that vibey writes
+  into `AGENTS.md` and its siblings no longer sends the engine to `.vibey/context/` as the
+  authority: where it disagrees with the task prompt, the prompt wins. An item without those
+  fields, or a project with no accepted spec, gets the prompt it always had.
+* **A local BUILD plan is fewer, larger slices, and a dependent item waits for the code it builds
+  on:** a real run of a seven-item plan showed two faults. Three of the items (`c4`, `c9`, `c10`)
+  had no files to write and only restated checks every item already runs, and the item that ran
+  first, `c4`, started before the walking skeleton was integrated, so its worktree was the bare
+  base and a local model spent 55 turns searching for routes that were not there. (1) The
+  sovereign decomposer now folds an item that touches no file into the dependency it verifies: its
+  criteria and checks move there, that item inherits what the folded one waited for, and anything
+  that waited on the folded item waits on it instead (an item with no dependency to fold into
+  stays for the plan check to name). The prompt says a check is never an item. (2) A dependent `build.implement` job
+  now defers, without using an attempt and without touching an engine circuit, until a succeeded
+  `build.integrate` job covers each item it builds on, so its branch is cut from the integration
+  branch with their code on it. The queue only waited for the dependency's implement job, which
+  finishes before its verify and integrate jobs, and those were last in line behind the other
+  items.
+* **A DESIGN interview stage with nothing left to ask asks nothing:** the sovereign interview
+  prompt demanded one to four questions at every stage and the schema and decoder refused an
+  empty list, so a model whose intake already stated every decision reasoned for most of a minute
+  and invented a filler question (Q13, "add a ministry link to the header?", after the decisions
+  had ruled it out). The prompt now says to ask none when the ledger already settles the stage
+  and never to ask to fill one, and an empty list is accepted. The ledger records the stage as
+  settled (a new `StageSettled` event, published with its stage and cycle only) so it is not
+  asked again on every replay, and the interview goes on to the next stage with no gate.
+* **A long local session no longer degrades into giving up:** the first section of a real build
+  ran past 100 turns with ninety thousand tokens of its own history in every request, and by then
+  the model was importing functions that did not exist, calling a file it had written itself
+  "corrupted", writing "Cannot finish." into a file and running `echo done`. Two things changed
+  in `qwenloop` (which drives gptossloop and qwenloop). Once the conversation passes about
+  24,000 estimated tokens, the older turns are replaced by a deterministic summary of what the
+  session did (files written, edited and read, the last commands and how they ended) while the
+  plan and the newest messages stay, and `context.renewed` is recorded. And a session that has
+  made no tool call it had not made in its last twenty calls for eight turns in a row now fails
+  as `stalled` instead of spending the rest of its turns, judged on the calls and not on what the
+  model says. The work brief also now tells the engine to find and read the closest existing
+  code before writing, to import only what exists, and to stop and say what is missing rather
+  than write placeholders. Both limits are `run()` arguments (`context_renewal_tokens`,
+  `max_stalled_turns`; 0 turns each off).
+* **A job no engine can take now says why:** a worker that could not place a job deferred it
+  with "No engines meet requirements for project ..." and nothing else, so an engine that was not
+  conformant, a login check gone stale, an open circuit, the engine a retry must rotate away from
+  and an engine left out of `--engines` all read the same, and a job could be deferred every five
+  minutes for an hour with no way to tell which. The message now lists each engine and the rule
+  that turned it down, names an engine the worker may use but has no health record for yet, and
+  says so when no engine has one. The rules are the ones that already decided eligibility; only
+  the explanation is new.
+* **A BUILD retry that must change engine no longer defers for ever on a pool with only one:**
+  from the third attempt a BUILD job escalates its effort (low to standard, then to high), and an
+  escalated retry is required to rotate away from the engine that just failed. On a pool with no
+  other engine that excluded the only candidate, selection found nobody, and the job was deferred
+  every five minutes with no park, no failure and nothing on the ledger (a one-engine local pool
+  did exactly that on its third attempt, with `gptossloop: excluded for this attempt (a retry that
+  must rotate away)` the only trace). The rotation now applies only when another engine remains
+  after the exclusions; otherwise the retry still escalates its effort and stays on the engine it
+  has, as a same-tier retry does. An unknown pool keeps the rotation absolute, and a pool with a
+  second engine rotates as before. The same rule `build.verify` already had for reviewer
+  independence.
+* **A plan can no longer verify a TypeScript file with pytest, and a Node repository gets Node
+  house rules:** the planner for a Next.js repository wrote `pytest -q
+  tests/__tests__/ministry.test.ts`, which cannot pass, and the plan check (which only looks for
+  files nothing provides) accepted it. The engine was then told to "keep every test under tests/"
+  and spent all sixteen turns of its first item searching for a directory the repository does not
+  have, writing no code. Decompose now rejects, and re-asks with the file named, a pytest command
+  pointed at a `.ts`, `.tsx`, `.js`, `.jsx`, `.mjs` or `.cjs` file. The house rules given to every
+  implement session now follow the checkout: a `package.json` with no `pyproject.toml` gets
+  rules that put tests in the repository's own `__tests__` directories and run its npm scripts;
+  everything else sees the unchanged Python rules.
+* **How many work items a plan has follows the spec, not a number:** a local DECOMPOSE is no
+  longer told how many items to make, nor re-asked for an item it made too large. The prompt now
+  says there is no target count: keep work that belongs together in one item (routes, data, tests
+  and docs for one feature), split where the work really divides (a different concern or layer,
+  something that must exist before the next piece can be built or checked, or more than one
+  engine session can finish), never split only to make items smaller and never merge dependent
+  pieces to make fewer. What is still checked is what makes a plan unsound: every criterion
+  claimed, dependencies listed first, files that exist or are planned, no item that writes no
+  file, and verification that can run (no pytest on a TypeScript file).
+* **`[publish]` in `vibey.toml` now reaches the project:** `vibey new` copies only an allow-list
+  of runtime tables from `vibey.toml` into the project's stored config, and `publish` was not on
+  it, so a `[publish] mode = "interview"` was silently dropped and a finished project never
+  published. `publish` is on the list, and a `[publish]` table that is wrong (`mode = "sometimes"`)
+  is refused when the project is created, not when it finishes.
+* **sovereign runner:** the job container now sits on a Docker network with no route out, and
+  its only way out is an egress gate (`[runners] egress_gate`, on by default). The gate
+  forwards four model-server requests (version, tags, models, chat completions) and tunnels
+  HTTPS to a short list of hosts (`egress_allow`: GitHub and its artifact stores, PyPI), to
+  globally routable addresses only. Before, `--add-host host-gateway` exposed every port on
+  the host to a job's shell, and the host's Postgres and RabbitMQ accepted connections from
+  inside the container. `vibey-gh runner install` renders the gate (`egress/`), the network and
+  the proxy settings; `runner check` reports drift in them. Turning the gate off is a declared,
+  documented choice, and the backlog prompt that runs on the host refuses to run without it.
+* **sovereign runner:** `runner install --load` no longer fails with `launchctl bootstrap failed
+  (exit 5)` when it replaces a running supervisor. `launchctl bootout` returns while launchd is
+  still stopping the old service, so the load landed in that window. The installer now waits for
+  the label to disappear, then retries a load that still answers 5, both bounded by the new
+  `[runners] launchd_settle_seconds` (default 60; 0 tries once). Any other refusal is still
+  reported at once.
+* **`vibey design accept --spec-json` keeps the research gaps:** an imported spec was built
+  without `research_gaps`, so editing a synthesized spec and importing it silently dropped the
+  "Research not performed" section, although the field exists so that "the spec states every
+  gap". The loader now reads an optional `research_gaps` list of `{topic, reason}`, refusing a
+  gap with no topic or no reason, and the documented shape says to keep them when editing.
+
 ## [4.3.0] (2026-10-08)
 
 ### Features
