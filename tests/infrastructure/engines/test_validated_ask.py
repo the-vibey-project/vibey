@@ -17,6 +17,7 @@ from vibey.infrastructure.engines.validated_ask import (
     SCHEMA_INSTRUCTION,
     JsonShapeChecker,
     ValidatedAsk,
+    unwrap_encoded_objects,
 )
 
 SCHEMA: dict[str, object] = {
@@ -212,3 +213,93 @@ async def test_re_asks_are_configurable_and_never_negative() -> None:
     assert len(chat.asked) == 1
     with pytest.raises(ValueError, match="reasks must not be negative"):
         ValidatedAsk(chat, reasks=-1)
+
+
+# ── a string that is the object, encoded a second time ───────────────────────
+
+ITEM_SCHEMA: dict[str, object] = {
+    "type": "object",
+    "properties": {
+        "items": {
+            "type": "array",
+            "items": {
+                "type": "object",
+                "properties": {"item_id": {"type": "string"}, "meta": {"type": "object"}},
+                "required": ["item_id"],
+            },
+        }
+    },
+    "required": ["items"],
+}
+
+
+def test_an_object_written_as_a_string_is_the_object() -> None:
+    """gpt-oss in JSON mode wrote a plan's second item as an escaped string of itself."""
+    first = {"item_id": "ws"}
+    second = {"item_id": "donate"}
+    answer = {"items": [first, json.dumps(second)]}
+
+    unwrapped = unwrap_encoded_objects(answer, ITEM_SCHEMA)
+
+    assert unwrapped == {"items": [first, second]}
+    assert JsonShapeChecker().violations(unwrapped, ITEM_SCHEMA) == ()
+    # The answer it was given is not changed: a new value comes back.
+    assert answer["items"][1] == json.dumps(second)  # type: ignore[index]
+
+
+def test_an_object_inside_an_encoded_object_is_unwrapped_too() -> None:
+    inner = {"item_id": "ws", "meta": json.dumps({"item_id": "nested"})}
+    answer = {"items": [json.dumps(inner)]}
+
+    assert unwrap_encoded_objects(answer, ITEM_SCHEMA) == {
+        "items": [{"item_id": "ws", "meta": {"item_id": "nested"}}]
+    }
+
+
+@pytest.mark.parametrize(
+    "stray",
+    ["not json at all", "[1, 2]", "7", "", '"a string"', "null"],
+    ids=["prose", "an-array", "a-number", "empty", "a-json-string", "null"],
+)
+def test_a_string_that_is_not_a_whole_json_object_is_left_for_the_check_to_name(
+    stray: str,
+) -> None:
+    answer = {"items": [{"item_id": "ws"}, stray]}
+
+    unwrapped = unwrap_encoded_objects(answer, ITEM_SCHEMA)
+
+    assert unwrapped == answer
+    assert JsonShapeChecker().violations(unwrapped, ITEM_SCHEMA) == (
+        "$.items[1] must be of JSON type object, got string",
+    )
+
+
+def test_only_a_place_the_schema_says_is_an_object_is_unwrapped() -> None:
+    schema: dict[str, object] = {
+        "type": "object",
+        "properties": {"text": {"type": "string"}, "tags": {"type": "array"}},
+    }
+    answer = {"text": json.dumps({"a": 1}), "tags": [json.dumps({"b": 2})], "extra": "{}"}
+
+    # A string field stays a string, an array with no `items` schema is not looked into, and a
+    # key the schema does not name is left alone.
+    assert unwrap_encoded_objects(answer, schema) == answer
+
+
+@pytest.mark.asyncio
+async def test_an_encoded_object_costs_no_re_ask() -> None:
+    """The whole plan was regenerated for this: a second model call, minutes on a local model."""
+    chat = ScriptedChat({"items": [{"item_id": "ws"}, json.dumps({"item_id": "donate"})]})
+
+    result = await ValidatedAsk(chat).ask(
+        "s", "u", ITEM_SCHEMA, subject="a plan", decode=lambda data: data["items"]
+    )
+
+    assert result == [{"item_id": "ws"}, {"item_id": "donate"}]
+    assert len(chat.asked) == 1  # one question; nothing was re-asked
+
+
+@pytest.mark.parametrize("wrong", [7, None, True, [1, 2]], ids=["number", "null", "bool", "array"])
+def test_a_value_that_is_neither_a_string_nor_an_object_is_left_as_it_is(wrong: object) -> None:
+    """Where an object is wanted and the model wrote something else, the check names it."""
+    assert unwrap_encoded_objects(wrong, {"type": "object"}) == wrong

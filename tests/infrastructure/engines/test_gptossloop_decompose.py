@@ -543,3 +543,20 @@ async def test_an_item_that_builds_nothing_is_folded_into_the_item_it_verifies()
     assert items[0].acceptance_ids == ("AC-1", "AC-2")
     assert items[0].verification.criteria_checked == ("AC-1", "AC-2")
     assert len(chat.asked) == 1  # nothing was re-asked: the fold is code's, not the model's
+
+
+@pytest.mark.asyncio
+async def test_an_item_the_model_double_encoded_is_read_as_the_item_without_a_re_ask() -> None:
+    """The real plan from the ministry run: its second item came back as a string holding it."""
+    plan = {
+        "items": [
+            _item("ws", acceptance=["AC-1"]),
+            json.dumps(_item("cli-parsing", acceptance=["AC-2"], depends_on=["ws"])),
+        ]
+    }
+    producer, chat = _producer(plan)
+
+    items = await producer.decompose(_spec("AC-1", "AC-2"))
+
+    assert [item.item_id for item in items] == ["ws", "cli-parsing"]
+    assert len(chat.asked) == 1
