@@ -100,13 +100,6 @@ _RUNNERS: Final[frozenset[str]] = frozenset({"uv", "poetry", "pipenv", "pdm", "h
 _SEPARATOR_CHARACTERS: Final[frozenset[str]] = frozenset("();|&")
 _OUTPUT_REDIRECTS: Final[frozenset[str]] = frozenset({">", ">>", ">|", "&>", "&>>"})
 _UNRESOLVABLE: Final[frozenset[str]] = frozenset("$*?[{~`")
-MAX_ITEM_CRITERIA: Final[int] = 6
-"""The most acceptance criteria one item may claim. The size check cannot rest on paths alone:
-a model that writes `files_touched_hint: []` and claims all eleven criteria in one item has
-made a monolith that lists no paths at all (measured, on the ministry section's second plan)."""
-MAX_ITEM_PATHS: Final[int] = 12
-"""The most paths one item may list in `files_touched_hint`. A local engine session has a few
-dozen turns, and an item that touches more than this is a project, not a work item."""
 _NON_PYTHON_SUFFIXES: Final[frozenset[str]] = frozenset(
     {".ts", ".tsx", ".js", ".jsx", ".mjs", ".cjs"}
 )
@@ -167,39 +160,7 @@ class PlanReferenceChecker:
         grouped: dict[str, list[UnresolvedReference]] = {}
         for reference in self.unresolved(items, exists=exists):
             grouped.setdefault(reference.item_id, []).append(reference)
-        return (
-            self._missing_messages(grouped)
-            + self._pytest_messages(items)
-            + self._size_messages(items)
-            + self._criteria_messages(items)
-        )
-
-    @staticmethod
-    def _criteria_messages(items: Sequence[ReferencingItemInterface]) -> tuple[str, ...]:
-        return tuple(
-            f"item {item.item_id!r} claims {len(ids)} acceptance criteria, more than the "
-            f"{MAX_ITEM_CRITERIA} one item may claim: split it into a chain of build pieces "
-            "that each claim only the criteria their own paths make true, where every piece "
-            "after the first lists the piece before it in depends_on. The walking skeleton "
-            "claims only what its thin slice demonstrates"
-            for item in items
-            if len(ids := set(item.acceptance_ids)) > MAX_ITEM_CRITERIA
-        )
-
-    @staticmethod
-    def _size_messages(items: Sequence[ReferencingItemInterface]) -> tuple[str, ...]:
-        """An item too big to build in one session. Measured: a single walking-skeleton item
-        that listed 25 paths and all eleven criteria used all sixteen turns of its session,
-        wrote none of the section, and was retried."""
-        return tuple(
-            f"item {item.item_id!r} lists {len(paths)} paths in files_touched_hint, more than "
-            f"the {MAX_ITEM_PATHS} one item may touch: split it into a chain of build pieces, "
-            "each touching fewer paths, where every piece after the first lists the piece "
-            "before it in depends_on. The walking skeleton is the thinnest slice that works "
-            "end to end, not the whole feature"
-            for item in items
-            if len(paths := {hint for hint in item.files_touched_hint if hint}) > MAX_ITEM_PATHS
-        )
+        return self._missing_messages(grouped) + self._pytest_messages(items)
 
     def _pytest_messages(self, items: Sequence[ReferencingItemInterface]) -> tuple[str, ...]:
         """A plan whose pytest commands name a TypeScript or JavaScript file: pytest runs
