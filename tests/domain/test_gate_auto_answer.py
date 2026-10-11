@@ -62,3 +62,46 @@ def test_the_limit_defaults_and_must_be_at_least_one() -> None:
     for bad in (0, -3, True):
         with pytest.raises(ValueError, match="at least 1"):
             GateAutoAnswerPolicy(limit=bad)
+
+
+REVIEW_OPTIONS = ("accept", "changes", "cancel")
+DEPLOY_OPTIONS = ("local_only", "deploy")
+
+
+def test_a_review_is_accepted_only_when_asked_for_and_only_with_the_accept_option() -> None:
+    on = GateAutoAnswerPolicy(answer_retries=False, accept_review=True)
+
+    assert on.answer_for("approval", REVIEW_OPTIONS) == {"verdict": "accept"}
+    assert on.answer_for("approval", ("changes", "cancel")) is None
+    assert on.answer_for("approval") is None
+    assert GateAutoAnswerPolicy().answer_for("approval", REVIEW_OPTIONS) is None
+
+
+def test_the_deployment_choice_is_only_ever_answered_local_only() -> None:
+    on = GateAutoAnswerPolicy(answer_retries=False, finish_local=True)
+
+    assert on.answer_for("choice", DEPLOY_OPTIONS) == {"choice": "local_only"}
+    assert on.answer_for("choice", ("deploy",)) is None
+    assert on.answer_for("choice") is None
+    assert GateAutoAnswerPolicy().answer_for("choice", DEPLOY_OPTIONS) is None
+
+
+def test_no_acceptance_flag_widens_to_a_deployment_a_spend_or_a_retry() -> None:
+    everything = GateAutoAnswerPolicy(answer_retries=False, accept_review=True, finish_local=True)
+
+    for kind in (
+        "deploy_acceptance",
+        "deploy_demo_review",
+        "deploy_interview",
+        "deploy_failure_triage",
+        "budget_exhausted",
+        "escalation_exhausted",
+        "question",
+        "research_evidence",
+    ):
+        assert everything.answer_for(kind, (*REVIEW_OPTIONS, *DEPLOY_OPTIONS)) is None, kind
+
+
+def test_retries_can_be_switched_off_and_stay_on_by_default() -> None:
+    assert GateAutoAnswerPolicy().answer_retries is True
+    assert GateAutoAnswerPolicy(answer_retries=False).answer_for("escalation_exhausted") is None

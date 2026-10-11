@@ -70,7 +70,7 @@ class GateAutoAnswerSweep:
         left: list[str] = []
         failed: list[str] = []
         for gate in sorted(open_gates, key=lambda g: g.raised_at):
-            answer = self._policy.answer_for(gate.kind)
+            answer = self._policy.answer_for(gate.kind, gate.options)
             if answer is None:
                 left.append(f"{gate.kind} gate {gate.gate_id}")
                 continue
