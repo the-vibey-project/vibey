@@ -27,12 +27,14 @@ from typing import Final
 
 class HostOs(StrEnum):
     ARCH = "arch"
+    FEDORA = "fedora"
     MACOS = "macos"
 
 
 class PackageSource(StrEnum):
     PACMAN = "pacman"
     AUR = "aur"
+    DNF = "dnf"
     BREW_FORMULA = "brew-formula"
     BREW_CASK = "brew-cask"
     NONE = "none"
@@ -105,12 +107,15 @@ class DependencySpec:
     macos: HostRecipe | None = None
     requires: tuple[str, ...] = ()
     note: str = ""
+    fedora: HostRecipe | None = None
 
     def recipe(self, host: HostOs | None) -> HostRecipe | None:
         if host is None:
             return None
         if host == HostOs.ARCH:
             return self.arch
+        if host == HostOs.FEDORA:
+            return self.fedora
         return self.macos
 
 
@@ -158,8 +163,14 @@ _POSTGRES_HINT = "export VIBEY_PG_URL=postgresql://$USER@localhost:5432/vibey"
 
 _PACKAGE_POSTGRES_ARCH = PackageSpec(PackageSource.PACMAN, ("postgresql",), ("pg_isready",))
 _PACKAGE_POSTGRES_MACOS = PackageSpec(PackageSource.BREW_FORMULA, ("postgresql@17",), ())
+# `postgresql-setup`, not `pg_isready`: on Fedora the client tools ship in `postgresql`,
+# which can be installed without the server; `postgresql-setup` ships only with the server.
+_PACKAGE_POSTGRES_FEDORA = PackageSpec(
+    PackageSource.DNF, ("postgresql-server",), ("postgresql-setup",)
+)
 
 _POSTGRES_ARCH_RECIPE = HostRecipe(_PACKAGE_POSTGRES_ARCH, hint=_POSTGRES_HINT)
+_POSTGRES_FEDORA_RECIPE = HostRecipe(_PACKAGE_POSTGRES_FEDORA, hint=_POSTGRES_HINT)
 _POSTGRES_MACOS_RECIPE = HostRecipe(_PACKAGE_POSTGRES_MACOS, hint=_POSTGRES_HINT)
 
 _CATALOGUE_ENTRIES: tuple[DependencySpec, ...] = (
@@ -170,8 +181,9 @@ _CATALOGUE_ENTRIES: tuple[DependencySpec, ...] = (
         default=True,
         installer=InstallerKind.POSTGRES,
         arch=_POSTGRES_ARCH_RECIPE,
+        fedora=_POSTGRES_FEDORA_RECIPE,
         macos=_POSTGRES_MACOS_RECIPE,
-        note="Homebrew is pinned to 17, the major the chart (deploy/helm/vibey/values.yaml:53) and CI run. Arch's repositories carry only the current major (18.6 on 2026-09-22), which vibey supports (14+).",
+        note="Homebrew is pinned to 17, the major the chart (deploy/helm/vibey/values.yaml:53) and CI run. Arch's repositories carry only the current major (18.6 on 2026-09-22), which vibey supports (14+). Fedora carries the release's default major, which vibey supports (14+).",
     ),
     DependencySpec(
         key="ollama",
@@ -181,6 +193,11 @@ _CATALOGUE_ENTRIES: tuple[DependencySpec, ...] = (
         installer=InstallerKind.PACKAGE,
         arch=HostRecipe(
             PackageSpec(PackageSource.PACMAN, ("ollama",), ("ollama",)),
+            ServiceSpec(ServiceManager.SYSTEMD, "ollama"),
+            ProbeSpec(("ollama", "list"), timeout_seconds=60.0),
+        ),
+        fedora=HostRecipe(
+            PackageSpec(PackageSource.DNF, ("ollama",), ("ollama",)),
             ServiceSpec(ServiceManager.SYSTEMD, "ollama"),
             ProbeSpec(("ollama", "list"), timeout_seconds=60.0),
         ),
@@ -197,6 +214,7 @@ _CATALOGUE_ENTRIES: tuple[DependencySpec, ...] = (
         default=True,
         installer=InstallerKind.MODEL,
         arch=HostRecipe(PackageSpec(PackageSource.NONE)),
+        fedora=HostRecipe(PackageSpec(PackageSource.NONE)),
         macos=HostRecipe(PackageSpec(PackageSource.NONE)),
         requires=("ollama",),
     ),

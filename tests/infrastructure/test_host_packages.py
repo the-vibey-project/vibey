@@ -129,7 +129,7 @@ def test_host_label_prefers_pretty_name(tmp_path: Path):
         (
             1000,
             ("pacman", "sudo"),
-            "Arch Linux is not a default OS for `vibey install` (Arch Linux, macOS)",
+            "Arch Linux is not a default OS for `vibey install` (Arch Linux, Fedora, macOS)",
         ),
     ],
 )
@@ -377,6 +377,106 @@ def test_executor_which_and_healthy_preconditions() -> None:
     assert mac.host_label() == "macOS"
     assert mac.precondition() is None
     assert arch.precondition() is None
+
+
+@pytest.mark.parametrize(
+    "release",
+    ["ID=fedora\n", 'ID="nobara"\nID_LIKE="fedora"\n'],
+)
+def test_detects_fedora_and_its_derivatives_from_os_release(release: str) -> None:
+    runner = make_runner(
+        platform="linux",
+        os_release=release,
+        uid=1000,
+        user="alice",
+        executor=FakeCommandExecutor(on_path=()),
+    )
+    assert runner.host() == HostOs.FEDORA
+
+
+def test_fedora_host_label_falls_back_when_there_is_no_pretty_name() -> None:
+    runner = make_runner(
+        platform="linux",
+        os_release="ID=fedora",
+        uid=1000,
+        user="alice",
+        executor=FakeCommandExecutor(on_path=()),
+    )
+    assert runner.host_label() == "Fedora Linux"
+
+
+def test_unknown_host_label_falls_back_to_the_platform() -> None:
+    runner = make_runner(
+        platform="plan9",
+        os_release="",
+        uid=1000,
+        user="alice",
+        executor=FakeCommandExecutor(on_path=()),
+    )
+    assert runner.host_label() == "plan9"
+
+
+@pytest.mark.parametrize(
+    "paths,expected",
+    [
+        (("sudo",), "dnf is not on PATH; this does not look like a working Fedora install"),
+        (("dnf",), "vibey install needs sudo on Fedora: dnf and systemctl run as root"),
+        (("dnf", "sudo"), None),
+    ],
+)
+def test_fedora_precondition_names_what_is_missing(paths, expected) -> None:
+    runner = make_runner(
+        platform="linux",
+        os_release="ID=fedora\n",
+        uid=1000,
+        user="alice",
+        executor=FakeCommandExecutor(on_path=paths),
+    )
+    assert runner.precondition() == expected
+
+
+def test_is_installed_queries_rpm_for_a_dnf_package() -> None:
+    executor = FakeCommandExecutor(
+        on_path=("dnf",), responses={("rpm", "-q", "postgresql-server"): CommandResult(0)}
+    )
+    runner = make_runner(
+        platform="linux", os_release="ID=fedora", uid=0, user="alice", executor=executor
+    )
+    assert runner.is_installed(PackageSpec(PackageSource.DNF, ("postgresql-server",)))
+    assert executor.calls == [("rpm", "-q", "postgresql-server")]
+
+
+@pytest.mark.parametrize(
+    "paths,uid,expected",
+    [
+        (("sudo",), 1000, ("sudo", "dnf", "install", "-y", "foo")),
+        ((), 0, ("dnf", "install", "-y", "foo")),
+    ],
+)
+def test_ensure_installs_a_dnf_package(paths, uid, expected) -> None:
+    executor = FakeCommandExecutor(
+        on_path=paths, responses={("rpm", "-q"): CommandResult(1)}, default=CommandResult(0)
+    )
+    runner = make_runner(
+        platform="linux", os_release="ID=fedora", uid=uid, user="alice", executor=executor
+    )
+    outcome = runner.ensure(PackageSpec(PackageSource.DNF, ("foo",)))
+    assert outcome.ok and outcome.changed
+    assert outcome.detail == "installed foo with dnf"
+    assert executor.calls[-1] == expected
+
+
+def test_ensure_refuses_dnf_without_root_or_sudo() -> None:
+    runner = make_runner(
+        platform="linux",
+        os_release="ID=fedora",
+        uid=1000,
+        user="alice",
+        executor=FakeCommandExecutor(on_path=(), default=CommandResult(1)),
+    )
+    outcome = runner.ensure(PackageSpec(PackageSource.DNF, ("foo",)))
+    assert not outcome.ok and not outcome.changed
+    assert outcome.detail == "dnf needs root or sudo to install foo"
 
 
 def test_runner_and_executor_satisfy_interfaces() -> None:
