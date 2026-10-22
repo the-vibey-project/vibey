@@ -10,6 +10,7 @@ REPO = Path(__file__).resolve().parents[2]
 CONTRACT = "Voice contract (mandatory, with no exceptions)"
 DIRECT_ADDRESS = "direct speech"
 NO_PLURAL_SELF = "for yourself alone"
+THINKING_CHANNEL = "hidden thinking and reasoning channel"
 RUNTIME_BOUNDARIES = (
     "scripts/continuation_prompts.py",
     "src/vibey/infrastructure/engines/ollama_chat.py",
@@ -42,6 +43,7 @@ def test_runtime_model_boundaries_carry_the_voice_contract(relative: str) -> Non
     assert DIRECT_ADDRESS in text, relative
     assert "to the operator" in text, relative
     assert NO_PLURAL_SELF in text, relative
+    assert THINKING_CHANNEL in text, relative
 
 
 @pytest.mark.parametrize("relative", WORKFLOW_PROMPTS)
@@ -61,3 +63,4 @@ def test_every_literal_managed_workflow_prompt_opens_with_the_contract(relative:
         assert CONTRACT in prompt, (relative, start.start())
         assert DIRECT_ADDRESS in prompt, (relative, start.start())
         assert NO_PLURAL_SELF in prompt, (relative, start.start())
+        assert THINKING_CHANNEL in prompt, (relative, start.start())
