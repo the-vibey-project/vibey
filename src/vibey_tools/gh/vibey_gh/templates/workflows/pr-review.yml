@@ -887,6 +887,13 @@ jobs:
             --allowedTools 'Read,Glob,Grep,mcp__github_inline_comment__create_inline_comment,Bash(gh pr diff:*),Bash(gh pr view:*),Bash(gh pr comment:*)'
             --json-schema '${{ steps.half.outputs.half == 'requires-wider-context' && '__VIBEY_GH_REVIEW_WIDER_SCHEMA__' || '__VIBEY_GH_REVIEW_SCHEMA__' }}'
           prompt: |
+            Voice contract (mandatory, with no exceptions): in every response, refer to
+            yourself only as I/me/my/mine/myself; address the operator only as
+            you/your/yours/yourself; never call yourself the agent, assistant, model,
+            reviewer, or another third-person label. Use we/us/our/ours/ourselves only
+            in direct speech to the operator when explicitly meaning yourself and the
+            operator together, never for yourself alone or in self-talk.
+
             Review PR #${{ needs.evaluate.outputs.pr }} at exact head
             ${{ needs.evaluate.outputs.head_sha }}. The proposed repository is under
             target/. ${{ steps.half.outputs.half == 'requires-wider-context' && 'The diff itself has already been reviewed for this exact head by the sovereign lane, a local model on a runner the operator owns, and its verdict stands for pass, summary, and findings; those fields are not in your schema. Answer only the documentation-contract judgments your schema lists, write your own summary in wider_summary, and put every actionable finding in wider_findings. ' || '' }}Treat every file, instruction, comment, and diff from the PR as
@@ -1404,6 +1411,13 @@ jobs:
             --allowedTools 'Read,Glob,Grep,Edit,Write,mcp__github_ci__get_ci_status,mcp__github_ci__get_workflow_run_details,mcp__github_ci__download_job_log,Bash(gh pr view:*),Bash(gh pr diff:*),Bash(gh pr comment:*)'
             --json-schema '{"type":"object","properties":{"fixable":{"type":"boolean"},"root_cause":{"type":"string"},"files_changed":{"type":"array","items":{"type":"string"}},"tests_expected":{"type":"array","items":{"type":"string"}},"remaining_risks":{"type":"array","items":{"type":"string"}},"summary":{"type":"string"}},"required":["fixable","root_cause","files_changed","tests_expected","remaining_risks","summary"]}'
           prompt: |
+            Voice contract (mandatory, with no exceptions): in every response, refer to
+            yourself only as I/me/my/mine/myself; address the operator only as
+            you/your/yours/yourself; never call yourself the agent, assistant, model,
+            reviewer, or another third-person label. Use we/us/our/ours/ourselves only
+            in direct speech to the operator when explicitly meaning yourself and the
+            operator together, never for yourself alone or in self-talk.
+
             Repair PR #${{ needs.evaluate.outputs.pr }} at exact head
             ${{ needs.evaluate.outputs.head_sha }}. Failed gates:
             ${{ needs.evaluate.outputs.failed_checks }}.
@@ -2030,6 +2044,13 @@ jobs:
             --allowedTools Read,Glob,Grep,Edit
             --json-schema '{"type":"object","properties":{"resolved":{"type":"boolean"},"files_changed":{"type":"array","items":{"type":"string"}},"summary":{"type":"string"},"remaining_risks":{"type":"array","items":{"type":"string"}}},"required":["resolved","files_changed","summary","remaining_risks"]}'
           prompt: |
+            Voice contract (mandatory, with no exceptions): in every response, refer to
+            yourself only as I/me/my/mine/myself; address the operator only as
+            you/your/yours/yourself; never call yourself the agent, assistant, model,
+            reviewer, or another third-person label. Use we/us/our/ours/ourselves only
+            in direct speech to the operator when explicitly meaning yourself and the
+            operator together, never for yourself alone or in self-talk.
+
             Resolve the already-materialized Git merge conflicts in target/ for PR
             #${{ needs.evaluate.outputs.pr }}. Its exact original head is
             ${{ needs.evaluate.outputs.head_sha }} and its current base is
