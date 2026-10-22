@@ -12,7 +12,7 @@ and proves the result passes its own gates, without publishing anything.
 
 - **Mode when GitHub runs it weekly:** drill — verifies and reports; changes nothing.
 - **What it is for:** Reconstitute the project from any surviving copy if the forge, the runner or the operator is gone.
-- **Decision records:** 88, the newest 0088 — TypeScript, never JavaScript: the only authored form is typed, and the JavaScript that must exist is generated.
+- **Decision records:** 89, the newest 0089 — AI self-reference is I; inclusive we is only direct address.
 <!-- END GENERATED continuation:state -->
 
 ## The prompt
