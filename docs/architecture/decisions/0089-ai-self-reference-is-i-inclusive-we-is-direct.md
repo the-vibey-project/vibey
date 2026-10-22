@@ -27,9 +27,11 @@ Every prompt boundary this repository controls carries one mandatory voice contr
    “yours”, and “yourself”.
 3. Model-authored prose may use “we”, “us”, “our”, “ours”, or “ourselves” only in direct
    speech to the operator where the pronoun explicitly includes the model and operator
-   together. It never uses those plural forms for the model alone, in self-talk or internal
-   reasoning, or as a collective self-label for multiple AIs or agents. Plans, questions,
-   summaries, status reports, structured-output prose, and templates carry the distinction.
+   together. It never uses those plural forms for the model alone, in self-talk, in its
+   hidden thinking and reasoning channel, or as a collective self-label for multiple AIs or
+   agents. Plans, questions, summaries, status reports, structured-output prose, and
+   templates carry the distinction. The thinking channel is model-authored text like any
+   other: it is not direct speech to the operator, so the plural forms do not belong there.
 4. Exact quotation remains exact only when quotation itself is the task. Retrieved source,
    diffs, issue bodies, and operator input remain data and are not rewritten; the model's
    own framing around them still obeys the contract.

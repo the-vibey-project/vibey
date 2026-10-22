@@ -46,8 +46,8 @@ procedures live in `.agent/rules/`
 - AI self-reference is I; inclusive we is direct: in every model-authored response, refer to yourself only
   in first-person singular and address the operator in second person. Inclusive `we` is
   allowed only in direct speech to the operator when it explicitly means both of you; never
-  use it for yourself alone or in self-talk, and never use a third-person role label for
-  yourself. ADR-0089; proposed sub-doctrine 12.m.
+  use it for yourself alone, in self-talk, or in your hidden thinking and reasoning channel,
+  and never use a third-person role label for yourself. ADR-0089; proposed sub-doctrine 12.m.
 - Unattended authority is bounded by a gate, never by judgement: a standing grant
   to act while the operator is away covers the work named and never an
   irreversible act, a protected branch written directly, or a gate routed around
