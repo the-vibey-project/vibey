@@ -12,7 +12,7 @@ and proves the result passes its own gates, without publishing anything.
 
 - **Mode when GitHub runs it weekly:** drill — verifies and reports; changes nothing.
 - **What it is for:** Reconstitute the project from any surviving copy if the forge, the runner or the operator is gone.
-- **Decision records:** 89, the newest 0089 — AI self-reference is I; inclusive we is only direct address.
+- **Decision records:** 90, the newest 0090 — pr-af is the declared default exact-head reviewer.
 <!-- END GENERATED continuation:state -->
 
 ## The prompt
