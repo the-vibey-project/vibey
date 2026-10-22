@@ -83,7 +83,15 @@ def build_turn_options(
     # The backend overlay last, so a profile's extra_env can tune the defaults above.
     merged_env.update(env or {})
 
-    append = AUTONOMY_SYSTEM_PROMPT_FRAGMENT
+    voice_contract = (
+        "Voice contract (mandatory, with no exceptions): in every response, refer to "
+        "yourself only as I/me/my/mine/myself; address the operator only as "
+        "you/your/yours/yourself; never call yourself the agent, assistant, model, or "
+        "another third-person label. Use we/us/our/ours/ourselves only in direct speech "
+        "to the operator when explicitly meaning yourself and the operator together, never "
+        "for yourself alone or in self-talk."
+    )
+    append = f"{voice_contract}\n\n{AUTONOMY_SYSTEM_PROMPT_FRAGMENT}"
     if system_prompt_append.strip():
         append = f"{append}\n\n{system_prompt_append.strip()}"
 

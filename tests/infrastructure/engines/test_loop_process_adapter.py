@@ -20,6 +20,7 @@ from vibey.infrastructure.engines.classify import CREDITS_FIXTURES
 from vibey.infrastructure.engines.descriptors import CLAUDELOOP, CODEXLOOP, QWENLOOP
 from vibey.infrastructure.engines.loop_process_adapter import (
     EXIT_CODE_WIND_DOWN,
+    MODEL_VOICE_CONTRACT,
     LoopProcessAdapter,
     _active_processes,
     _diagnostic_files,
@@ -249,11 +250,14 @@ def test_render_plan_adds_codexloop_checkbox_without_losing_prompt() -> None:
     rendered = _render_plan(CODEXLOOP, prompt)
 
     assert rendered.startswith("# Work Plan\n\n- [ ] Implement work item ws\n")
-    assert rendered.endswith(f"## Instructions\n\n{prompt}\n")
+    assert "## Instructions\n\nVoice contract (mandatory, with no exceptions)" in rendered
+    assert rendered.endswith(f"{prompt}\n")
 
 
 def test_render_plan_preserves_other_engine_prompts() -> None:
-    assert _render_plan(CLAUDELOOP, "plain prompt") == "plain prompt"
+    rendered = _render_plan(CLAUDELOOP, "plain prompt")
+    assert "Voice contract (mandatory, with no exceptions)" in rendered
+    assert rendered.endswith("plain prompt")
 
 
 def test_render_plan_handles_an_empty_codexloop_prompt() -> None:
@@ -1121,7 +1125,7 @@ async def test_start_writes_plan_and_returns_handle(tmp_path: Path) -> None:
 
         plan_file = worktree_path / ".vibey" / "plans" / f"{spec.run_id}.md"
         assert plan_file.exists()
-        assert plan_file.read_text() == "test prompt here"
+        assert plan_file.read_text() == f"{MODEL_VOICE_CONTRACT}\n\ntest prompt here"
 
         import signal
 
