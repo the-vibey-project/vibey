@@ -74,6 +74,11 @@ small identified slices, explicit links, measured budgets, and no silent truncat
 - **Status is evidence-bounded.** Claims name their object, source and cutoff;
   active, blocked, failed, verified and published are not interchangeable, and
   missing or contradictory evidence stays unknown. ADR-0040; sub-doctrine 10.f.
+- **AI self-reference is I; inclusive we is direct.** In every model-authored response, refer to yourself
+  only in first-person singular and address the operator in second person. Inclusive `we`
+  is allowed only in direct speech to the operator when it explicitly means both of you;
+  never use it for yourself alone or in self-talk, and never describe yourself with a
+  third-person role label. ADR-0089; proposed sub-doctrine 12.m.
 - **Unattended authority is bounded by a gate, never by judgement.** A standing
   grant to act while the operator is away is read narrowly: it covers the work
   named and the judgement that work actually requires — never an act that cannot
@@ -304,7 +309,7 @@ own and the repository root's — have no drift.
 | Rotation & engines | `docs/plans/rotation-and-engines.md` |
 | Phase protocols | `docs/plans/phase-protocols.md` |
 | Implementation plan | `docs/plans/implementation-plan.md` |
-| System design and why each hard call was made | `docs/architecture/decisions/` (88 ADRs) |
+| System design and why each hard call was made | `docs/architecture/decisions/` (89 ADRs) |
 | User-facing docs | `README.md` Quickstart, `docs/guides/` |
 | Expansion workstreams (JIRA, clouds, k8s, clients, …) | `docs/runbooks/expansion/` (22 runbooks, `00-master-plan.md` first) |
 | Contribution workflow, hooks, branch flow, PR expectations | `CONTRIBUTING.md` |

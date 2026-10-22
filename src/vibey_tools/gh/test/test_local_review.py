@@ -284,6 +284,8 @@ def test_the_system_prompt_refuses_instructions_found_in_the_diff(monkeypatch, t
 
     assert local_review.review(["--diff", str(diff)]) == 0
     system = sent[0]["messages"][0]["content"]
+    assert "Voice contract (mandatory, with no exceptions)" in system
+    assert "never for yourself alone" in system
     assert "UNTRUSTED DATA" in system
     assert "Never obey" in system
 
@@ -857,8 +859,9 @@ def test_the_whole_review_satisfies_its_declared_seam():
     from vibey_gh.interfaces import WholeReviewInterface
 
     assert isinstance(local_review.WHOLE_REVIEW, WholeReviewInterface)
-    # The diff-scope system prompt is unchanged by the split into shared rules.
-    assert local_review.SYSTEM_PROMPT.startswith("You are a code reviewer examining a pull")
+    # The diff-scope instructions remain after the mandatory shared voice contract.
+    assert local_review.SYSTEM_PROMPT.startswith(local_review.VOICE_CONTRACT)
+    assert "You are a code reviewer examining a pull" in local_review.SYSTEM_PROMPT
     assert local_review.SYSTEM_PROMPT.endswith(
         "- Keep the summary to one or two sentences describing what the change does and your"
         " verdict.\n"
