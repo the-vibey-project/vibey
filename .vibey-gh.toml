@@ -280,11 +280,18 @@ exempt_authors = []
 # declared for; `warn_days` before it expires the check says so. The exceptions file is a
 # protected path ([merge_train] protected_paths above, .github/CODEOWNERS), so accepting a
 # risk always takes the code owner's approval and a human merge.
+#
+# `on_unavailable` covers the one case with no audit to judge: the advisory service itself
+# is unreachable (a network timeout or a 5xx). `fail` keeps the gate closed and is the
+# default; `warn` prints the workspace and the reason as a `::warning::` and lets the job
+# continue, explicitly unaudited. It never excuses an advisory, a malformed report or a
+# missing lockfile.
 [advisories]
 audit_level = "high"
 exceptions_file = ".github/advisory-exceptions.toml"
 max_exception_days = 30
 warn_days = 7
+on_unavailable = "warn"
 
 # The changelog is written as fragments: one new file per change, `<slug>.<type>.md` in the
 # `changelog.d/` beside the changelog it belongs to, holding the entry exactly as it should
