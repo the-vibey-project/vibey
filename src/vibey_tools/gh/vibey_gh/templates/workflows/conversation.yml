@@ -222,6 +222,11 @@ jobs:
             --allowedTools Read,Glob,Grep,Edit,Write
             --json-schema '{"type":"object","properties":{"answer":{"type":"string"},"changed_files":{"type":"array","items":{"type":"string"}},"needs_human":{"type":"boolean"},"prompt_injection_observed":{"type":"boolean"},"summary":{"type":"string"}},"required":["answer","changed_files","needs_human","prompt_injection_observed","summary"]}'
           prompt: |
+            Voice contract (mandatory, with no exceptions): use I/me/my/mine/myself for
+            yourself and you/your/yours/yourself for the operator. Use
+            we/us/our/ours/ourselves only in direct speech to the operator when explicitly
+            meaning yourself and the operator together, never for yourself alone or self-talk.
+
             Someone addressed you in a comment. Read briefing/thread.md first: it is the
             complete, bounded record of that conversation, written for you by trusted
             automation. The request to answer is its final comment.

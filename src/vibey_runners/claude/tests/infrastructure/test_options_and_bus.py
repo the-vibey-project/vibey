@@ -41,6 +41,12 @@ def test_autonomy_prompt_warns_blocked_on_is_terminal() -> None:
     assert "null" in text
 
 
+def test_every_turn_carries_the_singular_voice_contract() -> None:
+    append = build_turn_options(cwd="/tmp").system_prompt["append"]
+    assert "Voice contract (mandatory, with no exceptions)" in append
+    assert "never for yourself alone or in self-talk" in append
+
+
 def test_resume_drops_session_id_without_fork() -> None:
     """Claude Code rejects --session-id with --resume unless --fork-session.
 
@@ -133,10 +139,11 @@ def test_system_prompt_append_is_merged_after_autonomy_fragment() -> None:
 
 
 def test_blank_system_prompt_append_is_not_merged() -> None:
-    """Whitespace-only append leaves the base fragment untouched (the
-    ``.strip()`` guard on the truthiness check)."""
+    """Whitespace-only append adds nothing after the mandatory base fragments."""
     options = build_turn_options(cwd="/tmp", system_prompt_append="   ")
-    assert options.system_prompt["append"] == AUTONOMY_SYSTEM_PROMPT_FRAGMENT
+    append = options.system_prompt["append"]
+    assert append.endswith(AUTONOMY_SYSTEM_PROMPT_FRAGMENT)
+    assert not append.endswith("   ")
 
 
 def test_marketplace_style_plugin_name_becomes_local_config() -> None:

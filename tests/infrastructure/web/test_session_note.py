@@ -3,7 +3,7 @@
 
 from vibey.infrastructure.engines.descriptors import CLAUDELOOP, CODEXLOOP
 from vibey.infrastructure.engines.engine_environment import EngineEnvironmentPolicy
-from vibey.infrastructure.engines.loop_process_adapter import _render_plan
+from vibey.infrastructure.engines.loop_process_adapter import MODEL_VOICE_CONTRACT, _render_plan
 from vibey.infrastructure.web.session import COMMAND_VARIABLE, web_access_note
 
 SEARCH = {"WEBSEARCH_PROVIDER": "searxng", "WEBSEARCH_SEARXNG_URL": "http://127.0.0.1:8080"}
@@ -46,5 +46,5 @@ def test_a_plan_with_a_web_command_ends_with_the_note_for_every_engine() -> None
         assert rendered.rstrip().endswith("name the URL of any fact you rely on.")
 
 
-def test_a_plan_without_a_web_command_is_unchanged() -> None:
-    assert _render_plan(CLAUDELOOP, "plain") == "plain"
+def test_a_plan_without_a_web_command_has_voice_but_no_web_note() -> None:
+    assert _render_plan(CLAUDELOOP, "plain") == f"{MODEL_VOICE_CONTRACT}\n\nplain"
