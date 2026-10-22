@@ -138,6 +138,23 @@ def gate_for(
     )
 
 
+def gate_answering(root: Path, npm, **changes: Any) -> AdvisoryGate:
+    """A gate over `root` whose npm is the given callable, for failures `gate_for` forbids."""
+    cfg = dataclasses.replace(GhConfig(root=root), **changes)
+    return AdvisoryGate(config=lambda: cfg, npm=npm, gh=FakeGh(), today=lambda: TODAY)
+
+
+# The real JSON npm 11.19.0 printed while registry.npmjs.org's advisory endpoint hung.
+UNAVAILABLE = json.dumps(
+    {
+        "message": (
+            "network timeout at: https://registry.npmjs.org/-/npm/v1/security/advisories/bulk"
+        ),
+        "error": {"summary": "", "detail": ""},
+    }
+)
+
+
 def test_the_gate_implements_its_interface():
     assert isinstance(AdvisoryGate(gh=FakeGh()), AdvisoryGateInterface)
 
@@ -228,6 +245,17 @@ def test_the_audit_runs_npm_in_the_workspace_and_reads_a_failing_exit_as_a_repor
         ("[]", "is a JSON object"),
         (json.dumps({"error": {"code": "ENOLOCK", "summary": "no lockfile"}}), "no lockfile"),
         (json.dumps({"error": "registry down"}), "registry down"),
+        (
+            json.dumps(
+                {
+                    "message": "network timeout at: "
+                    "https://registry.npmjs.org/-/npm/v1/security/advisories/bulk",
+                    "error": {"summary": "", "detail": ""},
+                }
+            ),
+            "network timeout at",
+        ),
+        (json.dumps({"error": {"summary": "", "detail": ""}}), "npm printed no reason"),
         (json.dumps({"auditReportVersion": 1, "advisories": {}}), "auditReportVersion 2"),
         (json.dumps({"auditReportVersion": 2, "vulnerabilities": []}), "auditReportVersion 2"),
     ],
@@ -518,6 +546,73 @@ def test_an_unreadable_saved_report_is_refused(tmp_path, capsys):
     assert f"::error::{APP}:" in capsys.readouterr().out
 
 
+def test_a_nonresponsive_advisory_service_is_a_warning_when_configured(tmp_path, capsys):
+    gate = gate_answering(
+        repository(tmp_path),
+        npm_answering(UNAVAILABLE),
+        advisories=AdvisoriesConfig(on_unavailable="warn"),
+    )
+    assert gate.run(["."]) == 0
+    out = capsys.readouterr().out
+    assert "::warning::.:" in out
+    assert "the advisory service did not answer: network timeout at:" in out
+    assert "the workspace was not audited" in out
+    assert "[advisories] on_unavailable = warn" in out
+    assert "::error::" not in out
+
+
+@pytest.mark.parametrize(
+    "report",
+    [
+        {"error": {"statusCode": 503, "summary": "Service Unavailable"}},
+        {"error": {"code": "ETIMEDOUT", "summary": "connect ETIMEDOUT"}},
+    ],
+)
+def test_a_server_or_socket_failure_is_an_outage_too(tmp_path, capsys, report):
+    gate = gate_answering(
+        repository(tmp_path),
+        npm_answering(json.dumps(report)),
+        advisories=AdvisoriesConfig(on_unavailable="warn"),
+    )
+    assert gate.run(["."]) == 0
+    assert "the advisory service did not answer" in capsys.readouterr().out
+
+
+def test_a_nonresponsive_advisory_service_still_fails_by_default(tmp_path, capsys):
+    assert gate_answering(repository(tmp_path), npm_answering(UNAVAILABLE)).run(["."]) == 1
+    out = capsys.readouterr().out
+    assert "::error::.:" in out
+    assert "the advisory service did not answer" in out
+    assert "::warning::" not in out
+
+
+def test_a_missing_lockfile_is_not_excused_as_an_outage(tmp_path, capsys):
+    report = json.dumps(
+        {"error": {"code": "ENOLOCK", "summary": "This command requires an existing lockfile."}}
+    )
+    gate = gate_answering(
+        repository(tmp_path),
+        npm_answering(report),
+        advisories=AdvisoriesConfig(on_unavailable="warn"),
+    )
+    assert gate.run(["."]) == 1
+    out = capsys.readouterr().out
+    assert "npm audit failed: This command requires an existing lockfile" in out
+    assert "::warning::" not in out
+
+
+def test_a_saved_report_from_an_outage_is_refused_even_when_warned(tmp_path, capsys):
+    saved = tmp_path / "audit.json"
+    saved.write_text(UNAVAILABLE, encoding="utf-8")
+    gate = gate_answering(
+        repository(tmp_path),
+        npm_answering(UNAVAILABLE),
+        advisories=AdvisoriesConfig(on_unavailable="warn"),
+    )
+    assert gate.run(["."], saved) == 1
+    assert "::error::.:" in capsys.readouterr().out
+
+
 def test_the_cli_subcommand_dispatches_through_the_class(monkeypatch, tmp_path):
     seen: list[tuple[Any, ...]] = []
     monkeypatch.setattr(AdvisoryGate, "run", lambda self, *a: seen.append(a) or 0)
@@ -539,12 +634,15 @@ def test_the_cli_declares_its_options():
 def test_advisories_load_from_toml_with_safe_defaults(tmp_path):
     assert load_config(tmp_path).advisories == AdvisoriesConfig()
     assert AdvisoriesConfig().audit_level == "high"
+    assert AdvisoriesConfig().on_unavailable == "fail"
     (tmp_path / ".vibey-gh.toml").write_text(
         '[advisories]\naudit_level = "critical"\nexceptions_file = "sec/x.toml"\n'
-        "max_exception_days = 14\nwarn_days = 3\n",
+        'max_exception_days = 14\nwarn_days = 3\non_unavailable = "warn"\n',
         encoding="utf-8",
     )
-    assert load_config(tmp_path).advisories == AdvisoriesConfig("critical", "sec/x.toml", 14, 3)
+    assert load_config(tmp_path).advisories == AdvisoriesConfig(
+        "critical", "sec/x.toml", 14, 3, "warn"
+    )
 
 
 @pytest.mark.parametrize(
@@ -556,6 +654,7 @@ def test_advisories_load_from_toml_with_safe_defaults(tmp_path):
         ({"max_exception_days": True}, "max_exception_days"),
         ({"warn_days": -1}, "warn_days must be an integer of at least 0"),
         ({"warn_days": 31}, "must not exceed max_exception_days"),
+        ({"on_unavailable": "ignore"}, "on_unavailable must be one of fail, warn"),
     ],
 )
 def test_a_malformed_advisories_table_is_refused(changes, message):
