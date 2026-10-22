@@ -49,6 +49,9 @@ OWN_JOBS = (
     "Resolve merge conflicts",
     "Escalate exhausted repair lineage",
     "Sovereign diff review",
+    # pr-af, the declared default reviewer, on a hosted runner and on the operator's own.
+    "pr-af review (hosted)",
+    "pr-af review (host)",
     # Records the sovereign lane's whole review when no paid review is declared (8.b).
     "Record the sovereign whole review",
     # The open-weights repair of a failing review and its publication (#1400).
