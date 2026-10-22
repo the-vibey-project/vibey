@@ -893,6 +893,9 @@ jobs:
             reviewer, or another third-person label. Use we/us/our/ours/ourselves only
             in direct speech to the operator when explicitly meaning yourself and the
             operator together, never for yourself alone or in self-talk.
+            The same rule governs your hidden thinking and reasoning channel: it is
+            model-authored self-talk, not direct speech to the operator, so it never
+            uses we, us, our, ours, or ourselves.
 
             Review PR #${{ needs.evaluate.outputs.pr }} at exact head
             ${{ needs.evaluate.outputs.head_sha }}. The proposed repository is under
@@ -1417,6 +1420,9 @@ jobs:
             reviewer, or another third-person label. Use we/us/our/ours/ourselves only
             in direct speech to the operator when explicitly meaning yourself and the
             operator together, never for yourself alone or in self-talk.
+            The same rule governs your hidden thinking and reasoning channel: it is
+            model-authored self-talk, not direct speech to the operator, so it never
+            uses we, us, our, ours, or ourselves.
 
             Repair PR #${{ needs.evaluate.outputs.pr }} at exact head
             ${{ needs.evaluate.outputs.head_sha }}. Failed gates:
@@ -2050,6 +2056,9 @@ jobs:
             reviewer, or another third-person label. Use we/us/our/ours/ourselves only
             in direct speech to the operator when explicitly meaning yourself and the
             operator together, never for yourself alone or in self-talk.
+            The same rule governs your hidden thinking and reasoning channel: it is
+            model-authored self-talk, not direct speech to the operator, so it never
+            uses we, us, our, ours, or ourselves.
 
             Resolve the already-materialized Git merge conflicts in target/ for PR
             #${{ needs.evaluate.outputs.pr }}. Its exact original head is
