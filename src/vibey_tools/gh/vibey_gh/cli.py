@@ -181,7 +181,7 @@ def _install(args, resolver: FallbackPinResolverInterface | None = None) -> int:
     pin = (resolver or FallbackPinResolver()).resolve(cfg)
     for action in install.install(cfg, fallback_pin=pin):
         print(f"  {action.hook}: {action.outcome}")
-    for notice in install.installation_notices():
+    for notice in install.installation_notices(cfg):
         print(f"  notice: {notice}")
     if pin.notice:
         print(f"  notice: {pin.notice}")
@@ -929,7 +929,7 @@ def _sovereign(args) -> int:
                 handle.write("ready=false\n")
                 handle.write(f"reason={' '.join(result.reason.split())}\n")
     else:
-        if fallback.runs_on:
+        if fallback.runs_on and not getattr(args, "host", False):
             # A GitHub-hosted runner cannot be offline, so the heartbeat -- which exists to
             # say whether the operator's own machine is up -- has nothing to answer.
             result = sovereign.Readiness(
@@ -2354,6 +2354,12 @@ def main(argv: list[str] | None = None) -> int:
         help="sovereign readiness (8.a): publish or read the local runner's heartbeat",
     )
     sv.add_argument("--beat", action="store_true", help="publish a heartbeat (run on a timer)")
+    sv.add_argument(
+        "--host",
+        action="store_true",
+        help="probe the self-hosted runner's heartbeat even when a hosted runner serves"
+        " the sovereign lane (the pr-af host venue asks this)",
+    )
     sv.add_argument("--remote", default="origin", help="git remote carrying the heartbeat ref")
     sv.add_argument(
         "--record",
