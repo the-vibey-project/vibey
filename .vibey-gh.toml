@@ -391,6 +391,34 @@ paid_review = false
 paid_repair = false
 paid_conflict_resolution = false
 
+# Agent-Field pr-af is this repository's DECLARED DEFAULT exact-head reviewer (operator,
+# 2026-10-22). It is a paid counterparty -- its model is served through OpenRouter -- so
+# sub-doctrine 8.b makes it declared-only, which is exactly this table. The sovereign lane
+# still runs beside it as the second opinion, and the gate falls back to that lane whenever
+# pr-af produces no verdict (a missing secret, an unreachable control plane, a spent
+# budget), so infrastructure never becomes a hard stop on every pull request.
+#
+# Why a third-party reviewer when the family ships review lanes: those lanes are not yet a
+# whole-pull-request exact-head reviewer -- the sovereign lane sees the diff only and
+# refuses a diff it cannot see in full. pr-af reviews the whole pull request at its head
+# today. That is a capability gap in ours, not a preference, and it stays declared and
+# pinned until ours closes it (ADR-0017, ADR-0090).
+#
+# `ref` is a full commit SHA, never a branch: the job checks third-party code out with a
+# token that can write the pull request, so updating the reviewer is a reviewed commit
+# here. `runs_on` is the hosted venue; set `host_enabled = true` to prefer the operator's
+# own runner while its heartbeat is fresh (the hosted job runs whenever it is not).
+[pr_automation.pr_af]
+enabled = true
+default = true
+repository = "Agent-Field/pr-af"
+ref = "421fbd23bf1c5a2c3916d7046c97b5273958e1f4"
+model = "deepseek/deepseek-v4-flash-0731"
+runs_on = "ubuntu-latest"
+# The host venue is the sovereign lane's own runner: its label and heartbeat come from
+# [pr_automation.fallback], so the readiness probe describes the machine the job uses.
+host_enabled = false
+
 # How many runs of one local model run at once on a device (sub-doctrines 8.c and 8.j,
 # ADR-0058). Declared here, checked by `vibey-gh slots allowed` against THAT device's own
 # calibration evidence, and read by the storm runner (storm-queue.sh) in place of the
