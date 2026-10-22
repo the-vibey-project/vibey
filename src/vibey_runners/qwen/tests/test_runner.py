@@ -329,6 +329,8 @@ async def test_runner_preserves_assistant_tool_call_context(tmp_path: Path) -> N
 
 def test_system_prompt_marks_verdict_as_text_not_a_tool(tmp_path: Path) -> None:
     prompt = _system_prompt(tmp_path)
+    assert "Voice contract (mandatory, with no exceptions)" in prompt
+    assert "never for yourself alone or in self-talk" in prompt
     assert "There is no qwenloop-verdict tool" in prompt
     assert "plain text in your final assistant response" in prompt
 

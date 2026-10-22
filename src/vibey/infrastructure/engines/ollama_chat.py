@@ -55,6 +55,17 @@ from vibey.infrastructure.engines.interfaces.ollama_chat_interface import (
 )
 from vibey.infrastructure.engines.wire_log import WIRE_LOG_ENV, JsonlWireLog, NullWireLog
 
+MODEL_VOICE_CONTRACT = (
+    "Voice contract (mandatory, with no exceptions): in every model-authored response, "
+    "refer to yourself only in the first-person singular (I, me, my, mine, myself), and "
+    "address the operator only in the second person (you, your, yours, yourself). Never "
+    "refer to yourself as the agent, assistant, model, reviewer, triager, or any other "
+    "third-person label. You may use we, us, our, ours, or ourselves only in direct speech "
+    "to the operator while explicitly meaning yourself and the operator together. "
+    "Never use those plural forms for yourself alone, in self-talk or reasoning, or for a "
+    "group of AIs or agents."
+)
+
 #: Environment keys, beside their defaults (ADR-0018). `VIBEY_OLLAMA_URL` is the name
 #: vibey-gh's local-review fallback already reads, so one setting points both at the
 #: same server.
@@ -456,6 +467,7 @@ class OllamaChatClient:
         self, system: str, user: str, schema: Mapping[str, object] | str
     ) -> dict[str, object]:
         call = uuid4().hex[:8]
+        system = f"{MODEL_VOICE_CONTRACT}\n\n{system}"
         bounded_user = self._bounded_user(user)
         prompt_chars = len(system) + len(bounded_user)
         fit_applies = self._fit_prompt_chars is None or prompt_chars <= self._fit_prompt_chars
