@@ -91,6 +91,13 @@ _diagnostic_files: dict[object, tuple[TextIO, TextIO]] = {}
 # PATH: the help contract must describe the binary that start() will launch.
 _help_text_cache: dict[str, str] = {}
 _ANSI_ESCAPE = re.compile(r"\x1b(?:[@-Z\\-_]|\[[0-?]*[ -/]*[@-~])")
+MODEL_VOICE_CONTRACT = (
+    "Voice contract (mandatory, with no exceptions): in every response, refer to yourself "
+    "only as I/me/my/mine/myself; address the operator only as you/your/yours/yourself; "
+    "never call yourself the agent, assistant, model, or another third-person label. Use "
+    "we/us/our/ours/ourselves only in direct speech to the operator when explicitly meaning "
+    "yourself and the operator together, never for yourself alone or in self-talk."
+)
 
 
 def _render_plan(
@@ -99,12 +106,13 @@ def _render_plan(
     """Render a vendor-compatible work plan without dropping prompt detail.
 
     With `web_command`, the session can search the web through vibey, and the plan says how."""
+    summary = next((line.strip() for line in prompt.splitlines() if line.strip()), "Complete task")
+    prompt = f"{MODEL_VOICE_CONTRACT}\n\n{prompt}"
     if web_command is not None:
         prompt = f"{prompt.rstrip()}\n\n{web_access_note(web_command)}\n"
     if descriptor.engine_id is not EngineId.CODEXLOOP:
         return prompt
 
-    summary = next((line.strip() for line in prompt.splitlines() if line.strip()), "Complete task")
     return f"# Work Plan\n\n- [ ] {summary}\n\n## Instructions\n\n{prompt}\n"
 
 
