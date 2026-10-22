@@ -106,7 +106,11 @@ advisory, package and workspace, records why the vulnerable code is not reached,
 expires within `max_exception_days` (30). Every run prints each exception it honours and
 until when, and fails when one has expired, matches nothing (remove it), or its package has
 a patched release (take the fix). The file is a protected path, so accepting a risk takes the
-code owner's approval and a human merge. `SECURITY.md`, "Dependency advisories", has the rest.
+code owner's approval and a human merge. An outage of the advisory service itself is handled
+separately: `on_unavailable = "fail"` is the default, and this repository sets `"warn"`, so a
+nonresponsive endpoint prints `::warning::` naming the workspace and the reason and continues
+unaudited; a real advisory, a malformed report or a missing lockfile still fails.
+`SECURITY.md`, "Dependency advisories", has the rest.
 
 ## Hook diet
 
