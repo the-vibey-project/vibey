@@ -240,6 +240,53 @@ the branch are different questions, and a repository may answer them differently
 three false — the default — no job in `pr-review.yml` that references the paid model or its
 secret can be scheduled, so the `[ai] auth_secret` repository secret can be deleted.
 
+### `[pr_automation.pr_af]`
+
+Agent-Field `pr-af` as an additional exact-head reviewer, and — in a repository that declares
+it, as this one does — the **default** one. It is a third-party reviewer that runs as an
+AgentField node in Docker Compose and reaches a model through OpenRouter, so sub-doctrine 8.b
+makes it **declared-only**: `enabled` is false until the table says otherwise, and an
+undeclared repository never schedules the job or reads the secret. Declared, its verdict is
+authoritative when it produces one; where it is offered, the sovereign/paid lane above still
+runs beside it as the second opinion, and its verdict is the fallback only when pr-af produced
+no verdict at all —
+a missing secret, an unreachable control plane, a failed execution, or a review that reached
+its own budget cap. A partial pass is never treated as a pass.
+
+```toml
+[pr_automation.pr_af]
+enabled = true
+default = true
+repository = "Agent-Field/pr-af"
+ref = "421fbd23bf1c5a2c3916d7046c97b5273958e1f4"
+model = "deepseek/deepseek-v4-flash-0731"
+runs_on = "ubuntu-latest"
+host_enabled = false
+```
+
+| Field | Type / default | Meaning |
+|---|---|---|
+| `enabled` | boolean / `false` | Declare pr-af. **False by default**, because it reaches a paid model and 8.b makes a paid counterparty declared-only. Undeclared, `review-pr-af` and `review-pr-af-host` are not scheduled and the repository secret is never read. |
+| `default` | boolean / `true` | Whether `PR review / gate` follows pr-af's verdict instead of the sovereign/paid fallback. A pr-af verdict is authoritative while this is true — its own merge gate decides blocking, not a severity label. False keeps the fallback authoritative and runs pr-af as a second opinion only. |
+| `repository` | string / `"Agent-Field/pr-af"` | The `owner/name` checked out for the review. |
+| `ref` | string / empty | The **full 40-character commit SHA**, never a branch. The job checks third-party code out with a token that can write the pull request, so a moving ref would let that code change between runs without a diff here. Updating pr-af is a reviewed commit in this repository. |
+| `runs_on` | string / `"ubuntu-latest"` | The GitHub-hosted runner for the hosted venue. Exactly one runner label. |
+| `host_enabled` | boolean / `false` | Prefer the operator's own runner while its heartbeat is fresh. The hosted job runs whenever the host is not ready, so a sleeping laptop cannot queue every pull request. The host venue is the sovereign lane's runner, with its label and heartbeat from `[pr_automation.fallback]`, so readiness is evidence about the machine the job will use. |
+| `model` | string / `"deepseek/deepseek-v4-flash-0731"` | The model id pr-af passes to OpenRouter. |
+| `depth` | string / `"standard"` | One of `auto`, `quick`, `standard`, `deep`; passed to pr-af's own review depth. |
+| `max_cost_usd` | number / `2.0` | pr-af's own spend cap for one review, passed in its input. Reaching it is **not** a verdict: the gate falls back rather than treating a partial review as a pass. |
+| `max_duration_seconds` | integer / `3600` | pr-af's own wall-clock cap for one review, passed in its input. Reaching it is likewise no verdict. |
+| `timeout_minutes` | integer / `120` | The workflow job's limit, covering the compose build, the review and teardown. A hosted review runs 35–50 minutes in practice. It must leave at least 15 minutes beyond `max_duration_seconds`, or the job would stop before pr-af's own cap could. |
+| `openrouter_secret` | string / `"OPENROUTER_API_KEY"` | The repository secret that holds the OpenRouter key, named rather than carried. Missing, the job skips with a step summary and the fallback decides. |
+
+The hosted venue is the default because it needs no machine of yours to be awake. With
+`host_enabled = true` and a fresh heartbeat, `review-pr-af-host` runs instead and the hosted
+job is skipped; a fork head never reaches the self-hosted runner, and that check is repeated
+in the job as defence in depth. Both venues post pr-af's review to the pull request and report
+`passed`, the blocking finding count, the review event and the reason as job outputs. The
+control plane publishes fixed ports (8080 and 8004) and the compose project is named per run,
+so a host running two reviews at once must serialise them.
+
 ### `[pr_automation.observability]`
 
 | Field | Type / default | Meaning |
