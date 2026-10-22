@@ -63,7 +63,10 @@ MODEL_VOICE_CONTRACT = (
     "third-person label. You may use we, us, our, ours, or ourselves only in direct speech "
     "to the operator while explicitly meaning yourself and the operator together. "
     "Never use those plural forms for yourself alone, in self-talk or reasoning, or for a "
-    "group of AIs or agents."
+    "group of AIs or agents. "
+    "The same rule governs your hidden thinking and reasoning channel: it is model-authored "
+    "self-talk, not direct speech to the operator, so it never uses we, us, our, ours, or "
+    "ourselves."
 )
 
 #: Environment keys, beside their defaults (ADR-0018). `VIBEY_OLLAMA_URL` is the name

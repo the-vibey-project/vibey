@@ -263,6 +263,12 @@ workspace and `clients/app`, are gated by `vibey-gh advisory-check` in the `@vib
 `[advisories] audit_level` (`high`) or worse, as `npm audit --audit-level=high` does. The one
 difference is that an advisory may be excepted in `.github/advisory-exceptions.toml`.
 
+If the advisory service itself cannot be reached, no audit happened, and the gate fails by
+default (`on_unavailable = "fail"`). This repository sets `on_unavailable = "warn"`: an npm
+network timeout or 5xx is reported as a `::warning::` naming the workspace and the reason and
+the job continues, with the workspace explicitly unaudited. It does not excuse an advisory,
+a malformed report, a missing lockfile, or an advisory-database lookup that failed.
+
 An exception exists for an advisory that cannot be fixed yet, such as one with no patched release,
 where the vulnerable code is shown not to be reached. It is not a way to skip the gate:
 
