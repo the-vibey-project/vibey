@@ -7,7 +7,7 @@ from collections.abc import Sequence
 from datetime import UTC, datetime, timedelta
 
 from codexloop.application.dto import ProbeResult, RunResult, TurnOutcome
-from codexloop.application.runner import AutonomousRunner, RunnerContext
+from codexloop.application.runner import AutonomousRunner, RunnerContext, _voiced
 from codexloop.domain.budget import Budget
 from codexloop.domain.capacity import Available, QuotaExhausted, WindowExhausted
 from codexloop.domain.completion import DEFAULT_DONE_MARKER
@@ -27,6 +27,7 @@ from tests.application.fakes import (
 
 NOW = datetime(2026, 8, 13, 12, 0, tzinfo=UTC)
 PLAN = "- [ ] Add login\n- [ ] Add logout\n"
+VOICED_PLAN = _voiced(PLAN)
 THREAD_ID = "thr_wait"
 ZERO_JITTER = AdaptiveWaitPolicy(WaitConfig(jitter_ratio=0.0), rand=lambda: 0.0)
 QUOTA_CEILING = WaitConfig().quota_probe_ceiling
@@ -94,7 +95,7 @@ async def test_resumes_when_a_human_tops_up_credit_mid_wait() -> None:
 
     assert result.success is True
     assert probe.calls == 6
-    assert gateway.sent_prompts == [PLAN]
+    assert gateway.sent_prompts == [VOICED_PLAN]
     cursor = NOW
     for when in sleeper.requested:
         assert when <= cursor + QUOTA_CEILING
@@ -123,7 +124,7 @@ async def test_window_exhausted_probes_at_interval_not_five_hour_sleep() -> None
     assert sleeper.requested[0] <= NOW + WINDOW_INTERVAL
     assert sleeper.requested[0] > NOW  # Should have slept at least once
     assert clock.now() < reset_at
-    assert gateway.sent_prompts == [PLAN]
+    assert gateway.sent_prompts == [VOICED_PLAN]
 
 
 async def test_max_wait_deadline_persists_reason_in_run_state() -> None:
