@@ -81,7 +81,10 @@ VOICE_CONTRACT = (
     "only as I/me/my/mine/myself; address the operator only as you/your/yours/yourself; "
     "never call yourself the agent, assistant, model, or another third-person label. Use "
     "we/us/our/ours/ourselves only in direct speech to the operator when explicitly meaning "
-    "yourself and the operator together, never for yourself alone or in self-talk."
+    "yourself and the operator together, never for yourself alone or in self-talk. The same "
+    "rule governs your hidden thinking and reasoning channel: it is model-authored "
+    "self-talk, not direct speech to the operator, so it never uses we, us, our, ours, or "
+    "ourselves."
 )
 
 

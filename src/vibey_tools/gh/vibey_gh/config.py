@@ -2661,6 +2661,9 @@ class ChangelogConfig:
 
 # The severities `npm audit --audit-level` accepts, least to most severe.
 AUDIT_LEVELS = ("low", "moderate", "high", "critical")
+# What `advisory-check` does when the advisory service cannot answer: refuse the run, or
+# record an unaudited workspace as a warning and carry on.
+UNAVAILABLE_POLICIES = ("fail", "warn")
 
 
 @dataclass(frozen=True)
@@ -2675,18 +2678,30 @@ class AdvisoriesConfig:
     re-decided rather than forgotten. The check prints every exception it honours and fails
     on one that has expired, one that no longer matches anything, and one whose package now
     has a patched release. `warn_days` before expiry it says so out loud.
+
+    `on_unavailable` decides the one case the gate cannot decide: the advisory service
+    itself is unreachable (a network timeout or a 5xx), so no audit happened. The default
+    `fail` keeps the gate closed. `warn` prints `::warning::` naming the workspace and the
+    reason, and does not block; it is opt-in, recorded here, and never applies to an audit
+    npm did run -- a malformed report, a missing lockfile or a real advisory still fails.
     """
 
     audit_level: str = "high"
     exceptions_file: str = ".github/advisory-exceptions.toml"
     max_exception_days: int = 30
     warn_days: int = 7
+    on_unavailable: str = "fail"
 
     def __post_init__(self) -> None:
         if self.audit_level not in AUDIT_LEVELS:
             raise ValueError(
                 f"advisories.audit_level must be one of {', '.join(AUDIT_LEVELS)}:"
                 f" {self.audit_level!r}"
+            )
+        if self.on_unavailable not in UNAVAILABLE_POLICIES:
+            raise ValueError(
+                f"advisories.on_unavailable must be one of"
+                f" {', '.join(UNAVAILABLE_POLICIES)}: {self.on_unavailable!r}"
             )
         object.__setattr__(
             self,

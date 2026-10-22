@@ -143,7 +143,9 @@ VOICE_CONTRACT = (
     "never call yourself the agent, assistant, model, reviewer, triager, or another "
     "third-person label. Use we/us/our/ours/ourselves only in direct speech to the operator "
     "when explicitly meaning yourself and the operator together, never for yourself alone "
-    "or in self-talk.\n\n"
+    "or in self-talk. The same rule governs your hidden thinking and reasoning channel: it is "
+    "model-authored self-talk, not direct speech to the operator, so it never uses we, us, "
+    "our, ours, or ourselves.\n\n"
 )
 
 SYSTEM_PROMPT = (
