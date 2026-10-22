@@ -82,6 +82,10 @@ jobs:
       # why not, as a code a program can count rather than a sentence it cannot.
       lane_decision: ${{ steps.lane.outputs.lane_decision }}
       lane_code: ${{ steps.lane.outputs.lane_code }}
+      # Whether the operator's own runner is up for the pr-af host venue. Empty when the
+      # venue is not declared; the host job is skipped before it can queue on an offline
+      # runner, and the hosted job runs instead.
+      pr_af_host_ready: ${{ steps.pr_af_host.outputs.ready }}
     steps:
       - name: Validate diagnostic output policy
         if: inputs.full_claude_output == true
@@ -131,6 +135,16 @@ jobs:
         run: |
           set -euo pipefail
           vibey-gh sovereign || true
+
+      - name: Probe the pr-af host runner
+        if: inputs.dry_run != true && true && false
+        id: pr_af_host
+        continue-on-error: true
+        run: |
+          set -euo pipefail
+          # The heartbeat answers whether the operator's machine is up even when the
+          # sovereign lane itself now runs on a hosted runner; `--host` asks it anyway.
+          vibey-gh sovereign --host || true
 
       - name: Resolve the PR and exact head
         id: resolve
@@ -234,6 +248,7 @@ jobs:
           PAID_REVIEW: false
           ENABLED: true
           TRUSTED_ONLY: true
+          PR_AF_DEFAULT: true
           READY: ${{ steps.sovereign.outputs.ready }}
           PROBE_REASON: ${{ steps.sovereign.outputs.reason }}
           TRUSTED: ${{ steps.evaluate.outputs.trusted }}
@@ -294,6 +309,12 @@ jobs:
             decision=sovereign_reserve
           else
             decision=paid_only
+          fi
+          # The declared default reviewer decides the gate when it is on. The sovereign
+          # decision above still drives the second-opinion jobs and the fallback wording
+          # when pr-af produces no verdict, but the recorded lane names who decides.
+          if [ "$PR_AF_DEFAULT" = true ]; then
+            decision=pr_af
           fi
           {
             echo "sovereign_lane=$lane"
@@ -769,6 +790,276 @@ jobs:
             ${{ runner.temp }}/verdict.json
             ${{ runner.temp }}/outcome.json
           if-no-files-found: ignore
+
+  review-pr-af:
+    name: pr-af review (hosted)
+    # pr-af is the repository's declared DEFAULT exact-head reviewer (operator,
+    # 2026-10-22): Agent-Field's open-source reviewer, pinned to a commit, reached through
+    # its own AgentField control plane on this runner. It is a paid counterparty (the
+    # model is served through OpenRouter), so sub-doctrine 8.b means a repository must
+    # declare it in `[pr_automation.pr_af]`; the literal at the head of this condition
+    # keeps an undeclared repository from ever scheduling the job or reading the secret.
+    #
+    # The sovereign/paid lane still runs beside it as the second opinion. The gate follows
+    # pr-af's verdict when it produced one, and falls back to that lane when it did not --
+    # so a missing secret or an unreachable control plane degrades the review rather than
+    # blocking every pull request on infrastructure.
+    #
+    # Why not the family's own lanes alone: they are not yet a whole-pull-request exact-head
+    # reviewer -- the sovereign lane sees the diff only and refuses one it cannot see in
+    # full. That is the capability gap this caller fills, not a preference, and the pinned
+    # SHA plus the declaration are what keep it bounded (ADR-0017, ADR-0090).
+    #
+    # The hosted venue is the default. When the operator offers their own runner
+    # (`host_enabled`) and its heartbeat is fresh, `review-pr-af-host` runs instead and
+    # this job is skipped, for the same reason the sovereign lane is: a job scheduled
+    # against an offline self-hosted runner queues forever rather than failing.
+    needs: evaluate
+    if: >-
+      true &&
+      (needs.evaluate.outputs.state == 'ready' ||
+       needs.evaluate.outputs.state == 'review') &&
+      inputs.dry_run != true &&
+      needs.evaluate.outputs.pr != '' &&
+      needs.evaluate.outputs.head_sha != '' &&
+      (false == false ||
+       needs.evaluate.outputs.pr_af_host_ready != 'true')
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    permissions:
+      actions: read
+      checks: read
+      contents: read
+      pull-requests: write
+    outputs:
+      passed: ${{ steps.verdict.outputs.passed }}
+      findings: ${{ steps.verdict.outputs.findings }}
+      event: ${{ steps.verdict.outputs.event }}
+      reason: ${{ steps.verdict.outputs.reason || steps.preflight.outputs.reason }}
+      model: ${{ steps.verdict.outputs.model }}
+      venue: ${{ steps.verdict.outputs.venue }}
+    env:
+      # One compose project per run, so two reviews on one runner cannot share the control
+      # plane, its volumes or its published ports.
+      COMPOSE_PROJECT_NAME: pr-af-${{ github.run_id }}-${{ github.run_attempt }}
+      PR_AF_MODEL: deepseek/deepseek-v4-flash-0731
+      PR_AF_MAX_COST_USD: "2.0"
+      PR_AF_MAX_DURATION_SECONDS: "3600"
+    steps:
+      - name: Preflight
+        id: preflight
+        env:
+          OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
+        run: |
+          set -euo pipefail
+          if [ -z "${OPENROUTER_API_KEY:-}" ]; then
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+            echo "reason=the repository secret OPENROUTER_API_KEY is not configured" >> "$GITHUB_OUTPUT"
+            {
+              echo "### pr-af review skipped"
+              echo
+              echo "The repository secret \`OPENROUTER_API_KEY\` is not configured."
+              echo "The sovereign lane's verdict is the fallback for this head."
+            } >> "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
+          echo "skip=false" >> "$GITHUB_OUTPUT"
+
+      - name: Check out trusted automation
+        if: steps.preflight.outputs.skip != 'true'
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          ref: ${{ github.event.repository.default_branch }}
+          path: automation
+          persist-credentials: false
+
+      - name: Set up Python
+        if: steps.preflight.outputs.skip != 'true'
+        uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5
+        with:
+          python-version: "3.12"
+
+      - name: Install vibey-gh
+        if: steps.preflight.outputs.skip != 'true'
+        run: |
+          set -euo pipefail
+          self="automation/src/vibey_tools/gh"
+          grep -qE '^name = "vibey-gh"' "$self/pyproject.toml" 2>/dev/null || self=""
+          if [ -n "$self" ]; then
+            python -m pip install --quiet -e "$self"
+          else
+            python -m pip install --quiet "vibey-engine==4.4.0"
+          fi
+
+      - name: Check out pr-af at its pinned commit
+        if: steps.preflight.outputs.skip != 'true'
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          repository: Agent-Field/pr-af
+          ref: 421fbd23bf1c5a2c3916d7046c97b5273958e1f4
+          path: pr-af
+          persist-credentials: false
+
+      - name: Start pr-af
+        if: steps.preflight.outputs.skip != 'true'
+        working-directory: pr-af
+        env:
+          OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          docker compose up -d --build
+          for _ in $(seq 1 60); do
+            if curl -fsS http://127.0.0.1:8004/health >/dev/null 2>&1; then
+              exit 0
+            fi
+            sleep 5
+          done
+          docker compose logs --tail=200
+          exit 1
+
+      - name: Review the exact head
+        id: verdict
+        if: steps.preflight.outputs.skip != 'true'
+        working-directory: automation
+        env:
+          PR: ${{ needs.evaluate.outputs.pr }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+          GITHUB_SERVER_URL: ${{ github.server_url }}
+          PR_AF_SERVER: http://127.0.0.1:8080
+          PR_AF_VENUE: hosted
+        run: python -m vibey_gh.pr_af
+
+      - name: Stop pr-af
+        if: always() && steps.preflight.outputs.skip != 'true'
+        working-directory: pr-af
+        run: docker compose down -v --remove-orphans || true
+
+  review-pr-af-host:
+    name: pr-af review (host)
+    # The operator's own runner, when they offer it and its heartbeat is fresh. Same
+    # reviewer, same pinned commit, same verdict -- just the other venue. The security
+    # boundary is the sovereign lane's: a self-hosted runner must never review a pull
+    # request whose head is in a fork, so the head-repository check is repeated here as
+    # defence in depth rather than trusted to one line.
+    needs: evaluate
+    if: >-
+      inputs.dry_run != true &&
+      true && false &&
+      needs.evaluate.outputs.pr_af_host_ready == 'true' &&
+      (needs.evaluate.outputs.state == 'ready' ||
+       needs.evaluate.outputs.state == 'review') &&
+      needs.evaluate.outputs.pr != '' &&
+      needs.evaluate.outputs.head_sha != '' &&
+      needs.evaluate.outputs.head_repo == github.repository
+    runs-on: [self-hosted, vibey-local-vibey]
+    timeout-minutes: 120
+    permissions:
+      actions: read
+      checks: read
+      contents: read
+      pull-requests: write
+    outputs:
+      passed: ${{ steps.verdict.outputs.passed }}
+      findings: ${{ steps.verdict.outputs.findings }}
+      event: ${{ steps.verdict.outputs.event }}
+      reason: ${{ steps.verdict.outputs.reason || steps.preflight.outputs.reason }}
+      model: ${{ steps.verdict.outputs.model }}
+      venue: ${{ steps.verdict.outputs.venue }}
+    env:
+      COMPOSE_PROJECT_NAME: pr-af-${{ github.run_id }}-${{ github.run_attempt }}
+      PR_AF_MODEL: deepseek/deepseek-v4-flash-0731
+      PR_AF_MAX_COST_USD: "2.0"
+      PR_AF_MAX_DURATION_SECONDS: "3600"
+    steps:
+      - name: Preflight
+        id: preflight
+        env:
+          OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
+        run: |
+          set -euo pipefail
+          if [ -z "${OPENROUTER_API_KEY:-}" ]; then
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+            echo "reason=the repository secret OPENROUTER_API_KEY is not configured" >> "$GITHUB_OUTPUT"
+            {
+              echo "### pr-af review skipped"
+              echo
+              echo "The repository secret \`OPENROUTER_API_KEY\` is not configured."
+              echo "The sovereign lane's verdict is the fallback for this head."
+            } >> "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
+          echo "skip=false" >> "$GITHUB_OUTPUT"
+
+      - name: Check out trusted automation
+        if: steps.preflight.outputs.skip != 'true'
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          ref: ${{ github.event.repository.default_branch }}
+          path: automation
+          persist-credentials: false
+
+      - name: Set up Python
+        if: steps.preflight.outputs.skip != 'true'
+        uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5
+        with:
+          python-version: "3.12"
+
+      - name: Install vibey-gh
+        if: steps.preflight.outputs.skip != 'true'
+        run: |
+          set -euo pipefail
+          self="automation/src/vibey_tools/gh"
+          grep -qE '^name = "vibey-gh"' "$self/pyproject.toml" 2>/dev/null || self=""
+          if [ -n "$self" ]; then
+            python -m pip install --quiet -e "$self"
+          else
+            python -m pip install --quiet "vibey-engine==4.4.0"
+          fi
+
+      - name: Check out pr-af at its pinned commit
+        if: steps.preflight.outputs.skip != 'true'
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          repository: Agent-Field/pr-af
+          ref: 421fbd23bf1c5a2c3916d7046c97b5273958e1f4
+          path: pr-af
+          persist-credentials: false
+
+      - name: Start pr-af
+        if: steps.preflight.outputs.skip != 'true'
+        working-directory: pr-af
+        env:
+          OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          docker compose up -d --build
+          for _ in $(seq 1 60); do
+            if curl -fsS http://127.0.0.1:8004/health >/dev/null 2>&1; then
+              exit 0
+            fi
+            sleep 5
+          done
+          docker compose logs --tail=200
+          exit 1
+
+      - name: Review the exact head
+        id: verdict
+        if: steps.preflight.outputs.skip != 'true'
+        working-directory: automation
+        env:
+          PR: ${{ needs.evaluate.outputs.pr }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+          GITHUB_SERVER_URL: ${{ github.server_url }}
+          PR_AF_SERVER: http://127.0.0.1:8080
+          PR_AF_VENUE: host
+        run: python -m vibey_gh.pr_af
+
+      - name: Stop pr-af
+        if: always() && steps.preflight.outputs.skip != 'true'
+        working-directory: pr-af
+        run: docker compose down -v --remove-orphans || true
 
   review:
     name: Exact-head code and documentation review
@@ -2276,6 +2567,8 @@ jobs:
       [
         evaluate,
         review-sovereign,
+        review-pr-af,
+        review-pr-af-host,
         review,
         record-sovereign,
         mirror-fork,
@@ -2337,6 +2630,12 @@ jobs:
           LANE_CODE: ${{ needs.evaluate.outputs.lane_code }}
           SOVEREIGN_CODE: ${{ needs.review-sovereign.outputs.code }}
           SOVEREIGN_PARTS: ${{ needs.review-sovereign.outputs.parts }}
+          PR_AF_PASSED: ${{ needs.review-pr-af.outputs.passed || needs.review-pr-af-host.outputs.passed }}
+          PR_AF_FINDINGS: ${{ needs.review-pr-af.outputs.findings || needs.review-pr-af-host.outputs.findings }}
+          PR_AF_EVENT: ${{ needs.review-pr-af.outputs.event || needs.review-pr-af-host.outputs.event }}
+          PR_AF_REASON: ${{ needs.review-pr-af.outputs.reason || needs.review-pr-af-host.outputs.reason }}
+          PR_AF_DEFAULT: true
+          PR_AF_MODEL: deepseek/deepseek-v4-flash-0731
         run: |
           set -euo pipefail
           conclusion=failure
@@ -2347,6 +2646,7 @@ jobs:
           # carries it -- into the check run and the `pr-review-outcome` artifact.
           code=unknown
           verdict=none
+          pr_af_note=""
           case "$STATE" in
             blocked) code=blocked ;;
             repair) code=paid_lane_declared_off ;;
@@ -2515,6 +2815,29 @@ jobs:
                 ;;
             esac
           fi
+          # pr-af is the declared default reviewer. A verdict from it is authoritative --
+          # its own merge gate decides blocking, not a severity label -- and the
+          # sovereign/paid lane beside it is the second opinion. No verdict leaves the
+          # fallback above standing, and says so instead of dressing it up as a full one.
+          if [ "$PR_AF_DEFAULT" = true ] &&
+            { [ "$STATE" = ready ] || [ "$STATE" = review ]; }; then
+            case "$PR_AF_PASSED" in
+              true)
+                conclusion=success; code=reviewed; verdict=pass
+                title="PR review: gate (pr-af)"
+                summary="Scans passed for this exact head; pr-af (${PR_AF_MODEL}), the declared default reviewer, found nothing blocking. The sovereign/paid lane is the second opinion wherever the repository offers it."
+                ;;
+              false)
+                conclusion=failure; code=reviewed; verdict=fail
+                title="PR review: pr-af found blocking findings"
+                summary="Scans passed for this exact head, but pr-af (${PR_AF_MODEL}) reported ${PR_AF_FINDINGS:-0} blocking finding(s). Its posted review and the 'pr-af review' job log carry them."
+                ;;
+              *)
+                pr_af_note=" pr-af produced no verdict (${PR_AF_REASON:-its job did not report one; see the 'pr-af review' job log}); the verdict above is the fallback."
+                ;;
+            esac
+          fi
+          [ -z "$pr_af_note" ] || summary="${summary}${pr_af_note}"
           mkdir -p "${RUNNER_TEMP}/review-outcome"
           jq -n \
             --arg schema "vibey-gh.review-outcome/1" --arg pr "$PR" --arg head_sha "$HEAD_SHA" \
@@ -2522,10 +2845,13 @@ jobs:
             --arg lane "${LANE_DECISION:-none}" --arg lane_code "$LANE_CODE" --arg code "$code" \
             --arg verdict "$verdict" --arg conclusion "$conclusion" --arg title "$title" \
             --arg sovereign_code "$SOVEREIGN_CODE" --arg parts "$SOVEREIGN_PARTS" \
+            --arg pr_af "$PR_AF_PASSED" --arg pr_af_findings "${PR_AF_FINDINGS:-0}" \
             '{schema: $schema, source: "gate", pr: $pr, head_sha: $head_sha, run_id: $run_id,
               state: $state, paid_review: ($paid == "true"), lane: $lane,
               lane_code: $lane_code, code: $code, verdict: $verdict,
               conclusion: $conclusion, reason: $title, sovereign_code: $sovereign_code,
+              pr_af: (if $pr_af == "" then null else ($pr_af == "true") end),
+              pr_af_findings: (($pr_af_findings | tonumber?) // null),
               parts: (($parts | tonumber?) // null)}' \
             > "${RUNNER_TEMP}/review-outcome/record.json"
           record=$(jq -c . "${RUNNER_TEMP}/review-outcome/record.json")
