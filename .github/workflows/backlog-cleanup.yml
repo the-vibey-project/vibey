@@ -46,8 +46,10 @@ jobs:
           GH_REPO: ${{ github.repository }}
         run: |
           set -euo pipefail
-          python scripts/backlog_cleanup.py --check --cutoff "${GITHUB_SHA}"
-          python scripts/backlog_cleanup.py --apply --cutoff "${GITHUB_SHA}" --repo "${GH_REPO}"
+          # This read-only job inventories the whole gap. The write-authorized job below
+          # applies it. Running --check here made triage debt exit 1 before --apply could
+          # ever create its durable entries, so the lane could diagnose debt but not pay it.
+          python scripts/backlog_cleanup.py --survey --cutoff "${GITHUB_SHA}" --repo "${GH_REPO}"
 
   publish:
     name: Publish changed expectations
