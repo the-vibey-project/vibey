@@ -343,6 +343,30 @@ def render_workflow(source: Path, cfg: GhConfig, *, fallback_pin: FallbackPin | 
     wanted = wanted.replace(
         "__VIBEY_GH_FALLBACK_CONTEXT_PATHS__", json.dumps(" ".join(fallback.context_paths))
     )
+    # pr-af, the declared third-party reviewer. Its `ref` is a commit, not a branch, and
+    # `default` is true only when the repository also switched it on: a job whose
+    # declaration is false must never be scheduled or read the router's secret.
+    pr_af = cfg.pr_automation.pr_af
+    pr_af_default = pr_af.enabled and pr_af.default
+    for marker, value in (
+        ("__VIBEY_GH_PR_AF_ENABLED__", "true" if pr_af.enabled else "false"),
+        ("__VIBEY_GH_PR_AF_DEFAULT__", "true" if pr_af_default else "false"),
+        ("__VIBEY_GH_PR_AF_HOST_ENABLED__", "true" if pr_af.host_enabled else "false"),
+        ("__VIBEY_GH_PR_AF_REPOSITORY__", pr_af.repository),
+        ("__VIBEY_GH_PR_AF_REF__", pr_af.ref),
+        ("__VIBEY_GH_PR_AF_RUNS_ON__", pr_af.runs_on),
+        (
+            "__VIBEY_GH_PR_AF_HOST_RUNS_ON__",
+            f"[self-hosted, {fallback.runner_label}]",
+        ),
+        ("__VIBEY_GH_PR_AF_MODEL__", pr_af.model),
+        ("__VIBEY_GH_PR_AF_DEPTH__", pr_af.depth),
+        ("__VIBEY_GH_PR_AF_MAX_COST_USD__", str(pr_af.max_cost_usd)),
+        ("__VIBEY_GH_PR_AF_MAX_DURATION_SECONDS__", str(pr_af.max_duration_seconds)),
+        ("__VIBEY_GH_PR_AF_TIMEOUT_MINUTES__", str(pr_af.timeout_minutes)),
+        ("__VIBEY_GH_PR_AF_SECRET__", pr_af.openrouter_secret),
+    ):
+        wanted = wanted.replace(marker, value)
     wanted = wanted.replace("__VIBEY_GH_FALLBACK_RUNNER_LABEL__", fallback.runner_label)
     wanted = wanted.replace("__VIBEY_GH_FALLBACK_MODEL__", fallback.model)
     wanted = wanted.replace("__VIBEY_GH_FALLBACK_BASE_URL__", fallback.base_url)
@@ -642,11 +666,15 @@ def render_workflow(source: Path, cfg: GhConfig, *, fallback_pin: FallbackPin | 
     )
 
 
-def installation_notices() -> tuple[str, ...]:
+def installation_notices(cfg: GhConfig | None = None) -> tuple[str, ...]:
     """Best-effort secret inventory plus settings the GitHub API cannot infer safely."""
     notices = [
         "enable Actions read/write permissions and allow Actions to create pull requests",
     ]
+    required = ["ANTHROPIC_API_KEY", "AUTOMERGE_TOKEN"]
+    pr_af = cfg.pr_automation.pr_af if cfg is not None else None
+    if pr_af is not None and pr_af.enabled:
+        required.append(pr_af.openrouter_secret)
     try:
         run = subprocess.run(
             ["gh", "secret", "list", "--json", "name"],
@@ -661,7 +689,7 @@ def installation_notices() -> tuple[str, ...]:
             present = {str(item["name"]) for item in json.loads(run.stdout)}
         except (json.JSONDecodeError, KeyError, TypeError):
             present = set()
-        for name in ("ANTHROPIC_API_KEY", "AUTOMERGE_TOKEN"):
+        for name in required:
             if name not in present:
                 notices.append(f"configure repository secret {name}")
     return tuple(notices)
