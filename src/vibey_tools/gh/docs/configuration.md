@@ -261,11 +261,12 @@ repository = "Agent-Field/pr-af"
 ref = "421fbd23bf1c5a2c3916d7046c97b5273958e1f4"
 model = "deepseek/deepseek-v4-flash-0731"
 runs_on = "ubuntu-latest"
-host_enabled = true
-host_provider = "local"
+host_enabled = false
 hosted_enabled = true
-local_verdict_passes = false
 ```
+
+To review on a model you serve, add `host_enabled = true` and `host_provider = "local"` (and
+`hosted_enabled = false` to need no OpenRouter key at all). See the speed note below first.
 
 | Field | Type / default | Meaning |
 |---|---|---|
@@ -305,6 +306,14 @@ OpenRouter, and **blanks `OPENROUTER_API_KEY` inside the container**. Third-part
 never patched. The host preflight checks that the server answers and already holds the model;
 either failing is "no verdict" and the fallback decides. A local model is smaller than the
 router's, so read its first reviews before trusting its verdicts.
+
+**Measure the speed before enabling it.** pr-af is a seven-phase agent, and a local model
+serves its agents one at a time. Measured on `gpt-oss:20b` on an Apple-silicon laptop
+(2026-10-22), a one-file dependency bump reviewed at depth `quick`, with no findings, was
+still in phase 6 after 45 minutes — 8 agent calls, 68 minutes of summed agent time, 12 more
+queued. A review that outlasts `max_duration_seconds` is "no verdict" and the fallback
+decides, so it is safe, but the gate waits for it. A faster model, a faster machine, or a
+smaller review profile is needed before a local venue is the default.
 
 ### `[pr_automation.observability]`
 

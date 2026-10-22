@@ -137,7 +137,7 @@ jobs:
           vibey-gh sovereign || true
 
       - name: Probe the pr-af host runner
-        if: inputs.dry_run != true && true && true
+        if: inputs.dry_run != true && true && false
         id: pr_af_host
         continue-on-error: true
         run: |
@@ -823,7 +823,7 @@ jobs:
       needs.evaluate.outputs.pr != '' &&
       needs.evaluate.outputs.head_sha != '' &&
       true &&
-      (true == false ||
+      (false == false ||
        needs.evaluate.outputs.pr_af_host_ready != 'true')
     runs-on: ubuntu-latest
     timeout-minutes: 120
@@ -946,7 +946,7 @@ jobs:
     needs: evaluate
     if: >-
       inputs.dry_run != true &&
-      true && true &&
+      true && false &&
       needs.evaluate.outputs.pr_af_host_ready == 'true' &&
       (needs.evaluate.outputs.state == 'ready' ||
        needs.evaluate.outputs.state == 'review') &&
@@ -971,7 +971,7 @@ jobs:
       COMPOSE_PROJECT_NAME: pr-af-${{ github.run_id }}-${{ github.run_attempt }}
       # Which model this venue reviews on: the paid router, or one the operator serves.
       # The hosted venue is always the router; only this one can be local.
-      PR_AF_HOST_PROVIDER: local
+      PR_AF_HOST_PROVIDER: openrouter
       PR_AF_MODEL: deepseek/deepseek-v4-flash-0731
       PR_AF_MAX_COST_USD: "2.0"
       PR_AF_MAX_DURATION_SECONDS: "3600"
@@ -979,7 +979,7 @@ jobs:
       - name: Preflight
         id: preflight
         env:
-          OPENROUTER_API_KEY: ""
+          OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
           LOCAL_MODEL: gpt-oss:20b
           LOCAL_URL: http://127.0.0.1:11434
         run: |
@@ -1051,7 +1051,7 @@ jobs:
         if: steps.preflight.outputs.skip != 'true'
         working-directory: pr-af
         env:
-          OPENROUTER_API_KEY: ""
+          OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
           GH_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
@@ -2662,7 +2662,7 @@ jobs:
           # direction. True only when the host venue reviewed on a local model and the
           # repository has not said local passes count; the expression lives here, in env,
           # so the script below stays under GitHub's expression-length cap.
-          PR_AF_LOCAL_DEFERS: ${{ needs.review-pr-af-host.outputs.venue == 'host' }}
+          PR_AF_LOCAL_DEFERS: false
           PR_AF_LOCAL_NOTE: ' pr-af, on a local model, found nothing blocking; a local model may block the gate but does not pass it alone, so the verdict above is the fallback.'
         run: |
           set -euo pipefail

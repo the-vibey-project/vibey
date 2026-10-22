@@ -121,6 +121,17 @@ pr-af block does, but leaves every pass to the sovereign/paid fallback and says 
 check. A model that can only tighten the gate cannot weaken it; the repository loosens it
 deliberately, by a reviewed change, after reading the local reviews.
 
+**Measured, and so not enabled in this repository.** On 2026-10-22 pr-af was run end to end
+on `gpt-oss:20b` on the operator's laptop against a one-file dependency bump (#1658, depth
+`quick`, `--dry-run`). The path worked — the entrypoint wrote the provider, the key stayed
+blank in the container, intake, anatomy, meta-selection, review and the coverage loop all
+completed, including a schema retry — but the review was still in phase 6 of 7 at 45
+minutes, with eight agent calls and 68 minutes of summed agent time behind it and twelve
+consistency-verify agents queued, past pr-af's own 3600 s cap. Capped, that is no verdict
+and the fallback decides; it is never a pass. The gate would, however, wait that long on every
+pull request, so this repository keeps `host_enabled = false` and records the opt-in beside
+the declaration. The capability is shipped, tested and ready for a faster model.
+
 **Consequences.** A local model is smaller than the router's, so verdict quality is
 something to measure, not assume: a review that cannot satisfy pr-af's structured outputs
 ends with no verdict and the fallback decides, never a pass. The host venue still serialises
