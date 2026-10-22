@@ -76,6 +76,13 @@ MODES = ("act", "drill", "chat")
 CADENCES = ("weekly", "daily")
 #: GitHub's limit on one comment body, less room for the reply's own frame.
 COMMENT_LIMIT = 60000
+VOICE_CONTRACT = (
+    "Voice contract (mandatory, with no exceptions): in every response, refer to yourself "
+    "only as I/me/my/mine/myself; address the operator only as you/your/yours/yourself; "
+    "never call yourself the agent, assistant, model, or another third-person label. Use "
+    "we/us/our/ours/ourselves only in direct speech to the operator when explicitly meaning "
+    "yourself and the operator together, never for yourself alone or in self-talk."
+)
 
 
 @dataclass(frozen=True)
@@ -1232,7 +1239,7 @@ class ContinuationPrompts:
         p = self._settings.prompt(prompt_id)
         cap = int(self._settings.run.get("evidence_chars", 12000))
         timeout = float(self._settings.run.get("gather_timeout_s", 120))
-        parts = [self.extract(prompt_id), "", "## Authority for this run", ""]
+        parts = [VOICE_CONTRACT, "", self.extract(prompt_id), "", "## Authority for this run", ""]
         if p.mode == "act":
             parts.append(
                 "You may change files in this checkout. Your changes become ONE draft pull "
@@ -1271,7 +1278,7 @@ class ContinuationPrompts:
                 else text[:cap] + f"\n[... cut at {cap} characters of {len(text)} ...]"
             )
 
-        parts = [self.extract(prompt.id), "", "## Authority for this turn", ""]
+        parts = [VOICE_CONTRACT, "", self.extract(prompt.id), "", "## Authority for this turn", ""]
         if mode == "act":
             parts.append(
                 "You may change files in this checkout. Your changes become ONE draft pull "
