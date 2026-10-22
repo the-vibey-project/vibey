@@ -137,8 +137,18 @@ the diff.
 - Keep the summary to one or two sentences describing what the change does and your verdict.
 """
 
+VOICE_CONTRACT = (
+    "Voice contract (mandatory, with no exceptions): in every response, refer to yourself "
+    "only as I/me/my/mine/myself; address the operator only as you/your/yours/yourself; "
+    "never call yourself the agent, assistant, model, reviewer, triager, or another "
+    "third-person label. Use we/us/our/ours/ourselves only in direct speech to the operator "
+    "when explicitly meaning yourself and the operator together, never for yourself alone "
+    "or in self-talk.\n\n"
+)
+
 SYSTEM_PROMPT = (
-    "You are a code reviewer examining a pull request diff. You are a FALLBACK reviewer running"
+    VOICE_CONTRACT
+    + "You are a code reviewer examining a pull request diff. You are a FALLBACK reviewer running"
     " because the primary reviewer was unavailable, so your job is to catch clear, demonstrable"
     " defects — not to nitpick style or speculate.\n\n" + REVIEW_RULES
 )
@@ -510,7 +520,12 @@ class WholeReview:
     def system_prompt(self) -> str:
         items = "".join(f"- {name}: {question}\n" for name, question in self.contract.questions())
         return (
-            WHOLE_REVIEW_INTRO + REVIEW_RULES + WHOLE_REVIEW_CONTRACT + items + WHOLE_REVIEW_VERDICT
+            VOICE_CONTRACT
+            + WHOLE_REVIEW_INTRO
+            + REVIEW_RULES
+            + WHOLE_REVIEW_CONTRACT
+            + items
+            + WHOLE_REVIEW_VERDICT
         )
 
     def documents(self, directory: pathlib.Path, order: Sequence[str] = ()) -> dict[str, str]:
@@ -2325,8 +2340,8 @@ TRIAGE_SCHEMA = {
     ],
 }
 
-TRIAGE_SYSTEM_PROMPT = """\
-You are triaging a repository issue. You are a FALLBACK triager running because the \
+TRIAGE_SYSTEM_PROMPT = f"""\
+{VOICE_CONTRACT}You are triaging a repository issue. You are a FALLBACK triager running because the \
 primary solver was unavailable. You do NOT write code, and nothing you produce will be \
 merged: your analysis becomes a comment that helps whoever picks the issue up next.
 
