@@ -52,6 +52,7 @@ __all__ = [
     "LOCAL_SCHEMA",
     "OUTCOME_ARTIFACT",
     "OUTCOME_SCHEMA",
+    "PR_AF",
     "REVIEW_OUTCOMES",
     "VERDICTS",
     "OutcomeTable",
@@ -73,6 +74,7 @@ RECORD_FILE = "record.json"
 
 # --- the lane decision -----------------------------------------------------------------------
 
+PR_AF = "pr_af"
 SOVEREIGN_WHOLE = "sovereign_whole"
 SOVEREIGN_CARRIES = "sovereign_carries"
 SOVEREIGN_RESERVE = "sovereign_reserve"
@@ -80,6 +82,7 @@ PAID_ONLY = "paid_only"
 NO_LANE = "none"
 
 LANES: dict[str, str] = {
+    PR_AF: "pr-af, the declared default reviewer, answers the exact-head review",
     SOVEREIGN_WHOLE: "no paid review is declared (8.b); the sovereign lane answers the whole review",
     SOVEREIGN_CARRIES: "the sovereign lane carries the diff half; the paid lane answers the rest",
     SOVEREIGN_RESERVE: "the paid lane reviews; the sovereign verdict is held in reserve",

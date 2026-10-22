@@ -168,6 +168,7 @@ This index is generated from the documentation's navigation by `scripts/llms_txt
 - [0087 — The six audiences, in order: developers, non-profits, universities, governments, freelance clients, industry](https://the-vibey-project.github.io/vibey/main/architecture/decisions/0087-the-six-audiences-in-order/)
 - [0088 — TypeScript, never JavaScript: the only authored form is typed, and the JavaScript that must exist is generated](https://the-vibey-project.github.io/vibey/main/architecture/decisions/0088-typescript-never-javascript/)
 - [0089 — AI self-reference is I; inclusive we is only direct address](https://the-vibey-project.github.io/vibey/main/architecture/decisions/0089-ai-self-reference-is-i-inclusive-we-is-direct/)
+- [0090 — pr-af is the declared default exact-head reviewer](https://the-vibey-project.github.io/vibey/main/architecture/decisions/0090-pr-af-as-the-declared-default-reviewer/)
 
 ## Governance
 
