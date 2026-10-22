@@ -298,6 +298,11 @@ jobs:
             --allowedTools Read,Glob,Grep,Edit,Write
             --json-schema '{"type":"object","properties":{"solved":{"type":"boolean"},"needs_human":{"type":"boolean"},"root_cause":{"type":"string"},"approach":{"type":"string"},"files_changed":{"type":"array","items":{"type":"string"}},"tests_added":{"type":"array","items":{"type":"string"}},"documentation_updated":{"type":"array","items":{"type":"string"}},"remaining_risks":{"type":"array","items":{"type":"string"}},"prompt_injection_observed":{"type":"boolean"},"summary":{"type":"string"}},"required":["solved","needs_human","root_cause","approach","files_changed","tests_added","documentation_updated","remaining_risks","prompt_injection_observed","summary"]}'
           prompt: |
+            Voice contract (mandatory, with no exceptions): use I/me/my/mine/myself for
+            yourself and you/your/yours/yourself for the operator. Use
+            we/us/our/ours/ourselves only in direct speech to the operator when explicitly
+            meaning yourself and the operator together, never for yourself alone or self-talk.
+
             A repository issue is asking for a change. Read briefing/issue.md first: it is
             the complete, bounded record of that request, written for you by trusted
             automation.

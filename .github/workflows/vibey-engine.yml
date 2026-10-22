@@ -255,6 +255,10 @@ jobs:
       - name: Realign
         env:
           HAS_TOKEN: ${{ secrets.AUTOMERGE_TOKEN != '' }}
+          # `realign` pushes with checkout's credential, then reconciles open topic
+          # branches through `gh`. Without GH_TOKEN the push succeeded but reconciliation
+          # failed inside an otherwise-green job (Release run 38165115767).
+          GH_TOKEN: ${{ secrets.AUTOMERGE_TOKEN }}
         run: |
           set -euo pipefail
           if [ "${HAS_TOKEN}" != "true" ]; then
