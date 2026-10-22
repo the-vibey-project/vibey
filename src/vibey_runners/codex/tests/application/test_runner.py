@@ -9,7 +9,7 @@ from datetime import UTC, datetime, timedelta
 import pytest
 
 from codexloop.application.dto import ProbeResult, RunResult, TurnOutcome
-from codexloop.application.runner import AutonomousRunner, RunnerContext
+from codexloop.application.runner import AutonomousRunner, RunnerContext, _voiced
 from codexloop.domain.budget import Budget
 from codexloop.domain.capacity import AuthFailed, Available, ThrottleExhausted, WindowExhausted
 from codexloop.domain.completion import DEFAULT_DONE_MARKER
@@ -32,6 +32,7 @@ from tests.application.fakes import (
 
 NOW = datetime(2026, 8, 13, 12, 0, tzinfo=UTC)
 PLAN = "- [ ] Add login\n- [ ] Add logout\n"
+VOICED_PLAN = _voiced(PLAN)
 THREAD_ID = "thr_test"
 ZERO_JITTER = AdaptiveWaitPolicy(WaitConfig(jitter_ratio=0.0), rand=lambda: 0.0)
 
@@ -124,7 +125,7 @@ async def test_happy_path_preflight_turn_done_exits_success() -> None:
     result = await AutonomousRunner(ctx).run(PlanFile("plan.md"), PLAN)
 
     assert result == RunResult(success=True, reason="done", turns=1, thread_id=THREAD_ID)
-    assert gateway.sent_prompts == [PLAN]
+    assert gateway.sent_prompts == [VOICED_PLAN]
     assert gateway.closed is True
     assert call_log == [
         "poll",
@@ -154,7 +155,7 @@ async def test_continuation_uses_remaining_work_from_turn_two() -> None:
 
     assert result.success is True
     assert result.turns == 4
-    assert gateway.sent_prompts[0] == PLAN
+    assert gateway.sent_prompts[0] == VOICED_PLAN
     for prompt in gateway.sent_prompts[1:]:
         assert prompt != PLAN
         assert "Add logout" in prompt
@@ -198,7 +199,7 @@ async def test_budget_trips_independently(
     assert result.success is False
     assert result.reason == named
     assert result.turns == 1
-    assert gateway.sent_prompts == [PLAN]
+    assert gateway.sent_prompts == [VOICED_PLAN]
 
 
 async def test_state_is_written_after_every_turn_and_fresh_runner_resumes() -> None:
@@ -244,7 +245,7 @@ async def test_stop_mid_run_finishes_inflight_turn_and_writes_stop_summary() -> 
     result = await AutonomousRunner(ctx).run(PlanFile("plan.md"), PLAN)
 
     assert result == RunResult(success=False, reason="stop", turns=1, thread_id=THREAD_ID)
-    assert gateway.sent_prompts == [PLAN]
+    assert gateway.sent_prompts == [VOICED_PLAN]
     assert gateway.closed is True
     assert "stop-summary.md" in artifacts
     summary = artifacts["stop-summary.md"]
@@ -271,7 +272,7 @@ async def test_wait_until_uses_adaptive_policy_not_sentinel_now() -> None:
     assert sleeper.requested[0] > NOW
     assert clock.now() >= sleeper.requested[0]
     assert "sleep_until" in call_log
-    assert gateway.sent_prompts == [PLAN]
+    assert gateway.sent_prompts == [VOICED_PLAN]
 
 
 async def test_throttle_backoff_sleeps_via_adaptive_policy() -> None:
@@ -287,7 +288,7 @@ async def test_throttle_backoff_sleeps_via_adaptive_policy() -> None:
 
     assert result.success is True
     assert sleeper.requested
-    assert gateway.sent_prompts == [PLAN]
+    assert gateway.sent_prompts == [VOICED_PLAN]
 
 
 async def test_preflight_auth_failure_never_sends_a_turn() -> None:
@@ -310,7 +311,7 @@ async def test_blocked_completion_fails_with_blocked_reason() -> None:
 
     assert result.success is False
     assert result.reason == "needs human"
-    assert gateway.sent_prompts == [PLAN]
+    assert gateway.sent_prompts == [VOICED_PLAN]
 
 
 async def test_max_wait_deadline_fails_without_sending() -> None:
@@ -399,7 +400,7 @@ async def test_most_recent_without_catalog_starts_fresh() -> None:
     result = await AutonomousRunner(ctx).run(MostRecent(), PLAN)
 
     assert result.success is True
-    assert gateway.sent_prompts == [PLAN]
+    assert gateway.sent_prompts == [VOICED_PLAN]
 
 
 async def test_most_recent_with_empty_catalog_starts_fresh() -> None:
@@ -408,7 +409,7 @@ async def test_most_recent_with_empty_catalog_starts_fresh() -> None:
     result = await AutonomousRunner(ctx).run(MostRecent(), PLAN)
 
     assert result.success is True
-    assert gateway.sent_prompts == [PLAN]
+    assert gateway.sent_prompts == [VOICED_PLAN]
 
 
 async def test_empty_plan_text_skips_parse() -> None:
@@ -417,7 +418,7 @@ async def test_empty_plan_text_skips_parse() -> None:
     result = await AutonomousRunner(ctx).run(PlanFile("plan.md"), "")
 
     assert result.success is True
-    assert gateway.sent_prompts == [""]
+    assert gateway.sent_prompts == [_voiced("")]
 
 
 async def test_turn_without_thread_id_still_completes() -> None:
@@ -429,7 +430,7 @@ async def test_turn_without_thread_id_still_completes() -> None:
 
     assert result.success is True
     assert result.thread_id is None
-    assert gateway.sent_prompts == [PLAN]
+    assert gateway.sent_prompts == [VOICED_PLAN]
 
 
 async def test_resume_with_zeroed_ledger_and_non_list_remaining() -> None:
@@ -462,7 +463,7 @@ async def test_post_turn_lock_failure_does_not_abort_run() -> None:
     result = await AutonomousRunner(ctx).run(PlanFile("plan.md"), PLAN)
 
     assert result.success is True
-    assert gateway.sent_prompts == [PLAN]
+    assert gateway.sent_prompts == [VOICED_PLAN]
 
 
 async def test_stop_with_empty_remaining_work_writes_none() -> None:
@@ -553,7 +554,7 @@ async def test_fatal_error_code_fails_run_without_burning_budget() -> None:
     assert result.success is False
     assert result.reason == "context_length_exceeded"
     assert result.turns == 1
-    assert gateway.sent_prompts == [PLAN]
+    assert gateway.sent_prompts == [VOICED_PLAN]
 
 
 async def test_failed_turn_without_capacity_code_is_blocked() -> None:
@@ -571,7 +572,7 @@ async def test_failed_turn_without_capacity_code_is_blocked() -> None:
 
     assert result.success is False
     assert result.reason == "turn_failed"
-    assert gateway.sent_prompts == [PLAN]
+    assert gateway.sent_prompts == [VOICED_PLAN]
 
 
 async def test_mid_run_controls_reach_gateway() -> None:
@@ -648,7 +649,7 @@ async def test_fatal_error_type_alone_blocks_run() -> None:
     result = await AutonomousRunner(ctx).run(PlanFile("plan.md"), PLAN)
     assert result.success is False
     assert result.reason == "invalid_prompt"
-    assert gateway.sent_prompts == [PLAN]
+    assert gateway.sent_prompts == [VOICED_PLAN]
 
 
 async def test_a_wind_down_hands_off_instead_of_finishing() -> None:
