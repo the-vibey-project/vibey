@@ -23,6 +23,7 @@ from vibey_gh.automation_bootstrap import AutomationBootstrapGate
 from vibey_gh.config import GhConfig, load_config
 from vibey_gh.fallback_pin import FallbackPinResolver
 from vibey_gh.interfaces.fallback_pin_resolver_interface import FallbackPin
+from vibey_gh.pr_af_local import PrAfLocalModel
 from vibey_gh.review_contract import REQUIRES_WIDER_CONTEXT, REVIEW_CONTRACT
 
 TEMPLATES = Path(__file__).parent / "templates" / "githooks"
@@ -348,8 +349,30 @@ def render_workflow(source: Path, cfg: GhConfig, *, fallback_pin: FallbackPin | 
     # declaration is false must never be scheduled or read the router's secret.
     pr_af = cfg.pr_automation.pr_af
     pr_af_default = pr_af.enabled and pr_af.default
+    pr_af_local = PrAfLocalModel(cfg)
+    # The host venue reads the router secret only when it reviews on the router. A local
+    # host renders no reference to it at all, so the job cannot be handed a key it must not use.
+    host_key = (
+        "${{ secrets." + pr_af.openrouter_secret + " }}"
+        if pr_af.host_provider == "openrouter"
+        else '""'
+    )
+    # Whether a host-venue verdict must defer to the fallback for a PASS: a local model may
+    # block the gate but only passes it alone if the repository says so. Rendered as an
+    # expression (or the literal false) so the gate's script need not carry the condition.
+    local_defers = (
+        "${{ needs.review-pr-af-host.outputs.venue == 'host' }}"
+        if pr_af.host_provider == "local" and not pr_af.local_verdict_passes
+        else "false"
+    )
     for marker, value in (
         ("__VIBEY_GH_PR_AF_ENABLED__", "true" if pr_af.enabled else "false"),
+        ("__VIBEY_GH_PR_AF_HOSTED_ENABLED__", "true" if pr_af.hosted_enabled else "false"),
+        ("__VIBEY_GH_PR_AF_HOST_PROVIDER__", pr_af.host_provider),
+        ("__VIBEY_GH_PR_AF_LOCAL_DEFERS__", local_defers),
+        ("__VIBEY_GH_PR_AF_HOST_KEY__", host_key),
+        ("__VIBEY_GH_PR_AF_LOCAL_MODEL__", pr_af_local.model),
+        ("__VIBEY_GH_PR_AF_LOCAL_URL__", pr_af_local.base_url.rstrip("/")),
         ("__VIBEY_GH_PR_AF_DEFAULT__", "true" if pr_af_default else "false"),
         ("__VIBEY_GH_PR_AF_HOST_ENABLED__", "true" if pr_af.host_enabled else "false"),
         ("__VIBEY_GH_PR_AF_REPOSITORY__", pr_af.repository),
@@ -673,7 +696,7 @@ def installation_notices(cfg: GhConfig | None = None) -> tuple[str, ...]:
     ]
     required = ["ANTHROPIC_API_KEY", "AUTOMERGE_TOKEN"]
     pr_af = cfg.pr_automation.pr_af if cfg is not None else None
-    if pr_af is not None and pr_af.enabled:
+    if pr_af is not None and pr_af.enabled and pr_af.needs_openrouter:
         required.append(pr_af.openrouter_secret)
     try:
         run = subprocess.run(

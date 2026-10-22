@@ -822,6 +822,7 @@ jobs:
       inputs.dry_run != true &&
       needs.evaluate.outputs.pr != '' &&
       needs.evaluate.outputs.head_sha != '' &&
+      __VIBEY_GH_PR_AF_HOSTED_ENABLED__ &&
       (__VIBEY_GH_PR_AF_HOST_ENABLED__ == false ||
        needs.evaluate.outputs.pr_af_host_ready != 'true')
     runs-on: __VIBEY_GH_PR_AF_RUNS_ON__
@@ -968,6 +969,9 @@ jobs:
       venue: ${{ steps.verdict.outputs.venue }}
     env:
       COMPOSE_PROJECT_NAME: pr-af-${{ github.run_id }}-${{ github.run_attempt }}
+      # Which model this venue reviews on: the paid router, or one the operator serves.
+      # The hosted venue is always the router; only this one can be local.
+      PR_AF_HOST_PROVIDER: __VIBEY_GH_PR_AF_HOST_PROVIDER__
       PR_AF_MODEL: __VIBEY_GH_PR_AF_MODEL__
       PR_AF_MAX_COST_USD: "__VIBEY_GH_PR_AF_MAX_COST_USD__"
       PR_AF_MAX_DURATION_SECONDS: "__VIBEY_GH_PR_AF_MAX_DURATION_SECONDS__"
@@ -975,19 +979,31 @@ jobs:
       - name: Preflight
         id: preflight
         env:
-          OPENROUTER_API_KEY: ${{ secrets.__VIBEY_GH_PR_AF_SECRET__ }}
+          OPENROUTER_API_KEY: __VIBEY_GH_PR_AF_HOST_KEY__
+          LOCAL_MODEL: __VIBEY_GH_PR_AF_LOCAL_MODEL__
+          LOCAL_URL: __VIBEY_GH_PR_AF_LOCAL_URL__
         run: |
           set -euo pipefail
-          if [ -z "${OPENROUTER_API_KEY:-}" ]; then
+          skip() {
             echo "skip=true" >> "$GITHUB_OUTPUT"
-            echo "reason=the repository secret __VIBEY_GH_PR_AF_SECRET__ is not configured" >> "$GITHUB_OUTPUT"
+            echo "reason=$1" >> "$GITHUB_OUTPUT"
             {
               echo "### pr-af review skipped"
               echo
-              echo "The repository secret \`__VIBEY_GH_PR_AF_SECRET__\` is not configured."
+              echo "$1."
               echo "The sovereign lane's verdict is the fallback for this head."
             } >> "$GITHUB_STEP_SUMMARY"
             exit 0
+          }
+          if [ "$PR_AF_HOST_PROVIDER" = local ]; then
+            # Observed, not assumed: the server must answer, and must already hold the model.
+            # A model that has to be pulled would spend the review's budget downloading it.
+            tags=$(curl -fsS --max-time 10 "${LOCAL_URL}/api/tags" 2>/dev/null) ||
+              skip "the local model server at ${LOCAL_URL} did not answer"
+            printf '%s' "$tags" | grep -qF "\"name\":\"${LOCAL_MODEL}\"" ||
+              skip "the local model server has no model named ${LOCAL_MODEL}"
+          elif [ -z "${OPENROUTER_API_KEY:-}" ]; then
+            skip "the repository secret __VIBEY_GH_PR_AF_SECRET__ is not configured"
           fi
           echo "skip=false" >> "$GITHUB_OUTPUT"
 
@@ -1026,11 +1042,16 @@ jobs:
           path: pr-af
           persist-credentials: false
 
+      - name: Point pr-af at the local model
+        if: steps.preflight.outputs.skip != 'true' && env.PR_AF_HOST_PROVIDER == 'local'
+        working-directory: automation
+        run: python -m vibey_gh.pr_af_local --directory ../pr-af
+
       - name: Start pr-af
         if: steps.preflight.outputs.skip != 'true'
         working-directory: pr-af
         env:
-          OPENROUTER_API_KEY: ${{ secrets.__VIBEY_GH_PR_AF_SECRET__ }}
+          OPENROUTER_API_KEY: __VIBEY_GH_PR_AF_HOST_KEY__
           GH_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
@@ -2623,7 +2644,14 @@ jobs:
           PR_AF_EVENT: ${{ needs.review-pr-af.outputs.event || needs.review-pr-af-host.outputs.event }}
           PR_AF_REASON: ${{ needs.review-pr-af.outputs.reason || needs.review-pr-af-host.outputs.reason }}
           PR_AF_DEFAULT: __VIBEY_GH_PR_AF_DEFAULT__
-          PR_AF_MODEL: __VIBEY_GH_PR_AF_MODEL__
+          PR_AF_MODEL: ${{ needs.review-pr-af.outputs.model || needs.review-pr-af-host.outputs.model }}
+          # A local model may tighten the gate but not loosen it: its block is authoritative,
+          # its approval is not, because a smaller model's "nothing blocking" is the unsafe
+          # direction. True only when the host venue reviewed on a local model and the
+          # repository has not said local passes count; the expression lives here, in env,
+          # so the script below stays under GitHub's expression-length cap.
+          PR_AF_LOCAL_DEFERS: __VIBEY_GH_PR_AF_LOCAL_DEFERS__
+          PR_AF_LOCAL_NOTE: ' pr-af, on a local model, found nothing blocking; a local model may block the gate but does not pass it alone, so the verdict above is the fallback.'
         run: |
           set -euo pipefail
           conclusion=failure
@@ -2811,9 +2839,13 @@ jobs:
             { [ "$STATE" = ready ] || [ "$STATE" = review ]; }; then
             case "$PR_AF_PASSED" in
               true)
-                conclusion=success; code=reviewed; verdict=pass
-                title="PR review: gate (pr-af)"
-                summary="Scans passed for this exact head; pr-af (${PR_AF_MODEL}), the declared default reviewer, found nothing blocking. The sovereign/paid lane is the second opinion wherever the repository offers it."
+                if [ "$PR_AF_LOCAL_DEFERS" = true ]; then
+                  pr_af_note=$PR_AF_LOCAL_NOTE
+                else
+                  conclusion=success; code=reviewed; verdict=pass
+                  title="PR review: gate (pr-af)"
+                  summary="Scans passed for this exact head; pr-af (${PR_AF_MODEL}), the declared default reviewer, found nothing blocking. The sovereign/paid lane is the second opinion wherever the repository offers it."
+                fi
                 ;;
               false)
                 conclusion=failure; code=reviewed; verdict=fail

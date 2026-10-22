@@ -262,7 +262,11 @@ ref = "421fbd23bf1c5a2c3916d7046c97b5273958e1f4"
 model = "deepseek/deepseek-v4-flash-0731"
 runs_on = "ubuntu-latest"
 host_enabled = false
+hosted_enabled = true
 ```
+
+To review on a model you serve, add `host_enabled = true` and `host_provider = "local"` (and
+`hosted_enabled = false` to need no OpenRouter key at all). See the speed note below first.
 
 | Field | Type / default | Meaning |
 |---|---|---|
@@ -273,11 +277,16 @@ host_enabled = false
 | `runs_on` | string / `"ubuntu-latest"` | The GitHub-hosted runner for the hosted venue. Exactly one runner label. |
 | `host_enabled` | boolean / `false` | Prefer the operator's own runner while its heartbeat is fresh. The hosted job runs whenever the host is not ready, so a sleeping laptop cannot queue every pull request. The host venue is the sovereign lane's runner, with its label and heartbeat from `[pr_automation.fallback]`, so readiness is evidence about the machine the job will use. |
 | `model` | string / `"deepseek/deepseek-v4-flash-0731"` | The model id pr-af passes to OpenRouter. |
+| `hosted_enabled` | boolean / `true` | Whether the GitHub-hosted venue exists. False drops the paid venue: with the host not ready pr-af gives no verdict and the fallback decides. With `host_provider = "local"` it makes the declaration need **no OpenRouter key at all**. At least one venue must be on. |
+| `host_provider` | string / `"openrouter"` | Which model the **host** venue reviews on: `"openrouter"` (the `model` above) or `"local"` (a model you serve, at no cost). The hosted venue is always OpenRouter, because a hosted runner cannot reach your machine. `"local"` needs `host_enabled = true`. |
+| `local_model` | string / empty | The local model id, e.g. `gpt-oss:20b`. Empty means `[pr_automation.fallback] model`, so one declaration serves both local lanes. The server must already hold it: the host preflight does not pull. |
+| `local_base_url` | string / empty | The local server, as the runner sees it. Empty means `[pr_automation.fallback] base_url`. A loopback address is rewritten to `host.docker.internal` for the container. |
+| `local_verdict_passes` | boolean / `false` | Whether a local model's "nothing blocking" may pass the gate **by itself**. False by default, because a smaller model's approval is the unsafe direction: its block is authoritative (the gate fails, as for any pr-af block), but a pass leaves the sovereign/paid fallback to decide, exactly as if pr-af had produced no verdict, and the check says so. Turn it on once its reviews have earned it. A router-model pass is unaffected. |
 | `depth` | string / `"standard"` | One of `auto`, `quick`, `standard`, `deep`; passed to pr-af's own review depth. |
 | `max_cost_usd` | number / `2.0` | pr-af's own spend cap for one review, passed in its input. Reaching it is **not** a verdict: the gate falls back rather than treating a partial review as a pass. |
 | `max_duration_seconds` | integer / `3600` | pr-af's own wall-clock cap for one review, passed in its input. Reaching it is likewise no verdict. |
 | `timeout_minutes` | integer / `120` | The workflow job's limit, covering the compose build, the review and teardown. A hosted review runs 35–50 minutes in practice. It must leave at least 15 minutes beyond `max_duration_seconds`, or the job would stop before pr-af's own cap could. |
-| `openrouter_secret` | string / `"OPENROUTER_API_KEY"` | The repository secret that holds the OpenRouter key, named rather than carried. Missing, the job skips with a step summary and the fallback decides. |
+| `openrouter_secret` | string / `"OPENROUTER_API_KEY"` | The repository secret that holds the OpenRouter key, named rather than carried. Missing, the job skips with a step summary and the fallback decides. Not requested, and not rendered into the host job, when no scheduled venue uses the router. |
 
 The hosted venue is the default because it needs no machine of yours to be awake. With
 `host_enabled = true` and a fresh heartbeat, `review-pr-af-host` runs instead and the hosted
@@ -286,6 +295,25 @@ in the job as defence in depth. Both venues post pr-af's review to the pull requ
 `passed`, the blocking finding count, the review event and the reason as job outputs. The
 control plane publishes fixed ports (8080 and 8004) and the compose project is named per run,
 so a host running two reviews at once must serialise them.
+
+**The venue chooses the model.** That is how cost and independence are balanced: while your
+machine is up, `host_provider = "local"` reviews on the model the sovereign lane already
+serves, for free; when it is asleep the hosted runner reviews through OpenRouter's inexpensive
+model. The local path is a `docker-compose.override.yml` written beside the pinned checkout by
+`python -m vibey_gh.pr_af_local` — it selects pr-af's opencode harness, writes an opencode
+provider for the server's OpenAI-compatible endpoint, replaces the entrypoint that only knows
+OpenRouter, and **blanks `OPENROUTER_API_KEY` inside the container**. Third-party code is
+never patched. The host preflight checks that the server answers and already holds the model;
+either failing is "no verdict" and the fallback decides. A local model is smaller than the
+router's, so read its first reviews before trusting its verdicts.
+
+**Measure the speed before enabling it.** pr-af is a seven-phase agent, and a local model
+serves its agents one at a time. Measured on `gpt-oss:20b` on an Apple-silicon laptop
+(2026-10-22), a one-file dependency bump reviewed at depth `quick`, with no findings, was
+still in phase 6 after 45 minutes — 8 agent calls, 68 minutes of summed agent time, 12 more
+queued. A review that outlasts `max_duration_seconds` is "no verdict" and the fallback
+decides, so it is safe, but the gate waits for it. A faster model, a faster machine, or a
+smaller review profile is needed before a local venue is the default.
 
 ### `[pr_automation.observability]`
 

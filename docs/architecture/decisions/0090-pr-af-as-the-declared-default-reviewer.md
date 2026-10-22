@@ -82,3 +82,59 @@ one per-run compose project and the same pinned commit.
 
 This is a mechanism decision, not a governing rule about conduct, so ADR-0020 does not require
 a sub-doctrine. The paid-counterparty rule it applies is already 8.b.
+
+## Amendment 2026-10-22 — the venue chooses the model
+
+**Context.** The first cut made OpenRouter the only way pr-af could reach a model, so the
+default reviewer could not run at all without a paid key and an operator with local
+hardware had no way to use it. pr-af itself has one model setting for every one of its
+agents and an entrypoint that writes an OpenRouter-only configuration, but its opencode
+harness reaches any OpenAI-compatible server, and tier names such as `premium` are labels,
+not model ids.
+
+**Decision.** `host_provider` (`"openrouter"` by default, `"local"` to opt in) says which
+model the **host** venue reviews on; the hosted venue is always OpenRouter, because a hosted
+runner cannot reach the operator's machine. A local host therefore reviews for free while its
+heartbeat is fresh, and a sleeping machine falls through to the inexpensive hosted model —
+cost and independence balanced by the venue, with no new scheduler. `hosted_enabled = false`
+drops the paid venue, so a repository can run on its own hardware and never hold the key;
+`needs_openrouter` is then false and the secret is neither requested nor rendered.
+
+The local model and server default to the sovereign lane's (`[pr_automation.fallback]`), so
+one declaration of "which local model, where" serves both lanes, and `local_model` /
+`local_base_url` override it for pr-af alone. The local path is
+`vibey_gh.pr_af_local`: a `docker-compose.override.yml` written beside the pinned checkout
+that selects the opencode harness, writes an opencode provider for the server, and replaces
+the entrypoint that only knows OpenRouter. It never patches third-party code, restates the
+image's `CMD` (compose drops it when the entrypoint is replaced), points the container at
+`host.docker.internal` in place of a loopback address, and **blanks `OPENROUTER_API_KEY`
+inside the container**, so a review declared local cannot reach the paid router by accident.
+
+The host job's preflight observes rather than assumes: the server must answer and must
+already hold the model, because a model that has to be pulled would spend the review's
+budget downloading it. Either failure is "no verdict", and the fallback decides, exactly as
+a missing secret does. The gate names the model the job reported, not the router's.
+
+A smaller model's approval is the unsafe direction, so the verdict is **asymmetric**:
+`local_verdict_passes` (false by default) lets a local model's block fail the gate, as any
+pr-af block does, but leaves every pass to the sovereign/paid fallback and says so in the
+check. A model that can only tighten the gate cannot weaken it; the repository loosens it
+deliberately, by a reviewed change, after reading the local reviews.
+
+**Measured, and so not enabled in this repository.** On 2026-10-22 pr-af was run end to end
+on `gpt-oss:20b` on the operator's laptop against a one-file dependency bump (#1658, depth
+`quick`, `--dry-run`). The path worked — the entrypoint wrote the provider, the key stayed
+blank in the container, intake, anatomy, meta-selection, review and the coverage loop all
+completed, including a schema retry — but the review was still in phase 6 of 7 at 45
+minutes, with eight agent calls and 68 minutes of summed agent time behind it and twelve
+consistency-verify agents queued, past pr-af's own 3600 s cap. Capped, that is no verdict
+and the fallback decides; it is never a pass. The gate would, however, wait that long on every
+pull request, so this repository keeps `host_enabled = false` and records the opt-in beside
+the declaration. The capability is shipped, tested and ready for a faster model.
+
+**Consequences.** A local model is smaller than the router's, so verdict quality is
+something to measure, not assume: a review that cannot satisfy pr-af's structured outputs
+ends with no verdict and the fallback decides, never a pass. The host venue still serialises
+reviews (fixed ports 8080 and 8004). Adopters change nothing: both new defaults reproduce the
+first cut exactly.
+
