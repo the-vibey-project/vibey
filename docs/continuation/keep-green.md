@@ -11,7 +11,7 @@ and land the fix.
 
 - **Mode when GitHub runs it daily:** act — may open a draft pull request; never merges, approves, releases or deletes.
 - **What it is for:** Find every failing workflow on the integration branch, fix its cause, and land the fix.
-- **Decision records:** 89, the newest 0089 — AI self-reference is I; inclusive we is only direct address.
+- **Decision records:** 90, the newest 0090 — pr-af is the declared default exact-head reviewer.
 - **Lanes it keeps usable:** [CI](https://github.com/the-vibey-project/vibey/actions/workflows/ci.yml), [Branch health](https://github.com/the-vibey-project/vibey/actions/workflows/branch-health.yml), [Ruleset drift](https://github.com/the-vibey-project/vibey/actions/workflows/ruleset-drift.yml), [Repository profile](https://github.com/the-vibey-project/vibey/actions/workflows/repository-profile.yml), [Documentation deep scan](https://github.com/the-vibey-project/vibey/actions/workflows/documentation-deep-scan.yml), [Self-healer](https://github.com/the-vibey-project/vibey/actions/workflows/self-healer.yml).
 - **Agent skills it relies on:** `.claude/skills/vibey-quality-gates/SKILL.md`.
 <!-- END GENERATED continuation:state -->
