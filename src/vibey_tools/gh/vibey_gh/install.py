@@ -357,10 +357,19 @@ def render_workflow(source: Path, cfg: GhConfig, *, fallback_pin: FallbackPin | 
         if pr_af.host_provider == "openrouter"
         else '""'
     )
+    # Whether a host-venue verdict must defer to the fallback for a PASS: a local model may
+    # block the gate but only passes it alone if the repository says so. Rendered as an
+    # expression (or the literal false) so the gate's script need not carry the condition.
+    local_defers = (
+        "${{ needs.review-pr-af-host.outputs.venue == 'host' }}"
+        if pr_af.host_provider == "local" and not pr_af.local_verdict_passes
+        else "false"
+    )
     for marker, value in (
         ("__VIBEY_GH_PR_AF_ENABLED__", "true" if pr_af.enabled else "false"),
         ("__VIBEY_GH_PR_AF_HOSTED_ENABLED__", "true" if pr_af.hosted_enabled else "false"),
         ("__VIBEY_GH_PR_AF_HOST_PROVIDER__", pr_af.host_provider),
+        ("__VIBEY_GH_PR_AF_LOCAL_DEFERS__", local_defers),
         ("__VIBEY_GH_PR_AF_HOST_KEY__", host_key),
         ("__VIBEY_GH_PR_AF_LOCAL_MODEL__", pr_af_local.model),
         ("__VIBEY_GH_PR_AF_LOCAL_URL__", pr_af_local.base_url.rstrip("/")),

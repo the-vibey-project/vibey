@@ -427,6 +427,10 @@ runs_on = "ubuntu-latest"
 host_enabled = true
 host_provider = "local"
 hosted_enabled = true
+# A local model may BLOCK the gate (fail closed) but its "nothing blocking" does not pass it
+# alone: a smaller model's approval is the unsafe direction, so the sovereign/paid fallback
+# decides every pass. Flip this once the local reviews have been read and have earned it.
+local_verdict_passes = false
 
 # How many runs of one local model run at once on a device (sub-doctrines 8.c and 8.j,
 # ADR-0058). Declared here, checked by `vibey-gh slots allowed` against THAT device's own

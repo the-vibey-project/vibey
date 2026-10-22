@@ -1562,6 +1562,11 @@ class PrAfConfig:
     # (`[pr_automation.fallback]` model and base_url), so one declaration serves both.
     local_model: str = ""
     local_base_url: str = ""
+    # Whether a local model's "nothing blocking" may pass the gate by itself. FALSE by
+    # default, because a smaller model's approval is the unsafe direction: its block is
+    # authoritative (fail closed), but a pass leaves the sovereign/paid fallback to decide,
+    # exactly as if pr-af had produced no verdict. Turn it on once its reviews have earned it.
+    local_verdict_passes: bool = False
     depth: str = "standard"
     # The review's own caps, passed to pr-af's input. A review that reaches either cap is
     # not a verdict: the gate falls back rather than treating a partial pass as a pass.
@@ -1585,7 +1590,7 @@ class PrAfConfig:
         return self.hosted_enabled or (self.host_enabled and self.host_provider == "openrouter")
 
     def __post_init__(self) -> None:
-        for key in ("enabled", "default", "host_enabled", "hosted_enabled"):
+        for key in ("enabled", "default", "host_enabled", "hosted_enabled", "local_verdict_passes"):
             value = getattr(self, key)
             if not isinstance(value, bool):
                 raise ValueError(  # noqa: TRY004

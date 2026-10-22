@@ -91,6 +91,15 @@ def test_the_declaration_refuses_what_it_cannot_honour(
         PrAfConfig(enabled=True, ref=SHA, **changes)
 
 
+def test_a_local_verdict_does_not_pass_the_gate_alone_by_default() -> None:
+    assert PrAfConfig(enabled=True, ref=SHA).local_verdict_passes is False
+
+
+def test_the_local_verdict_switch_must_be_a_boolean() -> None:
+    with pytest.raises(ValueError, match="local_verdict_passes must be true or false"):
+        PrAfConfig(enabled=True, ref=SHA, local_verdict_passes="yes")
+
+
 def test_an_undeclared_table_validates_nothing_else() -> None:
     PrAfConfig(host_provider="gemini", hosted_enabled=False)
 
@@ -380,6 +389,25 @@ def test_the_gate_names_the_model_the_job_reported(tmp_path: Path) -> None:
         "PR_AF_MODEL: ${{ needs.review-pr-af.outputs.model || "
         "needs.review-pr-af-host.outputs.model }}"
     ) in text
+
+
+def test_the_gate_lets_a_local_model_block_but_not_pass_by_default(tmp_path: Path) -> None:
+    text = render(tmp_path)
+    assert "PR_AF_LOCAL_DEFERS: ${{ needs.review-pr-af-host.outputs.venue == 'host' }}" in text
+    assert "a local model may block the gate but does not pass it alone" in text
+    # The block branch is untouched: a local model's finding still fails the gate.
+    assert "pr-af found blocking findings" in text
+
+
+def test_the_gate_lets_a_local_pass_count_once_the_repository_opts_in(tmp_path: Path) -> None:
+    assert "PR_AF_LOCAL_DEFERS: false" in render(tmp_path, local_verdict_passes=True)
+
+
+def test_a_router_host_never_defers_its_pass(tmp_path: Path) -> None:
+    text = render_workflow(
+        WORKFLOWS / "pr-review.yml", cfg(tmp_path, enabled=True, ref=SHA, host_enabled=True)
+    )
+    assert "PR_AF_LOCAL_DEFERS: false" in text
 
 
 def test_a_local_only_declaration_asks_for_no_router_secret(

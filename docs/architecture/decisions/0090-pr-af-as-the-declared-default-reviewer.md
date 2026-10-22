@@ -115,6 +115,12 @@ already hold the model, because a model that has to be pulled would spend the re
 budget downloading it. Either failure is "no verdict", and the fallback decides, exactly as
 a missing secret does. The gate names the model the job reported, not the router's.
 
+A smaller model's approval is the unsafe direction, so the verdict is **asymmetric**:
+`local_verdict_passes` (false by default) lets a local model's block fail the gate, as any
+pr-af block does, but leaves every pass to the sovereign/paid fallback and says so in the
+check. A model that can only tighten the gate cannot weaken it; the repository loosens it
+deliberately, by a reviewed change, after reading the local reviews.
+
 **Consequences.** A local model is smaller than the router's, so verdict quality is
 something to measure, not assume: a review that cannot satisfy pr-af's structured outputs
 ends with no verdict and the fallback decides, never a pass. The host venue still serialises

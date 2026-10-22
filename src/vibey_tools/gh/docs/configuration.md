@@ -264,6 +264,7 @@ runs_on = "ubuntu-latest"
 host_enabled = true
 host_provider = "local"
 hosted_enabled = true
+local_verdict_passes = false
 ```
 
 | Field | Type / default | Meaning |
@@ -279,6 +280,7 @@ hosted_enabled = true
 | `host_provider` | string / `"openrouter"` | Which model the **host** venue reviews on: `"openrouter"` (the `model` above) or `"local"` (a model you serve, at no cost). The hosted venue is always OpenRouter, because a hosted runner cannot reach your machine. `"local"` needs `host_enabled = true`. |
 | `local_model` | string / empty | The local model id, e.g. `gpt-oss:20b`. Empty means `[pr_automation.fallback] model`, so one declaration serves both local lanes. The server must already hold it: the host preflight does not pull. |
 | `local_base_url` | string / empty | The local server, as the runner sees it. Empty means `[pr_automation.fallback] base_url`. A loopback address is rewritten to `host.docker.internal` for the container. |
+| `local_verdict_passes` | boolean / `false` | Whether a local model's "nothing blocking" may pass the gate **by itself**. False by default, because a smaller model's approval is the unsafe direction: its block is authoritative (the gate fails, as for any pr-af block), but a pass leaves the sovereign/paid fallback to decide, exactly as if pr-af had produced no verdict, and the check says so. Turn it on once its reviews have earned it. A router-model pass is unaffected. |
 | `depth` | string / `"standard"` | One of `auto`, `quick`, `standard`, `deep`; passed to pr-af's own review depth. |
 | `max_cost_usd` | number / `2.0` | pr-af's own spend cap for one review, passed in its input. Reaching it is **not** a verdict: the gate falls back rather than treating a partial review as a pass. |
 | `max_duration_seconds` | integer / `3600` | pr-af's own wall-clock cap for one review, passed in its input. Reaching it is likewise no verdict. |
