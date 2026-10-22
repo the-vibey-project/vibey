@@ -15,6 +15,8 @@ published as a book — [PDF](https://the-vibey-project.github.io/vibey/main/boo
 
 ## [Unreleased]
 
+* Corrected label of issue #1629 from `bug` to `documentation/enhancement`
+
 ## [4.4.0] (2026-10-11)
 
 ### Features
