@@ -95,7 +95,9 @@ class AdvisoryGateInterface(Protocol):
         """`npm audit --json` run in `workspace`, decoded.
 
         Raises `RuntimeError` when npm reports an error or prints something that is not an
-        audit report: an audit that could not be read is one that never ran.
+        audit report: an audit that could not be read is one that never ran. When the
+        advisory service itself could not be reached, the error names that cause so
+        `[advisories] on_unavailable` can decide whether it is a refusal or a warning.
         """
         ...
 
@@ -118,5 +120,7 @@ class AdvisoryGateInterface(Protocol):
 
     def run(self, workspaces: Sequence[str], audit_file: Path | None = None) -> int:
         """Audit each workspace, print every finding and every exception honoured, and
-        return the exit status: 0 clean, 1 refused."""
+        return the exit status: 0 clean, 1 refused. With `on_unavailable = "warn"`, a
+        workspace whose advisory service did not answer is a printed warning, not a refusal.
+        """
         ...
