@@ -12,7 +12,7 @@ name below still exists where it says, and changes nothing.
 
 - **Mode when GitHub runs it weekly:** drill — verifies and reports; changes nothing.
 - **What it is for:** Hand the project to a new steward: what they must hold, where it is declared, and how to verify it.
-- **Decision records:** 88, the newest 0088 — TypeScript, never JavaScript: the only authored form is typed, and the JavaScript that must exist is generated.
+- **Decision records:** 89, the newest 0089 — AI self-reference is I; inclusive we is only direct address.
 <!-- END GENERATED continuation:state -->
 
 ## The prompt
