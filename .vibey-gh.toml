@@ -417,7 +417,16 @@ model = "deepseek/deepseek-v4-flash-0731"
 runs_on = "ubuntu-latest"
 # The host venue is the sovereign lane's own runner: its label and heartbeat come from
 # [pr_automation.fallback], so the readiness probe describes the machine the job uses.
-host_enabled = false
+#
+# The venue chooses the model, which balances cost against independence (ADR-0090, amended):
+# while the operator's machine is up (fresh heartbeat) pr-af reviews there on the local model
+# the sovereign lane already serves -- free -- and otherwise on a GitHub-hosted runner through
+# OpenRouter's inexpensive `model` above. The hosted runner cannot reach the operator's
+# machine, so it can only ever be the router. `local_model` / `local_base_url` are left empty
+# so the sovereign lane's own ([pr_automation.fallback] model and base_url) serve both.
+host_enabled = true
+host_provider = "local"
+hosted_enabled = true
 
 # How many runs of one local model run at once on a device (sub-doctrines 8.c and 8.j,
 # ADR-0058). Declared here, checked by `vibey-gh slots allowed` against THAT device's own
@@ -744,6 +753,7 @@ forbidden_paths = [
   "src/vibey_tools/gh/vibey_gh/github_state.py",
   "src/vibey_tools/gh/vibey_gh/install.py",
   "src/vibey_tools/gh/vibey_gh/issue_automation.py",
+  "src/vibey_tools/gh/vibey_gh/pr_af_local.py",
   "src/vibey_tools/gh/vibey_gh/pr_automation.py",
   "src/vibey_tools/gh/vibey_gh/protected_paths.py",
   "src/vibey_tools/gh/vibey_gh/reconcile.py",
