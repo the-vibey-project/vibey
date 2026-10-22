@@ -933,6 +933,12 @@ _RUNNER_SLUG_RE = re.compile(r"^[A-Za-z0-9._-]+/[A-Za-z0-9._-]+$")
 # YAML and shell, so neither may carry anything but the characters a name needs.
 _RUNNER_LABEL_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]*$")
 _OLLAMA_MODEL_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._/-]*(:[A-Za-z0-9._-]+)?$")
+# A model id as an OpenAI-compatible router spells it: a vendor or namespace, a slash, a
+# model, and an optional `:tag`. Rendered into a workflow's env and a compose environment.
+_PR_AF_MODEL_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._/-]*(:[A-Za-z0-9._-]+)?$")
+# A full commit, never a branch: third-party code is checked out with a token that can
+# write the pull request, so the exact tree must be a reviewed value in this repository.
+_PR_AF_COMMIT_RE = re.compile(r"^[0-9a-f]{40}$")
 _RUNNER_PREFIX_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9.-]*$")
 _RUNNER_VERSION_RE = re.compile(r"^\d+\.\d+\.\d+$")
 _EGRESS_HOST_RE = re.compile(r"^[a-z0-9*][a-z0-9*.-]*$")
@@ -1501,6 +1507,118 @@ class PrAutomationSovereignRepairConfig:
 
 
 @dataclass(frozen=True)
+class PrAfConfig:
+    """Agent-Field `pr-af` as the repository's declared exact-head reviewer.
+
+    pr-af is a third-party reviewer that runs as an AgentField node in Docker Compose and
+    reaches a model through OpenRouter -- a paid counterparty, so sub-doctrine 8.b makes it
+    declared-only and `enabled` is false for every adopter that says nothing. This
+    repository declares it on (`.vibey-gh.toml`), with the sovereign lane still running
+    beside it as the second opinion.
+
+    `ref` is a full commit SHA, never a branch: the review job checks third-party code out
+    with a token that can write the pull request. A branch would let that code change
+    between runs without a diff in this repository. Updating the reviewer is therefore a
+    commit here, reviewed like any other dependency bump.
+
+    The job runs on a GitHub-hosted runner by default. `host_enabled` offers the operator's
+    own runner instead -- but only while its heartbeat is fresh, so a sleeping laptop
+    cannot queue a pull request forever -- and the hosted job runs whenever the host is not
+    ready. The hosted job remains the default venue.
+    """
+
+    enabled: bool = False
+    # Whether the gate follows pr-af's verdict instead of the sovereign/paid fallback. True
+    # only matters while `enabled`; with no pr-af verdict the fallback decides either way.
+    default: bool = True
+    # `owner/name`, as `actions/checkout` spells a repository.
+    repository: str = "Agent-Field/pr-af"
+    # A full 40-character commit SHA. Empty until a repository declares one.
+    ref: str = ""
+    runs_on: str = "ubuntu-latest"
+    # Prefer the operator's own runner when its heartbeat is fresh. Off by default: the
+    # hosted venue needs no machine to be awake. The host venue is the sovereign lane's
+    # runner -- its label and heartbeat are `[pr_automation.fallback]`'s -- so the readiness
+    # probe is evidence about the machine the job will actually land on.
+    host_enabled: bool = False
+    model: str = "deepseek/deepseek-v4-flash-0731"
+    depth: str = "standard"
+    # The review's own caps, passed to pr-af's input. A review that reaches either cap is
+    # not a verdict: the gate falls back rather than treating a partial pass as a pass.
+    max_cost_usd: float = 2.0
+    max_duration_seconds: int = 3600
+    # The workflow job's limit: build, review and teardown. A hosted job stops at 360.
+    timeout_minutes: int = 120
+    # The repository secret holding the OpenRouter key, named rather than carried.
+    openrouter_secret: str = "OPENROUTER_API_KEY"
+
+    _DEPTHS = ("auto", "quick", "standard", "deep")
+
+    def __post_init__(self) -> None:
+        for key in ("enabled", "default", "host_enabled"):
+            value = getattr(self, key)
+            if not isinstance(value, bool):
+                raise ValueError(  # noqa: TRY004
+                    f"pr_automation.pr_af.{key} must be true or false, not {value!r}"
+                )
+        if not self.enabled:
+            return
+        if not _RUNNER_SLUG_RE.fullmatch(self.repository):
+            raise ValueError(
+                f"pr_automation.pr_af.repository must be an owner/name: {self.repository!r}"
+            )
+        if not _PR_AF_COMMIT_RE.fullmatch(self.ref):
+            raise ValueError(
+                "pr_automation.pr_af.ref must be a full 40-character commit SHA, never a "
+                f"branch: {self.ref!r}"
+            )
+        if not _RUNNER_LABEL_RE.fullmatch(self.runs_on):
+            raise ValueError(
+                "pr_automation.pr_af.runs_on must be one GitHub-hosted runner label: "
+                f"{self.runs_on!r}"
+            )
+        if not _PR_AF_MODEL_RE.fullmatch(self.model):
+            raise ValueError(f"pr_automation.pr_af.model is not a model id: {self.model!r}")
+        if self.depth not in self._DEPTHS:
+            raise ValueError(
+                f"pr_automation.pr_af.depth must be one of {', '.join(self._DEPTHS)}: {self.depth!r}"
+            )
+        if not _real(self.max_cost_usd) or not 0 < self.max_cost_usd <= 100:
+            raise ValueError("pr_automation.pr_af.max_cost_usd must be above 0, at most 100")
+        if (
+            type(self.max_duration_seconds) is not int
+            or not 60 <= self.max_duration_seconds <= 21600
+        ):
+            raise ValueError(
+                "pr_automation.pr_af.max_duration_seconds must be a whole number from 60 to 21600"
+            )
+        if type(self.timeout_minutes) is not int or not 10 <= self.timeout_minutes <= 350:
+            raise ValueError(
+                "pr_automation.pr_af.timeout_minutes must be a whole number from 10 to 350"
+            )
+        if self.max_duration_seconds + 900 > self.timeout_minutes * 60:
+            raise ValueError(
+                "pr_automation.pr_af.timeout_minutes must leave at least 15 minutes beyond "
+                "max_duration_seconds for the compose build, startup and teardown"
+            )
+        if not SECRET_NAME_PATTERN.fullmatch(self.openrouter_secret):
+            raise ValueError(
+                "pr_automation.pr_af.openrouter_secret must be a secret name: "
+                f"{self.openrouter_secret!r}"
+            )
+
+    @classmethod
+    def from_table(cls, table: Mapping[str, object]) -> PrAfConfig:
+        """The configuration `[pr_automation.pr_af]` declares, every key it leaves out at
+        its default. A key this table does not know is refused, never ignored."""
+        known = {field.name for field in dataclasses.fields(cls)}
+        unknown = sorted(set(table) - known)
+        if unknown:
+            raise ValueError(f"pr_automation.pr_af does not know {', '.join(unknown)}")
+        return cls(**table)  # type: ignore[arg-type]
+
+
+@dataclass(frozen=True)
 class PrAutomationConfig:
     enabled: bool = True
     scan_workflows: tuple[str, ...] = DEFAULT_SCAN_WORKFLOWS
@@ -1558,6 +1676,7 @@ class PrAutomationConfig:
     fallback: PrAutomationFallbackConfig = PrAutomationFallbackConfig()
     sovereign_repair: PrAutomationSovereignRepairConfig = PrAutomationSovereignRepairConfig()
     review_canary: ReviewCanaryConfig = ReviewCanaryConfig()
+    pr_af: PrAfConfig = PrAfConfig()
 
     def __post_init__(self) -> None:
         for key in ("paid_review", "paid_repair", "paid_conflict_resolution"):
@@ -3740,6 +3859,7 @@ def load_config(root: Path | None = None, config: Path | None = None) -> GhConfi
         sovereign_repair=PrAutomationSovereignRepairConfig.from_table(
             auto.get("sovereign_repair", {})
         ),
+        pr_af=PrAfConfig.from_table(auto.get("pr_af", {})),
     )
     return GhConfig(
         root=root,

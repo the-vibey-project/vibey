@@ -12,7 +12,7 @@ moves on. Correct one such statement a day, with the evidence that it was wrong.
 
 - **Mode when GitHub runs it daily:** act — may open a draft pull request; never merges, approves, releases or deletes.
 - **What it is for:** Find one statement in the documentation, the paper or the book that the repository contradicts, and correct it.
-- **Decision records:** 89, the newest 0089 — AI self-reference is I; inclusive we is only direct address.
+- **Decision records:** 90, the newest 0090 — pr-af is the declared default exact-head reviewer.
 - **Lanes it keeps usable:** [Documentation updater](https://github.com/the-vibey-project/vibey/actions/workflows/docs-updater.yml).
 <!-- END GENERATED continuation:state -->
 
