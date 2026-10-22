@@ -14,7 +14,9 @@ package and the workspace, records why the vulnerable code is not reached, and e
 and until when, and an exception fails the check the moment it expires, stops matching
 anything (so it is removed, not left to rot), or its package gets a patched release (so the
 fix replaces it). A report the check cannot account for -- npm erroring, an unknown format, a
-package at the audit level with no advisory behind it -- is refused, never passed.
+package at the audit level with no advisory behind it -- is refused, never passed. The one
+opt-in exception is `[advisories] on_unavailable = "warn"`: when the advisory service itself
+cannot be reached, the workspace is reported unaudited in a warning instead of blocking.
 """
 
 from __future__ import annotations
@@ -53,12 +55,60 @@ _RANK = {severity: rank for rank, severity in enumerate(("info", *AUDIT_LEVELS))
 _REQUIRED = ("advisory", "package", "workspace", "reason", "added", "expires", "retire_when")
 _OPTIONAL = ("upstream",)
 _LOCKFILE = "package-lock.json"
+# npm's own words for "the advisory service did not answer". Kept to transport failures so a
+# missing lockfile, a malformed report or a refusal by the registry still fails the gate.
+_UNAVAILABLE_MARKERS = (
+    "network timeout",
+    "timed out",
+    "timeout",
+    "econnreset",
+    "etimedout",
+    "eai_again",
+    "enotfound",
+    "econnrefused",
+    "enetunreach",
+    "ehostunreach",
+    "socket hang up",
+    "audit endpoint returned an error",
+    "service unavailable",
+)
+
+
+class AdvisoryServiceUnavailable(RuntimeError):
+    """`npm audit` could not reach the advisory service, so no audit happened.
+
+    Distinct from every other `RuntimeError` the gate raises: `on_unavailable` may turn
+    this one into a warning, and only this one.
+    """
 
 
 def _today() -> date:
     """Today in UTC, the clock CI runs on. A function, not a method: it is the default for an
     injected clock, which a class attribute would bind as a method."""
     return datetime.now(UTC).date()
+
+
+def _service_unavailable(report: Mapping[str, Any], stderr: str) -> str | None:
+    """The reason npm could not reach the advisory service, or `None` when it answered.
+
+    npm has no single error shape here: its JSON error object may carry the cause in
+    `message`, `error.code` or `error.detail`, and sometimes only stderr says what happened.
+    """
+    error = report.get("error")
+    parts: list[object] = [report.get("message"), stderr]
+    if isinstance(error, Mapping):
+        parts += [error.get("summary"), error.get("detail"), error.get("code")]
+        status = error.get("statusCode")
+        if isinstance(status, int) and status >= 500:
+            return f"the advisory service answered HTTP {status}"
+    else:
+        parts.append(error)
+    text = " ".join(str(part).strip() for part in parts if part)
+    if not any(marker in text.lower() for marker in _UNAVAILABLE_MARKERS):
+        return None
+    message = report.get("message")
+    reason = message.strip() if isinstance(message, str) else ""
+    return (reason or text).strip()[:500]
 
 
 class AdvisoryGate(AdvisoryGateInterface):
@@ -177,17 +227,32 @@ class AdvisoryGate(AdvisoryGateInterface):
                 f"npm audit in {workspace} printed no audit report (exit {run.returncode}):"
                 f" {run.stderr.strip()[-500:]}"
             ) from None
-        return self._readable(report, str(workspace))
+        return self._readable(report, str(workspace), live=True, stderr=run.stderr)
 
     @staticmethod
-    def _readable(report: object, where: str) -> Mapping[str, Any]:
-        """`report` when it is an npm audit report this gate can read, else `RuntimeError`."""
+    def _readable(
+        report: object, where: str, *, live: bool = False, stderr: str = ""
+    ) -> Mapping[str, Any]:
+        """`report` when it is an npm audit report this gate can read, else `RuntimeError`.
+
+        Only a report from a live `npm audit` can be an outage: a saved report that recorded
+        one is still a report this run cannot judge, so it is refused.
+        """
         if not isinstance(report, Mapping):
             raise RuntimeError(f"{where}: an npm audit report is a JSON object")  # noqa: TRY004
         if "error" in report:
             error = report["error"]
             summary = error.get("summary", error) if isinstance(error, Mapping) else error
-            raise RuntimeError(f"{where}: npm audit failed: {summary}")
+            # npm's JSON error object leaves `summary` empty for a network failure and puts
+            # the cause in the sibling `message`; without it the gate fails with no reason.
+            if not summary:
+                message = report.get("message")
+                summary = message.strip() if isinstance(message, str) and message.strip() else ""
+            if live and (reason := _service_unavailable(report, stderr)):
+                raise AdvisoryServiceUnavailable(
+                    f"{where}: the advisory service did not answer: {reason}"
+                )
+            raise RuntimeError(f"{where}: npm audit failed: {summary or 'npm printed no reason'}")
         if report.get("auditReportVersion") != 2 or not isinstance(
             report.get("vulnerabilities"), Mapping
         ):
@@ -377,6 +442,16 @@ class AdvisoryGate(AdvisoryGateInterface):
                     )
                 else:
                     report = self.audit(cfg.root / name)
+            except AdvisoryServiceUnavailable as exc:
+                if policy.on_unavailable == "warn":
+                    print(
+                        f"::warning::{name}: {exc}; the workspace was not audited"
+                        " ([advisories] on_unavailable = warn)"
+                    )
+                else:
+                    print(f"::error::{name}: {exc}")
+                    failed = True
+                continue
             except (RuntimeError, OSError, ValueError) as exc:
                 print(f"::error::{name}: {exc}")
                 failed = True
