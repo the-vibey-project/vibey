@@ -64,6 +64,13 @@ def test_no_optional_channel_can_fail_the_release_run() -> None:
     assert "openvsx" not in load("vibey-engine.yml")["jobs"]
 
 
+def test_realign_gives_the_reconciler_the_same_admin_token_as_the_push() -> None:
+    steps = load("vibey-engine.yml")["jobs"]["realign"]["steps"]
+    realign = next(step for step in steps if step.get("name") == "Realign")
+    assert realign["env"]["HAS_TOKEN"] == "${{ secrets.AUTOMERGE_TOKEN != '' }}"
+    assert realign["env"]["GH_TOKEN"] == "${{ secrets.AUTOMERGE_TOKEN }}"
+
+
 def test_open_vsx_publishes_after_a_successful_release_and_says_so_without_a_token() -> None:
     spec = load("openvsx.yml")
     assert spec["on"]["workflow_run"] == {
