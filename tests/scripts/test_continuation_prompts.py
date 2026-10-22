@@ -325,7 +325,8 @@ def test_the_plan_bounds_its_evidence_and_says_where_it_cut(tmp_path: Path) -> N
     root = sound(tmp_path)
     runner = FakeRunner(output="x" * 100)
     plan = prompts(root, runner).plan("resume")
-    assert plan.startswith("Read CLAUDE.md")
+    assert plan.startswith("Voice contract (mandatory, with no exceptions)")
+    assert "\n\nRead CLAUDE.md" in plan
     assert "ONE draft pull request" in plan
     assert "$ echo evidence   (exit 0)" in plan
     assert "[... cut at 40 characters of 100 ...]" in plan
@@ -588,7 +589,8 @@ def test_a_reply_cannot_mention_anyone_or_trigger_the_chat_and_is_cut_loudly() -
 def test_a_chat_plan_fences_the_thread_and_states_its_authority(tmp_path: Path) -> None:
     root = chat_world(tmp_path)
     answer = prompts(root).chat("answer", "what is ADR-0001?", "a thread " * 10)
-    assert answer.startswith("Read CLAUDE.md, then answer.")
+    assert answer.startswith("Voice contract (mandatory, with no exceptions)")
+    assert "\n\nRead CLAUDE.md, then answer." in answer
     assert "ANSWER: change no file" in answer and ".reply.md" in answer
     assert "````text\nwhat is ADR-0001?\n````" in answer
     assert "[... cut at 30 characters of 90 ...]" in answer
