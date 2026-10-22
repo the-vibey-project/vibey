@@ -103,6 +103,11 @@ jobs:
             --allowedTools Read,Glob,Grep,Edit,Write,mcp__github_ci__get_ci_status,mcp__github_ci__get_workflow_run_details,mcp__github_ci__download_job_log
             --json-schema '{"type":"object","properties":{"fixable":{"type":"boolean"},"root_cause":{"type":"string"},"files_changed":{"type":"array","items":{"type":"string"}},"tests_expected":{"type":"array","items":{"type":"string"}},"operator_action":{"type":"string"},"remaining_risks":{"type":"array","items":{"type":"string"}},"summary":{"type":"string"}},"required":["fixable","root_cause","files_changed","tests_expected","operator_action","remaining_risks","summary"]}'
           prompt: |
+            Voice contract (mandatory, with no exceptions): use I/me/my/mine/myself for
+            yourself and you/your/yours/yourself for the operator. Use
+            we/us/our/ours/ourselves only in direct speech to the operator when explicitly
+            meaning yourself and the operator together, never for yourself alone or self-talk.
+
             A trusted permanent-branch workflow failed after merge.
 
             Repository: ${{ github.repository }}

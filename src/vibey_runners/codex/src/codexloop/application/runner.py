@@ -210,7 +210,7 @@ class AutonomousRunner:
 
                 match decision:
                     case SendTurn():
-                        default = plan_text if first_turn else _continuation(remaining)
+                        default = _voiced(plan_text) if first_turn else _continuation(remaining)
                         prompt = self._take_prompt(default)
                         first_turn = False
                         turn = await self._gateway.send_turn(prompt)
@@ -631,10 +631,23 @@ def _continuation(remaining: Sequence[str]) -> str:
         body = f"Continue. Remaining work:\n{items}"
     else:
         body = "Continue."
-    return (
+    return _voiced(
         f"{body}\n\n"
         "When the entire task is fully complete, output "
         f"{DEFAULT_DONE_MARKER} on its own line."
+    )
+
+
+def _voiced(prompt: str) -> str:
+    # Module-level because the state machine needs the same pure prompt transform for its
+    # first and later turns; there is no I/O or substitution seam (ADR-0016 last resort).
+    return (
+        "Voice contract (mandatory, with no exceptions): in every response, refer to "
+        "yourself only as I/me/my/mine/myself; address the operator only as "
+        "you/your/yours/yourself; never call yourself the agent, assistant, model, or "
+        "another third-person label. Use we/us/our/ours/ourselves only in direct speech "
+        "to the operator when explicitly meaning yourself and the operator together, never "
+        f"for yourself alone or in self-talk.\n\n{prompt}"
     )
 
 

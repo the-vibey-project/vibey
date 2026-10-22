@@ -19,6 +19,7 @@ from vibey.infrastructure.engines.ollama_chat import (
     DEFAULT_OLLAMA_MODEL,
     DEFAULT_OLLAMA_TIMEOUT,
     DEFAULT_OLLAMA_URL,
+    MODEL_VOICE_CONTRACT,
     OLLAMA_CONTEXT_ENV,
     OLLAMA_FIT_ENV,
     OLLAMA_MODEL_ENV,
@@ -266,7 +267,7 @@ async def test_a_question_goes_out_constrained_and_deterministic() -> None:
     assert timeout == 30
     assert payload["model"] == "m:1"
     assert payload["messages"] == [
-        {"role": "system", "content": "be terse"},
+        {"role": "system", "content": f"{MODEL_VOICE_CONTRACT}\n\nbe terse"},
         {"role": "user", "content": "what is it?"},
     ]
     # Constrained decoding is the whole reason the sovereign path is reliable: the schema
@@ -503,7 +504,12 @@ async def test_the_widened_budget_never_outgrows_the_context_ceiling() -> None:
 
     second = transport.calls[1][1]
     assert "think" not in second  # "none" keeps the model's own reasoning default
-    assert second["options"]["num_predict"] == 2192
+    first = transport.calls[0][1]
+    messages = first["messages"]
+    assert isinstance(messages, list)
+    prompt_chars = sum(len(message["content"]) for message in messages)
+    expected = min(2048 * 2, max(2048, 8192 - prompt_chars // 3))
+    assert second["options"]["num_predict"] == expected
     assert second["options"]["num_ctx"] == 8192
 
 
