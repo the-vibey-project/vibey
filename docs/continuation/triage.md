@@ -11,7 +11,7 @@ closed one actually done, the forecast current.
 
 - **Mode when GitHub runs it weekly:** act — may open a draft pull request; never merges, approves, releases or deletes.
 - **What it is for:** Keep the backlog, the tracker and the roadmap truthful.
-- **Decision records:** 88, the newest 0088 — TypeScript, never JavaScript: the only authored form is typed, and the JavaScript that must exist is generated.
+- **Decision records:** 89, the newest 0089 — AI self-reference is I; inclusive we is only direct address.
 - **Lanes it keeps usable:** [Backlog cleanup](https://github.com/the-vibey-project/vibey/actions/workflows/backlog-cleanup.yml), [Delivery estimate](https://github.com/the-vibey-project/vibey/actions/workflows/delivery-estimate.yml).
 <!-- END GENERATED continuation:state -->
 
