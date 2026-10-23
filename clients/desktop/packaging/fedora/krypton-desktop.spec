@@ -5,6 +5,9 @@ Release:        1%{?dist}
 Summary:        The desktop app for krypton
 License:        MIT
 URL:            https://github.com/the-vibey-project/vibey
+# The tag below does not exist yet: this spec is declared only (above), and builds once the
+# operator tags krypton-desktop-v0.1.0 for the COPR channel (ADR-0019). Until then Source0
+# resolves to nothing, deliberately.
 Source0:        %{url}/archive/refs/tags/krypton-desktop-v%{version}.tar.gz
 
 BuildRequires:  gcc
@@ -24,6 +27,9 @@ Requires:       glib-networking
 krypton desktop: the GTK 4 and libadwaita client for a vibey hub.
 
 %prep
+# -n names the directory INSIDE the tarball, not the tarball itself. GitHub unpacks a tag
+# archive to <repository>-<tag> (the tag vibey-v4.4.0 unpacks to vibey-vibey-v4.4.0/), so the
+# tag krypton-desktop-v%{version} unpacks to vibey-krypton-desktop-v%{version}/.
 %autosetup -n vibey-krypton-desktop-v%{version}
 
 %build
