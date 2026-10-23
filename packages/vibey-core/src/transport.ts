@@ -161,20 +161,23 @@ export class HubTransport implements VibeyWorkflowsTransportInterface {
     return this.hostOnly('clearBudget', 'vibey budget clear');
   }
 
-  createProject(_name: string, _options: VibeyNewProjectOptions): Promise<VibeyNewProject> {
-    return this.notOverTheNetwork('createProject', 'start a project', 'vibey new');
+  /** The hub chooses the folder (`[hub] projects_root`, ADR-0091), so `options.repo` is not sent: a device names no path. */
+  async createProject(name: string, options: VibeyNewProjectOptions): Promise<VibeyNewProject> {
+    const body = { name, ...(options.intake?.trim() ? { intake: options.intake.trim() } : {}) };
+    return VibeyCli.readCreated(await this.send('/api/v1/projects', body, 'createProject', [201]), name);
   }
 
-  startWork(_projectId: string): Promise<string> {
-    return this.notOverTheNetwork('startWork', "start a project's worker", 'vibey retry --start-worker');
+  async startWork(projectId: string): Promise<string> {
+    return HubTransport.message(await this.send(`/api/v1/projects/${encodeURIComponent(projectId)}/work/start`, {}, 'startWork'));
   }
 
-  pauseWork(_projectId: string): Promise<string> {
-    return this.notOverTheNetwork('pauseWork', 'stop workers', 'vibey recover --stop-workers');
+  async pauseWork(projectId: string): Promise<string> {
+    return HubTransport.message(await this.send(`/api/v1/projects/${encodeURIComponent(projectId)}/work/pause`, {}, 'pauseWork'));
   }
 
-  abandonProject(_projectId: string, _reason: string, _options?: { readonly dryRun?: boolean }): Promise<VibeyAbandonReport> {
-    return this.notOverTheNetwork('abandonProject', 'abandon a project', 'vibey abandon');
+  async abandonProject(projectId: string, reason: string, options: { readonly dryRun?: boolean } = {}): Promise<VibeyAbandonReport> {
+    const body = { reason, dry_run: options.dryRun === true };
+    return VibeyCli.readAbandon(await this.send(`/api/v1/projects/${encodeURIComponent(projectId)}/abandon`, body, 'abandonProject'));
   }
 
   cost(_projectId?: string): Promise<string> {
@@ -246,12 +249,12 @@ export class HubTransport implements VibeyWorkflowsTransportInterface {
       401: `${baseUrl} does not know this device's key. Pair again: krypton: Connect to vibey on this network.`,
       403: "this device's key does not permit it. The host grants scopes when it pairs a device.",
       404: 'there is no such project or open gate on the hub.',
-      409: 'another request got there first: the gate was already answered, or the queue refused the change.',
+      409: 'another request got there first: the gate was already answered, or the queue refused the change, or a project\'s folder or checkout is already taken.',
       421: `the hub does not answer to this name. Connect by an address it serves, or add the name to [hub] names in the host's vibey.toml.`,
       422: 'the hub could not read the request.',
       429: 'the hub is asking for fewer requests; try again in a moment.',
       502: 'GitHub refused the hub, or could not be read from it.',
-      503: 'the hub does not have this switched on. The host enables it in its vibey.toml.',
+      503: 'the hub does not have this switched on, or is resting. The host enables it in its vibey.toml.',
     };
     return `${call}: ${words[status] ?? `the hub answered HTTP ${status}.`}`;
   }
@@ -275,12 +278,6 @@ export class HubTransport implements VibeyWorkflowsTransportInterface {
   static reason(error: unknown): string {
     const failure = error as { message?: unknown; code?: unknown };
     return (typeof failure.message === 'string' && failure.message) || (typeof failure.code === 'string' && failure.code) || 'no answer';
-  }
-
-  private notOverTheNetwork(call: string, what: string, command: string): Promise<never> {
-    return Promise.reject(
-      new HubTransportError(`${call}: the hub has no route to ${what} (ADR-0068), so it is done on the host. Run ${command} there, or open this folder in an editor on that computer.`),
-    );
   }
 
   private hostOnly(call: string, command: string): Promise<never> {
@@ -327,6 +324,12 @@ export class HubTransport implements VibeyWorkflowsTransportInterface {
 
   private headers(): Readonly<Record<string, string>> {
     return this.key === undefined ? {} : { authorization: `Bearer ${this.key}` };
+  }
+
+  /** The `message` a lifecycle route answers with. */
+  private static message(reply: unknown): string {
+    const message = HubTransport.record(reply).message;
+    return typeof message === 'string' ? message : '';
   }
 
   private static record(value: unknown): Record<string, unknown> {
