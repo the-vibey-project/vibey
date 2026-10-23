@@ -1,0 +1,34 @@
+[
+  {
+    "id": "skill-principles-639aa30050",
+    "purpose": "principles",
+    "source": "src/vibey_tools/skills/plugins/developer-experience/skills/devex-principles-and-feedback-loops/SKILL.md",
+    "output": "docs/microslices/skills/developer-experience/skills/devex-principles-and-feedback-loops/001-principles.md",
+    "requires": [],
+    "links": [
+      "skill-evidence-base-339b8b7252"
+    ]
+  },
+  {
+    "id": "skill-evidence-base-339b8b7252",
+    "purpose": "evidence base",
+    "source": "src/vibey_tools/skills/plugins/developer-experience/skills/devex-principles-and-feedback-loops/SKILL.md",
+    "output": "docs/microslices/skills/developer-experience/skills/devex-principles-and-feedback-loops/002-evidence-base.md",
+    "requires": [
+      "skill-principles-639aa30050"
+    ],
+    "links": [
+      "skill-codebase-and-feedback-loops-d9fa706dc1"
+    ]
+  },
+  {
+    "id": "skill-codebase-and-feedback-loops-d9fa706dc1",
+    "purpose": "codebase and feedback loops",
+    "source": "src/vibey_tools/skills/plugins/developer-experience/skills/devex-principles-and-feedback-loops/SKILL.md",
+    "output": "docs/microslices/skills/developer-experience/skills/devex-principles-and-feedback-loops/003-codebase-and-feedback-loops.md",
+    "requires": [
+      "skill-evidence-base-339b8b7252"
+    ],
+    "links": []
+  }
+]

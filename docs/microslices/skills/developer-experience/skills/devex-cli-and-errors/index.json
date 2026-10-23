@@ -1,0 +1,22 @@
+[
+  {
+    "id": "skill-cli-89b494e62e",
+    "purpose": "cli",
+    "source": "src/vibey_tools/skills/plugins/developer-experience/skills/devex-cli-and-errors/SKILL.md",
+    "output": "docs/microslices/skills/developer-experience/skills/devex-cli-and-errors/001-cli.md",
+    "requires": [],
+    "links": [
+      "skill-error-messages-270856393a"
+    ]
+  },
+  {
+    "id": "skill-error-messages-270856393a",
+    "purpose": "error messages",
+    "source": "src/vibey_tools/skills/plugins/developer-experience/skills/devex-cli-and-errors/SKILL.md",
+    "output": "docs/microslices/skills/developer-experience/skills/devex-cli-and-errors/002-error-messages.md",
+    "requires": [
+      "skill-cli-89b494e62e"
+    ],
+    "links": []
+  }
+]

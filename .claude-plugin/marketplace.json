@@ -6,7 +6,7 @@
     "email": "adam@matthewsteinberger.com"
   },
   "metadata": {
-    "description": "Every Claude Code plugin in this repository: 151 plugin(s) from src/vibey_tools/skills, src/vibey_tools/gh.",
+    "description": "Every Claude Code plugin in this repository: 152 plugin(s) from src/vibey_tools/skills, src/vibey_tools/gh.",
     "members": [
       {
         "path": "src/vibey_tools/skills",
@@ -456,6 +456,17 @@
       "description": "Desktop Apps (macOS & Linux): platform architecture (Darwin/launchd/bundles vs kernel/compositor/D-Bus/systemd), SwiftUI/AppKit and GTK4/libadwaita/Qt6, cross-platform frameworks (Electron, Tauri, Flutter, Avalonia, Compose Multiplatform, Rust GUIs), Wayland vs X11, native desktop idioms, packaging and distribution (notarization, Mac App Store, Flatpak, Snap, AppImage, distro packages), auto-update, sandboxing and privacy (TCC, entitlements, XDG portals), and testing/CI.",
       "version": "0.1.0",
       "category": "frontend",
+      "author": {
+        "name": "Adam Matthew Steinberger",
+        "email": "adam@matthewsteinberger.com"
+      }
+    },
+    {
+      "name": "developer-experience",
+      "source": "./src/vibey_tools/skills/plugins/developer-experience",
+      "description": "Developer Experience: the evidence-graded blueprint for making a codebase, CLI, API, documentation set, UI and AI-agent surface easy to use well. Short and trustworthy feedback loops, cognitive load, one-command local setup, CLI conventions (streams, exit codes, --json, --dry-run, NO_COLOR), error messages that say what failed and how to fix it, API and SDK usability, Diataxis documentation, TUI and screen-reader accessibility, onboarding and contribution barriers, AGENTS.md, llms.txt and MCP tool design for coding agents, and how to measure DevEx with surveys paired with system data, with every claim graded A, B or C and the weak or contested evidence called out.",
+      "version": "0.1.0",
+      "category": "engineering-process",
       "author": {
         "name": "Adam Matthew Steinberger",
         "email": "adam@matthewsteinberger.com"

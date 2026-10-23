@@ -1,0 +1,34 @@
+[
+  {
+    "id": "skill-interfaces-web-ui-tui-accessibility-1010febab1",
+    "purpose": "interfaces web ui tui accessibility",
+    "source": "src/vibey_tools/skills/plugins/developer-experience/skills/devex-interfaces-onboarding-and-agents/SKILL.md",
+    "output": "docs/microslices/skills/developer-experience/skills/devex-interfaces-onboarding-and-agents/001-interfaces-web-ui-tui-accessibility.md",
+    "requires": [],
+    "links": [
+      "skill-onboarding-and-open-source-contribution-8bad7cb779"
+    ]
+  },
+  {
+    "id": "skill-onboarding-and-open-source-contribution-8bad7cb779",
+    "purpose": "onboarding and open source contribution",
+    "source": "src/vibey_tools/skills/plugins/developer-experience/skills/devex-interfaces-onboarding-and-agents/SKILL.md",
+    "output": "docs/microslices/skills/developer-experience/skills/devex-interfaces-onboarding-and-agents/002-onboarding-and-open-source-contribution.md",
+    "requires": [
+      "skill-interfaces-web-ui-tui-accessibility-1010febab1"
+    ],
+    "links": [
+      "skill-ai-agent-ergonomics-0c1fe09f24"
+    ]
+  },
+  {
+    "id": "skill-ai-agent-ergonomics-0c1fe09f24",
+    "purpose": "ai agent ergonomics",
+    "source": "src/vibey_tools/skills/plugins/developer-experience/skills/devex-interfaces-onboarding-and-agents/SKILL.md",
+    "output": "docs/microslices/skills/developer-experience/skills/devex-interfaces-onboarding-and-agents/003-ai-agent-ergonomics.md",
+    "requires": [
+      "skill-onboarding-and-open-source-contribution-8bad7cb779"
+    ],
+    "links": []
+  }
+]

@@ -2,7 +2,7 @@
 
 > **Now part of the vibey monorepo.** `vibey-skills` lives in [the-vibey-project/vibey](https://github.com/the-vibey-project/vibey) at [`src/vibey_tools/skills`](https://github.com/the-vibey-project/vibey/tree/develop/src/vibey_tools/skills) (vibey ADR-0021). It is not published on its own any more: it ships inside the [`vibey-engine`](https://pypi.org/project/vibey-engine/) package, so `pip install vibey-engine` installs it (vibey ADR-0037).
 
-> **147 Claude Code plugins. 794 Agent Skills.** Long-form, source-cited practitioner
+> **148 Claude Code plugins. 799 Agent Skills.** Long-form, source-cited practitioner
 > references for the parts of software engineering an agent is most likely to get
 > confidently wrong — security, compliance, Azure, identity automation (Okta),
 > DevSecOps, AI/ML, data engineering, frontend, mobile, desktop, smart TV, game development, UI/UX design, systems programming, embedded and IoT, blockchain, quantum computing, penetration testing, architecture, quality
@@ -41,7 +41,7 @@ fast *and* correct. These skills are the reference layer for that.
 /plugin                                    # browse everything
 ```
 
-That one address serves every plugin in the family: these 147 and vibey-gh's four. The
+That one address serves every plugin in the family: these 148 and vibey-gh's four. The
 root manifest is rendered from this tree's own `.claude-plugin/marketplace.json` by
 `vibey-gh marketplace` (vibey ADR-0034), so nothing here is duplicated by hand.
 
@@ -57,7 +57,7 @@ rendered from.
 ```bash
 uv tool install vibey-engine                      # or: pipx install vibey-engine / pip install vibey-engine
 vibey-skills list
-vibey-skills install --all                 # copy all 794 skills into ~/.claude/skills
+vibey-skills install --all                 # copy all 799 skills into ~/.claude/skills
 vibey-skills install security-principles azure-cloud-infra
 ```
 
@@ -148,6 +148,7 @@ own `README.md` with the full skill list and trigger descriptions.
 | [design-patterns](https://github.com/the-vibey-project/vibey/tree/develop/src/vibey_tools/skills/plugins/design-patterns) | 0.1.0 | engineering-process | 5 | What a pattern is, the GoF audit, functional & data-oriented alternatives, DI, hexagonal/DDD/microservices, saga/outbox/CQRS/event sourcing, resilience & concurrency, LLM & agentic patterns, over-application anti-patterns |
 | [designing-and-building-buildings](https://github.com/the-vibey-project/vibey/tree/develop/src/vibey_tools/skills/plugins/designing-and-building-buildings) | 0.1.0 | construction | 6 | Disciplines & lifecycle, site & ground investigation, brief & programming, planning & entitlement, architectural design, structural systems & load paths, foundations, envelope, air tightness & condensation risk, building services, fire compartmentation & escape, accessibility, thermal comfort & energy modelling, drawings, specs & BIM, codes & permitting, procurement & risk allocation, cost estimating, sequencing & temporary works, materials, quality & inspection, site safety, commissioning & handover, retrofit, why projects fail |
 | [desktop-apps-macos-linux](https://github.com/the-vibey-project/vibey/tree/develop/src/vibey_tools/skills/plugins/desktop-apps-macos-linux) | 0.1.0 | frontend | 5 | macOS & Linux architecture, SwiftUI/AppKit, GTK4/Qt6, Electron/Tauri/Flutter, Wayland/X11, native idioms, notarization/Flatpak/Snap, sandboxing |
+| [developer-experience](https://github.com/the-vibey-project/vibey/tree/develop/src/vibey_tools/skills/plugins/developer-experience) | 0.1.0 | engineering-process | 5 | Evidence-graded DevEx blueprint: feedback loops, one-command setup, CLI conventions, error messages, API & SDK usability, Diataxis docs, TUI & accessibility, onboarding, AGENTS.md / llms.txt / MCP for agents, measurement & launch checklist |
 | [devsecops-cicd](https://github.com/the-vibey-project/vibey/tree/develop/src/vibey_tools/skills/plugins/devsecops-cicd) | 0.2.0 | devops | 4 | DevSecOps pipelines, Bitbucket/Azure, CI/CD field guide, GitHub/Atlassian |
 | [digital-logic-and-firmware-engineering](https://github.com/the-vibey-project/vibey/tree/develop/src/vibey_tools/skills/plugins/digital-logic-and-firmware-engineering) | 0.1.0 | electronics | 5 | Diodes, transistors as switches, MOSFET switching, static CMOS gates & duality, sizing & drive strength, logic families, dynamic/short-circuit/leakage power, standard cells, Boolean algebra, Karnaugh maps & synthesis, muxes, decoders & encoders, ripple-carry vs carry-lookahead, latches & flip-flops, setup/hold/slack & metastability, state machine encoding, clock domain crossing & synchronizers, HDL & synthesis inference, scan chains & DFT, UEFI & RTOS landscape, the boot sequence, root of trust & verified boot, ACPI, interrupts & DMA, firmware security & persistence |
 | [diy-kit-dev](https://github.com/the-vibey-project/vibey/tree/develop/src/vibey_tools/skills/plugins/diy-kit-dev) | 0.1.0 | embedded | 5 | Board choice, Raspberry Pi/Arduino/ESP32/Pico lineups, power, electronics fundamentals, sensors & actuators, Arduino/MicroPython/ESP-IDF, soldering & physical build, hardware debugging, home automation, enclosures, prototype→product |
