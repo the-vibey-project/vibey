@@ -57,6 +57,7 @@ nav:
       - Install, copy, reinstall, uninstall: guides/install.md
       - Downloads: guides/downloads.md
       - VS Code extension: guides/vscode-extension.md
+      - Drive a project from anywhere: guides/drive-a-project.md
       - Kubernetes: guides/kubernetes.md
       - Greeter live demo: guides/greeter-live-demo.md
       - Local models on Ollama: guides/local-models-ollama.md
