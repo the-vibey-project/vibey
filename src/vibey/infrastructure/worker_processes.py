@@ -134,11 +134,11 @@ def worker_scope(argv: Sequence[str]) -> str | None:
     arguments = _worker_arguments(argv) or ()
     if "--all-projects" in arguments:
         return SHARED
-    for index, token in enumerate(arguments):
-        if token == "--project" and index + 1 < len(arguments):
+    for index, argument in enumerate(arguments):
+        if argument == "--project" and index + 1 < len(arguments):
             return arguments[index + 1].lower()
-        if token.startswith("--project="):
-            return token.split("=", 1)[1].lower()
+        if argument.startswith("--project="):
+            return argument.split("=", 1)[1].lower()
     return None
 
 
