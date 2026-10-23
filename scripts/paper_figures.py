@@ -409,12 +409,18 @@ class CommitSeries(FigureSourceInterface):
                 }
             )
         roots.sort(key=lambda r: r["date"])
+        # A tag that contains the pin was cut at or after it, so it did not exist when the
+        # pin was the tip and the figure was written. A promotion rebase-merges the pin into
+        # `main` stamping every copy with one committer time, and the release tag then lands
+        # on that tip with the same instant as its creator date: `stamp > head_time` alone
+        # lets it in, and develop goes red on the figures the promotion just made stale.
+        cut_after_the_pin = set(self._git("tag", "--contains", rev).split())
         tags = []
         for line in self._git(
             "for-each-ref", "--format=%(refname:short) %(creatordate:unix)", "refs/tags"
         ).splitlines():
             name, stamp = line.rsplit(" ", 1)
-            if int(stamp) > head_time or name.startswith("scrapped/"):
+            if int(stamp) > head_time or name.startswith("scrapped/") or name in cut_after_the_pin:
                 continue
             package = next((pkg for prefix, pkg in TAG_PACKAGES if name.startswith(prefix)), None)
             if package is None:
