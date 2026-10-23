@@ -21,6 +21,8 @@ export interface HomeSummary {
   readonly headline: string;
   readonly needsYou: number;
   readonly cards: readonly ProjectCard[];
+  /** What to do when there is no project to show, said as a person would need it; empty when there is one. */
+  readonly emptyNote: string;
 }
 
 export interface GateCard {

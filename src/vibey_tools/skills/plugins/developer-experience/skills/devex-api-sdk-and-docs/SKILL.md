@@ -5,7 +5,7 @@ description: "Use when designing an API or SDK a developer will call, or writing
 
 # Developer Experience: API and SDK Design, and Documentation
 
-> **Part 3 of 5** of the *Developer Experience Blueprint* (plugin `developer-experience`), covering: API and SDK design; Documentation. Sibling skills: `devex-principles-and-feedback-loops`, `devex-cli-and-errors`, `devex-interfaces-onboarding-and-agents`, `devex-reference`. A reference into a sibling is written *Section name → `skill`*.
+> **Part 3 of 9** of the *Developer Experience Blueprint* (plugin `developer-experience`), covering: API and SDK design; Documentation. Sibling skills: `devex-principles-and-feedback-loops`, `devex-cli-and-errors`, `devex-interfaces-onboarding-and-agents`, `devex-surface-placement`, `devex-editor-and-desktop-surfaces`, `devex-mobile-and-web-surfaces`, `devex-non-developers-and-visual-design`, `devex-reference`. A reference into a sibling is written *Section name → `skill`*.
 >
 > **Currency:** the blueprint is dated Oct 23, 2026; its evidence base and the AI-tooling claims age fastest, so re-check those first.
 >

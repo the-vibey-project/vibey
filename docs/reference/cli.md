@@ -159,6 +159,7 @@ Create a project and enqueue its first DESIGN interview.
 | `--skills-context-budget N` | `6000` | Token budget for skills retrieval (1,000–32,000). Stored only when the mode is not `off`. |
 | `--design-default-scope {narrowest,model}` | unset | Whose appetite a DESIGN question's default follows — see [`[design.interview]`](configuration.md#designinterview). Stored as `design.interview.default_scope`, over whatever `vibey.toml` declares; unset keeps the file's value, and with neither the default is `narrowest`. Any other value exits 2. The triaged-delivery bridge always passes `narrowest`. |
 | `--accept-spec-json FILE` | unset | Skip DESIGN: the reviewed spec JSON (the file `vibey design accept --spec-json` takes) is the design. The project is created, moved into DESIGN with no interview job, the spec saved and accepted at once (visual design declined; the ledger names `new-with-spec`), and BUILD's decomposition enqueued. No interview, no research and no spec synthesis, so nothing waits for a person or a model. A spec that cannot be read is a usage error before any project exists; one the acceptance refuses leaves the project in DESIGN with the spec saved, so `vibey design accept PROJECT --spec-json FILE` can finish it. Prints `design skipped; entered build` where the interview prints its job. |
+| `--json` | off | Print one JSON document on stdout instead of the two lines below: `{"project_id": ..., "name": ..., "outcome": ...}`, where `outcome` is the second line (`design job <id>`, or `design skipped; entered <phase>`). A client such as the editor extension reads the project id from it rather than scraping text. |
 
 Prints `project <id>` and `design job <id>`. The project id is the
 `PROJECT_ID` the other commands take; [`vibey projects`](#vibey-projects)
@@ -537,6 +538,12 @@ id prints `unknown project <id>` and exits 1.
 
 Replay starts paused. Keys: Space play/pause, Right or `n` next step, Left or
 `p` previous step, `q` quit.
+
+**Not on a terminal.** When input or output is piped or redirected (a script, an agent, `| cat`),
+`watch` does not take over the screen: it says so on stderr, prints the same one-time snapshot
+[`vibey status`](#vibey-status-project_id) prints (`vibey status --json` is the machine form),
+and exits 0, or 1 when there is no project. `--replay` needs a terminal screen, so without one it
+is a usage error (exit 2).
 
 ## `vibey llm`
 

@@ -1,0 +1,22 @@
+[
+  {
+    "id": "skill-vs-code-and-ide-extensions-2d327eb8f9",
+    "purpose": "vs code and ide extensions",
+    "source": "src/vibey_tools/skills/plugins/developer-experience/skills/devex-editor-and-desktop-surfaces/SKILL.md",
+    "output": "docs/microslices/skills/developer-experience/skills/devex-editor-and-desktop-surfaces/001-vs-code-and-ide-extensions.md",
+    "requires": [],
+    "links": [
+      "skill-desktop-apps-e2ccf3b1e8"
+    ]
+  },
+  {
+    "id": "skill-desktop-apps-e2ccf3b1e8",
+    "purpose": "desktop apps",
+    "source": "src/vibey_tools/skills/plugins/developer-experience/skills/devex-editor-and-desktop-surfaces/SKILL.md",
+    "output": "docs/microslices/skills/developer-experience/skills/devex-editor-and-desktop-surfaces/002-desktop-apps.md",
+    "requires": [
+      "skill-vs-code-and-ide-extensions-2d327eb8f9"
+    ],
+    "links": []
+  }
+]

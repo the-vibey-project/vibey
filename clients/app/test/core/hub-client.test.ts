@@ -268,6 +268,10 @@ describe('HubClient', () => {
     const { client, calls } = fakeHub({});
     await expect(client.setBudget()).rejects.toMatchObject({ refusal: 'not-on-a-device' });
     await expect(client.clearBudget()).rejects.toThrow(/lifted on the host/);
+    await expect(client.createProject()).rejects.toThrow(/@krypton \/new.*vibey new NAME --repo PATH/);
+    await expect(client.startWork()).rejects.toThrow(/\/resume/);
+    await expect(client.pauseWork()).rejects.toThrow(/\/pause/);
+    await expect(client.abandonProject()).rejects.toThrow(/\/unwind/);
     await expect(client.cost()).rejects.toMatchObject({ refusal: 'not-on-a-device' });
     expect(calls).toHaveLength(0);
   });

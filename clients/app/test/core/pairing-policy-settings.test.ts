@@ -63,7 +63,7 @@ describe('Pairing', () => {
 describe('DevicePolicy', () => {
   const policy = new DevicePolicy();
 
-  it.each(['declare-paid-use', 'ultra-no-cap', 'set-cap', 'clear-cap', 'change-dsn', 'run-migrations', 'touch-canon'] as const)(
+  it.each(['declare-paid-use', 'ultra-no-cap', 'set-cap', 'clear-cap', 'start-project', 'start-work', 'pause-work', 'abandon-project', 'change-dsn', 'run-migrations', 'touch-canon'] as const)(
     'never lets a device %s',
     (action) => {
       const decision = policy.decide(action);

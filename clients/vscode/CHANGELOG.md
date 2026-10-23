@@ -4,6 +4,16 @@ All notable changes to krypton, vibey's extension for VS Code.
 
 ## Unreleased
 
+- **Drive a whole project from the chat or the sidebar.** `@krypton /new greeter a web page that
+  greets the visitor by name` starts a vibey project in the open folder and starts its worker;
+  `/next` shows the oldest question it is waiting on with the answers numbered, and `/reply 1` (or
+  a bare `1`, or the answer in words) answers it, then shows the next. `/pause` and `/resume`
+  stop and restart the work without losing any, and `/unwind` ends a project for good: it shows
+  what would be cancelled, asks you to confirm, and records why on the ledger. The Projects view
+  has a **Start a project** button and a right-click menu, its empty state now says what to do,
+  and the walkthrough has a new step. Over a hub connection these say plainly that they are done
+  on the host: the hub has no route for them.
+
 - **Published as `the-vibey-project.krypton`.** The package `name` is `krypton`, so the
   extension id, the `.vsix` (`krypton-<version>.vsix`) and its first Open VSX listing all say
   krypton. Command ids, settings, views and the walkthrough keep their `vibey.*` and

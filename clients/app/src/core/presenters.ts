@@ -63,7 +63,11 @@ export class Presenters implements PresentersInterface {
     const needsYou = cards.reduce((sum, card) => sum + card.openGates, 0);
     const headline =
       needsYou === 0 ? 'Nothing needs you' : needsYou === 1 ? '1 gate needs you' : `${needsYou} gates need you`;
-    return { headline, needsYou, cards };
+    const emptyNote =
+      cards.length > 0
+        ? ''
+        : 'No projects yet. A project is started on the computer that runs vibey: in VS Code with `@krypton /new`, or in a terminal with `vibey new NAME --repo PATH`. It shows up here as soon as it exists, and every question it asks is waiting for you under Gates.';
+    return { headline, needsYou, cards, emptyNote };
   }
 
   gates(gates: readonly VibeyGate[], nowMs: number): readonly GateCard[] {

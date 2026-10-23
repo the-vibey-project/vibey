@@ -35,6 +35,12 @@ runner = CliRunner(env={"_TYPER_FORCE_DISABLE_TERMINAL": "1"})
 
 
 @pytest.fixture(autouse=True)
+def _a_person_is_at_the_terminal(monkeypatch: pytest.MonkeyPatch) -> None:
+    """`vibey watch` takes over the screen only on a terminal; these tests drive that path."""
+    monkeypatch.setattr("vibey.cli.main._on_a_terminal", lambda: True)
+
+
+@pytest.fixture(autouse=True)
 def _database_security_passes(monkeypatch: pytest.MonkeyPatch) -> None:
     """These tests run as the schema's owner, and whether the local server accepts a
     password-less connection depends on the machine. ADR-0055's database checks are

@@ -1,0 +1,34 @@
+[
+  {
+    "id": "skill-ios-0effb8cd0f",
+    "purpose": "ios",
+    "source": "src/vibey_tools/skills/plugins/developer-experience/skills/devex-mobile-and-web-surfaces/SKILL.md",
+    "output": "docs/microslices/skills/developer-experience/skills/devex-mobile-and-web-surfaces/001-ios.md",
+    "requires": [],
+    "links": [
+      "skill-android-52462dbf9d"
+    ]
+  },
+  {
+    "id": "skill-android-52462dbf9d",
+    "purpose": "android",
+    "source": "src/vibey_tools/skills/plugins/developer-experience/skills/devex-mobile-and-web-surfaces/SKILL.md",
+    "output": "docs/microslices/skills/developer-experience/skills/devex-mobile-and-web-surfaces/002-android.md",
+    "requires": [
+      "skill-ios-0effb8cd0f"
+    ],
+    "links": [
+      "skill-web-and-pwa-and-the-cross-platform-trade-off-052eea5de2"
+    ]
+  },
+  {
+    "id": "skill-web-and-pwa-and-the-cross-platform-trade-off-052eea5de2",
+    "purpose": "web and pwa and the cross platform trade off",
+    "source": "src/vibey_tools/skills/plugins/developer-experience/skills/devex-mobile-and-web-surfaces/SKILL.md",
+    "output": "docs/microslices/skills/developer-experience/skills/devex-mobile-and-web-surfaces/003-web-and-pwa-and-the-cross-platform-trade-off.md",
+    "requires": [
+      "skill-android-52462dbf9d"
+    ],
+    "links": []
+  }
+]

@@ -5,7 +5,7 @@ description: "Use when building a web UI, TUI or dashboard for developers; makin
 
 # Developer Experience: Interfaces, Onboarding, and AI-Agent Ergonomics
 
-> **Part 4 of 5** of the *Developer Experience Blueprint* (plugin `developer-experience`), covering: Interfaces: web UI, TUI, accessibility; Onboarding and open-source contribution; AI-agent ergonomics. Sibling skills: `devex-principles-and-feedback-loops`, `devex-cli-and-errors`, `devex-api-sdk-and-docs`, `devex-reference`. A reference into a sibling is written *Section name → `skill`*.
+> **Part 4 of 9** of the *Developer Experience Blueprint* (plugin `developer-experience`), covering: Interfaces: web UI, TUI, accessibility; Onboarding and open-source contribution; AI-agent ergonomics. Sibling skills: `devex-principles-and-feedback-loops`, `devex-cli-and-errors`, `devex-api-sdk-and-docs`, `devex-surface-placement`, `devex-editor-and-desktop-surfaces`, `devex-mobile-and-web-surfaces`, `devex-non-developers-and-visual-design`, `devex-reference`. A reference into a sibling is written *Section name → `skill`*.
 >
 > **Currency:** the blueprint is dated Oct 23, 2026; its evidence base and the AI-tooling claims age fastest, so re-check those first.
 >

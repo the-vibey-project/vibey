@@ -20,7 +20,17 @@ import type { HttpClientInterface, HttpResponse } from './interfaces/http-client
 import type { HubDiscoveryInterface, HubKeyCheck, HubProbe } from './interfaces/hub-interface';
 import type { Environment, ProcessRunnerInterface } from './interfaces/process-runner-interface';
 import type { TransportKind, VibeyWorkflowsTransportInterface } from './interfaces/transport-interface';
-import type { GateAnswer, VibeyBudget, VibeyCliOptions, VibeyGate, VibeyProject, VibeyStatus } from './interfaces/vibey-cli-interface';
+import type {
+  GateAnswer,
+  VibeyAbandonReport,
+  VibeyBudget,
+  VibeyCliOptions,
+  VibeyGate,
+  VibeyNewProject,
+  VibeyNewProjectOptions,
+  VibeyProject,
+  VibeyStatus,
+} from './interfaces/vibey-cli-interface';
 import type { TimerInterface, WorkflowsRunOptions, WorkflowsRunResult } from './interfaces/workflows-interface';
 import { VibeyCli } from './vibey-cli';
 import { PortableTimer, WorkflowsCommandLine } from './workflows';
@@ -151,6 +161,22 @@ export class HubTransport implements VibeyWorkflowsTransportInterface {
     return this.hostOnly('clearBudget', 'vibey budget clear');
   }
 
+  createProject(_name: string, _options: VibeyNewProjectOptions): Promise<VibeyNewProject> {
+    return this.notOverTheNetwork('createProject', 'start a project', 'vibey new');
+  }
+
+  startWork(_projectId: string): Promise<string> {
+    return this.notOverTheNetwork('startWork', "start a project's worker", 'vibey retry --start-worker');
+  }
+
+  pauseWork(_projectId: string): Promise<string> {
+    return this.notOverTheNetwork('pauseWork', 'stop workers', 'vibey recover --stop-workers');
+  }
+
+  abandonProject(_projectId: string, _reason: string, _options?: { readonly dryRun?: boolean }): Promise<VibeyAbandonReport> {
+    return this.notOverTheNetwork('abandonProject', 'abandon a project', 'vibey abandon');
+  }
+
   cost(_projectId?: string): Promise<string> {
     return Promise.reject(new HubTransportError(`cost: ${this.baseUrl} serves no cost report; run vibey cost on the host.`));
   }
@@ -249,6 +275,12 @@ export class HubTransport implements VibeyWorkflowsTransportInterface {
   static reason(error: unknown): string {
     const failure = error as { message?: unknown; code?: unknown };
     return (typeof failure.message === 'string' && failure.message) || (typeof failure.code === 'string' && failure.code) || 'no answer';
+  }
+
+  private notOverTheNetwork(call: string, what: string, command: string): Promise<never> {
+    return Promise.reject(
+      new HubTransportError(`${call}: the hub has no route to ${what} (ADR-0068), so it is done on the host. Run ${command} there, or open this folder in an editor on that computer.`),
+    );
   }
 
   private hostOnly(call: string, command: string): Promise<never> {

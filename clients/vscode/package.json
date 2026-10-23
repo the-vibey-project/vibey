@@ -89,7 +89,7 @@
       },
       {
         "view": "vibey.projects",
-        "contents": "Projects come from vibey on this computer, or from a vibey hub on your network.\n[Connect to vibey on this network](command:vibey.connectHub)\n[Take the tour](command:workbench.action.openWalkthrough?%22the-vibey-project.krypton%23krypton.firstRun%22)"
+        "contents": "No project yet. Describe what you want built; vibey interviews you, writes the design, builds it and reviews it, and asks you only for the decisions that are yours.\n[Start a project](command:vibey.newProject)\nProjects can also come from a vibey hub on your network.\n[Connect to vibey on this network](command:vibey.connectHub)\n[Take the tour](command:workbench.action.openWalkthrough?%22the-vibey-project.krypton%23krypton.firstRun%22)"
       }
     ],
     "commands": [
@@ -230,6 +230,42 @@
         "title": "Refresh",
         "category": "krypton",
         "icon": "$(refresh)"
+      },
+      {
+        "command": "vibey.newProject",
+        "title": "Start a new project",
+        "category": "krypton",
+        "icon": "$(rocket)"
+      },
+      {
+        "command": "vibey.nextGate",
+        "title": "What is waiting for me?",
+        "category": "krypton",
+        "icon": "$(bell)"
+      },
+      {
+        "command": "vibey.replyGate",
+        "title": "Reply to the waiting question",
+        "category": "krypton",
+        "icon": "$(reply)"
+      },
+      {
+        "command": "vibey.pauseProject",
+        "title": "Pause work on this computer",
+        "category": "krypton",
+        "icon": "$(debug-pause)"
+      },
+      {
+        "command": "vibey.resumeProject",
+        "title": "Resume a project",
+        "category": "krypton",
+        "icon": "$(debug-continue)"
+      },
+      {
+        "command": "vibey.abandonProject",
+        "title": "Unwind (abandon) a project",
+        "category": "krypton",
+        "icon": "$(trash)"
       },
       {
         "command": "vibey.showProjects",
@@ -404,6 +440,16 @@
           "group": "navigation@9"
         },
         {
+          "command": "vibey.newProject",
+          "when": "view == vibey.projects",
+          "group": "navigation@0"
+        },
+        {
+          "command": "vibey.nextGate",
+          "when": "view == vibey.projects",
+          "group": "navigation@2"
+        },
+        {
           "command": "vibey.refresh",
           "when": "view == vibey.projects",
           "group": "navigation@9"
@@ -549,6 +595,26 @@
           "command": "vibey.bumpJob",
           "when": "view == vibey.projects && viewItem == vibey.job",
           "group": "inline@1"
+        },
+        {
+          "command": "vibey.nextGate",
+          "when": "view == vibey.projects && viewItem == vibey.project",
+          "group": "inline@1"
+        },
+        {
+          "command": "vibey.resumeProject",
+          "when": "view == vibey.projects && viewItem == vibey.project",
+          "group": "1_drive@1"
+        },
+        {
+          "command": "vibey.pauseProject",
+          "when": "view == vibey.projects && viewItem == vibey.project",
+          "group": "1_drive@2"
+        },
+        {
+          "command": "vibey.abandonProject",
+          "when": "view == vibey.projects && viewItem == vibey.project",
+          "group": "9_end@1"
         }
       ]
     },
@@ -882,6 +948,30 @@
             "description": "Read the model, projects, gates and lanes again now."
           },
           {
+            "name": "new",
+            "description": "Start a vibey project in this folder: it asks you what it needs to know, then builds it, and every decision stays yours."
+          },
+          {
+            "name": "next",
+            "description": "The oldest question a project is waiting on, with its answers numbered so a reply can be one digit."
+          },
+          {
+            "name": "reply",
+            "description": "Answer the oldest waiting question: a number picks one of the listed answers, and anything else is the answer itself."
+          },
+          {
+            "name": "pause",
+            "description": "Stop the workers running here. Nothing is lost: their jobs go back to the queue, and Resume starts them again."
+          },
+          {
+            "name": "resume",
+            "description": "Start the project's worker again, and grant more attempts to a job that ran out."
+          },
+          {
+            "name": "unwind",
+            "description": "End a project for good. It first shows what would be cancelled, asks you to confirm, and records why on its ledger."
+          },
+          {
             "name": "projects",
             "description": "Every vibey project and the phase it is in."
           },
@@ -1044,6 +1134,17 @@
             },
             "completionEvents": [
               "onCommand:vibey.ask"
+            ]
+          },
+          {
+            "id": "startProject",
+            "title": "Start a whole project",
+            "description": "A task is one small change; a project is the whole thing. Say what you want built, then talk to it in the chat.\n[Start a project](command:vibey.newProject)",
+            "media": {
+              "markdown": "media/walkthrough/start-project.md"
+            },
+            "completionEvents": [
+              "onCommand:vibey.newProject"
             ]
           },
           {

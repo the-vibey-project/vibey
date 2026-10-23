@@ -32,7 +32,7 @@ export function HomeScreen() {
                   ) : null}
                 </Card>
               ))}
-              {summary.cards.length === 0 ? <Label tone="tertiary">No projects yet. Start one with `vibey run` on the host.</Label> : null}
+              {summary.emptyNote === '' ? null : <Label tone="tertiary">{summary.emptyNote}</Label>}
             </>
           );
         }}

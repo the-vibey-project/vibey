@@ -1,0 +1,22 @@
+[
+  {
+    "id": "skill-non-developer-paths-the-quickest-route-to-working-code-through-a-ui-298497f89a",
+    "purpose": "non developer paths the quickest route to working code through a ui",
+    "source": "src/vibey_tools/skills/plugins/developer-experience/skills/devex-non-developers-and-visual-design/SKILL.md",
+    "output": "docs/microslices/skills/developer-experience/skills/devex-non-developers-and-visual-design/001-non-developer-paths-the-quickest-route-to-working-code-through-a-ui.md",
+    "requires": [],
+    "links": [
+      "skill-visual-appeal-and-ease-of-use-7b9f5f9d4d"
+    ]
+  },
+  {
+    "id": "skill-visual-appeal-and-ease-of-use-7b9f5f9d4d",
+    "purpose": "visual appeal and ease of use",
+    "source": "src/vibey_tools/skills/plugins/developer-experience/skills/devex-non-developers-and-visual-design/SKILL.md",
+    "output": "docs/microslices/skills/developer-experience/skills/devex-non-developers-and-visual-design/002-visual-appeal-and-ease-of-use.md",
+    "requires": [
+      "skill-non-developer-paths-the-quickest-route-to-working-code-through-a-ui-298497f89a"
+    ],
+    "links": []
+  }
+]
