@@ -5,7 +5,7 @@ description: "Use when deciding what to improve first in a developer-facing prod
 
 # Developer Experience: Principles, Evidence, and Feedback Loops
 
-> **Part 1 of 5** of the *Developer Experience Blueprint* (plugin `developer-experience`), covering: Principles; Evidence base; Codebase and feedback loops. Sibling skills: `devex-cli-and-errors`, `devex-api-sdk-and-docs`, `devex-interfaces-onboarding-and-agents`, `devex-reference`. A reference into a sibling is written *Section name → `skill`*.
+> **Part 1 of 9** of the *Developer Experience Blueprint* (plugin `developer-experience`), covering: Principles; Evidence base; Codebase and feedback loops. Sibling skills: `devex-cli-and-errors`, `devex-api-sdk-and-docs`, `devex-interfaces-onboarding-and-agents`, `devex-surface-placement`, `devex-editor-and-desktop-surfaces`, `devex-mobile-and-web-surfaces`, `devex-non-developers-and-visual-design`, `devex-reference`. A reference into a sibling is written *Section name → `skill`*.
 >
 > **Currency:** the blueprint is dated Oct 23, 2026; its evidence base and the AI-tooling claims age fastest, so re-check those first.
 >

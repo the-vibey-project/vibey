@@ -17,3 +17,10 @@ links: ["skill-sources-41d8f8d0b2"]
 - **LLM-enhanced error messages:** ineffective in one study only.
 - **CLI screen-reader finding:** checked from an abstract and a summary, not the full paper.
 - **Agent-friendly CLI patterns and llms.txt:** practitioner evidence only.
+- **Part 2, iOS:** Apple's Human Interface Guidelines could not be retrieved, so all iOS advice is from secondary references and unverified.
+- **Part 2, desktop and Windows:** desktop and mobile specifics come from loaded reference skills (secondary); Microsoft's Windows design page gave only an index.
+- **Part 2, VS Code:** the contribution-points page was blocked, so walkthrough contribution details are unverified; JetBrains, Visual Studio, Xcode and Android Studio were not researched.
+- **Part 2, Material 3 Expressive:** the research figures are Google's own, reported via press; not independently reproduced.
+- **Part 2, RedAccess figure:** a reference stated "about 40% of 5,000"; the article gives about 5,000 of roughly 380,000 apps, so the article's figures are used. Tool makers dispute that public exposure equals breach.
+- **Part 2, NN/g and WebAIM:** NN/g articles were not re-read for sample sizes; the WebAIM 83.9% figure was not opened.
+- **Part 2, the non-developer ladder and feature matrix:** design proposals, not tested findings.
