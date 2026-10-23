@@ -747,6 +747,13 @@
         }
       ]
     },
+    "1583": {
+      "close_when_done": false,
+      "kind": "triaged",
+      "last_verdict": "NEEDS-TRIAGE",
+      "next": "add explicit probes",
+      "probes": []
+    },
     "1584": {
       "close_when_done": false,
       "kind": "triaged",
@@ -808,6 +815,55 @@
       "kind": "standalone",
       "last_verdict": "OPEN",
       "next": "operator scope decision + design ADR",
+      "probes": []
+    },
+    "1686": {
+      "close_when_done": false,
+      "kind": "triaged",
+      "last_verdict": "NEEDS-TRIAGE",
+      "next": "add explicit probes",
+      "probes": []
+    },
+    "1687": {
+      "close_when_done": false,
+      "kind": "triaged",
+      "last_verdict": "NEEDS-TRIAGE",
+      "next": "add explicit probes",
+      "probes": []
+    },
+    "1688": {
+      "close_when_done": false,
+      "kind": "triaged",
+      "last_verdict": "NEEDS-TRIAGE",
+      "next": "add explicit probes",
+      "probes": []
+    },
+    "1689": {
+      "close_when_done": false,
+      "kind": "triaged",
+      "last_verdict": "NEEDS-TRIAGE",
+      "next": "add explicit probes",
+      "probes": []
+    },
+    "1690": {
+      "close_when_done": false,
+      "kind": "triaged",
+      "last_verdict": "NEEDS-TRIAGE",
+      "next": "add explicit probes",
+      "probes": []
+    },
+    "1691": {
+      "close_when_done": false,
+      "kind": "triaged",
+      "last_verdict": "NEEDS-TRIAGE",
+      "next": "add explicit probes",
+      "probes": []
+    },
+    "1692": {
+      "close_when_done": false,
+      "kind": "triaged",
+      "last_verdict": "NEEDS-TRIAGE",
+      "next": "add explicit probes",
       "probes": []
     },
     "226": {
