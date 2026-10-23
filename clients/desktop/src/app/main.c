@@ -4,6 +4,7 @@
  * (kr-model.h); a refusal or silence is said in the window's banner, never swallowed. */
 #include "kr-answer.h"
 #include "kr-app.h"
+#include "kr-lifecycle.h"
 #include "kr-model.h"
 #include "kr-pairing-client.h"
 #include "kr-window.h"
@@ -206,6 +207,182 @@ kr_app_answer(KrApp *app, const KrGate *gate, const char *value)
     pending->gate_prompt = g_strdup(gate->prompt);
     kr_hub_client_call_async(app->client, KR_HUB_ROUTE_GATE_ANSWER, NULL, gate->gate_id, body,
                              app->cancel, on_answered, pending);
+}
+
+/* ---- starting, pausing and unwinding a project (ADR-0091) ---------------------------- */
+
+typedef enum {
+    LIFE_START,
+    LIFE_WORK,
+    LIFE_PREVIEW,
+    LIFE_UNWIND,
+} LifeKind;
+
+typedef struct {
+    KrApp *app;
+    LifeKind kind;
+    char *project_id;
+    char *name;
+    char *fallback; /* what to say when the hub answers without a message of its own */
+} Life;
+
+static void
+life_free(Life *life)
+{
+    g_free(life->project_id);
+    g_free(life->name);
+    g_free(life->fallback);
+    g_free(life);
+}
+
+static gboolean
+life_blocked(KrApp *app)
+{
+    if (!app->awaiting_pairing)
+        return FALSE;
+    kr_app_toast(app, "Pair this computer with the hub first (Devices), then try again.");
+    return TRUE;
+}
+
+static void
+on_lifecycle(GObject *source, GAsyncResult *result, gpointer data)
+{
+    (void) source;
+    Life *life = data;
+    KrApp *app = life->app;
+    guint status = 0;
+    g_autofree char *detail = NULL;
+    g_autoptr(GError) error = NULL;
+    g_autoptr(GBytes) body =
+        kr_hub_client_call_finish_full(app->client, result, &status, &detail, &error);
+    if (g_error_matches(error, G_IO_ERROR, G_IO_ERROR_CANCELLED)) {
+        life_free(life);
+        return;
+    }
+    if (body == NULL) {
+        /* The hub's own words first: they say what to do ("a project is already running"). */
+        kr_app_toast(app, detail != NULL      ? detail
+                          : status != 0       ? kr_hub_status_text(status)
+                                              : error->message);
+        life_free(life);
+        return;
+    }
+    gsize size = 0;
+    const char *text = g_bytes_get_data(body, &size);
+    g_autofree char *json = g_strndup(text, size);
+    g_autoptr(GError) parse_error = NULL;
+    switch (life->kind) {
+    case LIFE_START: {
+        g_autoptr(KrCreated) created = kr_lifecycle_parse_created(json, &parse_error);
+        g_autofree char *said =
+            created != NULL
+                ? g_strdup_printf("Started \"%s\". krypton is designing it now (%s).",
+                                  created->name, created->outcome != NULL ? created->outcome : "queued")
+                : g_strdup(parse_error->message);
+        kr_app_toast(app, said);
+        if (app->window != NULL)
+            kr_window_show_page(app->window, "projects");
+        break;
+    }
+    case LIFE_WORK: {
+        g_autofree char *said = kr_lifecycle_message(json, life->fallback);
+        kr_app_toast(app, said);
+        break;
+    }
+    case LIFE_PREVIEW: {
+        g_autoptr(KrAbandonReport) report = kr_lifecycle_parse_report(json, &parse_error);
+        if (report == NULL) {
+            kr_app_toast(app, parse_error->message);
+        } else if (report->already_abandoned) {
+            g_autofree char *said = kr_lifecycle_confirm_text(report);
+            kr_app_toast(app, said);
+        } else if (app->window != NULL) {
+            g_autofree char *said = kr_lifecycle_confirm_text(report);
+            kr_window_confirm_unwind(app->window, life->project_id, life->name, said);
+        }
+        break;
+    }
+    case LIFE_UNWIND: {
+        g_autoptr(KrAbandonReport) report = kr_lifecycle_parse_report(json, &parse_error);
+        g_autofree char *said =
+            report != NULL
+                ? g_strdup_printf("Unwound \"%s\": %u job(s) cancelled, %u gate(s) withdrawn. "
+                                  "The work on disk stays.",
+                                  life->name, report->cancelled_jobs, report->withdrawn_gates)
+                : g_strdup(parse_error->message);
+        kr_app_toast(app, said);
+        break;
+    }
+    }
+    kr_app_refresh(app);
+    life_free(life);
+}
+
+static void
+life_call(KrApp *app, LifeKind kind, KrHubRoute route, const char *project_id, const char *name,
+          const char *fallback, const char *body)
+{
+    Life *life = g_new0(Life, 1);
+    life->app = app;
+    life->kind = kind;
+    life->project_id = g_strdup(project_id);
+    life->name = g_strdup(name != NULL ? name : "that project");
+    life->fallback = g_strdup(fallback);
+    kr_hub_client_call_async(app->client, route, project_id, NULL, body, app->cancel, on_lifecycle,
+                             life);
+}
+
+void
+kr_app_start_project(KrApp *app, const char *name, const char *intake)
+{
+    if (life_blocked(app))
+        return;
+    g_autoptr(GError) error = NULL;
+    g_autofree char *body = kr_lifecycle_start_body(name, intake, &error);
+    if (body == NULL) {
+        kr_app_toast(app, error->message);
+        return;
+    }
+    kr_app_toast(app, "Starting…");
+    life_call(app, LIFE_START, KR_HUB_ROUTE_PROJECT_CREATE, NULL, name, NULL, body);
+}
+
+void
+kr_app_project_work(KrApp *app, const char *project_id, const char *name, gboolean start)
+{
+    if (life_blocked(app))
+        return;
+    life_call(app, LIFE_WORK,
+              start ? KR_HUB_ROUTE_PROJECT_START_WORK : KR_HUB_ROUTE_PROJECT_PAUSE_WORK,
+              project_id, name, start ? "Work started." : "Work paused.", NULL);
+}
+
+void
+kr_app_unwind_preview(KrApp *app, const char *project_id, const char *name)
+{
+    if (life_blocked(app))
+        return;
+    g_autoptr(GError) error = NULL;
+    g_autofree char *body = kr_lifecycle_abandon_body(KR_UNWIND_REASON, TRUE, &error);
+    if (body == NULL) {
+        kr_app_toast(app, error->message);
+        return;
+    }
+    life_call(app, LIFE_PREVIEW, KR_HUB_ROUTE_PROJECT_ABANDON, project_id, name, NULL, body);
+}
+
+void
+kr_app_unwind(KrApp *app, const char *project_id, const char *name, const char *reason)
+{
+    if (life_blocked(app))
+        return;
+    g_autoptr(GError) error = NULL;
+    g_autofree char *body = kr_lifecycle_abandon_body(reason, FALSE, &error);
+    if (body == NULL) {
+        kr_app_toast(app, error->message);
+        return;
+    }
+    life_call(app, LIFE_UNWIND, KR_HUB_ROUTE_PROJECT_ABANDON, project_id, name, NULL, body);
 }
 
 void
@@ -449,6 +626,28 @@ action_settings(GSimpleAction *action, GVariant *parameter, gpointer data)
 }
 
 static void
+action_start_project(GSimpleAction *action, GVariant *parameter, gpointer data)
+{
+    (void) action;
+    (void) parameter;
+    KrApp *app = data;
+    g_application_activate(G_APPLICATION(app->application));
+    if (app->window != NULL)
+        kr_window_start_dialog(app->window);
+}
+
+static void
+action_about(GSimpleAction *action, GVariant *parameter, gpointer data)
+{
+    (void) action;
+    (void) parameter;
+    KrApp *app = data;
+    g_application_activate(G_APPLICATION(app->application));
+    if (app->window != NULL)
+        kr_window_about(app->window);
+}
+
+static void
 action_quit(GSimpleAction *action, GVariant *parameter, gpointer data)
 {
     (void) action;
@@ -466,6 +665,8 @@ on_startup(GApplication *application, gpointer data)
         {.name = "refresh", .activate = action_refresh},
         {.name = "show-gates", .activate = action_show_gates},
         {.name = "settings", .activate = action_settings},
+        {.name = "start-project", .activate = action_start_project},
+        {.name = "about", .activate = action_about},
         {.name = "quit", .activate = action_quit},
     };
     g_action_map_add_action_entries(G_ACTION_MAP(app->application), actions,
@@ -474,6 +675,7 @@ on_startup(GApplication *application, gpointer data)
     gtk_application_set_accels_for_action(gtk, "app.refresh", (const char *const[]){"<Control>r", "F5", NULL});
     gtk_application_set_accels_for_action(gtk, "app.show-gates", (const char *const[]){"<Control>g", NULL});
     gtk_application_set_accels_for_action(gtk, "app.settings", (const char *const[]){"<Control>comma", NULL});
+    gtk_application_set_accels_for_action(gtk, "app.start-project", (const char *const[]){"<Control>n", NULL});
     gtk_application_set_accels_for_action(gtk, "app.quit", (const char *const[]){"<Control>q", NULL});
 
     kr_app_apply_theme(app);

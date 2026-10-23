@@ -70,6 +70,7 @@ core_sources = files(
   'src/core/kr-discovery.c',
   'src/core/kr-format.c',
   'src/core/kr-hub.c',
+  'src/core/kr-lifecycle.c',
   'src/core/kr-model.c',
   'src/core/kr-pairing.c',
   'src/core/kr-settings.c',
@@ -127,7 +128,8 @@ core_dep = declare_dependency(
 subdir('tests')
 
 gtk_dep = dependency('gtk4', version: '>= 4.12', required: get_option('gui'))
-adw_dep = dependency('libadwaita-1', version: '>= 1.4', required: get_option('gui'))
+# 1.5: AdwAboutDialog and AdwAlertDialog, the current forms of the About and confirmation dialogs.
+adw_dep = dependency('libadwaita-1', version: '>= 1.5', required: get_option('gui'))
 if gtk_dep.found() and adw_dep.found() and soup_dep.found()
   subdir('src/app')
 endif

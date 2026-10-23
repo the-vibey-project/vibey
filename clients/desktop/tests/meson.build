@@ -13,6 +13,7 @@ core_tests = [
   'discovery',
   'format',
   'hub',
+  'lifecycle',
   'model',
   'pairing',
   'settings',
