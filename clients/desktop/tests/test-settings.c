@@ -45,12 +45,14 @@ test_round_trip(void)
     g_assert_null(defaults->hub_host);
     g_assert_true(defaults->notifications);
     g_assert_true(defaults->sounds);
+    g_assert_true(defaults->tray);
 
     KrSettings *settings = kr_settings_new_default();
     settings->theme = VIBEY_THEME_MODE_DARK;
     settings->hub_host = g_strdup("studio.local");
     settings->hub_port = 9000;
     settings->sounds = FALSE;
+    settings->tray = FALSE;
     g_autoptr(GError) error = NULL;
     g_assert_true(kr_settings_save(settings, path, &error));
     g_assert_no_error(error);
@@ -62,6 +64,7 @@ test_round_trip(void)
     g_assert_cmpuint(back->hub_port, ==, 9000);
     g_assert_true(back->notifications);
     g_assert_false(back->sounds);
+    g_assert_false(back->tray);
 
     /* A hand-edited file with nonsense in it gives the defaults for the nonsense. */
     g_assert_true(g_file_set_contents(path,

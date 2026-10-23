@@ -862,6 +862,14 @@ on_switch(AdwSwitchRow *toggle, GParamSpec *pspec, gpointer data)
     kr_app_save_settings(self->app);
 }
 
+static void
+on_tray_switch(AdwSwitchRow *toggle, GParamSpec *pspec, gpointer data)
+{
+    (void) pspec;
+    KrWindow *self = data;
+    kr_app_set_tray(self->app, adw_switch_row_get_active(toggle));
+}
+
 static GtkWidget *
 switch_row(KrWindow *self, const char *title, const char *subtitle, gboolean *field)
 {
@@ -896,6 +904,17 @@ build_settings(KrWindow *self)
                                          &self->app->settings->notifications));
     gtk_list_box_append(list, switch_row(self, "Sounds", "Play krypton's own sounds with them",
                                          &self->app->settings->sounds));
+    if (kr_tray_supported()) {
+        GtkWidget *tray = adw_switch_row_new();
+        adw_preferences_row_set_title(ADW_PREFERENCES_ROW(tray), "Keep running in the tray");
+        adw_action_row_set_subtitle(
+            ADW_ACTION_ROW(tray),
+            "Closing the window keeps krypton running, with an item to open it again and to "
+            "tell you when a gate waits");
+        adw_switch_row_set_active(ADW_SWITCH_ROW(tray), self->app->settings->tray);
+        g_signal_connect(tray, "notify::active", G_CALLBACK(on_tray_switch), self);
+        gtk_list_box_append(list, tray);
+    }
     g_autofree char *about = g_strdup_printf("%s %s", kr_channel_display_name(self->app->channel),
                                              KRYPTON_VERSION);
     gtk_list_box_append(list, row(about, kr_channel_app_id(self->app->channel)));
@@ -1004,6 +1023,18 @@ on_refresh_clicked(GtkButton *button, gpointer data)
     (void) button;
     KrWindow *self = data;
     kr_app_refresh(self->app);
+}
+
+/* Closing the window hides it while the tray item is there to bring it back; otherwise it
+ * closes, and a person is never left with a running app they cannot see. */
+static gboolean
+on_close_request(GtkWindow *window, gpointer data)
+{
+    KrWindow *self = data;
+    if (!self->app->settings->tray || !kr_tray_ready(self->app->tray))
+        return FALSE;
+    gtk_widget_set_visible(GTK_WIDGET(window), FALSE);
+    return TRUE;
 }
 
 static void
@@ -1152,6 +1183,7 @@ kr_window_new(KrApp *app)
     build_settings(self);
     self->listener = kr_state_listen(app->state, on_state, self);
     g_signal_connect(window, "destroy", G_CALLBACK(on_destroy), self);
+    g_signal_connect(window, "close-request", G_CALLBACK(on_close_request), self);
 
     render_projects(self);
     render_gates(self);

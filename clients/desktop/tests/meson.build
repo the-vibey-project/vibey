@@ -18,6 +18,7 @@ core_tests = [
   'pairing',
   'settings',
   'state',
+  'tray',
   'workflows',
 ]
 if soup_dep.found()

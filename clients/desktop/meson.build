@@ -75,6 +75,7 @@ core_sources = files(
   'src/core/kr-pairing.c',
   'src/core/kr-settings.c',
   'src/core/kr-state.c',
+  'src/core/kr-tray.c',
   'src/core/kr-workflows.c',
 )
 core_deps = [glib_dep, gio_dep, json_dep, math_dep]

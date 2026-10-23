@@ -584,6 +584,69 @@ start_discovery(KrApp *app)
     }
 }
 
+/* ---- the tray ------------------------------------------------------------------------ */
+
+static void
+on_tray_action(const char *action, gpointer data)
+{
+    KrApp *app = data;
+    g_action_group_activate_action(G_ACTION_GROUP(app->application), action, NULL);
+}
+
+static void
+update_tray(KrApp *app)
+{
+    if (app->tray == NULL)
+        return;
+    KrTrayModel *model = kr_tray_model_new(app->state, kr_channel_display_name(app->channel));
+    if (app->tray_shown != NULL && kr_tray_model_equal(app->tray_shown, model)) {
+        kr_tray_model_free(model);
+        return;
+    }
+    kr_tray_show(app->tray, model);
+    kr_tray_model_free(app->tray_shown);
+    app->tray_shown = model;
+}
+
+static void
+on_tray_state(KrState *state, KrStateSlice slice, gpointer data)
+{
+    (void) state;
+    (void) slice;
+    update_tray(data);
+}
+
+static void
+start_tray(KrApp *app)
+{
+    app->tray = kr_tray_new(kr_channel_app_id(app->channel),
+                            kr_channel_display_name(app->channel), on_tray_action, app);
+    update_tray(app);
+}
+
+static void
+stop_tray(KrApp *app)
+{
+    kr_tray_free(app->tray);
+    app->tray = NULL;
+    kr_tray_model_free(app->tray_shown);
+    app->tray_shown = NULL;
+}
+
+void
+kr_app_set_tray(KrApp *app, gboolean on)
+{
+    app->settings->tray = on;
+    kr_app_save_settings(app);
+    if (on && app->tray == NULL) {
+        start_tray(app);
+    } else if (!on && app->tray != NULL) {
+        stop_tray(app);
+        /* Nothing is left to bring a hidden window back: show it. */
+        g_application_activate(G_APPLICATION(app->application));
+    }
+}
+
 /* ---- the application ----------------------------------------------------------------- */
 
 static gboolean
@@ -648,6 +711,15 @@ action_about(GSimpleAction *action, GVariant *parameter, gpointer data)
 }
 
 static void
+action_open(GSimpleAction *action, GVariant *parameter, gpointer data)
+{
+    (void) action;
+    (void) parameter;
+    KrApp *app = data;
+    g_application_activate(G_APPLICATION(app->application));
+}
+
+static void
 action_quit(GSimpleAction *action, GVariant *parameter, gpointer data)
 {
     (void) action;
@@ -662,6 +734,7 @@ on_startup(GApplication *application, gpointer data)
     (void) application;
     KrApp *app = data;
     const GActionEntry actions[] = {
+        {.name = "open", .activate = action_open},
         {.name = "refresh", .activate = action_refresh},
         {.name = "show-gates", .activate = action_show_gates},
         {.name = "settings", .activate = action_settings},
@@ -681,6 +754,9 @@ on_startup(GApplication *application, gpointer data)
     kr_app_apply_theme(app);
     connect_client(app);
     start_discovery(app);
+    kr_state_listen(app->state, on_tray_state, app);
+    if (app->settings->tray)
+        start_tray(app);
     app->refresh_source = g_timeout_add_seconds(REFRESH_SECONDS, on_refresh_tick, app);
 }
 
@@ -727,6 +803,7 @@ main(int argc, char **argv)
     int status = g_application_run(G_APPLICATION(app.application), argc, argv);
 
     g_object_unref(app.application);
+    stop_tray(&app);
     kr_discovery_free(app.discovery);
     kr_hub_client_free(app.client);
     kr_device_credential_free(app.paired);

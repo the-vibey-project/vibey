@@ -13,6 +13,7 @@
 #include "kr-pairing.h"
 #include "kr-settings.h"
 #include "kr-state.h"
+#include "kr-tray-host.h"
 
 G_BEGIN_DECLS
 
@@ -31,6 +32,8 @@ typedef struct {
     GCancellable *cancel;
     guint refresh_source;
     GtkWidget *window;
+    KrTray *tray;            /* the tray item, or NULL (off, or this platform has none) */
+    KrTrayModel *tray_shown; /* what it last drew */
 } KrApp;
 
 /* Asks the hub for everything the views show; the answers land in app->state. */
@@ -60,6 +63,9 @@ void kr_app_project_work(KrApp *app, const char *project_id, const char *name, g
 #define KR_UNWIND_REASON "Unwound from krypton desktop"
 void kr_app_unwind_preview(KrApp *app, const char *project_id, const char *name);
 void kr_app_unwind(KrApp *app, const char *project_id, const char *name, const char *reason);
+/* Turns the tray item on or off (saved). On: closing the window keeps krypton running in it,
+ * once the platform shows it. Off: the window closes as a window does. */
+void kr_app_set_tray(KrApp *app, gboolean on);
 /* A short message at the bottom of the window. */
 void kr_app_toast(KrApp *app, const char *text);
 

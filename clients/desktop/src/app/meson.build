@@ -11,14 +11,41 @@ resources = gnome.compile_resources(
   c_name: 'krypton',
 )
 
+# The tray (kr-tray-host.h): one implementation per platform. GTK 4 has no tray of its own.
+tray_choice = get_option('tray')
+if tray_choice == 'auto'
+  tray_choice = host_machine.system() == 'darwin' ? 'macos' : 'sni'
+endif
+tray_sources = []
+tray_link_args = []
+tray_objc_args = []
+if tray_choice == 'macos'
+  if add_languages('objc', required: false, native: false)
+    tray_sources += files('kr-tray-macos.m')
+    tray_objc_args += ['-fobjc-arc']
+    tray_link_args += ['-framework', 'Cocoa']
+  else
+    tray_choice = 'none'
+  endif
+elif tray_choice == 'sni'
+  tray_sources += files('kr-tray-sni.c')
+endif
+if tray_sources.length() == 0
+  tray_choice = 'none'
+  tray_sources += files('kr-tray-none.c')
+endif
+
 executable(
   'krypton-desktop',
   'main.c',
   'kr-mark.c',
   'kr-window.c',
   'kr-workflows-page.c',
+  tray_sources,
   resources,
   dependencies: [core_dep, gtk_dep, adw_dep],
+  link_args: tray_link_args,
+  objc_args: tray_objc_args,
   c_args: [
     '-DKRYPTON_CHANNEL=' + channel_id,
     '-DKRYPTON_VERSION="@0@"'.format(meson.project_version()),
@@ -49,3 +76,5 @@ install_data(
   rename: app_id + '.svg',
   install_dir: get_option('datadir') / 'icons' / 'hicolor' / 'scalable' / 'apps',
 )
+
+summary({'tray': tray_choice}, section: 'krypton desktop')
