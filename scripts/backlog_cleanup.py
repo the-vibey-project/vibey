@@ -404,7 +404,11 @@ class BacklogCleanup(BacklogCleanupInterface):
         held = [p.name() for p in probes if p.holds(context)]
         missing = [p.name() for p in probes if p.name() not in held]
         if not probes:
-            verdict = "OPEN"
+            # An entry the loop itself recorded (kind "triaged") has no probes yet, so it is
+            # still awaiting triage: it keeps NEEDS-TRIAGE, the verdict `apply` stored for it.
+            # Calling it OPEN never matched that `last_verdict`, so each newly triaged issue
+            # was commented on a second time. Any other entry without probes is simply open.
+            verdict = "NEEDS-TRIAGE" if entry.get("kind") == "triaged" else "OPEN"
         elif not missing:
             verdict = "DONE"
         elif held:
