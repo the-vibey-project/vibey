@@ -1,0 +1,34 @@
+[
+  {
+    "id": "skill-measurement-and-launch-checklist-62a27cbbe2",
+    "purpose": "measurement and launch checklist",
+    "source": "src/vibey_tools/skills/plugins/developer-experience/skills/devex-reference/SKILL.md",
+    "output": "docs/microslices/skills/developer-experience/skills/devex-reference/001-measurement-and-launch-checklist.md",
+    "requires": [],
+    "links": [
+      "skill-where-the-evidence-is-weak-or-conflicting-09e0c9d019"
+    ]
+  },
+  {
+    "id": "skill-where-the-evidence-is-weak-or-conflicting-09e0c9d019",
+    "purpose": "where the evidence is weak or conflicting",
+    "source": "src/vibey_tools/skills/plugins/developer-experience/skills/devex-reference/SKILL.md",
+    "output": "docs/microslices/skills/developer-experience/skills/devex-reference/002-where-the-evidence-is-weak-or-conflicting.md",
+    "requires": [
+      "skill-measurement-and-launch-checklist-62a27cbbe2"
+    ],
+    "links": [
+      "skill-sources-41d8f8d0b2"
+    ]
+  },
+  {
+    "id": "skill-sources-41d8f8d0b2",
+    "purpose": "sources",
+    "source": "src/vibey_tools/skills/plugins/developer-experience/skills/devex-reference/SKILL.md",
+    "output": "docs/microslices/skills/developer-experience/skills/devex-reference/003-sources.md",
+    "requires": [
+      "skill-where-the-evidence-is-weak-or-conflicting-09e0c9d019"
+    ],
+    "links": []
+  }
+]

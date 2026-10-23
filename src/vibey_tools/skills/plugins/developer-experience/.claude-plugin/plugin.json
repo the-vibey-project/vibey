@@ -1,0 +1,9 @@
+{
+  "name": "developer-experience",
+  "version": "0.1.0",
+  "description": "Developer Experience: the evidence-graded blueprint for making a codebase, CLI, API, documentation set, UI and AI-agent surface easy to use well. Short and trustworthy feedback loops, cognitive load, one-command local setup, CLI conventions (streams, exit codes, --json, --dry-run, NO_COLOR), error messages that say what failed and how to fix it, API and SDK usability, Diataxis documentation, TUI and screen-reader accessibility, onboarding and contribution barriers, AGENTS.md, llms.txt and MCP tool design for coding agents, and how to measure DevEx with surveys paired with system data, with every claim graded A, B or C and the weak or contested evidence called out.",
+  "author": {
+    "name": "Adam Matthew Steinberger",
+    "email": "adam@matthewsteinberger.com"
+  }
+}
