@@ -63,6 +63,46 @@ def test_every_section_the_loader_reads_is_a_section_doctor_knows():
     assert not unknown, f"doctor would call these valid sections unknown: {unknown}"
 
 
+def test_every_key_the_loader_reads_from_a_hand_written_section_is_a_key_doctor_knows():
+    """The section-level guard above stopped at sections, so the same drift recurred one key
+    at a time: `install.self_source`, then `version.regenerate`, an ERROR telling this
+    repository its own release step "does nothing" while the loader ran it.
+
+    The keys come from the loader's source, section by section, through the local names it
+    binds each table to (`ver = data.get("version", {})` ... `ver.get("regenerate")`)."""
+    source = (Path(doctor.__file__).parent / "config.py").read_text()
+    sections = {
+        alias: section
+        for alias, section in re.findall(
+            r'^\s+(\w+) = data\.get\("([a-z_]+)", \{\}\)', source, re.MULTILINE
+        )
+    }
+    assert sections.get("ver") == "version", "the loader's aliasing changed; adapt this test"
+    unknown: list[str] = []
+    for alias, section in sections.items():
+        allowed = doctor._SECTION_KEYS.get(section)
+        if allowed is None:
+            continue
+        read = set(re.findall(rf'(?<![A-Za-z_]){alias}\.get\("([a-z_]+)"', source))
+        read |= set(re.findall(rf'(?<![A-Za-z_]){alias}\["([a-z_]+)"\]', source))
+        read |= set(re.findall(rf'"([a-z_]+)" in {alias}\b', source))
+        unknown += [f"[{section}] {key}" for key in sorted(read - allowed)]
+    assert not unknown, f"doctor would call these keys the loader reads unknown: {unknown}"
+
+
+def test_every_configuration_this_repository_ships_passes_its_own_doctor():
+    """`vibey-gh doctor` reported an error on develop's own `.vibey-gh.toml` for a key the
+    loader reads (#1665): the tool that checks every adopter's configuration was wrong about
+    its author's, and a doctor that cries wolf at its author stops being believed."""
+    repo = Path(__file__).resolve().parents[4]
+    configs = sorted(repo.rglob(".vibey-gh.toml"))
+    configs = [c for c in configs if not {".venv", "node_modules"} & set(c.parts)]
+    assert configs, "no .vibey-gh.toml found; the repository layout changed"
+    for config in configs:
+        errors = [f.message for f in doctor.diagnose(root=config.parent) if f.severity == "error"]
+        assert not errors, f"{config.relative_to(repo)}: {errors}"
+
+
 def test_an_unknown_section_is_named(tmp_path):
     _repo(tmp_path, "[documentaton]\nenabled = true\n")
     findings = doctor.diagnose(root=tmp_path)
