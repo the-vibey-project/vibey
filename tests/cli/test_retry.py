@@ -45,9 +45,11 @@ class FakeStopper:
         self._plan = StopPlan((row,) if workers else (), ())
         self._report = StopReport((200,), (), survivors)
         self.planned = self.stopped = False
+        self.planned_for: str | None = None
 
-    def plan(self) -> StopPlan:
+    def plan(self, project_id: str | None = None, *, include_shared: bool = False) -> StopPlan:
         self.planned = True
+        self.planned_for = project_id
         return self._plan
 
     def stop(self, plan: StopPlan, *, grace_seconds: float) -> StopReport:
@@ -273,3 +275,14 @@ def test_the_command_passes_its_options_and_the_arguments_after_dashes(
     assert seen["project_id"] == PROJECT and seen["max_attempts"] == 12
     assert seen["start_worker"] is True and seen["keep_workers"] is False
     assert seen["worker_args"] == ("--engines", "gptossloop")
+
+
+@pytest.mark.asyncio
+async def test_it_stops_only_this_projects_workers_and_does_not_fail_on_a_shared_one() -> None:
+    """A retry resets no lease, so a worker that serves every project may keep running."""
+    resources = FakeResources([])
+    command, stopper, _, _ = _command(resources)
+
+    await _run(command)
+
+    assert stopper.planned_for == str(PROJECT)
