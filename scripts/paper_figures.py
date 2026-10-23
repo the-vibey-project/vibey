@@ -414,7 +414,18 @@ class CommitSeries(FigureSourceInterface):
         # `main` stamping every copy with one committer time, and the release tag then lands
         # on that tip with the same instant as its creator date: `stamp > head_time` alone
         # lets it in, and develop goes red on the figures the promotion just made stale.
-        cut_after_the_pin = set(self._git("tag", "--contains", rev).split())
+        # Asked the way `RevisionPinGuard._tagged` asks it, so a clone that cannot answer
+        # degrades the same way in both: the tag then shows as drift in `--check`, loudly,
+        # rather than crashing the run.
+        # push-gate: not a push (asks which tags contain the pin)
+        contains = subprocess.run(
+            ["git", "tag", "--contains", rev],
+            cwd=self._repo,
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+        cut_after_the_pin = set(contains.stdout.split()) if contains.returncode == 0 else set()
         tags = []
         for line in self._git(
             "for-each-ref", "--format=%(refname:short) %(creatordate:unix)", "refs/tags"
