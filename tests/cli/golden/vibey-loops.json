@@ -122,7 +122,9 @@
               "paste_text": "the plan is text, and is the first message it sends",
               "paste_images": "every message it sends is text (`ChatMessage.content: str`, qwenloop domain/model.py)",
               "plugins": "when the project sets skills_context.mode = inject, vibey appends the vibey-skills context packet to the plan's text before the run starts (vibey application/build_implement_handler.py), whichever engine runs it",
-              "mcp": "the model is offered only its own fixed tools (qwenloop infrastructure/inference.py `_CODING_TOOLS`), and its `connector`, `plugin` and `skill` commands only echo (qwenloop cli/app.py)"
+              "mcp": "the model is offered only its own fixed tools (qwenloop infrastructure/inference.py `_CODING_TOOLS`), and its `connector`, `plugin` and `skill` commands only echo (qwenloop cli/app.py)",
+              "skills": "its `skill` command only echoes (qwenloop cli/app.py); vibey's context packets reach it as plan text (see `plugins`), not as skills it loads",
+              "web_search": "`web_search` and `web_fetch` are among its model-facing tools and run vibey's own `vibey search` and `vibey fetch` (qwenloop domain/model.py `CODING_TOOL_NAMES`; infrastructure/tools.py)"
             }
           },
           "done_marker": "QWENLOOP_TASK_FULLY_COMPLETE",
@@ -255,7 +257,9 @@
               "paste_text": "the plan is text, and is the first message it sends",
               "paste_images": "every message it sends is text (`ChatMessage.content: str`, qwenloop domain/model.py)",
               "plugins": "when the project sets skills_context.mode = inject, vibey appends the vibey-skills context packet to the plan's text before the run starts (vibey application/build_implement_handler.py), whichever engine runs it",
-              "mcp": "the model is offered only its own fixed tools (qwenloop infrastructure/inference.py `_CODING_TOOLS`), and its `connector`, `plugin` and `skill` commands only echo (qwenloop cli/app.py)"
+              "mcp": "the model is offered only its own fixed tools (qwenloop infrastructure/inference.py `_CODING_TOOLS`), and its `connector`, `plugin` and `skill` commands only echo (qwenloop cli/app.py)",
+              "skills": "its `skill` command only echoes (qwenloop cli/app.py); vibey's context packets reach it as plan text (see `plugins`), not as skills it loads",
+              "web_search": "`web_search` and `web_fetch` are among its model-facing tools and run vibey's own `vibey search` and `vibey fetch` (qwenloop domain/model.py `CODING_TOOL_NAMES`; infrastructure/tools.py)"
             }
           },
           "done_marker": "QWENLOOP_TASK_FULLY_COMPLETE",
@@ -403,7 +407,9 @@
               "files": "it runs in the worktree (`run --cwd`), and `run --add-folder` and `--attach` take more (claudeloop cli/commands/run.py)",
               "paste_text": "`prompt TEXT --now|--at-break` (claudeloop cli/commands/prompt.py); the plan itself is text",
               "plugins": "`run --plugin` becomes the Claude Agent SDK's `plugins` option (claudeloop cli/commands/run.py; infrastructure/agent/options.py)",
-              "mcp": "`run --connector NAME=JSON|url` becomes the Claude Agent SDK's `mcp_servers` (claudeloop cli/commands/run.py; infrastructure/agent/options.py)"
+              "mcp": "`run --connector NAME=JSON|url` becomes the Claude Agent SDK's `mcp_servers` (claudeloop cli/commands/run.py; infrastructure/agent/options.py)",
+              "skills": "`run --skill` becomes the Claude Agent SDK's `skills` option, which takes a list or \"all\" (claudeloop cli/commands/run.py; infrastructure/agent/options.py)",
+              "web_search": "a local backend cannot serve Anthropic's server-side tools, and claudeloop refuses `--web-search` and `--deep-research` against one (claudeloop domain/backend.py `check_tools`)"
             }
           },
           "done_marker": "CLAUDELOOP_TASK_FULLY_COMPLETE",
@@ -668,7 +674,9 @@
               "files": "it runs in the worktree (`run --cwd`), and `run --add-folder` and `--attach` take more (claudeloop cli/commands/run.py)",
               "paste_text": "`prompt TEXT --now|--at-break` (claudeloop cli/commands/prompt.py); the plan itself is text",
               "plugins": "`run --plugin` becomes the Claude Agent SDK's `plugins` option (claudeloop cli/commands/run.py; infrastructure/agent/options.py)",
-              "mcp": "`run --connector NAME=JSON|url` becomes the Claude Agent SDK's `mcp_servers` (claudeloop cli/commands/run.py; infrastructure/agent/options.py)"
+              "mcp": "`run --connector NAME=JSON|url` becomes the Claude Agent SDK's `mcp_servers` (claudeloop cli/commands/run.py; infrastructure/agent/options.py)",
+              "skills": "`run --skill` becomes the Claude Agent SDK's `skills` option, which takes a list or \"all\" (claudeloop cli/commands/run.py; infrastructure/agent/options.py)",
+              "web_search": "`run --web-search` (\"Enable web search tools\", off unless given) adds the SDK's WebSearch tool to the session (claudeloop cli/commands/run.py; infrastructure/resources/adapter.py `gateway_payload`); vibey always passes it"
             }
           },
           "done_marker": "CLAUDELOOP_TASK_FULLY_COMPLETE",
@@ -681,6 +689,7 @@
             "{plan}",
             "--run-id",
             "{run_id}",
+            "--web-search",
             "{effort_argv...}",
             "--cwd",
             "{cwd}"

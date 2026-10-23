@@ -66,6 +66,8 @@ _CLAUDELOOP_AFFORDANCES = EngineAffordances(
     paste_text=True,
     plugins=PluginSystem.CLAUDE_PLUGINS,
     mcp=True,
+    skills=True,
+    web_search=True,
     evidence={
         "files": "it runs in the worktree (`run --cwd`), and `run --add-folder` and "
         "`--attach` take more (claudeloop cli/commands/run.py)",
@@ -75,6 +77,11 @@ _CLAUDELOOP_AFFORDANCES = EngineAffordances(
         "(claudeloop cli/commands/run.py; infrastructure/agent/options.py)",
         "mcp": "`run --connector NAME=JSON|url` becomes the Claude Agent SDK's "
         "`mcp_servers` (claudeloop cli/commands/run.py; infrastructure/agent/options.py)",
+        "skills": "`run --skill` becomes the Claude Agent SDK's `skills` option, which takes "
+        'a list or "all" (claudeloop cli/commands/run.py; infrastructure/agent/options.py)',
+        "web_search": '`run --web-search` ("Enable web search tools", off unless given) adds '
+        "the SDK's WebSearch tool to the session (claudeloop cli/commands/run.py; "
+        "infrastructure/resources/adapter.py `gateway_payload`); vibey always passes it",
     },
 )
 # `stop` and `wind-down` take `--run-id` and `--cwd`; `prompt TEXT` needs exactly one of
@@ -131,6 +138,7 @@ CLAUDELOOP = EngineDescriptor(
         ),
     },
     session_verb="sessions",
+    launch_flags=("--web-search",),
     # --permission-mode is real (confirmed via --help), but its actual value
     # vocabulary is Literal["bypass", "manual", "accept-edits", "plan",
     # "auto"] (domain/permission.py in the claudeloop repo) -- "container"
@@ -297,6 +305,8 @@ QWENLOOP = EngineDescriptor(
         paste_images=False,
         plugins=PluginSystem.SKILLS_CONTEXT,
         mcp=False,
+        skills=False,
+        web_search=True,
         evidence={
             "images": "its model-facing tools are read_file, write_file, edit_file, shell, "
             "search, find and open_file (qwenloop domain/model.py `CODING_TOOL_NAMES`), and "
@@ -310,6 +320,11 @@ QWENLOOP = EngineDescriptor(
             "mcp": "the model is offered only its own fixed tools (qwenloop "
             "infrastructure/inference.py `_CODING_TOOLS`), and its `connector`, `plugin` "
             "and `skill` commands only echo (qwenloop cli/app.py)",
+            "skills": "its `skill` command only echoes (qwenloop cli/app.py); vibey's context "
+            "packets reach it as plan text (see `plugins`), not as skills it loads",
+            "web_search": "`web_search` and `web_fetch` are among its model-facing tools and "
+            "run vibey's own `vibey search` and `vibey fetch` (qwenloop domain/model.py "
+            "`CODING_TOOL_NAMES`; infrastructure/tools.py)",
         },
     ),
     # Each takes the run id positionally, then `prompt` its text, and `--cwd` (qwenloop
@@ -426,7 +441,16 @@ class ClaudeloopLocalDescriptors:
             tier=EngineTier.LOCAL,
             doctor_args=profile,
             # The same binary, so the same verbs, run directory and envelope.
-            affordances=CLAUDELOOP.affordances,
+            affordances=replace(
+                CLAUDELOOP.affordances,
+                web_search=False,
+                evidence={
+                    **CLAUDELOOP.affordances.evidence,
+                    "web_search": "a local backend cannot serve Anthropic's server-side tools, "
+                    "and claudeloop refuses `--web-search` and `--deep-research` against one "
+                    "(claudeloop domain/backend.py `check_tools`)",
+                },
+            ),
             controls=CLAUDELOOP.controls,
             events=CLAUDELOOP.events,
         )

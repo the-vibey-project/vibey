@@ -121,6 +121,7 @@ from vibey.domain.interfaces.remote_command_interface import (
     WorkflowsInvocationInterface,
 )
 from vibey.domain.interfaces.research_gap_interface import ResearchGapInterface
+from vibey.domain.interfaces.slicing_interface import AutoSlicerInterface
 from vibey.domain.interfaces.stored_value_interface import (
     StoredValueParserInterface,
     UnrecognizedValueInterface,
@@ -215,6 +216,7 @@ __all__ = [
     "CorrelationIdInterface",
     "CostReportEntryInterface",
     "CredentialRedactorInterface",
+    "AutoSlicerInterface",
     "DecompositionPlannerInterface",
     "DeliveryCorrelationInterface",
     "DesignInterviewConfigInterface",

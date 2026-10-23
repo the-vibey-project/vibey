@@ -27,7 +27,12 @@ The plan is all-or-nothing, end to end (#265):
    `python generate_toc.py`, a script nothing created, and BUILD burned four attempts
    looking for it). The producer is handed the checkout so it can re-ask its model;
    the handler judges the result again, whichever producer answered.
-5. **Never decomposed twice.** A replay that finds its own fan-out already
+5. **Sliced whole, then run in order.** Before anything is enqueued the plan is laid over
+   the four CDD layers -- project, phase, epic, story (ADR-0092, #1666) -- as many as its size
+   needs, and each group's first stories are made to wait for the last stories of the group
+   before it. The slicing is judged like the rest of the plan, and it exists whole before the
+   one transaction that enqueues it, so no item starts until all of it is sliced.
+6. **Never decomposed twice.** A replay that finds its own fan-out already
    committed (the worker died between the commit and the ack) returns it
    instead of asking the producer again: the producers are models, and a
    second answer would enqueue a second plan beside the first.
@@ -45,10 +50,12 @@ from vibey.application.ports import JobRepository
 from vibey.application.worker import Failure, Outcome, Success
 from vibey.domain.interfaces.plan_interface import DecompositionPlannerInterface
 from vibey.domain.interfaces.plan_references_interface import PlanReferenceCheckerInterface
+from vibey.domain.interfaces.slicing_interface import AutoSlicerInterface
 from vibey.domain.job import FailureClass, idempotency_key
 from vibey.domain.phase import Phase
 from vibey.domain.plan import DECOMPOSITION_PLANNER, WorkItem
 from vibey.domain.plan_references import PLAN_REFERENCE_CHECKER
+from vibey.domain.slicing import AUTO_SLICER, SlicePlan
 from vibey.domain.worktree import WorktreeNaming
 
 
@@ -64,6 +71,7 @@ class BuildDecomposeHandler:
         planner: DecompositionPlannerInterface = DECOMPOSITION_PLANNER,
         checkouts: CheckoutLocator | None = None,
         references: PlanReferenceCheckerInterface = PLAN_REFERENCE_CHECKER,
+        slicer: AutoSlicerInterface = AUTO_SLICER,
     ) -> None:
         self._specs = specs
         self._decomposer = decomposer
@@ -73,6 +81,7 @@ class BuildDecomposeHandler:
         # the unit tests of the rules above); the reference rule is then not applied.
         self._checkouts = checkouts
         self._references = references
+        self._slicer = slicer
 
     async def handle(self, job: JobRecord) -> Outcome:
         # "build.plan" is the review fast loop-back's spelling of the same
@@ -106,8 +115,16 @@ class BuildDecomposeHandler:
             return Failure(FailureClass.WORK, "; ".join(violations))
 
         ordered = self._planner.in_dependency_order(items)
-        await self._jobs.enqueue_batch(tuple(self._request(job, item) for item in ordered))
-        return Success({"work_items": len(ordered)})
+        slices = self._slicer.slice(ordered)
+        slice_violations = slices.violations(tuple(item.item_id for item in ordered))
+        if slice_violations:
+            return Failure(FailureClass.WORK, "; ".join(slice_violations))
+
+        sequenced = self._slicer.sequence(ordered, slices)
+        await self._jobs.enqueue_batch(
+            tuple(self._request(job, item, slices) for item in sequenced)
+        )
+        return Success({"work_items": len(sequenced)})
 
     async def _fanned_out(self, job: JobRecord) -> tuple[JobRecord, ...]:
         """This cycle's fan-out, if an earlier attempt already committed it.
@@ -128,7 +145,7 @@ class BuildDecomposeHandler:
             and record.idempotency_key == self._item_key(job, record.work_item_id)
         )
 
-    def _request(self, job: JobRecord, item: WorkItem) -> EnqueueRequest:
+    def _request(self, job: JobRecord, item: WorkItem, slices: SlicePlan) -> EnqueueRequest:
         return EnqueueRequest(
             project_id=job.project_id,
             cycle=job.cycle,
@@ -147,6 +164,9 @@ class BuildDecomposeHandler:
                 # these and the accepted spec (`application/build_brief.py`).
                 "acceptance_ids": list(item.acceptance_ids),
                 "files_touched_hint": list(item.files_touched_hint),
+                # Where the item sits in the sliced plan, outermost slice first, ending in its
+                # own story: the project, phase and epic it belongs to (ADR-0092).
+                "slice_path": list(slices.path_of(item.item_id)),
                 # Item branches stack on already-integrated code when
                 # any exists (the worktree manager falls back to HEAD
                 # before the first integrate): every item branching

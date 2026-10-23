@@ -454,3 +454,72 @@ async def test_each_item_carries_its_criteria_and_files_for_the_engines_brief() 
     assert payloads["ws"]["files_touched_hint"] == ["src/a.ts", "src/b.ts"]
     assert payloads["more"]["acceptance_ids"] == ["AC-2"]
     assert payloads["more"]["depends_on_items"] == ["ws"]
+
+
+async def test_a_small_plan_is_sliced_into_stories_only() -> None:
+    job = replace(make_job(uuid4()), kind="build.decompose")
+    items = (
+        _item("skeleton", acceptance_ids=("AC-1",)),
+        _item("item-2", acceptance_ids=("AC-2",), depends_on=("skeleton",)),
+    )
+    jobs = FakeJobRepository()
+    handler = BuildDecomposeHandler(specs=Specs(spec()), decomposer=Decomposer(items), jobs=jobs)
+
+    outcome = await handler.handle(job)
+
+    assert isinstance(outcome, Success)
+    paths = {r.work_item_id: r.payload["slice_path"] for r in _fan_out(jobs)}
+    assert paths == {"skeleton": ["story-skeleton"], "item-2": ["story-item-2"]}
+
+
+async def test_a_large_plan_is_sliced_into_groups_that_run_in_order() -> None:
+    """Twenty items under the default cap of eight become three epics; each epic's first
+    stories wait for the last stories of the epic before it, so the queue -- not the
+    producer's listing -- runs one group to completion before the next."""
+    job = replace(make_job(uuid4()), kind="build.decompose")
+    items = (
+        _item("skeleton", acceptance_ids=("AC-1", "AC-2")),
+        *(_item(f"item-{n:02d}", depends_on=("skeleton",)) for n in range(1, 20)),
+    )
+    jobs = FakeJobRepository()
+    handler = BuildDecomposeHandler(specs=Specs(spec()), decomposer=Decomposer(items), jobs=jobs)
+
+    outcome = await handler.handle(job)
+
+    assert isinstance(outcome, Success)
+    payloads = {r.work_item_id: r.payload for r in _fan_out(jobs)}
+    assert payloads["skeleton"]["slice_path"] == ["epic-1", "story-skeleton"]
+    assert payloads["item-19"]["slice_path"] == ["epic-3", "story-item-19"]
+    # item-19 opens the third epic: it waits for the stories the second epic ends on.
+    assert "item-07" in payloads["item-19"]["depends_on_items"]
+    assert "item-13" in payloads["item-19"]["depends_on_items"]
+    # ...and the queue itself is told, by key, not just the brief.
+    keys = {r.work_item_id: r.idempotency_key for r in _fan_out(jobs)}
+    assert keys["item-19"] != keys["item-07"]
+
+
+async def test_an_unsound_slicing_enqueues_nothing() -> None:
+    from vibey.domain.slicing import SlicePlan
+
+    class LosingSlicer:
+        max_children = 8
+
+        def slice(self, items):  # type: ignore[no-untyped-def]
+            return SlicePlan(())
+
+        def sequence(self, items, plan):  # type: ignore[no-untyped-def]
+            raise AssertionError("an unsound slicing must be refused before it is sequenced")
+
+    job = replace(make_job(uuid4()), kind="build.decompose")
+    items = (_item("skeleton", acceptance_ids=("AC-1", "AC-2")),)
+    jobs = FakeJobRepository()
+    handler = BuildDecomposeHandler(
+        specs=Specs(spec()), decomposer=Decomposer(items), jobs=jobs, slicer=LosingSlicer()
+    )
+
+    outcome = await handler.handle(job)
+
+    assert isinstance(outcome, Failure)
+    assert outcome.failure_class is FailureClass.WORK
+    assert "skeleton" in outcome.detail and "no story" in outcome.detail
+    assert _fan_out(jobs) == []
