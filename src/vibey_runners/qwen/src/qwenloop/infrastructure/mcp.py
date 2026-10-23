@@ -19,7 +19,7 @@ import json
 from collections.abc import Mapping
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any
+from typing import Any, cast
 
 PROTOCOL_VERSION = "2024-11-05"
 CONFIG_ENV = "QWENLOOP_MCP_CONFIG"
@@ -188,9 +188,10 @@ class McpGateway:
         await self._send(
             process, {"jsonrpc": "2.0", "id": request_id, "method": method, "params": params}
         )
-        assert process.stdout is not None
+        # Both pipes were asked for when the process was started, so neither is None.
+        stdout = cast(asyncio.StreamReader, process.stdout)
         while True:
-            line = await process.stdout.readline()
+            line = await stdout.readline()
             if not line:
                 raise McpError("the MCP server closed its output before answering")
             try:
@@ -209,6 +210,6 @@ class McpGateway:
 
     @staticmethod
     async def _send(process: asyncio.subprocess.Process, message: dict[str, Any]) -> None:
-        assert process.stdin is not None
-        process.stdin.write(json.dumps(message).encode() + b"\n")
-        await process.stdin.drain()
+        stdin = cast(asyncio.StreamWriter, process.stdin)
+        stdin.write(json.dumps(message).encode() + b"\n")
+        await stdin.drain()
