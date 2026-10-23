@@ -418,6 +418,24 @@ runs_on = "ubuntu-latest"
 # The host venue is the sovereign lane's own runner: its label and heartbeat come from
 # [pr_automation.fallback], so the readiness probe describes the machine the job uses.
 host_enabled = false
+# The venue chooses the model (ADR-0090, amended), which is how cost and independence are
+# balanced: while the operator's machine is up pr-af can review there on the local model the
+# sovereign lane already serves -- free -- and otherwise on a hosted runner through
+# OpenRouter's inexpensive `model` above. A hosted runner cannot reach the operator's machine,
+# so it is only ever the router. To turn the local venue on, uncomment these three lines (and
+# set hosted_enabled = false to run with no OpenRouter key at all):
+#
+#   host_enabled = true
+#   host_provider = "local"
+#   local_verdict_passes = false   # a local model may BLOCK the gate; the fallback decides passes
+#
+# NOT ENABLED HERE, deliberately, on measured evidence (2026-10-22): on gpt-oss:20b on the
+# operator's Mac a one-file dependency bump (#1658, depth quick, no findings) was still in
+# phase 6 of 7 after 45 minutes -- 8 agent calls, 68 minutes of summed agent time, with 12
+# more consistency-verify agents queued -- past pr-af's own 3600 s cap. Capped, it is "no
+# verdict" and the fallback decides, never a pass, but the gate would wait that long on every
+# pull request. Enable it once a faster model or a smaller review profile has been measured.
+hosted_enabled = true
 
 # How many runs of one local model run at once on a device (sub-doctrines 8.c and 8.j,
 # ADR-0058). Declared here, checked by `vibey-gh slots allowed` against THAT device's own
@@ -744,6 +762,7 @@ forbidden_paths = [
   "src/vibey_tools/gh/vibey_gh/github_state.py",
   "src/vibey_tools/gh/vibey_gh/install.py",
   "src/vibey_tools/gh/vibey_gh/issue_automation.py",
+  "src/vibey_tools/gh/vibey_gh/pr_af_local.py",
   "src/vibey_tools/gh/vibey_gh/pr_automation.py",
   "src/vibey_tools/gh/vibey_gh/protected_paths.py",
   "src/vibey_tools/gh/vibey_gh/reconcile.py",

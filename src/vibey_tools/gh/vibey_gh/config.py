@@ -51,6 +51,7 @@ import tomllib
 from collections.abc import Mapping
 from dataclasses import dataclass
 from pathlib import Path, PurePosixPath
+from urllib.parse import urlsplit
 
 from vibey_gh.forge import ForgeKind
 
@@ -1516,6 +1517,13 @@ class PrAfConfig:
     repository declares it on (`.vibey-gh.toml`), with the sovereign lane still running
     beside it as the second opinion.
 
+    The venue chooses the model, which is how cost and independence are balanced: a hosted
+    runner cannot reach the operator's machine, so it reviews through OpenRouter, while the
+    operator's own runner (`host_enabled`) may review on a model it serves itself
+    (`host_provider = "local"`), which costs nothing. `hosted_enabled = false` drops the
+    paid venue entirely, so a repository can run on its own hardware and never hold an
+    OpenRouter key.
+
     `ref` is a full commit SHA, never a branch: the review job checks third-party code out
     with a token that can write the pull request. A branch would let that code change
     between runs without a diff in this repository. Updating the reviewer is therefore a
@@ -1542,6 +1550,23 @@ class PrAfConfig:
     # probe is evidence about the machine the job will actually land on.
     host_enabled: bool = False
     model: str = "deepseek/deepseek-v4-flash-0731"
+    # Whether the GitHub-hosted venue exists. True by default -- it is what makes the gate
+    # dependable when the operator's machine sleeps. False drops the paid venue: with the
+    # host not ready, pr-af gives no verdict and the fallback decides.
+    hosted_enabled: bool = True
+    # Which model the HOST venue reviews on: "openrouter" (the paid model above, the
+    # default) or "local" (a model the operator serves, at no cost). The hosted venue is
+    # always OpenRouter, because a hosted runner cannot reach the operator's machine.
+    host_provider: str = "openrouter"
+    # The local model id and server. Empty means the sovereign lane's own
+    # (`[pr_automation.fallback]` model and base_url), so one declaration serves both.
+    local_model: str = ""
+    local_base_url: str = ""
+    # Whether a local model's "nothing blocking" may pass the gate by itself. FALSE by
+    # default, because a smaller model's approval is the unsafe direction: its block is
+    # authoritative (fail closed), but a pass leaves the sovereign/paid fallback to decide,
+    # exactly as if pr-af had produced no verdict. Turn it on once its reviews have earned it.
+    local_verdict_passes: bool = False
     depth: str = "standard"
     # The review's own caps, passed to pr-af's input. A review that reaches either cap is
     # not a verdict: the gate falls back rather than treating a partial pass as a pass.
@@ -1553,9 +1578,19 @@ class PrAfConfig:
     openrouter_secret: str = "OPENROUTER_API_KEY"
 
     _DEPTHS = ("auto", "quick", "standard", "deep")
+    _HOST_PROVIDERS = ("openrouter", "local")
+
+    @property
+    def needs_openrouter(self) -> bool:
+        """Whether any scheduled venue reads the router secret.
+
+        A repository that reviews only on its own hardware, with a local model, never holds
+        an OpenRouter key at all.
+        """
+        return self.hosted_enabled or (self.host_enabled and self.host_provider == "openrouter")
 
     def __post_init__(self) -> None:
-        for key in ("enabled", "default", "host_enabled"):
+        for key in ("enabled", "default", "host_enabled", "hosted_enabled", "local_verdict_passes"):
             value = getattr(self, key)
             if not isinstance(value, bool):
                 raise ValueError(  # noqa: TRY004
@@ -1563,6 +1598,31 @@ class PrAfConfig:
                 )
         if not self.enabled:
             return
+        if self.host_provider not in self._HOST_PROVIDERS:
+            raise ValueError(
+                "pr_automation.pr_af.host_provider must be one of "
+                f"{', '.join(self._HOST_PROVIDERS)}: {self.host_provider!r}"
+            )
+        if not (self.hosted_enabled or self.host_enabled):
+            raise ValueError(
+                "pr_automation.pr_af needs at least one venue: hosted_enabled or host_enabled"
+            )
+        if self.host_provider == "local" and not self.host_enabled:
+            raise ValueError(
+                'pr_automation.pr_af.host_provider = "local" needs host_enabled = true: a '
+                "local model is served by the operator's own runner, never a hosted one"
+            )
+        if self.local_model and not _PR_AF_MODEL_RE.fullmatch(self.local_model):
+            raise ValueError(
+                f"pr_automation.pr_af.local_model is not a model id: {self.local_model!r}"
+            )
+        if self.local_base_url:
+            parts = urlsplit(self.local_base_url)
+            if parts.scheme not in ("http", "https") or not parts.hostname:
+                raise ValueError(
+                    "pr_automation.pr_af.local_base_url must be an http(s) address: "
+                    f"{self.local_base_url!r}"
+                )
         if not _RUNNER_SLUG_RE.fullmatch(self.repository):
             raise ValueError(
                 f"pr_automation.pr_af.repository must be an owner/name: {self.repository!r}"
