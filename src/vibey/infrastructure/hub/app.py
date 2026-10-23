@@ -48,7 +48,7 @@ from fastapi import (
     WebSocket,
     WebSocketDisconnect,
 )
-from fastapi.responses import JSONResponse, Response
+from fastapi.responses import HTMLResponse, JSONResponse, Response
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from pydantic import BaseModel, ConfigDict, Field
 from vibey_bootstrap.fastapi_middleware import install_middleware
@@ -87,6 +87,7 @@ from vibey.infrastructure.hub.interfaces.authenticator_interface import (
 )
 from vibey.infrastructure.hub.interfaces.live_interface import LedgerAnnouncementsInterface
 from vibey.infrastructure.hub.interfaces.pairing_interface import HubPairingInterface
+from vibey.infrastructure.hub.landing import HUB_LANDING_PAGE
 from vibey.infrastructure.workflows.gh_workflows import GhWorkflowsError
 
 MAX_BODY_BYTES: Final = 64 * 1024
@@ -305,6 +306,14 @@ class HubAppFactory:
 
         who = Annotated[HubPrincipal, Depends(principal)]
         v1 = f"/api/v{HUB_API_VERSION}"
+
+        @app.get("/", include_in_schema=False)
+        async def front_door() -> HTMLResponse:
+            # No data and no credential: what a browser reads when `krypton` opens the hub.
+            return HTMLResponse(
+                HUB_LANDING_PAGE.render(),
+                headers={"content-security-policy": HUB_LANDING_PAGE.content_security_policy()},
+            )
 
         @app.get("/health/live", tags=["health"], summary="The process is up.")
         async def live_probe() -> dict[str, str]:
@@ -746,6 +755,10 @@ class HubAppFactory:
             else:
                 response = await call_next(request)
             for name, value in SECURITY_HEADERS.items():
+                # A response may narrow its own policy (the front door admits one style
+                # block by hash); every other header, and every other route, is the hub's.
+                if name == "content-security-policy" and name in response.headers:
+                    continue
                 response.headers[name] = value
             return response
 

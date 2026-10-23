@@ -37,6 +37,13 @@ Three routes have no single command behind them:
 process is up and whether the database answers. `GET /api/metrics` returns
 `vibey_bootstrap`'s metrics snapshot and needs `view`.
 
+`GET /` is the hub's front door: a plain page, with no data and no credential, that a person
+sees when `krypton` opens the hub in a browser. It says the hub is running and where to go
+next. It is not part of the API contract (it is absent from the OpenAPI document), it holds
+no script, and it is the one response whose `Content-Security-Policy` differs from the hub's
+`default-src 'none'`: it adds the SHA-256 hash of its single style block, so the only style
+that runs is the one in the page. Every other route and every refusal keeps the hub's policy.
+
 ## Live
 
 A ledger feed resumes from a **position**, never a time (sub-doctrine 10.g): the last

@@ -13,7 +13,8 @@ krypton --help
 
 `krypton` is a launcher. It finds the `vibey` command, starts `vibey serve` on
 `127.0.0.1:8765` (change it with `--host` and `--port`), waits until the hub answers, and
-opens it in your browser. `--no-browser` only starts it.
+opens it in your browser, where the hub's front door says it is running and where to go next
+(the desktop app, the VS Code chat, or pairing a phone). `--no-browser` only starts it.
 
 When the installed vibey-engine has no `vibey serve` yet, `krypton` says so plainly, lists
 what you can use instead, and exits with status 1. It never pretends a hub is running.
