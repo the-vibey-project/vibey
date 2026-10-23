@@ -318,8 +318,8 @@ def test_the_capabilities_each_runner_shows() -> None:
     assert shown == {
         "claudeloop": (*claude, True),
         "codexloop": (None, True, True, None, context, True, None, None),
-        "gptossloop": (False, True, True, False, context, False, False, True),
-        "qwenloop": (False, True, True, False, context, False, False, True),
+        "gptossloop": (False, True, True, False, context, True, False, True),
+        "qwenloop": (False, True, True, False, context, True, False, True),
         # The same binary, but a local backend cannot serve web search.
         "claudeloop-local": (*claude, False),
     }
@@ -334,8 +334,8 @@ def test_the_gaps_between_each_lane_and_full_access_are_pinned() -> None:
     assert gaps == {
         "claudeloop": (),
         "codexloop": ("skills", "plugins", "web_search"),
-        "gptossloop": ("skills", "plugins", "mcp"),
-        "qwenloop": ("skills", "plugins", "mcp"),
+        "gptossloop": ("skills", "plugins"),
+        "qwenloop": ("skills", "plugins"),
         "claudeloop-local": ("web_search",),
     }
 

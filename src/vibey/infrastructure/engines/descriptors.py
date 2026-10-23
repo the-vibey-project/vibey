@@ -317,7 +317,7 @@ QWENLOOP = EngineDescriptor(
         paste_text=True,
         paste_images=False,
         plugins=PluginSystem.SKILLS_CONTEXT,
-        mcp=False,
+        mcp=True,
         skills=False,
         web_search=True,
         evidence={
@@ -330,10 +330,11 @@ QWENLOOP = EngineDescriptor(
             "paste_images": "every message it sends is text (`ChatMessage.content: str`, "
             "qwenloop domain/model.py)",
             "plugins": _SKILLS_CONTEXT,
-            "mcp": "the model is offered only its own fixed tools (qwenloop "
-            "infrastructure/inference.py `_CODING_TOOLS`), and its `connector`, `plugin` "
-            "and `skill` commands only echo (qwenloop cli/app.py)",
-            "skills": "its `skill` command only echoes (qwenloop cli/app.py); vibey's context "
+            "mcp": "`mcp_list` and `mcp_call` are among its model-facing tools and reach the stdio "
+            "servers declared in ~/.claude.json, the worktree's .mcp.json and "
+            "QWENLOOP_MCP_CONFIG, two gateway tools rather than every server's tools so a small "
+            "context is not flooded (qwenloop infrastructure/mcp.py, infrastructure/tools.py)",
+            "skills": "its `skill` and `plugin` commands only echo (qwenloop cli/app.py); vibey's context "
             "packets reach it as plan text (see `plugins`), not as skills it loads",
             "web_search": "`web_search` and `web_fetch` are among its model-facing tools and "
             "run vibey's own `vibey search` and `vibey fetch` (qwenloop domain/model.py "
