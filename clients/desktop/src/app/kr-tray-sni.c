@@ -64,6 +64,7 @@ struct KrTray {
     KrTrayModel *model; /* what is drawn; never NULL once kr_tray_show has run */
     guint revision;
     GDBusConnection *bus;
+    GCancellable *cancel; /* the registration call in flight: it outlives a freed tray otherwise */
     GDBusNodeInfo *item_info;
     GDBusNodeInfo *menu_info;
     guint own_id;
@@ -298,10 +299,13 @@ menu_property(GDBusConnection *connection, const char *sender, const char *objec
 static void
 on_registered(GObject *source, GAsyncResult *result, gpointer data)
 {
-    KrTray *tray = data;
     g_autoptr(GError) error = NULL;
     g_autoptr(GVariant) reply =
         g_dbus_connection_call_finish(G_DBUS_CONNECTION(source), result, &error);
+    /* A cancelled call means the tray was freed while this was in flight: `data` is gone. */
+    if (g_error_matches(error, G_IO_ERROR, G_IO_ERROR_CANCELLED))
+        return;
+    KrTray *tray = data;
     tray->ready = reply != NULL;
 }
 
@@ -310,7 +314,7 @@ register_with_watcher(KrTray *tray)
 {
     g_dbus_connection_call(tray->bus, WATCHER_NAME, "/StatusNotifierWatcher", WATCHER_NAME,
                            "RegisterStatusNotifierItem", g_variant_new("(s)", tray->bus_name),
-                           NULL, G_DBUS_CALL_FLAGS_NONE, -1, NULL, on_registered, tray);
+                           NULL, G_DBUS_CALL_FLAGS_NONE, -1, tray->cancel, on_registered, tray);
 }
 
 static void
@@ -365,6 +369,7 @@ kr_tray_new(const char *app_id, const char *name, KrTrayActivate activate, gpoin
     tray->activate = activate;
     tray->data = user_data;
     tray->bus = g_steal_pointer(&bus);
+    tray->cancel = g_cancellable_new();
     tray->item_info = g_dbus_node_info_new_for_xml(ITEM_XML, NULL);
     tray->menu_info = g_dbus_node_info_new_for_xml(MENU_XML, NULL);
     const GDBusInterfaceVTable item_vtable = {item_call, item_property, NULL, {0}};
@@ -417,6 +422,8 @@ kr_tray_free(KrTray *tray)
 {
     if (tray == NULL)
         return;
+    g_cancellable_cancel(tray->cancel);
+    g_clear_object(&tray->cancel);
     if (tray->watch_id != 0)
         g_bus_unwatch_name(tray->watch_id);
     if (tray->own_id != 0)
