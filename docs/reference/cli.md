@@ -539,6 +539,12 @@ id prints `unknown project <id>` and exits 1.
 Replay starts paused. Keys: Space play/pause, Right or `n` next step, Left or
 `p` previous step, `q` quit.
 
+**Not on a terminal.** When input or output is piped or redirected (a script, an agent, `| cat`),
+`watch` does not take over the screen: it says so on stderr, prints the same one-time snapshot
+[`vibey status`](#vibey-status-project_id) prints (`vibey status --json` is the machine form),
+and exits 0, or 1 when there is no project. `--replay` needs a terminal screen, so without one it
+is a usage error (exit 2).
+
 ## `vibey llm`
 
 The conversation with the local model, as it happens. It only reads.

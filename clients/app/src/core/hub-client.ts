@@ -12,9 +12,11 @@
 import type {
   GateAnswer,
   TransportKind,
+  VibeyAbandonReport,
   VibeyBudget,
   VibeyCircuit,
   VibeyGate,
+  VibeyNewProject,
   VibeyProject,
   VibeyStatus,
 } from '@vibey/core';
@@ -227,6 +229,22 @@ export class HubClient implements HubClientInterface {
     return this.hostOnly('clear-cap');
   }
 
+  createProject(): Promise<VibeyNewProject> {
+    return this.hostOnly('start-project');
+  }
+
+  startWork(): Promise<string> {
+    return this.hostOnly('start-work');
+  }
+
+  pauseWork(): Promise<string> {
+    return this.hostOnly('pause-work');
+  }
+
+  abandonProject(): Promise<VibeyAbandonReport> {
+    return this.hostOnly('abandon-project');
+  }
+
   cost(): Promise<string> {
     return Promise.reject(
       new HubError('not-on-a-device', 'Spend is shown per project under Budgets; `vibey cost` runs on the host.'),
@@ -394,7 +412,7 @@ export class HubClient implements HubClientInterface {
     }
   }
 
-  private hostOnly(action: 'set-cap' | 'clear-cap'): Promise<never> {
+  private hostOnly(action: 'set-cap' | 'clear-cap' | 'start-project' | 'start-work' | 'pause-work' | 'abandon-project'): Promise<never> {
     return Promise.reject(new HubError('not-on-a-device', DevicePolicy.HOST_ONLY[action] as string));
   }
 

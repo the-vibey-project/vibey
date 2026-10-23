@@ -925,6 +925,15 @@ def waive_visual(project_id: UUID) -> None:
     typer.echo(f"waived visual design for {project_id}; entered {phase.value}")
 
 
+def _on_a_terminal() -> bool:
+    """Whether a person is at this terminal: input and output are both one.
+
+    Module-level, beside `watch` (its one caller), as a seam: the test runner's streams are
+    never a terminal, and a test that wants either answer substitutes this by name (a method
+    on a class would only add an object to build for one line)."""
+    return sys.stdin.isatty() and sys.stdout.isatty()
+
+
 @app.command("watch")
 def watch_dashboard(
     project_id: Annotated[UUID | None, typer.Argument(help="Optional project ID")] = None,
@@ -933,7 +942,23 @@ def watch_dashboard(
     ] = False,
     speed: Annotated[float, typer.Option("--speed", help="Playback speed multiplier")] = 1.0,
 ) -> None:
-    """Live dashboard monitoring current phase, queue, circuits, worktrees, and ledger tail."""
+    """Live dashboard monitoring current phase, queue, circuits, worktrees, and ledger tail.
+
+    Needs a terminal. Piped or redirected it prints the one snapshot `vibey status` prints
+    and exits, so a script or an agent gets text, not a screen takeover."""
+    if not _on_a_terminal():
+        if replay:
+            typer.echo(
+                "--replay plays the ledger back on a terminal screen; run it in one.", err=True
+            )
+            raise typer.Exit(EXIT_USAGE)
+        typer.echo(
+            "not a terminal, so this prints one snapshot instead of the live dashboard; "
+            "`vibey status --json` is the machine form.",
+            err=True,
+        )
+        status(project_id, as_json=False)
+        return
     from vibey.infrastructure.db.engine_health_repository import PostgresEngineHealthRepository
     from vibey.tui.dashboard import (
         DashboardState,
