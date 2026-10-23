@@ -317,7 +317,7 @@ def test_the_capabilities_each_runner_shows() -> None:
     context = PluginSystem.SKILLS_CONTEXT
     assert shown == {
         "claudeloop": (*claude, True),
-        "codexloop": (None, True, True, None, context, None, None, None),
+        "codexloop": (None, True, True, None, context, True, None, None),
         "gptossloop": (False, True, True, False, context, False, False, True),
         "qwenloop": (False, True, True, False, context, False, False, True),
         # The same binary, but a local backend cannot serve web search.
@@ -333,7 +333,7 @@ def test_the_gaps_between_each_lane_and_full_access_are_pinned() -> None:
     gaps = {d.engine_id.value: d.affordances.full_access_gaps() for d in ALL_DESCRIPTORS}
     assert gaps == {
         "claudeloop": (),
-        "codexloop": ("skills", "plugins", "mcp", "web_search"),
+        "codexloop": ("skills", "plugins", "web_search"),
         "gptossloop": ("skills", "plugins", "mcp"),
         "qwenloop": ("skills", "plugins", "mcp"),
         "claudeloop-local": ("web_search",),

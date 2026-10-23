@@ -59,13 +59,20 @@ graph (`domain/slicing.py`), so validation, the queue and idempotency are unchan
   for what it is about. A producer-supplied grouping is the natural next step.
 - Every BUILD lane on claudeloop now has web search. `claudeloop-local` keeps running.
 
+## Added after the first draft
+
+- **`[build.slicing] max_children`** is a key, read from the project's stored config.
+- **Planner-named epics.** A work item may carry `epic`; consecutive items under one name form one
+  named epic (split and numbered if over the cap), and both decomposers ask the model for it.
+- **Skills, plugins and MCP for claudeloop** are not narrowed. The SDK documents `skills=None` as
+  "not skills off" and `setting_sources=None` as loading every user, project and local setting, and
+  claudeloop sets neither; a claudeloop test pins that.
+- **`--deep-research`** is passed beside `--web-search`. claudeloop only records it as a flag; no
+  tool or cost follows from it.
+- **codexloop MCP** is shown: its argv suppresses nothing of Codex's own configuration and its
+  doctor checks the servers that configuration declares.
+
 ## Not done, and why
 
-- **`[build.slicing] max_children`.** The cap is injectable (`AutoSlicer(max_children=)`,
-  `BuildDecomposeHandler(slicer=)`) but production uses the default of 8. A key is owed (ADR-0018).
-- **Skills, plugins and MCP for claudeloop.** `--skill` takes names, not `all`, and whether ambient
-  user skills, plugins and MCP servers load depends on the SDK's `setting_sources`, which nothing in
-  the tree shows. This needs a live probe before any claim.
-- **`--deep-research`.** It exists and is off. What it does to a lane's cost and shape is unmeasured.
-- **The local runner has no MCP, and codexloop is unknown** for skills, MCP and web search. These
-  are capability gaps in the runners (ADR-0017): the fix is to add them to ours.
+- **codexloop skills and web search** are unknown: the `codex` binary is not installed here to
+  probe, and nothing in the runner's code shows either. They stay gaps, pinned.

@@ -11,6 +11,8 @@ from vibey.domain.interfaces.budget_caps_interface import (
 )
 from vibey.domain.interfaces.circuit_interface import EngineFailurePolicyInterface
 from vibey.domain.interfaces.config_interface import (
+    BuildConfigInterface,
+    BuildSlicingConfigInterface,
     DesignConfigInterface,
     DesignInterviewConfigInterface,
     DesignResearchConfigInterface,
@@ -194,6 +196,8 @@ __all__ = [
     "QueueConfigInterface",
     "QueuePriorityConfigInterface",
     "QueueReapConfigInterface",
+    "BuildConfigInterface",
+    "BuildSlicingConfigInterface",
     "DesignConfigInterface",
     "DesignResearchConfigInterface",
     "QueuedJobInterface",

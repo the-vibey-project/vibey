@@ -224,11 +224,11 @@ def test_the_template_names_the_plan_flag_only_where_the_runner_takes_one() -> N
         flagged, _spec(Effort.STANDARD)
     )
     assert RUN_ARGV_TEMPLATE.template(flagged) == (
-        "{binary}", "run", "{plan_flag?}", "{plan}", "--run-id", "{run_id}", "--web-search",
+        "{binary}", "run", "{plan_flag?}", "{plan}", "--run-id", "{run_id}", "--web-search", "--deep-research",
         "{effort_argv...}", "--cwd", "{cwd}",
     )  # fmt: skip
     assert RUN_ARGV_TEMPLATE.template(by_id["claudeloop"]) == (
-        "{binary}", "run", "{plan}", "--run-id", "{run_id}", "--web-search", "{effort_argv...}",
+        "{binary}", "run", "{plan}", "--run-id", "{run_id}", "--web-search", "--deep-research", "{effort_argv...}",
         "--cwd", "{cwd}",
     )  # fmt: skip
 
@@ -250,7 +250,8 @@ def test_a_new_claudeloop_run_always_carries_web_search() -> None:
     from vibey.infrastructure.engines.descriptors import CLAUDELOOP
 
     for effort in ALL_EFFORTS:
-        assert "--web-search" in build_argv(CLAUDELOOP, _spec(effort)), effort.name
+        argv = build_argv(CLAUDELOOP, _spec(effort))
+        assert "--web-search" in argv and "--deep-research" in argv, effort.name
 
 
 def test_a_resumed_claudeloop_session_keeps_the_resources_its_run_already_holds() -> None:
@@ -273,4 +274,5 @@ def test_claudeloop_local_is_never_asked_for_web_search(effort) -> None:  # type
     so passing it would stop the engine rather than widen it."""
     from vibey.infrastructure.engines.descriptors import CLAUDELOOP_LOCAL
 
-    assert "--web-search" not in build_argv(CLAUDELOOP_LOCAL, _spec(effort))
+    argv = build_argv(CLAUDELOOP_LOCAL, _spec(effort))
+    assert "--web-search" not in argv and "--deep-research" not in argv

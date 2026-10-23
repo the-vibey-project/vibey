@@ -96,6 +96,7 @@ async def test_run_materializes_plan_enforces_caps_and_reads_latest_response(
             "--run-id",
             "00000000-0000-0000-0000-000000000123",
             "--web-search",
+            "--deep-research",
             "--preset",
             "medium",
             "--effort",

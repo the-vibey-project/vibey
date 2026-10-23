@@ -85,6 +85,11 @@ class SlicePlan:
             node = by_id.get(node.parent_id) if node.parent_id is not None else None
         return tuple(reversed(path))
 
+    def titles_of(self, item_id: str) -> tuple[str, ...]:
+        """The titles along `path_of`, so a job can say which feature set it serves."""
+        by_id = {node.slice_id: node for node in self.nodes}
+        return tuple(by_id[slice_id].title for slice_id in self.path_of(item_id))
+
     def violations(self, item_ids: Sequence[str]) -> tuple[str, ...]:
         """Every way the slicing is unsound for `item_ids`; empty means it can be used."""
         violations: list[str] = []
@@ -171,20 +176,23 @@ class AutoSlicer:
 
     def slice(self, items: Sequence[WorkItem]) -> SlicePlan:
         """Groups `items`, which must already be in dependency order, bottom-up."""
-        level = [
-            _Draft(SliceLayer.STORY, f"Story {item.item_id}", (item.item_id,), ()) for item in items
-        ]
+        level = [_Draft(SliceLayer.STORY, item.title, (item.item_id,), ()) for item in items]
         ordinals = {layer: 0 for layer in LAYERS_OUTER_TO_INNER}
-        for layer in _GROUP_LAYERS_INNER_TO_OUTER:
+        layers: tuple[SliceLayer, ...] = _GROUP_LAYERS_INNER_TO_OUTER
+        if any(item.epic for item in items):
+            level = self._named_epics(items, level, ordinals)
+            layers = layers[1:]
+        for layer in layers:
             if len(level) <= self._max_children:
                 break
             grouped: list[_Draft] = []
             for chunk in self._balanced(level):
                 ordinals[layer] += 1
                 ids = tuple(i for draft in chunk for i in draft.item_ids)
-                grouped.append(
-                    _Draft(layer, f"{layer.value.title()} {ordinals[layer]}", ids, chunk)
-                )
+                title = f"{layer.value.title()} {ordinals[layer]}"
+                if layer is SliceLayer.EPIC:
+                    title = f"{title}: {chunk[0].title}"
+                grouped.append(_Draft(layer, title, ids, chunk))
             level = grouped
 
         nodes: list[SliceNode] = []
@@ -227,6 +235,37 @@ class AutoSlicer:
         """The items of a group that wait for nothing else in the group."""
         inside = set(item_ids)
         return [i for i in item_ids if not any(dep in inside for dep in by_id[i].depends_on)]
+
+    def _named_epics(
+        self,
+        items: Sequence[WorkItem],
+        stories: list[_Draft],
+        ordinals: dict[SliceLayer, int],
+    ) -> list[_Draft]:
+        """Epics from the planner's own names: a run of consecutive items under one `epic` is
+        one epic, split by size if it is over the cap, and a run with no name is an epic too,
+        titled by its place. A name that returns after other work is a new epic of the same
+        name -- a group is only ever a consecutive run, so the order stays sound."""
+        runs: list[tuple[str, list[_Draft]]] = []
+        for item, story in zip(items, stories, strict=True):
+            if runs and runs[-1][0] == item.epic:
+                runs[-1][1].append(story)
+            else:
+                runs.append((item.epic, [story]))
+        epics: list[_Draft] = []
+        for name, drafts in runs:
+            parts = self._balanced(drafts) if len(drafts) > self._max_children else [tuple(drafts)]
+            for number, part in enumerate(parts, start=1):
+                ordinals[SliceLayer.EPIC] += 1
+                if not name:
+                    title = f"Epic {ordinals[SliceLayer.EPIC]}: {part[0].title}"
+                elif len(parts) == 1:
+                    title = name
+                else:
+                    title = f"{name} ({number}/{len(parts)})"
+                ids = tuple(i for draft in part for i in draft.item_ids)
+                epics.append(_Draft(SliceLayer.EPIC, title, ids, part))
+        return epics
 
     def _balanced(self, level: list[_Draft]) -> list[tuple[_Draft, ...]]:
         """Consecutive chunks of at most `max_children`, as even as they can be: 9 under a

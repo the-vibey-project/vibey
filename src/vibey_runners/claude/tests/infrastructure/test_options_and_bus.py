@@ -219,3 +219,20 @@ def test_probe_options_without_an_overlay_set_no_env() -> None:
     options = build_probe_options(cwd="/tmp")
     assert options.env == {}
     assert options.cli_path is None
+
+
+def test_a_lane_with_nothing_named_is_not_narrowed() -> None:
+    """vibey names no skill, plugin or connector, so a lane has what the SDK and the CLI load
+    by default: with `skills` and `setting_sources` left unset every discovered skill and every
+    user, project and local setting (and so the plugins and MCP servers they enable) is
+    loaded. Naming skills would narrow that to the list and to user and project settings, so
+    nothing here may set any of these without a reason."""
+    options = build_turn_options(cwd="/tmp")
+    assert options.skills is None
+    assert options.setting_sources is None
+    assert not options.plugins
+    assert not options.mcp_servers
+    assert options.strict_mcp_config is False
+    assert not options.allowed_tools
+    assert not options.disallowed_tools
+    assert options.tools is None

@@ -167,6 +167,7 @@ class BuildDecomposeHandler:
                 # Where the item sits in the sliced plan, outermost slice first, ending in its
                 # own story: the project, phase and epic it belongs to (ADR-0092).
                 "slice_path": list(slices.path_of(item.item_id)),
+                "slice_titles": list(slices.titles_of(item.item_id)),
                 # Item branches stack on already-integrated code when
                 # any exists (the worktree manager falls back to HEAD
                 # before the first integrate): every item branching

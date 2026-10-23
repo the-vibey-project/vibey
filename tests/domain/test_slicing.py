@@ -246,3 +246,48 @@ def test_a_deeply_sliced_plan_stays_sound_and_runs_group_by_group() -> None:
             )
             checked += 1
     assert checked > 0
+
+
+def _named(count: int, epic_of: "dict[int, str]") -> tuple[WorkItem, ...]:
+    return tuple(replace(_item(f"i{n:04d}"), epic=epic_of.get(n, "")) for n in range(1, count + 1))
+
+
+def test_consecutive_items_under_one_name_form_one_named_epic() -> None:
+    items = _named(5, {1: "Parsing", 2: "Parsing", 3: "Output", 4: "Output", 5: "Output"})
+    plan = AutoSlicer(max_children=8).slice(items)
+    epics = [n for n in plan.nodes if n.layer is SliceLayer.EPIC]
+    assert [(e.title, len(e.item_ids)) for e in epics] == [("Parsing", 2), ("Output", 3)]
+    assert plan.titles_of("i0003") == ("Output", "do i0003")
+    assert plan.violations([i.item_id for i in items]) == ()
+
+
+def test_a_named_run_over_the_cap_is_split_and_numbered() -> None:
+    items = _named(9, {n: "Core" for n in range(1, 10)})
+    plan = AutoSlicer(max_children=8).slice(items)
+    titles = [n.title for n in plan.nodes if n.layer is SliceLayer.EPIC]
+    assert titles == ["Core (1/2)", "Core (2/2)"]
+
+
+def test_unnamed_items_between_named_ones_form_epics_titled_by_place() -> None:
+    items = _named(4, {1: "A", 4: "A"})
+    plan = AutoSlicer(max_children=8).slice(items)
+    titles = [n.title for n in plan.nodes if n.layer is SliceLayer.EPIC]
+    assert titles == ["A", "Epic 2: do i0002", "A"]
+
+
+def test_named_epics_still_gain_phases_when_there_are_many() -> None:
+    items = _named(30, {n: f"E{n}" for n in range(1, 31)})
+    plan = AutoSlicer(max_children=8).slice(items)
+    assert _layers(plan) == (SliceLayer.PHASE, SliceLayer.EPIC, SliceLayer.STORY)
+    sequenced = AUTO_SLICER.sequence(items, plan)
+    assert (
+        DECOMPOSITION_PLANNER.violations(
+            sequenced, criteria_ids=(), walking_skeleton_item_id="i0001"
+        )
+        == ()
+    )
+
+
+def test_unnamed_plans_title_their_epics_by_their_first_story() -> None:
+    plan = AutoSlicer(max_children=8).slice(_items(9))
+    assert plan.titles_of("i0001") == ("Epic 1: do i0001", "do i0001")
