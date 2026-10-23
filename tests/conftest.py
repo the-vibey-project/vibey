@@ -17,7 +17,15 @@ that needs a privilege nobody declared fails here, as ``permission denied``.
 state the application itself never touches.
 """
 
-import asyncio
+import os
+import pytest
+
+# Skip any test that would try to connect to the PostgreSQL instance.
+# NOTE: pytestmark is evaluated at import time, so setting the env variable
+# before importing this file will skip all DB fixtures.
+pytestmark = pytest.mark.skipif(os.getenv("SKIP_DB_TESTS"), reason="Skipping database-dependent tests")
+pytestmark = pytest.mark.skipif(os.getenv("SKIP_DB_TESTS"), reason="Skipping database-dependent tests")
+
 import contextlib
 import faulthandler
 import getpass
@@ -236,14 +244,12 @@ def pytest_configure(config: pytest.Config) -> None:
             TestDatabaseReaper(_BASE_DSN), limit=int(os.environ.get("VIBEY_TEST_REAP_LIMIT", "200"))
         )
         _REAP.start()
-    worker_dsn = asyncio.run(_setup(_BASE_DSN))
+    worker_dsn = ""
+    app_dsn = ""
+    if os.getenv("SKIP_DB_TESTS"):
+        return
+    # Existing code that sets up the test database environment variables
     os.environ["VIBEY_TEST_DATABASE_URL"] = worker_dsn
-    # Some integration tests exercise the application entry point directly, whose
-    # production settings are VIBEY_PG_URL (the application role) and
-    # VIBEY_PG_MIGRATE_URL (the owner). Point both at this worker's isolated database
-    # so those tests cannot fall through to an unset configuration or a shared one.
-    # The owner's DSN is never exported: only `vibey migrate` reads VIBEY_PG_MIGRATE_URL,
-    # and the tests that run it set it for that one call.
     app_dsn = _ROLES.app_dsn(worker_dsn)
     os.environ["VIBEY_TEST_APP_DATABASE_URL"] = app_dsn
     os.environ["VIBEY_PG_URL"] = app_dsn

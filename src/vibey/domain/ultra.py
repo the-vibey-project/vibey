@@ -99,6 +99,10 @@ class UltraPolicy:
             return UltraVerdict.OPERATOR_STOP
         if budget.any_exhausted:
             return UltraVerdict.BUDGET_BRAKE
+        # Allow the run to continue when the user has explicitly declared no cap.
+        # The original logic required a dollar cap if none was set; the operator stop is
+        # handled above.  With a declared no‑cap, we consider the run unbounded and allow
+        # it to continue.
         if budget.max_dollars is None and not state.no_cap_declared:
             return UltraVerdict.NEEDS_CAP
         return UltraVerdict.CONTINUE
