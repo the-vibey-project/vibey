@@ -2835,7 +2835,7 @@ ships the whole family ([Fig. 32](#fig:release-cadence)).
 \draw[vibeyline] (15.40,0.06) -- (15.40,0.48);
 \node[font=\sffamily\tiny,text=vibeyblue,rotate=55,anchor=south west,inner sep=1pt] at (15.42,0.48) {4.4.0};
 \end{tikzpicture}
-\caption{Every release tag created by the time of revision ec659be1, 27 tags on the repository; a tag is selected by its date, not by whether the revision's history reaches it. The 27 \texttt{vibey} releases run from vibey-v0.1.0 on 2026-08-16 to vibey-v4.4.0 on 2026-10-11; since the packages were absorbed into one tree, one version number ships the whole family, and the packages' earlier tags were never carried into this repository, whose pre-absorption repositories have since been removed.}
+\caption{Every release tag created by the time of revision ec659be1, 27 tags on the repository; a tag is selected by its date, not by whether the revision's history reaches it, except that a tag cut at or after the revision itself is left out: it did not exist when the revision was the tip. The 27 \texttt{vibey} releases run from vibey-v0.1.0 on 2026-08-16 to vibey-v4.4.0 on 2026-10-11; since the packages were absorbed into one tree, one version number ships the whole family, and the packages' earlier tags were never carried into this repository, whose pre-absorption repositories have since been removed.}
 \label{fig:release-cadence}
 \end{figure*}
 ```
