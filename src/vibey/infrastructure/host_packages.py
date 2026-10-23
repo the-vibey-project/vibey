@@ -94,21 +94,30 @@ class HostPackageRunner:
                 return value.strip().strip('"').strip("'")
         return ""
 
+    def _is_like(self, distro: str) -> bool:
+        return self._value("ID") == distro or distro in self._value("ID_LIKE").split()
+
     def host(self) -> HostOs | None:
         if self._platform == "darwin":
             return HostOs.MACOS
-        if self._platform.startswith("linux") and (
-            self._value("ID") == "arch" or "arch" in self._value("ID_LIKE").split()
-        ):
-            return HostOs.ARCH
+        if self._platform.startswith("linux"):
+            if self._is_like("arch"):
+                return HostOs.ARCH
+            if self._is_like("fedora"):
+                return HostOs.FEDORA
         return None
 
     def host_label(self) -> str:
-        if self.host() == HostOs.MACOS:
+        host = self.host()
+        if host == HostOs.MACOS:
             return "macOS"
-        return self._value("PRETTY_NAME") or (
-            "Arch Linux" if self.host() == HostOs.ARCH else self._platform
-        )
+        if pretty := self._value("PRETTY_NAME"):
+            return pretty
+        if host == HostOs.ARCH:
+            return "Arch Linux"
+        if host == HostOs.FEDORA:
+            return "Fedora Linux"
+        return self._platform
 
     @property
     def user(self) -> str:
@@ -126,9 +135,15 @@ class HostPackageRunner:
                 return "pacman is not on PATH; this does not look like a working Arch Linux install"
             if self._effective_uid != 0 and self._executor.which("sudo") is None:
                 return "vibey install needs sudo on Arch Linux: pacman and systemctl run as root"
+        elif host == HostOs.FEDORA:
+            if self._executor.which("dnf") is None:
+                return "dnf is not on PATH; this does not look like a working Fedora install"
+            if self._effective_uid != 0 and self._executor.which("sudo") is None:
+                return "vibey install needs sudo on Fedora: dnf and systemctl run as root"
         else:
             return (
-                f"{self.host_label()} is not a default OS for `vibey install` (Arch Linux, macOS)"
+                f"{self.host_label()} is not a default OS for `vibey install`"
+                " (Arch Linux, Fedora, macOS)"
             )
         return None
 
@@ -146,6 +161,11 @@ class HostPackageRunner:
         if spec.source in (PackageSource.PACMAN, PackageSource.AUR):
             return all(
                 self._executor.run(("pacman", "-Q", name), timeout=30.0).returncode == 0
+                for name in spec.names
+            )
+        if spec.source == PackageSource.DNF:
+            return all(
+                self._executor.run(("rpm", "-q", name), timeout=30.0).returncode == 0
                 for name in spec.names
             )
         flag = "--cask" if spec.source == PackageSource.BREW_CASK else "--formula"
@@ -166,6 +186,11 @@ class HostPackageRunner:
             if argv is None:
                 return StepOutcome(False, False, f"pacman needs root or sudo to install {names}")
             tool = "pacman"
+        elif spec.source == PackageSource.DNF:
+            argv = self.privileged(("dnf", "install", "-y", *spec.names))
+            if argv is None:
+                return StepOutcome(False, False, f"dnf needs root or sudo to install {names}")
+            tool = "dnf"
         elif spec.source == PackageSource.AUR:
             if self._effective_uid == 0:
                 return StepOutcome(

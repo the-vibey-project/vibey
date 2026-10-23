@@ -115,7 +115,7 @@ release attaches, is made from it by `scripts/macos_app_bundle.py` (see
 - **`tests/`: GLib tests over the core.** They include the hub client against a real
   loopback HTTP server, and pairing over real TLS with a certificate made at build time
   (openssl) and pinned. HTTPS needs GIO's TLS backend, glib-networking. The CI job `desktop` builds everything with `-Werror` under ASan
-  and UBSan on Ubuntu, Arch and macOS, and gates the core's coverage with gcovr. On macOS
+  and UBSan on Ubuntu, Arch, Fedora and macOS, and gates the core's coverage with gcovr. On macOS
   it also bundles the app and runs it with Homebrew unreadable.
 
 Every release attaches a Flatpak bundle, an Ubuntu build and a macOS `.dmg`

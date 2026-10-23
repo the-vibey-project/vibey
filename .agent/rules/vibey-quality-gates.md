@@ -161,7 +161,7 @@ below are the Python and deployment gates; the others are `noloss` (the no-loss
 property suite at 10,000 examples), `postgres-compatibility` (the database suite on
 PostgreSQL 14 to 18), `krypton-app`, `vibey-core` (`@vibey/core`), `app` (the krypton
 app, mobile and web), `vscode-extension` (Ubuntu and macOS) and `desktop` (the krypton
-desktop client on Ubuntu, Arch and macOS, where it also bundles, verifies, launches and
+desktop client on Ubuntu, Arch, Fedora and macOS, where it also bundles, verifies, launches and
 images the app):
 
 | Job | What it checks |

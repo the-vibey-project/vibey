@@ -263,7 +263,7 @@ versions = { kernel = "linux", python = "python", postgres = "postgresql", glib 
 
 [minimum_specs.linux.distros.fedora]
 name = "Fedora (current release)"
-support = "named by the operator (2026-10-01); a Fedora COPR channel is in ADR-0019; no CI job yet"
+support = "CI `desktop` job (ci.yml, fedora:latest); RPM spec (clients/desktop/packaging/fedora); `vibey install` (dnf); a Fedora COPR channel is in ADR-0019"
 package_manager = "dnf"
 images = { x86_64 = "fedora:latest", aarch64 = "fedora:latest" }
 unavailable = {}
