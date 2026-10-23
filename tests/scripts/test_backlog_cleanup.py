@@ -218,3 +218,35 @@ def test_an_entry_outranks_the_marker() -> None:
     }
     loop = bc.BacklogCleanup(_ListingGh([_TRACKER]), expectations, cutoff="abc")  # type: ignore[arg-type]
     assert loop.survey()[0]["verdict"] != "SELF-CLOSING"
+
+
+def test_a_just_triaged_issue_is_not_commented_on_again() -> None:
+    """The loop's own first comment must be the last one until something changes.
+
+    An issue with no entry is reported NEEDS-TRIAGE, and `apply` then records a "triaged"
+    entry with no probes. That entry is still awaiting triage, so it must keep the verdict
+    it was recorded with -- it used to evaluate as OPEN, which never matched the stored
+    `last_verdict`, and every issue just triaged was commented on a second time.
+    """
+    gh = FakeGh()
+    expectations: dict[str, object] = {"issues": {}}
+    loop = bc.BacklogCleanup(gh, expectations, cutoff="abc123")  # type: ignore[arg-type]
+
+    first = loop._row(1614, "a new issue", [], "")
+    assert first["verdict"] == "NEEDS-TRIAGE"
+    assert loop.apply([first])["commented"] == 1
+    assert len(gh.posted) == 1
+
+    again = loop._row(1614, "a new issue", [], "")
+    assert again["verdict"] == "NEEDS-TRIAGE"
+    assert loop.apply([again])["unchanged"] == 1
+    assert len(gh.posted) == 1
+
+
+def test_an_entry_with_no_probes_that_was_not_triaged_by_the_loop_stays_open() -> None:
+    loop = bc.BacklogCleanup(
+        FakeGh(),
+        {"issues": {"1204": {"kind": "feature", "probes": []}}},  # type: ignore[arg-type]
+        cutoff="abc123",
+    )
+    assert loop._row(1204, "hybrid multiplexer", [], "")["verdict"] == "OPEN"

@@ -418,7 +418,7 @@
     "1204": {
       "close_when_done": false,
       "kind": "triaged",
-      "last_verdict": "OPEN",
+      "last_verdict": "NEEDS-TRIAGE",
       "next": "add explicit probes",
       "probes": []
     },
@@ -439,7 +439,7 @@
     "1222": {
       "close_when_done": false,
       "kind": "triaged",
-      "last_verdict": "OPEN",
+      "last_verdict": "NEEDS-TRIAGE",
       "next": "define the System 1 model contract, training or serving plan, target hardware, safety boundary, and measurable acceptance criteria before implementation",
       "probes": []
     },
