@@ -109,6 +109,10 @@ describe('HubTransport', () => {
 
   it('refuses what only the host may do, and says where to do it', async () => {
     const hub = hubWith(new FakeHttp());
+    await expect(hub.createProject('x', { repo: '/r' })).rejects.toThrow(/createProject: the hub has no route to start a project .* Run vibey new there/);
+    await expect(hub.startWork('p1')).rejects.toThrow(/startWork: .* vibey retry --start-worker/);
+    await expect(hub.pauseWork('p1')).rejects.toThrow(/pauseWork: .* vibey recover --stop-workers/);
+    await expect(hub.abandonProject('p1', 'r')).rejects.toThrow(/abandonProject: .* vibey abandon/);
     await expect(hub.setBudget(undefined, { dollars: 5 })).rejects.toThrow(/setBudget: no scope can change a cap .* vibey budget set/);
     await expect(hub.clearBudget('p1', 'all')).rejects.toThrow(/clearBudget: .* vibey budget clear/);
     await expect(hub.cost()).rejects.toThrow(/serves no cost report; run vibey cost on the host/);

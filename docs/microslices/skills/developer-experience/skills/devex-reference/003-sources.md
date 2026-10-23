@@ -19,5 +19,13 @@ links: []
 - [Stripe: API versioning](https://stripe.com/blog/api-versioning)
 - [Nordic APIs: time to first call](https://nordicapis.com/why-time-to-first-call-is-a-vital-api-metric/)
 - [Cloudinary llms.txt (example)](https://cloudinary.com/documentation/llms.txt)
+- [VS Code UX guidelines: overview](https://code.visualstudio.com/api/ux-guidelines/overview.md), [webviews](https://code.visualstudio.com/api/ux-guidelines/webviews.md), [notifications](https://code.visualstudio.com/api/ux-guidelines/notifications.md)
+- [Android: widget quality](https://developer.android.com/design/ui/mobile/guides/widgets/widget-quality), [widget design](https://developer.android.com/design/ui/mobile/guides/widgets), [core app quality](https://developer.android.com/docs/quality-guidelines/core-app-quality)
+- [Microsoft: Windows design guidelines overview](https://learn.microsoft.com/en-us/windows/apps/design/guidelines-overview)
+- [MDN: making PWAs installable](https://developer.mozilla.org/en-US/docs/Web/Progressive_web_apps/Guides/Making_PWAs_installable) and [web.dev PWA checklist](https://web.dev/articles/pwa-checklist)
+- NN/g: [mobile-app onboarding](https://www.nngroup.com/articles/mobile-app-onboarding/), [empty states](https://www.nngroup.com/articles/empty-state-interface-design/), [progressive disclosure](https://www.nngroup.com/articles/progressive-disclosure/), [confirmation dialogs](https://www.nngroup.com/articles/confirmation-dialog/)
+- [GitHub: engineering team moved to Codespaces](https://github.blog/engineering/infrastructure/githubs-engineering-team-moved-codespaces/)
+- [Laws of UX: aesthetic-usability effect](https://lawsofux.com/aesthetic-usability-effect/)
+- Also used, cited by title without a link: Security Boulevard coverage of the RedAccess scan of AI-built apps; Dezeen coverage of Material 3 Expressive. Part 2's desktop, iOS and extension details also draw on reference skills loaded in this session (secondary sources).
 
 Studies cited by name without a link (Myers & Stylos, Robillard & DeLine, Fagerholm & Münch, Greiler/Storey/Noda, SPACE, Mark) were recalled from earlier reading in this session and not re-opened for the final doc.

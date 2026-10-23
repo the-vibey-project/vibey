@@ -1,11 +1,11 @@
 ---
 name: devex-reference
-description: "Use when measuring developer experience (perception surveys paired with system data, one North Star per team), running the launch checklist before shipping a developer tool, checking which developer-experience claims are weak or contested (Diataxis, DX Core 4, the 23-minute interruption figure, flaky-test statistics, the METR AI trial, AGENTS.md adoption counts), or finding the primary sources. Triggers on DevEx survey, DORA, SPACE, DX Core 4, developer productivity metrics, METR study, launch checklist, evidence grade. Companion to the other developer-experience skills."
+description: "Use when measuring developer experience (perception surveys paired with system data, one North Star per team), running the launch checklist before shipping a developer tool, checking which developer-experience claims are weak or contested (Diataxis, DX Core 4, the 23-minute interruption figure, flaky-test statistics, the METR AI trial, AGENTS.md adoption counts, the unverified iOS, Material 3 Expressive and RedAccess figures), or finding the primary sources. Triggers on DevEx survey, DORA, SPACE, DX Core 4, developer productivity metrics, METR study, launch checklist, evidence grade. Companion to the other developer-experience skills."
 ---
 
 # Developer Experience: Measurement, Launch Checklist, Weak Evidence, and Sources
 
-> **Part 5 of 5** of the *Developer Experience Blueprint* (plugin `developer-experience`), covering: Measurement and launch checklist; Where the evidence is weak or conflicting; Sources. Sibling skills: `devex-principles-and-feedback-loops`, `devex-cli-and-errors`, `devex-api-sdk-and-docs`, `devex-interfaces-onboarding-and-agents`. A reference into a sibling is written *Section name → `skill`*.
+> **Part 9 of 9** of the *Developer Experience Blueprint* (plugin `developer-experience`), covering: Measurement and launch checklist; Where the evidence is weak or conflicting; Sources. Sibling skills: `devex-principles-and-feedback-loops`, `devex-cli-and-errors`, `devex-api-sdk-and-docs`, `devex-interfaces-onboarding-and-agents`, `devex-surface-placement`, `devex-editor-and-desktop-surfaces`, `devex-mobile-and-web-surfaces`, `devex-non-developers-and-visual-design`. A reference into a sibling is written *Section name → `skill`*.
 >
 > **Currency:** the blueprint is dated Oct 23, 2026; its evidence base and the AI-tooling claims age fastest, so re-check those first.
 >
@@ -47,6 +47,13 @@ The doc is general because no repository was supplied; an audit of your actual c
 - **LLM-enhanced error messages:** ineffective in one study only.
 - **CLI screen-reader finding:** checked from an abstract and a summary, not the full paper.
 - **Agent-friendly CLI patterns and llms.txt:** practitioner evidence only.
+- **Part 2, iOS:** Apple's Human Interface Guidelines could not be retrieved, so all iOS advice is from secondary references and unverified.
+- **Part 2, desktop and Windows:** desktop and mobile specifics come from loaded reference skills (secondary); Microsoft's Windows design page gave only an index.
+- **Part 2, VS Code:** the contribution-points page was blocked, so walkthrough contribution details are unverified; JetBrains, Visual Studio, Xcode and Android Studio were not researched.
+- **Part 2, Material 3 Expressive:** the research figures are Google's own, reported via press; not independently reproduced.
+- **Part 2, RedAccess figure:** a reference stated "about 40% of 5,000"; the article gives about 5,000 of roughly 380,000 apps, so the article's figures are used. Tool makers dispute that public exposure equals breach.
+- **Part 2, NN/g and WebAIM:** NN/g articles were not re-read for sample sizes; the WebAIM 83.9% figure was not opened.
+- **Part 2, the non-developer ladder and feature matrix:** design proposals, not tested findings.
 
 ## Sources
 
@@ -61,5 +68,13 @@ The doc is general because no repository was supplied; an audit of your actual c
 - [Stripe: API versioning](https://stripe.com/blog/api-versioning)
 - [Nordic APIs: time to first call](https://nordicapis.com/why-time-to-first-call-is-a-vital-api-metric/)
 - [Cloudinary llms.txt (example)](https://cloudinary.com/documentation/llms.txt)
+- [VS Code UX guidelines: overview](https://code.visualstudio.com/api/ux-guidelines/overview.md), [webviews](https://code.visualstudio.com/api/ux-guidelines/webviews.md), [notifications](https://code.visualstudio.com/api/ux-guidelines/notifications.md)
+- [Android: widget quality](https://developer.android.com/design/ui/mobile/guides/widgets/widget-quality), [widget design](https://developer.android.com/design/ui/mobile/guides/widgets), [core app quality](https://developer.android.com/docs/quality-guidelines/core-app-quality)
+- [Microsoft: Windows design guidelines overview](https://learn.microsoft.com/en-us/windows/apps/design/guidelines-overview)
+- [MDN: making PWAs installable](https://developer.mozilla.org/en-US/docs/Web/Progressive_web_apps/Guides/Making_PWAs_installable) and [web.dev PWA checklist](https://web.dev/articles/pwa-checklist)
+- NN/g: [mobile-app onboarding](https://www.nngroup.com/articles/mobile-app-onboarding/), [empty states](https://www.nngroup.com/articles/empty-state-interface-design/), [progressive disclosure](https://www.nngroup.com/articles/progressive-disclosure/), [confirmation dialogs](https://www.nngroup.com/articles/confirmation-dialog/)
+- [GitHub: engineering team moved to Codespaces](https://github.blog/engineering/infrastructure/githubs-engineering-team-moved-codespaces/)
+- [Laws of UX: aesthetic-usability effect](https://lawsofux.com/aesthetic-usability-effect/)
+- Also used, cited by title without a link: Security Boulevard coverage of the RedAccess scan of AI-built apps; Dezeen coverage of Material 3 Expressive. Part 2's desktop, iOS and extension details also draw on reference skills loaded in this session (secondary sources).
 
 Studies cited by name without a link (Myers & Stylos, Robillard & DeLine, Fagerholm & Münch, Greiler/Storey/Noda, SPACE, Mark) were recalled from earlier reading in this session and not re-opened for the final doc.

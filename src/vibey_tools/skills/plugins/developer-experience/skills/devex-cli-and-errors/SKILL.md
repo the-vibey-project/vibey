@@ -5,7 +5,7 @@ description: "Use when designing or reviewing a command-line interface or the er
 
 # Developer Experience: Command-Line Interfaces and Error Messages
 
-> **Part 2 of 5** of the *Developer Experience Blueprint* (plugin `developer-experience`), covering: CLI; Error messages. Sibling skills: `devex-principles-and-feedback-loops`, `devex-api-sdk-and-docs`, `devex-interfaces-onboarding-and-agents`, `devex-reference`. A reference into a sibling is written *Section name → `skill`*.
+> **Part 2 of 9** of the *Developer Experience Blueprint* (plugin `developer-experience`), covering: CLI; Error messages. Sibling skills: `devex-principles-and-feedback-loops`, `devex-api-sdk-and-docs`, `devex-interfaces-onboarding-and-agents`, `devex-surface-placement`, `devex-editor-and-desktop-surfaces`, `devex-mobile-and-web-surfaces`, `devex-non-developers-and-visual-design`, `devex-reference`. A reference into a sibling is written *Section name → `skill`*.
 >
 > **Currency:** the blueprint is dated Oct 23, 2026; its evidence base and the AI-tooling claims age fastest, so re-check those first.
 >

@@ -40,7 +40,9 @@ export class VibeyChat implements VibeyChatInterface {
       stream.markdown('\n\n');
     };
     // VS Code hands over `@krypton /budget add x` as the command `budget` and the prompt `add x`.
-    const typed = request.command === undefined ? `/ask ${request.prompt}` : `/${request.command} ${request.prompt}`;
+    // A bare number is a reply to the question a project is waiting on, so a conversation can be "1".
+    const bareNumber = request.command === undefined && /^\d+$/.test(request.prompt.trim());
+    const typed = request.command === undefined ? (bareNumber ? `/reply ${request.prompt.trim()}` : `/ask ${request.prompt}`) : `/${request.command} ${request.prompt}`;
     const parsed = this.slash.parse(typed);
     if (parsed.kind !== 'command') {
       say(parsed.kind === 'unknown' ? parsed.reply : this.slash.help());
