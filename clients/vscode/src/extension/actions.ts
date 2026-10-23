@@ -16,7 +16,7 @@ import type { EffortSetting, LoopName } from '@vibey/core';
 import type { Lane } from '@vibey/core';
 import type { RunRecord, TaskRunInterface } from '@vibey/core';
 import type { GateAnswer, VibeyBudget, VibeyGate, VibeyProject } from '@vibey/core';
-import { ModelPuller } from '@vibey/core';
+import { ModelPuller, ProjectDriver } from '@vibey/core';
 import type { VibeyController } from './controller';
 import type { CommandActionsInterface, Invocation } from './interfaces/actions-interface';
 import type { TreeElement } from './interfaces/trees-interface';
@@ -60,6 +60,12 @@ export class CommandActions implements CommandActionsInterface {
       'vibey.startQueue': (i) => this.startQueue(i),
       'vibey.stopAll': (i) => this.stopAll(i),
       'vibey.refresh': (i) => this.refresh(i),
+      'vibey.newProject': (i) => this.newProject(i),
+      'vibey.nextGate': (i) => this.nextGate(i),
+      'vibey.replyGate': (i) => this.replyGate(i),
+      'vibey.pauseProject': (i) => this.pauseProject(i),
+      'vibey.resumeProject': (i) => this.resumeProject(i),
+      'vibey.abandonProject': (i) => this.abandonProject(i),
       'vibey.showProjects': () => this.focus('vibey.projects'),
       'vibey.showStatus': (i) => this.showStatus(i),
       'vibey.showGates': () => this.focus('vibey.gates'),
@@ -752,6 +758,169 @@ export class CommandActions implements CommandActionsInterface {
     output.appendLine('');
     output.show(true);
     invocation.say(this.workflowsLine.summary(argv, result));
+  }
+
+  // --- Driving a project: start it, be asked, reply, pause, resume, unwind ---------------
+
+  private driver(): ProjectDriver {
+    return new ProjectDriver(this.controller.services.answers);
+  }
+
+  /** The project a menu was run on, or the one picked: what follows a slash command here is not a project id. */
+  private async projectFor(invocation: Invocation, withArgs: boolean): Promise<VibeyProject | undefined> {
+    if (invocation.element?.kind === 'project') {
+      return invocation.element.project;
+    }
+    const project = await this.pickProject(withArgs ? invocation : { ...invocation, args: undefined });
+    if (project === undefined) {
+      invocation.say('No project to act on. Start one with /new.');
+    }
+    return project;
+  }
+
+  private async newProject(invocation: Invocation): Promise<void> {
+    const vibey = this.vibey(invocation);
+    if (vibey === undefined) {
+      return;
+    }
+    const folder = this.controller.folder();
+    if (folder === undefined) {
+      invocation.say('Open the folder you want built first: a project works in a folder.');
+      return;
+    }
+    let args = invocation.args?.trim() ?? '';
+    if (args === '') {
+      const intake = await vscode.window.showInputBox({
+        title: 'What should vibey build?',
+        prompt: 'Describe it in your own words. It will ask you anything else it needs to know, one question at a time.',
+        placeHolder: 'a web page that greets the visitor by name',
+        ignoreFocusOut: true,
+      });
+      if (intake === undefined) {
+        return;
+      }
+      args = `${path.basename(folder)} ${intake}`;
+    }
+    const driver = this.driver();
+    const request = driver.parseNew(args, path.basename(folder));
+    if (request === undefined) {
+      invocation.say('A project name has no spaces and does not start with a dash. For example: /new greeter a web page that greets the visitor by name');
+      return;
+    }
+    let created;
+    try {
+      created = await vibey.createProject(request.name, { repo: folder, intake: request.intake });
+    } catch (error) {
+      invocation.say(driver.newProjectRefusal((error as Error).message) ?? (error as Error).message);
+      return;
+    }
+    let worker = '';
+    try {
+      worker = await vibey.startWork(created.project_id);
+    } catch (error) {
+      worker = `The project exists, but its worker did not start (${(error as Error).message}). /resume tries again.`;
+    }
+    this.controller.changed();
+    invocation.say(driver.describeStarted(created, worker).join('\n'));
+    await this.focus('vibey.projects');
+  }
+
+  private async nextGate(invocation: Invocation): Promise<void> {
+    const vibey = this.vibey(invocation);
+    if (vibey === undefined) {
+      return;
+    }
+    const driver = this.driver();
+    const gate = driver.oldestGate(await vibey.gates(), invocation.element?.kind === 'project' ? invocation.element.project.project_id : undefined);
+    invocation.say(gate === undefined ? 'Nothing is waiting for you. A project asks here when it needs a decision.' : driver.describeGate(gate));
+  }
+
+  private async replyGate(invocation: Invocation): Promise<void> {
+    const vibey = this.vibey(invocation);
+    if (vibey === undefined) {
+      return;
+    }
+    const driver = this.driver();
+    const gate = driver.oldestGate(await vibey.gates());
+    if (gate === undefined) {
+      invocation.say('Nothing is waiting for you, so there is nothing to reply to.');
+      return;
+    }
+    const reply = driver.reply(gate, invocation.args ?? '');
+    if (reply.kind !== 'answer') {
+      invocation.say(reply.message);
+      return;
+    }
+    await vibey.answer(gate.gate_id, reply.answer);
+    this.controller.changed();
+    const next = driver.oldestGate(await vibey.gates(), gate.project_id);
+    invocation.say(
+      `${reply.summary}: answered. ${next === undefined ? 'It is working on it; /next shows the next question when one comes.' : `\n\n${driver.describeGate(next)}`}`,
+    );
+  }
+
+  private async pauseProject(invocation: Invocation): Promise<void> {
+    const vibey = this.vibey(invocation);
+    const project = vibey === undefined ? undefined : await this.projectFor(invocation, true);
+    if (vibey === undefined || project === undefined) {
+      return;
+    }
+    const sure = await vscode.window.showWarningMessage(
+      `Pause "${project.name}"?`,
+      { modal: true, detail: 'This stops every vibey worker running on this computer, for every project. Nothing is lost: their jobs go back to the queue, and Resume starts a project again.' },
+      'Pause',
+    );
+    if (sure !== 'Pause') {
+      invocation.say('Nothing was changed.');
+      return;
+    }
+    const said = await vibey.pauseWork(project.project_id);
+    this.controller.changed();
+    invocation.say(`Paused. ${said}\n/resume starts "${project.name}" again.`);
+  }
+
+  private async resumeProject(invocation: Invocation): Promise<void> {
+    const vibey = this.vibey(invocation);
+    const project = vibey === undefined ? undefined : await this.projectFor(invocation, true);
+    if (vibey === undefined || project === undefined) {
+      return;
+    }
+    const said = await vibey.startWork(project.project_id);
+    this.controller.changed();
+    invocation.say(`Resumed "${project.name}". ${said}`.trim());
+  }
+
+  private async abandonProject(invocation: Invocation): Promise<void> {
+    const vibey = this.vibey(invocation);
+    const project = vibey === undefined ? undefined : await this.projectFor(invocation, false);
+    if (vibey === undefined || project === undefined) {
+      return;
+    }
+    const why =
+      invocation.args?.trim() ||
+      (await vscode.window.showInputBox({
+        title: `Why unwind "${project.name}"?`,
+        prompt: 'In a few words. It is recorded on the project\'s ledger.',
+        ignoreFocusOut: true,
+        validateInput: (value) => (value.trim() === '' ? 'Say why, in a few words.' : undefined),
+      }));
+    if (!why?.trim()) {
+      return;
+    }
+    const driver = this.driver();
+    const confirmation = driver.abandonConfirmation(await vibey.abandonProject(project.project_id, why.trim(), { dryRun: true }));
+    if (confirmation.nothingToDo) {
+      invocation.say(confirmation.title);
+      return;
+    }
+    const sure = await vscode.window.showWarningMessage(confirmation.title, { modal: true, detail: confirmation.detail }, 'Unwind project');
+    if (sure !== 'Unwind project') {
+      invocation.say('Nothing was changed.');
+      return;
+    }
+    const done = await vibey.abandonProject(project.project_id, why.trim());
+    this.controller.changed();
+    invocation.say(`Unwound "${done.name}": ${done.cancelled_jobs} jobs cancelled, ${done.withdrawn_gates} questions withdrawn. The ledger records why: ${why.trim()}`);
   }
 
   private async showStatus(invocation: Invocation): Promise<void> {

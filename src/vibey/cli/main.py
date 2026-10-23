@@ -333,6 +333,13 @@ def new_project(
         ),
     ] = None,
     ignore_sabbath: IgnoreSabbath = False,
+    as_json: Annotated[
+        bool,
+        typer.Option(
+            "--json",
+            help="Print JSON instead: project_id, name and outcome, one document on stdout.",
+        ),
+    ] = False,
 ) -> None:
     """Create a project and enqueue its first DESIGN interview (or, with a spec, skip DESIGN)."""
     SABBATH.decline_if_resting("new", ignore=ignore_sabbath)
@@ -420,6 +427,11 @@ def new_project(
 
     with guard():
         project_id, outcome = asyncio.run(create())
+    if as_json:
+        typer.echo(
+            json.dumps({"project_id": project_id, "name": name, "outcome": outcome}, sort_keys=True)
+        )
+        return
     typer.echo(f"project {project_id}\n{outcome}")
 
 
