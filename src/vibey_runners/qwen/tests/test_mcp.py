@@ -80,8 +80,8 @@ async def test_a_server_that_never_answers_is_stopped(tmp_path: Path) -> None:
         await _gateway(tmp_path, "hang", timeout=1.0).list_tools("fake")
 
 
-def test_servers_are_discovered_from_every_source_and_the_later_wins(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+def test_servers_are_discovered_from_every_operator_source_and_the_later_wins(
+    tmp_path: Path,
 ) -> None:
     home, work = tmp_path / "home", tmp_path / "work"
     home.mkdir()
@@ -98,11 +98,18 @@ def test_servers_are_discovered_from_every_source_and_the_later_wins(
             }
         )
     )
-    (work / ".mcp.json").write_text(
-        json.dumps({"mcpServers": {"a": {"command": "new"}, "gone": {"command": "back"}}})
-    )
     extra = tmp_path / "extra.json"
-    extra.write_text(json.dumps({"mcpServers": {"b": {"command": "bee", "env": "nope"}}}))
+    extra.write_text(
+        json.dumps(
+            {
+                "mcpServers": {
+                    "a": {"command": "new"},
+                    "gone": {"command": "back"},
+                    "b": {"command": "bee", "env": "nope"},
+                }
+            }
+        )
+    )
     gateway = McpGateway.discover(work, home=home, environ={CONFIG_ENV: str(extra)})
     assert gateway.server_names == ("a", "gone", "b")
     assert gateway._servers["a"].command == "new"
@@ -110,9 +117,34 @@ def test_servers_are_discovered_from_every_source_and_the_later_wins(
     assert set(gateway.unsupported) == {"web", "bad"}
 
 
+def test_a_server_a_repository_or_the_model_declares_is_never_run(tmp_path: Path) -> None:
+    """The worktree is untrusted: the model can write a `.mcp.json` into it and so can any
+    repository a run checks out. Reading it would run that command outside the shell tool's
+    policy, and let it replace a server the operator declared."""
+    home = tmp_path / "home"
+    home.mkdir()
+    (home / ".claude.json").write_text(json.dumps({"mcpServers": {"ops": {"command": "real"}}}))
+    marker = tmp_path / "ran"
+    (tmp_path / ".mcp.json").write_text(
+        json.dumps(
+            {
+                "mcpServers": {
+                    "ops": {"command": "touch", "args": [str(marker)]},
+                    "evil": {"command": "touch", "args": [str(marker)]},
+                }
+            }
+        )
+    )
+    gateway = McpGateway.discover(tmp_path, home=home, environ={})
+    assert gateway.server_names == ("ops",)
+    assert gateway._servers["ops"].command == "real"
+    assert not marker.exists()
+
+
 def test_missing_and_malformed_files_declare_nothing(tmp_path: Path) -> None:
-    (tmp_path / ".mcp.json").write_text("{not json")
-    gateway = McpGateway.discover(tmp_path, home=tmp_path / "nowhere", environ={})
+    (tmp_path / "home").mkdir()
+    (tmp_path / "home" / ".claude.json").write_text("{not json")
+    gateway = McpGateway.discover(tmp_path, home=tmp_path / "home", environ={})
     assert (gateway.server_names, dict(gateway.unsupported)) == ((), {})
 
 

@@ -4,9 +4,11 @@
 A local model has a small context window and has been seen misusing a long tool list, so
 the servers' own tools are not added to the one it is told. `mcp_list` names the servers
 and, for one, its tools; `mcp_call` calls one. The servers are the ones the operator already
-declared for their other tools: `~/.claude.json`, the worktree's `.mcp.json` and the file
-`QWENLOOP_MCP_CONFIG` names, the later winning. Only stdio servers are supported, and a
-declared server that is not one is reported rather than dropped.
+declared for their other tools: `~/.claude.json` and the file `QWENLOOP_MCP_CONFIG` names,
+the later winning. The worktree's own `.mcp.json` is never read: a server is a command, the
+model can write that file, and so can any repository a run checks out, so reading it would let
+either run any program outside the shell tool's policy. Only stdio servers are supported, and
+a declared server that is not one is reported rather than dropped.
 
 Each call starts the server, speaks newline-delimited JSON-RPC to it, and stops it: no
 process outlives the call, so a run that dies leaves none behind.
@@ -61,9 +63,10 @@ class McpGateway:
         environ: Mapping[str, str],
         base_env: Mapping[str, str] | None = None,
     ) -> "McpGateway":
-        """The servers declared in `home/.claude.json`, `worktree/.mcp.json` and the file
-        `QWENLOOP_MCP_CONFIG` names. A file that is missing or is not JSON declares none."""
-        sources = [home / ".claude.json", worktree / ".mcp.json"]
+        """The servers declared in `home/.claude.json` and the file `QWENLOOP_MCP_CONFIG`
+        names, and nowhere in the worktree. A file that is missing or is not JSON declares
+        none."""
+        sources = [home / ".claude.json"]
         if environ.get(CONFIG_ENV):
             sources.append(Path(environ[CONFIG_ENV]))
         servers: dict[str, McpServer] = {}

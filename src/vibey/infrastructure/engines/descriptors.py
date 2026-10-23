@@ -331,9 +331,10 @@ QWENLOOP = EngineDescriptor(
             "qwenloop domain/model.py)",
             "plugins": _SKILLS_CONTEXT,
             "mcp": "`mcp_list` and `mcp_call` are among its model-facing tools and reach the stdio "
-            "servers declared in ~/.claude.json, the worktree's .mcp.json and "
-            "QWENLOOP_MCP_CONFIG, two gateway tools rather than every server's tools so a small "
-            "context is not flooded (qwenloop infrastructure/mcp.py, infrastructure/tools.py)",
+            "servers the operator declared in ~/.claude.json and QWENLOOP_MCP_CONFIG, never the "
+            "worktree's, which the model and a checked-out repository can write; two gateway "
+            "tools rather than every server's tools so a small context is not flooded (qwenloop "
+            "infrastructure/mcp.py, infrastructure/tools.py)",
             "skills": "its `skill` and `plugin` commands only echo (qwenloop cli/app.py); vibey's context "
             "packets reach it as plan text (see `plugins`), not as skills it loads",
             "web_search": "`web_search` and `web_fetch` are among its model-facing tools and "

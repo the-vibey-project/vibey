@@ -122,7 +122,7 @@
               "paste_text": "the plan is text, and is the first message it sends",
               "paste_images": "every message it sends is text (`ChatMessage.content: str`, qwenloop domain/model.py)",
               "plugins": "when the project sets skills_context.mode = inject, vibey appends the vibey-skills context packet to the plan's text before the run starts (vibey application/build_implement_handler.py), whichever engine runs it",
-              "mcp": "`mcp_list` and `mcp_call` are among its model-facing tools and reach the stdio servers declared in ~/.claude.json, the worktree's .mcp.json and QWENLOOP_MCP_CONFIG, two gateway tools rather than every server's tools so a small context is not flooded (qwenloop infrastructure/mcp.py, infrastructure/tools.py)",
+              "mcp": "`mcp_list` and `mcp_call` are among its model-facing tools and reach the stdio servers the operator declared in ~/.claude.json and QWENLOOP_MCP_CONFIG, never the worktree's, which the model and a checked-out repository can write; two gateway tools rather than every server's tools so a small context is not flooded (qwenloop infrastructure/mcp.py, infrastructure/tools.py)",
               "skills": "its `skill` and `plugin` commands only echo (qwenloop cli/app.py); vibey's context packets reach it as plan text (see `plugins`), not as skills it loads",
               "web_search": "`web_search` and `web_fetch` are among its model-facing tools and run vibey's own `vibey search` and `vibey fetch` (qwenloop domain/model.py `CODING_TOOL_NAMES`; infrastructure/tools.py)"
             }
@@ -257,7 +257,7 @@
               "paste_text": "the plan is text, and is the first message it sends",
               "paste_images": "every message it sends is text (`ChatMessage.content: str`, qwenloop domain/model.py)",
               "plugins": "when the project sets skills_context.mode = inject, vibey appends the vibey-skills context packet to the plan's text before the run starts (vibey application/build_implement_handler.py), whichever engine runs it",
-              "mcp": "`mcp_list` and `mcp_call` are among its model-facing tools and reach the stdio servers declared in ~/.claude.json, the worktree's .mcp.json and QWENLOOP_MCP_CONFIG, two gateway tools rather than every server's tools so a small context is not flooded (qwenloop infrastructure/mcp.py, infrastructure/tools.py)",
+              "mcp": "`mcp_list` and `mcp_call` are among its model-facing tools and reach the stdio servers the operator declared in ~/.claude.json and QWENLOOP_MCP_CONFIG, never the worktree's, which the model and a checked-out repository can write; two gateway tools rather than every server's tools so a small context is not flooded (qwenloop infrastructure/mcp.py, infrastructure/tools.py)",
               "skills": "its `skill` and `plugin` commands only echo (qwenloop cli/app.py); vibey's context packets reach it as plan text (see `plugins`), not as skills it loads",
               "web_search": "`web_search` and `web_fetch` are among its model-facing tools and run vibey's own `vibey search` and `vibey fetch` (qwenloop domain/model.py `CODING_TOOL_NAMES`; infrastructure/tools.py)"
             }

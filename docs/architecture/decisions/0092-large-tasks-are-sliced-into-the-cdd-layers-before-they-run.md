@@ -71,8 +71,9 @@ graph (`domain/slicing.py`), so validation, the queue and idempotency are unchan
   tool or cost follows from it.
 - **The local runner reaches MCP** through two gateway tools, `mcp_list` and `mcp_call`, not
   through every server's own tools: its model has a 32k context and has been seen misusing a long
-  tool list. It reads the stdio servers declared in `~/.claude.json`, the worktree's `.mcp.json` and
-  `QWENLOOP_MCP_CONFIG`, starts one per call and stops it, and marks every answer untrusted.
+  tool list. It reads the stdio servers the operator declared in `~/.claude.json` and
+  `QWENLOOP_MCP_CONFIG` and **never the worktree's `.mcp.json`**: a server is a command, and the
+  model and any checked-out repository can write that file (a security review caught this). It starts one per call and stops it, and marks every answer untrusted.
   Servers that are not stdio are reported, not dropped. It does not load skills or plugins.
 - **codexloop MCP** is shown: its argv suppresses nothing of Codex's own configuration and its
   doctor checks the servers that configuration declares.
