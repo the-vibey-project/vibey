@@ -29,6 +29,7 @@ from typing import Any, TextIO, cast
 
 from vibey_gh.config import GhConfig, load_config
 from vibey_gh.interfaces.pr_af_interface import PrAfClientInterface, PrAfVerdictInterface
+from vibey_gh.pr_af_local import PrAfLocalModel
 
 __all__ = ["PrAfClient", "PrAfCommand", "PrAfVerdict"]
 
@@ -353,7 +354,7 @@ class PrAfCommand:
                     "findings": "",
                     "event": "",
                     "reason": "no pull request URL was supplied",
-                    "model": cfg.model,
+                    "model": self._model(venue),
                     "venue": venue,
                 }
             )
@@ -377,6 +378,13 @@ class PrAfCommand:
         )
         return self._finish(verdict, venue)
 
+    def _model(self, venue: str) -> str:
+        """The model that reviewed on this venue: the local one only on a local host."""
+        cfg = self._cfg.pr_automation.pr_af
+        if venue == "host" and cfg.host_provider == "local":
+            return PrAfLocalModel(self._cfg).model
+        return cfg.model
+
     def _pr_url(self) -> str:
         explicit = self._env.get("PR_URL", "").strip()
         if explicit:
@@ -389,14 +397,13 @@ class PrAfCommand:
         return ""
 
     def _finish(self, verdict: PrAfVerdictInterface, venue: str) -> int:
-        cfg = self._cfg.pr_automation.pr_af
         self._write_outputs(
             {
                 "passed": "" if verdict.passed is None else ("true" if verdict.passed else "false"),
                 "findings": str(verdict.findings),
                 "event": verdict.event,
                 "reason": verdict.reason,
-                "model": cfg.model,
+                "model": self._model(venue),
                 "venue": venue,
                 "cost_usd": f"{verdict.cost_usd:.4f}",
                 "duration_seconds": f"{verdict.duration_seconds:.1f}",
@@ -437,7 +444,7 @@ class PrAfCommand:
             "### pr-af review",
             "",
             f"- Venue: `{venue}`",
-            f"- Model: `{self._cfg.pr_automation.pr_af.model}`",
+            f"- Model: `{self._model(venue)}`",
             f"- Outcome: **{outcome}**",
             f"- Review event: `{verdict.event or 'none'}`",
             f"- Reason: {verdict.reason}",

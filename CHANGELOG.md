@@ -15,6 +15,47 @@ published as a book — [PDF](https://the-vibey-project.github.io/vibey/main/boo
 
 ## [Unreleased]
 
+## [4.5.0] (2026-10-22)
+
+### Features
+
+* **AI voice in reasoning:** every model prompt now states that the singular self-reference
+  rule governs the model's hidden thinking and reasoning channel as much as its final
+  answer, so self-talk cannot use `we` for the model alone. ADR-0089 and proposed
+  sub-doctrine 12.m carry the distinction.
+* **AI voice:** every model prompt now requires singular `I` for AI self-reference and
+  second-person `you` for the operator; inclusive `we` is reserved for direct speech that
+  genuinely means both. ADR-0089 and proposed sub-doctrine 12.m make the distinction durable.
+* **pr-af as the declared default reviewer:** Agent-Field `pr-af` reviews every pull
+  request's exact head from a GitHub-hosted runner by default, with the operator's own
+  runner as an opt-in venue. Its own merge gate is authoritative while it has a verdict; a
+  missing secret, an unreachable control plane or a spent budget leaves no verdict, so the
+  sovereign/paid lane decides instead. ADR-0090.
+* **pr-af on a local model, balanced with OpenRouter:** the venue now chooses pr-af's
+  model. `[pr_automation.pr_af] host_provider = "local"` has the operator's own runner
+  review on the model the sovereign lane already serves (free) while its heartbeat is
+  fresh, and the hosted runner keeps the inexpensive OpenRouter model otherwise.
+  `hosted_enabled = false` drops the paid venue, so a repository can review on its own
+  hardware and never hold an OpenRouter key. The local path is a compose override layered on
+  the pinned checkout, and it blanks the router key inside the container. A local model may
+  block the gate but does not pass it alone (`local_verdict_passes`, false by default).
+  Off by default and not enabled in this repository: a one-file bump took over 45 minutes on
+  `gpt-oss:20b`. ADR-0090.
+
+### Bug Fixes
+
+* **`vibey-gh advisory-check` can report an advisory-service outage as a warning:** a
+  network timeout or 5xx from the npm advisory endpoint now says which service did not answer
+  instead of `npm audit failed:` with no reason. The gate still fails closed by default; a
+  repository may set `[advisories] on_unavailable = "warn"` to print a `::warning::` naming
+  the workspace and continue unaudited, and this repository does. A real advisory, a
+  malformed report or a missing lockfile still fails.
+* **The claudeloop stream viewer no longer crashes when its thinking indicator ticks during
+  teardown:** the 0.5-second thinking tick queried `#thinking-bar` with no guard, so a tick that
+  landed while the screen was being replaced or closed raised `NoMatches`, which showed up as an
+  intermittent `test_prev_turn_replay` failure on the release commit. It now waits until the bar
+  exists, like the live and replay ticks, and retries on the next interval.
+
 ## [4.4.0] (2026-10-11)
 
 ### Features
