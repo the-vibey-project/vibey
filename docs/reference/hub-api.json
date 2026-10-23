@@ -102,6 +102,50 @@
         "title": "OfferBody",
         "type": "object"
       },
+      "ProjectAbandonBody": {
+        "additionalProperties": false,
+        "description": "The body of `POST /api/v1/projects/{project_id}/abandon`.",
+        "properties": {
+          "dry_run": {
+            "default": false,
+            "description": "List what would be cancelled; write nothing.",
+            "title": "Dry Run",
+            "type": "boolean"
+          },
+          "reason": {
+            "description": "Why; recorded on the project's ledger with the move.",
+            "title": "Reason",
+            "type": "string"
+          }
+        },
+        "required": [
+          "reason"
+        ],
+        "title": "ProjectAbandonBody",
+        "type": "object"
+      },
+      "ProjectStartBody": {
+        "additionalProperties": false,
+        "description": "The body of `POST /api/v1/projects`: a name and what to build, and never a path.",
+        "properties": {
+          "intake": {
+            "default": "",
+            "description": "What the person wants built, in their own words.",
+            "title": "Intake",
+            "type": "string"
+          },
+          "name": {
+            "description": "The project's name; it becomes a folder name on the host.",
+            "title": "Name",
+            "type": "string"
+          }
+        },
+        "required": [
+          "name"
+        ],
+        "title": "ProjectStartBody",
+        "type": "object"
+      },
       "ValidationError": {
         "properties": {
           "ctx": {
@@ -844,6 +888,139 @@
         "tags": [
           "projects"
         ]
+      },
+      "post": {
+        "operationId": "create_project_api_v1_projects_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ProjectStartBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "description": "The request proves no principal."
+          },
+          "403": {
+            "description": "The principal's scopes do not permit this."
+          },
+          "409": {
+            "description": "A folder of that name exists, or a checkout is held."
+          },
+          "411": {
+            "description": "A body was sent without a Content-Length."
+          },
+          "413": {
+            "description": "The body is larger than the hub reads."
+          },
+          "421": {
+            "description": "The Host header is not one this hub answers."
+          },
+          "422": {
+            "description": "The name or the intake breaks the rules."
+          },
+          "429": {
+            "description": "Too many requests."
+          },
+          "503": {
+            "description": "The host allows no projects from a device, or is resting."
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Start a project from a name and what to build; the host chooses its folder.",
+        "tags": [
+          "projects"
+        ]
+      }
+    },
+    "/api/v1/projects/{project_id}/abandon": {
+      "post": {
+        "operationId": "abandon_project_api_v1_projects__project_id__abandon_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "project_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Project Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ProjectAbandonBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "description": "The request proves no principal."
+          },
+          "403": {
+            "description": "The principal's scopes do not permit this."
+          },
+          "411": {
+            "description": "A body was sent without a Content-Length."
+          },
+          "413": {
+            "description": "The body is larger than the hub reads."
+          },
+          "421": {
+            "description": "The Host header is not one this hub answers."
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          },
+          "429": {
+            "description": "Too many requests."
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Unwind a project for good, or with dry_run say what it would cancel.",
+        "tags": [
+          "projects"
+        ]
       }
     },
     "/api/v1/projects/{project_id}/budget": {
@@ -1321,6 +1498,134 @@
           }
         ],
         "summary": "One project's phase, queue depth and engine circuits.",
+        "tags": [
+          "projects"
+        ]
+      }
+    },
+    "/api/v1/projects/{project_id}/work/pause": {
+      "post": {
+        "operationId": "pause_work_api_v1_projects__project_id__work_pause_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "project_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Project Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "description": "The request proves no principal."
+          },
+          "403": {
+            "description": "The principal's scopes do not permit this."
+          },
+          "411": {
+            "description": "A body was sent without a Content-Length."
+          },
+          "413": {
+            "description": "The body is larger than the hub reads."
+          },
+          "421": {
+            "description": "The Host header is not one this hub answers."
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          },
+          "429": {
+            "description": "Too many requests."
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Stop the project's own workers and no one else's.",
+        "tags": [
+          "projects"
+        ]
+      }
+    },
+    "/api/v1/projects/{project_id}/work/start": {
+      "post": {
+        "operationId": "start_work_api_v1_projects__project_id__work_start_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "project_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Project Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "description": "The request proves no principal."
+          },
+          "403": {
+            "description": "The principal's scopes do not permit this."
+          },
+          "411": {
+            "description": "A body was sent without a Content-Length."
+          },
+          "413": {
+            "description": "The body is larger than the hub reads."
+          },
+          "421": {
+            "description": "The Host header is not one this hub answers."
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          },
+          "429": {
+            "description": "Too many requests."
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Start, or start again, the project's own worker.",
         "tags": [
           "projects"
         ]

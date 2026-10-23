@@ -792,6 +792,7 @@ mean "not declared".
 | `names` | `[]` | Extra names a request may carry in `Host` when the LAN is declared, e.g. `"studio.local"`. The computer's own host name, its `.local` name and its addresses are always admitted then. |
 | `state_dir` | the platform state directory + `/hub` | Where the host token (`token`, 0600), the key workflows request ids are bound to their starters under (`run.key`, 0600; ADR-0085) and the runtime record (`serving.json`) live. |
 | `lane_roots` | `[]` (the directory `vibey serve` runs in) | Where `/api/v1/lanes` looks for lanes: each root and every directory directly inside it. |
+| `projects_root` | `""` (nowhere) | The one folder a paired device holding `run` may start projects in: each project's folder is `<projects_root>/<name>`, made by the host (ADR-0091). Absolute, or starting with `~`. With none declared a device can pause, resume and unwind a project but cannot start one, and is told so. A device never names a path. |
 
 A bump from the hub is requested as the queue source `vibey-hub`; it lands only when
 [`[queue.priority]`](#queuepriority) `sources` names it.

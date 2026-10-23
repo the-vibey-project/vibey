@@ -62,6 +62,10 @@ from vibey.domain.errors import (
     GateAlreadyAnswered,
     InvalidActorLabel,
     InvalidAnswer,
+    LifecycleConflict,
+    LifecycleFailed,
+    LifecycleInvalid,
+    LifecycleUnavailable,
     PriorityRefused,
     ReorderRefused,
     UnknownGate,
@@ -139,6 +143,10 @@ ERROR_STATUS: Final[tuple[tuple[type[VibeyError], int], ...]] = (
     (InvalidLedgerQuery, 422),
     (RemoteCommandRefused, 422),
     (GhWorkflowsError, 502),
+    (LifecycleInvalid, 422),
+    (LifecycleConflict, 409),
+    (LifecycleUnavailable, 503),
+    (LifecycleFailed, 502),
 )
 """How each refusal the service raises reads over HTTP. The first match wins, so a
 subclass comes before its base: `PriorityRefused` (the host's queue grant does not admit
@@ -170,6 +178,24 @@ class GateAnswerBody(BaseModel):
         default=None,
         description="Names this request so a retry of the same answer is a no-op.",
     )
+
+
+class ProjectStartBody(BaseModel):
+    """The body of `POST /api/v1/projects`: a name and what to build, and never a path."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    name: str = Field(description="The project's name; it becomes a folder name on the host.")
+    intake: str = Field(default="", description="What the person wants built, in their own words.")
+
+
+class ProjectAbandonBody(BaseModel):
+    """The body of `POST /api/v1/projects/{project_id}/abandon`."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    reason: str = Field(description="Why; recorded on the project's ledger with the move.")
+    dry_run: bool = Field(default=False, description="List what would be cancelled; write nothing.")
 
 
 class OfferBody(BaseModel):
@@ -361,6 +387,54 @@ class HubAppFactory:
         )
         async def queue(caller: who, project_id: UUID) -> JSONResponse:
             return JSONResponse(await service.queue(caller, project_id))
+
+        @app.post(
+            f"{v1}/projects",
+            tags=["projects"],
+            summary="Start a project from a name and what to build; the host chooses its folder.",
+            status_code=201,
+            responses={
+                **REFUSED,
+                409: {"description": "A folder of that name exists, or a checkout is held."},
+                422: {"description": "The name or the intake breaks the rules."},
+                503: {"description": "The host allows no projects from a device, or is resting."},
+            },
+        )
+        async def create_project(caller: who, body: ProjectStartBody) -> JSONResponse:
+            return JSONResponse(
+                await service.create_project(caller, body.name, body.intake), status_code=201
+            )
+
+        @app.post(
+            f"{v1}/projects/{{project_id}}/work/start",
+            tags=["projects"],
+            summary="Start, or start again, the project's own worker.",
+            responses=REFUSED,
+        )
+        async def start_work(caller: who, project_id: UUID) -> JSONResponse:
+            return JSONResponse(await service.start_work(caller, project_id))
+
+        @app.post(
+            f"{v1}/projects/{{project_id}}/work/pause",
+            tags=["projects"],
+            summary="Stop the project's own workers and no one else's.",
+            responses=REFUSED,
+        )
+        async def pause_work(caller: who, project_id: UUID) -> JSONResponse:
+            return JSONResponse(await service.pause_work(caller, project_id))
+
+        @app.post(
+            f"{v1}/projects/{{project_id}}/abandon",
+            tags=["projects"],
+            summary="Unwind a project for good, or with dry_run say what it would cancel.",
+            responses=REFUSED,
+        )
+        async def abandon_project(
+            caller: who, project_id: UUID, body: ProjectAbandonBody
+        ) -> JSONResponse:
+            return JSONResponse(
+                await service.abandon_project(caller, project_id, body.reason, dry_run=body.dry_run)
+            )
 
         @app.post(
             f"{v1}/projects/{{project_id}}/queue/{{job_id}}/bump",
