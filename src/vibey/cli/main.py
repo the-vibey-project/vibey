@@ -49,6 +49,7 @@ from vibey.cli.errors import EXIT_USAGE, guard
 from vibey.cli.gate_auto_answer import auto_answer_lines, auto_answer_startup_line
 from vibey.cli.gate_notices import GATE_NOTICE_DOCTOR, GATE_REMINDERS
 from vibey.cli.gates import GATES
+from vibey.cli.help_layout import HelpLayout
 from vibey.cli.host_health import HOST_HEALTH
 from vibey.cli.hub_pair import hub_app
 from vibey.cli.ledger_publication import ledger_export, ledger_site
@@ -2774,6 +2775,9 @@ def worker(
 
     with guard():
         asyncio.run(run_worker())
+
+
+HelpLayout().apply(app)
 
 
 def run(argv: Sequence[str] | None = None) -> None:

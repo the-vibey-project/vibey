@@ -8,11 +8,17 @@ code's own help text, which is shorter than this page and in places less
 complete (for example, `vibey work --help` does not say that `qwenloop` is still
 accepted as the old name of `gptossloop`).
 
-Top-level commands, in `vibey --help` order: `new`, `serve`, `sabbath`,
-`projects`, `gates`, `answer`, `work`, `watch`, `recover`, `status`, `engines`,
-`loops`, `cost`, `install`, `doctor`, `migrate`, `operator`, `worker`, and the
-command groups `design`, `visual`, `deploy`, `ledger`, `queue`, `budget`,
-`ultra`, `driver`, `supervisor`, `state`, `hub`.
+`vibey --help` groups the top-level commands into six panels, in the order a newcomer
+needs them (the footer of that help holds four commands to copy). Commands that are
+command groups are marked with a trailing `…`.
+
+- **Start here:** `doctor`, `install`, `new`, `projects`, `status`
+- **Decisions that are yours:** `gates`, `answer`, `design`…, `visual`…, `deploy`…
+- **Watch and steer:** `watch`, `queue`…, `engines`, `loops`, `cost`, `budget`…, `ledger`…, `ultra`…, `retry`, `recover`, `abandon`
+- **Run the machinery:** `work`, `worker`, `serve`, `hub`…, `supervisor`…, `driver`…, `operator`
+- **Maintain:** `migrate`, `state`…, `sabbath`
+- **Tools for agents:** `search`, `fetch`, `llm`…
+
 Bare `vibey`, and each bare command group, prints help.
 
 Commands that read or write project state need `VIBEY_PG_URL` (see
