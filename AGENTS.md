@@ -261,6 +261,11 @@ explicit opt-in; declining deployment records a successful local completion.
 ## Commands worth memorizing
 
 ```bash
+# Once per clone (its worktrees share it), before the first commit: the commit hooks.
+# Without them nothing adds the `Made-With:` trailer, and CI's Provenance check fails
+# the pull request after the push. Safe to re-run; `uv run vibey-gh check` says if it held.
+uv run vibey-gh install
+
 # CI job `uv-lock` (runs first)
 uv lock --check
 
