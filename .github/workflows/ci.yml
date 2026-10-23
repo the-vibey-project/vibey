@@ -897,6 +897,9 @@ jobs:
           - distro: arch
             runner: ubuntu-latest
             container: archlinux:latest
+          - distro: fedora
+            runner: ubuntu-latest
+            container: fedora:latest
           # macos-15, not macos-latest: the runner's macOS is the oldest the bundle runs on
           # (Homebrew bottles are built for it), the same runner the release builds on.
           - distro: macos
@@ -940,6 +943,16 @@ jobs:
             sleep $((attempt * 15))
           done
           exit 1
+      - name: Toolchain and libraries (Fedora)
+        if: matrix.distro == 'fedora'
+        working-directory: /
+        # libasan and libubsan are packaged apart from gcc on Fedora; the sanitizer build
+        # needs them. avahi-glib-devel carries avahi-glib.pc, which avahi-devel does not.
+        run: |
+          dnf install -y --setopt=install_weak_deps=False git gcc meson ninja-build \
+            pkgconf-pkg-config glib2-devel json-glib-devel libsoup3-devel gtk4-devel \
+            libadwaita-devel avahi-devel avahi-glib-devel desktop-file-utils appstream \
+            glib-networking ca-certificates openssl libasan libubsan
       - uses: actions/checkout@v4
       - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5
         if: matrix.distro == 'macos'

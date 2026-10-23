@@ -34,12 +34,13 @@ above: the bundler reads them from the desktop entry `meson install` writes.
 | Platform | Artefact | Recipe | Status |
 |---|---|---|---|
 | Arch | `PKGBUILD` | [`packaging/arch/PKGBUILD`](packaging/arch/PKGBUILD) | Declared. It goes to the AUR on the operator's word. |
+| Fedora (current release) | `.rpm` | [`packaging/fedora/krypton-desktop.spec`](packaging/fedora/krypton-desktop.spec) | Declared. It goes to a Fedora COPR on the operator's word (ADR-0019). |
 | Flatpak (any Linux) | flatpak-builder manifest | [`packaging/flatpak/io.github.the_vibey_project.krypton.yml`](packaging/flatpak/io.github.the_vibey_project.krypton.yml) | A bundle of it, built from the released commit, is attached to every GitHub Release. It goes to Flathub on the operator's word. |
 | Ubuntu (24.04, and 26.04 per #1116) | `.deb` | `meson install` into a `debian/` tree | Planned. A `meson install` tarball built on 24.04 is attached to every GitHub Release meanwhile. |
 | macOS (Apple silicon) | `.app` in a `.dmg`, carrying its GTK runtime | [`scripts/macos_app_bundle.py`](../../scripts/macos_app_bundle.py), declared in [`scripts/macos_app_bundle.toml`](../../scripts/macos_app_bundle.toml) | Attached to every GitHub Release, ad-hoc signed. Developer ID signing and notarisation run as soon as their secrets are set (below). |
 | macOS (Intel) | | | Not built: Homebrew no longer bottles the GTK 4 stack for Intel macOS, and GitHub's last Intel runner retires in August 2027. |
 
-CI already proves the parts every recipe relies on, on Ubuntu, on Arch and on macOS (the CI job `desktop`):
+CI already proves the parts every recipe relies on, on Ubuntu, on Arch, on Fedora and on macOS (the CI job `desktop`):
 
 - the build;
 - the tests;

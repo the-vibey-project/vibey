@@ -19,6 +19,8 @@ from vibey.domain.local_stack import (
     HostOs,
     LocalStackCatalogue,
     LocalStackReport,
+    PackageSource,
+    PackageSpec,
     UnknownDependency,
 )
 
@@ -32,10 +34,26 @@ def test_default_local_model_is_gpt_oss_20b():
 # 2. Core entries have recipes for both default OSes
 
 
-def test_core_entries_have_a_recipe_for_both_default_oses():
+def test_core_entries_have_a_recipe_for_every_default_os():
     for entry in CATALOGUE_ENTRIES:
-        assert entry.recipe(HostOs.ARCH) is not None
-        assert entry.recipe(HostOs.MACOS) is not None
+        for host in HostOs:
+            assert entry.recipe(host) is not None, f"{entry.key} has no {host} recipe"
+
+
+def test_fedora_recipes_install_with_dnf():
+    by_key = {entry.key: entry for entry in CATALOGUE_ENTRIES}
+    assert by_key["postgres"].recipe(HostOs.FEDORA) == by_key["postgres"].fedora
+    assert by_key["postgres"].fedora.package.source == PackageSource.DNF
+    assert by_key["postgres"].fedora.package.names == ("postgresql-server",)
+    assert by_key["ollama"].fedora.package == PackageSpec(
+        PackageSource.DNF, ("ollama",), ("ollama",)
+    )
+    assert by_key["model"].fedora.package.source == PackageSource.NONE
+
+
+def test_resolve_on_fedora_keeps_every_default():
+    catalog = LocalStackCatalogue()
+    assert [e.key for e in catalog.resolve(HostOs.FEDORA)] == list(catalog.keys())
 
 
 # 3. Every entry has package names unless source is NONE
@@ -43,7 +61,7 @@ def test_core_entries_have_a_recipe_for_both_default_oses():
 
 def test_every_entry_has_package_names_unless_its_source_is_none():
     for entry in CATALOGUE_ENTRIES:
-        for recipe in (entry.arch, entry.macos):
+        for recipe in (entry.arch, entry.fedora, entry.macos):
             if recipe is None:
                 continue
             pkg = recipe.package
@@ -160,7 +178,7 @@ def test_catalogue_rejects_duplicate_keys_and_forward_requirements():
 def test_no_recipe_pipes_a_remote_script_into_a_shell():
     danger = {"curl", "wget", "sh", "bash", "zsh"}
     for entry in CATALOGUE_ENTRIES:
-        for recipe in (entry.arch, entry.macos):
+        for recipe in (entry.arch, entry.fedora, entry.macos):
             if recipe is None:
                 continue
             probe = recipe.probe
