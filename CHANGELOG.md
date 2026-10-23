@@ -15,6 +15,92 @@ published as a book — [PDF](https://the-vibey-project.github.io/vibey/main/boo
 
 ## [Unreleased]
 
+## [4.6.0] (2026-10-23)
+
+### Features
+
+* **The mobile and web app can start and steer a project, answer the design interview, and notify you:** a Start screen
+  (name and a sentence of intake; the host chooses the folder), Resume, Pause and Unwind on each project card (Unwind
+  shows what it would cancel first, asks for a reason, and re-checks it is you with Face ID, Touch ID or the passcode),
+  and an "Accept the suggested answers" button for the design interview, which used to say "answer this on the host".
+  The app now uses `expo-notifications`: while it is open or just in the background it tells you when a project needs
+  you, when a spending question appears, and when a project finishes, honoring the switches in Settings. A closed app
+  hears nothing yet: that needs the hub to push.
+* **`vibey --help` is now a map, not a wall:** the thirty-four top-level commands are grouped into six panels in the
+  order a newcomer needs them (Start here, Decisions that are yours, Watch and steer, Run the machinery, Maintain,
+  Tools for agents), each with a one-line summary, and the help ends with four commands to copy. Every command's own
+  `--help` keeps its full text. A command added without a place in the list now fails a test.
+* **krypton desktop starts, pauses and unwinds projects, and has an app menu, an About dialog and a tray item:** the
+  same four hub routes the phone and the VS Code extension use (ADR-0091), a dry run before any unwind, and a tray
+  (menu bar on macOS, StatusNotifierItem elsewhere) that shows waiting gates and lets the window close to it. The
+  Linux tray is compile-checked, not run against a bus.
+* **A developer-experience reference now ships in vibey-skills:** the new `developer-experience` plugin holds the
+  Developer Experience Blueprint as five skills (principles and feedback loops, CLI and error messages, API/SDK and
+  documentation, interfaces/onboarding/agents, and the measurement checklist with the weak-evidence register), every
+  rule keeping its A/B/C evidence grade. The catalogue is now 148 plugins and 799 skills.
+* **vibey-skills now carries Part 2 of the Developer Experience Blueprint:** the `developer-experience` plugin grows from
+  five skills to nine, adding the eight placement rules and feature-to-surface matrix, VS Code and desktop surfaces,
+  iOS/Android/web surfaces, and the non-developer ladder with visual design and accessibility. Part 1 is unchanged and
+  the weak-evidence register and sources now include Part 2's unverified claims. The catalogue is 803 skills.
+* **Fedora support:** `vibey install` now recognises Fedora (and `ID_LIKE=fedora` derivatives) and
+  installs the local stack with `dnf` — PostgreSQL (`postgresql-server`) and Ollama — and the CI
+  `desktop` job builds and tests krypton desktop on `fedora:latest`. An RPM spec for the desktop
+  app is declared in `clients/desktop/packaging/fedora/`, to be published to a Fedora COPR on the
+  operator's word (ADR-0019). Contributed by @montionugera (#1645, closes #1188).
+* **The hub has a front door:** `krypton` opens `http://127.0.0.1:8765/` in a browser, and that address answered
+  `{"detail":"Not Found"}`. `GET /` now returns a plain page that says the hub is running and where to go next
+  (the desktop app, `@krypton /new` in VS Code, `vibey hub pair` for a phone, `vibey new` in a terminal). It holds
+  no data, asks for no credential, has no script and sits outside the API contract; its Content-Security-Policy
+  admits its one style block by hash, and every other route keeps `default-src 'none'`.
+* **A paired phone or desktop app can start, pause, resume and unwind a project:** four hub routes
+  (`POST /api/v1/projects`, `.../work/start`, `.../work/pause`, `.../abandon`) need the existing `run` scope and run
+  the audited CLI commands on the host (ADR-0091). A device sends a name and a sentence of intake, never a path:
+  the folder is `<[hub] projects_root>/<name>`, and `projects_root` is unset by default, so nothing can be started
+  from a device until the host says where. Unwinding shows a dry run first and records the reason on the ledger.
+* **Pause, recover and retry one project without touching the others:** `vibey recover --project ID --stop-workers`
+  and `vibey retry ID` now stop only that project's workers (`vibey worker --project ID`) instead of every worker
+  this user runs. A worker that serves every project is left running and named; because it may hold one of the
+  project's leases, `recover` then resets none and exits 1 until you add `--include-shared`, so a job is never run
+  twice. `--all` still stops them all.
+* **The chat now narrates a running project:** after `/new`, `/reply` or `/resume`, krypton follows the project and tells
+  you each phase it enters, any job that fails, when no worker is running it, and the moment it needs you or is done,
+  so a conversation drives a project to completion. `/follow` watches again; `vibey.followPollSeconds` and
+  `vibey.followMinutes` tune it. `/pause` now stops only that project's worker, and the commands work over a paired hub.
+* **krypton can start and drive a whole vibey project from the editor:** `@krypton /new`, `/next`, `/reply`,
+  `/pause`, `/resume` and `/unwind` (and a Projects view with a Start button, a right-click menu and a new
+  walkthrough step) take a project from an idea through its design questions to a build, and unwind it on
+  command after showing what would be cancelled. `vibey new` gains `--json` so a client no longer scrapes text.
+
+### Bug Fixes
+
+* **The mobile and web app's empty state names a command that exists:** it told a newcomer to start a project with
+  `vibey run`, which has never been a command. It now says where a project is started (`@krypton /new` in VS Code,
+  `vibey new NAME --repo PATH` in a terminal) and that its questions will wait under Gates. A device also says
+  plainly, rather than failing, that starting, pausing or unwinding a project is done on the host.
+* **The krypton mobile app builds again:** `react-native-reanimated` and `react-native-worklets` are pinned to the
+  versions Expo SDK 57 declares (4.5.1 and 0.10.1). They were only transitive, so a lockfile re-derivation could
+  and did resolve Reanimated 4.2.2, which does not support React Native 0.86 and failed the iOS `pod install`.
+  `expo-camera` and `expo-notifications` move to the patch versions the SDK expects, so `expo-doctor` is clean.
+* **The backlog loop comments once on a newly triaged issue:** an entry the loop records for an issue it just
+  triaged (no probes yet) used to evaluate as `OPEN` while its stored verdict was `NEEDS-TRIAGE`, so the
+  idempotency guard missed and each such issue was commented on a second time. It now keeps `NEEDS-TRIAGE`
+  until probes are added.
+* **`vibey-gh doctor` no longer reports a false error on this repository's own configuration:** it called
+  `[version] regenerate` (and the two legacy `[documentation]` names the loader still accepts) keys vibey-gh ignores.
+  Its key list is now checked against the keys the loader reads, and doctor is run over every configuration the
+  repository ships, so the list cannot drift again unnoticed.
+* **`pip-audit` is green again:** `pypdf` 6.19.0→6.21.2 (eight advisories), `black` 26.5.1→26.10.1
+  and the OpenTelemetry family 1.44.0→1.45.1 (`opentelemetry-api`/`-sdk`, the 0.66b1
+  instrumentation packages and `azure-monitor-opentelemetry` 1.8.11), which have to move
+  together. `Gate 7 - pip-audit` was failing on `develop` itself, which held every pull request
+  in the repair state.
+* **`actions/setup-java` 6.0.1→6.1.0** in the release-binaries workflow, still pinned to the full
+  commit SHA that the `v6.1.0` tag resolves to.
+* **`vibey watch` no longer takes over a pipe:** run with its input or output piped or redirected it printed
+  the full-screen escape sequences (colour even with `NO_COLOR` set) and never exited, so a script or an agent
+  hung on a screen it could not read. It now prints the same snapshot as `vibey status` and exits; `--replay`
+  without a terminal is a usage error.
+
 ## [4.5.0] (2026-10-22)
 
 ### Features
