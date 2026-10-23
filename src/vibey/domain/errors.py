@@ -386,3 +386,26 @@ class ModelAnswerRejected(ClassifiedFailure, ValueError):
         self.subject = subject
         self.violations = violations
         super().__init__(f"{subject} was rejected after a re-ask: " + "; ".join(violations))
+
+
+class LifecycleRefused(VibeyError):
+    """A project could not be started, paused, resumed or unwound through the hub, and why.
+
+    Never a traceback to a device: each subclass reads as one HTTP status, and its message is
+    the plain sentence a person is shown."""
+
+
+class LifecycleInvalid(LifecycleRefused):
+    """What the device sent is not acceptable: a name, intake or reason that breaks the rules."""
+
+
+class LifecycleConflict(LifecycleRefused):
+    """The request is fine but the host's state refuses it: a folder or checkout is taken."""
+
+
+class LifecycleUnavailable(LifecycleRefused):
+    """The host has not allowed this, or is resting (the Sabbath window): try later or ask it."""
+
+
+class LifecycleFailed(LifecycleRefused):
+    """The host tried and the command it ran failed for a reason of its own."""

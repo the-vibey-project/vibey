@@ -19,7 +19,7 @@ GQuark kr_answer_error_quark(void);
 
 typedef enum {
     KR_ANSWER_ERROR_INVALID,     /* the value is not an answer this gate reads */
-    KR_ANSWER_ERROR_UNSUPPORTED, /* this kind is answered in the CLI's interview */
+    KR_ANSWER_ERROR_UNSUPPORTED, /* reserved: a kind no client can answer (none today) */
 } KrAnswerError;
 
 typedef enum {

@@ -16,6 +16,7 @@ This index is generated from the documentation's navigation by `scripts/llms_txt
 - [Install, copy, reinstall, uninstall](https://the-vibey-project.github.io/vibey/main/guides/install/): Install vibey in one command, reinstall it by running the same command again, copy the whole codebase in one more, and remove the krypton interfaces cleanly — while vibey-engine's core is never uninstalled.
 - [Downloads](https://the-vibey-project.github.io/vibey/main/guides/downloads/): The ready-built files attached to every vibey release, for each user interface and platform, with what is signed and how to install each.
 - [VS Code extension](https://the-vibey-project.github.io/vibey/main/guides/vscode-extension/): The extension is called krypton, the name every app carries (sub-doctrine 9.e), and its id is the-vibey-project.krypton; its commands and settings keep their vibey.* names.
+- [Drive a project from anywhere](https://the-vibey-project.github.io/vibey/main/guides/drive-a-project/): Start a vibey project, talk to it while it designs and builds, pause it, and unwind it, from a terminal, VS Code, the desktop app or your phone.
 - [Kubernetes](https://the-vibey-project.github.io/vibey/main/guides/kubernetes/): This guide takes vibey from a laptop process to a long-lived deployment: a containerized worker, a Helm chart, an in-cluster PostgreSQL, and queue-depth autoscaling via KEDA.
 - [Greeter live demo](https://the-vibey-project.github.io/vibey/main/guides/greeter-live-demo/): This runbook drives one small project ("a CLI greeter") end to end on real *loop binaries: DESIGN through the interactive interview, BUILD on engine-selected sessions, REVIEW with real automated gates, and DONE(local).
 - [Local models on Ollama](https://the-vibey-project.github.io/vibey/main/guides/local-models-ollama/): Sub-doctrine 8.a makes the sovereign path the preferred way to run vibey, not the fallback.
@@ -169,6 +170,7 @@ This index is generated from the documentation's navigation by `scripts/llms_txt
 - [0088 — TypeScript, never JavaScript: the only authored form is typed, and the JavaScript that must exist is generated](https://the-vibey-project.github.io/vibey/main/architecture/decisions/0088-typescript-never-javascript/)
 - [0089 — AI self-reference is I; inclusive we is only direct address](https://the-vibey-project.github.io/vibey/main/architecture/decisions/0089-ai-self-reference-is-i-inclusive-we-is-direct/)
 - [0090 — pr-af is the declared default exact-head reviewer](https://the-vibey-project.github.io/vibey/main/architecture/decisions/0090-pr-af-as-the-declared-default-reviewer/)
+- [0091 — A paired device may start, pause, resume and unwind a project](https://the-vibey-project.github.io/vibey/main/architecture/decisions/0091-devices-may-start-pause-and-unwind-projects/)
 
 ## Governance
 

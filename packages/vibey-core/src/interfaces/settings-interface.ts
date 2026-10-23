@@ -32,6 +32,10 @@ export interface RawSettings {
   readonly stuckHintMinutes: number;
   readonly forceStopAfterSeconds: number;
   readonly lanesRecentMinutes: number;
+  /** How often a followed project is looked at, in seconds. */
+  readonly followPollSeconds: number;
+  /** How long one follow keeps watching before it hands back, in minutes; `/follow` starts it again. */
+  readonly followMinutes: number;
   readonly skillsBudget: number;
   readonly budgetInputTokensPerTurn: number;
   readonly budgetOutputTokensPerTurn: number;
@@ -71,6 +75,8 @@ export interface ResolvedSettings {
   readonly stuckHintMs: number;
   readonly forceStopAfterMs: number;
   readonly lanesRecentMs: number;
+  readonly followPollMs: number;
+  readonly followMs: number;
   readonly skillsBudget: number;
   /** A projection's tokens per turn, until this machine has measured an engine's own. */
   readonly budgetPerTurn: { readonly input: number; readonly output: number };

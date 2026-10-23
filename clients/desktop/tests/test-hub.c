@@ -123,12 +123,23 @@ test_paths(void)
     path_is(KR_HUB_ROUTE_WORKFLOW_RUN, NULL, "req-1/../x",
             "/api/v1/workflows/runs/req-1%2F..%2Fx");
     path_is(KR_HUB_ROUTE_WORKFLOW_RUN, NULL, NULL, NULL);
+    path_is(KR_HUB_ROUTE_PROJECT_CREATE, NULL, NULL, "/api/v1/projects");
+    path_is(KR_HUB_ROUTE_PROJECT_START_WORK, "p 1", NULL, "/api/v1/projects/p%201/work/start");
+    path_is(KR_HUB_ROUTE_PROJECT_START_WORK, NULL, NULL, NULL);
+    path_is(KR_HUB_ROUTE_PROJECT_PAUSE_WORK, "p/../x", NULL, "/api/v1/projects/p%2F..%2Fx/work/pause");
+    path_is(KR_HUB_ROUTE_PROJECT_PAUSE_WORK, "", NULL, NULL);
+    path_is(KR_HUB_ROUTE_PROJECT_ABANDON, "p", NULL, "/api/v1/projects/p/abandon");
+    path_is(KR_HUB_ROUTE_PROJECT_ABANDON, NULL, NULL, NULL);
     path_is((KrHubRoute) 999, NULL, NULL, NULL);
 
     g_assert_true(kr_hub_route_writes(KR_HUB_ROUTE_GATE_ANSWER));
     g_assert_true(kr_hub_route_writes(KR_HUB_ROUTE_JOB_BUMP));
     g_assert_true(kr_hub_route_writes(KR_HUB_ROUTE_PAIRING_CLAIM));
     g_assert_true(kr_hub_route_writes(KR_HUB_ROUTE_WORKFLOW_RUNS));
+    g_assert_true(kr_hub_route_writes(KR_HUB_ROUTE_PROJECT_CREATE));
+    g_assert_true(kr_hub_route_writes(KR_HUB_ROUTE_PROJECT_START_WORK));
+    g_assert_true(kr_hub_route_writes(KR_HUB_ROUTE_PROJECT_PAUSE_WORK));
+    g_assert_true(kr_hub_route_writes(KR_HUB_ROUTE_PROJECT_ABANDON));
     g_assert_false(kr_hub_route_writes(KR_HUB_ROUTE_WORKFLOW_RUN));
     g_assert_false(kr_hub_route_writes(KR_HUB_ROUTE_PROJECTS));
 }

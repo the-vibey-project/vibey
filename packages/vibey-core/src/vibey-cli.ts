@@ -142,7 +142,11 @@ export class VibeyCli implements VibeyCliInterface, WorkflowsRunnerInterface {
 
   async createProject(name: string, options: VibeyNewProjectOptions): Promise<VibeyNewProject> {
     const args = ['new', name, '--repo', options.repo, ...(options.intake?.trim() ? ['--intake', options.intake.trim()] : []), '--json'];
-    const parsed = VibeyCli.json(await this.must(args, 'new'), 'vibey new --json');
+    return VibeyCli.readCreated(VibeyCli.json(await this.must(args, 'new'), 'vibey new --json'), name);
+  }
+
+  /** `vibey new --json`'s document (the hub's `POST /api/v1/projects` answers with the same one). */
+  static readCreated(parsed: unknown, name: string): VibeyNewProject {
     if (!VibeyCli.isRecord(parsed) || typeof parsed.project_id !== 'string') {
       throw new VibeyCliError('vibey new --json did not print a project', 'bad-output');
     }

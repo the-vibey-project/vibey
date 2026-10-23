@@ -238,6 +238,12 @@
         "icon": "$(rocket)"
       },
       {
+        "command": "vibey.followProject",
+        "title": "Follow a project",
+        "category": "krypton",
+        "icon": "$(eye)"
+      },
+      {
         "command": "vibey.nextGate",
         "title": "What is waiting for me?",
         "category": "krypton",
@@ -251,7 +257,7 @@
       },
       {
         "command": "vibey.pauseProject",
-        "title": "Pause work on this computer",
+        "title": "Pause a project",
         "category": "krypton",
         "icon": "$(debug-pause)"
       },
@@ -787,6 +793,18 @@
           "minimum": 1,
           "markdownDescription": "The Lanes view lists lanes with an event in this many minutes."
         },
+        "vibey.followPollSeconds": {
+          "type": "integer",
+          "default": 5,
+          "minimum": 2,
+          "markdownDescription": "How often krypton looks at a project it is following, to tell you what changed (`/new`, `/reply`, `/resume` and `/follow`)."
+        },
+        "vibey.followMinutes": {
+          "type": "integer",
+          "default": 30,
+          "minimum": 1,
+          "markdownDescription": "How long one follow keeps watching before it hands back. The project keeps running; `/follow` picks it up again."
+        },
         "vibey.skillsBudget": {
           "type": "integer",
           "default": 6000,
@@ -952,6 +970,10 @@
             "description": "Start a vibey project in this folder: it asks you what it needs to know, then builds it, and every decision stays yours."
           },
           {
+            "name": "follow",
+            "description": "Watch a project and be told what changes: each phase it enters, each job that fails, and the moment it needs you or is done."
+          },
+          {
             "name": "next",
             "description": "The oldest question a project is waiting on, with its answers numbered so a reply can be one digit."
           },
@@ -961,7 +983,7 @@
           },
           {
             "name": "pause",
-            "description": "Stop the workers running here. Nothing is lost: their jobs go back to the queue, and Resume starts them again."
+            "description": "Stop this project's worker. Nothing is lost: its jobs go back to the queue, and Resume starts it again."
           },
           {
             "name": "resume",

@@ -52,7 +52,13 @@ export class VibeyChat implements VibeyChatInterface {
       await this.ask(parsed.args, stream, token, say);
       return {};
     }
-    await this.actions.run(parsed.spec.id, { args: parsed.args, say });
+    // A followed project's progress streams into this reply as it happens; the stop button ends it.
+    await this.actions.run(parsed.spec.id, {
+      args: parsed.args,
+      say,
+      narrate: say,
+      cancelled: () => token.isCancellationRequested,
+    });
     return {};
   }
 

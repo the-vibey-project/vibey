@@ -16,8 +16,10 @@ class FakeStopper:
         self._plan = plan
         self._report = report or StopReport((), (), ())
         self.stopped_with: float | None = None
+        self.asked: tuple[str | None, bool] | None = None
 
-    def plan(self) -> StopPlan:
+    def plan(self, project_id: str | None = None, *, include_shared: bool = False) -> StopPlan:
+        self.asked = (project_id, include_shared)
         return self._plan
 
     def stop(self, plan: StopPlan, *, grace_seconds: float) -> StopReport:
@@ -82,3 +84,65 @@ def test_a_very_long_command_line_is_cut_for_the_terminal(
     stop_workers(FakeStopper(plan), grace_seconds=1, dry_run=True)
     line = next(line for line in capsys.readouterr().out.splitlines() if "worker 200" in line)
     assert line.endswith("…") and len(line) < 200
+
+
+def test_a_project_scoped_stop_asks_for_that_project_and_says_when_none_is_running(
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    stopper = FakeStopper(StopPlan((), ()))
+    assert stop_workers(stopper, grace_seconds=5, dry_run=False, project_id="p1") is True
+    assert stopper.asked == ("p1", False)
+    assert "no vibey worker is running for project p1" in capsys.readouterr().out
+
+
+def test_a_shared_worker_that_is_left_running_blocks_a_recovery_that_resets_leases(
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    plan = StopPlan(
+        (_row(200, "vibey worker --project p1"),), (), (_row(220, "vibey worker --all-projects"),)
+    )
+    stopper = FakeStopper(plan, StopReport(terminated=(200,), killed=(), survivors=()))
+
+    assert (
+        stop_workers(stopper, grace_seconds=5, dry_run=False, project_id="p1", shared_blocks=True)
+        is False
+    )
+
+    out = capsys.readouterr().out
+    assert "1 stopped on SIGTERM" in out
+    assert "left running, because it serves more than this project:" in out
+    assert "worker 220: vibey worker --all-projects" in out
+    assert "Leases were not reset" in out and "--include-shared" in out
+
+
+def test_a_shared_worker_left_running_does_not_fail_a_retry_or_a_dry_run(
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    plan = StopPlan((_row(200, "vibey worker --project p1"),), (), (_row(220, "vibey worker"),))
+
+    assert stop_workers(FakeStopper(plan), grace_seconds=5, dry_run=False, project_id="p1") is True
+    assert (
+        stop_workers(
+            FakeStopper(plan), grace_seconds=5, dry_run=True, project_id="p1", shared_blocks=True
+        )
+        is True
+    )
+    assert "Leases were not reset" not in capsys.readouterr().out
+
+
+def test_including_the_shared_workers_is_passed_on_and_nothing_is_then_left() -> None:
+    stopper = FakeStopper(
+        StopPlan((_row(200, "vibey worker --all-projects"),), ()), StopReport((200,), (), ())
+    )
+    assert (
+        stop_workers(
+            stopper,
+            grace_seconds=5,
+            dry_run=False,
+            project_id="p1",
+            include_shared=True,
+            shared_blocks=True,
+        )
+        is True
+    )
+    assert stopper.asked == ("p1", True)

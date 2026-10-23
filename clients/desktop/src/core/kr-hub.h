@@ -77,6 +77,10 @@ typedef enum {
     KR_HUB_ROUTE_PAIRING_CLAIM, /* a device, before it holds a key: the only unsigned write */
     KR_HUB_ROUTE_WORKFLOW_RUNS, /* POST a command line to the repository's GitHub runners */
     KR_HUB_ROUTE_WORKFLOW_RUN,  /* needs id (the request id): where that command is */
+    KR_HUB_ROUTE_PROJECT_CREATE,      /* POST a name and an intake: start a project (ADR-0091) */
+    KR_HUB_ROUTE_PROJECT_START_WORK,  /* POST, needs project_id: start its own worker */
+    KR_HUB_ROUTE_PROJECT_PAUSE_WORK,  /* POST, needs project_id: stop its own workers */
+    KR_HUB_ROUTE_PROJECT_ABANDON,     /* POST, needs project_id: unwind it (or dry_run) */
 } KrHubRoute;
 
 /* The path (and query) of a route, every id percent-escaped. NULL when a needed id is

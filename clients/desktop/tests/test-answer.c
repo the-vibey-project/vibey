@@ -50,7 +50,11 @@ test_build(void)
     builds("engine_misconfigured", NULL, "{}");
     builds("too_many_wind_downs", " {\"why\": \"fixed\"} ", "{\"why\":\"fixed\"}");
 
-    refuses("question", NULL, KR_ANSWER_ERROR_UNSUPPORTED);
+    /* The interview is answered by its suggested answers, whatever value is passed. */
+    g_autoptr(GError) none = NULL;
+    g_autofree char *defaults = kr_answer_build("question", NULL, &none);
+    g_assert_no_error(none);
+    g_assert_cmpstr(defaults, ==, "{\"accept_defaults\":true}");
     refuses("approval", NULL, KR_ANSWER_ERROR_INVALID);
     refuses("choice", "", KR_ANSWER_ERROR_INVALID);
     refuses("budget_exhausted", NULL, KR_ANSWER_ERROR_INVALID);

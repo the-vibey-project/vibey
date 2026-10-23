@@ -2780,7 +2780,7 @@ class _FakeWorkerStopper:
         )
         self.stopped = False
 
-    def plan(self):  # type: ignore[no-untyped-def]
+    def plan(self, project_id=None, *, include_shared=False):  # type: ignore[no-untyped-def]
         return self._plan
 
     def stop(self, plan, *, grace_seconds):  # type: ignore[no-untyped-def]

@@ -134,7 +134,7 @@ export interface VibeyCliInterface {
   createProject(name: string, options: VibeyNewProjectOptions): Promise<VibeyNewProject>;
   /** `vibey retry --keep-workers --start-worker`: start, or start again, the project's worker. */
   startWork(projectId: string): Promise<string>;
-  /** `vibey recover --stop-workers`: stop every worker this user runs and free their jobs. Reversible. */
+  /** `vibey recover --project --stop-workers`: stop this project's own workers and free its jobs; a worker that serves every project is left running and named, and the call then fails rather than reset a lease it may hold. Reversible. */
   pauseWork(projectId: string): Promise<string>;
   /** `vibey abandon --json`: unwind a project for good; `dryRun` lists what it would cancel and writes nothing. */
   abandonProject(projectId: string, reason: string, options?: { readonly dryRun?: boolean }): Promise<VibeyAbandonReport>;

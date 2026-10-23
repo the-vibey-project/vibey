@@ -13,6 +13,7 @@
 #include "kr-pairing.h"
 #include "kr-settings.h"
 #include "kr-state.h"
+#include "kr-tray-host.h"
 
 G_BEGIN_DECLS
 
@@ -31,6 +32,8 @@ typedef struct {
     GCancellable *cancel;
     guint refresh_source;
     GtkWidget *window;
+    KrTray *tray;            /* the tray item, or NULL (off, or this platform has none) */
+    KrTrayModel *tray_shown; /* what it last drew */
 } KrApp;
 
 /* Asks the hub for everything the views show; the answers land in app->state. */
@@ -50,6 +53,19 @@ const char *kr_app_advertised_fingerprint(KrApp *app, const char *host, guint16 
 /* Applies the theme in app->settings through AdwStyleManager (saving is the caller's). */
 void kr_app_apply_theme(KrApp *app);
 void kr_app_save_settings(KrApp *app);
+/* Start a project on the hub from this device (ADR-0091): `name` and what to build; the hub
+ * makes the folder. The outcome, or the hub's own refusal, is said in a toast. */
+void kr_app_start_project(KrApp *app, const char *name, const char *intake);
+/* Start (or pause) the project's own worker. `name` is only for the words. */
+void kr_app_project_work(KrApp *app, const char *project_id, const char *name, gboolean start);
+/* Unwinding is two steps: ask the hub what it would cancel (a dry run), let the window
+ * confirm it in words, then do it. The work on disk stays either way. */
+#define KR_UNWIND_REASON "Unwound from krypton desktop"
+void kr_app_unwind_preview(KrApp *app, const char *project_id, const char *name);
+void kr_app_unwind(KrApp *app, const char *project_id, const char *name, const char *reason);
+/* Turns the tray item on or off (saved). On: closing the window keeps krypton running in it,
+ * once the platform shows it. Off: the window closes as a window does. */
+void kr_app_set_tray(KrApp *app, gboolean on);
 /* A short message at the bottom of the window. */
 void kr_app_toast(KrApp *app, const char *text);
 

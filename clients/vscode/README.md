@@ -360,9 +360,10 @@ force.
 |---|---|---|---|
 | `vibey.refresh` | Refresh | `/refresh` | `/refresh` |
 | `vibey.newProject` | Start a new project | `/new <name> [what to build]` | `/new greeter a web page that greets the visitor by name` |
+| `vibey.followProject` | Follow a project | `/follow [project id]` | `/follow` |
 | `vibey.nextGate` | What is waiting for me? | `/next` | `/next` |
 | `vibey.replyGate` | Reply to the waiting question | `/reply <number or answer>` | `/reply 1` |
-| `vibey.pauseProject` | Pause work on this computer | `/pause [project id]` | `/pause` |
+| `vibey.pauseProject` | Pause a project | `/pause [project id]` | `/pause` |
 | `vibey.resumeProject` | Resume a project | `/resume [project id]` | `/resume` |
 | `vibey.abandonProject` | Unwind (abandon) a project | `/unwind [why]` | `/unwind the requirements changed` |
 | `vibey.showProjects` | Show vibey projects | `/projects` | `/projects` |

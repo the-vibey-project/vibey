@@ -44,6 +44,7 @@ typedef struct {
     guint16 hub_port;
     gboolean notifications; /* on by default */
     gboolean sounds;        /* on by default */
+    gboolean tray;          /* a tray item, and closing the window keeps krypton running; on by default */
 } KrSettings;
 
 KrSettings *kr_settings_new_default(void);

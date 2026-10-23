@@ -64,10 +64,9 @@ kr_answer_build(const char *kind, const char *value, GError **error)
     const char *key = NULL;
     switch (kr_answer_shape(kind, &key)) {
     case KR_ANSWER_DEFAULTS:
-        g_set_error_literal(error, KR_ANSWER_ERROR, KR_ANSWER_ERROR_UNSUPPORTED,
-                            "this is the design interview: answer it with vibey answer --defaults "
-                            "or in the interview itself");
-        return NULL;
+        /* The interview's own suggested answers: what `vibey answer --defaults` sends. Question
+         * keys are minted per run, so this is the one answer that needs none. */
+        return g_strdup("{\"accept_defaults\":true}");
     case KR_ANSWER_VERDICT:
     case KR_ANSWER_CHOICE: {
         if (value == NULL || *value == '\0') {

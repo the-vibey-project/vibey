@@ -64,6 +64,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
   plugins: [
     'expo-router',
     'expo-secure-store',
+    'expo-notifications',
     ['expo-camera', { cameraPermission: 'krypton scans the pairing QR code your vibey hub shows.' }],
     ['expo-local-authentication', { faceIDPermission: 'krypton asks for Face ID before you answer a gate that spends money.' }],
   ],

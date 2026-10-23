@@ -16,6 +16,7 @@ from vibey.infrastructure.worker_processes import (
     PsProcessTable,
     WorkerStopper,
     is_vibey_worker,
+    worker_scope,
 )
 
 ME = 501
@@ -245,3 +246,60 @@ def test_the_real_table_and_stopper_keep_their_declared_seams() -> None:
     table = PsProcessTable()
     assert isinstance(table, ProcessTableInterface)
     assert isinstance(WorkerStopper(table=table, uid=ME, pid=1), WorkerStopperInterface)
+
+
+@pytest.mark.parametrize(
+    ("argv", "scope"),
+    [
+        (("vibey", "worker", "--project", "ABC-1"), "abc-1"),
+        (("vibey", "worker", "--project=ABC-1"), "abc-1"),
+        (("vibey", "worker", "--all-projects"), "*"),
+        (("vibey", "worker", "--all-projects", "--project", "abc"), "*"),
+        (("vibey", "worker"), None),
+        (("vibey", "worker", "--project"), None),
+        # uv's own --project names a Python project, not a vibey one.
+        (("uv", "run", "--project", "/src/x", "vibey", "worker"), None),
+        (("vibey", "status", "--project", "abc"), None),
+    ],
+)
+def test_a_workers_scope_is_what_follows_the_word_worker(
+    argv: tuple[str, ...], scope: str | None
+) -> None:
+    assert worker_scope(argv) == scope
+
+
+def _scoped_machine() -> list[ProcessInfo]:
+    return [
+        _row(90, 1, ("-zsh",)),
+        _row(100, 90, ("vibey", "recover", "--stop-workers")),
+        _row(200, 90, ("vibey", "worker", "--project", "AAA")),
+        _row(201, 200, ("gptossloop", "run")),
+        _row(210, 90, ("vibey", "worker", "--project", "bbb")),
+        _row(220, 90, ("vibey", "worker", "--all-projects")),
+        _row(230, 90, ("vibey", "worker")),
+    ]
+
+
+def test_a_project_scoped_plan_stops_only_that_projects_workers_and_names_the_shared_ones() -> None:
+    plan = World(_scoped_machine()).stopper().plan("aaa")
+    assert [r.pid for r in plan.workers] == [200]
+    assert [r.pid for r in plan.descendants] == [201]
+    # The other project's worker is not this project's concern; the shared ones may serve it.
+    assert [r.pid for r in plan.left_running] == [220, 230]
+
+
+def test_a_scoped_plan_can_take_the_shared_workers_too() -> None:
+    plan = World(_scoped_machine()).stopper().plan("aaa", include_shared=True)
+    assert sorted(r.pid for r in plan.workers) == [200, 220, 230]
+    assert plan.left_running == ()
+
+
+def test_a_scoped_plan_for_a_project_nobody_serves_stops_nothing() -> None:
+    plan = World(_scoped_machine()).stopper().plan("zzz")
+    assert plan.workers == () and [r.pid for r in plan.left_running] == [220, 230]
+
+
+def test_an_unscoped_plan_is_every_worker_and_leaves_nothing_running() -> None:
+    plan = World(_scoped_machine()).stopper().plan()
+    assert sorted(r.pid for r in plan.workers) == [200, 210, 220, 230]
+    assert plan.left_running == ()

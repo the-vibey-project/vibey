@@ -34,6 +34,9 @@ function budget(overrides: Partial<VibeyBudget>): VibeyBudget {
 describe('Presenters', () => {
   it('sums the gates that need you on Home', () => {
     expect(present.home([]).headline).toBe('Nothing needs you');
+    expect(present.home([{ project_id: 'a', name: 'A', phase: 'DONE' }]).cards[0]?.finished).toBe(true);
+    expect(present.home([{ project_id: 'a', name: 'A', phase: 'abandoned' }]).cards[0]?.finished).toBe(true);
+    expect(present.home([{ project_id: 'a', name: 'A', phase: 'BUILD' }]).cards[0]?.finished).toBe(false);
     // The empty state names commands that exist: `vibey run` never did, and it sent a newcomer nowhere.
     const empty = present.home([]).emptyNote;
     expect(empty).toContain('vibey new NAME --repo PATH');
@@ -141,12 +144,28 @@ describe('Presenters', () => {
     expect(Presenters.answerKey('choice')).toBe('choice');
     expect(Presenters.answerKey('deploy_acceptance')).toBe('choice');
     expect(Presenters.answerKey('budget_exhausted')).toBe('host');
-    expect(Presenters.answerKey('question')).toBe('host');
+    // The design interview is answered from a button too: its suggested answers.
+    expect(Presenters.answerKey('question')).toBe('interview');
   });
 
   it('knows which gates spend', () => {
     expect(Presenters.spends('budget_exhausted')).toBe(true);
     expect(Presenters.spends('deploy_design')).toBe(true);
     expect(Presenters.spends('review_collect')).toBe(false);
+  });
+});
+
+describe('Presenters.projectNameProblem', () => {
+  it('accepts the names the hub accepts', () => {
+    for (const name of ['greeter', 'my-first-app', 'a', 'v1.2_final', ' padded ']) {
+      expect(Presenters.projectNameProblem(name)).toBeUndefined();
+    }
+  });
+
+  it('says what is wrong with a name before the hub is asked', () => {
+    expect(Presenters.projectNameProblem('   ')).toMatch(/Give the project a name/);
+    for (const name of ['has space', '-flag', '.hidden', 'a/b', 'x'.repeat(65), 'über']) {
+      expect(Presenters.projectNameProblem(name)).toMatch(/letters, digits/);
+    }
   });
 });

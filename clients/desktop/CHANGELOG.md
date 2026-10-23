@@ -36,6 +36,16 @@ krypton desktop carries its own version. The Python wheel stays one distribution
   what each scope it holds lets it do.
 - **Colours come from the design tokens**, ADR-0066. The Kr-84 mark is drawn live, stands
   still under reduced motion, and glows while a lane runs.
+- **Start, pause and unwind a project** from a name and an intake (`Ctrl+N`, or the row's
+  menu): the four hub routes of ADR-0091, a dry run before an unwind that says what it
+  would cancel, and the hub's own words when it refuses. An interview gate also offers
+  Accept the suggested answers.
+- **An app menu, an About dialog and a tray item.** The header menu holds Start a project,
+  Refresh, Preferences, About and Quit; About is an `AdwAboutDialog` (libadwaita 1.5 or
+  newer). The tray item is an `NSStatusItem` on macOS and a StatusNotifierItem with a
+  dbusmenu elsewhere, drawn from a pure, tested model (`kr-tray`); closing the window hides
+  it only while the tray is showing. The Linux tray is compile-checked only: no session bus
+  was available to run it against.
 - **Desktop notifications**, through `GNotification`, when a gate needs you.
 - **GLib tests over the core**, under ASan and UBSan, with coverage gated in CI (the
   `desktop` job, on Ubuntu and Arch).

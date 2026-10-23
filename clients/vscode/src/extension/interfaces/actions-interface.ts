@@ -11,6 +11,10 @@ export interface Invocation {
   readonly args?: string;
   /** Where replies go: a notification, the panel, or the chat. */
   readonly say: (text: string) => void;
+  /** Where a following project's progress goes as it happens: the chat's stream. Without it, the output channel. */
+  readonly narrate?: (text: string) => void;
+  /** True once the person has cancelled: the chat's stop button. Without it, a cancellable progress notification. */
+  readonly cancelled?: () => boolean;
   /** The run id of the panel it was typed in, when it was. */
   readonly runId?: string;
   /** The panel it was typed in: a task asked there is shown there. */
