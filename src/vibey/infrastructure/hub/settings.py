@@ -10,6 +10,7 @@ port = 8765           # the port `vibey serve` listens on
 names = []            # extra Host names a request may use, e.g. "studio.local"
 state_dir = ""        # where the hub keeps its token and runtime file; "" = the default
 lane_roots = []       # where to look for lanes; [] = the directory `vibey serve` runs in
+projects_root = ""    # where a paired device may start projects (a folder per project); "" = nowhere
 ```
 
 A missing file or table declares nothing, so the hub stays on loopback. A table that is
@@ -30,7 +31,7 @@ from vibey.domain.config import ConfigError, parse_toml_string
 DEFAULT_PORT: Final = 8765
 """The port `vibey serve` listens on when `[hub] port` is not set."""
 
-KEYS: Final = frozenset({"lan", "port", "names", "state_dir", "lane_roots"})
+KEYS: Final = frozenset({"lan", "port", "names", "state_dir", "lane_roots", "projects_root"})
 """Every key `[hub]` may carry."""
 
 
@@ -43,6 +44,7 @@ class HubSettings:
     names: frozenset[str] = field(default_factory=frozenset)
     state_dir: Path = field(default_factory=lambda: Path(user_state_dir("vibey")) / "hub")
     lane_roots: tuple[Path, ...] = ()
+    projects_root: Path | None = None
 
 
 class HubSettingsLoader:
@@ -89,6 +91,14 @@ class HubSettingsLoader:
             isinstance(root, str) and root.strip() for root in lane_roots
         ):
             raise ConfigError("hub.lane_roots", "must be a list of directories")
+        projects_root = table.get("projects_root", "")
+        if not isinstance(projects_root, str):
+            raise ConfigError("hub.projects_root", "must be a path")
+        if projects_root and not Path(projects_root).expanduser().is_absolute():
+            raise ConfigError(
+                "hub.projects_root",
+                "must be an absolute path (or start with ~): a device must never reach a folder by a relative one",
+            )
         defaults = HubSettings()
         return HubSettings(
             lan=lan,
@@ -96,6 +106,7 @@ class HubSettingsLoader:
             names=frozenset(name.strip().lower() for name in names),
             state_dir=Path(state_dir).expanduser() if state_dir else defaults.state_dir,
             lane_roots=tuple(Path(root).expanduser() for root in lane_roots),
+            projects_root=Path(projects_root).expanduser() if projects_root else None,
         )
 
 

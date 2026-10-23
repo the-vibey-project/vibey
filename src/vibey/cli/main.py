@@ -1030,10 +1030,22 @@ def recover(
         typer.Option(
             "--stop-workers",
             help=(
-                "First stop every `vibey worker` this user is running, and what each started: "
-                "SIGTERM, then SIGKILL after --grace. A live worker holds its leases, so the "
-                "jobs are only reset once none is left. The processes are listed first."
+                "First stop the `vibey worker` processes this user is running, and what each "
+                "started: SIGTERM, then SIGKILL after --grace. With --project, only that "
+                "project's workers (`vibey worker --project ID`); a worker that serves every "
+                "project is left running and named, and the jobs are then not reset, because "
+                "it may hold one (add --include-shared to stop it too). A live worker holds its "
+                "leases, so the jobs are only reset once none is left. The processes are "
+                "listed first."
             ),
+        ),
+    ] = False,
+    include_shared: Annotated[
+        bool,
+        typer.Option(
+            "--include-shared",
+            help="With --project and --stop-workers: also stop the workers that serve every "
+            "project (--all-projects) or none in particular.",
         ),
     ] = False,
     grace: Annotated[
@@ -1066,7 +1078,12 @@ def recover(
             raise typer.Exit(1)
 
         if stop_workers_first and not stop_workers(
-            WorkerStopper(), grace_seconds=grace, dry_run=dry_run
+            WorkerStopper(),
+            grace_seconds=grace,
+            dry_run=dry_run,
+            project_id=None if all_projects or project_id is None else str(project_id),
+            include_shared=include_shared,
+            shared_blocks=True,
         ):
             raise typer.Exit(1)
 
@@ -1126,7 +1143,7 @@ def retry(
         bool,
         typer.Option(
             "--keep-workers",
-            help="Do not stop this user's running workers first.",
+            help="Do not stop this project's running workers first. Workers that serve every project are never stopped by retry.",
         ),
     ] = False,
     start_worker: Annotated[

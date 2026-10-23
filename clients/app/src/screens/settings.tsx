@@ -38,6 +38,7 @@ export function SettingsScreen() {
             <Switch accessibilityLabel={SettingsModel.LABELS[which]} value={settings.notifications[which]} onValueChange={(on) => change({ type: 'notification', which, on })} trackColor={{ true: colors.accent.default }} />
           </View>
         ))}
+        <Label tone="tertiary">krypton tells you while it is open or has just been in the background. When the app is closed, a phone hears nothing yet: that needs the hub to push, which it does not do.</Label>
       </Card>
       <Card>
         <Link href="/budgets"><Label>Budgets →</Label></Link>

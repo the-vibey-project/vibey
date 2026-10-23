@@ -12,7 +12,7 @@ name below still exists where it says, and changes nothing.
 
 - **Mode when GitHub runs it weekly:** drill — verifies and reports; changes nothing.
 - **What it is for:** Hand the project to a new steward: what they must hold, where it is declared, and how to verify it.
-- **Decision records:** 90, the newest 0090 — pr-af is the declared default exact-head reviewer.
+- **Decision records:** 91, the newest 0091 — A paired device may start, pause, resume and unwind a project.
 <!-- END GENERATED continuation:state -->
 
 ## The prompt

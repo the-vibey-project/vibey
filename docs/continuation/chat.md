@@ -43,7 +43,7 @@ minutes, not seconds. It always replies — with an answer, or with the reason i
 
 - **How it runs:** whenever a trusted person writes `/vibey` in an issue or pull request, or runs the Chat workflow — it answers; asked to act, it may open a draft pull request; it never merges, approves, releases or deletes.
 - **What it is for:** Answer a trusted person who writes /vibey in an issue, a pull request or the Actions tab.
-- **Decision records:** 90, the newest 0090 — pr-af is the declared default exact-head reviewer.
+- **Decision records:** 91, the newest 0091 — A paired device may start, pause, resume and unwind a project.
 - **Lanes it keeps usable:** [Chat](https://github.com/the-vibey-project/vibey/actions/workflows/chat.yml), [vibey (remote command)](https://github.com/the-vibey-project/vibey/actions/workflows/vibey-remote.yml), [vibey state (write back)](https://github.com/the-vibey-project/vibey/actions/workflows/vibey-state-write.yml).
 <!-- END GENERATED continuation:state -->
 
