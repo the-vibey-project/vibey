@@ -409,6 +409,15 @@ class CommitSeries(FigureSourceInterface):
                 }
             )
         roots.sort(key=lambda r: r["date"])
+        # A tag that contains the pin was cut at or after it, so it did not exist when the
+        # pin was the tip and the figure was written. A promotion rebase-merges the pin into
+        # `main`, stamping every copy with one committer time; a lightweight tag's creator
+        # date IS its commit's committer date, so the release tag cut on that tip carries the
+        # same instant as the copy of the pin, and `stamp > head_time` alone lets it in.
+        # Asked the way `RevisionPinGuard._tagged` asks it, so a clone that cannot answer
+        # degrades the same way in both: the tag then shows as drift in `--check`, loudly.
+        # Only asked when a tag survives the cheaper filters below.
+        cut_after_the_pin: set[str] | None = None
         tags = []
         for line in self._git(
             "for-each-ref", "--format=%(refname:short) %(creatordate:unix)", "refs/tags"
@@ -418,6 +427,20 @@ class CommitSeries(FigureSourceInterface):
                 continue
             package = next((pkg for prefix, pkg in TAG_PACKAGES if name.startswith(prefix)), None)
             if package is None:
+                continue
+            if cut_after_the_pin is None:
+                # push-gate: not a push (asks which tags contain the pin)
+                contains = subprocess.run(
+                    ["git", "tag", "--contains", rev],
+                    cwd=self._repo,
+                    capture_output=True,
+                    text=True,
+                    check=False,
+                )
+                cut_after_the_pin = (
+                    set(contains.stdout.split()) if contains.returncode == 0 else set()
+                )
+            if name in cut_after_the_pin:
                 continue
             tags.append(
                 {
@@ -1291,7 +1314,8 @@ class PaperFigureAtlas(PaperFigureAtlasInterface):
         )
         caption = (
             f"Every release tag created by the time of revision {data['head'][:8]}, {lanes_text}; a tag is "
-            f"selected by its date, not by whether the revision's history reaches it. "
+            f"selected by its date, not by whether the revision's history reaches it, except that a tag cut "
+            f"at or after the revision itself is left out: it did not exist when the revision was the tip. "
             f"The {len(vibey_tags)} \\texttt{{vibey}} releases run from {vibey_tags[0]['name']} on "
             f"{vibey_tags[0]['date'].isoformat()} to {vibey_tags[-1]['name']} on {vibey_tags[-1]['date'].isoformat()}; "
             f"since the packages were absorbed into one tree, one version number ships the whole family, "
