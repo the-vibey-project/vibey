@@ -11,7 +11,7 @@ bending a protocol to fit an outcome.
 
 - **Mode when GitHub runs it weekly:** act — may open a draft pull request; never merges, approves, releases or deletes.
 - **What it is for:** Keep every weekly measurement and every registered study running without breaking its protocol.
-- **Decision records:** 92, the newest 0092 — Large tasks are sliced into the CDD layers before any of them runs, and every lane is given everything its runner can take.
+- **Decision records:** 93, the newest 0093 — Local model families are named and measured, never assumed.
 - **Lanes it keeps usable:** [Review canary](https://github.com/the-vibey-project/vibey/actions/workflows/review-canary.yml), [Minimum specs](https://github.com/the-vibey-project/vibey/actions/workflows/minimum-specs.yml), [Host health](https://github.com/the-vibey-project/vibey/actions/workflows/host-health.yml), [Autonomy scorecard](https://github.com/the-vibey-project/vibey/actions/workflows/autonomy-scorecard.yml), [Continuation prompts](https://github.com/the-vibey-project/vibey/actions/workflows/continuation-prompts.yml).
 <!-- END GENERATED continuation:state -->
 

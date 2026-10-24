@@ -14,7 +14,7 @@ command groups are marked with a trailing `…`.
 
 - **Start here:** `doctor`, `install`, `new`, `projects`, `status`
 - **Decisions that are yours:** `gates`, `answer`, `design`…, `visual`…, `deploy`…
-- **Watch and steer:** `watch`, `queue`…, `engines`, `loops`, `cost`, `budget`…, `ledger`…, `ultra`…, `retry`, `recover`, `abandon`
+- **Watch and steer:** `watch`, `queue`…, `engines`, `loops`, `models`, `cost`, `budget`…, `ledger`…, `ultra`…, `retry`, `recover`, `abandon`
 - **Run the machinery:** `work`, `worker`, `serve`, `hub`…, `supervisor`…, `driver`…, `operator`
 - **Maintain:** `migrate`, `state`…, `sabbath`
 - **Tools for agents:** `search`, `fetch`, `llm`…
@@ -754,6 +754,31 @@ What the runners' own code shows today:
 | `claudeloop`, `claudeloop-local` | files, pasted text, `claude-plugins` (`run --plugin`), MCP (`run --connector`); images unknown | `--run-id` and `--cwd` for each; `prompt TEXT --now` | `event_type+payload` |
 | `codexloop` | files, pasted text, `skills-context`; images and MCP unknown | `--run-id` for each and no `--cwd`: run it in the worktree; `prompt TEXT --now` | `type` |
 | `gptossloop`, `qwenloop` | files, pasted text, `skills-context`; no images, no pasted images, no MCP (text messages and a fixed tool set) | each takes the run id positionally, with `--cwd`; `prompt RUN_ID TEXT`, which its runner adds to the conversation at the next turn boundary | `type` |
+
+## `vibey models`
+
+List the local model families vibey knows by name -- Qwen Coder, DeepSeek Coder, Codestral,
+StarCoder, Gemma, Llama, CodeLlama and CodeGemma ([ADR-0093](../architecture/decisions/0093-local-model-families-are-named-and-measured-not-assumed.md)) --
+each with the Ollama tag to start from and the `ollama pull` that fetches it, and then the
+models the Ollama on this machine actually has, with what that Ollama reports each can do.
+
+The families need no network. The installed models come from the Ollama at
+`VIBEY_OLLAMA_URL` (default `http://127.0.0.1:11434`). Their capabilities are what Ollama's own
+`/api/show` says, never a table kept in vibey: Ollama decides tool-calling from more than a
+model's template, so a list kept here would be wrong for the newer models. A model whose
+capabilities Ollama does not report is **unknown**, which is not the same as having none. No
+Ollama answering is reported and is not an error; the families still print. It exits 0.
+
+For each installed model it says what the model can be tried for. `tools` means it can be
+tried for BUILD, and only a run shows whether it uses them: Qwen2.5-Coder 14B reports `tools`
+and still writes its calls out as text. `completion` means it can serve DESIGN and DECOMPOSE,
+which ask for JSON and need no tool-calling. `insert` means fill-in-the-middle completion. A
+model that reports `completion` without `tools` is also listed for BUILD through the text
+tool-call protocol, marked slower and measured unreliable.
+
+| Option | Default | What it does |
+|---|---|---|
+| `--json` | off | Print the same facts as JSON: `families` (`key`, `label`, `suggested_tag`, `pull`), `ollama_url`, `problem` (null, or why no Ollama answered), and `installed` (`tag`, `family`, `size_gb`, `capabilities` -- null when unknown -- and `jobs`). |
 
 ## `vibey cost [PROJECT_ID]`
 

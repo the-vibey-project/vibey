@@ -107,6 +107,7 @@ Each engine reads its own environment variables: `GPTOSSLOOP_*` for `gptossloop`
 | Backend | `--backend` | — | `backend` | `auto` |
 | Turn limit | `--max-turns` | — | `max_turns` | `40` |
 | Consecutive empty replies retried before a run fails | — | — | `max_empty_reply_retries` | `2` |
+| Tool-call protocol: `auto` carries calls as text for a model whose Ollama reports no tool-calling, `native` and `text` force either | — | — | `tool_protocol` | `auto` |
 | Characters of each tool-call argument value recorded in `events.jsonl` | — | — | `max_recorded_argument_chars` | `200` |
 | Characters of an empty reply's reasoning recorded as an excerpt | — | — | `empty_reply_reasoning_excerpt_chars` | `400` |
 | Characters of one tool result shown to the model (the rest is cut, and the cut named) | — | — | `max_tool_result_chars` | `12000` |

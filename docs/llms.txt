@@ -172,6 +172,7 @@ This index is generated from the documentation's navigation by `scripts/llms_txt
 - [0090 — pr-af is the declared default exact-head reviewer](https://the-vibey-project.github.io/vibey/main/architecture/decisions/0090-pr-af-as-the-declared-default-reviewer/)
 - [0091 — A paired device may start, pause, resume and unwind a project](https://the-vibey-project.github.io/vibey/main/architecture/decisions/0091-devices-may-start-pause-and-unwind-projects/)
 - [0092 — Large tasks are sliced into the CDD layers before they run](https://the-vibey-project.github.io/vibey/main/architecture/decisions/0092-large-tasks-are-sliced-into-the-cdd-layers-before-they-run/)
+- [0093 — Local model families are named and measured, never assumed](https://the-vibey-project.github.io/vibey/main/architecture/decisions/0093-local-model-families-are-named-and-measured-not-assumed/)
 
 ## Governance
 

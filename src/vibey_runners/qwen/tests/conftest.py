@@ -2,7 +2,7 @@
 from pathlib import Path
 
 import pytest
-from fakes import FakeOllamaProbe
+from fakes import FakeOllamaModelProbe, FakeOllamaProbe
 
 
 @pytest.fixture(autouse=True)
@@ -31,4 +31,12 @@ def no_local_ollama(monkeypatch: pytest.MonkeyPatch) -> FakeOllamaProbe:
     backend every CLI test selects."""
     probe = FakeOllamaProbe(available=False)
     monkeypatch.setattr("qwenloop.cli.app._ollama_probe", probe)
+    return probe
+
+
+@pytest.fixture(autouse=True)
+def unknown_model_capabilities(monkeypatch: pytest.MonkeyPatch) -> FakeOllamaModelProbe:
+    """No test reaches a real Ollama for a model's capabilities: unknown unless a test says."""
+    probe = FakeOllamaModelProbe()
+    monkeypatch.setattr("qwenloop.cli.app._model_probe", probe)
     return probe

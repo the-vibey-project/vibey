@@ -56,6 +56,7 @@ from vibey.cli.ledger_publication import ledger_export, ledger_site
 from vibey.cli.ledger_search import PRESENTER, ledger_search
 from vibey.cli.llm import llm_app
 from vibey.cli.loops import LOOPS
+from vibey.cli.models import MODELS
 from vibey.cli.projects import PROJECTS
 from vibey.cli.queue import queue_app
 from vibey.cli.recover import stop_workers
@@ -1309,6 +1310,23 @@ def loops(
     """
     with guard():
         LOOPS.run(as_json=as_json)
+
+
+@app.command("models")
+def models(
+    as_json: Annotated[
+        bool,
+        typer.Option("--json", help="Print the same facts as JSON, for a program."),
+    ] = False,
+) -> None:
+    """List the local model families and what the Ollama here says each model can do.
+
+    The families need no network. The installed models come from the Ollama at
+    VIBEY_OLLAMA_URL, with the capabilities Ollama itself reports; no Ollama is reported,
+    not fatal.
+    """
+    with guard():
+        MODELS.run(as_json=as_json)
 
 
 @app.command("cost")

@@ -382,3 +382,30 @@ A local model is not the paid one it displaces, and the defaults say so:
   the job goes to a paid engine; `vibey engines` and the local engine's health show
   why, but nothing is written to the ledger at that moment yet. Pin the pool with
   `--engines` if a paid run is never acceptable.
+
+## Model families
+
+`vibey models` lists the families vibey knows by name -- Qwen Coder, DeepSeek Coder, Codestral,
+StarCoder, Gemma, Llama, CodeLlama and CodeGemma -- each with a tag to start from and the
+`ollama pull` that fetches it, and then what the Ollama on this machine actually has and says
+each model can do. Run it before you choose.
+
+What matters is whether a model reports `tools`. The BUILD runner works through tool calls. A model
+that reports none is driven through a **text tool-call protocol** instead (`tool_protocol = "auto"` in
+the runner's config; `native` and `text` force either way): its tools are described in the prompt, it
+writes each call as `<tool_call>{...}</tool_call>`, and the run says when this is in use. It is about
+twice as slow per turn, and in the measurement behind ADR-0093 it did not make such models build
+correctly, so reach for it to see what a model does, not to expect a result. Such a model is also good
+for DESIGN and DECOMPOSE, which ask for JSON and need no tool-calling. A model whose capabilities your
+Ollama does not report is shown as unknown, and left native.
+
+On a small BUILD task Llama 3.1 8B was correct 0 times in 8 (native or text) and the default
+`gpt-oss:20b` 1 time in 3. Give a model that reports a large default context (Llama 3.1 does: 131,072)
+a `num_ctx 32768` derived model before you judge its speed; the first Llama run here took 8 minutes
+to load without it.
+
+Reporting `tools` is necessary, not sufficient: Qwen2.5-Coder 14B reports it and still writes its
+calls out as text. Only a run shows whether a model uses them well. The measurements behind the
+list, and why a template check is not enough, are in
+[ADR-0093](../architecture/decisions/0093-local-model-families-are-named-and-measured-not-assumed.md).
+

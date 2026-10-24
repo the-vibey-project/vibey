@@ -8,7 +8,7 @@ from enum import StrEnum
 from typing import Any
 from urllib.parse import urlsplit
 
-from qwenloop.domain.model import Backend
+from qwenloop.domain.model import Backend, ToolProtocol
 
 #: Where `--backend openai-compat` attaches when no `base_url` is configured: Ollama's
 #: own default listen address, with the `/v1` prefix its OpenAI-compatible API lives under.
@@ -182,6 +182,7 @@ class QwenConfig:
     context_window: int = 32_768
     max_turns: int = 40
     max_empty_reply_retries: int = DEFAULT_MAX_EMPTY_REPLY_RETRIES
+    tool_protocol: ToolProtocol = ToolProtocol.AUTO
     max_recorded_argument_chars: int = DEFAULT_MAX_RECORDED_ARGUMENT_CHARS
     empty_reply_reasoning_excerpt_chars: int = DEFAULT_EMPTY_REPLY_REASONING_EXCERPT_CHARS
     max_tool_result_chars: int = DEFAULT_MAX_TOOL_RESULT_CHARS
@@ -233,6 +234,9 @@ class QwenConfigParser:
         defaults = QwenConfig(model=self._default_model)
         config = QwenConfig(
             backend=Backend(str(data.get("backend", defaults.backend.value))),
+            tool_protocol=ToolProtocol(
+                str(data.get("tool_protocol", defaults.tool_protocol.value))
+            ),
             portable_profile=str(data.get("portable_profile", defaults.portable_profile)),
             nvidia_profile=str(data.get("nvidia_profile", defaults.nvidia_profile)),
             idle_timeout_seconds=int(

@@ -9,3 +9,11 @@ class OllamaProbeInterface(Protocol):
     def available(self) -> bool:
         """True when a local Ollama answers; any failure means it is not available."""
         ...
+
+
+@runtime_checkable
+class OllamaModelProbeInterface(Protocol):
+    def capabilities(self, base_url: str, model: str) -> frozenset[str] | None:
+        """What an Ollama at `base_url` reports `model` can do, or None when the endpoint is
+        not an Ollama or does not say."""
+        ...

@@ -1294,3 +1294,88 @@ def test_without_a_running_ollama_the_portable_backend_is_unchanged(
     server, _ = _server_for(QwenConfig())
     assert isinstance(server, LlamaCppServer)
     assert no_local_ollama.asked == 1
+
+
+def _compat_server():  # type: ignore[no-untyped-def]
+    from qwenloop.infrastructure.inference import OpenAICompatServer
+
+    return OpenAICompatServer("http://127.0.0.1:11434/v1", "codellama:7b")
+
+
+def test_a_model_ollama_says_cannot_call_tools_gets_the_text_protocol(
+    unknown_model_capabilities,  # type: ignore[no-untyped-def]
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    from qwenloop.cli.app import _choose_tool_protocol
+    from qwenloop.domain.model import ToolProtocol
+
+    unknown_model_capabilities.reported = frozenset({"completion"})
+    server = _compat_server()
+    _choose_tool_protocol(server, ToolProtocol.AUTO)
+    assert server.text_tools is True
+    assert unknown_model_capabilities.asked == [("http://127.0.0.1:11434/v1", "codellama:7b")]
+    assert "codellama:7b: carrying tool calls as text" in capsys.readouterr().err
+
+
+def test_a_tool_capable_or_unknown_model_stays_native_under_auto(
+    unknown_model_capabilities,  # type: ignore[no-untyped-def]
+) -> None:
+    from qwenloop.cli.app import _choose_tool_protocol
+    from qwenloop.domain.model import ToolProtocol
+
+    for reported in (frozenset({"completion", "tools"}), None):
+        unknown_model_capabilities.reported = reported
+        server = _compat_server()
+        _choose_tool_protocol(server, ToolProtocol.AUTO)
+        assert server.text_tools is False
+
+
+def test_auto_never_asks_a_server_that_is_not_an_attached_endpoint(
+    unknown_model_capabilities,  # type: ignore[no-untyped-def]
+    tmp_path: Path,
+) -> None:
+    from qwenloop.cli.app import _choose_tool_protocol
+    from qwenloop.domain.model import ToolProtocol
+    from qwenloop.infrastructure.inference import LlamaCppServer
+
+    unknown_model_capabilities.reported = frozenset()
+    server = LlamaCppServer(tmp_path)
+    _choose_tool_protocol(server, ToolProtocol.AUTO)
+    assert server.text_tools is False and unknown_model_capabilities.asked == []
+
+
+def test_text_forces_the_protocol_and_native_forbids_it(
+    unknown_model_capabilities,  # type: ignore[no-untyped-def]
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    from qwenloop.cli.app import _choose_tool_protocol
+    from qwenloop.domain.model import ToolProtocol
+
+    unknown_model_capabilities.reported = frozenset({"tools"})
+    forced, left = _compat_server(), _compat_server()
+    _choose_tool_protocol(forced, ToolProtocol.TEXT)
+    _choose_tool_protocol(left, ToolProtocol.NATIVE)
+    assert forced.text_tools is True and left.text_tools is False
+    assert unknown_model_capabilities.asked == []
+    assert "carrying tool calls as text" in capsys.readouterr().err
+
+
+def test_a_server_the_runner_did_not_build_is_left_alone() -> None:
+    from qwenloop.cli.app import _choose_tool_protocol
+    from qwenloop.domain.model import ToolProtocol
+
+    _choose_tool_protocol(object(), ToolProtocol.TEXT)  # type: ignore[arg-type]
+
+
+def test_a_run_on_a_model_without_tools_says_it_is_using_the_text_protocol(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+    unknown_model_capabilities,  # type: ignore[no-untyped-def]
+) -> None:
+    plan = tmp_path / "plan.md"
+    plan.write_text("do it")
+    unknown_model_capabilities.reported = frozenset({"completion"})
+    monkeypatch.setenv("QWENLOOP_BASE_URL", "http://127.0.0.1:1/v1")
+    monkeypatch.setenv("QWENLOOP_MODEL", "codellama:7b")
+    result = runner.invoke(app, ["run", str(plan), "--cwd", str(tmp_path)])
+    assert "codellama:7b: carrying tool calls as text" in result.stderr
