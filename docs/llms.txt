@@ -173,6 +173,11 @@ This index is generated from the documentation's navigation by `scripts/llms_txt
 - [0091 — A paired device may start, pause, resume and unwind a project](https://the-vibey-project.github.io/vibey/main/architecture/decisions/0091-devices-may-start-pause-and-unwind-projects/)
 - [0092 — Large tasks are sliced into the CDD layers before they run](https://the-vibey-project.github.io/vibey/main/architecture/decisions/0092-large-tasks-are-sliced-into-the-cdd-layers-before-they-run/)
 - [0093 — Local model families are named and measured, never assumed](https://the-vibey-project.github.io/vibey/main/architecture/decisions/0093-local-model-families-are-named-and-measured-not-assumed/)
+- [0094 — The cost of routing the cache through its lane is accepted](https://the-vibey-project.github.io/vibey/main/architecture/decisions/0094-the-cost-of-routing-the-cache-through-its-lane-is-accepted/)
+- [0095 — OpenTofu is the infrastructure-as-code tool for AWS deployments](https://the-vibey-project.github.io/vibey/main/architecture/decisions/0095-opentofu-is-the-infrastructure-as-code-tool-for-aws/)
+- [0096 — On Forgejo, branch rules are mapped where Forgejo can express them and waived loudly where it cannot](https://the-vibey-project.github.io/vibey/main/architecture/decisions/0096-on-forgejo-branch-rules-are-mapped-where-they-can-be-and-waived-loudly-where-they-cannot/)
+- [0097 — This project runs its own sovereign Forgejo host, on the operator's home server](https://the-vibey-project.github.io/vibey/main/architecture/decisions/0097-this-project-runs-its-own-sovereign-forgejo-host/)
+- [0098 — The VS Code verification is done by a large model and reviewed by the operator](https://the-vibey-project.github.io/vibey/main/architecture/decisions/0098-the-vs-code-verification-is-done-by-a-large-model-and-reviewed-by-the-operator/)
 
 ## Governance
 
