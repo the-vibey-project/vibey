@@ -1383,7 +1383,7 @@ with no exceptions.
 | `warn_days` | integer / `7` | How many days before an exception expires every run warns. At most `max_exception_days`. |
 
 Each exception is one `[[exception]]` table in `exceptions_file`. Every key is required except
-`upstream`:
+`upstream` and `fix_unreachable`:
 
 | Key | Meaning |
 |---|---|
@@ -1394,10 +1394,11 @@ Each exception is one `[[exception]]` table in `exceptions_file`. Every key is r
 | `added`, `expires` | Unquoted TOML dates. The exception is honoured before `expires` and refused from that day on. |
 | `retire_when` | The condition that ends it early, such as a patched release. |
 | `upstream` | A list of links to where that condition is tracked. |
+| `fix_unreachable` | Lets the exception stand although a patched release exists, because no package that depends on this one accepts it: who pins the vulnerable range, what that range is, and what was tried. The check verifies one thing itself, that the package is **dev-only** in the workspace's `package-lock.json` (present, and every copy marked `dev`), and refuses the key for a package that ships. It cannot verify that no dependent accepts the fix, so a reviewer must, and `max_exception_days` makes someone look again. |
 
 The check also fails when an exception matches nothing at `audit_level` or worse, when its
-package has a patched release in the GitHub advisory database, and when it names a workspace
-with no lockfile. Each workspace is judged only against its own exceptions.
+package has a patched release in the GitHub advisory database (unless it declares
+`fix_unreachable` and is dev-only), and when it names a workspace with no lockfile. Each workspace is judged only against its own exceptions.
 
 ## `[forge_retry]`
 
