@@ -57,6 +57,7 @@ nav:
       - Install, copy, reinstall, uninstall: guides/install.md
       - Downloads: guides/downloads.md
       - VS Code extension: guides/vscode-extension.md
+      - Drive a project from anywhere: guides/drive-a-project.md
       - Kubernetes: guides/kubernetes.md
       - Greeter live demo: guides/greeter-live-demo.md
       - Local models on Ollama: guides/local-models-ollama.md
@@ -199,4 +200,12 @@ nav:
           - "0088 — TypeScript, never JavaScript: the only authored form is typed, and the JavaScript that must exist is generated": architecture/decisions/0088-typescript-never-javascript.md
           - "0089 — AI self-reference is I; inclusive we is only direct address": architecture/decisions/0089-ai-self-reference-is-i-inclusive-we-is-direct.md
           - "0090 — pr-af is the declared default exact-head reviewer": architecture/decisions/0090-pr-af-as-the-declared-default-reviewer.md
+          - "0091 — A paired device may start, pause, resume and unwind a project": architecture/decisions/0091-devices-may-start-pause-and-unwind-projects.md
+          - "0092 — Large tasks are sliced into the CDD layers before they run": architecture/decisions/0092-large-tasks-are-sliced-into-the-cdd-layers-before-they-run.md
+          - "0093 — Local model families are named and measured, never assumed": architecture/decisions/0093-local-model-families-are-named-and-measured-not-assumed.md
+          - "0094 — The cost of routing the cache through its lane is accepted": architecture/decisions/0094-the-cost-of-routing-the-cache-through-its-lane-is-accepted.md
+          - "0095 — OpenTofu is the infrastructure-as-code tool for AWS deployments": architecture/decisions/0095-opentofu-is-the-infrastructure-as-code-tool-for-aws.md
+          - "0096 — On Forgejo, branch rules are mapped where Forgejo can express them and waived loudly where it cannot": architecture/decisions/0096-on-forgejo-branch-rules-are-mapped-where-they-can-be-and-waived-loudly-where-they-cannot.md
+          - "0097 — This project runs its own sovereign Forgejo host, on the operator's home server": architecture/decisions/0097-this-project-runs-its-own-sovereign-forgejo-host.md
+          - "0098 — The VS Code verification is done by a large model and reviewed by the operator": architecture/decisions/0098-the-vs-code-verification-is-done-by-a-large-model-and-reviewed-by-the-operator.md
   - Research paper: paper.md

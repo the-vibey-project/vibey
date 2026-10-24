@@ -136,3 +136,22 @@ this is one ADR rather than thirty tickets.
 `*loop` engine on `PATH` to do anything. Several of these channels imply "install
 and it works". The packaging has to be honest about that — a post-install note,
 and `vibey doctor` already reports what is missing.
+
+## Rulings of 2026-10-24
+
+Two questions this record left open were ruled by the operator on 2026-10-24 (#668,
+items 6 and 9). They add to the decision; nothing above is withdrawn.
+
+**The single-file executable is built with PyInstaller.** The *One artifact, many
+wrappers* paragraph names "shiv, pex or PyInstaller" without choosing. shiv and pex both
+need a Python already installed on the target, which defeats a self-contained
+executable that Homebrew, winget, Scoop and the npm wrapper can point at. PyInstaller
+needs none. Its cost is that each OS builds its own artifact, so the per-OS builds must
+run on Arch Linux and on macOS (sub-doctrine 8.h). Consequence 2 therefore starts from a
+PyInstaller recipe built from the release wheel.
+
+**The runnable OCI image gains an Arch Linux variant.** The image is Debian bookworm
+today. Sub-doctrine 8.h makes Arch Linux the default sovereign operating system, and the
+operator ruled that an OCI image is not exempt from it. The Arch variant is
+contract-tested like the Debian one and published beside it, from its own tested digest.
+Consequence 1 (the OCI image to `ghcr.io`) covers both.

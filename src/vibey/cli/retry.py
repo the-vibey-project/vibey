@@ -79,7 +79,10 @@ class RetryCommand:
             others = len(gates) - len(exhausted)
 
             if not keep_workers and not stop_workers(
-                self._stopper, grace_seconds=grace_seconds, dry_run=dry_run
+                self._stopper,
+                grace_seconds=grace_seconds,
+                dry_run=dry_run,
+                project_id=str(project_id),
             ):
                 raise typer.Exit(1)
 

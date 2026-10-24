@@ -190,3 +190,61 @@ describe('GateAnswerPlanner', () => {
     expect(planner.checkRaw('{bad')).toContain('That is not JSON');
   });
 });
+
+describe('VibeyCli project lifecycle', () => {
+  it('creates a project from `vibey new --json` and passes the folder and what to build', async () => {
+    const runner = new FakeProcessRunner().on(['new'], { stdout: JSON.stringify({ project_id: 'p1', name: 'greeter', outcome: 'design job j1' }) });
+    const created = await cli(runner).createProject('greeter', { repo: '/work/greeter', intake: '  a greeting page  ' });
+    expect(created).toEqual({ project_id: 'p1', name: 'greeter', outcome: 'design job j1' });
+    expect(runner.calls.at(-1)?.args).toEqual(['new', 'greeter', '--repo', '/work/greeter', '--intake', 'a greeting page', '--json']);
+    await cli(runner).createProject('greeter', { repo: '/work/greeter', intake: '   ' });
+    expect(runner.calls.at(-1)?.args).toEqual(['new', 'greeter', '--repo', '/work/greeter', '--json']);
+  });
+
+  it('fills a sparse creation reply and refuses one that names no project', async () => {
+    const sparse = new FakeProcessRunner().on(['new'], { stdout: JSON.stringify({ project_id: 'p1' }) });
+    expect(await cli(sparse).createProject('named', { repo: '/r' })).toEqual({ project_id: 'p1', name: 'named', outcome: '' });
+    await expect(cli(new FakeProcessRunner().on(['new'], { stdout: '[]' })).createProject('x', { repo: '/r' })).rejects.toThrow('did not print a project');
+    await expect(cli(new FakeProcessRunner().on(['new'], { stdout: 'project abc' })).createProject('x', { repo: '/r' })).rejects.toThrow('not JSON');
+  });
+
+  it('says what an older vibey lacks when it has no --json on new', async () => {
+    const runner = new FakeProcessRunner().on(['new'], { code: 2, stderr: 'Error: No such option: --json' });
+    await expect(cli(runner).createProject('x', { repo: '/r' })).rejects.toThrow('No such option');
+  });
+
+  it('starts and pauses work through the commands a person would type', async () => {
+    const runner = new FakeProcessRunner().on(['retry'], { stdout: 'started worker\n' }).on(['recover'], { stdout: 'stopped 1 worker\n' });
+    const vibey = cli(runner);
+    expect(await vibey.startWork('p1')).toBe('started worker');
+    expect(runner.calls.at(-1)?.args).toEqual(['retry', 'p1', '--keep-workers', '--start-worker']);
+    expect(await vibey.pauseWork('p1')).toBe('stopped 1 worker');
+    expect(runner.calls.at(-1)?.args).toEqual(['recover', '--project', 'p1', '--stop-workers']);
+  });
+
+  it('previews an abandonment with --dry-run and reduces the lists to counts', async () => {
+    const document = {
+      project_id: 'p1',
+      name: 'greeter',
+      from: 'BUILD',
+      to: 'ABANDONED',
+      dry_run: true,
+      already_abandoned: false,
+      written: false,
+      cancelled_jobs: [{ job_id: 'j1' }, { job_id: 'j2' }],
+      withdrawn_gates: [{ gate_id: 'g1' }],
+    };
+    const runner = new FakeProcessRunner().on(['abandon'], { stdout: JSON.stringify(document) });
+    const report = await cli(runner).abandonProject('p1', 'not needed', { dryRun: true });
+    expect(report).toEqual({ project_id: 'p1', name: 'greeter', from: 'BUILD', to: 'ABANDONED', dry_run: true, already_abandoned: false, written: false, cancelled_jobs: 2, withdrawn_gates: 1 });
+    expect(runner.calls.at(-1)?.args).toEqual(['abandon', 'p1', '--reason', 'not needed', '--by', 'vibey-vscode', '--json', '--dry-run']);
+    await cli(runner).abandonProject('p1', 'not needed');
+    expect(runner.calls.at(-1)?.args).toEqual(['abandon', 'p1', '--reason', 'not needed', '--by', 'vibey-vscode', '--json']);
+  });
+
+  it('fills a sparse abandonment and refuses one that names no project', async () => {
+    const sparse = new FakeProcessRunner().on(['abandon'], { stdout: JSON.stringify({ project_id: 'p1' }) });
+    expect(await cli(sparse).abandonProject('p1', 'r')).toEqual({ project_id: 'p1', name: 'p1', from: '', to: '', dry_run: false, already_abandoned: false, written: false, cancelled_jobs: 0, withdrawn_gates: 0 });
+    await expect(cli(new FakeProcessRunner().on(['abandon'], { stdout: '[]' })).abandonProject('p1', 'r')).rejects.toThrow('did not print an abandonment');
+  });
+});

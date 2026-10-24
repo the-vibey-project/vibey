@@ -149,7 +149,28 @@ class EngineAffordances:
     paste_images: bool | None = None
     plugins: PluginSystem | None = None
     mcp: bool | None = None
+    skills: bool | None = None
+    web_search: bool | None = None
     evidence: Mapping[str, str] = field(default_factory=dict)
+
+    def full_access_gaps(self) -> tuple[str, ...]:
+        """What a lane on this engine is not shown to have: every skill, Claude's own plugins,
+        every MCP server, and web search with the research tools beside it (#1666).
+
+        Every lane is meant to have all four. Unknown is a gap, not a grant -- a capability
+        nothing in the tree shows is not one to assume -- so the answer is only ever shorter
+        because a runner's code was read, never because a field was left blank.
+        """
+        gaps: list[str] = []
+        if self.skills is not True:
+            gaps.append("skills")
+        if self.plugins is not PluginSystem.CLAUDE_PLUGINS:
+            gaps.append("plugins")
+        if self.mcp is not True:
+            gaps.append("mcp")
+        if self.web_search is not True:
+            gaps.append("web_search")
+        return tuple(gaps)
 
 
 @dataclass(frozen=True, slots=True)
@@ -272,6 +293,11 @@ class EngineDescriptor:
     # Which side of TIER_PREFERENCE the engine sits on. PAID unless the
     # engine runs on the operator's own hardware.
     tier: EngineTier = EngineTier.PAID
+    # Flags vibey passes to every new `run` so the lane has what its runner can be handed and
+    # would otherwise leave off (#1666): claudeloop's web search is off unless asked for. Each
+    # is checked against the runner's own `--help` by conformance, and an engine that cannot
+    # serve one (claudeloop-local refuses web search) simply does not list it.
+    launch_flags: tuple[str, ...] = ()
     # Extra arguments for `<binary> doctor` in preflight. claudeloop-local
     # passes its profile, so the health check probes the local backend the
     # run will use rather than the Anthropic login a profile never touches.

@@ -49,12 +49,14 @@ from vibey.cli.errors import EXIT_USAGE, guard
 from vibey.cli.gate_auto_answer import auto_answer_lines, auto_answer_startup_line
 from vibey.cli.gate_notices import GATE_NOTICE_DOCTOR, GATE_REMINDERS
 from vibey.cli.gates import GATES
+from vibey.cli.help_layout import HelpLayout
 from vibey.cli.host_health import HOST_HEALTH
 from vibey.cli.hub_pair import hub_app
 from vibey.cli.ledger_publication import ledger_export, ledger_site
 from vibey.cli.ledger_search import PRESENTER, ledger_search
 from vibey.cli.llm import llm_app
 from vibey.cli.loops import LOOPS
+from vibey.cli.models import MODELS
 from vibey.cli.projects import PROJECTS
 from vibey.cli.queue import queue_app
 from vibey.cli.recover import stop_workers
@@ -332,6 +334,13 @@ def new_project(
         ),
     ] = None,
     ignore_sabbath: IgnoreSabbath = False,
+    as_json: Annotated[
+        bool,
+        typer.Option(
+            "--json",
+            help="Print JSON instead: project_id, name and outcome, one document on stdout.",
+        ),
+    ] = False,
 ) -> None:
     """Create a project and enqueue its first DESIGN interview (or, with a spec, skip DESIGN)."""
     SABBATH.decline_if_resting("new", ignore=ignore_sabbath)
@@ -419,6 +428,11 @@ def new_project(
 
     with guard():
         project_id, outcome = asyncio.run(create())
+    if as_json:
+        typer.echo(
+            json.dumps({"project_id": project_id, "name": name, "outcome": outcome}, sort_keys=True)
+        )
+        return
     typer.echo(f"project {project_id}\n{outcome}")
 
 
@@ -912,6 +926,15 @@ def waive_visual(project_id: UUID) -> None:
     typer.echo(f"waived visual design for {project_id}; entered {phase.value}")
 
 
+def _on_a_terminal() -> bool:
+    """Whether a person is at this terminal: input and output are both one.
+
+    Module-level, beside `watch` (its one caller), as a seam: the test runner's streams are
+    never a terminal, and a test that wants either answer substitutes this by name (a method
+    on a class would only add an object to build for one line)."""
+    return sys.stdin.isatty() and sys.stdout.isatty()
+
+
 @app.command("watch")
 def watch_dashboard(
     project_id: Annotated[UUID | None, typer.Argument(help="Optional project ID")] = None,
@@ -920,7 +943,23 @@ def watch_dashboard(
     ] = False,
     speed: Annotated[float, typer.Option("--speed", help="Playback speed multiplier")] = 1.0,
 ) -> None:
-    """Live dashboard monitoring current phase, queue, circuits, worktrees, and ledger tail."""
+    """Live dashboard monitoring current phase, queue, circuits, worktrees, and ledger tail.
+
+    Needs a terminal. Piped or redirected it prints the one snapshot `vibey status` prints
+    and exits, so a script or an agent gets text, not a screen takeover."""
+    if not _on_a_terminal():
+        if replay:
+            typer.echo(
+                "--replay plays the ledger back on a terminal screen; run it in one.", err=True
+            )
+            raise typer.Exit(EXIT_USAGE)
+        typer.echo(
+            "not a terminal, so this prints one snapshot instead of the live dashboard; "
+            "`vibey status --json` is the machine form.",
+            err=True,
+        )
+        status(project_id, as_json=False)
+        return
     from vibey.infrastructure.db.engine_health_repository import PostgresEngineHealthRepository
     from vibey.tui.dashboard import (
         DashboardState,
@@ -992,10 +1031,22 @@ def recover(
         typer.Option(
             "--stop-workers",
             help=(
-                "First stop every `vibey worker` this user is running, and what each started: "
-                "SIGTERM, then SIGKILL after --grace. A live worker holds its leases, so the "
-                "jobs are only reset once none is left. The processes are listed first."
+                "First stop the `vibey worker` processes this user is running, and what each "
+                "started: SIGTERM, then SIGKILL after --grace. With --project, only that "
+                "project's workers (`vibey worker --project ID`); a worker that serves every "
+                "project is left running and named, and the jobs are then not reset, because "
+                "it may hold one (add --include-shared to stop it too). A live worker holds its "
+                "leases, so the jobs are only reset once none is left. The processes are "
+                "listed first."
             ),
+        ),
+    ] = False,
+    include_shared: Annotated[
+        bool,
+        typer.Option(
+            "--include-shared",
+            help="With --project and --stop-workers: also stop the workers that serve every "
+            "project (--all-projects) or none in particular.",
         ),
     ] = False,
     grace: Annotated[
@@ -1028,7 +1079,12 @@ def recover(
             raise typer.Exit(1)
 
         if stop_workers_first and not stop_workers(
-            WorkerStopper(), grace_seconds=grace, dry_run=dry_run
+            WorkerStopper(),
+            grace_seconds=grace,
+            dry_run=dry_run,
+            project_id=None if all_projects or project_id is None else str(project_id),
+            include_shared=include_shared,
+            shared_blocks=True,
         ):
             raise typer.Exit(1)
 
@@ -1088,7 +1144,7 @@ def retry(
         bool,
         typer.Option(
             "--keep-workers",
-            help="Do not stop this user's running workers first.",
+            help="Do not stop this project's running workers first. Workers that serve every project are never stopped by retry.",
         ),
     ] = False,
     start_worker: Annotated[
@@ -1254,6 +1310,23 @@ def loops(
     """
     with guard():
         LOOPS.run(as_json=as_json)
+
+
+@app.command("models")
+def models(
+    as_json: Annotated[
+        bool,
+        typer.Option("--json", help="Print the same facts as JSON, for a program."),
+    ] = False,
+) -> None:
+    """List the local model families and what the Ollama here says each model can do.
+
+    The families need no network. The installed models come from the Ollama at
+    VIBEY_OLLAMA_URL, with the capabilities Ollama itself reports; no Ollama is reported,
+    not fatal.
+    """
+    with guard():
+        MODELS.run(as_json=as_json)
 
 
 @app.command("cost")
@@ -2774,6 +2847,9 @@ def worker(
 
     with guard():
         asyncio.run(run_worker())
+
+
+HelpLayout().apply(app)
 
 
 def run(argv: Sequence[str] | None = None) -> None:

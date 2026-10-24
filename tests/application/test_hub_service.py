@@ -21,13 +21,19 @@ from vibey.application.dto import (
     HumanGateRecord,
     ProjectRecord,
 )
-from vibey.application.hub.hub_service import HUB_QUEUE_SOURCE, HubService
+from vibey.application.hub.hub_service import (
+    HUB_QUEUE_SOURCE,
+    MAX_INTAKE,
+    MAX_REASON,
+    HubService,
+)
 from vibey.application.hub.interfaces.hub_service_interface import (
     HubDocumentsInterface,
     HubProbesInterface,
     HubServiceInterface,
 )
-from vibey.domain.errors import UnknownGate, UnknownProject
+from vibey.application.hub.interfaces.lifecycle_interface import ProjectLifecycleInterface
+from vibey.domain.errors import LifecycleInvalid, UnknownGate, UnknownProject
 from vibey.domain.hub_scope import HubForbidden, HubScope
 from vibey.domain.ledger import EventKind
 from vibey.domain.phase import Phase
@@ -229,6 +235,31 @@ class Probes:
         return ("tail", events_path, after)
 
 
+class Lifecycle:
+    """Records what the hub asked the host to do with a project, and answers as vibey would."""
+
+    def __init__(self, world: World) -> None:
+        self._world = world
+
+    async def create(self, name: str, intake: str) -> Mapping[str, object]:
+        self._world.asked.append(("create", (name, intake)))
+        return {"project_id": "p", "name": name, "outcome": "design job j"}
+
+    async def start_work(self, project_id: UUID) -> Mapping[str, object]:
+        self._world.asked.append(("start_work", project_id))
+        return {"message": "started"}
+
+    async def pause_work(self, project_id: UUID) -> Mapping[str, object]:
+        self._world.asked.append(("pause_work", project_id))
+        return {"message": "paused"}
+
+    async def abandon(
+        self, project_id: UUID, reason: str, *, by: str, dry_run: bool
+    ) -> Mapping[str, object]:
+        self._world.asked.append(("abandon", (project_id, reason, by, dry_run)))
+        return {"dry_run": dry_run}
+
+
 def _service(world: World) -> HubService:
     return HubService(
         projects=world,
@@ -241,6 +272,7 @@ def _service(world: World) -> HubService:
         ledger_range=Range(world),
         documents=Documents(),
         probes=Probes(),
+        lifecycle=Lifecycle(world),
     )
 
 
@@ -249,6 +281,7 @@ def test_the_service_and_its_collaborators_meet_their_declared_seams() -> None:
     assert isinstance(_service(world), HubServiceInterface)
     assert isinstance(Documents(), HubDocumentsInterface)
     assert isinstance(Probes(), HubProbesInterface)
+    assert isinstance(Lifecycle(world), ProjectLifecycleInterface)
 
 
 async def test_projects_counts_each_projects_open_gates() -> None:
@@ -450,3 +483,88 @@ async def test_the_live_feed_reads_by_position_after_the_last_seq() -> None:
         service.lane_tail(NOTHING, "/x", 0)
     with pytest.raises(UnknownProject):
         await service.ledger_after(EVERYTHING, uuid4(), after=0, limit=1)
+
+
+RUNNER = HubPrincipal(name="device:phone", scopes=frozenset({HubScope.VIEW, HubScope.RUN}))
+
+
+async def test_a_device_with_run_starts_a_project_from_a_name_and_an_intake() -> None:
+    world = World()
+    document = await _service(world).create_project(RUNNER, "greeter", "  a greeting page  ")
+    assert document == {"project_id": "p", "name": "greeter", "outcome": "design job j"}
+    assert world.asked == [("create", ("greeter", "a greeting page"))]
+
+
+@pytest.mark.parametrize(
+    "name", ["", ".hidden", "-flag", "has space", "a/b", "..", "x" * 65, "name\n", "über"]
+)
+async def test_a_project_name_that_could_name_a_path_or_a_flag_is_refused(name: str) -> None:
+    world = World()
+    with pytest.raises(LifecycleInvalid, match="project name"):
+        await _service(world).create_project(RUNNER, name, "")
+    assert world.asked == []
+
+
+async def test_an_intake_longer_than_the_cap_is_refused() -> None:
+    world = World()
+    await _service(world).create_project(RUNNER, "ok", "x" * MAX_INTAKE)
+    with pytest.raises(LifecycleInvalid, match=str(MAX_INTAKE)):
+        await _service(world).create_project(RUNNER, "ok", "x" * (MAX_INTAKE + 1))
+
+
+async def test_pause_and_start_act_on_a_project_that_exists_and_no_other() -> None:
+    world = World()
+    project = _project()
+    world.projects = [project]
+    service = _service(world)
+    assert await service.start_work(RUNNER, project.project_id) == {"message": "started"}
+    assert await service.pause_work(RUNNER, project.project_id) == {"message": "paused"}
+    assert [name for name, _ in world.asked] == ["start_work", "pause_work"]
+    with pytest.raises(UnknownProject):
+        await service.pause_work(RUNNER, uuid4())
+    with pytest.raises(UnknownProject):
+        await service.start_work(RUNNER, uuid4())
+
+
+async def test_an_unwind_is_recorded_under_the_principals_name_with_its_reason() -> None:
+    world = World()
+    project = _project()
+    world.projects = [project]
+    service = _service(world)
+    await service.abandon_project(RUNNER, project.project_id, "  not needed  ", dry_run=True)
+    await service.abandon_project(RUNNER, project.project_id, "not needed", dry_run=False)
+    assert world.asked == [
+        ("abandon", (project.project_id, "not needed", "device:phone", True)),
+        ("abandon", (project.project_id, "not needed", "device:phone", False)),
+    ]
+    with pytest.raises(UnknownProject):
+        await service.abandon_project(RUNNER, uuid4(), "why", dry_run=False)
+
+
+@pytest.mark.parametrize("reason", ["", "   ", "x" * (MAX_REASON + 1)])
+async def test_an_unwind_needs_a_reason_of_a_sensible_length(reason: str) -> None:
+    world = World()
+    project = _project()
+    world.projects = [project]
+    with pytest.raises(LifecycleInvalid, match="say why"):
+        await _service(world).abandon_project(RUNNER, project.project_id, reason, dry_run=False)
+    assert world.asked == []
+
+
+async def test_without_run_none_of_it_is_permitted_and_nothing_is_asked() -> None:
+    world = World()
+    project = _project()
+    world.projects = [project]
+    service = _service(world)
+    pid = project.project_id
+    viewer = HubPrincipal(name="device:tv", scopes=frozenset({HubScope.VIEW, HubScope.ANSWER}))
+    for who in (NOTHING, viewer):
+        for call in (
+            service.create_project(who, "greeter", ""),
+            service.start_work(who, pid),
+            service.pause_work(who, pid),
+            service.abandon_project(who, pid, "why", dry_run=False),
+        ):
+            with pytest.raises(HubForbidden):
+                await call
+    assert world.asked == []

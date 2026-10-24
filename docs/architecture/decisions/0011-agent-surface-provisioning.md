@@ -2,7 +2,7 @@
 
 **Status:** accepted · **Date:** 2026-08-14 · **Extended by:** ADR-0031
 
-**Owes:** a sub-doctrine (not yet proposed) — agent guidance has one source of truth, materialized for every engine and changed for all of them in the same change (nearest parent: doctrine 9, beside 9.a).
+**Canon:** sub-doctrine 9.i — *one source of agent guidance*, filed under the operator's ratifying merge of the change that adds it (ADR-0020).
 
 ## Context
 

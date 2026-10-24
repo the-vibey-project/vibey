@@ -8,11 +8,17 @@ code's own help text, which is shorter than this page and in places less
 complete (for example, `vibey work --help` does not say that `qwenloop` is still
 accepted as the old name of `gptossloop`).
 
-Top-level commands, in `vibey --help` order: `new`, `serve`, `sabbath`,
-`projects`, `gates`, `answer`, `work`, `watch`, `recover`, `status`, `engines`,
-`loops`, `cost`, `install`, `doctor`, `migrate`, `operator`, `worker`, and the
-command groups `design`, `visual`, `deploy`, `ledger`, `queue`, `budget`,
-`ultra`, `driver`, `supervisor`, `state`, `hub`.
+`vibey --help` groups the top-level commands into six panels, in the order a newcomer
+needs them (the footer of that help holds four commands to copy). Commands that are
+command groups are marked with a trailing `…`.
+
+- **Start here:** `doctor`, `install`, `new`, `projects`, `status`
+- **Decisions that are yours:** `gates`, `answer`, `design`…, `visual`…, `deploy`…
+- **Watch and steer:** `watch`, `queue`…, `engines`, `loops`, `models`, `cost`, `budget`…, `ledger`…, `ultra`…, `retry`, `recover`, `abandon`
+- **Run the machinery:** `work`, `worker`, `serve`, `hub`…, `supervisor`…, `driver`…, `operator`
+- **Maintain:** `migrate`, `state`…, `sabbath`
+- **Tools for agents:** `search`, `fetch`, `llm`…
+
 Bare `vibey`, and each bare command group, prints help.
 
 Commands that read or write project state need `VIBEY_PG_URL` (see
@@ -153,6 +159,7 @@ Create a project and enqueue its first DESIGN interview.
 | `--skills-context-budget N` | `6000` | Token budget for skills retrieval (1,000–32,000). Stored only when the mode is not `off`. |
 | `--design-default-scope {narrowest,model}` | unset | Whose appetite a DESIGN question's default follows — see [`[design.interview]`](configuration.md#designinterview). Stored as `design.interview.default_scope`, over whatever `vibey.toml` declares; unset keeps the file's value, and with neither the default is `narrowest`. Any other value exits 2. The triaged-delivery bridge always passes `narrowest`. |
 | `--accept-spec-json FILE` | unset | Skip DESIGN: the reviewed spec JSON (the file `vibey design accept --spec-json` takes) is the design. The project is created, moved into DESIGN with no interview job, the spec saved and accepted at once (visual design declined; the ledger names `new-with-spec`), and BUILD's decomposition enqueued. No interview, no research and no spec synthesis, so nothing waits for a person or a model. A spec that cannot be read is a usage error before any project exists; one the acceptance refuses leaves the project in DESIGN with the spec saved, so `vibey design accept PROJECT --spec-json FILE` can finish it. Prints `design skipped; entered build` where the interview prints its job. |
+| `--json` | off | Print one JSON document on stdout instead of the two lines below: `{"project_id": ..., "name": ..., "outcome": ...}`, where `outcome` is the second line (`design job <id>`, or `design skipped; entered <phase>`). A client such as the editor extension reads the project id from it rather than scraping text. |
 
 Prints `project <id>` and `design job <id>`. The project id is the
 `PROJECT_ID` the other commands take; [`vibey projects`](#vibey-projects)
@@ -532,6 +539,12 @@ id prints `unknown project <id>` and exits 1.
 Replay starts paused. Keys: Space play/pause, Right or `n` next step, Left or
 `p` previous step, `q` quit.
 
+**Not on a terminal.** When input or output is piped or redirected (a script, an agent, `| cat`),
+`watch` does not take over the screen: it says so on stderr, prints the same one-time snapshot
+[`vibey status`](#vibey-status-project_id) prints (`vibey status --json` is the machine form),
+and exits 0, or 1 when there is no project. `--replay` needs a terminal screen, so without one it
+is a usage error (exit 2).
+
 ## `vibey llm`
 
 The conversation with the local model, as it happens. It only reads.
@@ -592,7 +605,8 @@ assigned engine are cleared.
 | `--project ID` | unset | Recover jobs for one project. |
 | `--all` | off | Recover jobs for every project. Wins if `--project` is also given. |
 
-| `--stop-workers` | off | First stop every `vibey worker` this user is running, and everything each started (an engine runner, a `uv run` or `caffeinate` wrapper), then reset the leases. The processes are listed before anything is signalled. SIGTERM, then SIGKILL for what is still there after `--grace`. It matches `vibey` command lines with `worker` in them, in this user's processes only, and never itself or what started it. If anything survives SIGKILL it exits 1 **without resetting a lease**, because a live worker holds its leases by heartbeat and resetting them would run its job twice. |
+| `--stop-workers` | off | First stop the `vibey worker` processes this user is running, and everything each started (an engine runner, a `uv run` or `caffeinate` wrapper), then reset the leases. **With `--project`, only that project's workers** (`vibey worker --project ID`): a worker that serves every project (`--all-projects`) or none in particular may hold a lease on it, so it is left running and named, and the leases are **not** reset (exit 1) until you add `--include-shared`. With `--all`, every worker. The processes are listed first. |
+| `--include-shared` | off | With `--project` and `--stop-workers`: also stop the workers that serve every project or none in particular, so the leases can be reset. |
 | `--grace SECONDS` | `10` | How long `--stop-workers` waits after SIGTERM before SIGKILL. |
 | `--dry-run` | off | Change nothing: with `--stop-workers`, list the processes that would be stopped, and print `would recover N stuck job(s)` instead of resetting them. |
 
@@ -615,7 +629,7 @@ parks its job on an `attempts_exhausted` gate; this does what used to be `recove
 | Option | Default | What it does |
 |---|---|---|
 | `--max-attempts N` | `10` | Attempts to grant on each of the project's `attempts_exhausted` gates. |
-| `--keep-workers` | off | Do not stop this user's running workers first. |
+| `--keep-workers` | off | Do not stop this project's running workers first. `retry` stops only workers started for this project (`vibey worker --project ID`); one that serves every project is never stopped by it, because a retry resets no lease. |
 | `--start-worker` | off | Then start `vibey worker --project PROJECT_ID` detached, with every argument after `--` passed to it. |
 | `--log PATH` | `$XDG_STATE_HOME/vibey/worker-<project>.log` | Where the started worker's output is appended. |
 | `--grace SECONDS` | `10` | How long a worker gets after SIGTERM before SIGKILL. |
@@ -740,6 +754,31 @@ What the runners' own code shows today:
 | `claudeloop`, `claudeloop-local` | files, pasted text, `claude-plugins` (`run --plugin`), MCP (`run --connector`); images unknown | `--run-id` and `--cwd` for each; `prompt TEXT --now` | `event_type+payload` |
 | `codexloop` | files, pasted text, `skills-context`; images and MCP unknown | `--run-id` for each and no `--cwd`: run it in the worktree; `prompt TEXT --now` | `type` |
 | `gptossloop`, `qwenloop` | files, pasted text, `skills-context`; no images, no pasted images, no MCP (text messages and a fixed tool set) | each takes the run id positionally, with `--cwd`; `prompt RUN_ID TEXT`, which its runner adds to the conversation at the next turn boundary | `type` |
+
+## `vibey models`
+
+List the local model families vibey knows by name -- Qwen Coder, DeepSeek Coder, Codestral,
+StarCoder, Gemma, Llama, CodeLlama and CodeGemma ([ADR-0093](../architecture/decisions/0093-local-model-families-are-named-and-measured-not-assumed.md)) --
+each with the Ollama tag to start from and the `ollama pull` that fetches it, and then the
+models the Ollama on this machine actually has, with what that Ollama reports each can do.
+
+The families need no network. The installed models come from the Ollama at
+`VIBEY_OLLAMA_URL` (default `http://127.0.0.1:11434`). Their capabilities are what Ollama's own
+`/api/show` says, never a table kept in vibey: Ollama decides tool-calling from more than a
+model's template, so a list kept here would be wrong for the newer models. A model whose
+capabilities Ollama does not report is **unknown**, which is not the same as having none. No
+Ollama answering is reported and is not an error; the families still print. It exits 0.
+
+For each installed model it says what the model can be tried for. `tools` means it can be
+tried for BUILD, and only a run shows whether it uses them: Qwen2.5-Coder 14B reports `tools`
+and still writes its calls out as text. `completion` means it can serve DESIGN and DECOMPOSE,
+which ask for JSON and need no tool-calling. `insert` means fill-in-the-middle completion. A
+model that reports `completion` without `tools` is also listed for BUILD through the text
+tool-call protocol, marked slower and measured unreliable.
+
+| Option | Default | What it does |
+|---|---|---|
+| `--json` | off | Print the same facts as JSON: `families` (`key`, `label`, `suggested_tag`, `pull`), `ollama_url`, `problem` (null, or why no Ollama answered), and `installed` (`tag`, `family`, `size_gb`, `capabilities` -- null when unknown -- and `jobs`). |
 
 ## `vibey cost [PROJECT_ID]`
 

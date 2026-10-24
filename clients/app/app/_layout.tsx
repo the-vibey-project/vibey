@@ -2,6 +2,7 @@
 import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { AppStateProvider } from '../src/ui/app-state';
+import { GateNotifications } from '../src/ui/notifications';
 import { useTheme } from '../src/ui/theme';
 
 function Navigator() {
@@ -9,6 +10,7 @@ function Navigator() {
   return (
     <>
       <StatusBar style={mode === 'dark' ? 'light' : 'dark'} />
+      <GateNotifications />
       <Stack
         screenOptions={{
           headerStyle: { backgroundColor: colors.bg.surface },
@@ -19,6 +21,7 @@ function Navigator() {
       >
         <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
         <Stack.Screen name="pair" options={{ headerShown: false, presentation: 'modal' }} />
+        <Stack.Screen name="start" options={{ title: 'Start a project' }} />
         <Stack.Screen name="budgets" options={{ title: 'Budgets' }} />
         <Stack.Screen name="devices" options={{ title: 'Devices' }} />
         <Stack.Screen name="doctor" options={{ title: 'Doctor' }} />

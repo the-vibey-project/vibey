@@ -52,44 +52,44 @@
   {
    "anchor": "7 — The never-lost reader",
    "document": "docs/doctrines.md",
-   "sha256": "a6de883d3e22bc9fcf381c94e92f1935a8a792617b52f8011df9a1944be6306e",
+   "sha256": "cc241074c9701a391de7020b6bc0856dac2390531a594e7b335ad6acccdb2de3",
    "start_line": 67,
-   "text_lines": 67
+   "text_lines": 69
   },
   {
    "anchor": "8 — Local authority",
    "document": "docs/doctrines.md",
-   "sha256": "2f11f538a414d85a98ff36dd382ebbb24366a789e30e80e8bf8436ec00910064",
-   "start_line": 134,
-   "text_lines": 354
+   "sha256": "6362d2efce272802befc0d9518b1187c453f01da205f94fcdf27552896cbeb62",
+   "start_line": 136,
+   "text_lines": 356
   },
   {
    "anchor": "9 — The vibe",
    "document": "docs/doctrines.md",
-   "sha256": "620fcd5a3eba49db7e12ad3c33926d1f313995933ff714171761de575c515088",
-   "start_line": 488,
-   "text_lines": 35
+   "sha256": "cbee0be89d5edb1d8cd69f719b174bc914af9ad1d827ab539b4bda6294a8022f",
+   "start_line": 492,
+   "text_lines": 41
   },
   {
    "anchor": "10 — No guarantees",
    "document": "docs/doctrines.md",
-   "sha256": "87d723335b2cc41dabb1179928861a01f724e7ce0b002fb75d6d15030e1de640",
-   "start_line": 523,
-   "text_lines": 77
+   "sha256": "038d4bb2141fcd05a6372a061ba43de9504b2945e8d8c9a5b84cb4f6f899704b",
+   "start_line": 533,
+   "text_lines": 81
   },
   {
    "anchor": "11 — The living roadmap",
    "document": "docs/doctrines.md",
    "sha256": "2b7af17bfc318721c526df138ff45715828a18d9f4892ca8a80d194c4328548d",
-   "start_line": 600,
+   "start_line": 614,
    "text_lines": 7
   },
   {
    "anchor": "12 — Humans first",
    "document": "docs/doctrines.md",
-   "sha256": "8acaf0777af6ae41ec552d5340a2e92f128f2d3d2d01c0564fd99d79923530b5",
-   "start_line": 607,
-   "text_lines": 264
+   "sha256": "b9273e629792da329e547b7cba609beeeaacbf6849df8666306b72f7e3205560",
+   "start_line": 621,
+   "text_lines": 268
   },
   {
    "anchor": "The Constitution",
@@ -232,7 +232,7 @@
    "text_lines": 4
   }
  ],
- "corpus_sha256": "3fdfb3c1b1066f8eb378bb9b561915993f047c27eb995201babc8744fab7c048",
+ "corpus_sha256": "502705e90a2a83b322b255d8c5cb58929258c39cea8136f04ddc6a3adba0d6c0",
  "documents": [
   "docs/doctrines.md",
   "docs/constitution.md",

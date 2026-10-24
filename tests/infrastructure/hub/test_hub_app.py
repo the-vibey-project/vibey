@@ -23,6 +23,10 @@ from vibey.domain.errors import (
     GateAlreadyAnswered,
     InvalidActorLabel,
     InvalidAnswer,
+    LifecycleConflict,
+    LifecycleFailed,
+    LifecycleInvalid,
+    LifecycleUnavailable,
     PriorityRefused,
     ReorderRefused,
     UnknownGate,
@@ -86,6 +90,20 @@ class Service:
 
     async def bump(self, principal: HubPrincipal, project_id: UUID, job_id: UUID) -> Any:
         return self._done("bump", project_id, job_id)
+
+    async def create_project(self, principal: HubPrincipal, name: str, intake: str) -> Any:
+        return self._done("create_project", name, intake)
+
+    async def start_work(self, principal: HubPrincipal, project_id: UUID) -> Any:
+        return self._done("start_work", project_id)
+
+    async def pause_work(self, principal: HubPrincipal, project_id: UUID) -> Any:
+        return self._done("pause_work", project_id)
+
+    async def abandon_project(
+        self, principal: HubPrincipal, project_id: UUID, reason: str, *, dry_run: bool
+    ) -> Any:
+        return self._done("abandon_project", project_id, reason, dry_run)
 
     async def ledger(
         self,
@@ -178,6 +196,14 @@ def test_the_factory_meets_its_declared_seam() -> None:
         ("GET", f"/api/v1/projects/{PID}/budget", "budget", None),
         ("GET", f"/api/v1/projects/{PID}/queue", "queue", None),
         ("POST", f"/api/v1/projects/{PID}/queue/{JOB}/bump", "bump", None),
+        ("POST", f"/api/v1/projects/{PID}/work/start", "start_work", None),
+        ("POST", f"/api/v1/projects/{PID}/work/pause", "pause_work", None),
+        (
+            "POST",
+            f"/api/v1/projects/{PID}/abandon",
+            "abandon_project",
+            {"reason": "not needed", "dry_run": True},
+        ),
         ("GET", f"/api/v1/projects/{PID}/ledger?text=x&kind=GateAnswered&limit=3", "ledger", None),
         ("GET", "/api/v1/loops", "loops", None),
         ("GET", "/api/v1/lanes", "lanes", None),
@@ -262,6 +288,10 @@ async def test_no_cross_origin_reader_is_ever_admitted() -> None:
         (InvalidAnswer("no"), 422),
         (InvalidActorLabel("no"), 422),
         (InvalidLedgerQuery("no"), 422),
+        (LifecycleInvalid("no"), 422),
+        (LifecycleConflict("no"), 409),
+        (LifecycleUnavailable("no"), 503),
+        (LifecycleFailed("no"), 502),
     ],
 )
 async def test_each_refusal_reads_as_its_status(error: Exception, status: int) -> None:
@@ -271,6 +301,29 @@ async def test_each_refusal_reads_as_its_status(error: Exception, status: int) -
         response = await client.get("/api/v1/projects", headers=AUTH)
     assert response.status_code == status
     assert response.json() == {"detail": str(error)}
+
+
+async def test_starting_a_project_is_a_201_that_passes_the_name_and_intake_on() -> None:
+    async with _client(_app()) as client:
+        response = await client.post(
+            "/api/v1/projects", headers=AUTH, json={"name": "greeter", "intake": "a page"}
+        )
+    assert response.status_code == 201
+    assert response.json() == {"ran": "create_project", "args": ["greeter", "a page"]}
+
+
+async def test_the_intake_is_optional_and_a_path_or_extra_key_is_refused() -> None:
+    async with _client(_app()) as client:
+        bare = await client.post("/api/v1/projects", headers=AUTH, json={"name": "greeter"})
+        with_path = await client.post(
+            "/api/v1/projects", headers=AUTH, json={"name": "greeter", "repo": "/etc"}
+        )
+        unwind = await client.post(
+            f"/api/v1/projects/{PID}/abandon", headers=AUTH, json={"reason": "r", "force": True}
+        )
+    assert bare.status_code == 201 and bare.json()["args"] == ["greeter", ""]
+    # A device names no folder: an unknown key is a 422, never a path the host would use.
+    assert with_path.status_code == 422 and unwind.status_code == 422
 
 
 async def test_an_answer_body_with_unknown_keys_is_refused() -> None:

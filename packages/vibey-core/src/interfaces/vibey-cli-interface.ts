@@ -13,6 +13,33 @@ export interface VibeyProject {
   readonly open_gates?: number;
 }
 
+/** `vibey new --json`: the project a person just started, and what vibey queued first. */
+export interface VibeyNewProject {
+  readonly project_id: string;
+  readonly name: string;
+  /** vibey's own line, e.g. `design job <id>`: the interview is queued, not yet run. */
+  readonly outcome: string;
+}
+
+/** What starting a project asks for: the folder it works in, and what the person wants built. */
+export interface VibeyNewProjectOptions {
+  readonly repo: string;
+  readonly intake?: string;
+}
+
+/** `vibey abandon --json`, with the two lists reduced to what a confirmation shows: counts. */
+export interface VibeyAbandonReport {
+  readonly project_id: string;
+  readonly name: string;
+  readonly from: string;
+  readonly to: string;
+  readonly dry_run: boolean;
+  readonly already_abandoned: boolean;
+  readonly written: boolean;
+  readonly cancelled_jobs: number;
+  readonly withdrawn_gates: number;
+}
+
 /** One entry of `vibey gates --json`'s `gates`. */
 export interface VibeyGate {
   readonly gate_id: string;
@@ -103,6 +130,14 @@ export interface VibeyCliInterface {
   status(projectId?: string): Promise<VibeyStatus>;
   answer(gateId: string, answer: GateAnswer): Promise<string>;
   bump(jobId: string, projectId?: string): Promise<string>;
+  /** `vibey new --json`: create a project in `options.repo` and queue its design interview. */
+  createProject(name: string, options: VibeyNewProjectOptions): Promise<VibeyNewProject>;
+  /** `vibey retry --keep-workers --start-worker`: start, or start again, the project's worker. */
+  startWork(projectId: string): Promise<string>;
+  /** `vibey recover --project --stop-workers`: stop this project's own workers and free its jobs; a worker that serves every project is left running and named, and the call then fails rather than reset a lease it may hold. Reversible. */
+  pauseWork(projectId: string): Promise<string>;
+  /** `vibey abandon --json`: unwind a project for good; `dryRun` lists what it would cancel and writes nothing. */
+  abandonProject(projectId: string, reason: string, options?: { readonly dryRun?: boolean }): Promise<VibeyAbandonReport>;
   /** `vibey loops --json`, unparsed: the catalogue parser reads it. */
   loops(): Promise<unknown>;
   budgets(): Promise<readonly VibeyBudget[]>;

@@ -72,10 +72,16 @@ describe('DevicePolicy', () => {
     },
   );
 
-  it('re-verifies spending, and nothing else', () => {
+  it('re-verifies spending and unwinding, and nothing else', () => {
     expect(policy.decide('answer-spend')).toEqual({ allowed: true, confirm: true });
+    // Unwinding cannot be undone, so it asks for Face ID, Touch ID or the passcode too (ADR-0091).
+    expect(policy.decide('abandon-project')).toEqual({ allowed: true, confirm: true });
     expect(policy.decide('answer')).toEqual({ allowed: true, confirm: false });
     expect(policy.decide('view')).toEqual({ allowed: true, confirm: false });
+  });
+
+  it.each(['start-project', 'start-work', 'pause-work'] as const)('lets a device %s without a re-check, when it holds the run scope', (action) => {
+    expect(policy.decide(action)).toEqual({ allowed: true, confirm: false });
   });
 
   it('offers ULTRA only under a declared cap', () => {

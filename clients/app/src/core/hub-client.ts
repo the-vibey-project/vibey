@@ -9,12 +9,16 @@
  * what it becomes, kept here until it moves into the shared core. Declared by
  * `interfaces/hub-client-interface.ts`.
  */
+import { VibeyCli } from '@vibey/core';
 import type {
   GateAnswer,
   TransportKind,
+  VibeyAbandonReport,
   VibeyBudget,
   VibeyCircuit,
   VibeyGate,
+  VibeyNewProject,
+  VibeyNewProjectOptions,
   VibeyProject,
   VibeyStatus,
 } from '@vibey/core';
@@ -76,9 +80,19 @@ export class HubClient implements HubClientInterface {
     view: 'See projects, gates, lanes, budgets and the doctor',
     answer: 'Answer a gate that does not spend',
     spend: 'Answer a gate that spends, with answer',
-    run: 'Reserved for starting and stopping work',
+    run: 'Start, pause, resume and unwind projects (the host chooses where a project lives)',
     bump: 'Bump a job to the front of the queue',
     workflows: "Run vibey commands on the repository's GitHub-hosted runners",
+  };
+
+  /** The project-lifecycle routes' own refusals (ADR-0091); the hub's `detail` is added to each. */
+  static readonly LIFECYCLE_REFUSALS: Refusals = {
+    403: ['forbidden', "This device may not start or change projects. It needs the `run` scope, which the host grants when it pairs a device."],
+    404: ['not-found', 'The hub has no such project.'],
+    409: ['conflict', 'That project name, or its folder, is taken, or another project holds the folder. Choose another name.'],
+    422: ['invalid', 'The hub refused that. A name is letters, digits, dots and dashes, and at most 64 characters.'],
+    502: ['upstream', 'The host tried and could not do it.'],
+    503: ['unavailable', 'The host has not allowed this, or is resting.'],
   };
 
   /** The workflows routes' own refusals (ADR-0085); the hub's `detail` is added to each. */
@@ -227,6 +241,30 @@ export class HubClient implements HubClientInterface {
     return this.hostOnly('clear-cap');
   }
 
+  async createProject(name: string, options: VibeyNewProjectOptions): Promise<VibeyNewProject> {
+    // The host chooses the folder; a device names none (ADR-0091), so `options.repo` is never sent.
+    const intake = options.intake?.trim();
+    const body = { name, ...(intake ? { intake } : {}) };
+    const parsed = await this.post('/api/v1/projects', body, { accept: 201, refusals: HubClient.LIFECYCLE_REFUSALS });
+    return VibeyCli.readCreated(parsed, name);
+  }
+
+  async startWork(projectId: string): Promise<string> {
+    const parsed = await this.post(`/api/v1/projects/${encodeURIComponent(projectId)}/work/start`, {}, { refusals: HubClient.LIFECYCLE_REFUSALS });
+    return HubClient.said(parsed, 'Started.');
+  }
+
+  async pauseWork(projectId: string): Promise<string> {
+    const parsed = await this.post(`/api/v1/projects/${encodeURIComponent(projectId)}/work/pause`, {}, { refusals: HubClient.LIFECYCLE_REFUSALS });
+    return HubClient.said(parsed, 'Paused.');
+  }
+
+  async abandonProject(projectId: string, reason: string, options: { readonly dryRun?: boolean } = {}): Promise<VibeyAbandonReport> {
+    const body = { reason, dry_run: options.dryRun === true };
+    const parsed = await this.post(`/api/v1/projects/${encodeURIComponent(projectId)}/abandon`, body, { refusals: HubClient.LIFECYCLE_REFUSALS });
+    return VibeyCli.readAbandon(parsed);
+  }
+
   cost(): Promise<string> {
     return Promise.reject(
       new HubError('not-on-a-device', 'Spend is shown per project under Budgets; `vibey cost` runs on the host.'),
@@ -320,10 +358,7 @@ export class HubClient implements HubClientInterface {
       case 'choice':
         return { choice: answer.value };
       case 'pairs':
-        if (answer.defaults) {
-          throw new HubError('not-on-a-device', 'Accepting the defaults happens on the host. Answer every question here.');
-        }
-        return { ...answer.pairs };
+        return answer.defaults ? { ...answer.pairs, accept_defaults: true } : { ...answer.pairs };
       case 'raw': {
         let parsed: unknown;
         try {
@@ -337,7 +372,8 @@ export class HubClient implements HubClientInterface {
         return parsed;
       }
       case 'defaults':
-        throw new HubError('not-on-a-device', 'Accepting the defaults happens on the host. Answer every question here.');
+        // What `vibey answer --defaults` sends: the interview's own suggested answers.
+        return { accept_defaults: true };
     }
   }
 
@@ -462,6 +498,11 @@ export class HubClient implements HubClientInterface {
     } catch {
       throw new HubError('bad-answer', 'The hub sent something that is not JSON.', response.status);
     }
+  }
+
+  /** The `message` a lifecycle route answers with, or `fallback` when it sends none. */
+  private static said(parsed: unknown, fallback: string): string {
+    return HubClient.isRecord(parsed) && typeof parsed.message === 'string' && parsed.message !== '' ? parsed.message : fallback;
   }
 
   private static list(value: unknown, what: string): readonly unknown[] {

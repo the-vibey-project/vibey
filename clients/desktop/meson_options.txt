@@ -7,3 +7,5 @@ option('hub_transport', type: 'feature', value: 'auto',
        description: 'The libsoup 3 hub client')
 option('discovery', type: 'feature', value: 'auto',
        description: 'Find hubs on the network: Avahi on Linux, dns_sd on macOS')
+option('tray', type: 'combo', choices: ['auto', 'macos', 'sni', 'none'], value: 'auto',
+       description: 'The tray item: the macOS menu bar (macos), the freedesktop StatusNotifierItem (sni), or none. auto picks macos on macOS and sni elsewhere')

@@ -97,6 +97,7 @@ from vibey.infrastructure.hub.interfaces.server_interface import (
 from vibey.infrastructure.hub.interfaces.settings_interface import HubSettingsLoaderInterface
 from vibey.infrastructure.hub.interfaces.tls_interface import HubCertificateInterface
 from vibey.infrastructure.hub.lanes import LaneEngine, LaneScanner
+from vibey.infrastructure.hub.lifecycle import CliProjectLifecycle
 from vibey.infrastructure.hub.live import LedgerAnnouncements
 from vibey.infrastructure.hub.local_token import LocalTokenStore, ServingRecord
 from vibey.infrastructure.hub.mdns import MdnsAdvertiser
@@ -389,6 +390,7 @@ class ServeCommand:
                 ledger_range=resources.ledger,
                 documents=CliHubDocuments(),
                 probes=probes,
+                lifecycle=CliProjectLifecycle(projects_root=settings.projects_root),
             )
             pairing = HubPairing(
                 registry,

@@ -64,6 +64,18 @@ def test_new_project_creates_and_enqueues_design(tmp_path: Path) -> None:
     assert lines[1].startswith("design job ")
 
 
+def test_new_project_json_is_one_stable_document(tmp_path: Path) -> None:
+    """A client (the editor extension) learns the new project's id from JSON, not by scraping
+    the two plain lines a person reads."""
+    result = runner.invoke(app, ["new", "widget", "--repo", str(tmp_path), "--json"])
+
+    assert result.exit_code == 0, result.output
+    document = json.loads(result.stdout)
+    assert set(document) == {"project_id", "name", "outcome"}
+    assert UUID(document["project_id"]) and document["name"] == "widget"
+    assert document["outcome"].startswith("design job ")
+
+
 def test_new_project_seeds_issue_intake_in_design_ledger(tmp_path: Path) -> None:
     result = runner.invoke(
         app,

@@ -22,7 +22,10 @@ class ProcessTableInterface(Protocol):
 class WorkerStopperInterface(Protocol):
     """Finds this user's `vibey worker` processes and stops them and what they started."""
 
-    def plan(self) -> StopPlan: ...
+    def plan(self, project_id: str | None = None, *, include_shared: bool = False) -> StopPlan:
+        """This user's workers; with `project_id`, only that project's, and the shared ones
+        (`--all-projects`, or none named) in `left_running` unless `include_shared`."""
+        ...
 
     def stop(self, plan: StopPlan, *, grace_seconds: float) -> StopReport:
         """SIGTERM everything in the plan, wait up to `grace_seconds`, SIGKILL what is left."""

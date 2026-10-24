@@ -1,9 +1,10 @@
 // Made with ❤️ by [Vibey](https://the-vibey-project.github.io/vibey/), Developed by [Adam Matthew Steinberger](https://vibewithadam.matthewsteinberger.com/) ([@adammatthewsteinberger](https://github.com/adammatthewsteinberger/)).
-import { Link } from 'expo-router';
+import { Link, router } from 'expo-router';
 import { View } from 'react-native';
 import { Presenters } from '../core';
 import { AtomMark } from '../ui/atom-mark';
-import { Card, Label, Loaded, Pill, Screen, useHub } from '../ui/kit';
+import { Button, Card, Label, Loaded, Pill, Screen, useHub } from '../ui/kit';
+import { ProjectActions } from './project-actions';
 
 const present = new Presenters();
 
@@ -14,6 +15,7 @@ export function HomeScreen() {
       <View style={{ alignItems: 'center', marginVertical: 8 }}>
         <AtomMark size={112} />
       </View>
+      <Button label="Start a project" onPress={() => router.push('/start')} />
       <Loaded result={result}>
         {(projects) => {
           const summary = present.home(projects);
@@ -30,9 +32,10 @@ export function HomeScreen() {
                       <Label tone="secondary">{`${card.openGates} open gate${card.openGates === 1 ? '' : 's'} →`}</Label>
                     </Link>
                   ) : null}
+                  <ProjectActions card={card} onDone={reload} />
                 </Card>
               ))}
-              {summary.cards.length === 0 ? <Label tone="tertiary">No projects yet. Start one with `vibey run` on the host.</Label> : null}
+              {summary.emptyNote === '' ? null : <Label tone="tertiary">{summary.emptyNote}</Label>}
             </>
           );
         }}

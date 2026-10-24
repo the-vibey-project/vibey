@@ -81,7 +81,7 @@ def _fields(cls: type) -> set[str]:
 # sections (whose keys load onto GhConfig itself) are spelled out to match the loader.
 _SECTION_KEYS: dict[str, set[str] | None] = {
     "fingerprint": {"sources", "text", "superseded_texts", "trailer"},
-    "version": {"files", "content_paths", "code_paths"},
+    "version": {"files", "content_paths", "code_paths", "regenerate"},
     "branches": {"integration", "release"},
     "merge_train": {"owner", "trusted_authors", "restack_conflicts", "protected_paths"},
     "promotion": {"schedules"},
@@ -89,7 +89,10 @@ _SECTION_KEYS: dict[str, set[str] | None] = {
     "pr_automation": _fields(PrAutomationConfig) | {"observability", "fallback"},
     "unattended_approval": _fields(UnattendedApprovalConfig),
     "issue_automation": _fields(IssueAutomationConfig),
-    "documentation": _fields(DocumentationConfig),
+    # The loader still reads the former names of the two automation-doc keys, so an
+    # adopter's config that predates the rename keeps working.
+    "documentation": _fields(DocumentationConfig)
+    | {"github_readme_sections", "github_readme_min_words"},
     "marketplace": _fields(MarketplaceConfig),
     "yank": _fields(YankConfig),
     "ai": _fields(AiConfig),

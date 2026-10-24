@@ -158,6 +158,11 @@ Interactive: ①, ③, ④, ⑥, VISUAL_DESIGN. Autonomous: ②, ⑤.
 ## Commands
 
 ```bash
+# Once per clone (its worktrees share it), before the first commit: the commit hooks.
+# Without them nothing adds the `Made-With:` trailer, and CI's Provenance check fails
+# the pull request after the push. Safe to re-run; `uv run vibey-gh check` says if it held.
+uv run vibey-gh install
+
 # CI job `uv-lock` (runs first)
 uv lock --check
 
@@ -222,7 +227,7 @@ own and the repository root's — have no drift.
 | Data model | `docs/plans/data-model.md` |
 | Phase protocols | `docs/plans/phase-protocols.md` |
 | Implementation plan | `docs/plans/implementation-plan.md` |
-| ADRs | `docs/architecture/decisions/` (90 ADRs: 0001–0090) |
+| ADRs | `docs/architecture/decisions/` (98 ADRs: 0001–0098) |
 | User-facing docs | `README.md` Quickstart, `docs/guides/` |
 | Expansion runbooks | `docs/runbooks/expansion/` (22 runbooks, `00-master-plan.md` first) |
 | Contribution workflow, hooks, branch flow, PR expectations | `CONTRIBUTING.md` |
