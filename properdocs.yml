@@ -202,4 +202,5 @@ nav:
           - "0090 — pr-af is the declared default exact-head reviewer": architecture/decisions/0090-pr-af-as-the-declared-default-reviewer.md
           - "0091 — A paired device may start, pause, resume and unwind a project": architecture/decisions/0091-devices-may-start-pause-and-unwind-projects.md
           - "0092 — Large tasks are sliced into the CDD layers before they run": architecture/decisions/0092-large-tasks-are-sliced-into-the-cdd-layers-before-they-run.md
+          - "0093 — Local model families are named and measured, never assumed": architecture/decisions/0093-local-model-families-are-named-and-measured-not-assumed.md
   - Research paper: paper.md

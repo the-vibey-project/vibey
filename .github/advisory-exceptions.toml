@@ -15,6 +15,12 @@
 #   `added`; the exception stops being honoured ON that date. Renewing is a new decision:
 #   fresh evidence, a new `added`, a new `expires`.
 # - `retire_when`: the condition that ends it early; `upstream`: where that is tracked.
+# - `fix_unreachable` (optional): lets the entry stand although a patched release EXISTS, because
+#   no package that depends on this one accepts it. Say who pins the vulnerable range and what
+#   it is, and what was tried. The check verifies one thing itself, that the package is
+#   dev-only in the workspace's lockfile, and refuses the key for a package that ships. It
+#   cannot verify that no dependent accepts the fix, so a reviewer must; the expiry makes
+#   someone look again.
 #
 # The check prints every exception it honours on every run, and fails when one has expired,
 # no longer matches anything (delete it), or its package has a patched release (take the fix
@@ -70,4 +76,45 @@ upstream = [
   "https://github.com/advisories/GHSA-86w9-cpqp-85rv",
   "https://github.com/digitalbazaar/forge/issues/1149",
   "https://github.com/digitalbazaar/forge/pull/1152",
+]
+
+[[exception]]
+advisory = "GHSA-xcx6-jx8p-x3h5"
+package = "@azure/msal-node"
+workspace = "."
+added = 2026-10-23
+# 30 days, the [advisories] maximum: long enough not to churn CI, short enough that a stalled
+# upstream is re-decided, not forgotten.
+expires = 2026-11-22
+reason = """
+MSAL Node >= 5.0.0-beta.0, < 7.1.0 (here 6.0.1): its authorization code flow may disclose
+parameters to an attacker-controlled endpoint. Evidence, from the lockfile and the installed
+packages on 2026-10-23 -- what was checked, and what was not:
+
+1. The only path is clients/vscode -> @vscode/vsce 4.0.0 -> @azure/identity 4.13.3 ->
+   @azure/msal-node 6.0.1, and ovsx 1.3.0 -> @vscode/vsce. The root package-lock.json marks
+   every one of them `dev: true`: nothing that ships reaches it.
+2. Inside @vscode/vsce, @azure/identity is required from one file, out/auth.js, and that is
+   required only from out/publish.js. The credentials it builds are non-interactive
+   (EnvironmentCredential, AzureCliCredential, ...), not an interactive authorization-code
+   flow.
+3. This repository runs `vsce package --no-dependencies` (ci.yml, openvsx.yml,
+   release-binaries.yml) and never `vsce publish` or `vsce login`. It publishes with
+   `ovsx publish --pat`, a personal access token, not Microsoft Entra.
+
+NOT checked: what `ovsx` itself loads from @vscode/vsce, and the advisory's mechanism against
+6.0.1 (it was not reproduced). The case rests on points 1 to 3, which are reachability by
+inspection, not a measurement.
+"""
+fix_unreachable = """
+The fix is @azure/msal-node 7.1.0, a major above the ^6.0.0 that @azure/identity asks for.
+@azure/identity's latest release (4.14.0) and latest beta (4.15.0-beta.1) still ask for ^6.0.0,
+and @vscode/vsce's latest (4.0.0; `next` is 4.0.1-5) asks for @azure/identity ^4.13.2, so no
+version of any dependent takes it. An npm `overrides` entry was tried four ways and does not
+work in this workspace layout: it either leaves the lockfile at 6.0.1 or drops the package from
+it with no error, which makes `npm audit` pass without the package being there.
+"""
+retire_when = "@azure/identity releases a version that accepts @azure/msal-node 7.x (then refresh package-lock.json), or @vscode/vsce drops @azure/identity, or the extension stops depending on @vscode/vsce"
+upstream = [
+  "https://github.com/advisories/GHSA-xcx6-jx8p-x3h5",
 ]
