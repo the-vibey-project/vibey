@@ -23,7 +23,7 @@ ADR-0002 anticipated advisory locks for *phase transitions* (`pg_advisory_xact_l
 
 **Bad.** One pooled connection is unavailable for the duration of a merge; pool size must allow for it. A deferred integrate looks idle to an observer for one backoff.
 
-**Rule status.** The mechanism does not pass ADR-0020's test. The clause "a worker never blocks on a lock; contention is a Defer" extends the standing never-block rule, and belongs in the sub-doctrine ADR-0009 owes rather than one of its own.
+**Rule status.** The mechanism does not pass ADR-0020's test. The clause "a worker never blocks on a lock; contention is a Defer" extends the standing never-block rule, and belongs in sub-doctrine 12.n (a person is never waited on), which ADR-0009 owed, rather than one of its own.
 
 ## Alternatives rejected
 

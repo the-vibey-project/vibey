@@ -131,6 +131,8 @@ stale command, a dead link or a claim that does not hold is a person this projec
 and that failure is a defect, repaired like any other. Work nobody can find is work
 nobody did (7.d); work nobody can join ends with the people who began it.
 
+**7.f — no silent partial handoff** *(ratified by the merge that carried this entry; ADR-0004)*: when work passes from one engine to another, nothing the first one knew is lost on the way. A handoff is accepted only when a deterministic check, with no model in it, finds nothing missing between what the ledger holds and the brief that carries it. A brief that fails the check is never passed on as it stands: it is retried with the violations named, replaced by the full transcript, or put to a human, and work never proceeds on a failed check. A partial handoff that looks complete is the loss this forbids, because the engine that receives it cannot know what it was not told.
+
 ## 8 — Local authority
 
 When paid credits run out, local is the source of truth: green local work reaches
@@ -526,6 +528,8 @@ subject to the human merge required by Article II.3.
 
 **9.h — the floor is never lowered** *(ratified by the merge that carried this entry; ADR-0023)*: every architectural layer of the conductor carries a coverage floor at **100% of its branches**, not of its lines, measured and gated separately per layer on every change, so whether the failure path is tested is answered by the build and not by a reviewer's memory. A floor is never lowered to let a change merge, and a ratchet that only forbids getting worse is not a floor: it lets a layer sit short for ever. The pressure a floor puts on a change is relieved by making the suite faster or by moving it, never by asking less of it. A layer outside the floor is an exemption written down with its reason in the record that makes it, and lifting or changing it is a change to that record.
 
+**9.i — one source of agent guidance** *(ratified by the merge that carried this entry; ADR-0011)*: what an agent working on a project is told has one source of truth, and it is materialized for every engine from that source and changed for all of them in the same change. No engine keeps a private variant, and a surface that has drifted from its source is a defect to be reported, not a preference: rotating from one engine to another never changes the rules a project is built under.
+
 ## 10 — No guarantees
 
 Internet, power, the developer's laptop, and every third-party dependency: never
@@ -602,6 +606,10 @@ Durable storage is necessary and not sufficient, because one disk is one failure
 **10.l — the project outlives its maintainers** *(ratified by the merge that carried this entry)*: the project always carries, in its own repository, a handful of self-contained prompts with which anyone and any capable agent — the sovereign default first — can pick it up cold, with no memory of past sessions and no one left who built it. They cover every lane and every agent skill the repository has, or name the reason one needs none; every file, command and decision they name exists; and the check that proves both runs on every change, so a prompt cannot fall behind the code it describes. They are run, not only kept: every week, on the forge's own hosted runners, each one is exercised, and the run keeps every scheduled lane alive and says out loud when one has stopped. What a run may do is bounded by declaration, never by the judgement of the model running it (12.d): it may propose a change only as a draft for a person, it acts out nothing that cannot be undone, and an instruction that no longer holds is reported, not quietly repaired. One of the prompts assumes the forge, the runner and the operator are all gone, and rebuilds from whatever copy survives.
 
 **10.m — the core is never uninstalled** *(ratified by the merge that carried this entry)*: no script, command or workflow this project ships removes vibey-engine's core — the engine, its runners, the `vibey` command and its TUI, its data, its database, or the models it runs on. An interface built on the core may be removed, and removing it is made as easy and as exact as installing it: it shows what it would remove before removing anything, it removes only what this project put there and checks that before it deletes, it never escalates its own privileges, and it leaves a person's own data unless they ask. Putting the project back is one command, and running that command again is a repair, never a second, conflicting install. A person may still remove anything from their own machine with their own tools; the project simply never offers to destroy its core.
+
+**10.n — drive the runners, never the provider** *(ratified by the merge that carried this entry; ADR-0001)*: vibey orchestrates the family's runners and does not reimplement them. Build work reaches a model only through a runner the family ships, started as a subprocess from its descriptor, and never through a provider's interface called from the conductor itself. The runner is where a model's limits, credentials, capacity signals and failures are handled once and tested once (10.e); a conductor that also spoke to providers would hold a second, untested copy of all of it.
+
+**10.o — no citation without a fetch** *(ratified by the merge that carried this entry; ADR-0027)*: no citation, link or quoted source is emitted that the system did not itself retrieve and read for the work that cites it. A model's recollection of a source is a claim, not evidence (10.f): a design, a review or a document names only the sources it fetched, and where nothing could be fetched it says so and parks the question for a human instead of inventing a reference.
 
 ## 11 — The living roadmap
 
@@ -867,6 +875,10 @@ quotation is itself the task, but every word the model adds around that source o
 voice. Authorship and authority stay visible: the machine never makes its own observation,
 act, judgment or consent sound shared unless it is genuinely speaking with the operator
 about both parties.
+
+**12.n — a person is never waited on** *(ratified by the merge that carried this entry; ADR-0009, ADR-0029)*: no worker ever blocks on a human, and no worker blocks on a lock another holds. The rule is that no worker waits, not that no human is involved: work that needs a person's answer becomes a parked job with its question recorded as a gate, and the worker moves on to other work; the person answers at a moment designed for it (Article III.3), in their own time, and the answer returns the work to the queue. Contention between machines is met the same way: a worker defers and comes back. A thread that holds a machine until a person arrives wastes the machine.
+
+**12.o — reach only with a human's yes** *(ratified by the merge that carried this entry; ADR-0014)*: no cloud authority is exercised on a project's behalf, and none of its design work is sent to an external provider, without an explicit and durable human opt-in for that project, recorded in the ledger (7.c) and asked again whenever what it would permit changes. Silence, a default, a stale answer or a machine's inference is never consent, and a declined or unanswered opt-in leaves the work complete where it stands, locally. The rule is scoped to what ADR-0014 governs, deployment and design work sent out; a declared paid engine is the project's own declaration under 8.b, not this opt-in.
 
 ---
 

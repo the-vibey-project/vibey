@@ -2,7 +2,7 @@
 
 **Status:** accepted · **Date:** 2026-08-14 · **Supersedes:** the entry rule in ADR-0013
 
-**Owes:** a sub-doctrine (not yet proposed) — no cloud authority is exercised and nothing leaves the machine without an explicit, durable, re-asked human opt-in recorded in the ledger (nearest parent: doctrine 12, humans first; ADR-0013's consent guard cites the same rule).
+**Canon:** sub-doctrine 12.o — *reach only with a human's yes*, filed under the operator's ratifying merge of the change that adds it (ADR-0020).
 
 ## Context
 
