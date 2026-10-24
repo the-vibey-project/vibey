@@ -2,7 +2,7 @@
 
 **Status:** accepted · **Date:** 2026-08-14 · **Extended by:** ADR-0024
 
-**Owes:** a sub-doctrine (not yet proposed) — human input is a parked job plus a `human_gate` row, never a worker waiting on a person (nearest parent: doctrine 12, humans first).
+**Canon:** sub-doctrine 12.n — *a person is never waited on*, filed under the operator's ratifying merge of the change that adds it (ADR-0020).
 
 ## Context
 
