@@ -13,10 +13,18 @@ It is slower and less reliable than native calling, and the run says it is in us
 """
 
 import json
+import re
 from collections.abc import Mapping, Sequence
 from typing import Any
 
 from qwenloop.domain.model import ChatMessage
+
+#: The protocol's own delimiters. Whatever sits between them is somebody else's text -- a file, a
+#: web page, an MCP answer, the model's own argument -- so it must not be able to close one or open
+#: another. Native tool-calling keeps a tool's output in a separate `tool` role; this keeps the
+#: separation by making the delimiters unforgeable inside it.
+_DELIMITER = re.compile(r"<(/?)(tool_response|tool_call)", re.IGNORECASE)
+_UNSAFE_NAME = re.compile(r"[^A-Za-z0-9_.:-]")
 
 _INSTRUCTIONS = (
     "You have no native tool-calling here, so you call a tool by writing the call. End your "
@@ -60,8 +68,9 @@ class TextToolProtocol:
         for message in history:
             role, content = message.role, message.content
             if role == "tool":
-                name = names.get(message.tool_call_id or "", "")
-                piece = f'<tool_response name="{name}">{content}</tool_response>'
+                name = _UNSAFE_NAME.sub("", names.get(message.tool_call_id or "", ""))
+                safe = _DELIMITER.sub(r"&lt;\1\2", content)
+                piece = f'<tool_response name="{name}">{safe}</tool_response>'
                 if after_results:
                     rendered[-1]["content"] += f"\n{piece}"
                 else:
@@ -84,4 +93,6 @@ class TextToolProtocol:
         if isinstance(arguments, str):
             arguments = json.loads(arguments)
         body = json.dumps({"name": function["name"], "arguments": arguments})
+        # `<\/` is the same text to a JSON parser and is not the closing tag to anything else.
+        body = re.sub(r"</(tool_call|tool_response)", r"<\\/\1", body, flags=re.IGNORECASE)
         return f"<tool_call>{body}</tool_call>"
