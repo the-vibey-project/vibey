@@ -1,7 +1,10 @@
+# Made with ❤️ by [Vibey](https://the-vibey-project.github.io/vibey/), Developed by [Adam Matthew Steinberger](https://vibewithadam.matthewsteinberger.com/) ([@adammatthewsteinberger](https://github.com/adammatthewsteinberger/)).
 import os
+
 from vibey.infrastructure.engines.gptossloop_design import GptossloopDesignProvider
 
 # Helper to build provider
+
 
 def build_provider(env_vars):
     env = dict(os.environ)
