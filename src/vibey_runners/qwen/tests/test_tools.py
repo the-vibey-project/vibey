@@ -233,8 +233,9 @@ async def test_search_never_reads_outside_the_worktree(tmp_path: Path) -> None:
     tools = SandboxTools(worktree)
     result = await tools.execute("search", {"query": "needle"})
     assert result["matches"] == ["inside.txt:1: needle"]
-    with pytest.raises(ValueError, match="escapes"):
-        await tools.execute("search", {"query": "needle", "path": "../outside"})
+    assert await tools.execute("search", {"query": "needle", "path": "../outside"}) == {
+        "error": "path escapes the worktree"
+    }
     missing = await tools.execute("search", {"query": "needle", "path": "absent"})
     assert missing == {"error": "no such file or directory: absent"}
 
@@ -412,8 +413,9 @@ async def test_find_is_bounded_and_confined(tmp_path: Path) -> None:
     tools = SandboxTools(tmp_path, limits=ToolLimits(max_find_results=2))
     result = await tools.execute("find", {"pattern": "*.txt"})
     assert result == {"files": ["f0.txt", "f1.txt"], "count": 2, "truncated": True}
-    with pytest.raises(ValueError, match="escapes"):
-        await tools.execute("find", {"pattern": "x", "path": ".."})
+    assert await tools.execute("find", {"pattern": "x", "path": ".."}) == {
+        "error": "path escapes the worktree"
+    }
     missing = await tools.execute("find", {"pattern": "x", "path": "absent"})
     assert missing == {"error": "no such file or directory: absent"}
 
@@ -429,8 +431,9 @@ async def test_open_file_reads_like_read_file(tmp_path: Path) -> None:
         "read_file", {"path": "a.txt"}
     )
     assert "error" in await tools.execute("open_file", {"path": "missing.txt"})
-    with pytest.raises(ValueError, match="escapes"):
-        await tools.execute("open_file", {"path": "../x"})
+    assert await tools.execute("open_file", {"path": "../x"}) == {
+        "error": "path escapes the worktree"
+    }
 
 
 @pytest.mark.asyncio
@@ -661,3 +664,22 @@ async def test_outline_errors_on_a_missing_file_and_caps_a_huge_one(tmp_path: Pa
     big = await tools.execute("outline", {"path": "big.ts"})
 
     assert len(big["symbols"]) == 80 and big["truncated"] is True  # type: ignore[arg-type]
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    ("tool", "arguments"),
+    [
+        ("read_file", {"path": "/etc/passwd"}),
+        ("read_file", {"path": "../outside.txt"}),
+        ("write_file", {"path": "/tmp/escape.txt", "content": "x"}),
+        ("find", {"pattern": "*.py", "path": "/"}),
+        ("search", {"query": "x", "path": "/"}),
+        ("outline", {"path": "/etc/hosts"}),
+    ],
+)
+async def test_a_path_outside_the_worktree_is_an_answer_not_the_end_of_the_run(
+    tmp_path: Path, tool: str, arguments: dict[str, object]
+) -> None:
+    result = await SandboxTools(tmp_path).execute(tool, arguments)
+    assert result == {"error": "path escapes the worktree"}

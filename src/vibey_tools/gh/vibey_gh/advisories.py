@@ -13,7 +13,10 @@ package and the workspace, records why the vulnerable code is not reached, and e
 `max_exception_days`. Nothing is skipped silently: every run prints each exception it honours
 and until when, and an exception fails the check the moment it expires, stops matching
 anything (so it is removed, not left to rot), or its package gets a patched release (so the
-fix replaces it). A report the check cannot account for -- npm erroring, an unknown format, a
+fix replaces it). The one way an exception outlives a patched release is `fix_unreachable`: no
+package that depends on it accepts the fix (a major version above every dependent's range, as
+with `@azure/msal-node` under `@vscode/vsce`), the entry says who pins what, and the gate checks
+that the package is dev-only in the lockfile. A package that ships is never given that. A report the check cannot account for -- npm erroring, an unknown format, a
 package at the audit level with no advisory behind it -- is refused, never passed. The one
 opt-in exception is `[advisories] on_unavailable = "warn"`: when the advisory service itself
 cannot be reached, the workspace is reported unaudited in a warning instead of blocking.
@@ -53,7 +56,7 @@ _GHSA = re.compile(r"GHSA(?:-[0-9a-z]{4}){3}")
 # Least to most severe; `info` is below every level `--audit-level` accepts.
 _RANK = {severity: rank for rank, severity in enumerate(("info", *AUDIT_LEVELS))}
 _REQUIRED = ("advisory", "package", "workspace", "reason", "added", "expires", "retire_when")
-_OPTIONAL = ("upstream",)
+_OPTIONAL = ("upstream", "fix_unreachable")
 _LOCKFILE = "package-lock.json"
 # npm's own words for "the advisory service did not answer". Kept to transport failures so a
 # missing lockfile, a malformed report or a refusal by the registry still fails the gate.
@@ -197,6 +200,11 @@ class AdvisoryGate(AdvisoryGateInterface):
             isinstance(link, str) and link.strip() for link in upstream
         ):
             raise ValueError(f"{where}: upstream must be a list of non-empty strings")
+        unreachable = entry.get("fix_unreachable")
+        if unreachable is not None and (
+            not isinstance(unreachable, str) or not unreachable.strip()
+        ):
+            raise ValueError(f"{where}: fix_unreachable must be a non-empty string")
         return AdvisoryException(
             advisory=text["advisory"],
             package=text["package"],
@@ -206,6 +214,7 @@ class AdvisoryGate(AdvisoryGateInterface):
             expires=dates["expires"],
             retire_when=text["retire_when"],
             upstream=tuple(upstream),
+            fix_unreachable=None if unreachable is None else " ".join(unreachable.split()),
         )
 
     # ------------------------------------------------------------------ the audit
@@ -353,6 +362,30 @@ class AdvisoryGate(AdvisoryGateInterface):
 
     # ------------------------------------------------------------------ the fix
 
+    @staticmethod
+    def dev_only(lockfile: Path, package: str) -> bool:
+        """Whether `package` is dev-only in `lockfile`: present, and every copy marked `dev`.
+
+        npm marks a package `dev` only when nothing that ships reaches it. A copy that is
+        absent from the lockfile, or one that is not so marked, is not dev-only: the answer is
+        false whenever it cannot be shown true.
+        """
+        try:
+            document = json.loads(lockfile.read_text(encoding="utf-8"))
+        except (OSError, ValueError):
+            return False
+        packages = document.get("packages") if isinstance(document, Mapping) else None
+        if not isinstance(packages, Mapping):
+            return False
+        copies = [
+            entry
+            for path, entry in packages.items()
+            if path == f"node_modules/{package}" or path.endswith(f"/node_modules/{package}")
+        ]
+        return bool(copies) and all(
+            isinstance(entry, Mapping) and entry.get("dev") is True for entry in copies
+        )
+
     def patched_version(self, advisory: str, package: str) -> str | None:
         try:
             data = self._gh.json(["api", f"/advisories/{advisory}"])
@@ -433,6 +466,7 @@ class AdvisoryGate(AdvisoryGateInterface):
                 )
                 failed = True
         patched: dict[tuple[str, str], str | None | RuntimeError] = {}
+        dev_only: dict[tuple[str, str], bool] = {}
         today = self._today()
         for name in names:
             try:
@@ -470,7 +504,9 @@ class AdvisoryGate(AdvisoryGateInterface):
                         patched[key] = self.patched_version(*key)
                     except RuntimeError as exc:
                         patched[key] = exc
-            if not self._print(verdict, report, patched, today, policy):
+                if exception.fix_unreachable is not None:
+                    dev_only[key] = self.dev_only(cfg.root / name / _LOCKFILE, exception.package)
+            if not self._print(verdict, report, patched, dev_only, today, policy):
                 failed = True
         return 1 if failed else 0
 
@@ -479,6 +515,7 @@ class AdvisoryGate(AdvisoryGateInterface):
         verdict: AdvisoryVerdict,
         report: Mapping[str, Any],
         patched: Mapping[tuple[str, str], str | None | RuntimeError],
+        dev_only: Mapping[tuple[str, str], bool],
         today: date,
         policy: AdvisoriesConfig,
     ) -> bool:
@@ -506,12 +543,25 @@ class AdvisoryGate(AdvisoryGateInterface):
                     " while that is known"
                 )
                 ok = False
-            elif fix is not None:
+            elif fix is not None and exception.fix_unreachable is None:
                 print(
                     f"::error::{ws}: {exception.package} {fix} fixes {exception.advisory};"
                     f" upgrade to it and remove the exception from {where}"
                 )
                 ok = False
+            elif fix is not None and not dev_only[(exception.advisory, exception.package)]:
+                print(
+                    f"::error::{ws}: {exception.package} {fix} fixes {exception.advisory}, and"
+                    f" fix_unreachable is honoured only for a package that is dev-only in the"
+                    f" {_LOCKFILE}; this one is not, so it ships. Upgrade to it and remove the"
+                    f" exception from {where}"
+                )
+                ok = False
+            elif fix is not None:
+                print(
+                    f"            {exception.package} {fix} fixes it but cannot be taken (the"
+                    f" package is dev-only): {exception.fix_unreachable}"
+                )
             else:
                 print(
                     f"            no patched {exception.package} is published (advisory database)"
