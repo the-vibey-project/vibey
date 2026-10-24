@@ -291,6 +291,38 @@ where the vulnerable code is shown not to be reached. It is not a way to skip th
   the merge train never lands a change to it unattended. Merging an exception accepts its risk
   until it expires.
 
+### 9. The sovereign review runner reads untrusted pull-request content on the operator's machine — accepted 2026-10-24
+
+The sovereign review lane (sub-doctrine 8.a) runs `pr-review.yml`'s host job on a self-hosted
+runner, labelled `vibey-local-vibey`, on the operator's own Mac. A pull request's diff, title
+and description are untrusted text, and a model and its tools read them there. The operator
+accepted that risk on 2026-10-24 (#668, item 10), on these conditions, which are the
+isolation in force and are set out, with a way to verify each, in
+[`docs/runbooks/sovereign-review-runner.md`](docs/runbooks/sovereign-review-runner.md):
+
+- **One ephemeral container per job.** The supervisor starts a fresh runner container for each
+  job, so one job's container is not another's.
+- **An egress gate.** The job container joins only an internal Docker network, so the gate
+  (`vibey-egress`) is the only thing it can reach: HTTPS on port 443 to the hosts in
+  `[runners] egress_allow` only, refusing any address that is not globally routable, and the
+  model server's four read and chat endpoints. A job cannot pull, create or delete a model,
+  and cannot reach any other service on the machine. This closes a hole measured on
+  2026-10-09, when the host's PostgreSQL and RabbitMQ ports accepted connections from inside
+  a runner container.
+- **A credential of its own, scoped to one repository.** The runner logs in with a
+  fine-grained token for `the-vibey-project/vibey` alone, holding only
+  *Administration: Read and write* (to mint registration tokens and reap offline runners),
+  stored by a file-based `gh` login in `~/.config/gh-runner`. It is never the operator's own
+  login, which can administer every repository the operator owns. The supervisor refuses to
+  start if that login is missing, if its credential file is readable by other users, if GitHub
+  rejects the token, or if the directory resolves to the operator's own `gh` directory.
+
+**What this does not remove.** The gate bounds what a job can *reach*, not what it can
+*compute*: a hostile pull request can still try to steer the model that reads it, and the
+token the supervisor holds can still register and delete this repository's runners. The
+accepted risk is exactly those two. Reopen it if a job is found reaching anything outside the
+gate, if a container escape is demonstrated, or if the token's scope is widened.
+
 ---
 
 ## Reporting a Vulnerability

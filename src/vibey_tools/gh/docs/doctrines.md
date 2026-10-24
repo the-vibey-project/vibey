@@ -265,12 +265,14 @@ always in reach, is its bound. Before this paragraph a no-cap declaration took o
 and the canon said nothing of it; six required steps, a record and an instant withdrawal
 add protection and take none away (Constitution, Article IV).
 
-**8.c — every loop runs once, fed by a queue** *(ratified by the merge that
+**8.c — two loops, one instance per model, fed by queues** *(ratified by the merge that
 carried this entry; its two loops and two layers, and its one instance per model,
 set by the merge that carried them; its capacity on the operator's own hardware made
 the number measured on each device by the merge that carried that sentence; its
 sovereign runners named by the merge that carries ADR-0064, and its paid adapters
-narrowed by the merge that carries ADR-0078 — under Article II.3 each a
+narrowed by the merge that carries ADR-0078; its heading retitled, at the operator's
+ruling of 2026-10-24 (#668), to say what its body has said since the two-loop
+amendment — under Article II.3 each a
 ratification-ready draft until the operator's merge carries it)*: the family runs **exactly two loops**. **`sovereignloop`** — what `gptossloop`
 and `qwenloop` become — drives the models and tools that run on the operator's own hardware;
 **`paidloop`** drives every paid engine, with `claudeloop` and `codexloop`
