@@ -382,3 +382,22 @@ A local model is not the paid one it displaces, and the defaults say so:
   the job goes to a paid engine; `vibey engines` and the local engine's health show
   why, but nothing is written to the ledger at that moment yet. Pin the pool with
   `--engines` if a paid run is never acceptable.
+
+## Model families
+
+`vibey models` lists the families vibey knows by name -- Qwen Coder, DeepSeek Coder, Codestral,
+StarCoder, Gemma, Llama, CodeLlama and CodeGemma -- each with a tag to start from and the
+`ollama pull` that fetches it, and then what the Ollama on this machine actually has and says
+each model can do. Run it before you choose.
+
+What matters is whether a model reports `tools`. The BUILD runner works through tool calls, so a
+model that reports none cannot drive it, and `qwenloop` and `gptossloop` refuse one with the reason
+instead of letting it spend its turns on empty replies. Such a model is still good for DESIGN and
+DECOMPOSE, which ask for JSON and need no tool-calling. A model whose capabilities your Ollama does
+not report is shown as unknown, and is let through.
+
+Reporting `tools` is necessary, not sufficient: Qwen2.5-Coder 14B reports it and still writes its
+calls out as text. Only a run shows whether a model uses them well. The measurements behind the
+list, and why a template check is not enough, are in
+[ADR-0093](../architecture/decisions/0093-local-model-families-are-named-and-measured-not-assumed.md).
+

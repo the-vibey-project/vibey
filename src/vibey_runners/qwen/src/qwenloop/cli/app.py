@@ -25,7 +25,11 @@ from platformdirs import user_cache_path
 
 from qwenloop import __version__
 from qwenloop.application.backend_selection import BackendSelector, Hardware
-from qwenloop.application.interfaces import InferenceServer, OllamaProbeInterface
+from qwenloop.application.interfaces import (
+    InferenceServer,
+    OllamaModelProbeInterface,
+    OllamaProbeInterface,
+)
 from qwenloop.application.runner import AutonomousRunner
 from qwenloop.application.storm import build_item_plans
 from qwenloop.domain.config import (
@@ -63,7 +67,7 @@ from qwenloop.infrastructure.host_platform import HostPlatform
 from qwenloop.infrastructure.inference import LlamaCppServer, OpenAICompatServer, VllmServer
 from qwenloop.infrastructure.mcp import McpGateway
 from qwenloop.infrastructure.model_cache import ModelCache
-from qwenloop.infrastructure.ollama_probe import OllamaProbe
+from qwenloop.infrastructure.ollama_probe import OllamaModelProbe, OllamaProbe
 from qwenloop.infrastructure.profiles import NVIDIA_BF16, PORTABLE, PROFILES
 from qwenloop.infrastructure.run_store import FileRunStore
 from qwenloop.infrastructure.settings import SettingsLoader
@@ -220,6 +224,28 @@ def _load_config(**overrides: object) -> QwenConfig:
 #: The one probe `_select` asks whether a local Ollama is running (#388). The tests replace
 #: it with an in-memory fake (tests/conftest.py), so no test ever reaches a real Ollama.
 _ollama_probe: OllamaProbeInterface = OllamaProbe()
+#: The one probe `_require_tools` asks what the attached model can do. Replaced in tests too.
+_model_probe: OllamaModelProbeInterface = OllamaModelProbe()
+
+
+def _require_tools(server: InferenceServer) -> None:
+    """Refuse a model its own Ollama says cannot call tools.
+
+    This runner drives a model through tool calls, so one that cannot would spend its turns
+    producing empty replies. Only a model Ollama positively reports without `tools` is
+    refused: unknown (an older Ollama, another server) is let through, since a model nothing
+    says anything about is not one to turn away. DESIGN and DECOMPOSE ask for JSON and need
+    no tool-calling, so such a model is still useful there (vibey ADR-0093).
+    """
+    if not isinstance(server, OpenAICompatServer):
+        return
+    reported = _model_probe.capabilities(server.base_url, server.model)
+    if reported is not None and "tools" not in reported:
+        raise RuntimeError(
+            f"{server.model} reports no tool-calling to Ollama (it reports "
+            f"{', '.join(sorted(reported)) or 'nothing'}), and this runner works through tool "
+            "calls. Pick a model that does, or use it for DESIGN and DECOMPOSE, which need none."
+        )
 
 
 def _select(config: QwenConfig) -> BackendChoice:
@@ -299,6 +325,7 @@ def _run_single(
     actual_id = run_id or str(uuid.uuid4())
     server, profile = _server_for(config)
     try:
+        _require_tools(server)
         state = asyncio.run(
             _run_plan(
                 server,

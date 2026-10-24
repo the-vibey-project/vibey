@@ -1294,3 +1294,66 @@ def test_without_a_running_ollama_the_portable_backend_is_unchanged(
     server, _ = _server_for(QwenConfig())
     assert isinstance(server, LlamaCppServer)
     assert no_local_ollama.asked == 1
+
+
+def _compat_server():  # type: ignore[no-untyped-def]
+    from qwenloop.infrastructure.inference import OpenAICompatServer
+
+    return OpenAICompatServer("http://127.0.0.1:11434/v1", "codellama:7b")
+
+
+def test_a_model_ollama_says_cannot_call_tools_is_refused_before_it_runs(
+    unknown_model_capabilities,  # type: ignore[no-untyped-def]
+) -> None:
+    from qwenloop.cli.app import _require_tools
+
+    unknown_model_capabilities.reported = frozenset({"completion"})
+    with pytest.raises(RuntimeError, match=r"codellama:7b reports no tool-calling.*completion"):
+        _require_tools(_compat_server())
+    assert unknown_model_capabilities.asked == [("http://127.0.0.1:11434/v1", "codellama:7b")]
+
+
+def test_a_model_that_reports_nothing_at_all_is_refused_and_says_so(
+    unknown_model_capabilities,  # type: ignore[no-untyped-def]
+) -> None:
+    from qwenloop.cli.app import _require_tools
+
+    unknown_model_capabilities.reported = frozenset()
+    with pytest.raises(RuntimeError, match="reports nothing"):
+        _require_tools(_compat_server())
+
+
+def test_a_tool_capable_or_unknown_model_is_let_through(
+    unknown_model_capabilities,  # type: ignore[no-untyped-def]
+) -> None:
+    from qwenloop.cli.app import _require_tools
+
+    unknown_model_capabilities.reported = frozenset({"completion", "tools"})
+    _require_tools(_compat_server())
+    unknown_model_capabilities.reported = None
+    _require_tools(_compat_server())
+
+
+def test_a_server_that_is_not_an_attached_endpoint_is_never_asked(
+    unknown_model_capabilities,  # type: ignore[no-untyped-def]
+) -> None:
+    from qwenloop.cli.app import _require_tools
+
+    unknown_model_capabilities.reported = frozenset()
+    _require_tools(object())  # type: ignore[arg-type]
+    assert unknown_model_capabilities.asked == []
+
+
+def test_a_run_on_a_model_without_tools_stops_with_the_reason(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+    unknown_model_capabilities,  # type: ignore[no-untyped-def]
+) -> None:
+    plan = tmp_path / "plan.md"
+    plan.write_text("do it")
+    unknown_model_capabilities.reported = frozenset({"completion"})
+    monkeypatch.setenv("QWENLOOP_BASE_URL", "http://127.0.0.1:11434/v1")
+    monkeypatch.setenv("QWENLOOP_MODEL", "codellama:7b")
+    result = runner.invoke(app, ["run", str(plan), "--cwd", str(tmp_path)])
+    assert result.exit_code == 1
+    assert "codellama:7b reports no tool-calling" in result.stderr
