@@ -12,7 +12,7 @@ name below still exists where it says, and changes nothing.
 
 - **Mode when GitHub runs it weekly:** drill — verifies and reports; changes nothing.
 - **What it is for:** Hand the project to a new steward: what they must hold, where it is declared, and how to verify it.
-- **Decision records:** 93, the newest 0093 — Local model families are named and measured, never assumed.
+- **Decision records:** 98, the newest 0098 — The VS Code verification is done by a large model and reviewed by the operator.
 <!-- END GENERATED continuation:state -->
 
 ## The prompt
