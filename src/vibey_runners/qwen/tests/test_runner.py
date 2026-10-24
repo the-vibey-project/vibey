@@ -635,8 +635,9 @@ async def test_runner_honors_wind_down(tmp_path: Path) -> None:
 @pytest.mark.asyncio
 async def test_sandbox_rejects_escape_and_dangerous_command(tmp_path: Path) -> None:
     tools = SandboxTools(tmp_path)
-    with pytest.raises(ValueError):
-        await tools.execute("read_file", {"path": "../secret"})
+    assert await tools.execute("read_file", {"path": "../secret"}) == {
+        "error": "path escapes the worktree"
+    }
     assert "error" in await tools.execute("shell", {"argv": ["rm", "x"]})
     assert "error" in await tools.execute("unknown", {})
 
@@ -888,8 +889,9 @@ async def test_edit_file_refuses_what_it_cannot_do_exactly(tmp_path: Path) -> No
     binary = await tools.execute("edit_file", call("blob.bin", "x"))
     assert "cannot edit" in str(binary["error"])
     assert (tmp_path / "a.py").read_text() == "same\nsame\n"
-    with pytest.raises(ValueError, match="escapes"):
-        await tools.execute("edit_file", call("../outside.py", "x"))
+    assert await tools.execute("edit_file", call("../outside.py", "x")) == {
+        "error": "path escapes the worktree"
+    }
 
 
 @pytest.mark.asyncio

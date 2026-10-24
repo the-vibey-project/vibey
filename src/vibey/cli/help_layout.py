@@ -70,6 +70,7 @@ PANELS: tuple[Panel, ...] = (
             Entry("queue", "See the job queue and move a job to the front"),
             Entry("engines", "Show engine health, circuit breakers and selection"),
             Entry("loops", "List the loops, their engines and what each can do"),
+            Entry("models", "List local model families and what Ollama says each can do"),
             Entry("cost", "Show this cycle's spend against its caps"),
             Entry("budget", "See, set or remove a project's spending caps"),
             Entry("ledger", "Search, export or publish the append-only ledger"),
