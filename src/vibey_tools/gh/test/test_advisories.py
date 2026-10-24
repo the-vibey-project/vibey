@@ -670,3 +670,108 @@ def test_an_unknown_advisories_key_is_refused():
 def test_the_advisory_value_type_is_plain_data():
     advisory = Advisory("GHSA-a", "p", "high", "t", "u", "r")
     assert dataclasses.asdict(advisory)["package"] == "p"
+
+
+# ---------------------------------------------------------------- fix_unreachable
+
+UNREACHABLE = "no dependent accepts it: @expo/cli pins ^1, the fix is 2.x"
+
+
+def lock_with(tmp_path: Path, **copies: bool | None) -> None:
+    """The app's lockfile with each named package, its `dev` mark as given (None: unmarked)."""
+    packages: dict[str, Any] = {"": {"name": "app"}}
+    for path, dev in copies.items():
+        packages[path.replace("__", "/")] = {
+            "version": "1.4.0",
+            **({} if dev is None else {"dev": dev}),
+        }
+    (tmp_path / APP / "package-lock.json").write_text(
+        json.dumps({"packages": packages}), encoding="utf-8"
+    )
+
+
+def test_fix_unreachable_is_optional_and_read(tmp_path):
+    assert parse(tmp_path, ENTRY)[0].fix_unreachable is None
+    (parsed,) = parse(tmp_path, ENTRY + f'fix_unreachable = "  {UNREACHABLE}  "\n')
+    assert parsed == exception(fix_unreachable=UNREACHABLE)
+
+
+@pytest.mark.parametrize("value", ['""', '"   "', "3", "true", '["x"]'])
+def test_a_fix_unreachable_that_says_nothing_is_refused(tmp_path, value):
+    with pytest.raises(ValueError, match="fix_unreachable must be a non-empty string"):
+        parse(tmp_path, ENTRY + f"fix_unreachable = {value}\n")
+
+
+def test_dev_only_means_present_and_every_copy_marked_dev(tmp_path):
+    gate_dev_only = AdvisoryGate.dev_only
+    lock = tmp_path / "package-lock.json"
+
+    def check(**copies: bool | None) -> bool:
+        packages = {
+            path.replace("__", "/"): ({} if dev is None else {"dev": dev})
+            for path, dev in copies.items()
+        }
+        lock.write_text(json.dumps({"packages": packages}), encoding="utf-8")
+        return gate_dev_only(lock, "node-forge")
+
+    assert check(**{"node_modules__node-forge": True})
+    assert check(
+        **{"node_modules__node-forge": True, "node_modules__a__node_modules__node-forge": True}
+    )
+    # One shipping copy is enough to refuse it, and an unmarked copy is not dev-only either.
+    assert not check(
+        **{"node_modules__node-forge": True, "node_modules__a__node_modules__node-forge": False}
+    )
+    assert not check(**{"node_modules__node-forge": None})
+    # Only this package: a copy of another one, or a name that merely ends the same, is not it.
+    assert not check(node_modules__other=True)
+    assert not check(**{"node_modules__not-node-forge": True})
+
+
+@pytest.mark.parametrize("content", [None, "{not json", "[]", '{"packages": []}'])
+def test_dev_only_is_false_whenever_it_cannot_be_shown(tmp_path, content):
+    lock = tmp_path / "package-lock.json"
+    if content is not None:
+        lock.write_text(content, encoding="utf-8")
+    assert AdvisoryGate.dev_only(lock, "node-forge") is False
+
+
+def unreachable_repository(tmp_path: Path, dev: bool | None) -> Path:
+    root = repository(tmp_path, exceptions=ENTRY + f'fix_unreachable = "{UNREACHABLE}"\n')
+    lock_with(root, **{"node_modules__node-forge": dev})
+    return root
+
+
+def test_a_patch_nobody_can_take_leaves_a_dev_only_exception_standing(tmp_path, capsys):
+    gate = gate_for(unreachable_repository(tmp_path, dev=True), gh=FakeGh(with_patch("2.0.0")))
+    assert gate.run([APP]) == 0
+    out = capsys.readouterr().out
+    assert (
+        f"node-forge 2.0.0 fixes it but cannot be taken (the package is dev-only): {UNREACHABLE}"
+        in out
+    )
+    assert "::error::" not in out
+    assert f"vibey-gh: {APP}: no unexcepted advisory at high or worse; 1 excepted" in out
+
+
+def test_a_package_that_ships_gets_no_such_allowance(tmp_path, capsys):
+    gate = gate_for(unreachable_repository(tmp_path, dev=None), gh=FakeGh(with_patch("2.0.0")))
+    assert gate.run([APP]) == 1
+    out = capsys.readouterr().out
+    assert (
+        f"::error::{APP}: node-forge 2.0.0 fixes {GHSA}, and fix_unreachable is honoured only"
+        in out
+    )
+    assert "so it ships" in out
+
+
+def test_without_fix_unreachable_a_patch_still_retires_the_exception(tmp_path, capsys):
+    root = repository(tmp_path)
+    lock_with(root, **{"node_modules__node-forge": True})
+    assert gate_for(root, gh=FakeGh(with_patch("2.0.0"))).run([APP]) == 1
+    assert f"node-forge 2.0.0 fixes {GHSA}; upgrade to it and remove" in capsys.readouterr().out
+
+
+def test_with_no_patch_fix_unreachable_changes_nothing(tmp_path, capsys):
+    assert gate_for(unreachable_repository(tmp_path, dev=True)).run([APP]) == 0
+    assert "no patched node-forge is published" in capsys.readouterr().out
