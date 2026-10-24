@@ -2,7 +2,7 @@
 
 **Status:** accepted · **Date:** 2026-08-14
 
-**Owes:** a sub-doctrine (not yet proposed) — a handoff that fails the gate is a retry, an escalation to the full transcript, or a human gate, never a silent partial (nearest parent: doctrine 7, the never-lost reader).
+**Canon:** sub-doctrine 7.f — *no silent partial handoff*, filed under the operator's ratifying merge of the change that adds it (ADR-0020).
 
 ## Context
 

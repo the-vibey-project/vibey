@@ -2,7 +2,7 @@
 
 **Status:** accepted · **Date:** 2026-08-14
 
-**Owes:** a sub-doctrine (not yet proposed) — vibey drives its runners and never calls a provider API for build work (nearest ratified neighbour: 10.e, *the family first*).
+**Canon:** sub-doctrine 10.n — *drive the runners, never the provider*, filed under the operator's ratifying merge of the change that adds it (ADR-0020).
 
 > The decision stands.
 > [ADR-0037](0037-one-distribution-one-version.md) supersedes one supporting

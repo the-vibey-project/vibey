@@ -33,7 +33,7 @@ Under that rule the tree had a contradiction. `EngineId.QWENLOOP` was wired as a
 
 **Bad.** Two DESIGN providers to keep at parity; the sovereign one researches only what the operator supplies; and ADR-0015's rotation posture (qwenloop only when nothing paid is eligible) now applies to BUILD rotation but not to the explicit DESIGN choice, which this record makes explicit rather than leaving implicit.
 
-**Rule status.** The rule is 8.a and is already law; this ADR is the argument for how phase one satisfies it. The narrower clause — never emit a citation the model did not fetch — is conduct and may deserve its own sub-doctrine under doctrine 10.
+**Rule status.** The rule is 8.a and is already law; this ADR is the argument for how phase one satisfies it. The narrower clause — never emit a citation the model did not fetch — is conduct, and is filed as sub-doctrine 10.o (no citation without a fetch).
 
 ## Alternatives rejected
 
