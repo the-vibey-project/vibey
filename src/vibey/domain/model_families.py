@@ -74,15 +74,19 @@ class ModelFamilies:
 
     def jobs(self, capabilities: frozenset[str]) -> tuple[str, ...]:
         """What a model reporting `capabilities` can be tried for. Tool-calling is necessary
-        for BUILD, not sufficient: a model can report it and still write its calls out as text
-        (Qwen2.5-Coder 14B on Ollama does), which only a run shows."""
+        for native BUILD, not sufficient: a model can report it and still write its calls out
+        as text (Qwen2.5-Coder 14B on Ollama does), which only a run shows. A model without it
+        can still be driven through the text tool-call protocol, which is slower and, where it
+        was measured, no better (ADR-0093)."""
         jobs: list[str] = []
         if TOOLS in capabilities:
-            jobs.append("BUILD (it reports tool-calling; a run shows whether it uses it)")
+            jobs.append("BUILD (it reports tool-calling; a run shows whether it uses it well)")
         if COMPLETION in capabilities:
             jobs.append("DESIGN and DECOMPOSE (JSON mode needs no tool-calling)")
         if INSERT in capabilities:
             jobs.append("fill-in-the-middle completion")
+        if COMPLETION in capabilities and TOOLS not in capabilities:
+            jobs.append("BUILD through the text tool-call protocol (slower; measured unreliable)")
         return tuple(jobs)
 
 

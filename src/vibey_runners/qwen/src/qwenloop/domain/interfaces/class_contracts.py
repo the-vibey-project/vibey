@@ -95,6 +95,11 @@ class QwenConfigInterface(Protocol):
     def max_empty_reply_retries(self) -> int: ...
 
     @property
+    def tool_protocol(self) -> str:
+        """auto, native or text: how tool calls travel to the model."""
+        ...
+
+    @property
     def max_recorded_argument_chars(self) -> int: ...
 
     @property

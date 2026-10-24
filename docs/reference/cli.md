@@ -772,7 +772,9 @@ Ollama answering is reported and is not an error; the families still print. It e
 For each installed model it says what the model can be tried for. `tools` means it can be
 tried for BUILD, and only a run shows whether it uses them: Qwen2.5-Coder 14B reports `tools`
 and still writes its calls out as text. `completion` means it can serve DESIGN and DECOMPOSE,
-which ask for JSON and need no tool-calling. `insert` means fill-in-the-middle completion.
+which ask for JSON and need no tool-calling. `insert` means fill-in-the-middle completion. A
+model that reports `completion` without `tools` is also listed for BUILD through the text
+tool-call protocol, marked slower and measured unreliable.
 
 | Option | Default | What it does |
 |---|---|---|

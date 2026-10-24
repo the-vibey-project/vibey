@@ -78,8 +78,11 @@ def test_jobs_follow_only_what_the_model_reports() -> None:
         "DESIGN",
         "fill-in-the-middle",
     ]
-    assert [j.split(" ")[0] for j in jobs(frozenset({"completion"}))] == ["DESIGN"]
+    assert [j.split(" ")[0] for j in jobs(frozenset({"completion"}))] == ["DESIGN", "BUILD"]
+    assert "text tool-call protocol" in jobs(frozenset({"completion"}))[1]
     assert "a run shows" in jobs(frozenset({"tools"}))[0]
+    # With tools the model builds natively; the text protocol is only for one without them.
+    assert not any("text tool-call" in j for j in jobs(frozenset({"completion", "tools"})))
 
 
 def test_the_catalogue_satisfies_its_interface() -> None:

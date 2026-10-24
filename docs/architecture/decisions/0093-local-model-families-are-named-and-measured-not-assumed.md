@@ -33,9 +33,14 @@ positive "no".**
 - What a model "can be tried for" follows only what it reports: `tools` means BUILD may be tried (a
   run shows whether it works), `completion` means DESIGN and DECOMPOSE, which ask for JSON and need
   no tool-calling, and `insert` means fill-in-the-middle.
-- The local runner refuses a model its own Ollama positively reports **without** `tools`, naming
-  what it does report and pointing it at DESIGN and DECOMPOSE. Unknown passes: a model nothing says
-  anything about is not one to turn away, and a server that is not an Ollama has no `/api/show`.
+- A model its own Ollama positively reports **without** `tools` is driven through a **text
+  tool-call protocol** (`tool_protocol = "auto"`, the default; `native` and `text` force either way).
+  Ollama answers an error when a request carries `tools` for such a model, so its tools are
+  described in the system prompt, its calls are written as `<tool_call>{...}</tool_call>` and
+  recovered by the runner's existing text-call parser, and the history is rendered as plain chat
+  (calls as the text it wrote, results as user messages), because a template that has never heard
+  of a `tool` role cannot be trusted to show one. The run says when it is in use. Unknown stays
+  native: a model nothing says anything about is not one to second-guess.
 
 ## What was measured
 
@@ -53,9 +58,13 @@ declares a built-in renderer, so the registry says nothing about it; it was not 
 
 ## Consequences
 
-- The five families that report no tool-calling cannot drive BUILD on this runner. They remain
-  useful for DESIGN and DECOMPOSE, and `codestral`, `starcoder` and `deepseek-coder-v2` report fill-in-the-middle.
-  Supporting them for BUILD would need a text tool-call protocol, which is a different feature.
-- `llama` is the one new family that reports tools without a built-in renderer, so it is the first
-  to try for BUILD; whether it drives a run well is a benchmark, not a flag.
+- The families that report no tool-calling can now be *run* for BUILD, through the text protocol.
+  **Measured, that does not make them good at it** ([evidence](../evidence/model-build-benchmark-2026-10-23.md)):
+  0 of 5 valid Llama trials and 0 of 3 DeepSeek 1.3B trials produced a correct result on a small
+  task, against 1 of 3 for the default `gpt-oss:20b`. They remain useful for DESIGN and DECOMPOSE,
+  and `codestral`, `starcoder` and `deepseek-coder-v2` report fill-in-the-middle.
+- **Llama does not drive a BUILD run well on that task** (0 of 3 native, 0 of 5 text). It calls tools
+  sensibly and writes wrong code without noticing. A flag was never going to say so.
+- A refused tool call (a path outside the worktree) is an answer for the model, not the end of the
+  run. The benchmark found the runner crashing on one; every tool now returns the refusal.
 - Tag stems are a small list kept by hand; a new family needs a line and a test.
