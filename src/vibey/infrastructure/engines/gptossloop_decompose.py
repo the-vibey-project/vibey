@@ -71,6 +71,8 @@ DECOMPOSE_SYSTEM = (
     "checkout with nothing installed (no pip install, no network); prefer one pytest "
     "suite under tests/ shared by every item over inventing per-item test styles.\n"
     "- files_touched_hint lists the paths the item expects to change or create.\n"
+    "- epic names the feature set the item serves, a short phrase. Items that serve one "
+    "feature set share the name and are listed together.\n"
     "- A verification command may run or read only files that already exist in the "
     "repository, or that this item or an item it depends on creates and lists in "
     "files_touched_hint. Never reference a helper script you have not planned.\n"
@@ -167,6 +169,7 @@ class GptossloopWorkPlanProducer:
                                 "enum": [e.name.lower() for e in Effort if e is not Effort.ULTRA],
                             },
                             "files_touched_hint": strings,
+                            "epic": {"type": "string"},
                             "verification": {
                                 "type": "object",
                                 "properties": {

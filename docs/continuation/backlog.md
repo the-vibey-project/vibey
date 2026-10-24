@@ -11,7 +11,7 @@ smallest slice that ships on its own: tested, reviewed, and honest about what is
 
 - **Mode when GitHub runs it daily:** act — may open a draft pull request; never merges, approves, releases or deletes.
 - **What it is for:** Take this run's backlog item and land its smallest shippable, tested slice.
-- **Decision records:** 91, the newest 0091 — A paired device may start, pause, resume and unwind a project.
+- **Decision records:** 92, the newest 0092 — Large tasks are sliced into the CDD layers before any of them runs, and every lane is given everything its runner can take.
 - **Lanes it keeps usable:** [Backlog killer](https://github.com/the-vibey-project/vibey/actions/workflows/backlog-killer.yml), [Backlog splitter](https://github.com/the-vibey-project/vibey/actions/workflows/backlog-splitter.yml).
 <!-- END GENERATED continuation:state -->
 

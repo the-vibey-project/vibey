@@ -142,6 +142,24 @@ class DesignConfigInterface(Protocol):
 
 
 @runtime_checkable
+class BuildSlicingConfigInterface(Protocol):
+    """`[build.slicing]` (ADR-0092)."""
+
+    @property
+    def max_children(self) -> int:
+        """The most children one group holds before the plan gains the next layer out."""
+        ...
+
+
+@runtime_checkable
+class BuildConfigInterface(Protocol):
+    """`[build]`."""
+
+    @property
+    def slicing(self) -> BuildSlicingConfigInterface: ...
+
+
+@runtime_checkable
 class EngineDispatchConfigInterface(Protocol):
     """`[engines]`'s dispatch keys (ADR-0079). A plain value: `from_data` builds it."""
 

@@ -66,15 +66,30 @@ _CLAUDELOOP_AFFORDANCES = EngineAffordances(
     paste_text=True,
     plugins=PluginSystem.CLAUDE_PLUGINS,
     mcp=True,
+    skills=True,
+    web_search=True,
     evidence={
         "files": "it runs in the worktree (`run --cwd`), and `run --add-folder` and "
         "`--attach` take more (claudeloop cli/commands/run.py)",
         "paste_text": "`prompt TEXT --now|--at-break` (claudeloop cli/commands/prompt.py); "
         "the plan itself is text",
         "plugins": "`run --plugin` becomes the Claude Agent SDK's `plugins` option "
-        "(claudeloop cli/commands/run.py; infrastructure/agent/options.py)",
+        "(claudeloop cli/commands/run.py; infrastructure/agent/options.py); the plugins a "
+        "user's settings enable load through `setting_sources` (see `mcp`)",
         "mcp": "`run --connector NAME=JSON|url` becomes the Claude Agent SDK's "
-        "`mcp_servers` (claudeloop cli/commands/run.py; infrastructure/agent/options.py)",
+        "`mcp_servers` (claudeloop cli/commands/run.py; infrastructure/agent/options.py); with "
+        "none named, `setting_sources` is left unset, which the SDK documents as loading every "
+        "user, project and local setting, and so the MCP servers they declare",
+        "skills": "`run --skill` becomes the Claude Agent SDK's `skills` option "
+        "(claudeloop cli/commands/run.py; infrastructure/agent/options.py); with none named it "
+        'stays unset, which the SDK documents as "not skills off" -- the CLI\'s own defaults '
+        "load every discovered skill -- and claudeloop's own test pins that nothing narrows it "
+        "(tests/infrastructure/test_options_and_bus.py)",
+        "web_search": '`run --web-search` ("Enable web search tools", off unless given) adds '
+        "the SDK's WebSearch tool to the session (claudeloop cli/commands/run.py; "
+        "infrastructure/resources/adapter.py `gateway_payload`); vibey always passes it, and "
+        "`--deep-research` beside it, which claudeloop only records as a flag "
+        "(infrastructure/resources/store.py) -- no tool or cost follows from it",
     },
 )
 # `stop` and `wind-down` take `--run-id` and `--cwd`; `prompt TEXT` needs exactly one of
@@ -131,6 +146,7 @@ CLAUDELOOP = EngineDescriptor(
         ),
     },
     session_verb="sessions",
+    launch_flags=("--web-search", "--deep-research"),
     # --permission-mode is real (confirmed via --help), but its actual value
     # vocabulary is Literal["bypass", "manual", "accept-edits", "plan",
     # "auto"] (domain/permission.py in the claudeloop repo) -- "container"
@@ -229,7 +245,12 @@ CODEXLOOP = EngineDescriptor(
         files=True,
         paste_text=True,
         plugins=PluginSystem.SKILLS_CONTEXT,
+        mcp=True,
         evidence={
+            "mcp": "its exec argv overrides only approval, sandbox, network and effort and "
+            "passes nothing that suppresses Codex's own configuration, and its doctor checks "
+            "the MCP servers that configuration declares (codexloop "
+            "infrastructure/agent/argv.py, infrastructure/doctor_env.py)",
             "files": "it runs in the worktree as its working directory, and its exec argv "
             "carries `--add-dir` (codexloop infrastructure/agent/argv.py)",
             "paste_text": "`prompt TEXT --now|--next-turn` (codexloop cli/commands/prompt.py); "
@@ -296,7 +317,9 @@ QWENLOOP = EngineDescriptor(
         paste_text=True,
         paste_images=False,
         plugins=PluginSystem.SKILLS_CONTEXT,
-        mcp=False,
+        mcp=True,
+        skills=False,
+        web_search=True,
         evidence={
             "images": "its model-facing tools are read_file, write_file, edit_file, shell, "
             "search, find and open_file (qwenloop domain/model.py `CODING_TOOL_NAMES`), and "
@@ -307,9 +330,16 @@ QWENLOOP = EngineDescriptor(
             "paste_images": "every message it sends is text (`ChatMessage.content: str`, "
             "qwenloop domain/model.py)",
             "plugins": _SKILLS_CONTEXT,
-            "mcp": "the model is offered only its own fixed tools (qwenloop "
-            "infrastructure/inference.py `_CODING_TOOLS`), and its `connector`, `plugin` "
-            "and `skill` commands only echo (qwenloop cli/app.py)",
+            "mcp": "`mcp_list` and `mcp_call` are among its model-facing tools and reach the stdio "
+            "servers the operator declared in ~/.claude.json and QWENLOOP_MCP_CONFIG, never the "
+            "worktree's, which the model and a checked-out repository can write; two gateway "
+            "tools rather than every server's tools so a small context is not flooded (qwenloop "
+            "infrastructure/mcp.py, infrastructure/tools.py)",
+            "skills": "its `skill` and `plugin` commands only echo (qwenloop cli/app.py); vibey's context "
+            "packets reach it as plan text (see `plugins`), not as skills it loads",
+            "web_search": "`web_search` and `web_fetch` are among its model-facing tools and "
+            "run vibey's own `vibey search` and `vibey fetch` (qwenloop domain/model.py "
+            "`CODING_TOOL_NAMES`; infrastructure/tools.py)",
         },
     ),
     # Each takes the run id positionally, then `prompt` its text, and `--cwd` (qwenloop
@@ -426,7 +456,16 @@ class ClaudeloopLocalDescriptors:
             tier=EngineTier.LOCAL,
             doctor_args=profile,
             # The same binary, so the same verbs, run directory and envelope.
-            affordances=CLAUDELOOP.affordances,
+            affordances=replace(
+                CLAUDELOOP.affordances,
+                web_search=False,
+                evidence={
+                    **CLAUDELOOP.affordances.evidence,
+                    "web_search": "a local backend cannot serve Anthropic's server-side tools, "
+                    "and claudeloop refuses `--web-search` and `--deep-research` against one "
+                    "(claudeloop domain/backend.py `check_tools`)",
+                },
+            ),
             controls=CLAUDELOOP.controls,
             events=CLAUDELOOP.events,
         )

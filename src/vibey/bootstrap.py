@@ -114,6 +114,7 @@ from vibey.application.wind_down import WindDownOrchestrator
 from vibey.application.worker import WorkerLoop
 from vibey.bootstrap_interface import WorkerGateSeamsInterface
 from vibey.domain.config import (
+    BuildConfig,
     DesignResearchConfig,
     NotificationsConfig,
     QueueDefectConfig,
@@ -127,6 +128,7 @@ from vibey.domain.interfaces.config_interface import (
     QueueReapConfigInterface,
 )
 from vibey.domain.phase import Phase
+from vibey.domain.slicing import AutoSlicer
 from vibey.domain.worktree import WorktreeNaming
 from vibey.infrastructure.azure.adapter import InMemoryAzureClientAdapter
 from vibey.infrastructure.build.automated_review_runner import SubprocessAutomatedReviewRunner
@@ -783,6 +785,10 @@ def build_full_worker(
             decomposer=decomposer,
             jobs=resources.jobs,
             checkouts=ProjectCheckoutLocator(resources.projects),
+            # `[build.slicing] max_children`, from the project's stored config (ADR-0092).
+            slicer=AutoSlicer(
+                max_children=BuildConfig.from_data(project.config).slicing.max_children
+            ),
         ),
         "review.demo": ReviewDemoHandler(
             specs=resources.design_specs,

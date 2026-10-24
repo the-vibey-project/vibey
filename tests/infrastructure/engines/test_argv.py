@@ -224,11 +224,12 @@ def test_the_template_names_the_plan_flag_only_where_the_runner_takes_one() -> N
         flagged, _spec(Effort.STANDARD)
     )
     assert RUN_ARGV_TEMPLATE.template(flagged) == (
-        "{binary}", "run", "{plan_flag?}", "{plan}", "--run-id", "{run_id}",
+        "{binary}", "run", "{plan_flag?}", "{plan}", "--run-id", "{run_id}", "--web-search", "--deep-research",
         "{effort_argv...}", "--cwd", "{cwd}",
     )  # fmt: skip
     assert RUN_ARGV_TEMPLATE.template(by_id["claudeloop"]) == (
-        "{binary}", "run", "{plan}", "--run-id", "{run_id}", "{effort_argv...}", "--cwd", "{cwd}",
+        "{binary}", "run", "{plan}", "--run-id", "{run_id}", "--web-search", "--deep-research", "{effort_argv...}",
+        "--cwd", "{cwd}",
     )  # fmt: skip
 
 
@@ -243,3 +244,35 @@ def test_worktree_isolation_adds_no_flags_for_any_engine() -> None:
     """Why the template carries no isolation flags: vibey runs BUILD at worktree isolation,
     and there no descriptor has any."""
     assert all(d.isolation_flags.get(IsolationLevel.WORKTREE, ()) == () for d in ALL_DESCRIPTORS)
+
+
+def test_a_new_claudeloop_run_always_carries_web_search() -> None:
+    from vibey.infrastructure.engines.descriptors import CLAUDELOOP
+
+    for effort in ALL_EFFORTS:
+        argv = build_argv(CLAUDELOOP, _spec(effort))
+        assert "--web-search" in argv and "--deep-research" in argv, effort.name
+
+
+def test_a_resumed_claudeloop_session_keeps_the_resources_its_run_already_holds() -> None:
+    from vibey.infrastructure.engines.descriptors import CLAUDELOOP
+
+    spec = RunSpec(
+        run_id=RUN_ID,
+        worktree_path=Path(WORKTREE),
+        prompt="continue",
+        effort=Effort.LOW,
+        isolation=IsolationLevel.WORKTREE,
+        session_id="sess-abc123",
+    )
+    assert "--web-search" not in build_argv(CLAUDELOOP, spec)
+
+
+@pytest.mark.parametrize("effort", ALL_EFFORTS, ids=lambda e: e.name)
+def test_claudeloop_local_is_never_asked_for_web_search(effort) -> None:  # type: ignore[no-untyped-def]
+    """Its backend refuses the flag outright (claudeloop domain/backend.py `check_tools`),
+    so passing it would stop the engine rather than widen it."""
+    from vibey.infrastructure.engines.descriptors import CLAUDELOOP_LOCAL
+
+    argv = build_argv(CLAUDELOOP_LOCAL, _spec(effort))
+    assert "--web-search" not in argv and "--deep-research" not in argv

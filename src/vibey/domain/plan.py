@@ -46,6 +46,9 @@ class WorkItem:
     est_effort: Effort
     files_touched_hint: tuple[str, ...]
     verification: VerificationSpec
+    # The feature set this item belongs to, named by whoever planned it (ADR-0092). Items the
+    # plan lists consecutively under one name form one named epic; empty groups by position.
+    epic: str = ""
 
 
 def fold_verification_only(items: Sequence[WorkItem]) -> tuple[WorkItem, ...]:

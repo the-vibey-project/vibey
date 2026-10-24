@@ -11,6 +11,8 @@ from vibey.domain.interfaces.budget_caps_interface import (
 )
 from vibey.domain.interfaces.circuit_interface import EngineFailurePolicyInterface
 from vibey.domain.interfaces.config_interface import (
+    BuildConfigInterface,
+    BuildSlicingConfigInterface,
     DesignConfigInterface,
     DesignInterviewConfigInterface,
     DesignResearchConfigInterface,
@@ -121,6 +123,7 @@ from vibey.domain.interfaces.remote_command_interface import (
     WorkflowsInvocationInterface,
 )
 from vibey.domain.interfaces.research_gap_interface import ResearchGapInterface
+from vibey.domain.interfaces.slicing_interface import AutoSlicerInterface
 from vibey.domain.interfaces.stored_value_interface import (
     StoredValueParserInterface,
     UnrecognizedValueInterface,
@@ -193,6 +196,8 @@ __all__ = [
     "QueueConfigInterface",
     "QueuePriorityConfigInterface",
     "QueueReapConfigInterface",
+    "BuildConfigInterface",
+    "BuildSlicingConfigInterface",
     "DesignConfigInterface",
     "DesignResearchConfigInterface",
     "QueuedJobInterface",
@@ -215,6 +220,7 @@ __all__ = [
     "CorrelationIdInterface",
     "CostReportEntryInterface",
     "CredentialRedactorInterface",
+    "AutoSlicerInterface",
     "DecompositionPlannerInterface",
     "DeliveryCorrelationInterface",
     "DesignInterviewConfigInterface",

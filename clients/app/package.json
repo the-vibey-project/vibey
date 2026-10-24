@@ -78,5 +78,8 @@
       "node_modules",
       "<rootDir>/node_modules"
     ]
+  },
+  "overrides": {
+    "zod": "4.6.6"
   }
 }

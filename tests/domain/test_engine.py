@@ -196,7 +196,9 @@ def test_a_descriptor_declares_nothing_it_has_not_shown() -> None:
         affordances.paste_images,
         affordances.plugins,
         affordances.mcp,
-    ) == (None, None, None, None, None, None)
+        affordances.skills,
+        affordances.web_search,
+    ) == (None, None, None, None, None, None, None, None)
     assert affordances.evidence == {}
     assert (EventLog().path, EventLog().envelope) == (None, None)
     controls = EngineControls()
@@ -212,3 +214,32 @@ def test_the_plugin_systems_and_event_envelopes_are_named_as_the_contract_names_
         "event_type+payload",
         "event_type",
     ]
+
+
+def test_unknown_is_a_gap_not_a_grant() -> None:
+    from vibey.domain.engine import EngineAffordances
+
+    assert EngineAffordances().full_access_gaps() == ("skills", "plugins", "mcp", "web_search")
+
+
+def test_a_lane_with_all_four_has_no_gap() -> None:
+    from vibey.domain.engine import EngineAffordances, PluginSystem
+
+    full = EngineAffordances(
+        skills=True, plugins=PluginSystem.CLAUDE_PLUGINS, mcp=True, web_search=True
+    )
+    assert full.full_access_gaps() == ()
+
+
+def test_each_capability_is_its_own_gap() -> None:
+    from dataclasses import replace
+
+    from vibey.domain.engine import EngineAffordances, PluginSystem
+
+    full = EngineAffordances(
+        skills=True, plugins=PluginSystem.CLAUDE_PLUGINS, mcp=True, web_search=True
+    )
+    assert replace(full, skills=False).full_access_gaps() == ("skills",)
+    assert replace(full, plugins=PluginSystem.SKILLS_CONTEXT).full_access_gaps() == ("plugins",)
+    assert replace(full, mcp=False).full_access_gaps() == ("mcp",)
+    assert replace(full, web_search=None).full_access_gaps() == ("web_search",)

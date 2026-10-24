@@ -11,7 +11,7 @@ closed one actually done, the forecast current.
 
 - **Mode when GitHub runs it weekly:** act — may open a draft pull request; never merges, approves, releases or deletes.
 - **What it is for:** Keep the backlog, the tracker and the roadmap truthful.
-- **Decision records:** 91, the newest 0091 — A paired device may start, pause, resume and unwind a project.
+- **Decision records:** 92, the newest 0092 — Large tasks are sliced into the CDD layers before any of them runs, and every lane is given everything its runner can take.
 - **Lanes it keeps usable:** [Backlog cleanup](https://github.com/the-vibey-project/vibey/actions/workflows/backlog-cleanup.yml), [Delivery estimate](https://github.com/the-vibey-project/vibey/actions/workflows/delivery-estimate.yml).
 <!-- END GENERATED continuation:state -->
 

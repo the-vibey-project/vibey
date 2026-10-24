@@ -891,6 +891,25 @@ environment alone (`VIBEY_QUEUE_DEFECT_IDENTICAL_FAILURES`) in a pod with none.
 identical_failures = 4
 ```
 
+## `[build.slicing]` { #buildslicing }
+
+How `build.decompose` groups a large plan into the four CDD layers -- stories, epics, phases,
+project -- before any of it runs ([ADR-0092](../architecture/decisions/0092-large-tasks-are-sliced-into-the-cdd-layers-before-they-run.md)).
+A plan of at most `max_children` items stays stories only. A larger one is grouped into epics,
+more than `max_children` epics into phases, and so on, never past four layers. Each group
+runs to completion before the next begins.
+
+Copied into the project's stored config by `vibey new` and read when the plan is made.
+
+| Field | Type | Default | Notes |
+|---|---|---|---|
+| `max_children` | integer, at least 2 | `8` | The most children one group holds. Lower slices finer and serialises more across group boundaries; higher keeps a plan flatter. A boolean, a string, or anything below 2 is refused at load, as is an unknown key in `[build.slicing]` or an unknown table under `[build]`. |
+
+```toml
+[build.slicing]
+max_children = 6
+```
+
 ## `[design.research]` { #designresearch }
 
 What a DESIGN research job does when its provider can obtain no evidence. After the

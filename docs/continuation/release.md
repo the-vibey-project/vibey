@@ -12,7 +12,7 @@ below still holds and changes nothing.
 
 - **Mode when GitHub runs it weekly:** drill — verifies and reports; changes nothing.
 - **What it is for:** Derive the version, promote develop to main, and verify every channel and every asset.
-- **Decision records:** 91, the newest 0091 — A paired device may start, pause, resume and unwind a project.
+- **Decision records:** 92, the newest 0092 — Large tasks are sliced into the CDD layers before any of them runs, and every lane is given everything its runner can take.
 - **Lanes it keeps usable:** [Promote](https://github.com/the-vibey-project/vibey/actions/workflows/promote-to-main.yml), [Release](https://github.com/the-vibey-project/vibey/actions/workflows/vibey-engine.yml), [krypton-app](https://github.com/the-vibey-project/vibey/actions/workflows/krypton-app.yml), [GitHub Release](https://github.com/the-vibey-project/vibey/actions/workflows/github-release.yml), [Release binaries](https://github.com/the-vibey-project/vibey/actions/workflows/release-binaries.yml), [Release surfaces](https://github.com/the-vibey-project/vibey/actions/workflows/release-surfaces.yml), [Open VSX](https://github.com/the-vibey-project/vibey/actions/workflows/openvsx.yml).
 - **Agent skills it relies on:** `.claude/skills/vibey-releasing/SKILL.md`.
 <!-- END GENERATED continuation:state -->

@@ -113,7 +113,17 @@ class EngineAffordancesInterface(Protocol):
     def mcp(self) -> bool | None: ...
 
     @property
+    def skills(self) -> bool | None: ...
+
+    @property
+    def web_search(self) -> bool | None: ...
+
+    @property
     def evidence(self) -> Mapping[str, str]: ...
+
+    def full_access_gaps(self) -> tuple[str, ...]:
+        """The capabilities of skills, plugins, MCP and web search not shown to be granted."""
+        ...
 
 
 @runtime_checkable
@@ -179,6 +189,9 @@ class EngineDescriptorInterface(Protocol):
 
     @property
     def isolation_flags(self) -> Mapping[object, tuple[str, ...]]: ...
+
+    @property
+    def launch_flags(self) -> tuple[str, ...]: ...
 
     @property
     def cost_per_mtok_in(self) -> float: ...

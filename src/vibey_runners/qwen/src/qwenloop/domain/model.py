@@ -24,6 +24,8 @@ CODING_TOOL_NAMES: tuple[str, ...] = (
     "open_file",
     "web_search",
     "web_fetch",
+    "mcp_list",
+    "mcp_call",
 )
 
 
