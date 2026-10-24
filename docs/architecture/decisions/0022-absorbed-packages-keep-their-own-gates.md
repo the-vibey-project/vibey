@@ -23,7 +23,7 @@ The uv workspace makes a second, quieter lowering possible. The lock resolves at
 
 **Bad.** Two toolchains in one CI (uv for the conductor, pip for the tenants) and a matrix of seven jobs that will grow with every absorption. Accepted: the alternative is a floor nobody measures.
 
-**Rule status.** This binds every future absorption, survives any rewrite of the packages involved, and is about how the project treats its own work. It passes ADR-0020's test and owes a sub-doctrine, not yet proposed; the parent doctrine and the wording are the operator's to ratify.
+**Rule status.** This binds every future absorption, survives any rewrite of the packages involved, and is about how the project treats its own work. It passes ADR-0020's test and is filed as sub-doctrine 9.g (an absorbed package keeps every gate it arrived with), which the operator's merge of the change that adds it ratifies.
 
 ## Alternatives rejected
 
