@@ -400,7 +400,7 @@
     "1189": {
       "close_when_done": false,
       "kind": "standalone",
-      "last_verdict": "OPEN",
+      "last_verdict": "DONE",
       "next": "single-instance lock design + multiproject stress evidence",
       "probes": [
         {
