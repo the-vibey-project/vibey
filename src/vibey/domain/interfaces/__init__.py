@@ -71,6 +71,7 @@ from vibey.domain.interfaces.ledger_tier_interface import (
     LedgerTierManagerInterface,
     TierConfigInterface,
 )
+from vibey.domain.interfaces.model_families_interface import ModelFamiliesInterface
 from vibey.domain.interfaces.phase_timing_interface import (
     LedgerSpendRuleInterface,
     PhaseSpendInterface,
@@ -222,6 +223,7 @@ __all__ = [
     "CredentialRedactorInterface",
     "AutoSlicerInterface",
     "DecompositionPlannerInterface",
+    "ModelFamiliesInterface",
     "DeliveryCorrelationInterface",
     "DesignInterviewConfigInterface",
     "DesignDefaultScopeGuardInterface",

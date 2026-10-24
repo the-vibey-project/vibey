@@ -29,6 +29,17 @@ CODING_TOOL_NAMES: tuple[str, ...] = (
 )
 
 
+class ToolProtocol(StrEnum):
+    """How tool calls travel between the runner and the model."""
+
+    # Native tool-calling where the model's server reports it, the text protocol where it
+    # positively reports it does not. The default.
+    AUTO = "auto"
+    NATIVE = "native"
+    # Calls written in the conversation: for a model that has no native tool-calling.
+    TEXT = "text"
+
+
 class Backend(StrEnum):
     AUTO = "auto"
     LLAMA_CPP = "llama.cpp"

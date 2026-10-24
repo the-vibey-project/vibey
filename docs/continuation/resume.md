@@ -11,7 +11,7 @@ prompt to reach for when nobody remembers where things were.
 
 - **Mode when GitHub runs it weekly:** act — may open a draft pull request; never merges, approves, releases or deletes.
 - **What it is for:** Orient in the repository as it stands and continue delivery where it left off.
-- **Decision records:** 92, the newest 0092 — Large tasks are sliced into the CDD layers before any of them runs, and every lane is given everything its runner can take.
+- **Decision records:** 93, the newest 0093 — Local model families are named and measured, never assumed.
 - **Lanes it keeps usable:** [Merge train](https://github.com/the-vibey-project/vibey/actions/workflows/merge-train.yml), [PR evaluate](https://github.com/the-vibey-project/vibey/actions/workflows/pr-evaluate.yml), [PR review](https://github.com/the-vibey-project/vibey/actions/workflows/pr-review.yml), [Provenance](https://github.com/the-vibey-project/vibey/actions/workflows/provenance.yml), [Conventional Commits](https://github.com/the-vibey-project/vibey/actions/workflows/conventional-commits.yml), [Changelog](https://github.com/the-vibey-project/vibey/actions/workflows/changelog.yml), [Skip markers](https://github.com/the-vibey-project/vibey/actions/workflows/skip-markers.yml), [Automation bootstrap](https://github.com/the-vibey-project/vibey/actions/workflows/automation-bootstrap.yml).
 - **Agent skills it relies on:** `.claude/skills/vibey-architecture/SKILL.md`, `.claude/skills/vibey-domain-model/SKILL.md`, `.claude/skills/vibey-engine-adapters/SKILL.md`, `.claude/skills/vibey-testing/SKILL.md`, `.claude/skills/typesafe-ai/SKILL.md`.
 <!-- END GENERATED continuation:state -->
