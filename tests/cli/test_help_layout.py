@@ -12,6 +12,7 @@ from __future__ import annotations
 import re
 from pathlib import Path
 
+import click
 import pytest
 import typer
 from typer.testing import CliRunner
@@ -23,6 +24,14 @@ from vibey.cli.main import app
 REPO = Path(__file__).resolve().parents[2]
 runner = CliRunner()
 WIDE = {"COLUMNS": "120", "NO_COLOR": "1"}
+
+
+def _help(*args: str) -> str:
+    """The help as a person reads it, without the styling codes typer adds when the terminal
+    is forced (GitHub Actions forces it, whatever `NO_COLOR` says). Those codes split an option
+    name such as `--json` into pieces, so a search of the raw bytes fails there and passes on a
+    laptop; develop went red on that (#1724)."""
+    return click.unstyle(runner.invoke(app, list(args), env=WIDE).output)
 
 
 def _registered() -> set[str]:
@@ -60,9 +69,8 @@ def test_a_summary_is_one_short_line_with_no_full_stop(entry: Entry) -> None:
 
 
 def test_the_list_shows_every_panel_in_reading_order_with_each_summary() -> None:
-    result = runner.invoke(app, ["--help"], env=WIDE)
-    assert result.exit_code == 0
-    out = result.output
+    assert runner.invoke(app, ["--help"], env=WIDE).exit_code == 0
+    out = _help("--help")
     positions = [out.index(panel.title) for panel in PANELS]
     assert positions == sorted(positions), "the panels must print in the order PANELS lists them"
     for panel in PANELS:
@@ -72,7 +80,7 @@ def test_the_list_shows_every_panel_in_reading_order_with_each_summary() -> None
 
 def test_a_commands_own_help_keeps_its_full_text() -> None:
     """Only the list is shortened: `vibey abandon --help` still says what it does in full."""
-    out = " ".join(runner.invoke(app, ["abandon", "--help"], env=WIDE).output.split())
+    out = " ".join(_help("abandon", "--help").split())
     assert "its jobs are cancelled, its gates withdrawn" in out
 
 
@@ -83,7 +91,7 @@ def test_the_examples_name_only_commands_that_exist() -> None:
 
 
 def test_the_help_ends_with_the_examples() -> None:
-    out = runner.invoke(app, ["--help"], env=WIDE).output
+    out = _help("--help")
     assert "Examples:" in out and "vibey new my-app" in out
 
 
@@ -91,7 +99,7 @@ def test_the_help_ends_with_the_examples() -> None:
 def test_a_command_the_footer_says_takes_json_does_take_it(command: str) -> None:
     claim = re.search(r"([a-z, ]+) take --json", EPILOG)
     assert claim is not None and command in claim.group(1)
-    assert "--json" in runner.invoke(app, [command, "--help"], env=WIDE).output
+    assert "--json" in _help(command, "--help")
 
 
 def _small_app() -> typer.Typer:
