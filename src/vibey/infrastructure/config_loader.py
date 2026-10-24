@@ -37,6 +37,9 @@ RUNTIME_CONFIG_KEYS = (
     "gates",
     "engine_environment",
     "design",
+    # How a large BUILD plan is grouped into the CDD layers (ADR-0092); read from the stored
+    # project config when the plan is made.
+    "build",
     # Which gate kinds may resolve to their default after waiting (12.d: declared, never
     # assumed). Validated below so a kind that cannot time out is refused at `vibey new`.
     "human_gates",

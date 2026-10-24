@@ -61,12 +61,13 @@ from qwenloop.infrastructure.github import (
 )
 from qwenloop.infrastructure.host_platform import HostPlatform
 from qwenloop.infrastructure.inference import LlamaCppServer, OpenAICompatServer, VllmServer
+from qwenloop.infrastructure.mcp import McpGateway
 from qwenloop.infrastructure.model_cache import ModelCache
 from qwenloop.infrastructure.ollama_probe import OllamaProbe
 from qwenloop.infrastructure.profiles import NVIDIA_BF16, PORTABLE, PROFILES
 from qwenloop.infrastructure.run_store import FileRunStore
 from qwenloop.infrastructure.settings import SettingsLoader
-from qwenloop.infrastructure.tools import SandboxTools
+from qwenloop.infrastructure.tools import SandboxTools, ShellEnvironment
 from qwenloop.infrastructure.turn_dispatch import (
     DirectTurnDispatcher,
     HybridTurnMultiplexer,
@@ -351,7 +352,13 @@ async def _run_plan(
     runner = AutonomousRunner(
         server,
         FileRunStore(cwd),
-        SandboxTools(cwd, limits=tool_limits),
+        SandboxTools(
+            cwd,
+            limits=tool_limits,
+            mcp=McpGateway.discover(
+                cwd, home=Path.home(), environ=os.environ, base_env=ShellEnvironment().build()
+            ),
+        ),
         DesktopNotifier(enabled=desktop_notifications),
         clock=SystemClock(),
         dispatcher=dispatcher,  # type: ignore[arg-type]
