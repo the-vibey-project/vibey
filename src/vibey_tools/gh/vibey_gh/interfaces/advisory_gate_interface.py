@@ -34,6 +34,11 @@ class AdvisoryException:
     `reason` is the reachability evidence that justifies it; `retire_when` the condition
     that ends it early (a patched release, an upstream change); `upstream` links to where
     that condition is tracked.
+
+    `fix_unreachable` lets the exception stand although a patched release exists, because no
+    package that depends on this one accepts it: it names who pins the vulnerable range and
+    what that range is. The gate verifies one thing itself, that the package is dev-only in the
+    workspace's lockfile, and refuses the field for a package that ships.
     """
 
     advisory: str
@@ -44,6 +49,7 @@ class AdvisoryException:
     expires: date
     retire_when: str
     upstream: tuple[str, ...] = ()
+    fix_unreachable: str | None = None
 
 
 @dataclass(frozen=True)
