@@ -59,6 +59,7 @@ def test_installed_models_say_their_family_and_what_ollama_reports() -> None:
     assert by_tag["qwen2.5-coder:14b"].capabilities == ("completion", "insert", "tools")
     assert by_tag["deepseek-coder:1.3b"].jobs == (
         "DESIGN and DECOMPOSE (JSON mode needs no tool-calling)",
+        "BUILD through the text tool-call protocol (slower; measured unreliable)",
     )
     assert by_tag["mystery:1b"].family is None and by_tag["mystery:1b"].capabilities is None
     assert by_tag["mystery:1b"].jobs == ()

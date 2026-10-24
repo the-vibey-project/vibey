@@ -54,6 +54,7 @@ from qwenloop.domain.model import (
     RunState,
     RunStatus,
     ServerInfo,
+    ToolProtocol,
 )
 from qwenloop.infrastructure.clock import SystemClock
 from qwenloop.infrastructure.desktop_notifications import DesktopNotifier
@@ -64,7 +65,12 @@ from qwenloop.infrastructure.github import (
     list_repo_names,
 )
 from qwenloop.infrastructure.host_platform import HostPlatform
-from qwenloop.infrastructure.inference import LlamaCppServer, OpenAICompatServer, VllmServer
+from qwenloop.infrastructure.inference import (
+    LlamaCppServer,
+    OpenAICompatServer,
+    OpenAIServer,
+    VllmServer,
+)
 from qwenloop.infrastructure.mcp import McpGateway
 from qwenloop.infrastructure.model_cache import ModelCache
 from qwenloop.infrastructure.ollama_probe import OllamaModelProbe, OllamaProbe
@@ -228,24 +234,29 @@ _ollama_probe: OllamaProbeInterface = OllamaProbe()
 _model_probe: OllamaModelProbeInterface = OllamaModelProbe()
 
 
-def _require_tools(server: InferenceServer) -> None:
-    """Refuse a model its own Ollama says cannot call tools.
+def _choose_tool_protocol(server: InferenceServer, protocol: ToolProtocol) -> None:
+    """Carry tool calls as text when the model has no native tool-calling.
 
-    This runner drives a model through tool calls, so one that cannot would spend its turns
-    producing empty replies. Only a model Ollama positively reports without `tools` is
-    refused: unknown (an older Ollama, another server) is let through, since a model nothing
-    says anything about is not one to turn away. DESIGN and DECOMPOSE ask for JSON and need
-    no tool-calling, so such a model is still useful there (vibey ADR-0093).
+    `text` always does; `native` never does. `auto` does for a model its Ollama positively
+    reports without `tools`: sent a tool list, Ollama answers an error, and the model could
+    not be driven at all. Unknown (an older Ollama, another server) stays native, since a
+    model nothing says anything about is not one to second-guess. The text protocol is slower
+    and less reliable, so the run says when it is in use (vibey ADR-0093).
     """
-    if not isinstance(server, OpenAICompatServer):
+    if protocol is ToolProtocol.NATIVE or not isinstance(server, OpenAIServer):
         return
-    reported = _model_probe.capabilities(server.base_url, server.model)
-    if reported is not None and "tools" not in reported:
-        raise RuntimeError(
-            f"{server.model} reports no tool-calling to Ollama (it reports "
-            f"{', '.join(sorted(reported)) or 'nothing'}), and this runner works through tool "
-            "calls. Pick a model that does, or use it for DESIGN and DECOMPOSE, which need none."
-        )
+    if protocol is ToolProtocol.AUTO:
+        if not isinstance(server, OpenAICompatServer):
+            return
+        reported = _model_probe.capabilities(server.base_url, server.model)
+        if reported is None or "tools" in reported:
+            return
+    server.text_tools = True
+    typer.echo(
+        f"{getattr(server, 'model', 'the model')}: carrying tool calls as text "
+        "(no native tool-calling; slower and less reliable than native)",
+        err=True,
+    )
 
 
 def _select(config: QwenConfig) -> BackendChoice:
@@ -325,7 +336,7 @@ def _run_single(
     actual_id = run_id or str(uuid.uuid4())
     server, profile = _server_for(config)
     try:
-        _require_tools(server)
+        _choose_tool_protocol(server, config.tool_protocol)
         state = asyncio.run(
             _run_plan(
                 server,

@@ -188,6 +188,15 @@ class SandboxTools:
         return CODING_TOOL_NAMES
 
     async def execute(self, name: str, arguments: dict[str, object]) -> dict[str, object]:
+        """Run one tool call. A call the tool refuses (a path outside the worktree, an
+        argument of the wrong kind) is an answer for the model to correct, never a reason to
+        end the run: a model that names an absolute path must be told, not stopped."""
+        try:
+            return await self._dispatch(name, arguments)
+        except ValueError as exc:
+            return {"error": str(exc)}
+
+    async def _dispatch(self, name: str, arguments: dict[str, object]) -> dict[str, object]:
         requested, name = name, self._canonical(name)
         if name in {"read_file", "open_file"}:
             return self._read(arguments)
