@@ -731,6 +731,48 @@
       "next": "operator scope decision: a whitepaper hub on the docs site, reviewed by vibey-skills and by human peers; two PDFs attached to the issue are the first submissions",
       "probes": []
     },
+    "1517": {
+      "close_when_done": false,
+      "kind": "triaged",
+      "last_verdict": "NEEDS-TRIAGE",
+      "next": "add explicit probes",
+      "probes": []
+    },
+    "1518": {
+      "close_when_done": false,
+      "kind": "triaged",
+      "last_verdict": "NEEDS-TRIAGE",
+      "next": "add explicit probes",
+      "probes": []
+    },
+    "1519": {
+      "close_when_done": false,
+      "kind": "triaged",
+      "last_verdict": "NEEDS-TRIAGE",
+      "next": "add explicit probes",
+      "probes": []
+    },
+    "1520": {
+      "close_when_done": false,
+      "kind": "triaged",
+      "last_verdict": "NEEDS-TRIAGE",
+      "next": "add explicit probes",
+      "probes": []
+    },
+    "1521": {
+      "close_when_done": false,
+      "kind": "triaged",
+      "last_verdict": "NEEDS-TRIAGE",
+      "next": "add explicit probes",
+      "probes": []
+    },
+    "1522": {
+      "close_when_done": false,
+      "kind": "triaged",
+      "last_verdict": "NEEDS-TRIAGE",
+      "next": "add explicit probes",
+      "probes": []
+    },
     "155": {
       "close_when_done": false,
       "kind": "standalone",
@@ -746,6 +788,20 @@
           }
         }
       ]
+    },
+    "1551": {
+      "close_when_done": false,
+      "kind": "triaged",
+      "last_verdict": "NEEDS-TRIAGE",
+      "next": "add explicit probes",
+      "probes": []
+    },
+    "1552": {
+      "close_when_done": false,
+      "kind": "triaged",
+      "last_verdict": "NEEDS-TRIAGE",
+      "next": "add explicit probes",
+      "probes": []
     },
     "1583": {
       "close_when_done": false,
