@@ -20,10 +20,6 @@ export class DevicePolicy implements DevicePolicyInterface {
     'ultra-no-cap': 'ULTRA without a cap is chosen on the host computer, behind its warnings, never from a device.',
     'set-cap': 'Budget caps are set on the host computer, never from a device.',
     'clear-cap': 'Budget caps are lifted on the host computer, never from a device.',
-    'start-project': 'A project is started on the computer that runs vibey, never from a device: in VS Code with `@krypton /new`, or in a terminal with `vibey new NAME --repo PATH`.',
-    'start-work': "A project's worker is started on the computer that runs vibey, never from a device: `/resume` in VS Code, or `vibey retry PROJECT --start-worker` in a terminal.",
-    'pause-work': 'Work is paused on the computer that runs vibey, never from a device: `/pause` in VS Code, or `vibey recover --stop-workers` in a terminal.',
-    'abandon-project': 'A project is unwound on the computer that runs vibey, never from a device: `/unwind` in VS Code, or `vibey abandon PROJECT --reason WHY` in a terminal.',
     'change-dsn': "vibey's database is configured on the host computer, never from a device.",
     'run-migrations': 'Migrations run on the host computer, never from a device.',
     'touch-canon': 'The canon changes only by the operator, never from a device.',
@@ -34,8 +30,9 @@ export class DevicePolicy implements DevicePolicyInterface {
     if (refusal !== undefined) {
       return { allowed: false, reason: refusal };
     }
-    // Spending is re-verified on the device (Face ID, Touch ID or the passcode) every time.
-    return { allowed: true, confirm: action === 'answer-spend' };
+    // Spending, and unwinding a project (which cannot be undone), are re-verified on the device
+    // (Face ID, Touch ID or the passcode) every time.
+    return { allowed: true, confirm: action === 'answer-spend' || action === 'abandon-project' };
   }
 
   effortOptions(capDeclared: boolean): readonly DeviceEffortOption[] {

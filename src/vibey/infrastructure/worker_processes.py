@@ -52,6 +52,10 @@ class StopPlan:
 
     workers: tuple[ProcessInfo, ...]
     descendants: tuple[ProcessInfo, ...]
+    # Workers a project-scoped stop does NOT stop because they serve more than that project
+    # (`--all-projects`) or an unnamed one (a bare worker serves the latest project). Any of
+    # them may hold a lease on the project, so a recovery that resets leases must say so.
+    left_running: tuple[ProcessInfo, ...] = ()
 
     @property
     def targets(self) -> tuple[ProcessInfo, ...]:
@@ -100,16 +104,42 @@ def _parse_row(line: str) -> ProcessInfo | None:
     return ProcessInfo(pid=pid, ppid=ppid, uid=uid, state=parts[3], argv=argv)
 
 
-def is_vibey_worker(argv: Sequence[str]) -> bool:
-    """A `vibey` command line whose command is `worker`: the executable (or `-m vibey...`) and
-    then, somewhere after it, the word `worker` on its own."""
+SHARED: Final[str] = "*"
+"""A worker's scope when it serves every project (`--all-projects`)."""
+
+
+def _worker_arguments(argv: Sequence[str]) -> Sequence[str] | None:
+    """What follows the word `worker` on a `vibey` command line, or None when it is not one."""
     for index, token in enumerate(argv):
         launches_vibey = PurePath(token).name == "vibey" or (
             index > 0 and argv[index - 1] == "-m" and token.split(".")[0] == "vibey"
         )
         if launches_vibey and "worker" in argv[index + 1 :]:
-            return True
-    return False
+            return argv[index + 1 :][argv[index + 1 :].index("worker") + 1 :]
+    return None
+
+
+def is_vibey_worker(argv: Sequence[str]) -> bool:
+    """A `vibey` command line whose command is `worker`: the executable (or `-m vibey...`) and
+    then, somewhere after it, the word `worker` on its own."""
+    return _worker_arguments(argv) is not None
+
+
+def worker_scope(argv: Sequence[str]) -> str | None:
+    """The project a worker was started for: its `--project` id (lower-cased), `SHARED` for
+    `--all-projects`, or None for a bare worker, which serves the latest project.
+
+    Only what follows `worker` is read: `uv run --project PATH vibey worker` names a Python
+    project to uv, not a vibey one."""
+    arguments = _worker_arguments(argv) or ()
+    if "--all-projects" in arguments:
+        return SHARED
+    for index, argument in enumerate(arguments):
+        if argument == "--project" and index + 1 < len(arguments):
+            return arguments[index + 1].lower()
+        if argument.startswith("--project="):
+            return argument.split("=", 1)[1].lower()
+    return None
 
 
 def _ancestors(table: Sequence[ProcessInfo], pid: int) -> set[int]:
@@ -157,10 +187,14 @@ class WorkerStopper:
         self._uid = os.getuid() if uid is None else uid
         self._pid = os.getpid() if pid is None else pid
 
-    def plan(self) -> StopPlan:
+    def plan(self, project_id: str | None = None, *, include_shared: bool = False) -> StopPlan:
+        """Every worker of this user's, or with `project_id` only that project's.
+
+        A scoped plan leaves shared workers running and names them in `left_running`, unless
+        `include_shared` stops them too."""
         rows = list(self._table.snapshot())
         protected = _ancestors(rows, self._pid)
-        workers = tuple(
+        candidates = tuple(
             row
             for row in rows
             if row.uid == self._uid
@@ -168,12 +202,23 @@ class WorkerStopper:
             and row.pid not in protected
             and is_vibey_worker(row.argv)
         )
+        left_running: tuple[ProcessInfo, ...] = ()
+        workers = candidates
+        if project_id is not None:
+            wanted = project_id.lower()
+            shared = tuple(row for row in candidates if worker_scope(row.argv) in (SHARED, None))
+            workers = tuple(
+                row
+                for row in candidates
+                if worker_scope(row.argv) == wanted or (include_shared and row in shared)
+            )
+            left_running = () if include_shared else shared
         children = tuple(
             row
             for row in _descendants(rows, {w.pid for w in workers}, protected)
             if row.uid == self._uid and row.alive
         )
-        return StopPlan(workers=workers, descendants=children)
+        return StopPlan(workers=workers, descendants=children, left_running=left_running)
 
     def stop(self, plan: StopPlan, *, grace_seconds: float = DEFAULT_GRACE_SECONDS) -> StopReport:
         wanted = [row.pid for row in plan.targets]

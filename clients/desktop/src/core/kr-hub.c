@@ -140,6 +140,14 @@ kr_hub_path(KrHubRoute route, const char *project_id, const char *id)
         return g_strdup("/api/v1/workflows/runs");
     case KR_HUB_ROUTE_WORKFLOW_RUN:
         return other ? g_strdup_printf("/api/v1/workflows/runs/%s", other) : NULL;
+    case KR_HUB_ROUTE_PROJECT_CREATE:
+        return g_strdup("/api/v1/projects");
+    case KR_HUB_ROUTE_PROJECT_START_WORK:
+        return project ? g_strdup_printf("/api/v1/projects/%s/work/start", project) : NULL;
+    case KR_HUB_ROUTE_PROJECT_PAUSE_WORK:
+        return project ? g_strdup_printf("/api/v1/projects/%s/work/pause", project) : NULL;
+    case KR_HUB_ROUTE_PROJECT_ABANDON:
+        return project ? g_strdup_printf("/api/v1/projects/%s/abandon", project) : NULL;
     }
     return NULL;
 }
@@ -148,7 +156,9 @@ gboolean
 kr_hub_route_writes(KrHubRoute route)
 {
     return route == KR_HUB_ROUTE_JOB_BUMP || route == KR_HUB_ROUTE_GATE_ANSWER ||
-           route == KR_HUB_ROUTE_PAIRING_CLAIM || route == KR_HUB_ROUTE_WORKFLOW_RUNS;
+           route == KR_HUB_ROUTE_PAIRING_CLAIM || route == KR_HUB_ROUTE_WORKFLOW_RUNS ||
+           route == KR_HUB_ROUTE_PROJECT_CREATE || route == KR_HUB_ROUTE_PROJECT_START_WORK ||
+           route == KR_HUB_ROUTE_PROJECT_PAUSE_WORK || route == KR_HUB_ROUTE_PROJECT_ABANDON;
 }
 
 gboolean
@@ -261,7 +271,7 @@ kr_hub_status_text(guint status)
     case 404:
         return "That project or gate is not there any more.";
     case 409:
-        return "Someone else answered first, or the queue refused the change.";
+        return "Someone else got there first, the queue refused the change, or a project's folder is taken.";
     case 421:
         return "The hub does not answer to that address. Check its [hub] names.";
     case 422:
@@ -269,7 +279,7 @@ kr_hub_status_text(guint status)
     case 429:
         return "Too many requests. krypton will try again shortly.";
     case 503:
-        return "The hub is up, but its database is not answering.";
+        return "The hub is up, but cannot do that now: its database is not answering, the host has not allowed it, or it is resting.";
     default:
         if (status >= 200 && status < 300)
             return "OK";

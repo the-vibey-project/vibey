@@ -605,7 +605,8 @@ assigned engine are cleared.
 | `--project ID` | unset | Recover jobs for one project. |
 | `--all` | off | Recover jobs for every project. Wins if `--project` is also given. |
 
-| `--stop-workers` | off | First stop every `vibey worker` this user is running, and everything each started (an engine runner, a `uv run` or `caffeinate` wrapper), then reset the leases. The processes are listed before anything is signalled. SIGTERM, then SIGKILL for what is still there after `--grace`. It matches `vibey` command lines with `worker` in them, in this user's processes only, and never itself or what started it. If anything survives SIGKILL it exits 1 **without resetting a lease**, because a live worker holds its leases by heartbeat and resetting them would run its job twice. |
+| `--stop-workers` | off | First stop the `vibey worker` processes this user is running, and everything each started (an engine runner, a `uv run` or `caffeinate` wrapper), then reset the leases. **With `--project`, only that project's workers** (`vibey worker --project ID`): a worker that serves every project (`--all-projects`) or none in particular may hold a lease on it, so it is left running and named, and the leases are **not** reset (exit 1) until you add `--include-shared`. With `--all`, every worker. The processes are listed first. |
+| `--include-shared` | off | With `--project` and `--stop-workers`: also stop the workers that serve every project or none in particular, so the leases can be reset. |
 | `--grace SECONDS` | `10` | How long `--stop-workers` waits after SIGTERM before SIGKILL. |
 | `--dry-run` | off | Change nothing: with `--stop-workers`, list the processes that would be stopped, and print `would recover N stuck job(s)` instead of resetting them. |
 
@@ -628,7 +629,7 @@ parks its job on an `attempts_exhausted` gate; this does what used to be `recove
 | Option | Default | What it does |
 |---|---|---|
 | `--max-attempts N` | `10` | Attempts to grant on each of the project's `attempts_exhausted` gates. |
-| `--keep-workers` | off | Do not stop this user's running workers first. |
+| `--keep-workers` | off | Do not stop this project's running workers first. `retry` stops only workers started for this project (`vibey worker --project ID`); one that serves every project is never stopped by it, because a retry resets no lease. |
 | `--start-worker` | off | Then start `vibey worker --project PROJECT_ID` detached, with every argument after `--` passed to it. |
 | `--log PATH` | `$XDG_STATE_HOME/vibey/worker-<project>.log` | Where the started worker's output is appended. |
 | `--grace SECONDS` | `10` | How long a worker gets after SIGTERM before SIGKILL. |

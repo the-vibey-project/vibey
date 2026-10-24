@@ -67,12 +67,15 @@ def test_no_file_and_no_table_declare_nothing(tmp_path: Path) -> None:
     settings = loader.load(tmp_path / "vibey.toml")
     assert settings.lan is False and settings.port == DEFAULT_PORT and settings.names == frozenset()
     assert settings.state_dir.name == "hub" and settings.lane_roots == ()
+    # No device may start a project unless the host says where (ADR-0091).
+    assert settings.projects_root is None
 
 
 def test_a_declared_table_is_read(tmp_path: Path) -> None:
     (tmp_path / "vibey.toml").write_text(
         "[hub]\nlan = true\nport = 9000\nnames = [' Studio.local ']\n"
         f"state_dir = '{tmp_path}/state'\nlane_roots = ['{tmp_path}/lanes']\n"
+        f"projects_root = '{tmp_path}/projects'\n"
     )
     settings = HubSettingsLoader().load(tmp_path / "vibey.toml")
     assert settings == HubSettings(
@@ -81,6 +84,7 @@ def test_a_declared_table_is_read(tmp_path: Path) -> None:
         names=frozenset({"studio.local"}),
         state_dir=tmp_path / "state",
         lane_roots=(tmp_path / "lanes",),
+        projects_root=tmp_path / "projects",
     )
 
 
@@ -96,6 +100,9 @@ def test_a_declared_table_is_read(tmp_path: Path) -> None:
         ("names = 'a'", "hub.names"),
         ("state_dir = 3", "hub.state_dir"),
         ("lane_roots = [3]", "hub.lane_roots"),
+        ("projects_root = 3", "hub.projects_root"),
+        # A device must never reach a folder by a relative path.
+        ("projects_root = 'projects'", "hub.projects_root"),
     ],
 )
 def test_a_malformed_table_is_refused_never_read_as_undeclared(

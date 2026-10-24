@@ -52,6 +52,8 @@ def test_the_tool_catalogue_names_every_tool_the_model_is_given() -> None:
         "open_file",
         "web_search",
         "web_fetch",
+        "mcp_list",
+        "mcp_call",
     )
 
 

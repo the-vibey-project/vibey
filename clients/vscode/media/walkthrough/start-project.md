@@ -8,12 +8,13 @@ decisions that are yours.
 **krypton: Start a new project** (or `@krypton /new greeter a web page that greets the visitor by
 name`) creates it in the folder you have open and starts its worker.
 
-Then just talk to it in the chat:
+Then just talk to it in the chat. krypton **follows the project and tells you what changes**: each phase it enters,
+any job that fails, and the moment it needs you or is done.
 
 - `@krypton /next` shows the oldest question it is waiting on, with the answers numbered.
 - `@krypton /reply 1` answers it. You can also say the answer in words.
-- `@krypton /status` shows which phase it is in.
-- `@krypton /pause` stops the work (nothing is lost), and `/resume` starts it again.
+- `@krypton /status` shows which phase it is in, and `@krypton /follow` starts watching again if you stopped.
+- `@krypton /pause` stops this project's worker (nothing is lost, and no other project is touched), and `/resume` starts it again.
 - `@krypton /unwind` ends a project for good. It shows what would be cancelled first and asks you to
   confirm; the reason you give is recorded on its ledger.
 

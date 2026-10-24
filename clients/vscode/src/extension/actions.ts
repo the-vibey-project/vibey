@@ -16,7 +16,7 @@ import type { EffortSetting, LoopName } from '@vibey/core';
 import type { Lane } from '@vibey/core';
 import type { RunRecord, TaskRunInterface } from '@vibey/core';
 import type { GateAnswer, VibeyBudget, VibeyGate, VibeyProject } from '@vibey/core';
-import { ModelPuller, ProjectDriver } from '@vibey/core';
+import { ModelPuller, PortableTimer, ProjectDriver, ProjectFollower } from '@vibey/core';
 import type { VibeyController } from './controller';
 import type { CommandActionsInterface, Invocation } from './interfaces/actions-interface';
 import type { TreeElement } from './interfaces/trees-interface';
@@ -61,6 +61,7 @@ export class CommandActions implements CommandActionsInterface {
       'vibey.stopAll': (i) => this.stopAll(i),
       'vibey.refresh': (i) => this.refresh(i),
       'vibey.newProject': (i) => this.newProject(i),
+      'vibey.followProject': (i) => this.followProject(i),
       'vibey.nextGate': (i) => this.nextGate(i),
       'vibey.replyGate': (i) => this.replyGate(i),
       'vibey.pauseProject': (i) => this.pauseProject(i),
@@ -784,10 +785,13 @@ export class CommandActions implements CommandActionsInterface {
       return;
     }
     const folder = this.controller.folder();
-    if (folder === undefined) {
+    // Over a hub the host makes the project's folder (ADR-0091); only here is one needed.
+    const remote = vibey.kind === 'hub';
+    if (folder === undefined && !remote) {
       invocation.say('Open the folder you want built first: a project works in a folder.');
       return;
     }
+    const base = folder === undefined ? undefined : path.basename(folder);
     let args = invocation.args?.trim() ?? '';
     if (args === '') {
       const intake = await vscode.window.showInputBox({
@@ -799,17 +803,21 @@ export class CommandActions implements CommandActionsInterface {
       if (intake === undefined) {
         return;
       }
-      args = `${path.basename(folder)} ${intake}`;
+      const name = base ?? (await vscode.window.showInputBox({ title: 'Name the project', prompt: 'Letters, digits, dots and dashes; it becomes a folder on the host.', ignoreFocusOut: true }));
+      if (!name?.trim()) {
+        return;
+      }
+      args = `${name.trim()} ${intake}`;
     }
     const driver = this.driver();
-    const request = driver.parseNew(args, path.basename(folder));
+    const request = driver.parseNew(args, base ?? '');
     if (request === undefined) {
       invocation.say('A project name has no spaces and does not start with a dash. For example: /new greeter a web page that greets the visitor by name');
       return;
     }
     let created;
     try {
-      created = await vibey.createProject(request.name, { repo: folder, intake: request.intake });
+      created = await vibey.createProject(request.name, { repo: folder ?? '', intake: request.intake });
     } catch (error) {
       invocation.say(driver.newProjectRefusal((error as Error).message) ?? (error as Error).message);
       return;
@@ -823,6 +831,57 @@ export class CommandActions implements CommandActionsInterface {
     this.controller.changed();
     invocation.say(driver.describeStarted(created, worker).join('\n'));
     await this.focus('vibey.projects');
+    await this.followId(invocation, created.project_id);
+  }
+
+  private async followProject(invocation: Invocation): Promise<void> {
+    const vibey = this.vibey(invocation);
+    const project = vibey === undefined ? undefined : await this.projectFor(invocation, true);
+    if (vibey === undefined || project === undefined) {
+      return;
+    }
+    await this.followId(invocation, project.project_id);
+  }
+
+  /**
+   * Watch a project and tell the person what changes, until it needs them, it is finished, the
+   * follow time runs out, or they cancel. In the chat the words stream into the reply and the
+   * stop button cancels; elsewhere they go to the output channel under a cancellable progress
+   * notification. Starting and stopping nothing: it only reads.
+   */
+  private async followId(invocation: Invocation, projectId: string): Promise<void> {
+    const vibey = this.vibey(invocation);
+    if (vibey === undefined) {
+      return;
+    }
+    const settings = this.controller.services.settings;
+    const follower = new ProjectFollower(vibey, new PortableTimer());
+    const driver = this.driver();
+    const narrate = invocation.narrate ?? ((text: string) => this.controller.output.appendLine(text));
+    const run = (cancelled: () => boolean): Promise<string> =>
+      follower.follow(
+        projectId,
+        {
+          pollMs: settings.followPollMs,
+          maxMs: settings.followMs,
+          heartbeatMs: Math.max(settings.followPollMs * 6, 30_000),
+          stallMs: Math.max(settings.followPollMs * 6, 30_000),
+          onEvent: (event) => narrate(event.kind === 'gate' ? driver.describeGate(event.gate) : follower.describe(event)),
+        },
+        cancelled,
+      );
+    const end =
+      invocation.cancelled !== undefined
+        ? await run(invocation.cancelled)
+        : await vscode.window.withProgress({ location: vscode.ProgressLocation.Notification, title: 'krypton is following the project', cancellable: true }, (_progress, token) =>
+            run(() => token.isCancellationRequested),
+          );
+    this.controller.changed();
+    if (end === 'timeout') {
+      invocation.say(`Still going after ${Math.round(settings.followMs / 60_000)} minutes. The project keeps running; /follow watches it again, and /next shows a question when one comes.`);
+    } else if (end === 'cancelled') {
+      invocation.say('Stopped watching. The project keeps running; /follow picks it up again.');
+    }
   }
 
   private async nextGate(invocation: Invocation): Promise<void> {
@@ -854,9 +913,12 @@ export class CommandActions implements CommandActionsInterface {
     await vibey.answer(gate.gate_id, reply.answer);
     this.controller.changed();
     const next = driver.oldestGate(await vibey.gates(), gate.project_id);
-    invocation.say(
-      `${reply.summary}: answered. ${next === undefined ? 'It is working on it; /next shows the next question when one comes.' : `\n\n${driver.describeGate(next)}`}`,
-    );
+    if (next !== undefined) {
+      invocation.say(`${reply.summary}: answered.\n\n${driver.describeGate(next)}`);
+      return;
+    }
+    invocation.say(`${reply.summary}: answered. Following it from here; it will say when it needs you again.`);
+    await this.followId(invocation, gate.project_id);
   }
 
   private async pauseProject(invocation: Invocation): Promise<void> {
@@ -867,7 +929,7 @@ export class CommandActions implements CommandActionsInterface {
     }
     const sure = await vscode.window.showWarningMessage(
       `Pause "${project.name}"?`,
-      { modal: true, detail: 'This stops every vibey worker running on this computer, for every project. Nothing is lost: their jobs go back to the queue, and Resume starts a project again.' },
+      { modal: true, detail: "This stops this project's worker, and no other project's. Nothing is lost: its jobs go back to the queue, and Resume starts it again. If a worker that serves every project is running, it is left alone and the pause says so, because stopping it would stop your other projects too." },
       'Pause',
     );
     if (sure !== 'Pause') {
@@ -888,6 +950,7 @@ export class CommandActions implements CommandActionsInterface {
     const said = await vibey.startWork(project.project_id);
     this.controller.changed();
     invocation.say(`Resumed "${project.name}". ${said}`.trim());
+    await this.followId(invocation, project.project_id);
   }
 
   private async abandonProject(invocation: Invocation): Promise<void> {

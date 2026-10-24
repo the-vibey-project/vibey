@@ -784,7 +784,7 @@ describe('TaskRun', () => {
     const record = await h.run.execute();
     const child = h.processes.children[0] as FakeChildControl;
     expect(child.command).toBe('/bin/claudeloop');
-    expect(child.args).toEqual(['run', path.join(h.runDirectory, 'plan.md'), '--run-id', h.run.runId, '--preset', 'low', '--effort', 'medium', '--max-turns', '10', '--cwd', h.worktree]);
+    expect(child.args).toEqual(['run', path.join(h.runDirectory, 'plan.md'), '--run-id', h.run.runId, '--web-search', '--deep-research', '--preset', 'low', '--effort', 'medium', '--max-turns', '10', '--cwd', h.worktree]);
     expect(child.options.env).toEqual({ PATH: '/usr/bin:/bin', HOME: '/Users/me', LANG: 'en_US.UTF-8', ANTHROPIC_API_KEY: 'sk-ant-test' });
     expect(h.locks).toEqual([['claudeloop', 'paid']]);
     expect(h.selector.requests[0]).toMatchObject({ loop: 'paidloop', resident: [], paidDeclared: true });

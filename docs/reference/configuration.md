@@ -792,6 +792,7 @@ mean "not declared".
 | `names` | `[]` | Extra names a request may carry in `Host` when the LAN is declared, e.g. `"studio.local"`. The computer's own host name, its `.local` name and its addresses are always admitted then. |
 | `state_dir` | the platform state directory + `/hub` | Where the host token (`token`, 0600), the key workflows request ids are bound to their starters under (`run.key`, 0600; ADR-0085) and the runtime record (`serving.json`) live. |
 | `lane_roots` | `[]` (the directory `vibey serve` runs in) | Where `/api/v1/lanes` looks for lanes: each root and every directory directly inside it. |
+| `projects_root` | `""` (nowhere) | The one folder a paired device holding `run` may start projects in: each project's folder is `<projects_root>/<name>`, made by the host (ADR-0091). Absolute, or starting with `~`. With none declared a device can pause, resume and unwind a project but cannot start one, and is told so. A device never names a path. |
 
 A bump from the hub is requested as the queue source `vibey-hub`; it lands only when
 [`[queue.priority]`](#queuepriority) `sources` names it.
@@ -888,6 +889,25 @@ environment alone (`VIBEY_QUEUE_DEFECT_IDENTICAL_FAILURES`) in a pod with none.
 ```toml
 [queue.defect]
 identical_failures = 4
+```
+
+## `[build.slicing]` { #buildslicing }
+
+How `build.decompose` groups a large plan into the four CDD layers -- stories, epics, phases,
+project -- before any of it runs ([ADR-0092](../architecture/decisions/0092-large-tasks-are-sliced-into-the-cdd-layers-before-they-run.md)).
+A plan of at most `max_children` items stays stories only. A larger one is grouped into epics,
+more than `max_children` epics into phases, and so on, never past four layers. Each group
+runs to completion before the next begins.
+
+Copied into the project's stored config by `vibey new` and read when the plan is made.
+
+| Field | Type | Default | Notes |
+|---|---|---|---|
+| `max_children` | integer, at least 2 | `8` | The most children one group holds. Lower slices finer and serialises more across group boundaries; higher keeps a plan flatter. A boolean, a string, or anything below 2 is refused at load, as is an unknown key in `[build.slicing]` or an unknown table under `[build]`. |
+
+```toml
+[build.slicing]
+max_children = 6
 ```
 
 ## `[design.research]` { #designresearch }
