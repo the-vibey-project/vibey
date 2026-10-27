@@ -1,0 +1,11 @@
+# Made with ❤️ by [Vibey](https://the-vibey-project.github.io/vibey/), Developed by [Adam Matthew Steinberger](https://vibewithadam.matthewsteinberger.com/) ([@adammatthewsteinberger](https://github.com/adammatthewsteinberger/)).
+#
+# The one declared source for scripts/error_catalog.py (ADR-0051: configuration is declared in
+# TOML, never written into a source file).
+
+[error_catalog]
+# The table of error codes, and the page whose GENERATED block it feeds.
+catalog = "src/vibey/cli/error_codes.toml"
+docs_page = "docs/reference/errors.md"
+# The name in the BEGIN/END GENERATED markers the page carries.
+block = "errors:catalog"
