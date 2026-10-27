@@ -47,6 +47,7 @@ from vibey.cli.command_examples import CommandExamples
 from vibey.cli.design_auto_accept import auto_accept_design_lines, auto_accept_design_startup_line
 from vibey.cli.driver import driver_app
 from vibey.cli.errors import EXIT_USAGE, guard
+from vibey.cli.explain import ErrorExplainer
 from vibey.cli.gate_auto_answer import auto_answer_lines, auto_answer_startup_line
 from vibey.cli.gate_notices import GATE_NOTICE_DOCTOR, GATE_REMINDERS
 from vibey.cli.gates import GATES
@@ -459,6 +460,32 @@ def new_project(
 
 app.command("serve")(serve_command)
 app.add_typer(hub_app, name="hub")
+
+
+EXPLAIN = ErrorExplainer()
+
+
+@app.command("explain")
+def explain(
+    code: Annotated[
+        str | None,
+        typer.Argument(help="An error code such as E0007, as printed under an `Error:` line."),
+    ] = None,
+    list_all: Annotated[
+        bool, typer.Option("--list", help="Print every code and its title instead.")
+    ] = False,
+) -> None:
+    """Explain an error code: what caused it and what to do about it. Needs no database."""
+    if list_all:
+        typer.echo(EXPLAIN.listing())
+        return
+    if code is None:
+        typer.echo("Error: give a code, such as `vibey explain E0001`, or use --list.", err=True)
+        raise typer.Exit(code=EXIT_USAGE)
+    status, text = EXPLAIN.explain(code)
+    typer.echo(text, err=status != 0)
+    if status:
+        raise typer.Exit(code=status)
 
 
 @app.command("sabbath")
