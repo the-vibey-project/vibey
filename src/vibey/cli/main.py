@@ -45,6 +45,11 @@ from vibey.cli.abandon import abandon as abandon_command
 from vibey.cli.budget import budget_app
 from vibey.cli.cost import COST
 from vibey.cli.design_auto_accept import auto_accept_design_lines, auto_accept_design_startup_line
+from vibey.cli.doctor_output import (
+    DoctorFormat,
+    JsonDoctorOutput,
+    TextDoctorOutput,
+)
 from vibey.cli.driver import driver_app
 from vibey.cli.engines import ENGINES
 from vibey.cli.errors import EXIT_USAGE, guard, guarded
@@ -55,6 +60,7 @@ from vibey.cli.gates import GATES
 from vibey.cli.help_layout import HelpLayout
 from vibey.cli.host_health import HOST_HEALTH
 from vibey.cli.hub_pair import hub_app
+from vibey.cli.interfaces.doctor_output_interface import DoctorOutputInterface
 from vibey.cli.ledger_publication import ledger_export, ledger_site
 from vibey.cli.ledger_search import PRESENTER, ledger_search
 from vibey.cli.llm import llm_app
@@ -605,16 +611,7 @@ async def _passwordless_reach_section() -> bool:
 
 def _postgres_status_line(status: PostgresStatus) -> str:
     """Render the local database check in the same compact style as engine doctor."""
-    if not status.installed:
-        state = "NOT INSTALLED"
-    elif not status.supported:
-        state = "UNSUPPORTED"
-    elif not status.running:
-        state = "NOT READY"
-    else:
-        state = "READY"
-    version = f"v{status.version}" if status.version is not None else "v?"
-    return f"postgresql      {state:<14} {version:<8} {status.detail}"
+    return DoctorFormat.postgres_line(status)
 
 
 def _parse_question_answers(items: tuple[str, ...]) -> dict[str, object]:
@@ -1728,6 +1725,13 @@ def doctor(
         Path | None,
         typer.Option("--fit-output", help="Fit JSON path (default: local state directory)"),
     ] = None,
+    as_json: Annotated[
+        bool,
+        typer.Option(
+            "--json",
+            help="Print one JSON document instead of lines; changes the output, not what runs",
+        ),
+    ] = False,
 ) -> None:
     """Check local PostgreSQL, engine health, auth status, and conformance."""
     from vibey.application.conformance import DEFAULT_RUN_DIR_POLL_SECONDS, run_conformance
@@ -1736,8 +1740,11 @@ def doctor(
     from vibey.infrastructure.engines.descriptors import DEFAULT_DESCRIPTORS
     from vibey.infrastructure.engines.local_engines import LocalEndpointEnvironment
 
+    out: DoctorOutputInterface = (
+        JsonDoctorOutput(cluster=cluster) if as_json else TextDoctorOutput()
+    )
     if cluster and install_postgres:
-        typer.echo("--install-postgres applies only to the local doctor")
+        out.error("--install-postgres applies only to the local doctor")
         raise typer.Exit(EXIT_USAGE)
 
     run_dir_poll_seconds = DEFAULT_RUN_DIR_POLL_SECONDS
@@ -1745,7 +1752,7 @@ def doctor(
         try:
             declared_poll_seconds = conformance_poll_seconds(os.environ)
         except ValueError as exc:
-            typer.echo(str(exc))
+            out.error(str(exc))
             raise typer.Exit(EXIT_USAGE) from exc
         if declared_poll_seconds is not None:
             run_dir_poll_seconds = declared_poll_seconds
@@ -1771,7 +1778,7 @@ def doctor(
         # gives each local runner the endpoint the worker would, so doctor probes what runs.
         local = _local_engines_from_toml()
         for notice in local.notices:
-            typer.echo(f"note: {notice}")
+            out.note(notice)
         endpoint = LocalEndpointEnvironment(os.environ)
         if engine is not None:
             from vibey.domain.engine import RETIRED_ENGINES, EngineId
@@ -1779,7 +1786,7 @@ def doctor(
             try:
                 eids = [EngineId(engine)]
             except ValueError as exc:
-                typer.echo(f"Unknown engine: {engine}{RETIRED_ENGINES.get(engine, '')}")
+                out.error(f"Unknown engine: {engine}{RETIRED_ENGINES.get(engine, '')}")
                 raise typer.Exit(1) from exc
         else:
             eids = [d.engine_id for d in DEFAULT_DESCRIPTORS] + list(local.enabled_engines)
@@ -1808,11 +1815,11 @@ def doctor(
                 check=False,
             )
             if probe_result.returncode == 0:
-                typer.echo(f"sovereign fit PASS — recorded {output}")
+                out.say(f"sovereign fit PASS — recorded {output}")
             else:
-                typer.echo("sovereign fit FAIL — no measured capacity fit recorded")
+                out.say("sovereign fit FAIL — no measured capacity fit recorded")
                 if probe_result.stderr.strip():
-                    typer.echo(f"  detail: {probe_result.stderr.strip()}")
+                    out.say(f"  detail: {probe_result.stderr.strip()}")
                 all_ok = False
 
         record_project_id: UUID | None = None
@@ -1829,13 +1836,13 @@ def doctor(
                 else:
                     target = await resources.projects.get_latest()
             if target is None:
-                typer.echo("no projects found; create one with `vibey new` first")
+                out.error("no projects found; create one with `vibey new` first")
                 raise typer.Exit(1)
             record_project_id = target.project_id
             try:
                 engine_environment = EngineEnvironmentPolicy.from_config(target.config)
             except ValueError as exc:
-                typer.echo(f"project {record_project_id}: {exc}")
+                out.error(f"project {record_project_id}: {exc}")
                 raise typer.Exit(EXIT_USAGE) from exc
 
         for eid in eids:
@@ -1843,13 +1850,12 @@ def doctor(
             desc = adapter.descriptor
             preflight = await adapter.preflight()
 
-            status = "installed" if preflight.installed else "NOT INSTALLED"
-            version = preflight.version or "?"
-            auth = "auth OK" if preflight.auth_ok else "auth FAIL"
-            typer.echo(f"{desc.engine_id.value:<16} {status:<14} v{version:<10} {auth}")
+            out.engine(
+                desc.engine_id.value, preflight.installed, preflight.version, preflight.auth_ok
+            )
 
             if preflight.detail:
-                typer.echo(f"  detail: {preflight.detail}")
+                out.engine_detail(preflight.detail)
 
             if conformance and preflight.installed:
                 from vibey.domain.capacity import CreditsExhausted
@@ -1870,9 +1876,7 @@ def doctor(
                     run_dir_poll_seconds=run_dir_poll_seconds,
                 )
                 for check in report.checks:
-                    mark = "PASS" if check.ok else "FAIL"
-                    detail = f" — {check.detail}" if check.detail else ""
-                    typer.echo(f"  {mark} {check.name}{detail}")
+                    out.conformance(check.name, check.ok, check.detail)
                 if not report.ok:
                     all_ok = False
 
@@ -1881,54 +1885,52 @@ def doctor(
                         await resources.engine_health_service.update_from_preflight(
                             record_project_id, desc.engine_id, preflight, conformance_ok=report.ok
                         )
-                    typer.echo(f"  recorded engine_health for {desc.engine_id.value}")
+                    out.recorded(desc.engine_id.value, "engine_health")
             elif record_project_id is not None:
                 async with build_app() as resources:
                     await resources.engine_health_service.record_preflight(
                         record_project_id, desc.engine_id, preflight
                     )
-                typer.echo(f"  recorded preflight for {desc.engine_id.value}")
+                out.recorded(desc.engine_id.value, "preflight")
 
-        typer.echo(_postgres_status_line(local_postgres_status))
+        out.postgres(local_postgres_status)
         if install_postgres and not local_postgres_status.ready:
-            typer.echo(f"  detail: {local_postgres_status.detail}")
+            out.postgres_detail(local_postgres_status.detail)
+            out.finish(False)
             raise typer.Exit(1)
         # The database section. ADR-0055: whenever there is a database to ask, ask
         # whether the application's role could rewrite the ledger -- a single-DSN install
         # fails here until the roles are split, so the step cannot be forgotten silently
         # (12.e). Beside it: keeping VIBEY_PG_URL out of every model-driven process
         # protects nothing if the database lets the worker's OS user in without it.
-        database_ok = await _database_security_section()
+        database_ok = await out.captured(_database_security_section)
         # TODO: `db-passwordless` (below) overlaps ADR-0055's `local-auth` (above); both
         # now FAIL (sub-doctrine 10.j, ADR-0061); reviewers to decide whether to consolidate.
-        reach_ok = await _passwordless_reach_section()
+        reach_ok = await out.captured(_passwordless_reach_section)
         # A hub listening where vibey.toml does not declare it may is a FAIL (ADR-0067).
-        hub_ok = SERVE.exposure_line()
+        hub_ok = out.captured_sync(SERVE.exposure_line)
         # A model Ollama holds at a context far above the one vibey asks for is reloaded by
         # the first request, which is how a warm-up becomes a timeout. Said as a WARN, never
         # a failure, and only for a host that runs a local engine at all.
         if local.any_enabled:
-            typer.echo(await OllamaResidency().line(os.environ))
+            out.say(await OllamaResidency().line(os.environ))
         # Sub-doctrine 8.i: the window, the zone and where the location came from (10.f).
         # A host no source could place is a FAIL -- the fallback times then rule.
         sabbath_lines, sabbath_ok = SABBATH.doctor_lines()
-        for line in sabbath_lines:
-            typer.echo(line)
+        out.lines(sabbath_lines)
         # Gates waiting on a person nobody will tell: reported, not failed -- the default
         # is notifications off, and the gates are still listed by `vibey gates`.
-        typer.echo(await GATE_NOTICE_DOCTOR.line())
+        out.say(await GATE_NOTICE_DOCTOR.line())
         # #1189: whether the worker and the delivery bridge are kept running. A missing
         # supervisor is a WARN, a FAIL with `[supervisor] required = true` (12.e).
         supervisor_lines, supervisor_ok = SUPERVISOR.doctor_lines()
-        for line in supervisor_lines:
-            typer.echo(line)
+        out.lines(supervisor_lines)
         # The machine itself: the newest weekly host-health record, its age and when the
         # forecast says it needs replacing. Missing or stale is a WARN, a FAIL with
         # `[host_health] required = true` (12.e).
         health_lines, health_ok = HOST_HEALTH.doctor_lines()
-        for line in health_lines:
-            typer.echo(line)
-        if (
+        out.lines(health_lines)
+        failed = (
             (conformance and not all_ok)
             or not database_ok
             or not reach_ok
@@ -1936,7 +1938,9 @@ def doctor(
             or not sabbath_ok
             or not supervisor_ok
             or not health_ok
-        ):
+        )
+        out.finish(not failed)
+        if failed:
             raise typer.Exit(1)
 
     async def run_cluster_doctor() -> None:
@@ -1959,7 +1963,7 @@ def doctor(
                 engines=worker_engines, provider=worker_provider, which=shutil.which
             )
         except ValueError as exc:
-            typer.echo(f"Invalid worker flag: {exc}")
+            out.error(f"Invalid worker flag: {exc}")
             raise typer.Exit(EXIT_USAGE) from exc
         preflight: ClusterPreflightInterface = ClusterPreflight(engine_auth=engine_auth)
         checks = await preflight.run(
@@ -1970,15 +1974,17 @@ def doctor(
             uid=os.getuid(),
         )
         for check in checks:
-            typer.echo(f"{check.mark} {check.name:<20} {check.detail}")
-        if not all_ok(checks):
+            out.cluster_check(check.mark, check.name, check.detail)
+        passed = all_ok(checks)
+        out.finish(passed)
+        if not passed:
             raise typer.Exit(1)
 
     if cluster:
         asyncio.run(run_cluster_doctor())
         return
     if worker_engines is not None or worker_provider is not None:
-        typer.echo("--engines and --provider describe the worker; they apply only with --cluster")
+        out.error("--engines and --provider describe the worker; they apply only with --cluster")
         raise typer.Exit(EXIT_USAGE)
 
     asyncio.run(run_doctor())

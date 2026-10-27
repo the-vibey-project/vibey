@@ -1235,6 +1235,7 @@ PostgreSQL, run the conformance suite, or run the in-cluster preflight instead.
 | `--install-postgres` | off | Install and start local PostgreSQL when it is missing or stopped. This is explicit; the default doctor never changes the host. It cannot be combined with `--cluster`. |
 | `--sovereign-fit` | off | Run the GPT-OSS capacity probe (`scripts/sovereign_probe.py`) against `$VIBEY_OLLAMA_URL` (default `http://127.0.0.1:11434`) and `$VIBEY_OLLAMA_MODEL` (default `gpt-oss:20b`), and persist the measured fit; see [Local models](../guides/local-models-ollama.md#measuring-a-capacity-fit). Prints `sovereign fit PASS — recorded <path>`, or `sovereign fit FAIL — no measured capacity fit recorded`, which makes doctor exit 1. |
 | `--fit-output PATH` | `~/.local/state/vibey/sovereign-fit.json` | Where `--sovereign-fit` writes the fit record. Its parent directory is created. |
+| `--json` | off | Print one JSON document on stdout instead of lines — see [`--json`](#vibey-doctor-json). It changes only the output: the same checks run, `--record`, `--install-postgres` and `--sovereign-fit` do what they do without it, and the exit code is the text form's. |
 
 With `--engine` unset, doctor checks the two paid engines (`claudeloop`,
 `codexloop`) whether or not they are installed —
@@ -1255,6 +1256,34 @@ engine's allow-listed environment, never doctor's own: the defaults, or with
 `--record` the target project's `engine_environment`, so a credential that project
 declares reaches the auth check and the conformance run as it reaches a session. A
 forbidden declaration in that project exits 2.
+
+<a id="vibey-doctor-json"></a>
+
+**`--json`.** One document, printed after every check has run:
+
+```json
+{
+  "ok": true,
+  "mode": "local",
+  "checks":     [{"name": "db-passwordless", "mark": "UNKNOWN", "detail": "VIBEY_PG_URL is not set; nothing to check"}],
+  "engines":    [{"engine_id": "claudeloop", "installed": true, "version": "1.2.3", "auth_ok": true,
+                  "detail": null, "conformance": [], "recorded": null}],
+  "postgresql": {"state": "READY", "version": "16", "ready": true, "detail": "..."},
+  "notes":      []
+}
+```
+
+`ok` is whether the process exits 0. `mode` is `local`, or `cluster` with `--cluster`, whose
+document has only `ok`, `mode`, `checks` (one per preflight check) and `notes`. In `checks`,
+`mark` is `PASS`, `WARN`, `FAIL`, `UNKNOWN` (or `OK`/`SKIP` for the Ollama line) and `name` is
+the check's own name, read from the `MARK name detail` lines the sabbath, supervisor,
+host-health, database and hub-exposure sections print. A line that fits no known shape is kept
+whole as a check with `name` and `mark` null and the line under `line`; nothing is dropped. An
+engine's `conformance` lists each check as `{name, ok, detail}`, and `recorded` is
+`engine_health` or `preflight` when `--record` wrote that row. `note:` lines go to stderr and
+into `notes`. A refusal before any check ran (an unknown engine, no project for `--record`, a
+bad flag) goes to stderr with the text form's exit code and prints no document. A
+`--install-postgres` that leaves PostgreSQL unready still prints the document, with `ok` false.
 
 The final `postgresql` line shows `READY`, `NOT READY`, `UNSUPPORTED`, or
 `NOT INSTALLED`. `READY` means a local PostgreSQL server at port 5432 accepts
