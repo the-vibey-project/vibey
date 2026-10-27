@@ -766,6 +766,13 @@ def _forge_snapshot(args) -> int:
     from vibey_gh.gh_transport import GhTransport
 
     prefix = "vibey-gh forge-snapshot:"
+    if (args.out is None) == (args.verify is None):
+        print(
+            f"{prefix} exactly one of --out (capture) or --verify DIR is required", file=sys.stderr
+        )
+        return 2
+    if args.verify is not None:
+        return _verify_forge_snapshot(Path(args.verify), prefix)
     classes = None
     if args.classes is not None:
         classes = [name.strip() for name in args.classes.split(",") if name.strip()]
@@ -807,6 +814,21 @@ def _forge_snapshot(args) -> int:
     if manifest["resume_since"] is not None:
         print(f"{prefix} resume with --since {manifest['resume_since']} (or --since {RESUME})")
     return 0 if manifest["complete"] else 1
+
+
+def _verify_forge_snapshot(root: Path, prefix: str) -> int:
+    """Check a snapshot directory against its own seals and manifest (#1570); 0 intact, 1 broken."""
+    from vibey_gh.forge_snapshot import SnapshotVerifier
+
+    breaks = SnapshotVerifier(root).verify()
+    for found in breaks:
+        where = found.forge_class if found.line is None else f"{found.forge_class}:{found.line}"
+        print(f"{prefix} BROKEN {where} [{found.kind}] {found.detail}", file=sys.stderr)
+    if breaks:
+        print(f"{prefix} {root} is not intact: {len(breaks)} break(s)", file=sys.stderr)
+        return 1
+    print(f"{prefix} {root} is intact")
+    return 0
 
 
 def _corpus_index(args) -> int:
@@ -2351,7 +2373,13 @@ def main(argv: list[str] | None = None) -> int:
         help="read-only capture of issues, change requests, reviews, releases and more into"
         " hash-chained JSONL (#136)",
     )
-    fs.add_argument("--out", required=True, help="the snapshot directory; created if missing")
+    fs.add_argument("--out", help="the snapshot directory; created if missing")
+    fs.add_argument(
+        "--verify",
+        metavar="DIR",
+        help="instead of capturing, re-derive every seal in the snapshot directory DIR and exit 1"
+        " naming the first break in each file; reads nothing from the forge (#1570)",
+    )
     fs.add_argument(
         "--classes",
         help="comma-separated artifact classes (default: every supported class), e.g."
