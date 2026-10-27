@@ -50,9 +50,17 @@ machine.
 ```bash
 git clone https://github.com/<you>/vibey.git
 cd vibey
-uv sync --extra dev
+uv run --extra dev vibey-gh setup
 uv run vibey --version
 ```
+
+`vibey-gh setup` is the whole environment in one idempotent command: it syncs the
+dependencies, installs the pre-commit framework's three hook types and then the
+provenance hooks (in the order that works), checks that the test database in step 3 can be
+reached, and finishes by running `vibey doctor`. Run it again any time; a step that has
+nothing to do says `unchanged`. `vibey-gh setup --check` reports the state and changes
+nothing, and `vibey-gh check` names a clone whose hooks are missing. See
+[Environment setup](#environment-setup) for what it does and what it will not.
 
 **2. Run your first test, no database needed (1 minute).** These are the tests of the
 book exporter, one of the tools that ships inside vibey. `--no-cov` because one file on
@@ -92,13 +100,11 @@ explains what it proves.
 - a test for a branch a tenant's suite does not yet reach (see
   [The workspace tenants](#the-workspace-tenants)).
 
-**5. Open the pull request (about 10 minutes).** Install the hooks, branch from
-`develop`, commit with a [Conventional Commits](#conventional-commits) subject, and push
-to your fork:
+**5. Open the pull request (about 10 minutes).** The hooks went in with step 1. Branch
+from `develop`, commit with a [Conventional Commits](#conventional-commits) subject, and
+push to your fork:
 
 ```bash
-uv run pre-commit install --hook-type pre-commit --hook-type commit-msg --hook-type pre-push
-uv run vibey-gh install
 git switch -c docs/fix-cli-example origin/develop
 git commit -am "docs: fix the vibey answer example in the CLI reference"
 git push -u origin docs/fix-cli-example
@@ -114,18 +120,40 @@ could not — a reviewer helps with the rest.
 ```bash
 git clone https://github.com/the-vibey-project/vibey.git
 cd vibey
+uv run --extra dev vibey-gh setup
+```
+
+`vibey-gh setup` runs, in order, and reports what it observed afterwards rather than what
+it ran:
+
+1. `uv sync --extra dev`.
+2. The framework hooks, all three stages (`pre-commit`, `commit-msg`, `pre-push`). Without
+   `--hook-type` the commit-msg and pre-push hooks are never installed and the suite never
+   runs locally.
+3. `vibey-gh install`, the provenance hooks. This points `core.hooksPath` at `.githooks`;
+   the tracked `.githooks/*.local` shims chain back to the framework hooks above,
+   resolving the common git directory to ensure they run in linked worktrees. It lists any
+   tracked file it changed and commits nothing.
+4. A read-back through the same check `vibey-gh check` makes.
+5. PostgreSQL: whether the test database can be reached (`VIBEY_TEST_DATABASE_URL`, else
+   `postgresql://$USER@localhost:5432/vibey_test`) and the role can create databases. It
+   creates no role, password or `~/.pgpass`; when the check fails it prints the commands
+   from [step 3 of the first hour](#your-first-hour). `--postgres` installs the server only.
+6. `vibey doctor`, shown in full. It is advisory: it also checks things only an operator
+   has (the Sabbath location, the supervisor, host health), so its exit status does not
+   decide setup's. `--skip-doctor` leaves it out.
+
+It will not overwrite a `core.hooksPath` it did not set: a global, system or other
+local value is named and left alone. If you would rather run the steps yourself, they are:
+
+```bash
 uv sync --extra dev
-# The framework hooks, all three stages. Without --hook-type the commit-msg
-# and pre-push hooks are never installed and the suite never runs locally.
 uv run pre-commit install --hook-type pre-commit --hook-type commit-msg --hook-type pre-push
-# Then the provenance hooks. This points core.hooksPath at .githooks; the
-# tracked .githooks/*.local shims chain back to the framework hooks above,
-# resolving the common git directory to ensure they run in linked worktrees.
 uv run vibey-gh install
 ```
 
 The order matters: `pre-commit install` refuses to run while `core.hooksPath`
-is set. The tracked shims (`.githooks/pre-commit`, `commit-msg.local` and
+is set (`setup` lifts its own `.githooks` value for the install and puts it back). The tracked shims (`.githooks/pre-commit`, `commit-msg.local` and
 `pre-push.local`) all hand over to `.githooks/framework-hook.sh`. It finds the
 framework's hooks through `git rev-parse --git-common-dir`, the same directory
 `pre-commit install` writes to. That works from a plain clone and from a linked

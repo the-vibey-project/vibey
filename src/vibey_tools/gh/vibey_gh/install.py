@@ -22,6 +22,7 @@ from vibey_gh import dependabot
 from vibey_gh.automation_bootstrap import AutomationBootstrapGate
 from vibey_gh.config import GhConfig, load_config
 from vibey_gh.fallback_pin import FallbackPinResolver
+from vibey_gh.hook_inspector import HookInspector
 from vibey_gh.hooks_self_source import KEY as SELF_SOURCE_KEY, HooksSelfSource
 from vibey_gh.interfaces.fallback_pin_resolver_interface import FallbackPin
 from vibey_gh.pr_af_local import PrAfLocalModel
@@ -855,7 +856,11 @@ def install(
 
 
 def installed(
-    cfg: GhConfig | None = None, local: bool = True, *, fallback_pin: FallbackPin | None = None
+    cfg: GhConfig | None = None,
+    local: bool = True,
+    *,
+    fallback_pin: FallbackPin | None = None,
+    frameworks: bool = True,
 ) -> tuple[bool, list[str]]:
     """Whether the hooks are present, current, and — when `local` — actually wired up.
 
@@ -863,6 +868,11 @@ def installed(
     current is repository state, and CI can and should check it. Whether `core.hooksPath`
     points at them is per-clone local git config that no CI checkout will ever have, so
     asserting it on a runner would fail every build for a condition that cannot hold there.
+
+    `frameworks` is whether a local check also names a clone whose pre-commit framework hooks
+    are missing (#1689). `check --quiet` turns it off, because that is how the pre-push hook
+    asks, and the shims are fail-open by design: a missing framework hook prints a warning and
+    lets the push through (CONTRIBUTING.md). Naming the gap must not become a refused push.
     """
     cfg = cfg or load_config()
     pin = fallback_pin or FallbackPinResolver().resolve(cfg)
@@ -933,7 +943,9 @@ def installed(
             check=False,
         )
         if result.stdout.strip() != HOOKS_DIR:
-            problems.append(f"core.hooksPath is not {HOOKS_DIR} — run `vibey-gh install`")
+            problems.append(f"core.hooksPath is not {HOOKS_DIR} — run `vibey-gh setup`")
         problems.extend(HooksSelfSource().problems(cfg))
+        if frameworks:
+            problems.extend(HookInspector().problems(cfg))
 
     return (not problems), problems

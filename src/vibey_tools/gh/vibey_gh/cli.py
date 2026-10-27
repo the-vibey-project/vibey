@@ -38,9 +38,11 @@ from vibey_gh.approval_check import ApprovalCheck
 from vibey_gh.branch_health import BranchHealth
 from vibey_gh.changelog import Changelog
 from vibey_gh.config import load_config
+from vibey_gh.contributor_setup import ContributorSetup
 from vibey_gh.fallback_pin import FallbackPinResolver
 from vibey_gh.gh_retry import GhRetry
 from vibey_gh.gh_transport import GhTransport
+from vibey_gh.interfaces.contributor_setup_interface import ContributorSetupInterface
 from vibey_gh.interfaces.fallback_pin_resolver_interface import FallbackPinResolverInterface
 from vibey_gh.interfaces.marketplace_renderer_interface import MarketplaceRendererInterface
 from vibey_gh.interfaces.paper_interface import RevisionReaderInterface
@@ -93,7 +95,11 @@ def _check(args, resolver: FallbackPinResolverInterface | None = None) -> int:
     cfg = load_config()
     # Resolved once, so the drift verdict and the notice below describe the same pin.
     pin = (resolver or FallbackPinResolver()).resolve(cfg)
-    ok, problems = install.installed(cfg, local=not args.ci, fallback_pin=pin)
+    # `--quiet` is how the pre-push hook asks, and it stays fail-open about the framework's own
+    # hooks; a person running `check` is told (#1689).
+    ok, problems = install.installed(
+        cfg, local=not args.ci, fallback_pin=pin, frameworks=not args.quiet
+    )
     report = fingerprints.check(cfg, rev_range=args.commits, apply=args.apply)
     docs = documentation.check(cfg)
     scan = pr_automation.check_scan_workflows(cfg)
@@ -187,6 +193,21 @@ def _install(args, resolver: FallbackPinResolverInterface | None = None) -> int:
         print(f"  notice: {pin.notice}")
     print(f"vibey-gh: installed into {cfg.root}")
     return 0
+
+
+def _setup(args, setup: ContributorSetupInterface | None = None) -> int:
+    # A module function like `_install` beside it: argparse hands a handler the parsed
+    # namespace and nothing else, and the work is in `ContributorSetup`.
+    cfg = load_config()
+    setup = setup or ContributorSetup(cfg)
+    report = (
+        setup.check()
+        if args.check
+        else setup.run(postgres=args.postgres, doctor=not args.skip_doctor)
+    )
+    for line in setup.render(report):
+        print(line)
+    return 0 if report.ok else 1
 
 
 def _conventional_message(args) -> int:
@@ -1773,6 +1794,32 @@ def main(argv: list[str] | None = None) -> int:
 
     i = sub.add_parser("install", help="install the git hooks")
     i.set_defaults(func=_install)
+
+    st = sub.add_parser(
+        "setup",
+        help="take a fresh clone to a working contributor environment, in one idempotent command",
+        description=(
+            "Take a fresh clone to a working contributor environment: sync the environment, "
+            "install the pre-commit framework's hooks and then the provenance hooks, check the "
+            "test database, and finish with `vibey doctor` (advisory). Safe to re-run. It never "
+            "overwrites a core.hooksPath it did not set, and never creates a PostgreSQL role, "
+            "password or ~/.pgpass."
+        ),
+    )
+    st.add_argument(
+        "--postgres",
+        action="store_true",
+        help="also install a local PostgreSQL server; a role, password and ~/.pgpass are never created",
+    )
+    st.add_argument(
+        "--skip-doctor", action="store_true", help="do not finish by running `vibey doctor`"
+    )
+    st.add_argument(
+        "--check",
+        action="store_true",
+        help="report the state of each step and change and run nothing",
+    )
+    st.set_defaults(func=_setup)
 
     v = sub.add_parser("version", help="derive the version to release")
     v.add_argument(
