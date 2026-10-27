@@ -134,12 +134,12 @@ page = "docs/continuation/research.md"
 mode = "act"
 purpose = "Keep every weekly measurement and every registered study running without breaking its protocol."
 gather = [
-  "for w in review-canary minimum-specs host-health autonomy-scorecard; do gh run list --workflow \"$w.yml\" --limit 1 --json workflowName,conclusion,createdAt --jq '.[] | \"\\(.workflowName) \\(.conclusion) \\(.createdAt)\"'; done",
+  "for w in review-canary minimum-specs host-health autonomy-scorecard first-hour; do gh run list --workflow \"$w.yml\" --limit 1 --json workflowName,conclusion,createdAt --jq '.[] | \"\\(.workflowName) \\(.conclusion) \\(.createdAt)\"'; done",
   "tail -n 30 research/large-diff-review/experiments/LOG.md",
 ]
 covers = [
   "review-canary.yml", "minimum-specs.yml", "host-health.yml", "autonomy-scorecard.yml",
-  "continuation-prompts.yml",
+  "first-hour.yml", "continuation-prompts.yml",
 ]
 
 [[prompt]]
