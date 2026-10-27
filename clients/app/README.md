@@ -18,6 +18,25 @@ npx expo start --web
 - `src/screens/`, `src/ui/` — the screens, the Kr-84 atom mark and the kit.
 - `app/` — the routes only.
 
+## The hub on your computer
+
+The app is a client of a hub on another computer (reached over your network once paired). It
+never runs `vibey`, and the hub API has no route that starts or stops the hub (list them in
+[hub-api.json](../../docs/reference/hub-api.json): only a project's own `work/start` and
+`work/pause` exist), so **this app can never start a second hub**: one hub per user holds
+without any code here. Nor does it add a remote way to start or stop one; that would give a
+paired device authority it was not granted (ADR-0067/0068, SD-01).
+
+What it does when the hub does not answer (#1186):
+
+- Says that the hub on your computer is not running, and shows `vibey hub start` with a
+  Copy button, to run on that computer. It does nothing if a hub already runs there. Closing
+  a krypton app, on any device, never stops the hub.
+- Asks `GET /health/live` again by itself, after 2, 4, 8 ... up to 60 seconds (30 seconds
+  while the hub answers), and loads the screen again the moment it answers. It asks only
+  while the app is in front, never in the background.
+- Shows the status on Home and Doctor: reachable or not, the address, and since when.
+
 Channels: `APP_VARIANT=nightly` builds "krypton nightly" (`org.vibey.krypton.nightly`);
 anything else is the stable "krypton" (`org.vibey.krypton`). Each identity is its own EAS
 project, owned by the Expo organisation `the-vibey-project` (`easOwner` and `easProjectId`
