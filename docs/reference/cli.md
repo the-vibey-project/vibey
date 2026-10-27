@@ -223,6 +223,12 @@ carries a CORS header. The routes, scopes and refusals are in the
 While it runs it keeps `<state_dir>/serving.json` (address, port, process id, and whether
 it serves TLS), which `vibey doctor`'s `hub-exposure` line and `vibey hub` read.
 
+There is **one hub per user**. It holds an exclusive lock on `<state_dir>/serve.lock` for as
+long as it runs, so a second `vibey serve` prints that a hub is already running (with its
+process id) and exits 1 without opening anything. The kernel releases the lock when the
+hub dies, so a crash never leaves a stale one. To run it in the background, or to stop it,
+use [`vibey hub start` and `vibey hub stop`](#vibey-hub).
+
 With `[hub] lan = true` the hub serves its own self-signed certificate (made on first run
 in `<state_dir>`, owner-only), prints its SHA-256 fingerprint, and advertises itself on
 the LAN as `_vibey._tcp` (mDNS/DNS-SD) with that fingerprint. On loopback it serves plain
@@ -230,12 +236,23 @@ HTTP and announces nothing.
 
 ## `vibey hub`
 
-The host's side of pairing devices with the running hub (ADR-0071). Each subcommand
-reads `<state_dir>/serving.json`, presents the host token, and -- when the hub serves
-TLS -- trusts only the hub's own certificate. With no hub running they exit 3.
+The one hub on this computer: start it, stop it, ask about it, and pair devices with it
+(ADR-0071). The pairing subcommands read `<state_dir>/serving.json`, present the host token,
+and -- when the hub serves TLS -- trust only the hub's own certificate. With no hub running
+they exit 3.
+
+Every krypton UI offers the same start, stop and status actions, and they are these
+commands. **Closing a UI never stops the hub**: `start` launches it detached from the
+terminal and the session, its output in `<state_dir>/hub.log`, and only `stop` ends it.
+`stop` sends SIGTERM so the hub shuts down cleanly and clears its own record; it never sends
+SIGKILL, and a hub that is slow to stop is reported as still stopping (exit 1). A record
+whose process is gone is reported as stale, never as a running hub.
 
 | Command | What it does |
 |---|---|
+| `vibey hub status` | Says whether the hub runs and where (`http://127.0.0.1:8765/api/v1 (pid N)`). Exit 3 when it does not. |
+| `vibey hub start [--timeout SECONDS]` | Starts the hub in the background unless one already runs (then it says so and exits 0), and waits, 15 seconds by default, until the hub has said where it listens. Exit 1 if it exits first or does not come up. Reads `vibey.toml` from the current directory like `vibey serve`. |
+| `vibey hub stop [--timeout SECONDS]` | Asks the running hub to stop and waits for it to go. Exit 0 when none runs. |
 | `vibey hub pair --scope SCOPE [--scope SCOPE ...]` | Offers a pairing of the named scopes (`view`, `answer`, `spend`, `run`, `bump`; at least one) and shows a QR code, the 6-digit code (valid two minutes, once), the pairing URI and the certificate fingerprint. |
 | `vibey hub devices` | Lists the paired devices: id, name, scopes. Never a key. |
 | `vibey hub revoke DEVICE_ID` | Revokes a device. It is refused from its very next request. |
