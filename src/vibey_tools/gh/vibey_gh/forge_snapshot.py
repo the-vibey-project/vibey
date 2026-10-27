@@ -41,16 +41,19 @@ from typing import Any
 
 from vibey_gh.interfaces.forge_snapshot_interface import (
     AppendOutcome,
+    Break,
     ChainHead,
     ForgeRead,
     ForgeReaderInterface,
     ForgeSnapshotInterface,
     Observation,
     SnapshotStoreInterface,
+    SnapshotVerifierInterface,
 )
 from vibey_gh.interfaces.gh_transport_interface import GhTransportInterface
 
 __all__ = [
+    "BREAK_KINDS",
     "CLASSES",
     "EXCLUDED",
     "MANIFEST_NAME",
@@ -60,7 +63,9 @@ __all__ = [
     "ForgeSnapshot",
     "GithubForgeReader",
     "JsonlSnapshotStore",
+    "RecordChecker",
     "SnapshotStoreError",
+    "SnapshotVerifier",
     "canonical_bytes",
     "digest",
     "moment",
@@ -178,6 +183,32 @@ _NOT_SELECTED = "not selected for this capture; its file and its chain were left
 
 class SnapshotStoreError(RuntimeError):
     """A snapshot directory holds something this store did not write, or did not finish."""
+
+
+# What `--verify` can find, in the order a person should read them. A record that fails its own
+# checks is reported with the line it is on; the rest are about a file, or the manifest, as a whole.
+BREAK_KINDS = (
+    "malformed",
+    "non-canonical",
+    "bad-seal",
+    "bad-payload",
+    "broken-link",
+    "head-mismatch",
+    "manifest-behind",
+    "missing-file",
+    "unlisted-file",
+    "manifest-unreadable",
+)
+
+# Why a line was refused, by the fault `RecordChecker` found. The store raises with these words and
+# `--verify` reports them, so the two say the same thing about the same line.
+_RECORD_FAULTS = {
+    "malformed": "is not a {schema} {forge_class} record",
+    "non-canonical": "is not in canonical form",
+    "bad-seal": "has an invalid sha256",
+    "bad-payload": "has an invalid payload_sha256",
+    "broken-link": "does not link to the preceding record",
+}
 
 
 def canonical_bytes(value: object) -> bytes:
@@ -453,6 +484,35 @@ class JsonlSnapshotStore(SnapshotStoreInterface):
         forge_class: str,
         previous: str | None,
     ) -> dict[str, Any]:
+        checker = RecordChecker(self._forge, self._repository, forge_class)
+        record, fault = checker.check(line, previous)
+        if record is None:
+            raise SnapshotStoreError(f"{path} line {number} {fault}")
+        return record
+
+
+class RecordChecker:
+    """The five checks one chain line must pass, shared by the store and the verifier.
+
+    The store raises on the first failure so nothing is appended to a damaged chain; the
+    verifier reports it. They must never disagree about what a good line is, so there is one
+    implementation, and `fault` is the sentence both of them use.
+    """
+
+    def __init__(self, forge: str, repository: str, forge_class: str) -> None:
+        self._forge = forge
+        self._repository = repository
+        self._class = forge_class
+
+    def check(self, line: bytes, previous: str | None) -> tuple[dict[str, Any] | None, str]:
+        """The record and an empty string if `line` is sound, else None and why it is not."""
+        kind = self.kind(line, previous)
+        if kind is None:
+            return json.loads(line), ""
+        return None, _RECORD_FAULTS[kind].format(schema=RECORD_SCHEMA, forge_class=self._class)
+
+    def kind(self, line: bytes, previous: str | None) -> str | None:
+        """The member of `BREAK_KINDS` that names what is wrong with `line`, or None."""
         try:
             record = json.loads(line)
         except (UnicodeError, ValueError):
@@ -461,7 +521,7 @@ class JsonlSnapshotStore(SnapshotStoreInterface):
             "schema": RECORD_SCHEMA,
             "forge": self._forge,
             "repository": self._repository,
-            "class": forge_class,
+            "class": self._class,
         }
         if (
             not isinstance(record, dict)
@@ -479,21 +539,123 @@ class JsonlSnapshotStore(SnapshotStoreInterface):
             or not (record.get("prev") is None or isinstance(record.get("prev"), str))
             or "payload" not in record
         ):
-            raise SnapshotStoreError(
-                f"{path} line {number} is not a {RECORD_SCHEMA} {forge_class} record"
-            )
+            return "malformed"
         if canonical_bytes(record) != line.removesuffix(b"\n"):
-            raise SnapshotStoreError(f"{path} line {number} is not in canonical form")
-
-        sealed = record["sha256"]
+            return "non-canonical"
         body = {key: value for key, value in record.items() if key != "sha256"}
-        if digest(body) != sealed:
-            raise SnapshotStoreError(f"{path} line {number} has an invalid sha256")
+        if digest(body) != record["sha256"]:
+            return "bad-seal"
         if digest(record["payload"]) != record["payload_sha256"]:
-            raise SnapshotStoreError(f"{path} line {number} has an invalid payload_sha256")
+            return "bad-payload"
         if record["prev"] != previous:
-            raise SnapshotStoreError(f"{path} line {number} does not link to the preceding record")
-        return record
+            return "broken-link"
+        return None
+
+
+class SnapshotVerifier(SnapshotVerifierInterface):
+    """Re-derives every seal in a snapshot directory from its own bytes (#1570).
+
+    Needs no forge, no network and no credentials: the manifest names the forge and the
+    repository, each class file is walked with the same `RecordChecker` the store uses, and
+    each file's record count and head are compared to what the manifest says it wrote.
+    """
+
+    def __init__(self, root: Path) -> None:
+        self._root = root
+
+    def verify(self) -> tuple[Break, ...]:
+        manifest = self._manifest()
+        if isinstance(manifest, Break):
+            return (manifest,)
+        found: list[Break] = []
+        declared = manifest.get("classes")
+        entries: Mapping[str, Any] = declared if isinstance(declared, dict) else {}
+        names = [spec.name for spec in CLASSES]
+        for path in sorted(self._root.glob("*.jsonl")):
+            if path.stem not in entries:
+                found.append(
+                    Break(
+                        path.stem,
+                        None,
+                        "unlisted-file",
+                        f"{path.name} is not named by the manifest",
+                    )
+                )
+        for name in names:
+            entry = entries.get(name)
+            found.extend(self._class(manifest, name, entry if isinstance(entry, dict) else None))
+        return tuple(found)
+
+    def _manifest(self) -> Mapping[str, Any] | Break:
+        path = self._root / MANIFEST_NAME
+        try:
+            value = json.loads(path.read_text(encoding="utf-8"))
+        except (OSError, UnicodeError, ValueError) as error:
+            return Break("manifest", None, "manifest-unreadable", f"{path} cannot be read: {error}")
+        if (
+            not isinstance(value, dict)
+            or value.get("schema") != MANIFEST_SCHEMA
+            or not isinstance(value.get("forge"), str)
+            or not isinstance(value.get("repository"), str)
+        ):
+            return Break(
+                "manifest",
+                None,
+                "manifest-unreadable",
+                f"{path} is not a {MANIFEST_SCHEMA} manifest",
+            )
+        return value
+
+    def _class(
+        self, manifest: Mapping[str, Any], name: str, entry: Mapping[str, Any] | None
+    ) -> list[Break]:
+        path = self._root / f"{name}.jsonl"
+        recorded = entry.get("records") if entry is not None else 0
+        wanted = recorded if isinstance(recorded, int) else 0
+        if not path.is_file():
+            if wanted > 0:
+                return [
+                    Break(
+                        name,
+                        None,
+                        "missing-file",
+                        f"{path.name} is missing; the manifest records {wanted}",
+                    )
+                ]
+            return []
+        checker = RecordChecker(str(manifest["forge"]), str(manifest["repository"]), name)
+        previous: str | None = None
+        records = 0
+        with path.open("rb") as handle:
+            for number, line in enumerate(handle, start=1):
+                kind = checker.kind(line, previous)
+                if kind is not None:
+                    _, fault = checker.check(line, previous)
+                    return [Break(name, number, kind, f"{path.name} line {number} {fault}")]
+                previous = json.loads(line)["sha256"]
+                records += 1
+        if entry is None:  # already reported as unlisted
+            return []
+        if records > wanted:
+            return [
+                Break(
+                    name,
+                    None,
+                    "manifest-behind",
+                    f"{path.name} holds {records} records but the manifest records {wanted}",
+                )
+            ]
+        if records < wanted or previous != entry.get("head"):
+            return [
+                Break(
+                    name,
+                    None,
+                    "head-mismatch",
+                    f"{path.name} ends at record {records} with head {previous}; "
+                    f"the manifest records {wanted} ending at {entry.get('head')}",
+                )
+            ]
+        return []
 
 
 @dataclass

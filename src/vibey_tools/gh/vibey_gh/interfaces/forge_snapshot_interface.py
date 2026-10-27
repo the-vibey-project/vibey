@@ -107,6 +107,52 @@ class AppendOutcomeInterface(Protocol):
     def head(self) -> str | None: ...
 
 
+@dataclass(frozen=True)
+class Break:
+    """One place a snapshot stopped being what its manifest and its seals say it is.
+
+    `forge_class` is the class file it was found in, or `manifest` for the manifest itself.
+    `line` is the 1-based line of a record that fails its own checks, and `None` when the
+    break is about a file as a whole (a removed last line, a missing file, a stale manifest).
+    `kind` is one of `forge_snapshot.BREAK_KINDS`; `detail` is a sentence a person can act on.
+    """
+
+    forge_class: str
+    line: int | None
+    kind: str
+    detail: str
+
+
+@runtime_checkable
+class BreakInterface(Protocol):
+    @property
+    def forge_class(self) -> str: ...
+
+    @property
+    def line(self) -> int | None: ...
+
+    @property
+    def kind(self) -> str: ...
+
+    @property
+    def detail(self) -> str: ...
+
+
+@runtime_checkable
+class SnapshotVerifierInterface(Protocol):
+    """Walks a snapshot directory and reports every way it no longer matches itself."""
+
+    def verify(self) -> tuple[Break, ...]:
+        """Check every class file and the manifest, reading nothing from the forge.
+
+        Reports the first break in each file, and the manifest-level breaks (a missing or
+        foreign manifest, a head that does not match, a file the manifest names and does not
+        have, a file it does not name). An empty tuple is a snapshot that is intact. Never
+        raises for what is in the directory: a thing it cannot read is a `Break`.
+        """
+        ...
+
+
 @runtime_checkable
 class ForgeReaderInterface(Protocol):
     """Reads one forge's artifact classes for one repository. Never writes to the forge."""
