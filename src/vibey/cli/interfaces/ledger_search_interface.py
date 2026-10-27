@@ -43,6 +43,10 @@ class LedgerSearchPresenterInterface(Protocol):
         """The same result as a JSON document, every field of every event."""
         ...
 
+    def events_json(self, project_id: UUID, events: Iterable[LedgerEvent]) -> str:
+        """`{"project_id": ..., "events": [...]}`, each event as `record` carries it."""
+        ...
+
     def record(self, event: LedgerEvent) -> dict[str, object]:
         """One event as `--json` and the hub's live feed both carry it."""
         ...

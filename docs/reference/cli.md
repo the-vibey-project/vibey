@@ -102,8 +102,14 @@ Ctrl-C exits 130 and a closed pipe exits 0. Exceptions that are not
 `budget`, `budget show`, `budget set` and `budget clear` run inside `guard()` as
 well, and so does `abandon`.
 
-The other commands (`answer`, `watch`, `recover`, `status`, `engines`,
-`cost`, `ledger show`, every `deploy` subcommand, `doctor`, `operator`) are
+`engines` and `cost` run inside `guard()` too (they did not before #1686), so an unset
+`VIBEY_PG_URL` is the one-line `Error:` message and exit 3 for them as well. Their
+`--traceback` option restores the old behaviour for a caller that relied on it: a
+`VibeyError` then raises with its Python traceback and no code line. It changes nothing
+when there is no error. `--traceback` is on those two commands only.
+
+The other commands (`answer`, `watch`, `recover`, `status`,
+`ledger show`, every `deploy` subcommand, `doctor`, `operator`) are
 not guarded. Their own checks exit 1 or 2 as listed above; any other error,
 including an unset `VIBEY_PG_URL`, surfaces as a Python traceback.
 
@@ -689,6 +695,17 @@ startup preflight has recorded; with none it prints
 `no engines recorded for project`. Defaults to the most recently created
 project.
 
+`--json` prints one document on stdout instead of the table:
+`{"project_id": "<uuid>", "engines": [...]}`, with `"engines": []` (and exit 0)
+when none are recorded. Each engine has the nine keys `vibey status --json`
+carries under `circuits` (the same code writes both): `engine_id`, `installed`,
+`version`, `conformance_ok`, `circuit`, `capacity_state` (a string or `null`),
+`consecutive_fail`, `cost_usd_cycle` and `selected_count`. `cost_usd_cycle` is
+the engine's metered BUILD spend across **all** cycles, whatever its name
+(`vibey cost --json` calls it `cost_usd_all_cycles`). With no project the
+message `no projects found; create one with `vibey new` first` goes to stderr
+and the exit code is 1, as without `--json`.
+
 ## `vibey loops`
 
 List the family's two loops (sub-doctrine 8.c), every engine each one holds,
@@ -821,6 +838,13 @@ an unknown id prints `unknown project <id>` and exits 1.
 
 The spend and caps are the budget [`vibey budget`](#vibey-budget-project_id)
 shows. That command also changes the caps.
+
+`--json` prints one document on stdout instead: `project_id`, `name`, `cycle`,
+`caps` (`max_cycle_dollars` and `max_cycle_turns`, each a number or `null`),
+`spend` (`dollars` and `turns`), `exhausted` (a cap is reached) and `engines`, a
+list of `{"engine_id", "cost_usd_all_cycles", "selected_count"}`. The first six are
+`vibey budget show --json`'s own values (without its `history`). An unknown id or
+no project prints its message to stderr and exits 1, as without `--json`.
 
 ## `vibey budget [PROJECT_ID]`
 
@@ -1078,6 +1102,7 @@ Bare `vibey ledger` prints help. Subcommands, in `vibey ledger --help` order:
 | `ledger show [PROJECT_ID]` | `--limit N` / `-n` | `50` | Show the most recent N events (min 1). |
 | | `--phase PHASE` | unset | Filter to one phase, by name or value, case-insensitive (`BUILD`, `deploy_design`). |
 | | `--kind KIND` | unset | Filter to one event kind, by name or value, case-insensitive. |
+| | `--json` | off | Print `{"project_id": ..., "events": [...]}` on stdout: every field of every event, oldest first, in the shape `ledger search --json` uses. With no project the message goes to stderr and the exit code is 1. |
 | `ledger export PROJECT_ID` | `--out FILE` / `-o` | required | Write the public, redacted ledger projection. A payload that was redacted carries `_redactions`: a list of `{path, class}` entries (the JSON Pointer to what was redacted and why), never a value, a hash or a length; a private segment of a path is published as `[private]`. See [What gets published](../guides/ledger-publication.md). |
 | | `--billing` | off | Write the operator-scoped billing projection consumed by `vibey-gh forecast`; it keeps metered spend fields and operational event kinds only, and not `_redactions`. |
 | `ledger site` | `--from FILE` | required | A shard file written by `vibey ledger export`. Needs no database. |

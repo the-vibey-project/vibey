@@ -15,7 +15,7 @@ one.
 from __future__ import annotations
 
 from collections.abc import Iterator
-from contextlib import contextmanager
+from contextlib import AbstractContextManager, contextmanager, nullcontext
 from typing import NoReturn
 
 import typer
@@ -126,6 +126,13 @@ def render(exc: VibeyError, catalog: ErrorCatalogInterface | None = None) -> str
     if entry is not None and entry.code:
         lines += ["", f"({entry.code}: run `vibey explain {entry.code}`)"]
     return "\n".join(lines)
+
+
+# A module-level function for the same reason as `guard` above it: it is imported by name by the
+# commands that offer `--traceback`.
+def guarded(*, traceback: bool) -> AbstractContextManager[None]:
+    """`guard()`, or nothing at all when the caller asked to see the Python traceback."""
+    return nullcontext() if traceback else guard()
 
 
 def fail(exc: VibeyError) -> NoReturn:

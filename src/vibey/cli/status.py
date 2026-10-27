@@ -8,6 +8,7 @@ whichever way it asks (doctrine 7).
 
 from typing import Final
 
+from vibey.cli.engines import ENGINES_PRESENTER
 from vibey.cli.interfaces.status_interface import StatusPresenterInterface
 from vibey.domain.worktree import WorktreeNaming
 from vibey.tui.dashboard import DashboardState
@@ -27,20 +28,7 @@ class StatusPresenter:
             "visual_decision": state.visual_decision,
             "deployment_decision": state.deployment_decision,
             "queue_depth": {k.value: v for k, v in state.queue_depth.items()},
-            "circuits": [
-                {
-                    "engine_id": c.engine_id.value,
-                    "installed": c.installed,
-                    "version": c.version,
-                    "conformance_ok": c.conformance_ok,
-                    "circuit": (c.circuit.value if hasattr(c.circuit, "value") else str(c.circuit)),
-                    "capacity_state": str(c.capacity_state) if c.capacity_state else None,
-                    "consecutive_fail": c.consecutive_fail,
-                    "cost_usd_cycle": c.cost_usd_cycle,
-                    "selected_count": c.selected_count,
-                }
-                for c in state.circuits
-            ],
+            "circuits": [ENGINES_PRESENTER.document(c) for c in state.circuits],
             "active_worktrees": list(state.active_worktrees),
             # Named by the domain, not rebuilt by each reader: the delivery bridge
             # publishes exactly this branch, and a second copy of the naming rule is how

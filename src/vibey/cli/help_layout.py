@@ -121,7 +121,7 @@ Examples:
   vibey watch        follow the work live
 
 \b
-Every command takes --help. projects, gates, status and loops take --json.
+Every command takes --help. projects, gates, status, loops, models, engines and cost take --json.
 Documentation: https://the-vibey-project.github.io/vibey/main/"""
 
 

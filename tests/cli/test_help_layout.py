@@ -95,7 +95,9 @@ def test_the_help_ends_with_the_examples() -> None:
     assert "Examples:" in out and "vibey new my-app" in out
 
 
-@pytest.mark.parametrize("command", ["projects", "gates", "status", "loops"])
+@pytest.mark.parametrize(
+    "command", ["projects", "gates", "status", "loops", "models", "engines", "cost"]
+)
 def test_a_command_the_footer_says_takes_json_does_take_it(command: str) -> None:
     claim = re.search(r"([a-z, ]+) take --json", EPILOG)
     assert claim is not None and command in claim.group(1)
