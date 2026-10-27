@@ -95,6 +95,18 @@ export until the policy can withhold it (see [Widening or narrowing](#widening-o
   `name@example.com` becomes `[email]`. Relative paths (`src/vibey/cli/main.py`),
   URLs and version pins (`vibey@1.1.0`) are kept. A key inside a published value that
   is itself a path or an address is withheld with its value.
+- **`_redactions` is published**, for every published kind, so a reader can tell that a
+  field was redacted, where and why, instead of meeting a bare `[REDACTED]`. It is a
+  list of entries, each with exactly two fields: `path`, the RFC 6901 JSON Pointer to
+  what was redacted, and `class`, why. It **never** contains a value, a hash of a value
+  or its length: any other field of an entry is withheld and counted, and so is an
+  entry that is not a pointer and a class of the usual shape. Where a segment of a path
+  is itself private -- the last one of a `private-detail-key` entry, since a payload
+  keyed by an email address or a phone number is redacted *because of its key*, or any
+  segment that is itself an address or a path -- it is published as `[private]` and
+  counted as a replaced path, so you learn that something private sat at that depth and
+  not what. A record with nothing redacted has no `_redactions` field, not an empty one.
+  The billing projection does not keep it: it publishes cost, not payloads.
 - **Credentials**, last: the same patterns that keep secrets out of the ledger
   (`infrastructure/ledger/redact.py`) run again over what the policy kept.
 
@@ -119,7 +131,9 @@ shard came from that ledger.
 
 The policy is one value, `PublicationRules` in
 [`domain/publication_policy.py`](https://github.com/the-vibey-project/vibey/blob/main/src/vibey/domain/publication_policy.py):
-the allowlist, the chatter kinds, the withheld provenances and the two tokens. Every
+the allowlist, the chatter kinds, the withheld provenances, the tokens and whether
+`_redactions` is published (`publish_redactions`, on by default; withholding it is a
+decision a rule set states). Every
 shard names the exact rules that made it by their fingerprint (`policy.fingerprint`),
 so a change of rules is visible in the next export. There is no configuration key for
 it yet; the per-repository opt-in (#137's next slices) is where one belongs.

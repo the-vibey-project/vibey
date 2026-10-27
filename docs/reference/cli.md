@@ -1078,8 +1078,8 @@ Bare `vibey ledger` prints help. Subcommands, in `vibey ledger --help` order:
 | `ledger show [PROJECT_ID]` | `--limit N` / `-n` | `50` | Show the most recent N events (min 1). |
 | | `--phase PHASE` | unset | Filter to one phase, by name or value, case-insensitive (`BUILD`, `deploy_design`). |
 | | `--kind KIND` | unset | Filter to one event kind, by name or value, case-insensitive. |
-| `ledger export PROJECT_ID` | `--out FILE` / `-o` | required | Write the public, redacted ledger projection. |
-| | `--billing` | off | Write the operator-scoped billing projection consumed by `vibey-gh forecast`; it keeps metered spend fields and operational event kinds only. |
+| `ledger export PROJECT_ID` | `--out FILE` / `-o` | required | Write the public, redacted ledger projection. A payload that was redacted carries `_redactions`: a list of `{path, class}` entries (the JSON Pointer to what was redacted and why), never a value, a hash or a length; a private segment of a path is published as `[private]`. See [What gets published](../guides/ledger-publication.md). |
+| | `--billing` | off | Write the operator-scoped billing projection consumed by `vibey-gh forecast`; it keeps metered spend fields and operational event kinds only, and not `_redactions`. |
 | `ledger site` | `--from FILE` | required | A shard file written by `vibey ledger export`. Needs no database. |
 | | `--out DIR` / `-o` | required | The directory to write the site into. |
 | | `--json-only` | off | Build the JSON surface: `records/<event_id>.json`, `index.json`, `manifest.json`. Required until the human-first record pages exist; without it the command exits 2. An invalid shard exits 1. |
