@@ -133,9 +133,8 @@ def test_a_log_without_a_failing_test_falls_back_to_the_error_line(tmp_path):
 def test_a_log_with_nothing_to_name_says_so(tmp_path):
     forge = logged([failing_job()], log="all quiet\n")
     health(tmp_path, forge).report(RUN)
-    assert "- first failing test: unknown: no failing test id in the log\n" in (
-        forge.issues[1]["body"]
-    )
+    body = forge.issues[1]["body"]
+    assert "- first failing test: unknown: no failing test id in the log\n" in body
 
 
 def test_a_truncated_log_keeps_its_tail_and_drops_line_numbers(tmp_path):
