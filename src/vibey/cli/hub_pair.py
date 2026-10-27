@@ -1,5 +1,6 @@
 # Made with ❤️ by [Vibey](https://the-vibey-project.github.io/vibey/), Developed by [Adam Matthew Steinberger](https://vibewithadam.matthewsteinberger.com/) ([@adammatthewsteinberger](https://github.com/adammatthewsteinberger/)).
-"""`vibey hub pair | devices | revoke`: the host's side of pairing (ADR-0068).
+"""`vibey hub pair | devices | revoke`: the host's side of pairing (ADR-0068). `start`,
+`stop` and `status` for the hub itself live in `hub_engine.py` and are registered below.
 
 These commands talk to the hub `vibey serve` is running, as the host: they read where it
 listens from `<state_dir>/serving.json` and present the host token beside it. `pair`
@@ -18,6 +19,7 @@ from typing import Annotated, Any, Final
 import httpx
 import typer
 
+from vibey.cli.hub_engine import start, status, stop
 from vibey.cli.interfaces.hub_pair_interface import HubPairCommandInterface
 from vibey.domain.config import ConfigError
 from vibey.domain.hub_scope import HubScope
@@ -134,9 +136,13 @@ class HubPairCommand:
 HUB_PAIR: Final[HubPairCommandInterface] = HubPairCommand()
 
 hub_app = typer.Typer(
-    help="Pair devices with the running hub, list them, revoke them (ADR-0068).",
+    help="Start, stop and ask about the hub; pair devices with it, list them, revoke them "
+    "(ADR-0068).",
     no_args_is_help=True,
 )
+hub_app.command("status")(status)
+hub_app.command("start")(start)
+hub_app.command("stop")(stop)
 
 
 @hub_app.command("pair")
