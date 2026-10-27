@@ -4,6 +4,14 @@ All notable changes to krypton, vibey's extension for VS Code.
 
 ## Unreleased
 
+- **The editor starts and stops the one vibey hub on this computer.** When the editor opens and
+  no hub runs, krypton starts it (`vibey hub start`, in the background; `vibey.hubAutostart` turns
+  it off, and a device paired with a hub elsewhere skips it). **Closing the editor never stops
+  it.** Three commands are the buttons for it: **Start the vibey hub on this computer**
+  (`/hub start`), **Stop the vibey hub on this computer** (`/hub stop`, a clean shutdown, never
+  forced) and **Show whether the vibey hub runs** (`/hub status`). The status bar's tooltip says
+  what the start said, or why it could not. Needs a vibey that has `vibey hub start` (#1186).
+
 - **Drive a whole project from the chat or the sidebar.** `@krypton /new greeter a web page that
   greets the visitor by name` starts a vibey project in the open folder and starts its worker;
   `/next` shows the oldest question it is waiting on with the answers numbered, and `/reply 1` (or

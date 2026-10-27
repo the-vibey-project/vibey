@@ -13,7 +13,7 @@ import { CommandTable, Efforts, HubDiscovery, HubTransport, NoCapPath, SlashArgu
 import { Doctor } from '@vibey/core';
 import type { Budget, BudgetCaps, BudgetLoop, BudgetScope } from '@vibey/core';
 import type { EffortSetting, LoopName } from '@vibey/core';
-import type { Lane } from '@vibey/core';
+import type { HubAction, Lane } from '@vibey/core';
 import type { RunRecord, TaskRunInterface } from '@vibey/core';
 import type { GateAnswer, VibeyBudget, VibeyGate, VibeyProject } from '@vibey/core';
 import { ModelPuller, PortableTimer, ProjectDriver, ProjectFollower } from '@vibey/core';
@@ -80,6 +80,9 @@ export class CommandActions implements CommandActionsInterface {
       'vibey.endNoCap': (i) => this.endNoCap(i),
       'vibey.connectHub': (i) => this.connectHub(i),
       'vibey.disconnectHub': (i) => this.disconnectHub(i),
+      'vibey.startHub': (i) => this.hub('start', i),
+      'vibey.stopHub': (i) => this.hub('stop', i),
+      'vibey.hubStatus': (i) => this.hub('status', i),
       'vibey.runOnWorkflows': (i) => this.runOnWorkflows(i),
       'vibey.chooseTheme': (i) => this.chooseTheme(i),
       'vibey.startOllama': (i) => this.startOllama(i),
@@ -1231,6 +1234,22 @@ export class CommandActions implements CommandActionsInterface {
     );
     this.controller.changed();
     invocation.say(outcome.ok ? `${model} is downloaded.` : `The download stopped: ${outcome.error ?? 'unknown'}. In a terminal, this does the same: ${outcome.fallbackCommand}`);
+  }
+
+  /** Start, stop or ask about the one vibey hub on this computer. Closing the editor never stops it. */
+  private async hub(action: HubAction, invocation: Invocation): Promise<void> {
+    const engine = this.controller.services.hubEngine;
+    if (engine === undefined) {
+      invocation.say('vibey is not installed here, so there is no hub to ' + action + '. Install it, or set vibey.cliPath.');
+      return;
+    }
+    try {
+      const report = await engine.run(action);
+      invocation.say(report.message);
+    } catch (error) {
+      invocation.say(error instanceof Error ? error.message : String(error));
+    }
+    this.controller.changed();
   }
 
   private async doctor(invocation: Invocation): Promise<void> {

@@ -6,19 +6,20 @@
  */
 import { createHash } from 'node:crypto';
 import * as fs from 'node:fs';
+import * as os from 'node:os';
 import * as path from 'node:path';
 import { BatchRunner } from './batch';
 import { BudgetGuard, BudgetStore, SpendLedger } from './budgets';
 import { Capabilities, SkillsContext, SkillsMarketplace } from './capabilities';
 import { CatalogueParser, CatalogueSource, LoopSelector } from '@vibey/core';
 import { SlashArguments, SlashCommands } from '@vibey/core';
-import { Doctor } from '@vibey/core';
+import { Doctor, HubEngine } from '@vibey/core';
 import { EngineCommand } from './engine-command';
 import { FilteredEnvironment, ForbiddenEnvironment } from './environment';
 import { GitClient } from './git';
 import { NodeHttpClient } from './http-client';
 import type { Catalogue, CatalogueEngine, LoopName } from '@vibey/core';
-import type { HttpClientInterface } from '@vibey/core';
+import type { HttpClientInterface, HubEngineInterface } from '@vibey/core';
 import type { RunnerIdentity } from '@vibey/core';
 import type { Platform } from '@vibey/core';
 import type { ProcessRunnerInterface } from '@vibey/core';
@@ -71,6 +72,11 @@ export class CoreServices implements ServicesInterface {
    * Each can also send one command line to the workflows (`runOnWorkflows`).
    */
   readonly vibey: VibeyWorkflowsTransportInterface | undefined;
+  /**
+   * The one vibey hub on this computer: start, stop, status (#1186). Always the local
+   * `vibey`, never a paired hub or the workflows. Undefined when there is no vibey.
+   */
+  readonly hubEngine: HubEngineInterface | undefined;
   readonly history: RunHistory;
   readonly budgets: BudgetStore;
   readonly spend: SpendLedger;
@@ -114,6 +120,8 @@ export class CoreServices implements ServicesInterface {
             ? // `vibey -w` sends to the open folder's GitHub repository, so it runs from there.
               new WorkflowsTransport(this.processes, vibey, this.toolEnvironment, undefined, { cwd: () => options.workspaceRoots()[0] })
             : new LocalProcessTransport(this.processes, vibey, this.toolEnvironment);
+    // Run from the home folder, not the open one: the hub reads vibey.toml from where it starts.
+    this.hubEngine = vibey === undefined ? undefined : new HubEngine(this.processes, vibey, this.toolEnvironment, os.homedir());
     const state = this.settings.stateDir;
     this.history = new RunHistory(new JsonlJournal(path.join(state, 'runs.jsonl')), () => this.clock.now());
     this.budgets = new BudgetStore(state, new JsonlJournal(path.join(state, 'budget-journal.jsonl')), this.clock, this.ids, options.actor);

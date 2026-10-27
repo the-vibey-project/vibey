@@ -47,6 +47,8 @@ export interface RawSettings {
   readonly hubUrl: string;
   /** Run every vibey call on the repository's GitHub workflows (`vibey --workflows …`, ADR-0085) when no hub is paired. */
   readonly workflows: boolean;
+  /** Start the one vibey hub on this computer when the editor opens and none runs (#1186); closing the editor never stops it. */
+  readonly hubAutostart: boolean;
 }
 
 export interface ResolvedSettings {
@@ -88,6 +90,8 @@ export interface ResolvedSettings {
   readonly hubUrl: string;
   /** Whether the local command line sends every call to the repository's GitHub workflows. */
   readonly workflows: boolean;
+  /** Whether opening the editor starts the local hub when none runs. */
+  readonly hubAutostart: boolean;
 }
 
 export interface SettingsResolverInterface {

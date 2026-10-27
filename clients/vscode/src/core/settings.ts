@@ -63,6 +63,7 @@ export class Defaults {
     theme: 'system',
     hubUrl: '',
     workflows: false,
+    hubAutostart: true,
   };
 
   /** The declared minimum of each numeric setting; a smaller value is raised to it. */
@@ -138,6 +139,7 @@ export class SettingsResolver implements SettingsResolverInterface {
       theme: SettingsResolver.theme(raw.theme),
       hubUrl: raw.hubUrl.trim(),
       workflows: raw.workflows,
+      hubAutostart: raw.hubAutostart,
     };
   }
 
