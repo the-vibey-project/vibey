@@ -93,10 +93,12 @@ on_answer(GObject *source, GAsyncResult *result, gpointer data)
         return;
     }
     if (body == NULL) {
-        if (status == 0)
-            kr_state_set_connection(app->state, KR_CONNECTION_OFFLINE,
-                                    "No hub answers. Start one with: vibey serve");
-        else
+        if (status == 0) {
+            g_autofree char *said = kr_hub_engine_offline_text(
+                app->settings->hub_host, app->settings->hub_port != 0 ? app->settings->hub_port : KR_HUB_DEFAULT_PORT,
+                app->settings->hub_autostart);
+            kr_state_set_connection(app->state, KR_CONNECTION_OFFLINE, said);
+        } else
             kr_state_set_connection(app->state, KR_CONNECTION_REFUSED, kr_hub_status_text(status));
         pending_free(pending);
         return;
@@ -410,7 +412,7 @@ connect_client(KrApp *app)
         g_autoptr(GError) error = NULL;
         g_autofree char *token = kr_hub_read_token(path, &error);
         if (token == NULL)
-            problem = g_strdup("No hub token on this computer yet. Start the hub with: vibey serve");
+            problem = kr_hub_engine_no_token_text(app->settings->hub_autostart);
         endpoint = kr_hub_endpoint_new("http", NULL, port, token);
     } else {
         /* A hub elsewhere is reached as the device paired with it, or not at all. */
@@ -549,6 +551,116 @@ kr_app_apply_theme(KrApp *app)
     };
     adw_style_manager_set_color_scheme(adw_style_manager_get_default(),
                                        schemes[app->settings->theme]);
+}
+
+/* ---- the hub on this computer (#1186) ------------------------------------------------ */
+
+typedef struct {
+    KrApp *app;
+    KrHubEngineAction action;
+} HubJob;
+
+static const char *
+hub_verb(KrHubEngineAction action)
+{
+    switch (action) {
+    case KR_HUB_ENGINE_STATUS:
+        return "check";
+    case KR_HUB_ENGINE_STOP:
+        return "stop";
+    case KR_HUB_ENGINE_START:
+    case KR_HUB_ENGINE_ENSURE:
+    default:
+        return "start";
+    }
+}
+
+static void
+on_hub_engine(GObject *source, GAsyncResult *result, gpointer data)
+{
+    (void) source;
+    HubJob *job = data;
+    KrApp *app = job->app;
+    KrHubEngineAction action = job->action;
+    g_free(job);
+    g_autoptr(GError) error = NULL;
+    g_autoptr(KrHubEngineReport) report = kr_hub_engine_run_finish(result, &error);
+    if (g_error_matches(error, G_IO_ERROR, G_IO_ERROR_CANCELLED))
+        return; /* krypton is quitting: the hub is left exactly as it is */
+    app->hub_busy = FALSE;
+    if (report == NULL) {
+        g_autofree char *said = g_strdup_printf("krypton could not %s the hub. %s",
+                                                hub_verb(action), error->message);
+        g_message("%s", said);
+        /* A failed autostart is a quiet note in the connection status, never a pop-up on
+         * every start; a failed click is answered where the person clicked. */
+        if (action == KR_HUB_ENGINE_ENSURE)
+            kr_state_set_connection(app->state, KR_CONNECTION_OFFLINE, said);
+        else
+            kr_app_toast(app, said);
+        return;
+    }
+    /* A hub that came up, or went away, changes whether the token exists and what answers. */
+    connect_client(app);
+    kr_app_refresh(app);
+    if (action != KR_HUB_ENGINE_ENSURE)
+        kr_app_toast(app, report->message);
+}
+
+static void
+hub_run(KrApp *app, KrHubEngineAction action)
+{
+    if (app->hub_busy) {
+        if (action != KR_HUB_ENGINE_ENSURE)
+            kr_app_toast(app, "Still working on the hub. Try again in a moment.");
+        return;
+    }
+    app->hub_busy = TRUE;
+    HubJob *job = g_new0(HubJob, 1);
+    job->app = app;
+    job->action = action;
+    kr_hub_engine_run_async(app->hub_engine, action, app->cancel, on_hub_engine, job);
+}
+
+/* Start and stop act on this computer's hub: with another computer's chosen, they say so. */
+static gboolean
+hub_is_elsewhere(KrApp *app)
+{
+    if (app->settings->hub_host == NULL)
+        return FALSE;
+    g_autofree char *said = g_strdup_printf(
+        "krypton is using the hub on %s. Start or stop that one on its own computer (vibey hub "
+        "start | stop), or choose This computer on the Devices page.",
+        app->settings->hub_host);
+    kr_app_toast(app, said);
+    return TRUE;
+}
+
+void
+kr_app_hub_ensure(KrApp *app)
+{
+    if (app->settings->hub_host == NULL && app->settings->hub_autostart)
+        hub_run(app, KR_HUB_ENGINE_ENSURE);
+}
+
+void
+kr_app_hub_start(KrApp *app)
+{
+    if (!hub_is_elsewhere(app))
+        hub_run(app, KR_HUB_ENGINE_START);
+}
+
+void
+kr_app_hub_stop(KrApp *app)
+{
+    if (!hub_is_elsewhere(app))
+        hub_run(app, KR_HUB_ENGINE_STOP);
+}
+
+void
+kr_app_hub_status(KrApp *app)
+{
+    hub_run(app, KR_HUB_ENGINE_STATUS);
 }
 
 /* ---- discovery ----------------------------------------------------------------------- */
@@ -711,6 +823,30 @@ action_about(GSimpleAction *action, GVariant *parameter, gpointer data)
 }
 
 static void
+action_start_hub(GSimpleAction *action, GVariant *parameter, gpointer data)
+{
+    (void) action;
+    (void) parameter;
+    kr_app_hub_start(data);
+}
+
+static void
+action_stop_hub(GSimpleAction *action, GVariant *parameter, gpointer data)
+{
+    (void) action;
+    (void) parameter;
+    kr_app_hub_stop(data);
+}
+
+static void
+action_hub_status(GSimpleAction *action, GVariant *parameter, gpointer data)
+{
+    (void) action;
+    (void) parameter;
+    kr_app_hub_status(data);
+}
+
+static void
 action_open(GSimpleAction *action, GVariant *parameter, gpointer data)
 {
     (void) action;
@@ -739,6 +875,9 @@ on_startup(GApplication *application, gpointer data)
         {.name = "show-gates", .activate = action_show_gates},
         {.name = "settings", .activate = action_settings},
         {.name = "start-project", .activate = action_start_project},
+        {.name = "start-hub", .activate = action_start_hub},
+        {.name = "stop-hub", .activate = action_stop_hub},
+        {.name = "hub-status", .activate = action_hub_status},
         {.name = "about", .activate = action_about},
         {.name = "quit", .activate = action_quit},
     };
@@ -753,6 +892,8 @@ on_startup(GApplication *application, gpointer data)
 
     kr_app_apply_theme(app);
     connect_client(app);
+    app->hub_engine = kr_hub_engine_new(g_getenv("KRYPTON_VIBEY"), NULL);
+    kr_app_hub_ensure(app);
     start_discovery(app);
     kr_state_listen(app->state, on_tray_state, app);
     if (app->settings->tray)
@@ -806,6 +947,7 @@ main(int argc, char **argv)
     stop_tray(&app);
     kr_discovery_free(app.discovery);
     kr_hub_client_free(app.client);
+    kr_hub_engine_free(app.hub_engine);
     kr_device_credential_free(app.paired);
     g_free(app.credential_path);
     kr_state_free(app.state);

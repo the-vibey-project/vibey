@@ -42,6 +42,7 @@ typedef struct {
     VibeyThemeMode theme;
     char *hub_host; /* the hub last used; NULL means this computer's */
     guint16 hub_port;
+    gboolean hub_autostart; /* start this computer's hub when krypton opens and none runs; on by default */
     gboolean notifications; /* on by default */
     gboolean sounds;        /* on by default */
     gboolean tray;          /* a tray item, and closing the window keeps krypton running; on by default */

@@ -46,6 +46,7 @@ test_round_trip(void)
     g_assert_true(defaults->notifications);
     g_assert_true(defaults->sounds);
     g_assert_true(defaults->tray);
+    g_assert_true(defaults->hub_autostart);
 
     KrSettings *settings = kr_settings_new_default();
     settings->theme = VIBEY_THEME_MODE_DARK;
@@ -53,6 +54,7 @@ test_round_trip(void)
     settings->hub_port = 9000;
     settings->sounds = FALSE;
     settings->tray = FALSE;
+    settings->hub_autostart = FALSE;
     g_autoptr(GError) error = NULL;
     g_assert_true(kr_settings_save(settings, path, &error));
     g_assert_no_error(error);
@@ -65,6 +67,7 @@ test_round_trip(void)
     g_assert_true(back->notifications);
     g_assert_false(back->sounds);
     g_assert_false(back->tray);
+    g_assert_false(back->hub_autostart);
 
     /* A hand-edited file with nonsense in it gives the defaults for the nonsense. */
     g_assert_true(g_file_set_contents(path,
@@ -76,6 +79,7 @@ test_round_trip(void)
     g_assert_null(odd->hub_host);
     g_assert_cmpuint(odd->hub_port, ==, 0);
     g_assert_true(odd->notifications);
+    g_assert_true(odd->hub_autostart);
 
     g_autoptr(KrSettings) none = kr_settings_load(NULL);
     g_assert_cmpint(none->theme, ==, VIBEY_THEME_MODE_SYSTEM);
