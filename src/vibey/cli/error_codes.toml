@@ -1,0 +1,591 @@
+# Made with ❤️ by [Vibey](https://the-vibey-project.github.io/vibey/), Developed by [Adam Matthew Steinberger](https://vibewithadam.matthewsteinberger.com/) ([@adammatthewsteinberger](https://github.com/adammatthewsteinberger/)).
+#
+# The one declared table of vibey's error codes (#1691). `vibey explain CODE` prints an entry,
+# `Error:` output names its code, and docs/reference/errors.md is generated from this file
+# (`python scripts/error_catalog.py render`).
+#
+# A code is PERMANENT: assigned once, in order, and never reused or renumbered. An error that
+# is removed keeps its entry with `retired = true`, so an old log line still explains. An
+# entry is keyed by the exception's exact qualified class name (no inheritance fallback);
+# `abstract = true` marks a base class that is never raised itself and so has no cause/fix.
+# tests/cli/test_error_codes_are_complete.py fails for a VibeyError subclass with no entry,
+# an entry naming no class, a reused code, or a hinted error whose hint is not in its fix.
+
+[[error]]
+class = "vibey.domain.errors.VibeyError"
+title = "Base class of every vibey error"
+abstract = true
+cause = "Never raised directly; every error vibey reports derives from it."
+
+[[error]]
+class = "vibey.domain.errors.ClassifiedFailure"
+title = "A failure that already knows its class"
+abstract = true
+cause = "Never raised directly; a base for failures whose cause is known where they are raised."
+
+[[error]]
+class = "vibey.domain.errors.LifecycleRefused"
+title = "A project lifecycle request the hub refused"
+abstract = true
+cause = "Never raised directly; each subclass reads as one HTTP status to a device."
+
+[[error]]
+class = "vibey.domain.errors.ReorderRefused"
+title = "A queue reorder that was refused"
+abstract = true
+cause = "Never raised directly; each subclass is a reason a bump or un-bump did not happen (ADR-0054)."
+
+[[error]]
+code = "E0001"
+class = "vibey.application.ledger_publication.InvalidLedgerShard"
+title = "A ledger shard cannot be published"
+cause = "The file or value given to ledger publication is not a shard this build can publish. The message says why."
+fix = "Correct what the message names, or regenerate the shard with the vibey that wrote it, and publish again. `vibey ledger --help` lists the publishing commands."
+
+[[error]]
+code = "E0002"
+class = "vibey.application.rotation_handoff.TooManyWindDowns"
+title = "A work item has rotated engines too many times"
+cause = "The work item wound down and rotated to another engine three or more times, so vibey stops rotating it and asks for a person."
+fix = "This needs a human decision: read the work item's history with `vibey ledger search`, then retry it with a different scope or engine, or stop the project with `vibey abandon`."
+
+[[error]]
+code = "E0003"
+class = "vibey.bootstrap.DatabaseNotConfigured"
+title = "No database is configured"
+cause = "VIBEY_PG_URL is unset, and vibey has no safe default database to invent."
+fix = "Set VIBEY_PG_URL to a PostgreSQL URL, or run `vibey install --postgres` to install and start a supported local server. `vibey doctor` checks the result."
+
+[[error]]
+code = "E0004"
+class = "vibey.bootstrap.UnsupportedPostgresVersion"
+title = "The database is too old"
+cause = "The database VIBEY_PG_URL points at is below vibey's PostgreSQL compatibility floor."
+fix = "Point VIBEY_PG_URL at a supported server (CI covers PostgreSQL 14 to 18). `vibey doctor` reports the version it found."
+
+[[error]]
+code = "E0005"
+class = "vibey.domain.config.ConfigError"
+title = "vibey.toml failed validation"
+cause = "vibey.toml holds a key or value that breaks a rule. The message names the key and the rule."
+fix = "Correct that key in vibey.toml. docs/reference/configuration.md lists every key and what it accepts."
+
+[[error]]
+code = "E0006"
+class = "vibey.domain.engine_dispatch.SlotHeld"
+title = "A job is waiting for a local engine slot"
+cause = "Selection planned a hold: the job waits in the queue for a local engine slot."
+fix = "Nothing to do; the job is claimed when a slot frees. `vibey engines` shows engine health and selection, and `vibey queue list` shows the queue."
+
+[[error]]
+code = "E0007"
+class = "vibey.domain.errors.AbandonmentRefused"
+title = "The project cannot be abandoned from where it stands"
+cause = "The project is done (finished is a different ending from abandoned), or is in a phase with no edge to abandoned, or in a phase this vibey does not know. Nothing was changed."
+fix = "`vibey status` shows the project's phase. A finished project needs no abandoning."
+
+[[error]]
+code = "E0008"
+class = "vibey.domain.errors.BudgetExceeded"
+title = "A spend would exceed the project's budget caps"
+cause = "A spend would take the project over its dollar or turn cap, so vibey parks a gate instead of spending."
+fix = '''
+A tripped cap parks a budget_exhausted gate rather than spending more.
+Raise it with `vibey answer GATE_ID --raw {"max_dollars": 25}`, quoted
+for your shell, or "max_turns" for the turn cap; `vibey cost` shows
+where the spend went.
+`vibey gates` lists every open gate with its id, its prompt, and the exact
+`vibey answer` command that answers it.
+'''
+
+[[error]]
+code = "E0009"
+class = "vibey.domain.errors.CheckoutHeld"
+title = "The checkout is already held by a live project"
+cause = "A project was asked to start in a checkout that a live project already holds. Two live projects never share a checkout. Nothing was created."
+fix = '''
+Nothing was created. If the project holding the checkout should stop,
+`vibey abandon PROJECT_ID --reason TEXT` lets the checkout go; otherwise
+start the new project in another checkout with --repo. `vibey projects --json`
+lists every project with its checkout and phase.
+'''
+
+[[error]]
+code = "E0010"
+class = "vibey.domain.errors.DependencyCannotFinish"
+title = "A job depends on one that can never succeed"
+cause = "A job depends on one that failed, was cancelled, or is in a state this vibey does not know, so bumping it would claim a place it can never use."
+fix = "Nothing moved. Replace or unblock the dependency first; `vibey queue list` shows each job's state."
+
+[[error]]
+code = "E0011"
+class = "vibey.domain.errors.DependencyCycle"
+title = "Jobs depend on one another in a ring"
+cause = "Jobs depend on one another in a ring, so none of them can ever be claimed. Which job of a ring should run first is not a question an ordering rule can answer, so vibey refuses rather than break it arbitrarily."
+fix = "Nothing moved. Remove one dependency from the ring so an order exists."
+
+[[error]]
+code = "E0012"
+class = "vibey.domain.errors.DependentsStillBumped"
+title = "Bumped jobs still need this one's place"
+cause = "An un-bump of a job that bumped jobs still need. Un-bumping it would leave them holding a place they cannot use."
+fix = "Nothing moved. Un-bump the dependent jobs first with `vibey queue unbump`, then this one."
+
+[[error]]
+code = "E0013"
+class = "vibey.domain.errors.EscalationExhausted"
+title = "The escalation ladder has no rung left"
+cause = "The build escalation ladder has no rung left for this attempt, so the work item parked a human gate."
+fix = '''
+The work item failed at every rung of the effort ladder and parked a
+human gate. Answer it with `vibey answer GATE_ID`.
+`vibey gates` lists every open gate with its id, its prompt, and the exact
+`vibey answer` command that answers it.
+'''
+
+[[error]]
+code = "E0014"
+class = "vibey.domain.errors.ForeignBranchRefused"
+title = "BUILD refused a branch it cannot prove it created"
+cause = "BUILD found a branch it meant to create, reuse or merge and cannot prove this project created it, so it refused to touch it. Branch names carry the project, and each branch BUILD creates records the project that owns it. Nothing on the branch was changed."
+fix = "Inspect the branch the message names. If it is stale and nobody needs it, delete it yourself; if it holds work you want, merge it by hand. vibey will not build on history it cannot prove it started."
+
+[[error]]
+code = "E0015"
+class = "vibey.domain.errors.GateAlreadyAnswered"
+title = "The gate was already answered"
+cause = "A gate was answered once already, by another request, so this answer was not recorded. The first answer stands; a gate is never answered twice."
+fix = '''
+A gate is answered once, and the first answer stands. The answer that landed
+is on the ledger:
+  vibey ledger search --kind GateAnswered
+To retry an answer safely, give it a --request-id: the same id with the same
+answer is a no-op once it has landed.
+'''
+
+[[error]]
+code = "E0016"
+class = "vibey.domain.errors.HandbackRefused"
+title = "A handback was refused"
+cause = "A handback was asked for with no successful probe recorded after the latest failover, or with a failover that names no known engine (ADR-0070)."
+fix = "Record a successful probe of the original engine after the latest failover, then ask again. `vibey driver --help` lists the failover and handback commands."
+
+[[error]]
+code = "E0017"
+class = "vibey.domain.errors.HandoffRejected"
+title = "The no-loss gate refused a handoff"
+cause = "The no-loss gate denied a handoff after exhausting its escalation path."
+fix = '''
+The no-loss gate refused the handoff, so nothing was lost -- the run is
+parked on a human gate instead, whose prompt says what could not be
+carried over. Answer it with `vibey answer GATE_ID`.
+`vibey gates` lists every open gate with its id, its prompt, and the exact
+`vibey answer` command that answers it.
+'''
+
+[[error]]
+code = "E0018"
+class = "vibey.domain.errors.IllegalTransitionError"
+title = "The project is not in a phase this command applies to"
+cause = "A phase transition was attempted that the transition rules deny."
+fix = '''
+The project is not in a phase this command applies to. `vibey status`
+shows the current phase.
+'''
+
+[[error]]
+code = "E0019"
+class = "vibey.domain.errors.InvalidAbandonment"
+title = "The abandonment request cannot be recorded"
+cause = "The reason is empty, over-long or carries control or formatting characters, or the --by label cannot be recorded. Nothing was changed."
+fix = "Give `vibey abandon` a non-empty --reason of reasonable length with no control characters, and a --by label that can be recorded."
+
+[[error]]
+code = "E0020"
+class = "vibey.domain.errors.InvalidActorLabel"
+title = "The --by label cannot be recorded"
+cause = "A name given for the record (--by) is empty, too long, or carries control or formatting characters. Nothing was changed."
+fix = "Give a short, non-empty --by label with no control or formatting characters."
+
+[[error]]
+code = "E0021"
+class = "vibey.domain.errors.InvalidAnswer"
+title = "The gate answer is not in QUESTION_ID=ANSWER form"
+cause = "A human-gate answer was not in the expected QUESTION_ID=ANSWER form."
+fix = "Answer with `vibey answer GATE_ID QUESTION_ID=ANSWER`, or pass a JSON object with --raw. `vibey gates` prints the exact command for each open gate."
+
+[[error]]
+code = "E0022"
+class = "vibey.domain.errors.InvalidBudgetChange"
+title = "The budget change is not one vibey can make"
+cause = "The change names no cap, or gives a value that is not one: dollars must be a finite number above zero and turns a whole number above zero. Nothing was changed or recorded."
+fix = "Name a cap and give it a valid value; `vibey budget --help` shows the options."
+
+[[error]]
+code = "E0023"
+class = "vibey.domain.errors.InvalidPhaseError"
+title = "A phase state was built with invalid fields"
+cause = "A PhaseState was constructed with invalid fields."
+fix = "This looks like a bug in vibey rather than your project."
+
+[[error]]
+code = "E0024"
+class = "vibey.domain.errors.InvalidSpecError"
+title = "The design spec is not buildable"
+cause = "A DesignSpec failed its buildability checks."
+fix = "Run `vibey design` to finish the spec before building."
+
+[[error]]
+code = "E0025"
+class = "vibey.domain.errors.LeaseReapIncomplete"
+title = "Some expired leases could not be reaped"
+cause = "Each lease is reaped in a transaction of its own; the leases that could be reaped were, and the message names each one left as it was, and why."
+fix = "Fix the cause the message names for each lease left, then run `vibey recover` or `vibey queue reap` again."
+
+[[error]]
+code = "E0026"
+class = "vibey.domain.errors.LifecycleConflict"
+title = "The host's state refuses the request"
+cause = "The request is fine, but the host's state refuses it: a folder or checkout is taken."
+fix = "Choose another folder or checkout, or release the one that holds it (`vibey abandon` lets a project's checkout go)."
+
+[[error]]
+code = "E0027"
+class = "vibey.domain.errors.LifecycleFailed"
+title = "The host's command failed"
+cause = "The host tried, and the command it ran failed for a reason of its own."
+fix = "Read the failure in the message, fix that cause on the host, and try again."
+
+[[error]]
+code = "E0028"
+class = "vibey.domain.errors.LifecycleInvalid"
+title = "The device sent something unacceptable"
+cause = "What the device sent is not acceptable: a name, intake or reason that breaks the rules."
+fix = "Correct the name, intake or reason the message names and send it again."
+
+[[error]]
+code = "E0029"
+class = "vibey.domain.errors.LifecycleUnavailable"
+title = "The host has not allowed this, or is resting"
+cause = "The host has not allowed this action, or is resting (the Sabbath window)."
+fix = "Try later, or ask the host. `vibey sabbath` shows the window on this host."
+
+[[error]]
+code = "E0030"
+class = "vibey.domain.errors.ModelAnswerRejected"
+title = "A model's answer broke the required shape"
+cause = "A model's answer broke the shape its caller requires, after one re-ask naming why. It is recorded as an ENGINE failure: the work asked of the model was sound and vibey read the answer correctly."
+fix = "Retry. If it keeps happening, try another engine or model; `vibey engines` and `vibey models` show what is available."
+
+[[error]]
+code = "E0031"
+class = "vibey.domain.errors.NoEligibleEngine"
+title = "No engine is eligible"
+cause = "Rotation was asked to select from a candidate set with no positive weight."
+fix = '''
+Every engine is excluded, circuit-open, or missing a required capability.
+Run `vibey engines` to see why, or `vibey doctor` to check installs and auth.
+'''
+
+[[error]]
+code = "E0032"
+class = "vibey.domain.errors.NotReorderable"
+title = "The job's place in the queue cannot be changed"
+cause = "Only a job that is still waiting, parked or running can be moved. A finished job will never be claimed again, and a job in a state or phase this vibey does not know is one it will not write."
+fix = "Nothing moved. `vibey queue list` shows the jobs that can still be moved."
+
+[[error]]
+code = "E0033"
+class = "vibey.domain.errors.OutputBudgetExhausted"
+title = "A local model spent its whole output budget"
+cause = "A local model used its entire output budget on reasoning and produced no answer, even after one bounded retry with a larger budget and lighter reasoning. It is recorded as a CAPACITY failure."
+fix = "Use a model with more headroom; `vibey models` lists the local model families and what Ollama says each can do."
+
+[[error]]
+code = "E0034"
+class = "vibey.domain.errors.PriorityRefused"
+title = "The account has no grant to reorder the queue"
+cause = "A request to reorder the queue came from an account or source with no grant (sub-doctrine 12.j)."
+fix = '''
+Nothing moved, and the refusal is on the ledger:
+  vibey ledger search --kind JobPriorityRefused
+The operator is the account that owns the project's own vibey.toml. An
+automation is admitted by naming it in that file's `[queue.priority] sources`,
+in a reviewed change, and running it as that account (ADR-0054).
+'''
+
+[[error]]
+code = "E0035"
+class = "vibey.domain.errors.ReorderConflict"
+title = "The database aborted the reorder"
+cause = "The database broke a lock cycle by aborting this request. Nothing moved."
+fix = "Retry the same command; every reorder is idempotent under replay."
+
+[[error]]
+code = "E0036"
+class = "vibey.domain.errors.SovereignResearchUnavailable"
+title = "A research provider refused a topic rather than invent a source"
+cause = "A local model has no web access, and returning its recollection with a source field would put a fabricated citation into a design spec. The provider says so at the moment it knows (doctrine 10)."
+fix = "Supply the source yourself in the design interview, or use a provider with web access (--provider). vibey will not invent a citation."
+
+[[error]]
+code = "E0037"
+class = "vibey.domain.errors.UnknownGate"
+title = "No gate has that id"
+cause = "No human gate exists with the given id."
+fix = '''
+`vibey gates` lists every open gate with its id, its prompt, and the exact
+`vibey answer` command that answers it.
+'''
+
+[[error]]
+code = "E0038"
+class = "vibey.domain.errors.UnknownJob"
+title = "No job has that id in the project"
+cause = "No job with the given id exists in the project the request named."
+fix = "`vibey queue list` shows the project's jobs and their ids."
+
+[[error]]
+code = "E0039"
+class = "vibey.domain.errors.UnknownLane"
+title = "No listed lane has that events file"
+cause = "The hub reads only files it found as lanes, so a path that is not one is refused rather than opened (ADR-0067)."
+fix = "Choose a lane the hub listed."
+
+[[error]]
+code = "E0040"
+class = "vibey.domain.errors.UnknownProject"
+title = "No project has that id"
+cause = "No project exists with the given id."
+fix = "`vibey projects` lists every project with its id."
+
+[[error]]
+code = "E0041"
+class = "vibey.domain.errors.UnknownProvider"
+title = "The engine provider is not one vibey knows"
+cause = "The requested engine provider is not one vibey knows how to build."
+fix = "Use one of the providers the command's --help lists."
+
+[[error]]
+code = "E0042"
+class = "vibey.domain.errors.WrongPhase"
+title = "The project is not in a phase this command applies to"
+cause = "The project is not in a phase the requested command applies to."
+fix = "`vibey status` shows the project's current phase; run the command that applies to it."
+
+[[error]]
+code = "E0043"
+class = "vibey.domain.hub_binding.UndeclaredExposure"
+title = "The hub was asked to bind a non-loopback address"
+cause = "A non-loopback address was asked for and `[hub] lan = true` is not declared."
+fix = "Declare `[hub] lan = true` in vibey.toml to serve beyond this machine, or bind a loopback address."
+
+[[error]]
+code = "E0044"
+class = "vibey.domain.hub_pairing.PairingRefused"
+title = "A pairing claim or offer was refused"
+cause = "The code is wrong, spent or expired, or the offer grants nothing."
+fix = "Make a fresh pairing offer on the host (`vibey hub --help`) and claim it before it expires."
+
+[[error]]
+code = "E0045"
+class = "vibey.domain.hub_scope.HubForbidden"
+title = "The caller's scopes do not permit the action"
+cause = "The device's scopes do not include what the action needs."
+fix = "Use a device whose scopes permit the action, or pair a device with the scope it needs (`vibey hub --help`)."
+
+[[error]]
+code = "E0046"
+class = "vibey.domain.ledger_query.InvalidLedgerQuery"
+title = "The ledger search cannot be run as asked"
+cause = "The search was rejected before any I/O."
+fix = "Correct the search the message names. `vibey ledger search --help` lists the options."
+
+[[error]]
+code = "E0047"
+class = "vibey.domain.ledger_record.InvalidLedgerRecord"
+title = "The JSON object is not a ledger record"
+cause = "A JSON object is not a ledger record; the message names the field at fault."
+fix = "Correct the field the message names."
+
+[[error]]
+code = "E0048"
+class = "vibey.domain.publication_policy.InvalidPublicationRules"
+title = "The publication rules contradict a fixed rule"
+cause = "A rule set contradicts a rule that no rule set may break."
+fix = "Edit the rule set so it no longer breaks the rule the message names."
+
+[[error]]
+code = "E0049"
+class = "vibey.domain.remote_command.RemoteCommandRefused"
+title = "The command cannot be sent to the workflows"
+cause = "A command line cannot be sent to the workflows as it stands. The message says why."
+fix = "Run the command here instead of with -w/--workflows, or change it as the message says."
+
+[[error]]
+code = "E0050"
+class = "vibey.domain.state_sync.RemoteMoved"
+title = "The state branch moved during the sync"
+cause = "The branch moved between reading it and pushing to it."
+fix = "Run the sync again; it reads the branch afresh (`vibey state --help`)."
+
+[[error]]
+code = "E0051"
+class = "vibey.domain.state_sync.SchemaMismatch"
+title = "The two ends have applied different migrations"
+cause = "The database and the sealed copy have applied different migrations."
+fix = "Run `vibey migrate` on the end that is behind, then sync again."
+
+[[error]]
+code = "E0052"
+class = "vibey.domain.state_sync.SnapshotUnreadable"
+title = "The snapshot cannot be read"
+cause = "A snapshot document is not one this vibey reads, or the state key does not open it."
+fix = "Check that this machine has the state key the snapshot was sealed with, and a vibey new enough to read its format (`vibey state --help`)."
+
+[[error]]
+code = "E0053"
+class = "vibey.domain.state_sync.StateMoved"
+title = "The database changed during the sync"
+cause = "The database changed between reading it and writing it."
+fix = "Run the sync again (`vibey state --help`)."
+
+[[error]]
+code = "E0054"
+class = "vibey.domain.state_sync.StateSyncRefused"
+title = "The sync needs a decision"
+cause = "The sync cannot go on without someone deciding something. It changed nothing."
+fix = "Read the message for the decision it needs, make it, and run the sync again (`vibey state --help`)."
+
+[[error]]
+code = "E0055"
+class = "vibey.infrastructure.azure.az_cli.AzCliError"
+title = "The Azure CLI failed"
+cause = "An `az` command exited with an error. The exception holds the command and the CLI's stderr."
+fix = "Read the stderr in the message, check that `az` is logged in to the right subscription, and retry."
+
+[[error]]
+code = "E0056"
+class = "vibey.infrastructure.azure.az_cli.MutationNotAuthorized"
+title = "A mutating Azure call has no matching consent"
+cause = "A mutating call arrived without consent that is bound to the digest of the target scope."
+fix = "Review the plan and approve it again for this target; consent given for a different scope does not carry over."
+
+[[error]]
+code = "E0057"
+class = "vibey.infrastructure.db.ledger_guard.AppRoleMissing"
+title = "The application role does not exist"
+cause = "The application role does not exist and nothing supplied a password to create it."
+fix = "Supply a password for the application role so it can be created, then run `vibey migrate`."
+
+[[error]]
+code = "E0058"
+class = "vibey.infrastructure.db.ledger_guard.OwnerCannotCreateRole"
+title = "The owner cannot create the application role"
+cause = "The database owner may not create the missing application role."
+fix = "Create the application role with a database user that may, or grant the owner CREATEROLE, then run `vibey migrate`."
+
+[[error]]
+code = "E0059"
+class = "vibey.infrastructure.db.ledger_guard.RoleSeparationRefused"
+title = "The application role cannot be guarded"
+cause = "The application role is a superuser, may create roles, or is (or is a member of) the owner, so granting or revoking anything would change nothing. The message says which."
+fix = "Use an application role that is not a superuser, cannot create roles, and is not the owner or one of its members."
+
+[[error]]
+code = "E0060"
+class = "vibey.infrastructure.db.ledger_guard.SchemaNotMigrated"
+title = "Migrations are pending and this role may not apply them"
+cause = "The application role may not migrate, and migrations are pending."
+fix = "Run `vibey migrate` as the database owner."
+
+[[error]]
+code = "E0061"
+class = "vibey.infrastructure.db.migration_catalog.NoMigrationsFound"
+title = "No migrations were found"
+cause = "The migrations directory holds no .sql file, so the install is incomplete."
+fix = "Reinstall vibey; the migrations ship inside the package."
+
+[[error]]
+code = "E0062"
+class = "vibey.infrastructure.db.migrator.InvalidMigrationLockTimeout"
+title = "The migration lock wait is not a valid number of seconds"
+cause = "The configured wait is not a number of seconds Postgres can honour."
+fix = "Set the migration lock timeout to a positive number of seconds."
+
+[[error]]
+code = "E0063"
+class = "vibey.infrastructure.db.migrator.MigrationChecksumError"
+title = "An applied migration's file has changed"
+cause = "A migration that was already applied no longer matches the checksum recorded for it. The message names its version."
+fix = "Do not edit an applied migration. Restore the file from the release that applied it, and add a new migration for any change."
+
+[[error]]
+code = "E0064"
+class = "vibey.infrastructure.db.migrator.MigrationInsideTransaction"
+title = "Migrations were started inside a transaction"
+cause = "apply() was handed a connection with a transaction already open."
+fix = "This indicates a defect in the caller; report it."
+
+[[error]]
+code = "E0065"
+class = "vibey.infrastructure.db.migrator.MigrationLockTimeout"
+title = "Another process held the migration lock"
+cause = "Another process held the migration lock for longer than this one would wait."
+fix = "Wait for the other `vibey migrate` to finish and run it again."
+
+[[error]]
+code = "E0066"
+class = "vibey.infrastructure.engines.loop_process_adapter.ProcessError"
+title = "A loop process failed"
+cause = "A loop process failed in an unexpected way, for example because its binary could not be started."
+fix = "Check that the engine's binary is installed and runnable; `vibey doctor` checks installs and auth."
+
+[[error]]
+code = "E0067"
+class = "vibey.infrastructure.engines.tailer.UnknownEventKind"
+title = "An engine event has a kind the tailer does not know"
+cause = "Declared by the engine tailer for an event of an unrecognised kind. No code path raises it today."
+fix = "No operator action; if you see it, report it."
+
+[[error]]
+code = "E0068"
+class = "vibey.infrastructure.git.errors.WorktreeError"
+title = "A git command for a worktree or branch failed"
+cause = "A git command vibey ran for a worktree or a branch's recorded ownership exited with an error. The exception holds the command and git's stderr."
+fix = "Read git's stderr in the message and fix the repository state it names, then retry."
+
+[[error]]
+code = "E0069"
+class = "vibey.infrastructure.git.repository_config_guard.RepositoryExecutionRefused"
+title = "The repository's git config names a program"
+cause = "The repository's own config names a program that vibey's git would have run, and vibey refuses to run what a repository chose."
+fix = "Remove the setting the message names from the repository's git config, or work in a repository you trust."
+
+[[error]]
+code = "E0070"
+class = "vibey.infrastructure.provision.agent_surface.ProvisionError"
+title = "Provisioning the agent surface failed"
+cause = "A git command run while provisioning an agent surface exited with an error. The exception holds the command and its stderr."
+fix = "Read the stderr in the message, fix the repository state it names, and retry."
+
+[[error]]
+code = "E0071"
+class = "vibey.infrastructure.state.gh_state_remote.GhStateError"
+title = "GitHub refused a read or write of the state branch"
+cause = "GitHub refused a request on the state branch, or answered with something that was not an object. The message carries the request and the reason."
+fix = "Check that `gh` is authenticated with access to the repository, then run the sync again (`vibey state --help`)."
+
+[[error]]
+code = "E0072"
+class = "vibey.infrastructure.state.state_key.StateKeyMissing"
+title = "No usable state key on this machine"
+cause = "There is no state key on this machine, or the one present cannot be used. An existing key is never replaced."
+fix = "Read the message: restore the key this machine had, or create one if none was ever made (`vibey state --help`)."
+
+[[error]]
+code = "E0073"
+class = "vibey.infrastructure.workflows.gh_workflows.GhWorkflowsError"
+title = "`gh` refused a dispatch or could not be run"
+cause = "`gh` refused to dispatch the workflow, or could not be run at all."
+fix = "Check that `gh` is installed and authenticated, and that VIBEY_WORKFLOWS_* name a repository and branch you can dispatch to."

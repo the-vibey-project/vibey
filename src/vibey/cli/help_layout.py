@@ -98,6 +98,7 @@ PANELS: tuple[Panel, ...] = (
             Entry("migrate", "Apply database migrations and reconcile grants"),
             Entry("state", "Keep this database and its sealed GitHub copy in step"),
             Entry("sabbath", "Show the Sabbath window on this host"),
+            Entry("explain", "Explain an error code: its cause and what to do"),
         ),
     ),
     Panel(

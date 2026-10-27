@@ -98,6 +98,7 @@ nav:
       - Chat: continuation/chat.md
   - Reference:
       - CLI: reference/cli.md
+      - Error codes: reference/errors.md
       - Configuration: reference/configuration.md
       - Hub API: reference/hub-api.md
       - System requirements: reference/system-requirements.md

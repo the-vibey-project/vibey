@@ -16,7 +16,7 @@ command groups are marked with a trailing `…`.
 - **Decisions that are yours:** `gates`, `answer`, `design`…, `visual`…, `deploy`…
 - **Watch and steer:** `watch`, `queue`…, `engines`, `loops`, `models`, `cost`, `budget`…, `ledger`…, `ultra`…, `retry`, `recover`, `abandon`
 - **Run the machinery:** `work`, `worker`, `serve`, `hub`…, `supervisor`…, `driver`…, `operator`
-- **Maintain:** `migrate`, `state`…, `sabbath`
+- **Maintain:** `migrate`, `state`…, `sabbath`, `explain`
 - **Tools for agents:** `search`, `fetch`, `llm`…
 
 Bare `vibey`, and each bare command group, prints help.
@@ -83,7 +83,7 @@ reads any run.
 | `0` | Success. Also a guarded command whose reader closed the pipe early. |
 | `1` | Nothing to act on, or a check failed: no project exists (``no projects found; create one with `vibey new` first``); an explicit `PROJECT_ID` is unknown in `watch`, `cost`, `gates` (said on stderr), `abandon`, or `deploy *`; `recover` without `--project` or `--all`; `doctor --engine` with an unknown name; `doctor --conformance` with a failing engine; `doctor --install-postgres` or `install --postgres` could not install/start a supported server; `doctor --cluster` with a failing check; `operator` without the `operator` extra; `worker --azure az` without a logged-in Azure CLI. |
 | `2` | Usage error: a bad global flag (see above); typer's own validation (missing argument, malformed UUID, a value outside an option's minimum or maximum, unknown option); `install` without `--postgres`; `doctor --install-postgres` with `--cluster`; `new --skills-context-mode` outside `off`/`shadow`/`inject`; `answer` mode conflicts or a `--raw` value that is not a JSON object; `abandon` without `--reason`, or with a `--reason` or `--by` that cannot be recorded; `worker` with an unknown `--engines` id, an `--engines` list matching none of the worker's engines, an unknown `--provider`, or an unknown `--azure` value; `doctor --cluster` with an unknown `--engines` id or `--provider`; `doctor --engines` or `--provider` without `--cluster`; `doctor --record` whose target project declares a forbidden `engine_environment` entry; `new` whose `vibey.toml` declares a malformed or forbidden `[gates]` or `[engine_environment]` entry. |
-| `3` | Blocked by a domain rule, in a guarded command. Prints `Error: <message>` on stderr, plus a next-step hint for some error types. |
+| `3` | Blocked by a domain rule, in a guarded command. Prints `Error: <message>` on stderr, plus a next-step hint for some error types and, last, the error's permanent code (``(E0040: run `vibey explain E0040`)``). See [Error codes](errors.md). |
 | `130` | Interrupted with Ctrl-C, in a guarded command (prints `Interrupted.`). |
 | `78` | A supervisor setting no service could run with (EX_CONFIG): `supervisor install` or `supervisor status` with an unreadable `[supervisor]` table, a path on volatile storage or inside a linked worktree, `vibey` not on `PATH`, or no delivery bridge under `--repo`; `supervisor exec` with a missing or malformed environment file. |
 | `75` | Resting for the Sabbath (sub-doctrine 8.i, [ADR-0072](../architecture/decisions/0072-the-sabbath-kept-where-the-machine-stands.md)): `new` or `work` declined, said why and when it resumes, and changed nothing. Paused, not failed. |
@@ -125,6 +125,16 @@ The installer targets PostgreSQL 18 today. The application floor is
 PostgreSQL 14, and the same SQL/runtime contract is tested against 14, 15, 16,
 17, and 18 in CI. Installation does not invent or persist a database DSN:
 set `VIBEY_PG_URL` to a database you own after the server is ready.
+
+### Error codes and `vibey explain`
+
+Every error a guarded command can print has a permanent code, such as `E0040`, on the last line
+of its output. `vibey explain E0040` prints its cause and what to do; `vibey explain --list` prints
+every code and its title; an unknown code exits `2` and names the nearest ones. It reads only the
+shipped catalog, so it needs no database and works for the very first error. The full table is the
+generated [Error codes](errors.md) page. The first line of the output is unchanged, `Error:
+<message>`. Commands that are not guarded, `vibey state` and the hub's HTTP error bodies do not
+print codes yet.
 
 ### Next-step hints
 

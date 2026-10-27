@@ -487,6 +487,7 @@ copies of everything are published under `/develop/`.
 - [ ] All four 100% branch-coverage gates pass
 - [ ] If a tenant under `src/vibey_runners/` or `src/vibey_tools/` changed, its own checks pass
 - [ ] New or changed classes have an interface beside them (ADR-0016)
+- [ ] A new `VibeyError` subclass has an entry in `src/vibey/cli/error_codes.toml` (a permanent code, its cause and fix), and `python scripts/error_catalog.py render` has been run; CI fails otherwise
 - [ ] Protected tests untouched (or sign-off obtained and noted)
 - [ ] Agent-surface trees updated if a procedure changed
 - [ ] Docs updated if behavior changed; a new ADR bumps the count and the nav
