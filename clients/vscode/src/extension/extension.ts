@@ -19,6 +19,8 @@ export function activate(context: vscode.ExtensionContext): { readonly commands:
   const controller = new VibeyController(context, new EditorSettings());
   active = controller;
   const actions = new CommandActions(controller, context.extensionUri);
+  // Open the one local hub if none runs; closing the editor never stops it (#1186).
+  void controller.ensureHub();
   const notify = (text: string): void => void vscode.window.showInformationMessage(text);
   for (const spec of CommandTable.ALL) {
     context.subscriptions.push(
@@ -66,6 +68,7 @@ export function activate(context: vscode.ExtensionContext): { readonly commands:
       ultra ? 'ULTRA effort, with no turn limit.' : undefined,
       unlimited ? 'paidloop is declared with no dollar cap. krypton: End unlimited spend puts a cap back at once.' : undefined,
       hub === undefined ? undefined : `Connected to the vibey hub at ${hub}.`,
+      controller.hubNote,
       'krypton: every command',
     ]
       .filter((line) => line !== undefined)

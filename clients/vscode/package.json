@@ -352,6 +352,24 @@
         "icon": "$(debug-disconnect)"
       },
       {
+        "command": "vibey.startHub",
+        "title": "Start the vibey hub on this computer",
+        "category": "krypton",
+        "icon": "$(play)"
+      },
+      {
+        "command": "vibey.stopHub",
+        "title": "Stop the vibey hub on this computer",
+        "category": "krypton",
+        "icon": "$(stop-circle)"
+      },
+      {
+        "command": "vibey.hubStatus",
+        "title": "Show whether the vibey hub runs",
+        "category": "krypton",
+        "icon": "$(pulse)"
+      },
+      {
         "command": "vibey.runOnWorkflows",
         "title": "Run a vibey command on GitHub",
         "category": "krypton",
@@ -857,6 +875,12 @@
           "default": "",
           "markdownDescription": "The vibey hub (`vibey serve`, ADR-0068) this device is paired with, like `http://studio.local:8765`. Empty: the local `vibey` command line, the default. Set it with **krypton: Connect to vibey on this network**, which also keeps the hub's key in the editor's secret storage, never in settings."
         },
+        "vibey.hubAutostart": {
+          "type": "boolean",
+          "default": true,
+          "scope": "application",
+          "markdownDescription": "Start the one vibey hub on this computer (`vibey hub start`) when the editor opens and none runs. Closing the editor never stops it: **krypton: Stop the vibey hub on this computer** does. Skipped when this device is paired with a hub (`vibey.hubUrl`)."
+        },
         "vibey.workflows": {
           "type": "boolean",
           "default": false,
@@ -1028,6 +1052,10 @@
           {
             "name": "disconnect",
             "description": "Forget the hub's key on this device and go back to the local vibey command line."
+          },
+          {
+            "name": "hub",
+            "description": "Start the one vibey hub in the background unless it already runs. Closing the editor never stops it."
           },
           {
             "name": "workflows",

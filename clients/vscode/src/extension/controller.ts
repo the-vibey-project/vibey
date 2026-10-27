@@ -30,6 +30,7 @@ export class VibeyController implements VibeyControllerInterface {
   private tracker: Promise<LaneTracker> | undefined;
   private timer: NodeJS.Timeout | undefined;
   private hubKey: string | undefined;
+  private note: string | undefined;
   private readonly secrets: vscode.SecretStorage;
   /** Where a paired hub's key is kept, in the editor's secret storage. */
   static readonly HUB_KEY_SECRET = 'vibey.hubKey';
@@ -77,6 +78,31 @@ export class VibeyController implements VibeyControllerInterface {
   /** The paired hub's address, when vibey is reached through one. */
   get hubUrl(): string | undefined {
     return this.core.vibey?.kind === 'hub' ? this.core.settings.hubUrl : undefined;
+  }
+
+  get hubNote(): string | undefined {
+    return this.note;
+  }
+
+  /**
+   * Start the one local hub when the editor opens and none runs (#1186). Closing the editor
+   * never stops it. Skipped when the setting is off, when this device is paired with a hub
+   * (it does not need a local one), and when there is no vibey; a failure is a note in the
+   * status bar's tooltip and the krypton output, never a pop-up on every start.
+   */
+  async ensureHub(): Promise<void> {
+    const { hubEngine, settings } = this.core;
+    if (!settings.hubAutostart || settings.hubUrl !== '' || hubEngine === undefined) {
+      return;
+    }
+    try {
+      const report = await hubEngine.ensure();
+      this.note = report.message;
+    } catch (error) {
+      this.note = `The vibey hub could not be started: ${error instanceof Error ? error.message : String(error)}`;
+      this.output.appendLine(this.note);
+    }
+    this.changed();
   }
 
   /** Keep a checked key and the hub's address; the settings change rebuilds the core onto the hub. */
