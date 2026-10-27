@@ -339,6 +339,8 @@ async function renderWorkflows(start: Answer, reads: readonly Answer[], runs?: W
   const queue = [...reads];
   const sent: string[] = [];
   const fetchLike = (async (url: string, init: { method: string; body?: string }) => {
+    // The app's own reachability probe is not one of the requests under test.
+    if (url.includes('/health/')) return { status: 200, text: async () => '{}' };
     const answer = init.method === 'POST' ? start : (queue.shift() as Answer);
     if (init.method === 'POST') sent.push(init.body ?? '');
     else sent.push(url.replace('http://hub:8765', ''));
