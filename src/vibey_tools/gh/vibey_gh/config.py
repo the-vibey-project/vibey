@@ -3609,6 +3609,9 @@ class GhConfig:
     # its build backend with the job's permissions, and hand the provenance gate a tool of
     # the contributor's choosing. A path from configuration cannot be moved by a PR.
     self_source: str = "."
+    # Whether `[install] self_source` was written, so `install` copies only a declared value
+    # into local git config and never the "." default (#1292).
+    self_source_declared: bool = False
 
     def __post_init__(self) -> None:
         """Cross-field rules neither dataclass can check on its own.
@@ -3937,6 +3940,7 @@ def load_config(root: Path | None = None, config: Path | None = None) -> GhConfi
         fallback_package=_fallback_package(inst.get("fallback_package", "vibey-engine")),
         pin_version=inst.get("pin_version", False),
         self_source=_self_source(inst.get("self_source", ".")),
+        self_source_declared="self_source" in inst,
         integration_branch=br.get("integration", "develop"),
         release_branch=br.get("release", "main"),
         owner=tr.get("owner", ""),
