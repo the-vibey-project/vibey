@@ -1,0 +1,197 @@
+# Made with ❤️ by [Vibey](https://the-vibey-project.github.io/vibey/), Developed by [Adam Matthew Steinberger](https://vibewithadam.matthewsteinberger.com/) ([@adammatthewsteinberger](https://github.com/adammatthewsteinberger/)).
+name: First hour
+
+# How long the documented first hour takes is a measurement, repeated weekly, never a number
+# written once (#1692, scripts/first_hour.toml). Once a week, and by hand, a GitHub-hosted
+# runner performs CONTRIBUTING.md "Your first hour" in an empty directory -- clone, setup,
+# the first test, the chaos test against PostgreSQL -- times every step, appends one line to
+# docs/architecture/evidence/first-hour.jsonl and regenerates the guide's block that states
+# the time. The result lands as a pull request through the normal merge train; nothing here
+# pushes to develop. A run that fails part-way is still recorded (the failing step is the most
+# useful line in it) but never becomes the time the guide states.
+#
+# Beside it, a survey: in the months scripts/first_hour.toml declares, one issue asks the
+# people who followed the guide how it went, and every comment on any survey issue is folded
+# into docs/architecture/evidence/first-hour-survey.jsonl by comment id, so a late or
+# out-of-order answer is read once and never skipped (sub-doctrine 10.g).
+on:
+  schedule:
+    - cron: "41 6 * * 3"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+# One measurement at a time: two runs would race to open the same pull request.
+concurrency:
+  group: first-hour-${{ github.repository }}
+  cancel-in-progress: false
+
+jobs:
+  measure:
+    name: Time the first hour
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_USER: vibey
+          POSTGRES_PASSWORD: vibey
+          POSTGRES_DB: vibey_test
+          # scram-sha-256 for every connection, local and remote -- never trust,
+          # never md5 (sub-doctrine 10.j, ADR-0061).
+          POSTGRES_HOST_AUTH_METHOD: scram-sha-256
+          POSTGRES_INITDB_ARGS: --auth-local=scram-sha-256 --auth-host=scram-sha-256
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      VIBEY_TEST_DATABASE_URL: postgresql://vibey:vibey@localhost:5432/vibey_test
+    steps:
+      # This checkout carries only the script and its record. The first hour itself is
+      # performed in a second, empty directory, from a clone the script makes.
+      - uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v7
+
+      - name: Perform the first hour
+        id: measure
+        run: |
+          set -uo pipefail
+          status=0
+          python3 scripts/first_hour.py measure \
+            --workdir "$RUNNER_TEMP/first-hour" \
+            --run-id "${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}" || status=$?
+          echo "status=$status" >> "$GITHUB_OUTPUT"
+          # A failed first hour is a finding, not a broken job: the record is kept below and
+          # the job ends red afterwards, so the failure is both recorded and visible.
+          exit 0
+
+      - name: Regenerate the guide and check it against the record
+        run: |
+          set -euo pipefail
+          python3 scripts/first_hour.py render
+          python3 scripts/first_hour.py check
+
+      - name: Commit and open the pull request
+        env:
+          GH_TOKEN: ${{ secrets.AUTOMERGE_TOKEN || github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          branch="chore/first-hour-$(date -u +%Y-%m-%d)"
+          git switch --force-create "$branch"
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add docs/architecture/evidence/first-hour.jsonl CONTRIBUTING.md
+          # A measurement always appends a line, so an unchanged record means the run never
+          # reached the tracked file: say so and fail (sub-doctrine 12.e).
+          if git diff --cached --quiet; then
+            echo "::error::the measurement left the tracked record unchanged"
+            exit 1
+          fi
+          git commit -m "chore(devex): record the first-hour measurement" \
+            -m "Made-With: Made with ❤️ by [Vibey](https://the-vibey-project.github.io/vibey/), Developed by [Adam Matthew Steinberger](https://vibewithadam.matthewsteinberger.com/) ([@adammatthewsteinberger](https://github.com/adammatthewsteinberger/))."
+          git push --force-with-lease="refs/heads/$branch" origin "HEAD:$branch"
+          pr_number="$(gh pr list --repo "$GH_REPO" --head "$branch" --base develop --state open --json number --jq '.[0].number')"
+          if [ -n "$pr_number" ]; then
+            echo "updated the existing first-hour pull request #$pr_number"
+          else
+            gh pr create \
+              --repo "$GH_REPO" \
+              --base develop \
+              --head "$branch" \
+              --title "chore(devex): record the first-hour measurement" \
+              --body "Weekly timing of CONTRIBUTING.md \"Your first hour\" on a GitHub-hosted runner (\`scripts/first_hour.py\`, #1692). The measurement is appended to docs/architecture/evidence/first-hour.jsonl and the guide's generated block is regenerated from it. A run that failed part-way is recorded with the failing step and is not the time the guide states. Merge through the repository's normal train after the checks pass."
+          fi
+
+      - name: End red when the first hour did not complete
+        if: steps.measure.outputs.status != '0'
+        run: |
+          echo "::error::the documented first hour did not complete (exit ${{ steps.measure.outputs.status }}); the failing step is in the record"
+          exit 1
+
+  survey:
+    name: Ask about the first hour
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: read
+      issues: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Open this quarter's survey once
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          if ! python3 scripts/first_hour.py survey-due; then
+            echo "no survey opens this month"
+            exit 0
+          fi
+          title="$(python3 scripts/first_hour.py survey-title)"
+          label="first-hour-survey"
+          existing="$(gh issue list --repo "$GH_REPO" --label "$label" --state all --search "\"$title\" in:title" --json title --jq "[.[] | select(.title == \"$title\")] | length")"
+          if [ "$existing" != "0" ]; then
+            echo "the survey \"$title\" is already open or closed"
+            exit 0
+          fi
+          gh label create "$label" --repo "$GH_REPO" --color 0E8A16 --description "Quarterly first-hour survey" 2>/dev/null || true
+          python3 scripts/first_hour.py survey-body > "$RUNNER_TEMP/survey-body.md"
+          gh issue create --repo "$GH_REPO" --title "$title" --label "$label" --body-file "$RUNNER_TEMP/survey-body.md"
+
+      - name: Fold every survey answer into the record
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          # An unreadable issue or comment list stops here: the record is left as it was and
+          # the job is red, never a partial fold (sub-doctrine 10.g).
+          gh issue list --repo "$GH_REPO" --label first-hour-survey --state all --limit 100 \
+            --json number,title > "$RUNNER_TEMP/surveys.json"
+          jq -c '.[]' "$RUNNER_TEMP/surveys.json" | while read -r survey; do
+            number="$(jq -r .number <<<"$survey")"
+            quarter="$(jq -r '.title | capture("(?<q>[0-9]{4}-Q[1-4])").q' <<<"$survey")"
+            gh api --paginate --slurp "repos/$GH_REPO/issues/$number/comments" | jq 'add // []' > "$RUNNER_TEMP/comments.json"
+            python3 scripts/first_hour.py survey-collect --comments "$RUNNER_TEMP/comments.json" --quarter "$quarter"
+          done
+
+      - name: Open a pull request when there are new answers
+        env:
+          GH_TOKEN: ${{ secrets.AUTOMERGE_TOKEN || github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          if git diff --quiet -- docs/architecture/evidence/first-hour-survey.jsonl && [ -z "$(git ls-files --others --exclude-standard docs/architecture/evidence/first-hour-survey.jsonl)" ]; then
+            echo "no new survey answers"
+            exit 0
+          fi
+          python3 scripts/first_hour.py check
+          branch="chore/first-hour-survey-$(date -u +%Y-%m-%d)"
+          git switch --force-create "$branch"
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add docs/architecture/evidence/first-hour-survey.jsonl
+          git commit -m "chore(devex): record first-hour survey answers" \
+            -m "Made-With: Made with ❤️ by [Vibey](https://the-vibey-project.github.io/vibey/), Developed by [Adam Matthew Steinberger](https://vibewithadam.matthewsteinberger.com/) ([@adammatthewsteinberger](https://github.com/adammatthewsteinberger/))."
+          git push --force-with-lease="refs/heads/$branch" origin "HEAD:$branch"
+          pr_number="$(gh pr list --repo "$GH_REPO" --head "$branch" --base develop --state open --json number --jq '.[0].number')"
+          if [ -n "$pr_number" ]; then
+            echo "updated the existing survey pull request #$pr_number"
+          else
+            gh pr create \
+              --repo "$GH_REPO" \
+              --base develop \
+              --head "$branch" \
+              --title "chore(devex): record first-hour survey answers" \
+              --body "Answers to the quarterly first-hour survey, folded in by comment id (\`scripts/first_hour.py survey-collect\`, #1692). Each answer is recorded once, verbatim and without the author's name."
+          fi

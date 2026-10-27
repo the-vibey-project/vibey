@@ -1,0 +1,82 @@
+# Made with ❤️ by [Vibey](https://the-vibey-project.github.io/vibey/), Developed by [Adam Matthew Steinberger](https://vibewithadam.matthewsteinberger.com/) ([@adammatthewsteinberger](https://github.com/adammatthewsteinberger/)).
+#
+# The one declared source for scripts/first_hour.py (ADR-0051: configuration is declared in
+# TOML, never written into a source file). A key missing from this file is an error, not a
+# value.
+#
+# What it answers (#1692): how long does the documented first hour actually take on a fresh
+# machine, and what do the people who do it say. The first half is a measurement a scheduled
+# job repeats: it performs CONTRIBUTING.md "Your first hour" in an empty directory on a
+# GitHub-hosted runner, times every step, and appends one line to the record. The second half
+# is a quarterly survey, whose answers are folded into a second record.
+
+[first_hour]
+# The committed, append-only measurement record (one JSON object per line).
+record = "docs/architecture/evidence/first-hour.jsonl"
+# The committed, append-only survey record. A comment is recorded once, by its id.
+survey_record = "docs/architecture/evidence/first-hour-survey.jsonl"
+# The guide that states the measured time inside its GENERATED block.
+guide = "CONTRIBUTING.md"
+# The named owner of the first hour: who reads the record, runs the survey and answers for
+# the number in the guide. A GitHub login. Changing it is a pull request.
+owner = "adammatthewsteinberger"
+# Where the measured repository is cloned from, as the guide's step 1 clones it.
+repository_url = "https://github.com/the-vibey-project/vibey.git"
+branch = "develop"
+# What the runner stands in for. Said in the record and the guide, never left implicit
+# (sub-doctrine 10.f): the measured time covers exactly the steps below, on this machine.
+runner = "GitHub-hosted ubuntu-latest, PostgreSQL as a service container"
+substitutions = [
+  "PostgreSQL is a service container the workflow starts, not installed with apt as step 3 describes",
+  "the role and ~/.pgpass of step 3 are replaced by VIBEY_TEST_DATABASE_URL",
+  "step 4 (a small change) and step 5 (the pull request) are the contributor's own time and are not measured",
+]
+# Every step is bounded by this many seconds; a step that exceeds it is recorded as failed.
+step_timeout_s = 2700
+
+# The steps, in the order the guide gives them. `argv` is run without a shell. `{url}`,
+# `{branch}` and `{dir}` are replaced; `cwd` is `workdir` (the empty directory the run was
+# given) or `clone` (the repository just cloned into it).
+[[first_hour.steps]]
+name = "clone"
+guide_step = "1"
+cwd = "workdir"
+argv = ["git", "clone", "--branch", "{branch}", "{url}", "{dir}"]
+
+[[first_hour.steps]]
+name = "setup"
+guide_step = "1"
+cwd = "clone"
+argv = ["uv", "run", "--extra", "dev", "vibey-gh", "setup"]
+
+[[first_hour.steps]]
+name = "version"
+guide_step = "1"
+cwd = "clone"
+argv = ["uv", "run", "vibey", "--version"]
+
+[[first_hour.steps]]
+name = "first test"
+guide_step = "2"
+cwd = "clone"
+argv = ["uv", "run", "pytest", "src/vibey_tools/gh/test/test_book.py", "-q", "--no-cov"]
+
+[[first_hour.steps]]
+name = "chaos test"
+guide_step = "3"
+cwd = "clone"
+argv = ["uv", "run", "pytest", "tests/infrastructure/db/test_chaos.py", "-q"]
+
+[first_hour.survey]
+# A survey opens in these months (1 to 12), once, titled with its quarter.
+months = [1, 4, 7, 10]
+label = "first-hour-survey"
+title = "First-hour survey {quarter}"
+# The text above the questions. Answers are comments on the issue.
+intro = "You or someone you know followed CONTRIBUTING.md \"Your first hour\" this quarter? Answer in one comment; skip any question. Your answers are recorded verbatim in docs/architecture/evidence/first-hour-survey.jsonl without your name."
+questions = [
+  "How long did it take from clone to a green first test, in minutes? Where did you wait or hesitate?",
+  "Which step was unclear, or wrong for your machine?",
+  "Did you reach a pull request? If not, where did you stop?",
+  "One thing to change.",
+]
