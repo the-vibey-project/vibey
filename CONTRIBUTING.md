@@ -455,7 +455,14 @@ merge", so the maintainer merges it by hand.
 When a skill or procedure changes, update all four agent-surface trees in
 the same PR: `.claude/skills/`, `.cursor/rules/`, `.agents/skills/`, and
 `.agent/rules/`. CLAUDE.md, AGENTS.md and GEMINI.md hold facts, not
-procedures, and change together.
+procedures, and are **generated from one source**, `docs/agents/instructions.toml`:
+edit that file (a `full` and a `brief` edition of each block, and every difference
+between the three declared beside the text), then run
+`python scripts/agent_instructions.py render`. Do not edit the three files by hand;
+`tests/meta/test_agent_instructions.py` fails when one differs from what the source
+makes, and names the command. The block between `<!-- vibey:begin -->` and
+`<!-- vibey:end -->` in each file belongs to vibey's provisioner and is carried over
+untouched.
 
 ## Decisions and governing rules
 
@@ -464,8 +471,9 @@ An architectural choice is an ADR in
 Decision, Consequences, and Alternatives rejected. Adding one means the next
 contiguous number, an entry in the `properdocs.yml` nav (a title with no
 colon, or the book exporter drops the chapter), and bumping the "(N ADRs)"
-count in CLAUDE.md, AGENTS.md, GEMINI.md, README.md and docs/index.md;
-`tests/meta/test_adr_counts.py` fails otherwise.
+count in `docs/agents/instructions.toml` (then render CLAUDE.md, AGENTS.md and
+GEMINI.md from it), README.md and docs/index.md; `tests/meta/test_adr_counts.py`
+fails otherwise.
 
 A **governing rule** — one that binds future decisions, survives a rewrite,
 and is about conduct rather than mechanism — is not law until it is a
