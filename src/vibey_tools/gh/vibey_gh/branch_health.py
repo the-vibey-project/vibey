@@ -29,15 +29,20 @@ from typing import Any
 
 from vibey_gh import github_state
 from vibey_gh.config import GhConfig, load_config
+from vibey_gh.failure_evidence import RED, FailureEvidence
 from vibey_gh.gh_transport import GhTransport
 from vibey_gh.interfaces.branch_health_interface import BranchHealthInterface, BranchHealthVerdict
+from vibey_gh.interfaces.failure_evidence_interface import (
+    FailingTest,
+    FailureEvidenceInterface,
+    StepFailure,
+)
 from vibey_gh.interfaces.gh_transport_interface import GhTransportInterface
 from vibey_gh.interfaces.tracking_issue_interface import TrackingIssueInterface
 from vibey_gh.tracking_issue import TrackingIssue
 
 __all__ = ["BranchHealth"]
 
-RED = frozenset({"failure", "timed_out", "startup_failure"})
 PROVEN = frozenset({"success"})
 NEUTRAL = frozenset({"skipped", "neutral"})
 
@@ -52,6 +57,7 @@ class BranchHealth(BranchHealthInterface):
         transport: GhTransportInterface | None = None,
         tracker: TrackingIssueInterface | None = None,
         repository: Callable[[], str] = github_state.repository,
+        evidence: FailureEvidenceInterface | None = None,
     ) -> None:
         self._config = config
         self._transport: GhTransportInterface = transport or GhTransport()
@@ -59,6 +65,7 @@ class BranchHealth(BranchHealthInterface):
             transport=self._transport, repository=repository
         )
         self._repository = repository
+        self._evidence: FailureEvidenceInterface = evidence or FailureEvidence()
 
     @staticmethod
     def key(branch: str) -> str:
@@ -111,11 +118,18 @@ class BranchHealth(BranchHealthInterface):
         if state == "red":
             named = ", ".join(failed) if failed else "the workflow could not start"
             title = f"{branch} is red: {named}"
+            blocks = [
+                self._describe(repository, failed_job, cfg)
+                for failed_job in jobs
+                if failed_job.get("name") in failed and failed_job.get("conclusion") in RED
+            ]
+            evidence = "\n\n".join(blocks)
             body = (
                 f"The CI run on `{branch}` at {sha} is red: {named}.\n\n"
                 f"- Run: {url}\n"
                 f"- Watched checks: {', '.join(watched)}\n\n"
-                "Pull requests merging now merge over a failing branch. This issue closes "
+                + (f"{evidence}\n\n" if evidence else "")
+                + "Pull requests merging now merge over a failing branch. This issue closes "
                 "itself when a later run on the branch's tip is green (vibey-gh "
                 "`[branch_health]`)."
             )
@@ -123,7 +137,8 @@ class BranchHealth(BranchHealthInterface):
                 key,
                 title,
                 body,
-                event=f"Red at {sha[:12]}: {named} — {url}",
+                event=f"Red at {sha[:12]}: {named} — {url}"
+                + (f"\n\n{evidence}" if evidence else ""),
                 event_key=f"run-{run_id}",
                 labels=cfg.branch_health.labels,
             )
@@ -143,6 +158,66 @@ class BranchHealth(BranchHealthInterface):
         if run.returncode:
             raise RuntimeError(f"gh api {path}: {run.stderr.strip()}")
         return TrackingIssue.decode_pages(run.stdout)
+
+    def _log(self, repository: str, job_id: Any, limit: int) -> tuple[str, bool] | None:
+        """A failed job's log and whether it was cut to its tail, or None if unreadable.
+
+        Never raises: the alert is filed with or without the log.
+        """
+        if job_id is None:
+            return None
+        done = self._transport.run(["api", f"repos/{repository}/actions/jobs/{job_id}/logs"])
+        if done.returncode:
+            return None
+        raw = done.stdout.encode("utf-8")
+        if len(raw) <= limit:
+            return done.stdout, False
+        return raw[-limit:].decode("utf-8", "ignore"), True
+
+    def _describe(self, repository: str, job: Mapping[str, Any], cfg: GhConfig) -> str:
+        """One failed job's evidence block; every field that is unknown says so."""
+        health = cfg.branch_health
+        check = str(job["name"])
+        failed = self._evidence.failed_steps(job)
+        step = failed[0] if failed else None
+        lines = [f"**{check}**", self._step_line(job, step)]
+        test: FailingTest | None = None
+        log = self._log(repository, job.get("id"), health.log_bytes)
+        if log is None:
+            lines.append("- first failing test: unknown: the job log could not be read")
+        else:
+            text, truncated = log
+            test = self._evidence.first_failing_test(text, health.test_id_pattern, truncated)
+            lines.append(self._test_line(text, truncated, test))
+        repro = self._evidence.reproduction(
+            check, step.name if step else None, test.test_id if test else None, health.reproduce
+        )
+        lines.append(
+            f"- reproduce: `{repro.command}`"
+            if repro.command
+            else f"- reproduce: unknown: {repro.reason}"
+        )
+        return "\n".join(lines)
+
+    @staticmethod
+    def _step_line(job: Mapping[str, Any], step: StepFailure | None) -> str:
+        if step is None:
+            return "- step: unknown: the forge reported no failed step"
+        label = f"{step.name} (step {step.number})"
+        url = job.get("html_url")
+        return f"- step: [{label}]({url}#step:{step.number}:1)" if url else f"- step: {label}"
+
+    def _test_line(self, text: str, truncated: bool, test: FailingTest | None) -> str:
+        note = " (log truncated to its tail; no line numbers)" if truncated else ""
+        if test:
+            where = f", job-log line {test.line}" if test.line else ""
+            shown = test.test_id.replace("`", "'")
+            return f"- first failing test: `{shown}`{where}{note}"
+        unknown = "- first failing test: unknown: no failing test id in the log"
+        error = self._evidence.first_error_line(text, truncated)
+        if error:
+            return f"{unknown}; first `##[error]` at job-log line {error}{note}"
+        return f"{unknown}{note}"
 
     # ------------------------------------------------------------------ the command
 
