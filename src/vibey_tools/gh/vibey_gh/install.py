@@ -22,6 +22,7 @@ from vibey_gh import dependabot
 from vibey_gh.automation_bootstrap import AutomationBootstrapGate
 from vibey_gh.config import GhConfig, load_config
 from vibey_gh.fallback_pin import FallbackPinResolver
+from vibey_gh.hooks_self_source import KEY as SELF_SOURCE_KEY, HooksSelfSource
 from vibey_gh.interfaces.fallback_pin_resolver_interface import FallbackPin
 from vibey_gh.pr_af_local import PrAfLocalModel
 from vibey_gh.review_contract import REQUIRES_WIDER_CONTEXT, REVIEW_CONTRACT
@@ -845,6 +846,11 @@ def install(
             check=False,
             capture_output=True,
         )
+        # The hooks read this from local git config, not the tracked file (#1292).
+        # Reported only when the repository declares it: an adopter that never wrote
+        # `[install] self_source` sees no new line and no new local state.
+        if HooksSelfSource().declared(cfg) is not None:
+            actions.append(Action(SELF_SOURCE_KEY, HooksSelfSource().reconcile(cfg)))
     return actions
 
 
@@ -928,5 +934,6 @@ def installed(
         )
         if result.stdout.strip() != HOOKS_DIR:
             problems.append(f"core.hooksPath is not {HOOKS_DIR} — run `vibey-gh install`")
+        problems.extend(HooksSelfSource().problems(cfg))
 
     return (not problems), problems

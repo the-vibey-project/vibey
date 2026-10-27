@@ -1714,3 +1714,11 @@ def test_the_promotion_template_carries_the_declared_schedules():
 def test_the_shipped_promotion_template_spells_the_default_it_rewrites():
     template = Path(install.__file__).parent / "templates" / "workflows" / "promote-to-main.yml"
     assert install.PROMOTION_SCHEDULE in template.read_text(encoding="utf-8")
+
+
+def test_self_source_declared_tells_a_written_value_from_the_default(tmp_path):
+    from vibey_gh.config import load_config
+
+    assert load_config(tmp_path).self_source_declared is False
+    (tmp_path / ".vibey-gh.toml").write_text('[install]\nself_source = "."\n')
+    assert load_config(tmp_path).self_source_declared is True

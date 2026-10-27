@@ -1842,23 +1842,54 @@ def _resolver(hook: str) -> str:
     return text[start : text.index("\n}\n", start) + 3]
 
 
+def _git_env() -> dict[str, str]:
+    """Every `GIT_*` scrubbed and the global and system configs ignored.
+
+    A hook exports `GIT_DIR`; a resolver test that inherited it would read the repository
+    that is running this suite, and its own `vibey-gh.self-source`, instead of the scratch one.
+    """
+    env = {k: v for k, v in os.environ.items() if not k.startswith("GIT_")}
+    env["GIT_CONFIG_GLOBAL"] = os.devnull
+    env["GIT_CONFIG_NOSYSTEM"] = "1"
+    return env
+
+
+def _set_key(root: Path, value: str) -> None:
+    """What `vibey-gh install` does: the declared source, in THIS clone's local git config.
+
+    The hooks read it from there, never from a tracked file a branch controls (#1292).
+    """
+    root.mkdir(parents=True, exist_ok=True)
+    env = _git_env()
+    subprocess.run(["git", "init", "-q", "."], cwd=root, env=env, check=True)
+    subprocess.run(
+        ["git", "config", "--local", "vibey-gh.self-source", value], cwd=root, env=env, check=True
+    )
+
+
 def _run_resolver(hook: str, cwd) -> str:
     script = _resolver(hook) + "\nvibey_gh_self\n"
     # `set -eu` on purpose: pre-push runs under it, and an unguarded test inside the
     # resolver would abort the hook instead of falling through.
     done = subprocess.run(
-        ["sh", "-c", "set -eu\n" + script], cwd=cwd, capture_output=True, text=True, check=False
+        ["sh", "-c", "set -eu\n" + script],
+        cwd=cwd,
+        env=_git_env(),
+        capture_output=True,
+        text=True,
+        check=False,
     )
     assert done.returncode == 0, done.stderr
     return done.stdout
 
 
 def _tree(root, *, config: str | None, at: str = "src/tools/gh") -> None:
+    """A monorepo tree; `config` is the clone's local `vibey-gh.self-source`, if any."""
     (root / at / "vibey_gh").mkdir(parents=True, exist_ok=True)
     (root / "pyproject.toml").write_text('name = "vibey"\n')
     (root / at / "pyproject.toml").write_text('name = "vibey-gh"\n')
     if config is not None:
-        (root / ".vibey-gh.toml").write_text(f'[install]\nself_source = "{config}"\n')
+        _set_key(root, config)
 
 
 @pytest.mark.parametrize("hook", ["pre-push", "commit-msg"])
@@ -1871,7 +1902,9 @@ def test_the_hook_runs_the_tooling_this_repository_declares(hook, tmp_path):
     standalone = tmp_path / "standalone"
     (standalone / "vibey_gh").mkdir(parents=True)
     (standalone / "pyproject.toml").write_text('name = "vibey-gh"\n')
-    (standalone / ".vibey-gh.toml").write_text("[install]\n")
+    # Unset is NOT self-hosted: the old default of "." is what #1292 removed.
+    assert _run_resolver(hook, standalone) == ""
+    _set_key(standalone, ".")
     assert _run_resolver(hook, standalone) == "."
 
     adopter = tmp_path / "adopter"
@@ -1896,8 +1929,12 @@ def test_the_hook_never_discovers_a_tool_a_branch_added(hook, tmp_path):
     # No declaration: nothing is used, even though two candidates exist on disk.
     assert _run_resolver(hook, root) == ""
 
-    # Declared: exactly what was declared, never the planted one.
-    (root / ".vibey-gh.toml").write_text('[install]\nself_source = "src/tools/gh"\n')
+    # The tracked file is branch content: naming a source there decides nothing.
+    (root / ".vibey-gh.toml").write_text('[install]\nself_source = "evil"\n')
+    assert _run_resolver(hook, root) == ""
+
+    # Declared in this clone's local config: exactly that, never the planted one.
+    _set_key(root, "src/tools/gh")
     assert _run_resolver(hook, root) == "src/tools/gh"
 
 
@@ -2091,11 +2128,11 @@ def test_a_self_hosted_hook_still_runs_the_source_it_declares(hook, tmp_path):
     """
     bin_dir = tmp_path / "bin"
     _python3(bin_dir)
-    env = _isolated_env(tmp_path, bin_dir)
+    env = _isolated_env(tmp_path, bin_dir, git=True)
 
     mono = tmp_path / "mono"
     _stand_in_tool(mono / "tools" / "gh", "declared")
-    (mono / ".vibey-gh.toml").write_text('[install]\nself_source = "tools/gh"\n')
+    _set_key(mono, "tools/gh")
     marker = tmp_path / "planted-was-imported"
     _plant(mono, marker)
     done = _resolve(hook, mono, env)
@@ -2105,7 +2142,7 @@ def test_a_self_hosted_hook_still_runs_the_source_it_declares(hook, tmp_path):
 
     standalone = tmp_path / "standalone"
     _stand_in_tool(standalone, "standalone")
-    (standalone / ".vibey-gh.toml").write_text("[install]\n")
+    _set_key(standalone, ".")
     done = _resolve(hook, standalone, env)
     assert done.returncode == 0, done.stderr
     assert done.stdout.strip() == "standalone trailer-key"
@@ -2132,7 +2169,14 @@ def test_this_repository_s_hooks_still_run_its_own_source(hook, root, tmp_path):
     """
     bin_dir = tmp_path / "bin"
     _python3(bin_dir, "-S")
-    done = _resolve(hook, root, _isolated_env(tmp_path, bin_dir))
+    # The clone's local key names the declared source. Setting it on the real checkout would
+    # rewrite a developer's git config, so a scratch clone reaches the real tree by symlink.
+    scratch = tmp_path / "clone"
+    scratch.mkdir()
+    (scratch / "tree").symlink_to(root, target_is_directory=True)
+    declared = load_config(root).self_source
+    _set_key(scratch, "tree" if declared == "." else f"tree/{declared}")
+    done = _resolve(hook, scratch, _isolated_env(tmp_path, bin_dir, git=True))
     assert done.returncode == 0, done.stderr
     assert done.stdout.strip() == load_config(root).trailer_key
 

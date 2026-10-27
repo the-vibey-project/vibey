@@ -21,6 +21,10 @@ release     = "main"
 # driver, and where it did run it could duplicate a heading.
 [install]
 union_merge_paths = []
+# This tool's own source sits at the top of this tree. Declared, because `vibey-gh install`
+# copies only a DECLARED value into the clone's local git config, where the hooks read it
+# (a tracked default would be the branch-controlled input #1292 removes).
+self_source = "."
 
 [merge_train]
 owner           = "adammatthewsteinberger"

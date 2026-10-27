@@ -30,12 +30,15 @@ commit. So is one whose fork was deleted, whose head repository GitHub reports a
 
 The local git hooks run with the developer's own authority on whatever branch is checked
 out, and a branch fetched from someone else holds that author's content. The working tree
-is therefore untrusted input to the hooks. They never search it for the tooling; they
-honour only a declared `[install] self_source`. Every interpreter they start runs with
-`PYTHONSAFEPATH=1`, which keeps the working directory off `sys.path`, so a `vibey_gh/`
-package placed at the top of the tree is not imported. Self-hosting is the deliberate
-exception. A repository that declares `self_source` runs that declared copy, and on a
-checked-out branch that is the branch's copy. The hooks also never reduce a project's
+is therefore untrusted input to the hooks. They never search it for the tooling, and they
+do not read it to choose one: the source comes from `vibey-gh.self-source` in the clone's
+local git config, which a checkout cannot change, and unset means not self-hosted. Every
+interpreter they start runs with `PYTHONSAFEPATH=1`, which keeps the working directory off
+`sys.path`, so a `vibey_gh/` package placed at the top of the tree is not imported.
+Self-hosting is the deliberate exception. A clone whose key is set (`vibey-gh install` does
+it from a declared `[install] self_source`) runs that copy, and on a checked-out branch that
+is the branch's copy. Running `vibey-gh install` on a checkout you have not reviewed can
+still set an unset key from that checkout's declaration, so review before installing. The hooks also never reduce a project's
 existing checks. A pre-existing hook, chained as `<hook>.local`, can still refuse a commit
 or a push, and the managed hook exits with its status.
 
