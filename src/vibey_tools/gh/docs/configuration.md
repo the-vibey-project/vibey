@@ -606,7 +606,8 @@ input a repository has, so the defaults are closed.
 | Field | Type / default | Meaning |
 |---|---|---|
 | `enabled` | boolean / `true` | Respond to mentions at all. |
-| `trigger` | string / `@vibey-gh` | The mention that addresses the automation. Matched on a word boundary, so `@vibey-gh-bot` is not a mention. |
+| `trigger` | string / `@vibey` | The mention that addresses the automation. Matched on a word boundary, so `@vibey-bot` is not a mention. |
+| `legacy_triggers` | string list / `["@vibey-gh"]` | Handles that still address the automation, for people who type the name it had before `@vibey`. A comment that uses one is answered, and the evaluation carries a `warning` (the workflow raises it as an annotation) naming the trigger to use instead. Set it empty to stop answering them. Each must be non-empty, contain no whitespace, and differ from `trigger`. |
 | `model` | string / `claude-sonnet-5` | Model that reads the thread and answers. |
 | `max_interactions` | integer / `10` (1–100) | Responses per thread, so a conversation cannot become an unbounded work queue. |
 | `respond_to_untrusted` | boolean / `false` | Answer commenters outside the owner/trusted set. A response costs tokens, so answering everyone is a deliberate spending decision. |
