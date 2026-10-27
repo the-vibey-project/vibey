@@ -20,7 +20,7 @@ import typer
 from typer.testing import CliRunner
 
 from tests.cli.test_operational_commands import _seed_cost_project, _seed_engines_project
-from vibey.bootstrap import build_app
+from vibey.bootstrap import DatabaseNotConfigured, build_app
 from vibey.cli import main as cli_main
 from vibey.cli.cost import COST_PRESENTER, CostCommand
 from vibey.cli.engines import ENGINES_PRESENTER, EnginesCommand
@@ -227,3 +227,36 @@ def test_ledger_show_json_with_no_project_is_a_stderr_message_and_exit_1(
 @pytest.mark.parametrize("command", ["engines", "cost"])
 def test_the_help_of_the_new_flags_names_them(command: str) -> None:
     assert "--json" in runner.invoke(app, [command, "--help"]).stdout
+
+
+# ------------------------------------------------------------------------------ guard()
+
+
+@pytest.mark.parametrize("command", ["engines", "cost"])
+def test_without_a_database_engines_and_cost_say_so_with_a_code_and_exit_3(
+    command: str, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.delenv("VIBEY_PG_URL")
+    for args in ([command], [command, "--json"]):
+        result = runner.invoke(app, args)
+        assert result.exit_code == 3, args
+        assert "VIBEY_PG_URL is not set" in result.stderr, args
+        assert result.stdout == "", args
+        assert "vibey explain E" in result.stderr, args
+
+
+@pytest.mark.parametrize("command", ["engines", "cost"])
+def test_traceback_keeps_the_raw_python_error_reachable(
+    command: str, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.delenv("VIBEY_PG_URL")
+    result = runner.invoke(app, [command, "--traceback"])
+    assert isinstance(result.exception, DatabaseNotConfigured)
+    assert result.exit_code == 1 and "vibey explain" not in result.output
+
+
+def test_traceback_changes_nothing_when_there_is_no_error(tmp_path: Path) -> None:
+    project_id = asyncio.run(_seed_engines_project(tmp_path))
+    plain = runner.invoke(app, ["engines", str(project_id), "--json"])
+    raw = runner.invoke(app, ["engines", str(project_id), "--json", "--traceback"])
+    assert raw.exit_code == 0 and raw.stdout == plain.stdout

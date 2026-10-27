@@ -102,8 +102,14 @@ Ctrl-C exits 130 and a closed pipe exits 0. Exceptions that are not
 `budget`, `budget show`, `budget set` and `budget clear` run inside `guard()` as
 well, and so does `abandon`.
 
-The other commands (`answer`, `watch`, `recover`, `status`, `engines`,
-`cost`, `ledger show`, every `deploy` subcommand, `doctor`, `operator`) are
+`engines` and `cost` run inside `guard()` too (they did not before #1686), so an unset
+`VIBEY_PG_URL` is the one-line `Error:` message and exit 3 for them as well. Their
+`--traceback` option restores the old behaviour for a caller that relied on it: a
+`VibeyError` then raises with its Python traceback and no code line. It changes nothing
+when there is no error. `--traceback` is on those two commands only.
+
+The other commands (`answer`, `watch`, `recover`, `status`,
+`ledger show`, every `deploy` subcommand, `doctor`, `operator`) are
 not guarded. Their own checks exit 1 or 2 as listed above; any other error,
 including an unset `VIBEY_PG_URL`, surfaces as a Python traceback.
 

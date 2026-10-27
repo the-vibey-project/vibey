@@ -47,7 +47,7 @@ from vibey.cli.cost import COST
 from vibey.cli.design_auto_accept import auto_accept_design_lines, auto_accept_design_startup_line
 from vibey.cli.driver import driver_app
 from vibey.cli.engines import ENGINES
-from vibey.cli.errors import EXIT_USAGE, guard
+from vibey.cli.errors import EXIT_USAGE, guard, guarded
 from vibey.cli.explain import ErrorExplainer
 from vibey.cli.gate_auto_answer import auto_answer_lines, auto_answer_startup_line
 from vibey.cli.gate_notices import GATE_NOTICE_DOCTOR, GATE_REMINDERS
@@ -135,6 +135,17 @@ app = typer.Typer(name="vibey", no_args_is_help=True)
 #: `--ignore-sabbath`, on the commands the Sabbath holds (`new`, `work`, `worker`). A
 #: per-command choice by the operator and nothing stored: it is not a `vibey.toml` key, so
 #: no file can switch the Sabbath off for a run nobody is watching.
+#: `--traceback`, on the commands that run under `guard()` but whose callers may still want the raw
+#: Python error (`engines`, `cost`): they were unguarded until #1686, so a script may rely on it.
+RawErrors = Annotated[
+    bool,
+    typer.Option(
+        "--traceback",
+        help="Let a vibey error raise with its Python traceback instead of one sentence and "
+        "exit 3 (for debugging vibey itself).",
+    ),
+]
+
 IgnoreSabbath = Annotated[
     bool,
     typer.Option(
@@ -1293,9 +1304,11 @@ def engines(
             "per-engine facts `vibey status --json` carries under `circuits`.",
         ),
     ] = False,
+    traceback: RawErrors = False,
 ) -> None:
     """Show engine health, circuit breakers, and selection metrics."""
-    asyncio.run(ENGINES.run(project_id, as_json=as_json))
+    with guarded(traceback=traceback):
+        asyncio.run(ENGINES.run(project_id, as_json=as_json))
 
 
 @app.command("loops")
@@ -1347,9 +1360,11 @@ def cost(
             "across all cycles.",
         ),
     ] = False,
+    traceback: RawErrors = False,
 ) -> None:
     """Show the cycle's spend against the caps the budget brake enforces."""
-    asyncio.run(COST.run(project_id, as_json=as_json))
+    with guarded(traceback=traceback):
+        asyncio.run(COST.run(project_id, as_json=as_json))
 
 
 @ledger_app.callback(invoke_without_command=True)
