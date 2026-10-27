@@ -478,7 +478,7 @@ export class HubClient implements HubClientInterface {
     try {
       response = await this.fetchLike(`${this.connection.baseUrl}${path}`, init);
     } catch {
-      throw new HubError('unreachable', `No hub answers at ${this.connection.baseUrl}. Is \`vibey serve\` running, and is this device on the same network?`);
+      throw new HubError('unreachable', `No hub answers at ${this.connection.baseUrl}.`);
     }
     const text = await response.text();
     if (response.status !== (options.accept ?? 200)) {

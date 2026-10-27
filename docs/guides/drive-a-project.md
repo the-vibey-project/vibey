@@ -64,5 +64,8 @@ on your disk. On a phone it asks for your fingerprint or face first, as spending
   old project, or start in another folder.
 - **"This host has not allowed projects to be started from a device."** Set
   `[hub] projects_root` as above, on the computer that runs the hub.
-- **"No hub answers."** Start one with `vibey serve`, or run `krypton`, which starts it and
-  opens its front door in your browser.
+- **"No hub answers."** Start one with `vibey hub start` (it does nothing if one already
+  runs; the desktop app and the VS Code extension run it for you when they open), or run
+  `krypton`, which starts it and opens its front door in your browser. A phone cannot start
+  the hub: it shows the command to run on the computer that hosts it, asks again by itself,
+  and carries on when the hub answers.

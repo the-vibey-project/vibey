@@ -3,7 +3,7 @@ import { Link, router } from 'expo-router';
 import { View } from 'react-native';
 import { Presenters } from '../core';
 import { AtomMark } from '../ui/atom-mark';
-import { Button, Card, Label, Loaded, Pill, Screen, useHub } from '../ui/kit';
+import { Button, Card, HubStatusCard, Label, Loaded, Pill, Screen, useHub } from '../ui/kit';
 import { ProjectActions } from './project-actions';
 
 const present = new Presenters();
@@ -15,6 +15,7 @@ export function HomeScreen() {
       <View style={{ alignItems: 'center', marginVertical: 8 }}>
         <AtomMark size={112} />
       </View>
+      <HubStatusCard />
       <Button label="Start a project" onPress={() => router.push('/start')} />
       <Loaded result={result}>
         {(projects) => {
