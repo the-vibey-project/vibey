@@ -143,12 +143,12 @@ across every lane on the machine. Exit 124 (`reaped: hang`) means the reaper sto
 gate run; it is not a test failure. CONTRIBUTING.md, "Pushing in this repository", has the
 rest.
 
-Install all three hook types once, then the provenance hooks. The order matters,
-because `pre-commit install` refuses to run while `core.hooksPath` is set:
+Install all three hook types once, then the provenance hooks, with one idempotent
+command (the order matters, because `pre-commit install` refuses to run while
+`core.hooksPath` is set, and the command does it in that order):
 
 ```bash
-pre-commit install && pre-commit install --hook-type pre-push && pre-commit install --hook-type commit-msg
-uv run vibey-gh install
+uv run --extra dev vibey-gh setup
 ```
 
 `vibey-gh install` points `core.hooksPath` at `.githooks`. The tracked shims there
