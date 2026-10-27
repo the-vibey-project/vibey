@@ -70,6 +70,9 @@ RULE_TEXTS = (
     "CLAUDE.md",
     "AGENTS.md",
     "GEMINI.md",
+    # The one source those three are generated from (scripts/agent_instructions.py), so it
+    # carries the same sentences.
+    "docs/agents/instructions.toml",
     "src/vibey_tools/gh/docs/doctrines.md",
     "docs/plans/qwenstorm-3.0.0/README.md",
     "docs/plans/qwenstorm-3.0.0/STORM-CONTEXT.md",
