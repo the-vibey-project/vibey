@@ -43,6 +43,7 @@ from vibey.bootstrap import (
 )
 from vibey.cli.abandon import abandon as abandon_command
 from vibey.cli.budget import budget_app
+from vibey.cli.command_examples import CommandExamples
 from vibey.cli.cost import COST
 from vibey.cli.design_auto_accept import auto_accept_design_lines, auto_accept_design_startup_line
 from vibey.cli.doctor_output import (
@@ -156,6 +157,7 @@ IgnoreSabbath = Annotated[
     bool,
     typer.Option(
         "--ignore-sabbath",
+        rich_help_panel="Advanced",
         help=(
             "Run even while the Sabbath window (sub-doctrine 8.i) would rest this command. "
             "For this one command only: it is said on stderr when it applies, and nothing is "
@@ -298,7 +300,15 @@ def _build_spend_recorder(
 
 @app.command("new")
 def new_project(
-    name: str,
+    name: Annotated[
+        str,
+        typer.Argument(
+            metavar="NAME",
+            help="A name for the project, shown by `vibey projects`. It is a label: vibey "
+            "does not require it to be unique, and the project is identified by its id and "
+            "its checkout (--repo).",
+        ),
+    ],
     repo: Annotated[Path, typer.Option("--repo")] = Path("."),
     intake: Annotated[
         str | None,
@@ -307,11 +317,14 @@ def new_project(
             help="Initial issue/task text to seed the DESIGN ledger with",
         ),
     ] = None,
-    max_cycles: Annotated[int, typer.Option("--max-cycles", min=1)] = 10,
+    max_cycles: Annotated[
+        int, typer.Option("--max-cycles", rich_help_panel="Spending and turn limits", min=1)
+    ] = 10,
     max_cycle_dollars: Annotated[
         float | None,
         typer.Option(
             "--max-cycle-dollars",
+            rich_help_panel="Spending and turn limits",
             min=0.01,
             help="Cap engine spend per cycle; exceeding it parks a "
             "budget_exhausted gate instead of starting more sessions",
@@ -319,23 +332,30 @@ def new_project(
     ] = None,
     max_cycle_turns: Annotated[
         int | None,
-        typer.Option("--max-cycle-turns", min=1, help="Cap engine turns per cycle"),
+        typer.Option(
+            "--max-cycle-turns",
+            rich_help_panel="Spending and turn limits",
+            min=1,
+            help="Cap engine turns per cycle",
+        ),
     ] = None,
     skills_context_mode: Annotated[
         str,
         typer.Option(
             "--skills-context-mode",
+            rich_help_panel="Skills",
             help="Skills retrieval mode: off, shadow (measure only), or inject",
         ),
     ] = "off",
     skills_context_budget: Annotated[
         int,
-        typer.Option("--skills-context-budget", min=1_000, max=32_000),
+        typer.Option("--skills-context-budget", rich_help_panel="Skills", min=1_000, max=32_000),
     ] = 6_000,
     design_default_scope: Annotated[
         str | None,
         typer.Option(
             "--design-default-scope",
+            rich_help_panel="Advanced",
             help="Whose appetite a DESIGN question's default follows: narrowest (a question "
             "proposing an artefact the intake does not name defaults to No) or model. "
             "Overrides [design.interview] default_scope; unset keeps it (default narrowest)",
@@ -345,6 +365,7 @@ def new_project(
         Path | None,
         typer.Option(
             "--accept-spec-json",
+            rich_help_panel="Advanced",
             help=(
                 "Skip DESIGN: this reviewed spec JSON (the file `vibey design accept --spec-json` "
                 "takes) is the design. The project is created, the spec accepted with visual "
@@ -526,6 +547,7 @@ def list_gates(
         bool,
         typer.Option(
             "--remind",
+            rich_help_panel="Reminders",
             help="Send the notices now due instead: a raise notice for any gate with none "
             "on record, else each gate's next reminder on its project's schedule. Every "
             "notice is recorded as delivered or undeliverable. What an idle worker runs; "
@@ -536,6 +558,7 @@ def list_gates(
         bool,
         typer.Option(
             "--dry-run",
+            rich_help_panel="Reminders",
             help="With --remind: list the notices that are due, and send and record nothing.",
         ),
     ] = False,
@@ -626,8 +649,20 @@ def _parse_question_answers(items: tuple[str, ...]) -> dict[str, object]:
 
 @app.command("answer")
 def answer(
-    gate_id: UUID,
-    answers: Annotated[list[str] | None, typer.Argument()] = None,
+    gate_id: Annotated[
+        UUID,
+        typer.Argument(
+            metavar="GATE_ID",
+            help="The gate to answer: the id `vibey gates` prints beside each open gate.",
+        ),
+    ],
+    answers: Annotated[
+        list[str] | None,
+        typer.Argument(
+            metavar="[QUESTION_ID=ANSWER]...",
+            help="Answers to an interview gate's questions, one QUESTION_ID=ANSWER each.",
+        ),
+    ] = None,
     choice: Annotated[
         str | None,
         typer.Option("--choice", help='Answer a choice gate: sends {"choice": VALUE}'),
@@ -638,7 +673,9 @@ def answer(
     ] = None,
     raw: Annotated[
         str | None,
-        typer.Option("--raw", help="Answer with an arbitrary JSON object"),
+        typer.Option(
+            "--raw", rich_help_panel="Advanced", help="Answer with an arbitrary JSON object"
+        ),
     ] = None,
     defaults: Annotated[
         bool,
@@ -652,6 +689,7 @@ def answer(
         str | None,
         typer.Option(
             "--by",
+            rich_help_panel="Advanced",
             help="The name this answer is recorded under, for a tool that runs the command "
             "(the VS Code extension says vibey-vscode). Defaults to the account running it. "
             "A label for the record, not a permission: the account is recorded beside it.",
@@ -661,6 +699,7 @@ def answer(
         str | None,
         typer.Option(
             "--request-id",
+            rich_help_panel="Advanced",
             help="Name this request so a retry is safe: the same id with the same answer "
             "is a no-op once it has landed. Without one, every run is a new request, and "
             "a gate already answered refuses it.",
@@ -1678,17 +1717,23 @@ def doctor(
         bool,
         typer.Option(
             "--record",
+            rich_help_panel="Recording",
             help="Persist preflight (and conformance, with --conformance) to engine_health",
         ),
     ] = False,
     record_project: Annotated[
         UUID | None,
-        typer.Option("--project", help="Project to record health for (default: latest)"),
+        typer.Option(
+            "--project",
+            rich_help_panel="Recording",
+            help="Project to record health for (default: latest)",
+        ),
     ] = None,
     cluster: Annotated[
         bool,
         typer.Option(
             "--cluster",
+            rich_help_panel="In-cluster preflight",
             help="In-cluster preflight instead: DSN, workspace, secrets, database, migrations",
         ),
     ] = False,
@@ -1696,6 +1741,7 @@ def doctor(
         str | None,
         typer.Option(
             "--engines",
+            rich_help_panel="In-cluster preflight",
             help="With --cluster: the worker's --engines allow-list (chart worker.engines); "
             "engine-auth requires exactly these",
         ),
@@ -1704,6 +1750,7 @@ def doctor(
         str | None,
         typer.Option(
             "--provider",
+            rich_help_panel="In-cluster preflight",
             help="With --cluster: the worker's --provider (chart worker.provider)",
         ),
     ] = None,
@@ -1718,12 +1765,17 @@ def doctor(
         bool,
         typer.Option(
             "--sovereign-fit",
+            rich_help_panel="Capacity probe",
             help="Run and persist the portable GPT-OSS capacity probe",
         ),
     ] = False,
     fit_output: Annotated[
         Path | None,
-        typer.Option("--fit-output", help="Fit JSON path (default: local state directory)"),
+        typer.Option(
+            "--fit-output",
+            rich_help_panel="Capacity probe",
+            help="Fit JSON path (default: local state directory)",
+        ),
     ] = None,
     as_json: Annotated[
         bool,
@@ -2847,6 +2899,7 @@ def worker(
 
 
 HelpLayout().apply(app)
+CommandExamples().apply(app)
 
 
 def run(argv: Sequence[str] | None = None) -> None:
