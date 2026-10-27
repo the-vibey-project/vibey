@@ -22,6 +22,7 @@ from vibey_gh import dependabot
 from vibey_gh.automation_bootstrap import AutomationBootstrapGate
 from vibey_gh.config import GhConfig, load_config
 from vibey_gh.fallback_pin import FallbackPinResolver
+from vibey_gh.hook_inspector import HookInspector
 from vibey_gh.hooks_self_source import KEY as SELF_SOURCE_KEY, HooksSelfSource
 from vibey_gh.interfaces.fallback_pin_resolver_interface import FallbackPin
 from vibey_gh.pr_af_local import PrAfLocalModel
@@ -933,7 +934,8 @@ def installed(
             check=False,
         )
         if result.stdout.strip() != HOOKS_DIR:
-            problems.append(f"core.hooksPath is not {HOOKS_DIR} — run `vibey-gh install`")
+            problems.append(f"core.hooksPath is not {HOOKS_DIR} — run `vibey-gh setup`")
         problems.extend(HooksSelfSource().problems(cfg))
+        problems.extend(HookInspector().problems(cfg))
 
     return (not problems), problems
