@@ -225,6 +225,13 @@ def pytest_configure(config: pytest.Config) -> None:
     global _BASE_DSN
     # First, so a hang in the database setup below is as legible as one in a test.
     _arm_stack_dump()
+    # Typer reads this once, when typer.rich_utils is first imported, and a CliRunner(env=...)
+    # sets it only for the length of one call. Whichever test in a worker rendered help or an
+    # error first therefore decided, for every later test in that worker, whether CI's
+    # GITHUB_ACTIONS forced ANSI codes into option names ("-" and "-json" as two styled spans)
+    # and broke plain substring checks on --help. Set it for the whole process instead, in
+    # every worker, before any test can import it.
+    os.environ.setdefault("_TYPER_FORCE_DISABLE_TERMINAL", "1")
     _BASE_DSN = _resolve_base_dsn()
     os.environ["_VIBEY_TEST_BASE_DSN"] = _BASE_DSN
     # Once per session (the controller, or a serial run; never each xdist worker), clear
