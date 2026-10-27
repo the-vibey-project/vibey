@@ -125,3 +125,34 @@ def test_notifier_command_can_be_inspected_without_running() -> None:
     command = notifier._build_command("Title", "message")
     assert command[-1] == "Glass"
     assert "sound name (item 3 of argv)" in " ".join(command)
+
+
+class _Process:
+    def __init__(self, returncode: int, *, hangs: bool = False) -> None:
+        self.returncode = returncode
+        self._hangs = hangs
+
+    async def communicate(self) -> tuple[bytes, bytes]:
+        if self._hangs:
+            raise TimeoutError
+        return b"", b"Cannot autolaunch D-Bus without X11 $DISPLAY"
+
+
+@pytest.mark.asyncio
+async def test_a_headless_linux_host_answers_false_and_never_raises(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    notifier = DesktopNotifier(platform_override="linux")
+
+    async def missing(*args: object, **kwargs: object) -> _Process:
+        raise FileNotFoundError("notify-send")
+
+    async def no_bus(*args: object, **kwargs: object) -> _Process:
+        return _Process(returncode=1)
+
+    async def hangs(*args: object, **kwargs: object) -> _Process:
+        return _Process(returncode=0, hangs=True)
+
+    for fake in (missing, no_bus, hangs):
+        monkeypatch.setattr("asyncio.create_subprocess_exec", fake)
+        assert await notifier.notify("Title", "message") is False
