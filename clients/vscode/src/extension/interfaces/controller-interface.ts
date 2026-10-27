@@ -25,6 +25,10 @@ export interface VibeyControllerInterface {
   changed(): void;
   /** The paired hub's address, when vibey is reached through one (ADR-0068). */
   readonly hubUrl: string | undefined;
+  /** What starting the local hub on open said, or why it could not; undefined before it has run or when it is off. */
+  readonly hubNote: string | undefined;
+  /** Start the one local hub unless it runs, when `vibey.hubAutostart` is on and no hub is paired. */
+  ensureHub(): Promise<void>;
   /** Keep a checked key in secret storage and switch to the hub. */
   pairHub(url: string, key: string): Promise<void>;
   /** Forget the hub's key and go back to the local command line. */

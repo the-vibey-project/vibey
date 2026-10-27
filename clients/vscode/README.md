@@ -190,6 +190,17 @@ What the hub never allows from the network, krypton never asks it for: no key ca
 budget cap or declare paid use. **krypton: Disconnect from the hub** (or `/disconnect`) forgets
 the key and goes back to the local command line at once.
 
+## The one hub on this computer
+
+There is one vibey hub per user, and every krypton interface (this editor, the desktop app, a
+terminal) starts and stops the same one. When the editor opens and no hub runs, krypton starts it
+(`vibey hub start`, in the background; switch it off with `vibey.hubAutostart`). **Closing the
+editor never stops it.** **krypton: Start the vibey hub on this computer** (`/hub start`),
+**Stop the vibey hub on this computer** (`/hub stop`, a clean shutdown, never forced) and
+**Show whether the vibey hub runs** (`/hub status`) are the buttons for it. The status bar's
+tooltip says what the start said, or why it could not. A device paired with a hub elsewhere
+(`vibey.hubUrl`) does not start a local one on open.
+
 ## Run vibey on GitHub's runners
 
 vibey can run any of its commands on the repository's GitHub-hosted runners instead of on this
@@ -389,6 +400,9 @@ force.
 |---|---|---|---|
 | `vibey.connectHub` | Connect to vibey on this network | `/connect [address]` | `/connect studio.local` |
 | `vibey.disconnectHub` | Disconnect from the hub | `/disconnect` | `/disconnect` |
+| `vibey.startHub` | Start the vibey hub on this computer | `/hub start` | `/hub start` |
+| `vibey.stopHub` | Stop the vibey hub on this computer | `/hub stop` | `/hub stop` |
+| `vibey.hubStatus` | Show whether the vibey hub runs | `/hub status` | `/hub status` |
 | `vibey.runOnWorkflows` | Run a vibey command on GitHub | `/workflows <vibey command line>` | `/workflows status --json` |
 | `vibey.chooseTheme` | Choose the theme (Light, Dark or System) | `/theme system|light|dark` | `/theme system` |
 
@@ -444,6 +458,7 @@ Change them in **Settings** (search for `vibey`), or in `settings.json`.
 | `vibey.environment.allow` | `[]` | Extra environment variables (a name, or a prefix ending in `*`) passed to the engine and the commands the model runs. vibey's own variables (`VIBEY_*`), PostgreSQL's (`PG*`) and anything named like a database credential are never passed, whatever this says. |
 | `vibey.theme` | `"system"` | How krypton's panels are coloured. **System** follows the editor's colour theme, live; **Light** and **Dark** keep krypton's own palette from the design tokens (ADR-0066). Remembered on this device. |
 | `vibey.hubUrl` | `""` | The vibey hub (`vibey serve`, ADR-0068) this device is paired with, like `http://studio.local:8765`. Empty: the local `vibey` command line, the default. Set it with **krypton: Connect to vibey on this network**, which also keeps the hub's key in the editor's secret storage, never in settings. |
+| `vibey.hubAutostart` | `true` | Start the one vibey hub on this computer (`vibey hub start`) when the editor opens and none runs. Closing the editor never stops it: **krypton: Stop the vibey hub on this computer** does. Skipped when this device is paired with a hub (`vibey.hubUrl`). |
 | `vibey.workflows` | `false` | Run every vibey call on the repository's GitHub workflows, as `vibey --workflows …` (ADR-0085), instead of on this computer. It needs the GitHub CLI (`gh`) installed and logged in, and the open folder's repository to carry `.github/workflows/vibey-remote.yml`. Each call waits for its run, so views are slow to fill. A paired hub (`vibey.hubUrl`) takes precedence. **krypton: Run a vibey command on GitHub** sends a single command either way. |
 
 ## When something is wrong
