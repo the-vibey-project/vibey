@@ -42,7 +42,7 @@ jobs:
       true &&
       github.event.sender.type != 'Bot' &&
       (github.event_name == 'workflow_dispatch' ||
-       contains(github.event.comment.body, '@vibey-gh'))
+       (contains(github.event.comment.body, '@vibey') || contains(github.event.comment.body, '@vibey-gh')))
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -114,6 +114,8 @@ jobs:
           # shellcheck disable=SC2086
           result=$(vibey-gh conversation evaluate $args)
           printf '%s\n' "$result" | jq .
+          warning=$(jq -r .warning <<<"$result")
+          if [ -n "$warning" ]; then echo "::warning::$warning"; fi
           {
             echo "state=$(jq -r .state <<<"$result")"
             echo "is_pull_request=$(jq -r .is_pull_request <<<"$result")"

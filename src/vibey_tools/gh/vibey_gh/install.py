@@ -473,6 +473,16 @@ def render_workflow(source: Path, cfg: GhConfig, *, fallback_pin: FallbackPin | 
     wanted = wanted.replace(
         "__VIBEY_GH_CONVERSATION_ENABLED__", "true" if talk.enabled else "false"
     )
+    # The cheap filter admits the trigger and every legacy handle, so a comment that still
+    # says `@vibey-gh` reaches `conversation evaluate`, which answers it with a warning.
+    mention = " || ".join(
+        f"contains(github.event.comment.body, '{handle}')"
+        for handle in (talk.trigger, *talk.legacy_triggers)
+    )
+    wanted = wanted.replace(
+        "contains(github.event.comment.body, '__VIBEY_GH_CONVERSATION_TRIGGER__')",
+        f"({mention})",
+    )
     wanted = wanted.replace("__VIBEY_GH_CONVERSATION_TRIGGER__", talk.trigger)
     wanted = wanted.replace("__VIBEY_GH_CONVERSATION_MODEL__", talk.model)
     issues = cfg.issue_automation

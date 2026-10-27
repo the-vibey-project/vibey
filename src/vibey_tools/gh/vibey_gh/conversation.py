@@ -34,7 +34,7 @@ from typing import Any, cast
 from urllib.parse import urlparse
 
 from vibey_gh import github_state
-from vibey_gh.config import GhConfig, normalise_actor
+from vibey_gh.config import ConversationConfig, GhConfig, normalise_actor
 from vibey_gh.interfaces.conversation_interface import ConversationThreadInterface
 from vibey_gh.issue_automation import sanitize
 
@@ -69,6 +69,8 @@ class Evaluation:
     request: str = ""
     interaction: int = 0
     may_change_files: bool = False
+    # Set when the comment addressed a legacy handle, so the workflow can say so out loud.
+    warning: str = ""
 
     def to_json(self) -> str:
         return json.dumps(asdict(self), sort_keys=True)
@@ -98,7 +100,7 @@ def state_body(state: ConversationState, summary: str) -> str:
 def mentions(body: str, trigger: str) -> bool:
     """Whether a comment addresses the automation.
 
-    Matched on a word boundary so `@vibey-gh` is a mention and `@vibey-gh-bot` or an email
+    Matched on a word boundary so `@vibey` is a mention and `@vibey-bot` or an email
     address containing it is not. A mention inside a fenced code block still counts: this
     is a cheap check, and the expensive judgement belongs to the model with the whole
     thread in front of it.
@@ -106,6 +108,18 @@ def mentions(body: str, trigger: str) -> bool:
     if not trigger:
         return False
     return re.search(rf"(?<![\w-]){re.escape(trigger)}(?![\w-])", body or "") is not None
+
+
+def matched_trigger(body: str, policy: ConversationConfig) -> str:
+    """The handle the comment addressed: the trigger, else the first legacy handle, else "".
+
+    Module-level beside `mentions` and `request_of`, which it composes and the tests pin; a
+    class would add an interface for one three-line loop.
+    """
+    for handle in (policy.trigger, *policy.legacy_triggers):
+        if mentions(body, handle):
+            return handle
+    return ""
 
 
 def request_of(body: str, trigger: str) -> str:
@@ -250,6 +264,8 @@ def evaluate(
     is_pr = ConversationThread(subject).is_pull_request
     trusted = _trusted(author, cfg)
     state = stored or ConversationState(subject=number)
+    handle = matched_trigger(body, policy)
+    legacy = bool(handle) and handle != policy.trigger
 
     def result(name: str, reason: str, **kw: Any) -> Evaluation:
         return Evaluation(
@@ -260,7 +276,13 @@ def evaluate(
             is_pull_request=is_pr,
             state=name,
             reason=reason,
-            request=request_of(body, policy.trigger),
+            request=request_of(body, handle or policy.trigger),
+            warning=(
+                f"{handle} is a legacy handle and will stop being answered; "
+                f"address the automation as {policy.trigger}"
+                if legacy
+                else ""
+            ),
             **kw,
         )
 
@@ -270,7 +292,7 @@ def evaluate(
         return result(SKIP, "the automation does not answer its own comments")
     if not policy.enabled:
         return result(SKIP, "conversation is disabled")
-    if not mentions(body, policy.trigger):
+    if not handle:
         return result(SKIP, f"the comment does not mention {policy.trigger}")
     if str(subject.get("state", "OPEN")).upper() != "OPEN":
         return result(SKIP, "the thread is closed")

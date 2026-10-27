@@ -84,7 +84,7 @@ timeout_seconds = 1800
 
 [conversation]
 enabled = true
-trigger = "@vibey-gh"
+trigger = "@vibey"
 model = "claude-sonnet-5"
 max_interactions = 10
 respond_to_untrusted = false
