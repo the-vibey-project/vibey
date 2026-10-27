@@ -59,6 +59,12 @@ clean-repo survey (`vibey-gh tidy`, `check --ci`) reads.
 With the defaults, those run exactly the `gh` command lines, in the same directory and
 environment, that they ran before `[platform]` existed.
 
+An opt-in live test (`test/test_forge_bitbucket_live.py`, marked `network`) reads a real
+Bitbucket repository, read-only. It runs only with `VIBEY_GH_NETWORK_TESTS=1` and skips,
+naming the variable, unless `VIBEY_GH_BITBUCKET_REPOSITORY` (`workspace/repo-slug`) and a
+token are set; the token is read from `VIBEY_GH_BITBUCKET_TOKEN`, or from the variable
+`VIBEY_GH_BITBUCKET_TOKEN_ENV` names. A run that skipped is not evidence.
+
 ## `[ai]`
 
 Where every AI step sends its requests. Unset, nothing changes: requests go to Anthropic
