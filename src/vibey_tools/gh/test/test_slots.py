@@ -1431,3 +1431,44 @@ def test_a_directory_lock_waits_for_its_holder_and_says_so_once(tmp_path: Path) 
     with DirectoryLock(fresh):
         fresh.rmdir()
     assert not fresh.exists() and fresh.parent.is_dir()
+
+
+def test_linux_probe_reads_amd_accelerators_from_the_kernel_and_skips_what_it_cannot_read() -> None:
+    gib = 2**30
+    files = Files(
+        {
+            # card0 is an Intel iGPU, card1 the discrete AMD card, card3 an AMD card with no
+            # VRAM figure (left out, never guessed), card4 a second one with a product name.
+            "/sys/class/drm/card0/device/vendor": "0x8086\n",
+            "/sys/class/drm/card1/device/vendor": "0x1002\n",
+            "/sys/class/drm/card1/device/device": "0x744c\n",
+            "/sys/class/drm/card1/device/mem_info_vram_total": f"{24 * gib}\n",
+            "/sys/class/drm/card3/device/vendor": "0x1002\n",
+            "/sys/class/drm/card3/device/mem_info_vram_total": "not a number\n",
+            "/sys/class/drm/card4/device/vendor": "0x1002\n",
+            "/sys/class/drm/card4/device/product_name": "Radeon Pro W7900\n",
+            "/sys/class/drm/card4/device/mem_info_vram_total": f"{48 * gib}\n",
+            "/sys/class/drm/card5/device/vendor": "0x1002\n",
+            "/sys/class/drm/card5/device/mem_info_vram_total": "0\n",
+            "/sys/class/drm/card6/device/vendor": "0x1002\n",
+            "/sys/class/drm/card6/device/mem_info_vram_total": f"{8 * gib}\n",
+        }
+    )
+    got = LinuxDeviceProbe(run=lambda argv: "", reader=files).machine()
+    assert got["accelerator"] == (
+        "AMD GPU 0x744c, 24576 MiB; Radeon Pro W7900, 49152 MiB; AMD GPU, 8192 MiB"
+    )
+
+
+def test_linux_probe_lists_nvidia_and_amd_accelerators_together() -> None:
+    files = Files(
+        {
+            "/sys/class/drm/card0/device/vendor": "0x1002",
+            "/sys/class/drm/card0/device/product_name": "Radeon RX 7900 XTX",
+            "/sys/class/drm/card0/device/mem_info_vram_total": str(24 * 2**30),
+        }
+    )
+    probe = LinuxDeviceProbe(run=lambda argv: "NVIDIA RTX 4090, 24564 MiB\n", reader=files)
+    assert probe.machine()["accelerator"] == (
+        "NVIDIA RTX 4090, 24564 MiB; Radeon RX 7900 XTX, 24576 MiB"
+    )
