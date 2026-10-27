@@ -43,8 +43,10 @@ from vibey.bootstrap import (
 )
 from vibey.cli.abandon import abandon as abandon_command
 from vibey.cli.budget import budget_app
+from vibey.cli.cost import COST
 from vibey.cli.design_auto_accept import auto_accept_design_lines, auto_accept_design_startup_line
 from vibey.cli.driver import driver_app
+from vibey.cli.engines import ENGINES
 from vibey.cli.errors import EXIT_USAGE, guard
 from vibey.cli.explain import ErrorExplainer
 from vibey.cli.gate_auto_answer import auto_answer_lines, auto_answer_startup_line
@@ -1283,40 +1285,17 @@ def status(
 @app.command("engines")
 def engines(
     project_id: Annotated[UUID | None, typer.Argument(help="Optional project ID")] = None,
+    as_json: Annotated[
+        bool,
+        typer.Option(
+            "--json",
+            help='Print JSON instead: {"project_id": ..., "engines": [...]}, the same '
+            "per-engine facts `vibey status --json` carries under `circuits`.",
+        ),
+    ] = False,
 ) -> None:
     """Show engine health, circuit breakers, and selection metrics."""
-    from vibey.infrastructure.db.engine_health_repository import PostgresEngineHealthRepository
-
-    async def list_engines() -> None:
-        async with build_app() as resources:
-            target_id = project_id
-            if target_id is None:
-                latest = await resources.projects.get_latest()
-                if latest is None:
-                    typer.echo("no projects found; create one with `vibey new` first")
-                    raise typer.Exit(1)
-                target_id = latest.project_id
-
-            health_repo = PostgresEngineHealthRepository(resources.ledger._pool)
-            records = await health_repo.list_for_project(target_id)
-            if not records:
-                typer.echo("no engines recorded for project")
-                return
-
-            header = (
-                f"{'ENGINE':<12} {'VERSION':<10} {'CIRCUIT':<10} "
-                f"{'FAILS':<6} {'SELECTED':<10} {'COST':<8}"
-            )
-            typer.echo(header)
-            typer.echo("-" * 60)
-            for r in records:
-                circuit_str = r.circuit.value if hasattr(r.circuit, "value") else str(r.circuit)
-                typer.echo(
-                    f"{r.engine_id:<12} {r.version or '-':<10} {circuit_str:<10} "
-                    f"{r.consecutive_fail:<6} {r.selected_count:<10} ${r.cost_usd_cycle:<7.2f}"
-                )
-
-    asyncio.run(list_engines())
+    asyncio.run(ENGINES.run(project_id, as_json=as_json))
 
 
 @app.command("loops")
@@ -1359,59 +1338,18 @@ def models(
 @app.command("cost")
 def cost(
     project_id: Annotated[UUID | None, typer.Argument(help="Optional project ID")] = None,
+    as_json: Annotated[
+        bool,
+        typer.Option(
+            "--json",
+            help="Print JSON instead: the caps, the cycle's spend and whether a cap is "
+            "reached (as `vibey budget show --json` has them), and each engine's BUILD spend "
+            "across all cycles.",
+        ),
+    ] = False,
 ) -> None:
     """Show the cycle's spend against the caps the budget brake enforces."""
-    from vibey.infrastructure.db.engine_health_repository import PostgresEngineHealthRepository
-
-    async def show_cost() -> None:
-        async with build_app() as resources:
-            target_id = project_id
-            if target_id is None:
-                latest = await resources.projects.get_latest()
-                if latest is None:
-                    typer.echo("no projects found; create one with `vibey new` first")
-                    raise typer.Exit(1)
-                project = latest
-            else:
-                proj = await resources.projects.get(target_id)
-                if proj is None:
-                    typer.echo(f"unknown project {target_id}")
-                    raise typer.Exit(1)
-                project = proj
-
-            # The brake's own numbers, not a second opinion (issue #210): the
-            # caps through the one parser the worker uses, and the spend from
-            # the ledger sum the worker checks before every BUILD session --
-            # which also carries DESIGN's spend, unlike engine_health. Read
-            # through the one budget reader `vibey budget` shows, too.
-            budget = (await resources.project_budgets.show(project.project_id)).budget
-            max_dollars, max_turns = budget.max_dollars, budget.max_turns
-            dollar_cap = f"${max_dollars:.2f}" if max_dollars is not None else "none (uncapped)"
-            turn_cap = str(max_turns) if max_turns is not None else "none"
-
-            typer.echo(f"Project: {project.name} (Cycle {project.cycle})")
-            typer.echo(
-                f"Cycle spend:      ${budget.dollars_spent:.2f} ({budget.turns_spent} turns)"
-            )
-            typer.echo(f"Cycle dollar cap: {dollar_cap}")
-            typer.echo(f"Cycle turn cap:   {turn_cap}")
-            if budget.any_exhausted:
-                typer.echo("Cap reached: the next BUILD session parks a budget_exhausted gate.")
-
-            # Per engine, from engine_health. Its cost column is each engine's
-            # metered BUILD-session spend (issue #209), which accumulates across
-            # cycles -- nothing resets it -- so it is labelled as such rather
-            # than as this cycle's, and it leaves DESIGN out. The count is how
-            # often rotation selected the engine, which is not a turn count.
-            health_repo = PostgresEngineHealthRepository(resources.ledger._pool)
-            records = await health_repo.list_for_project(project.project_id)
-            typer.echo("\nPer-engine (BUILD sessions, all cycles):")
-            for r in records:
-                typer.echo(
-                    f"  • {r.engine_id}: ${r.cost_usd_cycle:.2f} ({r.selected_count} selections)"
-                )
-
-    asyncio.run(show_cost())
+    asyncio.run(COST.run(project_id, as_json=as_json))
 
 
 @ledger_app.callback(invoke_without_command=True)
@@ -1428,6 +1366,14 @@ def ledger_show(
     limit: Annotated[int, typer.Option("--limit", "-n", min=1)] = 50,
     phase: Annotated[str | None, typer.Option("--phase")] = None,
     kind: Annotated[str | None, typer.Option("--kind")] = None,
+    as_json: Annotated[
+        bool,
+        typer.Option(
+            "--json",
+            help='Print JSON instead: {"project_id": ..., "events": [...]}, oldest first, '
+            "every field of each event (the shape `vibey ledger search --json` uses).",
+        ),
+    ] = False,
 ) -> None:
     """Show the append-only event ledger history."""
     # `--kind` reads a label the way `ledger search --kind` does, from the same
@@ -1449,7 +1395,7 @@ def ledger_show(
             if target_id is None:
                 latest = await resources.projects.get_latest()
                 if latest is None:
-                    typer.echo("no projects found; create one with `vibey new` first")
+                    typer.echo("no projects found; create one with `vibey new` first", err=as_json)
                     raise typer.Exit(1)
                 target_id = latest.project_id
 
@@ -1467,6 +1413,9 @@ def ledger_show(
                 events = tuple(e for e in events if e.kind == wanted)
 
             displayed = events[-limit:] if len(events) > limit else events
+            if as_json:
+                typer.echo(PRESENTER.events_json(target_id, displayed))
+                return
             for e in displayed:
                 ts = e.produced_at.strftime("%Y-%m-%d %H:%M:%S")
                 eng = f" [{e.engine_id.value}]" if e.engine_id else ""
