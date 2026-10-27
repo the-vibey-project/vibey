@@ -52,6 +52,12 @@ kr_tray_model_new(KrState *state, const char *name)
         g_ptr_array_add(model->entries, entry_new(answer, "show-gates"));
     }
     g_ptr_array_add(model->entries, entry_new("Start a project…", "start-project"));
+    /* The hub outlives krypton: starting and stopping it are offered here, and quitting is not
+     * one of them. */
+    if (connection == KR_CONNECTION_OFFLINE)
+        g_ptr_array_add(model->entries, entry_new("Start the hub", "start-hub"));
+    else if (connection == KR_CONNECTION_ONLINE)
+        g_ptr_array_add(model->entries, entry_new("Stop the hub", "stop-hub"));
     g_ptr_array_add(model->entries, entry_new("Quit", "quit"));
     return model;
 }

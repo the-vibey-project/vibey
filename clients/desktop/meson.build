@@ -69,6 +69,7 @@ core_sources = files(
   'src/core/kr-answer.c',
   'src/core/kr-discovery.c',
   'src/core/kr-format.c',
+  'src/core/kr-hub-engine.c',
   'src/core/kr-hub.c',
   'src/core/kr-lifecycle.c',
   'src/core/kr-model.c',

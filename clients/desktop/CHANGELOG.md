@@ -5,6 +5,14 @@ krypton desktop carries its own version. The Python wheel stays one distribution
 
 ## 0.1.0 (unreleased)
 
+- **krypton starts this computer's hub, and never stops it on its own (#1186).** Opening
+  krypton with no hub running runs `vibey hub start` in the background (a setting, on by
+  default, and only for *This computer*); Start, Stop and Status are in the header menu, the
+  Settings page and the tray menu. A failed start is a note in the connection status. The
+  offline banner now says what krypton is doing and what to do, instead of telling a person
+  to run `vibey serve`. `kr-hub-engine` is the new core module, tested to 100% with a script
+  in place of `vibey`; a test reads the quit paths and fails if any can reach stop.
+
 - **The first krypton desktop.** It is C17 on GTK 4 and libadwaita, with an
   `AdwNavigationSplitView` that folds on narrow windows. It covers Projects, Gates (with
   answering), Lanes, Loops and effort (to ULTRA), Budgets, Doctor, Devices and Settings.
