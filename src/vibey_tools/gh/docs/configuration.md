@@ -50,8 +50,8 @@ questions ([ADR 0001](adr/0001-forge-neutral-nouns.md), #138).
 
 | Field | Type / default | Meaning |
 |---|---|---|
-| `kind` | string / `"forgejo"` | The forge. The standard names `github`, `gitlab` and `forgejo`, and every named forge has an adapter today. The sovereign, self-hosted default is `forgejo` (ADR 0002); `github` and `gitlab` are declared-only — an adopter writes the kind explicitly to leave the default. Any unadapted value is refused as unknown. |
-| `host` | string / `""` | The forge's host, as a bare host name with an optional port (`forgejo.local`, `ghe.example.com`, `git.internal:8443`); a scheme, path or whitespace is refused. Empty, the selected adapter's own default applies: `forgejo.local` for Forgejo, `github.com` for GitHub (which `gh` assumes on its own, so a `GH_HOST` already in the environment still applies), `gitlab.com` for GitLab. Any non-empty host is handed to the selected adapter's transport. |
+| `kind` | string / `"forgejo"` | The forge. The standard names `github`, `gitlab`, `forgejo` and `bitbucket`, and every named forge has an adapter today. The sovereign, self-hosted default is `forgejo` (ADR 0002); `github`, `gitlab` and `bitbucket` are declared-only — an adopter writes the kind explicitly to leave the default. Any unadapted value is refused as unknown. |
+| `host` | string / `""` | The forge's host, as a bare host name with an optional port (`forgejo.local`, `ghe.example.com`, `git.internal:8443`); a scheme, path or whitespace is refused. Empty, the selected adapter's own default applies: `forgejo.local` for Forgejo, `github.com` for GitHub (which `gh` assumes on its own, so a `GH_HOST` already in the environment still applies), `gitlab.com` for GitLab, `api.bitbucket.org` for Bitbucket Cloud (which takes an access token, or `username:app-password`, from `token_env`). Any non-empty host is handed to the selected adapter's transport. |
 
 Apart from that refusal, which every command makes, only the reads that have moved onto the
 adapter use this table today: the open pull request heads and the releases that the

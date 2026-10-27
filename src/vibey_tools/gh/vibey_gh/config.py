@@ -275,12 +275,12 @@ class WorkflowNamesConfig:
     ruleset_drift: str = "Ruleset drift"
 
 
-# The forges `[platform] kind` accepts today: the ones with an adapter. `ForgeKind` names
-# more (such as `bitbucket`, #138), because the standard is written for every forge, but a
-# kind with no adapter is refused here, at load, rather than accepted and then quietly
-# driven as forgejo by every module that has not moved onto the adapter yet.
+# The forges `[platform] kind` accepts today: the ones with an adapter. `ForgeKind` may name
+# more than this (#138), because the standard is written for every forge, but a kind with no
+# adapter is refused here, at load, rather than accepted and then quietly driven as forgejo
+# by every module that has not moved onto the adapter yet. Every named forge has one today.
 # `ForgeSelector.kinds` must equal this, and a test holds them together.
-ADAPTED_PLATFORM_KINDS = ("github", "gitlab", "forgejo")
+ADAPTED_PLATFORM_KINDS = ("github", "gitlab", "forgejo", "bitbucket")
 
 # A bare host name, optionally with a port: what `gh` takes as `GH_HOST`. No scheme, path,
 # user or whitespace, so the value cannot smuggle anything else into the client's reading.
@@ -292,8 +292,8 @@ class PlatformConfig:
     """Which forge this repository lives on, and where (#138).
 
     `kind` selects the forge adapter, which is the only code allowed to know what platform
-    it is speaking to. The sovereign, self-hosted default is `forgejo` (ADR 0002); `github`
-    and `gitlab` are declared-only — an adopter writes the kind explicitly. `host` is that
+    it is speaking to. The sovereign, self-hosted default is `forgejo` (ADR 0002); `github`,
+    `gitlab` and `bitbucket` are declared-only — an adopter writes the kind explicitly. `host` is that
     forge's host. With `forgejo` it defaults to the adapter's own `forgejo.local` (a bare
     self-hosted instance); with `github` the `gh` client's own `github.com` is assumed when
     `host` is empty, so the default changes neither the argv nor the environment of any

@@ -15,6 +15,7 @@ from pathlib import Path
 import pytest
 
 from vibey_gh import doctor, tidy
+from vibey_gh.bitbucket_transport import BitbucketTransport
 from vibey_gh.config import ADAPTED_PLATFORM_KINDS, GhConfig, PlatformConfig, load_config
 from vibey_gh.forge import (
     ChangeRequest,
@@ -26,6 +27,7 @@ from vibey_gh.forge import (
     ForgeRepository,
     ProtectedRef,
 )
+from vibey_gh.forge_bitbucket import BitbucketForge
 from vibey_gh.forge_forgejo import ForgejoForge
 from vibey_gh.forge_github import GitHubForge
 from vibey_gh.forge_selector import ForgeSelector
@@ -141,9 +143,9 @@ def test_a_forge_the_standard_does_not_name_is_refused(kind):
         PlatformConfig(kind=kind)  # type: ignore[arg-type]
 
 
-def test_a_named_forge_without_an_adapter_is_refused_at_load():
-    with pytest.raises(ValueError, match="bitbucket adapter is not implemented yet"):
-        PlatformConfig(kind="bitbucket")  # type: ignore[arg-type]
+def test_bitbucket_loads_and_every_named_forge_has_an_adapter():
+    assert PlatformConfig(kind="bitbucket").kind == "bitbucket"
+    assert {ForgeKind(kind) for kind in ADAPTED_PLATFORM_KINDS} == set(ForgeKind)
 
 
 @pytest.mark.parametrize(
@@ -203,6 +205,29 @@ def test_github_on_github_com_leaves_gh_to_find_its_own_host(tmp_path):
     forge = ForgeSelector().select(cfg)
     assert isinstance(forge, ForgeAdapterInterface)
     assert forge == GitHubForge(root=tmp_path, transport=GhTransport(host=None))
+
+
+def test_bitbucket_is_selected_with_its_cloud_host_and_the_named_token(tmp_path, monkeypatch):
+    monkeypatch.setenv("BB_TOKEN", "app-token")
+    cfg = _config(
+        tmp_path,
+        '[platform]\nkind = "bitbucket"\nrepository = "ws/repo"\ntoken_env = "BB_TOKEN"\n',
+    )
+    forge = ForgeSelector().select(cfg)
+    assert isinstance(forge, ForgeAdapterInterface)
+    assert forge == BitbucketForge(
+        root=tmp_path,
+        repository="ws/repo",
+        transport=BitbucketTransport(host="api.bitbucket.org", token="app-token"),
+    )
+
+
+def test_bitbucket_takes_a_self_managed_host_and_no_token_when_none_is_named(tmp_path):
+    cfg = _config(tmp_path, '[platform]\nkind = "bitbucket"\nhost = "bb.example.com"\n')
+    forge = ForgeSelector().select(cfg)
+    assert forge == BitbucketForge(
+        root=tmp_path, transport=BitbucketTransport(host="bb.example.com", token="")
+    )
 
 
 def test_any_other_host_pins_gh_to_it(tmp_path):
