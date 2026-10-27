@@ -116,8 +116,10 @@ from vibey_gh.interfaces.docx_interface import (
 from vibey_gh.interfaces.fallback_pin_resolver_interface import FallbackPinInterface
 from vibey_gh.interfaces.forge_snapshot_interface import (
     AppendOutcomeInterface,
+    BreakInterface,
     ChainHeadInterface,
     ForgeReadInterface,
+    SnapshotVerifierInterface,
 )
 from vibey_gh.interfaces.local_review_interface import (
     AddedHunkSplitterInterface,
@@ -163,6 +165,7 @@ __all__ = [
     "BillingUsageInterface",
     "BookChapterInterface",
     "BookErrorInterface",
+    "BreakInterface",
     "ChainHeadInterface",
     "ChangeRequestInterface",
     "ChapterSanitizerInterface",
@@ -259,6 +262,7 @@ __all__ = [
     "SampleInterface",
     "SizedChatInterface",
     "SnapshotStoreErrorInterface",
+    "SnapshotVerifierInterface",
     "SourceContextInterface",
     "SovereignReviewInterface",
     "StageInterface",

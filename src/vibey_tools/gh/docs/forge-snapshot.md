@@ -227,8 +227,8 @@ for number, line in enumerate(open(sys.argv[1], "rb"), start=1):
 print(head)
 ```
 
-A line edited, removed or moved breaks the chain at that line. A `--verify` walk that does
-this for a whole snapshot is the next slice.
+A line edited, removed or moved breaks the chain at that line. `vibey-gh forge-snapshot
+--verify DIR` does this walk for a whole snapshot (below).
 
 The store refuses to append to a file holding anything it did not write: a line that is not
 a record, a record of another repository or forge, or a line whose write never finished.
@@ -317,12 +317,37 @@ so. The list, as this version writes it:
 A class left out with `--classes` is added to the list for that capture, with the reason
 that it was not selected, and its file and chain are left exactly as they were.
 
+## Verifying a snapshot
+
+```bash
+vibey-gh forge-snapshot --verify DIR
+```
+
+Walks every class file and the manifest in `DIR` and reads nothing from the forge: no network,
+no `gh`, no credentials. Each line goes through the same checks the store applies before it
+appends, and each file's record count and head are compared with what the manifest says. It
+exits 0 when the snapshot is intact and 1 otherwise, naming the first break in each file as
+`BROKEN <class>:<line> [<kind>] <detail>` on stderr. `--verify` and `--out` are mutually
+exclusive; giving neither or both exits 2.
+
+| Kind | What it means |
+|---|---|
+| `malformed` | the line is not a record of this forge, repository and class |
+| `non-canonical` | the line is not in the canonical form it was sealed in |
+| `bad-seal` | the line was edited after it was sealed |
+| `bad-payload` | the payload does not match its `payload_sha256` |
+| `broken-link` | `prev` is not the seal of the line before: a line was removed or moved |
+| `head-mismatch` | the file ends earlier than, or somewhere other than, the manifest says |
+| `manifest-behind` | the file holds more records than the manifest: a capture was interrupted |
+| `missing-file` | the manifest records a class the directory does not hold |
+| `unlisted-file` | a `.jsonl` file the manifest does not name |
+| `manifest-unreadable` | no manifest, or not a `vibey.forge-manifest/1` one; nothing else is checked |
+
 ## What comes next
 
 This slice is S1 of vibey#136. The rest, in order:
 
-- **S2, a `--verify` walk:** check every seal, every link and every manifest head, and report
-  the first break in each file.
+- **S2, a `--verify` walk:** shipped (#1570); see [Verifying a snapshot](#verifying-a-snapshot).
 - **S3, more classes:** the exclusions above that the REST API can serve, starting with
   timelines, commit comments and repository metadata.
 - **S4, the vibey ledger writer:** a second store that writes these records into the ledger,
