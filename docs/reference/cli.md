@@ -126,6 +126,18 @@ PostgreSQL 14, and the same SQL/runtime contract is tested against 14, 15, 16,
 17, and 18 in CI. Installation does not invent or persist a database DSN:
 set `VIBEY_PG_URL` to a database you own after the server is ready.
 
+### Examples in `--help`
+
+`new`, `answer`, `gates`, `projects`, `doctor` and `watch` each end their `--help` with one or two
+worked examples. They are one table (`vibey.cli.command_examples.EXAMPLES`), and
+`tests/cli/test_command_examples.py` resolves every line against the real command tree with each
+command's own parser, without running it, so a renamed flag or a removed command fails a test
+instead of leaving help that no longer works. In those commands' `--help`, the rarely used options sit
+under named panels after the common ones (`new`: *Spending and turn limits*, *Skills*, *Advanced*;
+`doctor`: *Recording*, *In-cluster preflight*, *Capacity probe*; `answer`: *Advanced*; `gates`:
+*Reminders*). The shared `--ignore-sabbath` option sits under *Advanced* wherever it appears
+(`new`, `work`, `worker`). No option was renamed, removed or given a new default.
+
 ### Next-step hints
 
 `guard()` appends a hint for these error types. Every command a hint names
@@ -146,7 +158,7 @@ exists, and a test asserts it (`tests/cli/test_errors_and_logging.py`).
 
 ## `vibey new NAME`
 
-Create a project and enqueue its first DESIGN interview.
+Create a project and enqueue its first DESIGN interview. `NAME` is a label shown by `vibey projects`; vibey does not require it to be unique, and the project is identified by its id and its checkout (`--repo`).
 
 | Option | Default | What it does |
 |---|---|---|
