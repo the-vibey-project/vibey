@@ -33,6 +33,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 
 from vibey_gh.config import GhConfig
+from vibey_gh.forge import NotSupported
 from vibey_gh.forge_selector import ForgeSelector
 from vibey_gh.interfaces.forge_adapter_interface import ForgeAdapterInterface
 
@@ -149,7 +150,9 @@ def survey(
                 remote_merged.append(short)
 
     releases, release_problem = forge.releases(limit=100)
-    if release_problem:
+    # A forge with no release object (Bitbucket's `NotSupported`) has no draft release to
+    # leave behind: that is an answer, not a failure to look, so it is not a problem.
+    if release_problem and not NotSupported.is_problem(release_problem):
         problems.append(f"{release_problem}; draft releases were not judged")
     drafts = [release.label for release in releases if release.draft]
 

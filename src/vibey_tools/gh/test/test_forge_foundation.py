@@ -108,3 +108,12 @@ def test_every_name_the_interfaces_package_exports_can_be_imported():
 
     missing = [name for name in package.__all__ if not hasattr(package, name)]
     assert missing == [], f"__all__ promises names the package does not import: {missing}"
+
+
+def test_a_not_supported_problem_is_told_apart_from_a_forge_that_could_not_be_asked():
+    from vibey_gh.forge import ForgeKind, NotSupported
+
+    for kind in ForgeKind:
+        assert NotSupported.is_problem(NotSupported(kind, "releases", "none").problem)
+    assert not NotSupported.is_problem("Bitbucket API error 401: Unauthorized")
+    assert not NotSupported.is_problem("")
