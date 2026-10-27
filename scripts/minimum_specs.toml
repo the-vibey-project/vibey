@@ -234,6 +234,11 @@ version_pattern = '(?m)^Version\s*:\s*(\S+)'
 [minimum_specs.linux.distros."ubuntu-24.04"]
 name = "Ubuntu 24.04 LTS"
 support = "CI `desktop` job (ci.yml, ubuntu-latest); .deb planned (clients/desktop/PACKAGING.md)"
+# What proves this distro in CI (tests/meta/test_supported_platforms_have_ci.py reads it): the job
+# and the matrix cell of .github/workflows/ci.yml. `pinned` says whether that cell names the
+# release; the test holds the claim to the workflow, so a floating `ubuntu-latest` cannot be
+# declared as a pinned Ubuntu 24.04. It is not pinned today (#1116 build plan, PR 2).
+ci = { job = "desktop", cell = "ubuntu", pinned = false }
 package_manager = "apt"
 images = { x86_64 = "ubuntu:24.04", aarch64 = "ubuntu:24.04" }
 unavailable = {}
@@ -244,6 +249,9 @@ versions = { kernel = "linux-image-generic", python = "python3", postgres = "pos
 [minimum_specs.linux.distros."ubuntu-26.04"]
 name = "Ubuntu 26.04 LTS"
 support = "planned (#1116; clients/desktop/PACKAGING.md builds the .deb for 24.04 and 26.04)"
+# No CI cell proves this release yet; the pinned Ubuntu rows are PR 2 of the #1116 build plan.
+# A declared distro with neither a cell nor this marker fails tests/meta.
+ci = { pending = "#1116: pinned Ubuntu CI rows are not built yet" }
 package_manager = "apt"
 images = { x86_64 = "ubuntu:26.04", aarch64 = "ubuntu:26.04" }
 unavailable = {}
@@ -254,6 +262,7 @@ versions = { kernel = "linux-image-generic", python = "python3", postgres = "pos
 [minimum_specs.linux.distros.arch]
 name = "Arch Linux"
 support = "CI `desktop` job (ci.yml, archlinux:latest); PKGBUILD (clients/desktop/packaging/arch)"
+ci = { job = "desktop", cell = "arch" }
 package_manager = "pacman"
 images = { x86_64 = "archlinux:latest", aarch64 = "" }
 unavailable = { aarch64 = "no official Arch Linux image for arm64: archlinux:latest is amd64 only, and Arch Linux ARM is a separate project, not Arch" }
@@ -264,6 +273,7 @@ versions = { kernel = "linux", python = "python", postgres = "postgresql", glib 
 [minimum_specs.linux.distros.fedora]
 name = "Fedora (current release)"
 support = "CI `desktop` job (ci.yml, fedora:latest); RPM spec (clients/desktop/packaging/fedora); `vibey install` (dnf); a Fedora COPR channel is in ADR-0019"
+ci = { job = "desktop", cell = "fedora" }
 package_manager = "dnf"
 images = { x86_64 = "fedora:latest", aarch64 = "fedora:latest" }
 unavailable = {}
