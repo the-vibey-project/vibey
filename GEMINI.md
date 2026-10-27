@@ -1,5 +1,7 @@
 # GEMINI.md
 
+<!-- Generated from docs/agents/instructions.toml by scripts/agent_instructions.py -- edit that file, not this one. `python scripts/agent_instructions.py check` fails when they differ. -->
+
 `vibey`: a queue-based, six-phase conductor for autonomous software delivery.
 Orchestrates claudeloop and codexloop (plus the local
 runner's two engines: `gptossloop`, the sovereign default on GPT-OSS 20B, and opt-in
@@ -14,6 +16,7 @@ procedures live in `.agent/rules/`
   stdin.
 - Credits ≠ rate-limit window. `CreditsExhausted` has no `resets_at` —
   enforced by type, property test, and DB CHECK constraint.
+- Capacity rejection outranks a completion claim.
 - `domain/` stays pure: no I/O, no async, no clock, no network
   (`tests/domain/test_domain_purity.py`, AST walk). Imports: stdlib, itself, and
   dependency-free family packages only (`vibey-gh`, `vibey-skills`,
@@ -86,12 +89,15 @@ procedures live in `.agent/rules/`
   exemption for config, scripts or tests. A `.js` that must exist is compiled by
   `tsc` from a named `.ts` and declared in `scripts/typescript_artifacts.toml`
   (`python3 scripts/typescript_artifacts.py`). ADR-0088; sub-doctrine 9.f.
-- Capacity rejection outranks a completion claim.
 - No-loss handoff gate is not negotiable. Failed gate → retry, escalation to
   full-transcript mode, or human gate — never silent partial.
 - Every job is idempotent under replay.
 - Ledger is append-only.
 - Conventional Commits enforced by pre-commit hook.
+- Run `git commit` and `git push` in the foreground and wait for them. Never edit a file in
+  a worktree while a git hook runs there: pre-push hooks test the working tree, so a file
+  written mid-run fails the push with `files were modified by this hook` while the suite itself
+  passed. It reads as a test failure and is not one.
 - Never implement on `main`. PRs squash into `develop` via the merge train
   (`vibey-gh merge-train`); `vibey-gh promote` rebase-merges `develop` into
   `main` (linear history). `develop` → TestPyPI, `main` → PyPI, for `vibey-engine`
@@ -104,6 +110,13 @@ procedures live in `.agent/rules/`
   Android and iOS; the `.vsix`), and the extension's publication to Open VSX
   (`openvsx.yml`). `clients/` is in
   `[version] code_paths`, so a client-only change is releasable. ADR-0028.
+- Sovereign self-hosted free is the only default on every surface; paid is declared-only. Each
+  operational surface has one vibey-owned protocol and an always-on sovereign default adapter
+  (engine `gptossloop`, cloud OpenStack, forge Forgejo, tickets Plane, docs BookStack, secrets
+  Bitwarden, files Nextcloud, email Forward Email, SMS Fossify Messages, messaging Matrix with
+  Element). Paid platforms (claudeloop/codexloop, azure/aws/gcp, github/gitlab/bitbucket, and
+  the rest) are declared-only relays through the sovereign host and are never a default.
+  Sub-doctrine 8.b, ADR-0042.
 
 ## Layer map
 
@@ -126,6 +139,13 @@ package, two engines, ADR-0064 — and vibey-runners-common) and
 vibey-bootstrap). Sibling GitHub repos are gone and so are the separate PyPI
 names — the tree ships as one `vibey-engine` package (ADR-0037, ADR-0069); the apps ship as `krypton-app`.
 
+## Phases
+
+Six phases plus optional visual interstitial: INTAKE → ① DESIGN → [VISUAL_DESIGN] →
+② BUILD ⇄ ③ REVIEW. After ③: deployment opt-in → ④ DEPLOY_DESIGN → ⑤ DEPLOY_EXECUTE →
+⑥ DEPLOY_REVIEW → DONE(deployed); or deployment opt-out → DONE(local).
+Interactive: ①, ③, ④, ⑥, VISUAL_DESIGN. Autonomous: ②, ⑤.
+
 ## Queue and engines
 
 - **Queue:** PostgreSQL 14+, never SQLite (`FOR UPDATE SKIP LOCKED`, ADR-0002);
@@ -147,13 +167,6 @@ names — the tree ships as one `vibey-engine` package (ADR-0037, ADR-0069); the
 - **Handoff:** when `CreditsExhausted`, vibey verifies brief against no-loss
   gate (10 rules: R1–R10), writes full ledger to receiving worktree, seeds
   next engine.
-
-## Phases
-
-Six phases plus optional visual interstitial: INTAKE → ① DESIGN → [VISUAL_DESIGN] →
-② BUILD ⇄ ③ REVIEW. After ③: deployment opt-in → ④ DEPLOY_DESIGN → ⑤ DEPLOY_EXECUTE →
-⑥ DEPLOY_REVIEW → DONE(deployed); or deployment opt-out → DONE(local).
-Interactive: ①, ③, ④, ⑥, VISUAL_DESIGN. Autonomous: ②, ⑤.
 
 ## Commands
 
