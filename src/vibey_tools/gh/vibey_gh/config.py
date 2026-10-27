@@ -2981,10 +2981,46 @@ class BranchHealthConfig:
     enabled: bool = True
     checks: tuple[str, ...] = ()
     labels: tuple[str, ...] = ()
+    # `"<check>"` or `"<check> :: <step>"` -> the command that reproduces that failure
+    # locally; `{test}` is replaced by the first failing test id the job log names. The
+    # most specific key wins, and a check with no entry is reported as unmapped.
+    reproduce: tuple[tuple[str, str], ...] = ()
+    test_id_pattern: str = r"^FAILED (\S+)"
+    # The most of a failed job's log that is read; past it the tail is kept and said so.
+    log_bytes: int = 4 * 1024 * 1024
 
     def __post_init__(self) -> None:
         _unique_nonempty("branch_health.checks", self.checks)
         _unique_nonempty("branch_health.labels", self.labels)
+        _unique_nonempty("branch_health.reproduce", tuple(key for key, _ in self.reproduce))
+        if not all(command.strip() for _, command in self.reproduce):
+            raise ValueError("branch_health.reproduce commands must be non-empty")
+        try:
+            re.compile(self.test_id_pattern)
+        except re.error as exc:
+            raise ValueError(f"branch_health.test_id_pattern is not a regex: {exc}") from exc
+        if self.log_bytes < 1:
+            raise ValueError("branch_health.log_bytes must be at least 1")
+
+    @classmethod
+    def from_table(cls, section: dict) -> BranchHealthConfig:
+        """`[branch_health]` as TOML hands it over, with `reproduce` frozen in order."""
+        reproduce = section.get("reproduce", {})
+        if not isinstance(reproduce, dict) or not all(
+            isinstance(command, str) for command in reproduce.values()
+        ):
+            raise ValueError('branch_health.reproduce must be a table of "check" = "command"')
+        scalars = {
+            name: section[name]
+            for name in ("enabled", "test_id_pattern", "log_bytes")
+            if name in section
+        }
+        return cls(
+            **scalars,
+            checks=tuple(section.get("checks", ())),
+            labels=tuple(section.get("labels", ())),
+            reproduce=tuple((str(key), command) for key, command in reproduce.items()),
+        )
 
 
 @dataclass(frozen=True)
@@ -4104,11 +4140,7 @@ def load_config(root: Path | None = None, config: Path | None = None) -> GhConfi
         changelog=ChangelogConfig.from_table(data.get("changelog", {})),
         advisories=AdvisoriesConfig.from_table(data.get("advisories", {})),
         forge_retry=ForgeRetryConfig.from_table(data.get("forge_retry", {})),
-        branch_health=BranchHealthConfig(
-            enabled=branch_health.get("enabled", True),
-            checks=tuple(branch_health.get("checks", ())),
-            labels=tuple(branch_health.get("labels", ())),
-        ),
+        branch_health=BranchHealthConfig.from_table(branch_health),
         documentation=DocumentationConfig(
             enabled=documentation.get("enabled", True),
             ai_maintenance=documentation.get("ai_maintenance", True),

@@ -230,3 +230,36 @@ def test_branch_health_loads_from_toml(tmp_path):
 def test_branch_health_lists_must_be_unique_and_nonempty(field):
     with pytest.raises(ValueError, match=f"branch_health.{field}"):
         BranchHealthConfig(**{field: ("a", "a")})
+
+
+def test_branch_health_loads_the_reproduce_map_and_log_settings(tmp_path):
+    (tmp_path / ".vibey-gh.toml").write_text(
+        '[branch_health]\ntest_id_pattern = "^BAD (\\\\S+)"\nlog_bytes = 10\n'
+        '[branch_health.reproduce]\n"gates :: Lint" = "ruff check ."\ngates = "make {test}"\n',
+        encoding="utf-8",
+    )
+    loaded = load_config(tmp_path).branch_health
+    assert loaded.reproduce == (("gates :: Lint", "ruff check ."), ("gates", "make {test}"))
+    assert loaded.test_id_pattern == "^BAD (\\S+)" and loaded.log_bytes == 10
+
+
+@pytest.mark.parametrize(
+    "changes, message",
+    [
+        ({"reproduce": (("a", "x"), ("a", "y"))}, "branch_health.reproduce"),
+        ({"reproduce": (("a", "  "),)}, "commands must be non-empty"),
+        ({"test_id_pattern": "("}, "not a regex"),
+        ({"log_bytes": 0}, "log_bytes"),
+    ],
+)
+def test_branch_health_rejects_bad_evidence_settings(changes, message):
+    with pytest.raises(ValueError, match=message):
+        BranchHealthConfig(**changes)
+
+
+@pytest.mark.parametrize("table", ["reproduce = 3", "[reproduce]\ngates = 1"])
+def test_branch_health_reproduce_must_be_a_table_of_strings(table):
+    import tomllib
+
+    with pytest.raises(ValueError, match="must be a table"):
+        BranchHealthConfig.from_table(tomllib.loads(table))

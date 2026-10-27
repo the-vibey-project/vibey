@@ -1494,6 +1494,11 @@ whose commit is no longer the tip, changes nothing.
 | `enabled` | boolean / `true` | Run the alert. |
 | `checks` | string list / `[]` | The job names that decide red and green for both branches. Empty uses each branch's own `[rulesets.*] required_checks`. |
 | `labels` | string list / `[]` | Labels applied when the issue is opened. They must already exist. |
+| `reproduce` | table / `{}` | `"<check>"` or `"<check> :: <step>"` = the command that reproduces that failure locally. `{test}` is replaced by the first failing test id the job log names, shell-quoted; a command that needs it gets no command when the log gave none. The most specific key wins. A check with no entry is reported as having no declared command, never guessed. |
+| `test_id_pattern` | regex / `^FAILED (\S+)` | Matched against each log line, GitHub's timestamp prefix removed; group 1 (else the whole match) is the test id. The default is pytest's short summary. |
+| `log_bytes` | integer / `4194304` | The most of a failed job's log that is read. Past it the tail is kept, line numbers are dropped and the issue says so. |
+
+For each failed watched job the issue and its per-run comment carry the failed step (linked), the first failing test id with its job-log line, and the mapped command. A log that cannot be fetched (`actions: read` is needed) never stops the issue being filed; the field says it is unknown.
 
 ## `[documentation]`
 
