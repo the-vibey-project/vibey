@@ -66,6 +66,17 @@ class PublicationRulesInterface(Protocol):
         ...
 
     @property
+    def private_segment_token(self) -> str:
+        """What a private segment of a published `_redactions` path becomes."""
+        ...
+
+    @property
+    def publish_redactions(self) -> bool:
+        """Whether `_redactions` is published for every allowlisted kind. Withholding it
+        is a decision a rule set states, not a default."""
+        ...
+
+    @property
     def scheme(self) -> str:
         """The name of the policy family these rules belong to."""
         ...

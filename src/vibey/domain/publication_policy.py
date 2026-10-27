@@ -24,6 +24,13 @@ policy is **default-deny**:
   its value.
 - **`repo_path` is never published**, whatever the allowlist says, and a rule set
   that tries to allow it is refused on construction.
+- **`_redactions` is published**, for every allowlisted kind, without the kind having to
+  name it (operator ruling, 2026-10-24, #668 item 11, #1723): the record of what was
+  redacted, as a path and a class and nothing else, so that anyone reading the export can
+  tell that a field was redacted, where and why, rather than seeing a bare `[REDACTED]`.
+  See `PublicationPolicy._publish_redactions` for what a published entry is. A rule set
+  that does not want it says so with `publish_redactions=False`; that is a decision, not
+  a default.
 - **Credential redaction runs last**, through `CredentialRedactorInterface`, so
   the credential patterns stay in `infrastructure/ledger/redact.py` alone.
 
@@ -68,6 +75,22 @@ anyone else."""
 
 DEFAULT_PATH_TOKEN: Final = "[path]"
 DEFAULT_EMAIL_TOKEN: Final = "[email]"
+DEFAULT_PRIVATE_SEGMENT_TOKEN: Final = "[private]"
+"""What a private segment of a published `_redactions` path becomes. Not `~private~`: a
+`~` in an RFC 6901 pointer starts an escape (`~0`, `~1`), so a token holding one is not a
+valid segment."""
+
+REDACTIONS_FIELD: Final = "_redactions"
+"""The payload field `PayloadRedactor` records what it redacted in: a list of entries,
+each a JSON Pointer `path` and a `class`."""
+
+PRIVATE_DETAIL_KEY_CLASS: Final = "private-detail-key"
+"""The class whose key *is* the private detail: a payload keyed by an address or a phone
+number is redacted because of its key, so the last segment of its path is the value."""
+
+_REDACTION_CLASS: Final = re.compile(r"[a-z][a-z0-9]*(?:-[a-z0-9]+)*")
+"""What a class looks like. An entry whose class is anything else could carry a value in
+that field, so it is withheld rather than published."""
 
 ENGINE_CHATTER: Final = frozenset(
     {EventKind.TURN_REQUESTED, EventKind.TURN_COMPLETED, EventKind.TOOL_INVOKED}
@@ -245,6 +268,8 @@ class PublicationRules:
     withheld_provenance: frozenset[Provenance] = DEFAULT_WITHHELD_PROVENANCE
     path_token: str = DEFAULT_PATH_TOKEN
     email_token: str = DEFAULT_EMAIL_TOKEN
+    private_segment_token: str = DEFAULT_PRIVATE_SEGMENT_TOKEN
+    publish_redactions: bool = True
     scheme: str = PUBLICATION_SCHEME
 
     def __post_init__(self) -> None:
@@ -274,6 +299,8 @@ class PublicationRules:
                     "never_published": sorted(NEVER_PUBLISHED_FIELDS),
                     "path_token": self.path_token,
                     "email_token": self.email_token,
+                    "private_segment_token": self.private_segment_token,
+                    "publish_redactions": self.publish_redactions,
                 }
             )
         ).hexdigest()
@@ -380,6 +407,12 @@ class PublicationPolicy:
         payload: dict[str, object] = {}
         trim: TrimCountsInterface = NO_TRIM
         for key, value in event.payload.items():
+            if key == REDACTIONS_FIELD and self._rules.publish_redactions:
+                entries, inner = self._publish_redactions(value)
+                if entries:
+                    payload[key] = entries
+                trim = trim.plus(inner)
+                continue
             if key not in keep:
                 trim = trim.plus(TrimCounts(fields=1))
                 continue
@@ -391,6 +424,62 @@ class PublicationPolicy:
                 trim = trim.plus(TrimCounts(credentials=1))
             payload = redacted
         return dataclasses.replace(event, payload=payload, digest=digest_event(payload)), trim
+
+    def _publish_redactions(
+        self, value: object
+    ) -> tuple[list[dict[str, str]], TrimCountsInterface]:
+        """A payload's `_redactions`, as `{"path", "class"}` entries and nothing else.
+
+        The design question #1723 had to settle: the recorded path is built from the
+        redacted key's name, and for `private-detail-key` the key is the private detail,
+        so copying the path through would publish what was redacted. A private segment is
+        therefore replaced by `private_segment_token` and the class kept, so a reader
+        learns that something private sat at that depth and not what. A segment is
+        private when it is the last of a `private-detail-key` entry, or is itself an
+        address or a path (the keys `_scrub_mapping` withholds from a published record).
+
+        Nothing else of an entry survives: a field other than `path` and `class` (a value,
+        a hash or a length of one) is dropped and counted, and an entry that is not a
+        pointer and a class of the usual shape is withheld whole and counted. Each
+        replaced segment is counted as a replaced path. An empty or absent record
+        publishes nothing: no field, not an empty one.
+        """
+        if not isinstance(value, list | tuple):
+            return [], TrimCounts(fields=1)
+        entries: list[dict[str, str]] = []
+        trim: TrimCountsInterface = NO_TRIM
+        for item in value:
+            published, inner = self._publish_redaction(item)
+            trim = trim.plus(inner)
+            if published is not None:
+                entries.append(published)
+        return entries, trim
+
+    def _publish_redaction(self, item: object) -> tuple[dict[str, str] | None, TrimCountsInterface]:
+        if isinstance(item, Mapping):
+            path, kind = item.get("path"), item.get("class")
+            extra = sum(1 for key in item if key not in ("path", "class"))
+        elif isinstance(item, list | tuple) and len(item) == 2:
+            (path, kind), extra = item, 0
+        else:
+            return None, TrimCounts(fields=1)
+        if (
+            not isinstance(path, str)
+            or not (path == "" or path.startswith("/"))
+            or not isinstance(kind, str)
+            or not _REDACTION_CLASS.fullmatch(kind)
+        ):
+            return None, TrimCounts(fields=1)
+        segments = [part for part in path.split("/")[1:]] if path else []
+        replaced = 0
+        for index, segment in enumerate(segments):
+            name = segment.replace("~1", "/").replace("~0", "~")
+            last_private = kind == PRIVATE_DETAIL_KEY_CLASS and index == len(segments) - 1
+            if last_private or _EMAIL.search(name) or _PATH.search(name):
+                segments[index] = self._rules.private_segment_token
+                replaced += 1
+        shown = "".join(f"/{segment}" for segment in segments)
+        return {"path": shown, "class": kind}, TrimCounts(fields=extra, paths=replaced)
 
     def _reason(self, event: LedgerEvent) -> WithheldReason | None:
         if event.provenance in self._rules.withheld_provenance:
@@ -464,9 +553,13 @@ BILLING_ALLOWLIST: Final[Mapping[EventKind, frozenset[str]]] = MappingProxyType(
         EventKind.ARTIFACT_PRODUCED: frozenset(),
     }
 )
+# The billing projection does not keep `_redactions`: it publishes cost, not payloads, so
+# there is nothing in it for a record of redactions to describe (#1723). A `_redactions`
+# field in a payload it sees is withheld and counted like any other field it does not name.
 BILLING_RULES: Final[PublicationRulesInterface] = PublicationRules(
     allowed=BILLING_ALLOWLIST,
     chatter=frozenset(),
+    publish_redactions=False,
     scheme="vibey-billing-publication/v1",
 )
 BILLING_POLICY: Final[PublicationPolicyInterface] = PublicationPolicy(BILLING_RULES)
