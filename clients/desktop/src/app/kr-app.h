@@ -10,6 +10,7 @@
 
 #include "kr-discovery.h"
 #include "kr-hub-client.h"
+#include "kr-hub-engine.h"
 #include "kr-pairing.h"
 #include "kr-settings.h"
 #include "kr-state.h"
@@ -27,6 +28,8 @@ typedef struct {
     char *credential_path;        /* where this device's key is kept once it pairs */
     KrDeviceCredential *paired;   /* the key the client signs with, or NULL (the host token) */
     gboolean awaiting_pairing;    /* a hub elsewhere is chosen and not paired: nothing is asked */
+    KrHubEngine *hub_engine; /* `vibey hub status | start | stop` on this computer */
+    gboolean hub_busy;       /* one of them is running: no second one starts */
     KrDiscovery *discovery;
     char *discovery_problem; /* why discovery is not running, or NULL */
     GCancellable *cancel;
@@ -42,6 +45,13 @@ void kr_app_refresh(KrApp *app);
 void kr_app_refresh_budget(KrApp *app, const char *project_id);
 /* Answers a gate with `value` (see kr-answer.h); says the outcome in a toast. */
 void kr_app_answer(KrApp *app, const KrGate *gate, const char *value);
+/* The one hub on this computer (#1186). Starting krypton starts it when none runs and
+ * the setting allows; closing krypton NEVER stops it. Stop exists only as its own action.
+ * Every outcome is said in a toast or in the connection status, never in a modal. */
+void kr_app_hub_ensure(KrApp *app);
+void kr_app_hub_start(KrApp *app);
+void kr_app_hub_stop(KrApp *app);
+void kr_app_hub_status(KrApp *app);
 /* Points the app at a hub; NULL host means this computer's. Saves the choice. */
 void kr_app_use_hub(KrApp *app, const char *host, guint16 port);
 /* Pairs with a hub: `typed` is the 6-digit code its host shows (for the hub chosen on the

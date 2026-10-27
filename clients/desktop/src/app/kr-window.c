@@ -366,6 +366,12 @@ main_menu(void)
     g_autoptr(GMenu) start = g_menu_new();
     g_menu_append(start, "Start a project…", "app.start-project");
     g_menu_append_section(menu, NULL, G_MENU_MODEL(start));
+    /* The hub outlives krypton: these are the only ways to start or stop it from here. */
+    g_autoptr(GMenu) hub = g_menu_new();
+    g_menu_append(hub, "Start the hub", "app.start-hub");
+    g_menu_append(hub, "Stop the hub", "app.stop-hub");
+    g_menu_append(hub, "Hub status", "app.hub-status");
+    g_menu_append_section(menu, NULL, G_MENU_MODEL(hub));
     g_autoptr(GMenu) view = g_menu_new();
     g_menu_append(view, "Refresh", "app.refresh");
     g_menu_append(view, "Preferences", "app.settings");
@@ -777,7 +783,7 @@ render_devices(KrWindow *self)
     const KrHubEndpoint *endpoint = kr_hub_client_endpoint(self->app->client);
     g_autofree char *current = g_strdup_printf("Connected to %s:%u", endpoint->host,
                                                endpoint->port);
-    GtkWidget *here = row("This computer", "vibey serve on this computer, with its token");
+    GtkWidget *here = row("This computer", "the hub on this computer, with its token");
     adw_action_row_add_suffix(ADW_ACTION_ROW(here), use_button(self, NULL, 0));
     gtk_list_box_append(list, here);
 
@@ -904,6 +910,23 @@ build_settings(KrWindow *self)
                                          &self->app->settings->notifications));
     gtk_list_box_append(list, switch_row(self, "Sounds", "Play krypton's own sounds with them",
                                          &self->app->settings->sounds));
+    gtk_list_box_append(list, switch_row(self, "Start the hub automatically",
+                                         "When krypton opens and no hub runs on this computer, "
+                                         "start it. Closing krypton never stops it.",
+                                         &self->app->settings->hub_autostart));
+    GtkWidget *hub = row("The hub on this computer",
+                         "One hub per user, kept running when krypton closes");
+    static const struct {
+        const char *label;
+        const char *action;
+    } hub_buttons[] = {{"Start", "app.start-hub"}, {"Stop", "app.stop-hub"}, {"Status", "app.hub-status"}};
+    for (guint i = 0; i < G_N_ELEMENTS(hub_buttons); i++) {
+        GtkWidget *button = gtk_button_new_with_label(hub_buttons[i].label);
+        gtk_widget_set_valign(button, GTK_ALIGN_CENTER);
+        gtk_actionable_set_action_name(GTK_ACTIONABLE(button), hub_buttons[i].action);
+        adw_action_row_add_suffix(ADW_ACTION_ROW(hub), button);
+    }
+    gtk_list_box_append(list, hub);
     if (kr_tray_supported()) {
         GtkWidget *tray = adw_switch_row_new();
         adw_preferences_row_set_title(ADW_PREFERENCES_ROW(tray), "Keep running in the tray");

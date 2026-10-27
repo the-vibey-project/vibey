@@ -72,11 +72,30 @@ test_a_silent_hub_is_said_before_any_count(void)
     g_assert_cmpstr(offline->tooltip, ==, "krypton nightly: no hub answers");
     /* The counts are stale while the hub is silent: the item does not shout about them. */
     g_assert_false(offline->attention);
-    g_assert_cmpuint(offline->entries->len, ==, 3);
+    /* ...and offers the one thing that helps: starting the hub, which outlives krypton. */
+    g_assert_cmpuint(offline->entries->len, ==, 4);
+    g_assert_cmpstr(action_at(offline, 2), ==, "start-hub");
+    g_assert_cmpstr(((KrTrayEntry *) g_ptr_array_index(offline->entries, 2))->label, ==,
+                    "Start the hub");
 
     kr_state_set_connection(state, KR_CONNECTION_REFUSED, "Refused.");
     g_autoptr(KrTrayModel) refused = kr_tray_model_new(state, "krypton nightly");
-    g_assert_true(kr_tray_model_equal(offline, refused));
+    g_assert_cmpstr(refused->tooltip, ==, offline->tooltip);
+    /* A refusal is not a silent hub: starting one would not help. */
+    g_assert_cmpuint(refused->entries->len, ==, 3);
+    g_assert_false(kr_tray_model_equal(offline, refused));
+    kr_state_free(state);
+}
+
+static void
+test_a_running_hub_can_be_stopped_from_the_tray_and_quit_does_not_do_it(void)
+{
+    KrState *state = kr_state_new();
+    kr_state_set_connection(state, KR_CONNECTION_ONLINE, NULL);
+    g_autoptr(KrTrayModel) model = kr_tray_model_new(state, "krypton");
+    g_assert_cmpuint(model->entries->len, ==, 4);
+    g_assert_cmpstr(action_at(model, 2), ==, "stop-hub");
+    g_assert_cmpstr(action_at(model, 3), ==, "quit");
     kr_state_free(state);
 }
 
@@ -143,6 +162,7 @@ main(int argc, char **argv)
     g_test_add_func("/tray/quiet", test_a_quiet_state_offers_open_start_and_quit);
     g_test_add_func("/tray/gates", test_a_waiting_gate_asks_to_be_noticed_and_to_be_answered);
     g_test_add_func("/tray/silent-hub", test_a_silent_hub_is_said_before_any_count);
+    g_test_add_func("/tray/running-hub", test_a_running_hub_can_be_stopped_from_the_tray_and_quit_does_not_do_it);
     g_test_add_func("/tray/lanes", test_running_lanes_are_counted_when_nothing_waits);
     g_test_add_func("/tray/copy", test_a_copy_stands_alone);
     g_test_add_func("/tray/equal", test_equal_models_draw_the_same);
