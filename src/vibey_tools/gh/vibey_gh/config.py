@@ -1928,7 +1928,11 @@ class ConversationConfig:
     """
 
     enabled: bool = True
-    trigger: str = "@vibey-gh"
+    trigger: str = "@vibey"
+    # Handles that still address the automation, answered with a warning that names `trigger`.
+    # `@vibey-gh` was the default before `@vibey`; an adopter whose people still type it keeps
+    # working, and sets this empty to stop answering it.
+    legacy_triggers: tuple[str, ...] = ("@vibey-gh",)
     model: str = "claude-sonnet-5"
     max_interactions: int = 10
     respond_to_untrusted: bool = False
@@ -1939,6 +1943,11 @@ class ConversationConfig:
         _unique_nonempty("conversation.ignore_actors", self.ignore_actors)
         if not self.trigger.strip() or any(char.isspace() for char in self.trigger):
             raise ValueError("conversation.trigger must be non-empty and contain no whitespace")
+        _unique_nonempty("conversation.legacy_triggers", self.legacy_triggers)
+        if any(any(char.isspace() for char in handle) for handle in self.legacy_triggers):
+            raise ValueError("conversation.legacy_triggers must contain no whitespace")
+        if self.trigger in self.legacy_triggers:
+            raise ValueError("conversation.legacy_triggers must not repeat conversation.trigger")
         if not 1 <= self.max_interactions <= 100:
             raise ValueError("conversation.max_interactions must be between 1 and 100")
         if not self.model.strip():
@@ -4040,7 +4049,10 @@ def load_config(root: Path | None = None, config: Path | None = None) -> GhConfi
         ),
         conversation=ConversationConfig(
             enabled=talking.get("enabled", True),
-            trigger=talking.get("trigger", "@vibey-gh"),
+            trigger=talking.get("trigger", ConversationConfig().trigger),
+            legacy_triggers=tuple(
+                talking.get("legacy_triggers", ConversationConfig().legacy_triggers)
+            ),
             model=talking.get("model", "claude-sonnet-5"),
             max_interactions=talking.get("max_interactions", 10),
             respond_to_untrusted=talking.get("respond_to_untrusted", False),
