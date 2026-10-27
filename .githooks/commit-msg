@@ -20,16 +20,19 @@
 # `site/` can never match, and it is available here by definition: hooks run inside a
 # git repository, from the top of the working tree.
 vibey_gh_self() {
-  # Read from `[install] self_source` in .vibey-gh.toml at runtime rather than rendered
-  # in: `install.installed()` compares these hooks byte-for-byte against the template, so
-  # a substituted hook would be permanently "out of date" and refuse every push.
+  # Read from this clone's LOCAL git config, never from a tracked file. A tracked file is
+  # branch content, and this hook executes what it finds: a branch that added a root
+  # `pyproject.toml` named `vibey-gh` beside a `vibey_gh/` directory, or edited
+  # `[install] self_source` in .vibey-gh.toml, would have its own code run here on the
+  # developer's authority. Local config is something a checkout cannot change.
   #
-  # A DECLARED path, never a search. Searching the tree for a pyproject that declares
-  # `name = "vibey-gh"` reads whatever is in the working tree, which on a contributor's
-  # branch is whatever they put there -- and this hook executes what it finds.
-  dir=$(sed -n 's/^[[:space:]]*self_source[[:space:]]*=[[:space:]]*"\(.*\)".*/\1/p' \
-    .vibey-gh.toml 2>/dev/null | head -n 1)
-  [ -n "$dir" ] || dir=.
+  # Read at runtime rather than rendered in: `install.installed()` compares these hooks
+  # byte-for-byte against the template, so a substituted hook would be permanently "out of
+  # date" and refuse every push. `vibey-gh install` copies the repository's declared
+  # `[install] self_source` into `vibey-gh.self-source` (a hyphen: git rejects `_` in a
+  # variable name). Unset means NOT self-hosted -- use the `vibey-gh` on PATH.
+  dir=$(git config --local --get vibey-gh.self-source 2>/dev/null | head -n 1)
+  [ -n "$dir" ] || return 0
   case "$dir" in /*|*..*) return 0 ;; esac
   grep -qE '^name = "vibey-gh"' "$dir/pyproject.toml" 2>/dev/null || return 0
   [ -d "$dir/vibey_gh" ] || return 0

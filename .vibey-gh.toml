@@ -781,6 +781,7 @@ forbidden_paths = [
   "src/vibey_tools/gh/vibey_gh/forge.py",
   "src/vibey_tools/gh/vibey_gh/gh_transport.py",
   "src/vibey_tools/gh/vibey_gh/github_state.py",
+  "src/vibey_tools/gh/vibey_gh/hooks_self_source.py",
   "src/vibey_tools/gh/vibey_gh/install.py",
   "src/vibey_tools/gh/vibey_gh/issue_automation.py",
   "src/vibey_tools/gh/vibey_gh/pr_af_local.py",
