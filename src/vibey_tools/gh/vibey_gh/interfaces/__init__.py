@@ -24,6 +24,7 @@ from vibey_gh.interfaces.book_interface import (
 from vibey_gh.interfaces.chapter_sanitizer_interface import ChapterSanitizerInterface
 from vibey_gh.interfaces.class_contracts import (
     AutomationStateInterface,
+    BitbucketTransportInterface,
     ChangeRequestInterface,
     CheckResultInterface,
     CoordinateInterface,
@@ -163,6 +164,7 @@ __all__ = [
     "BillingLedgerReaderInterface",
     "BillingLedgerSnapshotInterface",
     "BillingUsageInterface",
+    "BitbucketTransportInterface",
     "BookChapterInterface",
     "BookErrorInterface",
     "BreakInterface",
