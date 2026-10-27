@@ -95,7 +95,11 @@ def _check(args, resolver: FallbackPinResolverInterface | None = None) -> int:
     cfg = load_config()
     # Resolved once, so the drift verdict and the notice below describe the same pin.
     pin = (resolver or FallbackPinResolver()).resolve(cfg)
-    ok, problems = install.installed(cfg, local=not args.ci, fallback_pin=pin)
+    # `--quiet` is how the pre-push hook asks, and it stays fail-open about the framework's own
+    # hooks; a person running `check` is told (#1689).
+    ok, problems = install.installed(
+        cfg, local=not args.ci, fallback_pin=pin, frameworks=not args.quiet
+    )
     report = fingerprints.check(cfg, rev_range=args.commits, apply=args.apply)
     docs = documentation.check(cfg)
     scan = pr_automation.check_scan_workflows(cfg)

@@ -138,3 +138,34 @@ def test_installed_names_the_missing_hooks_only_for_a_local_check(clone: Path) -
     assert any("framework's pre-push hook is not installed" in p for p in local)
     assert not any("framework" in p for p in ci)
     assert any("core.hooksPath is not .githooks — run `vibey-gh setup`" in p for p in local)
+
+
+def test_a_quiet_check_stays_fail_open_about_the_frameworks_hooks(clone: Path) -> None:
+    cfg = GhConfig(root=clone)
+    _, named = install.installed(cfg, local=True)
+    _, quiet = install.installed(cfg, local=True, frameworks=False)
+    assert any("framework" in p for p in named)
+    assert not any("framework" in p for p in quiet)
+
+
+class _Stop(Exception):
+    pass
+
+
+@pytest.mark.parametrize("flags, frameworks", [([], True), (["--quiet"], False)])
+def test_the_pre_push_mode_of_check_does_not_ask_about_the_frameworks_hooks(
+    monkeypatch: pytest.MonkeyPatch, flags: list[str], frameworks: bool
+) -> None:
+    from vibey_gh import cli
+
+    seen: list[bool] = []
+
+    def spy(*_args: object, **kwargs: object) -> tuple[bool, list[str]]:
+        seen.append(bool(kwargs["frameworks"]))
+        raise _Stop
+
+    monkeypatch.setattr(install, "installed", spy)
+    monkeypatch.setattr(cli, "load_config", lambda *a, **k: GhConfig(root=Path.cwd()))
+    with pytest.raises(_Stop):
+        cli.main(["check", *flags])
+    assert seen == [frameworks]
