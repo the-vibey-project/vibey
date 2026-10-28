@@ -27,6 +27,8 @@ jest.mock('expo-notifications', () => ({
   getPermissionsAsync: jest.fn(async () => ({ granted: true, canAskAgain: true })),
   requestPermissionsAsync: jest.fn(async () => ({ granted: true })),
   scheduleNotificationAsync: jest.fn(async () => 'id'),
+  setNotificationCategoryAsync: jest.fn(async () => ({})),
+  DEFAULT_ACTION_IDENTIFIER: 'expo.modules.notifications.actions.DEFAULT',
 }));
 jest.mock('expo-camera', () => ({ CameraView: () => null, useCameraPermissions: () => [{ granted: false }, jest.fn()] }));
 jest.mock('expo-local-authentication', () => ({ authenticateAsync: jest.fn(async () => ({ success: true })) }));
@@ -253,6 +255,110 @@ describe('screens', () => {
       (Notifications.getPermissionsAsync as jest.Mock).mockResolvedValue({ granted: true, canAskAgain: true });
       jest.useRealTimers();
     }
+  });
+
+  describe('answering from a notification', () => {
+    const gateOf = (kind: string, options: string[]) => ({ gate_id: 'g1', project_id: 'p1', project_name: 'Greeter', job_id: null, kind, prompt: 'Ship it?', options, default_answer: null, timeout_at: null });
+    const DEFAULT = 'expo.modules.notifications.actions.DEFAULT';
+    const schedule = Notifications.scheduleNotificationAsync as jest.Mock;
+    const category = Notifications.setNotificationCategoryAsync as jest.Mock;
+    const listener = () => (Notifications.addNotificationResponseReceivedListener as jest.Mock).mock.calls.at(-1)![0] as (response: unknown) => void;
+    const pressed = (actionIdentifier: string, data: Record<string, unknown>) => ({ actionIdentifier, notification: { request: { content: { data } } } });
+
+    /** The hub shows one new gate on the second look; returns what was posted. */
+    async function raise(gate: unknown, answer: unknown = { replayed: false }) {
+      schedule.mockClear();
+      category.mockClear();
+      let gates: unknown[] = [];
+      const posted = await renderWith(<GateNotifications />, {
+        'GET /api/v1/projects': [project],
+        'GET /api/v1/gates': () => ({ gates }),
+        'POST /api/v1/gates/g1/answer': answer,
+      });
+      await act(async () => {
+        await jest.advanceTimersByTimeAsync(10);
+      });
+      gates = [gate];
+      await act(async () => {
+        await jest.advanceTimersByTimeAsync(NOTIFICATION_POLL_MS);
+      });
+      return posted;
+    }
+
+    beforeEach(() => jest.useFakeTimers());
+    afterEach(() => jest.useRealTimers());
+
+    it('puts the options on a review as buttons that need the phone unlocked and do not open the app', async () => {
+      await raise(gateOf('approval', ['accept', 'reject']));
+      expect(category).toHaveBeenCalledWith('krypton-gate:accept|reject', [
+        { identifier: 'accept', buttonTitle: 'accept', options: { opensAppToForeground: false, isAuthenticationRequired: true } },
+        { identifier: 'reject', buttonTitle: 'reject', options: { opensAppToForeground: false, isAuthenticationRequired: true } },
+      ]);
+      expect(schedule.mock.calls[0]![0].content).toMatchObject({ categoryIdentifier: 'krypton-gate:accept|reject', data: { route: '/gates', gateId: 'g1', gateKind: 'approval', options: ['accept', 'reject'] } });
+    });
+
+    it('puts no buttons on a gate that spends: its notification only opens the app', async () => {
+      await raise(gateOf('budget_exhausted', ['25']));
+      expect(category).not.toHaveBeenCalled();
+      expect(schedule.mock.calls[0]![0].content.categoryIdentifier).toBeUndefined();
+    });
+
+    it('sends the answer once when a button is pressed, and says it was answered', async () => {
+      const posted = await raise(gateOf('approval', ['accept', 'reject']));
+      schedule.mockClear();
+      await act(async () => {
+        listener()(pressed('reject', { route: '/gates', gateId: 'g1', gateKind: 'approval', options: ['accept', 'reject'] }));
+        await jest.advanceTimersByTimeAsync(10);
+      });
+      expect(posted.map((call) => [call.url, JSON.parse(call.body)])).toEqual([['/api/v1/gates/g1/answer', expect.objectContaining({ answer: { verdict: 'reject' } })]]);
+      expect(schedule.mock.calls[0]![0]).toMatchObject({ identifier: 'answered-g1', content: { title: 'Answered' } });
+    });
+
+    it('never answers a gate that spends, even when told a button was pressed', async () => {
+      const posted = await raise(gateOf('budget_exhausted', ['25']));
+      schedule.mockClear();
+      await act(async () => {
+        listener()(pressed('25', { route: '/gates', gateId: 'g1', gateKind: 'budget_exhausted', options: ['25'] }));
+        listener()(pressed('accept', { route: '/gates', gateId: 'g1', gateKind: 'deploy_acceptance', options: ['accept'] }));
+        await jest.advanceTimersByTimeAsync(10);
+      });
+      expect(posted).toHaveLength(0);
+      expect(schedule).not.toHaveBeenCalled();
+    });
+
+    it('ignores a button the gate does not offer, and a notification with no gate on it', async () => {
+      const posted = await raise(gateOf('approval', ['accept']));
+      schedule.mockClear();
+      await act(async () => {
+        listener()(pressed('delete-everything', { route: '/gates', gateId: 'g1', gateKind: 'approval', options: ['accept'] }));
+        listener()(pressed('accept', { route: '/gates' }));
+        listener()(pressed('accept', { gateId: 'g1', gateKind: 'approval', options: 'accept' }));
+        await jest.advanceTimersByTimeAsync(10);
+      });
+      expect(posted).toHaveLength(0);
+      expect(schedule).not.toHaveBeenCalled();
+    });
+
+    it('says when the answer was not sent, and opens Gates on a tap, rather than failing silently', async () => {
+      const posted = await raise(gateOf('approval', ['accept']), { __status: 503, body: { detail: 'the hub is away' } });
+      schedule.mockClear();
+      await act(async () => {
+        listener()(pressed('accept', { route: '/gates', gateId: 'g1', gateKind: 'approval', options: ['accept'] }));
+        await jest.advanceTimersByTimeAsync(10);
+      });
+      expect(posted).toHaveLength(1);
+      expect(schedule.mock.calls[0]![0]).toMatchObject({ identifier: 'answered-g1', content: { title: 'Your answer was not sent', data: { route: '/gates' } } });
+      expect(schedule.mock.calls[0]![0].content.body).toContain('Open krypton to answer.');
+    });
+
+    it('still opens the app on a plain tap', async () => {
+      const { router } = jest.requireMock('expo-router') as { router: { push: jest.Mock } };
+      await raise(gateOf('approval', ['accept']));
+      router.push.mockClear();
+      listener()(pressed(DEFAULT, { route: '/gates' }));
+      listener()(pressed(DEFAULT, {}));
+      expect(router.push.mock.calls).toEqual([['/gates'], ['/']]);
+    });
   });
 
   it('Lanes shows what each lane has written', async () => {
