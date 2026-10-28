@@ -20,7 +20,7 @@ It is the first slice of [vibey#136](https://github.com/the-vibey-project/vibey/
 and it is deliberately narrow:
 
 - **Read-only.** It never writes to the forge. Every call is a `GET` listing.
-- **GitHub only.** A second forge is a second reader, and a later slice.
+- **GitHub by default, any adapted forge on request.** `--forge` reads another forge through its adapter, into the same envelope (see [one envelope](#one-envelope-on-every-forge)).
 - **Files only.** Nothing goes into the vibey ledger yet. That writer needs the storage tiers
   of vibey#114, and will take these same records, already sealed, unchanged.
 - **Native payloads.** Only the envelope is neutral. A payload is never translated, so no
@@ -35,6 +35,7 @@ vibey-gh forge-snapshot --out forge-state
 | Option | Meaning |
 |---|---|
 | `--out DIR` | Required. The snapshot directory. Created when missing; appended to when not. |
+| `--forge KIND` | The forge to read: `github` (the default), `forgejo`, `gitlab` or `bitbucket`. A forge other than GitHub is read through the adapter `[platform]` selects for it, and needs `--repo` or `[platform] repository`, because `gh` cannot say which repository. |
 | `--repo OWNER/NAME` | The repository. Without it, `$GH_REPO`, then the repository `gh` finds in the current directory. |
 | `--classes a,b,c` | Only these artifact classes (the names in [the table below](#the-files)). Without it, all of them. |
 | `--since MOMENT` | Capture from an ISO 8601 moment (`2026-09-18`, `2026-09-18T12:00:00Z`) rather than from the beginning. A moment with no offset is read as UTC. `--since resume` uses the resume point the last manifest recorded. |
@@ -187,13 +188,13 @@ repository's tags looks like this:
 | Field | Meaning |
 |---|---|
 | `schema` | Always `vibey.forge-record/1`. A change to this table is a new number. |
-| `forge` | The forge the record was read from: `github`. |
+| `forge` | The forge the record was read from: `github`, `forgejo`, and so on. The only envelope value that names a forge. |
 | `repository` | `owner/name` on that forge. |
 | `class` | The forge-neutral class, which is also the file's name. |
-| `native_class` | The forge's own name for the kind of object. |
+| `native_class` | The neutral table's name for the kind of object, which is GitHub's name for it (`pull_request_review`), on every forge. |
 | `native_id` | The forge's identifier for the object, always a string. Stable across edits, so every version of one object shares it. |
 | `captured_at` | When the walk of this class began, UTC, to the second. The object was observed in this state no earlier than this moment. |
-| `payload` | The forge's JSON for the object, verbatim: every field, in the forge's own names. |
+| `payload` | The forge's JSON for the object, verbatim: every field, in the forge's own names. The exception is `review` read through an adapter (any forge but GitHub): the adapter returns a normalised review, so the payload has four keys (`id`, `author`, `verdict`, `body`). |
 | `payload_sha256` | The SHA-256 of the payload's canonical form: the content's identity. Two records with the same value hold the same content. |
 | `prev` | The `sha256` of the record before this one in the same file, or `null` for the first. |
 | `sha256` | The SHA-256 of the canonical form of every other field of this record, `prev` included: the record's seal. |
@@ -342,6 +343,19 @@ exclusive; giving neither or both exits 2.
 | `missing-file` | the manifest records a class the directory does not hold |
 | `unlisted-file` | a `.jsonl` file the manifest does not name |
 | `manifest-unreadable` | no manifest, or not a `vibey.forge-manifest/1` one; nothing else is checked |
+
+## One envelope on every forge
+
+A record has exactly these fields, whichever forge it was read from: `schema`, `forge`,
+`repository`, `class`, `native_class`, `native_id`, `captured_at`, `payload`,
+`payload_sha256`, `prev` and `sha256`. The manifest and each of its class entries have one
+shape too. A test captures the same logical repository from GitHub and from Forgejo and holds
+both to those lists, so they cannot drift apart.
+
+A class the forge's adapter cannot list is `could-not-look` with the adapter's reason, never an
+empty `captured` class. The Forgejo adapter lists `issue`, `change-request`, `release` and
+`label` today; `comment`, `review-comment`, `milestone` and `tag` are `could-not-look` on it,
+and `review` is captured empty, because its adapter returns no reviews yet.
 
 ## What comes next
 

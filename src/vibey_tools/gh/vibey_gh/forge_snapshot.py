@@ -55,7 +55,10 @@ from vibey_gh.interfaces.gh_transport_interface import GhTransportInterface
 __all__ = [
     "BREAK_KINDS",
     "CLASSES",
+    "CLASS_ENTRY_FIELDS",
+    "ENVELOPE_FIELDS",
     "EXCLUDED",
+    "MANIFEST_FIELDS",
     "MANIFEST_NAME",
     "MANIFEST_SCHEMA",
     "RECORD_SCHEMA",
@@ -74,6 +77,47 @@ __all__ = [
 
 RECORD_SCHEMA = "vibey.forge-record/1"
 MANIFEST_SCHEMA = "vibey.forge-manifest/1"
+# The shapes every capture writes, whichever forge it read: the keys of one record, of the
+# manifest, and of one class entry in the manifest. Declared once so a test can hold every
+# forge's capture to the same list (#1572); `forge` is the only envelope value that names one.
+ENVELOPE_FIELDS = (
+    "schema",
+    "forge",
+    "repository",
+    "class",
+    "native_class",
+    "native_id",
+    "captured_at",
+    "payload",
+    "payload_sha256",
+    "prev",
+    "sha256",
+)
+MANIFEST_FIELDS = (
+    "schema",
+    "record_schema",
+    "forge",
+    "repository",
+    "captured_at",
+    "since",
+    "clock_skew_seconds",
+    "complete",
+    "resume_since",
+    "classes",
+    "excluded",
+)
+CLASS_ENTRY_FIELDS = (
+    "native_class",
+    "status",
+    "problem",
+    "captured_at",
+    "observed",
+    "appended",
+    "unchanged",
+    "records",
+    "head",
+    "cursor",
+)
 MANIFEST_NAME = "manifest.json"
 RESUME = "resume"
 _REPOSITORY = re.compile(r"[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+")

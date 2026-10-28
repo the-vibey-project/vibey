@@ -30,6 +30,7 @@ from vibey_gh.cli import main
 from vibey_gh.forge_snapshot import (
     BREAK_KINDS,
     CLASSES,
+    ENVELOPE_FIELDS,
     EXCLUDED,
     MANIFEST_NAME,
     MANIFEST_SCHEMA,
@@ -1157,6 +1158,9 @@ def test_the_schema_document_names_every_class_and_every_exclusion():
         assert f"| `{name}` |" in text, f"docs/forge-snapshot.md does not name `{name}`"
     for schema in (RECORD_SCHEMA, MANIFEST_SCHEMA):
         assert f"`{schema}`" in text
+    # The envelope is one list on every forge (#1572); the document names each of its fields.
+    for field_name in ENVELOPE_FIELDS:
+        assert f"| `{field_name}` |" in text, f"docs/forge-snapshot.md does not name `{field_name}`"
 
 
 # -- --verify: a walk over a whole snapshot, reading nothing from the forge (#1570) -----------
