@@ -13,13 +13,22 @@ import urllib.request
 import uuid
 
 from vibey.application.interfaces.messaging import MessagingPort
+from vibey.domain.config import DEFAULT_SURFACE_ADAPTER_TIMEOUT_SECONDS
 
 
 class MatrixMessagingAdapter(MessagingPort):
-    def __init__(self, *, url: str, token: str, opener: object | None = None) -> None:
+    def __init__(
+        self,
+        *,
+        url: str,
+        token: str,
+        opener: object | None = None,
+        timeout: float = DEFAULT_SURFACE_ADAPTER_TIMEOUT_SECONDS,
+    ) -> None:
         self._url = url.rstrip("/")
         self._token = token
         self._opener = opener if opener is not None else urllib.request.urlopen
+        self._timeout = timeout
 
     async def send_message(self, channel_id: str, message: str) -> None:
         await asyncio.to_thread(self._send_sync, channel_id, message)
@@ -41,7 +50,7 @@ class MatrixMessagingAdapter(MessagingPort):
             method="PUT",
         )
         try:
-            with self._opener(req) as resp:  # type: ignore[operator]
+            with self._opener(req, timeout=self._timeout) as resp:  # type: ignore[operator]
                 resp.read()
         except urllib.error.HTTPError as exc:
             raise RuntimeError(f"Matrix API error {exc.code}: {exc.reason}") from exc
