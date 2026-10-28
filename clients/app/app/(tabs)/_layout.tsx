@@ -27,7 +27,13 @@ export default function TabsLayout() {
           name={FILES[screen.route] ?? 'index'}
           options={{
             title: screen.title,
-            tabBarIcon: ({ color }) => <Text style={{ color, fontSize: 20 }}>{GLYPHS[screen.icon]}</Text>,
+            tabBarAccessibilityLabel: screen.title,
+            // The glyph is a picture of the title beside it: read aloud it would be a second, odd name.
+            tabBarIcon: ({ color }) => (
+              <Text accessibilityElementsHidden importantForAccessibility="no-hide-descendants" style={{ color, fontSize: 20 }}>
+                {GLYPHS[screen.icon]}
+              </Text>
+            ),
           }}
         />
       ))}

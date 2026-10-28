@@ -52,3 +52,6 @@ strictly and refuses any key it does not know (a `"$comment"` key stopped `eas i
 Not built yet: pairing by QR or code (the hub's pairing routes exist, ADR-0071, but the app
 does not call them yet; the host token connects today), mDNS discovery, lane stop/prompt and run start, push notifications and sounds, the
 nightly icon badge, Reanimated/Skia motion, Maestro flows.
+
+Screen readers: what the app does, what a test proves about it, and the VoiceOver and TalkBack
+checks nobody has run yet are in [ACCESSIBILITY.md](ACCESSIBILITY.md).

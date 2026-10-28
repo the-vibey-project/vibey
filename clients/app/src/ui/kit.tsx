@@ -173,7 +173,7 @@ export function useHub<T>(load: (client: HubClient) => Promise<T>, everyMs = 500
 
 export function Loaded<T>(props: { readonly result: Load<T>; readonly children: (value: T) => ReactNode }) {
   const { colors } = useTheme();
-  if (props.result.state === 'loading') return <ActivityIndicator color={colors.accent.default} />;
+  if (props.result.state === 'loading') return <ActivityIndicator accessibilityLabel="Loading" color={colors.accent.default} />;
   if (props.result.state === 'failed') return props.result.unreachable === true ? <UnreachableCard /> : <Notice role="danger">{props.result.message}</Notice>;
   return <>{props.children(props.result.value)}</>;
 }
