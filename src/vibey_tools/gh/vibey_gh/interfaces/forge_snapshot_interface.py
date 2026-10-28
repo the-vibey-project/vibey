@@ -18,7 +18,7 @@ that implements it: naming a shape is declaring, not consuming.
 
 from __future__ import annotations
 
-from collections.abc import Mapping, Sequence
+from collections.abc import Iterator, Mapping, Sequence
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Protocol, runtime_checkable
@@ -138,6 +138,46 @@ class BreakInterface(Protocol):
     def detail(self) -> str: ...
 
 
+STATE_FOUND = "found"
+STATE_BEFORE_FIRST = "before-first-record"
+STATE_UNKNOWN = "unknown-object"
+
+
+@dataclass(frozen=True)
+class StateAsOf:
+    """What a snapshot says an object looked like at a moment, or why it cannot say.
+
+    Three answers, never two: `found` carries the record; `before-first-record` means the
+    object was recorded, but every record is later than the moment; `unknown-object` means
+    the snapshot holds no record of it at all. None of them says the object did not exist or
+    was deleted, because a snapshot sees neither: a record means "this state, first seen
+    then". `last_capture` is when the most recent capture began, so a reader can see how
+    stale "as of" is.
+    """
+
+    status: str
+    native_id: str = ""
+    record: Mapping[str, Any] | None = None
+    last_capture: str | None = None
+
+
+@runtime_checkable
+class SnapshotQueryInterface(Protocol):
+    """Reads a snapshot back in time. Read-only: it appends nothing and asks no forge."""
+
+    def state(self, forge_class: str, native_id: str, as_of: str) -> StateAsOf:
+        """The latest record of the object with `captured_at` at or before `as_of`.
+
+        Raises `ValueError` for a moment that is not ISO 8601 and `SnapshotStoreError` for a
+        class file that fails its seals, before any answer is given.
+        """
+        ...
+
+    def issue(self, number: int, as_of: str) -> StateAsOf:
+        """The same for the issue with this number, which is not its native id."""
+        ...
+
+
 @runtime_checkable
 class SnapshotVerifierInterface(Protocol):
     """Walks a snapshot directory and reports every way it no longer matches itself."""
@@ -210,6 +250,14 @@ class SnapshotStoreInterface(Protocol):
 
     def write_manifest(self, manifest: Mapping[str, Any]) -> Path:
         """Replace the manifest, whole or not at all, and return where it is."""
+        ...
+
+    def records(self, forge_class: str) -> Iterator[Mapping[str, Any]]:
+        """Every record of the class in file order, each checked as the store checks it.
+
+        Refuses the file at the first line that is not this store's own, unbroken record:
+        a damaged chain is never read from.
+        """
         ...
 
 
