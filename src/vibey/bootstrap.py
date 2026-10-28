@@ -114,6 +114,7 @@ from vibey.application.wind_down import WindDownOrchestrator
 from vibey.application.worker import WorkerLoop
 from vibey.bootstrap_interface import WorkerGateSeamsInterface
 from vibey.domain.config import (
+    DEFAULT_SURFACE_ADAPTER_TIMEOUT_SECONDS,
     BuildConfig,
     DesignResearchConfig,
     NotificationsConfig,
@@ -1056,6 +1057,11 @@ async def build_app(
             resolved_config = resolver.resolve(Path.cwd())
             skipped_toml = resolver.skipped_file
 
+        adapter_timeout = (
+            resolved_config.surfaces.adapter_timeout_seconds
+            if resolved_config is not None
+            else DEFAULT_SURFACE_ADAPTER_TIMEOUT_SECONDS
+        )
         if (
             resolved_config
             and resolved_config.tracker.url
@@ -1064,6 +1070,7 @@ async def build_app(
             and resolved_config.tracker.project_id
         ):
             tracker_port: IssueTrackerPort = PlaneTrackerAdapter(
+                timeout=adapter_timeout,
                 url=resolved_config.tracker.url,
                 token=resolved_config.tracker.token,
                 workspace_slug=resolved_config.tracker.workspace_slug,
@@ -1079,6 +1086,7 @@ async def build_app(
             and resolved_config.docs.token_secret
         ):
             docs_port: DocsPort = BookStackDocsAdapter(
+                timeout=adapter_timeout,
                 url=resolved_config.docs.url,
                 token_id=resolved_config.docs.token_id,
                 token_secret=resolved_config.docs.token_secret,
@@ -1089,6 +1097,7 @@ async def build_app(
 
         if resolved_config and resolved_config.secrets.url and resolved_config.secrets.token:
             secrets_port: SecretsPort = OpenBaoSecretsAdapter(
+                timeout=adapter_timeout,
                 url=resolved_config.secrets.url,
                 token=resolved_config.secrets.token,
             )
@@ -1102,6 +1111,7 @@ async def build_app(
             and resolved_config.files.password
         ):
             files_port: FilesPort = NextcloudFilesAdapter(
+                timeout=adapter_timeout,
                 url=resolved_config.files.url,
                 user=resolved_config.files.user,
                 password=resolved_config.files.password,
@@ -1111,6 +1121,7 @@ async def build_app(
 
         if resolved_config and resolved_config.email.smtp_host and resolved_config.email.smtp_port:
             email_port: EmailPort = ForwardEmailAdapter(
+                timeout=adapter_timeout,
                 smtp_host=resolved_config.email.smtp_host,
                 smtp_port=resolved_config.email.smtp_port,
                 username=resolved_config.email.username,
@@ -1127,6 +1138,7 @@ async def build_app(
             and resolved_config.sms.password
         ):
             sms_port: SmsPort = KannelSmsAdapter(
+                timeout=adapter_timeout,
                 url=resolved_config.sms.url,
                 username=resolved_config.sms.username,
                 password=resolved_config.sms.password,
@@ -1137,6 +1149,7 @@ async def build_app(
 
         if resolved_config and resolved_config.messaging.url and resolved_config.messaging.token:
             messaging_port: MessagingPort = MatrixMessagingAdapter(
+                timeout=adapter_timeout,
                 url=resolved_config.messaging.url,
                 token=resolved_config.messaging.token,
             )
@@ -1152,6 +1165,7 @@ async def build_app(
             from vibey.infrastructure.config_store.infisical import InfisicalConfigStoreAdapter
 
             config_store_port: ConfigStorePort = InfisicalConfigStoreAdapter(
+                timeout=adapter_timeout,
                 url=resolved_config.config_store.url,
                 token=resolved_config.config_store.token,
                 project_id=resolved_config.config_store.project_id,
@@ -1165,7 +1179,9 @@ async def build_app(
         if resolved_config and resolved_config.cache.url:
             from vibey.infrastructure.cache.redis import RedisCacheAdapter
 
-            cache_port: CachePort = RedisCacheAdapter(url=resolved_config.cache.url)
+            cache_port: CachePort = RedisCacheAdapter(
+                url=resolved_config.cache.url, timeout=adapter_timeout
+            )
         else:
             from vibey.infrastructure.cache.in_memory import InMemoryCache
 
@@ -1200,6 +1216,7 @@ async def build_app(
             from vibey.infrastructure.bus.rabbitmq_inspector import RabbitMqBusInspector
 
             base_bus: BusPort = RabbitMqBusAdapter(
+                timeout=adapter_timeout,
                 url=bus_settings.url,
                 username=bus_settings.username,
                 password=bus_settings.password,
@@ -1251,6 +1268,7 @@ async def build_app(
             from vibey.infrastructure.blob.garage import GarageBlobAdapter
 
             blob_port: BlobPort = GarageBlobAdapter(
+                timeout=adapter_timeout,
                 url=resolved_config.blob.url,
                 access_key=resolved_config.blob.access_key,
                 secret_key=resolved_config.blob.secret_key,
@@ -1265,6 +1283,7 @@ async def build_app(
             from vibey.infrastructure.siem.wazuh import WazuhSiemAdapter
 
             siem_port: SiemPort = WazuhSiemAdapter(
+                timeout=adapter_timeout,
                 url=resolved_config.siem.url,
                 username=resolved_config.siem.username,
                 password=resolved_config.siem.password,
