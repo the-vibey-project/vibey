@@ -40,6 +40,7 @@ from vibey_gh.changelog import Changelog
 from vibey_gh.config import load_config
 from vibey_gh.contributor_setup import ContributorSetup
 from vibey_gh.fallback_pin import FallbackPinResolver
+from vibey_gh.forge import ForgeKind
 from vibey_gh.gh_retry import GhRetry
 from vibey_gh.gh_transport import GhTransport
 from vibey_gh.interfaces.contributor_setup_interface import ContributorSetupInterface
@@ -764,6 +765,7 @@ def _forge_snapshot(args) -> int:
         SnapshotStoreError,
     )
     from vibey_gh.gh_transport import GhTransport
+    from vibey_gh.interfaces.forge_snapshot_interface import ForgeReaderInterface
 
     prefix = "vibey-gh forge-snapshot:"
     if (args.out is None) == (args.verify is None):
@@ -776,14 +778,27 @@ def _forge_snapshot(args) -> int:
     classes = None
     if args.classes is not None:
         classes = [name.strip() for name in args.classes.split(",") if name.strip()]
+    # GitHub unless `--forge` names another: the command read GitHub alone before it could read
+    # any other, and `[platform] kind` defaults to Forgejo, so following it would change what a
+    # bare `forge-snapshot` does for every caller that never named a forge.
+    forge = args.forge or "github"
     try:
-        repository = args.repo or github_state.repository()
+        repository = args.repo or (
+            github_state.repository() if forge == "github" else load_config().platform.repository
+        )
+        if not repository:
+            raise ValueError("name it with --repo, or with [platform] repository")
     except (OSError, RuntimeError, ValueError, KeyError, TypeError) as exc:
         print(f"{prefix} could not tell which repository to read: {exc}", file=sys.stderr)
         return 1
     out = Path(args.out)
     try:
-        reader = GithubForgeReader(GhTransport(), repository, per_page=args.per_page)
+        if forge == "github":
+            reader: ForgeReaderInterface = GithubForgeReader(
+                GhTransport(), repository, per_page=args.per_page
+            )
+        else:
+            reader = _adapter_reader(forge, repository, args.per_page)
         store = JsonlSnapshotStore(out, forge=reader.forge, repository=reader.repository)
         capture = ForgeSnapshot(reader, store, clock_skew=timedelta(seconds=args.clock_skew))
         manifest = capture.capture(classes=classes, since=args.since)
@@ -814,6 +829,29 @@ def _forge_snapshot(args) -> int:
     if manifest["resume_since"] is not None:
         print(f"{prefix} resume with --since {manifest['resume_since']} (or --since {RESUME})")
     return 0 if manifest["complete"] else 1
+
+
+def _adapter_reader(forge: str, repository: str, per_page: int):
+    """A snapshot reader over the adapter `[platform]` selects for `forge` (#1572).
+
+    The platform table is used only when it names the same forge; another forge starts from
+    that forge's own defaults, so a GitHub host in the file is never handed to a Forgejo reader.
+    Module-level beside `_forge_snapshot`, its only caller.
+    """
+    from dataclasses import replace
+
+    from vibey_gh.config import PlatformConfig
+    from vibey_gh.forge_adapter_reader import ForgeAdapterReader
+    from vibey_gh.forge_selector import ForgeSelector
+
+    cfg = load_config()
+    platform = cfg.platform if cfg.platform.kind == forge else PlatformConfig(kind=forge)
+    adapter = ForgeSelector().select(
+        replace(cfg, platform=replace(platform, repository=repository))
+    )
+    return ForgeAdapterReader(
+        forge=forge, repository=repository, adapter=adapter, per_page=per_page
+    )
 
 
 def _verify_forge_snapshot(root: Path, prefix: str) -> int:
@@ -2389,6 +2427,12 @@ def main(argv: list[str] | None = None) -> int:
         "--since",
         help="ISO 8601 moment to capture from, or 'resume' for the manifest's resume point;"
         " omitted, the capture is a full one",
+    )
+    fs.add_argument(
+        "--forge",
+        choices=[kind.value for kind in ForgeKind],
+        help="the forge to read (default: github). A forge other than github is read through its"
+        " adapter, with --repo or [platform] repository naming the repository (#1572)",
     )
     fs.add_argument("--repo", default="", help="owner/name (default: $GH_REPO, then gh's own)")
     fs.add_argument("--per-page", type=int, default=100, help="listing page size, 1 to 100")
