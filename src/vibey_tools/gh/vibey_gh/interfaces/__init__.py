@@ -120,6 +120,7 @@ from vibey_gh.interfaces.forge_snapshot_interface import (
     BreakInterface,
     ChainHeadInterface,
     ForgeReadInterface,
+    SnapshotQueryInterface,
     SnapshotVerifierInterface,
 )
 from vibey_gh.interfaces.local_review_interface import (
@@ -263,6 +264,7 @@ __all__ = [
     "RunnersConfigInterface",
     "SampleInterface",
     "SizedChatInterface",
+    "SnapshotQueryInterface",
     "SnapshotStoreErrorInterface",
     "SnapshotVerifierInterface",
     "SourceContextInterface",

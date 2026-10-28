@@ -32,7 +32,7 @@ import hashlib
 import json
 import os
 import re
-from collections.abc import Callable, Iterable, Mapping, Sequence
+from collections.abc import Callable, Iterable, Iterator, Mapping, Sequence
 from dataclasses import dataclass, field
 from datetime import UTC, datetime, timedelta
 from functools import partial
@@ -40,6 +40,9 @@ from pathlib import Path
 from typing import Any
 
 from vibey_gh.interfaces.forge_snapshot_interface import (
+    STATE_BEFORE_FIRST,
+    STATE_FOUND,
+    STATE_UNKNOWN,
     AppendOutcome,
     Break,
     ChainHead,
@@ -47,8 +50,10 @@ from vibey_gh.interfaces.forge_snapshot_interface import (
     ForgeReaderInterface,
     ForgeSnapshotInterface,
     Observation,
+    SnapshotQueryInterface,
     SnapshotStoreInterface,
     SnapshotVerifierInterface,
+    StateAsOf,
 )
 from vibey_gh.interfaces.gh_transport_interface import GhTransportInterface
 
@@ -64,6 +69,7 @@ __all__ = [
     "RECORD_SCHEMA",
     "ForgeClass",
     "ForgeSnapshot",
+    "ForgeStateQuery",
     "GithubForgeReader",
     "JsonlSnapshotStore",
     "RecordChecker",
@@ -501,6 +507,17 @@ class JsonlSnapshotStore(SnapshotStoreInterface):
         os.replace(partial_path, path)
         return path
 
+    def records(self, forge_class: str) -> Iterator[Mapping[str, Any]]:
+        path = self.path(forge_class)
+        if not path.is_file():
+            return
+        previous: str | None = None
+        with path.open("rb") as handle:
+            for number, line in enumerate(handle, start=1):
+                record = self._parse(path, number, line, forge_class, previous)
+                previous = record["sha256"]
+                yield record
+
     def _load(self, forge_class: str) -> _Chain:
         if forge_class in self._chains:
             return self._chains[forge_class]
@@ -533,6 +550,55 @@ class JsonlSnapshotStore(SnapshotStoreInterface):
         if record is None:
             raise SnapshotStoreError(f"{path} line {number} {fault}")
         return record
+
+
+class ForgeStateQuery(SnapshotQueryInterface):
+    """Answers "what did this object look like then?" from a snapshot's own records.
+
+    An object's state as of a moment is its latest record with a `captured_at` at or before
+    that moment; records are only appended, so an earlier state is followed, never lost. Moments
+    are compared as moments, not as strings, and equal ones resolve to the later line, because
+    file order is append order. Every record passes through the store's checks on the way, so a
+    tampered file is refused rather than answered from.
+    """
+
+    def __init__(self, store: SnapshotStoreInterface) -> None:
+        self._store = store
+
+    def state(self, forge_class: str, native_id: str, as_of: str) -> StateAsOf:
+        wanted = moment(as_of)
+        ForgeClass.named(forge_class)
+        recorded = False
+        best: Mapping[str, Any] | None = None
+        best_at: datetime | None = None
+        for record in self._store.records(forge_class):
+            if record["native_id"] != native_id:
+                continue
+            recorded = True
+            seen = moment(record["captured_at"])
+            if seen <= wanted and (best_at is None or seen >= best_at):
+                best, best_at = record, seen
+        manifest = self._store.manifest() or {}
+        last = manifest.get("captured_at")
+        if best is not None:
+            return StateAsOf(STATE_FOUND, native_id, best, last)
+        return StateAsOf(STATE_BEFORE_FIRST if recorded else STATE_UNKNOWN, native_id, None, last)
+
+    def issue(self, number: int, as_of: str) -> StateAsOf:
+        moment(as_of)
+        ids = {
+            record["native_id"]
+            for record in self._store.records("issue")
+            if record["payload"].get("number") == number
+        }
+        if len(ids) > 1:
+            raise SnapshotStoreError(
+                f"issue number {number} appears under several native ids: {', '.join(sorted(ids))}"
+            )
+        if not ids:
+            manifest = self._store.manifest() or {}
+            return StateAsOf(STATE_UNKNOWN, "", None, manifest.get("captured_at"))
+        return self.state("issue", ids.pop(), as_of)
 
 
 class RecordChecker:
