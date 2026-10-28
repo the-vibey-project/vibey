@@ -307,6 +307,7 @@ An empty or whitespace-only value counts as unset.
 | `VIBEY_SIEM_USERNAME` | `[siem].username` | Wazuh indexer username |
 | `VIBEY_SIEM_PASSWORD` | `[siem].password` | Wazuh indexer password |
 | `VIBEY_SIEM_INDEX` | `[siem].index` | Wazuh index name |
+| `VIBEY_SURFACES_ADAPTER_TIMEOUT_SECONDS` | `[surfaces].adapter_timeout_seconds` | Seconds each surface adapter waits on one network call |
 
 The queue reaper's keys have the same overlay, and the same precedence
 ([`[queue.reap]`](#queuereap)). A boolean takes `1`, `true`, `yes` or `on` and `0`, `false`,
@@ -1278,6 +1279,19 @@ url = "http://localhost:9200"
 username = "vibey"
 password = "REPLACE_ME"
 index = "vibey-audit"
+```
+
+## `[surfaces]`
+
+Settings every sovereign surface adapter shares.
+
+| Field | Type | Default | Notes |
+|---|---|---|---|
+| `adapter_timeout_seconds` | integer, 1 to 600 | `10` | The bound on each blocking network call a surface adapter makes, so a server that accepts the connection and never answers cannot hang its caller for ever (doctrine 10). `VIBEY_SURFACES_ADAPTER_TIMEOUT_SECONDS` overrides it. A value outside 1 to 600, or one that is not an integer, is refused. The adapters ship with this default as their `timeout`; the key is declared and validated here, and nothing yet passes it to them from `vibey.toml`. |
+
+```toml
+[surfaces]
+adapter_timeout_seconds = 30
 ```
 
 ## Skills context (project config record — not a `vibey.toml` table) { #skills_context }
