@@ -1,0 +1,1 @@
+**Every `vibey` command in the CLI reference has a copy-pasteable example** (#846). Each of the 34 `## \`vibey ...\`` sections of `docs/reference/cli.md` now carries a fenced `bash` block under its introduction, using flags and subcommands the section itself documents. The change only inserts lines: no existing prose or table row moved.

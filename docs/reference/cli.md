@@ -123,6 +123,10 @@ Known gaps in unknown-project handling:
 
 Install local dependencies that vibey can manage explicitly.
 
+```bash
+vibey install --postgres
+```
+
 | Option | Default | What it does |
 |---|---|---|
 | `--postgres` | off | Install and start the current stable PostgreSQL major using Homebrew, apt, or dnf. |
@@ -176,6 +180,10 @@ exists, and a test asserts it (`tests/cli/test_errors_and_logging.py`).
 
 Create a project and enqueue its first DESIGN interview. `NAME` is a label shown by `vibey projects`; vibey does not require it to be unique, and the project is identified by its id and its checkout (`--repo`).
 
+```bash
+vibey new my-app --repo ~/src/my-app --max-cycle-dollars 15 --max-cycle-turns 40
+```
+
 | Option | Default | What it does |
 |---|---|---|
 | `--repo PATH` | `.` | Repository the project builds against. |
@@ -205,6 +213,10 @@ the new project is created beside them, and they stay readable by id.
 
 The hub (ADR-0068): the HTTP API every krypton client reaches, built on
 `vibey_bootstrap`. Install it with `pip install 'vibey-engine[hub]'`. It serves until stopped.
+
+```bash
+vibey serve --host 127.0.0.1 --port 8765
+```
 
 | Option | Default | What it does |
 |---|---|---|
@@ -241,6 +253,10 @@ The one hub on this computer: start it, stop it, ask about it, and pair devices 
 and -- when the hub serves TLS -- trust only the hub's own certificate. With no hub running
 they exit 3.
 
+```bash
+vibey hub start --timeout 30
+```
+
 Every krypton UI offers the same start, stop and status actions, and they are these
 commands. **Closing a UI never stops the hub**: `start` launches it detached from the
 terminal and the session, its output in `<state_dir>/hub.log`, and only `stop` ends it.
@@ -269,10 +285,18 @@ place the host). `--ignore-sabbath` on `vibey new`, `vibey work` and `vibey work
 that one command through the window and says so on stderr; no file can supply it. See
 [`[sabbath]`](configuration.md#sabbath) and the [guide](../guides/sabbath.md).
 
+```bash
+vibey sabbath
+```
+
 ## `vibey projects`
 
 List every project, newest first (by creation time, then id), with its phase,
 its cycle, and how many gates are waiting for your answer.
+
+```bash
+vibey projects --json
+```
 
 | Option | Default | What it does |
 |---|---|---|
@@ -324,6 +348,10 @@ one wrapped paragraph, and the exact command that answers it:
    Review artifacts ready for cycle 1. Accept, request changes, or ask
    questions.
    answer with: vibey answer 5e1f0c7a-8b2d-4e5f-9a61-2c3d4e5f6a7b --verdict accept
+```
+
+```bash
+vibey gates --remind --dry-run
 ```
 
 | Argument / option | Default | What it does |
@@ -440,6 +468,11 @@ Answer a parked human gate. Exactly one of the following modes is required
 | `--verdict VALUE` | Review gates: sends `{"verdict": VALUE}` — `accept`, `changes`, `cancel`, `approve`, or `request_changes`. |
 | `--raw JSON` | Any other gate shape, e.g. raising a tripped budget cap: `--raw '{"max_dollars": 25}'` or `--raw '{"max_turns": 50}'`. |
 
+```bash
+vibey answer 3f9c2a1e --defaults
+vibey answer 3f9c2a1e --raw '{"max_dollars": 25}'
+```
+
 | Option | What it does |
 |---|---|
 | `--by NAME` | the name the answer is recorded under, for a tool that runs the command (the VS Code extension says `vibey-vscode`). Defaults to the account running the command. It is a label for the record, not a permission: the account is always recorded beside it. |
@@ -464,6 +497,10 @@ no longer wanted, or stuck in `intake` because its dispatch never reached DESIGN
 phase short of `done` can be abandoned. Nothing in vibey abandons a project on its own;
 until a person does, anything waiting on it waits (the triaged-delivery bridge holds its
 one delivery slot for a dispatched project until it is done or abandoned).
+
+```bash
+vibey abandon 0b5c9a4e-1d4c-4c47-9a2a-3c1d2b8f9e10 --reason "built on a foreign spec" --dry-run
+```
 
 | Option | Default | What it does |
 |---|---|---|
@@ -528,6 +565,10 @@ Process one ready DESIGN job, or, when the project is in VISUAL_DESIGN, one
 visual-inventory job. Live engine use is explicit and capped. Prints
 `processed one job` or `no ready job`.
 
+```bash
+vibey work 0b5c9a4e-1d4c-4c47-9a2a-3c1d2b8f9e10 --provider scripted --max-turns 3
+```
+
 | Option | Default | What it does |
 |---|---|---|
 | `--provider {scripted,claudeloop,gptossloop}` | `gptossloop` | `gptossloop` runs the sovereign local DESIGN provider on Ollama (ADR-0015, ADR-0027, ADR-0064) and reads research material from `$VIBEY_EVIDENCE_DIR`; with that unset, research refuses rather than inventing a source, and DESIGN stops there. `claudeloop` runs a real, paid session capped by `--max-turns` and `--max-dollars`; its spend is recorded as `budget_spent` ledger events so the budget brake counts it. `scripted` needs no live engine. `qwenloop` is still accepted: it is read as `gptossloop`, with `--provider qwenloop is now --provider gptossloop (ADR-0064) ...` on stderr. Any other value exits 3 with `Error: provider must be 'scripted', 'claudeloop', or 'gptossloop'`. |
@@ -547,6 +588,10 @@ Bare `vibey design` prints help. Subcommands:
 |---|---|
 | `design resume PROJECT_ID [--priority]` | Enqueue or resume the project's DESIGN interview. Prints `design job <id>`. `--priority` enqueues it bumped, so it runs next after whatever is running — the same grant and ledger record as [`vibey queue bump`](#vibey-queue). On an interview that has already finished, `--priority` is a recorded no-op, as plain `resume` is a no-op. |
 | `design accept PROJECT_ID [--spec-json PATH] [--visual/--no-visual]` | Accept the synthesized spec (optionally importing JSON first) and choose whether to enter the VISUAL_DESIGN interstitial. Defaults to `--no-visual`; the choice is never implicit. Refused while any DESIGN job of the cycle (research, synthesis, spec) is unsettled. Prints `accepted design for <id>; entered <phase>; context under <repo_path>`. |
+
+```bash
+vibey design accept <project-id> --no-visual
+```
 
 `--spec-json` expects a JSON object with:
 
@@ -570,11 +615,19 @@ Bare `vibey visual` prints help. Subcommands:
 | `visual accept PROJECT_ID` | Accept the reviewed visual plan and enter BUILD. Prints `accepted visual design for <id>; entered <phase>`. |
 | `visual waive PROJECT_ID` | Explicitly waive the visual plan (the inventory must still be complete) and enter BUILD. Prints `waived visual design for <id>; entered <phase>`. |
 
+```bash
+vibey visual waive 0b5c9a4e-1d4c-4c47-9a2a-3c1d2b8f9e10
+```
+
 ## `vibey watch [PROJECT_ID]`
 
 Live TUI dashboard: current phase, queue, engine circuits, active worktrees,
 and a ledger tail. Defaults to the most recently created project; an unknown
 id prints `unknown project <id>` and exits 1.
+
+```bash
+vibey watch --replay --speed 4
+```
 
 | Option | Default | What it does |
 |---|---|---|
@@ -594,6 +647,10 @@ is a usage error (exit 2).
 
 The conversation with the local model, as it happens. It only reads.
 
+```bash
+vibey llm tail --all --no-follow
+```
+
 | Subcommand | Options | What it does |
 |---|---|---|
 | `llm tail` | `--file PATH`, `--all`, `--no-follow`, `--raw`, `--max-chars N` | Follows the [wire log](../guides/local-models-ollama.md#watching-the-model-think) in **every phase**: each request DESIGN and DECOMPOSE send the model, its reasoning and answer as they stream back, and the model's own counts and timings; and, for BUILD and REVIEW, each engine session the worker started: every tool call and its result, the streamed answer, the reasoning, and each turn's time and tokens. It starts at the latest call or session and **switches to each new session by itself** (a new run id means a new events file). `--all` starts from the beginning, with every session; `--raw` prints the JSON lines as written. |
@@ -610,6 +667,11 @@ is how the tail knows where BUILD and REVIEW write; the records hold ids and pat
 ```sh
 vibey search "QUERY" [--json] [--limit N]
 vibey fetch URL [--json] [--max-chars N]
+```
+
+```bash
+vibey search "postgres skip locked" --limit 5
+vibey fetch https://example.com --max-chars 20000
 ```
 
 The web, for any loop that can run a command, and for the sovereign DESIGN research stage.
@@ -645,6 +707,10 @@ Recover stuck leased jobs (e.g. after a worker crash): every job in state
 `leased` is set back to `ready`, and its lease owner, lease expiry, and
 assigned engine are cleared.
 
+```bash
+vibey recover --project 0b5c9a4e-1d4c-4c47-9a2a-3c1d2b8f9e10 --stop-workers --dry-run
+```
+
 | Option | Default | What it does |
 |---|---|---|
 | `--project ID` | unset | Recover jobs for one project. |
@@ -670,6 +736,10 @@ reset, read from PostgreSQL's `UPDATE n` status tag.
 Get a stalled project moving again in one command. A project that stalls on a bad model answer
 parks its job on an `attempts_exhausted` gate; this does what used to be `recover --stop-workers`,
 `gates`, `answer --raw '{"max_attempts": N}'` and a hand-written worker restart, in that order.
+
+```bash
+vibey retry 0b5c9a4e-1d4c-4c47-9a2a-3c1d2b8f9e10 --max-attempts 10 --dry-run
+```
 
 | Option | Default | What it does |
 |---|---|---|
@@ -699,6 +769,10 @@ repository path, queue depth per job state, and engine circuits (circuit
 state, consecutive failures, cycle cost). Defaults to the most recently
 created project.
 
+```bash
+vibey status --json
+```
+
 | Option | Default | What it does |
 |---|---|---|
 | `--json` | off | Emit JSON instead: `project_id`, `name`, `phase`, `cycle`, `max_cycles`, `repo_path`, `visual_decision`, `deployment_decision`, `queue_depth`, `circuits` (each with `engine_id`, `installed`, `version`, `conformance_ok`, `circuit`, `capacity_state`, `consecutive_fail`, `cost_usd_cycle`, `selected_count`), `active_worktrees`, and `integration_branch` (the project's own integration branch for the cycle, `vibey/<project8>/<cycle>/integration`). |
@@ -711,6 +785,10 @@ cost. Rows exist only for engines that `vibey doctor --record` or a worker's
 startup preflight has recorded; with none it prints
 `no engines recorded for project`. Defaults to the most recently created
 project.
+
+```bash
+vibey engines --json
+```
 
 `--json` prints one document on stdout instead of the table:
 `{"project_id": "<uuid>", "engines": [...]}`, with `"engines": []` (and exit 0)
@@ -734,6 +812,10 @@ default. The canon is reported as the canon: vibey's selector does not read a
 paid declaration yet. Today it prefers an eligible local engine and, when none
 is eligible, picks a paid one by weighted round robin (ADR-0038). Each engine
 is listed under the loop its descriptor's tier puts it in.
+
+```bash
+vibey loops --json
+```
 
 The command needs no database and no network. Local switches are read the way
 `vibey doctor` reads them, from the environment and then `./vibey.toml`. It
@@ -818,6 +900,10 @@ StarCoder, Gemma, Llama, CodeLlama and CodeGemma ([ADR-0093](../architecture/dec
 each with the Ollama tag to start from and the `ollama pull` that fetches it, and then the
 models the Ollama on this machine actually has, with what that Ollama reports each can do.
 
+```bash
+vibey models --json
+```
+
 The families need no network. The installed models come from the Ollama at
 `VIBEY_OLLAMA_URL` (default `http://127.0.0.1:11434`). Their capabilities are what Ollama's own
 `/api/show` says, never a table kept in vibey: Ollama decides tool-calling from more than a
@@ -841,6 +927,10 @@ tool-call protocol, marked slower and measured unreliable.
 Show the current cycle's spend against the caps the budget brake enforces, then
 each engine's metered BUILD spend. Defaults to the most recently created project;
 an unknown id prints `unknown project <id>` and exits 1.
+
+```bash
+vibey cost --json
+```
 
 - `Cycle spend:` is the ledger sum the brake checks before every BUILD session:
   `TurnCompleted` cost and `BudgetSpent` dollars, and one turn per `TurnCompleted`
@@ -871,6 +961,10 @@ change or remove the caps after the project exists. The caps are
 one place the budget brake reads them. The spend is the same ledger sum
 `vibey cost` and the worker use. Bare `vibey budget`, or `vibey budget show`,
 shows the most recently created project.
+
+```bash
+vibey budget set --max-cycle-dollars 15 --max-cycle-turns 100
+```
 
 | Subcommand | Option | Default | What it does |
 |---|---|---|---|
@@ -1000,6 +1094,10 @@ checks, under its own job key. Two things end the run: the operator's Stop, and
 the budget brake at a declared cap. A run with no dollar cap parks an
 `ultra_needs_cap` gate unless no cap was declared (`vibey budget no-cap`).
 
+```bash
+vibey ultra status --json
+```
+
 | Subcommand | Option | What it does |
 |---|---|---|
 | `ultra start [PROJECT_ID]` | `--by NAME` | Starts the run: records a trusted `UltraStarted` event. |
@@ -1018,6 +1116,10 @@ The driver is the Claude Code session steering the work. When it hits a usage
 limit or runs out of credit, the work continues on `[failover] target_engine`
 (gptossloop) at `target_effort` (ULTRA). When a probe of the paid model is
 recorded as successful, the work goes back to the same session.
+
+```bash
+vibey driver timer --platform systemd --out ~/.config/systemd/user
+```
 
 | Subcommand | Option | What it does |
 |---|---|---|
@@ -1046,6 +1148,10 @@ failure (never after a clean exit, so a worker drained by SIGTERM stays down), a
 its output to `<log_dir>/<name>.log`. vibey never loads a unit for you: `install` prints
 the commands.
 
+```bash
+vibey supervisor install --platform systemd
+```
+
 | Subcommand | Option | What it does |
 |---|---|---|
 | `supervisor install` | `--repo PATH` (`.`), `--out DIR`, `--platform launchd\|systemd`, `--config PATH` | Writes `<label_prefix>.worker` and `<label_prefix>.delivery` (and `<label_prefix>.state-sync` with `[supervisor] state_sync = true`) into the service manager's directory (`~/Library/LaunchAgents`, or `$XDG_CONFIG_HOME/systemd/user`), or `--out`. Creates the log directory, and the environment file from a commented template, readable by you alone, when it does not exist (an existing one is kept); with `state_sync`, the state sync's own `state-sync.env` the same way. Prints the `launchctl bootstrap` or `systemctl --user enable --now` commands that load them. Refuses, exit 78, a log directory, environment file, `vibey`, Python or `--repo` under a directory a reboot empties or inside a linked worktree (10.h), `vibey` not on `PATH`, and a `--repo` with no `scripts/triaged_delivery.py` unless `delivery = false`. `--config` defaults to `<repo>/vibey.toml`. |
@@ -1067,6 +1173,10 @@ encrypted with AES-256-GCM under the state key, and nothing else. Every setting 
 `VIBEY_STATE_*` variable ([State sync](configuration.md#state-sync)); the database is
 `VIBEY_STATE_PG_URL`, else `VIBEY_PG_URL`. Bare `vibey state` prints help. Subcommands, in
 `vibey state --help` order: `sync`, `status`, `export`, `import`, `forget`, `key`.
+
+```bash
+vibey state sync --no-push
+```
 
 | Subcommand | Option | Default | What it does |
 |---|---|---|---|
@@ -1104,6 +1214,10 @@ workflow runs it itself, and only for a private repository (ADR-0086).
 Bare `vibey ledger` prints help. Subcommands, in `vibey ledger --help` order:
 `search`, `export`, `site`, `show`. What `export` and `site` produce can be browsed in the
 [ledger explorer](../explorer/index.md).
+
+```bash
+vibey ledger show --kind GateAnswered --limit 20
+```
 
 | Subcommand | Option | Default | What it does |
 |---|---|---|---|
@@ -1143,6 +1257,10 @@ See the job queue in claim order, move a job to the front of it
 ([ADR-0054](../architecture/decisions/0054-a-bumped-job-runs-next.md)), and reap what is
 stuck ([ADR-0056](../architecture/decisions/0056-everything-a-queue-guards-is-reaped-by-measurement.md)).
 Bare `vibey queue` prints help.
+
+```bash
+vibey queue bump 6f1c2d3e-4a5b-4c6d-8e7f-9a0b1c2d3e4f --project 0b5c9a4e-1d4c-4c47-9a2a-3c1d2b8f9e10
+```
 
 | Subcommand | Option | Default | What it does |
 |---|---|---|---|
@@ -1235,6 +1353,10 @@ Phases ④–⑥. Bare `vibey deploy` prints help. Each subcommand takes an
 optional `PROJECT_ID`, defaulting to the latest project; an unknown id
 prints `unknown project <id>` and exits 1.
 
+```bash
+vibey deploy status
+```
+
 | Subcommand | What it does |
 |---|---|
 | `deploy status` | Prints the project name, its current phase, cycle, and the endpoint recorded by the most recent `deployment_verification` artifact (`(none)` if there is none). |
@@ -1251,6 +1373,10 @@ three reserve the command surface. Deployments themselves run through
 
 Check local PostgreSQL readiness, engine installs and auth; optionally install
 PostgreSQL, run the conformance suite, or run the in-cluster preflight instead.
+
+```bash
+vibey doctor --conformance --record
+```
 
 | Option | Default | What it does |
 |---|---|---|
@@ -1405,6 +1531,10 @@ exactly the declared ones
 It reads the owner's DSN from `VIBEY_PG_MIGRATE_URL` and the application's from
 `VIBEY_PG_URL`. It takes no options.
 
+```bash
+vibey migrate
+```
+
 1. Applies pending migrations under the migration lock, as the owner.
 2. Creates the role `VIBEY_PG_URL` names if it is missing and the DSN carries a password.
    A role that is a superuser, the owner, or a member of the owner is refused.
@@ -1424,6 +1554,10 @@ Run the Kubernetes operator, reconciling `VibeyProject` custom resources
 without it the command prints
 `operator support is not installed: pip install 'vibey-engine[operator]'` and exits 1.
 
+```bash
+vibey operator --namespace vibey
+```
+
 | Option | Default | What it does |
 |---|---|---|
 | `--namespace NS` | unset (cluster-wide) | Watch a single namespace instead of the whole cluster. |
@@ -1432,6 +1566,10 @@ without it the command prints
 
 Long-running worker: listens on `vibey_job_ready` and dispatches jobs across
 every phase for one project, or with `--all-projects` for every project.
+
+```bash
+vibey worker --provider claudeloop --engines claudeloop,codexloop -j 2
+```
 
 | Option | Default | What it does |
 |---|---|---|
