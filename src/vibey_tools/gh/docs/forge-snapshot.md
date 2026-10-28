@@ -203,6 +203,24 @@ repository's tags looks like this:
 `captured_at` at or before that moment. Records are only ever appended, so an earlier state
 is never overwritten, only followed.
 
+```bash
+vibey-gh forge-state forge-state-dir --issue 12 --as-of 2026-09-18T12:00:00Z
+vibey-gh forge-state forge-state-dir --class label --native-id 4242 --as-of 2026-09-18
+```
+
+`forge-state` reads the snapshot back and asks nothing of a forge. It prints the payload on
+stdout (so it pipes into `jq`) and the record's `captured_at`, its seal and when the latest
+capture began on stderr. `--issue` takes the number people say; `--class` with `--native-id`
+takes any class by the id the record holds. Every record on the way passes the same checks the
+capture applies, so a damaged class file is refused rather than answered from.
+
+It exits 0 when it found a record, 1 when it has none to give or the snapshot cannot be read,
+and 2 for a moment or arguments that name no query. There are two kinds of "none", and neither
+is "it did not exist": the object was recorded but first at a later moment, or the snapshot
+holds no record of it at all. A snapshot sees neither creation nor deletion; a record means
+"this state, first seen then", and an object that has not changed since has no record at later
+captures.
+
 ## The canonical form, and checking a chain
 
 Every digest is taken over one serialisation: the JSON with its keys sorted at every level,
