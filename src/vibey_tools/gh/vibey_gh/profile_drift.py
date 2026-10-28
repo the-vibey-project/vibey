@@ -81,7 +81,7 @@ class ProfileDrift(ProfileDriftInterface):
             return live
         try:
             live.update(self._decode(repo_run.stdout))
-        except ValueError as exc:
+        except (TypeError, ValueError) as exc:
             unread["*"] = f"repository settings could not be read: {exc}"
             return live
         topics = self._transport.run(["api", f"repos/{repository}/topics"])
@@ -90,7 +90,7 @@ class ProfileDrift(ProfileDriftInterface):
         else:
             try:
                 live["topics"] = list(self._decode(topics.stdout).get("names") or [])
-            except ValueError as exc:
+            except (TypeError, ValueError) as exc:
                 unread["topics"] = str(exc)
         for name, endpoint in SECURITY_ENDPOINTS.items():
             run = self._transport.run(["api", f"repos/{repository}/{endpoint}"])
@@ -109,7 +109,7 @@ class ProfileDrift(ProfileDriftInterface):
         except json.JSONDecodeError as exc:
             raise ValueError("the answer is not JSON") from exc
         if not isinstance(value, dict):
-            raise ValueError("the answer is not an object")
+            raise TypeError("the answer is not an object")
         return value
 
     @staticmethod
