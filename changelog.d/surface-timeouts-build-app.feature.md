@@ -1,0 +1,1 @@
+`build_app` hands the declared `[surfaces] adapter_timeout_seconds` (or `VIBEY_SURFACES_ADAPTER_TIMEOUT_SECONDS`) to every real surface adapter, so the bound on each call is one declared key instead of a constant per adapter. The Redis cache adapter's bound moves from its own 5 seconds to the declared default of 10.
