@@ -51,6 +51,7 @@ import tomllib
 from collections.abc import Mapping
 from dataclasses import dataclass
 from pathlib import Path, PurePosixPath
+from typing import ClassVar
 from urllib.parse import urlsplit
 
 from vibey_gh.forge import ForgeKind
@@ -2614,6 +2615,42 @@ class RepositoryProfileConfig:
     # commit subject the author never read.
     squash_merge_commit_title: str = ""
     squash_merge_commit_message: str = ""
+    # Does a live setting that differs from this declaration FAIL `check --ci`, or is it an
+    # advisory line? A key rather than a hard-coded judgment (ADR-0018), advisory by default:
+    # an adopter upgrading into the release that added the audit would otherwise go red for
+    # drift that was already there.
+    fail_check: bool = False
+
+    # The flags the forge stores as booleans, in the order they are sent. One list for the
+    # writer (`repository-profile.yml`) and the auditor (`ProfileDrift`), so they cannot
+    # disagree about which settings this table manages (12.c).
+    FLAGS: ClassVar[tuple[str, ...]] = (
+        "has_issues",
+        "has_projects",
+        "has_wiki",
+        "has_discussions",
+        "allow_squash_merge",
+        "allow_merge_commit",
+        "allow_rebase_merge",
+        "allow_auto_merge",
+        "delete_branch_on_merge",
+        "web_commit_signoff_required",
+        "vulnerability_alerts",
+        "automated_security_fixes",
+    )
+    # Managed only when declared: empty means "not managed" and sends and verifies nothing.
+    OPTIONAL_TEXT: ClassVar[tuple[str, ...]] = (
+        "squash_merge_commit_title",
+        "squash_merge_commit_message",
+    )
+
+    def settings(self) -> dict[str, bool | str]:
+        """Every setting this table manages, as the workflow sends it and the audit reads it."""
+        managed: dict[str, bool | str] = {name: getattr(self, name) for name in self.FLAGS}
+        managed.update(
+            {name: getattr(self, name) for name in self.OPTIONAL_TEXT if getattr(self, name)}
+        )
+        return managed
 
     def __post_init__(self) -> None:
         if self.squash_merge_commit_title not in ("", *SQUASH_TITLE_SOURCES):
@@ -4148,6 +4185,7 @@ def load_config(root: Path | None = None, config: Path | None = None) -> GhConfi
             automated_security_fixes=profile.get("automated_security_fixes", True),
             squash_merge_commit_title=profile.get("squash_merge_commit_title", ""),
             squash_merge_commit_message=profile.get("squash_merge_commit_message", ""),
+            fail_check=profile.get("fail_check", False),
         ),
         skip_markers=SkipMarkersConfig(
             enabled=skip_markers.get("enabled", True),
