@@ -5,6 +5,19 @@ krypton desktop carries its own version. The Python wheel stays one distribution
 
 ## 0.1.0 (unreleased)
 
+- **A Keyboard shortcuts dialog, one command table, and accessible names (#1699).** The header
+  menu has a **Keyboard shortcuts** entry (`Ctrl+?`) that lists every command with its keys.
+  The menu, that dialog and the registered accelerators now all read one table in the core
+  (`kr-commands`, tested to 100%), and krypton refuses to start if an action is missing from
+  the table or the table names an action nobody registered. The icon-only buttons (Refresh,
+  Main menu, Start a project, each project's actions menu) and the warning marks now carry an
+  explicit accessible name. `tests/test-accessible-names.c` fails when an icon-only control
+  is made without one; it is a heuristic over the source, said so in its first lines, because
+  the views need a display and a screen reader cannot run in CI. **Not done:** nobody has run
+  Orca or VoiceOver over krypton, and the Linux tray has still never run against a real
+  StatusNotifier host: both are rows marked "not run" in `ACCESSIBILITY.md`. There is still no
+  macOS menu bar and no command palette.
+
 - **krypton starts this computer's hub, and never stops it on its own (#1186).** Opening
   krypton with no hub running runs `vibey hub start` in the background (a setting, on by
   default, and only for *This computer*); Start, Stop and Status are in the header menu, the

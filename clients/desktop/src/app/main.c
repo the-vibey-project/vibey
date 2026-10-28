@@ -4,6 +4,7 @@
  * (kr-model.h); a refusal or silence is said in the window's banner, never swallowed. */
 #include "kr-answer.h"
 #include "kr-app.h"
+#include "kr-commands.h"
 #include "kr-lifecycle.h"
 #include "kr-model.h"
 #include "kr-pairing-client.h"
@@ -823,6 +824,17 @@ action_about(GSimpleAction *action, GVariant *parameter, gpointer data)
 }
 
 static void
+action_shortcuts(GSimpleAction *action, GVariant *parameter, gpointer data)
+{
+    (void) action;
+    (void) parameter;
+    KrApp *app = data;
+    g_application_activate(G_APPLICATION(app->application));
+    if (app->window != NULL)
+        kr_window_shortcuts(app->window);
+}
+
+static void
 action_start_hub(GSimpleAction *action, GVariant *parameter, gpointer data)
 {
     (void) action;
@@ -878,17 +890,25 @@ on_startup(GApplication *application, gpointer data)
         {.name = "start-hub", .activate = action_start_hub},
         {.name = "stop-hub", .activate = action_stop_hub},
         {.name = "hub-status", .activate = action_hub_status},
+        {.name = "shortcuts", .activate = action_shortcuts},
         {.name = "about", .activate = action_about},
         {.name = "quit", .activate = action_quit},
     };
     g_action_map_add_action_entries(G_ACTION_MAP(app->application), actions,
                                     G_N_ELEMENTS(actions), app);
     GtkApplication *gtk = GTK_APPLICATION(app->application);
-    gtk_application_set_accels_for_action(gtk, "app.refresh", (const char *const[]){"<Control>r", "F5", NULL});
-    gtk_application_set_accels_for_action(gtk, "app.show-gates", (const char *const[]){"<Control>g", NULL});
-    gtk_application_set_accels_for_action(gtk, "app.settings", (const char *const[]){"<Control>comma", NULL});
-    gtk_application_set_accels_for_action(gtk, "app.start-project", (const char *const[]){"<Control>n", NULL});
-    gtk_application_set_accels_for_action(gtk, "app.quit", (const char *const[]){"<Control>q", NULL});
+    /* Every action is a command in the one table, and every command has an action: a mismatch
+     * is a programming error, found the first time krypton starts. */
+    for (gsize i = 0; i < G_N_ELEMENTS(actions); i++)
+        g_assert(kr_command_find(actions[i].name) != NULL);
+    gsize command_count = 0;
+    const KrCommand *commands = kr_commands(&command_count);
+    for (gsize i = 0; i < command_count; i++) {
+        g_assert(g_action_map_lookup_action(G_ACTION_MAP(app->application), commands[i].action) !=
+                 NULL);
+        g_autofree char *name = g_strconcat("app.", commands[i].action, NULL);
+        gtk_application_set_accels_for_action(gtk, name, commands[i].accelerators);
+    }
 
     kr_app_apply_theme(app);
     connect_client(app);

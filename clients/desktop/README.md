@@ -18,12 +18,12 @@ over the [hub API](../../docs/reference/hub-api.md). It never touches vibey's da
 | Devices | Hubs found on your network (`_vibey._tcp`) with the certificate each advertises, this computer's hub, the hub this device is paired with and each scope it holds, in words, and pairing by the host's 6-digit code or its `vibey-pair://` address. |
 | Settings | Light, Dark or System (the default, which follows your desktop live), notifications, sounds, starting this computer's hub automatically (on by default), buttons to start, stop and check that hub, and, where the platform has one, keeping krypton running in the tray. |
 
-The header menu holds Start a project, Refresh, Preferences, **About krypton** and Quit.
+The header menu holds Start a project, the hub's Start, Stop and Status, Refresh, Preferences, **Keyboard shortcuts**, **About krypton** and Quit. Every command, its label and its keys come from one table (`src/core/kr-commands.c`), so the menu, the shortcuts dialog and the keys cannot disagree. Screen-reader support, and what has and has not been checked with one, is in [ACCESSIBILITY.md](ACCESSIBILITY.md).
 
 **The tray item** (the menu bar on macOS, a StatusNotifierItem elsewhere) shows how many gates wait on you, opens the window, jumps to Gates, starts a project and quits. While it is showing, closing the window hides it instead; if no tray is there to bring it back (GNOME needs the AppIndicator extension), the window closes as a window does. Turn it off in Settings.
 
 Keyboard: `Ctrl+N` starts a project, `Ctrl+R` or `F5` refreshes, `Ctrl+G` opens Gates, `Ctrl+,` opens Settings, and
-`Ctrl+Q` quits. On a narrow window the sidebar folds into one pane with back navigation.
+`Ctrl+?` lists every shortcut, and `Ctrl+Q` quits. On a narrow window the sidebar folds into one pane with back navigation.
 
 ## Connecting
 
