@@ -11,6 +11,7 @@ import smtplib
 from email.message import EmailMessage
 
 from vibey.application.interfaces.email import EmailPort
+from vibey.domain.config import DEFAULT_SURFACE_ADAPTER_TIMEOUT_SECONDS
 
 
 class ForwardEmailAdapter(EmailPort):
@@ -22,12 +23,14 @@ class ForwardEmailAdapter(EmailPort):
         username: str | None = None,
         password: str | None = None,
         from_email: str | None = None,
+        timeout: float = DEFAULT_SURFACE_ADAPTER_TIMEOUT_SECONDS,
     ) -> None:
         self._smtp_host = smtp_host
         self._smtp_port = smtp_port
         self._username = username
         self._password = password
         self._from_email = from_email or username or "vibey@localhost"
+        self._timeout = timeout
 
     async def send_email(self, to_addr: str, subject: str, body: str) -> None:
         message = EmailMessage()
@@ -42,12 +45,14 @@ class ForwardEmailAdapter(EmailPort):
         # handshake (or greets in plaintext). STARTTLS is only for submission
         # ports such as 587.
         if self._smtp_port == 465:
-            with smtplib.SMTP_SSL(self._smtp_host, self._smtp_port) as server:
+            with smtplib.SMTP_SSL(
+                self._smtp_host, self._smtp_port, timeout=self._timeout
+            ) as server:
                 if self._password:
                     server.login(self._username or "", self._password)
                 server.send_message(message)
             return
-        with smtplib.SMTP(self._smtp_host, self._smtp_port) as server:
+        with smtplib.SMTP(self._smtp_host, self._smtp_port, timeout=self._timeout) as server:
             server.ehlo()
             if self._password:
                 server.starttls()

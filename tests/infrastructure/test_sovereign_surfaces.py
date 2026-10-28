@@ -29,7 +29,7 @@ from vibey.application.interfaces import (
     SmsPort,
 )
 from vibey.bootstrap import build_app
-from vibey.domain.config import ConfigError, parse_config
+from vibey.domain.config import DEFAULT_SURFACE_ADAPTER_TIMEOUT_SECONDS, ConfigError, parse_config
 from vibey.infrastructure.blob.garage import GarageBlobAdapter
 from vibey.infrastructure.blob.in_memory import InMemoryBlob
 from vibey.infrastructure.blob.interfaces.garage_interface import GarageBlobAdapterInterface
@@ -918,7 +918,7 @@ async def test_forward_email_adapter_uses_implicit_tls_on_port_465() -> None:
         patch("smtplib.SMTP") as smtp_cls,
     ):
         await adapter.send_email("to@example.com", "s", "b")
-    ssl_cls.assert_called_once_with("smtp", 465)
+    ssl_cls.assert_called_once_with("smtp", 465, timeout=DEFAULT_SURFACE_ADAPTER_TIMEOUT_SECONDS)
     smtp_cls.assert_not_called()
     mock_ssl.login.assert_called_once_with("u", "p")
     mock_ssl.send_message.assert_called_once()
