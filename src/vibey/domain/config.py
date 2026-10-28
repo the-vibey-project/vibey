@@ -70,6 +70,9 @@ _SWITCH_HINTS = {
 }
 DEFAULT_CLAUDELOOP_LOCAL_PROFILE = "local"
 DEFAULT_LOCAL_CONTEXT_WINDOW = 32_768
+# Seconds a sovereign-surface adapter waits on one HTTP call before the call fails, so a server that
+# accepts the connection and never answers cannot block its caller for ever (doctrine 10; #727).
+DEFAULT_SURFACE_ADAPTER_TIMEOUT_SECONDS = 30.0
 
 
 class ConfigError(VibeyError):

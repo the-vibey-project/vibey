@@ -11,6 +11,7 @@ import urllib.request
 from typing import Any
 
 from vibey.application.interfaces.config_store import ConfigStorePort
+from vibey.domain.config import DEFAULT_SURFACE_ADAPTER_TIMEOUT_SECONDS
 
 
 class InfisicalConfigStoreAdapter(ConfigStorePort):
@@ -22,12 +23,14 @@ class InfisicalConfigStoreAdapter(ConfigStorePort):
         project_id: str,
         environment: str = "dev",
         opener: Any = urllib.request.urlopen,
+        timeout: float = DEFAULT_SURFACE_ADAPTER_TIMEOUT_SECONDS,
     ) -> None:
         self._url = url.strip().rstrip("/")
         self._token = token
         self._project_id = project_id
         self._environment = environment
         self._opener = opener
+        self._timeout = timeout
 
     async def create_config(self, key: str, value: str) -> None:
         await asyncio.to_thread(self._create_config_sync, key, value)
@@ -51,7 +54,7 @@ class InfisicalConfigStoreAdapter(ConfigStorePort):
             method="POST",
         )
         try:
-            with self._opener(req) as resp:
+            with self._opener(req, timeout=self._timeout) as resp:
                 resp.read()
         except urllib.error.HTTPError as exc:
             try:
@@ -78,7 +81,7 @@ class InfisicalConfigStoreAdapter(ConfigStorePort):
             method="GET",
         )
         try:
-            with self._opener(req) as resp:
+            with self._opener(req, timeout=self._timeout) as resp:
                 data = json.loads(resp.read().decode("utf-8"))
             return str(data["secret"]["secretValue"])
         except urllib.error.HTTPError as exc:
