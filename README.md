@@ -82,6 +82,29 @@ Azure deployment — built on top of the [`*loop` autonomous session
 runners](src/vibey_runners/), which live in this repository as uv
 workspace members (ADR-0021).
 
+## Contents
+
+- [What problem this solves](#what-problem-this-solves)
+- [Install](#install)
+- [Quickstart](#quickstart)
+- [Command reference](#command-reference)
+- [Configuration](#configuration)
+- [Notifications](#notifications)
+- [Telemetry](#telemetry)
+- [The shape of it](#the-shape-of-it)
+- [How it fits together](#how-it-fits-together)
+- [Why it isn't just another agent framework](#why-it-isnt-just-another-agent-framework)
+- [Questions people ask](#questions-people-ask)
+- [Documentation](#documentation)
+- [Status](#status)
+- [Troubleshooting](#troubleshooting)
+- [Upgrading](#upgrading)
+- [Formal notes](#formal-notes)
+- [Project links](#project-links)
+- [Join the community](#join-the-community)
+- [Related projects](#related-projects)
+- [License](#license)
+
 ## What problem this solves
 
 An autonomous coding session is not autonomous software delivery. A single
