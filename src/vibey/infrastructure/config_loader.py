@@ -97,6 +97,7 @@ _SURFACE_ENV_VARS: tuple[tuple[str, str, str, type], ...] = (
     ("siem", "username", "VIBEY_SIEM_USERNAME", str),
     ("siem", "password", "VIBEY_SIEM_PASSWORD", str),
     ("siem", "index", "VIBEY_SIEM_INDEX", str),
+    ("surfaces", "adapter_timeout_seconds", "VIBEY_SURFACES_ADAPTER_TIMEOUT_SECONDS", int),
     ("bus", "vhost", "VIBEY_BUS_VHOST", str),
 )
 
