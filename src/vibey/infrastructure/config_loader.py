@@ -1,4 +1,5 @@
 # Made with ❤️ by [Vibey](https://the-vibey-project.github.io/vibey/), Developed by [Adam Matthew Steinberger](https://vibewithadam.matthewsteinberger.com/) ([@adammatthewsteinberger](https://github.com/adammatthewsteinberger/)).
+import logging
 import os
 import tomllib
 from collections.abc import Mapping
@@ -23,6 +24,7 @@ from vibey.infrastructure.interfaces.class_contracts import (
     EnvironmentConfigLoaderInterface,
     QueueConfigLoaderInterface,
 )
+from vibey.infrastructure.interfaces.config_loader_interface import StartupConfigResolverInterface
 
 # The tables `vibey new` copies from vibey.toml into the project record. `gates` and
 # `engine_environment` decide what a gate command and an engine session may see of the
@@ -182,13 +184,12 @@ def apply_env_overrides(
     return data
 
 
-def load_config_from_path(path: Path) -> VibeyConfig:
-    data = parse_toml_string(path.read_text())
-    # Every local engine's environment switch overrides its `[features]` key -- the
-    # same switches, from the same table, `LocalEngineSettings` reads for the worker.
-    # Unlike that resolver, validation refuses a value that is not a boolean at all.
+def _apply_local_switches(data: dict[str, Any], environ: Mapping[str, str]) -> None:
+    """Every local engine's environment switch overrides its `[features]` key -- the same
+    switches, from the same table, `LocalEngineSettings` reads for the worker. Unlike that
+    resolver, validation refuses a value that is not a boolean at all."""
     for switch in LOCAL_ENGINE_SWITCHES:
-        override = os.environ.get(switch.env_var)
+        override = environ.get(switch.env_var)
         if override is None:
             continue
         normalized = override.strip().lower()
@@ -198,8 +199,71 @@ def load_config_from_path(path: Path) -> VibeyConfig:
         if not isinstance(features, dict):
             raise ValueError("features must be a table")
         features[switch.feature_key] = normalized in {"1", "true", "yes", "on"}
-    apply_env_overrides(data)
+
+
+def load_config_from_path(path: Path, environ: Mapping[str, str] = os.environ) -> VibeyConfig:
+    data = parse_toml_string(path.read_text())
+    _apply_local_switches(data, environ)
+    apply_env_overrides(data, environ)
     return parse_config(data)
+
+
+def load_config_from_environment(environ: Mapping[str, str] = os.environ) -> VibeyConfig:
+    """The configuration the environment alone declares: no vibey.toml has to exist.
+
+    Module-level beside `load_config_from_path`, which callers already import as a function;
+    `StartupConfigResolver` composes the two. `parse_config` refuses a document with no
+    `[project] name`, so the project is named `environment`, the way
+    `load_runtime_config_from_path` names its own.
+    """
+    data: dict[str, Any] = {"project": {"name": "environment"}}
+    _apply_local_switches(data, environ)
+    apply_env_overrides(data, environ)
+    return parse_config(data)
+
+
+class StartupConfigResolver(StartupConfigResolverInterface):
+    """What `build_app` reads its surfaces from: `./vibey.toml` when there is one, else the
+    environment, else nothing (every surface stays in memory). Startup is never blocked, but
+    a file or a variable that cannot be used is said once."""
+
+    def __init__(
+        self,
+        *,
+        environ: Mapping[str, str] = os.environ,
+        log: logging.Logger | None = None,
+    ) -> None:
+        self._environ = environ
+        self._log = log if log is not None else logging.getLogger("vibey.bootstrap")
+        self._skipped_file = False
+
+    @property
+    def skipped_file(self) -> bool:
+        """True when the last `resolve` found a `vibey.toml` it could not use."""
+        return self._skipped_file
+
+    def resolve(self, cwd: Path) -> VibeyConfig | None:
+        self._skipped_file = False
+        path = cwd / "vibey.toml"
+        if path.is_file():
+            try:
+                return load_config_from_path(path, self._environ)
+            except (OSError, ValueError, ConfigError) as error:
+                self._skipped_file = True
+                self._log.warning(
+                    "ignoring %s, which could not be used (%s); reading the environment instead",
+                    path,
+                    error,
+                )
+        try:
+            return load_config_from_environment(self._environ)
+        except (ValueError, ConfigError) as error:
+            self._log.warning(
+                "the environment's configuration could not be used (%s); every surface stays "
+                "in memory",
+                error,
+            )
+            return None
 
 
 def load_runtime_config_from_path(path: Path) -> dict[str, object]:

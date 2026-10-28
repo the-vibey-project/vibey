@@ -1046,15 +1046,15 @@ async def build_app(
         vibey_toml = Path("vibey.toml")
         skipped_toml = False
         if resolved_config is None:
-            try:
-                from vibey.infrastructure.config_loader import load_config_from_path
+            from vibey.infrastructure.config_loader import StartupConfigResolver
 
-                if vibey_toml.is_file():
-                    resolved_config = load_config_from_path(vibey_toml)
-            except Exception:  # nosec B110 - a malformed optional vibey.toml must not block startup
-                # ...except for the queue reaper's own table, read strictly below: skipping
-                # it would silently run the reaper on its defaults (#1108 review).
-                skipped_toml = True
+            # `./vibey.toml` when there is one, else the environment alone (a cluster pod has no
+            # file). A file that cannot be used is logged by the resolver; its [queue] table is
+            # still read on its own below, so a skipped file cannot start the reaper on defaults
+            # (#1108 review).
+            resolver = StartupConfigResolver()
+            resolved_config = resolver.resolve(Path.cwd())
+            skipped_toml = resolver.skipped_file
 
         if (
             resolved_config

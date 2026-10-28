@@ -1,4 +1,5 @@
 # Made with ❤️ by [Vibey](https://the-vibey-project.github.io/vibey/), Developed by [Adam Matthew Steinberger](https://vibewithadam.matthewsteinberger.com/) ([@adammatthewsteinberger](https://github.com/adammatthewsteinberger/)).
+import logging
 import re
 from pathlib import Path
 
@@ -7,9 +8,12 @@ import pytest
 from vibey.domain.config import ConfigError
 from vibey.infrastructure.config_loader import (
     RUNTIME_CONFIG_KEYS,
+    StartupConfigResolver,
+    load_config_from_environment,
     load_config_from_path,
     load_runtime_config_from_path,
 )
+from vibey.infrastructure.interfaces.config_loader_interface import StartupConfigResolverInterface
 
 
 def test_load_config_from_path_reads_and_parses(tmp_path: Path) -> None:
@@ -473,3 +477,93 @@ def test_a_publish_table_that_is_wrong_is_refused_when_the_project_is_created(
 
     with pytest.raises(ConfigError, match="publish.mode"):
         load_runtime_config_from_path(config_path)
+
+
+_TRACKER = {
+    "VIBEY_TRACKER_URL": "https://plane.test",
+    "VIBEY_TRACKER_TOKEN": "t",
+    "VIBEY_TRACKER_WORKSPACE_SLUG": "ws",
+    "VIBEY_TRACKER_PROJECT_ID": "p1",
+}
+
+
+def test_environment_only_config_carries_a_complete_tracker() -> None:
+    tracker = load_config_from_environment(_TRACKER).tracker
+    assert (tracker.url, tracker.token, tracker.workspace_slug, tracker.project_id) == (
+        "https://plane.test",
+        "t",
+        "ws",
+        "p1",
+    )
+
+
+def test_environment_only_config_without_variables_leaves_every_surface_unset() -> None:
+    config = load_config_from_environment({})
+    assert not (config.tracker.url or config.docs.url or config.secrets.url or config.files.url)
+    assert not (config.email.smtp_host or config.sms.url or config.messaging.url)
+    assert not (config.config_store.url or config.cache.url or config.bus.url)
+    assert not (config.blob.url or config.siem.url)
+
+
+def test_environment_only_config_rejects_a_non_integer_book_id() -> None:
+    with pytest.raises(ValueError):
+        load_config_from_environment({"VIBEY_DOCS_BOOK_ID": "abc"})
+
+
+def test_resolver_prefers_the_file_when_present(tmp_path: Path) -> None:
+    (tmp_path / "vibey.toml").write_text('[project]\nname = "from-file"\n')
+    resolver = StartupConfigResolver(environ=_TRACKER)
+    config = resolver.resolve(tmp_path)
+    assert config is not None
+    assert config.project.name == "from-file"
+    assert config.tracker.url == "https://plane.test"  # the environment still wins over the file
+    assert not resolver.skipped_file
+
+
+def test_resolver_warns_and_falls_back_on_a_malformed_file(
+    tmp_path: Path, caplog: pytest.LogCaptureFixture
+) -> None:
+    (tmp_path / "vibey.toml").write_text("[project\nname =")
+    resolver = StartupConfigResolver(environ=_TRACKER)
+    with caplog.at_level(logging.WARNING, logger="vibey.bootstrap"):
+        config = resolver.resolve(tmp_path)
+    assert config is not None and config.tracker.project_id == "p1"
+    assert resolver.skipped_file
+    assert [r.getMessage() for r in caplog.records if "vibey.toml" in r.getMessage()]
+
+
+def test_resolver_returns_none_and_warns_on_a_bad_variable(
+    tmp_path: Path, caplog: pytest.LogCaptureFixture
+) -> None:
+    resolver = StartupConfigResolver(environ={"VIBEY_DOCS_BOOK_ID": "abc"})
+    with caplog.at_level(logging.WARNING, logger="vibey.bootstrap"):
+        assert resolver.resolve(tmp_path) is None
+    assert len(caplog.records) == 1
+
+
+def test_resolver_uses_the_environment_when_there_is_no_file(tmp_path: Path) -> None:
+    config = StartupConfigResolver(environ=_TRACKER).resolve(tmp_path)
+    assert config is not None and config.tracker.workspace_slug == "ws"
+
+
+def test_resolver_logs_to_the_named_logger_by_default(
+    tmp_path: Path, caplog: pytest.LogCaptureFixture
+) -> None:
+    with caplog.at_level(logging.WARNING, logger="vibey.bootstrap"):
+        StartupConfigResolver(environ={"VIBEY_DOCS_BOOK_ID": "abc"}).resolve(tmp_path)
+    assert caplog.records[0].name == "vibey.bootstrap"
+
+
+def test_path_loader_reads_switches_from_the_given_environ(tmp_path: Path) -> None:
+    path = tmp_path / "vibey.toml"
+    path.write_text('[project]\nname = "x"\n')
+    config = load_config_from_path(path, {"VIBEY_FEATURE_QWENLOOP": "on"})
+    assert config.features.qwenloop
+
+
+def test_environment_only_config_reads_switches_from_the_given_environ() -> None:
+    assert load_config_from_environment({"VIBEY_FEATURE_QWENLOOP": "on"}).features.qwenloop
+
+
+def test_resolver_satisfies_its_interface() -> None:
+    assert isinstance(StartupConfigResolver(environ={}), StartupConfigResolverInterface)
