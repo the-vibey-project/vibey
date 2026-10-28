@@ -17,6 +17,7 @@ import urllib.request
 from typing import Any
 
 from vibey.application.interfaces.sms import SmsPort
+from vibey.domain.config import DEFAULT_SURFACE_ADAPTER_TIMEOUT_SECONDS
 
 
 class KannelSmsAdapter(SmsPort):
@@ -28,12 +29,14 @@ class KannelSmsAdapter(SmsPort):
         password: str,
         sender: str = "vibey",
         opener: Any = urllib.request.urlopen,
+        timeout: float = DEFAULT_SURFACE_ADAPTER_TIMEOUT_SECONDS,
     ) -> None:
         self._url = url.strip().rstrip("/")
         self._username = username
         self._password = password
         self._sender = sender
         self._opener = opener
+        self._timeout = timeout
 
     async def send_sms(self, phone_number: str, message: str) -> None:
         await asyncio.to_thread(self._send_sync, phone_number, message)
@@ -52,7 +55,7 @@ class KannelSmsAdapter(SmsPort):
             f"{self._url}/cgi-bin/sendsms?{query}", method="GET"
         )
         try:
-            with self._opener(req) as resp:
+            with self._opener(req, timeout=self._timeout) as resp:
                 body = resp.read().decode("utf-8", "replace")
         except urllib.error.HTTPError as exc:
             raise RuntimeError(f"Kannel sendsms failed: HTTP {exc.code}") from exc

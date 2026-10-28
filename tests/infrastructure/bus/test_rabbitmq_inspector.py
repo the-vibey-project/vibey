@@ -56,7 +56,7 @@ class Broker:
         self.routes = routes
         self.sent: list[tuple[str, str, object]] = []
 
-    def __call__(self, req: Any) -> MagicMock:
+    def __call__(self, req: Any, timeout: float | None = None) -> MagicMock:
         path = req.full_url.split("/api/", 1)[1]
         body = json.loads(req.data.decode()) if req.data else None
         self.sent.append((req.get_method(), path, body))

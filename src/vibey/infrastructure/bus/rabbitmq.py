@@ -33,6 +33,7 @@ from collections.abc import Callable
 from typing import Any
 
 from vibey.application.interfaces.bus import BusPort
+from vibey.domain.config import DEFAULT_SURFACE_ADAPTER_TIMEOUT_SECONDS
 from vibey.infrastructure.bus.management import RabbitMqApiError, RabbitMqManagementApi
 
 
@@ -45,11 +46,17 @@ class RabbitMqBusAdapter(BusPort):
         password: str,
         vhost: str = "/",
         opener: Any = urllib.request.urlopen,
+        timeout: float = DEFAULT_SURFACE_ADAPTER_TIMEOUT_SECONDS,
         message_ids: Callable[[], uuid.UUID] = uuid.uuid4,
         epoch_seconds: Callable[[], float] = time.time,
     ) -> None:
         self._api = RabbitMqManagementApi(
-            url=url, username=username, password=password, vhost=vhost, opener=opener
+            url=url,
+            username=username,
+            password=password,
+            vhost=vhost,
+            opener=opener,
+            timeout=timeout,
         )
         self._vhost = self._api.vhost
         self._message_ids = message_ids

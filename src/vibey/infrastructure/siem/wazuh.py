@@ -18,6 +18,7 @@ from datetime import UTC, datetime
 from typing import Any
 
 from vibey.application.interfaces.siem import SiemPort
+from vibey.domain.config import DEFAULT_SURFACE_ADAPTER_TIMEOUT_SECONDS
 
 
 class WazuhSiemAdapter(SiemPort):
@@ -28,6 +29,7 @@ class WazuhSiemAdapter(SiemPort):
         username: str | None = None,
         password: str | None = None,
         opener: Any = urllib.request.urlopen,
+        timeout: float = DEFAULT_SURFACE_ADAPTER_TIMEOUT_SECONDS,
     ) -> None:
         self._url = url.strip().rstrip("/")
         self._auth: dict[str, str] = {}
@@ -35,6 +37,7 @@ class WazuhSiemAdapter(SiemPort):
             credentials = base64.b64encode(f"{username}:{password}".encode()).decode()
             self._auth = {"Authorization": f"Basic {credentials}"}
         self._opener = opener
+        self._timeout = timeout
 
     async def send_event(self, index: str, event: dict[str, object]) -> None:
         await asyncio.to_thread(self._send_sync, index, event)
@@ -48,7 +51,7 @@ class WazuhSiemAdapter(SiemPort):
             method="POST",
         )
         try:
-            with self._opener(req) as resp:
+            with self._opener(req, timeout=self._timeout) as resp:
                 resp.read()
         except urllib.error.HTTPError as exc:
             raise RuntimeError(f"SIEM index failed: HTTP {exc.code}") from exc
