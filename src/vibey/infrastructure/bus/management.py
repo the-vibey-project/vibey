@@ -46,6 +46,9 @@ class RabbitMqManagementApi:
         opener: Any = urllib.request.urlopen,
         timeout: float = DEFAULT_SURFACE_ADAPTER_TIMEOUT_SECONDS,
     ) -> None:
+        # The bus adapter builds this class, so the guard here covers both.
+        if timeout <= 0:
+            raise ValueError("timeout must be positive")
         parsed = urllib.parse.urlsplit(url.strip())
         if parsed.username is not None or parsed.password is not None or "@" in parsed.netloc:
             # A credential in the URL is logged with every error the URL appears in, and
