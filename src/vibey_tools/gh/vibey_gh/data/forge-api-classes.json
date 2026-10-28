@@ -1,0 +1,584 @@
+{
+ "schema": "vibey.forge-api-classes/1",
+ "scope": "Repository-scoped artifact classes only: what a forge exposes beneath one repository. User, organisation and instance endpoints are out of scope.",
+ "forges": {
+  "github": {
+   "verified": true,
+   "source": "https://raw.githubusercontent.com/github/rest-api-description/main/descriptions/api.github.com/api.github.com.json",
+   "version": "1.1.4",
+   "read": "2026-10-28",
+   "note": "Every path beneath /repos/{owner}/{repo}, grouped by its first path segment, with the nested groups that hold a distinct artifact (issue comments, review comments, release assets, Actions secrets and variables) split out.",
+   "entries": [
+    {
+     "native": "actions",
+     "class": "workflow-run"
+    },
+    {
+     "native": "actions/secrets",
+     "class": "secret"
+    },
+    {
+     "native": "actions/variables",
+     "class": "variable"
+    },
+    {
+     "native": "activity",
+     "class": "repository-event"
+    },
+    {
+     "native": "agents",
+     "class": "codespace"
+    },
+    {
+     "native": "assignees",
+     "class": "collaborator"
+    },
+    {
+     "native": "attestations",
+     "class": "attestation"
+    },
+    {
+     "native": "autolinks",
+     "class": "autolink"
+    },
+    {
+     "native": "automated-security-fixes",
+     "class": "security-alert"
+    },
+    {
+     "native": "branches",
+     "class": "git-object"
+    },
+    {
+     "native": "branches/protection",
+     "class": "branch-protection"
+    },
+    {
+     "native": "check-runs",
+     "class": "check-run"
+    },
+    {
+     "native": "check-suites",
+     "class": "check-run"
+    },
+    {
+     "native": "code-quality",
+     "class": "security-alert"
+    },
+    {
+     "native": "code-scanning",
+     "class": "security-alert"
+    },
+    {
+     "native": "code-security-configuration",
+     "class": "security-alert"
+    },
+    {
+     "native": "codeowners",
+     "class": "repository-metadata"
+    },
+    {
+     "native": "codespaces",
+     "class": "codespace"
+    },
+    {
+     "native": "collaborators",
+     "class": "collaborator"
+    },
+    {
+     "native": "comments",
+     "class": "commit-comment"
+    },
+    {
+     "native": "commits",
+     "class": "git-object"
+    },
+    {
+     "native": "community",
+     "class": "repository-metadata"
+    },
+    {
+     "native": "compare",
+     "class": "git-object"
+    },
+    {
+     "native": "contents",
+     "class": "git-object"
+    },
+    {
+     "native": "contributors",
+     "class": "repository-metadata"
+    },
+    {
+     "native": "copilot",
+     "class": "codespace"
+    },
+    {
+     "native": "dependabot",
+     "class": "security-alert"
+    },
+    {
+     "native": "dependency-graph",
+     "class": "dependency-graph"
+    },
+    {
+     "native": "deployments",
+     "class": "deployment"
+    },
+    {
+     "native": "dispatches",
+     "class": "dispatch"
+    },
+    {
+     "native": "environments",
+     "class": "deployment"
+    },
+    {
+     "native": "events",
+     "class": "repository-event"
+    },
+    {
+     "native": "forks",
+     "class": "stargazer-watcher-fork"
+    },
+    {
+     "native": "git",
+     "class": "git-object"
+    },
+    {
+     "native": "hash-algorithm",
+     "class": "repository-metadata"
+    },
+    {
+     "native": "hooks",
+     "class": "webhook"
+    },
+    {
+     "native": "immutable-releases",
+     "class": "repository-metadata"
+    },
+    {
+     "native": "import",
+     "class": "import"
+    },
+    {
+     "native": "installation",
+     "class": "app-installation"
+    },
+    {
+     "native": "interaction-limits",
+     "class": "interaction-limit"
+    },
+    {
+     "native": "invitations",
+     "class": "collaborator"
+    },
+    {
+     "native": "issue-types",
+     "class": "sub-issue"
+    },
+    {
+     "native": "issues",
+     "class": "issue"
+    },
+    {
+     "native": "issues/comments",
+     "class": "comment"
+    },
+    {
+     "native": "issues/events",
+     "class": "timeline-event"
+    },
+    {
+     "native": "issues/reactions",
+     "class": "reaction"
+    },
+    {
+     "native": "issues/sub_issues",
+     "class": "sub-issue"
+    },
+    {
+     "native": "keys",
+     "class": "deploy-key"
+    },
+    {
+     "native": "labels",
+     "class": "label"
+    },
+    {
+     "native": "languages",
+     "class": "repository-metadata"
+    },
+    {
+     "native": "license",
+     "class": "repository-metadata"
+    },
+    {
+     "native": "merge-upstream",
+     "class": "git-object"
+    },
+    {
+     "native": "merges",
+     "class": "git-object"
+    },
+    {
+     "native": "milestones",
+     "class": "milestone"
+    },
+    {
+     "native": "notifications",
+     "class": "notification"
+    },
+    {
+     "native": "pages",
+     "class": "pages"
+    },
+    {
+     "native": "private-vulnerability-reporting",
+     "class": "security-alert"
+    },
+    {
+     "native": "properties",
+     "class": "custom-property"
+    },
+    {
+     "native": "pulls",
+     "class": "change-request"
+    },
+    {
+     "native": "pulls/comments",
+     "class": "review-comment"
+    },
+    {
+     "native": "pulls/reviews",
+     "class": "review"
+    },
+    {
+     "native": "readme",
+     "class": "repository-metadata"
+    },
+    {
+     "native": "releases",
+     "class": "release"
+    },
+    {
+     "native": "releases/assets",
+     "class": "release-asset-content"
+    },
+    {
+     "native": "repository",
+     "class": "repository-metadata"
+    },
+    {
+     "native": "rules",
+     "class": "ruleset"
+    },
+    {
+     "native": "rulesets",
+     "class": "ruleset"
+    },
+    {
+     "native": "secret-scanning",
+     "class": "security-alert"
+    },
+    {
+     "native": "security-advisories",
+     "class": "security-alert"
+    },
+    {
+     "native": "stacks",
+     "class": "change-request"
+    },
+    {
+     "native": "stargazers",
+     "class": "stargazer-watcher-fork"
+    },
+    {
+     "native": "stats",
+     "class": "repository-metadata"
+    },
+    {
+     "native": "statuses",
+     "class": "commit-status"
+    },
+    {
+     "native": "subscribers",
+     "class": "stargazer-watcher-fork"
+    },
+    {
+     "native": "subscription",
+     "class": "stargazer-watcher-fork"
+    },
+    {
+     "native": "tags",
+     "class": "tag"
+    },
+    {
+     "native": "tarball",
+     "class": "git-object"
+    },
+    {
+     "native": "teams",
+     "class": "collaborator"
+    },
+    {
+     "native": "topics",
+     "class": "repository-metadata"
+    },
+    {
+     "native": "traffic",
+     "class": "traffic"
+    },
+    {
+     "native": "transfer",
+     "class": "repository-metadata"
+    },
+    {
+     "native": "vulnerability-alerts",
+     "class": "security-alert"
+    },
+    {
+     "native": "zipball",
+     "class": "git-object"
+    }
+   ]
+  },
+  "forgejo": {
+   "verified": false,
+   "source": "https://codeberg.org/swagger.v1.json",
+   "version": "16.0.0-dev-798-568c49e1+gitea-1.22.0",
+   "read": "2026-10-28",
+   "note": "UNVERIFIED. The swagger document was reached but its extraction was cut short at the first five repository groups (actions, issues, pulls, releases, labels), so the rest of this list is written from the Gitea and Forgejo API as remembered. Replace it with a complete read of the live document, and set verified to true, before relying on it.",
+   "entries": [
+    {
+     "native": "issues",
+     "class": "issue"
+    },
+    {
+     "native": "issues/comments",
+     "class": "comment"
+    },
+    {
+     "native": "pulls",
+     "class": "change-request"
+    },
+    {
+     "native": "pulls/reviews",
+     "class": "review"
+    },
+    {
+     "native": "pulls/comments",
+     "class": "review-comment"
+    },
+    {
+     "native": "labels",
+     "class": "label"
+    },
+    {
+     "native": "milestones",
+     "class": "milestone"
+    },
+    {
+     "native": "releases",
+     "class": "release"
+    },
+    {
+     "native": "releases/assets",
+     "class": "release-asset-content"
+    },
+    {
+     "native": "tags",
+     "class": "tag"
+    },
+    {
+     "native": "issues/timeline",
+     "class": "timeline-event"
+    },
+    {
+     "native": "issues/reactions",
+     "class": "reaction"
+    },
+    {
+     "native": "issues/pin",
+     "class": "pinned-issue"
+    },
+    {
+     "native": "pin_allowed",
+     "class": "pinned-issue"
+    },
+    {
+     "native": "commits",
+     "class": "git-object"
+    },
+    {
+     "native": "git",
+     "class": "git-object"
+    },
+    {
+     "native": "branches",
+     "class": "git-object"
+    },
+    {
+     "native": "contents",
+     "class": "git-object"
+    },
+    {
+     "native": "raw",
+     "class": "git-object"
+    },
+    {
+     "native": "media",
+     "class": "git-object"
+    },
+    {
+     "native": "archive",
+     "class": "git-object"
+    },
+    {
+     "native": "compare",
+     "class": "git-object"
+    },
+    {
+     "native": "diffpatch",
+     "class": "git-object"
+    },
+    {
+     "native": "file-contents",
+     "class": "git-object"
+    },
+    {
+     "native": "merge-upstream",
+     "class": "git-object"
+    },
+    {
+     "native": "statuses",
+     "class": "commit-status"
+    },
+    {
+     "native": "branch_protections",
+     "class": "branch-protection"
+    },
+    {
+     "native": "tag_protections",
+     "class": "branch-protection"
+    },
+    {
+     "native": "hooks",
+     "class": "webhook"
+    },
+    {
+     "native": "keys",
+     "class": "deploy-key"
+    },
+    {
+     "native": "collaborators",
+     "class": "collaborator"
+    },
+    {
+     "native": "assignees",
+     "class": "collaborator"
+    },
+    {
+     "native": "reviewers",
+     "class": "collaborator"
+    },
+    {
+     "native": "teams",
+     "class": "collaborator"
+    },
+    {
+     "native": "stargazers",
+     "class": "stargazer-watcher-fork"
+    },
+    {
+     "native": "subscribers",
+     "class": "stargazer-watcher-fork"
+    },
+    {
+     "native": "subscription",
+     "class": "stargazer-watcher-fork"
+    },
+    {
+     "native": "forks",
+     "class": "stargazer-watcher-fork"
+    },
+    {
+     "native": "actions",
+     "class": "workflow-run"
+    },
+    {
+     "native": "actions/secrets",
+     "class": "secret"
+    },
+    {
+     "native": "actions/variables",
+     "class": "variable"
+    },
+    {
+     "native": "notifications",
+     "class": "notification"
+    },
+    {
+     "native": "activities/feeds",
+     "class": "repository-event"
+    },
+    {
+     "native": "topics",
+     "class": "repository-metadata"
+    },
+    {
+     "native": "languages",
+     "class": "repository-metadata"
+    },
+    {
+     "native": "editorconfig",
+     "class": "repository-metadata"
+    },
+    {
+     "native": "issue_config",
+     "class": "repository-metadata"
+    },
+    {
+     "native": "issue_templates",
+     "class": "repository-metadata"
+    },
+    {
+     "native": "flags",
+     "class": "repository-metadata"
+    },
+    {
+     "native": "avatar",
+     "class": "repository-metadata"
+    },
+    {
+     "native": "transfer",
+     "class": "repository-metadata"
+    },
+    {
+     "native": "signing-key",
+     "class": "signing-key"
+    },
+    {
+     "native": "mirror-sync",
+     "class": "mirror"
+    },
+    {
+     "native": "push_mirrors",
+     "class": "mirror"
+    },
+    {
+     "native": "times",
+     "class": "time-tracking"
+    },
+    {
+     "native": "wiki",
+     "class": "wiki"
+    },
+    {
+     "native": "repository",
+     "class": "repository-metadata"
+    }
+   ]
+  }
+ }
+}

@@ -791,6 +791,7 @@ def _forge_snapshot(args) -> int:
     from datetime import timedelta
 
     from vibey_gh import github_state
+    from vibey_gh.forge_inventory import JsonForgeInventory
     from vibey_gh.forge_snapshot import (
         RESUME,
         ForgeSnapshot,
@@ -834,7 +835,12 @@ def _forge_snapshot(args) -> int:
         else:
             reader = _adapter_reader(forge, repository, args.per_page)
         store = JsonlSnapshotStore(out, forge=reader.forge, repository=reader.repository)
-        capture = ForgeSnapshot(reader, store, clock_skew=timedelta(seconds=args.clock_skew))
+        capture = ForgeSnapshot(
+            reader,
+            store,
+            clock_skew=timedelta(seconds=args.clock_skew),
+            inventory=JsonForgeInventory(),
+        )
         manifest = capture.capture(classes=classes, since=args.since)
     except (SnapshotStoreError, OSError) as exc:
         print(f"{prefix} {exc}", file=sys.stderr)
@@ -860,6 +866,17 @@ def _forge_snapshot(args) -> int:
         f"{prefix} {len(manifest['excluded'])} artifact class(es) not captured, each named"
         f" with its reason in {out / 'manifest.json'}"
     )
+    accounting = manifest["inventory"]
+    if accounting["unaccounted"] is None:
+        print(f"{prefix} no inventory of what the {manifest['forge']} API exposes, so no account")
+    elif accounting["unaccounted"]:
+        print(
+            f"{prefix} API class(es) neither captured nor excluded:"
+            f" {', '.join(accounting['unaccounted'])}",
+            file=sys.stderr,
+        )
+    if not accounting["verified"]:
+        print(f"{prefix} the {manifest['forge']} inventory was not read in full", file=sys.stderr)
     if manifest["resume_since"] is not None:
         print(f"{prefix} resume with --since {manifest['resume_since']} (or --since {RESUME})")
     return 0 if manifest["complete"] else 1

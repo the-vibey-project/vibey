@@ -268,10 +268,11 @@ cursors can be recomputed from them.
 | `captured_at` | When this capture began. |
 | `since` | The moment this capture started from, or `null` for a full one. |
 | `clock_skew_seconds` | The clock allowance this capture used for its cursors. |
-| `complete` | `true` when every selected class was captured. |
+| `complete` | `true` when every selected class was captured and no class the forge's API exposes is unaccounted for (`inventory`). |
 | `resume_since` | Where the next capture can resume from, or `null` when some resumable class has never been captured completely. |
 | `classes` | One entry for every class this command knows, selected or not. |
 | `excluded` | Every artifact class this capture did not hold, each with its reason. |
+| `inventory` | What the capture was held to: the checked-in list of what the forge's API exposes. `sha256` names the list, `verified` says whether it was read in full from the forge's API description, and `unaccounted` lists the classes it exposes that are neither captured nor excluded (`null` for a forge nobody has listed). `null` itself when the capture was made without a list. |
 
 Each entry in `classes`:
 
@@ -332,6 +333,33 @@ so. The list, as this version writes it:
 | `autolink` | Needs administration permission to read. |
 | `deploy-key` | Needs administration permission to read. |
 | `custom-property` | Set by the organisation; not read. |
+| `app-installation` | Which apps are installed on a repository is an account setting. |
+| `attestation` | Build attestations are signed by the workflow that made them. |
+| `codespace` | Codespaces and coding agents are per-user working environments. |
+| `dependency-graph` | Derived from the files in the repository. |
+| `dispatch` | A repository dispatch is a write-only trigger. |
+| `import` | A source import is a migration job, not repository history. |
+| `interaction-limit` | A temporary moderation setting. |
+| `mirror` | Mirror configuration holds credentials for another host. |
+| `notification` | Notifications belong to the account reading them. |
+| `repository-event` | The activity feed repeats events the artifact classes already hold. |
+| `signing-key` | Signing keys are account material. |
+| `time-tracking` | Tracked time is read one issue at a time. |
+
+### Held against the API
+
+The two lists above say what a capture reads and what it declines. They do not say whether
+the two together cover what the forge offers. `vibey_gh/data/forge-api-classes.json` does:
+for each forge, every repository-scoped group its API description publishes, mapped to the
+forge-neutral class it belongs to. Each capture compares that list with the captured and
+excluded classes, records the result as `inventory` in the manifest, and is not `complete`
+while any class the API exposes has no home. A test holds the shipped list to the same rule,
+so adding an API group without deciding what becomes of it fails the suite.
+
+The GitHub list was read in full from GitHub's published OpenAPI description (version and
+date in the file). The Forgejo list was not: the swagger document was reached but cut short,
+so the file says `verified: false` and the manifest repeats it. Replacing it with a complete
+read, on a host that serves the document, is open work.
 
 A class left out with `--classes` is added to the list for that capture, with the reason
 that it was not selected, and its file and chain are left exactly as they were.

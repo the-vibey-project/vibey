@@ -279,3 +279,26 @@ class ForgeSnapshotInterface(Protocol):
         empty selection or an unreadable moment, before anything is read or written.
         """
         ...
+
+
+@runtime_checkable
+class ForgeInventoryInterface(Protocol):
+    """What each forge's API exposes, as a checked-in list the capture is accounted against.
+
+    The capture knows the classes it reads and the ones it declines. It cannot know, from
+    itself, whether those two lists cover what a forge offers; this is the third list that
+    says so (#1571). A forge it holds no list for is unknown, never "nothing to account for".
+    """
+
+    @property
+    def sha256(self) -> str:
+        """The digest of the inventory as read, so a manifest names the list it was held to."""
+        ...
+
+    def classes(self, forge: str) -> tuple[str, ...] | None:
+        """The forge-neutral classes the forge's API exposes, sorted; `None` if not inventoried."""
+        ...
+
+    def verified(self, forge: str) -> bool:
+        """Whether the forge's list was read in full from its published API description."""
+        ...
