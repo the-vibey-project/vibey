@@ -46,6 +46,7 @@ from vibey_gh.interfaces.forge_snapshot_interface import (
     AppendOutcome,
     Break,
     ChainHead,
+    ForgeInventoryInterface,
     ForgeRead,
     ForgeReaderInterface,
     ForgeSnapshotInterface,
@@ -111,6 +112,7 @@ MANIFEST_FIELDS = (
     "resume_since",
     "classes",
     "excluded",
+    "inventory",
 )
 CLASS_ENTRY_FIELDS = (
     "native_class",
@@ -226,6 +228,18 @@ EXCLUDED: tuple[tuple[str, str], ...] = (
     ("autolink", "Autolink references need administration permission."),
     ("deploy-key", "Deploy keys need administration permission."),
     ("custom-property", "Repository custom properties are set by the organisation."),
+    ("app-installation", "Which apps are installed on a repository is an account setting."),
+    ("attestation", "Build attestations are signed by the workflow that made them."),
+    ("codespace", "Codespaces and coding agents are per-user working environments."),
+    ("dependency-graph", "The dependency graph is derived from the files in the repository."),
+    ("dispatch", "A repository dispatch is a write-only trigger."),
+    ("import", "A source import is a migration job, not repository history."),
+    ("interaction-limit", "Interaction limits are a temporary moderation setting."),
+    ("mirror", "Mirror configuration holds credentials for another host."),
+    ("notification", "Notifications belong to the account reading them."),
+    ("repository-event", "The activity feed repeats events the artifact classes already hold."),
+    ("signing-key", "Signing keys are account material."),
+    ("time-tracking", "Tracked time is read one issue at a time."),
 )
 
 _NOT_SELECTED = "not selected for this capture; its file and its chain were left untouched"
@@ -784,6 +798,7 @@ class ForgeSnapshot(ForgeSnapshotInterface):
         clock: Callable[[], datetime] | None = None,
         clock_skew: timedelta = timedelta(minutes=5),
         excluded: Sequence[tuple[str, str]] = EXCLUDED,
+        inventory: ForgeInventoryInterface | None = None,
     ) -> None:
         if clock_skew < timedelta(0):
             raise ValueError(f"clock_skew must not be negative: {clock_skew}")
@@ -792,6 +807,7 @@ class ForgeSnapshot(ForgeSnapshotInterface):
         self._clock = clock if clock is not None else partial(datetime.now, UTC)
         self._clock_skew = clock_skew
         self._excluded = tuple(excluded)
+        self._inventory = inventory
 
     def capture(
         self,
@@ -840,6 +856,7 @@ class ForgeSnapshot(ForgeSnapshotInterface):
                 "unchanged": outcome.unchanged,
             }
         cursors = [entries[spec.name]["cursor"] for spec in CLASSES if spec.cursor]
+        inventory = self._accounting()
         manifest: dict[str, Any] = {
             "schema": MANIFEST_SCHEMA,
             "record_schema": RECORD_SCHEMA,
@@ -848,7 +865,8 @@ class ForgeSnapshot(ForgeSnapshotInterface):
             "captured_at": started,
             "since": since,
             "clock_skew_seconds": int(self._clock_skew.total_seconds()),
-            "complete": all(entries[name]["status"] == "captured" for name in selected),
+            "complete": all(entries[name]["status"] == "captured" for name in selected)
+            and (inventory is None or inventory["unaccounted"] == []),
             "resume_since": (
                 min(cursors, key=moment) if all(cursor is not None for cursor in cursors) else None
             ),
@@ -859,9 +877,29 @@ class ForgeSnapshot(ForgeSnapshotInterface):
                 for spec in CLASSES
                 if spec.name not in selected
             ],
+            "inventory": inventory,
         }
         self._store.write_manifest(manifest)
         return manifest
+
+    def _accounting(self) -> dict[str, Any] | None:
+        """Hold every class the forge's API exposes to this capture's two lists (#1571).
+
+        `unaccounted` is the inventoried classes that are neither captured nor excluded; it is
+        `None`, not empty, for a forge nobody inventoried, because a list that was never made
+        cannot be said to be covered. Without an inventory there is nothing to say, and the
+        manifest says so with `None` rather than by leaving the claim out.
+        """
+        if self._inventory is None:
+            return None
+        forge = self._reader.forge
+        exposed = self._inventory.classes(forge)
+        homes = {spec.name for spec in CLASSES} | {name for name, _ in self._excluded}
+        return {
+            "sha256": self._inventory.sha256,
+            "verified": self._inventory.verified(forge),
+            "unaccounted": None if exposed is None else sorted(set(exposed) - homes),
+        }
 
     @staticmethod
     def _select(classes: Sequence[str] | None) -> frozenset[str]:
