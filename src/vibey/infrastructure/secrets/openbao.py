@@ -33,6 +33,8 @@ class OpenBaoSecretsAdapter(SecretsPort):
         opener: Any = urllib.request.urlopen,
         timeout: float = DEFAULT_SURFACE_ADAPTER_TIMEOUT_SECONDS,
     ) -> None:
+        if timeout <= 0:
+            raise ValueError("timeout must be positive")
         self._url = url.strip().rstrip("/")
         self._token = token
         self._opener = opener

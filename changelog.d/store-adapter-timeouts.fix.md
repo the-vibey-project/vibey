@@ -1,0 +1,1 @@
+The OpenBao and Nextcloud adapters refuse a non-positive `timeout` with `ValueError("timeout must be positive")`, so a zero or negative bound can no longer reach the socket as "no bound at all".

@@ -26,6 +26,8 @@ class NextcloudFilesAdapter(FilesPort):
         opener: object | None = None,
         timeout: float = DEFAULT_SURFACE_ADAPTER_TIMEOUT_SECONDS,
     ) -> None:
+        if timeout <= 0:
+            raise ValueError("timeout must be positive")
         self._url = url.rstrip("/")
         self._user = user
         self._password = password
