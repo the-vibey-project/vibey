@@ -52,6 +52,12 @@ class NotificationsConfigInterface(Protocol):
 
 
 @runtime_checkable
+class SurfacesConfigInterface(Protocol):
+    @property
+    def adapter_timeout_seconds(self) -> int: ...
+
+
+@runtime_checkable
 class TelemetryConfigInterface(Protocol):
     @property
     def enabled(self) -> bool: ...
