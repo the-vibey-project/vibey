@@ -369,6 +369,12 @@ codebase does outside tests.
 | `max_cycles` | integer | `10` | Cap on delivery cycles. Not range-checked. The live value is the `project.max_cycles` column set by `vibey new --max-cycles` or `spec.maxCycles`. |
 | `strict_loopback` | boolean | `false` | When true, tightens review-loopback routing ([ADR-0010](../architecture/decisions/0010-review-loopback-routing.md)). |
 
+```toml
+[project]
+name = "my-app"
+repo = "~/src/my-app"
+```
+
 ## `[isolation]`
 
 | Field | Type | Default | Notes |
@@ -376,6 +382,13 @@ codebase does outside tests.
 | `level` | string | `"worktree"` | One of `worktree`, `container`, `vm`. |
 | `allow_push` | boolean | `false` | Whether a worktree may push to a remote. |
 | `egress` | array of strings | `[]` | Allowed egress destinations when network isolation is otherwise closed. Element types are not validated. |
+
+```toml
+[isolation]
+level = "worktree"
+allow_push = true
+egress = ["github.com"]
+```
 
 `worktree` isolation is the one active runtime behavior today: every job
 and phase runs in an isolated ephemeral git worktree. `container` and `vm`
@@ -398,6 +411,12 @@ for the same disclosure.
 | `max_turns_per_item` | integer or unset | unset (no cap) | Intended per-work-item turn cap; the implemented cap (`max_cycle_turns`) is per cycle. Not validated. |
 | `ultra_no_cap` | boolean | `false` | Written by `vibey budget no-cap` and `vibey budget cap` as the record of the no-cap declaration for ULTRA runs (ADR-0063). The worker reads the trusted `UltraNoCapChanged` ledger event, never this key: a `true` here with no event behind it declares nothing. |
 
+```toml
+[budget]
+max_dollars_per_cycle = 15.0
+max_dollars_total = 250.0
+```
+
 None of these keys is read at runtime. The live brake is the project's stored
 `max_cycle_dollars` / `max_cycle_turns` (set by `vibey new --max-cycle-dollars`
 / `--max-cycle-turns` or the operator's `spec.maxCycleDollars` /
@@ -417,6 +436,11 @@ never estimating it ahead of time. Tripping either cap parks a
 |---|---|---|---|
 | `require_independent_review` | bool | `false` | When `true`, `build.verify` always fails as `VIBEY` if the reviewing engine is the implementer, even when the configured pool has nobody else. When `false` (the default) a pool that cannot supply a second reviewer gets a self-review, recorded as a `DecisionRecorded` in the ledger so the weakened independence is visible. See [ADR-0035](../architecture/decisions/0035-independence-is-the-default-not-an-absolute.md). |
 
+```toml
+[verify]
+require_independent_review = true
+```
+
 Unlike `[budget]` above, this key **is** read at runtime, by
 `bootstrap.build_full_worker`.
 
@@ -434,6 +458,16 @@ walks through it.
 | `base` | string | the remote's default branch, else `main` | The branch a pull request targets, or the branch a new repository's first push becomes. |
 | `remote` | string | `"origin"` | The git remote to push to. |
 | `owner` | string | the logged-in `gh` user | The user or organisation a new repository is created under. |
+
+```toml
+[publish]
+mode = "interview"
+visibility = "private"
+draft = true
+base = "develop"
+remote = "origin"
+owner = "my-org"
+```
 
 Names are checked: a `base`, `remote` or `owner` that could be read as a command-line option
 (leading `-`) or holds a space or shell character is refused, as is an unknown key (`visibilty`),
@@ -455,6 +489,18 @@ read from the project's stored configuration, the same way `[verify]` is.
 | `auto_min_sessions` | integer ≥ 1 | `20` | Fewer local sessions than this in the window and `auto` chooses `singleton`. |
 | `auto_min_contention` | number 0–1 | `0.25` | The share of local sessions that must have found every local slot occupied before `auto` may choose `hybrid`. |
 | `auto_max_age_hours` | integer ≥ 1 | `24` | How long a recorded measurement decides before it is taken again. |
+
+```toml
+[engines]
+enabled = ["claudeloop", "codexloop"]
+max_run_minutes = 120
+mode = "hybrid"
+paid_daily_cap = 5
+
+[engines.weights]
+claudeloop = 3
+codexloop = 1
+```
 
 Known engine ids: `claudeloop`, `codexloop`,
 `gptossloop` (valid unless `features.gptossloop = false`), `qwenloop` (valid in
@@ -596,6 +642,11 @@ default_scope = "narrowest"
 |---|---|---|---|
 | `plugins` | array of strings | `[]` | Reserved for agent-surface provisioning plugins ([ADR-0011](../architecture/decisions/0011-agent-surface-provisioning.md)). Parsed and stored only; `infrastructure/provision/agent_surface.py` does not read it today. |
 
+```toml
+[provision]
+plugins = []
+```
+
 ## `[deploy]`
 
 | Field | Type | Default | Notes |
@@ -603,6 +654,13 @@ default_scope = "narrowest"
 | `enabled` | boolean | `false` | Opts the project into the DEPLOY_DESIGN / DEPLOY_EXECUTE / DEPLOY_REVIEW stage set. |
 | `target` | string | `"azure"` | Deployment target. Azure is the only implemented target today; other strings are accepted by `parse_config`. |
 | `iac` | string | `"bicep"` | Infrastructure-as-code format used by the deploy adapters; other strings are accepted by `parse_config`. |
+
+```toml
+[deploy]
+enabled = true
+target = "azure"
+iac = "bicep"
+```
 
 ## `[notifications]`
 
@@ -670,6 +728,12 @@ the running application but has no external exporter yet.
 | `enabled` | boolean | `true` | Set `false` to disable runtime tracing and metrics for this project. |
 | `export_path` | string or unset | unset | Reserved for a future file/exporter integration; it is validated and stored. |
 
+```toml
+[telemetry]
+enabled = true
+export_path = "~/.local/state/vibey/telemetry.jsonl"
+```
+
 ## `[features]`
 
 | Field | Type | Default | Notes |
@@ -677,6 +741,12 @@ the running application but has no external exporter yet.
 | `gptossloop` | boolean | `true` | The sovereign default engine: the local runner on GPT-OSS 20B (ADR-0064). On unless set `false`; `false` removes it from the default pool and refuses it in `[engines].enabled` and `[phases.*].engines`. |
 | `qwenloop` | boolean | `false` | The same runner on a Qwen model (`qwen3:14b` unless `QWENLOOP_MODEL` or its own config names another). Must be `true` before `qwenloop` can appear in `[engines].enabled` or any `[phases.*].engines` list. Before ADR-0064 this switch turned on the engine that ran `gpt-oss:20b`; that engine is now `gptossloop`, on by default. |
 | `claudeloop_local` | boolean | `false` | The claudeloop binary on a local backend profile (`[engines.claudeloop_local]`). Must be `true` before `claudeloop-local` can be requested. |
+
+```toml
+[features]
+qwenloop = true
+claudeloop_local = false
+```
 
 Runtime: `vibey doctor` and `vibey loops` read these keys from `./vibey.toml`.
 `vibey worker` reads them from the project's stored config record, which
@@ -749,6 +819,14 @@ key is optional. An unknown key or a wrong type is refused by name.
 | `probe_argv` | list of strings | `["claude", "-p", "Reply with the single word OK.", "--output-format", "json", "--max-turns", "1"]` | Success is exit 0 with a JSON result whose `is_error` is `false`. |
 | `resume_argv` | list of strings | `["claude", "-p", "--resume", "{session_id}", "{prompt}"]` | Started detached on handback. |
 
+```toml
+[failover]
+enabled = true
+target_engine = "gptossloop"
+target_effort = "ULTRA"
+probe_interval_seconds = 900
+```
+
 The argv templates fill `{brief}`, `{cwd}`, `{run_id}`, `{session_id}` and
 `{prompt}`; any other text is passed through unchanged.
 
@@ -778,6 +856,16 @@ What `vibey supervisor install` renders, and what `vibey supervisor status` and
 | `state_sync_env_file` | string | `state-sync.env` in the directory of `env_file`'s platform default | The state sync's own environment, read by `vibey supervisor exec`: set `VIBEY_STATE_PG_URL` and the other [`VIBEY_STATE_*`](#state-sync) variables here. Created from a commented template (mode 0600) when missing. Never the worker's file: the sync's DSN writes every synced table, more than the application role may (ADR-0055). Refused on volatile storage or in a linked worktree. |
 | `state_sync_args` | list of strings | `[]` | Appended to `vibey state sync --every N`, e.g. `["--no-push"]`. |
 
+```toml
+[supervisor]
+delivery = true
+delivery_interval_seconds = 600
+worker_args = ["-j", "2", "--provider", "gptossloop"]
+restart_seconds = 30
+required = true
+state_sync = false
+```
+
 ## `[hub]` { #hub }
 
 The hub, `vibey serve` (ADR-0068). Every key is optional, and the defaults are the closed
@@ -793,6 +881,13 @@ mean "not declared".
 | `state_dir` | the platform state directory + `/hub` | Where the host token (`token`, 0600), the key workflows request ids are bound to their starters under (`run.key`, 0600; ADR-0085) and the runtime record (`serving.json`) live. |
 | `lane_roots` | `[]` (the directory `vibey serve` runs in) | Where `/api/v1/lanes` looks for lanes: each root and every directory directly inside it. |
 | `projects_root` | `""` (nowhere) | The one folder a paired device holding `run` may start projects in: each project's folder is `<projects_root>/<name>`, made by the host (ADR-0091). Absolute, or starting with `~`. With none declared a device can pause, resume and unwind a project but cannot start one, and is told so. A device never names a path. |
+
+```toml
+[hub]
+lan = true
+port = 8765
+names = ["studio.local"]
+```
 
 A bump from the hub is requested as the queue source `vibey-hub`; it lands only when
 [`[queue.priority]`](#queuepriority) `sources` names it.
@@ -990,6 +1085,14 @@ for that surface is present, otherwise the in-memory default.
 | `workspace_slug` | string | unset | Workspace slug from the Plane URL, e.g. `my-team`. Required with `project_id`: Plane's work-item routes are workspace-scoped (`/api/v1/workspaces/{workspace_slug}/projects/{project_id}/work-items/`). |
 | `project_id` | string | unset | Plane project UUID. Required with `workspace_slug`. |
 
+```toml
+[tracker]
+url = "https://plane.example.com"
+token = "REPLACE_ME"
+workspace_slug = "my-team"
+project_id = "REPLACE_ME"
+```
+
 ## `[docs]` (sovereign default: BookStack)
 
 | Field | Type | Default | Notes |
@@ -999,12 +1102,26 @@ for that surface is present, otherwise the in-memory default.
 | `token_secret` | string | unset | API token secret. |
 | `book_id` | integer | unset | Book pages are created under. Must be an integer, never a boolean. |
 
+```toml
+[docs]
+url = "https://bookstack.example.com"
+token_id = "REPLACE_ME"
+token_secret = "REPLACE_ME"
+book_id = 1
+```
+
 ## `[secrets]` (sovereign default: OpenBao)
 
 | Field | Type | Default | Notes |
 |---|---|---|---|
 | `url` | string | unset | Base URL of the OpenBao instance, e.g. `http://localhost:8200`. |
 | `token` | string | unset | OpenBao root or service token (`X-Vault-Token`). |
+
+```toml
+[secrets]
+url = "http://localhost:8200"
+token = "REPLACE_ME"
+```
 
 ## `[files]` (sovereign default: Nextcloud)
 
@@ -1013,6 +1130,13 @@ for that surface is present, otherwise the in-memory default.
 | `url` | string | unset | Base URL of the Nextcloud instance (WebDAV). |
 | `user` | string | unset | WebDAV username. |
 | `password` | string | unset | WebDAV password or app token. |
+
+```toml
+[files]
+url = "https://nextcloud.example.com"
+user = "vibey"
+password = "REPLACE_ME"
+```
 
 ## `[email]` (sovereign default: Forward Email)
 
@@ -1024,6 +1148,15 @@ for that surface is present, otherwise the in-memory default.
 | `password` | string | unset | SMTP password. Login and STARTTLS are skipped without it. |
 | `from_email` | string | unset | Sender address; defaults to `username`, then `vibey@localhost`. |
 
+```toml
+[email]
+smtp_host = "smtp.example.com"
+smtp_port = 587
+username = "vibey@example.com"
+password = "REPLACE_ME"
+from_email = "vibey@example.com"
+```
+
 ## `[sms]` (gateway: Kannel; handsets: Fossify Messages)
 
 | Field | Type | Default | Notes |
@@ -1033,6 +1166,14 @@ for that surface is present, otherwise the in-memory default.
 | `password` | string | unset | Kannel sendsms password. |
 | `sender` | string | unset | Sender phone number or alphanumeric origin. |
 
+```toml
+[sms]
+url = "http://localhost:13013"
+username = "vibey"
+password = "REPLACE_ME"
+sender = "+15550100"
+```
+
 ## `[messaging]` (sovereign default: Matrix)
 
 | Field | Type | Default | Notes |
@@ -1040,6 +1181,13 @@ for that surface is present, otherwise the in-memory default.
 | `url` | string | unset | Base URL of the Matrix homeserver. |
 | `token` | string | unset | Access token (Bearer). |
 | `room_id` | string | unset | Default room, e.g. `!room:example.org`. |
+
+```toml
+[messaging]
+url = "https://matrix.example.org"
+token = "REPLACE_ME"
+room_id = "!room:example.org"
+```
 
 ## `[config_store]` (sovereign default: Infisical)
 
@@ -1050,11 +1198,24 @@ for that surface is present, otherwise the in-memory default.
 | `project_id` | string | unset | Infisical project ID. |
 | `environment` | string | `"dev"` | Environment slug secrets are read from and written to. |
 
+```toml
+[config_store]
+url = "https://infisical.example.com"
+token = "REPLACE_ME"
+project_id = "REPLACE_ME"
+environment = "dev"
+```
+
 ## `[cache]` (sovereign default: Redis)
 
 | Field | Type | Default | Notes |
 |---|---|---|---|
 | `url` | string | unset | Redis connection URL, e.g. `redis://localhost:6379/0`. |
+
+```toml
+[cache]
+url = "redis://localhost:6379/0"
+```
 
 ## `[bus]` (sovereign default: RabbitMQ)
 
@@ -1066,6 +1227,16 @@ for that surface is present, otherwise the in-memory default.
 | `vhost` | string | `/` | The vhost the bus declares its queues in and the queue reaper reads ([`[queue.reap]`](#queuereap)). |
 | `mode` | `auto`, `singleton`, `multiplexer`, or `hybrid` | `auto` | Dispatch policy. `auto` uses the durable per-machine benchmark winner and falls back to singleton when no valid result exists. |
 | `hybrid_concurrency` | positive integer | `4` | Maximum concurrent bus operations in hybrid mode. |
+
+```toml
+[bus]
+url = "http://localhost:15672"
+username = "vibey"
+password = "REPLACE_ME"
+vhost = "/"
+mode = "auto"
+hybrid_concurrency = 4
+```
 
 The bus port consumes at most once: its `consume` acknowledges on take, so no delivery is
 ever held -- and one whose consumer dies after `consume` returns is lost. The job queue's
@@ -1084,6 +1255,14 @@ and per machine; `mode` remains an explicit override when an operator needs one.
 | `secret_key` | string | unset | S3 API secret access key. |
 | `region` | string | `"us-east-1"` | S3 signing region (must match server configuration). |
 
+```toml
+[blob]
+url = "http://localhost:3900"
+access_key = "REPLACE_ME"
+secret_key = "REPLACE_ME"
+region = "us-east-1"
+```
+
 ## `[siem]` (sovereign default: Wazuh Indexer)
 
 | Field | Type | Default | Notes |
@@ -1092,6 +1271,14 @@ and per machine; `mode` remains an explicit override when an operator needs one.
 | `username` | string | unset | Indexer username for Basic auth (omitted when security is disabled). |
 | `password` | string | unset | Indexer password. |
 | `index` | string | `"vibey-audit"` | Target audit index name. |
+
+```toml
+[siem]
+url = "http://localhost:9200"
+username = "vibey"
+password = "REPLACE_ME"
+index = "vibey-audit"
+```
 
 ## Skills context (project config record — not a `vibey.toml` table) { #skills_context }
 
