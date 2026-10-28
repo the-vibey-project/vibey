@@ -46,6 +46,7 @@ from vibey_gh.interfaces.contributor_setup_interface import ContributorSetupInte
 from vibey_gh.interfaces.fallback_pin_resolver_interface import FallbackPinResolverInterface
 from vibey_gh.interfaces.marketplace_renderer_interface import MarketplaceRendererInterface
 from vibey_gh.interfaces.paper_interface import RevisionReaderInterface
+from vibey_gh.profile_drift import ProfileDrift
 from vibey_gh.review_canary import ReviewCanary
 from vibey_gh.review_composition import PAID_HALVES, REVIEW_COMPOSER
 from vibey_gh.review_timings import ReviewTimings
@@ -91,6 +92,18 @@ def _cloud_clutter(cfg, surveyed: bool) -> tuple[tuple[str, ...], tuple[str, ...
     return clutter, report.problems
 
 
+def _settings_drift(cfg, surveyed: bool) -> tuple[tuple[str, ...], tuple[str, ...]]:
+    """`(drift, not_surveyed)` for the declared repository settings against the live ones.
+
+    Surveyed under `--ci` alone, like the cloud clutter: it costs forge round trips a
+    pre-commit hook must not pay. Read-only. Module-level for the same reason as
+    `_cloud_clutter`: argparse hands the handler a namespace and `check` has no object.
+    """
+    if not surveyed:
+        return (), ()
+    return ProfileDrift().survey(cfg)
+
+
 def _check(args, resolver: FallbackPinResolverInterface | None = None) -> int:
     cfg = load_config()
     # Resolved once, so the drift verdict and the notice below describe the same pin.
@@ -116,7 +129,13 @@ def _check(args, resolver: FallbackPinResolverInterface | None = None) -> int:
         cfg, surveyed=args.ci and (not args.quiet or cfg.tidy.fail_check)
     )
     clutter_ok = not clutter or not cfg.tidy.fail_check
-    clean = ok and report.ok and docs.ok and scan.ok and marketplace_ok and clutter_ok
+    # Same reasoning for the settings audit: a `--quiet` run is worth the round trips only
+    # when `[repository_profile] fail_check` lets the result move the exit code.
+    drift, drift_unsurveyed = _settings_drift(
+        cfg, surveyed=args.ci and (not args.quiet or cfg.repository_profile.fail_check)
+    )
+    drift_ok = not drift or not cfg.repository_profile.fail_check
+    clean = ok and report.ok and docs.ok and scan.ok and marketplace_ok and clutter_ok and drift_ok
 
     if args.quiet:
         return 0 if clean else 1
@@ -156,6 +175,21 @@ def _check(args, resolver: FallbackPinResolverInterface | None = None) -> int:
         print(
             "  clutter: `vibey-gh tidy --apply` removes the provably-lossless classes"
             + ("" if cfg.tidy.fail_check else " (advisory; `[tidy] fail_check = true` fails)"),
+            file=sys.stderr,
+        )
+    for reason in drift_unsurveyed:
+        print(f"  settings drift: not surveyed — {reason}", file=sys.stderr)
+    for item in drift:
+        print(f"  settings drift: {item}", file=sys.stderr)
+    if drift:
+        print(
+            "  settings drift: `repository-profile.yml` restores the declared values on the next "
+            "release"
+            + (
+                ""
+                if cfg.repository_profile.fail_check
+                else " (advisory; `[repository_profile] fail_check = true` fails)"
+            ),
             file=sys.stderr,
         )
     # Advisory, never a verdict: a floating install still resolves. Printed because a pin

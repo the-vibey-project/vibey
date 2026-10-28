@@ -533,32 +533,9 @@ def render_workflow(source: Path, cfg: GhConfig, *, fallback_pin: FallbackPin | 
         "__VIBEY_GH_PROFILE_TOPICS__",
         json.dumps({"names": list(cfg.repository_profile.topics)}, separators=(",", ":")),
     )
-    profile_settings = {
-        name: getattr(cfg.repository_profile, name)
-        for name in (
-            "has_issues",
-            "has_projects",
-            "has_wiki",
-            "has_discussions",
-            "allow_squash_merge",
-            "allow_merge_commit",
-            "allow_rebase_merge",
-            "allow_auto_merge",
-            "delete_branch_on_merge",
-            "web_commit_signoff_required",
-            "vulnerability_alerts",
-            "automated_security_fixes",
-        )
-    }
     # Sent, and then verified, only when declared: an empty value means "not managed", and
     # sending one would ask the forge to set the setting to nothing.
-    profile_settings.update(
-        {
-            name: getattr(cfg.repository_profile, name)
-            for name in ("squash_merge_commit_title", "squash_merge_commit_message")
-            if getattr(cfg.repository_profile, name)
-        }
-    )
+    profile_settings = cfg.repository_profile.settings()
     wanted = wanted.replace(
         "__VIBEY_GH_PROFILE_SETTINGS__",
         json.dumps(profile_settings, separators=(",", ":")),
