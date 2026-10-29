@@ -81,6 +81,7 @@
     ]
   },
   "overrides": {
-    "zod": "4.6.6"
+    "zod": "4.6.6",
+    "decode-uri-component": "0.5.1"
   }
 }
