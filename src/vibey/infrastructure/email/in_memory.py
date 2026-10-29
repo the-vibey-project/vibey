@@ -11,6 +11,11 @@ class InMemoryEmail(EmailPort):
 
     def __init__(self) -> None:
         self.sent: list[dict[str, str]] = []
+        self.sent_keys: list[str | None] = []
+        """The idempotency key of each send, at the same index as `sent`. Nothing deduplicates."""
 
-    async def send_email(self, to_addr: str, subject: str, body: str) -> None:
+    async def send_email(
+        self, to_addr: str, subject: str, body: str, *, idempotency_key: str | None = None
+    ) -> None:
+        self.sent_keys.append(idempotency_key)
         self.sent.append({"to": to_addr, "subject": subject, "body": body})

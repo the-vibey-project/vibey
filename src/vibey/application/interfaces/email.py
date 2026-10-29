@@ -8,6 +8,12 @@ from typing import Protocol, runtime_checkable
 class EmailPort(Protocol):
     """Common protocol for sovereign and paid email relays."""
 
-    async def send_email(self, to_addr: str, subject: str, body: str) -> None:
-        """Send a transactional email message."""
+    async def send_email(
+        self, to_addr: str, subject: str, body: str, *, idempotency_key: str | None = None
+    ) -> None:
+        """Send a transactional email message.
+
+        The key names one logical message and fixes its Message-ID; SMTP cannot deduplicate,
+        so the surface lane guards it (ADR-0047 §8).
+        """
         ...
