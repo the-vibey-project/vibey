@@ -1,0 +1,1 @@
+`SmsPort.send_sms` takes an optional `idempotency_key` naming one logical message. Kannel's sendsms CGI cannot deduplicate it, so the adapter accepts it and sends the same request as before; `InMemorySms` records each key in `sent_keys`. `KannelSmsAdapter` also refuses a non-positive `timeout` with `ValueError("timeout must be positive")`.

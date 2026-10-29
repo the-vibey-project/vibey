@@ -31,6 +31,8 @@ class KannelSmsAdapter(SmsPort):
         opener: Any = urllib.request.urlopen,
         timeout: float = DEFAULT_SURFACE_ADAPTER_TIMEOUT_SECONDS,
     ) -> None:
+        if timeout <= 0:
+            raise ValueError("timeout must be positive")
         self._url = url.strip().rstrip("/")
         self._username = username
         self._password = password
@@ -38,7 +40,10 @@ class KannelSmsAdapter(SmsPort):
         self._opener = opener
         self._timeout = timeout
 
-    async def send_sms(self, phone_number: str, message: str) -> None:
+    async def send_sms(
+        self, phone_number: str, message: str, *, idempotency_key: str | None = None
+    ) -> None:
+        # The sendsms CGI has no key, so it is accepted and not sent; the guard owns it.
         await asyncio.to_thread(self._send_sync, phone_number, message)
 
     def _send_sync(self, phone_number: str, message: str) -> None:
