@@ -134,8 +134,7 @@ allowed_paths = [
 #
 # Paused again 2026-10-29 at the operator's request: this lane's agent is the one CI job that
 # runs on the operator's own machine (`continuation_prompts.toml` `[run.sovereign]`), and they
-# want no CI workflow using it. Switch it back on (set `enabled = true`) to resume; the sovereign
-# venue is unchanged.
+# want no CI workflow using it. Switch it back on with true; the sovereign venue is unchanged.
 enabled = false
 # The candidates are ranked, and each run picks one from the first `window` of them, in
 # rotation by run slot: the slot is the UTC time divided into `interval_minutes` intervals,
