@@ -1,0 +1,1 @@
+The backlog killer's pause comment in `scripts/daily_lanes.toml` says how to end the pause ("Switch it back on"), which `tests/meta/test_daily_lanes.py` requires of a paused lane and #1809 left out, turning `gates` red on `develop`.
