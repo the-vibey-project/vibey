@@ -1,0 +1,1 @@
+The backlog killer is paused (`[backlog_killer] enabled = false` in `scripts/daily_lanes.toml`), so no CI workflow dispatches work to the operator's own machine: its `backlog` prompt was the one job on the `[run.sovereign]` self-hosted runner. Set the key back to `true` to resume.

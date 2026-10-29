@@ -131,7 +131,11 @@ allowed_paths = [
 # `max_issue_chars`): the unrestricted pick ranked by priority and handed the agent the hardest
 # items (a paper revision, a client-suite plan, a research programme), each refused by the
 # guards and each costing ~17 minutes of the operator's machine. Set false to pause again.
-enabled = true
+#
+# Paused again 2026-10-29 at the operator's request: this lane's agent is the one CI job that
+# runs on the operator's own machine (`continuation_prompts.toml` `[run.sovereign]`), and they
+# want no CI workflow using it. Set true to resume; the sovereign venue is unchanged.
+enabled = false
 # The candidates are ranked, and each run picks one from the first `window` of them, in
 # rotation by run slot: the slot is the UTC time divided into `interval_minutes` intervals,
 # so there is no attempt ledger to keep, every candidate in the window gets a slot, and two
