@@ -8,6 +8,12 @@ from typing import Protocol, runtime_checkable
 class SmsPort(Protocol):
     """Common protocol for transactional SMS delivery."""
 
-    async def send_sms(self, phone_number: str, message: str) -> None:
-        """Send a transactional SMS notification."""
+    async def send_sms(
+        self, phone_number: str, message: str, *, idempotency_key: str | None = None
+    ) -> None:
+        """Send a transactional SMS notification.
+
+        The key names one logical message. The backend cannot deduplicate it; the surface
+        lane guards it (ADR-0047 §8).
+        """
         ...
