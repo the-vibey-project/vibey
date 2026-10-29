@@ -7,6 +7,7 @@ Self-hosted Forward Email (or any SMTP relay) over stdlib smtplib.
 from __future__ import annotations
 
 import asyncio
+import hashlib
 import smtplib
 from email.message import EmailMessage
 
@@ -25,6 +26,8 @@ class ForwardEmailAdapter(EmailPort):
         from_email: str | None = None,
         timeout: float = DEFAULT_SURFACE_ADAPTER_TIMEOUT_SECONDS,
     ) -> None:
+        if timeout <= 0:
+            raise ValueError("timeout must be positive")
         self._smtp_host = smtp_host
         self._smtp_port = smtp_port
         self._username = username
@@ -32,11 +35,18 @@ class ForwardEmailAdapter(EmailPort):
         self._from_email = from_email or username or "vibey@localhost"
         self._timeout = timeout
 
-    async def send_email(self, to_addr: str, subject: str, body: str) -> None:
+    async def send_email(
+        self, to_addr: str, subject: str, body: str, *, idempotency_key: str | None = None
+    ) -> None:
         message = EmailMessage()
         message["Subject"] = subject
         message["From"] = self._from_email
         message["To"] = to_addr
+        if idempotency_key is not None:
+            # A courtesy to receivers, not a guarantee: SMTP cannot deduplicate, the guard does.
+            digest = hashlib.sha256(idempotency_key.encode("utf-8")).hexdigest()[:32]
+            domain = self._from_email.rpartition("@")[2] if "@" in self._from_email else ""
+            message["Message-ID"] = f"<vibey.{digest}@{domain or 'localhost'}>"
         message.set_content(body)
         await asyncio.to_thread(self._send_sync, message)
 
