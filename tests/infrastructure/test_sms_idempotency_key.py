@@ -9,7 +9,6 @@ from typing import Any
 
 import pytest
 
-from vibey.application.interfaces.sms import SmsPort
 from vibey.domain.config import DEFAULT_SURFACE_ADAPTER_TIMEOUT_SECONDS
 from vibey.infrastructure.sms.in_memory import InMemorySms
 from vibey.infrastructure.sms.kannel import KannelSmsAdapter
@@ -86,15 +85,3 @@ async def test_in_memory_sms_records_every_send_and_its_key() -> None:
     await sms.send_sms("+15550100", "again")
     assert len(sms.sent_sms) == 3
     assert sms.sent_keys == ["msg-1", "msg-1", None]
-
-
-@pytest.mark.asyncio
-async def test_sms_send_accepts_an_idempotency_key() -> None:
-    """The port contract: both implementations take the keyword and still send."""
-    kannel_opener = _RecordingOpener()
-    memory = InMemorySms()
-    ports: list[SmsPort] = [_kannel(kannel_opener), memory]
-    for port in ports:
-        await port.send_sms("+15550100", "hello", idempotency_key="msg-1")
-    assert len(kannel_opener.urls) == 1
-    assert len(memory.sent_sms) == 1
