@@ -17,7 +17,7 @@ from pathlib import Path
 import pytest
 
 from vibey_gh import conversation as cv
-from vibey_gh.config import ConversationConfig, GhConfig
+from vibey_gh.config import ConversationConfig, GhConfig, load_config
 
 
 def cfg(tmp_path: Path, **talk) -> GhConfig:
@@ -30,7 +30,7 @@ def cfg(tmp_path: Path, **talk) -> GhConfig:
 
 
 def comment(**changes):
-    value = {"id": 42, "author": {"login": "owner"}, "body": "@vibey-gh please explain this"}
+    value = {"id": 42, "author": {"login": "owner"}, "body": "@vibey please explain this"}
     value.update(changes)
     return value
 
@@ -360,6 +360,51 @@ def test_a_mention_is_matched_on_a_word_boundary():
     assert not cv.mentions("@robotic", "@robot")
 
 
+def test_the_default_trigger_is_vibey_and_the_old_handle_is_a_legacy_one():
+    assert ConversationConfig().trigger == "@vibey"
+    assert ConversationConfig().legacy_triggers == ("@vibey-gh",)
+    # The new handle's own boundary: a longer handle, or one inside an address, is no mention.
+    assert not cv.mentions("@vibey-bot please", "@vibey")
+    assert not cv.mentions("a@vibeyx.com", "@vibey")
+
+
+def test_load_config_defaults_the_trigger_to_vibey(tmp_path):
+    (tmp_path / ".vibey-gh.toml").write_text("")
+    talk = load_config(tmp_path).conversation
+    assert (talk.trigger, talk.legacy_triggers) == ("@vibey", ("@vibey-gh",))
+    (tmp_path / ".vibey-gh.toml").write_text(
+        '[conversation]\ntrigger = "@robot"\nlegacy_triggers = ["@old", "@older"]\n'
+    )
+    talk = load_config(tmp_path).conversation
+    assert (talk.trigger, talk.legacy_triggers) == ("@robot", ("@old", "@older"))
+
+
+def test_the_matched_handle_is_the_trigger_first_then_a_legacy_one(tmp_path):
+    policy = cfg(tmp_path).conversation
+    assert cv.matched_trigger("@vibey and @vibey-gh", policy) == "@vibey"
+    assert cv.matched_trigger("hi @vibey-gh", policy) == "@vibey-gh"
+    assert cv.matched_trigger("nobody here", policy) == ""
+
+
+def test_the_legacy_handle_is_still_answered_and_flagged(tmp_path):
+    result = cv.evaluate(comment(body="@vibey-gh explain this"), subject(), cfg(tmp_path))
+    assert result.state == cv.ANSWER
+    assert result.request == "explain this"
+    assert "@vibey-gh" in result.warning and "@vibey" in result.warning
+    assert "warning" in result.to_json()
+
+
+def test_the_new_handle_carries_no_warning(tmp_path):
+    result = cv.evaluate(comment(body="@vibey explain this"), subject(), cfg(tmp_path))
+    assert result.state == cv.ANSWER and result.warning == ""
+
+
+def test_an_adopter_can_stop_answering_the_legacy_handle(tmp_path):
+    quiet = cfg(tmp_path, legacy_triggers=())
+    result = cv.evaluate(comment(body="@vibey-gh explain this"), subject(), quiet)
+    assert result.state == cv.SKIP and "does not mention @vibey" in result.reason
+
+
 def test_the_request_is_extracted_bounded_and_flattened():
     assert cv.request_of("@vibey-gh  fix the thing ", "@vibey-gh") == "fix the thing"
     assert cv.request_of("@vibey-gh a\nb\x00c", "@vibey-gh") == "a b c"
@@ -444,6 +489,9 @@ def test_the_rest_api_comment_shape_is_accepted(tmp_path):
     [
         ({"trigger": ""}, "non-empty and contain no whitespace"),
         ({"trigger": "@two words"}, "non-empty and contain no whitespace"),
+        ({"legacy_triggers": ("",)}, "legacy_triggers"),
+        ({"legacy_triggers": ("@a b",)}, "no whitespace"),
+        ({"legacy_triggers": ("@vibey",)}, "must not repeat"),
         ({"max_interactions": 0}, "between 1 and 100"),
         ({"max_interactions": 101}, "between 1 and 100"),
         ({"model": "  "}, "model must not be empty"),
@@ -566,3 +614,23 @@ def test_the_workflow_guards_the_loop_before_claiming_a_runner():
     assert "a fork branch is never written to" in text
     assert "git push --force" not in text
     assert "--delete" not in text
+
+
+def test_the_rendered_filter_admits_the_trigger_and_every_legacy_handle(tmp_path):
+    from vibey_gh.install import WORKFLOWS, render_workflow
+
+    source = WORKFLOWS / "conversation.yml"
+    both = render_workflow(source, cfg(tmp_path))
+    assert "contains(github.event.comment.body, '@vibey')" in both
+    assert "contains(github.event.comment.body, '@vibey-gh')" in both
+    assert "__VIBEY_GH_CONVERSATION_TRIGGER__" not in both
+    only = render_workflow(source, cfg(tmp_path, trigger="@robot", legacy_triggers=()))
+    assert "contains(github.event.comment.body, '@robot')" in only
+    assert "@vibey" not in only.split("jobs:")[1].split("runs-on")[0]
+
+
+def test_the_workflow_raises_the_legacy_warning_as_an_annotation():
+    from vibey_gh.install import WORKFLOWS
+
+    text = (WORKFLOWS / "conversation.yml").read_text(encoding="utf-8")
+    assert "jq -r .warning" in text and "::warning::$warning" in text

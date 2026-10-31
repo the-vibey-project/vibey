@@ -15,11 +15,13 @@ one.
 from __future__ import annotations
 
 from collections.abc import Iterator
-from contextlib import contextmanager
+from contextlib import AbstractContextManager, contextmanager, nullcontext
 from typing import NoReturn
 
 import typer
 
+from vibey.cli.error_catalog import ErrorCatalog
+from vibey.cli.interfaces.error_catalog_interface import ErrorCatalogInterface
 from vibey.domain.errors import (
     BudgetExceeded,
     CheckoutHeld,
@@ -99,12 +101,38 @@ _NEXT_STEP: dict[type[BaseException], str] = {
 }
 
 
-def render(exc: VibeyError) -> str:
+def _shipped_catalog() -> ErrorCatalogInterface | None:
+    """The shipped error codes, or None if they cannot be read.
+
+    Reporting an error must never raise another one: a catalog that fails to load is a
+    packaging defect, and tests/cli/test_error_codes_are_complete.py is what catches it. The
+    error itself still prints, just without its code.
+    """
+    try:
+        return ErrorCatalog.shipped()
+    except (OSError, ValueError):
+        return None
+
+
+# A module-level function, not a method: `render`, `fail` and `guard` predate the rule that code
+# lives in classes with an interface beside it (ADR-0016) and are imported by name across the
+# CLI, so they stay as they are and take the catalog as a parameter instead of holding state.
+def render(exc: VibeyError, catalog: ErrorCatalogInterface | None = None) -> str:
     lines = [f"Error: {exc}"]
     hint = _NEXT_STEP.get(type(exc))
     if hint:
         lines += ["", hint]
+    entry = (catalog or _shipped_catalog() or ErrorCatalog([])).entry_for(type(exc))
+    if entry is not None and entry.code:
+        lines += ["", f"({entry.code}: run `vibey explain {entry.code}`)"]
     return "\n".join(lines)
+
+
+# A module-level function for the same reason as `guard` above it: it is imported by name by the
+# commands that offer `--traceback`.
+def guarded(*, traceback: bool) -> AbstractContextManager[None]:
+    """`guard()`, or nothing at all when the caller asked to see the Python traceback."""
+    return nullcontext() if traceback else guard()
 
 
 def fail(exc: VibeyError) -> NoReturn:

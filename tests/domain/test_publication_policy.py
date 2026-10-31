@@ -330,6 +330,8 @@ def test_the_fingerprint_is_stable_and_moves_with_every_rule() -> None:
         PublicationRules(chatter=frozenset({EventKind.TOOL_INVOKED})),
         PublicationRules(withheld_provenance=frozenset()),
         PublicationRules(email_token="[address]"),
+        PublicationRules(private_segment_token="[hidden]"),
+        PublicationRules(publish_redactions=False),
         PublicationRules(scheme="another/v1"),
     ]
     prints = {rules.fingerprint for rules in variants} | {DEFAULT_RULES.fingerprint}
@@ -446,3 +448,172 @@ def test_no_withheld_field_ever_appears_in_what_is_published(
     for event in events:
         decision = policy.decide(event)
         assert (decision.record is None) != (decision.withheld is None)
+
+
+# -- `_redactions` (#1723) ---------------------------------------------------------
+
+
+def _with_redactions(*entries: object, **payload: object) -> LedgerEvent:
+    return _event(payload={"decision_id": "d1", **payload, "_redactions": list(entries)})
+
+
+def test_redactions_are_published_with_their_path_and_class_and_never_a_value() -> None:
+    event = _with_redactions(
+        {
+            "path": "/env/PASSWORD",
+            "class": "credential",
+            "value": "hunter2",
+            "hash": "ab12",
+            "length": 7,
+        }
+    )
+    payload, trim = _published(event)
+    assert payload["_redactions"] == [{"path": "/env/PASSWORD", "class": "credential"}]
+    text = json.dumps(payload)
+    assert "hunter2" not in text and "ab12" not in text
+    # The three extra fields were dropped, and counted as withheld fields.
+    assert trim.fields == 3 and trim.paths == 0
+
+
+def test_a_private_key_is_replaced_in_the_published_path_and_counted() -> None:
+    event = _with_redactions(
+        {"path": "/contacts/alice@example.com", "class": "private-detail-key"},
+        {"path": "/contacts/+1 555 0100", "class": "private-detail-key"},
+    )
+    payload, trim = _published(event)
+    assert payload["_redactions"] == [
+        {"path": "/contacts/[private]", "class": "private-detail-key"},
+        {"path": "/contacts/[private]", "class": "private-detail-key"},
+    ]
+    assert "alice" not in json.dumps(payload) and "555" not in json.dumps(payload)
+    assert trim.paths == 2 and trim.fields == 0
+
+
+def test_an_address_or_path_key_above_a_redaction_is_replaced_whatever_the_class() -> None:
+    event = _with_redactions(
+        {"path": "/bob@example.com/token", "class": "credential"},
+        {"path": "/~1home~1adam~1.env/token", "class": "credential"},
+    )
+    payload, trim = _published(event)
+    assert payload["_redactions"] == [
+        {"path": "/[private]/token", "class": "credential"},
+        {"path": "/[private]/token", "class": "credential"},
+    ]
+    assert trim.paths == 2
+
+
+def test_an_ordinary_path_survives_with_its_pointer_escapes_and_the_root_is_a_path() -> None:
+    event = _with_redactions(
+        {"path": "/a~1b/c~0d", "class": "credential"}, {"path": "", "class": "credential"}
+    )
+    payload, trim = _published(event)
+    assert payload["_redactions"] == [
+        {"path": "/a~1b/c~0d", "class": "credential"},
+        {"path": "", "class": "credential"},
+    ]
+    assert trim.total == 0
+
+
+def test_a_pair_is_read_as_a_path_and_a_class() -> None:
+    payload, _ = _published(_with_redactions(["/env/TOKEN", "credential"]))
+    assert payload["_redactions"] == [{"path": "/env/TOKEN", "class": "credential"}]
+
+
+@pytest.mark.parametrize(
+    "bad",
+    [
+        "a string",
+        42,
+        {"path": "/env/X"},
+        {"class": "credential"},
+        {"path": "env/X", "class": "credential"},
+        {"path": "/env/X", "class": "hunter2 is the password"},
+        {"path": "/env/X", "class": ""},
+        {"path": 7, "class": "credential"},
+        ["/env/X"],
+        ["/env/X", "credential", "extra"],
+    ],
+)
+def test_a_malformed_entry_is_withheld_whole_and_counted(bad: object) -> None:
+    good = {"path": "/env/OK", "class": "credential"}
+    payload, trim = _published(_with_redactions(bad, good))
+    assert payload["_redactions"] == [good]
+    assert trim.fields == 1
+
+
+def test_a_record_that_is_not_a_list_is_withheld_and_counted() -> None:
+    payload, trim = _published(_event(payload={"decision_id": "d1", "_redactions": "oops"}))
+    assert "_redactions" not in payload and trim.fields == 1
+
+
+def test_no_redactions_publishes_no_field_and_an_empty_record_is_not_a_withheld_field() -> None:
+    absent, absent_trim = _published(_event())
+    empty, empty_trim = _published(_with_redactions())
+    assert "_redactions" not in absent and "_redactions" not in empty
+    assert absent_trim.total == 0 and empty_trim.total == 0
+
+
+def test_redactions_need_no_naming_by_the_kind_and_publish_for_every_allowlisted_kind() -> None:
+    for kind in DEFAULT_ALLOWLIST:
+        event = _event(
+            kind=kind,
+            payload={"_redactions": [{"path": "/env/TOKEN", "class": "credential"}]},
+        )
+        payload, trim = _published(event)
+        assert payload == {"_redactions": [{"path": "/env/TOKEN", "class": "credential"}]}
+        assert trim.total == 0
+
+
+def test_a_rule_set_can_withhold_them_and_they_are_counted() -> None:
+    rules = PublicationRules(publish_redactions=False)
+    payload, trim = _published(
+        _with_redactions({"path": "/env/TOKEN", "class": "credential"}), PublicationPolicy(rules)
+    )
+    assert "_redactions" not in payload and trim.fields == 1
+
+
+def test_the_billing_projection_does_not_keep_them() -> None:
+    assert BILLING_RULES.publish_redactions is False
+    event = _event(
+        kind=EventKind.PHASE_TRANSITIONED,
+        payload={"_redactions": [{"path": "/env/TOKEN", "class": "credential"}]},
+    )
+    payload, trim = _published(event, BILLING_POLICY)
+    assert payload == {} and trim.fields == 1
+
+
+def test_the_published_digest_covers_the_redactions_as_published() -> None:
+    event = _with_redactions({"path": "/a@b.co", "class": "private-detail-key", "value": "x"})
+    decision = DEFAULT_POLICY.decide(event)
+    assert decision.record is not None
+    assert decision.record.digest == digest_event(decision.record.payload)
+
+
+_VALUE = "SECRETVALUE-9f3c"
+
+
+@st.composite
+def _redaction_entries(draw: st.DrawFn) -> object:
+    segments = draw(
+        st.lists(
+            st.sampled_from(["env", "a~1b", "alice@example.com", "~1etc~1passwd", _VALUE.lower()]),
+            max_size=4,
+        )
+    )
+    kind = draw(st.sampled_from(["credential", "private-detail-key", "path", "bad class!"]))
+    entry = {"path": "".join(f"/{part}" for part in segments), "class": kind}
+    for extra in draw(st.lists(st.sampled_from(["value", "hash", "length", "text"]), max_size=3)):
+        entry[extra] = _VALUE
+    return draw(st.sampled_from([entry, [entry["path"], kind], _VALUE, 7, None]))
+
+
+@settings(max_examples=200, deadline=None, suppress_health_check=[HealthCheck.too_slow])
+@given(st.lists(_redaction_entries(), max_size=6))
+def test_no_redacted_value_or_private_key_ever_reaches_the_published_bytes(
+    entries: list[object],
+) -> None:
+    payload, _ = _published(_with_redactions(*entries))
+    text = json.dumps(payload)
+    assert _VALUE not in text and "alice@example.com" not in text and "passwd" not in text
+    for entry in payload.get("_redactions", []):  # type: ignore[attr-defined]
+        assert set(entry) == {"path", "class"}

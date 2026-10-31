@@ -99,6 +99,13 @@ class LedgerSearchPresenter:
         }
         return json.dumps(document, indent=2, default=str)
 
+    def events_json(self, project_id: UUID, events: Iterable[LedgerEvent]) -> str:
+        document = {
+            "project_id": str(project_id),
+            "events": [self.record(event) for event in events],
+        }
+        return json.dumps(document, indent=2, default=str)
+
     def kind_notes(self, kinds: Iterable[LedgerEventKind]) -> list[str]:
         unrecognized = sorted(k.value for k in kinds if isinstance(k, UnrecognizedEventKind))
         return [

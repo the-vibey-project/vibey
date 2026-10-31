@@ -18,7 +18,7 @@ that implements it: naming a shape is declaring, not consuming.
 
 from __future__ import annotations
 
-from collections.abc import Mapping, Sequence
+from collections.abc import Iterator, Mapping, Sequence
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Protocol, runtime_checkable
@@ -107,6 +107,92 @@ class AppendOutcomeInterface(Protocol):
     def head(self) -> str | None: ...
 
 
+@dataclass(frozen=True)
+class Break:
+    """One place a snapshot stopped being what its manifest and its seals say it is.
+
+    `forge_class` is the class file it was found in, or `manifest` for the manifest itself.
+    `line` is the 1-based line of a record that fails its own checks, and `None` when the
+    break is about a file as a whole (a removed last line, a missing file, a stale manifest).
+    `kind` is one of `forge_snapshot.BREAK_KINDS`; `detail` is a sentence a person can act on.
+    """
+
+    forge_class: str
+    line: int | None
+    kind: str
+    detail: str
+
+
+@runtime_checkable
+class BreakInterface(Protocol):
+    @property
+    def forge_class(self) -> str: ...
+
+    @property
+    def line(self) -> int | None: ...
+
+    @property
+    def kind(self) -> str: ...
+
+    @property
+    def detail(self) -> str: ...
+
+
+STATE_FOUND = "found"
+STATE_BEFORE_FIRST = "before-first-record"
+STATE_UNKNOWN = "unknown-object"
+
+
+@dataclass(frozen=True)
+class StateAsOf:
+    """What a snapshot says an object looked like at a moment, or why it cannot say.
+
+    Three answers, never two: `found` carries the record; `before-first-record` means the
+    object was recorded, but every record is later than the moment; `unknown-object` means
+    the snapshot holds no record of it at all. None of them says the object did not exist or
+    was deleted, because a snapshot sees neither: a record means "this state, first seen
+    then". `last_capture` is when the most recent capture began, so a reader can see how
+    stale "as of" is.
+    """
+
+    status: str
+    native_id: str = ""
+    record: Mapping[str, Any] | None = None
+    last_capture: str | None = None
+
+
+@runtime_checkable
+class SnapshotQueryInterface(Protocol):
+    """Reads a snapshot back in time. Read-only: it appends nothing and asks no forge."""
+
+    def state(self, forge_class: str, native_id: str, as_of: str) -> StateAsOf:
+        """The latest record of the object with `captured_at` at or before `as_of`.
+
+        Raises `ValueError` for a moment that is not ISO 8601 and `SnapshotStoreError` for a
+        class file that fails its seals, before any answer is given.
+        """
+        ...
+
+    def issue(self, number: int, as_of: str) -> StateAsOf:
+        """The same for the issue with this number, which is not its native id."""
+        ...
+
+
+@runtime_checkable
+class SnapshotVerifierInterface(Protocol):
+    """Walks a snapshot directory and reports every way it no longer matches itself."""
+
+    def verify(self) -> tuple[Break, ...]:
+        """Check every class file and the manifest, reading nothing from the forge.
+
+        Reports the first break in each file, and the manifest-level breaks (a missing or
+        foreign manifest, a head that does not match, a file the manifest names and does not
+        have, a file it does not name). An empty tuple is a snapshot that is intact. Never
+        raises for what is in the directory: a thing it cannot read is a `Break`.
+        """
+        ...
+
+
 @runtime_checkable
 class ForgeReaderInterface(Protocol):
     """Reads one forge's artifact classes for one repository. Never writes to the forge."""
@@ -166,6 +252,14 @@ class SnapshotStoreInterface(Protocol):
         """Replace the manifest, whole or not at all, and return where it is."""
         ...
 
+    def records(self, forge_class: str) -> Iterator[Mapping[str, Any]]:
+        """Every record of the class in file order, each checked as the store checks it.
+
+        Refuses the file at the first line that is not this store's own, unbroken record:
+        a damaged chain is never read from.
+        """
+        ...
+
 
 @runtime_checkable
 class ForgeSnapshotInterface(Protocol):
@@ -184,4 +278,27 @@ class ForgeSnapshotInterface(Protocol):
         recorded, or `None` for a full capture. Raises `ValueError` for an unknown class, an
         empty selection or an unreadable moment, before anything is read or written.
         """
+        ...
+
+
+@runtime_checkable
+class ForgeInventoryInterface(Protocol):
+    """What each forge's API exposes, as a checked-in list the capture is accounted against.
+
+    The capture knows the classes it reads and the ones it declines. It cannot know, from
+    itself, whether those two lists cover what a forge offers; this is the third list that
+    says so (#1571). A forge it holds no list for is unknown, never "nothing to account for".
+    """
+
+    @property
+    def sha256(self) -> str:
+        """The digest of the inventory as read, so a manifest names the list it was held to."""
+        ...
+
+    def classes(self, forge: str) -> tuple[str, ...] | None:
+        """The forge-neutral classes the forge's API exposes, sorted; `None` if not inventoried."""
+        ...
+
+    def verified(self, forge: str) -> bool:
+        """Whether the forge's list was read in full from its published API description."""
         ...

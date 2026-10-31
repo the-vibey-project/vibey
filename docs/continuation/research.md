@@ -12,7 +12,7 @@ bending a protocol to fit an outcome.
 - **Mode when GitHub runs it weekly:** act — may open a draft pull request; never merges, approves, releases or deletes.
 - **What it is for:** Keep every weekly measurement and every registered study running without breaking its protocol.
 - **Decision records:** 98, the newest 0098 — The VS Code verification is done by a large model and reviewed by the operator.
-- **Lanes it keeps usable:** [Review canary](https://github.com/the-vibey-project/vibey/actions/workflows/review-canary.yml), [Minimum specs](https://github.com/the-vibey-project/vibey/actions/workflows/minimum-specs.yml), [Host health](https://github.com/the-vibey-project/vibey/actions/workflows/host-health.yml), [Autonomy scorecard](https://github.com/the-vibey-project/vibey/actions/workflows/autonomy-scorecard.yml), [Continuation prompts](https://github.com/the-vibey-project/vibey/actions/workflows/continuation-prompts.yml).
+- **Lanes it keeps usable:** [Review canary](https://github.com/the-vibey-project/vibey/actions/workflows/review-canary.yml), [Minimum specs](https://github.com/the-vibey-project/vibey/actions/workflows/minimum-specs.yml), [Host health](https://github.com/the-vibey-project/vibey/actions/workflows/host-health.yml), [Autonomy scorecard](https://github.com/the-vibey-project/vibey/actions/workflows/autonomy-scorecard.yml), [First hour](https://github.com/the-vibey-project/vibey/actions/workflows/first-hour.yml), [Continuation prompts](https://github.com/the-vibey-project/vibey/actions/workflows/continuation-prompts.yml).
 <!-- END GENERATED continuation:state -->
 
 ## The prompt

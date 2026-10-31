@@ -1,5 +1,7 @@
 # CLAUDE.md
 
+<!-- Generated from docs/agents/instructions.toml by scripts/agent_instructions.py -- edit that file, not this one. `python scripts/agent_instructions.py check` fails when they differ. -->
+
 `vibey`: a queue-based, six-phase conductor for autonomous software delivery.
 Built on PostgreSQL and three `*loop` autonomous session runners (claudeloop,
 codexloop, and the local runner that ships as two engines:
@@ -166,6 +168,21 @@ small identified slices, explicit links, measured budgets, and no silent truncat
   secrets are absent; the krypton app for web, Android and iOS; the `.vsix`), and the
   extension's publication to Open VSX (`openvsx.yml`). `clients/` is in `[version] code_paths`, so a
   client-only change is releasable. ADR-0028, ADR-0069.
+- **Sovereign self-hosted free is the only default on every surface; paid is
+  declared-only.** Each operational surface has one vibey-owned protocol and a
+  sovereign default adapter that is always on: engine `gptossloop`,
+  cloud self-hosted OpenStack, forge self-hosted Forgejo, ticketing self-hosted
+  free Plane, documentation self-hosted free BookStack, secrets self-hosted
+  free Bitwarden, files self-hosted free Nextcloud, email self-hosted free
+  Forward Email, SMS self-hosted free Fossify Messages, and messaging
+  self-hosted Matrix with the Element client. Paid platforms (engines
+  claudeloop/codexloop; cloud azure/aws/gcp; forge
+  github/gitlab/bitbucket; tickets jira/linear/asana (+ sibling sovereign
+  openproject); docs confluence/notion/gitbook; secrets lastpass/1password/
+  proton; files gdrive/icloud; email proton/gmail/apple; sms google-messages/
+  imessage; messaging signal/discord/slack/zoom/whatsapp/telegram/messenger/
+  facebook/instagram/tiktok) are declared-only relays through the sovereign
+  host and are never a default — sub-doctrine 8.b, ADR-0042.
 
 ## Layer map
 

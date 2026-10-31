@@ -305,6 +305,7 @@ access of its own. See [Threat model](docs/threat-model.md) for the full boundar
 |---|---|
 | `vibey-gh check [--apply] [--commits RANGE] [--ci]` | Verify installed assets, file fingerprints, commit trailers, traceable branch logging, documentation, marketplace structure, and interface parity; optionally add a missing source header or collapse a header duplicated within a file. |
 | `vibey-gh install` | Render configured workflows, install/chains hooks, and install release-site assets. |
+| `vibey-gh setup [--postgres] [--skip-doctor] [--check]` | One idempotent command from a fresh clone to a working contributor environment: sync, the pre-commit framework's three hook types, then `install` (in the order that works), a PostgreSQL reachability check, and `vibey doctor` (advisory). `--check` changes and runs nothing. It never overwrites a `core.hooksPath` it did not set and never creates a PostgreSQL role, password or `~/.pgpass`. `check` (without `--ci`) names a clone whose framework hooks are missing; `check --quiet`, which the pre-push hook runs, does not, so a missing framework hook stays a warning and never a refused push. |
 | `vibey-gh version [--since REF] [--dev BUILD] [--apply] [--explain]` | Derive, explain, print, or apply the next release version. |
 | `vibey-gh trailer` / `trailer-key` | Print the configured provenance trailer or its key for scripts and workflows. |
 | `vibey-gh conventional-message [--file COMMIT_EDITMSG]` / `conventional-check --commits BASE..HEAD` | Normalize one commit message or audit every subject in a revision range against Conventional Commits. |
@@ -980,7 +981,7 @@ trusted_authors = ["your-login", "dependabot[bot]"]
 | Branch intake | Turns a new topic branch into one reusable draft PR. |
 | Issue automation | Turns an eligible published issue into one guarded solution branch and linked PR. |
 | Branch sync | Brings open branches forward on every merge; daily, refills a bounded number of spent repair budgets. |
-| Conversation | Answers `@vibey-gh` in a comment, and may make the change when a trusted author asks on a PR. |
+| Conversation | Answers `@vibey` (and the legacy `@vibey-gh`, with a warning) in a comment, and may make the change when a trusted author asks on a PR. |
 | Conventional Commits | Normalizes guarded same-repository topic history and republishes it with an exact-head lease. |
 | CI\* / Provenance / CodeQL / Docs | Validate code, history, security, human docs, agent docs, plugins, and interfaces. |
 | PR automation | Aggregates exact-head scans; reviews, repairs, resolves conflicts, and gates. |

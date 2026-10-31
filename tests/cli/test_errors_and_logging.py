@@ -21,6 +21,7 @@ from vibey.domain.errors import (
     InvalidPhaseError,
     NoEligibleEngine,
     UnknownProject,
+    VibeyError,
 )
 from vibey.domain.handoff import GateMode, GateResult
 from vibey.domain.verbosity import resolve_log_plan
@@ -185,3 +186,29 @@ def test_the_null_logger_absorbs_everything() -> None:
     assert null.bind(run_id="r1") is null
     for level in ("debug", "info", "warning", "error"):
         getattr(null, level)("event", key="value")
+
+
+def test_a_catalogued_error_ends_with_its_code_and_keeps_line_one() -> None:
+    message = render(UnknownProject("unknown project 123"))
+    lines = message.splitlines()
+    assert lines[0] == "Error: unknown project 123"
+    assert re.fullmatch(r"\(E\d{4}: run `vibey explain E\d{4}`\)", lines[-1])
+    hinted = render(NoEligibleEngine("nothing eligible")).splitlines()
+    assert "vibey engines" in " ".join(hinted) and hinted[-1].startswith("(E")
+
+
+def test_an_error_with_no_entry_still_renders_without_a_code() -> None:
+    class Unlisted(VibeyError):
+        pass
+
+    assert render(Unlisted("odd")) == "Error: odd"
+
+
+def test_a_catalog_that_cannot_load_never_stops_the_error_printing(monkeypatch) -> None:
+    from vibey.cli.error_catalog import ErrorCatalog
+
+    def broken(cls):
+        raise ValueError("error catalog: damaged")
+
+    monkeypatch.setattr(ErrorCatalog, "shipped", classmethod(broken))
+    assert render(UnknownProject("unknown project 123")) == "Error: unknown project 123"

@@ -22,6 +22,8 @@ from vibey_gh import dependabot
 from vibey_gh.automation_bootstrap import AutomationBootstrapGate
 from vibey_gh.config import GhConfig, load_config
 from vibey_gh.fallback_pin import FallbackPinResolver
+from vibey_gh.hook_inspector import HookInspector
+from vibey_gh.hooks_self_source import KEY as SELF_SOURCE_KEY, HooksSelfSource
 from vibey_gh.interfaces.fallback_pin_resolver_interface import FallbackPin
 from vibey_gh.pr_af_local import PrAfLocalModel
 from vibey_gh.review_contract import REQUIRES_WIDER_CONTEXT, REVIEW_CONTRACT
@@ -471,6 +473,16 @@ def render_workflow(source: Path, cfg: GhConfig, *, fallback_pin: FallbackPin | 
     wanted = wanted.replace(
         "__VIBEY_GH_CONVERSATION_ENABLED__", "true" if talk.enabled else "false"
     )
+    # The cheap filter admits the trigger and every legacy handle, so a comment that still
+    # says `@vibey-gh` reaches `conversation evaluate`, which answers it with a warning.
+    mention = " || ".join(
+        f"contains(github.event.comment.body, '{handle}')"
+        for handle in (talk.trigger, *talk.legacy_triggers)
+    )
+    wanted = wanted.replace(
+        "contains(github.event.comment.body, '__VIBEY_GH_CONVERSATION_TRIGGER__')",
+        f"({mention})",
+    )
     wanted = wanted.replace("__VIBEY_GH_CONVERSATION_TRIGGER__", talk.trigger)
     wanted = wanted.replace("__VIBEY_GH_CONVERSATION_MODEL__", talk.model)
     issues = cfg.issue_automation
@@ -521,32 +533,9 @@ def render_workflow(source: Path, cfg: GhConfig, *, fallback_pin: FallbackPin | 
         "__VIBEY_GH_PROFILE_TOPICS__",
         json.dumps({"names": list(cfg.repository_profile.topics)}, separators=(",", ":")),
     )
-    profile_settings = {
-        name: getattr(cfg.repository_profile, name)
-        for name in (
-            "has_issues",
-            "has_projects",
-            "has_wiki",
-            "has_discussions",
-            "allow_squash_merge",
-            "allow_merge_commit",
-            "allow_rebase_merge",
-            "allow_auto_merge",
-            "delete_branch_on_merge",
-            "web_commit_signoff_required",
-            "vulnerability_alerts",
-            "automated_security_fixes",
-        )
-    }
     # Sent, and then verified, only when declared: an empty value means "not managed", and
     # sending one would ask the forge to set the setting to nothing.
-    profile_settings.update(
-        {
-            name: getattr(cfg.repository_profile, name)
-            for name in ("squash_merge_commit_title", "squash_merge_commit_message")
-            if getattr(cfg.repository_profile, name)
-        }
-    )
+    profile_settings = cfg.repository_profile.settings()
     wanted = wanted.replace(
         "__VIBEY_GH_PROFILE_SETTINGS__",
         json.dumps(profile_settings, separators=(",", ":")),
@@ -845,11 +834,20 @@ def install(
             check=False,
             capture_output=True,
         )
+        # The hooks read this from local git config, not the tracked file (#1292).
+        # Reported only when the repository declares it: an adopter that never wrote
+        # `[install] self_source` sees no new line and no new local state.
+        if HooksSelfSource().declared(cfg) is not None:
+            actions.append(Action(SELF_SOURCE_KEY, HooksSelfSource().reconcile(cfg)))
     return actions
 
 
 def installed(
-    cfg: GhConfig | None = None, local: bool = True, *, fallback_pin: FallbackPin | None = None
+    cfg: GhConfig | None = None,
+    local: bool = True,
+    *,
+    fallback_pin: FallbackPin | None = None,
+    frameworks: bool = True,
 ) -> tuple[bool, list[str]]:
     """Whether the hooks are present, current, and — when `local` — actually wired up.
 
@@ -857,6 +855,11 @@ def installed(
     current is repository state, and CI can and should check it. Whether `core.hooksPath`
     points at them is per-clone local git config that no CI checkout will ever have, so
     asserting it on a runner would fail every build for a condition that cannot hold there.
+
+    `frameworks` is whether a local check also names a clone whose pre-commit framework hooks
+    are missing (#1689). `check --quiet` turns it off, because that is how the pre-push hook
+    asks, and the shims are fail-open by design: a missing framework hook prints a warning and
+    lets the push through (CONTRIBUTING.md). Naming the gap must not become a refused push.
     """
     cfg = cfg or load_config()
     pin = fallback_pin or FallbackPinResolver().resolve(cfg)
@@ -927,6 +930,9 @@ def installed(
             check=False,
         )
         if result.stdout.strip() != HOOKS_DIR:
-            problems.append(f"core.hooksPath is not {HOOKS_DIR} — run `vibey-gh install`")
+            problems.append(f"core.hooksPath is not {HOOKS_DIR} — run `vibey-gh setup`")
+        problems.extend(HooksSelfSource().problems(cfg))
+        if frameworks:
+            problems.extend(HookInspector().problems(cfg))
 
     return (not problems), problems

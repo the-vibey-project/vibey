@@ -65,6 +65,7 @@ This index is generated from the documentation's navigation by `scripts/llms_txt
 ## Reference
 
 - [CLI](https://the-vibey-project.github.io/vibey/main/reference/cli/): Every vibey command and subcommand, written by hand against src/vibey/cli/main.py and checked against it as of 2026-09-29.
+- [Error codes](https://the-vibey-project.github.io/vibey/main/reference/errors/): Every error vibey reports for a known problem prints a permanent code on its last line:
 - [Configuration](https://the-vibey-project.github.io/vibey/main/reference/configuration/): The schema below is fully implemented and unit-tested in src/vibey/domain/config.py (VibeyConfig, parse_config, parse_toml_string) and src/vibey/infrastructure/config_loader.py (load_config_from_path). vibey new reads…
 - [Hub API](https://the-vibey-project.github.io/vibey/main/reference/hub-api/): The hub is vibey serve (ADR-0068): one HTTP API that every krypton client -- desktop, mobile, web, the VS Code extension -- reaches.
 - [System requirements](https://the-vibey-project.github.io/vibey/main/reference/system-requirements/): What a machine needs to run vibey and its krypton clients, and how each figure is known.

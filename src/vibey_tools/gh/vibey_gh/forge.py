@@ -176,3 +176,9 @@ class NotSupported:
     @property
     def problem(self) -> str:
         return f"{self.kind.value} does not support {self.verb}: {self.reason}"
+
+    @staticmethod
+    def is_problem(problem: str) -> bool:
+        """Whether an adapter's `problem` sentence is a `NotSupported` one, and so says the forge
+        has no such object, rather than that it could not be asked."""
+        return any(problem.startswith(f"{kind.value} does not support ") for kind in ForgeKind)
