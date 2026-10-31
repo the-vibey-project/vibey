@@ -17,6 +17,8 @@ import urllib.parse
 import urllib.request
 from typing import Any
 
+from vibey.domain.config import DEFAULT_SURFACE_ADAPTER_TIMEOUT_SECONDS
+
 
 class RabbitMqApiError(RuntimeError):
     """The management API answered with an HTTP error. `status` is its code."""
@@ -42,7 +44,11 @@ class RabbitMqManagementApi:
         password: str,
         vhost: str = "/",
         opener: Any = urllib.request.urlopen,
+        timeout: float = DEFAULT_SURFACE_ADAPTER_TIMEOUT_SECONDS,
     ) -> None:
+        # The bus adapter builds this class, so the guard here covers both.
+        if timeout <= 0:
+            raise ValueError("timeout must be positive")
         parsed = urllib.parse.urlsplit(url.strip())
         if parsed.username is not None or parsed.password is not None or "@" in parsed.netloc:
             # A credential in the URL is logged with every error the URL appears in, and
@@ -59,6 +65,7 @@ class RabbitMqManagementApi:
         self.vhost = urllib.parse.quote(vhost, safe="")
         """The vhost, percent-encoded for a path segment."""
         self._opener = opener
+        self._timeout = timeout
 
     def name(self, value: str) -> str:
         """A queue, exchange or policy name, percent-encoded for a path segment."""
@@ -75,7 +82,7 @@ class RabbitMqManagementApi:
             f"{self._url}/api/{path}", data=body, headers=headers, method=method
         )
         try:
-            with self._opener(req) as resp:
+            with self._opener(req, timeout=self._timeout) as resp:
                 raw = resp.read().decode("utf-8")
         except urllib.error.HTTPError as exc:
             raise RabbitMqApiError(exc.code, self._scrubbed(str(exc.reason))) from None

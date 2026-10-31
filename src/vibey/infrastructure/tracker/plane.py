@@ -12,6 +12,7 @@ import urllib.error
 import urllib.request
 
 from vibey.application.interfaces.tracker import IssueTrackerPort
+from vibey.domain.config import DEFAULT_SURFACE_ADAPTER_TIMEOUT_SECONDS
 
 
 class PlaneTrackerAdapter(IssueTrackerPort):
@@ -23,12 +24,14 @@ class PlaneTrackerAdapter(IssueTrackerPort):
         workspace_slug: str,
         project_id: str,
         opener: object | None = None,
+        timeout: float = DEFAULT_SURFACE_ADAPTER_TIMEOUT_SECONDS,
     ) -> None:
         self._url = url.rstrip("/")
         self._token = token
         self._workspace_slug = workspace_slug
         self._project_id = project_id
         self._opener = opener if opener is not None else urllib.request.urlopen
+        self._timeout = timeout
 
     def _headers(self) -> dict[str, str]:
         return {
@@ -58,7 +61,7 @@ class PlaneTrackerAdapter(IssueTrackerPort):
             method="POST",
         )
         try:
-            with self._opener(req) as resp:  # type: ignore[operator]
+            with self._opener(req, timeout=self._timeout) as resp:  # type: ignore[operator]
                 data = json.loads(resp.read().decode("utf-8"))
         except urllib.error.HTTPError as exc:
             raise RuntimeError(f"Plane API error {exc.code}: {exc.reason}") from exc
@@ -74,7 +77,7 @@ class PlaneTrackerAdapter(IssueTrackerPort):
             method="GET",
         )
         try:
-            with self._opener(req) as resp:  # type: ignore[operator]
+            with self._opener(req, timeout=self._timeout) as resp:  # type: ignore[operator]
                 data = json.loads(resp.read().decode("utf-8"))
         except urllib.error.HTTPError as exc:
             if exc.code == 404:
