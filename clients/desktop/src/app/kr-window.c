@@ -1,7 +1,9 @@
 /* Made with ❤️ by [Vibey](https://the-vibey-project.github.io/vibey/), Developed by [Adam Matthew Steinberger](https://vibewithadam.matthewsteinberger.com/) ([@adammatthewsteinberger](https://github.com/adammatthewsteinberger/)). */
 #include "kr-window.h"
 
+#include "kr-a11y.h"
 #include "kr-answer.h"
+#include "kr-commands.h"
 #include "kr-format.h"
 #include "kr-lifecycle.h"
 #include "kr-mark.h"
@@ -66,6 +68,16 @@ kr_window_toast(GtkWidget *window, const char *text)
 }
 
 /* ---- building blocks ----------------------------------------------------------------- */
+
+/* The warning mark beside a row. The row's own text says what is wrong; the mark is named so a
+ * screen reader announces that it is a warning, not just that there is an image. */
+static GtkWidget *
+warning_icon(void)
+{
+    GtkWidget *icon = gtk_image_new_from_icon_name("dialog-warning-symbolic");
+    kr_a11y_name(icon, "Warning");
+    return icon;
+}
 
 static GtkWidget *
 row(const char *title, const char *subtitle)
@@ -160,6 +172,7 @@ project_menu(const char *project_id)
     gtk_widget_set_valign(button, GTK_ALIGN_CENTER);
     gtk_widget_add_css_class(button, "flat");
     gtk_widget_set_tooltip_text(button, "Start, pause or unwind this project");
+    kr_a11y_name_with_hint(button, "Project actions", "Start, pause or unwind this project");
     return button;
 }
 
@@ -359,21 +372,74 @@ kr_window_about(GtkWidget *window)
     adw_dialog_present(about, window);
 }
 
+/* The keyboard shortcuts, listed from the command table. An AdwDialog over a preferences page
+ * rather than AdwShortcutsDialog or GtkShortcutsWindow: the first needs a newer libadwaita
+ * than the floor in meson.build, and the second is deprecated in newer GTK. */
+void
+kr_window_shortcuts(GtkWidget *window)
+{
+    AdwDialog *dialog = adw_dialog_new();
+    adw_dialog_set_title(dialog, "Keyboard shortcuts");
+    adw_dialog_set_content_width(dialog, 480);
+    adw_dialog_set_content_height(dialog, 560);
+    GtkWidget *page = adw_preferences_page_new();
+    gsize count = 0;
+    const KrCommand *commands = kr_commands(&count);
+    for (const char *const *group = kr_command_groups(); *group != NULL; group++) {
+        GtkWidget *section = adw_preferences_group_new();
+        adw_preferences_group_set_title(ADW_PREFERENCES_GROUP(section), *group);
+        for (gsize i = 0; i < count; i++) {
+            if (g_strcmp0(commands[i].group, *group) != 0)
+                continue;
+            GtkWidget *entry = adw_action_row_new();
+            adw_preferences_row_set_title(ADW_PREFERENCES_ROW(entry), commands[i].label);
+            g_autoptr(GPtrArray) keys = g_ptr_array_new_with_free_func(g_free);
+            for (const char *const *accel = commands[i].accelerators; *accel != NULL; accel++) {
+                guint key = 0;
+                GdkModifierType mods = 0;
+                if (gtk_accelerator_parse(*accel, &key, &mods))
+                    g_ptr_array_add(keys, gtk_accelerator_get_label(key, mods));
+            }
+            g_ptr_array_add(keys, NULL);
+            g_autofree char *keys_text =
+                keys->len > 1 ? g_strjoinv(", ", (char **) keys->pdata) : g_strdup("No shortcut");
+            GtkWidget *keys_label = gtk_label_new(keys_text);
+            gtk_widget_add_css_class(keys_label, "dim-label");
+            adw_action_row_add_suffix(ADW_ACTION_ROW(entry), keys_label);
+            adw_preferences_group_add(ADW_PREFERENCES_GROUP(section), entry);
+        }
+        adw_preferences_page_add(ADW_PREFERENCES_PAGE(page), ADW_PREFERENCES_GROUP(section));
+    }
+    GtkWidget *toolbar = adw_toolbar_view_new();
+    adw_toolbar_view_add_top_bar(ADW_TOOLBAR_VIEW(toolbar), adw_header_bar_new());
+    adw_toolbar_view_set_content(ADW_TOOLBAR_VIEW(toolbar), page);
+    adw_dialog_set_child(dialog, toolbar);
+    adw_dialog_present(dialog, window);
+}
+
+/* The header menu: the sections, each a list of actions whose label comes from the one
+ * command table, so the menu cannot disagree with the shortcuts dialog. */
 static GMenuModel *
 main_menu(void)
 {
+    static const char *const sections[][5] = {
+        {"start-project", NULL},
+        /* The hub outlives krypton: these are the only ways to start or stop it from here. */
+        {"start-hub", "stop-hub", "hub-status", NULL},
+        {"refresh", "settings", NULL},
+        {"shortcuts", "about", "quit", NULL},
+    };
     GMenu *menu = g_menu_new();
-    g_autoptr(GMenu) start = g_menu_new();
-    g_menu_append(start, "Start a project…", "app.start-project");
-    g_menu_append_section(menu, NULL, G_MENU_MODEL(start));
-    g_autoptr(GMenu) view = g_menu_new();
-    g_menu_append(view, "Refresh", "app.refresh");
-    g_menu_append(view, "Preferences", "app.settings");
-    g_menu_append_section(menu, NULL, G_MENU_MODEL(view));
-    g_autoptr(GMenu) app = g_menu_new();
-    g_menu_append(app, "About krypton", "app.about");
-    g_menu_append(app, "Quit", "app.quit");
-    g_menu_append_section(menu, NULL, G_MENU_MODEL(app));
+    for (gsize s = 0; s < G_N_ELEMENTS(sections); s++) {
+        g_autoptr(GMenu) section = g_menu_new();
+        for (gsize a = 0; sections[s][a] != NULL; a++) {
+            const KrCommand *command = kr_command_find(sections[s][a]);
+            g_return_val_if_fail(command != NULL, G_MENU_MODEL(menu));
+            g_autofree char *name = g_strconcat("app.", command->action, NULL);
+            g_menu_append(section, command->label, name);
+        }
+        g_menu_append_section(menu, NULL, G_MENU_MODEL(section));
+    }
     return G_MENU_MODEL(menu);
 }
 
@@ -512,7 +578,7 @@ add_answer_controls(KrWindow *self, AdwExpanderRow *expander, const KrGate *gate
         GtkWidget *warn = row("Answering this can spend money",
                               "It needs the spend scope as well as answer.");
         adw_action_row_add_prefix(ADW_ACTION_ROW(warn),
-                                  gtk_image_new_from_icon_name("dialog-warning-symbolic"));
+                                  warning_icon());
         adw_expander_row_add_row(expander, warn);
     }
     switch (shape) {
@@ -693,7 +759,7 @@ render_budgets(KrWindow *self)
         GtkWidget *warn = row("This budget is spent",
                               "Its gate is waiting: raise the cap there, or let it rest.");
         adw_action_row_add_prefix(ADW_ACTION_ROW(warn),
-                                  gtk_image_new_from_icon_name("dialog-warning-symbolic"));
+                                  warning_icon());
         gtk_list_box_append(self->lists[PAGE_BUDGETS], warn);
     }
     show_list(self, PAGE_BUDGETS, TRUE);
@@ -777,7 +843,7 @@ render_devices(KrWindow *self)
     const KrHubEndpoint *endpoint = kr_hub_client_endpoint(self->app->client);
     g_autofree char *current = g_strdup_printf("Connected to %s:%u", endpoint->host,
                                                endpoint->port);
-    GtkWidget *here = row("This computer", "vibey serve on this computer, with its token");
+    GtkWidget *here = row("This computer", "the hub on this computer, with its token");
     adw_action_row_add_suffix(ADW_ACTION_ROW(here), use_button(self, NULL, 0));
     gtk_list_box_append(list, here);
 
@@ -904,6 +970,23 @@ build_settings(KrWindow *self)
                                          &self->app->settings->notifications));
     gtk_list_box_append(list, switch_row(self, "Sounds", "Play krypton's own sounds with them",
                                          &self->app->settings->sounds));
+    gtk_list_box_append(list, switch_row(self, "Start the hub automatically",
+                                         "When krypton opens and no hub runs on this computer, "
+                                         "start it. Closing krypton never stops it.",
+                                         &self->app->settings->hub_autostart));
+    GtkWidget *hub = row("The hub on this computer",
+                         "One hub per user, kept running when krypton closes");
+    static const struct {
+        const char *label;
+        const char *action;
+    } hub_buttons[] = {{"Start", "app.start-hub"}, {"Stop", "app.stop-hub"}, {"Status", "app.hub-status"}};
+    for (guint i = 0; i < G_N_ELEMENTS(hub_buttons); i++) {
+        GtkWidget *button = gtk_button_new_with_label(hub_buttons[i].label);
+        gtk_widget_set_valign(button, GTK_ALIGN_CENTER);
+        gtk_actionable_set_action_name(GTK_ACTIONABLE(button), hub_buttons[i].action);
+        adw_action_row_add_suffix(ADW_ACTION_ROW(hub), button);
+    }
+    gtk_list_box_append(list, hub);
     if (kr_tray_supported()) {
         GtkWidget *tray = adw_switch_row_new();
         adw_preferences_row_set_title(ADW_PREFERENCES_ROW(tray), "Keep running in the tray");
@@ -1120,15 +1203,18 @@ kr_window_new(KrApp *app)
 
     GtkWidget *refresh = gtk_button_new_from_icon_name("view-refresh-symbolic");
     gtk_widget_set_tooltip_text(refresh, "Refresh (Ctrl+R)");
+    kr_a11y_name(refresh, "Refresh");
     g_signal_connect(refresh, "clicked", G_CALLBACK(on_refresh_clicked), self);
     GtkWidget *menu_button = gtk_menu_button_new();
     gtk_menu_button_set_icon_name(GTK_MENU_BUTTON(menu_button), "open-menu-symbolic");
     g_autoptr(GMenuModel) menu = main_menu();
     gtk_menu_button_set_menu_model(GTK_MENU_BUTTON(menu_button), menu);
     gtk_widget_set_tooltip_text(menu_button, "Main menu");
+    kr_a11y_name(menu_button, "Main menu");
     GtkWidget *start_button = gtk_button_new_from_icon_name("list-add-symbolic");
     gtk_actionable_set_action_name(GTK_ACTIONABLE(start_button), "app.start-project");
     gtk_widget_set_tooltip_text(start_button, "Start a project (Ctrl+N)");
+    kr_a11y_name(start_button, "Start a project");
     GtkWidget *content_header = adw_header_bar_new();
     adw_header_bar_pack_end(ADW_HEADER_BAR(content_header), menu_button);
     adw_header_bar_pack_end(ADW_HEADER_BAR(content_header), refresh);

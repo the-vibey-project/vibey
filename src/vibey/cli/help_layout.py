@@ -98,6 +98,7 @@ PANELS: tuple[Panel, ...] = (
             Entry("migrate", "Apply database migrations and reconcile grants"),
             Entry("state", "Keep this database and its sealed GitHub copy in step"),
             Entry("sabbath", "Show the Sabbath window on this host"),
+            Entry("explain", "Explain an error code: its cause and what to do"),
         ),
     ),
     Panel(
@@ -120,7 +121,7 @@ Examples:
   vibey watch        follow the work live
 
 \b
-Every command takes --help. projects, gates, status and loops take --json.
+Every command takes --help. projects, gates, status, loops, models, engines, cost and doctor take --json.
 Documentation: https://the-vibey-project.github.io/vibey/main/"""
 
 

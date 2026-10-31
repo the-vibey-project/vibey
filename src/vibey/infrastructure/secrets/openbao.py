@@ -21,13 +21,24 @@ import urllib.request
 from typing import Any
 
 from vibey.application.interfaces.secrets import SecretsPort
+from vibey.domain.config import DEFAULT_SURFACE_ADAPTER_TIMEOUT_SECONDS
 
 
 class OpenBaoSecretsAdapter(SecretsPort):
-    def __init__(self, *, url: str, token: str, opener: Any = urllib.request.urlopen) -> None:
+    def __init__(
+        self,
+        *,
+        url: str,
+        token: str,
+        opener: Any = urllib.request.urlopen,
+        timeout: float = DEFAULT_SURFACE_ADAPTER_TIMEOUT_SECONDS,
+    ) -> None:
+        if timeout <= 0:
+            raise ValueError("timeout must be positive")
         self._url = url.strip().rstrip("/")
         self._token = token
         self._opener = opener
+        self._timeout = timeout
 
     def _headers(self) -> dict[str, str]:
         return {"X-Vault-Token": self._token, "Content-Type": "application/json"}
@@ -44,7 +55,7 @@ class OpenBaoSecretsAdapter(SecretsPort):
             self._key_url(key), headers=self._headers(), method="GET"
         )
         try:
-            with self._opener(req) as resp:
+            with self._opener(req, timeout=self._timeout) as resp:
                 data = json.loads(resp.read().decode("utf-8"))
         except urllib.error.HTTPError as exc:
             if exc.code == 404:
@@ -67,7 +78,7 @@ class OpenBaoSecretsAdapter(SecretsPort):
             method="PUT",
         )
         try:
-            with self._opener(req) as resp:
+            with self._opener(req, timeout=self._timeout) as resp:
                 resp.read()
         except urllib.error.HTTPError as exc:
             raise RuntimeError(f"OpenBao API error {exc.code}: {exc.reason}") from exc

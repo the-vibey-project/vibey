@@ -17,8 +17,10 @@ from collections.abc import Callable, Mapping
 from types import MappingProxyType
 from urllib.parse import urlsplit
 
+from vibey_gh.bitbucket_transport import BitbucketTransport
 from vibey_gh.config import ADAPTED_PLATFORM_KINDS, GhConfig, PlatformConfig
 from vibey_gh.forge import ForgeKind
+from vibey_gh.forge_bitbucket import BitbucketForge
 from vibey_gh.forge_forgejo import ForgejoForge
 from vibey_gh.forge_github import GH_DEFAULT_HOST, GitHubForge
 from vibey_gh.forge_gitlab import GitLabForge
@@ -47,6 +49,7 @@ class ForgeSelector(ForgeSelectorInterface):
                     for kind, factory in (
                         (ForgeKind.GITLAB.value, self._gitlab),
                         (ForgeKind.FORGEJO.value, self._forgejo),
+                        (ForgeKind.BITBUCKET.value, self._bitbucket),
                     )
                     if kind in ADAPTED_PLATFORM_KINDS
                 },
@@ -87,6 +90,15 @@ class ForgeSelector(ForgeSelectorInterface):
             token=os.environ.get(cfg.platform.token_env, "") if cfg.platform.token_env else "",
         )
         return ForgejoForge(root=cfg.root, repository=_repository(cfg), transport=transport)
+
+    @staticmethod
+    def _bitbucket(cfg: GhConfig) -> ForgeAdapterInterface:
+        host = cfg.platform.host or BitbucketTransport().host
+        transport = BitbucketTransport(
+            host=host,
+            token=os.environ.get(cfg.platform.token_env, "") if cfg.platform.token_env else "",
+        )
+        return BitbucketForge(root=cfg.root, repository=_repository(cfg), transport=transport)
 
 
 def _repository(cfg: GhConfig) -> str:

@@ -564,3 +564,55 @@ def test_quiet_check_skips_a_survey_that_cannot_move_the_exit_code(checkable, mo
     monkeypatch.setattr(tidy, "survey", boom)
     assert main(["check", "--ci", "--quiet"]) == 0
     assert capsys.readouterr().err == ""
+
+
+class _BitbucketFixture:
+    """A scripted Bitbucket transport: one open pull request, answering only what is asked."""
+
+    executable = "fake-bitbucket"
+
+    def __init__(self, *, heads=("pr-head",), problem: str = "") -> None:
+        self.heads = heads
+        self.problem = problem
+        self.calls: list[tuple[str, ...]] = []
+
+    def survey(self, args, *, cwd=None, stdin=None):
+        del cwd, stdin
+        self.calls.append(tuple(args))
+        if self.problem:
+            return [], self.problem
+        return [{"source": {"branch": {"name": head}}} for head in self.heads], ""
+
+
+def test_survey_runs_against_a_bitbucket_fixture(repos):
+    from vibey_gh.forge_bitbucket import BitbucketForge
+
+    work, _cfg = repos
+    cfg = GhConfig(root=work, platform=PlatformConfig(kind="bitbucket", repository="ws/repo"))
+    transport = _BitbucketFixture()
+    report = tidy.survey(
+        cfg, forge=BitbucketForge(root=work, repository="ws/repo", transport=transport)
+    )
+    assert transport.calls == [("repositories/ws/repo/pullrequests?state=OPEN&pagelen=200",)]
+    assert report.remote_merged == ("merged-work",)
+    assert "pr-head" not in report.remote_merged
+    assert report.orphan_tags == ("orphaned-tag",)
+    assert report.local_gone == ("gone-work",)
+    # Bitbucket has no release object: there is no draft to find, and that is no failure.
+    assert report.draft_releases == ()
+    assert report.problems == ()
+
+
+def test_a_bitbucket_that_cannot_be_asked_leaves_merged_branches_unjudged(repos):
+    from vibey_gh.forge_bitbucket import BitbucketForge
+
+    work, _cfg = repos
+    cfg = GhConfig(root=work, platform=PlatformConfig(kind="bitbucket", repository="ws/repo"))
+    forge = BitbucketForge(
+        root=work,
+        repository="ws/repo",
+        transport=_BitbucketFixture(problem="Bitbucket API error 401"),
+    )
+    report = tidy.survey(cfg, forge=forge)
+    assert report.remote_merged == ()
+    assert report.problems == ("Bitbucket API error 401; merged branches were not judged",)

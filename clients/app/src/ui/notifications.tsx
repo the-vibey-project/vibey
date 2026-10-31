@@ -8,13 +8,18 @@
  * It looks while the app is open or recently in the background. A phone that has closed the app
  * hears nothing: that needs the hub to push through Apple's and Google's services, which it
  * does not yet do (see the issue linked from Settings).
+ *
+ * A notification about a question the phone may answer carries the answers as buttons, so a
+ * person can answer without opening the app. Which gates get buttons, and what a button means,
+ * is `NotificationPlanner`'s: a gate that spends never has one, and a button is checked again
+ * against the gate's kind when it is pressed, so nothing here can answer a spending gate.
  */
 import * as Notifications from 'expo-notifications';
 import { router } from 'expo-router';
 import { useEffect, useRef } from 'react';
 import { Platform } from 'react-native';
 import { NotificationPlanner } from '../core';
-import type { NotificationSnapshot } from '../core';
+import type { HubClient, NotificationSnapshot } from '../core';
 import { useApp } from './app-state';
 
 const planner = new NotificationPlanner();
@@ -30,6 +35,33 @@ export async function allowed(): Promise<boolean> {
   return (await Notifications.requestPermissionsAsync()).granted;
 }
 
+function gateOptions(snapshot: NotificationSnapshot, gateId: string | undefined): readonly string[] {
+  return snapshot.gates.find((gate) => gate.id === gateId)?.options ?? [];
+}
+
+async function say(identifier: string, title: string, body: string, route: '/gates' | '/'): Promise<void> {
+  await Notifications.scheduleNotificationAsync({ identifier, content: { title, body, data: { route } }, trigger: null });
+}
+
+/** A button was pressed on a gate's notification: send that answer, and say how it went. Never silently. */
+async function answerFromNotification(client: HubClient, response: Notifications.NotificationResponse): Promise<void> {
+  const data = response.notification.request.content.data ?? {};
+  const { gateId, gateKind, options } = data as { gateId?: unknown; gateKind?: unknown; options?: unknown };
+  if (typeof gateId !== 'string' || typeof gateKind !== 'string' || !Array.isArray(options)) return;
+  const answer = planner.answerFor(
+    gateKind,
+    options.filter((option): option is string => typeof option === 'string'),
+    response.actionIdentifier,
+  );
+  if (answer === undefined) return;
+  try {
+    await say(`answered-${gateId}`, 'Answered', await client.answer(gateId, answer), '/gates');
+  } catch (error) {
+    // The hub is away or refused: the question is still waiting, so say that and open Gates on a tap.
+    await say(`answered-${gateId}`, 'Your answer was not sent', `${error instanceof Error ? error.message : String(error)} Open krypton to answer.`, '/gates');
+  }
+}
+
 export function GateNotifications() {
   const { client, settings } = useApp();
   const last = useRef<NotificationSnapshot | undefined>(undefined);
@@ -43,7 +75,11 @@ export function GateNotifications() {
       handleNotification: async () => ({ shouldShowBanner: true, shouldShowList: true, shouldPlaySound: settings.sounds, shouldSetBadge: false }),
     });
     const tapped = Notifications.addNotificationResponseReceivedListener((response) => {
-      router.push(response.notification.request.content.data?.route === '/gates' ? '/gates' : '/');
+      if (response.actionIdentifier === Notifications.DEFAULT_ACTION_IDENTIFIER) {
+        router.push(response.notification.request.content.data?.route === '/gates' ? '/gates' : '/');
+        return;
+      }
+      void answerFromNotification(client, response);
     });
     let stopped = false;
     const look = async () => {
@@ -54,9 +90,27 @@ export function GateNotifications() {
         last.current = after;
         if (stopped || due.length === 0 || !(await allowed())) return;
         for (const notification of due) {
+          const category = notification.actions.length === 0 ? undefined : planner.categoryFor(notification.actions);
+          if (category !== undefined) {
+            // `isAuthenticationRequired`: on iOS a button answers only once the phone is unlocked.
+            await Notifications.setNotificationCategoryAsync(
+              category,
+              notification.actions.map((action) => ({
+                identifier: action.id,
+                buttonTitle: action.title,
+                options: { opensAppToForeground: false, isAuthenticationRequired: true },
+              })),
+            );
+          }
           await Notifications.scheduleNotificationAsync({
             identifier: notification.id,
-            content: { title: notification.title, body: notification.body, data: { route: notification.route }, sound: settings.sounds },
+            content: {
+              title: notification.title,
+              body: notification.body,
+              data: { route: notification.route, gateId: notification.gateId, gateKind: notification.gateKind, options: gateOptions(after, notification.gateId) },
+              categoryIdentifier: category,
+              sound: settings.sounds,
+            },
             trigger: null,
           });
         }

@@ -70,6 +70,12 @@ _SWITCH_HINTS = {
 }
 DEFAULT_CLAUDELOOP_LOCAL_PROFILE = "local"
 DEFAULT_LOCAL_CONTEXT_WINDOW = 32_768
+# The bound, in seconds, on each blocking network operation of a sovereign surface adapter
+# (doctrine 10), so a server that accepts the connection and never answers cannot block its caller
+# for ever. `[surfaces] adapter_timeout_seconds` or VIBEY_SURFACES_ADAPTER_TIMEOUT_SECONDS
+# overrides it (doctrine 12.c).
+DEFAULT_SURFACE_ADAPTER_TIMEOUT_SECONDS = 10
+SURFACE_ADAPTER_TIMEOUT_BOUNDS = (1, 600)
 
 
 class ConfigError(VibeyError):
@@ -388,6 +394,24 @@ class SiemConfig:
     username: str | None = None
     password: str | None = None
     index: str = "vibey-audit"
+
+
+@dataclass(frozen=True, slots=True)
+class SurfacesConfig:
+    """`[surfaces]`: settings every sovereign surface adapter shares."""
+
+    adapter_timeout_seconds: int = DEFAULT_SURFACE_ADAPTER_TIMEOUT_SECONDS
+
+    @classmethod
+    def from_table(cls, table: dict[str, Any], path: str) -> "SurfacesConfig":
+        """Validate one already-parsed table; `path` names it in any error."""
+        low, high = SURFACE_ADAPTER_TIMEOUT_BOUNDS
+        timeout = table.get("adapter_timeout_seconds", DEFAULT_SURFACE_ADAPTER_TIMEOUT_SECONDS)
+        if isinstance(timeout, bool) or not isinstance(timeout, int) or not low <= timeout <= high:
+            raise ConfigError(
+                f"{path}.adapter_timeout_seconds", f"must be an integer from {low} to {high}"
+            )
+        return cls(adapter_timeout_seconds=timeout)
 
 
 @dataclass(frozen=True, slots=True)
@@ -926,6 +950,7 @@ class VibeyConfig:
     bus: BusConfig = field(default_factory=BusConfig)
     blob: BlobConfig = field(default_factory=BlobConfig)
     siem: SiemConfig = field(default_factory=SiemConfig)
+    surfaces: SurfacesConfig = field(default_factory=SurfacesConfig)
     queue: QueueConfig = field(default_factory=QueueConfig)
     design: DesignConfig = field(default_factory=DesignConfig)
     build: BuildConfig = field(default_factory=BuildConfig)
@@ -1354,6 +1379,9 @@ def parse_config(data: dict[str, Any]) -> VibeyConfig:
         bus=_parse_bus(data),
         blob=_parse_blob(data),
         siem=_parse_siem(data),
+        surfaces=SurfacesConfig.from_table(
+            _optional(data, "surfaces", "surfaces", dict, {}), "surfaces"
+        ),
         queue=QueueConfig.from_data(data),
         design=DesignConfig.from_data(data),
         build=BuildConfig.from_data(data),
