@@ -29,7 +29,7 @@ from vibey.application.interfaces import (
     SmsPort,
 )
 from vibey.bootstrap import build_app
-from vibey.domain.config import ConfigError, parse_config
+from vibey.domain.config import DEFAULT_SURFACE_ADAPTER_TIMEOUT_SECONDS, ConfigError, parse_config
 from vibey.infrastructure.blob.garage import GarageBlobAdapter
 from vibey.infrastructure.blob.in_memory import InMemoryBlob
 from vibey.infrastructure.blob.interfaces.garage_interface import GarageBlobAdapterInterface
@@ -918,7 +918,7 @@ async def test_forward_email_adapter_uses_implicit_tls_on_port_465() -> None:
         patch("smtplib.SMTP") as smtp_cls,
     ):
         await adapter.send_email("to@example.com", "s", "b")
-    ssl_cls.assert_called_once_with("smtp", 465)
+    ssl_cls.assert_called_once_with("smtp", 465, timeout=DEFAULT_SURFACE_ADAPTER_TIMEOUT_SECONDS)
     smtp_cls.assert_not_called()
     mock_ssl.login.assert_called_once_with("u", "p")
     mock_ssl.send_message.assert_called_once()
@@ -1222,7 +1222,7 @@ async def test_rabbitmq_adapter_declare_without_dlq_is_one_call() -> None:
 async def test_rabbitmq_adapter_publish_and_consume() -> None:
     seen: list[Any] = []
 
-    def _fake_opener(req: Any) -> Any:
+    def _fake_opener(req: Any, timeout: float | None = None) -> Any:
         seen.append(req)
         if req.full_url.endswith("/publish"):
             return _mock_response(b'{"routed": true}')
@@ -1257,7 +1257,7 @@ async def test_rabbitmq_adapter_publishes_into_an_existing_queue_without_redecla
     quorum queue re-declared it as classic -- a 400 -- and left `.dlx`/`.dlq` behind."""
     seen: list[Any] = []
 
-    def _fake_opener(req: Any) -> Any:
+    def _fake_opener(req: Any, timeout: float | None = None) -> Any:
         seen.append((req.get_method(), req.full_url))
         if req.full_url.endswith("/publish"):
             return _mock_response(b'{"routed": true}')
@@ -1275,7 +1275,7 @@ async def test_rabbitmq_adapter_publishes_into_an_existing_queue_without_redecla
 async def test_rabbitmq_adapter_declares_a_missing_queue_before_publishing() -> None:
     seen: list[str] = []
 
-    def _fake_opener(req: Any) -> Any:
+    def _fake_opener(req: Any, timeout: float | None = None) -> Any:
         seen.append(req.get_method())
         if req.get_method() == "GET":
             raise urllib.error.HTTPError(req.full_url, 404, "Not Found", {}, None)  # type: ignore[arg-type]
@@ -1292,7 +1292,7 @@ async def test_rabbitmq_adapter_declares_a_missing_queue_before_publishing() -> 
 
 @pytest.mark.asyncio
 async def test_rabbitmq_adapter_unrouted_publish_raises() -> None:
-    def _fake_opener(req: Any) -> Any:
+    def _fake_opener(req: Any, timeout: float | None = None) -> Any:
         if req.full_url.endswith("/publish"):
             return _mock_response(b'{"routed": false}')
         return _mock_response(b"")
@@ -1309,7 +1309,7 @@ async def test_rabbitmq_adapter_consume_paths() -> None:
     import base64 as _base64
 
     async def _consume_with(body: bytes) -> Any:
-        def _fake_opener(req: Any) -> Any:
+        def _fake_opener(req: Any, timeout: float | None = None) -> Any:
             if req.full_url.endswith("/get"):
                 return _mock_response(body)
             return _mock_response(b"")
@@ -1427,7 +1427,7 @@ async def test_in_memory_bus_publish_does_not_redeclare_an_existing_queue() -> N
 def _garage_responder(
     *, bucket_status: int = 200, bucket_body: bytes = b"", object_status: int = 200
 ) -> Any:
-    def _fake_opener(req: Any) -> Any:
+    def _fake_opener(req: Any, timeout: float | None = None) -> Any:
         if req.get_method() == "PUT" and req.data is None:
             if bucket_status == 200:
                 return _mock_response(b"")
@@ -1462,7 +1462,7 @@ async def test_garage_adapter_put_and_get() -> None:
 async def test_garage_adapter_put_creates_bucket_first() -> None:
     seen: list[Any] = []
 
-    def _fake_opener(req: Any) -> Any:
+    def _fake_opener(req: Any, timeout: float | None = None) -> Any:
         seen.append(req)
         return _mock_response(b"")
 
@@ -1520,7 +1520,7 @@ async def test_garage_adapter_object_errors() -> None:
     with pytest.raises(RuntimeError, match="put failed"):
         await adapter.put_blob("b", "k", b"hi")
 
-    def _missing(req: Any) -> Any:
+    def _missing(req: Any, timeout: float | None = None) -> Any:
         if req.get_method() == "PUT":
             return _mock_response(b"")
         raise urllib.error.HTTPError(req.full_url, 404, "x", {}, None)
@@ -1531,7 +1531,7 @@ async def test_garage_adapter_object_errors() -> None:
     with pytest.raises(FileNotFoundError):
         await adapter2.get_blob("b", "gone")
 
-    def _denied_with_code(req: Any) -> Any:
+    def _denied_with_code(req: Any, timeout: float | None = None) -> Any:
         if req.get_method() == "PUT":
             return _mock_response(b"")
 
@@ -1547,7 +1547,7 @@ async def test_garage_adapter_object_errors() -> None:
     with pytest.raises(FileNotFoundError):
         await adapter3.get_blob("b", "gone")
 
-    def _boom(req: Any) -> Any:
+    def _boom(req: Any, timeout: float | None = None) -> Any:
         if req.get_method() == "PUT" and req.data is None:
             return _mock_response(b"")
         raise urllib.error.HTTPError(req.full_url, 500, "x", {}, None)

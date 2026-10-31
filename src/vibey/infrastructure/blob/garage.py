@@ -21,6 +21,7 @@ from datetime import UTC, datetime
 from typing import Any
 
 from vibey.application.interfaces.blob import BlobPort
+from vibey.domain.config import DEFAULT_SURFACE_ADAPTER_TIMEOUT_SECONDS
 
 _SERVICE = "s3"
 _ALGORITHM = "AWS4-HMAC-SHA256"
@@ -60,12 +61,16 @@ class GarageBlobAdapter(BlobPort):
         secret_key: str,
         region: str = "us-east-1",
         opener: Any = urllib.request.urlopen,
+        timeout: float = DEFAULT_SURFACE_ADAPTER_TIMEOUT_SECONDS,
     ) -> None:
+        if timeout <= 0:
+            raise ValueError("timeout must be positive")
         self._url = url.strip().rstrip("/")
         self._access_key = access_key
         self._secret_key = secret_key
         self._region = region
         self._opener = opener
+        self._timeout = timeout
         self._host = urllib.parse.urlsplit(self._url).netloc
 
     def _signed_request(
@@ -109,7 +114,7 @@ class GarageBlobAdapter(BlobPort):
 
     def _send(self, req: urllib.request.Request) -> tuple[int, bytes]:
         try:
-            with self._opener(req) as resp:
+            with self._opener(req, timeout=self._timeout) as resp:
                 return resp.status, resp.read()
         except urllib.error.HTTPError as exc:
             try:

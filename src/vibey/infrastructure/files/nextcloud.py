@@ -13,14 +13,26 @@ import urllib.parse
 import urllib.request
 
 from vibey.application.interfaces.files import FilesPort
+from vibey.domain.config import DEFAULT_SURFACE_ADAPTER_TIMEOUT_SECONDS
 
 
 class NextcloudFilesAdapter(FilesPort):
-    def __init__(self, *, url: str, user: str, password: str, opener: object | None = None) -> None:
+    def __init__(
+        self,
+        *,
+        url: str,
+        user: str,
+        password: str,
+        opener: object | None = None,
+        timeout: float = DEFAULT_SURFACE_ADAPTER_TIMEOUT_SECONDS,
+    ) -> None:
+        if timeout <= 0:
+            raise ValueError("timeout must be positive")
         self._url = url.rstrip("/")
         self._user = user
         self._password = password
         self._opener = opener if opener is not None else urllib.request.urlopen
+        self._timeout = timeout
 
     def _dav_url(self, remote_path: str) -> str:
         # Quote each segment so spaces, `#` and other reserved characters
@@ -44,7 +56,7 @@ class NextcloudFilesAdapter(FilesPort):
             dav_url, data=content, headers=self._headers(), method="PUT"
         )
         try:
-            with self._opener(req) as resp:  # type: ignore[operator]
+            with self._opener(req, timeout=self._timeout) as resp:  # type: ignore[operator]
                 resp.read()
         except urllib.error.HTTPError as exc:
             raise RuntimeError(f"Nextcloud API error {exc.code}: {exc.reason}") from exc
@@ -58,7 +70,7 @@ class NextcloudFilesAdapter(FilesPort):
             self._dav_url(remote_path), headers=self._headers(), method="GET"
         )
         try:
-            with self._opener(req) as resp:  # type: ignore[operator]
+            with self._opener(req, timeout=self._timeout) as resp:  # type: ignore[operator]
                 data = resp.read()
         except urllib.error.HTTPError as exc:
             if exc.code == 404:
