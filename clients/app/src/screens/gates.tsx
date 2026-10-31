@@ -10,10 +10,10 @@ import { Button, Card, Label, Loaded, Notice, Pill, Screen, useHub } from '../ui
 const present = new Presenters();
 const policy = new DevicePolicy();
 
-/** Face ID, Touch ID or the passcode before a gate that spends. The web has none: it refuses. */
-export async function reverify(): Promise<boolean> {
+/** Face ID, Touch ID or the passcode before a gate that spends, or a project is unwound. The web has none: it refuses. */
+export async function reverify(prompt = 'Confirm an answer that spends money'): Promise<boolean> {
   if (Platform.OS === 'web') return false;
-  const result = await LocalAuthentication.authenticateAsync({ promptMessage: 'Confirm an answer that spends money' });
+  const result = await LocalAuthentication.authenticateAsync({ promptMessage: prompt });
   return result.success;
 }
 
@@ -29,7 +29,7 @@ function Gate(props: { readonly gate: GateCard; readonly onDone: () => void; rea
     }
     try {
       if (gate.answerKey === 'host') return;
-      setMessage(await client!.answer(gate.id, { mode: gate.answerKey, value }));
+      setMessage(await client!.answer(gate.id, gate.answerKey === 'interview' ? { mode: 'defaults' } : { mode: gate.answerKey, value }));
       props.onDone();
     } catch (error) {
       setMessage(error instanceof Error ? error.message : String(error));
@@ -43,10 +43,16 @@ function Gate(props: { readonly gate: GateCard; readonly onDone: () => void; rea
         {gate.spends ? <Pill role="ultra">Spends · confirm it is you</Pill> : null}
       </View>
       <Label tone="secondary">{gate.prompt}</Label>
-      {gate.answerKey !== 'host'
+      {gate.answerKey === 'interview' ? (
+        <>
+          <Button label="Accept the suggested answers" onPress={() => void choose('')} />
+          <Label tone="tertiary">To answer in your own words instead, use VS Code (/reply) or the host: `vibey answer`.</Label>
+        </>
+      ) : null}
+      {gate.answerKey === 'verdict' || gate.answerKey === 'choice'
         ? gate.options.map((option) => <Button key={option} label={option} onPress={() => void choose(option)} />)
         : null}
-      {gate.answerKey === 'host' || gate.options.length === 0 ? (
+      {gate.answerKey === 'host' || (gate.answerKey !== 'interview' && gate.options.length === 0) ? (
         <Label tone="tertiary">Answer this gate on the host: `vibey answer` takes the value it needs.</Label>
       ) : null}
       {message ? <Notice>{message}</Notice> : null}

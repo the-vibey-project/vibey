@@ -8,7 +8,7 @@ over the [hub API](../../docs/reference/hub-api.md). It never touches vibey's da
 
 | Place | What you get |
 |---|---|
-| Projects | Every project, its phase and cycle, and how many gates wait on it. |
+| Projects | Every project, its phase and cycle, and how many gates wait on it. **Start a project** (the `+` button or `Ctrl+N`) asks for a name and what to build; each row's menu starts or pauses that project's own worker, or **unwinds** it after a dry run says what it would cancel and that the work on disk stays ([ADR-0091](../../docs/architecture/decisions/0091-devices-may-start-pause-and-unwind-projects.md)). The hub makes the folder; the desktop never names a path. |
 | Gates | Every gate waiting on you, with the controls its kind takes: a verdict or choice as buttons, a new bound for a grant, a retry, or a free-form answer. It warns you before an answer that can spend money. A desktop notification tells you when a new gate is raised. |
 | Lanes | The lanes running on the hub's computer. The krypton mark in the sidebar glows while one runs. |
 | Loops and effort | The loops, their engines and the effort ladder, up to ULTRA. |
@@ -16,12 +16,33 @@ over the [hub API](../../docs/reference/hub-api.md). It never touches vibey's da
 | Doctor | The checks the hub runs itself. |
 | Run on GitHub | A vibey command run on the repository's GitHub-hosted runners, as `vibey -w` runs it ([ADR-0085](../../docs/architecture/decisions/0085-vibey-on-the-workflows.md)). Type the command as it would follow `vibey -w` (`status --json`; double quotes keep spaces), and krypton sends it through the hub, asks every ten seconds where it is (queued, running, done or failed) for up to an hour, links its GitHub run, and shows its exit code and what it printed, selectable, in monospace. The paired device needs the `workflows` scope, and the scopes of what the command itself does; a hub with the workflows switched off, or a command the hub never runs (`migrate`, `budget set`), is said as such. |
 | Devices | Hubs found on your network (`_vibey._tcp`) with the certificate each advertises, this computer's hub, the hub this device is paired with and each scope it holds, in words, and pairing by the host's 6-digit code or its `vibey-pair://` address. |
-| Settings | Light, Dark or System (the default, which follows your desktop live), notifications and sounds. |
+| Settings | Light, Dark or System (the default, which follows your desktop live), notifications, sounds, starting this computer's hub automatically (on by default), buttons to start, stop and check that hub, and, where the platform has one, keeping krypton running in the tray. |
 
-Keyboard: `Ctrl+R` or `F5` refreshes, `Ctrl+G` opens Gates, `Ctrl+,` opens Settings, and
-`Ctrl+Q` quits. On a narrow window the sidebar folds into one pane with back navigation.
+The header menu holds Start a project, the hub's Start, Stop and Status, Refresh, Preferences, **Keyboard shortcuts**, **About krypton** and Quit. Every command, its label and its keys come from one table (`src/core/kr-commands.c`), so the menu, the shortcuts dialog and the keys cannot disagree. Screen-reader support, and what has and has not been checked with one, is in [ACCESSIBILITY.md](ACCESSIBILITY.md).
+
+**The tray item** (the menu bar on macOS, a StatusNotifierItem elsewhere) shows how many gates wait on you, opens the window, jumps to Gates, starts a project and quits. While it is showing, closing the window hides it instead; if no tray is there to bring it back (GNOME needs the AppIndicator extension), the window closes as a window does. Turn it off in Settings.
+
+Keyboard: `Ctrl+N` starts a project, `Ctrl+R` or `F5` refreshes, `Ctrl+G` opens Gates, `Ctrl+,` opens Settings, and
+`Ctrl+?` lists every shortcut, and `Ctrl+Q` quits. On a narrow window the sidebar folds into one pane with back navigation.
 
 ## Connecting
+
+**The hub on this computer is started for you.** There is one hub per user (`vibey serve`
+takes a lock, so a second refuses), and closing krypton never stops it. When krypton opens
+pointed at *This computer* and no hub runs, it runs `vibey hub start` in the background
+(a worker thread; the window never waits on it), then connects. A failure is a note in the
+connection status, never a pop-up. Start, Stop and Status are in the header menu, on the
+Settings page and, while the tray is showing, in the tray menu (Start when no hub answers,
+Stop while one does); they are the only way krypton stops the hub, and quitting is not one.
+Turn the automatic start off in Settings (`[hub] autostart=false` in the settings file). With
+another computer's hub chosen, krypton starts nothing: the hub there is started and stopped
+on that computer (`vibey hub start | stop`).
+
+krypton finds `vibey` on `PATH`, then in `~/.local/bin`, `/opt/homebrew/bin` and
+`/usr/local/bin` (a launch from the Dock has a short `PATH`); `KRYPTON_VIBEY` names one
+explicitly. It runs the commands from your home directory, so a `vibey.toml` in a project
+folder cannot redirect them. It needs a `vibey` that has `vibey hub start | stop | status`,
+and says to upgrade when it does not.
 
 On the computer that runs the hub, krypton reads the hub's token the way the hub keeps it:
 `~/.local/state/vibey/hub/token` on Linux, `~/Library/Application Support/vibey/hub/token`
@@ -100,7 +121,9 @@ release attaches, is made from it by `scripts/macos_app_bundle.py` (see
   - `kr-answer`: which answer each gate kind takes, mirroring `src/vibey/cli/gate_answers.py`;
   - `kr-state`: what the app knows, and which gates are new;
   - `kr-format`: money, durations and phases in words;
-  - `kr-settings`: themes and channels;
+  - `kr-settings`: themes, channels and whether the hub starts with krypton;
+  - `kr-hub-engine`: `vibey hub status | start | stop` through `GSubprocess` (never a shell), on
+    a worker thread, and the words for a hub that does not answer;
   - `kr-pairing` and `kr-pairing-client`: the pairing code and address, the claim, the
     device's key and where it is kept;
   - `kr-discovery`, with its Avahi and dns_sd backends;

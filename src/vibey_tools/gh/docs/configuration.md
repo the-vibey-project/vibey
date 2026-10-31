@@ -38,7 +38,7 @@ defaults below. Paths are repository-relative unless stated otherwise.
 | `merge_train.protected_paths` | string list / empty | Paths the train never merges unattended. A pull request that touches one — or whose changed files it cannot list completely — is reported `needs a human merge` instead of merged, because the train's fallback to `gh pr merge --admin` would bypass the code-owner review a ruleset asks for (see `require_code_owner_review`). Shell-style globs matched case-sensitively against the whole repository-root path, where `*` also crosses `/`: `tests/live/*` protects that whole tree. A rename counts as a change to its old path too. The list comes from the paginated REST files endpoint and is checked against GitHub's own `changedFiles` count, so a truncated listing refuses rather than passes. A promotion from the integration branch is exempt: everything it carries already merged there under this check. Entries must be unique and non-empty, and a leading `/` (the CODEOWNERS habit) is refused at load because no listed path starts with one. Empty protects nothing — the behaviour before this key existed. |
 | `install.workflows` | string list / all managed workflows | Exact managed subset; `[]` installs hooks and CLI assets only. |
 | `install.union_merge_paths` | string list / `["CHANGELOG.md"]` | Files declared `merge=union` in `.gitattributes`, so two branches appending to the same section merge instead of conflicting. Appended to an existing `.gitattributes`, never rewriting it. `[]` declares none. GitHub's mergeability never runs the driver, so a pull request still shows CONFLICTING there while a local merge is clean, and where it does run it can keep both sides of a heading and duplicate it: a changelog is better written as fragments (`[changelog]`), with this set to `[]`. |
-| `install.self_source` | string / `"."` | Where a repository that **is** the tooling keeps its own copy, for the workflows that install it. Declared rather than discovered on purpose: a workflow that searched the tree for a `pyproject.toml` declaring `name = "vibey-gh"` would be reading a pull request's own files, and a branch that adds one anywhere would get it installed with that job's permissions. The rendered workflows verify the path before using it and fall back to the published release if it does not hold the tooling. It also anchors `automation-bootstrap.yml`'s change scope: `gh pr diff` reports repository-root paths, so a vendored copy's automation-core files are admitted under this prefix and nowhere else. |
+| `install.self_source` | string / `"."` | Where a repository that **is** the tooling keeps its own copy, for the workflows that install it. Declared rather than discovered on purpose: a workflow that searched the tree for a `pyproject.toml` declaring `name = "vibey-gh"` would be reading a pull request's own files, and a branch that adds one anywhere would get it installed with that job's permissions. The rendered workflows verify the path before using it and fall back to the published release if it does not hold the tooling. The local git hooks do not read this file: `vibey-gh install` copies an **explicitly declared** value (never the `"."` default) into this clone's `git config --local vibey-gh.self-source`, where the hooks read it, and leaves a different existing value alone and reports it. An unset key means the hooks run the `vibey-gh` on `PATH`. It also anchors `automation-bootstrap.yml`'s change scope: `gh pr diff` reports repository-root paths, so a vendored copy's automation-core files are admitted under this prefix and nowhere else. |
 | `install.fallback_package` | string / `"vibey"` | The distribution the managed workflows install when `self_source` does not hold the tooling — the branch every adopter takes, since their `self_source` default `"."` never matches. A key rather than a constant so a fork, or an internal index publishing under another name, can point it at their own distribution instead of one they cannot publish to. It is the package `pin_version` pins. |
 | `install.pin_version` | boolean / `false` | Pin every managed workflow's `pip install vibey-engine` — the distribution that carries `vibey-gh` — to the exact version that rendered it (`vibey==X.Y.Z`), instead of the latest release on every run. `false` keeps the historical floating install. That version is knowable in two places: in the repository that IS `fallback_package`, its own `[project] version`; everywhere else, the installed `fallback_package` release the running `vibey-gh` came from, so `uvx --from vibey==X.Y.Z vibey-gh install` renders `vibey==X.Y.Z`. An editable or other source-tree install names no release — its templates may be ahead of the number it carries — so there the fallback stays floating and `install` and `check` print a `notice:` saying why. The self-hosting path (this repository, and anything else installing from its own `pyproject.toml`) is never pinned — it installs from source regardless. Running `vibey-gh install` from a newer release moves the pin forward as one visible diff. |
 
@@ -50,14 +50,20 @@ questions ([ADR 0001](adr/0001-forge-neutral-nouns.md), #138).
 
 | Field | Type / default | Meaning |
 |---|---|---|
-| `kind` | string / `"forgejo"` | The forge. The standard names `github`, `gitlab` and `forgejo`, and every named forge has an adapter today. The sovereign, self-hosted default is `forgejo` (ADR 0002); `github` and `gitlab` are declared-only — an adopter writes the kind explicitly to leave the default. Any unadapted value is refused as unknown. |
-| `host` | string / `""` | The forge's host, as a bare host name with an optional port (`forgejo.local`, `ghe.example.com`, `git.internal:8443`); a scheme, path or whitespace is refused. Empty, the selected adapter's own default applies: `forgejo.local` for Forgejo, `github.com` for GitHub (which `gh` assumes on its own, so a `GH_HOST` already in the environment still applies), `gitlab.com` for GitLab. Any non-empty host is handed to the selected adapter's transport. |
+| `kind` | string / `"forgejo"` | The forge. The standard names `github`, `gitlab`, `forgejo` and `bitbucket`, and every named forge has an adapter today. The sovereign, self-hosted default is `forgejo` (ADR 0002); `github`, `gitlab` and `bitbucket` are declared-only — an adopter writes the kind explicitly to leave the default. Any unadapted value is refused as unknown. |
+| `host` | string / `""` | The forge's host, as a bare host name with an optional port (`forgejo.local`, `ghe.example.com`, `git.internal:8443`); a scheme, path or whitespace is refused. Empty, the selected adapter's own default applies: `forgejo.local` for Forgejo, `github.com` for GitHub (which `gh` assumes on its own, so a `GH_HOST` already in the environment still applies), `gitlab.com` for GitLab, `api.bitbucket.org` for Bitbucket Cloud (which takes an access token, or `username:app-password`, from `token_env`). Any non-empty host is handed to the selected adapter's transport. |
 
 Apart from that refusal, which every command makes, only the reads that have moved onto the
 adapter use this table today: the open pull request heads and the releases that the
 clean-repo survey (`vibey-gh tidy`, `check --ci`) reads.
 With the defaults, those run exactly the `gh` command lines, in the same directory and
 environment, that they ran before `[platform]` existed.
+
+An opt-in live test (`test/test_forge_bitbucket_live.py`, marked `network`) reads a real
+Bitbucket repository, read-only. It runs only with `VIBEY_GH_NETWORK_TESTS=1` and skips,
+naming the variable, unless `VIBEY_GH_BITBUCKET_REPOSITORY` (`workspace/repo-slug`) and a
+token are set; the token is read from `VIBEY_GH_BITBUCKET_TOKEN`, or from the variable
+`VIBEY_GH_BITBUCKET_TOKEN_ENV` names. A run that skipped is not evidence.
 
 ## `[ai]`
 
@@ -600,7 +606,8 @@ input a repository has, so the defaults are closed.
 | Field | Type / default | Meaning |
 |---|---|---|
 | `enabled` | boolean / `true` | Respond to mentions at all. |
-| `trigger` | string / `@vibey-gh` | The mention that addresses the automation. Matched on a word boundary, so `@vibey-gh-bot` is not a mention. |
+| `trigger` | string / `@vibey` | The mention that addresses the automation. Matched on a word boundary, so `@vibey-bot` is not a mention. |
+| `legacy_triggers` | string list / `["@vibey-gh"]` | Handles that still address the automation, for people who type the name it had before `@vibey`. A comment that uses one is answered, and the evaluation carries a `warning` (the workflow raises it as an annotation) naming the trigger to use instead. Set it empty to stop answering them. Each must be non-empty, contain no whitespace, and differ from `trigger`. |
 | `model` | string / `claude-sonnet-5` | Model that reads the thread and answers. |
 | `max_interactions` | integer / `10` (1–100) | Responses per thread, so a conversation cannot become an unbounded work queue. |
 | `respond_to_untrusted` | boolean / `false` | Answer commenters outside the owner/trusted set. A response costs tokens, so answering everyone is a deliberate spending decision. |
@@ -1346,6 +1353,7 @@ job's name, not the workflow's.
 | `web_commit_signoff_required` | boolean / `true` | Require web-editor signoff. |
 | `vulnerability_alerts`, `automated_security_fixes` | boolean / `true` | Enable dependency security services. |
 | `squash_merge_commit_title`, `squash_merge_commit_message` | string / `""` (not managed) | What a squash merge proposes as its commit, in the API's own words: title `PR_TITLE` or `COMMIT_OR_PR_TITLE`, message `PR_BODY`, `COMMIT_MESSAGES` or `BLANK`. Declared together or not at all, and `COMMIT_OR_PR_TITLE` only with `COMMIT_MESSAGES` (the forge's pairing rule). Empty sends nothing and verifies nothing. The forge's own default concatenates every commit message into the body, which is how a quoted skip-ci marker from a branch's history reached a release commit; `PR_TITLE` with `PR_BODY` proposes only what the author wrote, and `skip-markers.yml` checks both. |
+| `fail_check` | boolean / `false` | Does a live repository setting that differs from this table fail `vibey-gh check --ci`? Advisory by default, so an adopter upgrading into the audit does not go red for drift that was already there. The audit is read-only and covers the flags above, the squash-commit title and message when declared, the description (the workflow's fallback sentence when empty) and the topic set (order ignored). A setting the forge withheld from the token, or a read that could not be made (no `gh`, no token, another forge), is `settings drift: not surveyed — …` and never counted as matching. Under `--quiet` it runs only when this is `true`. |
 
 ## `[skip_markers]`
 
@@ -1383,7 +1391,7 @@ with no exceptions.
 | `warn_days` | integer / `7` | How many days before an exception expires every run warns. At most `max_exception_days`. |
 
 Each exception is one `[[exception]]` table in `exceptions_file`. Every key is required except
-`upstream`:
+`upstream` and `fix_unreachable`:
 
 | Key | Meaning |
 |---|---|
@@ -1394,10 +1402,11 @@ Each exception is one `[[exception]]` table in `exceptions_file`. Every key is r
 | `added`, `expires` | Unquoted TOML dates. The exception is honoured before `expires` and refused from that day on. |
 | `retire_when` | The condition that ends it early, such as a patched release. |
 | `upstream` | A list of links to where that condition is tracked. |
+| `fix_unreachable` | Lets the exception stand although a patched release exists, because no package that depends on this one accepts it: who pins the vulnerable range, what that range is, and what was tried. The check verifies one thing itself, that the package is **dev-only** in the workspace's `package-lock.json` (present, and every copy marked `dev`), and refuses the key for a package that ships. It cannot verify that no dependent accepts the fix, so a reviewer must, and `max_exception_days` makes someone look again. |
 
 The check also fails when an exception matches nothing at `audit_level` or worse, when its
-package has a patched release in the GitHub advisory database, and when it names a workspace
-with no lockfile. Each workspace is judged only against its own exceptions.
+package has a patched release in the GitHub advisory database (unless it declares
+`fix_unreachable` and is dev-only), and when it names a workspace with no lockfile. Each workspace is judged only against its own exceptions.
 
 ## `[forge_retry]`
 
@@ -1493,6 +1502,11 @@ whose commit is no longer the tip, changes nothing.
 | `enabled` | boolean / `true` | Run the alert. |
 | `checks` | string list / `[]` | The job names that decide red and green for both branches. Empty uses each branch's own `[rulesets.*] required_checks`. |
 | `labels` | string list / `[]` | Labels applied when the issue is opened. They must already exist. |
+| `reproduce` | table / `{}` | `"<check>"` or `"<check> :: <step>"` = the command that reproduces that failure locally. `{test}` is replaced by the first failing test id the job log names, shell-quoted; a command that needs it gets no command when the log gave none. The most specific key wins. A check with no entry is reported as having no declared command, never guessed. |
+| `test_id_pattern` | regex / `^FAILED (\S+)` | Matched against each log line, GitHub's timestamp prefix removed; group 1 (else the whole match) is the test id. The default is pytest's short summary. |
+| `log_bytes` | integer / `4194304` | The most of a failed job's log that is read. Past it the tail is kept, line numbers are dropped and the issue says so. |
+
+For each failed watched job the issue and its per-run comment carry the failed step (linked), the first failing test id with its job-log line, and the mapped command. A log that cannot be fetched (`actions: read` is needed) never stops the issue being filed; the field says it is unknown.
 
 ## `[documentation]`
 

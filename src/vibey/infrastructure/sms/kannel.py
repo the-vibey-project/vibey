@@ -17,6 +17,7 @@ import urllib.request
 from typing import Any
 
 from vibey.application.interfaces.sms import SmsPort
+from vibey.domain.config import DEFAULT_SURFACE_ADAPTER_TIMEOUT_SECONDS
 
 
 class KannelSmsAdapter(SmsPort):
@@ -28,14 +29,21 @@ class KannelSmsAdapter(SmsPort):
         password: str,
         sender: str = "vibey",
         opener: Any = urllib.request.urlopen,
+        timeout: float = DEFAULT_SURFACE_ADAPTER_TIMEOUT_SECONDS,
     ) -> None:
+        if timeout <= 0:
+            raise ValueError("timeout must be positive")
         self._url = url.strip().rstrip("/")
         self._username = username
         self._password = password
         self._sender = sender
         self._opener = opener
+        self._timeout = timeout
 
-    async def send_sms(self, phone_number: str, message: str) -> None:
+    async def send_sms(
+        self, phone_number: str, message: str, *, idempotency_key: str | None = None
+    ) -> None:
+        # The sendsms CGI has no key, so it is accepted and not sent; the guard owns it.
         await asyncio.to_thread(self._send_sync, phone_number, message)
 
     def _send_sync(self, phone_number: str, message: str) -> None:
@@ -52,7 +60,7 @@ class KannelSmsAdapter(SmsPort):
             f"{self._url}/cgi-bin/sendsms?{query}", method="GET"
         )
         try:
-            with self._opener(req) as resp:
+            with self._opener(req, timeout=self._timeout) as resp:
                 body = resp.read().decode("utf-8", "replace")
         except urllib.error.HTTPError as exc:
             raise RuntimeError(f"Kannel sendsms failed: HTTP {exc.code}") from exc

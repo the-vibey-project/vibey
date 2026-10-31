@@ -23,7 +23,7 @@ PR #3 (2026-08-15) brought `application/`, `infrastructure/` and `cli/` to 100% 
 
 **Bad.** Every new branch costs a test before it can merge, and a mechanical refactor of the tree is expensive precisely because it cannot lower the number (ADR-0016 accepts this cost explicitly). Test-suite time is the pressure valve: PR #70 bought parallelism rather than lowering the floor, and PR #117 moved the suite off the commit hook rather than shrinking it.
 
-**Rule status.** Binds every future change, survives any rewrite, and is about how this project treats its own work: it passes ADR-0020's test and owes a sub-doctrine, not yet proposed; the parent doctrine and the wording are the operator's to ratify.
+**Rule status.** Binds every future change, survives any rewrite, and is about how this project treats its own work: it passes ADR-0020's test and is filed as sub-doctrine 9.h (the floor is never lowered), which the operator's merge of the change that adds it ratifies.
 
 ## Alternatives rejected
 

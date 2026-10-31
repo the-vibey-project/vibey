@@ -55,6 +55,10 @@ describe('HubClient', () => {
       ['get', '/api/v1/projects/{project_id}/budget'],
       ['get', '/api/v1/projects/{project_id}/queue'],
       ['post', '/api/v1/projects/{project_id}/queue/{job_id}/bump'],
+      ['post', '/api/v1/projects'],
+      ['post', '/api/v1/projects/{project_id}/work/start'],
+      ['post', '/api/v1/projects/{project_id}/work/pause'],
+      ['post', '/api/v1/projects/{project_id}/abandon'],
       ['get', '/api/v1/loops'],
       ['get', '/api/v1/lanes'],
       ['get', '/api/v1/doctor'],
@@ -159,8 +163,9 @@ describe('HubClient', () => {
   it('turns every answer mode into what vibey answer --raw takes, or refuses it', () => {
     expect(HubClient.answerDocument({ mode: 'pairs', pairs: { q1: 'yes' }, defaults: false })).toEqual({ q1: 'yes' });
     expect(HubClient.answerDocument({ mode: 'raw', json: '{"max_dollars": 25}' })).toEqual({ max_dollars: 25 });
-    expect(() => HubClient.answerDocument({ mode: 'pairs', pairs: {}, defaults: true })).toThrow(HubError);
-    expect(() => HubClient.answerDocument({ mode: 'defaults' })).toThrow(/on the host/);
+    // The interview's own suggested answers, as `vibey answer --defaults` sends them.
+    expect(HubClient.answerDocument({ mode: 'pairs', pairs: { q1: 'yes' }, defaults: true })).toEqual({ q1: 'yes', accept_defaults: true });
+    expect(HubClient.answerDocument({ mode: 'defaults' })).toEqual({ accept_defaults: true });
     expect(() => HubClient.answerDocument({ mode: 'raw', json: '{' })).toThrow(/not JSON/);
     expect(() => HubClient.answerDocument({ mode: 'raw', json: '[1]' })).toThrow(/JSON object/);
   });
@@ -270,6 +275,58 @@ describe('HubClient', () => {
     await expect(client.clearBudget()).rejects.toThrow(/lifted on the host/);
     await expect(client.cost()).rejects.toMatchObject({ refusal: 'not-on-a-device' });
     expect(calls).toHaveLength(0);
+  });
+
+  it('starts a project from a name and an intake, never sending a path (ADR-0091)', async () => {
+    const { client, calls } = fakeHub({
+      'POST /api/v1/projects': { status: 201, body: { project_id: 'p9', name: 'greeter', outcome: 'design job j1' } },
+    });
+    await expect(client.createProject('greeter', { repo: '/Users/me/secret', intake: '  a page  ' })).resolves.toEqual({
+      project_id: 'p9',
+      name: 'greeter',
+      outcome: 'design job j1',
+    });
+    await client.createProject('greeter', { repo: '/x' });
+    expect(calls.map((call) => JSON.parse(call.init.body ?? '{}'))).toEqual([{ name: 'greeter', intake: 'a page' }, { name: 'greeter' }]);
+  });
+
+  it("starts and pauses a project's own worker, and says what the host answered", async () => {
+    const { client, calls } = fakeHub({
+      'POST /api/v1/projects/p%201/work/start': { status: 200, body: { message: 'worker started' } },
+      'POST /api/v1/projects/p%201/work/pause': { status: 200, body: {} },
+    });
+    await expect(client.startWork('p 1')).resolves.toBe('worker started');
+    await expect(client.pauseWork('p 1')).resolves.toBe('Paused.');
+    expect(calls).toHaveLength(2);
+  });
+
+  it('previews an unwind with a dry run, then performs it, and reads the report', async () => {
+    const { client, calls } = fakeHub({
+      'POST /api/v1/projects/p1/abandon': {
+        status: 200,
+        body: { project_id: 'p1', name: 'greeter', from: 'build', to: 'abandoned', dry_run: true, cancelled_jobs: [{}, {}], withdrawn_gates: [{}] },
+      },
+    });
+    await expect(client.abandonProject('p1', 'not needed', { dryRun: true })).resolves.toMatchObject({ dry_run: true, cancelled_jobs: 2, withdrawn_gates: 1 });
+    await client.abandonProject('p1', 'not needed');
+    expect(calls.map((call) => JSON.parse(call.init.body ?? '{}'))).toEqual([
+      { reason: 'not needed', dry_run: true },
+      { reason: 'not needed', dry_run: false },
+    ]);
+  });
+
+  it('says plainly why the host will not: no run scope, no projects_root, a taken name, a bad name', async () => {
+    const refuse = (status: number, detail: string): Route => ({ status, body: { detail } });
+    const { client } = fakeHub({
+      'POST /api/v1/projects': refuse(503, 'this host has not allowed projects to be started from a device'),
+      'POST /api/v1/projects/p1/abandon': refuse(403, 'device may not run_work'),
+      'POST /api/v1/projects/p2/work/start': refuse(409, 'held'),
+      'POST /api/v1/projects/p3/work/pause': refuse(404, 'no'),
+    });
+    await expect(client.createProject('x', { repo: '' })).rejects.toMatchObject({ refusal: 'unavailable', message: expect.stringContaining('this host has not allowed projects') });
+    await expect(client.abandonProject('p1', 'r')).rejects.toMatchObject({ refusal: 'forbidden', message: expect.stringContaining('`run` scope') });
+    await expect(client.startWork('p2')).rejects.toMatchObject({ refusal: 'conflict' });
+    await expect(client.pauseWork('p3')).rejects.toMatchObject({ refusal: 'not-found' });
   });
 
   it('reports health without credentials, and version from it', async () => {

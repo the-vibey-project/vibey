@@ -144,6 +144,7 @@ async def run_conformance(
         }
         for flags in descriptor.isolation_flags.values():
             claimed_flags.update(f for f in flags if f.startswith("-"))
+        claimed_flags.update(f for f in descriptor.launch_flags if f.startswith("-"))
         if descriptor.plan_flag is not None:
             claimed_flags.add(descriptor.plan_flag)
         missing = sorted(f for f in claimed_flags if f not in help_text)

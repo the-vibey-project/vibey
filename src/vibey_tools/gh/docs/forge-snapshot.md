@@ -20,7 +20,7 @@ It is the first slice of [vibey#136](https://github.com/the-vibey-project/vibey/
 and it is deliberately narrow:
 
 - **Read-only.** It never writes to the forge. Every call is a `GET` listing.
-- **GitHub only.** A second forge is a second reader, and a later slice.
+- **GitHub by default, any adapted forge on request.** `--forge` reads another forge through its adapter, into the same envelope (see [one envelope](#one-envelope-on-every-forge)).
 - **Files only.** Nothing goes into the vibey ledger yet. That writer needs the storage tiers
   of vibey#114, and will take these same records, already sealed, unchanged.
 - **Native payloads.** Only the envelope is neutral. A payload is never translated, so no
@@ -35,6 +35,7 @@ vibey-gh forge-snapshot --out forge-state
 | Option | Meaning |
 |---|---|
 | `--out DIR` | Required. The snapshot directory. Created when missing; appended to when not. |
+| `--forge KIND` | The forge to read: `github` (the default), `forgejo`, `gitlab` or `bitbucket`. A forge other than GitHub is read through the adapter `[platform]` selects for it, and needs `--repo` or `[platform] repository`, because `gh` cannot say which repository. |
 | `--repo OWNER/NAME` | The repository. Without it, `$GH_REPO`, then the repository `gh` finds in the current directory. |
 | `--classes a,b,c` | Only these artifact classes (the names in [the table below](#the-files)). Without it, all of them. |
 | `--since MOMENT` | Capture from an ISO 8601 moment (`2026-09-18`, `2026-09-18T12:00:00Z`) rather than from the beginning. A moment with no offset is read as UTC. `--since resume` uses the resume point the last manifest recorded. |
@@ -187,13 +188,13 @@ repository's tags looks like this:
 | Field | Meaning |
 |---|---|
 | `schema` | Always `vibey.forge-record/1`. A change to this table is a new number. |
-| `forge` | The forge the record was read from: `github`. |
+| `forge` | The forge the record was read from: `github`, `forgejo`, and so on. The only envelope value that names a forge. |
 | `repository` | `owner/name` on that forge. |
 | `class` | The forge-neutral class, which is also the file's name. |
-| `native_class` | The forge's own name for the kind of object. |
+| `native_class` | The neutral table's name for the kind of object, which is GitHub's name for it (`pull_request_review`), on every forge. |
 | `native_id` | The forge's identifier for the object, always a string. Stable across edits, so every version of one object shares it. |
 | `captured_at` | When the walk of this class began, UTC, to the second. The object was observed in this state no earlier than this moment. |
-| `payload` | The forge's JSON for the object, verbatim: every field, in the forge's own names. |
+| `payload` | The forge's JSON for the object, verbatim: every field, in the forge's own names. The exception is `review` read through an adapter (any forge but GitHub): the adapter returns a normalised review, so the payload has four keys (`id`, `author`, `verdict`, `body`). |
 | `payload_sha256` | The SHA-256 of the payload's canonical form: the content's identity. Two records with the same value hold the same content. |
 | `prev` | The `sha256` of the record before this one in the same file, or `null` for the first. |
 | `sha256` | The SHA-256 of the canonical form of every other field of this record, `prev` included: the record's seal. |
@@ -201,6 +202,24 @@ repository's tags looks like this:
 **Point in time.** The state of an object as of a moment is its latest record with a
 `captured_at` at or before that moment. Records are only ever appended, so an earlier state
 is never overwritten, only followed.
+
+```bash
+vibey-gh forge-state forge-state-dir --issue 12 --as-of 2026-09-18T12:00:00Z
+vibey-gh forge-state forge-state-dir --class label --native-id 4242 --as-of 2026-09-18
+```
+
+`forge-state` reads the snapshot back and asks nothing of a forge. It prints the payload on
+stdout (so it pipes into `jq`) and the record's `captured_at`, its seal and when the latest
+capture began on stderr. `--issue` takes the number people say; `--class` with `--native-id`
+takes any class by the id the record holds. Every record on the way passes the same checks the
+capture applies, so a damaged class file is refused rather than answered from.
+
+It exits 0 when it found a record, 1 when it has none to give or the snapshot cannot be read,
+and 2 for a moment or arguments that name no query. There are two kinds of "none", and neither
+is "it did not exist": the object was recorded but first at a later moment, or the snapshot
+holds no record of it at all. A snapshot sees neither creation nor deletion; a record means
+"this state, first seen then", and an object that has not changed since has no record at later
+captures.
 
 ## The canonical form, and checking a chain
 
@@ -227,8 +246,8 @@ for number, line in enumerate(open(sys.argv[1], "rb"), start=1):
 print(head)
 ```
 
-A line edited, removed or moved breaks the chain at that line. A `--verify` walk that does
-this for a whole snapshot is the next slice.
+A line edited, removed or moved breaks the chain at that line. `vibey-gh forge-snapshot
+--verify DIR` does this walk for a whole snapshot (below).
 
 The store refuses to append to a file holding anything it did not write: a line that is not
 a record, a record of another repository or forge, or a line whose write never finished.
@@ -249,10 +268,11 @@ cursors can be recomputed from them.
 | `captured_at` | When this capture began. |
 | `since` | The moment this capture started from, or `null` for a full one. |
 | `clock_skew_seconds` | The clock allowance this capture used for its cursors. |
-| `complete` | `true` when every selected class was captured. |
+| `complete` | `true` when every selected class was captured and no class the forge's API exposes is unaccounted for (`inventory`). |
 | `resume_since` | Where the next capture can resume from, or `null` when some resumable class has never been captured completely. |
 | `classes` | One entry for every class this command knows, selected or not. |
 | `excluded` | Every artifact class this capture did not hold, each with its reason. |
+| `inventory` | What the capture was held to: the checked-in list of what the forge's API exposes. `sha256` names the list, `verified` says whether it was read in full from the forge's API description, and `unaccounted` lists the classes it exposes that are neither captured nor excluded (`null` for a forge nobody has listed). `null` itself when the capture was made without a list. |
 
 Each entry in `classes`:
 
@@ -313,16 +333,81 @@ so. The list, as this version writes it:
 | `autolink` | Needs administration permission to read. |
 | `deploy-key` | Needs administration permission to read. |
 | `custom-property` | Set by the organisation; not read. |
+| `app-installation` | Which apps are installed on a repository is an account setting. |
+| `attestation` | Build attestations are signed by the workflow that made them. |
+| `codespace` | Codespaces and coding agents are per-user working environments. |
+| `dependency-graph` | Derived from the files in the repository. |
+| `dispatch` | A repository dispatch is a write-only trigger. |
+| `import` | A source import is a migration job, not repository history. |
+| `interaction-limit` | A temporary moderation setting. |
+| `mirror` | Mirror configuration holds credentials for another host. |
+| `notification` | Notifications belong to the account reading them. |
+| `repository-event` | The activity feed repeats events the artifact classes already hold. |
+| `signing-key` | Signing keys are account material. |
+| `time-tracking` | Tracked time is read one issue at a time. |
+
+### Held against the API
+
+The two lists above say what a capture reads and what it declines. They do not say whether
+the two together cover what the forge offers. `vibey_gh/data/forge-api-classes.json` does:
+for each forge, every repository-scoped group its API description publishes, mapped to the
+forge-neutral class it belongs to. Each capture compares that list with the captured and
+excluded classes, records the result as `inventory` in the manifest, and is not `complete`
+while any class the API exposes has no home. A test holds the shipped list to the same rule,
+so adding an API group without deciding what becomes of it fails the suite.
+
+The GitHub list was read in full from GitHub's published OpenAPI description (version and
+date in the file). The Forgejo list was not: the swagger document was reached but cut short,
+so the file says `verified: false` and the manifest repeats it. Replacing it with a complete
+read, on a host that serves the document, is open work.
 
 A class left out with `--classes` is added to the list for that capture, with the reason
 that it was not selected, and its file and chain are left exactly as they were.
+
+## Verifying a snapshot
+
+```bash
+vibey-gh forge-snapshot --verify DIR
+```
+
+Walks every class file and the manifest in `DIR` and reads nothing from the forge: no network,
+no `gh`, no credentials. Each line goes through the same checks the store applies before it
+appends, and each file's record count and head are compared with what the manifest says. It
+exits 0 when the snapshot is intact and 1 otherwise, naming the first break in each file as
+`BROKEN <class>:<line> [<kind>] <detail>` on stderr. `--verify` and `--out` are mutually
+exclusive; giving neither or both exits 2.
+
+| Kind | What it means |
+|---|---|
+| `malformed` | the line is not a record of this forge, repository and class |
+| `non-canonical` | the line is not in the canonical form it was sealed in |
+| `bad-seal` | the line was edited after it was sealed |
+| `bad-payload` | the payload does not match its `payload_sha256` |
+| `broken-link` | `prev` is not the seal of the line before: a line was removed or moved |
+| `head-mismatch` | the file ends earlier than, or somewhere other than, the manifest says |
+| `manifest-behind` | the file holds more records than the manifest: a capture was interrupted |
+| `missing-file` | the manifest records a class the directory does not hold |
+| `unlisted-file` | a `.jsonl` file the manifest does not name |
+| `manifest-unreadable` | no manifest, or not a `vibey.forge-manifest/1` one; nothing else is checked |
+
+## One envelope on every forge
+
+A record has exactly these fields, whichever forge it was read from: `schema`, `forge`,
+`repository`, `class`, `native_class`, `native_id`, `captured_at`, `payload`,
+`payload_sha256`, `prev` and `sha256`. The manifest and each of its class entries have one
+shape too. A test captures the same logical repository from GitHub and from Forgejo and holds
+both to those lists, so they cannot drift apart.
+
+A class the forge's adapter cannot list is `could-not-look` with the adapter's reason, never an
+empty `captured` class. The Forgejo adapter lists `issue`, `change-request`, `release` and
+`label` today; `comment`, `review-comment`, `milestone` and `tag` are `could-not-look` on it,
+and `review` is captured empty, because its adapter returns no reviews yet.
 
 ## What comes next
 
 This slice is S1 of vibey#136. The rest, in order:
 
-- **S2, a `--verify` walk:** check every seal, every link and every manifest head, and report
-  the first break in each file.
+- **S2, a `--verify` walk:** shipped (#1570); see [Verifying a snapshot](#verifying-a-snapshot).
 - **S3, more classes:** the exclusions above that the REST API can serve, starting with
   timelines, commit comments and repository metadata.
 - **S4, the vibey ledger writer:** a second store that writes these records into the ledger,

@@ -114,6 +114,8 @@ jobs:
           # shellcheck disable=SC2086
           result=$(vibey-gh conversation evaluate $args)
           printf '%s\n' "$result" | jq .
+          warning=$(jq -r .warning <<<"$result")
+          if [ -n "$warning" ]; then echo "::warning::$warning"; fi
           {
             echo "state=$(jq -r .state <<<"$result")"
             echo "is_pull_request=$(jq -r .is_pull_request <<<"$result")"

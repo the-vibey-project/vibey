@@ -35,6 +35,7 @@ from vibey.domain.research_gap import (
     DEFAULT_RESEARCH_ON_UNAVAILABLE,
     ResearchOnUnavailable,
 )
+from vibey.domain.slicing import DEFAULT_MAX_CHILDREN
 
 VALID_ISOLATION_LEVELS = ("worktree", "container", "vm")
 VALID_EFFORTS = ("trivial", "low", "standard", "high", "max")
@@ -69,6 +70,12 @@ _SWITCH_HINTS = {
 }
 DEFAULT_CLAUDELOOP_LOCAL_PROFILE = "local"
 DEFAULT_LOCAL_CONTEXT_WINDOW = 32_768
+# The bound, in seconds, on each blocking network operation of a sovereign surface adapter
+# (doctrine 10), so a server that accepts the connection and never answers cannot block its caller
+# for ever. `[surfaces] adapter_timeout_seconds` or VIBEY_SURFACES_ADAPTER_TIMEOUT_SECONDS
+# overrides it (doctrine 12.c).
+DEFAULT_SURFACE_ADAPTER_TIMEOUT_SECONDS = 10
+SURFACE_ADAPTER_TIMEOUT_BOUNDS = (1, 600)
 
 
 class ConfigError(VibeyError):
@@ -390,6 +397,24 @@ class SiemConfig:
 
 
 @dataclass(frozen=True, slots=True)
+class SurfacesConfig:
+    """`[surfaces]`: settings every sovereign surface adapter shares."""
+
+    adapter_timeout_seconds: int = DEFAULT_SURFACE_ADAPTER_TIMEOUT_SECONDS
+
+    @classmethod
+    def from_table(cls, table: dict[str, Any], path: str) -> "SurfacesConfig":
+        """Validate one already-parsed table; `path` names it in any error."""
+        low, high = SURFACE_ADAPTER_TIMEOUT_BOUNDS
+        timeout = table.get("adapter_timeout_seconds", DEFAULT_SURFACE_ADAPTER_TIMEOUT_SECONDS)
+        if isinstance(timeout, bool) or not isinstance(timeout, int) or not low <= timeout <= high:
+            raise ConfigError(
+                f"{path}.adapter_timeout_seconds", f"must be an integer from {low} to {high}"
+            )
+        return cls(adapter_timeout_seconds=timeout)
+
+
+@dataclass(frozen=True, slots=True)
 class QueuePriorityConfig:
     """`[queue.priority]`: who besides the operator may move a job ahead (ADR-0054).
 
@@ -671,6 +696,49 @@ class DesignConfig:
         )
 
 
+@dataclass(frozen=True, slots=True)
+class BuildSlicingConfig:
+    """`[build.slicing]`: how a large BUILD plan is grouped into the CDD layers (ADR-0092).
+
+    `max_children` is the most children one group holds before the plan gains the next layer out
+    (stories, then epics, phases, project). Lower slices finer and serialises more; higher
+    keeps a plan flatter. At least 2: a group of one groups nothing.
+    """
+
+    max_children: int = DEFAULT_MAX_CHILDREN
+
+    @classmethod
+    def from_table(cls, table: dict[str, Any], path: str) -> "BuildSlicingConfig":
+        unknown = sorted(set(table) - set(cls.__dataclass_fields__))
+        if unknown:
+            raise ConfigError(f"{path}.{unknown[0]}", "is not a [build.slicing] key")
+        value = table.get("max_children", DEFAULT_MAX_CHILDREN)
+        if isinstance(value, bool) or not isinstance(value, int) or value < 2:
+            raise ConfigError(
+                f"{path}.max_children", f"must be an integer of at least 2, got {value!r}"
+            )
+        return cls(max_children=value)
+
+
+@dataclass(frozen=True, slots=True)
+class BuildConfig:
+    """`[build]`: how the BUILD phase plans its work (not which engines run it, which is
+    `[phases.build]`)."""
+
+    slicing: BuildSlicingConfig = field(default_factory=BuildSlicingConfig)
+
+    @classmethod
+    def from_data(cls, data: Mapping[str, Any]) -> "BuildConfig":
+        """Read `[build]` from a whole parsed document or a project's stored config; needs
+        nothing else in it."""
+        table = _optional(dict(data), "build", "build", dict, {})
+        unknown = sorted(set(table) - set(cls.__dataclass_fields__))
+        if unknown:
+            raise ConfigError(f"build.{unknown[0]}", "is not a [build] table")
+        slicing = _optional(table, "slicing", "build.slicing", dict, {})
+        return cls(slicing=BuildSlicingConfig.from_table(slicing, "build.slicing"))
+
+
 ENGINE_DISPATCH_MODES = ("singleton", "hybrid", "auto")
 """`[engines] mode` (ADR-0079): today's tier-first selection, paid overflow onto a saturated
 local tier, or a choice between the two from a recorded measurement."""
@@ -882,8 +950,10 @@ class VibeyConfig:
     bus: BusConfig = field(default_factory=BusConfig)
     blob: BlobConfig = field(default_factory=BlobConfig)
     siem: SiemConfig = field(default_factory=SiemConfig)
+    surfaces: SurfacesConfig = field(default_factory=SurfacesConfig)
     queue: QueueConfig = field(default_factory=QueueConfig)
     design: DesignConfig = field(default_factory=DesignConfig)
+    build: BuildConfig = field(default_factory=BuildConfig)
     engine_dispatch: EngineDispatchConfig = field(default_factory=EngineDispatchConfig)
     publish: PublishConfig = field(default_factory=PublishConfig)
 
@@ -1309,8 +1379,12 @@ def parse_config(data: dict[str, Any]) -> VibeyConfig:
         bus=_parse_bus(data),
         blob=_parse_blob(data),
         siem=_parse_siem(data),
+        surfaces=SurfacesConfig.from_table(
+            _optional(data, "surfaces", "surfaces", dict, {}), "surfaces"
+        ),
         queue=QueueConfig.from_data(data),
         design=DesignConfig.from_data(data),
+        build=BuildConfig.from_data(data),
         engine_dispatch=EngineDispatchConfig.from_data(data),
         publish=PublishConfig.from_data(data),
     )

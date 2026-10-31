@@ -74,7 +74,7 @@ export async function run(): Promise<void> {
     await vscode.commands.executeCommand('workbench.action.openWalkthrough', `${manifest.publisher}.${manifest.name}#krypton.firstRun`, false);
   });
 
-  for (const id of ['vibey.refresh', 'vibey.showLoops', 'vibey.doctor', 'vibey.showLanes', 'vibey.showProjects', 'vibey.showGates', 'vibey.showBudgets', 'vibey.endNoCap', 'vibey.disconnectHub']) {
+  for (const id of ['vibey.refresh', 'vibey.showLoops', 'vibey.doctor', 'vibey.showLanes', 'vibey.showProjects', 'vibey.showGates', 'vibey.nextGate', 'vibey.showBudgets', 'vibey.endNoCap', 'vibey.disconnectHub', 'vibey.startHub', 'vibey.stopHub', 'vibey.hubStatus']) {
     await check(`${id} runs`, () => vscode.commands.executeCommand(id));
   }
 }

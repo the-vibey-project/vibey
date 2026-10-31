@@ -7,6 +7,7 @@
 #define GROUP_LOOK "look"
 #define GROUP_HUB "hub"
 #define GROUP_ALERTS "alerts"
+#define GROUP_WINDOW "window"
 
 const char *
 kr_channel_app_id(KrChannel channel)
@@ -65,8 +66,10 @@ kr_settings_new_default(void)
     settings->theme = VIBEY_THEME_MODE_DEFAULT;
     settings->hub_host = NULL;
     settings->hub_port = 0;
+    settings->hub_autostart = TRUE;
     settings->notifications = TRUE;
     settings->sounds = TRUE;
+    settings->tray = TRUE;
     return settings;
 }
 
@@ -110,9 +113,11 @@ kr_settings_load(const char *path)
         settings->hub_host = g_steal_pointer(&host);
     gint port = g_key_file_get_integer(file, GROUP_HUB, "port", NULL);
     settings->hub_port = port > 0 && port <= 65535 ? (guint16) port : 0;
+    settings->hub_autostart = read_bool(file, GROUP_HUB, "autostart", TRUE);
 
     settings->notifications = read_bool(file, GROUP_ALERTS, "notifications", TRUE);
     settings->sounds = read_bool(file, GROUP_ALERTS, "sounds", TRUE);
+    settings->tray = read_bool(file, GROUP_WINDOW, "tray", TRUE);
     return settings;
 }
 
@@ -125,8 +130,10 @@ kr_settings_save(const KrSettings *settings, const char *path, GError **error)
         g_key_file_set_string(file, GROUP_HUB, "host", settings->hub_host);
     if (settings->hub_port != 0)
         g_key_file_set_integer(file, GROUP_HUB, "port", settings->hub_port);
+    g_key_file_set_boolean(file, GROUP_HUB, "autostart", settings->hub_autostart);
     g_key_file_set_boolean(file, GROUP_ALERTS, "notifications", settings->notifications);
     g_key_file_set_boolean(file, GROUP_ALERTS, "sounds", settings->sounds);
+    g_key_file_set_boolean(file, GROUP_WINDOW, "tray", settings->tray);
 
     g_autofree char *directory = g_path_get_dirname(path);
     if (g_mkdir_with_parents(directory, 0700) != 0) {

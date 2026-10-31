@@ -65,10 +65,12 @@ class ClaudeLoopWorkPlanProducer:
             "depends on creates and lists in files_touched_hint; verification commands "
             "check the work, never perform it, and must run unchanged on macOS and Linux. "
             "Do not inspect files; "
-            "answer immediately in this first turn. Return only JSON with shape "
+            "answer immediately in this first turn. Name each item's feature set in epic "
+            "(a short phrase); items that serve one feature set share the name and are "
+            "listed together. Return only JSON with shape "
             '{"items":[{"item_id":str,"title":str,"acceptance_ids":[str],'
             '"depends_on":[str],"est_effort":"trivial|low|standard|high|max",'
-            '"files_touched_hint":[str],'
+            '"files_touched_hint":[str],"epic":str,'
             '"verification":{"commands":[str],"criteria_checked":[str]}}]}.\n'
             f"Spec: {json.dumps(self._decoder.spec_json(spec), default=str)}"
         )

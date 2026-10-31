@@ -9,14 +9,19 @@ test_env.set('G_TEST_SRCDIR', meson.current_source_dir())
 loops_golden = meson.current_source_dir() / '../../../tests/cli/golden/vibey-loops.json'
 
 core_tests = [
+  'accessible-names',
   'answer',
+  'commands',
   'discovery',
   'format',
   'hub',
+  'hub-engine',
+  'lifecycle',
   'model',
   'pairing',
   'settings',
   'state',
+  'tray',
   'workflows',
 ]
 if soup_dep.found()

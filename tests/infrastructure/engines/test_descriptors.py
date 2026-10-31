@@ -174,7 +174,16 @@ def test_the_local_descriptors_are_exactly_the_local_tier() -> None:
 # descriptors to it: a declared control must be a verb the runner's CLI defines, with the
 # options and positionals the template uses, and a capability that is set must name its proof.
 
-AFFORDANCE_FIELDS = ("images", "files", "paste_text", "paste_images", "plugins", "mcp")
+AFFORDANCE_FIELDS = (
+    "images",
+    "files",
+    "paste_text",
+    "paste_images",
+    "plugins",
+    "mcp",
+    "skills",
+    "web_search",
+)
 RUNNER_CLI = {
     EngineId.CLAUDELOOP: "claudeloop.cli.app",
     EngineId.CLAUDELOOP_LOCAL: "claudeloop.cli.app",
@@ -304,15 +313,60 @@ def test_the_capabilities_each_runner_shows() -> None:
         d.engine_id.value: tuple(getattr(d.affordances, name) for name in AFFORDANCE_FIELDS)
         for d in ALL_DESCRIPTORS
     }
-    claude = (None, True, True, None, PluginSystem.CLAUDE_PLUGINS, True)
-    skills = PluginSystem.SKILLS_CONTEXT
+    claude = (None, True, True, None, PluginSystem.CLAUDE_PLUGINS, True, True)
+    context = PluginSystem.SKILLS_CONTEXT
     assert shown == {
-        "claudeloop": claude,
-        "codexloop": (None, True, True, None, skills, None),
-        "gptossloop": (False, True, True, False, skills, False),
-        "qwenloop": (False, True, True, False, skills, False),
-        "claudeloop-local": claude,
+        "claudeloop": (*claude, True),
+        "codexloop": (None, True, True, None, context, True, None, None),
+        "gptossloop": (False, True, True, False, context, True, False, True),
+        "qwenloop": (False, True, True, False, context, True, False, True),
+        # The same binary, but a local backend cannot serve web search.
+        "claudeloop-local": (*claude, False),
     }
+
+
+def test_the_gaps_between_each_lane_and_full_access_are_pinned() -> None:
+    """Every lane is meant to have all skills, Claude's plugins, every MCP server and web
+    search with the research tools (#1666). What each engine is not shown to have is pinned,
+    so a gap can only close because a runner's code was read and can never widen unseen. Each
+    entry here is a capability gap to close in the runner, not a fact to accept."""
+    gaps = {d.engine_id.value: d.affordances.full_access_gaps() for d in ALL_DESCRIPTORS}
+    assert gaps == {
+        "claudeloop": (),
+        "codexloop": ("skills", "plugins", "web_search"),
+        "gptossloop": ("skills", "plugins"),
+        "qwenloop": ("skills", "plugins"),
+        "claudeloop-local": ("web_search",),
+    }
+
+
+@pytest.mark.parametrize("descriptor", ALL_DESCRIPTORS, ids=lambda d: d.engine_id.value)
+def test_every_launch_flag_is_one_the_runners_run_defines(descriptor) -> None:  # type: ignore[no-untyped-def]
+    run = _runner_commands(descriptor.engine_id)["run"]
+    defined = {opt for p in run.params for opt in p.opts}  # type: ignore[attr-defined]
+    assert set(descriptor.launch_flags) <= defined, descriptor.engine_id.value
+
+
+def test_no_engine_is_launched_narrower_than_its_runner_allows() -> None:
+    """Lanes are never restricted at launch: no flag vibey passes narrows the tools, MCP
+    servers, plugins or settings a session loads."""
+    narrowing = {
+        "--allowed-tools",
+        "--allowedTools",
+        "--disallowed-tools",
+        "--disallowedTools",
+        "--strict-mcp-config",
+        "--bare",
+        "--disable-slash-commands",
+        "--tools",
+    }
+    for descriptor in ALL_DESCRIPTORS:
+        flags = {
+            *descriptor.launch_flags,
+            *(f for flags in descriptor.isolation_flags.values() for f in flags),
+            *(t for inv in descriptor.effort_projection.values() for t in inv.argv),
+        }
+        assert not narrowing & flags, descriptor.engine_id.value
 
 
 @pytest.mark.parametrize("descriptor", ALL_DESCRIPTORS, ids=lambda d: d.engine_id.value)

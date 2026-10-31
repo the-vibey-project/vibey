@@ -52,6 +52,12 @@ class NotificationsConfigInterface(Protocol):
 
 
 @runtime_checkable
+class SurfacesConfigInterface(Protocol):
+    @property
+    def adapter_timeout_seconds(self) -> int: ...
+
+
+@runtime_checkable
 class TelemetryConfigInterface(Protocol):
     @property
     def enabled(self) -> bool: ...
@@ -139,6 +145,24 @@ class DesignConfigInterface(Protocol):
 
     @property
     def research(self) -> DesignResearchConfigInterface: ...
+
+
+@runtime_checkable
+class BuildSlicingConfigInterface(Protocol):
+    """`[build.slicing]` (ADR-0092)."""
+
+    @property
+    def max_children(self) -> int:
+        """The most children one group holds before the plan gains the next layer out."""
+        ...
+
+
+@runtime_checkable
+class BuildConfigInterface(Protocol):
+    """`[build]`."""
+
+    @property
+    def slicing(self) -> BuildSlicingConfigInterface: ...
 
 
 @runtime_checkable

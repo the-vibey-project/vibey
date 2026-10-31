@@ -259,9 +259,12 @@ describe('CoreServices', () => {
     // Tools no model drives keep vibey's own settings; only git plumbing is taken out.
     expect(core.toolEnvironment).toEqual({ PATH: bin, HOME: home, VIBEY_PG_URL: 'postgresql://vibey@localhost/vibey' });
     expect(core.vibey).toBeDefined();
+    // The local hub is controlled through the local vibey, wherever the views read from (#1186).
+    expect(core.hubEngine).toBeDefined();
     expect(core.skills).toBeDefined();
     const bare = build({ present: [] }).core;
     expect(bare.vibey).toBeUndefined();
+    expect(bare.hubEngine).toBeUndefined();
     expect(bare.skills).toBeUndefined();
     expect(core.loop()).toBe('sovereignloop');
     expect(core.withSettings({ loop: 'paidloop' }).loop()).toBe('paidloop');
@@ -297,6 +300,8 @@ describe('CoreServices', () => {
     });
     expect(hub.vibey?.kind).toBe('hub');
     expect(hub.vibey).toBeInstanceOf(HubTransport);
+    // With no vibey on PATH there is no local hub to start or stop, paired hub or not.
+    expect(hub.hubEngine).toBeUndefined();
   });
 
   it('reads vibey loops once until asked again, and says plainly when there is no vibey', async () => {

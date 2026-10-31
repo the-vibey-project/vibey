@@ -107,6 +107,51 @@ describe('HubTransport', () => {
     expect(await hubWith(http).budgets()).toEqual([budget]);
   });
 
+  it('starts a project from a name and an intake, and never sends a path (ADR-0091)', async () => {
+    const seen: unknown[] = [];
+    const http = new FakeHttp().route('POST', `${base}/api/v1/projects`, (body) => {
+      seen.push(body);
+      return { status: 201, body: JSON.stringify({ project_id: 'p9', name: 'greeter', outcome: 'design job j1' }) };
+    });
+    const hub = hubWith(http);
+    expect(await hub.createProject('greeter', { repo: '/Users/me/secret', intake: '  a page  ' })).toEqual({ project_id: 'p9', name: 'greeter', outcome: 'design job j1' });
+    await hub.createProject('greeter', { repo: '/x' });
+    // The folder is the host's choice: nothing the device knows about its own disk crosses the wire.
+    expect(seen).toEqual([{ name: 'greeter', intake: 'a page' }, { name: 'greeter' }]);
+  });
+
+  it('starts and pauses a project\'s own worker, and says what the host answered', async () => {
+    const http = new FakeHttp()
+      .route('POST', `${base}/api/v1/projects/p%201/work/start`, ok({ message: 'worker started' }))
+      .route('POST', `${base}/api/v1/projects/p%201/work/pause`, ok({}));
+    const hub = hubWith(http);
+    expect(await hub.startWork('p 1')).toBe('worker started');
+    expect(await hub.pauseWork('p 1')).toBe('');
+  });
+
+  it('previews and performs an unwind, and reads the host\'s report', async () => {
+    const seen: unknown[] = [];
+    const http = new FakeHttp().route('POST', `${base}/api/v1/projects/p1/abandon`, (body) => {
+      seen.push(body);
+      return ok({ project_id: 'p1', name: 'greeter', from: 'BUILD', to: 'ABANDONED', dry_run: true, cancelled_jobs: [{}, {}], withdrawn_gates: [] });
+    });
+    const hub = hubWith(http);
+    expect(await hub.abandonProject('p1', 'not needed', { dryRun: true })).toMatchObject({ dry_run: true, cancelled_jobs: 2, withdrawn_gates: 0 });
+    await hub.abandonProject('p1', 'not needed');
+    expect(seen).toEqual([{ reason: 'not needed', dry_run: true }, { reason: 'not needed', dry_run: false }]);
+  });
+
+  it('says why when the host will not: a taken folder, no projects_root, or no run scope', async () => {
+    const refuse = (status: number, detail: string) => ({ status, body: JSON.stringify({ detail }) });
+    const hub = hubWith(
+      new FakeHttp()
+        .route('POST', `${base}/api/v1/projects`, refuse(503, 'this host has not allowed projects to be started from a device'))
+        .route('POST', `${base}/api/v1/projects/p1/abandon`, refuse(403, 'device:phone may not run_work')),
+    );
+    await expect(hub.createProject('x', { repo: '/r' })).rejects.toThrow(/does not have this switched on.*The hub said: this host has not allowed projects/);
+    await expect(hub.abandonProject('p1', 'r')).rejects.toThrow(/does not permit it/);
+  });
+
   it('refuses what only the host may do, and says where to do it', async () => {
     const hub = hubWith(new FakeHttp());
     await expect(hub.setBudget(undefined, { dollars: 5 })).rejects.toThrow(/setBudget: no scope can change a cap .* vibey budget set/);

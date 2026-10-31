@@ -16,6 +16,7 @@ This index is generated from the documentation's navigation by `scripts/llms_txt
 - [Install, copy, reinstall, uninstall](https://the-vibey-project.github.io/vibey/main/guides/install/): Install vibey in one command, reinstall it by running the same command again, copy the whole codebase in one more, and remove the krypton interfaces cleanly — while vibey-engine's core is never uninstalled.
 - [Downloads](https://the-vibey-project.github.io/vibey/main/guides/downloads/): The ready-built files attached to every vibey release, for each user interface and platform, with what is signed and how to install each.
 - [VS Code extension](https://the-vibey-project.github.io/vibey/main/guides/vscode-extension/): The extension is called krypton, the name every app carries (sub-doctrine 9.e), and its id is the-vibey-project.krypton; its commands and settings keep their vibey.* names.
+- [Drive a project from anywhere](https://the-vibey-project.github.io/vibey/main/guides/drive-a-project/): Start a vibey project, talk to it while it designs and builds, pause it, and unwind it, from a terminal, VS Code, the desktop app or your phone.
 - [Kubernetes](https://the-vibey-project.github.io/vibey/main/guides/kubernetes/): This guide takes vibey from a laptop process to a long-lived deployment: a containerized worker, a Helm chart, an in-cluster PostgreSQL, and queue-depth autoscaling via KEDA.
 - [Greeter live demo](https://the-vibey-project.github.io/vibey/main/guides/greeter-live-demo/): This runbook drives one small project ("a CLI greeter") end to end on real *loop binaries: DESIGN through the interactive interview, BUILD on engine-selected sessions, REVIEW with real automated gates, and DONE(local).
 - [Local models on Ollama](https://the-vibey-project.github.io/vibey/main/guides/local-models-ollama/): Sub-doctrine 8.a makes the sovereign path the preferred way to run vibey, not the fallback.
@@ -64,6 +65,7 @@ This index is generated from the documentation's navigation by `scripts/llms_txt
 ## Reference
 
 - [CLI](https://the-vibey-project.github.io/vibey/main/reference/cli/): Every vibey command and subcommand, written by hand against src/vibey/cli/main.py and checked against it as of 2026-09-29.
+- [Error codes](https://the-vibey-project.github.io/vibey/main/reference/errors/): Every error vibey reports for a known problem prints a permanent code on its last line:
 - [Configuration](https://the-vibey-project.github.io/vibey/main/reference/configuration/): The schema below is fully implemented and unit-tested in src/vibey/domain/config.py (VibeyConfig, parse_config, parse_toml_string) and src/vibey/infrastructure/config_loader.py (load_config_from_path). vibey new reads…
 - [Hub API](https://the-vibey-project.github.io/vibey/main/reference/hub-api/): The hub is vibey serve (ADR-0068): one HTTP API that every krypton client -- desktop, mobile, web, the VS Code extension -- reaches.
 - [System requirements](https://the-vibey-project.github.io/vibey/main/reference/system-requirements/): What a machine needs to run vibey and its krypton clients, and how each figure is known.
@@ -169,6 +171,14 @@ This index is generated from the documentation's navigation by `scripts/llms_txt
 - [0088 — TypeScript, never JavaScript: the only authored form is typed, and the JavaScript that must exist is generated](https://the-vibey-project.github.io/vibey/main/architecture/decisions/0088-typescript-never-javascript/)
 - [0089 — AI self-reference is I; inclusive we is only direct address](https://the-vibey-project.github.io/vibey/main/architecture/decisions/0089-ai-self-reference-is-i-inclusive-we-is-direct/)
 - [0090 — pr-af is the declared default exact-head reviewer](https://the-vibey-project.github.io/vibey/main/architecture/decisions/0090-pr-af-as-the-declared-default-reviewer/)
+- [0091 — A paired device may start, pause, resume and unwind a project](https://the-vibey-project.github.io/vibey/main/architecture/decisions/0091-devices-may-start-pause-and-unwind-projects/)
+- [0092 — Large tasks are sliced into the CDD layers before they run](https://the-vibey-project.github.io/vibey/main/architecture/decisions/0092-large-tasks-are-sliced-into-the-cdd-layers-before-they-run/)
+- [0093 — Local model families are named and measured, never assumed](https://the-vibey-project.github.io/vibey/main/architecture/decisions/0093-local-model-families-are-named-and-measured-not-assumed/)
+- [0094 — The cost of routing the cache through its lane is accepted](https://the-vibey-project.github.io/vibey/main/architecture/decisions/0094-the-cost-of-routing-the-cache-through-its-lane-is-accepted/)
+- [0095 — OpenTofu is the infrastructure-as-code tool for AWS deployments](https://the-vibey-project.github.io/vibey/main/architecture/decisions/0095-opentofu-is-the-infrastructure-as-code-tool-for-aws/)
+- [0096 — On Forgejo, branch rules are mapped where Forgejo can express them and waived loudly where it cannot](https://the-vibey-project.github.io/vibey/main/architecture/decisions/0096-on-forgejo-branch-rules-are-mapped-where-they-can-be-and-waived-loudly-where-they-cannot/)
+- [0097 — This project runs its own sovereign Forgejo host, on the operator's home server](https://the-vibey-project.github.io/vibey/main/architecture/decisions/0097-this-project-runs-its-own-sovereign-forgejo-host/)
+- [0098 — The VS Code verification is done by a large model and reviewed by the operator](https://the-vibey-project.github.io/vibey/main/architecture/decisions/0098-the-vs-code-verification-is-done-by-a-large-model-and-reviewed-by-the-operator/)
 
 ## Governance
 

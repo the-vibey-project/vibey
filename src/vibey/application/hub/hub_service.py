@@ -19,6 +19,7 @@ A bump is always requested as the declared queue source `HUB_QUEUE_SOURCE`, so t
 device's `bump` scope is necessary and never sufficient.
 """
 
+import re
 from collections import Counter
 from collections.abc import Mapping, Sequence
 from typing import Final
@@ -30,13 +31,14 @@ from vibey.application.hub.interfaces.hub_service_interface import (
     HubDocumentsInterface,
     HubProbesInterface,
 )
+from vibey.application.hub.interfaces.lifecycle_interface import ProjectLifecycleInterface
 from vibey.application.interfaces.gate_answer import GateAnswerServiceInterface
 from vibey.application.interfaces.gates import GateLookup, HumanGateRepository
 from vibey.application.interfaces.ledger import LedgerRangeReader, LedgerSearch
 from vibey.application.interfaces.project_budget import ProjectBudgetServiceInterface
 from vibey.application.interfaces.projects import ProjectReader
 from vibey.application.interfaces.queue_priority import QueuePriorityServiceInterface
-from vibey.domain.errors import UnknownGate, UnknownProject
+from vibey.domain.errors import LifecycleInvalid, UnknownGate, UnknownProject
 from vibey.domain.hub_scope import HUB_SCOPES, HubAction, HubForbidden
 from vibey.domain.interfaces.hub_scope_interface import HubScopePolicyInterface
 from vibey.domain.interfaces.ledger_query_interface import (
@@ -44,6 +46,16 @@ from vibey.domain.interfaces.ledger_query_interface import (
     EventKindResolverInterface,
 )
 from vibey.domain.ledger_query import ACTORS, EVENT_KINDS, LedgerQuery
+
+PROJECT_NAME: Final = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$")
+"""A project name a device may choose: it becomes a folder name on the host, so no slash, no
+leading dot or dash, and short (ADR-0091)."""
+
+MAX_INTAKE: Final = 4000
+"""The most characters of "what to build" a device may send."""
+
+MAX_REASON: Final = 500
+"""The most characters of a reason for unwinding a project."""
 
 HUB_QUEUE_SOURCE: Final = "vibey-hub"
 """The queue source every hub bump is requested as. The host admits it, or not, in
@@ -66,6 +78,7 @@ class HubService:
         ledger_range: LedgerRangeReader,
         documents: HubDocumentsInterface,
         probes: HubProbesInterface,
+        lifecycle: ProjectLifecycleInterface,
         policy: HubScopePolicyInterface = HUB_SCOPES,
         kinds: EventKindResolverInterface = EVENT_KINDS,
         actors: ActorResolverInterface = ACTORS,
@@ -80,6 +93,7 @@ class HubService:
         self._range = ledger_range
         self._documents = documents
         self._probes = probes
+        self._lifecycle = lifecycle
         self._policy = policy
         self._kinds = kinds
         self._actors = actors
@@ -147,6 +161,37 @@ class HubService:
         await self._project(project_id)
         change = await self._queue.bump(project_id, job_id, source=HUB_QUEUE_SOURCE)
         return self._documents.bumped(change)
+
+    async def create_project(self, principal: HubPrincipal, name: str, intake: str) -> HubDocument:
+        self._authorise(principal, HubAction.RUN_WORK)
+        if PROJECT_NAME.fullmatch(name) is None:
+            raise LifecycleInvalid(
+                "a project name is letters, digits, dots, dashes and underscores, starts with a "
+                "letter or digit, and is at most 64 characters"
+            )
+        if len(intake) > MAX_INTAKE:
+            raise LifecycleInvalid(f"what to build is at most {MAX_INTAKE} characters")
+        return await self._lifecycle.create(name, intake.strip())
+
+    async def start_work(self, principal: HubPrincipal, project_id: UUID) -> HubDocument:
+        self._authorise(principal, HubAction.RUN_WORK)
+        await self._project(project_id)
+        return await self._lifecycle.start_work(project_id)
+
+    async def pause_work(self, principal: HubPrincipal, project_id: UUID) -> HubDocument:
+        self._authorise(principal, HubAction.RUN_WORK)
+        await self._project(project_id)
+        return await self._lifecycle.pause_work(project_id)
+
+    async def abandon_project(
+        self, principal: HubPrincipal, project_id: UUID, reason: str, *, dry_run: bool
+    ) -> HubDocument:
+        self._authorise(principal, HubAction.RUN_WORK)
+        why = reason.strip()
+        if not why or len(why) > MAX_REASON:
+            raise LifecycleInvalid(f"say why, in 1 to {MAX_REASON} characters")
+        await self._project(project_id)
+        return await self._lifecycle.abandon(project_id, why, by=principal.name, dry_run=dry_run)
 
     async def ledger(
         self,

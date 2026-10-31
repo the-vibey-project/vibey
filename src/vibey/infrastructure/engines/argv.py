@@ -21,7 +21,8 @@ class RunArgvTemplate:
     """`build_argv`'s `run` command line with its per-run values left as placeholders, for a
     caller that starts a runner itself -- the VS Code extension, through `vibey loops`.
 
-    It makes `build_argv`'s two per-engine choices: `{plan_flag?}` is there only when the
+    It makes `build_argv`'s per-engine choices, and carries the descriptor's `launch_flags`
+    (the flags every new lane is given, #1666) as plain arguments: `{plan_flag?}` is there only when the
     descriptor has a plan flag (the caller puts that flag in its place), and the `--cwd`
     pair only when the runner takes one. `{effort_argv...}` stands for the chosen effort's
     argv, which may be empty. Isolation flags are not in it: at worktree isolation, where a
@@ -32,7 +33,7 @@ class RunArgvTemplate:
         argv = [BINARY, "run"]
         if descriptor.plan_flag is not None:
             argv.append(PLAN_FLAG)
-        argv.extend([PLAN, "--run-id", RUN_ID, EFFORT_ARGV])
+        argv.extend([PLAN, "--run-id", RUN_ID, *descriptor.launch_flags, EFFORT_ARGV])
         if descriptor.supports_cwd_flag:
             argv.extend(["--cwd", CWD])
         return tuple(argv)
@@ -55,6 +56,9 @@ def build_argv(descriptor: EngineDescriptor, spec: RunSpec) -> tuple[str, ...]:
             argv.append(descriptor.plan_flag)
         argv.append(str(plan_path))
         argv.extend(["--run-id", str(spec.run_id)])
+        # A new session is where the lane's capabilities are set; a resumed one keeps the
+        # resources its run directory already holds.
+        argv.extend(descriptor.launch_flags)
 
     argv.extend(descriptor.invoke(spec.effort).argv)
     argv.extend(descriptor.isolation_flags.get(spec.isolation, ()))

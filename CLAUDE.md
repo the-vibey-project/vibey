@@ -1,5 +1,7 @@
 # CLAUDE.md
 
+<!-- Generated from docs/agents/instructions.toml by scripts/agent_instructions.py -- edit that file, not this one. `python scripts/agent_instructions.py check` fails when they differ. -->
+
 `vibey`: a queue-based, six-phase conductor for autonomous software delivery.
 Built on PostgreSQL and three `*loop` autonomous session runners (claudeloop,
 codexloop, and the local runner that ships as two engines:
@@ -166,6 +168,21 @@ small identified slices, explicit links, measured budgets, and no silent truncat
   secrets are absent; the krypton app for web, Android and iOS; the `.vsix`), and the
   extension's publication to Open VSX (`openvsx.yml`). `clients/` is in `[version] code_paths`, so a
   client-only change is releasable. ADR-0028, ADR-0069.
+- **Sovereign self-hosted free is the only default on every surface; paid is
+  declared-only.** Each operational surface has one vibey-owned protocol and a
+  sovereign default adapter that is always on: engine `gptossloop`,
+  cloud self-hosted OpenStack, forge self-hosted Forgejo, ticketing self-hosted
+  free Plane, documentation self-hosted free BookStack, secrets self-hosted
+  free Bitwarden, files self-hosted free Nextcloud, email self-hosted free
+  Forward Email, SMS self-hosted free Fossify Messages, and messaging
+  self-hosted Matrix with the Element client. Paid platforms (engines
+  claudeloop/codexloop; cloud azure/aws/gcp; forge
+  github/gitlab/bitbucket; tickets jira/linear/asana (+ sibling sovereign
+  openproject); docs confluence/notion/gitbook; secrets lastpass/1password/
+  proton; files gdrive/icloud; email proton/gmail/apple; sms google-messages/
+  imessage; messaging signal/discord/slack/zoom/whatsapp/telegram/messenger/
+  facebook/instagram/tiktok) are declared-only relays through the sovereign
+  host and are never a default — sub-doctrine 8.b, ADR-0042.
 
 ## Layer map
 
@@ -246,6 +263,11 @@ explicit opt-in; declining deployment records a successful local completion.
 ## Commands worth memorizing
 
 ```bash
+# Once per clone (its worktrees share it), before the first commit: the commit hooks.
+# Without them nothing adds the `Made-With:` trailer, and CI's Provenance check fails
+# the pull request after the push. Safe to re-run; `uv run vibey-gh check` says if it held.
+uv run vibey-gh install
+
 # CI job `uv-lock` (runs first)
 uv lock --check
 
@@ -310,7 +332,7 @@ own and the repository root's — have no drift.
 | Rotation & engines | `docs/plans/rotation-and-engines.md` |
 | Phase protocols | `docs/plans/phase-protocols.md` |
 | Implementation plan | `docs/plans/implementation-plan.md` |
-| System design and why each hard call was made | `docs/architecture/decisions/` (90 ADRs) |
+| System design and why each hard call was made | `docs/architecture/decisions/` (98 ADRs) |
 | User-facing docs | `README.md` Quickstart, `docs/guides/` |
 | Expansion workstreams (JIRA, clouds, k8s, clients, …) | `docs/runbooks/expansion/` (22 runbooks, `00-master-plan.md` first) |
 | Contribution workflow, hooks, branch flow, PR expectations | `CONTRIBUTING.md` |

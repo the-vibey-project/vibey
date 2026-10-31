@@ -23,6 +23,17 @@ describe('the one command table', () => {
 describe('SlashCommands', () => {
   const slash = new SlashCommands();
 
+  // Doctrine 3: an example must work as written. This proves the syntax only: that the slash
+  // parser places each documented example on the command it documents. It cannot prove that an
+  // id or path inside an example exists (`/watch 1a2b3c4d`).
+  it('places every documented example on the command it documents', () => {
+    for (const spec of CommandTable.ALL) {
+      const parsed = slash.parse(spec.example);
+      expect(parsed.kind, `${spec.id}: ${spec.example}`).toBe('command');
+      expect(parsed.kind === 'command' ? parsed.spec.id : undefined, spec.example).toBe(spec.id);
+    }
+  });
+
   it('reads text that is not a command as text', () => {
     expect(slash.parse('  hello there ')).toEqual({ kind: 'text', text: 'hello there' });
   });

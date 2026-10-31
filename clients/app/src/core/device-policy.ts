@@ -30,8 +30,9 @@ export class DevicePolicy implements DevicePolicyInterface {
     if (refusal !== undefined) {
       return { allowed: false, reason: refusal };
     }
-    // Spending is re-verified on the device (Face ID, Touch ID or the passcode) every time.
-    return { allowed: true, confirm: action === 'answer-spend' };
+    // Spending, and unwinding a project (which cannot be undone), are re-verified on the device
+    // (Face ID, Touch ID or the passcode) every time.
+    return { allowed: true, confirm: action === 'answer-spend' || action === 'abandon-project' };
   }
 
   effortOptions(capDeclared: boolean): readonly DeviceEffortOption[] {

@@ -103,10 +103,15 @@ hook had rejected its message. Second, every `python3` a hook starts runs with
 `PYTHONSAFEPATH=1`. That keeps the top of the working tree, whatever branch is checked out,
 off the interpreter's import path. Without it, a branch containing a `vibey_gh/` package
 would have that package imported and run by the hook in place of the installed tool. A
-repository that self-hosts the tooling still runs its declared `[install] self_source`,
-because that path reaches the interpreter through `PYTHONPATH`, which the variable leaves
-alone. Python 3.12 and newer honour it, and vibey-gh requires 3.12. Older
-interpreters ignore it.
+repository that self-hosts the tooling still runs its `vibey-gh.self-source`, because that
+path reaches the interpreter through `PYTHONPATH`, which the variable leaves alone. The hooks
+read that key from the clone's **local git config**, never from the tracked `.vibey-gh.toml`:
+a tracked file is branch content, and a branch that named its own source there (or added a
+root `pyproject.toml` named `vibey-gh` beside a `vibey_gh/` directory) would otherwise have
+its code run on the developer's commit and push. An unset key means "not self-hosted", and
+the `vibey-gh` on `PATH` runs. `vibey-gh install` copies a declared `[install] self_source`
+into the key once and never overwrites a different value. Python 3.12 and newer honour
+`PYTHONSAFEPATH`, and vibey-gh requires 3.12. Older interpreters ignore it.
 
 The automation-bootstrap workflow is a second guarded exception: a manually dispatched,
 admin-only squash merge that bypasses the ordinary PR-automation review because privileged

@@ -32,6 +32,10 @@ export interface RawSettings {
   readonly stuckHintMinutes: number;
   readonly forceStopAfterSeconds: number;
   readonly lanesRecentMinutes: number;
+  /** How often a followed project is looked at, in seconds. */
+  readonly followPollSeconds: number;
+  /** How long one follow keeps watching before it hands back, in minutes; `/follow` starts it again. */
+  readonly followMinutes: number;
   readonly skillsBudget: number;
   readonly budgetInputTokensPerTurn: number;
   readonly budgetOutputTokensPerTurn: number;
@@ -43,6 +47,8 @@ export interface RawSettings {
   readonly hubUrl: string;
   /** Run every vibey call on the repository's GitHub workflows (`vibey --workflows …`, ADR-0085) when no hub is paired. */
   readonly workflows: boolean;
+  /** Start the one vibey hub on this computer when the editor opens and none runs (#1186); closing the editor never stops it. */
+  readonly hubAutostart: boolean;
 }
 
 export interface ResolvedSettings {
@@ -71,6 +77,8 @@ export interface ResolvedSettings {
   readonly stuckHintMs: number;
   readonly forceStopAfterMs: number;
   readonly lanesRecentMs: number;
+  readonly followPollMs: number;
+  readonly followMs: number;
   readonly skillsBudget: number;
   /** A projection's tokens per turn, until this machine has measured an engine's own. */
   readonly budgetPerTurn: { readonly input: number; readonly output: number };
@@ -82,6 +90,8 @@ export interface ResolvedSettings {
   readonly hubUrl: string;
   /** Whether the local command line sends every call to the repository's GitHub workflows. */
   readonly workflows: boolean;
+  /** Whether opening the editor starts the local hub when none runs. */
+  readonly hubAutostart: boolean;
 }
 
 export interface SettingsResolverInterface {

@@ -25,7 +25,11 @@ from platformdirs import user_cache_path
 
 from qwenloop import __version__
 from qwenloop.application.backend_selection import BackendSelector, Hardware
-from qwenloop.application.interfaces import InferenceServer, OllamaProbeInterface
+from qwenloop.application.interfaces import (
+    InferenceServer,
+    OllamaModelProbeInterface,
+    OllamaProbeInterface,
+)
 from qwenloop.application.runner import AutonomousRunner
 from qwenloop.application.storm import build_item_plans
 from qwenloop.domain.config import (
@@ -50,6 +54,7 @@ from qwenloop.domain.model import (
     RunState,
     RunStatus,
     ServerInfo,
+    ToolProtocol,
 )
 from qwenloop.infrastructure.clock import SystemClock
 from qwenloop.infrastructure.desktop_notifications import DesktopNotifier
@@ -60,13 +65,19 @@ from qwenloop.infrastructure.github import (
     list_repo_names,
 )
 from qwenloop.infrastructure.host_platform import HostPlatform
-from qwenloop.infrastructure.inference import LlamaCppServer, OpenAICompatServer, VllmServer
+from qwenloop.infrastructure.inference import (
+    LlamaCppServer,
+    OpenAICompatServer,
+    OpenAIServer,
+    VllmServer,
+)
+from qwenloop.infrastructure.mcp import McpGateway
 from qwenloop.infrastructure.model_cache import ModelCache
-from qwenloop.infrastructure.ollama_probe import OllamaProbe
+from qwenloop.infrastructure.ollama_probe import OllamaModelProbe, OllamaProbe
 from qwenloop.infrastructure.profiles import NVIDIA_BF16, PORTABLE, PROFILES
 from qwenloop.infrastructure.run_store import FileRunStore
 from qwenloop.infrastructure.settings import SettingsLoader
-from qwenloop.infrastructure.tools import SandboxTools
+from qwenloop.infrastructure.tools import SandboxTools, ShellEnvironment
 from qwenloop.infrastructure.turn_dispatch import (
     DirectTurnDispatcher,
     HybridTurnMultiplexer,
@@ -219,6 +230,33 @@ def _load_config(**overrides: object) -> QwenConfig:
 #: The one probe `_select` asks whether a local Ollama is running (#388). The tests replace
 #: it with an in-memory fake (tests/conftest.py), so no test ever reaches a real Ollama.
 _ollama_probe: OllamaProbeInterface = OllamaProbe()
+#: The one probe `_require_tools` asks what the attached model can do. Replaced in tests too.
+_model_probe: OllamaModelProbeInterface = OllamaModelProbe()
+
+
+def _choose_tool_protocol(server: InferenceServer, protocol: ToolProtocol) -> None:
+    """Carry tool calls as text when the model has no native tool-calling.
+
+    `text` always does; `native` never does. `auto` does for a model its Ollama positively
+    reports without `tools`: sent a tool list, Ollama answers an error, and the model could
+    not be driven at all. Unknown (an older Ollama, another server) stays native, since a
+    model nothing says anything about is not one to second-guess. The text protocol is slower
+    and less reliable, so the run says when it is in use (vibey ADR-0093).
+    """
+    if protocol is ToolProtocol.NATIVE or not isinstance(server, OpenAIServer):
+        return
+    if protocol is ToolProtocol.AUTO:
+        if not isinstance(server, OpenAICompatServer):
+            return
+        reported = _model_probe.capabilities(server.base_url, server.model)
+        if reported is None or "tools" in reported:
+            return
+    server.text_tools = True
+    typer.echo(
+        f"{getattr(server, 'model', 'the model')}: carrying tool calls as text "
+        "(no native tool-calling; slower and less reliable than native)",
+        err=True,
+    )
 
 
 def _select(config: QwenConfig) -> BackendChoice:
@@ -298,6 +336,7 @@ def _run_single(
     actual_id = run_id or str(uuid.uuid4())
     server, profile = _server_for(config)
     try:
+        _choose_tool_protocol(server, config.tool_protocol)
         state = asyncio.run(
             _run_plan(
                 server,
@@ -351,7 +390,13 @@ async def _run_plan(
     runner = AutonomousRunner(
         server,
         FileRunStore(cwd),
-        SandboxTools(cwd, limits=tool_limits),
+        SandboxTools(
+            cwd,
+            limits=tool_limits,
+            mcp=McpGateway.discover(
+                cwd, home=Path.home(), environ=os.environ, base_env=ShellEnvironment().build()
+            ),
+        ),
         DesktopNotifier(enabled=desktop_notifications),
         clock=SystemClock(),
         dispatcher=dispatcher,  # type: ignore[arg-type]

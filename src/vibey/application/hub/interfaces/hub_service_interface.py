@@ -157,6 +157,26 @@ class HubServiceInterface(Protocol):
         """Searches a project's ledger. Needs `view`."""
         ...
 
+    async def create_project(self, principal: HubPrincipal, name: str, intake: str) -> HubDocument:
+        """Starts a project from a name and what to build; the host chooses the folder
+        (ADR-0091). Needs `run`."""
+        ...
+
+    async def start_work(self, principal: HubPrincipal, project_id: UUID) -> HubDocument:
+        """Starts the project's own worker. Needs `run`."""
+        ...
+
+    async def pause_work(self, principal: HubPrincipal, project_id: UUID) -> HubDocument:
+        """Stops the project's own workers and no one else's. Needs `run`."""
+        ...
+
+    async def abandon_project(
+        self, principal: HubPrincipal, project_id: UUID, reason: str, *, dry_run: bool
+    ) -> HubDocument:
+        """Unwinds a project for good under the principal's name, or with `dry_run` says what
+        it would cancel. Needs `run`."""
+        ...
+
     def loops(self, principal: HubPrincipal) -> HubDocument:
         """The loops, engines and efforts. Needs `view`."""
         ...

@@ -7,9 +7,9 @@
 import * as SecureStore from 'expo-secure-store';
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
 import type { ReactNode } from 'react';
-import { Platform } from 'react-native';
-import { HubClient, SettingsModel } from '../core';
-import type { HubConnection, KryptonSettings, SettingsChange } from '../core';
+import { AppState as ForegroundState, Platform } from 'react-native';
+import { HubClient, HubWatch, SettingsModel } from '../core';
+import type { HubConnection, HubWatchState, KryptonSettings, SettingsChange } from '../core';
 
 const MODEL = new SettingsModel();
 const KEYS = { settings: 'krypton.settings', connection: 'krypton.connection' } as const;
@@ -55,6 +55,10 @@ interface AppState {
   readonly settings: KryptonSettings;
   readonly connection: HubConnection | null;
   readonly client: HubClient | null;
+  /** Whether the hub answers, kept up to date while the app is in front (#1186). */
+  readonly watch: HubWatchState;
+  /** Counts the times a hub that was down answered again, so screens load once more by themselves. */
+  readonly recoveries: number;
   change(change: SettingsChange): void;
   connect(connection: HubConnection): Promise<void>;
   forget(): Promise<void>;
@@ -121,9 +125,31 @@ export function AppStateProvider(props: {
     [connection, fetchLike],
   );
 
+  const [watch, setWatch] = useState<HubWatchState>({ reachable: null, since: null, failures: 0 });
+  const [recoveries, setRecoveries] = useState(0);
+  useEffect(() => {
+    setWatch({ reachable: null, since: null, failures: 0 });
+    if (client === null) return;
+    const watcher = new HubWatch(async () => (await client.health()).live);
+    let before: boolean | null = null;
+    const unsubscribe = watcher.subscribe((state) => {
+      setWatch(state);
+      if (before === false && state.reachable === true) setRecoveries((count) => count + 1);
+      before = state.reachable;
+    });
+    // Asked only while the app is in front: a phone in a pocket is not woken to ask a hub.
+    watcher.start();
+    const foreground = ForegroundState.addEventListener('change', (next) => (next === 'active' ? watcher.start() : watcher.stop()));
+    return () => {
+      foreground.remove();
+      unsubscribe();
+      watcher.stop();
+    };
+  }, [client]);
+
   const value = useMemo(
-    () => ({ ready, settings, connection, client, change, connect, forget }),
-    [ready, settings, connection, client, change, connect, forget],
+    () => ({ ready, settings, connection, client, watch, recoveries, change, connect, forget }),
+    [ready, settings, connection, client, watch, recoveries, change, connect, forget],
   );
   return <Context.Provider value={value}>{props.children}</Context.Provider>;
 }

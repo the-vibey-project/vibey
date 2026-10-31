@@ -1,6 +1,6 @@
 // Made with ❤️ by [Vibey](https://the-vibey-project.github.io/vibey/), Developed by [Adam Matthew Steinberger](https://vibewithadam.matthewsteinberger.com/) ([@adammatthewsteinberger](https://github.com/adammatthewsteinberger/)).
 import { Presenters } from '../core';
-import { Card, Label, Loaded, Pill, Screen, useHub } from '../ui/kit';
+import { Card, HubStatusCard, Label, Loaded, Pill, Screen, useHub } from '../ui/kit';
 
 const present = new Presenters();
 
@@ -8,6 +8,7 @@ export function DoctorScreen() {
   const { result, reload } = useHub((client) => client.doctor(), 0);
   return (
     <Screen title="Doctor" subtitle="The checks the hub runs itself. `vibey doctor` on the host is the full check." onRefresh={reload}>
+      <HubStatusCard />
       <Loaded result={result}>
         {(doctor) =>
           present.doctor(doctor).map((row) => (

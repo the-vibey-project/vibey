@@ -1,0 +1,10 @@
+[
+  {
+    "id": "skill-feature-to-surface-matrix-4f63950f04",
+    "purpose": "feature to surface matrix",
+    "source": "src/vibey_tools/skills/plugins/developer-experience/skills/devex-surface-placement/SKILL.md",
+    "output": "docs/microslices/skills/developer-experience/skills/devex-surface-placement/001-feature-to-surface-matrix.md",
+    "requires": [],
+    "links": []
+  }
+]

@@ -51,6 +51,7 @@ import tomllib
 from collections.abc import Mapping
 from dataclasses import dataclass
 from pathlib import Path, PurePosixPath
+from typing import ClassVar
 from urllib.parse import urlsplit
 
 from vibey_gh.forge import ForgeKind
@@ -275,12 +276,12 @@ class WorkflowNamesConfig:
     ruleset_drift: str = "Ruleset drift"
 
 
-# The forges `[platform] kind` accepts today: the ones with an adapter. `ForgeKind` names
-# more (such as `bitbucket`, #138), because the standard is written for every forge, but a
-# kind with no adapter is refused here, at load, rather than accepted and then quietly
-# driven as forgejo by every module that has not moved onto the adapter yet.
+# The forges `[platform] kind` accepts today: the ones with an adapter. `ForgeKind` may name
+# more than this (#138), because the standard is written for every forge, but a kind with no
+# adapter is refused here, at load, rather than accepted and then quietly driven as forgejo
+# by every module that has not moved onto the adapter yet. Every named forge has one today.
 # `ForgeSelector.kinds` must equal this, and a test holds them together.
-ADAPTED_PLATFORM_KINDS = ("github", "gitlab", "forgejo")
+ADAPTED_PLATFORM_KINDS = ("github", "gitlab", "forgejo", "bitbucket")
 
 # A bare host name, optionally with a port: what `gh` takes as `GH_HOST`. No scheme, path,
 # user or whitespace, so the value cannot smuggle anything else into the client's reading.
@@ -292,8 +293,8 @@ class PlatformConfig:
     """Which forge this repository lives on, and where (#138).
 
     `kind` selects the forge adapter, which is the only code allowed to know what platform
-    it is speaking to. The sovereign, self-hosted default is `forgejo` (ADR 0002); `github`
-    and `gitlab` are declared-only — an adopter writes the kind explicitly. `host` is that
+    it is speaking to. The sovereign, self-hosted default is `forgejo` (ADR 0002); `github`,
+    `gitlab` and `bitbucket` are declared-only — an adopter writes the kind explicitly. `host` is that
     forge's host. With `forgejo` it defaults to the adapter's own `forgejo.local` (a bare
     self-hosted instance); with `github` the `gh` client's own `github.com` is assumed when
     `host` is empty, so the default changes neither the argv nor the environment of any
@@ -1928,7 +1929,11 @@ class ConversationConfig:
     """
 
     enabled: bool = True
-    trigger: str = "@vibey-gh"
+    trigger: str = "@vibey"
+    # Handles that still address the automation, answered with a warning that names `trigger`.
+    # `@vibey-gh` was the default before `@vibey`; an adopter whose people still type it keeps
+    # working, and sets this empty to stop answering it.
+    legacy_triggers: tuple[str, ...] = ("@vibey-gh",)
     model: str = "claude-sonnet-5"
     max_interactions: int = 10
     respond_to_untrusted: bool = False
@@ -1939,6 +1944,11 @@ class ConversationConfig:
         _unique_nonempty("conversation.ignore_actors", self.ignore_actors)
         if not self.trigger.strip() or any(char.isspace() for char in self.trigger):
             raise ValueError("conversation.trigger must be non-empty and contain no whitespace")
+        _unique_nonempty("conversation.legacy_triggers", self.legacy_triggers)
+        if any(any(char.isspace() for char in handle) for handle in self.legacy_triggers):
+            raise ValueError("conversation.legacy_triggers must contain no whitespace")
+        if self.trigger in self.legacy_triggers:
+            raise ValueError("conversation.legacy_triggers must not repeat conversation.trigger")
         if not 1 <= self.max_interactions <= 100:
             raise ValueError("conversation.max_interactions must be between 1 and 100")
         if not self.model.strip():
@@ -2605,6 +2615,42 @@ class RepositoryProfileConfig:
     # commit subject the author never read.
     squash_merge_commit_title: str = ""
     squash_merge_commit_message: str = ""
+    # Does a live setting that differs from this declaration FAIL `check --ci`, or is it an
+    # advisory line? A key rather than a hard-coded judgment (ADR-0018), advisory by default:
+    # an adopter upgrading into the release that added the audit would otherwise go red for
+    # drift that was already there.
+    fail_check: bool = False
+
+    # The flags the forge stores as booleans, in the order they are sent. One list for the
+    # writer (`repository-profile.yml`) and the auditor (`ProfileDrift`), so they cannot
+    # disagree about which settings this table manages (12.c).
+    FLAGS: ClassVar[tuple[str, ...]] = (
+        "has_issues",
+        "has_projects",
+        "has_wiki",
+        "has_discussions",
+        "allow_squash_merge",
+        "allow_merge_commit",
+        "allow_rebase_merge",
+        "allow_auto_merge",
+        "delete_branch_on_merge",
+        "web_commit_signoff_required",
+        "vulnerability_alerts",
+        "automated_security_fixes",
+    )
+    # Managed only when declared: empty means "not managed" and sends and verifies nothing.
+    OPTIONAL_TEXT: ClassVar[tuple[str, ...]] = (
+        "squash_merge_commit_title",
+        "squash_merge_commit_message",
+    )
+
+    def settings(self) -> dict[str, bool | str]:
+        """Every setting this table manages, as the workflow sends it and the audit reads it."""
+        managed: dict[str, bool | str] = {name: getattr(self, name) for name in self.FLAGS}
+        managed.update(
+            {name: getattr(self, name) for name in self.OPTIONAL_TEXT if getattr(self, name)}
+        )
+        return managed
 
     def __post_init__(self) -> None:
         if self.squash_merge_commit_title not in ("", *SQUASH_TITLE_SOURCES):
@@ -2981,10 +3027,46 @@ class BranchHealthConfig:
     enabled: bool = True
     checks: tuple[str, ...] = ()
     labels: tuple[str, ...] = ()
+    # `"<check>"` or `"<check> :: <step>"` -> the command that reproduces that failure
+    # locally; `{test}` is replaced by the first failing test id the job log names. The
+    # most specific key wins, and a check with no entry is reported as unmapped.
+    reproduce: tuple[tuple[str, str], ...] = ()
+    test_id_pattern: str = r"^FAILED (\S+)"
+    # The most of a failed job's log that is read; past it the tail is kept and said so.
+    log_bytes: int = 4 * 1024 * 1024
 
     def __post_init__(self) -> None:
         _unique_nonempty("branch_health.checks", self.checks)
         _unique_nonempty("branch_health.labels", self.labels)
+        _unique_nonempty("branch_health.reproduce", tuple(key for key, _ in self.reproduce))
+        if not all(command.strip() for _, command in self.reproduce):
+            raise ValueError("branch_health.reproduce commands must be non-empty")
+        try:
+            re.compile(self.test_id_pattern)
+        except re.error as exc:
+            raise ValueError(f"branch_health.test_id_pattern is not a regex: {exc}") from exc
+        if self.log_bytes < 1:
+            raise ValueError("branch_health.log_bytes must be at least 1")
+
+    @classmethod
+    def from_table(cls, section: dict) -> BranchHealthConfig:
+        """`[branch_health]` as TOML hands it over, with `reproduce` frozen in order."""
+        reproduce = section.get("reproduce", {})
+        if not isinstance(reproduce, dict) or not all(
+            isinstance(command, str) for command in reproduce.values()
+        ):
+            raise ValueError('branch_health.reproduce must be a table of "check" = "command"')
+        scalars = {
+            name: section[name]
+            for name in ("enabled", "test_id_pattern", "log_bytes")
+            if name in section
+        }
+        return cls(
+            **scalars,
+            checks=tuple(section.get("checks", ())),
+            labels=tuple(section.get("labels", ())),
+            reproduce=tuple((str(key), command) for key, command in reproduce.items()),
+        )
 
 
 @dataclass(frozen=True)
@@ -3609,6 +3691,9 @@ class GhConfig:
     # its build backend with the job's permissions, and hand the provenance gate a tool of
     # the contributor's choosing. A path from configuration cannot be moved by a PR.
     self_source: str = "."
+    # Whether `[install] self_source` was written, so `install` copies only a declared value
+    # into local git config and never the "." default (#1292).
+    self_source_declared: bool = False
 
     def __post_init__(self) -> None:
         """Cross-field rules neither dataclass can check on its own.
@@ -3937,6 +4022,7 @@ def load_config(root: Path | None = None, config: Path | None = None) -> GhConfi
         fallback_package=_fallback_package(inst.get("fallback_package", "vibey-engine")),
         pin_version=inst.get("pin_version", False),
         self_source=_self_source(inst.get("self_source", ".")),
+        self_source_declared="self_source" in inst,
         integration_branch=br.get("integration", "develop"),
         release_branch=br.get("release", "main"),
         owner=tr.get("owner", ""),
@@ -4000,7 +4086,10 @@ def load_config(root: Path | None = None, config: Path | None = None) -> GhConfi
         ),
         conversation=ConversationConfig(
             enabled=talking.get("enabled", True),
-            trigger=talking.get("trigger", "@vibey-gh"),
+            trigger=talking.get("trigger", ConversationConfig().trigger),
+            legacy_triggers=tuple(
+                talking.get("legacy_triggers", ConversationConfig().legacy_triggers)
+            ),
             model=talking.get("model", "claude-sonnet-5"),
             max_interactions=talking.get("max_interactions", 10),
             respond_to_untrusted=talking.get("respond_to_untrusted", False),
@@ -4096,6 +4185,7 @@ def load_config(root: Path | None = None, config: Path | None = None) -> GhConfi
             automated_security_fixes=profile.get("automated_security_fixes", True),
             squash_merge_commit_title=profile.get("squash_merge_commit_title", ""),
             squash_merge_commit_message=profile.get("squash_merge_commit_message", ""),
+            fail_check=profile.get("fail_check", False),
         ),
         skip_markers=SkipMarkersConfig(
             enabled=skip_markers.get("enabled", True),
@@ -4104,11 +4194,7 @@ def load_config(root: Path | None = None, config: Path | None = None) -> GhConfi
         changelog=ChangelogConfig.from_table(data.get("changelog", {})),
         advisories=AdvisoriesConfig.from_table(data.get("advisories", {})),
         forge_retry=ForgeRetryConfig.from_table(data.get("forge_retry", {})),
-        branch_health=BranchHealthConfig(
-            enabled=branch_health.get("enabled", True),
-            checks=tuple(branch_health.get("checks", ())),
-            labels=tuple(branch_health.get("labels", ())),
-        ),
+        branch_health=BranchHealthConfig.from_table(branch_health),
         documentation=DocumentationConfig(
             enabled=documentation.get("enabled", True),
             ai_maintenance=documentation.get("ai_maintenance", True),

@@ -33,6 +33,7 @@ from vibey.domain.phase import Phase
 from vibey.infrastructure.hub.lanes import LaneScanner
 from vibey.infrastructure.hub.local_token import LocalTokenStore, ServingRecord
 from vibey.infrastructure.hub.mdns import MdnsAdvertiser
+from vibey.infrastructure.hub.serve_lock import ServeLock
 from vibey.infrastructure.hub.settings import HubSettings
 
 runner = CliRunner(env={"_TYPER_FORCE_DISABLE_TERMINAL": "1"})
@@ -461,3 +462,52 @@ def test_a_run_key_that_cannot_be_used_exits_cleanly(
 async def test_the_openapi_only_app_never_listens() -> None:
     with pytest.raises(RuntimeError):
         await ServeCommand._never_connect()
+
+
+def test_a_second_hub_is_refused_while_one_holds_the_lock(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """One hub per user (#1186): the second says who holds it and opens nothing."""
+
+    def refuse() -> Any:
+        raise AssertionError("nothing may open")
+
+    state = tmp_path / "state"
+    (tmp_path / "vibey.toml").write_text(f"[hub]\nstate_dir = '{state}'\n")
+    first = ServeLock(state)
+    assert first.acquire() is True
+    command = ServeCommand(
+        open_app=refuse,
+        server=Driven(lambda *_: asyncio.sleep(0)),
+        config_path=lambda: tmp_path / "vibey.toml",
+    )
+    with pytest.raises(Exception) as caught:
+        asyncio.run(command.run(host=None, port=None))
+    assert getattr(caught.value, "exit_code", None) == 1
+    assert f"already running on this computer (pid {os.getpid()})" in capsys.readouterr().err
+    first.release()
+
+
+def test_a_second_hub_is_refused_even_when_the_holder_wrote_no_pid(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    class Held:
+        def acquire(self) -> bool:
+            return False
+
+        def holder(self) -> int | None:
+            return None
+
+        def release(self) -> None:
+            raise AssertionError("a lock never held is never released")
+
+    (tmp_path / "vibey.toml").write_text(f"[hub]\nstate_dir = '{tmp_path / 'state'}'\n")
+    command = ServeCommand(
+        server=Driven(lambda *_: asyncio.sleep(0)),
+        config_path=lambda: tmp_path / "vibey.toml",
+        lock=lambda _: Held(),
+    )
+    with pytest.raises(Exception) as caught:
+        asyncio.run(command.run(host=None, port=None))
+    assert getattr(caught.value, "exit_code", None) == 1
+    assert "already running on this computer:" in capsys.readouterr().err

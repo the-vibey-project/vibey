@@ -52,6 +52,8 @@ describe('SettingsResolver', () => {
     expect(resolved.stuckHintMs).toBe(300_000);
     expect(resolved.forceStopAfterMs).toBe(120_000);
     expect(resolved.lanesRecentMs).toBe(3_600_000);
+    expect(resolved.followPollMs).toBe(5_000);
+    expect(resolved.followMs).toBe(1_800_000);
     expect(resolved.skillsBudget).toBe(6000);
     expect(resolved.budgetPerTurn).toEqual({ input: 20000, output: 2000 });
     expect(resolved.environmentAllow).toEqual([]);

@@ -5,6 +5,27 @@ krypton desktop carries its own version. The Python wheel stays one distribution
 
 ## 0.1.0 (unreleased)
 
+- **A Keyboard shortcuts dialog, one command table, and accessible names (#1699).** The header
+  menu has a **Keyboard shortcuts** entry (`Ctrl+?`) that lists every command with its keys.
+  The menu, that dialog and the registered accelerators now all read one table in the core
+  (`kr-commands`, tested to 100%), and krypton refuses to start if an action is missing from
+  the table or the table names an action nobody registered. The icon-only buttons (Refresh,
+  Main menu, Start a project, each project's actions menu) and the warning marks now carry an
+  explicit accessible name. `tests/test-accessible-names.c` fails when an icon-only control
+  is made without one; it is a heuristic over the source, said so in its first lines, because
+  the views need a display and a screen reader cannot run in CI. **Not done:** nobody has run
+  Orca or VoiceOver over krypton, and the Linux tray has still never run against a real
+  StatusNotifier host: both are rows marked "not run" in `ACCESSIBILITY.md`. There is still no
+  macOS menu bar and no command palette.
+
+- **krypton starts this computer's hub, and never stops it on its own (#1186).** Opening
+  krypton with no hub running runs `vibey hub start` in the background (a setting, on by
+  default, and only for *This computer*); Start, Stop and Status are in the header menu, the
+  Settings page and the tray menu. A failed start is a note in the connection status. The
+  offline banner now says what krypton is doing and what to do, instead of telling a person
+  to run `vibey serve`. `kr-hub-engine` is the new core module, tested to 100% with a script
+  in place of `vibey`; a test reads the quit paths and fails if any can reach stop.
+
 - **The first krypton desktop.** It is C17 on GTK 4 and libadwaita, with an
   `AdwNavigationSplitView` that folds on narrow windows. It covers Projects, Gates (with
   answering), Lanes, Loops and effort (to ULTRA), Budgets, Doctor, Devices and Settings.
@@ -36,6 +57,16 @@ krypton desktop carries its own version. The Python wheel stays one distribution
   what each scope it holds lets it do.
 - **Colours come from the design tokens**, ADR-0066. The Kr-84 mark is drawn live, stands
   still under reduced motion, and glows while a lane runs.
+- **Start, pause and unwind a project** from a name and an intake (`Ctrl+N`, or the row's
+  menu): the four hub routes of ADR-0091, a dry run before an unwind that says what it
+  would cancel, and the hub's own words when it refuses. An interview gate also offers
+  Accept the suggested answers.
+- **An app menu, an About dialog and a tray item.** The header menu holds Start a project,
+  Refresh, Preferences, About and Quit; About is an `AdwAboutDialog` (libadwaita 1.5 or
+  newer). The tray item is an `NSStatusItem` on macOS and a StatusNotifierItem with a
+  dbusmenu elsewhere, drawn from a pure, tested model (`kr-tray`); closing the window hides
+  it only while the tray is showing. The Linux tray is compile-checked only: no session bus
+  was available to run it against.
 - **Desktop notifications**, through `GNotification`, when a gate needs you.
 - **GLib tests over the core**, under ASan and UBSan, with coverage gated in CI (the
   `desktop` job, on Ubuntu and Arch).

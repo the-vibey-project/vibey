@@ -1045,6 +1045,51 @@
     "count": 7
   },
   {
+    "source": "src/vibey_tools/skills/plugins/developer-experience/skills/devex-api-sdk-and-docs/SKILL.md",
+    "output": "docs/microslices/skills/developer-experience/skills/devex-api-sdk-and-docs",
+    "count": 2
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/developer-experience/skills/devex-cli-and-errors/SKILL.md",
+    "output": "docs/microslices/skills/developer-experience/skills/devex-cli-and-errors",
+    "count": 2
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/developer-experience/skills/devex-editor-and-desktop-surfaces/SKILL.md",
+    "output": "docs/microslices/skills/developer-experience/skills/devex-editor-and-desktop-surfaces",
+    "count": 2
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/developer-experience/skills/devex-interfaces-onboarding-and-agents/SKILL.md",
+    "output": "docs/microslices/skills/developer-experience/skills/devex-interfaces-onboarding-and-agents",
+    "count": 3
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/developer-experience/skills/devex-mobile-and-web-surfaces/SKILL.md",
+    "output": "docs/microslices/skills/developer-experience/skills/devex-mobile-and-web-surfaces",
+    "count": 3
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/developer-experience/skills/devex-non-developers-and-visual-design/SKILL.md",
+    "output": "docs/microslices/skills/developer-experience/skills/devex-non-developers-and-visual-design",
+    "count": 2
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/developer-experience/skills/devex-principles-and-feedback-loops/SKILL.md",
+    "output": "docs/microslices/skills/developer-experience/skills/devex-principles-and-feedback-loops",
+    "count": 3
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/developer-experience/skills/devex-reference/SKILL.md",
+    "output": "docs/microslices/skills/developer-experience/skills/devex-reference",
+    "count": 3
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/developer-experience/skills/devex-surface-placement/SKILL.md",
+    "output": "docs/microslices/skills/developer-experience/skills/devex-surface-placement",
+    "count": 1
+  },
+  {
     "source": "src/vibey_tools/skills/plugins/devsecops-cicd/skills/bitbucket-azure/SKILL.md",
     "output": "docs/microslices/skills/devsecops-cicd/skills/bitbucket-azure",
     "count": 13

@@ -15,10 +15,12 @@ import type {
 export class Presenters implements PresentersInterface {
   /**
    * How each gate kind is answered, mirroring `ANSWER_RULES` in src/vibey/cli/gate_answers.py:
-   * `{"verdict": …}` or `{"choice": …}` from a button; every other kind (the interview's
-   * defaults, grants of money, attempts or rounds, free-form answers) is answered on the host.
+   * `{"verdict": …}` or `{"choice": …}` from a button, and the design interview's suggested
+   * answers (`{"accept_defaults": true}`, what `vibey answer --defaults` sends) from one; every
+   * other kind (grants of money, attempts or rounds, free-form answers) is answered on the host.
    */
-  static readonly ANSWER_KEYS: Readonly<Record<string, 'verdict' | 'choice'>> = {
+  static readonly ANSWER_KEYS: Readonly<Record<string, 'verdict' | 'choice' | 'interview'>> = {
+    question: 'interview',
     approval: 'verdict',
     deploy_demo_review: 'verdict',
     choice: 'choice',
@@ -28,13 +30,26 @@ export class Presenters implements PresentersInterface {
     bus_dead_lettered: 'choice',
   };
 
-  static answerKey(kind: string): 'verdict' | 'choice' | 'host' {
+  static answerKey(kind: string): 'verdict' | 'choice' | 'interview' | 'host' {
     return Presenters.ANSWER_KEYS[kind] ?? 'host';
   }
 
   /** Gates that spend (hub-api.md, "Who may do what"): answering them needs `spend`. */
   static spends(kind: string): boolean {
     return kind === 'budget_exhausted' || kind.startsWith('deploy_');
+  }
+
+  /** A project name the hub accepts: it becomes a folder name on the host (ADR-0091). */
+  static readonly PROJECT_NAME = /^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$/;
+
+  /** Why a project name will not do, in words, or undefined when it will: said before the hub is asked. */
+  static projectNameProblem(name: string): string | undefined {
+    if (name.trim() === '') {
+      return 'Give the project a name, for example my-first-app.';
+    }
+    return Presenters.PROJECT_NAME.test(name.trim())
+      ? undefined
+      : 'A name is letters, digits, dots, dashes and underscores, starts with a letter or digit, and is at most 64 characters. No spaces.';
   }
 
   /** `review_collect` → "Review collect". */
@@ -58,12 +73,17 @@ export class Presenters implements PresentersInterface {
               : `Cycle ${project.cycle} of ${project.max_cycles}`,
         openGates,
         role: Presenters.phaseRole(project.phase, openGates),
+        finished: ['done', 'abandoned'].includes(project.phase.toLowerCase()),
       };
     });
     const needsYou = cards.reduce((sum, card) => sum + card.openGates, 0);
     const headline =
       needsYou === 0 ? 'Nothing needs you' : needsYou === 1 ? '1 gate needs you' : `${needsYou} gates need you`;
-    return { headline, needsYou, cards };
+    const emptyNote =
+      cards.length > 0
+        ? ''
+        : 'No projects yet. A project is started on the computer that runs vibey: in VS Code with `@krypton /new`, or in a terminal with `vibey new NAME --repo PATH`. It shows up here as soon as it exists, and every question it asks is waiting for you under Gates.';
+    return { headline, needsYou, cards, emptyNote };
   }
 
   gates(gates: readonly VibeyGate[], nowMs: number): readonly GateCard[] {

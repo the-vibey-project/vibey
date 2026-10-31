@@ -265,7 +265,7 @@
     "1176": {
       "close_when_done": false,
       "kind": "standalone",
-      "last_verdict": "OPEN",
+      "last_verdict": "DONE",
       "next": "ride the runner-unit work",
       "probes": [
         {
@@ -400,7 +400,7 @@
     "1189": {
       "close_when_done": false,
       "kind": "standalone",
-      "last_verdict": "OPEN",
+      "last_verdict": "DONE",
       "next": "single-instance lock design + multiproject stress evidence",
       "probes": [
         {
@@ -697,7 +697,7 @@
     "145": {
       "close_when_done": false,
       "kind": "standalone",
-      "last_verdict": "OPEN",
+      "last_verdict": "DONE",
       "next": "snapshot verify + timelines",
       "probes": [
         {
@@ -731,6 +731,48 @@
       "next": "operator scope decision: a whitepaper hub on the docs site, reviewed by vibey-skills and by human peers; two PDFs attached to the issue are the first submissions",
       "probes": []
     },
+    "1517": {
+      "close_when_done": false,
+      "kind": "triaged",
+      "last_verdict": "NEEDS-TRIAGE",
+      "next": "add explicit probes",
+      "probes": []
+    },
+    "1518": {
+      "close_when_done": false,
+      "kind": "triaged",
+      "last_verdict": "NEEDS-TRIAGE",
+      "next": "add explicit probes",
+      "probes": []
+    },
+    "1519": {
+      "close_when_done": false,
+      "kind": "triaged",
+      "last_verdict": "NEEDS-TRIAGE",
+      "next": "add explicit probes",
+      "probes": []
+    },
+    "1520": {
+      "close_when_done": false,
+      "kind": "triaged",
+      "last_verdict": "NEEDS-TRIAGE",
+      "next": "add explicit probes",
+      "probes": []
+    },
+    "1521": {
+      "close_when_done": false,
+      "kind": "triaged",
+      "last_verdict": "NEEDS-TRIAGE",
+      "next": "add explicit probes",
+      "probes": []
+    },
+    "1522": {
+      "close_when_done": false,
+      "kind": "triaged",
+      "last_verdict": "NEEDS-TRIAGE",
+      "next": "add explicit probes",
+      "probes": []
+    },
     "155": {
       "close_when_done": false,
       "kind": "standalone",
@@ -746,6 +788,27 @@
           }
         }
       ]
+    },
+    "1551": {
+      "close_when_done": false,
+      "kind": "triaged",
+      "last_verdict": "NEEDS-TRIAGE",
+      "next": "add explicit probes",
+      "probes": []
+    },
+    "1552": {
+      "close_when_done": false,
+      "kind": "triaged",
+      "last_verdict": "NEEDS-TRIAGE",
+      "next": "add explicit probes",
+      "probes": []
+    },
+    "1583": {
+      "close_when_done": false,
+      "kind": "triaged",
+      "last_verdict": "NEEDS-TRIAGE",
+      "next": "add explicit probes",
+      "probes": []
     },
     "1584": {
       "close_when_done": false,
@@ -808,6 +871,90 @@
       "kind": "standalone",
       "last_verdict": "OPEN",
       "next": "operator scope decision + design ADR",
+      "probes": []
+    },
+    "1686": {
+      "close_when_done": false,
+      "kind": "triaged",
+      "last_verdict": "NEEDS-TRIAGE",
+      "next": "add explicit probes",
+      "probes": []
+    },
+    "1687": {
+      "close_when_done": false,
+      "kind": "triaged",
+      "last_verdict": "NEEDS-TRIAGE",
+      "next": "add explicit probes",
+      "probes": []
+    },
+    "1688": {
+      "close_when_done": false,
+      "kind": "triaged",
+      "last_verdict": "NEEDS-TRIAGE",
+      "next": "add explicit probes",
+      "probes": []
+    },
+    "1689": {
+      "close_when_done": false,
+      "kind": "triaged",
+      "last_verdict": "NEEDS-TRIAGE",
+      "next": "add explicit probes",
+      "probes": []
+    },
+    "1690": {
+      "close_when_done": false,
+      "kind": "triaged",
+      "last_verdict": "NEEDS-TRIAGE",
+      "next": "add explicit probes",
+      "probes": []
+    },
+    "1691": {
+      "close_when_done": false,
+      "kind": "triaged",
+      "last_verdict": "NEEDS-TRIAGE",
+      "next": "add explicit probes",
+      "probes": []
+    },
+    "1692": {
+      "close_when_done": false,
+      "kind": "triaged",
+      "last_verdict": "NEEDS-TRIAGE",
+      "next": "add explicit probes",
+      "probes": []
+    },
+    "1723": {
+      "close_when_done": false,
+      "kind": "triaged",
+      "last_verdict": "NEEDS-TRIAGE",
+      "next": "add explicit probes",
+      "probes": []
+    },
+    "1725": {
+      "close_when_done": false,
+      "kind": "triaged",
+      "last_verdict": "NEEDS-TRIAGE",
+      "next": "add explicit probes",
+      "probes": []
+    },
+    "1726": {
+      "close_when_done": false,
+      "kind": "triaged",
+      "last_verdict": "NEEDS-TRIAGE",
+      "next": "add explicit probes",
+      "probes": []
+    },
+    "1727": {
+      "close_when_done": false,
+      "kind": "triaged",
+      "last_verdict": "NEEDS-TRIAGE",
+      "next": "add explicit probes",
+      "probes": []
+    },
+    "1728": {
+      "close_when_done": false,
+      "kind": "triaged",
+      "last_verdict": "NEEDS-TRIAGE",
+      "next": "add explicit probes",
       "probes": []
     },
     "226": {

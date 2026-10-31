@@ -17,10 +17,13 @@ import type {
   GateAnswer,
   GateAnswerPlannerInterface,
   VibeyCircuit,
+  VibeyAbandonReport,
   VibeyBudget,
   VibeyCliInterface,
   VibeyCliOptions,
   VibeyGate,
+  VibeyNewProject,
+  VibeyNewProjectOptions,
   VibeyProject,
   VibeyStatus,
 } from './interfaces/vibey-cli-interface';
@@ -135,6 +138,51 @@ export class VibeyCli implements VibeyCliInterface, WorkflowsRunnerInterface {
       args.push('--project', projectId);
     }
     return (await this.must(args)).trim();
+  }
+
+  async createProject(name: string, options: VibeyNewProjectOptions): Promise<VibeyNewProject> {
+    const args = ['new', name, '--repo', options.repo, ...(options.intake?.trim() ? ['--intake', options.intake.trim()] : []), '--json'];
+    return VibeyCli.readCreated(VibeyCli.json(await this.must(args, 'new'), 'vibey new --json'), name);
+  }
+
+  /** `vibey new --json`'s document (the hub's `POST /api/v1/projects` answers with the same one). */
+  static readCreated(parsed: unknown, name: string): VibeyNewProject {
+    if (!VibeyCli.isRecord(parsed) || typeof parsed.project_id !== 'string') {
+      throw new VibeyCliError('vibey new --json did not print a project', 'bad-output');
+    }
+    return { project_id: parsed.project_id, name: typeof parsed.name === 'string' ? parsed.name : name, outcome: typeof parsed.outcome === 'string' ? parsed.outcome : '' };
+  }
+
+  async startWork(projectId: string): Promise<string> {
+    return (await this.must(['retry', projectId, '--keep-workers', '--start-worker'], 'retry')).trim();
+  }
+
+  async pauseWork(projectId: string): Promise<string> {
+    return (await this.must(['recover', '--project', projectId, '--stop-workers'], 'recover')).trim();
+  }
+
+  async abandonProject(projectId: string, reason: string, options: { readonly dryRun?: boolean } = {}): Promise<VibeyAbandonReport> {
+    const args = ['abandon', projectId, '--reason', reason, '--by', VibeyCli.ACTOR, '--json', ...(options.dryRun === true ? ['--dry-run'] : [])];
+    return VibeyCli.readAbandon(VibeyCli.json(await this.must(args, 'abandon'), 'vibey abandon --json'));
+  }
+
+  /** `vibey abandon --json`'s document, its two lists reduced to counts. */
+  static readAbandon(parsed: unknown): VibeyAbandonReport {
+    if (!VibeyCli.isRecord(parsed) || typeof parsed.project_id !== 'string') {
+      throw new VibeyCliError('vibey abandon --json did not print an abandonment', 'bad-output');
+    }
+    const count = (value: unknown): number => (Array.isArray(value) ? value.length : 0);
+    return {
+      project_id: parsed.project_id,
+      name: typeof parsed.name === 'string' ? parsed.name : parsed.project_id,
+      from: typeof parsed.from === 'string' ? parsed.from : '',
+      to: typeof parsed.to === 'string' ? parsed.to : '',
+      dry_run: parsed.dry_run === true,
+      already_abandoned: parsed.already_abandoned === true,
+      written: parsed.written === true,
+      cancelled_jobs: count(parsed.cancelled_jobs),
+      withdrawn_gates: count(parsed.withdrawn_gates),
+    };
   }
 
   async loops(): Promise<unknown> {

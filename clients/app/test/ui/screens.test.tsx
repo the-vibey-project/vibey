@@ -1,5 +1,6 @@
 // Made with ❤️ by [Vibey](https://the-vibey-project.github.io/vibey/), Developed by [Adam Matthew Steinberger](https://vibewithadam.matthewsteinberger.com/) ([@adammatthewsteinberger](https://github.com/adammatthewsteinberger/)).
-import { fireEvent, render, screen, waitFor } from '@testing-library/react-native';
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react-native';
+import * as Notifications from 'expo-notifications';
 import type { ReactNode } from 'react';
 import { Linking } from 'react-native';
 import { WorkflowRuns } from '../../src/core/workflow-runs';
@@ -11,12 +12,23 @@ import { HomeScreen } from '../../src/screens/home';
 import { LanesScreen } from '../../src/screens/lanes';
 import { PairScreen } from '../../src/screens/pair';
 import { SettingsScreen } from '../../src/screens/settings';
+import { StartScreen } from '../../src/screens/start';
 import { WorkflowsScreen } from '../../src/screens/workflows';
 import { AppStateProvider, MemoryStore } from '../../src/ui/app-state';
+import { GateNotifications, NOTIFICATION_POLL_MS } from '../../src/ui/notifications';
 
 jest.mock('expo-router', () => ({
   Link: ({ children }: { children: ReactNode }) => children,
-  router: { replace: jest.fn() },
+  router: { replace: jest.fn(), push: jest.fn() },
+}));
+jest.mock('expo-notifications', () => ({
+  setNotificationHandler: jest.fn(),
+  addNotificationResponseReceivedListener: jest.fn(() => ({ remove: jest.fn() })),
+  getPermissionsAsync: jest.fn(async () => ({ granted: true, canAskAgain: true })),
+  requestPermissionsAsync: jest.fn(async () => ({ granted: true })),
+  scheduleNotificationAsync: jest.fn(async () => 'id'),
+  setNotificationCategoryAsync: jest.fn(async () => ({})),
+  DEFAULT_ACTION_IDENTIFIER: 'expo.modules.notifications.actions.DEFAULT',
 }));
 jest.mock('expo-camera', () => ({ CameraView: () => null, useCameraPermissions: () => [{ granted: false }, jest.fn()] }));
 jest.mock('expo-local-authentication', () => ({ authenticateAsync: jest.fn(async () => ({ success: true })) }));
@@ -28,8 +40,11 @@ function hub(routes: Routes) {
   const fetchLike = (async (url: string, init: { method: string; body?: string }) => {
     const path = url.replace('http://hub:8765', '');
     if (init.method === 'POST') posted.push({ url: path, body: init.body ?? '' });
-    const body = routes[`${init.method} ${path}`];
-    return { status: body === undefined ? 404 : 200, text: async () => JSON.stringify(body ?? {}) };
+    const route = routes[`${init.method} ${path}`];
+    const found = typeof route === 'function' ? (route as () => unknown)() : route;
+    const withStatus = typeof found === 'object' && found !== null && '__status' in found ? (found as { __status: number; body: unknown }) : undefined;
+    const body = withStatus === undefined ? found : withStatus.body;
+    return { status: withStatus?.__status ?? (body === undefined ? 404 : 200), text: async () => JSON.stringify(body ?? {}) };
   }) as unknown as typeof fetch;
   return { fetchLike, posted };
 }
@@ -78,6 +93,272 @@ describe('screens', () => {
     expect(screen.getAllByText(/Answer this gate on the host/)).toHaveLength(1);
     expect(verify).not.toHaveBeenCalled();
     expect(posted).toHaveLength(1);
+  });
+
+  it('Home starts a project from a button, and says what to do when there is none', async () => {
+    const { router } = jest.requireMock('expo-router') as { router: { push: jest.Mock } };
+    await renderWith(<HomeScreen />, { 'GET /api/v1/projects': [] });
+    expect(await screen.findByText(/@krypton \/new/)).toBeTruthy();
+    await fireEvent.press(screen.getByText('Start a project'));
+    expect(router.push).toHaveBeenCalledWith('/start');
+  });
+
+  it('Start refuses a bad name before asking the hub, and never sends a folder', async () => {
+    const posted = await renderWith(<StartScreen />, {
+      'POST /api/v1/projects': { __status: 201, body: { project_id: 'p9', name: 'greeter', outcome: 'design job j1' } },
+    });
+    await fireEvent.changeText(screen.getByLabelText('Project name'), 'has space');
+    await fireEvent.press(screen.getByText('Start'));
+    expect(await screen.findByText(/No spaces/)).toBeTruthy();
+    expect(posted).toHaveLength(0);
+    await fireEvent.changeText(screen.getByLabelText('Project name'), 'greeter');
+    await fireEvent.changeText(screen.getByLabelText('What to build'), 'a greeting page');
+    await fireEvent.press(screen.getByText('Start'));
+    expect(await screen.findByText(/Started "greeter"/)).toBeTruthy();
+    expect(JSON.parse(posted[0]!.body)).toEqual({ name: 'greeter', intake: 'a greeting page' });
+  });
+
+  it('Start says why the host will not, in the hub\'s words', async () => {
+    await renderWith(<StartScreen />, { 'POST /api/v1/projects': { __status: 503, body: { detail: 'this host has not allowed projects to be started from a device' } } });
+    await fireEvent.changeText(screen.getByLabelText('Project name'), 'greeter');
+    await fireEvent.press(screen.getByText('Start'));
+    expect(await screen.findByText(/this host has not allowed projects/)).toBeTruthy();
+  });
+
+  it('a project card resumes and pauses its own project', async () => {
+    const posted = await renderWith(<HomeScreen />, {
+      'GET /api/v1/projects': [project],
+      'POST /api/v1/projects/p1/work/start': { message: 'worker started' },
+      'POST /api/v1/projects/p1/work/pause': {},
+    });
+    await fireEvent.press(await screen.findByText('Resume'));
+    expect(await screen.findByText('worker started')).toBeTruthy();
+    await fireEvent.press(screen.getByText('Pause'));
+    expect(await screen.findByText('Paused.')).toBeTruthy();
+    expect(posted.map((call) => call.url)).toEqual(['/api/v1/projects/p1/work/start', '/api/v1/projects/p1/work/pause']);
+  });
+
+  it('a finished project offers no actions', async () => {
+    await renderWith(<HomeScreen />, { 'GET /api/v1/projects': [{ ...project, phase: 'DONE', open_gates: 0 }] });
+    await screen.findByText('Greeter');
+    expect(screen.queryByText('Pause')).toBeNull();
+  });
+
+  it('Unwind asks why, shows what it would cancel, re-checks it is you, then does it', async () => {
+    const report = { project_id: 'p1', name: 'Greeter', from: 'build', to: 'abandoned', dry_run: true, already_abandoned: false, cancelled_jobs: [{}, {}], withdrawn_gates: [{}] };
+    const posted = await renderWith(<HomeScreen />, { 'GET /api/v1/projects': [project], 'POST /api/v1/projects/p1/abandon': report });
+    await fireEvent.press(await screen.findByText('Unwind…'));
+    await fireEvent.press(screen.getByText('See what it would cancel'));
+    expect(await screen.findByText(/Say why/)).toBeTruthy();
+    expect(posted).toHaveLength(0);
+    await fireEvent.changeText(screen.getByLabelText('Why unwind this project'), 'not needed');
+    await fireEvent.press(screen.getByText('See what it would cancel'));
+    expect(await screen.findByText(/cancels 2 queued or running jobs and withdraws 1 waiting questions/)).toBeTruthy();
+    await fireEvent.press(screen.getByText('Unwind for good'));
+    expect(await screen.findByText(/Unwound "Greeter": 2 jobs cancelled/)).toBeTruthy();
+    expect(posted.map((call) => JSON.parse(call.body))).toEqual([
+      { reason: 'not needed', dry_run: true },
+      { reason: 'not needed', dry_run: false },
+    ]);
+  });
+
+  it('Unwind does nothing when it cannot confirm it is you, and can be cancelled', async () => {
+    const auth = jest.requireMock('expo-local-authentication') as { authenticateAsync: jest.Mock };
+    auth.authenticateAsync.mockResolvedValueOnce({ success: false });
+    const report = { project_id: 'p1', name: 'Greeter', dry_run: true, already_abandoned: false, cancelled_jobs: [], withdrawn_gates: [] };
+    const posted = await renderWith(<HomeScreen />, { 'GET /api/v1/projects': [project], 'POST /api/v1/projects/p1/abandon': report });
+    await fireEvent.press(await screen.findByText('Unwind…'));
+    await fireEvent.changeText(screen.getByLabelText('Why unwind this project'), 'not needed');
+    await fireEvent.press(screen.getByText('See what it would cancel'));
+    await fireEvent.press(await screen.findByText('Unwind for good'));
+    expect(await screen.findByText(/Not confirmed; nothing was changed/)).toBeTruthy();
+    expect(posted).toHaveLength(1);
+    await fireEvent.press(screen.getByText('Keep it'));
+    await fireEvent.press(screen.getByText('Unwind…'));
+    await fireEvent.press(screen.getByText('Cancel'));
+    expect(screen.getByText('Unwind…')).toBeTruthy();
+  });
+
+  it('Unwind says so when the project is already unwound', async () => {
+    const report = { project_id: 'p1', name: 'Greeter', dry_run: true, already_abandoned: true, cancelled_jobs: [], withdrawn_gates: [] };
+    await renderWith(<HomeScreen />, { 'GET /api/v1/projects': [project], 'POST /api/v1/projects/p1/abandon': report });
+    await fireEvent.press(await screen.findByText('Unwind…'));
+    await fireEvent.changeText(screen.getByLabelText('Why unwind this project'), 'x');
+    await fireEvent.press(screen.getByText('See what it would cancel'));
+    expect(await screen.findByText('This project is already unwound.')).toBeTruthy();
+    expect(screen.queryByText('Unwind for good')).toBeNull();
+  });
+
+  it('Gates lets a phone accept the design interview\'s suggested answers', async () => {
+    const posted = await renderWith(<GatesScreen verify={async () => true} />, {
+      'GET /api/v1/gates': { gates: [{ gate_id: 'g5', project_id: 'p1', job_id: null, kind: 'question', prompt: 'Who is it for?', options: [], default_answer: null, timeout_at: null }] },
+      'POST /api/v1/gates/g5/answer': { replayed: false },
+    });
+    await fireEvent.press(await screen.findByText('Accept the suggested answers'));
+    await waitFor(() => expect(posted).toHaveLength(1));
+    expect(JSON.parse(posted[0]!.body).answer).toEqual({ accept_defaults: true });
+  });
+
+  it('tells a person about a new question once, and about nothing that was already there', async () => {
+    jest.useFakeTimers();
+    try {
+      const schedule = Notifications.scheduleNotificationAsync as jest.Mock;
+      schedule.mockClear();
+      let gates: unknown[] = [];
+      await renderWith(<GateNotifications />, {
+        'GET /api/v1/projects': [project],
+        'GET /api/v1/gates': () => ({ gates }),
+      });
+      await act(async () => {
+        await jest.advanceTimersByTimeAsync(10);
+      });
+      expect(schedule).not.toHaveBeenCalled();
+      gates = [{ gate_id: 'g9', project_id: 'p1', project_name: 'Greeter', job_id: null, kind: 'question', prompt: 'Who is it for?\nmore', options: [], default_answer: null, timeout_at: null }];
+      await act(async () => {
+        await jest.advanceTimersByTimeAsync(NOTIFICATION_POLL_MS);
+      });
+      expect(schedule).toHaveBeenCalledTimes(1);
+      expect(schedule.mock.calls[0]![0]).toMatchObject({ identifier: 'gate-g9', content: { title: 'Greeter needs you', body: 'Who is it for?', data: { route: '/gates' } }, trigger: null });
+      await act(async () => {
+        await jest.advanceTimersByTimeAsync(NOTIFICATION_POLL_MS);
+      });
+      expect(schedule).toHaveBeenCalledTimes(1);
+    } finally {
+      jest.useRealTimers();
+    }
+  });
+
+  it('does not notify without the phone\'s permission, and says nothing when the hub is away', async () => {
+    jest.useFakeTimers();
+    try {
+      const schedule = Notifications.scheduleNotificationAsync as jest.Mock;
+      schedule.mockClear();
+      (Notifications.getPermissionsAsync as jest.Mock).mockResolvedValue({ granted: false, canAskAgain: false });
+      let gates: unknown[] = [];
+      await renderWith(<GateNotifications />, { 'GET /api/v1/projects': [project], 'GET /api/v1/gates': () => ({ gates }) });
+      await act(async () => {
+        await jest.advanceTimersByTimeAsync(10);
+      });
+      gates = [{ gate_id: 'g9', project_id: 'p1', job_id: null, kind: 'question', prompt: 'q', options: [], default_answer: null, timeout_at: null }];
+      await act(async () => {
+        await jest.advanceTimersByTimeAsync(NOTIFICATION_POLL_MS);
+      });
+      expect(schedule).not.toHaveBeenCalled();
+      (Notifications.getPermissionsAsync as jest.Mock).mockResolvedValue({ granted: false, canAskAgain: true });
+      (Notifications.requestPermissionsAsync as jest.Mock).mockResolvedValueOnce({ granted: true });
+      gates = [...gates, { gate_id: 'g10', project_id: 'p1', job_id: null, kind: 'question', prompt: 'r', options: [], default_answer: null, timeout_at: null }];
+      await act(async () => {
+        await jest.advanceTimersByTimeAsync(NOTIFICATION_POLL_MS);
+      });
+      expect(schedule).toHaveBeenCalledTimes(1);
+    } finally {
+      (Notifications.getPermissionsAsync as jest.Mock).mockResolvedValue({ granted: true, canAskAgain: true });
+      jest.useRealTimers();
+    }
+  });
+
+  describe('answering from a notification', () => {
+    const gateOf = (kind: string, options: string[]) => ({ gate_id: 'g1', project_id: 'p1', project_name: 'Greeter', job_id: null, kind, prompt: 'Ship it?', options, default_answer: null, timeout_at: null });
+    const DEFAULT = 'expo.modules.notifications.actions.DEFAULT';
+    const schedule = Notifications.scheduleNotificationAsync as jest.Mock;
+    const category = Notifications.setNotificationCategoryAsync as jest.Mock;
+    const listener = () => (Notifications.addNotificationResponseReceivedListener as jest.Mock).mock.calls.at(-1)![0] as (response: unknown) => void;
+    const pressed = (actionIdentifier: string, data: Record<string, unknown>) => ({ actionIdentifier, notification: { request: { content: { data } } } });
+
+    /** The hub shows one new gate on the second look; returns what was posted. */
+    async function raise(gate: unknown, answer: unknown = { replayed: false }) {
+      schedule.mockClear();
+      category.mockClear();
+      let gates: unknown[] = [];
+      const posted = await renderWith(<GateNotifications />, {
+        'GET /api/v1/projects': [project],
+        'GET /api/v1/gates': () => ({ gates }),
+        'POST /api/v1/gates/g1/answer': answer,
+      });
+      await act(async () => {
+        await jest.advanceTimersByTimeAsync(10);
+      });
+      gates = [gate];
+      await act(async () => {
+        await jest.advanceTimersByTimeAsync(NOTIFICATION_POLL_MS);
+      });
+      return posted;
+    }
+
+    beforeEach(() => jest.useFakeTimers());
+    afterEach(() => jest.useRealTimers());
+
+    it('puts the options on a review as buttons that need the phone unlocked and do not open the app', async () => {
+      await raise(gateOf('approval', ['accept', 'reject']));
+      expect(category).toHaveBeenCalledWith('krypton-gate:accept|reject', [
+        { identifier: 'accept', buttonTitle: 'accept', options: { opensAppToForeground: false, isAuthenticationRequired: true } },
+        { identifier: 'reject', buttonTitle: 'reject', options: { opensAppToForeground: false, isAuthenticationRequired: true } },
+      ]);
+      expect(schedule.mock.calls[0]![0].content).toMatchObject({ categoryIdentifier: 'krypton-gate:accept|reject', data: { route: '/gates', gateId: 'g1', gateKind: 'approval', options: ['accept', 'reject'] } });
+    });
+
+    it('puts no buttons on a gate that spends: its notification only opens the app', async () => {
+      await raise(gateOf('budget_exhausted', ['25']));
+      expect(category).not.toHaveBeenCalled();
+      expect(schedule.mock.calls[0]![0].content.categoryIdentifier).toBeUndefined();
+    });
+
+    it('sends the answer once when a button is pressed, and says it was answered', async () => {
+      const posted = await raise(gateOf('approval', ['accept', 'reject']));
+      schedule.mockClear();
+      await act(async () => {
+        listener()(pressed('reject', { route: '/gates', gateId: 'g1', gateKind: 'approval', options: ['accept', 'reject'] }));
+        await jest.advanceTimersByTimeAsync(10);
+      });
+      expect(posted.map((call) => [call.url, JSON.parse(call.body)])).toEqual([['/api/v1/gates/g1/answer', expect.objectContaining({ answer: { verdict: 'reject' } })]]);
+      expect(schedule.mock.calls[0]![0]).toMatchObject({ identifier: 'answered-g1', content: { title: 'Answered' } });
+    });
+
+    it('never answers a gate that spends, even when told a button was pressed', async () => {
+      const posted = await raise(gateOf('budget_exhausted', ['25']));
+      schedule.mockClear();
+      await act(async () => {
+        listener()(pressed('25', { route: '/gates', gateId: 'g1', gateKind: 'budget_exhausted', options: ['25'] }));
+        listener()(pressed('accept', { route: '/gates', gateId: 'g1', gateKind: 'deploy_acceptance', options: ['accept'] }));
+        await jest.advanceTimersByTimeAsync(10);
+      });
+      expect(posted).toHaveLength(0);
+      expect(schedule).not.toHaveBeenCalled();
+    });
+
+    it('ignores a button the gate does not offer, and a notification with no gate on it', async () => {
+      const posted = await raise(gateOf('approval', ['accept']));
+      schedule.mockClear();
+      await act(async () => {
+        listener()(pressed('delete-everything', { route: '/gates', gateId: 'g1', gateKind: 'approval', options: ['accept'] }));
+        listener()(pressed('accept', { route: '/gates' }));
+        listener()(pressed('accept', { gateId: 'g1', gateKind: 'approval', options: 'accept' }));
+        await jest.advanceTimersByTimeAsync(10);
+      });
+      expect(posted).toHaveLength(0);
+      expect(schedule).not.toHaveBeenCalled();
+    });
+
+    it('says when the answer was not sent, and opens Gates on a tap, rather than failing silently', async () => {
+      const posted = await raise(gateOf('approval', ['accept']), { __status: 503, body: { detail: 'the hub is away' } });
+      schedule.mockClear();
+      await act(async () => {
+        listener()(pressed('accept', { route: '/gates', gateId: 'g1', gateKind: 'approval', options: ['accept'] }));
+        await jest.advanceTimersByTimeAsync(10);
+      });
+      expect(posted).toHaveLength(1);
+      expect(schedule.mock.calls[0]![0]).toMatchObject({ identifier: 'answered-g1', content: { title: 'Your answer was not sent', data: { route: '/gates' } } });
+      expect(schedule.mock.calls[0]![0].content.body).toContain('Open krypton to answer.');
+    });
+
+    it('still opens the app on a plain tap', async () => {
+      const { router } = jest.requireMock('expo-router') as { router: { push: jest.Mock } };
+      await raise(gateOf('approval', ['accept']));
+      router.push.mockClear();
+      listener()(pressed(DEFAULT, { route: '/gates' }));
+      listener()(pressed(DEFAULT, {}));
+      expect(router.push.mock.calls).toEqual([['/gates'], ['/']]);
+    });
   });
 
   it('Lanes shows what each lane has written', async () => {
@@ -164,6 +445,8 @@ async function renderWorkflows(start: Answer, reads: readonly Answer[], runs?: W
   const queue = [...reads];
   const sent: string[] = [];
   const fetchLike = (async (url: string, init: { method: string; body?: string }) => {
+    // The app's own reachability probe is not one of the requests under test.
+    if (url.includes('/health/')) return { status: 200, text: async () => '{}' };
     const answer = init.method === 'POST' ? start : (queue.shift() as Answer);
     if (init.method === 'POST') sent.push(init.body ?? '');
     else sent.push(url.replace('http://hub:8765', ''));

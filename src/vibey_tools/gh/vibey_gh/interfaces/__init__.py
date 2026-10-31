@@ -24,6 +24,7 @@ from vibey_gh.interfaces.book_interface import (
 from vibey_gh.interfaces.chapter_sanitizer_interface import ChapterSanitizerInterface
 from vibey_gh.interfaces.class_contracts import (
     AutomationStateInterface,
+    BitbucketTransportInterface,
     ChangeRequestInterface,
     CheckResultInterface,
     CoordinateInterface,
@@ -116,8 +117,12 @@ from vibey_gh.interfaces.docx_interface import (
 from vibey_gh.interfaces.fallback_pin_resolver_interface import FallbackPinInterface
 from vibey_gh.interfaces.forge_snapshot_interface import (
     AppendOutcomeInterface,
+    BreakInterface,
     ChainHeadInterface,
+    ForgeInventoryInterface,
     ForgeReadInterface,
+    SnapshotQueryInterface,
+    SnapshotVerifierInterface,
 )
 from vibey_gh.interfaces.local_review_interface import (
     AddedHunkSplitterInterface,
@@ -161,8 +166,10 @@ __all__ = [
     "BillingLedgerReaderInterface",
     "BillingLedgerSnapshotInterface",
     "BillingUsageInterface",
+    "BitbucketTransportInterface",
     "BookChapterInterface",
     "BookErrorInterface",
+    "BreakInterface",
     "ChainHeadInterface",
     "ChangeRequestInterface",
     "ChapterSanitizerInterface",
@@ -191,6 +198,7 @@ __all__ = [
     "FlattenPlanInterface",
     "ForgeClassInterface",
     "ForgeCommentInterface",
+    "ForgeInventoryInterface",
     "ForgeIssueInterface",
     "ForgeKindInterface",
     "ForgeLabelInterface",
@@ -258,7 +266,9 @@ __all__ = [
     "RunnersConfigInterface",
     "SampleInterface",
     "SizedChatInterface",
+    "SnapshotQueryInterface",
     "SnapshotStoreErrorInterface",
+    "SnapshotVerifierInterface",
     "SourceContextInterface",
     "SovereignReviewInterface",
     "StageInterface",

@@ -14,6 +14,8 @@ export interface ProjectCard {
   readonly cycle: string;
   readonly openGates: number;
   readonly role: StatusRole;
+  /** Done or unwound: nothing is running and nothing can be paused, resumed or unwound. */
+  readonly finished: boolean;
 }
 
 export interface HomeSummary {
@@ -21,6 +23,8 @@ export interface HomeSummary {
   readonly headline: string;
   readonly needsYou: number;
   readonly cards: readonly ProjectCard[];
+  /** What to do when there is no project to show, said as a person would need it; empty when there is one. */
+  readonly emptyNote: string;
 }
 
 export interface GateCard {
@@ -31,8 +35,8 @@ export interface GateCard {
   readonly options: readonly string[];
   /** A gate that spends money: answering it asks for Face ID, Touch ID or the passcode. */
   readonly spends: boolean;
-  /** Which key a device answers with, or `host` when only the host can answer it. */
-  readonly answerKey: 'verdict' | 'choice' | 'host';
+  /** Which key a device answers with: a verdict or choice from a button, `interview` for the design interview's suggested answers, or `host` when only the host can answer it. */
+  readonly answerKey: 'verdict' | 'choice' | 'interview' | 'host';
   readonly due: string;
 }
 

@@ -276,9 +276,15 @@ class DarwinDeviceProbe(DeviceProbe, DeviceProbeInterface):
         }
 
 
+# The PCI vendor id the kernel writes for AMD, and how many `/sys/class/drm/cardN` indexes a
+# host is searched for (more GPUs than this in one machine is not a case the fit has seen).
+AMD_PCI_VENDOR = "0x1002"
+DRM_CARD_LIMIT = 16
+
+
 class LinuxDeviceProbe(DeviceProbe, DeviceProbeInterface):
     """Linux states itself through the kernel's files, `nvidia-smi` where there is an NVIDIA
-    accelerator, and `/etc/os-release` -- the same on Ubuntu 26.04, Arch and a container.
+    accelerator, `/sys/class/drm` where there is an AMD one, and `/etc/os-release` -- the same on Ubuntu 26.04, Arch and a container.
     A container's memory is the cgroup's limit, not the host's; that refinement is
     `vibey_gh.fit.LinuxMemorySampler`'s and joins here when a Linux host is first measured
     (#1116)."""
@@ -295,9 +301,16 @@ class LinuxDeviceProbe(DeviceProbe, DeviceProbeInterface):
         processor = self.field(cpuinfo, "model name") or self.field(cpuinfo, "Model")
         meminfo = self._reader.read("/proc/meminfo") or ""
         total = re.search(r"^MemTotal:\s*(\d+)\s*kB", meminfo, re.MULTILINE)
-        gpus = self._run(
-            ["nvidia-smi", "--query-gpu=name,memory.total", "--format=csv,noheader"]
-        ).strip()
+        gpus = "\n".join(
+            part
+            for part in (
+                self._run(
+                    ["nvidia-smi", "--query-gpu=name,memory.total", "--format=csv,noheader"]
+                ).strip(),
+                *self._amd_accelerators(),
+            )
+            if part
+        )
         release = self._reader.read("/etc/os-release") or ""
         pretty = re.search(r'^PRETTY_NAME="?([^"\n]*)"?', release, re.MULTILINE)
         return {
@@ -307,6 +320,29 @@ class LinuxDeviceProbe(DeviceProbe, DeviceProbeInterface):
             "accelerator": "; ".join(line.strip() for line in gpus.splitlines()) or "none",
             "os": pretty.group(1) if pretty else "",
         }
+
+    def _amd_accelerators(self) -> list[str]:
+        """AMD GPUs the kernel's `amdgpu` driver reports, as `name, N MiB` like `nvidia-smi`.
+
+        `/sys/class/drm/cardN/device/` holds `vendor` (0x1002 is AMD), `mem_info_vram_total`
+        in bytes and, on some cards, `product_name`. Card numbers are not contiguous (an
+        integrated GPU can be card0 and the discrete one card1), so every index up to
+        `DRM_CARD_LIMIT` is tried and a missing file is skipped. A card with no readable
+        VRAM figure is left out, never reported with a guessed one."""
+        found: list[str] = []
+        for index in range(DRM_CARD_LIMIT):
+            base = f"/sys/class/drm/card{index}/device"
+            if (self._reader.read(f"{base}/vendor") or "").strip().lower() != AMD_PCI_VENDOR:
+                continue
+            vram = (self._reader.read(f"{base}/mem_info_vram_total") or "").strip()
+            if not vram.isdigit() or int(vram) == 0:
+                continue
+            device = (self._reader.read(f"{base}/device") or "").strip()
+            name = (self._reader.read(f"{base}/product_name") or "").strip() or (
+                f"AMD GPU {device}" if device else "AMD GPU"
+            )
+            found.append(f"{name}, {int(vram) // 2**20} MiB")
+        return found
 
 
 class DeviceFingerprinter(DeviceFingerprinterInterface):

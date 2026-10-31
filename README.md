@@ -36,7 +36,7 @@ clients; and industry. Each audience is meant to have its own demo; the non-prof
 - **The record cannot be quietly rewritten.** The database refuses every update and delete to the ledger ([ADR-0055](docs/architecture/decisions/0055-the-ledger-is-append-only-by-the-database.md)), and a SHA-256 hash chain over its events makes any edit visible ([`ledger_chain.py`](src/vibey/domain/ledger_chain.py)). **See one for yourself in the [ledger explorer](https://the-vibey-project.github.io/vibey/main/explorer/)**: a public, searchable view of a real project's ledger, where your browser checks each record's digest.
 - **Local first, paid by choice.** The default engine runs GPT-OSS 20B on your own machine through Ollama ([ADR-0064](docs/architecture/decisions/0064-gptossloop-is-the-sovereign-engine.md)); a paid engine runs only when no local one can ([ADR-0038](docs/architecture/decisions/0038-local-engines-are-preferred-first.md)).
 - **You decide what matters.** Design, review and deployment wait for your recorded answer, and a waiting question parks its job instead of blocking a worker ([ADR-0009](docs/architecture/decisions/0009-human-gates-are-parked-jobs.md)).
-- **Held to gates it cannot talk its way past.** vibey's four code layers each need 100% branch coverage to merge ([ADR-0023](docs/architecture/decisions/0023-four-layers-four-floors.md)), every hard call is argued in a [decision record](docs/architecture/decisions/) (90 ADRs), and releases publish through PyPI trusted publishing with no stored token ([`vibey-engine.yml`](.github/workflows/vibey-engine.yml)).
+- **Held to gates it cannot talk its way past.** vibey's four code layers each need 100% branch coverage to merge ([ADR-0023](docs/architecture/decisions/0023-four-layers-four-floors.md)), every hard call is argued in a [decision record](docs/architecture/decisions/) (98 ADRs), and releases publish through PyPI trusted publishing with no stored token ([`vibey-engine.yml`](.github/workflows/vibey-engine.yml)).
 
 **See a real ledger** — no install, no account: [open the ledger explorer](https://the-vibey-project.github.io/vibey/main/explorer/), search every public decision, finding and phase change of a real project, and check each record yourself.
 
@@ -81,6 +81,29 @@ software delivery — with an optional visual-design interstitial and opt-in
 Azure deployment — built on top of the [`*loop` autonomous session
 runners](src/vibey_runners/), which live in this repository as uv
 workspace members (ADR-0021).
+
+## Contents
+
+- [What problem this solves](#what-problem-this-solves)
+- [Install](#install)
+- [Quickstart](#quickstart)
+- [Command reference](#command-reference)
+- [Configuration](#configuration)
+- [Notifications](#notifications)
+- [Telemetry](#telemetry)
+- [The shape of it](#the-shape-of-it)
+- [How it fits together](#how-it-fits-together)
+- [Why it isn't just another agent framework](#why-it-isnt-just-another-agent-framework)
+- [Questions people ask](#questions-people-ask)
+- [Documentation](#documentation)
+- [Status](#status)
+- [Troubleshooting](#troubleshooting)
+- [Upgrading](#upgrading)
+- [Formal notes](#formal-notes)
+- [Project links](#project-links)
+- [Join the community](#join-the-community)
+- [Related projects](#related-projects)
+- [License](#license)
 
 ## What problem this solves
 
@@ -187,13 +210,13 @@ packets to BUILD prompts. Missing tools, timeouts, low-confidence retrieval, and
 insufficient budgets all fall back to the original prompt. The feature is off by
 default, and wind-down prompts are never modified (ADR-0031).
 
-The same tree is a Claude Code plugin marketplace — every plugin in the family, the 147
+The same tree is a Claude Code plugin marketplace — every plugin in the family, the 148
 skills plugins and vibey-gh's four, from one address and nothing else:
 
 ```text
 /plugin marketplace add the-vibey-project/vibey
 /plugin install security-principles@vibey
-/plugin                                    # browse all 151
+/plugin                                    # browse all 152
 ```
 
 The root manifest is rendered from the workspace members by `vibey-gh marketplace` and
@@ -501,7 +524,7 @@ welcome on [Discord](https://discord.gg/Qvu8aYnVS) and in
 | [Phase protocols](docs/plans/phase-protocols.md) | What all six phases do, turn by turn |
 | [Implementation plan](docs/plans/implementation-plan.md) | Milestone-by-milestone, test-first task breakdown |
 | [CLAUDE.md](CLAUDE.md) | The short facts file every coding agent working on vibey loads first: non-negotiables, layer map, gate commands |
-| [Decision records](docs/architecture/decisions/) | Why each hard call was made (90 ADRs) |
+| [Decision records](docs/architecture/decisions/) | Why each hard call was made (98 ADRs) |
 
 ## Status
 

@@ -10,9 +10,11 @@
 
 #include "kr-discovery.h"
 #include "kr-hub-client.h"
+#include "kr-hub-engine.h"
 #include "kr-pairing.h"
 #include "kr-settings.h"
 #include "kr-state.h"
+#include "kr-tray-host.h"
 
 G_BEGIN_DECLS
 
@@ -26,11 +28,15 @@ typedef struct {
     char *credential_path;        /* where this device's key is kept once it pairs */
     KrDeviceCredential *paired;   /* the key the client signs with, or NULL (the host token) */
     gboolean awaiting_pairing;    /* a hub elsewhere is chosen and not paired: nothing is asked */
+    KrHubEngine *hub_engine; /* `vibey hub status | start | stop` on this computer */
+    gboolean hub_busy;       /* one of them is running: no second one starts */
     KrDiscovery *discovery;
     char *discovery_problem; /* why discovery is not running, or NULL */
     GCancellable *cancel;
     guint refresh_source;
     GtkWidget *window;
+    KrTray *tray;            /* the tray item, or NULL (off, or this platform has none) */
+    KrTrayModel *tray_shown; /* what it last drew */
 } KrApp;
 
 /* Asks the hub for everything the views show; the answers land in app->state. */
@@ -39,6 +45,13 @@ void kr_app_refresh(KrApp *app);
 void kr_app_refresh_budget(KrApp *app, const char *project_id);
 /* Answers a gate with `value` (see kr-answer.h); says the outcome in a toast. */
 void kr_app_answer(KrApp *app, const KrGate *gate, const char *value);
+/* The one hub on this computer (#1186). Starting krypton starts it when none runs and
+ * the setting allows; closing krypton NEVER stops it. Stop exists only as its own action.
+ * Every outcome is said in a toast or in the connection status, never in a modal. */
+void kr_app_hub_ensure(KrApp *app);
+void kr_app_hub_start(KrApp *app);
+void kr_app_hub_stop(KrApp *app);
+void kr_app_hub_status(KrApp *app);
 /* Points the app at a hub; NULL host means this computer's. Saves the choice. */
 void kr_app_use_hub(KrApp *app, const char *host, guint16 port);
 /* Pairs with a hub: `typed` is the 6-digit code its host shows (for the hub chosen on the
@@ -50,6 +63,19 @@ const char *kr_app_advertised_fingerprint(KrApp *app, const char *host, guint16 
 /* Applies the theme in app->settings through AdwStyleManager (saving is the caller's). */
 void kr_app_apply_theme(KrApp *app);
 void kr_app_save_settings(KrApp *app);
+/* Start a project on the hub from this device (ADR-0091): `name` and what to build; the hub
+ * makes the folder. The outcome, or the hub's own refusal, is said in a toast. */
+void kr_app_start_project(KrApp *app, const char *name, const char *intake);
+/* Start (or pause) the project's own worker. `name` is only for the words. */
+void kr_app_project_work(KrApp *app, const char *project_id, const char *name, gboolean start);
+/* Unwinding is two steps: ask the hub what it would cancel (a dry run), let the window
+ * confirm it in words, then do it. The work on disk stays either way. */
+#define KR_UNWIND_REASON "Unwound from krypton desktop"
+void kr_app_unwind_preview(KrApp *app, const char *project_id, const char *name);
+void kr_app_unwind(KrApp *app, const char *project_id, const char *name, const char *reason);
+/* Turns the tray item on or off (saved). On: closing the window keeps krypton running in it,
+ * once the platform shows it. Off: the window closes as a window does. */
+void kr_app_set_tray(KrApp *app, gboolean on);
 /* A short message at the bottom of the window. */
 void kr_app_toast(KrApp *app, const char *text);
 

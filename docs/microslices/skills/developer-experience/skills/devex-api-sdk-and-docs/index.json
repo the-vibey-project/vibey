@@ -1,0 +1,22 @@
+[
+  {
+    "id": "skill-api-and-sdk-design-cf8d7a15ef",
+    "purpose": "api and sdk design",
+    "source": "src/vibey_tools/skills/plugins/developer-experience/skills/devex-api-sdk-and-docs/SKILL.md",
+    "output": "docs/microslices/skills/developer-experience/skills/devex-api-sdk-and-docs/001-api-and-sdk-design.md",
+    "requires": [],
+    "links": [
+      "skill-documentation-64c297e083"
+    ]
+  },
+  {
+    "id": "skill-documentation-64c297e083",
+    "purpose": "documentation",
+    "source": "src/vibey_tools/skills/plugins/developer-experience/skills/devex-api-sdk-and-docs/SKILL.md",
+    "output": "docs/microslices/skills/developer-experience/skills/devex-api-sdk-and-docs/002-documentation.md",
+    "requires": [
+      "skill-api-and-sdk-design-cf8d7a15ef"
+    ],
+    "links": []
+  }
+]

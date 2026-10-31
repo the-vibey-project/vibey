@@ -79,6 +79,7 @@ class WorkPlanDecoder:
                 files_touched_hint=tuple(
                     str(f) for f in self._list(entry.get("files_touched_hint", []))
                 ),
+                epic=str(entry.get("epic", "")).strip(),
                 verification=VerificationSpec(
                     commands=tuple(str(c) for c in self._list(verification.get("commands", []))),
                     criteria_checked=tuple(

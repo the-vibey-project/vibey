@@ -1,6 +1,7 @@
 /* Made with ❤️ by [Vibey](https://the-vibey-project.github.io/vibey/), Developed by [Adam Matthew Steinberger](https://vibewithadam.matthewsteinberger.com/) ([@adammatthewsteinberger](https://github.com/adammatthewsteinberger/)). */
 #include "kr-workflows-page.h"
 
+#include "kr-a11y.h"
 #include "kr-workflows-client.h"
 
 /* How a host grants a device the scope, as `vibey hub pair` takes it. */
@@ -21,6 +22,15 @@ typedef struct {
     GCancellable *cancel; /* the run being followed, or NULL */
     char *url;            /* the GitHub run of the latest run, once GitHub shows it */
 } Page;
+
+/* The warning mark beside the scope row: named so a screen reader says it is a warning. */
+static GtkWidget *
+workflows_warning_icon(void)
+{
+    GtkWidget *icon = gtk_image_new_from_icon_name("dialog-warning-symbolic");
+    kr_a11y_name(icon, "Warning");
+    return icon;
+}
 
 static Page *
 page_of(GtkWidget *widget)
@@ -353,7 +363,7 @@ kr_workflows_page_new(KrApp *app)
     gtk_list_box_append(GTK_LIST_BOX(form), command);
     GtkWidget *scope = row("", NULL);
     adw_action_row_add_prefix(ADW_ACTION_ROW(scope),
-                              gtk_image_new_from_icon_name("dialog-warning-symbolic"));
+                              workflows_warning_icon());
     gtk_widget_set_visible(scope, FALSE);
     self->scope = ADW_ACTION_ROW(scope);
     gtk_list_box_append(GTK_LIST_BOX(form), scope);

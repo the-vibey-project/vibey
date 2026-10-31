@@ -43,18 +43,30 @@ from vibey.bootstrap import (
 )
 from vibey.cli.abandon import abandon as abandon_command
 from vibey.cli.budget import budget_app
+from vibey.cli.command_examples import CommandExamples
+from vibey.cli.cost import COST
 from vibey.cli.design_auto_accept import auto_accept_design_lines, auto_accept_design_startup_line
+from vibey.cli.doctor_output import (
+    DoctorFormat,
+    JsonDoctorOutput,
+    TextDoctorOutput,
+)
 from vibey.cli.driver import driver_app
-from vibey.cli.errors import EXIT_USAGE, guard
+from vibey.cli.engines import ENGINES
+from vibey.cli.errors import EXIT_USAGE, guard, guarded
+from vibey.cli.explain import ErrorExplainer
 from vibey.cli.gate_auto_answer import auto_answer_lines, auto_answer_startup_line
 from vibey.cli.gate_notices import GATE_NOTICE_DOCTOR, GATE_REMINDERS
 from vibey.cli.gates import GATES
+from vibey.cli.help_layout import HelpLayout
 from vibey.cli.host_health import HOST_HEALTH
 from vibey.cli.hub_pair import hub_app
+from vibey.cli.interfaces.doctor_output_interface import DoctorOutputInterface
 from vibey.cli.ledger_publication import ledger_export, ledger_site
 from vibey.cli.ledger_search import PRESENTER, ledger_search
 from vibey.cli.llm import llm_app
 from vibey.cli.loops import LOOPS
+from vibey.cli.models import MODELS
 from vibey.cli.projects import PROJECTS
 from vibey.cli.queue import queue_app
 from vibey.cli.recover import stop_workers
@@ -130,10 +142,22 @@ app = typer.Typer(name="vibey", no_args_is_help=True)
 #: `--ignore-sabbath`, on the commands the Sabbath holds (`new`, `work`, `worker`). A
 #: per-command choice by the operator and nothing stored: it is not a `vibey.toml` key, so
 #: no file can switch the Sabbath off for a run nobody is watching.
+#: `--traceback`, on the commands that run under `guard()` but whose callers may still want the raw
+#: Python error (`engines`, `cost`): they were unguarded until #1686, so a script may rely on it.
+RawErrors = Annotated[
+    bool,
+    typer.Option(
+        "--traceback",
+        help="Let a vibey error raise with its Python traceback instead of one sentence and "
+        "exit 3 (for debugging vibey itself).",
+    ),
+]
+
 IgnoreSabbath = Annotated[
     bool,
     typer.Option(
         "--ignore-sabbath",
+        rich_help_panel="Advanced",
         help=(
             "Run even while the Sabbath window (sub-doctrine 8.i) would rest this command. "
             "For this one command only: it is said on stderr when it applies, and nothing is "
@@ -276,7 +300,15 @@ def _build_spend_recorder(
 
 @app.command("new")
 def new_project(
-    name: str,
+    name: Annotated[
+        str,
+        typer.Argument(
+            metavar="NAME",
+            help="A name for the project, shown by `vibey projects`. It is a label: vibey "
+            "does not require it to be unique, and the project is identified by its id and "
+            "its checkout (--repo).",
+        ),
+    ],
     repo: Annotated[Path, typer.Option("--repo")] = Path("."),
     intake: Annotated[
         str | None,
@@ -285,11 +317,14 @@ def new_project(
             help="Initial issue/task text to seed the DESIGN ledger with",
         ),
     ] = None,
-    max_cycles: Annotated[int, typer.Option("--max-cycles", min=1)] = 10,
+    max_cycles: Annotated[
+        int, typer.Option("--max-cycles", rich_help_panel="Spending and turn limits", min=1)
+    ] = 10,
     max_cycle_dollars: Annotated[
         float | None,
         typer.Option(
             "--max-cycle-dollars",
+            rich_help_panel="Spending and turn limits",
             min=0.01,
             help="Cap engine spend per cycle; exceeding it parks a "
             "budget_exhausted gate instead of starting more sessions",
@@ -297,23 +332,30 @@ def new_project(
     ] = None,
     max_cycle_turns: Annotated[
         int | None,
-        typer.Option("--max-cycle-turns", min=1, help="Cap engine turns per cycle"),
+        typer.Option(
+            "--max-cycle-turns",
+            rich_help_panel="Spending and turn limits",
+            min=1,
+            help="Cap engine turns per cycle",
+        ),
     ] = None,
     skills_context_mode: Annotated[
         str,
         typer.Option(
             "--skills-context-mode",
+            rich_help_panel="Skills",
             help="Skills retrieval mode: off, shadow (measure only), or inject",
         ),
     ] = "off",
     skills_context_budget: Annotated[
         int,
-        typer.Option("--skills-context-budget", min=1_000, max=32_000),
+        typer.Option("--skills-context-budget", rich_help_panel="Skills", min=1_000, max=32_000),
     ] = 6_000,
     design_default_scope: Annotated[
         str | None,
         typer.Option(
             "--design-default-scope",
+            rich_help_panel="Advanced",
             help="Whose appetite a DESIGN question's default follows: narrowest (a question "
             "proposing an artefact the intake does not name defaults to No) or model. "
             "Overrides [design.interview] default_scope; unset keeps it (default narrowest)",
@@ -323,6 +365,7 @@ def new_project(
         Path | None,
         typer.Option(
             "--accept-spec-json",
+            rich_help_panel="Advanced",
             help=(
                 "Skip DESIGN: this reviewed spec JSON (the file `vibey design accept --spec-json` "
                 "takes) is the design. The project is created, the spec accepted with visual "
@@ -332,6 +375,13 @@ def new_project(
         ),
     ] = None,
     ignore_sabbath: IgnoreSabbath = False,
+    as_json: Annotated[
+        bool,
+        typer.Option(
+            "--json",
+            help="Print JSON instead: project_id, name and outcome, one document on stdout.",
+        ),
+    ] = False,
 ) -> None:
     """Create a project and enqueue its first DESIGN interview (or, with a spec, skip DESIGN)."""
     SABBATH.decline_if_resting("new", ignore=ignore_sabbath)
@@ -419,11 +469,42 @@ def new_project(
 
     with guard():
         project_id, outcome = asyncio.run(create())
+    if as_json:
+        typer.echo(
+            json.dumps({"project_id": project_id, "name": name, "outcome": outcome}, sort_keys=True)
+        )
+        return
     typer.echo(f"project {project_id}\n{outcome}")
 
 
 app.command("serve")(serve_command)
 app.add_typer(hub_app, name="hub")
+
+
+EXPLAIN = ErrorExplainer()
+
+
+@app.command("explain")
+def explain(
+    code: Annotated[
+        str | None,
+        typer.Argument(help="An error code such as E0007, as printed under an `Error:` line."),
+    ] = None,
+    list_all: Annotated[
+        bool, typer.Option("--list", help="Print every code and its title instead.")
+    ] = False,
+) -> None:
+    """Explain an error code: what caused it and what to do about it. Needs no database."""
+    if list_all:
+        typer.echo(EXPLAIN.listing())
+        return
+    if code is None:
+        typer.echo("Error: give a code, such as `vibey explain E0001`, or use --list.", err=True)
+        raise typer.Exit(code=EXIT_USAGE)
+    status, text = EXPLAIN.explain(code)
+    typer.echo(text, err=status != 0)
+    if status:
+        raise typer.Exit(code=status)
 
 
 @app.command("sabbath")
@@ -466,6 +547,7 @@ def list_gates(
         bool,
         typer.Option(
             "--remind",
+            rich_help_panel="Reminders",
             help="Send the notices now due instead: a raise notice for any gate with none "
             "on record, else each gate's next reminder on its project's schedule. Every "
             "notice is recorded as delivered or undeliverable. What an idle worker runs; "
@@ -476,6 +558,7 @@ def list_gates(
         bool,
         typer.Option(
             "--dry-run",
+            rich_help_panel="Reminders",
             help="With --remind: list the notices that are due, and send and record nothing.",
         ),
     ] = False,
@@ -551,16 +634,7 @@ async def _passwordless_reach_section() -> bool:
 
 def _postgres_status_line(status: PostgresStatus) -> str:
     """Render the local database check in the same compact style as engine doctor."""
-    if not status.installed:
-        state = "NOT INSTALLED"
-    elif not status.supported:
-        state = "UNSUPPORTED"
-    elif not status.running:
-        state = "NOT READY"
-    else:
-        state = "READY"
-    version = f"v{status.version}" if status.version is not None else "v?"
-    return f"postgresql      {state:<14} {version:<8} {status.detail}"
+    return DoctorFormat.postgres_line(status)
 
 
 def _parse_question_answers(items: tuple[str, ...]) -> dict[str, object]:
@@ -575,8 +649,20 @@ def _parse_question_answers(items: tuple[str, ...]) -> dict[str, object]:
 
 @app.command("answer")
 def answer(
-    gate_id: UUID,
-    answers: Annotated[list[str] | None, typer.Argument()] = None,
+    gate_id: Annotated[
+        UUID,
+        typer.Argument(
+            metavar="GATE_ID",
+            help="The gate to answer: the id `vibey gates` prints beside each open gate.",
+        ),
+    ],
+    answers: Annotated[
+        list[str] | None,
+        typer.Argument(
+            metavar="[QUESTION_ID=ANSWER]...",
+            help="Answers to an interview gate's questions, one QUESTION_ID=ANSWER each.",
+        ),
+    ] = None,
     choice: Annotated[
         str | None,
         typer.Option("--choice", help='Answer a choice gate: sends {"choice": VALUE}'),
@@ -587,7 +673,9 @@ def answer(
     ] = None,
     raw: Annotated[
         str | None,
-        typer.Option("--raw", help="Answer with an arbitrary JSON object"),
+        typer.Option(
+            "--raw", rich_help_panel="Advanced", help="Answer with an arbitrary JSON object"
+        ),
     ] = None,
     defaults: Annotated[
         bool,
@@ -601,6 +689,7 @@ def answer(
         str | None,
         typer.Option(
             "--by",
+            rich_help_panel="Advanced",
             help="The name this answer is recorded under, for a tool that runs the command "
             "(the VS Code extension says vibey-vscode). Defaults to the account running it. "
             "A label for the record, not a permission: the account is recorded beside it.",
@@ -610,6 +699,7 @@ def answer(
         str | None,
         typer.Option(
             "--request-id",
+            rich_help_panel="Advanced",
             help="Name this request so a retry is safe: the same id with the same answer "
             "is a no-op once it has landed. Without one, every run is a new request, and "
             "a gate already answered refuses it.",
@@ -912,6 +1002,15 @@ def waive_visual(project_id: UUID) -> None:
     typer.echo(f"waived visual design for {project_id}; entered {phase.value}")
 
 
+def _on_a_terminal() -> bool:
+    """Whether a person is at this terminal: input and output are both one.
+
+    Module-level, beside `watch` (its one caller), as a seam: the test runner's streams are
+    never a terminal, and a test that wants either answer substitutes this by name (a method
+    on a class would only add an object to build for one line)."""
+    return sys.stdin.isatty() and sys.stdout.isatty()
+
+
 @app.command("watch")
 def watch_dashboard(
     project_id: Annotated[UUID | None, typer.Argument(help="Optional project ID")] = None,
@@ -920,7 +1019,23 @@ def watch_dashboard(
     ] = False,
     speed: Annotated[float, typer.Option("--speed", help="Playback speed multiplier")] = 1.0,
 ) -> None:
-    """Live dashboard monitoring current phase, queue, circuits, worktrees, and ledger tail."""
+    """Live dashboard monitoring current phase, queue, circuits, worktrees, and ledger tail.
+
+    Needs a terminal. Piped or redirected it prints the one snapshot `vibey status` prints
+    and exits, so a script or an agent gets text, not a screen takeover."""
+    if not _on_a_terminal():
+        if replay:
+            typer.echo(
+                "--replay plays the ledger back on a terminal screen; run it in one.", err=True
+            )
+            raise typer.Exit(EXIT_USAGE)
+        typer.echo(
+            "not a terminal, so this prints one snapshot instead of the live dashboard; "
+            "`vibey status --json` is the machine form.",
+            err=True,
+        )
+        status(project_id, as_json=False)
+        return
     from vibey.infrastructure.db.engine_health_repository import PostgresEngineHealthRepository
     from vibey.tui.dashboard import (
         DashboardState,
@@ -992,10 +1107,22 @@ def recover(
         typer.Option(
             "--stop-workers",
             help=(
-                "First stop every `vibey worker` this user is running, and what each started: "
-                "SIGTERM, then SIGKILL after --grace. A live worker holds its leases, so the "
-                "jobs are only reset once none is left. The processes are listed first."
+                "First stop the `vibey worker` processes this user is running, and what each "
+                "started: SIGTERM, then SIGKILL after --grace. With --project, only that "
+                "project's workers (`vibey worker --project ID`); a worker that serves every "
+                "project is left running and named, and the jobs are then not reset, because "
+                "it may hold one (add --include-shared to stop it too). A live worker holds its "
+                "leases, so the jobs are only reset once none is left. The processes are "
+                "listed first."
             ),
+        ),
+    ] = False,
+    include_shared: Annotated[
+        bool,
+        typer.Option(
+            "--include-shared",
+            help="With --project and --stop-workers: also stop the workers that serve every "
+            "project (--all-projects) or none in particular.",
         ),
     ] = False,
     grace: Annotated[
@@ -1028,7 +1155,12 @@ def recover(
             raise typer.Exit(1)
 
         if stop_workers_first and not stop_workers(
-            WorkerStopper(), grace_seconds=grace, dry_run=dry_run
+            WorkerStopper(),
+            grace_seconds=grace,
+            dry_run=dry_run,
+            project_id=None if all_projects or project_id is None else str(project_id),
+            include_shared=include_shared,
+            shared_blocks=True,
         ):
             raise typer.Exit(1)
 
@@ -1088,7 +1220,7 @@ def retry(
         bool,
         typer.Option(
             "--keep-workers",
-            help="Do not stop this user's running workers first.",
+            help="Do not stop this project's running workers first. Workers that serve every project are never stopped by retry.",
         ),
     ] = False,
     start_worker: Annotated[
@@ -1200,40 +1332,19 @@ def status(
 @app.command("engines")
 def engines(
     project_id: Annotated[UUID | None, typer.Argument(help="Optional project ID")] = None,
+    as_json: Annotated[
+        bool,
+        typer.Option(
+            "--json",
+            help='Print JSON instead: {"project_id": ..., "engines": [...]}, the same '
+            "per-engine facts `vibey status --json` carries under `circuits`.",
+        ),
+    ] = False,
+    traceback: RawErrors = False,
 ) -> None:
     """Show engine health, circuit breakers, and selection metrics."""
-    from vibey.infrastructure.db.engine_health_repository import PostgresEngineHealthRepository
-
-    async def list_engines() -> None:
-        async with build_app() as resources:
-            target_id = project_id
-            if target_id is None:
-                latest = await resources.projects.get_latest()
-                if latest is None:
-                    typer.echo("no projects found; create one with `vibey new` first")
-                    raise typer.Exit(1)
-                target_id = latest.project_id
-
-            health_repo = PostgresEngineHealthRepository(resources.ledger._pool)
-            records = await health_repo.list_for_project(target_id)
-            if not records:
-                typer.echo("no engines recorded for project")
-                return
-
-            header = (
-                f"{'ENGINE':<12} {'VERSION':<10} {'CIRCUIT':<10} "
-                f"{'FAILS':<6} {'SELECTED':<10} {'COST':<8}"
-            )
-            typer.echo(header)
-            typer.echo("-" * 60)
-            for r in records:
-                circuit_str = r.circuit.value if hasattr(r.circuit, "value") else str(r.circuit)
-                typer.echo(
-                    f"{r.engine_id:<12} {r.version or '-':<10} {circuit_str:<10} "
-                    f"{r.consecutive_fail:<6} {r.selected_count:<10} ${r.cost_usd_cycle:<7.2f}"
-                )
-
-    asyncio.run(list_engines())
+    with guarded(traceback=traceback):
+        asyncio.run(ENGINES.run(project_id, as_json=as_json))
 
 
 @app.command("loops")
@@ -1256,62 +1367,40 @@ def loops(
         LOOPS.run(as_json=as_json)
 
 
+@app.command("models")
+def models(
+    as_json: Annotated[
+        bool,
+        typer.Option("--json", help="Print the same facts as JSON, for a program."),
+    ] = False,
+) -> None:
+    """List the local model families and what the Ollama here says each model can do.
+
+    The families need no network. The installed models come from the Ollama at
+    VIBEY_OLLAMA_URL, with the capabilities Ollama itself reports; no Ollama is reported,
+    not fatal.
+    """
+    with guard():
+        MODELS.run(as_json=as_json)
+
+
 @app.command("cost")
 def cost(
     project_id: Annotated[UUID | None, typer.Argument(help="Optional project ID")] = None,
+    as_json: Annotated[
+        bool,
+        typer.Option(
+            "--json",
+            help="Print JSON instead: the caps, the cycle's spend and whether a cap is "
+            "reached (as `vibey budget show --json` has them), and each engine's BUILD spend "
+            "across all cycles.",
+        ),
+    ] = False,
+    traceback: RawErrors = False,
 ) -> None:
     """Show the cycle's spend against the caps the budget brake enforces."""
-    from vibey.infrastructure.db.engine_health_repository import PostgresEngineHealthRepository
-
-    async def show_cost() -> None:
-        async with build_app() as resources:
-            target_id = project_id
-            if target_id is None:
-                latest = await resources.projects.get_latest()
-                if latest is None:
-                    typer.echo("no projects found; create one with `vibey new` first")
-                    raise typer.Exit(1)
-                project = latest
-            else:
-                proj = await resources.projects.get(target_id)
-                if proj is None:
-                    typer.echo(f"unknown project {target_id}")
-                    raise typer.Exit(1)
-                project = proj
-
-            # The brake's own numbers, not a second opinion (issue #210): the
-            # caps through the one parser the worker uses, and the spend from
-            # the ledger sum the worker checks before every BUILD session --
-            # which also carries DESIGN's spend, unlike engine_health. Read
-            # through the one budget reader `vibey budget` shows, too.
-            budget = (await resources.project_budgets.show(project.project_id)).budget
-            max_dollars, max_turns = budget.max_dollars, budget.max_turns
-            dollar_cap = f"${max_dollars:.2f}" if max_dollars is not None else "none (uncapped)"
-            turn_cap = str(max_turns) if max_turns is not None else "none"
-
-            typer.echo(f"Project: {project.name} (Cycle {project.cycle})")
-            typer.echo(
-                f"Cycle spend:      ${budget.dollars_spent:.2f} ({budget.turns_spent} turns)"
-            )
-            typer.echo(f"Cycle dollar cap: {dollar_cap}")
-            typer.echo(f"Cycle turn cap:   {turn_cap}")
-            if budget.any_exhausted:
-                typer.echo("Cap reached: the next BUILD session parks a budget_exhausted gate.")
-
-            # Per engine, from engine_health. Its cost column is each engine's
-            # metered BUILD-session spend (issue #209), which accumulates across
-            # cycles -- nothing resets it -- so it is labelled as such rather
-            # than as this cycle's, and it leaves DESIGN out. The count is how
-            # often rotation selected the engine, which is not a turn count.
-            health_repo = PostgresEngineHealthRepository(resources.ledger._pool)
-            records = await health_repo.list_for_project(project.project_id)
-            typer.echo("\nPer-engine (BUILD sessions, all cycles):")
-            for r in records:
-                typer.echo(
-                    f"  • {r.engine_id}: ${r.cost_usd_cycle:.2f} ({r.selected_count} selections)"
-                )
-
-    asyncio.run(show_cost())
+    with guarded(traceback=traceback):
+        asyncio.run(COST.run(project_id, as_json=as_json))
 
 
 @ledger_app.callback(invoke_without_command=True)
@@ -1328,6 +1417,14 @@ def ledger_show(
     limit: Annotated[int, typer.Option("--limit", "-n", min=1)] = 50,
     phase: Annotated[str | None, typer.Option("--phase")] = None,
     kind: Annotated[str | None, typer.Option("--kind")] = None,
+    as_json: Annotated[
+        bool,
+        typer.Option(
+            "--json",
+            help='Print JSON instead: {"project_id": ..., "events": [...]}, oldest first, '
+            "every field of each event (the shape `vibey ledger search --json` uses).",
+        ),
+    ] = False,
 ) -> None:
     """Show the append-only event ledger history."""
     # `--kind` reads a label the way `ledger search --kind` does, from the same
@@ -1349,7 +1446,7 @@ def ledger_show(
             if target_id is None:
                 latest = await resources.projects.get_latest()
                 if latest is None:
-                    typer.echo("no projects found; create one with `vibey new` first")
+                    typer.echo("no projects found; create one with `vibey new` first", err=as_json)
                     raise typer.Exit(1)
                 target_id = latest.project_id
 
@@ -1367,6 +1464,9 @@ def ledger_show(
                 events = tuple(e for e in events if e.kind == wanted)
 
             displayed = events[-limit:] if len(events) > limit else events
+            if as_json:
+                typer.echo(PRESENTER.events_json(target_id, displayed))
+                return
             for e in displayed:
                 ts = e.produced_at.strftime("%Y-%m-%d %H:%M:%S")
                 eng = f" [{e.engine_id.value}]" if e.engine_id else ""
@@ -1617,17 +1717,23 @@ def doctor(
         bool,
         typer.Option(
             "--record",
+            rich_help_panel="Recording",
             help="Persist preflight (and conformance, with --conformance) to engine_health",
         ),
     ] = False,
     record_project: Annotated[
         UUID | None,
-        typer.Option("--project", help="Project to record health for (default: latest)"),
+        typer.Option(
+            "--project",
+            rich_help_panel="Recording",
+            help="Project to record health for (default: latest)",
+        ),
     ] = None,
     cluster: Annotated[
         bool,
         typer.Option(
             "--cluster",
+            rich_help_panel="In-cluster preflight",
             help="In-cluster preflight instead: DSN, workspace, secrets, database, migrations",
         ),
     ] = False,
@@ -1635,6 +1741,7 @@ def doctor(
         str | None,
         typer.Option(
             "--engines",
+            rich_help_panel="In-cluster preflight",
             help="With --cluster: the worker's --engines allow-list (chart worker.engines); "
             "engine-auth requires exactly these",
         ),
@@ -1643,6 +1750,7 @@ def doctor(
         str | None,
         typer.Option(
             "--provider",
+            rich_help_panel="In-cluster preflight",
             help="With --cluster: the worker's --provider (chart worker.provider)",
         ),
     ] = None,
@@ -1657,13 +1765,25 @@ def doctor(
         bool,
         typer.Option(
             "--sovereign-fit",
+            rich_help_panel="Capacity probe",
             help="Run and persist the portable GPT-OSS capacity probe",
         ),
     ] = False,
     fit_output: Annotated[
         Path | None,
-        typer.Option("--fit-output", help="Fit JSON path (default: local state directory)"),
+        typer.Option(
+            "--fit-output",
+            rich_help_panel="Capacity probe",
+            help="Fit JSON path (default: local state directory)",
+        ),
     ] = None,
+    as_json: Annotated[
+        bool,
+        typer.Option(
+            "--json",
+            help="Print one JSON document instead of lines; changes the output, not what runs",
+        ),
+    ] = False,
 ) -> None:
     """Check local PostgreSQL, engine health, auth status, and conformance."""
     from vibey.application.conformance import DEFAULT_RUN_DIR_POLL_SECONDS, run_conformance
@@ -1672,8 +1792,11 @@ def doctor(
     from vibey.infrastructure.engines.descriptors import DEFAULT_DESCRIPTORS
     from vibey.infrastructure.engines.local_engines import LocalEndpointEnvironment
 
+    out: DoctorOutputInterface = (
+        JsonDoctorOutput(cluster=cluster) if as_json else TextDoctorOutput()
+    )
     if cluster and install_postgres:
-        typer.echo("--install-postgres applies only to the local doctor")
+        out.error("--install-postgres applies only to the local doctor")
         raise typer.Exit(EXIT_USAGE)
 
     run_dir_poll_seconds = DEFAULT_RUN_DIR_POLL_SECONDS
@@ -1681,7 +1804,7 @@ def doctor(
         try:
             declared_poll_seconds = conformance_poll_seconds(os.environ)
         except ValueError as exc:
-            typer.echo(str(exc))
+            out.error(str(exc))
             raise typer.Exit(EXIT_USAGE) from exc
         if declared_poll_seconds is not None:
             run_dir_poll_seconds = declared_poll_seconds
@@ -1707,7 +1830,7 @@ def doctor(
         # gives each local runner the endpoint the worker would, so doctor probes what runs.
         local = _local_engines_from_toml()
         for notice in local.notices:
-            typer.echo(f"note: {notice}")
+            out.note(notice)
         endpoint = LocalEndpointEnvironment(os.environ)
         if engine is not None:
             from vibey.domain.engine import RETIRED_ENGINES, EngineId
@@ -1715,7 +1838,7 @@ def doctor(
             try:
                 eids = [EngineId(engine)]
             except ValueError as exc:
-                typer.echo(f"Unknown engine: {engine}{RETIRED_ENGINES.get(engine, '')}")
+                out.error(f"Unknown engine: {engine}{RETIRED_ENGINES.get(engine, '')}")
                 raise typer.Exit(1) from exc
         else:
             eids = [d.engine_id for d in DEFAULT_DESCRIPTORS] + list(local.enabled_engines)
@@ -1744,11 +1867,11 @@ def doctor(
                 check=False,
             )
             if probe_result.returncode == 0:
-                typer.echo(f"sovereign fit PASS — recorded {output}")
+                out.say(f"sovereign fit PASS — recorded {output}")
             else:
-                typer.echo("sovereign fit FAIL — no measured capacity fit recorded")
+                out.say("sovereign fit FAIL — no measured capacity fit recorded")
                 if probe_result.stderr.strip():
-                    typer.echo(f"  detail: {probe_result.stderr.strip()}")
+                    out.say(f"  detail: {probe_result.stderr.strip()}")
                 all_ok = False
 
         record_project_id: UUID | None = None
@@ -1765,13 +1888,13 @@ def doctor(
                 else:
                     target = await resources.projects.get_latest()
             if target is None:
-                typer.echo("no projects found; create one with `vibey new` first")
+                out.error("no projects found; create one with `vibey new` first")
                 raise typer.Exit(1)
             record_project_id = target.project_id
             try:
                 engine_environment = EngineEnvironmentPolicy.from_config(target.config)
             except ValueError as exc:
-                typer.echo(f"project {record_project_id}: {exc}")
+                out.error(f"project {record_project_id}: {exc}")
                 raise typer.Exit(EXIT_USAGE) from exc
 
         for eid in eids:
@@ -1779,13 +1902,12 @@ def doctor(
             desc = adapter.descriptor
             preflight = await adapter.preflight()
 
-            status = "installed" if preflight.installed else "NOT INSTALLED"
-            version = preflight.version or "?"
-            auth = "auth OK" if preflight.auth_ok else "auth FAIL"
-            typer.echo(f"{desc.engine_id.value:<16} {status:<14} v{version:<10} {auth}")
+            out.engine(
+                desc.engine_id.value, preflight.installed, preflight.version, preflight.auth_ok
+            )
 
             if preflight.detail:
-                typer.echo(f"  detail: {preflight.detail}")
+                out.engine_detail(preflight.detail)
 
             if conformance and preflight.installed:
                 from vibey.domain.capacity import CreditsExhausted
@@ -1806,9 +1928,7 @@ def doctor(
                     run_dir_poll_seconds=run_dir_poll_seconds,
                 )
                 for check in report.checks:
-                    mark = "PASS" if check.ok else "FAIL"
-                    detail = f" — {check.detail}" if check.detail else ""
-                    typer.echo(f"  {mark} {check.name}{detail}")
+                    out.conformance(check.name, check.ok, check.detail)
                 if not report.ok:
                     all_ok = False
 
@@ -1817,54 +1937,52 @@ def doctor(
                         await resources.engine_health_service.update_from_preflight(
                             record_project_id, desc.engine_id, preflight, conformance_ok=report.ok
                         )
-                    typer.echo(f"  recorded engine_health for {desc.engine_id.value}")
+                    out.recorded(desc.engine_id.value, "engine_health")
             elif record_project_id is not None:
                 async with build_app() as resources:
                     await resources.engine_health_service.record_preflight(
                         record_project_id, desc.engine_id, preflight
                     )
-                typer.echo(f"  recorded preflight for {desc.engine_id.value}")
+                out.recorded(desc.engine_id.value, "preflight")
 
-        typer.echo(_postgres_status_line(local_postgres_status))
+        out.postgres(local_postgres_status)
         if install_postgres and not local_postgres_status.ready:
-            typer.echo(f"  detail: {local_postgres_status.detail}")
+            out.postgres_detail(local_postgres_status.detail)
+            out.finish(False)
             raise typer.Exit(1)
         # The database section. ADR-0055: whenever there is a database to ask, ask
         # whether the application's role could rewrite the ledger -- a single-DSN install
         # fails here until the roles are split, so the step cannot be forgotten silently
         # (12.e). Beside it: keeping VIBEY_PG_URL out of every model-driven process
         # protects nothing if the database lets the worker's OS user in without it.
-        database_ok = await _database_security_section()
+        database_ok = await out.captured(_database_security_section)
         # TODO: `db-passwordless` (below) overlaps ADR-0055's `local-auth` (above); both
         # now FAIL (sub-doctrine 10.j, ADR-0061); reviewers to decide whether to consolidate.
-        reach_ok = await _passwordless_reach_section()
+        reach_ok = await out.captured(_passwordless_reach_section)
         # A hub listening where vibey.toml does not declare it may is a FAIL (ADR-0067).
-        hub_ok = SERVE.exposure_line()
+        hub_ok = out.captured_sync(SERVE.exposure_line)
         # A model Ollama holds at a context far above the one vibey asks for is reloaded by
         # the first request, which is how a warm-up becomes a timeout. Said as a WARN, never
         # a failure, and only for a host that runs a local engine at all.
         if local.any_enabled:
-            typer.echo(await OllamaResidency().line(os.environ))
+            out.say(await OllamaResidency().line(os.environ))
         # Sub-doctrine 8.i: the window, the zone and where the location came from (10.f).
         # A host no source could place is a FAIL -- the fallback times then rule.
         sabbath_lines, sabbath_ok = SABBATH.doctor_lines()
-        for line in sabbath_lines:
-            typer.echo(line)
+        out.lines(sabbath_lines)
         # Gates waiting on a person nobody will tell: reported, not failed -- the default
         # is notifications off, and the gates are still listed by `vibey gates`.
-        typer.echo(await GATE_NOTICE_DOCTOR.line())
+        out.say(await GATE_NOTICE_DOCTOR.line())
         # #1189: whether the worker and the delivery bridge are kept running. A missing
         # supervisor is a WARN, a FAIL with `[supervisor] required = true` (12.e).
         supervisor_lines, supervisor_ok = SUPERVISOR.doctor_lines()
-        for line in supervisor_lines:
-            typer.echo(line)
+        out.lines(supervisor_lines)
         # The machine itself: the newest weekly host-health record, its age and when the
         # forecast says it needs replacing. Missing or stale is a WARN, a FAIL with
         # `[host_health] required = true` (12.e).
         health_lines, health_ok = HOST_HEALTH.doctor_lines()
-        for line in health_lines:
-            typer.echo(line)
-        if (
+        out.lines(health_lines)
+        failed = (
             (conformance and not all_ok)
             or not database_ok
             or not reach_ok
@@ -1872,7 +1990,9 @@ def doctor(
             or not sabbath_ok
             or not supervisor_ok
             or not health_ok
-        ):
+        )
+        out.finish(not failed)
+        if failed:
             raise typer.Exit(1)
 
     async def run_cluster_doctor() -> None:
@@ -1895,7 +2015,7 @@ def doctor(
                 engines=worker_engines, provider=worker_provider, which=shutil.which
             )
         except ValueError as exc:
-            typer.echo(f"Invalid worker flag: {exc}")
+            out.error(f"Invalid worker flag: {exc}")
             raise typer.Exit(EXIT_USAGE) from exc
         preflight: ClusterPreflightInterface = ClusterPreflight(engine_auth=engine_auth)
         checks = await preflight.run(
@@ -1906,15 +2026,17 @@ def doctor(
             uid=os.getuid(),
         )
         for check in checks:
-            typer.echo(f"{check.mark} {check.name:<20} {check.detail}")
-        if not all_ok(checks):
+            out.cluster_check(check.mark, check.name, check.detail)
+        passed = all_ok(checks)
+        out.finish(passed)
+        if not passed:
             raise typer.Exit(1)
 
     if cluster:
         asyncio.run(run_cluster_doctor())
         return
     if worker_engines is not None or worker_provider is not None:
-        typer.echo("--engines and --provider describe the worker; they apply only with --cluster")
+        out.error("--engines and --provider describe the worker; they apply only with --cluster")
         raise typer.Exit(EXIT_USAGE)
 
     asyncio.run(run_doctor())
@@ -2774,6 +2896,10 @@ def worker(
 
     with guard():
         asyncio.run(run_worker())
+
+
+HelpLayout().apply(app)
+CommandExamples().apply(app)
 
 
 def run(argv: Sequence[str] | None = None) -> None:

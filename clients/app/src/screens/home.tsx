@@ -1,11 +1,31 @@
 // Made with ❤️ by [Vibey](https://the-vibey-project.github.io/vibey/), Developed by [Adam Matthew Steinberger](https://vibewithadam.matthewsteinberger.com/) ([@adammatthewsteinberger](https://github.com/adammatthewsteinberger/)).
-import { Link } from 'expo-router';
+import { Link, router } from 'expo-router';
+import { useState } from 'react';
 import { View } from 'react-native';
 import { Presenters } from '../core';
+import type { ProjectCard } from '../core';
 import { AtomMark } from '../ui/atom-mark';
-import { Card, Label, Loaded, Pill, Screen, useHub } from '../ui/kit';
+import { shareProject } from '../ui/share';
+import { Button, Card, HubStatusCard, Label, Loaded, Pill, Screen, useHub } from '../ui/kit';
+import { ProjectActions } from './project-actions';
 
 const present = new Presenters();
+
+const SHARED: Readonly<Record<string, string>> = {
+  copied: 'Copied to the clipboard.',
+  failed: 'Could not share it.',
+};
+
+/** Shares a project's name, phase and cycle, and nothing else. */
+function ShareProject(props: { readonly card: ProjectCard }) {
+  const [note, setNote] = useState('');
+  return (
+    <>
+      <Button label="Share" kind="quiet" onPress={() => void shareProject(props.card).then((outcome) => setNote(SHARED[outcome] ?? ''))} />
+      {note === '' ? null : <Label tone="tertiary">{note}</Label>}
+    </>
+  );
+}
 
 export function HomeScreen() {
   const { result, reload } = useHub((client) => client.projects());
@@ -14,6 +34,8 @@ export function HomeScreen() {
       <View style={{ alignItems: 'center', marginVertical: 8 }}>
         <AtomMark size={112} />
       </View>
+      <HubStatusCard />
+      <Button label="Start a project" onPress={() => router.push('/start')} />
       <Loaded result={result}>
         {(projects) => {
           const summary = present.home(projects);
@@ -30,9 +52,11 @@ export function HomeScreen() {
                       <Label tone="secondary">{`${card.openGates} open gate${card.openGates === 1 ? '' : 's'} →`}</Label>
                     </Link>
                   ) : null}
+                  <ShareProject card={card} />
+                  <ProjectActions card={card} onDone={reload} />
                 </Card>
               ))}
-              {summary.cards.length === 0 ? <Label tone="tertiary">No projects yet. Start one with `vibey run` on the host.</Label> : null}
+              {summary.emptyNote === '' ? null : <Label tone="tertiary">{summary.emptyNote}</Label>}
             </>
           );
         }}
