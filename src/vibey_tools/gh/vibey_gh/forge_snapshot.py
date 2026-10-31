@@ -32,7 +32,7 @@ import hashlib
 import json
 import os
 import re
-from collections.abc import Callable, Iterable, Mapping, Sequence
+from collections.abc import Callable, Iterable, Iterator, Mapping, Sequence
 from dataclasses import dataclass, field
 from datetime import UTC, datetime, timedelta
 from functools import partial
@@ -40,27 +40,42 @@ from pathlib import Path
 from typing import Any
 
 from vibey_gh.interfaces.forge_snapshot_interface import (
+    STATE_BEFORE_FIRST,
+    STATE_FOUND,
+    STATE_UNKNOWN,
     AppendOutcome,
+    Break,
     ChainHead,
+    ForgeInventoryInterface,
     ForgeRead,
     ForgeReaderInterface,
     ForgeSnapshotInterface,
     Observation,
+    SnapshotQueryInterface,
     SnapshotStoreInterface,
+    SnapshotVerifierInterface,
+    StateAsOf,
 )
 from vibey_gh.interfaces.gh_transport_interface import GhTransportInterface
 
 __all__ = [
+    "BREAK_KINDS",
     "CLASSES",
+    "CLASS_ENTRY_FIELDS",
+    "ENVELOPE_FIELDS",
     "EXCLUDED",
+    "MANIFEST_FIELDS",
     "MANIFEST_NAME",
     "MANIFEST_SCHEMA",
     "RECORD_SCHEMA",
     "ForgeClass",
     "ForgeSnapshot",
+    "ForgeStateQuery",
     "GithubForgeReader",
     "JsonlSnapshotStore",
+    "RecordChecker",
     "SnapshotStoreError",
+    "SnapshotVerifier",
     "canonical_bytes",
     "digest",
     "moment",
@@ -69,6 +84,48 @@ __all__ = [
 
 RECORD_SCHEMA = "vibey.forge-record/1"
 MANIFEST_SCHEMA = "vibey.forge-manifest/1"
+# The shapes every capture writes, whichever forge it read: the keys of one record, of the
+# manifest, and of one class entry in the manifest. Declared once so a test can hold every
+# forge's capture to the same list (#1572); `forge` is the only envelope value that names one.
+ENVELOPE_FIELDS = (
+    "schema",
+    "forge",
+    "repository",
+    "class",
+    "native_class",
+    "native_id",
+    "captured_at",
+    "payload",
+    "payload_sha256",
+    "prev",
+    "sha256",
+)
+MANIFEST_FIELDS = (
+    "schema",
+    "record_schema",
+    "forge",
+    "repository",
+    "captured_at",
+    "since",
+    "clock_skew_seconds",
+    "complete",
+    "resume_since",
+    "classes",
+    "excluded",
+    "inventory",
+)
+CLASS_ENTRY_FIELDS = (
+    "native_class",
+    "status",
+    "problem",
+    "captured_at",
+    "observed",
+    "appended",
+    "unchanged",
+    "records",
+    "head",
+    "cursor",
+)
 MANIFEST_NAME = "manifest.json"
 RESUME = "resume"
 _REPOSITORY = re.compile(r"[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+")
@@ -171,6 +228,18 @@ EXCLUDED: tuple[tuple[str, str], ...] = (
     ("autolink", "Autolink references need administration permission."),
     ("deploy-key", "Deploy keys need administration permission."),
     ("custom-property", "Repository custom properties are set by the organisation."),
+    ("app-installation", "Which apps are installed on a repository is an account setting."),
+    ("attestation", "Build attestations are signed by the workflow that made them."),
+    ("codespace", "Codespaces and coding agents are per-user working environments."),
+    ("dependency-graph", "The dependency graph is derived from the files in the repository."),
+    ("dispatch", "A repository dispatch is a write-only trigger."),
+    ("import", "A source import is a migration job, not repository history."),
+    ("interaction-limit", "Interaction limits are a temporary moderation setting."),
+    ("mirror", "Mirror configuration holds credentials for another host."),
+    ("notification", "Notifications belong to the account reading them."),
+    ("repository-event", "The activity feed repeats events the artifact classes already hold."),
+    ("signing-key", "Signing keys are account material."),
+    ("time-tracking", "Tracked time is read one issue at a time."),
 )
 
 _NOT_SELECTED = "not selected for this capture; its file and its chain were left untouched"
@@ -178,6 +247,32 @@ _NOT_SELECTED = "not selected for this capture; its file and its chain were left
 
 class SnapshotStoreError(RuntimeError):
     """A snapshot directory holds something this store did not write, or did not finish."""
+
+
+# What `--verify` can find, in the order a person should read them. A record that fails its own
+# checks is reported with the line it is on; the rest are about a file, or the manifest, as a whole.
+BREAK_KINDS = (
+    "malformed",
+    "non-canonical",
+    "bad-seal",
+    "bad-payload",
+    "broken-link",
+    "head-mismatch",
+    "manifest-behind",
+    "missing-file",
+    "unlisted-file",
+    "manifest-unreadable",
+)
+
+# Why a line was refused, by the fault `RecordChecker` found. The store raises with these words and
+# `--verify` reports them, so the two say the same thing about the same line.
+_RECORD_FAULTS = {
+    "malformed": "is not a {schema} {forge_class} record",
+    "non-canonical": "is not in canonical form",
+    "bad-seal": "has an invalid sha256",
+    "bad-payload": "has an invalid payload_sha256",
+    "broken-link": "does not link to the preceding record",
+}
 
 
 def canonical_bytes(value: object) -> bytes:
@@ -426,6 +521,17 @@ class JsonlSnapshotStore(SnapshotStoreInterface):
         os.replace(partial_path, path)
         return path
 
+    def records(self, forge_class: str) -> Iterator[Mapping[str, Any]]:
+        path = self.path(forge_class)
+        if not path.is_file():
+            return
+        previous: str | None = None
+        with path.open("rb") as handle:
+            for number, line in enumerate(handle, start=1):
+                record = self._parse(path, number, line, forge_class, previous)
+                previous = record["sha256"]
+                yield record
+
     def _load(self, forge_class: str) -> _Chain:
         if forge_class in self._chains:
             return self._chains[forge_class]
@@ -453,6 +559,84 @@ class JsonlSnapshotStore(SnapshotStoreInterface):
         forge_class: str,
         previous: str | None,
     ) -> dict[str, Any]:
+        checker = RecordChecker(self._forge, self._repository, forge_class)
+        record, fault = checker.check(line, previous)
+        if record is None:
+            raise SnapshotStoreError(f"{path} line {number} {fault}")
+        return record
+
+
+class ForgeStateQuery(SnapshotQueryInterface):
+    """Answers "what did this object look like then?" from a snapshot's own records.
+
+    An object's state as of a moment is its latest record with a `captured_at` at or before
+    that moment; records are only appended, so an earlier state is followed, never lost. Moments
+    are compared as moments, not as strings, and equal ones resolve to the later line, because
+    file order is append order. Every record passes through the store's checks on the way, so a
+    tampered file is refused rather than answered from.
+    """
+
+    def __init__(self, store: SnapshotStoreInterface) -> None:
+        self._store = store
+
+    def state(self, forge_class: str, native_id: str, as_of: str) -> StateAsOf:
+        wanted = moment(as_of)
+        ForgeClass.named(forge_class)
+        recorded = False
+        best: Mapping[str, Any] | None = None
+        best_at: datetime | None = None
+        for record in self._store.records(forge_class):
+            if record["native_id"] != native_id:
+                continue
+            recorded = True
+            seen = moment(record["captured_at"])
+            if seen <= wanted and (best_at is None or seen >= best_at):
+                best, best_at = record, seen
+        manifest = self._store.manifest() or {}
+        last = manifest.get("captured_at")
+        if best is not None:
+            return StateAsOf(STATE_FOUND, native_id, best, last)
+        return StateAsOf(STATE_BEFORE_FIRST if recorded else STATE_UNKNOWN, native_id, None, last)
+
+    def issue(self, number: int, as_of: str) -> StateAsOf:
+        moment(as_of)
+        ids = {
+            record["native_id"]
+            for record in self._store.records("issue")
+            if record["payload"].get("number") == number
+        }
+        if len(ids) > 1:
+            raise SnapshotStoreError(
+                f"issue number {number} appears under several native ids: {', '.join(sorted(ids))}"
+            )
+        if not ids:
+            manifest = self._store.manifest() or {}
+            return StateAsOf(STATE_UNKNOWN, "", None, manifest.get("captured_at"))
+        return self.state("issue", ids.pop(), as_of)
+
+
+class RecordChecker:
+    """The five checks one chain line must pass, shared by the store and the verifier.
+
+    The store raises on the first failure so nothing is appended to a damaged chain; the
+    verifier reports it. They must never disagree about what a good line is, so there is one
+    implementation, and `fault` is the sentence both of them use.
+    """
+
+    def __init__(self, forge: str, repository: str, forge_class: str) -> None:
+        self._forge = forge
+        self._repository = repository
+        self._class = forge_class
+
+    def check(self, line: bytes, previous: str | None) -> tuple[dict[str, Any] | None, str]:
+        """The record and an empty string if `line` is sound, else None and why it is not."""
+        kind = self.kind(line, previous)
+        if kind is None:
+            return json.loads(line), ""
+        return None, _RECORD_FAULTS[kind].format(schema=RECORD_SCHEMA, forge_class=self._class)
+
+    def kind(self, line: bytes, previous: str | None) -> str | None:
+        """The member of `BREAK_KINDS` that names what is wrong with `line`, or None."""
         try:
             record = json.loads(line)
         except (UnicodeError, ValueError):
@@ -461,7 +645,7 @@ class JsonlSnapshotStore(SnapshotStoreInterface):
             "schema": RECORD_SCHEMA,
             "forge": self._forge,
             "repository": self._repository,
-            "class": forge_class,
+            "class": self._class,
         }
         if (
             not isinstance(record, dict)
@@ -479,21 +663,123 @@ class JsonlSnapshotStore(SnapshotStoreInterface):
             or not (record.get("prev") is None or isinstance(record.get("prev"), str))
             or "payload" not in record
         ):
-            raise SnapshotStoreError(
-                f"{path} line {number} is not a {RECORD_SCHEMA} {forge_class} record"
-            )
+            return "malformed"
         if canonical_bytes(record) != line.removesuffix(b"\n"):
-            raise SnapshotStoreError(f"{path} line {number} is not in canonical form")
-
-        sealed = record["sha256"]
+            return "non-canonical"
         body = {key: value for key, value in record.items() if key != "sha256"}
-        if digest(body) != sealed:
-            raise SnapshotStoreError(f"{path} line {number} has an invalid sha256")
+        if digest(body) != record["sha256"]:
+            return "bad-seal"
         if digest(record["payload"]) != record["payload_sha256"]:
-            raise SnapshotStoreError(f"{path} line {number} has an invalid payload_sha256")
+            return "bad-payload"
         if record["prev"] != previous:
-            raise SnapshotStoreError(f"{path} line {number} does not link to the preceding record")
-        return record
+            return "broken-link"
+        return None
+
+
+class SnapshotVerifier(SnapshotVerifierInterface):
+    """Re-derives every seal in a snapshot directory from its own bytes (#1570).
+
+    Needs no forge, no network and no credentials: the manifest names the forge and the
+    repository, each class file is walked with the same `RecordChecker` the store uses, and
+    each file's record count and head are compared to what the manifest says it wrote.
+    """
+
+    def __init__(self, root: Path) -> None:
+        self._root = root
+
+    def verify(self) -> tuple[Break, ...]:
+        manifest = self._manifest()
+        if isinstance(manifest, Break):
+            return (manifest,)
+        found: list[Break] = []
+        declared = manifest.get("classes")
+        entries: Mapping[str, Any] = declared if isinstance(declared, dict) else {}
+        names = [spec.name for spec in CLASSES]
+        for path in sorted(self._root.glob("*.jsonl")):
+            if path.stem not in entries:
+                found.append(
+                    Break(
+                        path.stem,
+                        None,
+                        "unlisted-file",
+                        f"{path.name} is not named by the manifest",
+                    )
+                )
+        for name in names:
+            entry = entries.get(name)
+            found.extend(self._class(manifest, name, entry if isinstance(entry, dict) else None))
+        return tuple(found)
+
+    def _manifest(self) -> Mapping[str, Any] | Break:
+        path = self._root / MANIFEST_NAME
+        try:
+            value = json.loads(path.read_text(encoding="utf-8"))
+        except (OSError, UnicodeError, ValueError) as error:
+            return Break("manifest", None, "manifest-unreadable", f"{path} cannot be read: {error}")
+        if (
+            not isinstance(value, dict)
+            or value.get("schema") != MANIFEST_SCHEMA
+            or not isinstance(value.get("forge"), str)
+            or not isinstance(value.get("repository"), str)
+        ):
+            return Break(
+                "manifest",
+                None,
+                "manifest-unreadable",
+                f"{path} is not a {MANIFEST_SCHEMA} manifest",
+            )
+        return value
+
+    def _class(
+        self, manifest: Mapping[str, Any], name: str, entry: Mapping[str, Any] | None
+    ) -> list[Break]:
+        path = self._root / f"{name}.jsonl"
+        recorded = entry.get("records") if entry is not None else 0
+        wanted = recorded if isinstance(recorded, int) else 0
+        if not path.is_file():
+            if wanted > 0:
+                return [
+                    Break(
+                        name,
+                        None,
+                        "missing-file",
+                        f"{path.name} is missing; the manifest records {wanted}",
+                    )
+                ]
+            return []
+        checker = RecordChecker(str(manifest["forge"]), str(manifest["repository"]), name)
+        previous: str | None = None
+        records = 0
+        with path.open("rb") as handle:
+            for number, line in enumerate(handle, start=1):
+                kind = checker.kind(line, previous)
+                if kind is not None:
+                    _, fault = checker.check(line, previous)
+                    return [Break(name, number, kind, f"{path.name} line {number} {fault}")]
+                previous = json.loads(line)["sha256"]
+                records += 1
+        if entry is None:  # already reported as unlisted
+            return []
+        if records > wanted:
+            return [
+                Break(
+                    name,
+                    None,
+                    "manifest-behind",
+                    f"{path.name} holds {records} records but the manifest records {wanted}",
+                )
+            ]
+        if records < wanted or previous != entry.get("head"):
+            return [
+                Break(
+                    name,
+                    None,
+                    "head-mismatch",
+                    f"{path.name} ends at record {records} with head {previous}; "
+                    f"the manifest records {wanted} ending at {entry.get('head')}",
+                )
+            ]
+        return []
 
 
 @dataclass
@@ -512,6 +798,7 @@ class ForgeSnapshot(ForgeSnapshotInterface):
         clock: Callable[[], datetime] | None = None,
         clock_skew: timedelta = timedelta(minutes=5),
         excluded: Sequence[tuple[str, str]] = EXCLUDED,
+        inventory: ForgeInventoryInterface | None = None,
     ) -> None:
         if clock_skew < timedelta(0):
             raise ValueError(f"clock_skew must not be negative: {clock_skew}")
@@ -520,6 +807,7 @@ class ForgeSnapshot(ForgeSnapshotInterface):
         self._clock = clock if clock is not None else partial(datetime.now, UTC)
         self._clock_skew = clock_skew
         self._excluded = tuple(excluded)
+        self._inventory = inventory
 
     def capture(
         self,
@@ -568,6 +856,7 @@ class ForgeSnapshot(ForgeSnapshotInterface):
                 "unchanged": outcome.unchanged,
             }
         cursors = [entries[spec.name]["cursor"] for spec in CLASSES if spec.cursor]
+        inventory = self._accounting()
         manifest: dict[str, Any] = {
             "schema": MANIFEST_SCHEMA,
             "record_schema": RECORD_SCHEMA,
@@ -576,7 +865,8 @@ class ForgeSnapshot(ForgeSnapshotInterface):
             "captured_at": started,
             "since": since,
             "clock_skew_seconds": int(self._clock_skew.total_seconds()),
-            "complete": all(entries[name]["status"] == "captured" for name in selected),
+            "complete": all(entries[name]["status"] == "captured" for name in selected)
+            and (inventory is None or inventory["unaccounted"] == []),
             "resume_since": (
                 min(cursors, key=moment) if all(cursor is not None for cursor in cursors) else None
             ),
@@ -587,9 +877,29 @@ class ForgeSnapshot(ForgeSnapshotInterface):
                 for spec in CLASSES
                 if spec.name not in selected
             ],
+            "inventory": inventory,
         }
         self._store.write_manifest(manifest)
         return manifest
+
+    def _accounting(self) -> dict[str, Any] | None:
+        """Hold every class the forge's API exposes to this capture's two lists (#1571).
+
+        `unaccounted` is the inventoried classes that are neither captured nor excluded; it is
+        `None`, not empty, for a forge nobody inventoried, because a list that was never made
+        cannot be said to be covered. Without an inventory there is nothing to say, and the
+        manifest says so with `None` rather than by leaving the claim out.
+        """
+        if self._inventory is None:
+            return None
+        forge = self._reader.forge
+        exposed = self._inventory.classes(forge)
+        homes = {spec.name for spec in CLASSES} | {name for name, _ in self._excluded}
+        return {
+            "sha256": self._inventory.sha256,
+            "verified": self._inventory.verified(forge),
+            "unaccounted": None if exposed is None else sorted(set(exposed) - homes),
+        }
 
     @staticmethod
     def _select(classes: Sequence[str] | None) -> frozenset[str]:

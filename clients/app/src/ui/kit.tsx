@@ -3,8 +3,10 @@
 import { useCallback, useEffect, useState } from 'react';
 import type { ReactNode } from 'react';
 import { ActivityIndicator, Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { HubError, HubStatus } from '../core';
 import type { HubClient, StatusRole } from '../core';
 import { useApp } from './app-state';
+import { copyText } from './clipboard';
 import { roleColour, useTheme } from './theme';
 
 const radius = 16;
@@ -90,11 +92,52 @@ export function Notice(props: { readonly children: ReactNode; readonly role?: St
   );
 }
 
-export type Load<T> = { readonly state: 'loading' } | { readonly state: 'ready'; readonly value: T } | { readonly state: 'failed'; readonly message: string };
+const STATUS = new HubStatus();
+
+/**
+ * What a phone says when the hub does not answer: the hub runs on another computer, so the
+ * way back is a command to run there (#1186). Nothing here starts or stops a hub.
+ */
+export function UnreachableCard() {
+  const { connection } = useApp();
+  const [copied, setCopied] = useState(false);
+  const view = STATUS.unreachable(connection?.baseUrl ?? 'the hub');
+  return (
+    <Card role="danger" testID="hub-unreachable">
+      <Label strong>{view.headline}</Label>
+      <Label tone="secondary">{view.body}</Label>
+      <Label tone="primary">{`On that computer, run:  ${view.command}`}</Label>
+      <Button label={view.copyLabel} kind="quiet" onPress={() => void copyText(view.command).then(setCopied)} />
+      {copied ? <Label tone="tertiary">Copied.</Label> : null}
+      {view.notes.map((note) => (
+        <Label key={note} tone="tertiary">{note}</Label>
+      ))}
+    </Card>
+  );
+}
+
+/** Reachable or not, the address, and since when: the phone's hub status. */
+export function HubStatusCard() {
+  const { connection, watch } = useApp();
+  if (connection === null) return null;
+  const line = STATUS.line(watch, connection.baseUrl, Date.now());
+  return (
+    <Card role={line.role} testID="hub-status">
+      <Label strong>The hub on your computer</Label>
+      <Pill role={line.role}>{line.label}</Pill>
+      <Label tone="secondary">{line.detail}</Label>
+    </Card>
+  );
+}
+
+export type Load<T> =
+  | { readonly state: 'loading' }
+  | { readonly state: 'ready'; readonly value: T }
+  | { readonly state: 'failed'; readonly message: string; readonly unreachable?: true };
 
 /** Loads from the hub now and every `everyMs` after (the hub has no live feed for devices yet). */
 export function useHub<T>(load: (client: HubClient) => Promise<T>, everyMs = 5000): { readonly result: Load<T>; readonly reload: () => void } {
-  const { client } = useApp();
+  const { client, recoveries } = useApp();
   const [result, setResult] = useState<Load<T>>({ state: 'loading' });
   const [tick, setTick] = useState(0);
   const reload = useCallback(() => setTick((value) => value + 1), []);
@@ -106,22 +149,32 @@ export function useHub<T>(load: (client: HubClient) => Promise<T>, everyMs = 500
     let live = true;
     load(client).then(
       (value) => live && setResult({ state: 'ready', value }),
-      (error: unknown) => live && setResult({ state: 'failed', message: error instanceof Error ? error.message : String(error) }),
+      (error: unknown) => {
+        if (!live) return;
+        const unreachable = error instanceof HubError && error.refusal === 'unreachable';
+        setResult({ state: 'failed', message: error instanceof Error ? error.message : String(error), ...(unreachable ? { unreachable: true as const } : {}) });
+        // A hub that does not answer is watched by the watch, which backs off and reloads this
+        // screen when it answers again; this screen only asks again at the slowest pace.
+        if (unreachable) {
+          if (timer !== undefined) clearTimeout(timer);
+          timer = setTimeout(reload, HubStatus.STEADY_MS);
+        }
+      },
     );
-    const timer = everyMs > 0 ? setTimeout(reload, everyMs) : undefined;
+    let timer: ReturnType<typeof setTimeout> | undefined = everyMs > 0 ? setTimeout(reload, everyMs) : undefined;
     return () => {
       live = false;
       if (timer !== undefined) clearTimeout(timer);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [client, tick]);
+  }, [client, tick, recoveries]);
   return { result, reload };
 }
 
 export function Loaded<T>(props: { readonly result: Load<T>; readonly children: (value: T) => ReactNode }) {
   const { colors } = useTheme();
-  if (props.result.state === 'loading') return <ActivityIndicator color={colors.accent.default} />;
-  if (props.result.state === 'failed') return <Notice role="danger">{props.result.message}</Notice>;
+  if (props.result.state === 'loading') return <ActivityIndicator accessibilityLabel="Loading" color={colors.accent.default} />;
+  if (props.result.state === 'failed') return props.result.unreachable === true ? <UnreachableCard /> : <Notice role="danger">{props.result.message}</Notice>;
   return <>{props.children(props.result.value)}</>;
 }
 

@@ -28,7 +28,9 @@ import pytest
 from vibey_gh import github_state
 from vibey_gh.cli import main
 from vibey_gh.forge_snapshot import (
+    BREAK_KINDS,
     CLASSES,
+    ENVELOPE_FIELDS,
     EXCLUDED,
     MANIFEST_NAME,
     MANIFEST_SCHEMA,
@@ -37,7 +39,9 @@ from vibey_gh.forge_snapshot import (
     ForgeSnapshot,
     GithubForgeReader,
     JsonlSnapshotStore,
+    RecordChecker,
     SnapshotStoreError,
+    SnapshotVerifier,
     canonical_bytes,
     digest,
     moment,
@@ -45,11 +49,14 @@ from vibey_gh.forge_snapshot import (
 )
 from vibey_gh.gh_transport import GhTransport
 from vibey_gh.interfaces.forge_snapshot_interface import (
+    Break,
+    BreakInterface,
     ChainHead,
     ForgeRead,
     ForgeReaderInterface,
     ForgeSnapshotInterface,
     SnapshotStoreInterface,
+    SnapshotVerifierInterface,
 )
 
 REPO = "acme/widgets"
@@ -1151,3 +1158,218 @@ def test_the_schema_document_names_every_class_and_every_exclusion():
         assert f"| `{name}` |" in text, f"docs/forge-snapshot.md does not name `{name}`"
     for schema in (RECORD_SCHEMA, MANIFEST_SCHEMA):
         assert f"`{schema}`" in text
+    # The envelope is one list on every forge (#1572); the document names each of its fields.
+    for field_name in ENVELOPE_FIELDS:
+        assert f"| `{field_name}` |" in text, f"docs/forge-snapshot.md does not name `{field_name}`"
+
+
+# -- --verify: a walk over a whole snapshot, reading nothing from the forge (#1570) -----------
+
+
+def resealed(record: dict[str, Any]) -> dict[str, Any]:
+    record.pop("sha256", None)
+    record["sha256"] = digest(record)
+    return record
+
+
+def write_lines(path: Path, records: list[dict[str, Any]]) -> None:
+    path.write_bytes(b"".join(canonical_bytes(item) + b"\n" for item in records))
+
+
+@pytest.fixture
+def captured(fake_gh, snap) -> Path:
+    """A full snapshot in which every class file holds at least three chained records."""
+    fake_gh.script(World.seeded().answers())
+    snapshot(snap).capture()
+    manifest = json.loads((snap / MANIFEST_NAME).read_text(encoding="utf-8"))
+    for name in NAMES:
+        path = snap / f"{name}.jsonl"
+        records = lines(path) if path.is_file() else []
+        while len(records) < 3:
+            template = records[-1] if records else None
+            if template is None:
+                template = {
+                    "schema": RECORD_SCHEMA,
+                    "forge": "github",
+                    "repository": REPO,
+                    "class": name,
+                    "native_class": name,
+                    "captured_at": "2026-01-01T00:00:00Z",
+                    "payload": {"id": 0},
+                    "payload_sha256": digest({"id": 0}),
+                    "prev": None,
+                }
+            payload = {"id": len(records) + 1000}
+            records.append(
+                resealed(
+                    {
+                        **template,
+                        "native_id": str(len(records) + 1000),
+                        "payload": payload,
+                        "payload_sha256": digest(payload),
+                        "prev": records[-1]["sha256"] if records else None,
+                    }
+                )
+            )
+        write_lines(path, records)
+        manifest["classes"][name]["records"] = len(records)
+        manifest["classes"][name]["head"] = records[-1]["sha256"]
+    (snap / MANIFEST_NAME).write_text(
+        json.dumps(manifest, indent=2, sort_keys=True), encoding="utf-8"
+    )
+    return snap
+
+
+def broken(root: Path) -> dict[str, Break]:
+    found = SnapshotVerifier(root).verify()
+    return {item.forge_class: item for item in found}
+
+
+def test_an_intact_snapshot_verifies_with_no_forge_and_exits_zero(captured, fake_gh, capsys):
+    fake_gh.forget()
+    assert SnapshotVerifier(captured).verify() == ()
+    assert isinstance(SnapshotVerifier(captured), SnapshotVerifierInterface)
+    assert main(["forge-snapshot", "--verify", str(captured)]) == 0
+    assert f"{captured} is intact" in capsys.readouterr().out
+    assert fake_gh.calls() == []
+
+
+@pytest.mark.parametrize("forge_class", NAMES)
+@pytest.mark.parametrize(
+    ("mode", "kind", "line"),
+    (
+        ("not-json", "malformed", 2),
+        ("whitespace", "non-canonical", 2),
+        ("seal", "bad-seal", 2),
+        ("edited", "bad-seal", 2),
+        ("edited-resealed", "bad-payload", 2),
+        ("removed-first", "broken-link", 1),
+        ("removed-middle", "broken-link", 2),
+        ("reordered", "broken-link", 1),
+        ("removed-last", "head-mismatch", None),
+        ("appended", "manifest-behind", None),
+        ("deleted", "missing-file", None),
+    ),
+)
+def test_every_failure_mode_is_named_for_every_class(captured, forge_class, mode, kind, line):
+    path = captured / f"{forge_class}.jsonl"
+    raw = path.read_bytes().splitlines(keepends=True)
+    records = lines(path)
+    if mode == "not-json":
+        raw[1] = b"not a record\n"
+    elif mode == "whitespace":
+        raw[1] = raw[1].removesuffix(b"\n") + b" \n"
+    elif mode == "seal":
+        records[1]["sha256"] = "0" * 64
+        raw[1] = canonical_bytes(records[1]) + b"\n"
+    elif mode == "edited":
+        records[1]["payload"] = {"id": "forged"}
+        raw[1] = canonical_bytes(records[1]) + b"\n"
+    elif mode == "edited-resealed":
+        records[1]["payload"] = {"id": "forged"}
+        raw[1] = canonical_bytes(resealed(records[1])) + b"\n"
+    elif mode == "removed-first":
+        raw = raw[1:]
+    elif mode == "removed-middle":
+        raw = [raw[0], raw[2]]
+    elif mode == "reordered":
+        raw = [raw[1], raw[0], raw[2]]
+    elif mode == "removed-last":
+        raw = raw[:-1]
+    elif mode == "appended":
+        extra = resealed({**records[-1], "prev": records[-1]["sha256"], "native_id": "late"})
+        raw.append(canonical_bytes(extra) + b"\n")
+    if mode == "deleted":
+        path.unlink()
+    else:
+        path.write_bytes(b"".join(raw))
+
+    found = broken(captured)
+    assert set(found) == {forge_class}
+    assert found[forge_class].kind == kind and found[forge_class].line == line
+    assert found[forge_class].kind in BREAK_KINDS
+    assert isinstance(found[forge_class], BreakInterface)
+    assert path.name in found[forge_class].detail
+
+
+def test_only_the_first_break_in_a_file_is_reported(captured):
+    path = captured / "issue.jsonl"
+    records = lines(path)
+    records[0]["sha256"] = "0" * 64
+    records[1]["sha256"] = "1" * 64
+    write_lines(path, records)
+    found = SnapshotVerifier(captured).verify()
+    assert [(item.forge_class, item.line) for item in found] == [("issue", 1)]
+
+
+def test_an_unlisted_class_file_is_named(captured):
+    (captured / "mystery.jsonl").write_text("{}\n", encoding="utf-8")
+    found = SnapshotVerifier(captured).verify()
+    assert [(item.forge_class, item.kind) for item in found] == [("mystery", "unlisted-file")]
+
+
+def test_a_manifest_entry_without_a_count_leaves_the_file_unexplained(captured):
+    manifest = json.loads((captured / MANIFEST_NAME).read_text(encoding="utf-8"))
+    manifest["classes"]["issue"].pop("records")
+    (captured / MANIFEST_NAME).write_text(json.dumps(manifest), encoding="utf-8")
+    assert [item.kind for item in SnapshotVerifier(captured).verify()] == ["manifest-behind"]
+
+
+def test_a_manifest_without_classes_leaves_every_file_unlisted(captured):
+    manifest = json.loads((captured / MANIFEST_NAME).read_text(encoding="utf-8"))
+    manifest["classes"] = "nothing"
+    (captured / MANIFEST_NAME).write_text(json.dumps(manifest), encoding="utf-8")
+    kinds = {item.kind for item in SnapshotVerifier(captured).verify()}
+    assert kinds == {"unlisted-file"}
+
+
+def test_a_class_never_written_is_not_a_break(captured):
+    (captured / "label.jsonl").unlink()
+    manifest = json.loads((captured / MANIFEST_NAME).read_text(encoding="utf-8"))
+    manifest["classes"]["label"]["records"] = 0
+    (captured / MANIFEST_NAME).write_text(json.dumps(manifest), encoding="utf-8")
+    assert SnapshotVerifier(captured).verify() == ()
+
+
+@pytest.mark.parametrize(
+    "content",
+    (None, "not json", "[]", '{"schema": "other/1"}', json.dumps({"schema": MANIFEST_SCHEMA})),
+)
+def test_a_missing_or_unrecognised_manifest_is_the_only_break_reported(captured, content):
+    path = captured / MANIFEST_NAME
+    if content is None:
+        path.unlink()
+    else:
+        path.write_text(content, encoding="utf-8")
+    found = SnapshotVerifier(captured).verify()
+    assert [(item.forge_class, item.kind) for item in found] == [
+        ("manifest", "manifest-unreadable")
+    ]
+
+
+def test_the_command_exits_one_naming_the_first_break_in_each_file(captured, capsys):
+    for name, index in (("issue", 1), ("label", 2)):
+        path = captured / f"{name}.jsonl"
+        records = lines(path)
+        records[index]["payload"] = {"id": "forged"}
+        write_lines(path, [*records[:index], resealed(records[index]), *records[index + 1 :]])
+    assert main(["forge-snapshot", "--verify", str(captured)]) == 1
+    err = capsys.readouterr().err
+    assert "BROKEN issue:2 [bad-payload] issue.jsonl line 2 has an invalid payload_sha256" in err
+    assert "BROKEN label:3 [bad-payload]" in err
+    assert "is not intact: 2 break(s)" in err
+
+
+def test_the_command_needs_exactly_one_of_out_and_verify(captured, capsys):
+    assert main(["forge-snapshot"]) == 2
+    assert main(["forge-snapshot", "--out", str(captured), "--verify", str(captured)]) == 2
+    assert capsys.readouterr().err.count("exactly one of --out (capture) or --verify DIR") == 2
+
+
+def test_the_store_and_the_verifier_share_one_definition_of_a_good_line(captured):
+    checker = RecordChecker("github", REPO, "label")
+    good = (captured / "label.jsonl").read_bytes().splitlines(keepends=True)[0]
+    record, fault = checker.check(good, None)
+    assert record is not None and fault == ""
+    assert checker.check(good, "0" * 64) == (None, "does not link to the preceding record")
+    assert checker.kind(b"nope", None) == "malformed"

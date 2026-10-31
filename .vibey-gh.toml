@@ -341,6 +341,27 @@ versioned = false
 [branch_health]
 enabled = true
 
+# The command that reproduces each watched check's failure, so the red-branch issue can
+# hand it over instead of making someone read the log. `"<check> :: <step>"` names a step of
+# the job (tests/meta/test_branch_health_reproduce.py fails when a step name drifts from
+# ci.yml); `{test}` is the first failing test id the log names. The two VS Code jobs and
+# `No skip markers` are left undeclared on purpose: the issue reports them as unmapped.
+[branch_health.reproduce]
+"gates :: Gate 0a - committed JavaScript is generated from TypeScript" = "python3 scripts/typescript_artifacts.py --check"
+"gates :: Gate 0 - governance corpus index" = "uv run vibey-gh corpus-index --check"
+"gates :: Gate 1 - ruff check" = "uv run ruff check ."
+"gates :: Gate 2 - ruff format --check" = "uv run ruff format --check ."
+"gates :: Gate 3 - mypy --strict" = "uv run mypy --strict src/vibey"
+"gates :: Run test suite with coverage" = "uv run pytest {test} -q -p no:cacheprovider"
+"gates :: Gate 4a - pytest domain layer (100% coverage)" = "uv run pytest -q -p no:cacheprovider --cov=vibey --cov-branch --cov-report= && uv run coverage report --include='src/vibey/domain/*' --fail-under=100"
+"gates :: Gate 4b - pytest application layer (100% coverage)" = "uv run pytest -q -p no:cacheprovider --cov=vibey --cov-branch --cov-report= && uv run coverage report --include='src/vibey/application/*' --fail-under=100"
+"gates :: Gate 4c - pytest infrastructure layer (100% coverage)" = "uv run pytest -q -p no:cacheprovider --cov=vibey --cov-branch --cov-report= && uv run coverage report --include='src/vibey/infrastructure/*' --fail-under=100"
+"gates :: Gate 4d - pytest CLI layer (100% coverage)" = "uv run pytest -q -p no:cacheprovider --cov=vibey --cov-branch --cov-report= && uv run coverage report --include='src/vibey/cli/*' --fail-under=100"
+"gates :: Gate 5 - lint-imports (onion contract)" = "uv run lint-imports"
+"gates :: Gate 6 - bandit" = "uv run bandit -q -r src/vibey"
+"gates :: Gate 7 - pip-audit" = "uv run pip-audit --skip-editable"
+"No-loss property suite (10,000 examples)" = "uv run pytest -m noloss --hypothesis-profile=noloss -p no:cacheprovider"
+
 [pr_automation]
 # The review, repair and conflict jobs load this tree's own vibey-skills marketplace, read
 # from the trusted default-branch checkout. It used to be cloned from
@@ -760,6 +781,8 @@ forbidden_paths = [
   "src/vibey_tools/gh/vibey_gh/forge.py",
   "src/vibey_tools/gh/vibey_gh/gh_transport.py",
   "src/vibey_tools/gh/vibey_gh/github_state.py",
+  "src/vibey_tools/gh/vibey_gh/hook_inspector.py",
+  "src/vibey_tools/gh/vibey_gh/hooks_self_source.py",
   "src/vibey_tools/gh/vibey_gh/install.py",
   "src/vibey_tools/gh/vibey_gh/issue_automation.py",
   "src/vibey_tools/gh/vibey_gh/pr_af_local.py",

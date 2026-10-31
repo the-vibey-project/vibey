@@ -223,6 +223,16 @@ class ForgejoTransportInterface(ForgeTransportInterface, Protocol):
 
 
 @runtime_checkable
+class BitbucketTransportInterface(ForgeTransportInterface, Protocol):
+    """The Bitbucket transport implementation."""
+
+    @property
+    def timeout(self) -> float:
+        """Seconds a single call may take before it is abandoned."""
+        ...
+
+
+@runtime_checkable
 class GitLabTransportInterface(ForgeTransportInterface, Protocol):
     """The GitLab transport implementation."""
 

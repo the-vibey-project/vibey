@@ -23,6 +23,8 @@ void kr_window_confirm_unwind(GtkWidget *window, const char *project_id, const c
                               const char *text);
 /* The About dialog. */
 void kr_window_about(GtkWidget *window);
+/* The keyboard shortcuts, listed from the command table (Ctrl+?). */
+void kr_window_shortcuts(GtkWidget *window);
 /* The hubs seen on the network changed: redraw the Devices page. */
 void kr_window_devices_changed(GtkWidget *window);
 

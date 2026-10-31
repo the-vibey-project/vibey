@@ -90,6 +90,7 @@ from vibey.infrastructure.hub.interfaces.pairing_interface import (
     HubPairingInterface,
     PairingLedgerInterface,
 )
+from vibey.infrastructure.hub.interfaces.serve_lock_interface import ServeLockInterface
 from vibey.infrastructure.hub.interfaces.server_interface import (
     HubServerInterface,
     LocalNamesInterface,
@@ -103,6 +104,7 @@ from vibey.infrastructure.hub.local_token import LocalTokenStore, ServingRecord
 from vibey.infrastructure.hub.mdns import MdnsAdvertiser
 from vibey.infrastructure.hub.pairing import HubPairing
 from vibey.infrastructure.hub.pairing_ledger import PostgresPairingLedger
+from vibey.infrastructure.hub.serve_lock import ServeLock
 from vibey.infrastructure.hub.server import HUB_SERVER, LOCAL_NAMES
 from vibey.infrastructure.hub.settings import HUB_SETTINGS, HubSettings
 from vibey.infrastructure.hub.tls import HubCertificate, HubTls
@@ -310,7 +312,9 @@ class ServeCommand:
         certificate: Callable[[Path], HubCertificateInterface] = HubCertificate,
         advertiser: MdnsAdvertiserInterface | None = None,
         pairing_ledger: Callable[[asyncpg.Pool], PairingLedgerInterface] = (PostgresPairingLedger),
+        lock: Callable[[Path], ServeLockInterface] = ServeLock,
     ) -> None:
+        self._lock = lock
         self._devices = devices
         self._certificate = certificate
         self._advertiser = advertiser if advertiser is not None else MdnsAdvertiser()
@@ -346,6 +350,24 @@ class ServeCommand:
             typer.echo(str(exc), err=True)
             raise typer.Exit(EXIT_USAGE) from exc
         listen = port if port is not None else settings.port
+        # One hub per user (#1186): every UI reaches the hub on this computer, so a second
+        # one would split the paired devices and the port. The lock is held until exit.
+        lock = self._lock(settings.state_dir)
+        if not lock.acquire():
+            holder = lock.holder()
+            by = f" (pid {holder})" if holder is not None else ""
+            typer.echo(
+                f"a hub is already running on this computer{by}: there is one hub per user. "
+                "See `vibey hub status`; `vibey hub stop` stops it.",
+                err=True,
+            )
+            raise typer.Exit(1)
+        try:
+            await self._serve(settings, bound, listen)
+        finally:
+            lock.release()
+
+    async def _serve(self, settings: HubSettings, bound: str, listen: int) -> None:
         store = LocalTokenStore(settings.state_dir)
         try:
             token = store.token()

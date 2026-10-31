@@ -1,0 +1,33 @@
+# Made with ❤️ by [Vibey](https://the-vibey-project.github.io/vibey/), Developed by [Adam Matthew Steinberger](https://vibewithadam.matthewsteinberger.com/) ([@adammatthewsteinberger](https://github.com/adammatthewsteinberger/)).
+#
+# The recorded exceptions to "one paper source, one publishing book definition"
+# (tests/meta/test_single_source_paper_and_book.py, ADR-0032, #155). Each entry is a debt:
+# a tracked tenant file the root paper and root book are meant to replace. The list can only
+# shrink. Delete an entry in the same change that removes its file, because a stale entry fails
+# the guard. When both lists are empty, delete this file and the exception logic with it.
+#
+# #1597 removes the tenant papers; #1598 removes the tenant book definitions, or keeps one
+# here as recorded non-publishing. Both need the operator's ruling on each tenant (#155).
+
+legacy_papers = [
+  "src/vibey_runners/claude/docs/paper.md",
+  "src/vibey_runners/codex/docs/paper.md",
+  "src/vibey_runners/qwen/docs/paper.md",
+  "src/vibey_tools/bootstrap/docs/paper.md",
+  "src/vibey_tools/gh/docs/paper.md",
+  "src/vibey_tools/skills/docs/paper.md",
+]
+
+# properdocs.yml and mkdocs.yml are both book definitions a docs build can read.
+legacy_book_definitions = [
+  "src/vibey_runners/claude/properdocs.yml",
+  "src/vibey_runners/codex/properdocs.yml",
+  "src/vibey_runners/qwen/properdocs.yml",
+  "src/vibey_tools/bootstrap/properdocs.yml",
+  "src/vibey_tools/gh/properdocs.yml",
+  "src/vibey_tools/skills/properdocs.yml",
+  "src/vibey_runners/claude/mkdocs.yml",
+  "src/vibey_runners/codex/mkdocs.yml",
+  "src/vibey_tools/bootstrap/mkdocs.yml",
+  "src/vibey_tools/skills/mkdocs.yml",
+]

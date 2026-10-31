@@ -1,5 +1,7 @@
 # AGENTS.md
 
+<!-- Generated from docs/agents/instructions.toml by scripts/agent_instructions.py -- edit that file, not this one. `python scripts/agent_instructions.py check` fails when they differ. -->
+
 `vibey`: a queue-based, six-phase conductor for autonomous software delivery.
 Built on PostgreSQL and three `*loop` autonomous session runners (claudeloop,
 codexloop, and the local runner that ships as two engines:
@@ -53,7 +55,7 @@ small identified slices, explicit links, measured budgets, and no silent truncat
   that can be spelled out explicitly as a sub-doctrine in the governance corpus
   must be — filed under one of the sealed Twelve in
   `src/vibey_tools/gh/docs/doctrines.md`, and ratified by the operator's merge per
-  Article IV.4, under the authority Article I.1 places above every other. No
+  Article II.3, under the authority Article I.1 places above every other. No
   exceptions. The test: it binds future decisions, it survives a rewrite, and it
   is about conduct rather than mechanism. An ADR records the decision; the canon
   records the law. Both get written. ADR-0020.
@@ -208,9 +210,10 @@ uv workspace (`[tool.uv.workspace] members = ["src/vibey_runners/*",
   vibey-skills; `src/vibey_tools/bootstrap` — vibey-bootstrap.
 
 Each tenant keeps its own `pyproject.toml`, version, Python floor (3.12+ for
-every library), test suite and gates (ADR-0022). The old sibling GitHub
-repositories are gone, and so are the old PyPI names: the whole tree ships as
-the single `vibey-engine` package (ADR-0037, ADR-0069).
+every library; CI's `tools` matrix runs each on 3.12, 3.13 and 3.14), test
+suite and gates (ADR-0022). The old sibling GitHub repositories are gone, and so
+are the old PyPI names: the whole tree ships as the single `vibey-engine` package
+(ADR-0037, ADR-0069).
 
 ## The six-phase model
 
@@ -231,24 +234,23 @@ explicit opt-in; declining deployment records a successful local completion.
 ## The queue and engines
 
 - **Queue backend:** PostgreSQL 14+, never SQLite. CI exercises every currently
-  supported major (14–18), while the Helm chart defaults to PostgreSQL 17. `FOR UPDATE SKIP LOCKED` is
-  the reason; see ADR-0002.
+  supported major (14–18); the Helm chart defaults to PostgreSQL 17. `FOR UPDATE
+  SKIP LOCKED` is the reason; see ADR-0002.
 - **Engines:** `claudeloop` and `codexloop` are the default paid-engine pool
-  (tier PAID); cursorloop and agyloop were retired by ADR-0078. Three local
-  engines (tier LOCAL) join
-  them, each behind its own switch: `gptossloop` — the sovereign default on
-  GPT-OSS 20B, **on by default**, switched off only by `VIBEY_FEATURE_GPTOSSLOOP=0`
-  or `[features] gptossloop = false`; `qwenloop` — the same runner on a Qwen model
-  (`qwen3:14b`), off by default (`VIBEY_FEATURE_QWENLOOP=1` or `[features]
-  qwenloop = true`); and `claudeloop-local` — the claudeloop binary on a local
-  backend profile, off by default (`VIBEY_FEATURE_CLAUDELOOP_LOCAL` or `[features]
-  claudeloop_local`). ADR-0064. Under sub-doctrine 8.a local engines are
-  **preferred first**: BUILD selection runs SWRR within the LOCAL tier and falls
-  back to PAID only when no local engine is eligible (ADR-0038, amending
-  ADR-0015's standby). With no `--provider`, DESIGN and DECOMPOSE run on the
-  sovereign providers (`GptossloopDesignProvider`, `GptossloopWorkPlanProducer`;
-  ADR-0027, ADR-0038, ADR-0064). `VIBEY_OLLAMA_URL` is the one local endpoint
-  setting.
+  (tier PAID); cursorloop and agyloop were retired by ADR-0078.
+  Three local engines (tier LOCAL) join them, each behind its own switch:
+  `gptossloop` — the sovereign default on GPT-OSS 20B, **on by default**, switched
+  off only by `VIBEY_FEATURE_GPTOSSLOOP=0` or `[features] gptossloop = false`;
+  `qwenloop` — the same runner on a Qwen model (`qwen3:14b`), off by default
+  (`VIBEY_FEATURE_QWENLOOP=1` or `[features] qwenloop = true`); and
+  `claudeloop-local` — the claudeloop binary on a local backend profile, off by
+  default (`VIBEY_FEATURE_CLAUDELOOP_LOCAL` or `[features] claudeloop_local`).
+  ADR-0064. Under sub-doctrine 8.a local engines are **preferred first**:
+  BUILD selection runs SWRR within the LOCAL tier and falls back to PAID only when
+  no local engine is eligible (ADR-0038, amending ADR-0015's standby). With no
+  `--provider`, DESIGN and DECOMPOSE run on the sovereign providers
+  (`GptossloopDesignProvider`, `GptossloopWorkPlanProducer`; ADR-0027, ADR-0038,
+  ADR-0064). `VIBEY_OLLAMA_URL` is the one local endpoint setting.
 - **Rotation:** `domain/rotation.py::select()` implements smooth-weighted
   round-robin selection (ADR-0005) and is wired in production: `bootstrap.py`
   builds `EngineSelector`, and BUILD jobs pick their engine per job through
@@ -270,8 +272,7 @@ uv run vibey-gh install
 uv lock --check
 
 # CI job `gates`: Gate 0 plus the 7-gate sweep over src/vibey (services:
-# postgres:17 and rabbitmq; the broker tests skip without it); the
-# `postgres-compatibility` matrix runs the database suite on PostgreSQL 14–18
+# postgres:17 and rabbitmq; the broker tests skip without it)
 uv sync --extra dev
 uv run vibey-gh corpus-index --check
 uv run ruff check .
@@ -337,8 +338,8 @@ own and the repository root's — have no drift.
 | Contribution workflow, hooks, branch flow, PR expectations | `CONTRIBUTING.md` |
 | Security policy and disclosure | `SECURITY.md` |
 
-**Maintenance:** when procedural guidance changes, update Claude skills,
-Cursor rules, Codex skills, and Antigravity rules in the **same PR**.
+**Agent-surface maintenance:** when a skill/procedure changes, update
+Claude, Cursor, Codex, and Antigravity trees in the same PR.
 
 <!-- vibey:begin -->
 This section is generated by vibey. Do not edit inside these markers --

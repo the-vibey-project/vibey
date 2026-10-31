@@ -38,12 +38,16 @@ from vibey_gh.approval_check import ApprovalCheck
 from vibey_gh.branch_health import BranchHealth
 from vibey_gh.changelog import Changelog
 from vibey_gh.config import load_config
+from vibey_gh.contributor_setup import ContributorSetup
 from vibey_gh.fallback_pin import FallbackPinResolver
+from vibey_gh.forge import ForgeKind
 from vibey_gh.gh_retry import GhRetry
 from vibey_gh.gh_transport import GhTransport
+from vibey_gh.interfaces.contributor_setup_interface import ContributorSetupInterface
 from vibey_gh.interfaces.fallback_pin_resolver_interface import FallbackPinResolverInterface
 from vibey_gh.interfaces.marketplace_renderer_interface import MarketplaceRendererInterface
 from vibey_gh.interfaces.paper_interface import RevisionReaderInterface
+from vibey_gh.profile_drift import ProfileDrift
 from vibey_gh.review_canary import ReviewCanary
 from vibey_gh.review_composition import PAID_HALVES, REVIEW_COMPOSER
 from vibey_gh.review_timings import ReviewTimings
@@ -89,11 +93,27 @@ def _cloud_clutter(cfg, surveyed: bool) -> tuple[tuple[str, ...], tuple[str, ...
     return clutter, report.problems
 
 
+def _settings_drift(cfg, surveyed: bool) -> tuple[tuple[str, ...], tuple[str, ...]]:
+    """`(drift, not_surveyed)` for the declared repository settings against the live ones.
+
+    Surveyed under `--ci` alone, like the cloud clutter: it costs forge round trips a
+    pre-commit hook must not pay. Read-only. Module-level for the same reason as
+    `_cloud_clutter`: argparse hands the handler a namespace and `check` has no object.
+    """
+    if not surveyed:
+        return (), ()
+    return ProfileDrift().survey(cfg)
+
+
 def _check(args, resolver: FallbackPinResolverInterface | None = None) -> int:
     cfg = load_config()
     # Resolved once, so the drift verdict and the notice below describe the same pin.
     pin = (resolver or FallbackPinResolver()).resolve(cfg)
-    ok, problems = install.installed(cfg, local=not args.ci, fallback_pin=pin)
+    # `--quiet` is how the pre-push hook asks, and it stays fail-open about the framework's own
+    # hooks; a person running `check` is told (#1689).
+    ok, problems = install.installed(
+        cfg, local=not args.ci, fallback_pin=pin, frameworks=not args.quiet
+    )
     report = fingerprints.check(cfg, rev_range=args.commits, apply=args.apply)
     docs = documentation.check(cfg)
     scan = pr_automation.check_scan_workflows(cfg)
@@ -110,7 +130,13 @@ def _check(args, resolver: FallbackPinResolverInterface | None = None) -> int:
         cfg, surveyed=args.ci and (not args.quiet or cfg.tidy.fail_check)
     )
     clutter_ok = not clutter or not cfg.tidy.fail_check
-    clean = ok and report.ok and docs.ok and scan.ok and marketplace_ok and clutter_ok
+    # Same reasoning for the settings audit: a `--quiet` run is worth the round trips only
+    # when `[repository_profile] fail_check` lets the result move the exit code.
+    drift, drift_unsurveyed = _settings_drift(
+        cfg, surveyed=args.ci and (not args.quiet or cfg.repository_profile.fail_check)
+    )
+    drift_ok = not drift or not cfg.repository_profile.fail_check
+    clean = ok and report.ok and docs.ok and scan.ok and marketplace_ok and clutter_ok and drift_ok
 
     if args.quiet:
         return 0 if clean else 1
@@ -152,6 +178,21 @@ def _check(args, resolver: FallbackPinResolverInterface | None = None) -> int:
             + ("" if cfg.tidy.fail_check else " (advisory; `[tidy] fail_check = true` fails)"),
             file=sys.stderr,
         )
+    for reason in drift_unsurveyed:
+        print(f"  settings drift: not surveyed — {reason}", file=sys.stderr)
+    for item in drift:
+        print(f"  settings drift: {item}", file=sys.stderr)
+    if drift:
+        print(
+            "  settings drift: `repository-profile.yml` restores the declared values on the next "
+            "release"
+            + (
+                ""
+                if cfg.repository_profile.fail_check
+                else " (advisory; `[repository_profile] fail_check = true` fails)"
+            ),
+            file=sys.stderr,
+        )
     # Advisory, never a verdict: a floating install still resolves. Printed because a pin
     # that cannot resolve renders floating, so a deployed workflow that still carries the
     # pin reads "out of date" above with no cause named, and a drift report with no cause
@@ -187,6 +228,21 @@ def _install(args, resolver: FallbackPinResolverInterface | None = None) -> int:
         print(f"  notice: {pin.notice}")
     print(f"vibey-gh: installed into {cfg.root}")
     return 0
+
+
+def _setup(args, setup: ContributorSetupInterface | None = None) -> int:
+    # A module function like `_install` beside it: argparse hands a handler the parsed
+    # namespace and nothing else, and the work is in `ContributorSetup`.
+    cfg = load_config()
+    setup = setup or ContributorSetup(cfg)
+    report = (
+        setup.check()
+        if args.check
+        else setup.run(postgres=args.postgres, doctor=not args.skip_doctor)
+    )
+    for line in setup.render(report):
+        print(line)
+    return 0 if report.ok else 1
 
 
 def _conventional_message(args) -> int:
@@ -735,6 +791,7 @@ def _forge_snapshot(args) -> int:
     from datetime import timedelta
 
     from vibey_gh import github_state
+    from vibey_gh.forge_inventory import JsonForgeInventory
     from vibey_gh.forge_snapshot import (
         RESUME,
         ForgeSnapshot,
@@ -743,21 +800,47 @@ def _forge_snapshot(args) -> int:
         SnapshotStoreError,
     )
     from vibey_gh.gh_transport import GhTransport
+    from vibey_gh.interfaces.forge_snapshot_interface import ForgeReaderInterface
 
     prefix = "vibey-gh forge-snapshot:"
+    if (args.out is None) == (args.verify is None):
+        print(
+            f"{prefix} exactly one of --out (capture) or --verify DIR is required", file=sys.stderr
+        )
+        return 2
+    if args.verify is not None:
+        return _verify_forge_snapshot(Path(args.verify), prefix)
     classes = None
     if args.classes is not None:
         classes = [name.strip() for name in args.classes.split(",") if name.strip()]
+    # GitHub unless `--forge` names another: the command read GitHub alone before it could read
+    # any other, and `[platform] kind` defaults to Forgejo, so following it would change what a
+    # bare `forge-snapshot` does for every caller that never named a forge.
+    forge = args.forge or "github"
     try:
-        repository = args.repo or github_state.repository()
+        repository = args.repo or (
+            github_state.repository() if forge == "github" else load_config().platform.repository
+        )
+        if not repository:
+            raise ValueError("name it with --repo, or with [platform] repository")
     except (OSError, RuntimeError, ValueError, KeyError, TypeError) as exc:
         print(f"{prefix} could not tell which repository to read: {exc}", file=sys.stderr)
         return 1
     out = Path(args.out)
     try:
-        reader = GithubForgeReader(GhTransport(), repository, per_page=args.per_page)
+        if forge == "github":
+            reader: ForgeReaderInterface = GithubForgeReader(
+                GhTransport(), repository, per_page=args.per_page
+            )
+        else:
+            reader = _adapter_reader(forge, repository, args.per_page)
         store = JsonlSnapshotStore(out, forge=reader.forge, repository=reader.repository)
-        capture = ForgeSnapshot(reader, store, clock_skew=timedelta(seconds=args.clock_skew))
+        capture = ForgeSnapshot(
+            reader,
+            store,
+            clock_skew=timedelta(seconds=args.clock_skew),
+            inventory=JsonForgeInventory(),
+        )
         manifest = capture.capture(classes=classes, since=args.since)
     except (SnapshotStoreError, OSError) as exc:
         print(f"{prefix} {exc}", file=sys.stderr)
@@ -783,9 +866,124 @@ def _forge_snapshot(args) -> int:
         f"{prefix} {len(manifest['excluded'])} artifact class(es) not captured, each named"
         f" with its reason in {out / 'manifest.json'}"
     )
+    accounting = manifest["inventory"]
+    if accounting["unaccounted"] is None:
+        print(f"{prefix} no inventory of what the {manifest['forge']} API exposes, so no account")
+    elif accounting["unaccounted"]:
+        print(
+            f"{prefix} API class(es) neither captured nor excluded:"
+            f" {', '.join(accounting['unaccounted'])}",
+            file=sys.stderr,
+        )
+    if not accounting["verified"]:
+        print(f"{prefix} the {manifest['forge']} inventory was not read in full", file=sys.stderr)
     if manifest["resume_since"] is not None:
         print(f"{prefix} resume with --since {manifest['resume_since']} (or --since {RESUME})")
     return 0 if manifest["complete"] else 1
+
+
+def _adapter_reader(forge: str, repository: str, per_page: int):
+    """A snapshot reader over the adapter `[platform]` selects for `forge` (#1572).
+
+    The platform table is used only when it names the same forge; another forge starts from
+    that forge's own defaults, so a GitHub host in the file is never handed to a Forgejo reader.
+    Module-level beside `_forge_snapshot`, its only caller.
+    """
+    from dataclasses import replace
+
+    from vibey_gh.config import PlatformConfig
+    from vibey_gh.forge_adapter_reader import ForgeAdapterReader
+    from vibey_gh.forge_selector import ForgeSelector
+
+    cfg = load_config()
+    platform = cfg.platform if cfg.platform.kind == forge else PlatformConfig(kind=forge)
+    adapter = ForgeSelector().select(
+        replace(cfg, platform=replace(platform, repository=repository))
+    )
+    return ForgeAdapterReader(
+        forge=forge, repository=repository, adapter=adapter, per_page=per_page
+    )
+
+
+def _forge_state(args) -> int:
+    """Read one object's state back out of a snapshot, as of a moment (#1574); read-only.
+
+    Exit 0 when a record is found, 1 when there is none to give (the object was never
+    recorded, or was first recorded later) or the snapshot cannot be read, 2 for a moment or
+    an argument that names no query. The payload is printed on stdout and the facts about the
+    record on stderr, so the output pipes into `jq`. Which forge and repository the snapshot
+    holds comes from its own manifest, so the command needs neither a forge nor a credential.
+    """
+    import json
+
+    from vibey_gh.forge_snapshot import (
+        MANIFEST_NAME,
+        ForgeStateQuery,
+        JsonlSnapshotStore,
+        SnapshotStoreError,
+    )
+    from vibey_gh.interfaces.forge_snapshot_interface import STATE_BEFORE_FIRST, STATE_FOUND
+
+    prefix = "vibey-gh forge-state:"
+    root = Path(args.directory)
+    try:
+        manifest = json.loads((root / MANIFEST_NAME).read_text(encoding="utf-8"))
+        forge, repository = manifest["forge"], manifest["repository"]
+    except (OSError, ValueError, KeyError, TypeError) as exc:
+        print(f"{prefix} {root} holds no readable snapshot manifest: {exc}", file=sys.stderr)
+        return 1
+    if args.issue is None and not args.native_id:
+        print(f"{prefix} --class needs --native-id", file=sys.stderr)
+        return 2
+    query = ForgeStateQuery(JsonlSnapshotStore(root, forge=forge, repository=repository))
+    try:
+        if args.issue is not None:
+            found = query.issue(args.issue, args.as_of)
+        else:
+            found = query.state(args.forge_class, args.native_id, args.as_of)
+    except SnapshotStoreError as exc:
+        print(f"{prefix} {exc}", file=sys.stderr)
+        return 1
+    except ValueError as exc:
+        print(f"{prefix} {exc}", file=sys.stderr)
+        return 2
+    last = found.last_capture or "never"
+    if found.status != STATE_FOUND or found.record is None:
+        reason = (
+            "was recorded, but first at a later moment"
+            if found.status == STATE_BEFORE_FIRST
+            else "is not in this snapshot"
+        )
+        print(
+            f"{prefix} the object {reason}; that says nothing about whether it existed"
+            f" (latest capture began {last})",
+            file=sys.stderr,
+        )
+        return 1
+    record = found.record
+    print(json.dumps(record["payload"], indent=2, sort_keys=True))
+    print(
+        f"{prefix} {record['class']} {record['native_id']} as of {args.as_of}:"
+        f" captured_at {record['captured_at']}, seal {record['sha256']}"
+        f" (latest capture began {last})",
+        file=sys.stderr,
+    )
+    return 0
+
+
+def _verify_forge_snapshot(root: Path, prefix: str) -> int:
+    """Check a snapshot directory against its own seals and manifest (#1570); 0 intact, 1 broken."""
+    from vibey_gh.forge_snapshot import SnapshotVerifier
+
+    breaks = SnapshotVerifier(root).verify()
+    for found in breaks:
+        where = found.forge_class if found.line is None else f"{found.forge_class}:{found.line}"
+        print(f"{prefix} BROKEN {where} [{found.kind}] {found.detail}", file=sys.stderr)
+    if breaks:
+        print(f"{prefix} {root} is not intact: {len(breaks)} break(s)", file=sys.stderr)
+        return 1
+    print(f"{prefix} {root} is intact")
+    return 0
 
 
 def _corpus_index(args) -> int:
@@ -1774,6 +1972,32 @@ def main(argv: list[str] | None = None) -> int:
     i = sub.add_parser("install", help="install the git hooks")
     i.set_defaults(func=_install)
 
+    st = sub.add_parser(
+        "setup",
+        help="take a fresh clone to a working contributor environment, in one idempotent command",
+        description=(
+            "Take a fresh clone to a working contributor environment: sync the environment, "
+            "install the pre-commit framework's hooks and then the provenance hooks, check the "
+            "test database, and finish with `vibey doctor` (advisory). Safe to re-run. It never "
+            "overwrites a core.hooksPath it did not set, and never creates a PostgreSQL role, "
+            "password or ~/.pgpass."
+        ),
+    )
+    st.add_argument(
+        "--postgres",
+        action="store_true",
+        help="also install a local PostgreSQL server; a role, password and ~/.pgpass are never created",
+    )
+    st.add_argument(
+        "--skip-doctor", action="store_true", help="do not finish by running `vibey doctor`"
+    )
+    st.add_argument(
+        "--check",
+        action="store_true",
+        help="report the state of each step and change and run nothing",
+    )
+    st.set_defaults(func=_setup)
+
     v = sub.add_parser("version", help="derive the version to release")
     v.add_argument(
         "--config",
@@ -2304,7 +2528,13 @@ def main(argv: list[str] | None = None) -> int:
         help="read-only capture of issues, change requests, reviews, releases and more into"
         " hash-chained JSONL (#136)",
     )
-    fs.add_argument("--out", required=True, help="the snapshot directory; created if missing")
+    fs.add_argument("--out", help="the snapshot directory; created if missing")
+    fs.add_argument(
+        "--verify",
+        metavar="DIR",
+        help="instead of capturing, re-derive every seal in the snapshot directory DIR and exit 1"
+        " naming the first break in each file; reads nothing from the forge (#1570)",
+    )
     fs.add_argument(
         "--classes",
         help="comma-separated artifact classes (default: every supported class), e.g."
@@ -2314,6 +2544,12 @@ def main(argv: list[str] | None = None) -> int:
         "--since",
         help="ISO 8601 moment to capture from, or 'resume' for the manifest's resume point;"
         " omitted, the capture is a full one",
+    )
+    fs.add_argument(
+        "--forge",
+        choices=[kind.value for kind in ForgeKind],
+        help="the forge to read (default: github). A forge other than github is read through its"
+        " adapter, with --repo or [platform] repository naming the repository (#1572)",
     )
     fs.add_argument("--repo", default="", help="owner/name (default: $GH_REPO, then gh's own)")
     fs.add_argument("--per-page", type=int, default=100, help="listing page size, 1 to 100")
@@ -2326,6 +2562,20 @@ def main(argv: list[str] | None = None) -> int:
         " it is set back this far (default 300)",
     )
     fs.set_defaults(func=_forge_snapshot)
+
+    fq = sub.add_parser(
+        "forge-state",
+        help="read one object's state back from a forge snapshot, as of a moment (#1574)",
+    )
+    fq.add_argument("directory", help="a snapshot directory made by forge-snapshot")
+    fq.add_argument("--as-of", required=True, help="ISO 8601 moment; no offset is read as UTC")
+    target = fq.add_mutually_exclusive_group(required=True)
+    target.add_argument("--issue", type=int, help="the issue's number, as people say it")
+    target.add_argument(
+        "--class", dest="forge_class", help="a forge-neutral class; needs --native-id"
+    )
+    fq.add_argument("--native-id", help="the object's native id, as the record holds it")
+    fq.set_defaults(func=_forge_state)
 
     ci_ = sub.add_parser(
         "corpus-index",

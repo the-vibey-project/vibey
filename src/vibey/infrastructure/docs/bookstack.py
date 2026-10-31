@@ -12,6 +12,7 @@ import urllib.error
 import urllib.request
 
 from vibey.application.interfaces.docs import DocsPort
+from vibey.domain.config import DEFAULT_SURFACE_ADAPTER_TIMEOUT_SECONDS
 
 
 class BookStackDocsAdapter(DocsPort):
@@ -23,12 +24,14 @@ class BookStackDocsAdapter(DocsPort):
         token_secret: str,
         book_id: int = 1,
         opener: object | None = None,
+        timeout: float = DEFAULT_SURFACE_ADAPTER_TIMEOUT_SECONDS,
     ) -> None:
         self._url = url.rstrip("/")
         self._token_id = token_id
         self._token_secret = token_secret
         self._book_id = book_id
         self._opener = opener if opener is not None else urllib.request.urlopen
+        self._timeout = timeout
 
     def _headers(self) -> dict[str, str]:
         return {
@@ -50,7 +53,7 @@ class BookStackDocsAdapter(DocsPort):
             f"{self._url}/api/pages", data=payload, headers=self._headers(), method="POST"
         )
         try:
-            with self._opener(req) as resp:  # type: ignore[operator]
+            with self._opener(req, timeout=self._timeout) as resp:  # type: ignore[operator]
                 data = json.loads(resp.read().decode("utf-8"))
         except urllib.error.HTTPError as exc:
             raise RuntimeError(f"BookStack API error {exc.code}: {exc.reason}") from exc
@@ -70,7 +73,7 @@ class BookStackDocsAdapter(DocsPort):
             method="PUT",
         )
         try:
-            with self._opener(req) as resp:  # type: ignore[operator]
+            with self._opener(req, timeout=self._timeout) as resp:  # type: ignore[operator]
                 resp.read()
         except urllib.error.HTTPError as exc:
             raise RuntimeError(f"BookStack API error {exc.code}: {exc.reason}") from exc
