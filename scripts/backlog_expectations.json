@@ -265,7 +265,7 @@
     "1176": {
       "close_when_done": false,
       "kind": "standalone",
-      "last_verdict": "OPEN",
+      "last_verdict": "DONE",
       "next": "ride the runner-unit work",
       "probes": [
         {
@@ -697,7 +697,7 @@
     "145": {
       "close_when_done": false,
       "kind": "standalone",
-      "last_verdict": "OPEN",
+      "last_verdict": "DONE",
       "next": "snapshot verify + timelines",
       "probes": [
         {
