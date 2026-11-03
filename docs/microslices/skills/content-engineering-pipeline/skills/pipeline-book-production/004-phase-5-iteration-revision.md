@@ -3,7 +3,7 @@ id: skill-phase-5-iteration-revision-6f10bec0aa
 purpose: phase 5 iteration revision
 source: src/vibey_tools/skills/plugins/content-engineering-pipeline/skills/pipeline-book-production/SKILL.md
 requires: ["skill-phase-4-assembly-2f884c370b"]
-links: ["skill-how-phases-4-and-5-connect-to-the-larger-pipeline-be622bccaf"]
+links: ["skill-phase-5-5-release-engineering-handoff-e297d470c9"]
 ---
 
 ## PHASE 5 — ITERATION (REVISION)
@@ -304,5 +304,3 @@ The Publication Readiness Declaration closes the loop that Phase 1
 opened when the working hypothesis was formed. It marks the moment
 when a claim the author was willing to argue became a book the
 author was willing to put their name on.
-
----

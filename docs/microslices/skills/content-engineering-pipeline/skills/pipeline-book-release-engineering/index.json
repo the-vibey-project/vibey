@@ -1,0 +1,142 @@
+[
+  {
+    "id": "skill-the-governing-rule-no-invisible-manual-state-a90d84f9d7",
+    "purpose": "the governing rule no invisible manual state",
+    "source": "src/vibey_tools/skills/plugins/content-engineering-pipeline/skills/pipeline-book-release-engineering/SKILL.md",
+    "output": "docs/microslices/skills/content-engineering-pipeline/skills/pipeline-book-release-engineering/001-the-governing-rule-no-invisible-manual-state.md",
+    "requires": [],
+    "links": [
+      "skill-release-graph-45a35465c1"
+    ]
+  },
+  {
+    "id": "skill-release-graph-45a35465c1",
+    "purpose": "release graph",
+    "source": "src/vibey_tools/skills/plugins/content-engineering-pipeline/skills/pipeline-book-release-engineering/SKILL.md",
+    "output": "docs/microslices/skills/content-engineering-pipeline/skills/pipeline-book-release-engineering/002-release-graph.md",
+    "requires": [
+      "skill-the-governing-rule-no-invisible-manual-state-a90d84f9d7"
+    ],
+    "links": [
+      "skill-gate-0-source-and-manuscript-audit-e7687b5dfd"
+    ]
+  },
+  {
+    "id": "skill-gate-0-source-and-manuscript-audit-e7687b5dfd",
+    "purpose": "gate 0 source and manuscript audit",
+    "source": "src/vibey_tools/skills/plugins/content-engineering-pipeline/skills/pipeline-book-release-engineering/SKILL.md",
+    "output": "docs/microslices/skills/content-engineering-pipeline/skills/pipeline-book-release-engineering/003-gate-0-source-and-manuscript-audit.md",
+    "requires": [
+      "skill-release-graph-45a35465c1"
+    ],
+    "links": [
+      "skill-gate-0-5-release-readiness-contract-4dbe9671af"
+    ]
+  },
+  {
+    "id": "skill-gate-0-5-release-readiness-contract-4dbe9671af",
+    "purpose": "gate 0 5 release readiness contract",
+    "source": "src/vibey_tools/skills/plugins/content-engineering-pipeline/skills/pipeline-book-release-engineering/SKILL.md",
+    "output": "docs/microslices/skills/content-engineering-pipeline/skills/pipeline-book-release-engineering/004-gate-0-5-release-readiness-contract.md",
+    "requires": [
+      "skill-gate-0-source-and-manuscript-audit-e7687b5dfd"
+    ],
+    "links": [
+      "skill-gate-1-deterministic-print-build-220664ec11"
+    ]
+  },
+  {
+    "id": "skill-gate-1-deterministic-print-build-220664ec11",
+    "purpose": "gate 1 deterministic print build",
+    "source": "src/vibey_tools/skills/plugins/content-engineering-pipeline/skills/pipeline-book-release-engineering/SKILL.md",
+    "output": "docs/microslices/skills/content-engineering-pipeline/skills/pipeline-book-release-engineering/005-gate-1-deterministic-print-build.md",
+    "requires": [
+      "skill-gate-0-5-release-readiness-contract-4dbe9671af"
+    ],
+    "links": [
+      "skill-gate-2-covers-from-the-final-interior-c8a8623813"
+    ]
+  },
+  {
+    "id": "skill-gate-2-covers-from-the-final-interior-c8a8623813",
+    "purpose": "gate 2 covers from the final interior",
+    "source": "src/vibey_tools/skills/plugins/content-engineering-pipeline/skills/pipeline-book-release-engineering/SKILL.md",
+    "output": "docs/microslices/skills/content-engineering-pipeline/skills/pipeline-book-release-engineering/006-gate-2-covers-from-the-final-interior.md",
+    "requires": [
+      "skill-gate-1-deterministic-print-build-220664ec11"
+    ],
+    "links": [
+      "skill-gate-3-epub-build-and-validation-7bc1110f96"
+    ]
+  },
+  {
+    "id": "skill-gate-3-epub-build-and-validation-7bc1110f96",
+    "purpose": "gate 3 epub build and validation",
+    "source": "src/vibey_tools/skills/plugins/content-engineering-pipeline/skills/pipeline-book-release-engineering/SKILL.md",
+    "output": "docs/microslices/skills/content-engineering-pipeline/skills/pipeline-book-release-engineering/007-gate-3-epub-build-and-validation.md",
+    "requires": [
+      "skill-gate-2-covers-from-the-final-interior-c8a8623813"
+    ],
+    "links": [
+      "skill-gate-4-all-page-visual-evidence-835aa8f0f9"
+    ]
+  },
+  {
+    "id": "skill-gate-4-all-page-visual-evidence-835aa8f0f9",
+    "purpose": "gate 4 all page visual evidence",
+    "source": "src/vibey_tools/skills/plugins/content-engineering-pipeline/skills/pipeline-book-release-engineering/SKILL.md",
+    "output": "docs/microslices/skills/content-engineering-pipeline/skills/pipeline-book-release-engineering/008-gate-4-all-page-visual-evidence.md",
+    "requires": [
+      "skill-gate-3-epub-build-and-validation-7bc1110f96"
+    ],
+    "links": [
+      "skill-gate-5-release-manifest-4be09ecb53"
+    ]
+  },
+  {
+    "id": "skill-gate-5-release-manifest-4be09ecb53",
+    "purpose": "gate 5 release manifest",
+    "source": "src/vibey_tools/skills/plugins/content-engineering-pipeline/skills/pipeline-book-release-engineering/SKILL.md",
+    "output": "docs/microslices/skills/content-engineering-pipeline/skills/pipeline-book-release-engineering/009-gate-5-release-manifest.md",
+    "requires": [
+      "skill-gate-4-all-page-visual-evidence-835aa8f0f9"
+    ],
+    "links": [
+      "skill-retrospective-lessons-made-executable-d2068f6822"
+    ]
+  },
+  {
+    "id": "skill-retrospective-lessons-made-executable-d2068f6822",
+    "purpose": "retrospective lessons made executable",
+    "source": "src/vibey_tools/skills/plugins/content-engineering-pipeline/skills/pipeline-book-release-engineering/SKILL.md",
+    "output": "docs/microslices/skills/content-engineering-pipeline/skills/pipeline-book-release-engineering/010-retrospective-lessons-made-executable.md",
+    "requires": [
+      "skill-gate-5-release-manifest-4be09ecb53"
+    ],
+    "links": [
+      "skill-operating-procedure-96e9c803c0"
+    ]
+  },
+  {
+    "id": "skill-operating-procedure-96e9c803c0",
+    "purpose": "operating procedure",
+    "source": "src/vibey_tools/skills/plugins/content-engineering-pipeline/skills/pipeline-book-release-engineering/SKILL.md",
+    "output": "docs/microslices/skills/content-engineering-pipeline/skills/pipeline-book-release-engineering/011-operating-procedure.md",
+    "requires": [
+      "skill-retrospective-lessons-made-executable-d2068f6822"
+    ],
+    "links": [
+      "skill-references-7a159b3efc"
+    ]
+  },
+  {
+    "id": "skill-references-7a159b3efc",
+    "purpose": "references",
+    "source": "src/vibey_tools/skills/plugins/content-engineering-pipeline/skills/pipeline-book-release-engineering/SKILL.md",
+    "output": "docs/microslices/skills/content-engineering-pipeline/skills/pipeline-book-release-engineering/012-references.md",
+    "requires": [
+      "skill-operating-procedure-96e9c803c0"
+    ],
+    "links": []
+  }
+]
