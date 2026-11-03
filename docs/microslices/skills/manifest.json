@@ -817,7 +817,12 @@
   {
     "source": "src/vibey_tools/skills/plugins/content-engineering-pipeline/skills/pipeline-book-production/SKILL.md",
     "output": "docs/microslices/skills/content-engineering-pipeline/skills/pipeline-book-production",
-    "count": 6
+    "count": 7
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/content-engineering-pipeline/skills/pipeline-book-release-engineering/SKILL.md",
+    "output": "docs/microslices/skills/content-engineering-pipeline/skills/pipeline-book-release-engineering",
+    "count": 12
   },
   {
     "source": "src/vibey_tools/skills/plugins/content-engineering-pipeline/skills/pipeline-distribution/SKILL.md",
