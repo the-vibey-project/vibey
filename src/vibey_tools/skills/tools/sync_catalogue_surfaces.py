@@ -66,15 +66,12 @@ def _counts() -> tuple[int, int, dict[str, dict[str, object]], dict[str, int]]:
     for plugin_dir in sorted(PLUGINS.iterdir()):
         if not plugin_dir.is_dir() or plugin_dir.name.startswith("."):
             continue
-        actual[plugin_dir.name] = sum(
-            1 for path in (plugin_dir / "skills").glob("*/SKILL.md")
-        )
+        actual[plugin_dir.name] = sum(1 for path in (plugin_dir / "skills").glob("*/SKILL.md"))
     missing = sorted(set(actual) - set(entries))
     absent = sorted(set(entries) - set(actual))
     if missing or absent:
         raise ValueError(
-            "marketplace/tree mismatch: "
-            f"unlisted={missing or 'none'}, missing={absent or 'none'}"
+            f"marketplace/tree mismatch: unlisted={missing or 'none'}, missing={absent or 'none'}"
         )
     return len(entries), sum(actual.values()), entries, actual
 
