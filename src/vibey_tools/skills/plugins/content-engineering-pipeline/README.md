@@ -8,6 +8,7 @@ Before Phase 1 the method asks you to state your own governing postulates — wh
 
 - **pipeline-thesis-development** — Before Phase 1: your governing postulates; Phases 1–3: topic → falsifiable thesis → terrain mapping → argument investigation with verified evidence chains
 - **pipeline-book-production** — Phases 4–5: research book assembly from investigated arguments and iterative revision to publication readiness
+- **pipeline-book-release-engineering** — the deterministic handoff from locked manuscript to PDF, covers, EPUB, all-page visual evidence, and a hashed release manifest
 - **pipeline-novel-conversion** — Phases 6–7: converting non-fiction to novel (C.S. Lewis 'watchful dragons'); architecture before prose
 - **pipeline-screenplay-conversion** — Phase 8: novel → screenplay architecture; visual storytelling; 100-120 page compression
 - **pipeline-ai-film-production** — Phases 10–13: AI film production (Sora 2, ElevenLabs, Kling AI — dated tool stack) and five-spoke transmedia campaign (TikTok/LinkedIn/X/Instagram/email)

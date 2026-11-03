@@ -149,7 +149,11 @@ only make sense inside one company belongs in a private marketplace, not this on
 1. Create `plugins/<plugin>/skills/<new-skill>/SKILL.md`.
 2. Add a bullet for it in `plugins/<plugin>/README.md`.
 3. Bump the plugin `version` and mirror it into `.claude-plugin/marketplace.json`.
-4. Update the skill count and summary for that plugin in the root [README.md](https://github.com/the-vibey-project/vibey/blob/develop/src/vibey_tools/skills/README.md) table.
+4. Synchronize the derived catalogue surfaces:
+   ```bash
+   python3 tools/sync_catalogue_surfaces.py --write
+   ```
+5. Review the resulting root [README.md](https://github.com/the-vibey-project/vibey/blob/develop/src/vibey_tools/skills/README.md) table row and run the validator/tests.
 
 ### Add a new plugin
 
@@ -180,7 +184,7 @@ Also keep these in sync, or installation breaks:
   `marketplace.json` entry.
 - Each `marketplace.json` entry's `version`/`description` match the plugin's `plugin.json`.
 - Each plugin `README.md` lists exactly the skills present in its `skills/` directory.
-- The root `README.md` plugin table reflects current versions, categories, and skill counts.
+- The root `README.md` plugin table reflects current versions, categories, and skill counts; `tools/sync_catalogue_surfaces.py --check` makes that drift visible in CI.
 
 ## 7. Conventions
 
