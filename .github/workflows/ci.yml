@@ -322,7 +322,7 @@ jobs:
             dir: src/vibey_tools/skills
             python: "3.12"
             install: 'pip install -e ".[dev]"'
-            test: 'python3 tools/validate_manifests.py && python3 tools/check_links.py && PYTHONPATH=src python3 -m unittest discover -s tests'
+            test: 'python3 tools/sync_catalogue_surfaces.py --check && python3 tools/validate_manifests.py && python3 tools/check_links.py && PYTHONPATH=src python3 -m unittest discover -s tests'
             # Its own `docs` job, verbatim: --strict is what makes 700-odd generated pages
             # trustworthy, and the counts prove every plugin and skill produced one.
             docs: |
@@ -339,12 +339,12 @@ jobs:
             dir: src/vibey_tools/skills
             python: "3.13"
             install: 'pip install -e ".[dev]"'
-            test: 'python3 tools/validate_manifests.py && python3 tools/check_links.py && PYTHONPATH=src python3 -m unittest discover -s tests'
+            test: 'python3 tools/sync_catalogue_surfaces.py --check && python3 tools/validate_manifests.py && python3 tools/check_links.py && PYTHONPATH=src python3 -m unittest discover -s tests'
           - package: vibey-skills
             dir: src/vibey_tools/skills
             python: "3.14"
             install: 'pip install -e ".[dev]"'
-            test: 'python3 tools/validate_manifests.py && python3 tools/check_links.py && PYTHONPATH=src python3 -m unittest discover -s tests'
+            test: 'python3 tools/sync_catalogue_surfaces.py --check && python3 tools/validate_manifests.py && python3 tools/check_links.py && PYTHONPATH=src python3 -m unittest discover -s tests'
           # vibey-bootstrap's nested CI never ran a static gate at all. Its own pre-commit
           # hook did, and these are that hook's commands, verbatim: its configured
           # (non-strict) mypy, and bandit at medium severity and up. `dev` joins the floor

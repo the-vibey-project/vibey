@@ -665,6 +665,30 @@ opened when the working hypothesis was formed. It marks the moment
 when a claim the author was willing to argue became a book the
 author was willing to put their name on.
 
+## PHASE 5.5 — RELEASE ENGINEERING HANDOFF
+
+Publication readiness is a manuscript decision, not yet a release
+decision. Before distribution, hand the locked manuscript and its
+configuration to `pipeline-book-release-engineering`. That skill owns the
+mechanical chain from source inventory through print PDF, page-count-derived
+covers, EPUB packaging, all-page rendering, and the hashed release manifest.
+
+The handoff must carry the Phase 5 log and declaration, the final source
+revision, the book configuration, the bibliography and source records, the
+cover direction, and any human decisions that cannot be reduced to a Boolean.
+The release skill must then rerun the source audit from the new revision; it
+must not inherit a green result from an earlier draft or treat a page-specific
+repair as proof that later pagination is safe. If a merge, metadata change,
+prose edit, cover edit, or conflict resolution changes the source, invalidate
+the old manifest and begin the handoff again.
+
+The division of labor is deliberate. Phase 5 proves that the author has
+finished the book as an argument and a work of prose. Phase 5.5 proves that a
+particular set of PDF, EPUB, and cover files came from that book, passed the
+declared structural gates, and received a complete visual review surface. The
+machine records measurement and chain of custody; the author still decides
+whether the work is truthful, beautiful, and ready to bear a name.
+
 ---
 
 ## HOW PHASES 4 AND 5 CONNECT TO THE LARGER PIPELINE
