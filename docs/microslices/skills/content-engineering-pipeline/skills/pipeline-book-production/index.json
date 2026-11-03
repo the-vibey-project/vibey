@@ -42,28 +42,40 @@
       "skill-phase-4-assembly-2f884c370b"
     ],
     "links": [
-      "skill-how-phases-4-and-5-connect-to-the-larger-pipeline-be622bccaf"
+      "skill-phase-5-5-release-engineering-handoff-e297d470c9"
     ]
   },
   {
-    "id": "skill-how-phases-4-and-5-connect-to-the-larger-pipeline-be622bccaf",
-    "purpose": "how phases 4 and 5 connect to the larger pipeline",
+    "id": "skill-phase-5-5-release-engineering-handoff-e297d470c9",
+    "purpose": "phase 5 5 release engineering handoff",
     "source": "src/vibey_tools/skills/plugins/content-engineering-pipeline/skills/pipeline-book-production/SKILL.md",
-    "output": "docs/microslices/skills/content-engineering-pipeline/skills/pipeline-book-production/005-how-phases-4-and-5-connect-to-the-larger-pipeline.md",
+    "output": "docs/microslices/skills/content-engineering-pipeline/skills/pipeline-book-production/005-phase-5-5-release-engineering-handoff.md",
     "requires": [
       "skill-phase-5-iteration-revision-6f10bec0aa"
     ],
     "links": [
-      "skill-operating-principles-for-this-skill-bbe3888435"
+      "skill-how-phases-4-and-5-connect-to-the-larger-pipeline-16ef8d0271"
     ]
   },
   {
-    "id": "skill-operating-principles-for-this-skill-bbe3888435",
+    "id": "skill-how-phases-4-and-5-connect-to-the-larger-pipeline-16ef8d0271",
+    "purpose": "how phases 4 and 5 connect to the larger pipeline",
+    "source": "src/vibey_tools/skills/plugins/content-engineering-pipeline/skills/pipeline-book-production/SKILL.md",
+    "output": "docs/microslices/skills/content-engineering-pipeline/skills/pipeline-book-production/006-how-phases-4-and-5-connect-to-the-larger-pipeline.md",
+    "requires": [
+      "skill-phase-5-5-release-engineering-handoff-e297d470c9"
+    ],
+    "links": [
+      "skill-operating-principles-for-this-skill-a074d67b84"
+    ]
+  },
+  {
+    "id": "skill-operating-principles-for-this-skill-a074d67b84",
     "purpose": "operating principles for this skill",
     "source": "src/vibey_tools/skills/plugins/content-engineering-pipeline/skills/pipeline-book-production/SKILL.md",
-    "output": "docs/microslices/skills/content-engineering-pipeline/skills/pipeline-book-production/006-operating-principles-for-this-skill.md",
+    "output": "docs/microslices/skills/content-engineering-pipeline/skills/pipeline-book-production/007-operating-principles-for-this-skill.md",
     "requires": [
-      "skill-how-phases-4-and-5-connect-to-the-larger-pipeline-be622bccaf"
+      "skill-how-phases-4-and-5-connect-to-the-larger-pipeline-16ef8d0271"
     ],
     "links": []
   }

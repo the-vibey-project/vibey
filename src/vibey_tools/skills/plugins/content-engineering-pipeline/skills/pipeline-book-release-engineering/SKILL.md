@@ -46,6 +46,9 @@ The release command must own this dependency graph:
 source inventory and prose audit
         │
         ▼
+release-readiness contract ──► metadata, research, pricing, format feasibility
+        │
+        ▼
 print interior ──► PDF structural and folio checks
         │
         ▼
@@ -111,6 +114,41 @@ A word-count target is not permission to pad. If the target is missed, the
 report should identify the gap and the shortest chapters so the next pass adds
 evidence, mechanism, case study, objection, or theological development. The
 quality gate must not reward repeated claims that add no new knowledge.
+
+## Gate 0.5: release-readiness contract
+
+Before spending time on typesetting, verify the commercial and evidentiary
+inputs that were previously likely to live in a spreadsheet, a launch note, or
+the operator's memory. The book configuration is the source of record. A
+release contract should declare and the native publisher command should measure:
+
+- title, subtitle, author, description, and the description's minimum useful
+  length;
+- the exact store-keyword count required by the target retailer, with unique,
+  non-empty keywords and no accidental duplication;
+- the required research apparatus files and a minimum count of reader-facing
+  source URLs, so a researched book cannot pass after its evidence register was
+  omitted from the build;
+- the date, source URL, currency, list prices, royalty assumptions, delivery
+  costs, and print-cost assumptions used for the pricing decision;
+- estimated unit economics for every configured format, reported as evidence
+  rather than treated as a promise of retailer payout;
+- page-count and trim constraints for each retailer and format. If a book
+  exceeds a platform limit, the contract must disable that format for that
+  platform or name the external provider and variant that will carry it.
+
+The gate must fail on missing metadata, an invalid keyword cardinality, missing
+research apparatus, absent or stale pricing verification, impossible prices,
+or a configured format whose page count cannot be accepted by its retailer. It
+may warn on a deliberate alternative such as an external hardcover provider,
+but that warning must be explicit in the machine-readable report. The report
+must be written beside the other release evidence before the build continues.
+
+This gate is intentionally separate from human approval. A machine can prove
+that seven keywords exist, that a pricing source was checked on a stated date,
+and that a 607-page interior exceeds a 550-page KDP hardcover limit. It cannot
+decide whether the positioning is honest, whether the price is wise, or whether
+the final cover deserves approval. Those remain recorded human judgments.
 
 ## Gate 1: deterministic print build
 
@@ -246,6 +284,8 @@ covered by tests:
 | EPUB was refreshed manually after a merge | one release command plus deterministic timestamps |
 | Every page was “checked” from memory | page-counted renders, contact sheets, and report |
 | A build passed without `epubcheck` | explicit unavailable-tool status |
+| Store metadata and pricing were decided in a launch conversation | release-readiness contract with metadata, keyword, research, dated-source, and unit-economics checks |
+| A long book was priced as a hardcover without checking the retailer limit | page-count feasibility gate and explicit external-provider or split-edition decision |
 
 These gates do not eliminate editing. They make editing honest: the machine
 handles inventory, measurement, conversion, and evidence; the author handles
@@ -257,13 +297,15 @@ the work.
 1. Lock the manuscript and configuration; do not begin from an old output file.
 2. Run the source audit and resolve every hard failure. Read warnings as a
    revision queue, not as decoration.
-3. Build PDF, cover, and EPUB in dependency order.
-4. Render every page and inspect the contact sheets and representative full-size
+3. Run the release-readiness contract and resolve every hard failure or record
+   the explicit platform/format exception.
+4. Build PDF, cover, and EPUB in dependency order.
+5. Render every page and inspect the contact sheets and representative full-size
    pages. Record human review.
-5. Run the external retailer/previewer checks available for the intended format.
-6. Write the manifest, compare artifact hashes to the reviewed files, and only
+6. Run the external retailer/previewer checks available for the intended format.
+7. Write the manifest, compare artifact hashes to the reviewed files, and only
    then prepare the distribution handoff.
-7. If a conflict, content edit, metadata edit, page repair, or cover repair
+8. If a conflict, content edit, metadata edit, page repair, or cover repair
    occurs, invalidate the old manifest and rerun from Gate 0.
 
 For repositories with a native command, use that command rather than copying
