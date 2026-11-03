@@ -61,6 +61,22 @@ all-page rendering ──► contact sheets and human visual review
 release manifest ──► author approval and distribution handoff
 ```
 
+When a title has more than one print interior, make the format matrix part of
+the book configuration before building:
+
+```text
+locked source
+   ├── standard interior ──► paperback cover geometry
+   └── compact hardcover interior ──► hardcover cover geometry
+   └── EPUB ──► ebook cover
+```
+
+Each interior is a format variant of the same source, never a manually edited
+copy. The release manifest must record each variant's PDF path, page count,
+hash, render report, and configured page-limit policy. A cover spine must read
+the page count from the matching final interior; using the standard PDF's page
+count for a compact hardcover is a release defect.
+
 The order is load-bearing. A cover cannot know its print spine until the PDF
 page count is final. An EPUB cannot embed its cover until the cover exists. A
 table of contents cannot be trusted until typesetting has settled. A visual
@@ -121,14 +137,16 @@ diff merely because a clock moved.
 
 ## Gate 2: covers from the final interior
 
-Generate the ebook front cover and print wraps only after the interior page
-count is final. The cover gate should verify:
+Generate the ebook front cover and print wraps only after every configured
+interior page count is final. The cover gate should verify:
 
 - exact ebook, paperback, and hardcover dimensions from the configured trim,
   paper, bleed, board, hinge, and spine rules;
 - barcode clearance, text-safe areas, minimum print type size, and panel
   boundaries;
 - title/author metadata agreement with the interior;
+- each print spine is calculated from its matching format variant, including a
+  hardcover page-limit check before artwork is accepted;
 - readable typography over artwork at the actual cover scale;
 - deterministic artwork from a declared seed and bundled fonts/assets;
 - the presence of every required upload file, including one-page wrap PDFs.
@@ -224,6 +242,7 @@ covered by tests:
 | Numbered chapters and scholarly back matter became mixed | source model and PDF/EPUB ToC checks |
 | Cover text disappeared into artwork | cover safe-area, pixel, and preview checks |
 | A PDF page count changed the spine | PDF → cover dependency order |
+| A compact hardcover used the paperback page count | format matrix and per-variant spine input |
 | EPUB was refreshed manually after a merge | one release command plus deterministic timestamps |
 | Every page was “checked” from memory | page-counted renders, contact sheets, and report |
 | A build passed without `epubcheck` | explicit unavailable-tool status |
