@@ -840,6 +840,11 @@
     "count": 11
   },
   {
+    "source": "src/vibey_tools/skills/plugins/content-engineering-pipeline/skills/pipeline-serial-fiction-production/SKILL.md",
+    "output": "docs/microslices/skills/content-engineering-pipeline/skills/pipeline-serial-fiction-production",
+    "count": 11
+  },
+  {
     "source": "src/vibey_tools/skills/plugins/content-engineering-pipeline/skills/pipeline-thesis-development/SKILL.md",
     "output": "docs/microslices/skills/content-engineering-pipeline/skills/pipeline-thesis-development",
     "count": 7
