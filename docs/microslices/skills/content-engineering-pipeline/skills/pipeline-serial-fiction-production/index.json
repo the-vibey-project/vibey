@@ -1,0 +1,130 @@
+[
+  {
+    "id": "skill-the-governing-rule-one-source-every-other-file-derived-6ecce3a212",
+    "purpose": "the governing rule one source every other file derived",
+    "source": "src/vibey_tools/skills/plugins/content-engineering-pipeline/skills/pipeline-serial-fiction-production/SKILL.md",
+    "output": "docs/microslices/skills/content-engineering-pipeline/skills/pipeline-serial-fiction-production/001-the-governing-rule-one-source-every-other-file-derived.md",
+    "requires": [],
+    "links": [
+      "skill-the-per-unit-manifest-0dfb94338d"
+    ]
+  },
+  {
+    "id": "skill-the-per-unit-manifest-0dfb94338d",
+    "purpose": "the per unit manifest",
+    "source": "src/vibey_tools/skills/plugins/content-engineering-pipeline/skills/pipeline-serial-fiction-production/SKILL.md",
+    "output": "docs/microslices/skills/content-engineering-pipeline/skills/pipeline-serial-fiction-production/002-the-per-unit-manifest.md",
+    "requires": [
+      "skill-the-governing-rule-one-source-every-other-file-derived-6ecce3a212"
+    ],
+    "links": [
+      "skill-computed-facts-bb6216686c"
+    ]
+  },
+  {
+    "id": "skill-computed-facts-bb6216686c",
+    "purpose": "computed facts",
+    "source": "src/vibey_tools/skills/plugins/content-engineering-pipeline/skills/pipeline-serial-fiction-production/SKILL.md",
+    "output": "docs/microslices/skills/content-engineering-pipeline/skills/pipeline-serial-fiction-production/003-computed-facts.md",
+    "requires": [
+      "skill-the-per-unit-manifest-0dfb94338d"
+    ],
+    "links": [
+      "skill-canon-is-searched-before-it-is-written-40f81ac2cd"
+    ]
+  },
+  {
+    "id": "skill-canon-is-searched-before-it-is-written-40f81ac2cd",
+    "purpose": "canon is searched before it is written",
+    "source": "src/vibey_tools/skills/plugins/content-engineering-pipeline/skills/pipeline-serial-fiction-production/SKILL.md",
+    "output": "docs/microslices/skills/content-engineering-pipeline/skills/pipeline-serial-fiction-production/004-canon-is-searched-before-it-is-written.md",
+    "requires": [
+      "skill-computed-facts-bb6216686c"
+    ],
+    "links": [
+      "skill-standing-rules-are-gates-8680a34756"
+    ]
+  },
+  {
+    "id": "skill-standing-rules-are-gates-8680a34756",
+    "purpose": "standing rules are gates",
+    "source": "src/vibey_tools/skills/plugins/content-engineering-pipeline/skills/pipeline-serial-fiction-production/SKILL.md",
+    "output": "docs/microslices/skills/content-engineering-pipeline/skills/pipeline-serial-fiction-production/005-standing-rules-are-gates.md",
+    "requires": [
+      "skill-canon-is-searched-before-it-is-written-40f81ac2cd"
+    ],
+    "links": [
+      "skill-found-document-forms-823f666858"
+    ]
+  },
+  {
+    "id": "skill-found-document-forms-823f666858",
+    "purpose": "found document forms",
+    "source": "src/vibey_tools/skills/plugins/content-engineering-pipeline/skills/pipeline-serial-fiction-production/SKILL.md",
+    "output": "docs/microslices/skills/content-engineering-pipeline/skills/pipeline-serial-fiction-production/006-found-document-forms.md",
+    "requires": [
+      "skill-standing-rules-are-gates-8680a34756"
+    ],
+    "links": [
+      "skill-the-batch-loop-2dd20e9856"
+    ]
+  },
+  {
+    "id": "skill-the-batch-loop-2dd20e9856",
+    "purpose": "the batch loop",
+    "source": "src/vibey_tools/skills/plugins/content-engineering-pipeline/skills/pipeline-serial-fiction-production/SKILL.md",
+    "output": "docs/microslices/skills/content-engineering-pipeline/skills/pipeline-serial-fiction-production/007-the-batch-loop.md",
+    "requires": [
+      "skill-found-document-forms-823f666858"
+    ],
+    "links": [
+      "skill-determinism-across-machines-16872cc4bc"
+    ]
+  },
+  {
+    "id": "skill-determinism-across-machines-16872cc4bc",
+    "purpose": "determinism across machines",
+    "source": "src/vibey_tools/skills/plugins/content-engineering-pipeline/skills/pipeline-serial-fiction-production/SKILL.md",
+    "output": "docs/microslices/skills/content-engineering-pipeline/skills/pipeline-serial-fiction-production/008-determinism-across-machines.md",
+    "requires": [
+      "skill-the-batch-loop-2dd20e9856"
+    ],
+    "links": [
+      "skill-retrospective-lessons-made-executable-da1e7b396b"
+    ]
+  },
+  {
+    "id": "skill-retrospective-lessons-made-executable-da1e7b396b",
+    "purpose": "retrospective lessons made executable",
+    "source": "src/vibey_tools/skills/plugins/content-engineering-pipeline/skills/pipeline-serial-fiction-production/SKILL.md",
+    "output": "docs/microslices/skills/content-engineering-pipeline/skills/pipeline-serial-fiction-production/009-retrospective-lessons-made-executable.md",
+    "requires": [
+      "skill-determinism-across-machines-16872cc4bc"
+    ],
+    "links": [
+      "skill-operating-procedure-e187a550f6"
+    ]
+  },
+  {
+    "id": "skill-operating-procedure-e187a550f6",
+    "purpose": "operating procedure",
+    "source": "src/vibey_tools/skills/plugins/content-engineering-pipeline/skills/pipeline-serial-fiction-production/SKILL.md",
+    "output": "docs/microslices/skills/content-engineering-pipeline/skills/pipeline-serial-fiction-production/010-operating-procedure.md",
+    "requires": [
+      "skill-retrospective-lessons-made-executable-da1e7b396b"
+    ],
+    "links": [
+      "skill-references-0457168b07"
+    ]
+  },
+  {
+    "id": "skill-references-0457168b07",
+    "purpose": "references",
+    "source": "src/vibey_tools/skills/plugins/content-engineering-pipeline/skills/pipeline-serial-fiction-production/SKILL.md",
+    "output": "docs/microslices/skills/content-engineering-pipeline/skills/pipeline-serial-fiction-production/011-references.md",
+    "requires": [
+      "skill-operating-procedure-e187a550f6"
+    ],
+    "links": []
+  }
+]
