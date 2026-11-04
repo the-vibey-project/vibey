@@ -84,6 +84,10 @@ thread. Then check the author's decision documents for locked rulings. Most
 continuity errors are not forgotten facts; they are facts that were never looked
 up.
 
+- **Make the search a command, with a roster.** A canon search that labels each hit with its
+  unit, and a machine-readable roster of every person (name, how to find them, who they are),
+  turn "look it up" from a habit into a step. The roster reports each person's first and last
+  appearance and flags any two who share a surname, which catches a collision when it is made.
 - **Invent as little as possible.** A new named person, date or quantity is a
   decision. If one is needed, mark it proposed in the handoff and verify it
   against the corpus: a surname, a state, a month.
