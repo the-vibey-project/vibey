@@ -7,6 +7,7 @@
 import * as vscode from 'vscode';
 import { CommandTable } from '@vibey/core';
 import { CommandActions } from './actions';
+import { ChatViewProvider } from './chat-view-provider';
 import { VibeyChat } from './chat';
 import { VibeyController } from './controller';
 import { EditorSettings } from './editor-settings';
@@ -19,6 +20,13 @@ export function activate(context: vscode.ExtensionContext): { readonly commands:
   const controller = new VibeyController(context, new EditorSettings());
   active = controller;
   const actions = new CommandActions(controller, context.extensionUri);
+  const chatViewProvider = new ChatViewProvider(controller, actions, context.extensionUri);
+  actions.setChatViewProvider(chatViewProvider);
+  context.subscriptions.push(
+    vscode.window.registerWebviewViewProvider(ChatViewProvider.VIEW_TYPE, chatViewProvider, {
+      webviewOptions: { retainContextWhenHidden: true },
+    }),
+  );
   // Open the one local hub if none runs; closing the editor never stops it (#1186).
   void controller.ensureHub();
   const notify = (text: string): void => void vscode.window.showInformationMessage(text);

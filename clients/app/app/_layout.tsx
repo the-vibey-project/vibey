@@ -25,6 +25,7 @@ function Navigator() {
         <Stack.Screen name="budgets" options={{ title: 'Budgets' }} />
         <Stack.Screen name="devices" options={{ title: 'Devices' }} />
         <Stack.Screen name="doctor" options={{ title: 'Doctor' }} />
+        <Stack.Screen name="usage" options={{ title: 'Usage', headerShown: false }} />
         <Stack.Screen name="workflows" options={{ title: 'Run on GitHub' }} />
       </Stack>
     </>

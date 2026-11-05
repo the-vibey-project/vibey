@@ -13,6 +13,7 @@ import { LanesScreen } from '../../src/screens/lanes';
 import { PairScreen } from '../../src/screens/pair';
 import { SettingsScreen } from '../../src/screens/settings';
 import { StartScreen } from '../../src/screens/start';
+import { UsageScreen } from '../../src/screens/usage';
 import { WorkflowsScreen } from '../../src/screens/workflows';
 import { AppStateProvider, MemoryStore } from '../../src/ui/app-state';
 import { AccessibleControls } from './accessible-controls';
@@ -126,6 +127,7 @@ const SCREENS: readonly { title: string; render: () => Promise<void>; loaded: Re
   { title: 'Settings', render: () => show(<SettingsScreen />), loaded: 'Sounds', atLeast: 8 },
   { title: 'Start', render: () => show(<StartScreen />), loaded: /Say what you want built/, atLeast: 3 },
   { title: 'Pair', render: () => show(<PairScreen />, {}, false), loaded: 'Pair', atLeast: 4 },
+  { title: 'Usage', render: () => show(<UsageScreen />), loaded: 'Weekly limits', atLeast: 3 },
   { title: 'Devices', render: () => show(<DevicesScreen />), loaded: 'Forget this hub', atLeast: 1 },
   { title: 'Run on GitHub', render: () => show(<WorkflowsScreen runs={new WorkflowRuns({ sleep: async () => undefined })} />), loaded: /Run on GitHub/, atLeast: 2 },
 ];

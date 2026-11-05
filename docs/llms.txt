@@ -15,6 +15,7 @@ This index is generated from the documentation's navigation by `scripts/llms_txt
 
 - [Install, copy, reinstall, uninstall](https://the-vibey-project.github.io/vibey/main/guides/install/): Install vibey and every krypton interface (Desktop on macOS and Linux, VS Code extension, Web app, Android and iOS mobile app, browser launcher, and MCP chat driver) in one place, with step-by-step instructions for…
 - [Downloads](https://the-vibey-project.github.io/vibey/main/guides/downloads/): The ready-built files attached to every vibey release, for each user interface and platform, with what is signed and how to install each.
+- [Visual tour & screenshots](https://the-vibey-project.github.io/vibey/main/guides/gallery/): Comprehensive visual tour and screenshots of all krypton user interfaces — Desktop, Mobile, Web, and VS Code.
 - [VS Code extension](https://the-vibey-project.github.io/vibey/main/guides/vscode-extension/): The extension is called krypton, the name every app carries (sub-doctrine 9.e), and its id is the-vibey-project.krypton; its commands and settings keep their vibey.* names.
 - [Drive a project from anywhere](https://the-vibey-project.github.io/vibey/main/guides/drive-a-project/): Start a vibey project, talk to it while it designs and builds, pause it, and unwind it, from a terminal, VS Code, the desktop app or your phone.
 - [Kubernetes](https://the-vibey-project.github.io/vibey/main/guides/kubernetes/): This guide takes vibey from a laptop process to a long-lived deployment: a containerized worker, a Helm chart, an in-cluster PostgreSQL, and queue-depth autoscaling via KEDA.
@@ -167,7 +168,7 @@ This index is generated from the documentation's navigation by `scripts/llms_txt
 - [0084 — A rolling nightly of every krypton interface, from the release builders](https://the-vibey-project.github.io/vibey/main/architecture/decisions/0084-krypton-nightly/)
 - [0085 — vibey -w: any vibey command, run on the repository's GitHub-hosted runners](https://the-vibey-project.github.io/vibey/main/architecture/decisions/0085-vibey-on-the-workflows/)
 - [0086 — vibey state: the whole database, sealed on a branch, kept in sync both ways](https://the-vibey-project.github.io/vibey/main/architecture/decisions/0086-state-sync/)
-- [0087 — The six audiences, in order: developers, non-profits, universities, governments, freelance clients, industry](https://the-vibey-project.github.io/vibey/main/architecture/decisions/0087-the-six-audiences-in-order/)
+- [0087 — The six audiences, in order: FOSS developers, freelancers, universities, governments, non-profits, industry](https://the-vibey-project.github.io/vibey/main/architecture/decisions/0087-the-six-audiences-in-order/)
 - [0088 — TypeScript, never JavaScript: the only authored form is typed, and the JavaScript that must exist is generated](https://the-vibey-project.github.io/vibey/main/architecture/decisions/0088-typescript-never-javascript/)
 - [0089 — AI self-reference is I; inclusive we is only direct address](https://the-vibey-project.github.io/vibey/main/architecture/decisions/0089-ai-self-reference-is-i-inclusive-we-is-direct/)
 - [0090 — pr-af is the declared default exact-head reviewer](https://the-vibey-project.github.io/vibey/main/architecture/decisions/0090-pr-af-as-the-declared-default-reviewer/)

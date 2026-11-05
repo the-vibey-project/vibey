@@ -23,16 +23,17 @@ team of those agents from your first description to deployed software, the
 way a project manager runs a team — asking you questions up front, checking
 the work, and only interrupting you when a decision is truly yours.
 
-**Who it is for**, in this order ([ADR-0087](architecture/decisions/0087-the-six-audiences-in-order.md)): open-source developers who already use
+**Who it is for**, in this order ([ADR-0087](architecture/decisions/0087-the-six-audiences-in-order.md)): FOSS developers who already use
 Claude Code, Codex or a local model, want finished, reviewed work rather than one session at a
-time, and may build vibey with us; non-profits and other small mission-driven teams, who can
-[cap what agents spend](guides/outcomes/cap-agent-spending.md) and
-[run them on their own hardware](guides/outcomes/run-agents-on-your-own-hardware.md)
-([the non-profit demo](guides/demos/non-profit.md)); universities and
+time, and may build vibey with us; freelancers and freelance clients, who need fixed-scope delivery
+with principal-engineer quality guarantees and hard budget caps; universities and
 academia, who can study and cite a working design for durable, auditable agent orchestration
 ([the paper](https://the-vibey-project.github.io/vibey/main/paper/)); governments and their militaries, who can
-[keep a record that cannot be quietly rewritten](guides/outcomes/keep-a-tamper-evident-record.md); freelance
-clients; and industry. Each audience is meant to have its own demo; the non-profit one is written, and the other five are not yet.
+[keep a record that cannot be quietly rewritten](guides/outcomes/keep-a-tamper-evident-record.md); non-profit
+orgs and other small mission-driven teams, who can
+[cap what agents spend](guides/outcomes/cap-agent-spending.md) and
+[run them on their own hardware](guides/outcomes/run-agents-on-your-own-hardware.md)
+([the non-profit demo](guides/demos/non-profit.md)); and industry teams. Each audience is meant to have its own demo; the non-profit one is written, and the other five are not yet.
 
 **What makes it different** — each claim links to what proves it:
 
@@ -54,7 +55,7 @@ vibey doctor                   # checks engines, local PostgreSQL, and the ledge
 vibey connect --yes            # plug vibey into Claude Code, Codex, Cursor, VS Code, Claude Desktop & Gemini CLI
 ```
 
-**Install every krypton interface (Desktop, Mobile, Web, VS Code, Browser & Chat MCP) — Bottom Line Up Front:** jump straight to [Install](#install) or the [step-by-step install guide](guides/install.md) and [downloads page](guides/downloads.md) for copy-and-paste instructions for every platform (macOS, Ubuntu, Fedora, Arch, Flatpak, VS Code, VSCodium, Cursor, Android, iOS, and Web), written so anyone can install everything regardless of coding experience.
+**Install every krypton interface (Desktop, Mobile, Web, VS Code, Browser & Chat MCP) — Bottom Line Up Front (BLUF):** Krypton and the vibey engine are the free, censorship-free, open-to-everyone Claude Code and Codex killer designed to replace both. It writes code the way a principal software engineer does — delivering rigorous, tested, high-quality architectures rather than unverified slop, 100% free of charge. Powered by an autonomous delivery loop, it is an AGI with superintelligence coming soon. Jump straight to [Install](#install) or the [step-by-step install guide](guides/install.md) and [downloads page](guides/downloads.md) for copy-and-paste instructions across every platform (macOS, Ubuntu, Fedora, Arch, Flatpak, VS Code, VSCodium, Cursor, Android, iOS, and Web), with no coding experience required.
 
 The full setup is under [Install](#install), then [Quickstart](#quickstart). Came with a
 specific problem? [What do you want to do?](guides/outcomes/index.md) answers six,
@@ -106,7 +107,9 @@ in one vendor's chat session.
 
 ## Install
 
-> **Bottom Line Up Front (BLUF) — How to install vibey and every krypton interface on any platform (no coding experience needed):**
+> **Bottom Line Up Front (BLUF) — Krypton and vibey are the free, censorship-free Claude Code and Codex killer, replacing both with principal-engineer quality code and AGI superintelligence coming soon:**
+>
+> Krypton and the vibey engine are completely free, open to everyone, and completely censorship-free. They replace both Claude Code and Codex by writing code the way a principal software engineer does: grounded in specifications, verified against strict gates, and delivering real, robust software without slop. As an autonomous AGI system with superintelligence coming soon, you can run it entirely on your own local hardware or drive it across desktop, mobile, browser, and IDE interfaces without paying vendor subscriptions.
 >
 > *Never used a terminal?* On **macOS**, press **Cmd + Space**, type **Terminal**, and press **Enter**. On **Linux**, press the **Super (Windows) key**, type **Terminal**, and press **Enter**. Copy any command below, paste it into the window, and press **Enter**.
 >

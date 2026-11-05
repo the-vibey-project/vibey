@@ -5,6 +5,9 @@
 #include "kr-answer.h"
 #include "kr-chat.h"
 #include "kr-format.h"
+#include "kr-inspector.h"
+#include "kr-mark.h"
+#include "kr-settings-dialog.h"
 #include "kr-window.h"
 
 typedef struct {
@@ -18,6 +21,12 @@ typedef struct {
     GtkPopover *completion_popover;
     GtkEntry *composer;
     GtkWidget *send_button;
+    GtkWidget *attach_menu_button;
+    GtkWidget *dictate_button;
+    GtkWidget *model_chip_button;
+    GtkWidget *project_selector_btn;
+    GtkWidget *inspector;
+    GtkWidget *inspector_toggle_btn;
     GtkLabel *session_heading;
     GtkLabel *session_subtitle;
     gboolean updating_sessions;
@@ -148,7 +157,7 @@ build_gate_row(KrApp *app, const KrGate *gate)
         gate->options[0] != NULL) {
         GtkWidget *action_row = adw_action_row_new();
         adw_preferences_row_set_title(ADW_PREFERENCES_ROW(action_row),
-                                      spends ? "Approve spend decision" : "Choose an answer");
+                                       spends ? "Approve spend decision" : "Choose an answer");
         for (gsize i = 0; gate->options[i] != NULL; i++) {
             GtkWidget *btn = gtk_button_new_with_label(gate->options[i]);
             gtk_widget_set_valign(btn, GTK_ALIGN_CENTER);
@@ -201,21 +210,39 @@ build_gate_row(KrApp *app, const KrGate *gate)
     return expander;
 }
 
-/* ---- transcript cards ---------------------------------------------------------------- */
+/* ---- transcript cards & actions ------------------------------------------------------ */
+
+static void
+str_closure_free(gpointer data, GClosure *closure)
+{
+    (void) closure;
+    g_free(data);
+}
+
+static void
+on_copy_turn_clicked(GtkButton *btn, gpointer data)
+{
+    (void) btn;
+    const char *text = data;
+    if (text != NULL) {
+        GdkDisplay *disp = gdk_display_get_default();
+        if (disp != NULL) {
+            GdkClipboard *clip = gdk_display_get_clipboard(disp);
+            gdk_clipboard_set_text(clip, text);
+        }
+    }
+}
 
 static GtkWidget *
-build_bubble_card(const char *role_label, const char *role_css, const char *body_text)
+build_bubble_card(ChatPage *self, const char *role_label, const char *role_css, const char *body_text)
 {
+    gboolean is_user = g_strcmp0(role_label, "YOU") == 0;
+    GtkWidget *wrap = gtk_box_new(GTK_ORIENTATION_VERTICAL, 4);
+
     GtkWidget *card = gtk_box_new(GTK_ORIENTATION_VERTICAL, 6);
-    gtk_widget_add_css_class(card, "card");
-    gtk_widget_set_margin_top(card, 4);
-    gtk_widget_set_margin_bottom(card, 4);
+    gtk_widget_add_css_class(card, is_user ? "chat-turn-bubble-user" : "chat-turn-bubble-agent");
 
     GtkWidget *inner = gtk_box_new(GTK_ORIENTATION_VERTICAL, 6);
-    gtk_widget_set_margin_top(inner, 10);
-    gtk_widget_set_margin_bottom(inner, 10);
-    gtk_widget_set_margin_start(inner, 14);
-    gtk_widget_set_margin_end(inner, 14);
 
     GtkWidget *header = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 8);
     gtk_box_append(GTK_BOX(header), badge_pill(role_label, role_css));
@@ -228,7 +255,38 @@ build_bubble_card(const char *role_label, const char *role_css, const char *body
     gtk_box_append(GTK_BOX(inner), body);
 
     gtk_box_append(GTK_BOX(card), inner);
-    return card;
+    gtk_box_append(GTK_BOX(wrap), card);
+
+    /* Turn footer action row (Copy, thumbs, speech, timestamp) */
+    GtkWidget *action_bar = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 6);
+    gtk_widget_set_margin_start(action_bar, is_user ? 48 : 20);
+    gtk_widget_set_margin_end(action_bar, is_user ? 20 : 48);
+
+    GtkWidget *copy_btn = gtk_button_new_from_icon_name("edit-copy-symbolic");
+    gtk_widget_add_css_class(copy_btn, "turn-action-btn");
+    kr_a11y_name(copy_btn, "Copy message text");
+    g_signal_connect_data(copy_btn, "clicked", G_CALLBACK(on_copy_turn_clicked),
+                          g_strdup(body_text != NULL ? body_text : ""), str_closure_free, 0);
+    gtk_box_append(GTK_BOX(action_bar), copy_btn);
+
+    if (!is_user) {
+        GtkWidget *th_up = gtk_button_new_from_icon_name("starred-symbolic");
+        gtk_widget_add_css_class(th_up, "turn-action-btn");
+        kr_a11y_name(th_up, "Thumbs up");
+        gtk_box_append(GTK_BOX(action_bar), th_up);
+
+        GtkWidget *spk = gtk_button_new_from_icon_name("audio-speakers-symbolic");
+        gtk_widget_add_css_class(spk, "turn-action-btn");
+        kr_a11y_name(spk, "Read aloud");
+        gtk_box_append(GTK_BOX(action_bar), spk);
+    }
+
+    GtkWidget *time_lbl = gtk_label_new("just now");
+    gtk_widget_add_css_class(time_lbl, "dim-label");
+    gtk_box_append(GTK_BOX(action_bar), time_lbl);
+
+    gtk_box_append(GTK_BOX(wrap), action_bar);
+    return wrap;
 }
 
 static GtkWidget *
@@ -237,6 +295,8 @@ build_tool_call_card(const KrChatToolCall *call)
     GtkWidget *list = gtk_list_box_new();
     gtk_list_box_set_selection_mode(GTK_LIST_BOX(list), GTK_SELECTION_NONE);
     gtk_widget_add_css_class(list, "boxed-list");
+    gtk_widget_set_margin_start(list, 20);
+    gtk_widget_set_margin_end(list, 20);
 
     GtkWidget *expander = adw_expander_row_new();
     adw_preferences_row_set_use_markup(ADW_PREFERENCES_ROW(expander), FALSE);
@@ -333,13 +393,56 @@ on_send_clicked(GtkButton *button, gpointer data)
     send_current_message(data);
 }
 
+/* ---- sidebar quick buttons & project picker ------------------------------------------ */
+
 static void
-on_quick_chip_clicked(GtkButton *button, gpointer data)
+on_new_chat_clicked(GtkButton *btn, gpointer data)
 {
+    (void) btn;
     ChatPage *self = data;
-    const char *command = g_object_get_data(G_OBJECT(button), "quick-command");
-    if (command != NULL)
-        kr_app_chat_send(self->app, command);
+    clear_box(self->transcript);
+    gtk_box_append(
+        self->transcript,
+        build_bubble_card(
+            self, "VIBEY", "success",
+            "Started a new session. Ask anything about your projects, trigger slash commands, or run /help."));
+    scroll_to_bottom(self);
+}
+
+static void
+on_search_clicked(GtkButton *btn, gpointer data)
+{
+    (void) btn;
+    ChatPage *self = data;
+    gtk_editable_set_text(GTK_EDITABLE(self->composer), "/ledger ");
+    gtk_editable_set_position(GTK_EDITABLE(self->composer), -1);
+    gtk_widget_grab_focus(GTK_WIDGET(self->composer));
+}
+
+static void
+on_artifacts_clicked(GtkButton *btn, gpointer data)
+{
+    (void) btn;
+    ChatPage *self = data;
+    kr_app_toast(self->app, "Viewing artifacts repository.");
+}
+
+static void
+on_customize_clicked(GtkButton *btn, gpointer data)
+{
+    (void) btn;
+    ChatPage *self = data;
+    gtk_editable_set_text(GTK_EDITABLE(self->composer), "/loops");
+    send_current_message(self);
+}
+
+static void
+on_inspector_toggle_clicked(GtkButton *btn, gpointer data)
+{
+    (void) btn;
+    ChatPage *self = data;
+    gboolean vis = gtk_widget_get_visible(self->inspector);
+    gtk_widget_set_visible(self->inspector, !vis);
 }
 
 /* ---- session sidebar (projects as sessions) ------------------------------------------ */
@@ -374,7 +477,7 @@ render_sessions_and_gates(ChatPage *self)
     /* Row 0: All projects overview session */
     GtkWidget *overview = adw_action_row_new();
     adw_preferences_row_set_use_markup(ADW_PREFERENCES_ROW(overview), FALSE);
-    adw_preferences_row_set_title(ADW_PREFERENCES_ROW(overview), "All projects");
+    adw_preferences_row_set_title(ADW_PREFERENCES_ROW(overview), "All projects overview");
     adw_action_row_set_subtitle(ADW_ACTION_ROW(overview), "Hub overview & global commands");
     gtk_list_box_row_set_activatable(GTK_LIST_BOX_ROW(overview), TRUE);
     gtk_list_box_append(self->sessions, overview);
@@ -410,10 +513,13 @@ render_sessions_and_gates(ChatPage *self)
             kr_format_phase(active->phase), active->cycle, active->max_cycles, active->project_id);
         gtk_label_set_text(self->session_heading, active->name);
         gtk_label_set_text(self->session_subtitle, sub);
+        g_autofree char *btn_title = g_strdup_printf("%s ▾", active->name);
+        gtk_button_set_label(GTK_BUTTON(self->project_selector_btn), btn_title);
     } else {
         gtk_label_set_text(self->session_heading, "All projects");
         gtk_label_set_text(self->session_subtitle,
                            "Ask about projects, answer waiting gates, or type /new to start one");
+        gtk_button_set_label(GTK_BUTTON(self->project_selector_btn), "All projects ▾");
     }
 
     /* Update inline open-gate cards for the active session */
@@ -426,6 +532,9 @@ render_sessions_and_gates(ChatPage *self)
         gtk_list_box_append(self->gate_cards, build_gate_row(self->app, gate));
     }
     gtk_widget_set_visible(self->gate_section, open_gates->len > 0);
+
+    /* Refresh right-hand inspector */
+    kr_inspector_refresh(self->inspector);
 }
 
 /* ---- public API ---------------------------------------------------------------------- */
@@ -445,14 +554,14 @@ kr_chat_page_append_turn(GtkWidget *page, const char *user_message, const KrChat
     if (self == NULL || turn == NULL)
         return;
     if (user_message != NULL && user_message[0] != '\0')
-        gtk_box_append(self->transcript, build_bubble_card("YOU", "accent", user_message));
+        gtk_box_append(self->transcript, build_bubble_card(self, "YOU", "accent", user_message));
 
     for (guint i = 0; i < turn->tool_calls->len; i++) {
         const KrChatToolCall *call = g_ptr_array_index(turn->tool_calls, i);
         gtk_box_append(self->transcript, build_tool_call_card(call));
     }
 
-    gtk_box_append(self->transcript, build_bubble_card("KRYPTON", "success", turn->reply));
+    gtk_box_append(self->transcript, build_bubble_card(self, "HERETIC", "success", turn->reply));
 
     for (guint i = 0; i < turn->gates->len; i++) {
         const KrChatGateCard *card = g_ptr_array_index(turn->gates, i);
@@ -474,9 +583,9 @@ kr_chat_page_append_error(GtkWidget *page, const char *user_message, const char 
     if (self == NULL)
         return;
     if (user_message != NULL && user_message[0] != '\0')
-        gtk_box_append(self->transcript, build_bubble_card("YOU", "accent", user_message));
+        gtk_box_append(self->transcript, build_bubble_card(self, "YOU", "accent", user_message));
     gtk_box_append(self->transcript,
-                   build_bubble_card("REFUSED", "error",
+                   build_bubble_card(self, "REFUSED", "error",
                                      error_text != NULL ? error_text : "Request failed"));
     scroll_to_bottom(self);
 }
@@ -489,7 +598,7 @@ kr_chat_page_append_ledger(GtkWidget *page, const KrChatLedgerPage *ledger)
         return;
     for (guint i = 0; i < ledger->events->len; i++) {
         const KrChatNarration *ev = g_ptr_array_index(ledger->events, i);
-        gtk_box_append(self->transcript, build_bubble_card("LEDGER", "dim-label", ev->summary));
+        gtk_box_append(self->transcript, build_bubble_card(self, "LEDGER", "dim-label", ev->summary));
     }
     scroll_to_bottom(self);
 }
@@ -500,6 +609,117 @@ kr_chat_page_focus_composer(GtkWidget *page)
     ChatPage *self = chat_page_of(page);
     if (self != NULL && self->composer != NULL)
         gtk_widget_grab_focus(GTK_WIDGET(self->composer));
+}
+
+/* ---- User footer popover menu -------------------------------------------------------- */
+
+static void
+on_user_settings_clicked(GtkButton *btn, gpointer data)
+{
+    (void) btn;
+    ChatPage *self = data;
+    kr_settings_dialog_present(self->app->window, self->app);
+}
+
+static GtkWidget *
+build_account_popover(ChatPage *self)
+{
+    GtkWidget *popover = gtk_popover_new();
+    GtkWidget *box = gtk_box_new(GTK_ORIENTATION_VERTICAL, 4);
+    gtk_widget_set_margin_top(box, 8);
+    gtk_widget_set_margin_bottom(box, 8);
+    gtk_widget_set_margin_start(box, 8);
+    gtk_widget_set_margin_end(box, 8);
+
+    GtkWidget *email = gtk_label_new("adam@matthewsteinberger.com");
+    gtk_widget_add_css_class(email, "dim-label");
+    gtk_label_set_xalign(GTK_LABEL(email), 0.0f);
+    gtk_box_append(GTK_BOX(box), email);
+    gtk_box_append(GTK_BOX(box), gtk_separator_new(GTK_ORIENTATION_HORIZONTAL));
+
+    struct {
+        const char *label;
+        const char *icon;
+    } items[] = {
+        {"Settings", "emblem-system-symbolic"},
+        {"Usage", "wallet-symbolic"},
+        {"Language", "network-wireless-symbolic"},
+        {"Get help", "dialog-information-symbolic"},
+        {"Send feedback", "dialog-question-symbolic"},
+        {"View all plans", "view-refresh-symbolic"},
+        {"Get apps and extensions", "folder-symbolic"},
+        {"View changelog", "text-x-generic-symbolic"},
+        {"Learn more", "go-next-symbolic"},
+        {"Get API keys", "system-search-symbolic"},
+        {"Log out", "system-shutdown-symbolic"},
+    };
+
+    for (gsize i = 0; i < G_N_ELEMENTS(items); i++) {
+        GtkWidget *b = gtk_button_new_with_label(items[i].label);
+        gtk_widget_add_css_class(b, "flat");
+        gtk_widget_set_halign(b, GTK_ALIGN_FILL);
+        if (i == 0)
+            g_signal_connect(b, "clicked", G_CALLBACK(on_user_settings_clicked), self);
+        gtk_box_append(GTK_BOX(box), b);
+    }
+
+    gtk_popover_set_child(GTK_POPOVER(popover), box);
+    return popover;
+}
+
+/* ---- Attach popover menu (+ button) -------------------------------------------------- */
+
+static GtkWidget *
+build_attach_popover(ChatPage *self)
+{
+    (void) self;
+    GtkWidget *popover = gtk_popover_new();
+    GtkWidget *box = gtk_box_new(GTK_ORIENTATION_VERTICAL, 2);
+    gtk_widget_set_margin_top(box, 6);
+    gtk_widget_set_margin_bottom(box, 6);
+    gtk_widget_set_margin_start(box, 6);
+    gtk_widget_set_margin_end(box, 6);
+
+    struct {
+        const char *label;
+        const char *icon;
+    } items[] = {
+        {"Add files or photos (⌘U)", "document-open-symbolic"},
+        {"Add folder", "folder-symbolic"},
+        {"Slash commands", "utilities-terminal-symbolic"},
+        {"Connectors (1 needs reconnection >)", "network-wireless-symbolic"},
+        {"Plugins >", "package-x-generic-symbolic"},
+    };
+
+    for (gsize i = 0; i < G_N_ELEMENTS(items); i++) {
+        GtkWidget *b = gtk_button_new_with_label(items[i].label);
+        gtk_widget_add_css_class(b, "flat");
+        gtk_widget_set_halign(b, GTK_ALIGN_FILL);
+        gtk_box_append(GTK_BOX(box), b);
+    }
+    gtk_popover_set_child(GTK_POPOVER(popover), box);
+    return popover;
+}
+
+/* ---- Composer and root layout -------------------------------------------------------- */
+
+static GtkWidget *
+sidebar_nav_button(const char *label, const char *icon_name, GCallback callback, gpointer data)
+{
+    GtkWidget *btn = gtk_button_new();
+    gtk_widget_add_css_class(btn, "sidebar-quick-btn");
+
+    GtkWidget *box = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 10);
+    gtk_box_append(GTK_BOX(box), gtk_image_new_from_icon_name(icon_name));
+    GtkWidget *lbl = gtk_label_new(label);
+    gtk_label_set_xalign(GTK_LABEL(lbl), 0.0f);
+    gtk_widget_set_hexpand(lbl, TRUE);
+    gtk_box_append(GTK_BOX(box), lbl);
+
+    gtk_button_set_child(GTK_BUTTON(btn), box);
+    if (callback != NULL)
+        g_signal_connect(btn, "clicked", callback, data);
+    return btn;
 }
 
 GtkWidget *
@@ -513,28 +733,27 @@ kr_chat_page_new(KrApp *app)
     gtk_widget_set_vexpand(root, TRUE);
     g_object_set_data_full(G_OBJECT(root), "kr-chat-page", self, g_free);
 
-    /* Left column: project sessions sidebar */
-    GtkWidget *left = gtk_box_new(GTK_ORIENTATION_VERTICAL, 8);
+    /* Left column: Quick Actions + Project Sessions + User Account Footer */
+    GtkWidget *left = gtk_box_new(GTK_ORIENTATION_VERTICAL, 4);
     gtk_widget_set_size_request(left, 240, -1);
-    gtk_widget_set_margin_top(left, 12);
-    gtk_widget_set_margin_bottom(left, 12);
-    gtk_widget_set_margin_start(left, 12);
+    gtk_widget_set_margin_top(left, 8);
+    gtk_widget_set_margin_bottom(left, 8);
+    gtk_widget_set_margin_start(left, 6);
     gtk_widget_set_margin_end(left, 6);
 
-    GtkWidget *left_header = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 8);
-    GtkWidget *sessions_title = gtk_label_new("Sessions");
-    gtk_widget_add_css_class(sessions_title, "heading");
-    gtk_label_set_xalign(GTK_LABEL(sessions_title), 0.0f);
-    gtk_widget_set_hexpand(sessions_title, TRUE);
-    gtk_box_append(GTK_BOX(left_header), sessions_title);
+    /* Quick actions */
+    gtk_box_append(GTK_BOX(left), sidebar_nav_button("+ New", "document-new-symbolic", G_CALLBACK(on_new_chat_clicked), self));
+    gtk_box_append(GTK_BOX(left), sidebar_nav_button("Search", "edit-find-symbolic", G_CALLBACK(on_search_clicked), self));
+    gtk_box_append(GTK_BOX(left), sidebar_nav_button("Artifacts", "folder-symbolic", G_CALLBACK(on_artifacts_clicked), self));
+    gtk_box_append(GTK_BOX(left), sidebar_nav_button("Customize", "preferences-system-symbolic", G_CALLBACK(on_customize_clicked), self));
 
-    GtkWidget *new_btn = gtk_button_new_from_icon_name("list-add-symbolic");
-    gtk_actionable_set_action_name(GTK_ACTIONABLE(new_btn), "app.start-project");
-    gtk_widget_set_tooltip_text(new_btn, "Start a project (Ctrl+N)");
-    kr_a11y_name(new_btn, "Start a project");
-    gtk_box_append(GTK_BOX(left_header), new_btn);
-    gtk_box_append(GTK_BOX(left), left_header);
+    /* Sessions Section header */
+    GtkWidget *grp_lbl = gtk_label_new("Sessions");
+    gtk_widget_add_css_class(grp_lbl, "session-group-header");
+    gtk_label_set_xalign(GTK_LABEL(grp_lbl), 0.0f);
+    gtk_box_append(GTK_BOX(left), grp_lbl);
 
+    /* Sessions list */
     GtkWidget *sessions_list = gtk_list_box_new();
     gtk_widget_add_css_class(sessions_list, "navigation-sidebar");
     self->sessions = GTK_LIST_BOX(sessions_list);
@@ -545,62 +764,72 @@ kr_chat_page_new(KrApp *app)
     gtk_widget_set_vexpand(sessions_scroll, TRUE);
     gtk_box_append(GTK_BOX(left), sessions_scroll);
 
+    /* Account footer button with menu popover */
+    GtkWidget *account_btn = gtk_menu_button_new();
+    gtk_widget_add_css_class(account_btn, "account-footer-btn");
+
+    GtkWidget *acct_box = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 8);
+    GtkWidget *avatar = kr_mark_new(24);
+    gtk_box_append(GTK_BOX(acct_box), avatar);
+
+    GtkWidget *acct_name = gtk_label_new("Adam · Pro ▾");
+    gtk_widget_set_hexpand(acct_name, TRUE);
+    gtk_label_set_xalign(GTK_LABEL(acct_name), 0.0f);
+    gtk_box_append(GTK_BOX(acct_box), acct_name);
+
+    GtkWidget *gear_img = gtk_image_new_from_icon_name("emblem-system-symbolic");
+    gtk_box_append(GTK_BOX(acct_box), gear_img);
+
+    gtk_menu_button_set_child(GTK_MENU_BUTTON(account_btn), acct_box);
+    gtk_menu_button_set_popover(GTK_MENU_BUTTON(account_btn), build_account_popover(self));
+    gtk_box_append(GTK_BOX(left), account_btn);
+
     gtk_box_append(GTK_BOX(root), left);
     gtk_box_append(GTK_BOX(root), gtk_separator_new(GTK_ORIENTATION_VERTICAL));
 
-    /* Right column: active session header, inline open gates, transcript, and bottom composer */
-    GtkWidget *right = gtk_box_new(GTK_ORIENTATION_VERTICAL, 10);
-    gtk_widget_set_hexpand(right, TRUE);
-    gtk_widget_set_vexpand(right, TRUE);
-    gtk_widget_set_margin_top(right, 12);
-    gtk_widget_set_margin_bottom(right, 12);
-    gtk_widget_set_margin_start(right, 12);
-    gtk_widget_set_margin_end(right, 12);
+    /* Center column: active session header, inline gates, transcript, and rounded floating composer */
+    GtkWidget *center = gtk_box_new(GTK_ORIENTATION_VERTICAL, 0);
+    gtk_widget_set_hexpand(center, TRUE);
+    gtk_widget_set_vexpand(center, TRUE);
 
-    /* Session header + quick command chips */
-    GtkWidget *top_bar = gtk_box_new(GTK_ORIENTATION_VERTICAL, 4);
-    GtkWidget *heading = gtk_label_new("All projects");
-    gtk_widget_add_css_class(heading, "title-3");
-    gtk_label_set_xalign(GTK_LABEL(heading), 0.0f);
+    /* Center Header Bar */
+    GtkWidget *top_bar = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 12);
+    gtk_widget_set_margin_top(top_bar, 10);
+    gtk_widget_set_margin_bottom(top_bar, 8);
+    gtk_widget_set_margin_start(top_bar, 16);
+    gtk_widget_set_margin_end(top_bar, 16);
+
+    GtkWidget *proj_btn = gtk_button_new_with_label("All projects ▾");
+    gtk_widget_add_css_class(proj_btn, "flat");
+    gtk_widget_add_css_class(proj_btn, "title-4");
+    self->project_selector_btn = proj_btn;
+    gtk_box_append(GTK_BOX(top_bar), proj_btn);
+
+    GtkWidget *heading = gtk_label_new("");
     self->session_heading = GTK_LABEL(heading);
-    gtk_box_append(GTK_BOX(top_bar), heading);
-
     GtkWidget *subtitle = gtk_label_new("");
-    gtk_widget_add_css_class(subtitle, "dim-label");
-    gtk_label_set_xalign(GTK_LABEL(subtitle), 0.0f);
-    gtk_label_set_wrap(GTK_LABEL(subtitle), TRUE);
     self->session_subtitle = GTK_LABEL(subtitle);
-    gtk_box_append(GTK_BOX(top_bar), subtitle);
 
-    GtkWidget *chips = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 6);
-    static const struct {
-        const char *label;
-        const char *cmd;
-    } quick_commands[] = {
-        {"Status", "/status"},
-        {"Open gates", "/gates"},
-        {"Budget", "/budget"},
-        {"Queue", "/queue"},
-        {"Lanes", "/lanes"},
-        {"Doctor", "/doctor"},
-        {"Help", "/help"},
-    };
-    for (gsize i = 0; i < G_N_ELEMENTS(quick_commands); i++) {
-        GtkWidget *chip = gtk_button_new_with_label(quick_commands[i].label);
-        gtk_widget_add_css_class(chip, "pill");
-        g_object_set_data(G_OBJECT(chip), "quick-command", (gpointer) quick_commands[i].cmd);
-        g_signal_connect(chip, "clicked", G_CALLBACK(on_quick_chip_clicked), self);
-        gtk_box_append(GTK_BOX(chips), chip);
-    }
-    gtk_box_append(GTK_BOX(top_bar), chips);
-    gtk_box_append(GTK_BOX(right), top_bar);
+    GtkWidget *top_spacer = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 0);
+    gtk_widget_set_hexpand(top_spacer, TRUE);
+    gtk_box_append(GTK_BOX(top_bar), top_spacer);
+
+    /* Inspector toggle button */
+    GtkWidget *toggle_btn = gtk_button_new_from_icon_name("view-paged-symbolic");
+    gtk_widget_add_css_class(toggle_btn, "flat");
+    kr_a11y_name(toggle_btn, "Toggle inspector pane");
+    g_signal_connect(toggle_btn, "clicked", G_CALLBACK(on_inspector_toggle_clicked), self);
+    self->inspector_toggle_btn = toggle_btn;
+    gtk_box_append(GTK_BOX(top_bar), toggle_btn);
+
+    gtk_box_append(GTK_BOX(center), top_bar);
+    gtk_box_append(GTK_BOX(center), gtk_separator_new(GTK_ORIENTATION_HORIZONTAL));
 
     /* Pinned open-gate approval cards for the selected session */
     GtkWidget *gate_section = gtk_box_new(GTK_ORIENTATION_VERTICAL, 6);
-    GtkWidget *gate_title = gtk_label_new("Waiting for your decision");
-    gtk_widget_add_css_class(gate_title, "heading");
-    gtk_label_set_xalign(GTK_LABEL(gate_title), 0.0f);
-    gtk_box_append(GTK_BOX(gate_section), gate_title);
+    gtk_widget_set_margin_start(gate_section, 24);
+    gtk_widget_set_margin_end(gate_section, 24);
+    gtk_widget_set_margin_top(gate_section, 8);
 
     GtkWidget *gate_cards = gtk_list_box_new();
     gtk_list_box_set_selection_mode(GTK_LIST_BOX(gate_cards), GTK_SELECTION_NONE);
@@ -609,7 +838,7 @@ kr_chat_page_new(KrApp *app)
     gtk_box_append(GTK_BOX(gate_section), gate_cards);
     gtk_widget_set_visible(gate_section, FALSE);
     self->gate_section = gate_section;
-    gtk_box_append(GTK_BOX(right), gate_section);
+    gtk_box_append(GTK_BOX(center), gate_section);
 
     /* Scrolling conversation transcript */
     GtkWidget *transcript = gtk_box_new(GTK_ORIENTATION_VERTICAL, 8);
@@ -618,33 +847,52 @@ kr_chat_page_new(KrApp *app)
     gtk_box_append(
         self->transcript,
         build_bubble_card(
-            "KRYPTON", "success",
-            "Welcome to krypton chat. Pick a project on the left or type `/` for commands "
+            self, "VIBEY", "success",
+            "Welcome to vibey krypton chat. Pick a project on the left or type `/` for commands "
             "(`/projects`, `/status`, `/gates`, `/new <name> <what to build>`, `/help`)."));
 
     GtkWidget *clamp = adw_clamp_new();
-    adw_clamp_set_maximum_size(ADW_CLAMP(clamp), 860);
+    adw_clamp_set_maximum_size(ADW_CLAMP(clamp), 880);
     adw_clamp_set_child(ADW_CLAMP(clamp), transcript);
 
     GtkWidget *transcript_scroll = gtk_scrolled_window_new();
     gtk_scrolled_window_set_child(GTK_SCROLLED_WINDOW(transcript_scroll), clamp);
     gtk_widget_set_vexpand(transcript_scroll, TRUE);
     self->transcript_scroll = GTK_SCROLLED_WINDOW(transcript_scroll);
-    gtk_box_append(GTK_BOX(right), transcript_scroll);
+    gtk_box_append(GTK_BOX(center), transcript_scroll);
 
-    /* Bottom composer with `/` completion popover */
-    GtkWidget *composer_box = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 8);
+    /* Rounded floating bottom composer card */
+    GtkWidget *comp_card = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 8);
+    gtk_widget_add_css_class(comp_card, "floating-composer-card");
+
+    /* + attach menu button */
+    GtkWidget *attach_btn = gtk_menu_button_new();
+    gtk_widget_add_css_class(attach_btn, "composer-attach-btn");
+    gtk_menu_button_set_icon_name(GTK_MENU_BUTTON(attach_btn), "list-add-symbolic");
+    kr_a11y_name(attach_btn, "Add files or commands");
+    gtk_menu_button_set_popover(GTK_MENU_BUTTON(attach_btn), build_attach_popover(self));
+    self->attach_menu_button = attach_btn;
+    gtk_box_append(GTK_BOX(comp_card), attach_btn);
+
+    /* Text entry */
     GtkWidget *composer = gtk_entry_new();
-    gtk_entry_set_placeholder_text(
-        GTK_ENTRY(composer),
-        "Ask about a project, answer a gate, or type / for commands…");
+    gtk_widget_add_css_class(composer, "composer-input");
+    gtk_entry_set_placeholder_text(GTK_ENTRY(composer), "+ Type / for commands");
     gtk_widget_set_hexpand(composer, TRUE);
     kr_a11y_name(composer, "Chat message or slash command");
     self->composer = GTK_ENTRY(composer);
     g_signal_connect(composer, "changed", G_CALLBACK(on_composer_changed), self);
     g_signal_connect(composer, "activate", G_CALLBACK(on_composer_activate), self);
-    gtk_box_append(GTK_BOX(composer_box), composer);
+    gtk_box_append(GTK_BOX(comp_card), composer);
 
+    /* Dictation microphone button */
+    GtkWidget *mic_btn = gtk_button_new_from_icon_name("audio-input-microphone-symbolic");
+    gtk_widget_add_css_class(mic_btn, "composer-attach-btn");
+    kr_a11y_name(mic_btn, "Voice dictation");
+    self->dictate_button = mic_btn;
+    gtk_box_append(GTK_BOX(comp_card), mic_btn);
+
+    /* Popover for slash completion */
     GtkWidget *popover = gtk_popover_new();
     gtk_popover_set_autohide(GTK_POPOVER(popover), FALSE);
     gtk_popover_set_position(GTK_POPOVER(popover), GTK_POS_TOP);
@@ -661,15 +909,47 @@ kr_chat_page_new(KrApp *app)
     gtk_popover_set_child(GTK_POPOVER(popover), comp_scroll);
     self->completion_popover = GTK_POPOVER(popover);
 
-    GtkWidget *send_btn = gtk_button_new_with_label("Send");
+    /* Send button */
+    GtkWidget *send_btn = gtk_button_new_from_icon_name("document-send-symbolic");
     gtk_widget_add_css_class(send_btn, "suggested-action");
     kr_a11y_name(send_btn, "Send chat message");
     g_signal_connect(send_btn, "clicked", G_CALLBACK(on_send_clicked), self);
     self->send_button = send_btn;
-    gtk_box_append(GTK_BOX(composer_box), send_btn);
+    gtk_box_append(GTK_BOX(comp_card), send_btn);
 
-    gtk_box_append(GTK_BOX(right), composer_box);
-    gtk_box_append(GTK_BOX(root), right);
+    gtk_box_append(GTK_BOX(center), comp_card);
+
+    /* Sub-composer status bar (Model / Effort pill + Tier Auto) */
+    GtkWidget *sub_bar = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 8);
+    gtk_widget_add_css_class(sub_bar, "composer-status-bar");
+
+    GtkWidget *sub_spacer = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 0);
+    gtk_widget_set_hexpand(sub_spacer, TRUE);
+    gtk_box_append(GTK_BOX(sub_bar), sub_spacer);
+
+    GtkWidget *model_chip = gtk_button_new_with_label("Sonnet 5.5 Medium");
+    gtk_widget_add_css_class(model_chip, "model-effort-chip");
+    g_signal_connect(model_chip, "clicked", G_CALLBACK(on_customize_clicked), self);
+    self->model_chip_button = model_chip;
+    gtk_box_append(GTK_BOX(sub_bar), model_chip);
+
+    GtkWidget *tier_lbl = gtk_label_new("Auto");
+    gtk_widget_add_css_class(tier_lbl, "dim-label");
+    gtk_box_append(GTK_BOX(sub_bar), tier_lbl);
+
+    GtkWidget *dot = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 0);
+    gtk_widget_add_css_class(dot, "status-dot-green");
+    gtk_widget_set_valign(dot, GTK_ALIGN_CENTER);
+    gtk_box_append(GTK_BOX(sub_bar), dot);
+
+    gtk_box_append(GTK_BOX(center), sub_bar);
+
+    gtk_box_append(GTK_BOX(root), center);
+    gtk_box_append(GTK_BOX(root), gtk_separator_new(GTK_ORIENTATION_VERTICAL));
+
+    /* Right column: Inspector Sidebar */
+    self->inspector = kr_inspector_new(app);
+    gtk_box_append(GTK_BOX(root), self->inspector);
 
     render_sessions_and_gates(self);
     return root;

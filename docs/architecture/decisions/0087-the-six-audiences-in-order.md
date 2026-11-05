@@ -1,6 +1,6 @@
-# 0087 — The six audiences, in order: developers, non-profits, universities, governments, freelance clients, industry
+# 0087 — The six audiences, in order: FOSS developers, freelancers, universities, governments, non-profits, industry
 
-**Status:** proposed · **Date:** 2026-10-07 · **Extends:** ADR-0077 (outcome guides; its reader order) · **Cites:** doctrines 2, 7 and 12; sub-doctrines 2.a, 4.a, 7.e, 10.f and 12.b · **Related:** ADR-0033, ADR-0076 · **Evidence:** `develop` at `c5cc3c9cc`, read 2026-10-07 · **Canon:** proposes sub-doctrine 2.c — *the six audiences*, under doctrine 2 (audience channels), carried on its own branch for the operator's ratification
+**Status:** accepted (amended) · **Date:** 2026-10-07 (amended 2026-11-05) · **Extends:** ADR-0077 (outcome guides; its reader order) · **Cites:** doctrines 2, 7 and 12; sub-doctrines 2.a, 4.a, 7.e, 10.f and 12.b · **Related:** ADR-0033, ADR-0076 · **Evidence:** `develop` at `c5cc3c9cc`, read 2026-10-07 · **Canon:** proposes sub-doctrine 2.c — *the six audiences*, under doctrine 2 (audience channels), carried on its own branch for the operator's ratification
 
 **Owes:** the advertised ADR count in `CLAUDE.md`, `AGENTS.md`, `GEMINI.md`, `README.md`
 and `docs/index.md`; a `properdocs.yml` nav entry; `docs/llms.txt` regenerated from that
@@ -39,15 +39,16 @@ never said it is for.
 **The project serves six audiences, in this order, on every surface that addresses an
 audience; each has its own demo; the order and the demos are law (2.c), not preference.**
 
-1. **Open-source developers** — who might use the project and then build it. First, as
+1. **FOSS developers** — open-source developers who might use the project and then build it. First, as
    ADR-0077 and 7.e already treat them.
-2. **Non-profits** — small, mission-driven teams. New in this record, and second.
+2. **Freelancers** — independent engineers and freelance clients, delivering fixed-scope work stated as
+   scope and price rather than as a pitch.
 3. **Universities and academia** — the paper, the book and the citation file are theirs.
 4. **Governments, with their militaries** — 2.a stands unchanged: the military arm is the
    primary emphasis and civil agencies inherit every guarantee.
-5. **Freelance clients** — fixed-scope work, stated as scope and price rather than as a
-   pitch.
-6. **Industry** — last, and not absent: doctrine 2's "afterthought" is an ordering, and an
+5. **Non-profit orgs** — small, mission-driven teams who most need software that holds a budget
+   and keeps data where they choose.
+6. **Industry teams** — last, and not absent: doctrine 2's "afterthought" is an ordering, and an
    audience served sixth is still served.
 
 Four rules carry it.

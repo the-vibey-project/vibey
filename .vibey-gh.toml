@@ -168,7 +168,7 @@ union_merge_paths = []
 # browse by: the words a stranger would search for, each true of the project (sub-doctrine
 # 7.d, ADR-0076). GitHub allows twenty topics. Reconciled by repository-profile.yml after a
 # release, never set by hand.
-description = "Open-source orchestrator for AI coding agents: a spec interview, unattended builds on local (Ollama) or paid agents, human-gated review, and an append-only PostgreSQL ledger so a crashed agent's work is picked up, not lost."
+description = "Free, censorship-free open-source orchestrator and Claude Code / Codex killer: writes code like a principal software engineer with no slop, autonomous AGI with superintelligence coming soon."
 topics = [
   "ai-agents", "coding-agents", "agent-orchestration", "autonomous-agents",
   "autonomous-software-delivery", "llm", "local-llm", "ollama", "sovereign-ai",

@@ -42,6 +42,13 @@
   "activationEvents": [],
   "contributes": {
     "viewsContainers": {
+      "secondarySidebar": [
+        {
+          "id": "vibey-chat-sidebar",
+          "title": "krypton",
+          "icon": "media/krypton.svg"
+        }
+      ],
       "activitybar": [
         {
           "id": "vibey",
@@ -51,6 +58,13 @@
       ]
     },
     "views": {
+      "vibey-chat-sidebar": [
+        {
+          "type": "webview",
+          "id": "vibey.chatView",
+          "name": "krypton"
+        }
+      ],
       "vibey": [
         {
           "id": "vibey.model",
