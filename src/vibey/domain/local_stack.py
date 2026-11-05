@@ -20,6 +20,8 @@ from dataclasses import dataclass
 from enum import StrEnum
 from typing import Final
 
+from vibey.domain.sovereign_model import SOVEREIGN_CATALOG
+
 # ---------------------------------------------------------------------------
 # Enumerations
 # ---------------------------------------------------------------------------
@@ -154,8 +156,8 @@ class UnknownDependency(ValueError):
 # Default catalogue entries
 # ---------------------------------------------------------------------------
 
-DEFAULT_LOCAL_MODEL: Final = "gpt-oss:20b"
-DEFAULT_LOCAL_MODEL_DOWNLOAD: Final = "14 GB"
+DEFAULT_LOCAL_MODEL: Final = SOVEREIGN_CATALOG.default().tag
+DEFAULT_LOCAL_MODEL_DOWNLOAD: Final = SOVEREIGN_CATALOG.default().download
 
 # Common hint for PostgreSQL, used in both recipes.
 _POSTGRES_HINT = "export VIBEY_PG_URL=postgresql://$USER@localhost:5432/vibey"

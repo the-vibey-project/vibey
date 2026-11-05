@@ -33,6 +33,9 @@ parser = QwenConfigParser()
 selector = BackendSelector()
 
 
+HERETIC_V2_TAG = "hf.co/mradermacher/gpt-oss-20b-heretic-v2-GGUF:MXFP4_MOE"
+
+
 def test_default_config() -> None:
     assert parser.parse({}) == QwenConfig()
     assert isinstance(parser, QwenConfigParserInterface)
@@ -129,7 +132,7 @@ def test_endpoint_is_unconfigured_by_default_and_falls_back_to_ollama() -> None:
     config = parser.parse({})
     assert not config.endpoint_configured
     assert config.endpoint_url == DEFAULT_ENDPOINT_BASE_URL == "http://127.0.0.1:11434/v1"
-    assert config.model == DEFAULT_ENDPOINT_MODEL == "gpt-oss:20b"
+    assert config.model == DEFAULT_ENDPOINT_MODEL == HERETIC_V2_TAG
 
 
 def test_endpoint_settings_are_parsed_and_normalised() -> None:
@@ -338,7 +341,7 @@ def test_the_two_engines_differ_only_in_name_prefix_and_model() -> None:
     from qwenloop.domain.interfaces import RunnerIdentityInterface
 
     assert isinstance(GPTOSSLOOP, RunnerIdentityInterface)
-    assert (GPTOSSLOOP.name, GPTOSSLOOP.default_model) == ("gptossloop", "gpt-oss:20b")
+    assert (GPTOSSLOOP.name, GPTOSSLOOP.default_model) == ("gptossloop", HERETIC_V2_TAG)
     assert (QWENLOOP.name, QWENLOOP.default_model) == ("qwenloop", "qwen3:14b")
     assert (
         GPTOSSLOOP.env_config,

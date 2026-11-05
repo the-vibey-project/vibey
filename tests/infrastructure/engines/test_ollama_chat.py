@@ -10,6 +10,7 @@ import pytest
 from vibey.domain.config import ConfigError
 from vibey.domain.errors import OutputBudgetExhausted
 from vibey.domain.job import FailureClass
+from vibey.domain.sovereign_model import DEFAULT_SOVEREIGN_TAG
 from vibey.infrastructure.engines.interfaces import (
     OllamaChatClientInterface,
     OllamaTransportInterface,
@@ -80,7 +81,7 @@ def test_the_defaults_are_todays_endpoint_and_model() -> None:
     """Configurable, and nothing about an unconfigured install changes (ADR-0018)."""
     client = OllamaChatClient()
     assert client.base_url == DEFAULT_OLLAMA_URL == "http://127.0.0.1:11434"
-    assert client.model == DEFAULT_OLLAMA_MODEL == "gpt-oss:20b"
+    assert client.model == DEFAULT_OLLAMA_MODEL == DEFAULT_SOVEREIGN_TAG
     assert DEFAULT_OLLAMA_TIMEOUT == 900
     assert isinstance(client, OllamaChatClientInterface)
     assert isinstance(UrllibOllamaTransport(), OllamaTransportInterface)

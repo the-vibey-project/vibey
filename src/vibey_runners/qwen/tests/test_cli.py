@@ -12,7 +12,7 @@ from typer.testing import CliRunner
 
 from qwenloop import __version__
 from qwenloop.cli.app import app
-from qwenloop.domain.config import QwenConfig, ToolLimits
+from qwenloop.domain.config import DEFAULT_ENDPOINT_MODEL, QwenConfig, ToolLimits
 from qwenloop.domain.model import Backend, RepoItem, RunState, RunStatus, ServerInfo
 from qwenloop.infrastructure.dispatch_benchmark import DispatchBenchmarkResult
 from qwenloop.infrastructure.inference import LlamaCppServer, OpenAICompatServer
@@ -813,7 +813,8 @@ def test_storm_continues_past_unavailable_repo(
 # --- openai-compat endpoint mode (Ollama first) -------------------------------------------
 
 OLLAMA_MODELS = (
-    b'{"object": "list", "data": [{"id": "gpt-oss:20b"}, {"id": "qwen3:14b"}, '
+    b'{"object": "list", "data": [{"id": "gpt-oss:20b"}, '
+    b'{"id": "hf.co/mradermacher/gpt-oss-20b-heretic-v2-GGUF:MXFP4_MOE"}, {"id": "qwen3:14b"}, '
     b'{"id": "qwen2.5-coder:14b"}]}'
 )
 
@@ -916,7 +917,7 @@ def test_gptossloop_asks_for_gpt_oss_and_reads_only_its_own_settings(
     assert result.exit_code == 0, result.output
     info = recording_runner[0]["server_info"]
     assert isinstance(info, ServerInfo)
-    assert (info.backend, info.model) == (Backend.OPENAI_COMPAT, "gpt-oss:20b")
+    assert (info.backend, info.model) == (Backend.OPENAI_COMPAT, DEFAULT_ENDPOINT_MODEL)
     version = runner.invoke(app, ["--version"])
     assert version.stdout.startswith("gptossloop ")
 
@@ -1259,7 +1260,7 @@ def test_with_nothing_configured_a_running_ollama_is_attached(
     server, profile = _server_for(QwenConfig())
     assert isinstance(server, OpenAICompatServer)
     assert server.base_url == "http://127.0.0.1:11434/v1"  # type: ignore[attr-defined]
-    assert profile.name == "gpt-oss:20b"
+    assert profile.name == DEFAULT_ENDPOINT_MODEL
     assert no_local_ollama.asked == 1
 
 

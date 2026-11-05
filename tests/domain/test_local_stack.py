@@ -23,12 +23,14 @@ from vibey.domain.local_stack import (
     PackageSpec,
     UnknownDependency,
 )
+from vibey.domain.sovereign_model import DEFAULT_SOVEREIGN_TAG
 
 # 1. Constant
 
 
-def test_default_local_model_is_gpt_oss_20b():
-    assert DEFAULT_LOCAL_MODEL == "gpt-oss:20b"
+def test_default_local_model_is_the_sovereign_default():
+    assert DEFAULT_LOCAL_MODEL == DEFAULT_SOVEREIGN_TAG
+    assert "heretic" in DEFAULT_LOCAL_MODEL
 
 
 # 2. Core entries have recipes for both default OSes

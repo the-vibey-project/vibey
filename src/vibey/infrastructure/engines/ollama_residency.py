@@ -20,12 +20,11 @@ import urllib.request
 from collections.abc import Callable, Mapping
 from typing import Any, Final
 
+from vibey.domain.sovereign_model import SOVEREIGN_CATALOG
 from vibey.infrastructure.engines.ollama_chat import (
     DEFAULT_OLLAMA_CONTEXT,
-    DEFAULT_OLLAMA_MODEL,
     DEFAULT_OLLAMA_URL,
     OLLAMA_CONTEXT_ENV,
-    OLLAMA_MODEL_ENV,
     OLLAMA_URL_ENV,
 )
 
@@ -47,7 +46,7 @@ class OllamaResidency:
 
     async def line(self, environ: Mapping[str, str]) -> str:
         url = (environ.get(OLLAMA_URL_ENV) or DEFAULT_OLLAMA_URL).strip().rstrip("/")
-        model = (environ.get(OLLAMA_MODEL_ENV) or DEFAULT_OLLAMA_MODEL).strip()
+        model = SOVEREIGN_CATALOG.from_environment(environ)
         raw_ceiling = (environ.get(OLLAMA_CONTEXT_ENV) or str(DEFAULT_OLLAMA_CONTEXT)).strip()
         try:
             ceiling = int(raw_ceiling)

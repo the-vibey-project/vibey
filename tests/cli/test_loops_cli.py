@@ -34,6 +34,7 @@ from vibey.domain.engine import (
     EngineInvocation,
     EngineTier,
 )
+from vibey.domain.sovereign_model import DEFAULT_SOVEREIGN_TAG
 from vibey.infrastructure.engines.descriptors import CLAUDELOOP
 from vibey.infrastructure.engines.local_engines import LocalEndpointEnvironment, LocalEngineSettings
 
@@ -370,7 +371,7 @@ def test_gptossloops_model_mirrors_how_the_model_reaches_it() -> None:
     nothing = (None, {None}, {OWN_CHOICE})
     assert _models() == nothing
     assert _models(VIBEY_OLLAMA_MODEL="qwen3-coder") == nothing
-    assert _models(**ENDPOINT) == ("gpt-oss:20b", {"gpt-oss:20b"}, {""})
+    assert _models(**ENDPOINT) == (DEFAULT_SOVEREIGN_TAG, {DEFAULT_SOVEREIGN_TAG}, {""})
     assert _models(**ENDPOINT, VIBEY_OLLAMA_MODEL="qwen3-coder") == (
         "qwen3-coder",
         {"qwen3-coder"},

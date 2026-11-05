@@ -97,6 +97,7 @@ from vibey.domain.ledger_query import EVENT_KINDS, InvalidLedgerQuery
 from vibey.domain.phase import Phase, StoredPhase, VisualDecision
 from vibey.domain.remote_command import WORKFLOWS_INVOCATION
 from vibey.domain.research_gap import ResearchGap
+from vibey.domain.sovereign_model import SOVEREIGN_CATALOG
 from vibey.domain.spec import (
     AcceptanceCriterion,
     Constraint,
@@ -1858,7 +1859,7 @@ def doctor(
                     "--url",
                     os.environ.get("VIBEY_OLLAMA_URL", "http://127.0.0.1:11434"),
                     "--model",
-                    os.environ.get("VIBEY_OLLAMA_MODEL", "gpt-oss:20b"),
+                    SOVEREIGN_CATALOG.from_environment(os.environ),
                     "--record",
                     str(output),
                 ],

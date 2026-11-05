@@ -48,6 +48,7 @@ from uuid import uuid4
 
 from vibey.domain.config import ConfigError
 from vibey.domain.errors import OutputBudgetExhausted
+from vibey.domain.sovereign_model import DEFAULT_SOVEREIGN_TAG, SOVEREIGN_CATALOG
 from vibey.infrastructure.engines.interfaces.ollama_chat_interface import (
     OllamaStreamTransportInterface,
     OllamaTransportInterface,
@@ -87,7 +88,7 @@ OLLAMA_RETRY_CONTEXT_ENV = "VIBEY_OLLAMA_RETRY_CONTEXT"
 VIBEY_REVISION_ENV = "VIBEY_REVISION"
 
 DEFAULT_OLLAMA_URL = "http://127.0.0.1:11434"
-DEFAULT_OLLAMA_MODEL = "gpt-oss:20b"
+DEFAULT_OLLAMA_MODEL = DEFAULT_SOVEREIGN_TAG
 DEFAULT_OLLAMA_TIMEOUT = 900
 DEFAULT_OLLAMA_CONTEXT = 8192
 DEFAULT_OLLAMA_OUTPUT = 2048
@@ -365,7 +366,7 @@ class OllamaChatClient:
         fit = _load_fit(
             fit_path,
             environ.get(OLLAMA_URL_ENV) or DEFAULT_OLLAMA_URL,
-            model or environ.get(OLLAMA_MODEL_ENV) or DEFAULT_OLLAMA_MODEL,
+            SOVEREIGN_CATALOG.from_environment(environ, explicit=model),
             environ.get(VIBEY_REVISION_ENV),
         )
         if fit is not None:
@@ -422,7 +423,7 @@ class OllamaChatClient:
             ) from exc
         return cls(
             base_url=environ.get(OLLAMA_URL_ENV) or DEFAULT_OLLAMA_URL,
-            model=model or environ.get(OLLAMA_MODEL_ENV) or DEFAULT_OLLAMA_MODEL,
+            model=SOVEREIGN_CATALOG.from_environment(environ, explicit=model),
             timeout=timeout,
             context_ceiling=context_ceiling,
             output_ceiling=output_ceiling,
