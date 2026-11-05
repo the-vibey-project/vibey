@@ -148,6 +148,14 @@ kr_hub_path(KrHubRoute route, const char *project_id, const char *id)
         return project ? g_strdup_printf("/api/v1/projects/%s/work/pause", project) : NULL;
     case KR_HUB_ROUTE_PROJECT_ABANDON:
         return project ? g_strdup_printf("/api/v1/projects/%s/abandon", project) : NULL;
+    case KR_HUB_ROUTE_CHAT_MESSAGES:
+        return g_strdup("/api/v1/chat/messages");
+    case KR_HUB_ROUTE_PROJECT_LEDGER_AFTER:
+        return project
+                   ? (other ? g_strdup_printf("/api/v1/projects/%s/ledger/after?seq=%s", project,
+                                              other)
+                            : g_strdup_printf("/api/v1/projects/%s/ledger/after", project))
+                   : NULL;
     }
     return NULL;
 }
@@ -158,7 +166,8 @@ kr_hub_route_writes(KrHubRoute route)
     return route == KR_HUB_ROUTE_JOB_BUMP || route == KR_HUB_ROUTE_GATE_ANSWER ||
            route == KR_HUB_ROUTE_PAIRING_CLAIM || route == KR_HUB_ROUTE_WORKFLOW_RUNS ||
            route == KR_HUB_ROUTE_PROJECT_CREATE || route == KR_HUB_ROUTE_PROJECT_START_WORK ||
-           route == KR_HUB_ROUTE_PROJECT_PAUSE_WORK || route == KR_HUB_ROUTE_PROJECT_ABANDON;
+           route == KR_HUB_ROUTE_PROJECT_PAUSE_WORK || route == KR_HUB_ROUTE_PROJECT_ABANDON ||
+           route == KR_HUB_ROUTE_CHAT_MESSAGES;
 }
 
 gboolean

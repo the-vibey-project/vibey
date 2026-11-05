@@ -38,6 +38,7 @@ endif
 executable(
   'krypton-desktop',
   'main.c',
+  'kr-chat-page.c',
   'kr-mark.c',
   'kr-window.c',
   'kr-workflows-page.c',

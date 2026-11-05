@@ -3,6 +3,7 @@
 
 #include "kr-a11y.h"
 #include "kr-answer.h"
+#include "kr-chat-page.h"
 #include "kr-commands.h"
 #include "kr-format.h"
 #include "kr-lifecycle.h"
@@ -11,7 +12,7 @@
 #include "kr-workflows-page.h"
 
 const char *const kr_window_page_names[KR_WINDOW_PAGES] = {
-    "projects", "gates", "lanes", "loops", "budgets", "doctor", "workflows", "devices",
+    "chat", "projects", "gates", "lanes", "loops", "budgets", "doctor", "workflows", "devices",
     "settings",
 };
 
@@ -21,6 +22,7 @@ typedef struct {
 } Place;
 
 static const Place PLACES[KR_WINDOW_PAGES] = {
+    {"Chat", "user-available-symbolic"},
     {"Projects", "folder-symbolic"},
     {"Gates", "dialog-question-symbolic"},
     {"Lanes", "media-playback-start-symbolic"},
@@ -45,11 +47,12 @@ typedef struct {
     AdwStatusPage *empty[KR_WINDOW_PAGES];
     GtkStack *page_stacks[KR_WINDOW_PAGES];
     GtkWidget *gates_badge;
+    GtkWidget *chat;      /* the Chat workspace page (kr-chat-page.h) */
     GtkWidget *workflows; /* the Run on GitHub page (kr-workflows-page.h) */
     guint listener;
 } KrWindow;
 
-enum { PAGE_PROJECTS, PAGE_GATES, PAGE_LANES, PAGE_LOOPS, PAGE_BUDGETS, PAGE_DOCTOR,
+enum { PAGE_CHAT, PAGE_PROJECTS, PAGE_GATES, PAGE_LANES, PAGE_LOOPS, PAGE_BUDGETS, PAGE_DOCTOR,
        PAGE_WORKFLOWS, PAGE_DEVICES, PAGE_SETTINGS };
 
 static KrWindow *
@@ -423,7 +426,7 @@ static GMenuModel *
 main_menu(void)
 {
     static const char *const sections[][5] = {
-        {"start-project", NULL},
+        {"show-chat", "start-project", NULL},
         /* The hub outlives krypton: these are the only ways to start or stop it from here. */
         {"start-hub", "stop-hub", "hub-status", NULL},
         {"refresh", "settings", NULL},
@@ -452,7 +455,8 @@ on_project_activated(AdwActionRow *widget, gpointer data)
     const char *project_id = g_object_get_data(G_OBJECT(widget), "project-id");
     kr_state_select_project(self->app->state, project_id);
     kr_app_refresh_budget(self->app, project_id);
-    kr_window_show_page(self->app->window, "budgets");
+    kr_app_refresh_ledger(self->app, project_id);
+    kr_window_show_page(self->app->window, "chat");
 }
 
 static void
@@ -1015,6 +1019,7 @@ render_connection(KrWindow *self)
     adw_banner_set_title(self->banner, message != NULL ? message : "");
     adw_banner_set_revealed(self->banner, trouble);
     render_devices(self);
+    kr_chat_page_refresh(self->chat);
     kr_workflows_page_refresh(self->workflows);
 }
 
@@ -1027,9 +1032,11 @@ on_state(KrState *state, KrStateSlice slice, gpointer data)
     case KR_STATE_PROJECTS:
         render_projects(self);
         render_budgets(self);
+        kr_chat_page_refresh(self->chat);
         break;
     case KR_STATE_GATES:
         render_gates(self);
+        kr_chat_page_refresh(self->chat);
         break;
     case KR_STATE_LANES:
         render_lanes(self);
@@ -1043,11 +1050,44 @@ on_state(KrState *state, KrStateSlice slice, gpointer data)
     case KR_STATE_BUDGET:
     case KR_STATE_SELECTION:
         render_budgets(self);
+        kr_chat_page_refresh(self->chat);
         break;
     case KR_STATE_CONNECTION:
         render_connection(self);
         break;
     }
+}
+
+void
+kr_window_chat_turn(GtkWidget *window, const char *user_message, const KrChatTurn *turn)
+{
+    KrWindow *self = window_of(window);
+    if (self != NULL)
+        kr_chat_page_append_turn(self->chat, user_message, turn);
+}
+
+void
+kr_window_chat_error(GtkWidget *window, const char *user_message, const char *error_text)
+{
+    KrWindow *self = window_of(window);
+    if (self != NULL)
+        kr_chat_page_append_error(self->chat, user_message, error_text);
+}
+
+void
+kr_window_chat_ledger(GtkWidget *window, const KrChatLedgerPage *page)
+{
+    KrWindow *self = window_of(window);
+    if (self != NULL)
+        kr_chat_page_append_ledger(self->chat, page);
+}
+
+void
+kr_window_chat_focus(GtkWidget *window)
+{
+    KrWindow *self = window_of(window);
+    if (self != NULL)
+        kr_chat_page_focus_composer(self->chat);
 }
 
 /* ---- the frame ----------------------------------------------------------------------- */
@@ -1171,6 +1211,7 @@ kr_window_new(KrApp *app)
     gtk_stack_set_transition_type(GTK_STACK(stack), GTK_STACK_TRANSITION_TYPE_CROSSFADE);
     self->stack = GTK_STACK(stack);
     const char *const empty_titles[KR_WINDOW_PAGES] = {
+        "Chat",
         "No projects yet",
         "Nothing is waiting on you",
         "No lanes running",
@@ -1182,6 +1223,7 @@ kr_window_new(KrApp *app)
         "Settings",
     };
     const char *const empty_descriptions[KR_WINDOW_PAGES] = {
+        "",
         "Start one here, or from a terminal with: vibey new NAME",
         "When krypton needs a decision, it appears here and krypton tells you.",
         "Lanes started on this computer appear here as they run.",
@@ -1192,13 +1234,15 @@ kr_window_new(KrApp *app)
         "",
         "",
     };
-    /* Every place is a list of rows but Run on GitHub, which is a form and what it printed. */
+    /* Chat is the conversational workspace; Run on GitHub is a form and what it printed. */
+    self->chat = kr_chat_page_new(app);
     self->workflows = kr_workflows_page_new(app);
     for (int i = 0; i < KR_WINDOW_PAGES; i++)
         gtk_stack_add_named(GTK_STACK(stack),
-                            i == PAGE_WORKFLOWS
-                                ? self->workflows
-                                : list_page(self, i, empty_titles[i], empty_descriptions[i]),
+                            i == PAGE_CHAT        ? self->chat
+                            : i == PAGE_WORKFLOWS ? self->workflows
+                                                  : list_page(self, i, empty_titles[i],
+                                                              empty_descriptions[i]),
                             kr_window_page_names[i]);
 
     GtkWidget *refresh = gtk_button_new_from_icon_name("view-refresh-symbolic");

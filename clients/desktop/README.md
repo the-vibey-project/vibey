@@ -8,6 +8,7 @@ over the [hub API](../../docs/reference/hub-api.md). It never touches vibey's da
 
 | Place | What you get |
 |---|---|
+| Chat | **The landing page** (`Ctrl+L`), mirroring the Claude Code and Codex desktop apps ([ADR-0100](../../docs/architecture/decisions/0100-host-driven-mcp-interface-and-chat-first-surfaces.md)): a session sidebar of every project (plus an *All projects* overview), a conversation transcript of your turns (`POST /api/v1/chat/messages`) with expandable tool-call cards and live ledger narration (`GET /api/v1/projects/{id}/ledger/after`), inline approval cards for waiting gates (with `SPEND GATE` clearly badged whenever answering requires the `spend` scope), quick-action chips, and a bottom composer with `/` slash-command completion (`/projects`, `/status`, `/gates`, `/answer`, `/budget`, `/queue`, `/ledger`, `/loops`, `/lanes`, `/doctor`, `/new`, `/start`, `/pause`, `/abandon`, `/help`). |
 | Projects | Every project, its phase and cycle, and how many gates wait on it. **Start a project** (the `+` button or `Ctrl+N`) asks for a name and what to build; each row's menu starts or pauses that project's own worker, or **unwinds** it after a dry run says what it would cancel and that the work on disk stays ([ADR-0091](../../docs/architecture/decisions/0091-devices-may-start-pause-and-unwind-projects.md)). The hub makes the folder; the desktop never names a path. |
 | Gates | Every gate waiting on you, with the controls its kind takes: a verdict or choice as buttons, a new bound for a grant, a retry, or a free-form answer. It warns you before an answer that can spend money. A desktop notification tells you when a new gate is raised. |
 | Lanes | The lanes running on the hub's computer. The krypton mark in the sidebar glows while one runs. |
@@ -22,7 +23,7 @@ The header menu holds Start a project, the hub's Start, Stop and Status, Refresh
 
 **The tray item** (the menu bar on macOS, a StatusNotifierItem elsewhere) shows how many gates wait on you, opens the window, jumps to Gates, starts a project and quits. While it is showing, closing the window hides it instead; if no tray is there to bring it back (GNOME needs the AppIndicator extension), the window closes as a window does. Turn it off in Settings.
 
-Keyboard: `Ctrl+N` starts a project, `Ctrl+R` or `F5` refreshes, `Ctrl+G` opens Gates, `Ctrl+,` opens Settings, and
+Keyboard: `Ctrl+L` opens Chat and focuses the composer, `Ctrl+N` starts a project, `Ctrl+R` or `F5` refreshes, `Ctrl+G` opens Gates, `Ctrl+,` opens Settings, and
 `Ctrl+?` lists every shortcut, and `Ctrl+Q` quits. On a narrow window the sidebar folds into one pane with back navigation.
 
 ## Connecting
@@ -116,6 +117,8 @@ release attaches, is made from it by `scripts/macos_app_bundle.py` (see
 - **`src/core/`: libkryptondesktop, pure C with no GTK.** Each module is a header, its
   interface, and a `.c`, which is ADR-0016 in C:
   - `kr-model`: the hub's documents as structs;
+  - `kr-chat`: the `/` slash-command catalogue and completion, `POST /api/v1/chat/messages`
+    request and turn parser, spend-gate badge helper, and live ledger narration parser;
   - `kr-hub` and `kr-hub-client`: routes, the token, a paired device's request signature,
     the certificate pin and the libsoup transport;
   - `kr-answer`: which answer each gate kind takes, mirroring `src/vibey/cli/gate_answers.py`;

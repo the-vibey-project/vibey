@@ -182,8 +182,10 @@ kr_app_refresh(KrApp *app)
     ask(app, KR_HUB_ROUTE_LOOPS, NULL, WANT_LOOPS);
     ask(app, KR_HUB_ROUTE_DOCTOR, NULL, WANT_DOCTOR);
     const char *selected = kr_state_selected_project(app->state);
-    if (selected != NULL)
+    if (selected != NULL) {
         kr_app_refresh_budget(app, selected);
+        kr_app_refresh_ledger(app, selected);
+    }
 }
 
 void
@@ -191,6 +193,140 @@ kr_app_refresh_budget(KrApp *app, const char *project_id)
 {
     if (project_id != NULL && !app->awaiting_pairing)
         ask(app, KR_HUB_ROUTE_PROJECT_BUDGET, project_id, WANT_BUDGET);
+}
+
+typedef struct {
+    KrApp *app;
+    char *user_message;
+} ChatPending;
+
+static void
+chat_pending_free(ChatPending *pending)
+{
+    g_free(pending->user_message);
+    g_free(pending);
+}
+
+static void
+on_chat_turn(GObject *source, GAsyncResult *result, gpointer data)
+{
+    (void) source;
+    ChatPending *pending = data;
+    KrApp *app = pending->app;
+    guint status = 0;
+    g_autofree char *detail = NULL;
+    g_autoptr(GError) error = NULL;
+    g_autoptr(GBytes) body =
+        kr_hub_client_call_finish_full(app->client, result, &status, &detail, &error);
+    if (g_error_matches(error, G_IO_ERROR, G_IO_ERROR_CANCELLED)) {
+        chat_pending_free(pending);
+        return;
+    }
+    if (body == NULL) {
+        const char *said = detail != NULL ? detail
+                           : status != 0  ? kr_hub_status_text(status)
+                                          : error->message;
+        if (app->window != NULL)
+            kr_window_chat_error(app->window, pending->user_message, said);
+        chat_pending_free(pending);
+        return;
+    }
+    gsize size = 0;
+    const char *text = g_bytes_get_data(body, &size);
+    g_autoptr(GError) parse_error = NULL;
+    g_autoptr(KrChatTurn) turn = kr_chat_turn_parse(text, (gssize) size, &parse_error);
+    if (turn == NULL) {
+        if (app->window != NULL)
+            kr_window_chat_error(app->window, pending->user_message, parse_error->message);
+        chat_pending_free(pending);
+        return;
+    }
+    if (turn->project_id != NULL && turn->project_id[0] != '\0')
+        kr_state_select_project(app->state, turn->project_id);
+    if (app->window != NULL)
+        kr_window_chat_turn(app->window, pending->user_message, turn);
+    kr_app_refresh(app);
+    chat_pending_free(pending);
+}
+
+void
+kr_app_chat_send(KrApp *app, const char *message)
+{
+    if (app->awaiting_pairing) {
+        if (app->window != NULL)
+            kr_window_chat_error(app->window, message,
+                                 "Pair this computer with the hub first (Devices), then try again.");
+        return;
+    }
+    g_autoptr(GError) error = NULL;
+    g_autofree char *request_id = kr_answer_request_id();
+    const char *project_id = kr_state_selected_project(app->state);
+    g_autofree char *body = kr_chat_request_body(message, project_id, request_id, &error);
+    if (body == NULL) {
+        kr_app_toast(app, error->message);
+        return;
+    }
+    ChatPending *pending = g_new0(ChatPending, 1);
+    pending->app = app;
+    pending->user_message = g_strdup(message);
+    kr_hub_client_call_async(app->client, KR_HUB_ROUTE_CHAT_MESSAGES, NULL, NULL, body, app->cancel,
+                             on_chat_turn, pending);
+}
+
+typedef struct {
+    KrApp *app;
+    char *project_id;
+} LedgerPending;
+
+static void
+ledger_pending_free(LedgerPending *pending)
+{
+    g_free(pending->project_id);
+    g_free(pending);
+}
+
+static void
+on_ledger_page(GObject *source, GAsyncResult *result, gpointer data)
+{
+    (void) source;
+    LedgerPending *pending = data;
+    KrApp *app = pending->app;
+    guint status = 0;
+    g_autoptr(GError) error = NULL;
+    g_autoptr(GBytes) body = kr_hub_client_call_finish(app->client, result, &status, &error);
+    if (body == NULL) {
+        ledger_pending_free(pending);
+        return;
+    }
+    gsize size = 0;
+    const char *text = g_bytes_get_data(body, &size);
+    g_autoptr(GError) parse_error = NULL;
+    g_autoptr(KrChatLedgerPage) page = kr_chat_ledger_page_parse(text, (gssize) size, &parse_error);
+    if (page != NULL) {
+        if (page->last_seq > app->chat_last_seq)
+            app->chat_last_seq = page->last_seq;
+        if (app->window != NULL && page->events->len > 0)
+            kr_window_chat_ledger(app->window, page);
+    }
+    ledger_pending_free(pending);
+}
+
+void
+kr_app_refresh_ledger(KrApp *app, const char *project_id)
+{
+    if (project_id == NULL || app->awaiting_pairing)
+        return;
+    if (g_strcmp0(app->chat_project_id, project_id) != 0) {
+        g_free(app->chat_project_id);
+        app->chat_project_id = g_strdup(project_id);
+        app->chat_last_seq = 0;
+    }
+    g_autofree char *seq_text = g_strdup_printf("%" G_GINT64_FORMAT, app->chat_last_seq);
+    LedgerPending *pending = g_new0(LedgerPending, 1);
+    pending->app = app;
+    pending->project_id = g_strdup(project_id);
+    kr_hub_client_call_async(app->client, KR_HUB_ROUTE_PROJECT_LEDGER_AFTER, project_id, seq_text,
+                             NULL, app->cancel, on_ledger_page, pending);
 }
 
 void
@@ -283,8 +419,10 @@ on_lifecycle(GObject *source, GAsyncResult *result, gpointer data)
                                   created->name, created->outcome != NULL ? created->outcome : "queued")
                 : g_strdup(parse_error->message);
         kr_app_toast(app, said);
+        if (created != NULL && created->project_id != NULL)
+            kr_state_select_project(app->state, created->project_id);
         if (app->window != NULL)
-            kr_window_show_page(app->window, "projects");
+            kr_window_show_page(app->window, "chat");
         break;
     }
     case LIFE_WORK: {
@@ -786,6 +924,17 @@ show_page(KrApp *app, const char *name)
 }
 
 static void
+action_show_chat(GSimpleAction *action, GVariant *parameter, gpointer data)
+{
+    (void) action;
+    (void) parameter;
+    KrApp *app = data;
+    show_page(app, "chat");
+    if (app->window != NULL)
+        kr_window_chat_focus(app->window);
+}
+
+static void
 action_show_gates(GSimpleAction *action, GVariant *parameter, gpointer data)
 {
     (void) action;
@@ -884,6 +1033,7 @@ on_startup(GApplication *application, gpointer data)
     const GActionEntry actions[] = {
         {.name = "open", .activate = action_open},
         {.name = "refresh", .activate = action_refresh},
+        {.name = "show-chat", .activate = action_show_chat},
         {.name = "show-gates", .activate = action_show_gates},
         {.name = "settings", .activate = action_settings},
         {.name = "start-project", .activate = action_start_project},
@@ -974,6 +1124,7 @@ main(int argc, char **argv)
     kr_settings_free(app.settings);
     g_free(app.settings_path);
     g_free(app.discovery_problem);
+    g_free(app.chat_project_id);
     g_object_unref(app.cancel);
     return status;
 }

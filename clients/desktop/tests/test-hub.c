@@ -130,6 +130,11 @@ test_paths(void)
     path_is(KR_HUB_ROUTE_PROJECT_PAUSE_WORK, "", NULL, NULL);
     path_is(KR_HUB_ROUTE_PROJECT_ABANDON, "p", NULL, "/api/v1/projects/p/abandon");
     path_is(KR_HUB_ROUTE_PROJECT_ABANDON, NULL, NULL, NULL);
+    path_is(KR_HUB_ROUTE_CHAT_MESSAGES, NULL, NULL, "/api/v1/chat/messages");
+    path_is(KR_HUB_ROUTE_PROJECT_LEDGER_AFTER, "p", "4",
+            "/api/v1/projects/p/ledger/after?seq=4");
+    path_is(KR_HUB_ROUTE_PROJECT_LEDGER_AFTER, "p", NULL, "/api/v1/projects/p/ledger/after");
+    path_is(KR_HUB_ROUTE_PROJECT_LEDGER_AFTER, NULL, "4", NULL);
     path_is((KrHubRoute) 999, NULL, NULL, NULL);
 
     g_assert_true(kr_hub_route_writes(KR_HUB_ROUTE_GATE_ANSWER));
@@ -140,6 +145,8 @@ test_paths(void)
     g_assert_true(kr_hub_route_writes(KR_HUB_ROUTE_PROJECT_START_WORK));
     g_assert_true(kr_hub_route_writes(KR_HUB_ROUTE_PROJECT_PAUSE_WORK));
     g_assert_true(kr_hub_route_writes(KR_HUB_ROUTE_PROJECT_ABANDON));
+    g_assert_true(kr_hub_route_writes(KR_HUB_ROUTE_CHAT_MESSAGES));
+    g_assert_false(kr_hub_route_writes(KR_HUB_ROUTE_PROJECT_LEDGER_AFTER));
     g_assert_false(kr_hub_route_writes(KR_HUB_ROUTE_WORKFLOW_RUN));
     g_assert_false(kr_hub_route_writes(KR_HUB_ROUTE_PROJECTS));
 }

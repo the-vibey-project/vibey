@@ -9,11 +9,12 @@ automatically, and what has been checked by a person. An unrun check is unknown,
 
 - **Every command has a name and a key in one place.** `src/core/kr-commands.c` is the table
   the header menu, the Keyboard shortcuts dialog (`Ctrl+?`) and the registered accelerators
-  read. `Ctrl+,` is Preferences and `Ctrl+Q` is Quit.
-- **Icon-only controls are named.** Refresh, Main menu, Start a project and each project's
-  actions menu are given an explicit accessible name through `kr_a11y_name` (`src/app/kr-a11y.h`),
-  with the tooltip as the description where it carries the key. The warning marks beside a
-  row are named "Warning"; the row's own text says what is wrong.
+  read. `Ctrl+L` is Chat, `Ctrl+,` is Preferences and `Ctrl+Q` is Quit.
+- **Icon-only controls are named.** Refresh, Main menu, Start a project (in the header bar and
+  in the Chat session sidebar) and each project's actions menu are given an explicit accessible
+  name through `kr_a11y_name` (`src/app/kr-a11y.h`), with the tooltip as the description where
+  it carries the key. The Chat composer and Send button carry explicit accessible names as well.
+  The warning marks beside a row are named "Warning"; the row's own text says what is wrong.
 - **Widgets from libadwaita** (rows, switches, entries, dialogs, the About dialog) bring their
   own roles and names from their titles.
 
