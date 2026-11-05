@@ -2,7 +2,13 @@
 
 All notable changes to krypton, vibey's extension for VS Code.
 
-## Unreleased
+## 0.3.0
+
+- **Chat-first krypton workspace (`vibey.openChat`, `Ctrl+Shift+Y` / `Cmd+Shift+Y`).** Opens the
+  dedicated krypton chat webview with a persistent thread, slash-command chips, inline pending
+  gate cards, and a collapsible context drawer, plus **krypton: Connect a chat app or editor
+  (MCP)** (`vibey.connectMcp`) and Heretic v2 (`hf.co/mradermacher/gpt-oss-20b-heretic-v2-GGUF:MXFP4_MOE`)
+  as the default sovereign model.
 
 - **The editor starts and stops the one vibey hub on this computer.** When the editor opens and
   no hub runs, krypton starts it (`vibey hub start`, in the background; `vibey.hubAutostart` turns

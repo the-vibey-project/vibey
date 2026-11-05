@@ -73,18 +73,18 @@ that every [release](https://github.com/the-vibey-project/vibey/releases) attach
 ([Downloads](downloads.md)):
 
 ```bash
-code --install-extension krypton-vscode-0.2.0.vsix
+code --install-extension krypton-vscode-0.3.0.vsix
 ```
 
 On a Mac where `code` is not on your PATH:
 
 ```bash
-"/Applications/Visual Studio Code.app/Contents/Resources/app/bin/code" --install-extension krypton-vscode-0.2.0.vsix
+"/Applications/Visual Studio Code.app/Contents/Resources/app/bin/code" --install-extension krypton-vscode-0.3.0.vsix
 ```
 
 Or use **Install from VSIX…** in the Extensions view's `…` menu. CI's `vscode-extension` job
 builds the same file, and `npx vsce package --no-dependencies` in `clients/vscode` builds it
-locally, named `krypton-0.2.0.vsix`.
+locally, named `krypton-0.3.0.vsix`.
 
 A build from before the rename installed as `the-vibey-project.vibey`: uninstall it first
 (`code --uninstall-extension the-vibey-project.vibey`), since two extensions offering the same

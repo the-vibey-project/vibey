@@ -3,7 +3,15 @@
 krypton desktop carries its own version. The Python wheel stays one distribution
 (ADR-0037).
 
-## 0.1.0 (unreleased)
+## 0.2.0
+
+- **Chat-first desktop workspace.** Chat is now the primary workspace (`chat`, item 0 in the
+  navigation rail) with a multi-line message composer, slash-command suggestions (`/status`,
+  `/gates`, `/answer`, `/new`, `/start`, `/pause`, `/unwind`, `/loops`, `/lanes`, `/budget`,
+  `/doctor`, `/ledger`, `/connect`), inline pending gate cards with numbered quick-reply buttons,
+  and an optional right context inspector (`Ctrl+I`).
+
+## 0.1.0
 
 - **A Keyboard shortcuts dialog, one command table, and accessible names (#1699).** The header
   menu has a **Keyboard shortcuts** entry (`Ctrl+?`) that lists every command with its keys.

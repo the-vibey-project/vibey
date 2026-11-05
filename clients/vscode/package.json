@@ -2,7 +2,7 @@
   "name": "krypton",
   "displayName": "krypton",
   "description": "krypton for VS Code: drive vibey and a local gpt-oss model from your editor, or a vibey hub on your network. Runs on your own computer; no account and no cloud.",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "publisher": "the-vibey-project",
   "icon": "media/krypton.png",
   "license": "MIT",
@@ -1266,7 +1266,7 @@
   "devDependencies": {
     "@types/node": "22.20.4",
     "@types/vscode": "1.90.0",
-    "@vibey/core": "0.1.0",
+    "@vibey/core": "0.2.0",
     "@vitest/coverage-v8": "5.0.5",
     "@vscode/test-electron": "3.1.0",
     "@vscode/vsce": "4.0.0",
