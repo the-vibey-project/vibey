@@ -81,17 +81,17 @@ Marketplace does not carry it, so in VS Code install the `.vsix` that every
 `krypton-vscode-<version>.vsix`:
 
 ```sh
-code --install-extension krypton-vscode-0.2.0.vsix
+code --install-extension krypton-vscode-0.3.0.vsix
 ```
 
 If your Mac says `code: command not found`, use the full path instead:
 
 ```sh
-"/Applications/Visual Studio Code.app/Contents/Resources/app/bin/code" --install-extension krypton-vscode-0.2.0.vsix
+"/Applications/Visual Studio Code.app/Contents/Resources/app/bin/code" --install-extension krypton-vscode-0.3.0.vsix
 ```
 
 A `.vsix` you build yourself (`npx vsce package --no-dependencies` here) is named
-`krypton-0.2.0.vsix`; install it the same way.
+`krypton-0.3.0.vsix`; install it the same way.
 
 You can also do it without a terminal: open the **Extensions** view, click the `…` menu at its
 top, choose **Install from VSIX…**, and pick the file.

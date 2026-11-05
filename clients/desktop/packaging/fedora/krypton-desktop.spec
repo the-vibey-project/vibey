@@ -1,12 +1,12 @@
 # Declared only: not published to Fedora COPR until the operator decides (see clients/desktop/PACKAGING.md).
 Name:           krypton-desktop
-Version:        0.1.0
+Version:        0.2.0
 Release:        1%{?dist}
 Summary:        The desktop app for krypton
 License:        MIT
 URL:            https://github.com/the-vibey-project/vibey
 # The tag below does not exist yet: this spec is declared only (above), and builds once the
-# operator tags krypton-desktop-v0.1.0 for the COPR channel (ADR-0019). Until then Source0
+# operator tags krypton-desktop-v0.2.0 for the COPR channel (ADR-0019). Until then Source0
 # resolves to nothing, deliberately.
 Source0:        %{url}/archive/refs/tags/krypton-desktop-v%{version}.tar.gz
 

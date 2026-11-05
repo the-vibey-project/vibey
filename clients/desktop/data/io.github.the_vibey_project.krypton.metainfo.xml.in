@@ -30,6 +30,11 @@
     <control>keyboard</control>
   </supports>
   <releases>
+    <release version="0.2.0" date="2026-11-05">
+      <description>
+        <p>Chat-first desktop redesign, MCP host-tool integration, and Heretic v2 sovereign default support.</p>
+      </description>
+    </release>
     <release version="0.1.0" date="2026-09-25">
       <description>
         <p>The first krypton desktop.</p>
