@@ -23,7 +23,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
   // The Expo account that owns the EAS project (`eas init` asks for it; a fork changes it).
   ...(identity.easOwner ? { owner: identity.easOwner } : {}),
   scheme: identity.scheme,
-  version: '0.1.0',
+  version: '0.2.0',
   orientation: 'default',
   icon: `${ICONS}/ios/AppIcon-1024.png`,
   // Light, Dark or System is the person's choice in Settings; System follows the OS live.
