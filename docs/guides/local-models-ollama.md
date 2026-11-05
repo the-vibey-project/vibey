@@ -53,8 +53,34 @@ ollama pull your-model:tag
 
 ```bash
 export VIBEY_OLLAMA_URL=http://127.0.0.1:11434
-export VIBEY_OLLAMA_MODEL=your-model:tag     # or --ollama-model on work/worker; default gpt-oss:20b
+# Default sovereign build: Heretic v2 of GPT-OSS 20B (ADR-0099)
+#   hf.co/mradermacher/gpt-oss-20b-heretic-v2-GGUF:MXFP4_MOE
+# Select the unmodified OpenAI release instead with:
+#   export VIBEY_SOVEREIGN_MODEL=stock        (or: --ollama-model stock)
+export VIBEY_OLLAMA_MODEL=your-model:tag     # or --ollama-model on work/worker; beats VIBEY_SOVEREIGN_MODEL
 ```
+
+### The two sovereign builds (`heretic` vs `stock`)
+
+`gptossloop` and the sovereign DESIGN and DECOMPOSE providers share one two-variant
+catalogue (`src/vibey/domain/sovereign_model.py`,
+[ADR-0099](../architecture/decisions/0099-heretic-v2-of-gpt-oss-20b-is-the-sovereign-default-model.md)):
+
+| Variant key | Ollama tag | Source & license | Notes |
+|---|---|---|---|
+| `heretic` (default) | `hf.co/mradermacher/gpt-oss-20b-heretic-v2-GGUF:MXFP4_MOE` | `p-e-w/gpt-oss-20b-heretic-v2` (Apache-2.0 weights; ~12.1 GB download; Heretic AGPL-3.0 tool not used at runtime) | Refusal direction removed (49/100 test prompts refused vs 98/100 for stock; KL divergence 0.1248). Native `MXFP4_MOE`. |
+| `stock` | `gpt-oss:20b` | Ollama library (Apache-2.0; ~14 GB download) | OpenAI's release, unmodified. Select with `VIBEY_SOVEREIGN_MODEL=stock` or `--ollama-model stock`. |
+
+Precedence is `--ollama-model` > `VIBEY_OLLAMA_MODEL` > `VIBEY_SOVEREIGN_MODEL` > `heretic`.
+Both `--ollama-model` and `VIBEY_OLLAMA_MODEL` also accept the variant keys `heretic` and
+`stock` and resolve them to their full tags.
+
+**Verification note (sub-doctrine 10.f):** The Hugging Face manifest for
+`hf.co/mradermacher/gpt-oss-20b-heretic-v2-GGUF:MXFP4_MOE` has been verified, but the tag
+has **not** yet been pulled with `ollama pull` or run through an end-to-end tool-calling or
+`--sovereign-fit` measurement on the reference host. Every measured latency, memory and
+benchmark figure on this page and in [System requirements](../reference/system-requirements.md)
+was recorded against stock `gpt-oss:20b`.
 
 For the qwenloop storm profile used while developing this repository, see the
 copyable [qwenloop-local.toml](../examples/qwenloop-local.toml) and
@@ -76,7 +102,7 @@ commands even though it is the default.
   [sovereign-retry-2026-09-29](../architecture/evidence/sovereign-retry-2026-09-29.md).
 - gptossloop's process gets `GPTOSSLOOP_BASE_URL=<VIBEY_OLLAMA_URL>/v1` and
   `GPTOSSLOOP_MODEL=<the model>` (`--ollama-model`, else `VIBEY_OLLAMA_MODEL`, else
-  `gpt-oss:20b`), so it attaches to this server and runs the providers' model.
+  `VIBEY_SOVEREIGN_MODEL`, else the `heretic` default tag), so it attaches to this server and runs the providers' model.
 - qwenloop's process gets `QWENLOOP_BASE_URL=<VIBEY_OLLAMA_URL>/v1` only — never a
   model: it asks for `qwen3:14b` unless `QWENLOOP_MODEL` or its own config names
   another, so pull that model too.
@@ -300,7 +326,8 @@ work` and `vibey worker`. The client then uses the record only when all of these
 - its `url` equals `VIBEY_OLLAMA_URL` (default `http://127.0.0.1:11434`) exactly, as a
   string, so a trailing slash is a different server;
 - its `model` equals the model in effect: `--ollama-model`, else `VIBEY_OLLAMA_MODEL`,
-  else `gpt-oss:20b`;
+  else `VIBEY_SOVEREIGN_MODEL`, else `hf.co/mradermacher/gpt-oss-20b-heretic-v2-GGUF:MXFP4_MOE`
+  (`heretic`);
 - when `VIBEY_REVISION` is set, its `revision` equals it;
 - its `selected_fit` is valid, with a context of at least `4096` and a positive output,
   and it carries a `prompt_shape`.

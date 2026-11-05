@@ -179,6 +179,8 @@ This index is generated from the documentation's navigation by `scripts/llms_txt
 - [0096 — On Forgejo, branch rules are mapped where Forgejo can express them and waived loudly where it cannot](https://the-vibey-project.github.io/vibey/main/architecture/decisions/0096-on-forgejo-branch-rules-are-mapped-where-they-can-be-and-waived-loudly-where-they-cannot/)
 - [0097 — This project runs its own sovereign Forgejo host, on the operator's home server](https://the-vibey-project.github.io/vibey/main/architecture/decisions/0097-this-project-runs-its-own-sovereign-forgejo-host/)
 - [0098 — The VS Code verification is done by a large model and reviewed by the operator](https://the-vibey-project.github.io/vibey/main/architecture/decisions/0098-the-vs-code-verification-is-done-by-a-large-model-and-reviewed-by-the-operator/)
+- [0099 — Heretic v2 of GPT-OSS 20B is the sovereign default model](https://the-vibey-project.github.io/vibey/main/architecture/decisions/0099-heretic-v2-of-gpt-oss-20b-is-the-sovereign-default-model/)
+- [0100 — Host-driven MCP interface and chat-first krypton surfaces](https://the-vibey-project.github.io/vibey/main/architecture/decisions/0100-host-driven-mcp-interface-and-chat-first-surfaces/)
 
 ## Governance
 

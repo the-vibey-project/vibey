@@ -10,7 +10,7 @@ Mirrors `cli/hub_pair.py::HubPairCommand._call`, with two deliberate differences
 
 from __future__ import annotations
 
-import subprocess
+import subprocess  # nosec B404
 import sys
 from collections.abc import Callable
 from dataclasses import dataclass
@@ -53,7 +53,7 @@ def _default_starter() -> bool:
     Module-level by design: the default of `HubGateway`'s `starter` seam.
     """
     try:
-        completed = subprocess.run(  # noqa: S603 - fixed argv using current Python interpreter
+        completed = subprocess.run(  # noqa: S603  # nosec B603
             [sys.executable, "-c", "from vibey.cli.main import run; run(['hub', 'start'])"],
             capture_output=True,
             text=True,

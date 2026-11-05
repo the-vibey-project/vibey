@@ -589,3 +589,25 @@ class = "vibey.infrastructure.workflows.gh_workflows.GhWorkflowsError"
 title = "`gh` refused a dispatch or could not be run"
 cause = "`gh` refused to dispatch the workflow, or could not be run at all."
 fix = "Check that `gh` is installed and authenticated, and that VIBEY_WORKFLOWS_* name a repository and branch you can dispatch to."
+
+[[error]]
+code = "E0074"
+class = "vibey.domain.host_clients.HostClientError"
+title = "The host LLM client configuration could not be updated"
+cause = "The client name is unknown, or its existing configuration file is not valid JSON or TOML."
+fix = "Fix the configuration file named in the message or pass a known client name to `vibey connect` (`vibey connect --list`)."
+
+[[error]]
+code = "E0075"
+class = "vibey.domain.host_tools.HostToolError"
+title = "A host MCP tool call failed argument validation"
+cause = "The tool name is unknown, a required argument is missing, or an argument is outside its allowed shape."
+fix = "Pass arguments matching the tool's inputSchema returned by `vibey mcp`."
+
+[[error]]
+code = "E0076"
+class = "vibey.infrastructure.mcp.hub_gateway.HubGatewayError"
+title = "The MCP server could not reach the local hub"
+cause = "The local hub is not running and could not be started, `agent.token` is missing, or the hub returned a non-JSON response."
+fix = "Start the local hub with `vibey hub start` or `vibey serve` and ensure `[hub] agent_scopes` is not empty in vibey.toml."
+

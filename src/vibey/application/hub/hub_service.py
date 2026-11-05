@@ -303,14 +303,14 @@ class HubService:
                 pid,
             )
         if kind == "status":
-            assert intent.project_id is not None
+            project_id_val = intent.project_id or UUID(int=0)
             return (
                 {
                     "name": "vibey_status",
-                    "arguments": {"project_id": str(intent.project_id)},
-                    "result": await self.status(principal, intent.project_id),
+                    "arguments": {"project_id": str(project_id_val)},
+                    "result": await self.status(principal, project_id_val),
                 },
-                intent.project_id,
+                project_id_val,
             )
         if kind == "gates":
             args = {"project_id": str(intent.project_id)} if intent.project_id is not None else {}
@@ -323,47 +323,47 @@ class HubService:
                 intent.project_id,
             )
         if kind == "answer_gate":
-            assert intent.gate_id is not None
+            gate_id_val = intent.gate_id or UUID(int=0)
             answer_map = intent.answer
             if answer_map is None:
-                gate = await self._gate_lookup.get(intent.gate_id)
+                gate = await self._gate_lookup.get(gate_id_val)
                 if gate is None:
-                    raise UnknownGate(f"no gate {intent.gate_id}")
+                    raise UnknownGate(f"no gate {gate_id_val}")
                 answer_map = self._chat.parse_gate_answer(gate.kind, intent.raw_answer or "")
             result = await self.answer_gate(
-                principal, intent.gate_id, answer_map, request_id=request_id
+                principal, gate_id_val, answer_map, request_id=request_id
             )
             return (
                 {
                     "name": "vibey_answer_gate",
-                    "arguments": {"gate_id": str(intent.gate_id), "answer": dict(answer_map)},
+                    "arguments": {"gate_id": str(gate_id_val), "answer": dict(answer_map)},
                     "result": result,
                 },
                 pid,
             )
         if kind == "budget":
-            assert intent.project_id is not None
+            project_id_val = intent.project_id or UUID(int=0)
             return (
                 {
                     "name": "vibey_budget",
-                    "arguments": {"project_id": str(intent.project_id)},
-                    "result": await self.budget(principal, intent.project_id),
+                    "arguments": {"project_id": str(project_id_val)},
+                    "result": await self.budget(principal, project_id_val),
                 },
-                intent.project_id,
+                project_id_val,
             )
         if kind == "queue":
-            assert intent.project_id is not None
+            project_id_val = intent.project_id or UUID(int=0)
             return (
                 {
                     "name": "vibey_queue",
-                    "arguments": {"project_id": str(intent.project_id)},
-                    "result": await self.queue(principal, intent.project_id),
+                    "arguments": {"project_id": str(project_id_val)},
+                    "result": await self.queue(principal, project_id_val),
                 },
-                intent.project_id,
+                project_id_val,
             )
         if kind == "ledger":
-            assert intent.project_id is not None
-            args = {"project_id": str(intent.project_id)}
+            project_id_val = intent.project_id or UUID(int=0)
+            args = {"project_id": str(project_id_val)}
             if intent.text is not None:
                 args["text"] = intent.text
             return (
@@ -372,14 +372,14 @@ class HubService:
                     "arguments": args,
                     "result": await self.ledger(
                         principal,
-                        intent.project_id,
+                        project_id_val,
                         text=intent.text,
                         kinds=(),
                         actor=None,
                         limit=DEFAULT_SEARCH_LIMIT,
                     ),
                 },
-                intent.project_id,
+                project_id_val,
             )
         if kind == "loops":
             return (
@@ -397,8 +397,8 @@ class HubService:
                 pid,
             )
         if kind == "start_project":
-            assert intent.name is not None
-            created = await self.create_project(principal, intent.name, intent.intake)
+            name_val = intent.name or ""
+            created = await self.create_project(principal, name_val, intent.intake)
             new_pid = pid
             raw_pid = created.get("project_id") if isinstance(created, Mapping) else None
             if isinstance(raw_pid, str) and UUID_RE.fullmatch(raw_pid):
@@ -406,45 +406,45 @@ class HubService:
             return (
                 {
                     "name": "vibey_start_project",
-                    "arguments": {"name": intent.name, "intake": intent.intake},
+                    "arguments": {"name": name_val, "intake": intent.intake},
                     "result": created,
                 },
                 new_pid,
             )
         if kind == "start_work":
-            assert intent.project_id is not None
+            project_id_val = intent.project_id or UUID(int=0)
             return (
                 {
                     "name": "vibey_start_work",
-                    "arguments": {"project_id": str(intent.project_id)},
-                    "result": await self.start_work(principal, intent.project_id),
+                    "arguments": {"project_id": str(project_id_val)},
+                    "result": await self.start_work(principal, project_id_val),
                 },
-                intent.project_id,
+                project_id_val,
             )
         if kind == "pause_work":
-            assert intent.project_id is not None
+            project_id_val = intent.project_id or UUID(int=0)
             return (
                 {
                     "name": "vibey_pause_work",
-                    "arguments": {"project_id": str(intent.project_id)},
-                    "result": await self.pause_work(principal, intent.project_id),
+                    "arguments": {"project_id": str(project_id_val)},
+                    "result": await self.pause_work(principal, project_id_val),
                 },
-                intent.project_id,
+                project_id_val,
             )
-        assert intent.project_id is not None
+        project_id_val = intent.project_id or UUID(int=0)
         return (
             {
                 "name": "vibey_abandon_project",
                 "arguments": {
-                    "project_id": str(intent.project_id),
+                    "project_id": str(project_id_val),
                     "reason": intent.reason,
                     "dry_run": intent.dry_run,
                 },
                 "result": await self.abandon_project(
-                    principal, intent.project_id, intent.reason, dry_run=intent.dry_run
+                    principal, project_id_val, intent.reason, dry_run=intent.dry_run
                 ),
             },
-            intent.project_id,
+            project_id_val,
         )
 
     @staticmethod

@@ -462,16 +462,16 @@ class HubChat(HubChatInterface):
         )
 
     def _parse_abandon_slash(self, rest: str, *, fallback: UUID | None) -> ChatIntent:
-        tokens = rest.split()
+        parts = rest.split()
         dry_run = True
         filtered: list[str] = []
-        for token in tokens:
-            if token == "--confirm":
+        for part in parts:
+            if part == "--confirm":
                 dry_run = False
-            elif token == "--dry-run":
+            elif part == "--dry-run":
                 dry_run = True
             else:
-                filtered.append(token)
+                filtered.append(part)
         target = fallback
         if filtered and UUID_RE.fullmatch(filtered[0]):
             target = UUID(filtered[0])

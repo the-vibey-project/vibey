@@ -119,6 +119,51 @@ Known gaps in unknown-project handling:
 - `engines <unknown-id>` prints `no engines recorded for project` and exits 0.
 - `ledger show <unknown-id>` prints nothing and exits 0.
 
+## `vibey connect`
+
+Register [`vibey mcp`](#vibey-mcp) in your frontier LLM chat and IDE clients so you can
+drive vibey directly from the conversation you already have open
+([ADR-0100](../architecture/decisions/0100-host-driven-mcp-interface-and-chat-first-surfaces.md)).
+
+```bash
+vibey connect --dry-run
+vibey connect --yes
+vibey connect --client claude_code --client cursor --yes
+vibey connect --list
+```
+
+| Option | Default | What it does |
+|---|---|---|
+| `--client ID` / `-c ID` (repeatable) | all supported clients | Client id to configure (`claude_code`, `claude_desktop`, `codex`, `cursor`, `vscode`, `gemini_cli`, or `all`). An unknown id prints `Error: unknown client ...` on stderr and exits 2. |
+| `--yes` / `-y` | off | Apply the planned configuration changes without interactive confirmation. |
+| `--dry-run` | off | Print the planned actions (`create`, `update`, `unchanged`) and target paths without touching any file. |
+| `--list` | off | List every supported host client, its scope and its config target, then exit 0. |
+
+Before writing an existing config file, `vibey connect` copies the original to
+`<path>.vibey.bak` and merges the `vibey` MCP server entry idempotently without disturbing
+other servers or settings. Re-running `vibey connect` when every selected client already
+carries the entry prints `All selected clients are already connected.` and exits 0. Declining
+the interactive prompt exits 1 without modifying any file.
+
+## `vibey mcp`
+
+Run vibey's Model Context Protocol (MCP) server over standard input and standard output
+(JSON-RPC 2.0, protocol `2024-11-05`;
+[ADR-0100](../architecture/decisions/0100-host-driven-mcp-interface-and-chat-first-surfaces.md)).
+
+```bash
+vibey mcp
+```
+
+`vibey mcp` takes no options. It is a thin client of the local hub API (`/api/v1`) and
+authenticates with `<state_dir>/agent.token` as the scoped `agent` principal
+([`[hub] agent_scopes`](configuration.md#hub): `view`, `answer` and `run` by default —
+never `spend`, `bump` or `workflows`). If no hub is running when a tool is called, it runs
+`vibey hub start` once and retries. It exposes 14 tools (`vibey_projects`, `vibey_status`,
+`vibey_gates`, `vibey_answer_gate`, `vibey_budget`, `vibey_queue`, `vibey_ledger`,
+`vibey_loops`, `vibey_lanes`, `vibey_doctor`, `vibey_start_project`, `vibey_start_work`,
+`vibey_pause_work`, and `vibey_abandon_project` where `dry_run` defaults to `true`).
+
 ## `vibey install`
 
 Install local dependencies that vibey can manage explicitly.
@@ -1579,7 +1624,7 @@ vibey worker --provider claudeloop --engines claudeloop,codexloop -j 2
 | `--provider {scripted,claudeloop,gptossloop}` | `gptossloop` | DESIGN and decomposition providers. `gptossloop` uses the sovereign local DESIGN and decomposition providers on Ollama (`GptossloopDesignProvider`, `GptossloopWorkPlanProducer`; reads `$VIBEY_EVIDENCE_DIR`), recorded in the ledger as `gptossloop`. `claudeloop` uses a live session for both DESIGN and decomposition, capped by `--max-turns` / `--max-dollars`. `scripted` is fully offline. `qwenloop` is still accepted and read as `gptossloop`, with a notice on stderr (ADR-0064). Any other value exits 2. |
 | `--max-turns N` | `25` | Turn cap per claudeloop DESIGN or decomposition session (min 1). |
 | `--max-dollars F` | `2.0` | Dollar cap per claudeloop DESIGN or decomposition session (0.01–10). |
-| `--ollama-model NAME` | `$VIBEY_OLLAMA_MODEL`, else `gpt-oss:20b` | Local model for `--provider gptossloop`, and the model the worker hands gptossloop (below); ignored by the other providers. |
+| `--ollama-model NAME` | `$VIBEY_OLLAMA_MODEL`, else `$VIBEY_SOVEREIGN_MODEL`, else `heretic` (`hf.co/mradermacher/gpt-oss-20b-heretic-v2-GGUF:MXFP4_MOE`) | Local model for `--provider gptossloop`, and the model the worker hands gptossloop (below); accepts `heretic`, `stock` (`gpt-oss:20b`), or any Ollama tag (ADR-0099). Ignored by the other providers. |
 | `--project ID` | latest | Project to work on. |
 | `--all-projects` | off | Serve every project ([#1189](https://github.com/the-vibey-project/vibey/issues/1189)). Each pass asks the queue which projects have a job the claim would hand out now, ordered by each project's next job in the claim's own order (bump, priority, due time), and claims through that project's own loop — the same `FOR UPDATE SKIP LOCKED` claim, budgets, Sabbath gate, capacity circuits, phase gates and engine selection a single-project worker uses. A project's loops are built, and its engines preflighted, the first time it has work. A project that cannot be served (an unknown phase, an `--engines` list matching none of its engines, a forbidden `engine_environment`) prints `project <name> refused: its jobs stay queued for a worker that can serve them` and the worker goes on with the others. With nothing queued anywhere it waits on any project's `vibey_job_ready` instead of exiting, so a supervised worker never restart-loops. Parallel loops (`-j`) are clamped to the CPU count only. Exits 2 with `--project`, `--wait-for-project` or `--auto-answer`. This is what `vibey supervisor install` runs. |
 | `--wait-for-project SECONDS` | unset (min 1.0) | Poll every N seconds for a project instead of exiting 1 when none exists yet — for long-lived deployments, where exiting means a restart loop. |
@@ -1671,7 +1716,8 @@ Variables read by code under `src/vibey`:
 | `VIBEY_EVIDENCE_DIR` | `work --provider gptossloop`, `worker --provider gptossloop` | Directory of reading material for the gptossloop DESIGN provider's research stage. Unset means research refuses and DESIGN stops there. |
 | `VIBEY_FEATURE_GPTOSSLOOP` | `doctor`, `worker`, `loops` | `1`, `true`, `yes`, or `on` (case-insensitive) enables gptossloop; any other set value, `0` included, disables it. When set it overrides config. When unset, `doctor` and `loops` fall back to `[features] gptossloop` in `./vibey.toml` and `worker` to the project's stored config; with neither, gptossloop is on (ADR-0064). |
 | `VIBEY_OLLAMA_URL` | `work` and `worker` with `--provider gptossloop`; `doctor --sovereign-fit`; `loops`; the worker's local engines | The Ollama server, default `http://127.0.0.1:11434`. Only an `http(s)` URL with a host is accepted. |
-| `VIBEY_OLLAMA_MODEL` | as `VIBEY_OLLAMA_URL` | The local model, default `gpt-oss:20b`; `--ollama-model` beats it. |
+| `VIBEY_OLLAMA_MODEL` | as `VIBEY_OLLAMA_URL` | The local model tag (or variant key `heretic` / `stock`); `--ollama-model` beats it, and it beats `VIBEY_SOVEREIGN_MODEL` (ADR-0099). |
+| `VIBEY_SOVEREIGN_MODEL` | as `VIBEY_OLLAMA_URL` | Sovereign model variant key: `heretic` (default, `hf.co/mradermacher/gpt-oss-20b-heretic-v2-GGUF:MXFP4_MOE`) or `stock` (`gpt-oss:20b`). Beaten by `--ollama-model` and `VIBEY_OLLAMA_MODEL`; an unknown value raises an error naming the valid keys (ADR-0099). |
 | `VIBEY_OLLAMA_TIMEOUT` | the sovereign DESIGN and DECOMPOSE providers | Seconds per request, default `900`. |
 | `VIBEY_OLLAMA_CONTEXT` | as `VIBEY_OLLAMA_TIMEOUT` | Context ceiling in tokens (`num_ctx`), default `8192`, at least `4096`. |
 | `VIBEY_OLLAMA_OUTPUT` | as `VIBEY_OLLAMA_TIMEOUT` | Output ceiling in tokens (`num_predict`), default `2048`. |
