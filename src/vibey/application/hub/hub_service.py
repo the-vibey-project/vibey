@@ -25,7 +25,7 @@ from collections.abc import Mapping, Sequence
 from typing import Final
 from uuid import UUID
 
-from vibey.application.dto import HubPrincipal, ProjectRecord
+from vibey.application.dto import HubPrincipal, HumanGateRecord, ProjectRecord
 from vibey.application.hub.interfaces.hub_service_interface import (
     HubDocument,
     HubDocumentsInterface,
@@ -39,13 +39,16 @@ from vibey.application.interfaces.project_budget import ProjectBudgetServiceInte
 from vibey.application.interfaces.projects import ProjectReader
 from vibey.application.interfaces.queue_priority import QueuePriorityServiceInterface
 from vibey.domain.errors import LifecycleInvalid, UnknownGate, UnknownProject
+from vibey.domain.host_tools import UUID_RE
+from vibey.domain.hub_chat import HUB_CHAT, ChatIntent
 from vibey.domain.hub_scope import HUB_SCOPES, HubAction, HubForbidden
+from vibey.domain.interfaces.hub_chat_interface import HubChatInterface
 from vibey.domain.interfaces.hub_scope_interface import HubScopePolicyInterface
 from vibey.domain.interfaces.ledger_query_interface import (
     ActorResolverInterface,
     EventKindResolverInterface,
 )
-from vibey.domain.ledger_query import ACTORS, EVENT_KINDS, LedgerQuery
+from vibey.domain.ledger_query import ACTORS, DEFAULT_SEARCH_LIMIT, EVENT_KINDS, LedgerQuery
 
 PROJECT_NAME: Final = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$")
 """A project name a device may choose: it becomes a folder name on the host, so no slash, no
@@ -82,6 +85,7 @@ class HubService:
         policy: HubScopePolicyInterface = HUB_SCOPES,
         kinds: EventKindResolverInterface = EVENT_KINDS,
         actors: ActorResolverInterface = ACTORS,
+        chat: HubChatInterface = HUB_CHAT,
     ) -> None:
         self._projects = projects
         self._gates = gates
@@ -97,6 +101,7 @@ class HubService:
         self._policy = policy
         self._kinds = kinds
         self._actors = actors
+        self._chat = chat
 
     async def projects(self, principal: HubPrincipal) -> HubDocument:
         self._authorise(principal, HubAction.READ)
@@ -236,6 +241,222 @@ class HubService:
     def lane_tail(self, principal: HubPrincipal, events_path: str, after: int) -> HubDocument:
         self._authorise(principal, HubAction.READ)
         return self._probes.lane_tail(events_path, after)
+
+    async def chat(
+        self,
+        principal: HubPrincipal,
+        message: str,
+        *,
+        project_id: UUID | None = None,
+        request_id: str | None = None,
+    ) -> HubDocument:
+        open_records: Sequence[HumanGateRecord] = ()
+        if self._policy.permits(principal.scopes, HubAction.READ):
+            if project_id is not None:
+                await self._project(project_id)
+                open_records = await self._gates.open_for_project(project_id)
+            else:
+                open_records = await self._gates.open_all()
+        open_dicts = [self._gate_dict(g) for g in open_records]
+        intent = self._chat.parse(message, project_id=project_id, open_gates=open_dicts)
+        if intent.kind == "help":
+            self._authorise(principal, HubAction.READ)
+            return self._chat.summarize_turn(
+                intent=intent,
+                tool_calls=(),
+                gates=open_dicts,
+                project_id=project_id,
+            )
+        tool_call, active_pid = await self._run_chat_intent(
+            principal, intent, fallback_project_id=project_id, request_id=request_id
+        )
+        refreshed: Sequence[HumanGateRecord] = ()
+        if self._policy.permits(principal.scopes, HubAction.READ):
+            if active_pid is not None:
+                refreshed = await self._gates.open_for_project(active_pid)
+            else:
+                refreshed = await self._gates.open_all()
+        return self._chat.summarize_turn(
+            intent=intent,
+            tool_calls=(tool_call,),
+            gates=[self._gate_dict(g) for g in refreshed],
+            project_id=active_pid,
+        )
+
+    async def _run_chat_intent(
+        self,
+        principal: HubPrincipal,
+        intent: ChatIntent,
+        *,
+        fallback_project_id: UUID | None,
+        request_id: str | None,
+    ) -> tuple[dict[str, object], UUID | None]:
+        kind = intent.kind
+        pid: UUID | None = intent.project_id or fallback_project_id
+        if kind == "projects":
+            return (
+                {
+                    "name": "vibey_projects",
+                    "arguments": {},
+                    "result": await self.projects(principal),
+                },
+                pid,
+            )
+        if kind == "status":
+            assert intent.project_id is not None
+            return (
+                {
+                    "name": "vibey_status",
+                    "arguments": {"project_id": str(intent.project_id)},
+                    "result": await self.status(principal, intent.project_id),
+                },
+                intent.project_id,
+            )
+        if kind == "gates":
+            args = {"project_id": str(intent.project_id)} if intent.project_id is not None else {}
+            return (
+                {
+                    "name": "vibey_gates",
+                    "arguments": args,
+                    "result": await self.gates(principal, intent.project_id),
+                },
+                intent.project_id,
+            )
+        if kind == "answer_gate":
+            assert intent.gate_id is not None
+            answer_map = intent.answer
+            if answer_map is None:
+                gate = await self._gate_lookup.get(intent.gate_id)
+                if gate is None:
+                    raise UnknownGate(f"no gate {intent.gate_id}")
+                answer_map = self._chat.parse_gate_answer(gate.kind, intent.raw_answer or "")
+            result = await self.answer_gate(
+                principal, intent.gate_id, answer_map, request_id=request_id
+            )
+            return (
+                {
+                    "name": "vibey_answer_gate",
+                    "arguments": {"gate_id": str(intent.gate_id), "answer": dict(answer_map)},
+                    "result": result,
+                },
+                pid,
+            )
+        if kind == "budget":
+            assert intent.project_id is not None
+            return (
+                {
+                    "name": "vibey_budget",
+                    "arguments": {"project_id": str(intent.project_id)},
+                    "result": await self.budget(principal, intent.project_id),
+                },
+                intent.project_id,
+            )
+        if kind == "queue":
+            assert intent.project_id is not None
+            return (
+                {
+                    "name": "vibey_queue",
+                    "arguments": {"project_id": str(intent.project_id)},
+                    "result": await self.queue(principal, intent.project_id),
+                },
+                intent.project_id,
+            )
+        if kind == "ledger":
+            assert intent.project_id is not None
+            args = {"project_id": str(intent.project_id)}
+            if intent.text is not None:
+                args["text"] = intent.text
+            return (
+                {
+                    "name": "vibey_ledger",
+                    "arguments": args,
+                    "result": await self.ledger(
+                        principal,
+                        intent.project_id,
+                        text=intent.text,
+                        kinds=(),
+                        actor=None,
+                        limit=DEFAULT_SEARCH_LIMIT,
+                    ),
+                },
+                intent.project_id,
+            )
+        if kind == "loops":
+            return (
+                {"name": "vibey_loops", "arguments": {}, "result": self.loops(principal)},
+                pid,
+            )
+        if kind == "lanes":
+            return (
+                {"name": "vibey_lanes", "arguments": {}, "result": self.lanes(principal)},
+                pid,
+            )
+        if kind == "doctor":
+            return (
+                {"name": "vibey_doctor", "arguments": {}, "result": await self.doctor(principal)},
+                pid,
+            )
+        if kind == "start_project":
+            assert intent.name is not None
+            created = await self.create_project(principal, intent.name, intent.intake)
+            new_pid = pid
+            raw_pid = created.get("project_id") if isinstance(created, Mapping) else None
+            if isinstance(raw_pid, str) and UUID_RE.fullmatch(raw_pid):
+                new_pid = UUID(raw_pid)
+            return (
+                {
+                    "name": "vibey_start_project",
+                    "arguments": {"name": intent.name, "intake": intent.intake},
+                    "result": created,
+                },
+                new_pid,
+            )
+        if kind == "start_work":
+            assert intent.project_id is not None
+            return (
+                {
+                    "name": "vibey_start_work",
+                    "arguments": {"project_id": str(intent.project_id)},
+                    "result": await self.start_work(principal, intent.project_id),
+                },
+                intent.project_id,
+            )
+        if kind == "pause_work":
+            assert intent.project_id is not None
+            return (
+                {
+                    "name": "vibey_pause_work",
+                    "arguments": {"project_id": str(intent.project_id)},
+                    "result": await self.pause_work(principal, intent.project_id),
+                },
+                intent.project_id,
+            )
+        assert intent.project_id is not None
+        return (
+            {
+                "name": "vibey_abandon_project",
+                "arguments": {
+                    "project_id": str(intent.project_id),
+                    "reason": intent.reason,
+                    "dry_run": intent.dry_run,
+                },
+                "result": await self.abandon_project(
+                    principal, intent.project_id, intent.reason, dry_run=intent.dry_run
+                ),
+            },
+            intent.project_id,
+        )
+
+    @staticmethod
+    def _gate_dict(gate: HumanGateRecord) -> dict[str, object]:
+        return {
+            "gate_id": str(gate.gate_id),
+            "project_id": str(gate.project_id),
+            "kind": gate.kind,
+            "prompt": gate.prompt,
+            "options": list(gate.options),
+            "default_answer": gate.default_answer,
+        }
 
     def _authorise(self, principal: HubPrincipal, action: HubAction) -> None:
         if not self._policy.permits(principal.scopes, action):

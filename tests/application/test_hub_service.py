@@ -568,3 +568,129 @@ async def test_without_run_none_of_it_is_permitted_and_nothing_is_asked() -> Non
             with pytest.raises(HubForbidden):
                 await call
     assert world.asked == []
+
+
+async def test_chat_executes_every_intent_and_enforces_scopes() -> None:
+    world = World()
+    project = _project("greeter")
+    gate = _gate(project, kind="approval")
+    spend_gate = _gate(project, kind="budget_exhausted")
+    closed_gate = _gate(project, kind="approval")
+    world.projects = [project]
+    world.gates = [gate]
+    world.closed = [closed_gate]
+    service = _service(world)
+    pid = project.project_id
+
+    # Help turn (with and without view scope)
+    help_turn = await service.chat(EVERYTHING, "/help", project_id=pid)
+    assert isinstance(help_turn, Mapping)
+    assert "Commands you can type" in str(help_turn["reply"])
+    assert help_turn["project_id"] == str(pid)
+    with pytest.raises(HubForbidden):
+        await service.chat(NOTHING, "/help")
+
+    # Projects, status, gates (all and project-scoped), budget, queue, ledger, loops, lanes, doctor
+    assert (await service.chat(EVERYTHING, "/projects"))["tool_calls"][0][
+        "name"
+    ] == "vibey_projects"
+    assert (await service.chat(EVERYTHING, "/status", project_id=pid))["tool_calls"][0][
+        "name"
+    ] == "vibey_status"
+    assert (await service.chat(EVERYTHING, "/gates"))["tool_calls"][0]["name"] == "vibey_gates"
+    assert (await service.chat(EVERYTHING, f"/gates {pid}"))["tool_calls"][0][
+        "name"
+    ] == "vibey_gates"
+    assert (await service.chat(EVERYTHING, "/budget", project_id=pid))["tool_calls"][0][
+        "name"
+    ] == "vibey_budget"
+    assert (await service.chat(EVERYTHING, "/queue", project_id=pid))["tool_calls"][0][
+        "name"
+    ] == "vibey_queue"
+    assert (await service.chat(EVERYTHING, "/ledger", project_id=pid))["tool_calls"][0][
+        "name"
+    ] == "vibey_ledger"
+    assert (await service.chat(EVERYTHING, "/ledger hello", project_id=pid))["tool_calls"][0][
+        "arguments"
+    ] == {
+        "project_id": str(pid),
+        "text": "hello",
+    }
+    assert (await service.chat(EVERYTHING, "/loops"))["tool_calls"][0]["name"] == "vibey_loops"
+    assert (await service.chat(EVERYTHING, "/lanes"))["tool_calls"][0]["name"] == "vibey_lanes"
+    assert (await service.chat(EVERYTHING, "/doctor"))["tool_calls"][0]["name"] == "vibey_doctor"
+
+    # Answer gate: open gate matched from open_gates
+    ans_turn = await service.chat(
+        EVERYTHING, f"/answer {gate.gate_id} accept", project_id=pid, request_id="r1"
+    )
+    assert ans_turn["tool_calls"][0]["name"] == "vibey_answer_gate"
+
+    # Answer gate: principal without view scope (holds ANSWER only) so open_records is () and
+    # intent.answer is None, forcing _run_chat_intent to look up the gate via _gate_lookup.
+    answer_only = HubPrincipal(name="answerer", scopes=frozenset({HubScope.ANSWER}))
+    ans_no_view = await service.chat(
+        answer_only, f"/answer {gate.gate_id} accept", project_id=pid, request_id="r2"
+    )
+    assert ans_no_view["tool_calls"][0]["name"] == "vibey_answer_gate"
+    assert ans_no_view["gates"] == []
+
+    # Unknown gate when answer_only answers a nonexistent gate UUID
+    with pytest.raises(UnknownGate):
+        await service.chat(answer_only, f"/answer {uuid4()} accept")
+
+    # Spend gate refused for agent / answer-only principal
+    world.gates = [spend_gate]
+    with pytest.raises(HubForbidden):
+        await service.chat(answer_only, f"/answer {spend_gate.gate_id} 50")
+
+    # Start project: non-UUID project_id in lifecycle response vs valid UUID project_id
+    new_turn = await service.chat(EVERYTHING, "/new demo build a tool", project_id=pid)
+    assert new_turn["tool_calls"][0]["name"] == "vibey_start_project"
+    assert new_turn["project_id"] == str(pid)
+
+    valid_new_pid = uuid4()
+    world.projects.append(
+        ProjectRecord(
+            project_id=valid_new_pid,
+            name="demo2",
+            repo_path=Path("/repo2"),
+            phase=Phase.DESIGN,
+            cycle=1,
+            max_cycles=3,
+            config={},
+            created_at=AT,
+            updated_at=AT,
+        )
+    )
+
+    class UuidLifecycle(Lifecycle):
+        async def create(self, name: str, intake: str) -> Mapping[str, object]:
+            return {"project_id": str(valid_new_pid), "name": name, "outcome": "design"}
+
+    service_with_uuid = HubService(
+        projects=world,
+        gates=world,  # type: ignore[arg-type]
+        gate_lookup=Lookup(world),
+        gate_answers=Answers(world),
+        budgets=Budgets(world),
+        queue=Queue(world),
+        ledger=Ledger(world),
+        ledger_range=Range(world),
+        documents=Documents(),
+        probes=Probes(),
+        lifecycle=UuidLifecycle(world),
+    )
+    created_turn = await service_with_uuid.chat(EVERYTHING, "/new demo2 build it")
+    assert created_turn["project_id"] == str(valid_new_pid)
+
+    # Start work, pause work, abandon project
+    assert (await service.chat(EVERYTHING, "/start", project_id=pid))["tool_calls"][0][
+        "name"
+    ] == "vibey_start_work"
+    assert (await service.chat(EVERYTHING, "/pause", project_id=pid))["tool_calls"][0][
+        "name"
+    ] == "vibey_pause_work"
+    assert (await service.chat(EVERYTHING, "/abandon obsolete", project_id=pid))["tool_calls"][0][
+        "name"
+    ] == "vibey_abandon_project"

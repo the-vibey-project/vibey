@@ -199,3 +199,16 @@ class HubServiceInterface(Protocol):
     def lane_tail(self, principal: HubPrincipal, events_path: str, after: int) -> HubDocument:
         """A lane's lines after byte `after`. Needs `view`."""
         ...
+
+    async def chat(
+        self,
+        principal: HubPrincipal,
+        message: str,
+        *,
+        project_id: UUID | None = None,
+        request_id: str | None = None,
+    ) -> HubDocument:
+        """Runs a conversational or `/` command turn over the hub's tool catalogue, checking
+        the principal's scopes for the underlying action. Returns a structured chat turn
+        (`reply`, `tool_calls`, `gates`, `project_id`)."""
+        ...
