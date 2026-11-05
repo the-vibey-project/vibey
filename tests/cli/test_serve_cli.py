@@ -392,10 +392,11 @@ def test_a_lan_with_no_address_to_announce_says_so_and_serves(
 
     server = Driven(drive)
     advertiser = Advertiser()
-    command = _command(tmp_path, server, "lan = true\n", advertiser)
+    command = _command(tmp_path, server, "lan = true\nagent_scopes = []\n", advertiser)
     command._names = NamesOnly()
     asyncio.run(command.run(host="studio.local", port=9101))
     assert advertiser.adverts == [] and server.tls is not None
+    assert not (tmp_path / "state" / "agent.token").exists()
     assert "no LAN address to advertise" in capsys.readouterr().out
 
 

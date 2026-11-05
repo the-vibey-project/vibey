@@ -62,6 +62,27 @@ class LocalTokenAuthenticator:
         return None
 
 
+class AgentTokenAuthenticator:
+    """Admits `Authorization: Bearer <the agent token>` as the `agent` principal, which holds
+    only the scopes `[hub] agent_scopes` grants (ADR-0100).
+
+    Declared by `interfaces/authenticator_interface.py::HubAuthenticatorInterface`."""
+
+    def __init__(self, token: str, scopes: frozenset[HubScope]) -> None:
+        if not token:
+            raise ValueError("the agent token must not be empty")
+        self._token = token
+        self._principal = HubPrincipal(name="agent", scopes=scopes)
+
+    async def authenticate(self, request: HubRequest) -> HubPrincipal | None:
+        header = request.headers.get("authorization", "")
+        if not header.lower().startswith(BEARER):
+            return None
+        if compare_secrets(header[len(BEARER) :].strip(), self._token):
+            return self._principal
+        return None
+
+
 class FirstOf:
     """The first principal any of `authenticators` names, asked in order.
 

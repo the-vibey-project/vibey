@@ -65,6 +65,14 @@ REQUIRED_SCOPE: Final[dict[HubAction, HubScope]] = {
 }
 """The one scope each action needs. Total over `HubAction`; a test holds it so."""
 
+AGENT_DEFAULT_SCOPES: Final[frozenset[HubScope]] = frozenset(
+    {HubScope.VIEW, HubScope.ANSWER, HubScope.RUN}
+)
+"""What a host LLM driving vibey through MCP (ADR-0100) may do unless `[hub] agent_scopes` says
+otherwise: look, answer a gate that does not spend, and start, pause or unwind work. Never
+`spend`, `bump` or `workflows`: a model that has been argued out of its instructions must not
+be able to spend money by answering a budget gate, so the hub itself refuses it."""
+
 NEVER_FROM_THE_HUB: Final[frozenset[str]] = frozenset(
     {
         "declare_paid_use",
