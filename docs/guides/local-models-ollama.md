@@ -1,5 +1,22 @@
 # Local models on Ollama
 
+> **Bottom Line Up Front (BLUF) — Install Ollama, vibey, and every krypton interface on your machine:**
+>
+> 1. **Install `vibey` and `krypton` (one line in Terminal):**
+>    ```bash
+>    curl -fsSL https://raw.githubusercontent.com/the-vibey-project/vibey/main/scripts/install.sh | sh -s -- --with-krypton
+>    vibey connect --yes   # plug vibey into Claude Code, Codex, Cursor, VS Code, Claude Desktop & Gemini CLI
+>    ```
+> 2. **Install Ollama and pull the sovereign default model (Heretic v2 of GPT-OSS 20B):**
+>    - **macOS:** Download Ollama from [ollama.com/download](https://ollama.com/download) and open it once.
+>    - **Linux:** `curl -fsSL https://ollama.com/install.sh | sh`
+>    - **Pull the model (~12.1 GB):**
+>      ```bash
+>      ollama pull hf.co/mradermacher/gpt-oss-20b-heretic-v2-GGUF:MXFP4_MOE
+>      # Or for the stock build: VIBEY_SOVEREIGN_MODEL=stock (ollama pull gpt-oss:20b)
+>      ```
+> 3. **Install any krypton interface (Desktop for macOS & Linux, VS Code extension, Web app, Android & iOS mobile app):** See the [step-by-step install guide](install.md) and [Downloads](downloads.md).
+
 Sub-doctrine 8.a makes the sovereign path the preferred way to run vibey, not the
 fallback. This guide is the operator recipe for doing that on one machine with
 [Ollama](https://ollama.com): the server, the claudeloop profile, the switches,

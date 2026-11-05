@@ -13,7 +13,7 @@ This index is generated from the documentation's navigation by `scripts/llms_txt
 
 ## Guides
 
-- [Install, copy, reinstall, uninstall](https://the-vibey-project.github.io/vibey/main/guides/install/): Install vibey in one command, reinstall it by running the same command again, copy the whole codebase in one more, and remove the krypton interfaces cleanly — while vibey-engine's core is never uninstalled.
+- [Install, copy, reinstall, uninstall](https://the-vibey-project.github.io/vibey/main/guides/install/): Install vibey and every krypton interface (Desktop on macOS and Linux, VS Code extension, Web app, Android and iOS mobile app, browser launcher, and MCP chat driver) in one place, with step-by-step instructions for…
 - [Downloads](https://the-vibey-project.github.io/vibey/main/guides/downloads/): The ready-built files attached to every vibey release, for each user interface and platform, with what is signed and how to install each.
 - [VS Code extension](https://the-vibey-project.github.io/vibey/main/guides/vscode-extension/): The extension is called krypton, the name every app carries (sub-doctrine 9.e), and its id is the-vibey-project.krypton; its commands and settings keep their vibey.* names.
 - [Drive a project from anywhere](https://the-vibey-project.github.io/vibey/main/guides/drive-a-project/): Start a vibey project, talk to it while it designs and builds, pause it, and unwind it, from a terminal, VS Code, the desktop app or your phone.

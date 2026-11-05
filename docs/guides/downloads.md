@@ -4,6 +4,25 @@ description: The ready-built files attached to every vibey release, for each use
 
 # Downloads
 
+> **Bottom Line Up Front (BLUF) — Which file to download for your device and how to install it in seconds:**
+>
+> Every release on [GitHub Releases](https://github.com/the-vibey-project/vibey/releases) (and the daily [`krypton-nightly`](https://github.com/the-vibey-project/vibey/releases/tag/krypton-nightly) build) attaches ready-to-install files for every krypton interface. Pick your platform below:
+>
+> | Your device / app | File to download from [Releases](https://github.com/the-vibey-project/vibey/releases) | Exact install steps (no coding experience required) |
+> |---|---|---|
+> | **One-line installer (macOS & Linux)** | *(None — runs directly from Terminal)* | Open **Terminal** and run:<br>`curl -fsSL https://raw.githubusercontent.com/the-vibey-project/vibey/main/scripts/install.sh \| sh -s -- --with-krypton`<br>Then run `vibey connect --yes` to plug into Claude Code, Codex, Cursor, VS Code, Claude Desktop & Gemini CLI. |
+> | **Mac (Apple silicon M1/M2/M3/M4/M5, macOS 15+)** — *krypton desktop* | `krypton-desktop-<version>-macos-arm64.dmg` | 1. Double-click the `.dmg` and drag **krypton** to **Applications**.<br>2. Open **Terminal** and run: `xattr -dr com.apple.quarantine /Applications/krypton.app` (or double-click **krypton**, then click **Open Anyway** in **System Settings → Privacy & Security**).<br>3. Open **krypton** from **Applications**. |
+> | **Linux (Any distro: Ubuntu, Fedora, Arch, Mint)** — *krypton desktop (Flatpak)* | `krypton-desktop-<version>-linux-x86_64.flatpak` *(Intel/AMD)* or `...-aarch64.flatpak` *(ARM64)* | In Terminal, run:<br>`flatpak install --user ~/Downloads/krypton-desktop-*-linux-*.flatpak`<br>Launch with: `flatpak run io.github.the_vibey_project.krypton` |
+> | **Linux (Ubuntu 24.04+ native)** — *krypton desktop (tarball)* | `krypton-desktop-<version>-linux-x86_64.tar.gz` *(Intel/AMD)* or `...-aarch64.tar.gz` *(ARM64)* | In Terminal, run:<br>`sudo apt update && sudo apt install -y libgtk-4-1 libadwaita-1-0 libsoup-3.0-0 libjson-glib-1.0-0 libavahi-client3 libavahi-glib1 glib-networking`<br>`sudo tar -xzf ~/Downloads/krypton-desktop-*-linux-*.tar.gz -C /`<br>Launch with: `krypton-desktop` |
+> | **VS Code, VSCodium & Cursor (macOS & Linux)** — *krypton extension* | `krypton-vscode-<version>.vsix` *(or install from Open VSX)* | **No Terminal:** In VS Code / Cursor / VSCodium, open **Extensions** (`Cmd+Shift+X` / `Ctrl+Shift+X`) → click **`…`** at top right → **Install from VSIX…** → pick the `.vsix` file.<br>**With Terminal:** `code --install-extension ~/Downloads/krypton-vscode-*.vsix` (or `codium --install-extension the-vibey-project.krypton`). |
+> | **Web Browser (Safari, Chrome, Firefox, Edge)** — *krypton web app* | `krypton-web-<version>.tar.gz` | In Terminal, run:<br>`mkdir -p ~/krypton-web && tar -xzf ~/Downloads/krypton-web-*.tar.gz -C ~/krypton-web && python3 -m http.server 8000 -d ~/krypton-web`<br>Then open `http://localhost:8000` in your browser. |
+> | **Android Phone or Tablet** — *krypton mobile app* | `krypton-android-<version>.apk` | Download the `.apk` on your Android device, tap it in **Downloads**, allow **Install unknown apps** if prompted, and tap **Install** (or from a computer: `adb install krypton-android-<version>.apk`). |
+> | **iPhone or iPad (iOS)** — *krypton mobile app* | `krypton-ios-<version>.ipa` *(or Expo Go)* | Distributed via Apple **TestFlight / App Store** from the signed `.ipa` when `EXPO_TOKEN` is set; or run immediately on any iPhone with **Expo Go** (`cd clients/app && npm ci && npx expo start`). |
+> | **Browser Launcher (`krypton` CLI)** | `krypton_app-<version>-py3-none-any.whl` *(or PyPI)* | `uv tool install krypton-app` (or `uv tool install ./krypton_app-<version>-py3-none-any.whl`), then run `krypton`. |
+> | **Engine, Runners & TUI (`vibey` CLI)** | `vibey_engine-<version>-py3-none-any.whl` *(or PyPI)* | `uv tool install vibey-engine` (or `uv tool install ./vibey_engine-<version>-py3-none-any.whl`), then run `vibey doctor`. |
+>
+> Need even more detail? Read the complete beginner walkthrough in [Install, copy, reinstall, uninstall](install.md).
+
 Every vibey release on GitHub carries ready-built files for each user interface, on each
 platform the project supports. They are attached to the release's page under
 [Releases](https://github.com/the-vibey-project/vibey/releases), beside the source archives.

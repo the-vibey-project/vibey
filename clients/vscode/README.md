@@ -1,5 +1,35 @@
 # krypton for VS Code
 
+> **Bottom Line Up Front (BLUF) — How to install krypton in VS Code, VSCodium, or Cursor in 60 seconds (no coding experience needed):**
+>
+> 1. **Install the `vibey` engine and `krypton` on your computer (one line in Terminal):**
+>    ```sh
+>    curl -fsSL https://raw.githubusercontent.com/the-vibey-project/vibey/main/scripts/install.sh | sh -s -- --with-krypton
+>    vibey connect --yes
+>    ```
+> 2. **Install the extension into your editor (pick Option A or Option B):**
+>    - **Option A — Click-only (no Terminal):**
+>      1. Download **`krypton-vscode-<version>.vsix`** from [GitHub Releases](https://github.com/the-vibey-project/vibey/releases) (or [krypton-nightly](https://github.com/the-vibey-project/vibey/releases/tag/krypton-nightly)).
+>      2. In VS Code, Cursor, or VSCodium, open the **Extensions** view (**Cmd+Shift+X** on macOS, **Ctrl+Shift+X** on Linux).
+>      3. Click the **`…` (three dots)** menu at the top right of the Extensions panel and choose **Install from VSIX…**.
+>      4. Pick the downloaded `krypton-vscode-<version>.vsix` file.
+>    - **Option B — One command in Terminal:**
+>      ```sh
+>      # In VSCodium or any Open VSX editor:
+>      codium --install-extension the-vibey-project.krypton
+>
+>      # In VS Code (after downloading krypton-vscode-<version>.vsix from GitHub Releases):
+>      code --install-extension ~/Downloads/krypton-vscode-*.vsix
+>
+>      # On macOS if 'code' is not on your PATH:
+>      "/Applications/Visual Studio Code.app/Contents/Resources/app/bin/code" --install-extension ~/Downloads/krypton-vscode-*.vsix
+>
+>      # In Cursor:
+>      cursor --install-extension ~/Downloads/krypton-vscode-*.vsix
+>      ```
+> 3. **Open it:** Click the **krypton atom** icon on the left activity bar to open the chat-first krypton panel, or open VS Code Chat and type `@krypton /chat`.
+> 4. **Want the other krypton apps too (Desktop for macOS & Linux, Web, Android, iOS)?** See [docs/guides/install.md](../../docs/guides/install.md) and [docs/guides/downloads.md](../../docs/guides/downloads.md).
+
 **krypton** is vibey's face in your editor: the display name of this extension, and of every
 vibey app (sub-doctrine 9.e). Its extension id is `the-vibey-project.krypton`. The engine
 underneath is still **vibey**, and the extension's settings (`vibey.*`) and commands

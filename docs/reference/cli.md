@@ -1,5 +1,20 @@
 # CLI reference
 
+> **Bottom Line Up Front (BLUF) — Install the `vibey` and `krypton` CLIs and every krypton app:**
+>
+> ```bash
+> # 1. Install vibey-engine (vibey + all *loop runners + tools) AND krypton-app (krypton launcher):
+> curl -fsSL https://raw.githubusercontent.com/the-vibey-project/vibey/main/scripts/install.sh | sh -s -- --with-krypton
+>
+> # 2. Or install with uv / pipx / pip directly:
+> uv tool install vibey-engine && uv tool install krypton-app
+>
+> # 3. Connect your frontier LLM & IDE chat clients (Claude Code, Claude Desktop, Codex, Cursor, VS Code, Gemini CLI):
+> vibey connect --yes
+> ```
+>
+> For click-by-click and copy-and-paste instructions for **krypton desktop** (macOS `.dmg`, Linux Flatpak, Ubuntu `.tar.gz`), **krypton for VS Code / VSCodium / Cursor**, **krypton web**, and **krypton mobile** (Android `.apk` & iOS), see [Install, copy, reinstall, uninstall](../guides/install.md) and [Downloads](../guides/downloads.md).
+
 Every `vibey` command and subcommand, written by hand against
 [`src/vibey/cli/main.py`](https://github.com/the-vibey-project/vibey/blob/main/src/vibey/cli/main.py)
 and checked against it as of 2026-09-29. Nothing generates this page. If it

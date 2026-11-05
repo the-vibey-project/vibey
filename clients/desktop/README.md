@@ -1,5 +1,35 @@
 # krypton desktop
 
+> **Bottom Line Up Front (BLUF) — How to install krypton desktop on macOS and Linux (no coding experience needed):**
+>
+> First, make sure the `vibey` engine is installed on your computer (`curl -fsSL https://raw.githubusercontent.com/the-vibey-project/vibey/main/scripts/install.sh | sh -s -- --with-krypton`). Then pick your operating system below:
+>
+> - **macOS 15 Sequoia and newer (Apple silicon M1/M2/M3/M4/M5):**
+>   1. Download **`krypton-desktop-<version>-macos-arm64.dmg`** from [GitHub Releases](https://github.com/the-vibey-project/vibey/releases) (or [krypton-nightly](https://github.com/the-vibey-project/vibey/releases/tag/krypton-nightly)).
+>   2. Double-click the `.dmg` and drag **krypton** into **Applications** (no Homebrew or extra libraries needed).
+>   3. Clear macOS Gatekeeper's quarantine flag in Terminal:
+>      ```bash
+>      xattr -dr com.apple.quarantine /Applications/krypton.app
+>      ```
+>      *(Or open **krypton** once, then click **Open Anyway** in **System Settings → Privacy & Security**.)*
+>   4. Launch **krypton** from **Applications** or Spotlight. It opens straight into **Chat** (`Cmd+L`) and starts your local hub automatically.
+> - **Linux — Any Distribution with Flatpak (Ubuntu, Fedora, Arch, Debian, Mint, openSUSE):**
+>   1. Download **`krypton-desktop-<version>-linux-x86_64.flatpak`** (or `aarch64`) from [GitHub Releases](https://github.com/the-vibey-project/vibey/releases).
+>   2. Install and run:
+>      ```bash
+>      flatpak install --user ~/Downloads/krypton-desktop-*-linux-*.flatpak
+>      flatpak run io.github.the_vibey_project.krypton
+>      ```
+> - **Linux — Ubuntu 24.04 LTS and newer (Native `.tar.gz`):**
+>   1. Download **`krypton-desktop-<version>-linux-x86_64.tar.gz`** (or `aarch64`) from [GitHub Releases](https://github.com/the-vibey-project/vibey/releases).
+>   2. Install the system GTK 4 / libadwaita dependencies and unpack into `/`:
+>      ```bash
+>      sudo apt update && sudo apt install -y libgtk-4-1 libadwaita-1-0 libsoup-3.0-0 libjson-glib-1.0-0 libavahi-client3 libavahi-glib1 glib-networking
+>      sudo tar -xzf ~/Downloads/krypton-desktop-*-linux-*.tar.gz -C /
+>      krypton-desktop
+>      ```
+> - **Want the other krypton interfaces too (VS Code, Web, Android, iOS, or `vibey connect` for Claude Code / Codex)?** See [docs/guides/install.md](../../docs/guides/install.md) and [docs/guides/downloads.md](../../docs/guides/downloads.md).
+
 The desktop app for vibey, for Linux and macOS. It is written in C17 on GTK 4 and
 libadwaita, and it talks to a vibey hub (`vibey serve`, [ADR-0068](../../docs/architecture/decisions/0068-the-hub.md))
 over the [hub API](../../docs/reference/hub-api.md). It never touches vibey's database.
