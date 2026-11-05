@@ -405,7 +405,10 @@ describe('CoreServices', () => {
     expect(record).toMatchObject({ outcome: 'wound-down', engine: 'gptossloop', max_turns: 16 });
     const child = processes.children[0];
     expect(child?.command).toBe(path.join(bin, 'gptossloop'));
-    expect(child?.options.env).toMatchObject({ GPTOSSLOOP_BASE_URL: `${ROOT}/v1`, GPTOSSLOOP_MODEL: 'gpt-oss:20b' });
+    expect(child?.options.env).toMatchObject({
+      GPTOSSLOOP_BASE_URL: `${ROOT}/v1`,
+      GPTOSSLOOP_MODEL: 'hf.co/mradermacher/gpt-oss-20b-heretic-v2-GGUF:MXFP4_MOE',
+    });
     expect(child?.options.env).not.toHaveProperty('QWENLOOP_BASE_URL');
     expect(child?.options.env).not.toHaveProperty('VIBEY_PG_URL');
     expect(child?.options.env).not.toHaveProperty('GIT_DIR');

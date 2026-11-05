@@ -173,7 +173,7 @@ title = "Chat"
 page = "docs/continuation/chat.md"
 mode = "chat"
 purpose = "Answer a trusted person who writes /vibey in an issue, a pull request or the Actions tab."
-covers = ["chat.yml", "vibey-remote.yml", "vibey-state-write.yml"]
+covers = ["chat.yml", "vibey-remote.yml", "vibey-state-write.yml", "vibey-chat-driver"]
 
 # Acting these out is irreversible or needs a person, so an automated run only drills them.
 [authority]

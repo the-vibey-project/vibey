@@ -8,6 +8,7 @@
 
 #include <adwaita.h>
 
+#include "kr-chat.h"
 #include "kr-discovery.h"
 #include "kr-hub-client.h"
 #include "kr-hub-engine.h"
@@ -34,6 +35,8 @@ typedef struct {
     char *discovery_problem; /* why discovery is not running, or NULL */
     GCancellable *cancel;
     guint refresh_source;
+    gint64 chat_last_seq;    /* the watermark seq of the active project's live ledger feed */
+    char *chat_project_id;   /* the project UUID whose ledger feed chat_last_seq tracks */
     GtkWidget *window;
     KrTray *tray;            /* the tray item, or NULL (off, or this platform has none) */
     KrTrayModel *tray_shown; /* what it last drew */
@@ -41,6 +44,10 @@ typedef struct {
 
 /* Asks the hub for everything the views show; the answers land in app->state. */
 void kr_app_refresh(KrApp *app);
+/* Sends a chat message or `/` command to POST /api/v1/chat/messages and appends the turn. */
+void kr_app_chat_send(KrApp *app, const char *message);
+/* Polls GET /api/v1/projects/{id}/ledger/after for live narration in the Chat view. */
+void kr_app_refresh_ledger(KrApp *app, const char *project_id);
 /* The budget of one project (the Budgets page asks when a project is chosen). */
 void kr_app_refresh_budget(KrApp *app, const char *project_id);
 /* Answers a gate with `value` (see kr-answer.h); says the outcome in a toast. */

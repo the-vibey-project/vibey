@@ -127,6 +127,7 @@ def run_json(*args: str, expect: int = 0):
 
 def test_local_doctor_prints_one_document_with_engine_and_postgres_findings(monkeypatch):
     monkeypatch.delenv("VIBEY_PG_URL", raising=False)
+    monkeypatch.delenv("VIBEY_FEATURE_QWENLOOP", raising=False)
     with patch(PREFLIGHT, new=preflight()):
         result = run_json("--engine", "claudeloop")
     document = json.loads(result.stdout)

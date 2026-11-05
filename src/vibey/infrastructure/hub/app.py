@@ -230,6 +230,24 @@ class ClaimBody(BaseModel):
     name: str = Field(min_length=1, max_length=64, description="What the device calls itself.")
 
 
+class ChatMessageBody(BaseModel):
+    """The body of `POST /api/v1/chat/messages`: a chat turn or `/` command."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    message: str = Field(
+        description="A `/` command (e.g. `/status`, `/gates`, `/new demo build a cli`) or a question."
+    )
+    project_id: UUID | None = Field(
+        default=None,
+        description="The active project UUID in the chat session, if one is selected.",
+    )
+    request_id: str | None = Field(
+        default=None,
+        description="Optional idempotency key when answering a gate from chat.",
+    )
+
+
 class HubAppFactory:
     """Builds the hub's FastAPI app.
 
@@ -527,6 +545,22 @@ class HubAppFactory:
             caller: who, path: str, after: Annotated[int, Query(ge=0)] = 0
         ) -> JSONResponse:
             return JSONResponse(service.lane_tail(caller, path, after))
+
+        @app.post(
+            f"{v1}/chat/messages",
+            tags=["chat"],
+            summary="Run a chat command or question over the hub's tool catalogue.",
+            responses=REFUSED,
+        )
+        async def chat_messages(caller: who, body: ChatMessageBody) -> JSONResponse:
+            return JSONResponse(
+                await service.chat(
+                    caller,
+                    body.message,
+                    project_id=body.project_id,
+                    request_id=body.request_id,
+                )
+            )
 
         def remote(
             caller: HubPrincipal,

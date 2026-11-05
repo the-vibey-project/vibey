@@ -7,6 +7,7 @@ from typing import Any
 
 import pytest
 
+from vibey.domain.sovereign_model import DEFAULT_SOVEREIGN_TAG
 from vibey.infrastructure.engines.ollama_residency import OllamaResidency
 
 
@@ -40,17 +41,19 @@ async def _line(body: object, environ: dict[str, str] | None = None) -> str:
 
 
 async def test_a_model_loaded_far_above_the_requests_context_is_warned_about() -> None:
-    line = await _line({"models": [{"model": "gpt-oss:20b", "context_length": 131072}]})
-    assert line.startswith("ollama   WARN: gpt-oss:20b is loaded at a context of 131072")
+    line = await _line({"models": [{"model": DEFAULT_SOVEREIGN_TAG, "context_length": 131072}]})
+    assert line.startswith(
+        f"ollama   WARN: {DEFAULT_SOVEREIGN_TAG} is loaded at a context of 131072"
+    )
     assert "above the 8192" in line and "VIBEY_OLLAMA_CONTEXT" in line
-    assert "ollama stop gpt-oss:20b" in line
+    assert f"ollama stop {DEFAULT_SOVEREIGN_TAG}" in line
 
 
 async def test_a_model_loaded_within_the_ceiling_is_fine() -> None:
-    line = await _line({"models": [{"name": "gpt-oss:20b", "context_length": 8192}]})
+    line = await _line({"models": [{"name": DEFAULT_SOVEREIGN_TAG, "context_length": 8192}]})
     assert (
         line
-        == "ollama   OK: gpt-oss:20b is loaded at a context of 8192, within the 8192 requests are held to"
+        == f"ollama   OK: {DEFAULT_SOVEREIGN_TAG} is loaded at a context of 8192, within the 8192 requests are held to"
     )
 
 
@@ -69,15 +72,18 @@ async def test_an_untagged_name_matches_ollamas_latest_tag() -> None:
 
 async def test_a_model_that_is_not_loaded_is_said_to_load_on_first_use() -> None:
     line = await _line({"models": [{"model": "other:1b", "context_length": 8192}, "odd"]})
-    assert line == "ollama   OK: gpt-oss:20b is not loaded; the first request loads it"
+    assert line == f"ollama   OK: {DEFAULT_SOVEREIGN_TAG} is not loaded; the first request loads it"
 
 
 @pytest.mark.parametrize("context", [None, "8192", True])
 async def test_an_ollama_that_does_not_report_context_is_not_second_guessed(
     context: object,
 ) -> None:
-    line = await _line({"models": [{"model": "gpt-oss:20b", "context_length": context}]})
-    assert line == "ollama   OK: gpt-oss:20b is loaded (this Ollama does not report its context)"
+    line = await _line({"models": [{"model": DEFAULT_SOVEREIGN_TAG, "context_length": context}]})
+    assert (
+        line
+        == f"ollama   OK: {DEFAULT_SOVEREIGN_TAG} is loaded (this Ollama does not report its context)"
+    )
 
 
 @pytest.mark.parametrize("body", [b"not json", [1], {"models": "no"}, {"nothing": 1}])

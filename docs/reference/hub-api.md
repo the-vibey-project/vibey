@@ -1,5 +1,15 @@
 # Hub API reference
 
+> **Bottom Line Up Front (BLUF) — Install and launch the hub and every krypton client:**
+>
+> - **Install `vibey` and `krypton` in one line (macOS & Linux):**
+>   ```bash
+>   curl -fsSL https://raw.githubusercontent.com/the-vibey-project/vibey/main/scripts/install.sh | sh -s -- --with-krypton
+>   krypton               # starts `vibey serve` on 127.0.0.1:8765 and opens it in your browser
+>   vibey connect --yes   # connects Claude Code, Claude Desktop, Codex, Cursor, VS Code & Gemini CLI to the hub over MCP
+>   ```
+> - **Install every krypton client that talks to this hub (Desktop on macOS & Linux, VS Code / VSCodium / Cursor extension, Web app, Android `.apk`, and iOS app):** See [Install, copy, reinstall, uninstall](../guides/install.md) and [Downloads](../guides/downloads.md).
+
 The hub is `vibey serve` ([ADR-0068](../architecture/decisions/0068-the-hub.md)): one HTTP
 API that every krypton client -- desktop, mobile, web, the VS Code extension -- reaches.
 Version 1. The machine-readable contract is the OpenAPI 3.1 document, committed at
@@ -29,6 +39,12 @@ Three routes have no single command behind them:
   where `answer` is what `vibey answer --raw` takes. It answers through the same service as
   `vibey answer`: once, recorded under the caller's name. The same `request_id` with the
   same answer is a no-op (`"replayed": true`); a gate another request answered first is 409.
+- `POST /api/v1/chat/messages` takes `{"message": "...", "project_id": "…", "request_id": "…"}`
+  and runs a conversational question or `/` command (`/projects`, `/status`, `/gates`,
+  `/answer`, `/budget`, `/queue`, `/ledger`, `/loops`, `/lanes`, `/doctor`, `/new`, `/start`,
+  `/pause`, `/abandon`, `/help`) over the same hub use cases and scope checks. It returns
+  `{"reply", "tool_calls", "gates", "project_id"}`, where each open gate carries `is_spend`
+  and `requires_scope` so chat clients badge spending gates clearly.
 - `GET /api/v1/lanes` lists the lanes on this computer, each with its byte `offset`.
 - `GET /api/v1/doctor` runs the checks the hub can run itself (the database, `hub-exposure`)
   and says so; `vibey doctor` on the host is the full check.

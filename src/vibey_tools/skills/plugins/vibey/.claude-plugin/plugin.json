@@ -1,0 +1,9 @@
+{
+  "name": "vibey",
+  "version": "0.1.0",
+  "description": "Drive vibey from Claude Code, Codex, Cursor, VS Code or any MCP chat client: MCP server wiring (`vibey mcp`) and the host-driven operator workflow skill.",
+  "author": {
+    "name": "Adam Matthew Steinberger",
+    "email": "adam@matthewsteinberger.com"
+  }
+}

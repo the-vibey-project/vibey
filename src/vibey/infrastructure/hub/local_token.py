@@ -31,6 +31,7 @@ from typing import Final
 
 TOKEN_FILE: Final = "token"
 RUN_KEY_FILE: Final = "run.key"
+AGENT_TOKEN_FILE: Final = "agent.token"
 RUNTIME_FILE: Final = "serving.json"
 TOKEN_BYTES: Final = 32
 RUN_KEY_BYTES: Final = 32
@@ -61,6 +62,12 @@ class LocalTokenStore:
         by no other, or it is refused rather than trusted -- whoever could plant it would
         know the host's key (security review of #1155)."""
         made = self._secret(TOKEN_FILE, lambda: secrets.token_urlsafe(TOKEN_BYTES).encode())
+        return made.decode().strip()
+
+    def agent_token(self) -> str:
+        """The token a host LLM's MCP server presents (ADR-0100): a second key, made the same
+        way as the host's, that the hub honours with the narrower `[hub] agent_scopes`."""
+        made = self._secret(AGENT_TOKEN_FILE, lambda: secrets.token_urlsafe(TOKEN_BYTES).encode())
         return made.decode().strip()
 
     def run_key(self) -> bytes:

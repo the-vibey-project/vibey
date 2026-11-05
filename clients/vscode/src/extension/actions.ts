@@ -28,6 +28,7 @@ export class CommandActions implements CommandActionsInterface {
   readonly ids: readonly string[];
   private readonly handlers: Readonly<Record<string, Handler>>;
   private readonly panels = new Map<string, TaskPanel>();
+  private chatPanel: TaskPanel | undefined;
   private readonly slash = new SlashCommands();
   private readonly words = new SlashArguments();
   private readonly workflowsLine = new WorkflowsCommandLine();
@@ -37,6 +38,7 @@ export class CommandActions implements CommandActionsInterface {
     private readonly extensionUri: vscode.Uri,
   ) {
     this.handlers = {
+      'vibey.openChat': (i) => this.openChat(i),
       'vibey.ask': (i) => this.ask(i),
       'vibey.followUp': (i) => this.followUp(i),
       'vibey.runBatch': (i) => this.runBatch(i),
@@ -79,6 +81,7 @@ export class CommandActions implements CommandActionsInterface {
       'vibey.grantBudget': (i) => this.grantBudget(i),
       'vibey.endNoCap': (i) => this.endNoCap(i),
       'vibey.connectHub': (i) => this.connectHub(i),
+      'vibey.connectMcp': (i) => this.connectMcp(i),
       'vibey.disconnectHub': (i) => this.disconnectHub(i),
       'vibey.startHub': (i) => this.hub('start', i),
       'vibey.stopHub': (i) => this.hub('stop', i),
@@ -111,6 +114,23 @@ export class CommandActions implements CommandActionsInterface {
   }
 
   // --- Run -------------------------------------------------------------------------------
+
+  private async openChat(invocation: Invocation): Promise<void> {
+    if (this.chatPanel === undefined) {
+      const created = new TaskPanel(this.controller, this, this.extensionUri, 'task');
+      created.onDidClose(() => {
+        if (this.chatPanel === created) {
+          this.chatPanel = undefined;
+        }
+      });
+      this.chatPanel = created;
+    }
+    this.chatPanel.openChat();
+    const text = invocation.args?.trim();
+    if (text) {
+      await this.ask({ ...invocation, panel: this.chatPanel, args: text });
+    }
+  }
 
   private async ask(invocation: Invocation): Promise<void> {
     const task =
@@ -584,6 +604,48 @@ export class CommandActions implements CommandActionsInterface {
     const url = this.controller.hubUrl;
     await this.controller.unpairHub();
     invocation.say(url === undefined ? 'No hub was connected; krypton uses the local vibey.' : `Disconnected from ${url}. krypton uses the local vibey again.`);
+  }
+
+  private async connectMcp(invocation: Invocation): Promise<void> {
+    const services = this.controller.services;
+    const vibeyPath = services.locator.locate('vibey', services.settings.raw.cliPath).path;
+    if (vibeyPath === undefined) {
+      invocation.say('vibey was not found. Install it (pip install vibey-engine), or point the vibey.cliPath setting at it.');
+      return;
+    }
+    const clients = [
+      { label: 'vscode', detail: 'Write .vscode/mcp.json in this workspace so VS Code can drive vibey over MCP.' },
+      { label: 'claude_code', detail: 'Write .mcp.json in this workspace so Claude Code can drive vibey over MCP.' },
+      { label: 'claude_desktop', detail: 'Register vibey in Claude Desktop.' },
+      { label: 'codex', detail: 'Register vibey in Codex (~/.codex/config.toml).' },
+      { label: 'cursor', detail: 'Write .cursor/mcp.json in this workspace so Cursor can drive vibey over MCP.' },
+      { label: 'gemini_cli', detail: 'Register vibey in Gemini CLI (~/.gemini/settings.json).' },
+      { label: 'all', detail: 'Register vibey in every supported chat app and editor.' },
+    ];
+    let client = invocation.args?.trim();
+    if (!client) {
+      const picked = await vscode.window.showQuickPick(clients, {
+        title: 'Connect a chat app or editor (MCP)',
+        placeHolder: 'Choose which host client to configure for vibey MCP',
+      });
+      client = picked?.label;
+    }
+    if (!client) {
+      return;
+    }
+    const folder = this.controller.folder();
+    const args = ['connect', client];
+    if (folder !== undefined) {
+      args.push('--project-dir', folder);
+    }
+    const result = await services.processes.run(vibeyPath, args, { env: services.toolEnvironment });
+    const message = (result.stdout || result.stderr).trim();
+    if (result.code !== 0) {
+      invocation.say(message || `vibey connect ${client} exited with code ${result.code}.`);
+      return;
+    }
+    this.controller.output.appendLine(message);
+    invocation.say(message.split('\n')[0] || `Registered vibey MCP for ${client}.`);
   }
 
   private async chooseModel(invocation: Invocation): Promise<void> {

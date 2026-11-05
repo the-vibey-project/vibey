@@ -1,14 +1,45 @@
 # VS Code extension
 
+> **Bottom Line Up Front (BLUF) — How to install krypton in VS Code, VSCodium, or Cursor in 60 seconds (no coding experience needed):**
+>
+> 1. **Install the engine + krypton on your computer (one line in Terminal):**
+>    ```bash
+>    curl -fsSL https://raw.githubusercontent.com/the-vibey-project/vibey/main/scripts/install.sh | sh -s -- --with-krypton
+>    vibey connect --yes
+>    ```
+> 2. **Install the extension into your editor (pick Option A or Option B):**
+>    - **Option A — Click-only (no Terminal):**
+>      1. Download **`krypton-vscode-<version>.vsix`** from [GitHub Releases](https://github.com/the-vibey-project/vibey/releases) (or [krypton-nightly](https://github.com/the-vibey-project/vibey/releases/tag/krypton-nightly)).
+>      2. In VS Code, Cursor, or VSCodium, open the **Extensions** view (**Cmd+Shift+X** on macOS, **Ctrl+Shift+X** on Linux).
+>      3. Click the **`…` (three dots)** menu at the top right of the Extensions panel and choose **Install from VSIX…**.
+>      4. Pick the downloaded `krypton-vscode-<version>.vsix` file.
+>    - **Option B — One command in Terminal:**
+>      ```bash
+>      # In VSCodium or any Open VSX editor:
+>      codium --install-extension the-vibey-project.krypton
+>
+>      # In VS Code (after downloading krypton-vscode-<version>.vsix from GitHub Releases):
+>      code --install-extension ~/Downloads/krypton-vscode-*.vsix
+>
+>      # On macOS if 'code' is not on your PATH:
+>      "/Applications/Visual Studio Code.app/Contents/Resources/app/bin/code" --install-extension ~/Downloads/krypton-vscode-*.vsix
+>
+>      # In Cursor:
+>      cursor --install-extension ~/Downloads/krypton-vscode-*.vsix
+>      ```
+> 3. **Open and use it:** Click the **krypton atom** icon on the left activity bar to open the chat-first krypton panel (with **Open Chat `@krypton`**, **Connect MCP (`vibey connect`)**, quick `/` command chips, and inline gate approval cards with `SPEND GATE` badges), or open VS Code Chat and type `@krypton /chat`.
+> 4. **Want the other krypton apps too (Desktop for macOS & Linux, Web, Android, iOS)?** See the [step-by-step install guide](install.md) and [Downloads](downloads.md).
+
 The extension is called **krypton**, the name every app carries (sub-doctrine 9.e), and its id
 is `the-vibey-project.krypton`; its commands and settings keep their `vibey.*` names. It lets you drive vibey, and a model on your own computer, from VS Code:
 describe a task, watch the model work on a copy of your project, and apply the result when
 you are happy with it. It needs no account and no cloud. Everything on the default loop,
-sovereignloop, runs on your machine: gptossloop, vibey's local agent, drives **gpt-oss:20b**
+sovereignloop, runs on your machine: gptossloop, vibey's local agent, drives **Heretic v2 of GPT-OSS 20B** (`hf.co/mradermacher/gpt-oss-20b-heretic-v2-GGUF:MXFP4_MOE`, or stock `gpt-oss:20b` with `VIBEY_SOVEREIGN_MODEL=stock`)
 through [Ollama](https://ollama.com). The design behind it is
 [ADR-0059](../architecture/decisions/0059-the-editor-drives-the-familys-own-loops.md); the
 engine it runs is set out in
-[ADR-0064](../architecture/decisions/0064-gptossloop-is-the-sovereign-engine.md).
+[ADR-0064](../architecture/decisions/0064-gptossloop-is-the-sovereign-engine.md) and
+[ADR-0099](../architecture/decisions/0099-heretic-v2-of-gpt-oss-20b-is-the-sovereign-default-model.md).
 
 The extension's own
 [README](https://github.com/the-vibey-project/vibey/blob/main/clients/vscode/README.md) lists

@@ -9,13 +9,18 @@
 
 G_BEGIN_DECLS
 
-/* The places, in sidebar order. Each is also a page name ("projects", "gates", ...). */
-#define KR_WINDOW_PAGES 9
+/* The places, in sidebar order. Each is also a page name ("chat", "projects", "gates", ...). */
+#define KR_WINDOW_PAGES 10
 extern const char *const kr_window_page_names[KR_WINDOW_PAGES];
 
 GtkWidget *kr_window_new(KrApp *app);
 void kr_window_show_page(GtkWidget *window, const char *name);
 void kr_window_toast(GtkWidget *window, const char *text);
+/* Appends a chat turn, error or live ledger page to the Chat view. */
+void kr_window_chat_turn(GtkWidget *window, const char *user_message, const KrChatTurn *turn);
+void kr_window_chat_error(GtkWidget *window, const char *user_message, const char *error_text);
+void kr_window_chat_ledger(GtkWidget *window, const KrChatLedgerPage *ledger);
+void kr_window_chat_focus(GtkWidget *window);
 /* Ask what to build and what to call it, then start the project (Ctrl+N). */
 void kr_window_start_dialog(GtkWidget *window);
 /* Say what an unwind cancels and that it cannot be undone; on confirmation, do it. */

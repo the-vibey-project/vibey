@@ -92,7 +92,7 @@ describe('CatalogueParser', () => {
       on_by_default: true,
       switch: 'VIBEY_FEATURE_GPTOSSLOOP',
       repealed: false,
-      default_model: 'gpt-oss:20b',
+      default_model: 'hf.co/mradermacher/gpt-oss-20b-heretic-v2-GGUF:MXFP4_MOE',
       done_marker: 'QWENLOOP_TASK_FULLY_COMPLETE',
       controls: { prompt: ['prompt', '{run_id}', '{text}', '--cwd', '{cwd}'] },
       env: { passthrough: ['GPTOSSLOOP_*'] },
@@ -110,7 +110,7 @@ describe('CatalogueParser', () => {
     });
     expect(catalogue.loops[0]?.by_effort.LOW?.map((choice) => [choice.engine_id, choice.model])).toEqual([
       ['claudeloop-local', null],
-      ['gptossloop', 'gpt-oss:20b'],
+      ['gptossloop', 'hf.co/mradermacher/gpt-oss-20b-heretic-v2-GGUF:MXFP4_MOE'],
       ['qwenloop', null],
     ]);
   });
@@ -307,7 +307,7 @@ describe('LoopSelector', () => {
     expect(selection.engine.engine_id).toBe('gptossloop');
     expect(selection.effort).toBe('LOW');
     expect(selection.effortSource).toBe('auto');
-    expect(selection.model).toBe('gpt-oss:20b');
+    expect(selection.model).toBe('hf.co/mradermacher/gpt-oss-20b-heretic-v2-GGUF:MXFP4_MOE');
     expect(selection.argv).toEqual(['--max-turns', '16']);
     expect(selection.maxTurns).toBe(16);
     expect(selection.maxTurnsSource).toBe('effort');
@@ -448,7 +448,7 @@ describe('LoopSelector', () => {
     const local = selector.select(request({ engine: 'gptossloop/gpt-oss:120b', effort: 'STANDARD' }));
     expect(local.model).toBe('gpt-oss:120b');
     expect(local.reason).toContain('on gpt-oss:120b as you chose');
-    expect(selector.select(request({ engine: 'gptossloop/' })).model).toBe('gpt-oss:20b');
+    expect(selector.select(request({ engine: 'gptossloop/' })).model).toBe('hf.co/mradermacher/gpt-oss-20b-heretic-v2-GGUF:MXFP4_MOE');
     expect(selector.select(request({ engine: 'gptossloop' })).engine.engine_id).toBe('gptossloop');
     // qwenloop is opt-in: named while vibey has it off, it says which switch turns it on.
     expect(() => selector.select(request({ engine: 'qwenloop' }))).toThrow(/^qwenloop is switched off; switch it on with VIBEY_FEATURE_QWENLOOP$/);

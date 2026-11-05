@@ -81,18 +81,24 @@
     "viewsWelcome": [
       {
         "view": "vibey.runs",
-        "contents": "Ask the local model to do something in this folder. It works on a copy, so nothing changes until you choose Apply.\n[Ask the model](command:vibey.ask)\n[Run a folder of tasks](command:vibey.runBatch)\n[Show every command](command:vibey.showMenu)\n[Take the one-minute tour](command:workbench.action.openWalkthrough?%22the-vibey-project.krypton%23krypton.firstRun%22)"
+        "contents": "Open the krypton chat workspace or ask the local model to do something in this folder. Tasks work on a copy, so nothing changes until you choose Apply.\n[Open krypton chat](command:vibey.openChat)\n[Ask the model](command:vibey.ask)\n[Run a folder of tasks](command:vibey.runBatch)\n[Show every command](command:vibey.showMenu)\n[Take the one-minute tour](command:workbench.action.openWalkthrough?%22the-vibey-project.krypton%23krypton.firstRun%22)"
       },
       {
         "view": "vibey.lanes",
-        "contents": "No lanes are running on this computer right now.\n[Ask the model](command:vibey.ask)"
+        "contents": "No lanes are running on this computer right now.\n[Open krypton chat](command:vibey.openChat)\n[Ask the model](command:vibey.ask)"
       },
       {
         "view": "vibey.projects",
-        "contents": "No project yet. Describe what you want built; vibey interviews you, writes the design, builds it and reviews it, and asks you only for the decisions that are yours.\n[Start a project](command:vibey.newProject)\nProjects can also come from a vibey hub on your network.\n[Connect to vibey on this network](command:vibey.connectHub)\n[Take the tour](command:workbench.action.openWalkthrough?%22the-vibey-project.krypton%23krypton.firstRun%22)"
+        "contents": "No project yet. Describe what you want built in chat; vibey interviews you, writes the design, builds it and reviews it, and asks you only for the decisions that are yours.\n[Open krypton chat](command:vibey.openChat)\n[Start a project](command:vibey.newProject)\n[Connect a chat app or editor (MCP)](command:vibey.connectMcp)\nProjects can also come from a vibey hub on your network.\n[Connect to vibey on this network](command:vibey.connectHub)\n[Take the tour](command:workbench.action.openWalkthrough?%22the-vibey-project.krypton%23krypton.firstRun%22)"
       }
     ],
     "commands": [
+      {
+        "command": "vibey.openChat",
+        "title": "Open krypton chat",
+        "category": "krypton",
+        "icon": "$(comment)"
+      },
       {
         "command": "vibey.ask",
         "title": "Ask the model to do a task",
@@ -346,6 +352,12 @@
         "icon": "$(plug)"
       },
       {
+        "command": "vibey.connectMcp",
+        "title": "Connect a chat app or editor (MCP)",
+        "category": "krypton",
+        "icon": "$(hubot)"
+      },
+      {
         "command": "vibey.disconnectHub",
         "title": "Disconnect from the hub",
         "category": "krypton",
@@ -429,6 +441,11 @@
           "group": "navigation@9"
         },
         {
+          "command": "vibey.openChat",
+          "when": "view == vibey.runs",
+          "group": "navigation@0"
+        },
+        {
           "command": "vibey.ask",
           "when": "view == vibey.runs",
           "group": "navigation@1"
@@ -477,6 +494,11 @@
           "command": "vibey.refresh",
           "when": "view == vibey.projects",
           "group": "navigation@9"
+        },
+        {
+          "command": "vibey.openChat",
+          "when": "view == vibey.gates",
+          "group": "navigation@0"
         },
         {
           "command": "vibey.answerGate",
@@ -898,6 +920,10 @@
         "isSticky": true,
         "commands": [
           {
+            "name": "chat",
+            "description": "Open the krypton chat workspace: drive projects, answer waiting gates, run tasks and use every / command in one conversation."
+          },
+          {
             "name": "ask",
             "description": "Start a task on a copy of your folder; nothing changes until you apply it."
           },
@@ -1048,6 +1074,10 @@
           {
             "name": "connect",
             "description": "Find a vibey hub here or at an address, pair once with its key, and read projects, gates and budgets through it."
+          },
+          {
+            "name": "mcp",
+            "description": "Register vibey as an MCP server in Claude Code, Claude Desktop, Codex, Cursor, VS Code or Gemini CLI so you can drive it from chat."
           },
           {
             "name": "disconnect",

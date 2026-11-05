@@ -23,6 +23,8 @@ import type {
   VibeyStatus,
 } from '@vibey/core';
 import { DevicePolicy } from './device-policy';
+import { ChatModel } from './chat';
+import type { ChatLedgerPage, ChatTurn } from './interfaces/chat-interface';
 import type {
   FetchLike,
   HubClientInterface,
@@ -331,6 +333,26 @@ export class HubClient implements HubClientInterface {
   async workflowRun(requestId: string): Promise<WorkflowRun> {
     const parsed = await this.send(`/api/v1/workflows/runs/${encodeURIComponent(requestId)}`, { method: 'GET', headers: this.headers() }, { refusals: HubClient.WORKFLOW_REFUSALS });
     return HubClient.workflowRunOf(parsed);
+  }
+
+  async chat(message: string, projectId?: string | null): Promise<ChatTurn> {
+    const trimmed = message.trim();
+    if (trimmed === '') {
+      throw new HubError('invalid', 'Type a message or a / command first.');
+    }
+    const body = {
+      message: trimmed,
+      request_id: this.requestId(),
+      ...(typeof projectId === 'string' && projectId !== '' ? { project_id: projectId } : {}),
+    };
+    const parsed = await this.post('/api/v1/chat/messages', body, { refusals: HubClient.LIFECYCLE_REFUSALS });
+    return new ChatModel().parseTurn(parsed);
+  }
+
+  async ledgerAfter(projectId: string, afterSeq: number): Promise<ChatLedgerPage> {
+    const seq = Math.max(0, Math.floor(afterSeq));
+    const parsed = await this.get(`/api/v1/projects/${encodeURIComponent(projectId)}/ledger/after?seq=${seq}`);
+    return new ChatModel().parseLedgerPage(parsed);
   }
 
   /**

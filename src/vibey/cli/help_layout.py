@@ -46,6 +46,7 @@ PANELS: tuple[Panel, ...] = (
     Panel(
         "Start here",
         (
+            Entry("connect", "Plug vibey into Claude, Codex, Cursor or VS Code over MCP"),
             Entry("doctor", "Check this machine is ready: PostgreSQL, engines, auth"),
             Entry("install", "Install the local dependencies vibey can manage"),
             Entry("new", "Start a project and its first design interview"),
@@ -104,6 +105,7 @@ PANELS: tuple[Panel, ...] = (
     Panel(
         "Tools for agents",
         (
+            Entry("mcp", "Serve the hub MCP tools over stdio for a host chat client"),
             Entry("search", "Search the web through vibey's own backend"),
             Entry("fetch", "Read one public web page as plain text"),
             Entry("llm", "Follow the model conversation and its wire log"),

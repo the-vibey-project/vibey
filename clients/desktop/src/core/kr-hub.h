@@ -81,6 +81,8 @@ typedef enum {
     KR_HUB_ROUTE_PROJECT_START_WORK,  /* POST, needs project_id: start its own worker */
     KR_HUB_ROUTE_PROJECT_PAUSE_WORK,  /* POST, needs project_id: stop its own workers */
     KR_HUB_ROUTE_PROJECT_ABANDON,     /* POST, needs project_id: unwind it (or dry_run) */
+    KR_HUB_ROUTE_CHAT_MESSAGES,       /* POST a chat message or /command (ADR-0100) */
+    KR_HUB_ROUTE_PROJECT_LEDGER_AFTER, /* GET events after seq: needs project_id and id (seq) */
 } KrHubRoute;
 
 /* The path (and query) of a route, every id percent-escaped. NULL when a needed id is

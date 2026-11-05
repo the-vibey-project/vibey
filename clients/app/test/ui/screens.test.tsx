@@ -5,6 +5,7 @@ import type { ReactNode } from 'react';
 import { Linking } from 'react-native';
 import { WorkflowRuns } from '../../src/core/workflow-runs';
 import { BudgetsScreen } from '../../src/screens/budgets';
+import { ChatScreen } from '../../src/screens/chat';
 import { DoctorScreen } from '../../src/screens/doctor';
 import { EffortScreen } from '../../src/screens/effort';
 import { GatesScreen } from '../../src/screens/gates';
@@ -66,6 +67,42 @@ async function renderWith(node: ReactNode, routes: Routes, connected = true) {
 const project = { project_id: 'p1', name: 'Greeter', phase: 'BUILD', open_gates: 1, cycle: 1, max_cycles: 3 };
 
 describe('screens', () => {
+  it('Chat sends slash and plain-language turns, completes / commands, and answers inline gates', async () => {
+    const posted = await renderWith(<ChatScreen verify={async () => true} />, {
+      'GET /api/v1/projects': [project],
+      'GET /api/v1/gates': {
+        gates: [
+          { gate_id: 'g1', project_id: 'p1', job_id: null, kind: 'approval', prompt: 'Ship it?', options: ['accept'], default_answer: null, timeout_at: null },
+        ],
+      },
+      'POST /api/v1/chat/messages': {
+        reply: 'Greeter is in BUILD.',
+        project_id: 'p1',
+        tool_calls: [{ name: 'vibey_status', arguments: { project_id: 'p1' }, result: { phase: 'BUILD' } }],
+        gates: [],
+      },
+      'POST /api/v1/gates/g1/answer': { replayed: false },
+    });
+    expect(await screen.findByText('All projects')).toBeTruthy();
+    expect(screen.getByText('Gate · answer scope')).toBeTruthy();
+
+    // Slash completion
+    await fireEvent.changeText(screen.getByLabelText('Chat message or slash command'), '/st');
+    expect(await screen.findByText('/status [project-id]')).toBeTruthy();
+    await fireEvent.press(screen.getByText('/status [project-id]'));
+
+    // Send turn
+    await fireEvent.press(screen.getByText('Send'));
+    expect(await screen.findByText('Greeter is in BUILD.')).toBeTruthy();
+    expect(screen.getByText('vibey_status')).toBeTruthy();
+    expect(JSON.parse(posted[0]!.body)).toMatchObject({ message: '/status' });
+
+    // Answer inline gate
+    await fireEvent.press(screen.getByText('accept'));
+    await waitFor(() => expect(posted).toHaveLength(2));
+    expect(JSON.parse(posted[1]!.body).answer).toEqual({ verdict: 'accept' });
+  });
+
   it('Home shows each project and what needs you', async () => {
     await renderWith(<HomeScreen />, { 'GET /api/v1/projects': [project] });
     expect(await screen.findByText('1 gate needs you')).toBeTruthy();

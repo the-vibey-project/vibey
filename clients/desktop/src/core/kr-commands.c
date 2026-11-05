@@ -4,6 +4,7 @@
 #include "kr-commands.h"
 
 static const char *const ACCEL_REFRESH[] = {"<Control>r", "F5", NULL};
+static const char *const ACCEL_CHAT[] = {"<Control>l", NULL};
 static const char *const ACCEL_GATES[] = {"<Control>g", NULL};
 static const char *const ACCEL_SETTINGS[] = {"<Control>comma", NULL};
 static const char *const ACCEL_START[] = {"<Control>n", NULL};
@@ -12,6 +13,7 @@ static const char *const ACCEL_QUIT[] = {"<Control>q", NULL};
 static const char *const NO_ACCEL[] = {NULL};
 
 static const KrCommand COMMANDS[] = {
+    {"show-chat", "Chat", "Projects", ACCEL_CHAT},
     {"start-project", "Start a project…", "Projects", ACCEL_START},
     {"show-gates", "Answer waiting gates", "Projects", ACCEL_GATES},
     {"open", "Open krypton", "Projects", NO_ACCEL},

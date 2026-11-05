@@ -446,7 +446,7 @@ describe('TaskRun', () => {
       GPTOSSLOOP_DEBUG: '1',
       OLLAMA_HOST: h.settings.ollama.root,
       GPTOSSLOOP_BASE_URL: h.settings.ollama.v1,
-      GPTOSSLOOP_MODEL: 'gpt-oss:20b',
+      GPTOSSLOOP_MODEL: 'hf.co/mradermacher/gpt-oss-20b-heretic-v2-GGUF:MXFP4_MOE',
       GPTOSSLOOP_CONFIG: config,
     });
     expect(fs.readFileSync(config, 'utf8')).toContain('context_window = 32768\n');
@@ -462,7 +462,7 @@ describe('TaskRun', () => {
       loop: 'sovereignloop',
       engine: 'gptossloop',
       effort: 'LOW',
-      model: 'gpt-oss:20b',
+      model: 'hf.co/mradermacher/gpt-oss-20b-heretic-v2-GGUF:MXFP4_MOE',
       catalogue: 'vibey',
       context_window: 32768,
       max_turns: 16,
@@ -501,7 +501,7 @@ describe('TaskRun', () => {
         loop: 'sovereignloop',
         tier: 'local',
         engine: 'gptossloop',
-        model: 'gpt-oss:20b',
+        model: 'hf.co/mradermacher/gpt-oss-20b-heretic-v2-GGUF:MXFP4_MOE',
         effort: 'LOW',
         effort_source: 'chosen',
         max_turns: 16,
@@ -531,11 +531,15 @@ describe('TaskRun', () => {
     expect(h.notices()).toEqual([
       `Working on a copy: ${h.worktree}, branch ${h.branch}, from HEAD at ${BASE.slice(0, 12)}.`,
       'Attempt 1: gptossloop for this test.',
-      'gptossloop plans for a 32,768-token window on gpt-oss:20b.',
+      'gptossloop plans for a 32,768-token window on hf.co/mradermacher/gpt-oss-20b-heretic-v2-GGUF:MXFP4_MOE.',
       'The engine reports the task complete at turn 1.',
     ]);
     expect(h.patches.length).toBeGreaterThanOrEqual(h.run.items().length);
-    expect(h.run.current).toEqual({ engine: 'gptossloop', model: 'gpt-oss:20b', effort: 'LOW' });
+    expect(h.run.current).toEqual({
+      engine: 'gptossloop',
+      model: 'hf.co/mradermacher/gpt-oss-20b-heretic-v2-GGUF:MXFP4_MOE',
+      effort: 'LOW',
+    });
     expect(h.run.workspace).toMatchObject({ mode: 'worktree', branch: h.branch, baseSha: BASE });
     expect(await h.run.execute()).toBe(record);
     expect(await h.run.result).toBe(record);

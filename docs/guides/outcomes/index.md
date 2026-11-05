@@ -4,6 +4,15 @@ description: Six short guides, each answering one question people bring to AI co
 
 # What do you want to do?
 
+> **Bottom Line Up Front (BLUF) — Need to install vibey or any krypton app first?**
+>
+> - **One-line install (`vibey` engine + `krypton` browser launcher on macOS & Linux):**
+>   ```bash
+>   curl -fsSL https://raw.githubusercontent.com/the-vibey-project/vibey/main/scripts/install.sh | sh -s -- --with-krypton
+>   vibey connect --yes   # plug vibey into Claude Code, Codex, Cursor, VS Code, Claude Desktop & Gemini CLI
+>   ```
+> - **Install every krypton interface (Desktop on macOS & Linux, VS Code / VSCodium / Cursor extension, Web app, and Android & iOS mobile apps):** Follow the step-by-step beginner guide in [Install, copy, reinstall, uninstall](../install.md) and [Downloads](../downloads.md).
+
 You probably arrived with a problem rather than a wish to learn a new tool: code that must
 not leave your machine, an agent bill nobody can explain, an auditor asking what the agent
 did. Each guide below answers one such question. It opens with a one-sentence answer, then
