@@ -44,6 +44,7 @@ from vibey.bootstrap import (
 from vibey.cli.abandon import abandon as abandon_command
 from vibey.cli.budget import budget_app
 from vibey.cli.command_examples import CommandExamples
+from vibey.cli.connect import connect as connect_command
 from vibey.cli.cost import COST
 from vibey.cli.design_auto_accept import auto_accept_design_lines, auto_accept_design_startup_line
 from vibey.cli.doctor_output import (
@@ -66,6 +67,7 @@ from vibey.cli.ledger_publication import ledger_export, ledger_site
 from vibey.cli.ledger_search import PRESENTER, ledger_search
 from vibey.cli.llm import llm_app
 from vibey.cli.loops import LOOPS
+from vibey.cli.mcp import mcp as mcp_command
 from vibey.cli.models import MODELS
 from vibey.cli.projects import PROJECTS
 from vibey.cli.queue import queue_app
@@ -479,6 +481,8 @@ def new_project(
 
 
 app.command("serve")(serve_command)
+app.command("mcp")(mcp_command)
+app.command("connect")(connect_command)
 app.add_typer(hub_app, name="hub")
 
 

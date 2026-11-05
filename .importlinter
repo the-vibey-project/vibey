@@ -136,6 +136,7 @@ source_modules =
     vibey.infrastructure.sms.interfaces
     vibey.infrastructure.tracker.interfaces
     vibey.infrastructure.hub.interfaces
+    vibey.infrastructure.mcp.interfaces
 forbidden_modules =
     vibey.cli
     vibey.tui
