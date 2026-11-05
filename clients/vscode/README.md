@@ -332,6 +332,7 @@ force.
 
 | Command | Palette title | In the panel or after @vibey | Example |
 |---|---|---|---|
+| `vibey.openChat` | Open krypton chat | `/chat` | `/chat` |
 | `vibey.ask` | Ask the model to do a task | `/ask <task>` | `/ask add a line to README.md that says how to run the tests` |
 | `vibey.followUp` | Tell the running task something | `/tell <message>` | `/tell keep the heading short` |
 | `vibey.runBatch` | Run a folder of tasks | `/batch <folder>` | `/batch docs/tasks` |
@@ -399,6 +400,7 @@ force.
 | Command | Palette title | In the panel or after @vibey | Example |
 |---|---|---|---|
 | `vibey.connectHub` | Connect to vibey on this network | `/connect [address]` | `/connect studio.local` |
+| `vibey.connectMcp` | Connect a chat app or editor (MCP) | `/mcp [client]` | `/mcp vscode` |
 | `vibey.disconnectHub` | Disconnect from the hub | `/disconnect` | `/disconnect` |
 | `vibey.startHub` | Start the vibey hub on this computer | `/hub start` | `/hub start` |
 | `vibey.stopHub` | Stop the vibey hub on this computer | `/hub stop` | `/hub stop` |

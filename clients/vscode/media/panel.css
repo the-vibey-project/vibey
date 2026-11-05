@@ -288,12 +288,85 @@ pre.item.assistant {
 
 /* The designed empty state: a first look that says what to do. */
 main:empty::before {
-  content: 'Describe a task below. It runs on a copy of your folder, so nothing changes until you choose Apply.';
+  content: 'Ask a task, reply to a waiting gate, or use the / command chips below. Tasks run on a copy of your folder until you choose Apply.';
   display: block;
   margin: var(--v-space-8) auto;
   max-width: 34em;
   text-align: center;
   color: var(--k-muted);
+}
+
+/* --- Open gates in the chat workspace ---------------------------------------------------- */
+#gates {
+  display: flex;
+  flex-direction: column;
+  gap: var(--v-space-2);
+  padding: var(--v-space-2) var(--v-space-4);
+  border-bottom: var(--v-border-width-hairline) solid var(--k-border);
+  background: color-mix(in srgb, var(--k-raised) 55%, transparent);
+}
+.gate-card {
+  display: flex;
+  flex-direction: column;
+  gap: var(--v-space-2);
+  padding: var(--v-space-2) var(--v-space-3);
+  border-radius: var(--v-radius-md);
+  border: var(--v-border-width-hairline) solid color-mix(in srgb, var(--v-state-awaiting-human) 50%, var(--k-border));
+  background: color-mix(in srgb, var(--v-state-awaiting-human) 8%, var(--k-raised));
+}
+.gate-card.spend {
+  border-color: color-mix(in srgb, var(--v-status-warning) 75%, var(--k-border));
+  background: color-mix(in srgb, var(--v-status-warning) 12%, var(--k-raised));
+}
+.gate-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--v-space-2);
+  font-size: 0.85em;
+}
+.gate-badge {
+  font-weight: 650;
+  color: var(--v-state-awaiting-human);
+}
+.gate-badge.spend {
+  color: var(--v-status-warning);
+  letter-spacing: 0.04em;
+}
+.gate-meta {
+  color: var(--k-muted);
+  font-family: var(--k-mono);
+}
+.gate-prompt {
+  white-space: pre-wrap;
+}
+.gate-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--v-space-2);
+}
+
+/* --- Quick slash-command chips ----------------------------------------------------------- */
+#chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--v-space-1);
+  margin-bottom: var(--v-space-2);
+}
+button.chip {
+  font-family: var(--k-mono);
+  font-size: 0.85em;
+  font-weight: 500;
+  color: var(--k-muted);
+  background: color-mix(in srgb, var(--k-raised) 85%, transparent);
+  border: var(--v-border-width-hairline) solid var(--k-border);
+  border-radius: var(--v-radius-pill);
+  padding: 2px var(--v-space-2);
+  box-shadow: none;
+}
+button.chip:hover {
+  color: var(--k-fg);
+  border-color: var(--k-accent);
 }
 
 /* --- The composer ------------------------------------------------------------------------ */

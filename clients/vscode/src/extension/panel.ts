@@ -22,7 +22,7 @@ import type { RunStatus, TaskRunInterface } from '@vibey/core';
 import { HtmlText } from '../core/support';
 import type { VibeyController } from './controller';
 import type { CommandActionsInterface } from './interfaces/actions-interface';
-import type { PanelHtmlInterface, PanelLook, PanelRequest, PanelUpdate, TaskPanelInterface } from './interfaces/panel-interface';
+import type { PanelGate, PanelHtmlInterface, PanelLook, PanelRequest, PanelUpdate, TaskPanelInterface } from './interfaces/panel-interface';
 
 export class PanelHtml implements PanelHtmlInterface {
   private readonly html = new HtmlText();
@@ -46,12 +46,23 @@ ${tokens === '' ? '' : `<link rel="stylesheet" href="${tokens}">\n`}<link rel="s
   <span id="effort" class="pill ultra" hidden title="ULTRA: effort without a ceiling. It stops only at Stop or a declared budget cap.">ULTRA</span>
   <span id="status" class="pill state" data-state="idle" role="status"></span>
 </header>
+<section id="gates" aria-label="Open gates" hidden></section>
 <main id="items" aria-live="polite"></main>
 <footer id="composer">
   <ul id="completions" role="listbox" aria-label="Commands" hidden></ul>
-  <textarea id="input" rows="3" aria-label="Task, follow-up or command" placeholder="Describe a task, or type / for commands. Enter sends; Shift+Enter starts a new line."></textarea>
+  <div id="chips" role="toolbar" aria-label="Quick slash commands">
+    <button type="button" class="chip" data-slash="/status">/status</button>
+    <button type="button" class="chip" data-slash="/gates">/gates</button>
+    <button type="button" class="chip" data-slash="/next">/next</button>
+    <button type="button" class="chip" data-slash="/budget">/budget</button>
+    <button type="button" class="chip" data-slash="/lanes">/lanes</button>
+    <button type="button" class="chip" data-slash="/mcp ">/mcp</button>
+    <button type="button" class="chip" data-slash="/doctor">/doctor</button>
+    <button type="button" class="chip" data-slash="/help">/help</button>
+  </div>
+  <textarea id="input" rows="3" aria-label="Chat message, task, follow-up or command" placeholder="Ask a task, reply to a waiting gate, or type / for every command. Enter sends; Shift+Enter starts a new line."></textarea>
   <div id="buttons">
-    <button id="start" type="button">Start</button>
+    <button id="start" type="button">Send</button>
     <button id="stop" type="button" hidden>Stop</button>
     <button id="force" type="button" class="danger" hidden>Force stop</button>
     <button id="review" type="button" hidden>Review</button>
@@ -92,7 +103,7 @@ export class TaskPanel implements TaskPanelInterface {
     private readonly lane?: { readonly eventsPath: string; readonly label: string },
   ) {
     const media = vscode.Uri.joinPath(extensionUri, 'media');
-    this.panel = vscode.window.createWebviewPanel(TaskPanel.VIEW_TYPE, lane?.label ?? 'krypton task', vscode.ViewColumn.Beside, {
+    this.panel = vscode.window.createWebviewPanel(TaskPanel.VIEW_TYPE, lane?.label ?? 'krypton chat', vscode.ViewColumn.Beside, {
       enableScripts: true,
       retainContextWhenHidden: true,
       localResourceRoots: [media],
@@ -101,7 +112,7 @@ export class TaskPanel implements TaskPanelInterface {
     const html = new PanelHtml();
     const webview = this.panel.webview;
     webview.html = html.page(
-      lane?.label ?? 'krypton task',
+      lane?.label ?? 'krypton chat',
       webview.asWebviewUri(vscode.Uri.joinPath(media, 'panel.js')).toString(),
       webview.asWebviewUri(vscode.Uri.joinPath(media, 'panel.css')).toString(),
       html.nonce(),
@@ -112,7 +123,10 @@ export class TaskPanel implements TaskPanelInterface {
     // The look follows the editor's theme live in System mode, and the settings in every mode.
     this.watchingLook.push(
       vscode.window.onDidChangeActiveColorTheme(() => this.post({ type: 'look', ...this.look() })),
-      controller.onDidChange(() => this.post({ type: 'look', ...this.look() })),
+      controller.onDidChange(() => {
+        this.post({ type: 'look', ...this.look() });
+        void this.refreshGates();
+      }),
     );
     webview.onDidReceiveMessage((message: PanelRequest) => void this.receive(message));
     this.panel.onDidDispose(() => {
@@ -136,13 +150,18 @@ export class TaskPanel implements TaskPanelInterface {
     this.unwatch();
     this.runId = runId;
     const run = this.controller.runs.get(runId);
-    this.panel.title = run?.request.title ?? 'krypton task';
+    this.panel.title = run?.request.title ?? 'krypton chat';
     if (run !== undefined) {
       this.watching.push(
         run.onPatch((patch) => this.post({ type: 'patch', patch })),
         run.onStatus((status) => this.post(this.status(run, status))),
       );
     }
+    void this.sendInit();
+    this.reveal();
+  }
+
+  openChat(): void {
     void this.sendInit();
     this.reveal();
   }
@@ -195,11 +214,20 @@ export class TaskPanel implements TaskPanelInterface {
       }
       return;
     }
+    if (/^\d+$/.test(parsed.text.trim())) {
+      await this.actions.run('vibey.replyGate', { ...this.invocation(), args: parsed.text.trim() });
+      return;
+    }
     await this.actions.run('vibey.ask', { ...this.invocation(), args: parsed.text });
   }
 
-  private invocation(): { say: (text: string) => void; panel: TaskPanelInterface; runId?: string } {
-    return { say: (text) => this.note('info', text), panel: this, ...(this.runId === undefined ? {} : { runId: this.runId }) };
+  private invocation(): { say: (text: string) => void; narrate: (text: string) => void; panel: TaskPanelInterface; runId?: string } {
+    return {
+      say: (text) => this.note('info', text),
+      narrate: (text) => this.note('info', text),
+      panel: this,
+      ...(this.runId === undefined ? {} : { runId: this.runId }),
+    };
   }
 
   /** A pasted image is written where the run records live and attached to the next task. */
@@ -228,11 +256,13 @@ export class TaskPanel implements TaskPanelInterface {
     const menu = await this.controller.menu();
     const run = this.runId === undefined ? undefined : this.controller.runs.get(this.runId);
     const status = this.mode === 'lane' ? 'lane' : run === undefined ? (this.runId === undefined ? 'idle' : 'finished') : run.status;
+    const gates = this.mode === 'lane' ? [] : await this.loadGates();
     const update: PanelUpdate = {
       type: 'init',
-      title: this.lane?.label ?? run?.request.title ?? 'krypton task',
+      title: this.lane?.label ?? run?.request.title ?? 'krypton chat',
       mode: this.mode,
       items: run?.items() ?? [],
+      gates,
       status,
       slash: this.slash.complete('').map((spec) => ({ name: spec.slash ?? '', usage: spec.usage ?? '', description: spec.description })),
       canPasteImage: menu.pasteImage,
@@ -244,6 +274,45 @@ export class TaskPanel implements TaskPanelInterface {
     this.post({ type: 'look', ...this.look() });
     if (this.mode === 'lane') {
       void this.refreshLane();
+    }
+  }
+
+  private async refreshGates(): Promise<void> {
+    if (this.mode === 'lane' || this.disposed) {
+      return;
+    }
+    this.post({ type: 'gates', gates: await this.loadGates() });
+  }
+
+  private async loadGates(): Promise<readonly PanelGate[]> {
+    const vibey = this.controller.services.vibey;
+    if (vibey === undefined) {
+      return [];
+    }
+    try {
+      const gates = await vibey.gates();
+      return gates.map((gate) => {
+        const isSpend = gate.kind === 'budget_exhausted';
+        const choices = isSpend
+          ? [
+              { label: 'Grant +$10', command: `/budget grant ${gate.gate_id} $10` },
+              { label: 'Grant +40 turns', command: `/budget grant ${gate.gate_id} 40 turns` },
+            ]
+          : this.controller.services.answers
+              .choices(gate)
+              .slice(0, 4)
+              .map((choice, index) => ({ label: choice.label, command: `/reply ${index + 1}` }));
+        return {
+          gateId: gate.gate_id,
+          kind: gate.kind,
+          prompt: gate.prompt,
+          projectName: gate.project_name ?? gate.project_id,
+          isSpend,
+          choices,
+        };
+      });
+    } catch {
+      return [];
     }
   }
 

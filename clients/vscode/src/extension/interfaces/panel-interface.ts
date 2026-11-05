@@ -1,7 +1,18 @@
 // Made with ❤️ by [Vibey](https://the-vibey-project.github.io/vibey/), Developed by [Adam Matthew Steinberger](https://vibewithadam.matthewsteinberger.com/) ([@adammatthewsteinberger](https://github.com/adammatthewsteinberger/)).
-/** The task panel: a task's transcript as it happens, a box to type in, and its buttons. */
+/** The krypton chat and task panel: a conversation and transcript as it happens, open gates, a box to type in, and its buttons. */
 import type { RunItem, RunPatch } from '@vibey/core';
 import type { RunStatus } from '@vibey/core';
+
+/** An open gate shown inline in the chat panel so the operator can answer in one click. */
+export interface PanelGate {
+  readonly gateId: string;
+  readonly kind: string;
+  readonly prompt: string;
+  readonly projectName: string;
+  /** True when answering this gate requires the `spend` scope (`budget_exhausted`). */
+  readonly isSpend: boolean;
+  readonly choices: readonly { readonly label: string; readonly command: string }[];
+}
 
 /** What the page sends: a line typed, a button pressed, an image pasted. */
 export type PanelRequest =
@@ -29,6 +40,7 @@ export type PanelUpdate =
       readonly title: string;
       readonly mode: 'task' | 'lane';
       readonly items: readonly RunItem[];
+      readonly gates?: readonly PanelGate[];
       readonly status: RunStatus | 'idle' | 'lane';
       readonly slash: readonly { readonly name: string; readonly usage: string; readonly description: string }[];
       readonly canPasteImage: boolean;
@@ -36,6 +48,7 @@ export type PanelUpdate =
       readonly finishedActions: boolean;
       readonly takesFollowUps: boolean;
     }
+  | { readonly type: 'gates'; readonly gates: readonly PanelGate[] }
   | { readonly type: 'patch'; readonly patch: RunPatch }
   | { readonly type: 'items'; readonly items: readonly RunItem[] }
   | {
@@ -51,6 +64,8 @@ export type PanelUpdate =
 export interface TaskPanelInterface {
   /** Show this task in the panel, from its first item. */
   show(runId: string): void;
+  /** Open the chat workspace even when no task is running yet, loading any waiting gates. */
+  openChat(): void;
   /** A line from the extension, in the panel's stream. */
   note(level: 'info' | 'warn' | 'error', text: string): void;
   reveal(): void;

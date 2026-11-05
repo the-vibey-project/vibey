@@ -49,7 +49,7 @@
           "repealed": false,
           "cost_per_mtok_in": 0.0,
           "cost_per_mtok_out": 0.0,
-          "default_model": "gpt-oss:20b",
+          "default_model": "hf.co/mradermacher/gpt-oss-20b-heretic-v2-GGUF:MXFP4_MOE",
           "efforts": [
             {
               "effort": "TRIVIAL",
@@ -58,7 +58,7 @@
                 "8"
               ],
               "achieved": "TRIVIAL",
-              "model": "gpt-oss:20b",
+              "model": "hf.co/mradermacher/gpt-oss-20b-heretic-v2-GGUF:MXFP4_MOE",
               "notes": ""
             },
             {
@@ -68,7 +68,7 @@
                 "16"
               ],
               "achieved": "LOW",
-              "model": "gpt-oss:20b",
+              "model": "hf.co/mradermacher/gpt-oss-20b-heretic-v2-GGUF:MXFP4_MOE",
               "notes": ""
             },
             {
@@ -78,7 +78,7 @@
                 "40"
               ],
               "achieved": "STANDARD",
-              "model": "gpt-oss:20b",
+              "model": "hf.co/mradermacher/gpt-oss-20b-heretic-v2-GGUF:MXFP4_MOE",
               "notes": ""
             },
             {
@@ -88,7 +88,7 @@
                 "64"
               ],
               "achieved": "HIGH",
-              "model": "gpt-oss:20b",
+              "model": "hf.co/mradermacher/gpt-oss-20b-heretic-v2-GGUF:MXFP4_MOE",
               "notes": ""
             },
             {
@@ -98,14 +98,14 @@
                 "96"
               ],
               "achieved": "MAX",
-              "model": "gpt-oss:20b",
+              "model": "hf.co/mradermacher/gpt-oss-20b-heretic-v2-GGUF:MXFP4_MOE",
               "notes": ""
             },
             {
               "effort": "ULTRA",
               "argv": [],
               "achieved": "ULTRA",
-              "model": "gpt-oss:20b",
+              "model": "hf.co/mradermacher/gpt-oss-20b-heretic-v2-GGUF:MXFP4_MOE",
               "notes": ""
             }
           ],
@@ -476,7 +476,7 @@
           },
           {
             "engine_id": "gptossloop",
-            "model": "gpt-oss:20b",
+            "model": "hf.co/mradermacher/gpt-oss-20b-heretic-v2-GGUF:MXFP4_MOE",
             "achieved": "TRIVIAL"
           },
           {
@@ -493,7 +493,7 @@
           },
           {
             "engine_id": "gptossloop",
-            "model": "gpt-oss:20b",
+            "model": "hf.co/mradermacher/gpt-oss-20b-heretic-v2-GGUF:MXFP4_MOE",
             "achieved": "LOW"
           },
           {
@@ -510,7 +510,7 @@
           },
           {
             "engine_id": "gptossloop",
-            "model": "gpt-oss:20b",
+            "model": "hf.co/mradermacher/gpt-oss-20b-heretic-v2-GGUF:MXFP4_MOE",
             "achieved": "STANDARD"
           },
           {
@@ -522,7 +522,7 @@
         "HIGH": [
           {
             "engine_id": "gptossloop",
-            "model": "gpt-oss:20b",
+            "model": "hf.co/mradermacher/gpt-oss-20b-heretic-v2-GGUF:MXFP4_MOE",
             "achieved": "HIGH"
           },
           {
@@ -539,7 +539,7 @@
         "MAX": [
           {
             "engine_id": "gptossloop",
-            "model": "gpt-oss:20b",
+            "model": "hf.co/mradermacher/gpt-oss-20b-heretic-v2-GGUF:MXFP4_MOE",
             "achieved": "MAX"
           },
           {
@@ -556,7 +556,7 @@
         "ULTRA": [
           {
             "engine_id": "gptossloop",
-            "model": "gpt-oss:20b",
+            "model": "hf.co/mradermacher/gpt-oss-20b-heretic-v2-GGUF:MXFP4_MOE",
             "achieved": "ULTRA"
           },
           {

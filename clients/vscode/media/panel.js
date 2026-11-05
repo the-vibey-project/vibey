@@ -8,9 +8,11 @@
 (() => {
     const vscode = acquireVsCodeApi();
     const $ = (id) => document.getElementById(id);
+    const gatesBox = $("gates");
     const itemsBox = $("items");
     const input = $("input");
     const completions = $("completions");
+    const chipsBox = $("chips");
     const statusLine = $("status");
     const title = $("title");
     const banner = $("banner");
@@ -33,7 +35,7 @@
     let takesFollowUps = false;
     let chosen = -1;
     const WORDS = {
-        idle: "Describe a task to start.",
+        idle: "Ready to chat, answer gates, or run a task.",
         queued: "Waiting its turn for the model.",
         preparing: "Making its copy of the folder.",
         waiting: "Waiting for the model.",
@@ -42,6 +44,40 @@
         finishing: "Finishing: committing the work on its branch.",
         finished: "Finished.",
         lane: "Watching a lane started elsewhere (read-only).",
+    };
+    const renderGates = (gates) => {
+        gatesBox.replaceChildren();
+        gatesBox.hidden = gates.length === 0;
+        for (const gate of gates) {
+            const card = document.createElement("div");
+            card.className = `gate-card${gate.isSpend ? " spend" : ""}`;
+            const header = document.createElement("div");
+            header.className = "gate-header";
+            const badge = document.createElement("span");
+            badge.className = `gate-badge${gate.isSpend ? " spend" : ""}`;
+            badge.textContent = gate.isSpend ? "SPEND GATE · requires spend scope" : "Gate · answer scope";
+            const meta = document.createElement("span");
+            meta.className = "gate-meta";
+            meta.textContent = `${gate.projectName} · ${gate.kind}`;
+            header.append(badge, meta);
+            const prompt = document.createElement("div");
+            prompt.className = "gate-prompt";
+            prompt.textContent = gate.prompt;
+            const actions = document.createElement("div");
+            actions.className = "gate-actions";
+            for (const choice of gate.choices) {
+                const button = document.createElement("button");
+                button.type = "button";
+                button.className = gate.isSpend ? "quiet spend-choice" : "quiet";
+                button.textContent = choice.label;
+                button.addEventListener("click", () => {
+                    vscode.postMessage({ type: "send", text: choice.command });
+                });
+                actions.append(button);
+            }
+            card.append(header, prompt, actions);
+            gatesBox.append(card);
+        }
     };
     const line = (kind, text, extra) => {
         const element = document.createElement(kind === "assistant" ? "pre" : "div");
@@ -231,6 +267,19 @@
     buttons.apply.addEventListener("click", press("vibey.applyRun"));
     buttons.discard.addEventListener("click", press("vibey.discardRun"));
     $("endNoCap").addEventListener("click", press("vibey.endNoCap"));
+    for (const button of Array.from(chipsBox.querySelectorAll("button.chip"))) {
+        button.addEventListener("click", () => {
+            const text = button.dataset["slash"] ?? "";
+            if (text.endsWith(" ")) {
+                input.value = text;
+                showCompletions();
+                input.focus();
+            }
+            else if (text !== "") {
+                vscode.postMessage({ type: "send", text });
+            }
+        });
+    }
     /** Light, Dark or System, resolved by the extension; ULTRA and UNLIMITED SPEND are never hidden. */
     const look = (message) => {
         const root = document.documentElement;
@@ -265,9 +314,13 @@
                 title.textContent = message.title;
                 slash = message.slash;
                 canPasteImage = message.canPasteImage;
+                renderGates(message.gates ?? []);
                 replaceItems(message.items);
                 setStatus(message.status, message.forceAfterMs, message.finishedActions, message.takesFollowUps);
                 input.focus();
+                break;
+            case "gates":
+                renderGates(message.gates);
                 break;
             case "items":
                 replaceItems(message.items);
