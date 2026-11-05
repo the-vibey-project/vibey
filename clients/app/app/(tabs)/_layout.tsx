@@ -5,8 +5,15 @@ import { Screens } from '../../src/core';
 import { useApp } from '../../src/ui/app-state';
 import { useTheme } from '../../src/ui/theme';
 
-const GLYPHS: Record<string, string> = { home: '⌂', gate: '◈', lanes: '≋', effort: '⚛', settings: '⚙' };
-const FILES: Record<string, string> = { '/': 'index', '/gates': 'gates', '/lanes': 'lanes', '/effort': 'effort', '/settings': 'settings' };
+const GLYPHS: Record<string, string> = { chat: '💬', home: '⌂', gate: '◈', lanes: '≋', effort: '⚛', settings: '⚙' };
+const FILES: Record<string, string> = {
+  '/': 'index',
+  '/projects': 'projects',
+  '/gates': 'gates',
+  '/lanes': 'lanes',
+  '/effort': 'effort',
+  '/settings': 'settings',
+};
 
 export default function TabsLayout() {
   const { ready, connection } = useApp();

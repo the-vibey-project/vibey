@@ -4,6 +4,7 @@
  * `docs/reference/hub-api.json` (ADR-0068) that a device may call, and nothing more.
  */
 import type { VibeyTransportInterface } from '@vibey/core';
+import type { ChatLedgerPage, ChatTurn } from './chat-interface';
 
 /** What `fetch` gives back, as far as the client reads it. */
 export interface FetchResponse {
@@ -113,4 +114,8 @@ export interface HubClientInterface extends VibeyTransportInterface {
   startWorkflowRun(argv: readonly string[]): Promise<WorkflowRun>;
   /** `GET /api/v1/workflows/runs/{request_id}`. */
   workflowRun(requestId: string): Promise<WorkflowRun>;
+  /** `POST /api/v1/chat/messages`: conversational or `/` command turn against the hub (ADR-0100). */
+  chat(message: string, projectId?: string | null): Promise<ChatTurn>;
+  /** `GET /api/v1/projects/{project_id}/ledger/after?seq=<afterSeq>`. */
+  ledgerAfter(projectId: string, afterSeq: number): Promise<ChatLedgerPage>;
 }

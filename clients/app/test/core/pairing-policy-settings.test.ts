@@ -152,7 +152,7 @@ describe('Screens', () => {
   it('carries every row of the parity matrix', () => {
     const screens = new Screens();
     expect(screens.missing()).toEqual([]);
-    expect(screens.tabs.map((screen) => screen.title)).toEqual(['Home', 'Gates', 'Lanes', 'Loops & Effort', 'Settings']);
+    expect(screens.tabs.map((screen) => screen.title)).toEqual(['Chat', 'Home', 'Gates', 'Lanes', 'Loops & Effort', 'Settings']);
   });
 
   it('notices a missing feature', () => {

@@ -12,10 +12,13 @@ npm run coverage    # src/core held to 100%
 npx expo start --web
 ```
 
-- `src/core/` — pure logic, each class with its interface beside it: the hub client, pairing
-  offers, the device policy (a device never declares paid use, lifts a cap or picks ULTRA
-  without one), settings, the stable/nightly identities, presenters and the screen table.
-- `src/screens/`, `src/ui/` — the screens, the Kr-84 atom mark and the kit.
+- `src/core/` — pure logic, each class with its interface beside it: the hub client, the chat
+  model (`/` slash-command table, completion, `POST /api/v1/chat/messages` turn parser and
+  spend-gate badges, ADR-0100), pairing offers, the device policy (a device never declares paid
+  use, lifts a cap or picks ULTRA without one), settings, the stable/nightly identities,
+  presenters and the screen table.
+- `src/screens/`, `src/ui/` — the screens (with **Chat** as the landing tab), the Kr-84 atom
+  mark and the kit.
 - `app/` — the routes only.
 
 ## The hub on your computer

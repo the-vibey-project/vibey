@@ -64,6 +64,8 @@ describe('HubClient', () => {
       ['get', '/api/v1/doctor'],
       ['post', '/api/v1/workflows/runs'],
       ['get', '/api/v1/workflows/runs/{request_id}'],
+      ['post', '/api/v1/chat/messages'],
+      ['get', '/api/v1/projects/{project_id}/ledger/after'],
     ];
     for (const [method, path] of used) {
       expect(document.paths[path as string]?.[method as string]).toBeDefined();
@@ -456,5 +458,61 @@ describe('HubClient', () => {
     });
     await client.answer('g', { mode: 'choice', value: 'a' });
     expect(JSON.parse(calls[0] ?? '{}').request_id).toMatch(/^krypton-\d+-1$/);
+  });
+
+  it('sends a chat turn to POST /api/v1/chat/messages and reads ledger narration after seq', async () => {
+    const { client, calls } = fakeHub({
+      'POST /api/v1/chat/messages': {
+        status: 200,
+        body: {
+          reply: 'Greeter is in BUILD.',
+          project_id: 'p1',
+          tool_calls: [{ name: 'vibey_status', arguments: { project_id: 'p1' }, result: { phase: 'BUILD' } }],
+          gates: [
+            {
+              gate_id: 'g1',
+              project_id: 'p1',
+              kind: 'budget_exhausted',
+              prompt: 'Raise cap?',
+              options: ['25'],
+              default_answer: null,
+              grant_key: 'max_dollars',
+              is_spend: true,
+              requires_scope: 'spend',
+            },
+          ],
+        },
+      },
+      'GET /api/v1/projects/p1/ledger/after?seq=5': {
+        status: 200,
+        body: {
+          project_id: 'p1',
+          next_seq: 6,
+          entries: [{ seq: 6, kind: 'job_completed', actor: 'claudeloop', payload: { summary: 'Built module' } }],
+        },
+      },
+    });
+    await expect(client.chat('   ', 'p1')).rejects.toMatchObject({ refusal: 'invalid' });
+    const turn = await client.chat('  /status  ', 'p1');
+    expect(turn.reply).toBe('Greeter is in BUILD.');
+    expect(turn.projectId).toBe('p1');
+    expect(turn.toolCalls).toHaveLength(1);
+    expect(turn.gates[0]?.isSpend).toBe(true);
+    expect(JSON.parse(calls[0]?.init.body ?? '{}')).toEqual({
+      message: '/status',
+      project_id: 'p1',
+      request_id: 'req-1',
+    });
+    await client.chat('/projects');
+    expect(JSON.parse(calls[1]?.init.body ?? '{}')).toEqual({
+      message: '/projects',
+      request_id: 'req-2',
+    });
+    const ledger = await client.ledgerAfter('p1', 5.8);
+    expect(ledger).toEqual({
+      projectId: 'p1',
+      lastSeq: 6,
+      events: [{ seq: 6, kind: 'job_completed', actor: 'claudeloop', summary: '#6 job_completed (claudeloop) — Built module' }],
+    });
   });
 });

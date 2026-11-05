@@ -3,6 +3,7 @@ import { render, screen, waitFor } from '@testing-library/react-native';
 import type { ReactNode } from 'react';
 import { WorkflowRuns } from '../../src/core/workflow-runs';
 import { BudgetsScreen } from '../../src/screens/budgets';
+import { ChatScreen } from '../../src/screens/chat';
 import { DevicesScreen } from '../../src/screens/devices';
 import { DoctorScreen } from '../../src/screens/doctor';
 import { EffortScreen } from '../../src/screens/effort';
@@ -100,6 +101,12 @@ const loops = {
 
 /** Each screen with the data that makes it show its controls, the text that says it has loaded, and the fewest controls it must have. */
 const SCREENS: readonly { title: string; render: () => Promise<void>; loaded: RegExp | string; atLeast: number }[] = [
+  {
+    title: 'Chat',
+    render: () => show(<ChatScreen verify={async () => true} />, { 'GET /api/v1/projects': [project], 'GET /api/v1/gates': { gates: [gate('g1', 'approval', ['accept'])] } }),
+    loaded: 'All projects',
+    atLeast: 6,
+  },
   { title: 'Home', render: () => show(<HomeScreen />, { 'GET /api/v1/projects': [project] }), loaded: 'Greeter', atLeast: 4 },
   {
     title: 'Gates',

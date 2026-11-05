@@ -1,5 +1,6 @@
 // Made with ❤️ by [Vibey](https://the-vibey-project.github.io/vibey/), Developed by [Adam Matthew Steinberger](https://vibewithadam.matthewsteinberger.com/) ([@adammatthewsteinberger](https://github.com/adammatthewsteinberger/)).
 /** The app's core: plain TypeScript with no React, held to 100% coverage. */
+export type * from './interfaces/chat-interface';
 export type * from './interfaces/device-policy-interface';
 export type * from './interfaces/hub-client-interface';
 export type * from './interfaces/hub-status-interface';
@@ -12,6 +13,7 @@ export type * from './interfaces/screens-interface';
 export type * from './interfaces/settings-interface';
 export type * from './interfaces/share-interface';
 export type * from './interfaces/workflow-runs-interface';
+export * from './chat';
 export * from './device-policy';
 export * from './hub-client';
 export * from './hub-status';
