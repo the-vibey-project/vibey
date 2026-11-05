@@ -56,6 +56,7 @@ nav:
   - Guides:
       - Install, copy, reinstall, uninstall: guides/install.md
       - Downloads: guides/downloads.md
+      - Visual tour & screenshots: guides/gallery.md
       - VS Code extension: guides/vscode-extension.md
       - Drive a project from anywhere: guides/drive-a-project.md
       - Kubernetes: guides/kubernetes.md
@@ -197,7 +198,7 @@ nav:
           - "0084 — A rolling nightly of every krypton interface, from the release builders": architecture/decisions/0084-krypton-nightly.md
           - "0085 — `vibey -w`: any vibey command, run on the repository's GitHub-hosted runners": architecture/decisions/0085-vibey-on-the-workflows.md
           - "0086 — `vibey state`: the whole database, sealed on a branch, kept in sync both ways": architecture/decisions/0086-state-sync.md
-          - "0087 — The six audiences, in order: developers, non-profits, universities, governments, freelance clients, industry": architecture/decisions/0087-the-six-audiences-in-order.md
+          - "0087 — The six audiences, in order: FOSS developers, freelancers, universities, governments, non-profits, industry": architecture/decisions/0087-the-six-audiences-in-order.md
           - "0088 — TypeScript, never JavaScript: the only authored form is typed, and the JavaScript that must exist is generated": architecture/decisions/0088-typescript-never-javascript.md
           - "0089 — AI self-reference is I; inclusive we is only direct address": architecture/decisions/0089-ai-self-reference-is-i-inclusive-we-is-direct.md
           - "0090 — pr-af is the declared default exact-head reviewer": architecture/decisions/0090-pr-af-as-the-declared-default-reviewer.md

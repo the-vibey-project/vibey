@@ -14,6 +14,7 @@ import { LanesScreen } from '../../src/screens/lanes';
 import { PairScreen } from '../../src/screens/pair';
 import { SettingsScreen } from '../../src/screens/settings';
 import { StartScreen } from '../../src/screens/start';
+import { UsageScreen } from '../../src/screens/usage';
 import { WorkflowsScreen } from '../../src/screens/workflows';
 import { AppStateProvider, MemoryStore } from '../../src/ui/app-state';
 import { GateNotifications, NOTIFICATION_POLL_MS } from '../../src/ui/notifications';
@@ -472,6 +473,62 @@ describe('screens', () => {
   it('says when no hub is connected', async () => {
     await renderWith(<HomeScreen />, {}, false);
     expect(await screen.findByText('Not connected to a hub yet.')).toBeTruthy();
+  });
+
+  it('UsageScreen displays usage limits, progress bars, and toggles credits', async () => {
+    await renderWith(<UsageScreen />, {});
+    expect(await screen.findByText(/Heads up\. At this pace you'll run out/)).toBeTruthy();
+    expect(screen.getByText('Current session')).toBeTruthy();
+    expect(screen.getByText('0% used')).toBeTruthy();
+    expect(screen.getByText('All models')).toBeTruthy();
+    expect(screen.getByText('96% used')).toBeTruthy();
+    expect(screen.getByText('No resets right now')).toBeTruthy();
+    expect(screen.getByText('Buy usage credits')).toBeTruthy();
+
+    const switchEl = screen.getByLabelText('Usage credits switch');
+    expect(switchEl.props.value).toBe(true);
+    await fireEvent(switchEl, 'valueChange', false);
+    expect(switchEl.props.value).toBe(false);
+  });
+
+  it('ChatScreen supports model cycling, add to session sheet, feedback, and retry', async () => {
+    const posted = await renderWith(<ChatScreen verify={async () => true} />, {
+      'GET /api/v1/projects': [project],
+      'GET /api/v1/gates': { gates: [] },
+      'POST /api/v1/chat/messages': {
+        reply: 'Check resume.md for changes.\n• fonts/: installed\n• output/: built',
+        project_id: 'p1',
+        tool_calls: [],
+        gates: [],
+      },
+    });
+
+    // Model selection toggle
+    const modelButton = screen.getByLabelText(/Model: Sonnet 5.5 Medium/);
+    expect(modelButton).toBeTruthy();
+    await fireEvent.press(modelButton);
+    expect(screen.getByLabelText(/Model: GPT-OSS 20B/)).toBeTruthy();
+
+    // Open and close Add to session modal
+    await fireEvent.press(screen.getByLabelText('Add to session'));
+    expect(await screen.findByText('Camera')).toBeTruthy();
+    expect(screen.getByText('Photos')).toBeTruthy();
+    expect(screen.getByText('Files')).toBeTruthy();
+    await fireEvent.press(screen.getByLabelText('Close'));
+
+    // Send a message
+    await fireEvent.changeText(screen.getByLabelText('Chat message or slash command'), 'help please');
+    await fireEvent.press(screen.getByText('Send'));
+    expect(await screen.findByText('krypton is AI and can make mistakes.')).toBeTruthy();
+    expect(screen.getByText('resume.md')).toBeTruthy();
+
+    // Feedback actions
+    await fireEvent.press(screen.getByLabelText('Thumbs up'));
+    await fireEvent.press(screen.getByLabelText('Copy response'));
+    await fireEvent.press(screen.getByLabelText('Read aloud'));
+    await fireEvent.press(screen.getByLabelText('Share response'));
+    await fireEvent.press(screen.getByLabelText('Retry turn'));
+    await waitFor(() => expect(posted.length).toBeGreaterThanOrEqual(2));
   });
 });
 

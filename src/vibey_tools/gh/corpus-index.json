@@ -17,7 +17,7 @@
   {
    "anchor": "2 — Audience channels",
    "document": "docs/doctrines.md",
-   "sha256": "1bc869ea1f5badbae828b6d4f415baa0962261b2544a5cd6f8b36b916ffb906d",
+   "sha256": "7acdf101a191c134f19e817d2eb700670737416c7e835542b1150cc4d1648faa",
    "start_line": 19,
    "text_lines": 15
   },
@@ -232,7 +232,7 @@
    "text_lines": 4
   }
  ],
- "corpus_sha256": "502705e90a2a83b322b255d8c5cb58929258c39cea8136f04ddc6a3adba0d6c0",
+ "corpus_sha256": "f53f261b7fc8bcec46f97b15b673613c19597ad537a95810dcdeb13cd712ce8e",
  "documents": [
   "docs/doctrines.md",
   "docs/constitution.md",

@@ -15,6 +15,7 @@ import type { RunItem } from '@vibey/core';
 import type { RunRecord, TaskRunInterface } from '@vibey/core';
 import type { LaneTracker } from '../core/lanes';
 import { CoreServices } from '../core/services';
+import { LocalHubToken } from '../core/local-token';
 import type { EditorSettings } from './editor-settings';
 import type { NextTask, VibeyControllerInterface } from './interfaces/controller-interface';
 
@@ -98,6 +99,9 @@ export class VibeyController implements VibeyControllerInterface {
     try {
       const report = await hubEngine.ensure();
       this.note = report.message;
+      if (this.hubKey === undefined) {
+        this.hubKey = new LocalHubToken().readToken();
+      }
     } catch (error) {
       this.note = `The vibey hub could not be started: ${error instanceof Error ? error.message : String(error)}`;
       this.output.appendLine(this.note);
@@ -258,8 +262,9 @@ export class VibeyController implements VibeyControllerInterface {
 
   private build(): CoreServices {
     const url = (this.settings.raw().hubUrl ?? '').trim();
+    const effectiveKey = this.hubKey ?? (url === '' || url.includes('127.0.0.1') || url.includes('localhost') ? new LocalHubToken().readToken() : undefined);
     return new CoreServices({
-      ...(url !== '' && this.hubKey !== undefined ? { hub: { url, key: this.hubKey } } : {}),
+      ...(url !== '' && effectiveKey !== undefined ? { hub: { url, key: effectiveKey } } : {}),
       raw: this.settings.raw(),
       environ: process.env,
       platform: process.platform,

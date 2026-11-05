@@ -97,6 +97,15 @@ export class HubClient implements HubClientInterface {
     503: ['unavailable', 'The host has not allowed this, or is resting.'],
   };
 
+  /** The chat routes' own refusals; the hub's `detail` is added to each. */
+  static readonly CHAT_REFUSALS: Refusals = {
+    403: ['forbidden', 'This device may not send chat messages. It needs permission from the host.'],
+    404: ['not-found', 'The hub has no such project for this chat.'],
+    422: ['invalid', 'The hub could not process that chat command.'],
+    502: ['upstream', 'The chat engine tried and could not answer. Try again in a moment.'],
+    503: ['unavailable', 'The chat engine is resting or unavailable.'],
+  };
+
   /** The workflows routes' own refusals (ADR-0085); the hub's `detail` is added to each. */
   static readonly WORKFLOW_REFUSALS: Refusals = {
     403: [
@@ -345,7 +354,7 @@ export class HubClient implements HubClientInterface {
       request_id: this.requestId(),
       ...(typeof projectId === 'string' && projectId !== '' ? { project_id: projectId } : {}),
     };
-    const parsed = await this.post('/api/v1/chat/messages', body, { refusals: HubClient.LIFECYCLE_REFUSALS });
+    const parsed = await this.post('/api/v1/chat/messages', body, { refusals: HubClient.CHAT_REFUSALS });
     return new ChatModel().parseTurn(parsed);
   }
 

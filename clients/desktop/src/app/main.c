@@ -1108,6 +1108,14 @@ main(int argc, char **argv)
     /* Both channels read the one stylesheet pair, generated from the design tokens. */
     g_application_set_resource_base_path(G_APPLICATION(app.application),
                                          "/io/github/the_vibey_project/krypton");
+
+    /* Load modern chat styles overlay */
+    GtkCssProvider *css_prov = gtk_css_provider_new();
+    gtk_css_provider_load_from_resource(css_prov, "/io/github/the_vibey_project/krypton/custom.css");
+    GdkDisplay *display = gdk_display_get_default();
+    if (display != NULL)
+        gtk_style_context_add_provider_for_display(display, GTK_STYLE_PROVIDER(css_prov),
+                                                   GTK_STYLE_PROVIDER_PRIORITY_APPLICATION + 1);
     g_signal_connect(app.application, "startup", G_CALLBACK(on_startup), &app);
     g_signal_connect(app.application, "activate", G_CALLBACK(on_activate), &app);
     g_signal_connect(app.application, "shutdown", G_CALLBACK(on_shutdown), &app);

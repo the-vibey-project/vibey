@@ -514,5 +514,15 @@ describe('HubClient', () => {
       lastSeq: 6,
       events: [{ seq: 6, kind: 'job_completed', actor: 'claudeloop', summary: '#6 job_completed (claudeloop) — Built module' }],
     });
+
+    const refusedChat = fakeHub({
+      'POST /api/v1/chat/messages': {
+        status: 422,
+        body: { detail: 'select a project first or pass its UUID: /status <project-id>' },
+      },
+    });
+    await expect(refusedChat.client.chat('/status')).rejects.toThrow(
+      /The hub could not process that chat command\. The hub said: select a project first or pass its UUID: \/status <project-id>/,
+    );
   });
 });

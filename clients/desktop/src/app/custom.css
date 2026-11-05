@@ -1,0 +1,161 @@
+/* Modern Frontier AI Chat Desktop theme overlay for Krypton */
+
+.sidebar-brand-box {
+  padding: 8px 12px 4px 12px;
+}
+
+.sidebar-quick-btn {
+  border-radius: 8px;
+  font-weight: 500;
+  padding: 8px 12px;
+  margin: 2px 8px;
+  background: transparent;
+  color: @window_fg_color;
+  box-shadow: none;
+  border: none;
+}
+
+.sidebar-quick-btn:hover {
+  background: alpha(@window_fg_color, 0.08);
+}
+
+.sidebar-quick-btn.active {
+  background: alpha(@window_fg_color, 0.12);
+}
+
+.account-footer-btn {
+  border-radius: 10px;
+  padding: 8px 10px;
+  margin: 8px;
+  background: transparent;
+  box-shadow: none;
+  border: none;
+}
+
+.account-footer-btn:hover {
+  background: alpha(@window_fg_color, 0.08);
+}
+
+.session-group-header {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: alpha(@window_fg_color, 0.55);
+  padding: 12px 14px 4px 14px;
+}
+
+/* Rounded floating composer */
+.floating-composer-card {
+  border-radius: 20px;
+  background-color: @card_bg_color;
+  border: 1px solid alpha(@window_fg_color, 0.12);
+  padding: 8px 12px;
+  margin: 8px 24px 4px 24px;
+  box-shadow: 0 4px 20px alpha(black, 0.15);
+}
+
+.composer-input {
+  background: transparent;
+  border: none;
+  box-shadow: none;
+  outline: none;
+  color: @window_fg_color;
+  font-size: 14px;
+}
+
+.composer-input:focus {
+  border: none;
+  box-shadow: none;
+  outline: none;
+}
+
+.composer-attach-btn {
+  border-radius: 12px;
+  min-width: 34px;
+  min-height: 34px;
+  padding: 0;
+  background: alpha(@window_fg_color, 0.06);
+  border: none;
+  box-shadow: none;
+}
+
+.composer-attach-btn:hover {
+  background: alpha(@window_fg_color, 0.12);
+}
+
+.composer-status-bar {
+  margin: 0 32px 12px 32px;
+  font-size: 12px;
+  color: alpha(@window_fg_color, 0.65);
+}
+
+.model-effort-chip {
+  border-radius: 8px;
+  font-size: 12px;
+  font-weight: 500;
+  padding: 2px 8px;
+  background: transparent;
+  border: none;
+  box-shadow: none;
+  color: alpha(@window_fg_color, 0.75);
+}
+
+.model-effort-chip:hover {
+  background: alpha(@window_fg_color, 0.08);
+  color: @window_fg_color;
+}
+
+/* Chat bubble styling */
+.chat-turn-bubble-user {
+  background: alpha(@window_fg_color, 0.06);
+  border-radius: 18px 18px 4px 18px;
+  padding: 12px 16px;
+  margin: 6px 16px 6px 48px;
+}
+
+.chat-turn-bubble-agent {
+  background: transparent;
+  border-radius: 18px;
+  padding: 12px 16px;
+  margin: 6px 48px 6px 16px;
+}
+
+.turn-action-btn {
+  min-width: 28px;
+  min-height: 28px;
+  padding: 0;
+  background: transparent;
+  box-shadow: none;
+  border: none;
+  color: alpha(@window_fg_color, 0.5);
+  border-radius: 6px;
+}
+
+.turn-action-btn:hover {
+  background: alpha(@window_fg_color, 0.08);
+  color: @window_fg_color;
+}
+
+/* Inspector pane */
+.inspector-card {
+  background: @card_bg_color;
+  border-radius: 12px;
+  border: 1px solid alpha(@window_fg_color, 0.08);
+  padding: 12px 14px;
+  margin: 6px 12px;
+}
+
+.inspector-card-title {
+  font-size: 12px;
+  font-weight: 600;
+  color: alpha(@window_fg_color, 0.7);
+  margin-bottom: 8px;
+}
+
+.status-dot-green {
+  min-width: 8px;
+  min-height: 8px;
+  background: #2dd4bf;
+  border-radius: 4px;
+}

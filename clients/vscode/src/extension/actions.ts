@@ -20,6 +20,8 @@ import { ModelPuller, PortableTimer, ProjectDriver, ProjectFollower } from '@vib
 import type { VibeyController } from './controller';
 import type { CommandActionsInterface, Invocation } from './interfaces/actions-interface';
 import type { TreeElement } from './interfaces/trees-interface';
+import { LocalHubToken } from '../core/local-token';
+import { ChatViewProvider } from './chat-view-provider';
 import { TaskPanel } from './panel';
 
 type Handler = (invocation: Invocation) => Promise<void>;
@@ -29,6 +31,7 @@ export class CommandActions implements CommandActionsInterface {
   private readonly handlers: Readonly<Record<string, Handler>>;
   private readonly panels = new Map<string, TaskPanel>();
   private chatPanel: TaskPanel | undefined;
+  private chatViewProvider: ChatViewProvider | undefined;
   private readonly slash = new SlashCommands();
   private readonly words = new SlashArguments();
   private readonly workflowsLine = new WorkflowsCommandLine();
@@ -113,9 +116,21 @@ export class CommandActions implements CommandActionsInterface {
     }
   }
 
+  setChatViewProvider(provider: ChatViewProvider): void {
+    this.chatViewProvider = provider;
+  }
+
   // --- Run -------------------------------------------------------------------------------
 
   private async openChat(invocation: Invocation): Promise<void> {
+    if (this.chatViewProvider !== undefined) {
+      this.chatViewProvider.openChat();
+      const text = invocation.args?.trim();
+      if (text) {
+        await this.ask({ ...invocation, panel: this.chatViewProvider, args: text });
+      }
+      return;
+    }
     if (this.chatPanel === undefined) {
       const created = new TaskPanel(this.controller, this, this.extensionUri, 'task');
       created.onDidClose(() => {
@@ -152,7 +167,7 @@ export class CommandActions implements CommandActionsInterface {
     if (run === undefined) {
       return;
     }
-    (invocation.panel ?? this.panel(run.runId)).show(run.runId);
+    (invocation.panel ?? this.chatViewProvider ?? this.panel(run.runId)).show(run.runId);
   }
 
   private async followUp(invocation: Invocation): Promise<void> {
@@ -579,6 +594,15 @@ export class CommandActions implements CommandActionsInterface {
     if (probe === undefined || !probe.live) {
       invocation.say(`${probe?.problem ?? `Nothing answered at ${url}.`} Start it on the host with vibey serve (and [hub] lan = true to listen on the network).`);
       return;
+    }
+    const localToken = new LocalHubToken().readToken();
+    if (localToken && (url.includes('127.0.0.1') || url.includes('localhost'))) {
+      const check = await discovery.checkKey(url, localToken);
+      if (check.ok) {
+        await this.controller.pairHub(url, localToken);
+        invocation.say(`Connected to local hub at ${url}: ${check.projects} project(s).`);
+        return;
+      }
     }
     const key = await vscode.window.showInputBox({
       title: `Pair with ${url}`,

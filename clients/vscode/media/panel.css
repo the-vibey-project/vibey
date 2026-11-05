@@ -1,40 +1,34 @@
 /* Made with ❤️ by [Vibey](https://the-vibey-project.github.io/vibey/), Developed by [Adam Matthew Steinberger](https://vibewithadam.matthewsteinberger.com/) ([@adammatthewsteinberger](https://github.com/adammatthewsteinberger/)). */
 /*
- * krypton's task panel, on the design system (ADR-0066). tokens.css, loaded first, is the
- * generated token sheet: every colour, space, radius, shadow and motion here is one of its
- * `--v-*` variables. The page sets two attributes on <html>:
- *   data-theme   light | dark     which of the tokens' two palettes applies;
- *   data-surface editor | krypton System mode sits on the editor's own surfaces and text, so
- *                                  the panel is native in any theme; Light and Dark use
- *                                  krypton's own surfaces, whatever the editor uses.
- * The identity (accent, state colours, motion, shape) is krypton's in every mode.
+ * krypton's right-column chat engine design system.
+ * Built to match frontier AI extensions with floating rounded composer, tool cards,
+ * collapsible reasoning accordions, activity indicators, and popovers.
  */
 :root {
-  --k-bg: var(--vscode-editor-background);
-  --k-fg: var(--vscode-foreground);
-  --k-muted: var(--vscode-descriptionForeground);
-  --k-border: var(--vscode-panel-border, var(--v-border-subtle));
-  --k-raised: var(--vscode-editorWidget-background, var(--vscode-editor-background));
-  --k-input-bg: var(--vscode-input-background);
-  --k-input-fg: var(--vscode-input-foreground);
-  --k-font: var(--vscode-font-family, var(--v-font-family-ui));
+  --k-bg: var(--vscode-sideBar-background, var(--vscode-editor-background));
+  --k-fg: var(--vscode-sideBar-foreground, var(--vscode-foreground));
+  --k-muted: var(--vscode-descriptionForeground, #8a8f98);
+  --k-border: var(--vscode-sideBar-border, var(--vscode-panel-border, rgba(255, 255, 255, 0.08)));
+  --k-raised: var(--vscode-editorWidget-background, #1e1e24);
+  --k-input-bg: var(--vscode-input-background, #18191d);
+  --k-input-fg: var(--vscode-input-foreground, var(--k-fg));
+  --k-font: var(--vscode-font-family, var(--v-font-family-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif));
   --k-font-size: var(--vscode-font-size, 13px);
-  --k-mono: var(--vscode-editor-font-family, var(--v-font-family-mono));
-  --k-mono-size: var(--vscode-editor-font-size, 13px);
-  --k-accent: var(--v-accent-default);
-  --k-on-accent: var(--v-text-on-accent);
-  --k-focus: var(--v-focus-ring);
+  --k-mono: var(--vscode-editor-font-family, var(--v-font-family-mono, "SF Mono", Consolas, monospace));
+  --k-mono-size: var(--vscode-editor-font-size, 12px);
+  --k-accent: var(--v-accent-default, #007acc);
+  --k-on-accent: var(--v-text-on-accent, #ffffff);
+  --k-focus: var(--v-focus-ring, #007fd4);
 }
+
 :root[data-surface='krypton'] {
-  --k-bg: var(--v-bg-canvas);
-  --k-fg: var(--v-text-primary);
-  --k-muted: var(--v-text-secondary);
-  --k-border: var(--v-border-subtle);
-  --k-raised: var(--v-bg-raised);
-  --k-input-bg: var(--v-bg-surface);
-  --k-input-fg: var(--v-text-primary);
-  --k-font: var(--v-font-family-ui);
-  --k-mono: var(--v-font-family-mono);
+  --k-bg: #14151a;
+  --k-fg: #e2e4e9;
+  --k-muted: #8b909a;
+  --k-border: rgba(255, 255, 255, 0.08);
+  --k-raised: #1c1d24;
+  --k-input-bg: #18191f;
+  --k-input-fg: #e2e4e9;
 }
 
 html,
@@ -42,7 +36,9 @@ body {
   height: 100%;
   margin: 0;
   padding: 0;
+  overflow: hidden;
 }
+
 body {
   display: flex;
   flex-direction: column;
@@ -52,58 +48,91 @@ body {
   color: var(--k-fg);
   background: var(--k-bg);
 }
-:root[data-surface='krypton'] body {
-  background:
-    radial-gradient(1200px 420px at 100% -10%, var(--v-effect-glow-1), transparent 60%),
-    radial-gradient(900px 360px at -10% 110%, var(--v-effect-glow-2), transparent 60%),
-    var(--k-bg);
-}
+
 ::selection {
-  background: var(--v-effect-selection);
+  background: rgba(0, 122, 204, 0.35);
 }
 
-/* --- The header: the atom, the title, and the state -------------------------------------- */
+/* --- Header Area ------------------------------------------------------------------------ */
 header {
   display: flex;
   align-items: center;
-  gap: var(--v-space-3);
-  padding: var(--v-space-3) var(--v-space-4);
-  border-bottom: var(--v-border-width-hairline) solid var(--k-border);
-  background: color-mix(in srgb, var(--k-raised) 70%, transparent);
+  justify-content: space-between;
+  gap: 8px;
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--k-border);
+  background: color-mix(in srgb, var(--k-bg) 85%, transparent);
+  backdrop-filter: blur(8px);
+  flex-shrink: 0;
 }
+
+.header-left {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  flex: 1;
+}
+
 h1 {
   flex: 1;
   min-width: 0;
-  font-size: 1.15em;
-  font-weight: 650;
+  font-size: 1.05em;
+  font-weight: 600;
   letter-spacing: -0.01em;
   margin: 0;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  color: var(--k-fg);
 }
 
-/* The krypton atom: a nucleus and two electrons in orbit, which move only while work runs. */
+.header-right {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.icon-btn {
+  background: transparent;
+  border: none;
+  color: var(--k-muted);
+  font-size: 14px;
+  padding: 4px 6px;
+  border-radius: 6px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: color 0.15s, background 0.15s;
+}
+
+.icon-btn:hover {
+  color: var(--k-fg);
+  background: rgba(255, 255, 255, 0.08);
+}
+
+/* Atom logo animation */
 .mark {
   position: relative;
   flex: none;
-  width: 22px;
-  height: 22px;
+  width: 20px;
+  height: 20px;
 }
 .mark .nucleus {
   position: absolute;
-  inset: 8px;
-  border-radius: var(--v-radius-pill);
-  background: linear-gradient(135deg, var(--v-effect-action-from), var(--v-effect-action-to));
+  inset: 7px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #007acc, #9c64fe);
 }
 .mark .orbit {
   position: absolute;
   inset: 0;
-  border-radius: var(--v-radius-pill);
-  border: var(--v-border-width-hairline) solid color-mix(in srgb, var(--k-accent) 55%, transparent);
+  border-radius: 50%;
+  border: 1px solid rgba(0, 122, 204, 0.45);
 }
 .mark .orbit.two {
-  inset: 3px;
+  inset: 2px;
   transform: rotate(60deg) scaleY(0.45);
 }
 .mark .orbit::after {
@@ -113,374 +142,714 @@ h1 {
   left: calc(50% - 2px);
   width: 4px;
   height: 4px;
-  border-radius: var(--v-radius-pill);
-  background: var(--v-state-running);
+  border-radius: 50%;
+  background: #3fb950;
 }
 body[data-live='true'] .mark .orbit.one {
-  animation: krypton-orbit var(--v-motion-duration-ambient) linear infinite;
+  animation: krypton-orbit 4s linear infinite;
 }
 body[data-live='true'] .mark .orbit.two {
-  animation: krypton-orbit-tilted calc(var(--v-motion-duration-ambient) * 0.75) linear infinite;
-}
-body[data-ultra='true'] .mark .orbit::after {
-  background: var(--v-state-ultra);
+  animation: krypton-orbit-tilted 3s linear infinite;
 }
 @keyframes krypton-orbit {
-  to {
-    transform: rotate(360deg);
-  }
+  to { transform: rotate(360deg); }
 }
 @keyframes krypton-orbit-tilted {
-  from {
-    transform: rotate(60deg) scaleY(0.45) rotate(0deg);
-  }
-  to {
-    transform: rotate(60deg) scaleY(0.45) rotate(360deg);
-  }
+  to { transform: rotate(420deg) scaleY(0.45); }
 }
 
-/* Pills: the state, and ULTRA in its own colour. */
+/* Status pills */
 .pill {
-  display: inline-flex;
-  align-items: center;
-  gap: var(--v-space-1);
-  padding: 2px var(--v-space-2);
-  border-radius: var(--v-radius-pill);
-  font-size: 0.85em;
+  flex: none;
+  font-size: 0.75em;
   font-weight: 600;
-  white-space: nowrap;
-  color: var(--pill, var(--k-muted));
-  background: color-mix(in srgb, var(--pill, var(--k-muted)) 14%, transparent);
-  border: var(--v-border-width-hairline) solid color-mix(in srgb, var(--pill, var(--k-muted)) 35%, transparent);
-  transition: color var(--v-motion-transition-hover), background var(--v-motion-transition-hover);
+  padding: 2px 8px;
+  border-radius: 12px;
+}
+.pill.state {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  color: var(--k-muted);
 }
 .pill.state::before {
   content: '';
-  width: 7px;
-  height: 7px;
-  border-radius: var(--v-radius-pill);
-  background: currentColor;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #6e7681;
 }
-.pill.state:empty {
-  display: none;
+.pill.state[data-state='running']::before,
+.pill.state[data-state='waiting']::before {
+  background: #e09b55;
+  box-shadow: 0 0 6px #e09b55;
 }
-.pill.state[data-state='queued'],
-.pill.state[data-state='idle'] {
-  --pill: var(--v-state-queued);
-}
-.pill.state[data-state='preparing'],
-.pill.state[data-state='waiting'],
-.pill.state[data-state='running'],
-.pill.state[data-state='finishing'],
-.pill.state[data-state='lane'] {
-  --pill: var(--v-state-running);
-}
-.pill.state[data-state='stopping'] {
-  --pill: var(--v-state-awaiting-human);
-}
-.pill.state[data-state='finished'] {
-  --pill: var(--v-state-succeeded);
-}
-body[data-live='true'] .pill.state::before {
-  animation: krypton-pulse 1.6s var(--v-motion-easing-standard) infinite;
+.pill.state[data-state='finished']::before {
+  background: #3fb950;
 }
 .pill.ultra {
-  --pill: var(--v-state-ultra);
-  letter-spacing: 0.06em;
-}
-body[data-live='true'] .pill.ultra {
-  animation: krypton-glow var(--v-motion-duration-ambient) var(--v-motion-easing-standard) infinite;
-}
-@keyframes krypton-pulse {
-  0%,
-  100% {
-    box-shadow: 0 0 0 0 color-mix(in srgb, currentColor 55%, transparent);
-  }
-  60% {
-    box-shadow: 0 0 0 5px transparent;
-  }
-}
-@keyframes krypton-glow {
-  50% {
-    box-shadow: 0 0 12px 0 color-mix(in srgb, var(--v-state-ultra) 45%, transparent);
-  }
+  color: #ff9800;
+  background: rgba(255, 152, 0, 0.15);
+  border: 1px solid rgba(255, 152, 0, 0.3);
 }
 
-/* UNLIMITED SPEND: shown for as long as a no-cap declaration stands (ADR-0063). */
-#banner {
-  display: flex;
-  align-items: center;
-  gap: var(--v-space-3);
-  padding: var(--v-space-2) var(--v-space-4);
-  color: var(--v-status-warning);
-  background: color-mix(in srgb, var(--v-status-warning) 14%, var(--k-bg));
-  border-bottom: var(--v-border-width-thick) solid var(--v-status-warning);
-}
-#banner .banner-text {
-  flex: 1;
-}
-#banner strong {
-  letter-spacing: 0.08em;
-  margin-right: var(--v-space-2);
-}
-
-/* --- The transcript ---------------------------------------------------------------------- */
-main {
-  flex: 1;
-  overflow-y: auto;
-  padding: var(--v-space-3) var(--v-space-4);
-}
-.item {
-  margin: var(--v-space-1) 0;
-  white-space: pre-wrap;
-  overflow-wrap: anywhere;
-  animation: krypton-enter var(--v-motion-duration-base) var(--v-motion-easing-enter) both;
-}
-@keyframes krypton-enter {
-  from {
-    opacity: 0;
-    transform: translateY(4px);
-  }
-}
-pre.item.assistant {
-  font-family: var(--k-mono);
-  font-size: var(--k-mono-size);
-  margin: var(--v-space-2) 0;
-  padding: var(--v-space-2) var(--v-space-3);
-  border-radius: var(--v-radius-md);
-  background: color-mix(in srgb, var(--k-raised) 80%, transparent);
-  border: var(--v-border-width-hairline) solid var(--k-border);
-}
-.item.tool-call {
-  color: var(--v-text-link);
-  padding-left: var(--v-space-3);
-  border-left: var(--v-border-width-thick) solid color-mix(in srgb, var(--v-text-link) 45%, transparent);
-}
-.item.tool-call .name {
-  font-weight: 650;
-}
-.item.tool-result {
-  color: var(--k-muted);
-  padding-left: var(--v-space-3);
-}
-.item.tool-result.failed,
-.item.notice.error {
-  color: var(--v-status-danger);
-}
-.item.notice.warn {
-  color: var(--v-status-warning);
-}
-.item.notice.info {
-  color: var(--v-status-info);
-}
-.item.turn {
-  color: var(--k-muted);
-  font-size: 0.85em;
-  letter-spacing: 0.02em;
-  border-top: var(--v-border-width-hairline) dashed var(--k-border);
-  padding-top: var(--v-space-1);
-  margin-top: var(--v-space-3);
-}
-.item.follow-up {
-  font-style: italic;
-  color: var(--k-accent);
-}
-
-/* The designed empty state: a first look that says what to do. */
-main:empty::before {
-  content: 'Ask a task, reply to a waiting gate, or use the / command chips below. Tasks run on a copy of your folder until you choose Apply.';
-  display: block;
-  margin: var(--v-space-8) auto;
-  max-width: 34em;
-  text-align: center;
-  color: var(--k-muted);
-}
-
-/* --- Open gates in the chat workspace ---------------------------------------------------- */
-#gates {
-  display: flex;
-  flex-direction: column;
-  gap: var(--v-space-2);
-  padding: var(--v-space-2) var(--v-space-4);
-  border-bottom: var(--v-border-width-hairline) solid var(--k-border);
-  background: color-mix(in srgb, var(--k-raised) 55%, transparent);
-}
-.gate-card {
-  display: flex;
-  flex-direction: column;
-  gap: var(--v-space-2);
-  padding: var(--v-space-2) var(--v-space-3);
-  border-radius: var(--v-radius-md);
-  border: var(--v-border-width-hairline) solid color-mix(in srgb, var(--v-state-awaiting-human) 50%, var(--k-border));
-  background: color-mix(in srgb, var(--v-state-awaiting-human) 8%, var(--k-raised));
-}
-.gate-card.spend {
-  border-color: color-mix(in srgb, var(--v-status-warning) 75%, var(--k-border));
-  background: color-mix(in srgb, var(--v-status-warning) 12%, var(--k-raised));
-}
-.gate-header {
+/* --- Banners ---------------------------------------------------------------------------- */
+#banner,
+.pinned-banner {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: var(--v-space-2);
+  gap: 8px;
+  padding: 6px 12px;
   font-size: 0.85em;
+  background: rgba(40, 48, 64, 0.85);
+  border: 1px solid rgba(100, 140, 200, 0.25);
+  border-radius: 8px;
+  margin: 8px 12px 0 12px;
+  flex-shrink: 0;
+}
+.pinned-banner .close-btn {
+  background: transparent;
+  border: none;
+  color: var(--k-muted);
+  cursor: pointer;
+  font-size: 13px;
+  padding: 0 4px;
+}
+.pinned-banner .close-btn:hover {
+  color: var(--k-fg);
+}
+
+/* --- Gates Section ---------------------------------------------------------------------- */
+#gates {
+  padding: 8px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  flex-shrink: 0;
+}
+.gate-card {
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: var(--k-raised);
+  border: 1px solid var(--k-border);
+}
+.gate-card.spend {
+  border-color: rgba(255, 152, 0, 0.4);
+  background: rgba(255, 152, 0, 0.05);
+}
+.gate-header {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 6px;
+  font-size: 0.8em;
 }
 .gate-badge {
-  font-weight: 650;
-  color: var(--v-state-awaiting-human);
+  font-weight: 600;
+  color: #58a6ff;
 }
 .gate-badge.spend {
-  color: var(--v-status-warning);
-  letter-spacing: 0.04em;
-}
-.gate-meta {
-  color: var(--k-muted);
-  font-family: var(--k-mono);
+  color: #ff9800;
 }
 .gate-prompt {
-  white-space: pre-wrap;
+  font-size: 0.9em;
+  margin-bottom: 8px;
 }
 .gate-actions {
   display: flex;
+  gap: 6px;
   flex-wrap: wrap;
-  gap: var(--v-space-2);
 }
 
-/* --- Quick slash-command chips ----------------------------------------------------------- */
-#chips {
+/* --- Main Transcript Area --------------------------------------------------------------- */
+main#items {
+  flex: 1;
+  overflow-y: auto;
+  padding: 12px 0;
   display: flex;
-  flex-wrap: wrap;
-  gap: var(--v-space-1);
-  margin-bottom: var(--v-space-2);
+  flex-direction: column;
+  gap: 8px;
 }
-button.chip {
-  font-family: var(--k-mono);
+
+/* User Message Card */
+.user-message-card {
+  margin: 4px 12px 8px 12px;
+  padding: 10px 14px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 12px;
+}
+.user-message-header {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.8em;
+  color: var(--k-muted);
+  margin-bottom: 4px;
+}
+.user-label {
+  font-weight: 600;
+  color: var(--k-fg);
+}
+.user-message-body {
+  font-size: 0.95em;
+  line-height: 1.45;
+  color: var(--k-fg);
+  word-break: break-word;
+}
+
+/* Assistant Narration */
+.assistant-block {
+  margin: 4px 14px;
+}
+.assistant-narration {
+  font-size: 0.95em;
+  line-height: 1.55;
+  color: var(--k-fg);
+}
+
+/* Thought Accordion */
+.thought-card {
+  margin: 4px 14px;
+}
+.thought-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: transparent;
+  border: none;
+  padding: 4px 0;
+  font-size: 0.85em;
+  color: var(--k-muted);
+  cursor: pointer;
+  border-radius: 4px;
+}
+.thought-toggle:hover {
+  color: var(--k-fg);
+}
+.thought-dot {
+  color: #8b949e;
+  font-size: 9px;
+}
+.thought-label {
+  font-weight: 500;
+}
+.thought-chevron {
+  font-size: 11px;
+}
+.thought-content {
+  margin-top: 6px;
+  padding: 8px 12px;
+  background: rgba(0, 0, 0, 0.25);
+  border-left: 2px solid rgba(255, 255, 255, 0.15);
+  border-radius: 0 8px 8px 0;
+  font-size: 0.85em;
+  color: var(--k-muted);
+  line-height: 1.45;
+}
+
+/* Tool Call Card */
+.tool-call-card {
+  margin: 6px 12px;
+  background: rgba(28, 30, 36, 0.85);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 10px;
+  overflow: hidden;
+}
+.tool-call-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 12px;
+  background: rgba(255, 255, 255, 0.03);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+}
+.tool-header-left {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+.tool-tag {
+  font-size: 0.75em;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  background: rgba(88, 166, 255, 0.15);
+  color: #79b8ff;
+  padding: 2px 6px;
+  border-radius: 4px;
+}
+.tool-title {
   font-size: 0.85em;
   font-weight: 500;
-  color: var(--k-muted);
-  background: color-mix(in srgb, var(--k-raised) 85%, transparent);
-  border: var(--v-border-width-hairline) solid var(--k-border);
-  border-radius: var(--v-radius-pill);
-  padding: 2px var(--v-space-2);
-  box-shadow: none;
-}
-button.chip:hover {
   color: var(--k-fg);
-  border-color: var(--k-accent);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.btn-run-bg {
+  font-size: 0.75em;
+  font-weight: 500;
+  padding: 3px 8px;
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  color: var(--k-muted);
+  cursor: pointer;
+  flex-shrink: 0;
+}
+.btn-run-bg:hover {
+  background: rgba(255, 255, 255, 0.1);
+  color: var(--k-fg);
+}
+.tool-call-body {
+  padding: 8px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.tool-section {
+  display: flex;
+  gap: 8px;
+}
+.section-label {
+  font-size: 0.75em;
+  font-weight: 700;
+  color: var(--k-muted);
+  width: 24px;
+  flex-shrink: 0;
+  padding-top: 2px;
+}
+.code-box {
+  flex: 1;
+  margin: 0;
+  padding: 6px 10px;
+  font-family: var(--k-mono);
+  font-size: var(--k-mono-size);
+  background: rgba(0, 0, 0, 0.35);
+  border-radius: 6px;
+  overflow-x: auto;
+  color: #e6edf3;
+  line-height: 1.4;
 }
 
-/* --- The composer ------------------------------------------------------------------------ */
-footer {
-  position: relative;
-  border-top: var(--v-border-width-hairline) solid var(--k-border);
-  padding: var(--v-space-3) var(--v-space-4);
-  background: color-mix(in srgb, var(--k-raised) 60%, transparent);
+/* Activity Indicator */
+.activity-indicator {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 14px;
+  font-size: 0.85em;
+  color: var(--k-muted);
 }
-textarea {
+.pulsing-atom {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #e09b55;
+  box-shadow: 0 0 8px #e09b55;
+  animation: pulse-glow 1.5s infinite;
+}
+@keyframes pulse-glow {
+  0%, 100% { opacity: 0.4; transform: scale(0.9); }
+  50% { opacity: 1; transform: scale(1.15); }
+}
+
+/* Generic item classes */
+.item.notice {
+  margin: 4px 14px;
+  font-size: 0.85em;
+  color: var(--k-muted);
+}
+.item.notice.warn {
+  color: #e3b341;
+}
+.item.notice.error {
+  color: #f85149;
+}
+.item.tool-result {
+  margin: 4px 14px;
+  font-size: 0.85em;
+  color: #3fb950;
+  font-family: var(--k-mono);
+}
+.item.tool-result.failed {
+  color: #f85149;
+}
+
+/* --- Floating Composer ------------------------------------------------------------------ */
+footer#composer {
+  position: relative;
+  padding: 8px 12px 14px 12px;
+  background: transparent;
+  flex-shrink: 0;
+}
+
+.composer-card {
+  background: var(--k-raised);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 16px;
+  padding: 10px 12px;
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.3);
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.composer-input-row {
+  display: flex;
+  align-items: flex-end;
+  gap: 8px;
+}
+
+textarea#input {
   box-sizing: border-box;
   width: 100%;
-  resize: vertical;
+  resize: none;
   font-family: var(--k-font);
   font-size: var(--k-font-size);
   color: var(--k-input-fg);
-  background: var(--k-input-bg);
-  border: var(--v-border-width-hairline) solid var(--vscode-input-border, var(--k-border));
-  border-radius: var(--v-radius-md);
-  padding: var(--v-space-2) var(--v-space-3);
-  transition: border-color var(--v-motion-transition-hover), box-shadow var(--v-motion-transition-hover);
-}
-textarea:focus,
-button:focus-visible {
-  outline: none;
-  border-color: var(--k-focus);
-  box-shadow: 0 0 0 var(--v-border-width-focus) color-mix(in srgb, var(--k-focus) 35%, transparent);
-}
-textarea:disabled {
-  opacity: 0.7;
-}
-#buttons {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--v-space-2);
-  margin-top: var(--v-space-2);
-}
-button {
-  font-family: var(--k-font);
-  font-size: var(--k-font-size);
-  font-weight: 600;
-  color: var(--k-on-accent);
-  background: linear-gradient(135deg, var(--v-effect-action-from), var(--v-effect-action-to));
-  border: var(--v-border-width-hairline) solid transparent;
-  border-radius: var(--v-radius-pill);
-  padding: var(--v-space-1) var(--v-space-4);
-  cursor: pointer;
-  box-shadow: var(--v-elevation-1);
-  transition:
-    transform var(--v-motion-transition-hover),
-    box-shadow var(--v-motion-transition-hover),
-    filter var(--v-motion-transition-hover);
-}
-button:hover {
-  filter: brightness(1.08);
-  box-shadow: var(--v-elevation-2);
-  transform: translateY(-1px);
-}
-button:active {
-  transform: translateY(0);
-}
-button:disabled {
-  opacity: 0.55;
-  cursor: default;
-  transform: none;
-  filter: none;
-}
-button.quiet {
-  color: var(--k-fg);
   background: transparent;
-  border-color: var(--k-border);
-  box-shadow: none;
+  border: none;
+  outline: none;
+  padding: 2px 0;
+  line-height: 1.45;
+  max-height: 120px;
 }
-button.danger {
-  color: var(--v-text-on-accent);
-  background: var(--v-status-danger);
+textarea#input::placeholder {
+  color: var(--k-muted);
 }
+
+.mic-btn {
+  background: transparent;
+  border: none;
+  color: var(--k-muted);
+  font-size: 16px;
+  cursor: pointer;
+  padding: 2px;
+}
+.mic-btn:hover {
+  color: var(--k-fg);
+}
+
+.composer-controls {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 6px;
+}
+
+.controls-left,
+.controls-right {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.control-btn {
+  width: 24px;
+  height: 24px;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  color: var(--k-fg);
+  cursor: pointer;
+  font-size: 13px;
+  padding: 0;
+  transition: background 0.15s;
+}
+.control-btn:hover {
+  background: rgba(255, 255, 255, 0.12);
+}
+
+.pill-badge {
+  font-size: 0.72em;
+  padding: 3px 7px;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--k-muted);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  white-space: nowrap;
+}
+
+.pill-btn {
+  font-size: 0.75em;
+  font-weight: 500;
+  padding: 4px 9px;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.09);
+  color: var(--k-fg);
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  white-space: nowrap;
+  transition: background 0.15s;
+}
+.pill-btn:hover {
+  background: rgba(255, 255, 255, 0.12);
+}
+.pill-btn.remote-btn.active {
+  background: rgba(88, 166, 255, 0.2);
+  border-color: #58a6ff;
+  color: #79b8ff;
+}
+
+.action-btn.send-btn {
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--k-fg);
+  color: var(--k-bg);
+  border: none;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+  padding: 0;
+}
+.action-btn.send-btn:hover {
+  filter: brightness(1.15);
+}
+.action-btn.stop-btn {
+  width: 26px;
+  height: 26px;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #f85149;
+  color: #ffffff;
+  border: none;
+  font-size: 11px;
+  cursor: pointer;
+  padding: 0;
+}
+
+.finished-actions-row {
+  display: flex;
+  gap: 6px;
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
+  padding-top: 6px;
+}
+.finished-actions-row button {
+  font-size: 0.8em;
+  padding: 4px 10px;
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: var(--k-fg);
+  cursor: pointer;
+}
+
+/* --- Popovers --------------------------------------------------------------------------- */
+.popover-menu {
+  position: absolute;
+  bottom: 80px;
+  background: #1b1c22;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 12px;
+  box-shadow: 0 10px 36px rgba(0, 0, 0, 0.6);
+  padding: 6px;
+  z-index: 1000;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 190px;
+  animation: popover-slide-up 0.15s ease-out;
+}
+@keyframes popover-slide-up {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+#popoverAdd {
+  left: 14px;
+}
+#popoverActions {
+  left: 14px;
+  width: 230px;
+}
+#popoverModel {
+  right: 14px;
+  width: 230px;
+}
+#popoverMode {
+  right: 14px;
+  width: 210px;
+}
+
+.popover-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 7px 10px;
+  border-radius: 8px;
+  background: transparent;
+  border: none;
+  color: var(--k-fg);
+  font-size: 0.85em;
+  cursor: pointer;
+  width: 100%;
+  box-sizing: border-box;
+  text-align: left;
+  transition: background 0.12s;
+}
+.popover-item:hover {
+  background: rgba(255, 255, 255, 0.08);
+}
+.popover-item .check {
+  display: none;
+  color: #79b8ff;
+  font-weight: 700;
+}
+.popover-item.selected .check {
+  display: inline;
+}
+.popover-title {
+  font-size: 0.8em;
+  font-weight: 600;
+  color: var(--k-muted);
+  padding: 6px 10px 4px 10px;
+}
+.popover-divider {
+  height: 1px;
+  background: rgba(255, 255, 255, 0.08);
+  margin: 4px 0;
+}
+.popover-section-label {
+  font-size: 0.72em;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--k-muted);
+  padding: 6px 10px 2px 10px;
+}
+.popover-search {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 8px;
+  background: rgba(0, 0, 0, 0.3);
+  border-radius: 8px;
+  margin-bottom: 4px;
+}
+.popover-search input {
+  border: none;
+  background: transparent;
+  outline: none;
+  font-size: 0.85em;
+  color: var(--k-fg);
+  width: 100%;
+}
+.popover-slider-row {
+  padding: 6px 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.popover-slider-row .label {
+  font-size: 0.8em;
+  font-weight: 600;
+  color: var(--k-muted);
+}
+.slider-container input[type='range'] {
+  width: 100%;
+  margin: 4px 0;
+}
+.slider-labels {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.7em;
+  color: var(--k-muted);
+}
+
+/* Switch toggle */
+.toggle-item {
+  cursor: default;
+}
+.switch {
+  position: relative;
+  display: inline-block;
+  width: 32px;
+  height: 18px;
+}
+.switch input {
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+.slider {
+  position: absolute;
+  cursor: pointer;
+  inset: 0;
+  background-color: rgba(255, 255, 255, 0.2);
+  transition: 0.2s;
+  border-radius: 18px;
+}
+.slider:before {
+  position: absolute;
+  content: '';
+  height: 14px;
+  width: 14px;
+  left: 2px;
+  bottom: 2px;
+  background-color: white;
+  transition: 0.2s;
+  border-radius: 50%;
+}
+input:checked + .slider {
+  background-color: #ff9800;
+}
+input:checked + .slider:before {
+  transform: translateX(14px);
+}
+
+/* Completions dropdown */
 #completions {
   position: absolute;
   bottom: 100%;
-  left: var(--v-space-4);
-  right: var(--v-space-4);
+  left: 14px;
+  right: 14px;
   max-height: 16em;
   overflow-y: auto;
-  margin: 0 0 var(--v-space-1);
-  padding: var(--v-space-1) 0;
+  margin: 0 0 6px 0;
+  padding: 4px 0;
   list-style: none;
-  background: var(--vscode-editorSuggestWidget-background, var(--k-raised));
-  border: var(--v-border-width-hairline) solid var(--vscode-editorSuggestWidget-border, var(--k-border));
-  border-radius: var(--v-radius-md);
-  box-shadow: var(--v-elevation-3);
-  animation: krypton-enter var(--v-motion-duration-fast) var(--v-motion-easing-enter) both;
+  background: var(--k-raised);
+  border: 1px solid var(--k-border);
+  border-radius: 10px;
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.4);
 }
 #completions li {
   display: flex;
-  gap: var(--v-space-4);
-  padding: var(--v-space-1) var(--v-space-3);
+  gap: 8px;
+  padding: 6px 12px;
   cursor: pointer;
+  font-size: 0.85em;
 }
 #completions li.chosen,
 #completions li:hover {
-  background: var(--vscode-editorSuggestWidget-selectedBackground, var(--v-effect-tint-strong));
+  background: rgba(255, 255, 255, 0.08);
 }
 #completions .name {
   font-family: var(--k-mono);
+  font-weight: 600;
+  color: #79b8ff;
 }
 #completions .description {
   color: var(--k-muted);
 }
+
 [hidden] {
   display: none !important;
 }
 
-/* Reduced motion, the system's or the editor's: nothing moves that does not have to (the Beauty Bar, item 5). */
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,
@@ -488,10 +857,4 @@ button.danger {
     animation: none !important;
     transition: none !important;
   }
-}
-body.vscode-reduce-motion *,
-body.vscode-reduce-motion *::before,
-body.vscode-reduce-motion *::after {
-  animation: none !important;
-  transition: none !important;
 }
