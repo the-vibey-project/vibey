@@ -14,12 +14,13 @@ export interface PanelGate {
   readonly choices: readonly { readonly label: string; readonly command: string }[];
 }
 
-/** What the page sends: a line typed, a button pressed, an image pasted. */
+/** What the page sends: a line typed, a button pressed, an image pasted, or a UI action. */
 export type PanelRequest =
   | { readonly type: 'ready' }
   | { readonly type: 'send'; readonly text: string }
   | { readonly type: 'button'; readonly command: string }
-  | { readonly type: 'pasteImage'; readonly dataUrl: string };
+  | { readonly type: 'pasteImage'; readonly dataUrl: string }
+  | { readonly type: 'action'; readonly action: string; readonly payload?: unknown };
 
 /** How the page looks: the resolved theme, whose surfaces it sits on, and the two states it must never hide. */
 export interface PanelLook {
@@ -47,6 +48,11 @@ export type PanelUpdate =
       readonly forceAfterMs?: number;
       readonly finishedActions: boolean;
       readonly takesFollowUps: boolean;
+      readonly model?: { readonly name: string; readonly effort: string; readonly ultracode: boolean; readonly models?: readonly string[] };
+      readonly agentMode?: string;
+      readonly sessionDuration?: string;
+      readonly subagentsCount?: number;
+      readonly browserConnected?: boolean;
     }
   | { readonly type: 'gates'; readonly gates: readonly PanelGate[] }
   | { readonly type: 'patch'; readonly patch: RunPatch }
@@ -58,7 +64,13 @@ export type PanelUpdate =
       readonly finishedActions: boolean;
       /** Whether the engine running now acts on a follow-up; the box is closed while it runs otherwise. */
       readonly takesFollowUps: boolean;
+      readonly model?: { readonly name: string; readonly effort: string; readonly ultracode: boolean };
+      readonly agentMode?: string;
+      readonly sessionDuration?: string;
+      readonly subagentsCount?: number;
+      readonly browserConnected?: boolean;
     }
+  | { readonly type: 'config'; readonly model?: { readonly name: string; readonly effort: string; readonly ultracode: boolean; readonly models?: readonly string[] }; readonly agentMode?: string; readonly browserConnected?: boolean }
   | { readonly type: 'note'; readonly level: 'info' | 'warn' | 'error'; readonly text: string };
 
 export interface TaskPanelInterface {

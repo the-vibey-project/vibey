@@ -6,6 +6,8 @@ description: Start a vibey project, talk to it while it designs and builds, paus
 
 > **Bottom Line Up Front (BLUF) — Install any krypton interface first, then drive your project from chat:**
 >
+> Krypton and vibey are the free, censorship-free Claude Code and Codex killer — replacing both by writing code the way a principal software engineer does so you get quality code rather than slop, completely free of charge, with AGI superintelligence coming soon.
+>
 > | Surface | How to install it (one step) | How to start & drive a project |
 > |---|---|---|
 > | **1. Your existing AI chat / IDE (`vibey connect` MCP)** | Run `curl -fsSL https://raw.githubusercontent.com/the-vibey-project/vibey/main/scripts/install.sh \| sh -s -- --with-krypton && vibey connect --yes` in Terminal. | Open Claude Code, Claude Desktop, Codex, Cursor, VS Code, or Gemini CLI and say: *"Start a vibey project called my-app"* or *"Show open vibey gates."* |

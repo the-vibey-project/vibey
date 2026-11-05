@@ -5,7 +5,7 @@ description: Install vibey and every krypton interface (Desktop on macOS and Lin
 
 > **Bottom Line Up Front (BLUF) — Every krypton interface, on every platform, in one table:**
 >
-> **vibey** is the autonomous delivery engine; **krypton** is every app and interface you use to talk to it. You do not need any coding experience to install or use krypton.
+> **Krypton and the vibey engine are the free, censorship-free Claude Code and Codex killer** meant to replace both. Open to everyone and 100% free of charge, vibey writes code the way a principal software engineer does — shipping high-quality, verified code rather than disposable slop. It operates as an autonomous AGI with superintelligence coming soon. **vibey** is the autonomous delivery engine; **krypton** is every app and interface you use to talk to it. You do not need any coding experience to install or use krypton.
 >
 > - **How to open a Terminal if you have never used one:**
 >   - **On a Mac (macOS):** Hold down the **Command (⌘)** key and press **Spacebar**, type `Terminal`, and press **Return (Enter)**.

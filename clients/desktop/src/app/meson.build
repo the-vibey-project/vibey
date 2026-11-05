@@ -7,7 +7,7 @@ gnome = import('gnome')
 resources = gnome.compile_resources(
   'krypton-resources',
   'krypton.gresource.xml',
-  source_dir: [gtk_css_dir],
+  source_dir: [gtk_css_dir, meson.current_source_dir()],
   c_name: 'krypton',
 )
 
@@ -39,6 +39,8 @@ executable(
   'krypton-desktop',
   'main.c',
   'kr-chat-page.c',
+  'kr-inspector.c',
+  'kr-settings-dialog.c',
   'kr-mark.c',
   'kr-window.c',
   'kr-workflows-page.c',

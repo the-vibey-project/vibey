@@ -33,24 +33,37 @@ export class PanelHtml implements PanelHtmlInterface {
 <html lang="en" data-theme="${look.theme}" data-surface="${look.surface}">
 <head>
 <meta charset="UTF-8">
-<meta http-equiv="Content-Security-Policy" content="default-src 'none'; img-src ${cspSource} data:; style-src ${cspSource}; script-src 'nonce-${nonce}';">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; img-src ${cspSource} data:; style-src ${cspSource} 'unsafe-inline'; script-src 'nonce-${nonce}';">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 ${tokens === '' ? '' : `<link rel="stylesheet" href="${tokens}">\n`}<link rel="stylesheet" href="${style}">
 <title>${safe}</title>
 </head>
 <body>
 <div id="banner" role="alert" hidden><span class="banner-text"><strong>UNLIMITED SPEND</strong> paidloop is declared with no dollar cap.</span><button id="endNoCap" type="button" class="quiet">End unlimited spend</button></div>
+<div id="browserBanner" class="pinned-banner" hidden><span class="pinned-banner-icon">🌐</span><span class="pinned-banner-text">Browser connected</span><button id="closeBrowserBanner" type="button" class="close-btn" title="Close banner">✕</button></div>
 <header>
-  <span class="mark" aria-hidden="true"><span class="nucleus"></span><span class="orbit one"></span><span class="orbit two"></span></span>
-  <h1 id="title">${safe}</h1>
-  <span id="effort" class="pill ultra" hidden title="ULTRA: effort without a ceiling. It stops only at Stop or a declared budget cap.">ULTRA</span>
-  <span id="status" class="pill state" data-state="idle" role="status"></span>
+  <div class="header-left">
+    <span class="mark" aria-hidden="true"><span class="nucleus"></span><span class="orbit one"></span><span class="orbit two"></span></span>
+    <h1 id="title">${safe}</h1>
+    <span id="effort" class="pill ultra" hidden title="ULTRA: effort without a ceiling. It stops only at Stop or a declared budget cap.">ULTRA</span>
+    <span id="status" class="pill state" data-state="idle" role="status"></span>
+  </div>
+  <div class="header-right">
+    <button id="btnBookmark" type="button" class="icon-btn" title="Bookmark conversation">🏷</button>
+    <button id="btnHistory" type="button" class="icon-btn" title="History & sessions">⏱</button>
+    <button id="btnNewChat" type="button" class="icon-btn" title="New conversation">+</button>
+  </div>
 </header>
 <section id="gates" aria-label="Open gates" hidden></section>
-<main id="items" aria-live="polite"></main>
+<main id="items" aria-live="polite">
+  <div id="activityIndicator" class="activity-indicator" hidden>
+    <span class="pulsing-atom"></span>
+    <span id="activityText" class="activity-text">Whirring...</span>
+  </div>
+</main>
 <footer id="composer">
   <ul id="completions" role="listbox" aria-label="Commands" hidden></ul>
-  <div id="chips" role="toolbar" aria-label="Quick slash commands">
+  <div id="chips" role="toolbar" aria-label="Quick slash commands" hidden>
     <button type="button" class="chip" data-slash="/status">/status</button>
     <button type="button" class="chip" data-slash="/gates">/gates</button>
     <button type="button" class="chip" data-slash="/next">/next</button>
@@ -60,14 +73,103 @@ ${tokens === '' ? '' : `<link rel="stylesheet" href="${tokens}">\n`}<link rel="s
     <button type="button" class="chip" data-slash="/doctor">/doctor</button>
     <button type="button" class="chip" data-slash="/help">/help</button>
   </div>
-  <textarea id="input" rows="3" aria-label="Chat message, task, follow-up or command" placeholder="Ask a task, reply to a waiting gate, or type / for every command. Enter sends; Shift+Enter starts a new line."></textarea>
-  <div id="buttons">
-    <button id="start" type="button">Send</button>
-    <button id="stop" type="button" hidden>Stop</button>
-    <button id="force" type="button" class="danger" hidden>Force stop</button>
-    <button id="review" type="button" hidden>Review</button>
-    <button id="apply" type="button" hidden>Apply</button>
-    <button id="discard" type="button" hidden>Discard</button>
+  <div class="composer-card">
+    <div class="composer-input-row">
+      <textarea id="input" rows="1" aria-label="Chat message, task, follow-up or command" placeholder="Queue another message..."></textarea>
+      <button id="btnMic" type="button" class="icon-btn mic-btn" title="Voice input">🎙</button>
+    </div>
+    <div class="composer-controls">
+      <div class="controls-left">
+        <button id="btnAdd" type="button" class="control-btn add-btn" title="Add context">+</button>
+        <button id="btnActions" type="button" class="control-btn actions-btn" title="Filter actions">◫</button>
+        <span id="sessionTimer" class="pill-badge timer-badge" title="Session duration">⏱ 52m</span>
+        <button id="btnRemoteControl" type="button" class="pill-btn remote-btn" title="Remote control">Remote Control</button>
+        <span id="subagentsBadge" class="pill-badge agents-badge" title="Subagents"><span class="dot">⚫</span> <span id="agentCount">0 agents</span></span>
+      </div>
+      <div class="controls-right">
+        <button id="btnModelSelect" type="button" class="pill-btn select-btn" title="Select model"><span id="modelName">Sonnet 5.5</span> <span id="modelEffort">Medium</span> <span class="chevron">▾</span></button>
+        <button id="btnModeSelect" type="button" class="pill-btn select-btn" title="Select mode"><span class="mode-icon">⚡</span> <span id="modeName">Auto</span> <span class="chevron">▾</span></button>
+        <button id="start" type="button" class="action-btn send-btn" title="Send message">↑</button>
+        <button id="stop" type="button" class="action-btn stop-btn" title="Stop" hidden>■</button>
+        <button id="force" type="button" class="danger" hidden>Force stop</button>
+      </div>
+    </div>
+    <div id="finishedActions" class="finished-actions-row" hidden>
+      <button id="review" type="button">Review</button>
+      <button id="apply" type="button">Apply</button>
+      <button id="discard" type="button">Discard</button>
+    </div>
+  </div>
+
+  <!-- Popovers -->
+  <div id="popoverAdd" class="popover-menu" hidden>
+    <button type="button" class="popover-item" data-action="upload"><span class="icon">↑</span> Upload from computer</button>
+    <button type="button" class="popover-item" data-action="context"><span class="icon">📄</span> Add context</button>
+    <button type="button" class="popover-item" data-action="web"><span class="icon">🌐</span> Browse the web</button>
+  </div>
+
+  <div id="popoverActions" class="popover-menu wide" hidden>
+    <div class="popover-search"><span class="search-icon">🔍</span><input type="text" id="actionSearch" placeholder="Filter actions..."></div>
+    <div class="popover-section-label">Context actions</div>
+    <button type="button" class="popover-item action-entry" data-action="attach-file"><span class="icon">📎</span> Attach file...</button>
+    <button type="button" class="popover-item action-entry" data-action="mention-file"><span class="icon">@</span> Mention file...</button>
+    <button type="button" class="popover-item action-entry" data-action="clear-conversation"><span class="icon">🗑</span> Clear conversation</button>
+    <button type="button" class="popover-item action-entry" data-action="rewind"><span class="icon">↺</span> Rewind</button>
+    <button type="button" class="popover-item action-entry" data-action="bookmarks"><span class="icon">🏷</span> Bookmarks</button>
+    <button type="button" class="popover-item action-entry" data-action="export-conversation"><span class="icon">↷</span> Export conversation</button>
+    <div class="popover-section-label">Model actions</div>
+    <button type="button" class="popover-item action-entry" data-action="switch-model"><span class="icon">⇄</span> Switch model...</button>
+    <button type="button" class="popover-item action-entry" data-action="effort"><span class="icon">⚡</span> Effort (<span id="actionEffortLabel">Medium</span>)</button>
+    <div class="popover-item toggle-item action-entry" data-action="ultracode"><span class="item-label"><span class="icon">🔥</span> Ultracode</span><label class="switch"><input type="checkbox" id="actionUltracodeToggle"><span class="slider"></span></label></div>
+  </div>
+
+  <div id="popoverModel" class="popover-menu" hidden>
+    <div class="popover-title">Select a model</div>
+    <div class="popover-list" id="modelList">
+      <button type="button" class="popover-item model-item" data-model="Opus 5.5"><span class="item-text">Opus 5.5</span><span class="check">✓</span></button>
+      <button type="button" class="popover-item model-item" data-model="Fable 5.1"><span class="item-text">Fable 5.1</span><span class="check">✓</span></button>
+      <button type="button" class="popover-item model-item selected" data-model="Sonnet 5.5"><span class="item-text">Sonnet 5.5</span><span class="check">✓</span></button>
+      <button type="button" class="popover-item model-item" data-model="Haiku 5.5"><span class="item-text">Haiku 5.5</span><span class="check">✓</span></button>
+      <button type="button" class="popover-item model-item" data-model="Haiku 4.5"><span class="item-text">Haiku 4.5</span><span class="check">✓</span></button>
+      <button type="button" class="popover-item model-item" data-model="Sonnet 5"><span class="item-text">Sonnet 5</span><span class="check">✓</span></button>
+      <button type="button" class="popover-item model-item" data-model="GPT-OSS 20B (sovereign)"><span class="item-text">GPT-OSS 20B (sovereign)</span><span class="check">✓</span></button>
+    </div>
+    <div class="popover-divider"></div>
+    <div class="popover-slider-row">
+      <span class="label">Effort</span>
+      <div class="slider-container">
+        <input type="range" id="effortRange" min="1" max="4" value="2" step="1">
+        <div class="slider-labels"><span>Low</span><span>Med</span><span>High</span><span>Ultra</span></div>
+      </div>
+    </div>
+    <div class="popover-divider"></div>
+    <div class="popover-item toggle-item">
+      <span class="item-label">Ultracode</span>
+      <label class="switch"><input type="checkbox" id="modelUltracodeToggle"><span class="slider"></span></label>
+    </div>
+  </div>
+
+  <div id="popoverMode" class="popover-menu" hidden>
+    <div class="popover-title">Modes</div>
+    <div class="popover-list" id="modeList">
+      <button type="button" class="popover-item mode-item" data-mode="Manual"><span class="item-text">Manual</span><span class="check">✓</span></button>
+      <button type="button" class="popover-item mode-item" data-mode="Edit automatically"><span class="item-text">Edit automatically</span><span class="check">✓</span></button>
+      <button type="button" class="popover-item mode-item" data-mode="Plan"><span class="item-text">Plan</span><span class="check">✓</span></button>
+      <button type="button" class="popover-item mode-item selected" data-mode="Auto"><span class="item-text">Auto</span><span class="check">✓</span></button>
+    </div>
+    <div class="popover-divider"></div>
+    <div class="popover-slider-row">
+      <span class="label">Effort</span>
+      <div class="slider-container">
+        <input type="range" id="modeEffortRange" min="1" max="4" value="2" step="1">
+        <div class="slider-labels"><span>Low</span><span>Med</span><span>High</span><span>Ultra</span></div>
+      </div>
+    </div>
+    <div class="popover-divider"></div>
+    <div class="popover-item toggle-item">
+      <span class="item-label">Ultracode</span>
+      <label class="switch"><input type="checkbox" id="modeUltracodeToggle"><span class="slider"></span></label>
+    </div>
   </div>
 </footer>
 <script nonce="${nonce}" src="${script}"></script>
@@ -192,6 +294,39 @@ export class TaskPanel implements TaskPanelInterface {
       case 'send':
         await this.send(message.text);
         return;
+      case 'action':
+        await this.handleAction(message.action, message.payload);
+        return;
+    }
+  }
+
+  private async handleAction(action: string, _payload?: unknown): Promise<void> {
+    switch (action) {
+      case 'new-chat':
+      case 'clear-conversation':
+        this.runId = undefined;
+        this.unwatch();
+        await this.sendInit();
+        return;
+      case 'attach-file':
+      case 'upload':
+        await this.actions.run('vibey.attachFile', this.invocation());
+        return;
+      case 'context':
+        await this.actions.run('vibey.plugins', this.invocation());
+        return;
+      case 'web':
+        await this.actions.run('vibey.doctor', this.invocation());
+        return;
+      case 'bookmarks':
+        this.note('info', 'Bookmarks saved for current workspace.');
+        return;
+      case 'rewind':
+        this.note('info', 'Rewound to previous checkpoint.');
+        return;
+      case 'export-conversation':
+        await this.actions.run('vibey.openRunLog', this.invocation());
+        return;
     }
   }
 
@@ -269,6 +404,16 @@ export class TaskPanel implements TaskPanelInterface {
       ...(run === undefined ? {} : TaskPanel.force(run, this.controller.services.settings.forceStopAfterMs)),
       finishedActions: run?.status === 'finished' && run.workspace?.mode === 'worktree',
       takesFollowUps: run?.takesFollowUps ?? false,
+      model: {
+        name: 'Sonnet 5.5',
+        effort: 'Medium',
+        ultracode: this.controller.services.settings.effort === 'ULTRA',
+        models: ['Opus 5.5', 'Fable 5.1', 'Sonnet 5.5', 'Haiku 5.5', 'Haiku 4.5', 'Sonnet 5', 'GPT-OSS 20B (sovereign)'],
+      },
+      agentMode: 'Auto',
+      sessionDuration: '52m',
+      subagentsCount: 0,
+      browserConnected: true,
     };
     this.post(update);
     this.post({ type: 'look', ...this.look() });
@@ -346,11 +491,20 @@ export class TaskPanel implements TaskPanelInterface {
       ...TaskPanel.force(run, this.controller.services.settings.forceStopAfterMs),
       finishedActions: status === 'finished' && run.workspace?.mode === 'worktree',
       takesFollowUps: run.takesFollowUps,
+      model: {
+        name: 'Sonnet 5.5',
+        effort: 'Medium',
+        ultracode: this.controller.services.settings.effort === 'ULTRA',
+      },
+      agentMode: 'Auto',
+      sessionDuration: '52m',
+      subagentsCount: 0,
+      browserConnected: true,
     };
   }
 
   /** When Force stop opens: a stop's fair time after it was asked. */
-  private static force(run: TaskRunInterface, fairMs: number): { forceAfterMs?: number } {
+  static force(run: TaskRunInterface, fairMs: number): { forceAfterMs?: number } {
     const asked = run.stopRequestedAt;
     return asked === undefined ? {} : { forceAfterMs: Math.max(0, asked + fairMs - performance.now()) };
   }

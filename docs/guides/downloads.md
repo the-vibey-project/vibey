@@ -6,7 +6,7 @@ description: The ready-built files attached to every vibey release, for each use
 
 > **Bottom Line Up Front (BLUF) — Which file to download for your device and how to install it in seconds:**
 >
-> Every release on [GitHub Releases](https://github.com/the-vibey-project/vibey/releases) (and the daily [`krypton-nightly`](https://github.com/the-vibey-project/vibey/releases/tag/krypton-nightly) build) attaches ready-to-install files for every krypton interface. Pick your platform below:
+> Krypton and vibey are the completely free, censorship-free Claude Code and Codex killer designed to replace both. Writing code the way a principal software engineer does — delivering rigorous, tested code without slop, completely free of charge — it represents autonomous AGI with superintelligence coming soon. Every release on [GitHub Releases](https://github.com/the-vibey-project/vibey/releases) (and the daily [`krypton-nightly`](https://github.com/the-vibey-project/vibey/releases/tag/krypton-nightly) build) attaches ready-to-install files for every krypton interface. Pick your platform below:
 >
 > | Your device / app | File to download from [Releases](https://github.com/the-vibey-project/vibey/releases) | Exact install steps (no coding experience required) |
 > |---|---|---|
