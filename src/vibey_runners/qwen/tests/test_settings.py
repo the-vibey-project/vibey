@@ -3,7 +3,7 @@ from pathlib import Path
 
 import pytest
 
-from qwenloop.domain.config import QwenConfig
+from qwenloop.domain.config import DEFAULT_ENDPOINT_MODEL, QwenConfig
 from qwenloop.domain.model import Backend
 from qwenloop.infrastructure.interfaces import SettingsLoaderInterface
 from qwenloop.infrastructure.settings import SettingsLoader
@@ -101,7 +101,7 @@ def test_each_engine_reads_only_its_own_settings(tmp_path: Path) -> None:
     gptoss = SettingsLoader(environ, identity=GPTOSSLOOP, default_path=absent)
     qwen = SettingsLoader(environ, identity=QWENLOOP, default_path=absent)
     assert (gptoss.load().model, gptoss.load().base_url, gptoss.api_key) == (
-        "gpt-oss:20b",
+        DEFAULT_ENDPOINT_MODEL,
         "http://gpt:1/v1",
         "gpt-key",
     )

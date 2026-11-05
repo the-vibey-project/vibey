@@ -21,6 +21,15 @@ export class CommandTable {
 
   static readonly ALL: readonly CommandSpec[] = [
     {
+      id: 'vibey.openChat',
+      title: 'Open krypton chat',
+      group: 'Run',
+      icon: 'comment',
+      slash: 'chat',
+      description: 'Open the krypton chat workspace: drive projects, answer waiting gates, run tasks and use every / command in one conversation.',
+      example: '/chat',
+    },
+    {
       id: 'vibey.ask',
       title: 'Ask the model to do a task',
       group: 'Run',
@@ -454,6 +463,17 @@ export class CommandTable {
       description: 'Find a vibey hub here or at an address, pair once with its key, and read projects, gates and budgets through it.',
       example: '/connect studio.local',
       wraps: 'the hub API (vibey serve, ADR-0068)',
+    },
+    {
+      id: 'vibey.connectMcp',
+      title: 'Connect a chat app or editor (MCP)',
+      group: 'Connect & look',
+      icon: 'hubot',
+      slash: 'mcp',
+      usage: '[client]',
+      description: 'Register vibey as an MCP server in Claude Code, Claude Desktop, Codex, Cursor, VS Code or Gemini CLI so you can drive it from chat.',
+      example: '/mcp vscode',
+      wraps: 'vibey connect',
     },
     {
       id: 'vibey.disconnectHub',

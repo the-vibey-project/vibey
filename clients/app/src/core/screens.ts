@@ -18,7 +18,15 @@ export class Screens implements ScreensInterface {
   ];
 
   readonly all: readonly ScreenSpec[] = [
-    { route: '/', title: 'Home', icon: 'home', tab: true, features: ['projects-and-phases'], gaps: [] },
+    {
+      route: '/',
+      title: 'Chat',
+      icon: 'chat',
+      tab: true,
+      features: ['projects-and-phases', 'gates', 'command-palette'],
+      gaps: [],
+    },
+    { route: '/projects', title: 'Home', icon: 'home', tab: true, features: ['projects-and-phases'], gaps: [] },
     { route: '/gates', title: 'Gates', icon: 'gate', tab: true, features: ['gates'], gaps: [] },
     {
       route: '/lanes',

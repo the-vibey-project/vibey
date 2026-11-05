@@ -134,6 +134,16 @@ class Service:
     def lane_tail(self, principal: HubPrincipal, events_path: str, after: int) -> Any:
         return self._done("lane_tail", events_path, after)
 
+    async def chat(
+        self,
+        principal: HubPrincipal,
+        message: str,
+        *,
+        project_id: UUID | None = None,
+        request_id: str | None = None,
+    ) -> Any:
+        return self._done("chat", message, project_id, request_id)
+
 
 class Quiet:
     """A live feed nobody announces on."""
@@ -210,6 +220,12 @@ def test_the_factory_meets_its_declared_seam() -> None:
         ("GET", "/api/v1/doctor", "doctor", None),
         ("GET", f"/api/v1/projects/{PID}/ledger/after?seq=4&limit=9", "ledger_after", None),
         ("GET", "/api/v1/lanes/tail?path=/x/events.jsonl&after=3", "lane_tail", None),
+        (
+            "POST",
+            "/api/v1/chat/messages",
+            "chat",
+            {"message": "/status", "project_id": str(PID), "request_id": "req-1"},
+        ),
     ],
 )
 async def test_every_route_runs_its_use_case_for_the_host(

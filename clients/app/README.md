@@ -1,6 +1,25 @@
 <!-- Made with ❤️ by [Vibey](https://the-vibey-project.github.io/vibey/), Developed by [Adam Matthew Steinberger](https://vibewithadam.matthewsteinberger.com/) ([@adammatthewsteinberger](https://github.com/adammatthewsteinberger/)). -->
 # krypton for iOS, Android and the web
 
+> **Bottom Line Up Front (BLUF) — How to install and open krypton on Android, iOS, and the Web (no coding experience needed):**
+>
+> Make sure a vibey hub is running on your computer (`curl -fsSL https://raw.githubusercontent.com/the-vibey-project/vibey/main/scripts/install.sh | sh -s -- --with-krypton && vibey hub start`). Then install the app on your device:
+>
+> - **Web Browser (any computer or phone browser — Safari, Chrome, Firefox, Edge):**
+>   1. Download **`krypton-web-<version>.tar.gz`** from [GitHub Releases](https://github.com/the-vibey-project/vibey/releases) (or [krypton-nightly](https://github.com/the-vibey-project/vibey/releases/tag/krypton-nightly)).
+>   2. In Terminal, unpack and serve it:
+>      ```bash
+>      mkdir -p ~/krypton-web && tar -xzf ~/Downloads/krypton-web-*.tar.gz -C ~/krypton-web && python3 -m http.server 8000 -d ~/krypton-web
+>      ```
+>   3. Open **[http://localhost:8000](http://localhost:8000)** in your browser. It opens directly into the **Chat** tab.
+> - **Android Phone or Tablet (`.apk`):**
+>   1. On your Android device, open [GitHub Releases](https://github.com/the-vibey-project/vibey/releases) and tap **`krypton-android-<version>.apk`** to download it.
+>   2. Tap the downloaded file, allow **Install unknown apps** if Android asks, and tap **Install** (or from a computer with USB debugging: `adb install krypton-android-<version>.apk`).
+> - **iOS (iPhone or iPad):**
+>   - **Release build (`.ipa`):** When `EXPO_TOKEN` is configured, each release builds the signed `krypton-ios-<version>.ipa` for Apple **TestFlight / App Store** distribution.
+>   - **Instant run with Expo Go (no Apple Developer account needed):** Install **Expo Go** from the App Store on your iPhone, then on your computer in `clients/app` run `npm ci && npx expo start` and scan the QR code with your iPhone Camera.
+> - **Want the other krypton interfaces too (Desktop on macOS & Linux, VS Code extension, or `vibey connect` for Claude Code / Codex)?** See [docs/guides/install.md](../../docs/guides/install.md) and [docs/guides/downloads.md](../../docs/guides/downloads.md).
+
 One Expo (SDK 57, Expo Router, TypeScript strict) app over the vibey hub (`vibey serve`,
 [hub API](../../docs/reference/hub-api.md), ADR-0068). It reads `@vibey/core` and the design
 tokens from source, and keeps its own lockfile outside the npm workspace.
@@ -12,10 +31,13 @@ npm run coverage    # src/core held to 100%
 npx expo start --web
 ```
 
-- `src/core/` — pure logic, each class with its interface beside it: the hub client, pairing
-  offers, the device policy (a device never declares paid use, lifts a cap or picks ULTRA
-  without one), settings, the stable/nightly identities, presenters and the screen table.
-- `src/screens/`, `src/ui/` — the screens, the Kr-84 atom mark and the kit.
+- `src/core/` — pure logic, each class with its interface beside it: the hub client, the chat
+  model (`/` slash-command table, completion, `POST /api/v1/chat/messages` turn parser and
+  spend-gate badges, ADR-0100), pairing offers, the device policy (a device never declares paid
+  use, lifts a cap or picks ULTRA without one), settings, the stable/nightly identities,
+  presenters and the screen table.
+- `src/screens/`, `src/ui/` — the screens (with **Chat** as the landing tab), the Kr-84 atom
+  mark and the kit.
 - `app/` — the routes only.
 
 ## The hub on your computer

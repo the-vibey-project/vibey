@@ -1,5 +1,14 @@
 # System requirements
 
+> **Bottom Line Up Front (BLUF) — Ready to install vibey and every krypton interface?**
+>
+> - **One-line install (`vibey` engine + `krypton` browser launcher on macOS & Linux):**
+>   ```bash
+>   curl -fsSL https://raw.githubusercontent.com/the-vibey-project/vibey/main/scripts/install.sh | sh -s -- --with-krypton
+>   vibey connect --yes   # plug vibey into Claude Code, Codex, Cursor, VS Code, Claude Desktop & Gemini CLI
+>   ```
+> - **Every krypton client (Desktop `.dmg` for macOS Apple silicon, Flatpak & Ubuntu `.tar.gz` for Linux, VS Code `.vsix` & Open VSX extension, Web app bundle, and Android `.apk` & iOS `.ipa` mobile apps):** Follow the step-by-step beginner instructions in [Install, copy, reinstall, uninstall](../guides/install.md) and [Downloads](../guides/downloads.md).
+
 What a machine needs to run vibey and its krypton clients, and how each figure is known.
 The tables on this page are **generated**: `scripts/minimum_specs.py` writes them from the
 committed evidence record,

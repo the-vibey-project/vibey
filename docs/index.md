@@ -40,7 +40,7 @@ clients; and industry. Each audience is meant to have its own demo; the non-prof
 - **The record cannot be quietly rewritten.** The database refuses every update and delete to the ledger ([ADR-0055](architecture/decisions/0055-the-ledger-is-append-only-by-the-database.md)), and a SHA-256 hash chain over its events makes any edit visible ([`ledger_chain.py`](https://github.com/the-vibey-project/vibey/blob/develop/src/vibey/domain/ledger_chain.py)). **See one for yourself in the [ledger explorer](explorer/index.md)**: a public, searchable view of a real project's ledger, where your browser checks each record's digest.
 - **Local first, paid by choice.** The default engine runs GPT-OSS 20B on your own machine through Ollama ([ADR-0064](architecture/decisions/0064-gptossloop-is-the-sovereign-engine.md)); a paid engine runs only when no local one can ([ADR-0038](architecture/decisions/0038-local-engines-are-preferred-first.md)).
 - **You decide what matters.** Design, review and deployment wait for your recorded answer, and a waiting question parks its job instead of blocking a worker ([ADR-0009](architecture/decisions/0009-human-gates-are-parked-jobs.md)).
-- **Held to gates it cannot talk its way past.** vibey's four code layers each need 100% branch coverage to merge ([ADR-0023](architecture/decisions/0023-four-layers-four-floors.md)), every hard call is argued in a [decision record](https://github.com/the-vibey-project/vibey/tree/develop/docs/architecture/decisions/) (98 ADRs), and releases publish through PyPI trusted publishing with no stored token ([`vibey-engine.yml`](https://github.com/the-vibey-project/vibey/blob/develop/.github/workflows/vibey-engine.yml)).
+- **Held to gates it cannot talk its way past.** vibey's four code layers each need 100% branch coverage to merge ([ADR-0023](architecture/decisions/0023-four-layers-four-floors.md)), every hard call is argued in a [decision record](https://github.com/the-vibey-project/vibey/tree/develop/docs/architecture/decisions/) (100 ADRs), and releases publish through PyPI trusted publishing with no stored token ([`vibey-engine.yml`](https://github.com/the-vibey-project/vibey/blob/develop/.github/workflows/vibey-engine.yml)).
 
 **See a real ledger** — no install, no account: [open the ledger explorer](explorer/index.md), search every public decision, finding and phase change of a real project, and check each record yourself.
 
@@ -48,8 +48,13 @@ clients; and industry. Each audience is meant to have its own demo; the non-prof
 
 ```bash
 uv tool install vibey-engine   # or: pipx install vibey-engine
+# or, with nothing installed yet — installs vibey AND krypton (also reinstalls and repairs):
+# curl -fsSL https://raw.githubusercontent.com/the-vibey-project/vibey/main/scripts/install.sh | sh -s -- --with-krypton
 vibey doctor                   # checks engines, local PostgreSQL, and the ledger guard
+vibey connect --yes            # plug vibey into Claude Code, Codex, Cursor, VS Code, Claude Desktop & Gemini CLI
 ```
+
+**Install every krypton interface (Desktop, Mobile, Web, VS Code, Browser & Chat MCP) — Bottom Line Up Front:** jump straight to [Install](#install) or the [step-by-step install guide](guides/install.md) and [downloads page](guides/downloads.md) for copy-and-paste instructions for every platform (macOS, Ubuntu, Fedora, Arch, Flatpak, VS Code, VSCodium, Cursor, Android, iOS, and Web), written so anyone can install everything regardless of coding experience.
 
 The full setup is under [Install](#install), then [Quickstart](#quickstart). Came with a
 specific problem? [What do you want to do?](guides/outcomes/index.md) answers six,
@@ -100,6 +105,25 @@ in one vendor's chat session.
 | Done marker | Each loop's own marker (`CLAUDELOOP_TASK_FULLY_COMPLETE`, `QWENLOOP_TASK_FULLY_COMPLETE`, etc.) |
 
 ## Install
+
+> **Bottom Line Up Front (BLUF) — How to install vibey and every krypton interface on any platform (no coding experience needed):**
+>
+> *Never used a terminal?* On **macOS**, press **Cmd + Space**, type **Terminal**, and press **Enter**. On **Linux**, press the **Super (Windows) key**, type **Terminal**, and press **Enter**. Copy any command below, paste it into the window, and press **Enter**.
+>
+> | What you want to install | Platform | Exact command or click-by-click steps |
+> |---|---|---|
+> | **1. Everything on your computer at once** (`vibey` engine + `krypton` browser launcher) | macOS & Linux | `curl -fsSL https://raw.githubusercontent.com/the-vibey-project/vibey/main/scripts/install.sh \| sh -s -- --with-krypton` |
+> | **2. Your existing AI chat / IDE (`vibey connect` MCP driver)** | Claude Code, Claude Desktop, Codex, Cursor, VS Code, Gemini CLI | Run `vibey connect --yes` in Terminal. Then open your AI chat and ask: *"What vibey projects and gates are open?"* |
+> | **3. krypton browser launcher (`krypton-app`)** | macOS & Linux | Run `uv tool install krypton-app` (or `pip install krypton-app`), then type `krypton` and press Enter — it starts the local hub and opens it in your browser. |
+> | **4. krypton desktop app (native chat-first app)** | **macOS 15+ (Apple silicon)** | 1. Download `krypton-desktop-<version>-macos-arm64.dmg` from [GitHub Releases](https://github.com/the-vibey-project/vibey/releases) (or [krypton-nightly](https://github.com/the-vibey-project/vibey/releases/tag/krypton-nightly)).<br>2. Double-click the `.dmg` and drag **krypton** to **Applications**.<br>3. Run `xattr -dr com.apple.quarantine /Applications/krypton.app` in Terminal (or open it once and click **Open Anyway** in **System Settings → Privacy & Security**). |
+> | **4. krypton desktop app (native chat-first app)** | **Linux (any distro: Ubuntu, Fedora, Arch — Flatpak)** | Download `krypton-desktop-<version>-linux-x86_64.flatpak` (or `aarch64`) from [GitHub Releases](https://github.com/the-vibey-project/vibey/releases) and run:<br>`flatpak install --user krypton-desktop-<version>-linux-x86_64.flatpak`<br>Launch with: `flatpak run io.github.the_vibey_project.krypton` |
+> | **4. krypton desktop app (native chat-first app)** | **Linux (Ubuntu 24.04+ native tarball)** | Download `krypton-desktop-<version>-linux-x86_64.tar.gz` (or `aarch64`) from [GitHub Releases](https://github.com/the-vibey-project/vibey/releases) and run:<br>`sudo apt update && sudo apt install -y libgtk-4-1 libadwaita-1-0 libsoup-3.0-0 libjson-glib-1.0-0 libavahi-client3 libavahi-glib1 glib-networking`<br>`sudo tar -xzf krypton-desktop-<version>-linux-x86_64.tar.gz -C /`<br>Launch with: `krypton-desktop` |
+> | **5. krypton for VS Code / VSCodium / Cursor** | macOS & Linux | **VSCodium / Open VSX editors:** `codium --install-extension the-vibey-project.krypton`<br>**VS Code / Cursor:** Download `krypton-vscode-<version>.vsix` from [GitHub Releases](https://github.com/the-vibey-project/vibey/releases) and run `code --install-extension krypton-vscode-<version>.vsix` (or in VS Code click **Extensions → `…` → Install from VSIX…**). |
+> | **6. krypton web app (browser UI)** | Any browser (macOS, Linux, mobile) | Download `krypton-web-<version>.tar.gz` from [GitHub Releases](https://github.com/the-vibey-project/vibey/releases) and run:<br>`mkdir krypton-web && tar -xzf krypton-web-<version>.tar.gz -C krypton-web && python3 -m http.server -d krypton-web`<br>Then open `http://localhost:8000` in your browser. |
+> | **7. krypton mobile app (Android & iOS)** | **Android & iOS** | **Android:** Download `krypton-android-<version>.apk` from [GitHub Releases](https://github.com/the-vibey-project/vibey/releases) on your phone and tap it to install (or from a computer: `adb install krypton-android-<version>.apk`).<br>**iOS:** Installed via TestFlight / App Store from the signed `krypton-ios-<version>.ipa`, or run live in Expo Go during development (`cd clients/app && npm ci && npx expo start`). |
+> | **Uninstall any krypton app cleanly** | macOS & Linux | `curl -fsSL https://raw.githubusercontent.com/the-vibey-project/vibey/main/scripts/uninstall-krypton.sh \| sh -s -- --yes` (removes krypton interfaces; never touches `vibey-engine`). |
+>
+> For complete beginner-friendly walkthroughs of every platform, see [Install, copy, reinstall, uninstall](guides/install.md) and [Downloads](guides/downloads.md).
 
 Requires **Python 3.12+** and **PostgreSQL**. Windows is not a supported
 target. Every database-backed command reads the connection string from
@@ -174,13 +198,13 @@ packets to BUILD prompts. Missing tools, timeouts, low-confidence retrieval, and
 insufficient budgets all fall back to the original prompt. The feature is off by
 default, and wind-down prompts are never modified (ADR-0031).
 
-The same tree is a Claude Code plugin marketplace — every plugin in the family, the 148
+The same tree is a Claude Code plugin marketplace — every plugin in the family, the 149
 skills plugins and vibey-gh's four, from one address and nothing else:
 
 ```text
 /plugin marketplace add the-vibey-project/vibey
 /plugin install security-principles@vibey
-/plugin                                    # browse all 152
+/plugin                                    # browse all 153
 ```
 
 The root manifest is rendered from the workspace members by `vibey-gh marketplace` and
@@ -191,13 +215,14 @@ ships as one distribution ([ADR-0037](architecture/decisions/0037-one-distributi
 
 ```bash
 export VIBEY_PG_URL=postgresql://user@localhost:5432/vibey
+vibey connect --yes                          # plug vibey into Claude Code, Codex, Cursor, VS Code, Claude Desktop & Gemini CLI over MCP
 vibey new my-app --repo ~/src/my-app \
   --max-cycle-dollars 15                     # real budget brake, enforced from the ledger
 vibey doctor --conformance --record          # verify each engine's contract, persist health for the latest project
 vibey worker --provider claudeloop \
   --engines claudeloop,codexloop -j 2        # live DESIGN provider; unattended build across the pool
 
-# When vibey parks for your input (design gates, review, budget grants):
+# Drive everything from your chat/IDE session (via MCP or krypton chat), or from the CLI:
 vibey gates                                  # each open gate, its prompt, and the command that answers it
 vibey answer <gate-id> --defaults            # accept the interview defaults, or:
 vibey answer <gate-id> --raw '{"max_dollars": 25}'   # raise a tripped budget cap
@@ -206,7 +231,7 @@ vibey answer <gate-id> --verdict accept      # review demo
 vibey answer <gate-id> --choice local_only   # decline deployment → DONE (local)
 ```
 
-`vibey doctor --record` needs a project to record against, so run it after
+`vibey connect` registers `vibey mcp` with your frontier LLM and IDE clients so you can inspect status, answer non-spending gates, and start or pause work directly from chat (ADR-0100). `vibey doctor --record` needs a project to record against, so run it after
 `vibey new`. `vibey worker` defaults to `--provider gptossloop`, the sovereign
 DESIGN interview and BUILD decomposition on a local model; pass
 `--provider claudeloop` for the same on a paid engine, or `--provider scripted`
@@ -227,6 +252,8 @@ Every command's flags and defaults are in the
 
 | Command | What it does |
 |---|---|
+| `vibey connect` | Register `vibey mcp` in Claude Code, Claude Desktop, Codex, Cursor, VS Code and Gemini CLI (`--dry-run`, `--yes`, `--client`, `--list`; ADR-0100). |
+| `vibey mcp` | Run the stdio Model Context Protocol (MCP) server as the scoped `agent` principal over the hub API (ADR-0100). |
 | `vibey doctor` | Pre-flight: engine install state, versions, auth; `--conformance` runs the 9-check suite, `--record` persists health, `--cluster` runs the in-cluster preflight. |
 | `vibey new` | Create a project and enqueue its first DESIGN interview. |
 | `vibey worker` | Long-running worker: dispatches jobs across every phase (`--provider scripted\|claudeloop\|gptossloop`, `--engines`, `-j`, `--azure memory\|az`). |
@@ -483,7 +510,7 @@ welcome on [Discord](https://discord.gg/Qvu8aYnVS) and in
 | [Phase protocols](https://github.com/the-vibey-project/vibey/blob/main/docs/plans/phase-protocols.md) | What all six phases do, turn by turn |
 | [Implementation plan](https://github.com/the-vibey-project/vibey/blob/main/docs/plans/implementation-plan.md) | Milestone-by-milestone, test-first task breakdown |
 | [CLAUDE.md](https://github.com/the-vibey-project/vibey/blob/main/CLAUDE.md) | The short facts file every coding agent working on vibey loads first: non-negotiables, layer map, gate commands |
-| [Decision records](https://github.com/the-vibey-project/vibey/blob/main/docs/architecture/decisions/) | Why each hard call was made (98 ADRs) |
+| [Decision records](https://github.com/the-vibey-project/vibey/blob/main/docs/architecture/decisions/) | Why each hard call was made (100 ADRs) |
 
 ## Status
 

@@ -14,6 +14,14 @@ declare function acquireVsCodeApi(): { postMessage(message: unknown): void };
     usage: string;
     description: string;
   }
+  interface PanelGate {
+    gateId: string;
+    kind: string;
+    prompt: string;
+    projectName: string;
+    isSpend: boolean;
+    choices: { label: string; command: string }[];
+  }
   type PanelItem =
     | { id: number; kind: "assistant"; text: string }
     | { id: number; kind: "tool-call"; name: string; detail?: string }
@@ -29,7 +37,8 @@ declare function acquireVsCodeApi(): { postMessage(message: unknown): void };
     takesFollowUps?: boolean;
   }
   type HostMessage =
-    | ({ type: "init"; title: string; slash: SlashCommand[]; canPasteImage: boolean; items: PanelItem[] } & StatusFields)
+    | ({ type: "init"; title: string; slash: SlashCommand[]; canPasteImage: boolean; items: PanelItem[]; gates?: PanelGate[] } & StatusFields)
+    | { type: "gates"; gates: PanelGate[] }
     | { type: "items"; items: PanelItem[] }
     | { type: "patch"; patch: PanelPatch }
     | ({ type: "status" } & StatusFields)
@@ -38,9 +47,11 @@ declare function acquireVsCodeApi(): { postMessage(message: unknown): void };
 
   const vscode = acquireVsCodeApi();
   const $ = <T extends HTMLElement = HTMLElement>(id: string): T => document.getElementById(id) as T;
+  const gatesBox = $("gates");
   const itemsBox = $("items");
   const input = $<HTMLTextAreaElement>("input");
   const completions = $("completions");
+  const chipsBox = $("chips");
   const statusLine = $("status");
   const title = $("title");
   const banner = $("banner");
@@ -64,7 +75,7 @@ declare function acquireVsCodeApi(): { postMessage(message: unknown): void };
   let chosen = -1;
 
   const WORDS: Readonly<Record<string, string>> = {
-    idle: "Describe a task to start.",
+    idle: "Ready to chat, answer gates, or run a task.",
     queued: "Waiting its turn for the model.",
     preparing: "Making its copy of the folder.",
     waiting: "Waiting for the model.",
@@ -73,6 +84,41 @@ declare function acquireVsCodeApi(): { postMessage(message: unknown): void };
     finishing: "Finishing: committing the work on its branch.",
     finished: "Finished.",
     lane: "Watching a lane started elsewhere (read-only).",
+  };
+
+  const renderGates = (gates: PanelGate[]): void => {
+    gatesBox.replaceChildren();
+    gatesBox.hidden = gates.length === 0;
+    for (const gate of gates) {
+      const card = document.createElement("div");
+      card.className = `gate-card${gate.isSpend ? " spend" : ""}`;
+      const header = document.createElement("div");
+      header.className = "gate-header";
+      const badge = document.createElement("span");
+      badge.className = `gate-badge${gate.isSpend ? " spend" : ""}`;
+      badge.textContent = gate.isSpend ? "SPEND GATE · requires spend scope" : "Gate · answer scope";
+      const meta = document.createElement("span");
+      meta.className = "gate-meta";
+      meta.textContent = `${gate.projectName} · ${gate.kind}`;
+      header.append(badge, meta);
+      const prompt = document.createElement("div");
+      prompt.className = "gate-prompt";
+      prompt.textContent = gate.prompt;
+      const actions = document.createElement("div");
+      actions.className = "gate-actions";
+      for (const choice of gate.choices) {
+        const button = document.createElement("button");
+        button.type = "button";
+        button.className = gate.isSpend ? "quiet spend-choice" : "quiet";
+        button.textContent = choice.label;
+        button.addEventListener("click", () => {
+          vscode.postMessage({ type: "send", text: choice.command });
+        });
+        actions.append(button);
+      }
+      card.append(header, prompt, actions);
+      gatesBox.append(card);
+    }
   };
 
   const line = (kind: string, text: string, extra?: string): HTMLElement => {
@@ -276,6 +322,19 @@ declare function acquireVsCodeApi(): { postMessage(message: unknown): void };
   buttons.discard.addEventListener("click", press("vibey.discardRun"));
   $("endNoCap").addEventListener("click", press("vibey.endNoCap"));
 
+  for (const button of Array.from(chipsBox.querySelectorAll<HTMLButtonElement>("button.chip"))) {
+    button.addEventListener("click", () => {
+      const text = button.dataset["slash"] ?? "";
+      if (text.endsWith(" ")) {
+        input.value = text;
+        showCompletions();
+        input.focus();
+      } else if (text !== "") {
+        vscode.postMessage({ type: "send", text });
+      }
+    });
+  }
+
   /** Light, Dark or System, resolved by the extension; ULTRA and UNLIMITED SPEND are never hidden. */
   const look = (message: Extract<HostMessage, { type: "look" }>): void => {
     const root = document.documentElement;
@@ -312,9 +371,13 @@ declare function acquireVsCodeApi(): { postMessage(message: unknown): void };
         title.textContent = message.title;
         slash = message.slash;
         canPasteImage = message.canPasteImage;
+        renderGates(message.gates ?? []);
         replaceItems(message.items);
         setStatus(message.status, message.forceAfterMs, message.finishedActions, message.takesFollowUps);
         input.focus();
+        break;
+      case "gates":
+        renderGates(message.gates);
         break;
       case "items":
         replaceItems(message.items);

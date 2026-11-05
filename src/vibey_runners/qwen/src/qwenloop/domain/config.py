@@ -16,7 +16,9 @@ DEFAULT_ENDPOINT_BASE_URL = "http://127.0.0.1:11434/v1"
 #: This era's default free model (sub-doctrine 8.d): GPT-OSS 20B, under the name Ollama
 #: gives it -- the model `gptossloop` asks an endpoint for. The pinned llama.cpp profiles
 #: are a separate choice and keep their own model.
-DEFAULT_ENDPOINT_MODEL = "gpt-oss:20b"
+#: The sovereign default build (Heretic v2 of GPT-OSS 20B, ADR-0099). The same name as vibey's
+#: `domain/sovereign_model.py`; this tenant cannot import vibey, so a test pins the two together.
+DEFAULT_ENDPOINT_MODEL = "hf.co/mradermacher/gpt-oss-20b-heretic-v2-GGUF:MXFP4_MOE"
 #: The Qwen model `qwenloop` asks an endpoint for (ADR-0064): Qwen3 14B, under the name
 #: Ollama gives it. Qwen3 rather than Qwen2.5-Coder because this runner drives the model
 #: through native tool calls, and Qwen2.5-Coder 14B on Ollama writes its calls out as text.

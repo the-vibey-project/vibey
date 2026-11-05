@@ -73,7 +73,11 @@ from vibey.domain.run_ownership import RunOwnership
 from vibey.infrastructure.db.engine_health_repository import PostgresEngineHealthRepository
 from vibey.infrastructure.db.ledger_search_repository import PostgresLedgerSearchRepository
 from vibey.infrastructure.engines.descriptors import ALL_DESCRIPTORS
-from vibey.infrastructure.hub.authenticator import FirstOf, LocalTokenAuthenticator
+from vibey.infrastructure.hub.authenticator import (
+    AgentTokenAuthenticator,
+    FirstOf,
+    LocalTokenAuthenticator,
+)
 from vibey.infrastructure.hub.devices import DeviceAuthenticator, DeviceRegistry
 from vibey.infrastructure.hub.exposure import HUB_EXPOSURE
 from vibey.infrastructure.hub.interfaces.app_interface import HubAppFactoryInterface
@@ -371,6 +375,7 @@ class ServeCommand:
         store = LocalTokenStore(settings.state_dir)
         try:
             token = store.token()
+            agent = store.agent_token() if settings.agent_scopes else None
             # Workflows request ids are minted under this key, so a device reads back only
             # the runs it started; kept on disk, a restarted hub still recognises them.
             runs = RunOwnership(store.run_key())
@@ -393,9 +398,14 @@ class ServeCommand:
             if settings.lan
             else None
         )
-        authenticator = FirstOf(
-            [LocalTokenAuthenticator(token), DeviceAuthenticator(registry, clock=self._now)]
-        )
+        known: list[HubAuthenticatorInterface] = [
+            LocalTokenAuthenticator(token),
+            DeviceAuthenticator(registry, clock=self._now),
+        ]
+        if agent is not None:
+            # A host LLM's MCP server (ADR-0100): its own key, and only the scopes declared.
+            known.append(AgentTokenAuthenticator(agent, settings.agent_scopes))
+        authenticator = FirstOf(known)
         async with self._open_app() as resources:
             await live.start()
             probes = CliHubProbes(

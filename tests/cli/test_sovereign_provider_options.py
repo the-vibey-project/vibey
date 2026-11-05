@@ -27,6 +27,7 @@ from vibey.bootstrap import build_app, database_url
 from vibey.cli.main import app
 from vibey.domain.job import idempotency_key
 from vibey.domain.phase import Phase
+from vibey.domain.sovereign_model import DEFAULT_SOVEREIGN_TAG
 from vibey.domain.spec import AcceptanceCriterion, DesignSpec
 
 pytestmark = pytest.mark.integration
@@ -254,7 +255,7 @@ def test_an_invalid_plan_leaves_nothing_enqueued(tmp_path: Path) -> None:
         res = runner.invoke(app, ["worker", "--once", "--provider", "gptossloop"])
 
     assert res.exit_code == 0, res.output
-    assert ollama.requests[0]["model"] == "gpt-oss:20b"
+    assert ollama.requests[0]["model"] == DEFAULT_SOVEREIGN_TAG
     rows = asyncio.run(
         _rows(
             "SELECT kind, state, last_error FROM job WHERE project_id = $1 ORDER BY created_at",

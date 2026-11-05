@@ -21,6 +21,10 @@ class LocalTokenStoreInterface(Protocol):
         """The token, created 0600 on first call; refuses a file others can read."""
         ...
 
+    def agent_token(self) -> str:
+        """The host LLM's token (`agent.token`), created 0600 on first call; same checks."""
+        ...
+
     def run_key(self) -> bytes:
         """The 32-byte key workflows request ids are minted under, created 0600 on first
         call; refuses a file others can read, and `ValueError` for one of another length."""

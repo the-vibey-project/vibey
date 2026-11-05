@@ -12,7 +12,7 @@ and proves the result passes its own gates, without publishing anything.
 
 - **Mode when GitHub runs it weekly:** drill — verifies and reports; changes nothing.
 - **What it is for:** Reconstitute the project from any surviving copy if the forge, the runner or the operator is gone.
-- **Decision records:** 98, the newest 0098 — The VS Code verification is done by a large model and reviewed by the operator.
+- **Decision records:** 100, the newest 0100 — Host-driven MCP interface and chat-first krypton surfaces.
 <!-- END GENERATED continuation:state -->
 
 ## The prompt

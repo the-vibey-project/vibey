@@ -1,6 +1,47 @@
 {
   "components": {
     "schemas": {
+      "ChatMessageBody": {
+        "additionalProperties": false,
+        "description": "The body of `POST /api/v1/chat/messages`: a chat turn or `/` command.",
+        "properties": {
+          "message": {
+            "description": "A `/` command (e.g. `/status`, `/gates`, `/new demo build a cli`) or a question.",
+            "title": "Message",
+            "type": "string"
+          },
+          "project_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The active project UUID in the chat session, if one is selected.",
+            "title": "Project Id"
+          },
+          "request_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Optional idempotency key when answering a gate from chat.",
+            "title": "Request Id"
+          }
+        },
+        "required": [
+          "message"
+        ],
+        "title": "ChatMessageBody",
+        "type": "object"
+      },
       "ClaimBody": {
         "additionalProperties": false,
         "description": "The body of `POST /api/v1/pairing/claim` (a device, before it holds a key).",
@@ -261,6 +302,68 @@
         "summary": "vibey_bootstrap's metrics snapshot.",
         "tags": [
           "health"
+        ]
+      }
+    },
+    "/api/v1/chat/messages": {
+      "post": {
+        "operationId": "chat_messages_api_v1_chat_messages_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ChatMessageBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "description": "The request proves no principal."
+          },
+          "403": {
+            "description": "The principal's scopes do not permit this."
+          },
+          "411": {
+            "description": "A body was sent without a Content-Length."
+          },
+          "413": {
+            "description": "The body is larger than the hub reads."
+          },
+          "421": {
+            "description": "The Host header is not one this hub answers."
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          },
+          "429": {
+            "description": "Too many requests."
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Run a chat command or question over the hub's tool catalogue.",
+        "tags": [
+          "chat"
         ]
       }
     },

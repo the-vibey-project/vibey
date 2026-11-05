@@ -18,7 +18,8 @@ and what only a person with a device can say. An unrun check is unknown, never p
 ## What is checked automatically, and how far that goes
 
 `test/ui/accessibility.test.tsx` renders every screen with data that makes it show its controls
-(Home with a project card and its actions, Gates with a verdict, a question and a spending
+(Chat with project sessions, quick commands, inline gate cards and the slash-command composer,
+Home with a project card and its actions, Gates with a verdict, a question and a spending
 gate, Effort, Budgets, Doctor, Settings, Start, Pairing, Devices, Run on GitHub, Lanes) and
 reads the rendered tree. It fails when a pressable, an input or a switch has no name, or a
 pressable has no role. It also fails if a screen shows fewer controls than it should, so a screen

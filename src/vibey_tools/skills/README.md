@@ -2,7 +2,7 @@
 
 > **Now part of the vibey monorepo.** `vibey-skills` lives in [the-vibey-project/vibey](https://github.com/the-vibey-project/vibey) at [`src/vibey_tools/skills`](https://github.com/the-vibey-project/vibey/tree/develop/src/vibey_tools/skills) (vibey ADR-0021). It is not published on its own any more: it ships inside the [`vibey-engine`](https://pypi.org/project/vibey-engine/) package, so `pip install vibey-engine` installs it (vibey ADR-0037).
 
-> **148 Claude Code plugins. 805 Agent Skills.** Long-form, source-cited practitioner
+> **149 Claude Code plugins. 806 Agent Skills.** Long-form, source-cited practitioner
 > references for the parts of software engineering an agent is most likely to get
 > confidently wrong — security, compliance, Azure, identity automation (Okta),
 > DevSecOps, AI/ML, data engineering, frontend, mobile, desktop, smart TV, game development, UI/UX design, systems programming, embedded and IoT, blockchain, quantum computing, penetration testing, architecture, quality
@@ -41,7 +41,7 @@ fast *and* correct. These skills are the reference layer for that.
 /plugin                                    # browse everything
 ```
 
-That one address serves every plugin in the family: these 148 and vibey-gh's four. The
+That one address serves every plugin in the family: these 149 and vibey-gh's four. The
 root manifest is rendered from this tree's own `.claude-plugin/marketplace.json` by
 `vibey-gh marketplace` (vibey ADR-0034), so nothing here is duplicated by hand.
 
@@ -57,7 +57,7 @@ rendered from.
 ```bash
 uv tool install vibey-engine                      # or: pipx install vibey-engine / pip install vibey-engine
 vibey-skills list
-vibey-skills install --all                 # copy all 805 skills into ~/.claude/skills
+vibey-skills install --all                 # copy all 806 skills into ~/.claude/skills
 vibey-skills install security-principles azure-cloud-infra
 ```
 
@@ -245,6 +245,7 @@ own `README.md` with the full skill list and trigger descriptions.
 | [trading-mechanics](https://github.com/the-vibey-project/vibey/tree/develop/src/vibey_tools/skills/plugins/trading-mechanics) | 0.1.0 | finance | 5 | What the retail outcome literature shows, order books & price formation, order types & slippage, asset classes, options/futures & the Greeks, technical analysis assessed honestly, factor approaches after costs, swing & day trading constraints, real vs apparent arbitrage, forex leverage & carry, AMMs/impermanent loss/MEV, position sizing & ruin, backtesting pitfalls, psychology & harm — mechanics, not advice |
 | [trip-planning-and-travel-strategies](https://github.com/the-vibey-project/vibey/tree/develop/src/vibey_tools/skills/plugins/trip-planning-and-travel-strategies) | 0.2.0 | travel | 6 | Trip type & purpose, choosing a destination, constraints-first planning, seasonality, budgeting, how airfare pricing actually works, fare buckets & advance purchase, flight routing & minimum connection times, points & miles honestly, accommodation, ground transport, booking order & optionality, passport validity & visas, travel insurance exclusions, health, safety in proportion, money abroad & fees, itinerary pacing, packing, jet lag, eSIMs & offline navigation, language & culture, food & water, group travel, long-term travel, handling disruption & passenger rights |
 | [ui-ux-design-principles](https://github.com/the-vibey-project/vibey/tree/develop/src/vibey_tools/skills/plugins/ui-ux-design-principles) | 0.1.0 | frontend | 5 | Perception & cognition, heuristics, IA & navigation, interaction per form factor, layout, visual design, design tokens, HIG/Material/Fluent, WCAG 2.2/EAA/APCA, UX writing, research, dark patterns, AI-era UI |
+| [vibey](https://github.com/the-vibey-project/vibey/tree/develop/src/vibey_tools/skills/plugins/vibey) | 0.1.0 | developer-tools | 1 | Drive vibey from Claude Code, Codex, Cursor, VS Code or any MCP chat client: MCP server wiring (`vibey mcp`) and the host-driven operator workflow skill |
 | [vibey-bootstrap](https://github.com/the-vibey-project/vibey/tree/develop/src/vibey_tools/skills/plugins/vibey-bootstrap) | 0.3.0 | cloud-infrastructure | 4 | The [vibey-bootstrap](https://github.com/the-vibey-project/vibey/tree/develop/src/vibey_tools/bootstrap) library (v4.0.0, formerly `azure-bootstrap`): 4-phase bootstrap, v2 primitives, ten logging transports, subpackages, v3 DB/email/HTTP/AKS/governance/scaffold, TypeScript integration |
 | [video-game-development](https://github.com/the-vibey-project/vibey/tree/develop/src/vibey_tools/skills/plugins/video-game-development) | 0.1.0 | game-development | 5 | Engines, game loop, ECS, rendering, physics, animation, audio, gameplay AI, netcode (rollback/prediction), pipelines, frame budgets, game feel, shipping, production & business |
 | [vr-ar-development](https://github.com/the-vibey-project/vibey/tree/develop/src/vibey_tools/skills/plugins/vr-ar-development) | 0.1.0 | xr | 5 | Motion-to-photon latency, cybersickness, vergence-accommodation conflict, presence, displays & optics, inside-out tracking, stereo rendering & reprojection, foveated rendering, hand tracking & locomotion, AR planes/meshing/anchors, OpenXR & WebXR, spatial audio, comfort & accessibility, 3D UX, frame budgeting |

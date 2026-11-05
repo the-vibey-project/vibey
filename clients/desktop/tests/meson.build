@@ -11,6 +11,7 @@ loops_golden = meson.current_source_dir() / '../../../tests/cli/golden/vibey-loo
 core_tests = [
   'accessible-names',
   'answer',
+  'chat',
   'commands',
   'discovery',
   'format',

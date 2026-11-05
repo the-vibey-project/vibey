@@ -7,6 +7,7 @@ import pytest
 
 from vibey.domain.config import ConfigError
 from vibey.domain.engine import Effort, EngineId
+from vibey.domain.sovereign_model import DEFAULT_SOVEREIGN_TAG
 from vibey.infrastructure.engines.descriptors import CLAUDELOOP, GPTOSSLOOP, QWENLOOP
 from vibey.infrastructure.engines.interfaces import (
     LocalEndpointEnvironmentInterface,
@@ -273,7 +274,7 @@ def test_vibey_ollama_url_becomes_each_runners_openai_compat_endpoint() -> None:
 
     assert endpoint.overlay_for(EngineId.GPTOSSLOOP) == {
         "GPTOSSLOOP_BASE_URL": "http://10.0.0.5:11434/v1",
-        "GPTOSSLOOP_MODEL": "gpt-oss:20b",
+        "GPTOSSLOOP_MODEL": DEFAULT_SOVEREIGN_TAG,
     }
     assert endpoint.overlay_for(EngineId.QWENLOOP) == {
         "QWENLOOP_BASE_URL": "http://10.0.0.5:11434/v1",
@@ -298,7 +299,7 @@ def test_what_the_operator_set_for_a_runner_directly_is_kept() -> None:
     }
 
     assert LocalEndpointEnvironment(environ).overlay_for(EngineId.GPTOSSLOOP) == {
-        "GPTOSSLOOP_MODEL": "gpt-oss:20b"
+        "GPTOSSLOOP_MODEL": DEFAULT_SOVEREIGN_TAG
     }
     assert LocalEndpointEnvironment(environ).overlay_for(EngineId.QWENLOOP) == {}
 
@@ -345,7 +346,7 @@ def test_without_the_endpoint_setting_vibey_hands_gptossloop_no_model() -> None:
 
 
 def test_with_the_endpoint_setting_gptossloops_model_is_the_one_the_overlay_hands_it() -> None:
-    assert LocalEndpointEnvironment(URL).model_for(EngineId.GPTOSSLOOP) == "gpt-oss:20b"
+    assert LocalEndpointEnvironment(URL).model_for(EngineId.GPTOSSLOOP) == DEFAULT_SOVEREIGN_TAG
     environ = {**URL, "VIBEY_OLLAMA_MODEL": "qwen3-coder"}
     assert LocalEndpointEnvironment(environ).model_for(EngineId.GPTOSSLOOP) == "qwen3-coder"
     chosen = LocalEndpointEnvironment(environ, model="gemma3:27b")

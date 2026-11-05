@@ -11,6 +11,7 @@ names = []            # extra Host names a request may use, e.g. "studio.local"
 state_dir = ""        # where the hub keeps its token and runtime file; "" = the default
 lane_roots = []       # where to look for lanes; [] = the directory `vibey serve` runs in
 projects_root = ""    # where a paired device may start projects (a folder per project); "" = nowhere
+agent_scopes = ["view", "answer", "run"]   # what a host LLM over MCP may do; [] = nothing
 ```
 
 A missing file or table declares nothing, so the hub stays on loopback. A table that is
@@ -27,11 +28,14 @@ from typing import Any, Final
 from platformdirs import user_state_dir
 
 from vibey.domain.config import ConfigError, parse_toml_string
+from vibey.domain.hub_scope import AGENT_DEFAULT_SCOPES, HubScope
 
 DEFAULT_PORT: Final = 8765
 """The port `vibey serve` listens on when `[hub] port` is not set."""
 
-KEYS: Final = frozenset({"lan", "port", "names", "state_dir", "lane_roots", "projects_root"})
+KEYS: Final = frozenset(
+    {"lan", "port", "names", "state_dir", "lane_roots", "projects_root", "agent_scopes"}
+)
 """Every key `[hub]` may carry."""
 
 
@@ -45,6 +49,7 @@ class HubSettings:
     state_dir: Path = field(default_factory=lambda: Path(user_state_dir("vibey")) / "hub")
     lane_roots: tuple[Path, ...] = ()
     projects_root: Path | None = None
+    agent_scopes: frozenset[HubScope] = AGENT_DEFAULT_SCOPES
 
 
 class HubSettingsLoader:
@@ -99,6 +104,7 @@ class HubSettingsLoader:
                 "hub.projects_root",
                 "must be an absolute path (or start with ~): a device must never reach a folder by a relative one",
             )
+        agent_scopes = self._agent_scopes(table.get("agent_scopes"))
         defaults = HubSettings()
         return HubSettings(
             lan=lan,
@@ -107,7 +113,22 @@ class HubSettingsLoader:
             state_dir=Path(state_dir).expanduser() if state_dir else defaults.state_dir,
             lane_roots=tuple(Path(root).expanduser() for root in lane_roots),
             projects_root=Path(projects_root).expanduser() if projects_root else None,
+            agent_scopes=agent_scopes,
         )
+
+    @staticmethod
+    def _agent_scopes(raw: object) -> frozenset[HubScope]:
+        """`[hub] agent_scopes`: absent means the default ceiling, an empty list means no
+        agent access at all, and a name the hub does not define is refused."""
+        if raw is None:
+            return AGENT_DEFAULT_SCOPES
+        if not isinstance(raw, list) or not all(isinstance(item, str) for item in raw):
+            raise ConfigError("hub.agent_scopes", "must be a list of scope names")
+        try:
+            return frozenset(HubScope(item.strip().lower()) for item in raw)
+        except ValueError as exc:
+            known = ", ".join(scope.value for scope in HubScope)
+            raise ConfigError("hub.agent_scopes", f"{exc}; the scopes are {known}") from exc
 
 
 HUB_SETTINGS: Final = HubSettingsLoader()

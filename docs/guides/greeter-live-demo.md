@@ -1,5 +1,14 @@
 # The greeter live demo: a real project, real engines, one forced rotation
 
+> **Bottom Line Up Front (BLUF) — Install vibey and every krypton interface before running the demo:**
+>
+> - **One-line install (`vibey` engine + `krypton` browser launcher on macOS & Linux):**
+>   ```bash
+>   curl -fsSL https://raw.githubusercontent.com/the-vibey-project/vibey/main/scripts/install.sh | sh -s -- --with-krypton
+>   vibey connect --yes   # plug vibey into Claude Code, Codex, Cursor, VS Code, Claude Desktop & Gemini CLI
+>   ```
+> - **Prefer a visual app while running the demo?** Install **krypton desktop** (macOS `.dmg` or Linux Flatpak / Ubuntu `.tar.gz`), **krypton for VS Code / VSCodium / Cursor**, **krypton web**, or **krypton mobile** (Android `.apk` & iOS) using the step-by-step instructions in [Install, copy, reinstall, uninstall](install.md) and [Downloads](downloads.md).
+
 This runbook drives one small project ("a CLI greeter") end to end on real
 `*loop` binaries: DESIGN through the interactive interview, BUILD on
 engine-selected sessions, REVIEW with real automated gates, and DONE(local).

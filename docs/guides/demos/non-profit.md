@@ -4,6 +4,15 @@ description: A walk-through for a small non-profit team that builds a volunteer 
 
 # The non-profit demo: a volunteer sign-up tool, a budget you set, a machine you own
 
+> **Bottom Line Up Front (BLUF) — How to install vibey and every krypton app (no coding experience needed):**
+>
+> - **Install `vibey` and `krypton` in one command (macOS & Linux):** Open **Terminal** and paste:
+>   ```bash
+>   curl -fsSL https://raw.githubusercontent.com/the-vibey-project/vibey/main/scripts/install.sh | sh -s -- --with-krypton
+>   vibey connect --yes
+>   ```
+> - **Want to use a desktop, browser, editor, or phone app instead of typing commands?** You can drive every step of this demo from **krypton desktop** (macOS `.dmg` or Linux Flatpak / Ubuntu `.tar.gz`), **krypton for VS Code / VSCodium / Cursor**, **krypton web**, or **krypton mobile** (Android & iOS). Follow the step-by-step beginner instructions in [Install, copy, reinstall, uninstall](../install.md) and [Downloads](../downloads.md).
+
 This is the second audience vibey names, after open-source developers
 ([ADR-0087](../../architecture/decisions/0087-the-six-audiences-in-order.md)). It follows
 one small, invented project, a page where volunteers pick a shift, from an empty machine

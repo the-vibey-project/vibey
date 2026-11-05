@@ -1,5 +1,15 @@
 # Contributing to vibey
 
+> **Bottom Line Up Front (BLUF) — Just want to install and use vibey and the krypton apps?**
+>
+> You do not need to clone the repository or write code to use vibey or any krypton interface:
+> - **One-line install (`vibey` engine + `krypton` browser launcher on macOS & Linux):**
+>   ```bash
+>   curl -fsSL https://raw.githubusercontent.com/the-vibey-project/vibey/main/scripts/install.sh | sh -s -- --with-krypton
+>   vibey connect --yes   # plug vibey into Claude Code, Codex, Cursor, VS Code, Claude Desktop & Gemini CLI
+>   ```
+> - **Every krypton app (Desktop `.dmg` for macOS Apple silicon, Flatpak & Ubuntu `.tar.gz` for Linux, VS Code `.vsix` & Open VSX extension, Web app, and Android `.apk` & iOS mobile apps):** Follow the step-by-step instructions for every skill level in [docs/guides/install.md](docs/guides/install.md) and [docs/guides/downloads.md](docs/guides/downloads.md).
+
 Thank you for considering a contribution. This document is meant to be
 command-level and specific — if something here is unclear or you hit a
 situation it doesn't cover, that's a bug in this document; please open an

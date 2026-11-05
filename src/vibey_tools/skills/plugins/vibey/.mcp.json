@@ -1,0 +1,8 @@
+{
+  "mcpServers": {
+    "vibey": {
+      "command": "vibey",
+      "args": ["mcp"]
+    }
+  }
+}

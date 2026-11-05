@@ -17,9 +17,10 @@ from fastapi import FastAPI
 
 from vibey.application.dto import HubPrincipal
 from vibey.domain.config import ConfigError
-from vibey.domain.hub_scope import HubScope
+from vibey.domain.hub_scope import AGENT_DEFAULT_SCOPES, HubScope
 from vibey.infrastructure.hub.authenticator import (
     HOST_PRINCIPAL,
+    AgentTokenAuthenticator,
     HubRequest,
     LocalTokenAuthenticator,
 )
@@ -390,3 +391,71 @@ def test_a_symlinked_token_is_never_followed(tmp_path: Path) -> None:
     (tmp_path / "hub" / "token").symlink_to(tmp_path / "planted")
     with pytest.raises(OSError):
         store.token()
+
+
+# --- the host LLM's key (ADR-0100) ------------------------------------------------------
+
+
+def test_the_agent_token_is_its_own_key_made_once_owner_only(tmp_path: Path) -> None:
+    store = LocalTokenStore(tmp_path / "hub")
+    agent = store.agent_token()
+    assert len(agent) >= 40 and agent != store.token()
+    assert store.agent_token() == agent
+    assert (tmp_path / "hub" / "agent.token").stat().st_mode & 0o777 == 0o600
+
+
+def test_an_agent_token_others_can_read_is_refused(tmp_path: Path) -> None:
+    store = LocalTokenStore(tmp_path)
+    store.agent_token()
+    (tmp_path / "agent.token").chmod(0o644)
+    with pytest.raises(PermissionError, match="open to other accounts"):
+        store.agent_token()
+
+
+async def test_the_agent_token_names_the_agent_with_only_its_scopes() -> None:
+    scopes = frozenset({HubScope.VIEW})
+    authenticator = AgentTokenAuthenticator("agent-secret", scopes)
+    found = await authenticator.authenticate(_request(authorization="Bearer agent-secret"))
+    assert found == HubPrincipal(name="agent", scopes=scopes)
+    assert HubScope.SPEND not in found.scopes
+    assert await authenticator.authenticate(_request(authorization="Bearer secret")) is None
+    assert await authenticator.authenticate(_request(authorization="Token agent-secret")) is None
+    assert await authenticator.authenticate(_request()) is None
+    with pytest.raises(ValueError):
+        AgentTokenAuthenticator("", scopes)
+
+
+def test_the_host_token_does_not_open_the_agent_door_and_the_reverse() -> None:
+    import asyncio
+
+    host = LocalTokenAuthenticator("host-secret")
+    agent = AgentTokenAuthenticator("agent-secret", AGENT_DEFAULT_SCOPES)
+    assert asyncio.run(host.authenticate(_request(authorization="Bearer agent-secret"))) is None
+    assert asyncio.run(agent.authenticate(_request(authorization="Bearer host-secret"))) is None
+
+
+def test_the_agent_ceiling_is_look_answer_and_run_and_never_spend() -> None:
+    assert {HubScope.VIEW, HubScope.ANSWER, HubScope.RUN} == AGENT_DEFAULT_SCOPES
+    assert HubSettings().agent_scopes == AGENT_DEFAULT_SCOPES
+
+
+def test_agent_scopes_are_declared_narrowed_or_switched_off(tmp_path: Path) -> None:
+    loader = HubSettingsLoader()
+    assert loader.from_table({}).agent_scopes == AGENT_DEFAULT_SCOPES
+    assert loader.from_table({"agent_scopes": ["View"]}).agent_scopes == {HubScope.VIEW}
+    assert loader.from_table({"agent_scopes": []}).agent_scopes == frozenset()
+    assert loader.from_table({"agent_scopes": ["view", "spend"]}).agent_scopes == {
+        HubScope.VIEW,
+        HubScope.SPEND,
+    }
+
+
+@pytest.mark.parametrize("raw", ["view", 3, [3], ["view", None]])
+def test_agent_scopes_must_be_a_list_of_names(raw: object) -> None:
+    with pytest.raises(ConfigError, match="hub.agent_scopes"):
+        HubSettingsLoader().from_table({"agent_scopes": raw})
+
+
+def test_an_agent_scope_the_hub_does_not_define_is_refused_and_the_list_is_shown() -> None:
+    with pytest.raises(ConfigError, match="view, answer, spend, run, bump, workflows"):
+        HubSettingsLoader().from_table({"agent_scopes": ["root"]})

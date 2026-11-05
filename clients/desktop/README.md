@@ -1,5 +1,35 @@
 # krypton desktop
 
+> **Bottom Line Up Front (BLUF) — How to install krypton desktop on macOS and Linux (no coding experience needed):**
+>
+> First, make sure the `vibey` engine is installed on your computer (`curl -fsSL https://raw.githubusercontent.com/the-vibey-project/vibey/main/scripts/install.sh | sh -s -- --with-krypton`). Then pick your operating system below:
+>
+> - **macOS 15 Sequoia and newer (Apple silicon M1/M2/M3/M4/M5):**
+>   1. Download **`krypton-desktop-<version>-macos-arm64.dmg`** from [GitHub Releases](https://github.com/the-vibey-project/vibey/releases) (or [krypton-nightly](https://github.com/the-vibey-project/vibey/releases/tag/krypton-nightly)).
+>   2. Double-click the `.dmg` and drag **krypton** into **Applications** (no Homebrew or extra libraries needed).
+>   3. Clear macOS Gatekeeper's quarantine flag in Terminal:
+>      ```bash
+>      xattr -dr com.apple.quarantine /Applications/krypton.app
+>      ```
+>      *(Or open **krypton** once, then click **Open Anyway** in **System Settings → Privacy & Security**.)*
+>   4. Launch **krypton** from **Applications** or Spotlight. It opens straight into **Chat** (`Cmd+L`) and starts your local hub automatically.
+> - **Linux — Any Distribution with Flatpak (Ubuntu, Fedora, Arch, Debian, Mint, openSUSE):**
+>   1. Download **`krypton-desktop-<version>-linux-x86_64.flatpak`** (or `aarch64`) from [GitHub Releases](https://github.com/the-vibey-project/vibey/releases).
+>   2. Install and run:
+>      ```bash
+>      flatpak install --user ~/Downloads/krypton-desktop-*-linux-*.flatpak
+>      flatpak run io.github.the_vibey_project.krypton
+>      ```
+> - **Linux — Ubuntu 24.04 LTS and newer (Native `.tar.gz`):**
+>   1. Download **`krypton-desktop-<version>-linux-x86_64.tar.gz`** (or `aarch64`) from [GitHub Releases](https://github.com/the-vibey-project/vibey/releases).
+>   2. Install the system GTK 4 / libadwaita dependencies and unpack into `/`:
+>      ```bash
+>      sudo apt update && sudo apt install -y libgtk-4-1 libadwaita-1-0 libsoup-3.0-0 libjson-glib-1.0-0 libavahi-client3 libavahi-glib1 glib-networking
+>      sudo tar -xzf ~/Downloads/krypton-desktop-*-linux-*.tar.gz -C /
+>      krypton-desktop
+>      ```
+> - **Want the other krypton interfaces too (VS Code, Web, Android, iOS, or `vibey connect` for Claude Code / Codex)?** See [docs/guides/install.md](../../docs/guides/install.md) and [docs/guides/downloads.md](../../docs/guides/downloads.md).
+
 The desktop app for vibey, for Linux and macOS. It is written in C17 on GTK 4 and
 libadwaita, and it talks to a vibey hub (`vibey serve`, [ADR-0068](../../docs/architecture/decisions/0068-the-hub.md))
 over the [hub API](../../docs/reference/hub-api.md). It never touches vibey's database.
@@ -8,6 +38,7 @@ over the [hub API](../../docs/reference/hub-api.md). It never touches vibey's da
 
 | Place | What you get |
 |---|---|
+| Chat | **The landing page** (`Ctrl+L`), mirroring the Claude Code and Codex desktop apps ([ADR-0100](../../docs/architecture/decisions/0100-host-driven-mcp-interface-and-chat-first-surfaces.md)): a session sidebar of every project (plus an *All projects* overview), a conversation transcript of your turns (`POST /api/v1/chat/messages`) with expandable tool-call cards and live ledger narration (`GET /api/v1/projects/{id}/ledger/after`), inline approval cards for waiting gates (with `SPEND GATE` clearly badged whenever answering requires the `spend` scope), quick-action chips, and a bottom composer with `/` slash-command completion (`/projects`, `/status`, `/gates`, `/answer`, `/budget`, `/queue`, `/ledger`, `/loops`, `/lanes`, `/doctor`, `/new`, `/start`, `/pause`, `/abandon`, `/help`). |
 | Projects | Every project, its phase and cycle, and how many gates wait on it. **Start a project** (the `+` button or `Ctrl+N`) asks for a name and what to build; each row's menu starts or pauses that project's own worker, or **unwinds** it after a dry run says what it would cancel and that the work on disk stays ([ADR-0091](../../docs/architecture/decisions/0091-devices-may-start-pause-and-unwind-projects.md)). The hub makes the folder; the desktop never names a path. |
 | Gates | Every gate waiting on you, with the controls its kind takes: a verdict or choice as buttons, a new bound for a grant, a retry, or a free-form answer. It warns you before an answer that can spend money. A desktop notification tells you when a new gate is raised. |
 | Lanes | The lanes running on the hub's computer. The krypton mark in the sidebar glows while one runs. |
@@ -22,7 +53,7 @@ The header menu holds Start a project, the hub's Start, Stop and Status, Refresh
 
 **The tray item** (the menu bar on macOS, a StatusNotifierItem elsewhere) shows how many gates wait on you, opens the window, jumps to Gates, starts a project and quits. While it is showing, closing the window hides it instead; if no tray is there to bring it back (GNOME needs the AppIndicator extension), the window closes as a window does. Turn it off in Settings.
 
-Keyboard: `Ctrl+N` starts a project, `Ctrl+R` or `F5` refreshes, `Ctrl+G` opens Gates, `Ctrl+,` opens Settings, and
+Keyboard: `Ctrl+L` opens Chat and focuses the composer, `Ctrl+N` starts a project, `Ctrl+R` or `F5` refreshes, `Ctrl+G` opens Gates, `Ctrl+,` opens Settings, and
 `Ctrl+?` lists every shortcut, and `Ctrl+Q` quits. On a narrow window the sidebar folds into one pane with back navigation.
 
 ## Connecting
@@ -116,6 +147,8 @@ release attaches, is made from it by `scripts/macos_app_bundle.py` (see
 - **`src/core/`: libkryptondesktop, pure C with no GTK.** Each module is a header, its
   interface, and a `.c`, which is ADR-0016 in C:
   - `kr-model`: the hub's documents as structs;
+  - `kr-chat`: the `/` slash-command catalogue and completion, `POST /api/v1/chat/messages`
+    request and turn parser, spend-gate badge helper, and live ledger narration parser;
   - `kr-hub` and `kr-hub-client`: routes, the token, a paired device's request signature,
     the certificate pin and the libsoup transport;
   - `kr-answer`: which answer each gate kind takes, mirroring `src/vibey/cli/gate_answers.py`;
