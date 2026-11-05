@@ -6,7 +6,7 @@
     "email": "adam@matthewsteinberger.com"
   },
   "metadata": {
-    "description": "Every Claude Code plugin in this repository: 152 plugin(s) from src/vibey_tools/skills, src/vibey_tools/gh.",
+    "description": "Every Claude Code plugin in this repository: 153 plugin(s) from src/vibey_tools/skills, src/vibey_tools/gh.",
     "members": [
       {
         "path": "src/vibey_tools/skills",
@@ -1534,6 +1534,17 @@
       "description": "UI/UX Design Principles: the perceptual and cognitive science underneath interface decisions, usability heuristics and mental models, information architecture and navigation, input and interaction per form factor, layout and responsive/adaptive design, visual design (typography, color, space, motion, iconography), design systems and tokens, platform conventions (Apple HIG, Material 3, GNOME/KDE HIG, Fluent), accessibility law and practice (WCAG 2.2/3.0, EAA, ADA Title II, APCA), UX writing, forms/onboarding/conversion, research and evaluation, ethics and dark-pattern regulation, and AI-era interface patterns.",
       "version": "0.1.0",
       "category": "frontend",
+      "author": {
+        "name": "Adam Matthew Steinberger",
+        "email": "adam@matthewsteinberger.com"
+      }
+    },
+    {
+      "name": "vibey",
+      "source": "./src/vibey_tools/skills/plugins/vibey",
+      "description": "Drive vibey from Claude Code, Codex, Cursor, VS Code or any MCP chat client: MCP server wiring (`vibey mcp`) and the host-driven operator workflow skill.",
+      "version": "0.1.0",
+      "category": "developer-tools",
       "author": {
         "name": "Adam Matthew Steinberger",
         "email": "adam@matthewsteinberger.com"
