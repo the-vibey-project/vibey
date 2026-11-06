@@ -1,5 +1,8 @@
 # VS Code extension
 
+> [!IMPORTANT]
+> **Work in progress — not a final product:** The `krypton` VS Code extension and the underlying `vibey` engine are actively in development and not yet a final product. Folks will be notified on the [Discord server](https://discord.gg/Qvu8aYnVS) once the product is finally done.
+>
 > **Bottom Line Up Front (BLUF) — How to install krypton in VS Code, VSCodium, or Cursor in 60 seconds (no coding experience needed):**
 >
 > 1. **Install the engine + krypton on your computer (one line in Terminal):**

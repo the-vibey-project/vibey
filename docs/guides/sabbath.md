@@ -1,5 +1,8 @@
 # The Sabbath
 
+> [!IMPORTANT]
+> **Work in progress — not a final product:** `vibey` is an active work in progress and not a final product. Folks will be notified on the [Discord server](https://discord.gg/Qvu8aYnVS) once the product is finally done.
+
 From sundown on Friday to sundown on Saturday, vibey rests. It writes no code, merges
 nothing and ships nothing. This is sub-doctrine 8.i. The heartbeat keeps going the whole
 time, so at sundown on Saturday everything starts again by itself.

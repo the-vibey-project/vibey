@@ -1,5 +1,8 @@
 # System requirements
 
+> [!IMPORTANT]
+> **Work in progress — not a final product:** `vibey` is an active work in progress and not yet a final product. Requirements and performance characteristics continue to evolve. Folks will be notified on the [Discord server](https://discord.gg/Qvu8aYnVS) once the product is finally done.
+>
 > **Bottom Line Up Front (BLUF) — Ready to install vibey and every krypton interface?**
 >
 > - **One-line install (`vibey` engine + `krypton` browser launcher on macOS & Linux):**

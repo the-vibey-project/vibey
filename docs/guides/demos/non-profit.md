@@ -4,6 +4,9 @@ description: A walk-through for a small non-profit team that builds a volunteer 
 
 # The non-profit demo: a volunteer sign-up tool, a budget you set, a machine you own
 
+> [!IMPORTANT]
+> **Work in progress — not a final product:** `vibey` is currently under active development and is not a final product. Folks will be notified on the [Discord server](https://discord.gg/Qvu8aYnVS) once the product is finally done.
+>
 > **Bottom Line Up Front (BLUF) — How to install vibey and every krypton app (no coding experience needed):**
 >
 > - **Install `vibey` and `krypton` in one command (macOS & Linux):** Open **Terminal** and paste:

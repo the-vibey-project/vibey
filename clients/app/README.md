@@ -1,6 +1,9 @@
 <!-- Made with ❤️ by [Vibey](https://the-vibey-project.github.io/vibey/), Developed by [Adam Matthew Steinberger](https://vibewithadam.matthewsteinberger.com/) ([@adammatthewsteinberger](https://github.com/adammatthewsteinberger/)). -->
 # krypton for iOS, Android and the web
 
+> [!IMPORTANT]
+> **Work in progress — not a final product:** `krypton` for mobile and web is in active development and is not a finished product. Builds, features, and screen flows are actively evolving. Folks will be notified on the [Discord server](https://discord.gg/Qvu8aYnVS) once the product is finally done.
+>
 > **Bottom Line Up Front (BLUF) — How to install and open krypton on Android, iOS, and the Web (no coding experience needed):**
 >
 > Make sure a vibey hub is running on your computer (`curl -fsSL https://raw.githubusercontent.com/the-vibey-project/vibey/main/scripts/install.sh | sh -s -- --with-krypton && vibey hub start`). Then install the app on your device:

@@ -1,5 +1,8 @@
 # Running vibey on Kubernetes
 
+> [!IMPORTANT]
+> **Work in progress — not a final product:** Running `vibey` on Kubernetes is actively being developed and is not a final product. Folks will be notified on the [Discord server](https://discord.gg/Qvu8aYnVS) once the product is finally done.
+
 This guide takes vibey from a laptop process to a long-lived deployment:
 a containerized worker, a Helm chart, an in-cluster PostgreSQL, and
 queue-depth autoscaling via KEDA. Everything below was verified on

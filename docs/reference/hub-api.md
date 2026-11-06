@@ -1,5 +1,8 @@
 # Hub API reference
 
+> [!IMPORTANT]
+> **Work in progress — not a final product:** The `vibey` Hub API is actively in development and not yet a final product. Endpoints, models, and contracts are still evolving. Folks will be notified on the [Discord server](https://discord.gg/Qvu8aYnVS) once the product is finally done.
+>
 > **Bottom Line Up Front (BLUF) — Install and launch the hub and every krypton client:**
 >
 > - **Install `vibey` and `krypton` in one line (macOS & Linux):**

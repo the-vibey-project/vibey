@@ -1,5 +1,8 @@
 # The greeter live demo: a real project, real engines, one forced rotation
 
+> [!IMPORTANT]
+> **Work in progress — not a final product:** The greeter demo exercises real engine sessions in a system that is still an active work in progress and not yet a final product. Folks will be notified on the [Discord server](https://discord.gg/Qvu8aYnVS) once the product is finally done.
+>
 > **Bottom Line Up Front (BLUF) — Install vibey and every krypton interface before running the demo:**
 >
 > - **One-line install (`vibey` engine + `krypton` browser launcher on macOS & Linux):**

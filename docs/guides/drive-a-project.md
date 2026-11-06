@@ -4,6 +4,9 @@ description: Start a vibey project, talk to it while it designs and builds, paus
 
 # Drive a project from anywhere
 
+> [!IMPORTANT]
+> **Work in progress — not a final product:** Driving projects across `vibey` interfaces is an active work in progress and not a final product. Features and commands are actively evolving. Folks will be notified on the [Discord server](https://discord.gg/Qvu8aYnVS) once the product is finally done.
+>
 > **Bottom Line Up Front (BLUF) — Install any krypton interface first, then drive your project from chat:**
 >
 > Krypton and vibey are the free, censorship-free Claude Code and Codex killer — replacing both by writing code the way a principal software engineer does so you get quality code rather than slop, completely free of charge, with AGI superintelligence coming soon.

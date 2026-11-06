@@ -4,6 +4,9 @@ description: Six short guides, each answering one question people bring to AI co
 
 # What do you want to do?
 
+> [!IMPORTANT]
+> **Work in progress — not a final product:** `vibey` is under active development and is not yet a final product. Capabilities and outcomes documented here reflect our living, evolving system. Folks will be notified on the [Discord server](https://discord.gg/Qvu8aYnVS) once the product is finally done.
+>
 > **Bottom Line Up Front (BLUF) — Need to install vibey or any krypton app first?**
 >
 > - **One-line install (`vibey` engine + `krypton` browser launcher on macOS & Linux):**

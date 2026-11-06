@@ -1,5 +1,8 @@
 # krypton desktop
 
+> [!IMPORTANT]
+> **Work in progress — not a final product:** `krypton desktop` is actively being developed and is not a final product. Features, UI, and packages are still evolving. Folks will be notified on the [Discord server](https://discord.gg/Qvu8aYnVS) once the product is finally done.
+>
 > **Bottom Line Up Front (BLUF) — How to install krypton desktop on macOS and Linux (no coding experience needed):**
 >
 > First, make sure the `vibey` engine is installed on your computer (`curl -fsSL https://raw.githubusercontent.com/the-vibey-project/vibey/main/scripts/install.sh | sh -s -- --with-krypton`). Then pick your operating system below:

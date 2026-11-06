@@ -1,5 +1,8 @@
 # The biological philosophy
 
+> [!IMPORTANT]
+> **Work in progress — not a final product:** `vibey` is an active work in progress and not a final product. Folks will be notified on the [Discord server](https://discord.gg/Qvu8aYnVS) once the product is finally done.
+
 Vibey's development loop, Convergence-Driven Development (CDD), measures delivery as a
 scoreboard: work converges, stays neutral or diverges, and divergence needs a bounded path
 back. This page sets out the broader philosophy the project builds on that scoreboard. It

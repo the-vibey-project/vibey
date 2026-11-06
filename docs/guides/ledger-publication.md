@@ -1,5 +1,8 @@
 # What gets published
 
+> [!IMPORTANT]
+> **Work in progress — not a final product:** `vibey` and its ledger publication capabilities are an active work in progress and not a final product. Folks will be notified on the [Discord server](https://discord.gg/Qvu8aYnVS) once the product is finally done.
+
 **Bottom line:** `vibey ledger export` never publishes your ledger. It publishes a
 *projection* of it — the decisions, questions, answers, assumptions, findings and
 phase moves, with local paths and email addresses taken out — and it counts, by

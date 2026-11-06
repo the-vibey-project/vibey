@@ -1,5 +1,8 @@
 # @vibey/core
 
+> [!IMPORTANT]
+> **Work in progress — not a final product:** `@vibey/core` and the surrounding vibey ecosystem are under active development and are not yet a final product. APIs and types are still evolving. Folks will be notified on the [Discord server](https://discord.gg/Qvu8aYnVS) once the product is finally done.
+
 The TypeScript every krypton client shares: the VS Code extension today, and the mobile, web and
 desktop apps as they land. It is plain TypeScript with no Node, no editor and no DOM, and it builds
 against no platform types at all ([ADR-0067](../../docs/architecture/decisions/0067-one-typescript-core-for-every-krypton-client.md)).
