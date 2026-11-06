@@ -1,5 +1,8 @@
 # Convergence-Driven Development
 
+> [!IMPORTANT]
+> **Work in progress — not a final product:** `vibey` and its delivery methodologies are under active development and not a final product. Folks will be notified on the [Discord server](https://discord.gg/Qvu8aYnVS) once the product is finally done.
+
 ## BLUF
 
 Convergence-Driven Development (CDD) is the delivery loop above

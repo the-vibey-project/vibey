@@ -1,5 +1,8 @@
 # Configuration reference: `vibey.toml`
 
+> [!IMPORTANT]
+> **Work in progress — not a final product:** The `vibey.toml` configuration schema is actively evolving and not yet a final product. Folks will be notified on the [Discord server](https://discord.gg/Qvu8aYnVS) once the product is finally done.
+
 The schema below is fully implemented
 and unit-tested in
 [`src/vibey/domain/config.py`](https://github.com/the-vibey-project/vibey/blob/main/src/vibey/domain/config.py)

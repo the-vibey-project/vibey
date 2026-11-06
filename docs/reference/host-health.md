@@ -1,5 +1,8 @@
 # Host health
 
+> [!IMPORTANT]
+> **Work in progress — not a final product:** Host health monitoring in `vibey` is actively under development and not yet a final product. Folks will be notified on the [Discord server](https://discord.gg/Qvu8aYnVS) once the product is finally done.
+
 How healthy is the machine vibey and krypton run on, and how long until it needs replacing?
 The tables on this page are **generated**. `scripts/host_health.py` writes them from the
 committed, append-only weekly record,

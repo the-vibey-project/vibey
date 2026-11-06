@@ -4,6 +4,9 @@ description: How far vibey is from running its whole delivery loop without a per
 
 # How far vibey is from full autonomy
 
+> [!IMPORTANT]
+> **Work in progress — not a final product:** `vibey` is an active work in progress and not a final product. Autonomous capabilities and stage maturity continue to evolve. Folks will be notified on the [Discord server](https://discord.gg/Qvu8aYnVS) once the product is finally done.
+
 vibey's goal is a delivery loop that runs from a specification to a merged, released change
 with nobody present, and that stops for a person only where a rule the operator declared says
 it must. This page shows how far it is from that, as a measurement. Everything between the

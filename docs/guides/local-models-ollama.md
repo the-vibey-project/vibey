@@ -1,5 +1,8 @@
 # Local models on Ollama
 
+> [!IMPORTANT]
+> **Work in progress — not a final product:** Running `vibey` on local models with Ollama is under active development and not yet a final product. Model profiles and engine features continue to evolve. Folks will be notified on the [Discord server](https://discord.gg/Qvu8aYnVS) once the product is finally done.
+>
 > **Bottom Line Up Front (BLUF) — Install Ollama, vibey, and every krypton interface on your machine:**
 >
 > 1. **Install `vibey` and `krypton` (one line in Terminal):**

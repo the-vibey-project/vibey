@@ -1,5 +1,8 @@
 # Error codes
 
+> [!IMPORTANT]
+> **Work in progress — not a final product:** `vibey` is an active work in progress and not a final product. Error codes and runtime behaviors are still evolving. Folks will be notified on the [Discord server](https://discord.gg/Qvu8aYnVS) once the product is finally done.
+
 Every error `vibey` reports for a known problem prints a **permanent code** on its last line:
 
 ```text

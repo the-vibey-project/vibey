@@ -1,5 +1,8 @@
 # Getting help with vibey
 
+> [!IMPORTANT]
+> **Work in progress — not a final product:** Please note that `vibey` is an active work in progress and not yet a final product. Folks will be notified on the [Discord server](https://discord.gg/Qvu8aYnVS) once the product is finally done.
+
 Please do **not** open a bug issue for a usage question. Use the channel
 that matches what you need:
 

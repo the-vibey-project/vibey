@@ -1,5 +1,8 @@
 # CLI reference
 
+> [!IMPORTANT]
+> **Work in progress — not a final product:** The `vibey` and `krypton` command-line interfaces are in active development and not yet a final product. Commands, subcommands, and flags are actively evolving. Folks will be notified on the [Discord server](https://discord.gg/Qvu8aYnVS) once the product is finally done.
+>
 > **Bottom Line Up Front (BLUF) — Install the `vibey` and `krypton` CLIs and every krypton app:**
 >
 > ```bash

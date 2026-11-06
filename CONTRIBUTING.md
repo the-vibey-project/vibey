@@ -1,5 +1,8 @@
 # Contributing to vibey
 
+> [!IMPORTANT]
+> **Work in progress — not a final product:** `vibey` is actively under development and not yet a finished product. Contributors and early testers are warmly welcomed! Folks will be notified on the [Discord server](https://discord.gg/Qvu8aYnVS) once the product is finally completed.
+>
 > **Bottom Line Up Front (BLUF) — Just want to install and use vibey and the krypton apps?**
 >
 > You do not need to clone the repository or write code to use vibey or any krypton interface:

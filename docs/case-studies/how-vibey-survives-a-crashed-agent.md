@@ -4,6 +4,9 @@ description: When an AI coding agent crashes mid-task, vibey loses no job and co
 
 # How vibey survives a crashed agent
 
+> [!IMPORTANT]
+> **Work in progress — not a final product:** `vibey` is an active work in progress and not yet a final product. Folks will be notified on the [Discord server](https://discord.gg/Qvu8aYnVS) once the product is finally done.
+
 An AI coding agent is a program, and programs die. A laptop lid closes. The operating
 system kills a process that ran out of memory. Kubernetes stops a pod to scale in. A
 vendor's credits run out halfway through a task. When the agent was the only place the
