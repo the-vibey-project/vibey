@@ -96,7 +96,7 @@ test = [
     "azure-storage-blob>=12.19",
     "apscheduler>=3.10",
     "tenacity>=8.0",
-    "pypdf>=6.13.3",  # CVE remediation: see pdf-safety extra
+    "pypdf>=6.21.4",  # CVE remediation: see pdf-safety extra
     "starlette>=1.3.1",  # CVE remediation: see fastapi extra
 ]
 
@@ -129,7 +129,7 @@ metrics = []
 # v2 Parts 2+3 — error handling, defensive coding, security
 retry = ["tenacity>=8.0"]
 ingress = []                            # stdlib-only
-pdf-safety = ["pypdf>=6.13.3"]  # CVE-2026-48155/48156/48735/49460/49461/54530/54531, GHSA-jm82-fx9c-mx94
+pdf-safety = ["pypdf>=6.21.4"]  # CVE-2026-48155/48156/48735/49460/49461/54530/54531, GHSA-jm82-fx9c-mx94
 ratelimit = []                          # stdlib-only
 notify = []                             # stdlib-only
 subscription = []                       # stdlib-only
