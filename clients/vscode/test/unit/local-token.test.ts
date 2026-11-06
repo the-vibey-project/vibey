@@ -123,7 +123,7 @@ describe('LocalHubToken', () => {
       },
     };
 
-    const token = new LocalHubToken('darwin', '/Users/me', {}, fakeFs);
+    const token = new LocalHubToken('darwin', '/Users/me', {}, fakeFs as unknown as typeof fs);
     expect(token.readToken('/some/path')).toBeUndefined();
   });
 });
