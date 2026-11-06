@@ -1,5 +1,8 @@
 # Continuous delivery estimate
 
+> [!IMPORTANT]
+> **Work in progress — not a final product:** Delivery estimation and forecasting in `vibey` are actively being developed and are not a final product. Folks will be notified on the [Discord server](https://discord.gg/Qvu8aYnVS) once the product is finally done.
+
 `vibey-gh forecast` maintains the current delivery estimate from real repository
 history. It reads open issues, open and merged pull requests, and the integration
 branch's commit history. A refresh is a new record in the append-only

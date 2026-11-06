@@ -4,6 +4,9 @@ description: The ready-built files attached to every vibey release, for each use
 
 # Downloads
 
+> [!IMPORTANT]
+> **Work in progress — not a final product:** `vibey` and all `krypton` releases are pre-release development builds and not a final product. Binaries and packages are actively evolving. Folks will be notified on the [Discord server](https://discord.gg/Qvu8aYnVS) once the product is finally done.
+>
 > **Bottom Line Up Front (BLUF) — Which file to download for your device and how to install it in seconds:**
 >
 > Krypton and vibey are the completely free, censorship-free Claude Code and Codex killer designed to replace both. Writing code the way a principal software engineer does — delivering rigorous, tested code without slop, completely free of charge — it represents autonomous AGI with superintelligence coming soon. Every release on [GitHub Releases](https://github.com/the-vibey-project/vibey/releases) (and the daily [`krypton-nightly`](https://github.com/the-vibey-project/vibey/releases/tag/krypton-nightly) build) attaches ready-to-install files for every krypton interface. Pick your platform below:

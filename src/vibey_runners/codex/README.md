@@ -1,5 +1,8 @@
 # codexloop
 
+> [!IMPORTANT]
+> **Work in progress — not a final product:** `codexloop` and `vibey` are in active development and not a final product. Folks will be notified on the [Discord server](https://discord.gg/Qvu8aYnVS) once the product is finally done.
+
 > **Now part of the vibey monorepo.** `codexloop` lives in [the-vibey-project/vibey](https://github.com/the-vibey-project/vibey) at [`src/vibey_runners/codex`](https://github.com/the-vibey-project/vibey/tree/develop/src/vibey_runners/codex) (vibey ADR-0021). It is not published on its own any more: it ships inside the [`vibey-engine`](https://pypi.org/project/vibey-engine/) package, so `pip install vibey-engine` installs it (vibey ADR-0037).
 
 [![Ships in vibey](https://img.shields.io/pypi/v/vibey-engine?label=ships%20in%20vibey)](https://pypi.org/project/vibey-engine/)

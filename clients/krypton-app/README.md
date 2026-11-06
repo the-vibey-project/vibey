@@ -1,5 +1,8 @@
 # krypton-app
 
+> [!IMPORTANT]
+> **Work in progress — not a final product:** `krypton-app` and `vibey` are actively under development and not yet a final product. Features, interfaces, and packaging are still taking shape. Folks will be notified on the [Discord server](https://discord.gg/Qvu8aYnVS) once the product is finally done.
+>
 > **Bottom Line Up Front (BLUF) — Install `krypton` and every krypton interface on any platform:**
 >
 > - **Install `krypton` (the browser launcher) and `vibey-engine` in one command (macOS & Linux):**

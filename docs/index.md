@@ -15,6 +15,9 @@ writes every step to a record that can only be added to — an append-only ledge
 PostgreSQL database — so a crashed or out-of-credit agent's work is picked up again
 rather than lost.
 
+> [!IMPORTANT]
+> **Work in progress — not a final product:** vibey is currently in active development and is not yet a final product. Features, interfaces, and APIs are actively evolving. Folks will be notified on the [Discord server](https://discord.gg/Qvu8aYnVS) once the product is finally done.
+
 **Never written code?** You can still read this. *Code* is text files of
 instructions computers run; an *AI coding agent* is a program that writes and
 edits that code from plain-English requests; *deploying* means putting the

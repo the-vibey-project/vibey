@@ -1,5 +1,8 @@
 # Publishing a finished project
 
+> [!IMPORTANT]
+> **Work in progress — not a final product:** Publishing workflows in `vibey` are under active development and not yet a final product. Folks will be notified on the [Discord server](https://discord.gg/Qvu8aYnVS) once the product is finally done.
+
 A run that ends at REVIEW leaves its work on a local branch. Publishing is the last step: it
 pushes that branch and opens a pull request, or, for a project with no remote, creates a new
 GitHub repository and pushes to it. Both send work off your machine and neither is easy to take

@@ -1,5 +1,8 @@
 # Sovereign operational surfaces: self-hosted cluster install
 
+> [!IMPORTANT]
+> **Work in progress — not a final product:** Sovereign operational surfaces in `vibey` are under active development and not yet a final product. Folks will be notified on the [Discord server](https://discord.gg/Qvu8aYnVS) once the product is finally done.
+
 `vibey` orchestrates software delivery end-to-end on sovereign defaults:
 every operational dependency — issue tracking, documentation, secrets, files,
 email, SMS, messaging, configuration store, caching, message bus, object

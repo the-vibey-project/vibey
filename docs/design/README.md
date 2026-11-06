@@ -1,6 +1,9 @@
 <!-- Made with ❤️ by [Vibey](https://the-vibey-project.github.io/vibey/), Developed by [Adam Matthew Steinberger](https://vibewithadam.matthewsteinberger.com/) ([@adammatthewsteinberger](https://github.com/adammatthewsteinberger/)). -->
 # The design system
 
+> [!IMPORTANT]
+> **Work in progress — not a final product:** The `vibey` and `krypton` design system is in active development and not yet a final product. Folks will be notified on the [Discord server](https://discord.gg/Qvu8aYnVS) once the product is finally done.
+
 Every colour, face, size, space, radius, shadow, curve and sound cue that a vibey surface
 uses comes from one place: `design/tokens/`. The docs sites, the paper, the VS Code
 extension and every krypton app read generated forms of those tokens and add no colour of

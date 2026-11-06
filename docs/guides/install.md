@@ -3,6 +3,9 @@ description: Install vibey and every krypton interface (Desktop on macOS and Lin
 ---
 # Install, copy, reinstall, uninstall
 
+> [!IMPORTANT]
+> **Work in progress — not a final product:** `vibey` and every `krypton` interface are currently in active development and not yet a final product. Features, CLI commands, and installation packages are actively being refined. Folks will be notified on the [Discord server](https://discord.gg/Qvu8aYnVS) once the product is finally done.
+>
 > **Bottom Line Up Front (BLUF) — Every krypton interface, on every platform, in one table:**
 >
 > **Krypton and the vibey engine are the free, censorship-free Claude Code and Codex killer** meant to replace both. Open to everyone and 100% free of charge, vibey writes code the way a principal software engineer does — shipping high-quality, verified code rather than disposable slop. It operates as an autonomous AGI with superintelligence coming soon. **vibey** is the autonomous delivery engine; **krypton** is every app and interface you use to talk to it. You do not need any coding experience to install or use krypton.
