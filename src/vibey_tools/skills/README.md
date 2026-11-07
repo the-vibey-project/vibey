@@ -2,7 +2,7 @@
 
 > **Now part of the vibey monorepo.** `vibey-skills` lives in [the-vibey-project/vibey](https://github.com/the-vibey-project/vibey) at [`src/vibey_tools/skills`](https://github.com/the-vibey-project/vibey/tree/develop/src/vibey_tools/skills) (vibey ADR-0021). It is not published on its own any more: it ships inside the [`vibey-engine`](https://pypi.org/project/vibey-engine/) package, so `pip install vibey-engine` installs it (vibey ADR-0037).
 
-> **149 Claude Code plugins. 806 Agent Skills.** Long-form, source-cited practitioner
+> **150 Claude Code plugins. 811 Agent Skills.** Long-form, source-cited practitioner
 > references for the parts of software engineering an agent is most likely to get
 > confidently wrong — security, compliance, Azure, identity automation (Okta),
 > DevSecOps, AI/ML, data engineering, frontend, mobile, desktop, smart TV, game development, UI/UX design, systems programming, embedded and IoT, blockchain, quantum computing, penetration testing, architecture, quality
@@ -41,7 +41,7 @@ fast *and* correct. These skills are the reference layer for that.
 /plugin                                    # browse everything
 ```
 
-That one address serves every plugin in the family: these 149 and vibey-gh's four. The
+That one address serves every plugin in the family: these 150 and vibey-gh's four. The
 root manifest is rendered from this tree's own `.claude-plugin/marketplace.json` by
 `vibey-gh marketplace` (vibey ADR-0034), so nothing here is duplicated by hand.
 
@@ -57,7 +57,7 @@ rendered from.
 ```bash
 uv tool install vibey-engine                      # or: pipx install vibey-engine / pip install vibey-engine
 vibey-skills list
-vibey-skills install --all                 # copy all 806 skills into ~/.claude/skills
+vibey-skills install --all                 # copy all 811 skills into ~/.claude/skills
 vibey-skills install security-principles azure-cloud-infra
 ```
 
@@ -179,6 +179,7 @@ own `README.md` with the full skill list and trigger descriptions.
 | [home-valuation](https://github.com/the-vibey-project/vibey/tree/develop/src/vibey_tools/skills/plugins/home-valuation) | 0.1.0 | finance | 7 | Market vs appraised vs assessed value, the three approaches, appraisal/CMA/BPO/AVM compared, UAD 3.6, the NAR settlement & buyer agreements, Clear Cooperation & private listings, months of supply & sale-to-list and how each lies, rates & the marginal buyer, comp selection & the adjustment grid, time adjustments, hedonic regression, honest AVM error, the offer ladder & 30-day timeline, the seller net sheet & pricing by regime, Section 121, climate & insurance risk, cap rate/DSCR/BRRRR, specialty valuations, fraud & fair housing, plus a tested numpy/pandas toolkit |
 | [how-cars-work-and-how-mechanics-work](https://github.com/the-vibey-project/vibey/tree/develop/src/vibey_tools/skills/plugins/how-cars-work-and-how-mechanics-work) | 0.1.0 | automotive | 5 | Four-stroke cycle, engine anatomy, air path & turbocharging, port vs direct injection, ignition & knock, closed-loop control, lambda & fuel trims, cooling & lubrication, catalysts/EGR/DPF/SCR, diesel, manual/auto/DCT/CVT transmissions, differentials & AWD, suspension, alignment, brakes & ABS, tyres & wear patterns, 12V & parasitic draw, CAN & automotive Ethernet, ADAS calibration, EV architecture, battery degradation, high-voltage safety, hybrids, corrosion, diagnostic method, OBD-II & mode 6, tools, common misdiagnoses, maintenance intervals & shop economics |
 | [hunting-botany-livestock-agriculture](https://github.com/the-vibey-project/vibey/tree/develop/src/vibey_tools/skills/plugins/hunting-botany-livestock-agriculture) | 0.1.0 | agriculture | 5 | Plant structure, C3/C4/CAM photosynthesis, water relations, nutrition, pollination, succession, identification & its hard limit, pathology, weeds, soil, fertility, crop rotation, IPM & resistance, irrigation, breeding, farming systems honestly, ruminant digestion, rations, herd health & biosecurity, grazing, welfare, wildlife management, hunting law/ethics/safety, shot placement, game meat safety |
+| [individual-social-philosophy](https://github.com/the-vibey-project/vibey/tree/develop/src/vibey_tools/skills/plugins/individual-social-philosophy) | 0.1.0 | philosophy | 5 | Individual Social Philosophy: a comprehensive micro-sociological and ethical framework for navigating interpersonal life. Grounded in biblical wisdom (Sirach, Proverbs, Gospels), Catholic scholasticism (Aquinas, Aelred of Rievaulx), Eastern Orthodox asceticism (nepsis, diakrisis), and Protestant casuistry (Bonhoeffer, Lewis), integrating game-theoretic trust asymmetry and objective social risk calculation. |
 | [investment-strategy-personal-and-business](https://github.com/the-vibey-project/vibey/tree/develop/src/vibey_tools/skills/plugins/investment-strategy-personal-and-business) | 0.1.0 | finance | 6 | What comes before investing, risk & return, compounding, diversification, market efficiency honestly, asset classes, factors out of sample, fee drag, tax concepts, asset allocation, rebalancing, vehicle selection, accumulation, decumulation & sequence-of-returns risk, the behaviour gap, business vs personal investment, NPV & IRR traps, WACC, capital structure, treasury, valuation, raising capital, fraud red flags, alternatives honestly, advisor conflicts & fiduciary limits |
 | [it-infrastructure-governance](https://github.com/the-vibey-project/vibey/tree/develop/src/vibey_tools/skills/plugins/it-infrastructure-governance) | 0.1.0 | it-governance | 5 | The layers, virtualization, storage tiers, segmentation, directory & hybrid identity sync, MFA/SSO/federation, RBAC & beyond, privileged access & JIT elevation, joiner-mover-leaver, access certification, segregation of duties, patching, RPO/RTO & restore testing, monitoring, ITSM & change, CMDB, ITIL/COBIT, capacity, vendor risk |
 | [linux-server-admin](https://github.com/the-vibey-project/vibey/tree/develop/src/vibey_tools/skills/plugins/linux-server-admin) | 0.1.0 | systems-administration | 5 | Filesystem & file semantics, users/permissions/capabilities, processes & cgroups, systemd units/hardening/timers, LVM & filesystems, networking & diagnosis order, packages, boot, SELinux/AppArmor & SSH, eBPF observability, troubleshooting method, namespaces, config management, backup & recovery |

@@ -1,8 +1,8 @@
 # Claude Code skills
 
 This file exists to satisfy `vibey-gh`'s documentation contract, which expects a skills
-index at this path. This repository's actual product — 806 Agent Skills across 149
-Claude Code plugins — lives under
+index at this path. This repository's actual product, comprising 811 Agent Skills across 150
+Claude Code plugins, lives under
 [plugins/](https://github.com/the-vibey-project/vibey-skills/tree/main/plugins), one
 `SKILL.md` per skill directory, indexed by
 [.claude-plugin/marketplace.json](https://github.com/the-vibey-project/vibey-skills/blob/main/.claude-plugin/marketplace.json).
