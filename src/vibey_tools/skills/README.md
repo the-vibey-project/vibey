@@ -2,7 +2,7 @@
 
 > **Now part of the vibey monorepo.** `vibey-skills` lives in [the-vibey-project/vibey](https://github.com/the-vibey-project/vibey) at [`src/vibey_tools/skills`](https://github.com/the-vibey-project/vibey/tree/develop/src/vibey_tools/skills) (vibey ADR-0021). It is not published on its own any more: it ships inside the [`vibey-engine`](https://pypi.org/project/vibey-engine/) package, so `pip install vibey-engine` installs it (vibey ADR-0037).
 
-> **150 Claude Code plugins. 811 Agent Skills.** Long-form, source-cited practitioner
+> **150 Claude Code plugins. 816 Agent Skills.** Long-form, source-cited practitioner
 > references for the parts of software engineering an agent is most likely to get
 > confidently wrong — security, compliance, Azure, identity automation (Okta),
 > DevSecOps, AI/ML, data engineering, frontend, mobile, desktop, smart TV, game development, UI/UX design, systems programming, embedded and IoT, blockchain, quantum computing, penetration testing, architecture, quality
@@ -57,7 +57,7 @@ rendered from.
 ```bash
 uv tool install vibey-engine                      # or: pipx install vibey-engine / pip install vibey-engine
 vibey-skills list
-vibey-skills install --all                 # copy all 811 skills into ~/.claude/skills
+vibey-skills install --all                 # copy all 816 skills into ~/.claude/skills
 vibey-skills install security-principles azure-cloud-infra
 ```
 

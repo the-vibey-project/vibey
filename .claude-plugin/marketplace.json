@@ -6,7 +6,7 @@
     "email": "adam@matthewsteinberger.com"
   },
   "metadata": {
-    "description": "Every Claude Code plugin in this repository: 154 plugin(s) from src/vibey_tools/skills, src/vibey_tools/gh.",
+    "description": "Every Claude Code plugin in this repository: 155 plugin(s) from src/vibey_tools/skills, src/vibey_tools/gh.",
     "members": [
       {
         "path": "src/vibey_tools/skills",
@@ -269,6 +269,17 @@
       "description": "Chaos Theory: what chaos actually is and is not, the stretch-and-fold mechanism, dynamical systems, stability and linearization, bifurcations, the logistic map and Feigenbaum universality, Lyapunov exponents, strange attractors, the routes to chaos, fractals and dimension, Poincare sections and symbolic dynamics, Hamiltonian chaos and KAM, detecting chaos in real data, control and synchronization, where chaos actually appears, and computing chaotic systems numerically.",
       "version": "0.2.0",
       "category": "mathematics",
+      "author": {
+        "name": "Adam Matthew Steinberger",
+        "email": "adam@matthewsteinberger.com"
+      }
+    },
+    {
+      "name": "christian-courtship",
+      "source": "./src/vibey_tools/skills/plugins/christian-courtship",
+      "description": "Christian Courtship: a comprehensive multidisciplinary framework for relational progression from community friendship to solemn betrothal and indissoluble covenant marriage. Grounded in orthodox Protestant covenant theology, Roman Catholic sacramental personalism, Eastern Greek Orthodox ascetical mysteriology, Scott Stanley commitment theory, Murray Bowen differentiation of self, and formal game-theoretic verification.",
+      "version": "0.1.0",
+      "category": "philosophy",
       "author": {
         "name": "Adam Matthew Steinberger",
         "email": "adam@matthewsteinberger.com"
