@@ -8,11 +8,11 @@
 
 Betrayals arrive in the quiet hours after five o’clock. The machinery spins down, the fluorescent tubes hum against the ceiling, and a man finds a drawer unlocked that ought to have been secured.
 
-Daniel stood by the workbench with grease on his forearms and a sheet of blue cardstock in his hand. The revisions had vanished. Three months of stress calculations on the pressure manifold, the pencil notes his father had left in the margins before the stroke, and the pricing estimates for the county contract; all of it had left the shop in Miller’s leather satchel.
+Daniel stood by the workbench with grease on his forearms and a sheet of blue cardstock in his hand. The revisions had vanished. Three months of stress calculations on the pressure manifold, the pencil notes his father had left in the margins before the stroke, and the pricing estimates for the county contract; all of it had left the shop in Miller’s leather satchel. Miller was Daniel’s chief competitor across the river, a rival machine shop contractor who had bid against him for the county pumping station.
 
 Nora found him there. The empty drawer told the entire story.
 
-“He told the council it was his design,” Daniel said. His voice was flat, like iron struck with wood. “He told them I was behind schedule and lacked the skill for the tolerances.”
+“Miller told the county council it was his own design,” Daniel said. His voice was flat, like iron struck with wood. “He used my pricing to undercut my bid. He told the commissioners I was behind schedule and lacked the skill for the tolerances, and the board awarded the contract to his shop.”
 
 “And you gave him the notebook,” Nora said softly.
 
@@ -131,11 +131,11 @@ After supper, Daniel built up the hearth with split hickory logs until the sitti
 
 Daniel sat on the hearth rug beside her chair, resting his head against her knees. The defensive armor from the bank, the vigilant eye from the shop floor, and the calculations of the contracts rested on the floor like heavy boots after a long journey.
 
-He spoke aloud the fear that had troubled his sleep since summer: that the small shop would be outpaced by industrial foundries in the city, that his hands grew stiff in the winter chill, that his father’s legacy might falter.
+He spoke aloud the fear that had troubled his sleep since summer: that the small shop would be outpaced by industrial foundries in the city, that his hands grew stiff in the winter chill, that his father’s legacy might falter. He voiced the lingering ache of the county board meeting: the commissioners had dismissed his honest calculations, choosing Miller's stolen design and hollow promises.
 
 Nora listened in silence. She offered no hurried formulas. She placed her fingers through his hair and held him steadily while the embers shifted in the grate.
 
-“Cast not pearls before swine,” he murmured, recalling the verse that had guided his year.[^11]
+“Cast not pearls before swine,” he murmured, his voice heavy with the sting of the board's rejection.[^11] “I offered the commissioners forty years of honest shop craft and exact tolerances. They chose Miller's cheap, stolen bid and trampled our labor in the dirt.”
 
 “That wisdom governs the highway, Daniel,” she said softly, resting her chin near his temple. “On the highway, you keep your coat buttoned. Here, before God and this hearth, there is only covenant.[^12] A soldier lives behind a shield on the field; at home by the fire, he sets the shield down so he can embrace his family.”
 

@@ -880,6 +880,17 @@
       }
     },
     {
+      "name": "loving-people-well",
+      "source": "./src/vibey_tools/skills/plugins/loving-people-well",
+      "description": "Loving People Well: a backward-induction framework of relational stewardship, presence, cognitive memory, bounded mercy, and radical surrender in Christian ethics. Grounded in Richard Bellman's principle of backward induction, Dietrich Bonhoeffer's life together, Thomas Aquinas's caritas and affabilitas, Eastern Orthodox kenosis and hesychia, and modern attention economics.",
+      "version": "0.1.0",
+      "category": "philosophy",
+      "author": {
+        "name": "Adam Matthew Steinberger",
+        "email": "adam@matthewsteinberger.com"
+      }
+    },
+    {
       "name": "low-code-no-code",
       "source": "./src/vibey_tools/skills/plugins/low-code-no-code",
       "description": "Low-Code / No-Code: platforms across the whole spectrum — block-based education tools (Scratch, LEGO, micro:bit), workflow automation (n8n, Zapier, Make, Power Automate), integration and iPaaS (MuleSoft, Boomi, Workato), data pipelines and ETL (Alteryx, Matillion, dbt), app builders (Power Apps, Retool, Airtable, Bubble), RPA, and the AI app-generation wave now reshaping the category — plus how to choose, the governance and escape-hatch problems that bite later, licensing traps, the security evidence, and when to write code instead.",
