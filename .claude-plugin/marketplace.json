@@ -6,7 +6,7 @@
     "email": "adam@matthewsteinberger.com"
   },
   "metadata": {
-    "description": "Every Claude Code plugin in this repository: 153 plugin(s) from src/vibey_tools/skills, src/vibey_tools/gh.",
+    "description": "Every Claude Code plugin in this repository: 154 plugin(s) from src/vibey_tools/skills, src/vibey_tools/gh.",
     "members": [
       {
         "path": "src/vibey_tools/skills",
@@ -797,6 +797,17 @@
       "description": "Botany, Agriculture, Livestock and Hunting: plant structure, photosynthesis and the three pathways, water relations, plant nutrition, reproduction and pollination, ecology and succession, plant identification and its hard limits, plant pathology, weeds, soil, fertility management, crop production, integrated pest management, water and irrigation, breeding and genetics, farming systems assessed honestly, ruminant digestion, livestock nutrition, reproduction, herd health and biosecurity, livestock genetics, grazing management, welfare, wildlife management, and hunting law, ethics, safety, shot placement and game meat safety.",
       "version": "0.1.0",
       "category": "agriculture",
+      "author": {
+        "name": "Adam Matthew Steinberger",
+        "email": "adam@matthewsteinberger.com"
+      }
+    },
+    {
+      "name": "individual-social-philosophy",
+      "source": "./src/vibey_tools/skills/plugins/individual-social-philosophy",
+      "description": "Individual Social Philosophy: a comprehensive micro-sociological and ethical framework for navigating interpersonal life. Grounded in biblical wisdom, Catholic scholasticism, Eastern Orthodox asceticism, and Protestant casuistry, integrating game-theoretic trust asymmetry and objective social risk calculation.",
+      "version": "0.1.0",
+      "category": "philosophy",
       "author": {
         "name": "Adam Matthew Steinberger",
         "email": "adam@matthewsteinberger.com"

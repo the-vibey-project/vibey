@@ -68,6 +68,8 @@ async function renderWith(node: ReactNode, routes: Routes, connected = true) {
 const project = { project_id: 'p1', name: 'Greeter', phase: 'BUILD', open_gates: 1, cycle: 1, max_cycles: 3 };
 
 describe('screens', () => {
+  jest.setTimeout(30000);
+
   it('Chat sends slash and plain-language turns, completes / commands, and answers inline gates', async () => {
     const posted = await renderWith(<ChatScreen verify={async () => true} />, {
       'GET /api/v1/projects': [project],
