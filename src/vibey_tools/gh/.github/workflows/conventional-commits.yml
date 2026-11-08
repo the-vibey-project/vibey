@@ -90,11 +90,13 @@ jobs:
         working-directory: target
         env:
           BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          BASE_REF: ${{ github.event.pull_request.base.ref }}
           HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+          REPO: ${{ github.repository }}
         run: |
           set -euo pipefail
           if [ -n "${BASE_SHA:-}" ] && ! git rev-parse --verify --quiet "${BASE_SHA}^{commit}" >/dev/null; then
-            git fetch --no-tags "https://github.com/${{ github.repository }}.git" "${{ github.event.pull_request.base.ref }}" || true
+            git fetch --no-tags "https://github.com/${REPO}.git" "$BASE_REF" || true
           fi
           command -v vibey-gh >/dev/null || {
             echo "::error::vibey-gh is not on PATH; cannot check or normalize commit subjects" >&2

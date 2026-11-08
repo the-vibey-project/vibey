@@ -63,9 +63,12 @@ jobs:
 
       - name: Fetch base branch for fork pull request
         if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name != github.repository
+        env:
+          THIS_REPO: ${{ github.repository }}
+          BASE_REF: ${{ github.event.pull_request.base.ref }}
         run: |
           set -euo pipefail
-          git fetch --no-tags "https://github.com/${{ github.repository }}.git" "${{ github.event.pull_request.base.ref }}"
+          git fetch --no-tags "https://github.com/${THIS_REPO}.git" "$BASE_REF"
 
       - name: Set up Python
         uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5
