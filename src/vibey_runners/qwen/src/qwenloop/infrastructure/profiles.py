@@ -1,21 +1,13 @@
 # Made with ❤️ by [Vibey](https://the-vibey-project.github.io/vibey/), Developed by [Adam Matthew Steinberger](https://vibewithadam.matthewsteinberger.com/) ([@adammatthewsteinberger](https://github.com/adammatthewsteinberger/)).
 """Pinned model profiles. Digests are operator-verifiable manifest fields."""
 
+from qwenloop.domain.catalogue import CATALOGUE, QWEN25_CODER_14B_Q5_K_M
 from qwenloop.domain.model import Backend, ModelProfile
 
 QWEN_REVISION = "65784b8b67c59e1ae00b0f85206ac78775a2a2f4"
-QWEN_GGUF_REVISION = "d0a692ef765eefbf2fabb130b3cb2e8917e3d225"
+QWEN_GGUF_REVISION = QWEN25_CODER_14B_Q5_K_M.revision
 
-PORTABLE = ModelProfile(
-    name="qwen2.5-coder-14b-q5-k-m",
-    backend=Backend.LLAMA_CPP,
-    repository="Qwen/Qwen2.5-Coder-14B-Instruct-GGUF",
-    revision=QWEN_GGUF_REVISION,
-    filename="qwen2.5-coder-14b-instruct-q5_k_m.gguf",
-    sha256="98ab25e0132e3f1e6d3554e1b64de2b5021908819b740d9c208430117e49a775",
-    size=10_508_873_152,
-    quantization="Q5_K_M",
-)
+PORTABLE = QWEN25_CODER_14B_Q5_K_M
 
 NVIDIA_BF16 = ModelProfile(
     name="qwen2.5-coder-14b-bf16",
@@ -29,3 +21,8 @@ NVIDIA_BF16 = ModelProfile(
 )
 
 PROFILES = {profile.name: profile for profile in (PORTABLE, NVIDIA_BF16)}
+
+#: Every catalogue entry's llama.cpp pin, by profile name, so a GGUF can be chosen by name.
+CATALOGUE_PROFILES: dict[str, ModelProfile] = {
+    entry.gguf.name: entry.gguf for entry in CATALOGUE if entry.gguf is not None
+}
