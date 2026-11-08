@@ -2,7 +2,7 @@
 
 > **Now part of the vibey monorepo.** `vibey-skills` lives in [the-vibey-project/vibey](https://github.com/the-vibey-project/vibey) at [`src/vibey_tools/skills`](https://github.com/the-vibey-project/vibey/tree/develop/src/vibey_tools/skills) (vibey ADR-0021). It is not published on its own any more: it ships inside the [`vibey-engine`](https://pypi.org/project/vibey-engine/) package, so `pip install vibey-engine` installs it (vibey ADR-0037).
 
-> **152 Claude Code plugins. 821 Agent Skills.** Long-form, source-cited practitioner
+> **153 Claude Code plugins. 826 Agent Skills.** Long-form, source-cited practitioner
 > references for the parts of software engineering an agent is most likely to get
 > confidently wrong — security, compliance, Azure, identity automation (Okta),
 > DevSecOps, AI/ML, data engineering, frontend, mobile, desktop, smart TV, game development, UI/UX design, systems programming, embedded and IoT, blockchain, quantum computing, penetration testing, architecture, quality
@@ -41,7 +41,7 @@ fast *and* correct. These skills are the reference layer for that.
 /plugin                                    # browse everything
 ```
 
-That one address serves every plugin in the family: these 152 and vibey-gh's four. The
+That one address serves every plugin in the family: these 153 and vibey-gh's four. The
 root manifest is rendered from this tree's own `.claude-plugin/marketplace.json` by
 `vibey-gh marketplace` (vibey ADR-0034), so nothing here is duplicated by hand.
 
@@ -57,7 +57,7 @@ rendered from.
 ```bash
 uv tool install vibey-engine                      # or: pipx install vibey-engine / pip install vibey-engine
 vibey-skills list
-vibey-skills install --all                 # copy all 821 skills into ~/.claude/skills
+vibey-skills install --all                 # copy all 826 skills into ~/.claude/skills
 vibey-skills install security-principles azure-cloud-infra
 ```
 
@@ -132,6 +132,7 @@ own `README.md` with the full skill list and trigger descriptions.
 | [car-valuation](https://github.com/the-vibey-project/vibey/tree/develop/src/vibey_tools/skills/plugins/car-valuation) | 0.1.0 | finance | 7 | What a car's value means (MSRP to wholesale & ACV), KBB/Edmunds/J.D. Power/Black Book/Manheim MMR compared, sales channels, the FTC Used Car Rule, dealer fees & trade-in tax credits, the Manheim index, ATP & days' supply, comps & the adjustment grid, a regression cross-check, EVs & battery health, classics & branded titles, out-the-door negotiation, F&I products, the private-party sale, PPI & history reports, odometer & title-washing fraud, TCO, lease vs buy, EV vs gas, lemon laws, plus a tested numpy/pandas toolkit |
 | [chaos-theory](https://github.com/the-vibey-project/vibey/tree/develop/src/vibey_tools/skills/plugins/chaos-theory) | 0.2.0 | mathematics | 5 | What chaos is and is not, stretch-and-fold, flows & maps, linear stability, bifurcations, the logistic map & Feigenbaum universality, Lyapunov exponents, strange attractors, routes to chaos, fractal dimension, Poincaré sections, Hamiltonian chaos & KAM, Takens embedding & surrogate testing, control & synchronization, numerics |
 | [christian-courtship](https://github.com/the-vibey-project/vibey/tree/develop/src/vibey_tools/skills/plugins/christian-courtship) | 0.1.0 | philosophy | 5 | Relational progression from friendship to covenant marriage, Protestant/Catholic/Orthodox dogma, Stanley commitment theory, Bowen differentiation, chastity, and risk calculus |
+| [christian-marriage-and-family](https://github.com/the-vibey-project/vibey/tree/develop/src/vibey_tools/skills/plugins/christian-marriage-and-family) | 0.1.0 | religion | 5 | Biblical patriarchy, sacrificial male headship, executive domestic governance, authoritative child rearing, and filial piety triangulated across Protestant, Catholic, and Greek Orthodox traditions. |
 | [christian-pastoral-care](https://github.com/the-vibey-project/vibey/tree/develop/src/vibey_tools/skills/plugins/christian-pastoral-care) | 0.1.0 | religion | 1 | Faith-integrated self-compassion: the evangelical theology of grace, gospel self-grace vs secular self-compassion, shame vs guilt & conviction vs condemnation, identity in Christ, spiritual disciplines as means of grace adapted for autistic & ADHD believers, lament, confession & community, the clinical evidence on self-compassion & religiously adapted therapy & where it runs out, red flags for referral, pastoral failure modes; pastoral & educational, not therapy |
 | [civil-industrial-engineering-for-software-devs](https://github.com/the-vibey-project/vibey/tree/develop/src/vibey_tools/skills/plugins/civil-industrial-engineering-for-software-devs) | 0.1.0 | industrial-engineering | 5 | Why the engineering comparison recurs, loads & load paths, factor of safety & LRFD, steel/concrete/timber, foundations & soil, codes & standards, PE licensure & liability, failure analysis, construction sequencing, infrastructure, queueing & Little's Law, Theory of Constraints, lean & TPS, Six Sigma & SPC, work measurement, scheduling & inventory, human factors, reliability & FMEA, safety engineering & the hierarchy of controls, what transfers to software & what doesn't |
 | [cloud-computing](https://github.com/the-vibey-project/vibey/tree/develop/src/vibey_tools/skills/plugins/cloud-computing) | 0.1.0 | cloud-infrastructure | 5 | Service/deployment models, provider landscape, primitives, Well-Architected trade-offs, 2025 outage lessons, FinOps, shared responsibility, EU Data Act sovereignty, observability, migration, multi-cloud, AI workloads |
