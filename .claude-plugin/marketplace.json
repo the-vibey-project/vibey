@@ -6,7 +6,7 @@
     "email": "adam@matthewsteinberger.com"
   },
   "metadata": {
-    "description": "Every Claude Code plugin in this repository: 154 plugin(s) from src/vibey_tools/skills, src/vibey_tools/gh.",
+    "description": "Every Claude Code plugin in this repository: 157 plugin(s) from src/vibey_tools/skills, src/vibey_tools/gh.",
     "members": [
       {
         "path": "src/vibey_tools/skills",
@@ -269,6 +269,28 @@
       "description": "Chaos Theory: what chaos actually is and is not, the stretch-and-fold mechanism, dynamical systems, stability and linearization, bifurcations, the logistic map and Feigenbaum universality, Lyapunov exponents, strange attractors, the routes to chaos, fractals and dimension, Poincare sections and symbolic dynamics, Hamiltonian chaos and KAM, detecting chaos in real data, control and synchronization, where chaos actually appears, and computing chaotic systems numerically.",
       "version": "0.2.0",
       "category": "mathematics",
+      "author": {
+        "name": "Adam Matthew Steinberger",
+        "email": "adam@matthewsteinberger.com"
+      }
+    },
+    {
+      "name": "christian-courtship",
+      "source": "./src/vibey_tools/skills/plugins/christian-courtship",
+      "description": "Christian Courtship: a comprehensive multidisciplinary framework for relational progression from community friendship to solemn betrothal and indissoluble covenant marriage. Grounded in orthodox Protestant covenant theology, Roman Catholic sacramental personalism, Eastern Greek Orthodox ascetical mysteriology, Scott Stanley commitment theory, Murray Bowen differentiation of self, and formal game-theoretic verification.",
+      "version": "0.1.0",
+      "category": "philosophy",
+      "author": {
+        "name": "Adam Matthew Steinberger",
+        "email": "adam@matthewsteinberger.com"
+      }
+    },
+    {
+      "name": "christian-marriage-and-family",
+      "source": "./src/vibey_tools/skills/plugins/christian-marriage-and-family",
+      "description": "Biblical patriarchy, sacrificial male headship, executive domestic governance, authoritative child rearing, and filial piety triangulated across Protestant, Catholic, and Greek Orthodox traditions.",
+      "version": "0.1.0",
+      "category": "religion",
       "author": {
         "name": "Adam Matthew Steinberger",
         "email": "adam@matthewsteinberger.com"
@@ -863,6 +885,17 @@
       "description": "Logistics and Optimization Software: why optimization projects fail, complexity assessed honestly, linear programming, MIP and branch-and-bound, modeling well, constraint programming, metaheuristics, local search and large neighbourhood search, bounds and solution quality, shortest path and network flow, the TSP, vehicle routing as the core problem, packing and loading, assignment and matching, scheduling, facility location and network design, inventory, forecasting, warehouse operations, last mile, the data layer, dynamic and stochastic problems, and solvers and tooling.",
       "version": "0.1.0",
       "category": "operations-research",
+      "author": {
+        "name": "Adam Matthew Steinberger",
+        "email": "adam@matthewsteinberger.com"
+      }
+    },
+    {
+      "name": "loving-people-well",
+      "source": "./src/vibey_tools/skills/plugins/loving-people-well",
+      "description": "Loving People Well: a backward-induction framework of relational stewardship, presence, cognitive memory, bounded mercy, and radical surrender in Christian ethics. Grounded in Richard Bellman's principle of backward induction, Dietrich Bonhoeffer's life together, Thomas Aquinas's caritas and affabilitas, Eastern Orthodox kenosis and hesychia, and modern attention economics.",
+      "version": "0.1.0",
+      "category": "philosophy",
       "author": {
         "name": "Adam Matthew Steinberger",
         "email": "adam@matthewsteinberger.com"

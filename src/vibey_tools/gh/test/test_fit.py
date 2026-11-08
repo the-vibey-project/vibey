@@ -815,3 +815,30 @@ def test_the_default_window_and_reserve_are_the_measured_ones():
 def test_a_reserve_that_leaves_no_room_is_refused():
     with pytest.raises(ValueError, match="reserve_tokens"):
         ContextSizer(ceiling_tokens=8192, reserve_tokens=8192)
+
+
+class FixedProbe:
+    def __init__(self, total: int | None) -> None:
+        self._total = total
+
+    def total_bytes(self) -> int | None:
+        return self._total
+
+
+def test_both_samplers_read_physical_memory_through_the_family_probe() -> None:
+    sample_linux = LinuxMemorySampler(FakeFiles({}), probe=FixedProbe(8 * 1024**3)).sample()
+    assert sample_linux.total_gb == 8.59
+    assert sample_linux.readable
+
+    sample_linux_none = LinuxMemorySampler(FakeFiles({}), probe=FixedProbe(None)).sample()
+    assert not sample_linux_none.readable
+
+    sample_darwin = DarwinMemorySampler(probe=FixedProbe(25769803776)).sample()
+    assert sample_darwin.total_gb == 25.77
+
+
+def test_the_linux_default_probe_reads_through_the_samplers_own_reader() -> None:
+    sample = LinuxMemorySampler(
+        FakeFiles({fit.LINUX_MEMINFO_PATH: "MemTotal: 4000000 kB\n"})
+    ).sample()
+    assert sample.total_gb == 4.1

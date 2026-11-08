@@ -311,13 +311,13 @@ jobs:
           # `tools-lint`, while its mypy gate also runs on the declared 3.12 floor below.
           # vibey-skills declares no static gates, being stdlib-only with no type or import config.
           - {package: vibey-gh, dir: src/vibey_tools/gh, python: "3.12",
-             install: 'pip install -e ".[dev]"',
+             install: 'pip install -e ../../vibey_runners/common && pip install -e ".[dev]"',
              static: 'python -m mypy vibey_gh', test: 'python -m pytest -q',
              network_test: 'python -m pytest -q -m network --no-cov'}
           - {package: vibey-gh, dir: src/vibey_tools/gh, python: "3.13",
-             install: 'pip install -e ".[dev]"', test: 'python -m pytest -q'}
+             install: 'pip install -e ../../vibey_runners/common && pip install -e ".[dev]"', test: 'python -m pytest -q'}
           - {package: vibey-gh, dir: src/vibey_tools/gh, python: "3.14",
-             install: 'pip install -e ".[dev]"', test: 'python -m pytest -q'}
+             install: 'pip install -e ../../vibey_runners/common && pip install -e ".[dev]"', test: 'python -m pytest -q'}
           - package: vibey-skills
             dir: src/vibey_tools/skills
             python: "3.12"
@@ -391,25 +391,27 @@ jobs:
           # Every absorbed library now shares the >=3.12 floor, so each tenant below runs
           # on the common supported range: Python 3.12, 3.13, and 3.14.
           #
-          # vibey-runners-common ships no suite, so it has no `test` and the suite step
-          # skips it (tests/meta/test_tools_matrix_covers_every_package.py counts only rows
-          # that do carry one). Its row exists for `static`: it declares a strict mypy and
-          # two import contracts, and until this row nothing had ever run either.
+          # vibey-runners-common's suite covers its one infrastructure module, the family
+          # memory probe (#383), at a 100% branch floor. Its static gate runs a strict mypy and
+          # its two import contracts.
           - package: vibey-runners-common
             dir: src/vibey_runners/common
             python: "3.12"
             install: 'pip install -e ".[dev]"'
             static: 'mypy --strict src/vibey_runners/common && lint-imports'
+            test: 'python -m pytest -q -p no:cacheprovider --cov=vibey_runners.common.infrastructure --cov-branch --cov-report=term-missing --cov-fail-under=100'
           - package: vibey-runners-common
             dir: src/vibey_runners/common
             python: "3.13"
             install: 'pip install -e ".[dev]"'
             static: 'mypy --strict src/vibey_runners/common && lint-imports'
+            test: 'python -m pytest -q -p no:cacheprovider --cov=vibey_runners.common.infrastructure --cov-branch --cov-report=term-missing --cov-fail-under=100'
           - package: vibey-runners-common
             dir: src/vibey_runners/common
             python: "3.14"
             install: 'pip install -e ".[dev]"'
             static: 'mypy --strict src/vibey_runners/common && lint-imports'
+            test: 'python -m pytest -q -p no:cacheprovider --cov=vibey_runners.common.infrastructure --cov-branch --cov-report=term-missing --cov-fail-under=100'
           # claudeloop's own CI ran these on 3.12; that is now the common library floor. The
           # frontmatter check was its `skills` job: Claude Code loads a malformed SKILL.md
           # silently, so nothing else would notice.
@@ -684,6 +686,7 @@ jobs:
       - name: vibey-gh - black, isort, mypy
         working-directory: src/vibey_tools/gh
         run: |
+          python -m pip install --quiet -e ../../vibey_runners/common
           python -m pip install --quiet -e ".[dev]"
           python -m black --check vibey_gh test
           isort --check-only vibey_gh test
