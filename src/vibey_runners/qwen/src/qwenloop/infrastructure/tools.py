@@ -14,7 +14,9 @@ from qwenloop.domain.config import ToolLimits
 from qwenloop.domain.model import CODING_TOOL_NAMES
 from qwenloop.infrastructure.content_scanner import ContentScanner
 from qwenloop.infrastructure.interfaces.mcp_interface import McpGatewayInterface
+from qwenloop.infrastructure.interfaces.web_search_interface import WebSearchToolInterface
 from qwenloop.infrastructure.mcp import McpError
+from qwenloop.infrastructure.web_search import WebSearchTool
 
 # The argument names a model uses for the same thing, first match wins. The canonical
 # name (first in each tuple) is the one the tool schema advertises; the rest are the
@@ -176,12 +178,16 @@ class SandboxTools:
         limits: ToolLimits | None = None,
         shell_environment: ShellEnvironment | None = None,
         mcp: McpGatewayInterface | None = None,
+        web_search: WebSearchToolInterface | None = None,
     ) -> None:
         self._mcp = mcp
         self.worktree = worktree.resolve()
         self.allow_network = allow_network
         self.limits = limits or ToolLimits()
         self._shell_environment = shell_environment or ShellEnvironment()
+        self._web_tool = web_search or WebSearchTool(
+            self.worktree, self._shell_environment, self.limits
+        )
 
     @property
     def tool_names(self) -> tuple[str, ...]:
@@ -291,54 +297,8 @@ class SandboxTools:
         return {"content": text, "untrusted": _MCP_UNTRUSTED}
 
     async def _web(self, name: str, arguments: Mapping[str, object]) -> dict[str, object]:
-        """web_search and web_fetch: the same `vibey search` and `vibey fetch` a shell would
-        run, called without the model having to spell the command.
-
-        The address checks, the redirect checks and the size caps live in vibey, so a
-        runner that has to be installed alone never reimplements them. It needs the settings
-        vibey passes every session (`WEBSEARCH_*`, among them the absolute path of the
-        running `vibey`); without them the answer says so, and the model carries on without.
-        """
-        environment = self._shell_environment.build()
-        command = environment.get("WEBSEARCH_COMMAND", "vibey")
-        if "WEBSEARCH_PROVIDER" not in environment:
-            return {"error": _WEB_NOT_CONFIGURED}
-        if name == "web_search":
-            query = self._first(arguments, _QUERY_KEYS)
-            if not isinstance(query, str) or not query.strip():
-                return {"error": "web_search needs a query: what to look up"}
-            try:
-                limit = self._integer(self._first(arguments, _LIMIT_KEYS))
-            except ValueError as exc:
-                return {"error": f"max_results must be an integer: {exc}"}
-            argv = [command, "search", "--json", "--limit", str(min(max(limit or 5, 1), 20)), "--"]
-            argv.append(query)
-        else:
-            url = self._first(arguments, _URL_KEYS)
-            if not isinstance(url, str) or not url.strip():
-                return {"error": "web_fetch needs a url: the page to read"}
-            argv = [command, "fetch", "--json", "--", url]
-        try:
-            process = await asyncio.create_subprocess_exec(
-                *argv,
-                cwd=self.worktree,
-                env=environment,
-                stdout=asyncio.subprocess.PIPE,
-                stderr=asyncio.subprocess.STDOUT,
-                start_new_session=True,
-            )
-        except OSError as exc:
-            return {"error": f"could not run {command!r}: {exc}"}
-        try:
-            output, _ = await asyncio.wait_for(process.communicate(), timeout=_WEB_TIMEOUT_SECONDS)
-        except TimeoutError:
-            process.kill()
-            await process.wait()
-            return {"error": "the web request timed out"}
-        text = output.decode(errors="replace")[: self.limits.max_read_chars]
-        if process.returncode != 0:
-            return {"error": text.strip() or f"exit code {process.returncode}"}
-        return {"content": text, "untrusted": _WEB_UNTRUSTED}
+        """web_search and web_fetch: delegated to WebSearchTool."""
+        return await self._web_tool.execute(name, arguments)
 
     def _canonical(self, name: str) -> str:
         """The tool a call names. A namespaced name resolves to its last segment when that
