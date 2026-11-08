@@ -1016,33 +1016,6 @@ async def build_app(
 
         telemetry_tracer = TelemetryTracer()
         telemetry_metrics = TelemetryMetrics()
-        notifications = NotificationService()
-        projects = PostgresProjectRepository(
-            pool,
-            notifications=notifications,
-        )
-        ledger = PostgresLedgerRepository(pool)
-
-        # Build rotation infrastructure (Phase E1)
-        engine_health_repo = PostgresEngineHealthRepository(pool)
-        rotation_cursors = PostgresRotationCursorRepository(pool)
-        engine_health_service = EngineHealthService(engine_health_repo)
-        conductor_preflight = ConductorPreflight(
-            health=engine_health_service,
-            feasibility=VibeyGhFeasibilityAdapter(),
-        )
-        engine_selector = EngineSelector(
-            health_service=engine_health_service,
-            cursor_repository=rotation_cursors,
-            descriptors=BY_ENGINE_ID,
-        )
-        rotation_handoff = RotationHandoffService(engine_selector)
-
-        # Build engine adapters
-        engine_adapters = {
-            desc.engine_id: LoopProcessAdapter(descriptor=desc) for desc in DEFAULT_DESCRIPTORS
-        }
-
         resolved_config = config
         vibey_toml = Path("vibey.toml")
         skipped_toml = False
@@ -1292,6 +1265,38 @@ async def build_app(
             from vibey.infrastructure.siem.in_memory import InMemorySiem
 
             siem_port = InMemorySiem()
+
+        notifications = NotificationService(
+            messaging=messaging_port,
+            messaging_room=resolved_config.messaging.room_id if resolved_config else None,
+            email=email_port,
+            sms=sms_port,
+        )
+        projects = PostgresProjectRepository(
+            pool,
+            notifications=notifications,
+        )
+        ledger = PostgresLedgerRepository(pool)
+
+        # Build rotation infrastructure (Phase E1)
+        engine_health_repo = PostgresEngineHealthRepository(pool)
+        rotation_cursors = PostgresRotationCursorRepository(pool)
+        engine_health_service = EngineHealthService(engine_health_repo)
+        conductor_preflight = ConductorPreflight(
+            health=engine_health_service,
+            feasibility=VibeyGhFeasibilityAdapter(),
+        )
+        engine_selector = EngineSelector(
+            health_service=engine_health_service,
+            cursor_repository=rotation_cursors,
+            descriptors=BY_ENGINE_ID,
+        )
+        rotation_handoff = RotationHandoffService(engine_selector)
+
+        # Build engine adapters
+        engine_adapters = {
+            desc.engine_id: LoopProcessAdapter(descriptor=desc) for desc in DEFAULT_DESCRIPTORS
+        }
 
         jobs = PostgresJobRepository(pool, reap_thresholds=reap_settings.thresholds())
         clock = SystemClock()
