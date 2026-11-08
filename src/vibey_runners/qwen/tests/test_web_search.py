@@ -92,6 +92,16 @@ async def test_web_search_command_error_and_timeout(tmp_path: Path) -> None:
     timeout_result = await searcher.search("hang")
     assert timeout_result == {"error": "the web request timed out"}
 
+    tool_timeout = WebSearchTool(
+        tmp_path,
+        tool_hang._shell_environment,
+        ToolLimits(),
+        timeout_seconds=0.1,
+    )
+    assert await tool_timeout.execute("web_search", {"query": "hang"}) == {
+        "error": "the web request timed out"
+    }
+
 
 @pytest.mark.asyncio
 async def test_web_search_tool_and_class_satisfy_interfaces(tmp_path: Path) -> None:

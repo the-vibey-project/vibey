@@ -186,7 +186,10 @@ class SandboxTools:
         self.limits = limits or ToolLimits()
         self._shell_environment = shell_environment or ShellEnvironment()
         self._web_tool = web_search or WebSearchTool(
-            self.worktree, self._shell_environment, self.limits
+            self.worktree,
+            self._shell_environment,
+            self.limits,
+            timeout_seconds=_WEB_TIMEOUT_SECONDS,
         )
 
     @property

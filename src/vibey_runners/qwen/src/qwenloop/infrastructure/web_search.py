@@ -113,10 +113,13 @@ class WebSearchTool:
         worktree: Path,
         shell_environment: ShellEnvironmentInterface,
         limits: ToolLimits,
+        *,
+        timeout_seconds: float = _WEB_TIMEOUT_SECONDS,
     ) -> None:
         self.worktree = worktree.resolve()
         self._shell_environment = shell_environment
         self.limits = limits
+        self.timeout_seconds = timeout_seconds
 
     @staticmethod
     def _first(arguments: Mapping[str, object], keys: tuple[str, ...]) -> object:
@@ -142,6 +145,7 @@ class WebSearchTool:
         searcher = WebSearch(
             self.worktree,
             environment,
+            timeout_seconds=self.timeout_seconds,
             max_read_chars=self.limits.max_read_chars,
         )
         if not searcher.is_configured:
