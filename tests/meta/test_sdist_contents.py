@@ -12,6 +12,7 @@ from __future__ import annotations
 import subprocess
 import tarfile
 import tomllib
+import zipfile
 from collections import Counter
 from pathlib import Path
 
@@ -24,8 +25,8 @@ MIB = 1024 * 1024
 
 
 @pytest.fixture(scope="module")
-def sdist(tmp_path_factory: pytest.TempPathFactory) -> tuple[dict[str, int], int]:
-    """The built sdist: each repository-relative path with its size, and the tarball's size."""
+def sdist_archive(tmp_path_factory: pytest.TempPathFactory) -> Path:
+    """The built sdist tarball."""
     out = tmp_path_factory.mktemp("sdist")
     # Built for real rather than listed through hatchling's internals: the file list in the
     # tarball is the artifact that gets uploaded, and `uv build` brings hatchling itself.
@@ -35,6 +36,13 @@ def sdist(tmp_path_factory: pytest.TempPathFactory) -> tuple[dict[str, int], int
         capture_output=True,
     )
     (archive,) = out.glob("*.tar.gz")
+    return archive
+
+
+@pytest.fixture(scope="module")
+def sdist(sdist_archive: Path) -> tuple[dict[str, int], int]:
+    """The sdist's contents: each repository-relative path with its size, and the tarball's size."""
+    archive = sdist_archive
     files: dict[str, int] = {}
     with tarfile.open(archive) as tar:
         for member in tar.getmembers():
@@ -42,6 +50,22 @@ def sdist(tmp_path_factory: pytest.TempPathFactory) -> tuple[dict[str, int], int
                 # Drop the leading `<name>-<version>/` directory.
                 files[member.name.split("/", 1)[1]] = member.size
     return files, archive.stat().st_size
+
+
+@pytest.fixture(scope="module")
+def wheel_names(sdist_archive: Path, tmp_path_factory: pytest.TempPathFactory) -> list[str]:
+    """The names inside the wheel built FROM the sdist, as the release workflows build it
+    (`python -m build` makes the sdist, then the wheel from that sdist): a build hook that
+    reads a file the sdist dropped fails here and not in Release."""
+    out = tmp_path_factory.mktemp("wheel")
+    subprocess.run(
+        ["uv", "build", "--wheel", "--out-dir", str(out), str(sdist_archive)],
+        check=True,
+        capture_output=True,
+    )
+    (wheel,) = out.glob("*.whl")
+    with zipfile.ZipFile(wheel) as archive:
+        return archive.namelist()
 
 
 def _under(path: str, prefix: str) -> bool:
@@ -111,3 +135,8 @@ def test_sdist_still_ships_what_the_wheel_needs(sdist: tuple[dict[str, int], int
 def test_the_budget_has_no_unused_prefix() -> None:
     gone = [p for p in BUDGET["forbidden_prefixes"] if not (REPO / p).exists()]
     assert not gone, f"forbidden prefixes naming nothing in the repository; remove them: {gone}"
+
+
+def test_a_wheel_builds_from_the_sdist_and_carries_the_packages(wheel_names: list[str]) -> None:
+    assert "vibey/__init__.py" in wheel_names
+    assert "vibey_gh/__init__.py" in wheel_names
