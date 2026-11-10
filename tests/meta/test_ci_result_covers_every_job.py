@@ -84,3 +84,104 @@ def test_ci_result_step_fails_on_failure_and_cancellation_but_not_skip(tmp_path:
 def test_no_workflow_expression_is_interpolated_into_the_script() -> None:
     assert "${{" not in _step()["run"]
     assert _step()["env"]["NEEDS_JSON"] == "${{ toJSON(needs) }}"
+
+
+# --- `lint`: the cheap static gates run first, so a lint failure stops the fan-out ---------
+
+LINT = "lint"
+# Every job that runs Python or the container waits for `lint`. The JS and desktop jobs have
+# their own typecheck and gain nothing from waiting on Python lint, and `chart` is a Helm
+# render; they stay ungated so they keep running in parallel.
+GATED_BY_LINT = {
+    "gates",
+    "noloss",
+    "postgres-compatibility",
+    "tools",
+    "tools-lint",
+    "image",
+    "cluster-smoke",
+}
+UNGATED_BY_LINT = {"krypton-app", "vibey-core", "app", "vscode-extension", "desktop", "chart"}
+# Moved verbatim from `gates` into `lint`, in this order.
+MOVED_STEPS = [
+    "Install uv",
+    "Set up Python",
+    "Install dependencies",
+    "Install the TypeScript compiler",
+    "Gate 0a - committed JavaScript is generated from TypeScript",
+    "Gate 0 - governance corpus index",
+    "Gate 1 - ruff check",
+    "Gate 2 - ruff format --check",
+    "Gate 3 - mypy --strict",
+    "Gate 5 - lint-imports (onion contract)",
+]
+# Moved gates only: setup is duplicated on purpose, a gate must run exactly once.
+MOVED_GATES = MOVED_STEPS[4:]
+STAYING_GATES = [
+    "Run test suite with coverage",
+    "Gate 4a - pytest domain layer (100% coverage)",
+    "Gate 4b - pytest application layer (100% coverage)",
+    "Gate 4c - pytest infrastructure layer (100% coverage)",
+    "Gate 4d - pytest CLI layer (100% coverage)",
+    "Gate 6 - bandit",
+    "Gate 7 - pip-audit",
+]
+
+
+def _step_names(job: str) -> list[str]:
+    return [str(step.get("name", "")) for step in _jobs()[job]["steps"]]
+
+
+def _needs(job: str) -> set[str]:
+    needs = _jobs()[job].get("needs", [])
+    return {needs} if isinstance(needs, str) else set(needs)
+
+
+def test_lint_job_exists_after_uv_lock_with_its_declared_name() -> None:
+    jobs = _jobs()
+    assert LINT in jobs, "ci.yml has no `lint` job"
+    assert jobs[LINT]["name"] == "Lint and static gates"
+    assert _needs(LINT) == {"uv-lock"}
+
+
+def test_exactly_the_python_and_container_jobs_wait_for_lint() -> None:
+    jobs = _jobs()
+    waiting = {job for job in jobs if LINT in _needs(job)} - {"ci-result"}
+    assert waiting == GATED_BY_LINT, (
+        f"jobs gated by lint: {sorted(waiting)}; expected {sorted(GATED_BY_LINT)}"
+    )
+    assert set(jobs) - {LINT, "ci-result", "uv-lock"} == GATED_BY_LINT | UNGATED_BY_LINT
+
+
+def test_jobs_that_waited_for_uv_lock_still_do() -> None:
+    for job in ("gates", "noloss", "postgres-compatibility", "tools", "tools-lint"):
+        assert {"uv-lock", LINT} <= _needs(job), job
+
+
+def test_moved_steps_live_in_lint_in_order_and_gates_are_not_duplicated() -> None:
+    names = _step_names(LINT)
+    assert [n for n in names if n in MOVED_STEPS] == MOVED_STEPS
+    gates_names = _step_names("gates")
+    assert not set(MOVED_GATES) & set(gates_names), "a moved gate is still in `gates`"
+    every_gate = [n for job in _jobs() for n in _step_names(job) if n.startswith("Gate ")]
+    assert len(every_gate) == len(set(every_gate)), "a gate runs in more than one job"
+
+
+def test_gates_keeps_the_test_suite_and_the_remaining_gates() -> None:
+    names = _step_names("gates")
+    for step in STAYING_GATES:
+        assert step in names, f"`gates` lost {step!r}"
+        assert step not in _step_names(LINT)
+
+
+def test_gates_keeps_the_environment_the_test_suite_needs() -> None:
+    names = _step_names("gates")
+    for setup in ("Install uv", "Set up Python", "Install dependencies"):
+        assert setup in names
+    # The suite recompiles the TypeScript artifacts (tests/meta/test_typescript_artifacts.py),
+    # so `gates` still needs Node and the compiler even though Gate 0a moved out.
+    assert "Install the TypeScript compiler" in names
+
+
+def test_ci_result_needs_lint() -> None:
+    assert LINT in _needs("ci-result")
