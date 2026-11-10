@@ -12,8 +12,9 @@ p50 and p90 in minutes and the job minutes split by runner OS. Wall time is the 
 approval; job minutes are each job's `started_at` to `completed_at`. Job minutes are measured
 on a sample (the newest `sample_size` runs per workflow) and the sample is named beside them.
 
-Billed dollars are 0 for a public repository on standard runners; the record observes the
-billable milliseconds the run timing API reports for a few runs and says so. Anything the
+Billed dollars are recorded, not assumed: the record observes the billable milliseconds the
+run timing API reports for a few probed runs (one per runner OS where the window has one) and
+states a zero only for the runner kinds it probed and only for those runs. Anything the
 forge could not answer is recorded `unknown` with the reason, never a number (sub-doctrine
 10.f). Settings come only from `scripts/ci_cost_baseline.toml`. Every call is a `gh api` GET.
 Promoting this to a `vibey-gh` command is a later step (SP1, CI-L).
