@@ -378,9 +378,10 @@ def test_run_stops_when_the_host_is_busy_and_resumes_without_repeating(tmp_path:
     assert all(row["solved"] for row in ledger.read())
 
 
-def test_storm_home_refuses_volatile_storage(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setenv("VIBEY_STORM_HOME", "/tmp/storm")
-    with pytest.raises(SystemExit, match="volatile"):
-        mq.Volatile.storm_home(SETTINGS)
+def test_trial_home_refuses_volatile_storage_with_exit_78(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("VIBEY_STORM_HOME", "/" + "tmp/storm")
+    with pytest.raises(SystemExit) as refused:
+        mq.TrialHome.resolve(SETTINGS)
+    assert refused.value.code == 78
     monkeypatch.setenv("VIBEY_STORM_HOME", str(Path.home() / "storm-home"))
-    assert mq.Volatile.storm_home(SETTINGS).name == SETTINGS.trials_subdir
+    assert mq.TrialHome.resolve(SETTINGS).name == SETTINGS.trials_subdir

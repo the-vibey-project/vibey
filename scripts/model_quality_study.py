@@ -37,6 +37,11 @@ from typing import Any
 
 from vibey_gh.review_canary import CanaryLedger, WilsonInterval
 
+# The storm's tools sit under docs/plans; the durability gate that refuses volatile storage
+# (10.h, exit 78) lives there, and is reused rather than reimplemented (10.e).
+sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "docs/plans/qwenstorm-3.0.0/tools"))
+import storm_durability  # noqa: E402 - after the path it is found on
+
 try:
     from scripts.interfaces.model_quality_study_interface import (
         ClockInterface,
@@ -76,8 +81,6 @@ TIERS = ("t1", "t2", "t3", "t4")
 LANGUAGES = ("python", "typescript")
 #: Where a failed check lands in the failure vocabulary the preregistration records.
 FAILURE_OF_CHECK = {"hidden": "wrong_behaviour", "lint": "lint", "types": "types"}
-#: Exit status for a refusal to work in volatile storage (sub-doctrine 10.h).
-EX_CONFIG = 78
 GIB = 1024**3
 
 
@@ -585,23 +588,17 @@ class StudyRunner:
         return ran
 
 
-class Volatile:
-    PREFIXES = ("/tmp", "/private/tmp", "/var/tmp")  # noqa: S108 - these are what we refuse
+class TrialHome:
+    """Where trial repositories live: under the storm home, refused when that is volatile."""
 
-    @classmethod
-    def storm_home(cls, settings: Settings) -> Path:
-        explicit = os.environ.get("VIBEY_STORM_HOME")
-        if explicit:
-            home = Path(explicit).expanduser()
-        elif platform.system() == "Darwin":
-            home = Path.home() / "git" / "vibey-storm"
-        else:
-            home = Path.home() / ".local" / "share" / "vibey" / "storm"
-        resolved = str(home.resolve())
-        scratch = os.environ.get("TMPDIR", "").rstrip("/")
-        if resolved.startswith(cls.PREFIXES) or (scratch and resolved.startswith(scratch)):
-            raise SystemExit(f"refusing volatile storage for trial repositories: {resolved}")
-        return home / settings.trials_subdir
+    @staticmethod
+    def resolve(settings: Settings) -> Path:
+        home, _ = storm_durability.StormHome(os.environ).resolve()
+        root = home / settings.trials_subdir
+        storm_durability.DurabilityGate(storm_durability.VolatileLocations(os.environ)).enforce(
+            {"trial repositories": root}, "VIBEY_STORM_HOME"
+        )
+        return root
 
 
 # ------------------------------------------------------------------------ command line
@@ -683,7 +680,7 @@ def main(argv: Sequence[str] | None = None) -> int:
         preparer,
         idle,
         SystemClock(),
-        Volatile.storm_home(settings),
+        TrialHome.resolve(settings),
     ).run(models, sets, host)
     print(f"ran {ran} trial(s)")
     return 0

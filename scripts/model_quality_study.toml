@@ -8,7 +8,7 @@
 [study]
 tasks = "research/model-quality/tasks"
 ledger = "research/model-quality/ledger.jsonl"
-# Trial repositories live under the storm home, never /tmp (work outlives the machine,
+# Trial repositories live under the storm home, never in volatile storage (work outlives the machine,
 # sub-doctrine 10.h). VIBEY_STORM_HOME wins; the fallback matches `vibey-gh`'s own.
 trials_subdir = "model-quality"
 # Fixed by the preregistration, section 5.
