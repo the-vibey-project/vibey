@@ -46,6 +46,11 @@ class GhActionsReaderInterface(Protocol):
         """The run's timing object (billable milliseconds by runner OS)."""
         ...
 
+    @staticmethod
+    def is_read_only(argv: Sequence[str]) -> bool:
+        """True only for a plain `gh api repos/...` GET."""
+        ...
+
     @property
     def calls(self) -> int:
         """How many API calls this reader has made."""
@@ -74,4 +79,8 @@ class CiCostBaselineInterface(Protocol):
 
     def collect(self, since_days: int) -> dict[str, object]:
         """The record: window and cutoff, per-workflow figures, totals, cost basis, unknowns."""
+        ...
+
+    def render(self, record: Mapping[str, Any], document: str) -> str:
+        """The document with every GENERATED block rewritten from the record."""
         ...

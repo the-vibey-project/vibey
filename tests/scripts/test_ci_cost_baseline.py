@@ -11,6 +11,7 @@ import json
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
 from datetime import datetime, timedelta
+from pathlib import Path
 from typing import Any
 
 from scripts import ci_cost_baseline as cb
@@ -43,10 +44,10 @@ class FakeGh:
         runs: Mapping[int, Sequence[Mapping[str, Any]]],
         jobs: Mapping[int, Sequence[Mapping[str, Any]]],
         private: bool = False,
-        timing_ms: int = 0,
+        billable: Mapping[str, Any] | None = None,
     ) -> None:
         self.workflows, self.runs, self.jobs = workflows, runs, jobs
-        self.private, self.timing_ms = private, timing_ms
+        self.private, self.billable = private, dict(billable or {})
         self.paths: list[str] = []
 
     def run(
@@ -77,8 +78,7 @@ class FakeGh:
             chunk = rows[(page - 1) * per_page : page * per_page]
             return Result(0, json.dumps({"total_count": len(rows), "jobs": chunk}))
         if route.endswith("/timing"):
-            billable = {"UBUNTU": {"total_ms": self.timing_ms}} if self.timing_ms else {}
-            return Result(0, json.dumps({"billable": billable, "run_duration_ms": 1000}))
+            return Result(0, json.dumps({"billable": self.billable, "run_duration_ms": 1000}))
         return Result(1, "", f"gh: unrouted {path}")
 
 
@@ -90,7 +90,11 @@ def settings(**over: Any) -> cb.CiBaselineSettings:
         "per_page": 100,
         "timeout_seconds": 5.0,
         "timing_probe_runs": 1,
-        "output": "unused.json",
+        "output": "out-{stamp}.json",
+        "baseline": "baseline.json",
+        "document": "state.md",
+        "orientation_disabled": 14,
+        "related_records": {"old": "a related note"},
     }
     base.update(over)
     return cb.CiBaselineSettings(**base)
@@ -278,20 +282,58 @@ def test_a_workflow_that_cannot_be_read_is_unknown_with_its_reason() -> None:
     assert record["unknowns"] and "ci" in record["unknowns"][0]
 
 
-def test_billed_dollars_zero_for_public_repository_with_measured_basis() -> None:
-    gh = FakeGh([wf(1, "ci")], {1: [run(11)]}, {11: []}, private=False, timing_ms=0)
-    cost = collector(gh).collect(14)["cost"]
+UBUNTU_JOB = [job("ubuntu-latest", 5)]
+ZERO = {"UBUNTU": {"total_ms": 0, "jobs": 1}}
+
+
+def cost_of(gh: FakeGh, **over: Any) -> dict[str, Any]:
+    return collector(gh, **over).collect(14)["cost"]  # type: ignore[return-value]
+
+
+def test_billed_dollars_zero_only_when_the_api_returned_entries_that_are_zero() -> None:
+    cost = cost_of(FakeGh([wf(1, "ci")], {1: [run(11)]}, {11: UBUNTU_JOB}, billable=ZERO))
     assert cost["billed_usd"] == 0
     assert cost["repository_visibility"] == "public"
     assert cost["billable_ms_observed"] == 0
-    assert "public" in cost["basis"]
+    assert cost["billable_keys_seen"] == ["UBUNTU"]
+    assert "standard runners" not in cost["basis"]
+
+
+def test_an_empty_billable_object_is_no_data_not_a_zero() -> None:
+    cost = cost_of(FakeGh([wf(1, "ci")], {1: [run(11)]}, {11: UBUNTU_JOB}, billable={}))
+    assert cost["billed_usd"] is None
+    assert cost["billable_ms_observed"] is None
+    assert cost["basis"].startswith("unknown")
+    assert cost["billable_keys_seen"] == []
+
+
+def test_billable_milliseconds_above_zero_on_a_public_repository_are_not_called_free() -> None:
+    paid = {"UBUNTU": {"total_ms": 5000, "jobs": 1}}
+    cost = cost_of(FakeGh([wf(1, "ci")], {1: [run(11)]}, {11: UBUNTU_JOB}, billable=paid))
+    assert cost["billed_usd"] is None
+    assert cost["billable_ms_observed"] == 5000
+    assert cost["basis"].startswith("unknown")
 
 
 def test_private_repository_does_not_claim_zero_dollars() -> None:
-    gh = FakeGh([wf(1, "ci")], {1: [run(11)]}, {11: []}, private=True)
-    cost = collector(gh).collect(14)["cost"]
+    gh = FakeGh([wf(1, "ci")], {1: [run(11)]}, {11: UBUNTU_JOB}, private=True, billable=ZERO)
+    cost = cost_of(gh)
     assert cost["billed_usd"] is None
     assert "unknown" in cost["basis"]
+
+
+def test_one_completed_run_is_probed_per_runner_os() -> None:
+    jobs = {11: [job("ubuntu-latest", 5)], 12: [job("macos-14", 5)], 13: [job("ubuntu-latest", 5)]}
+    gh = FakeGh([wf(1, "ci")], {1: [run(11), run(12), run(13)]}, jobs, billable=ZERO)
+    probes = cost_of(gh)["probes"]
+    assert [(p["os"], p["run_id"]) for p in probes] == [("ubuntu", 11), ("macos", 12)]
+    assert sum(1 for path in gh.paths if path.endswith("/timing")) == 2
+
+
+def test_labels_in_the_other_bucket_are_recorded() -> None:
+    jobs = {11: [job("self-hosted", 5), job("ubuntu-latest", 5)]}
+    record = collector(FakeGh([wf(1, "ci")], {1: [run(11)]}, jobs)).collect(14)
+    assert record["other_runner_labels"] == {"self-hosted": 1}
 
 
 def test_record_names_window_cutoff_and_api_call_count() -> None:
@@ -304,18 +346,41 @@ def test_record_names_window_cutoff_and_api_call_count() -> None:
 
 
 def test_only_get_calls_are_made() -> None:
-    gh = FakeGh([wf(1, "ci")], {1: [run(11)]}, {11: []})
+    gh = FakeGh([wf(1, "ci")], {1: [run(11)]}, {11: UBUNTU_JOB})
     seen: list[Sequence[str]] = []
     original = gh.run
 
     def spy(argv: Sequence[str], **kw: Any) -> Result:
-        seen.append(argv)
+        seen.append(list(argv))
         return original(argv, **kw)
 
     gh.run = spy  # type: ignore[method-assign]
     collector(gh).collect(14)
-    flags = {"-X", "--method", "-f", "-F", "--field", "--raw-field", "--input"}
-    assert seen and all(not flags & set(a) for a in seen)
+    assert seen
+    for argv in seen:
+        assert argv == ["gh", "api", argv[-1]]
+        assert argv[-1].startswith("repos/")
+
+
+def test_the_guard_rejects_anything_that_is_not_a_plain_get() -> None:
+    guard = cb.GhActionsReader.is_read_only
+    assert guard(["gh", "api", "repos/a/b/actions/workflows"])
+    assert not guard(["gh", "api", "-X", "POST", "repos/a/b/actions/runs/1/rerun"])
+    assert not guard(["gh", "api", "--method", "DELETE", "repos/a/b"])
+    assert not guard(["gh", "api", "-f", "x=1", "repos/a/b"])
+    assert not guard(["gh", "api", "orgs/a"])
+    assert not guard(["gh", "workflow", "disable", "repos/a/b"])
+
+
+def test_the_reader_refuses_a_write_shaped_path_before_calling_gh() -> None:
+    gh = FakeGh([], {}, {})
+    reader = cb.GhActionsReader(gh, REPO, 5.0)
+    try:
+        reader._get("orgs/elsewhere")
+    except ValueError:
+        assert gh.paths == []
+        return
+    raise AssertionError("a non-repos path must be refused")
 
 
 def test_collector_satisfies_its_interface() -> None:
@@ -326,7 +391,8 @@ def test_settings_load_from_toml_with_no_defaults(tmp_path: Any) -> None:
     path = tmp_path / "s.toml"
     path.write_text(
         '[ci_cost_baseline]\nrepo = "a/b"\nwindow_days = 3\nsample_size = 4\nper_page = 5\n'
-        'timeout_seconds = 6.0\ntiming_probe_runs = 1\noutput = "o.json"\n'
+        'timeout_seconds = 6.0\ntiming_probe_runs = 1\noutput = "o.json"\nbaseline = "b.json"\n'
+        'document = "d.md"\norientation_disabled = 14\n[ci_cost_baseline.related_records]\nx = "y"\n'
     )
     loaded = cb.CiBaselineSettings.load(path)
     assert (loaded.repo, loaded.window_days, loaded.sample_size, loaded.output) == (
@@ -341,3 +407,102 @@ def test_settings_load_from_toml_with_no_defaults(tmp_path: Any) -> None:
     except KeyError:
         return
     raise AssertionError("a missing key must be an error, not a default")
+
+
+# ------------------------------------------------------------------ the command line
+
+DOC = "intro\n" + "".join(
+    f"<!-- BEGIN GENERATED ci-baseline:{n} — regenerated by scripts/ci_cost_baseline.py -->\n"
+    f"old\n<!-- END GENERATED ci-baseline:{n} -->\nstatic prose\n"
+    for n in ("provenance", "cost", "headline", "workflows")
+)
+
+
+def cli(tmp_path: Any, gh: FakeGh) -> cb.CiCostBaselineCli:
+    config = tmp_path / "scripts"
+    config.mkdir(exist_ok=True)
+    (config / "ci_cost_baseline.toml").write_text(
+        '[ci_cost_baseline]\nrepo = "example-org/example-repo"\nwindow_days = 14\nsample_size = 10\n'
+        'per_page = 100\ntimeout_seconds = 5.0\ntiming_probe_runs = 1\noutput = "out-{stamp}.json"\n'
+        'baseline = "baseline.json"\ndocument = "state.md"\norientation_disabled = 14\n'
+        '[ci_cost_baseline.related_records]\nold = "a related note"\n'
+    )
+    return cb.CiCostBaselineCli(tmp_path, runner=gh, clock=FixedClock())
+
+
+def healthy() -> FakeGh:
+    return FakeGh(
+        [wf(1, "ci"), wf(2, "old", "disabled_manually")],
+        {1: [run(11)], 2: [run(12)]},
+        {11: UBUNTU_JOB, 12: UBUNTU_JOB},
+        billable=ZERO,
+    )
+
+
+def test_collect_writes_a_stamped_file_and_exits_zero(tmp_path: Any) -> None:
+    assert cli(tmp_path, healthy()).run(["collect"]) == 0
+    assert (tmp_path / "out-20261110T120000Z.json").exists()
+
+
+def test_collect_refuses_to_overwrite_and_force_overwrites(tmp_path: Any) -> None:
+    target = tmp_path / "out-20261110T120000Z.json"
+    target.write_text("good evidence")
+    assert cli(tmp_path, healthy()).run(["collect"]) == 1
+    assert target.read_text() == "good evidence"
+    assert cli(tmp_path, healthy()).run(["collect", "--force"]) == 0
+    assert json.loads(target.read_text())["repo"] == REPO
+
+
+def test_collect_exits_one_and_writes_nothing_when_the_listing_is_unreadable(tmp_path: Any) -> None:
+    class Dead(FakeGh):
+        def run(self, argv: Sequence[str], **kw: Any) -> Result:
+            return Result(1, "", "gh: HTTP 500")
+
+    assert cli(tmp_path, Dead([], {}, {})).run(["collect"]) == 1
+    assert list(tmp_path.glob("out-*.json")) == []
+
+
+def test_collect_exits_two_when_the_record_is_written_with_unknowns(tmp_path: Any) -> None:
+    class Partial(FakeGh):
+        def run(self, argv: Sequence[str], **kw: Any) -> Result:
+            if "/workflows/1/runs" in argv[-1]:
+                return Result(1, "", "gh: HTTP 502")
+            return super().run(argv, **kw)
+
+    flaky = Partial([wf(1, "ci"), wf(2, "other")], {2: [run(9)]}, {9: []})
+    assert cli(tmp_path, flaky).run(["collect"]) == 2
+    assert (tmp_path / "out-20261110T120000Z.json").exists()
+
+
+def test_render_rewrites_only_the_generated_blocks_and_check_follows(tmp_path: Any) -> None:
+    tool = cli(tmp_path, healthy())
+    assert tool.run(["collect", "--out", "baseline.json"]) == 0
+    (tmp_path / "state.md").write_text(DOC)
+    assert tool.run(["check"]) == 1  # the blocks still say "old"
+    assert tool.run(["render"]) == 0
+    text = (tmp_path / "state.md").read_text()
+    assert text.startswith("intro\n") and text.count("static prose") == 4
+    assert "| old | `disabled_manually` |" in text and "a related note" in text
+    assert "about 14 disabled workflows; the measurement found 1" in text
+    assert tool.run(["check"]) == 0
+    (tmp_path / "state.md").write_text(text.replace("| ci |", "| edited |"))
+    assert tool.run(["check"]) == 1
+
+
+def test_render_fails_loudly_when_a_block_is_missing(tmp_path: Any) -> None:
+    tool = cli(tmp_path, healthy())
+    assert tool.run(["collect", "--out", "baseline.json"]) == 0
+    (tmp_path / "state.md").write_text("no markers here\n")
+    try:
+        tool.run(["render"])
+    except ValueError as exc:
+        assert "ci-baseline:provenance" in str(exc)
+        return
+    raise AssertionError("a missing block must be an error")
+
+
+def test_committed_document_matches_the_committed_record() -> None:
+    """The state document's generated blocks must be what `render` makes of the committed record
+    (the same check as `python scripts/ci_cost_baseline.py check`)."""
+    root = Path(__file__).resolve().parents[2]
+    assert cb.CiCostBaselineCli(root).run(["check"]) == 0

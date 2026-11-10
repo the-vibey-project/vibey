@@ -19,8 +19,20 @@ sample_size = 20
 per_page = 100
 # Seconds one `gh api` call may take before it is recorded as unreadable.
 timeout_seconds = 60.0
-# How many runs have their timing object read, to observe the billable milliseconds the API
-# reports. Billed dollars are 0 for a public repository on standard runners; this observes it.
-timing_probe_runs = 3
-# Where `collect` writes the record.
-output = "docs/architecture/evidence/ci-cost-baseline-2026-11-10.json"
+# How many completed runs per runner OS (ubuntu, macos, windows) have their timing object read,
+# to observe the billable milliseconds the API reports. An empty `billable` is recorded as no
+# data, never as 0.
+timing_probe_runs = 1
+# Where `collect` writes a NEW record; `{stamp}` is the cutoff (e.g. 20261110T181500Z). It never
+# overwrites an existing file unless `--force` is given.
+output = "docs/architecture/evidence/ci-cost-baseline-{stamp}.json"
+# The record the state document is rendered from, and the document itself (`render`, `check`).
+baseline = "docs/architecture/evidence/ci-cost-baseline-20261110T192053Z.json"
+document = "docs/architecture/evidence/ci-workflow-state-2026-11-10.md"
+# What the program's orientation expected before this measurement, stated beside the count found.
+orientation_disabled = 14
+
+# A record the repository holds that bears on why a workflow is disabled, by workflow name. A
+# workflow with no entry says `unknown, operator to say`.
+[ci_cost_baseline.related_records]
+"Backlog killer" = "the lane was paused in `scripts/daily_lanes.toml` by #1809 (2026-10-29), a repository switch, not this GitHub-level disablement"

@@ -1,13 +1,36 @@
 {
-  "api_calls": 525,
-  "collected_at": "2026-11-10T18:06:05Z",
+  "api_calls": 523,
+  "collected_at": "2026-11-10T19:20:53Z",
   "cost": {
-    "basis": "public repository on standard runners: billed dollars are 0; the run timing API reported 0 billable ms across 3 sampled run(s)",
+    "basis": "public repository: the run timing API returned billable entries with 0 billable ms for 2 probed run(s) covering runner OS macos, ubuntu; runner OS not probed are listed in `probes` (standard-runner status is not verified; see other_runner_labels)",
+    "billable_keys_seen": [
+      "MACOS",
+      "UBUNTU"
+    ],
     "billable_ms_observed": 0,
     "billed_usd": 0,
+    "probes": [
+      {
+        "billable_keys": [
+          "UBUNTU"
+        ],
+        "os": "ubuntu",
+        "run_id": 40889365572,
+        "total_ms": 0
+      },
+      {
+        "billable_keys": [
+          "MACOS",
+          "UBUNTU"
+        ],
+        "os": "macos",
+        "run_id": 42876689344,
+        "total_ms": 0
+      }
+    ],
     "real_costs": "queueing and wall time, not dollars",
     "repository_visibility": "public",
-    "timing_probe_runs": 3
+    "timing_probe_runs": 2
   },
   "disabled_workflows": [
     {
@@ -210,34 +233,36 @@
     }
   ],
   "job_minutes_definition": "started_at to completed_at of each job in the sampled runs, by runner OS from the job labels",
+  "other_runner_labels": {
+    "(no labels)": 40,
+    "self-hosted,vibey-local-vibey": 27
+  },
   "repo": "the-vibey-project/vibey",
   "sample_size_per_workflow": 20,
   "schema": "vibey-ci-cost-baseline/1",
   "source": "gh api GET (repos/<repo>/actions/workflows, .../workflows/<id>/runs, .../runs/<id>/jobs, .../runs/<id>/timing)",
   "totals": {
     "conclusions_in_sample": {
-      "cancelled": 31,
-      "failure": 66,
-      "in_progress": 1,
-      "queued": 1,
+      "cancelled": 30,
+      "failure": 67,
       "skipped": 80,
-      "success": 297
+      "success": 298
     },
     "estimate_basis": "per-workflow mean job minutes per sampled run times runs in window; an estimate, not a measurement",
     "job_minutes_estimated_for_window": {
-      "macos": 2776.0,
-      "other": 287.05,
-      "ubuntu": 51652.12,
+      "macos": 3019.7,
+      "other": 281.74,
+      "ubuntu": 50784.54,
       "windows": 0.0
     },
     "job_minutes_sampled": {
-      "macos": 284.63,
+      "macos": 305.98,
       "other": 106.32,
-      "ubuntu": 17333.55,
+      "ubuntu": 17332.68,
       "windows": 0.0
     },
-    "runs_in_window": 4617,
-    "runs_sampled": 476,
+    "runs_in_window": 4432,
+    "runs_sampled": 475,
     "workflows_active": 21,
     "workflows_disabled_manually": 18,
     "workflows_disabled_other": 0,
@@ -247,30 +272,30 @@
   "totals_by_state": {
     "active": {
       "job_minutes_estimated_for_window": {
-        "macos": 2648.55,
+        "macos": 2892.25,
         "other": 0.0,
-        "ubuntu": 33588.24,
+        "ubuntu": 32838.23,
         "windows": 0.0
       },
-      "runs_in_window": 2529
+      "runs_in_window": 2432
     },
     "disabled": {
       "job_minutes_estimated_for_window": {
         "macos": 127.45,
-        "other": 287.05,
-        "ubuntu": 18063.88,
+        "other": 281.74,
+        "ubuntu": 17946.32,
         "windows": 0.0
       },
-      "runs_in_window": 2088
+      "runs_in_window": 2000
     }
   },
   "totals_by_state_note": "state is the workflow's state at the cutoff; a now-disabled workflow's runs in the window ran before it was disabled",
   "unknowns": [],
   "wall_time_definition": "run_started_at to updated_at of a completed run, in minutes; includes any wait on a runner",
   "window": {
-    "cutoff": "2026-11-10T18:06:05Z",
+    "cutoff": "2026-11-10T19:20:53Z",
     "days": 14,
-    "start": "2026-10-27T18:06:05Z"
+    "start": "2026-10-27T19:20:53Z"
   },
   "workflows": [
     {
@@ -419,7 +444,7 @@
       },
       "name": "Backlog killer",
       "path": ".github/workflows/backlog-killer.yml",
-      "runs_in_window": 44,
+      "runs_in_window": 43,
       "runs_sampled": 20,
       "runs_without_jobs": 2,
       "sample_capped": true,
@@ -460,7 +485,7 @@
       },
       "name": "Backlog splitter",
       "path": ".github/workflows/backlog-splitter.yml",
-      "runs_in_window": 23,
+      "runs_in_window": 22,
       "runs_sampled": 20,
       "runs_without_jobs": 0,
       "sample_capped": true,
@@ -474,9 +499,8 @@
     },
     {
       "conclusions": {
-        "in_progress": 1,
         "skipped": 2,
-        "success": 17
+        "success": 18
       },
       "events": {
         "workflow_run": 20
@@ -485,41 +509,40 @@
       "job_minutes_per_run_mean": {
         "macos": 0.0,
         "other": 0.0,
-        "ubuntu": 0.2675,
+        "ubuntu": 0.2833,
         "windows": 0.0
       },
       "job_minutes_sampled": {
         "macos": 0.0,
         "other": 0.0,
-        "ubuntu": 5.35,
+        "ubuntu": 5.6667,
         "windows": 0.0
       },
       "jobs_sampled_runs": 20,
-      "jobs_without_timing": 1,
+      "jobs_without_timing": 0,
       "last_run": {
-        "conclusion": "in_progress",
+        "conclusion": "success",
         "created_at": "2026-11-10T18:06:48Z",
         "event": "workflow_run"
       },
       "name": "Branch health",
       "path": ".github/workflows/branch-health.yml",
-      "runs_in_window": 127,
+      "runs_in_window": 123,
       "runs_sampled": 20,
       "runs_without_jobs": 0,
       "sample_capped": true,
       "state": "active",
       "status": "measured",
       "wall_minutes": {
-        "n": 19,
+        "n": 20,
         "p50": 0.4,
-        "p90": 0.6733
+        "p90": 0.67
       }
     },
     {
       "conclusions": {
         "cancelled": 5,
-        "failure": 6,
-        "queued": 1,
+        "failure": 7,
         "success": 8
       },
       "events": {
@@ -528,36 +551,36 @@
       },
       "id": 334642063,
       "job_minutes_per_run_mean": {
-        "macos": 7.8592,
+        "macos": 8.9267,
         "other": 0.0,
-        "ubuntu": 56.0417,
+        "ubuntu": 56.0317,
         "windows": 0.0
       },
       "job_minutes_sampled": {
-        "macos": 157.1833,
+        "macos": 178.5333,
         "other": 0.0,
-        "ubuntu": 1120.8333,
+        "ubuntu": 1120.6333,
         "windows": 0.0
       },
       "jobs_sampled_runs": 20,
-      "jobs_without_timing": 1,
+      "jobs_without_timing": 0,
       "last_run": {
-        "conclusion": "failure",
-        "created_at": "2026-11-10T17:48:10Z",
-        "event": "push"
+        "conclusion": "success",
+        "created_at": "2026-11-10T18:35:10Z",
+        "event": "pull_request"
       },
       "name": "CI",
       "path": ".github/workflows/ci.yml",
-      "runs_in_window": 337,
+      "runs_in_window": 324,
       "runs_sampled": 20,
       "runs_without_jobs": 1,
       "sample_capped": true,
       "state": "active",
       "status": "measured",
       "wall_minutes": {
-        "n": 19,
-        "p50": 11.2833,
-        "p90": 17.6333
+        "n": 20,
+        "p50": 11.3167,
+        "p90": 17.8467
       }
     },
     {
@@ -573,25 +596,25 @@
       "job_minutes_per_run_mean": {
         "macos": 0.0,
         "other": 0.0,
-        "ubuntu": 0.2883,
+        "ubuntu": 0.2908,
         "windows": 0.0
       },
       "job_minutes_sampled": {
         "macos": 0.0,
         "other": 0.0,
-        "ubuntu": 5.7667,
+        "ubuntu": 5.8167,
         "windows": 0.0
       },
       "jobs_sampled_runs": 20,
       "jobs_without_timing": 0,
       "last_run": {
         "conclusion": "success",
-        "created_at": "2026-11-10T17:47:41Z",
+        "created_at": "2026-11-10T18:35:10Z",
         "event": "pull_request"
       },
       "name": "Changelog",
       "path": ".github/workflows/changelog.yml",
-      "runs_in_window": 284,
+      "runs_in_window": 271,
       "runs_sampled": 20,
       "runs_without_jobs": 0,
       "sample_capped": true,
@@ -599,7 +622,7 @@
       "status": "measured",
       "wall_minutes": {
         "n": 20,
-        "p50": 0.4333,
+        "p50": 0.425,
         "p90": 0.9133
       }
     },
@@ -632,7 +655,7 @@
       },
       "name": "Chat",
       "path": ".github/workflows/chat.yml",
-      "runs_in_window": 45,
+      "runs_in_window": 41,
       "runs_sampled": 20,
       "runs_without_jobs": 0,
       "sample_capped": true,
@@ -675,7 +698,7 @@
       },
       "name": "Continuation prompts",
       "path": ".github/workflows/continuation-prompts.yml",
-      "runs_in_window": 54,
+      "runs_in_window": 53,
       "runs_sampled": 20,
       "runs_without_jobs": 0,
       "sample_capped": true,
@@ -698,25 +721,25 @@
       "job_minutes_per_run_mean": {
         "macos": 0.0,
         "other": 0.0,
-        "ubuntu": 0.3183,
+        "ubuntu": 0.32,
         "windows": 0.0
       },
       "job_minutes_sampled": {
         "macos": 0.0,
         "other": 0.0,
-        "ubuntu": 6.3667,
+        "ubuntu": 6.4,
         "windows": 0.0
       },
       "jobs_sampled_runs": 20,
       "jobs_without_timing": 0,
       "last_run": {
         "conclusion": "success",
-        "created_at": "2026-11-10T17:47:41Z",
+        "created_at": "2026-11-10T18:35:10Z",
         "event": "pull_request_target"
       },
       "name": "Conventional Commits",
       "path": ".github/workflows/conventional-commits.yml",
-      "runs_in_window": 304,
+      "runs_in_window": 292,
       "runs_sampled": 20,
       "runs_without_jobs": 0,
       "sample_capped": true,
@@ -725,7 +748,7 @@
       "wall_minutes": {
         "n": 20,
         "p50": 0.3917,
-        "p90": 1.3683
+        "p90": 0.9617
       }
     },
     {
@@ -873,7 +896,7 @@
       },
       "name": "Dependabot Updates",
       "path": "dynamic/dependabot/dependabot-updates",
-      "runs_in_window": 24,
+      "runs_in_window": 22,
       "runs_sampled": 20,
       "runs_without_jobs": 0,
       "sample_capped": true,
@@ -887,25 +910,25 @@
     },
     {
       "conclusions": {
-        "success": 14
+        "success": 13
       },
       "events": {
-        "dynamic": 14
+        "dynamic": 13
       },
       "id": 335284842,
       "job_minutes_per_run_mean": {
         "macos": 0.0,
         "other": 0.0,
-        "ubuntu": 0.8571,
+        "ubuntu": 0.8115,
         "windows": 0.0
       },
       "job_minutes_sampled": {
         "macos": 0.0,
         "other": 0.0,
-        "ubuntu": 12.0,
+        "ubuntu": 10.55,
         "windows": 0.0
       },
-      "jobs_sampled_runs": 14,
+      "jobs_sampled_runs": 13,
       "jobs_without_timing": 0,
       "last_run": {
         "conclusion": "success",
@@ -914,16 +937,16 @@
       },
       "name": "Dependency Graph",
       "path": "dynamic/dependabot/update-graph",
-      "runs_in_window": 14,
-      "runs_sampled": 14,
+      "runs_in_window": 13,
+      "runs_sampled": 13,
       "runs_without_jobs": 0,
       "sample_capped": false,
       "state": "active",
       "status": "measured",
       "wall_minutes": {
-        "n": 14,
-        "p50": 1.0583,
-        "p90": 2.4483
+        "n": 13,
+        "p50": 1.0167,
+        "p90": 1.2933
       }
     },
     {
@@ -1079,7 +1102,7 @@
       },
       "name": "GitHub Release",
       "path": ".github/workflows/github-release.yml",
-      "runs_in_window": 72,
+      "runs_in_window": 69,
       "runs_sampled": 20,
       "runs_without_jobs": 0,
       "sample_capped": true,
@@ -1287,7 +1310,7 @@
       },
       "name": "PR evaluate",
       "path": ".github/workflows/pr-evaluate.yml",
-      "runs_in_window": 1838,
+      "runs_in_window": 1753,
       "runs_sampled": 20,
       "runs_without_jobs": 2,
       "sample_capped": true,
@@ -1389,32 +1412,32 @@
         "success": 20
       },
       "events": {
-        "pull_request": 8,
-        "push": 12
+        "pull_request": 9,
+        "push": 11
       },
       "id": 339785695,
       "job_minutes_per_run_mean": {
         "macos": 0.0,
         "other": 0.0,
-        "ubuntu": 0.3792,
+        "ubuntu": 0.3858,
         "windows": 0.0
       },
       "job_minutes_sampled": {
         "macos": 0.0,
         "other": 0.0,
-        "ubuntu": 7.5833,
+        "ubuntu": 7.7167,
         "windows": 0.0
       },
       "jobs_sampled_runs": 20,
       "jobs_without_timing": 0,
       "last_run": {
         "conclusion": "success",
-        "created_at": "2026-11-10T17:48:10Z",
-        "event": "push"
+        "created_at": "2026-11-10T18:35:10Z",
+        "event": "pull_request"
       },
       "name": "Provenance",
       "path": ".github/workflows/provenance.yml",
-      "runs_in_window": 533,
+      "runs_in_window": 513,
       "runs_sampled": 20,
       "runs_without_jobs": 0,
       "sample_capped": true,
@@ -1422,7 +1445,7 @@
       "status": "measured",
       "wall_minutes": {
         "n": 20,
-        "p50": 0.4583,
+        "p50": 0.4667,
         "p90": 1.0383
       }
     },
@@ -1456,7 +1479,7 @@
       },
       "name": "Release",
       "path": ".github/workflows/vibey-engine.yml",
-      "runs_in_window": 72,
+      "runs_in_window": 69,
       "runs_sampled": 20,
       "runs_without_jobs": 0,
       "sample_capped": true,
@@ -1542,7 +1565,7 @@
       },
       "name": "Release surfaces",
       "path": ".github/workflows/release-surfaces.yml",
-      "runs_in_window": 72,
+      "runs_in_window": 69,
       "runs_sampled": 20,
       "runs_without_jobs": 0,
       "sample_capped": true,
@@ -1583,7 +1606,7 @@
       },
       "name": "Repository profile",
       "path": ".github/workflows/repository-profile.yml",
-      "runs_in_window": 73,
+      "runs_in_window": 70,
       "runs_sampled": 20,
       "runs_without_jobs": 0,
       "sample_capped": true,
@@ -1721,8 +1744,8 @@
     },
     {
       "conclusions": {
-        "cancelled": 5,
-        "success": 15
+        "cancelled": 4,
+        "success": 16
       },
       "events": {
         "pull_request": 20
@@ -1731,25 +1754,25 @@
       "job_minutes_per_run_mean": {
         "macos": 0.0,
         "other": 0.0,
-        "ubuntu": 0.23,
+        "ubuntu": 0.2425,
         "windows": 0.0
       },
       "job_minutes_sampled": {
         "macos": 0.0,
         "other": 0.0,
-        "ubuntu": 4.6,
+        "ubuntu": 4.85,
         "windows": 0.0
       },
       "jobs_sampled_runs": 20,
       "jobs_without_timing": 0,
       "last_run": {
         "conclusion": "success",
-        "created_at": "2026-11-10T17:47:41Z",
+        "created_at": "2026-11-10T18:35:10Z",
         "event": "pull_request"
       },
       "name": "Skip markers",
       "path": ".github/workflows/skip-markers.yml",
-      "runs_in_window": 331,
+      "runs_in_window": 318,
       "runs_sampled": 20,
       "runs_without_jobs": 0,
       "sample_capped": true,
@@ -1757,7 +1780,7 @@
       "status": "measured",
       "wall_minutes": {
         "n": 20,
-        "p50": 0.3583,
+        "p50": 0.375,
         "p90": 0.5767
       }
     },
@@ -1792,7 +1815,7 @@
       },
       "name": "krypton-app",
       "path": ".github/workflows/krypton-app.yml",
-      "runs_in_window": 60,
+      "runs_in_window": 57,
       "runs_sampled": 20,
       "runs_without_jobs": 0,
       "sample_capped": true,
