@@ -203,7 +203,7 @@ enabled = true
 # "No skip markers" is skip-markers.yml's job: a skip-ci marker in a commit, or in the title
 # or body a squash merge commits, never reaches a permanent branch unrefused.
 required_checks  = [
-  "gates", "No-loss property suite (10,000 examples)",
+  "gates", "Lint and static gates", "No-loss property suite (10,000 examples)",
   "VS Code extension (ubuntu-latest)", "VS Code extension (macos-latest)",
   "No skip markers",
 ]
@@ -233,7 +233,7 @@ enabled = true
 # branch that drifts there is a release branch whose gates never ran.
 [rulesets.release]
 required_checks  = [
-  "gates", "No-loss property suite (10,000 examples)", "uv.lock is in sync with pyproject.toml",
+  "gates", "Lint and static gates", "No-loss property suite (10,000 examples)", "uv.lock is in sync with pyproject.toml",
   "VS Code extension (ubuntu-latest)", "VS Code extension (macos-latest)",
   "No skip markers",
 ]
@@ -347,17 +347,17 @@ enabled = true
 # ci.yml); `{test}` is the first failing test id the log names. The two VS Code jobs and
 # `No skip markers` are left undeclared on purpose: the issue reports them as unmapped.
 [branch_health.reproduce]
-"gates :: Gate 0a - committed JavaScript is generated from TypeScript" = "python3 scripts/typescript_artifacts.py --check"
-"gates :: Gate 0 - governance corpus index" = "uv run vibey-gh corpus-index --check"
-"gates :: Gate 1 - ruff check" = "uv run ruff check ."
-"gates :: Gate 2 - ruff format --check" = "uv run ruff format --check ."
-"gates :: Gate 3 - mypy --strict" = "uv run mypy --strict src/vibey"
+"Lint and static gates :: Gate 0a - committed JavaScript is generated from TypeScript" = "python3 scripts/typescript_artifacts.py --check"
+"Lint and static gates :: Gate 0 - governance corpus index" = "uv run vibey-gh corpus-index --check"
+"Lint and static gates :: Gate 1 - ruff check" = "uv run ruff check ."
+"Lint and static gates :: Gate 2 - ruff format --check" = "uv run ruff format --check ."
+"Lint and static gates :: Gate 3 - mypy --strict" = "uv run mypy --strict src/vibey"
 "gates :: Run test suite with coverage" = "uv run pytest {test} -q -p no:cacheprovider"
 "gates :: Gate 4a - pytest domain layer (100% coverage)" = "uv run pytest -q -p no:cacheprovider --cov=vibey --cov-branch --cov-report= && uv run coverage report --include='src/vibey/domain/*' --fail-under=100"
 "gates :: Gate 4b - pytest application layer (100% coverage)" = "uv run pytest -q -p no:cacheprovider --cov=vibey --cov-branch --cov-report= && uv run coverage report --include='src/vibey/application/*' --fail-under=100"
 "gates :: Gate 4c - pytest infrastructure layer (100% coverage)" = "uv run pytest -q -p no:cacheprovider --cov=vibey --cov-branch --cov-report= && uv run coverage report --include='src/vibey/infrastructure/*' --fail-under=100"
 "gates :: Gate 4d - pytest CLI layer (100% coverage)" = "uv run pytest -q -p no:cacheprovider --cov=vibey --cov-branch --cov-report= && uv run coverage report --include='src/vibey/cli/*' --fail-under=100"
-"gates :: Gate 5 - lint-imports (onion contract)" = "uv run lint-imports"
+"Lint and static gates :: Gate 5 - lint-imports (onion contract)" = "uv run lint-imports"
 "gates :: Gate 6 - bandit" = "uv run bandit -q -r src/vibey"
 "gates :: Gate 7 - pip-audit" = "uv run pip-audit --skip-editable"
 "No-loss property suite (10,000 examples)" = "uv run pytest -m noloss --hypothesis-profile=noloss -p no:cacheprovider"
