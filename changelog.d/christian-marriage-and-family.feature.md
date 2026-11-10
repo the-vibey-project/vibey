@@ -1,0 +1,1 @@
+* **skills:** add christian marriage and family theory, textbook, narrative, and skills plugin covering biblical patriarchy, sacrificial male headship, and filial piety across Protestant, Catholic, and Greek Orthodox traditions.

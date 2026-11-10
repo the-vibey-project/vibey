@@ -27,6 +27,7 @@ classifiers = [
 # Deliberately empty, and worth keeping that way. This is release tooling: it runs in
 # every CI job of every repository that adopts it, so each dependency it grows is a
 # dependency all of them grow. Everything here is stdlib.
+# The fit's physical-memory reading is the family probe in vibey-runners-common, imported where it is used so that `import vibey_gh.cli` stays stdlib-only.
 dependencies = []
 
 [project.optional-dependencies]
