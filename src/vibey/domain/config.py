@@ -75,6 +75,10 @@ DEFAULT_LOCAL_CONTEXT_WINDOW = 32_768
 # for ever. `[surfaces] adapter_timeout_seconds` or VIBEY_SURFACES_ADAPTER_TIMEOUT_SECONDS
 # overrides it (doctrine 12.c).
 DEFAULT_SURFACE_ADAPTER_TIMEOUT_SECONDS = 10
+# The newest-N caps on the in-process telemetry buffers: finished spans, and the latency and
+# duration samples kept per series. `[telemetry] max_spans` / `max_samples` override them.
+DEFAULT_TELEMETRY_MAX_SPANS = 10_000
+DEFAULT_TELEMETRY_MAX_SAMPLES = 1_000
 SURFACE_ADAPTER_TIMEOUT_BOUNDS = (1, 600)
 
 
@@ -242,6 +246,15 @@ class TelemetryConfig:
 
     enabled: bool = True
     export_path: str | None = None
+    # Newest-N caps on the in-process buffers, so a long-running worker cannot grow them
+    # without bound. Both must be at least 1.
+    max_spans: int = DEFAULT_TELEMETRY_MAX_SPANS
+    max_samples: int = DEFAULT_TELEMETRY_MAX_SAMPLES
+
+    def __post_init__(self) -> None:
+        for name in ("max_spans", "max_samples"):
+            if getattr(self, name) < 1:
+                raise ConfigError(f"telemetry.{name}", "must be at least 1")
 
 
 @dataclass(frozen=True, slots=True)
@@ -1140,6 +1153,8 @@ def _parse_telemetry(data: dict[str, Any]) -> TelemetryConfig:
     return TelemetryConfig(
         enabled=_optional(table, "enabled", "telemetry.enabled", bool, True),
         export_path=export_path,
+        max_spans=_count(table, "max_spans", "telemetry", DEFAULT_TELEMETRY_MAX_SPANS),
+        max_samples=_count(table, "max_samples", "telemetry", DEFAULT_TELEMETRY_MAX_SAMPLES),
     )
 
 

@@ -218,3 +218,62 @@ def test_rotation_fairness_with_zero_weight() -> None:
 def test_rotation_fairness_with_negative_weight() -> None:
     result = calculate_rotation_fairness({"a": 5}, {"a": -1})
     assert result == pytest.approx(1.0)
+
+
+def test_tracer_keeps_only_the_newest_spans() -> None:
+    tracer = TelemetryTracer(max_spans=3)
+    for index in range(10):
+        with tracer.start_span(f"s{index}"):
+            pass
+
+    assert [s.name for s in tracer.get_finished_spans()] == ["s7", "s8", "s9"]
+
+
+def test_tracer_default_cap_is_ten_thousand() -> None:
+    tracer = TelemetryTracer()
+    for index in range(10_005):
+        with tracer.start_span(f"s{index}"):
+            pass
+
+    spans = tracer.get_finished_spans()
+    assert len(spans) == 10_000
+    assert spans[-1].name == "s10004"
+    assert spans[0].name == "s5"
+
+
+def test_metrics_keep_only_the_newest_samples() -> None:
+    metrics = TelemetryMetrics(max_samples=2)
+    project_id = uuid4()
+    for value in (1.0, 2.0, 3.0):
+        metrics.record_queue_latency(project_id, Phase.BUILD, "build", value)
+        metrics.record_phase_duration(project_id, 1, Phase.BUILD, value)
+
+    exported = metrics.export_metrics(project_id)
+    assert exported["queue_latencies"] == {"build": [2.0, 3.0]}
+    assert exported["phase_durations"] == {"build": [2.0, 3.0]}
+    assert type(exported["queue_latencies"]["build"]) is list  # type: ignore[index]
+
+
+def test_metrics_default_cap_is_one_thousand() -> None:
+    metrics = TelemetryMetrics()
+    project_id = uuid4()
+    for value in range(1_005):
+        metrics.record_queue_latency(project_id, Phase.BUILD, "build", float(value))
+
+    latencies = metrics.export_metrics(project_id)["queue_latencies"]["build"]  # type: ignore[index]
+    assert len(latencies) == 1_000
+    assert latencies[-1] == 1_004.0
+
+
+def test_metrics_counters_are_unaffected_by_the_cap() -> None:
+    metrics = TelemetryMetrics(max_samples=1)
+    project_id = uuid4()
+    for _ in range(5):
+        metrics.record_engine_selection(project_id, EngineId.CLAUDELOOP)
+        metrics.record_handoff_gate_failure(project_id, "rule-1")
+        metrics.record_cost_spend(project_id, 1, Phase.BUILD, EngineId.CLAUDELOOP, 0.5)
+
+    exported = metrics.export_metrics(project_id)
+    assert exported["engine_selections"] == {"claudeloop": 5}
+    assert exported["handoff_gate_failures"] == {"rule-1": 5}
+    assert exported["cost_spend"] == {"claudeloop": 2.5}

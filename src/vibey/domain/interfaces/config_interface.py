@@ -65,6 +65,12 @@ class TelemetryConfigInterface(Protocol):
     @property
     def export_path(self) -> str | None: ...
 
+    @property
+    def max_spans(self) -> int: ...
+
+    @property
+    def max_samples(self) -> int: ...
+
 
 @runtime_checkable
 class QueuePriorityConfigInterface(Protocol):
