@@ -1,0 +1,32 @@
+# The source distribution's budget (tests/meta/test_sdist_contents.py).
+#
+# Every develop push uploads the wheel and the sdist to TestPyPI, which refuses uploads once
+# the project reaches its 10 GB limit. The sdist was 31 MB because it carried the whole
+# repository; a source build needs only what the wheel is made from.
+# Measured on the compressed tarball, the file that is uploaded and counted.
+max_total_mib = 12
+
+# Trees the sdist must not ship. Each is checked to exist in the repository, so an entry
+# goes when its tree does.
+forbidden_prefixes = [
+    "docs/microslices",  # generated context slices, 5.5k files; documentation, not source
+    "docs/explorer",     # generated ledger explorer pages; documentation, not source
+    "docs/plans",        # planning documents; the wheel does not read them
+    "research",          # measurement corpora and study output
+    "clients",           # krypton app and VS Code extension; separate artifacts
+    "tests",             # the suites run from the repository, never from the sdist
+    "deploy",            # Helm chart and manifests; shipped as the chart, not the package
+    "design",            # design sources and assets
+    "screenshots",       # README and docs images
+    "docs-src",          # documentation site sources
+    "docs-theme",        # documentation site theme
+    "packages",          # npm workspace packages (@vibey/core); a separate artifact
+    "scripts",           # repository maintenance scripts
+]
+
+# Trees that appear on a developer's disk or after a test run but are never committed, so
+# they cannot be checked for existence in a clean checkout.
+ephemeral_prefixes = [
+    ".hypothesis",  # hypothesis example database and constants cache
+    ".mypy_cache",  # mypy cache
+]
