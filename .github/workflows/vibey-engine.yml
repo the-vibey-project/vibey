@@ -111,6 +111,7 @@ jobs:
     environment: testpypi
     permissions:
       id-token: write            # trusted publishing; no token is stored anywhere
+      issues: write              # the failure notice below
     steps:
       - uses: actions/download-artifact@v4
         with: { name: dist, path: dist }
@@ -118,6 +119,29 @@ jobs:
         with:
           repository-url: https://test.pypi.org/legacy/
           skip-existing: true
+      - name: Open an issue when the develop publish fails
+        if: failure()
+        # continue-on-error on THIS step only: the publish above already failed the job and
+        # that red status is the truth. If notifying itself breaks (token, API), it must not
+        # replace or hide the publish failure, so it may not fail the job on its own.
+        continue-on-error: true
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          SHA: ${{ github.sha }}
+        run: |
+          set -euo pipefail
+          title="Release: develop publish failed"
+          body="The \`Publish to TestPyPI\` step failed for ${SHA}. Run: ${RUN_URL}"$'\n\n'"Check the storage limit first: TestPyPI answers \`400 Project size too large\` once the project passes its 10 GB limit. Delete old dev releases on test.pypi.org, or ask for an increase (https://docs.pypi.org/project-management/storage-limits/)."
+          gh label create release-health --color B60205 --description "A release job failed" || true
+          existing="$(gh issue list --state open --search "\"${title}\" in:title" \
+            --json number,title --jq "map(select(.title == \"${title}\")) | .[0].number // empty")"
+          if [ -n "${existing}" ]; then
+            gh issue comment "${existing}" --body "${body}"
+          else
+            gh issue create --title "${title}" --label release-health --body "${body}"
+          fi
 
   verify-testpypi:
     name: Verify the TestPyPI artifact

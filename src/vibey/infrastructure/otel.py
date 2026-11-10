@@ -1,7 +1,7 @@
 # Made with ❤️ by [Vibey](https://the-vibey-project.github.io/vibey/), Developed by [Adam Matthew Steinberger](https://vibewithadam.matthewsteinberger.com/) ([@adammatthewsteinberger](https://github.com/adammatthewsteinberger/)).
 """OpenTelemetry tracing and metrics instrumentation (Milestone 8 task 8.3)."""
 
-from collections import defaultdict
+from collections import defaultdict, deque
 from collections.abc import Iterator, Mapping
 from contextlib import contextmanager
 from contextvars import ContextVar
@@ -9,9 +9,14 @@ from dataclasses import dataclass, field
 from datetime import UTC, datetime, timedelta
 from uuid import UUID, uuid4
 
+from vibey.domain.config import DEFAULT_TELEMETRY_MAX_SAMPLES, DEFAULT_TELEMETRY_MAX_SPANS
 from vibey.domain.effort import Effort
 from vibey.domain.engine import EngineId
 from vibey.domain.phase import Phase
+from vibey.infrastructure.interfaces.otel_interface import (
+    TelemetryMetricsInterface,
+    TelemetryTracerInterface,
+)
 
 
 @dataclass(slots=True)
@@ -48,9 +53,11 @@ class Span:
         self.end_time = datetime.now(UTC)
 
 
-class TelemetryTracer:
-    def __init__(self) -> None:
-        self._spans: list[Span] = []
+class TelemetryTracer(TelemetryTracerInterface):
+    def __init__(self, max_spans: int = DEFAULT_TELEMETRY_MAX_SPANS) -> None:
+        # Newest `max_spans` finished spans: a deque drops from the left, so the most
+        # recent span is never the one discarded. Declared as `[telemetry] max_spans`.
+        self._spans: deque[Span] = deque(maxlen=max_spans)
         # One tracer is shared by every worker task.  The active parent chain
         # belongs to the current asyncio context, not to the process: a global
         # list lets overlapping jobs adopt one another's spans and pop the
@@ -167,14 +174,16 @@ class TelemetryTracer:
         self._active_stack.set(())
 
 
-class TelemetryMetrics:
-    def __init__(self) -> None:
+class TelemetryMetrics(TelemetryMetricsInterface):
+    def __init__(self, max_samples: int = DEFAULT_TELEMETRY_MAX_SAMPLES) -> None:
+        # Each latency or duration series keeps its newest `max_samples` values
+        # (`[telemetry] max_samples`). The counters below are bounded by distinct keys.
         self._selections: dict[UUID, dict[str, int]] = defaultdict(lambda: defaultdict(int))
-        self._queue_latencies: dict[UUID, dict[str, list[float]]] = defaultdict(
-            lambda: defaultdict(list)
+        self._queue_latencies: dict[UUID, dict[str, deque[float]]] = defaultdict(
+            lambda: defaultdict(lambda: deque(maxlen=max_samples))
         )
-        self._phase_durations: dict[UUID, dict[str, list[float]]] = defaultdict(
-            lambda: defaultdict(list)
+        self._phase_durations: dict[UUID, dict[str, deque[float]]] = defaultdict(
+            lambda: defaultdict(lambda: deque(maxlen=max_samples))
         )
         self._handoff_failures: dict[UUID, dict[str, int]] = defaultdict(lambda: defaultdict(int))
         self._cost_spend: dict[UUID, dict[str, float]] = defaultdict(lambda: defaultdict(float))
@@ -211,8 +220,14 @@ class TelemetryMetrics:
     def export_metrics(self, project_id: UUID) -> dict[str, object]:
         return {
             "engine_selections": dict(self._selections.get(project_id, {})),
-            "queue_latencies": dict(self._queue_latencies.get(project_id, {})),
-            "phase_durations": dict(self._phase_durations.get(project_id, {})),
+            "queue_latencies": {
+                kind: list(values)
+                for kind, values in self._queue_latencies.get(project_id, {}).items()
+            },
+            "phase_durations": {
+                phase: list(values)
+                for phase, values in self._phase_durations.get(project_id, {}).items()
+            },
             "handoff_gate_failures": dict(self._handoff_failures.get(project_id, {})),
             "cost_spend": dict(self._cost_spend.get(project_id, {})),
         }
