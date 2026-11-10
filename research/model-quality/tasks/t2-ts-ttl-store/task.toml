@@ -1,0 +1,12 @@
+id = "t2-ts-ttl-store"
+tier = "t2"
+language = "typescript"
+expected_files = ["src/ttl-store.ts"]
+
+[[check]]
+name = "hidden"
+argv = ["node", "--test", "hidden/*.test.ts"]
+
+[[check]]
+name = "types"
+argv = ["npx", "--yes", "--package", "typescript@5.9.3", "tsc", "-p", "."]

@@ -1,0 +1,12 @@
+id = "t1-bytes"
+tier = "t1"
+language = "typescript"
+expected_files = ["src/bytes.ts"]
+
+[[check]]
+name = "hidden"
+argv = ["node", "--test", "hidden/*.test.ts"]
+
+[[check]]
+name = "types"
+argv = ["npx", "--yes", "--package", "typescript@5.9.3", "tsc", "-p", "."]

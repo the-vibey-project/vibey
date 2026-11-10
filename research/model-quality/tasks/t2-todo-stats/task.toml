@@ -1,0 +1,16 @@
+id = "t2-todo-stats"
+tier = "t2"
+language = "python"
+expected_files = ["todo/stats.py"]
+
+[[check]]
+name = "hidden"
+argv = ["python", "-m", "pytest", "-q", "-p", "no:cacheprovider", "hidden"]
+
+[[check]]
+name = "lint"
+argv = ["ruff", "check", "--isolated", "--select", "E4,E7,E9,F", "--exclude", "hidden", "."]
+
+[[check]]
+name = "types"
+argv = ["mypy", "--ignore-missing-imports", "--exclude", "hidden", "."]

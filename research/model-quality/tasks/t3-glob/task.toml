@@ -1,0 +1,12 @@
+id = "t3-glob"
+tier = "t3"
+language = "typescript"
+expected_files = ["src/glob.ts"]
+
+[[check]]
+name = "hidden"
+argv = ["node", "--test", "hidden/*.test.ts"]
+
+[[check]]
+name = "types"
+argv = ["npx", "--yes", "--package", "typescript@5.9.3", "tsc", "-p", "."]
