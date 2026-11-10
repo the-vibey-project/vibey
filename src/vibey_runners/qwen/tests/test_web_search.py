@@ -117,3 +117,28 @@ async def test_web_search_tool_and_class_satisfy_interfaces(tmp_path: Path) -> N
 async def test_web_search_standalone_helper(tmp_path: Path) -> None:
     result = await web_search("test", worktree=tmp_path, environment={})
     assert "not set up" in str(result["error"])
+
+
+@pytest.mark.asyncio
+async def test_web_search_class_refuses_a_blank_query_on_its_own(tmp_path: Path) -> None:
+    # The tool dispatcher screens blank queries first; a direct caller of WebSearch gets
+    # the same plain refusal rather than an empty `vibey search` run.
+    searcher = WebSearch(tmp_path, {"WEBSEARCH_PROVIDER": "searxng"})
+
+    assert await searcher.search("   ") == {"error": "web_search needs a query: what to look up"}
+
+
+@pytest.mark.asyncio
+async def test_web_fetch_class_says_so_when_not_configured(tmp_path: Path) -> None:
+    searcher = WebSearch(tmp_path, {})
+
+    result = await searcher.fetch("https://example.org")
+
+    assert "not set up" in str(result["error"])
+
+
+@pytest.mark.asyncio
+async def test_web_fetch_class_refuses_a_blank_url_on_its_own(tmp_path: Path) -> None:
+    searcher = WebSearch(tmp_path, {"WEBSEARCH_PROVIDER": "searxng"})
+
+    assert await searcher.fetch("  ") == {"error": "web_fetch needs a url: the page to read"}
