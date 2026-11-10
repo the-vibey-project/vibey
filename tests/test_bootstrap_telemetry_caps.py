@@ -1,3 +1,4 @@
+# Made with ❤️ by [Vibey](https://the-vibey-project.github.io/vibey/), Developed by [Adam Matthew Steinberger](https://vibewithadam.matthewsteinberger.com/) ([@adammatthewsteinberger](https://github.com/adammatthewsteinberger/)).
 """build_app hands the declared `[telemetry]` buffer caps to the tracer and metrics it builds.
 
 The caps are declared keys (sub-doctrine 12.c), not literals in `otel.py`: the bound on
