@@ -506,3 +506,32 @@ def test_committed_document_matches_the_committed_record() -> None:
     (the same check as `python scripts/ci_cost_baseline.py check`)."""
     root = Path(__file__).resolve().parents[2]
     assert cb.CiCostBaselineCli(root).run(["check"]) == 0
+
+
+def test_cost_wording_names_probed_os_and_what_falls_outside_the_measurement(tmp_path: Any) -> None:
+    jobs = {11: [job("ubuntu-latest", 5), job("self-hosted", 5), job("", 5), job("", 5)]}
+    gh = FakeGh([wf(1, "ci")], {1: [run(11)]}, jobs, billable=ZERO)
+    tool = cli(tmp_path, gh)
+    assert tool.run(["collect", "--out", "baseline.json"]) == 0
+    record = json.loads((tmp_path / "baseline.json").read_text())
+    basis = record["cost"]["basis"]
+    assert "covering runner OS ubuntu" in basis
+    assert "not for jobs on any other runner kind" in basis
+    assert "are listed in `probes`" not in basis
+    (tmp_path / "state.md").write_text(DOC)
+    assert tool.run(["render"]) == 0
+    text = (tmp_path / "state.md").read_text()
+    assert "Runner OS with no probe recorded: macos, windows." in text
+    assert "(2 jobs)" in text and "`self-hosted` (1 jobs)" in text
+    assert "jobs (3 in the sampled runs) are on runner kinds no probe covered" in text
+    assert "A self-hosted runner label appears on 1 jobs" in text
+    assert "scripts/minimum_specs.toml" in text and "the operator is to say which is right" in text
+
+
+def test_no_self_hosted_note_when_no_job_used_a_self_hosted_label(tmp_path: Any) -> None:
+    gh = FakeGh([wf(1, "ci")], {1: [run(11)]}, {11: UBUNTU_JOB}, billable=ZERO)
+    tool = cli(tmp_path, gh)
+    assert tool.run(["collect", "--out", "baseline.json"]) == 0
+    (tmp_path / "state.md").write_text(DOC)
+    assert tool.run(["render"]) == 0
+    assert "self-hosted runner label appears" not in (tmp_path / "state.md").read_text()

@@ -411,8 +411,8 @@ class CiCostBaseline(CiCostBaselineInterface):
             billed = 0
             basis = (
                 f"public repository: the run timing API returned billable entries with 0 billable ms for "
-                f"{len(with_data)} probed run(s) covering runner OS {', '.join(covered)}; runner OS not "
-                "probed are listed in `probes` (standard-runner status is not verified; see other_runner_labels)"
+                f"{len(with_data)} probed run(s) covering runner OS {', '.join(covered)}; the zero is "
+                "observed only for those probes, not for jobs on any other runner kind"
             )
         return {
             "billed_usd": billed,
@@ -533,6 +533,17 @@ class CiCostBaseline(CiCostBaselineInterface):
         observed = (
             "unknown" if c["billable_ms_observed"] is None else str(c["billable_ms_observed"])
         )
+        probed_os = {p["os"] for p in c["probes"]}
+        unprobed = ", ".join(k for k in OS_KEYS[:3] if k not in probed_os) or "none"
+        other_jobs = sum(record["other_runner_labels"].values())
+        self_hosted = sum(v for k, v in record["other_runner_labels"].items() if "self-hosted" in k)
+        hosted_note = (
+            f"- A self-hosted runner label appears on {self_hosted} jobs in the sampled runs of the window. The repository's "
+            "own note (`scripts/minimum_specs.toml`) says every CI workflow runs on GitHub-hosted "
+            "runners only, so the two disagree; the operator is to say which is right.\n"
+            if self_hosted
+            else ""
+        )
         other = (
             ", ".join(f"`{k}` ({v} jobs)" for k, v in record["other_runner_labels"].items())
             or "none"
@@ -543,7 +554,12 @@ class CiCostBaseline(CiCostBaselineInterface):
             f"- Run timing probes (`GET repos/<repo>/actions/runs/<id>/timing`, one completed run per "
             f"runner OS where the window has one): {probed}. Billable keys seen: "
             f"{', '.join(c['billable_keys_seen']) or 'none'}. Billable ms observed: {observed}.\n"
+            f"- Runner OS with no probe recorded: {unprobed}.\n"
             f"- Runner labels in the `other` bucket (not ubuntu, macos or windows): {other}.\n"
+            "- Outside the measurement: the zero-dollar statement covers only the probed runs above. "
+            f"The `other` bucket's jobs ({other_jobs} in the sampled runs) are on runner kinds no "
+            "probe covered, so nothing here says what they cost.\n"
+            f"{hosted_note}"
             "- The costs that remain are queueing and wall time (the table below), not dollars.\n"
         )
         est_a = bs["active"]["job_minutes_estimated_for_window"]

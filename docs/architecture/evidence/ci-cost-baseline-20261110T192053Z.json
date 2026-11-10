@@ -2,7 +2,7 @@
   "api_calls": 523,
   "collected_at": "2026-11-10T19:20:53Z",
   "cost": {
-    "basis": "public repository: the run timing API returned billable entries with 0 billable ms for 2 probed run(s) covering runner OS macos, ubuntu; runner OS not probed are listed in `probes` (standard-runner status is not verified; see other_runner_labels)",
+    "basis": "public repository: the run timing API returned billable entries with 0 billable ms for 2 probed run(s) covering runner OS macos, ubuntu; the zero is observed only for those probes, not for jobs on any other runner kind",
     "billable_keys_seen": [
       "MACOS",
       "UBUNTU"
