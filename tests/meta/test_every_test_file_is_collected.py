@@ -39,6 +39,16 @@ ROOT = Path(__file__).resolve().parents[2]
 TEST_FILE = ("test_*.py", "*_test.py")  # pytest's default `python_files`
 # Path components that mark a tree as somebody else's code, never this repository's tests.
 FOREIGN = {"site-packages", "node_modules", "vendor", "_vendor", "vendored", "venv", ".venv"}
+#: Test files that are DATA, not suites, and why. Each is judged by something other than
+#: collection, and an entry that no longer matches a tracked file fails below (12.e).
+FIXTURES: tuple[tuple[str, str], ...] = (
+    (
+        "research/model-quality/tasks/*/*/*",
+        "the model-quality corpus: a task's hidden tests MUST fail against its seed, so collecting"
+        " them would fail the build; tests/scripts/test_model_quality_corpus.py runs every one"
+        " against its seed and its reference solution (MQ_VALIDATE_CORPUS=1)",
+    ),
+)
 
 
 def ini_options(project: Path) -> dict | None:
@@ -105,6 +115,8 @@ def strays() -> list[str]:
     all_suites = suites()
     out = []
     for path in tracked_test_files():
+        if any(fnmatch.fnmatch(str(path), pattern) for pattern, _ in FIXTURES):
+            continue
         _, collected, patterns = governing(path, all_suites)
         inside = any(c == PurePosixPath(".") or c in path.parents for c in collected)
         named = any(fnmatch.fnmatch(path.name, p) for p in patterns)
@@ -139,3 +151,13 @@ def test_a_stray_file_is_reported_by_name(monkeypatch) -> None:
     real = tracked_test_files()
     monkeypatch.setitem(globals(), "tracked_test_files", lambda: [*real, stray])
     assert any(line.startswith(str(stray)) for line in strays())
+
+
+def test_every_fixture_exemption_still_matches_a_tracked_test_file() -> None:
+    tracked = [str(path) for path in tracked_test_files()]
+    unused = [
+        pattern
+        for pattern, _ in FIXTURES
+        if not any(fnmatch.fnmatch(name, pattern) for name in tracked)
+    ]
+    assert not unused, f"these exemptions match nothing, so delete them: {unused}"

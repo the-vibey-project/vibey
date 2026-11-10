@@ -1,0 +1,19 @@
+# Calibration task: the October 2026 slugify benchmark, plan verbatim
+# (docs/architecture/evidence/model-build-benchmark-2026-10-23.md). The harness must reproduce
+# that result for stock gpt-oss:20b before any ranking is reported (preregistration, 5).
+id = "t1-slugify"
+tier = "t1"
+language = "python"
+expected_files = ["slugify.py", "test_slugify.py"]
+
+[[check]]
+name = "hidden"
+argv = ["python", "-m", "pytest", "-q", "-p", "no:cacheprovider", "hidden"]
+
+[[check]]
+name = "lint"
+argv = ["ruff", "check", "--isolated", "--select", "E4,E7,E9,F", "--exclude", "hidden", "."]
+
+[[check]]
+name = "types"
+argv = ["mypy", "--ignore-missing-imports", "--exclude", "hidden", "."]
