@@ -1,0 +1,1 @@
+* **Bounded in-process telemetry:** New `[telemetry] max_spans` and `max_samples` keys (also `VIBEY_TELEMETRY_MAX_SPANS` and `VIBEY_TELEMETRY_MAX_SAMPLES`) cap the in-process tracer and metrics buffers at the newest entries, so a long-running worker no longer grows them without bound.
