@@ -17,6 +17,7 @@ skipping every (model, task, trial) already in it, so a crash re-runs one trial 
 from __future__ import annotations
 
 import argparse
+import importlib.metadata
 import json
 import os
 import platform
@@ -670,7 +671,13 @@ def main(argv: Sequence[str] | None = None) -> int:
     idle = IdleGate(
         idle_settings, LlamaServerLog(Path(idle_settings["server_log"])), commands_runner
     )
-    host = {"system": platform.system(), "machine": platform.machine(), "node": platform.node()}
+    host = {
+        "system": platform.system(),
+        "machine": platform.machine(),
+        "node": platform.node(),
+        # Scores depend on the checkers, so their versions are part of the record.
+        **{tool: importlib.metadata.version(tool) for tool in ("ruff", "mypy", "pytest")},
+    }
     ran = StudyRunner(
         settings,
         ledger,
