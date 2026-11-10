@@ -16,6 +16,10 @@ from qwenloop.infrastructure.interfaces.tools_interface import (
     SandboxToolsInterface,
     ShellEnvironmentInterface,
 )
+from qwenloop.infrastructure.interfaces.web_search_interface import (
+    WebSearchInterface,
+    WebSearchToolInterface,
+)
 
 __all__ = [
     "AttachedServerInterface",
@@ -27,4 +31,6 @@ __all__ = [
     "ShellEnvironmentInterface",
     "SettingsLoaderInterface",
     "VllmServerInterface",
+    "WebSearchInterface",
+    "WebSearchToolInterface",
 ]
