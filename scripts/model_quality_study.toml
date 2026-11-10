@@ -1,0 +1,89 @@
+# Made with ❤️ by [Vibey](https://the-vibey-project.github.io/vibey/), Developed by [Adam Matthew Steinberger](https://vibewithadam.matthewsteinberger.com/) ([@adammatthewsteinberger](https://github.com/adammatthewsteinberger/)).
+#
+# The one declared source for scripts/model_quality_study.py (ADR-0051: configuration is
+# declared in TOML). Every value the preregistration fixes is here, with the reason beside
+# it: research/model-quality/PREREGISTRATION.md. Changing one after the first scored trial
+# is a protocol change and must be recorded there.
+
+[study]
+tasks = "research/model-quality/tasks"
+ledger = "research/model-quality/ledger.jsonl"
+# Trial repositories live under the storm home, never /tmp (work outlives the machine,
+# sub-doctrine 10.h). VIBEY_STORM_HOME wins; the fallback matches `vibey-gh`'s own.
+trials_subdir = "model-quality"
+# Fixed by the preregistration, section 5.
+num_ctx = 32768
+trials = 5
+max_turns = 25
+wall_s = 420
+check_timeout_s = 120
+# Screening set size, and the seed that splits screening from confirmation, section 4.
+screening = 6
+split_seed = 20261110
+# Wilson interval confidence (z = 1.96 is 95%).
+z = 1.96
+# Section 3.2 rule 3: resident size at num_ctx, leaving headroom for the OS and the runner.
+max_resident_gib = 20.0
+base_url = "http://127.0.0.1:11434/v1"
+ollama_url = "http://127.0.0.1:11434"
+# How qwenloop is started. The console script is in the workspace install.
+runner_argv = ["qwenloop"]
+
+[study.idle]
+# The quiet-host gate, the same rule scripts/minimum_specs.py applies (dogfooded, 10.e).
+max_load1 = 4.0
+quiet_window_s = 60
+max_wait_s = 900
+poll_s = 15
+busy_command = ""
+server_log = "~/.ollama/logs/server.log"
+
+# Candidates. A model enters a run only after `screen` passes it (preregistration 3.2).
+# `license_osi` is a fact read from the model card at registration; `license_source` is
+# where. `reference_only` models are measured and never selected as the default.
+# Tags marked "to confirm" in the preregistration are added here only once pulled and read.
+
+[[model]]
+key = "heretic-v2"
+tag = "hf.co/mradermacher/gpt-oss-20b-heretic-v2-GGUF:MXFP4_MOE"
+family = "gpt-oss"
+license_spdx = "Apache-2.0"
+license_osi = true
+license_source = "https://huggingface.co/p-e-w/gpt-oss-20b-heretic-v2"
+reference_only = false
+
+[[model]]
+key = "gpt-oss-stock"
+tag = "gpt-oss:20b"
+family = "gpt-oss"
+license_spdx = "Apache-2.0"
+license_osi = true
+license_source = "https://ollama.com/library/gpt-oss"
+reference_only = false
+
+[[model]]
+key = "qwen3-14b"
+tag = "qwen3:14b"
+family = "qwen3"
+license_spdx = "Apache-2.0"
+license_osi = true
+license_source = "https://ollama.com/library/qwen3"
+reference_only = false
+
+[[model]]
+key = "qwen25-coder-14b"
+tag = "qwen2.5-coder:14b"
+family = "qwen2.5-coder"
+license_spdx = "Apache-2.0"
+license_osi = true
+license_source = "https://ollama.com/library/qwen2.5-coder"
+reference_only = false
+
+[[model]]
+key = "gemma4-26b"
+tag = "gemma4:26b"
+family = "gemma4"
+license_spdx = "Gemma"
+license_osi = false
+license_source = "https://ollama.com/library/gemma4"
+reference_only = true
