@@ -76,7 +76,6 @@ nav:
   - Installation: installation.md
   - Usage: usage.md
   - Retrieval context engine: rag-context-engine.md
-  - Research paper: paper.md
   - Skills reference: reference/
   - Contributing: contributing.md
   - Security: security.md

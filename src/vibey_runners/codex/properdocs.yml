@@ -51,5 +51,4 @@ nav:
   - Reference: reference/cli.md
   - Contributing: contributing.md
   - Publishing: publishing.md
-  - Research paper: paper.md
 strict: true

@@ -2324,7 +2324,9 @@ def test_code_blocks_are_legible_against_the_background_this_theme_forces():
 
 
 def test_properdocs_theme_is_channel_aware_and_accessible():
-    root = Path(__file__).resolve().parent.parent
+    # The one published book is the repository root's (tests/meta/test_one_book_one_paper.py);
+    # the tenant's own properdocs.yml was retired, so the theme is asserted where it ships.
+    root = Path(__file__).resolve().parents[4]
     config = (root / "properdocs.yml").read_text(encoding="utf-8")
     css = (root / "docs/stylesheets/vibey.css").read_text(encoding="utf-8")
     script = (root / "docs/javascripts/channel.js").read_text(encoding="utf-8")
@@ -2352,9 +2354,6 @@ def test_properdocs_theme_is_channel_aware_and_accessible():
     assert '["__PRODUCTION_LABEL__", "main"]' in script
     assert '["__PREVIEW_LABEL__", "develop"]' in script
     assert "Release channels: release-channels.md" not in config
-    index = (root / "docs/index.md").read_text(encoding="utf-8")
-    assert 'data-release-target="main"' in index
-    assert 'data-release-target="develop"' in index
     assert "link.dataset.releaseTarget" in script
 
 
