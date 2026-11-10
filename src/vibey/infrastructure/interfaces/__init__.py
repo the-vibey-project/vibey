@@ -52,6 +52,10 @@ from vibey.infrastructure.interfaces.cluster_preflight_interface import (
     EngineAuthCheckInterface,
 )
 from vibey.infrastructure.interfaces.logging_interface import CorrelationLogContextInterface
+from vibey.infrastructure.interfaces.otel_interface import (
+    TelemetryMetricsInterface,
+    TelemetryTracerInterface,
+)
 from vibey.infrastructure.interfaces.postgres_interface import PostgresLocalServiceInterface
 
 if TYPE_CHECKING:  # concrete result types live beside their adapter
@@ -107,6 +111,8 @@ __all__ = [
     "StaticSiteWriterInterface",
     "SubprocessAutomatedReviewRunnerInterface",
     "SubprocessGateRunnerInterface",
+    "TelemetryMetricsInterface",
+    "TelemetryTracerInterface",
     "TierManagerInterface",
     "UrllibOllamaTransportInterface",
     "VibeySkillsContextCompilerInterface",

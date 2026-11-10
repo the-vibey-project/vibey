@@ -13,6 +13,10 @@ from vibey.domain.config import DEFAULT_TELEMETRY_MAX_SAMPLES, DEFAULT_TELEMETRY
 from vibey.domain.effort import Effort
 from vibey.domain.engine import EngineId
 from vibey.domain.phase import Phase
+from vibey.infrastructure.interfaces.otel_interface import (
+    TelemetryMetricsInterface,
+    TelemetryTracerInterface,
+)
 
 
 @dataclass(slots=True)
@@ -49,7 +53,7 @@ class Span:
         self.end_time = datetime.now(UTC)
 
 
-class TelemetryTracer:
+class TelemetryTracer(TelemetryTracerInterface):
     def __init__(self, max_spans: int = DEFAULT_TELEMETRY_MAX_SPANS) -> None:
         # Newest `max_spans` finished spans: a deque drops from the left, so the most
         # recent span is never the one discarded. Declared as `[telemetry] max_spans`.
@@ -170,7 +174,7 @@ class TelemetryTracer:
         self._active_stack.set(())
 
 
-class TelemetryMetrics:
+class TelemetryMetrics(TelemetryMetricsInterface):
     def __init__(self, max_samples: int = DEFAULT_TELEMETRY_MAX_SAMPLES) -> None:
         # Each latency or duration series keeps its newest `max_samples` values
         # (`[telemetry] max_samples`). The counters below are bounded by distinct keys.
