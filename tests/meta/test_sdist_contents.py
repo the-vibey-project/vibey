@@ -61,19 +61,43 @@ def test_sdist_ships_no_forbidden_tree(sdist: tuple[dict[str, int], int]) -> Non
     )
 
 
+def _tree(path: str) -> str:
+    """The tree a file counts toward: three segments under src/, else the first segment."""
+    parts = path.split("/")
+    depth = 3 if parts[0] == "src" else 1
+    return "/".join(parts[:depth]) if len(parts) > depth else path
+
+
+def _budget_message(files: dict[str, int], archive_size: int) -> str:
+    # The budget is the tarball, which is what TestPyPI stores and counts. A tar listing
+    # carries no per-file compressed size, so the trees are ranked by unpacked size.
+    by_tree: Counter[str] = Counter()
+    for path, size in files.items():
+        by_tree[_tree(path)] += size
+    largest = ", ".join(f"{tree} {size / MIB:.1f} MiB" for tree, size in by_tree.most_common(5))
+    return (
+        f"the sdist is {archive_size / MIB:.1f} MiB against a budget of "
+        f"{BUDGET['max_total_mib']} MiB; largest trees (ranked by unpacked size, "
+        f"not compressed): {largest}"
+    )
+
+
 def test_sdist_is_within_budget(sdist: tuple[dict[str, int], int]) -> None:
     sdist_files, archive_size = sdist
-    # The budget is the tarball, which is what TestPyPI stores and counts, not the sum of
-    # the unpacked files; the trees named on failure are ranked by unpacked size.
-    total = archive_size / MIB
-    by_tree: Counter[str] = Counter()
-    for path, size in sdist_files.items():
-        by_tree[path.split("/", 1)[0]] += size
-    largest = ", ".join(f"{tree} {size / MIB:.1f} MiB" for tree, size in by_tree.most_common(5))
-    assert total <= BUDGET["max_total_mib"], (
-        f"the sdist is {total:.1f} MiB against a budget of {BUDGET['max_total_mib']} MiB; "
-        f"largest trees (unpacked): {largest}"
-    )
+    assert archive_size / MIB <= BUDGET["max_total_mib"], _budget_message(sdist_files, archive_size)
+
+
+def test_budget_failure_names_the_nested_tree() -> None:
+    synthetic = {
+        "pyproject.toml": 2_000,
+        "src/vibey/cli/main.py": 1 * MIB,
+        "src/vibey_tools/gh/assets/blob.bin": 20 * MIB,
+        "src/vibey_tools/skills/plugins/x.md": 2 * MIB,
+    }
+    message = _budget_message(synthetic, 30 * MIB)
+    assert "src/vibey_tools/gh 20.0 MiB" in message
+    assert message.index("src/vibey_tools/gh") < message.index("src/vibey_tools/skills")
+    assert "src 2" not in message  # never the bare `src` bucket
 
 
 def test_sdist_still_ships_what_the_wheel_needs(sdist: tuple[dict[str, int], int]) -> None:
