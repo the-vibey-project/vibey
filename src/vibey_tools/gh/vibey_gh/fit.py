@@ -38,6 +38,7 @@ import subprocess
 import sys
 from collections.abc import Callable, Mapping
 from dataclasses import dataclass, field
+from typing import TYPE_CHECKING
 
 from vibey_gh.estimation import GradedEstimator, Sample
 from vibey_gh.interfaces.context_sizer_interface import ContextSizerInterface
@@ -45,6 +46,11 @@ from vibey_gh.interfaces.graded_estimator_interface import GradedEstimatorInterf
 from vibey_gh.interfaces.memory_sampler_interface import MemorySamplerInterface
 from vibey_gh.interfaces.model_sampler_interface import ModelSamplerInterface
 from vibey_gh.interfaces.text_file_reader_interface import TextFileReaderInterface
+
+if TYPE_CHECKING:
+    from vibey_runners.common.infrastructure.interfaces.memory_probe_interface import (
+        MemoryProbeInterface,
+    )
 
 __all__ = [
     "ADMIT",
@@ -288,11 +294,24 @@ class DarwinMemorySampler(MemorySamplerInterface):
     size reports `readable=False` so the caller can fail loudly instead.
     """
 
+    def __init__(self, probe: MemoryProbeInterface | None = None) -> None:
+        self._probe = probe
+
+    def _physical_total(self) -> int:
+        """Bytes of physical memory, read by the family probe (#383, sub-doctrine 10.e)."""
+        probe = self._probe
+        if probe is None:
+            # Imported here, not at the top: `import vibey_gh.cli` must keep working with only
+            # this package on PYTHONPATH -- the self-hosted pre-push hook runs exactly that
+            # (vibey_gh/templates/githooks/pre-push, `vibey_gh_self`).
+            from vibey_runners.common.infrastructure.memory_probe import MemoryProbe
+
+            # `_run` is looked up per call, so the fit's own command seam still reaches it.
+            probe = MemoryProbe(platform_name="darwin", runner=lambda argv: _run(*argv))
+        return probe.total_bytes() or 0
+
     def sample(self) -> Machine:
-        total_bytes = 0
-        raw = _run("sysctl", "-n", "hw.memsize").strip()
-        if raw.isdigit():
-            total_bytes = int(raw)
+        total_bytes = self._physical_total()
 
         free_gb = 0.0
         stat = _run("vm_stat")
@@ -359,9 +378,11 @@ class LinuxMemorySampler(MemorySamplerInterface):
         cgroup_swap_limit_paths: tuple[str, ...] = LINUX_CGROUP_SWAP_LIMIT_PATHS,
         cgroup_swap_usage_paths: tuple[str, ...] = LINUX_CGROUP_SWAP_USAGE_PATHS,
         proc_self_cgroup_path: str = LINUX_PROC_SELF_CGROUP,
+        probe: MemoryProbeInterface | None = None,
     ) -> None:
         self._reader: TextFileReaderInterface = TextFileReader() if reader is None else reader
         self._meminfo_path = meminfo_path
+        self._probe = probe
         # Each tuple gains this process's OWN cgroup ahead of the hierarchy root, so a
         # container that is not at the root is read where its limit actually is. Ahead,
         # not instead: `_first_int` walks the tuple in order, so a derived path that does
@@ -376,6 +397,19 @@ class LinuxMemorySampler(MemorySamplerInterface):
         self._cgroup_usage_paths = _with_nested(cgroup_usage_paths, relative)
         self._cgroup_swap_limit_paths = _with_nested(cgroup_swap_limit_paths, relative)
         self._cgroup_swap_usage_paths = _with_nested(cgroup_swap_usage_paths, relative)
+
+    def _physical_total(self) -> int:
+        """The host's physical memory, read by the family probe (#383, sub-doctrine 10.e)
+        through this sampler's own reader and path, so a cgroup limit still overrides it."""
+        probe = self._probe
+        if probe is None:
+            # Imported here for the reason DarwinMemorySampler._physical_total gives.
+            from vibey_runners.common.infrastructure.memory_probe import MemoryProbe
+
+            probe = MemoryProbe(
+                platform_name="linux", reader=self._reader.read, meminfo_path=self._meminfo_path
+            )
+        return probe.total_bytes() or 0
 
     def _relative_cgroup(self, path: str) -> str:
         """This process's cgroup path relative to its hierarchy root, or `""`.
@@ -407,7 +441,7 @@ class LinuxMemorySampler(MemorySamplerInterface):
 
     def sample(self) -> Machine:
         fields = self._meminfo()
-        total = fields.get("MemTotal", 0)
+        total = self._physical_total()
         # MemAvailable is the kernel's own answer to "what could a new process get?" and
         # is the right number here; MemFree, which ignores reclaimable cache, is only the
         # fallback for a kernel too old to publish it.

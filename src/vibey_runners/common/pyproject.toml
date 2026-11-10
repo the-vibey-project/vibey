@@ -80,5 +80,11 @@ forbidden_modules = [
 [[tool.importlinter.contracts]]
 name = "Interfaces declare seams, never consume them"
 type = "forbidden"
-source_modules = ["vibey_runners.common.application.interfaces"]
-forbidden_modules = ["vibey_runners.common.application.usecases"]
+source_modules = [
+    "vibey_runners.common.application.interfaces",
+    "vibey_runners.common.infrastructure.interfaces",
+]
+forbidden_modules = [
+    "vibey_runners.common.application.usecases",
+    "vibey_runners.common.infrastructure.memory_probe",
+]
