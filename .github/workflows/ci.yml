@@ -1405,3 +1405,54 @@ jobs:
           fi
           kubectl logs -n vibey deployment/vibey-vibey-worker --tail=100 || true
           kubectl logs -n keda deployment/keda-operator --tail=50 || true
+
+  # The one check that is red when any job above is red. Only a handful of checks are
+  # required on develop, so without this a job outside that set can fail and still merge.
+  # `if: always()` is what makes it run (and report) after a failed or cancelled need,
+  # instead of being skipped along with them. Nothing is required on it until the operator
+  # applies that settings change; meanwhile it reports and gates nothing.
+  ci-result:
+    name: CI result
+    if: always()
+    needs:
+      - uv-lock
+      - gates
+      - noloss
+      - postgres-compatibility
+      - tools
+      - tools-lint
+      - krypton-app
+      - vibey-core
+      - app
+      - vscode-extension
+      - desktop
+      - image
+      - chart
+      - cluster-smoke
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Fail unless every job succeeded or was skipped
+        env:
+          NEEDS_JSON: ${{ toJSON(needs) }}
+        run: |
+          python3 - <<'PY'
+          import json
+          import os
+          import sys
+
+          raw = os.environ.get("NEEDS_JSON", "").strip()
+          needs = json.loads(raw) if raw else {}
+          if not needs:
+              print("no needed job reported a result: nothing ran")
+              sys.exit(1)
+          bad = []
+          for job, info in sorted(needs.items()):
+              result = info.get("result") if isinstance(info, dict) else None
+              print(f"{job}: {result}")
+              if result not in ("success", "skipped"):
+                  bad.append(job)
+          if bad:
+              print("not green: " + ", ".join(bad))
+              sys.exit(1)
+          PY
