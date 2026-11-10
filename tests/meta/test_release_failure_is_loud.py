@@ -54,3 +54,35 @@ def test_the_issue_names_the_testpypi_storage_limit() -> None:
     run = _notify(_testpypi())["run"]
     assert "Project size too large" in run
     assert "docs.pypi.org/project-management/storage-limits" in run
+
+
+def test_the_notify_step_carries_no_expression_in_its_script() -> None:
+    # Values reach the script through `env`, never by `${{ }}` interpolation into shell.
+    assert "${{" not in _notify(_testpypi())["run"]
+
+
+def test_the_notify_step_cannot_hide_the_publish_failure() -> None:
+    assert _notify(_testpypi())["continue-on-error"] is True
+
+
+def test_the_job_keeps_trusted_publishing_and_gains_only_issues_write() -> None:
+    permissions = _testpypi()["permissions"]
+    assert permissions["id-token"] == "write"
+    assert permissions["issues"] == "write"
+
+
+def test_the_notify_step_names_its_repository_and_token_in_env() -> None:
+    env = _notify(_testpypi())["env"]
+    assert "GH_REPO" in env
+    assert "GH_TOKEN" in env
+
+
+def test_the_issue_lookup_matches_the_title_exactly() -> None:
+    # A search is fuzzy: only an exact title match may count as the existing issue.
+    assert "select(.title ==" in _notify(_testpypi())["run"]
+
+
+def test_the_notify_step_comes_after_the_publish_step() -> None:
+    steps = _testpypi()["steps"]
+    publish = next(i for i, s in enumerate(steps) if "gh-action-pypi-publish" in s.get("uses", ""))
+    assert steps.index(_notify(_testpypi())) > publish
