@@ -497,10 +497,8 @@ class LoopProcessAdapter:
         process_exited_without_status_since: float | None = None
         while True:
             try:
-                for line in await asyncio.to_thread(tail.read_new):
-                    event = self._translate_line(handle, line)
-                    if event is not None:
-                        yield event
+                for event in self._drain(handle, await asyncio.to_thread(tail.read_new)):
+                    yield event
 
                 # Check if done via meta.json's own status field. Every loop
                 # engine's RunMeta documents the same terminal vocabulary
@@ -513,10 +511,15 @@ class LoopProcessAdapter:
                 if meta_path.exists():
                     meta = json.loads(meta_path.read_text())
                     if meta.get("status") in ("finished", "failed", "stopped"):
-                        for line in tail.flush():
-                            event = self._translate_line(handle, line)
-                            if event is not None:
-                                yield event
+                        # The engine may have appended its last line (normally the
+                        # verdict) and written the terminal status after the read at
+                        # the top of this poll -- the window includes the consumer's
+                        # processing of every event yielded above. Read once more
+                        # before flushing, or that line is never seen and the run
+                        # reads as "did not report completion".
+                        late = await asyncio.to_thread(tail.read_new)
+                        for event in self._drain(handle, late + tail.flush()):
+                            yield event
                         break
 
                 # A well-behaved engine always writes a terminal status
@@ -541,10 +544,8 @@ class LoopProcessAdapter:
                             run_id=str(handle.run_id),
                             returncode=process.returncode,
                         )
-                        for line in tail.flush():
-                            event = self._translate_line(handle, line)
-                            if event is not None:
-                                yield event
+                        for event in self._drain(handle, tail.flush()):
+                            yield event
                         break
                 else:
                     process_exited_without_status_since = None
@@ -558,6 +559,11 @@ class LoopProcessAdapter:
                 )
                 break
 
+    def _drain(self, handle: RunHandle, lines: list[str]) -> list[EngineEvent]:
+        """Translate each line, dropping the ones that are skipped."""
+        events = (self._translate_line(handle, line) for line in lines)
+        return [event for event in events if event is not None]
+
     def _translate_line(self, handle: RunHandle, line: str) -> EngineEvent | None:
         """Translate one events.jsonl line, or None when it is skipped.
 
@@ -568,6 +574,8 @@ class LoopProcessAdapter:
             return None
         try:
             raw = json.loads(line)
+            if not isinstance(raw, dict):
+                raise ValueError(f"event line is a {type(raw).__name__}, not an object")
             # claudeloop writes {"event_type": ..., "payload": {...}}.
             # codexloop passes the wrapped codex CLI's own stream
             # through nearly verbatim, where the key is "type" and

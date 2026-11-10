@@ -602,6 +602,60 @@ async def test_tail_still_skips_a_complete_invalid_line_once(tmp_path: Path) -> 
     assert [log["event"] for log in logs].count("event_parse_failed") == 1
 
 
+async def test_tail_reads_once_more_at_terminal_status_so_a_final_line_is_not_lost(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """The engine appends its last line and writes `finished` after the poll's read.
+
+    Deterministic form of the race: the first read_new returns nothing, but by the time
+    it returns the engine has appended a complete line and written the terminal status.
+    """
+    from vibey.infrastructure.engines.events_tail import EventsTail
+
+    adapter = LoopProcessAdapter(descriptor=CLAUDELOOP)
+    run_dir = tmp_path / "test-run"
+    run_dir.mkdir(parents=True)
+    handle = _make_handle(run_dir)
+    events_path = run_dir / "events.jsonl"
+    events_path.write_text("")
+    real_read_new = EventsTail.read_new
+    calls = {"n": 0}
+
+    def racing_read_new(self: EventsTail) -> list[str]:
+        calls["n"] += 1
+        if calls["n"] == 1:
+            with events_path.open("a") as out:
+                out.write(_STARTED_LINE + "\n")
+            (run_dir / "meta.json").write_text('{"status":"finished"}')
+            return []
+        return real_read_new(self)
+
+    monkeypatch.setattr(EventsTail, "read_new", racing_read_new)
+
+    events = await asyncio.wait_for(_collect_events(adapter, handle), timeout=5)
+
+    assert len(events) == 1
+    assert events[0].kind == "SessionSeeded"
+
+
+async def test_tail_skips_a_valid_json_line_that_is_not_an_object(tmp_path: Path) -> None:
+    from structlog.testing import capture_logs
+
+    adapter = LoopProcessAdapter(descriptor=CLAUDELOOP)
+    run_dir = tmp_path / "test-run"
+    run_dir.mkdir(parents=True)
+    handle = _make_handle(run_dir)
+    (run_dir / "events.jsonl").write_text("[1]\nnull\n" + _STARTED_LINE + "\n")
+    (run_dir / "meta.json").write_text('{"status":"finished"}')
+
+    with capture_logs() as logs:
+        events = await asyncio.wait_for(_collect_events(adapter, handle), timeout=5)
+
+    assert len(events) == 1
+    assert [log["event"] for log in logs].count("event_parse_failed") == 2
+    assert "tail_error" not in [log["event"] for log in logs]
+
+
 async def test_tail_skips_blank_lines(tmp_path: Path) -> None:
     adapter = LoopProcessAdapter(descriptor=CLAUDELOOP)
     run_dir = tmp_path / "test-run"
