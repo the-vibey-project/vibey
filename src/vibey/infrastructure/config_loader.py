@@ -141,6 +141,13 @@ _ENGINE_DISPATCH_ENV_VARS: tuple[tuple[str, str, str, type], ...] = (
     ("engines", "paid_daily_cap", "VIBEY_ENGINES_PAID_DAILY_CAP", int),
 )
 
+# `[telemetry]`'s newest-N caps on the in-process buffers: a worker pod has no vibey.toml,
+# so the environment declares them there (12.c).
+_TELEMETRY_ENV_VARS: tuple[tuple[str, str, str, type], ...] = (
+    ("telemetry", "max_spans", "VIBEY_TELEMETRY_MAX_SPANS", int),
+    ("telemetry", "max_samples", "VIBEY_TELEMETRY_MAX_SAMPLES", int),
+)
+
 _TRUE: Final = frozenset({"1", "true", "yes", "on"})
 _FALSE: Final = frozenset({"0", "false", "no", "off"})
 
@@ -152,7 +159,7 @@ def apply_env_overrides(
     variables: tuple[tuple[str, str, str, type], ...] | None = None,
 ) -> dict[str, Any]:
     """Overlay surface, `[queue.reap]`, `[queue.defect]`, `[design.research]` and
-    `[engines]` dispatch environment variables onto parsed TOML data, in place. A dotted
+    `[engines]` dispatch and `[telemetry]` cap environment variables onto parsed TOML data, in place. A dotted
     table name is a nested table. `variables` narrows the overlay to those entries."""
     for table, key, variable, cast in variables or (
         *_SURFACE_ENV_VARS,
@@ -160,6 +167,7 @@ def apply_env_overrides(
         *_QUEUE_DEFECT_ENV_VARS,
         *_DESIGN_RESEARCH_ENV_VARS,
         *_ENGINE_DISPATCH_ENV_VARS,
+        *_TELEMETRY_ENV_VARS,
     ):
         raw = environ.get(variable)
         if raw is None or not raw.strip():

@@ -5,6 +5,7 @@ Tests the LoopProcessAdapter's file-based operations (snapshot, send_prompt,
 stop, classify, attribute) without spawning real subprocesses.
 """
 
+import asyncio
 import json
 import os
 from pathlib import Path
@@ -12,7 +13,7 @@ from uuid import uuid4
 
 import pytest
 
-from vibey.application.dto import RunHandle
+from vibey.application.dto import EngineEvent, RunHandle
 from vibey.domain.capacity import CreditsExhausted
 from vibey.domain.engine import EngineId
 from vibey.domain.job import FailureClass
@@ -534,6 +535,125 @@ async def test_tail_skips_invalid_json_lines(tmp_path: Path) -> None:
         events.append(event)
 
     assert len(events) == 1
+
+
+_STARTED_LINE = '{"event_type":"run.started","at":"2026-01-01T00:00:00+00:00","payload":{}}'
+
+
+async def _collect_events(adapter: LoopProcessAdapter, handle: RunHandle) -> list[EngineEvent]:
+    return [event async for event in adapter.tail(handle)]
+
+
+async def test_tail_delivers_a_line_flushed_in_two_pieces(tmp_path: Path) -> None:
+    adapter = LoopProcessAdapter(descriptor=CLAUDELOOP)
+    run_dir = tmp_path / "test-run"
+    run_dir.mkdir(parents=True)
+    handle = _make_handle(run_dir)
+    events_path = run_dir / "events.jsonl"
+    half = len(_STARTED_LINE) // 2
+    events_path.write_text(_STARTED_LINE[:half])
+
+    task = asyncio.create_task(_collect_events(adapter, handle))
+    await asyncio.sleep(0.7)  # at least one poll sees only the half line
+    with events_path.open("a") as out:
+        out.write(_STARTED_LINE[half:] + "\n")
+    (run_dir / "meta.json").write_text('{"status":"finished"}')
+    events = await asyncio.wait_for(task, timeout=5)
+
+    assert len(events) == 1
+    assert events[0].kind == "SessionSeeded"
+
+
+async def test_tail_delivers_a_final_line_with_no_newline_after_terminal_status(
+    tmp_path: Path,
+) -> None:
+    adapter = LoopProcessAdapter(descriptor=CLAUDELOOP)
+    run_dir = tmp_path / "test-run"
+    run_dir.mkdir(parents=True)
+    handle = _make_handle(run_dir)
+    (run_dir / "events.jsonl").write_text(_STARTED_LINE)
+    (run_dir / "meta.json").write_text('{"status":"finished"}')
+
+    events = await asyncio.wait_for(_collect_events(adapter, handle), timeout=5)
+
+    assert len(events) == 1
+    assert events[0].kind == "SessionSeeded"
+
+
+async def test_tail_still_skips_a_complete_invalid_line_once(tmp_path: Path) -> None:
+    from structlog.testing import capture_logs
+
+    adapter = LoopProcessAdapter(descriptor=CLAUDELOOP)
+    run_dir = tmp_path / "test-run"
+    run_dir.mkdir(parents=True)
+    handle = _make_handle(run_dir)
+    events_path = run_dir / "events.jsonl"
+    events_path.write_text("not valid json\n")
+
+    with capture_logs() as logs:
+        task = asyncio.create_task(_collect_events(adapter, handle))
+        await asyncio.sleep(1.2)  # two polls see the same complete invalid line
+        with events_path.open("a") as out:
+            out.write(_STARTED_LINE + "\n")
+        (run_dir / "meta.json").write_text('{"status":"finished"}')
+        events = await asyncio.wait_for(task, timeout=5)
+
+    assert len(events) == 1
+    assert [log["event"] for log in logs].count("event_parse_failed") == 1
+
+
+async def test_tail_reads_once_more_at_terminal_status_so_a_final_line_is_not_lost(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """The engine appends its last line and writes `finished` after the poll's read.
+
+    Deterministic form of the race: the first read_new returns nothing, but by the time
+    it returns the engine has appended a complete line and written the terminal status.
+    """
+    from vibey.infrastructure.engines.events_tail import EventsTail
+
+    adapter = LoopProcessAdapter(descriptor=CLAUDELOOP)
+    run_dir = tmp_path / "test-run"
+    run_dir.mkdir(parents=True)
+    handle = _make_handle(run_dir)
+    events_path = run_dir / "events.jsonl"
+    events_path.write_text("")
+    real_read_new = EventsTail.read_new
+    calls = {"n": 0}
+
+    def racing_read_new(self: EventsTail) -> list[str]:
+        calls["n"] += 1
+        if calls["n"] == 1:
+            with events_path.open("a") as out:
+                out.write(_STARTED_LINE + "\n")
+            (run_dir / "meta.json").write_text('{"status":"finished"}')
+            return []
+        return real_read_new(self)
+
+    monkeypatch.setattr(EventsTail, "read_new", racing_read_new)
+
+    events = await asyncio.wait_for(_collect_events(adapter, handle), timeout=5)
+
+    assert len(events) == 1
+    assert events[0].kind == "SessionSeeded"
+
+
+async def test_tail_skips_a_valid_json_line_that_is_not_an_object(tmp_path: Path) -> None:
+    from structlog.testing import capture_logs
+
+    adapter = LoopProcessAdapter(descriptor=CLAUDELOOP)
+    run_dir = tmp_path / "test-run"
+    run_dir.mkdir(parents=True)
+    handle = _make_handle(run_dir)
+    (run_dir / "events.jsonl").write_text("[1]\nnull\n" + _STARTED_LINE + "\n")
+    (run_dir / "meta.json").write_text('{"status":"finished"}')
+
+    with capture_logs() as logs:
+        events = await asyncio.wait_for(_collect_events(adapter, handle), timeout=5)
+
+    assert len(events) == 1
+    assert [log["event"] for log in logs].count("event_parse_failed") == 2
+    assert "tail_error" not in [log["event"] for log in logs]
 
 
 async def test_tail_skips_blank_lines(tmp_path: Path) -> None:
@@ -1327,6 +1447,64 @@ async def test_tail_gives_up_when_process_exits_without_terminal_status(
         assert events2 == []
     finally:
         _active_processes.pop(handle.run_id, None)
+
+
+async def test_tail_delivers_a_final_unterminated_line_when_the_process_exits_without_status(
+    tmp_path: Path,
+) -> None:
+    from types import SimpleNamespace
+
+    adapter = LoopProcessAdapter(descriptor=CLAUDELOOP)
+    run_dir = tmp_path / "test-run"
+    run_dir.mkdir(parents=True)
+    handle = _make_handle(run_dir)
+    (run_dir / "events.jsonl").write_text(_STARTED_LINE)
+
+    _active_processes[handle.run_id] = SimpleNamespace(returncode=0)  # type: ignore[assignment]
+    try:
+        async with asyncio.timeout(5.0):
+            events = await _collect_events(adapter, handle)
+    finally:
+        _active_processes.pop(handle.run_id, None)
+
+    assert len(events) == 1
+    assert events[0].kind == "SessionSeeded"
+
+
+async def test_tail_drops_an_unterminated_invalid_final_line_when_the_process_exits(
+    tmp_path: Path,
+) -> None:
+    from types import SimpleNamespace
+
+    adapter = LoopProcessAdapter(descriptor=CLAUDELOOP)
+    run_dir = tmp_path / "test-run"
+    run_dir.mkdir(parents=True)
+    handle = _make_handle(run_dir)
+    (run_dir / "events.jsonl").write_text(_STARTED_LINE + '\n{"event_type":')
+
+    _active_processes[handle.run_id] = SimpleNamespace(returncode=0)  # type: ignore[assignment]
+    try:
+        async with asyncio.timeout(5.0):
+            events = await _collect_events(adapter, handle)
+    finally:
+        _active_processes.pop(handle.run_id, None)
+
+    assert len(events) == 1
+
+
+async def test_tail_drops_an_unterminated_invalid_final_line_at_terminal_status(
+    tmp_path: Path,
+) -> None:
+    adapter = LoopProcessAdapter(descriptor=CLAUDELOOP)
+    run_dir = tmp_path / "test-run"
+    run_dir.mkdir(parents=True)
+    handle = _make_handle(run_dir)
+    (run_dir / "events.jsonl").write_text(_STARTED_LINE + '\n{"event_type":')
+    (run_dir / "meta.json").write_text('{"status":"finished"}')
+
+    events = await asyncio.wait_for(_collect_events(adapter, handle), timeout=5)
+
+    assert len(events) == 1
 
 
 async def test_stop_remaining_work_round_trips_through_snapshot(tmp_path: Path) -> None:

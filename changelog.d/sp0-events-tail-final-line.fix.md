@@ -1,0 +1,1 @@
+* **Events tail no longer drops a final line:** The engine events tail reads by byte offset, so a half-written line is completed on the next read, and a line appended together with the terminal status is read before the tail ends; a non-object JSON line is skipped instead of ending the tail.

@@ -1,0 +1,38 @@
+# Made with ❤️ by [Vibey](https://the-vibey-project.github.io/vibey/), Developed by [Adam Matthew Steinberger](https://vibewithadam.matthewsteinberger.com/) ([@adammatthewsteinberger](https://github.com/adammatthewsteinberger/)).
+#
+# The one declared source for scripts/ci_cost_baseline.py (ADR-0051: configuration is declared
+# in TOML, never written into a source file). The script measures what CI costs over a window,
+# from read-only `gh api` GET calls, so a later saving can be evidenced instead of assumed.
+# Change a value here and run `python scripts/ci_cost_baseline.py collect`.
+
+[ci_cost_baseline]
+# The repository whose Actions are measured (owner/name).
+repo = "the-vibey-project/vibey"
+# How far back the window reaches from the moment of collection. Fourteen days spans two
+# weekly cadences (the weekly scheduled workflows run twice) and the PR traffic of two weeks.
+window_days = 14
+# The most runs read per workflow, newest first. Job minutes are measured on these runs only
+# and are reported as a sample, with the in-window run count beside it, never extrapolated
+# silently. Twenty keeps the whole collection to a few hundred read-only calls.
+sample_size = 20
+# Page size of the runs and jobs listings (the API maximum is 100).
+per_page = 100
+# Seconds one `gh api` call may take before it is recorded as unreadable.
+timeout_seconds = 60.0
+# How many completed runs per runner OS (ubuntu, macos, windows) have their timing object read,
+# to observe the billable milliseconds the API reports. An empty `billable` is recorded as no
+# data, never as 0.
+timing_probe_runs = 1
+# Where `collect` writes a NEW record; `{stamp}` is the cutoff (e.g. 20261110T181500Z). It never
+# overwrites an existing file unless `--force` is given.
+output = "docs/architecture/evidence/ci-cost-baseline-{stamp}.json"
+# The record the state document is rendered from, and the document itself (`render`, `check`).
+baseline = "docs/architecture/evidence/ci-cost-baseline-20261110T192053Z.json"
+document = "docs/architecture/evidence/ci-workflow-state-2026-11-10.md"
+# What the program's orientation expected before this measurement, stated beside the count found.
+orientation_disabled = 14
+
+# A record the repository holds that bears on why a workflow is disabled, by workflow name. A
+# workflow with no entry says `unknown, operator to say`.
+[ci_cost_baseline.related_records]
+"Backlog killer" = "the lane was paused in `scripts/daily_lanes.toml` by #1809 (2026-10-29), a repository switch, not this GitHub-level disablement"

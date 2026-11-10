@@ -113,6 +113,31 @@ def test_minimal_config_applies_defaults() -> None:
     assert config.notifications.webhooks == ()
     assert config.telemetry.enabled is True
     assert config.telemetry.export_path is None
+    assert config.telemetry.max_spans == 10_000
+    assert config.telemetry.max_samples == 1_000
+
+
+def test_telemetry_buffer_caps_load_from_toml() -> None:
+    config = load_config_from_string(
+        '[project]\nname = "capped"\n\n[telemetry]\nmax_spans = 50\nmax_samples = 7\n'
+    )
+
+    assert config.telemetry.max_spans == 50
+    assert config.telemetry.max_samples == 7
+
+
+@pytest.mark.parametrize(
+    "fragment, match",
+    [
+        ("[telemetry]\nmax_spans = 0", "telemetry.max_spans"),
+        ("[telemetry]\nmax_samples = 0", "telemetry.max_samples"),
+        ("[telemetry]\nmax_spans = -5", "telemetry.max_spans"),
+        ('[telemetry]\nmax_samples = "many"', "telemetry.max_samples"),
+    ],
+)
+def test_telemetry_buffer_caps_must_be_at_least_one(fragment: str, match: str) -> None:
+    with pytest.raises(ConfigError, match=match):
+        load_config_from_string(f'[project]\nname = "x"\n\n{fragment}\n')
 
 
 def test_notifications_and_telemetry_parse_from_toml() -> None:

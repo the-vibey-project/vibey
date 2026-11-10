@@ -11,6 +11,7 @@ from vibey.infrastructure.engines.interfaces.design_json_interface import (
 from vibey.infrastructure.engines.interfaces.engine_environment_interface import (
     EngineEnvironmentPolicyInterface,
 )
+from vibey.infrastructure.engines.interfaces.events_tail_interface import EventsTailInterface
 from vibey.infrastructure.engines.interfaces.gptossloop_decompose_interface import (
     GptossloopWorkPlanProducerInterface,
 )
@@ -34,6 +35,7 @@ from vibey.infrastructure.engines.interfaces.validated_ask_interface import (
 __all__ = [
     "ClaudeloopLocalDescriptorsInterface",
     "EngineEnvironmentPolicyInterface",
+    "EventsTailInterface",
     "LocalEndpointEnvironmentInterface",
     "LocalEngineSettingsInterface",
     "OllamaChatClientInterface",

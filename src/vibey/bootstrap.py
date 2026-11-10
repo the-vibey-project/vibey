@@ -119,6 +119,7 @@ from vibey.domain.config import (
     DesignResearchConfig,
     NotificationsConfig,
     QueueDefectConfig,
+    TelemetryConfig,
     VibeyConfig,
 )
 from vibey.domain.engine import EngineId
@@ -1014,8 +1015,6 @@ async def build_app(
                 conn, endpoints, MigrationCatalog.packaged().migrations()
             )
 
-        telemetry_tracer = TelemetryTracer()
-        telemetry_metrics = TelemetryMetrics()
         resolved_config = config
         vibey_toml = Path("vibey.toml")
         skipped_toml = False
@@ -1029,6 +1028,14 @@ async def build_app(
             resolver = StartupConfigResolver()
             resolved_config = resolver.resolve(Path.cwd())
             skipped_toml = resolver.skipped_file
+
+        # Built once the config is resolved, because the buffer caps are declared keys
+        # (`[telemetry] max_spans` / `max_samples`); nothing above this point uses either.
+        telemetry_config = (
+            resolved_config.telemetry if resolved_config is not None else TelemetryConfig()
+        )
+        telemetry_tracer = TelemetryTracer(max_spans=telemetry_config.max_spans)
+        telemetry_metrics = TelemetryMetrics(max_samples=telemetry_config.max_samples)
 
         adapter_timeout = (
             resolved_config.surfaces.adapter_timeout_seconds

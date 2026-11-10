@@ -233,6 +233,20 @@ dev = [
     "segno>=1.6",
 ]
 
+# The source distribution carries what a source build needs and nothing else (budget and
+# forbidden trees: tests/meta/sdist_budget.toml). An allow-list, because with none hatchling
+# ships every tracked file plus anything untracked and unignored -- 88 MiB unpacked, 31 MB
+# on the wire, which filled TestPyPI's 10 GB project limit one develop push at a time.
+# `/src` holds every package and every force-included source the wheel table below names.
+[tool.hatch.build.targets.sdist]
+include = [
+    "/src",
+    "/pyproject.toml",
+    "/README.md",
+    "/LICENSE",
+    "/CHANGELOG.md",
+]
+
 # Eight importable trees, one wheel (ADR-0037). `packages` rather than `force-include` for
 # every one of them, and the reason is not taste:
 #

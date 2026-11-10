@@ -43,6 +43,7 @@ markdown_extensions:
 # claims drift from the code. Publishing them would present drafts as reference.
 exclude_docs: |
   plans/**
+  superpowers/**
 
 # ADRs legitimately reference the excluded plans; those links resolve on GitHub, and
 # failing the build over a deliberate exclusion would just re-publish the drafts.

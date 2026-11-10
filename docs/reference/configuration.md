@@ -332,6 +332,8 @@ The queue reaper's keys have the same overlay, and the same precedence
 | `VIBEY_QUEUE_REAP_DELIVERY_LIMIT` | `[queue.reap].delivery_limit` |
 | `VIBEY_QUEUE_DEFECT_IDENTICAL_FAILURES` | `[queue.defect].identical_failures` |
 | `VIBEY_DESIGN_RESEARCH_ON_UNAVAILABLE` | `[design.research].on_unavailable` |
+| `VIBEY_TELEMETRY_MAX_SPANS` | `[telemetry].max_spans` |
+| `VIBEY_TELEMETRY_MAX_SAMPLES` | `[telemetry].max_samples` |
 
 ## Schema semantics
 
@@ -731,11 +733,15 @@ the running application but has no external exporter yet.
 |---|---|---|---|
 | `enabled` | boolean | `true` | Set `false` to disable runtime tracing and metrics for this project. |
 | `export_path` | string or unset | unset | Reserved for a future file/exporter integration; it is validated and stored. |
+| `max_spans` | integer | `10000` | How many finished spans the in-process tracer keeps. Only the newest are kept; the oldest are dropped first. Must be at least 1. `VIBEY_TELEMETRY_MAX_SPANS` overrides it. |
+| `max_samples` | integer | `1000` | How many latency or duration samples the metrics recorder keeps per series (queue latency per job kind, phase duration per phase). Only the newest are kept. Must be at least 1. Counters (engine selections, handoff-gate failures, cost spend) are not capped. `VIBEY_TELEMETRY_MAX_SAMPLES` overrides it. |
 
 ```toml
 [telemetry]
 enabled = true
 export_path = "~/.local/state/vibey/telemetry.jsonl"
+max_spans = 10000
+max_samples = 1000
 ```
 
 ## `[features]`

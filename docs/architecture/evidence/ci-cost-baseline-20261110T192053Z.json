@@ -1,0 +1,1897 @@
+{
+  "api_calls": 523,
+  "collected_at": "2026-11-10T19:20:53Z",
+  "cost": {
+    "basis": "public repository: the run timing API returned billable entries with 0 billable ms for 2 probed run(s) covering runner OS macos, ubuntu; the zero is observed only for those probes, not for jobs on any other runner kind",
+    "billable_keys_seen": [
+      "MACOS",
+      "UBUNTU"
+    ],
+    "billable_ms_observed": 0,
+    "billed_usd": 0,
+    "probes": [
+      {
+        "billable_keys": [
+          "UBUNTU"
+        ],
+        "os": "ubuntu",
+        "run_id": 40889365572,
+        "total_ms": 0
+      },
+      {
+        "billable_keys": [
+          "MACOS",
+          "UBUNTU"
+        ],
+        "os": "macos",
+        "run_id": 42876689344,
+        "total_ms": 0
+      }
+    ],
+    "real_costs": "queueing and wall time, not dollars",
+    "repository_visibility": "public",
+    "timing_probe_runs": 2
+  },
+  "disabled_workflows": [
+    {
+      "id": 372743657,
+      "last_run": {
+        "conclusion": "success",
+        "created_at": "2026-10-29T14:13:36Z",
+        "event": "schedule"
+      },
+      "name": "Autonomy scorecard",
+      "path": ".github/workflows/autonomy-scorecard.yml",
+      "state": "disabled_manually"
+    },
+    {
+      "id": 367765528,
+      "last_run": {
+        "conclusion": "success",
+        "created_at": "2026-11-05T00:32:53Z",
+        "event": "schedule"
+      },
+      "name": "Backlog cleanup",
+      "path": ".github/workflows/backlog-cleanup.yml",
+      "state": "disabled_manually"
+    },
+    {
+      "id": 376331431,
+      "last_run": {
+        "conclusion": "cancelled",
+        "created_at": "2026-10-29T17:00:06Z",
+        "event": "workflow_dispatch"
+      },
+      "name": "Backlog killer",
+      "path": ".github/workflows/backlog-killer.yml",
+      "state": "disabled_manually"
+    },
+    {
+      "id": 380463163,
+      "last_run": {
+        "conclusion": "success",
+        "created_at": "2026-11-04T19:58:45Z",
+        "event": "schedule"
+      },
+      "name": "Backlog splitter",
+      "path": ".github/workflows/backlog-splitter.yml",
+      "state": "disabled_manually"
+    },
+    {
+      "id": 374184206,
+      "last_run": {
+        "conclusion": "failure",
+        "created_at": "2026-11-05T01:26:57Z",
+        "event": "workflow_dispatch"
+      },
+      "name": "Continuation prompts",
+      "path": ".github/workflows/continuation-prompts.yml",
+      "state": "disabled_manually"
+    },
+    {
+      "id": 362253696,
+      "last_run": {
+        "conclusion": "success",
+        "created_at": "2026-11-05T03:29:12Z",
+        "event": "schedule"
+      },
+      "name": "Delivery estimate",
+      "path": ".github/workflows/delivery-estimate.yml",
+      "state": "disabled_manually"
+    },
+    {
+      "id": 368099607,
+      "last_run": {
+        "conclusion": "success",
+        "created_at": "2026-11-04T10:57:55Z",
+        "event": "schedule"
+      },
+      "name": "Documentation deep scan",
+      "path": ".github/workflows/documentation-deep-scan.yml",
+      "state": "disabled_manually"
+    },
+    {
+      "id": 376331432,
+      "last_run": {
+        "conclusion": "success",
+        "created_at": "2026-11-05T01:26:24Z",
+        "event": "schedule"
+      },
+      "name": "Documentation updater",
+      "path": ".github/workflows/docs-updater.yml",
+      "state": "disabled_manually"
+    },
+    {
+      "id": 398841071,
+      "last_run": {
+        "conclusion": "failure",
+        "created_at": "2026-11-04T14:51:02Z",
+        "event": "schedule"
+      },
+      "name": "First hour",
+      "path": ".github/workflows/first-hour.yml",
+      "state": "disabled_manually"
+    },
+    {
+      "id": 372726110,
+      "last_run": {
+        "conclusion": "success",
+        "created_at": "2026-11-03T17:03:35Z",
+        "event": "schedule"
+      },
+      "name": "Host health",
+      "path": ".github/workflows/host-health.yml",
+      "state": "disabled_manually"
+    },
+    {
+      "id": 339812289,
+      "last_run": {
+        "conclusion": "success",
+        "created_at": "2026-11-02T17:03:20Z",
+        "event": "schedule"
+      },
+      "name": "Merge train",
+      "path": ".github/workflows/merge-train.yml",
+      "state": "disabled_manually"
+    },
+    {
+      "id": 370844910,
+      "last_run": {
+        "conclusion": "success",
+        "created_at": "2026-11-02T17:14:34Z",
+        "event": "schedule"
+      },
+      "name": "Minimum specs",
+      "path": ".github/workflows/minimum-specs.yml",
+      "state": "disabled_manually"
+    },
+    {
+      "id": 363661460,
+      "last_run": {
+        "conclusion": "success",
+        "created_at": "2026-11-05T05:47:05Z",
+        "event": "workflow_run"
+      },
+      "name": "PR evaluate",
+      "path": ".github/workflows/pr-evaluate.yml",
+      "state": "disabled_manually"
+    },
+    {
+      "id": 339812290,
+      "last_run": {
+        "conclusion": "success",
+        "created_at": "2026-11-02T18:20:35Z",
+        "event": "schedule"
+      },
+      "name": "Promote",
+      "path": ".github/workflows/promote-to-main.yml",
+      "state": "disabled_manually"
+    },
+    {
+      "id": 372425775,
+      "last_run": {
+        "conclusion": "success",
+        "created_at": "2026-11-05T05:48:53Z",
+        "event": "workflow_run"
+      },
+      "name": "Release binaries",
+      "path": ".github/workflows/release-binaries.yml",
+      "state": "disabled_manually"
+    },
+    {
+      "id": 372583650,
+      "last_run": {
+        "conclusion": "success",
+        "created_at": "2026-11-04T14:50:13Z",
+        "event": "schedule"
+      },
+      "name": "Review canary",
+      "path": ".github/workflows/review-canary.yml",
+      "state": "disabled_manually"
+    },
+    {
+      "id": 370390676,
+      "last_run": {
+        "conclusion": "success",
+        "created_at": "2026-11-05T05:48:18Z",
+        "event": "push"
+      },
+      "name": "Ruleset drift",
+      "path": ".github/workflows/ruleset-drift.yml",
+      "state": "disabled_manually"
+    },
+    {
+      "id": 376331433,
+      "last_run": {
+        "conclusion": "success",
+        "created_at": "2026-11-04T13:03:06Z",
+        "event": "schedule"
+      },
+      "name": "Self-healer",
+      "path": ".github/workflows/self-healer.yml",
+      "state": "disabled_manually"
+    }
+  ],
+  "job_minutes_definition": "started_at to completed_at of each job in the sampled runs, by runner OS from the job labels",
+  "other_runner_labels": {
+    "(no labels)": 40,
+    "self-hosted,vibey-local-vibey": 27
+  },
+  "repo": "the-vibey-project/vibey",
+  "sample_size_per_workflow": 20,
+  "schema": "vibey-ci-cost-baseline/1",
+  "source": "gh api GET (repos/<repo>/actions/workflows, .../workflows/<id>/runs, .../runs/<id>/jobs, .../runs/<id>/timing)",
+  "totals": {
+    "conclusions_in_sample": {
+      "cancelled": 30,
+      "failure": 67,
+      "skipped": 80,
+      "success": 298
+    },
+    "estimate_basis": "per-workflow mean job minutes per sampled run times runs in window; an estimate, not a measurement",
+    "job_minutes_estimated_for_window": {
+      "macos": 3019.7,
+      "other": 281.74,
+      "ubuntu": 50784.54,
+      "windows": 0.0
+    },
+    "job_minutes_sampled": {
+      "macos": 305.98,
+      "other": 106.32,
+      "ubuntu": 17332.68,
+      "windows": 0.0
+    },
+    "runs_in_window": 4432,
+    "runs_sampled": 475,
+    "workflows_active": 21,
+    "workflows_disabled_manually": 18,
+    "workflows_disabled_other": 0,
+    "workflows_total": 39,
+    "workflows_unknown": 0
+  },
+  "totals_by_state": {
+    "active": {
+      "job_minutes_estimated_for_window": {
+        "macos": 2892.25,
+        "other": 0.0,
+        "ubuntu": 32838.23,
+        "windows": 0.0
+      },
+      "runs_in_window": 2432
+    },
+    "disabled": {
+      "job_minutes_estimated_for_window": {
+        "macos": 127.45,
+        "other": 281.74,
+        "ubuntu": 17946.32,
+        "windows": 0.0
+      },
+      "runs_in_window": 2000
+    }
+  },
+  "totals_by_state_note": "state is the workflow's state at the cutoff; a now-disabled workflow's runs in the window ran before it was disabled",
+  "unknowns": [],
+  "wall_time_definition": "run_started_at to updated_at of a completed run, in minutes; includes any wait on a runner",
+  "window": {
+    "cutoff": "2026-11-10T19:20:53Z",
+    "days": 14,
+    "start": "2026-10-27T19:20:53Z"
+  },
+  "workflows": [
+    {
+      "conclusions": {},
+      "events": {},
+      "id": 344319041,
+      "job_minutes_per_run_mean": {
+        "macos": 0.0,
+        "other": 0.0,
+        "ubuntu": 0.0,
+        "windows": 0.0
+      },
+      "job_minutes_sampled": {
+        "macos": 0.0,
+        "other": 0.0,
+        "ubuntu": 0.0,
+        "windows": 0.0
+      },
+      "jobs_sampled_runs": 0,
+      "jobs_without_timing": 0,
+      "last_run": null,
+      "name": "Automation bootstrap",
+      "path": ".github/workflows/automation-bootstrap.yml",
+      "runs_in_window": 0,
+      "runs_sampled": 0,
+      "runs_without_jobs": 0,
+      "sample_capped": false,
+      "state": "active",
+      "status": "measured",
+      "wall_minutes": {
+        "n": 0,
+        "p50": null,
+        "p90": null
+      }
+    },
+    {
+      "conclusions": {
+        "success": 1
+      },
+      "events": {
+        "schedule": 1
+      },
+      "id": 372743657,
+      "job_minutes_per_run_mean": {
+        "macos": 0.0,
+        "other": 0.0,
+        "ubuntu": 1.7,
+        "windows": 0.0
+      },
+      "job_minutes_sampled": {
+        "macos": 0.0,
+        "other": 0.0,
+        "ubuntu": 1.7,
+        "windows": 0.0
+      },
+      "jobs_sampled_runs": 1,
+      "jobs_without_timing": 0,
+      "last_run": {
+        "conclusion": "success",
+        "created_at": "2026-10-29T14:13:36Z",
+        "event": "schedule"
+      },
+      "name": "Autonomy scorecard",
+      "path": ".github/workflows/autonomy-scorecard.yml",
+      "runs_in_window": 1,
+      "runs_sampled": 1,
+      "runs_without_jobs": 0,
+      "sample_capped": false,
+      "state": "disabled_manually",
+      "status": "measured",
+      "wall_minutes": {
+        "n": 1,
+        "p50": 1.6,
+        "p90": 1.6
+      }
+    },
+    {
+      "conclusions": {
+        "success": 20
+      },
+      "events": {
+        "schedule": 20
+      },
+      "id": 367765528,
+      "job_minutes_per_run_mean": {
+        "macos": 0.0,
+        "other": 0.0,
+        "ubuntu": 1.9142,
+        "windows": 0.0
+      },
+      "job_minutes_sampled": {
+        "macos": 0.0,
+        "other": 0.0,
+        "ubuntu": 38.2833,
+        "windows": 0.0
+      },
+      "jobs_sampled_runs": 20,
+      "jobs_without_timing": 0,
+      "last_run": {
+        "conclusion": "success",
+        "created_at": "2026-11-05T00:32:53Z",
+        "event": "schedule"
+      },
+      "name": "Backlog cleanup",
+      "path": ".github/workflows/backlog-cleanup.yml",
+      "runs_in_window": 34,
+      "runs_sampled": 20,
+      "runs_without_jobs": 0,
+      "sample_capped": true,
+      "state": "disabled_manually",
+      "status": "measured",
+      "wall_minutes": {
+        "n": 20,
+        "p50": 1.9833,
+        "p90": 2.47
+      }
+    },
+    {
+      "conclusions": {
+        "cancelled": 3,
+        "success": 17
+      },
+      "events": {
+        "schedule": 3,
+        "workflow_dispatch": 17
+      },
+      "id": 376331431,
+      "job_minutes_per_run_mean": {
+        "macos": 0.0,
+        "other": 0.0,
+        "ubuntu": 48.3483,
+        "windows": 0.0
+      },
+      "job_minutes_sampled": {
+        "macos": 0.0,
+        "other": 0.0,
+        "ubuntu": 966.9667,
+        "windows": 0.0
+      },
+      "jobs_sampled_runs": 20,
+      "jobs_without_timing": 0,
+      "last_run": {
+        "conclusion": "cancelled",
+        "created_at": "2026-10-29T17:00:06Z",
+        "event": "workflow_dispatch"
+      },
+      "name": "Backlog killer",
+      "path": ".github/workflows/backlog-killer.yml",
+      "runs_in_window": 43,
+      "runs_sampled": 20,
+      "runs_without_jobs": 2,
+      "sample_capped": true,
+      "state": "disabled_manually",
+      "status": "measured",
+      "wall_minutes": {
+        "n": 20,
+        "p50": 60.05,
+        "p90": 60.1
+      }
+    },
+    {
+      "conclusions": {
+        "success": 20
+      },
+      "events": {
+        "schedule": 20
+      },
+      "id": 380463163,
+      "job_minutes_per_run_mean": {
+        "macos": 0.0,
+        "other": 0.0,
+        "ubuntu": 0.2692,
+        "windows": 0.0
+      },
+      "job_minutes_sampled": {
+        "macos": 0.0,
+        "other": 0.0,
+        "ubuntu": 5.3833,
+        "windows": 0.0
+      },
+      "jobs_sampled_runs": 20,
+      "jobs_without_timing": 0,
+      "last_run": {
+        "conclusion": "success",
+        "created_at": "2026-11-04T19:58:45Z",
+        "event": "schedule"
+      },
+      "name": "Backlog splitter",
+      "path": ".github/workflows/backlog-splitter.yml",
+      "runs_in_window": 22,
+      "runs_sampled": 20,
+      "runs_without_jobs": 0,
+      "sample_capped": true,
+      "state": "disabled_manually",
+      "status": "measured",
+      "wall_minutes": {
+        "n": 20,
+        "p50": 0.3,
+        "p90": 0.3467
+      }
+    },
+    {
+      "conclusions": {
+        "skipped": 2,
+        "success": 18
+      },
+      "events": {
+        "workflow_run": 20
+      },
+      "id": 370386854,
+      "job_minutes_per_run_mean": {
+        "macos": 0.0,
+        "other": 0.0,
+        "ubuntu": 0.2833,
+        "windows": 0.0
+      },
+      "job_minutes_sampled": {
+        "macos": 0.0,
+        "other": 0.0,
+        "ubuntu": 5.6667,
+        "windows": 0.0
+      },
+      "jobs_sampled_runs": 20,
+      "jobs_without_timing": 0,
+      "last_run": {
+        "conclusion": "success",
+        "created_at": "2026-11-10T18:06:48Z",
+        "event": "workflow_run"
+      },
+      "name": "Branch health",
+      "path": ".github/workflows/branch-health.yml",
+      "runs_in_window": 123,
+      "runs_sampled": 20,
+      "runs_without_jobs": 0,
+      "sample_capped": true,
+      "state": "active",
+      "status": "measured",
+      "wall_minutes": {
+        "n": 20,
+        "p50": 0.4,
+        "p90": 0.67
+      }
+    },
+    {
+      "conclusions": {
+        "cancelled": 5,
+        "failure": 7,
+        "success": 8
+      },
+      "events": {
+        "pull_request": 15,
+        "push": 5
+      },
+      "id": 334642063,
+      "job_minutes_per_run_mean": {
+        "macos": 8.9267,
+        "other": 0.0,
+        "ubuntu": 56.0317,
+        "windows": 0.0
+      },
+      "job_minutes_sampled": {
+        "macos": 178.5333,
+        "other": 0.0,
+        "ubuntu": 1120.6333,
+        "windows": 0.0
+      },
+      "jobs_sampled_runs": 20,
+      "jobs_without_timing": 0,
+      "last_run": {
+        "conclusion": "success",
+        "created_at": "2026-11-10T18:35:10Z",
+        "event": "pull_request"
+      },
+      "name": "CI",
+      "path": ".github/workflows/ci.yml",
+      "runs_in_window": 324,
+      "runs_sampled": 20,
+      "runs_without_jobs": 1,
+      "sample_capped": true,
+      "state": "active",
+      "status": "measured",
+      "wall_minutes": {
+        "n": 20,
+        "p50": 11.3167,
+        "p90": 17.8467
+      }
+    },
+    {
+      "conclusions": {
+        "cancelled": 1,
+        "failure": 2,
+        "success": 17
+      },
+      "events": {
+        "pull_request": 20
+      },
+      "id": 372046884,
+      "job_minutes_per_run_mean": {
+        "macos": 0.0,
+        "other": 0.0,
+        "ubuntu": 0.2908,
+        "windows": 0.0
+      },
+      "job_minutes_sampled": {
+        "macos": 0.0,
+        "other": 0.0,
+        "ubuntu": 5.8167,
+        "windows": 0.0
+      },
+      "jobs_sampled_runs": 20,
+      "jobs_without_timing": 0,
+      "last_run": {
+        "conclusion": "success",
+        "created_at": "2026-11-10T18:35:10Z",
+        "event": "pull_request"
+      },
+      "name": "Changelog",
+      "path": ".github/workflows/changelog.yml",
+      "runs_in_window": 271,
+      "runs_sampled": 20,
+      "runs_without_jobs": 0,
+      "sample_capped": true,
+      "state": "active",
+      "status": "measured",
+      "wall_minutes": {
+        "n": 20,
+        "p50": 0.425,
+        "p90": 0.9133
+      }
+    },
+    {
+      "conclusions": {
+        "skipped": 20
+      },
+      "events": {
+        "issue_comment": 20
+      },
+      "id": 374198581,
+      "job_minutes_per_run_mean": {
+        "macos": 0.0,
+        "other": 0.0,
+        "ubuntu": 0.0,
+        "windows": 0.0
+      },
+      "job_minutes_sampled": {
+        "macos": 0.0,
+        "other": 0.0,
+        "ubuntu": 0.0,
+        "windows": 0.0
+      },
+      "jobs_sampled_runs": 20,
+      "jobs_without_timing": 0,
+      "last_run": {
+        "conclusion": "skipped",
+        "created_at": "2026-11-08T20:45:45Z",
+        "event": "issue_comment"
+      },
+      "name": "Chat",
+      "path": ".github/workflows/chat.yml",
+      "runs_in_window": 41,
+      "runs_sampled": 20,
+      "runs_without_jobs": 0,
+      "sample_capped": true,
+      "state": "active",
+      "status": "measured",
+      "wall_minutes": {
+        "n": 20,
+        "p50": 0.025,
+        "p90": 0.1667
+      }
+    },
+    {
+      "conclusions": {
+        "failure": 17,
+        "success": 3
+      },
+      "events": {
+        "schedule": 1,
+        "workflow_dispatch": 19
+      },
+      "id": 374184206,
+      "job_minutes_per_run_mean": {
+        "macos": 0.0,
+        "other": 5.3158,
+        "ubuntu": 50.3175,
+        "windows": 0.0
+      },
+      "job_minutes_sampled": {
+        "macos": 0.0,
+        "other": 106.3167,
+        "ubuntu": 1006.35,
+        "windows": 0.0
+      },
+      "jobs_sampled_runs": 20,
+      "jobs_without_timing": 0,
+      "last_run": {
+        "conclusion": "failure",
+        "created_at": "2026-11-05T01:26:57Z",
+        "event": "workflow_dispatch"
+      },
+      "name": "Continuation prompts",
+      "path": ".github/workflows/continuation-prompts.yml",
+      "runs_in_window": 53,
+      "runs_sampled": 20,
+      "runs_without_jobs": 0,
+      "sample_capped": true,
+      "state": "disabled_manually",
+      "status": "measured",
+      "wall_minutes": {
+        "n": 20,
+        "p50": 38.825,
+        "p90": 66.2267
+      }
+    },
+    {
+      "conclusions": {
+        "success": 20
+      },
+      "events": {
+        "pull_request_target": 20
+      },
+      "id": 359994723,
+      "job_minutes_per_run_mean": {
+        "macos": 0.0,
+        "other": 0.0,
+        "ubuntu": 0.32,
+        "windows": 0.0
+      },
+      "job_minutes_sampled": {
+        "macos": 0.0,
+        "other": 0.0,
+        "ubuntu": 6.4,
+        "windows": 0.0
+      },
+      "jobs_sampled_runs": 20,
+      "jobs_without_timing": 0,
+      "last_run": {
+        "conclusion": "success",
+        "created_at": "2026-11-10T18:35:10Z",
+        "event": "pull_request_target"
+      },
+      "name": "Conventional Commits",
+      "path": ".github/workflows/conventional-commits.yml",
+      "runs_in_window": 292,
+      "runs_sampled": 20,
+      "runs_without_jobs": 0,
+      "sample_capped": true,
+      "state": "active",
+      "status": "measured",
+      "wall_minutes": {
+        "n": 20,
+        "p50": 0.3917,
+        "p90": 0.9617
+      }
+    },
+    {
+      "conclusions": {},
+      "events": {},
+      "id": 335283460,
+      "job_minutes_per_run_mean": {
+        "macos": 0.0,
+        "other": 0.0,
+        "ubuntu": 0.0,
+        "windows": 0.0
+      },
+      "job_minutes_sampled": {
+        "macos": 0.0,
+        "other": 0.0,
+        "ubuntu": 0.0,
+        "windows": 0.0
+      },
+      "jobs_sampled_runs": 0,
+      "jobs_without_timing": 0,
+      "last_run": {
+        "conclusion": "success",
+        "created_at": "2026-09-24T08:17:06Z",
+        "event": "dynamic"
+      },
+      "name": "Copilot",
+      "path": "dynamic/agents/copilot-pull-request-reviewer",
+      "runs_in_window": 0,
+      "runs_sampled": 0,
+      "runs_without_jobs": 0,
+      "sample_capped": false,
+      "state": "active",
+      "status": "measured",
+      "wall_minutes": {
+        "n": 0,
+        "p50": null,
+        "p90": null
+      }
+    },
+    {
+      "conclusions": {},
+      "events": {},
+      "id": 336520025,
+      "job_minutes_per_run_mean": {
+        "macos": 0.0,
+        "other": 0.0,
+        "ubuntu": 0.0,
+        "windows": 0.0
+      },
+      "job_minutes_sampled": {
+        "macos": 0.0,
+        "other": 0.0,
+        "ubuntu": 0.0,
+        "windows": 0.0
+      },
+      "jobs_sampled_runs": 0,
+      "jobs_without_timing": 0,
+      "last_run": {
+        "conclusion": "success",
+        "created_at": "2026-09-18T21:55:42Z",
+        "event": "dynamic"
+      },
+      "name": "Copilot cloud agent",
+      "path": "dynamic/copilot-swe-agent/copilot",
+      "runs_in_window": 0,
+      "runs_sampled": 0,
+      "runs_without_jobs": 0,
+      "sample_capped": false,
+      "state": "active",
+      "status": "measured",
+      "wall_minutes": {
+        "n": 0,
+        "p50": null,
+        "p90": null
+      }
+    },
+    {
+      "conclusions": {
+        "success": 20
+      },
+      "events": {
+        "schedule": 20
+      },
+      "id": 362253696,
+      "job_minutes_per_run_mean": {
+        "macos": 0.0,
+        "other": 0.0,
+        "ubuntu": 15.7392,
+        "windows": 0.0
+      },
+      "job_minutes_sampled": {
+        "macos": 0.0,
+        "other": 0.0,
+        "ubuntu": 314.7833,
+        "windows": 0.0
+      },
+      "jobs_sampled_runs": 20,
+      "jobs_without_timing": 0,
+      "last_run": {
+        "conclusion": "success",
+        "created_at": "2026-11-05T03:29:12Z",
+        "event": "schedule"
+      },
+      "name": "Delivery estimate",
+      "path": ".github/workflows/delivery-estimate.yml",
+      "runs_in_window": 34,
+      "runs_sampled": 20,
+      "runs_without_jobs": 0,
+      "sample_capped": true,
+      "state": "disabled_manually",
+      "status": "measured",
+      "wall_minutes": {
+        "n": 20,
+        "p50": 15.0667,
+        "p90": 17.995
+      }
+    },
+    {
+      "conclusions": {
+        "failure": 3,
+        "success": 17
+      },
+      "events": {
+        "dynamic": 20
+      },
+      "id": 358161778,
+      "job_minutes_per_run_mean": {
+        "macos": 0.0,
+        "other": 0.0,
+        "ubuntu": 1.4825,
+        "windows": 0.0
+      },
+      "job_minutes_sampled": {
+        "macos": 0.0,
+        "other": 0.0,
+        "ubuntu": 29.65,
+        "windows": 0.0
+      },
+      "jobs_sampled_runs": 20,
+      "jobs_without_timing": 0,
+      "last_run": {
+        "conclusion": "success",
+        "created_at": "2026-11-08T20:49:12Z",
+        "event": "dynamic"
+      },
+      "name": "Dependabot Updates",
+      "path": "dynamic/dependabot/dependabot-updates",
+      "runs_in_window": 22,
+      "runs_sampled": 20,
+      "runs_without_jobs": 0,
+      "sample_capped": true,
+      "state": "active",
+      "status": "measured",
+      "wall_minutes": {
+        "n": 20,
+        "p50": 1.3083,
+        "p90": 2.5533
+      }
+    },
+    {
+      "conclusions": {
+        "success": 13
+      },
+      "events": {
+        "dynamic": 13
+      },
+      "id": 335284842,
+      "job_minutes_per_run_mean": {
+        "macos": 0.0,
+        "other": 0.0,
+        "ubuntu": 0.8115,
+        "windows": 0.0
+      },
+      "job_minutes_sampled": {
+        "macos": 0.0,
+        "other": 0.0,
+        "ubuntu": 10.55,
+        "windows": 0.0
+      },
+      "jobs_sampled_runs": 13,
+      "jobs_without_timing": 0,
+      "last_run": {
+        "conclusion": "success",
+        "created_at": "2026-11-08T14:42:50Z",
+        "event": "dynamic"
+      },
+      "name": "Dependency Graph",
+      "path": "dynamic/dependabot/update-graph",
+      "runs_in_window": 13,
+      "runs_sampled": 13,
+      "runs_without_jobs": 0,
+      "sample_capped": false,
+      "state": "active",
+      "status": "measured",
+      "wall_minutes": {
+        "n": 13,
+        "p50": 1.0167,
+        "p90": 1.2933
+      }
+    },
+    {
+      "conclusions": {
+        "success": 8
+      },
+      "events": {
+        "schedule": 8
+      },
+      "id": 368099607,
+      "job_minutes_per_run_mean": {
+        "macos": 0.0,
+        "other": 0.0,
+        "ubuntu": 0.3167,
+        "windows": 0.0
+      },
+      "job_minutes_sampled": {
+        "macos": 0.0,
+        "other": 0.0,
+        "ubuntu": 2.5333,
+        "windows": 0.0
+      },
+      "jobs_sampled_runs": 8,
+      "jobs_without_timing": 0,
+      "last_run": {
+        "conclusion": "success",
+        "created_at": "2026-11-04T10:57:55Z",
+        "event": "schedule"
+      },
+      "name": "Documentation deep scan",
+      "path": ".github/workflows/documentation-deep-scan.yml",
+      "runs_in_window": 8,
+      "runs_sampled": 8,
+      "runs_without_jobs": 0,
+      "sample_capped": false,
+      "state": "disabled_manually",
+      "status": "measured",
+      "wall_minutes": {
+        "n": 8,
+        "p50": 0.3583,
+        "p90": 0.46
+      }
+    },
+    {
+      "conclusions": {
+        "success": 9
+      },
+      "events": {
+        "schedule": 9
+      },
+      "id": 376331432,
+      "job_minutes_per_run_mean": {
+        "macos": 0.0,
+        "other": 0.0,
+        "ubuntu": 0.6759,
+        "windows": 0.0
+      },
+      "job_minutes_sampled": {
+        "macos": 0.0,
+        "other": 0.0,
+        "ubuntu": 6.0833,
+        "windows": 0.0
+      },
+      "jobs_sampled_runs": 9,
+      "jobs_without_timing": 0,
+      "last_run": {
+        "conclusion": "success",
+        "created_at": "2026-11-05T01:26:24Z",
+        "event": "schedule"
+      },
+      "name": "Documentation updater",
+      "path": ".github/workflows/docs-updater.yml",
+      "runs_in_window": 9,
+      "runs_sampled": 9,
+      "runs_without_jobs": 0,
+      "sample_capped": false,
+      "state": "disabled_manually",
+      "status": "measured",
+      "wall_minutes": {
+        "n": 9,
+        "p50": 0.7667,
+        "p90": 0.8067
+      }
+    },
+    {
+      "conclusions": {
+        "failure": 2
+      },
+      "events": {
+        "schedule": 2
+      },
+      "id": 398841071,
+      "job_minutes_per_run_mean": {
+        "macos": 0.0,
+        "other": 0.0,
+        "ubuntu": 1.2333,
+        "windows": 0.0
+      },
+      "job_minutes_sampled": {
+        "macos": 0.0,
+        "other": 0.0,
+        "ubuntu": 2.4667,
+        "windows": 0.0
+      },
+      "jobs_sampled_runs": 2,
+      "jobs_without_timing": 0,
+      "last_run": {
+        "conclusion": "failure",
+        "created_at": "2026-11-04T14:51:02Z",
+        "event": "schedule"
+      },
+      "name": "First hour",
+      "path": ".github/workflows/first-hour.yml",
+      "runs_in_window": 2,
+      "runs_sampled": 2,
+      "runs_without_jobs": 0,
+      "sample_capped": false,
+      "state": "disabled_manually",
+      "status": "measured",
+      "wall_minutes": {
+        "n": 2,
+        "p50": 276.45,
+        "p90": 279.9567
+      }
+    },
+    {
+      "conclusions": {
+        "skipped": 19,
+        "success": 1
+      },
+      "events": {
+        "workflow_run": 20
+      },
+      "id": 358831129,
+      "job_minutes_per_run_mean": {
+        "macos": 0.0,
+        "other": 0.0,
+        "ubuntu": 0.0192,
+        "windows": 0.0
+      },
+      "job_minutes_sampled": {
+        "macos": 0.0,
+        "other": 0.0,
+        "ubuntu": 0.3833,
+        "windows": 0.0
+      },
+      "jobs_sampled_runs": 20,
+      "jobs_without_timing": 0,
+      "last_run": {
+        "conclusion": "skipped",
+        "created_at": "2026-11-10T17:51:03Z",
+        "event": "workflow_run"
+      },
+      "name": "GitHub Release",
+      "path": ".github/workflows/github-release.yml",
+      "runs_in_window": 69,
+      "runs_sampled": 20,
+      "runs_without_jobs": 0,
+      "sample_capped": true,
+      "state": "active",
+      "status": "measured",
+      "wall_minutes": {
+        "n": 20,
+        "p50": 0.0333,
+        "p90": 0.185
+      }
+    },
+    {
+      "conclusions": {
+        "success": 1
+      },
+      "events": {
+        "schedule": 1
+      },
+      "id": 372726110,
+      "job_minutes_per_run_mean": {
+        "macos": 0.0,
+        "other": 0.0,
+        "ubuntu": 0.4667,
+        "windows": 0.0
+      },
+      "job_minutes_sampled": {
+        "macos": 0.0,
+        "other": 0.0,
+        "ubuntu": 0.4667,
+        "windows": 0.0
+      },
+      "jobs_sampled_runs": 1,
+      "jobs_without_timing": 0,
+      "last_run": {
+        "conclusion": "success",
+        "created_at": "2026-11-03T17:03:35Z",
+        "event": "schedule"
+      },
+      "name": "Host health",
+      "path": ".github/workflows/host-health.yml",
+      "runs_in_window": 1,
+      "runs_sampled": 1,
+      "runs_without_jobs": 0,
+      "sample_capped": false,
+      "state": "disabled_manually",
+      "status": "measured",
+      "wall_minutes": {
+        "n": 1,
+        "p50": 0.5333,
+        "p90": 0.5333
+      }
+    },
+    {
+      "conclusions": {
+        "success": 4
+      },
+      "events": {
+        "schedule": 1,
+        "workflow_dispatch": 3
+      },
+      "id": 339812289,
+      "job_minutes_per_run_mean": {
+        "macos": 0.0,
+        "other": 0.0,
+        "ubuntu": 0.4833,
+        "windows": 0.0
+      },
+      "job_minutes_sampled": {
+        "macos": 0.0,
+        "other": 0.0,
+        "ubuntu": 1.9333,
+        "windows": 0.0
+      },
+      "jobs_sampled_runs": 4,
+      "jobs_without_timing": 0,
+      "last_run": {
+        "conclusion": "success",
+        "created_at": "2026-11-02T17:03:20Z",
+        "event": "schedule"
+      },
+      "name": "Merge train",
+      "path": ".github/workflows/merge-train.yml",
+      "runs_in_window": 4,
+      "runs_sampled": 4,
+      "runs_without_jobs": 0,
+      "sample_capped": false,
+      "state": "disabled_manually",
+      "status": "measured",
+      "wall_minutes": {
+        "n": 4,
+        "p50": 0.5583,
+        "p90": 1.0533
+      }
+    },
+    {
+      "conclusions": {
+        "success": 1
+      },
+      "events": {
+        "schedule": 1
+      },
+      "id": 370844910,
+      "job_minutes_per_run_mean": {
+        "macos": 0.0,
+        "other": 0.0,
+        "ubuntu": 183.75,
+        "windows": 0.0
+      },
+      "job_minutes_sampled": {
+        "macos": 0.0,
+        "other": 0.0,
+        "ubuntu": 183.75,
+        "windows": 0.0
+      },
+      "jobs_sampled_runs": 1,
+      "jobs_without_timing": 0,
+      "last_run": {
+        "conclusion": "success",
+        "created_at": "2026-11-02T17:14:34Z",
+        "event": "schedule"
+      },
+      "name": "Minimum specs",
+      "path": ".github/workflows/minimum-specs.yml",
+      "runs_in_window": 1,
+      "runs_sampled": 1,
+      "runs_without_jobs": 0,
+      "sample_capped": false,
+      "state": "disabled_manually",
+      "status": "measured",
+      "wall_minutes": {
+        "n": 1,
+        "p50": 173.5333,
+        "p90": 173.5333
+      }
+    },
+    {
+      "conclusions": {
+        "success": 1
+      },
+      "events": {
+        "workflow_run": 1
+      },
+      "id": 370390950,
+      "job_minutes_per_run_mean": {
+        "macos": 0.0,
+        "other": 0.0,
+        "ubuntu": 0.4833,
+        "windows": 0.0
+      },
+      "job_minutes_sampled": {
+        "macos": 0.0,
+        "other": 0.0,
+        "ubuntu": 0.4833,
+        "windows": 0.0
+      },
+      "jobs_sampled_runs": 1,
+      "jobs_without_timing": 0,
+      "last_run": {
+        "conclusion": "success",
+        "created_at": "2026-11-05T05:48:53Z",
+        "event": "workflow_run"
+      },
+      "name": "Open VSX",
+      "path": ".github/workflows/openvsx.yml",
+      "runs_in_window": 1,
+      "runs_sampled": 1,
+      "runs_without_jobs": 0,
+      "sample_capped": false,
+      "state": "active",
+      "status": "measured",
+      "wall_minutes": {
+        "n": 1,
+        "p50": 0.85,
+        "p90": 0.85
+      }
+    },
+    {
+      "conclusions": {
+        "cancelled": 10,
+        "success": 10
+      },
+      "events": {
+        "pull_request_target": 1,
+        "workflow_run": 19
+      },
+      "id": 363661460,
+      "job_minutes_per_run_mean": {
+        "macos": 0.0,
+        "other": 0.0,
+        "ubuntu": 0.2192,
+        "windows": 0.0
+      },
+      "job_minutes_sampled": {
+        "macos": 0.0,
+        "other": 0.0,
+        "ubuntu": 4.3833,
+        "windows": 0.0
+      },
+      "jobs_sampled_runs": 20,
+      "jobs_without_timing": 0,
+      "last_run": {
+        "conclusion": "success",
+        "created_at": "2026-11-05T05:47:05Z",
+        "event": "workflow_run"
+      },
+      "name": "PR evaluate",
+      "path": ".github/workflows/pr-evaluate.yml",
+      "runs_in_window": 1753,
+      "runs_sampled": 20,
+      "runs_without_jobs": 2,
+      "sample_capped": true,
+      "state": "disabled_manually",
+      "status": "measured",
+      "wall_minutes": {
+        "n": 20,
+        "p50": 0.4667,
+        "p90": 0.895
+      }
+    },
+    {
+      "conclusions": {
+        "cancelled": 5,
+        "failure": 15
+      },
+      "events": {
+        "workflow_dispatch": 20
+      },
+      "id": 363661465,
+      "job_minutes_per_run_mean": {
+        "macos": 0.0,
+        "other": 0.0,
+        "ubuntu": 78.0392,
+        "windows": 0.0
+      },
+      "job_minutes_sampled": {
+        "macos": 0.0,
+        "other": 0.0,
+        "ubuntu": 1560.7833,
+        "windows": 0.0
+      },
+      "jobs_sampled_runs": 20,
+      "jobs_without_timing": 0,
+      "last_run": {
+        "conclusion": "failure",
+        "created_at": "2026-11-05T05:46:12Z",
+        "event": "workflow_dispatch"
+      },
+      "name": "PR review",
+      "path": ".github/workflows/pr-review.yml",
+      "runs_in_window": 180,
+      "runs_sampled": 20,
+      "runs_without_jobs": 0,
+      "sample_capped": true,
+      "state": "active",
+      "status": "measured",
+      "wall_minutes": {
+        "n": 20,
+        "p50": 57.0333,
+        "p90": 162.4683
+      }
+    },
+    {
+      "conclusions": {
+        "success": 4
+      },
+      "events": {
+        "schedule": 2,
+        "workflow_dispatch": 1,
+        "workflow_run": 1
+      },
+      "id": 339812290,
+      "job_minutes_per_run_mean": {
+        "macos": 0.0,
+        "other": 0.0,
+        "ubuntu": 0.4167,
+        "windows": 0.0
+      },
+      "job_minutes_sampled": {
+        "macos": 0.0,
+        "other": 0.0,
+        "ubuntu": 1.6667,
+        "windows": 0.0
+      },
+      "jobs_sampled_runs": 4,
+      "jobs_without_timing": 0,
+      "last_run": {
+        "conclusion": "success",
+        "created_at": "2026-11-02T18:20:35Z",
+        "event": "schedule"
+      },
+      "name": "Promote",
+      "path": ".github/workflows/promote-to-main.yml",
+      "runs_in_window": 4,
+      "runs_sampled": 4,
+      "runs_without_jobs": 0,
+      "sample_capped": false,
+      "state": "disabled_manually",
+      "status": "measured",
+      "wall_minutes": {
+        "n": 4,
+        "p50": 0.4833,
+        "p90": 0.66
+      }
+    },
+    {
+      "conclusions": {
+        "success": 20
+      },
+      "events": {
+        "pull_request": 9,
+        "push": 11
+      },
+      "id": 339785695,
+      "job_minutes_per_run_mean": {
+        "macos": 0.0,
+        "other": 0.0,
+        "ubuntu": 0.3858,
+        "windows": 0.0
+      },
+      "job_minutes_sampled": {
+        "macos": 0.0,
+        "other": 0.0,
+        "ubuntu": 7.7167,
+        "windows": 0.0
+      },
+      "jobs_sampled_runs": 20,
+      "jobs_without_timing": 0,
+      "last_run": {
+        "conclusion": "success",
+        "created_at": "2026-11-10T18:35:10Z",
+        "event": "pull_request"
+      },
+      "name": "Provenance",
+      "path": ".github/workflows/provenance.yml",
+      "runs_in_window": 513,
+      "runs_sampled": 20,
+      "runs_without_jobs": 0,
+      "sample_capped": true,
+      "state": "active",
+      "status": "measured",
+      "wall_minutes": {
+        "n": 20,
+        "p50": 0.4667,
+        "p90": 1.0383
+      }
+    },
+    {
+      "conclusions": {
+        "failure": 19,
+        "success": 1
+      },
+      "events": {
+        "push": 20
+      },
+      "id": 367029467,
+      "job_minutes_per_run_mean": {
+        "macos": 0.0,
+        "other": 0.0,
+        "ubuntu": 1.0125,
+        "windows": 0.0
+      },
+      "job_minutes_sampled": {
+        "macos": 0.0,
+        "other": 0.0,
+        "ubuntu": 20.25,
+        "windows": 0.0
+      },
+      "jobs_sampled_runs": 20,
+      "jobs_without_timing": 0,
+      "last_run": {
+        "conclusion": "failure",
+        "created_at": "2026-11-10T17:48:10Z",
+        "event": "push"
+      },
+      "name": "Release",
+      "path": ".github/workflows/vibey-engine.yml",
+      "runs_in_window": 69,
+      "runs_sampled": 20,
+      "runs_without_jobs": 0,
+      "sample_capped": true,
+      "state": "active",
+      "status": "measured",
+      "wall_minutes": {
+        "n": 20,
+        "p50": 1.425,
+        "p90": 2.5017
+      }
+    },
+    {
+      "conclusions": {
+        "failure": 1,
+        "success": 10
+      },
+      "events": {
+        "pull_request": 2,
+        "schedule": 8,
+        "workflow_run": 1
+      },
+      "id": 372425775,
+      "job_minutes_per_run_mean": {
+        "macos": 11.5864,
+        "other": 0.0,
+        "ubuntu": 14.3455,
+        "windows": 0.0
+      },
+      "job_minutes_sampled": {
+        "macos": 127.45,
+        "other": 0.0,
+        "ubuntu": 157.8,
+        "windows": 0.0
+      },
+      "jobs_sampled_runs": 11,
+      "jobs_without_timing": 0,
+      "last_run": {
+        "conclusion": "success",
+        "created_at": "2026-11-05T05:48:53Z",
+        "event": "workflow_run"
+      },
+      "name": "Release binaries",
+      "path": ".github/workflows/release-binaries.yml",
+      "runs_in_window": 11,
+      "runs_sampled": 11,
+      "runs_without_jobs": 0,
+      "sample_capped": false,
+      "state": "disabled_manually",
+      "status": "measured",
+      "wall_minutes": {
+        "n": 11,
+        "p50": 19.5833,
+        "p90": 24.6167
+      }
+    },
+    {
+      "conclusions": {
+        "failure": 1,
+        "skipped": 19
+      },
+      "events": {
+        "workflow_run": 20
+      },
+      "id": 344319045,
+      "job_minutes_per_run_mean": {
+        "macos": 0.0,
+        "other": 0.0,
+        "ubuntu": 0.1858,
+        "windows": 0.0
+      },
+      "job_minutes_sampled": {
+        "macos": 0.0,
+        "other": 0.0,
+        "ubuntu": 3.7167,
+        "windows": 0.0
+      },
+      "jobs_sampled_runs": 20,
+      "jobs_without_timing": 0,
+      "last_run": {
+        "conclusion": "skipped",
+        "created_at": "2026-11-10T17:51:03Z",
+        "event": "workflow_run"
+      },
+      "name": "Release surfaces",
+      "path": ".github/workflows/release-surfaces.yml",
+      "runs_in_window": 69,
+      "runs_sampled": 20,
+      "runs_without_jobs": 0,
+      "sample_capped": true,
+      "state": "active",
+      "status": "measured",
+      "wall_minutes": {
+        "n": 20,
+        "p50": 0.0333,
+        "p90": 0.1367
+      }
+    },
+    {
+      "conclusions": {
+        "skipped": 20
+      },
+      "events": {
+        "workflow_run": 20
+      },
+      "id": 367954761,
+      "job_minutes_per_run_mean": {
+        "macos": 0.0,
+        "other": 0.0,
+        "ubuntu": 0.0,
+        "windows": 0.0
+      },
+      "job_minutes_sampled": {
+        "macos": 0.0,
+        "other": 0.0,
+        "ubuntu": 0.0,
+        "windows": 0.0
+      },
+      "jobs_sampled_runs": 20,
+      "jobs_without_timing": 0,
+      "last_run": {
+        "conclusion": "skipped",
+        "created_at": "2026-11-10T17:51:16Z",
+        "event": "workflow_run"
+      },
+      "name": "Repository profile",
+      "path": ".github/workflows/repository-profile.yml",
+      "runs_in_window": 70,
+      "runs_sampled": 20,
+      "runs_without_jobs": 0,
+      "sample_capped": true,
+      "state": "active",
+      "status": "measured",
+      "wall_minutes": {
+        "n": 20,
+        "p50": 0.0167,
+        "p90": 0.1683
+      }
+    },
+    {
+      "conclusions": {
+        "success": 2
+      },
+      "events": {
+        "schedule": 2
+      },
+      "id": 372583650,
+      "job_minutes_per_run_mean": {
+        "macos": 0.0,
+        "other": 0.0,
+        "ubuntu": 5920.5417,
+        "windows": 0.0
+      },
+      "job_minutes_sampled": {
+        "macos": 0.0,
+        "other": 0.0,
+        "ubuntu": 11841.0833,
+        "windows": 0.0
+      },
+      "jobs_sampled_runs": 2,
+      "jobs_without_timing": 0,
+      "last_run": {
+        "conclusion": "success",
+        "created_at": "2026-11-04T14:50:13Z",
+        "event": "schedule"
+      },
+      "name": "Review canary",
+      "path": ".github/workflows/review-canary.yml",
+      "runs_in_window": 2,
+      "runs_sampled": 2,
+      "runs_without_jobs": 0,
+      "sample_capped": false,
+      "state": "disabled_manually",
+      "status": "measured",
+      "wall_minutes": {
+        "n": 2,
+        "p50": 441.6167,
+        "p90": 442.1633
+      }
+    },
+    {
+      "conclusions": {
+        "success": 10
+      },
+      "events": {
+        "push": 2,
+        "schedule": 8
+      },
+      "id": 370390676,
+      "job_minutes_per_run_mean": {
+        "macos": 0.0,
+        "other": 0.0,
+        "ubuntu": 0.2283,
+        "windows": 0.0
+      },
+      "job_minutes_sampled": {
+        "macos": 0.0,
+        "other": 0.0,
+        "ubuntu": 2.2833,
+        "windows": 0.0
+      },
+      "jobs_sampled_runs": 10,
+      "jobs_without_timing": 0,
+      "last_run": {
+        "conclusion": "success",
+        "created_at": "2026-11-05T05:48:18Z",
+        "event": "push"
+      },
+      "name": "Ruleset drift",
+      "path": ".github/workflows/ruleset-drift.yml",
+      "runs_in_window": 10,
+      "runs_sampled": 10,
+      "runs_without_jobs": 0,
+      "sample_capped": false,
+      "state": "disabled_manually",
+      "status": "measured",
+      "wall_minutes": {
+        "n": 10,
+        "p50": 0.3,
+        "p90": 156.54
+      }
+    },
+    {
+      "conclusions": {
+        "success": 8
+      },
+      "events": {
+        "schedule": 8
+      },
+      "id": 376331433,
+      "job_minutes_per_run_mean": {
+        "macos": 0.0,
+        "other": 0.0,
+        "ubuntu": 1.0437,
+        "windows": 0.0
+      },
+      "job_minutes_sampled": {
+        "macos": 0.0,
+        "other": 0.0,
+        "ubuntu": 8.35,
+        "windows": 0.0
+      },
+      "jobs_sampled_runs": 8,
+      "jobs_without_timing": 0,
+      "last_run": {
+        "conclusion": "success",
+        "created_at": "2026-11-04T13:03:06Z",
+        "event": "schedule"
+      },
+      "name": "Self-healer",
+      "path": ".github/workflows/self-healer.yml",
+      "runs_in_window": 8,
+      "runs_sampled": 8,
+      "runs_without_jobs": 0,
+      "sample_capped": false,
+      "state": "disabled_manually",
+      "status": "measured",
+      "wall_minutes": {
+        "n": 8,
+        "p50": 1.175,
+        "p90": 4.0567
+      }
+    },
+    {
+      "conclusions": {
+        "cancelled": 4,
+        "success": 16
+      },
+      "events": {
+        "pull_request": 20
+      },
+      "id": 370344056,
+      "job_minutes_per_run_mean": {
+        "macos": 0.0,
+        "other": 0.0,
+        "ubuntu": 0.2425,
+        "windows": 0.0
+      },
+      "job_minutes_sampled": {
+        "macos": 0.0,
+        "other": 0.0,
+        "ubuntu": 4.85,
+        "windows": 0.0
+      },
+      "jobs_sampled_runs": 20,
+      "jobs_without_timing": 0,
+      "last_run": {
+        "conclusion": "success",
+        "created_at": "2026-11-10T18:35:10Z",
+        "event": "pull_request"
+      },
+      "name": "Skip markers",
+      "path": ".github/workflows/skip-markers.yml",
+      "runs_in_window": 318,
+      "runs_sampled": 20,
+      "runs_without_jobs": 0,
+      "sample_capped": true,
+      "state": "active",
+      "status": "measured",
+      "wall_minutes": {
+        "n": 20,
+        "p50": 0.375,
+        "p90": 0.5767
+      }
+    },
+    {
+      "conclusions": {
+        "cancelled": 2,
+        "success": 18
+      },
+      "events": {
+        "pull_request": 15,
+        "push": 5
+      },
+      "id": 367100918,
+      "job_minutes_per_run_mean": {
+        "macos": 0.0,
+        "other": 0.0,
+        "ubuntu": 0.4758,
+        "windows": 0.0
+      },
+      "job_minutes_sampled": {
+        "macos": 0.0,
+        "other": 0.0,
+        "ubuntu": 9.5167,
+        "windows": 0.0
+      },
+      "jobs_sampled_runs": 20,
+      "jobs_without_timing": 0,
+      "last_run": {
+        "conclusion": "success",
+        "created_at": "2026-11-06T07:20:10Z",
+        "event": "push"
+      },
+      "name": "krypton-app",
+      "path": ".github/workflows/krypton-app.yml",
+      "runs_in_window": 57,
+      "runs_sampled": 20,
+      "runs_without_jobs": 0,
+      "sample_capped": true,
+      "state": "active",
+      "status": "measured",
+      "wall_minutes": {
+        "n": 20,
+        "p50": 0.825,
+        "p90": 1.735
+      }
+    },
+    {
+      "conclusions": {},
+      "events": {},
+      "id": 376530170,
+      "job_minutes_per_run_mean": {
+        "macos": 0.0,
+        "other": 0.0,
+        "ubuntu": 0.0,
+        "windows": 0.0
+      },
+      "job_minutes_sampled": {
+        "macos": 0.0,
+        "other": 0.0,
+        "ubuntu": 0.0,
+        "windows": 0.0
+      },
+      "jobs_sampled_runs": 0,
+      "jobs_without_timing": 0,
+      "last_run": null,
+      "name": "vibey (remote command)",
+      "path": ".github/workflows/vibey-remote.yml",
+      "runs_in_window": 0,
+      "runs_sampled": 0,
+      "runs_without_jobs": 0,
+      "sample_capped": false,
+      "state": "active",
+      "status": "measured",
+      "wall_minutes": {
+        "n": 0,
+        "p50": null,
+        "p90": null
+      }
+    },
+    {
+      "conclusions": {},
+      "events": {},
+      "id": 376539539,
+      "job_minutes_per_run_mean": {
+        "macos": 0.0,
+        "other": 0.0,
+        "ubuntu": 0.0,
+        "windows": 0.0
+      },
+      "job_minutes_sampled": {
+        "macos": 0.0,
+        "other": 0.0,
+        "ubuntu": 0.0,
+        "windows": 0.0
+      },
+      "jobs_sampled_runs": 0,
+      "jobs_without_timing": 0,
+      "last_run": null,
+      "name": "vibey state (write back)",
+      "path": ".github/workflows/vibey-state-write.yml",
+      "runs_in_window": 0,
+      "runs_sampled": 0,
+      "runs_without_jobs": 0,
+      "sample_capped": false,
+      "state": "active",
+      "status": "measured",
+      "wall_minutes": {
+        "n": 0,
+        "p50": null,
+        "p90": null
+      }
+    }
+  ]
+}
