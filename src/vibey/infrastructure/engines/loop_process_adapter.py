@@ -44,6 +44,7 @@ from vibey.domain.ledger import EventKind
 from vibey.infrastructure.engines.argv import build_argv
 from vibey.infrastructure.engines.classify import attribute_failure, classify_capacity
 from vibey.infrastructure.engines.engine_environment import EngineEnvironmentPolicy
+from vibey.infrastructure.engines.events_tail import EventsTail
 from vibey.infrastructure.engines.interfaces.engine_environment_interface import (
     EngineEnvironmentPolicyInterface,
 )
@@ -492,122 +493,14 @@ class LoopProcessAdapter:
             )
             return
 
-        # Tail the file (simplified for now - can be made more sophisticated)
-        seen_lines = 0
+        tail = EventsTail(events_path)
         process_exited_without_status_since: float | None = None
         while True:
             try:
-                lines = (await asyncio.to_thread(events_path.read_text)).splitlines()
-                for line in lines[seen_lines:]:
-                    if not line.strip():
-                        continue
-                    try:
-                        raw = json.loads(line)
-                        # claudeloop writes {"event_type": ..., "payload": {...}}.
-                        # codexloop passes the wrapped codex CLI's own stream
-                        # through nearly verbatim, where the key is "type" and
-                        # the fields sit at the top level with no payload
-                        # envelope. Accepting only event_type/kind meant every
-                        # codexloop event was dropped as "event_missing_type" --
-                        # its whole entry in LOOP_EVENT_MAP was unreachable, and
-                        # conformance failures downstream (no verdict, no
-                        # completion) were really this one parse gap.
-                        event_type = raw.get("event_type") or raw.get("kind") or raw.get("type")
-                        if not event_type:
-                            logger.warning(
-                                "event_missing_type",
-                                run_id=str(handle.run_id),
-                                raw=raw,
-                            )
-                            continue
-
-                        # Translate event_type to EventKind
-                        kind = translate_event_type(self.descriptor.engine_id, event_type)
-                        if kind is None:
-                            logger.info(
-                                "unknown_event_type",
-                                engine=self.descriptor.engine_id.value,
-                                event_type=event_type,
-                                detail="skipping gracefully",
-                            )
-                            continue
-
-                        # Parse timestamp
-                        at_str = raw.get("at") or raw.get("timestamp") or raw.get("ts")
-                        at = datetime.fromisoformat(at_str) if at_str else datetime.now(UTC)
-
-                        # Enrich payload for verdict events with done_marker.
-                        # claudeloop's own "finished" event_type covers both
-                        # success and failure (see application/runner.py),
-                        # distinguished only by payload["success"] -- require
-                        # it explicitly True rather than defaulting when
-                        # absent, since other engines' verdict payloads use a
-                        # different field ("complete", not "success") whose
-                        # true/false state this code can't read here. A
-                        # missing or falsy "success" must never enrich, or a
-                        # failed run could report a false done_marker match.
-                        # A flat event (codexloop's shape) is its own payload:
-                        # success/complete/done_marker/usage live at the top
-                        # level, so an empty dict here would discard exactly
-                        # the fields every consumer downstream reads.
-                        if "payload" in raw:
-                            payload = dict(raw.get("payload", {}))
-                        else:
-                            payload = {
-                                k: v
-                                for k, v in raw.items()
-                                if k not in {"event_type", "kind", "type", "at", "timestamp", "ts"}
-                            }
-                        if (
-                            kind == EventKind.VERDICT_RENDERED
-                            and "done_marker" not in payload
-                            and payload.get("success") is True
-                        ):
-                            payload["done_marker"] = self.descriptor.done_marker
-                        # Normalize the completion key: claudeloop's
-                        # verdict payloads say {"success": bool} while every
-                        # vibey consumer (run_and_record, the brief builder)
-                        # reads {"complete": bool}. Caught live: a real
-                        # claudeloop run finished its item, rendered
-                        # success=true, and the handler still failed it as
-                        # "did not report completion".
-                        if (
-                            kind == EventKind.VERDICT_RENDERED
-                            and "complete" not in payload
-                            and "success" in payload
-                        ):
-                            payload["complete"] = payload.get("success") is True
-                        # qwenloop and gptossloop end a run with a bare
-                        # {"type": "completed"} or {"type": "failed"} (qwenloop
-                        # application/runner.py): the event's name is the verdict.
-                        # Without this every sovereign BUILD session read as "did
-                        # not report completion" -- caught by the ULTRA proof run.
-                        raw_type = raw.get("type")
-                        if (
-                            kind == EventKind.VERDICT_RENDERED
-                            and "complete" not in payload
-                            and raw_type in {"completed", "failed"}
-                        ):
-                            payload["complete"] = raw_type == "completed"
-                            if payload["complete"]:
-                                payload.setdefault("done_marker", self.descriptor.done_marker)
-
-                        # Yield translated event
-                        yield EngineEvent(
-                            kind=kind.value,  # EventKind enum value
-                            at=at,
-                            payload=payload,
-                        )
-                    except (json.JSONDecodeError, KeyError, ValueError) as e:
-                        logger.warning(
-                            "event_parse_failed",
-                            run_id=str(handle.run_id),
-                            line=line[:200],
-                            error=str(e),
-                        )
-                        continue
-
-                seen_lines = len(lines)
+                for line in await asyncio.to_thread(tail.read_new):
+                    event = self._translate_line(handle, line)
+                    if event is not None:
+                        yield event
 
                 # Check if done via meta.json's own status field. Every loop
                 # engine's RunMeta documents the same terminal vocabulary
@@ -620,6 +513,10 @@ class LoopProcessAdapter:
                 if meta_path.exists():
                     meta = json.loads(meta_path.read_text())
                     if meta.get("status") in ("finished", "failed", "stopped"):
+                        for line in tail.flush():
+                            event = self._translate_line(handle, line)
+                            if event is not None:
+                                yield event
                         break
 
                 # A well-behaved engine always writes a terminal status
@@ -644,6 +541,10 @@ class LoopProcessAdapter:
                             run_id=str(handle.run_id),
                             returncode=process.returncode,
                         )
+                        for line in tail.flush():
+                            event = self._translate_line(handle, line)
+                            if event is not None:
+                                yield event
                         break
                 else:
                     process_exited_without_status_since = None
@@ -656,6 +557,120 @@ class LoopProcessAdapter:
                     error=str(e),
                 )
                 break
+
+    def _translate_line(self, handle: RunHandle, line: str) -> EngineEvent | None:
+        """Translate one events.jsonl line, or None when it is skipped.
+
+        A blank, untyped, unknown-type or unparseable line is skipped (the last
+        three are logged); a complete line is never retried.
+        """
+        if not line.strip():
+            return None
+        try:
+            raw = json.loads(line)
+            # claudeloop writes {"event_type": ..., "payload": {...}}.
+            # codexloop passes the wrapped codex CLI's own stream
+            # through nearly verbatim, where the key is "type" and
+            # the fields sit at the top level with no payload
+            # envelope. Accepting only event_type/kind meant every
+            # codexloop event was dropped as "event_missing_type" --
+            # its whole entry in LOOP_EVENT_MAP was unreachable, and
+            # conformance failures downstream (no verdict, no
+            # completion) were really this one parse gap.
+            event_type = raw.get("event_type") or raw.get("kind") or raw.get("type")
+            if not event_type:
+                logger.warning(
+                    "event_missing_type",
+                    run_id=str(handle.run_id),
+                    raw=raw,
+                )
+                return None
+
+            # Translate event_type to EventKind
+            kind = translate_event_type(self.descriptor.engine_id, event_type)
+            if kind is None:
+                logger.info(
+                    "unknown_event_type",
+                    engine=self.descriptor.engine_id.value,
+                    event_type=event_type,
+                    detail="skipping gracefully",
+                )
+                return None
+
+            # Parse timestamp
+            at_str = raw.get("at") or raw.get("timestamp") or raw.get("ts")
+            at = datetime.fromisoformat(at_str) if at_str else datetime.now(UTC)
+
+            # Enrich payload for verdict events with done_marker.
+            # claudeloop's own "finished" event_type covers both
+            # success and failure (see application/runner.py),
+            # distinguished only by payload["success"] -- require
+            # it explicitly True rather than defaulting when
+            # absent, since other engines' verdict payloads use a
+            # different field ("complete", not "success") whose
+            # true/false state this code can't read here. A
+            # missing or falsy "success" must never enrich, or a
+            # failed run could report a false done_marker match.
+            # A flat event (codexloop's shape) is its own payload:
+            # success/complete/done_marker/usage live at the top
+            # level, so an empty dict here would discard exactly
+            # the fields every consumer downstream reads.
+            if "payload" in raw:
+                payload = dict(raw.get("payload", {}))
+            else:
+                payload = {
+                    k: v
+                    for k, v in raw.items()
+                    if k not in {"event_type", "kind", "type", "at", "timestamp", "ts"}
+                }
+            if (
+                kind == EventKind.VERDICT_RENDERED
+                and "done_marker" not in payload
+                and payload.get("success") is True
+            ):
+                payload["done_marker"] = self.descriptor.done_marker
+            # Normalize the completion key: claudeloop's
+            # verdict payloads say {"success": bool} while every
+            # vibey consumer (run_and_record, the brief builder)
+            # reads {"complete": bool}. Caught live: a real
+            # claudeloop run finished its item, rendered
+            # success=true, and the handler still failed it as
+            # "did not report completion".
+            if (
+                kind == EventKind.VERDICT_RENDERED
+                and "complete" not in payload
+                and "success" in payload
+            ):
+                payload["complete"] = payload.get("success") is True
+            # qwenloop and gptossloop end a run with a bare
+            # {"type": "completed"} or {"type": "failed"} (qwenloop
+            # application/runner.py): the event's name is the verdict.
+            # Without this every sovereign BUILD session read as "did
+            # not report completion" -- caught by the ULTRA proof run.
+            raw_type = raw.get("type")
+            if (
+                kind == EventKind.VERDICT_RENDERED
+                and "complete" not in payload
+                and raw_type in {"completed", "failed"}
+            ):
+                payload["complete"] = raw_type == "completed"
+                if payload["complete"]:
+                    payload.setdefault("done_marker", self.descriptor.done_marker)
+
+            # Translated event
+            return EngineEvent(
+                kind=kind.value,  # EventKind enum value
+                at=at,
+                payload=payload,
+            )
+        except (json.JSONDecodeError, KeyError, ValueError) as e:
+            logger.warning(
+                "event_parse_failed",
+                run_id=str(handle.run_id),
+                line=line[:200],
+                error=str(e),
+            )
+            return None
 
     async def send_prompt(self, handle: RunHandle, text: str, *, now: bool) -> None:
         """Write prompt to inbox/ directory for mid-run prompting."""
