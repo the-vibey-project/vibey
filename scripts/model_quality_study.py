@@ -354,8 +354,10 @@ class OllamaApi:
             self._probe = OllamaModelProbe()
         return self._probe.capabilities(self._url + "/v1", tag)  # type: ignore[no-any-return]
 
-    def create(self, name: str, modelfile: str) -> None:
-        self._post("/api/create", {"model": name, "modelfile": modelfile, "stream": False})
+    def create(self, name: str, base: str, parameters: Mapping[str, Any]) -> None:
+        """Ollama 0.40 takes `from` and `parameters`; the old `modelfile` field is refused."""
+        body = {"model": name, "from": base, "parameters": dict(parameters), "stream": False}
+        self._post("/api/create", body)
 
     def resident_bytes(self, name: str) -> int:
         """Load the model at its derived context, read what Ollama holds, then unload it."""
@@ -385,7 +387,7 @@ class ModelPreparer(ModelPreparerInterface):
 
     def derive(self, entry: Mapping[str, Any], num_ctx: int) -> str:
         name = self.derived_name(entry, num_ctx)
-        self._ollama.create(name, f"FROM {entry['tag']}\nPARAMETER num_ctx {num_ctx}\n")
+        self._ollama.create(name, str(entry["tag"]), {"num_ctx": num_ctx})
         return name
 
     def screen(self, entry: Mapping[str, Any]) -> Mapping[str, Any]:
@@ -578,7 +580,7 @@ class StudyRunner:
                                 "recorded": self._clock.now(),
                                 "host": dict(host),
                                 "conditions": conditions,
-                                "workspace": str(work),
+                                "workspace": work.name,  # relative: an absolute path would carry the home directory
                                 "solved": score["solved"],
                                 "failure": score["failure"],
                                 "checks": score["checks"],
@@ -625,9 +627,10 @@ def main(argv: Sequence[str] | None = None) -> int:
     for name in ("screen", "run"):
         sub = commands.add_parser(name)
         sub.add_argument("--models")
-    commands.choices["run"].add_argument(
-        "--set", default="all", choices=("screening", "confirmation", "all")
-    )
+    run_options = commands.choices["run"]
+    run_options.add_argument("--set", default="all", choices=("screening", "confirmation", "all"))
+    run_options.add_argument("--tasks", help="comma-separated task ids; a calibration run")
+    run_options.add_argument("--trials", type=int, help="trials per task, overriding the TOML")
     summary = commands.add_parser("summary")
     summary.add_argument(
         "--set", default="confirmation", choices=("screening", "confirmation", "all")
@@ -663,8 +666,16 @@ def main(argv: Sequence[str] | None = None) -> int:
         tasks, screening=int(settings.screening), seed=int(settings.split_seed)
     )
     sets = {"screening": screening, "confirmation": confirmation}
-    if args.set != "all":
+    if args.tasks:
+        wanted_ids = set(args.tasks.split(","))
+        chosen = tuple(task for task in tasks if task.id in wanted_ids)
+        if {task.id for task in chosen} != wanted_ids:
+            raise SystemExit(f"unknown task id(s): {', '.join(sorted(wanted_ids))}")
+        sets = {"calibration": chosen}
+    elif args.set != "all":
         sets = {args.set: sets[args.set]}
+    if args.trials:
+        settings = Settings({**settings.raw, "trials": args.trials}, settings.models)
     commands_runner = SubprocessRunner()
     idle_settings = dict(settings.idle)
     idle_settings["server_log"] = str(Path(idle_settings["server_log"]).expanduser())
@@ -674,7 +685,6 @@ def main(argv: Sequence[str] | None = None) -> int:
     host = {
         "system": platform.system(),
         "machine": platform.machine(),
-        "node": platform.node(),
         # Scores depend on the checkers, so their versions are part of the record.
         **{tool: importlib.metadata.version(tool) for tool in ("ruff", "mypy", "pytest")},
     }

@@ -267,13 +267,13 @@ class FakeOllama:
     def __init__(self, capabilities: frozenset[str] | None, resident_gib: float) -> None:
         self.capabilities = capabilities
         self.resident_gib = resident_gib
-        self.created: list[tuple[str, str]] = []
+        self.created: list[tuple[str, str, Mapping[str, Any]]] = []
 
     def probe(self, tag: str) -> frozenset[str] | None:
         return self.capabilities
 
-    def create(self, name: str, modelfile: str) -> None:
-        self.created.append((name, modelfile))
+    def create(self, name: str, base: str, parameters: Mapping[str, Any]) -> None:
+        self.created.append((name, base, parameters))
 
     def resident_bytes(self, name: str) -> int:
         return int(self.resident_gib * 1024**3)
@@ -314,7 +314,7 @@ def test_derive_builds_the_32k_tag_with_a_generated_modelfile() -> None:
     ollama = FakeOllama(frozenset({"tools"}), 12.0)
     name = mq.ModelPreparer(ollama, SETTINGS).derive(ENTRY, 32768)
     assert name == "mq-m-32768"
-    assert ollama.created == [(name, "FROM m:1\nPARAMETER num_ctx 32768\n")]
+    assert ollama.created == [(name, "m:1", {"num_ctx": 32768})]
 
 
 def test_settings_declare_the_preregistered_values() -> None:
