@@ -1,0 +1,119 @@
+# Time limit for every job in .github/workflows/ci.yml, and the token-permission exceptions.
+# Checked in both directions by tests/meta/test_ci_job_hygiene.py: a job with no entry fails,
+# and an entry for a job that no longer exists fails (sub-doctrine 12.e).
+#
+# THE RULE
+#   limit = roundup5(max(2 x p90 minutes of the job's SLOWEST matrix cell, 10))
+#   never below 15 for a job that runs a real test suite, so a slow runner day cannot fail a
+#   healthy job; `image` and `cluster-smoke` keep their existing 45 unless p90 exceeds 22.
+#
+# THE MEASUREMENT
+#   Per-job durations are completed_at - started_at (queue wait excluded, because it does not
+#   count toward a timeout), read with GET-only `gh api` calls on 2026-11-10: the 30 most
+#   recent completed ci.yml runs, of which the 12 that concluded `success` (events
+#   pull_request and push, 2026-11-08 to 2026-11-10) are the sample; `n` below is the number of
+#   samples of the slowest cell. Failed runs were looked at separately and are not a basis: no
+#   job in any of them ran longer than in the passing sample (longest 10.8 minutes).
+#   The `gates` figure is the OLD gates job (the static gates have since moved to `lint`), so
+#   it is conservative. Minutes are rounded to one decimal.
+#   No limit is within 50% of its observed max; the closest are gates (8.2 of 20, in a failed
+#   run) and tools (6.4 of 15).
+#
+# Each entry: timeout_minutes (what ci.yml must say), basis (measured | unmeasured | kept),
+# and, when measured, the evidence beside it.
+
+# Used for a job that has no entry. Every job has one, so this is a floor for a future job.
+default_timeout_minutes = 15
+
+[jobs.uv-lock]
+# n=12 p90=0.2 max=0.3, slowest cell: "uv.lock is in sync with pyproject.toml". 2 x p90 < 10.
+timeout_minutes = 10
+basis = "measured"
+
+[jobs.lint]
+# unmeasured, set from the work it does, revisit after the first runs. It repeats the setup
+# and runs mypy, ruff, lint-imports, the TypeScript check and the corpus index: the old
+# `gates` job ran all of that plus the full suite inside its own 7.8 minutes.
+timeout_minutes = 20
+basis = "unmeasured"
+
+[jobs.gates]
+# n=12 p90=7.8 max=7.8 (8.2 in a failed run), slowest cell: "gates". 2 x 7.8 = 15.6 -> 20.
+timeout_minutes = 20
+basis = "measured"
+
+[jobs.noloss]
+# n=12 p90=2.8 max=2.8, slowest cell: "No-loss property suite (10,000 examples)". Test-suite floor 15.
+timeout_minutes = 15
+basis = "measured"
+
+[jobs.postgres-compatibility]
+# n=12 p90=1.5 max=1.6, slowest cell: "PostgreSQL 18 compatibility" (5 cells). Test-suite floor 15.
+timeout_minutes = 15
+basis = "measured"
+
+[jobs.tools]
+# n=12 p90=6.1 max=6.4, slowest cell: "vibey-gh on 3.12" (24 cells). 2 x 6.1 = 12.2 -> 15.
+timeout_minutes = 15
+basis = "measured"
+
+[jobs.tools-lint]
+# n=12 p90=0.6 max=0.6, slowest cell: "Absorbed tools - their own linters". 2 x p90 < 10.
+timeout_minutes = 10
+basis = "measured"
+
+[jobs.krypton-app]
+# n=12 p90=0.3 max=0.3, slowest cell: "krypton-app". Test-suite floor 15.
+timeout_minutes = 15
+basis = "measured"
+
+[jobs.vibey-core]
+# n=12 p90=0.4 max=0.5, slowest cell: "@vibey/core". Test-suite floor 15.
+timeout_minutes = 15
+basis = "measured"
+
+[jobs.app]
+# n=12 p90=1.3 max=1.4, slowest cell: "krypton app (mobile and web)". Test-suite floor 15.
+timeout_minutes = 15
+basis = "measured"
+
+[jobs.vscode-extension]
+# n=12 p90=1.5 max=1.5, slowest cell: "VS Code extension (macos-latest)" (2 cells). Test-suite floor 15.
+timeout_minutes = 15
+basis = "measured"
+
+[jobs.desktop]
+# n=12 p90=3.0 max=3.7, slowest cell: "krypton desktop (ubuntu)" (4 cells; macos p90 2.8). Test-suite floor 15.
+timeout_minutes = 15
+basis = "measured"
+
+[jobs.image]
+# n=12 p90=9.6 max=10.0, slowest cell: "Container image (amd64 + arm64)". p90 is below 22: the
+# existing 45 is kept.
+timeout_minutes = 45
+basis = "kept"
+
+[jobs.chart]
+# n=12 p90=0.2 max=0.2, slowest cell: "Helm chart lint and golden render". 2 x p90 < 10.
+timeout_minutes = 10
+basis = "measured"
+
+[jobs.cluster-smoke]
+# n=12 p90=11.3 max=11.4, slowest cell: "Helm install on minikube". p90 is below 22: the
+# existing 45 is kept (the Helm progressDeadline is 600s inside it).
+timeout_minutes = 45
+basis = "kept"
+
+[jobs.ci-result]
+# unmeasured, set from the work it does, revisit after the first runs. One short script over
+# the `needs` context; its existing 5 is kept.
+timeout_minutes = 5
+basis = "unmeasured"
+
+# Jobs that need more than the read-only default token, each with its reason. A job listed here
+# must carry its own `permissions:` block in ci.yml. None does: the audit of ci.yml found no
+# job that writes, comments, publishes, pushes an image, or uses OIDC. The three `GH_TOKEN:
+# ${{ github.token }}` steps (advisory-check) only GET the public advisory database, which
+# needs no permission; the docker builds use `push: false`; cache and upload-artifact use the
+# runner's own token, not GITHUB_TOKEN scopes.
+[permission_exceptions]

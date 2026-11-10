@@ -37,10 +37,17 @@ concurrency:
   group: ci-${{ github.event_name }}-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
+# The token is read-only for every job. None of them writes, comments, publishes, pushes an
+# image or uses OIDC (audited in tests/meta/ci_job_limits.toml); a job that ever needs more
+# declares its own `permissions:` block and is listed there under [permission_exceptions].
+permissions:
+  contents: read
+
 jobs:
   uv-lock:
     name: uv.lock is in sync with pyproject.toml
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
       - uses: astral-sh/setup-uv@v7
@@ -54,6 +61,7 @@ jobs:
     name: Lint and static gates
     needs: [uv-lock]
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     # The cheap static gates run before any heavy job starts, so a lint failure stops the
     # fan-out instead of being discovered after every matrix cell has been paid for.
     steps:
@@ -107,6 +115,7 @@ jobs:
   gates:
     needs: [uv-lock, lint]
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     services:
       postgres:
         image: postgres:17
@@ -210,6 +219,7 @@ jobs:
     name: No-loss property suite (10,000 examples)
     needs: [uv-lock, lint]
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     services:
       postgres:
         image: postgres:17
@@ -251,6 +261,7 @@ jobs:
     name: PostgreSQL ${{ matrix.postgres }} compatibility
     needs: [uv-lock, lint]
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     strategy:
       fail-fast: false
       matrix:
@@ -311,6 +322,7 @@ jobs:
     name: ${{ matrix.package }} on ${{ matrix.python }}${{ matrix.os && format(' ({0})', matrix.os) || '' }}
     needs: [uv-lock, lint]
     runs-on: ${{ matrix.os || 'ubuntu-latest' }}
+    timeout-minutes: 15
     strategy:
       fail-fast: false
       matrix:
@@ -715,6 +727,7 @@ jobs:
     name: Absorbed tools - their own linters
     needs: [uv-lock, lint]
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -757,6 +770,7 @@ jobs:
     # static checks on every change, as every client and package here is run by CI.
     name: krypton-app
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     defaults:
       run:
         working-directory: clients/krypton-app
@@ -782,6 +796,7 @@ jobs:
     # functions and statements, as the extension's core was before it moved there.
     name: "@vibey/core"
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     defaults:
       run:
         working-directory: packages/vibey-core
@@ -825,6 +840,7 @@ jobs:
     # declared only (eas.json).
     name: krypton app (mobile and web)
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     defaults:
       run:
         working-directory: clients/app
@@ -861,6 +877,7 @@ jobs:
     # checks in .vibey-gh.toml since they ran green on develop (ADR-0059, #290).
     name: VS Code extension (${{ matrix.os }})
     runs-on: ${{ matrix.os }}
+    timeout-minutes: 15
     strategy:
       fail-fast: false
       matrix:
@@ -925,6 +942,7 @@ jobs:
     # green on develop (the same rule as vscode-extension).
     name: krypton desktop (${{ matrix.distro }})
     runs-on: ${{ matrix.runner }}
+    timeout-minutes: 15
     container: ${{ matrix.container }}
     strategy:
       fail-fast: false
@@ -1190,6 +1208,7 @@ jobs:
   chart:
     name: Helm chart lint and golden render
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
 
