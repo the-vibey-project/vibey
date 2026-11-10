@@ -40,6 +40,67 @@ QWEN25_CODER_14B_Q5_K_M = ModelProfile(
 )
 
 
+QWEN36_27B = ModelEntry(
+    name="qwen3.6-27b",
+    family="qwen3.6",
+    total_params_b=27.0,
+    active_params_b=27.0,
+    license_spdx="Apache-2.0",
+    license_osi=True,
+    min_ram_gib=24,
+    context_window=131_072,
+    ollama=OllamaArtifact("qwen3.6:27b"),
+    gguf=None,
+    evidence=(
+        "named in operator's tier table of 2026-09-22 (24–32 GB); opt-in alternative to gpt-oss-20b"
+        " under the operator's ruling of 2026-09-22; GGUF from unsloth/Qwen3.6-27B-GGUF to be pinned"
+        " in follow-up; not load-tested"
+    ),
+    recorded="2026-09-22",
+    unverified=("llama.cpp", "ollama"),
+)
+
+QWEN36_35B_A3B = ModelEntry(
+    name="qwen3.6-35b-a3b",
+    family="qwen3.6",
+    total_params_b=35.0,
+    active_params_b=3.0,
+    license_spdx="Apache-2.0",
+    license_osi=True,
+    min_ram_gib=48,
+    context_window=131_072,
+    ollama=OllamaArtifact("qwen3.6:35b-a3b"),
+    gguf=None,
+    evidence=(
+        "named in operator's tier table of 2026-09-22 (48–64 GB); active params 3.0B from A3B in"
+        " name; opt-in alternative to gpt-oss-20b under the operator's ruling of 2026-09-22; GGUF"
+        " from unsloth/Qwen3.6-35B-A3B-GGUF to be pinned in follow-up; not load-tested"
+    ),
+    recorded="2026-09-22",
+    unverified=("llama.cpp", "ollama"),
+)
+
+QWEN38_27B = ModelEntry(
+    name="qwen3.8-27b",
+    family="qwen3.8",
+    total_params_b=27.0,
+    active_params_b=27.0,
+    license_spdx="Apache-2.0",
+    license_osi=True,
+    min_ram_gib=24,
+    context_window=131_072,
+    ollama=OllamaArtifact("qwen3.8:27b"),
+    gguf=None,
+    evidence=(
+        "takes sibling Qwen3.6-27B's tier (24 GB) per 2026-09-22 table; opt-in alternative to"
+        " gpt-oss-20b under the operator's ruling of 2026-09-22; GGUF from"
+        " unsloth/Qwen3.8-27B-GGUF to be pinned in follow-up; not load-tested"
+    ),
+    recorded="2026-09-22",
+    unverified=("llama.cpp", "ollama"),
+)
+
+
 CATALOGUE: tuple[ModelEntry, ...] = (
     ModelEntry(
         name="qwen2.5-coder-14b",
@@ -79,6 +140,9 @@ CATALOGUE: tuple[ModelEntry, ...] = (
         recorded="2026-09-22",
         unverified=("llama.cpp",),
     ),
+    QWEN36_27B,
+    QWEN36_35B_A3B,
+    QWEN38_27B,
 )
 
 

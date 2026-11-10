@@ -160,3 +160,36 @@ def test_existing_profiles_are_unchanged() -> None:
 
 def test_catalogue_satisfies_its_interface() -> None:
     assert isinstance(ModelCatalogue(), ModelCatalogueInterface)
+
+
+NEW_QWEN = ("qwen3.6-27b", "qwen3.6-35b-a3b", "qwen3.8-27b")
+
+
+def test_the_new_qwen_entries_follow_the_pinning_rules() -> None:
+    expected_ram = {"qwen3.6-27b": 24, "qwen3.6-35b-a3b": 48, "qwen3.8-27b": 24}
+    catalogue = ModelCatalogue()
+    for name in NEW_QWEN:
+        entry = catalogue.get(name)
+        assert entry.min_ram_gib == expected_ram[name]
+        assert entry.ollama is not None or entry.gguf is not None
+        if entry.gguf:
+            assert entry.gguf.repository.startswith("unsloth/")
+            assert entry.gguf.quantization in {"Q4_K_M", "UD-Q4_K_M"}
+            assert entry.gguf.filename.endswith(f"-{entry.gguf.quantization}.gguf")
+            assert "/" not in entry.gguf.filename
+            assert not entry.gguf.filename.startswith("mmproj")
+            expected_gguf_name = f"{name}-{entry.gguf.quantization.lower().replace('_', '-')}"
+            assert entry.gguf.name == expected_gguf_name
+            assert CATALOGUE_PROFILES[entry.gguf.name] is entry.gguf
+        if entry.ollama:
+            assert entry.ollama.tag.startswith(entry.family + ":")
+        assert entry.total_params_b >= entry.active_params_b > 0
+
+
+def test_the_new_qwen_entries_are_never_claimed_as_loaded() -> None:
+    catalogue = ModelCatalogue()
+    for name in NEW_QWEN:
+        entry = catalogue.get(name)
+        assert set(entry.unverified) == {"llama.cpp", "ollama"}
+        assert "not load-tested" in entry.evidence
+        assert "opt-in alternative" in entry.evidence
