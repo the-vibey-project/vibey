@@ -37,10 +37,17 @@ concurrency:
   group: ci-${{ github.event_name }}-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
+# The token is read-only for every job. None of them writes, comments, publishes, pushes an
+# image or uses OIDC (audited in tests/meta/ci_job_limits.toml); a job that ever needs more
+# declares its own `permissions:` block and is listed there under [permission_exceptions].
+permissions:
+  contents: read
+
 jobs:
   uv-lock:
     name: uv.lock is in sync with pyproject.toml
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
       - uses: astral-sh/setup-uv@v7
@@ -50,9 +57,67 @@ jobs:
         run: uv python install 3.12
       - run: uv lock --check
 
-  gates:
+  lint:
+    name: Lint and static gates
     needs: [uv-lock]
     runs-on: ubuntu-latest
+    timeout-minutes: 20
+    # The cheap static gates run before any heavy job starts, so a lint failure stops the
+    # fan-out instead of being discovered after every matrix cell has been paid for.
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          # Carried over from `gates`, where the paper's history figures are recomputed from
+          # the full log (tests/meta/test_paper_figures.py). None of the gates in this job
+          # needs history, so this could be a shallow clone: left as it was so the move is
+          # byte-for-byte, and a candidate for a later speed-up.
+          fetch-depth: 0
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v7
+        with:
+          enable-cache: true
+
+      - name: Set up Python
+        run: uv python install 3.12
+
+      - name: Install dependencies
+        run: uv sync --extra dev
+
+      # TypeScript is the only authored JavaScript (sub-doctrine 9.f): the committed `.js` the
+      # sites and Expo need is compiled from it, and tests/meta/test_typescript_artifacts.py
+      # recompiles it here. With no compiler that test fails in CI rather than skipping.
+      - uses: actions/setup-node@v7.1.0
+        with:
+          node-version-file: .node-version
+          cache: npm
+          cache-dependency-path: package-lock.json
+
+      - name: Install the TypeScript compiler
+        run: npm ci
+
+      - name: Gate 0a - committed JavaScript is generated from TypeScript
+        run: python3 scripts/typescript_artifacts.py --check
+
+      - name: Gate 0 - governance corpus index
+        run: uv run vibey-gh corpus-index --check
+
+      - name: Gate 1 - ruff check
+        run: uv run ruff check .
+
+      - name: Gate 2 - ruff format --check
+        run: uv run ruff format --check .
+
+      - name: Gate 3 - mypy --strict
+        run: uv run mypy --strict src/vibey
+
+      - name: Gate 5 - lint-imports (onion contract)
+        run: uv run lint-imports
+
+  gates:
+    needs: [uv-lock, lint]
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
     services:
       postgres:
         image: postgres:17
@@ -121,21 +186,6 @@ jobs:
       - name: Install the TypeScript compiler
         run: npm ci
 
-      - name: Gate 0a - committed JavaScript is generated from TypeScript
-        run: python3 scripts/typescript_artifacts.py --check
-
-      - name: Gate 0 - governance corpus index
-        run: uv run vibey-gh corpus-index --check
-
-      - name: Gate 1 - ruff check
-        run: uv run ruff check .
-
-      - name: Gate 2 - ruff format --check
-        run: uv run ruff format --check .
-
-      - name: Gate 3 - mypy --strict
-        run: uv run mypy --strict src/vibey
-
       - name: Run test suite with coverage
         run: uv run pytest -q -p no:cacheprovider --cov=vibey --cov-branch --cov-report=
 
@@ -150,9 +200,6 @@ jobs:
 
       - name: Gate 4d - pytest CLI layer (100% coverage)
         run: uv run coverage report --include='src/vibey/cli/*' --fail-under=100
-
-      - name: Gate 5 - lint-imports (onion contract)
-        run: uv run lint-imports
 
       - name: Gate 6 - bandit
         run: uv run bandit -q -r src/vibey
@@ -172,8 +219,9 @@ jobs:
   # test template at session start, for every session, whatever it selects.
   noloss:
     name: No-loss property suite (10,000 examples)
-    needs: [uv-lock]
+    needs: [uv-lock, lint]
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     services:
       postgres:
         image: postgres:17
@@ -213,8 +261,9 @@ jobs:
 
   postgres-compatibility:
     name: PostgreSQL ${{ matrix.postgres }} compatibility
-    needs: [uv-lock]
+    needs: [uv-lock, lint]
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     strategy:
       fail-fast: false
       matrix:
@@ -273,8 +322,9 @@ jobs:
     # A row runs on ubuntu unless it names another `os`; only a row that does gets the
     # suffix, so every ubuntu row keeps the check name it already had.
     name: ${{ matrix.package }} on ${{ matrix.python }}${{ matrix.os && format(' ({0})', matrix.os) || '' }}
-    needs: [uv-lock]
+    needs: [uv-lock, lint]
     runs-on: ${{ matrix.os || 'ubuntu-latest' }}
+    timeout-minutes: 15
     strategy:
       fail-fast: false
       matrix:
@@ -677,8 +727,9 @@ jobs:
 
   tools-lint:
     name: Absorbed tools - their own linters
-    needs: [uv-lock]
+    needs: [uv-lock, lint]
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -721,6 +772,7 @@ jobs:
     # static checks on every change, as every client and package here is run by CI.
     name: krypton-app
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     defaults:
       run:
         working-directory: clients/krypton-app
@@ -746,6 +798,7 @@ jobs:
     # functions and statements, as the extension's core was before it moved there.
     name: "@vibey/core"
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     defaults:
       run:
         working-directory: packages/vibey-core
@@ -789,6 +842,7 @@ jobs:
     # declared only (eas.json).
     name: krypton app (mobile and web)
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     defaults:
       run:
         working-directory: clients/app
@@ -825,6 +879,7 @@ jobs:
     # checks in .vibey-gh.toml since they ran green on develop (ADR-0059, #290).
     name: VS Code extension (${{ matrix.os }})
     runs-on: ${{ matrix.os }}
+    timeout-minutes: 15
     strategy:
       fail-fast: false
       matrix:
@@ -889,6 +944,7 @@ jobs:
     # green on develop (the same rule as vscode-extension).
     name: krypton desktop (${{ matrix.distro }})
     runs-on: ${{ matrix.runner }}
+    timeout-minutes: 15
     container: ${{ matrix.container }}
     strategy:
       fail-fast: false
@@ -1022,6 +1078,7 @@ jobs:
 
   image:
     name: Container image (amd64 + arm64)
+    needs: [lint]
     runs-on: ubuntu-latest
     timeout-minutes: 45
     steps:
@@ -1153,6 +1210,7 @@ jobs:
   chart:
     name: Helm chart lint and golden render
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
 
@@ -1168,6 +1226,7 @@ jobs:
 
   cluster-smoke:
     name: Helm install on minikube
+    needs: [lint]
     runs-on: ubuntu-latest
     timeout-minutes: 45
     steps:
@@ -1405,3 +1464,56 @@ jobs:
           fi
           kubectl logs -n vibey deployment/vibey-vibey-worker --tail=100 || true
           kubectl logs -n keda deployment/keda-operator --tail=50 || true
+
+  # The one check that is red when any job above is red. Only a handful of checks are
+  # required on develop, so without this a job outside that set can fail and still merge.
+  # `if: always()` is what makes it run (and report) after a failed or cancelled need,
+  # instead of being skipped along with them: a SKIPPED required check counts as passing,
+  # so `!cancelled()` would let a cancelled run leave this one skipped and green. Nothing is
+  # required on it until the ruleset names it; meanwhile it reports and gates nothing.
+  ci-result:
+    name: CI result
+    if: always()
+    needs:
+      - uv-lock
+      - lint
+      - gates
+      - noloss
+      - postgres-compatibility
+      - tools
+      - tools-lint
+      - krypton-app
+      - vibey-core
+      - app
+      - vscode-extension
+      - desktop
+      - image
+      - chart
+      - cluster-smoke
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Fail unless every job succeeded or was skipped
+        env:
+          NEEDS_JSON: ${{ toJSON(needs) }}
+        run: |
+          python3 - <<'PY'
+          import json
+          import os
+          import sys
+
+          raw = os.environ.get("NEEDS_JSON", "").strip()
+          needs = json.loads(raw) if raw else {}
+          if not needs:
+              print("no needed job reported a result: nothing ran")
+              sys.exit(1)
+          bad = []
+          for job, info in sorted(needs.items()):
+              result = info.get("result") if isinstance(info, dict) else None
+              print(f"{job}: {result}")
+              if result not in ("success", "skipped"):
+                  bad.append(job)
+          if bad:
+              print("not green: " + ", ".join(bad))
+              sys.exit(1)
+          PY
