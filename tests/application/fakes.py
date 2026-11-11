@@ -265,16 +265,26 @@ class FakeJobRepository:
     async def reap(self) -> int:
         """Every lapsed lease: requeued while attempts remain, parked once they are spent (one
         attempt refunded), as `PostgresQueueReapStore.reap_leases` does. The `delivery_exhausted`
-        gate it also raises belongs to the gate store, not to this fake."""
+        gate it also raises belongs to the gate store, not to this fake.
+
+        In the store's order (`_EXPIRED`: `ORDER BY lease_expires_at, id`), and each at an
+        instant of its own: the store reaps every lease in a transaction of its own, so each
+        requeued job's `greatest(run_after, now())` is later than the one before, and the
+        next claims hand them out in lapse order rather than by id."""
         now = datetime.now(UTC)
-        lapsed = [
-            job
-            for job in self._jobs.values()
-            if job.state is JobState.LEASED
-            and job.lease_expires_at is not None
-            and job.lease_expires_at < now
-        ]
+        lapsed = sorted(
+            (
+                job
+                for job in self._jobs.values()
+                if job.state is JobState.LEASED
+                and job.lease_expires_at is not None
+                and job.lease_expires_at < now
+            ),
+            key=lambda job: (job.lease_expires_at or now, str(job.id)),
+        )
+        tick = timedelta(microseconds=1)
         for job in lapsed:
+            now = max(datetime.now(UTC), now + tick)
             if job.attempts >= job.max_attempts:
                 self._jobs[job.id] = _with(
                     job,

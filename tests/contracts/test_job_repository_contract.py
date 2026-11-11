@@ -396,6 +396,27 @@ async def test_reap_requeues_only_lapsed_leases_and_returns_the_count(
     assert await queue.repo.reap() == 0
 
 
+async def test_jobs_reaped_together_are_claimed_again_in_the_order_their_leases_lapsed(
+    queue: Queue, project_id: UUID
+) -> None:
+    # queue_reap_store `_EXPIRED`: `ORDER BY lease_expires_at, id`, each lease reaped in a
+    # transaction of its own, `_REQUEUE` setting `run_after = greatest(run_after, now())`. So
+    # each requeued job is due at its own, later reap instant, and _CLAIM_ORDER's
+    # `run_after ASC` hands them out again in lapse order -- never by the generated id.
+    # Found by the job repository state machine: the fake gave every job of one reap the
+    # same instant, so the id decided the next claim.
+    lapsed = []
+    for key in "abcd":
+        lapsed.append(await leased(queue, project_id, key, lease=LAPSED))
+    assert await queue.repo.reap() == 4
+    order = []
+    for _ in lapsed:
+        job = await queue.repo.claim(project_id, owner="w2", lease=LIVE)
+        assert job is not None
+        order.append(job.id)
+    assert order == [job.id for job in lapsed]
+
+
 async def test_reap_parks_a_lapsed_job_whose_attempts_are_spent(
     queue: Queue, project_id: UUID
 ) -> None:
