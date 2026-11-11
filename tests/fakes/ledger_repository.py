@@ -42,6 +42,9 @@ from vibey.domain.ledger import LedgerEvent, digest_event
 from vibey.infrastructure.engines.tailer import LedgerEventDraft
 from vibey.infrastructure.ledger.redact import redact_payload
 
+_NON_FINITE = object()
+"""Stands in, while a payload is checked, for a NaN or infinity ``json.dumps`` wrote."""
+
 
 class LedgerRepository(Protocol):
     """The precise shape ``PostgresLedgerRepository`` has. Its declared interface
@@ -134,24 +137,25 @@ class InMemoryLedgerRepository:
 
     @classmethod
     def _as_jsonb(cls, text: str) -> None:
-        """Refuses what the jsonb cast refuses: a NaN or infinite number, a U+0000."""
-
-        def constant(token: str) -> object:
-            raise asyncpg.InvalidTextRepresentationError("invalid input syntax for type json")
-
-        cls._refuse_nul(json.loads(text, parse_constant=constant))
+        """Refuses what the jsonb cast refuses -- a NaN or infinite number, a U+0000 -- and,
+        when a payload holds both, the one met first in document order, as PostgreSQL's
+        lexer does (psql 2026-11-11: `{"a":"\\u0000","b":NaN}` is refused for the escape,
+        `{"b":NaN,"a":"\\u0000"}` for the token)."""
+        cls._refuse(json.loads(text, parse_constant=lambda token: _NON_FINITE))
 
     @classmethod
-    def _refuse_nul(cls, value: object) -> None:
+    def _refuse(cls, value: object) -> None:
+        if value is _NON_FINITE:
+            raise asyncpg.InvalidTextRepresentationError("invalid input syntax for type json")
         if isinstance(value, str) and "\x00" in value:
             raise asyncpg.UntranslatableCharacterError("unsupported Unicode escape sequence")
         if isinstance(value, dict):
             for key, item in value.items():
-                cls._refuse_nul(key)
-                cls._refuse_nul(item)
+                cls._refuse(key)
+                cls._refuse(item)
         if isinstance(value, list):
             for item in value:
-                cls._refuse_nul(item)
+                cls._refuse(item)
 
     def _ordered(self, project_id: UUID) -> list[LedgerEvent]:
         return sorted(self._events.get(project_id, ()), key=lambda event: event.seq)

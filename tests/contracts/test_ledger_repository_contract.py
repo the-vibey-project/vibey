@@ -256,11 +256,34 @@ async def test_a_non_finite_number_is_refused_and_claims_no_seq(
     assert (await ledger.repo.append(draft(project))).seq == 1
 
 
+@pytest.mark.parametrize(
+    ("payload", "refused"),
+    [
+        ({"a": "\x00", "b": float("nan")}, asyncpg.UntranslatableCharacterError),
+        ({"b": float("nan"), "a": "\x00"}, asyncpg.InvalidTextRepresentationError),
+        ({"a\x00": float("inf")}, asyncpg.UntranslatableCharacterError),
+        ({"l": [[float("-inf")], "\x00"]}, asyncpg.InvalidTextRepresentationError),
+    ],
+    ids=["nul-first", "nan-first", "nul-key-first", "nested-nan-first"],
+)
+async def test_a_payload_jsonb_refuses_twice_is_refused_for_what_comes_first(
+    ledger: Ledger, payload: dict[str, object], refused: type[Exception]
+) -> None:
+    # The jsonb lexer reports the first bad token in document order (psql 2026-11-11:
+    # `{"a":"\u0000","b":NaN}` -> "unsupported Unicode escape sequence";
+    # `{"b":NaN,"a":"\u0000"}` -> "invalid input syntax for type json").
+    project = await ledger.new_project()
+    with pytest.raises(refused):
+        await ledger.repo.append(draft(project, payload))
+    assert await ledger.repo.latest_seq(project) == 0
+
+
 @pytest.mark.xfail(
     strict=True,
     raises=AssertionError,
     reason="jsonb rewrites 1e+16 / -0.0 after the repository digested Python's rendering, "
-    "so the stored digest no longer matches the stored payload; see the follow-up issue",
+    "so the stored digest no longer matches the stored payload (ledger digest vs jsonb "
+    "float rewrite, see #1883)",
 )
 @pytest.mark.parametrize("value", [1e16, 1e20, -0.0], ids=["1e16", "1e20", "minus-zero"])
 async def test_a_float_jsonb_rewrites_still_verifies_in_postgres(
