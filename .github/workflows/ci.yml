@@ -102,6 +102,8 @@ jobs:
           python-version: "3.12"
       - name: Install vibey-gh
         run: pip install -e src/vibey_tools/gh
+      - name: PROBE fail the plan job mid-way
+        run: exit 1
       - name: Default matrices, from the one source
         id: matrices
         run: |
