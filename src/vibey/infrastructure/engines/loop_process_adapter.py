@@ -140,6 +140,10 @@ class LoopProcessAdapter:
     """
 
     descriptor: EngineDescriptor
+    version_timeout: float = 10.0
+    """`<binary> --version` wall-clock budget for preflight. A killed probe reports no
+    version, which conformance reads as "below the minimum"; a caller that runs the
+    real binary while the machine is busy (the full suite under xdist) widens it."""
     doctor_timeout: float = 120.0
     """`<binary> doctor` wall-clock budget for preflight. claudeloop's
     doctor verifies credentials over the network and takes ~60s warm --
@@ -330,7 +334,7 @@ class LoopProcessAdapter:
                 stderr=asyncio.subprocess.PIPE,
                 start_new_session=True,
             )
-            stdout, stderr = await self._communicate(proc, timeout=10.0)
+            stdout, stderr = await self._communicate(proc, timeout=self.version_timeout)
             version_output = (stdout or stderr).decode().strip()
             version = version_output.split()[-1] if version_output else None
         except (TimeoutError, Exception) as e:

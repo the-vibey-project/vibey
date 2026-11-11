@@ -6,6 +6,7 @@ stop, classify, attribute) without spawning real subprocesses.
 """
 
 import asyncio
+import dataclasses
 import json
 import os
 from pathlib import Path
@@ -1128,6 +1129,39 @@ async def test_preflight_version_timeout_still_checks_auth(tmp_path: Path) -> No
         assert result.auth_ok is True
     finally:
         os.environ["PATH"] = old_path
+
+
+async def _slow_version_adapter(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, **adapter_kwargs: float
+) -> LoopProcessAdapter:
+    """An adapter whose `--version` answers only after one second."""
+    bin_dir = _make_fake_binary(tmp_path, "fakeslowver", 'echo ""')
+    (bin_dir / "fakeslowver").write_text(
+        "#!/bin/sh\n"
+        'if [ "$1" = "--version" ]; then sleep 1; echo "fakeslowver 1.2.3"; fi\n'
+        'if [ "$1" = "doctor" ]; then exit 0; fi\n'
+    )
+    (bin_dir / "fakeslowver").chmod(0o755)
+    monkeypatch.setenv("PATH", f"{bin_dir}:{os.environ.get('PATH', '')}")
+    desc = dataclasses.replace(CLAUDELOOP, binary="fakeslowver")
+    return LoopProcessAdapter(descriptor=desc, **adapter_kwargs)
+
+
+async def test_version_probe_budget_is_a_constructor_value(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """A loaded machine can answer `--version` late. The budget is a constructor value
+    (like `doctor_timeout`), so a caller that expects contention can widen it; a short
+    one still gives up and reports no version rather than waiting."""
+    short = await _slow_version_adapter(tmp_path, monkeypatch, version_timeout=0.2)
+    assert (await short.preflight()).version is None
+
+    generous = await _slow_version_adapter(tmp_path, monkeypatch, version_timeout=30.0)
+    assert (await generous.preflight()).version == "1.2.3"
+
+
+def test_version_probe_default_budget_is_unchanged() -> None:
+    assert LoopProcessAdapter(descriptor=CLAUDELOOP).version_timeout == 10.0
 
 
 async def test_preflight_doctor_exception_falls_back_to_env(tmp_path: Path) -> None:
