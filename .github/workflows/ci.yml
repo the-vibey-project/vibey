@@ -351,6 +351,7 @@ jobs:
           path: .hypothesis
           retention-days: 7
           if-no-files-found: ignore
+          include-hidden-files: true
 
   # The definition of done says "No-loss property suite green over 10,000 adversarial
   # examples" (docs/plans/implementation-plan.md); `gates` runs the same tests at
@@ -414,6 +415,7 @@ jobs:
           path: .hypothesis
           retention-days: 7
           if-no-files-found: ignore
+          include-hidden-files: true
 
   postgres-compatibility:
     name: PostgreSQL ${{ matrix.postgres }} compatibility

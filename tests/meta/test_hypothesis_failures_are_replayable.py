@@ -45,6 +45,9 @@ def test_job_uploads_the_example_database_on_failure(job: str) -> None:
     assert step["with"]["name"] == f"hypothesis-examples-{job}"
     assert step["with"]["retention-days"] == 7
     assert step["with"]["if-no-files-found"] == "ignore"
+    # `.hypothesis` is a hidden directory; upload-artifact@v4 skips hidden files by default,
+    # and `ignore` above would then report green with no artifact.
+    assert step["with"]["include-hidden-files"] is True
 
 
 def test_upload_pin_matches_the_other_uploads() -> None:
