@@ -52,9 +52,10 @@ paths = [
   "properdocs.yml",
   # The root markdown by exact name: a bare `*.md` matches root files only, and a new root
   # file should be a decision, so each is listed.
-  # NOTE (deferred to Task 3): README.md is copied into the container image
-  # (deploy/docker/Dockerfile), yet `docs` does not trigger the `image` job. Task 3 must decide
-  # whether README.md belongs in the image trigger; nothing is changed here.
+  # DECIDED (SP1-B Task 3): README.md is copied into the container image
+  # (deploy/docker/Dockerfile), and a docs change still does NOT trigger the `image` job. An
+  # edit to its text cannot break the build; a deletion or rename would, and the root gates
+  # (which run on every diff) pin the files the Dockerfile copies.
   "README.md",
   "CONTRIBUTING.md",
   "SECURITY.md",

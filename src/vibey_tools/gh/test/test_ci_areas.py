@@ -17,7 +17,6 @@ from pathlib import Path
 from typing import Any
 
 import pytest
-import yaml
 
 from vibey_gh.ci_areas import AreaDecision, CiAreas, CiAreasCommand
 from vibey_gh.cli import main
@@ -27,7 +26,7 @@ from vibey_gh.interfaces.command_runner_interface import CommandResult, CommandR
 ROOT = Path(__file__).resolve().parents[4]
 AREAS_TOML = ROOT / ".github" / "ci-areas.toml"
 MATRICES_TOML = ROOT / ".github" / "ci-matrices.toml"
-CI_YML = ROOT / ".github" / "workflows" / "ci.yml"
+SNAPSHOT = ROOT / "tests" / "meta" / "ci_matrix_snapshot.json"
 
 pytestmark = pytest.mark.skipif(
     not AREAS_TOML.is_file(), reason="the repository's CI maps are not beside this tenant"
@@ -513,28 +512,28 @@ def toml_rows(job: str, tier: str) -> list[dict[str, Any]]:
     return real().rows(job, tier)
 
 
-def ci_yml_rows() -> dict[str, list[dict[str, Any]]]:
-    jobs = yaml.safe_load(CI_YML.read_text(encoding="utf-8"))["jobs"]
-    return {
-        "tools": jobs["tools"]["strategy"]["matrix"]["include"],
-        "postgres-compatibility": [
-            {"postgres": version}
-            for version in jobs["postgres-compatibility"]["strategy"]["matrix"]["postgres"]
-        ],
-        "desktop": jobs["desktop"]["strategy"]["matrix"]["include"],
-    }
+def snapshot_rows() -> dict[str, list[dict[str, Any]]]:
+    """The matrices ci.yml declared before the jobs read them from the plan job."""
+    snapshot = json.loads(SNAPSHOT.read_text(encoding="utf-8"))
+    return {job: snapshot[job] for job in ("tools", "postgres-compatibility", "desktop")}
 
 
-def test_the_toml_full_rows_equal_the_ci_yml_matrix_rows() -> None:
-    # The two cannot drift until the jobs read the TOML (a later task moves them).
-    declared = ci_yml_rows()
+def canonical(rows: list[dict[str, Any]]) -> list[str]:
+    return sorted(json.dumps(row, sort_keys=True) for row in rows)
+
+
+def test_the_toml_full_rows_equal_the_snapshot_of_the_old_ci_yml_matrices() -> None:
+    # ci.yml no longer declares these matrices: each job reads `fromJSON(needs.plan.outputs
+    # .<job>_matrix)`, so the full tier in the TOML is the only copy. The snapshot, committed
+    # before ci.yml moved them, is what keeps a dropped row from going unnoticed.
+    declared = snapshot_rows()
     assert {job: len(rows) for job, rows in declared.items()} == {
         "tools": 24,
         "postgres-compatibility": 5,
         "desktop": 4,
     }
     for job, rows in declared.items():
-        assert toml_rows(job, "full") == rows, job
+        assert canonical(toml_rows(job, "full")) == canonical(rows), job
     assert [row["postgres"] for row in toml_rows("postgres-compatibility", "full")] == [
         14,
         15,
