@@ -60,6 +60,9 @@ _DEFAULT_FULL_BASE_REFS = ("main",)
 # still counts toward `full`).
 _REASON_CAP = 20
 _TIERS = ("pr", "full")
+# Options whose next token is a path, and the long forms that attach it with `=`.
+_OPERAND_OPTIONS = ("-e", "--editable", "-r", "--requirement")
+_LONG_ATTACHED = ("--editable=", "--requirement=")
 
 
 class CiAreas(CiAreasInterface):
@@ -74,14 +77,21 @@ class CiAreas(CiAreasInterface):
         self._full = self._globs(areas.get("full", {}), "[full]")
         events = areas.get("events", {})
         self._require_table(events, "[events]")
-        self._full_events = tuple(events.get("full", _DEFAULT_FULL_EVENTS))
-        self._diff_events = tuple(events.get("diff", _DEFAULT_DIFF_EVENTS))
-        self._full_base_refs = tuple(events.get("full_base_refs", _DEFAULT_FULL_BASE_REFS))
+        # A string where a list belongs would iterate as characters ("main" -> m, a, i, n)
+        # and silently stop a promotion pull request being full: refuse it at load.
+        where = "[events]"
+        self._full_events = tuple(self._names(events, "full", where, _DEFAULT_FULL_EVENTS))
+        self._diff_events = tuple(self._names(events, "diff", where, _DEFAULT_DIFF_EVENTS))
+        self._full_base_refs = tuple(
+            self._names(events, "full_base_refs", where, _DEFAULT_FULL_BASE_REFS)
+        )
         # Validated here, at load, so a broken map is found before a decision depends on it.
+        # Every top-level entry is a job: a `[[tools]]` where `[tools]` belongs is refused,
+        # not dropped.
+        for name, spec in matrices.items():
+            self._require_table(spec, f"[{name}]")
         self._jobs = {
-            name: self._checked(name, spec, set(self._areas))
-            for name, spec in matrices.items()
-            if isinstance(spec, dict)
+            name: self._checked(name, spec, set(self._areas)) for name, spec in matrices.items()
         }
         self._plans = {
             name: self._plan(spec) for name, spec in self._jobs.items() if "owner_key" in spec
@@ -105,11 +115,19 @@ class CiAreas(CiAreasInterface):
             raise ValueError(f"{where} must be a table")
 
     @staticmethod
-    def _names(spec: Mapping[str, Any], key: str, where: str) -> list[str]:
-        value = spec.get(key, [])
+    def _names(
+        spec: Mapping[str, Any], key: str, where: str, default: Sequence[str] = ()
+    ) -> list[str]:
+        value = spec.get(key, list(default))
         if not isinstance(value, list) or not all(isinstance(item, str) for item in value):
-            raise ValueError(f"{where} `{key}` must be a list of area names")
+            raise ValueError(f"{where} `{key}` must be a list of strings")
         return value
+
+    @classmethod
+    def _require_string(cls, value: Any, where: str) -> None:
+        malformed = not isinstance(value, str)
+        if malformed:
+            raise ValueError(f"{where} must be a string")
 
     @classmethod
     def _checked(cls, job: str, spec: dict[str, Any], declared: set[str]) -> dict[str, Any]:
@@ -119,6 +137,9 @@ class CiAreas(CiAreasInterface):
             malformed = not isinstance(spec.get(tier), list)
             if malformed:
                 raise ValueError(f"{where} needs a `{tier}` list of rows")
+        if not spec["full"]:
+            raise ValueError(f"{where} `full` must not be empty: a full run would run nothing")
+        cls._require_string(spec.get("output", job), f"{where} `output`")
         select_on = spec.get("select_on", {})
         cls._require_table(select_on, f"{where} `select_on`")
         named = {
@@ -135,11 +156,15 @@ class CiAreas(CiAreasInterface):
         keys = [spec["owner_key"], spec.get("name_key")] if "owner_key" in spec else []
         if keys and keys[1] is None:
             raise ValueError(f"{where} has an `owner_key` and needs a `name_key` to name its rows")
+        for label, key in zip(("owner_key", "name_key"), keys, strict=False):
+            cls._require_string(key, f"{where} `{label}`")
         for tier in ("full", "pr"):
             for row in spec[tier]:
+                cls._require_table(row, f"{where} a `{tier}` row")
                 for key in keys:
                     if key not in row:
                         raise ValueError(f"{where} a `{tier}` row lacks `{key}`")
+                    cls._require_string(row[key], f"{where} `{key}`")
         packages = {row[keys[1]] for row in spec["full"]} if keys else set()
         for area, chosen in select_on.items():
             malformed = not isinstance(chosen, list)
@@ -194,27 +219,48 @@ class CiAreas(CiAreasInterface):
     # ------------------------------------------------------------------ the dependency edges
 
     @staticmethod
-    def _install_paths(install: str) -> list[str] | None:
-        """The `-e <path>` targets of an install command, or None when it cannot be read."""
+    def _install_paths(install: Any) -> list[str] | None:
+        """Every path an install command reaches into: the operand of `-e`/`--editable`/`-r`/
+        `--requirement` (spaced or attached, `--editable=../x`, `-e../x`) and any positional
+        token that looks like a path (a slash, a dot-dot or `.`). None when it cannot be read.
+        """
+        if not isinstance(install, str):
+            return None
         try:
             tokens = shlex.split(install)
         except ValueError:
             return None
         paths: list[str] = []
-        for index, token in enumerate(tokens):
-            if token in ("-e", "--editable"):
-                if index + 1 >= len(tokens):
+        index = 0
+        while index < len(tokens):
+            token = tokens[index]
+            index += 1
+            operand: str | None = None
+            if token in _OPERAND_OPTIONS:
+                if index >= len(tokens):
                     return None
-                # `.[dev]` is the row's own package with extras; drop the extras.
-                paths.append(re.sub(r"\[[^\]]*\]$", "", tokens[index + 1]))
+                operand = tokens[index]
+                index += 1
+            elif token.startswith(_LONG_ATTACHED):
+                operand = token.split("=", 1)[1]
+            elif token[:2] in ("-e", "-r") and not token.startswith("--") and len(token) > 2:
+                operand = token[2:]
+            elif not token.startswith("-"):
+                # `.[dev]` is the row's own package with extras: drop the extras.
+                bare = re.sub(r"\[[^\]]*\]$", "", token)
+                if bare == "." or "/" in bare or ".." in bare:
+                    operand = bare
+            if operand is not None:
+                paths.append(re.sub(r"\[[^\]]*\]$", "", operand))
         return paths
 
     @classmethod
     def _edges(cls, spec: Mapping[str, Any]) -> tuple[dict[str, set[str]], set[str]]:
         """(directory -> the directories it installs from the tree, directories that widen).
 
-        A row whose install cannot be read, or installs a path that is no row's directory,
-        widens: it cannot say what it depends on, so a change to ANY package selects it.
+        A row whose install cannot be read, or reaches a path that is inside no row's
+        directory, widens: it cannot say what it depends on, so a change to ANY package
+        selects it. A path inside another row's directory is an edge to that row.
         """
         key = spec["owner_key"]
         dirs = {row[key] for row in spec["full"]}
@@ -228,12 +274,18 @@ class CiAreas(CiAreasInterface):
                 continue
             for target in targets:
                 resolved = posixpath.normpath(posixpath.join(here, target))
-                if resolved == here:
-                    continue
-                if resolved in dirs:
-                    deps[here].add(resolved)
-                else:
+                if "://" in target:
+                    # A URL is a path to nothing in the tree: it cannot be resolved.
                     wide.add(here)
+                elif resolved == here or resolved.startswith(here + "/"):
+                    continue
+                owner = next(
+                    (d for d in dirs if resolved == d or resolved.startswith(d + "/")), None
+                )
+                if owner is None:
+                    wide.add(here)
+                else:
+                    deps[here].add(owner)
         return deps, wide
 
     def _plan(
@@ -548,12 +600,15 @@ class CiAreasCommand(CiAreasCommandInterface):
         }
         matrices: dict[str, str] = {}
         for job, spec in table(matrices_path).items():
-            if isinstance(spec, dict) and isinstance(spec.get("full"), list):
-                prefix = spec.get("output", job)
+            rows = spec.get("full") if isinstance(spec, dict) else None
+            # Only a job whose full rows are a non-empty list of tables is printed; anything
+            # else cannot be stood behind, and its keys stay absent (the workflow's own
+            # defaults step supplies them).
+            if isinstance(rows, list) and rows and all(isinstance(row, dict) for row in rows):
+                output = spec.get("output")
+                prefix = output if isinstance(output, str) else job
                 out[f"{prefix}_any"] = "true"
-                matrices[f"{prefix}_matrix"] = json.dumps(
-                    {"include": spec["full"]}, separators=compact
-                )
+                matrices[f"{prefix}_matrix"] = json.dumps({"include": rows}, separators=compact)
         return {**out, **matrices}
 
     def matrix(self, *, job: str, tier: str, paths: tuple[Path, Path, Path]) -> int:

@@ -231,12 +231,13 @@ def test_a_docs_change_selects_the_vibey_gh_row_and_its_dependants() -> None:
     for path in ("docs/runbooks/sovereign-review-runner.md", "README.md", "docs/index.md"):
         decision = classify(path)
         assert decision.areas == {"docs"}
-        assert sorted(packages(decision)) == ["vibey-bootstrap", "vibey-gh"], path
+        assert sorted(packages(decision)) == ["vibey-bootstrap", "vibey-gh", "vibey-skills"], path
         assert real().outputs(decision)["tools_any"] == "true"
 
 
 def test_select_on_is_declared_in_the_toml() -> None:
-    assert real()._jobs["tools"]["select_on"] == {"docs": ["vibey-gh"]}
+    # vibey-skills too: its tools/check_links.py needs docs/context-microslices.md to exist.
+    assert real()._jobs["tools"]["select_on"] == {"docs": ["vibey-gh", "vibey-skills"]}
 
 
 def test_a_core_change_yields_vscode_and_app() -> None:
@@ -678,11 +679,25 @@ def test_the_maps_are_validated_at_load_naming_the_key() -> None:
         (good, {"j": job(areas="docs")}, r"\[j\] `areas` must be a list"),
         (good, {"j": {k: v for k, v in job().items() if k != "name_key"}}, r"\[j\].*`name_key`"),
         ({**good, "events": ["x"]}, {}, r"\[events\] must be a table"),
+        (good, {"j": 1}, r"\[j\] must be a table"),
+        (good, {"j": [job()]}, r"\[j\] must be a table"),
+        (good, {"j": job(full=[], pr=[])}, r"\[j\] `full` must not be empty"),
+        (good, {"j": job(pr=["p"])}, r"\[j\] a `pr` row must be a table"),
+        (good, {"j": job(full=["p"])}, r"\[j\] a `full` row must be a table"),
+        (good, {"j": job(full=[{"package": "p", "dir": 3}])}, r"\[j\] `dir` must be a string"),
+        (
+            good,
+            {"j": job(pr=[{"package": ["p"], "dir": "d/p"}])},
+            r"\[j\] `package` must be a string",
+        ),
+        (good, {"j": job(output=3)}, r"\[j\] `output` must be a string"),
+        (good, {"j": job(owner_key=3)}, r"\[j\] `owner_key` must be a string"),
+        (good, {"j": job(name_key=3)}, r"\[j\] `name_key` must be a string"),
     ]
     for areas, matrices, message in cases:
         with pytest.raises(ValueError, match=message):
             CiAreas(areas, matrices)
-    CiAreas(good, {"j": job(), "scalar": 1})  # a valid map loads; a non-table entry is not a job
+    CiAreas(good, {"j": job()})  # a valid map loads
 
 
 def test_the_implementation_honours_its_interface() -> None:
@@ -765,7 +780,11 @@ def test_a_clean_docs_diff_prints_the_pr_tier_and_only_the_gh_dependants(capsys)
     assert (lines["postgres_any"], lines["desktop_any"]) == ("false", "false")
     assert lines["tools_any"] == "true"
     rows = json.loads(lines["tools_matrix"])["include"]
-    assert sorted(row["package"] for row in rows) == ["vibey-bootstrap", "vibey-gh"]
+    assert sorted(row["package"] for row in rows) == [
+        "vibey-bootstrap",
+        "vibey-gh",
+        "vibey-skills",
+    ]
     assert "postgres_matrix" not in lines and "desktop_matrix" not in lines
     assert err == ""
 
@@ -1020,3 +1039,140 @@ def test_real_git_a_path_with_a_newline_can_never_inject_an_output_line(tmp_path
     ]
     assert "full=true" in captured.out.splitlines()
     assert "full=false" not in captured.out.splitlines()
+
+
+# ------------------------------------------------------------------ fix round 2
+
+
+@pytest.mark.parametrize("key", ["full", "diff", "full_base_refs"])
+def test_an_events_list_given_as_a_string_is_refused_at_load(key: str, tmp_path, capsys) -> None:
+    # `full_base_refs = "main"` used to become ('m', 'a', 'i', 'n') and let a promotion
+    # pull request into main run the small tier.
+    areas = {
+        "areas": {"docs": {"paths": ["docs/**"]}},
+        "full": {"paths": []},
+        "events": {key: "main"},
+    }
+    with pytest.raises(ValueError, match=rf"\[events\] `{key}` must be a list of strings"):
+        CiAreas(areas, {})
+    with pytest.raises(ValueError, match=rf"\[events\] `{key}` must be a list"):
+        CiAreas({**areas, "events": {key: ["ok", 3]}}, {})
+    broken = tmp_path / "areas.toml"
+    broken.write_text(
+        f'[areas.docs]\npaths = ["docs/**"]\n[full]\npaths = []\n[events]\n{key} = "main"\n'
+    )
+    status, lines, err = run_areas(
+        FakeRunner(stdout="docs/x.md\0"), capsys, paths=(ROOT, broken, MATRICES_TOML)
+    )
+    assert status == 0
+    assert (lines["full"], lines["tier"]) == ("true", "full")
+    assert json.loads(lines["areas"]) == ["docs"]
+    assert f"`{key}` must be a list of strings" in err
+
+
+def test_the_release_branch_is_always_a_full_base_ref() -> None:
+    import tomllib
+
+    release = tomllib.loads((ROOT / ".vibey-gh.toml").read_text(encoding="utf-8"))["branches"][
+        "release"
+    ]
+    assert release in real()._full_base_refs
+    assert real().classify(["docs/x.md"], event="pull_request", base_ref=release).full
+
+
+def test_the_skills_row_follows_docs_and_nothing_else_does() -> None:
+    decision = classify("docs/context-microslices.md")
+    assert set(packages(decision)) == {"vibey-gh", "vibey-bootstrap", "vibey-skills"}
+    assert len(packages(decision)) == 3
+    others = real().outputs(decision)
+    assert (others["postgres_any"], others["desktop_any"]) == ("false", "false")
+
+
+def test_a_desktop_pr_list_of_strings_prints_the_all_full_fallback_and_exits_zero(
+    tmp_path, capsys
+) -> None:
+    bad = tmp_path / "matrices.toml"
+    bad.write_text(
+        '[desktop]\noutput = "desktop"\nareas = ["desktop"]\npr = ["ubuntu"]\n'
+        '[[desktop.full]]\ndistro = "ubuntu"\n'
+    )
+    status, lines, err = run_areas(
+        FakeRunner(stdout="docs/x.md\0"), capsys, paths=(ROOT, AREAS_TOML, bad)
+    )
+    assert status == 0
+    assert (lines["full"], lines["tier"]) == ("true", "full")
+    assert json.loads(lines["areas"]) == ALL_AREAS
+    assert lines["desktop_any"] == "true"
+    assert json.loads(lines["desktop_matrix"]) == {"include": [{"distro": "ubuntu"}]}
+    assert "a `pr` row must be a table" in err
+
+
+def test_the_fallback_prints_only_job_keys_it_can_stand_behind(tmp_path, capsys) -> None:
+    odd = tmp_path / "matrices.toml"
+    odd.write_text(
+        '[tools]\noutput = 3\nfull = [{ package = "x" }]\n'
+        '[empty]\nfull = []\n[strings]\nfull = ["x"]\n[missing]\nareas = []\n'
+    )
+    _, lines, _ = run_areas(FakeRunner(), capsys, paths=(ROOT, AREAS_TOML, odd))
+    assert lines["tools_any"] == "true" and json.loads(lines["tools_matrix"]) == {
+        "include": [{"package": "x"}]
+    }
+    assert not [key for key in lines if key.startswith(("empty", "strings", "missing"))]
+
+
+def test_an_unreadable_matrices_file_prints_no_job_keys(tmp_path, capsys) -> None:
+    garbled = tmp_path / "garbled.toml"
+    garbled.write_text("= = =")
+    _, lines, _ = run_areas(FakeRunner(), capsys, paths=(ROOT, AREAS_TOML, garbled))
+    assert list(lines) == ["areas", "full", "tier"]
+
+
+def edges_of(install: str) -> dict[str, set[str]]:
+    return tools_job({"a": install, "b": "pip install pytest"}).dependencies("tools")
+
+
+@pytest.mark.parametrize(
+    "install",
+    [
+        "pip install -e ../b",
+        "pip install --editable ../b",
+        "pip install --editable=../b",
+        "pip install -e../b",
+        "pip install ../b",
+        'pip install "../b[dev]"',
+        "pip install -r ../b/requirements.txt",
+        "pip install --requirement ../b/requirements.txt",
+        "pip install --requirement=../b/requirements.txt",
+        "pip install -r../b/requirements.txt",
+        "cd ../b && pip install .",
+    ],
+)
+def test_every_install_form_that_reaches_another_row_is_an_edge(install: str) -> None:
+    assert edges_of(install) == {"a": {"b"}, "b": set()}
+
+
+@pytest.mark.parametrize(
+    "install",
+    [
+        "pip install ../nowhere",
+        "pip install -r ../nowhere/requirements.txt",
+        "pip install --editable=../nowhere",
+        "pip install -e../nowhere",
+        "pip install https://example.com/x.whl",
+        "pip install git+https://example.com/x.git",
+        "pip install --index-url https://example.com/simple pytest",
+        "pip install -r",
+        "pip install -r../",
+        3,
+    ],
+)
+def test_a_path_like_token_that_resolves_nowhere_widens(install: Any) -> None:
+    ci = tools_job({"a": "pip install pytest", "b": "pip install pytest", "c": install})
+    assert ci.classify(["d/a/x.py"], **PR).owners == {"d/a", "d/c"}
+
+
+def test_plain_requirements_and_options_are_leaves_and_never_widen() -> None:
+    install = 'pip install -q --upgrade pytest "pyyaml>=6.0" -e ".[dev]" -r requirements.txt'
+    assert edges_of(install) == {"a": set(), "b": set()}
+    ci = tools_job({"a": install, "b": "pip install pytest"})
+    assert ci.classify(["d/b/x.py"], **PR).owners == {"d/b"}

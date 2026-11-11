@@ -16,7 +16,8 @@
 #                  `select_on` and `vibey-gh`'s derived edge report
 #   select_on      area -> the packages it selects (closed over their dependants). `docs`
 #                  selects vibey-gh because its suite reads root docs (README.md, docs/index.md,
-#                  docs/runbooks/sovereign-review-runner.md)
+#                  docs/runbooks/sovereign-review-runner.md), and vibey-skills because its
+#                  tools/check_links.py needs docs/context-microslices.md to exist
 #   full           the rows run on the merge queue, a pull request into the release branch, a
 #                  push to it, a dispatch and any always-full path. EXACTLY the rows ci.yml
 #                  declares today; a test pins the two so they cannot drift until the jobs
@@ -34,7 +35,7 @@ owner_key = "dir"
 name_key = "package"
 
 [tools.select_on]
-docs = ["vibey-gh"]
+docs = ["vibey-gh", "vibey-skills"]
 
 # PR tier: each of the seven packages at Python 3.12 on ubuntu.
 [[tools.pr]]
