@@ -1,0 +1,12 @@
+# Made with ❤️ by [Vibey](https://the-vibey-project.github.io/vibey/), Developed by [Adam Matthew Steinberger](https://vibewithadam.matthewsteinberger.com/) ([@adammatthewsteinberger](https://github.com/adammatthewsteinberger/)).
+#
+# The recorded exceptions to "every test asserts something"
+# (tests/meta/test_tests_assert_something.py). Each entry is a test that calls code and checks
+# nothing, keyed `"file::name"` with the reason it stays. The list can only shrink: delete an
+# entry in the same change that gives the test a check, because a stale entry fails the guard.
+#
+# Measured 2026-11-11: 6711 test functions, 21 with no check. Each was given a real assertion
+# in the change that introduced this census, so the baseline starts empty and a new
+# assertion-free test fails instead of joining a list.
+
+[entries]
