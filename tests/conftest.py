@@ -48,17 +48,20 @@ settings.register_profile(
     max_examples=10_000,
     deadline=None,
     suppress_health_check=[HealthCheck.too_slow],
+    print_blob=True,
 )
 
 # Every other run: Hypothesis' default example count, but no per-example deadline and no
 # too_slow check, for the same reason as the no-loss lane -- a loaded machine is not a
-# property failure. Under parallel suites (load average 60+) a 22 ms example took 253 ms
+# property failure. `print_blob=True` in both profiles prints a `@reproduce_failure` line with a
+# failing example, and CI uploads `.hypothesis/` when `gates` or `noloss` fails. Under parallel suites (load average 60+) a 22 ms example took 253 ms
 # and failed `test_every_dollar_the_budget_brake_sees_is_charged_somewhere` as "flaky"
 # (2026-09-24). A test that genuinely needs a time bound declares it with @settings.
 settings.register_profile(
     "vibey",
     deadline=None,
     suppress_health_check=[HealthCheck.too_slow],
+    print_blob=True,
 )
 settings.load_profile("vibey")
 

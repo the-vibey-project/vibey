@@ -343,6 +343,15 @@ jobs:
         # resolvable third-party environment without querying PyPI for them.
         run: uv run pip-audit --skip-editable
 
+      - name: Keep the Hypothesis examples of a failed run
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: hypothesis-examples-gates
+          path: .hypothesis
+          retention-days: 7
+          if-no-files-found: ignore
+
   # The definition of done says "No-loss property suite green over 10,000 adversarial
   # examples" (docs/plans/implementation-plan.md); `gates` runs the same tests at
   # Hypothesis' default 100. This job runs only the `noloss`-marked suite, at the `noloss`
@@ -396,6 +405,15 @@ jobs:
 
       - name: No-loss property suite at 10,000 examples per property
         run: uv run pytest -m noloss --hypothesis-profile=noloss --hypothesis-show-statistics -p no:cacheprovider
+
+      - name: Keep the Hypothesis examples of a failed run
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: hypothesis-examples-noloss
+          path: .hypothesis
+          retention-days: 7
+          if-no-files-found: ignore
 
   postgres-compatibility:
     name: PostgreSQL ${{ matrix.postgres }} compatibility
