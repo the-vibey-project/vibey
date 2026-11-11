@@ -5,8 +5,10 @@
 # nothing, keyed `"file::name"` with the reason it stays. The list can only shrink: delete an
 # entry in the same change that gives the test a check, because a stale entry fails the guard.
 #
-# Measured 2026-11-11: 6711 test functions, 21 with no check. Each was given a real assertion
-# in the change that introduced this census, so the baseline starts empty and a new
+# Point-in-time figure, measured on the base commit (9d91a8e45, 2026-11-11): 6710 test functions,
+# 21 with no check. The test count grows; the number that matters is the length of this list.
+# Each was given a real assertion in the change that introduced this census, so the baseline
+# starts empty and a new
 # assertion-free test fails instead of joining a list.
 
 [entries]

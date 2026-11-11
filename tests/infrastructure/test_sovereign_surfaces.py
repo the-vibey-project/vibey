@@ -1373,10 +1373,13 @@ async def test_rabbitmq_adapter_delete_queue_sends_one_delete() -> None:
 @pytest.mark.asyncio
 async def test_rabbitmq_adapter_deleting_a_missing_queue_is_not_an_error() -> None:
     missing = urllib.error.HTTPError("http://x", 404, "Not Found", {}, None)
-    adapter = RabbitMqBusAdapter(
-        url="http://bus:15672", username="u", password="p", opener=_raising_opener(missing)
-    )
+    opener = _raising_opener(missing)
+    adapter = RabbitMqBusAdapter(url="http://bus:15672", username="u", password="p", opener=opener)
     assert await adapter.delete_queue("gone") is None
+    assert len(opener.call_args_list) == 1
+    sent = _bus_call(opener)
+    assert sent.get_method() == "DELETE"
+    assert sent.full_url.endswith("/api/queues/%2F/gone")
 
 
 @pytest.mark.asyncio

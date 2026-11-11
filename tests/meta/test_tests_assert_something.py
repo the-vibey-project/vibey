@@ -23,11 +23,13 @@ class, so it can be run on synthetic source.
 from __future__ import annotations
 
 import ast
+import subprocess
 import tomllib
 from collections.abc import Iterator
 from pathlib import Path
 
-TESTS = Path(__file__).resolve().parents[1]
+REPO = Path(__file__).resolve().parents[2]
+TESTS = REPO / "tests"
 BASELINE = Path(__file__).with_name("assertion_free_tests.toml")
 CHECK_PREFIXES = ("assert", "expect", "verify", "check")
 CHECK_NAMES = frozenset({"fail", "skip", "xfail", "approx"})
@@ -80,14 +82,29 @@ class AssertionCensus:
     def unchecked(cls, source: str) -> list[str]:
         return [fn.name for fn in cls.collected(ast.parse(source)) if not cls.has_a_check(fn)]
 
+    @staticmethod
+    def tracked_python(root: Path) -> list[Path]:
+        """The git-tracked `.py` files under `root`, so an untracked scratch file cannot fail
+        a local run (the single-source guard walks the same list)."""
+        listed = subprocess.run(
+            ["git", "ls-files", "-z", "--", str(root)],
+            cwd=REPO,
+            check=True,
+            capture_output=True,
+            text=True,
+        ).stdout.split("\0")
+        return sorted(
+            REPO / name for name in listed if name.endswith(".py") and (REPO / name).is_file()
+        )
+
     @classmethod
     def census(cls, root: Path) -> tuple[int, list[str]]:
         """(test functions seen, `file::name` of each that checks nothing), one parse per file."""
         seen = 0
         found: list[str] = []
-        for path in sorted(root.rglob("*.py")):
+        for path in cls.tracked_python(root):
             tree = ast.parse(path.read_text(encoding="utf-8"), filename=str(path))
-            relative = f"tests/{path.relative_to(root).as_posix()}"
+            relative = path.relative_to(REPO).as_posix()
             for function in cls.collected(tree):
                 seen += 1
                 if not cls.has_a_check(function):

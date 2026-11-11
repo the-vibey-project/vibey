@@ -45,3 +45,4 @@ def test_releasing_without_holding_is_a_no_op(tmp_path: Path) -> None:
 
     assert lock.release() is None
     assert lock.holder() is None
+    assert not (tmp_path / LOCK_FILE).exists()

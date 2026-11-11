@@ -1,4 +1,5 @@
 # Made with ❤️ by [Vibey](https://the-vibey-project.github.io/vibey/), Developed by [Adam Matthew Steinberger](https://vibewithadam.matthewsteinberger.com/) ([@adammatthewsteinberger](https://github.com/adammatthewsteinberger/)).
+import json
 import logging
 from pathlib import Path
 
@@ -112,9 +113,9 @@ def test_structlog_app_logger_without_bound(capsys: pytest.CaptureFixture[str]) 
     logger.info("test")
 
     captured = capsys.readouterr()
-    emitted = captured.out + captured.err
-    assert "auto" in emitted
-    assert "test" in emitted
+    record = json.loads((captured.out + captured.err).strip().splitlines()[-1])
+    assert record["event"] == "test"
+    assert record["component"] == "auto"
 
 
 def test_null_app_logger() -> None:

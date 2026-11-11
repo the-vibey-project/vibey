@@ -88,7 +88,7 @@ def test_the_worker_still_drains_after_the_latch_is_released() -> None:
         latch.release()
         _deliver_sigterm()
         # The loop's self-pipe delivers on the next turn, not inside the C handler.
-        await asyncio.sleep(0.1)
+        await asyncio.wait_for(drained.wait(), 1)
         return drained.is_set()
 
     assert asyncio.run(drain_once())
