@@ -60,12 +60,16 @@ jobs:
   plan:
     # REPORT ONLY (SP1-B). Says which areas a diff touches and which tier it earns; nothing
     # reads it yet. A skipped required check passes on GitHub, so this job is built so that it
-    # can never be the reason anything is skipped: it never fails (`continue-on-error`, so a
-    # dependant is not cut by the implicit `success()` of `needs`), it has no `needs`, and its
+    # can never be the reason anything is skipped: a failing step does not cut a dependant
+    # (`continue-on-error`: the job's own check run still concludes `failure`, and the merge
+    # train counts that, but `needs.plan.result` is `success`, so the implicit `success()` of
+    # `needs` does not skip the dependants; observed on a throwaway run), it has no `needs`, and its
     # FIRST step writes the all-full defaults before the checkout, so even a failed checkout
     # or install leaves `full=true`. Later steps only overwrite them. Every output is read as
     # `steps.cli.outputs.X || steps.<defaults>.outputs.X`, so a key the CLI did not print
-    # falls through to the default. The timeout is unmeasured until the first run.
+    # falls through to the default. A timeout or a cancellation of the job is NOT proven to
+    # leave `needs.plan.result` at `success`: consumers must not rely on that. The first run
+    # took 16 s; the timeout stays marked unmeasured until the rule's sample size is met.
     name: CI plan
     runs-on: ubuntu-latest
     timeout-minutes: 10
