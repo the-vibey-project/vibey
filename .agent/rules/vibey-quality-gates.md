@@ -101,7 +101,7 @@ uv run pip-audit
 ```
 
 The npm lockfiles (the root workspace and `clients/app`) get the same gate from
-`vibey-gh advisory-check` in the `@vibey/core`, `app` and `vscode-extension` jobs:
+`vibey-gh advisory-check` in the `@vibey/core`, `app` and the two `VS Code extension` jobs:
 `npm audit` at `[advisories] audit_level` (high), less the declared exceptions in
 `.github/advisory-exceptions.toml`. An exception is never a silent skip: it names one
 advisory, package and workspace, records why the vulnerable code is not reached, and
@@ -162,7 +162,7 @@ push went ahead but none of that stage's gates ran. Run them by hand before you 
 below are the Python and deployment gates; the others are `noloss` (the no-loss
 property suite at 10,000 examples), `postgres-compatibility` (the database suite on
 PostgreSQL 14 to 18), `krypton-app`, `vibey-core` (`@vibey/core`), `app` (the krypton
-app, mobile and web), `vscode-extension` (Ubuntu and macOS) and `desktop` (the krypton
+app, mobile and web), the two `VS Code extension` jobs (Ubuntu and macOS) and `desktop` (the krypton
 desktop client on Ubuntu, Arch, Fedora and macOS, where it also bundles, verifies, launches and
 images the app):
 

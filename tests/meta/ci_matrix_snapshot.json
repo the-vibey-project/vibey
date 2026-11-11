@@ -1,0 +1,238 @@
+{
+  "_comment": "The CI matrices as .github/workflows/ci.yml declared them at 43baaa6a8, before the jobs read them from the plan job. tests/meta/test_ci_tiers_keep_every_row.py holds the union of the PR and full tiers to this file. Regenerating it to match a smaller tier defeats it: change it only when a row is added on purpose.",
+  "desktop": [
+    {
+      "container": "",
+      "distro": "ubuntu",
+      "runner": "ubuntu-latest"
+    },
+    {
+      "container": "archlinux:latest",
+      "distro": "arch",
+      "runner": "ubuntu-latest"
+    },
+    {
+      "container": "fedora:latest",
+      "distro": "fedora",
+      "runner": "ubuntu-latest"
+    },
+    {
+      "container": "",
+      "distro": "macos",
+      "runner": "macos-15"
+    }
+  ],
+  "postgres-compatibility": [
+    {
+      "postgres": 14
+    },
+    {
+      "postgres": 15
+    },
+    {
+      "postgres": 16
+    },
+    {
+      "postgres": 17
+    },
+    {
+      "postgres": 18
+    }
+  ],
+  "tools": [
+    {
+      "dir": "src/vibey_tools/gh",
+      "install": "pip install -e ../../vibey_runners/common && pip install -e \".[dev]\"",
+      "network_test": "python -m pytest -q -m network --no-cov",
+      "package": "vibey-gh",
+      "python": "3.12",
+      "static": "python -m mypy vibey_gh",
+      "test": "python -m pytest -q"
+    },
+    {
+      "dir": "src/vibey_tools/gh",
+      "install": "pip install -e ../../vibey_runners/common && pip install -e \".[dev]\"",
+      "package": "vibey-gh",
+      "python": "3.13",
+      "test": "python -m pytest -q"
+    },
+    {
+      "dir": "src/vibey_tools/gh",
+      "install": "pip install -e ../../vibey_runners/common && pip install -e \".[dev]\"",
+      "package": "vibey-gh",
+      "python": "3.14",
+      "test": "python -m pytest -q"
+    },
+    {
+      "dir": "src/vibey_tools/skills",
+      "docs": "pip install -e \".[docs]\"\nmkdocs build --strict\nplugins=$(python3 -c \"import json;print(len(json.load(open('.claude-plugin/marketplace.json'))['plugins']))\")\nskills=$(find plugins -name SKILL.md | wc -l | tr -d ' ')\nbuilt_plugins=$(find site/reference -mindepth 2 -maxdepth 2 -name index.html | wc -l | tr -d ' ')\nbuilt_skills=$(find site/reference -mindepth 3 -maxdepth 3 -name index.html | wc -l | tr -d ' ')\necho \"plugins $plugins -> $built_plugins ; skills $skills -> $built_skills\"\ntest \"$plugins\" = \"$built_plugins\"\ntest \"$skills\" = \"$built_skills\"\n",
+      "install": "pip install -e \".[dev]\"",
+      "package": "vibey-skills",
+      "python": "3.12",
+      "test": "python3 tools/sync_catalogue_surfaces.py --check && python3 tools/validate_manifests.py && python3 tools/check_links.py && PYTHONPATH=src python3 -m unittest discover -s tests"
+    },
+    {
+      "dir": "src/vibey_tools/skills",
+      "install": "pip install -e \".[dev]\"",
+      "package": "vibey-skills",
+      "python": "3.13",
+      "test": "python3 tools/sync_catalogue_surfaces.py --check && python3 tools/validate_manifests.py && python3 tools/check_links.py && PYTHONPATH=src python3 -m unittest discover -s tests"
+    },
+    {
+      "dir": "src/vibey_tools/skills",
+      "install": "pip install -e \".[dev]\"",
+      "package": "vibey-skills",
+      "python": "3.14",
+      "test": "python3 tools/sync_catalogue_surfaces.py --check && python3 tools/validate_manifests.py && python3 tools/check_links.py && PYTHONPATH=src python3 -m unittest discover -s tests"
+    },
+    {
+      "dir": "src/vibey_tools/bootstrap",
+      "install": "pip install -e ../gh && pip install -e \".[test,all,dev]\"",
+      "package": "vibey-bootstrap",
+      "python": "3.12",
+      "static": "python -m mypy vibey_bootstrap/ && python -m bandit -r vibey_bootstrap/ -ll -q",
+      "test": "pytest test/ -m \"not integration\" --cov=vibey_bootstrap --cov-report=term"
+    },
+    {
+      "dir": "src/vibey_tools/bootstrap",
+      "install": "pip install -e ../gh && pip install -e \".[test,all]\"",
+      "package": "vibey-bootstrap",
+      "python": "3.13",
+      "test": "pytest test/ -m \"not integration\" --cov=vibey_bootstrap --cov-report=term"
+    },
+    {
+      "dir": "src/vibey_tools/bootstrap",
+      "install": "pip install -e ../gh && pip install -e \".[test,all]\"",
+      "package": "vibey-bootstrap",
+      "python": "3.14",
+      "test": "pytest test/ -m \"not integration\" --cov=vibey_bootstrap --cov-report=term"
+    },
+    {
+      "dir": "src/vibey_runners/common",
+      "install": "pip install -e \".[dev]\"",
+      "package": "vibey-runners-common",
+      "python": "3.12",
+      "static": "mypy --strict src/vibey_runners/common && lint-imports",
+      "test": "python -m pytest -q -p no:cacheprovider --cov=vibey_runners.common.infrastructure --cov-branch --cov-report=term-missing --cov-fail-under=100"
+    },
+    {
+      "dir": "src/vibey_runners/common",
+      "install": "pip install -e \".[dev]\"",
+      "package": "vibey-runners-common",
+      "python": "3.13",
+      "static": "mypy --strict src/vibey_runners/common && lint-imports",
+      "test": "python -m pytest -q -p no:cacheprovider --cov=vibey_runners.common.infrastructure --cov-branch --cov-report=term-missing --cov-fail-under=100"
+    },
+    {
+      "dir": "src/vibey_runners/common",
+      "install": "pip install -e \".[dev]\"",
+      "package": "vibey-runners-common",
+      "python": "3.14",
+      "static": "mypy --strict src/vibey_runners/common && lint-imports",
+      "test": "python -m pytest -q -p no:cacheprovider --cov=vibey_runners.common.infrastructure --cov-branch --cov-report=term-missing --cov-fail-under=100"
+    },
+    {
+      "dir": "src/vibey_runners/claude",
+      "install": "pip install -e ../common && pip install -e \".[dev]\"",
+      "package": "claudeloop",
+      "python": "3.12",
+      "static": "mypy --strict src/claudeloop && lint-imports && bandit -q -r src/claudeloop && python scripts/check_skill_frontmatter.py",
+      "test": "pytest tests/domain --cov=claudeloop.domain --cov-branch --cov-report=term-missing --cov-fail-under=100 && pytest tests/application --cov=claudeloop.application --cov-branch --cov-report=term-missing --cov-fail-under=100 && pytest tests/infrastructure -n auto --maxprocesses=8 --cov=claudeloop.infrastructure --cov-branch --cov-report=term-missing --cov-fail-under=100 && pytest tests/cli -n auto --maxprocesses=8 --cov=claudeloop.cli --cov-branch --cov-report=term-missing --cov-fail-under=100"
+    },
+    {
+      "dir": "src/vibey_runners/claude",
+      "install": "pip install -e ../common && pip install -e \".[dev]\"",
+      "package": "claudeloop",
+      "python": "3.13",
+      "test": "pytest tests/domain --cov=claudeloop.domain --cov-branch --cov-report=term-missing --cov-fail-under=100 && pytest tests/application --cov=claudeloop.application --cov-branch --cov-report=term-missing --cov-fail-under=100 && pytest tests/infrastructure -n auto --maxprocesses=8 --cov=claudeloop.infrastructure --cov-branch --cov-report=term-missing --cov-fail-under=100 && pytest tests/cli -n auto --maxprocesses=8 --cov=claudeloop.cli --cov-branch --cov-report=term-missing --cov-fail-under=100"
+    },
+    {
+      "dir": "src/vibey_runners/claude",
+      "install": "pip install -e ../common && pip install -e \".[dev]\"",
+      "package": "claudeloop",
+      "python": "3.14",
+      "test": "pytest tests/domain --cov=claudeloop.domain --cov-branch --cov-report=term-missing --cov-fail-under=100 && pytest tests/application --cov=claudeloop.application --cov-branch --cov-report=term-missing --cov-fail-under=100 && pytest tests/infrastructure -n auto --maxprocesses=8 --cov=claudeloop.infrastructure --cov-branch --cov-report=term-missing --cov-fail-under=100 && pytest tests/cli -n auto --maxprocesses=8 --cov=claudeloop.cli --cov-branch --cov-report=term-missing --cov-fail-under=100"
+    },
+    {
+      "dir": "src/vibey_runners/codex",
+      "docs": "pip install 'properdocs==1.6.7' 'properdocs-theme-mkdocs==1.6.7' && properdocs build --strict",
+      "install": "pip install -e ../common && pip install -e \".[dev]\"",
+      "package": "codexloop",
+      "python": "3.12",
+      "static": "mypy --strict src/codexloop && lint-imports && bandit -q -r src/codexloop",
+      "test": "pytest -q --cov=codexloop --cov-branch --cov-report= && coverage report --include='src/codexloop/domain/*' --fail-under=100 && coverage report --include='src/codexloop/application/*' --fail-under=100 && coverage report --include='src/codexloop/infrastructure/*' --fail-under=100 && coverage report --include='src/codexloop/cli/*' --fail-under=100"
+    },
+    {
+      "dir": "src/vibey_runners/codex",
+      "install": "pip install -e ../common && pip install -e \".[dev]\"",
+      "package": "codexloop",
+      "python": "3.13",
+      "static": "mypy --strict src/codexloop && lint-imports && bandit -q -r src/codexloop",
+      "test": "pytest -q --cov=codexloop --cov-branch --cov-report= && coverage report --include='src/codexloop/domain/*' --fail-under=100 && coverage report --include='src/codexloop/application/*' --fail-under=100 && coverage report --include='src/codexloop/infrastructure/*' --fail-under=100 && coverage report --include='src/codexloop/cli/*' --fail-under=100"
+    },
+    {
+      "dir": "src/vibey_runners/codex",
+      "install": "pip install -e ../common && pip install -e \".[dev]\"",
+      "package": "codexloop",
+      "python": "3.14",
+      "test": "pytest -q --cov=codexloop --cov-branch --cov-report= && coverage report --include='src/codexloop/domain/*' --fail-under=100 && coverage report --include='src/codexloop/application/*' --fail-under=100 && coverage report --include='src/codexloop/infrastructure/*' --fail-under=100 && coverage report --include='src/codexloop/cli/*' --fail-under=100"
+    },
+    {
+      "dir": "src/vibey_runners/codex",
+      "install": "pip install -e ../common && pip install -e \".[dev]\"",
+      "os": "macos-latest",
+      "package": "codexloop",
+      "python": "3.12",
+      "static": "mypy --strict src/codexloop && lint-imports && bandit -q -r src/codexloop",
+      "test": "pytest -q --cov=codexloop --cov-branch --cov-report= && coverage report --include='src/codexloop/domain/*' --fail-under=100 && coverage report --include='src/codexloop/application/*' --fail-under=100 && coverage report --include='src/codexloop/infrastructure/*' --fail-under=100 && coverage report --include='src/codexloop/cli/*' --fail-under=100"
+    },
+    {
+      "dir": "src/vibey_runners/codex",
+      "install": "pip install -e ../common && pip install -e \".[dev]\"",
+      "os": "macos-latest",
+      "package": "codexloop",
+      "python": "3.13",
+      "static": "mypy --strict src/codexloop && lint-imports && bandit -q -r src/codexloop",
+      "test": "pytest -q --cov=codexloop --cov-branch --cov-report= && coverage report --include='src/codexloop/domain/*' --fail-under=100 && coverage report --include='src/codexloop/application/*' --fail-under=100 && coverage report --include='src/codexloop/infrastructure/*' --fail-under=100 && coverage report --include='src/codexloop/cli/*' --fail-under=100"
+    },
+    {
+      "dir": "src/vibey_runners/codex",
+      "install": "pip install -e ../common && pip install -e \".[dev]\"",
+      "os": "macos-latest",
+      "package": "codexloop",
+      "python": "3.14",
+      "static": "mypy --strict src/codexloop && lint-imports && bandit -q -r src/codexloop",
+      "test": "pytest -q --cov=codexloop --cov-branch --cov-report= && coverage report --include='src/codexloop/domain/*' --fail-under=100 && coverage report --include='src/codexloop/application/*' --fail-under=100 && coverage report --include='src/codexloop/infrastructure/*' --fail-under=100 && coverage report --include='src/codexloop/cli/*' --fail-under=100"
+    },
+    {
+      "dir": "src/vibey_runners/qwen",
+      "install": "pip install -e \".[dev]\"",
+      "package": "qwenloop",
+      "python": "3.12",
+      "static": "mypy --strict src/qwenloop && lint-imports && bandit -q -r src/qwenloop",
+      "test": "python -m pytest -q"
+    },
+    {
+      "dir": "src/vibey_runners/qwen",
+      "install": "pip install -e \".[dev]\"",
+      "package": "qwenloop",
+      "python": "3.13",
+      "test": "python -m pytest -q"
+    },
+    {
+      "dir": "src/vibey_runners/qwen",
+      "install": "pip install -e \".[dev]\"",
+      "package": "qwenloop",
+      "python": "3.14",
+      "test": "python -m pytest -q"
+    }
+  ],
+  "vscode": [
+    {
+      "os": "ubuntu-latest"
+    },
+    {
+      "os": "macos-latest"
+    }
+  ]
+}

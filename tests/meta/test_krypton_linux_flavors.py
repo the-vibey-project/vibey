@@ -9,6 +9,8 @@ from typing import Any
 
 import yaml
 
+from .ci_matrix_rows import CiMatrixRows
+
 ROOT = Path(__file__).resolve().parents[2]
 CI = ROOT / ".github" / "workflows" / "ci.yml"
 DESKTOP = ROOT / "clients" / "desktop"
@@ -16,8 +18,8 @@ FLAVORS = ("arch", "ubuntu", "fedora")
 
 
 def _desktop_cells() -> dict[str, dict[str, Any]]:
-    workflow = yaml.safe_load(CI.read_text(encoding="utf-8"))
-    include: list[dict[str, Any]] = workflow["jobs"]["desktop"]["strategy"]["matrix"]["include"]
+    # The desktop matrix is the plan job's output; its FULL rows live in ci-matrices.toml.
+    include: list[dict[str, Any]] = CiMatrixRows.full("desktop")
     return {cell["distro"]: cell for cell in include}
 
 

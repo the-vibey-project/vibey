@@ -9,6 +9,8 @@ from __future__ import annotations
 import dataclasses
 import json
 import re
+import shutil
+import subprocess
 from pathlib import Path
 
 import pytest
@@ -156,3 +158,87 @@ def test_rendered_values_survive_yaml_then_json_parsing():
 def test_an_empty_ruleset_renders_an_empty_list_for_the_step_to_refuse():
     parsed = yaml.safe_load(GATE.render(TEMPLATE, _config(required=())))
     assert json.loads(parsed["REQUIRED"]) == []
+
+
+# --- the check-run verdict (the jq expression), executed -------------------------------------
+
+_JQ = re.compile(r"jq -e (?P<flags>.*?)'\n(?P<program>.*?)\n\s*' <<<\"\$checks\"", re.DOTALL)
+_TEMPLATE = (
+    Path(__file__).resolve().parents[1] / "vibey_gh" / "templates" / "workflows"
+) / "automation-bootstrap.yml"
+
+
+def _verdict(runs: list[tuple[str, str, str]], required: list[str]) -> bool:
+    """Run the template's own jq program over check runs `(name, status, conclusion)`."""
+    assert shutil.which("jq"), "jq is required to test the bootstrap verdict"
+    match = _JQ.search(_TEMPLATE.read_text(encoding="utf-8"))
+    assert match, "the jq verdict is no longer in the template"
+    document = {
+        "check_runs": [
+            {"name": name, "status": status, "conclusion": conclusion}
+            for name, status, conclusion in runs
+        ]
+    }
+    done = subprocess.run(
+        [
+            "jq",
+            "-e",
+            "--argjson",
+            "required",
+            json.dumps(required),
+            "--argjson",
+            "excluded",
+            json.dumps(list(EXCLUDED_CHECKS)),
+            "--argjson",
+            "strict",
+            json.dumps(["gates"]),
+            match.group("program"),
+        ],
+        input=json.dumps(document),
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    return done.returncode == 0
+
+
+def test_the_template_declares_gates_as_a_success_only_check():
+    text = _TEMPLATE.read_text(encoding="utf-8")
+    assert 'SUCCESS_ONLY_CHECKS: "[\\"gates\\"]"' in text
+    assert '--argjson strict "$SUCCESS_ONLY_CHECKS"' in text
+
+
+def test_a_skipped_gates_is_not_green_for_the_admin_bootstrap():
+    # `gates` is skipped when `uv-lock` or `lint` failed: the suite never ran.
+    runs = [("gates", "completed", "skipped"), ("Lint and static gates", "completed", "success")]
+    assert not _verdict(runs, ["gates", "Lint and static gates"])
+
+
+def test_a_successful_gates_passes_and_other_checks_may_still_be_skipped():
+    runs = [
+        ("gates", "completed", "success"),
+        ("Lint and static gates", "completed", "success"),
+        ("VS Code extension (macos-latest)", "completed", "skipped"),
+        ("krypton desktop (arch)", "completed", "neutral"),
+    ]
+    required = ["gates", "Lint and static gates", "VS Code extension (macos-latest)"]
+    assert _verdict(runs, required)
+
+
+def test_a_failed_or_unfinished_gates_is_not_green():
+    for status, conclusion in (
+        ("completed", "failure"),
+        ("in_progress", None),
+        ("completed", "cancelled"),
+    ):
+        runs = [("gates", status, conclusion)]
+        assert not _verdict(runs, ["gates"]), (status, conclusion)  # type: ignore[arg-type]
+
+
+def test_a_missing_required_gate_is_still_refused():
+    assert not _verdict([("Lint and static gates", "completed", "success")], ["gates"])
+
+
+def test_a_repository_without_a_gates_check_is_not_held_to_one():
+    # The named check is accepted on `success` alone only where it is reported.
+    assert _verdict([("test", "completed", "success")], ["test"])

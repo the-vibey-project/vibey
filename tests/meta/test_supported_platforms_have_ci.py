@@ -27,6 +27,8 @@ from typing import Any
 
 import yaml
 
+from .ci_matrix_rows import CiMatrixRows
+
 ROOT = Path(__file__).resolve().parents[2]
 RELEASE_SUFFIX = re.compile(r"-(\d+\.\d+)$")
 
@@ -91,7 +93,10 @@ class PlatformCiAudit:
 
 def _real() -> PlatformCiAudit:
     toml = tomllib.loads((ROOT / "scripts" / "minimum_specs.toml").read_text(encoding="utf-8"))
+    # The desktop matrix is read from the plan job at run time; the cells it can run are the
+    # FULL rows of ci-matrices.toml, so the audit holds the declared distros to those.
     workflow = yaml.safe_load((ROOT / ".github" / "workflows" / "ci.yml").read_text("utf-8"))
+    workflow["jobs"]["desktop"]["strategy"]["matrix"] = {"include": CiMatrixRows.full("desktop")}
     return PlatformCiAudit(toml["minimum_specs"]["linux"]["distros"], workflow)
 
 

@@ -32,7 +32,7 @@ timeout_minutes = 10
 basis = "measured"
 
 [jobs.plan]
-# unmeasured until its first run (SP1-B, report-only). One Linux job: a checkout, `pip install
+# unmeasured until its first run (SP1-B). One Linux job: a checkout, `pip install
 # -e` of the dependency-free vibey-gh and one git diff; the target is under a minute, so 10 is
 # the rule's floor and generous. First observed run: 16 s (one sample, so still unmeasured).
 timeout_minutes = 10
@@ -85,8 +85,15 @@ basis = "measured"
 timeout_minutes = 15
 basis = "measured"
 
-[jobs.vscode-extension]
-# n=12 p90=1.5 max=1.5, slowest cell: "VS Code extension (macos-latest)" (2 cells). Test-suite floor 15.
+[jobs.vscode-extension-ubuntu]
+# Split out of the old two-cell `vscode-extension` matrix (SP1-B) so the required check names
+# survive a skip; the steps and the limit are unchanged. Measured as that matrix's cells:
+# n=12 p90=1.5 max=1.5, slowest cell "VS Code extension (macos-latest)". Test-suite floor 15.
+timeout_minutes = 15
+basis = "measured"
+
+[jobs.vscode-extension-macos]
+# The macOS cell of the old `vscode-extension` matrix, the slowest of the two (see above).
 timeout_minutes = 15
 basis = "measured"
 

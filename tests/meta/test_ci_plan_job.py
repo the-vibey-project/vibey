@@ -4,8 +4,9 @@
 A skipped required check passes on GitHub, so `plan` is built so that it cannot be the reason
 anything is skipped: a failing step does not cut a dependant (job-level `continue-on-error`:
 the check run still concludes `failure`, `needs.plan.result` is `success`), it has no `needs`, its
-first step writes the all-full defaults, and later steps only overwrite them. This task skips
-nothing: no other job reads a `plan` output yet, and a test says so.
+first step writes the all-full defaults (the full matrices as literals), and later steps only
+overwrite them. The jobs that read its outputs, and how, are pinned in
+`test_ci_tiers_keep_every_row.py`; here a test says that nothing reads its `result`.
 
 The shell of the `vibey-gh ci-areas` step is executed with a stub `vibey-gh` that echoes its
 arguments and a stub `git` that fails if called, so the per-event arguments are proved by
@@ -108,19 +109,31 @@ def test_the_checkout_is_deep_and_keeps_no_credentials() -> None:
 
 
 def test_only_vibey_gh_is_installed_from_the_checkout() -> None:
-    installs = [s["run"] for s in _steps() if "pip install" in s.get("run", "")]
+    installs = [
+        s["run"]
+        for s in _steps()
+        if s.get("id") != "defaults" and "pip install" in s.get("run", "")
+    ]
     assert installs == ["pip install -e src/vibey_tools/gh"]
 
 
-def test_the_matrix_defaults_come_from_the_single_source_after_the_install() -> None:
-    order = [s.get("id") for s in _steps()]
-    assert order.index("matrices") < order.index("cli")
-    script = _step("matrices")["run"]
-    for job in ("tools", "postgres-compatibility", "desktop"):
-        assert f"ci-matrix --job {job} --tier full" in script
-    assert "tools_matrix=" in script
-    assert "postgres_matrix=" in script
-    assert "desktop_matrix=" in script
+def test_the_matrix_defaults_are_literals_written_by_the_first_step() -> None:
+    # A plan that dies before the `cli` step (a failed checkout or install) must still hand
+    # the matrix jobs their full matrices, so the first step writes them as literals instead
+    # of asking vibey-gh. tests/meta/test_ci_tiers_keep_every_row.py holds each literal to
+    # `vibey-gh ci-matrix --job <job> --tier full`.
+    ids = [s.get("id") for s in _steps()]
+    assert "matrices" not in ids
+    script = _step("defaults")["run"]
+    for key in ("tools_matrix=", "postgres_matrix=", "desktop_matrix="):
+        assert key in script
+    # (the literals themselves mention `pip install`: they are data, never run by this step)
+    assert "vibey-gh ci-" not in script.replace("`vibey-gh ci-matrix", ""), (
+        "needs nothing installed"
+    )
+    assert not [
+        ln for ln in script.splitlines() if ln.strip().startswith(("pip ", "uv ", "vibey-gh"))
+    ]
 
 
 def test_no_workflow_expression_is_interpolated_into_a_script() -> None:
@@ -130,23 +143,40 @@ def test_no_workflow_expression_is_interpolated_into_a_script() -> None:
 
 def test_every_output_falls_through_from_the_cli_to_the_defaults() -> None:
     pattern = re.compile(
-        r"^\$\{\{ steps\.cli\.outputs\.(\w+) \|\| steps\.(defaults|matrices)\.outputs\.(\w+) \}\}$"
+        r"^\$\{\{ steps\.cli\.outputs\.(\w+) \|\| steps\.(defaults)\.outputs\.(\w+) \}\}$"
     )
     for name, expression in _plan()["outputs"].items():
         match = pattern.match(expression)
         assert match, f"{name}: {expression}"
         assert match.group(1) == match.group(3) == name
-        assert match.group(2) == ("matrices" if name.endswith("_matrix") else "defaults")
+        assert match.group(2) == "defaults"
 
 
-def test_nothing_consumes_the_plan_yet() -> None:
+def test_the_jobs_read_the_plans_outputs_and_never_its_result() -> None:
+    # `needs.plan.result` is unproven for a timed-out or cancelled plan, so no job may depend
+    # on it: each reads outputs (which fall through to the full defaults) and replaces the
+    # implicit `success()` with `!cancelled()`.
     for job_id, job in _jobs().items():
-        if job_id in ("plan", "ci-result"):
-            continue
-        assert "plan" not in (job.get("needs") or []), job_id
-        blob = yaml.safe_dump({k: v for k, v in job.items() if k != "steps"})
-        assert "needs.plan" not in blob, job_id
-        assert "needs.plan" not in yaml.safe_dump(job.get("steps", [])), job_id
+        blob = yaml.safe_dump(job)
+        assert "needs.plan.result" not in blob, job_id
+        assert "needs.plan.conclusion" not in blob, job_id
+    consumers = {j for j, spec in _jobs().items() if "plan" in (spec.get("needs") or [])}
+    assert consumers - {"ci-result"} == {
+        "noloss",
+        "postgres-compatibility",
+        "tools",
+        "tools-lint",
+        "krypton-app",
+        "vibey-core",
+        "app",
+        "vscode-extension-ubuntu",
+        "vscode-extension-macos",
+        "desktop",
+        "image",
+        "chart",
+        "cluster-smoke",
+    }
+    assert "gates" not in consumers and "lint" not in consumers and "uv-lock" not in consumers
 
 
 # --- the shell of the `vibey-gh ci-areas` step, executed -----------------------------------
