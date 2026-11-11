@@ -4,7 +4,7 @@ from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from uuid import UUID, uuid4
 
-from tests.application.fakes import FakeJobRepository, make_job
+from tests.application.fakes import FakeJobRepository, handle_leased, make_job
 from vibey.application.build_verify_handler import (
     BuildVerifyHandler,
     GateResult,
@@ -84,7 +84,8 @@ async def test_successful_verify_runs_gates_reviews_the_diff_and_enqueues_integr
     )
 
     job = _job()
-    outcome = await handler.handle(job)
+    jobs.seed_leased(job)  # the leased parent the follow-up depends on
+    outcome = await handle_leased(handler, job)
 
     assert isinstance(outcome, Success)
     assert outcome.result == {
@@ -96,9 +97,11 @@ async def test_successful_verify_runs_gates_reviews_the_diff_and_enqueues_integr
     assert gates.calls[-1] == ("git", "diff", "HEAD")
     assert any(event.kind == "VerdictRendered" for event in ledger.recorded)
 
-    enqueued = await jobs.claim(job.project_id, owner="t", lease=timedelta(seconds=5))
-    assert enqueued is not None
+    # The follow-up depends on this job, which is still leased, so it is not claimable
+    # yet (as in Postgres); read it back by its kind.
+    (enqueued,) = await jobs.list_for_cycle(job.project_id, cycle=job.cycle, kind="build.integrate")
     assert enqueued.kind == "build.integrate"
+    assert jobs.dependencies[enqueued.id] == (job.id,)
     assert enqueued.work_item_id == "item-1"
 
 
@@ -114,11 +117,11 @@ async def test_rejects_wrong_kind_and_missing_work_item_id(tmp_path: Path) -> No
     )
 
     wrong_kind = replace(make_job(uuid4()), kind="build.implement")
-    assert await handler.handle(wrong_kind) == Failure(
+    assert await handle_leased(handler, wrong_kind) == Failure(
         FailureClass.VIBEY, "expected build.verify job"
     )
     missing_item = replace(make_job(uuid4()), kind="build.verify", work_item_id=None)
-    assert await handler.handle(missing_item) == Failure(
+    assert await handle_leased(handler, missing_item) == Failure(
         FailureClass.VIBEY, "build.verify job is missing work_item_id"
     )
 
@@ -135,7 +138,7 @@ async def test_rejects_a_reviewer_that_matches_the_implementer(tmp_path: Path) -
     )
 
     job = _job(requirement={"implementer_engine_id": "claudeloop"})
-    outcome = await handler.handle(job)
+    outcome = await handle_leased(handler, job)
 
     assert outcome == Failure(FailureClass.VIBEY, "verifier must differ from the implementer")
 
@@ -160,7 +163,8 @@ async def test_a_one_engine_pool_verifies_its_own_work_and_says_so(tmp_path: Pat
     )
 
     job = _job(requirement={"implementer_engine_id": "claudeloop"})
-    outcome = await handler.handle(job)
+    jobs.seed_leased(job)  # the leased parent the follow-up depends on
+    outcome = await handle_leased(handler, job)
 
     assert isinstance(outcome, Success)
     assert outcome.result == {
@@ -177,9 +181,11 @@ async def test_a_one_engine_pool_verifies_its_own_work_and_says_so(tmp_path: Pat
     assert "claudeloop" in str(decision.payload["title"])
     assert decision.at == datetime(2026, 8, 19, tzinfo=UTC)
     # The work still went all the way through.
-    enqueued = await jobs.claim(job.project_id, owner="t", lease=timedelta(seconds=5))
-    assert enqueued is not None
+    # The follow-up depends on this job, which is still leased, so it is not claimable
+    # yet (as in Postgres); read it back by its kind.
+    (enqueued,) = await jobs.list_for_cycle(job.project_id, cycle=job.cycle, kind="build.integrate")
     assert enqueued.kind == "build.integrate"
+    assert jobs.dependencies[enqueued.id] == (job.id,)
 
 
 async def test_a_pool_with_a_second_engine_still_rejects_a_self_review(tmp_path: Path) -> None:
@@ -197,7 +203,9 @@ async def test_a_pool_with_a_second_engine_still_rejects_a_self_review(tmp_path:
         ),
     )
 
-    outcome = await handler.handle(_job(requirement={"implementer_engine_id": "claudeloop"}))
+    outcome = await handle_leased(
+        handler, _job(requirement={"implementer_engine_id": "claudeloop"})
+    )
 
     assert outcome == Failure(FailureClass.VIBEY, "verifier must differ from the implementer")
     assert ledger.recorded == []
@@ -219,7 +227,7 @@ async def test_a_rotated_reviewer_records_no_waiver(tmp_path: Path) -> None:
         ),
     )
 
-    outcome = await handler.handle(_job())
+    outcome = await handle_leased(handler, _job())
 
     assert isinstance(outcome, Success)
     assert outcome.result["independent_review"] is True
@@ -238,7 +246,7 @@ async def test_a_failing_gate_command_fails_as_work(tmp_path: Path) -> None:
         clock=FixedClock(),
     )
 
-    outcome = await handler.handle(_job())
+    outcome = await handle_leased(handler, _job())
 
     assert isinstance(outcome, Failure)
     assert outcome.failure_class is FailureClass.WORK
@@ -259,7 +267,7 @@ async def test_no_criteria_checked_fails_as_work(tmp_path: Path) -> None:
     )
 
     job = _job(payload={"verification": {"commands": (), "criteria_checked": ()}})
-    outcome = await handler.handle(job)
+    outcome = await handle_leased(handler, job)
 
     assert isinstance(outcome, Failure)
     assert outcome.failure_class is FailureClass.WORK
@@ -283,7 +291,7 @@ async def test_reviewer_rejection_fails_as_work(tmp_path: Path) -> None:
     )
 
     job = _job(requirement={"implementer_engine_id": "claudeloop"})
-    outcome = await handler.handle(job)
+    outcome = await handle_leased(handler, job)
 
     assert outcome == Failure(FailureClass.WORK, "diff review did not approve this work item")
 
@@ -305,7 +313,9 @@ async def test_reviewer_rejection_with_exit_code_uses_engine_attribution(tmp_pat
         clock=FixedClock(),
     )
 
-    outcome = await handler.handle(_job(requirement={"implementer_engine_id": "claudeloop"}))
+    outcome = await handle_leased(
+        handler, _job(requirement={"implementer_engine_id": "claudeloop"})
+    )
 
     assert outcome == Failure(
         FailureClass.ENGINE,
@@ -337,7 +347,7 @@ async def test_a_reviewer_whose_backend_is_misconfigured_parks_rather_than_rejec
         clock=FixedClock(),
     )
 
-    outcome = await handler.handle(_job(requirement={"implementer_engine_id": "qwenloop"}))
+    outcome = await handle_leased(handler, _job(requirement={"implementer_engine_id": "qwenloop"}))
 
     assert isinstance(outcome, Park)
     assert outcome.request.kind == "engine_misconfigured"
@@ -430,7 +440,7 @@ async def test_first_gate_failure_raises_a_finding_and_enqueues_a_repair(tmp_pat
         repair=_repair_policy([]),
     )
 
-    outcome = await handler.handle(_job())
+    outcome = await handle_leased(handler, _job())
 
     from vibey.application.worker import Defer
 
@@ -467,7 +477,7 @@ async def test_gate_failure_with_a_repair_in_flight_only_defers(tmp_path: Path) 
         repair=_repair_policy([open_finding]),
     )
 
-    outcome = await handler.handle(job)
+    outcome = await handle_leased(handler, job)
 
     assert isinstance(outcome, Defer)
     assert "in flight" in outcome.detail
@@ -495,7 +505,7 @@ async def test_exhausted_repair_rounds_park_for_a_human(tmp_path: Path) -> None:
         repair=_repair_policy(history),
     )
 
-    outcome = await handler.handle(job)
+    outcome = await handle_leased(handler, job)
 
     assert isinstance(outcome, Park)
     assert outcome.request.kind == "verify_repair_exhausted"
@@ -526,7 +536,7 @@ async def test_success_resolves_this_items_open_findings(tmp_path: Path) -> None
         repair=_repair_policy(events),
     )
 
-    outcome = await handler.handle(job)
+    outcome = await handle_leased(handler, job)
 
     assert isinstance(outcome, Success)
     resolutions = [e for e in ledger.recorded if e.kind == "FindingResolved"]
@@ -545,7 +555,7 @@ async def test_without_a_repair_policy_gate_failure_stays_a_plain_failure(
         clock=FixedClock(),
     )
 
-    outcome = await handler.handle(_job())
+    outcome = await handle_leased(handler, _job())
 
     assert isinstance(outcome, Failure)
     assert outcome.failure_class is FailureClass.WORK
@@ -596,21 +606,21 @@ async def test_an_answered_gate_can_grant_more_repair_rounds(tmp_path: Path) -> 
         )
 
     # Without a grant: parks, and the prompt advertises the contract.
-    parked = await _handler_with(policy).handle(job)
+    parked = await handle_leased(_handler_with(policy), job)
     assert isinstance(parked, Park)
     assert '"max_rounds"' in parked.request.prompt
 
     # The human answers the raised gate with a grant; the retry proceeds.
     gate = await gates.raise_gate(job.project_id, job.id, parked.request)
     await gates.answer(gate.gate_id, answer={"max_rounds": 6}, answered_by="operator")
-    retried = await _handler_with(policy).handle(job)
+    retried = await handle_leased(_handler_with(policy), job)
     assert isinstance(retried, Defer)
     assert "repair" in retried.detail
 
     # A grant at or below the burned rounds still parks (pairs form too).
     regate = await gates.raise_gate(job.project_id, job.id, parked.request)
     await gates.answer(regate.gate_id, answer={"answers": {"max_rounds": "2"}}, answered_by="op")
-    still_parked = await _handler_with(policy).handle(job)
+    still_parked = await handle_leased(_handler_with(policy), job)
     assert isinstance(still_parked, Park)
 
 
@@ -633,7 +643,9 @@ async def test_a_failing_gate_on_a_solo_pool_records_no_waiver(tmp_path: Path) -
         ),
     )
 
-    outcome = await handler.handle(_job(requirement={"implementer_engine_id": "claudeloop"}))
+    outcome = await handle_leased(
+        handler, _job(requirement={"implementer_engine_id": "claudeloop"})
+    )
 
     assert isinstance(outcome, Failure)
     assert outcome.failure_class is FailureClass.WORK
@@ -664,7 +676,9 @@ async def test_a_rejected_self_review_on_a_solo_pool_records_no_waiver(tmp_path:
         ),
     )
 
-    outcome = await handler.handle(_job(requirement={"implementer_engine_id": "claudeloop"}))
+    outcome = await handle_leased(
+        handler, _job(requirement={"implementer_engine_id": "claudeloop"})
+    )
 
     assert outcome == Failure(FailureClass.WORK, "diff review did not approve this work item")
     assert [e for e in ledger.recorded if e.kind == "DecisionRecorded"] == []
@@ -736,7 +750,9 @@ async def test_a_capacity_rejected_review_defers_as_capacity_not_a_work_failure(
         clock=FixedClock(),
     )
 
-    outcome = await handler.handle(_job(requirement={"implementer_engine_id": "claudeloop"}))
+    outcome = await handle_leased(
+        handler, _job(requirement={"implementer_engine_id": "claudeloop"})
+    )
 
     assert outcome == Defer(
         retry_at=FixedClock().now() + timedelta(minutes=5),
@@ -780,7 +796,7 @@ async def test_a_capacity_rejected_self_review_writes_no_waiver_and_resolves_not
         ),
     )
 
-    outcome = await handler.handle(job)
+    outcome = await handle_leased(handler, job)
 
     assert isinstance(outcome, Defer)
     assert outcome.capacity is True
@@ -806,7 +822,9 @@ async def test_the_capacity_backoff_is_configurable(tmp_path: Path) -> None:
         capacity_backoff=timedelta(minutes=17),
     )
 
-    outcome = await handler.handle(_job(requirement={"implementer_engine_id": "claudeloop"}))
+    outcome = await handle_leased(
+        handler, _job(requirement={"implementer_engine_id": "claudeloop"})
+    )
 
     assert isinstance(outcome, Defer)
     assert outcome.retry_at == FixedClock().now() + timedelta(minutes=17)
@@ -827,7 +845,9 @@ async def test_a_review_past_its_wall_clock_limit_fails_as_the_reviewers(tmp_pat
         run_deadline=timedelta(milliseconds=50),
     )
 
-    outcome = await handler.handle(_job(requirement={"implementer_engine_id": "claudeloop"}))
+    outcome = await handle_leased(
+        handler, _job(requirement={"implementer_engine_id": "claudeloop"})
+    )
 
     assert isinstance(outcome, Failure)
     assert outcome.failure_class is FailureClass.ENGINE
@@ -889,7 +909,7 @@ def _handler_for(tmp_path: Path, history: list, *, stderr: str, gates=None, ledg
 async def _failure_text(tmp_path: Path, stderr: str) -> str:
     """The text this handler records for a gate failure, so the tests need not guess it."""
     ledger = FakeLedger()
-    await _handler_for(tmp_path, [], stderr=stderr, ledger=ledger).handle(_job())
+    await handle_leased(_handler_for(tmp_path, [], stderr=stderr, ledger=ledger), _job())
     (raised,) = [e for e in ledger.recorded if e.kind == "FindingRaised"]
     return str(raised.payload["text"])
 
@@ -917,7 +937,7 @@ async def test_a_failure_two_repairs_left_unchanged_parks_instead_of_repairing_a
         tmp_path, _unchanged_history(job, text), stderr=NEXT_MISSING, ledger=ledger, jobs=jobs
     )
 
-    outcome = await handler.handle(job)
+    outcome = await handle_leased(handler, job)
 
     assert isinstance(outcome, Park)
     assert outcome.request.kind == "repair_not_converging"
@@ -940,7 +960,7 @@ async def test_a_failure_that_keeps_changing_is_still_repaired(tmp_path: Path) -
     ledger = FakeLedger()
     handler = _handler_for(tmp_path, history, stderr=NEXT_MISSING, ledger=ledger)
 
-    outcome = await handler.handle(job)
+    outcome = await handle_leased(handler, job)
 
     assert isinstance(outcome, Defer) and "repair" in outcome.detail
     assert [e for e in ledger.recorded if e.kind == "FindingRaised"]
@@ -953,7 +973,7 @@ async def test_one_unchanged_repair_is_not_yet_a_reason_to_stop(tmp_path: Path) 
     text = await _failure_text(tmp_path, NEXT_MISSING)
     handler = _handler_for(tmp_path, _unchanged_history(job, text, count=1), stderr=NEXT_MISSING)
 
-    assert isinstance(await handler.handle(job), Defer)
+    assert isinstance(await handle_leased(handler, job), Defer)
 
 
 async def test_a_persons_answer_gives_the_item_a_fresh_count(tmp_path: Path) -> None:
@@ -967,13 +987,17 @@ async def test_a_persons_answer_gives_the_item_a_fresh_count(tmp_path: Path) -> 
     history = _unchanged_history(job, text)
     gates = FakeHumanGateRepository()
 
-    parked = await _handler_for(tmp_path, history, stderr=NEXT_MISSING, gates=gates).handle(job)
+    parked = await handle_leased(
+        _handler_for(tmp_path, history, stderr=NEXT_MISSING, gates=gates), job
+    )
     assert isinstance(parked, Park) and parked.request.kind == "repair_not_converging"
 
     gate = await gates.raise_gate(job.project_id, job.id, parked.request)
     await gates.answer(gate.gate_id, answer={}, answered_by="operator")
 
-    resumed = await _handler_for(tmp_path, history, stderr=NEXT_MISSING, gates=gates).handle(job)
+    resumed = await handle_leased(
+        _handler_for(tmp_path, history, stderr=NEXT_MISSING, gates=gates), job
+    )
 
     assert isinstance(resumed, Defer) and "repair" in resumed.detail
 
@@ -987,6 +1011,6 @@ async def test_findings_with_no_recorded_text_never_count_as_unchanged(tmp_path:
         finding_id = f"f_verify_item-1_{index:08d}"
         history.append(_raised_with_text(job.cycle, finding_id, ""))
         history.append(_resolved(job.cycle, finding_id))
-    outcome = await _handler_for(tmp_path, history, stderr="").handle(job)
+    outcome = await handle_leased(_handler_for(tmp_path, history, stderr=""), job)
 
     assert not (isinstance(outcome, Park) and outcome.request.kind == "repair_not_converging")
