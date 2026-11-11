@@ -225,7 +225,8 @@ minimum_coverage = 100
 # with the base moving underneath -- which is how twelve open pull requests came to have
 # ten unmergeable. SQUASH because feature pull requests squash into develop (ADR-0028);
 # ALLGREEN because a group that merges on its head alone can land a member that was never
-# green. Takes effect when the operator runs `vibey-gh reconcile` (ADR-0036).
+# green. Takes effect when `vibey-gh rulesets` runs: by the operator, or automatically by
+# repository-profile.yml after a successful Release surfaces run (ADR-0036).
 [rulesets.integration.merge_queue]
 enabled = true
 
