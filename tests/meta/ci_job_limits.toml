@@ -31,6 +31,13 @@ default_timeout_minutes = 15
 timeout_minutes = 10
 basis = "measured"
 
+[jobs.plan]
+# unmeasured until its first run (SP1-B, report-only). One Linux job: a checkout, `pip install
+# -e` of the dependency-free vibey-gh and one git diff; the target is under a minute, so 10 is
+# the rule's floor and generous.
+timeout_minutes = 10
+basis = "unmeasured"
+
 [jobs.lint]
 # unmeasured, set from the work it does, revisit after the first runs. It repeats the setup
 # and runs mypy, ruff, lint-imports, the TypeScript check and the corpus index: the old
