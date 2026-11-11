@@ -2,236 +2,265 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Stop running every one of the 47 jobs on every PR. A feature PR into `develop` runs the
-changed areas on a small matrix; the full matrix runs at promotion (develop to main), on the
-merge queue, and nightly on the develop tip.
+**Goal:** Stop running every one of the 47 jobs on every PR. A feature PR into `develop` runs only
+what its diff can affect, on a small matrix; the full matrix runs at the merge queue, at promotion
+(develop to main), on push to `main` and, once the operator approves it, nightly on the develop tip.
 
-**Architecture:** Three pieces, each landing and reverting on its own: (1) a tested `vibey-gh`
-command that turns a diff into changed areas from a TOML map; (2) a `plan` job in `ci.yml` that
-runs it and publishes the areas and a tier as job outputs, still skipping NOTHING (report-only);
-(3) the jobs consume the outputs: job-level `if:` for areas, and matrices computed with
-`fromJSON` so one definition serves a small PR tier and the full tier. Piece 3 is the only one
-that changes what runs.
+**Architecture:** Four pieces that land and revert on their own: (1) a tested `vibey-gh` command
+that turns a diff into changed areas and tier from a TOML map; (2) a `plan` job in `ci.yml` that
+publishes the areas, the tier and ready-made matrices as job outputs and skips NOTHING; (3) the jobs
+consume the outputs through job-level `if:` and `fromJSON` matrices; (4) the nightly, operator-gated.
 
 **Tech Stack:** Python 3.12 (`vibey_gh`), GitHub Actions YAML (`fromJSON`, job outputs, job-level
-`if:`), pytest meta tests.
+`if:` and `continue-on-error`), pytest meta tests.
 
-**Spec:** `docs/superpowers/plans/2026-11-10-vibey-optimization-program.md` (SP1: CI-F, CI-G),
-operator decisions of 2026-11-10 (develop push: core + nightly extended; PR matrix reduced).
-Evidence: SP0's baseline (`docs/architecture/evidence/ci-cost-baseline-*.json`) and SP1-A's
-measured job durations (`tests/meta/ci_job_limits.toml`).
+**Spec:** `docs/superpowers/plans/2026-11-10-vibey-optimization-program.md` (SP1: CI-F, CI-G) and the
+operator decisions of 2026-11-10 (develop push: core plus nightly extended; PR matrix reduced).
+Evidence: `docs/architecture/evidence/ci-cost-baseline-*.json`, `tests/meta/ci_job_limits.toml`.
+
+This plan was critiqued before any implementation; its first draft had these defects, now fixed
+below: a failed `plan` job would have skipped the required `gates` and `noloss` (a skipped required
+check passes); `docs`, `tools` and `deploy` changes were allowed to skip root `gates` although 67, 18
+and 23 root test files read those trees; "covers every tracked file" contradicted "unmapped means
+full"; four existing meta tests read a literal matrix; an empty `tools` matrix would abort the run.
 
 ## Global Constraints
 
-- **A skipped job must still satisfy its required check.** Required checks are matched by NAME.
-  A job skipped at job level reports `skipped` under its template name; a MATRIX job skipped
-  before expansion reports the unexpanded name (`VS Code extension (${{ matrix.os }})`), so the
-  two required VS Code checks would never appear. Task 3 gives those two a safe path (see its
-  step 4) and a meta test pins it.
-- A skipped required check counts as PASSING on GitHub, so every skip rule must be a function of
-  the diff only, never of an upstream job's failure. `ci-result` (SP1-A) stays the catch-all.
-- No workflow-level `paths:` filter (a workflow that does not run leaves required checks
-  "Expected" forever). The skipping is job-level `if:` driven by the `plan` job.
-- The full matrix is NEVER lost, only moved: it must run on (a) `merge_group`, (b) pull requests
-  into `main`, (c) push to `main`, (d) a nightly schedule on the develop tip, (e) any change to
-  `ci.yml`, `pyproject.toml`, `uv.lock`, `.node-version`, `package-lock.json` or the area map
-  itself (`full`).
-- Area membership is declared in TOML (`.github/ci-areas.toml`), read by tested code; no
-  path logic in inline bash. A changed file that matches NO area forces `full` (fail safe).
-- Job ids and check names do not change except where a task says so. No ruleset or required
-  check is changed by this plan; if one must change, stop and ask the operator (the ruleset also
-  auto-applies after a successful develop Release: see the memory note on the apply chain).
-- Every `${{ }}` reaches a shell through `env:`. Commits: Conventional Commits ending
+- **A skipped required check passes on GitHub, so skipping must depend on the DIFF only.** Any job
+  whose result is a REQUIRED check, or that guards one, is skipped only by an `if:` over
+  `needs.plan.outputs.*`; the `plan` job itself can never cause a skip: it runs with job-level
+  `continue-on-error: true`, its FIRST step writes `full=true`, `tier=full` and default full matrices
+  to `$GITHUB_OUTPUT`, and later steps overwrite them. A `plan` failure, timeout or cancellation
+  therefore yields `full`. A meta test proves every dependant's `if:` evaluates true when the outputs
+  are the defaults. This replaces the unworkable "treat a failed plan as full" wording of the first
+  draft: GitHub adds an implicit `success()` to any job with `needs`, so a dependant of a FAILED job is
+  skipped before its `if:` is read; `continue-on-error` is what keeps `plan` from ever failing.
+  **Unproven until Task 2 step 5:** that a job-level `continue-on-error` job reports `success` to its
+  dependants and keeps the outputs an earlier step wrote after a later step fails, times out or is
+  cancelled, is GitHub's documented behaviour but has NOT been observed here. If step 5 shows otherwise,
+  stop: the design needs a different guard (for example computing the tier inside each dependant) before
+  anything is allowed to skip.
+- No job reads another job's `result` in an `if:`, except `lint` and `uv-lock` (the existing implicit
+  `success()` chain). No job uses `always()`: a `lint` failure must still skip the heavy jobs.
+- **Root `gates` is the one suite that reads the whole repository** (67 root test files read `docs/`,
+  65 `scripts/`, 23 `deploy/`, 18 the tenants, 10 `clients/`). It therefore runs on EVERY diff except
+  one that touches nothing in those trees (in practice: always). Only `noloss`, `postgres-compatibility`,
+  `image`, `cluster-smoke`, the tenant matrix and the client jobs may skip by area.
+- `Lint and static gates`, `uv-lock`, `plan` and `ci-result` always run.
+- No workflow-level `paths:` filter. No ruleset or required-check change in this plan: if one is
+  needed, stop and ask the operator (a ruleset also auto-applies after a successful develop Release).
+- The full matrix is never lost, only moved: it runs on `merge_group`, on `pull_request` into `main`,
+  on `push` to `main`, on `workflow_dispatch`, and on any change to `.github/**`, `scripts/**`,
+  `pyproject.toml`, `uv.lock`, `.node-version`, `package.json`, `package-lock.json`, `.importlinter`,
+  `.python-version`, `.vibey-gh.toml`, `design/**`, `research/**`, `changelog.d/**`, the agent trees
+  (`.claude/**`, `.agent*/**`, `.cursor/**`, `.githooks/**`, `.vibey/**`) and the area map.
+  Anything that matches no area is `full` (fail safe); the config test asserts every tracked file is
+  either mapped or covered by `[full]`, so an unmapped file is a defect found by a test, not a runtime
+  surprise.
+- Area membership is TOML read by tested code, never inline bash. The area map and the matrices are
+  each ONE source (`.github/ci-areas.toml`, `.github/ci-matrices.toml`).
+- Job ids and check names do not change, except the two VS Code jobs in Task 3 step 4.
+- Every `${{ }}` reaches a shell through `env:`. Commits are Conventional Commits ending
   `Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>`.
-- The nightly schedule is a NEW trigger: scheduled workflows are currently disabled
-  (`disabled_manually`), and a schedule runs only on the default branch. Task 4 is therefore
-  operator-gated and is not started without a yes.
+- The nightly is a NEW scheduled trigger and every scheduled workflow is currently
+  `disabled_manually`; Task 4 is operator-gated.
 
 ## Review Focus
 
-1. **Fail safe.** An unmapped file, an empty diff, a diff that cannot be computed (shallow
-   clone, force-push, first push), or a `plan` job failure results in `full`, never in skipping.
-2. **Required checks never go missing.** On a docs-only PR every required check is either run or
-   `skipped` under its exact required name; the two VS Code names in particular.
-3. **A moved matrix row still runs somewhere.** Every row removed from the PR tier appears in the
-   promotion/merge-queue/nightly tier, and a meta test proves the union of tiers equals today's
-   full set (no row silently dropped).
-4. **The plan job is cheap and boring.** One Linux job, seconds, no checkout of dependencies.
-5. **Stale `merge_group` / `pull_request` event shapes**: `github.event.pull_request.base.sha`
-   does not exist on `merge_group` or `push`; each event computes its base explicitly.
-6. **The event field names are NOT verified by tooling.** `actionlint` does not validate
-   `github.event.*` property names (a control probe with a deliberately fake field passed), so
-   `github.event.merge_group.base_sha` / `head_sha` rest on GitHub's documentation alone. An empty
-   or wrong value must widen to `full` (Review Focus 1), never skip, and the FIRST merge-queue run
-   of Task 2's `plan` job is the proof: read its job summary and record the base and head it used.
-   Until that run exists, Task 3 must not merge.
+1. **Fail safe.** An unmapped file, an empty diff, a diff that cannot be computed, a failed or timed-out
+   `plan`, a missing output, or an event the code does not recognise results in `full`.
+2. **Required checks never go missing.** On every kind of PR each required check is run or reported
+   `skipped` under its exact name; the two VS Code names in particular.
+3. **A moved matrix row still runs somewhere.** Every row the PR tier drops is in the full tier, and the
+   four existing matrix-reading meta tests, repointed at the full tier, are the permanent guard.
+4. **`plan` is cheap and boring**: one Linux job, installs only `vibey-gh`, target under a minute.
+5. **No empty matrix ever reaches `strategy`**: an empty row set is turned into a skipped job by a
+   boolean output, never into `fromJSON` of an empty `include`.
+6. **Event field names are NOT verified by tooling** (`actionlint` accepted a deliberately fake
+   `github.event.merge_group` field). `merge_group.base_sha`/`head_sha` rest on documentation, and the
+   repository has NEVER had a `merge_group` run (`gh run list --event merge_group` is empty for every
+   workflow). The first merge-queue run of Task 2's `plan` job is the proof; read its summary and record
+   the base and head it used. Task 3 must not merge before that, and Task 2 must not be admin-merged.
 
 ---
 
-### Task 1: `vibey-gh ci-areas`: a diff becomes changed areas, from TOML
+### Task 1: `vibey-gh ci-areas` and `ci-matrix`: a diff becomes areas, tier and matrices
 
 **Files:**
-- Create: `.github/ci-areas.toml`
-- Create: `src/vibey_tools/gh/vibey_gh/ci_areas.py`,
-  `src/vibey_tools/gh/vibey_gh/interfaces/ci_areas_interface.py`
-- Modify: `src/vibey_tools/gh/vibey_gh/cli.py` (register the subcommand; follow how a neighbour such as
-  `branch-health` or `rulesets` is registered)
+- Create: `.github/ci-areas.toml`, `.github/ci-matrices.toml`
+- Create: `src/vibey_tools/gh/vibey_gh/ci_areas.py`, `src/vibey_tools/gh/vibey_gh/interfaces/ci_areas_interface.py`
+- Modify: `src/vibey_tools/gh/vibey_gh/cli.py` (register both subcommands the way `rulesets` is registered)
 - Test: `src/vibey_tools/gh/test/test_ci_areas.py`
 
 **Interfaces:**
 - Produces:
-  - `CiAreasInterface` (Protocol): `classify(self, paths: Sequence[str]) -> AreaDecision`.
   - `AreaDecision` (frozen dataclass): `areas: frozenset[str]`, `full: bool`, `reasons: tuple[str, ...]`.
-  - `CiAreas(config: Mapping[str, Any])` implementing it.
-  - CLI: `vibey-gh ci-areas --base <sha> --head <sha> [--event <name>] [--format github-output|json]`;
-    it runs `git diff --name-only <base> <head>` through the family's existing command runner
-    (reuse the runner in `vibey_gh`; do not call subprocess ad hoc), and prints either
-    `areas=<json list>`, `full=<true|false>`, `tier=<pr|full>` lines for `$GITHUB_OUTPUT`, or JSON.
-- Config shape (`.github/ci-areas.toml`):
-  `[areas.<name>] paths = [globs]` for: `python` (src/vibey/**, tests/**, pyproject.toml excluded:
-  those are `full`), `tools` (src/vibey_tools/**, src/vibey_runners/**), `vscode`
-  (clients/vscode/**, packages/vibey-core/**), `app` (clients/app/**, packages/**), `krypton_app`
-  (clients/krypton-app/**), `desktop` (clients/desktop/**), `deploy` (deploy/**, Dockerfile paths),
-  `docs` (docs/**, *.md outside src, mkdocs/properdocs config: docs-only). `[full] paths` = the
-  always-full triggers listed in Global Constraints. `[events] full = ["merge_group", "push-main",
-  "pull_request-main"]`.
+  - `CiAreasInterface` (Protocol): `classify(self, paths: Sequence[str], *, event: str, base_ref: str) -> AreaDecision`
+    and `matrix(self, job: str, decision: AreaDecision) -> Mapping[str, Any]`.
+  - `CiAreas(areas: Mapping[str, Any], matrices: Mapping[str, Any])` implementing it.
+  - CLI `vibey-gh ci-areas --base <sha> --head <sha> --event <name> --base-ref <ref> [--format github-output|json]`:
+    runs `git diff --name-only --no-renames -z <base>...<head>` (three-dot, so a PR behind its base is not
+    charged with the base's newer changes) through the family's existing command runner (do not call
+    `subprocess` ad hoc), and prints for `$GITHUB_OUTPUT`: `areas=<json list>`, `full=<true|false>`,
+    `tier=<pr|full>`, `tools_any`, `postgres_any`, `desktop_any`, and one `<job>_matrix=<json>` per matrix
+    job. Any failure of git, an unknown event, or an empty diff prints the all-full defaults and exits 0.
+  - `merge_group`, `workflow_dispatch`, `schedule`, a `pull_request` whose `--base-ref` is `main`, and a
+    `push` to `main` are `full` by event; the CLI learns the base branch from `--base-ref`.
+- Config (`.github/ci-areas.toml`): `[areas.<name>] paths = [fnmatch globs where ** crosses /]`:
+  - `python`: `src/vibey/**`, `tests/**`
+  - `tools`: `src/vibey_tools/**`, `src/vibey_runners/**`
+  - `vscode`: `clients/vscode/**`; `packages/vibey-core/**` maps to `vscode` AND `app` (a core change
+    affects both consumers); `app`: `clients/app/**`; `krypton_app`: `clients/krypton-app/**`
+  - `desktop`: `clients/desktop/**`
+  - `deploy`: `deploy/**`
+  - `docs`: `docs/**`, `docs-src/**`, `docs-theme/**`, `properdocs.yml`, and the ROOT markdown by
+    exact name only: `README.md`, `CONTRIBUTING.md`, `SECURITY.md`, `SUPPORT.md`, `CHANGELOG.md`,
+    `CLAUDE.md`, `AGENTS.md`, `GEMINI.md`
+  - `[full] paths`: the always-full list in Global Constraints.
+- Config (`.github/ci-matrices.toml`): per matrix job (`tools`, `postgres-compatibility`, `desktop`) a
+  `full` row list (exactly today's rows, copied from `ci.yml` at the base commit) and a `pr` row list.
+  `tools` PR tier: each of the 7 packages at Python 3.12 on ubuntu (7 rows), filtered to the packages whose
+  directory changed; when the `tools` area changed only through a path that no package owns, or the diff is
+  `python`-only, the rule is: **a `python`-area-only PR runs all 7 PR-tier rows** (the tenants depend on the
+  root package), a `tools`-area PR runs the rows of the changed packages (a path under `src/vibey_tools/gh`
+  selects `vibey-gh`, and so on; an unowned path under `src/vibey_tools` or `src/vibey_runners` selects all
+  7). `postgres-compatibility` PR tier: 14 and 18. `desktop` PR tier: ubuntu only.
 
-- [ ] **Step 1: Write the failing tests** (names and assertions):
-  - `test_a_docs_only_diff_yields_only_the_docs_area`: `["docs/guides/x.md"]` gives `{"docs"}`, `full False`.
-  - `test_a_python_source_change_yields_python`; `test_a_tenant_change_yields_tools`;
-    `test_a_vscode_change_yields_vscode_and_core_consumers` (core change maps to `vscode` and `app`).
-  - `test_each_always_full_path_forces_full`: parametrised over `.github/workflows/ci.yml`, `pyproject.toml`,
-    `uv.lock`, `.node-version`, `package-lock.json`, `.github/ci-areas.toml`.
-  - `test_an_unmapped_file_forces_full_with_a_reason`: `["some/new/dir/x.bin"]` gives `full True` and the
-    reason names the path (Review Focus 1).
-  - `test_an_empty_diff_forces_full`: `[]` gives `full True` (a diff that could not be computed must not skip).
-  - `test_event_forces_full`: parametrised over `merge_group` and a PR into main.
-  - `test_the_toml_in_the_repository_loads_and_covers_every_tracked_file`: load the real
-    `.github/ci-areas.toml`, list every tracked file (`git ls-files`) and assert each file matches at least
-    one area or `[full]`, otherwise fail naming up to 10 unmapped files (an unmapped tracked file is a
-    config defect, not a runtime surprise).
-  - `test_the_cli_prints_github_output_lines`: fake the runner returning a diff; assert the three lines.
-  - `test_the_cli_exits_zero_and_says_full_when_git_fails`: runner returns non-zero; output `full=true`,
-    exit 0 (the job must not fail; it must widen).
+- [ ] **Step 1: Write the failing tests:**
+  - `test_a_docs_only_diff_yields_docs_and_tier_pr` (`["docs/guides/x.md"]`).
+  - `test_python_source_yields_python`; `test_a_tenant_path_yields_tools_and_selects_only_its_package_row`
+    (`src/vibey_tools/gh/vibey_gh/x.py` yields the `vibey-gh` row only); `test_a_core_change_yields_vscode_and_app`.
+  - `test_each_always_full_path_forces_full`, parametrised over every entry of `[full]` and over
+    `.github/workflows/ci.yml`, `scripts/x.py`, `.claude/skills/x/SKILL.md`, `package.json`.
+  - `test_an_unmapped_file_forces_full_with_a_reason_naming_it`, `test_an_empty_diff_forces_full`.
+  - `test_each_full_event_forces_full`: `merge_group`, `workflow_dispatch`, `schedule`, a pull request into
+    `main`, a `push` with base ref `main`; and `test_an_unknown_event_forces_full`.
+  - `test_the_repository_config_covers_every_tracked_file`: load the real TOML files, list `git ls-files`,
+    assert every file is matched by an area or by `[full]`; the failure message names up to 10 files.
+  - `test_the_union_of_pr_and_full_rows_is_the_full_set_and_pr_rows_are_a_subset`.
+  - `test_an_empty_row_set_prints_the_any_output_false_and_no_matrix` (Review Focus 5).
+  - `test_the_cli_prints_github_output_lines_and_defaults_to_full_when_git_fails` (fake runner returns
+    non-zero: output is the all-full defaults, exit status 0), and `test_the_diff_command_is_three_dot_no_renames_z`.
 - [ ] **Step 2: Run them and confirm they fail** (`cd src/vibey_tools/gh && python -m pytest -q test/test_ci_areas.py`).
-- [ ] **Step 3: Implement** `CiAreas.classify` (glob matching with `fnmatch` semantics where `**` crosses
-  directories; first compute `full` triggers, then areas) and the CLI wrapper. Keep the tenant's own floors:
-  vibey-gh runs `mypy` (strict as of the SP4 plan; at least the current config) and its coverage gate:
-  every new line must be covered.
-- [ ] **Step 4: Run the tenant suite portion and its static gates** as the `vibey-gh` row of `ci.yml` runs them
-  (read the row; do not guess), plus ruff on the touched files.
-- [ ] **Step 5: Commit:** `git commit -m "feat(gh): turn a diff into changed CI areas from a declared map"`
+- [ ] **Step 3: Implement.** Keep the tenant's own gates (read the `vibey-gh` row of `ci.yml`): its static
+  gates and coverage floor; every new line is covered.
+- [ ] **Step 4: Run the tenant's suite and static gates as its `ci.yml` row runs them**, ruff on touched files.
+- [ ] **Step 5: Commit:** `git commit -m "feat(gh): turn a diff into changed CI areas, a tier and matrices from declared maps"`
 
 ---
 
-### Task 2: A report-only `plan` job
+### Task 2: A report-only `plan` job (merge it through the queue, never by admin)
 
 **Files:**
-- Modify: `.github/workflows/ci.yml` (add job `plan`; add it to `ci-result` needs; add its limit)
-- Modify: `tests/meta/ci_job_limits.toml`, `tests/meta/test_ci_result_covers_every_job.py` (the
-  gated/ungated partition: `plan` is neither; extend the test's classification rather than editing its logic)
+- Modify: `.github/workflows/ci.yml` (add job `plan`; add it to `ci-result.needs`)
+- Modify: `tests/meta/ci_job_limits.toml`, `tests/meta/test_ci_result_covers_every_job.py` (classification: `plan` is neither
+  gated nor ungated; extend the partition, do not weaken it)
 - Test: `tests/meta/test_ci_plan_job.py` (new)
 
 **Interfaces:**
-- Consumes: Task 1's `vibey-gh ci-areas`.
-- Produces: job `plan` (`name: CI plan`, ubuntu, `timeout-minutes: 10`, no `needs`) with outputs
-  `areas` (JSON list), `full` (`'true'|'false'`), `tier` (`'pr'|'full'`), computed per event:
-  `pull_request` base = `github.event.pull_request.base.sha`, head = `github.sha`'s merge ref parent as
-  GitHub provides (use `github.event.pull_request.head.sha`); `push` base = `github.event.before`
-  (all-zero before, i.e. a new branch, means `full`); `merge_group` base =
-  `github.event.merge_group.base_sha`, head = `github.event.merge_group.head_sha`; `workflow_dispatch`
-  and `schedule` mean `full`. Each value reaches the shell via `env:`.
-  It writes the decision and its reasons to `$GITHUB_STEP_SUMMARY`. **It skips nothing in this task:**
-  no other job reads its outputs yet.
+- Consumes: Task 1's CLI.
+- Produces: job `plan`, `name: CI plan`, ubuntu, `timeout-minutes: 10`, `continue-on-error: true`, no `needs`,
+  outputs `areas`, `full`, `tier`, `tools_any`, `postgres_any`, `desktop_any`, `tools_matrix`,
+  `postgres_matrix`, `desktop_matrix`. Step 1 writes the all-full defaults. Step 2 checks out with
+  `fetch-depth: 0` (a shallow clone cannot diff). Step 3 installs only `vibey-gh` from the checkout and runs
+  `vibey-gh ci-areas` with per-event arguments, all via `env:`:
+  `pull_request`: base `github.event.pull_request.base.sha`, head `github.event.pull_request.head.sha`,
+  base ref `github.event.pull_request.base.ref`; `push`: base `github.event.before` (an all-zero value
+  means a new branch: `full`), head `github.sha`, base ref `github.ref_name`; `merge_group`: base
+  `github.event.merge_group.base_sha`, head `github.event.merge_group.head_sha`; `workflow_dispatch` and
+  `schedule`: `full`. It writes the decision and its reasons to `$GITHUB_STEP_SUMMARY`.
+  **It skips nothing in this task: no other job reads its outputs yet.**
 
-- [ ] **Step 1: Write failing meta tests**: `plan` exists, has no `needs`, has the three outputs, has a
-  `timeout-minutes` entry in the limits TOML, is in `ci-result.needs`; its checkout uses `fetch-depth: 0`
-  or fetches the base commit (a shallow clone cannot diff: assert one of the two); no `${{` inside `run`;
-  the steps compute the base per event as specified (assert each of the four event branches by
-  executing the step's shell with sample `env:` and a stub `vibey-gh` on PATH that echoes its arguments:
-  the test checks the `--base`/`--head` arguments it received for each event).
+- [ ] **Step 1: Write the failing meta tests:** `plan` exists, has no `needs`, has `continue-on-error: true`, has the
+  listed outputs, has a limits entry, is in `ci-result.needs`; the first step writes the all-full defaults
+  (assert `full=true` and `tier=full` appear before the `vibey-gh` step); no `${{` in any `run`; the checkout is
+  `fetch-depth: 0`; and, by executing the step's shell with sample `env:` and a stub `vibey-gh` on `PATH` that echoes its
+  arguments, the arguments for each of the five events are exactly as specified (an all-zero `before` produces
+  the `full` path without calling git).
 - [ ] **Step 2: Run and confirm failure.**
-- [ ] **Step 3: Add the job.** Install only `vibey-gh` (not the whole workspace): `pip install` from the
-  checkout's `src/vibey_tools/gh` with its own dependencies, as the `tools` row does; measure and report
-  how long `plan` takes (target: under a minute).
-- [ ] **Step 4: Validate with `actionlint` and the meta suite.** Open the PR; its own run is the first
-  proof: the job summary must show the areas for this very PR (`ci`, `python` tests, `full` true because
-  `ci.yml` changed). State the observed values in the PR description.
-- [ ] **Step 5: Commit:** `git commit -m "ci: a plan job reports the changed areas and the tier, skipping nothing"`
+- [ ] **Step 3: Add the job.** Measure and report how long `plan` takes (target: under a minute).
+- [ ] **Step 4: Validate** with `actionlint` and the meta suite. Open the PR; its own run is the first proof: the job
+  summary must show `full` because `ci.yml` changed. Put the observed values in the PR description.
+- [ ] **Step 5: Prove the failure path.** Push a throwaway DRAFT branch (never merged) in which the `vibey-gh ci-areas` step is
+  forced to `exit 1`; record from the run that `plan` is reported with `continue-on-error`, that `needs.plan.outputs.full`
+  is `true`, and that `ci-result` is green. This is the evidence for the Global Constraint; without it Task 3 does not start.
+- [ ] **Step 6: Commit:** `git commit -m "ci: a plan job reports the changed areas and the tier and can never cause a skip"`
+- [ ] **Step 7: Merge through the merge queue, not by admin**, and record from the resulting `merge_group` run's `plan`
+  summary the base and head SHAs it used (Review Focus 6).
 
 ---
 
-### Task 3: Jobs consume the plan (this is the task that changes what runs)
+### Task 3: Jobs consume the plan (the only task that changes what runs)
 
 **Files:**
-- Modify: `.github/workflows/ci.yml` (job-level `if:` on area jobs; `fromJSON` matrices for `tools`,
-  `postgres-compatibility`, `desktop`; the VS Code path)
-- Create: `.github/ci-matrices.toml` (the PR-tier and full-tier rows, one source for both)
-- Modify: `src/vibey_tools/gh/vibey_gh/ci_areas.py` (a `matrix` method) and its CLI
-  (`vibey-gh ci-matrix --job <name> --tier <pr|full>` printing the JSON matrix), `test_ci_areas.py`
-- Test: `tests/meta/test_ci_tiers_keep_every_row.py` (new)
+- Modify: `.github/workflows/ci.yml` (job-level `if:`; `fromJSON` matrices; the VS Code jobs)
+- Modify: `tests/meta/test_postgres_support_matrix.py`, `tests/meta/test_tools_matrix_covers_every_package.py`,
+  `tests/meta/test_krypton_linux_flavors.py`, `tests/meta/test_supported_platforms_have_ci.py` (each reads a literal
+  `strategy.matrix` today; repoint them at the FULL rows in `.github/ci-matrices.toml`: they become the permanent
+  no-dropped-row guard)
+- Modify: `.github/workflows/automation-bootstrap.yml` (require `success`, not `skipped`, for `gates`)
+- Modify: `tests/meta/ci_job_limits.toml`, `tests/meta/test_ci_result_covers_every_job.py` (job ids for Task 3 step 4)
+- Create: `tests/meta/ci_matrix_snapshot.json`, `tests/meta/test_ci_tiers_keep_every_row.py`
 
 **Interfaces:**
-- Consumes: Task 2's outputs `areas`, `full`, `tier`; the existing matrix rows (listed in the parsed
-  `ci.yml` at the base commit: `tools` 24 rows, `postgres-compatibility` [14..18], `desktop` 4 rows).
-- Produces:
-  - **PR tier rows** (when `tier == pr`): `tools`: every package at Python 3.12 only, ubuntu (8 rows), and
-    only the packages whose area changed; `postgres-compatibility`: 14 and 18; `desktop`: ubuntu only.
-  - **Full tier rows**: exactly today's rows (the meta test compares them to the committed full set).
-  - Job-level `if:` per area: `krypton-app` (`krypton_app` or full), `vibey-core` and `app` (`vscode`/`app`
-    or full), `desktop` (`desktop` or full), `image`, `chart`, `cluster-smoke` (`deploy`, `python` or full),
-    `tools`/`tools-lint` (`tools`, `python` or full), `gates`/`noloss`/`postgres-compatibility` (`python` or
-    full). A docs-only PR therefore skips all of them and runs `uv-lock`, `lint`, `plan`, `ci-result`.
-    `lint` and `uv-lock` always run.
-  - A `docs` strict build job is OUT of scope here (queued in the master plan as CI-E).
+- Consumes: Task 2's outputs.
+- Produces, in `ci.yml`, with `needs: [..., plan]` added to each job below (keep the existing `needs`):
+  - `gates`: no area `if:` (always runs).
+  - `noloss`, `postgres-compatibility`: `if: needs.plan.outputs.full != 'false' || contains(fromJSON(needs.plan.outputs.areas), 'python')`
+    plus `tools`/`deploy`/`docs` do not trigger them. `postgres-compatibility` also needs `postgres_any != 'false'`.
+  - `tools`, `tools-lint`: `full != 'false' || tools or python in areas`; `tools` also `tools_any != 'false'`.
+  - `image`, `cluster-smoke`, `chart`: `full != 'false' || python or tools or deploy in areas` (the Dockerfile copies the
+    tenant sources, `deploy/docker/Dockerfile:135-144`).
+  - `krypton-app`: `krypton_app`; `vibey-core`, `app`: `vscode` or `app`; `desktop`: `desktop`; each also `full != 'false'`.
+  - A docs-only PR therefore runs `uv-lock`, `plan`, `lint`, `gates`, `ci-result` and the always-on checks, and skips the rest.
+  - Matrices: `strategy.matrix: ${{ fromJSON(needs.plan.outputs.<job>_matrix) }}` for `tools`, `postgres-compatibility`,
+    `desktop`, each guarded by its `<job>_any` output so an empty set never reaches `strategy`. `fail-fast` stays `false`;
+    every `name:` template is unchanged.
+- **Snapshot:** commit `tests/meta/ci_matrix_snapshot.json` generated from TODAY's `ci.yml` in a SEPARATE FIRST COMMIT, before
+  `ci.yml` is edited, so a regenerated snapshot cannot hide a dropped row; the ongoing guard is the four repointed tests.
 
-- [ ] **Step 1: Write the failing tests** `test_ci_tiers_keep_every_row.py`: (a) the union of PR-tier and
-  full-tier rows for each matrix job equals the rows in `ci.yml` at the base commit (read it with
-  `git show <merge-base>:.github/workflows/ci.yml`, or commit a snapshot `tests/meta/ci_matrix_snapshot.json`
-  generated once and kept: choose the snapshot, and say why); (b) every PR-tier row is a member of the
-  full tier (no row exists only in the PR tier); (c) each area job's `if:` references only `needs.plan.outputs`;
-  (d) no job's `if:` references `needs.<other>.result` (skip must depend on the diff only; Global
-  Constraints); (e) every job that gained an `if:` has `plan` in `needs`; (f) `plan` failing results in
-  `full` for dependants: assert the `if:` expressions treat an empty/failed plan output as full
-  (`needs.plan.outputs.full != 'false'`).
-- [ ] **Step 2: Run and confirm failure.**
-- [ ] **Step 3: Move the matrices** into `ci-matrices.toml` and generate each job's `matrix` with
-  `fromJSON(needs.plan.outputs.<job>_matrix)`; extend `plan` to emit `tools_matrix`, `postgres_matrix`,
-  `desktop_matrix` via `vibey-gh ci-matrix`. `strategy.fail-fast` stays `false`. Keep `name:` templates
-  exactly as they are.
-- [ ] **Step 4: The two required VS Code checks.** Their names are `VS Code extension (ubuntu-latest)` and
-  `(macos-latest)`. Decide and implement ONE of these, justify it in the report, and pin it with a meta test:
-  (A) the VS Code job is never skipped at job level: it always runs both rows, and the steps inside are
-  gated by `if:` so a non-VS-Code PR passes in seconds under the same names; or
-  (B) two fixed-name non-matrix jobs with those exact names, each skipped by `if:` (a skipped non-matrix job
-  reports its fixed name as `skipped`). Prefer (B) only if the meta test proves the check names are
-  byte-identical to the required ones. If neither can be shown to keep both names reporting, STOP and report.
-- [ ] **Step 5: First-run proof.** In the PR description, record for FOUR synthetic diffs what the plan job
-  produced and which jobs ran: a docs-only change, a `src/vibey/` change, a `clients/vscode/` change,
-  and a `ci.yml` change. Produce them by pushing four throwaway draft PRs from this branch (do not merge
-  them) or by running `vibey-gh ci-areas` locally against four constructed diffs and attaching the output:
-  state which you did. Report the job count and the macOS job count of each.
-- [ ] **Step 6: Commit:** `git commit -m "ci: skip unchanged areas and run the small matrix on pull requests"`
+- [ ] **Step 1: First commit, the snapshot** of the current matrices (`tools` 24 rows, `postgres` 14 to 18, `desktop` 4 rows,
+  `vscode` 2 rows). `git commit -m "test(meta): snapshot the CI matrices before they move"`.
+- [ ] **Step 2: Write the failing tests** `test_ci_tiers_keep_every_row.py`: (a) union of PR and full rows per matrix job equals the
+  snapshot; (b) every PR row is a member of the full rows; (c) every area `if:` references only `needs.plan.outputs`; (d) no
+  `if:` reads another job's `result` or uses `always()`; (e) every job that gained an `if:` has `plan` in `needs`; (f) with the
+  outputs set to the DEFAULTS (`full=true`) every dependant's `if:` evaluates true (evaluate the expressions with a small
+  evaluator for the subset of the expression language used, or assert the exact expression strings: choose and say why);
+  (g) `gates` has no area `if:`; (h) a `tools`-only diff does not skip `gates`; and repoint the four existing tests.
+- [ ] **Step 3: Run and confirm failure.**
+- [ ] **Step 4: The two REQUIRED VS Code checks, OPTION B.** Replace the matrix job with two non-matrix jobs whose `name:` is
+  byte-identical to the required names: `VS Code extension (ubuntu-latest)` and `VS Code extension (macos-latest)`; each is
+  skipped by `if: needs.plan.outputs.full != 'false' || vscode in areas`. A meta test asserts both literal names, that the job
+  ids in `ci_job_limits.toml`, `ci-result.needs` and the lint-gating partition are updated, and that artifact names are
+  unchanged. Evidence that a skipped MATRIX job reports its unexpanded template name: run 41614652612 (Release binaries,
+  mode=skip). If option B cannot keep both names byte-identical, STOP and report.
+- [ ] **Step 5: `automation-bootstrap.yml`:** require `conclusion == "success"` for `gates` (it accepts `skipped` today and then
+  runs `gh pr merge --admin`); a test asserts the jq expression.
+- [ ] **Step 6: Move the matrices** into `ci-matrices.toml`, add the `plan` outputs they need, edit `ci.yml`, and run the whole meta suite.
+- [ ] **Step 7: First-run proof.** For FOUR constructed diffs record the `vibey-gh ci-areas` output and which jobs a PR would run
+  and how many macOS jobs: docs-only, `src/vibey/`, `clients/vscode/`, `ci.yml`. State whether you ran four throwaway draft PRs
+  (preferred; never merged) or ran the command locally against constructed diffs.
+- [ ] **Step 8: Commit:** `git commit -m "ci: skip unchanged areas and run the small matrix on pull requests"`
 
 ---
 
-### Task 4 (OPERATOR-GATED, not started without a yes): the nightly full run
+### Task 4 (OPERATOR-GATED; not started without a yes): the nightly full run
 
-**Files:** `.github/workflows/ci-nightly.yml` (new) or a `schedule:` trigger on `ci.yml`.
-
-**Why gated:** every scheduled workflow in this repository is currently `disabled_manually`, and the
-reason for each is unknown (`docs/architecture/evidence/ci-workflow-state-*.md`). A new schedule makes a
-runner-minute commitment every night and a failure needs an owner. Before writing it, ask the operator:
-(a) whether scheduled workflows are meant to be disabled, (b) who owns a red nightly (the master plan says
-it opens an issue through `vibey-gh issue_automation` and carries a skip-if-the-tip-is-unchanged guard
-like `release-binaries.yml`'s plan step), (c) the hour. Until then the tiers in Task 3 give the full
-matrix at `merge_group`, promotion and `push` to `main`, which is the minimum the operator-approved design
-requires; the nightly adds same-day signal for develop pushes only.
+A `schedule:` trigger or `ci-nightly.yml`. **Ask first:** (a) whether scheduled workflows are meant to be disabled (every one is
+`disabled_manually` with no recorded reason), (b) who owns a red nightly (the master plan: it opens an issue through
+`vibey-gh issue_automation` and skips when the develop tip is unchanged since the last green nightly, like
+`release-binaries.yml`'s plan step), (c) the hour. Until then the full matrix runs at `merge_group`, promotion and
+`push` to `main`, the minimum the approved design requires.
 
 ---
+
+## Deliberate departures from the master plan
+
+The master SP1 table sends `merge_group` to the PR tier and a develop push to the reduced set. This plan sends `merge_group` to
+the FULL matrix (up to six macOS cells per queue entry): safer, because a PR tier that skips by area is proven green only
+against the diff, and the queue is where a combined group is proven. Revisit once the queue has run and its cost is measured.
 
 ## Not in this plan
 
-- Sharding the root suite, native arm64 image, caches, SHA pinning, SBOM, `docs` strict build (CI-E, CI-H to
-  CI-K of the master plan): later sub-plans, each editing `ci.yml` after this one lands.
-- Changing any required check or ruleset. If Task 3 step 4 needs `.vibey-gh.toml` to change, stop and ask.
+Sharding the root suite, native arm64, caches, SHA pinning, SBOM, a `docs` strict build job (CI-E, CI-H to CI-K): later sub-plans.
+Any required-check or ruleset change (ask the operator).
