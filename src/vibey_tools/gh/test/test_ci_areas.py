@@ -20,7 +20,7 @@ import yaml
 
 from vibey_gh.ci_areas import AreaDecision, CiAreas, CiAreasCommand
 from vibey_gh.cli import main
-from vibey_gh.interfaces.ci_areas_interface import CiAreasInterface
+from vibey_gh.interfaces.ci_areas_interface import CiAreasCommandInterface, CiAreasInterface
 from vibey_gh.interfaces.command_runner_interface import CommandResult, CommandRunnerInterface
 
 ROOT = Path(__file__).resolve().parents[4]
@@ -113,23 +113,99 @@ def test_python_source_yields_python() -> None:
     assert not decision.full
 
 
-def test_a_tenant_path_yields_tools_and_selects_only_its_package_row() -> None:
+def test_a_tenant_path_yields_tools_and_selects_its_row_and_its_dependants() -> None:
     decision = classify("src/vibey_tools/gh/vibey_gh/x.py")
     assert decision.areas == {"tools"}
     assert not decision.full
-    assert packages(decision) == ["vibey-gh"]
-    row = real().matrix("tools", decision)["include"][0]
-    assert (row["python"], row.get("os")) == ("3.12", None)
+    assert sorted(packages(decision)) == ["vibey-bootstrap", "vibey-gh"]
+    for row in real().matrix("tools", decision)["include"]:
+        assert (row["python"], row.get("os")) == ("3.12", None)
 
 
-@pytest.mark.parametrize(("package", "directory"), sorted(TOOLS_DIRS.items()))
-def test_every_package_directory_selects_exactly_its_own_row(package: str, directory: str) -> None:
-    assert packages(classify(f"{directory}/sub/x.py")) == [package]
+# A package's row plus every row that (transitively) installs it, derived from `install`.
+CLOSURES = {
+    "src/vibey_runners/common/x.py": {
+        "vibey-runners-common",
+        "vibey-gh",
+        "claudeloop",
+        "codexloop",
+        "vibey-bootstrap",
+    },
+    "src/vibey_tools/gh/vibey_gh/x.py": {"vibey-gh", "vibey-bootstrap"},
+    "src/vibey_tools/bootstrap/x.py": {"vibey-bootstrap"},
+    "src/vibey_tools/skills/x.py": {"vibey-skills"},
+    "src/vibey_runners/qwen/x.py": {"qwenloop"},
+    "src/vibey_runners/claude/x.py": {"claudeloop"},
+    "src/vibey_runners/codex/x.py": {"codexloop"},
+}
 
 
-def test_two_packages_select_two_rows() -> None:
+@pytest.mark.parametrize(("path", "expected"), sorted(CLOSURES.items()))
+def test_a_changed_package_selects_exactly_itself_and_what_installs_it(
+    path: str, expected: set[str]
+) -> None:
+    assert set(packages(classify(path))) == expected
+    assert len(packages(classify(path))) == len(expected)
+
+
+def test_the_derived_dependency_edges_are_exactly_the_known_set() -> None:
+    # A new tenant install edge must change this test knowingly.
+    assert real().dependencies("tools") == {
+        "vibey-gh": {"vibey-runners-common"},
+        "vibey-bootstrap": {"vibey-gh"},
+        "claudeloop": {"vibey-runners-common"},
+        "codexloop": {"vibey-runners-common"},
+        "vibey-skills": set(),
+        "qwenloop": set(),
+        "vibey-runners-common": set(),
+    }
+
+
+def tools_job(install_by_package: dict[str, Any]) -> CiAreas:
+    """A synthetic tools matrix: package -> (dir, install) with one row each."""
+    rows = [
+        {"package": name, "dir": f"d/{name}", **({"install": text} if text is not None else {})}
+        for name, text in install_by_package.items()
+    ]
+    job = {
+        "areas": ["tools"],
+        "owner_key": "dir",
+        "name_key": "package",
+        "full": rows,
+        "pr": rows,
+    }
+    areas = {"areas": {"tools": {"paths": ["d/**"]}}, "full": {"paths": []}}
+    return CiAreas(areas, {"tools": job})
+
+
+def test_a_row_whose_install_has_no_editable_path_is_a_leaf_never_an_error() -> None:
+    ci = tools_job({"a": 'pip install -e ".[dev]"', "b": "pip install pytest", "c": None})
+    assert ci.dependencies("tools") == {"a": set(), "b": set(), "c": set()}
+    assert ci.classify(["d/a/x.py"], **PR).owners == {"d/a"}
+
+
+def test_an_unparseable_or_unresolvable_install_widens_never_raises() -> None:
+    for bad in ('pip install -e "../x', "pip install -e", "pip install -e ../nowhere"):
+        ci = tools_job({"a": "pip install pytest", "b": bad})
+        # b cannot say what it depends on, so a change to ANY package selects it.
+        owners = ci.classify(["d/a/x.py"], **PR).owners
+        assert owners == {"d/a", "d/b"}, bad
+
+
+def test_a_job_without_owners_has_no_dependency_edges() -> None:
+    assert real().dependencies("postgres-compatibility") == {}
+    with pytest.raises(ValueError, match="no matrix job"):
+        real().dependencies("nope")
+
+
+def test_two_tenants_that_install_each_other_do_not_loop() -> None:
+    ci = tools_job({"a": "pip install -e ../b", "b": "pip install -e ../a"})
+    assert ci.classify(["d/a/x.py"], **PR).owners == {"d/a", "d/b"}
+
+
+def test_two_packages_select_the_union_of_their_closures() -> None:
     decision = classify("src/vibey_tools/gh/a.py", "src/vibey_runners/qwen/b.py")
-    assert sorted(packages(decision)) == ["qwenloop", "vibey-gh"]
+    assert sorted(packages(decision)) == ["qwenloop", "vibey-bootstrap", "vibey-gh"]
 
 
 def test_an_unowned_path_under_the_tools_trees_selects_every_pr_row() -> None:
@@ -138,14 +214,29 @@ def test_an_unowned_path_under_the_tools_trees_selects_every_pr_row() -> None:
     assert sorted(packages(decision)) == sorted(TOOLS_DIRS)
 
 
-def test_a_python_only_pr_runs_all_seven_tenant_rows() -> None:
+def test_a_python_only_pr_selects_no_tenant_row() -> None:
+    # No tenant imports the root package `vibey`; the full tier still runs them at the queue.
     decision = classify("src/vibey/x.py")
-    assert sorted(packages(decision)) == sorted(TOOLS_DIRS)
+    assert packages(decision) == []
+    assert real().outputs(decision)["tools_any"] == "false"
 
 
-def test_python_plus_a_tenant_still_runs_all_seven_rows() -> None:
-    decision = classify("src/vibey/x.py", "src/vibey_tools/gh/a.py")
-    assert sorted(packages(decision)) == sorted(TOOLS_DIRS)
+def test_python_plus_a_tenant_selects_only_the_tenants_closure() -> None:
+    decision = classify("src/vibey/x.py", "src/vibey_tools/skills/a.py")
+    assert packages(decision) == ["vibey-skills"]
+
+
+def test_a_docs_change_selects_the_vibey_gh_row_and_its_dependants() -> None:
+    # The vibey-gh suite reads root docs (README.md, docs/index.md, a runbook).
+    for path in ("docs/runbooks/sovereign-review-runner.md", "README.md", "docs/index.md"):
+        decision = classify(path)
+        assert decision.areas == {"docs"}
+        assert sorted(packages(decision)) == ["vibey-bootstrap", "vibey-gh"], path
+        assert real().outputs(decision)["tools_any"] == "true"
+
+
+def test_select_on_is_declared_in_the_toml() -> None:
+    assert real()._jobs["tools"]["select_on"] == {"docs": ["vibey-gh"]}
 
 
 def test_a_core_change_yields_vscode_and_app() -> None:
@@ -461,7 +552,6 @@ def test_the_union_of_pr_and_full_rows_is_the_full_set_and_pr_rows_are_a_subset(
         full, pr = toml_rows(job, "full"), toml_rows(job, "pr")
         assert pr, job
         assert all(row in full for row in pr), job
-        assert [*full, *[row for row in pr if row not in full]] == full, job
         assert len(full) > len(pr), job
     assert len(toml_rows("tools", "pr")) == 7
     assert {row["package"] for row in toml_rows("tools", "pr")} == set(TOOLS_DIRS)
@@ -508,7 +598,7 @@ def test_an_unknown_job_or_tier_is_refused() -> None:
 
 
 def test_an_empty_row_set_prints_the_any_output_false_and_no_matrix() -> None:
-    outputs = real().outputs(classify("docs/guides/x.md"))
+    outputs = real().outputs(classify("deploy/helm/vibey/values.yaml"))
     assert outputs["tools_any"] == outputs["postgres_any"] == outputs["desktop_any"] == "false"
     assert not [key for key in outputs if key.endswith("_matrix")]
     assert "include" not in "".join(outputs.values())
@@ -523,19 +613,81 @@ def test_outputs_are_the_plans_lines_in_order() -> None:
         "tools_any",
         "postgres_any",
         "desktop_any",
-        "tools_matrix",
         "postgres_matrix",
     ]
     assert outputs["areas"] == '["python"]'
     assert (outputs["full"], outputs["tier"]) == ("false", "pr")
+    assert outputs["tools_any"] == "false"
     assert json.loads(outputs["postgres_matrix"]) == {
         "include": [{"postgres": 14}, {"postgres": 18}]
     }
-    assert len(json.loads(outputs["tools_matrix"])["include"]) == 7
+    both = real().outputs(classify("src/vibey/x.py", "src/vibey_tools/gh/a.py"))
+    assert len(json.loads(both["tools_matrix"])["include"]) == 2
+
+
+ALL_AREAS = sorted({"python", "tools", "vscode", "app", "krypton_app", "desktop", "deploy", "docs"})
+
+
+def test_a_full_decision_always_prints_every_declared_area() -> None:
+    # Whatever made it full: git failing, an empty diff, an always-full path, an event.
+    cases = [
+        real().full_decision("x"),
+        real().classify([], **PR),
+        real().classify([".github/workflows/ci.yml"], **PR),
+        real().classify(["docs/x.md", "scripts/y.py"], **PR),
+        real().classify(["src/vibey/x.py"], event="merge_group", base_ref=""),
+    ]
+    for decision in cases:
+        assert decision.full
+        assert json.loads(real().outputs(decision)["areas"]) == ALL_AREAS
+
+
+def test_a_small_decision_prints_only_its_own_areas() -> None:
+    assert real().outputs(classify("docs/x.md"))["areas"] == '["docs"]'
+
+
+def test_an_always_full_path_prints_all_areas_through_the_cli(capsys) -> None:
+    _, lines, _ = run_areas(FakeRunner(stdout=".github/workflows/ci.yml\0"), capsys)
+    assert lines["full"] == "true"
+    assert json.loads(lines["areas"]) == ALL_AREAS
+
+
+def test_the_maps_are_validated_at_load_naming_the_key() -> None:
+    good = {"areas": {"docs": {"paths": ["docs/**"]}}, "full": {"paths": []}}
+    row = {"package": "p", "dir": "d/p"}
+
+    def job(**over: Any) -> dict[str, Any]:
+        base = {"areas": ["docs"], "owner_key": "dir", "name_key": "package"}
+        return {**base, "full": [row], "pr": [row], **over}
+
+    no_pr = {k: v for k, v in job().items() if k != "pr"}
+    cases: list[tuple[dict, dict, str]] = [
+        ({"areas": {"docs": "x"}, "full": {"paths": []}}, {}, r"\[areas.docs\] must be a table"),
+        ({"areas": {}, "full": ["x"]}, {}, r"\[full\] must be a table"),
+        ({"areas": ["x"], "full": {"paths": []}}, {}, r"\[areas\] must be a table"),
+        (good, {"j": job(areas=["ghost"])}, r"\[j\].*`areas`.*'ghost'"),
+        (good, {"j": job(select_all_on=["ghost"])}, r"\[j\].*`select_all_on`.*'ghost'"),
+        (good, {"j": job(select_on={"ghost": ["p"]})}, r"\[j\].*`select_on`.*'ghost'"),
+        (good, {"j": job(select_on={"docs": ["nope"]})}, r"\[j\].*`select_on`.*'nope'"),
+        (good, {"j": job(select_on={"docs": "p"})}, r"\[j\].*`select_on`"),
+        (good, {"j": no_pr}, r"\[j\] needs a `pr` list"),
+        (good, {"j": {"areas": ["docs"]}}, r"\[j\] needs a `full` list"),
+        (good, {"j": job(pr=[{"package": "p"}])}, r"\[j\].*`pr`.*`dir`"),
+        (good, {"j": job(full=[{"dir": "d/p"}], pr=[])}, r"\[j\].*`full`.*`package`"),
+        (good, {"j": job(owner_key="dir", name_key="nope")}, r"\[j\].*`nope`"),
+        (good, {"j": job(areas="docs")}, r"\[j\] `areas` must be a list"),
+        (good, {"j": {k: v for k, v in job().items() if k != "name_key"}}, r"\[j\].*`name_key`"),
+        ({**good, "events": ["x"]}, {}, r"\[events\] must be a table"),
+    ]
+    for areas, matrices, message in cases:
+        with pytest.raises(ValueError, match=message):
+            CiAreas(areas, matrices)
+    CiAreas(good, {"j": job(), "scalar": 1})  # a valid map loads; a non-table entry is not a job
 
 
 def test_the_implementation_honours_its_interface() -> None:
     assert isinstance(real(), CiAreasInterface)
+    assert isinstance(CiAreasCommand(), CiAreasCommandInterface)
 
 
 # ------------------------------------------------------------- the repository's own maps
@@ -605,11 +757,21 @@ def test_the_diff_command_is_three_dot_no_renames_z(capsys) -> None:
     ]
 
 
-def test_a_clean_docs_diff_prints_the_pr_tier_and_no_matrix_for_a_skipped_job(capsys) -> None:
+def test_a_clean_docs_diff_prints_the_pr_tier_and_only_the_gh_dependants(capsys) -> None:
     status, lines, err = run_areas(FakeRunner(stdout="docs/a.md\0docs/b/c.md\0"), capsys)
     assert status == 0
     assert lines["areas"] == '["docs"]'
     assert (lines["full"], lines["tier"]) == ("false", "pr")
+    assert (lines["postgres_any"], lines["desktop_any"]) == ("false", "false")
+    assert lines["tools_any"] == "true"
+    rows = json.loads(lines["tools_matrix"])["include"]
+    assert sorted(row["package"] for row in rows) == ["vibey-bootstrap", "vibey-gh"]
+    assert "postgres_matrix" not in lines and "desktop_matrix" not in lines
+    assert err == ""
+
+
+def test_a_deploy_only_diff_prints_no_matrix_at_all(capsys) -> None:
+    _, lines, err = run_areas(FakeRunner(stdout="deploy/helm/vibey/values.yaml\0"), capsys)
     assert (lines["tools_any"], lines["postgres_any"], lines["desktop_any"]) == ("false",) * 3
     assert not [key for key in lines if key.endswith("_matrix")]
     assert err == ""
@@ -662,7 +824,7 @@ def test_an_empty_diff_from_git_prints_the_full_defaults(capsys) -> None:
     status, lines, err = run_areas(FakeRunner(stdout=""), capsys)
     assert status == 0
     assert lines["full"] == "true" and lines["tier"] == "full"
-    assert lines["areas"] == "[]"
+    assert json.loads(lines["areas"]) == ALL_AREAS
     assert "diff is empty" in err
 
 
@@ -685,28 +847,48 @@ def test_the_json_format_prints_one_object_with_the_reasons(capsys) -> None:
     )
     document = json.loads(capsys.readouterr().out)
     assert status == 0
-    assert document["areas"] == ["docs"] and document["full"] is True and document["tier"] == "full"
+    assert document["areas"] == ALL_AREAS
+    assert document["full"] is True and document["tier"] == "full"
     assert document["reasons"] == ["mystery.bin is in no area and not on the always-full list"]
     assert document["outputs"]["tier"] == "full"
 
 
-def test_a_broken_declaration_is_loud_but_still_prints_the_full_defaults(tmp_path, capsys) -> None:
+def test_a_broken_map_widens_to_the_full_defaults_and_exits_zero(tmp_path, capsys) -> None:
     broken = tmp_path / "areas.toml"
     broken.write_text("[areas.docs]\npaths = 'not a list'\n[full]\npaths = []\n")
-    cases = [
-        (tmp_path / "missing.toml", MATRICES_TOML),
-        (broken, MATRICES_TOML),
-    ]
     garbled = tmp_path / "garbled.toml"
     garbled.write_text("this is = = not toml")
-    cases.append((AREAS_TOML, garbled))
-    for areas_path, matrices_path in cases:
-        status, lines, err = run_areas(
-            FakeRunner(stdout="docs/x.md\0"), capsys, paths=(ROOT, areas_path, matrices_path)
+    ghost = tmp_path / "ghost.toml"
+    ghost.write_text(
+        MATRICES_TOML.read_text(encoding="utf-8").replace(
+            'areas = ["desktop"]', 'areas = ["desktop", "no_such_area"]'
         )
-        assert status == 1
+    )
+    no_full = tmp_path / "nofull.toml"
+    no_full.write_text('[tools]\nareas = ["tools"]\n')
+    not_a_table = tmp_path / "areas-list.toml"
+    not_a_table.write_text('areas = ["docs"]\n[full]\npaths = []\n')
+    runner = FakeRunner(stdout="docs/x.md\0")
+    # The areas map is readable: every area name is still printed.
+    for matrices_path in (garbled, ghost, no_full):
+        status, lines, err = run_areas(runner, capsys, paths=(ROOT, AREAS_TOML, matrices_path))
+        assert status == 0
         assert (lines["full"], lines["tier"]) == ("true", "full")
+        assert json.loads(lines["areas"]) == ALL_AREAS
         assert "vibey-gh: ci-areas:" in err
+    # The areas map is the broken one: say so, and print what can still be said.
+    cases = ((tmp_path / "missing.toml", []), (broken, ["docs"]), (not_a_table, []))
+    for areas_path, names in cases:
+        status, lines, err = run_areas(runner, capsys, paths=(ROOT, areas_path, MATRICES_TOML))
+        assert status == 0
+        assert (lines["full"], lines["tier"]) == ("true", "full")
+        assert json.loads(lines["areas"]) == names
+        assert (lines["tools_any"], len(json.loads(lines["tools_matrix"])["include"])) == (
+            "true",
+            24,
+        )
+        assert "vibey-gh: ci-areas:" in err
+    assert runner.calls == []
 
 
 def test_ci_matrix_prints_one_tier_of_one_job(capsys) -> None:
@@ -783,7 +965,7 @@ def test_real_git_a_three_dot_diff_with_awkward_names_and_a_base_that_moved_on(
     assert "dir with space/café ünï.md is in no area" in captured.err
     assert "newer.py" not in captured.err
     lines = dict(line.split("=", 1) for line in captured.out.splitlines())
-    assert lines["areas"] == '["docs"]' and lines["full"] == "true"
+    assert json.loads(lines["areas"]) == ALL_AREAS and lines["full"] == "true"
 
     git(tmp_path, "checkout", "-q", "topic")
     git(tmp_path, "rm", "-q", "-r", "dir with space")
@@ -798,3 +980,43 @@ def test_real_git_a_three_dot_diff_with_awkward_names_and_a_base_that_moved_on(
     )
     out = capsys.readouterr().out
     assert clean == 0 and 'areas=["docs"]' in out and "full=false" in out and "tier=pr" in out
+
+
+def test_real_git_a_path_with_a_newline_can_never_inject_an_output_line(tmp_path, capsys) -> None:
+    git(tmp_path, "init", "-q", "-b", "develop")
+    git(tmp_path, "config", "commit.gpgsign", "false")
+    (tmp_path / "README.md").write_text("base\n")
+    git(tmp_path, "add", ".")
+    git(tmp_path, "commit", "-q", "-m", "base")
+    base = git(tmp_path, "rev-parse", "HEAD")
+    evil = "zz\nfull=false\ntier=pr\ntools_any=false.bin"
+    (tmp_path / evil).write_text("x\n")
+    git(tmp_path, "add", ".")
+    git(tmp_path, "commit", "-q", "-m", "a path with newlines")
+    status = CiAreasCommand().areas(
+        base=base,
+        head=git(tmp_path, "rev-parse", "HEAD"),
+        event="pull_request",
+        base_ref="develop",
+        fmt="github-output",
+        paths=(tmp_path, AREAS_TOML, MATRICES_TOML),
+    )
+    captured = capsys.readouterr()
+    assert status == 0
+    # With -z the name arrives whole (git without -z would quote it), it is judged unmapped,
+    # and it appears only on stderr: stdout holds one `key=value` line per output, once each.
+    assert f"{evil} is in no area" in captured.err
+    keys = [line.split("=", 1)[0] for line in captured.out.splitlines()]
+    assert keys == [
+        "areas",
+        "full",
+        "tier",
+        "tools_any",
+        "postgres_any",
+        "desktop_any",
+        "tools_matrix",
+        "postgres_matrix",
+        "desktop_matrix",
+    ]
+    assert "full=true" in captured.out.splitlines()
+    assert "full=false" not in captured.out.splitlines()

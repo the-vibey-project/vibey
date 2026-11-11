@@ -10,6 +10,7 @@ from __future__ import annotations
 
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
+from pathlib import Path
 from typing import Any, Protocol, runtime_checkable
 
 
@@ -63,5 +64,36 @@ class CiAreasInterface(Protocol):
         ...
 
     def outputs(self, decision: AreaDecision) -> dict[str, str]:
-        """The `$GITHUB_OUTPUT` pairs for `decision`, in the order they are printed."""
+        """The `$GITHUB_OUTPUT` pairs for `decision`, in the order they are printed.
+
+        A full decision prints every declared area, whatever made it full."""
+        ...
+
+    def dependencies(self, job: str) -> dict[str, set[str]]:
+        """Package -> the packages its rows install from the tree, derived from `install`."""
+        ...
+
+
+@runtime_checkable
+class CiAreasCommandInterface(Protocol):
+    """The two commands: print a change's decision, and print one tier of one matrix job.
+
+    A broken map widens `areas` to the full defaults and exits 0; only `matrix`, which has
+    no diff to be in doubt about, reports a broken map as a failure."""
+
+    def areas(
+        self,
+        *,
+        base: str,
+        head: str,
+        event: str,
+        base_ref: str,
+        fmt: str,
+        paths: tuple[Path, Path, Path],
+    ) -> int:
+        """Print the decision for `base...head`; any doubt prints the full defaults."""
+        ...
+
+    def matrix(self, *, job: str, tier: str, paths: tuple[Path, Path, Path]) -> int:
+        """Print `{"include": rows}` for one job at one tier."""
         ...

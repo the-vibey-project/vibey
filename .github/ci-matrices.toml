@@ -4,10 +4,19 @@
 # Per matrix job:
 #   output         the prefix of its `$GITHUB_OUTPUT` names (`<output>_any`, `<output>_matrix`)
 #   areas          the areas of .github/ci-areas.toml whose change runs the job at the PR tier
-#   select_all_on  areas that select EVERY PR row (the tenants depend on the root package)
+#   select_all_on  areas that select EVERY PR row (none today: no tenant imports the root
+#                  package `vibey`, so a python-only change selects no tenant row; the full
+#                  tier still runs them at the queue and at promotion)
 #   owner_key      the row field naming the directory that owns the row; a changed path under
-#                  that directory selects only the owning rows, and a path in an `areas` area
-#                  that no row owns selects them all
+#                  that directory selects the owning rows AND every row that installs it from
+#                  the tree (read from each row's `install`: `pip install -e <path>`, resolved
+#                  against the row's directory; no declared edge list to drift). A path in an
+#                  `areas` area that no row owns selects them all
+#   name_key       the row field naming its package; required with `owner_key`, used by
+#                  `select_on` and `vibey-gh`'s derived edge report
+#   select_on      area -> the packages it selects (closed over their dependants). `docs`
+#                  selects vibey-gh because its suite reads root docs (README.md, docs/index.md,
+#                  docs/runbooks/sovereign-review-runner.md)
 #   full           the rows run on the merge queue, a pull request into the release branch, a
 #                  push to it, a dispatch and any always-full path. EXACTLY the rows ci.yml
 #                  declares today; a test pins the two so they cannot drift until the jobs
@@ -20,9 +29,12 @@
 
 [tools]
 output = "tools"
-areas = ["python", "tools"]
-select_all_on = ["python"]
+areas = ["tools"]
 owner_key = "dir"
+name_key = "package"
+
+[tools.select_on]
+docs = ["vibey-gh"]
 
 # PR tier: each of the seven packages at Python 3.12 on ubuntu.
 [[tools.pr]]

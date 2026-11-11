@@ -52,6 +52,9 @@ paths = [
   "properdocs.yml",
   # The root markdown by exact name: a bare `*.md` matches root files only, and a new root
   # file should be a decision, so each is listed.
+  # NOTE (deferred to Task 3): README.md is copied into the container image
+  # (deploy/docker/Dockerfile), yet `docs` does not trigger the `image` job. Task 3 must decide
+  # whether README.md belongs in the image trigger; nothing is changed here.
   "README.md",
   "CONTRIBUTING.md",
   "SECURITY.md",

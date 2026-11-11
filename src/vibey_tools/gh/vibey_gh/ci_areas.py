@@ -11,19 +11,27 @@ The design rule is FAIL SAFE. A skipped required check counts as passing on GitH
 doubt resolves to the full tier and never to a skip: a path no area claims, a path on the
 always-full list, an empty diff, a diff that could not be computed, an event this code does
 not recognise, a pull request or push whose target branch is unknown or is the release
-branch. "Unmapped means full" is the runtime rule; the test that every tracked file is
-mapped or on the always-full list is what keeps that rule from firing by surprise.
+branch, and a map that cannot be read or fails validation. "Unmapped means full" is the
+runtime rule; the test that every tracked file is mapped or on the always-full list is what
+keeps that rule from firing by surprise.
 
 Globs are `*` (anything but `/`), `**` (anything, crossing `/`) and `?` (one character but
 `/`), anchored to the whole path. A bare `*.md` therefore matches a root file only, which is
 why the root markdown is listed by exact name.
+
+A matrix job whose rows have an owner (`owner_key`, a package directory) selects, for a
+changed path, the owning row AND every row that installs it from the tree. The edges are not
+declared: they are read from each row's own `install` string (`pip install -e <path>`,
+resolved against the row's directory), so the matrix cannot disagree with itself.
 """
 
 from __future__ import annotations
 
 import argparse
 import json
+import posixpath
 import re
+import shlex
 import sys
 import tomllib
 from collections.abc import Mapping, Sequence
@@ -32,7 +40,11 @@ from typing import Any
 
 from vibey_gh.config import find_root
 from vibey_gh.contributor_setup import SubprocessRunner
-from vibey_gh.interfaces.ci_areas_interface import AreaDecision, CiAreasInterface
+from vibey_gh.interfaces.ci_areas_interface import (
+    AreaDecision,
+    CiAreasCommandInterface,
+    CiAreasInterface,
+)
 from vibey_gh.interfaces.command_runner_interface import CommandRunnerInterface
 
 __all__ = ["AreaDecision", "CiAreas", "CiAreasCommand"]
@@ -43,7 +55,9 @@ MATRICES_FILE = Path(".github/ci-matrices.toml")
 _DEFAULT_FULL_EVENTS = ("merge_group", "workflow_dispatch", "schedule")
 _DEFAULT_DIFF_EVENTS = ("pull_request", "push")
 _DEFAULT_FULL_BASE_REFS = ("main",)
-# How many paths one kind of reason names before it says "and N more".
+# How many paths one kind of reason names before it says "and N more". It only caps the
+# length of a stderr message and the job summary; it never changes a decision (every path
+# still counts toward `full`).
 _REASON_CAP = 20
 _TIERS = ("pr", "full")
 
@@ -53,18 +67,24 @@ class CiAreas(CiAreasInterface):
 
     def __init__(self, areas: Mapping[str, Any], matrices: Mapping[str, Any]) -> None:
         declared = areas.get("areas", {})
+        self._require_table(declared, "[areas]")
         self._areas = {
             name: self._globs(spec, f"[areas.{name}]") for name, spec in declared.items()
         }
         self._full = self._globs(areas.get("full", {}), "[full]")
         events = areas.get("events", {})
+        self._require_table(events, "[events]")
         self._full_events = tuple(events.get("full", _DEFAULT_FULL_EVENTS))
         self._diff_events = tuple(events.get("diff", _DEFAULT_DIFF_EVENTS))
         self._full_base_refs = tuple(events.get("full_base_refs", _DEFAULT_FULL_BASE_REFS))
+        # Validated here, at load, so a broken map is found before a decision depends on it.
         self._jobs = {
-            name: spec
+            name: self._checked(name, spec, set(self._areas))
             for name, spec in matrices.items()
-            if isinstance(spec, dict) and "full" in spec
+            if isinstance(spec, dict)
+        }
+        self._plans = {
+            name: self._plan(spec) for name, spec in self._jobs.items() if "owner_key" in spec
         }
 
     @classmethod
@@ -76,10 +96,67 @@ class CiAreas(CiAreasInterface):
             matrices = tomllib.load(handle)
         return cls(areas, matrices)
 
+    # ------------------------------------------------------------------ validation
+
+    @staticmethod
+    def _require_table(value: Any, where: str) -> None:
+        malformed = not isinstance(value, dict)  # a bad map is a ValueError, by contract
+        if malformed:
+            raise ValueError(f"{where} must be a table")
+
+    @staticmethod
+    def _names(spec: Mapping[str, Any], key: str, where: str) -> list[str]:
+        value = spec.get(key, [])
+        if not isinstance(value, list) or not all(isinstance(item, str) for item in value):
+            raise ValueError(f"{where} `{key}` must be a list of area names")
+        return value
+
+    @classmethod
+    def _checked(cls, job: str, spec: dict[str, Any], declared: set[str]) -> dict[str, Any]:
+        """Refuse a matrix job that names an undeclared area or lacks what it relies on."""
+        where = f"[{job}]"
+        for tier in ("full", "pr"):
+            malformed = not isinstance(spec.get(tier), list)
+            if malformed:
+                raise ValueError(f"{where} needs a `{tier}` list of rows")
+        select_on = spec.get("select_on", {})
+        cls._require_table(select_on, f"{where} `select_on`")
+        named = {
+            "areas": cls._names(spec, "areas", where),
+            "select_all_on": cls._names(spec, "select_all_on", where),
+            "select_on": list(select_on),
+        }
+        for key, areas in named.items():
+            for area in areas:
+                if area not in declared:
+                    raise ValueError(
+                        f"{where} `{key}` names {area!r}, which is not a declared area"
+                    )
+        keys = [spec["owner_key"], spec.get("name_key")] if "owner_key" in spec else []
+        if keys and keys[1] is None:
+            raise ValueError(f"{where} has an `owner_key` and needs a `name_key` to name its rows")
+        for tier in ("full", "pr"):
+            for row in spec[tier]:
+                for key in keys:
+                    if key not in row:
+                        raise ValueError(f"{where} a `{tier}` row lacks `{key}`")
+        packages = {row[keys[1]] for row in spec["full"]} if keys else set()
+        for area, chosen in select_on.items():
+            malformed = not isinstance(chosen, list)
+            if malformed:
+                raise ValueError(f"{where} `select_on` {area!r} must list package names")
+            for package in chosen:
+                if package not in packages:
+                    raise ValueError(
+                        f"{where} `select_on` names {package!r}, which is no row's package"
+                    )
+        return spec
+
     # ------------------------------------------------------------------ globs
 
     @staticmethod
-    def _globs(spec: Mapping[str, Any], where: str) -> tuple[tuple[str, re.Pattern[str]], ...]:
+    def _globs(spec: Any, where: str) -> tuple[tuple[str, re.Pattern[str]], ...]:
+        CiAreas._require_table(spec, where)
         paths = spec.get("paths")
         if not isinstance(paths, list) or not all(isinstance(p, str) for p in paths):
             raise ValueError(f"{where} needs `paths`, a list of glob strings")
@@ -113,6 +190,85 @@ class CiAreas(CiAreasInterface):
             if regex.fullmatch(path):
                 return pattern
         return None
+
+    # ------------------------------------------------------------------ the dependency edges
+
+    @staticmethod
+    def _install_paths(install: str) -> list[str] | None:
+        """The `-e <path>` targets of an install command, or None when it cannot be read."""
+        try:
+            tokens = shlex.split(install)
+        except ValueError:
+            return None
+        paths: list[str] = []
+        for index, token in enumerate(tokens):
+            if token in ("-e", "--editable"):
+                if index + 1 >= len(tokens):
+                    return None
+                # `.[dev]` is the row's own package with extras; drop the extras.
+                paths.append(re.sub(r"\[[^\]]*\]$", "", tokens[index + 1]))
+        return paths
+
+    @classmethod
+    def _edges(cls, spec: Mapping[str, Any]) -> tuple[dict[str, set[str]], set[str]]:
+        """(directory -> the directories it installs from the tree, directories that widen).
+
+        A row whose install cannot be read, or installs a path that is no row's directory,
+        widens: it cannot say what it depends on, so a change to ANY package selects it.
+        """
+        key = spec["owner_key"]
+        dirs = {row[key] for row in spec["full"]}
+        deps: dict[str, set[str]] = {directory: set() for directory in dirs}
+        wide: set[str] = set()
+        for row in spec["full"]:
+            here = row[key]
+            targets = cls._install_paths(row.get("install", ""))
+            if targets is None:
+                wide.add(here)
+                continue
+            for target in targets:
+                resolved = posixpath.normpath(posixpath.join(here, target))
+                if resolved == here:
+                    continue
+                if resolved in dirs:
+                    deps[here].add(resolved)
+                else:
+                    wide.add(here)
+        return deps, wide
+
+    def _plan(
+        self, spec: Mapping[str, Any]
+    ) -> tuple[frozenset[str], dict[str, frozenset[str]], dict[str, frozenset[str]]]:
+        """(every owner directory, directory -> its reverse transitive closure, area -> the
+        closed directories `select_on` names for it)."""
+        deps, wide = self._edges(spec)
+        dirs = frozenset(deps)
+
+        def closure(start: set[str]) -> frozenset[str]:
+            selected = set(start) | wide
+            grew = True
+            while grew:
+                grew = False
+                for directory in dirs - selected:
+                    if deps[directory] & selected:
+                        selected.add(directory)
+                        grew = True
+            return frozenset(selected)
+
+        by_name = {row[spec["name_key"]]: row[spec["owner_key"]] for row in spec["full"]}
+        chosen = {
+            area: closure({by_name[name] for name in names})
+            for area, names in spec.get("select_on", {}).items()
+        }
+        return dirs, {directory: closure({directory}) for directory in dirs}, chosen
+
+    def dependencies(self, job: str) -> dict[str, set[str]]:
+        spec = self._job(job)
+        if "owner_key" not in spec:
+            return {}
+        deps, _ = self._edges(spec)
+        label = {row[spec["owner_key"]]: row[spec["name_key"]] for row in spec["full"]}
+        return {label[d]: {label[t] for t in targets} for d, targets in deps.items()}
 
     # ------------------------------------------------------------------ the decision
 
@@ -174,36 +330,44 @@ class CiAreas(CiAreasInterface):
     def _owners(self, path: str, matched: set[str]) -> set[str]:
         """The matrix-row owners (package directories) `path` selects, per owning job.
 
-        A path under an owner's directory selects that owner. A path an owning job's area
-        claims but no owner does selects every owner: it cannot be said which it affects.
+        A path under an owner's directory selects that owner and everything that installs it.
+        A path an owning job's area claims but no owner does selects every owner: it cannot
+        be said which it affects. `select_on` adds the owners an area is declared to affect.
         """
         found: set[str] = set()
-        for spec in self._jobs.values():
-            key = spec.get("owner_key")
-            if key is None:
-                continue
-            every = {row[key] for row in spec["full"]}
-            owned = {owner for owner in every if path.startswith(owner + "/")}
+        for job, (dirs, closures, by_area) in self._plans.items():
+            spec = self._jobs[job]
+            owned = {owner for owner in dirs if path.startswith(owner + "/")}
+            selected: set[str] = set().union(*(closures[owner] for owner in owned))
+            for area in matched:
+                selected |= by_area.get(area, frozenset())
             narrowing = set(spec.get("areas", ())) - set(spec.get("select_all_on", ()))
-            found |= owned or (every if matched & narrowing else set())
+            if not owned and matched & narrowing:
+                selected |= dirs
+            found |= selected
         return found
 
     # ------------------------------------------------------------------ the matrices
 
-    def rows(self, job: str, tier: str) -> list[dict[str, Any]]:
-        """Every row `job` declares at `tier` (`full` or `pr`), copied."""
+    def _job(self, job: str) -> dict[str, Any]:
         if job not in self._jobs:
             raise ValueError(f"no matrix job {job!r}; declared: {', '.join(sorted(self._jobs))}")
+        return self._jobs[job]
+
+    def rows(self, job: str, tier: str) -> list[dict[str, Any]]:
+        """Every row `job` declares at `tier` (`full` or `pr`), copied."""
+        spec = self._job(job)
         if tier not in _TIERS:
             raise ValueError(f"no tier {tier!r}; choose from {', '.join(_TIERS)}")
-        return [dict(row) for row in self._jobs[job][tier]]
+        return [dict(row) for row in spec[tier]]
 
     def matrix(self, job: str, decision: AreaDecision) -> Mapping[str, Any]:
         if decision.full:
             return {"include": self.rows(job, "full")}
         rows = self.rows(job, "pr")
         spec = self._jobs[job]
-        if not set(spec.get("areas", ())) & decision.areas:
+        triggers = set(spec.get("areas", ())) | set(spec.get("select_on", ()))
+        if not triggers & decision.areas:
             return {"include": []}
         key = spec.get("owner_key")
         if key and decision.owners and not set(spec.get("select_all_on", ())) & decision.areas:
@@ -213,8 +377,11 @@ class CiAreas(CiAreasInterface):
 
     def outputs(self, decision: AreaDecision) -> dict[str, str]:
         compact = (",", ":")
+        # A full decision reports every declared area, whatever made it full, so a consumer
+        # testing `contains(areas, X)` never reads a full run as "nothing touched X".
+        areas = sorted(self._areas if decision.full else decision.areas)
         out = {
-            "areas": json.dumps(sorted(decision.areas), separators=compact),
+            "areas": json.dumps(areas, separators=compact),
             "full": "true" if decision.full else "false",
             "tier": "full" if decision.full else "pr",
         }
@@ -230,7 +397,7 @@ class CiAreas(CiAreasInterface):
         return {**out, **matrices}
 
 
-class CiAreasCommand:
+class CiAreasCommand(CiAreasCommandInterface):
     """`vibey-gh ci-areas` and `vibey-gh ci-matrix`."""
 
     def __init__(self, *, runner: CommandRunnerInterface | None = None) -> None:
@@ -322,12 +489,10 @@ class CiAreasCommand:
         root, areas_path, matrices_path = paths
         try:
             ci = CiAreas.load(areas_path, matrices_path)
-        except (OSError, ValueError, tomllib.TOMLDecodeError) as exc:
-            # A broken declaration is a defect, not a doubt about the diff: say so loudly, and
-            # still print what a consumer needs to run everything.
+        except Exception as exc:  # noqa: BLE001 - a broken map must widen, never fail the job
             print(f"vibey-gh: ci-areas: {exc}", file=sys.stderr)
-            print("full=true\ntier=full")
-            return 1
+            self._emit(self._fallback(areas_path, matrices_path), (str(exc),), fmt)
+            return 0
         reasons = ci.gate(event, base_ref)
         if reasons:
             decision = ci.full_decision(*reasons)
@@ -339,30 +504,64 @@ class CiAreasCommand:
                 decision = ci.classify(changed, event=event, base_ref=base_ref)
         for reason in decision.reasons:
             print(f"vibey-gh: ci-areas: full tier: {reason}", file=sys.stderr)
-        outputs = ci.outputs(decision)
+        self._emit(ci.outputs(decision), decision.reasons, fmt)
+        return 0
+
+    @staticmethod
+    def _emit(outputs: Mapping[str, str], reasons: Sequence[str], fmt: str) -> None:
+        """Print `outputs`; paths and reasons never reach stdout as lines of their own."""
         if fmt == "json":
             print(
                 json.dumps(
                     {
-                        "areas": sorted(decision.areas),
-                        "full": decision.full,
+                        "areas": json.loads(outputs["areas"]),
+                        "full": outputs["full"] == "true",
                         "tier": outputs["tier"],
-                        "reasons": list(decision.reasons),
-                        "outputs": outputs,
+                        "reasons": list(reasons),
+                        "outputs": dict(outputs),
                     }
                 )
             )
-        else:
-            for key, value in outputs.items():
-                print(f"{key}={value}")
-        return 0
+            return
+        for key, value in outputs.items():
+            print(f"{key}={value}")
+
+    @staticmethod
+    def _fallback(areas_path: Path, matrices_path: Path) -> dict[str, str]:
+        """The all-full defaults when a map could not be loaded: everything the readable
+        parts of the declaration can still say (every area name, every full matrix)."""
+
+        def table(path: Path) -> dict[str, Any]:
+            try:
+                with path.open("rb") as handle:
+                    return tomllib.load(handle)
+            except (OSError, ValueError):
+                return {}
+
+        declared = table(areas_path).get("areas")
+        names = sorted(declared) if isinstance(declared, dict) else []
+        compact = (",", ":")
+        out = {
+            "areas": json.dumps(names, separators=compact),
+            "full": "true",
+            "tier": "full",
+        }
+        matrices: dict[str, str] = {}
+        for job, spec in table(matrices_path).items():
+            if isinstance(spec, dict) and isinstance(spec.get("full"), list):
+                prefix = spec.get("output", job)
+                out[f"{prefix}_any"] = "true"
+                matrices[f"{prefix}_matrix"] = json.dumps(
+                    {"include": spec["full"]}, separators=compact
+                )
+        return {**out, **matrices}
 
     def matrix(self, *, job: str, tier: str, paths: tuple[Path, Path, Path]) -> int:
         """Print `{"include": rows}` for one job at one tier, with no diff involved."""
         _, areas_path, matrices_path = paths
         try:
             rows = CiAreas.load(areas_path, matrices_path).rows(job, tier)
-        except (OSError, ValueError, tomllib.TOMLDecodeError) as exc:
+        except (OSError, ValueError) as exc:
             print(f"vibey-gh: ci-matrix: {exc}", file=sys.stderr)
             return 1
         print(json.dumps({"include": rows}, separators=(",", ":")))
@@ -380,5 +579,5 @@ class CiAreasCommand:
         )
         if done.returncode:
             return [], f"git diff {base}...{head} failed ({done.returncode}): {done.output}"
-        # NUL-separated, so a path with spaces, quotes or non-ASCII bytes arrives whole.
+        # NUL-separated, so a path with spaces, quotes, newlines or non-ASCII arrives whole.
         return [path for path in done.stdout.split("\0") if path], ""
