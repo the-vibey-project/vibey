@@ -105,8 +105,9 @@ async def test_successful_run_provisions_and_records_events_and_succeeds(tmp_pat
     # A plain implement (not a repair) resolves nothing.
     assert not any(event.kind == "FindingResolved" for event in ledger.recorded)
 
-    enqueued = await jobs.claim(job.project_id, owner="t", lease=timedelta(seconds=5))
-    assert enqueued is not None
+    # The follow-up depends on this job, which is still leased, so it is not claimable
+    # yet (as in Postgres); read it back by its kind.
+    (enqueued,) = await jobs.list_for_cycle(job.project_id, cycle=job.cycle, kind="build.verify")
     assert enqueued.kind == "build.verify"
     assert enqueued.work_item_id == "item-1"
     assert enqueued.requirement["implementer_engine_id"] == "claudeloop"

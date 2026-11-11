@@ -96,8 +96,9 @@ async def test_successful_verify_runs_gates_reviews_the_diff_and_enqueues_integr
     assert gates.calls[-1] == ("git", "diff", "HEAD")
     assert any(event.kind == "VerdictRendered" for event in ledger.recorded)
 
-    enqueued = await jobs.claim(job.project_id, owner="t", lease=timedelta(seconds=5))
-    assert enqueued is not None
+    # The follow-up depends on this job, which is still leased, so it is not claimable
+    # yet (as in Postgres); read it back by its kind.
+    (enqueued,) = await jobs.list_for_cycle(job.project_id, cycle=job.cycle, kind="build.integrate")
     assert enqueued.kind == "build.integrate"
     assert enqueued.work_item_id == "item-1"
 
@@ -177,8 +178,9 @@ async def test_a_one_engine_pool_verifies_its_own_work_and_says_so(tmp_path: Pat
     assert "claudeloop" in str(decision.payload["title"])
     assert decision.at == datetime(2026, 8, 19, tzinfo=UTC)
     # The work still went all the way through.
-    enqueued = await jobs.claim(job.project_id, owner="t", lease=timedelta(seconds=5))
-    assert enqueued is not None
+    # The follow-up depends on this job, which is still leased, so it is not claimable
+    # yet (as in Postgres); read it back by its kind.
+    (enqueued,) = await jobs.list_for_cycle(job.project_id, cycle=job.cycle, kind="build.integrate")
     assert enqueued.kind == "build.integrate"
 
 

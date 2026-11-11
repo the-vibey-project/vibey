@@ -3,6 +3,7 @@
 without a database (real-DB behavior is covered separately against
 Postgres in tests/infrastructure/db/)."""
 
+import random
 from collections.abc import Mapping, Sequence
 from dataclasses import replace
 from datetime import UTC, datetime, timedelta
@@ -29,14 +30,16 @@ class FakeJobRepository:
         self.dependencies: dict[UUID, tuple[UUID, ...]] = {}
 
     async def enqueue(self, request: EnqueueRequest) -> JobRecord:
-        job = self._record(request)
-        self._jobs[job.id] = job
-        return job
+        """Idempotent on (project_id, idempotency_key), like the Postgres insert."""
+        return self._enqueue_all([request])[0]
 
     async def enqueue_batch(self, requests: Sequence[EnqueueRequest]) -> tuple[JobRecord, ...]:
         """All-or-nothing and idempotent per request, like the Postgres batch:
         nothing lands until every request has resolved its dependency keys."""
         self.calls.append("enqueue_batch")
+        return self._enqueue_all(requests)
+
+    def _enqueue_all(self, requests: Sequence[EnqueueRequest]) -> tuple[JobRecord, ...]:
         by_key = {(job.project_id, job.idempotency_key): job for job in self._jobs.values()}
         staged: dict[UUID, JobRecord] = {}
         staged_dependencies: dict[UUID, tuple[UUID, ...]] = {}
@@ -94,10 +97,39 @@ class FakeJobRepository:
             updated_at=datetime.now(UTC),
         )
 
+    def _claimable(self) -> list[JobRecord]:
+        """What `PostgresJobRepository._CLAIMABLE` admits, in its `_CLAIM_ORDER`: ready, due,
+        every dependency succeeded; bumped jobs first (by place), then priority high to low,
+        then the earlier due time, then id."""
+        now = datetime.now(UTC)
+
+        def dependencies_met(job: JobRecord) -> bool:
+            return all(
+                (dependency := self._jobs.get(dependency_id)) is not None
+                and dependency.state is JobState.SUCCEEDED
+                for dependency_id in self.dependencies.get(job.id, ())
+            )
+
+        due = [
+            job
+            for job in self._jobs.values()
+            if job.state is JobState.READY and job.run_after <= now and dependencies_met(job)
+        ]
+        return sorted(
+            due,
+            key=lambda job: (
+                job.bump_seq is None,
+                job.bump_seq or 0,
+                -job.priority,
+                job.run_after,
+                str(job.id),
+            ),
+        )
+
     async def claim(self, project_id: UUID, *, owner: str, lease: timedelta) -> JobRecord | None:
         self.calls.append("claim")
-        for job in self._jobs.values():
-            if job.project_id == project_id and job.state is JobState.READY:
+        for job in self._claimable():
+            if job.project_id == project_id:
                 leased = _with(
                     job,
                     state=JobState.LEASED,
@@ -109,18 +141,22 @@ class FakeJobRepository:
                 return leased
         return None
 
+    def make_all_due(self) -> None:
+        """Lets the backoff a nack scheduled pass, without a test sleeping through it."""
+        now = datetime.now(UTC)
+        self._jobs = {
+            job_id: _with(job, run_after=min(job.run_after, now))
+            for job_id, job in self._jobs.items()
+        }
+
     async def claimable_projects(self) -> tuple[UUID, ...]:
         self.calls.append("claimable_projects")
-        return tuple(
-            dict.fromkeys(
-                job.project_id for job in self._jobs.values() if job.state is JobState.READY
-            )
-        )
+        return tuple(dict.fromkeys(job.project_id for job in self._claimable()))
 
     async def heartbeat(self, job_id: UUID, *, owner: str, lease: timedelta) -> bool:
         self.calls.append("heartbeat")
         job = self._jobs.get(job_id)
-        if job is None or job.lease_owner != owner:
+        if job is None or job.lease_owner != owner or job.state is not JobState.LEASED:
             return False
         self._jobs[job_id] = _with(job, lease_expires_at=datetime.now(UTC) + lease)
         return True
@@ -141,8 +177,15 @@ class FakeJobRepository:
         if job is None or job.lease_owner != owner:
             return False
         state = JobState.FAILED if job.attempts >= job.max_attempts else JobState.READY
+        # Postgres: run_after = now() + least(2^attempts * 2s, 15min) * random().
+        backoff = min(timedelta(seconds=2 * 2**job.attempts), timedelta(minutes=15))
         self._jobs[job_id] = _with(
-            job, state=state, lease_owner=None, lease_expires_at=None, last_error=dict(error)
+            job,
+            state=state,
+            lease_owner=None,
+            lease_expires_at=None,
+            run_after=datetime.now(UTC) + backoff * random.random(),  # nosec B311
+            last_error=dict(error),
         )
         return True
 
@@ -192,7 +235,35 @@ class FakeJobRepository:
         return True
 
     async def reap(self) -> int:
-        return 0
+        """Every lapsed lease: requeued while attempts remain, parked once they are spent (one
+        attempt refunded), as `PostgresQueueReapStore.reap_leases` does. The `delivery_exhausted`
+        gate it also raises belongs to the gate store, not to this fake."""
+        now = datetime.now(UTC)
+        lapsed = [
+            job
+            for job in self._jobs.values()
+            if job.state is JobState.LEASED
+            and job.lease_expires_at is not None
+            and job.lease_expires_at < now
+        ]
+        for job in lapsed:
+            if job.attempts >= job.max_attempts:
+                self._jobs[job.id] = _with(
+                    job,
+                    state=JobState.AWAITING_HUMAN,
+                    lease_owner=None,
+                    lease_expires_at=None,
+                    attempts=max(job.attempts - 1, 0),
+                )
+            else:
+                self._jobs[job.id] = _with(
+                    job,
+                    state=JobState.READY,
+                    lease_owner=None,
+                    lease_expires_at=None,
+                    run_after=max(job.run_after, now),
+                )
+        return len(lapsed)
 
     async def assign_engine(self, job_id: UUID, *, owner: str, engine_id: EngineId) -> bool:
         self.calls.append("assign_engine")
@@ -219,7 +290,7 @@ class FakeJobRepository:
     async def queue_depth(self, project_id: UUID) -> Mapping[str, int]:
         from collections import Counter
 
-        counts: Counter[str] = Counter()
+        counts: Counter[str] = Counter({state: 0 for state in JobState})
         for job in self._jobs.values():
             if job.project_id == project_id:
                 counts[job.state] += 1
