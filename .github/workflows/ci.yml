@@ -57,6 +57,136 @@ jobs:
         run: uv python install 3.12
       - run: uv lock --check
 
+  plan:
+    # REPORT ONLY (SP1-B). Says which areas a diff touches and which tier it earns; nothing
+    # reads it yet. A skipped required check passes on GitHub, so this job is built so that it
+    # can never be the reason anything is skipped: it never fails (`continue-on-error`, so a
+    # dependant is not cut by the implicit `success()` of `needs`), it has no `needs`, and its
+    # FIRST step writes the all-full defaults before the checkout, so even a failed checkout
+    # or install leaves `full=true`. Later steps only overwrite them. Every output is read as
+    # `steps.cli.outputs.X || steps.<defaults>.outputs.X`, so a key the CLI did not print
+    # falls through to the default. The timeout is unmeasured until the first run.
+    name: CI plan
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    continue-on-error: true
+    outputs:
+      areas: ${{ steps.cli.outputs.areas || steps.defaults.outputs.areas }}
+      full: ${{ steps.cli.outputs.full || steps.defaults.outputs.full }}
+      tier: ${{ steps.cli.outputs.tier || steps.defaults.outputs.tier }}
+      tools_any: ${{ steps.cli.outputs.tools_any || steps.defaults.outputs.tools_any }}
+      postgres_any: ${{ steps.cli.outputs.postgres_any || steps.defaults.outputs.postgres_any }}
+      desktop_any: ${{ steps.cli.outputs.desktop_any || steps.defaults.outputs.desktop_any }}
+      tools_matrix: ${{ steps.cli.outputs.tools_matrix || steps.matrices.outputs.tools_matrix }}
+      postgres_matrix: ${{ steps.cli.outputs.postgres_matrix || steps.matrices.outputs.postgres_matrix }}
+      desktop_matrix: ${{ steps.cli.outputs.desktop_matrix || steps.matrices.outputs.desktop_matrix }}
+    steps:
+      - name: Default to the full tier
+        id: defaults
+        run: |
+          {
+            echo "areas=[]"
+            echo "full=true"
+            echo "tier=full"
+            echo "tools_any=true"
+            echo "postgres_any=true"
+            echo "desktop_any=true"
+          } >> "$GITHUB_OUTPUT"
+      - uses: actions/checkout@v4
+        with:
+          # A shallow clone cannot diff base...head.
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install vibey-gh
+        run: pip install -e src/vibey_tools/gh
+      - name: Default matrices, from the one source
+        id: matrices
+        run: |
+          if m="$(vibey-gh ci-matrix --job tools --tier full)"; then
+            echo "tools_matrix=$m" >> "$GITHUB_OUTPUT"
+          fi
+          if m="$(vibey-gh ci-matrix --job postgres-compatibility --tier full)"; then
+            echo "postgres_matrix=$m" >> "$GITHUB_OUTPUT"
+          fi
+          if m="$(vibey-gh ci-matrix --job desktop --tier full)"; then
+            echo "desktop_matrix=$m" >> "$GITHUB_OUTPUT"
+          fi
+      - name: Decide the areas and the tier
+        id: cli
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          PR_BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          PR_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+          PR_BASE_REF: ${{ github.event.pull_request.base.ref }}
+          PUSH_BEFORE: ${{ github.event.before }}
+          PUSH_AFTER: ${{ github.sha }}
+          PUSH_REF_NAME: ${{ github.ref_name }}
+          MQ_BASE_SHA: ${{ github.event.merge_group.base_sha }}
+          MQ_HEAD_SHA: ${{ github.event.merge_group.head_sha }}
+        run: |
+          set -euo pipefail
+          args=(--event "$EVENT_NAME")
+          base=""
+          head=""
+          note=""
+          case "$EVENT_NAME" in
+            pull_request)
+              base="${PR_BASE_SHA:-}"
+              head="${PR_HEAD_SHA:-}"
+              args+=(--base "$base" --head "$head" --base-ref "${PR_BASE_REF:-}")
+              ;;
+            push)
+              if [[ "${PUSH_BEFORE:-}" =~ ^0+$ ]]; then
+                # An all-zero `before` is a new branch: there is no base to diff against, so
+                # no diff is attempted and the CLI answers full.
+                note="new branch (all-zero before): no base, full tier"
+                args+=(--base-ref "${PUSH_REF_NAME:-}")
+              else
+                base="${PUSH_BEFORE:-}"
+                head="${PUSH_AFTER:-}"
+                args+=(--base "$base" --head "$head" --base-ref "${PUSH_REF_NAME:-}")
+              fi
+              ;;
+            merge_group)
+              base="${MQ_BASE_SHA:-}"
+              head="${MQ_HEAD_SHA:-}"
+              args+=(--base "$base" --head "$head")
+              ;;
+            workflow_dispatch | schedule)
+              note="$EVENT_NAME: full tier"
+              ;;
+            *)
+              note="unrecognised event: left to the CLI, which answers full"
+              ;;
+          esac
+          out="$(mktemp)"
+          err="$(mktemp)"
+          if ! vibey-gh ci-areas "${args[@]}" > "$out" 2> "$err"; then
+            cat "$err" >&2
+            exit 1
+          fi
+          cat "$out" >> "$GITHUB_OUTPUT"
+          {
+            echo "### CI plan"
+            echo
+            echo "- event: \`$EVENT_NAME\`"
+            echo "- base: \`${base:-none}\`"
+            echo "- head: \`${head:-none}\`"
+            if [ -n "$note" ]; then echo "- note: $note"; fi
+            echo
+            echo '```'
+            cat "$out"
+            echo '```'
+            echo
+            echo "Reasons:"
+            echo '```'
+            cat "$err"
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+
   lint:
     name: Lint and static gates
     needs: [uv-lock]
@@ -1475,6 +1605,7 @@ jobs:
     name: CI result
     if: always()
     needs:
+      - plan
       - uv-lock
       - lint
       - gates
