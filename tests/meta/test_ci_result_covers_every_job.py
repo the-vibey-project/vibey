@@ -101,6 +101,9 @@ GATED_BY_LINT = {
     "image",
     "cluster-smoke",
 }
+# `plan` is neither: it has no `needs` at all (it must never wait on, or be cut by, another
+# job) and nothing reads it yet (SP1-B). tests/meta/test_ci_plan_job.py pins its shape.
+REPORT_ONLY = {"plan"}
 UNGATED_BY_LINT = {"krypton-app", "vibey-core", "app", "vscode-extension", "desktop", "chart"}
 # Moved verbatim from `gates` into `lint`, in this order.
 MOVED_STEPS = [
@@ -150,7 +153,9 @@ def test_exactly_the_python_and_container_jobs_wait_for_lint() -> None:
     assert waiting == GATED_BY_LINT, (
         f"jobs gated by lint: {sorted(waiting)}; expected {sorted(GATED_BY_LINT)}"
     )
-    assert set(jobs) - {LINT, "ci-result", "uv-lock"} == GATED_BY_LINT | UNGATED_BY_LINT
+    assert set(jobs) - {LINT, "ci-result", "uv-lock"} - REPORT_ONLY == (
+        GATED_BY_LINT | UNGATED_BY_LINT
+    )
 
 
 def test_jobs_that_waited_for_uv_lock_still_do() -> None:

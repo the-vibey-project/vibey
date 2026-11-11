@@ -1,0 +1,362 @@
+# The CI matrices, one source (SP1-B). `vibey-gh ci-areas` reads this file to print the
+# matrix a change runs; `vibey-gh ci-matrix --job J --tier T` prints one tier of one job.
+#
+# Per matrix job:
+#   output         the prefix of its `$GITHUB_OUTPUT` names (`<output>_any`, `<output>_matrix`)
+#   areas          the areas of .github/ci-areas.toml whose change runs the job at the PR tier
+#   select_all_on  areas that select EVERY PR row (none today: no tenant imports the root
+#                  package `vibey`, so a python-only change selects no tenant row; the full
+#                  tier still runs them at the queue and at promotion)
+#   owner_key      the row field naming the directory that owns the row; a changed path under
+#                  that directory selects the owning rows AND every row that installs it from
+#                  the tree (read from each row's `install`: `pip install -e <path>`, resolved
+#                  against the row's directory; no declared edge list to drift). A path in an
+#                  `areas` area that no row owns selects them all
+#   name_key       the row field naming its package; required with `owner_key`, used by
+#                  `select_on` and `vibey-gh`'s derived edge report
+#   select_on      area -> the packages it selects (closed over their dependants). `docs`
+#                  selects vibey-gh because its suite reads root docs (README.md, docs/index.md,
+#                  docs/runbooks/sovereign-review-runner.md), and vibey-skills because its
+#                  tools/check_links.py needs docs/context-microslices.md to exist
+#   full           the rows run on the merge queue, a pull request into the release branch, a
+#                  push to it, a dispatch and any always-full path. EXACTLY the rows ci.yml
+#                  declares today; a test pins the two so they cannot drift until the jobs
+#                  read this file
+#   pr             the smaller set a feature pull request runs. Every PR row is a full row
+#                  (a test pins that): the PR tier drops rows, it never invents one
+#
+# The VS Code extension is NOT a matrix job here: it becomes two non-matrix jobs so that its
+# two required check names stay byte-identical.
+
+[tools]
+output = "tools"
+areas = ["tools"]
+owner_key = "dir"
+name_key = "package"
+
+[tools.select_on]
+docs = ["vibey-gh", "vibey-skills"]
+
+# PR tier: each of the seven packages at Python 3.12 on ubuntu.
+[[tools.pr]]
+package = "vibey-gh"
+dir = "src/vibey_tools/gh"
+python = "3.12"
+install = "pip install -e ../../vibey_runners/common && pip install -e \".[dev]\""
+static = "python -m mypy vibey_gh"
+test = "python -m pytest -q"
+network_test = "python -m pytest -q -m network --no-cov"
+
+[[tools.pr]]
+package = "vibey-skills"
+dir = "src/vibey_tools/skills"
+python = "3.12"
+install = "pip install -e \".[dev]\""
+test = "python3 tools/sync_catalogue_surfaces.py --check && python3 tools/validate_manifests.py && python3 tools/check_links.py && PYTHONPATH=src python3 -m unittest discover -s tests"
+docs = '''
+pip install -e ".[docs]"
+mkdocs build --strict
+plugins=$(python3 -c "import json;print(len(json.load(open('.claude-plugin/marketplace.json'))['plugins']))")
+skills=$(find plugins -name SKILL.md | wc -l | tr -d ' ')
+built_plugins=$(find site/reference -mindepth 2 -maxdepth 2 -name index.html | wc -l | tr -d ' ')
+built_skills=$(find site/reference -mindepth 3 -maxdepth 3 -name index.html | wc -l | tr -d ' ')
+echo "plugins $plugins -> $built_plugins ; skills $skills -> $built_skills"
+test "$plugins" = "$built_plugins"
+test "$skills" = "$built_skills"
+'''
+
+[[tools.pr]]
+package = "vibey-bootstrap"
+dir = "src/vibey_tools/bootstrap"
+python = "3.12"
+install = "pip install -e ../gh && pip install -e \".[test,all,dev]\""
+static = "python -m mypy vibey_bootstrap/ && python -m bandit -r vibey_bootstrap/ -ll -q"
+test = "pytest test/ -m \"not integration\" --cov=vibey_bootstrap --cov-report=term"
+
+[[tools.pr]]
+package = "vibey-runners-common"
+dir = "src/vibey_runners/common"
+python = "3.12"
+install = "pip install -e \".[dev]\""
+static = "mypy --strict src/vibey_runners/common && lint-imports"
+test = "python -m pytest -q -p no:cacheprovider --cov=vibey_runners.common.infrastructure --cov-branch --cov-report=term-missing --cov-fail-under=100"
+
+[[tools.pr]]
+package = "claudeloop"
+dir = "src/vibey_runners/claude"
+python = "3.12"
+install = "pip install -e ../common && pip install -e \".[dev]\""
+static = "mypy --strict src/claudeloop && lint-imports && bandit -q -r src/claudeloop && python scripts/check_skill_frontmatter.py"
+test = "pytest tests/domain --cov=claudeloop.domain --cov-branch --cov-report=term-missing --cov-fail-under=100 && pytest tests/application --cov=claudeloop.application --cov-branch --cov-report=term-missing --cov-fail-under=100 && pytest tests/infrastructure -n auto --maxprocesses=8 --cov=claudeloop.infrastructure --cov-branch --cov-report=term-missing --cov-fail-under=100 && pytest tests/cli -n auto --maxprocesses=8 --cov=claudeloop.cli --cov-branch --cov-report=term-missing --cov-fail-under=100"
+
+[[tools.pr]]
+package = "codexloop"
+dir = "src/vibey_runners/codex"
+python = "3.12"
+install = "pip install -e ../common && pip install -e \".[dev]\""
+static = "mypy --strict src/codexloop && lint-imports && bandit -q -r src/codexloop"
+docs = "pip install 'properdocs==1.6.7' 'properdocs-theme-mkdocs==1.6.7' && properdocs build --strict"
+test = "pytest -q --cov=codexloop --cov-branch --cov-report= && coverage report --include='src/codexloop/domain/*' --fail-under=100 && coverage report --include='src/codexloop/application/*' --fail-under=100 && coverage report --include='src/codexloop/infrastructure/*' --fail-under=100 && coverage report --include='src/codexloop/cli/*' --fail-under=100"
+
+[[tools.pr]]
+package = "qwenloop"
+dir = "src/vibey_runners/qwen"
+python = "3.12"
+install = "pip install -e \".[dev]\""
+static = "mypy --strict src/qwenloop && lint-imports && bandit -q -r src/qwenloop"
+test = "python -m pytest -q"
+
+# Full tier: every row ci.yml runs today (24).
+[[tools.full]]
+package = "vibey-gh"
+dir = "src/vibey_tools/gh"
+python = "3.12"
+install = "pip install -e ../../vibey_runners/common && pip install -e \".[dev]\""
+static = "python -m mypy vibey_gh"
+test = "python -m pytest -q"
+network_test = "python -m pytest -q -m network --no-cov"
+
+[[tools.full]]
+package = "vibey-gh"
+dir = "src/vibey_tools/gh"
+python = "3.13"
+install = "pip install -e ../../vibey_runners/common && pip install -e \".[dev]\""
+test = "python -m pytest -q"
+
+[[tools.full]]
+package = "vibey-gh"
+dir = "src/vibey_tools/gh"
+python = "3.14"
+install = "pip install -e ../../vibey_runners/common && pip install -e \".[dev]\""
+test = "python -m pytest -q"
+
+[[tools.full]]
+package = "vibey-skills"
+dir = "src/vibey_tools/skills"
+python = "3.12"
+install = "pip install -e \".[dev]\""
+test = "python3 tools/sync_catalogue_surfaces.py --check && python3 tools/validate_manifests.py && python3 tools/check_links.py && PYTHONPATH=src python3 -m unittest discover -s tests"
+docs = '''
+pip install -e ".[docs]"
+mkdocs build --strict
+plugins=$(python3 -c "import json;print(len(json.load(open('.claude-plugin/marketplace.json'))['plugins']))")
+skills=$(find plugins -name SKILL.md | wc -l | tr -d ' ')
+built_plugins=$(find site/reference -mindepth 2 -maxdepth 2 -name index.html | wc -l | tr -d ' ')
+built_skills=$(find site/reference -mindepth 3 -maxdepth 3 -name index.html | wc -l | tr -d ' ')
+echo "plugins $plugins -> $built_plugins ; skills $skills -> $built_skills"
+test "$plugins" = "$built_plugins"
+test "$skills" = "$built_skills"
+'''
+
+[[tools.full]]
+package = "vibey-skills"
+dir = "src/vibey_tools/skills"
+python = "3.13"
+install = "pip install -e \".[dev]\""
+test = "python3 tools/sync_catalogue_surfaces.py --check && python3 tools/validate_manifests.py && python3 tools/check_links.py && PYTHONPATH=src python3 -m unittest discover -s tests"
+
+[[tools.full]]
+package = "vibey-skills"
+dir = "src/vibey_tools/skills"
+python = "3.14"
+install = "pip install -e \".[dev]\""
+test = "python3 tools/sync_catalogue_surfaces.py --check && python3 tools/validate_manifests.py && python3 tools/check_links.py && PYTHONPATH=src python3 -m unittest discover -s tests"
+
+[[tools.full]]
+package = "vibey-bootstrap"
+dir = "src/vibey_tools/bootstrap"
+python = "3.12"
+install = "pip install -e ../gh && pip install -e \".[test,all,dev]\""
+static = "python -m mypy vibey_bootstrap/ && python -m bandit -r vibey_bootstrap/ -ll -q"
+test = "pytest test/ -m \"not integration\" --cov=vibey_bootstrap --cov-report=term"
+
+[[tools.full]]
+package = "vibey-bootstrap"
+dir = "src/vibey_tools/bootstrap"
+python = "3.13"
+install = "pip install -e ../gh && pip install -e \".[test,all]\""
+test = "pytest test/ -m \"not integration\" --cov=vibey_bootstrap --cov-report=term"
+
+[[tools.full]]
+package = "vibey-bootstrap"
+dir = "src/vibey_tools/bootstrap"
+python = "3.14"
+install = "pip install -e ../gh && pip install -e \".[test,all]\""
+test = "pytest test/ -m \"not integration\" --cov=vibey_bootstrap --cov-report=term"
+
+[[tools.full]]
+package = "vibey-runners-common"
+dir = "src/vibey_runners/common"
+python = "3.12"
+install = "pip install -e \".[dev]\""
+static = "mypy --strict src/vibey_runners/common && lint-imports"
+test = "python -m pytest -q -p no:cacheprovider --cov=vibey_runners.common.infrastructure --cov-branch --cov-report=term-missing --cov-fail-under=100"
+
+[[tools.full]]
+package = "vibey-runners-common"
+dir = "src/vibey_runners/common"
+python = "3.13"
+install = "pip install -e \".[dev]\""
+static = "mypy --strict src/vibey_runners/common && lint-imports"
+test = "python -m pytest -q -p no:cacheprovider --cov=vibey_runners.common.infrastructure --cov-branch --cov-report=term-missing --cov-fail-under=100"
+
+[[tools.full]]
+package = "vibey-runners-common"
+dir = "src/vibey_runners/common"
+python = "3.14"
+install = "pip install -e \".[dev]\""
+static = "mypy --strict src/vibey_runners/common && lint-imports"
+test = "python -m pytest -q -p no:cacheprovider --cov=vibey_runners.common.infrastructure --cov-branch --cov-report=term-missing --cov-fail-under=100"
+
+[[tools.full]]
+package = "claudeloop"
+dir = "src/vibey_runners/claude"
+python = "3.12"
+install = "pip install -e ../common && pip install -e \".[dev]\""
+static = "mypy --strict src/claudeloop && lint-imports && bandit -q -r src/claudeloop && python scripts/check_skill_frontmatter.py"
+test = "pytest tests/domain --cov=claudeloop.domain --cov-branch --cov-report=term-missing --cov-fail-under=100 && pytest tests/application --cov=claudeloop.application --cov-branch --cov-report=term-missing --cov-fail-under=100 && pytest tests/infrastructure -n auto --maxprocesses=8 --cov=claudeloop.infrastructure --cov-branch --cov-report=term-missing --cov-fail-under=100 && pytest tests/cli -n auto --maxprocesses=8 --cov=claudeloop.cli --cov-branch --cov-report=term-missing --cov-fail-under=100"
+
+[[tools.full]]
+package = "claudeloop"
+dir = "src/vibey_runners/claude"
+python = "3.13"
+install = "pip install -e ../common && pip install -e \".[dev]\""
+test = "pytest tests/domain --cov=claudeloop.domain --cov-branch --cov-report=term-missing --cov-fail-under=100 && pytest tests/application --cov=claudeloop.application --cov-branch --cov-report=term-missing --cov-fail-under=100 && pytest tests/infrastructure -n auto --maxprocesses=8 --cov=claudeloop.infrastructure --cov-branch --cov-report=term-missing --cov-fail-under=100 && pytest tests/cli -n auto --maxprocesses=8 --cov=claudeloop.cli --cov-branch --cov-report=term-missing --cov-fail-under=100"
+
+[[tools.full]]
+package = "claudeloop"
+dir = "src/vibey_runners/claude"
+python = "3.14"
+install = "pip install -e ../common && pip install -e \".[dev]\""
+test = "pytest tests/domain --cov=claudeloop.domain --cov-branch --cov-report=term-missing --cov-fail-under=100 && pytest tests/application --cov=claudeloop.application --cov-branch --cov-report=term-missing --cov-fail-under=100 && pytest tests/infrastructure -n auto --maxprocesses=8 --cov=claudeloop.infrastructure --cov-branch --cov-report=term-missing --cov-fail-under=100 && pytest tests/cli -n auto --maxprocesses=8 --cov=claudeloop.cli --cov-branch --cov-report=term-missing --cov-fail-under=100"
+
+[[tools.full]]
+package = "codexloop"
+dir = "src/vibey_runners/codex"
+python = "3.12"
+install = "pip install -e ../common && pip install -e \".[dev]\""
+static = "mypy --strict src/codexloop && lint-imports && bandit -q -r src/codexloop"
+docs = "pip install 'properdocs==1.6.7' 'properdocs-theme-mkdocs==1.6.7' && properdocs build --strict"
+test = "pytest -q --cov=codexloop --cov-branch --cov-report= && coverage report --include='src/codexloop/domain/*' --fail-under=100 && coverage report --include='src/codexloop/application/*' --fail-under=100 && coverage report --include='src/codexloop/infrastructure/*' --fail-under=100 && coverage report --include='src/codexloop/cli/*' --fail-under=100"
+
+[[tools.full]]
+package = "codexloop"
+dir = "src/vibey_runners/codex"
+python = "3.13"
+install = "pip install -e ../common && pip install -e \".[dev]\""
+static = "mypy --strict src/codexloop && lint-imports && bandit -q -r src/codexloop"
+test = "pytest -q --cov=codexloop --cov-branch --cov-report= && coverage report --include='src/codexloop/domain/*' --fail-under=100 && coverage report --include='src/codexloop/application/*' --fail-under=100 && coverage report --include='src/codexloop/infrastructure/*' --fail-under=100 && coverage report --include='src/codexloop/cli/*' --fail-under=100"
+
+[[tools.full]]
+package = "codexloop"
+dir = "src/vibey_runners/codex"
+python = "3.14"
+install = "pip install -e ../common && pip install -e \".[dev]\""
+test = "pytest -q --cov=codexloop --cov-branch --cov-report= && coverage report --include='src/codexloop/domain/*' --fail-under=100 && coverage report --include='src/codexloop/application/*' --fail-under=100 && coverage report --include='src/codexloop/infrastructure/*' --fail-under=100 && coverage report --include='src/codexloop/cli/*' --fail-under=100"
+
+[[tools.full]]
+package = "codexloop"
+dir = "src/vibey_runners/codex"
+python = "3.12"
+os = "macos-latest"
+install = "pip install -e ../common && pip install -e \".[dev]\""
+static = "mypy --strict src/codexloop && lint-imports && bandit -q -r src/codexloop"
+test = "pytest -q --cov=codexloop --cov-branch --cov-report= && coverage report --include='src/codexloop/domain/*' --fail-under=100 && coverage report --include='src/codexloop/application/*' --fail-under=100 && coverage report --include='src/codexloop/infrastructure/*' --fail-under=100 && coverage report --include='src/codexloop/cli/*' --fail-under=100"
+
+[[tools.full]]
+package = "codexloop"
+dir = "src/vibey_runners/codex"
+python = "3.13"
+os = "macos-latest"
+install = "pip install -e ../common && pip install -e \".[dev]\""
+static = "mypy --strict src/codexloop && lint-imports && bandit -q -r src/codexloop"
+test = "pytest -q --cov=codexloop --cov-branch --cov-report= && coverage report --include='src/codexloop/domain/*' --fail-under=100 && coverage report --include='src/codexloop/application/*' --fail-under=100 && coverage report --include='src/codexloop/infrastructure/*' --fail-under=100 && coverage report --include='src/codexloop/cli/*' --fail-under=100"
+
+[[tools.full]]
+package = "codexloop"
+dir = "src/vibey_runners/codex"
+python = "3.14"
+os = "macos-latest"
+install = "pip install -e ../common && pip install -e \".[dev]\""
+static = "mypy --strict src/codexloop && lint-imports && bandit -q -r src/codexloop"
+test = "pytest -q --cov=codexloop --cov-branch --cov-report= && coverage report --include='src/codexloop/domain/*' --fail-under=100 && coverage report --include='src/codexloop/application/*' --fail-under=100 && coverage report --include='src/codexloop/infrastructure/*' --fail-under=100 && coverage report --include='src/codexloop/cli/*' --fail-under=100"
+
+[[tools.full]]
+package = "qwenloop"
+dir = "src/vibey_runners/qwen"
+python = "3.12"
+install = "pip install -e \".[dev]\""
+static = "mypy --strict src/qwenloop && lint-imports && bandit -q -r src/qwenloop"
+test = "python -m pytest -q"
+
+[[tools.full]]
+package = "qwenloop"
+dir = "src/vibey_runners/qwen"
+python = "3.13"
+install = "pip install -e \".[dev]\""
+test = "python -m pytest -q"
+
+[[tools.full]]
+package = "qwenloop"
+dir = "src/vibey_runners/qwen"
+python = "3.14"
+install = "pip install -e \".[dev]\""
+test = "python -m pytest -q"
+
+[postgres-compatibility]
+output = "postgres"
+areas = ["python"]
+
+# PR tier: the oldest and the newest supported major.
+[[postgres-compatibility.pr]]
+postgres = 14
+
+[[postgres-compatibility.pr]]
+postgres = 18
+
+# Full tier: every supported major (14 to 18).
+[[postgres-compatibility.full]]
+postgres = 14
+
+[[postgres-compatibility.full]]
+postgres = 15
+
+[[postgres-compatibility.full]]
+postgres = 16
+
+[[postgres-compatibility.full]]
+postgres = 17
+
+[[postgres-compatibility.full]]
+postgres = 18
+
+[desktop]
+output = "desktop"
+areas = ["desktop"]
+
+# PR tier: ubuntu only.
+[[desktop.pr]]
+distro = "ubuntu"
+runner = "ubuntu-latest"
+container = ""
+
+# Full tier: every distro ci.yml runs today (4).
+[[desktop.full]]
+distro = "ubuntu"
+runner = "ubuntu-latest"
+container = ""
+
+[[desktop.full]]
+distro = "arch"
+runner = "ubuntu-latest"
+container = "archlinux:latest"
+
+[[desktop.full]]
+distro = "fedora"
+runner = "ubuntu-latest"
+container = "fedora:latest"
+
+[[desktop.full]]
+distro = "macos"
+runner = "macos-15"
+container = ""
