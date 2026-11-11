@@ -46,5 +46,14 @@ async def test_same_instance_reports_contention_not_reentry(
 
 
 async def test_release_without_a_held_lock_is_a_no_op(migrated_pool: asyncpg.Pool) -> None:
-    lock = PostgresAdvisoryLock(migrated_pool)
-    await lock.release(uuid4(), 1)
+    holder = PostgresAdvisoryLock(migrated_pool)
+    bystander = PostgresAdvisoryLock(migrated_pool)
+    project_id = uuid4()
+    assert await holder.try_acquire(project_id, 1) is True
+
+    assert await bystander.release(project_id, 1) is None
+
+    assert await bystander.try_acquire(project_id, 1) is False  # still held by the holder
+    await holder.release(project_id, 1)
+    assert await bystander.try_acquire(project_id, 1) is True
+    await bystander.release(project_id, 1)

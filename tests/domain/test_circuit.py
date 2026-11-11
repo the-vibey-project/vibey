@@ -103,7 +103,11 @@ def test_credits_never_produce_a_deadline(
     attempt=st.integers(0, 100),
 )
 def test_schedule_probe_never_raises(capacity: CapacityState, now: datetime, attempt: int) -> None:
-    schedule_probe(capacity, now=now, attempt=attempt)
+    probe = schedule_probe(capacity, now=now, attempt=attempt)
+    if isinstance(capacity, (Available, AuthenticationFailed)):
+        assert probe is None  # waiting cannot fix either
+    else:
+        assert probe is not None
 
 
 # -- EngineFailurePolicy: when ENGINE-class failures open a circuit ---------------

@@ -36,7 +36,8 @@ def test_png_dimensions_are_1200_by_630() -> None:
 
 
 def test_favicon_svg_is_well_formed() -> None:
-    ET.fromstring(FAVICON.read_text(encoding="utf-8"))
+    root = ET.fromstring(FAVICON.read_text(encoding="utf-8"))
+    assert root.tag.rsplit("}", 1)[-1] == "svg"
 
 
 def test_properdocs_yml_theme_names_the_favicon() -> None:

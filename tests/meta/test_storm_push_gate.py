@@ -1007,7 +1007,7 @@ def test_a_busy_bare_mkdir_push_is_left_alone(tmp_path: Path) -> None:
     assert r.signaller.sent == [] and r.cfg.lock.is_dir()
 
 
-def _never_killed(r: Rig, reason: str) -> None:
+def assert_never_killed(r: Rig, reason: str) -> None:
     r.reaper.tick()
     r.clock.sleep(3601)
     decision = r.reaper.tick()
@@ -1023,21 +1023,21 @@ def test_two_candidate_pushes_are_unknown_and_never_killed(tmp_path: Path) -> No
     legacy_push(r, tmp_path, made)
     r.table.groups[1200] = [Proc(1200, 1, 1200, 0.0, "git push origin HEAD:other", made + 2, UID)]
     r.table.cwds[1200] = str(tmp_path / "other-lane")
-    _never_killed(r, "2 pushes")
+    assert_never_killed(r, "2 pushes")
 
 
 def test_a_push_that_started_well_after_the_lock_is_not_its_holder(tmp_path: Path) -> None:
     r = rig(tmp_path)
     made = bare_lock(r)
     legacy_push(r, tmp_path, made, started_at=made + 30)
-    _never_killed(r, "no push")
+    assert_never_killed(r, "no push")
 
 
 def test_a_push_outside_the_declared_worktrees_is_not_its_holder(tmp_path: Path) -> None:
     r = rig(tmp_path, worktree_roots=(tmp_path / "somewhere-else",))
     made = bare_lock(r)
     legacy_push(r, tmp_path, made)
-    _never_killed(r, "no push")
+    assert_never_killed(r, "no push")
 
 
 def test_a_push_whose_cwd_is_unreadable_is_not_its_holder(tmp_path: Path) -> None:
@@ -1045,7 +1045,7 @@ def test_a_push_whose_cwd_is_unreadable_is_not_its_holder(tmp_path: Path) -> Non
     made = bare_lock(r)
     legacy_push(r, tmp_path, made)
     r.table.cwds.clear()
-    _never_killed(r, "no push")
+    assert_never_killed(r, "no push")
 
 
 def test_git_dash_c_names_the_worktree_when_the_cwd_cannot_be_read(tmp_path: Path) -> None:
@@ -1064,7 +1064,7 @@ def test_a_group_holding_anything_but_the_push_recipe_is_never_killed(tmp_path: 
     made = bare_lock(r)
     legacy_push(r, tmp_path, made)
     r.table.groups[SHELL].append(Proc(990, SHELL, SHELL, 0.0, "node some-editor-server", made))
-    _never_killed(r, "outside the push")
+    assert_never_killed(r, "outside the push")
 
 
 def test_a_bare_mkdir_lock_with_an_unreadable_table_is_unknown(tmp_path: Path) -> None:
@@ -1072,7 +1072,7 @@ def test_a_bare_mkdir_lock_with_an_unreadable_table_is_unknown(tmp_path: Path) -
     made = bare_lock(r)
     legacy_push(r, tmp_path, made)
     r.table.readable = False
-    _never_killed(r, "cannot be read")
+    assert_never_killed(r, "cannot be read")
 
 
 def test_a_bare_mkdir_lock_under_dry_run_changes_nothing(tmp_path: Path) -> None:
