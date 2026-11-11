@@ -29,17 +29,20 @@ paths = ["src/vibey/**", "tests/**"]
 paths = ["src/vibey_tools/**", "src/vibey_runners/**"]
 
 [areas.vscode]
-# A change to the shared core affects both of its consumers, the extension and the app.
-paths = ["clients/vscode/**", "packages/vibey-core/**"]
+# A change to the shared core affects both of its consumers, the extension and the app. The
+# gh tenant source is here too: the extension and the app jobs (and `vibey-core`) run
+# `pip install -e src/vibey_tools/gh && vibey-gh advisory-check`.
+paths = ["clients/vscode/**", "packages/vibey-core/**", "src/vibey_tools/gh/**"]
 
 [areas.app]
-paths = ["clients/app/**", "packages/vibey-core/**"]
+paths = ["clients/app/**", "packages/vibey-core/**", "src/vibey_tools/gh/**"]
 
 [areas.krypton_app]
 paths = ["clients/krypton-app/**"]
 
 [areas.desktop]
-paths = ["clients/desktop/**"]
+# tests/cli/golden/vibey-loops.json is a python-tree file that clients/desktop/tests/meson.build reads.
+paths = ["clients/desktop/**", "tests/cli/golden/vibey-loops.json"]
 
 [areas.deploy]
 paths = ["deploy/**"]
@@ -54,8 +57,10 @@ paths = [
   # file should be a decision, so each is listed.
   # DECIDED (SP1-B Task 3): README.md is copied into the container image
   # (deploy/docker/Dockerfile), and a docs change still does NOT trigger the `image` job. An
-  # edit to its text cannot break the build; a deletion or rename would, and the root gates
-  # (which run on every diff) pin the files the Dockerfile copies.
+  # edit to its text cannot break the build. A deletion or rename would; the root gates, which
+  # run on every diff, fail on it (tests/meta/test_ci_tiers_keep_every_row.py asserts that
+  # every file the Dockerfile COPYs exists). test_container_context.py is a different check:
+  # it only pins that those files are not dockerignored.
   "README.md",
   "CONTRIBUTING.md",
   "SECURITY.md",
@@ -67,6 +72,12 @@ paths = [
 ]
 
 [full]
+# The classifier and its maps are here: the plan job runs the PULL REQUEST's own copy of
+# vibey_gh, so a change to them must not be able to choose its own tier. `.github/**` already
+# covers both TOMLs. The classifier registration in vibey_gh/cli.py is not separable from the
+# rest of the CLI and is not listed. Running the classifier from the BASE revision instead is
+# the open follow-up.
+#
 # A change to any of these runs the full tier: each one can change what EVERY job does, or is
 # read by a test of the root suite, which runs on every diff.
 paths = [
@@ -85,6 +96,11 @@ paths = [
   "design/**",
   "research/**",
   "changelog.d/**",
+  # --- the classifier itself, and what pins its rows
+  "src/vibey_tools/gh/vibey_gh/ci_areas.py",
+  "src/vibey_tools/gh/vibey_gh/interfaces/ci_areas_interface.py",
+  "src/vibey_tools/gh/test/test_ci_areas.py",
+  "tests/meta/ci_matrix_snapshot.json",
   # --- the agent surfaces: skills, rules and hooks that a test and a gate both read
   ".claude/**",
   ".agent*/**",                # .agent/ and .agents/
@@ -104,3 +120,22 @@ paths = [
   "googleebf918639d02415d.html",  # the search-console verification file, published by release-surfaces.yml
   "CODE_OF_CONDUCT.md",        # a root markdown that is not on the docs list; linked from the PR template
 ]
+
+# Which areas select which area-skippable job of ci.yml. The workflow's `if:` expressions are
+# held to this table by tests/meta/test_ci_tiers_keep_every_row.py (a typo such as 'vscod' in
+# an `if:` fails there). For the three matrix jobs it must equal what .github/ci-matrices.toml
+# selects on (`areas` plus `select_on`), which a test also pins.
+[jobs]
+noloss = ["python"]
+postgres-compatibility = ["python", "deploy"]
+tools = ["tools", "docs"]
+tools-lint = ["tools", "python"]
+image = ["python", "tools", "deploy"]
+cluster-smoke = ["python", "tools", "deploy"]
+chart = ["python", "tools", "deploy"]
+krypton-app = ["krypton_app"]
+vibey-core = ["vscode", "app"]
+app = ["vscode", "app"]
+vscode-extension-ubuntu = ["vscode"]
+vscode-extension-macos = ["vscode"]
+desktop = ["desktop"]

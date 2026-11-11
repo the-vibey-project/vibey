@@ -18,7 +18,9 @@ def test_ci_exercises_every_currently_supported_postgres_major() -> None:
 
     # The matrix is the plan job's `postgres_matrix`; the rows it can run are the FULL rows of
     # .github/ci-matrices.toml, so that is what must cover every supported major.
-    assert job["strategy"]["matrix"] == "${{ fromJSON(needs.plan.outputs.postgres_matrix) }}"
+    assert job["strategy"]["matrix"].startswith(
+        "${{ fromJSON(needs.plan.outputs.postgres_matrix || '"
+    )
     full = tuple(row["postgres"] for row in CiMatrixRows.full("postgres-compatibility"))
     assert full == POSTGRES_SUPPORTED_MAJORS
     assert job["services"]["postgres"]["image"] == "postgres:${{ matrix.postgres }}"

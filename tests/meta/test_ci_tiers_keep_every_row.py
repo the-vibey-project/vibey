@@ -36,6 +36,8 @@ REPO = Path(__file__).resolve().parents[2]
 WORKFLOW = REPO / ".github" / "workflows" / "ci.yml"
 SNAPSHOT = REPO / "tests" / "meta" / "ci_matrix_snapshot.json"
 VIBEY_GH = REPO / ".vibey-gh.toml"
+AREAS_TOML = REPO / ".github" / "ci-areas.toml"
+MATRICES_TOML = REPO / ".github" / "ci-matrices.toml"
 
 # Every job whose `if:` reads the plan, with the needs it has besides `plan` (what the implicit
 # `success()` used to test and the `if:` now tests by name).
@@ -427,7 +429,15 @@ def test_every_pr_row_is_a_full_row(job: str) -> None:
 def test_the_job_reads_its_matrix_from_the_plan(job: str) -> None:
     output = MATRIX_JOBS[job]
     strategy = _jobs()[job]["strategy"]
-    assert strategy["matrix"] == f"${{{{ fromJSON(needs.plan.outputs.{output}_matrix) }}}}"
+    reads = f"fromJSON(needs.plan.outputs.{output}_matrix"
+    if job == "tools":
+        # Too long to repeat as a literal fallback (the expression limit is 21,000 characters).
+        assert strategy["matrix"] == f"${{{{ {reads}) }}}}"
+    else:
+        # A plan that dies before its first step leaves the output empty and `fromJSON('')`
+        # fails the job: fall back to the full literal, the one the defaults step writes.
+        literal = json.dumps({"include": CiMatrixRows.full(job)}, separators=(",", ":"))
+        assert strategy["matrix"] == f"${{{{ {reads} || '{literal}') }}}}"
     assert strategy["fail-fast"] is False
 
 
@@ -576,22 +586,101 @@ def test_gates_always_runs_and_does_not_wait_for_the_plan() -> None:
     assert _needs("gates") == ["uv-lock", "lint"]
 
 
-@pytest.mark.parametrize(
-    "paths",
-    [
-        ["src/vibey_tools/gh/vibey_gh/x.py"],
-        ["docs/guides/x.md"],
-        ["clients/vscode/src/x.ts"],
-        ["src/vibey/domain/x.py"],
-        [".github/workflows/ci.yml"],
-    ],
-)
-def test_no_diff_skips_gates(paths: list[str]) -> None:
-    # `gates` has no `if:`, so the only way it can be skipped is a skipped need (uv-lock, lint),
-    # which the diff cannot cause.
-    outputs = _outputs_for(paths)
-    assert "if" not in _jobs()["gates"]
-    assert outputs["full"] in ("true", "false")
+# --- the truth table: a job runs when, and only when, ci-areas.toml says its area changed --------
+
+
+def _declared() -> dict[str, Any]:
+    loaded: dict[str, Any] = tomllib.loads(AREAS_TOML.read_text(encoding="utf-8"))
+    return loaded
+
+
+def _sample_paths() -> list[str]:
+    """One concrete path per glob of every declared area (`**` becomes a file name)."""
+    paths: list[str] = []
+    for spec in _declared()["areas"].values():
+        for glob in spec["paths"]:
+            paths.append(glob.replace("**", "sample.txt"))
+    return sorted(set(paths))
+
+
+def test_every_area_job_is_declared_in_the_area_map_and_the_other_way_round() -> None:
+    declared = _declared()["jobs"]
+    assert set(declared) == set(AREA_JOBS)
+    areas = set(_declared()["areas"])
+    for job, names in declared.items():
+        assert names and set(names) <= areas, f"{job}: {names} names an undeclared area"
+
+
+def test_a_matrix_jobs_declared_areas_are_what_the_matrix_map_selects_on() -> None:
+    matrices = tomllib.loads(MATRICES_TOML.read_text(encoding="utf-8"))
+    for job in MATRIX_JOBS:
+        spec = matrices[job]
+        want = set(spec.get("areas", ())) | set(spec.get("select_on", ()))
+        assert set(_declared()["jobs"][job]) == want, job
+
+
+@pytest.mark.parametrize("path", _sample_paths())
+def test_every_job_runs_when_and_only_when_a_declared_area_of_it_changed(path: str) -> None:
+    outputs = _outputs_for([path])
+    changed = set(json.loads(outputs["areas"]))
+    full = outputs["full"] == "true"
+    expected = (
+        set(AREA_JOBS)
+        if full
+        else {job for job, names in _declared()["jobs"].items() if changed & set(names)}
+    )
+    assert _would_run(outputs) == expected, (
+        f"{path}: areas {sorted(changed)}, full={full}; the workflow's `if:`s disagree with "
+        "the [jobs] table of .github/ci-areas.toml"
+    )
+
+
+@pytest.mark.parametrize("pair", [("python", "docs"), ("vscode", "desktop"), ("tools", "deploy")])
+def test_the_union_of_two_areas_runs_the_union_of_their_jobs(pair: tuple[str, str]) -> None:
+    samples = {area: _declared()["areas"][area]["paths"][0].replace("**", "s.txt") for area in pair}
+    outputs = _outputs_for(list(samples.values()))
+    changed = set(json.loads(outputs["areas"]))
+    expected = {job for job, names in _declared()["jobs"].items() if changed & set(names)}
+    assert _would_run(outputs) == expected
+
+
+def test_a_gh_tenant_change_selects_the_jobs_that_install_it() -> None:
+    # Both required VS Code jobs, `vibey-core` and `app` run `pip install -e src/vibey_tools/gh`
+    # and `vibey-gh advisory-check`, so a change to that source must select them.
+    outputs = _outputs_for(["src/vibey_tools/gh/vibey_gh/advisories.py"])
+    assert outputs["full"] == "false"
+    assert {"vscode-extension-ubuntu", "vscode-extension-macos", "vibey-core", "app"} <= _would_run(
+        outputs
+    )
+
+
+def test_a_desktop_test_input_in_the_python_tree_selects_desktop() -> None:
+    # clients/desktop/tests/meson.build reads tests/cli/golden/vibey-loops.json.
+    outputs = _outputs_for(["tests/cli/golden/vibey-loops.json"])
+    assert "desktop" in _would_run(outputs)
+    assert "noloss" in _would_run(outputs)
+
+
+def test_a_deploy_only_diff_runs_the_postgres_matrix() -> None:
+    # tests/infrastructure/db/test_keda_scaler_query.py reads deploy/helm/golden.
+    outputs = _outputs_for(["deploy/helm/vibey/values.yaml"])
+    assert "postgres-compatibility" in _would_run(outputs)
+
+
+def test_the_dockerfiles_copied_files_exist() -> None:
+    # A docs-only diff skips `image`, so a deleted or renamed README.md (COPY'd, and the
+    # pyproject `readme`) is caught here, by the root gates that run on every diff.
+    lines = (REPO / "deploy/docker/Dockerfile").read_text(encoding="utf-8").splitlines()
+    missing = []
+    for line in lines:
+        words = line.split()
+        if not words or words[0] != "COPY" or any(w.startswith("--from") for w in words):
+            continue
+        for source in [w for w in words[1:-1] if not w.startswith("--")]:
+            if not (REPO / source).exists():
+                missing.append(source)
+    assert missing == []
+    assert (REPO / "README.md").is_file()
 
 
 def test_a_docs_only_diff_skips_the_heavy_jobs() -> None:
@@ -627,11 +716,20 @@ def test_a_python_only_diff_runs_the_python_jobs_and_the_image() -> None:
 
 
 def test_a_tools_only_diff_runs_the_tools_jobs_and_not_the_rest() -> None:
-    outputs = _outputs_for(["src/vibey_tools/gh/vibey_gh/x.py"])
+    outputs = _outputs_for(["src/vibey_runners/qwen/src/qwenloop/x.py"])
     assert outputs["full"] == "false"
     ran = _would_run(outputs)
     assert {"tools", "tools-lint", "image", "cluster-smoke", "chart"} <= ran
     assert not ran & {"noloss", "postgres-compatibility", "desktop", "app", "krypton-app"}
+    assert [row["package"] for row in json.loads(outputs["tools_matrix"])["include"]] == [
+        "qwenloop"
+    ]
+
+
+def test_a_gh_only_diff_adds_the_client_jobs_that_install_vibey_gh() -> None:
+    outputs = _outputs_for(["src/vibey_tools/gh/vibey_gh/x.py"])
+    ran = _would_run(outputs)
+    assert {"tools", "tools-lint", "vscode-extension-macos", "vibey-core", "app"} <= ran
     # vibey-bootstrap installs vibey-gh from the tree, so a vibey-gh change selects both.
     assert [row["package"] for row in json.loads(outputs["tools_matrix"])["include"]] == [
         "vibey-gh",

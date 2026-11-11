@@ -414,7 +414,7 @@ jobs:
     # runtime version check once it becomes stable and is added here.
     strategy:
       fail-fast: false
-      matrix: ${{ fromJSON(needs.plan.outputs.postgres_matrix) }}
+      matrix: ${{ fromJSON(needs.plan.outputs.postgres_matrix || '{"include":[{"postgres":14},{"postgres":15},{"postgres":16},{"postgres":17},{"postgres":18}]}') }}
     services:
       postgres:
         image: postgres:${{ matrix.postgres }}
@@ -998,7 +998,7 @@ jobs:
     # (Homebrew bottles are built for it), the same runner the release builds on.
     strategy:
       fail-fast: false
-      matrix: ${{ fromJSON(needs.plan.outputs.desktop_matrix) }}
+      matrix: ${{ fromJSON(needs.plan.outputs.desktop_matrix || '{"include":[{"distro":"ubuntu","runner":"ubuntu-latest","container":""},{"distro":"arch","runner":"ubuntu-latest","container":"archlinux:latest"},{"distro":"fedora","runner":"ubuntu-latest","container":"fedora:latest"},{"distro":"macos","runner":"macos-15","container":""}]}') }}
     defaults:
       run:
         working-directory: clients/desktop
