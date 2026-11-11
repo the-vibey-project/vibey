@@ -10,7 +10,8 @@ from vibey.domain.capacity import (
 
 
 def test_available_constructs() -> None:
-    Available()
+    assert Available() == Available()
+    assert not hasattr(Available(), "resets_at")
 
 
 def test_window_exhausted_defaults() -> None:

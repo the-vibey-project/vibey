@@ -6,7 +6,7 @@ from uuid import UUID, uuid4
 
 import pytest
 
-from tests.application.fakes import FakeJobRepository, make_job
+from tests.application.fakes import FakeJobRepository, handle_leased, make_job
 from vibey.application.build_implement_handler import BuildImplementHandler
 from vibey.application.dto import EngineEvent
 from vibey.application.interfaces import SkillsContextResult
@@ -95,7 +95,8 @@ async def test_successful_run_provisions_and_records_events_and_succeeds(tmp_pat
     )
 
     job = _job(payload={"title": "do the thing", "verification": {}})
-    outcome = await handler.handle(job)
+    jobs.seed_leased(job)  # the leased parent the follow-up depends on
+    outcome = await handle_leased(handler, job)
 
     assert isinstance(outcome, Success)
     assert outcome.result["work_item_id"] == "item-1"
@@ -105,9 +106,11 @@ async def test_successful_run_provisions_and_records_events_and_succeeds(tmp_pat
     # A plain implement (not a repair) resolves nothing.
     assert not any(event.kind == "FindingResolved" for event in ledger.recorded)
 
-    enqueued = await jobs.claim(job.project_id, owner="t", lease=timedelta(seconds=5))
-    assert enqueued is not None
+    # The follow-up depends on this job, which is still leased, so it is not claimable
+    # yet (as in Postgres); read it back by its kind.
+    (enqueued,) = await jobs.list_for_cycle(job.project_id, cycle=job.cycle, kind="build.verify")
     assert enqueued.kind == "build.verify"
+    assert jobs.dependencies[enqueued.id] == (job.id,)
     assert enqueued.work_item_id == "item-1"
     assert enqueued.requirement["implementer_engine_id"] == "claudeloop"
 
@@ -130,7 +133,7 @@ async def test_completed_repair_resolves_its_finding_so_reverify_can_count_round
             "repair_detail": "pytest exited 1",
         }
     )
-    outcome = await handler.handle(job)
+    outcome = await handle_leased(handler, job)
 
     assert isinstance(outcome, Success)
     resolved = [event for event in ledger.recorded if event.kind == "FindingResolved"]
@@ -165,7 +168,7 @@ async def test_a_foreign_branch_parks_for_a_person_before_any_engine_session(
         clock=FixedClock(),
     )
 
-    outcome = await handler.handle(_job(payload={"base_ref": "vibey/1/integration"}))
+    outcome = await handle_leased(handler, _job(payload={"base_ref": "vibey/1/integration"}))
 
     assert isinstance(outcome, Park)
     assert outcome.request.kind == FOREIGN_BRANCH_GATE_KIND
@@ -181,11 +184,11 @@ async def test_rejects_wrong_kind_and_missing_work_item_id() -> None:
     handler, _, _ = _handler(Path("/tmp/unused"), engine=engine, ledger=FakeLedger())
 
     wrong_kind = replace(make_job(uuid4()), kind="build.decompose")
-    assert await handler.handle(wrong_kind) == Failure(
+    assert await handle_leased(handler, wrong_kind) == Failure(
         FailureClass.VIBEY, "expected build.implement job"
     )
     missing_item = replace(make_job(uuid4()), kind="build.implement", work_item_id=None)
-    assert await handler.handle(missing_item) == Failure(
+    assert await handle_leased(handler, missing_item) == Failure(
         FailureClass.VIBEY, "build.implement job is missing work_item_id"
     )
 
@@ -194,7 +197,7 @@ async def test_escalation_ladder_exhausted_parks_for_a_human_gate(tmp_path: Path
     engine = ScriptedEngine(descriptor=CLAUDELOOP, base_dir=tmp_path / "engine")
     handler, _, _ = _handler(tmp_path, engine=engine, ledger=FakeLedger())
 
-    outcome = await handler.handle(_job(attempts=8))
+    outcome = await handle_leased(handler, _job(attempts=8))
 
     assert isinstance(outcome, Park)
     assert "item-1" in outcome.request.prompt
@@ -218,7 +221,7 @@ async def test_capacity_rejected_event_defers_the_job(tmp_path: Path) -> None:
     ledger = FakeLedger()
     handler, _, _ = _handler(tmp_path, engine=engine, ledger=ledger)
 
-    outcome = await handler.handle(_job())
+    outcome = await handle_leased(handler, _job())
 
     assert isinstance(outcome, Defer)
     assert outcome.retry_at == FixedClock().now() + timedelta(minutes=5)
@@ -238,7 +241,7 @@ async def test_forced_rotation_rejects_same_engine(tmp_path: Path, attempt: int)
         attempts=attempt,
         payload={"title": "t", "previous_engine_id": "claudeloop"},
     )
-    outcome = await handler.handle(job)
+    outcome = await handle_leased(handler, job)
 
     assert isinstance(outcome, Failure)
     assert outcome.failure_class is FailureClass.VIBEY
@@ -256,7 +259,7 @@ async def test_forced_rotation_allows_different_engine(tmp_path: Path, attempt: 
         attempts=attempt,
         payload={"title": "t", "previous_engine_id": "codexloop"},
     )
-    outcome = await handler.handle(job)
+    outcome = await handle_leased(handler, job)
 
     assert isinstance(outcome, Success)
 
@@ -272,7 +275,7 @@ async def test_no_forced_rotation_at_non_crossing_attempts(tmp_path: Path, attem
         attempts=attempt,
         payload={"title": "t", "previous_engine_id": "claudeloop"},
     )
-    outcome = await handler.handle(job)
+    outcome = await handle_leased(handler, job)
 
     is_rotation_failure = (
         isinstance(outcome, Failure)
@@ -312,7 +315,7 @@ async def test_budget_exceeded_parks_before_escalation(tmp_path: Path) -> None:
         attempts=2,
         payload={"title": "t", "projected_cost_per_attempt": 1.00},
     )
-    outcome = await handler.handle(job)
+    outcome = await handle_leased(handler, job)
 
     assert isinstance(outcome, Park)
     assert "budget" in outcome.request.prompt.lower()
@@ -347,7 +350,7 @@ async def test_budget_at_exact_cap_is_allowed(tmp_path: Path) -> None:
         attempts=2,
         payload={"title": "t", "projected_cost_per_attempt": 1.00},
     )
-    outcome = await handler.handle(job)
+    outcome = await handle_leased(handler, job)
 
     assert isinstance(outcome, Success)
 
@@ -361,7 +364,7 @@ async def test_no_budget_source_skips_check(tmp_path: Path) -> None:
         attempts=2,
         payload={"title": "t", "projected_cost_per_attempt": 999.0},
     )
-    outcome = await handler.handle(job)
+    outcome = await handle_leased(handler, job)
 
     assert isinstance(outcome, Success)
 
@@ -396,7 +399,7 @@ async def test_non_numeric_projected_cost_skips_budget_check(tmp_path: Path) -> 
         attempts=2,
         payload={"title": "t", "projected_cost_per_attempt": "not-a-number"},
     )
-    outcome = await handler.handle(job)
+    outcome = await handle_leased(handler, job)
     assert isinstance(outcome, Success)
 
 
@@ -409,7 +412,7 @@ async def test_run_without_a_completion_verdict_fails_as_work(tmp_path: Path) ->
     )
     handler, _, _ = _handler(tmp_path, engine=engine, ledger=FakeLedger())
 
-    outcome = await handler.handle(_job())
+    outcome = await handle_leased(handler, _job())
 
     assert outcome == Failure(FailureClass.WORK, "engine run did not report completion")
 
@@ -439,7 +442,7 @@ async def test_an_incomplete_run_is_attributed_by_the_engine_from_its_exit_code(
     )
     handler, _, _ = _handler(tmp_path, engine=engine, ledger=FakeLedger())
 
-    outcome = await handler.handle(_job())
+    outcome = await handle_leased(handler, _job())
 
     assert outcome == Failure(
         failure_class, f"engine run did not report completion (exit code {exit_code})"
@@ -494,7 +497,7 @@ async def test_exit_75_with_an_orchestrator_stops_and_delegates(tmp_path: Path) 
         wind_down=wind_down,  # type: ignore[arg-type]
     )
 
-    outcome = await handler.handle(_job())
+    outcome = await handle_leased(handler, _job())
 
     assert outcome == Success({"wind_down": True})
     (call,) = wind_down.calls
@@ -515,7 +518,7 @@ async def test_exit_75_without_an_orchestrator_keeps_the_old_failure_path(
     )
     handler, _, _ = _handler(tmp_path, engine=engine, ledger=FakeLedger())
 
-    outcome = await handler.handle(_job())
+    outcome = await handle_leased(handler, _job())
 
     # Still WORK: without an orchestrator, 75 is an ordinary non-zero exit.
     assert outcome == Failure(
@@ -540,7 +543,7 @@ async def test_normal_exit_with_an_orchestrator_never_winds_down(tmp_path: Path)
         wind_down=wind_down,  # type: ignore[arg-type]
     )
 
-    outcome = await handler.handle(_job(payload={"title": "t"}))
+    outcome = await handle_leased(handler, _job(payload={"title": "t"}))
 
     assert isinstance(outcome, Success)
     assert wind_down.calls == []
@@ -551,7 +554,7 @@ async def test_seed_prompt_in_the_payload_reaches_the_engine_verbatim(tmp_path: 
     handler, _, _ = _handler(tmp_path, engine=engine, ledger=FakeLedger())
     seed = "Objective: resume the relay.\nNext action: close [q-77]."
 
-    outcome = await handler.handle(_job(payload={"title": "ignored", "seed_prompt": seed}))
+    outcome = await handle_leased(handler, _job(payload={"title": "ignored", "seed_prompt": seed}))
 
     assert isinstance(outcome, Success)
     # ScriptedEngine ignores the prompt, so prove it through the renderer.
@@ -608,7 +611,7 @@ async def test_skills_context_shadow_and_inject_modes(
         skills_context=context,
     )
 
-    outcome = await handler.handle(_job(payload={"title": "do the thing"}))
+    outcome = await handle_leased(handler, _job(payload={"title": "do the thing"}))
 
     assert isinstance(outcome, Success)
     assert ("Retrieved guidance." in engine.prompt) is contains_context
@@ -632,7 +635,7 @@ async def test_skills_context_never_mutates_a_wind_down_seed(tmp_path: Path) -> 
     )
     seed = "Objective: resume without losing [q-77]."
 
-    outcome = await handler.handle(_job(payload={"seed_prompt": seed}))
+    outcome = await handle_leased(handler, _job(payload={"seed_prompt": seed}))
 
     assert isinstance(outcome, Success)
     assert engine.prompt == seed
@@ -710,14 +713,14 @@ async def test_an_answered_gate_extends_the_exhausted_ladder_at_top_effort(
     )
     job = _job(attempts=8, payload={"title": "t"})
 
-    parked = await handler.handle(job)
+    parked = await handle_leased(handler, job)
     assert isinstance(parked, Park)
     assert parked.request.kind == "escalation_exhausted"
     assert '"max_attempts"' in parked.request.prompt
 
     gate = await gates.raise_gate(job.project_id, job.id, parked.request)
     await gates.answer(gate.gate_id, answer={"max_attempts": 10}, answered_by="operator")
-    granted = await handler.handle(job)
+    granted = await handle_leased(handler, job)
     assert isinstance(granted, Success)
     assert captured["effort"] is _Effort.HIGH
 
@@ -725,7 +728,7 @@ async def test_an_answered_gate_extends_the_exhausted_ladder_at_top_effort(
     beyond = _job(attempts=11, payload={"title": "t"})
     gate2 = await gates.raise_gate(beyond.project_id, beyond.id, parked.request)
     await gates.answer(gate2.gate_id, answer={"max_attempts": 10}, answered_by="operator")
-    reparked = await handler.handle(beyond)
+    reparked = await handle_leased(handler, beyond)
     assert isinstance(reparked, Park)
 
 
@@ -735,7 +738,7 @@ async def test_exhausted_ladder_without_gates_parks_as_before(tmp_path: Path) ->
     engine = ScriptedEngine(descriptor=CLAUDELOOP, base_dir=tmp_path / "engine")
     handler, _, _ = _handler(tmp_path, engine=engine, ledger=FakeLedger())
 
-    outcome = await handler.handle(_job(attempts=9))
+    outcome = await handle_leased(handler, _job(attempts=9))
 
     assert isinstance(outcome, Park)
     assert outcome.request.kind == "escalation_exhausted"
@@ -770,7 +773,7 @@ async def test_an_exhausted_cycle_budget_parks_before_any_session(tmp_path: Path
         budget_source=_FixedBudgetSource(budget),  # type: ignore[arg-type]
     )
 
-    outcome = await handler.handle(_job(payload={"title": "t"}))
+    outcome = await handle_leased(handler, _job(payload={"title": "t"}))
 
     assert isinstance(outcome, Park)
     assert outcome.request.kind == "budget_exhausted"
@@ -798,12 +801,12 @@ async def test_a_budget_grant_raises_the_cap_and_the_session_runs(tmp_path: Path
     )
     job = _job(payload={"title": "t"})
 
-    parked = await handler.handle(job)
+    parked = await handle_leased(handler, job)
     assert isinstance(parked, Park)
 
     gate = await gates.raise_gate(job.project_id, job.id, parked.request)
     await gates.answer(gate.gate_id, answer={"max_dollars": 30}, answered_by="operator")
-    granted = await handler.handle(job)
+    granted = await handle_leased(handler, job)
     assert isinstance(granted, Success)
 
     # A grant below the spend still parks (turns grant path too). A gate is answered once
@@ -812,7 +815,7 @@ async def test_a_budget_grant_raises_the_cap_and_the_session_runs(tmp_path: Path
     await gates.answer(
         regate.gate_id, answer={"max_dollars": 11, "max_turns": 30}, answered_by="op"
     )
-    still_parked = await handler.handle(job)
+    still_parked = await handle_leased(handler, job)
     assert isinstance(still_parked, Park)
 
 
@@ -841,7 +844,7 @@ async def test_exit_78_parks_for_a_human_instead_of_failing_into_a_retry(tmp_pat
         clock=FixedClock(),
     )
 
-    outcome = await handler.handle(_job())
+    outcome = await handle_leased(handler, _job())
 
     assert isinstance(outcome, Park)
     assert outcome.request.kind == "engine_misconfigured"
@@ -860,7 +863,7 @@ async def test_a_completed_run_is_complete_whatever_its_exit_code(tmp_path: Path
     )
     handler, _, _ = _handler(tmp_path, engine=engine, ledger=FakeLedger())
 
-    outcome = await handler.handle(_job(payload={"title": "t"}))
+    outcome = await handle_leased(handler, _job(payload={"title": "t"}))
 
     assert isinstance(outcome, Success)
 
@@ -899,12 +902,12 @@ async def test_a_requeued_defect_runs_the_exhausted_ladder_at_top_effort(tmp_pat
     )
 
     # Unanswered, it grants nothing: the ladder parks as before.
-    still_parked = await handler.handle(job)
+    still_parked = await handle_leased(handler, job)
     assert isinstance(still_parked, Park)
     assert still_parked.request.kind == "escalation_exhausted"
 
     await gates.answer(defect.gate_id, answer={"choice": "requeue"}, answered_by="operator")
-    ran = await handler.handle(job)
+    ran = await handle_leased(handler, job)
     assert isinstance(ran, Success)
     assert captured["effort"] is _Effort.HIGH
 
@@ -937,7 +940,7 @@ async def test_a_session_past_its_wall_clock_limit_fails_as_the_engines(tmp_path
         run_deadline=timedelta(milliseconds=50),
     )
 
-    outcome = await handler.handle(_job())
+    outcome = await handle_leased(handler, _job())
 
     assert isinstance(outcome, Failure)
     assert outcome.failure_class is FailureClass.ENGINE
@@ -1001,7 +1004,7 @@ async def test_a_dependent_waits_until_its_dependency_is_integrated(tmp_path: Pa
         clock=FixedClock(),
     )
 
-    outcome = await handler.handle(_dependent(project, ["ws"]))
+    outcome = await handle_leased(handler, _dependent(project, ["ws"]))
 
     assert isinstance(outcome, Defer)
     assert outcome.capacity is False  # not an engine signal: no circuit may open on it
@@ -1028,7 +1031,7 @@ async def test_a_dependent_runs_once_every_dependency_is_integrated(tmp_path: Pa
         clock=FixedClock(),
     )
 
-    outcome = await handler.handle(_dependent(project, ["ws", "c7"]))
+    outcome = await handle_leased(handler, _dependent(project, ["ws", "c7"]))
 
     assert isinstance(outcome, Success)
     assert worktrees.created == ["c8"]
@@ -1046,7 +1049,7 @@ async def test_the_wait_names_only_the_dependencies_still_to_integrate(tmp_path:
         clock=FixedClock(),
     )
 
-    outcome = await handler.handle(_dependent(project, ["ws", "c7"]))
+    outcome = await handle_leased(handler, _dependent(project, ["ws", "c7"]))
 
     assert isinstance(outcome, Defer)
     assert outcome.detail.startswith("waiting for c7 to be integrated")
@@ -1065,7 +1068,7 @@ async def test_a_job_without_a_list_of_dependencies_does_not_wait(
         clock=FixedClock(),
     )
 
-    outcome = await handler.handle(_dependent(uuid4(), depends_on))
+    outcome = await handle_leased(handler, _dependent(uuid4(), depends_on))
 
     assert isinstance(outcome, Success)
 
@@ -1132,7 +1135,7 @@ async def _prompt_for(tmp_path: Path, payload: dict[str, object], *, specs=None)
         clock=FixedClock(),
         specs=specs,
     )
-    outcome = await handler.handle(_job(payload=payload))
+    outcome = await handle_leased(handler, _job(payload=payload))
     assert isinstance(outcome, Success)
     (started,) = engine.started
     return str(started.prompt)  # type: ignore[attr-defined]

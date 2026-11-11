@@ -154,6 +154,8 @@ async def test_exhaustion_park_advertises_the_configured_grant_step() -> None:
 
     # Burn the first attempt (a plain nack), then trip the bound.
     await loop.run_once(PROJECT_ID)
+    # A nack schedules the retry after a backoff (as in Postgres); let it pass.
+    jobs.make_all_due()
     await loop.run_once(PROJECT_ID)
 
     assert '{"max_attempts": 12}' in gates.raised[0].prompt
@@ -491,7 +493,10 @@ async def test_heartbeat_task_is_cancelled_cleanly_after_settling() -> None:
     )
 
     # Should return promptly rather than waiting out the (long) heartbeat interval.
-    await asyncio.wait_for(loop.run_once(PROJECT_ID), timeout=1.0)
+    claimed = await asyncio.wait_for(loop.run_once(PROJECT_ID), timeout=1.0)
+
+    assert claimed is True
+    assert [t for t in asyncio.all_tasks() if t is not asyncio.current_task()] == []
 
 
 async def test_unknown_outcome_type_is_silently_ignored() -> None:

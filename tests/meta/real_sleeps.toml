@@ -1,0 +1,40 @@
+# Made with ❤️ by [Vibey](https://the-vibey-project.github.io/vibey/), Developed by [Adam Matthew Steinberger](https://vibewithadam.matthewsteinberger.com/) ([@adammatthewsteinberger](https://github.com/adammatthewsteinberger/)).
+#
+# The recorded exceptions to "no in-process test waits on the real clock for more than 0.05s"
+# (tests/meta/test_no_real_sleeps_in_process.py). Each entry is the `time.sleep(<literal>)` and
+# `asyncio.sleep(<literal>)` calls in one scope, keyed `"file::enclosing function"` (module level:
+# `file::<module>`), with a `count` and the reason the wait is real. Keying by function means an
+# edit above a sleep disturbs nothing. Counts can only fall: lower or delete an entry in the same
+# change that removes a sleep, because a recorded count above what is there fails the guard.
+#
+# Measured 2026-11-11 by AST walk, after the sleeps over one second that sat in-process beside a
+# code seam were injected (tests/cli/test_driver_cli.py now moves the driver clock;
+# tests/application/test_bounded_preflight.py waits on an Event that never fires; and
+# tests/cli/test_early_signals.py waits on the drain Event instead of a fixed 0.1s). The textual
+# `sleep(` hits are mostly subprocess script text (inside string literals, which an AST walk
+# never sees), fake-clock calls and waits of 0.05s or less.
+#
+# Remaining by directory: infrastructure 11, meta 5, cli 3, system 3 (total 22).
+
+[entries]
+"tests/cli/test_operational_commands.py::test_worker_parallelism_spawns_gathered_loops.sigterm" = { count = 1, reason = "yields to the loop so a real SIGTERM (os.kill) is delivered before the next claim; a fixed 0.1s yield, not a wait on a clock" }
+"tests/cli/test_operational_commands.py::test_worker_drains_on_sigterm_rather_than_claiming_more.sigterm" = { count = 1, reason = "yields to the loop so a real SIGTERM (os.kill) is delivered before the next claim; a fixed 0.1s yield, not a wait on a clock" }
+"tests/cli/test_worker_all_projects.py::test_all_projects_parallel_loops_share_one_worker.sigterm" = { count = 1, reason = "yields to the loop so a real SIGTERM (os.kill) is delivered; a fixed 0.1s yield, not a wait on a clock" }
+"tests/infrastructure/bus/test_rabbitmq_live.py::Broker.settled" = { count = 1, reason = "live broker: poll interval of settled(), bounded by a deadline, for the management statistics" }
+"tests/infrastructure/bus/test_rabbitmq_live.py::test_finding_2_a_single_mixed_policy_is_caught_as_not_in_force" = { count = 1, reason = "live broker: waits for a real RabbitMQ to detach a policy, which no injected clock can speed up" }
+"tests/infrastructure/bus/test_rabbitmq_live.py::test_finding_12_a_quorum_queue_reports_no_head_timestamp" = { count = 1, reason = "live broker: waits out the management plugin's statistics interval for a head timestamp" }
+"tests/infrastructure/engines/test_loop_process_adapter.py::test_tail_delivers_a_line_flushed_in_two_pieces" = { count = 1, reason = "LoopProcessAdapter.tail polls on a hard-coded 0.5s asyncio.sleep; the test needs one real poll to see the half line" }
+"tests/infrastructure/engines/test_loop_process_adapter.py::test_tail_still_skips_a_complete_invalid_line_once" = { count = 1, reason = "LoopProcessAdapter.tail polls on a hard-coded 0.5s asyncio.sleep; the test needs two real polls to see the same line" }
+"tests/infrastructure/engines/test_loop_process_adapter.py::test_tail_polls_until_complete._write_meta_after_delay" = { count = 2, reason = "LoopProcessAdapter.tail polls on a hard-coded 0.5s asyncio.sleep, so a write must land between two real polls; a seam needs a production change" }
+"tests/infrastructure/engines/test_ollama_chat_stream.py::test_closing_early_stops_the_reader_thread_without_hanging.slow" = { count = 1, reason = "a slow byte stream feeding a real reader thread, to prove closing early does not hang; the delay is the fixture, not a wait for it" }
+"tests/infrastructure/process/escapes.py::release" = { count = 1, reason = "lets the loop see a SIGKILLed child's pipes close; the OS delivers that, no clock is involved" }
+"tests/infrastructure/publish/test_program_runner.py::test_cancelling_a_run_stops_the_program" = { count = 1, reason = "lets a real child process start before the runner is cancelled; no clock is involved" }
+"tests/infrastructure/test_gate_runner.py::_release" = { count = 1, reason = "lets the loop see a SIGKILLed child's pipes close; the OS delivers that, no clock is involved" }
+"tests/meta/test_db_reaper.py::test_a_test_that_patches_asyncio_sleep_never_reaches_the_hold" = { count = 1, reason = "proves three real polls of the hold's thread ran while asyncio.sleep is patched; it is a real-clock check by design" }
+"tests/meta/test_storm_priority.py::test_the_runner_waits_out_an_unreadable_priority_log_and_says_why" = { count = 1, reason = "poll loop (0.2s step, 60s deadline) for a real subprocess to print progress; bounded by a deadline, not a fixed wait" }
+"tests/meta/test_storm_priority.py::test_a_typo_after_a_lost_log_still_exits_3_and_the_runner_waits" = { count = 1, reason = "poll loop (0.2s step, 60s deadline) for a real subprocess to print progress; bounded by a deadline, not a fixed wait" }
+"tests/meta/test_storm_push_gate.py::_reap_until_acted" = { count = 1, reason = "poll loop (0.2s step) until the reaper's real subprocess acts; bounded, not a fixed wait" }
+"tests/meta/test_storm_push_gate.py::test_run_waits_for_a_held_lock_and_takes_it_when_released" = { count = 1, reason = "proves a real second push is still blocked behind the lock; absence cannot be observed without waiting" }
+"tests/system/test_full_worker_faked.py::test_full_worker_drives_a_project_to_done_local" = { count = 1, reason = "idle step of a poll loop waiting on a WORK retry backoff in the full faked worker; the backoff is real asyncio time inside the worker" }
+"tests/system/test_full_worker_faked.py::test_full_worker_drives_the_deploy_stage_set_to_done_deployed" = { count = 1, reason = "idle step of a poll loop waiting on the full faked worker; the worker's own pacing is real asyncio time" }
+"tests/system/test_full_worker_faked.py::test_full_worker_survives_a_forced_wind_down_rotation" = { count = 1, reason = "idle step of a poll loop waiting on the full faked worker; the worker's own pacing is real asyncio time" }
