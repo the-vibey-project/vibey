@@ -6,8 +6,10 @@ allowed-tools: Bash
 
 # vibey quality gates
 
-CI runs a 7-gate sweep over the root `vibey` package, as the `gates` job in
-`.github/workflows/ci.yml`. **All seven must pass** — together with the other CI
+CI runs a 7-gate sweep over the root `vibey` package, split over two jobs in
+`.github/workflows/ci.yml`: `lint` (named "Lint and static gates": Gates 1, 2, 3 and 5
+with the corpus index and TypeScript artifact checks) and `gates` (the test run, Gate 4,
+bandit and pip-audit). **All seven must pass** — together with the other CI
 jobs below — before a PR can merge. Run them locally with
 `pre-commit run --all-files --hook-stage pre-push` (a plain
 `pre-commit run --all-files` runs only the ruff hooks) or individually:

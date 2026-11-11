@@ -179,14 +179,17 @@ uv run vibey-gh install
 # CI job `uv-lock` (runs first)
 uv lock --check
 
-# CI job `gates`: Gate 0 plus the 7-gate sweep over src/vibey (services:
-# postgres:17 and rabbitmq; the broker tests skip without it)
+# CI job `lint` ("Lint and static gates", after `uv-lock`; every heavy job waits for it):
+# Gate 0a (TypeScript artifacts), Gate 0, Gates 1, 2, 3 and 5
 uv sync --extra dev
 uv run vibey-gh corpus-index --check
 uv run ruff check .
 uv run ruff format --check .
 uv run mypy --strict src/vibey
+uv run lint-imports
 
+# CI job `gates`: the test run, the per-layer 100% gates (Gate 4), bandit and pip-audit
+# (services: postgres:17 and rabbitmq; the broker tests skip without it)
 # Single test run with coverage, then per-layer 100% gates
 uv run pytest -q -p no:cacheprovider --cov=vibey --cov-branch --cov-report=
 uv run coverage report --include='src/vibey/domain/*' --fail-under=100
@@ -194,7 +197,6 @@ uv run coverage report --include='src/vibey/application/*' --fail-under=100
 uv run coverage report --include='src/vibey/infrastructure/*' --fail-under=100
 uv run coverage report --include='src/vibey/cli/*' --fail-under=100
 
-uv run lint-imports
 uv run bandit -q -r src/vibey
 uv run pip-audit --skip-editable
 

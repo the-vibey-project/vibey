@@ -324,7 +324,7 @@ uv run vibey-gh check --apply    # add missing file headers
 On `git commit` the hooks run only ruff (`--fix`) and ruff-format. Everything
 else runs on `git push`: first `vibey-gh check`, then the test suite, mypy
 --strict, import-linter, the four 100% branch-coverage gates, bandit and
-pip-audit. CI (ci.yml, job `gates`) enforces the same seven gates, of which
+pip-audit. CI (ci.yml, jobs `lint` and `gates`) enforces the same seven gates, of which
 Gate 4 is the four per-layer floors (ADR-0023):
 
 ```bash
