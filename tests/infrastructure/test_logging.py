@@ -1,7 +1,9 @@
 # Made with ❤️ by [Vibey](https://the-vibey-project.github.io/vibey/), Developed by [Adam Matthew Steinberger](https://vibewithadam.matthewsteinberger.com/) ([@adammatthewsteinberger](https://github.com/adammatthewsteinberger/)).
+import json
 import logging
 from pathlib import Path
 
+import pytest
 import structlog
 
 from vibey.domain.verbosity import LogPlan
@@ -102,13 +104,18 @@ def test_structlog_app_logger_with_bound() -> None:
     assert isinstance(child, StructlogAppLogger)
 
 
-def test_structlog_app_logger_without_bound() -> None:
+def test_structlog_app_logger_without_bound(capsys: pytest.CaptureFixture[str]) -> None:
     _reset_logging()
     plan = LogPlan(level="DEBUG", include_third_party=False, include_payloads=False)
     configure_logging(plan, human_console=False)
 
     logger = StructlogAppLogger(component="auto")
     logger.info("test")
+
+    captured = capsys.readouterr()
+    record = json.loads((captured.out + captured.err).strip().splitlines()[-1])
+    assert record["event"] == "test"
+    assert record["component"] == "auto"
 
 
 def test_null_app_logger() -> None:

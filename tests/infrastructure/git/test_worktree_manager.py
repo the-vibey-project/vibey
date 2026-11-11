@@ -292,7 +292,14 @@ async def test_remove_deletes_the_worktree_and_its_registration(repo: Path) -> N
 
 
 async def test_remove_of_an_already_gone_worktree_is_a_no_op(repo: Path) -> None:
-    await _manager(repo).remove("never-created")  # must not raise
+    manager = _manager(repo)
+    kept = await manager.create("item-1")
+
+    assert await manager.remove("never-created") is None
+
+    assert kept.exists()
+    listed = await _run("git", "-C", str(repo), "worktree", "list", "--porcelain")
+    assert str(kept) in listed.stdout
 
 
 async def test_reclaim_orphans_removes_directories_git_does_not_recognize(repo: Path) -> None:

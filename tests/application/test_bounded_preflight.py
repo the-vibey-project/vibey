@@ -13,7 +13,7 @@ from vibey.domain.engine import EngineId
 
 class _Hangs:
     async def preflight(self) -> PreflightResult:
-        await asyncio.sleep(30)
+        await asyncio.Event().wait()  # never answers; the bound cancels it
         raise AssertionError("unreachable")
 
 

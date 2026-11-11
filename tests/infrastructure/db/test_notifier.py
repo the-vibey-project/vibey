@@ -45,7 +45,8 @@ async def test_wait_for_job_ready_falls_back_to_timeout_when_not_notified(
 
 
 async def test_close_without_connect_is_a_no_op(notifier: PostgresJobReadyNotifier) -> None:
-    await notifier.close()
+    assert await notifier.close() is None
+    assert notifier._conn is None
 
 
 async def test_on_notify_skips_already_done_future(notifier: PostgresJobReadyNotifier) -> None:

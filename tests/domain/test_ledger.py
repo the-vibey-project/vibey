@@ -140,7 +140,19 @@ _event_kind_strategy = st.sampled_from(list(EventKind))
 
 @given(seq=st.integers(1, 10_000), payload_value=st.text(max_size=20))
 def test_digest_event_never_raises(seq: int, payload_value: str) -> None:
-    digest_event({"seq": seq, "v": payload_value})
+    digest = digest_event({"seq": seq, "v": payload_value})
+    assert len(digest) == 64
+    int(digest, 16)  # hex
+    assert digest == digest_event({"v": payload_value, "seq": seq})
+    assert digest != digest_event({"seq": seq + 1, "v": payload_value})
+
+
+def test_digest_event_golden_vector() -> None:
+    """Ledger chain verification depends on this digest staying byte-for-byte stable."""
+    assert (
+        digest_event({"seq": 1, "v": ""})
+        == "91fef47c402ce32016993bc9738b4e4ff5ee6b6024d230c1d2c2e2ca856f5523"
+    )
 
 
 # -- forward-compatible readers (vibey#275) ----------------------------------
