@@ -1,0 +1,24 @@
+# SQL statements one call sends through the pool, against a real migrated
+# PostgreSQL (tests/infrastructure/db/test_query_budgets.py). Measured, not
+# hoped for, on 2026-11-11 with asyncpg 0.31.
+#
+# The budget can only fall. A higher count fails and needs a written reason in
+# the commit; a lower count fails too, until the number here is lowered to match.
+#
+# The count includes the BEGIN and COMMIT of an explicit transaction and leaves
+# out driver housekeeping (the pool's reset query, asyncpg's one-time type
+# introspection), which depends on connection warmth and not on the operation.
+
+# BEGIN, SELECT append_event(...), SELECT * FROM event (read the row back), COMMIT.
+# The master plan expected 2 (the function call and the follow-up SELECT *): the
+# repository wraps both in a transaction, which adds BEGIN and COMMIT.
+ledger_append = 4
+
+# One UPDATE ... WHERE id = (SELECT ... FOR UPDATE SKIP LOCKED) RETURNING *.
+job_claim = 1
+
+# BEGIN, INSERT ... ON CONFLICT DO NOTHING RETURNING *, NOTIFY vibey_job_ready, COMMIT.
+job_enqueue = 4
+
+# One UPDATE.
+job_ack = 1
