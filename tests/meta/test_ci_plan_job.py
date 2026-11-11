@@ -2,7 +2,8 @@
 """The `plan` job reports the changed areas and the tier, and can never cause a skip (SP1-B).
 
 A skipped required check passes on GitHub, so `plan` is built so that it cannot be the reason
-anything is skipped: it never fails (job-level `continue-on-error`), it has no `needs`, its
+anything is skipped: a failing step does not cut a dependant (job-level `continue-on-error`:
+the check run still concludes `failure`, `needs.plan.result` is `success`), it has no `needs`, its
 first step writes the all-full defaults, and later steps only overwrite them. This task skips
 nothing: no other job reads a `plan` output yet, and a test says so.
 
