@@ -37,6 +37,7 @@ from vibey_gh.announce import Announcer
 from vibey_gh.approval_check import ApprovalCheck
 from vibey_gh.branch_health import BranchHealth
 from vibey_gh.changelog import Changelog
+from vibey_gh.ci_areas import CiAreasCommand
 from vibey_gh.config import load_config
 from vibey_gh.contributor_setup import ContributorSetup
 from vibey_gh.fallback_pin import FallbackPinResolver
@@ -3050,6 +3051,18 @@ def main(argv: list[str] | None = None) -> int:
         help="read-only: exit 1 when any live repository ruleset differs from the declaration",
     )
     rs.set_defaults(func=_rulesets)
+
+    ca = sub.add_parser(
+        "ci-areas",
+        help="turn a diff into the CI areas it touches, a tier and the matrices to run",
+    )
+    CiAreasCommand.declare_areas(ca).set_defaults(func=CiAreasCommand.dispatch_areas)
+
+    cm = sub.add_parser(
+        "ci-matrix",
+        help="print the full or pull-request rows of one CI matrix job from the declared map",
+    )
+    CiAreasCommand.declare_matrix(cm).set_defaults(func=CiAreasCommand.dispatch_matrix)
 
     sm = sub.add_parser(
         "skip-marker-check",
