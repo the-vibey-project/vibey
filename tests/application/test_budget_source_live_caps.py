@@ -14,7 +14,7 @@ from datetime import UTC, datetime
 from pathlib import Path
 from uuid import UUID, uuid4
 
-from tests.application.fakes import FakeJobRepository, make_job
+from tests.application.fakes import FakeJobRepository, handle_leased, make_job
 from vibey.application.budget_source import LedgerBudgetSource
 from vibey.application.build_implement_handler import BuildImplementHandler
 from vibey.application.dto import EngineEvent, JobRecord, ProjectRecord
@@ -170,14 +170,14 @@ async def test_a_worker_built_uncapped_parks_the_next_session_once_a_cap_is_set(
         budget_source=LedgerBudgetSource(_Ledger([_spend(project_id, 3.21)]), projects=projects),
     )
 
-    assert isinstance(await handler.handle(_job(project_id)), Success)
+    assert isinstance(await handle_leased(handler, _job(project_id)), Success)
 
     projects.configure({"max_cycle_dollars": 2.0})
-    parked = await handler.handle(_job(project_id))
+    parked = await handle_leased(handler, _job(project_id))
 
     assert isinstance(parked, Park)
     assert parked.request.kind == BUDGET_GATE_KIND
     assert "$3.21 spent of $2.00 cap" in parked.request.prompt
 
     projects.configure({})
-    assert isinstance(await handler.handle(_job(project_id)), Success)
+    assert isinstance(await handle_leased(handler, _job(project_id)), Success)

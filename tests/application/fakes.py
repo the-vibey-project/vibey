@@ -15,9 +15,10 @@ from vibey.application.dto import (
     HumanGateRequest,
     JobRecord,
 )
+from vibey.application.interfaces.queue import JobHandler, Outcome
 from vibey.domain.engine import EngineId
 from vibey.domain.errors import GateAlreadyAnswered, UnknownGate
-from vibey.domain.job import QUEUE_GATE_KINDS, JobState
+from vibey.domain.job import QUEUE_GATE_KINDS, JobState, StoredJobState
 from vibey.domain.phase import Phase
 
 
@@ -27,22 +28,35 @@ class FakeJobRepository:
         self.calls: list[str] = []
         # job id -> the job ids it depends on, as `enqueue_batch` resolved them.
         self.dependencies: dict[UUID, tuple[UUID, ...]] = {}
+        # Jobs a handler test runs without putting them in the queue (`adopt`): they exist for
+        # the `job_dependency` foreign key but are not rows the test can list or claim.
+        self._adopted: set[UUID] = set()
 
     async def enqueue(self, request: EnqueueRequest) -> JobRecord:
-        job = self._record(request)
-        self._jobs[job.id] = job
-        return job
+        """Idempotent on (project_id, idempotency_key), like the Postgres insert."""
+        return self._enqueue_all([request])[0]
 
     async def enqueue_batch(self, requests: Sequence[EnqueueRequest]) -> tuple[JobRecord, ...]:
         """All-or-nothing and idempotent per request, like the Postgres batch:
         nothing lands until every request has resolved its dependency keys."""
         self.calls.append("enqueue_batch")
+        return self._enqueue_all(requests)
+
+    def _enqueue_all(self, requests: Sequence[EnqueueRequest]) -> tuple[JobRecord, ...]:
         by_key = {(job.project_id, job.idempotency_key): job for job in self._jobs.values()}
         staged: dict[UUID, JobRecord] = {}
         staged_dependencies: dict[UUID, tuple[UUID, ...]] = {}
         records: list[JobRecord] = []
         for request in requests:
             depends_on = [*request.depends_on]
+            for dependency_id in depends_on:
+                # The `job_dependency` foreign key: a dependency must be a job that exists.
+                if (
+                    dependency_id not in self._jobs
+                    and dependency_id not in staged
+                    and dependency_id not in self._adopted
+                ):
+                    raise LookupError(f"depends_on names unknown job {dependency_id}")
             for key in request.depends_on_keys:
                 dependency = by_key.get((request.project_id, key))
                 if dependency is None:
@@ -94,10 +108,39 @@ class FakeJobRepository:
             updated_at=datetime.now(UTC),
         )
 
+    def _claimable(self) -> list[JobRecord]:
+        """What `PostgresJobRepository._CLAIMABLE` admits, in its `_CLAIM_ORDER`: ready, due,
+        every dependency succeeded; bumped jobs first (by place), then priority high to low,
+        then the earlier due time, then id."""
+        now = datetime.now(UTC)
+
+        def dependencies_met(job: JobRecord) -> bool:
+            return all(
+                (dependency := self._jobs.get(dependency_id)) is not None
+                and dependency.state is JobState.SUCCEEDED
+                for dependency_id in self.dependencies.get(job.id, ())
+            )
+
+        due = [
+            job
+            for job in self._jobs.values()
+            if job.state is JobState.READY and job.run_after <= now and dependencies_met(job)
+        ]
+        return sorted(
+            due,
+            key=lambda job: (
+                job.bump_seq is None,
+                job.bump_seq or 0,
+                -job.priority,
+                job.run_after,
+                str(job.id),
+            ),
+        )
+
     async def claim(self, project_id: UUID, *, owner: str, lease: timedelta) -> JobRecord | None:
         self.calls.append("claim")
-        for job in self._jobs.values():
-            if job.project_id == project_id and job.state is JobState.READY:
+        for job in self._claimable():
+            if job.project_id == project_id:
                 leased = _with(
                     job,
                     state=JobState.LEASED,
@@ -109,18 +152,38 @@ class FakeJobRepository:
                 return leased
         return None
 
+    def seed_leased(self, job: JobRecord) -> None:
+        """Puts a job a handler is about to run into the repository as the leased job it is, so
+        what the handler enqueues can depend on it (the `job_dependency` foreign key)."""
+        if job.id not in self._jobs:
+            self._jobs[job.id] = _with(
+                job,
+                state=JobState.LEASED,
+                lease_owner="seeded-worker",
+                lease_expires_at=datetime.now(UTC) + timedelta(hours=1),
+            )
+
+    def adopt(self, job: JobRecord) -> None:
+        """Lets what a handler enqueues depend on `job` without making `job` a row of this
+        queue: for the many handler tests that assert on the queue's contents."""
+        self._adopted.add(job.id)
+
+    def make_all_due(self) -> None:
+        """Lets the backoff a nack scheduled pass, without a test sleeping through it."""
+        now = datetime.now(UTC)
+        self._jobs = {
+            job_id: _with(job, run_after=min(job.run_after, now))
+            for job_id, job in self._jobs.items()
+        }
+
     async def claimable_projects(self) -> tuple[UUID, ...]:
         self.calls.append("claimable_projects")
-        return tuple(
-            dict.fromkeys(
-                job.project_id for job in self._jobs.values() if job.state is JobState.READY
-            )
-        )
+        return tuple(dict.fromkeys(job.project_id for job in self._claimable()))
 
     async def heartbeat(self, job_id: UUID, *, owner: str, lease: timedelta) -> bool:
         self.calls.append("heartbeat")
         job = self._jobs.get(job_id)
-        if job is None or job.lease_owner != owner:
+        if job is None or job.lease_owner != owner or job.state is not JobState.LEASED:
             return False
         self._jobs[job_id] = _with(job, lease_expires_at=datetime.now(UTC) + lease)
         return True
@@ -141,8 +204,16 @@ class FakeJobRepository:
         if job is None or job.lease_owner != owner:
             return False
         state = JobState.FAILED if job.attempts >= job.max_attempts else JobState.READY
+        # Postgres: run_after = now() + least(2^attempts * 2s, 15min) * random(). The fake takes
+        # the ceiling of that range, so it is deterministic and never earlier than the real one.
+        backoff = min(timedelta(seconds=2 * 2**job.attempts), timedelta(minutes=15))
         self._jobs[job_id] = _with(
-            job, state=state, lease_owner=None, lease_expires_at=None, last_error=dict(error)
+            job,
+            state=state,
+            lease_owner=None,
+            lease_expires_at=None,
+            run_after=datetime.now(UTC) + backoff,
+            last_error=dict(error),
         )
         return True
 
@@ -192,7 +263,45 @@ class FakeJobRepository:
         return True
 
     async def reap(self) -> int:
-        return 0
+        """Every lapsed lease: requeued while attempts remain, parked once they are spent (one
+        attempt refunded), as `PostgresQueueReapStore.reap_leases` does. The `delivery_exhausted`
+        gate it also raises belongs to the gate store, not to this fake.
+
+        In the store's order (`_EXPIRED`: `ORDER BY lease_expires_at, id`), and each at an
+        instant of its own: the store reaps every lease in a transaction of its own, so each
+        requeued job's `greatest(run_after, now())` is later than the one before, and the
+        next claims hand them out in lapse order rather than by id."""
+        now = datetime.now(UTC)
+        lapsed = sorted(
+            (
+                job
+                for job in self._jobs.values()
+                if job.state is JobState.LEASED
+                and job.lease_expires_at is not None
+                and job.lease_expires_at < now
+            ),
+            key=lambda job: (job.lease_expires_at or now, str(job.id)),
+        )
+        tick = timedelta(microseconds=1)
+        for job in lapsed:
+            now = max(datetime.now(UTC), now + tick)
+            if job.attempts >= job.max_attempts:
+                self._jobs[job.id] = _with(
+                    job,
+                    state=JobState.AWAITING_HUMAN,
+                    lease_owner=None,
+                    lease_expires_at=None,
+                    attempts=max(job.attempts - 1, 0),
+                )
+            else:
+                self._jobs[job.id] = _with(
+                    job,
+                    state=JobState.READY,
+                    lease_owner=None,
+                    lease_expires_at=None,
+                    run_after=max(job.run_after, now),
+                )
+        return len(lapsed)
 
     async def assign_engine(self, job_id: UUID, *, owner: str, engine_id: EngineId) -> bool:
         self.calls.append("assign_engine")
@@ -216,10 +325,10 @@ class FakeJobRepository:
             and job.id != exclude
         )
 
-    async def queue_depth(self, project_id: UUID) -> Mapping[str, int]:
+    async def queue_depth(self, project_id: UUID) -> Mapping[StoredJobState, int]:
         from collections import Counter
 
-        counts: Counter[str] = Counter()
+        counts: Counter[StoredJobState] = Counter({state: 0 for state in JobState})
         for job in self._jobs.values():
             if job.project_id == project_id:
                 counts[job.state] += 1
@@ -335,6 +444,15 @@ class FakeHumanGateRepository:
                 key=lambda record: (record.raised_at, record.gate_id),
             )
         )
+
+
+async def handle_leased(handler: JobHandler, job: JobRecord) -> Outcome:
+    """Runs `handler` on `job` as a worker would: the job exists for the handler's repository. Handlers enqueue follow-ups that depend on their own job, and a dependency on a
+    job that does not exist is refused (as Postgres refuses it)."""
+    jobs = getattr(handler, "_jobs", None)
+    if isinstance(jobs, FakeJobRepository):
+        jobs.adopt(job)
+    return await handler.handle(job)
 
 
 def _with(job: JobRecord, **overrides: object) -> JobRecord:

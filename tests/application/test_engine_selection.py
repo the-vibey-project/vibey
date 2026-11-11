@@ -8,7 +8,7 @@ from uuid import uuid4
 
 import pytest
 
-from tests.application.fakes import FakeJobRepository, make_job
+from tests.application.fakes import FakeJobRepository, handle_leased, make_job
 from tests.application.test_engine_selector import (
     FakeEngineHealthRepository,
     FakeRotationCursorRepository,
@@ -661,7 +661,7 @@ async def _recording(
 async def test_success_closes_the_circuit_and_records() -> None:
     handler, health, project_id = await _recording(Success())
 
-    outcome = await handler.handle(make_job(uuid4()))
+    outcome = await handle_leased(handler, make_job(uuid4()))
 
     assert isinstance(outcome, Success)
     record = await health.get_or_create(project_id, EngineId.CLAUDELOOP)  # type: ignore[arg-type]
@@ -673,7 +673,7 @@ async def test_capacity_defer_opens_the_circuit_with_the_defer_deadline() -> Non
     retry_at = NOW + timedelta(minutes=5)
     handler, health, project_id = await _recording(Defer(retry_at, "capacity", capacity=True))
 
-    outcome = await handler.handle(make_job(uuid4()))
+    outcome = await handle_leased(handler, make_job(uuid4()))
 
     assert isinstance(outcome, Defer)
     record = await health.get_or_create(project_id, EngineId.CLAUDELOOP)  # type: ignore[arg-type]
@@ -688,7 +688,7 @@ async def test_capacity_state_forbidden_maps_to_authentication_failed() -> None:
         Defer(retry_at, "capacity", capacity=True, capacity_state="forbidden")
     )
 
-    outcome = await handler.handle(make_job(uuid4()))
+    outcome = await handle_leased(handler, make_job(uuid4()))
 
     assert isinstance(outcome, Defer)
     record = await health.get_or_create(project_id, EngineId.CLAUDELOOP)  # type: ignore[arg-type]
@@ -704,7 +704,7 @@ async def test_work_and_vibey_failures_record_nothing(failure_class: FailureClas
     """The code being wrong, or vibey being wrong, is never the engine's fault."""
     handler, health, project_id = await _recording(Failure(failure_class, "nope"))
 
-    outcome = await handler.handle(make_job(uuid4()))
+    outcome = await handle_leased(handler, make_job(uuid4()))
 
     assert isinstance(outcome, Failure)
     record = await health.get_or_create(project_id, EngineId.CLAUDELOOP)  # type: ignore[arg-type]
@@ -716,7 +716,7 @@ async def test_work_and_vibey_failures_record_nothing(failure_class: FailureClas
 async def test_an_engine_failure_is_recorded_against_the_engine() -> None:
     handler, health, project_id = await _recording(Failure(FailureClass.ENGINE, "exit 137"))
 
-    outcome = await handler.handle(make_job(uuid4()))
+    outcome = await handle_leased(handler, make_job(uuid4()))
 
     assert outcome == Failure(FailureClass.ENGINE, "exit 137")
     record = await health.get_or_create(project_id, EngineId.CLAUDELOOP)  # type: ignore[arg-type]
@@ -728,7 +728,7 @@ async def test_the_third_engine_failure_opens_the_circuit_with_a_probe_time() ->
     handler, health, project_id = await _recording(Failure(FailureClass.ENGINE, "exit 137"))
 
     for _ in range(3):
-        await handler.handle(make_job(uuid4()))
+        await handle_leased(handler, make_job(uuid4()))
 
     record = await health.get_or_create(project_id, EngineId.CLAUDELOOP)  # type: ignore[arg-type]
     assert record.circuit == "open"
@@ -789,7 +789,7 @@ async def test_non_capacity_defer_never_opens_the_circuit() -> None:
     retry_at = NOW + timedelta(minutes=10)
     handler, health, project_id = await _recording(Defer(retry_at, "repair in flight"))
 
-    outcome = await handler.handle(make_job(uuid4()))
+    outcome = await handle_leased(handler, make_job(uuid4()))
 
     assert isinstance(outcome, Defer)
     record = await health.get_or_create(project_id, EngineId.CLAUDELOOP)  # type: ignore[arg-type]
@@ -836,8 +836,9 @@ async def test_a_capacity_rejected_diff_review_opens_the_reviewers_circuit(
         engine_id=EngineId.CODEXLOOP,
     )
 
-    outcome = await handler.handle(
-        _verify_job(project_id=project_id, requirement={"implementer_engine_id": "claudeloop"})
+    outcome = await handle_leased(
+        handler,
+        _verify_job(project_id=project_id, requirement={"implementer_engine_id": "claudeloop"}),
     )
 
     assert isinstance(outcome, Defer)
@@ -1046,7 +1047,7 @@ async def _metered(
 async def test_the_jobs_spend_is_charged_to_the_engine_however_it_ends(outcome: Outcome) -> None:
     handler, health, project_id = await _metered(_FixedInner(outcome), _Meter(0.03))
 
-    assert await handler.handle(make_job(uuid4())) == outcome
+    assert await handle_leased(handler, make_job(uuid4())) == outcome
 
     record = await health.get_or_create(project_id, EngineId.CLAUDELOOP)  # type: ignore[arg-type]
     assert record.cost_usd_cycle == pytest.approx(0.03)
@@ -1058,7 +1059,7 @@ async def test_spend_is_charged_even_when_the_handler_raises() -> None:
     handler, health, project_id = await _metered(_RaisingInner(), _Meter(0.02))
 
     with pytest.raises(RuntimeError, match="handler blew up"):
-        await handler.handle(make_job(uuid4()))
+        await handle_leased(handler, make_job(uuid4()))
 
     record = await health.get_or_create(project_id, EngineId.CLAUDELOOP)  # type: ignore[arg-type]
     assert record.cost_usd_cycle == pytest.approx(0.02)
@@ -1068,7 +1069,7 @@ async def test_spend_is_charged_even_when_the_handler_raises() -> None:
 async def test_a_meter_with_nothing_chargeable_writes_no_spend(dollars: float) -> None:
     handler, health, project_id = await _metered(_FixedInner(Success()), _Meter(dollars))
 
-    await handler.handle(make_job(uuid4()))
+    await handle_leased(handler, make_job(uuid4()))
 
     record = await health.get_or_create(project_id, EngineId.CLAUDELOOP)  # type: ignore[arg-type]
     assert record.cost_usd_cycle == 0.0
@@ -1078,7 +1079,7 @@ async def test_a_meter_with_nothing_chargeable_writes_no_spend(dollars: float) -
 async def test_without_a_meter_no_spend_is_charged() -> None:
     handler, health, project_id = await _metered(_FixedInner(Success()), None)
 
-    await handler.handle(make_job(uuid4()))
+    await handle_leased(handler, make_job(uuid4()))
 
     record = await health.get_or_create(project_id, EngineId.CLAUDELOOP)  # type: ignore[arg-type]
     assert record.cost_usd_cycle == 0.0
@@ -1106,13 +1107,14 @@ async def test_a_real_implement_run_charges_its_engine_through_the_meter(
     health = EngineHealthService(repo)
     ledger = FakeLedger()
     meter = SpendMeteringLedger(ledger)
+    jobs = FakeJobRepository()
     handler = RotationRecordingHandler(
         inner=BuildImplementHandler(
             worktrees=FakeWorktrees(tmp_path),
             provisioner=FakeProvisioner(),
             engine=ScriptedEngine(descriptor=CLAUDELOOP, base_dir=tmp_path / "engine"),
             ledger=meter,
-            jobs=FakeJobRepository(),
+            jobs=jobs,
             clock=FixedClock(),
         ),
         health=health,
@@ -1121,7 +1123,9 @@ async def test_a_real_implement_run_charges_its_engine_through_the_meter(
         meter=meter,
     )
 
-    outcome = await handler.handle(_implement_item(project_id=project_id))
+    item = _implement_item(project_id=project_id)
+    jobs.adopt(item)  # the wrapper hides the inner handler's queue from `handle_leased`
+    outcome = await handler.handle(item)
 
     assert isinstance(outcome, Success)
     assert any(event.kind == "TurnCompleted" for event in ledger.recorded)
