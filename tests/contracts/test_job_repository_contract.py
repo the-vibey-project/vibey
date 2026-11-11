@@ -20,6 +20,7 @@ driven through ``EnqueueRequest.run_after`` with past and future instants.
 from collections.abc import Awaitable, Callable
 from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
+from itertools import count
 from uuid import UUID, uuid4
 
 import asyncpg
@@ -44,6 +45,7 @@ class Queue:
 
     repo: JobRepository
     set_priority: Callable[[UUID, int], Awaitable[None]]
+    set_bump: Callable[[UUID], Awaitable[None]]
     new_project: Callable[[], Awaitable[UUID]]
 
 
@@ -57,15 +59,28 @@ def queue(request: pytest.FixtureRequest) -> Queue:
 
             fake._jobs[job_id] = replace(fake._jobs[job_id], priority=priority)
 
+        bumps = count(1)
+
+        async def fake_bump(job_id: UUID) -> None:
+            from dataclasses import replace
+
+            fake._jobs[job_id] = replace(fake._jobs[job_id], bump_seq=next(bumps))
+
         async def fake_project() -> UUID:
             return uuid4()
 
-        return Queue(fake, fake_priority, fake_project)
+        return Queue(fake, fake_priority, fake_bump, fake_project)
 
     pool: asyncpg.Pool = request.getfixturevalue("migrated_pool")
 
     async def pg_priority(job_id: UUID, priority: int) -> None:
         await pool.execute("UPDATE job SET priority = $2 WHERE id = $1", job_id, priority)
+
+    async def pg_bump(job_id: UUID) -> None:
+        # What PostgresJobPriorityRepository's bump writes (job_priority_repository.py).
+        await pool.execute(
+            "UPDATE job SET bump_seq = nextval('job_bump_seq') WHERE id = $1", job_id
+        )
 
     async def pg_project() -> UUID:
         name = f"contract-{uuid4()}"
@@ -77,7 +92,7 @@ def queue(request: pytest.FixtureRequest) -> Queue:
         )
         return UUID(str(pid))
 
-    return Queue(PostgresJobRepository(pool), pg_priority, pg_project)
+    return Queue(PostgresJobRepository(pool), pg_priority, pg_bump, pg_project)
 
 
 def req(project_id: UUID, key: str, **overrides: object) -> EnqueueRequest:
@@ -134,6 +149,23 @@ async def test_claim_prefers_the_higher_priority_job(queue: Queue, project_id: U
     assert first is not None and first.id == high.id
     second = await queue.repo.claim(project_id, owner="w1", lease=LIVE)
     assert second is not None and second.id == low.id
+
+
+async def test_claim_puts_bumped_jobs_first_in_bump_order(queue: Queue, project_id: UUID) -> None:
+    # SQL _CLAIM_ORDER: `j.bump_seq ASC NULLS LAST` precedes priority, so a bumped job beats
+    # a higher-priority unbumped one, and the earlier bump beats the later.
+    plain = await queue.repo.enqueue(req(project_id, "plain"))
+    await queue.set_priority(plain.id, 99)
+    second = await queue.repo.enqueue(req(project_id, "second"))
+    first = await queue.repo.enqueue(req(project_id, "first"))
+    await queue.set_bump(first.id)
+    await queue.set_bump(second.id)
+    order = []
+    for _ in range(3):
+        job = await queue.repo.claim(project_id, owner="w1", lease=LIVE)
+        assert job is not None
+        order.append(job.id)
+    assert order == [first.id, second.id, plain.id]
 
 
 async def test_claim_breaks_a_priority_tie_by_the_earlier_due_time(
@@ -262,7 +294,7 @@ async def test_nack_requeues_while_attempts_remain_and_records_the_error(
     # SQL `nack`: state='ready' when attempts < max_attempts; lease cleared;
     # run_after = now() + backoff (never earlier than now); last_error stored.
     job = await leased(queue, project_id)
-    before = datetime.now(UTC) - timedelta(seconds=1)
+    nacked_at = datetime.now(UTC)
     assert await queue.repo.nack(job.id, owner="w1", error=ERROR)
     retried = await queue.repo.get(job.id)
     assert retried is not None
@@ -270,7 +302,10 @@ async def test_nack_requeues_while_attempts_remain_and_records_the_error(
     assert retried.lease_owner is None and retried.lease_expires_at is None
     assert retried.last_error == ERROR
     assert retried.attempts == 1
-    assert retried.run_after >= before
+    # The backoff: pushed past the original due time, and by at most
+    # least(2^attempts * 2s, 15min) = 4s at attempts=1 (random in [0, 4s] in Postgres).
+    assert retried.run_after > job.run_after
+    assert retried.run_after <= nacked_at + timedelta(seconds=4, milliseconds=500)
 
 
 async def test_nack_fails_the_job_once_its_attempts_are_spent(
@@ -471,11 +506,23 @@ async def test_enqueue_batch_is_all_or_nothing(queue: Queue, project_id: UUID) -
     assert await queue.repo.claim(project_id, owner="w1", lease=LIVE) is None
 
 
+async def test_enqueue_refuses_a_dependency_on_a_job_that_does_not_exist(
+    queue: Queue, project_id: UUID
+) -> None:
+    # SQL: `job_dependency.depends_on_job_id` is a foreign key, so the insert fails and the
+    # transaction rolls the job back (asyncpg ForeignKeyViolationError); the fake raises
+    # LookupError, as for an unknown depends_on_keys. Either way nothing is left behind.
+    with pytest.raises((LookupError, asyncpg.PostgresError)):
+        await queue.repo.enqueue(req(project_id, "orphan", depends_on=(uuid4(),)))
+    assert await queue.repo.list_for_cycle(project_id, cycle=1, kind="build.implement") == ()
+
+
 async def test_list_for_cycle_filters_by_cycle_and_kind_oldest_first(
     queue: Queue, project_id: UUID
 ) -> None:
     # queue.py list_for_cycle: "Every job of `kind` in this project's `cycle`, whatever its
-    # state, oldest first."
+    # state, oldest first." Postgres orders by created_at then a random uuid, so two jobs
+    # made in one batch can come back in either order there; sort before comparing those.
     first = await queue.repo.enqueue(req(project_id, "1"))
     await queue.repo.enqueue(req(project_id, "other-cycle", cycle=2))
     await queue.repo.enqueue(req(project_id, "other-kind", kind="build.verify"))

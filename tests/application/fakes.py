@@ -3,7 +3,6 @@
 without a database (real-DB behavior is covered separately against
 Postgres in tests/infrastructure/db/)."""
 
-import random
 from collections.abc import Mapping, Sequence
 from dataclasses import replace
 from datetime import UTC, datetime, timedelta
@@ -16,9 +15,10 @@ from vibey.application.dto import (
     HumanGateRequest,
     JobRecord,
 )
+from vibey.application.interfaces.queue import JobHandler, Outcome
 from vibey.domain.engine import EngineId
 from vibey.domain.errors import GateAlreadyAnswered, UnknownGate
-from vibey.domain.job import QUEUE_GATE_KINDS, JobState
+from vibey.domain.job import QUEUE_GATE_KINDS, JobState, StoredJobState
 from vibey.domain.phase import Phase
 
 
@@ -28,6 +28,9 @@ class FakeJobRepository:
         self.calls: list[str] = []
         # job id -> the job ids it depends on, as `enqueue_batch` resolved them.
         self.dependencies: dict[UUID, tuple[UUID, ...]] = {}
+        # Jobs a handler test runs without putting them in the queue (`adopt`): they exist for
+        # the `job_dependency` foreign key but are not rows the test can list or claim.
+        self._adopted: set[UUID] = set()
 
     async def enqueue(self, request: EnqueueRequest) -> JobRecord:
         """Idempotent on (project_id, idempotency_key), like the Postgres insert."""
@@ -46,6 +49,14 @@ class FakeJobRepository:
         records: list[JobRecord] = []
         for request in requests:
             depends_on = [*request.depends_on]
+            for dependency_id in depends_on:
+                # The `job_dependency` foreign key: a dependency must be a job that exists.
+                if (
+                    dependency_id not in self._jobs
+                    and dependency_id not in staged
+                    and dependency_id not in self._adopted
+                ):
+                    raise LookupError(f"depends_on names unknown job {dependency_id}")
             for key in request.depends_on_keys:
                 dependency = by_key.get((request.project_id, key))
                 if dependency is None:
@@ -141,6 +152,22 @@ class FakeJobRepository:
                 return leased
         return None
 
+    def seed_leased(self, job: JobRecord) -> None:
+        """Puts a job a handler is about to run into the repository as the leased job it is, so
+        what the handler enqueues can depend on it (the `job_dependency` foreign key)."""
+        if job.id not in self._jobs:
+            self._jobs[job.id] = _with(
+                job,
+                state=JobState.LEASED,
+                lease_owner="seeded-worker",
+                lease_expires_at=datetime.now(UTC) + timedelta(hours=1),
+            )
+
+    def adopt(self, job: JobRecord) -> None:
+        """Lets what a handler enqueues depend on `job` without making `job` a row of this
+        queue: for the many handler tests that assert on the queue's contents."""
+        self._adopted.add(job.id)
+
     def make_all_due(self) -> None:
         """Lets the backoff a nack scheduled pass, without a test sleeping through it."""
         now = datetime.now(UTC)
@@ -177,14 +204,15 @@ class FakeJobRepository:
         if job is None or job.lease_owner != owner:
             return False
         state = JobState.FAILED if job.attempts >= job.max_attempts else JobState.READY
-        # Postgres: run_after = now() + least(2^attempts * 2s, 15min) * random().
+        # Postgres: run_after = now() + least(2^attempts * 2s, 15min) * random(). The fake takes
+        # the ceiling of that range, so it is deterministic and never earlier than the real one.
         backoff = min(timedelta(seconds=2 * 2**job.attempts), timedelta(minutes=15))
         self._jobs[job_id] = _with(
             job,
             state=state,
             lease_owner=None,
             lease_expires_at=None,
-            run_after=datetime.now(UTC) + backoff * random.random(),  # nosec B311
+            run_after=datetime.now(UTC) + backoff,
             last_error=dict(error),
         )
         return True
@@ -287,10 +315,10 @@ class FakeJobRepository:
             and job.id != exclude
         )
 
-    async def queue_depth(self, project_id: UUID) -> Mapping[str, int]:
+    async def queue_depth(self, project_id: UUID) -> Mapping[StoredJobState, int]:
         from collections import Counter
 
-        counts: Counter[str] = Counter({state: 0 for state in JobState})
+        counts: Counter[StoredJobState] = Counter({state: 0 for state in JobState})
         for job in self._jobs.values():
             if job.project_id == project_id:
                 counts[job.state] += 1
@@ -406,6 +434,15 @@ class FakeHumanGateRepository:
                 key=lambda record: (record.raised_at, record.gate_id),
             )
         )
+
+
+async def handle_leased(handler: JobHandler, job: JobRecord) -> Outcome:
+    """Runs `handler` on `job` as a worker would: the job exists for the handler's repository. Handlers enqueue follow-ups that depend on their own job, and a dependency on a
+    job that does not exist is refused (as Postgres refuses it)."""
+    jobs = getattr(handler, "_jobs", None)
+    if isinstance(jobs, FakeJobRepository):
+        jobs.adopt(job)
+    return await handler.handle(job)
 
 
 def _with(job: JobRecord, **overrides: object) -> JobRecord:

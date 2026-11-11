@@ -8,7 +8,7 @@ from datetime import UTC, datetime
 from pathlib import Path
 from uuid import UUID, uuid4
 
-from tests.application.fakes import FakeJobRepository
+from tests.application.fakes import FakeJobRepository, handle_leased
 from tests.application.test_build_implement_handler import (
     FakeLedger,
     FakeProvisioner,
@@ -117,7 +117,7 @@ async def test_an_active_run_passes_at_ultra_past_the_ladder_and_enqueues_the_ne
     # Attempt 40 would exhaust any ladder; at ULTRA the ladder is not consulted.
     job = _job(attempts=40, payload={"title": "improve", ULTRA_PAYLOAD_KEY: 2})
 
-    outcome = await handler.handle(job)
+    outcome = await handle_leased(handler, job)
 
     assert isinstance(outcome, Success)
     assert engine.efforts == [Effort.ULTRA]
@@ -134,7 +134,7 @@ async def test_an_active_run_passes_at_ultra_past_the_ladder_and_enqueues_the_ne
 
 async def test_stop_ends_a_queued_pass_without_running_it(tmp_path: Path) -> None:
     handler, engine, _, jobs = _handler(tmp_path, EventsReader(STARTED, STOPPED))
-    outcome = await handler.handle(_job(payload={ULTRA_PAYLOAD_KEY: 5}))
+    outcome = await handle_leased(handler, _job(payload={ULTRA_PAYLOAD_KEY: 5}))
     assert outcome == Success({"work_item_id": "item-1", "ultra": "stopped"})
     assert engine.efforts == [] and not jobs._jobs
 
@@ -142,7 +142,7 @@ async def test_stop_ends_a_queued_pass_without_running_it(tmp_path: Path) -> Non
 async def test_the_brake_parks_an_ultra_pass_at_its_cap(tmp_path: Path) -> None:
     spent = BudgetLedger(turns_spent=0, dollars_spent=10.0, max_turns=None, max_dollars=10.0)
     handler, engine, _, _ = _handler(tmp_path, EventsReader(STARTED), spent)
-    outcome = await handler.handle(_job())
+    outcome = await handle_leased(handler, _job())
     assert isinstance(outcome, Park) and outcome.request.kind == "budget_exhausted"
     assert engine.efforts == []
 
@@ -150,7 +150,7 @@ async def test_the_brake_parks_an_ultra_pass_at_its_cap(tmp_path: Path) -> None:
 async def test_no_cap_without_the_declaration_parks_for_one(tmp_path: Path) -> None:
     uncapped = replace(CAPPED, max_dollars=None)
     handler, engine, _, _ = _handler(tmp_path, EventsReader(STARTED), uncapped)
-    outcome = await handler.handle(_job())
+    outcome = await handle_leased(handler, _job())
     assert isinstance(outcome, Park) and outcome.request.kind == "ultra_needs_cap"
     assert "vibey budget no-cap" in outcome.request.prompt
     assert engine.efforts == []
@@ -158,14 +158,14 @@ async def test_no_cap_without_the_declaration_parks_for_one(tmp_path: Path) -> N
 
 async def test_no_budget_source_is_uncapped_so_it_needs_the_declaration(tmp_path: Path) -> None:
     handler, engine, _, _ = _handler(tmp_path, EventsReader(STARTED, NO_CAP), budget=None)
-    outcome = await handler.handle(_job())
+    outcome = await handle_leased(handler, _job())
     assert isinstance(outcome, Success)
     assert engine.efforts == [Effort.ULTRA]
 
 
 async def test_a_first_pass_after_start_is_pass_one(tmp_path: Path) -> None:
     handler, _, ledger, jobs = _handler(tmp_path, EventsReader(STARTED))
-    await handler.handle(_job(payload={"title": "t"}))
+    await handle_leased(handler, _job(payload={"title": "t"}))
     passes = [e for e in ledger.recorded if e.kind == EventKind.ULTRA_PASS_COMPLETED.value]
     assert passes[0].payload["pass"] == 1
     assert list(jobs._jobs.values())[-1].payload[ULTRA_PAYLOAD_KEY] == 2
@@ -173,7 +173,7 @@ async def test_a_first_pass_after_start_is_pass_one(tmp_path: Path) -> None:
 
 async def test_without_a_run_the_ladder_decides_as_before(tmp_path: Path) -> None:
     handler, engine, ledger, jobs = _handler(tmp_path, EventsReader())
-    outcome = await handler.handle(_job(payload={"title": "t"}))
+    outcome = await handle_leased(handler, _job(payload={"title": "t"}))
     assert isinstance(outcome, Success) and "verify_job_id" not in outcome.result
     assert engine.efforts == [Effort.LOW]
     assert [job.kind for job in jobs._jobs.values()] == ["build.verify"]
@@ -183,7 +183,7 @@ async def test_without_a_run_the_ladder_decides_as_before(tmp_path: Path) -> Non
 async def test_an_ultra_pass_skips_forced_rotation(tmp_path: Path) -> None:
     handler, engine, _, _ = _handler(tmp_path, EventsReader(STARTED))
     job = _job(attempts=3, payload={"previous_engine_id": "qwenloop"})
-    assert isinstance(await handler.handle(job), Success)
+    assert isinstance(await handle_leased(handler, job), Success)
     assert engine.efforts == [Effort.ULTRA]
 
 
@@ -204,7 +204,7 @@ async def test_a_failed_pass_enqueues_no_next_pass(tmp_path: Path) -> None:
         budget_source=FixedBudget(CAPPED),
         ultra_ledger=EventsReader(STARTED),
     )
-    outcome = await handler.handle(_job())
+    outcome = await handle_leased(handler, _job())
     assert isinstance(outcome, Failure)
     assert not jobs._jobs
 
@@ -219,7 +219,7 @@ async def test_the_next_pass_depends_on_the_checks(tmp_path: Path) -> None:
         return await original(request)
 
     jobs.enqueue = spy  # type: ignore[method-assign]
-    await handler.handle(_job())
+    await handle_leased(handler, _job())
     verify = next(j for j in jobs._jobs.values() if j.kind == "build.verify")
     following = requests[-1]
     assert following.depends_on == (verify.id,)  # type: ignore[attr-defined]
@@ -228,7 +228,7 @@ async def test_the_next_pass_depends_on_the_checks(tmp_path: Path) -> None:
 async def test_done_is_a_checkpoint_committed_before_the_next_pass(tmp_path: Path) -> None:
     checkpoint = FakeCheckpoint()
     handler, _, ledger, _ = _handler(tmp_path, EventsReader(STARTED), checkpoint=checkpoint)
-    await handler.handle(_job(payload={ULTRA_PAYLOAD_KEY: 4}))
+    await handle_leased(handler, _job(payload={ULTRA_PAYLOAD_KEY: 4}))
     assert checkpoint.commits == [(tmp_path / "item-1", "chore(ultra): pass 4 of item-1")]
     [done] = [e for e in ledger.recorded if e.kind == EventKind.ULTRA_PASS_COMPLETED.value]
     assert done.payload["commit"] == "c0ffee"
