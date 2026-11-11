@@ -1376,7 +1376,7 @@ async def test_rabbitmq_adapter_deleting_a_missing_queue_is_not_an_error() -> No
     adapter = RabbitMqBusAdapter(
         url="http://bus:15672", username="u", password="p", opener=_raising_opener(missing)
     )
-    await adapter.delete_queue("gone")
+    assert await adapter.delete_queue("gone") is None
 
 
 @pytest.mark.asyncio

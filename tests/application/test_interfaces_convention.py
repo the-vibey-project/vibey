@@ -117,6 +117,8 @@ def test_every_interface_is_runtime_checkable() -> None:
 def test_interface_annotations_all_resolve() -> None:
     """A Protocol whose annotations cannot be resolved is not usable as a type;
     `from __future__ import annotations` makes that easy to miss."""
+    unresolved: list[str] = []
+    resolved = 0
     for name in interfaces.__all__:
         proto = getattr(interfaces, name)
         if not _is_protocol(proto):
@@ -124,7 +126,14 @@ def test_interface_annotations_all_resolve() -> None:
         for method_name, method in vars(proto).items():
             if method_name.startswith("_") or not callable(method):
                 continue
-            get_type_hints(method)
+            try:
+                get_type_hints(method)
+            except NameError as exc:
+                unresolved.append(f"{name}.{method_name}: {exc}")
+            else:
+                resolved += 1
+    assert unresolved == []
+    assert resolved > 0
 
 
 def test_infrastructure_protocols_are_declared_in_its_own_interfaces() -> None:

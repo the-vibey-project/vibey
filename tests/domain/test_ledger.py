@@ -140,7 +140,9 @@ _event_kind_strategy = st.sampled_from(list(EventKind))
 
 @given(seq=st.integers(1, 10_000), payload_value=st.text(max_size=20))
 def test_digest_event_never_raises(seq: int, payload_value: str) -> None:
-    digest_event({"seq": seq, "v": payload_value})
+    digest = digest_event({"seq": seq, "v": payload_value})
+    assert len(digest) == 64
+    assert digest == digest_event({"v": payload_value, "seq": seq})
 
 
 # -- forward-compatible readers (vibey#275) ----------------------------------

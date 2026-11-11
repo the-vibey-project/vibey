@@ -318,13 +318,16 @@ def test_aborting_survives_a_socket_and_a_response_that_will_not_close() -> None
     def refuse(*_: object) -> None:
         raise OSError("already closed")
 
-    _abort(
-        SimpleNamespace(
-            fp=SimpleNamespace(raw=SimpleNamespace(_sock=SimpleNamespace(shutdown=refuse))),
-            close=refuse,
+    assert (
+        _abort(
+            SimpleNamespace(
+                fp=SimpleNamespace(raw=SimpleNamespace(_sock=SimpleNamespace(shutdown=refuse))),
+                close=refuse,
+            )
         )
+        is None
     )
-    _abort(SimpleNamespace(close=refuse))
+    assert _abort(SimpleNamespace(close=refuse)) is None
 
 
 def test_a_stop_that_came_while_connecting_reads_nothing() -> None:

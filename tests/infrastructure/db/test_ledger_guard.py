@@ -879,7 +879,12 @@ async def test_an_owner_that_may_not_revoke_the_parameter_leaves_it_to_the_inspe
         async def execute(self, sql: str, *args: object) -> str:
             raise asyncpg.InsufficientPrivilegeError("permission denied to revoke")
 
-    await DatabaseRoleReconciler._revoke_replication_role(_Refusing(), '"app"')  # type: ignore[arg-type]
+    refusing = _Refusing()
+
+    revoked = await DatabaseRoleReconciler._revoke_replication_role(refusing, '"app"')  # type: ignore[arg-type]
+
+    assert revoked is None
+    assert refusing.executed == []
 
 
 class _Flaky(_OldServer):

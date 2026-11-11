@@ -8,11 +8,14 @@ import json
 import subprocess
 import sys
 import time
+from collections.abc import Callable
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
 
+import pytest
 from typer.testing import CliRunner
 
+import vibey.cli.driver as driver_module
 from vibey.cli.driver import DriverCommand, _UtcClock
 from vibey.cli.interfaces.driver_interface import DriverCommandInterface, UtcClockInterface
 from vibey.cli.main import app
@@ -59,6 +62,24 @@ def _worktree(tmp_path: Path, probe_json: str) -> tuple[Path, Path]:
     return tree, transcript
 
 
+@pytest.fixture
+def advance_clock(monkeypatch: pytest.MonkeyPatch) -> Callable[[float], None]:
+    """Moves the clock the driver stamps its records with, so a probe interval can pass
+    without the test waiting it out; the CLI builds `_UtcClock` per command."""
+    skew = {"seconds": 0.0}
+
+    class _Skewed(_UtcClock):
+        def now(self) -> datetime:
+            return super().now() + timedelta(seconds=skew["seconds"])
+
+    monkeypatch.setattr(driver_module, "_UtcClock", _Skewed)
+
+    def advance(seconds: float) -> None:
+        skew["seconds"] += seconds
+
+    return advance
+
+
 def _wait(path: Path) -> str:
     for _ in range(200):
         if path.exists() and path.read_text():
@@ -87,7 +108,9 @@ def test_interfaces() -> None:
     assert isinstance(clock, UtcClockInterface) and clock.now().tzinfo is UTC
 
 
-def test_hook_fails_over_then_probe_hands_back_to_the_same_session(tmp_path: Path) -> None:
+def test_hook_fails_over_then_probe_hands_back_to_the_same_session(
+    tmp_path: Path, advance_clock: Callable[[float], None]
+) -> None:
     tree, transcript = _worktree(tmp_path, '{"is_error": false, "subtype": "success"}')
     out = runner.invoke(app, ["driver", "hook"], input=_hook(tree, transcript, "rate_limit"))
     assert out.exit_code == 0, out.output
@@ -103,7 +126,7 @@ def test_hook_fails_over_then_probe_hands_back_to_the_same_session(tmp_path: Pat
 
     early = runner.invoke(app, ["driver", "probe", "--cwd", str(tree)])
     assert json.loads(early.output)["result"] == "not_due"
-    time.sleep(1.1)
+    advance_clock(1.1)
     back = runner.invoke(app, ["driver", "probe", "--cwd", str(tree)])
     assert back.exit_code == 0, back.output
     body = json.loads(back.output)
@@ -123,10 +146,12 @@ def test_hook_fails_over_then_probe_hands_back_to_the_same_session(tmp_path: Pat
     assert state["active"] is False and state["failover"]["kind"] == "EngineFailedOver"
 
 
-def test_a_refused_probe_keeps_the_sovereign_engine_working(tmp_path: Path) -> None:
+def test_a_refused_probe_keeps_the_sovereign_engine_working(
+    tmp_path: Path, advance_clock: Callable[[float], None]
+) -> None:
     tree, transcript = _worktree(tmp_path, '{"is_error": true}')
     runner.invoke(app, ["driver", "hook"], input=_hook(tree, transcript, "billing_error"))
-    time.sleep(1.1)
+    advance_clock(1.1)
     out = runner.invoke(app, ["driver", "probe", "--cwd", str(tree)])
     body = json.loads(out.output)
     assert body["result"] == "probe_failed" and body["status"]["active"] is True

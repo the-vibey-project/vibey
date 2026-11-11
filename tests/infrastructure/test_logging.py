@@ -2,6 +2,7 @@
 import logging
 from pathlib import Path
 
+import pytest
 import structlog
 
 from vibey.domain.verbosity import LogPlan
@@ -102,13 +103,18 @@ def test_structlog_app_logger_with_bound() -> None:
     assert isinstance(child, StructlogAppLogger)
 
 
-def test_structlog_app_logger_without_bound() -> None:
+def test_structlog_app_logger_without_bound(capsys: pytest.CaptureFixture[str]) -> None:
     _reset_logging()
     plan = LogPlan(level="DEBUG", include_third_party=False, include_payloads=False)
     configure_logging(plan, human_console=False)
 
     logger = StructlogAppLogger(component="auto")
     logger.info("test")
+
+    captured = capsys.readouterr()
+    emitted = captured.out + captured.err
+    assert "auto" in emitted
+    assert "test" in emitted
 
 
 def test_null_app_logger() -> None:

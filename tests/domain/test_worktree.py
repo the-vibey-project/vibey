@@ -19,9 +19,9 @@ OTHER = UUID("11111111-2222-3333-4444-555555555555")
 
 
 def test_validate_item_id_accepts_lowercase_alphanumeric_and_hyphens() -> None:
-    validate_item_id("item-014")
-    validate_item_id("a")
-    validate_item_id("skeleton")
+    assert validate_item_id("item-014") is None
+    assert validate_item_id("a") is None
+    assert validate_item_id("skeleton") is None
 
 
 @pytest.mark.parametrize("bad", ["", "Item-1", "item_1", "-item", "it/em", "a" * 65])

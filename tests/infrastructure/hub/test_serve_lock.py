@@ -41,4 +41,7 @@ def test_a_lock_file_that_names_no_process_has_no_holder(tmp_path: Path) -> None
 
 
 def test_releasing_without_holding_is_a_no_op(tmp_path: Path) -> None:
-    ServeLock(tmp_path).release()
+    lock = ServeLock(tmp_path)
+
+    assert lock.release() is None
+    assert lock.holder() is None

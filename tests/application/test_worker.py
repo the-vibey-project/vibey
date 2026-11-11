@@ -491,7 +491,10 @@ async def test_heartbeat_task_is_cancelled_cleanly_after_settling() -> None:
     )
 
     # Should return promptly rather than waiting out the (long) heartbeat interval.
-    await asyncio.wait_for(loop.run_once(PROJECT_ID), timeout=1.0)
+    claimed = await asyncio.wait_for(loop.run_once(PROJECT_ID), timeout=1.0)
+
+    assert claimed is True
+    assert [t for t in asyncio.all_tasks() if t is not asyncio.current_task()] == []
 
 
 async def test_unknown_outcome_type_is_silently_ignored() -> None:
