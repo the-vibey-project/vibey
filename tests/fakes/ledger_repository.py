@@ -7,23 +7,36 @@ sequences), so a test that stands on it stands on the SQL's behaviour, not on a 
 Each behaviour below names the line of ``infrastructure/db/ledger_repository.py`` or
 of the migrations it copies.
 
-What it does not model, on purpose (none of it is reachable through a correct caller):
+What it refuses, as PostgreSQL does (each pinned by a contract case on both sides, with
+the same asyncpg exception and SQLSTATE, probed against PostgreSQL 2026-11-11):
 
-- the ``project`` foreign key: ``event.project_id`` references ``project(id)``, so
-  PostgreSQL refuses an append to a project that does not exist; this keeps no project
-  table and takes any id;
-- jsonb's refusals and rewrites: a ``\\u0000`` in a string, or a NaN or infinite float,
-  is refused by PostgreSQL and kept here; a float written with an exponent (``1e20``)
-  comes back from jsonb as an integer and here as the float (equal, not the same type);
+- a project that is not in ``projects`` (the ``project`` table): ``event_seq.project_id
+  REFERENCES project(id)`` (0002), ``ForeignKeyViolationError``;
+- U+0000 anywhere in a key or string: jsonb cannot hold it (``text`` cannot),
+  ``UntranslatableCharacterError``;
+- NaN and the infinities, which ``json.dumps`` writes as tokens JSON does not have:
+  ``InvalidTextRepresentationError``.
+
+What it does not model, on purpose:
+
+- jsonb's number rewrites: a float Python renders with an exponent (``1e+16``, every
+  float of magnitude 1e16 and up) comes back from jsonb as an integer, and ``-0.0`` as
+  ``0.0``. The repository digests Python's rendering first, so on PostgreSQL such an
+  event's stored digest is not its stored payload's and the hash chain reports
+  ``digest_mismatch`` -- a defect of the real repository, pinned as a strict xfail in
+  the contract, not one to copy here;
 - concurrency: ``append_event`` serialises appends to one project on the ``event_seq``
   row; this is single-threaded.
 """
 
 import json
+from collections.abc import Iterable
 from dataclasses import replace
 from datetime import UTC
 from typing import Protocol
 from uuid import UUID, uuid4
+
+import asyncpg
 
 from vibey.domain.ledger import LedgerEvent, digest_event
 from vibey.infrastructure.engines.tailer import LedgerEventDraft
@@ -47,10 +60,13 @@ class LedgerRepository(Protocol):
 
 
 class InMemoryLedgerRepository:
-    """Per-project, append-only lists of events. ``_events`` is the table: the machine
-    reads it directly, the way it reads PostgreSQL's ``event`` rows."""
+    """Per-project, append-only lists of events. ``_events`` is the event table: the
+    machine reads it directly, the way it reads PostgreSQL's ``event`` rows. ``projects``
+    is the project table: a test adds the projects it writes to, as it would insert a
+    ``project`` row."""
 
-    def __init__(self) -> None:
+    def __init__(self, projects: Iterable[UUID] = ()) -> None:
+        self.projects: set[UUID] = set(projects)
         self._events: dict[UUID, list[LedgerEvent]] = {}
 
     async def append(self, draft: LedgerEventDraft) -> LedgerEvent:
@@ -61,6 +77,14 @@ class InMemoryLedgerRepository:
         # `json.dumps(redacted_payload)` is an argument to the append_event call, so a
         # payload JSON cannot carry raises before any seq is claimed.
         stored = json.dumps(payload)
+        # PostgreSQL then casts the argument (`$11::jsonb`) before append_event's body
+        # runs, so jsonb's refusals come before the foreign key's; none claims a seq.
+        self._as_jsonb(stored)
+        if draft.project_id not in self.projects:
+            raise asyncpg.ForeignKeyViolationError(
+                'insert or update on table "event_seq" violates foreign key constraint '
+                '"event_seq_project_id_fkey"'
+            )
         rows = self._events.setdefault(draft.project_id, [])
         event = LedgerEvent(
             # 0002: `event_id uuid ... DEFAULT gen_random_uuid()`.
@@ -107,6 +131,27 @@ class InMemoryLedgerRepository:
     async def latest_seq(self, project_id: UUID) -> int:
         # `max(seq)`, read as 0 when the project has no events.
         return max((event.seq for event in self._events.get(project_id, ())), default=0)
+
+    @classmethod
+    def _as_jsonb(cls, text: str) -> None:
+        """Refuses what the jsonb cast refuses: a NaN or infinite number, a U+0000."""
+
+        def constant(token: str) -> object:
+            raise asyncpg.InvalidTextRepresentationError("invalid input syntax for type json")
+
+        cls._refuse_nul(json.loads(text, parse_constant=constant))
+
+    @classmethod
+    def _refuse_nul(cls, value: object) -> None:
+        if isinstance(value, str) and "\x00" in value:
+            raise asyncpg.UntranslatableCharacterError("unsupported Unicode escape sequence")
+        if isinstance(value, dict):
+            for key, item in value.items():
+                cls._refuse_nul(key)
+                cls._refuse_nul(item)
+        if isinstance(value, list):
+            for item in value:
+                cls._refuse_nul(item)
 
     def _ordered(self, project_id: UUID) -> list[LedgerEvent]:
         return sorted(self._events.get(project_id, ()), key=lambda event: event.seq)

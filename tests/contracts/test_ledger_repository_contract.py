@@ -52,22 +52,24 @@ class Level(IntEnum):
 @dataclass
 class Ledger:
     """One repository plus the one setup move its interface lacks: a project to write
-    to. The real ``event.project_id`` references ``project(id)``, so PostgreSQL needs a
-    row; the fake keeps no project table and takes any id."""
+    to. ``event.project_id`` references ``project(id)`` (0002), so PostgreSQL needs a
+    row; the fake keeps the same table as its ``projects`` set."""
 
     repo: LedgerRepository
     new_project: "NewProject"
 
 
 class NewProject:
-    def __init__(self, pool: asyncpg.Pool | None) -> None:
-        self._pool = pool
+    def __init__(self, table: asyncpg.Pool | InMemoryLedgerRepository) -> None:
+        self._table = table
 
     async def __call__(self) -> UUID:
-        if self._pool is None:
-            return uuid4()
+        if isinstance(self._table, InMemoryLedgerRepository):
+            project = uuid4()
+            self._table.projects.add(project)
+            return project
         name = f"ledger-contract-{uuid4()}"
-        pid = await self._pool.fetchval(
+        pid = await self._table.fetchval(
             "INSERT INTO project (name, repo_path, config) VALUES ($1, $2, '{}'::jsonb) "
             "RETURNING id",
             name,
@@ -79,7 +81,8 @@ class NewProject:
 @pytest.fixture(params=["fake", "postgres"])
 def ledger(request: pytest.FixtureRequest) -> Ledger:
     if request.param == "fake":
-        return Ledger(InMemoryLedgerRepository(), NewProject(None))
+        fake = InMemoryLedgerRepository()
+        return Ledger(fake, NewProject(fake))
     pool: asyncpg.Pool = request.getfixturevalue("migrated_pool")
     return Ledger(PostgresLedgerRepository(pool), NewProject(pool))
 
@@ -208,6 +211,72 @@ async def test_a_payload_json_cannot_carry_is_refused_and_claims_no_seq(ledger: 
         await ledger.repo.append(draft(project, {"x": object()}))
     assert await ledger.repo.latest_seq(project) == 0
     assert (await ledger.repo.append(draft(project))).seq == 1
+
+
+async def test_an_append_to_a_project_that_does_not_exist_is_refused(ledger: Ledger) -> None:
+    # 0002: `event_seq.project_id REFERENCES project(id)` -- append_event's first insert
+    # (into event_seq) is refused, and the transaction claims no seq. Probed 2026-11-11:
+    # ForeignKeyViolationError, `violates foreign key constraint "event_seq_project_id_fkey"`.
+    stranger = uuid4()
+    with pytest.raises(asyncpg.ForeignKeyViolationError, match="event_seq_project_id_fkey"):
+        await ledger.repo.append(draft(stranger))
+    assert await ledger.repo.latest_seq(stranger) == 0
+    assert await ledger.repo.all_for_project(stranger) == ()
+
+
+@pytest.mark.parametrize(
+    "payload",
+    [{"s": "a\x00b"}, {"nested": ["ok", {"k": "\x00"}]}, {"key\x00": 1}],
+    ids=["value", "nested", "key"],
+)
+async def test_a_nul_character_is_refused_and_claims_no_seq(
+    ledger: Ledger, payload: dict[str, object]
+) -> None:
+    # jsonb cannot hold U+0000 (`text` cannot): psql `select '{"a\u0000": 1}'::jsonb` and
+    # the append itself (probed 2026-11-11) fail with "unsupported Unicode escape
+    # sequence", SQLSTATE 22P05, asyncpg.UntranslatableCharacterError.
+    project = await ledger.new_project()
+    with pytest.raises(asyncpg.UntranslatableCharacterError, match="unsupported Unicode escape"):
+        await ledger.repo.append(draft(project, payload))
+    assert await ledger.repo.latest_seq(project) == 0
+    assert (await ledger.repo.append(draft(project))).seq == 1
+
+
+@pytest.mark.parametrize("value", [float("nan"), float("inf"), float("-inf")])
+async def test_a_non_finite_number_is_refused_and_claims_no_seq(
+    ledger: Ledger, value: float
+) -> None:
+    # json.dumps writes NaN / Infinity / -Infinity, which JSON (and so jsonb) has no token
+    # for: "invalid input syntax for type json", SQLSTATE 22P02,
+    # asyncpg.InvalidTextRepresentationError (probed 2026-11-11).
+    project = await ledger.new_project()
+    with pytest.raises(asyncpg.InvalidTextRepresentationError, match="type json"):
+        await ledger.repo.append(draft(project, {"x": value}))
+    assert await ledger.repo.latest_seq(project) == 0
+    assert (await ledger.repo.append(draft(project))).seq == 1
+
+
+@pytest.mark.xfail(
+    strict=True,
+    raises=AssertionError,
+    reason="jsonb rewrites 1e+16 / -0.0 after the repository digested Python's rendering, "
+    "so the stored digest no longer matches the stored payload; see the follow-up issue",
+)
+@pytest.mark.parametrize("value", [1e16, 1e20, -0.0], ids=["1e16", "1e20", "minus-zero"])
+async def test_a_float_jsonb_rewrites_still_verifies_in_postgres(
+    migrated_pool: asyncpg.Pool, project_id: UUID, value: float
+) -> None:
+    # ConnectionEventAppender.append digests `redacted_payload` as Python renders it
+    # (`json.dumps(1e16)` is `1e+16`, of -0.0 is `-0.0`), but jsonb stores and returns
+    # 10000000000000000 (an int, once json.loads reads it) and 0.0. The stored digest is then
+    # not the digest of the stored payload, and LedgerChain.verify reports
+    # DIGEST_MISMATCH on the real ledger. PostgreSQL only: the fake keeps the float, which
+    # is what the ledger promises. Flips loudly (strict) the day the repository is fixed.
+    repo = PostgresLedgerRepository(migrated_pool)
+    await repo.append(draft(project_id, {"x": value}))
+    events = await repo.all_for_project(project_id)
+    verified = LedgerChain().verify(project_id, events)
+    assert verified.ok, verified.findings
 
 
 # --- what an event holds ------------------------------------------------------------------
