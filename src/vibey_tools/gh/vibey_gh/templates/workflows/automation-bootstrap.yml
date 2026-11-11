@@ -53,6 +53,13 @@ jobs:
           # PR automation's own merge gate (broken, or this path would not be needed) and
           # this workflow's own: never waited on, never required.
           EXCLUDED_CHECKS: __VIBEY_GH_BOOTSTRAP_EXCLUDED_CHECKS__
+          # Checks that must have concluded `success` themselves. A SKIPPED check counts as
+          # passing everywhere else, and `gates` is skipped whenever a job it needs (`uv-lock`,
+          # `lint`) failed: skipped there means the suite never ran, and this path then runs
+          # `gh pr merge --admin`. The one suite that reads the whole repository is therefore
+          # accepted on `success` alone. A check named here that is not reported is no failure
+          # (REQUIRED_CHECKS above is what demands presence); one that is reported must be green.
+          SUCCESS_ONLY_CHECKS: "[\"gates\"]"
           # Workflow, template, and automation-core paths as a POSIX ERE, anchored at
           # `[install] self_source`: `gh pr diff` reports repository-root paths.
           CHANGED_FILE_SCOPE: __VIBEY_GH_BOOTSTRAP_SCOPE__
@@ -78,7 +85,8 @@ jobs:
           checks=$(gh api "repos/${REPO}/commits/${EXPECTED_SHA}/check-runs?per_page=100")
           # Fail closed on every axis: at least one gate declared, at least one check run
           # reported, every reported run green, and every declared gate among them.
-          if ! jq -e --argjson required "$REQUIRED_CHECKS" --argjson excluded "$EXCLUDED_CHECKS" '
+          if ! jq -e --argjson required "$REQUIRED_CHECKS" --argjson excluded "$EXCLUDED_CHECKS" \
+            --argjson strict "$SUCCESS_ONLY_CHECKS" '
             [.check_runs[] | select(.name as $name | all($excluded[]; . != $name))] as $checks |
             ($required | length > 0) and
             ($checks | length > 0) and
@@ -86,6 +94,8 @@ jobs:
               .status == "completed" and
               (.conclusion == "success" or .conclusion == "neutral" or .conclusion == "skipped")
             )) and
+            ([$checks[] | select(.name as $name | $strict | index($name))]
+              | all(.conclusion == "success")) and
             (($required - [$checks[].name]) | length == 0)
           ' <<<"$checks" >/dev/null; then
             absent=$(jq -r --argjson required "$REQUIRED_CHECKS" \

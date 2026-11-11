@@ -85,7 +85,7 @@ On a Mac where `code` is not on your PATH:
 "/Applications/Visual Studio Code.app/Contents/Resources/app/bin/code" --install-extension krypton-vscode-0.3.0.vsix
 ```
 
-Or use **Install from VSIX…** in the Extensions view's `…` menu. CI's `vscode-extension` job
+Or use **Install from VSIX…** in the Extensions view's `…` menu. CI's `VS Code extension` jobs
 builds the same file, and `npx vsce package --no-dependencies` in `clients/vscode` builds it
 locally, named `krypton-0.3.0.vsix`.
 

@@ -53,6 +53,8 @@ from typing import Any
 import pytest
 import yaml
 
+from .ci_matrix_rows import CiMatrixRows
+
 REPO = Path(__file__).resolve().parents[2]
 WORKFLOW = REPO / ".github" / "workflows" / "ci.yml"
 TENANT_ROOTS = ("src/vibey_runners", "src/vibey_tools")
@@ -62,8 +64,9 @@ SUPPORTED_PYTHON = ("3.12", "3.13", "3.14")
 
 
 def _matrix_rows() -> list[dict[str, Any]]:
-    workflow = yaml.safe_load(WORKFLOW.read_text(encoding="utf-8"))
-    rows = workflow["jobs"]["tools"]["strategy"]["matrix"]["include"]
+    # The `tools` matrix is the plan job's output; the rows it can run are the FULL rows of
+    # .github/ci-matrices.toml, which is what must cover every package.
+    rows = CiMatrixRows.full("tools")
     assert rows, "the tools job has no matrix rows"
     return list(rows)
 
@@ -166,7 +169,7 @@ def _commands_run_from(where: str) -> list[str]:
     workflow = yaml.safe_load(WORKFLOW.read_text(encoding="utf-8"))
     commands = [
         str(row["static"])
-        for row in workflow["jobs"]["tools"]["strategy"]["matrix"]["include"]
+        for row in CiMatrixRows.full("tools")
         if str(row["dir"]) == where and row.get("static")
     ]
     commands += [

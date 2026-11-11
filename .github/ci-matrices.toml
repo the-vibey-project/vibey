@@ -305,7 +305,8 @@ test = "python -m pytest -q"
 
 [postgres-compatibility]
 output = "postgres"
-areas = ["python"]
+# python: the suite. deploy: tests/infrastructure/db/test_keda_scaler_query.py reads deploy/helm/golden.
+areas = ["python", "deploy"]
 
 # PR tier: the oldest and the newest supported major.
 [[postgres-compatibility.pr]]

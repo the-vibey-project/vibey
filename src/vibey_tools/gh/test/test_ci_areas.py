@@ -17,7 +17,6 @@ from pathlib import Path
 from typing import Any
 
 import pytest
-import yaml
 
 from vibey_gh.ci_areas import AreaDecision, CiAreas, CiAreasCommand
 from vibey_gh.cli import main
@@ -27,7 +26,7 @@ from vibey_gh.interfaces.command_runner_interface import CommandResult, CommandR
 ROOT = Path(__file__).resolve().parents[4]
 AREAS_TOML = ROOT / ".github" / "ci-areas.toml"
 MATRICES_TOML = ROOT / ".github" / "ci-matrices.toml"
-CI_YML = ROOT / ".github" / "workflows" / "ci.yml"
+SNAPSHOT = ROOT / "tests" / "meta" / "ci_matrix_snapshot.json"
 
 pytestmark = pytest.mark.skipif(
     not AREAS_TOML.is_file(), reason="the repository's CI maps are not beside this tenant"
@@ -116,7 +115,8 @@ def test_python_source_yields_python() -> None:
 
 def test_a_tenant_path_yields_tools_and_selects_its_row_and_its_dependants() -> None:
     decision = classify("src/vibey_tools/gh/vibey_gh/x.py")
-    assert decision.areas == {"tools"}
+    # The gh source is also a vscode and app input: those jobs install it for `advisory-check`.
+    assert decision.areas == {"tools", "vscode", "app"}
     assert not decision.full
     assert sorted(packages(decision)) == ["vibey-bootstrap", "vibey-gh"]
     for row in real().matrix("tools", decision)["include"]:
@@ -513,28 +513,28 @@ def toml_rows(job: str, tier: str) -> list[dict[str, Any]]:
     return real().rows(job, tier)
 
 
-def ci_yml_rows() -> dict[str, list[dict[str, Any]]]:
-    jobs = yaml.safe_load(CI_YML.read_text(encoding="utf-8"))["jobs"]
-    return {
-        "tools": jobs["tools"]["strategy"]["matrix"]["include"],
-        "postgres-compatibility": [
-            {"postgres": version}
-            for version in jobs["postgres-compatibility"]["strategy"]["matrix"]["postgres"]
-        ],
-        "desktop": jobs["desktop"]["strategy"]["matrix"]["include"],
-    }
+def snapshot_rows() -> dict[str, list[dict[str, Any]]]:
+    """The matrices ci.yml declared before the jobs read them from the plan job."""
+    snapshot = json.loads(SNAPSHOT.read_text(encoding="utf-8"))
+    return {job: snapshot[job] for job in ("tools", "postgres-compatibility", "desktop")}
 
 
-def test_the_toml_full_rows_equal_the_ci_yml_matrix_rows() -> None:
-    # The two cannot drift until the jobs read the TOML (a later task moves them).
-    declared = ci_yml_rows()
+def canonical(rows: list[dict[str, Any]]) -> list[str]:
+    return sorted(json.dumps(row, sort_keys=True) for row in rows)
+
+
+def test_the_toml_full_rows_equal_the_snapshot_of_the_old_ci_yml_matrices() -> None:
+    # ci.yml no longer declares these matrices: each job reads `fromJSON(needs.plan.outputs
+    # .<job>_matrix)`, so the full tier in the TOML is the only copy. The snapshot, committed
+    # before ci.yml moved them, is what keeps a dropped row from going unnoticed.
+    declared = snapshot_rows()
     assert {job: len(rows) for job, rows in declared.items()} == {
         "tools": 24,
         "postgres-compatibility": 5,
         "desktop": 4,
     }
     for job, rows in declared.items():
-        assert toml_rows(job, "full") == rows, job
+        assert canonical(toml_rows(job, "full")) == canonical(rows), job
     assert [row["postgres"] for row in toml_rows("postgres-compatibility", "full")] == [
         14,
         15,
@@ -600,7 +600,7 @@ def test_an_unknown_job_or_tier_is_refused() -> None:
 
 
 def test_an_empty_row_set_prints_the_any_output_false_and_no_matrix() -> None:
-    outputs = real().outputs(classify("deploy/helm/vibey/values.yaml"))
+    outputs = real().outputs(classify("clients/krypton-app/package.json"))
     assert outputs["tools_any"] == outputs["postgres_any"] == outputs["desktop_any"] == "false"
     assert not [key for key in outputs if key.endswith("_matrix")]
     assert "include" not in "".join(outputs.values())
@@ -791,8 +791,8 @@ def test_a_clean_docs_diff_prints_the_pr_tier_and_only_the_gh_dependants(capsys)
     assert err == ""
 
 
-def test_a_deploy_only_diff_prints_no_matrix_at_all(capsys) -> None:
-    _, lines, err = run_areas(FakeRunner(stdout="deploy/helm/vibey/values.yaml\0"), capsys)
+def test_a_krypton_app_only_diff_prints_no_matrix_at_all(capsys) -> None:
+    _, lines, err = run_areas(FakeRunner(stdout="clients/krypton-app/package.json\0"), capsys)
     assert (lines["tools_any"], lines["postgres_any"], lines["desktop_any"]) == ("false",) * 3
     assert not [key for key in lines if key.endswith("_matrix")]
     assert err == ""
@@ -1258,7 +1258,7 @@ def test_the_cli_reference_pins_the_consumer_contract() -> None:
 
 AREA_LINES = {
     "desktop": 'areas = ["desktop"]\n',
-    "postgres-compatibility": 'areas = ["python"]\n',
+    "postgres-compatibility": 'areas = ["python", "deploy"]\n',
     "tools": 'areas = ["tools"]\n',
 }
 TOOLS_SELECT_ON = '[tools.select_on]\ndocs = ["vibey-gh", "vibey-skills"]\n'
@@ -1302,3 +1302,37 @@ def test_select_on_alone_can_trigger_a_job_and_the_real_maps_load() -> None:
     areas = tomllib.loads(AREAS_TOML.read_text(encoding="utf-8"))
     CiAreas(areas, tomllib.loads(text))
     assert real().rows("desktop", "pr") and real()._jobs["desktop"]["areas"] == ["desktop"]
+
+
+# The plan job runs the PULL REQUEST's own classifier and maps, so a change to any of them must
+# never be able to choose its own tier: each is on the always-full list. (Running the classifier
+# from the base revision instead is the open follow-up.)
+CLASSIFIER_FILES = (
+    "src/vibey_tools/gh/vibey_gh/ci_areas.py",
+    "src/vibey_tools/gh/vibey_gh/interfaces/ci_areas_interface.py",
+    "src/vibey_tools/gh/test/test_ci_areas.py",
+    ".github/ci-areas.toml",
+    ".github/ci-matrices.toml",
+    "tests/meta/ci_matrix_snapshot.json",
+)
+
+
+@pytest.mark.parametrize("path", CLASSIFIER_FILES)
+def test_a_change_to_the_classifier_or_its_maps_runs_the_full_tier(path: str) -> None:
+    decision = real().classify([path], **PR)
+    assert decision.full, path
+    assert any("always-full" in reason for reason in decision.reasons)
+
+
+def test_a_gh_tenant_source_change_selects_the_jobs_that_install_it() -> None:
+    decision = classify("src/vibey_tools/gh/vibey_gh/advisories.py")
+    assert {"tools", "vscode", "app"} <= decision.areas
+
+
+def test_a_desktop_test_input_in_the_python_tree_is_a_desktop_change() -> None:
+    assert {"python", "desktop"} <= classify("tests/cli/golden/vibey-loops.json").areas
+
+
+def test_a_deploy_change_selects_the_postgres_matrix() -> None:
+    decision = classify("deploy/helm/golden/x.yaml")
+    assert real().matrix("postgres-compatibility", decision)["include"]

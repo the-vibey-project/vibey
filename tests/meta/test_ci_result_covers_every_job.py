@@ -102,9 +102,18 @@ GATED_BY_LINT = {
     "cluster-smoke",
 }
 # `plan` is neither: it has no `needs` at all (it must never wait on, or be cut by, another
-# job) and nothing reads it yet (SP1-B). tests/meta/test_ci_plan_job.py pins its shape.
+# job) and it gates nothing itself: the jobs read its outputs (SP1-B). tests/meta/test_ci_plan_job.py
+# pins its shape and tests/meta/test_ci_tiers_keep_every_row.py what reads it.
 REPORT_ONLY = {"plan"}
-UNGATED_BY_LINT = {"krypton-app", "vibey-core", "app", "vscode-extension", "desktop", "chart"}
+UNGATED_BY_LINT = {
+    "krypton-app",
+    "vibey-core",
+    "app",
+    "vscode-extension-ubuntu",
+    "vscode-extension-macos",
+    "desktop",
+    "chart",
+}
 # Moved verbatim from `gates` into `lint`, in this order.
 MOVED_STEPS = [
     "Install uv",

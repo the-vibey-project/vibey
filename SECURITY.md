@@ -259,7 +259,7 @@ Vibey is a queue-based conductor for autonomous software delivery. Because Vibey
 
 Python dependencies are gated by `pip-audit` in CI's `gates` job. The npm lockfiles, the root
 workspace and `clients/app`, are gated by `vibey-gh advisory-check` in the `@vibey/core`, `app` and
-`vscode-extension` jobs. The check runs `npm audit --json` and fails on every advisory at
+`VS Code extension` jobs. The check runs `npm audit --json` and fails on every advisory at
 `[advisories] audit_level` (`high`) or worse, as `npm audit --audit-level=high` does. The one
 difference is that an advisory may be excepted in `.github/advisory-exceptions.toml`.
 
