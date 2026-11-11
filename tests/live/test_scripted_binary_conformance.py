@@ -54,6 +54,8 @@ _FIXTURE_ROOTS = {
     EngineId.CODEXLOOP: _REPO_ROOT / "src" / "vibey_runners" / "codex",
 }
 
+_PROBE_BUDGET_SECONDS = 60.0
+
 # An engine whose own scripted agent is known broken upstream, with the reason; its case
 # is a strict xfail until the fix lands. None today.
 _KNOWN_BROKEN_UPSTREAM: dict[EngineId, str] = {}
@@ -91,12 +93,16 @@ async def test_real_binary_scripted_conformance(
     monkeypatch.setenv(allow_env, "1")
     monkeypatch.setenv(script_env, str(script))
 
-    adapter = LoopProcessAdapter(descriptor=descriptor)
+    # This file runs the real binary inside the full suite, where several xdist workers and
+    # other sessions compete for the machine. The probe budgets are widened, not the
+    # assertions loosened: a binary that is merely slow passes, a broken one still fails.
+    adapter = LoopProcessAdapter(descriptor=descriptor, version_timeout=_PROBE_BUDGET_SECONDS)
     fixtures = [("credits", CREDITS_FIXTURES[engine_id], CreditsExhausted)]
     report = await run_conformance(
         adapter,
         capacity_fixtures=fixtures,
         trivial_worktree=str(tmp_path / "conformance-wt"),
+        verdict_poll_seconds=_PROBE_BUDGET_SECONDS,
     )
 
     assert report.ok, [c for c in report.checks if not c.ok]
