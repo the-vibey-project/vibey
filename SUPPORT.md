@@ -23,3 +23,5 @@ Running vibey needs PostgreSQL and at least one `*loop` engine on PATH —
 `vibey doctor` reports what's missing.
 
 By participating you agree to the [Code of Conduct](CODE_OF_CONDUCT.md).
+
+<!-- throwaway probe: proves a docs-only diff skips the area jobs. Never merged. -->
