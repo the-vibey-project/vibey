@@ -137,8 +137,9 @@ class CiAreas(CiAreasInterface):
             malformed = not isinstance(spec.get(tier), list)
             if malformed:
                 raise ValueError(f"{where} needs a `{tier}` list of rows")
-        if not spec["full"]:
-            raise ValueError(f"{where} `full` must not be empty: a full run would run nothing")
+        for tier in ("full", "pr"):
+            if not spec[tier]:
+                raise ValueError(f"{where} `{tier}` must not be empty: the job would run nothing")
         cls._require_string(spec.get("output", job), f"{where} `output`")
         select_on = spec.get("select_on", {})
         cls._require_table(select_on, f"{where} `select_on`")
@@ -273,11 +274,13 @@ class CiAreas(CiAreasInterface):
                 wide.add(here)
                 continue
             for target in targets:
-                resolved = posixpath.normpath(posixpath.join(here, target))
-                if "://" in target:
-                    # A URL is a path to nothing in the tree: it cannot be resolved.
+                if "://" in target or any(mark in target for mark in "${`") or target[:1] == "~":
+                    # A URL, a shell expansion or a home path is a path to nothing the tree
+                    # can resolve: joined onto the row's directory it would look local.
                     wide.add(here)
-                elif resolved == here or resolved.startswith(here + "/"):
+                    continue
+                resolved = posixpath.normpath(posixpath.join(here, target))
+                if resolved == here or resolved.startswith(here + "/"):
                     continue
                 owner = next(
                     (d for d in dirs if resolved == d or resolved.startswith(d + "/")), None
@@ -429,8 +432,9 @@ class CiAreas(CiAreasInterface):
 
     def outputs(self, decision: AreaDecision) -> dict[str, str]:
         compact = (",", ":")
-        # A full decision reports every declared area, whatever made it full, so a consumer
-        # testing `contains(areas, X)` never reads a full run as "nothing touched X".
+        # A full decision reports every declared area, whatever made it full. That is not
+        # enough on its own: when the areas map is unreadable the fallback has no names to
+        # print, so a consumer MUST test `full` before `areas` (docs/cli.md).
         areas = sorted(self._areas if decision.full else decision.areas)
         out = {
             "areas": json.dumps(areas, separators=compact),
@@ -616,7 +620,7 @@ class CiAreasCommand(CiAreasCommandInterface):
         _, areas_path, matrices_path = paths
         try:
             rows = CiAreas.load(areas_path, matrices_path).rows(job, tier)
-        except (OSError, ValueError) as exc:
+        except (OSError, ValueError, TypeError) as exc:
             print(f"vibey-gh: ci-matrix: {exc}", file=sys.stderr)
             return 1
         print(json.dumps({"include": rows}, separators=(",", ":")))

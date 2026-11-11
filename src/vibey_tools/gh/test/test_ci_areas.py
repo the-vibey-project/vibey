@@ -674,7 +674,7 @@ def test_the_maps_are_validated_at_load_naming_the_key() -> None:
         (good, {"j": no_pr}, r"\[j\] needs a `pr` list"),
         (good, {"j": {"areas": ["docs"]}}, r"\[j\] needs a `full` list"),
         (good, {"j": job(pr=[{"package": "p"}])}, r"\[j\].*`pr`.*`dir`"),
-        (good, {"j": job(full=[{"dir": "d/p"}], pr=[])}, r"\[j\].*`full`.*`package`"),
+        (good, {"j": job(full=[{"dir": "d/p"}], pr=[row])}, r"\[j\].*`full`.*`package`"),
         (good, {"j": job(owner_key="dir", name_key="nope")}, r"\[j\].*`nope`"),
         (good, {"j": job(areas="docs")}, r"\[j\] `areas` must be a list"),
         (good, {"j": {k: v for k, v in job().items() if k != "name_key"}}, r"\[j\].*`name_key`"),
@@ -682,6 +682,7 @@ def test_the_maps_are_validated_at_load_naming_the_key() -> None:
         (good, {"j": 1}, r"\[j\] must be a table"),
         (good, {"j": [job()]}, r"\[j\] must be a table"),
         (good, {"j": job(full=[], pr=[])}, r"\[j\] `full` must not be empty"),
+        (good, {"j": job(pr=[])}, r"\[j\] `pr` must not be empty"),
         (good, {"j": job(pr=["p"])}, r"\[j\] a `pr` row must be a table"),
         (good, {"j": job(full=["p"])}, r"\[j\] a `full` row must be a table"),
         (good, {"j": job(full=[{"package": "p", "dir": 3}])}, r"\[j\] `dir` must be a string"),
@@ -1163,6 +1164,10 @@ def test_every_install_form_that_reaches_another_row_is_an_edge(install: str) ->
         "pip install --index-url https://example.com/simple pytest",
         "pip install -r",
         "pip install -r../",
+        "pip install -e $GITHUB_WORKSPACE/d/b",
+        'pip install -e "${ROOT}/d/b"',
+        "pip install -e ~/d/b",
+        "pip install -e `pwd`/../b",
         3,
     ],
 )
@@ -1176,3 +1181,70 @@ def test_plain_requirements_and_options_are_leaves_and_never_widen() -> None:
     assert edges_of(install) == {"a": set(), "b": set()}
     ci = tools_job({"a": install, "b": "pip install pytest"})
     assert ci.classify(["d/b/x.py"], **PR).owners == {"d/b"}
+
+
+# ------------------------------------------------------------------ fix round 3
+
+
+def test_a_shell_expansion_is_never_resolved_against_the_row_directory() -> None:
+    # `-e .` and `.[dev]` are the row's own package and must stay leaves.
+    for install in ("pip install -e .", 'pip install -e ".[dev]"', "pip install ."):
+        assert edges_of(install) == {"a": set(), "b": set()}, install
+        assert tools_job({"a": install, "b": "pip install pytest"}).classify(
+            ["d/b/x.py"], **PR
+        ).owners == {"d/b"}
+
+
+@pytest.mark.parametrize(
+    "install",
+    [
+        "pip install --index-url https://example.com/simple pytest",
+        "pip install -e git+https://example.com/x.git",
+        "pip install https://example.com/x.whl",
+    ],
+)
+def test_a_url_install_widens_without_a_self_edge(install: str) -> None:
+    ci = tools_job({"a": install, "b": "pip install pytest"})
+    assert ci.dependencies("tools") == {"a": set(), "b": set()}
+    assert ci.classify(["d/b/x.py"], **PR).owners == {"d/a", "d/b"}
+
+
+def test_an_empty_pr_list_through_the_cli_prints_the_fallback_and_exits_zero(
+    tmp_path, capsys
+) -> None:
+    bad = tmp_path / "matrices.toml"
+    bad.write_text(
+        '[desktop]\noutput = "desktop"\nareas = ["desktop"]\npr = []\n'
+        '[[desktop.full]]\ndistro = "ubuntu"\n'
+    )
+    status, lines, err = run_areas(
+        FakeRunner(stdout="clients/desktop/x.c\0"), capsys, paths=(ROOT, AREAS_TOML, bad)
+    )
+    assert status == 0
+    assert (lines["full"], lines["tier"], lines["desktop_any"]) == ("true", "full", "true")
+    assert "`pr` must not be empty" in err
+
+
+def test_ci_matrix_gives_a_clean_error_for_a_malformed_select_on(tmp_path, capsys) -> None:
+    text = MATRICES_TOML.read_text(encoding="utf-8").replace(
+        'docs = ["vibey-gh", "vibey-skills"]', 'docs = [["x"]]'
+    )
+    assert 'docs = [["x"]]' in text
+    bad = tmp_path / "matrices.toml"
+    bad.write_text(text)
+    status = CiAreasCommand(runner=FakeRunner()).matrix(
+        job="tools", tier="pr", paths=(ROOT, AREAS_TOML, bad)
+    )
+    assert status == 1
+    assert "vibey-gh: ci-matrix:" in capsys.readouterr().err
+
+
+CLI_DOC = Path(__file__).resolve().parents[1] / "docs" / "cli.md"
+
+
+def test_the_cli_reference_pins_the_consumer_contract() -> None:
+    doc = CLI_DOC.read_text(encoding="utf-8")
+    assert "consumers MUST test `full` before `areas`" in doc
+    assert "`areas` is empty when the areas map is unreadable" in doc
+    assert "`ci-matrix` is not a gating step" in doc
+    assert "continue-on-error" in doc and "behind the defaults step" in doc
