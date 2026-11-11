@@ -148,6 +148,10 @@ class CiAreas(CiAreasInterface):
             "select_all_on": cls._names(spec, "select_all_on", where),
             "select_on": list(select_on),
         }
+        if not named["areas"] and not named["select_on"]:
+            raise ValueError(
+                f"{where} `areas` and `select_on` name no area, so nothing could ever select it"
+            )
         for key, areas in named.items():
             for area in areas:
                 if area not in declared:
@@ -220,7 +224,12 @@ class CiAreas(CiAreasInterface):
     # ------------------------------------------------------------------ the dependency edges
 
     @staticmethod
-    def _install_paths(install: Any) -> list[str] | None:
+    def _unresolvable(target: str) -> bool:
+        """A URL, a shell expansion or a home path: no path the tree can resolve."""
+        return "://" in target or any(mark in target for mark in "${`") or target[:1] == "~"
+
+    @classmethod
+    def _install_paths(cls, install: Any) -> list[str] | None:
         """Every path an install command reaches into: the operand of `-e`/`--editable`/`-r`/
         `--requirement` (spaced or attached, `--editable=../x`, `-e../x`) and any positional
         token that looks like a path (a slash, a dot-dot or `.`). None when it cannot be read.
@@ -249,7 +258,7 @@ class CiAreas(CiAreasInterface):
             elif not token.startswith("-"):
                 # `.[dev]` is the row's own package with extras: drop the extras.
                 bare = re.sub(r"\[[^\]]*\]$", "", token)
-                if bare == "." or "/" in bare or ".." in bare:
+                if bare == "." or "/" in bare or ".." in bare or cls._unresolvable(bare):
                     operand = bare
             if operand is not None:
                 paths.append(re.sub(r"\[[^\]]*\]$", "", operand))
@@ -274,7 +283,7 @@ class CiAreas(CiAreasInterface):
                 wide.add(here)
                 continue
             for target in targets:
-                if "://" in target or any(mark in target for mark in "${`") or target[:1] == "~":
+                if cls._unresolvable(target):
                     # A URL, a shell expansion or a home path is a path to nothing the tree
                     # can resolve: joined onto the row's directory it would look local.
                     wide.add(here)

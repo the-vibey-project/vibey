@@ -11,6 +11,7 @@ from __future__ import annotations
 
 import json
 import subprocess
+import tomllib
 from collections.abc import Mapping, Sequence
 from pathlib import Path
 from typing import Any
@@ -1168,6 +1169,9 @@ def test_every_install_form_that_reaches_another_row_is_an_edge(install: str) ->
         'pip install -e "${ROOT}/d/b"',
         "pip install -e ~/d/b",
         "pip install -e `pwd`/../b",
+        "pip install $GH",
+        'pip install "$GH_DIR"',
+        "pip install ~",
         3,
     ],
 )
@@ -1186,7 +1190,7 @@ def test_plain_requirements_and_options_are_leaves_and_never_widen() -> None:
 # ------------------------------------------------------------------ fix round 3
 
 
-def test_a_shell_expansion_is_never_resolved_against_the_row_directory() -> None:
+def test_dot_and_dot_with_extras_stay_leaves_and_never_widen() -> None:
     # `-e .` and `.[dev]` are the row's own package and must stay leaves.
     for install in ("pip install -e .", 'pip install -e ".[dev]"', "pip install ."):
         assert edges_of(install) == {"a": set(), "b": set()}, install
@@ -1248,3 +1252,53 @@ def test_the_cli_reference_pins_the_consumer_contract() -> None:
     assert "`areas` is empty when the areas map is unreadable" in doc
     assert "`ci-matrix` is not a gating step" in doc
     assert "continue-on-error" in doc and "behind the defaults step" in doc
+
+
+# ------------------------------------------------------------------ fix round 4
+
+AREA_LINES = {
+    "desktop": 'areas = ["desktop"]\n',
+    "postgres-compatibility": 'areas = ["python"]\n',
+    "tools": 'areas = ["tools"]\n',
+}
+TOOLS_SELECT_ON = '[tools.select_on]\ndocs = ["vibey-gh", "vibey-skills"]\n'
+
+
+def matrices_without_areas(
+    tmp_path: Path, job: str, replacement: str, *, drop_select_on: bool
+) -> Path:
+    text = MATRICES_TOML.read_text(encoding="utf-8")
+    assert text.count(AREA_LINES[job]) == 1
+    text = text.replace(AREA_LINES[job], replacement)
+    if drop_select_on:
+        assert TOOLS_SELECT_ON in text
+        text = text.replace(TOOLS_SELECT_ON, "")
+    path = tmp_path / f"{job}.toml"
+    path.write_text(text)
+    return path
+
+
+@pytest.mark.parametrize("job", sorted(AREA_LINES))
+@pytest.mark.parametrize("replacement", ["areas = []\n", ""], ids=["empty", "missing"])
+def test_a_job_that_no_area_can_trigger_is_refused_at_load_and_falls_back(
+    job: str, replacement: str, tmp_path, capsys
+) -> None:
+    path = matrices_without_areas(tmp_path, job, replacement, drop_select_on=True)
+    areas = tomllib.loads(AREAS_TOML.read_text(encoding="utf-8"))
+    with pytest.raises(ValueError, match=rf"\[{job}\] `areas` .*select_on.*no area"):
+        CiAreas(areas, tomllib.loads(path.read_text(encoding="utf-8")))
+    status, lines, err = run_areas(
+        FakeRunner(stdout="clients/desktop/x.c\0"), capsys, paths=(ROOT, AREAS_TOML, path)
+    )
+    assert status == 0
+    assert (lines["full"], lines["tier"]) == ("true", "full")
+    assert json.loads(lines["areas"]) == ALL_AREAS
+    assert lines["desktop_any"] == "true" and "no area" in err
+
+
+def test_select_on_alone_can_trigger_a_job_and_the_real_maps_load() -> None:
+    # tools has areas = ["tools"] plus select_on; with areas = [] the select_on keys remain.
+    text = MATRICES_TOML.read_text(encoding="utf-8").replace(AREA_LINES["tools"], "areas = []\n")
+    areas = tomllib.loads(AREAS_TOML.read_text(encoding="utf-8"))
+    CiAreas(areas, tomllib.loads(text))
+    assert real().rows("desktop", "pr") and real()._jobs["desktop"]["areas"] == ["desktop"]
