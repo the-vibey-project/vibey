@@ -68,6 +68,7 @@ from vibey.domain.ledger import (
     LedgerEventKind,
     Provenance,
     StoredProvenance,
+    canonical_bytes,
     digest_event,
     open_items,
 )
@@ -96,8 +97,11 @@ PAYLOADS: st.SearchStrategy[dict[str, object]] = st.dictionaries(
     SCALARS | st.lists(SCALARS, max_size=2),
     max_size=3,
 )
-"""JSON a jsonb column hands back unchanged (no exponent floats, no ``\\u0000``), with a
-sensitive key name and a vendor-shaped secret often enough that redaction is exercised."""
+"""JSON a jsonb column hands back unchanged, with a sensitive key name and a vendor-shaped
+secret often enough that redaction is exercised. Left out on purpose: what jsonb refuses
+(U+0000, NaN, the infinities -- pinned on both sides by the contract) and the floats it
+rewrites (``1e+16`` and up, ``-0.0``) -- a defect of the real repository, pinned there as a
+strict xfail, that this machine would otherwise report on every run."""
 ORDINARY = (EventKind.TURN_REQUESTED, EventKind.FILE_EDITED, EventKind.TOOL_INVOKED)
 IDS = (None, UUID(int=1), UUID(int=2))
 CORRELATIONS = (UUID(int=10), UUID(int=11))
@@ -109,10 +113,12 @@ CONTROL_SETTINGS = settings(
     deadline=None,
     database=None,
     derandomize=True,
-    phases=[HypothesisPhase.generate, HypothesisPhase.shrink],
+    phases=[HypothesisPhase.generate],
 )
 """Deterministic (``derandomize``) and remembering nothing, so a control's verdict never
-depends on an earlier run; no explain phase, which only annotates the report."""
+depends on an earlier run. Generation only: a control needs the first failure, not the
+smallest, and its message is matched whatever the example (shrinking was most of its time,
+the explain phase only annotates the report)."""
 
 
 class Runner(Protocol):
@@ -154,7 +160,9 @@ class Seen:
     correlation_id: UUID
     provenance: StoredProvenance
     produced_at: str
-    payload: dict[str, object]
+    payload: str
+    """``canonical_bytes`` of the payload, so ``True``, ``1`` and ``1.0`` -- equal as
+    Python values, different as stored JSON -- do not compare equal."""
     digest: str
 
 
@@ -169,6 +177,7 @@ class FakeSides:
             return tuple(sorted(repo._events.get(project_id, ()), key=lambda e: e.seq))
 
         projects = tuple(uuid4() for _ in range(WRITTEN + 1))
+        repo.projects.update(projects[:WRITTEN])
         return Side(name, repo, projects, stored)
 
 
@@ -321,7 +330,7 @@ class LedgerRepositoryMachine(RuleBasedStateMachine):
             correlation_id=event.correlation_id,
             provenance=event.provenance,
             produced_at=event.produced_at.isoformat(),
-            payload=dict(event.payload),
+            payload=canonical_bytes(event.payload).decode(),
             digest=event.digest,
         )
 
