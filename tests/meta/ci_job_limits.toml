@@ -34,7 +34,7 @@ basis = "measured"
 [jobs.plan]
 # unmeasured until its first run (SP1-B, report-only). One Linux job: a checkout, `pip install
 # -e` of the dependency-free vibey-gh and one git diff; the target is under a minute, so 10 is
-# the rule's floor and generous.
+# the rule's floor and generous. First observed run: 16 s (one sample, so still unmeasured).
 timeout_minutes = 10
 basis = "unmeasured"
 
