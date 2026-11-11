@@ -12,7 +12,10 @@ fails here, instead of letting a false-green through every faked-mode test.
 Normalisation. Ids are generated on each side, so a job is named by the order it was first
 enqueued (its index) and every id a call returns is mapped back through that order. Times
 come from two clocks, so a lease reads as live, lapsed or none, and ``run_after`` as due or
-not due, rather than as an instant.
+not due, rather than as an instant -- each side's read against that side's own clock
+(``Side.clock``: the database's ``clock_timestamp()`` for PostgreSQL), and every instant the
+machine chooses given as an offset from that side's own start. A database clock skewed
+against this host therefore changes no reading.
 
 Time. No step sleeps. ``claim`` and ``heartbeat`` take ``lease`` as an interval added to the
 database clock (``now() + $n::interval``), so a lease is made to lapse by granting it a
@@ -42,7 +45,9 @@ Laws (checked after every step, on both sides; the source of each in brackets):
 
 The negative controls run the same machine with a deliberately wrong fake as the reference
 and the correct fake as the subject, without a database, and require Hypothesis to find the
-divergence: they are what shows the machine can fail.
+divergence: they are what shows the machine can fail. One wrong fake per kind of check: a
+wrong claim (the claim comparison), a wrong guard (the guarded-write comparison), and a
+wrong row behind right answers (the job-table comparison, which nothing else sees).
 """
 
 import asyncio
@@ -111,13 +116,16 @@ class Runner(Protocol):
 
 @dataclass(frozen=True)
 class Side:
-    """One repository under the machine, and the two moves its interface deliberately lacks:
-    ``pin`` sets a job's ``run_after`` (the clock), ``reset`` empties the queue."""
+    """One repository under the machine, and the moves its interface deliberately lacks:
+    ``pin`` sets a job's ``run_after``, ``reset`` empties the queue, and ``clock`` reads the
+    clock that side judges time by (the database's for PostgreSQL), so no reading ever
+    compares one host's clock with another's."""
 
     name: str
     repo: JobRepository
     pin: Callable[[UUID, datetime], Coroutine[Any, Any, None]]
     reset: Callable[[], Coroutine[Any, Any, None]]
+    clock: Callable[[], Coroutine[Any, Any, datetime]]
 
 
 @dataclass(frozen=True)
@@ -148,7 +156,10 @@ class FakeSides:
             repo._jobs.clear()
             repo.dependencies.clear()
 
-        return Side(name, repo, pin, reset)
+        async def clock() -> datetime:
+            return datetime.now(UTC)
+
+        return Side(name, repo, pin, reset, clock)
 
 
 class LeaseBlindJobRepository(FakeJobRepository):
@@ -180,6 +191,21 @@ class OwnerBlindAckJobRepository(FakeJobRepository):
         return await super().ack(job_id, owner=job.lease_owner)
 
 
+class RefundlessDeferJobRepository(FakeJobRepository):
+    """WRONG ON PURPOSE (negative control): ``defer`` answers True and releases the lease,
+    but keeps the attempt it should refund. Every value it returns is right; only the row it
+    leaves behind is wrong, so only the job-table comparison can see it."""
+
+    async def defer(
+        self, job_id: UUID, *, owner: str, retry_at: datetime, error: Mapping[str, object]
+    ) -> bool:
+        job = self._jobs.get(job_id)
+        done = await super().defer(job_id, owner=owner, retry_at=retry_at, error=error)
+        if done and job is not None:
+            self._jobs[job_id] = replace(self._jobs[job_id], attempts=job.attempts)
+        return done
+
+
 class JobRepositoryMachine(RuleBasedStateMachine):
     """The reference and the subject, driven in lockstep; see the module docstring."""
 
@@ -197,7 +223,7 @@ class JobRepositoryMachine(RuleBasedStateMachine):
         self.dependencies: dict[int, int] = {}
         self.acked: dict[int, Row] = {}
         self.instants = count(1)
-        self.start = datetime.now(UTC)
+        self.starts = (run(self.reference.clock()), run(self.subject.clock()))
 
     # -- helpers ---------------------------------------------------------------------------
 
@@ -205,10 +231,18 @@ class JobRepositoryMachine(RuleBasedStateMachine):
     def sides(self) -> tuple[Side, Side]:
         return (self.reference, self.subject)
 
-    def _instant(self, *, future: bool) -> datetime:
-        """A due (past) or waiting (future) instant no other instant of this run equals."""
+    def _offset(self, *, future: bool) -> timedelta:
+        """A due (past) or waiting (future) offset no other offset of this run equals."""
         step = timedelta(milliseconds=next(self.instants))
-        return self.start + (LIVE if future else -LIVE) + step
+        return (LIVE if future else -LIVE) + step
+
+    def _at(self, side: int, offset: timedelta) -> datetime:
+        """The instant ``offset`` names on one side: from that side's own start, read on its
+        own clock, so a database clock skewed against this host shifts nothing."""
+        return self.starts[side] + offset
+
+    def _now(self, side: int) -> datetime:
+        return self.run(self.sides[side].clock())
 
     def _job(self, pick: int) -> tuple[int | None, UUID, UUID]:
         """The picked job's index and its id on each side; an unknown id when there is none.
@@ -223,7 +257,7 @@ class JobRepositoryMachine(RuleBasedStateMachine):
         index = candidates[pick % len(candidates)]
         return (index, *self.ids[index])
 
-    def _row(self, side: int, index: int, record: JobRecord, now: datetime) -> Row:
+    def _row(self, index: int, record: JobRecord, now: datetime) -> Row:
         lease = (
             "none"
             if record.lease_expires_at is None
@@ -247,21 +281,25 @@ class JobRepositoryMachine(RuleBasedStateMachine):
             return None
         index = self.index[side].get(record.id)
         assert index is not None, f"{self.sides[side].name} returned a job never enqueued"
-        return self._row(side, index, record, datetime.now(UTC))
+        return self._row(index, record, self._now(side))
 
     def _rows(self, side: int) -> list[Row]:
         repo = self.sides[side].repo
-        now = datetime.now(UTC)
+        now = self._now(side)
         rows = []
         for index, ids in enumerate(self.ids):
             record = self.run(repo.get(ids[side]))
             assert record is not None, f"{self.sides[side].name} lost job {index}"
-            rows.append(self._row(side, index, record, now))
+            rows.append(self._row(index, record, now))
         listed = self.run(repo.list_for_cycle(self.project_id, cycle=CYCLE, kind=KIND))
-        assert len(listed) == len(self.ids), f"{self.sides[side].name} holds jobs never enqueued"
+        named = sorted(self.index[side].get(job.id, -1) for job in listed)
+        assert named == list(range(len(self.ids))), (
+            f"{self.sides[side].name} lists jobs {named}, enqueued {len(self.ids)} "
+            "(-1 is a job never enqueued)"
+        )
         return rows
 
-    def _request(self, key: int, run_after: datetime | None, max_attempts: int) -> EnqueueRequest:
+    def _request(self, key: int, max_attempts: int) -> EnqueueRequest:
         return EnqueueRequest(
             project_id=self.project_id,
             cycle=CYCLE,
@@ -269,7 +307,6 @@ class JobRepositoryMachine(RuleBasedStateMachine):
             kind=KIND,
             idempotency_key=f"k{key}",
             payload={"n": next(self.instants)},
-            run_after=run_after,
             max_attempts=max_attempts,
         )
 
@@ -278,15 +315,16 @@ class JobRepositoryMachine(RuleBasedStateMachine):
         name: str,
         pick: int,
         who: str,
-        call: Callable[[JobRepository, UUID, str], Coroutine[Any, Any, bool]],
+        call: Callable[[int, JobRepository, UUID, str], Coroutine[Any, Any, bool]],
     ) -> tuple[int | None, bool]:
-        """One lease-guarded write on both sides. Both must answer alike, and a caller that
-        does not hold the lease must get False and leave the row exactly as it was."""
+        """One lease-guarded write on both sides (``call`` gets the side's number, its repository,
+        the job's id there and the caller). Both must answer alike, and a caller that does not
+        hold the lease must get False and leave the row exactly as it was."""
         index, *ids = self._job(pick)
         before = [self.run(side.repo.get(ids[n])) for n, side in enumerate(self.sides)]
         holder = before[0].lease_owner if before[0] is not None else None
         owner = (holder or OWNERS[0]) if who == HOLDER else who
-        results = [self.run(call(side.repo, ids[n], owner)) for n, side in enumerate(self.sides)]
+        results = [self.run(call(n, side.repo, ids[n], owner)) for n, side in enumerate(self.sides)]
         assert results[0] == results[1], (
             f"{name} diverged on job {index} by {owner}: "
             f"{self.reference.name} {results[0]}, {self.subject.name} {results[1]}"
@@ -320,15 +358,23 @@ class JobRepositoryMachine(RuleBasedStateMachine):
         max_attempts=st.integers(min_value=1, max_value=3),
     )
     def enqueue(self, key: int, when: str, dependency: int | None, max_attempts: int) -> None:
-        run_after = None if when == "now" else self._instant(future=when == "future")
+        offset = None if when == "now" else self._offset(future=when == "future")
         depends_on: list[tuple[UUID, ...]] = [(), ()]
         depends_index = None
         if dependency is not None and self.ids:
             depends_index = dependency % len(self.ids)
             depends_on = [(self.ids[depends_index][0],), (self.ids[depends_index][1],)]
-        request = self._request(key, run_after, max_attempts)
+        request = self._request(key, max_attempts)
         made = [
-            self.run(side.repo.enqueue(replace(request, depends_on=depends_on[n])))
+            self.run(
+                side.repo.enqueue(
+                    replace(
+                        request,
+                        depends_on=depends_on[n],
+                        run_after=None if offset is None else self._at(n, offset),
+                    )
+                )
+            )
             for n, side in enumerate(self.sides)
         ]
         known = [self.index[n].get(made[n].id) for n in range(2)]
@@ -340,8 +386,7 @@ class JobRepositoryMachine(RuleBasedStateMachine):
             self.index[1][made[1].id] = index
             if depends_index is not None:
                 self.dependencies[index] = depends_index
-        now = datetime.now(UTC)
-        rows = [self._row(n, self.index[n][made[n].id], made[n], now) for n in range(2)]
+        rows = [self._row(self.index[n][made[n].id], made[n], self._now(n)) for n in range(2)]
         assert rows[0] == rows[1], f"enqueue of k{key} returned {rows[0]} vs {rows[1]}"
 
     @rule(owner=st.sampled_from(OWNERS), lease=st.sampled_from([LIVE, LAPSED]))
@@ -373,38 +418,38 @@ class JobRepositoryMachine(RuleBasedStateMachine):
             "heartbeat",
             pick,
             who,
-            lambda repo, job, owner: repo.heartbeat(job, owner=owner, lease=lease),
+            lambda _, repo, job, owner: repo.heartbeat(job, owner=owner, lease=lease),
         )
 
     @rule(pick=st.integers(min_value=0, max_value=100), who=CALLERS)
     def ack(self, pick: int, who: str) -> None:
         index, done = self._guarded(
-            "ack", pick, who, lambda repo, job, owner: repo.ack(job, owner=owner)
+            "ack", pick, who, lambda _, repo, job, owner: repo.ack(job, owner=owner)
         )
         if done and index is not None:
             self.acked[index] = self._rows(0)[index]
 
     @rule(pick=st.integers(min_value=0, max_value=100), who=CALLERS)
     def nack(self, pick: int, who: str) -> None:
-        started = datetime.now(UTC)
+        started = [self._now(n) for n in range(2)]
         index, done = self._guarded(
-            "nack", pick, who, lambda repo, job, owner: repo.nack(job, owner=owner, error=ERROR)
+            "nack", pick, who, lambda _, repo, job, owner: repo.nack(job, owner=owner, error=ERROR)
         )
         if not done or index is None:
             return
-        finished = datetime.now(UTC)
-        settled = self._instant(future=True)
+        finished = [self._now(n) for n in range(2)]
+        settled = self._offset(future=True)
         for n, side in enumerate(self.sides):
             record = self.run(side.repo.get(self.ids[index][n]))
             assert record is not None
             # SQL `nack`: run_after = now() + least(2^attempts * 2s, 15min) * random().
             cap = min(timedelta(seconds=2 * 2**record.attempts), timedelta(minutes=15))
             slack = timedelta(milliseconds=500)
-            assert started - slack <= record.run_after <= finished + cap + slack, (
-                f"{side.name}: nack backoff {record.run_after} outside [{started}, "
-                f"{finished} + {cap}]"
+            low, high = started[n] - slack, finished[n] + cap + slack
+            assert low <= record.run_after <= high, (
+                f"{side.name}: nack backoff {record.run_after} outside [{low}, {high}]"
             )
-            self.run(side.pin(self.ids[index][n], settled))
+            self.run(side.pin(self.ids[index][n], self._at(n, settled)))
 
     @rule(
         pick=st.integers(min_value=0, max_value=100),
@@ -412,17 +457,19 @@ class JobRepositoryMachine(RuleBasedStateMachine):
         later=st.booleans(),
     )
     def defer(self, pick: int, who: str, later: bool) -> None:
-        retry_at = self._instant(future=later)
+        retry = self._offset(future=later)
         self._guarded(
             "defer",
             pick,
             who,
-            lambda repo, job, owner: repo.defer(job, owner=owner, retry_at=retry_at, error=ERROR),
+            lambda n, repo, job, owner: repo.defer(
+                job, owner=owner, retry_at=self._at(n, retry), error=ERROR
+            ),
         )
 
     @rule(pick=st.integers(min_value=0, max_value=100), who=CALLERS)
     def park(self, pick: int, who: str) -> None:
-        self._guarded("park", pick, who, lambda repo, job, owner: repo.park(job, owner=owner))
+        self._guarded("park", pick, who, lambda _, repo, job, owner: repo.park(job, owner=owner))
 
     @rule(
         pick=st.integers(min_value=0, max_value=100),
@@ -434,7 +481,7 @@ class JobRepositoryMachine(RuleBasedStateMachine):
             "grant_attempts",
             pick,
             who,
-            lambda repo, job, owner: repo.grant_attempts(job, owner=owner, max_attempts=bound),
+            lambda _, repo, job, owner: repo.grant_attempts(job, owner=owner, max_attempts=bound),
         )
 
     @rule(
@@ -447,7 +494,7 @@ class JobRepositoryMachine(RuleBasedStateMachine):
             "assign_engine",
             pick,
             who,
-            lambda repo, job, owner: repo.assign_engine(job, owner=owner, engine_id=engine),
+            lambda _, repo, job, owner: repo.assign_engine(job, owner=owner, engine_id=engine),
         )
 
     @rule()
@@ -472,9 +519,9 @@ class JobRepositoryMachine(RuleBasedStateMachine):
         """Time passes for every waiting job: each becomes due, in index order."""
         for row in self._rows(0):
             if not row.due:
-                at = self._instant(future=False)
+                offset = self._offset(future=False)
                 for n, side in enumerate(self.sides):
-                    self.run(side.pin(self.ids[row.index][n], at))
+                    self.run(side.pin(self.ids[row.index][n], self._at(n, offset)))
 
     # -- invariants ------------------------------------------------------------------------
 
@@ -567,8 +614,13 @@ async def test_the_fake_and_postgres_agree_through_random_operation_sequences(
     async def reset() -> None:
         await owner.execute("DELETE FROM job")
 
+    async def clock() -> datetime:
+        # The clock `claim`, `reap` and `nack` judge by: the database's, never this host's.
+        at: datetime = await migrated_pool.fetchval("SELECT clock_timestamp()")
+        return at
+
     def sides() -> tuple[Side, Side]:
-        return FakeSides.of(FakeJobRepository()), Side("postgres", postgres, pin, reset)
+        return FakeSides.of(FakeJobRepository()), Side("postgres", postgres, pin, reset, clock)
 
     try:
         await MachineHarness(asyncio.get_running_loop()).check(sides, project_id, MACHINE_SETTINGS)
@@ -592,6 +644,8 @@ async def test_the_machine_passes_the_fake_against_itself() -> None:
     [
         (LeaseBlindJobRepository, r"^claim diverged for w\d"),
         (OwnerBlindAckJobRepository, r"^ack diverged on job \d+ by w\d"),
+        # Right answers, wrong row: only the job-table comparison can find this one.
+        (RefundlessDeferJobRepository, r"^job tables diverged"),
     ],
 )
 async def test_the_machine_finds_a_wrong_reference(
