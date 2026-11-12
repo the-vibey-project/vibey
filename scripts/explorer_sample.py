@@ -187,7 +187,7 @@ class SampleLedger:
 class NoDatabase:
     """The exporter's ledger reader, unused here: `shard()` takes its events directly."""
 
-    async def all_for_project(self, project_id: UUID) -> list[LedgerEvent]:
+    async def all_for_project(self, project_id: UUID) -> tuple[LedgerEvent, ...]:
         raise RuntimeError(f"the sample is built from events in memory, not project {project_id}")
 
 

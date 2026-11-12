@@ -60,6 +60,7 @@ import ast
 import re
 import subprocess
 from pathlib import Path
+from typing import TypedDict
 
 # .absolute(), never .resolve(): tools/ is a symlink into the planning worktree, where specs/
 # resolve but lanes/ and integration/ exist only in the runtime root.
@@ -161,7 +162,14 @@ def is_list_item(line: str) -> bool:
     return bool(re.match(r"^([-*+]\s|\d+[.)]\s)", stripped))
 
 
-def split_hunks(text: str) -> list[object]:
+class Hunk(TypedDict):
+    """One conflict: the lines each side holds."""
+
+    ours: list[str]
+    theirs: list[str]
+
+
+def split_hunks(text: str) -> list[str | Hunk]:
     """Split a conflicted file into plain strings and {ours, theirs} hunks.
 
     Parsed from the markers rather than from `git show :2:`/`:3:` on purpose. The index
@@ -170,7 +178,7 @@ def split_hunks(text: str) -> list[object]:
     section they were written in, not appended to the end of the file. The markers are the
     only place that position survives.
     """
-    out: list[object] = []
+    out: list[str | Hunk] = []
     plain: list[str] = []
     lines = text.splitlines(keepends=True)
     index = 0
@@ -211,7 +219,7 @@ def split_hunks(text: str) -> list[object]:
     return out
 
 
-def merge_hunk_as_list(hunk: dict) -> str | None:
+def merge_hunk_as_list(hunk: Hunk) -> str | None:
     """Ours, then every one of theirs that ours does not already carry -- if all are items."""
     ours, theirs = hunk["ours"], hunk["theirs"]
     if not all(is_list_item(line) for line in ours + theirs):
@@ -224,7 +232,7 @@ def merge_hunk_as_list(hunk: dict) -> str | None:
     return body + "".join(extra)
 
 
-def merge_hunk_as_append(hunk: dict) -> str:
+def merge_hunk_as_append(hunk: Hunk) -> str:
     """Every record from both sides, in ours-then-theirs order, each kept once."""
     seen: set[str] = set()
     out: list[str] = []
@@ -301,7 +309,7 @@ def classify(repo: Path, path: str) -> str:
     hunks = split_hunks(target.read_text(errors="replace"))
     if not hunks:
         return "REFUSE"
-    blocks = [h for h in hunks if isinstance(h, dict)]
+    blocks = [h for h in hunks if not isinstance(h, str)]
     if blocks and all(merge_hunk_as_list(h) is not None for h in blocks):
         return "LIST"
     return "REFUSE"
@@ -328,16 +336,16 @@ def apply_resolution(repo: Path, path: str, kind: str) -> str | None:
         pieces = split_hunks(target.read_text(errors="replace"))
         if not pieces:
             return "conflict markers are truncated"
-        out: list[str] = []
+        resolved: list[str] = []
         for piece in pieces:
             if isinstance(piece, str):
-                out.append(piece)
+                resolved.append(piece)
                 continue
             merged = merge_hunk_as_append(piece) if kind == "APPEND" else merge_hunk_as_list(piece)
             if merged is None:
                 return "a hunk stopped being a pure list while resolving"
-            out.append(merged)
-        target.write_text("".join(out))
+            resolved.append(merged)
+        target.write_text("".join(resolved))
     code, out = run(["git", "add", "--", path], repo)
     return None if code == 0 else f"could not stage: {out[:70]}"
 

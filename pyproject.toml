@@ -214,6 +214,8 @@ dev = [
     "hypothesis>=6.115",
     "ruff>=0.8",
     "mypy>=1.13",
+    # scripts/inject_docs_meta.py imports yaml (a runtime dependency) and is checked with mypy --strict.
+    "types-pyyaml>=6.0",
     "import-linter>=2.1",
     "bandit>=1.8",
     "pip-audit>=2.7",
@@ -349,8 +351,14 @@ markers = [
 line-length = 100
 target-version = "py312"
 # scripts/ is here for the same reason it is a `[fingerprint]` source in .vibey-gh.toml:
-# a tracked Python file the gates cannot see is one nobody is checking.
-include = ["src/**/*.py", "tests/**/*.py", "scripts/**/*.py"]
+# a tracked Python file the gates cannot see is one nobody is checking. The storm tools carry
+# the mandatory push gate, so they are named here too.
+include = [
+    "src/**/*.py",
+    "tests/**/*.py",
+    "scripts/**/*.py",
+    "docs/plans/qwenstorm-3.0.0/tools/**/*.py",
+]
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "UP", "B", "SIM"]
@@ -366,6 +374,23 @@ ignore = ["E501"]
 # SIG_DFL -- every import below that line is time in which a Kubernetes scale-in would be
 # thrown away. The placement IS the fix; moving those imports up would undo it.
 "src/vibey/cli/main.py" = ["E402"]
+
+# Trees checked with `mypy --strict --explicit-package-bases` besides `src/vibey` (which the
+# `[tool.mypy]` table below names). The `lint` job and the every-Python-file census both read
+# this list, so a tree is added in one place. `mypy_path` is the directory a tree's own modules
+# import each other from (empty when none do); `explicit-package-bases` is needed because the
+# `interfaces/` folders have no package root and mypy otherwise sees a module twice.
+[[tool.vibey.static_gates]]
+name = "storm-tools"
+paths = ["docs/plans/qwenstorm-3.0.0/tools"]
+mypy_path = "docs/plans/qwenstorm-3.0.0/tools"
+
+# No `mypy_path`: the scripts name each other `scripts.interfaces.x` from the repository
+# root, and putting `scripts` on MYPYPATH makes mypy see every interface file under two names.
+[[tool.vibey.static_gates]]
+name = "scripts"
+paths = ["scripts"]
+mypy_path = ""
 
 [tool.mypy]
 python_version = "3.12"

@@ -36,12 +36,16 @@ from typing import Any
 
 try:
     from scripts import backlog_killer as bk
+    from scripts.interfaces.backlog_killer_interface import BacklogSourceInterface
     from scripts.interfaces.backlog_splitter_interface import (
         BacklogSplitterInterface,
         SplitSinkInterface,
     )
 except ModuleNotFoundError:  # Direct execution keeps the script directory on sys.path.
-    import backlog_killer as bk  # type: ignore[no-redef]
+    import backlog_killer as bk  # type: ignore[import-not-found,no-redef]  # direct execution: a top-level sibling
+    from interfaces.backlog_killer_interface import (  # type: ignore[import-not-found,no-redef]  # same, via sys.path
+        BacklogSourceInterface,
+    )
     from interfaces.backlog_splitter_interface import (  # type: ignore[import-not-found,no-redef]
         BacklogSplitterInterface,
         SplitSinkInterface,
@@ -122,7 +126,7 @@ class BacklogSplitter(BacklogSplitterInterface):
 
     def __init__(
         self,
-        source: bk.BacklogSourceInterface,
+        source: BacklogSourceInterface,
         sink: SplitSinkInterface,
         killer: dict[str, Any],
         settings: dict[str, Any],

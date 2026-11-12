@@ -20,7 +20,7 @@ import json
 import subprocess
 import sys
 from pathlib import Path
-from typing import cast
+from typing import TypedDict
 
 import storm_paths
 import storm_trust
@@ -133,11 +133,22 @@ def forbidden_problem(files: list[str]) -> str | None:
     )
 
 
-def verify(lane: Path) -> dict[str, object]:
+class Report(TypedDict, total=False):
+    """What `verify` found about one lane, and what `main` adds before writing it out."""
+
+    files: list[str]
+    python: int
+    problems: list[str]
+    tests_required: bool
+    commits: int
+    claimed: bool
+
+
+def verify(lane: Path) -> Report:
     files = changed(lane)
     python = [f for f in files if f.endswith(".py") and (lane / f).is_file()]
-    report: dict[str, object] = {"files": files, "python": len(python), "problems": []}
-    problems: list[str] = report["problems"]  # type: ignore[assignment]
+    problems: list[str] = []
+    report: Report = {"files": files, "python": len(python), "problems": problems}
 
     if not files:
         problems.append("the lane finished having changed nothing")
@@ -238,9 +249,7 @@ def main() -> int:
         report["claimed"] = bool(claim.get("completed"))
         if claim.get("refused"):
             # Refused at the seam before it ran: say so, rather than only "changed nothing".
-            cast(list[str], report["problems"]).insert(
-                0, f"refused before it ran: {claim['refused']}"
-            )
+            report["problems"].insert(0, f"refused before it ran: {claim['refused']}")
         (lane / ".qwenstorm/verify.json").write_text(json.dumps(report, indent=2))
         problems = report["problems"]
         mark = "ok  " if not problems else "BAD "

@@ -57,6 +57,7 @@ import os
 import re
 import time
 from pathlib import Path
+from typing import Any, TypedDict
 
 import storm_paths
 
@@ -100,7 +101,39 @@ LANE_START = re.compile(r"^\S+Z start \S+ #\d+(?:\s|$)")
 LANE_END = re.compile(r"^\S+Z end +\S+ #\d+(?:\s|$)")
 
 
-def lane_lines(rows: list[dict], pattern: re.Pattern[str]) -> list[str]:
+# A ledger row is JSON read back from disk: a stream line or a lane result, so its keys vary
+# with `kind` and what a lane wrote.
+Row = dict[str, Any]  # JSON from disk: the keys vary by record kind, see above
+
+
+class Mark(TypedDict, total=False):
+    """The watermark: positions in the streams, never timestamps (10.g)."""
+
+    offsets: dict[str, int]
+    seen: list[str]
+    resets: dict[str, str]
+    unreadable: bool
+    advanced_at: str
+    gaps: list[str]
+
+
+class Summary(TypedDict):
+    """The figures the paper block states."""
+
+    records: int
+    lanes: int
+    completed: int
+    starts: int
+    ends: int
+    integrated: int
+    abandoned: int
+    attempts: int
+    turns: int
+    first: str
+    last: str
+
+
+def lane_lines(rows: list[Row], pattern: re.Pattern[str]) -> list[str]:
     """progress.log lines matching `pattern`. A function beside the others here: this
     module has no classes, and one would not change how it is read."""
     return [
@@ -116,11 +149,11 @@ def digest(text: str) -> str:
     return hashlib.sha256(text.encode("utf-8", "replace")).hexdigest()[:16]
 
 
-def load_watermark() -> dict:
+def load_watermark() -> Mark:
     if not WATERMARK.is_file():
         return {"offsets": {}, "seen": [], "resets": {}}
     try:
-        mark = json.loads(WATERMARK.read_text())
+        mark: Mark = json.loads(WATERMARK.read_text())
     except (OSError, ValueError):
         # Unreadable watermark means the span cannot be established. Starting from zero would
         # re-read everything and call it complete; the honest move is an empty mark plus the
@@ -167,7 +200,7 @@ def read_stream(name: str, offset: int) -> tuple[list[tuple[int, str]], int, str
     return out, size, None
 
 
-def reset_head(name: str) -> dict | None:
+def reset_head(name: str) -> Row | None:
     """The stream's first line, when it is a priority-log `reset` event; else None.
 
     A reset (`storm-priority.py reset`) starts the log again after it was lost. The offset
@@ -185,7 +218,7 @@ def reset_head(name: str) -> dict | None:
     return first if isinstance(first, dict) and first.get("action") == "reset" else None
 
 
-def lane_records(seen: set[str]) -> list[dict]:
+def lane_records(seen: set[str]) -> list[Row]:
     """One record per lane result, identified by content so a re-read cannot duplicate it."""
     out = []
     for result in sorted(LANES.glob("*/.qwenstorm/result.json")) if LANES.is_dir() else []:
@@ -220,7 +253,7 @@ def lane_records(seen: set[str]) -> list[dict]:
     return out
 
 
-def collect(mark: dict) -> tuple[list[dict], dict, list[str]]:
+def collect(mark: Mark) -> tuple[list[Row], Mark, list[str]]:
     """Everything since the watermark, the watermark it would advance to, and any gaps.
 
     Identity is checked against the LEDGER, not against the watermark. The ledger is the
@@ -231,8 +264,11 @@ def collect(mark: dict) -> tuple[list[dict], dict, list[str]]:
     counted twice is as wrong as evidence missed.
     """
     offsets = dict(mark["offsets"])
-    seen = {row.get("id") for row in ledger_rows()} | set(mark.get("seen", []))
-    records: list[dict] = []
+    # Only a string id can match an identity, so a row without one cannot be "seen".
+    seen = {i for row in ledger_rows() if isinstance(i := row.get("id"), str)} | set(
+        mark.get("seen", [])
+    )
+    records: list[Row] = []
     gaps: list[str] = []
     if mark.get("unreadable"):
         gaps.append("watermark.json was unreadable; the span before this run is unknown")
@@ -271,7 +307,7 @@ def collect(mark: dict) -> tuple[list[dict], dict, list[str]]:
     return records, {"offsets": offsets, "resets": resets}, gaps
 
 
-def append(records: list[dict], when: str) -> None:
+def append(records: list[Row], when: str) -> None:
     """Append and flush BEFORE the watermark moves. This ordering is the guarantee."""
     EVIDENCE.mkdir(parents=True, exist_ok=True)
     with LEDGER.open("a", encoding="utf-8") as handle:
@@ -281,7 +317,7 @@ def append(records: list[dict], when: str) -> None:
         os.fsync(handle.fileno())
 
 
-def advance(mark: dict, when: str, gaps: list[str]) -> None:
+def advance(mark: Mark, when: str, gaps: list[str]) -> None:
     mark = {**mark, "advanced_at": when, "gaps": gaps}
     EVIDENCE.mkdir(parents=True, exist_ok=True)
     temporary = WATERMARK.with_suffix(".json.new")
@@ -289,7 +325,7 @@ def advance(mark: dict, when: str, gaps: list[str]) -> None:
     temporary.replace(WATERMARK)  # atomic: a half-written watermark would invent a gap
 
 
-def ledger_rows() -> list[dict]:
+def ledger_rows() -> list[Row]:
     if not LEDGER.is_file():
         return []
     rows = []
@@ -302,7 +338,7 @@ def ledger_rows() -> list[dict]:
     return rows
 
 
-def summarise(rows: list[dict]) -> dict:
+def summarise(rows: list[Row]) -> Summary:
     lanes = {r["lane"]: r for r in rows if r.get("kind") == "lane_result"}
     starts = lane_lines(rows, LANE_START)
     ends = lane_lines(rows, LANE_END)
@@ -330,7 +366,7 @@ def summarise(rows: list[dict]) -> dict:
     }
 
 
-def block(summary: dict, gaps: list[str]) -> str:
+def block(summary: Summary, gaps: list[str]) -> str:
     gap_line = (
         "**Gaps in this span:** " + "; ".join(gaps)
         if gaps
@@ -376,7 +412,7 @@ def write_paper(text: str) -> str:
     return "paper block regenerated"
 
 
-def report(records: list[dict], when: str, gaps: list[str]) -> str:
+def report(records: list[Row], when: str, gaps: list[str]) -> str:
     """What this run consumed, in prose a person can fold into the paper.
 
     The generated block carries the figures; this carries the events behind them. They are

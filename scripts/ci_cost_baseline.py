@@ -238,7 +238,9 @@ class CiCostBaseline(CiCostBaselineInterface):
 
     def collect(self, since_days: int) -> dict[str, object]:
         cutoff = self._clock.now()
-        start = (self._parse(cutoff) - timedelta(days=since_days)).strftime(TIME_FORMAT)  # type: ignore[operator]
+        now = self._parse(cutoff)
+        assert now is not None  # the clock always returns a stamp
+        start = (now - timedelta(days=since_days)).strftime(TIME_FORMAT)
         unknowns: list[str] = []
         try:
             flows = self._reader.workflows()
@@ -297,6 +299,7 @@ class CiCostBaseline(CiCostBaselineInterface):
         )
         in_window = total_in_window if capped else len(sampled)
 
+        last: dict[str, Any] | None
         if sampled:
             last = sampled[0]
         else:
@@ -565,7 +568,10 @@ class CiCostBaseline(CiCostBaselineInterface):
         )
         est_a = bs["active"]["job_minutes_estimated_for_window"]
         est_d = bs["disabled"]["job_minutes_estimated_for_window"]
-        minutes = lambda d: ", ".join(f"{k} {v:,.0f}" for k, v in d.items())  # noqa: E731
+
+        def minutes(by_os: Mapping[str, float]) -> str:
+            return ", ".join(f"{k} {v:,.0f}" for k, v in by_os.items())
+
         out["headline"] = (
             f"- Workflows: {t['workflows_total']} ({t['workflows_active']} active, "
             f"{t['workflows_disabled_manually']} `disabled_manually`, {t['workflows_disabled_other']} "
@@ -624,9 +630,11 @@ class CiCostBaseline(CiCostBaselineInterface):
             pattern = self._marker(name)
             if not pattern.search(document):
                 raise ValueError(f"the document has no GENERATED ci-baseline:{name} block")
-            document = pattern.sub(
-                lambda m, name=name: m["head"] + blocks[name] + m["tail"], document, count=1
-            )
+
+            def block(m: re.Match[str], name: str = name) -> str:
+                return m["head"] + blocks[name] + m["tail"]
+
+            document = pattern.sub(block, document, count=1)
         return document
 
 

@@ -20,21 +20,37 @@ import hashlib
 import json
 import sys
 from pathlib import Path
+from typing import TYPE_CHECKING
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
-from interfaces.design_interface import DesignGeneratorInterface  # noqa: E402
+if TYPE_CHECKING:
+    # The checker sees these under the names the repository root resolves; the `sys.path` line above
+    # is what makes them `interfaces.*` and `design.*` at run time.
+    from scripts.design.emitters import (
+        CHeader,
+        CssTokens,
+        GtkCss,
+        PaperPalette,
+        SharedStylesheet,
+        TypeScriptTokens,
+    )
+    from scripts.design.identity import IdentityEmitter
+    from scripts.design.tokens import ContrastAudit, TokenSet
+    from scripts.interfaces.design_interface import DesignGeneratorInterface
+else:
+    from interfaces.design_interface import DesignGeneratorInterface  # noqa: E402
 
-from design.emitters import (  # noqa: E402
-    CHeader,
-    CssTokens,
-    GtkCss,
-    PaperPalette,
-    SharedStylesheet,
-    TypeScriptTokens,
-)
-from design.identity import IdentityEmitter  # noqa: E402
-from design.tokens import ContrastAudit, TokenSet  # noqa: E402
+    from design.emitters import (  # noqa: E402
+        CHeader,
+        CssTokens,
+        GtkCss,
+        PaperPalette,
+        SharedStylesheet,
+        TypeScriptTokens,
+    )
+    from design.identity import IdentityEmitter  # noqa: E402
+    from design.tokens import ContrastAudit, TokenSet  # noqa: E402
 
 REPO = Path(__file__).resolve().parents[2]
 CONFIG = Path("design/design.json")

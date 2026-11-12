@@ -787,7 +787,7 @@ class FlatpakManifestLocalizer:
     """
 
     def localize(self, manifest: Path, module: str, source: Path) -> dict[str, Any]:
-        import yaml  # type: ignore[import-untyped]  # PyYAML: only this command needs it.
+        import yaml  # PyYAML: only this command needs it.
 
         data = yaml.safe_load(manifest.read_text(encoding="utf-8"))
         modules = data.get("modules") or []

@@ -62,9 +62,14 @@ import re
 import subprocess
 from collections.abc import Callable
 from pathlib import Path
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 import storm_paths
+
+if TYPE_CHECKING:
+    # For the type checker only: the names the runtime block below loads by path. `TYPE_CHECKING`
+    # is false at runtime, so this import never resolves through `sys.path` and cannot be shadowed.
+    from interfaces.storm_forge_interface import PullRequest, StormForgeInterface, Unreadable
 
 # The declaration, loaded by its FILE PATH -- the way `lane_environment.py`'s and
 # `storm_trust.py`'s are -- and never imported as `interfaces.storm_forge_interface`. That
@@ -77,11 +82,14 @@ _DECLARED = importlib.util.spec_from_file_location(
     "storm_forge_interface",
     Path(__file__).absolute().parent / "interfaces" / "storm_forge_interface.py",
 )
-_INTERFACE = importlib.util.module_from_spec(_DECLARED)  # type: ignore[arg-type]
-_DECLARED.loader.exec_module(_INTERFACE)  # type: ignore[union-attr]
-PullRequest = _INTERFACE.PullRequest
-StormForgeInterface = _INTERFACE.StormForgeInterface
-Unreadable = _INTERFACE.Unreadable
+if _DECLARED is None or _DECLARED.loader is None:
+    raise ImportError("interfaces/storm_forge_interface.py cannot be loaded as a module")
+_INTERFACE = importlib.util.module_from_spec(_DECLARED)
+_DECLARED.loader.exec_module(_INTERFACE)
+if not TYPE_CHECKING:
+    PullRequest = _INTERFACE.PullRequest
+    StormForgeInterface = _INTERFACE.StormForgeInterface
+    Unreadable = _INTERFACE.Unreadable
 
 __all__ = ["PullRequest", "StormForge", "StormForgeInterface", "Unreadable"]
 

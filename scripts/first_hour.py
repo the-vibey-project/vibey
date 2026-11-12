@@ -41,7 +41,7 @@ try:
         SurveyCollectorInterface,
     )
 except ImportError:  # run as `python scripts/first_hour.py`
-    from interfaces.first_hour_interface import (  # type: ignore[no-redef]
+    from interfaces.first_hour_interface import (  # type: ignore[import-not-found,no-redef]  # direct execution
         FirstHourLedgerInterface,
         FirstHourMeasurerInterface,
         GuideRendererInterface,

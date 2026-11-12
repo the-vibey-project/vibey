@@ -12,7 +12,10 @@ spec = Path(sys.argv[1]).read_text()
 # Never a literal: the storm root is derived from this tool's own location (12.h).
 tpl = (storm_paths.storm(__file__) / "SPEC-TEMPLATE.md").read_text()
 rules = tpl.split("## Hard repository rules (always)", 1)[1].strip()
-title = re.search(r"^## Title\n(.+)$", spec, re.M).group(1).strip()
+found = re.search(r"^## Title\n(.+)$", spec, re.M)
+if found is None:
+    sys.exit(f"file-issue: {sys.argv[1]} has no '## Title' line, so there is no issue title")
+title = found.group(1).strip()
 body = spec.split("\n", 2)[2] if spec.startswith("## Title") else spec
 body = re.sub(r"^## Title\n.+\n", "", spec, count=1, flags=re.M)
 # Any spelling of the pointer: `STORM/SPEC-TEMPLATE.md`, or an absolute storm root.

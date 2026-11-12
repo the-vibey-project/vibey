@@ -245,6 +245,9 @@ jobs:
       - name: Gate 3 - mypy --strict
         run: uv run mypy --strict src/vibey
 
+      - name: Gate 3b - mypy --strict on the other declared trees
+        run: uv run python scripts/static_gates.py
+
       - name: Gate 5 - lint-imports (onion contract)
         run: uv run lint-imports
 

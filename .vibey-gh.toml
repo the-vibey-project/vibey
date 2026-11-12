@@ -353,6 +353,7 @@ enabled = true
 "Lint and static gates :: Gate 1 - ruff check" = "uv run ruff check ."
 "Lint and static gates :: Gate 2 - ruff format --check" = "uv run ruff format --check ."
 "Lint and static gates :: Gate 3 - mypy --strict" = "uv run mypy --strict src/vibey"
+"Lint and static gates :: Gate 3b - mypy --strict on the other declared trees" = "uv run python scripts/static_gates.py"
 "gates :: Run test suite with coverage" = "uv run pytest {test} -q -p no:cacheprovider"
 "gates :: Gate 4a - pytest domain layer (100% coverage)" = "uv run pytest -q -p no:cacheprovider --cov=vibey --cov-branch --cov-report= && uv run coverage report --include='src/vibey/domain/*' --fail-under=100"
 "gates :: Gate 4b - pytest application layer (100% coverage)" = "uv run pytest -q -p no:cacheprovider --cov=vibey --cov-branch --cov-report= && uv run coverage report --include='src/vibey/application/*' --fail-under=100"

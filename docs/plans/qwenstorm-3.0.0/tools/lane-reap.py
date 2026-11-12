@@ -98,6 +98,8 @@ import sys
 import time
 from datetime import UTC, datetime
 from pathlib import Path
+from types import ModuleType
+from typing import Any
 
 import storm_paths
 from storm_forge import PullRequest, StormForge, StormForgeInterface, Unreadable
@@ -117,7 +119,7 @@ MAIN = storm_paths.repo(STORM)
 LANE_BRANCH = "lane/"
 
 
-def _stopper():
+def _stopper() -> ModuleType:
     """`storm-stop.py`, imported by path because its name is not an identifier.
 
     For `lane_in_flight` and `is_invocation`. Reimplementing the "is a runner inside this
@@ -128,8 +130,10 @@ def _stopper():
     spec = importlib.util.spec_from_file_location(
         "storm_stop", Path(__file__).with_name("storm-stop.py")
     )
-    module = importlib.util.module_from_spec(spec)  # type: ignore[arg-type]
-    spec.loader.exec_module(module)  # type: ignore[union-attr]
+    if spec is None or spec.loader is None:
+        raise ImportError("storm-stop.py cannot be loaded as a module")
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
     return module
 
 
@@ -159,7 +163,7 @@ def queue() -> dict[str, list[str]]:
     return out
 
 
-def verdict(lane: Path) -> dict | None:
+def verdict(lane: Path) -> dict[str, Any] | None:  # JSON the runner wrote; its keys vary
     """What `qwenlane.py` recorded for this lane, or None if it never finished."""
     path = lane / ".qwenstorm" / "result.json"
     if not path.is_file():
@@ -282,10 +286,13 @@ def survey(
             # has just declined to trust. Whether the issue is sound is a person's call; the
             # lane stays unsettled until one makes it, and its dependants are named below.
             out["refused"].append((slug, f"refused to start: {found['refused']}"))
-        elif found.get("completed") is True and not pr:
-            out["publishable"].append((slug, "the runner completed it; lane-publish.py owns it"))
         elif found.get("completed") is True:
-            out["reap"].append((slug, f"#{pr[0]} was closed unmerged, so the work was refused"))
+            if not pr:
+                out["publishable"].append(
+                    (slug, "the runner completed it; lane-publish.py owns it")
+                )
+            else:
+                out["reap"].append((slug, f"#{pr[0]} was closed unmerged, so the work was refused"))
         elif (age := now - (lane / ".qwenstorm" / "result.json").stat().st_mtime) < grace_seconds:
             # The cycle repairs every ten minutes, and `lane-repair.py` runs before this
             # step. A verdict minutes old has not yet had a repair pass argue with it, so

@@ -180,12 +180,13 @@ uv run vibey-gh install
 uv lock --check
 
 # CI job `lint` ("Lint and static gates", after `uv-lock`; every heavy job waits for it):
-# Gate 0a (TypeScript artifacts), Gate 0, Gates 1, 2, 3 and 5
+# Gate 0a (TypeScript artifacts), Gate 0, Gates 1, 2, 3, 3b and 5
 uv sync --extra dev
 uv run vibey-gh corpus-index --check
 uv run ruff check .
 uv run ruff format --check .
 uv run mypy --strict src/vibey
+uv run python scripts/static_gates.py
 uv run lint-imports
 
 # CI job `gates`: the test run, the per-layer 100% gates (Gate 4), bandit and pip-audit

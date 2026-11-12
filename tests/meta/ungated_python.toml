@@ -1,0 +1,178 @@
+# Made with ❤️ by [Vibey](https://the-vibey-project.github.io/vibey/), Developed by [Adam Matthew Steinberger](https://vibewithadam.matthewsteinberger.com/) ([@adammatthewsteinberger](https://github.com/adammatthewsteinberger/)).
+#
+# Tracked Python that is not both ruff-checked (as `ruff check --show-files .` lists it) and
+# mypy-checked, by prefix, and why
+# (tests/meta/test_every_python_file_is_gated.py). The list can only shrink: a prefix that matches
+# no tracked file, or only files that are now gated, fails; CEILING, a constant in the census
+# test (not here, so this file cannot move its own limit), must equal the number of entries.
+# Bringing a tree under a gate (add it to `[[tool.vibey.static_gates]]` or to a tenant's `static`
+# command in .github/ci-matrices.toml) removes its entry in the same change.
+#
+# A prefix ends in `/` or is exactly one tracked file; a reason is at least 20 characters. A new
+# directory under `tests/` fails the census until it is written down here.
+#
+# Measured 2026-11-12 against ruff's own file list: 1248 tracked files fell outside every gate.
+
+[[ungated]]
+prefix = "tests/application/"
+reason = "tests/application: The repository's own suite: ruff-checked, not type-checked (`mypy --strict` covers `src/vibey`, and the suite is not annotated to that standard)."
+
+[[ungated]]
+prefix = "tests/cli/"
+reason = "tests/cli: The repository's own suite: ruff-checked, not type-checked (`mypy --strict` covers `src/vibey`, and the suite is not annotated to that standard)."
+
+[[ungated]]
+prefix = "tests/contracts/"
+reason = "tests/contracts: The repository's own suite: ruff-checked, not type-checked (`mypy --strict` covers `src/vibey`, and the suite is not annotated to that standard)."
+
+[[ungated]]
+prefix = "tests/domain/"
+reason = "tests/domain: The repository's own suite: ruff-checked, not type-checked (`mypy --strict` covers `src/vibey`, and the suite is not annotated to that standard)."
+
+[[ungated]]
+prefix = "tests/fakes/"
+reason = "tests/fakes: The repository's own suite: ruff-checked, not type-checked (`mypy --strict` covers `src/vibey`, and the suite is not annotated to that standard)."
+
+[[ungated]]
+prefix = "tests/infrastructure/"
+reason = "tests/infrastructure: The repository's own suite: ruff-checked, not type-checked (`mypy --strict` covers `src/vibey`, and the suite is not annotated to that standard)."
+
+[[ungated]]
+prefix = "tests/live/"
+reason = "tests/live: The repository's own suite: ruff-checked, not type-checked (`mypy --strict` covers `src/vibey`, and the suite is not annotated to that standard)."
+
+[[ungated]]
+prefix = "tests/meta/"
+reason = "tests/meta: The repository's own suite: ruff-checked, not type-checked (`mypy --strict` covers `src/vibey`, and the suite is not annotated to that standard)."
+
+[[ungated]]
+prefix = "tests/scripts/"
+reason = "tests/scripts: The repository's own suite: ruff-checked, not type-checked (`mypy --strict` covers `src/vibey`, and the suite is not annotated to that standard)."
+
+[[ungated]]
+prefix = "tests/system/"
+reason = "tests/system: The repository's own suite: ruff-checked, not type-checked (`mypy --strict` covers `src/vibey`, and the suite is not annotated to that standard)."
+
+[[ungated]]
+prefix = "tests/tui/"
+reason = "tests/tui: The repository's own suite: ruff-checked, not type-checked (`mypy --strict` covers `src/vibey`, and the suite is not annotated to that standard)."
+
+[[ungated]]
+prefix = "tests/unit/"
+reason = "tests/unit: The repository's own suite: ruff-checked, not type-checked (`mypy --strict` covers `src/vibey`, and the suite is not annotated to that standard)."
+
+[[ungated]]
+prefix = "tests/__init__.py"
+reason = "A top-level file of the repository's own suite: ruff-checked, not type-checked (`mypy --strict` covers `src/vibey`)."
+
+[[ungated]]
+prefix = "tests/conftest.py"
+reason = "A top-level file of the repository's own suite: ruff-checked, not type-checked (`mypy --strict` covers `src/vibey`)."
+
+[[ungated]]
+prefix = "tests/db_reaper.py"
+reason = "A top-level file of the repository's own suite: ruff-checked, not type-checked (`mypy --strict` covers `src/vibey`)."
+
+[[ungated]]
+prefix = "tests/db_roles.py"
+reason = "A top-level file of the repository's own suite: ruff-checked, not type-checked (`mypy --strict` covers `src/vibey`)."
+
+[[ungated]]
+prefix = "tests/ledger_strategies.py"
+reason = "A top-level file of the repository's own suite: ruff-checked, not type-checked (`mypy --strict` covers `src/vibey`)."
+
+[[ungated]]
+prefix = "tests/test_bootstrap.py"
+reason = "A top-level file of the repository's own suite: ruff-checked, not type-checked (`mypy --strict` covers `src/vibey`)."
+
+[[ungated]]
+prefix = "tests/test_bootstrap_engine_dispatch.py"
+reason = "A top-level file of the repository's own suite: ruff-checked, not type-checked (`mypy --strict` covers `src/vibey`)."
+
+[[ungated]]
+prefix = "tests/test_bootstrap_notification_surfaces.py"
+reason = "A top-level file of the repository's own suite: ruff-checked, not type-checked (`mypy --strict` covers `src/vibey`)."
+
+[[ungated]]
+prefix = "tests/test_bootstrap_publish.py"
+reason = "A top-level file of the repository's own suite: ruff-checked, not type-checked (`mypy --strict` covers `src/vibey`)."
+
+[[ungated]]
+prefix = "tests/test_bootstrap_surface_timeouts.py"
+reason = "A top-level file of the repository's own suite: ruff-checked, not type-checked (`mypy --strict` covers `src/vibey`)."
+
+[[ungated]]
+prefix = "tests/test_bootstrap_telemetry_caps.py"
+reason = "A top-level file of the repository's own suite: ruff-checked, not type-checked (`mypy --strict` covers `src/vibey`)."
+
+[[ungated]]
+prefix = "clients/krypton-app/"
+reason = "The krypton desktop launcher package and its tests: it has its own pyproject, its own [tool.ruff] and its own CI job (`krypton-app`, which runs ruff and `mypy src`); the root static gates do not reach it."
+
+[[ungated]]
+prefix = "research/model-quality/"
+reason = "The model-quality study's task corpus (hidden tests and reference solutions): data for the study harness, outside the ruff include and every mypy tree; not product code."
+
+[[ungated]]
+prefix = "research/large-diff-review/"
+reason = "The large-diff-review study's experiment harness and evidence-analysis scripts: research code outside the ruff include and every mypy tree, not product code."
+
+[[ungated]]
+prefix = "docs/plans/qwenstorm-3.0.0/bench/"
+reason = "Benchmark scripts beside the storm tools (the tools directory itself is gated as `storm-tools`); outside the ruff include and the mypy tree."
+
+[[ungated]]
+prefix = "src/vibey_runners/claude/legacy/"
+reason = "claudeloop's original single-file script, a frozen reference implementation: excluded from ruff by the tenant's own `extend-exclude = [legacy]` and outside `mypy src/claudeloop`."
+
+[[ungated]]
+prefix = "src/vibey_runners/claude/scripts/"
+reason = "claudeloop's skill-frontmatter checker: ruff-checked, outside the tenant's `mypy src/claudeloop`."
+
+[[ungated]]
+prefix = "src/vibey_runners/claude/tests/"
+reason = "claudeloop's own suite: ruff-checked, not type-checked (its static gate names `src/claudeloop` only)."
+
+[[ungated]]
+prefix = "src/vibey_runners/codex/tests/"
+reason = "codexloop's own suite: ruff-checked, not type-checked (its static gate names `src/codexloop` only)."
+
+[[ungated]]
+prefix = "src/vibey_runners/codex/tools/"
+reason = "codexloop's API-baseline refresher: ruff-checked, outside the tenant's `mypy src/codexloop`."
+
+[[ungated]]
+prefix = "src/vibey_runners/common/tests/"
+reason = "vibey-runners-common's own suite: ruff-checked, not type-checked (its static gate names `src/vibey_runners/common`)."
+
+[[ungated]]
+prefix = "src/vibey_runners/common/src/vibey_runners/__init__.py"
+reason = "The namespace-parent `__init__` above the gated `common` package; empty of logic, outside the tenant's mypy path."
+
+[[ungated]]
+prefix = "src/vibey_runners/qwen/scripts/"
+reason = "qwenloop's quantisation evaluation script: ruff-checked, outside the tenant's `mypy src/qwenloop`."
+
+[[ungated]]
+prefix = "src/vibey_runners/qwen/tests/"
+reason = "qwenloop's own suite: ruff-checked, not type-checked (its static gate names `src/qwenloop` only)."
+
+[[ungated]]
+prefix = "src/vibey_tools/bootstrap/docs/"
+reason = "vibey-bootstrap's documentation page generator: ruff-checked, outside its `mypy vibey_bootstrap/`."
+
+[[ungated]]
+prefix = "src/vibey_tools/bootstrap/examples/"
+reason = "vibey-bootstrap's runnable examples: ruff-checked, not type-checked (its static gate names `vibey_bootstrap/` only)."
+
+[[ungated]]
+prefix = "src/vibey_tools/bootstrap/test/"
+reason = "vibey-bootstrap's own suite: ruff-checked, not type-checked (its static gate names `vibey_bootstrap/` only)."
+
+[[ungated]]
+prefix = "src/vibey_tools/gh/test/"
+reason = "vibey-gh's own suite: ruff-checked, not type-checked (its static gate names `vibey_gh` only)."
+
+[[ungated]]
+prefix = "src/vibey_tools/skills/"
+reason = "The whole vibey-skills tenant (package, tests, validators, doc generators, plugin helper scripts): it declares no mypy gate (its CI static step is manifest and link validation), and its own [tool.ruff] include covers src, tools, tests and docs but not `plugins/`, so those scripts are outside ruff as well."
