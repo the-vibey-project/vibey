@@ -359,6 +359,45 @@ Correction to the original plan: bandit already runs on `claudeloop`, `codexloop
     in a canon PR the operator merges.
   - Hot spots: `cli/main.py` (49), `domain/config.py` (31), `claudeloop/bootstrap_ops.py` (46),
     `vibey_gh/cli.py` (64).
+- [ ] **Architecture review and target layout (added 2026-11-12).** The operator's rule:
+  all code lives in classes; every class has an interface and implements it; one class per
+  file; every source folder is `<folder>/` plus `<folder>/interfaces/` (for example
+  `src/controllers` and `src/controllers/interfaces`); and the architecture beyond that is
+  optimal, onion-layered, with controllers, services and repositories beside everything else.
+  The review comes first and is read-only; nothing moves until the operator rules on it.
+  - **Measured on `origin/develop` (2026-11-12, `src/`, excluding `interfaces/`,
+    `__init__` and templates):** 1,225 files; 380 define more than one class; 496 define no
+    class; 8,519 module-level functions; 195 folders hold code, only 48 have an
+    `interfaces/` folder. `src/vibey` today is `domain`, `application`, `infrastructure`,
+    `cli`, `tui` plus `bootstrap.py`.
+  - **Review step 1, census:** a `tests/meta` report (not yet a gate) of each violation per
+    package: module-level functions, files with 0 or 2+ classes, classes with no interface,
+    interface with no implementer, folders without `interfaces/`, interfaces that consume.
+    Output is a committed TOML baseline per rule that may only fall.
+  - **Review step 2, target architecture:** a written proposal (an ADR draft) that maps the
+    five layers to the onion and names where controllers (`hub` routes, CLI commands, TUI
+    screens), services (`application`), repositories (`infrastructure/db`) and the pure
+    core (`domain`) sit. It must keep the non-negotiables: dependencies point inward,
+    `domain/` stays pure, `bootstrap.py` is the sole composition root, and the layer
+    coverage floors carry over. It says what it costs (import-linter contracts, every
+    import path, the 100% gates, the tenants) and proposes a staged migration, one
+    package per PR, behind the ratchets.
+  - **Open conflicts the operator rules on first:**
+    1. Decision 3 exempts value types (dataclasses, Enums, Exceptions, TypedDicts) from the
+       class-and-interface rule; "every class has an interface" removes that exemption.
+       Recommendation: keep value types exempt from interfaces and module-level functions,
+       but not from one-class-per-file, and say so in the amendment.
+    2. Does the folder rule cover the tenants (`vibey_runners`, `vibey_tools`) and
+       `clients/`, or only `src/vibey`? Recommendation: all Python under `src/`; TypeScript
+       and C follow their own layout rules in SP4.
+    3. Scope of "one class per file" for private helper classes (nested or underscore).
+  - **Governance:** the rule binds future decisions, so it is a sub-doctrine in the canon
+    (CLAUDE.md "A governing rule is a ratified sub-doctrine"), proposed in a separate canon
+    PR the operator merges, plus an ADR amendment to ADR-0016. The gate is an ordinary
+    `tests/meta` census with a falling baseline, not a one-time rewrite.
+  - **Order:** review and rulings first; then the splits above (which this changes), then
+    the census gates; the physical move of packages is last because it touches every
+    import and the hot-file order (`hub/app.py`, `cli/main.py`) in the Order section.
 
 ## SP6 Family consolidation (Q2, Q7)
 
@@ -544,7 +583,9 @@ Answered by the operator on 2026-11-10:
    bypass there; tier (b) then proves every merge green.
 3. **ADR-0016:** value types (dataclasses, Enums, Exceptions, TypedDicts) are exempt. This is
    recorded as an ADR-0016 amendment plus a proposed sub-doctrine 9.b wording that the
-   operator ratifies by merging, and enforced by the census.
+   operator ratifies by merging, and enforced by the census. Under review since 2026-11-12:
+   the operator's stricter rule (every class has an interface, one class per file) is in
+   SP5's architecture review, which asks for a ruling on this exemption.
 4. **Telemetry:** the real OpenTelemetry API through `vibey_bootstrap.tracing`. The OTLP
    exporter is declared in config and stays off unless a collector is set.
 
