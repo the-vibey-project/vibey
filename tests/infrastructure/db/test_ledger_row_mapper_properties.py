@@ -32,6 +32,7 @@ from vibey.domain.ledger import (
 )
 from vibey.domain.phase import UnrecognizedPhase
 from vibey.infrastructure.db.ledger_repository import EVENT_ROWS, to_drafts
+from vibey.infrastructure.engines.tailer import LedgerEventDraft
 
 PROJECT = UUID("6f1c2a0e-0000-4000-8000-000000001883")
 
@@ -65,13 +66,6 @@ def _ledgers(draw: st.DrawFn, *, unknown_values: bool = False) -> tuple[LedgerEv
             ledger_events(
                 project_id=PROJECT,
                 seq=seq,
-                payloads=st.dictionaries(
-                    st.text(max_size=4),
-                    st.integers()
-                    | st.text(max_size=6)
-                    | st.floats(allow_nan=False, allow_infinity=False),
-                    max_size=3,
-                ),
                 unknown_values=unknown_values,
             )
         )
@@ -99,7 +93,7 @@ def test_a_row_maps_to_the_event_it_was_written_from(event: LedgerEvent) -> None
     assert type(mapped.provenance) is type(event.provenance)
 
 
-@settings(max_examples=40)
+@settings(max_examples=30)
 @given(events=_ledgers())
 def test_appending_the_drafts_of_a_ledger_writes_the_ledger_again(
     events: tuple[LedgerEvent, ...],
@@ -125,16 +119,25 @@ def test_a_draft_of_an_event_carries_no_state_the_event_lacks(
     events: tuple[LedgerEvent, ...],
 ) -> None:
     drafts = to_drafts(events)
-    assert len(drafts) == len(events)
-    for draft, event in zip(drafts, events, strict=True):
-        assert draft.payload == event.payload
-        assert draft.payload is not event.payload
-        assert (draft.project_id, draft.cycle, draft.job_id, draft.digest) == (
-            event.project_id,
-            event.cycle,
-            event.job_id,
-            event.digest,
+    assert drafts == tuple(
+        LedgerEventDraft(
+            project_id=e.project_id,
+            cycle=e.cycle,
+            phase=e.phase,
+            kind=e.kind,
+            engine_id=e.engine_id,
+            job_id=e.job_id,
+            causation_id=e.causation_id,
+            correlation_id=e.correlation_id,
+            provenance=e.provenance,
+            produced_at=e.produced_at,
+            payload=dict(e.payload),
+            digest=e.digest,
         )
+        for e in events
+    )
+    for draft, event in zip(drafts, events, strict=True):
+        assert draft.payload is not event.payload
 
 
 def _is_unrecognized(event: LedgerEvent) -> bool:

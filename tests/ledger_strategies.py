@@ -36,6 +36,10 @@ PLAIN_WORDS = st.text(alphabet="abcdefghijklmnopqrstuvwxyz0123456789 ", max_size
 letter, a dash, an underscore or a dot."""
 
 
+PLAIN_KEYS = st.text(alphabet="0123456789 ", max_size=6)
+"""Dictionary keys that can never match a sensitive key name (those are words)."""
+
+
 def _json_values(text: st.SearchStrategy[str], keys: st.SearchStrategy[str]) -> st.SearchStrategy:
     leaves = st.one_of(
         st.none(),
@@ -65,7 +69,7 @@ def json_payloads() -> st.SearchStrategy[dict[str, object]]:
 
 def plain_payloads() -> st.SearchStrategy[dict[str, object]]:
     """A payload that holds no secret: nothing in it can match a key or value pattern."""
-    return st.dictionaries(PLAIN_WORDS, _json_values(PLAIN_WORDS, PLAIN_WORDS), max_size=4)
+    return st.dictionaries(PLAIN_KEYS, _json_values(PLAIN_WORDS, PLAIN_KEYS), max_size=4)
 
 
 _KNOWN_VALUES = frozenset(

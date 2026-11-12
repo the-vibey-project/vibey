@@ -188,6 +188,43 @@ def test_digest_event_changes_when_any_field_changes(
         assert digest_event({**payload, key: replacement}) != digest  # a value changed
 
 
+def _leaf_paths(value: object, path: tuple[object, ...] = ()) -> list[tuple[object, ...]]:
+    if isinstance(value, dict):
+        return [p for k, v in value.items() for p in _leaf_paths(v, (*path, k))]
+    if isinstance(value, list):
+        return [p for i, v in enumerate(value) for p in _leaf_paths(v, (*path, i))]
+    return [path]
+
+
+def _with_leaf(value: object, path: tuple[object, ...], leaf: object) -> object:
+    if not path:
+        return leaf
+    head, *rest = path
+    if isinstance(value, dict):
+        return {k: _with_leaf(v, tuple(rest), leaf) if k == head else v for k, v in value.items()}
+    assert isinstance(value, list)
+    return [_with_leaf(v, tuple(rest), leaf) if i == head else v for i, v in enumerate(value)]
+
+
+@given(payload=json_payloads(), replacement=json_values(), data=st.data())
+def test_digest_event_changes_when_a_nested_leaf_changes(
+    payload: dict[str, object], replacement: object, data: st.DataObject
+) -> None:
+    paths = [p for p in _leaf_paths(payload) if p]
+    if not paths:
+        return
+    path = data.draw(st.sampled_from(paths))
+    changed = _with_leaf(payload, path, replacement)
+    assert isinstance(changed, dict)
+    if json.dumps(changed, sort_keys=True) != json.dumps(payload, sort_keys=True):
+        assert digest_event(changed) != digest_event(payload)
+
+
+@given(items=st.lists(st.integers(), min_size=2, max_size=6, unique=True))
+def test_digest_event_is_sensitive_to_list_order(items: list[int]) -> None:
+    assert digest_event({"xs": items}) != digest_event({"xs": items[::-1]})
+
+
 def test_digest_event_golden_vector() -> None:
     """Ledger chain verification depends on this digest staying byte-for-byte stable."""
     assert (
