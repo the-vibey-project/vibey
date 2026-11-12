@@ -10,7 +10,7 @@ went quiet exactly when the long work began.
 One `session` record per run closes that: it names the run's event file, and the tail
 follows whichever session is newest, switching by itself when a new one starts. It carries
 paths and ids only, nothing a redactor would need to touch, and does nothing unless the wire
-log is on (`-vvv`, or `VIBEY_LLM_WIRE_LOG`).
+log is on (`-ddd`, or `VIBEY_LLM_WIRE_LOG`).
 """
 
 import json

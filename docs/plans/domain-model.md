@@ -1419,7 +1419,7 @@ def resolve_log_plan(*, verbose: int = 0, quiet: bool = False, log_level: str | 
     """An explicit --log-level always wins over the -v count — naming a
     level and having it silently overridden by a count (possibly set in an
     alias) would be more surprising than honouring it. The count still
-    widens scope independently, so `--log-level WARNING -vvv` is a
+    widens scope independently, so `--log-level WARNING -ddd` is a
     legitimate way to ask for warnings from everything: include_third_party
     from TRACE and up, include_payloads from FIREHOSE."""
 ```

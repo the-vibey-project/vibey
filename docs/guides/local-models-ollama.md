@@ -258,7 +258,7 @@ answer, an attempt budget you would grant again, a delivery that died with its w
 one worker keep going through those, tell it so, for that run:
 
 ```bash
-caffeinate -i vibey -vvv worker --project PROJECT_ID --auto-answer
+caffeinate -i vibey -ddd worker --project PROJECT_ID --auto-answer
 ```
 
 `--auto-answer` answers the interview with each question's own default, grants ten more
@@ -283,11 +283,11 @@ shows nothing until it returns. Ask for the conversation and follow it from a se
 terminal:
 
 ```bash
-vibey -vvv worker --project PROJECT_ID
+vibey -ddd worker --project PROJECT_ID
 vibey llm tail
 ```
 
-`-vvv` makes the client stream Ollama's reply and write every request and every piece of
+`-ddd` makes the client stream Ollama's reply and write every request and every piece of
 the reply to the wire log, `~/.local/state/vibey/llm-wire.jsonl`. `vibey llm tail` shows the
 request (model, context, output budget, both messages), then the reasoning and the answer
 growing as they are generated, then the model's own counts and tokens per second. A call
@@ -314,7 +314,7 @@ starts, the tail moves to its run on its own, so one terminal shows the whole pr
 Text appears a word at a time, not a token at a time, because the log releases streamed text
 only at whitespace: a credential the model repeats cannot then be split across two pieces and
 escape redaction. The log holds your full prompts, so it is created readable by you alone;
-remove it when you no longer need it. To log without `-vvv`, set `VIBEY_LLM_WIRE_LOG=path`.
+remove it when you no longer need it. To log without `-ddd`, set `VIBEY_LLM_WIRE_LOG=path`.
 
 ### Measuring a capacity fit
 

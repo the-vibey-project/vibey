@@ -23,7 +23,6 @@ from uuid import UUID, uuid4
 
 import typer
 
-from vibey import __version__
 from vibey.application.design import DesignEvent
 from vibey.application.design_acceptance import DesignAcceptanceService
 from vibey.application.design_auto_accept import DesignAutoAccept
@@ -80,6 +79,7 @@ from vibey.cli.state import state_app
 from vibey.cli.status import STATUS_PRESENTER
 from vibey.cli.supervisor import SUPERVISOR, supervisor_app
 from vibey.cli.ultra import ultra_app
+from vibey.cli.version_report import VERSION_REPORT
 from vibey.cli.web import fetch_command, search_command, vibey_command, web_search_line
 from vibey.cli.workflows import WORKFLOWS
 from vibey.domain.config import ConfigError
@@ -191,26 +191,36 @@ app.add_typer(state_app, name="state")
 
 
 def _version_callback(value: bool) -> None:
+    # A Typer eager-option callback: a bare function by construction (Typer binds it by name).
     if value:
-        typer.echo(f"vibey {__version__}")
+        for line in VERSION_REPORT.lines():
+            typer.echo(line)
         raise typer.Exit()
 
 
 @app.callback()
 def main(
-    version: bool = typer.Option(False, "--version", callback=_version_callback, is_eager=True),
+    version: bool = typer.Option(
+        False,
+        "--version",
+        "-v",
+        callback=_version_callback,
+        is_eager=True,
+        help="Print the vibey-engine and krypton-app versions and exit (-v is this flag, "
+        "even before a subcommand; the verbose flag is -d).",
+    ),
     verbose: int = typer.Option(
         0,
         "--verbose",
-        "-v",
+        "-d",
         count=True,
-        help="More detail: -v debug, -vv also third-party libraries, -vvv full payloads "
+        help="More detail: -d debug, -dd also third-party libraries, -ddd full payloads "
         "(every request to the local model and its reply, streamed, in a wire log: "
         "follow it with `vibey llm tail`).",
     ),
     quiet: bool = typer.Option(False, "--quiet", "-q", help="Warnings and errors only."),
     log_level: str | None = typer.Option(
-        None, "--log-level", help="DEBUG, INFO, WARNING, ERROR or CRITICAL. Overrides -v."
+        None, "--log-level", help="DEBUG, INFO, WARNING, ERROR or CRITICAL. Overrides -d."
     ),
     log_file: Annotated[
         Path | None,

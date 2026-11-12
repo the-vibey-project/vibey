@@ -439,7 +439,7 @@ class OllamaChatClient:
 
     @staticmethod
     def _wire_log_from(environ: Mapping[str, str]) -> WireLogInterface | None:
-        """The wire log `VIBEY_LLM_WIRE_LOG` names (`-vvv` sets it), or none."""
+        """The wire log `VIBEY_LLM_WIRE_LOG` names (`-ddd` sets it), or none."""
         path = (environ.get(WIRE_LOG_ENV) or "").strip()
         return JsonlWireLog(pathlib.Path(path).expanduser()) if path else None
 

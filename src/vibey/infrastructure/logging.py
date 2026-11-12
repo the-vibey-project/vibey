@@ -134,7 +134,7 @@ def configure_logging(
 
 
 def apply_third_party_level(plan: LogPlan) -> None:
-    """Raise third-party loggers' floor unless -vv asked for them.
+    """Raise third-party loggers' floor unless -dd asked for them.
 
     Raising the floor rather than removing their handlers keeps a genuine
     library error visible at any verbosity.
