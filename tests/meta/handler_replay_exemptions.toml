@@ -12,12 +12,9 @@
 # case (build_decompose, design, build_implement, build_integrate, build_verify), 13 without.
 # SP2-A Task 8 gives the twelve below that are not bus_dead_letter a case each.
 
-ceiling = 16
+ceiling = 13
 
 exempt = [
-  "build_implement",        # SP2-A Task 7, next commit
-  "build_integrate",        # SP2-A Task 7, next commit
-  "build_verify",           # SP2-A Task 7, next commit
   "bus_dead_letter",        # replays a dead letter, not a delivered job: a different contract
   "deploy_acceptance",      # SP2-A Task 8
   "deploy_design",          # SP2-A Task 8

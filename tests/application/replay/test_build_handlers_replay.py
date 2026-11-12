@@ -1,5 +1,5 @@
 # Made with ❤️ by [Vibey](https://the-vibey-project.github.io/vibey/), Developed by [Adam Matthew Steinberger](https://vibewithadam.matthewsteinberger.com/) ([@adammatthewsteinberger](https://github.com/adammatthewsteinberger/)).
-"""Replay cases for the build_decompose handler and the design interview (SP2-A Task 7).
+"""Replay cases for the BUILD handlers and the design interview (SP2-A Task 7).
 
 Each case reuses the fakes of the handler's own test file, over one persisted set of fakes
 the redelivered handler instance shares with the first (``harness.py``)."""
@@ -14,22 +14,38 @@ import pytest
 
 from tests.application.fakes import FakeHumanGateRepository, FakeJobRepository, make_job
 from tests.application.replay.harness import (
+    ContentLedger,
     ReplayCase,
     ReplayRig,
     assert_replay_is_idempotent,
     jobs_content,
 )
 from tests.application.test_build_decompose_handler import Decomposer, Specs, _item, spec
+from tests.application.test_build_implement_handler import FakeProvisioner, FakeWorktrees
+from tests.application.test_build_integrate_handler import (
+    FakeGateRunner as IntegrateGates,
+)
+from tests.application.test_build_integrate_handler import (
+    FakeIntegration,
+    FakeTransitioner,
+)
+from tests.application.test_build_verify_handler import FakeGateRunner as VerifyGates
+from tests.application.test_build_verify_handler import FakeWorktrees as VerifyWorktrees
 from tests.application.test_design_handler import (
     FakeDesignLedger,
     ScriptedQuestionProvider,
 )
 from vibey.application.build_decompose_handler import BuildDecomposeHandler
+from vibey.application.build_implement_handler import BuildImplementHandler
+from vibey.application.build_integrate_handler import BuildIntegrateHandler, MergeOutcome
+from vibey.application.build_verify_handler import BuildVerifyHandler
 from vibey.application.design import DESIGN_STAGES
 from vibey.application.design_handler import DesignInterviewHandler
 from vibey.application.worker import Park
 from vibey.domain.engine import EngineId
 from vibey.domain.phase import Phase
+from vibey.infrastructure.engines.descriptors import CLAUDELOOP
+from vibey.infrastructure.engines.scripted import ScriptedEngine
 
 _SCRATCH: list[Path] = []
 
@@ -143,6 +159,106 @@ def _design_question_batch() -> ReplayRig:
     )
 
 
+def _implement() -> ReplayRig:
+    ledger = ContentLedger()
+    jobs = FakeJobRepository()
+    worktrees = FakeWorktrees(_tmp())
+    job = replace(
+        make_job(uuid4()),
+        kind="build.implement",
+        work_item_id="item-1",
+        attempts=1,
+        payload={"title": "do the thing", "verification": {}},
+    )
+    jobs.seed_leased(job)
+
+    def handler() -> BuildImplementHandler:
+        return BuildImplementHandler(
+            worktrees=worktrees,
+            provisioner=FakeProvisioner(),
+            engine=ScriptedEngine(descriptor=CLAUDELOOP, base_dir=_tmp() / "engine"),
+            ledger=ledger,
+            jobs=jobs,
+            clock=_Clock(),
+        )
+
+    return ReplayRig(
+        handler=handler(),
+        job=job,
+        redeliver=handler,
+        snapshot=lambda: {"ledger": ledger.content(), "jobs": jobs_content(jobs)},
+    )
+
+
+def _integrate() -> ReplayRig:
+    """The last integrate of the cycle: it records gate evidence, moves the project to
+    REVIEW and enqueues the review entry."""
+    ledger = ContentLedger()
+    jobs = FakeJobRepository()
+    transitioner = FakeTransitioner()
+    integration = FakeIntegration(merge_outcome=MergeOutcome(ok=True, detail=""), path=_tmp())
+    job = replace(
+        make_job(uuid4()),
+        kind="build.integrate",
+        work_item_id="item-1",
+        payload={"verification": {"commands": ("true",), "criteria_checked": ("AC-1",)}},
+    )
+    jobs.seed_leased(job)
+
+    def handler() -> BuildIntegrateHandler:
+        return BuildIntegrateHandler(
+            integration=integration,
+            gates=IntegrateGates(),
+            ledger=ledger,
+            jobs=jobs,
+            clock=_Clock(),
+            projects=transitioner,
+        )
+
+    return ReplayRig(
+        handler=handler(),
+        job=job,
+        redeliver=handler,
+        snapshot=lambda: {
+            "ledger": ledger.content(),
+            "jobs": jobs_content(jobs),
+            # Which items are merged, not how many times merge_item was called: a merge of
+            # a branch already merged is a no-op in git, which this fake does not model.
+            "merged": sorted(set(integration.merged)),
+        },
+    )
+
+
+def _verify() -> ReplayRig:
+    ledger = ContentLedger()
+    jobs = FakeJobRepository()
+    job = replace(
+        make_job(uuid4()),
+        kind="build.verify",
+        work_item_id="item-1",
+        payload={"verification": {"commands": ("pytest",), "criteria_checked": ("AC-1",)}},
+        requirement={"implementer_engine_id": "codexloop"},
+    )
+    jobs.seed_leased(job)
+
+    def handler() -> BuildVerifyHandler:
+        return BuildVerifyHandler(
+            worktrees=VerifyWorktrees(_tmp()),
+            gates=VerifyGates(),
+            reviewer=ScriptedEngine(descriptor=CLAUDELOOP, base_dir=_tmp() / "engine"),
+            ledger=ledger,
+            jobs=jobs,
+            clock=_Clock(),
+        )
+
+    return ReplayRig(
+        handler=handler(),
+        job=job,
+        redeliver=handler,
+        snapshot=lambda: {"ledger": ledger.content(), "jobs": jobs_content(jobs)},
+    )
+
+
 # The census (tests/meta/test_every_handler_has_a_replay_case.py) reads `kind="..."` of each
 # ReplayCase( call in this directory by AST, so a kind is a string literal, not a variable.
 CASES = (
@@ -154,6 +270,13 @@ CASES = (
         name="a finished interview that fans out the follow-up jobs",
         kind="design",
         build=_design_interview,
+    ),
+    ReplayCase(name="a session that enqueues its verify", kind="build_implement", build=_implement),
+    ReplayCase(name="the last merge that enters REVIEW", kind="build_integrate", build=_integrate),
+    ReplayCase(
+        name="gates, an independent review and the integrate follow-up",
+        kind="build_verify",
+        build=_verify,
     ),
 )
 
