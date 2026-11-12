@@ -26,6 +26,7 @@ Every project-specific decision lives here so the logic beside it can stay gener
                               # this tooling from when the repository has no copy of it
     pin_version = false       # pin that rendered `pip install vibey-engine` to the exact
                               # version that rendered it, instead of the latest release
+    # pin = "4.6.0"           # with pin_version = true: pin to this exact release instead
 
     [issue_automation]
     enabled        = true               # propose a solution branch for a published issue
@@ -3689,6 +3690,12 @@ class GhConfig:
     # rendered it. False keeps the historical floating install, so upgrading this
     # package changes nothing in an adopting repository until this is turned on.
     pin_version: bool = False
+    # `[install] pin`: an exact release that replaces the resolved one in every rendered
+    # pin. For a repository whose own `[project] version` is not on an index yet -- a
+    # renumbering -- the pin rendered from it would name a release nobody can install, and
+    # floating instead would hand privileged workflows whatever is newest. Unset, the pin
+    # resolves exactly as it always has. Only read while `pin_version` is on.
+    pin: str | None = None
     # Where THIS repository keeps its own copy of vibey-gh, repository-root-relative.
     # "." is the standalone layout and the default, so nothing changes for an adopter.
     # A monorepo that vendors the tooling points this at the subtree.
@@ -3781,6 +3788,27 @@ def _schedules(raw: object) -> tuple[str, ...]:
             raise ValueError(f"promotion.schedules entries must be five-field crons: {item!r}")
         crons.append(item)
     return tuple(dict.fromkeys(crons))
+
+
+_RELEASE_RE = re.compile(r"^[0-9]+(\.[0-9]+)*$")
+
+
+def _install_pin(raw: object, pin_version: object) -> str | None:
+    """`[install] pin`: a PEP 440 release segment (`4.6.0`), or absent.
+
+    Validated because it is rendered into `pip install "<package>==<pin>"` in a generated
+    workflow: digits and dots cannot carry a quote, a space or a second requirement, and
+    an operator who means an exact pin cannot be handed a range or a pre-release by a typo.
+    Set without `pin_version = true` it would do nothing, so that is refused rather than
+    silently ignored. Module-level beside the other `[install]` readers, which the loader
+    calls by name (ADR-0016 has not converged this module yet)."""
+    if raw is None:
+        return None
+    if not isinstance(raw, str) or not _RELEASE_RE.match(raw):
+        raise ValueError(f"install.pin must be an exact release such as 4.6.0: {raw!r}")
+    if pin_version is not True:
+        raise ValueError("install.pin needs install.pin_version = true; it pins nothing alone")
+    return raw
 
 
 def _max_major(raw: object) -> int | None:
@@ -4040,6 +4068,7 @@ def load_config(root: Path | None = None, config: Path | None = None) -> GhConfi
         union_merge_paths=tuple(inst.get("union_merge_paths", DEFAULT_UNION_MERGE_PATHS)),
         fallback_package=_fallback_package(inst.get("fallback_package", "vibey-engine")),
         pin_version=inst.get("pin_version", False),
+        pin=_install_pin(inst.get("pin"), inst.get("pin_version", False)),
         self_source=_self_source(inst.get("self_source", ".")),
         self_source_declared="self_source" in inst,
         integration_branch=br.get("integration", "develop"),

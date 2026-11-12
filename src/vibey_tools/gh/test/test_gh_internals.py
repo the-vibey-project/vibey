@@ -1680,6 +1680,45 @@ def test_regenerate_must_be_a_list_of_argv_lists(tmp_path, raw):
         load_config(tmp_path)
 
 
+@pytest.mark.parametrize("raw", ['"4.6.0"', '"1"', '"10.20.30.40"'])
+def test_install_pin_is_read_as_a_release(tmp_path, raw):
+    (tmp_path / ".vibey-gh.toml").write_text(f"[install]\npin_version = true\npin = {raw}\n")
+    assert load_config(tmp_path).pin == raw.strip('"')
+
+
+def test_install_pin_is_unset_by_default(tmp_path):
+    assert load_config(tmp_path).pin is None
+
+
+@pytest.mark.parametrize(
+    "raw",
+    [
+        '""',
+        '"latest"',
+        '"4.6.0rc1"',
+        '"==4.6.0"',
+        '">=4"',
+        '"4.6.0; rm -rf /"',
+        '" 4.6.0"',
+        '"4..6"',
+        "4.6",
+        "true",
+    ],
+)
+def test_install_pin_must_be_an_exact_release(tmp_path, raw):
+    """Rendered into `pip install "<package>==<pin>"`: a release segment and nothing else."""
+    (tmp_path / ".vibey-gh.toml").write_text(f"[install]\npin_version = true\npin = {raw}\n")
+    with pytest.raises(ValueError, match=r"install\.pin must be"):
+        load_config(tmp_path)
+
+
+def test_install_pin_without_pin_version_is_refused(tmp_path):
+    """A key that silently does nothing is the defect fallback_pin exists to end."""
+    (tmp_path / ".vibey-gh.toml").write_text('[install]\npin = "4.6.0"\n')
+    with pytest.raises(ValueError, match=r"install\.pin needs install\.pin_version = true"):
+        load_config(tmp_path)
+
+
 @pytest.mark.parametrize("raw", ['"0"', "true", "false", "-1", "1.5", "[0]"])
 def test_max_major_must_be_a_non_negative_int(tmp_path, raw):
     (tmp_path / ".vibey-gh.toml").write_text(f"[version]\nmax_major = {raw}\n")
