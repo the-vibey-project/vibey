@@ -400,6 +400,99 @@ def test_breaking_prose_is_not_a_breaking_footer(repo):
     assert new == "1.3.0", why
 
 
+@pytest.mark.parametrize(
+    "version,level,cap,expected",
+    [
+        ("0.8.0", "major", 0, "0.9.0"),
+        ("0.8.0", "major", 1, "1.0.0"),
+        ("1.2.3", "major", 1, "1.3.0"),
+        ("1.2.3", "major", 2, "2.0.0"),
+        ("3.1.0", "major", 0, "3.2.0"),
+        ("0.8.0", "major", None, "1.0.0"),
+        ("0.8.0", "minor", 0, "0.9.0"),
+        ("0.8.4", "patch", 0, "0.8.5"),
+    ],
+)
+def test_bump_caps_a_major_at_max_major(version, level, cap, expected):
+    assert versioning.bump(version, level, cap) == expected
+
+
+def _break_in_content(repo, message="feat!: drop the old flag"):
+    git(repo, "branch", "-q", "base")
+    (repo / "content" / "thing.md").write_text("changed\n")
+    git(repo, "add", "-A")
+    git(repo, "commit", "-qm", message)
+
+
+def test_a_breaking_change_under_max_major_zero_bumps_the_minor(repo):
+    cfg = cfg_for(repo, max_major=0)
+    _break_in_content(repo)
+    new, _ = versioning.decide(cfg, "base")
+    assert new == "1.3.0"
+
+
+def test_a_breaking_patch_under_max_major_zero_bumps_the_minor(repo):
+    cfg = cfg_for(repo, max_major=0)
+    git(repo, "branch", "-q", "base")
+    (repo / "src" / "other.py").write_text("x = 1\n")
+    git(repo, "add", "-A")
+    git(repo, "commit", "-qm", "refactor!: rename the entry point")
+    new, _ = versioning.decide(cfg, "base")
+    assert new == "1.3.0"
+
+
+def test_max_major_unset_keeps_a_breaking_change_major(repo):
+    cfg = cfg_for(repo)
+    assert cfg.max_major is None
+    _break_in_content(repo)
+    new, why = versioning.decide(cfg, "base")
+    assert new == "2.0.0"
+    assert "capped" not in why
+
+
+def test_the_reason_names_the_cap(repo):
+    cfg = cfg_for(repo, max_major=0)
+    _break_in_content(repo)
+    _, why = versioning.decide(cfg, "base")
+    assert (
+        "the range declares a break (capped to a minor: [version] max_major = 0): "
+        "feat!: drop the old flag"
+    ) in why
+
+
+def test_max_major_one_allows_one_zero_zero_but_caps_two(repo):
+    cfg = cfg_for(repo, max_major=2)
+    _break_in_content(repo)
+    assert versioning.decide(cfg, "base")[0] == "2.0.0"
+    cfg = cfg_for(repo, max_major=1)
+    new, why = versioning.decide(cfg, "base")
+    assert new == "1.3.0" and "max_major = 1" in why
+    # a pre-1.0 tree may still reach 1.0.0 under max_major = 1
+    assert versioning.bump("0.8.0", "major", 1) == "1.0.0"
+
+
+def test_an_allowed_break_is_not_described_as_capped(repo):
+    cfg = cfg_for(repo, max_major=5)
+    _break_in_content(repo)
+    new, why = versioning.decide(cfg, "base")
+    assert new == "2.0.0" and "capped" not in why
+
+
+def test_a_staged_minor_followed_by_a_break_is_not_raised_past_the_cap(repo):
+    """The #393 escalation of a staged bump honours the cap too: under max_major = 0 the
+    range owes only the minor already staged, so it is kept rather than raised."""
+    cfg = cfg_for(repo, max_major=0)
+    _break_in_content(repo)
+    versioning.apply_version(cfg, "1.3.0")
+    git(repo, "add", "-A")
+    git(repo, "commit", "-qm", "chore: stage the bump")
+    new, why = versioning.decide(cfg, "base")
+    assert new is None and "deliberate bump" in why
+    uncapped = cfg_for(repo)
+    new, why = versioning.decide(uncapped, "base")
+    assert new == "2.0.0" and "staged 1.3.0 raised to 2.0.0" in why
+
+
 def test_a_deliberate_bump_is_never_doubled(repo):
     """Someone bumped by hand in a pull request; the automation must leave it alone."""
     cfg = cfg_for(repo)

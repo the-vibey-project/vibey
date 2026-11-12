@@ -1,0 +1,1 @@
+`[version] max_major` caps the major the version deriver may reach: a breaking-change marker that would carry the version past it derives a minor instead, and the reason names the cap. `max_major = 0` keeps a project pre-1.0 until the key is deleted; unset, a break is a major bump as before.

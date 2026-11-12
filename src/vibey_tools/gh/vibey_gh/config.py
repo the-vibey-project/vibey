@@ -12,6 +12,7 @@ Every project-specific decision lives here so the logic beside it can stay gener
     files         = ["src/pkg/__init__.py", "manifest.json"]
     content_paths = ["plugins/"]     # a change here is a MINOR release
     code_paths    = ["src/"]         # a change here alone is a PATCH
+    max_major     = 0                # optional ceiling: a break derives a minor, not 1.0.0
     regenerate    = [["python", "scripts/render.py"]]  # argv run after every bump; what
                                      # it rewrites joins the release commit
 
@@ -3610,6 +3611,10 @@ class GhConfig:
     version_files: tuple[str, ...] = ()
     content_paths: tuple[str, ...] = ()
     code_paths: tuple[str, ...] = ("src/",)
+    # `[version] max_major`: the highest major the deriver may reach. A breaking-change
+    # marker that would carry the version past it derives a minor instead, so a project
+    # stays pre-1.0 (`0`) until the operator deletes the key. None is no ceiling.
+    max_major: int | None = None
     # Commands (argv, never a shell line) that re-derive files embedding the version. Run
     # after every release bump; whatever they rewrite joins the release commit.
     version_regenerate: tuple[tuple[str, ...], ...] = ()
@@ -3776,6 +3781,16 @@ def _schedules(raw: object) -> tuple[str, ...]:
             raise ValueError(f"promotion.schedules entries must be five-field crons: {item!r}")
         crons.append(item)
     return tuple(dict.fromkeys(crons))
+
+
+def _max_major(raw: object) -> int | None:
+    """`[version] max_major`: a non-negative integer, or absent. A bool is refused although
+    it is an int in Python: `max_major = true` is a mistake, not a ceiling of one."""
+    if raw is None:
+        return None
+    if isinstance(raw, bool) or not isinstance(raw, int) or raw < 0:
+        raise ValueError(f"version.max_major must be a non-negative integer: {raw!r}")
+    return raw
 
 
 def _regenerate(raw: object) -> tuple[tuple[str, ...], ...]:
@@ -4018,6 +4033,7 @@ def load_config(root: Path | None = None, config: Path | None = None) -> GhConfi
         version_files=tuple(ver.get("files", ())),
         content_paths=tuple(ver.get("content_paths", ())),
         code_paths=tuple(ver.get("code_paths", ("src/",))),
+        max_major=_max_major(ver.get("max_major")),
         version_regenerate=_regenerate(ver.get("regenerate", ())),
         promotion_schedules=_schedules(data.get("promotion", {}).get("schedules", ("17 8 * * 1",))),
         managed_workflows=(tuple(inst["workflows"]) if "workflows" in inst else None),

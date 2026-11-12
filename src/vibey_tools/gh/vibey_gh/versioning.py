@@ -143,7 +143,7 @@ def read_version_at(cfg: GhConfig, ref: str) -> str | None:
     return None
 
 
-def bump(version: str, level: str) -> str:
+def bump(version: str, level: str, max_major: int | None = None) -> str:
     """The next version at `level` — `major`, `minor`, or anything else meaning patch.
 
     `major` is derived like the other two, not chosen. A version this function cannot
@@ -152,11 +152,25 @@ def bump(version: str, level: str) -> str:
     one, and answers "a deliberate bump is in place" — once, for that release. The
     release after it derives from the hand-written number as though the tool had written
     it. So the only safe way to reach 1.0.0 is for the deriver to be able to reach it.
+
+    `max_major` (`[version] max_major`) is the operator's ceiling: a `major` that would
+    land above it is a `minor` instead, so a project that has not declared 1.0.0 cannot
+    be carried there by a breaking-change marker. Unset, nothing is capped.
     """
     major, minor, patch = (int(p) for p in version.split(".")[:3])
-    if level == "major":
+    if level == "major" and not _capped(version, max_major):
         return f"{major + 1}.0.0"
+    if level == "major":
+        level = "minor"
     return f"{major}.{minor + 1}.0" if level == "minor" else f"{major}.{minor}.{patch + 1}"
+
+
+def _capped(version: str, max_major: int | None) -> bool:
+    """True when a major bump of `version` would exceed `[version] max_major`.
+
+    Module-level beside `bump`, its caller, for the reason `decide` is (ADR-0016 has not
+    converged this module yet)."""
+    return max_major is not None and int(version.split(".")[0]) + 1 > max_major
 
 
 def breaking_marker(cfg: GhConfig, since: str, head: str) -> str | None:
@@ -321,6 +335,11 @@ def _classify(cfg: GhConfig, since: str, head: str, working: str) -> tuple[str |
     # number asserting an incompatibility that does not exist.
     marker = breaking_marker(cfg, since, head)
     if marker is not None:
+        if _capped(working, cfg.max_major):
+            return bump(working, "major", cfg.max_major), (
+                f"{why}, and the range declares a break "
+                f"(capped to a minor: [version] max_major = {cfg.max_major}): {marker}"
+            )
         return bump(working, "major"), f"{why}, and the range declares a break: {marker}"
     return bump(working, level), why
 

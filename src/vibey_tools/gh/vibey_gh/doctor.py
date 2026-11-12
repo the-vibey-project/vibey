@@ -81,7 +81,7 @@ def _fields(cls: type) -> set[str]:
 # sections (whose keys load onto GhConfig itself) are spelled out to match the loader.
 _SECTION_KEYS: dict[str, set[str] | None] = {
     "fingerprint": {"sources", "text", "superseded_texts", "trailer"},
-    "version": {"files", "content_paths", "code_paths", "regenerate"},
+    "version": {"files", "content_paths", "code_paths", "max_major", "regenerate"},
     "branches": {"integration", "release"},
     "merge_train": {"owner", "trusted_authors", "restack_conflicts", "protected_paths"},
     "promotion": {"schedules"},

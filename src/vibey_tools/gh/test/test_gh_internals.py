@@ -1668,6 +1668,20 @@ def test_regenerate_must_be_a_list_of_argv_lists(tmp_path, raw):
         load_config(tmp_path)
 
 
+@pytest.mark.parametrize("raw", ['"0"', "true", "false", "-1", "1.5", "[0]"])
+def test_max_major_must_be_a_non_negative_int(tmp_path, raw):
+    (tmp_path / ".vibey-gh.toml").write_text(f"[version]\nmax_major = {raw}\n")
+    with pytest.raises(ValueError, match=r"version\.max_major"):
+        load_config(tmp_path)
+
+
+@pytest.mark.parametrize(("raw", "expected"), [("0", 0), ("1", 1), (None, None)])
+def test_max_major_is_read_as_an_int_or_left_unset(tmp_path, raw, expected):
+    line = "" if raw is None else f"max_major = {raw}\n"
+    (tmp_path / ".vibey-gh.toml").write_text(f"[version]\n{line}")
+    assert load_config(tmp_path).max_major == expected
+
+
 def test_regenerate_is_read_as_argv_tuples(tmp_path):
     (tmp_path / ".vibey-gh.toml").write_text(
         '[version]\nregenerate = [["python", "scripts/render.py", "render"]]\n'

@@ -18,6 +18,7 @@ defaults below. Paths are repository-relative unless stated otherwise.
 | `files` | string list / empty | Version-bearing files updated by `version --apply`. |
 | `content_paths` | string list / empty | Paths whose changes produce a minor bump. |
 | `code_paths` | string list / `["src/"]` | Paths whose changes produce a patch bump. |
+| `max_major` | non-negative int / unset | The highest major version the deriver may reach. A breaking-change marker that would carry the version past it derives a minor instead (`max_major = 0` keeps a project pre-1.0: `0.8.0` plus a break is `0.9.0`, never `1.0.0`), and the reason says so. Delete the key to lift the cap. Unset, a break is a major bump. |
 | `regenerate` | list of argv lists / `[]` | Commands run after every release bump to re-derive files that embed the version; what they rewrite joins the release commit, and a failure stops the release. Dev builds skip them. |
 
 ## `[promotion]`

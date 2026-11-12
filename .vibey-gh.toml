@@ -44,6 +44,9 @@ kind = "github"
 # sat at 0.6.0 through two releases because nothing managed it. `apply_version` bumps the
 # top-level `version:` only, never `cff-version:`, which is the FORMAT version.
 files         = ["pyproject.toml", "src/vibey/__init__.py", "CITATION.cff"]
+# Pre-1.0 until the operator says otherwise: a breaking-change marker derives a minor
+# (0.Y.0 -> 0.(Y+1).0), never 1.0.0. Delete this key to lift the cap.
+max_major     = 0
 content_paths = [
   "src/vibey/",
   "src/vibey_runners/claude/src/",
