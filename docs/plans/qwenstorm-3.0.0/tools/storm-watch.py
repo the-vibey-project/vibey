@@ -57,6 +57,7 @@ import time
 import urllib.error
 import urllib.request
 from pathlib import Path
+from typing import TypedDict
 
 import storm_durability
 
@@ -184,7 +185,22 @@ CHECKS = (
 )
 
 
-def report(args: argparse.Namespace, thrash: tuple[str, str] | None = None) -> dict:
+class CheckResult(TypedDict):
+    """One check's verdict."""
+
+    state: str
+    detail: str
+
+
+class Report(TypedDict):
+    """The whole report: an overall verdict and every check behind it."""
+
+    overall: str
+    at: str
+    checks: dict[str, CheckResult]
+
+
+def report(args: argparse.Namespace, thrash: tuple[str, str] | None = None) -> Report:
     results = {name: check(args) for name, check in CHECKS}
     if thrash is not None:
         results["thrash"] = thrash
@@ -203,14 +219,14 @@ def report(args: argparse.Namespace, thrash: tuple[str, str] | None = None) -> d
     }
 
 
-def render(result: dict) -> str:
+def render(result: Report) -> str:
     lines = [f"{result['at']}  {result['overall']}"]
     for name, item in result["checks"].items():
         lines.append(f"  {item['state']:8} {name:9} {item['detail']}")
     return "\n".join(lines)
 
 
-def exit_code(result: dict) -> int:
+def exit_code(result: Report) -> int:
     if result["overall"] == TROUBLE:
         return 1
     if all(item["state"] == UNKNOWN for item in result["checks"].values()):
