@@ -1,0 +1,1 @@
+**ruff and `mypy --strict` now cover `scripts/` and the storm tools, and a census covers every tracked Python file** (`pyproject.toml`, `scripts/static_gates.py`). CI runs the extra trees from `[[tool.vibey.static_gates]]` as Gate 3b, and `tests/meta/test_every_python_file_is_gated.py` fails on a tracked Python file that is outside either gate without a recorded reason.
