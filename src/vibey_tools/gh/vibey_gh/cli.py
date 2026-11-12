@@ -11,6 +11,7 @@ import sys
 from dataclasses import asdict
 from datetime import UTC, datetime
 from pathlib import Path
+from typing import TYPE_CHECKING
 
 from vibey_gh import (
     conversation,
@@ -38,7 +39,7 @@ from vibey_gh.approval_check import ApprovalCheck
 from vibey_gh.branch_health import BranchHealth
 from vibey_gh.changelog import Changelog
 from vibey_gh.ci_areas import CiAreasCommand
-from vibey_gh.config import load_config
+from vibey_gh.config import GhConfig, load_config
 from vibey_gh.contributor_setup import ContributorSetup
 from vibey_gh.fallback_pin import FallbackPinResolver
 from vibey_gh.forge import ForgeKind
@@ -56,8 +57,21 @@ from vibey_gh.ruleset_drift import RulesetDrift
 from vibey_gh.skip_markers import SkipMarkerGuard
 from vibey_gh.tracking_issue import TrackingIssue
 
+if TYPE_CHECKING:
+    from vibey_gh.feasibility import StateVector
+    from vibey_gh.heartbeat_timer import ServiceManager
+    from vibey_gh.interfaces.forge_snapshot_interface import ForgeReaderInterface
+    from vibey_gh.interfaces.heartbeat_timer_interface import HeartbeatTimerInterface
+    from vibey_gh.interfaces.sabbath_guard_interface import (
+        SabbathGuardInterface,
+        SabbathLanesInterface,
+    )
+    from vibey_gh.interfaces.sovereign_lane_interface import LaneReadinessInterface
+    from vibey_gh.paper import Provenance
+    from vibey_gh.sovereign_runner import Launchctl
 
-def _cloud_clutter(cfg, surveyed: bool) -> tuple[tuple[str, ...], tuple[str, ...]]:
+
+def _cloud_clutter(cfg: GhConfig, surveyed: bool) -> tuple[tuple[str, ...], tuple[str, ...]]:
     """Sub-doctrine 9.a's cloud clutter classes, named for `check`: merged-and-undeleted
     remote branches (a closed pull request's head among them, once its work landed),
     draft releases, orphan tags. Returns `(clutter, unsurveyable)` — the second is why
@@ -94,7 +108,7 @@ def _cloud_clutter(cfg, surveyed: bool) -> tuple[tuple[str, ...], tuple[str, ...
     return clutter, report.problems
 
 
-def _settings_drift(cfg, surveyed: bool) -> tuple[tuple[str, ...], tuple[str, ...]]:
+def _settings_drift(cfg: GhConfig, surveyed: bool) -> tuple[tuple[str, ...], tuple[str, ...]]:
     """`(drift, not_surveyed)` for the declared repository settings against the live ones.
 
     Surveyed under `--ci` alone, like the cloud clutter: it costs forge round trips a
@@ -106,7 +120,7 @@ def _settings_drift(cfg, surveyed: bool) -> tuple[tuple[str, ...], tuple[str, ..
     return ProfileDrift().survey(cfg)
 
 
-def _check(args, resolver: FallbackPinResolverInterface | None = None) -> int:
+def _check(args: argparse.Namespace, resolver: FallbackPinResolverInterface | None = None) -> int:
     cfg = load_config()
     # Resolved once, so the drift verdict and the notice below describe the same pin.
     pin = (resolver or FallbackPinResolver()).resolve(cfg)
@@ -218,7 +232,7 @@ def _check(args, resolver: FallbackPinResolverInterface | None = None) -> int:
     return 1
 
 
-def _install(args, resolver: FallbackPinResolverInterface | None = None) -> int:
+def _install(args: argparse.Namespace, resolver: FallbackPinResolverInterface | None = None) -> int:
     cfg = load_config()
     pin = (resolver or FallbackPinResolver()).resolve(cfg)
     for action in install.install(cfg, fallback_pin=pin):
@@ -231,7 +245,7 @@ def _install(args, resolver: FallbackPinResolverInterface | None = None) -> int:
     return 0
 
 
-def _setup(args, setup: ContributorSetupInterface | None = None) -> int:
+def _setup(args: argparse.Namespace, setup: ContributorSetupInterface | None = None) -> int:
     # A module function like `_install` beside it: argparse hands a handler the parsed
     # namespace and nothing else, and the work is in `ContributorSetup`.
     cfg = load_config()
@@ -246,7 +260,7 @@ def _setup(args, setup: ContributorSetupInterface | None = None) -> int:
     return 0 if report.ok else 1
 
 
-def _conventional_message(args) -> int:
+def _conventional_message(args: argparse.Namespace) -> int:
     if args.file:
         message = args.file.read_text(encoding="utf-8")
         args.file.write_text(fingerprints.normalize_commit_message(message), encoding="utf-8")
@@ -255,7 +269,7 @@ def _conventional_message(args) -> int:
     return 0
 
 
-def _provenance_message(args) -> int:
+def _provenance_message(args: argparse.Namespace) -> int:
     message = args.file.read_text(encoding="utf-8") if args.file else sys.stdin.read()
     normalized = fingerprints.normalize_provenance_message(message)
     if args.file:
@@ -265,14 +279,14 @@ def _provenance_message(args) -> int:
     return 0
 
 
-def _conventional_check(args) -> int:
+def _conventional_check(args: argparse.Namespace) -> int:
     invalid = fingerprints.commits_with_invalid_subject(args.commits, load_config())
     for commit in invalid:
         print(commit)
     return 1 if invalid else 0
 
 
-def _provenance_check(args) -> int:
+def _provenance_check(args: argparse.Namespace) -> int:
     cfg = load_config()
     missing = fingerprints.commits_missing_trailer(args.commits, cfg)
     for commit in missing:
@@ -280,7 +294,7 @@ def _provenance_check(args) -> int:
     return 1 if missing else 0
 
 
-def _version(args) -> int:
+def _version(args: argparse.Namespace) -> int:
     cfg = load_config(config=args.config)
     if args.dev is not None:
         dev = versioning.dev_version(cfg, args.dev)
@@ -312,7 +326,7 @@ def _summary_rows(rows: list[tuple[int, str, str]], merged: int, skipped: int) -
     return "\n".join(lines) + "\n"
 
 
-def _sabbath_guard(cfg):
+def _sabbath_guard(cfg: GhConfig) -> SabbathGuardInterface:
     """This host's Sabbath guard. A module function because argparse dispatches to
     functions and every writer below builds the guard the same way."""
     from vibey_gh.sabbath_guard import SabbathGuard
@@ -320,14 +334,14 @@ def _sabbath_guard(cfg):
     return SabbathGuard(cfg.sabbath, home=Path.home())
 
 
-def _sabbath_lanes(cfg):
+def _sabbath_lanes(cfg: GhConfig) -> SabbathLanesInterface:
     from vibey_gh.sabbath_guard import SabbathLanes
 
     declared = cfg.sabbath.lanes_dir
     return SabbathLanes(Path(os.path.expanduser(declared)))
 
 
-def _sabbath_resume(cfg, cwd: str | None, *, ended: bool) -> list[str]:
+def _sabbath_resume(cfg: GhConfig, cwd: str | None, *, ended: bool) -> list[str]:
     """What the heartbeat re-arms outside the window. `ended` marks the first beat after
     one: that beat writes the SabbathEnded line and re-fires the held workflows."""
     from vibey_gh.sabbath_guard import resume_dispatch
@@ -341,7 +355,7 @@ def _sabbath_resume(cfg, cwd: str | None, *, ended: bool) -> list[str]:
     return lines + resumed
 
 
-def _sabbath(args) -> int:
+def _sabbath(args: argparse.Namespace) -> int:
     """`vibey-gh sabbath status|register-lane|resume` (sub-doctrine 8.i)."""
     cfg = load_config()
     if args.action == "status":
@@ -367,7 +381,7 @@ def _sabbath(args) -> int:
     return 0
 
 
-def _held_for_the_sabbath(args, cfg) -> bool:
+def _held_for_the_sabbath(args: argparse.Namespace, cfg: GhConfig) -> bool:
     """Sub-doctrine 8.i: stand down, visibly. A held run prints the hold, writes it to the
     job summary and returns 0 -- paused, not failed, not silently skipped (10.f)."""
     held = _sabbath_guard(cfg).hold()
@@ -378,7 +392,7 @@ def _held_for_the_sabbath(args, cfg) -> bool:
     return True
 
 
-def _merge_train(args) -> int:
+def _merge_train(args: argparse.Namespace) -> int:
     cfg = load_config()
     if _held_for_the_sabbath(args, cfg):
         return 0
@@ -481,14 +495,14 @@ def _merge_train(args) -> int:
     return 0
 
 
-def _read_json(value: str) -> dict:
+def _read_json(value: str) -> dict[str, object]:
     parsed = json.loads(_read_text(value))
     if not isinstance(parsed, dict):
         raise TypeError("input JSON must be an object")
     return parsed
 
 
-def _pr_automation(args) -> int:
+def _pr_automation(args: argparse.Namespace) -> int:
     cfg = load_config()
     try:
         if args.action == "evaluate":
@@ -533,7 +547,7 @@ def _pr_automation(args) -> int:
     return 0
 
 
-def _issue_automation(args) -> int:
+def _issue_automation(args: argparse.Namespace) -> int:
     cfg = load_config()
     try:
         if args.action == "evaluate":
@@ -569,7 +583,7 @@ def _issue_automation(args) -> int:
     return 0
 
 
-def _issue_triage(args) -> int:
+def _issue_triage(args: argparse.Namespace) -> int:
     try:
         # Every triage call is a read or a label edit, safe to repeat, so a transient forge
         # failure is asked again (`[forge_retry]`) instead of failing the hourly sweep.
@@ -593,7 +607,7 @@ def _issue_triage(args) -> int:
     return 0
 
 
-def _github_release(args) -> int:
+def _github_release(args: argparse.Namespace) -> int:
     cfg = load_config()
     try:
         result = github_release.publish(cfg, target=args.target, version=args.version)
@@ -604,7 +618,7 @@ def _github_release(args) -> int:
     return 0
 
 
-def _write_summary(args, text: str) -> None:
+def _write_summary(args: argparse.Namespace, text: str) -> None:
     """Append to the job summary when running in Actions. Best-effort: a summary that
     cannot be written is not a reason to fail a train that merged correctly."""
     path = args.summary or os.environ.get("GITHUB_STEP_SUMMARY")
@@ -617,7 +631,7 @@ def _write_summary(args, text: str) -> None:
         print(f"vibey-gh: could not write the summary: {exc}", file=sys.stderr)
 
 
-def _flatten(args) -> int:
+def _flatten(args: argparse.Namespace) -> int:
     try:
         plan, notes = flatten.Flattener().flatten(
             load_config(),
@@ -637,7 +651,7 @@ def _flatten(args) -> int:
     return 0
 
 
-def _promote(args) -> int:
+def _promote(args: argparse.Namespace) -> int:
     if args.admin_fallback and not args.wait:
         # Without --wait nothing merges here (the merge train does), so the flag would be
         # accepted and silently ignored -- refused instead, so nobody believes it applied.
@@ -664,14 +678,14 @@ def _promote(args) -> int:
     return 0
 
 
-def _promotion_summary(result) -> str:
+def _promotion_summary(result: promote.Promotion) -> str:
     lines = ["## Promotion", ""]
     lines += [f"- {note}" for note in result.notes]
     lines += ["", f"Files differing: {result.changed_files}", f"Version: `{result.version}`"]
     return "\n".join(lines) + "\n"
 
 
-def _realign(args) -> int:
+def _realign(args: argparse.Namespace) -> int:
     try:
         _changed, message = realign.realign(load_config())
     except RuntimeError as exc:
@@ -681,7 +695,7 @@ def _realign(args) -> int:
     return 0
 
 
-def _report_superseded(args) -> int:
+def _report_superseded(args: argparse.Namespace) -> int:
     import subprocess
 
     from vibey_gh import yank
@@ -734,7 +748,7 @@ def _report_superseded(args) -> int:
     return 0
 
 
-def _failover(args) -> int:
+def _failover(args: argparse.Namespace) -> int:
     from vibey_gh import failover
 
     cfg = failover.load(Path(args.config).expanduser() if args.config else None)
@@ -743,7 +757,7 @@ def _failover(args) -> int:
     return 0
 
 
-def _tidy(args) -> int:
+def _tidy(args: argparse.Namespace) -> int:
     from vibey_gh import tidy
 
     cfg = load_config()
@@ -781,7 +795,7 @@ def _tidy(args) -> int:
     return 1
 
 
-def _forge_snapshot(args) -> int:
+def _forge_snapshot(args: argparse.Namespace) -> int:
     """Capture the forge's state into `--out` (vibey#136, slice S1); read-only against the forge.
 
     Exit 0 when every selected class was captured, 1 when any could not be looked at (the
@@ -801,7 +815,6 @@ def _forge_snapshot(args) -> int:
         SnapshotStoreError,
     )
     from vibey_gh.gh_transport import GhTransport
-    from vibey_gh.interfaces.forge_snapshot_interface import ForgeReaderInterface
 
     prefix = "vibey-gh forge-snapshot:"
     if (args.out is None) == (args.verify is None):
@@ -883,7 +896,7 @@ def _forge_snapshot(args) -> int:
     return 0 if manifest["complete"] else 1
 
 
-def _adapter_reader(forge: str, repository: str, per_page: int):
+def _adapter_reader(forge: str, repository: str, per_page: int) -> ForgeReaderInterface:
     """A snapshot reader over the adapter `[platform]` selects for `forge` (#1572).
 
     The platform table is used only when it names the same forge; another forge starts from
@@ -906,7 +919,7 @@ def _adapter_reader(forge: str, repository: str, per_page: int):
     )
 
 
-def _forge_state(args) -> int:
+def _forge_state(args: argparse.Namespace) -> int:
     """Read one object's state back out of a snapshot, as of a moment (#1574); read-only.
 
     Exit 0 when a record is found, 1 when there is none to give (the object was never
@@ -987,7 +1000,7 @@ def _verify_forge_snapshot(root: Path, prefix: str) -> int:
     return 0
 
 
-def _corpus_index(args) -> int:
+def _corpus_index(args: argparse.Namespace) -> int:
     from vibey_gh import corpus
 
     cfg = load_config()
@@ -1005,7 +1018,9 @@ def _corpus_index(args) -> int:
     return 0
 
 
-def _marketplace(args, renderer: MarketplaceRendererInterface | None = None) -> int:
+def _marketplace(
+    args: argparse.Namespace, renderer: MarketplaceRendererInterface | None = None
+) -> int:
     from vibey_gh.marketplace import MarketplaceError, MarketplaceRenderer
 
     cfg = load_config()
@@ -1028,7 +1043,7 @@ def _marketplace(args, renderer: MarketplaceRendererInterface | None = None) -> 
     return 0
 
 
-def _push_scope(args) -> int:
+def _push_scope(args: argparse.Namespace) -> int:
     """Judge the refs a pre-push hook was handed: does this push carry code at all?
 
     Reads git's pre-push standard input. Prints `NO_CODE` on stdout and exits 0 only when
@@ -1056,7 +1071,7 @@ def _push_scope(args) -> int:
     return 0
 
 
-def _lane_readiness(cfg):
+def _lane_readiness(cfg: GhConfig) -> LaneReadinessInterface:
     """The sovereign lane's readiness as this machine can read it: the runner `[runners]`
     declares, listed with its own credential, and the model `[pr_automation.fallback]`
     names, read through the fit's sampler. One function so a test can hand `--beat` an exact
@@ -1072,7 +1087,7 @@ def _lane_readiness(cfg):
     )
 
 
-def _sovereign(args) -> int:
+def _sovereign(args: argparse.Namespace) -> int:
     """Publish or read the sovereign heartbeat (doctrine 8.a).
 
     `--beat` is what the heartbeat timer runs (`vibey-gh heartbeat install`); the bare form
@@ -1153,7 +1168,9 @@ def _sovereign(args) -> int:
     return 0 if (result.ready or not args.beat) else 1
 
 
-def _heartbeat_timer(cfg, service=None):
+def _heartbeat_timer(
+    cfg: GhConfig, service: ServiceManager | None = None
+) -> HeartbeatTimerInterface:
     """The heartbeat timer as this machine runs it. A module function because argparse
     dispatches to functions, and `heartbeat`, `runner` and `sovereign --beat` all build the
     timer the same way."""
@@ -1162,7 +1179,7 @@ def _heartbeat_timer(cfg, service=None):
     return HeartbeatTimer(cfg, home=Path.home(), uid=os.getuid(), service=service)
 
 
-def _install_heartbeat(timer, *, load: bool) -> int:
+def _install_heartbeat(timer: HeartbeatTimerInterface, *, load: bool) -> int:
     """Render and install the heartbeat timer, printing each act; 0 only when it is in place
     (and loaded, with `load`). A module function: `heartbeat install` and `runner install`
     share it, and argparse dispatches to functions."""
@@ -1182,7 +1199,7 @@ def _install_heartbeat(timer, *, load: bool) -> int:
     return 0
 
 
-def _heartbeat(args, service=None) -> int:
+def _heartbeat(args: argparse.Namespace, service: ServiceManager | None = None) -> int:
     """Stand the sovereign heartbeat's timer up from the tree, report on it, or remove it.
 
     launchd on macOS, a systemd user timer on Linux. Only `install --load` and
@@ -1203,7 +1220,7 @@ def _heartbeat(args, service=None) -> int:
     return 0
 
 
-def _runner(args, launchctl=None) -> int:
+def _runner(args: argparse.Namespace, launchctl: Launchctl | None = None) -> int:
     """Stand the sovereign review runner up from `[runners]`, or check or remove it (12.c).
 
     Only `install --load` and `--apply` touch launchd; every other form reads or writes
@@ -1268,7 +1285,7 @@ def _runner(args, launchctl=None) -> int:
     return 0
 
 
-def _fit(args) -> int:
+def _fit(args: argparse.Namespace) -> int:
     from pathlib import Path
 
     from vibey_gh import fit
@@ -1333,7 +1350,7 @@ def _fit(args) -> int:
     return 0 if verdict.ok else 1
 
 
-def _slots(args) -> int:
+def _slots(args: argparse.Namespace) -> int:
     # Module-level like every other handler here: argparse dispatches through
     # `set_defaults(func=...)`. It only resolves configuration; the work is `SlotCommands`'
     # (ADR-0016).
@@ -1348,7 +1365,7 @@ def _slots(args) -> int:
     return int(getattr(commands, args.slots_action)(args))
 
 
-def _estimate(args) -> int:
+def _estimate(args: argparse.Namespace) -> int:
     # Module-level like every other handler in this file: argparse dispatches through
     # `set_defaults(func=...)`. It only resolves configuration and prints; the estimate
     # itself is `OperationEstimator`'s (ADR-0016).
@@ -1399,7 +1416,7 @@ def _estimate(args) -> int:
     return result.exit_code
 
 
-def _forecast(args) -> int:
+def _forecast(args: argparse.Namespace) -> int:
     """Refresh the append-only delivery estimate and its human report."""
     from vibey_gh import github_state
     from vibey_gh.delivery_estimate import DeliveryEstimator, PhiConfig, WorkHistoryCalculator
@@ -1470,7 +1487,7 @@ def _forecast(args) -> int:
     return 1 if args.strict and forecast.problems else 0
 
 
-def _forecast_state(path: Path | None):
+def _forecast_state(path: Path | None) -> StateVector:
     from vibey_gh.feasibility import Coordinate, StateVector
 
     if path is None:
@@ -1506,7 +1523,7 @@ def _summary_path() -> Path | None:
     return Path(value) if value else None
 
 
-def _doctor(args) -> int:
+def _doctor(args: argparse.Namespace) -> int:
     from vibey_gh import doctor
 
     findings = doctor.diagnose(root=None)
@@ -1529,7 +1546,9 @@ def _doctor(args) -> int:
     return 0
 
 
-def _paper_provenance(args, reader: RevisionReaderInterface | None = None):
+def _paper_provenance(
+    args: argparse.Namespace, reader: RevisionReaderInterface | None = None
+) -> Provenance | None:
     """The article's provenance from the flags and, with `--provenance`, from git and the clock.
 
     Nothing here is typed by a person: the revision and its commit time come from the
@@ -1558,7 +1577,7 @@ def _paper_provenance(args, reader: RevisionReaderInterface | None = None):
     )
 
 
-def _paper(args, reader: RevisionReaderInterface | None = None) -> int:
+def _paper(args: argparse.Namespace, reader: RevisionReaderInterface | None = None) -> int:
     from vibey_gh import paper
     from vibey_gh.docx import DocxError
 
@@ -1595,7 +1614,7 @@ def _paper(args, reader: RevisionReaderInterface | None = None) -> int:
     return 0
 
 
-def _paper_figures(args) -> int:
+def _paper_figures(args: argparse.Namespace) -> int:
     """Emit the paper's figures as standalone TeX, or inline their SVG renderings.
 
     Two halves of one pipeline that a TeX engine sits between. `--emit DIR` writes one
@@ -1647,7 +1666,7 @@ def _paper_figures(args) -> int:
     return 0
 
 
-def _book(args) -> int:
+def _book(args: argparse.Namespace) -> int:
     from vibey_gh import book
     from vibey_gh.docx import DocxError
 
@@ -1697,7 +1716,7 @@ def _book(args) -> int:
     return 0
 
 
-def _local_authority(args) -> int:
+def _local_authority(args: argparse.Namespace) -> int:
     from vibey_gh import local_authority
 
     paths = (
@@ -1719,7 +1738,7 @@ def _local_authority(args) -> int:
     return 0
 
 
-def _local_triage(args) -> int:
+def _local_triage(args: argparse.Namespace) -> int:
     from vibey_gh import local_review
 
     forwarded: list[str] = []
@@ -1734,7 +1753,7 @@ def _local_triage(args) -> int:
     return local_review.triage(forwarded)
 
 
-def _local_review(args) -> int:
+def _local_review(args: argparse.Namespace) -> int:
     from vibey_gh import local_review
 
     forwarded: list[str] = []
@@ -1775,7 +1794,7 @@ def _local_review(args) -> int:
     return local_review.review(forwarded)
 
 
-def _review_outcomes(args) -> int:
+def _review_outcomes(args: argparse.Namespace) -> int:
     from vibey_gh.review_outcome import ReviewOutcomeReader
 
     reader = ReviewOutcomeReader(args.repo or "", workflow=args.workflow)
@@ -1791,7 +1810,7 @@ def _review_outcomes(args) -> int:
     return 0
 
 
-def _conversation(args) -> int:
+def _conversation(args: argparse.Namespace) -> int:
     cfg = load_config()
     try:
         if args.action in ("evaluate", "context"):
@@ -1841,7 +1860,7 @@ def _read_text(value: str) -> str:
     return path.read_text(encoding="utf-8") if is_file else value
 
 
-def _reconcile(args) -> int:
+def _reconcile(args: argparse.Namespace) -> int:
     cfg = load_config()
     try:
         outcomes = reconcile.reconcile(cfg, dry_run=args.dry_run)
@@ -1869,7 +1888,7 @@ def _reconcile(args) -> int:
     return 0
 
 
-def _rulesets(args) -> int:
+def _rulesets(args: argparse.Namespace) -> int:
     if args.check:
         return RulesetDrift.dispatch(args)
     cfg = load_config()
@@ -1898,7 +1917,7 @@ def _rulesets(args) -> int:
     return 0
 
 
-def _surface(args) -> int:
+def _surface(args: argparse.Namespace) -> int:
     try:
         arguments = json.loads(args.arguments)
         if not isinstance(arguments, list):

@@ -51,12 +51,15 @@ import tomllib
 from collections.abc import Mapping
 from dataclasses import dataclass
 from pathlib import Path, PurePosixPath
-from typing import ClassVar
+from typing import Any, ClassVar
 from urllib.parse import urlsplit
 
 from vibey_gh.forge import ForgeKind
 
 CONFIG_NAME = ".vibey-gh.toml"
+
+# One parsed table of the operator-written configuration file.
+type TomlTable = dict[str, Any]  # Any: what tomllib.loads returns; each reader checks its values
 
 
 def _finite_forecast_number(name: str, value: object) -> float:
@@ -1785,7 +1788,7 @@ class PrAutomationConfig:
             raise ValueError("pr_automation.model must not be empty")
 
 
-def _merge_queue(section: dict, default_merge_method: str) -> MergeQueueConfig:
+def _merge_queue(section: TomlTable, default_merge_method: str) -> MergeQueueConfig:
     """The declared queue for one branch, defaulting to that branch's own merge style.
 
     The default is passed in rather than fixed here because the two permanent branches do
@@ -1810,7 +1813,7 @@ def _merge_queue(section: dict, default_merge_method: str) -> MergeQueueConfig:
 
 
 def _ruleset(
-    section: dict,
+    section: TomlTable,
     default_checks: tuple[str, ...],
     default_approvals: int,
     default_merge_method: str = "SQUASH",
@@ -2321,7 +2324,7 @@ class AnnounceConfig:
             )
 
     @classmethod
-    def from_table(cls, section: dict) -> AnnounceConfig:
+    def from_table(cls, section: TomlTable) -> AnnounceConfig:
         """`[announce]` as TOML hands it over, with its structured keys frozen in order."""
         groups = section.get("groups", {label: list(types) for label, types in cls.groups})
         words = section.get("type_words", {})
@@ -3049,7 +3052,7 @@ class BranchHealthConfig:
             raise ValueError("branch_health.log_bytes must be at least 1")
 
     @classmethod
-    def from_table(cls, section: dict) -> BranchHealthConfig:
+    def from_table(cls, section: TomlTable) -> BranchHealthConfig:
         """`[branch_health]` as TOML hands it over, with `reproduce` frozen in order."""
         reproduce = section.get("reproduce", {})
         if not isinstance(reproduce, dict) or not all(
@@ -3472,7 +3475,7 @@ class EstimateConfig:
             raise ValueError("estimate.forecast_size_weights values must be positive")
 
     @classmethod
-    def from_table(cls, section: dict) -> EstimateConfig:
+    def from_table(cls, section: TomlTable) -> EstimateConfig:
         """`[estimate]` as TOML hands it over, with each stage's table frozen."""
         raw = section.get("requirements", {})
         if not isinstance(raw, dict) or not all(isinstance(v, dict) for v in raw.values()):
@@ -3592,7 +3595,7 @@ class LocalModelsConfig:
                 raise ValueError(f"local_models.{name} must not be negative")
 
     @classmethod
-    def from_table(cls, section: dict) -> LocalModelsConfig:
+    def from_table(cls, section: TomlTable) -> LocalModelsConfig:
         known = {f.name for f in dataclasses.fields(cls)}
         return cls(**{key: value for key, value in section.items() if key in known})
 
@@ -3840,7 +3843,7 @@ def find_root(start: Path | None = None) -> Path:
     return here
 
 
-def _social_signals(raw: dict) -> SocialSignalsConfig:
+def _social_signals(raw: TomlTable) -> SocialSignalsConfig:
     cfg = SocialSignalsConfig(
         enabled=bool(raw.get("enabled", False)),
         heading=str(raw.get("heading", "Real people, real words")),
@@ -3866,7 +3869,7 @@ def _social_signals(raw: dict) -> SocialSignalsConfig:
     return cfg
 
 
-def _workflow_names(raw: dict) -> WorkflowNamesConfig:
+def _workflow_names(raw: TomlTable) -> WorkflowNamesConfig:
     defaults = WorkflowNamesConfig()
     return WorkflowNamesConfig(
         **{
@@ -3876,7 +3879,7 @@ def _workflow_names(raw: dict) -> WorkflowNamesConfig:
     )
 
 
-def _runners(table: dict) -> RunnersConfig:
+def _runners(table: TomlTable) -> RunnersConfig:
     """`[runners]`, every key defaulting to the dataclass's own value.
 
     A module function rather than a method: it is the loader's parsing step for one table,
@@ -3908,7 +3911,7 @@ def load_config(root: Path | None = None, config: Path | None = None) -> GhConfi
     path = config if config is not None else root / CONFIG_NAME
     if not path.is_absolute():
         path = root / path
-    data: dict = {}
+    data: TomlTable = {}
     if path.is_file():
         data = tomllib.loads(path.read_text(encoding="utf-8"))
     elif config is not None:

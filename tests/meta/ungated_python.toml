@@ -174,5 +174,17 @@ prefix = "src/vibey_tools/gh/test/"
 reason = "vibey-gh's own suite: ruff-checked, not type-checked (its static gate names `vibey_gh` only)."
 
 [[ungated]]
-prefix = "src/vibey_tools/skills/"
-reason = "The whole vibey-skills tenant (package, tests, validators, doc generators, plugin helper scripts): it declares no mypy gate (its CI static step is manifest and link validation), and its own [tool.ruff] include covers src, tools, tests and docs but not `plugins/`, so those scripts are outside ruff as well."
+prefix = "src/vibey_tools/skills/tests/"
+reason = "vibey-skills' mypy gate (`mypy --strict --explicit-package-bases src`, its 3.12 `tools` row) covers `src` only, and its [tool.ruff] include covers src, tools, tests and docs but not `plugins/`. This prefix is its own test suite; one entry per directory because the former whole-tenant prefix now covers the gated `src/` tree (SP4-B)."
+
+[[ungated]]
+prefix = "src/vibey_tools/skills/tools/"
+reason = "Same gate as the sibling entries: mypy covers `src` only. This prefix is its manifest, link and catalogue validators; one entry per directory because the former whole-tenant prefix now covers the gated `src/` tree (SP4-B)."
+
+[[ungated]]
+prefix = "src/vibey_tools/skills/docs/"
+reason = "Same gate as the sibling entries: mypy covers `src` only. This prefix is its doc-generator hooks; one entry per directory because the former whole-tenant prefix now covers the gated `src/` tree (SP4-B)."
+
+[[ungated]]
+prefix = "src/vibey_tools/skills/plugins/"
+reason = "Same gate as the sibling entries: mypy covers `src` only, and `plugins/` is outside the [tool.ruff] include. This prefix is the plugin helper scripts; one entry per directory because the former whole-tenant prefix now covers the gated `src/` tree (SP4-B)."

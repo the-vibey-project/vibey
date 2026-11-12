@@ -20,7 +20,7 @@ from vibey_gh import reconcile
 from vibey_gh.config import GhConfig, load_config
 
 
-def _git(cfg: GhConfig, *args: str) -> subprocess.CompletedProcess:
+def _git(cfg: GhConfig, *args: str) -> subprocess.CompletedProcess[str]:
     return subprocess.run(["git", *args], cwd=cfg.root, capture_output=True, text=True, check=False)
 
 

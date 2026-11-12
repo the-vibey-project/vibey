@@ -28,10 +28,11 @@ import json
 import os
 from dataclasses import asdict, dataclass
 from pathlib import Path
+from typing import TypedDict
 
 from vibey_gh.config import GhConfig
 
-__all__ = ["CORPUS_DOCUMENTS", "Chunk", "build", "check", "index_path", "write"]
+__all__ = ["CORPUS_DOCUMENTS", "Chunk", "CorpusIndex", "build", "check", "index_path", "write"]
 
 # The governance corpus, in the constitutional cluster's own order. sd-*.md globs in
 # the standing subdoctrines so future SD filings index without a code change.
@@ -128,7 +129,15 @@ def _chunks_of(cfg: GhConfig, path: Path) -> list[Chunk]:
     return chunks
 
 
-def build(cfg: GhConfig) -> dict:
+class CorpusIndex(TypedDict):
+    """The published index: the chained corpus hash, its documents, and every chunk."""
+
+    corpus_sha256: str
+    documents: list[str]
+    chunks: list[dict[str, object]]
+
+
+def build(cfg: GhConfig) -> CorpusIndex:
     """The whole index: every chunk, plus one corpus hash chaining them all."""
     chunks = [c for path in _documents(cfg) for c in _chunks_of(cfg, path)]
     walk = hashlib.sha256()

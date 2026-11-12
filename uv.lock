@@ -5788,6 +5788,7 @@ source = { editable = "src/vibey_tools/skills" }
 
 [package.optional-dependencies]
 dev = [
+    { name = "mypy" },
     { name = "pytest" },
 ]
 docs = [
@@ -5801,6 +5802,7 @@ requires-dist = [
     { name = "mkdocs-gen-files", marker = "extra == 'docs'", specifier = ">=0.5" },
     { name = "mkdocs-literate-nav", marker = "extra == 'docs'", specifier = ">=0.6" },
     { name = "mkdocs-material", marker = "extra == 'docs'", specifier = ">=9.5" },
+    { name = "mypy", marker = "extra == 'dev'", specifier = ">=1.10" },
     { name = "pytest", marker = "extra == 'dev'", specifier = ">=8" },
 ]
 provides-extras = ["dev", "docs"]

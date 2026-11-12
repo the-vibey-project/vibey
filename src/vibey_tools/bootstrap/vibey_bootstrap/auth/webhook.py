@@ -134,7 +134,6 @@ def install_graph_webhook_route(
             "pip install 'vibey[bootstrap-all]'"
         ) from exc
 
-    @app.post(path, include_in_schema=False)
     async def _webhook(  # type: ignore[no-untyped-def]
         request: Request,
         background_tasks: BackgroundTasks,
@@ -193,6 +192,10 @@ def install_graph_webhook_route(
             background_tasks.add_task(background_handler, message_id)
 
         return Response(status_code=202)
+
+    # `app` is Any, so register by call: a decorator expression typed Any makes
+    # the decorated function untyped under mypy --strict (untyped-decorator).
+    app.post(path, include_in_schema=False)(_webhook)
 
 
 __all__ = [

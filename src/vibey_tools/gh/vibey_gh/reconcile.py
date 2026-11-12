@@ -140,7 +140,7 @@ def decide(facts: BranchFacts, cfg: GhConfig) -> Decision:
     return result(REBASE, f"{facts.unique_commits} unique commit(s) replayed onto the new tip")
 
 
-def _git_at(root: Path, *args: str) -> subprocess.CompletedProcess:
+def _git_at(root: Path, *args: str) -> subprocess.CompletedProcess[str]:
     """Git in a named directory. `merge_forward` does its work in a throwaway
     worktree, and `cwd` rather than `-C` keeps the subcommand in argv[1] where
     every caller -- and every test that drives this by intercepting the command --
@@ -148,7 +148,7 @@ def _git_at(root: Path, *args: str) -> subprocess.CompletedProcess:
     return subprocess.run(["git", *args], cwd=root, capture_output=True, text=True, check=False)
 
 
-def _git(cfg: GhConfig, *args: str) -> subprocess.CompletedProcess:
+def _git(cfg: GhConfig, *args: str) -> subprocess.CompletedProcess[str]:
     return _git_at(cfg.root, *args)
 
 

@@ -20,8 +20,10 @@ way without the caller caring.
 from __future__ import annotations
 
 import json
+from collections.abc import Iterator
 from dataclasses import dataclass
 from pathlib import Path
+from typing import Any
 
 __version__ = "2.28.0"
 
@@ -91,9 +93,11 @@ def marketplace_manifest_path() -> Path:
     )
 
 
-def marketplace_manifest() -> dict:
+def marketplace_manifest() -> dict[str, Any]:
     """Return the parsed marketplace manifest."""
-    return json.loads(marketplace_manifest_path().read_text(encoding="utf-8"))
+    # Any: a parsed JSON document, its shape owned by marketplace.json, not this module.
+    manifest: dict[str, Any] = json.loads(marketplace_manifest_path().read_text(encoding="utf-8"))
+    return manifest
 
 
 def _parse_frontmatter(text: str) -> dict[str, str]:
@@ -133,7 +137,7 @@ def _parse_frontmatter(text: str) -> dict[str, str]:
     return fields
 
 
-def iter_skills(plugin: str | None = None):
+def iter_skills(plugin: str | None = None) -> Iterator[Skill]:
     """Yield every :class:`Skill`, sorted by plugin then skill name.
 
     Args:
