@@ -387,12 +387,6 @@ PROTONS, NEUTRONS = 36, 48
 SHELLS = (2, 8, 18, 8)
 
 
-#: How much of the atom a size can carry. `full` is the real Kr-84 (every nucleon, every
-#: electron) from 128 px up; `medium` keeps four shells with fewer electrons and a nucleus of
-#: a dozen visible nucleons (48-64 px, and the dot on the i); `small` (22-32 px) keeps the four
-#: shells, a nucleus blob with a few nucleons, and one or two electrons a shell. `tiny` (16 px)
-#: keeps two shells: four circles a pixel apart alias into a moire, measured, not guessed. Radii follow the Bohr model's n-squared growth, relaxed so the nucleus fits inside
-#: the first shell, and relaxed further at small sizes so four shells stay four lines.
 class AtomDetail(TypedDict):
     """One size class of the atom: shell radii (fractions of the whole), electrons per shell."""
 
@@ -404,6 +398,12 @@ class AtomDetail(TypedDict):
     electron: float
 
 
+#: How much of the atom a size can carry. `full` is the real Kr-84 (every nucleon, every
+#: electron) from 128 px up; `medium` keeps four shells with fewer electrons and a nucleus of
+#: a dozen visible nucleons (48-64 px, and the dot on the i); `small` (22-32 px) keeps the four
+#: shells, a nucleus blob with a few nucleons, and one or two electrons a shell. `tiny` (16 px)
+#: keeps two shells: four circles a pixel apart alias into a moire, measured, not guessed. Radii follow the Bohr model's n-squared growth, relaxed so the nucleus fits inside
+#: the first shell, and relaxed further at small sizes so four shells stay four lines.
 ATOM_DETAIL: dict[str, AtomDetail] = {
     "full": {
         "radii": tuple(0.253 + 0.0467 * n * n for n in (1, 2, 3, 4)),
