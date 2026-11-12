@@ -7,7 +7,7 @@ build-backend = "hatchling.build"
 # published by its own workflow, .github/workflows/krypton-app.yml, and by no other.
 [project]
 name = "krypton-app"
-version = "0.2.0"
+version = "0.3.0"
 description = "krypton, the apps of vibey, the open-source orchestrator for AI coding agents: launches the local vibey hub and opens it."
 readme = "README.md"
 requires-python = ">=3.12"
