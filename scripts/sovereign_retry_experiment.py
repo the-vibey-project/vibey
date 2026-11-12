@@ -44,14 +44,22 @@ import time
 from collections.abc import Awaitable, Callable, Mapping, Sequence
 from datetime import UTC, datetime
 from pathlib import Path
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
-from interfaces.sovereign_retry_experiment_interface import (  # noqa: E402
-    ExchangeRecorderInterface,
-    SovereignRetryExperimentInterface,
-)
+if TYPE_CHECKING:
+    # The checker sees the interface under the name the repository root resolves; the `sys.path`
+    # line above is what makes it the top-level `interfaces.*` at run time.
+    from scripts.interfaces.sovereign_retry_experiment_interface import (
+        ExchangeRecorderInterface,
+        SovereignRetryExperimentInterface,
+    )
+else:
+    from interfaces.sovereign_retry_experiment_interface import (  # noqa: E402
+        ExchangeRecorderInterface,
+        SovereignRetryExperimentInterface,
+    )
 
 from vibey.application.design import DesignEvent, DesignStage  # noqa: E402
 from vibey.domain.ledger import EventKind, Provenance  # noqa: E402

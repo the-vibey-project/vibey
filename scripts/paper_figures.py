@@ -35,15 +35,29 @@ from collections import Counter, defaultdict
 from collections.abc import Callable
 from datetime import UTC, date, datetime, timedelta
 from pathlib import Path
-from typing import Any
+from typing import TYPE_CHECKING, Any, TypedDict
 from zoneinfo import ZoneInfo
 
-from interfaces.paper_figures_interface import (
-    FigureSourceInterface,
-    PaperFigureAtlasInterface,
-    RevisionPinGuardInterface,
-)
-from paper_evidence import DEFAULT_QWEN_STORM_RECORD, DEFAULT_STRESS_RECORD, StressRecord
+if TYPE_CHECKING:
+    # The checker sees these under the names the repository root resolves; at run time the script
+    # directory is on `sys.path`, so they are the top-level `interfaces.*` and `paper_evidence`.
+    from scripts.interfaces.paper_figures_interface import (
+        FigureSourceInterface,
+        PaperFigureAtlasInterface,
+        RevisionPinGuardInterface,
+    )
+    from scripts.paper_evidence import (
+        DEFAULT_QWEN_STORM_RECORD,
+        DEFAULT_STRESS_RECORD,
+        StressRecord,
+    )
+else:
+    from interfaces.paper_figures_interface import (
+        FigureSourceInterface,
+        PaperFigureAtlasInterface,
+        RevisionPinGuardInterface,
+    )
+    from paper_evidence import DEFAULT_QWEN_STORM_RECORD, DEFAULT_STRESS_RECORD, StressRecord
 
 DEFAULT_PAPER = "docs/paper.md"
 DEFAULT_STORM_DIR = "docs/plans/qwenstorm-3.0.0"
@@ -121,12 +135,27 @@ def _thousands(value: int) -> str:
 # ------------------------------------------------------------------- sources
 
 
+class Root(TypedDict):
+    """A parentless commit of the history: where a line of work began."""
+
+    sha: str
+    date: date
+    subject: str
+
+
 class StressTable(FigureSourceInterface):
     """The stress record's rung table with every column, plus the evidence summary."""
 
     def __init__(self, path: Path, record: StressRecord) -> None:
         self._path = path
         self._record = record
+
+    @staticmethod
+    def _number(cell: str) -> float:
+        match = re.search(r"\d+(?:\.\d+)?", cell)
+        if match is None:
+            raise ValueError(f"no number in table cell {cell!r}")
+        return float(match.group(0))
 
     def load(self) -> dict[str, Any]:
         rows: list[dict[str, float]] = []
@@ -143,17 +172,16 @@ class StressTable(FigureSourceInterface):
             if set(cells[0]) <= set("-: "):
                 continue
             succeeded, attempted = (int(p) for p in cells[1].split("/"))
-            number = lambda cell: float(re.search(r"\d+(?:\.\d+)?", cell).group(0))  # noqa: E731
             rows.append(
                 {
                     "n": int(cells[0]),
                     "attempted": attempted,
                     "succeeded": succeeded,
                     "success": succeeded / attempted,
-                    "p50": number(cells[3]),
-                    "max": number(cells[4]),
-                    "throughput": number(cells[5]),
-                    "free_memory": number(cells[6]),
+                    "p50": self._number(cells[3]),
+                    "max": self._number(cells[4]),
+                    "throughput": self._number(cells[5]),
+                    "free_memory": self._number(cells[6]),
                 }
             )
         if not rows:
@@ -396,7 +424,7 @@ class CommitSeries(FigureSourceInterface):
             match = _CC_TYPE.match(subject)
             types[match.group(1) if match else "other"] += 1
         pr_days: Counter[date] = Counter(s.date() for s, sub in window if _PR_SUBJECT.search(sub))
-        roots = []
+        roots: list[Root] = []
         for sha in self._git("rev-list", "--max-parents=0", rev).split():
             stamp, _, subject = (
                 self._git("log", "-1", "--format=%at%x09%s", sha).strip().partition("\t")
@@ -620,7 +648,7 @@ class PaperFigureAtlas(PaperFigureAtlasInterface):
         low, high = region["concurrency"]
         band_lo, band_hi = region["throughput_min"], region["throughput_max"]
         coords = " ".join(f"({r['n']},{r['throughput']})" for r in rungs)
-        by_class = {"good": [], "fair": [], "over": []}
+        by_class: dict[str, list[dict[str, Any]]] = {"good": [], "fair": [], "over": []}
         for r in rungs:
             key = "good" if r["success"] >= 0.95 else "fair" if r["success"] >= 0.875 else "over"
             by_class[key].append(r)
