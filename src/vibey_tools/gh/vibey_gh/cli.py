@@ -1738,7 +1738,7 @@ def _local_authority(args: argparse.Namespace) -> int:
     return 0
 
 
-def _local_triage(args) -> int:
+def _local_triage(args: argparse.Namespace) -> int:
     from vibey_gh import local_review
 
     forwarded: list[str] = []
@@ -1753,7 +1753,7 @@ def _local_triage(args) -> int:
     return local_review.triage(forwarded)
 
 
-def _local_review(args) -> int:
+def _local_review(args: argparse.Namespace) -> int:
     from vibey_gh import local_review
 
     forwarded: list[str] = []
@@ -1794,7 +1794,7 @@ def _local_review(args) -> int:
     return local_review.review(forwarded)
 
 
-def _review_outcomes(args) -> int:
+def _review_outcomes(args: argparse.Namespace) -> int:
     from vibey_gh.review_outcome import ReviewOutcomeReader
 
     reader = ReviewOutcomeReader(args.repo or "", workflow=args.workflow)
@@ -1810,7 +1810,7 @@ def _review_outcomes(args) -> int:
     return 0
 
 
-def _conversation(args) -> int:
+def _conversation(args: argparse.Namespace) -> int:
     cfg = load_config()
     try:
         if args.action in ("evaluate", "context"):
@@ -1860,7 +1860,7 @@ def _read_text(value: str) -> str:
     return path.read_text(encoding="utf-8") if is_file else value
 
 
-def _reconcile(args) -> int:
+def _reconcile(args: argparse.Namespace) -> int:
     cfg = load_config()
     try:
         outcomes = reconcile.reconcile(cfg, dry_run=args.dry_run)
@@ -1888,7 +1888,7 @@ def _reconcile(args) -> int:
     return 0
 
 
-def _rulesets(args) -> int:
+def _rulesets(args: argparse.Namespace) -> int:
     if args.check:
         return RulesetDrift.dispatch(args)
     cfg = load_config()
@@ -1917,7 +1917,7 @@ def _rulesets(args) -> int:
     return 0
 
 
-def _surface(args) -> int:
+def _surface(args: argparse.Namespace) -> int:
     try:
         arguments = json.loads(args.arguments)
         if not isinstance(arguments, list):
