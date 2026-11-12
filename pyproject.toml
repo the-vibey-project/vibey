@@ -214,6 +214,8 @@ dev = [
     "hypothesis>=6.115",
     "ruff>=0.8",
     "mypy>=1.13",
+    # scripts/inject_docs_meta.py imports yaml (a runtime dependency) and is checked with mypy --strict.
+    "types-pyyaml>=6.0",
     "import-linter>=2.1",
     "bandit>=1.8",
     "pip-audit>=2.7",
