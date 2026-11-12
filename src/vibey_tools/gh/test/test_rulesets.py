@@ -874,3 +874,145 @@ def test_a_declared_coverage_rule_missing_live_is_drift():
 
 def test_ruleset_policy_honours_its_interface():
     assert isinstance(policy(minimum_coverage=100), RulesetConfigInterface)
+
+
+# ------------------------------------------------------------------------- absent rules
+
+
+def test_absent_rules_default_to_none_and_load_from_toml(tmp_path):
+    assert policy().absent_rules == ()
+    (tmp_path / ".vibey-gh.toml").write_text(
+        '[rulesets.integration]\nabsent_rules = ["code_coverage", "creation"]\n',
+        encoding="utf-8",
+    )
+    loaded = load_config(tmp_path).rulesets
+    assert loaded.integration.absent_rules == ("code_coverage", "creation")
+    assert loaded.release.absent_rules == ()
+
+
+def test_absent_rules_given_as_a_bare_string_is_a_type_error(tmp_path):
+    (tmp_path / ".vibey-gh.toml").write_text(
+        '[rulesets.integration]\nabsent_rules = "code_coverage"\n', encoding="utf-8"
+    )
+    with pytest.raises(TypeError, match="rulesets.absent_rules must be a list"):
+        load_config(tmp_path)
+
+
+@pytest.mark.parametrize("value", [1, None, ["x"]])
+def test_an_absent_rules_entry_that_is_not_a_string_is_a_type_error(value):
+    with pytest.raises(TypeError, match="rulesets.absent_rules entries must be strings"):
+        policy(absent_rules=(value,))
+
+
+def test_absent_rules_must_be_unique_and_nonempty():
+    with pytest.raises(ValueError, match="rulesets.absent_rules entries must be unique"):
+        policy(absent_rules=("creation", "creation"))
+    with pytest.raises(ValueError, match="rulesets.absent_rules entries must be non-empty"):
+        policy(absent_rules=(" ",))
+
+
+@pytest.mark.parametrize(
+    ("kind", "changes"),
+    [
+        ("deletion", {}),
+        ("non_fast_forward", {}),
+        ("pull_request", {}),
+        ("required_linear_history", {}),
+        ("required_status_checks", {}),
+        ("code_coverage", {"minimum_coverage": 100}),
+        ("code_coverage", {"max_coverage_drop": 0}),
+        ("required_signatures", {"require_signed_commits": True}),
+        ("merge_queue", {"merge_queue": MergeQueueConfig(enabled=True)}),
+    ],
+)
+def test_a_rule_type_cannot_be_both_declared_and_absent(kind, changes):
+    with pytest.raises(ValueError, match=f"rulesets.absent_rules names {kind}, which"):
+        policy(absent_rules=(kind,), **changes)
+
+
+@pytest.mark.parametrize(
+    "changes",
+    [
+        {},
+        {"require_linear_history": False, "required_checks": ()},
+        {
+            "require_signed_commits": True,
+            "minimum_coverage": 100,
+            "merge_queue": MergeQueueConfig(enabled=True),
+        },
+    ],
+)
+def test_declared_rule_types_are_exactly_the_types_desired_rules_renders(changes):
+    """`RulesetConfig` cannot import `rulesets`, so it mirrors the rule types by hand; this
+    is what stops the two lists drifting apart."""
+    value = policy(**changes)
+    assert value.declared_rule_types == {rule["type"] for rule in rs.desired_rules(value)}
+
+
+def test_a_live_absent_rule_is_dropped_from_the_payload_and_reported():
+    desired = rs.build_ruleset("develop", policy(absent_rules=("code_coverage",)))
+    existing = {
+        **desired,
+        "id": 1,
+        "rules": [
+            *desired["rules"],
+            {"type": "code_coverage", "parameters": {"minimum_coverage": 100}},
+        ],
+    }
+    result = rs.diff_ruleset(desired, existing, absent=("code_coverage",))
+    assert result.changed
+    assert result.removed_rules == ("code_coverage",)
+    assert result.unexpected_rules == ()
+    assert all(rule["type"] != "code_coverage" for rule in result.payload["rules"])
+    assert result.payload["rules"] == desired["rules"]
+
+
+def test_an_absent_rule_that_is_not_live_is_no_drift():
+    desired = rs.build_ruleset("develop", policy(absent_rules=("code_coverage",)))
+    result = rs.diff_ruleset(desired, {**desired, "id": 1}, absent=("code_coverage",))
+    assert not result.changed
+    assert result.removed_rules == ()
+
+
+def test_an_absent_rule_does_not_stop_another_unexpected_rule_being_preserved():
+    desired = rs.build_ruleset("develop", policy())
+    existing = {
+        **desired,
+        "id": 1,
+        "rules": [*desired["rules"], {"type": "code_coverage"}, {"type": "creation"}],
+    }
+    result = rs.diff_ruleset(desired, existing, absent=("code_coverage",))
+    assert result.removed_rules == ("code_coverage",)
+    assert result.unexpected_rules == ("creation",)
+    assert {"type": "creation"} in result.payload["rules"]
+
+
+def test_a_ruleset_that_does_not_exist_yet_has_nothing_to_remove():
+    desired = rs.build_ruleset("develop", policy(absent_rules=("code_coverage",)))
+    result = rs.diff_ruleset(desired, None, absent=("code_coverage",))
+    assert result.changed and result.removed_rules == ()
+
+
+def test_reconcile_one_puts_a_payload_without_the_absent_rule(monkeypatch):
+    desired = rs.build_ruleset("develop", policy(absent_rules=("code_coverage",)))
+    live = {
+        **desired,
+        "id": 9,
+        "rules": [*desired["rules"], {"type": "code_coverage", "parameters": {}}],
+    }
+    monkeypatch.setattr(rs, "fetch_ruleset", lambda name: live)
+    updated = []
+    monkeypatch.setattr(rs, "update_ruleset", lambda rid, payload: updated.append((rid, payload)))
+    outcome = rs.reconcile_one("develop", policy(absent_rules=("code_coverage",)))
+    assert outcome["changed"] and outcome["applied"]
+    assert outcome["removed_rules"] == ["code_coverage"]
+    assert updated[0][0] == 9
+    assert all(rule["type"] != "code_coverage" for rule in updated[0][1]["rules"])
+
+    updated.clear()
+    dry = rs.reconcile_one("develop", policy(absent_rules=("code_coverage",)), dry_run=True)
+    assert dry["changed"] and not dry["applied"] and updated == []
+
+
+def test_ruleset_policy_honours_its_interface_for_absent_rules():
+    assert policy(absent_rules=("creation",)).absent_rules == ("creation",)

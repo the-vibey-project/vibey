@@ -203,6 +203,29 @@ def test_a_live_coverage_floor_nobody_declared_is_drift(tmp_path):
     )
 
 
+def test_a_live_rule_declared_absent_is_drift_until_it_is_removed(tmp_path):
+    config = GhConfig(
+        root=tmp_path,
+        rulesets=RulesetsConfig(
+            integration=replace(INTEGRATION, absent_rules=("code_coverage",)), release=RELEASE
+        ),
+    )
+    live = [
+        as_live(rs.build_ruleset("develop", config.rulesets.integration), 1),
+        as_live(rs.build_ruleset("main", config.rulesets.release), 2),
+    ]
+    assert RulesetDrift().compare(config, live) == ()
+    live[0]["rules"].append(
+        {
+            "type": "code_coverage",
+            "parameters": {"minimum_coverage": 100, "max_coverage_drop": None},
+        }
+    )
+    assert RulesetDrift().compare(config, live) == (
+        "vibey-gh: develop: rule code_coverage is live but declared absent",
+    )
+
+
 def test_a_repository_that_declares_no_rulesets_has_nothing_to_compare(tmp_path):
     assert RulesetDrift().compare(cfg(tmp_path, enabled=False), [{"name": "x"}]) == ()
 
