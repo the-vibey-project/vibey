@@ -96,10 +96,11 @@ class ReviewCollectHandler:
             for index, item_text in enumerate(items):
                 findings_count += 1
                 # Minted from the job and the request's position, not from a fresh uuid: a
-                # redelivery raises the same finding again (a restatement the ledger and
-                # `build_deltas` fold by id), where a random id raised every requested
-                # change a second time (finding F-8-3).
-                fid = f"f_user_{job.cycle}_{uuid5(job.id, f'finding-{index}').hex[:8]}"
+                # redelivery raises the same finding again, which `build_deltas` and
+                # `open_items` fold by id (the ledger itself does not dedupe, #1887), where
+                # a random id raised every requested change a second time (finding F-8-3).
+                # The position is in the id so two changes in one job cannot collide.
+                fid = f"f_user_{job.cycle}_{uuid5(job.id, f'finding-{index}').hex[:8]}_{index}"
                 await self._ledger.append_event(
                     project_id=job.project_id,
                     cycle=job.cycle,
