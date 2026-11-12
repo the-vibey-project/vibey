@@ -1391,7 +1391,7 @@ a repo root is the infrastructure layer's job.
 
 Resolving how loud the process should be, from CLI flags. Pure: no logging
 library, no I/O — the ladder is a domain decision because it has to mean the
-same thing everywhere; an operator who learns `-vv` on one runner should not
+same thing everywhere; an operator who learns `-dd` on one runner should not
 get something different from the next one.
 
 ```python

@@ -1,12 +1,18 @@
 # Made with ❤️ by [Vibey](https://the-vibey-project.github.io/vibey/), Developed by [Adam Matthew Steinberger](https://vibewithadam.matthewsteinberger.com/) ([@adammatthewsteinberger](https://github.com/adammatthewsteinberger/)).
-"""While `[version] max_major` is set in `.vibey-gh.toml`, no shipped version exceeds that major.
+"""While `[version] max_major` is set in `.vibey-gh.toml`, the files below stay under that major.
 
 The cap is the project's pre-1.0 rule. The release derivation honours it (a breaking change
-bumps the minor), and this test holds the *declared* numbers to it: every version in
+bumps the minor), and this test holds these *declared* numbers to it: every version in
 `[version] files`, `clients/krypton-app/pyproject.toml`, `clients/vscode/package.json` and
 `packages/vibey-core/package.json`. A file above the cap must be recorded in `EXEMPT` with a
 reason of at least `MIN_REASON` characters; an exemption whose file is no longer above the cap
 is stale and fails. Lifting the cap (deleting `max_major`) turns the check off.
+
+Known gaps, not checked here: the tenants that ship inside vibey-engine with their own
+numbers (vibey-gh 1.73.0; vibey-bootstrap 4.2.3, which `vibey_bootstrap.__version__`
+exposes), which are above the cap; and `clients/desktop/meson.build` and
+`clients/app/app.config.ts`, which say 0.2.0 today but are not read. This test says nothing
+about any of them.
 """
 
 import json
