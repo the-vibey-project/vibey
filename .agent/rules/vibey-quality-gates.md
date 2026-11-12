@@ -3,7 +3,7 @@
 # vibey quality gates
 
 CI runs a 7-gate sweep over the root `vibey` package, split over two jobs in
-`.github/workflows/ci.yml`: `lint` (named "Lint and static gates": Gates 1, 2, 3 and 5
+`.github/workflows/ci.yml`: `lint` (named "Lint and static gates": Gates 1, 2, 3, 3b and 5
 with the corpus index and TypeScript artifact checks) and `gates` (the test run, Gate 4,
 bandit and pip-audit). **All seven must pass** — together with the other CI
 jobs below — before a PR can merge. Run them locally with
@@ -40,6 +40,13 @@ errors, missing type annotations, and `Any` usage.
 
 ```bash
 uv run mypy --strict src/vibey
+```
+
+Gate 3b runs the same checker over the other declared trees (`scripts/`, the storm
+tools and the tenants), read from `[[tool.vibey.static_gates]]`:
+
+```bash
+uv run python scripts/static_gates.py
 ```
 
 ## Gate 4: pytest per-layer coverage (100%)
