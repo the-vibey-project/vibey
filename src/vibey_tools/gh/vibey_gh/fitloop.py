@@ -291,7 +291,7 @@ class FitLoop:
         self._decisions.append(entry)
         self._write({"kind": "decision", **asdict(entry)})
 
-    def _write(self, payload: dict) -> None:
+    def _write(self, payload: Mapping[str, object]) -> None:
         if self.journal is None:
             return
         try:

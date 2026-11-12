@@ -73,7 +73,7 @@ class Promotion:
         self.notes.append(note)
 
 
-def _git(cfg: GhConfig, *args: str) -> subprocess.CompletedProcess:
+def _git(cfg: GhConfig, *args: str) -> subprocess.CompletedProcess[str]:
     return subprocess.run(["git", *args], cwd=cfg.root, capture_output=True, text=True, check=False)
 
 
@@ -404,13 +404,13 @@ class PromotionPullRequest:
             moved = f" (opened as {result.previous}, now {result.version})"
         result.say(f"reusing #{number}; refreshed its title and body{moved}")
 
-    def _gh(self, *args: str) -> subprocess.CompletedProcess:
+    def _gh(self, *args: str) -> subprocess.CompletedProcess[str]:
         return subprocess.run(
             ["gh", *args], cwd=self._cfg.root, capture_output=True, text=True, check=False
         )
 
     @staticmethod
-    def _detail(run: subprocess.CompletedProcess, what: str) -> str:
+    def _detail(run: subprocess.CompletedProcess[str], what: str) -> str:
         # gh names the actual refusal on stderr; hiding it turns a token-scope problem
         # into guessing, which is the lesson the version-bump push above already records.
         text = " ".join(((run.stderr or run.stdout) or "").split())[:300]
