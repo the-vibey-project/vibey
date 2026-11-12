@@ -69,6 +69,7 @@
       "install": "pip install -e \".[dev]\"",
       "package": "vibey-skills",
       "python": "3.12",
+      "static": "python -m mypy --strict --explicit-package-bases src",
       "test": "python3 tools/sync_catalogue_surfaces.py --check && python3 tools/validate_manifests.py && python3 tools/check_links.py && PYTHONPATH=src python3 -m unittest discover -s tests"
     },
     {
