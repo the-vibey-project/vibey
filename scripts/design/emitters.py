@@ -13,11 +13,17 @@ import json
 import re
 import urllib.parse
 from pathlib import Path
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
-from interfaces.design_interface import EmitterInterface, Token, TokenSetInterface
+if TYPE_CHECKING:
+    # The checker sees these under the names the repository root resolves; at run time the script
+    # directory is on `sys.path`, so the same files are imported as `interfaces.*` and `design.*`.
+    from scripts.design.tokens import THEMES, Colour
+    from scripts.interfaces.design_interface import EmitterInterface, Token, TokenSetInterface
+else:
+    from interfaces.design_interface import EmitterInterface, Token, TokenSetInterface
 
-from design.tokens import THEMES, Colour
+    from design.tokens import THEMES, Colour
 
 SOURCE = "design/tokens/*.tokens.json"
 

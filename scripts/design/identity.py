@@ -20,8 +20,14 @@ import struct
 import zlib
 from dataclasses import dataclass, field
 from pathlib import Path
+from typing import TYPE_CHECKING, TypedDict
 
-from interfaces.design_interface import EmitterInterface, TokenSetInterface
+if TYPE_CHECKING:
+    # The checker sees the interface under the name the repository root resolves; at run time the
+    # script directory is on `sys.path`, so the same file is imported as `interfaces.design_interface`.
+    from scripts.interfaces.design_interface import EmitterInterface, TokenSetInterface
+else:
+    from interfaces.design_interface import EmitterInterface, TokenSetInterface
 
 RGBA = tuple[float, float, float, float]
 Point = tuple[float, float]
@@ -266,9 +272,9 @@ class Scene:
             sx, sy = cx + shape.radius * math.cos(a0), cy + shape.radius * math.sin(a0)
             ex, ey = cx + shape.radius * math.cos(a1), cy + shape.radius * math.sin(a1)
             large = 1 if ((a1 - a0) % math.tau) > math.pi else 0
-            r = _num(shape.radius)
+            radius_text = _num(shape.radius)
             return (
-                f'<path d="M{_num(sx)} {_num(sy)}A{r} {r} 0 {large} 1 {_num(ex)} {_num(ey)}" fill="none" '
+                f'<path d="M{_num(sx)} {_num(sy)}A{radius_text} {radius_text} 0 {large} 1 {_num(ex)} {_num(ey)}" fill="none" '
                 f'stroke="{paint}"{stroke_opacity} stroke-width="{_num(shape.width)}" stroke-linecap="round"/>\n'
             )
         if shape.kind == "rect":
@@ -380,13 +386,25 @@ class Palette:
 PROTONS, NEUTRONS = 36, 48
 SHELLS = (2, 8, 18, 8)
 
+
 #: How much of the atom a size can carry. `full` is the real Kr-84 (every nucleon, every
 #: electron) from 128 px up; `medium` keeps four shells with fewer electrons and a nucleus of
 #: a dozen visible nucleons (48-64 px, and the dot on the i); `small` (22-32 px) keeps the four
 #: shells, a nucleus blob with a few nucleons, and one or two electrons a shell. `tiny` (16 px)
 #: keeps two shells: four circles a pixel apart alias into a moire, measured, not guessed. Radii follow the Bohr model's n-squared growth, relaxed so the nucleus fits inside
 #: the first shell, and relaxed further at small sizes so four shells stay four lines.
-ATOM_DETAIL: dict[str, dict[str, object]] = {
+class AtomDetail(TypedDict):
+    """One size class of the atom: shell radii (fractions of the whole), electrons per shell."""
+
+    radii: tuple[float, ...]
+    nucleus: float
+    nucleons: int
+    electrons: tuple[int, ...]
+    stroke: float
+    electron: float
+
+
+ATOM_DETAIL: dict[str, AtomDetail] = {
     "full": {
         "radii": tuple(0.253 + 0.0467 * n * n for n in (1, 2, 3, 4)),
         "nucleus": 0.19,
@@ -529,10 +547,10 @@ class Identity:
         if detail not in ATOM_DETAIL:
             raise ValueError(f"atom detail is one of {tuple(ATOM_DETAIL)}, not {detail}")
         spec = ATOM_DETAIL[detail]
-        radii = [radius * float(r) for r in spec["radii"]]  # type: ignore[attr-defined]
+        radii = [radius * float(r) for r in spec["radii"]]
         pal = palette or self.dark
         cx, cy = centre
-        stroke = radius * float(spec["stroke"])  # type: ignore[arg-type]
+        stroke = radius * float(spec["stroke"])
         ring: Paint = mono or Linear(
             (cx - radius, cy - radius), (cx + radius, cy + radius), (pal.shell_from, pal.shell_to)
         )
@@ -540,14 +558,14 @@ class Identity:
         if mono is None and detail in ("full", "medium"):
             shapes.append(
                 Shape("glow", pal.halo, (centre,), radius=radius * float(spec["nucleus"]) * 3.2)
-            )  # type: ignore[arg-type]
+            )
         for r in radii:
             shapes.append(Shape("ellipse-ring", ring, (centre,), width=stroke, extra=(r, r, 0.0)))
         shapes += self._nucleus(
             cx, cy, radius * float(spec["nucleus"]), int(spec["nucleons"]), pal, mono
-        )  # type: ignore[call-overload]
-        size = radius * float(spec["electron"])  # type: ignore[arg-type]
-        for shell, (r, count) in enumerate(zip(radii, spec["electrons"], strict=True)):  # type: ignore[call-overload]
+        )
+        size = radius * float(spec["electron"])
+        for shell, (r, count) in enumerate(zip(radii, spec["electrons"], strict=True)):
             for j in range(count):
                 phase = math.radians(SHELL_OFFSET[shell]) + math.tau * j / count
                 shapes.append(
