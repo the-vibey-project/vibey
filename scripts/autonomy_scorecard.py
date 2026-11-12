@@ -717,7 +717,7 @@ class ForgeSource(SourceInterface):
             )
         method = f"`{c['release_workflow']}` runs on `{s['release_branch']}`, event `{c['release_event']}`, created in the window"
         try:
-            runs = self._outcomes(
+            outcomes = self._outcomes(
                 self._runs(
                     c["release_workflow"], s["release_branch"], c["release_event"], start, end
                 )
@@ -728,8 +728,8 @@ class ForgeSource(SourceInterface):
             figures.append(
                 make.share(
                     "forge.release.success_share",
-                    sum(1 for r in runs if r.get("conclusion") == "success"),
-                    len(runs),
+                    sum(1 for r in outcomes if r.get("conclusion") == "success"),
+                    len(outcomes),
                     method + "; cancelled and skipped runs left out",
                 )
             )

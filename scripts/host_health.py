@@ -153,7 +153,8 @@ class HealthSettings:
 
     @property
     def drivers(self) -> Mapping[str, Mapping[str, Any]]:
-        return self.table["drivers"]
+        drivers: Mapping[str, Mapping[str, Any]] = self.table["drivers"]
+        return drivers
 
 
 class Stamp:
@@ -1575,7 +1576,7 @@ class PlatformProbe(ProbeInterface):
         """(table key, display name)."""
         if system == "Darwin":
             return "macos", "macOS"
-        found = dict(re.findall(r'^(\w+)="?([^"\n]*)"?$', os_release, re.M))
+        found: dict[str, str] = dict(re.findall(r'^(\w+)="?([^"\n]*)"?$', os_release, re.M))
         distro, version = found.get("ID", ""), found.get("VERSION_ID", "")
         key = f"{distro}-{version}" if distro == "ubuntu" else distro
         return key, found.get("PRETTY_NAME", key)
@@ -3331,8 +3332,8 @@ class HostHealthCli:
                 "systemctl --user daemon-reload",
                 f"systemctl --user enable --now {label}.timer",
             ]
-        for path in written:
-            print(f"wrote {path}")
+        for unit_file in written:
+            print(f"wrote {unit_file}")
         exists = "" if log_dir.is_dir() else f" ({log_dir} is created by `install`)"
         print(f"logs: {log}{exists}")
         print("load it with (vibey never loads a unit into your session):")

@@ -41,7 +41,7 @@ from vibey_gh.review_canary import CanaryLedger, WilsonInterval
 # The storm's tools sit under docs/plans; the durability gate that refuses volatile storage
 # (10.h, exit 78) lives there, and is reused rather than reimplemented (10.e).
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "docs/plans/qwenstorm-3.0.0/tools"))
-import storm_durability  # noqa: E402 - after the path it is found on
+import storm_durability  # type: ignore[import-not-found]  # noqa: E402 - found on the sys.path line above; the tools dir is not a package mypy can name
 
 try:
     from scripts.interfaces.model_quality_study_interface import (
@@ -597,7 +597,9 @@ class TrialHome:
     @staticmethod
     def resolve(settings: Settings) -> Path:
         home, _ = storm_durability.StormHome(os.environ).resolve()
-        root = home / settings.trials_subdir
+        root: Path = (
+            home / settings.trials_subdir
+        )  # `home` is Any: the module is imported with an ignore
         storm_durability.DurabilityGate(storm_durability.VolatileLocations(os.environ)).enforce(
             {"trial repositories": root}, "VIBEY_STORM_HOME"
         )
@@ -647,9 +649,9 @@ def main(argv: Sequence[str] | None = None) -> int:
         print(f"ledger ok: {len(rows)} trial(s), chain intact")
         return 0
     if args.command == "summary":
-        rows = [r for r in ledger.read() if args.set == "all" or r["set"] == args.set]
+        selected = [r for r in ledger.read() if args.set == "all" or r["set"] == args.set]
         summarizer = StudySummarizer()
-        summed = summarizer.summarize(rows, float(settings.z))
+        summed = summarizer.summarize(selected, float(settings.z))
         verdict = summarizer.decide(summed, settings.models)
         print(json.dumps({"summary": summed, "decision": verdict}, indent=2, default=list))
         return 0
