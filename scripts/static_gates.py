@@ -73,7 +73,7 @@ class StaticGates:
         return entries
 
     def mypy_command(self, entry: StaticGateEntryInterface) -> list[str]:
-        return ["mypy", "--strict", "--explicit-package-bases", *entry.paths]
+        return [sys.executable, "-m", "mypy", "--strict", "--explicit-package-bases", *entry.paths]
 
     def env(self, entry: StaticGateEntryInterface, base: Mapping[str, str]) -> dict[str, str]:
         env = {key: value for key, value in base.items() if key != "MYPYPATH"}
@@ -86,7 +86,8 @@ class StaticGates:
         for entry in self.entries():
             print(f"== {entry.name}", flush=True)
             code = self.runner(self.mypy_command(entry), self.env(entry, os.environ))
-            worst = max(worst, code)
+            # A signal death is negative; any non-zero code is a failure and stays one.
+            worst = max(worst, code if code > 0 else 1 if code else 0)
         return worst
 
 

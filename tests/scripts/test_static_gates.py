@@ -3,6 +3,7 @@
 
 from __future__ import annotations
 
+import sys
 from pathlib import Path
 
 import pytest
@@ -37,6 +38,8 @@ def test_entries_are_read_in_declared_order(tmp_path: Path) -> None:
 def test_the_command_is_strict_with_explicit_package_bases_then_the_paths(tmp_path: Path) -> None:
     gates = sg.StaticGates(project(tmp_path))
     assert gates.mypy_command(gates.entries()[0]) == [
+        sys.executable,
+        "-m",
         "mypy",
         "--strict",
         "--explicit-package-bases",
@@ -55,18 +58,28 @@ def test_mypypath_is_set_only_when_the_entry_declares_one(tmp_path: Path) -> Non
 def test_run_returns_the_worst_exit_code_and_names_each_entry(
     tmp_path: Path, capsys: pytest.CaptureFixture[str]
 ) -> None:
-    codes = {"one": 0, "three": 2}
+    codes = {"two": 0, "three": 2}
     seen: list[list[str]] = []
 
     def runner(argv: list[str], env: dict[str, str]) -> int:
         seen.append(argv)
-        return codes[argv[-1] if argv[-1] == "three" else "one"]
+        return codes[argv[-1]]
 
     gates = sg.StaticGates(project(tmp_path), runner=runner)
     assert gates.run() == 2
     assert len(seen) == 2
     out = capsys.readouterr().out
     assert out.index("alpha") < out.index("beta")
+
+
+def test_a_killed_mypy_fails_the_gate(tmp_path: Path) -> None:
+    """A signal death is a negative return code; max() against 0 would have called it green."""
+    codes = {"two": -9, "three": 0}
+
+    def runner(argv: list[str], env: dict[str, str]) -> int:
+        return codes[argv[-1]]
+
+    assert sg.StaticGates(project(tmp_path), runner=runner).run() != 0
 
 
 def test_run_continues_past_a_failure_so_every_tree_is_reported(tmp_path: Path) -> None:
