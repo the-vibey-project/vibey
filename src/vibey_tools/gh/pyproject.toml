@@ -146,6 +146,7 @@ exclude_dirs = ["test", ".venv", "build", "dist", "site"]
 
 [tool.mypy]
 python_version = "3.12"
+strict = true
 warn_return_any = true
 # The runner's egress gate is copied verbatim into /opt/egress beside its `interfaces/`
 # and imports that sibling as the top-level package it is there. The same root is given
