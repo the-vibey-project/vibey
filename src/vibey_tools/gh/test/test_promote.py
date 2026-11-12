@@ -367,6 +367,35 @@ def test_a_deliberate_bump_already_in_place_is_not_doubled(project, fake_gh):
     assert result.version == "2.0.0"
 
 
+def test_a_version_above_the_cap_is_never_promoted(project, fake_gh):
+    """Nothing derived is above `[version] max_major`, but a hand-written one can be, and
+    merging the promotion would publish it. Refused before any pull request exists."""
+    from dataclasses import replace
+
+    advance_develop(project)
+    with pytest.raises(RuntimeError, match=r"refusing to promote: 1\.0\.0 is above"):
+        promote_mod.promote(replace(cfg_for(project), max_major=0))
+    assert not [c for c in calls(fake_gh) if c.startswith("pr create")]
+
+
+def test_a_renumber_under_the_cap_is_promoted(project, fake_gh):
+    """Released 1.0.0, develop renumbered to 0.3.0 under cap 0: kept, and promoted."""
+    from dataclasses import replace
+
+    advance_develop(project)
+    git(project, "checkout", "-qB", "develop", "origin/develop")
+    (project / "pyproject.toml").write_text('[project]\nname = "demo"\nversion = "0.3.0"\n')
+    git(project, "add", "-A")
+    git(project, "commit", "-qm", "chore: renumber")
+    git(project, "push", "-q", "origin", "develop")
+    git(project, "fetch", "-q", "origin")
+
+    script(fake_gh, {"pr list": {"out": "7\n"}, "pr view 7": view("x", ""), "pr edit 7": {}})
+    result = promote_mod.promote(replace(cfg_for(project), max_major=0))
+    assert result.bumped is None and "renumber" in result.reason
+    assert result.version == "0.3.0" and result.pull_request == 7
+
+
 # ── a reused pull request says what it proposes now (#235) ─────────────────
 
 # The body every promotion carried before #235, word for word: no record of its version.

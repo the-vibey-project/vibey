@@ -424,15 +424,16 @@ def _break_in_content(repo, message="feat!: drop the old flag"):
     git(repo, "commit", "-qm", message)
 
 
-def test_a_breaking_change_under_max_major_zero_bumps_the_minor(repo):
-    cfg = cfg_for(repo, max_major=0)
+def test_a_breaking_change_at_the_cap_bumps_the_minor(repo):
+    """1.2.3 under max_major = 1: the break would reach 2.0.0, so it is a minor instead."""
+    cfg = cfg_for(repo, max_major=1)
     _break_in_content(repo)
     new, _ = versioning.decide(cfg, "base")
     assert new == "1.3.0"
 
 
-def test_a_breaking_patch_under_max_major_zero_bumps_the_minor(repo):
-    cfg = cfg_for(repo, max_major=0)
+def test_a_breaking_patch_at_the_cap_bumps_the_minor(repo):
+    cfg = cfg_for(repo, max_major=1)
     git(repo, "branch", "-q", "base")
     (repo / "src" / "other.py").write_text("x = 1\n")
     git(repo, "add", "-A")
@@ -451,11 +452,11 @@ def test_max_major_unset_keeps_a_breaking_change_major(repo):
 
 
 def test_the_reason_names_the_cap(repo):
-    cfg = cfg_for(repo, max_major=0)
+    cfg = cfg_for(repo, max_major=1)
     _break_in_content(repo)
     _, why = versioning.decide(cfg, "base")
     assert (
-        "the range declares a break (capped to a minor: [version] max_major = 0): "
+        "the range declares a break (capped to a minor: [version] max_major = 1): "
         "feat!: drop the old flag"
     ) in why
 
@@ -479,9 +480,9 @@ def test_an_allowed_break_is_not_described_as_capped(repo):
 
 
 def test_a_staged_minor_followed_by_a_break_is_not_raised_past_the_cap(repo):
-    """The #393 escalation of a staged bump honours the cap too: under max_major = 0 the
+    """The #393 escalation of a staged bump honours the cap too: under max_major = 1 the
     range owes only the minor already staged, so it is kept rather than raised."""
-    cfg = cfg_for(repo, max_major=0)
+    cfg = cfg_for(repo, max_major=1)
     _break_in_content(repo)
     versioning.apply_version(cfg, "1.3.0")
     git(repo, "add", "-A")
@@ -491,6 +492,90 @@ def test_a_staged_minor_followed_by_a_break_is_not_raised_past_the_cap(repo):
     uncapped = cfg_for(repo)
     new, why = versioning.decide(uncapped, "base")
     assert new == "2.0.0" and "staged 1.3.0 raised to 2.0.0" in why
+
+
+def _stage(repo, cfg, version):
+    versioning.apply_version(cfg, version, regenerate=False)
+    git(repo, "add", "-A")
+    git(repo, "commit", "-qm", f"chore: stage {version}")
+
+
+def test_a_renumber_under_the_cap_is_kept_not_raised_back_over_it(repo):
+    """Released 4.6.0, staged 0.3.0, cap 0, a break in the range. Classified against the
+    released number the range owes 4.7.0, which is above 0.3.0 -- so the old escalation
+    raised the staged version straight back over the ceiling. The renumber is kept."""
+    cfg = cfg_for(repo, max_major=0)
+    _stage(repo, cfg, "4.6.0")
+    _break_in_content(repo, "feat(cli)!: print the versions on --version")
+    _stage(repo, cfg, "0.3.0")
+    new, why = versioning.decide(cfg, "base")
+    assert new is None, why
+    assert "deliberate bump" in why
+    assert "renumber under [version] max_major = 0" in why
+    assert "4.6.0 is above the cap" in why
+    owed, why = versioning.owed_at(cfg, "base", "HEAD")
+    assert owed is None and "renumber" in why
+
+
+def test_a_version_already_above_the_cap_is_refused_not_bumped(repo):
+    """Released and working both 4.6.0 under cap 0: any level bumped from 4.6.0 keeps the
+    major 4, so the deriver refuses rather than answering a version above the cap."""
+    cfg = cfg_for(repo, max_major=0)
+    _stage(repo, cfg, "4.6.0")
+    _break_in_content(repo)
+    new, why = versioning.decide(cfg, "base")
+    assert new is None
+    assert why == (
+        "4.6.0 is above [version] max_major = 0; refusing to derive a version from it — "
+        "renumber to a major of 0 or less, or raise the cap"
+    )
+    assert versioning.owed_at(cfg, "base", "HEAD") == (None, why)
+
+
+def test_a_staged_version_above_the_cap_is_refused_not_kept(repo):
+    """A hand-written 1.0.0 under cap 0 is not a deliberate bump this module may keep."""
+    cfg = cfg_for(repo, max_major=0)
+    _stage(repo, cfg, "0.3.0")
+    _break_in_content(repo)
+    _stage(repo, cfg, "1.0.0")
+    new, why = versioning.decide(cfg, "base")
+    assert new is None
+    assert why.startswith("1.0.0 is above [version] max_major = 0; refusing to derive")
+
+
+def test_an_unreadable_staged_version_beside_an_over_cap_release_is_left_alone(repo):
+    cfg = cfg_for(repo, max_major=0)
+    _stage(repo, cfg, "4.6.0")
+    _break_in_content(repo)
+    _stage(repo, cfg, "next")
+    new, why = versioning.decide(cfg, "base")
+    assert new is None and "renumber" in why
+
+
+def test_the_renumber_rules_are_off_without_a_cap(repo):
+    """Unset, the cap changes nothing: the same 4.6.0 -> 0.3.0 range with a break is
+    raised to the major it owes against the released version, exactly as before."""
+    cfg = cfg_for(repo)
+    _stage(repo, cfg, "4.6.0")
+    _break_in_content(repo)
+    _stage(repo, cfg, "0.3.0")
+    new, why = versioning.decide(cfg, "base")
+    assert new == "5.0.0" and "staged 0.3.0 raised to 5.0.0" in why
+
+
+@pytest.mark.parametrize(
+    "version,cap,expected",
+    [
+        ("4.6.0", 0, True),
+        ("0.3.0", 0, False),
+        ("1.0.0", 0, True),
+        ("1.0.0", 1, False),
+        ("4.6.0", None, False),
+        ("next", 0, False),
+    ],
+)
+def test_exceeds_cap(version, cap, expected):
+    assert versioning.exceeds_cap(version, cap) is expected
 
 
 def test_a_deliberate_bump_is_never_doubled(repo):

@@ -1255,6 +1255,18 @@ def test_the_train_holds_an_unbumped_promotion(repo, monkeypatch):
     verdict = merge_train.judge(promotion, cfg)
     assert verdict.ready
 
+    # Under `[version] max_major`, a head carrying a version above the cap is held: merging
+    # it would publish a major the project has not declared. At or under it, ready.
+    capped = replace(cfg, max_major=0)
+    refusal = "4.6.0 is above [version] max_major = 0; refusing to derive"
+    monkeypatch.setattr(versioning, "owed_at", lambda c, since, head: (None, refusal))
+    monkeypatch.setattr(versioning, "read_version_at", lambda c, ref: "4.6.0")
+    verdict = merge_train.judge(promotion, capped)
+    assert not verdict.ready
+    assert verdict.reason == f"promotion would publish a version above the cap — {refusal}"
+    monkeypatch.setattr(versioning, "read_version_at", lambda c, ref: "0.3.0")
+    assert merge_train.judge(promotion, capped).ready
+
 
 # ------------------------------------------------------- the fallback distribution as a key
 

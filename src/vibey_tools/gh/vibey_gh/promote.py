@@ -191,6 +191,11 @@ def promote(
     new, why = versioning.decide(cfg, f"origin/{release}")
     result.bumped, result.reason = new, why
     result.say(f"version: {why}")
+    # Nothing derived is ever above `[version] max_major`, but a version written by hand
+    # can be, and merging the promotion would publish it. Refused like an unpushed bump:
+    # loudly, before a pull request exists that could carry it to the release branch.
+    if new is None and versioning.exceeds_cap(versioning.read_version(cfg), cfg.max_major):
+        raise RuntimeError(f"refusing to promote: {why}")
 
     if new and not dry_run:
         written = versioning.apply_version(cfg, new)
