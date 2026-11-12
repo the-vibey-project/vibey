@@ -2189,7 +2189,7 @@ def review(
     runner = RunnerLabel.from_environ(os.environ if environ is None else environ)
 
     def record(
-        code: str, reason: str, report: ReviewReport, requests: Sequence[Mapping[str, object]]
+        code: str, reason: str, report: ReviewReport, requests: list[dict[str, object]]
     ) -> None:
         # Fields are only ever added to `outcome.LOCAL_SCHEMA`, never renamed or removed, so
         # a reader of the first ones reads a later record unchanged. The model, the runner
@@ -2214,7 +2214,7 @@ def review(
         partial.write_text(json.dumps(written, indent=2) + "\n", encoding="utf-8")
         partial.replace(target)
 
-    def progress(requests: Sequence[Mapping[str, object]]) -> None:
+    def progress(requests: list[dict[str, object]]) -> None:
         # Best effort, and never the record a review that ends leaves: a write that fails
         # here changes nothing, and the review's own last word is written in `said`.
         try:
