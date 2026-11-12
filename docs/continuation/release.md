@@ -28,7 +28,8 @@ The version is derived, never chosen.
 1. `git fetch origin` and derive at the real tip, never a stale local checkout:
    `git switch --detach origin/develop` then `uv run vibey-gh version --since origin/main --explain`.
    A change under [version] content_paths in .vibey-gh.toml is a minor release; code_paths a
-   patch; a breaking marker anywhere in the range makes it major.
+   patch; a breaking marker anywhere in the range makes it major, or a minor while
+   [version] max_major caps it (it is 0 here, so vibey stays pre-1.0).
 2. Check develop is releasable: the latest CI run on its tip is green, no workflow is red
    (docs/continuation/keep-green.md), and no commit between main and develop carries a
    skip-ci marker (`git log origin/main..origin/develop --format=%B`).
