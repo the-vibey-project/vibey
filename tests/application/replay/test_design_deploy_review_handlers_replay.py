@@ -918,6 +918,11 @@ CASES = (
         kind="review_collect",
         build=_review_collect({"verdict": "accept"}),
     ),
+    ReplayCase(
+        name="requested changes become findings",
+        kind="review_collect",
+        build=_review_collect({"verdict": "changes", "feedback": ["fix the title", "add a test"]}),
+    ),
     ReplayCase(name="the demo artifacts", kind="review_demo", build=_review_demo(reviewer=False)),
     ReplayCase(
         name="a deployment choice waiting for a person",
@@ -995,9 +1000,8 @@ async def test_a_redelivered_job_leaves_what_one_delivery_left(
 # FindingRaised after its own FindingResolved reads as resolved (projections.build_deltas), so
 # a stable id would make the supersede hide the live finding.
 #
-# F-8-3: review.collect turns each requested change into a FindingRaised whose id is minted
-# from a fresh uuid4 per delivery, so a redelivery raises every requested change a second time
-# under a new id and the triage sees twice the findings.
+# (F-8-3, review.collect minting a requested change's finding id from a fresh uuid4 so that a
+# redelivery raised every change a second time, is fixed: its case is in CASES.)
 def _known(
     finding: str, build: Callable[[Path], ReplayRig], raises: type[Exception], name: str
 ) -> Any:
@@ -1055,12 +1059,6 @@ KNOWN_FINDINGS = (
     ),
     _known(
         "F-8-2", _review_demo(reviewer=True), AssertionError, "F-8-2 review_demo (automated review)"
-    ),
-    _known(
-        "F-8-3",
-        _review_collect({"verdict": "changes", "feedback": ["fix the title", "add a test"]}),
-        AssertionError,
-        "F-8-3 review_collect (requested changes)",
     ),
 )
 

@@ -9,7 +9,7 @@ Holds the review conversation:
 - On accept or changes, enqueues ``review.triage`` to classify open findings.
 """
 
-from uuid import uuid4
+from uuid import uuid5
 
 from vibey.application.dto import EnqueueRequest, HumanGateRequest, JobRecord
 from vibey.application.interfaces import (
@@ -93,9 +93,13 @@ class ReviewCollectHandler:
                 else []
             )
 
-            for item_text in items:
+            for index, item_text in enumerate(items):
                 findings_count += 1
-                fid = f"f_user_{job.cycle}_{uuid4().hex[:8]}"
+                # Minted from the job and the request's position, not from a fresh uuid: a
+                # redelivery raises the same finding again (a restatement the ledger and
+                # `build_deltas` fold by id), where a random id raised every requested
+                # change a second time (finding F-8-3).
+                fid = f"f_user_{job.cycle}_{uuid5(job.id, f'finding-{index}').hex[:8]}"
                 await self._ledger.append_event(
                     project_id=job.project_id,
                     cycle=job.cycle,
