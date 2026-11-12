@@ -1339,9 +1339,11 @@ class ScratchDatabase:
 
     def sql(self, statement: str, database: str | None = None) -> CommandResult:
         url = self.url(database) if database else self._admin
-        return self._runner.run(
+        # CommandRunnerInterface.run is declared `Any` (its result type lives in this module).
+        result: CommandResult = self._runner.run(
             ["psql", url, "-X", "-At", "-v", "ON_ERROR_STOP=1", "-c", statement], timeout=120
         )
+        return result
 
     def url(self, database: str | None = None) -> str:
         """The admin DSN pointed at `database` (the path component replaced)."""
@@ -2844,10 +2846,14 @@ class CellMerger:
             for cell in self._cell_of(partial):
                 prefixes = self._matrix.prefixes(cell)
                 covered.add(cell.prefix)
+
+                def reported_cell(fid: str, owned: tuple[str, ...] = prefixes) -> bool:
+                    return fid.startswith(owned)
+
                 policy = StalenessPolicy(
                     derived,
                     f"the {cell.distro}/{cell.arch} cell's run did not report it",
-                    lambda fid, p=prefixes: fid.startswith(p),
+                    reported_cell,
                 )
                 figures = [
                     *policy.merge(figures, partial.figures),
@@ -2858,10 +2864,14 @@ class CellMerger:
         for cell in self._matrix.cells():
             if complete and cell.prefix not in covered and cell.image:
                 prefixes = self._matrix.prefixes(cell)
+
+                def handed_over_cell(fid: str, owned: tuple[str, ...] = prefixes) -> bool:
+                    return fid.startswith(owned)
+
                 policy = StalenessPolicy(
                     derived,
                     f"the {cell.distro}/{cell.arch} cell handed over no record this run",
-                    lambda fid, p=prefixes: fid.startswith(p),
+                    handed_over_cell,
                 )
                 figures = [*policy.merge(figures, []), *[f for f in figures if f.id in derived]]
             reason = (
@@ -2902,7 +2912,9 @@ class Derivation:
     unit: str
     formula: str
     inputs: tuple[str, ...]
-    compute: Callable[[Mapping[str, float]], Any]
+    #: Called with the values, plus any loop variables the lambda binds as defaulted parameters;
+    #: a fixed-arity `Callable` cannot describe that, and mypy cannot infer such a lambda at all.
+    compute: Callable[..., Any]
     note: str | None = None
     #: A fit over a sweep may run on part of it: when set, missing inputs are tolerated as
     #: long as at least this many figure inputs are present (the formula names the rest).
@@ -3455,7 +3467,9 @@ class Derivations(DerivationsInterface):
                     )
             else:
                 dated = [
-                    known[i].measured_at for i in spec.inputs if i in known and known[i].measured_at
+                    measured
+                    for i in spec.inputs
+                    if i in known and (measured := known[i].measured_at)
                 ]
                 figure = Figure(
                     id=spec.id,

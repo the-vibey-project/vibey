@@ -85,7 +85,8 @@ class Gh:
             "number,title,labels,body",
         )
         proc.check_returncode()
-        return json.loads(proc.stdout or "[]")
+        issues: list[dict[str, object]] = json.loads(proc.stdout or "[]")
+        return issues
 
     def issue_state(self, number: int) -> str:
         proc = self._run("issue", "view", str(number), "--json", "state", "--jq", ".state")
@@ -343,9 +344,8 @@ class BacklogCleanup(BacklogCleanupInterface):
         # stale the moment it closes, and counting it as debt turned every red develop
         # into a red backlog lane as well (#1423, 2026-10-05).
         markers = expectations.get("self_closing_markers", [])
-        self.self_closing: tuple[str, ...] = tuple(
-            str(m) for m in markers if isinstance(markers, list) and m
-        )
+        listed = markers if isinstance(markers, list) else []
+        self.self_closing: tuple[str, ...] = tuple(str(m) for m in listed if m)
 
     def _labels(self, issue: dict[str, object]) -> list[str]:
         labels = issue.get("labels", [])
@@ -524,11 +524,13 @@ class BacklogCleanup(BacklogCleanupInterface):
 
     def coverage_gaps(self, rows: list[dict[str, object]]) -> list[int]:
         """Open non-storm issues with no entry and no marker: triage debt."""
-        return [
-            int(r["number"])
-            for r in rows
-            if r.get("verdict") == "NEEDS-TRIAGE" and not r.get("entry")
-        ]
+        gaps: list[int] = []
+        for r in rows:
+            if r.get("verdict") == "NEEDS-TRIAGE" and not r.get("entry"):
+                number = r["number"]
+                assert isinstance(number, int)
+                gaps.append(number)
+        return gaps
 
 
 def load_expectations(path: Path) -> dict[str, object]:
