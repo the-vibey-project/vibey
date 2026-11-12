@@ -1,0 +1,34 @@
+# Made with ❤️ by [Vibey](https://the-vibey-project.github.io/vibey/), Developed by [Adam Matthew Steinberger](https://vibewithadam.matthewsteinberger.com/) ([@adammatthewsteinberger](https://github.com/adammatthewsteinberger/)).
+#
+# The job handlers that have no replay case yet
+# (tests/meta/test_every_handler_has_a_replay_case.py; CLAUDE.md: "Every job is idempotent
+# under replay"). Each entry is a handler module under src/vibey/application, named without
+# its `_handler` suffix, with the reason it is not covered. The list can only shrink: a handler
+# that now has a case in tests/application/replay/ must leave it in the same change (a stale
+# entry fails), and `ceiling` is lowered with it (a ratchet that fails on a fall as well as a
+# rise, so the number is never quietly raised).
+#
+# Measured 2026-11-11 against src/vibey/application/*_handler.py: 18 handlers, 5 with a replay
+# case (build_decompose, design, build_implement, build_integrate, build_verify), 13 without.
+# SP2-A Task 8 gives the twelve below that are not bus_dead_letter a case each.
+
+ceiling = 16
+
+exempt = [
+  "build_implement",        # SP2-A Task 7, next commit
+  "build_integrate",        # SP2-A Task 7, next commit
+  "build_verify",           # SP2-A Task 7, next commit
+  "bus_dead_letter",        # replays a dead letter, not a delivered job: a different contract
+  "deploy_acceptance",      # SP2-A Task 8
+  "deploy_design",          # SP2-A Task 8
+  "deploy_execute",         # SP2-A Task 8
+  "deploy_review",          # SP2-A Task 8
+  "design_research",        # SP2-A Task 8
+  "design_synthesis",       # SP2-A Task 8
+  "review_collect",         # SP2-A Task 8
+  "review_demo",            # SP2-A Task 8
+  "review_deployment_choice",  # SP2-A Task 8
+  "review_publish",         # SP2-A Task 8
+  "review_triage",          # SP2-A Task 8
+  "visual",                 # SP2-A Task 8
+]
