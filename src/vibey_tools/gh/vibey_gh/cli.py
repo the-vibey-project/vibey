@@ -58,6 +58,7 @@ from vibey_gh.skip_markers import SkipMarkerGuard
 from vibey_gh.tracking_issue import TrackingIssue
 
 if TYPE_CHECKING:
+    from vibey_gh.interfaces.forge_snapshot_interface import ForgeReaderInterface
     from vibey_gh.interfaces.sabbath_guard_interface import (
         SabbathGuardInterface,
         SabbathLanesInterface,
@@ -750,7 +751,7 @@ def _failover(args: argparse.Namespace) -> int:
     return 0
 
 
-def _tidy(args) -> int:
+def _tidy(args: argparse.Namespace) -> int:
     from vibey_gh import tidy
 
     cfg = load_config()
@@ -788,7 +789,7 @@ def _tidy(args) -> int:
     return 1
 
 
-def _forge_snapshot(args) -> int:
+def _forge_snapshot(args: argparse.Namespace) -> int:
     """Capture the forge's state into `--out` (vibey#136, slice S1); read-only against the forge.
 
     Exit 0 when every selected class was captured, 1 when any could not be looked at (the
@@ -808,7 +809,6 @@ def _forge_snapshot(args) -> int:
         SnapshotStoreError,
     )
     from vibey_gh.gh_transport import GhTransport
-    from vibey_gh.interfaces.forge_snapshot_interface import ForgeReaderInterface
 
     prefix = "vibey-gh forge-snapshot:"
     if (args.out is None) == (args.verify is None):
@@ -890,7 +890,7 @@ def _forge_snapshot(args) -> int:
     return 0 if manifest["complete"] else 1
 
 
-def _adapter_reader(forge: str, repository: str, per_page: int):
+def _adapter_reader(forge: str, repository: str, per_page: int) -> ForgeReaderInterface:
     """A snapshot reader over the adapter `[platform]` selects for `forge` (#1572).
 
     The platform table is used only when it names the same forge; another forge starts from
@@ -913,7 +913,7 @@ def _adapter_reader(forge: str, repository: str, per_page: int):
     )
 
 
-def _forge_state(args) -> int:
+def _forge_state(args: argparse.Namespace) -> int:
     """Read one object's state back out of a snapshot, as of a moment (#1574); read-only.
 
     Exit 0 when a record is found, 1 when there is none to give (the object was never
@@ -994,7 +994,7 @@ def _verify_forge_snapshot(root: Path, prefix: str) -> int:
     return 0
 
 
-def _corpus_index(args) -> int:
+def _corpus_index(args: argparse.Namespace) -> int:
     from vibey_gh import corpus
 
     cfg = load_config()
@@ -1012,7 +1012,9 @@ def _corpus_index(args) -> int:
     return 0
 
 
-def _marketplace(args, renderer: MarketplaceRendererInterface | None = None) -> int:
+def _marketplace(
+    args: argparse.Namespace, renderer: MarketplaceRendererInterface | None = None
+) -> int:
     from vibey_gh.marketplace import MarketplaceError, MarketplaceRenderer
 
     cfg = load_config()
@@ -1035,7 +1037,7 @@ def _marketplace(args, renderer: MarketplaceRendererInterface | None = None) -> 
     return 0
 
 
-def _push_scope(args) -> int:
+def _push_scope(args: argparse.Namespace) -> int:
     """Judge the refs a pre-push hook was handed: does this push carry code at all?
 
     Reads git's pre-push standard input. Prints `NO_CODE` on stdout and exits 0 only when
