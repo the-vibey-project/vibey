@@ -373,6 +373,16 @@ ignore = ["E501"]
 # thrown away. The placement IS the fix; moving those imports up would undo it.
 "src/vibey/cli/main.py" = ["E402"]
 
+# Trees checked with `mypy --strict --explicit-package-bases` besides `src/vibey` (which the
+# `[tool.mypy]` table below names). The `lint` job and the every-Python-file census both read
+# this list, so a tree is added in one place. `mypy_path` is the directory a tree's own modules
+# import each other from (empty when none do); `explicit-package-bases` is needed because the
+# `interfaces/` folders have no package root and mypy otherwise sees a module twice.
+[[tool.vibey.static_gates]]
+name = "storm-tools"
+paths = ["docs/plans/qwenstorm-3.0.0/tools"]
+mypy_path = "docs/plans/qwenstorm-3.0.0/tools"
+
 [tool.mypy]
 python_version = "3.12"
 strict = true
