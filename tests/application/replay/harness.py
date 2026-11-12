@@ -3,20 +3,27 @@
 idempotent under replay. Workers die; the lease expires and another worker picks it up").
 
 A replay case builds a handler over persisted fakes (the ledger, the queue, whatever the
-handler writes to), runs the job once, and captures a *content* snapshot of everything the
-handler touched. A lease expiry is then simulated the way
-``test_build_decompose_handler.py`` does it: a NEW handler instance over the SAME persisted
-fakes, handed the SAME job. The second snapshot must equal the first, field by field. A count
-would pass a handler that rewrites a row with different content, or swaps one event for
-another; content does not (SP2-A Review Focus 1).
+handler writes to) and a job that sits READY in the faithful ``FakeJobRepository``. The harness
+leases it (``attempts`` becomes 1), delivers it, and captures a *content* snapshot of
+everything the handler touched. A lease expiry is then simulated as the queue does it: the
+lease lapses, ``reap`` requeues the row, the lease is taken again (``attempts`` becomes 2, and
+the handlers that branch on ``job.attempts`` see it), and a NEW handler instance over the SAME
+persisted fakes gets the REFRESHED row (``test_build_decompose_handler.py`` simulates a
+redelivery the same way). The second snapshot must equal the first, field by field. A count
+would pass a handler that rewrites a row with different content; content does not (SP2-A
+Review Focus 1).
 
 Helpers here are module functions and two value-type dataclasses; this is test support, not
 production code, so ADR-0016's class rule does not apply.
 """
 
-from collections.abc import Awaitable, Callable, Iterable, Mapping, Sequence
+from collections import Counter
+from collections.abc import Awaitable, Callable, Mapping, Sequence
 from dataclasses import dataclass
+from datetime import timedelta
+from pathlib import Path
 from typing import Any
+from uuid import UUID
 
 from tests.application.fakes import FakeJobRepository
 from vibey.application.dto import EngineEvent, JobRecord
@@ -25,21 +32,29 @@ from vibey.application.worker import Defer, Failure, Park, Success
 
 Snapshot = Mapping[str, object]
 
+LEASE = timedelta(minutes=5)
+
+RESULT_KEYS_A_REDELIVERY_MAY_CHANGE = frozenset({"replayed", "run_id"})
+"""Keys of a Success result that legitimately differ on a redelivery: ``replayed`` is the
+decompose handler saying it found the committed fan-out, ``run_id`` is the id of the engine
+session a redelivery runs again."""
+
 
 @dataclass
 class ReplayRig:
     """One case's world.
 
-    ``handler`` is the instance that takes the first delivery; ``redeliver()`` builds the
-    instance that takes the second, over the same persisted fakes (a worker died and another
-    picked the job up: nothing but the persisted state survives). ``snapshot()`` reads that
-    persisted state as comparable content. ``prepare`` is the setup that must have happened
-    before the job could be delivered (a human answering a gate, say); it runs once, before
-    the first delivery, and is not part of what is replayed.
+    ``jobs`` holds ``job`` READY; the harness leases it. ``handler`` takes the first delivery;
+    ``redeliver()`` builds the instance that takes the second, over the same persisted fakes (a
+    worker died and another picked the job up: only persisted state survives). ``snapshot()``
+    reads that persisted state as comparable content and is called once after each delivery.
+    ``prepare`` is setup that must precede the delivery (a human answering a gate); it runs
+    once, before the first lease, and is not part of what is replayed.
     """
 
     handler: JobHandler
     job: JobRecord
+    jobs: FakeJobRepository
     snapshot: Callable[[], Snapshot]
     redeliver: Callable[[], JobHandler]
     prepare: Callable[[], Awaitable[None]] | None = None
@@ -48,11 +63,12 @@ class ReplayRig:
 @dataclass(frozen=True)
 class ReplayCase:
     """``kind`` names the handler module under ``src/vibey/application`` the case covers
-    (``build_implement`` for ``build_implement_handler.py``); the census reads it."""
+    (``build_implement`` for ``build_implement_handler.py``); the census reads it. ``build``
+    gets a scratch directory the case's fakes may write under."""
 
     name: str
     kind: str
-    build: Callable[[], ReplayRig]
+    build: Callable[[Path], ReplayRig]
 
 
 def event_content(event: EngineEvent) -> dict[str, object]:
@@ -61,27 +77,71 @@ def event_content(event: EngineEvent) -> dict[str, object]:
     return {"kind": event.kind, "at": event.at, "payload": dict(event.payload)}
 
 
-def job_row_content(job: JobRecord, dependencies: Sequence[object]) -> dict[str, object]:
-    """A queue row as content: everything the row holds, including its id (an idempotent
-    enqueue returns the SAME row, so a new id on replay is a duplicate), its dependencies,
-    attempts and state. Only ``created_at`` and ``updated_at`` are left out: they are
-    wall-clock stamps the fake takes from ``datetime.now`` and legitimately differ between
-    two deliveries. ``run_after`` and ``lease_expires_at`` are kept."""
-    row: dict[str, Any] = {
-        field: getattr(job, field)
-        for field in job.__dataclass_fields__
-        if field not in {"created_at", "updated_at"}
-    }
-    row["dependencies"] = tuple(dependencies)
-    return row
+# What a redelivery leaves unchanged in the delivered job's OWN row: what the job IS, not where
+# it is in its lease (attempts, state, owner, expiry, run_after and the stamps all legitimately
+# move when a lease lapses and is retaken).
+_IDENTITY_FIELDS = (
+    "id",
+    "project_id",
+    "cycle",
+    "phase",
+    "kind",
+    "priority",
+    "work_item_id",
+    "payload",
+    "requirement",
+    "idempotency_key",
+    "max_attempts",
+)
+
+
+def jobs_content(jobs: FakeJobRepository, delivered: UUID) -> list[Mapping[str, object]]:
+    """Every row the queue holds, with its dependencies, in a stable order. Rows the handler
+    enqueued are compared in full (an idempotent enqueue returns the SAME row, so a new id or
+    a changed field is a duplicate or a rewrite); only ``created_at`` and ``updated_at``,
+    wall-clock stamps from ``datetime.now`` in the fake, are left out. The delivered job's
+    own row is compared through ``_IDENTITY_FIELDS`` only."""
+    rows: list[Mapping[str, object]] = []
+    for job, dependencies in jobs.rows():
+        if job.id == delivered:
+            row: dict[str, Any] = {field: getattr(job, field) for field in _IDENTITY_FIELDS}
+        else:
+            row = {
+                field: getattr(job, field)
+                for field in job.__dataclass_fields__
+                if field not in {"created_at", "updated_at"}
+            }
+        row["dependencies"] = tuple(dependencies)
+        rows.append(row)
+    return sorted(rows, key=lambda row: (str(row["kind"]), str(row["idempotency_key"])))
 
 
 class ContentLedger:
-    """A ``BuildLedger`` that keeps every argument of every ``record`` call, not just the
-    event: which job wrote it, under which correlation and causation, as which engine."""
+    """A ``BuildLedger`` that keeps every argument of every ``record`` call, split by delivery.
+
+    ``after_delivery()`` closes one delivery's batch and returns what a redelivery is held
+    to. The first delivery's batch is the reference:
+
+    - ``own`` (no ``causation_id``: what the handler records on its own account) is the
+      MULTISET of its entries, so a handler writing one entry twice in a single delivery shows.
+    - ``runs`` is the engine-run events in order, with the run id and the time removed (the
+      run id also appears in payload text, and a redelivery really does run the engine again,
+      so a new id and new times are legitimate) and everything else kept.
+    - ``unmatched`` is what a LATER batch adds that the first does not account for: an own
+      entry that is new, different, or more frequent than in the first batch, or a run whose
+      content differs from the first's. It is empty in the first snapshot.
+
+    What a later batch is allowed: the same own entries again, and the same run events again.
+    That is the ledger's restatement on a redelivery, not idempotence: the ledger is
+    append-only and does not dedupe on identity (an entry such as ``integrate-gates-<item>``
+    is written twice, identically), and the engine runs again. See #1887; tighten to exact
+    entries once the ledger dedupes on identity, and delete the allowance here.
+    """
 
     def __init__(self) -> None:
         self.entries: list[dict[str, object]] = []
+        self._batches: list[list[dict[str, object]]] = []
+        self._closed = 0
 
     async def record(  # type: ignore[no-untyped-def]
         self, *, project_id, cycle, job_id, engine_id, correlation_id, event, causation_id=None
@@ -98,45 +158,59 @@ class ContentLedger:
             }
         )
 
-    def content(self) -> dict[str, object]:
-        """What a redelivery is held to, in two parts.
+    @staticmethod
+    def _run_content(entry: Mapping[str, object]) -> str:
+        """A run-scoped entry without its run id (everywhere it appears) and its time."""
+        run = str(entry["causation_id"])
+        kept = {k: v for k, v in entry.items() if k not in {"causation_id", "at"}}
+        return repr(kept).replace(run, "<run>")
 
-        ``own`` is what the handler records on its own account (no ``causation_id``): the
-        DISTINCT entries, so a derived identity restated on a redelivery (the gate evidence
-        ``integrate-gates-<item>``, the verify independence decision) is one fact said
-        twice, while an entry whose CONTENT differs from every earlier one is a new fact and
-        shows. ``runs`` is the kinds of the run-scoped events (``causation_id`` is the engine
-        run): a redelivery really does run the engine again, so its events are new facts with
-        new run ids and times (legitimately volatile); only the set of kinds is compared.
-        """
-        own: list[dict[str, object]] = []
-        for entry in self.entries:
-            if entry["causation_id"] is None and entry not in own:
-                own.append(entry)
-        runs = sorted({str(e["kind"]) for e in self.entries if e["causation_id"] is not None})
-        return {"own": own, "runs": runs}
+    def after_delivery(self) -> dict[str, object]:
+        self._batches.append(self.entries[self._closed :])
+        self._closed = len(self.entries)
+        first, later = self._batches[0], self._batches[1:]
+
+        def own(batch: list[dict[str, object]]) -> Counter[str]:
+            return Counter(repr(e) for e in batch if e["causation_id"] is None)
+
+        def runs(batch: list[dict[str, object]]) -> list[str]:
+            return [self._run_content(e) for e in batch if e["causation_id"] is not None]
+
+        reference = own(first)
+        unmatched: list[str] = []
+        for batch in later:
+            unmatched += sorted((own(batch) - reference).elements())
+            if runs(batch) != runs(first):
+                unmatched += runs(batch)
+        return {
+            "own": sorted(reference.items()),
+            "runs": runs(first),
+            "unmatched": unmatched,
+        }
 
 
-def jobs_content(jobs: FakeJobRepository) -> list[Mapping[str, object]]:
-    """Every row the queue holds (adopted jobs are not rows), with its dependencies."""
-    return sorted_rows(
-        job_row_content(job, jobs.dependencies.get(job.id, ())) for job in jobs._jobs.values()
-    )
-
-
-def outcome_kind(outcome: Outcome) -> str:
-    """The outcome's class. A replay may legitimately answer with a different RESULT (the
-    decompose handler reports ``replayed: True`` once it finds the committed fan-out), but
-    never with a different kind of outcome."""
-    for cls in (Success, Failure, Park, Defer):
-        if isinstance(outcome, cls):
-            return cls.__name__
+def outcome_content(outcome: Outcome) -> object:
+    """The outcome as comparable content: its class, and for a Success its result without
+    the keys a redelivery may legitimately change (``RESULT_KEYS_A_REDELIVERY_MAY_CHANGE``).
+    Any other outcome is compared whole."""
+    if isinstance(outcome, Success):
+        kept = {
+            key: value
+            for key, value in outcome.result.items()
+            if key not in RESULT_KEYS_A_REDELIVERY_MAY_CHANGE
+        }
+        return ("Success", kept)
+    if isinstance(outcome, Failure | Park | Defer):
+        return (type(outcome).__name__, outcome)
     raise AssertionError(f"unknown outcome {outcome!r}")
 
 
-def sorted_rows(rows: Iterable[Mapping[str, object]]) -> list[Mapping[str, object]]:
-    """Rows in a stable order, so two snapshots compare by content and not by insertion."""
-    return sorted(rows, key=lambda row: (str(row["kind"]), str(row["idempotency_key"])))
+def _is_empty(value: object) -> bool:
+    if isinstance(value, Mapping):
+        return all(_is_empty(item) for item in value.values())
+    if isinstance(value, Sequence) and not isinstance(value, str | bytes):
+        return all(_is_empty(item) for item in value)
+    return not value
 
 
 def _differences(first: Snapshot, second: Snapshot) -> list[str]:
@@ -147,17 +221,29 @@ def _differences(first: Snapshot, second: Snapshot) -> list[str]:
     return lines
 
 
-async def assert_replay_is_idempotent(case: ReplayCase) -> None:
-    """Deliver once, snapshot, simulate a lease expiry (a new handler over the same persisted
-    state), deliver again, and demand the second snapshot equal the first."""
-    rig = case.build()
+async def _lease(jobs: FakeJobRepository, job: JobRecord, owner: str) -> JobRecord:
+    return jobs.lease(job.id, owner=owner, lease=LEASE)
+
+
+async def assert_replay_is_idempotent(case: ReplayCase, scratch: Path) -> None:
+    """Lease and deliver, snapshot, let the lease lapse and be retaken (a new handler over the
+    same persisted state, the refreshed row), deliver again, and demand equal snapshots."""
+    rig = case.build(scratch)
     if rig.prepare is not None:
         await rig.prepare()
 
-    first_outcome = await rig.handler.handle(rig.job)
+    first_job = await _lease(rig.jobs, rig.job, "worker-1")
+    assert first_job.attempts == 1, "the first delivery is the job's first attempt"
+    first_outcome = await rig.handler.handle(first_job)
     once = dict(rig.snapshot())
+    assert not _is_empty(once), f"{case.name}: the first delivery left nothing to compare"
 
-    second_outcome = await rig.redeliver().handle(rig.job)
+    rig.jobs.expire_lease(rig.job.id)
+    assert await rig.jobs.reap() == 1, "the lapsed lease is requeued"
+    rig.jobs.make_all_due()
+    second_job = await _lease(rig.jobs, rig.job, "worker-2")
+    assert second_job.attempts == 2, "a redelivery arrives with the attempt counted"
+    second_outcome = await rig.redeliver().handle(second_job)
     twice = dict(rig.snapshot())
 
     differences = _differences(once, twice)
@@ -165,7 +251,7 @@ async def assert_replay_is_idempotent(case: ReplayCase) -> None:
         f"{case.name}: a redelivery changed what one delivery left behind:\n"
         + "\n".join(differences)
     )
-    assert outcome_kind(first_outcome) == outcome_kind(second_outcome), (
+    assert outcome_content(first_outcome) == outcome_content(second_outcome), (
         f"{case.name}: the first delivery answered {first_outcome!r}, the second {second_outcome!r}"
     )
 
@@ -176,8 +262,6 @@ __all__ = [
     "ReplayRig",
     "assert_replay_is_idempotent",
     "event_content",
-    "job_row_content",
     "jobs_content",
-    "outcome_kind",
-    "sorted_rows",
+    "outcome_content",
 ]

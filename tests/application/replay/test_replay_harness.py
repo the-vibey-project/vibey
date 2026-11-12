@@ -3,18 +3,21 @@
 harmless and fails one whose replay is not, even when a COUNT would not notice."""
 
 from dataclasses import replace
+from datetime import UTC, datetime
+from pathlib import Path
 from uuid import uuid4
 
 import pytest
 
 from tests.application.fakes import FakeJobRepository, make_job
 from tests.application.replay.harness import (
+    ContentLedger,
     ReplayCase,
     ReplayRig,
     assert_replay_is_idempotent,
     jobs_content,
 )
-from vibey.application.dto import EnqueueRequest, JobRecord
+from vibey.application.dto import EngineEvent, EnqueueRequest, JobRecord
 from vibey.application.worker import Success
 from vibey.domain.job import idempotency_key
 from vibey.domain.phase import Phase
@@ -46,72 +49,153 @@ class _ToyHandler:
         return Success({})
 
 
-class _ToyRewriter:
-    """Always leaves exactly one follow-up row (the COUNT never changes) but rewrites its
-    payload on every delivery: only a content comparison sees it."""
+class _ToyByAttempt:
+    """Enqueues a follow-up whose payload carries ``job.attempts``: harmless on a first
+    delivery, different on a real redelivery (which arrives as attempt 2)."""
 
     def __init__(self, jobs: FakeJobRepository) -> None:
         self._jobs = jobs
-        self._deliveries = 0
 
     async def handle(self, job: JobRecord) -> Success:
-        self._deliveries += 1
-        existing = [row for row in self._jobs._jobs.values() if row.kind == "toy.follow"]
+        follow = EnqueueRequest(
+            project_id=job.project_id,
+            cycle=job.cycle,
+            phase=Phase.BUILD,
+            kind="toy.follow",
+            idempotency_key="toy-one",
+            payload={"attempt": job.attempts},
+        )
+        existing = [row for row, _ in self._jobs.rows() if row.kind == "toy.follow"]
         if existing:
-            self._jobs._jobs[existing[0].id] = replace(
-                existing[0], payload={"delivery": self._deliveries}
-            )
+            self._jobs._jobs[existing[0].id] = replace(existing[0], payload=follow.payload)
         else:
-            row = await self._jobs.enqueue(
-                EnqueueRequest(
-                    project_id=job.project_id,
-                    cycle=job.cycle,
-                    phase=Phase.BUILD,
-                    kind="toy.follow",
-                    idempotency_key="toy-one",
-                    payload={"delivery": self._deliveries},
-                )
-            )
-            assert row.kind == "toy.follow"
+            await self._jobs.enqueue(follow)
         return Success({})
 
 
 def _case(make_handler) -> ReplayCase:  # type: ignore[no-untyped-def]
-    def build() -> ReplayRig:
-        jobs = FakeJobRepository()
+    def build(scratch: Path) -> ReplayRig:
         job = replace(make_job(uuid4()), kind="toy.in")
-        jobs.seed_leased(job)
+        jobs = FakeJobRepository([job])
         return ReplayRig(
             handler=make_handler(jobs),
             job=job,
-            snapshot=lambda: {"jobs": jobs_content(jobs)},
+            jobs=jobs,
+            snapshot=lambda: {"jobs": jobs_content(jobs, job.id)},
             redeliver=lambda: make_handler(jobs),
         )
 
     return ReplayCase(name="toy", kind="toy", build=build)
 
 
-async def test_an_idempotent_handler_passes() -> None:
-    await assert_replay_is_idempotent(_case(lambda jobs: _ToyHandler(jobs, idempotent=True)))
+async def test_an_idempotent_handler_passes(tmp_path: Path) -> None:
+    await assert_replay_is_idempotent(
+        _case(lambda jobs: _ToyHandler(jobs, idempotent=True)), tmp_path
+    )
 
 
-async def test_a_handler_that_adds_a_row_per_delivery_fails() -> None:
+async def test_a_handler_that_adds_a_row_per_delivery_fails(tmp_path: Path) -> None:
     with pytest.raises(AssertionError, match="a redelivery changed"):
-        await assert_replay_is_idempotent(_case(lambda jobs: _ToyHandler(jobs, idempotent=False)))
+        await assert_replay_is_idempotent(
+            _case(lambda jobs: _ToyHandler(jobs, idempotent=False)), tmp_path
+        )
 
 
-async def test_a_handler_that_rewrites_a_row_fails_even_though_the_count_is_equal() -> None:
-    # One row after the first delivery and one after the second: a count comparison passes.
-    shared: dict[str, _ToyRewriter] = {}
+async def test_a_handler_that_behaves_differently_on_attempt_two_fails(tmp_path: Path) -> None:
+    """One row after each delivery (a count passes) but its payload follows ``job.attempts``:
+    only a redelivery that really arrives as attempt 2 sees it."""
+    with pytest.raises(AssertionError, match="attempt"):
+        await assert_replay_is_idempotent(_case(_ToyByAttempt), tmp_path)
 
-    def handler(jobs: FakeJobRepository) -> _ToyRewriter:
-        # A new instance over the same persisted rows, as a redelivery is; its delivery
-        # counter continues so the second write differs from the first.
-        previous = shared.get("h")
-        instance = _ToyRewriter(jobs)
-        instance._deliveries = previous._deliveries if previous else 0
-        shared["h"] = instance
-        return instance
 
-    with pytest.raises(AssertionError, match="payload"):
-        await assert_replay_is_idempotent(_case(handler))
+async def test_the_redelivery_is_a_real_lease_expiry(tmp_path: Path) -> None:
+    seen: list[tuple[int, str | None]] = []
+
+    class Recorder(_ToyHandler):
+        async def handle(self, job: JobRecord) -> Success:
+            seen.append((job.attempts, job.lease_owner))
+            return await super().handle(job)
+
+    await assert_replay_is_idempotent(_case(lambda jobs: Recorder(jobs, idempotent=True)), tmp_path)
+
+    assert seen == [(1, "worker-1"), (2, "worker-2")]
+
+
+async def test_an_empty_snapshot_fails(tmp_path: Path) -> None:
+    def build(scratch: Path) -> ReplayRig:
+        job = replace(make_job(uuid4()), kind="toy.in")
+        jobs = FakeJobRepository([job])
+        return ReplayRig(
+            handler=_ToyHandler(jobs, idempotent=True),
+            job=job,
+            jobs=jobs,
+            snapshot=lambda: {"ledger": [], "jobs": []},
+            redeliver=lambda: _ToyHandler(jobs, idempotent=True),
+        )
+
+    with pytest.raises(AssertionError, match="left nothing to compare"):
+        await assert_replay_is_idempotent(ReplayCase("empty", "toy", build), tmp_path)
+
+
+# ---- the ledger comparison -------------------------------------------------------------
+
+
+_PID = uuid4()
+
+
+def _record(ledger: ContentLedger, kind: str, *, run=None, payload=None):  # type: ignore[no-untyped-def]
+    event = EngineEvent(kind=kind, at=datetime(2026, 1, 1, tzinfo=UTC), payload=payload or {})
+    pid = _PID
+    return ledger.record(
+        project_id=pid,
+        cycle=1,
+        job_id=pid,
+        engine_id=None,
+        correlation_id=pid,
+        event=event,
+        causation_id=run,
+    )
+
+
+async def test_a_handler_writing_one_entry_twice_in_a_delivery_is_visible() -> None:
+    once, twice = ContentLedger(), ContentLedger()
+    pid = uuid4()
+    for ledger, times in ((once, 1), (twice, 2)):
+        for _ in range(times):
+            await ledger.record(
+                project_id=pid,
+                cycle=1,
+                job_id=pid,
+                engine_id=None,
+                correlation_id=pid,
+                event=EngineEvent("A", datetime(2026, 1, 1, tzinfo=UTC), {}),
+            )
+    assert once.after_delivery() != twice.after_delivery()
+
+
+async def test_the_same_entries_restated_on_a_redelivery_are_allowed() -> None:
+    ledger = ContentLedger()
+    for _ in range(2):
+        run = uuid4()
+        await _record(ledger, "A", payload={"x": 1})
+        await _record(ledger, "Run", run=run, payload={"summary": f"run {run} done"})
+        content = ledger.after_delivery()
+    assert content["unmatched"] == []
+
+
+async def test_a_new_or_different_entry_on_a_redelivery_is_reported() -> None:
+    ledger = ContentLedger()
+    await _record(ledger, "A", payload={"x": 1})
+    first = ledger.after_delivery()
+    await _record(ledger, "A", payload={"x": 2})
+    second = ledger.after_delivery()
+    assert first["unmatched"] == []
+    assert second["unmatched"] != []
+
+
+async def test_a_run_whose_content_differs_on_a_redelivery_is_reported() -> None:
+    ledger = ContentLedger()
+    await _record(ledger, "Run", run=uuid4(), payload={"complete": True})
+    ledger.after_delivery()
+    await _record(ledger, "Run", run=uuid4(), payload={"complete": False})
+    assert ledger.after_delivery()["unmatched"] != []

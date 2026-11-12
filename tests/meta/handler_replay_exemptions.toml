@@ -5,14 +5,12 @@
 # under replay"). Each entry is a handler module under src/vibey/application, named without
 # its `_handler` suffix, with the reason it is not covered. The list can only shrink: a handler
 # that now has a case in tests/application/replay/ must leave it in the same change (a stale
-# entry fails), and `ceiling` is lowered with it (a ratchet that fails on a fall as well as a
-# rise, so the number is never quietly raised).
+# entry fails), and CEILING, a constant in the census test (not here, so this file cannot move
+# its own limit), is lowered with it; it must equal the number of entries.
 #
 # Measured 2026-11-11 against src/vibey/application/*_handler.py: 18 handlers, 5 with a replay
 # case (build_decompose, design, build_implement, build_integrate, build_verify), 13 without.
 # SP2-A Task 8 gives the twelve below that are not bus_dead_letter a case each.
-
-ceiling = 13
 
 exempt = [
   "bus_dead_letter",        # replays a dead letter, not a delivered job: a different contract

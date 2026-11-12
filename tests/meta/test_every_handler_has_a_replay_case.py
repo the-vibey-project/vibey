@@ -6,8 +6,8 @@ worker picks it up." A handler is held to that by a ``ReplayCase`` under
 ``tests/application/replay/`` (``assert_replay_is_idempotent``). This census walks
 ``src/vibey/application/*_handler.py`` and requires each handler to be named by the ``kind``
 of some ``ReplayCase(...)`` call there, or to be listed in
-``tests/meta/handler_replay_exemptions.toml`` (a ratchet: stale entries fail, and ``ceiling``
-must equal the list's length, so it falls in the same change that covers a handler).
+``tests/meta/handler_replay_exemptions.toml`` (a ratchet: stale entries fail, and ``CEILING``
+(a constant in this file) must equal the list's length, so it falls in the same change that covers a handler).
 
 Cases are found by AST (a ``ReplayCase(..., kind="...")`` call with a string-literal kind in
 a ``test_*_replay.py`` file), so the census imports no test module and stays well under a
@@ -23,6 +23,11 @@ REPO = Path(__file__).resolve().parents[2]
 HANDLERS = REPO / "src" / "vibey" / "application"
 REPLAY = REPO / "tests" / "application" / "replay"
 EXEMPTIONS = Path(__file__).with_name("handler_replay_exemptions.toml")
+
+CEILING = 13
+"""The most handlers that may be exempt. It lives here, not in the TOML, so that a change to
+the list cannot also move its own limit: lower it in the same change that covers a handler,
+and never raise it without a written reason in review."""
 
 
 class ReplayCensus:
@@ -51,14 +56,46 @@ class ReplayCensus:
         return sorted({name for name in self.exempt if self.exempt.count(name) > 1})
 
     @staticmethod
-    def case_kinds(source: str) -> set[str]:
-        """The string-literal ``kind=`` of each ``ReplayCase(...)`` call in ``source``."""
+    def _is_case_call(node: ast.AST) -> bool:
+        if not isinstance(node, ast.Call):
+            return False
+        func = node.func
+        return (isinstance(func, ast.Name) and func.id == "ReplayCase") or (
+            isinstance(func, ast.Attribute) and func.attr == "ReplayCase"
+        )
+
+    @classmethod
+    def case_kinds(cls, source: str) -> set[str]:
+        """The string-literal ``kind=`` of each ``ReplayCase(...)`` call inside the module's
+        ``CASES = ...`` assignment, and only if a ``pytest.mark.parametrize`` over ``CASES``
+        runs them. A case defined anywhere else, or defined in CASES but never parametrized,
+        is not one that runs and does not count."""
+        tree = ast.parse(source)
+        runs_cases = any(
+            isinstance(node, ast.Call)
+            and getattr(node.func, "attr", "") == "parametrize"
+            and len(node.args) >= 2
+            and isinstance(node.args[1], ast.Name)
+            and node.args[1].id == "CASES"
+            for node in ast.walk(tree)
+        )
+        if not runs_cases:
+            return set()
         kinds: set[str] = set()
-        for node in ast.walk(ast.parse(source)):
-            if isinstance(node, ast.Call) and getattr(node.func, "id", "") == "ReplayCase":
-                for keyword in node.keywords:
-                    if keyword.arg == "kind" and isinstance(keyword.value, ast.Constant):
-                        kinds.add(str(keyword.value.value))
+        for node in ast.walk(tree):
+            targets = (
+                [node.target]
+                if isinstance(node, ast.AnnAssign)
+                else getattr(node, "targets", [])
+                if isinstance(node, ast.Assign)
+                else []
+            )
+            if any(isinstance(t, ast.Name) and t.id == "CASES" for t in targets) and node.value:
+                for call in ast.walk(node.value):
+                    if cls._is_case_call(call):
+                        for keyword in call.keywords:  # type: ignore[attr-defined]
+                            if keyword.arg == "kind" and isinstance(keyword.value, ast.Constant):
+                                kinds.add(str(keyword.value.value))
         return kinds
 
 
@@ -73,13 +110,13 @@ def covered_names() -> set[str]:
     return kinds
 
 
-def recorded() -> tuple[int, list[str]]:
+def recorded() -> list[str]:
     table = tomllib.loads(EXEMPTIONS.read_text(encoding="utf-8"))
-    return int(table["ceiling"]), list(table["exempt"])
+    return list(table["exempt"])
 
 
 def committed() -> ReplayCensus:
-    return ReplayCensus(handler_names(), covered_names(), recorded()[1])
+    return ReplayCensus(handler_names(), covered_names(), recorded())
 
 
 # ------------------------------------------------------------------- the repository
@@ -114,11 +151,11 @@ def test_every_replay_case_names_a_real_handler() -> None:
 
 
 def test_the_exemptions_are_unique_and_the_ceiling_is_exactly_their_number() -> None:
-    ceiling, exempt = recorded()
+    exempt = recorded()
     assert committed().duplicated_exemptions() == []
-    assert ceiling == len(exempt), (
-        f"`ceiling` is {ceiling} but {len(exempt)} handlers are exempt: the list can only "
-        "shrink, and `ceiling` falls with it (a rise needs a written reason in review)"
+    assert len(exempt) == CEILING, (
+        f"CEILING is {CEILING} but {len(exempt)} handlers are exempt: the list can only "
+        "shrink, and CEILING falls with it (a rise needs a written reason in review)"
     )
 
 
@@ -166,8 +203,23 @@ def test_a_duplicated_exemption_is_reported() -> None:
 
 def test_case_kinds_are_read_from_source_by_ast() -> None:
     source = (
-        'x = ReplayCase(name="n", kind="build_verify", build=f)\n'
-        'y = ReplayCase(name="n", kind=KIND, build=f)\n'
-        'z = Other(kind="not_a_case")\n'
+        "CASES = (\n"
+        '    ReplayCase(name="n", kind="build_verify", build=f),\n'
+        '    harness.ReplayCase(name="n", kind="design", build=f),\n'
+        '    ReplayCase(name="n", kind=KIND, build=f),\n'
+        '    Other(kind="not_a_case"),\n'
+        ")\n"
+        '@pytest.mark.parametrize("case", CASES)\n'
+        "def test_it(case): ...\n"
     )
-    assert ReplayCensus.case_kinds(source) == {"build_verify"}
+    assert ReplayCensus.case_kinds(source) == {"build_verify", "design"}
+
+
+def test_a_case_outside_cases_or_never_parametrized_does_not_count() -> None:
+    outside = (
+        'CASES = ()\nSTRAY = ReplayCase(name="n", kind="design", build=f)\n'
+        '@pytest.mark.parametrize("case", CASES)\ndef test_it(case): ...\n'
+    )
+    never_run = 'CASES = (ReplayCase(name="n", kind="design", build=f),)\n'
+    assert ReplayCensus.case_kinds(outside) == set()
+    assert ReplayCensus.case_kinds(never_run) == set()
