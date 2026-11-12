@@ -141,16 +141,31 @@ class FakeJobRepository:
         self.calls.append("claim")
         for job in self._claimable():
             if job.project_id == project_id:
-                leased = _with(
-                    job,
-                    state=JobState.LEASED,
-                    lease_owner=owner,
-                    lease_expires_at=datetime.now(UTC) + lease,
-                    attempts=job.attempts + 1,
-                )
-                self._jobs[job.id] = leased
-                return leased
+                return self.lease(job.id, owner=owner, lease=lease)
         return None
+
+    def lease(self, job_id: UUID, *, owner: str, lease: timedelta) -> JobRecord:
+        """What `claim` does to the row it picks: leased to `owner`, one more attempt. For a
+        test that must lease a particular job, not whichever the queue would hand out."""
+        job = self._jobs[job_id]
+        leased = _with(
+            job,
+            state=JobState.LEASED,
+            lease_owner=owner,
+            lease_expires_at=datetime.now(UTC) + lease,
+            attempts=job.attempts + 1,
+        )
+        self._jobs[job_id] = leased
+        return leased
+
+    def expire_lease(self, job_id: UUID) -> None:
+        """The worker died: its lease lapses, so `reap` requeues the job."""
+        job = self._jobs[job_id]
+        self._jobs[job_id] = _with(job, lease_expires_at=datetime.now(UTC) - timedelta(seconds=1))
+
+    def rows(self) -> tuple[tuple[JobRecord, tuple[UUID, ...]], ...]:
+        """Every row of the queue with the ids it depends on (adopted jobs are not rows)."""
+        return tuple((job, self.dependencies.get(job.id, ())) for job in self._jobs.values())
 
     def seed_leased(self, job: JobRecord) -> None:
         """Puts a job a handler is about to run into the repository as the leased job it is, so

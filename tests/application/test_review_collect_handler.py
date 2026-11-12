@@ -229,6 +229,39 @@ async def test_review_collect_handler_turns_free_text_changes_into_finding_event
     assert triage_job is not None
 
 
+async def _finding_ids(job: JobRecord, feedback: list[str]) -> list[str]:
+    ledger = FakeReviewCollectLedger()
+    handler = ReviewCollectHandler(
+        ledger=ledger,
+        gates=FakeGateRepo(answer={"verdict": "changes", "feedback": feedback}),
+        jobs=FakeJobRepository(),
+        clock=FixedClock(),
+    )
+    await handler.handle(job)
+    await handler.handle(job)
+    return [
+        str(payload["finding_id"])
+        for kind, payload in ledger.appended
+        if kind == EventKind.FINDING_RAISED
+    ]
+
+
+async def test_requested_changes_get_distinct_finding_ids() -> None:
+    ids = await _finding_ids(_make_job(), ["one", "two", "three"])
+    assert len(ids) == 3 and len(set(ids)) == 3
+
+
+async def test_the_same_job_handled_twice_mints_the_same_finding_ids() -> None:
+    job = _make_job()
+    assert await _finding_ids(job, ["one", "two"]) == await _finding_ids(job, ["one", "two"])
+
+
+async def test_two_different_jobs_mint_different_finding_ids() -> None:
+    first = await _finding_ids(_make_job(), ["one"])
+    second = await _finding_ids(_make_job(), ["one"])
+    assert first != second
+
+
 async def test_review_collect_handler_answers_why_questions_from_ledger() -> None:
     events = (
         LedgerEvent(
