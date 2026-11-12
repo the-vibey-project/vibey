@@ -1,5 +1,6 @@
 # Made with ❤️ by [Vibey](https://the-vibey-project.github.io/vibey/), Developed by [Adam Matthew Steinberger](https://vibewithadam.matthewsteinberger.com/) ([@adammatthewsteinberger](https://github.com/adammatthewsteinberger/)).
 import dataclasses
+import json
 from datetime import UTC, datetime
 from uuid import UUID, uuid4
 
@@ -7,6 +8,7 @@ import pytest
 from hypothesis import given
 from hypothesis import strategies as st
 
+from tests.ledger_strategies import json_payloads, json_values
 from vibey.domain.interfaces import EventKindParserInterface, UnrecognizedEventKindInterface
 from vibey.domain.ledger import (
     CLOSABLE,
@@ -145,6 +147,82 @@ def test_digest_event_never_raises(seq: int, payload_value: str) -> None:
     int(digest, 16)  # hex
     assert digest == digest_event({"v": payload_value, "seq": seq})
     assert digest != digest_event({"seq": seq + 1, "v": payload_value})
+
+
+def _reordered(value: object, data: st.DataObject) -> object:
+    """The same JSON value with every object's keys inserted in a drawn order."""
+    if isinstance(value, dict):
+        keys = data.draw(st.permutations(list(value)))
+        return {key: _reordered(value[key], data) for key in keys}
+    if isinstance(value, list):
+        return [_reordered(item, data) for item in value]
+    return value
+
+
+@given(payload=json_payloads(), data=st.data())
+def test_digest_event_is_stable_under_key_order_at_every_depth(
+    payload: dict[str, object], data: st.DataObject
+) -> None:
+    shuffled = _reordered(payload, data)
+    assert isinstance(shuffled, dict)
+    assert canonical_bytes(shuffled) == canonical_bytes(payload)
+    assert digest_event(shuffled) == digest_event(payload)
+
+
+@given(payload=json_payloads(), replacement=json_values(), data=st.data())
+def test_digest_event_changes_when_any_field_changes(
+    payload: dict[str, object], replacement: object, data: st.DataObject
+) -> None:
+    digest = digest_event(payload)
+    fresh = "new"
+    while fresh in payload:
+        fresh += "_"
+    assert digest_event({**payload, fresh: replacement}) != digest  # a field added
+    if not payload:
+        return
+    key = data.draw(st.sampled_from(sorted(payload)))
+    rest = {k: v for k, v in payload.items() if k != key}
+    assert digest_event(rest) != digest  # a field removed
+    assert digest_event({**rest, fresh: payload[key]}) != digest  # a field renamed
+    if json.dumps(replacement, sort_keys=True) != json.dumps(payload[key], sort_keys=True):
+        assert digest_event({**payload, key: replacement}) != digest  # a value changed
+
+
+def _leaf_paths(value: object, path: tuple[object, ...] = ()) -> list[tuple[object, ...]]:
+    if isinstance(value, dict):
+        return [p for k, v in value.items() for p in _leaf_paths(v, (*path, k))]
+    if isinstance(value, list):
+        return [p for i, v in enumerate(value) for p in _leaf_paths(v, (*path, i))]
+    return [path]
+
+
+def _with_leaf(value: object, path: tuple[object, ...], leaf: object) -> object:
+    if not path:
+        return leaf
+    head, *rest = path
+    if isinstance(value, dict):
+        return {k: _with_leaf(v, tuple(rest), leaf) if k == head else v for k, v in value.items()}
+    assert isinstance(value, list)
+    return [_with_leaf(v, tuple(rest), leaf) if i == head else v for i, v in enumerate(value)]
+
+
+@given(payload=json_payloads(), replacement=json_values(), data=st.data())
+def test_digest_event_changes_when_a_nested_leaf_changes(
+    payload: dict[str, object], replacement: object, data: st.DataObject
+) -> None:
+    paths = [p for p in _leaf_paths(payload) if p]
+    if not paths:
+        return
+    path = data.draw(st.sampled_from(paths))
+    changed = _with_leaf(payload, path, replacement)
+    assert isinstance(changed, dict)
+    if json.dumps(changed, sort_keys=True) != json.dumps(payload, sort_keys=True):
+        assert digest_event(changed) != digest_event(payload)
+
+
+@given(items=st.lists(st.integers(), min_size=2, max_size=6, unique=True))
+def test_digest_event_is_sensitive_to_list_order(items: list[int]) -> None:
+    assert digest_event({"xs": items}) != digest_event({"xs": items[::-1]})
 
 
 def test_digest_event_golden_vector() -> None:
