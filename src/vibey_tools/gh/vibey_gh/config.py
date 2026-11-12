@@ -1836,7 +1836,16 @@ def _ruleset(
         allowed_merge_methods=tuple(section.get("allowed_merge_methods", ())),
         minimum_coverage=section.get("minimum_coverage"),
         max_coverage_drop=section.get("max_coverage_drop"),
+        absent_rules=_rule_types(section.get("absent_rules", ())),
     )
+
+
+def _rule_types(raw: object) -> tuple[str, ...]:
+    """A list of rule type names from TOML. A bare string is refused: `tuple("creation")`
+    would silently become eight one-letter rule types."""
+    if not isinstance(raw, list | tuple):
+        raise TypeError(f"rulesets.absent_rules must be a list of rule types, got {raw!r}")
+    return tuple(raw)
 
 
 @dataclass(frozen=True)
@@ -2492,6 +2501,13 @@ class RulesetConfig:
     # The forge echoes an unset threshold as null but refuses a null one on input (422).
     minimum_coverage: int | float | None = None
     max_coverage_drop: int | float | None = None
+    # Rule types that must NOT exist on this branch's ruleset. The reconciler otherwise
+    # carries forward every live rule the declaration does not name (a silent deletion of
+    # someone's rule is the worse failure), so removing one needs a declaration of its own:
+    # a type listed here is dropped from the payload and reported, and `rulesets --check`
+    # fails while it is live. Empty is "none declared absent". A type that this policy also
+    # declares is refused at load: the two statements cannot both hold.
+    absent_rules: tuple[str, ...] = ()
 
     @staticmethod
     def _coverage_percent(name: str, value: object) -> None:
@@ -2513,7 +2529,37 @@ class RulesetConfig:
         """Whether this branch declares GitHub's `code_coverage` rule at all."""
         return self.minimum_coverage is not None or self.max_coverage_drop is not None
 
+    @property
+    def declared_rule_types(self) -> set[str]:
+        """The rule types `vibey_gh.rulesets.desired_rules` renders for this policy.
+
+        Mirrored here, not imported, because `rulesets` imports this module; a test holds
+        the two lists equal. `absent_rules` is validated against it at construction.
+        """
+        kinds = {"deletion", "non_fast_forward", "pull_request"}
+        for kind, declared in (
+            ("required_linear_history", self.require_linear_history),
+            ("required_signatures", self.require_signed_commits),
+            ("required_status_checks", bool(self.required_checks)),
+            ("merge_queue", self.merge_queue.enabled),
+            ("code_coverage", self.declares_code_coverage),
+        ):
+            if declared:
+                kinds.add(kind)
+        return kinds
+
     def __post_init__(self) -> None:
+        if any(not isinstance(kind, str) for kind in self.absent_rules):
+            raise TypeError(
+                f"rulesets.absent_rules entries must be strings, got {self.absent_rules!r}"
+            )
+        _unique_nonempty("rulesets.absent_rules", self.absent_rules)
+        for kind in self.absent_rules:
+            if kind in self.declared_rule_types:
+                raise ValueError(
+                    f"rulesets.absent_rules names {kind}, which this ruleset also declares; "
+                    "remove one of the two"
+                )
         self._coverage_percent("minimum_coverage", self.minimum_coverage)
         self._coverage_percent("max_coverage_drop", self.max_coverage_drop)
         _unique_nonempty("rulesets.allowed_merge_methods", self.allowed_merge_methods)

@@ -582,6 +582,12 @@ class RulesetConfigInterface(_ConfigRecordInterface, Protocol):
     @property
     def declares_code_coverage(self) -> bool: ...
 
+    @property
+    def absent_rules(self) -> tuple[str, ...]: ...
+
+    @property
+    def declared_rule_types(self) -> set[str]: ...
+
 
 @runtime_checkable
 class RulesetsConfigInterface(_ConfigRecordInterface, Protocol):
