@@ -9,6 +9,7 @@ import pytest
 import pytest_asyncio
 
 from tests.db_roles import TestDatabaseRoles
+from tests.infrastructure.db.query_counter import QueryCounter
 from vibey.infrastructure.db.migration_catalog import MigrationCatalog
 from vibey.infrastructure.db.migrator import apply_migrations, discover_migrations
 
@@ -99,3 +100,9 @@ async def project_id(migrated_pool: asyncpg.Pool) -> UUID:
         )
         assert pid is not None
         return UUID(str(pid))
+
+
+@pytest.fixture
+def query_counter() -> QueryCounter:
+    """Counts the SQL statements a block sends through a pool (see query_counter.py)."""
+    return QueryCounter()
