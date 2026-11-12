@@ -1,0 +1,1 @@
+The `develop` ruleset no longer declares `minimum_coverage`: GitHub's code-coverage rule cannot be evaluated on a merge-queue push ("Code coverage checks require a pull request"), so it failed every queue entry after its checks passed and nothing could land through the queue. The 100% floor stays enforced by the required `gates` job. Run `vibey-gh rulesets` to apply it.
