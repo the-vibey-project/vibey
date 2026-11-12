@@ -391,6 +391,25 @@ Correction to the original plan: bandit already runs on `claudeloop`, `codexloop
        `clients/`, or only `src/vibey`? Recommendation: all Python under `src/`; TypeScript
        and C follow their own layout rules in SP4.
     3. Scope of "one class per file" for private helper classes (nested or underscore).
+  - **Enforcement (added 2026-11-12, operator):** the rules are enforced by the git hooks
+    and by CI, not by review. One checker, `scripts/architecture_rules.py` (a class with an
+    interface, per the rule itself), reads the declared rules and baselines from
+    `pyproject.toml` and the TOML baseline files. The same command runs in three places:
+    - **pre-commit hook** on staged `.py` files under `src/`: fails a new or changed file
+      with a module-level function, a second class, a class without an interface, or a
+      folder without `interfaces/`; it never fails on a violation already in the baseline.
+    - **pre-push hook** (next to the SP4-A Gate 3b hook): the full census, failing if any
+      baseline count rose.
+    - **CI `lint` job** (first, before any heavy job, per SP1 CI-B): the same full census,
+      and `tests/meta` holds the baselines so they can only fall. The `ci.yml` step is one
+      commit, owned by SP1.
+
+    Hooks are declared in `.pre-commit-config.yaml` and described in
+    `docs/agents/instructions.toml` with their rendered copies, so CI's drift check keeps
+    them honest. The checker reports success only for rules it actually evaluated (it
+    prints the rule names and counts), never a silent pass. Until the operator rules on
+    the open conflicts, the hooks run in report-only mode and the rules switch to failing
+    in the same PR that records the ruling.
   - **Governance:** the rule binds future decisions, so it is a sub-doctrine in the canon
     (CLAUDE.md "A governing rule is a ratified sub-doctrine"), proposed in a separate canon
     PR the operator merges, plus an ADR amendment to ADR-0016. The gate is an ordinary
