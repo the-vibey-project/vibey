@@ -189,6 +189,35 @@ class ContentLedger:
         }
 
 
+class EntryBatches:
+    """The append-only record of a handler that is not a ``BuildLedger``, split by delivery.
+
+    ``add`` takes one entry as content; ``after_delivery()`` closes the delivery's batch and
+    returns what a redelivery is held to, by the same rule as ``ContentLedger`` (see #1887):
+    the first batch is the reference (``own``: its entries as a MULTISET, so one written twice
+    in a single delivery shows), and a later batch may only restate those entries, no more
+    often than the first wrote them. Anything else a later batch adds (``unmatched``) is a
+    difference. Delete the allowance when the ledger dedupes on identity.
+    """
+
+    def __init__(self) -> None:
+        self.entries: list[dict[str, object]] = []
+        self._batches: list[list[dict[str, object]]] = []
+        self._closed = 0
+
+    def add(self, entry: Mapping[str, object]) -> None:
+        self.entries.append(dict(entry))
+
+    def after_delivery(self) -> dict[str, object]:
+        self._batches.append(self.entries[self._closed :])
+        self._closed = len(self.entries)
+        first = Counter(repr(entry) for entry in self._batches[0])
+        unmatched: list[str] = []
+        for batch in self._batches[1:]:
+            unmatched += sorted((Counter(repr(entry) for entry in batch) - first).elements())
+        return {"own": sorted(first.items()), "unmatched": unmatched}
+
+
 def outcome_content(outcome: Outcome) -> object:
     """The outcome as comparable content: its class, and for a Success its result without
     the keys a redelivery may legitimately change (``RESULT_KEYS_A_REDELIVERY_MAY_CHANGE``).
@@ -200,7 +229,15 @@ def outcome_content(outcome: Outcome) -> object:
             if key not in RESULT_KEYS_A_REDELIVERY_MAY_CHANGE
         }
         return ("Success", kept)
-    if isinstance(outcome, Failure | Park | Defer):
+    if isinstance(outcome, Park):
+        # The request only. A handler that raises its own gate returns the new record in
+        # `gate` so the worker announces it once; a redelivery that finds the gate already
+        # open re-parks WITHOUT one ("an already-open gate from an earlier run is
+        # deliberately not notified again", worker._raise_and_park). That difference is the
+        # contract, not a drift. A DUPLICATED gate row is caught by the gate rows each gate
+        # case puts in its snapshot.
+        return ("Park", outcome.request)
+    if isinstance(outcome, Failure | Defer):
         return (type(outcome).__name__, outcome)
     raise AssertionError(f"unknown outcome {outcome!r}")
 
@@ -258,6 +295,7 @@ async def assert_replay_is_idempotent(case: ReplayCase, scratch: Path) -> None:
 
 __all__ = [
     "ContentLedger",
+    "EntryBatches",
     "ReplayCase",
     "ReplayRig",
     "assert_replay_is_idempotent",

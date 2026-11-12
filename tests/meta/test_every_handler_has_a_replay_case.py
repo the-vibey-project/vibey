@@ -24,7 +24,7 @@ HANDLERS = REPO / "src" / "vibey" / "application"
 REPLAY = REPO / "tests" / "application" / "replay"
 EXEMPTIONS = Path(__file__).with_name("handler_replay_exemptions.toml")
 
-CEILING = 13
+CEILING = 1
 """The most handlers that may be exempt. It lives here, not in the TOML, so that a change to
 the list cannot also move its own limit: lower it in the same change that covers a handler,
 and never raise it without a written reason in review."""
@@ -157,6 +157,16 @@ def test_the_exemptions_are_unique_and_the_ceiling_is_exactly_their_number() -> 
         f"CEILING is {CEILING} but {len(exempt)} handlers are exempt: the list can only "
         "shrink, and CEILING falls with it (a rise needs a written reason in review)"
     )
+
+
+def test_only_the_dead_letter_replay_is_exempt_and_for_its_stated_reason() -> None:
+    """Every job handler has a replay case. The one exception is not a job handler: it replays a
+    dead letter off the bus, which is not a delivered job. The census accepts a reason-bearing
+    entry for that name only; any other handler needs a case, not an exemption."""
+    assert recorded() == ["bus_dead_letter"]
+    lines = EXEMPTIONS.read_text(encoding="utf-8").splitlines()
+    (entry,) = [line for line in lines if line.strip().startswith('"bus_dead_letter"')]
+    assert "dead letter" in entry.split("#", 1)[1]
 
 
 def test_every_exemption_carries_a_reason() -> None:

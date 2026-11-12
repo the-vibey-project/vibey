@@ -12,13 +12,15 @@ import pytest
 from tests.application.fakes import FakeJobRepository, make_job
 from tests.application.replay.harness import (
     ContentLedger,
+    EntryBatches,
     ReplayCase,
     ReplayRig,
     assert_replay_is_idempotent,
     jobs_content,
+    outcome_content,
 )
-from vibey.application.dto import EngineEvent, EnqueueRequest, JobRecord
-from vibey.application.worker import Success
+from vibey.application.dto import EngineEvent, EnqueueRequest, HumanGateRequest, JobRecord
+from vibey.application.worker import Park, Success
 from vibey.domain.job import idempotency_key
 from vibey.domain.phase import Phase
 
@@ -199,3 +201,34 @@ async def test_a_run_whose_content_differs_on_a_redelivery_is_reported() -> None
     ledger.after_delivery()
     await _record(ledger, "Run", run=uuid4(), payload={"complete": False})
     assert ledger.after_delivery()["unmatched"] != []
+
+
+def test_entry_batches_allow_a_restatement_and_report_anything_else() -> None:
+    batches = EntryBatches()
+    batches.add({"kind": "A", "n": 1})
+    first = batches.after_delivery()
+    batches.add({"kind": "A", "n": 1})
+    assert batches.after_delivery()["unmatched"] == []
+    batches.add({"kind": "A", "n": 1})
+    batches.add({"kind": "A", "n": 1})
+    assert batches.after_delivery()["unmatched"] != []  # more often than the first wrote it
+    batches.add({"kind": "B", "n": 1})
+    assert batches.after_delivery()["unmatched"] != []  # an entry the first never wrote
+    assert first["unmatched"] == []
+    assert first["own"] == [(repr({"kind": "A", "n": 1}), 1)]
+
+
+def test_entry_batches_see_one_entry_written_twice_in_a_single_delivery() -> None:
+    once, twice = EntryBatches(), EntryBatches()
+    once.add({"kind": "A"})
+    twice.add({"kind": "A"})
+    twice.add({"kind": "A"})
+    assert once.after_delivery() != twice.after_delivery()
+
+
+def test_a_park_is_compared_by_its_request_not_by_the_gate_record_it_carries() -> None:
+    request = HumanGateRequest(kind="k", prompt="p")
+    assert outcome_content(Park(request)) == outcome_content(Park(request))
+    assert outcome_content(Park(request)) != outcome_content(
+        Park(HumanGateRequest(kind="k", prompt="another prompt"))
+    )
