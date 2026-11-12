@@ -187,4 +187,4 @@ reason = "Same gate as the sibling entries: mypy covers `src` only. This prefix 
 
 [[ungated]]
 prefix = "src/vibey_tools/skills/plugins/"
-reason = "Same gate as the sibling entries: mypy covers `src` only, and `plugins/` is outside [tool.ruff] include too. This prefix is the plugin helper scripts, which are outside ruff as well; one entry per directory because the former whole-tenant prefix now covers the gated `src/` tree (SP4-B)."
+reason = "Same gate as the sibling entries: mypy covers `src` only, and `plugins/` is outside the [tool.ruff] include. This prefix is the plugin helper scripts; one entry per directory because the former whole-tenant prefix now covers the gated `src/` tree (SP4-B)."

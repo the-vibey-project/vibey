@@ -45,6 +45,7 @@ _NOTIFIED_MARKER = "awaiting your review"
 
 # One pull request as `gh pr view --json` gives it (`_PR_FIELDS`), plus the keys this module adds.
 type PullRequest = dict[str, Any]  # Any: gh JSON, as `_gh_json` says; `judge` checks each field
+
 # Both gates the split PR automation renders must be green before the train may merge: the
 # scan gate from pr-evaluate.yml and the review gate from pr-review.yml. `PR automation /
 # gate` is the pre-split spelling; a head that has it in its rollup is checked by name
