@@ -26,16 +26,27 @@ from collections import Counter
 from datetime import date, datetime
 from itertools import accumulate, pairwise
 from pathlib import Path
-from typing import Any
+from typing import TYPE_CHECKING, Any
 from zoneinfo import ZoneInfo
 
-from interfaces.paper_evidence_interface import (
-    GitHistoryInterface,
-    PaperEvidenceInterface,
-    QwenStormRecordInterface,
-    StressRecordInterface,
-    StressRung,
-)
+if TYPE_CHECKING:
+    # The checker sees the interface under the name the repository root resolves; at run time the
+    # script directory is on `sys.path`, so the same file is imported as `interfaces.*`.
+    from scripts.interfaces.paper_evidence_interface import (
+        GitHistoryInterface,
+        PaperEvidenceInterface,
+        QwenStormRecordInterface,
+        StressRecordInterface,
+        StressRung,
+    )
+else:
+    from interfaces.paper_evidence_interface import (
+        GitHistoryInterface,
+        PaperEvidenceInterface,
+        QwenStormRecordInterface,
+        StressRecordInterface,
+        StressRung,
+    )
 
 DEFAULT_STRESS_RECORD = "src/vibey_tools/gh/docs/sovereignty-stress-2026-08-30.md"
 DEFAULT_QWEN_STORM_RECORD = "src/vibey_tools/gh/docs/qwenloop-storm-2026-09-20.json"
@@ -72,7 +83,8 @@ class StressRecord(StressRecordInterface):
         self._work_units = work_units
 
     @staticmethod
-    def _number(cell: str) -> float:
+    def number(cell: str) -> float:
+        """The first number in a table cell, or a `ValueError` naming the cell."""
         match = _NUMBER.search(cell)
         if match is None:
             raise ValueError(f"no number in table cell {cell!r}")
@@ -98,9 +110,9 @@ class StressRecord(StressRecordInterface):
                     concurrency=int(cells[0]),
                     attempted=attempted,
                     succeeded=succeeded,
-                    p50_seconds=self._number(cells[3]),
-                    max_seconds=self._number(cells[4]),
-                    throughput_per_minute=self._number(cells[5]),
+                    p50_seconds=self.number(cells[3]),
+                    max_seconds=self.number(cells[4]),
+                    throughput_per_minute=self.number(cells[5]),
                 )
             )
         if not rows:

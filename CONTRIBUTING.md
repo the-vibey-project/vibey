@@ -331,6 +331,7 @@ Gate 4 is the four per-layer floors (ADR-0023):
 uv run ruff check .
 uv run ruff format --check .
 uv run mypy --strict src/vibey
+uv run python scripts/static_gates.py   # Gate 3b: the other declared trees
 
 # One test run with coverage, then the per-layer 100% branch gates:
 uv run pytest -q -p no:cacheprovider --cov=vibey --cov-branch --cov-report=

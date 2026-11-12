@@ -780,8 +780,8 @@ class GroundingRule(GroundingRuleInterface):
             for status, path in touched
             if status != "A" and path not in read
         )
-        runs = self.passing_runs(calls)
-        if not runs:
+        passing = self.passing_runs(calls)
+        if not passing:
             found.append("(no passing test command ran)")
         elif self._tests:
             # The run must be about THIS patch: a passing test elsewhere says nothing about it.
@@ -790,7 +790,7 @@ class GroundingRule(GroundingRuleInterface):
                 for status, path in touched
                 if status != "D" and any(rx.search(path) for rx in self._tests)
             ]
-            if changed and not self.covers(runs, changed):
+            if changed and not self.covers(passing, changed):
                 found.append("(no passing test run targeted a test this patch adds or changes)")
         return found
 

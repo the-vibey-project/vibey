@@ -12,14 +12,24 @@ from __future__ import annotations
 import json
 import re
 from pathlib import Path
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
-from interfaces.design_interface import (
-    ContrastAuditInterface,
-    ContrastResult,
-    Token,
-    TokenSetInterface,
-)
+if TYPE_CHECKING:
+    # The checker sees the interface under the name the repository root resolves; at run time the
+    # script directory is on `sys.path`, so the same file is imported as `interfaces.design_interface`.
+    from scripts.interfaces.design_interface import (
+        ContrastAuditInterface,
+        ContrastResult,
+        Token,
+        TokenSetInterface,
+    )
+else:
+    from interfaces.design_interface import (
+        ContrastAuditInterface,
+        ContrastResult,
+        Token,
+        TokenSetInterface,
+    )
 
 REFERENCE = re.compile(r"^\{([^{}]+)\}$")
 THEMES: tuple[str, ...] = ("dark", "light")

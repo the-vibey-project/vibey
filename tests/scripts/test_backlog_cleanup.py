@@ -14,6 +14,8 @@ from __future__ import annotations
 
 import subprocess
 
+import pytest
+
 from scripts import backlog_cleanup as bc
 
 
@@ -197,6 +199,12 @@ def test_a_self_closing_tracker_is_not_triage_debt() -> None:
     assert rows[1423]["verdict"] == "SELF-CLOSING"
     assert rows[1423]["act"] is False
     assert loop.coverage_gaps(list(rows.values())) == [1500]
+
+
+def test_a_malformed_self_closing_markers_key_raises() -> None:
+    expectations = {"issues": {}, "self_closing_markers": 3}
+    with pytest.raises(TypeError, match="self_closing_markers"):
+        bc.BacklogCleanup(_ListingGh([]), expectations, cutoff="abc")  # type: ignore[arg-type]
 
 
 def test_without_declared_markers_every_unentered_issue_is_debt() -> None:

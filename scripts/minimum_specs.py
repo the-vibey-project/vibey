@@ -1339,9 +1339,11 @@ class ScratchDatabase:
 
     def sql(self, statement: str, database: str | None = None) -> CommandResult:
         url = self.url(database) if database else self._admin
-        return self._runner.run(
+        # CommandRunnerInterface.run is declared `Any` (its result type lives in this module).
+        result: CommandResult = self._runner.run(
             ["psql", url, "-X", "-At", "-v", "ON_ERROR_STOP=1", "-c", statement], timeout=120
         )
+        return result
 
     def url(self, database: str | None = None) -> str:
         """The admin DSN pointed at `database` (the path component replaced)."""
@@ -2844,10 +2846,14 @@ class CellMerger:
             for cell in self._cell_of(partial):
                 prefixes = self._matrix.prefixes(cell)
                 covered.add(cell.prefix)
+
+                def reported_cell(fid: str, owned: tuple[str, ...] = prefixes) -> bool:
+                    return fid.startswith(owned)
+
                 policy = StalenessPolicy(
                     derived,
                     f"the {cell.distro}/{cell.arch} cell's run did not report it",
-                    lambda fid, p=prefixes: fid.startswith(p),
+                    reported_cell,
                 )
                 figures = [
                     *policy.merge(figures, partial.figures),
@@ -2858,10 +2864,14 @@ class CellMerger:
         for cell in self._matrix.cells():
             if complete and cell.prefix not in covered and cell.image:
                 prefixes = self._matrix.prefixes(cell)
+
+                def handed_over_cell(fid: str, owned: tuple[str, ...] = prefixes) -> bool:
+                    return fid.startswith(owned)
+
                 policy = StalenessPolicy(
                     derived,
                     f"the {cell.distro}/{cell.arch} cell handed over no record this run",
-                    lambda fid, p=prefixes: fid.startswith(p),
+                    handed_over_cell,
                 )
                 figures = [*policy.merge(figures, []), *[f for f in figures if f.id in derived]]
             reason = (
@@ -2902,7 +2912,9 @@ class Derivation:
     unit: str
     formula: str
     inputs: tuple[str, ...]
-    compute: Callable[[Mapping[str, float]], Any]
+    #: Called with the values. A computation that needs a loop variable binds it as a defaulted
+    #: parameter of a nested `def` (a lambda's default-binding form defeats mypy's inference).
+    compute: Callable[[Mapping[str, Any]], Any]
     note: str | None = None
     #: A fit over a sweep may run on part of it: when set, missing inputs are tolerated as
     #: long as at least this many figure inputs are present (the formula names the rest).
@@ -2933,6 +2945,18 @@ class Derivations(DerivationsInterface):
             return next((s for s in sorted(options) if s >= value), None)
 
         def model_process(ctx: int) -> Derivation:
+            # Any: the inputs are untyped measured figures (dict[str, Any]), so the result is too.
+            def process_gib(v: Mapping[str, Any], c: int = ctx) -> Any:
+                return round(
+                    (
+                        v[f"bench.{m}.ctx{c}.device_mib"]
+                        + v[f"bench.{m}.ctx{c}.host_model_mib"]
+                        + v[f"bench.{m}.ctx{c}.host_compute_mib"]
+                    )
+                    / 1024,
+                    2,
+                )
+
             return Derivation(
                 f"ram.model_process.ctx{ctx}",
                 f"{m} process memory at {ctx:,} tokens",
@@ -2943,15 +2967,7 @@ class Derivations(DerivationsInterface):
                     f"bench.{m}.ctx{ctx}.host_model_mib",
                     f"bench.{m}.ctx{ctx}.host_compute_mib",
                 ),
-                lambda v, c=ctx: round(
-                    (
-                        v[f"bench.{m}.ctx{c}.device_mib"]
-                        + v[f"bench.{m}.ctx{c}.host_model_mib"]
-                        + v[f"bench.{m}.ctx{c}.host_compute_mib"]
-                    )
-                    / 1024,
-                    2,
-                ),
+                process_gib,
             )
 
         contexts = sorted(int(c) for c in self._settings.bench["contexts"])
@@ -3455,7 +3471,9 @@ class Derivations(DerivationsInterface):
                     )
             else:
                 dated = [
-                    known[i].measured_at for i in spec.inputs if i in known and known[i].measured_at
+                    measured
+                    for i in spec.inputs
+                    if i in known and (measured := known[i].measured_at)
                 ]
                 figure = Figure(
                     id=spec.id,
@@ -3629,6 +3647,43 @@ class ModelFits(DerivationSourceInterface):
             def fit(v: Mapping[str, Any], a: str = arch) -> AmdahlFit:
                 return self.cpu_fit(a, v)
 
+            def t1(
+                v: Mapping[str, Any], g: Callable[[Mapping[str, Any]], AmdahlFit] = fit
+            ) -> float:
+                return round(g(v).t1, 3)
+
+            def parallel_fraction(
+                v: Mapping[str, Any], g: Callable[[Mapping[str, Any]], AmdahlFit] = fit
+            ) -> float:
+                return round(g(v).p, 4)
+
+            def r_squared(
+                v: Mapping[str, Any], g: Callable[[Mapping[str, Any]], AmdahlFit] = fit
+            ) -> float:
+                return round(g(v).r2, 4)
+
+            def asymptote(
+                v: Mapping[str, Any], g: Callable[[Mapping[str, Any]], AmdahlFit] = fit
+            ) -> float | str:
+                return round(g(v).asymptote, 2) if g(v).p < 1 else "unbounded"
+
+            def knee_cores(
+                v: Mapping[str, Any], g: Callable[[Mapping[str, Any]], AmdahlFit] = fit
+            ) -> int | str:
+                return (
+                    math.ceil(self._math.knee(g(v), v[knee]))
+                    if math.isfinite(self._math.knee(g(v), v[knee]))
+                    else "unbounded"
+                )
+
+            def minimum_cores(
+                v: Mapping[str, Any], g: Callable[[Mapping[str, Any]], AmdahlFit] = fit
+            ) -> int | str:
+                return (
+                    self._math.cores_for_rate(g(v), v["assumption.minimum_gen_tok_s"])
+                    or "unreachable"
+                )
+
             specs += [
                 Derivation(
                     f"{f}.t1_tok_s",
@@ -3636,7 +3691,7 @@ class ModelFits(DerivationSourceInterface):
                     "tokens/s",
                     f"Amdahl T(n) = T1 / ((1-p) + p/n) {sweep}: {amdahl}",
                     ids,
-                    lambda v, g=fit: round(g(v).t1, 3),
+                    t1,
                     at_least=3,
                 ),
                 Derivation(
@@ -3645,7 +3700,7 @@ class ModelFits(DerivationSourceInterface):
                     "ratio",
                     f"Amdahl {sweep}: p = b/(a+b)",
                     ids,
-                    lambda v, g=fit: round(g(v).p, 4),
+                    parallel_fraction,
                     at_least=3,
                 ),
                 Derivation(
@@ -3654,7 +3709,7 @@ class ModelFits(DerivationSourceInterface):
                     "ratio",
                     f"Amdahl {sweep}; R^2 of T(n) against the measured T",
                     ids,
-                    lambda v, g=fit: round(g(v).r2, 4),
+                    r_squared,
                     at_least=3,
                 ),
                 Derivation(
@@ -3663,7 +3718,7 @@ class ModelFits(DerivationSourceInterface):
                     "tokens/s",
                     "lim n->inf T(n) = T1 / (1-p)",
                     ids,
-                    lambda v, g=fit: round(g(v).asymptote, 2) if g(v).p < 1 else "unbounded",
+                    asymptote,
                     at_least=3,
                 ),
                 Derivation(
@@ -3672,11 +3727,7 @@ class ModelFits(DerivationSourceInterface):
                     "cores",
                     "dT/dn = T1*p / ((1-p)n + p)^2 = theta  =>  n* = (sqrt(T1*p/theta) - p)/(1-p); ceil",
                     (*ids, knee),
-                    lambda v, g=fit: (
-                        math.ceil(self._math.knee(g(v), v[knee]))
-                        if math.isfinite(self._math.knee(g(v), v[knee]))
-                        else "unbounded"
-                    ),
+                    knee_cores,
                     at_least=3,
                 ),
                 Derivation(
@@ -3685,10 +3736,7 @@ class ModelFits(DerivationSourceInterface):
                     "cores",
                     "T(n) >= F  <=>  n >= p / (T1/F - (1-p)), solvable only when F < T1/(1-p); ceil",
                     (*ids, "assumption.minimum_gen_tok_s"),
-                    lambda v, g=fit: (
-                        self._math.cores_for_rate(g(v), v["assumption.minimum_gen_tok_s"])
-                        or "unreachable"
-                    ),
+                    minimum_cores,
                     at_least=3,
                 ),
             ]
@@ -3790,6 +3838,74 @@ class LinuxDerivations(DerivationSourceInterface):
             p = cell.prefix
             b = self._matrix.bundle_prefix(cell.arch)
             engine, krypton = f"{p}.install.vibey-engine", f"{p}.install.krypton-app"
+
+            # Any: the inputs are untyped measured figures (dict[str, Any]), so the result is too.
+            def minimum_need(v: Mapping[str, Any], p: str = p, b: str = b, e: str = engine) -> Any:
+                return round(
+                    (
+                        v[f"{p}.pkg.base.bytes"]
+                        + v[f"{p}.pkg.postgres.bytes"]
+                        + v[f"{e}.venv_bytes"]
+                        + v[f"{e}.uv_cache_bytes"]
+                        + v[f"{b}.unpacked_bytes"]
+                        + v[f"model.{m}.download_bytes"]
+                        + v["disk.git_pack_mib"] * MIB
+                        + v["assumption.minimum_worktrees"] * v["disk.worktree_bytes"]
+                    )
+                    / 1e9
+                    + v["assumption.postgres_data_allowance_gb"],
+                    1,
+                )
+
+            # Any: the inputs are untyped measured figures (dict[str, Any]), so the result is too.
+            def minimum_disk(v: Mapping[str, Any], p: str = p) -> Any:
+                return math.ceil(v[f"{p}.disk.minimum_need_gb"] / 10) * 10
+
+            # Any: the inputs are untyped measured figures (dict[str, Any]), so the result is too.
+            def with_ledger(v: Mapping[str, Any], p: str = p) -> Any:
+                return round(v[f"{p}.disk.minimum_need_gb"] + v["disk.ledger_growth_gb"], 1)
+
+            # Any: the inputs are untyped measured figures (dict[str, Any]), so the result is too.
+            def recommended_need(v: Mapping[str, Any], p: str = p, kr: str = krypton) -> Any:
+                return round(
+                    v[f"{p}.disk.minimum_need_gb"]
+                    + (
+                        v[f"{p}.pkg.desktop.bytes"]
+                        + v[f"{kr}.venv_bytes"]
+                        + sum(v[f"model.{o}.download_bytes"] for o in optional)
+                        + v["disk.dev_venv_bytes"]
+                        + (
+                            v["assumption.recommended_worktrees"]
+                            - v["assumption.minimum_worktrees"]
+                        )
+                        * v["disk.worktree_bytes"]
+                        + v[f"model.{m}.download_bytes"]
+                    )
+                    / 1e9,
+                    1,
+                )
+
+            # Any: the inputs are untyped measured figures (dict[str, Any]), so the result is too.
+            def recommended_disk(v: Mapping[str, Any], p: str = p) -> Any:
+                return math.ceil(v[f"{p}.disk.recommended_need_gb"] / 10) * 10
+
+            def floor_postgres(v: Mapping[str, Any], p: str = p) -> bool:
+                return Versions.major(v[f"{p}.packaged.postgres"]) >= int(
+                    v["declared.postgres_min_major"]
+                )
+
+            def floor_python(v: Mapping[str, Any], p: str = p) -> bool:
+                return Versions.at_least(v[f"{p}.packaged.python"], v["python.floor"])
+
+            def floor_glibc(v: Mapping[str, Any], p: str = p) -> bool:
+                return Versions.at_least(v[f"{p}.glibc"], v[f"{p}.install.glibc_floor"])
+
+            def floor_desktop(v: Mapping[str, Any], p: str = p) -> bool:
+                return all(
+                    Versions.at_least(v[f"{p}.packaged.{role}"], v[f"declared.desktop_{role}"])
+                    for role in ("glib", "json_glib", "gtk4", "libadwaita")
+                )
+
             specs += [
                 Derivation(
                     f"{p}.disk.minimum_need_gb",
@@ -3808,21 +3924,7 @@ class LinuxDerivations(DerivationSourceInterface):
                         "disk.worktree_bytes",
                         "assumption.postgres_data_allowance_gb",
                     ),
-                    lambda v, p=p, b=b, e=engine: round(
-                        (
-                            v[f"{p}.pkg.base.bytes"]
-                            + v[f"{p}.pkg.postgres.bytes"]
-                            + v[f"{e}.venv_bytes"]
-                            + v[f"{e}.uv_cache_bytes"]
-                            + v[f"{b}.unpacked_bytes"]
-                            + v[f"model.{m}.download_bytes"]
-                            + v["disk.git_pack_mib"] * MIB
-                            + v["assumption.minimum_worktrees"] * v["disk.worktree_bytes"]
-                        )
-                        / 1e9
-                        + v["assumption.postgres_data_allowance_gb"],
-                        1,
-                    ),
+                    minimum_need,
                 ),
                 Derivation(
                     f"{p}.disk.minimum_gb",
@@ -3830,7 +3932,7 @@ class LinuxDerivations(DerivationSourceInterface):
                     "GB",
                     "the need rounded up to the next 10 GB",
                     (f"{p}.disk.minimum_need_gb",),
-                    lambda v, p=p: math.ceil(v[f"{p}.disk.minimum_need_gb"] / 10) * 10,
+                    minimum_disk,
                 ),
                 Derivation(
                     f"{p}.disk.with_ledger_gb",
@@ -3838,9 +3940,7 @@ class LinuxDerivations(DerivationSourceInterface):
                     "GB",
                     "minimum need + ledger growth over the horizon",
                     (f"{p}.disk.minimum_need_gb", "disk.ledger_growth_gb"),
-                    lambda v, p=p: round(
-                        v[f"{p}.disk.minimum_need_gb"] + v["disk.ledger_growth_gb"], 1
-                    ),
+                    with_ledger,
                 ),
                 Derivation(
                     f"{p}.disk.recommended_need_gb",
@@ -3858,23 +3958,7 @@ class LinuxDerivations(DerivationSourceInterface):
                         "disk.worktree_bytes",
                         f"model.{m}.download_bytes",
                     ),
-                    lambda v, p=p, kr=krypton: round(
-                        v[f"{p}.disk.minimum_need_gb"]
-                        + (
-                            v[f"{p}.pkg.desktop.bytes"]
-                            + v[f"{kr}.venv_bytes"]
-                            + sum(v[f"model.{o}.download_bytes"] for o in optional)
-                            + v["disk.dev_venv_bytes"]
-                            + (
-                                v["assumption.recommended_worktrees"]
-                                - v["assumption.minimum_worktrees"]
-                            )
-                            * v["disk.worktree_bytes"]
-                            + v[f"model.{m}.download_bytes"]
-                        )
-                        / 1e9,
-                        1,
-                    ),
+                    recommended_need,
                 ),
                 Derivation(
                     f"{p}.disk.recommended_gb",
@@ -3882,7 +3966,7 @@ class LinuxDerivations(DerivationSourceInterface):
                     "GB",
                     "the recommended need rounded up to the next 10 GB",
                     (f"{p}.disk.recommended_need_gb",),
-                    lambda v, p=p: math.ceil(v[f"{p}.disk.recommended_need_gb"] / 10) * 10,
+                    recommended_disk,
                 ),
                 Derivation(
                     f"{p}.floor.postgres",
@@ -3890,10 +3974,7 @@ class LinuxDerivations(DerivationSourceInterface):
                     "verdict",
                     "major(packaged PostgreSQL) >= the floor vibey checks on connect",
                     (f"{p}.packaged.postgres", "declared.postgres_min_major"),
-                    lambda v, p=p: (
-                        Versions.major(v[f"{p}.packaged.postgres"])
-                        >= int(v["declared.postgres_min_major"])
-                    ),
+                    floor_postgres,
                 ),
                 Derivation(
                     f"{p}.floor.python",
@@ -3901,7 +3982,7 @@ class LinuxDerivations(DerivationSourceInterface):
                     "verdict",
                     "packaged python3 >= the oldest Python vibey-engine runs on",
                     (f"{p}.packaged.python", "python.floor"),
-                    lambda v, p=p: Versions.at_least(v[f"{p}.packaged.python"], v["python.floor"]),
+                    floor_python,
                 ),
                 Derivation(
                     f"{p}.floor.glibc",
@@ -3909,9 +3990,7 @@ class LinuxDerivations(DerivationSourceInterface):
                     "verdict",
                     "glibc >= the newest glibc any installed wheel requires",
                     (f"{p}.glibc", f"{p}.install.glibc_floor"),
-                    lambda v, p=p: Versions.at_least(
-                        v[f"{p}.glibc"], v[f"{p}.install.glibc_floor"]
-                    ),
+                    floor_glibc,
                 ),
                 Derivation(
                     f"{p}.floor.desktop",
@@ -3928,10 +4007,7 @@ class LinuxDerivations(DerivationSourceInterface):
                         f"{p}.packaged.libadwaita",
                         "declared.desktop_libadwaita",
                     ),
-                    lambda v, p=p: all(
-                        Versions.at_least(v[f"{p}.packaged.{role}"], v[f"declared.desktop_{role}"])
-                        for role in ("glib", "json_glib", "gtk4", "libadwaita")
-                    ),
+                    floor_desktop,
                 ),
             ]
         return specs

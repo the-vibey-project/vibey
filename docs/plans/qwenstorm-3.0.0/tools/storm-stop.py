@@ -45,6 +45,7 @@ import subprocess
 import sys
 import time
 from pathlib import Path
+from typing import TypedDict
 
 # .absolute(), never .resolve(): tools/ is a symlink into the planning worktree, where specs/
 # resolve but lanes/ and integration/ exist only in the runtime root.
@@ -145,7 +146,22 @@ def lines_of(name: str) -> list[str]:
     return [line.strip() for line in path.read_text(errors="replace").splitlines() if line.strip()]
 
 
-def gather(table: list[tuple[int, str]]) -> dict:
+class RunState(TypedDict):
+    """What `gather` records of the storm while it is still alive."""
+
+    when: str
+    in_flight: str | None
+    queue: int
+    integrated: list[str]
+    abandoned: list[str]
+    lanes: list[str]
+    unsettled: list[str]
+    unfinished: list[str]
+    integration: str
+    running: list[tuple[str, int]]
+
+
+def gather(table: list[tuple[int, str]]) -> RunState:
     """Everything worth recording, read while the storm is still alive."""
     lanes = sorted(d.name for d in LANES.iterdir() if d.is_dir()) if LANES.is_dir() else []
     settled = set(lines_of("integrated.txt")) | set(lines_of("abandoned.txt"))

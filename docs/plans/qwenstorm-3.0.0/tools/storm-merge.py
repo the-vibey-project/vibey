@@ -37,6 +37,7 @@ import os
 import re
 import subprocess
 import time
+from collections.abc import Iterator
 from pathlib import Path
 
 import storm_paths
@@ -92,7 +93,7 @@ TRAIN_LOCK = STORM / "scratch/merge-train.lock"
 
 
 @contextlib.contextmanager
-def only_one_train():
+def only_one_train() -> Iterator[bool]:
     """Hold the one lock that lets a merge train run, or decline to run one.
 
     `storm-cycle.py` already runs `vibey-gh merge-train` every ten minutes as one of its

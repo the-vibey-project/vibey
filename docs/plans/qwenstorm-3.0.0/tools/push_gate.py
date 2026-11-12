@@ -465,7 +465,7 @@ class Owner:
         def number(value: object) -> bool:
             return isinstance(value, int | float) and not isinstance(value, bool)
 
-        checks = {
+        checks: dict[str, Callable[[object], bool]] = {
             "token": lambda v: isinstance(v, str) and bool(TOKEN.match(v)),
             "pid": lambda v: isinstance(v, int) and not isinstance(v, bool) and v > 1,
             "pgid": lambda v: (
@@ -2550,8 +2550,8 @@ def main(argv: list[str] | None = None) -> int:
         if args.command == "schedule-status":
             print(schedule.status())
             return 0
-        verb = schedule.install if args.command == "install-schedule" else schedule.uninstall
-        lines = verb(dry_run=args.dry_run)
+        act = schedule.install if args.command == "install-schedule" else schedule.uninstall
+        lines = act(dry_run=args.dry_run)
         print("\n".join(lines))
         return 1 if any(line.startswith("FAILED") for line in lines) else 0
     signaller = Signaller()

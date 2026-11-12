@@ -632,7 +632,7 @@ class ChildGuard:
                 self._send(f"pid {process.pid}")
             return process
 
-        asyncio.create_subprocess_exec = recording  # type: ignore[assignment]
+        asyncio.create_subprocess_exec = recording
 
     def report(self, verdict: dict[str, Any]) -> None:
         self._send("result " + json.dumps(verdict))

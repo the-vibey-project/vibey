@@ -46,6 +46,7 @@ from __future__ import annotations
 import subprocess
 import sys
 import tomllib
+from collections.abc import Callable
 from pathlib import Path
 
 CONFIG = "storm.toml"
@@ -203,14 +204,13 @@ def main() -> int:
         print("usage: storm_paths.py {storm|repo|python|slug}", file=sys.stderr)
         return 2
     root = storm(__file__)
-    print(
-        {
-            "storm": lambda: root,
-            "repo": lambda: repo(root),
-            "python": lambda: interpreter(root),
-            "slug": lambda: slug(root),
-        }[sys.argv[1]]()
-    )
+    answers: dict[str, Callable[[], str | Path]] = {
+        "storm": lambda: root,
+        "repo": lambda: repo(root),
+        "python": lambda: interpreter(root),
+        "slug": lambda: slug(root),
+    }
+    print(answers[sys.argv[1]]())
     return 0
 
 
