@@ -58,6 +58,7 @@ from vibey_gh.skip_markers import SkipMarkerGuard
 from vibey_gh.tracking_issue import TrackingIssue
 
 if TYPE_CHECKING:
+    from vibey_gh.feasibility import StateVector
     from vibey_gh.heartbeat_timer import ServiceManager
     from vibey_gh.interfaces.forge_snapshot_interface import ForgeReaderInterface
     from vibey_gh.interfaces.heartbeat_timer_interface import HeartbeatTimerInterface
@@ -66,6 +67,7 @@ if TYPE_CHECKING:
         SabbathLanesInterface,
     )
     from vibey_gh.interfaces.sovereign_lane_interface import LaneReadinessInterface
+    from vibey_gh.paper import Provenance
     from vibey_gh.sovereign_runner import Launchctl
 
 
@@ -1283,7 +1285,7 @@ def _runner(args: argparse.Namespace, launchctl: Launchctl | None = None) -> int
     return 0
 
 
-def _fit(args) -> int:
+def _fit(args: argparse.Namespace) -> int:
     from pathlib import Path
 
     from vibey_gh import fit
@@ -1348,7 +1350,7 @@ def _fit(args) -> int:
     return 0 if verdict.ok else 1
 
 
-def _slots(args) -> int:
+def _slots(args: argparse.Namespace) -> int:
     # Module-level like every other handler here: argparse dispatches through
     # `set_defaults(func=...)`. It only resolves configuration; the work is `SlotCommands`'
     # (ADR-0016).
@@ -1363,7 +1365,7 @@ def _slots(args) -> int:
     return int(getattr(commands, args.slots_action)(args))
 
 
-def _estimate(args) -> int:
+def _estimate(args: argparse.Namespace) -> int:
     # Module-level like every other handler in this file: argparse dispatches through
     # `set_defaults(func=...)`. It only resolves configuration and prints; the estimate
     # itself is `OperationEstimator`'s (ADR-0016).
@@ -1414,7 +1416,7 @@ def _estimate(args) -> int:
     return result.exit_code
 
 
-def _forecast(args) -> int:
+def _forecast(args: argparse.Namespace) -> int:
     """Refresh the append-only delivery estimate and its human report."""
     from vibey_gh import github_state
     from vibey_gh.delivery_estimate import DeliveryEstimator, PhiConfig, WorkHistoryCalculator
@@ -1485,7 +1487,7 @@ def _forecast(args) -> int:
     return 1 if args.strict and forecast.problems else 0
 
 
-def _forecast_state(path: Path | None):
+def _forecast_state(path: Path | None) -> StateVector:
     from vibey_gh.feasibility import Coordinate, StateVector
 
     if path is None:
@@ -1521,7 +1523,7 @@ def _summary_path() -> Path | None:
     return Path(value) if value else None
 
 
-def _doctor(args) -> int:
+def _doctor(args: argparse.Namespace) -> int:
     from vibey_gh import doctor
 
     findings = doctor.diagnose(root=None)
@@ -1544,7 +1546,9 @@ def _doctor(args) -> int:
     return 0
 
 
-def _paper_provenance(args, reader: RevisionReaderInterface | None = None):
+def _paper_provenance(
+    args: argparse.Namespace, reader: RevisionReaderInterface | None = None
+) -> Provenance | None:
     """The article's provenance from the flags and, with `--provenance`, from git and the clock.
 
     Nothing here is typed by a person: the revision and its commit time come from the
@@ -1573,7 +1577,7 @@ def _paper_provenance(args, reader: RevisionReaderInterface | None = None):
     )
 
 
-def _paper(args, reader: RevisionReaderInterface | None = None) -> int:
+def _paper(args: argparse.Namespace, reader: RevisionReaderInterface | None = None) -> int:
     from vibey_gh import paper
     from vibey_gh.docx import DocxError
 
@@ -1610,7 +1614,7 @@ def _paper(args, reader: RevisionReaderInterface | None = None) -> int:
     return 0
 
 
-def _paper_figures(args) -> int:
+def _paper_figures(args: argparse.Namespace) -> int:
     """Emit the paper's figures as standalone TeX, or inline their SVG renderings.
 
     Two halves of one pipeline that a TeX engine sits between. `--emit DIR` writes one
@@ -1662,7 +1666,7 @@ def _paper_figures(args) -> int:
     return 0
 
 
-def _book(args) -> int:
+def _book(args: argparse.Namespace) -> int:
     from vibey_gh import book
     from vibey_gh.docx import DocxError
 
@@ -1712,7 +1716,7 @@ def _book(args) -> int:
     return 0
 
 
-def _local_authority(args) -> int:
+def _local_authority(args: argparse.Namespace) -> int:
     from vibey_gh import local_authority
 
     paths = (
