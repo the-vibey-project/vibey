@@ -83,7 +83,8 @@ class StressRecord(StressRecordInterface):
         self._work_units = work_units
 
     @staticmethod
-    def _number(cell: str) -> float:
+    def number(cell: str) -> float:
+        """The first number in a table cell, or a `ValueError` naming the cell."""
         match = _NUMBER.search(cell)
         if match is None:
             raise ValueError(f"no number in table cell {cell!r}")
@@ -109,9 +110,9 @@ class StressRecord(StressRecordInterface):
                     concurrency=int(cells[0]),
                     attempted=attempted,
                     succeeded=succeeded,
-                    p50_seconds=self._number(cells[3]),
-                    max_seconds=self._number(cells[4]),
-                    throughput_per_minute=self._number(cells[5]),
+                    p50_seconds=self.number(cells[3]),
+                    max_seconds=self.number(cells[4]),
+                    throughput_per_minute=self.number(cells[5]),
                 )
             )
         if not rows:

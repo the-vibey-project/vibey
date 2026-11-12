@@ -150,13 +150,6 @@ class StressTable(FigureSourceInterface):
         self._path = path
         self._record = record
 
-    @staticmethod
-    def _number(cell: str) -> float:
-        match = re.search(r"\d+(?:\.\d+)?", cell)
-        if match is None:
-            raise ValueError(f"no number in table cell {cell!r}")
-        return float(match.group(0))
-
     def load(self) -> dict[str, Any]:
         rows: list[dict[str, float]] = []
         in_table = False
@@ -178,10 +171,10 @@ class StressTable(FigureSourceInterface):
                     "attempted": attempted,
                     "succeeded": succeeded,
                     "success": succeeded / attempted,
-                    "p50": self._number(cells[3]),
-                    "max": self._number(cells[4]),
-                    "throughput": self._number(cells[5]),
-                    "free_memory": self._number(cells[6]),
+                    "p50": StressRecord.number(cells[3]),
+                    "max": StressRecord.number(cells[4]),
+                    "throughput": StressRecord.number(cells[5]),
+                    "free_memory": StressRecord.number(cells[6]),
                 }
             )
         if not rows:
