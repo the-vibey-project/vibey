@@ -317,7 +317,7 @@ def build_prompt(diff: str, max_chars: int) -> str:
     return f"Review this pull request diff.\n\n<diff>\n{diff}\n</diff>"
 
 
-def _post(request: urllib.request.Request, timeout: int):
+def _post(request: urllib.request.Request, timeout: int) -> http.client.HTTPResponse:
     """`urlopen`, but only over HTTP(S).
 
     `urlopen` also speaks file:, ftp: and data:. The base URL here is operator
@@ -328,7 +328,10 @@ def _post(request: urllib.request.Request, timeout: int):
     scheme = urllib.parse.urlsplit(request.full_url).scheme
     if scheme not in ("http", "https"):
         raise ValueError(f"refusing a non-HTTP model endpoint: {request.full_url!r}")
-    return urllib.request.urlopen(request, timeout=timeout)  # nosec B310
+    response: http.client.HTTPResponse = urllib.request.urlopen(  # nosec B310
+        request, timeout=timeout
+    )
+    return response
 
 
 class SourceContext(SourceContextInterface):
@@ -1243,7 +1246,7 @@ def call_ollama(
     deadline: RequestDeadlineInterface | None = None,
     slot: SlotWaitInterface | None = None,
     log: RequestLogInterface | None = None,
-) -> dict:
+) -> dict[str, Any]:  # the model's JSON answer, as `SizedChat.ask` returns it
     """One review request. `sizer` sizes it and says whether it fits; the default is
     `vibey_gh.fit`'s `ContextSizer`, the same rule the triage call uses. `whole` asks the
     whole review instead of the diff half, judged against `documents` (already trimmed to
@@ -2185,7 +2188,9 @@ def review(
 
     runner = RunnerLabel.from_environ(os.environ if environ is None else environ)
 
-    def record(code: str, reason: str, report: ReviewReport, requests: list) -> None:
+    def record(
+        code: str, reason: str, report: ReviewReport, requests: Sequence[Mapping[str, object]]
+    ) -> None:
         # Fields are only ever added to `outcome.LOCAL_SCHEMA`, never renamed or removed, so
         # a reader of the first ones reads a later record unchanged. The model, the runner
         # and every request with its timings are the latest (`vibey-gh review-timings`).
@@ -2209,7 +2214,7 @@ def review(
         partial.write_text(json.dumps(written, indent=2) + "\n", encoding="utf-8")
         partial.replace(target)
 
-    def progress(requests: list) -> None:
+    def progress(requests: Sequence[Mapping[str, object]]) -> None:
         # Best effort, and never the record a review that ends leaves: a write that fails
         # here changes nothing, and the review's own last word is written in `said`.
         try:
@@ -2387,7 +2392,7 @@ def call_ollama_triage(
     *,
     sizer: ContextSizerInterface | None = None,
     think: str = "",
-) -> dict:
+) -> dict[str, Any]:  # the model's JSON answer, as `SizedChat.ask` returns it
     """One triage request, sized, sent and read exactly as `call_ollama`'s is."""
     payload_prompt = build_triage_prompt(issue_text, max_chars)
     payload: dict[str, Any] = {
