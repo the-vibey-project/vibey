@@ -344,8 +344,11 @@ class BacklogCleanup(BacklogCleanupInterface):
         # stale the moment it closes, and counting it as debt turned every red develop
         # into a red backlog lane as well (#1423, 2026-10-05).
         markers = expectations.get("self_closing_markers", [])
-        listed = markers if isinstance(markers, list) else []
-        self.self_closing: tuple[str, ...] = tuple(str(m) for m in listed if m)
+        if not isinstance(markers, list):
+            raise TypeError(
+                f"expectations key self_closing_markers must be a list, got {type(markers).__name__}"
+            )
+        self.self_closing: tuple[str, ...] = tuple(str(m) for m in markers if m)
 
     def _labels(self, issue: dict[str, object]) -> list[str]:
         labels = issue.get("labels", [])
