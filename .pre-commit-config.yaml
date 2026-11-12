@@ -15,6 +15,15 @@ repos:
         pass_filenames: false
         stages: [pre-push]
 
+      - id: static-gates
+        # The trees `[[tool.vibey.static_gates]]` declares besides src/vibey: measured at
+        # 4.2 s cold, so it runs at the same stage as the mypy hook above (CI: Gate 3b).
+        name: mypy --strict on the other declared trees
+        entry: uv run --extra dev python scripts/static_gates.py
+        language: system
+        pass_filenames: false
+        stages: [pre-push]
+
       - id: lint-imports
         name: import-linter onion contract
         entry: uv run --extra dev lint-imports

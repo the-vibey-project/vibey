@@ -385,6 +385,13 @@ name = "storm-tools"
 paths = ["docs/plans/qwenstorm-3.0.0/tools"]
 mypy_path = "docs/plans/qwenstorm-3.0.0/tools"
 
+# No `mypy_path`: the scripts name each other `scripts.interfaces.x` from the repository
+# root, and putting `scripts` on MYPYPATH makes mypy see every interface file under two names.
+[[tool.vibey.static_gates]]
+name = "scripts"
+paths = ["scripts"]
+mypy_path = ""
+
 [tool.mypy]
 python_version = "3.12"
 strict = true
