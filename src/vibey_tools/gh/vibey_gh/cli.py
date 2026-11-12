@@ -38,7 +38,7 @@ from vibey_gh.approval_check import ApprovalCheck
 from vibey_gh.branch_health import BranchHealth
 from vibey_gh.changelog import Changelog
 from vibey_gh.ci_areas import CiAreasCommand
-from vibey_gh.config import load_config
+from vibey_gh.config import GhConfig, load_config
 from vibey_gh.contributor_setup import ContributorSetup
 from vibey_gh.fallback_pin import FallbackPinResolver
 from vibey_gh.forge import ForgeKind
@@ -57,7 +57,7 @@ from vibey_gh.skip_markers import SkipMarkerGuard
 from vibey_gh.tracking_issue import TrackingIssue
 
 
-def _cloud_clutter(cfg, surveyed: bool) -> tuple[tuple[str, ...], tuple[str, ...]]:
+def _cloud_clutter(cfg: GhConfig, surveyed: bool) -> tuple[tuple[str, ...], tuple[str, ...]]:
     """Sub-doctrine 9.a's cloud clutter classes, named for `check`: merged-and-undeleted
     remote branches (a closed pull request's head among them, once its work landed),
     draft releases, orphan tags. Returns `(clutter, unsurveyable)` — the second is why
@@ -94,7 +94,7 @@ def _cloud_clutter(cfg, surveyed: bool) -> tuple[tuple[str, ...], tuple[str, ...
     return clutter, report.problems
 
 
-def _settings_drift(cfg, surveyed: bool) -> tuple[tuple[str, ...], tuple[str, ...]]:
+def _settings_drift(cfg: GhConfig, surveyed: bool) -> tuple[tuple[str, ...], tuple[str, ...]]:
     """`(drift, not_surveyed)` for the declared repository settings against the live ones.
 
     Surveyed under `--ci` alone, like the cloud clutter: it costs forge round trips a
@@ -106,7 +106,7 @@ def _settings_drift(cfg, surveyed: bool) -> tuple[tuple[str, ...], tuple[str, ..
     return ProfileDrift().survey(cfg)
 
 
-def _check(args, resolver: FallbackPinResolverInterface | None = None) -> int:
+def _check(args: argparse.Namespace, resolver: FallbackPinResolverInterface | None = None) -> int:
     cfg = load_config()
     # Resolved once, so the drift verdict and the notice below describe the same pin.
     pin = (resolver or FallbackPinResolver()).resolve(cfg)
@@ -218,7 +218,7 @@ def _check(args, resolver: FallbackPinResolverInterface | None = None) -> int:
     return 1
 
 
-def _install(args, resolver: FallbackPinResolverInterface | None = None) -> int:
+def _install(args: argparse.Namespace, resolver: FallbackPinResolverInterface | None = None) -> int:
     cfg = load_config()
     pin = (resolver or FallbackPinResolver()).resolve(cfg)
     for action in install.install(cfg, fallback_pin=pin):
@@ -231,7 +231,7 @@ def _install(args, resolver: FallbackPinResolverInterface | None = None) -> int:
     return 0
 
 
-def _setup(args, setup: ContributorSetupInterface | None = None) -> int:
+def _setup(args: argparse.Namespace, setup: ContributorSetupInterface | None = None) -> int:
     # A module function like `_install` beside it: argparse hands a handler the parsed
     # namespace and nothing else, and the work is in `ContributorSetup`.
     cfg = load_config()
@@ -246,7 +246,7 @@ def _setup(args, setup: ContributorSetupInterface | None = None) -> int:
     return 0 if report.ok else 1
 
 
-def _conventional_message(args) -> int:
+def _conventional_message(args: argparse.Namespace) -> int:
     if args.file:
         message = args.file.read_text(encoding="utf-8")
         args.file.write_text(fingerprints.normalize_commit_message(message), encoding="utf-8")
@@ -255,7 +255,7 @@ def _conventional_message(args) -> int:
     return 0
 
 
-def _provenance_message(args) -> int:
+def _provenance_message(args: argparse.Namespace) -> int:
     message = args.file.read_text(encoding="utf-8") if args.file else sys.stdin.read()
     normalized = fingerprints.normalize_provenance_message(message)
     if args.file:
@@ -265,14 +265,14 @@ def _provenance_message(args) -> int:
     return 0
 
 
-def _conventional_check(args) -> int:
+def _conventional_check(args: argparse.Namespace) -> int:
     invalid = fingerprints.commits_with_invalid_subject(args.commits, load_config())
     for commit in invalid:
         print(commit)
     return 1 if invalid else 0
 
 
-def _provenance_check(args) -> int:
+def _provenance_check(args: argparse.Namespace) -> int:
     cfg = load_config()
     missing = fingerprints.commits_missing_trailer(args.commits, cfg)
     for commit in missing:
@@ -280,7 +280,7 @@ def _provenance_check(args) -> int:
     return 1 if missing else 0
 
 
-def _version(args) -> int:
+def _version(args: argparse.Namespace) -> int:
     cfg = load_config(config=args.config)
     if args.dev is not None:
         dev = versioning.dev_version(cfg, args.dev)
