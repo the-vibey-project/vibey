@@ -1,23 +1,28 @@
-# Made with ❤️ by [Vibey](https://the-vibey-project.github.io/vibey/), Developed by [Adam Matthew Steinberger](https://vibewithadam.matthewsteinberger.com/) ([@adammatthewsteinberger](https://github.com/adammatthewsteinberger/)).
 """Every tracked Python file is ruff-checked AND type-checked, or is recorded as not being.
 
 A tracked `.py` that no gate sees is one nobody is checking (the reason `scripts/` and the
-storm tools joined `[tool.ruff] include`). The rule, per file from `git ls-files '*.py'`:
+storm tools joined `[tool.ruff] include`). The rule, per file from `git ls-files '*.py'` plus
+untracked files git does not ignore (so a new file fails locally, before CI):
 
-  (a) it is under a `[tool.ruff] include` glob, AND
-  (b) it is under a tree checked with `mypy --strict`: `src/vibey` (`[tool.mypy]`), a
-      `[[tool.vibey.static_gates]]` path, or a tenant tree named by the `static` command of its
-      `tools` rows in `.github/ci-matrices.toml`,
+  (a) ruff checks it: the set is whatever `ruff check --show-files .` lists, so the tenants' own
+      `[tool.ruff]` tables (claudeloop excludes `legacy`; krypton-app has its own) are honoured
+      rather than modelled, AND
+  (b) it is under a tree checked with `mypy`: `src/vibey` (`[tool.mypy]`, strict), a
+      `[[tool.vibey.static_gates]]` path (strict), or a tenant tree named by the `static` command
+      of its `tools` rows in `.github/ci-matrices.toml` (the tenants' own mypy settings; gh and
+      bootstrap are looser than `--strict`),
 
-or it is under a prefix recorded in `tests/meta/ungated_python.toml` with a reason. The list is
+or it is under a prefix recorded in `tests/meta/ungated_python.toml` with a reason. A prefix ends
+in `/` or names one tracked file, and its reason is at least `MIN_REASON` characters. The list is
 a ratchet: a prefix that matches no tracked file, or only files that are now gated, fails, and
 `CEILING` (a constant here, so the list cannot move its own limit) must equal its length. It
 counts prefixes, not files, so a new test file under a recorded tree does not move it; a new
-tree outside every gate does. The census is a class so it can be run on synthetic input.
+tree outside every gate (a new `tests/` subdirectory included) does. The census is a class so it
+can be run on synthetic input.
 """
 
-import re
 import subprocess
+import sys
 import tomllib
 from collections.abc import Iterable, Mapping
 from pathlib import Path
@@ -25,7 +30,10 @@ from pathlib import Path
 REPO = Path(__file__).resolve().parents[2]
 EXEMPTIONS = Path(__file__).with_name("ungated_python.toml")
 
-CEILING = 23
+MIN_REASON = 20
+"""A reason shorter than this says nothing a reviewer can weigh."""
+
+CEILING = 41
 """The most prefixes that may be recorded as ungated. Lower it in the same change that gates a
 tree; never raise it without a written reason in review."""
 
@@ -36,34 +44,17 @@ class GateCensus:
     def __init__(
         self,
         files: Iterable[str],
-        ruff_globs: Iterable[str],
+        linted: Iterable[str],
         gated_roots: Iterable[str],
         exempt: Mapping[str, str],
     ) -> None:
         self.files = sorted(files)
-        self.ruff = [self.glob_regex(glob) for glob in ruff_globs]
+        self.ruff = set(linted)
         self.roots = [root.rstrip("/") + "/" for root in gated_roots]
         self.exempt = dict(exempt)
 
-    @staticmethod
-    def glob_regex(glob: str) -> re.Pattern[str]:
-        """A ruff-style glob as a regex: `**/` spans directories, `*` stays in one."""
-        out = ""
-        i = 0
-        while i < len(glob):
-            if glob.startswith("**/", i):
-                out += "(?:.*/)?"
-                i += 3
-            elif glob[i] == "*":
-                out += "[^/]*"
-                i += 1
-            else:
-                out += re.escape(glob[i])
-                i += 1
-        return re.compile(out + "\\Z")
-
     def linted(self, path: str) -> bool:
-        return any(pattern.match(path) for pattern in self.ruff)
+        return path in self.ruff
 
     def type_checked(self, path: str) -> bool:
         return any(path.startswith(root) for root in self.roots)
@@ -89,18 +80,46 @@ class GateCensus:
             if (hits := [f for f in self.files if f.startswith(p)]) and all(map(self.gated, hits))
         )
 
+    def malformed(self) -> list[str]:
+        """Prefixes that are neither a directory (`.../`) nor exactly one tracked file."""
+        return sorted(p for p in self.exempt if not p.endswith("/") and p not in self.files)
+
     def reasonless(self) -> list[str]:
-        return sorted(p for p, reason in self.exempt.items() if not reason.strip())
+        """Prefixes whose reason is too short to be one."""
+        return sorted(p for p, reason in self.exempt.items() if len(reason.strip()) < MIN_REASON)
 
 
 # ------------------------------------------------------------------- reading the repository
 
 
 def tracked_python() -> list[str]:
+    """Tracked `.py` files plus untracked ones git does not ignore."""
     out = subprocess.run(
-        ["git", "ls-files", "*.py"], cwd=REPO, capture_output=True, text=True, check=True
+        ["git", "ls-files", "--cached", "--others", "--exclude-standard", "*.py"],
+        cwd=REPO,
+        capture_output=True,
+        text=True,
+        check=True,
     ).stdout
-    return [line for line in out.splitlines() if (REPO / line).is_file()]
+    return sorted({line for line in out.splitlines() if (REPO / line).is_file()})
+
+
+def ruff_files() -> set[str]:
+    """The files ruff itself checks from the repository root, nested `[tool.ruff]` tables included."""
+    out = subprocess.run(
+        [sys.executable, "-m", "ruff", "check", "--show-files", "."],
+        cwd=REPO,
+        capture_output=True,
+        text=True,
+        check=True,
+    ).stdout
+    root = REPO.resolve()
+    files: set[str] = set()
+    for line in out.splitlines():
+        path = Path(line).resolve()
+        if path.suffix == ".py" and path.is_relative_to(root):
+            files.add(path.relative_to(root).as_posix())
+    return files
 
 
 def tenant_trees(matrices: Mapping[str, object]) -> set[str]:
@@ -134,18 +153,13 @@ def gated_roots() -> set[str]:
     return roots | tenant_trees(matrices)
 
 
-def ruff_globs() -> list[str]:
-    project = tomllib.loads((REPO / "pyproject.toml").read_text(encoding="utf-8"))
-    return list(project["tool"]["ruff"]["include"])
-
-
 def recorded() -> dict[str, str]:
     table = tomllib.loads(EXEMPTIONS.read_text(encoding="utf-8"))
     return {row["prefix"]: row["reason"] for row in table["ungated"]}
 
 
 def committed() -> GateCensus:
-    return GateCensus(tracked_python(), ruff_globs(), gated_roots(), recorded())
+    return GateCensus(tracked_python(), ruff_files(), gated_roots(), recorded())
 
 
 # ------------------------------------------------------------------- the repository
@@ -153,7 +167,7 @@ def committed() -> GateCensus:
 
 def test_every_tracked_python_file_is_gated_or_recorded_with_a_reason() -> None:
     assert committed().ungated() == [], (
-        "these tracked Python files are outside the ruff include or every mypy --strict tree: "
+        "these tracked Python files are outside ruff or every mypy-checked tree: "
         "bring them under a gate ([tool.ruff] include, [[tool.vibey.static_gates]]), or record "
         "their prefix in tests/meta/ungated_python.toml with the reason"
     )
@@ -172,8 +186,15 @@ def test_a_prefix_whose_files_are_all_gated_leaves_the_list() -> None:
     )
 
 
-def test_every_recorded_prefix_carries_a_reason() -> None:
-    assert committed().reasonless() == []
+def test_every_recorded_prefix_is_a_directory_or_one_tracked_file() -> None:
+    assert committed().malformed() == [], (
+        "a prefix must end in `/` or name exactly one tracked file: a bare string such as "
+        "`tests` would also exempt `tests_new/` and every file that happens to start with it"
+    )
+
+
+def test_every_recorded_prefix_carries_a_real_reason() -> None:
+    assert committed().reasonless() == [], f"a reason needs at least {MIN_REASON} characters"
 
 
 def test_the_ceiling_is_exactly_the_number_of_recorded_prefixes() -> None:
@@ -191,16 +212,32 @@ def test_the_census_sees_the_trees_it_is_meant_to() -> None:
     files = tracked_python()
     assert "scripts/typescript_artifacts.py" in files
     assert len(files) > 1500
+    linted = ruff_files()
+    assert "scripts/typescript_artifacts.py" in linted
+    assert "clients/krypton-app/src/krypton_app/launcher.py" in linted, "a tenant's own [tool.ruff]"
+    assert not any(f.startswith("src/vibey_runners/claude/legacy/") for f in linted), (
+        "extend-exclude"
+    )
 
 
 # --------------------------------------------------------------- the census, on synthetic input
 
-GLOBS = ["src/**/*.py", "tests/**/*.py", "scripts/**/*.py"]
+LINTED = [
+    "src/vibey/domain/x.py",
+    "scripts/a/b.py",
+    "scripts/a.py",
+    "tests/unit/test_x.py",
+    "tests/a.py",
+    "scripts/ok.py",
+]
 ROOTS = ["src/vibey", "scripts"]
 
 
 def census(files: list[str], exempt: dict[str, str] | None = None) -> GateCensus:
-    return GateCensus(files, GLOBS, ROOTS, exempt or {})
+    return GateCensus(files, LINTED, ROOTS, exempt or {})
+
+
+REASON = "a reason that is long enough to be one"
 
 
 def test_a_file_under_ruff_and_a_checked_tree_is_gated() -> None:
@@ -215,37 +252,43 @@ def test_a_file_linted_but_not_type_checked_is_reported() -> None:
     assert census(["tests/unit/test_x.py"]).ungated() == ["tests/unit/test_x.py"]
 
 
-def test_a_file_type_checked_but_outside_the_ruff_include_is_reported() -> None:
-    files = ["scripts/ok.py", "scripts/notpython/x.txt.py"]
-    narrow = GateCensus(files, ["scripts/*.py"], ROOTS, {})
-    assert narrow.ungated() == ["scripts/notpython/x.txt.py"]
+def test_a_file_type_checked_but_not_listed_by_ruff_is_reported() -> None:
+    """Under a mypy tree, yet a nested `extend-exclude` (claudeloop's `legacy`) keeps ruff off it."""
+    assert census(["scripts/ok.py", "scripts/legacy/x.py"]).ungated() == ["scripts/legacy/x.py"]
 
 
 def test_a_recorded_prefix_covers_its_files_and_only_them() -> None:
-    exempt = {"tests/": "linted, not typed"}
+    exempt = {"tests/": REASON}
     assert census(["tests/unit/test_x.py", "clients/a.py"], exempt).ungated() == ["clients/a.py"]
 
 
+def test_a_new_directory_beside_recorded_ones_is_reported() -> None:
+    exempt = {"tests/unit/": REASON}
+    assert census(["tests/unit/test_x.py", "tests/new/test_y.py"], exempt).ungated() == [
+        "tests/new/test_y.py"
+    ]
+
+
 def test_a_prefix_matching_nothing_is_reported_as_unused() -> None:
-    exempt = {"tests/": "r", "gone/": "r"}
+    exempt = {"tests/": REASON, "gone/": REASON}
     assert census(["tests/a.py"], exempt).unused_exemptions() == ["gone/"]
 
 
 def test_a_prefix_whose_files_are_all_gated_is_reported() -> None:
-    exempt = {"scripts/": "r", "tests/": "r"}
+    exempt = {"scripts/": REASON, "tests/": REASON}
     found = census(["scripts/a.py", "tests/a.py"], exempt).exemptions_for_gated_files()
     assert found == ["scripts/"]
 
 
-def test_a_reasonless_prefix_is_reported() -> None:
-    assert census(["tests/a.py"], {"tests/": "  "}).reasonless() == ["tests/"]
+def test_a_short_reason_is_reported() -> None:
+    assert census(["tests/a.py"], {"tests/": "  legacy  "}).reasonless() == ["tests/"]
+    assert census(["tests/a.py"], {"tests/": REASON}).reasonless() == []
 
 
-def test_a_glob_double_star_spans_directories_and_star_does_not() -> None:
-    deep = GateCensus.glob_regex("src/**/*.py")
-    assert deep.match("src/a/b/c.py") and deep.match("src/c.py")
-    flat = GateCensus.glob_regex("scripts/*.py")
-    assert flat.match("scripts/a.py") and not flat.match("scripts/d/a.py")
+def test_a_bare_prefix_is_malformed_unless_it_is_one_tracked_file() -> None:
+    files = ["tests/a.py", "tests_new/b.py", "tests/conftest.py"]
+    exempt = {"tests": REASON, "tests/conftest.py": REASON, "tests/": REASON}
+    assert census(files, exempt).malformed() == ["tests"]
 
 
 def test_tenant_trees_are_read_from_the_static_commands() -> None:
