@@ -35,6 +35,7 @@ import signal
 import subprocess
 import time
 import tomllib
+from collections.abc import Callable
 from dataclasses import dataclass, field
 from pathlib import Path
 
@@ -134,7 +135,7 @@ def step(paid_ok: bool, seat_active: bool) -> str:
     return HOLD
 
 
-def _read_state(state_path: Path) -> dict:
+def _read_state(state_path: Path) -> dict[str, object]:
     try:
         value = json.loads(state_path.read_text(encoding="utf-8"))
         return value if isinstance(value, dict) else {}
@@ -142,12 +143,12 @@ def _read_state(state_path: Path) -> dict:
         return {}
 
 
-def _write_state(state_path: Path, state: dict) -> None:
+def _write_state(state_path: Path, state: dict[str, object]) -> None:
     state_path.parent.mkdir(parents=True, exist_ok=True)
     state_path.write_text(json.dumps(state, indent=2) + "\n", encoding="utf-8")
 
 
-def _seat_alive(state: dict) -> bool:
+def _seat_alive(state: dict[str, object]) -> bool:
     pid = state.get("pid")
     if not isinstance(pid, int):
         return False
@@ -158,7 +159,7 @@ def _seat_alive(state: dict) -> bool:
     return True
 
 
-def _engage(cfg: FailoverConfig, state_path: Path, report) -> None:
+def _engage(cfg: FailoverConfig, state_path: Path, report: Callable[[str], object]) -> None:
     for seat in cfg.seats:
         if seat.health and not probe(seat.health):
             report(f"vibey-gh failover: seat {seat.name} failed its health check; next")
@@ -179,7 +180,7 @@ def _engage(cfg: FailoverConfig, state_path: Path, report) -> None:
     report("vibey-gh failover: paid lane down and NO seat is healthy — operator needed")
 
 
-def _reclaim(state: dict, state_path: Path, report) -> None:
+def _reclaim(state: dict[str, object], state_path: Path, report: Callable[[str], object]) -> None:
     pid = state.get("pid")
     if isinstance(pid, int):
         try:
@@ -199,7 +200,7 @@ def _reclaim(state: dict, state_path: Path, report) -> None:
 def run_once(
     cfg: FailoverConfig,
     state_path: Path | None = None,
-    report=print,
+    report: Callable[[str], object] = print,
 ) -> str:
     """One probe, one decision, one transition. Returns the action taken."""
     if not cfg.enabled:
@@ -226,8 +227,8 @@ def run(
     cfg: FailoverConfig,
     state_path: Path | None = None,
     once: bool = False,
-    report=print,
-    sleep=time.sleep,
+    report: Callable[[str], object] = print,
+    sleep: Callable[[float], object] = time.sleep,
 ) -> None:
     """The supervised loop: what a LaunchAgent or systemd unit runs."""
     while True:

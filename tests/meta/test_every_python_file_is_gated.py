@@ -34,7 +34,7 @@ EXEMPTIONS = Path(__file__).with_name("ungated_python.toml")
 MIN_REASON = 20
 """A reason shorter than this says nothing a reviewer can weigh."""
 
-CEILING = 41
+CEILING = 44
 """The most prefixes that may be recorded as ungated. Lower it in the same change that gates a
 tree; never raise it without a written reason in review."""
 

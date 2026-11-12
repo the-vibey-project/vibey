@@ -48,7 +48,6 @@ def install_middleware(
 
     probe_set = set(probe_paths)
 
-    @app.middleware("http")
     async def _timing_middleware(request: Any, call_next: Any) -> Any:
         path = request.url.path
         method = request.method
@@ -140,6 +139,10 @@ def install_middleware(
                 except Exception:
                     pass
         return response
+
+    # `app` is Any, so register by call: a decorator expression typed Any makes
+    # the decorated function untyped under mypy --strict (untyped-decorator).
+    app.middleware("http")(_timing_middleware)
 
 
 __all__ = ["install_middleware"]

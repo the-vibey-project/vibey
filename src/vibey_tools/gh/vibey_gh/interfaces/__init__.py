@@ -45,7 +45,6 @@ from vibey_gh.interfaces.class_contracts import (
     ForgeReleaseInterface,
     ForgeRepositoryInterface,
     ForgeReviewInterface,
-    ForgeTransportInterface,
     ForgeUserInterface,
     GapInterface,
     GhConfigInterface,
@@ -124,6 +123,7 @@ from vibey_gh.interfaces.forge_snapshot_interface import (
     SnapshotQueryInterface,
     SnapshotVerifierInterface,
 )
+from vibey_gh.interfaces.forge_transport_interface import ForgeTransportInterface
 from vibey_gh.interfaces.local_review_interface import (
     AddedHunkSplitterInterface,
     DiffChunkerInterface,
