@@ -27,7 +27,7 @@ BUDGETS = tomllib.loads((Path(__file__).parent / "query_budgets.toml").read_text
 LEASE = timedelta(seconds=30)
 
 
-def _check(operation: str, log: QueryLog) -> None:
+def check_budget(operation: str, log: QueryLog) -> None:
     budget = BUDGETS[operation]
     assert isinstance(budget, int)
     listing = "\n".join(
@@ -81,7 +81,7 @@ async def test_ledger_append_stays_within_its_query_budget(
     async with query_counter.count(migrated_pool) as log:
         await repo.append(_draft(project_id))
 
-    _check("ledger_append", log)
+    check_budget("ledger_append", log)
 
 
 async def test_job_enqueue_stays_within_its_query_budget(
@@ -92,7 +92,7 @@ async def test_job_enqueue_stays_within_its_query_budget(
     async with query_counter.count(migrated_pool) as log:
         await repo.enqueue(_request(project_id))
 
-    _check("job_enqueue", log)
+    check_budget("job_enqueue", log)
 
 
 async def test_job_claim_stays_within_its_query_budget(
@@ -105,7 +105,7 @@ async def test_job_claim_stays_within_its_query_budget(
         claimed = await repo.claim(project_id, owner="worker-1", lease=LEASE)
 
     assert claimed is not None
-    _check("job_claim", log)
+    check_budget("job_claim", log)
 
 
 async def test_job_ack_stays_within_its_query_budget(
@@ -119,7 +119,7 @@ async def test_job_ack_stays_within_its_query_budget(
         acked = await repo.ack(job.id, owner="worker-1")
 
     assert acked is True
-    _check("job_ack", log)
+    check_budget("job_ack", log)
 
 
 async def test_the_counter_counts_every_statement_in_the_block(
@@ -165,11 +165,11 @@ def test_a_count_above_the_budget_fails_and_asks_for_a_written_reason() -> None:
     log = QueryLog(statements=["SELECT 1"] * (BUDGETS["job_ack"] + 1))
 
     with pytest.raises(AssertionError, match="written reason in the commit"):
-        _check("job_ack", log)
+        check_budget("job_ack", log)
 
 
 def test_a_count_below_the_budget_fails_and_asks_for_the_budget_to_be_lowered() -> None:
     log = QueryLog(statements=["SELECT 1"] * (BUDGETS["ledger_append"] - 1))
 
     with pytest.raises(AssertionError, match="lower ledger_append to 3"):
-        _check("ledger_append", log)
+        check_budget("ledger_append", log)
