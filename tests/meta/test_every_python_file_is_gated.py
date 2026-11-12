@@ -73,11 +73,11 @@ class GateCensus:
         return sorted(p for p in self.exempt if not any(f.startswith(p) for f in self.files))
 
     def exemptions_for_gated_files(self) -> list[str]:
-        """Prefixes whose every file is already gated: the exemption has nothing left to say."""
+        """Prefixes that cover a gated file: too wide, or stale, so it may hide an ungated one."""
         return sorted(
-            p
+            f"{p} (covers the gated {gated})"
             for p in self.exempt
-            if (hits := [f for f in self.files if f.startswith(p)]) and all(map(self.gated, hits))
+            if (gated := next((f for f in self.files if f.startswith(p) and self.gated(f)), None))
         )
 
     def malformed(self) -> list[str]:
@@ -181,8 +181,8 @@ def test_every_recorded_prefix_still_matches_a_tracked_file() -> None:
 
 def test_a_prefix_whose_files_are_all_gated_leaves_the_list() -> None:
     assert committed().exemptions_for_gated_files() == [], (
-        "every file under these prefixes is now gated: delete them from "
-        "tests/meta/ungated_python.toml and lower CEILING"
+        "these prefixes cover a gated file, so they are stale or too wide and may hide an ungated "
+        "one: narrow or delete them in tests/meta/ungated_python.toml and lower CEILING"
     )
 
 
@@ -277,7 +277,15 @@ def test_a_prefix_matching_nothing_is_reported_as_unused() -> None:
 def test_a_prefix_whose_files_are_all_gated_is_reported() -> None:
     exempt = {"scripts/": REASON, "tests/": REASON}
     found = census(["scripts/a.py", "tests/a.py"], exempt).exemptions_for_gated_files()
-    assert found == ["scripts/"]
+    assert found == ["scripts/ (covers the gated scripts/a.py)"]
+
+
+def test_a_prefix_too_wide_for_a_gated_file_beside_ungated_ones_is_reported() -> None:
+    """`src/` hides `src/new_tree/b.py` while it also covers the gated `src/vibey/domain/x.py`."""
+    exempt = {"src/": "x" * 20}
+    census_ = census(["src/vibey/domain/x.py", "src/new_tree/b.py"], exempt)
+    assert census_.ungated() == []
+    assert census_.exemptions_for_gated_files() == ["src/ (covers the gated src/vibey/domain/x.py)"]
 
 
 def test_a_short_reason_is_reported() -> None:
