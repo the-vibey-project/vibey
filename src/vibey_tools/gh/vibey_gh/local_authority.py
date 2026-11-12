@@ -23,6 +23,7 @@ from __future__ import annotations
 
 import subprocess
 import time
+from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -122,8 +123,8 @@ def run(
     once: bool = False,
     protected: tuple[str, ...] = (),
     check: bool = True,
-    report=print,
-    sleep=time.sleep,
+    report: Callable[[str], object] = print,
+    sleep: Callable[[float], object] = time.sleep,
 ) -> None:
     """The loop. `once` makes a single pass — for tests, cron, and CI smoke."""
     while True:

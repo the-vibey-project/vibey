@@ -24,7 +24,7 @@ from __future__ import annotations
 import json
 import subprocess
 from dataclasses import dataclass
-from typing import Any, cast
+from typing import Any
 
 from vibey_gh import reconcile, versioning
 from vibey_gh.config import GhConfig, normalise_actor
@@ -42,6 +42,10 @@ _PROTECTED_PATHS = ProtectedPathsGuard()
 # The phrase the owner-notification comment is recognised by. Matching on our own text is
 # what keeps the mention to once per pull request; see hold_for_review().
 _NOTIFIED_MARKER = "awaiting your review"
+
+# One pull request as `gh pr view --json` gives it (`_PR_FIELDS`), plus the keys this module adds.
+type PullRequest = dict[str, Any]  # Any: gh JSON, as `_gh_json` says; `judge` checks each field
+
 # Both gates the split PR automation renders must be green before the train may merge: the
 # scan gate from pr-evaluate.yml and the review gate from pr-review.yml. `PR automation /
 # gate` is the pre-split spelling; a head that has it in its rollup is checked by name
@@ -135,7 +139,7 @@ def hold_for_review(verdict: Verdict, cfg: GhConfig, label: str = NEEDS_REVIEW_L
     )
 
 
-def judge(pr: dict, cfg: GhConfig) -> Verdict:
+def judge(pr: PullRequest, cfg: GhConfig) -> Verdict:
     author = (pr.get("author") or {}).get("login", "")
     # Deduplicated the same way the gate deduplicates, and for the same reason: a rollup
     # carries every check run for the head, so a superseded run's CANCELLED jobs sit beside
@@ -279,15 +283,15 @@ _PR_FIELDS = (
 )
 
 
-def pull_request(number: int, cfg: GhConfig | None = None) -> dict:
-    pr = cast(dict, _gh_json("pr", "view", str(number), "--json", _PR_FIELDS))
+def pull_request(number: int, cfg: GhConfig | None = None) -> PullRequest:
+    pr: PullRequest = _gh_json("pr", "view", str(number), "--json", _PR_FIELDS)
     _include_exact_head_gate(pr)
     if cfg is not None and cfg.protected_paths:
         _include_changed_paths(pr)
     return pr
 
 
-def _include_changed_paths(pr: dict) -> None:
+def _include_changed_paths(pr: PullRequest) -> None:
     """Every path the pull request changes, for `[merge_train] protected_paths`.
 
     Paginated REST, because `pr view --json files` is one GraphQL page of at most 100. Left
@@ -320,7 +324,7 @@ def _include_changed_paths(pr: dict) -> None:
     pr[LISTED_FILES_KEY] = listed
 
 
-def _include_exact_head_gate(pr: dict) -> None:
+def _include_exact_head_gate(pr: PullRequest) -> None:
     """GitHub may omit a freshly API-created check from a PR rollup for a few seconds.
 
     The checks are already durable on the exact commit. Reading that authoritative endpoint
@@ -346,7 +350,7 @@ def _include_exact_head_gate(pr: dict) -> None:
             rollup.append({"name": name, "status": "COMPLETED", "conclusion": "SUCCESS"})
 
 
-def open_pull_requests(cfg: GhConfig, number: int | None = None) -> list[dict]:
+def open_pull_requests(cfg: GhConfig, number: int | None = None) -> list[PullRequest]:
     if number is not None:
         return [pull_request(number, cfg)]
     numbers = _gh_json(
@@ -361,24 +365,24 @@ def open_pull_requests(cfg: GhConfig, number: int | None = None) -> list[dict]:
         "--jq",
         "sort_by(.number)",
     )
-    out: list[dict] = []
+    out: list[PullRequest] = []
     for entry in numbers or []:
         out.append(pull_request(int(entry["number"]), cfg))
     return out
 
 
-def method_for(pr: dict, cfg: GhConfig, default: str = "squash") -> str:
+def method_for(pr: PullRequest, cfg: GhConfig, default: str = "squash") -> str:
     return "rebase" if pr.get("baseRefName") == cfg.release_branch else default
 
 
-def should_delete_head(pr: dict, cfg: GhConfig) -> bool:
+def should_delete_head(pr: PullRequest, cfg: GhConfig) -> bool:
     """Delete merged topic branches, never permanent or contributor-fork branches."""
     return reconcile.deletable(
         str(pr.get("headRefName") or ""), cfg, fork=bool(pr.get("isCrossRepository", False))
     )
 
 
-def delete_head_branch(pr: dict) -> bool:
+def delete_head_branch(pr: PullRequest) -> bool:
     """Best-effort deletion after a successful merge; never called for permanent refs."""
     repository = _gh_json("repo", "view", "--json", "nameWithOwner")["nameWithOwner"]
     head = str(pr["headRefName"])

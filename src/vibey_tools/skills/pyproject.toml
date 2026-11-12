@@ -83,7 +83,7 @@ docs = [
 # The package stays dependency-free at runtime. Tests import pytest directly, however,
 # and the CI tenant matrix installs the package before running its unittest discovery;
 # keeping pytest here makes that declared test environment complete on every Python floor.
-dev = ["pytest>=8"]
+dev = ["pytest>=8", "mypy>=1.10"]
 
 # `vibey-skills` is the CLI. `vibe-skills` (the short alias from the vibe-engineering-skills
 # era) is kept as a deprecated entry point that prints one warning line and delegates; the
@@ -137,3 +137,7 @@ include = [
   "LICENSE",
   "NOTICE.md",
 ]
+
+[tool.mypy]
+python_version = "3.12"
+strict = true

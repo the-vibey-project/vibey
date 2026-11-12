@@ -29,6 +29,7 @@ it is the mess, wearing a uniform.
 from __future__ import annotations
 
 import subprocess
+from collections.abc import Callable
 from dataclasses import dataclass, field
 from pathlib import Path
 
@@ -219,7 +220,11 @@ def survey(
     )
 
 
-def apply(cfg: GhConfig, report: TidyReport, run=subprocess.run) -> tuple[str, ...]:
+def apply(
+    cfg: GhConfig,
+    report: TidyReport,
+    run: Callable[..., subprocess.CompletedProcess[bytes]] = subprocess.run,
+) -> tuple[str, ...]:
     """Delete exactly the provably-lossless classes; return what was done."""
     root = cfg.root
     actions: list[str] = []
