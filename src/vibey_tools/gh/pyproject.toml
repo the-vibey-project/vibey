@@ -148,8 +148,9 @@ exclude_dirs = ["test", ".venv", "build", "dist", "site"]
 python_version = "3.12"
 strict = true
 warn_return_any = true
-# The runner's egress gate is copied verbatim into /opt/egress beside its `interfaces/`
-# and imports that sibling as the top-level package it is there. The same root is given
+# The runner's egress gate is installed verbatim at <install_dir>/egress beside its
+# `interfaces/`, mounted read-only at /egress in the gate's container, and imports that
+# sibling as the top-level package it is there. The same root is given
 # to it here, so its classes are checked against the protocols they declare rather than
 # against an unresolved Any; the interface file is then left out of the directory walk,
 # which would otherwise find it a second time under its `vibey_gh.templates` name.
