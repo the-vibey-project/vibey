@@ -29,7 +29,7 @@ from collections.abc import Callable, Sequence
 from pathlib import Path
 
 try:
-    from interfaces.egress_gate_interface import (  # type: ignore[import-not-found]
+    from interfaces.egress_gate_interface import (
         AccessLogInterface,
         DialerInterface,
         HostPolicyInterface,
@@ -38,7 +38,7 @@ try:
     )
 except ModuleNotFoundError:  # run from outside the directory that holds `interfaces/`
     sys.path.insert(0, str(Path(__file__).resolve().parent))
-    from interfaces.egress_gate_interface import (  # type: ignore[import-not-found,no-redef]
+    from interfaces.egress_gate_interface import (
         AccessLogInterface,
         DialerInterface,
         HostPolicyInterface,

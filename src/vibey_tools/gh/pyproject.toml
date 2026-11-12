@@ -147,3 +147,10 @@ exclude_dirs = ["test", ".venv", "build", "dist", "site"]
 [tool.mypy]
 python_version = "3.12"
 warn_return_any = true
+# The runner's egress gate is copied verbatim into /opt/egress beside its `interfaces/`
+# and imports that sibling as the top-level package it is there. The same root is given
+# to it here, so its classes are checked against the protocols they declare rather than
+# against an unresolved Any; the interface file is then left out of the directory walk,
+# which would otherwise find it a second time under its `vibey_gh.templates` name.
+mypy_path = "$MYPY_CONFIG_FILE_DIR/vibey_gh/templates/runner/egress"
+exclude = ["vibey_gh/templates/runner/egress/interfaces/"]
