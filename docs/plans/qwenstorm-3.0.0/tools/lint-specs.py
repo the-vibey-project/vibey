@@ -17,6 +17,7 @@ import importlib.util
 import re
 import sys
 from pathlib import Path
+from types import ModuleType
 
 STORM = Path(__file__).resolve().parent.parent
 SPECS = STORM / "specs"
@@ -24,19 +25,21 @@ AUDIT = STORM / "issue-audit"
 REPO = STORM.parents[2]  # docs/plans/qwenstorm-3.0.0 -> plans -> docs -> the repository
 
 
-def _publisher():
+def _publisher() -> ModuleType:
     """`lane-publish.py`, imported by path because its name is not an identifier."""
     spec = importlib.util.spec_from_file_location(
         "lane_publish", Path(__file__).with_name("lane-publish.py")
     )
-    module = importlib.util.module_from_spec(spec)  # type: ignore[arg-type]
-    spec.loader.exec_module(module)  # type: ignore[union-attr]
+    if spec is None or spec.loader is None:
+        raise ImportError("lane-publish.py cannot be loaded as a module")
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
     return module
 
 
 PUBLISH = _publisher()
 
-SECTIONS = (
+SECTIONS: tuple[str, ...] = (
     "## Title",
     "## Why",
     "## Required behaviour",

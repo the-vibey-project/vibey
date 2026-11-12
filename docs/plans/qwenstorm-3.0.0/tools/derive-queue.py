@@ -49,6 +49,8 @@ def load_file_suite_constants() -> None:
     if not path.is_file():
         return
     spec = importlib.util.spec_from_file_location("fs", path)
+    if spec is None or spec.loader is None:
+        raise ImportError(f"{path} cannot be loaded as a module")
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
     ALIASES = getattr(module, "ALIASES", {})
