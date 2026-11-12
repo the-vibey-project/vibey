@@ -13,7 +13,8 @@ handler persists (specs, consents, inventories, review artifacts, the project's 
 Two known allowances, both stated where they are made:
 
 - The ledger is append-only and does not dedupe on identity (#1887), so a redelivery may
-  restate an entry the first delivery wrote (``EntryBatches``); anything new or different
+  restate an entry the first delivery wrote (``EntryBatches``; remove the allowance when the
+  ledger dedupes on identity); anything new or different
   still fails.
 - A stored value is overwritten by a redelivery (a spec file, a consent file), so the fakes
   keep the last write, exactly as the real stores do.
@@ -23,7 +24,7 @@ second ``transition(expected=X, ...)`` after the first one moved the phase raise
 ``ValueError`` (``ProjectRepository.transition_on``). Every handler that makes a transition
 is therefore run twice: with a transition that tolerates a replay, which isolates everything
 else the handler does on a redelivery (``CASES``), and with that faithful compare-and-set,
-where a redelivery raises (finding F-8-1, ``KNOWN_FINDINGS``).
+where a redelivery raises (finding F-8-1, #1888, ``KNOWN_FINDINGS``).
 """
 
 import dataclasses
@@ -38,6 +39,7 @@ import pytest
 
 from tests.application.fakes import FakeHumanGateRepository, FakeJobRepository, make_job
 from tests.application.replay.harness import (
+    CallBatches,
     EntryBatches,
     ReplayCase,
     ReplayRig,
@@ -47,6 +49,8 @@ from tests.application.replay.harness import (
 from tests.application.test_deploy_design_and_acceptance import _valid_spec
 from tests.application.test_deploy_execute_handler import FakeAzureClient
 from tests.application.test_deploy_execute_handler import _sample_spec as _execute_spec
+from tests.application.test_deploy_review_routing import FakeAzureClient as RouteAzure
+from tests.application.test_deploy_review_routing import _sample_spec as _route_spec
 from tests.application.test_design_research_handler import FixedResearcher, RefusingResearcher
 from tests.application.test_design_synthesis_handler import FakeSpecs, FakeSynthesizer
 from tests.application.test_design_synthesis_handler import spec as _synthesized_spec
@@ -60,12 +64,14 @@ from tests.application.test_review_deployment_choice import FakeProjectRepo
 from tests.application.test_review_publish_handler import _Publisher, _spec, _Specs
 from tests.application.test_visual_handler import FakeInventories, FakeProducer, inventory
 from vibey.application.deploy_acceptance_handler import DeployAcceptanceHandler
+from vibey.application.deploy_design_bridge import DeployDesignBridgeHandler
 from vibey.application.deploy_design_handler import DeployInterviewHandler, DeploySynthesizeHandler
 from vibey.application.deploy_execute_handler import DeployExecuteHandler, DeployStep
 from vibey.application.deploy_review_handler import (
     DeployReviewDemoHandler,
     DeployReviewTriageHandler,
 )
+from vibey.application.deploy_review_routing import DeployReviewRoutingHandler
 from vibey.application.design import DesignEvent
 from vibey.application.design_research_handler import DesignResearchHandler
 from vibey.application.design_synthesis_handler import DesignSpecHandler, DesignSynthesizeHandler
@@ -392,6 +398,12 @@ def _deploy_execute(*, fails: bool, replay_is_noop: bool) -> Callable[[Path], Re
         ledger = PhaseEntries(Phase.DEPLOY_EXECUTE)
         projects = CasProjects(project_id, Phase.DEPLOY_EXECUTE, replay_is_noop=replay_is_noop)
         azure = FakeAzureClient(fail_at_step=DeployStep.APPLY if fails else None)
+        graph = CallBatches(
+            lambda: azure.steps_run,
+            expected_first=[DeployStep.DISCOVER, DeployStep.APPLY]
+            if fails
+            else [DeployStep.DISCOVER, DeployStep.APPLY, DeployStep.VERIFY],
+        )
         spec = _execute_spec()
         consent = DeploymentConsent("c-1", spec.scope_digest(), "user", NOW, True)
 
@@ -415,11 +427,101 @@ def _deploy_execute(*, fails: bool, replay_is_noop: bool) -> Callable[[Path], Re
                 "ledger": ledger.after_delivery(),
                 "jobs": jobs_content(jobs, job.id),
                 "project": projects.standing(),
-                # Which graph steps ran, not how often: the apply is keyed by the spec id
-                # (`dep-<spec_id>`), so applying the same spec again lands on the same
-                # deployment. The fake azure client logs calls, it does not model that.
-                "azure_steps": sorted({step.value for step in azure.steps_run}),
+                # The graph steps, in order, delivery by delivery. The fake client appends
+                # to `steps_run` on every call; the apply is keyed by the spec id
+                # (`dep-<spec_id>`), so a redelivery applying the same spec lands on the same
+                # deployment, and it is compared with the first delivery's calls, not forbidden.
+                # A step more, fewer, out of order or doubled inside one delivery fails.
+                "azure_steps": graph.after_delivery(),
             },
+        )
+
+    return build
+
+
+# ---------------------------------------------------------------- deploy_design_bridge
+
+
+def _deploy_bridge(scratch: Path) -> ReplayRig:
+    """The legacy DEPLOY phase bridged onto DEPLOY_DESIGN. It suppresses the compare-and-set
+    miss itself (``contextlib.suppress(ValueError)``), so it runs against the faithful one."""
+    project_id = uuid4()
+    job = _job("deploy.design", Phase.DEPLOY, project_id)
+    jobs = FakeJobRepository([job])
+    projects = CasProjects(project_id, Phase.DEPLOY, replay_is_noop=False)
+
+    def handler() -> DeployDesignBridgeHandler:
+        return DeployDesignBridgeHandler(jobs=jobs, projects=projects)
+
+    return ReplayRig(
+        handler=handler(),
+        job=job,
+        jobs=jobs,
+        redeliver=handler,
+        snapshot=lambda: {"jobs": jobs_content(jobs, job.id), "project": projects.standing()},
+    )
+
+
+# ---------------------------------------------------------------- deploy_review_routing
+
+
+_ROUTE_TARGETS = {
+    "approve": Phase.DONE,
+    "loop_deploy_design": Phase.DEPLOY_DESIGN,
+    "retry_deploy_execute": Phase.DEPLOY_EXECUTE,
+    "abort": Phase.DONE,
+    "loop_code_fix": Phase.DESIGN,
+}
+
+
+def _deploy_route(action: str, *, replay_is_noop: bool) -> Callable[[Path], ReplayRig]:
+    def build(scratch: Path) -> ReplayRig:
+        project_id = uuid4()
+        cleanup = action in {"abort", "loop_code_fix"}
+        job = _job(
+            "deploy.route",
+            Phase.DEPLOY_REVIEW,
+            project_id,
+            payload={"action": action, "cleanup_ephemeral": cleanup},
+        )
+        jobs = FakeJobRepository([job])
+        ledger = PhaseEntries(Phase.DEPLOY_REVIEW)
+        projects = CasProjects(project_id, Phase.DEPLOY_REVIEW, replay_is_noop=replay_is_noop)
+        azure = RouteAzure()
+        spec = _route_spec()
+        consent = DeploymentConsent("c-1", spec.scope_digest(), "user", NOW, True)
+        cleanups = CallBatches(
+            lambda: azure.deleted_resources, expected_first=[spec.spec_id] if cleanup else []
+        )
+
+        def handler() -> DeployReviewRoutingHandler:
+            return DeployReviewRoutingHandler(
+                ledger=ledger,
+                jobs=jobs,
+                projects=projects,
+                azure_client=azure,
+                spec_provider=lambda _pid: spec,
+                consent_provider=lambda _pid: consent,
+            )
+
+        def snapshot() -> dict[str, object]:
+            assert projects.project.phase is _ROUTE_TARGETS[action]
+            return {
+                "ledger": ledger.after_delivery(),
+                "jobs": jobs_content(jobs, job.id),
+                "project": projects.standing(),
+                # The ephemeral resources deleted, in order, delivery by delivery: the fake
+                # client appends on every delete (a delete of a resource already gone is the
+                # port's concern), so a redelivery's list is compared with the first's.
+                "deleted": cleanups.after_delivery(),
+            }
+
+        return ReplayRig(
+            handler=handler(),
+            job=job,
+            jobs=jobs,
+            redeliver=handler,
+            snapshot=snapshot,
         )
 
     return build
@@ -706,6 +808,10 @@ def _review_publish(
         projects = CasProjects(project_id, Phase.REVIEW, replay_is_noop=replay_is_noop)
         projects.project = replace(projects.project, config={"publish": {"mode": mode}})
         publisher = _Publisher()
+        publishes = CallBatches(
+            lambda: publisher.published, expected_first=None
+        )  # pinned below: one publish per delivery that gets as far as publishing
+        inspections = CallBatches(lambda: publisher.inspected, expected_first=None)
 
         def handler() -> ReviewPublishHandler:
             return ReviewPublishHandler(
@@ -719,6 +825,28 @@ def _review_publish(
         async def answered() -> None:
             assert answer is not None
             await _park_then_answer(handler(), gates, job, answer)
+            inspections.skip_existing()
+
+        def snapshot() -> dict[str, object]:
+            published = publishes.after_delivery()
+            inspected = inspections.after_delivery()
+            # What one delivery does to the publisher: it inspects the checkout once, and
+            # publishes once if it publishes at all (never twice inside a delivery).
+            assert len(inspected["first"]) == 1  # type: ignore[arg-type]
+            assert len(published["first"]) == (1 if (mode == "auto" or answer) else 0)  # type: ignore[arg-type]
+            return {
+                "ledger": ledger.after_delivery(),
+                "jobs": jobs_content(jobs, job.id),
+                "gates": _gates_content(gates),
+                "project": projects.standing(),
+                # The plans pushed, in order, delivery by delivery, not how many times: a retry "finishes the work instead
+                # of repeating it" is the publisher's contract (PublisherInterface;
+                # PublishResult.already_there). The fake publisher appends on every call; it
+                # does not model that, so a redelivery's list is compared with the first
+                # delivery's (the same plan again), not forbidden.
+                "published": published,
+                "inspected": inspected,
+            }
 
         return ReplayRig(
             handler=handler(),
@@ -726,18 +854,7 @@ def _review_publish(
             jobs=jobs,
             redeliver=handler,
             prepare=answered if answer is not None else None,
-            snapshot=lambda: {
-                "ledger": ledger.after_delivery(),
-                "jobs": jobs_content(jobs, job.id),
-                "gates": _gates_content(gates),
-                "project": projects.standing(),
-                # The plans pushed, not how many times: a retry "finishes the work instead
-                # of repeating it" is the publisher's contract (PublisherInterface;
-                # PublishResult.already_there). The fake publisher logs calls; it does not
-                # model that, so a repeated identical plan is not read as a second push.
-                "published": sorted({repr(plan) for plan in publisher.published}),
-                "inspected": sorted({repr(call) for call in publisher.inspected}),
-            },
+            snapshot=snapshot,
         )
 
     return build
@@ -895,6 +1012,36 @@ CASES = (
         build=_deploy_review("deploy.triage", {"choice": "RETRY_DEPLOY_EXECUTE"}, seeded=True),
     ),
     ReplayCase(
+        name="the legacy deploy phase is bridged to deploy design",
+        kind="deploy_design_bridge",
+        build=_deploy_bridge,
+    ),
+    ReplayCase(
+        name="a review routed as approve",
+        kind="deploy_review_routing",
+        build=_deploy_route("approve", replay_is_noop=True),
+    ),
+    ReplayCase(
+        name="a review routed as loop_deploy_design",
+        kind="deploy_review_routing",
+        build=_deploy_route("loop_deploy_design", replay_is_noop=True),
+    ),
+    ReplayCase(
+        name="a review routed as retry_deploy_execute",
+        kind="deploy_review_routing",
+        build=_deploy_route("retry_deploy_execute", replay_is_noop=True),
+    ),
+    ReplayCase(
+        name="a review routed as abort",
+        kind="deploy_review_routing",
+        build=_deploy_route("abort", replay_is_noop=True),
+    ),
+    ReplayCase(
+        name="a review routed as loop_code_fix",
+        kind="deploy_review_routing",
+        build=_deploy_route("loop_code_fix", replay_is_noop=True),
+    ),
+    ReplayCase(
         name="a research result is recorded as untrusted",
         kind="design_research",
         build=_design_research(gap=False),
@@ -985,14 +1132,14 @@ async def test_a_redelivered_job_leaves_what_one_delivery_left(
 # the finding, so a fix has to remove the mark in the same change (an unexpected pass fails),
 # and none is normalised away in the cases above.
 #
-# F-8-1: a handler that moves the project's phase makes a compare-and-set, and the real
+# F-8-1 (#1888): a handler that moves the project's phase makes a compare-and-set, and the real
 # repository raises ValueError when the project is no longer in the expected phase. After a
 # complete delivery (a worker that died between the transition and the ack, or a lease that
 # lapsed under a slow handler) the redelivery therefore raises at the transition instead of
 # finishing, and the job fails although its work is done. build_integrate suppresses exactly
 # this ValueError for that reason (``_maybe_enter_review``); these handlers do not.
 #
-# F-8-2: review.demo with an automated reviewer is a fresh scan on every delivery. It
+# F-8-2 (#1889): review.demo with an automated reviewer is a fresh scan on every delivery. It
 # supersedes the earlier scan's findings and raises the same findings again under new ids
 # (the production runner sets no finding id, so each is minted from a uuid4), so a redelivery
 # leaves a RESOLVED twin of every automated finding in the ledger and in deltas.md. The OPEN
@@ -1000,65 +1147,122 @@ async def test_a_redelivered_job_leaves_what_one_delivery_left(
 # FindingRaised after its own FindingResolved reads as resolved (projections.build_deltas), so
 # a stable id would make the supersede hide the live finding.
 #
-# (F-8-3, review.collect minting a requested change's finding id from a fresh uuid4 so that a
+# (F-8-3, fixed here: review.collect minting a requested change's finding id from a fresh uuid4 so that a
 # redelivery raised every change a second time, is fixed: its case is in CASES.)
 def _known(
-    finding: str, build: Callable[[Path], ReplayRig], raises: type[Exception], name: str
+    finding: str,
+    issue: str,
+    build: Callable[[Path], ReplayRig],
+    raises: type[Exception],
+    name: str,
 ) -> Any:
     return pytest.param(
         build,
         id=name,
         marks=pytest.mark.xfail(
-            strict=True, raises=raises, reason=f"{finding}: see the note above KNOWN_FINDINGS"
+            strict=True,
+            raises=raises,
+            reason=f"{finding} {issue}: {_ISSUES[issue]} (see the note above KNOWN_FINDINGS)",
         ),
     )
 
 
+_ISSUES = {
+    "#1888": "phase compare-and-set raises on redelivery",
+    "#1889": "review.demo rescan re-raises findings under new ids",
+}
+
 KNOWN_FINDINGS = (
     _known(
         "F-8-1",
+        "#1888",
         _deploy_acceptance(answered=True, replay_is_noop=False),
         ValueError,
         "F-8-1 deploy_acceptance",
     ),
     _known(
         "F-8-1",
+        "#1888",
         _deploy_execute(fails=False, replay_is_noop=False),
         ValueError,
         "F-8-1 deploy_execute (verified)",
     ),
     _known(
         "F-8-1",
+        "#1888",
         _deploy_execute(fails=True, replay_is_noop=False),
         ValueError,
         "F-8-1 deploy_execute (failed)",
     ),
     _known(
         "F-8-1",
+        "#1888",
         _deployment_choice({"choice": "deploy"}, replay_is_noop=False),
         ValueError,
         "F-8-1 review_deployment_choice (deploy)",
     ),
     _known(
         "F-8-1",
+        "#1888",
         _deployment_choice({"choice": "local_only"}, replay_is_noop=False),
         ValueError,
         "F-8-1 review_deployment_choice (local)",
     ),
     _known(
         "F-8-1",
+        "#1888",
         _review_publish("auto", None, replay_is_noop=False),
         ValueError,
         "F-8-1 review_publish",
     ),
     _known(
         "F-8-1",
+        "#1888",
         _review_triage(findings=True, replay_is_noop=False),
         ValueError,
         "F-8-1 review_triage",
     ),
     _known(
-        "F-8-2", _review_demo(reviewer=True), AssertionError, "F-8-2 review_demo (automated review)"
+        "F-8-1",
+        "#1888",
+        _deploy_route("approve", replay_is_noop=False),
+        ValueError,
+        "F-8-1 deploy_review_routing (approve)",
+    ),
+    _known(
+        "F-8-1",
+        "#1888",
+        _deploy_route("loop_deploy_design", replay_is_noop=False),
+        ValueError,
+        "F-8-1 deploy_review_routing (loop_deploy_design)",
+    ),
+    _known(
+        "F-8-1",
+        "#1888",
+        _deploy_route("retry_deploy_execute", replay_is_noop=False),
+        ValueError,
+        "F-8-1 deploy_review_routing (retry_deploy_execute)",
+    ),
+    _known(
+        "F-8-1",
+        "#1888",
+        _deploy_route("abort", replay_is_noop=False),
+        ValueError,
+        "F-8-1 deploy_review_routing (abort)",
+    ),
+    _known(
+        "F-8-1",
+        "#1888",
+        _deploy_route("loop_code_fix", replay_is_noop=False),
+        ValueError,
+        "F-8-1 deploy_review_routing (loop_code_fix)",
+    ),
+    _known(
+        "F-8-2",
+        "#1889",
+        _review_demo(reviewer=True),
+        AssertionError,
+        "F-8-2 review_demo (automated review)",
     ),
 )
 

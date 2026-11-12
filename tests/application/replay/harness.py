@@ -218,6 +218,44 @@ class EntryBatches:
         return {"own": sorted(first.items()), "unmatched": unmatched}
 
 
+class CallBatches:
+    """An ORDERED call log (the fake adapter's own list, which appends on every call), split
+    by delivery.
+
+    The first delivery's calls, in order, are the reference, and every later delivery's calls
+    must equal them exactly: a redelivery may run the graph again, but an extra step, a missing
+    one, a different order, or a double call inside one delivery is a difference. A set would
+    hide all four. ``expected_first`` pins the first delivery's calls as well (a double call
+    that every delivery repeats equally is otherwise invisible to a comparison of deliveries
+    with each other).
+    """
+
+    def __init__(
+        self, calls: Callable[[], Sequence[object]], *, expected_first: Sequence[object] | None
+    ) -> None:
+        self._calls = calls
+        self._expected = None if expected_first is None else [repr(c) for c in expected_first]
+        self._batches: list[list[str]] = []
+        self._closed = 0
+
+    def skip_existing(self) -> None:
+        """Leave out the calls made so far: setup (a person answering a gate runs the handler
+        once to raise it), not a delivery."""
+        self._closed = len(self._calls())
+
+    def after_delivery(self) -> dict[str, object]:
+        log = [repr(call) for call in self._calls()]
+        self._batches.append(log[self._closed :])
+        self._closed = len(log)
+        first = self._batches[0]
+        if len(self._batches) == 1 and self._expected is not None:
+            assert first == self._expected, f"the first delivery made calls {first}"
+        return {
+            "first": first,
+            "unmatched": [batch for batch in self._batches[1:] if batch != first],
+        }
+
+
 def outcome_content(outcome: Outcome) -> object:
     """The outcome as comparable content: its class, and for a Success its result without
     the keys a redelivery may legitimately change (``RESULT_KEYS_A_REDELIVERY_MAY_CHANGE``).
@@ -237,8 +275,13 @@ def outcome_content(outcome: Outcome) -> object:
         # contract, not a drift. A DUPLICATED gate row is caught by the gate rows each gate
         # case puts in its snapshot.
         return ("Park", outcome.request)
-    if isinstance(outcome, Failure | Defer):
-        return (type(outcome).__name__, outcome)
+    if isinstance(outcome, Defer):
+        # When and why-class, not the prose: `detail` says what THIS delivery found, and a
+        # redelivery that finds the repair its first delivery enqueued still in flight says
+        # so ("repair in flight", not "repair enqueued") while deferring to the same time.
+        return ("Defer", outcome.retry_at, outcome.capacity, outcome.capacity_state)
+    if isinstance(outcome, Failure):
+        return ("Failure", outcome)
     raise AssertionError(f"unknown outcome {outcome!r}")
 
 
@@ -283,6 +326,13 @@ async def assert_replay_is_idempotent(case: ReplayCase, scratch: Path) -> None:
     second_outcome = await rig.redeliver().handle(second_job)
     twice = dict(rig.snapshot())
 
+    for outcome in (first_outcome, second_outcome):
+        if isinstance(outcome, Park) and outcome.gate is not None:
+            assert "gates" in once, (
+                f"{case.name}: the handler raised a gate itself, so the snapshot must hold the "
+                "gate rows (a Park is compared by its request, which cannot show a duplicate gate)"
+            )
+
     differences = _differences(once, twice)
     assert not differences, (
         f"{case.name}: a redelivery changed what one delivery left behind:\n"
@@ -294,6 +344,7 @@ async def assert_replay_is_idempotent(case: ReplayCase, scratch: Path) -> None:
 
 
 __all__ = [
+    "CallBatches",
     "ContentLedger",
     "EntryBatches",
     "ReplayCase",

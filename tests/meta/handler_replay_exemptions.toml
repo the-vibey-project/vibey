@@ -1,19 +1,23 @@
 # Made with ❤️ by [Vibey](https://the-vibey-project.github.io/vibey/), Developed by [Adam Matthew Steinberger](https://vibewithadam.matthewsteinberger.com/) ([@adammatthewsteinberger](https://github.com/adammatthewsteinberger/)).
 #
-# The job handlers that have no replay case yet
+# The job handlers that have no replay case, and why
 # (tests/meta/test_every_handler_has_a_replay_case.py; CLAUDE.md: "Every job is idempotent
-# under replay"). Each entry is a handler module under src/vibey/application, named without
-# its `_handler` suffix, with the reason it is not covered. The list can only shrink: a handler
-# that now has a case in tests/application/replay/ must leave it in the same change (a stale
-# entry fails), and CEILING, a constant in the census test (not here, so this file cannot move
-# its own limit), is lowered with it; it must equal the number of entries.
+# under replay"). Each entry is a module under src/vibey/application that defines a class with
+# `async def handle(self, job: JobRecord)` (a registered job handler or something that stands
+# in for one), named without a `_handler` suffix, with the reason it has no case. The list can
+# only shrink: a module that now has a case in tests/application/replay/ must leave it in the
+# same change (a stale entry fails), and CEILING, a constant in the census test (not here, so
+# this file cannot move its own limit), is lowered with it; it must equal the number of
+# entries. The census test pins exactly which names may stay and why.
 #
-# Measured 2026-11-11 against src/vibey/application/*_handler.py: 18 handlers. SP2-A Task 7
-# covered five (build_decompose, design, build_implement, build_integrate, build_verify) and
-# Task 8 the other twelve; what is left is the one handler that is not a job handler at all.
-# Only bus_dead_letter may stay (the census test pins it by name): it replays a dead letter
-# from the bus, which is a different contract from a job delivered twice.
+# Measured 2026-11-11: 23 modules define such a class. SP2-A Task 7 covered five, Task 8 the
+# other fourteen; what is left is three wrappers (a job handler that delegates to, or stands
+# in for, another one: the replay that matters is the wrapped handler's, which has its case)
+# and the dead-letter handler, whose contract is deliberately not replay equality.
 
 exempt = [
-  "bus_dead_letter",        # replays a dead letter, not a delivered job: a different contract
+  "bus_dead_letter",   # a leased job, but its contract is at-least-once: replay re-publishes
+  "build_dependency_wait",  # DeferringHandler: returns a fixed Defer, touches nothing
+  "engine_selection",  # RotationRecordingHandler: wraps a handler, records the engine's health
+  "job_dispatcher",    # JobDispatcher: routes a job to the handler for its kind, no effect of its own
 ]

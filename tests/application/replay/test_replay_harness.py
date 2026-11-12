@@ -3,7 +3,7 @@
 harmless and fails one whose replay is not, even when a COUNT would not notice."""
 
 from dataclasses import replace
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from uuid import uuid4
 
@@ -11,6 +11,7 @@ import pytest
 
 from tests.application.fakes import FakeJobRepository, make_job
 from tests.application.replay.harness import (
+    CallBatches,
     ContentLedger,
     EntryBatches,
     ReplayCase,
@@ -20,7 +21,7 @@ from tests.application.replay.harness import (
     outcome_content,
 )
 from vibey.application.dto import EngineEvent, EnqueueRequest, HumanGateRequest, JobRecord
-from vibey.application.worker import Park, Success
+from vibey.application.worker import Defer, Park, Success
 from vibey.domain.job import idempotency_key
 from vibey.domain.phase import Phase
 
@@ -232,3 +233,52 @@ def test_a_park_is_compared_by_its_request_not_by_the_gate_record_it_carries() -
     assert outcome_content(Park(request)) != outcome_content(
         Park(HumanGateRequest(kind="k", prompt="another prompt"))
     )
+
+
+def test_call_batches_compare_the_ordered_calls_of_each_delivery() -> None:
+    calls: list[str] = []
+    batches = CallBatches(lambda: calls, expected_first=["a", "b"])
+    calls += ["a", "b"]
+    first = batches.after_delivery()
+    calls += ["a", "b"]
+    assert batches.after_delivery()["unmatched"] == []
+    calls += ["b", "a"]  # the same steps in another order
+    assert batches.after_delivery()["unmatched"] != []
+    calls += ["a", "b", "b"]  # a double call
+    assert batches.after_delivery()["unmatched"] != []
+    assert first["first"] == [repr("a"), repr("b")]
+
+
+def test_call_batches_pin_the_first_delivery_when_told_to() -> None:
+    calls = ["a", "a"]  # a double call inside the first delivery
+    with pytest.raises(AssertionError):
+        CallBatches(lambda: calls, expected_first=["a"]).after_delivery()
+
+
+def test_a_defer_is_compared_by_its_time_and_class_not_its_prose() -> None:
+    at = datetime(2026, 1, 1, tzinfo=UTC)
+    assert outcome_content(Defer(at, "repair enqueued")) == outcome_content(
+        Defer(at, "repair in flight")
+    )
+    assert outcome_content(Defer(at, "x")) != outcome_content(Defer(at + timedelta(minutes=1), "x"))
+    assert outcome_content(Defer(at, "x")) != outcome_content(Defer(at, "x", capacity=True))
+
+
+async def test_a_handler_that_raises_its_own_gate_must_snapshot_its_gates(tmp_path: Path) -> None:
+    class _Gated:
+        async def handle(self, job: JobRecord) -> Park:
+            gate = object()
+            return Park(HumanGateRequest(kind="k", prompt="p"), gate=gate)  # type: ignore[arg-type]
+
+    def build(scratch: Path) -> ReplayRig:
+        jobs = FakeJobRepository([job := replace(make_job(uuid4()), kind="toy")])
+        return ReplayRig(
+            handler=_Gated(),
+            job=job,
+            jobs=jobs,
+            redeliver=_Gated,
+            snapshot=lambda: {"jobs": jobs_content(jobs, job.id)},
+        )
+
+    with pytest.raises(AssertionError, match="gate rows"):
+        await assert_replay_is_idempotent(ReplayCase(name="n", kind="k", build=build), tmp_path)

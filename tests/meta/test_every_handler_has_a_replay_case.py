@@ -4,7 +4,10 @@
 CLAUDE.md: "Every job is idempotent under replay. Workers die; the lease expires and another
 worker picks it up." A handler is held to that by a ``ReplayCase`` under
 ``tests/application/replay/`` (``assert_replay_is_idempotent``). This census walks
-``src/vibey/application/*_handler.py`` and requires each handler to be named by the ``kind``
+``src/vibey/application/*.py`` for the classes that are job handlers (an ``async def handle``
+taking a ``JobRecord``: the registered handlers in ``bootstrap.py``, ``deploy_design_bridge``
+and ``deploy_review_routing`` among them, not only the modules named ``*_handler.py``), keys each
+by its module name without a ``_handler`` suffix, and requires each handler to be named by the ``kind``
 of some ``ReplayCase(...)`` call there, or to be listed in
 ``tests/meta/handler_replay_exemptions.toml`` (a ratchet: stale entries fail, and ``CEILING``
 (a constant in this file) must equal the list's length, so it falls in the same change that covers a handler).
@@ -24,7 +27,7 @@ HANDLERS = REPO / "src" / "vibey" / "application"
 REPLAY = REPO / "tests" / "application" / "replay"
 EXEMPTIONS = Path(__file__).with_name("handler_replay_exemptions.toml")
 
-CEILING = 1
+CEILING = 4
 """The most handlers that may be exempt. It lives here, not in the TOML, so that a change to
 the list cannot also move its own limit: lower it in the same change that covers a handler,
 and never raise it without a written reason in review."""
@@ -99,8 +102,29 @@ class ReplayCensus:
         return kinds
 
 
+def defines_a_job_handler(source: str) -> bool:
+    """Whether the module has a class with ``async def handle(self, job: JobRecord)``."""
+    for node in ast.walk(ast.parse(source)):
+        if not isinstance(node, ast.ClassDef):
+            continue
+        for member in node.body:
+            if (
+                isinstance(member, ast.AsyncFunctionDef)
+                and member.name == "handle"
+                and len(member.args.args) >= 2
+                and isinstance(member.args.args[1].annotation, ast.Name)
+                and member.args.args[1].annotation.id == "JobRecord"
+            ):
+                return True
+    return False
+
+
 def handler_names() -> list[str]:
-    return sorted(path.stem.removesuffix("_handler") for path in HANDLERS.glob("*_handler.py"))
+    return sorted(
+        path.stem.removesuffix("_handler")
+        for path in HANDLERS.glob("*.py")
+        if defines_a_job_handler(path.read_text(encoding="utf-8"))
+    )
 
 
 def covered_names() -> set[str]:
@@ -140,7 +164,7 @@ def test_every_exemption_names_a_handler_that_still_exists() -> None:
 def test_a_handler_with_a_case_leaves_the_exemptions() -> None:
     assert committed().exempt_but_covered() == [], (
         "these handlers now have a replay case: delete their entries from "
-        "tests/meta/handler_replay_exemptions.toml and lower `ceiling`"
+        "tests/meta/handler_replay_exemptions.toml and lower `CEILING`"
     )
 
 
@@ -159,14 +183,25 @@ def test_the_exemptions_are_unique_and_the_ceiling_is_exactly_their_number() -> 
     )
 
 
-def test_only_the_dead_letter_replay_is_exempt_and_for_its_stated_reason() -> None:
-    """Every job handler has a replay case. The one exception is not a job handler: it replays a
-    dead letter off the bus, which is not a delivered job. The census accepts a reason-bearing
-    entry for that name only; any other handler needs a case, not an exemption."""
-    assert recorded() == ["bus_dead_letter"]
+EXEMPT_FOR_A_STATED_REASON = {
+    "bus_dead_letter": "at-least-once",
+    "build_dependency_wait": "Defer",
+    "engine_selection": "wraps",
+    "job_dispatcher": "routes",
+}
+
+
+def test_only_the_wrappers_and_the_dead_letter_are_exempt_each_for_its_stated_reason() -> None:
+    """Every job handler has a replay case. The census accepts a reason-bearing entry for
+    these four names only: three wrappers that delegate to a handler that has its own case, and
+    the dead-letter handler, which is a leased job but whose documented contract is
+    at-least-once (a replay publishes the body again; an answer it cannot use re-parks), so
+    equality of what a redelivery leaves is not its invariant. Any other handler needs a case."""
+    assert sorted(recorded()) == sorted(EXEMPT_FOR_A_STATED_REASON)
     lines = EXEMPTIONS.read_text(encoding="utf-8").splitlines()
-    (entry,) = [line for line in lines if line.strip().startswith('"bus_dead_letter"')]
-    assert "dead letter" in entry.split("#", 1)[1]
+    for name, word in EXEMPT_FOR_A_STATED_REASON.items():
+        (entry,) = [line for line in lines if line.strip().startswith(f'"{name}"')]
+        assert word in entry.split("#", 1)[1], f"{name}: the reason should say {word!r}"
 
 
 def test_every_exemption_carries_a_reason() -> None:
@@ -182,7 +217,17 @@ def test_every_exemption_carries_a_reason() -> None:
 def test_the_census_sees_the_handlers_it_is_meant_to() -> None:
     names = handler_names()
     assert {"build_implement", "design", "visual"} <= set(names)
-    assert len(names) >= 18
+    # Job handlers that are not named *_handler.py are in it too.
+    assert {"deploy_design_bridge", "deploy_review_routing", "job_dispatcher"} <= set(names)
+    assert len(names) >= 23
+
+
+def test_a_module_defining_a_job_handler_is_recognised_by_its_signature_not_its_name() -> None:
+    handler = "class Anything:\n    async def handle(self, job: JobRecord) -> Outcome: ...\n"
+    assert defines_a_job_handler(handler)
+    assert not defines_a_job_handler("class A:\n    async def handle(self, event: Event): ...\n")
+    assert not defines_a_job_handler("class A:\n    def handle(self, job: JobRecord): ...\n")
+    assert not defines_a_job_handler("async def handle(job: JobRecord): ...\n")
 
 
 # --------------------------------------------------------------- the census, on synthetic input
