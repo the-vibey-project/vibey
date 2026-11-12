@@ -38,7 +38,7 @@ import subprocess
 import sys
 from collections.abc import Callable, Mapping
 from dataclasses import dataclass, field
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 from vibey_gh.estimation import GradedEstimator, Sample
 from vibey_gh.interfaces.context_sizer_interface import ContextSizerInterface
@@ -650,7 +650,8 @@ class OllamaModelSampler(ModelSamplerInterface):
             return None
 
     @staticmethod
-    def _entry(data: object, name: str) -> dict | None:
+    # Any-valued: the runner's own JSON entry; `sample` coerces each field it reads.
+    def _entry(data: object, name: str) -> dict[str, Any] | None:
         """The `models` entry naming this model, or `None`.
 
         A name without a tag also matches its `:latest`, because that is the model the

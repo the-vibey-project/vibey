@@ -61,9 +61,12 @@ def keda_metric_value(name: str = "queue_depth") -> float:
 def mount_build_info_route(app: Any, path: str = "/api/version") -> None:
     """Mount a FastAPI route returning :func:`build_info`."""
 
-    @app.get(path)
     def _version() -> dict[str, str | None]:
         return build_info()
+
+    # `app` is Any, so register by call: a decorator expression typed Any makes
+    # the decorated function untyped under mypy --strict (untyped-decorator).
+    app.get(path)(_version)
 
 
 def pod_context_extra() -> dict[str, str | None]:

@@ -16,6 +16,7 @@ import threading
 import time
 import types
 import uuid
+from collections.abc import Iterator
 from contextlib import ExitStack
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
@@ -47,7 +48,7 @@ def _instructions(code: types.CodeType) -> dict[int, dis.Instruction]:
     return {instruction.offset: instruction for instruction in dis.get_instructions(code)}
 
 
-def _code_objects(code: types.CodeType):
+def _code_objects(code: types.CodeType) -> Iterator[types.CodeType]:
     yield code
     for constant in code.co_consts:
         if isinstance(constant, types.CodeType):
@@ -120,7 +121,7 @@ class BranchTracer:
             self.stream.write(json.dumps(record, sort_keys=True) + "\n")
             self.stream.flush()
 
-    def _resolve_pending(self, frame, actual_offset: int) -> None:
+    def _resolve_pending(self, frame: types.FrameType, actual_offset: int) -> None:
         pending = self._pending.pop(id(frame), None)
         if pending is None:
             return
@@ -140,7 +141,7 @@ class BranchTracer:
             }
         )
 
-    def __call__(self, frame, event: str, arg):
+    def __call__(self, frame: types.FrameType, event: str, arg: object) -> BranchTracer | None:
         if event == "call":
             if not self._owned(frame.f_code.co_filename):
                 return None

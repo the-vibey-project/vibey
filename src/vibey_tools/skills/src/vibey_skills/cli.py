@@ -24,6 +24,7 @@ import sys
 from pathlib import Path
 
 from . import (
+    Skill,
     __version__,
     iter_skills,
     marketplace_manifest,
@@ -78,7 +79,7 @@ def cmd_list(args: argparse.Namespace) -> int:
             )
             return 1
 
-    skills_by_plugin: dict[str, list] = {}
+    skills_by_plugin: dict[str, list[Skill]] = {}
     for skill in iter_skills(args.plugin):
         skills_by_plugin.setdefault(skill.plugin, []).append(skill)
 
@@ -378,7 +379,7 @@ def main(argv: list[str] | None = None) -> int:
         parser.print_help()
         return 1
     try:
-        return args.func(args)
+        return int(args.func(args))
     except (FileNotFoundError, ValueError, json.JSONDecodeError) as exc:
         print(f"vibey-skills: {exc}", file=sys.stderr)
         return 1
