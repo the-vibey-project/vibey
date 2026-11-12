@@ -597,9 +597,8 @@ class TrialHome:
     @staticmethod
     def resolve(settings: Settings) -> Path:
         home, _ = storm_durability.StormHome(os.environ).resolve()
-        root: Path = (
-            home / settings.trials_subdir
-        )  # `home` is Any: the module is imported with an ignore
+        # `home` is Any (the module is imported with an ignore), so the annotation is what types `root`.
+        root: Path = home / settings.trials_subdir
         storm_durability.DurabilityGate(storm_durability.VolatileLocations(os.environ)).enforce(
             {"trial repositories": root}, "VIBEY_STORM_HOME"
         )
