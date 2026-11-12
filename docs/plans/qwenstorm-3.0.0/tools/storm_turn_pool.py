@@ -200,7 +200,7 @@ class QwenloopTurnPool(TurnPoolBuilderInterface):
                 # truncates them, then the invalid-completion or continue prompt.
                 after: list[tuple[Any, str | None]] = []
                 if results:
-                    calls = tuple(
+                    calls: tuple[dict[str, Any], ...] = tuple(  # ChatMessage.tool_calls' own type
                         {
                             "id": f"t{entry['turn']}c{i}",
                             "type": "function",
@@ -321,7 +321,7 @@ class SpecTurnPool(SpecTurnPoolInterface):
                 result = {
                     "content": (self._repo / path).read_text(encoding="utf-8", errors="replace")
                 }
-                call = {
+                call: dict[str, Any] = {  # one ChatMessage.tool_calls element, typed as it is
                     "id": f"t{len(turns) + 1}c0",
                     "type": "function",
                     "function": {"name": "read_file", "arguments": json.dumps({"path": path})},
