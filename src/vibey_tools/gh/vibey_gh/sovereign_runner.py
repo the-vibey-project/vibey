@@ -38,6 +38,10 @@ from urllib.parse import urlsplit
 from xml.sax.saxutils import escape
 
 from vibey_gh.config import GhConfig
+from vibey_gh.interfaces.sovereign_runner_interface import (
+    LaunchAgentUnitInterface,
+    RunnerPlanInterface,
+)
 
 __all__ = [
     "AMBIENT_TOKENS",
@@ -225,7 +229,7 @@ class SovereignRunner:
 
     # --- install and verify ---------------------------------------------------------------
 
-    def install(self, plan: RunnerPlan, *, load: bool) -> tuple[list[str], bool]:
+    def install(self, plan: RunnerPlanInterface, *, load: bool) -> tuple[list[str], bool]:
         lines = []
         for rendered in plan.files:
             rendered.path.parent.mkdir(parents=True, exist_ok=True)
@@ -246,7 +250,7 @@ class SovereignRunner:
             return lines, code == 0
         return lines, True
 
-    def _bootstrap_when_gone(self, service: str, plan: RunnerPlan) -> tuple[int, str]:
+    def _bootstrap_when_gone(self, service: str, plan: RunnerPlanInterface) -> tuple[int, str]:
         """`bootout` returns while launchd is still stopping the service (the supervisor traps
         TERM, removes the egress gate and reaps its runners); a `bootstrap` into that window
         fails with exit 5. Wait for the label to disappear, then retry a load that still
@@ -264,7 +268,7 @@ class SovereignRunner:
             code, output = self._launch(argv)
         return code, output
 
-    def next_steps(self, plan: RunnerPlan) -> list[str]:
+    def next_steps(self, plan: RunnerPlanInterface) -> list[str]:
         """Shell commands, every path and value quoted: `[runners]` paths may hold spaces."""
         q = shlex.quote
         host = q(self._host(plan))
@@ -291,10 +295,10 @@ class SovereignRunner:
         ]
 
     @staticmethod
-    def _host(plan: RunnerPlan) -> str:
+    def _host(plan: RunnerPlanInterface) -> str:
         return plan.repo_url.split("/")[2]
 
-    def check(self, plan: RunnerPlan) -> list[str]:
+    def check(self, plan: RunnerPlanInterface) -> list[str]:
         problems = []
         for rendered in plan.files:
             if not rendered.path.is_file():
@@ -305,7 +309,7 @@ class SovereignRunner:
                 problems.append(f"not executable: {rendered.path}")
         return problems + [f"credential: {p}" for p in self.credential_problems(plan)]
 
-    def credential_problems(self, plan: RunnerPlan) -> list[str]:
+    def credential_problems(self, plan: RunnerPlanInterface) -> list[str]:
         """The supervisor's rule, ending as it does: GitHub itself must accept the token.
 
         The last step runs `gh auth status --hostname <host>` under the dedicated
@@ -342,7 +346,9 @@ class SovereignRunner:
         env["GH_CONFIG_DIR"] = str(self._gh_dir)
         return env
 
-    def registered_runners(self, plan: RunnerPlan) -> tuple[tuple[RegisteredRunner, ...], str]:
+    def registered_runners(
+        self, plan: RunnerPlanInterface
+    ) -> tuple[tuple[RegisteredRunner, ...], str]:
         """Every runner GitHub lists for the plan's repository, read with the runner's OWN
         login: `GH_CONFIG_DIR` is `gh_config_dir` and every ambient token is stripped, so the
         answer is about the credential the runner itself uses -- the one that holds the
@@ -393,7 +399,7 @@ class SovereignRunner:
 
     # --- removal --------------------------------------------------------------------------
 
-    def strays(self, plan: RunnerPlan) -> tuple[LaunchAgentUnit, ...]:
+    def strays(self, plan: RunnerPlanInterface) -> tuple[LaunchAgentUnit, ...]:
         prefix = self._runners.unit_prefix
         found = []
         agents = self._agents_dir
@@ -422,7 +428,7 @@ class SovereignRunner:
             path, str(body.get("Label", path.stem)), env.get("VIBEY_REPO_URL", "")
         )
 
-    def remove(self, units: Sequence[LaunchAgentUnit], *, apply: bool) -> list[str]:
+    def remove(self, units: Sequence[LaunchAgentUnitInterface], *, apply: bool) -> list[str]:
         if not units:
             return ["nothing to remove"]
         retired = self._install_dir / RETIRED_DIR
@@ -461,7 +467,7 @@ class SovereignRunner:
             target = retired / f"{path.stem}.{n}{path.suffix}"
         return target
 
-    def uninstall(self, plan: RunnerPlan, *, apply: bool) -> list[str]:
+    def uninstall(self, plan: RunnerPlanInterface, *, apply: bool) -> list[str]:
         lines = []
         if plan.plist.is_file():
             lines += self.remove((self._describe(plan.plist),), apply=apply)
