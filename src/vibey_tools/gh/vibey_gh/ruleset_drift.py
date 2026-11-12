@@ -94,7 +94,9 @@ class RulesetDrift(RulesetDriftInterface):
                 continue
             problems.extend(
                 f"{name}: {detail}"
-                for detail in self._differences(rulesets.build_ruleset(branch, policy), existing)
+                for detail in self._differences(
+                    rulesets.build_ruleset(branch, policy), existing, policy.absent_rules
+                )
             )
         return tuple(problems)
 
@@ -116,7 +118,9 @@ class RulesetDrift(RulesetDriftInterface):
             names.append(name)
         return sorted(names)
 
-    def _differences(self, desired: dict[str, Any], existing: Mapping[str, Any]) -> list[str]:
+    def _differences(
+        self, desired: dict[str, Any], existing: Mapping[str, Any], absent: tuple[str, ...]
+    ) -> list[str]:
         found = []
         for field in ("target", "enforcement", "conditions"):
             if existing.get(field) != desired[field]:
@@ -141,8 +145,12 @@ class RulesetDrift(RulesetDriftInterface):
                 found.append(f"rule {rule['type']} {state}")
         declared_types = {rule["type"] for rule in desired["rules"]}
         found.extend(
+            f"rule {kind} is live but declared absent"
+            for kind in sorted(set(live_rules) & set(absent))
+        )
+        found.extend(
             f"rule {kind} is live but not declared"
-            for kind in sorted(set(live_rules) - declared_types)
+            for kind in sorted(set(live_rules) - declared_types - set(absent))
         )
         return found
 

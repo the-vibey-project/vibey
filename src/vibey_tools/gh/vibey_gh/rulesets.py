@@ -215,21 +215,31 @@ class Diff:
     changed: bool
     payload: dict[str, Any]
     unexpected_rules: tuple[str, ...]
+    # Live rules the declaration names in `absent_rules`: left out of `payload`, so the PUT
+    # removes them. Empty when nothing declared absent is live.
+    removed_rules: tuple[str, ...] = ()
 
 
-def diff_ruleset(desired: dict[str, Any], existing: dict[str, Any] | None) -> Diff:
+def diff_ruleset(
+    desired: dict[str, Any],
+    existing: dict[str, Any] | None,
+    absent: tuple[str, ...] = (),
+) -> Diff:
     """Compare `desired` against a fetched ruleset without ever discarding an unmentioned
-    rule: `payload` always carries every rule `existing` had that `desired` did not."""
+    rule: `payload` always carries every rule `existing` had that `desired` did not -- except
+    one whose type is in `absent`, which the declaration says must not exist."""
     if existing is None:
         return Diff(True, desired, ())
 
     desired_by_type = _rules_by_type(desired["rules"])
     existing_by_type = _rules_by_type(existing.get("rules", []))
-    unexpected = tuple(sorted(set(existing_by_type) - set(desired_by_type)))
+    removed = tuple(sorted(set(existing_by_type) & set(absent)))
+    unexpected = tuple(sorted(set(existing_by_type) - set(desired_by_type) - set(removed)))
     merged_rules = [existing_by_type[kind] for kind in unexpected] + desired["rules"]
 
     changed = (
-        existing.get("target") != desired["target"]
+        bool(removed)
+        or existing.get("target") != desired["target"]
         or existing.get("enforcement") != desired["enforcement"]
         or _bypass_key(existing.get("bypass_actors") or []) != _bypass_key(desired["bypass_actors"])
         or existing.get("conditions") != desired["conditions"]
@@ -239,7 +249,7 @@ def diff_ruleset(desired: dict[str, Any], existing: dict[str, Any] | None) -> Di
         )
     )
     payload = {**desired, "rules": merged_rules}
-    return Diff(changed, payload, unexpected)
+    return Diff(changed, payload, unexpected, removed)
 
 
 # --------------------------------------------------------------------------- gh adapters
@@ -301,12 +311,13 @@ def reconcile_one(branch: str, policy: RulesetConfig, *, dry_run: bool = False) 
     name = ruleset_name(branch)
     desired = build_ruleset(branch, policy)
     existing = fetch_ruleset(name)
-    result = diff_ruleset(desired, existing)
+    result = diff_ruleset(desired, existing, policy.absent_rules)
     outcome: dict[str, Any] = {
         "ruleset": name,
         "branch": branch,
         "changed": result.changed,
         "unexpected_rules": list(result.unexpected_rules),
+        "removed_rules": list(result.removed_rules),
         "applied": False,
     }
     if dry_run or not result.changed:

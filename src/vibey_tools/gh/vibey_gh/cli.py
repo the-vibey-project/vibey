@@ -1883,6 +1883,8 @@ def _rulesets(args) -> int:
         note = ""
         if outcome["unexpected_rules"]:
             note = f" — unexpected rule(s) preserved: {', '.join(outcome['unexpected_rules'])}"
+        if outcome.get("removed_rules"):
+            note += f" — removed rule(s): {', '.join(outcome['removed_rules'])}"
         print(f"  {outcome['ruleset']} ({outcome['branch']}): {state}{note}")
     # Report what was observed, not what was attempted (12.e): a dry run applies nothing,
     # and only a ruleset the forge accepted counts as applied.
