@@ -58,10 +58,8 @@ from vibey_gh.forge import ForgeKind
 
 CONFIG_NAME = ".vibey-gh.toml"
 
-# One parsed table of the configuration file. Any-valued because `tomllib.loads` returns
-# exactly that: the file is operator-written, and each value is checked or coerced by the
-# reader that consumes it, never by the table.
-type TomlTable = dict[str, Any]
+# One parsed table of the operator-written configuration file.
+type TomlTable = dict[str, Any]  # Any: what tomllib.loads returns; each reader checks its values
 
 
 def _finite_forecast_number(name: str, value: object) -> float:
