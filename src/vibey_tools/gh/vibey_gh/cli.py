@@ -58,11 +58,15 @@ from vibey_gh.skip_markers import SkipMarkerGuard
 from vibey_gh.tracking_issue import TrackingIssue
 
 if TYPE_CHECKING:
+    from vibey_gh.heartbeat_timer import ServiceManager
     from vibey_gh.interfaces.forge_snapshot_interface import ForgeReaderInterface
+    from vibey_gh.interfaces.heartbeat_timer_interface import HeartbeatTimerInterface
     from vibey_gh.interfaces.sabbath_guard_interface import (
         SabbathGuardInterface,
         SabbathLanesInterface,
     )
+    from vibey_gh.interfaces.sovereign_lane_interface import LaneReadinessInterface
+    from vibey_gh.sovereign_runner import Launchctl
 
 
 def _cloud_clutter(cfg: GhConfig, surveyed: bool) -> tuple[tuple[str, ...], tuple[str, ...]]:
@@ -1065,7 +1069,7 @@ def _push_scope(args: argparse.Namespace) -> int:
     return 0
 
 
-def _lane_readiness(cfg):
+def _lane_readiness(cfg: GhConfig) -> LaneReadinessInterface:
     """The sovereign lane's readiness as this machine can read it: the runner `[runners]`
     declares, listed with its own credential, and the model `[pr_automation.fallback]`
     names, read through the fit's sampler. One function so a test can hand `--beat` an exact
@@ -1081,7 +1085,7 @@ def _lane_readiness(cfg):
     )
 
 
-def _sovereign(args) -> int:
+def _sovereign(args: argparse.Namespace) -> int:
     """Publish or read the sovereign heartbeat (doctrine 8.a).
 
     `--beat` is what the heartbeat timer runs (`vibey-gh heartbeat install`); the bare form
@@ -1162,7 +1166,9 @@ def _sovereign(args) -> int:
     return 0 if (result.ready or not args.beat) else 1
 
 
-def _heartbeat_timer(cfg, service=None):
+def _heartbeat_timer(
+    cfg: GhConfig, service: ServiceManager | None = None
+) -> HeartbeatTimerInterface:
     """The heartbeat timer as this machine runs it. A module function because argparse
     dispatches to functions, and `heartbeat`, `runner` and `sovereign --beat` all build the
     timer the same way."""
@@ -1171,7 +1177,7 @@ def _heartbeat_timer(cfg, service=None):
     return HeartbeatTimer(cfg, home=Path.home(), uid=os.getuid(), service=service)
 
 
-def _install_heartbeat(timer, *, load: bool) -> int:
+def _install_heartbeat(timer: HeartbeatTimerInterface, *, load: bool) -> int:
     """Render and install the heartbeat timer, printing each act; 0 only when it is in place
     (and loaded, with `load`). A module function: `heartbeat install` and `runner install`
     share it, and argparse dispatches to functions."""
@@ -1191,7 +1197,7 @@ def _install_heartbeat(timer, *, load: bool) -> int:
     return 0
 
 
-def _heartbeat(args, service=None) -> int:
+def _heartbeat(args: argparse.Namespace, service: ServiceManager | None = None) -> int:
     """Stand the sovereign heartbeat's timer up from the tree, report on it, or remove it.
 
     launchd on macOS, a systemd user timer on Linux. Only `install --load` and
@@ -1212,7 +1218,7 @@ def _heartbeat(args, service=None) -> int:
     return 0
 
 
-def _runner(args, launchctl=None) -> int:
+def _runner(args: argparse.Namespace, launchctl: Launchctl | None = None) -> int:
     """Stand the sovereign review runner up from `[runners]`, or check or remove it (12.c).
 
     Only `install --load` and `--apply` touch launchd; every other form reads or writes
