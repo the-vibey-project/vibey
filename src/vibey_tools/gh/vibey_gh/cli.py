@@ -11,6 +11,7 @@ import sys
 from dataclasses import asdict
 from datetime import UTC, datetime
 from pathlib import Path
+from typing import TYPE_CHECKING
 
 from vibey_gh import (
     conversation,
@@ -55,6 +56,12 @@ from vibey_gh.review_timings import ReviewTimings
 from vibey_gh.ruleset_drift import RulesetDrift
 from vibey_gh.skip_markers import SkipMarkerGuard
 from vibey_gh.tracking_issue import TrackingIssue
+
+if TYPE_CHECKING:
+    from vibey_gh.interfaces.sabbath_guard_interface import (
+        SabbathGuardInterface,
+        SabbathLanesInterface,
+    )
 
 
 def _cloud_clutter(cfg: GhConfig, surveyed: bool) -> tuple[tuple[str, ...], tuple[str, ...]]:
@@ -312,7 +319,7 @@ def _summary_rows(rows: list[tuple[int, str, str]], merged: int, skipped: int) -
     return "\n".join(lines) + "\n"
 
 
-def _sabbath_guard(cfg):
+def _sabbath_guard(cfg: GhConfig) -> SabbathGuardInterface:
     """This host's Sabbath guard. A module function because argparse dispatches to
     functions and every writer below builds the guard the same way."""
     from vibey_gh.sabbath_guard import SabbathGuard
@@ -320,14 +327,14 @@ def _sabbath_guard(cfg):
     return SabbathGuard(cfg.sabbath, home=Path.home())
 
 
-def _sabbath_lanes(cfg):
+def _sabbath_lanes(cfg: GhConfig) -> SabbathLanesInterface:
     from vibey_gh.sabbath_guard import SabbathLanes
 
     declared = cfg.sabbath.lanes_dir
     return SabbathLanes(Path(os.path.expanduser(declared)))
 
 
-def _sabbath_resume(cfg, cwd: str | None, *, ended: bool) -> list[str]:
+def _sabbath_resume(cfg: GhConfig, cwd: str | None, *, ended: bool) -> list[str]:
     """What the heartbeat re-arms outside the window. `ended` marks the first beat after
     one: that beat writes the SabbathEnded line and re-fires the held workflows."""
     from vibey_gh.sabbath_guard import resume_dispatch
@@ -341,7 +348,7 @@ def _sabbath_resume(cfg, cwd: str | None, *, ended: bool) -> list[str]:
     return lines + resumed
 
 
-def _sabbath(args) -> int:
+def _sabbath(args: argparse.Namespace) -> int:
     """`vibey-gh sabbath status|register-lane|resume` (sub-doctrine 8.i)."""
     cfg = load_config()
     if args.action == "status":
@@ -367,7 +374,7 @@ def _sabbath(args) -> int:
     return 0
 
 
-def _held_for_the_sabbath(args, cfg) -> bool:
+def _held_for_the_sabbath(args: argparse.Namespace, cfg: GhConfig) -> bool:
     """Sub-doctrine 8.i: stand down, visibly. A held run prints the hold, writes it to the
     job summary and returns 0 -- paused, not failed, not silently skipped (10.f)."""
     held = _sabbath_guard(cfg).hold()
@@ -378,7 +385,7 @@ def _held_for_the_sabbath(args, cfg) -> bool:
     return True
 
 
-def _merge_train(args) -> int:
+def _merge_train(args: argparse.Namespace) -> int:
     cfg = load_config()
     if _held_for_the_sabbath(args, cfg):
         return 0
@@ -481,14 +488,14 @@ def _merge_train(args) -> int:
     return 0
 
 
-def _read_json(value: str) -> dict:
+def _read_json(value: str) -> dict[str, object]:
     parsed = json.loads(_read_text(value))
     if not isinstance(parsed, dict):
         raise TypeError("input JSON must be an object")
     return parsed
 
 
-def _pr_automation(args) -> int:
+def _pr_automation(args: argparse.Namespace) -> int:
     cfg = load_config()
     try:
         if args.action == "evaluate":
@@ -533,7 +540,7 @@ def _pr_automation(args) -> int:
     return 0
 
 
-def _issue_automation(args) -> int:
+def _issue_automation(args: argparse.Namespace) -> int:
     cfg = load_config()
     try:
         if args.action == "evaluate":
@@ -569,7 +576,7 @@ def _issue_automation(args) -> int:
     return 0
 
 
-def _issue_triage(args) -> int:
+def _issue_triage(args: argparse.Namespace) -> int:
     try:
         # Every triage call is a read or a label edit, safe to repeat, so a transient forge
         # failure is asked again (`[forge_retry]`) instead of failing the hourly sweep.
@@ -593,7 +600,7 @@ def _issue_triage(args) -> int:
     return 0
 
 
-def _github_release(args) -> int:
+def _github_release(args: argparse.Namespace) -> int:
     cfg = load_config()
     try:
         result = github_release.publish(cfg, target=args.target, version=args.version)
@@ -604,7 +611,7 @@ def _github_release(args) -> int:
     return 0
 
 
-def _write_summary(args, text: str) -> None:
+def _write_summary(args: argparse.Namespace, text: str) -> None:
     """Append to the job summary when running in Actions. Best-effort: a summary that
     cannot be written is not a reason to fail a train that merged correctly."""
     path = args.summary or os.environ.get("GITHUB_STEP_SUMMARY")
@@ -617,7 +624,7 @@ def _write_summary(args, text: str) -> None:
         print(f"vibey-gh: could not write the summary: {exc}", file=sys.stderr)
 
 
-def _flatten(args) -> int:
+def _flatten(args: argparse.Namespace) -> int:
     try:
         plan, notes = flatten.Flattener().flatten(
             load_config(),
@@ -637,7 +644,7 @@ def _flatten(args) -> int:
     return 0
 
 
-def _promote(args) -> int:
+def _promote(args: argparse.Namespace) -> int:
     if args.admin_fallback and not args.wait:
         # Without --wait nothing merges here (the merge train does), so the flag would be
         # accepted and silently ignored -- refused instead, so nobody believes it applied.
@@ -664,14 +671,14 @@ def _promote(args) -> int:
     return 0
 
 
-def _promotion_summary(result) -> str:
+def _promotion_summary(result: promote.Promotion) -> str:
     lines = ["## Promotion", ""]
     lines += [f"- {note}" for note in result.notes]
     lines += ["", f"Files differing: {result.changed_files}", f"Version: `{result.version}`"]
     return "\n".join(lines) + "\n"
 
 
-def _realign(args) -> int:
+def _realign(args: argparse.Namespace) -> int:
     try:
         _changed, message = realign.realign(load_config())
     except RuntimeError as exc:
@@ -681,7 +688,7 @@ def _realign(args) -> int:
     return 0
 
 
-def _report_superseded(args) -> int:
+def _report_superseded(args: argparse.Namespace) -> int:
     import subprocess
 
     from vibey_gh import yank
@@ -734,7 +741,7 @@ def _report_superseded(args) -> int:
     return 0
 
 
-def _failover(args) -> int:
+def _failover(args: argparse.Namespace) -> int:
     from vibey_gh import failover
 
     cfg = failover.load(Path(args.config).expanduser() if args.config else None)
