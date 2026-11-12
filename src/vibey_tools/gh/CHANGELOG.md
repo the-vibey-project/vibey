@@ -64,10 +64,6 @@ This file follows Keep a Changelog and semantic versioning conventions.
   is refused, never cut inside. Declared as `[pr_automation.fallback] split_added_hunks`
   (default `true`; `false` restores the refusal), `local-review --[no-]split-added-hunks`,
   and rendered into `pr-review.yml`.
-- **Feature:** `[rulesets.integration]` and `[rulesets.release]` `absent_rules` (list of
-  rule types, default empty). A live rule of a listed type is left out of the reconciled
-  payload instead of being preserved, reported as `removed rule(s)`, and `rulesets --check`
-  fails while it is live. A type the same table also declares is a `ValueError` at load.
 - **Feature:** `[rulesets.integration]` and `[rulesets.release]` `minimum_coverage` and
   `max_coverage_drop` (numbers 0-100, absent by default: no rule, unchanged behaviour).
   Declaring either renders GitHub's `code_coverage` rule as
