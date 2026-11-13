@@ -52,21 +52,21 @@ These apply to every command; they must come before the subcommand name.
 
 | Option | Default | What it does |
 |---|---|---|
-| `--version` | — | Print `vibey <version>` and exit. |
-| `--verbose` / `-v` (repeatable) | `0` | `-v` debug, `-vv` also third-party libraries, `-vvv` full payloads. |
+| `--version` / `-v` | — | Print two lines, `vibey-engine <version>` then `krypton-app <version>` (`krypton-app not installed` when the app is absent), and exit 0. Eager: it answers before any subcommand is parsed, so `vibey -v status` prints the versions and does not run `status`. |
+| `--verbose` / `-d` (repeatable) | `0` | `-d` debug, `-dd` also third-party libraries, `-ddd` full payloads. |
 | `--quiet` / `-q` | off | Warnings and errors only. |
-| `--log-level LEVEL` | unset | `DEBUG`, `INFO`, `WARNING`, `ERROR`, or `CRITICAL` (case-insensitive). Overrides the level `-v` or `-q` would pick. |
+| `--log-level LEVEL` | unset | `DEBUG`, `INFO`, `WARNING`, `ERROR`, or `CRITICAL` (case-insensitive). Overrides the level `-d` or `-q` would pick. |
 | `--log-file PATH` | unset | Also write redacted JSON lines to this file. |
 | `--workflows` / `-w` | off | Run the command on this repository's GitHub-hosted runners instead of here ([below](#running-a-command-on-the-workflows)). |
 | `--install-completion` | — | Install shell completion for the current shell. |
 | `--show-completion` | — | Print the completion script for the current shell. |
 | `--help` | — | Show help and exit. |
 
-`-v` and `-q` are mutually exclusive: together they print
+`-d` and `-q` are mutually exclusive: together they print
 `Error: --quiet and --verbose are mutually exclusive` and exit 2. An unknown
 `--log-level` exits 2 with `Error: invalid log level ...`. `--log-level`
-fixes the level, but the `-v` count still widens scope, so
-`--log-level WARNING -vvv` means warnings from third-party libraries too,
+fixes the level, but the `-d` count still widens scope, so
+`--log-level WARNING -ddd` means warnings from third-party libraries too,
 with payloads.
 
 ### Running a command on the workflows { #running-a-command-on-the-workflows }
@@ -718,7 +718,7 @@ vibey llm tail --all --no-follow
 |---|---|---|
 | `llm tail` | `--file PATH`, `--all`, `--no-follow`, `--raw`, `--max-chars N` | Follows the [wire log](../guides/local-models-ollama.md#watching-the-model-think) in **every phase**: each request DESIGN and DECOMPOSE send the model, its reasoning and answer as they stream back, and the model's own counts and timings; and, for BUILD and REVIEW, each engine session the worker started: every tool call and its result, the streamed answer, the reasoning, and each turn's time and tokens. It starts at the latest call or session and **switches to each new session by itself** (a new run id means a new events file). `--all` starts from the beginning, with every session; `--raw` prints the JSON lines as written. |
 
-The log is written when a command runs with `-vvv`, or with `VIBEY_LLM_WIRE_LOG=path`
+The log is written when a command runs with `-ddd`, or with `VIBEY_LLM_WIRE_LOG=path`
 (see [`VIBEY_LLM_WIRE_LOG`](configuration.md#environment-variables)). Without either, nothing is
 written and the model is asked exactly as before. The default file is
 `~/.local/state/vibey/llm-wire.jsonl`, readable by its owner alone. With it on, the worker also

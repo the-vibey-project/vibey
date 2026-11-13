@@ -231,6 +231,41 @@ def test_a_bump_still_moves_the_pin_the_repository_owns(tmp_path):
     assert ".github/workflows/provenance.yml" in moved
 
 
+# ------------------------------------------------------- an explicit `[install] pin`
+
+
+def _self_hosting(root: Path, version: str = "0.3.0") -> None:
+    root.joinpath("pyproject.toml").write_text(
+        f'[project]\nname = "{FALLBACK_DISTRIBUTION}"\nversion = "{version}"\n', encoding="utf-8"
+    )
+
+
+def test_an_explicit_pin_outranks_the_repositorys_own_version(tmp_path):
+    """The renumbering case: `[project] version` is 0.3.0, not yet on an index, so the
+    pin rendered from it would name a release nobody can install. `pin` holds the
+    rendered pin at a release that exists; the installed metadata is never asked."""
+    _self_hosting(tmp_path)
+    pin, text = _render(GhConfig(root=tmp_path, pin_version=True, pin="4.6.0"), Unasked())
+    assert pin == FallbackPin("4.6.0")
+    assert f'python -m pip install --quiet "{FALLBACK_DISTRIBUTION}==4.6.0"\n' in text
+    assert "0.3.0" not in text
+
+
+def test_an_explicit_pin_outranks_an_adopters_installed_release(tmp_path):
+    pin, text = _render(_adopter(tmp_path, pin="1.2"), Unasked())
+    assert pin == FallbackPin("1.2")
+    assert f'"{FALLBACK_DISTRIBUTION}==1.2"' in text
+
+
+def test_an_explicit_pin_is_not_moved_by_a_version_bump(tmp_path):
+    """Not `from_repository`: the release commit re-renders nothing while it is set."""
+    _self_hosting(tmp_path)
+    cfg = GhConfig(root=tmp_path, pin_version=True, pin="4.6.0")
+    install(cfg, hooks_path=False)
+    assert rerender_version_pinned(cfg) == []
+    assert installed(cfg, local=False)[0]
+
+
 # ------------------------------------------------ the metadata, read from a real site
 
 

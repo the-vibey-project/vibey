@@ -1255,6 +1255,18 @@ def test_the_train_holds_an_unbumped_promotion(repo, monkeypatch):
     verdict = merge_train.judge(promotion, cfg)
     assert verdict.ready
 
+    # Under `[version] max_major`, a head carrying a version above the cap is held: merging
+    # it would publish a major the project has not declared. At or under it, ready.
+    capped = replace(cfg, max_major=0)
+    refusal = "4.6.0 is above [version] max_major = 0; refusing to derive"
+    monkeypatch.setattr(versioning, "owed_at", lambda c, since, head: (None, refusal))
+    monkeypatch.setattr(versioning, "read_version_at", lambda c, ref: "4.6.0")
+    verdict = merge_train.judge(promotion, capped)
+    assert not verdict.ready
+    assert verdict.reason == f"promotion would publish a version above the cap — {refusal}"
+    monkeypatch.setattr(versioning, "read_version_at", lambda c, ref: "0.3.0")
+    assert merge_train.judge(promotion, capped).ready
+
 
 # ------------------------------------------------------- the fallback distribution as a key
 
@@ -1666,6 +1678,59 @@ def test_regenerate_must_be_a_list_of_argv_lists(tmp_path, raw):
     (tmp_path / ".vibey-gh.toml").write_text(f"[version]\nregenerate = {json.dumps(raw)}\n")
     with pytest.raises(ValueError, match="version.regenerate"):
         load_config(tmp_path)
+
+
+@pytest.mark.parametrize("raw", ['"4.6.0"', '"1"', '"10.20.30.40"'])
+def test_install_pin_is_read_as_a_release(tmp_path, raw):
+    (tmp_path / ".vibey-gh.toml").write_text(f"[install]\npin_version = true\npin = {raw}\n")
+    assert load_config(tmp_path).pin == raw.strip('"')
+
+
+def test_install_pin_is_unset_by_default(tmp_path):
+    assert load_config(tmp_path).pin is None
+
+
+@pytest.mark.parametrize(
+    "raw",
+    [
+        '""',
+        '"latest"',
+        '"4.6.0rc1"',
+        '"==4.6.0"',
+        '">=4"',
+        '"4.6.0; rm -rf /"',
+        '" 4.6.0"',
+        '"4..6"',
+        "4.6",
+        "true",
+    ],
+)
+def test_install_pin_must_be_an_exact_release(tmp_path, raw):
+    """Rendered into `pip install "<package>==<pin>"`: a release segment and nothing else."""
+    (tmp_path / ".vibey-gh.toml").write_text(f"[install]\npin_version = true\npin = {raw}\n")
+    with pytest.raises(ValueError, match=r"install\.pin must be"):
+        load_config(tmp_path)
+
+
+def test_install_pin_without_pin_version_is_refused(tmp_path):
+    """A key that silently does nothing is the defect fallback_pin exists to end."""
+    (tmp_path / ".vibey-gh.toml").write_text('[install]\npin = "4.6.0"\n')
+    with pytest.raises(ValueError, match=r"install\.pin needs install\.pin_version = true"):
+        load_config(tmp_path)
+
+
+@pytest.mark.parametrize("raw", ['"0"', "true", "false", "-1", "1.5", "[0]"])
+def test_max_major_must_be_a_non_negative_int(tmp_path, raw):
+    (tmp_path / ".vibey-gh.toml").write_text(f"[version]\nmax_major = {raw}\n")
+    with pytest.raises(ValueError, match=r"version\.max_major"):
+        load_config(tmp_path)
+
+
+@pytest.mark.parametrize(("raw", "expected"), [("0", 0), ("1", 1), (None, None)])
+def test_max_major_is_read_as_an_int_or_left_unset(tmp_path, raw, expected):
+    line = "" if raw is None else f"max_major = {raw}\n"
+    (tmp_path / ".vibey-gh.toml").write_text(f"[version]\n{line}")
+    assert load_config(tmp_path).max_major == expected
 
 
 def test_regenerate_is_read_as_argv_tuples(tmp_path):

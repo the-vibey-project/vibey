@@ -123,9 +123,9 @@ def test_the_entry_point_sends_a_w_command_line_to_the_workflows(
 
     monkeypatch.setattr(cli_main, "WORKFLOWS", Recording())
     with pytest.raises(SystemExit) as exited:
-        cli_main.run(["-v", "-w", "status", "--json"])
+        cli_main.run(["-d", "-w", "status", "--json"])
     assert exited.value.code == 5
-    assert sent == [("-v", "status", "--json")]
+    assert sent == [("-d", "status", "--json")]
 
 
 def test_the_entry_point_runs_everything_else_here(
@@ -135,7 +135,7 @@ def test_the_entry_point_runs_everything_else_here(
     with pytest.raises(SystemExit) as exited:
         cli_main.run()
     assert exited.value.code == 0
-    assert capsys.readouterr().out.startswith("vibey ")
+    assert capsys.readouterr().out.startswith("vibey-engine ")
 
 
 def test_the_flag_reaching_the_parser_is_refused_not_ignored() -> None:

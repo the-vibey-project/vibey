@@ -34,7 +34,7 @@ from vibey.infrastructure.interfaces.logging_interface import CorrelationLogCont
 from vibey.infrastructure.ledger.redact import redact_payload
 
 # Chatty libraries that are noise unless the operator explicitly widened the
-# net with -vv. asyncpg in particular logs every statement at DEBUG.
+# net with -dd. asyncpg in particular logs every statement at DEBUG.
 _THIRD_PARTY_LOGGERS = ("asyncpg", "asyncio", "httpx", "httpcore", "urllib3", "textual")
 
 # What the delivery correlation id is rendered under by default -- the same
@@ -134,7 +134,7 @@ def configure_logging(
 
 
 def apply_third_party_level(plan: LogPlan) -> None:
-    """Raise third-party loggers' floor unless -vv asked for them.
+    """Raise third-party loggers' floor unless -dd asked for them.
 
     Raising the floor rather than removing their handlers keeps a genuine
     library error visible at any verbosity.

@@ -1176,11 +1176,19 @@ jobs:
       # them, so adding one cannot leave a stale number behind.
       - name: Image contract - entrypoint runs
         run: |
+          # Two lines: `vibey-engine <version>`, then `krypton-app <version>` or
+          # `krypton-app not installed` (the image ships the engine alone).
           out=$(docker run --rm vibey:ci --version)
           echo "$out"
-          case "$out" in
-            "vibey "*) ;;
-            *) echo "::error::unexpected --version output: $out"; exit 1 ;;
+          engine=$(printf '%s\n' "$out" | sed -n 1p)
+          app=$(printf '%s\n' "$out" | sed -n 2p)
+          case "$engine" in
+            "vibey-engine "*) ;;
+            *) echo "::error::unexpected first --version line: $engine"; exit 1 ;;
+          esac
+          case "$app" in
+            "krypton-app "*) ;;
+            *) echo "::error::unexpected second --version line: $app"; exit 1 ;;
           esac
 
       - name: Image contract - runs as non-root uid 10001

@@ -106,6 +106,15 @@ flattens a branch, so the commit it writes and the version it derives can never
 disagree. Nothing else about the message is read: the minor/patch/nothing part of
 the answer is still derived from *which paths changed*.
 
+While `[version] max_major` is set in `.vibey-gh.toml`, a break that would carry the
+major past it is a **minor** instead, and the reason says "capped". This repository
+sets `max_major = 0`, so it stays pre-1.0: `0.3.0` plus a break is `0.4.0`, never
+`1.0.0`. Nothing is derived from or raised to a version above the cap: a version
+already over it is refused (renumber it, or raise the cap), a staged version at or
+under it beside a released one over it is kept as a renumber, and `promote` and the
+merge train refuse a promotion that would publish a version over it. Lifting the cap
+(deleting the key) is the operator's decision to go to 1.0.
+
 ## How the version is derived
 
 `uv run vibey-gh version --since origin/main --explain` prints the answer and why.
@@ -116,7 +125,8 @@ provenance header, and then:
 - otherwise, any changed file under `[version] code_paths` → **patch**
 - otherwise (docs, workflows, tooling only) → **nothing to release**
 - and then, only if one of the first two matched, a breaking marker anywhere in
-  the range escalates that answer to **major**
+  the range escalates that answer to **major** — or to **minor** while
+  `[version] max_major` caps it (see above)
 
 The order is the implementation's, not a presentation choice. A marker never
 *creates* a release: `docs!: …` still answers "nothing to release", because a

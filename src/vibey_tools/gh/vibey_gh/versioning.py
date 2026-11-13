@@ -12,6 +12,9 @@ a human-maintained version is a silent-failure generator.
     version already ahead  -> NONE    a deliberate bump is in place; never double it,
                                       unless the range now owes more (#393): a staged
                                       minor followed by a break is raised to the major
+    above [version] max_major -> NONE  refused: nothing is derived from, or raised to, a
+                                      major over the ceiling; a staged version at or under
+                                      it beside a released one over it is a renumber, kept
 
 MAJOR escalates a decision the two lines under it already reached; it never creates one.
 A range that reaches no installed user still releases nothing, and writing
@@ -143,7 +146,7 @@ def read_version_at(cfg: GhConfig, ref: str) -> str | None:
     return None
 
 
-def bump(version: str, level: str) -> str:
+def bump(version: str, level: str, max_major: int | None = None) -> str:
     """The next version at `level` — `major`, `minor`, or anything else meaning patch.
 
     `major` is derived like the other two, not chosen. A version this function cannot
@@ -152,11 +155,53 @@ def bump(version: str, level: str) -> str:
     one, and answers "a deliberate bump is in place" — once, for that release. The
     release after it derives from the hand-written number as though the tool had written
     it. So the only safe way to reach 1.0.0 is for the deriver to be able to reach it.
+
+    `max_major` (`[version] max_major`) is the operator's ceiling: a `major` that would
+    land above it is a `minor` instead, so a project that has not declared 1.0.0 cannot
+    be carried there by a breaking-change marker. Unset, nothing is capped.
     """
     major, minor, patch = (int(p) for p in version.split(".")[:3])
-    if level == "major":
+    if level == "major" and not _capped(version, max_major):
         return f"{major + 1}.0.0"
+    if level == "major":
+        level = "minor"
     return f"{major}.{minor + 1}.0" if level == "minor" else f"{major}.{minor}.{patch + 1}"
+
+
+def _capped(version: str, max_major: int | None) -> bool:
+    """True when a major bump of `version` would exceed `[version] max_major`.
+
+    Module-level beside `bump`, its caller, for the reason `decide` is (ADR-0016 has not
+    converged this module yet)."""
+    return max_major is not None and int(version.split(".")[0]) + 1 > max_major
+
+
+def exceeds_cap(version: str, max_major: int | None) -> bool:
+    """True when `version` itself is already above `[version] max_major`.
+
+    `_capped` asks whether the NEXT major would cross the ceiling; this asks whether the
+    version in hand already has. While the cap is set, the deriver never answers with a
+    version above it, and a version above it is never derived from: a range classified
+    against `4.6.0` under `max_major = 0` owes `4.7.0`, which is the cap undone by a
+    minor. Unset, or a version whose major is not a number, is never above the cap --
+    the second is left exactly as it was, as `_staged` leaves every version it cannot
+    read. Public because `promote` and `merge_train` refuse to ship such a version too.
+    Module-level beside `_capped` for the reason `decide` is (ADR-0016 has not converged
+    this module yet)."""
+    if max_major is None:
+        return False
+    try:
+        return int(version.split(".")[0]) > max_major
+    except ValueError:
+        return False
+
+
+def _cap_refusal(version: str, max_major: int | None) -> str:
+    """The reason given when `version` is above the cap: names both, says what to do."""
+    return (
+        f"{version} is above [version] max_major = {max_major}; refusing to derive a "
+        f"version from it — renumber to a major of {max_major} or less, or raise the cap"
+    )
 
 
 def breaking_marker(cfg: GhConfig, since: str, head: str) -> str | None:
@@ -274,9 +319,22 @@ def _staged(
     `3.0.0`, and publishing `2.1.0` would ship a break under a minor number. A staged
     version this module cannot read as `major.minor.patch` is left exactly as it was.
 
+    Under `[version] max_major` a staged version is never raised past the ceiling, and a
+    staged version already above it is refused rather than kept. A RELEASED version above
+    the ceiling with a staged one at or under it is a declared renumber (`4.6.0` released,
+    `0.3.0` staged, cap `0`): the range is not classified against the released number,
+    because everything derived from it would carry its major back over the cap.
+
     A module function, like `decide` and `owed_at` — its only callers — in a module that
     ADR-0016 has not converged yet; it moves into their class when they do.
     """
+    if exceeds_cap(staged, cfg.max_major):
+        return None, _cap_refusal(staged, cfg.max_major)
+    if exceeds_cap(released, cfg.max_major):
+        return None, (
+            f"{kept} — a renumber under [version] max_major = {cfg.max_major}: "
+            f"{released} is above the cap, so nothing is derived from it"
+        )
     owed, why = _classify(cfg, since, head, released)
     if owed is None:
         return None, kept
@@ -292,6 +350,10 @@ def _staged(
 
 
 def _classify(cfg: GhConfig, since: str, head: str, working: str) -> tuple[str | None, str]:
+    # A working version already above the cap derives nothing: any level bumped from it
+    # keeps its major, so the answer would be a version above the cap (see exceeds_cap).
+    if exceeds_cap(working, cfg.max_major):
+        return None, _cap_refusal(working, cfg.max_major)
     changed = [line for line in _git(cfg, "diff", "--name-only", since, head).splitlines() if line]
     if not changed:
         return None, f"no changes since {since}"
@@ -321,6 +383,11 @@ def _classify(cfg: GhConfig, since: str, head: str, working: str) -> tuple[str |
     # number asserting an incompatibility that does not exist.
     marker = breaking_marker(cfg, since, head)
     if marker is not None:
+        if _capped(working, cfg.max_major):
+            return bump(working, "major", cfg.max_major), (
+                f"{why}, and the range declares a break "
+                f"(capped to a minor: [version] max_major = {cfg.max_major}): {marker}"
+            )
         return bump(working, "major"), f"{why}, and the range declares a break: {marker}"
     return bump(working, level), why
 

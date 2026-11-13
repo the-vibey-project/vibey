@@ -549,6 +549,6 @@ def test_the_hub_never_runs_state_on_the_workflows() -> None:
     from vibey.domain.hub_scope import HUB_SCOPES, RESERVED_COMMANDS
 
     assert RESERVED_COMMANDS[("state",)] == "state_sync"
-    for argv in (("state", "sync"), ("-v", "state", "key", "--show"), ("state",)):
+    for argv in (("state", "sync"), ("-d", "state", "key", "--show"), ("state",)):
         assert HUB_SCOPES.reserved_command(argv) == "state_sync"
     assert HUB_SCOPES.reserved("state_sync")
