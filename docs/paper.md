@@ -2635,47 +2635,13 @@ the integration branch, not when the work was done.
 \node[font=\sffamily\tiny,text=vibeygold,rotate=60,anchor=south west,inner sep=1pt] at (axis cs:11,61) {v0.1.1--v0.1.2};
 \node[vibeyanchor,fill=vibeygold] at (axis cs:15,7) {};
 \node[font=\sffamily\tiny,text=vibeygold,rotate=60,anchor=south west,inner sep=1pt] at (axis cs:15,10) {v0.2.0};
-\node[vibeyanchor,fill=vibeygold] at (axis cs:20,97) {};
-\node[font=\sffamily\tiny,text=vibeygold,rotate=60,anchor=south west,inner sep=1pt] at (axis cs:20,100) {v0.3.0};
-\node[vibeyanchor,fill=vibeygold] at (axis cs:21,77) {};
-\node[font=\sffamily\tiny,text=vibeygold,rotate=60,anchor=south west,inner sep=1pt] at (axis cs:21,80) {v0.4.0--v0.5.0};
-\node[vibeyanchor,fill=vibeygold] at (axis cs:36,30) {};
-\node[font=\sffamily\tiny,text=vibeygold,rotate=60,anchor=south west,inner sep=1pt] at (axis cs:36,33) {v0.6.0};
-\node[vibeyanchor,fill=vibeygold] at (axis cs:37,67) {};
-\node[font=\sffamily\tiny,text=vibeygold,rotate=60,anchor=south west,inner sep=1pt] at (axis cs:37,70) {v0.7.0};
-\node[vibeyanchor,fill=vibeygold] at (axis cs:38,39) {};
-\node[font=\sffamily\tiny,text=vibeygold,rotate=60,anchor=south west,inner sep=1pt] at (axis cs:38,42) {v0.8.0};
-\node[vibeyanchor,fill=vibeygold] at (axis cs:40,197) {};
-\node[font=\sffamily\tiny,text=vibeygold,rotate=60,anchor=south west,inner sep=1pt] at (axis cs:40,200) {v1.0.0--v1.3.0};
-\node[vibeyanchor,fill=vibeygold] at (axis cs:41,13) {};
-\node[font=\sffamily\tiny,text=vibeygold,rotate=60,anchor=south west,inner sep=1pt] at (axis cs:41,16) {v1.4.0--v1.5.0};
-\node[vibeyanchor,fill=vibeygold] at (axis cs:43,9) {};
-\node[font=\sffamily\tiny,text=vibeygold,rotate=60,anchor=south west,inner sep=1pt] at (axis cs:43,12) {v2.0.0};
-\node[vibeyanchor,fill=vibeygold] at (axis cs:51,19) {};
-\node[font=\sffamily\tiny,text=vibeygold,rotate=60,anchor=south west,inner sep=1pt] at (axis cs:51,22) {v3.0.0};
-\node[vibeyanchor,fill=vibeygold] at (axis cs:52,27) {};
-\node[font=\sffamily\tiny,text=vibeygold,rotate=60,anchor=south west,inner sep=1pt] at (axis cs:52,30) {v3.1.0--v3.2.0};
-\node[vibeyanchor,fill=vibeygold] at (axis cs:54,33) {};
-\node[font=\sffamily\tiny,text=vibeygold,rotate=60,anchor=south west,inner sep=1pt] at (axis cs:54,36) {v3.3.0--v3.4.0};
-\node[vibeyanchor,fill=vibeygold] at (axis cs:55,29) {};
-\node[font=\sffamily\tiny,text=vibeygold,rotate=60,anchor=south west,inner sep=1pt] at (axis cs:55,32) {v4.0.0};
-\node[vibeyanchor,fill=vibeygold] at (axis cs:58,26) {};
-\node[font=\sffamily\tiny,text=vibeygold,rotate=60,anchor=south west,inner sep=1pt] at (axis cs:58,29) {v4.1.0};
-\node[vibeyanchor,fill=vibeygold] at (axis cs:59,18) {};
-\node[font=\sffamily\tiny,text=vibeygold,rotate=60,anchor=south west,inner sep=1pt] at (axis cs:59,21) {v4.2.0};
-\node[vibeyanchor,fill=vibeygold] at (axis cs:60,23) {};
-\node[font=\sffamily\tiny,text=vibeygold,rotate=60,anchor=south west,inner sep=1pt] at (axis cs:60,26) {v4.3.0};
-\node[vibeyanchor,fill=vibeygold] at (axis cs:63,20) {};
-\node[font=\sffamily\tiny,text=vibeygold,rotate=60,anchor=south west,inner sep=1pt] at (axis cs:63,23) {v4.4.0};
-\node[vibeyanchor,fill=vibeygold] at (axis cs:75,34) {};
-\node[font=\sffamily\tiny,text=vibeygold,rotate=60,anchor=south west,inner sep=1pt] at (axis cs:75,37) {v4.5.0};
 \draw[decorate,decoration={brace,amplitude=3pt},vibeygray] (axis cs:22,6) -- (axis cs:30,6);
 \node[vibeynote,anchor=south] at (axis cs:26.0,10) {9 days without a commit};
 \node[vibeycallout,anchor=east] at (axis cs:39.4,185) {191 on Sep 18};
 \node[vibeynote,anchor=north west,align=left] at (axis description cs:0.01,0.97) {\textcolor{vibeygold}{$\bullet$} vibey release tag};
 \end{axis}
 \end{tikzpicture}
-\caption{Commits per day since 2026-08-09, when the family's own development begins, read at revision f5b38b4a: 1,585 commits on 49 active days, with the busiest day at 191. Gold marks are the 28 \texttt{vibey} release tags in the window; the brace marks the longest pause.}
+\caption{Commits per day since 2026-08-09, when the family's own development begins, read at revision f5b38b4a: 1,585 commits on 49 active days, with the busiest day at 191. Gold marks are the 4 \texttt{vibey} release tags in the window; the brace marks the longest pause.}
 \label{fig:commits-daily}
 \end{figure*}
 ```
@@ -2778,69 +2744,19 @@ ships the whole family ([Fig. 32](#fig:release-cadence)).
 \begin{figure*}[t]
 \centering
 \begin{tikzpicture}[x=1cm,y=1cm]
-\draw[vibeydashed] (3.62,-0.30) -- (3.62,0.35);\node[vibeynote,anchor=north] at (3.62,-0.32) {Sep 2026};
-\draw[vibeydashed] (10.42,-0.30) -- (10.42,0.35);\node[vibeynote,anchor=north] at (10.42,-0.32) {Oct 2026};
 \node[vibeynote,anchor=north] at (0.00,-0.32) {Aug 16};
-\node[vibeynote,anchor=north] at (15.40,-0.32) {Oct 23};
+\node[vibeynote,anchor=north] at (15.40,-0.32) {Aug 24};
 \draw[vibeyline,line width=.5pt] (0,0.00) -- (15.40,0.00);
 \node[font=\sffamily\tiny\bfseries,anchor=east,text=vibeyink] at (-0.15,0.00) {vibey};
 \node[vibeyanchor,fill=vibeyblue] at (0.00,0.00) {};
 \node[font=\sffamily\tiny,text=vibeyblue,rotate=55,anchor=south west,inner sep=1pt] at (0.02,0.06) {0.1.0};
-\node[vibeyanchor,fill=vibeyblue] at (0.91,0.00) {};
-\node[font=\sffamily\tiny\bfseries,text=white,fill=vibeyblue,circle,inner sep=.6pt,anchor=north] at (0.91,-0.09) {2};
-\draw[vibeyline] (0.91,0.06) -- (0.91,0.48);
-\node[font=\sffamily\tiny,text=vibeyblue,rotate=55,anchor=south west,inner sep=1pt] at (0.93,0.48) {0.1.1--0.1.2};
-\node[vibeyanchor,fill=vibeyblue] at (1.81,0.00) {};
-\node[font=\sffamily\tiny,text=vibeyblue,rotate=55,anchor=south west,inner sep=1pt] at (1.83,0.06) {0.2.0};
-\node[vibeyanchor,fill=vibeyblue] at (2.94,0.00) {};
-\node[font=\sffamily\tiny,text=vibeyblue,rotate=55,anchor=south west,inner sep=1pt] at (2.96,0.06) {0.3.0};
-\node[vibeyanchor,fill=vibeyblue] at (3.17,0.00) {};
-\node[font=\sffamily\tiny\bfseries,text=white,fill=vibeyblue,circle,inner sep=.6pt,anchor=north] at (3.17,-0.09) {2};
-\draw[vibeyline] (3.17,0.06) -- (3.17,0.48);
-\node[font=\sffamily\tiny,text=vibeyblue,rotate=55,anchor=south west,inner sep=1pt] at (3.19,0.48) {0.4.0--0.5.0};
-\node[vibeyanchor,fill=vibeyblue] at (6.57,0.00) {};
-\node[font=\sffamily\tiny,text=vibeyblue,rotate=55,anchor=south west,inner sep=1pt] at (6.59,0.06) {0.6.0};
-\node[vibeyanchor,fill=vibeyblue] at (6.79,0.00) {};
-\draw[vibeyline] (6.79,0.06) -- (6.79,0.48);
-\node[font=\sffamily\tiny,text=vibeyblue,rotate=55,anchor=south west,inner sep=1pt] at (6.81,0.48) {0.7.0};
-\node[vibeyanchor,fill=vibeyblue] at (7.02,0.00) {};
-\node[font=\sffamily\tiny,text=vibeyblue,rotate=55,anchor=south west,inner sep=1pt] at (7.04,0.06) {0.8.0};
-\node[vibeyanchor,fill=vibeyblue] at (7.47,0.00) {};
-\node[font=\sffamily\tiny\bfseries,text=white,fill=vibeyblue,circle,inner sep=.6pt,anchor=north] at (7.47,-0.09) {4};
-\draw[vibeyline] (7.47,0.06) -- (7.47,0.48);
-\node[font=\sffamily\tiny,text=vibeyblue,rotate=55,anchor=south west,inner sep=1pt] at (7.49,0.48) {1.0.0--1.3.0};
 \node[vibeyanchor,fill=vibeyblue] at (7.70,0.00) {};
 \node[font=\sffamily\tiny\bfseries,text=white,fill=vibeyblue,circle,inner sep=.6pt,anchor=north] at (7.70,-0.09) {2};
-\node[font=\sffamily\tiny,text=vibeyblue,rotate=55,anchor=south west,inner sep=1pt] at (7.72,0.06) {1.4.0--1.5.0};
-\node[vibeyanchor,fill=vibeyblue] at (8.15,0.00) {};
-\draw[vibeyline] (8.15,0.06) -- (8.15,0.48);
-\node[font=\sffamily\tiny,text=vibeyblue,rotate=55,anchor=south west,inner sep=1pt] at (8.17,0.48) {2.0.0};
-\node[vibeyanchor,fill=vibeyblue] at (9.96,0.00) {};
-\node[font=\sffamily\tiny,text=vibeyblue,rotate=55,anchor=south west,inner sep=1pt] at (9.98,0.06) {3.0.0};
-\node[vibeyanchor,fill=vibeyblue] at (10.19,0.00) {};
-\node[font=\sffamily\tiny\bfseries,text=white,fill=vibeyblue,circle,inner sep=.6pt,anchor=north] at (10.19,-0.09) {2};
-\draw[vibeyline] (10.19,0.06) -- (10.19,0.48);
-\node[font=\sffamily\tiny,text=vibeyblue,rotate=55,anchor=south west,inner sep=1pt] at (10.21,0.48) {3.1.0--3.2.0};
-\node[vibeyanchor,fill=vibeyblue] at (10.64,0.00) {};
-\node[font=\sffamily\tiny\bfseries,text=white,fill=vibeyblue,circle,inner sep=.6pt,anchor=north] at (10.64,-0.09) {2};
-\node[font=\sffamily\tiny,text=vibeyblue,rotate=55,anchor=south west,inner sep=1pt] at (10.66,0.06) {3.3.0--3.4.0};
-\node[vibeyanchor,fill=vibeyblue] at (10.87,0.00) {};
-\draw[vibeyline] (10.87,0.06) -- (10.87,0.48);
-\node[font=\sffamily\tiny,text=vibeyblue,rotate=55,anchor=south west,inner sep=1pt] at (10.89,0.48) {4.0.0};
-\node[vibeyanchor,fill=vibeyblue] at (11.55,0.00) {};
-\node[font=\sffamily\tiny,text=vibeyblue,rotate=55,anchor=south west,inner sep=1pt] at (11.57,0.06) {4.1.0};
-\node[vibeyanchor,fill=vibeyblue] at (11.78,0.00) {};
-\draw[vibeyline] (11.78,0.06) -- (11.78,0.48);
-\node[font=\sffamily\tiny,text=vibeyblue,rotate=55,anchor=south west,inner sep=1pt] at (11.80,0.48) {4.2.0};
-\node[vibeyanchor,fill=vibeyblue] at (12.00,0.00) {};
-\node[font=\sffamily\tiny,text=vibeyblue,rotate=55,anchor=south west,inner sep=1pt] at (12.02,0.06) {4.3.0};
-\node[vibeyanchor,fill=vibeyblue] at (12.68,0.00) {};
-\draw[vibeyline] (12.68,0.06) -- (12.68,0.48);
-\node[font=\sffamily\tiny,text=vibeyblue,rotate=55,anchor=south west,inner sep=1pt] at (12.70,0.48) {4.4.0};
+\node[font=\sffamily\tiny,text=vibeyblue,rotate=55,anchor=south west,inner sep=1pt] at (7.72,0.06) {0.1.1--0.1.2};
 \node[vibeyanchor,fill=vibeyblue] at (15.40,0.00) {};
-\node[font=\sffamily\tiny,text=vibeyblue,rotate=55,anchor=south west,inner sep=1pt] at (15.42,0.06) {4.5.0};
+\node[font=\sffamily\tiny,text=vibeyblue,rotate=55,anchor=south west,inner sep=1pt] at (15.42,0.06) {0.2.0};
 \end{tikzpicture}
-\caption{Every release tag created by the time of revision f5b38b4a, 28 tags on the repository; a tag is selected by its date, not by whether the revision's history reaches it, except that a tag cut at or after the revision itself is left out: it did not exist when the revision was the tip. The 28 \texttt{vibey} releases run from vibey-v0.1.0 on 2026-08-16 to vibey-v4.5.0 on 2026-10-23; since the packages were absorbed into one tree, one version number ships the whole family, and the packages' earlier tags were never carried into this repository, whose pre-absorption repositories have since been removed.}
+\caption{Every release tag created by the time of revision f5b38b4a, 4 tags on the repository; a tag is selected by its date, not by whether the revision's history reaches it, except that a tag cut at or after the revision itself is left out: it did not exist when the revision was the tip. The 4 \texttt{vibey} releases run from vibey-v0.1.0 on 2026-08-16 to vibey-v0.2.0 on 2026-08-24; since the packages were absorbed into one tree, one version number ships the whole family, and the packages' earlier tags were never carried into this repository, whose pre-absorption repositories have since been removed.}
 \label{fig:release-cadence}
 \end{figure*}
 ```
