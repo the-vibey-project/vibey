@@ -25,7 +25,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
-__version__ = "2.28.0"
+__version__ = "0.3.0"
 
 __all__ = [
     "__version__",

@@ -22,7 +22,7 @@ from hypothesis import given, settings
 from hypothesis import strategies as st
 
 from tests.fakes.ledger_repository import InMemoryLedgerRepository
-from tests.ledger_strategies import ledger_events
+from tests.ledger_strategies import ledger_events, plain_payloads
 from vibey.domain.engine import UnrecognizedEngineId
 from vibey.domain.ledger import (
     LedgerEvent,
@@ -66,6 +66,11 @@ def _ledgers(draw: st.DrawFn, *, unknown_values: bool = False) -> tuple[LedgerEv
             ledger_events(
                 project_id=PROJECT,
                 seq=seq,
+                # Plain payloads, because `append` redacts: a payload with a key that reads as
+                # a secret (Hypothesis drew "SECRET") is rewritten on the way in, so it cannot
+                # come back equal, and its digest changes with it. The redactor's own
+                # round-trip is held by test_redact_properties.py.
+                payloads=plain_payloads(),
                 unknown_values=unknown_values,
             )
         )
@@ -111,6 +116,22 @@ def test_appending_the_drafts_of_a_ledger_writes_the_ledger_again(
         for e in events
     ]
     assert all(e.digest == digest_event(e.payload) for e in again)
+
+
+@given(
+    event=ledger_events(project_id=PROJECT, seq=1, payloads=st.just({"SECRET": "hunter2"})),
+)
+def test_a_secret_key_is_redacted_on_append_and_the_digest_follows_the_stored_payload(
+    event: LedgerEvent,
+) -> None:
+    """The case the property above must not draw: Hypothesis once found `{"SECRET": None}`
+    in the default payloads and the ledger did not come back equal. It should not: the stored
+    payload is the redacted one, and the digest is taken over what is stored."""
+    (stored,) = _append_all((event,))
+    assert stored.payload != event.payload
+    assert "hunter2" not in json.dumps(stored.payload)
+    assert stored.digest == digest_event(stored.payload)
+    assert stored.digest != event.digest
 
 
 @settings(max_examples=40)

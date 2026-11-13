@@ -138,7 +138,7 @@ def test_an_editable_install_floats_and_says_why(tmp_path):
 
 
 def test_a_vibey_gh_from_another_distribution_floats_and_says_why(tmp_path):
-    distributions = Distributions(versions={FALLBACK_DISTRIBUTION: "1.0.0", "vibey-gh": "1.73.0"})
+    distributions = Distributions(versions={FALLBACK_DISTRIBUTION: "1.0.0", "vibey-gh": "0.3.0"})
     pin, text = _render(_adopter(tmp_path), distributions)
     assert pin.version is None
     assert FALLBACK_INSTALL in text

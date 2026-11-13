@@ -1014,7 +1014,7 @@ wheels = [
 
 [[package]]
 name = "claudeloop"
-version = "0.8.0"
+version = "0.3.0"
 source = { editable = "src/vibey_runners/claude" }
 dependencies = [
     { name = "anthropic" },
@@ -1092,7 +1092,7 @@ wheels = [
 
 [[package]]
 name = "codexloop"
-version = "0.4.0"
+version = "0.3.0"
 source = { editable = "src/vibey_runners/codex" }
 dependencies = [
     { name = "anyio" },
@@ -5288,7 +5288,7 @@ wheels = [
 
 [[package]]
 name = "vibey-bootstrap"
-version = "4.2.3"
+version = "0.3.0"
 source = { editable = "src/vibey_tools/bootstrap" }
 dependencies = [
     { name = "aio-pika" },
@@ -5728,7 +5728,7 @@ provides-extras = ["operator", "skills", "azure", "bootstrap-all", "hub", "voice
 
 [[package]]
 name = "vibey-gh"
-version = "1.73.0"
+version = "0.3.0"
 source = { editable = "src/vibey_tools/gh" }
 
 [package.optional-dependencies]
@@ -5758,7 +5758,7 @@ provides-extras = ["dev"]
 
 [[package]]
 name = "vibey-runners-common"
-version = "0.1.0"
+version = "0.3.0"
 source = { editable = "src/vibey_runners/common" }
 
 [package.optional-dependencies]

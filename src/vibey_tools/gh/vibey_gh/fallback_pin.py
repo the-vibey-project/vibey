@@ -4,7 +4,7 @@
 The promise the key makes is "install the exact release that rendered this file". It used
 to be kept with `vibey_gh.__version__`, back when the tooling was its own distribution. It
 is not one any more (ADR-0037): `vibey_gh` is a package inside `<fallback_package>`, and
-`__version__` numbers the package (1.73.0), not any release an index can serve.
+`__version__` numbers the package (0.3.0), not any release an index can serve.
 
 For a while that was taken to mean the release is unknowable outside the repository that
 publishes it, so every adopter's pin was dropped and their workflows floated. The release
