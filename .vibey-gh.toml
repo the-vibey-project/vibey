@@ -134,13 +134,10 @@ self_source = "src/vibey_tools/gh"
 # Pin every rendered template to the version that rendered it. Unpinned, a runner adopts
 # whatever is newest -- the failure mode that took vibey-skills' CI red for two days.
 pin_version = true
-# TRANSITIONAL, set 2026-11-12 while vibey-engine is renumbered to 0.3.0: `[project] version`
-# names 0.3.0, which is not on PyPI yet, so the pin rendered from it would break every
-# managed workflow, and an unpinned install would hand the privileged ones (publish, review,
-# promote, merge train) whatever is newest. This holds them at 4.6.0, the last published
-# release. Order: publish 0.3.0; then delete this line and re-render (`vibey-gh install`);
-# only after that re-render has landed on main may 4.6.0 be deleted from PyPI.
-pin = "4.6.0"
+# No `pin` here. The 2026-11-12 transitional override that held the managed workflows at
+# 4.6.0 while vibey-engine was renumbered is removed now that 0.3.0 is on PyPI (published
+# 2026-11-13): the pin renders from `[project] version` again, and it is exact. The `pin`
+# key itself stays available for the next renumbering.
 # github-release.yml: the immutable tag and GitHub Release for every version promoted to
 # main. Releases stopped at v0.1.2 when release-please was retired (#77) and nothing took
 # over the tagging; the book and the paper are attached to each Release from here on.
