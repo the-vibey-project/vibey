@@ -1,5 +1,5 @@
 # Made with ❤️ by [Vibey](https://the-vibey-project.github.io/vibey/), Developed by [Adam Matthew Steinberger](https://vibewithadam.matthewsteinberger.com/) ([@adammatthewsteinberger](https://github.com/adammatthewsteinberger/)).
-"""`vibey llm tail`, and `-vvv` switching the wire log on."""
+"""`vibey llm tail`, and `-ddd` switching the wire log on."""
 
 import json
 import os
@@ -64,7 +64,7 @@ def test_tail_without_a_log_says_how_to_make_one_and_fails_when_not_following(
         app, ["llm", "tail", "--file", str(tmp_path / "none.jsonl"), "--no-follow"]
     )
     assert result.exit_code == 1
-    assert "no wire log at" in result.output and "-vvv" in result.output
+    assert "no wire log at" in result.output and "-ddd" in result.output
 
 
 def test_tail_following_a_log_that_does_not_exist_yet_waits_for_it(
@@ -125,7 +125,7 @@ def test_vvv_switches_the_wire_log_on_and_says_where_it_is(
 ) -> None:
     monkeypatch.setenv(WIRE_LOG_ENV, "x")
     monkeypatch.delenv(WIRE_LOG_ENV)
-    result = runner.invoke(app, ["-vvv", "sabbath"])
+    result = runner.invoke(app, ["-ddd", "sabbath"])
     assert os.environ[WIRE_LOG_ENV] == str(default_wire_log_path())
     assert "vibey llm tail" in result.output
     assert str(default_wire_log_path()) in result.output
@@ -136,13 +136,13 @@ def test_a_log_the_operator_named_is_never_overridden_and_vv_does_not_switch_it_
 ) -> None:
     chosen = str(tmp_path / "mine.jsonl")
     monkeypatch.setenv(WIRE_LOG_ENV, chosen)
-    result = runner.invoke(app, ["-vvv", "sabbath"])
+    result = runner.invoke(app, ["-ddd", "sabbath"])
     assert os.environ[WIRE_LOG_ENV] == chosen
     assert "wire log" not in result.output
 
     monkeypatch.setenv(WIRE_LOG_ENV, "x")
     monkeypatch.delenv(WIRE_LOG_ENV)
-    runner.invoke(app, ["-vv", "sabbath"])
+    runner.invoke(app, ["-dd", "sabbath"])
     assert WIRE_LOG_ENV not in os.environ
 
 

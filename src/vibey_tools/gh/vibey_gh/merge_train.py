@@ -230,6 +230,13 @@ def judge(pr: PullRequest, cfg: GhConfig) -> Verdict:
                     f"promotion owes `chore(release): {owed}` before it may merge —"
                     f" {why}; merging unbumped publishes nothing (see #254)"
                 )
+            elif cfg.max_major is not None and versioning.exceeds_cap(
+                versioning.read_version_at(cfg, head) or "", cfg.max_major
+            ):
+                # Nothing derived is ever above the ceiling, so a head that is was written
+                # by hand -- and merging it would publish a major the project has not
+                # declared. Held with the deriver's own words, which name the cap.
+                reason = f"promotion would publish a version above the cap — {why}"
 
     # Last, so it is the reason given only when nothing else stands in the way: a pull
     # request touching a protected path is otherwise ready, and must still not merge

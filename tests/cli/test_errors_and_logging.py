@@ -104,12 +104,12 @@ def test_guard_treats_ctrl_c_as_a_decision_not_a_failure() -> None:
 def test_verbosity_flags_are_advertised() -> None:
     result = runner.invoke(app, ["--help"])
     assert result.exit_code == 0
-    for flag in ("-v", "--verbose", "--quiet", "--log-level", "--log-file"):
+    for flag in ("-v", "-d", "--version", "--verbose", "--quiet", "--log-level", "--log-file"):
         assert flag in result.output
 
 
 def test_quiet_and_verbose_together_exit_with_a_usage_error() -> None:
-    result = runner.invoke(app, ["-q", "-v", "status", "--help"])
+    result = runner.invoke(app, ["-q", "-d", "status", "--help"])
     assert result.exit_code == 2
     assert "mutually exclusive" in result.output
 

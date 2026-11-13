@@ -1,7 +1,7 @@
 # Made with ❤️ by [Vibey](https://the-vibey-project.github.io/vibey/), Developed by [Adam Matthew Steinberger](https://vibewithadam.matthewsteinberger.com/) ([@adammatthewsteinberger](https://github.com/adammatthewsteinberger/)).
 """The wire log: every request to, and every streamed word from, the local model.
 
-`-vvv` has always promised "full payloads", and the sovereign providers' traffic to Ollama
+`-ddd` has always promised "full payloads", and the sovereign providers' traffic to Ollama
 reached no log at all: a DESIGN call that ran for fifteen minutes showed nothing until it
 returned. With the wire log on, the client streams the reply and appends one JSON line per
 event to a file that `vibey llm tail` follows as it grows.
@@ -37,7 +37,7 @@ WIRE_LOG_VERSION: Final[int] = 1
 
 
 def default_wire_log_path() -> Path:
-    """Where `-vvv` writes the wire log: beside the sovereign-fit record."""
+    """Where `-ddd` writes the wire log: beside the sovereign-fit record."""
     return Path.home() / ".local" / "state" / "vibey" / "llm-wire.jsonl"
 
 

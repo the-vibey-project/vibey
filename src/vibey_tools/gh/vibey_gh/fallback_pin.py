@@ -16,6 +16,10 @@ of ADR-0037 ("`[install] pin_version` keeps its meaning") and sub-doctrine 12.c.
 
 So the pin resolves, in order:
 
+0. **`[install] pin` is set.** That exact release, declared. It exists for the window a
+   repository's own `[project] version` names a release no index has yet (a renumbering):
+   pinning to it would break every install, and floating would give privileged workflows
+   whatever is newest.
 1. **The repository IS the fallback distribution.** It declares the release it
    publishes, and that wins: name and version are read from one `[project]` table in one
    parse, so the version cannot belong to a different distribution than the name just
@@ -120,6 +124,10 @@ class FallbackPinResolver(FallbackPinResolverInterface):
     def resolve(self, cfg: GhConfig) -> FallbackPin:
         if not cfg.pin_version:
             return FallbackPin(None)
+        if cfg.pin is not None:
+            # Declared, so it outranks both answers below. Not `from_repository`: a version
+            # bump does not move it, and the release commit re-renders nothing while it holds.
+            return FallbackPin(cfg.pin)
         declared = self._declared_release(cfg)
         if declared is not None:
             return FallbackPin(declared, from_repository=True)

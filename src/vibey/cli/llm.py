@@ -1,7 +1,7 @@
 # Made with ❤️ by [Vibey](https://the-vibey-project.github.io/vibey/), Developed by [Adam Matthew Steinberger](https://vibewithadam.matthewsteinberger.com/) ([@adammatthewsteinberger](https://github.com/adammatthewsteinberger/)).
 """`vibey llm`: the conversation with the local model, as it happens, in every phase.
 
-`vibey llm tail` follows the wire log (`-vvv`, or `VIBEY_LLM_WIRE_LOG=path`): each request the
+`vibey llm tail` follows the wire log (`-ddd`, or `VIBEY_LLM_WIRE_LOG=path`): each request the
 sovereign DESIGN and DECOMPOSE providers send, the answer and the reasoning as they stream
 back, and the model's own counts and timings. BUILD and REVIEW run in an engine's own process,
 so the worker notes each engine session in the same log, and the tail follows that session's
@@ -30,7 +30,7 @@ llm_app = typer.Typer(name="llm", no_args_is_help=True, help="The conversation w
 
 
 def wire_log_path(explicit: Path | None) -> Path:
-    """The file to read: `--file`, else `VIBEY_LLM_WIRE_LOG`, else where `-vvv` writes."""
+    """The file to read: `--file`, else `VIBEY_LLM_WIRE_LOG`, else where `-ddd` writes."""
     if explicit is not None:
         return explicit
     declared = os.environ.get(WIRE_LOG_ENV, "").strip()
@@ -42,7 +42,7 @@ def tail(
     file: Annotated[
         Path | None,
         typer.Option(
-            "--file", help="The wire log (default: VIBEY_LLM_WIRE_LOG, else the -vvv log)"
+            "--file", help="The wire log (default: VIBEY_LLM_WIRE_LOG, else the -ddd log)"
         ),
     ] = None,
     all_calls: Annotated[
@@ -62,7 +62,7 @@ def tail(
     """Follow the conversation with the local model, in every phase, as it happens.
 
     Starts at the latest call or engine session and keeps going until interrupted, switching
-    to each new engine session by itself. Run any `vibey` command with -vvv (or
+    to each new engine session by itself. Run any `vibey` command with -ddd (or
     VIBEY_LLM_WIRE_LOG=path) in another terminal to fill the log."""
     path = wire_log_path(file)
     wire = WireFormatter(max_chars=max_chars)
@@ -94,9 +94,9 @@ def tail(
                 for event in events:
                     show("run", event)
     elif follow:
-        typer.echo(f"waiting for {path} (run a vibey command with -vvv)", err=True)
+        typer.echo(f"waiting for {path} (run a vibey command with -ddd)", err=True)
     else:
-        typer.echo(f"no wire log at {path}; run a vibey command with -vvv first", err=True)
+        typer.echo(f"no wire log at {path}; run a vibey command with -ddd first", err=True)
         raise typer.Exit(1)
     if not follow:
         return

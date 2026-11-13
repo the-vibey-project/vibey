@@ -2,7 +2,7 @@
 """Resolving how loud the process should be, from CLI flags.
 
 Pure: no logging library, no I/O. The ladder is a domain decision because it
-has to mean the same thing everywhere -- an operator who learns `-vv` on one
+has to mean the same thing everywhere -- an operator who learns `-dd` on one
 runner should not get something different from the next one.
 """
 
@@ -54,10 +54,10 @@ def resolve_log_plan(
 ) -> LogPlan:
     """Turn CLI flags into a logging plan.
 
-    An explicit ``--log-level`` always wins over the ``-v`` count: if someone
+    An explicit ``--log-level`` always wins over the ``-d`` count: if someone
     names a level, honouring it is less surprising than silently overriding it
     with a count they may have set in an alias. The count still widens scope,
-    so ``--log-level WARNING -vvv`` is a legitimate way to ask for warnings
+    so ``--log-level WARNING -ddd`` is a legitimate way to ask for warnings
     from everything.
     """
     verbosity = parse_verbosity(verbose=verbose, quiet=quiet)

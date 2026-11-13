@@ -1391,7 +1391,7 @@ a repo root is the infrastructure layer's job.
 
 Resolving how loud the process should be, from CLI flags. Pure: no logging
 library, no I/O — the ladder is a domain decision because it has to mean the
-same thing everywhere; an operator who learns `-vv` on one runner should not
+same thing everywhere; an operator who learns `-dd` on one runner should not
 get something different from the next one.
 
 ```python
@@ -1419,7 +1419,7 @@ def resolve_log_plan(*, verbose: int = 0, quiet: bool = False, log_level: str | 
     """An explicit --log-level always wins over the -v count — naming a
     level and having it silently overridden by a count (possibly set in an
     alias) would be more surprising than honouring it. The count still
-    widens scope independently, so `--log-level WARNING -vvv` is a
+    widens scope independently, so `--log-level WARNING -ddd` is a
     legitimate way to ask for warnings from everything: include_third_party
     from TRACE and up, include_payloads from FIREHOSE."""
 ```

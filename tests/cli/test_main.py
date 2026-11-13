@@ -18,11 +18,79 @@ from vibey.domain.errors import InvalidAnswer
 runner = CliRunner(env={"_TYPER_FORCE_DISABLE_TERMINAL": "1"})
 
 
-def test_version_flag_prints_version_and_exits() -> None:
+def _krypton_app_version(monkeypatch: pytest.MonkeyPatch, version: str | None) -> None:
+    """Make `importlib.metadata.version("krypton-app")` answer `version`, or say it is absent."""
+    import importlib.metadata as metadata
+
+    real = metadata.version
+
+    def fake(name: str) -> str:
+        if name != "krypton-app":
+            return real(name)
+        if version is None:
+            raise metadata.PackageNotFoundError(name)
+        return version
+
+    monkeypatch.setattr(metadata, "version", fake)
+
+
+@pytest.mark.parametrize("flag", ["--version", "-v"])
+def test_version_and_dash_v_print_both_versions(flag: str, monkeypatch: pytest.MonkeyPatch) -> None:
+    _krypton_app_version(monkeypatch, "9.8.7")
+
+    result = runner.invoke(app, [flag])
+
+    assert result.exit_code == 0
+    assert result.stdout.splitlines() == [f"vibey-engine {__version__}", "krypton-app 9.8.7"]
+
+
+def test_dash_v_with_a_subcommand_prints_the_version_and_stops(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """`-v` is eager like `--version`: it answers before the subcommand is parsed or run."""
+    _krypton_app_version(monkeypatch, "1.2.3")
+
+    result = runner.invoke(app, ["-v", "status", "--help"])
+
+    assert result.exit_code == 0
+    assert result.stdout.splitlines() == [f"vibey-engine {__version__}", "krypton-app 1.2.3"]
+
+
+def test_krypton_app_not_installed_is_named_not_a_traceback(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    _krypton_app_version(monkeypatch, None)
+
     result = runner.invoke(app, ["--version"])
 
     assert result.exit_code == 0
-    assert __version__ in result.stdout
+    assert result.stdout.splitlines() == [
+        f"vibey-engine {__version__}",
+        "krypton-app not installed",
+    ]
+    assert "Traceback" not in result.output
+
+
+@pytest.mark.parametrize(
+    ("argv", "level_args"),
+    [(["-d"], 1), (["-dd"], 2), (["-ddd"], 3), (["--verbose", "--verbose"], 2)],
+)
+def test_dash_d_counts_like_the_old_verbose(
+    argv: list[str], level_args: int, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    seen: list[int] = []
+    real = cli_main.resolve_log_plan
+
+    def spy(*, verbose: int, quiet: bool, log_level: str | None) -> object:
+        seen.append(verbose)
+        return real(verbose=verbose, quiet=quiet, log_level=log_level)
+
+    monkeypatch.setattr(cli_main, "resolve_log_plan", spy)
+    monkeypatch.setenv("VIBEY_LLM_WIRE_LOG", "x")
+
+    result = runner.invoke(app, [*argv, "sabbath"])
+
+    assert seen == [level_args], result.output
 
 
 def test_no_args_shows_help() -> None:
