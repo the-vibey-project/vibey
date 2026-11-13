@@ -1,6 +1,6 @@
 {
   "name": "@vibey/core",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "private": true,
   "description": "The shared, pure TypeScript core of every krypton client: the engine catalogue, run events, the one command table, gate answers, budgets, the doctor, the design tokens and the transports to vibey.",
   "license": "MIT",
