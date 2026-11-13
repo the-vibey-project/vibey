@@ -1,0 +1,1 @@
+claudeloop and codexloop `__version__` now read 0.3.0 with their packages; the 0.3.0 move had left them at 0.8.0 and 0.4.0, which failed codexloop's own packaging test on every Python after the merge. `tests/meta/test_pre_1_0_versions.py` now pairs each runner's manifest with its constant, so this fails before a push instead of in the tenant CI jobs.
