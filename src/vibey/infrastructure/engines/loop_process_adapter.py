@@ -144,6 +144,12 @@ class LoopProcessAdapter:
     """`<binary> --version` wall-clock budget for preflight. A killed probe reports no
     version, which conformance reads as "below the minimum"; a caller that runs the
     real binary while the machine is busy (the full suite under xdist) widens it."""
+    help_timeout: float = 30.0
+    """`<binary> run --help` wall-clock budget for the flags conformance check. A killed
+    probe reports no help text, so every flag the descriptor names reads as absent. It was a
+    hard-coded 10 seconds, which a busy host (the suite under xdist, a push hook with other
+    work running) exceeds for a Python entry point's cold start; like `version_timeout`, a
+    caller that runs the real binary widens it."""
     doctor_timeout: float = 120.0
     """`<binary> doctor` wall-clock budget for preflight. claudeloop's
     doctor verifies credentials over the network and takes ~60s warm --
@@ -298,7 +304,7 @@ class LoopProcessAdapter:
                 [binary_path, "run", "--help"],
                 capture_output=True,
                 text=True,
-                timeout=10.0,
+                timeout=self.help_timeout,
                 env=env,
                 check=False,
             )

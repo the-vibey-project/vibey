@@ -96,7 +96,11 @@ async def test_real_binary_scripted_conformance(
     # This file runs the real binary inside the full suite, where several xdist workers and
     # other sessions compete for the machine. The probe budgets are widened, not the
     # assertions loosened: a binary that is merely slow passes, a broken one still fails.
-    adapter = LoopProcessAdapter(descriptor=descriptor, version_timeout=_PROBE_BUDGET_SECONDS)
+    adapter = LoopProcessAdapter(
+        descriptor=descriptor,
+        version_timeout=_PROBE_BUDGET_SECONDS,
+        help_timeout=_PROBE_BUDGET_SECONDS,
+    )
     fixtures = [("credits", CREDITS_FIXTURES[engine_id], CreditsExhausted)]
     report = await run_conformance(
         adapter,

@@ -16,7 +16,7 @@ import pytest
 
 from vibey.application.dto import EngineEvent, RunHandle
 from vibey.domain.capacity import CreditsExhausted
-from vibey.domain.engine import EngineId
+from vibey.domain.engine import EngineDescriptor, EngineId
 from vibey.domain.job import FailureClass
 from vibey.infrastructure.engines.classify import CREDITS_FIXTURES
 from vibey.infrastructure.engines.descriptors import CLAUDELOOP, CODEXLOOP, QWENLOOP
@@ -401,6 +401,48 @@ def test_help_text_returns_none_on_subprocess_error(tmp_path: Path) -> None:
             assert adapter.help_text is None
     finally:
         os.environ["PATH"] = old_path
+
+
+def _help_descriptor(binary: str) -> EngineDescriptor:
+    return CLAUDELOOP.__class__(
+        engine_id=EngineId.CLAUDELOOP,
+        binary=binary,
+        min_version="0.1.0",
+        state_dir=".test",
+        done_marker="TEST_DONE",
+        auth_env=("TEST_KEY",),
+        capabilities=frozenset(),
+        effort_projection=CLAUDELOOP.effort_projection,
+        session_verb="sessions",
+        isolation_flags=CLAUDELOOP.isolation_flags,
+        cost_per_mtok_in=1.0,
+        cost_per_mtok_out=5.0,
+        context_window=100_000,
+    )
+
+
+def test_help_text_gives_up_when_the_binary_outlasts_the_help_timeout(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """The probe's budget is the adapter's `help_timeout`, not a constant: a `--help` that
+    takes longer is killed and reads as no help text (which conformance treats as every flag
+    missing), and the same binary is read in full when the budget is wide enough."""
+    bin_dir = _make_fake_binary(
+        tmp_path, "fakecli_help_slow", 'sleep 2\necho "usage: fakecli_help_slow --slow-flag"'
+    )
+    monkeypatch.setenv("PATH", f"{bin_dir}:{os.environ.get('PATH', '')}")
+    descriptor = _help_descriptor("fakecli_help_slow")
+
+    assert LoopProcessAdapter(descriptor=descriptor, help_timeout=0.3).help_text is None
+    wide = LoopProcessAdapter(descriptor=descriptor, help_timeout=30.0).help_text
+    assert wide is not None
+    assert "--slow-flag" in wide
+
+
+def test_the_default_help_timeout_is_wider_than_a_busy_machine_needs() -> None:
+    """It was 10 seconds, hard-coded; a loaded host (the suite under xdist, a push hook with
+    other work running) took longer and the engine's flags read as absent."""
+    assert LoopProcessAdapter(descriptor=_help_descriptor("fakecli")).help_timeout >= 30.0
 
 
 def test_help_text_uses_the_isolated_engine_environment(
