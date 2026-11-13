@@ -39,9 +39,12 @@ EXTRA_FILES = (
     "package-lock.json#packages>packages/vibey-core>version",
     "package-lock.json#packages>clients/vscode>version",
     "src/vibey_runners/claude/pyproject.toml",
+    "src/vibey_runners/claude/src/claudeloop/__init__.py",
     "src/vibey_runners/codex/pyproject.toml",
+    "src/vibey_runners/codex/src/codexloop/__init__.py",
     "src/vibey_runners/common/pyproject.toml",
     "src/vibey_runners/qwen/pyproject.toml",
+    "src/vibey_runners/qwen/src/qwenloop/__init__.py",
     "src/vibey_tools/bootstrap/pyproject.toml",
     "src/vibey_tools/bootstrap/vibey_bootstrap/__init__.py",
     "src/vibey_tools/gh/pyproject.toml",
@@ -159,6 +162,22 @@ def test_the_vscode_extension_pins_the_core_it_ships_with() -> None:
             "clients/app/package.json",
             "clients/app/app.config.ts",
         ),
+        # The runners assert this themselves in their own suites (codexloop's
+        # tests/test_packaging.py), but those run only in the tenant CI jobs, after a merge;
+        # a stale constant reached develop that way once (the 0.3.0 move missed codexloop's).
+        (
+            "src/vibey_runners/claude/pyproject.toml",
+            "src/vibey_runners/claude/src/claudeloop/__init__.py",
+        ),
+        (
+            "src/vibey_runners/codex/pyproject.toml",
+            "src/vibey_runners/codex/src/codexloop/__init__.py",
+        ),
+        (
+            "src/vibey_runners/qwen/pyproject.toml",
+            "src/vibey_runners/qwen/src/qwenloop/__init__.py",
+        ),
+        ("pyproject.toml", "src/vibey/__init__.py"),
     ],
 )
 def test_a_manifest_and_the_constant_that_exposes_it_agree(manifest: str, constant: str) -> None:
