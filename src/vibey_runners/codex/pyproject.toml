@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "codexloop"
-version = "0.3.0"
+version = "0.3.1"
 description = "Onion-architected, autonomous OpenAI Codex session runner — never blocks on a human, distinguishes rate limits from exhausted credits, and resumes safely across usage windows."
 readme = "README.md"
 requires-python = ">=3.12"
