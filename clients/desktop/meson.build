@@ -10,7 +10,7 @@
 project(
   'krypton-desktop',
   'c',
-  version: '0.3.1',
+  version: '0.4.0',
   license: 'MIT',
   meson_version: '>= 1.1.0',
   default_options: [

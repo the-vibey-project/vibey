@@ -134,11 +134,11 @@ self_source = "src/vibey_tools/gh"
 # Pin every rendered template to the version that rendered it. Unpinned, a runner adopts
 # whatever is newest -- the failure mode that took vibey-skills' CI red for two days.
 pin_version = true
-# TRANSITIONAL, set 2026-11-14 while 0.3.1 is staged: `[project] version` names 0.3.1, which
+# TRANSITIONAL, set 2026-11-14 while 0.4.0 is staged: `[project] version` names 0.4.0, which
 # is not on PyPI yet, so the pin rendered from it would break every managed workflow, and an
 # unpinned install would hand the privileged ones (publish, review, promote, merge train)
-# whatever is newest. This holds them at 0.3.0, the last published release, while 0.3.1 is
-# staged and unpublished. Order: publish 0.3.1; then delete this line and re-render
+# whatever is newest. This holds them at 0.3.0, the last published release, while 0.4.0 is
+# staged and unpublished. Order: publish 0.4.0; then delete this line and re-render
 # (`vibey-gh install`); only after that re-render has landed on main may 0.3.0 be
 # considered superseded.
 pin = "0.3.0"
