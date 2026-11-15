@@ -5,7 +5,7 @@ description: "Use for delivery and construction: procurement and delivery models
 
 # Buildings and Civil Structures: Procurement and Delivery, Cost, Sequencing and Temporary Works, Materials in Construction, and Quality and Inspection
 
-> **Part 4 of 6** of the *Designing and Building Buildings and Other Civil Structures* reference (plugin `designing-and-building-buildings`), covering §15–§19. Sibling skills: `building-disciplines-site-brief-planning-and-design` (§0–§5), `building-structure-foundations-envelope-services-and-fire` (§6–§10), `building-accessibility-energy-drawings-bim-and-codes` (§11–§14), `building-site-safety-commissioning-retrofit-and-why-projects-fail` (§20–§23), `building-reference` (§24–§29). Section numbers are shared across the set; a reference written as §N → `skill` points into that sibling skill.
+> **Part 4 of 6** of the *Designing and Building Buildings and Other Civil Structures* reference (plugin `designing-and-building-buildings`), covering §15–§19. Sibling skills: `building-disciplines-site-brief-planning-and-design` (§0–§5), `building-structure-foundations-envelope-services-and-fire` (§6–§10), `building-accessibility-energy-drawings-bim-and-codes` (§11–§14), `building-site-safety-commissioning-retrofit-and-project-failure` (§20–§23), `building-reference` (§24–§29). Section numbers are shared across the set; a reference written as §N → `skill` points into that sibling skill.
 >
 > **Currency:** The engineering is settled. Two areas moved. See §24 → `building-reference` for tall mass timber code adoption, and embodied carbon regulation.
 
@@ -17,7 +17,7 @@ description: "Use for delivery and construction: procurement and delivery models
 > parties with different contracts, different liabilities and different incentives.**
 > ⚠️ **Most building failures are not engineering failures — they are COORDINATION
 > failures at the boundaries between disciplines and between design and construction**
-> (§23 → `building-site-safety-commissioning-retrofit-and-why-projects-fail`).
+> (§23 → `building-site-safety-commissioning-retrofit-and-project-failure`).
 >
 > **⚠️ GOTCHA** boxes mark the assumptions that cause litigation.
 >

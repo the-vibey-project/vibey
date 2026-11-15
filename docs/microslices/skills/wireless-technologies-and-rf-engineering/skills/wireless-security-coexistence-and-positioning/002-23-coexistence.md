@@ -8,7 +8,7 @@ links: ["skill-24-positioning-and-sensing-12ef0f723b"]
 
 ## §23. ⚠️ Coexistence
 
-> **⚠️ §1 → `wireless-propagation-link-budget-modulation-antennas-and-spectrum`'s second organizing idea. You share the band, and the interferers are often your
+> **⚠️ §1 → `wireless-propagation-link-budget-modulation-antennas-spectrum`'s second organizing idea. You share the band, and the interferers are often your
 > own.**
 ```
 ⚠️ SAME-BAND NEIGHBOURS  ⚠️ 2.4 GHz holds Wi-Fi, Bluetooth,

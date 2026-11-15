@@ -8,7 +8,7 @@ links: []
 
 ## §35. Method
 
-**§1–§28 → `thermo-laws-entropy-property-relations-and-phase-behaviour`, `thermo-cycles-exergy-combustion-and-psychrometrics`, `thermo-fluid-statics-control-volume-bernoulli-and-navier-stokes`, `thermo-dimensional-analysis-flows-turbulence-and-turbomachinery`, `thermo-heat-transfer-conduction-convection-radiation-and-exchangers` is settled science and engineering** — **the laws, property relations, cycles,
+**§1–§28 → `thermo-laws-entropy-property-relations-and-phase-behaviour`, `thermo-cycles-exergy-combustion-and-psychrometrics`, `thermo-fluid-statics-control-volume-bernoulli-and-navier-stokes`, `thermo-dimensional-analysis-flows-turbulence-and-turbomachinery`, `thermo-heat-transfer-conduction-convection-radiation-exchangers` is settled science and engineering** — **the laws, property relations, cycles,
 Navier-Stokes, boundary layer theory, the dimensionless groups, and the three modes of
 heat transfer** — sourced from §33. ⚠️ **This is the most stable content in this series;
 Carnot published in 1824 and none of it needed verification.**
@@ -17,7 +17,7 @@ Carnot published in 1824 and none of it needed verification.**
 **high-density thermal management** — ⚠️ **deliberately targeting PRACTICE rather than
 theory, because the theory doesn't move and the practice genuinely has.**
 
-**Confidence.** **High** throughout §1–§28 → `thermo-laws-entropy-property-relations-and-phase-behaviour`, `thermo-cycles-exergy-combustion-and-psychrometrics`, `thermo-fluid-statics-control-volume-bernoulli-and-navier-stokes`, `thermo-dimensional-analysis-flows-turbulence-and-turbomachinery`, `thermo-heat-transfer-conduction-convection-radiation-and-exchangers`. ⚠️ **The sections I'd most want read are §4 → `thermo-laws-entropy-property-relations-and-phase-behaviour`,
+**Confidence.** **High** throughout §1–§28 → `thermo-laws-entropy-property-relations-and-phase-behaviour`, `thermo-cycles-exergy-combustion-and-psychrometrics`, `thermo-fluid-statics-control-volume-bernoulli-and-navier-stokes`, `thermo-dimensional-analysis-flows-turbulence-and-turbomachinery`, `thermo-heat-transfer-conduction-convection-radiation-exchangers`. ⚠️ **The sections I'd most want read are §4 → `thermo-laws-entropy-property-relations-and-phase-behaviour`,
 §10 → `thermo-cycles-exergy-combustion-and-psychrometrics`, §16 → `thermo-fluid-statics-control-volume-bernoulli-and-navier-stokes` and §19 → `thermo-dimensional-analysis-flows-turbulence-and-turbomachinery`.** **§10 → `thermo-cycles-exergy-combustion-and-psychrometrics` (exergy) because it is under-taught and it changes where you look
 for losses; §16 → `thermo-fluid-statics-control-volume-bernoulli-and-navier-stokes` because the equal-transit-time lift myth is still in circulation and in
 some textbooks; §19 → `thermo-dimensional-analysis-flows-turbulence-and-turbomachinery` because dimensional analysis tells you which physics dominates before
@@ -41,7 +41,7 @@ substantially between sources (22% vs 37% for 2026) and I've presented them as
 directional rather than picking one.** **⚠️ Sourcing caution: a significant share of the
 liquid-cooling material comes from vendors, buying guides and consultancies with obvious
 interests** — **I anchored the threshold logic on the ASHRAE TC 9.9 recommendation and on
-the physics (which is checkable from §26 → `thermo-heat-transfer-conduction-convection-radiation-and-exchangers`'s h-magnitude table) rather than on any vendor's
+the physics (which is checkable from §26 → `thermo-heat-transfer-conduction-convection-radiation-exchangers`'s h-magnitude table) rather than on any vendor's
 recommended product.**
 
 ⚠️ **One judgement stated plainly**: **the warm-water cooling development in §29.2 is

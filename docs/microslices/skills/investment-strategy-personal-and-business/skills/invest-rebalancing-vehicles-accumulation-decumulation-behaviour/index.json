@@ -1,0 +1,58 @@
+[
+  {
+    "id": "skill-11-rebalancing-3810268478",
+    "purpose": "11 rebalancing",
+    "source": "src/vibey_tools/skills/plugins/investment-strategy-personal-and-business/skills/invest-rebalancing-vehicles-accumulation-decumulation-behaviour/SKILL.md",
+    "output": "docs/microslices/skills/investment-strategy-personal-and-business/skills/invest-rebalancing-vehicles-accumulation-decumulation-behaviour/001-11-rebalancing.md",
+    "requires": [],
+    "links": [
+      "skill-12-vehicle-selection-6aec9692c4"
+    ]
+  },
+  {
+    "id": "skill-12-vehicle-selection-6aec9692c4",
+    "purpose": "12 vehicle selection",
+    "source": "src/vibey_tools/skills/plugins/investment-strategy-personal-and-business/skills/invest-rebalancing-vehicles-accumulation-decumulation-behaviour/SKILL.md",
+    "output": "docs/microslices/skills/investment-strategy-personal-and-business/skills/invest-rebalancing-vehicles-accumulation-decumulation-behaviour/002-12-vehicle-selection.md",
+    "requires": [
+      "skill-11-rebalancing-3810268478"
+    ],
+    "links": [
+      "skill-13-accumulation-790cc290dd"
+    ]
+  },
+  {
+    "id": "skill-13-accumulation-790cc290dd",
+    "purpose": "13 accumulation",
+    "source": "src/vibey_tools/skills/plugins/investment-strategy-personal-and-business/skills/invest-rebalancing-vehicles-accumulation-decumulation-behaviour/SKILL.md",
+    "output": "docs/microslices/skills/investment-strategy-personal-and-business/skills/invest-rebalancing-vehicles-accumulation-decumulation-behaviour/003-13-accumulation.md",
+    "requires": [
+      "skill-12-vehicle-selection-6aec9692c4"
+    ],
+    "links": [
+      "skill-14-decumulation-a5e8e0a5fc"
+    ]
+  },
+  {
+    "id": "skill-14-decumulation-a5e8e0a5fc",
+    "purpose": "14 decumulation",
+    "source": "src/vibey_tools/skills/plugins/investment-strategy-personal-and-business/skills/invest-rebalancing-vehicles-accumulation-decumulation-behaviour/SKILL.md",
+    "output": "docs/microslices/skills/investment-strategy-personal-and-business/skills/invest-rebalancing-vehicles-accumulation-decumulation-behaviour/004-14-decumulation.md",
+    "requires": [
+      "skill-13-accumulation-790cc290dd"
+    ],
+    "links": [
+      "skill-15-behavioural-failure-d7b182d08b"
+    ]
+  },
+  {
+    "id": "skill-15-behavioural-failure-d7b182d08b",
+    "purpose": "15 behavioural failure",
+    "source": "src/vibey_tools/skills/plugins/investment-strategy-personal-and-business/skills/invest-rebalancing-vehicles-accumulation-decumulation-behaviour/SKILL.md",
+    "output": "docs/microslices/skills/investment-strategy-personal-and-business/skills/invest-rebalancing-vehicles-accumulation-decumulation-behaviour/005-15-behavioural-failure.md",
+    "requires": [
+      "skill-14-decumulation-a5e8e0a5fc"
+    ],
+    "links": []
+  }
+]

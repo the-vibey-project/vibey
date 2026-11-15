@@ -5,7 +5,7 @@ description: "Use when orienting in an enterprise estate or making a platform de
 
 # IT Infrastructure and Governance: The Layers, Compute and Virtualization, Storage, and Networking
 
-> **Part 1 of 5** of the *IT Infrastructure and Governance* reference (plugin `it-infrastructure-governance`), covering §0–§4. Sibling skills: `itgov-directory-authentication-authorization-and-privileged-access` (§5–§8), `itgov-identity-lifecycle-access-review-and-segregation-of-duties` (§9–§11), `itgov-endpoints-continuity-itsm-and-vendor-risk` (§12–§19), `itgov-reference` (§20–§26). Section numbers are shared across the set; a reference written as §N → `skill` points into that sibling skill.
+> **Part 1 of 5** of the *IT Infrastructure and Governance* reference (plugin `it-infrastructure-governance`), covering §0–§4. Sibling skills: `itgov-directory-authn-authz-and-privileged-access` (§5–§8), `itgov-identity-lifecycle-access-review-and-segregation-of-duties` (§9–§11), `itgov-endpoints-continuity-itsm-and-vendor-risk` (§12–§19), `itgov-reference` (§20–§26). Section numbers are shared across the set; a reference written as §N → `skill` points into that sibling skill.
 >
 > **Currency:** RBAC theory, directory concepts, backup strategy and ITIL process are stable. Two areas moved. See §21 → `itgov-reference` for the phishing-resistant authentication mandate timeline and non-human identity governance.
 
@@ -20,7 +20,7 @@ description: "Use when orienting in an enterprise estate or making a platform de
 > **The three ideas that organize this:**
 > 1. **⚠️ Identity is the perimeter.** The network boundary stopped being the control
 >    point years ago. **Every meaningful access decision now happens at authentication and
->    authorization time** (§5 → `itgov-directory-authentication-authorization-and-privileged-access`, §6 → `itgov-directory-authentication-authorization-and-privileged-access`).
+>    authorization time** (§5 → `itgov-directory-authn-authz-and-privileged-access`, §6 → `itgov-directory-authn-authz-and-privileged-access`).
 > 2. **⚠️ Access accumulates and never sheds by itself.** People change roles and keep old
 >    permissions; service accounts outlive their systems. **Privilege creep is the default
 >    state of any system without deliberate revocation** (§9 → `itgov-identity-lifecycle-access-review-and-segregation-of-duties`, §10 → `itgov-identity-lifecycle-access-review-and-segregation-of-duties`).
@@ -38,10 +38,10 @@ description: "Use when orienting in an enterprise estate or making a platform de
 | Compute and virtualization | §2 |
 | Storage | §3 |
 | Networking | §4 |
-| **Directory services and hybrid identity** | **§5 → `itgov-directory-authentication-authorization-and-privileged-access`** |
-| **Authentication** | **§6 → `itgov-directory-authentication-authorization-and-privileged-access`** |
-| **Authorization: RBAC, ABAC and role explosion** | **§7 → `itgov-directory-authentication-authorization-and-privileged-access`** |
-| **Privileged access** | **§8 → `itgov-directory-authentication-authorization-and-privileged-access`** |
+| **Directory services and hybrid identity** | **§5 → `itgov-directory-authn-authz-and-privileged-access`** |
+| **Authentication** | **§6 → `itgov-directory-authn-authz-and-privileged-access`** |
+| **Authorization: RBAC, ABAC and role explosion** | **§7 → `itgov-directory-authn-authz-and-privileged-access`** |
+| **Privileged access** | **§8 → `itgov-directory-authn-authz-and-privileged-access`** |
 | **Identity lifecycle (JML)** | **§9 → `itgov-identity-lifecycle-access-review-and-segregation-of-duties`** |
 | **Access review and certification** | **§10 → `itgov-identity-lifecycle-access-review-and-segregation-of-duties`** |
 | Segregation of duties | §11 → `itgov-identity-lifecycle-access-review-and-segregation-of-duties` |
@@ -115,7 +115,7 @@ either — they usually share the same storage and the same fate**), **replicati
 (sync vs async)**, **deduplication and compression.**
 **⚠️ Storage permissions are where file-level access governance actually lives**, and
 **NTFS/share permission interaction, inheritance, and the accumulated mess of nested
-groups is a perennial audit finding** (§7 → `itgov-directory-authentication-authorization-and-privileged-access`).
+groups is a perennial audit finding** (§7 → `itgov-directory-authn-authz-and-privileged-access`).
 
 ---
 
@@ -130,7 +130,7 @@ displaced by zero-trust network access, which authenticates per-application rath
 granting network presence**).
 **⚠️ DNS and DHCP are load-bearing and under-appreciated** — ⚠️ **a large share of "the
 network is down" incidents are DNS**, and **in a Windows environment AD depends on DNS
-absolutely** (§5 → `itgov-directory-authentication-authorization-and-privileged-access`).
+absolutely** (§5 → `itgov-directory-authn-authz-and-privileged-access`).
 **WAN**: MPLS, SD-WAN, internet breakout. **NTP** — ⚠️ **time skew breaks Kerberos, logging
 correlation, and certificate validation, and it is the cause of a surprising number of
-authentication failures** (§6 → `itgov-directory-authentication-authorization-and-privileged-access`).
+authentication failures** (§6 → `itgov-directory-authn-authz-and-privileged-access`).

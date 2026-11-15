@@ -5,7 +5,7 @@ description: "Use when checking a thermodynamics or fluids anti-pattern or misco
 
 # Thermodynamics and Fluid Mechanics: What's Live, Anti-Patterns, Misconceptions, Numbers, and Books
 
-> **Part 6 of 6** of the *Thermodynamics and Fluid Mechanics* reference (plugin `thermodynamics-fluid-mechanics`), covering §29–§35. Sibling skills: `thermo-laws-entropy-property-relations-and-phase-behaviour` (§0–§7), `thermo-cycles-exergy-combustion-and-psychrometrics` (§8–§12), `thermo-fluid-statics-control-volume-bernoulli-and-navier-stokes` (§13–§18), `thermo-dimensional-analysis-flows-turbulence-and-turbomachinery` (§19–§24), `thermo-heat-transfer-conduction-convection-radiation-and-exchangers` (§25–§28). Section numbers are shared across the set; a reference written as §N → `skill` points into that sibling skill.
+> **Part 6 of 6** of the *Thermodynamics and Fluid Mechanics* reference (plugin `thermodynamics-fluid-mechanics`), covering §29–§35. Sibling skills: `thermo-laws-entropy-property-relations-and-phase-behaviour` (§0–§7), `thermo-cycles-exergy-combustion-and-psychrometrics` (§8–§12), `thermo-fluid-statics-control-volume-bernoulli-and-navier-stokes` (§13–§18), `thermo-dimensional-analysis-flows-turbulence-and-turbomachinery` (§19–§24), `thermo-heat-transfer-conduction-convection-radiation-exchangers` (§25–§28). Section numbers are shared across the set; a reference written as §N → `skill` points into that sibling skill.
 >
 > **Currency:** The laws are permanent — Carnot 1824, Navier-Stokes 1845. Two areas of practice moved. See §29 for CFD and turbulence modelling, and high-density thermal management.
 
@@ -78,7 +78,7 @@ ML surrogates as fast interpolators rather than as solvers.** **⚠️ Validatio
 experiment did not become less necessary.**
 
 ### 29.2 ⚠️ High-density thermal management: air hit a wall
-**⚠️ The most consequential applied heat-transfer problem right now, and it is §26 → `thermo-heat-transfer-conduction-convection-radiation-and-exchangers`'s
+**⚠️ The most consequential applied heat-transfer problem right now, and it is §26 → `thermo-heat-transfer-conduction-convection-radiation-exchangers`'s
 h-magnitude table becoming a business constraint.**
 
 - **⚠️ The physical driver: liquid's volumetric heat transfer capacity is roughly
@@ -162,11 +162,11 @@ additionally faces fluid-availability and PFAS regulatory risk.**
 | Smooth surfaces always have less drag | ⚠️ **Dimples delay separation; drag crisis** (§18 → `thermo-fluid-statics-control-volume-bernoulli-and-navier-stokes`, §21 → `thermo-dimensional-analysis-flows-turbulence-and-turbomachinery`) |
 | Turbulent boundary layers are bad | ⚠️ **They resist separation better** (§18 → `thermo-fluid-statics-control-volume-bernoulli-and-navier-stokes`) |
 | Suction pulls fluid | ⚠️ **Ambient pressure pushes. Nothing pulls** (§14 → `thermo-fluid-statics-control-volume-bernoulli-and-navier-stokes`) |
-| Insulation always reduces heat loss | ⚠️ **Below critical radius it can increase it** (§25 → `thermo-heat-transfer-conduction-convection-radiation-and-exchangers`) |
-| Space is cold, so spacecraft need heating | ⚠️ **Vacuum insulates; rejecting heat is the problem** (§27 → `thermo-heat-transfer-conduction-convection-radiation-and-exchangers`) |
-| h is a property of the fluid | ⚠️ **It depends on geometry and flow. That's the problem** (§26 → `thermo-heat-transfer-conduction-convection-radiation-and-exchangers`) |
-| More heat flux always means more boiling | ⚠️ **Past CHF the surface burns out** (§28 → `thermo-heat-transfer-conduction-convection-radiation-and-exchangers`) |
-| A droplet evaporates fastest on the hottest plate | ⚠️ **Leidenfrost — film boiling insulates** (§28 → `thermo-heat-transfer-conduction-convection-radiation-and-exchangers`) |
+| Insulation always reduces heat loss | ⚠️ **Below critical radius it can increase it** (§25 → `thermo-heat-transfer-conduction-convection-radiation-exchangers`) |
+| Space is cold, so spacecraft need heating | ⚠️ **Vacuum insulates; rejecting heat is the problem** (§27 → `thermo-heat-transfer-conduction-convection-radiation-exchangers`) |
+| h is a property of the fluid | ⚠️ **It depends on geometry and flow. That's the problem** (§26 → `thermo-heat-transfer-conduction-convection-radiation-exchangers`) |
+| More heat flux always means more boiling | ⚠️ **Past CHF the surface burns out** (§28 → `thermo-heat-transfer-conduction-convection-radiation-exchangers`) |
+| A droplet evaporates fastest on the hottest plate | ⚠️ **Leidenfrost — film boiling insulates** (§28 → `thermo-heat-transfer-conduction-convection-radiation-exchangers`) |
 | Tacoma Narrows was resonance from vortex shedding | ⚠️ **Better explained as aeroelastic flutter** (§21 → `thermo-dimensional-analysis-flows-turbulence-and-turbomachinery`) |
 | Navier-Stokes is solved, we just need computers | ⚠️ **Existence/smoothness is an open problem** (§17 → `thermo-fluid-statics-control-volume-bernoulli-and-navier-stokes`) |
 | DNS will replace turbulence models soon | ⚠️ **Work scales ~Re³. Decades away** (§22 → `thermo-dimensional-analysis-flows-turbulence-and-turbomachinery`, §29.1) |
@@ -229,14 +229,14 @@ which you should be able to read fluently.**
 | Where do I start any problem? | ⚠️ **Draw the control volume** (§15 → `thermo-fluid-statics-control-volume-bernoulli-and-navier-stokes`) |
 | Does viscosity matter here? | ⚠️ **Reynolds number** (§19 → `thermo-dimensional-analysis-flows-turbulence-and-turbomachinery`) |
 | Does compressibility matter? | ⚠️ **Ma > 0.3** (§19 → `thermo-dimensional-analysis-flows-turbulence-and-turbomachinery`, §23 → `thermo-dimensional-analysis-flows-turbulence-and-turbomachinery`) |
-| Can I use lumped capacitance? | ⚠️ **Bi < 0.1** (§19 → `thermo-dimensional-analysis-flows-turbulence-and-turbomachinery`, §25 → `thermo-heat-transfer-conduction-convection-radiation-and-exchangers`) |
+| Can I use lumped capacitance? | ⚠️ **Bi < 0.1** (§19 → `thermo-dimensional-analysis-flows-turbulence-and-turbomachinery`, §25 → `thermo-heat-transfer-conduction-convection-radiation-exchangers`) |
 | Can I use Bernoulli? | ⚠️ **Steady, inviscid, incompressible, one streamline** (§16 → `thermo-fluid-statics-control-volume-bernoulli-and-navier-stokes`) |
 | Best possible cycle efficiency? | ⚠️ **1 − T_C/T_H, absolute temperatures** (§4 → `thermo-laws-entropy-property-relations-and-phase-behaviour`) |
 | Where are my real losses? | ⚠️ **Exergy analysis, not First Law efficiency** (§10 → `thermo-cycles-exergy-combustion-and-psychrometrics`) |
-| Why is my heat exchanger underperforming? | ⚠️ **Fouling; check flow arrangement** (§28 → `thermo-heat-transfer-conduction-convection-radiation-and-exchangers`) |
+| Why is my heat exchanger underperforming? | ⚠️ **Fouling; check flow arrangement** (§28 → `thermo-heat-transfer-conduction-convection-radiation-exchangers`) |
 | Pump is noisy and eroding | ⚠️ **Cavitation. Check NPSH available** (§24 → `thermo-dimensional-analysis-flows-turbulence-and-turbomachinery`) |
 | Flow separates / stalls | ⚠️ **Adverse pressure gradient; consider tripping it turbulent** (§18 → `thermo-fluid-statics-control-volume-bernoulli-and-navier-stokes`) |
-| Heat won't leave a small hot chip | ⚠️ **Contact resistance, then h magnitude** (§25 → `thermo-heat-transfer-conduction-convection-radiation-and-exchangers`, §26 → `thermo-heat-transfer-conduction-convection-radiation-and-exchangers`) |
+| Heat won't leave a small hot chip | ⚠️ **Contact resistance, then h magnitude** (§25 → `thermo-heat-transfer-conduction-convection-radiation-exchangers`, §26 → `thermo-heat-transfer-conduction-convection-radiation-exchangers`) |
 | Air cooling isn't enough | ⚠️ **§29.2's thresholds** |
 | Which turbulence model? | ⚠️ **RANS to iterate; scale-resolving where it separates** (§22 → `thermo-dimensional-analysis-flows-turbulence-and-turbomachinery`, §29.1) |
 | Evaporative cooling not working | ⚠️ **Wet-bulb is the floor** (§12 → `thermo-cycles-exergy-combustion-and-psychrometrics`) |
@@ -255,7 +255,7 @@ which you should be able to read fluently.**
 
 ## §35. Method
 
-**§1–§28 → `thermo-laws-entropy-property-relations-and-phase-behaviour`, `thermo-cycles-exergy-combustion-and-psychrometrics`, `thermo-fluid-statics-control-volume-bernoulli-and-navier-stokes`, `thermo-dimensional-analysis-flows-turbulence-and-turbomachinery`, `thermo-heat-transfer-conduction-convection-radiation-and-exchangers` is settled science and engineering** — **the laws, property relations, cycles,
+**§1–§28 → `thermo-laws-entropy-property-relations-and-phase-behaviour`, `thermo-cycles-exergy-combustion-and-psychrometrics`, `thermo-fluid-statics-control-volume-bernoulli-and-navier-stokes`, `thermo-dimensional-analysis-flows-turbulence-and-turbomachinery`, `thermo-heat-transfer-conduction-convection-radiation-exchangers` is settled science and engineering** — **the laws, property relations, cycles,
 Navier-Stokes, boundary layer theory, the dimensionless groups, and the three modes of
 heat transfer** — sourced from §33. ⚠️ **This is the most stable content in this series;
 Carnot published in 1824 and none of it needed verification.**
@@ -264,7 +264,7 @@ Carnot published in 1824 and none of it needed verification.**
 **high-density thermal management** — ⚠️ **deliberately targeting PRACTICE rather than
 theory, because the theory doesn't move and the practice genuinely has.**
 
-**Confidence.** **High** throughout §1–§28 → `thermo-laws-entropy-property-relations-and-phase-behaviour`, `thermo-cycles-exergy-combustion-and-psychrometrics`, `thermo-fluid-statics-control-volume-bernoulli-and-navier-stokes`, `thermo-dimensional-analysis-flows-turbulence-and-turbomachinery`, `thermo-heat-transfer-conduction-convection-radiation-and-exchangers`. ⚠️ **The sections I'd most want read are §4 → `thermo-laws-entropy-property-relations-and-phase-behaviour`,
+**Confidence.** **High** throughout §1–§28 → `thermo-laws-entropy-property-relations-and-phase-behaviour`, `thermo-cycles-exergy-combustion-and-psychrometrics`, `thermo-fluid-statics-control-volume-bernoulli-and-navier-stokes`, `thermo-dimensional-analysis-flows-turbulence-and-turbomachinery`, `thermo-heat-transfer-conduction-convection-radiation-exchangers`. ⚠️ **The sections I'd most want read are §4 → `thermo-laws-entropy-property-relations-and-phase-behaviour`,
 §10 → `thermo-cycles-exergy-combustion-and-psychrometrics`, §16 → `thermo-fluid-statics-control-volume-bernoulli-and-navier-stokes` and §19 → `thermo-dimensional-analysis-flows-turbulence-and-turbomachinery`.** **§10 → `thermo-cycles-exergy-combustion-and-psychrometrics` (exergy) because it is under-taught and it changes where you look
 for losses; §16 → `thermo-fluid-statics-control-volume-bernoulli-and-navier-stokes` because the equal-transit-time lift myth is still in circulation and in
 some textbooks; §19 → `thermo-dimensional-analysis-flows-turbulence-and-turbomachinery` because dimensional analysis tells you which physics dominates before
@@ -288,7 +288,7 @@ substantially between sources (22% vs 37% for 2026) and I've presented them as
 directional rather than picking one.** **⚠️ Sourcing caution: a significant share of the
 liquid-cooling material comes from vendors, buying guides and consultancies with obvious
 interests** — **I anchored the threshold logic on the ASHRAE TC 9.9 recommendation and on
-the physics (which is checkable from §26 → `thermo-heat-transfer-conduction-convection-radiation-and-exchangers`'s h-magnitude table) rather than on any vendor's
+the physics (which is checkable from §26 → `thermo-heat-transfer-conduction-convection-radiation-exchangers`'s h-magnitude table) rather than on any vendor's
 recommended product.**
 
 ⚠️ **One judgement stated plainly**: **the warm-water cooling development in §29.2 is

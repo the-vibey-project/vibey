@@ -14,7 +14,7 @@ production unreviewed; request access and approve it; administer a system and au
 logs.**
 **⚠️ SoD is a combinatorial problem, not a per-permission one** — **each permission is
 fine; the combination is the violation**, ⚠️ **which is why it must be evaluated as a rule
-set across effective access, and why it interacts badly with nested groups** (§7 → `itgov-directory-authentication-authorization-and-privileged-access`).
+set across effective access, and why it interacts badly with nested groups** (§7 → `itgov-directory-authn-authz-and-privileged-access`).
 **⚠️ Compensating controls** where SoD is impossible — **and in small teams it frequently
 is.** **Detective controls, mandatory review, and logging with independent oversight are
 the honest answer for a five-person IT department, rather than pretending the separation

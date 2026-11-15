@@ -14,10 +14,10 @@ links: ["skill-1-the-layers-06964e8a32"]
 | Compute and virtualization | §2 |
 | Storage | §3 |
 | Networking | §4 |
-| **Directory services and hybrid identity** | **§5 → `itgov-directory-authentication-authorization-and-privileged-access`** |
-| **Authentication** | **§6 → `itgov-directory-authentication-authorization-and-privileged-access`** |
-| **Authorization: RBAC, ABAC and role explosion** | **§7 → `itgov-directory-authentication-authorization-and-privileged-access`** |
-| **Privileged access** | **§8 → `itgov-directory-authentication-authorization-and-privileged-access`** |
+| **Directory services and hybrid identity** | **§5 → `itgov-directory-authn-authz-and-privileged-access`** |
+| **Authentication** | **§6 → `itgov-directory-authn-authz-and-privileged-access`** |
+| **Authorization: RBAC, ABAC and role explosion** | **§7 → `itgov-directory-authn-authz-and-privileged-access`** |
+| **Privileged access** | **§8 → `itgov-directory-authn-authz-and-privileged-access`** |
 | **Identity lifecycle (JML)** | **§9 → `itgov-identity-lifecycle-access-review-and-segregation-of-duties`** |
 | **Access review and certification** | **§10 → `itgov-identity-lifecycle-access-review-and-segregation-of-duties`** |
 | Segregation of duties | §11 → `itgov-identity-lifecycle-access-review-and-segregation-of-duties` |

@@ -28,7 +28,7 @@ links: ["skill-9-tax-concepts-cedabc91e8"]
    and not the downside. ⚠️ Check for high-water marks and hurdles
 ```
 **⚠️ Where paying more can be justified**: ⚠️ **genuine planning and behavioural coaching
-(§15 → `invest-rebalancing-vehicles-accumulation-decumulation-and-behaviour`, §25 → `invest-fraud-alternatives-and-advisor-conflicts`), tax and estate complexity, and access to markets you cannot reach otherwise.**
+(§15 → `invest-rebalancing-vehicles-accumulation-decumulation-behaviour`, §25 → `invest-fraud-alternatives-and-advisor-conflicts`), tax and estate complexity, and access to markets you cannot reach otherwise.**
 **⚠️ Where it usually isn't: paying for stock selection** (§26.1 → `invest-reference`).
 
 ---

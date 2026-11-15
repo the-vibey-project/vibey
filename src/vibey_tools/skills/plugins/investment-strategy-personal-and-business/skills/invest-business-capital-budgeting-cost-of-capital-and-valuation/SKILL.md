@@ -5,7 +5,7 @@ description: "Use for corporate rather than personal investment: how business in
 
 # Investment Strategy: How Business Investment Differs, Capital Budgeting, Cost of Capital, Capital Structure, Treasury, Valuation, and Raising Capital
 
-> **Part 4 of 6** of the *Gold Standards for Investment Strategy* reference (plugin `investment-strategy-personal-and-business`), covering §16–§22. Sibling skills: `invest-foundations-risk-compounding-diversification-and-efficiency` (§0–§5), `invest-asset-classes-factors-costs-tax-and-allocation` (§6–§10), `invest-rebalancing-vehicles-accumulation-decumulation-and-behaviour` (§11–§15), `invest-fraud-alternatives-and-advisor-conflicts` (§23–§25), `invest-reference` (§26–§31). Section numbers are shared across the set; a reference written as §N → `skill` points into that sibling skill.
+> **Part 4 of 6** of the *Gold Standards for Investment Strategy* reference (plugin `investment-strategy-personal-and-business`), covering §16–§22. Sibling skills: `invest-foundations-risk-compounding-diversification-efficiency` (§0–§5), `invest-asset-classes-factors-costs-tax-and-allocation` (§6–§10), `invest-rebalancing-vehicles-accumulation-decumulation-behaviour` (§11–§15), `invest-fraud-alternatives-and-advisor-conflicts` (§23–§25), `invest-reference` (§26–§31). Section numbers are shared across the set; a reference written as §N → `skill` points into that sibling skill.
 >
 > **Currency:** The core findings are decades old. Two areas are genuinely live. See §26 → `invest-reference` for the active-versus-passive evidence, and private markets entering retirement accounts.
 
@@ -26,11 +26,11 @@ description: "Use for corporate rather than personal investment: how business in
 > **The three ideas that organize this document:**
 > 1. **⚠️ COSTS are the only reliable input you control** (§8 → `invest-asset-classes-factors-costs-tax-and-allocation`). **Returns are uncertain;
 >    fees are certain. Over decades the arithmetic is brutal and it compounds against you.**
-> 2. **⚠️ BEHAVIOUR dominates selection** (§15 → `invest-rebalancing-vehicles-accumulation-decumulation-and-behaviour`). **The gap between fund returns and
+> 2. **⚠️ BEHAVIOUR dominates selection** (§15 → `invest-rebalancing-vehicles-accumulation-decumulation-behaviour`). **The gap between fund returns and
 >    INVESTOR returns is real and well documented — most damage is self-inflicted through
 >    buying high and selling low, not through picking the wrong fund.**
 > 3. **⚠️ Diversification is the only thing in finance that is close to a free lunch**
->    (§4 → `invest-foundations-risk-compounding-diversification-and-efficiency`). **Everything else is a trade-off between risk, return and liquidity, and anyone
+>    (§4 → `invest-foundations-risk-compounding-diversification-efficiency`). **Everything else is a trade-off between risk, return and liquidity, and anyone
 >    offering you all three should be assumed to be hiding one.**
 
 ---
@@ -123,7 +123,7 @@ it is profitable, and PROFIT IS NOT CASH — the gap is working capital.**
 return-maximization one — ⚠️ **and the counterparty and concentration risk of where cash is
 HELD is a real exposure, as depositors have periodically rediscovered.**
 **⚠️ Small business specifics**: ⚠️ **separate business and personal finances completely;
-understand that the owner's wealth is already concentrated in the business (§4 → `invest-foundations-risk-compounding-diversification-and-efficiency`); and
+understand that the owner's wealth is already concentrated in the business (§4 → `invest-foundations-risk-compounding-diversification-efficiency`); and
 ⚠️ recognize that "investing in the business" is a capital allocation decision competing
 with everything else, not automatically the best use of funds.**
 

@@ -29,10 +29,10 @@ links: ["skill-1-the-disciplines-and-the-lifecycle-50248c678e"]
 | **⚠️ Construction sequencing** | **§17 → `building-procurement-cost-sequencing-materials-and-quality`** |
 | Materials in construction | §18 → `building-procurement-cost-sequencing-materials-and-quality` |
 | Quality and inspection | §19 → `building-procurement-cost-sequencing-materials-and-quality` |
-| Site safety | §20 → `building-site-safety-commissioning-retrofit-and-why-projects-fail` |
-| Commissioning and handover | §21 → `building-site-safety-commissioning-retrofit-and-why-projects-fail` |
-| Existing buildings | §22 → `building-site-safety-commissioning-retrofit-and-why-projects-fail` |
-| **⚠️ Why projects fail** | **§23 → `building-site-safety-commissioning-retrofit-and-why-projects-fail`** |
+| Site safety | §20 → `building-site-safety-commissioning-retrofit-and-project-failure` |
+| Commissioning and handover | §21 → `building-site-safety-commissioning-retrofit-and-project-failure` |
+| Existing buildings | §22 → `building-site-safety-commissioning-retrofit-and-project-failure` |
+| **⚠️ Why projects fail** | **§23 → `building-site-safety-commissioning-retrofit-and-project-failure`** |
 | **What's live** | **§24 → `building-reference`** |
 | Misconceptions, numbers | §25–§26 → `building-reference` |
 | Sources, quick ref, method | §27–§29 → `building-reference` |

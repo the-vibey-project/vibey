@@ -21,12 +21,12 @@ links: ["skill-1-what-this-field-actually-knows-87c4c237cf"]
 | Q&A and hostility | §9 → `speaking-language-delivery-visual-aids-and-practice` |
 | Formats | §10 → `speaking-language-delivery-visual-aids-and-practice` |
 | Practice and feedback | §11 → `speaking-language-delivery-visual-aids-and-practice` |
-| **⚠️ Listening** | **§12 → `speaking-listening-rapport-difficult-conversations-and-negotiation`** |
-| Rapport and trust | §13 → `speaking-listening-rapport-difficult-conversations-and-negotiation` |
-| **⚠️ Difficult conversations** | **§14 → `speaking-listening-rapport-difficult-conversations-and-negotiation`** |
-| Negotiation | §15 → `speaking-listening-rapport-difficult-conversations-and-negotiation` |
-| Feedback | §16 → `speaking-listening-rapport-difficult-conversations-and-negotiation` |
-| Conflict | §17 → `speaking-listening-rapport-difficult-conversations-and-negotiation` |
+| **⚠️ Listening** | **§12 → `speaking-listening-rapport-hard-conversations-and-negotiation`** |
+| Rapport and trust | §13 → `speaking-listening-rapport-hard-conversations-and-negotiation` |
+| **⚠️ Difficult conversations** | **§14 → `speaking-listening-rapport-hard-conversations-and-negotiation`** |
+| Negotiation | §15 → `speaking-listening-rapport-hard-conversations-and-negotiation` |
+| Feedback | §16 → `speaking-listening-rapport-hard-conversations-and-negotiation` |
+| Conflict | §17 → `speaking-listening-rapport-hard-conversations-and-negotiation` |
 | **⚠️ What actually persuades** | **§18 → `speaking-persuasion-and-the-ethics-of-influence`** |
 | **⚠️ The ethics of influence** | **§19 → `speaking-persuasion-and-the-ethics-of-influence`** |
 | How groups work | §20 → `speaking-groups-community-facilitation-organizing-and-conflict` |

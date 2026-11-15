@@ -5,7 +5,7 @@ description: "Use when correcting an investment misconception, looking up a hist
 
 # Investment Strategy: What's Live, Misconceptions, Numbers, and Books
 
-> **Part 6 of 6** of the *Gold Standards for Investment Strategy* reference (plugin `investment-strategy-personal-and-business`), covering §26–§31. Sibling skills: `invest-foundations-risk-compounding-diversification-and-efficiency` (§0–§5), `invest-asset-classes-factors-costs-tax-and-allocation` (§6–§10), `invest-rebalancing-vehicles-accumulation-decumulation-and-behaviour` (§11–§15), `invest-business-capital-budgeting-cost-of-capital-and-valuation` (§16–§22), `invest-fraud-alternatives-and-advisor-conflicts` (§23–§25). Section numbers are shared across the set; a reference written as §N → `skill` points into that sibling skill.
+> **Part 6 of 6** of the *Gold Standards for Investment Strategy* reference (plugin `investment-strategy-personal-and-business`), covering §26–§31. Sibling skills: `invest-foundations-risk-compounding-diversification-efficiency` (§0–§5), `invest-asset-classes-factors-costs-tax-and-allocation` (§6–§10), `invest-rebalancing-vehicles-accumulation-decumulation-behaviour` (§11–§15), `invest-business-capital-budgeting-cost-of-capital-and-valuation` (§16–§22), `invest-fraud-alternatives-and-advisor-conflicts` (§23–§25). Section numbers are shared across the set; a reference written as §N → `skill` points into that sibling skill.
 >
 > **Currency:** The core findings are decades old. Two areas are genuinely live. See §26 for the active-versus-passive evidence, and private markets entering retirement accounts.
 
@@ -26,11 +26,11 @@ description: "Use when correcting an investment misconception, looking up a hist
 > **The three ideas that organize this document:**
 > 1. **⚠️ COSTS are the only reliable input you control** (§8 → `invest-asset-classes-factors-costs-tax-and-allocation`). **Returns are uncertain;
 >    fees are certain. Over decades the arithmetic is brutal and it compounds against you.**
-> 2. **⚠️ BEHAVIOUR dominates selection** (§15 → `invest-rebalancing-vehicles-accumulation-decumulation-and-behaviour`). **The gap between fund returns and
+> 2. **⚠️ BEHAVIOUR dominates selection** (§15 → `invest-rebalancing-vehicles-accumulation-decumulation-behaviour`). **The gap between fund returns and
 >    INVESTOR returns is real and well documented — most damage is self-inflicted through
 >    buying high and selling low, not through picking the wrong fund.**
 > 3. **⚠️ Diversification is the only thing in finance that is close to a free lunch**
->    (§4 → `invest-foundations-risk-compounding-diversification-and-efficiency`). **Everything else is a trade-off between risk, return and liquidity, and anyone
+>    (§4 → `invest-foundations-risk-compounding-diversification-efficiency`). **Everything else is a trade-off between risk, return and liquidity, and anyone
 >    offering you all three should be assumed to be hiding one.**
 
 ---
@@ -74,7 +74,7 @@ conclusion.**
 gives substantial weight to very small funds few people actually own, and comparing against
 an uninvestable costless index does overstate the gap.** ⚠️ **The fixed-income reversal is
 the most interesting claim, and is consistent with the general expectation that less
-efficient markets offer more room for skill** (§5 → `invest-foundations-risk-compounding-diversification-and-efficiency`).
+efficient markets offer more room for skill** (§5 → `invest-foundations-risk-compounding-diversification-efficiency`).
 ⚠️ **But note what the critique does NOT touch: the PERSISTENCE finding.** ⚠️ **One
 commentator's response is that persistence is the Achilles heel of the active case —
 whether or not a majority of dollars beat the benchmark in hindsight, you still have to
@@ -138,15 +138,15 @@ portfolio is prudent given that you may not be able to get out.**
 
 | Misconception | Correction |
 |---|---|
-| Investing is the first financial priority | ⚠️ **Insurance, high-interest debt and a reserve come first** (§1 → `invest-foundations-risk-compounding-diversification-and-efficiency`) |
-| Paying off debt isn't "investing" | ⚠️ **It's a guaranteed, tax-free, risk-free return** (§1 → `invest-foundations-risk-compounding-diversification-and-efficiency`) |
-| Cash reserves are inefficient | ⚠️ **They buy the ability to hold risk without forced selling** (§1 → `invest-foundations-risk-compounding-diversification-and-efficiency`) |
-| Risk means volatility | ⚠️ **Permanent loss and goal failure are what matter** (§2 → `invest-foundations-risk-compounding-diversification-and-efficiency`) |
-| All risk is compensated | ⚠️ **Single-company risk isn't — you can diversify it free** (§2 → `invest-foundations-risk-compounding-diversification-and-efficiency`, §4 → `invest-foundations-risk-compounding-diversification-and-efficiency`) |
-| +50% then −50% is break-even | ⚠️ **It's −25%. Volatility drag** (§2 → `invest-foundations-risk-compounding-diversification-and-efficiency`) |
-| My portfolio is diversified | ⚠️ **Count your salary, employer equity and pension too** (§4 → `invest-foundations-risk-compounding-diversification-and-efficiency`) |
-| Correlations are stable | ⚠️ **They converge toward 1 in a crisis** (§4 → `invest-foundations-risk-compounding-diversification-and-efficiency`) |
-| Efficient markets means prices are correct | ⚠️ **It means they're hard to beat, not right** (§5 → `invest-foundations-risk-compounding-diversification-and-efficiency`) |
+| Investing is the first financial priority | ⚠️ **Insurance, high-interest debt and a reserve come first** (§1 → `invest-foundations-risk-compounding-diversification-efficiency`) |
+| Paying off debt isn't "investing" | ⚠️ **It's a guaranteed, tax-free, risk-free return** (§1 → `invest-foundations-risk-compounding-diversification-efficiency`) |
+| Cash reserves are inefficient | ⚠️ **They buy the ability to hold risk without forced selling** (§1 → `invest-foundations-risk-compounding-diversification-efficiency`) |
+| Risk means volatility | ⚠️ **Permanent loss and goal failure are what matter** (§2 → `invest-foundations-risk-compounding-diversification-efficiency`) |
+| All risk is compensated | ⚠️ **Single-company risk isn't — you can diversify it free** (§2 → `invest-foundations-risk-compounding-diversification-efficiency`, §4 → `invest-foundations-risk-compounding-diversification-efficiency`) |
+| +50% then −50% is break-even | ⚠️ **It's −25%. Volatility drag** (§2 → `invest-foundations-risk-compounding-diversification-efficiency`) |
+| My portfolio is diversified | ⚠️ **Count your salary, employer equity and pension too** (§4 → `invest-foundations-risk-compounding-diversification-efficiency`) |
+| Correlations are stable | ⚠️ **They converge toward 1 in a crisis** (§4 → `invest-foundations-risk-compounding-diversification-efficiency`) |
+| Efficient markets means prices are correct | ⚠️ **It means they're hard to beat, not right** (§5 → `invest-foundations-risk-compounding-diversification-efficiency`) |
 | Long-run stock data proves safety | ⚠️ **Survivorship bias — some markets went to zero** (§6 → `invest-asset-classes-factors-costs-tax-and-allocation`) |
 | Bonds are the safe part | ⚠️ **Duration risk is larger than most expect** (§6 → `invest-asset-classes-factors-costs-tax-and-allocation`) |
 | Factors are free money | ⚠️ **They can underperform longer than you'll hold them** (§7 → `invest-asset-classes-factors-costs-tax-and-allocation`) |
@@ -154,12 +154,12 @@ portfolio is prudent given that you may not be able to get out.**
 | Good managers can beat the market on average | ⚠️ **After costs the average active dollar must lag. Arithmetic** (§8 → `invest-asset-classes-factors-costs-tax-and-allocation`) |
 | Never sell because of the tax bill | ⚠️ **Concentration risk has cost more than tax would** (§9 → `invest-asset-classes-factors-costs-tax-and-allocation`) |
 | Asset allocation explains most returns | ⚠️ **Most return VARIABILITY — commonly misquoted** (§10 → `invest-asset-classes-factors-costs-tax-and-allocation`) |
-| Rebalancing boosts returns | ⚠️ **Its job is risk control** (§11 → `invest-rebalancing-vehicles-accumulation-decumulation-and-behaviour`) |
-| Index investing isn't an active choice | ⚠️ **Choosing the index is an allocation decision** (§12 → `invest-rebalancing-vehicles-accumulation-decumulation-and-behaviour`) |
-| The 4% rule is a law | ⚠️ **A finding from specific data, period and portfolio** (§14 → `invest-rebalancing-vehicles-accumulation-decumulation-and-behaviour`) |
-| Investors earn what their funds earn | ⚠️ **They earn less. Timing gap** (§15 → `invest-rebalancing-vehicles-accumulation-decumulation-and-behaviour`) |
-| A crisis demands action | ⚠️ **Action bias. Usually it demands nothing** (§15 → `invest-rebalancing-vehicles-accumulation-decumulation-and-behaviour`) |
-| More trading means better outcomes | ⚠️ **Most-traded accounts perform worst** (§15 → `invest-rebalancing-vehicles-accumulation-decumulation-and-behaviour`) |
+| Rebalancing boosts returns | ⚠️ **Its job is risk control** (§11 → `invest-rebalancing-vehicles-accumulation-decumulation-behaviour`) |
+| Index investing isn't an active choice | ⚠️ **Choosing the index is an allocation decision** (§12 → `invest-rebalancing-vehicles-accumulation-decumulation-behaviour`) |
+| The 4% rule is a law | ⚠️ **A finding from specific data, period and portfolio** (§14 → `invest-rebalancing-vehicles-accumulation-decumulation-behaviour`) |
+| Investors earn what their funds earn | ⚠️ **They earn less. Timing gap** (§15 → `invest-rebalancing-vehicles-accumulation-decumulation-behaviour`) |
+| A crisis demands action | ⚠️ **Action bias. Usually it demands nothing** (§15 → `invest-rebalancing-vehicles-accumulation-decumulation-behaviour`) |
+| More trading means better outcomes | ⚠️ **Most-traded accounts perform worst** (§15 → `invest-rebalancing-vehicles-accumulation-decumulation-behaviour`) |
 | IRR ranks projects correctly | ⚠️ **It misranks on scale and timing. Decide on NPV** (§17 → `invest-business-capital-budgeting-cost-of-capital-and-valuation`) |
 | One corporate hurdle rate is fine | ⚠️ **It accepts risky and rejects safe projects** (§18 → `invest-business-capital-budgeting-cost-of-capital-and-valuation`) |
 | Profit means you have cash | ⚠️ **Working capital is the gap. Businesses fail profitable** (§20 → `invest-business-capital-budgeting-cost-of-capital-and-valuation`) |
@@ -202,9 +202,9 @@ portfolio is prudent given that you may not be able to get out.**
 | Author | Work | Why |
 |---|---|---|
 | **Bogle** | ***The Little Book of Common Sense Investing*** | ⚠️ **§8 → `invest-asset-classes-factors-costs-tax-and-allocation`'s argument, from the person who built the industry around it** |
-| **Malkiel** | ***A Random Walk Down Wall Street*** | ⚠️ **The accessible standard on §5 → `invest-foundations-risk-compounding-diversification-and-efficiency`** |
+| **Malkiel** | ***A Random Walk Down Wall Street*** | ⚠️ **The accessible standard on §5 → `invest-foundations-risk-compounding-diversification-efficiency`** |
 | **Bernstein** | ***The Four Pillars of Investing*** | ⚠️ **Theory, history, psychology and business in one** |
-| **Housel** | ***The Psychology of Money*** | ⚠️ **§15 → `invest-rebalancing-vehicles-accumulation-decumulation-and-behaviour`, and the best on behaviour for a general reader** |
+| **Housel** | ***The Psychology of Money*** | ⚠️ **§15 → `invest-rebalancing-vehicles-accumulation-decumulation-behaviour`, and the best on behaviour for a general reader** |
 | **Kahneman** | *Thinking, Fast and Slow* | The underlying cognitive science |
 | **Ellis** | *Winning the Loser's Game* | ⚠️ **Why avoiding errors beats seeking brilliance** |
 | **Damodaran** | ***Investment Valuation*** / his free site | ⚠️ **§17–§21 → `invest-business-capital-budgeting-cost-of-capital-and-valuation`. Publishes data and spreadsheets free** |
@@ -221,15 +221,15 @@ portfolio is prudent given that you may not be able to get out.**
 ### 30.1 Picker
 | Question | Where |
 |---|---|
-| I have money to invest — where do I start? | ⚠️ **§1 → `invest-foundations-risk-compounding-diversification-and-efficiency` first. Insurance, debt, reserve** |
+| I have money to invest — where do I start? | ⚠️ **§1 → `invest-foundations-risk-compounding-diversification-efficiency` first. Insurance, debt, reserve** |
 | How much risk should I take? | ⚠️ **Capacity vs tolerance; take the lower** (§10 → `invest-asset-classes-factors-costs-tax-and-allocation`) |
-| Lump sum or spread it in? | ⚠️ **Evidence favours lump sum; averaging hedges regret** (§13 → `invest-rebalancing-vehicles-accumulation-decumulation-and-behaviour`) |
+| Lump sum or spread it in? | ⚠️ **Evidence favours lump sum; averaging hedges regret** (§13 → `invest-rebalancing-vehicles-accumulation-decumulation-behaviour`) |
 | Should I pick active or index? | ⚠️ **Compare total cost, and note §26.1's live dispute** |
-| Market just fell 30% | ⚠️ **Do what you wrote down when calm** (§15 → `invest-rebalancing-vehicles-accumulation-decumulation-and-behaviour`) |
-| Should I rebalance? | ⚠️ **It's risk control. Use contributions if you can** (§11 → `invest-rebalancing-vehicles-accumulation-decumulation-and-behaviour`) |
+| Market just fell 30% | ⚠️ **Do what you wrote down when calm** (§15 → `invest-rebalancing-vehicles-accumulation-decumulation-behaviour`) |
+| Should I rebalance? | ⚠️ **It's risk control. Use contributions if you can** (§11 → `invest-rebalancing-vehicles-accumulation-decumulation-behaviour`) |
 | Is this fund expensive? | ⚠️ **Total cost, not headline fee** (§8 → `invest-asset-classes-factors-costs-tax-and-allocation`) |
-| Am I diversified? | ⚠️ **Include your job and employer equity** (§4 → `invest-foundations-risk-compounding-diversification-and-efficiency`) |
-| How much can I withdraw? | ⚠️ **Sequence risk is the real problem** (§14 → `invest-rebalancing-vehicles-accumulation-decumulation-and-behaviour`) |
+| Am I diversified? | ⚠️ **Include your job and employer equity** (§4 → `invest-foundations-risk-compounding-diversification-efficiency`) |
+| How much can I withdraw? | ⚠️ **Sequence risk is the real problem** (§14 → `invest-rebalancing-vehicles-accumulation-decumulation-behaviour`) |
 | Should the business do this project? | ⚠️ **NPV, not IRR. Project-specific rate** (§17 → `invest-business-capital-budgeting-cost-of-capital-and-valuation`, §18 → `invest-business-capital-budgeting-cost-of-capital-and-valuation`) |
 | What do we do with surplus business cash? | ⚠️ **Buffer, then positive-NPV, then debt, then owners** (§20 → `invest-business-capital-budgeting-cost-of-capital-and-valuation`) |
 | Is this investment legitimate? | ⚠️ **§23 → `invest-fraud-alternatives-and-advisor-conflicts`. Start with the custodian** |
@@ -237,15 +237,15 @@ portfolio is prudent given that you may not be able to get out.**
 | Should I buy crypto / private funds? | ⚠️ **§24 → `invest-fraud-alternatives-and-advisor-conflicts`. Size for total loss; check who's selling** |
 
 ### 30.2 Before committing money
-- [ ] ⚠️ **§1 → `invest-foundations-risk-compounding-diversification-and-efficiency`'s foundations are actually in place**
+- [ ] ⚠️ **§1 → `invest-foundations-risk-compounding-diversification-efficiency`'s foundations are actually in place**
 - [ ] ⚠️ **I can explain in one sentence where the return comes from** (§23 → `invest-fraud-alternatives-and-advisor-conflicts`)
 - [ ] ⚠️ **Total cost known as a single number** (§8 → `invest-asset-classes-factors-costs-tax-and-allocation`)
 - [ ] ⚠️ **Independent custodian confirmed** (§23 → `invest-fraud-alternatives-and-advisor-conflicts`)
 - [ ] Registration verified via the regulator directly (§23 → `invest-fraud-alternatives-and-advisor-conflicts`, §25 → `invest-fraud-alternatives-and-advisor-conflicts`)
 - [ ] ⚠️ **Liquidity terms understood — how and when do I get out?** (§24 → `invest-fraud-alternatives-and-advisor-conflicts`, §26.2)
-- [ ] ⚠️ **Concentration checked including salary and employer** (§4 → `invest-foundations-risk-compounding-diversification-and-efficiency`)
+- [ ] ⚠️ **Concentration checked including salary and employer** (§4 → `invest-foundations-risk-compounding-diversification-efficiency`)
 - [ ] Tax treatment and account location considered (§9 → `invest-asset-classes-factors-costs-tax-and-allocation`)
-- [ ] ⚠️ **Written down what I'll do if it falls 40%** (§15 → `invest-rebalancing-vehicles-accumulation-decumulation-and-behaviour`)
+- [ ] ⚠️ **Written down what I'll do if it falls 40%** (§15 → `invest-rebalancing-vehicles-accumulation-decumulation-behaviour`)
 - [ ] ⚠️ **Nobody is pressuring me on timing** (§23 → `invest-fraud-alternatives-and-advisor-conflicts`)
 
 ---
@@ -257,7 +257,7 @@ advisor, this is not advice, and nothing here is a recommendation.** ⚠️ **It
 what the evidence supports and where the disputes are, so you can interrogate advice
 rather than accept it.**
 
-**§1–§25 → `invest-foundations-risk-compounding-diversification-and-efficiency`, `invest-asset-classes-factors-costs-tax-and-allocation`, `invest-rebalancing-vehicles-accumulation-decumulation-and-behaviour`, `invest-business-capital-budgeting-cost-of-capital-and-valuation`, `invest-fraud-alternatives-and-advisor-conflicts` rests on findings that are decades old and heavily replicated** — **the arithmetic
+**§1–§25 → `invest-foundations-risk-compounding-diversification-efficiency`, `invest-asset-classes-factors-costs-tax-and-allocation`, `invest-rebalancing-vehicles-accumulation-decumulation-behaviour`, `invest-business-capital-budgeting-cost-of-capital-and-valuation`, `invest-fraud-alternatives-and-advisor-conflicts` rests on findings that are decades old and heavily replicated** — **the arithmetic
 of costs, the diversification benefit, the investor-return gap, NPV's superiority to IRR,
 and the structural signatures of fraud.** ⚠️ **None of that needed verification; Sharpe's
 arithmetic is arithmetic.**
@@ -267,13 +267,13 @@ arithmetic is arithmetic.**
 central empirical claim and it just came under serious methodological attack, the second
 because it changes what ordinary savers can hold.**
 
-**Confidence.** **High** in §8 → `invest-asset-classes-factors-costs-tax-and-allocation` and §15 → `invest-rebalancing-vehicles-accumulation-decumulation-and-behaviour`, which are the sections I'd most want read.
+**Confidence.** **High** in §8 → `invest-asset-classes-factors-costs-tax-and-allocation` and §15 → `invest-rebalancing-vehicles-accumulation-decumulation-behaviour`, which are the sections I'd most want read.
 ⚠️ **Costs are the only input you control with certainty, and Sharpe's arithmetic — the
 average active dollar must underperform after costs, as a matter of arithmetic rather than
-evidence — is the most robust claim in this document.** ⚠️ **§15 → `invest-rebalancing-vehicles-accumulation-decumulation-and-behaviour`'s behaviour gap is the
+evidence — is the most robust claim in this document.** ⚠️ **§15 → `invest-rebalancing-vehicles-accumulation-decumulation-behaviour`'s behaviour gap is the
 second: the documented shortfall between fund returns and investor returns says most damage
 is self-inflicted, which means the highest-value intervention is a written plan made while
-calm.** **§4 → `invest-foundations-risk-compounding-diversification-and-efficiency`'s point that your salary and employer equity belong in the concentration
+calm.** **§4 → `invest-foundations-risk-compounding-diversification-efficiency`'s point that your salary and employer equity belong in the concentration
 analysis is the one people most often miss.**
 
 **High** on §26.1's SPIVA figures, which come from S&P's own scorecard and are reported

@@ -20,7 +20,7 @@ real advantage in taxable accounts beyond their lower fees.**
 **⚠️ Tax-loss harvesting** is real and constrained by wash-sale-type rules.
 > **⚠️ GOTCHA — do not let the tax tail wag the investment dog.** ⚠️ **Refusing to sell a
 > dangerously concentrated position because of the tax bill has destroyed more wealth than
-> the tax would have** (§4 → `invest-foundations-risk-compounding-diversification-and-efficiency`). **⚠️ And any structure whose primary purpose is tax avoidance
+> the tax would have** (§4 → `invest-foundations-risk-compounding-diversification-efficiency`). **⚠️ And any structure whose primary purpose is tax avoidance
 > rather than a real economic purpose deserves scrutiny** (§23 → `invest-fraud-alternatives-and-advisor-conflicts`).
 
 ---

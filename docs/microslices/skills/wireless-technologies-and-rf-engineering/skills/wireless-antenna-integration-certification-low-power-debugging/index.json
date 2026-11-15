@@ -1,0 +1,58 @@
+[
+  {
+    "id": "skill-17-antenna-integration-a72249f8dd",
+    "purpose": "17 antenna integration",
+    "source": "src/vibey_tools/skills/plugins/wireless-technologies-and-rf-engineering/skills/wireless-antenna-integration-certification-low-power-debugging/SKILL.md",
+    "output": "docs/microslices/skills/wireless-technologies-and-rf-engineering/skills/wireless-antenna-integration-certification-low-power-debugging/001-17-antenna-integration.md",
+    "requires": [],
+    "links": [
+      "skill-18-certification-a38cdd0ab5"
+    ]
+  },
+  {
+    "id": "skill-18-certification-a38cdd0ab5",
+    "purpose": "18 certification",
+    "source": "src/vibey_tools/skills/plugins/wireless-technologies-and-rf-engineering/skills/wireless-antenna-integration-certification-low-power-debugging/SKILL.md",
+    "output": "docs/microslices/skills/wireless-technologies-and-rf-engineering/skills/wireless-antenna-integration-certification-low-power-debugging/002-18-certification.md",
+    "requires": [
+      "skill-17-antenna-integration-a72249f8dd"
+    ],
+    "links": [
+      "skill-19-low-power-design-63b45be52d"
+    ]
+  },
+  {
+    "id": "skill-19-low-power-design-63b45be52d",
+    "purpose": "19 low power design",
+    "source": "src/vibey_tools/skills/plugins/wireless-technologies-and-rf-engineering/skills/wireless-antenna-integration-certification-low-power-debugging/SKILL.md",
+    "output": "docs/microslices/skills/wireless-technologies-and-rf-engineering/skills/wireless-antenna-integration-certification-low-power-debugging/003-19-low-power-design.md",
+    "requires": [
+      "skill-18-certification-a38cdd0ab5"
+    ],
+    "links": [
+      "skill-20-provisioning-and-onboarding-3d234737af"
+    ]
+  },
+  {
+    "id": "skill-20-provisioning-and-onboarding-3d234737af",
+    "purpose": "20 provisioning and onboarding",
+    "source": "src/vibey_tools/skills/plugins/wireless-technologies-and-rf-engineering/skills/wireless-antenna-integration-certification-low-power-debugging/SKILL.md",
+    "output": "docs/microslices/skills/wireless-technologies-and-rf-engineering/skills/wireless-antenna-integration-certification-low-power-debugging/004-20-provisioning-and-onboarding.md",
+    "requires": [
+      "skill-19-low-power-design-63b45be52d"
+    ],
+    "links": [
+      "skill-21-rf-debugging-b021b1f8a0"
+    ]
+  },
+  {
+    "id": "skill-21-rf-debugging-b021b1f8a0",
+    "purpose": "21 rf debugging",
+    "source": "src/vibey_tools/skills/plugins/wireless-technologies-and-rf-engineering/skills/wireless-antenna-integration-certification-low-power-debugging/SKILL.md",
+    "output": "docs/microslices/skills/wireless-technologies-and-rf-engineering/skills/wireless-antenna-integration-certification-low-power-debugging/005-21-rf-debugging.md",
+    "requires": [
+      "skill-20-provisioning-and-onboarding-3d234737af"
+    ],
+    "links": []
+  }
+]

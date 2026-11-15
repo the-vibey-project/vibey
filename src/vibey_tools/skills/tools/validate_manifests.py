@@ -17,6 +17,9 @@ Checks performed:
      directory name and whose `description` is non-empty.
   6. Skill names are unique across the whole marketplace.
   7. `pyproject.toml`'s version equals `marketplace.json`'s `metadata.version`.
+  8. Every skill `name` is at most 64 characters and every `description` at most 1024
+     (the ChatGPT plugin limits; `SkillLimits`). A skill over either cannot be loaded there,
+     so the limits are checked here rather than found by an upload that refuses it.
 
 Exits 0 on success, 1 with a report of every problem found on failure. It reports *all*
 failures rather than stopping at the first, so one run tells you everything to fix.
@@ -48,6 +51,32 @@ class Report:
 
     def ok(self) -> bool:
         return not self.errors
+
+
+class SkillLimits:
+    """The ChatGPT plugin limits on skill front matter.
+
+    A class rather than bare constants and a function so the limits and the check that
+    applies them travel together; `name` must also equal its folder name (check 5), so a
+    too-long name is fixed by renaming the folder, a too-long description by shortening it.
+    """
+
+    MAX_NAME = 64
+    MAX_DESCRIPTION = 1024
+
+    @classmethod
+    def violations(cls, where: str, name: str, description: str) -> list[str]:
+        problems: list[str] = []
+        if len(name) > cls.MAX_NAME:
+            problems.append(
+                f"{where}: skill name is {len(name)} characters, over the {cls.MAX_NAME} limit"
+            )
+        if len(description) > cls.MAX_DESCRIPTION:
+            problems.append(
+                f"{where}: description is {len(description)} characters, "
+                f"over the {cls.MAX_DESCRIPTION} limit"
+            )
+        return problems
 
 
 def rel(path: Path) -> str:
@@ -243,6 +272,9 @@ def main() -> int:
 
         if not fields.get("description", "").strip():
             report.fail(f"{rel(skill_md)}: frontmatter `description` is missing or empty")
+
+        for problem in SkillLimits.violations(rel(skill_md), name, fields.get("description", "")):
+            report.fail(problem)
 
         if name:
             if name in seen_skills:

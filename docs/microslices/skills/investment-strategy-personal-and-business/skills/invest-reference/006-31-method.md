@@ -13,7 +13,7 @@ advisor, this is not advice, and nothing here is a recommendation.** ⚠️ **It
 what the evidence supports and where the disputes are, so you can interrogate advice
 rather than accept it.**
 
-**§1–§25 → `invest-foundations-risk-compounding-diversification-and-efficiency`, `invest-asset-classes-factors-costs-tax-and-allocation`, `invest-rebalancing-vehicles-accumulation-decumulation-and-behaviour`, `invest-business-capital-budgeting-cost-of-capital-and-valuation`, `invest-fraud-alternatives-and-advisor-conflicts` rests on findings that are decades old and heavily replicated** — **the arithmetic
+**§1–§25 → `invest-foundations-risk-compounding-diversification-efficiency`, `invest-asset-classes-factors-costs-tax-and-allocation`, `invest-rebalancing-vehicles-accumulation-decumulation-behaviour`, `invest-business-capital-budgeting-cost-of-capital-and-valuation`, `invest-fraud-alternatives-and-advisor-conflicts` rests on findings that are decades old and heavily replicated** — **the arithmetic
 of costs, the diversification benefit, the investor-return gap, NPV's superiority to IRR,
 and the structural signatures of fraud.** ⚠️ **None of that needed verification; Sharpe's
 arithmetic is arithmetic.**
@@ -23,13 +23,13 @@ arithmetic is arithmetic.**
 central empirical claim and it just came under serious methodological attack, the second
 because it changes what ordinary savers can hold.**
 
-**Confidence.** **High** in §8 → `invest-asset-classes-factors-costs-tax-and-allocation` and §15 → `invest-rebalancing-vehicles-accumulation-decumulation-and-behaviour`, which are the sections I'd most want read.
+**Confidence.** **High** in §8 → `invest-asset-classes-factors-costs-tax-and-allocation` and §15 → `invest-rebalancing-vehicles-accumulation-decumulation-behaviour`, which are the sections I'd most want read.
 ⚠️ **Costs are the only input you control with certainty, and Sharpe's arithmetic — the
 average active dollar must underperform after costs, as a matter of arithmetic rather than
-evidence — is the most robust claim in this document.** ⚠️ **§15 → `invest-rebalancing-vehicles-accumulation-decumulation-and-behaviour`'s behaviour gap is the
+evidence — is the most robust claim in this document.** ⚠️ **§15 → `invest-rebalancing-vehicles-accumulation-decumulation-behaviour`'s behaviour gap is the
 second: the documented shortfall between fund returns and investor returns says most damage
 is self-inflicted, which means the highest-value intervention is a written plan made while
-calm.** **§4 → `invest-foundations-risk-compounding-diversification-and-efficiency`'s point that your salary and employer equity belong in the concentration
+calm.** **§4 → `invest-foundations-risk-compounding-diversification-efficiency`'s point that your salary and employer equity belong in the concentration
 analysis is the one people most often miss.**
 
 **High** on §26.1's SPIVA figures, which come from S&P's own scorecard and are reported

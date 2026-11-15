@@ -16,7 +16,7 @@ Source-cited deep dives across agriculture, operating systems, cognition, civili
 - **volume-b-linux-macos-internals-deep-dive** — Volume B — Linux and macOS Internals.
 - **volume-c-cognition-recovery-community-deep-dive** — Volume C — Cognition, Neurodevelopment, Recovery, and Community.
 - **volume-d-religion-civilization-deep-dive** — Volume D — Religion, Ancient Societies, and European Civilizations.
-- **volume-e-politics-philosophy-science-engineering-technology-deep-dive** — Volume E — Politics, Culture, Philosophy, Science, Mathematics, Engineering, and Technology.
+- **volume-e-politics-philosophy-science-engineering-tech-deep-dive** — Volume E — Politics, Culture, Philosophy, Science, Mathematics, Engineering, and Technology.
 - **volume-f-worldbuilding-film-tv-games-deep-dive** — Volume F — Worldbuilding, Trilogies, Film, Television, Games, and Transmedia.
 - **volume-g-egpu-linux-macos-deep-dive** — Volume G — eGPUs, Linux/macOS Compatibility, and GPU Systems.
 - **volume-h-integrated-systems-synthesis** — Volume H — Integrated Systems Synthesis.

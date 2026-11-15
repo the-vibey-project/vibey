@@ -8,7 +8,7 @@ links: ["skill-26-communication-difference-815cf153a0"]
 
 ## §25. Community Conflict
 
-**⚠️ Conflict at group scale differs from §17 → `speaking-listening-rapport-difficult-conversations-and-negotiation`** — ⚠️ **it has an audience, factions form
+**⚠️ Conflict at group scale differs from §17 → `speaking-listening-rapport-hard-conversations-and-negotiation`** — ⚠️ **it has an audience, factions form
 fast, and history accumulates.**
 **⚠️ Address early and directly.** ⚠️ **Hoping it resolves is the standard mistake, and the
 cost of an awkward early conversation is always lower than the cost of the late one.**

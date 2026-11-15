@@ -17,7 +17,7 @@ displaced by zero-trust network access, which authenticates per-application rath
 granting network presence**).
 **⚠️ DNS and DHCP are load-bearing and under-appreciated** — ⚠️ **a large share of "the
 network is down" incidents are DNS**, and **in a Windows environment AD depends on DNS
-absolutely** (§5 → `itgov-directory-authentication-authorization-and-privileged-access`).
+absolutely** (§5 → `itgov-directory-authn-authz-and-privileged-access`).
 **WAN**: MPLS, SD-WAN, internet breakout. **NTP** — ⚠️ **time skew breaks Kerberos, logging
 correlation, and certificate validation, and it is the cause of a surprising number of
-authentication failures** (§6 → `itgov-directory-authentication-authorization-and-privileged-access`).
+authentication failures** (§6 → `itgov-directory-authn-authz-and-privileged-access`).

@@ -5,7 +5,7 @@ description: "Use when strategic, operational and tactical claims are getting mi
 
 # Military Science: The Levels of War, Principles and Their Limits, and Manoeuvre, Attrition and Decision Cycles
 
-> **Part 2 of 6** of the *Military Science and National Defence* reference (plugin `military-science-and-national-defence`), covering §5–§7. Sibling skills: `mil-theory-clausewitz-sun-tzu-and-sea-and-air-power` (§0–§4), `mil-deterrence-nuclear-strategy-alliances-and-grand-strategy` (§8–§12), `mil-force-structure-logistics-doctrine-intelligence-and-procurement` (§13–§18), `mil-modern-conflict-irregular-warfare-resilience-and-the-law` (§19–§25), `mil-reference` (§26–§31). Section numbers are shared across the set; a reference written as §N → `skill` points into that sibling skill.
+> **Part 2 of 6** of the *Military Science and National Defence* reference (plugin `military-science-and-national-defence`), covering §5–§7. Sibling skills: `mil-theory-clausewitz-sun-tzu-and-sea-and-air-power` (§0–§4), `mil-deterrence-nuclear-strategy-alliances-and-grand-strategy` (§8–§12), `mil-force-structure-logistics-doctrine-intel-and-procurement` (§13–§18), `mil-modern-conflict-irregular-warfare-resilience-and-the-law` (§19–§25), `mil-reference` (§26–§31). Section numbers are shared across the set; a reference written as §N → `skill` points into that sibling skill.
 >
 > **Currency:** The theory is old and durable. Two areas are moving. See §26 → `mil-reference` for what Ukraine has actually demonstrated, and European rearmament.
 
@@ -29,10 +29,10 @@ description: "Use when strategic, operational and tactical claims are getting mi
 >    actually achieve is the recurring cause of strategic failure, and the pattern repeats
 >    across two centuries.**
 > 2. **⚠️ DEFENCE IS AN ECONOMIC AND INDUSTRIAL PROBLEM BEFORE IT IS A MILITARY ONE**
->    (§14 → `mil-force-structure-logistics-doctrine-intelligence-and-procurement`, §18 → `mil-force-structure-logistics-doctrine-intelligence-and-procurement`, §26.2 → `mil-reference`). **Logistics, industrial capacity and the ability to replace losses
+>    (§14 → `mil-force-structure-logistics-doctrine-intel-and-procurement`, §18 → `mil-force-structure-logistics-doctrine-intel-and-procurement`, §26.2 → `mil-reference`). **Logistics, industrial capacity and the ability to replace losses
 >    decide protracted wars. Amateurs discuss tactics; the professional literature discusses
 >    sustainment.**
-> 3. **⚠️ THE HARDEST CAPABILITY TO COPY IS INSTITUTIONAL LEARNING** (§15 → `mil-force-structure-logistics-doctrine-intelligence-and-procurement`, §26.1 → `mil-reference`). **Any
+> 3. **⚠️ THE HARDEST CAPABILITY TO COPY IS INSTITUTIONAL LEARNING** (§15 → `mil-force-structure-logistics-doctrine-intel-and-procurement`, §26.1 → `mil-reference`). **Any
 >    state can buy equipment. What distinguishes effective militaries is the speed at which
 >    they absorb, adapt and redistribute what they learn — and that is organizational, not
 >    technological.**
@@ -100,7 +100,7 @@ ORIENT is the part Boyd considered decisive and the part popular versions omit; 
 usually reduced to "be fast," which loses the point.**
 **⚠️ Mission command (Auftragstaktik)** — ⚠️ **specify the intent and the task, delegate the
 method.** ⚠️ **It requires trust, shared doctrine and tolerance of subordinate error, which
-is why it is easy to declare and hard to practise** (§17 → `mil-force-structure-logistics-doctrine-intelligence-and-procurement`).
+is why it is easy to declare and hard to practise** (§17 → `mil-force-structure-logistics-doctrine-intel-and-procurement`).
 **⚠️ The honest caveat**: ⚠️ **the manoeuvrist school became somewhat doctrinaire in
 Western militaries, and §26.1 → `mil-reference` shows attrition returning to prominence — the two are
 complementary rather than opposed.**

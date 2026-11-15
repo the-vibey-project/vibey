@@ -24,11 +24,11 @@ links: ["skill-32-numbers-39feabc59d"]
 | Smooth surfaces always have less drag | ⚠️ **Dimples delay separation; drag crisis** (§18 → `thermo-fluid-statics-control-volume-bernoulli-and-navier-stokes`, §21 → `thermo-dimensional-analysis-flows-turbulence-and-turbomachinery`) |
 | Turbulent boundary layers are bad | ⚠️ **They resist separation better** (§18 → `thermo-fluid-statics-control-volume-bernoulli-and-navier-stokes`) |
 | Suction pulls fluid | ⚠️ **Ambient pressure pushes. Nothing pulls** (§14 → `thermo-fluid-statics-control-volume-bernoulli-and-navier-stokes`) |
-| Insulation always reduces heat loss | ⚠️ **Below critical radius it can increase it** (§25 → `thermo-heat-transfer-conduction-convection-radiation-and-exchangers`) |
-| Space is cold, so spacecraft need heating | ⚠️ **Vacuum insulates; rejecting heat is the problem** (§27 → `thermo-heat-transfer-conduction-convection-radiation-and-exchangers`) |
-| h is a property of the fluid | ⚠️ **It depends on geometry and flow. That's the problem** (§26 → `thermo-heat-transfer-conduction-convection-radiation-and-exchangers`) |
-| More heat flux always means more boiling | ⚠️ **Past CHF the surface burns out** (§28 → `thermo-heat-transfer-conduction-convection-radiation-and-exchangers`) |
-| A droplet evaporates fastest on the hottest plate | ⚠️ **Leidenfrost — film boiling insulates** (§28 → `thermo-heat-transfer-conduction-convection-radiation-and-exchangers`) |
+| Insulation always reduces heat loss | ⚠️ **Below critical radius it can increase it** (§25 → `thermo-heat-transfer-conduction-convection-radiation-exchangers`) |
+| Space is cold, so spacecraft need heating | ⚠️ **Vacuum insulates; rejecting heat is the problem** (§27 → `thermo-heat-transfer-conduction-convection-radiation-exchangers`) |
+| h is a property of the fluid | ⚠️ **It depends on geometry and flow. That's the problem** (§26 → `thermo-heat-transfer-conduction-convection-radiation-exchangers`) |
+| More heat flux always means more boiling | ⚠️ **Past CHF the surface burns out** (§28 → `thermo-heat-transfer-conduction-convection-radiation-exchangers`) |
+| A droplet evaporates fastest on the hottest plate | ⚠️ **Leidenfrost — film boiling insulates** (§28 → `thermo-heat-transfer-conduction-convection-radiation-exchangers`) |
 | Tacoma Narrows was resonance from vortex shedding | ⚠️ **Better explained as aeroelastic flutter** (§21 → `thermo-dimensional-analysis-flows-turbulence-and-turbomachinery`) |
 | Navier-Stokes is solved, we just need computers | ⚠️ **Existence/smoothness is an open problem** (§17 → `thermo-fluid-statics-control-volume-bernoulli-and-navier-stokes`) |
 | DNS will replace turbulence models soon | ⚠️ **Work scales ~Re³. Decades away** (§22 → `thermo-dimensional-analysis-flows-turbulence-and-turbomachinery`, §29.1) |

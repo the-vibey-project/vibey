@@ -21,9 +21,9 @@ links: ["skill-29-method-f4e1cc7f32"]
 | Cost has ballooned | ⚠️ **Check the estimate stage and the reference class** (§16 → `building-procurement-cost-sequencing-materials-and-quality`) |
 | Which delivery method? | ⚠️ **Who can control which risk** (§15 → `building-procurement-cost-sequencing-materials-and-quality`) |
 | Structure isn't stable during erection | ⚠️ **Temporary works are engineered** (§17 → `building-procurement-cost-sequencing-materials-and-quality`) |
-| Building uses more energy than modelled | ⚠️ **The performance gap. Commission it** (§12 → `building-accessibility-energy-drawings-bim-and-codes`, §21 → `building-site-safety-commissioning-retrofit-and-why-projects-fail`) |
-| Keep the existing frame or demolish? | ⚠️ **45% reuse is a compliance path in California** (§22 → `building-site-safety-commissioning-retrofit-and-why-projects-fail`, §24.2) |
-| A detail changed on site | ⚠️ **Re-derive the analysis. Hyatt Regency** (§23 → `building-site-safety-commissioning-retrofit-and-why-projects-fail`) |
+| Building uses more energy than modelled | ⚠️ **The performance gap. Commission it** (§12 → `building-accessibility-energy-drawings-bim-and-codes`, §21 → `building-site-safety-commissioning-retrofit-and-project-failure`) |
+| Keep the existing frame or demolish? | ⚠️ **45% reuse is a compliance path in California** (§22 → `building-site-safety-commissioning-retrofit-and-project-failure`, §24.2) |
+| A detail changed on site | ⚠️ **Re-derive the analysis. Hyatt Regency** (§23 → `building-site-safety-commissioning-retrofit-and-project-failure`) |
 
 ### 28.2 Design review checklist
 - [ ] ⚠️ **Ground investigation adequate for the foundation assumed** (§2 → `building-disciplines-site-brief-planning-and-design`)
@@ -38,6 +38,6 @@ links: ["skill-29-method-f4e1cc7f32"]
 - [ ] ⚠️ **Services space and risers allocated, with maintenance access** (§9 → `building-structure-foundations-envelope-services-and-fire`)
 - [ ] ⚠️ **Buildable with normal tolerances and a sensible sequence** (§5 → `building-disciplines-site-brief-planning-and-design`, §17 → `building-procurement-cost-sequencing-materials-and-quality`)
 - [ ] ⚠️ **Adopted code edition confirmed for the actual jurisdiction** (§14 → `building-accessibility-energy-drawings-bim-and-codes`)
-- [ ] Commissioning scope and time protected in the programme (§21 → `building-site-safety-commissioning-retrofit-and-why-projects-fail`)
+- [ ] Commissioning scope and time protected in the programme (§21 → `building-site-safety-commissioning-retrofit-and-project-failure`)
 
 ---

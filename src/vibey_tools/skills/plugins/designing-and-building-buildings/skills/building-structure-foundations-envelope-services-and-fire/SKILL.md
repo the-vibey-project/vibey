@@ -5,7 +5,7 @@ description: "Use for the technical core of a building: structural systems and h
 
 # Buildings and Civil Structures: Structural Systems, Foundations, Envelope and Building Physics, Building Services, and Fire Safety
 
-> **Part 2 of 6** of the *Designing and Building Buildings and Other Civil Structures* reference (plugin `designing-and-building-buildings`), covering §6–§10. Sibling skills: `building-disciplines-site-brief-planning-and-design` (§0–§5), `building-accessibility-energy-drawings-bim-and-codes` (§11–§14), `building-procurement-cost-sequencing-materials-and-quality` (§15–§19), `building-site-safety-commissioning-retrofit-and-why-projects-fail` (§20–§23), `building-reference` (§24–§29). Section numbers are shared across the set; a reference written as §N → `skill` points into that sibling skill.
+> **Part 2 of 6** of the *Designing and Building Buildings and Other Civil Structures* reference (plugin `designing-and-building-buildings`), covering §6–§10. Sibling skills: `building-disciplines-site-brief-planning-and-design` (§0–§5), `building-accessibility-energy-drawings-bim-and-codes` (§11–§14), `building-procurement-cost-sequencing-materials-and-quality` (§15–§19), `building-site-safety-commissioning-retrofit-and-project-failure` (§20–§23), `building-reference` (§24–§29). Section numbers are shared across the set; a reference written as §N → `skill` points into that sibling skill.
 >
 > **Currency:** The engineering is settled. Two areas moved. See §24 → `building-reference` for tall mass timber code adoption, and embodied carbon regulation.
 
@@ -17,7 +17,7 @@ description: "Use for the technical core of a building: structural systems and h
 > parties with different contracts, different liabilities and different incentives.**
 > ⚠️ **Most building failures are not engineering failures — they are COORDINATION
 > failures at the boundaries between disciplines and between design and construction**
-> (§23 → `building-site-safety-commissioning-retrofit-and-why-projects-fail`).
+> (§23 → `building-site-safety-commissioning-retrofit-and-project-failure`).
 >
 > **⚠️ GOTCHA** boxes mark the assumptions that cause litigation.
 >

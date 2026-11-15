@@ -5,7 +5,7 @@ description: "Use for the short-range standards: Wi-Fi and its generations, Wi-F
 
 # Wireless Technologies and RF: Wi-Fi, Wi-Fi in Practice, Bluetooth, BLE Programming, and NFC and RFID
 
-> **Part 2 of 6** of the *Wireless Technologies: RF, Standards, Building and Programming* reference (plugin `wireless-technologies-and-rf-engineering`), covering §6–§10. Sibling skills: `wireless-propagation-link-budget-modulation-antennas-and-spectrum` (§0–§5), `wireless-thread-matter-lora-cellular-uwb-and-choosing` (§11–§16), `wireless-antenna-integration-certification-low-power-and-debugging` (§17–§21), `wireless-security-coexistence-and-positioning` (§22–§24), `wireless-reference` (§25–§30). Section numbers are shared across the set; a reference written as §N → `skill` points into that sibling skill.
+> **Part 2 of 6** of the *Wireless Technologies: RF, Standards, Building and Programming* reference (plugin `wireless-technologies-and-rf-engineering`), covering §6–§10. Sibling skills: `wireless-propagation-link-budget-modulation-antennas-spectrum` (§0–§5), `wireless-thread-matter-lora-cellular-uwb-and-choosing` (§11–§16), `wireless-antenna-integration-certification-low-power-debugging` (§17–§21), `wireless-security-coexistence-and-positioning` (§22–§24), `wireless-reference` (§25–§30). Section numbers are shared across the set; a reference written as §N → `skill` points into that sibling skill.
 >
 > **Currency:** The physics is permanent and the mature standards are stable. Two areas are moving. See §25 → `wireless-reference` for Wi-Fi's next generation, and Bluetooth ranging.
 
@@ -21,14 +21,14 @@ description: "Use for the short-range standards: Wi-Fi and its generations, Wi-F
 > is nearly everywhere.
 >
 > **The three ideas that organize this document:**
-> 1. **⚠️ THE LINK BUDGET IS THE WHOLE GAME** (§2 → `wireless-propagation-link-budget-modulation-antennas-and-spectrum`). **Transmit power, antenna gains, path
+> 1. **⚠️ THE LINK BUDGET IS THE WHOLE GAME** (§2 → `wireless-propagation-link-budget-modulation-antennas-spectrum`). **Transmit power, antenna gains, path
 >    loss and receiver sensitivity determine whether a link works. Everything else is
 >    optimization within that envelope, and "add more power" is almost never the available
 >    lever because regulation caps it.**
-> 2. **⚠️ SPECTRUM IS A SHARED, CONTESTED, REGULATED RESOURCE** (§5 → `wireless-propagation-link-budget-modulation-antennas-and-spectrum`, §23 → `wireless-security-coexistence-and-positioning`). **You do not own
+> 2. **⚠️ SPECTRUM IS A SHARED, CONTESTED, REGULATED RESOURCE** (§5 → `wireless-propagation-link-budget-modulation-antennas-spectrum`, §23 → `wireless-security-coexistence-and-positioning`). **You do not own
 >    your channel. Unlicensed bands mean your neighbours, your own other radios, and
 >    physically unrelated devices all degrade you — and coexistence design is not optional.**
-> 3. **⚠️ THE ANTENNA IS THE MOST NEGLECTED COMPONENT AND THE MOST DECISIVE** (§4 → `wireless-propagation-link-budget-modulation-antennas-and-spectrum`, §17 → `wireless-antenna-integration-certification-low-power-and-debugging`).
+> 3. **⚠️ THE ANTENNA IS THE MOST NEGLECTED COMPONENT AND THE MOST DECISIVE** (§4 → `wireless-propagation-link-budget-modulation-antennas-spectrum`, §17 → `wireless-antenna-integration-certification-low-power-debugging`).
 >    **A superb radio with a badly integrated antenna performs worse than a mediocre radio
 >    with a good one, and antenna problems are usually designed in months before anyone
 >    measures them.**

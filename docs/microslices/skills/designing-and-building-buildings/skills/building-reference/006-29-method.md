@@ -8,7 +8,7 @@ links: []
 
 ## §29. Method
 
-**§1–§23 → `building-disciplines-site-brief-planning-and-design`, `building-structure-foundations-envelope-services-and-fire`, `building-accessibility-energy-drawings-bim-and-codes`, `building-procurement-cost-sequencing-materials-and-quality`, `building-site-safety-commissioning-retrofit-and-why-projects-fail` rests on established professional practice and settled engineering** — **load
+**§1–§23 → `building-disciplines-site-brief-planning-and-design`, `building-structure-foundations-envelope-services-and-fire`, `building-accessibility-energy-drawings-bim-and-codes`, `building-procurement-cost-sequencing-materials-and-quality`, `building-site-safety-commissioning-retrofit-and-project-failure` rests on established professional practice and settled engineering** — **load
 paths and lateral systems, foundation selection, building physics, fire strategy, the
 documentation and procurement apparatus, and construction sequencing.** ⚠️ **None of it
 needed verification.**
@@ -53,7 +53,7 @@ $10–20k WBLCA cost are single-source and marked as reported.**
 have — EPBD, RE2020, RICS, London Plan, Caltrans and jurisdiction counts are named as
 unverified in-section.**
 
-**⚠️ The general lesson, which belongs in a document about buildings**: ⚠️ **§23 → `building-site-safety-commissioning-retrofit-and-why-projects-fail` lists the
+**⚠️ The general lesson, which belongs in a document about buildings**: ⚠️ **§23 → `building-site-safety-commissioning-retrofit-and-project-failure` lists the
 Hyatt Regency pattern — a change that looks like a detail silently invalidates the
 original analysis and nobody re-derives it.** **⚠️ Writing a currency section on top of
 failed searches is the same failure mode in a different medium, and the fix is the same:

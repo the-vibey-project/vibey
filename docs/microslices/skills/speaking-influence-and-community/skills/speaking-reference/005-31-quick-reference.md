@@ -16,9 +16,9 @@ links: ["skill-32-method-409eb51d9e"]
 | Talk is too long | ⚠️ **Cut a whole point, don't speak faster** (§4 → `speaking-what-the-field-knows-anxiety-audience-and-structure`) |
 | What goes on the slide? | ⚠️ **Not your notes. A handout is a separate document** (§8 → `speaking-language-delivery-visual-aids-and-practice`) |
 | Hostile question | ⚠️ **Answer the legitimate part calmly. The room is watching** (§9 → `speaking-language-delivery-visual-aids-and-practice`) |
-| They won't hear my feedback | ⚠️ **Behaviour not character; check the identity layer** (§14 → `speaking-listening-rapport-difficult-conversations-and-negotiation`, §16 → `speaking-listening-rapport-difficult-conversations-and-negotiation`) |
-| Conversation keeps escalating | ⚠️ **Pause. Arousal impairs the reasoning you need** (§17 → `speaking-listening-rapport-difficult-conversations-and-negotiation`) |
-| How do I actually change a mind? | ⚠️ **Listen first, then evidence. Not force** (§12 → `speaking-listening-rapport-difficult-conversations-and-negotiation`, §18 → `speaking-persuasion-and-the-ethics-of-influence`, §27.2) |
+| They won't hear my feedback | ⚠️ **Behaviour not character; check the identity layer** (§14 → `speaking-listening-rapport-hard-conversations-and-negotiation`, §16 → `speaking-listening-rapport-hard-conversations-and-negotiation`) |
+| Conversation keeps escalating | ⚠️ **Pause. Arousal impairs the reasoning you need** (§17 → `speaking-listening-rapport-hard-conversations-and-negotiation`) |
+| How do I actually change a mind? | ⚠️ **Listen first, then evidence. Not force** (§12 → `speaking-listening-rapport-hard-conversations-and-negotiation`, §18 → `speaking-persuasion-and-the-ethics-of-influence`, §27.2) |
 | Is this persuasion or manipulation? | ⚠️ **Apply the disclosure test** (§19 → `speaking-persuasion-and-the-ethics-of-influence`) |
 | Community has stalled | ⚠️ **Check onboarding and the founder bottleneck** (§21 → `speaking-groups-community-facilitation-organizing-and-conflict`) |
 | Meetings are frustrating | ⚠️ **Decide how you'll decide, before discussing** (§22 → `speaking-groups-community-facilitation-organizing-and-conflict`) |
@@ -40,11 +40,11 @@ links: ["skill-32-method-409eb51d9e"]
 - [ ] ⚠️ **Accessibility: captions, structure, visuals described** (§26 → `speaking-groups-community-facilitation-organizing-and-conflict`)
 
 ### 31.3 Before a difficult conversation
-- [ ] ⚠️ **What outcome do I actually want?** (§14 → `speaking-listening-rapport-difficult-conversations-and-negotiation`)
-- [ ] ⚠️ **What is MY contribution to this?** (§14 → `speaking-listening-rapport-difficult-conversations-and-negotiation`)
-- [ ] What might their story reasonably be? (§14 → `speaking-listening-rapport-difficult-conversations-and-negotiation`)
-- [ ] ⚠️ **Impact stated, intent not assumed** (§14 → `speaking-listening-rapport-difficult-conversations-and-negotiation`)
-- [ ] Private, unhurried, both parties functional (§14 → `speaking-listening-rapport-difficult-conversations-and-negotiation`)
+- [ ] ⚠️ **What outcome do I actually want?** (§14 → `speaking-listening-rapport-hard-conversations-and-negotiation`)
+- [ ] ⚠️ **What is MY contribution to this?** (§14 → `speaking-listening-rapport-hard-conversations-and-negotiation`)
+- [ ] What might their story reasonably be? (§14 → `speaking-listening-rapport-hard-conversations-and-negotiation`)
+- [ ] ⚠️ **Impact stated, intent not assumed** (§14 → `speaking-listening-rapport-hard-conversations-and-negotiation`)
+- [ ] Private, unhurried, both parties functional (§14 → `speaking-listening-rapport-hard-conversations-and-negotiation`)
 - [ ] ⚠️ **Am I engaging their reasoning or bypassing it?** (§19 → `speaking-persuasion-and-the-ethics-of-influence`)
 - [ ] ⚠️ **Is there a power asymmetry that changes what's fair?** (§19 → `speaking-persuasion-and-the-ethics-of-influence`)
 

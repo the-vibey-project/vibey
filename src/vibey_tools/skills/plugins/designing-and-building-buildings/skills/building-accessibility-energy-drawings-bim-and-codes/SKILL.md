@@ -5,7 +5,7 @@ description: "Use for the regulated and documented layer: accessibility requirem
 
 # Buildings and Civil Structures: Accessibility, Energy and Comfort, Drawings, Specifications and BIM, and Codes and Permitting
 
-> **Part 3 of 6** of the *Designing and Building Buildings and Other Civil Structures* reference (plugin `designing-and-building-buildings`), covering §11–§14. Sibling skills: `building-disciplines-site-brief-planning-and-design` (§0–§5), `building-structure-foundations-envelope-services-and-fire` (§6–§10), `building-procurement-cost-sequencing-materials-and-quality` (§15–§19), `building-site-safety-commissioning-retrofit-and-why-projects-fail` (§20–§23), `building-reference` (§24–§29). Section numbers are shared across the set; a reference written as §N → `skill` points into that sibling skill.
+> **Part 3 of 6** of the *Designing and Building Buildings and Other Civil Structures* reference (plugin `designing-and-building-buildings`), covering §11–§14. Sibling skills: `building-disciplines-site-brief-planning-and-design` (§0–§5), `building-structure-foundations-envelope-services-and-fire` (§6–§10), `building-procurement-cost-sequencing-materials-and-quality` (§15–§19), `building-site-safety-commissioning-retrofit-and-project-failure` (§20–§23), `building-reference` (§24–§29). Section numbers are shared across the set; a reference written as §N → `skill` points into that sibling skill.
 >
 > **Currency:** The engineering is settled. Two areas moved. See §24 → `building-reference` for tall mass timber code adoption, and embodied carbon regulation.
 
@@ -17,7 +17,7 @@ description: "Use for the regulated and documented layer: accessibility requirem
 > parties with different contracts, different liabilities and different incentives.**
 > ⚠️ **Most building failures are not engineering failures — they are COORDINATION
 > failures at the boundaries between disciplines and between design and construction**
-> (§23 → `building-site-safety-commissioning-retrofit-and-why-projects-fail`).
+> (§23 → `building-site-safety-commissioning-retrofit-and-project-failure`).
 >
 > **⚠️ GOTCHA** boxes mark the assumptions that cause litigation.
 >
@@ -68,7 +68,7 @@ occupants accept a wider range in naturally ventilated buildings than in sealed 
 > **⚠️ GOTCHA — THE PERFORMANCE GAP is real and well documented.** ⚠️ **Buildings routinely
 > use substantially more energy than their design models predicted.** **⚠️ Causes:
 > modelling assumptions versus real occupancy, construction quality (thermal bridging and
-> air leakage as built), controls that were never commissioned properly (§21 → `building-site-safety-commissioning-retrofit-and-why-projects-fail`), and
+> air leakage as built), controls that were never commissioned properly (§21 → `building-site-safety-commissioning-retrofit-and-project-failure`), and
 > occupants defeating systems that annoy them.**
 > **⚠️ The lesson is that predicted performance is a design intention, and measured
 > performance requires commissioning, metering and someone paying attention afterwards.**

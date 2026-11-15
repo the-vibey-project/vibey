@@ -9,7 +9,7 @@ links: ["skill-27-misconceptions-56711de1df"]
 ## §26. What's Live — checked August 2026
 
 ### 26.1 ⚠️ What Ukraine has demonstrated — and the argument about it
-**⚠️ §15 → `mil-force-structure-logistics-doctrine-intelligence-and-procurement`'s institutional-learning problem made concrete, with a genuine analytical dispute
+**⚠️ §15 → `mil-force-structure-logistics-doctrine-intel-and-procurement`'s institutional-learning problem made concrete, with a genuine analytical dispute
 that is worth understanding rather than resolving.**
 
 - **⚠️ THE SCALE OF THE SHIFT IS NOT DISPUTED.** ⚠️ **Australian Army research assesses
@@ -22,7 +22,7 @@ that is worth understanding rather than resolving.**
   expensive ones at scale, described as a shift from "exquisite scarcity" to "intelligent
   mass" — large numbers of good-enough, networked, attritable systems.**
   ⚠️ **CEPA frames it as "mass is back — in the form of thousands of cheap drones."**
-- **⚠️ THE PRODUCTION DIMENSION** (§14 → `mil-force-structure-logistics-doctrine-intelligence-and-procurement`, §18 → `mil-force-structure-logistics-doctrine-intelligence-and-procurement`): ⚠️ **Ukraine reportedly planned 7 million
+- **⚠️ THE PRODUCTION DIMENSION** (§14 → `mil-force-structure-logistics-doctrine-intel-and-procurement`, §18 → `mil-force-structure-logistics-doctrine-intel-and-procurement`): ⚠️ **Ukraine reportedly planned 7 million
   military drones in 2026, up from 4 million produced the previous year — which is an
   industrial statistic, not a technological one.**
 - **⚠️ CONTESTED AIR AND ELECTROMAGNETIC SPECTRUM.** ⚠️ **CSIS notes neither side achieved
@@ -44,7 +44,7 @@ that is worth understanding rather than resolving.**
 > returning improved capabilities to the front in weeks rather than years" — and the
 > conclusion is that "any government can buy Ukraine's drones. The advantage will belong to
 > those who build what Ukraine actually built: a system that learns."**
-> **⚠️ That is §15 → `mil-force-structure-logistics-doctrine-intelligence-and-procurement` and §1 → `mil-theory-clausewitz-sun-tzu-and-sea-and-air-power`'s third organizing idea, stated by a practitioner.**
+> **⚠️ That is §15 → `mil-force-structure-logistics-doctrine-intel-and-procurement` and §1 → `mil-theory-clausewitz-sun-tzu-and-sea-and-air-power`'s third organizing idea, stated by a practitioner.**
 
 **⚠️ And the institutional-learning failure is documented rather than alleged.** ⚠️ **The
 Lowy Institute notes a 2024 investigation finding key US military study centres treating the
@@ -60,7 +60,7 @@ rather than a verdict.** ⚠️ **Casualty and attrition percentages originate s
 Ukrainian claims and should be read as contested.**
 
 ### 26.2 ⚠️ European rearmament and the 5% pledge
-**⚠️ §11 → `mil-deterrence-nuclear-strategy-alliances-and-grand-strategy`'s burden-sharing dispute and §18 → `mil-force-structure-logistics-doctrine-intelligence-and-procurement`'s industrial-base problem meeting a concrete
+**⚠️ §11 → `mil-deterrence-nuclear-strategy-alliances-and-grand-strategy`'s burden-sharing dispute and §18 → `mil-force-structure-logistics-doctrine-intel-and-procurement`'s industrial-base problem meeting a concrete
 commitment.**
 
 - **⚠️ WHAT WAS AGREED.** ⚠️ **At the June 2025 Hague Summit, NATO allies committed to
@@ -87,7 +87,7 @@ commitment.**
 > uniform spending benchmarks than on effective capabilities, societal resilience and
 > coordinated contributions"** (§23 → `mil-modern-conflict-irregular-warfare-resilience-and-the-law`).
 
-**⚠️ The industrial base is the binding constraint** (§18 → `mil-force-structure-logistics-doctrine-intelligence-and-procurement`): ⚠️ **analysis points to
+**⚠️ The industrial base is the binding constraint** (§18 → `mil-force-structure-logistics-doctrine-intel-and-procurement`): ⚠️ **analysis points to
 FRAGMENTATION across European producers causing "wasted investments, higher production
 costs, the loss of economies of scale, strained supply chains," with underspending having
 aged production lines and constrained surge capacity — and European defence firms described

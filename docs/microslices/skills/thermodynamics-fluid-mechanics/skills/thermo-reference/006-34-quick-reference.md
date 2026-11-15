@@ -14,14 +14,14 @@ links: ["skill-35-method-4d9e2aa8bf"]
 | Where do I start any problem? | ⚠️ **Draw the control volume** (§15 → `thermo-fluid-statics-control-volume-bernoulli-and-navier-stokes`) |
 | Does viscosity matter here? | ⚠️ **Reynolds number** (§19 → `thermo-dimensional-analysis-flows-turbulence-and-turbomachinery`) |
 | Does compressibility matter? | ⚠️ **Ma > 0.3** (§19 → `thermo-dimensional-analysis-flows-turbulence-and-turbomachinery`, §23 → `thermo-dimensional-analysis-flows-turbulence-and-turbomachinery`) |
-| Can I use lumped capacitance? | ⚠️ **Bi < 0.1** (§19 → `thermo-dimensional-analysis-flows-turbulence-and-turbomachinery`, §25 → `thermo-heat-transfer-conduction-convection-radiation-and-exchangers`) |
+| Can I use lumped capacitance? | ⚠️ **Bi < 0.1** (§19 → `thermo-dimensional-analysis-flows-turbulence-and-turbomachinery`, §25 → `thermo-heat-transfer-conduction-convection-radiation-exchangers`) |
 | Can I use Bernoulli? | ⚠️ **Steady, inviscid, incompressible, one streamline** (§16 → `thermo-fluid-statics-control-volume-bernoulli-and-navier-stokes`) |
 | Best possible cycle efficiency? | ⚠️ **1 − T_C/T_H, absolute temperatures** (§4 → `thermo-laws-entropy-property-relations-and-phase-behaviour`) |
 | Where are my real losses? | ⚠️ **Exergy analysis, not First Law efficiency** (§10 → `thermo-cycles-exergy-combustion-and-psychrometrics`) |
-| Why is my heat exchanger underperforming? | ⚠️ **Fouling; check flow arrangement** (§28 → `thermo-heat-transfer-conduction-convection-radiation-and-exchangers`) |
+| Why is my heat exchanger underperforming? | ⚠️ **Fouling; check flow arrangement** (§28 → `thermo-heat-transfer-conduction-convection-radiation-exchangers`) |
 | Pump is noisy and eroding | ⚠️ **Cavitation. Check NPSH available** (§24 → `thermo-dimensional-analysis-flows-turbulence-and-turbomachinery`) |
 | Flow separates / stalls | ⚠️ **Adverse pressure gradient; consider tripping it turbulent** (§18 → `thermo-fluid-statics-control-volume-bernoulli-and-navier-stokes`) |
-| Heat won't leave a small hot chip | ⚠️ **Contact resistance, then h magnitude** (§25 → `thermo-heat-transfer-conduction-convection-radiation-and-exchangers`, §26 → `thermo-heat-transfer-conduction-convection-radiation-and-exchangers`) |
+| Heat won't leave a small hot chip | ⚠️ **Contact resistance, then h magnitude** (§25 → `thermo-heat-transfer-conduction-convection-radiation-exchangers`, §26 → `thermo-heat-transfer-conduction-convection-radiation-exchangers`) |
 | Air cooling isn't enough | ⚠️ **§29.2's thresholds** |
 | Which turbulence model? | ⚠️ **RANS to iterate; scale-resolving where it separates** (§22 → `thermo-dimensional-analysis-flows-turbulence-and-turbomachinery`, §29.1) |
 | Evaporative cooling not working | ⚠️ **Wet-bulb is the floor** (§12 → `thermo-cycles-exergy-combustion-and-psychrometrics`) |

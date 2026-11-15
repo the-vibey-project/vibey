@@ -5,7 +5,7 @@ description: "Use when checking an IT governance anti-pattern, checking what mov
 
 # IT Infrastructure and Governance: Anti-Patterns, What Moved, Misconceptions, and Canon
 
-> **Part 5 of 5** of the *IT Infrastructure and Governance* reference (plugin `it-infrastructure-governance`), covering §20–§26. Sibling skills: `itgov-infrastructure-layers-compute-storage-and-networking` (§0–§4), `itgov-directory-authentication-authorization-and-privileged-access` (§5–§8), `itgov-identity-lifecycle-access-review-and-segregation-of-duties` (§9–§11), `itgov-endpoints-continuity-itsm-and-vendor-risk` (§12–§19). Section numbers are shared across the set; a reference written as §N → `skill` points into that sibling skill.
+> **Part 5 of 5** of the *IT Infrastructure and Governance* reference (plugin `it-infrastructure-governance`), covering §20–§26. Sibling skills: `itgov-infrastructure-layers-compute-storage-and-networking` (§0–§4), `itgov-directory-authn-authz-and-privileged-access` (§5–§8), `itgov-identity-lifecycle-access-review-and-segregation-of-duties` (§9–§11), `itgov-endpoints-continuity-itsm-and-vendor-risk` (§12–§19). Section numbers are shared across the set; a reference written as §N → `skill` points into that sibling skill.
 >
 > **Currency:** RBAC theory, directory concepts, backup strategy and ITIL process are stable. Two areas moved. See §21 below for the phishing-resistant authentication mandate timeline and non-human identity governance.
 
@@ -20,7 +20,7 @@ description: "Use when checking an IT governance anti-pattern, checking what mov
 > **The three ideas that organize this:**
 > 1. **⚠️ Identity is the perimeter.** The network boundary stopped being the control
 >    point years ago. **Every meaningful access decision now happens at authentication and
->    authorization time** (§5 → `itgov-directory-authentication-authorization-and-privileged-access`, §6 → `itgov-directory-authentication-authorization-and-privileged-access`).
+>    authorization time** (§5 → `itgov-directory-authn-authz-and-privileged-access`, §6 → `itgov-directory-authn-authz-and-privileged-access`).
 > 2. **⚠️ Access accumulates and never sheds by itself.** People change roles and keep old
 >    permissions; service accounts outlive their systems. **Privilege creep is the default
 >    state of any system without deliberate revocation** (§9 → `itgov-identity-lifecycle-access-review-and-segregation-of-duties`, §10 → `itgov-identity-lifecycle-access-review-and-segregation-of-duties`).
@@ -117,7 +117,7 @@ methodology:**
 > growing.** **Do not quote a specific multiple as fact; do act on the direction.**
 
 **⚠️ Why NHIs break conventional IAM, which is the part that actually matters:**
-- **⚠️ They cannot use MFA.** **The entire §6 → `itgov-directory-authentication-authorization-and-privileged-access` control stack assumes a human who can be
+- **⚠️ They cannot use MFA.** **The entire §6 → `itgov-directory-authn-authz-and-privileged-access` control stack assumes a human who can be
   challenged.**
 - **⚠️ They never log out and are rarely retired.** **A credential issued for a 2019
   integration is still valid.** **One report found a majority of secrets confirmed exposed
@@ -131,7 +131,7 @@ methodology:**
   organizations take over 24 hours to rotate them.**
 
 **⚠️ Agentic AI is accelerating this rather than creating it.** **The service account
-problem is decades old** (§8 → `itgov-directory-authentication-authorization-and-privileged-access`); **what agents add is volume, autonomy, and access breadth —
+problem is decades old** (§8 → `itgov-directory-authn-authz-and-privileged-access`); **what agents add is volume, autonomy, and access breadth —
 an agent that reads, decides and acts needs entitlements a conventional service account
 wouldn't.** ⚠️ **Reported survey findings — that around 92% of organizations say current
 IAM tooling cannot manage AI agent identities, while a much smaller share have implemented
@@ -145,7 +145,7 @@ with no authentication at all** — **which, if approximately right, is a straig
 consequence of new infrastructure being deployed faster than its security patterns
 mature.**
 
-**⚠️ What actually works, and it's an extension of §8 → `itgov-directory-authentication-authorization-and-privileged-access` rather than something new:**
+**⚠️ What actually works, and it's an extension of §8 → `itgov-directory-authn-authz-and-privileged-access` rather than something new:**
 ```
 1. ⚠️ INVENTORY first — you cannot govern what you can't enumerate. Scan for
    secrets, tokens, service accounts and integration grants across environments
@@ -167,23 +167,23 @@ problem; eliminating the static secret removes it.**
 
 | Misconception | Correction |
 |---|---|
-| The network perimeter is the security boundary | ⚠️ **Identity is. Every access decision happens there** (§0 → `itgov-infrastructure-layers-compute-storage-and-networking`, §6 → `itgov-directory-authentication-authorization-and-privileged-access`) |
-| The domain is the AD security boundary | ⚠️ **The FOREST is** (§5 → `itgov-directory-authentication-authorization-and-privileged-access`) |
-| All MFA is roughly equivalent | ⚠️ **Only phishing-resistant methods survive relay attacks** (§6 → `itgov-directory-authentication-authorization-and-privileged-access`, §21.1) |
-| SMS MFA is adequate | ⚠️ **Weakest in use, and being retired** (§6 → `itgov-directory-authentication-authorization-and-privileged-access`, §21.1) |
+| The network perimeter is the security boundary | ⚠️ **Identity is. Every access decision happens there** (§0 → `itgov-infrastructure-layers-compute-storage-and-networking`, §6 → `itgov-directory-authn-authz-and-privileged-access`) |
+| The domain is the AD security boundary | ⚠️ **The FOREST is** (§5 → `itgov-directory-authn-authz-and-privileged-access`) |
+| All MFA is roughly equivalent | ⚠️ **Only phishing-resistant methods survive relay attacks** (§6 → `itgov-directory-authn-authz-and-privileged-access`, §21.1) |
+| SMS MFA is adequate | ⚠️ **Weakest in use, and being retired** (§6 → `itgov-directory-authn-authz-and-privileged-access`, §21.1) |
 | RAID protects your data | ⚠️ **Against drive failure only. Not deletion or ransomware** (§3 → `itgov-infrastructure-layers-compute-storage-and-networking`) |
 | Snapshots are backups | ⚠️ **Same storage, same fate** (§3 → `itgov-infrastructure-layers-compute-storage-and-networking`, §13 → `itgov-endpoints-continuity-itsm-and-vendor-risk`) |
 | The backup job says success | ⚠️ **Only a restore test proves it** (§13 → `itgov-endpoints-continuity-itsm-and-vendor-risk`) |
-| RBAC solves access governance | ⚠️ **Role explosion is the default outcome without design** (§7 → `itgov-directory-authentication-authorization-and-privileged-access`) |
-| ABAC is the more modern answer | ⚠️ **Trades role explosion for less-visible policy explosion** (§7 → `itgov-directory-authentication-authorization-and-privileged-access`) |
-| Effective permissions can be read off the ACL | ⚠️ **Not with nested groups. Use tooling** (§7 → `itgov-directory-authentication-authorization-and-privileged-access`) |
+| RBAC solves access governance | ⚠️ **Role explosion is the default outcome without design** (§7 → `itgov-directory-authn-authz-and-privileged-access`) |
+| ABAC is the more modern answer | ⚠️ **Trades role explosion for less-visible policy explosion** (§7 → `itgov-directory-authn-authz-and-privileged-access`) |
+| Effective permissions can be read off the ACL | ⚠️ **Not with nested groups. Use tooling** (§7 → `itgov-directory-authn-authz-and-privileged-access`) |
 | Recertification means access is controlled | ⚠️ **Rubber-stamping produces perfect evidence of nothing** (§10 → `itgov-identity-lifecycle-access-review-and-segregation-of-duties`) |
 | Deprovisioning is handled by disabling the AD account | ⚠️ **Non-SSO apps, API keys and shared secrets persist** (§9 → `itgov-identity-lifecycle-access-review-and-segregation-of-duties`) |
 | Role changes are a provisioning event | ⚠️ **They must trigger REVOCATION review — this is where creep comes from** (§9 → `itgov-identity-lifecycle-access-review-and-segregation-of-duties`) |
 | SoD can be checked per permission | ⚠️ **It's combinatorial, over effective access** (§11 → `itgov-identity-lifecycle-access-review-and-segregation-of-duties`) |
 | Zero-days are the main exploitation route | ⚠️ **Known, patchable vulnerabilities dominate** (§12 → `itgov-endpoints-continuity-itsm-and-vendor-risk`) |
 | Compliance means secure | ⚠️ **It's a negotiated floor** (§17 → `itgov-endpoints-continuity-itsm-and-vendor-risk`) |
-| Service accounts are a minor cleanup task | ⚠️ **They're the classical form of §21.2's problem** (§8 → `itgov-directory-authentication-authorization-and-privileged-access`) |
+| Service accounts are a minor cleanup task | ⚠️ **They're the classical form of §21.2's problem** (§8 → `itgov-directory-authn-authz-and-privileged-access`) |
 | AI agents created the machine identity problem | ⚠️ **They accelerated a decades-old one** (§21.2) |
 | NHI ratios are established facts | ⚠️ **Mostly vendor-sourced, 25:1 to 144:1. Trust the direction** (§21.2) |
 | Vaulting secrets solves NHI risk | ⚠️ **Eliminating static secrets does. Vaulting manages** (§21.2) |
@@ -226,8 +226,8 @@ Tier 0 identity infra · Tier 1 servers · Tier 2 workstations
 | **Allspaw & Robbins** | *Web Operations* | Operational culture |
 | **NIST** | ***SP 800-53, 800-63, CSF 2.0*** | ⚠️ **Free, authoritative. 800-63 is THE authentication reference** |
 | **CIS** | ***CIS Controls v8 / Benchmarks*** | ⚠️ **Free, prioritized, immediately actionable** |
-| **Microsoft** | *Securing Privileged Access* documentation | ⚠️ **§5 → `itgov-directory-authentication-authorization-and-privileged-access`'s tiering model, from the source** |
-| **Hu et al. (NIST)** | *Guide to Attribute Based Access Control* (SP 800-162) | §7 → `itgov-directory-authentication-authorization-and-privileged-access` rigorously |
+| **Microsoft** | *Securing Privileged Access* documentation | ⚠️ **§5 → `itgov-directory-authn-authz-and-privileged-access`'s tiering model, from the source** |
+| **Hu et al. (NIST)** | *Guide to Attribute Based Access Control* (SP 800-162) | §7 → `itgov-directory-authn-authz-and-privileged-access` rigorously |
 | **Ferraiolo, Kuhn & Chandramouli** | *Role-Based Access Control* | ⚠️ **The foundational RBAC text** |
 | **AXELOS** | *ITIL 4 Foundation* | §15 → `itgov-endpoints-continuity-itsm-and-vendor-risk` — ⚠️ take as vocabulary, not scripture |
 | **Kim, Behr & Spafford** | *The Phoenix Project* | ⚠️ **Change management and constraints, as a novel** |
@@ -239,29 +239,29 @@ Tier 0 identity infra · Tier 1 servers · Tier 2 workstations
 ### 25.1 Picker
 | Question | Where |
 |---|---|
-| Where should access decisions be enforced? | ⚠️ **Identity layer, not network** (§6 → `itgov-directory-authentication-authorization-and-privileged-access`) |
-| Is our MFA good enough? | ⚠️ **Is it phishing-resistant? If not, no** (§6 → `itgov-directory-authentication-authorization-and-privileged-access`, §21.1) |
-| Why do we have 900 roles? | ⚠️ **Role explosion — split business roles from entitlements** (§7 → `itgov-directory-authentication-authorization-and-privileged-access`) |
-| How do we cut standing privilege? | ⚠️ **JIT elevation + PAM vaulting** (§8 → `itgov-directory-authentication-authorization-and-privileged-access`) |
+| Where should access decisions be enforced? | ⚠️ **Identity layer, not network** (§6 → `itgov-directory-authn-authz-and-privileged-access`) |
+| Is our MFA good enough? | ⚠️ **Is it phishing-resistant? If not, no** (§6 → `itgov-directory-authn-authz-and-privileged-access`, §21.1) |
+| Why do we have 900 roles? | ⚠️ **Role explosion — split business roles from entitlements** (§7 → `itgov-directory-authn-authz-and-privileged-access`) |
+| How do we cut standing privilege? | ⚠️ **JIT elevation + PAM vaulting** (§8 → `itgov-directory-authn-authz-and-privileged-access`) |
 | Where does privilege creep come from? | ⚠️ **The mover case** (§9 → `itgov-identity-lifecycle-access-review-and-segregation-of-duties`) |
 | Our access reviews are meaningless | ⚠️ **Risk-scope, owner-review, plain language** (§10 → `itgov-identity-lifecycle-access-review-and-segregation-of-duties`) |
 | Is this backup adequate? | ⚠️ **3-2-1-1-0, and restore-test it** (§13 → `itgov-endpoints-continuity-itsm-and-vendor-risk`) |
-| Who owns this service account? | ⚠️ **If nobody, that's the finding** (§8 → `itgov-directory-authentication-authorization-and-privileged-access`, §21.2) |
+| Who owns this service account? | ⚠️ **If nobody, that's the finding** (§8 → `itgov-directory-authn-authz-and-privileged-access`, §21.2) |
 | How many machine identities do we have? | ⚠️ **Inventory first — most orgs cannot answer** (§21.2) |
 | Which framework should we adopt? | ⚠️ **CIS Controls IG1 to start** (§17 → `itgov-endpoints-continuity-itsm-and-vendor-risk`) |
 | Small team, can't separate duties | ⚠️ **Compensating detective controls, honestly documented** (§11 → `itgov-identity-lifecycle-access-review-and-segregation-of-duties`) |
 
 ### 25.2 Access governance health check
 - [ ] Can you enumerate every account, human and non-human? (§16 → `itgov-endpoints-continuity-itsm-and-vendor-risk`, §21.2)
-- [ ] ⚠️ **Does every privileged account have a named human owner?** (§8 → `itgov-directory-authentication-authorization-and-privileged-access`, §21.2)
-- [ ] Is standing privileged access eliminated or minimized? (§8 → `itgov-directory-authentication-authorization-and-privileged-access`)
+- [ ] ⚠️ **Does every privileged account have a named human owner?** (§8 → `itgov-directory-authn-authz-and-privileged-access`, §21.2)
+- [ ] Is standing privileged access eliminated or minimized? (§8 → `itgov-directory-authn-authz-and-privileged-access`)
 - [ ] ⚠️ **Do role changes trigger revocation review, not just grants?** (§9 → `itgov-identity-lifecycle-access-review-and-segregation-of-duties`)
 - [ ] Are leavers deprovisioned from non-SSO systems too? (§9 → `itgov-identity-lifecycle-access-review-and-segregation-of-duties`)
 - [ ] Do contractor accounts have expiry dates set at creation? (§9 → `itgov-identity-lifecycle-access-review-and-segregation-of-duties`)
 - [ ] Are reviews risk-scoped and in plain language? (§10 → `itgov-identity-lifecycle-access-review-and-segregation-of-duties`)
-- [ ] ⚠️ **Are privileged accounts on phishing-resistant MFA?** (§6 → `itgov-directory-authentication-authorization-and-privileged-access`, §21.1)
-- [ ] Is legacy authentication disabled? (§5 → `itgov-directory-authentication-authorization-and-privileged-access`)
-- [ ] Are break-glass accounts tested and monitored? (§6 → `itgov-directory-authentication-authorization-and-privileged-access`)
+- [ ] ⚠️ **Are privileged accounts on phishing-resistant MFA?** (§6 → `itgov-directory-authn-authz-and-privileged-access`, §21.1)
+- [ ] Is legacy authentication disabled? (§5 → `itgov-directory-authn-authz-and-privileged-access`)
+- [ ] Are break-glass accounts tested and monitored? (§6 → `itgov-directory-authn-authz-and-privileged-access`)
 - [ ] ⚠️ **Have you restore-tested a full system this year?** (§13 → `itgov-endpoints-continuity-itsm-and-vendor-risk`)
 - [ ] Are logs forwarded off-host and tamper-resistant? (§14 → `itgov-endpoints-continuity-itsm-and-vendor-risk`)
 - [ ] Are third-party OAuth grants and API tokens reviewed? (§19 → `itgov-endpoints-continuity-itsm-and-vendor-risk`, §21.2)
@@ -270,7 +270,7 @@ Tier 0 identity infra · Tier 1 servers · Tier 2 workstations
 
 ## §26. Method
 
-**§1–§20 → `itgov-infrastructure-layers-compute-storage-and-networking`, `itgov-directory-authentication-authorization-and-privileged-access`, `itgov-identity-lifecycle-access-review-and-segregation-of-duties`, `itgov-endpoints-continuity-itsm-and-vendor-risk` rest on stable material** — **RBAC theory (Ferraiolo, Kuhn & Chandramouli;
+**§1–§20 → `itgov-infrastructure-layers-compute-storage-and-networking`, `itgov-directory-authn-authz-and-privileged-access`, `itgov-identity-lifecycle-access-review-and-segregation-of-duties`, `itgov-endpoints-continuity-itsm-and-vendor-risk` rest on stable material** — **RBAC theory (Ferraiolo, Kuhn & Chandramouli;
 NIST SP 800-162), directory and Kerberos fundamentals, Microsoft's tiered administration
 model, backup and DR practice, and ITIL/COBIT/NIST CSF process** — sourced from §24.
 ⚠️ **The joiner-mover-leaver problem, role explosion and rubber-stamped recertification
@@ -279,7 +279,7 @@ have been the same three failures for twenty years.**
 **Two searches were run in August 2026**, both on identity, **because that is where this
 domain actually moved.**
 
-**Confidence.** **High** in §1–§20 → `itgov-infrastructure-layers-compute-storage-and-networking`, `itgov-directory-authentication-authorization-and-privileged-access`, `itgov-identity-lifecycle-access-review-and-segregation-of-duties`, `itgov-endpoints-continuity-itsm-and-vendor-risk`.
+**Confidence.** **High** in §1–§20 → `itgov-infrastructure-layers-compute-storage-and-networking`, `itgov-directory-authn-authz-and-privileged-access`, `itgov-identity-lifecycle-access-review-and-segregation-of-duties`, `itgov-endpoints-continuity-itsm-and-vendor-risk`.
 **High in §21.1's mechanism and method list** — **the five Entra phishing-resistant
 methods, Authentication Strengths, and the Conditional Access enforcement pattern are
 consistent across Microsoft Learn documentation and multiple independent practitioners.**
@@ -302,7 +302,7 @@ hedged each in place.**
 ⚠️ **The mechanism claims in §21.2 I'm confident about on first principles rather than on
 the surveys**: **NHIs genuinely cannot do MFA, genuinely don't log out, and genuinely tend
 to lack owners.** **Those are structural properties, not survey findings** — **and they're
-why the §8 → `itgov-directory-authentication-authorization-and-privileged-access` service-account problem and the agentic-AI problem are the same problem at
+why the §8 → `itgov-directory-authn-authz-and-privileged-access` service-account problem and the agentic-AI problem are the same problem at
 different scales.** ⚠️ **The recommendation to eliminate static secrets rather than vault
 them is the one I'd stand behind most firmly, because it removes the failure mode instead
 of managing it.**
