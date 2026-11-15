@@ -521,7 +521,9 @@ docs site beside the pages they mirror:
   Helvetica and Courier have no definitions under XeTeX). The fifteen empirical
   figures between `BEGIN GENERATED figure:` markers are written by
   `scripts/paper_figures.py` from tracked records and checked for drift with
-  `--check`; every section closes with a `plainwords` box that restates it for a
+  `--check`. The release-cadence figure counts the releases in the tracked
+  `docs/paper_releases.toml`, never `git tag`; `python scripts/paper_releases.py sync` records a
+  new release once its tag exists (the daily documentation updater does it for you); every section closes with a `plainwords` box that restates it for a
   reader outside the field.
 - **The book.** Every page in `properdocs.yml` nav order, exported by
   `vibey-gh book` as [PDF](https://the-vibey-project.github.io/vibey/main/book.pdf),

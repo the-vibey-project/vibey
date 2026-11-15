@@ -80,6 +80,12 @@ surfaces_workflow = "release-surfaces.yml"
 # forecast) are measured by their own lanes; these re-render what those lanes recorded, so a
 # page can never sit behind its own record. Generated indexes the documentation deep scan
 # keeps (src/vibey_tools/gh/corpus-index.json) stay its own.
+# First, so the figures below are drawn from a ledger that already holds every release: a tag is
+# read here once to propose an entry, and the figures never read a tag (docs/paper_releases.toml).
+[[docs_updater.repair]]
+name = "paper release ledger, one entry per release tag"
+argv = ["python", "scripts/paper_releases.py", "sync"]
+
 [[docs_updater.repair]]
 name = "paper figures, re-pinned to today's develop"
 argv = ["python", "scripts/paper_figures.py", "--rev", "{integration_sha}"]
@@ -114,6 +120,7 @@ argv = ["python", "scripts/llms_txt.py"]
 
 [docs_updater.guard]
 allowed_paths = [
+  '^docs/paper_releases\.toml$',
   '^docs/.+\.md$',
   '^docs/llms\.txt$',
   '^README\.md$',

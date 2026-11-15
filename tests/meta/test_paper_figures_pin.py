@@ -184,26 +184,40 @@ def test_a_pre_squash_tree_still_does_not_reach_the_integration_branch(tmp_path:
     assert any("not on origin/develop's history" in r for r in problems), problems
 
 
-def test_a_pin_a_tag_holds_is_accepted_as_it_stands(tmp_path: Path) -> None:
-    """A squash merge drops the pin from every branch; a tag keeps it walkable."""
+def test_a_tag_on_a_pin_does_not_make_it_walkable(tmp_path: Path) -> None:
+    """A tag is forge state: a pin the integration branch lost stays refused whatever it holds.
+
+    A tag on the pin once kept it walkable in every clone, and so made `--check` depend on which
+    tags the forge held; deleting one turned develop red.
+    """
     commits = _history(tmp_path)
     _git(tmp_path, "tag", "-a", "paper-figures/pin", "-m", "pin", commits["feature"])
     problems, resolved = _probe(tmp_path, None, commits["feature"])[commits["feature"]]
-    assert problems == [] and resolved == commits["feature"], (problems, resolved)
+    assert resolved is None
+    assert any("not on origin/develop's history" in r for r in problems), problems
 
 
 # A promotion rebase-merges `develop` into `main`: the pin comes through as a copy with the
-# same tree and author time but one new committer time, and the release tag is then cut on
-# the tip. The tag's creator date is that tip's committer date, the instant the copy of the
-# pin carries too, so a filter that only compared times counted a release the paper was
-# written without, and develop went red on `commits-daily` and `release-cadence` every time.
-TAGS_PROBE = (
+# same tree and author time but one new committer time, and the release is then cut on the
+# tip. Its recorded instant is that tip's committer date, the instant the copy of the pin
+# carries too, so a filter that only compared times counted a release the paper was written
+# without, and develop went red on `commits-daily` and `release-cadence` every time.
+RELEASES_PROBE = (
     "import json, sys\n"
     "from pathlib import Path\n"
     "sys.path.insert(0, sys.argv[1])\n"
     "import paper_figures\n"
-    "series = paper_figures.CommitSeries(Path(sys.argv[2]), sys.argv[3])\n"
-    "print(json.dumps([tag['name'] for tag in series.load()['tags']]))\n"
+    "repo = Path(sys.argv[2])\n"
+    "series = paper_figures.CommitSeries(\n"
+    "    repo,\n"
+    "    sys.argv[3],\n"
+    "    releases=paper_figures.PaperReleaseLedger(repo / paper_figures.DEFAULT_RELEASE_LEDGER),\n"
+    "    cutoff=paper_figures.ReleaseCutoff(repo),\n"
+    ")\n"
+    "print(json.dumps([release['name'] for release in series.load()['releases']]))\n"
+)
+LEDGER_HEAD = (
+    '[[family]]\npackage = "vibey"\ntag_prefix = "vibey-v"\nversion_file = "pyproject.toml"\n'
 )
 
 
@@ -220,6 +234,19 @@ def _at(repo: Path, moment: str, *args: str, author: str | None = None) -> str:
     return done.stdout.strip()
 
 
+def _record(repo: Path, version: str, commit: str, released: str) -> None:
+    """Append one release to the repository's tracked ledger, as `sync` would."""
+    ledger = repo / "docs" / "paper_releases.toml"
+    ledger.parent.mkdir(exist_ok=True)
+    text = ledger.read_text("utf-8") if ledger.exists() else LEDGER_HEAD
+    ledger.write_text(
+        text
+        + f'\n[[release]]\npackage = "vibey"\nversion = "{version}"\ntag = "vibey-v{version}"\n'
+        f'commit = "{commit}"\nreleased = {released}\n',
+        encoding="utf-8",
+    )
+
+
 def _release_promotion(repo: Path) -> dict[str, str]:
     """An earlier release, the pin, and the pin's rebased copy plus a tip, as `main` holds them."""
     _git(repo, "init", "-q", "-b", "develop")
@@ -227,7 +254,6 @@ def _release_promotion(repo: Path) -> dict[str, str]:
     _git(repo, "add", "log.txt")
     _at(repo, "2026-10-01T12:00:00Z", "commit", "-q", "-m", "chore(release): 1.0.0")
     earlier = _git(repo, "rev-parse", "HEAD")
-    _git(repo, "tag", "vibey-v1.0.0")
     (repo / "log.txt").write_text("release 1\nrelease 2\n", encoding="utf-8")
     _git(repo, "add", "log.txt")
     _at(repo, "2026-10-02T12:00:00Z", "commit", "-q", "-m", "chore(release): 2.0.0")
@@ -251,12 +277,13 @@ def _release_promotion(repo: Path) -> dict[str, str]:
     _git(repo, "add", "log.txt")
     _at(repo, promoted_at, "commit", "-q", "-m", "feat: work promoted with the release")
     tip = _git(repo, "rev-parse", "HEAD")
+    _record(repo, "1.0.0", earlier, "2026-10-01T12:00:00Z")
     return {"earlier": earlier, "pin": pin, "copy": copy, "tip": tip}
 
 
-def _tags_at(repo: Path, revision: str) -> list[str]:
+def _releases_at(repo: Path, revision: str) -> list[str]:
     done = subprocess.run(
-        [sys.executable, "-c", TAGS_PROBE, str(SCRIPT.parent), str(repo), revision],
+        [sys.executable, "-c", RELEASES_PROBE, str(SCRIPT.parent), str(repo), revision],
         check=True,
         capture_output=True,
         text=True,
@@ -264,19 +291,39 @@ def _tags_at(repo: Path, revision: str) -> list[str]:
     return json.loads(done.stdout)
 
 
-def test_a_release_tag_cut_on_the_promoted_tip_is_not_in_the_pins_figures(tmp_path: Path) -> None:
+def test_a_release_cut_on_the_promoted_tip_is_not_in_the_pins_figures(tmp_path: Path) -> None:
     commits = _release_promotion(tmp_path)
-    _git(tmp_path, "tag", "vibey-v2.0.0", commits["tip"])
-    assert _tags_at(tmp_path, commits["copy"]) == ["vibey-v1.0.0"]
+    _record(tmp_path, "2.0.0", commits["tip"], "2026-10-03T12:00:00Z")
+    assert _releases_at(tmp_path, commits["copy"]) == ["vibey-v1.0.0"]
 
 
-def test_a_release_tag_cut_on_the_pins_own_copy_is_not_in_the_pins_figures(tmp_path: Path) -> None:
+def test_a_release_cut_on_the_pins_own_copy_is_not_in_the_pins_figures(tmp_path: Path) -> None:
     commits = _release_promotion(tmp_path)
-    _git(tmp_path, "tag", "vibey-v2.0.0", commits["copy"])
-    assert _tags_at(tmp_path, commits["copy"]) == ["vibey-v1.0.0"]
+    _record(tmp_path, "2.0.0", commits["copy"], "2026-10-03T12:00:00Z")
+    assert _releases_at(tmp_path, commits["copy"]) == ["vibey-v1.0.0"]
 
 
 def test_the_release_enters_the_figures_once_the_pin_moves_past_it(tmp_path: Path) -> None:
     commits = _release_promotion(tmp_path)
-    _git(tmp_path, "tag", "vibey-v2.0.0", commits["copy"])
-    assert _tags_at(tmp_path, commits["tip"]) == ["vibey-v1.0.0", "vibey-v2.0.0"]
+    _record(tmp_path, "2.0.0", commits["copy"], "2026-10-03T12:00:00Z")
+    assert _releases_at(tmp_path, commits["tip"]) == ["vibey-v1.0.0", "vibey-v2.0.0"]
+
+
+def test_a_release_whose_commit_the_clone_lacks_is_judged_by_its_instant(tmp_path: Path) -> None:
+    commits = _release_promotion(tmp_path)
+    gone = "e" * 40
+    _record(tmp_path, "1.5.0", gone, "2026-10-01T18:00:00Z")
+    _record(tmp_path, "2.5.0", gone, "2026-10-03T12:00:00Z")
+    _record(tmp_path, "3.0.0", gone, "2026-10-09T12:00:00Z")
+    assert _releases_at(tmp_path, commits["copy"]) == ["vibey-v1.0.0", "vibey-v1.5.0"]
+
+
+def test_deleting_and_cutting_tags_changes_no_release_figure(tmp_path: Path) -> None:
+    """The figures read the ledger: no tag, however it comes or goes, enters or leaves them."""
+    commits = _release_promotion(tmp_path)
+    before = _releases_at(tmp_path, commits["tip"])
+    _git(tmp_path, "tag", "vibey-v1.0.0", commits["earlier"])
+    _git(tmp_path, "tag", "vibey-v9.9.9", commits["tip"])
+    assert _releases_at(tmp_path, commits["tip"]) == before == ["vibey-v1.0.0"]
+    _git(tmp_path, "tag", "-d", "vibey-v1.0.0", "vibey-v9.9.9")
+    assert _releases_at(tmp_path, commits["tip"]) == before

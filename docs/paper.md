@@ -2756,7 +2756,7 @@ ships the whole family ([Fig. 32](#fig:release-cadence)).
 \node[vibeyanchor,fill=vibeyblue] at (15.40,0.00) {};
 \node[font=\sffamily\tiny,text=vibeyblue,rotate=55,anchor=south west,inner sep=1pt] at (15.42,0.06) {0.2.0};
 \end{tikzpicture}
-\caption{Every release tag created by the time of revision f5b38b4a, 4 tags on the repository; a tag is selected by its date, not by whether the revision's history reaches it, except that a tag cut at or after the revision itself is left out: it did not exist when the revision was the tip. The 4 \texttt{vibey} releases run from vibey-v0.1.0 on 2026-08-16 to vibey-v0.2.0 on 2026-08-24; since the packages were absorbed into one tree, one version number ships the whole family, and the packages' earlier tags were never carried into this repository, whose pre-absorption repositories have since been removed.}
+\caption{Every release recorded in the tracked release ledger (docs/paper_releases.toml) as of revision f5b38b4a, 4 releases on the repository; a release is selected by its date, not by whether the revision's history reaches it, except that a release cut at or after the revision itself is left out: it did not exist when the revision was the tip. The 4 \texttt{vibey} releases run from vibey-v0.1.0 on 2026-08-16 to vibey-v0.2.0 on 2026-08-24; since the packages were absorbed into one tree, one version number ships the whole family, and the packages' earlier releases were never recorded in this repository, whose pre-absorption repositories have since been removed.}
 \label{fig:release-cadence}
 \end{figure*}
 ```
