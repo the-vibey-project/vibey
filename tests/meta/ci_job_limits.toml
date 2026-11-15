@@ -125,10 +125,19 @@ basis = "kept"
 timeout_minutes = 5
 basis = "unmeasured"
 
+[jobs.nightly-report]
+# unmeasured until the first scheduled run (SP1-B Task 4). One Linux job: a checkout, `pip
+# install -e` of the dependency-free vibey-gh and three or four REST calls; 10 is the rule's
+# floor and generous.
+timeout_minutes = 10
+basis = "unmeasured"
+
 # Jobs that need more than the read-only default token, each with its reason. A job listed here
-# must carry its own `permissions:` block in ci.yml. None does: the audit of ci.yml found no
-# job that writes, comments, publishes, pushes an image, or uses OIDC. The three `GH_TOKEN:
-# ${{ github.token }}` steps (advisory-check) only GET the public advisory database, which
-# needs no permission; the docker builds use `push: false`; cache and upload-artifact use the
-# runner's own token, not GITHUB_TOKEN scopes.
+# must carry its own `permissions:` block in ci.yml. The audit of ci.yml found no job that
+# publishes, pushes an image, or uses OIDC. The three `GH_TOKEN: ${{ github.token }}` steps
+# (advisory-check) only GET the public advisory database, which needs no permission; the docker
+# builds use `push: false`; cache and upload-artifact use the runner's own token, not
+# GITHUB_TOKEN scopes. The two below are the nightly's (SP1-B Task 4); neither publishes.
 [permission_exceptions]
+plan = "actions: read, for the nightly's watermark: on `schedule` only, the `watermark` step lists this workflow's successful scheduled runs (`vibey-gh ci-nightly last-green`); no other step is given the token"
+nightly-report = "actions: read to list this run's jobs and issues: write to open, update or close the ONE tracking issue a red nightly keeps (`vibey-gh ci-nightly report`); it runs on `schedule` only"

@@ -169,7 +169,8 @@ push went ahead but none of that stage's gates ran. Run them by hand before you 
 
 ## The other CI jobs
 
-`ci.yml` runs fourteen jobs on every push and PR to `develop`/`main`. The seven
+`ci.yml` declares fourteen check jobs for every push and PR to `develop`/`main` (which of them
+run, and on how big a matrix, is the `plan` job's call: see below the table). The seven
 below are the Python and deployment gates; the others are `noloss` (the no-loss
 property suite at 10,000 examples), `postgres-compatibility` (the database suite on
 PostgreSQL 14 to 18), `krypton-app`, `vibey-core` (`@vibey/core`), `app` (the krypton
@@ -186,6 +187,15 @@ images the app):
 | `image` | Builds `deploy/docker/Dockerfile` for amd64 and arm64 and asserts each `Image contract - …` step: the entrypoint runs, it runs as non-root uid 10001, it has no compiler/uv/pip, migrations ship in the image, and every console script is on PATH. |
 | `chart` | Render-only: `deploy/helm/golden/render.sh` runs `helm lint --strict` and `helm template` for each profile (defaults, `ollama.enabled`, the GPU + gptossloop wiring with qwenloop switched on beside it, and the KEDA query unbound and bound to a project) and diffs each render against its committed golden under `deploy/helm/golden/`, with helm pinned. After an intended chart change, regenerate with `deploy/helm/golden/render.sh --update`. |
 | `cluster-smoke` | Helm install of `deploy/helm/vibey` on minikube and four cluster contracts: a projectless worker parks instead of crash-looping, the worker picks up a project created in-cluster, the KEDA ScaledObject reconciles against real Postgres, and a worker drains promptly on SIGTERM (ADR-0025, ADR-0026). |
+
+Which jobs run is decided by the `plan` job (`vibey-gh ci-areas` over `.github/ci-areas.toml`
+and `.github/ci-matrices.toml`). A pull request into `develop`, or a push to it, runs `uv-lock`,
+`plan`, `lint`, `gates` and only the jobs its diff can affect, on the pull-request rows. The
+merge queue, a pull request into or a push to `main`, and the nightly `schedule` (06:17 UTC on
+develop's tip; GitHub runs a cron on the default branch only) run every job on the full matrix.
+The nightly is skipped when develop's tip is the head of the last green scheduled run
+(`vibey-gh ci-nightly last-green`; a skipped nightly reads green in `ci-result`), and a red one
+keeps one tracking issue open (job `nightly-report`, `vibey-gh ci-nightly report`).
 
 Other workflows also gate a merge: `provenance.yml` (runs on every push and PR),
 and `pr-evaluate.yml`, which re-evaluates a PR each time `CI` or `Provenance`

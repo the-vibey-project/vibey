@@ -67,6 +67,10 @@ VSCODE_NAMES = {
 }
 # `ci-result` is the one job that must run after a failure: its `always()` is the point.
 ALWAYS_JOBS = {"ci-result"}
+# The nightly's two guards (SP1-B Task 4), pinned in tests/meta/test_ci_nightly.py: `lint` may
+# skip on a `schedule` whose tip is the last green nightly's, and `nightly-report` runs on a
+# `schedule` alone.
+NIGHTLY_GUARDED_JOBS = {"lint", "nightly-report"}
 PLAN_OUTPUTS = (
     "areas",
     "full",
@@ -88,8 +92,9 @@ class ExpressionEvaluator:
     """Parses and evaluates the subset of GitHub's expression language ci.yml's `if:` uses.
 
     Supported: single-quoted strings, `!`, `&&`, `||`, `==`, `!=`, parentheses,
-    `cancelled()`, `contains(a, b)`, `fromJSON(s)`, `needs.<job>.result` and
-    `needs.plan.outputs.<name>`. `&&` and `||` return an operand, as GitHub's do, and an empty
+    `cancelled()`, `contains(a, b)`, `fromJSON(s)`, `needs.<job>.result`,
+    `needs.plan.outputs.<name>` and `github.event_name` (the nightly's guards, SP1-B Task 4;
+    an area job's `if:` may still not read it, `test_every_area_if_reads_only_...`). `&&` and `||` return an operand, as GitHub's do, and an empty
     string and `null` are falsy, `'false'` is truthy. Anything else raises `ExpressionError`:
     a function, a context or an operator outside the subset is never silently treated as true.
     """
@@ -191,7 +196,8 @@ class ExpressionEvaluator:
         parts = value.split(".")
         is_result = len(parts) == 3 and parts[0] == "needs" and parts[2] == "result"
         is_output = len(parts) == 4 and parts[:2] == ["needs", "plan"] and parts[2] == "outputs"
-        if not (is_result or is_output):
+        is_event = value == "github.event_name"
+        if not (is_result or is_output or is_event):
             raise ExpressionError(f"context {value!r} is outside the evaluated subset")
         return ("ref", value)
 
@@ -250,9 +256,13 @@ class ExpressionEvaluator:
         return value not in (None, "", 0, False)
 
     def evaluate(
-        self, results: Mapping[str, str], outputs: Mapping[str, str], cancelled: bool
+        self,
+        results: Mapping[str, str],
+        outputs: Mapping[str, str],
+        cancelled: bool,
+        event: str = "pull_request",
     ) -> bool:
-        return self._truthy(self._value(self.tree, results, outputs, cancelled))
+        return self._truthy(self._value(self.tree, results, outputs, cancelled, event))
 
     def _value(
         self,
@@ -260,14 +270,17 @@ class ExpressionEvaluator:
         results: Mapping[str, str],
         outputs: Mapping[str, str],
         cancelled: bool,
+        event: str,
     ) -> Any:
         kind = node[0]
 
         def go(child: tuple[Any, ...]) -> Any:
-            return self._value(child, results, outputs, cancelled)
+            return self._value(child, results, outputs, cancelled, event)
 
         if kind == "str":
             return node[1]
+        if kind == "ref" and node[1] == "github.event_name":
+            return event
         if kind == "ref":
             parts = str(node[1]).split(".")
             if parts[2] == "result":
@@ -384,7 +397,8 @@ def test_the_evaluator_models_github_semantics() -> None:
         "failure()",
         "format('{0}', needs.plan.outputs.full)",
         "startsWith(needs.plan.outputs.full, 't')",
-        "github.event_name == 'push'",
+        "github.ref == 'refs/heads/develop'",
+        "github.event.before == 'x'",
         "needs.gates.outputs.full == 'true'",
         "needs.plan.outputs == 'x'",
         "needs.plan.result == 'success' && toJSON(needs)",
@@ -477,7 +491,8 @@ def test_the_default_matrix_literals_are_what_the_cli_prints_for_the_full_tier()
 
 def test_exactly_the_area_jobs_have_an_if_and_the_always_jobs_keep_theirs() -> None:
     with_if = {job for job, spec in _jobs().items() if "if" in spec}
-    assert with_if == set(AREA_JOBS) | ALWAYS_JOBS, sorted(with_if ^ (set(AREA_JOBS) | ALWAYS_JOBS))
+    expected = set(AREA_JOBS) | ALWAYS_JOBS | NIGHTLY_GUARDED_JOBS
+    assert with_if == expected, sorted(with_if ^ expected)
     assert _jobs()["ci-result"]["if"] == "always()"
 
 
