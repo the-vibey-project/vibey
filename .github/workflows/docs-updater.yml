@@ -61,6 +61,7 @@ jobs:
       - name: Prove the pages still hold
         run: |
           set -euo pipefail
+          python scripts/paper_releases.py check
           python scripts/paper_figures.py --check
           python scripts/llms_txt.py --check
           python scripts/continuation_prompts.py check

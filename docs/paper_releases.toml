@@ -1,0 +1,72 @@
+# Made with ❤️ by [Vibey](https://the-vibey-project.github.io/vibey/), Developed by [Adam Matthew Steinberger](https://vibewithadam.matthewsteinberger.com/) ([@adammatthewsteinberger](https://github.com/adammatthewsteinberger/)).
+#
+# The releases the research paper counts. `scripts/paper_figures.py` draws its release-cadence
+# figure from this file and from nothing a forge holds: deleting, moving or recreating a release
+# tag changes no figure and turns no check red, because a tag is only ever read once, by
+# `python scripts/paper_releases.py sync`, to propose an entry here. Review the entry like any
+# other change.
+#
+# Adding a release: the Release workflow cuts the tag on `main`, so the entry can only follow it.
+# The daily documentation updater runs `sync` and puts the entry in its refresh pull request. By
+# hand, once the tag is in your clone:
+#
+#     python scripts/paper_releases.py sync
+#
+# `sync` only appends and never rewrites an entry. `python scripts/paper_releases.py check` fails,
+# naming the version, when the release branch ships one this file lacks.
+#
+# A release is selected for a figure by its `released` instant, and left out when its `commit`
+# holds the revision the figure is pinned at (tests/meta/test_paper_releases.py).
+
+# Each release family: the package it names, the prefix its tags carry (the same prefix
+# `[github_release] tag_prefix` sets in .vibey-gh.toml, held equal by a test) and the file whose
+# `[project] version` the release branch ships. The absorbed packages tagged their own releases
+# in repositories that were removed (claudeloop-v*, agyloop-v*, cursorloop-v*, codexloop's bare
+# v*); those were never carried into this repository, so only this family has entries. Add a
+# family here, and its entries with `sync`, to restore a lane per package.
+[[family]]
+package = "vibey"
+tag_prefix = "vibey-v"
+version_file = "pyproject.toml"
+
+[[release]]
+package = "vibey"
+version = "0.1.0"
+tag = "vibey-v0.1.0"
+commit = "f50dd64ad36f44e1f9481eff63764f673322bb55"
+released = 2026-08-16T03:55:58-04:00
+
+[[release]]
+package = "vibey"
+version = "0.1.1"
+tag = "vibey-v0.1.1"
+commit = "f0dcacae20cd7e793aca3212c3db557163acc02a"
+released = 2026-08-20T03:46:26-04:00
+
+[[release]]
+package = "vibey"
+version = "0.1.2"
+tag = "vibey-v0.1.2"
+commit = "de9ccb252e78a3e0a8b8b9d8f4416ce6df301981"
+released = 2026-08-20T14:59:03-04:00
+
+[[release]]
+package = "vibey"
+version = "0.2.0"
+tag = "vibey-v0.2.0"
+commit = "2d08a834a28ae0312f31039ac2e12ffea9cb5fc6"
+released = 2026-08-24T08:04:25+00:00
+
+[[release]]
+package = "vibey"
+version = "0.3.0"
+tag = "vibey-v0.3.0"
+commit = "b3d7decc2284b14827746ee0e324c64f4511a3e3"
+released = 2026-11-13T02:22:21-05:00
+
+[[release]]
+package = "vibey"
+version = "0.4.0"
+tag = "vibey-v0.4.0"
+commit = "36de6c4c7faa9c4ac06bcb54c30c8b955947a75e"
+released = 2026-11-14T21:15:58-05:00
