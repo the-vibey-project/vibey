@@ -1,0 +1,1 @@
+**The managed workflows pin `vibey-engine==0.4.0`.** The transitional `[install] pin = "0.3.0"` is gone now that 0.4.0 is on PyPI, so the pin is derived from `[project] version` again and the workflows are re-rendered.
