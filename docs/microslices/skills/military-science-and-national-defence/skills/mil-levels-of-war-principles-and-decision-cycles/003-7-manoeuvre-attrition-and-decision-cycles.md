@@ -17,7 +17,7 @@ ORIENT is the part Boyd considered decisive and the part popular versions omit; 
 usually reduced to "be fast," which loses the point.**
 **⚠️ Mission command (Auftragstaktik)** — ⚠️ **specify the intent and the task, delegate the
 method.** ⚠️ **It requires trust, shared doctrine and tolerance of subordinate error, which
-is why it is easy to declare and hard to practise** (§17 → `mil-force-structure-logistics-doctrine-intelligence-and-procurement`).
+is why it is easy to declare and hard to practise** (§17 → `mil-force-structure-logistics-doctrine-intel-and-procurement`).
 **⚠️ The honest caveat**: ⚠️ **the manoeuvrist school became somewhat doctrinaire in
 Western militaries, and §26.1 → `mil-reference` shows attrition returning to prominence — the two are
 complementary rather than opposed.**

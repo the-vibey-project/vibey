@@ -22,12 +22,12 @@ links: ["skill-29-numbers-and-claims-c3ab103fb4"]
 | End with Q&A | ⚠️ **Close after it. The last words should be yours** (§5 → `speaking-what-the-field-knows-anxiety-audience-and-structure`, §9 → `speaking-language-delivery-visual-aids-and-practice`) |
 | "I don't know" damages credibility | ⚠️ **Bluffing does. Not knowing doesn't** (§9 → `speaking-language-delivery-visual-aids-and-practice`) |
 | Filler words are a serious problem | ⚠️ **Far less noticeable to audiences than to you** (§7 → `speaking-language-delivery-visual-aids-and-practice`) |
-| Mirroring builds rapport | ⚠️ **The deliberate version is detectable and costs trust** (§13 → `speaking-listening-rapport-difficult-conversations-and-negotiation`) |
-| Listening means waiting politely | ⚠️ **It's the mechanism of durable persuasion** (§12 → `speaking-listening-rapport-difficult-conversations-and-negotiation`, §18 → `speaking-persuasion-and-the-ethics-of-influence`) |
-| Someone describing a problem wants a solution | ⚠️ **Usually not. Ask which they want** (§12 → `speaking-listening-rapport-difficult-conversations-and-negotiation`) |
-| Intent is what matters | ⚠️ **You can't know theirs. Speak to impact** (§14 → `speaking-listening-rapport-difficult-conversations-and-negotiation`) |
-| The feedback sandwich softens criticism | ⚠️ **It gets learned and discounted. Be direct and kind** (§16 → `speaking-listening-rapport-difficult-conversations-and-negotiation`) |
-| Conflict means something is wrong | ⚠️ **No visible conflict usually means it's suppressed** (§17 → `speaking-listening-rapport-difficult-conversations-and-negotiation`) |
+| Mirroring builds rapport | ⚠️ **The deliberate version is detectable and costs trust** (§13 → `speaking-listening-rapport-hard-conversations-and-negotiation`) |
+| Listening means waiting politely | ⚠️ **It's the mechanism of durable persuasion** (§12 → `speaking-listening-rapport-hard-conversations-and-negotiation`, §18 → `speaking-persuasion-and-the-ethics-of-influence`) |
+| Someone describing a problem wants a solution | ⚠️ **Usually not. Ask which they want** (§12 → `speaking-listening-rapport-hard-conversations-and-negotiation`) |
+| Intent is what matters | ⚠️ **You can't know theirs. Speak to impact** (§14 → `speaking-listening-rapport-hard-conversations-and-negotiation`) |
+| The feedback sandwich softens criticism | ⚠️ **It gets learned and discounted. Be direct and kind** (§16 → `speaking-listening-rapport-hard-conversations-and-negotiation`) |
+| Conflict means something is wrong | ⚠️ **No visible conflict usually means it's suppressed** (§17 → `speaking-listening-rapport-hard-conversations-and-negotiation`) |
 | Facts change minds | ⚠️ **Facts help; identity-linked beliefs resist them** (§18 → `speaking-persuasion-and-the-ethics-of-influence`) |
 | Microtargeting is enormously effective | ⚠️ **Evidence conflicts; measured effects are small** (§27.2) |
 | Persuasion and manipulation differ by degree | ⚠️ **Structurally different. Apply the disclosure test** (§19 → `speaking-persuasion-and-the-ethics-of-influence`) |

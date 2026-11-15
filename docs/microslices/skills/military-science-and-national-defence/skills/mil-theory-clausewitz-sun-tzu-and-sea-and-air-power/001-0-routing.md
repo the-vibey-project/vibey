@@ -22,12 +22,12 @@ links: ["skill-1-what-military-science-is-5a52308b8a"]
 | Escalation | §10 → `mil-deterrence-nuclear-strategy-alliances-and-grand-strategy` |
 | Alliances | §11 → `mil-deterrence-nuclear-strategy-alliances-and-grand-strategy` |
 | Grand strategy | §12 → `mil-deterrence-nuclear-strategy-alliances-and-grand-strategy` |
-| Force structure | §13 → `mil-force-structure-logistics-doctrine-intelligence-and-procurement` |
-| **⚠️ Logistics** | **§14 → `mil-force-structure-logistics-doctrine-intelligence-and-procurement`** |
-| **⚠️ Doctrine and learning** | **§15 → `mil-force-structure-logistics-doctrine-intelligence-and-procurement`** |
-| Intelligence | §16 → `mil-force-structure-logistics-doctrine-intelligence-and-procurement` |
-| Command and control | §17 → `mil-force-structure-logistics-doctrine-intelligence-and-procurement` |
-| **⚠️ Procurement** | **§18 → `mil-force-structure-logistics-doctrine-intelligence-and-procurement`** |
+| Force structure | §13 → `mil-force-structure-logistics-doctrine-intel-and-procurement` |
+| **⚠️ Logistics** | **§14 → `mil-force-structure-logistics-doctrine-intel-and-procurement`** |
+| **⚠️ Doctrine and learning** | **§15 → `mil-force-structure-logistics-doctrine-intel-and-procurement`** |
+| Intelligence | §16 → `mil-force-structure-logistics-doctrine-intel-and-procurement` |
+| Command and control | §17 → `mil-force-structure-logistics-doctrine-intel-and-procurement` |
+| **⚠️ Procurement** | **§18 → `mil-force-structure-logistics-doctrine-intel-and-procurement`** |
 | Unmanned systems | §19 → `mil-modern-conflict-irregular-warfare-resilience-and-the-law` |
 | Cyber and space | §20 → `mil-modern-conflict-irregular-warfare-resilience-and-the-law` |
 | **⚠️ Information operations** | **§21 → `mil-modern-conflict-irregular-warfare-resilience-and-the-law`** |

@@ -5,7 +5,7 @@ description: "Use when running or governing operations: endpoint management and 
 
 # IT Infrastructure and Governance: Endpoints and Patching, Continuity, Monitoring, ITSM, Governance Frameworks, and Vendor Risk
 
-> **Part 4 of 5** of the *IT Infrastructure and Governance* reference (plugin `it-infrastructure-governance`), covering §12–§19. Sibling skills: `itgov-infrastructure-layers-compute-storage-and-networking` (§0–§4), `itgov-directory-authentication-authorization-and-privileged-access` (§5–§8), `itgov-identity-lifecycle-access-review-and-segregation-of-duties` (§9–§11), `itgov-reference` (§20–§26). Section numbers are shared across the set; a reference written as §N → `skill` points into that sibling skill.
+> **Part 4 of 5** of the *IT Infrastructure and Governance* reference (plugin `it-infrastructure-governance`), covering §12–§19. Sibling skills: `itgov-infrastructure-layers-compute-storage-and-networking` (§0–§4), `itgov-directory-authn-authz-and-privileged-access` (§5–§8), `itgov-identity-lifecycle-access-review-and-segregation-of-duties` (§9–§11), `itgov-reference` (§20–§26). Section numbers are shared across the set; a reference written as §N → `skill` points into that sibling skill.
 >
 > **Currency:** RBAC theory, directory concepts, backup strategy and ITIL process are stable. Two areas moved. See §21 → `itgov-reference` for the phishing-resistant authentication mandate timeline and non-human identity governance.
 
@@ -20,7 +20,7 @@ description: "Use when running or governing operations: endpoint management and 
 > **The three ideas that organize this:**
 > 1. **⚠️ Identity is the perimeter.** The network boundary stopped being the control
 >    point years ago. **Every meaningful access decision now happens at authentication and
->    authorization time** (§5 → `itgov-directory-authentication-authorization-and-privileged-access`, §6 → `itgov-directory-authentication-authorization-and-privileged-access`).
+>    authorization time** (§5 → `itgov-directory-authn-authz-and-privileged-access`, §6 → `itgov-directory-authn-authz-and-privileged-access`).
 > 2. **⚠️ Access accumulates and never sheds by itself.** People change roles and keep old
 >    permissions; service accounts outlive their systems. **Privilege creep is the default
 >    state of any system without deliberate revocation** (§9 → `itgov-identity-lifecycle-access-review-and-segregation-of-duties`, §10 → `itgov-identity-lifecycle-access-review-and-segregation-of-duties`).

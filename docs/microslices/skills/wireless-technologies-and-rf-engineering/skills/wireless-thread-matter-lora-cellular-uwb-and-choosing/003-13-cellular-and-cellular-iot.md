@@ -13,7 +13,7 @@ telemetry — a live lesson about designing hardware around a network you don't 
 **⚠️ 5G's three service classes** are the useful framing: ⚠️ **eMBB (bandwidth), URLLC
 (latency and reliability), mMTC (device density) — and no deployment delivers all three at
 once.**
-**⚠️ mmWave versus sub-6 GHz** is §2 → `wireless-propagation-link-budget-modulation-antennas-and-spectrum`'s physics again: ⚠️ **enormous bandwidth, terrible
+**⚠️ mmWave versus sub-6 GHz** is §2 → `wireless-propagation-link-budget-modulation-antennas-spectrum`'s physics again: ⚠️ **enormous bandwidth, terrible
 propagation and building penetration, which is why mmWave coverage is patchy and sub-6 does
 the real work.**
 **⚠️ For IoT specifically**: ⚠️ **NB-IoT (deep indoor penetration, tiny data) and LTE-M
@@ -21,6 +21,6 @@ the real work.**
 make multi-year battery life possible on a cellular radio.**
 **⚠️ Practical concerns**: ⚠️ **eSIM/iSIM provisioning, roaming agreements and permanent
 roaming restrictions, module certification against carrier requirements (⚠️ which is
-separate from and additional to regulatory certification, §18 → `wireless-antenna-integration-certification-low-power-and-debugging`), and network sunset risk.**
+separate from and additional to regulatory certification, §18 → `wireless-antenna-integration-certification-low-power-debugging`), and network sunset risk.**
 
 ---

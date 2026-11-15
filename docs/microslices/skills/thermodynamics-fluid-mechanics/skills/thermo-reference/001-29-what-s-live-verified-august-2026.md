@@ -48,7 +48,7 @@ ML surrogates as fast interpolators rather than as solvers.** **⚠️ Validatio
 experiment did not become less necessary.**
 
 ### 29.2 ⚠️ High-density thermal management: air hit a wall
-**⚠️ The most consequential applied heat-transfer problem right now, and it is §26 → `thermo-heat-transfer-conduction-convection-radiation-and-exchangers`'s
+**⚠️ The most consequential applied heat-transfer problem right now, and it is §26 → `thermo-heat-transfer-conduction-convection-radiation-exchangers`'s
 h-magnitude table becoming a business constraint.**
 
 - **⚠️ The physical driver: liquid's volumetric heat transfer capacity is roughly

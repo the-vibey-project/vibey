@@ -5,7 +5,7 @@ description: "Use for the theoretical canon and how to read it: what military sc
 
 # Military Science: What Military Science Is, Clausewitz, Sun Tzu and Other Traditions, and Sea and Air Power
 
-> **Part 1 of 6** of the *Military Science and National Defence* reference (plugin `military-science-and-national-defence`), covering §0–§4. Sibling skills: `mil-levels-of-war-principles-and-decision-cycles` (§5–§7), `mil-deterrence-nuclear-strategy-alliances-and-grand-strategy` (§8–§12), `mil-force-structure-logistics-doctrine-intelligence-and-procurement` (§13–§18), `mil-modern-conflict-irregular-warfare-resilience-and-the-law` (§19–§25), `mil-reference` (§26–§31). Section numbers are shared across the set; a reference written as §N → `skill` points into that sibling skill.
+> **Part 1 of 6** of the *Military Science and National Defence* reference (plugin `military-science-and-national-defence`), covering §0–§4. Sibling skills: `mil-levels-of-war-principles-and-decision-cycles` (§5–§7), `mil-deterrence-nuclear-strategy-alliances-and-grand-strategy` (§8–§12), `mil-force-structure-logistics-doctrine-intel-and-procurement` (§13–§18), `mil-modern-conflict-irregular-warfare-resilience-and-the-law` (§19–§25), `mil-reference` (§26–§31). Section numbers are shared across the set; a reference written as §N → `skill` points into that sibling skill.
 >
 > **Currency:** The theory is old and durable. Two areas are moving. See §26 → `mil-reference` for what Ukraine has actually demonstrated, and European rearmament.
 
@@ -29,10 +29,10 @@ description: "Use for the theoretical canon and how to read it: what military sc
 >    actually achieve is the recurring cause of strategic failure, and the pattern repeats
 >    across two centuries.**
 > 2. **⚠️ DEFENCE IS AN ECONOMIC AND INDUSTRIAL PROBLEM BEFORE IT IS A MILITARY ONE**
->    (§14 → `mil-force-structure-logistics-doctrine-intelligence-and-procurement`, §18 → `mil-force-structure-logistics-doctrine-intelligence-and-procurement`, §26.2 → `mil-reference`). **Logistics, industrial capacity and the ability to replace losses
+>    (§14 → `mil-force-structure-logistics-doctrine-intel-and-procurement`, §18 → `mil-force-structure-logistics-doctrine-intel-and-procurement`, §26.2 → `mil-reference`). **Logistics, industrial capacity and the ability to replace losses
 >    decide protracted wars. Amateurs discuss tactics; the professional literature discusses
 >    sustainment.**
-> 3. **⚠️ THE HARDEST CAPABILITY TO COPY IS INSTITUTIONAL LEARNING** (§15 → `mil-force-structure-logistics-doctrine-intelligence-and-procurement`, §26.1 → `mil-reference`). **Any
+> 3. **⚠️ THE HARDEST CAPABILITY TO COPY IS INSTITUTIONAL LEARNING** (§15 → `mil-force-structure-logistics-doctrine-intel-and-procurement`, §26.1 → `mil-reference`). **Any
 >    state can buy equipment. What distinguishes effective militaries is the speed at which
 >    they absorb, adapt and redistribute what they learn — and that is organizational, not
 >    technological.**
@@ -55,12 +55,12 @@ description: "Use for the theoretical canon and how to read it: what military sc
 | Escalation | §10 → `mil-deterrence-nuclear-strategy-alliances-and-grand-strategy` |
 | Alliances | §11 → `mil-deterrence-nuclear-strategy-alliances-and-grand-strategy` |
 | Grand strategy | §12 → `mil-deterrence-nuclear-strategy-alliances-and-grand-strategy` |
-| Force structure | §13 → `mil-force-structure-logistics-doctrine-intelligence-and-procurement` |
-| **⚠️ Logistics** | **§14 → `mil-force-structure-logistics-doctrine-intelligence-and-procurement`** |
-| **⚠️ Doctrine and learning** | **§15 → `mil-force-structure-logistics-doctrine-intelligence-and-procurement`** |
-| Intelligence | §16 → `mil-force-structure-logistics-doctrine-intelligence-and-procurement` |
-| Command and control | §17 → `mil-force-structure-logistics-doctrine-intelligence-and-procurement` |
-| **⚠️ Procurement** | **§18 → `mil-force-structure-logistics-doctrine-intelligence-and-procurement`** |
+| Force structure | §13 → `mil-force-structure-logistics-doctrine-intel-and-procurement` |
+| **⚠️ Logistics** | **§14 → `mil-force-structure-logistics-doctrine-intel-and-procurement`** |
+| **⚠️ Doctrine and learning** | **§15 → `mil-force-structure-logistics-doctrine-intel-and-procurement`** |
+| Intelligence | §16 → `mil-force-structure-logistics-doctrine-intel-and-procurement` |
+| Command and control | §17 → `mil-force-structure-logistics-doctrine-intel-and-procurement` |
+| **⚠️ Procurement** | **§18 → `mil-force-structure-logistics-doctrine-intel-and-procurement`** |
 | Unmanned systems | §19 → `mil-modern-conflict-irregular-warfare-resilience-and-the-law` |
 | Cyber and space | §20 → `mil-modern-conflict-irregular-warfare-resilience-and-the-law` |
 | **⚠️ Information operations** | **§21 → `mil-modern-conflict-irregular-warfare-resilience-and-the-law`** |

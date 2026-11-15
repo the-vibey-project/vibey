@@ -12,7 +12,7 @@ links: ["skill-16-choosing-a-radio-4d8b5e4a2e"]
 technically attractive and adoption has been slow.**
 **⚠️ 60 GHz (802.11ad/ay, WiGig)** — ⚠️ **multi-gigabit at room scale, blocked by a hand.**
 **⚠️ Satellite**: ⚠️ **LEO constellations, and direct-to-device messaging now appearing in
-phones — with latency and link budget both governed by §2 → `wireless-propagation-link-budget-modulation-antennas-and-spectrum`.**
+phones — with latency and link budget both governed by §2 → `wireless-propagation-link-budget-modulation-antennas-spectrum`.**
 **⚠️ Infrared** — ⚠️ **still ubiquitous in remotes, line-of-sight, no spectrum regulation.**
 **⚠️ Wireless power (Qi)** — ⚠️ **inductive coupling like NFC (§10 → `wireless-wifi-bluetooth-ble-nfc-and-rfid`), with alignment and
 foreign-object detection as the engineering problems.**

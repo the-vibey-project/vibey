@@ -5,7 +5,7 @@ description: "Use for contemporary conflict and its constraints: unmanned system
 
 # Military Science: Unmanned Systems, Cyber and Space, Information Operations, Irregular Warfare, Total Defence and Societal Resilience, Civil-Military Relations, and the Law of Armed Conflict
 
-> **Part 5 of 6** of the *Military Science and National Defence* reference (plugin `military-science-and-national-defence`), covering §19–§25. Sibling skills: `mil-theory-clausewitz-sun-tzu-and-sea-and-air-power` (§0–§4), `mil-levels-of-war-principles-and-decision-cycles` (§5–§7), `mil-deterrence-nuclear-strategy-alliances-and-grand-strategy` (§8–§12), `mil-force-structure-logistics-doctrine-intelligence-and-procurement` (§13–§18), `mil-reference` (§26–§31). Section numbers are shared across the set; a reference written as §N → `skill` points into that sibling skill.
+> **Part 5 of 6** of the *Military Science and National Defence* reference (plugin `military-science-and-national-defence`), covering §19–§25. Sibling skills: `mil-theory-clausewitz-sun-tzu-and-sea-and-air-power` (§0–§4), `mil-levels-of-war-principles-and-decision-cycles` (§5–§7), `mil-deterrence-nuclear-strategy-alliances-and-grand-strategy` (§8–§12), `mil-force-structure-logistics-doctrine-intel-and-procurement` (§13–§18), `mil-reference` (§26–§31). Section numbers are shared across the set; a reference written as §N → `skill` points into that sibling skill.
 >
 > **Currency:** The theory is old and durable. Two areas are moving. See §26 → `mil-reference` for what Ukraine has actually demonstrated, and European rearmament.
 
@@ -29,10 +29,10 @@ description: "Use for contemporary conflict and its constraints: unmanned system
 >    actually achieve is the recurring cause of strategic failure, and the pattern repeats
 >    across two centuries.**
 > 2. **⚠️ DEFENCE IS AN ECONOMIC AND INDUSTRIAL PROBLEM BEFORE IT IS A MILITARY ONE**
->    (§14 → `mil-force-structure-logistics-doctrine-intelligence-and-procurement`, §18 → `mil-force-structure-logistics-doctrine-intelligence-and-procurement`, §26.2 → `mil-reference`). **Logistics, industrial capacity and the ability to replace losses
+>    (§14 → `mil-force-structure-logistics-doctrine-intel-and-procurement`, §18 → `mil-force-structure-logistics-doctrine-intel-and-procurement`, §26.2 → `mil-reference`). **Logistics, industrial capacity and the ability to replace losses
 >    decide protracted wars. Amateurs discuss tactics; the professional literature discusses
 >    sustainment.**
-> 3. **⚠️ THE HARDEST CAPABILITY TO COPY IS INSTITUTIONAL LEARNING** (§15 → `mil-force-structure-logistics-doctrine-intelligence-and-procurement`, §26.1 → `mil-reference`). **Any
+> 3. **⚠️ THE HARDEST CAPABILITY TO COPY IS INSTITUTIONAL LEARNING** (§15 → `mil-force-structure-logistics-doctrine-intel-and-procurement`, §26.1 → `mil-reference`). **Any
 >    state can buy equipment. What distinguishes effective militaries is the speed at which
 >    they absorb, adapt and redistribute what they learn — and that is organizational, not
 >    technological.**

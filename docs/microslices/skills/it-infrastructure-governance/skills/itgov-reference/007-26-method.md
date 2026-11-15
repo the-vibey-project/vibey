@@ -8,7 +8,7 @@ links: []
 
 ## §26. Method
 
-**§1–§20 → `itgov-infrastructure-layers-compute-storage-and-networking`, `itgov-directory-authentication-authorization-and-privileged-access`, `itgov-identity-lifecycle-access-review-and-segregation-of-duties`, `itgov-endpoints-continuity-itsm-and-vendor-risk` rest on stable material** — **RBAC theory (Ferraiolo, Kuhn & Chandramouli;
+**§1–§20 → `itgov-infrastructure-layers-compute-storage-and-networking`, `itgov-directory-authn-authz-and-privileged-access`, `itgov-identity-lifecycle-access-review-and-segregation-of-duties`, `itgov-endpoints-continuity-itsm-and-vendor-risk` rest on stable material** — **RBAC theory (Ferraiolo, Kuhn & Chandramouli;
 NIST SP 800-162), directory and Kerberos fundamentals, Microsoft's tiered administration
 model, backup and DR practice, and ITIL/COBIT/NIST CSF process** — sourced from §24.
 ⚠️ **The joiner-mover-leaver problem, role explosion and rubber-stamped recertification
@@ -17,7 +17,7 @@ have been the same three failures for twenty years.**
 **Two searches were run in August 2026**, both on identity, **because that is where this
 domain actually moved.**
 
-**Confidence.** **High** in §1–§20 → `itgov-infrastructure-layers-compute-storage-and-networking`, `itgov-directory-authentication-authorization-and-privileged-access`, `itgov-identity-lifecycle-access-review-and-segregation-of-duties`, `itgov-endpoints-continuity-itsm-and-vendor-risk`.
+**Confidence.** **High** in §1–§20 → `itgov-infrastructure-layers-compute-storage-and-networking`, `itgov-directory-authn-authz-and-privileged-access`, `itgov-identity-lifecycle-access-review-and-segregation-of-duties`, `itgov-endpoints-continuity-itsm-and-vendor-risk`.
 **High in §21.1's mechanism and method list** — **the five Entra phishing-resistant
 methods, Authentication Strengths, and the Conditional Access enforcement pattern are
 consistent across Microsoft Learn documentation and multiple independent practitioners.**
@@ -40,7 +40,7 @@ hedged each in place.**
 ⚠️ **The mechanism claims in §21.2 I'm confident about on first principles rather than on
 the surveys**: **NHIs genuinely cannot do MFA, genuinely don't log out, and genuinely tend
 to lack owners.** **Those are structural properties, not survey findings** — **and they're
-why the §8 → `itgov-directory-authentication-authorization-and-privileged-access` service-account problem and the agentic-AI problem are the same problem at
+why the §8 → `itgov-directory-authn-authz-and-privileged-access` service-account problem and the agentic-AI problem are the same problem at
 different scales.** ⚠️ **The recommendation to eliminate static secrets rather than vault
 them is the one I'd stand behind most firmly, because it removes the failure mode instead
 of managing it.**

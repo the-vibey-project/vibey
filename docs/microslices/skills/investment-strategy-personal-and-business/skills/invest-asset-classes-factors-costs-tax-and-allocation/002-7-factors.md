@@ -19,7 +19,7 @@ scrutiny; and factor premia can underperform for periods LONGER THAN MOST INVEST
 PATIENCE — a decade or more.**
 > **⚠️ GOTCHA — the practical problem with factor investing is not whether the factors are
 > real. It is that capturing them requires holding an underperforming strategy for a
-> decade without abandoning it** (§15 → `invest-rebalancing-vehicles-accumulation-decumulation-and-behaviour`), **and paying higher fees to do so** (§8).
+> decade without abandoning it** (§15 → `invest-rebalancing-vehicles-accumulation-decumulation-behaviour`), **and paying higher fees to do so** (§8).
 > **⚠️ Most investors who tilt end up selling the tilt at the bottom, which converts a
 > theoretical premium into a realized loss.**
 

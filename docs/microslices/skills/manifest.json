@@ -1020,8 +1020,8 @@
     "count": 6
   },
   {
-    "source": "src/vibey_tools/skills/plugins/designing-and-building-buildings/skills/building-site-safety-commissioning-retrofit-and-why-projects-fail/SKILL.md",
-    "output": "docs/microslices/skills/designing-and-building-buildings/skills/building-site-safety-commissioning-retrofit-and-why-projects-fail",
+    "source": "src/vibey_tools/skills/plugins/designing-and-building-buildings/skills/building-site-safety-commissioning-retrofit-and-project-failure/SKILL.md",
+    "output": "docs/microslices/skills/designing-and-building-buildings/skills/building-site-safety-commissioning-retrofit-and-project-failure",
     "count": 4
   },
   {
@@ -1910,8 +1910,8 @@
     "count": 7
   },
   {
-    "source": "src/vibey_tools/skills/plugins/investment-strategy-personal-and-business/skills/invest-foundations-risk-compounding-diversification-and-efficiency/SKILL.md",
-    "output": "docs/microslices/skills/investment-strategy-personal-and-business/skills/invest-foundations-risk-compounding-diversification-and-efficiency",
+    "source": "src/vibey_tools/skills/plugins/investment-strategy-personal-and-business/skills/invest-foundations-risk-compounding-diversification-efficiency/SKILL.md",
+    "output": "docs/microslices/skills/investment-strategy-personal-and-business/skills/invest-foundations-risk-compounding-diversification-efficiency",
     "count": 6
   },
   {
@@ -1920,8 +1920,8 @@
     "count": 3
   },
   {
-    "source": "src/vibey_tools/skills/plugins/investment-strategy-personal-and-business/skills/invest-rebalancing-vehicles-accumulation-decumulation-and-behaviour/SKILL.md",
-    "output": "docs/microslices/skills/investment-strategy-personal-and-business/skills/invest-rebalancing-vehicles-accumulation-decumulation-and-behaviour",
+    "source": "src/vibey_tools/skills/plugins/investment-strategy-personal-and-business/skills/invest-rebalancing-vehicles-accumulation-decumulation-behaviour/SKILL.md",
+    "output": "docs/microslices/skills/investment-strategy-personal-and-business/skills/invest-rebalancing-vehicles-accumulation-decumulation-behaviour",
     "count": 5
   },
   {
@@ -1930,8 +1930,8 @@
     "count": 6
   },
   {
-    "source": "src/vibey_tools/skills/plugins/it-infrastructure-governance/skills/itgov-directory-authentication-authorization-and-privileged-access/SKILL.md",
-    "output": "docs/microslices/skills/it-infrastructure-governance/skills/itgov-directory-authentication-authorization-and-privileged-access",
+    "source": "src/vibey_tools/skills/plugins/it-infrastructure-governance/skills/itgov-directory-authn-authz-and-privileged-access/SKILL.md",
+    "output": "docs/microslices/skills/it-infrastructure-governance/skills/itgov-directory-authn-authz-and-privileged-access",
     "count": 4
   },
   {
@@ -2305,8 +2305,8 @@
     "count": 5
   },
   {
-    "source": "src/vibey_tools/skills/plugins/military-science-and-national-defence/skills/mil-force-structure-logistics-doctrine-intelligence-and-procurement/SKILL.md",
-    "output": "docs/microslices/skills/military-science-and-national-defence/skills/mil-force-structure-logistics-doctrine-intelligence-and-procurement",
+    "source": "src/vibey_tools/skills/plugins/military-science-and-national-defence/skills/mil-force-structure-logistics-doctrine-intel-and-procurement/SKILL.md",
+    "output": "docs/microslices/skills/military-science-and-national-defence/skills/mil-force-structure-logistics-doctrine-intel-and-procurement",
     "count": 6
   },
   {
@@ -3210,8 +3210,8 @@
     "count": 17
   },
   {
-    "source": "src/vibey_tools/skills/plugins/research-deep-dives/skills/volume-e-politics-philosophy-science-engineering-technology-deep-dive/SKILL.md",
-    "output": "docs/microslices/skills/research-deep-dives/skills/volume-e-politics-philosophy-science-engineering-technology-deep-dive",
+    "source": "src/vibey_tools/skills/plugins/research-deep-dives/skills/volume-e-politics-philosophy-science-engineering-tech-deep-dive/SKILL.md",
+    "output": "docs/microslices/skills/research-deep-dives/skills/volume-e-politics-philosophy-science-engineering-tech-deep-dive",
     "count": 18
   },
   {
@@ -3540,8 +3540,8 @@
     "count": 6
   },
   {
-    "source": "src/vibey_tools/skills/plugins/speaking-influence-and-community/skills/speaking-listening-rapport-difficult-conversations-and-negotiation/SKILL.md",
-    "output": "docs/microslices/skills/speaking-influence-and-community/skills/speaking-listening-rapport-difficult-conversations-and-negotiation",
+    "source": "src/vibey_tools/skills/plugins/speaking-influence-and-community/skills/speaking-listening-rapport-hard-conversations-and-negotiation/SKILL.md",
+    "output": "docs/microslices/skills/speaking-influence-and-community/skills/speaking-listening-rapport-hard-conversations-and-negotiation",
     "count": 6
   },
   {
@@ -3630,8 +3630,8 @@
     "count": 6
   },
   {
-    "source": "src/vibey_tools/skills/plugins/thermodynamics-fluid-mechanics/skills/thermo-heat-transfer-conduction-convection-radiation-and-exchangers/SKILL.md",
-    "output": "docs/microslices/skills/thermodynamics-fluid-mechanics/skills/thermo-heat-transfer-conduction-convection-radiation-and-exchangers",
+    "source": "src/vibey_tools/skills/plugins/thermodynamics-fluid-mechanics/skills/thermo-heat-transfer-conduction-convection-radiation-exchangers/SKILL.md",
+    "output": "docs/microslices/skills/thermodynamics-fluid-mechanics/skills/thermo-heat-transfer-conduction-convection-radiation-exchangers",
     "count": 4
   },
   {
@@ -3940,13 +3940,13 @@
     "count": 4
   },
   {
-    "source": "src/vibey_tools/skills/plugins/wireless-technologies-and-rf-engineering/skills/wireless-antenna-integration-certification-low-power-and-debugging/SKILL.md",
-    "output": "docs/microslices/skills/wireless-technologies-and-rf-engineering/skills/wireless-antenna-integration-certification-low-power-and-debugging",
+    "source": "src/vibey_tools/skills/plugins/wireless-technologies-and-rf-engineering/skills/wireless-antenna-integration-certification-low-power-debugging/SKILL.md",
+    "output": "docs/microslices/skills/wireless-technologies-and-rf-engineering/skills/wireless-antenna-integration-certification-low-power-debugging",
     "count": 5
   },
   {
-    "source": "src/vibey_tools/skills/plugins/wireless-technologies-and-rf-engineering/skills/wireless-propagation-link-budget-modulation-antennas-and-spectrum/SKILL.md",
-    "output": "docs/microslices/skills/wireless-technologies-and-rf-engineering/skills/wireless-propagation-link-budget-modulation-antennas-and-spectrum",
+    "source": "src/vibey_tools/skills/plugins/wireless-technologies-and-rf-engineering/skills/wireless-propagation-link-budget-modulation-antennas-spectrum/SKILL.md",
+    "output": "docs/microslices/skills/wireless-technologies-and-rf-engineering/skills/wireless-propagation-link-budget-modulation-antennas-spectrum",
     "count": 6
   },
   {

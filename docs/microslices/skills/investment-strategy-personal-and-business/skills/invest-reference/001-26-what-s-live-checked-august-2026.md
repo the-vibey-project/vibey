@@ -45,7 +45,7 @@ conclusion.**
 gives substantial weight to very small funds few people actually own, and comparing against
 an uninvestable costless index does overstate the gap.** ⚠️ **The fixed-income reversal is
 the most interesting claim, and is consistent with the general expectation that less
-efficient markets offer more room for skill** (§5 → `invest-foundations-risk-compounding-diversification-and-efficiency`).
+efficient markets offer more room for skill** (§5 → `invest-foundations-risk-compounding-diversification-efficiency`).
 ⚠️ **But note what the critique does NOT touch: the PERSISTENCE finding.** ⚠️ **One
 commentator's response is that persistence is the Achilles heel of the active case —
 whether or not a majority of dollars beat the benchmark in hindsight, you still have to

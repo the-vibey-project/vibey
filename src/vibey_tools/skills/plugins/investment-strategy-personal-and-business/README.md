@@ -6,9 +6,9 @@ One reference, split into 6 skills along its section groups so a task loads only
 
 ## Skills
 
-- **invest-foundations-risk-compounding-diversification-and-efficiency** — What Comes Before Investing, Risk and Return, Compounding, Diversification, and Market Efficiency (§0–§5): Routing; ⚠️ What Comes Before Investing; Risk and Return; Compounding; ⚠️ Diversification; Market Efficiency, Honestly.
+- **invest-foundations-risk-compounding-diversification-efficiency** — What Comes Before Investing, Risk and Return, Compounding, Diversification, and Market Efficiency (§0–§5): Routing; ⚠️ What Comes Before Investing; Risk and Return; Compounding; ⚠️ Diversification; Market Efficiency, Honestly.
 - **invest-asset-classes-factors-costs-tax-and-allocation** — Asset Classes, Factors, Costs, Tax Concepts, and Asset Allocation (§6–§10): Asset Classes; Factors; ⚠️ Costs; Tax Concepts; Asset Allocation.
-- **invest-rebalancing-vehicles-accumulation-decumulation-and-behaviour** — Rebalancing, Vehicle Selection, Accumulation, Decumulation, and Behavioural Failure (§11–§15): Rebalancing; Vehicle Selection; Accumulation; Decumulation; ⚠️ Behavioural Failure.
+- **invest-rebalancing-vehicles-accumulation-decumulation-behaviour** — Rebalancing, Vehicle Selection, Accumulation, Decumulation, and Behavioural Failure (§11–§15): Rebalancing; Vehicle Selection; Accumulation; Decumulation; ⚠️ Behavioural Failure.
 - **invest-business-capital-budgeting-cost-of-capital-and-valuation** — How Business Investment Differs, Capital Budgeting, Cost of Capital, Capital Structure, Treasury, Valuation, and Raising Capital (§16–§22): How Business Investment Differs; ⚠️ Capital Budgeting; Cost of Capital; Capital Structure; Business Cash and Treasury; Valuation; Raising Capital.
 - **invest-fraud-alternatives-and-advisor-conflicts** — Fraud and Red Flags, Alternatives Honestly, and Advisors and Conflicts (§23–§25): ⚠️ Fraud and Red Flags; Alternatives, Honestly; ⚠️ Advisors and Conflicts.
 - **invest-reference** — What's Live, Misconceptions, Numbers, and Books (§26–§31): What's Live; Misconceptions; Numbers; Books; Quick Reference; Method.

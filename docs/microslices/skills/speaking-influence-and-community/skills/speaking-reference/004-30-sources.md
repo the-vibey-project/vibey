@@ -10,10 +10,10 @@ links: ["skill-31-quick-reference-76095e8ac7"]
 
 | Source | Why |
 |---|---|
-| **Stone, Patton & Heen, *Difficult Conversations*** | ⚠️ **§14 → `speaking-listening-rapport-difficult-conversations-and-negotiation`. The three-conversations model** |
-| **Fisher & Ury, *Getting to Yes*** | ⚠️ **§15 → `speaking-listening-rapport-difficult-conversations-and-negotiation`. Interests vs positions, BATNA** |
-| **Patterson et al., *Crucial Conversations*** | §14 → `speaking-listening-rapport-difficult-conversations-and-negotiation`, §17 → `speaking-listening-rapport-difficult-conversations-and-negotiation` |
-| **Rogers on listening; Motivational Interviewing (Miller & Rollnick)** | ⚠️ **§12 → `speaking-listening-rapport-difficult-conversations-and-negotiation` — and MI has a real evidence base** |
+| **Stone, Patton & Heen, *Difficult Conversations*** | ⚠️ **§14 → `speaking-listening-rapport-hard-conversations-and-negotiation`. The three-conversations model** |
+| **Fisher & Ury, *Getting to Yes*** | ⚠️ **§15 → `speaking-listening-rapport-hard-conversations-and-negotiation`. Interests vs positions, BATNA** |
+| **Patterson et al., *Crucial Conversations*** | §14 → `speaking-listening-rapport-hard-conversations-and-negotiation`, §17 → `speaking-listening-rapport-hard-conversations-and-negotiation` |
+| **Rogers on listening; Motivational Interviewing (Miller & Rollnick)** | ⚠️ **§12 → `speaking-listening-rapport-hard-conversations-and-negotiation` — and MI has a real evidence base** |
 | **Cialdini, *Influence*** | ⚠️ **§18 → `speaking-persuasion-and-the-ethics-of-influence` — read alongside §19 → `speaking-persuasion-and-the-ethics-of-influence`, since it is also a manipulation manual** |
 | **Petty & Cacioppo, Elaboration Likelihood Model** | §18 → `speaking-persuasion-and-the-ethics-of-influence` |
 | **Broockman & Kalla on deep canvassing (Science, 2016)** | ⚠️ **§18 → `speaking-persuasion-and-the-ethics-of-influence`, §27.2 — durable attitude change, field experiment** |

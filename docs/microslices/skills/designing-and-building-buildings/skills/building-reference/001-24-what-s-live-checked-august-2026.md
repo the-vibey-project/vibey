@@ -102,7 +102,7 @@ locked in early.**
 
 > **⚠️ GOTCHA — the reuse path is the one with the biggest design implication, and it
 > inverts a default.** ⚠️ **If retaining 45% of an existing structure IS compliance, then
-> demolish-and-rebuild carries a regulatory cost that it previously didn't** (§22 → `building-site-safety-commissioning-retrofit-and-why-projects-fail`).
+> demolish-and-rebuild carries a regulatory cost that it previously didn't** (§22 → `building-site-safety-commissioning-retrofit-and-project-failure`).
 > **⚠️ Expect feasibility studies to start asking whether the frame can be kept.**
 > **⚠️ Note also the criticism: at least one commentator has questioned whether the
 > compliance thresholds were set too loosely to drive real reduction, and one practice

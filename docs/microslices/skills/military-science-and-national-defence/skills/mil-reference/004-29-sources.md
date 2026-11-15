@@ -15,8 +15,8 @@ links: ["skill-30-quick-reference-a30a71a995"]
 | **Thucydides, *History of the Peloponnesian War*** | ⚠️ **Still the best single text on why wars start** |
 | **Corbett, *Some Principles of Maritime Strategy*** | ⚠️ **§4 → `mil-theory-clausewitz-sun-tzu-and-sea-and-air-power` — better than Mahan** |
 | **Schelling, *Arms and Influence*** | ⚠️ **§8 → `mil-deterrence-nuclear-strategy-alliances-and-grand-strategy`, §10 → `mil-deterrence-nuclear-strategy-alliances-and-grand-strategy`. The foundational deterrence text** |
-| **Jervis, *Perception and Misperception in International Politics*** | ⚠️ **§8 → `mil-deterrence-nuclear-strategy-alliances-and-grand-strategy`, §16 → `mil-force-structure-logistics-doctrine-intelligence-and-procurement`** |
-| **van Creveld, *Supplying War*** | ⚠️ **§14 → `mil-force-structure-logistics-doctrine-intelligence-and-procurement`. The logistics correction** |
+| **Jervis, *Perception and Misperception in International Politics*** | ⚠️ **§8 → `mil-deterrence-nuclear-strategy-alliances-and-grand-strategy`, §16 → `mil-force-structure-logistics-doctrine-intel-and-procurement`** |
+| **van Creveld, *Supplying War*** | ⚠️ **§14 → `mil-force-structure-logistics-doctrine-intel-and-procurement`. The logistics correction** |
 | **Feaver, *Armed Servants*; Huntington, *The Soldier and the State*** | ⚠️ **§24 → `mil-modern-conflict-irregular-warfare-resilience-and-the-law`** |
 | **ICRC materials and the Geneva Conventions** | ⚠️ **§25 → `mil-modern-conflict-irregular-warfare-resilience-and-the-law` — primary and free** |
 | **Freedman, *Strategy: A History*** | Broad, readable synthesis |

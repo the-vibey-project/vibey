@@ -48,7 +48,7 @@ links: ["skill-26-misconceptions-600f2d2076"]
 > production.**
 
 **⚠️ My reading**: ⚠️ **this is the most honest generational pitch Wi-Fi has made in years,
-because §1 → `wireless-propagation-link-budget-modulation-antennas-and-spectrum`'s core complaint — that advertised rates never resemble real experience — is
+because §1 → `wireless-propagation-link-budget-modulation-antennas-spectrum`'s core complaint — that advertised rates never resemble real experience — is
 finally what the standard is targeting.** ⚠️ **One source puts it well: Wi-Fi 8 will not
 make every client faster, it is designed to make Wi-Fi less fragile.**
 

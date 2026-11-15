@@ -21,7 +21,7 @@ occupants accept a wider range in naturally ventilated buildings than in sealed 
 > **⚠️ GOTCHA — THE PERFORMANCE GAP is real and well documented.** ⚠️ **Buildings routinely
 > use substantially more energy than their design models predicted.** **⚠️ Causes:
 > modelling assumptions versus real occupancy, construction quality (thermal bridging and
-> air leakage as built), controls that were never commissioned properly (§21 → `building-site-safety-commissioning-retrofit-and-why-projects-fail`), and
+> air leakage as built), controls that were never commissioned properly (§21 → `building-site-safety-commissioning-retrofit-and-project-failure`), and
 > occupants defeating systems that annoy them.**
 > **⚠️ The lesson is that predicted performance is a design intention, and measured
 > performance requires commissioning, metering and someone paying attention afterwards.**

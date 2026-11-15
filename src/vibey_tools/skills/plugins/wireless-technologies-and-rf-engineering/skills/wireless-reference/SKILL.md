@@ -5,7 +5,7 @@ description: "Use when correcting a wireless misconception, looking up a range, 
 
 # Wireless Technologies and RF: What's Live, Misconceptions, Numbers, and Sources
 
-> **Part 6 of 6** of the *Wireless Technologies: RF, Standards, Building and Programming* reference (plugin `wireless-technologies-and-rf-engineering`), covering §25–§30. Sibling skills: `wireless-propagation-link-budget-modulation-antennas-and-spectrum` (§0–§5), `wireless-wifi-bluetooth-ble-nfc-and-rfid` (§6–§10), `wireless-thread-matter-lora-cellular-uwb-and-choosing` (§11–§16), `wireless-antenna-integration-certification-low-power-and-debugging` (§17–§21), `wireless-security-coexistence-and-positioning` (§22–§24). Section numbers are shared across the set; a reference written as §N → `skill` points into that sibling skill.
+> **Part 6 of 6** of the *Wireless Technologies: RF, Standards, Building and Programming* reference (plugin `wireless-technologies-and-rf-engineering`), covering §25–§30. Sibling skills: `wireless-propagation-link-budget-modulation-antennas-spectrum` (§0–§5), `wireless-wifi-bluetooth-ble-nfc-and-rfid` (§6–§10), `wireless-thread-matter-lora-cellular-uwb-and-choosing` (§11–§16), `wireless-antenna-integration-certification-low-power-debugging` (§17–§21), `wireless-security-coexistence-and-positioning` (§22–§24). Section numbers are shared across the set; a reference written as §N → `skill` points into that sibling skill.
 >
 > **Currency:** The physics is permanent and the mature standards are stable. Two areas are moving. See §25 for Wi-Fi's next generation, and Bluetooth ranging.
 
@@ -21,14 +21,14 @@ description: "Use when correcting a wireless misconception, looking up a range, 
 > is nearly everywhere.
 >
 > **The three ideas that organize this document:**
-> 1. **⚠️ THE LINK BUDGET IS THE WHOLE GAME** (§2 → `wireless-propagation-link-budget-modulation-antennas-and-spectrum`). **Transmit power, antenna gains, path
+> 1. **⚠️ THE LINK BUDGET IS THE WHOLE GAME** (§2 → `wireless-propagation-link-budget-modulation-antennas-spectrum`). **Transmit power, antenna gains, path
 >    loss and receiver sensitivity determine whether a link works. Everything else is
 >    optimization within that envelope, and "add more power" is almost never the available
 >    lever because regulation caps it.**
-> 2. **⚠️ SPECTRUM IS A SHARED, CONTESTED, REGULATED RESOURCE** (§5 → `wireless-propagation-link-budget-modulation-antennas-and-spectrum`, §23 → `wireless-security-coexistence-and-positioning`). **You do not own
+> 2. **⚠️ SPECTRUM IS A SHARED, CONTESTED, REGULATED RESOURCE** (§5 → `wireless-propagation-link-budget-modulation-antennas-spectrum`, §23 → `wireless-security-coexistence-and-positioning`). **You do not own
 >    your channel. Unlicensed bands mean your neighbours, your own other radios, and
 >    physically unrelated devices all degrade you — and coexistence design is not optional.**
-> 3. **⚠️ THE ANTENNA IS THE MOST NEGLECTED COMPONENT AND THE MOST DECISIVE** (§4 → `wireless-propagation-link-budget-modulation-antennas-and-spectrum`, §17 → `wireless-antenna-integration-certification-low-power-and-debugging`).
+> 3. **⚠️ THE ANTENNA IS THE MOST NEGLECTED COMPONENT AND THE MOST DECISIVE** (§4 → `wireless-propagation-link-budget-modulation-antennas-spectrum`, §17 → `wireless-antenna-integration-certification-low-power-debugging`).
 >    **A superb radio with a badly integrated antenna performs worse than a mediocre radio
 >    with a good one, and antenna problems are usually designed in months before anyone
 >    measures them.**
@@ -77,7 +77,7 @@ description: "Use when correcting a wireless misconception, looking up a range, 
 > production.**
 
 **⚠️ My reading**: ⚠️ **this is the most honest generational pitch Wi-Fi has made in years,
-because §1 → `wireless-propagation-link-budget-modulation-antennas-and-spectrum`'s core complaint — that advertised rates never resemble real experience — is
+because §1 → `wireless-propagation-link-budget-modulation-antennas-spectrum`'s core complaint — that advertised rates never resemble real experience — is
 finally what the standard is targeting.** ⚠️ **One source puts it well: Wi-Fi 8 will not
 make every client faster, it is designed to make Wi-Fi less fragile.**
 
@@ -136,15 +136,15 @@ picking the most flattering number.**
 
 | Misconception | Correction |
 |---|---|
-| Advertised data rate is what you get | ⚠️ **Peak, shared, half-duplex, pre-overhead** (§1 → `wireless-propagation-link-budget-modulation-antennas-and-spectrum`) |
-| More transmit power fixes range | ⚠️ **Regulated, and often makes the return path worse** (§5 → `wireless-propagation-link-budget-modulation-antennas-and-spectrum`, §7 → `wireless-wifi-bluetooth-ble-nfc-and-rfid`) |
-| 5 GHz is better than 2.4 GHz | ⚠️ **More capacity, less range. Physics, not quality** (§2 → `wireless-propagation-link-budget-modulation-antennas-and-spectrum`) |
+| Advertised data rate is what you get | ⚠️ **Peak, shared, half-duplex, pre-overhead** (§1 → `wireless-propagation-link-budget-modulation-antennas-spectrum`) |
+| More transmit power fixes range | ⚠️ **Regulated, and often makes the return path worse** (§5 → `wireless-propagation-link-budget-modulation-antennas-spectrum`, §7 → `wireless-wifi-bluetooth-ble-nfc-and-rfid`) |
+| 5 GHz is better than 2.4 GHz | ⚠️ **More capacity, less range. Physics, not quality** (§2 → `wireless-propagation-link-budget-modulation-antennas-spectrum`) |
 | Wider channels are always faster | ⚠️ **Higher noise floor, fewer channels. Often worse when dense** (§6 → `wireless-wifi-bluetooth-ble-nfc-and-rfid`) |
-| Antenna gain amplifies | ⚠️ **It's directionality. Passive** (§4 → `wireless-propagation-link-budget-modulation-antennas-and-spectrum`) |
-| Higher-gain omni is always better | ⚠️ **It squashes the pattern vertically** (§4 → `wireless-propagation-link-budget-modulation-antennas-and-spectrum`) |
-| The antenna is a component you bolt on | ⚠️ **The ground plane and enclosure are part of it** (§4 → `wireless-propagation-link-budget-modulation-antennas-and-spectrum`, §17 → `wireless-antenna-integration-certification-low-power-and-debugging`) |
-| Test the radio on a bare board | ⚠️ **The enclosure detunes it. Tune as-built** (§17 → `wireless-antenna-integration-certification-low-power-and-debugging`) |
-| MIMO works best with clear line of sight | ⚠️ **Spatial multiplexing needs rich multipath** (§3 → `wireless-propagation-link-budget-modulation-antennas-and-spectrum`) |
+| Antenna gain amplifies | ⚠️ **It's directionality. Passive** (§4 → `wireless-propagation-link-budget-modulation-antennas-spectrum`) |
+| Higher-gain omni is always better | ⚠️ **It squashes the pattern vertically** (§4 → `wireless-propagation-link-budget-modulation-antennas-spectrum`) |
+| The antenna is a component you bolt on | ⚠️ **The ground plane and enclosure are part of it** (§4 → `wireless-propagation-link-budget-modulation-antennas-spectrum`, §17 → `wireless-antenna-integration-certification-low-power-debugging`) |
+| Test the radio on a bare board | ⚠️ **The enclosure detunes it. Tune as-built** (§17 → `wireless-antenna-integration-certification-low-power-debugging`) |
+| MIMO works best with clear line of sight | ⚠️ **Spatial multiplexing needs rich multipath** (§3 → `wireless-propagation-link-budget-modulation-antennas-spectrum`) |
 | BLE is a newer Bluetooth version | ⚠️ **Different radio and stack, since 4.0 in 2010** (§8 → `wireless-wifi-bluetooth-ble-nfc-and-rfid`) |
 | LE Audio means Bluetooth 5.2+ | ⚠️ **Features decoupled from version numbers** (§8 → `wireless-wifi-bluetooth-ble-nfc-and-rfid`) |
 | Auracast works on any modern device | ⚠️ **Needs PAwR — 5.4 and later** (§8 → `wireless-wifi-bluetooth-ble-nfc-and-rfid`) |
@@ -154,10 +154,10 @@ picking the most flattering number.**
 | A mesh of battery sensors self-heals | ⚠️ **Battery devices usually don't route** (§11 → `wireless-thread-matter-lora-cellular-uwb-and-choosing`) |
 | RSSI gives you distance | ⚠️ **Terrible proxy. Multipath and obstruction dominate** (§24 → `wireless-security-coexistence-and-positioning`) |
 | Signal strength proves proximity | ⚠️ **Relay attacks defeat it. Needs distance bounding** (§22 → `wireless-security-coexistence-and-positioning`, §25.2) |
-| Optimize transmit efficiency for battery life | ⚠️ **Sleep current usually dominates** (§19 → `wireless-antenna-integration-certification-low-power-and-debugging`) |
-| A coin cell with enough capacity will work | ⚠️ **Peak current capability is separate** (§19 → `wireless-antenna-integration-certification-low-power-and-debugging`) |
-| Certification is a final step | ⚠️ **Design for it, pre-test early** (§18 → `wireless-antenna-integration-certification-low-power-and-debugging`) |
-| A module means no RF work | ⚠️ **Only if you follow the reference layout exactly** (§16 → `wireless-thread-matter-lora-cellular-uwb-and-choosing`, §17 → `wireless-antenna-integration-certification-low-power-and-debugging`) |
+| Optimize transmit efficiency for battery life | ⚠️ **Sleep current usually dominates** (§19 → `wireless-antenna-integration-certification-low-power-debugging`) |
+| A coin cell with enough capacity will work | ⚠️ **Peak current capability is separate** (§19 → `wireless-antenna-integration-certification-low-power-debugging`) |
+| Certification is a final step | ⚠️ **Design for it, pre-test early** (§18 → `wireless-antenna-integration-certification-low-power-debugging`) |
+| A module means no RF work | ⚠️ **Only if you follow the reference layout exactly** (§16 → `wireless-thread-matter-lora-cellular-uwb-and-choosing`, §17 → `wireless-antenna-integration-certification-low-power-debugging`) |
 | My wireless mouse is faulty | ⚠️ **Often USB 3 noise desensitizing 2.4 GHz** (§23 → `wireless-security-coexistence-and-positioning`) |
 | Interference comes from other people | ⚠️ **In-device coexistence is often the harder problem** (§23 → `wireless-security-coexistence-and-positioning`) |
 | Wi-Fi 8 will be much faster | ⚠️ **Peak is broadly flat. It targets edge and percentile** (§25.1) |
@@ -197,17 +197,17 @@ picking the most flattering number.**
 
 | Source | Why |
 |---|---|
-| **Rappaport, *Wireless Communications: Principles and Practice*** | ⚠️ **§2–§3 → `wireless-propagation-link-budget-modulation-antennas-and-spectrum`, the standard** |
-| **ARRL Antenna Book / Handbook** | ⚠️ **§4 → `wireless-propagation-link-budget-modulation-antennas-and-spectrum`, §17 → `wireless-antenna-integration-certification-low-power-and-debugging` — practical and unmatched** |
+| **Rappaport, *Wireless Communications: Principles and Practice*** | ⚠️ **§2–§3 → `wireless-propagation-link-budget-modulation-antennas-spectrum`, the standard** |
+| **ARRL Antenna Book / Handbook** | ⚠️ **§4 → `wireless-propagation-link-budget-modulation-antennas-spectrum`, §17 → `wireless-antenna-integration-certification-low-power-debugging` — practical and unmatched** |
 | **Bluetooth SIG core specification and feature overviews** | ⚠️ **§8–§9 → `wireless-wifi-bluetooth-ble-nfc-and-rfid`, primary and free** |
 | **IEEE 802.11 working group documents** | ⚠️ **§6 → `wireless-wifi-bluetooth-ble-nfc-and-rfid`, §25.1 — the actual drafts** |
 | **Wi-Fi Alliance certification programmes** | What "certified" actually means |
 | **NFC Forum specifications** | §10 → `wireless-wifi-bluetooth-ble-nfc-and-rfid` |
-| **Nordic, TI, Espressif and Silicon Labs app notes** | ⚠️ **§16–§19 → `wireless-thread-matter-lora-cellular-uwb-and-choosing`, `wireless-antenna-integration-certification-low-power-and-debugging` — vendor app notes are the real documentation in RF** |
-| **Zephyr Project documentation** | ⚠️ **§9 → `wireless-wifi-bluetooth-ble-nfc-and-rfid`, §17 → `wireless-antenna-integration-certification-low-power-and-debugging` — portable and well written** |
-| **Your regulator's equipment authorization guidance** | ⚠️ **§18 → `wireless-antenna-integration-certification-low-power-and-debugging` — read before designing** |
+| **Nordic, TI, Espressif and Silicon Labs app notes** | ⚠️ **§16–§19 → `wireless-thread-matter-lora-cellular-uwb-and-choosing`, `wireless-antenna-integration-certification-low-power-debugging` — vendor app notes are the real documentation in RF** |
+| **Zephyr Project documentation** | ⚠️ **§9 → `wireless-wifi-bluetooth-ble-nfc-and-rfid`, §17 → `wireless-antenna-integration-certification-low-power-debugging` — portable and well written** |
+| **Your regulator's equipment authorization guidance** | ⚠️ **§18 → `wireless-antenna-integration-certification-low-power-debugging` — read before designing** |
 | **Ekahau / wireless survey vendor material** | §7 → `wireless-wifi-bluetooth-ble-nfc-and-rfid`, practical deployment |
-| **RTL-SDR community resources** | ⚠️ **§21 → `wireless-antenna-integration-certification-low-power-and-debugging`, the cheapest way to actually see RF** |
+| **RTL-SDR community resources** | ⚠️ **§21 → `wireless-antenna-integration-certification-low-power-debugging`, the cheapest way to actually see RF** |
 
 ---
 
@@ -216,11 +216,11 @@ picking the most flattering number.**
 ### 29.1 Picker
 | Question | Where |
 |---|---|
-| Will this link work? | ⚠️ **Do the link budget first** (§2 → `wireless-propagation-link-budget-modulation-antennas-and-spectrum`) |
-| Range is poor — what now? | ⚠️ **Antenna and placement before power** (§1 → `wireless-propagation-link-budget-modulation-antennas-and-spectrum`, §17 → `wireless-antenna-integration-certification-low-power-and-debugging`) |
+| Will this link work? | ⚠️ **Do the link budget first** (§2 → `wireless-propagation-link-budget-modulation-antennas-spectrum`) |
+| Range is poor — what now? | ⚠️ **Antenna and placement before power** (§1 → `wireless-propagation-link-budget-modulation-antennas-spectrum`, §17 → `wireless-antenna-integration-certification-low-power-debugging`) |
 | Which radio for my product? | ⚠️ **Answer power and "talk to what" first** (§16 → `wireless-thread-matter-lora-cellular-uwb-and-choosing`) |
-| Module or chip-down? | ⚠️ **Module, unless high volume** (§16 → `wireless-thread-matter-lora-cellular-uwb-and-choosing`, §18 → `wireless-antenna-integration-certification-low-power-and-debugging`) |
-| Why is battery life bad? | ⚠️ **Measure SLEEP current on the real board** (§19 → `wireless-antenna-integration-certification-low-power-and-debugging`) |
+| Module or chip-down? | ⚠️ **Module, unless high volume** (§16 → `wireless-thread-matter-lora-cellular-uwb-and-choosing`, §18 → `wireless-antenna-integration-certification-low-power-debugging`) |
+| Why is battery life bad? | ⚠️ **Measure SLEEP current on the real board** (§19 → `wireless-antenna-integration-certification-low-power-debugging`) |
 | BLE throughput too low | ⚠️ **Connection interval, MTU, PHY — not the "2 Mbps"** (§9 → `wireless-wifi-bluetooth-ble-nfc-and-rfid`) |
 | Wi-Fi slow in a crowded office | ⚠️ **Narrower channels, lower power, more APs** (§7 → `wireless-wifi-bluetooth-ble-nfc-and-rfid`) |
 | Client won't roam | ⚠️ **The client decides, not the AP** (§6 → `wireless-wifi-bluetooth-ble-nfc-and-rfid`) |
@@ -231,28 +231,28 @@ picking the most flattering number.**
 | Do I need UWB for ranging? | ⚠️ **Maybe not now** (§14 → `wireless-thread-matter-lora-cellular-uwb-and-choosing`, §25.2) |
 
 ### 29.2 Wireless product checklist
-- [ ] ⚠️ **Link budget computed with realistic path loss, not free space** (§2 → `wireless-propagation-link-budget-modulation-antennas-and-spectrum`)
-- [ ] ⚠️ **Regions of sale confirmed — band availability and duty cycle** (§5 → `wireless-propagation-link-budget-modulation-antennas-and-spectrum`)
+- [ ] ⚠️ **Link budget computed with realistic path loss, not free space** (§2 → `wireless-propagation-link-budget-modulation-antennas-spectrum`)
+- [ ] ⚠️ **Regions of sale confirmed — band availability and duty cycle** (§5 → `wireless-propagation-link-budget-modulation-antennas-spectrum`)
 - [ ] Radio chosen against power budget and connectivity requirement (§16 → `wireless-thread-matter-lora-cellular-uwb-and-choosing`)
-- [ ] ⚠️ **Module reference layout followed EXACTLY, keepout respected** (§17 → `wireless-antenna-integration-certification-low-power-and-debugging`)
-- [ ] ⚠️ **Antenna tuned with the final enclosure, battery and display fitted** (§17 → `wireless-antenna-integration-certification-low-power-and-debugging`)
-- [ ] ⚠️ **Tested on-body if worn** (§17 → `wireless-antenna-integration-certification-low-power-and-debugging`)
-- [ ] Sleep current measured, not calculated (§19 → `wireless-antenna-integration-certification-low-power-and-debugging`)
-- [ ] Peak current capability of the battery verified (§19 → `wireless-antenna-integration-certification-low-power-and-debugging`)
+- [ ] ⚠️ **Module reference layout followed EXACTLY, keepout respected** (§17 → `wireless-antenna-integration-certification-low-power-debugging`)
+- [ ] ⚠️ **Antenna tuned with the final enclosure, battery and display fitted** (§17 → `wireless-antenna-integration-certification-low-power-debugging`)
+- [ ] ⚠️ **Tested on-body if worn** (§17 → `wireless-antenna-integration-certification-low-power-debugging`)
+- [ ] Sleep current measured, not calculated (§19 → `wireless-antenna-integration-certification-low-power-debugging`)
+- [ ] Peak current capability of the battery verified (§19 → `wireless-antenna-integration-certification-low-power-debugging`)
 - [ ] ⚠️ **In-device coexistence considered — every radio and switcher** (§23 → `wireless-security-coexistence-and-positioning`)
-- [ ] ⚠️ **Pre-compliance scan before booking a chamber** (§18 → `wireless-antenna-integration-certification-low-power-and-debugging`)
-- [ ] ⚠️ **Modular certification conditions not invalidated** (§18 → `wireless-antenna-integration-certification-low-power-and-debugging`)
-- [ ] Industry certification budgeted (SIG, Wi-Fi Alliance, carrier) (§18 → `wireless-antenna-integration-certification-low-power-and-debugging`)
+- [ ] ⚠️ **Pre-compliance scan before booking a chamber** (§18 → `wireless-antenna-integration-certification-low-power-debugging`)
+- [ ] ⚠️ **Modular certification conditions not invalidated** (§18 → `wireless-antenna-integration-certification-low-power-debugging`)
+- [ ] Industry certification budgeted (SIG, Wi-Fi Alliance, carrier) (§18 → `wireless-antenna-integration-certification-low-power-debugging`)
 - [ ] ⚠️ **Pairing method gives MITM protection — not "Just Works"** (§22 → `wireless-security-coexistence-and-positioning`)
-- [ ] ⚠️ **Provisioning window closes; device authenticates too** (§20 → `wireless-antenna-integration-certification-low-power-and-debugging`, §22 → `wireless-security-coexistence-and-positioning`)
+- [ ] ⚠️ **Provisioning window closes; device authenticates too** (§20 → `wireless-antenna-integration-certification-low-power-debugging`, §22 → `wireless-security-coexistence-and-positioning`)
 - [ ] ⚠️ **Signed firmware update path; debug interfaces disabled** (§22 → `wireless-security-coexistence-and-positioning`)
-- [ ] ⚠️ **Tested at range, in the real environment, against golden units** (§21 → `wireless-antenna-integration-certification-low-power-and-debugging`)
+- [ ] ⚠️ **Tested at range, in the real environment, against golden units** (§21 → `wireless-antenna-integration-certification-low-power-debugging`)
 
 ---
 
 ## §30. Method
 
-**§1–§24 → `wireless-propagation-link-budget-modulation-antennas-and-spectrum`, `wireless-wifi-bluetooth-ble-nfc-and-rfid`, `wireless-thread-matter-lora-cellular-uwb-and-choosing`, `wireless-antenna-integration-certification-low-power-and-debugging`, `wireless-security-coexistence-and-positioning` rests on settled physics and mature standards** — **the link budget, free-space
+**§1–§24 → `wireless-propagation-link-budget-modulation-antennas-spectrum`, `wireless-wifi-bluetooth-ble-nfc-and-rfid`, `wireless-thread-matter-lora-cellular-uwb-and-choosing`, `wireless-antenna-integration-certification-low-power-debugging`, `wireless-security-coexistence-and-positioning` rests on settled physics and mature standards** — **the link budget, free-space
 path loss, OFDM, CSMA/CA, the GATT model, near-field coupling in NFC, and the
 certification regime.** ⚠️ **None needed verification; Friis published the transmission
 equation in 1946 and the Chu-Harrington limit on small antennas is not going to move.**
@@ -262,12 +262,12 @@ equation in 1946 and the Chu-Harrington limit on small antennas is not going to 
 FOR, the second because it puts secure ranging on the radio that is already in everything,
 which changes a real design decision.**
 
-**Confidence.** **High** in §2 → `wireless-propagation-link-budget-modulation-antennas-and-spectrum` and §4 → `wireless-propagation-link-budget-modulation-antennas-and-spectrum`, which are the sections I'd most want read.
+**Confidence.** **High** in §2 → `wireless-propagation-link-budget-modulation-antennas-spectrum` and §4 → `wireless-propagation-link-budget-modulation-antennas-spectrum`, which are the sections I'd most want read.
 ⚠️ **The link budget predicts more than any amount of protocol knowledge, and the dB
 intuition — 3 dB doubles, doubling distance costs 6 dB — is what lets you sanity-check a
-claim in your head.** ⚠️ **§4 → `wireless-propagation-link-budget-modulation-antennas-and-spectrum`'s "gain is directionality, not amplification" and "the ground
+claim in your head.** ⚠️ **§4 → `wireless-propagation-link-budget-modulation-antennas-spectrum`'s "gain is directionality, not amplification" and "the ground
 plane is part of the antenna" are the two corrections that most often prevent a product
-from being designed wrong months before anyone measures it.** **§19 → `wireless-antenna-integration-certification-low-power-and-debugging`'s point that sleep
+from being designed wrong months before anyone measures it.** **§19 → `wireless-antenna-integration-certification-low-power-debugging`'s point that sleep
 current usually dominates battery life is the one that most often saves a project.**
 
 **High** on §25.1's targets, which come from the IEEE 802.11bn PAR as reported by Samsung

@@ -5,7 +5,7 @@ description: "Use when correcting a military-affairs misconception, looking up a
 
 # Military Science: What's Live, Misconceptions, Concepts and Figures, and Sources
 
-> **Part 6 of 6** of the *Military Science and National Defence* reference (plugin `military-science-and-national-defence`), covering §26–§31. Sibling skills: `mil-theory-clausewitz-sun-tzu-and-sea-and-air-power` (§0–§4), `mil-levels-of-war-principles-and-decision-cycles` (§5–§7), `mil-deterrence-nuclear-strategy-alliances-and-grand-strategy` (§8–§12), `mil-force-structure-logistics-doctrine-intelligence-and-procurement` (§13–§18), `mil-modern-conflict-irregular-warfare-resilience-and-the-law` (§19–§25). Section numbers are shared across the set; a reference written as §N → `skill` points into that sibling skill.
+> **Part 6 of 6** of the *Military Science and National Defence* reference (plugin `military-science-and-national-defence`), covering §26–§31. Sibling skills: `mil-theory-clausewitz-sun-tzu-and-sea-and-air-power` (§0–§4), `mil-levels-of-war-principles-and-decision-cycles` (§5–§7), `mil-deterrence-nuclear-strategy-alliances-and-grand-strategy` (§8–§12), `mil-force-structure-logistics-doctrine-intel-and-procurement` (§13–§18), `mil-modern-conflict-irregular-warfare-resilience-and-the-law` (§19–§25). Section numbers are shared across the set; a reference written as §N → `skill` points into that sibling skill.
 >
 > **Currency:** The theory is old and durable. Two areas are moving. See §26 for what Ukraine has actually demonstrated, and European rearmament.
 
@@ -29,10 +29,10 @@ description: "Use when correcting a military-affairs misconception, looking up a
 >    actually achieve is the recurring cause of strategic failure, and the pattern repeats
 >    across two centuries.**
 > 2. **⚠️ DEFENCE IS AN ECONOMIC AND INDUSTRIAL PROBLEM BEFORE IT IS A MILITARY ONE**
->    (§14 → `mil-force-structure-logistics-doctrine-intelligence-and-procurement`, §18 → `mil-force-structure-logistics-doctrine-intelligence-and-procurement`, §26.2). **Logistics, industrial capacity and the ability to replace losses
+>    (§14 → `mil-force-structure-logistics-doctrine-intel-and-procurement`, §18 → `mil-force-structure-logistics-doctrine-intel-and-procurement`, §26.2). **Logistics, industrial capacity and the ability to replace losses
 >    decide protracted wars. Amateurs discuss tactics; the professional literature discusses
 >    sustainment.**
-> 3. **⚠️ THE HARDEST CAPABILITY TO COPY IS INSTITUTIONAL LEARNING** (§15 → `mil-force-structure-logistics-doctrine-intelligence-and-procurement`, §26.1). **Any
+> 3. **⚠️ THE HARDEST CAPABILITY TO COPY IS INSTITUTIONAL LEARNING** (§15 → `mil-force-structure-logistics-doctrine-intel-and-procurement`, §26.1). **Any
 >    state can buy equipment. What distinguishes effective militaries is the speed at which
 >    they absorb, adapt and redistribute what they learn — and that is organizational, not
 >    technological.**
@@ -42,7 +42,7 @@ description: "Use when correcting a military-affairs misconception, looking up a
 ## §26. What's Live — checked August 2026
 
 ### 26.1 ⚠️ What Ukraine has demonstrated — and the argument about it
-**⚠️ §15 → `mil-force-structure-logistics-doctrine-intelligence-and-procurement`'s institutional-learning problem made concrete, with a genuine analytical dispute
+**⚠️ §15 → `mil-force-structure-logistics-doctrine-intel-and-procurement`'s institutional-learning problem made concrete, with a genuine analytical dispute
 that is worth understanding rather than resolving.**
 
 - **⚠️ THE SCALE OF THE SHIFT IS NOT DISPUTED.** ⚠️ **Australian Army research assesses
@@ -55,7 +55,7 @@ that is worth understanding rather than resolving.**
   expensive ones at scale, described as a shift from "exquisite scarcity" to "intelligent
   mass" — large numbers of good-enough, networked, attritable systems.**
   ⚠️ **CEPA frames it as "mass is back — in the form of thousands of cheap drones."**
-- **⚠️ THE PRODUCTION DIMENSION** (§14 → `mil-force-structure-logistics-doctrine-intelligence-and-procurement`, §18 → `mil-force-structure-logistics-doctrine-intelligence-and-procurement`): ⚠️ **Ukraine reportedly planned 7 million
+- **⚠️ THE PRODUCTION DIMENSION** (§14 → `mil-force-structure-logistics-doctrine-intel-and-procurement`, §18 → `mil-force-structure-logistics-doctrine-intel-and-procurement`): ⚠️ **Ukraine reportedly planned 7 million
   military drones in 2026, up from 4 million produced the previous year — which is an
   industrial statistic, not a technological one.**
 - **⚠️ CONTESTED AIR AND ELECTROMAGNETIC SPECTRUM.** ⚠️ **CSIS notes neither side achieved
@@ -77,7 +77,7 @@ that is worth understanding rather than resolving.**
 > returning improved capabilities to the front in weeks rather than years" — and the
 > conclusion is that "any government can buy Ukraine's drones. The advantage will belong to
 > those who build what Ukraine actually built: a system that learns."**
-> **⚠️ That is §15 → `mil-force-structure-logistics-doctrine-intelligence-and-procurement` and §1 → `mil-theory-clausewitz-sun-tzu-and-sea-and-air-power`'s third organizing idea, stated by a practitioner.**
+> **⚠️ That is §15 → `mil-force-structure-logistics-doctrine-intel-and-procurement` and §1 → `mil-theory-clausewitz-sun-tzu-and-sea-and-air-power`'s third organizing idea, stated by a practitioner.**
 
 **⚠️ And the institutional-learning failure is documented rather than alleged.** ⚠️ **The
 Lowy Institute notes a 2024 investigation finding key US military study centres treating the
@@ -93,7 +93,7 @@ rather than a verdict.** ⚠️ **Casualty and attrition percentages originate s
 Ukrainian claims and should be read as contested.**
 
 ### 26.2 ⚠️ European rearmament and the 5% pledge
-**⚠️ §11 → `mil-deterrence-nuclear-strategy-alliances-and-grand-strategy`'s burden-sharing dispute and §18 → `mil-force-structure-logistics-doctrine-intelligence-and-procurement`'s industrial-base problem meeting a concrete
+**⚠️ §11 → `mil-deterrence-nuclear-strategy-alliances-and-grand-strategy`'s burden-sharing dispute and §18 → `mil-force-structure-logistics-doctrine-intel-and-procurement`'s industrial-base problem meeting a concrete
 commitment.**
 
 - **⚠️ WHAT WAS AGREED.** ⚠️ **At the June 2025 Hague Summit, NATO allies committed to
@@ -120,7 +120,7 @@ commitment.**
 > uniform spending benchmarks than on effective capabilities, societal resilience and
 > coordinated contributions"** (§23 → `mil-modern-conflict-irregular-warfare-resilience-and-the-law`).
 
-**⚠️ The industrial base is the binding constraint** (§18 → `mil-force-structure-logistics-doctrine-intelligence-and-procurement`): ⚠️ **analysis points to
+**⚠️ The industrial base is the binding constraint** (§18 → `mil-force-structure-logistics-doctrine-intel-and-procurement`): ⚠️ **analysis points to
 FRAGMENTATION across European producers causing "wasted investments, higher production
 costs, the loss of economies of scale, strained supply chains," with underspending having
 aged production lines and constrained surge capacity — and European defence firms described
@@ -152,12 +152,12 @@ that disagree about almost everything else.**
 | Compellence is deterrence in reverse | ⚠️ **Much harder — it requires visible compliance** (§8 → `mil-deterrence-nuclear-strategy-alliances-and-grand-strategy`) |
 | Nuclear deterrence has worked reliably | ⚠️ **Compatible with having been repeatedly lucky** (§9 → `mil-deterrence-nuclear-strategy-alliances-and-grand-strategy`) |
 | Alliances mainly aggregate power | ⚠️ **They also constrain members. Abandonment vs entrapment** (§11 → `mil-deterrence-nuclear-strategy-alliances-and-grand-strategy`) |
-| Support troops are overhead | ⚠️ **They're what makes combat power sustainable** (§13 → `mil-force-structure-logistics-doctrine-intelligence-and-procurement`, §14 → `mil-force-structure-logistics-doctrine-intelligence-and-procurement`) |
-| Wars are decided by weapons | ⚠️ **Protracted wars are decided by sustainment** (§14 → `mil-force-structure-logistics-doctrine-intelligence-and-procurement`) |
-| Militaries learn from experience | ⚠️ **Identifying a lesson ≠ changing the institution** (§15 → `mil-force-structure-logistics-doctrine-intelligence-and-procurement`, §26.1) |
-| Intelligence failure means missing information | ⚠️ **Usually failure to believe available warning** (§16 → `mil-force-structure-logistics-doctrine-intelligence-and-procurement`) |
-| Better comms enable better command | ⚠️ **They enable micromanagement from a distance** (§17 → `mil-force-structure-logistics-doctrine-intelligence-and-procurement`) |
-| Procurement overruns are mismanagement | ⚠️ **Structural — monopsony, requirements creep, politics** (§18 → `mil-force-structure-logistics-doctrine-intelligence-and-procurement`) |
+| Support troops are overhead | ⚠️ **They're what makes combat power sustainable** (§13 → `mil-force-structure-logistics-doctrine-intel-and-procurement`, §14 → `mil-force-structure-logistics-doctrine-intel-and-procurement`) |
+| Wars are decided by weapons | ⚠️ **Protracted wars are decided by sustainment** (§14 → `mil-force-structure-logistics-doctrine-intel-and-procurement`) |
+| Militaries learn from experience | ⚠️ **Identifying a lesson ≠ changing the institution** (§15 → `mil-force-structure-logistics-doctrine-intel-and-procurement`, §26.1) |
+| Intelligence failure means missing information | ⚠️ **Usually failure to believe available warning** (§16 → `mil-force-structure-logistics-doctrine-intel-and-procurement`) |
+| Better comms enable better command | ⚠️ **They enable micromanagement from a distance** (§17 → `mil-force-structure-logistics-doctrine-intel-and-procurement`) |
+| Procurement overruns are mismanagement | ⚠️ **Structural — monopsony, requirements creep, politics** (§18 → `mil-force-structure-logistics-doctrine-intel-and-procurement`) |
 | Cyber will produce a decisive strike | ⚠️ **Predicted for 20+ years. It's a shaping contest** (§20 → `mil-modern-conflict-irregular-warfare-resilience-and-the-law`) |
 | Microtargeting drives influence ops | ⚠️ **Measured effects are small; exhaustion is the aim** (§21 → `mil-modern-conflict-irregular-warfare-resilience-and-the-law`) |
 | Counterinsurgency is about territory | ⚠️ **Population and legitimacy — and outsiders can't supply it** (§22 → `mil-modern-conflict-irregular-warfare-resilience-and-the-law`) |
@@ -207,8 +207,8 @@ that disagree about almost everything else.**
 | **Thucydides, *History of the Peloponnesian War*** | ⚠️ **Still the best single text on why wars start** |
 | **Corbett, *Some Principles of Maritime Strategy*** | ⚠️ **§4 → `mil-theory-clausewitz-sun-tzu-and-sea-and-air-power` — better than Mahan** |
 | **Schelling, *Arms and Influence*** | ⚠️ **§8 → `mil-deterrence-nuclear-strategy-alliances-and-grand-strategy`, §10 → `mil-deterrence-nuclear-strategy-alliances-and-grand-strategy`. The foundational deterrence text** |
-| **Jervis, *Perception and Misperception in International Politics*** | ⚠️ **§8 → `mil-deterrence-nuclear-strategy-alliances-and-grand-strategy`, §16 → `mil-force-structure-logistics-doctrine-intelligence-and-procurement`** |
-| **van Creveld, *Supplying War*** | ⚠️ **§14 → `mil-force-structure-logistics-doctrine-intelligence-and-procurement`. The logistics correction** |
+| **Jervis, *Perception and Misperception in International Politics*** | ⚠️ **§8 → `mil-deterrence-nuclear-strategy-alliances-and-grand-strategy`, §16 → `mil-force-structure-logistics-doctrine-intel-and-procurement`** |
+| **van Creveld, *Supplying War*** | ⚠️ **§14 → `mil-force-structure-logistics-doctrine-intel-and-procurement`. The logistics correction** |
 | **Feaver, *Armed Servants*; Huntington, *The Soldier and the State*** | ⚠️ **§24 → `mil-modern-conflict-irregular-warfare-resilience-and-the-law`** |
 | **ICRC materials and the Geneva Conventions** | ⚠️ **§25 → `mil-modern-conflict-irregular-warfare-resilience-and-the-law` — primary and free** |
 | **Freedman, *Strategy: A History*** | Broad, readable synthesis |
@@ -225,8 +225,8 @@ that disagree about almost everything else.**
 | Why is this campaign not working? | ⚠️ **Check level confusion first** (§5 → `mil-levels-of-war-principles-and-decision-cycles`) |
 | Will deterrence hold? | ⚠️ **Capability is usually fine; test credibility** (§8 → `mil-deterrence-nuclear-strategy-alliances-and-grand-strategy`) |
 | Why did they escalate? | ⚠️ **Thresholds are asymmetrically perceived** (§10 → `mil-deterrence-nuclear-strategy-alliances-and-grand-strategy`) |
-| Can this offensive be sustained? | ⚠️ **Logistics and the culminating point** (§2 → `mil-theory-clausewitz-sun-tzu-and-sea-and-air-power`, §14 → `mil-force-structure-logistics-doctrine-intelligence-and-procurement`) |
-| Why is this programme late and over cost? | ⚠️ **Structural, not a personnel failure** (§18 → `mil-force-structure-logistics-doctrine-intelligence-and-procurement`) |
+| Can this offensive be sustained? | ⚠️ **Logistics and the culminating point** (§2 → `mil-theory-clausewitz-sun-tzu-and-sea-and-air-power`, §14 → `mil-force-structure-logistics-doctrine-intel-and-procurement`) |
+| Why is this programme late and over cost? | ⚠️ **Structural, not a personnel failure** (§18 → `mil-force-structure-logistics-doctrine-intel-and-procurement`) |
 | Is this claim about drones right? | ⚠️ **Ask what it implies about manoeuvre and adaptation** (§26.1) |
 | How does a small state deter? | ⚠️ **Denial and resilience, not punishment** (§8 → `mil-deterrence-nuclear-strategy-alliances-and-grand-strategy`, §23 → `mil-modern-conflict-irregular-warfare-resilience-and-the-law`) |
 | Is this strike lawful? | ⚠️ **Distinction, then proportionality as defined** (§25 → `mil-modern-conflict-irregular-warfare-resilience-and-the-law`) |
@@ -238,19 +238,19 @@ that disagree about almost everything else.**
 - [ ] ⚠️ **What is the POLITICAL objective, and can force deliver it?** (§2 → `mil-theory-clausewitz-sun-tzu-and-sea-and-air-power`)
 - [ ] ⚠️ **Which level of war is this claim about?** (§5 → `mil-levels-of-war-principles-and-decision-cycles`)
 - [ ] Ends, ways and means actually matched? (§12 → `mil-deterrence-nuclear-strategy-alliances-and-grand-strategy`)
-- [ ] ⚠️ **Is sustainment addressed, or only the platform?** (§14 → `mil-force-structure-logistics-doctrine-intelligence-and-procurement`)
-- [ ] ⚠️ **Does the institution have a mechanism to learn and adapt?** (§15 → `mil-force-structure-logistics-doctrine-intelligence-and-procurement`)
+- [ ] ⚠️ **Is sustainment addressed, or only the platform?** (§14 → `mil-force-structure-logistics-doctrine-intel-and-procurement`)
+- [ ] ⚠️ **Does the institution have a mechanism to learn and adapt?** (§15 → `mil-force-structure-logistics-doctrine-intel-and-procurement`)
 - [ ] For deterrence claims: whose perception, and how would we know? (§8 → `mil-deterrence-nuclear-strategy-alliances-and-grand-strategy`)
 - [ ] ⚠️ **Is the threat assessment independent of the budget it justifies?** (§1 → `mil-theory-clausewitz-sun-tzu-and-sea-and-air-power`, §12 → `mil-deterrence-nuclear-strategy-alliances-and-grand-strategy`)
 - [ ] Resilience and civil preparedness considered, not only forces? (§23 → `mil-modern-conflict-irregular-warfare-resilience-and-the-law`)
 - [ ] ⚠️ **Are the legal constraints stated accurately?** (§25 → `mil-modern-conflict-irregular-warfare-resilience-and-the-law`)
-- [ ] ⚠️ **Who benefits from this analysis being believed?** (§18 → `mil-force-structure-logistics-doctrine-intelligence-and-procurement`, §26)
+- [ ] ⚠️ **Who benefits from this analysis being believed?** (§18 → `mil-force-structure-logistics-doctrine-intel-and-procurement`, §26)
 
 ---
 
 ## §31. Method
 
-**§1–§25 → `mil-theory-clausewitz-sun-tzu-and-sea-and-air-power`, `mil-levels-of-war-principles-and-decision-cycles`, `mil-deterrence-nuclear-strategy-alliances-and-grand-strategy`, `mil-force-structure-logistics-doctrine-intelligence-and-procurement`, `mil-modern-conflict-irregular-warfare-resilience-and-the-law` rests on an established academic and professional literature** — **Clausewitz and
+**§1–§25 → `mil-theory-clausewitz-sun-tzu-and-sea-and-air-power`, `mil-levels-of-war-principles-and-decision-cycles`, `mil-deterrence-nuclear-strategy-alliances-and-grand-strategy`, `mil-force-structure-logistics-doctrine-intel-and-procurement`, `mil-modern-conflict-irregular-warfare-resilience-and-the-law` rests on an established academic and professional literature** — **Clausewitz and
 the strategic canon, Schelling on deterrence and coercion, the levels of war, the logistics
 literature, military innovation studies, civil-military relations theory, and international
 humanitarian law.** ⚠️ **None needed verification; *On War* is from 1832 and Schelling's
@@ -263,7 +263,7 @@ whether a country is defended well are the ones in Parts II to IV, and they are 
 ones public discussion skips in favour of hardware.**
 
 **Two searches were run in August 2026**, on **Ukraine's demonstrated lessons** and
-**European rearmament** — ⚠️ **the first because §15 → `mil-force-structure-logistics-doctrine-intelligence-and-procurement`'s institutional-learning problem is
+**European rearmament** — ⚠️ **the first because §15 → `mil-force-structure-logistics-doctrine-intel-and-procurement`'s institutional-learning problem is
 being tested in public and the answer is genuinely disputed, the second because §11 → `mil-deterrence-nuclear-strategy-alliances-and-grand-strategy`'s
 burden-sharing argument has become a concrete commitment with measurable milestones.**
 

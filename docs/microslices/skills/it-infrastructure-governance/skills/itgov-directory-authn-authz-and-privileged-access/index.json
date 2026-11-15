@@ -1,0 +1,46 @@
+[
+  {
+    "id": "skill-5-directory-services-and-hybrid-identity-3ebd44d2fd",
+    "purpose": "5 directory services and hybrid identity",
+    "source": "src/vibey_tools/skills/plugins/it-infrastructure-governance/skills/itgov-directory-authn-authz-and-privileged-access/SKILL.md",
+    "output": "docs/microslices/skills/it-infrastructure-governance/skills/itgov-directory-authn-authz-and-privileged-access/001-5-directory-services-and-hybrid-identity.md",
+    "requires": [],
+    "links": [
+      "skill-6-authentication-3057a2c23a"
+    ]
+  },
+  {
+    "id": "skill-6-authentication-3057a2c23a",
+    "purpose": "6 authentication",
+    "source": "src/vibey_tools/skills/plugins/it-infrastructure-governance/skills/itgov-directory-authn-authz-and-privileged-access/SKILL.md",
+    "output": "docs/microslices/skills/it-infrastructure-governance/skills/itgov-directory-authn-authz-and-privileged-access/002-6-authentication.md",
+    "requires": [
+      "skill-5-directory-services-and-hybrid-identity-3ebd44d2fd"
+    ],
+    "links": [
+      "skill-7-authorization-rbac-and-beyond-2e5c316348"
+    ]
+  },
+  {
+    "id": "skill-7-authorization-rbac-and-beyond-2e5c316348",
+    "purpose": "7 authorization rbac and beyond",
+    "source": "src/vibey_tools/skills/plugins/it-infrastructure-governance/skills/itgov-directory-authn-authz-and-privileged-access/SKILL.md",
+    "output": "docs/microslices/skills/it-infrastructure-governance/skills/itgov-directory-authn-authz-and-privileged-access/003-7-authorization-rbac-and-beyond.md",
+    "requires": [
+      "skill-6-authentication-3057a2c23a"
+    ],
+    "links": [
+      "skill-8-privileged-access-942bcc7e44"
+    ]
+  },
+  {
+    "id": "skill-8-privileged-access-942bcc7e44",
+    "purpose": "8 privileged access",
+    "source": "src/vibey_tools/skills/plugins/it-infrastructure-governance/skills/itgov-directory-authn-authz-and-privileged-access/SKILL.md",
+    "output": "docs/microslices/skills/it-infrastructure-governance/skills/itgov-directory-authn-authz-and-privileged-access/004-8-privileged-access.md",
+    "requires": [
+      "skill-7-authorization-rbac-and-beyond-2e5c316348"
+    ],
+    "links": []
+  }
+]

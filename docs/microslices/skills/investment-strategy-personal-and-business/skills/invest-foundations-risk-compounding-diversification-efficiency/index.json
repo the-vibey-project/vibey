@@ -1,0 +1,70 @@
+[
+  {
+    "id": "skill-0-routing-3f1a244029",
+    "purpose": "0 routing",
+    "source": "src/vibey_tools/skills/plugins/investment-strategy-personal-and-business/skills/invest-foundations-risk-compounding-diversification-efficiency/SKILL.md",
+    "output": "docs/microslices/skills/investment-strategy-personal-and-business/skills/invest-foundations-risk-compounding-diversification-efficiency/001-0-routing.md",
+    "requires": [],
+    "links": [
+      "skill-1-what-comes-before-investing-d756e087d0"
+    ]
+  },
+  {
+    "id": "skill-1-what-comes-before-investing-d756e087d0",
+    "purpose": "1 what comes before investing",
+    "source": "src/vibey_tools/skills/plugins/investment-strategy-personal-and-business/skills/invest-foundations-risk-compounding-diversification-efficiency/SKILL.md",
+    "output": "docs/microslices/skills/investment-strategy-personal-and-business/skills/invest-foundations-risk-compounding-diversification-efficiency/002-1-what-comes-before-investing.md",
+    "requires": [
+      "skill-0-routing-3f1a244029"
+    ],
+    "links": [
+      "skill-2-risk-and-return-bd66ff51b4"
+    ]
+  },
+  {
+    "id": "skill-2-risk-and-return-bd66ff51b4",
+    "purpose": "2 risk and return",
+    "source": "src/vibey_tools/skills/plugins/investment-strategy-personal-and-business/skills/invest-foundations-risk-compounding-diversification-efficiency/SKILL.md",
+    "output": "docs/microslices/skills/investment-strategy-personal-and-business/skills/invest-foundations-risk-compounding-diversification-efficiency/003-2-risk-and-return.md",
+    "requires": [
+      "skill-1-what-comes-before-investing-d756e087d0"
+    ],
+    "links": [
+      "skill-3-compounding-e9bf5b5a66"
+    ]
+  },
+  {
+    "id": "skill-3-compounding-e9bf5b5a66",
+    "purpose": "3 compounding",
+    "source": "src/vibey_tools/skills/plugins/investment-strategy-personal-and-business/skills/invest-foundations-risk-compounding-diversification-efficiency/SKILL.md",
+    "output": "docs/microslices/skills/investment-strategy-personal-and-business/skills/invest-foundations-risk-compounding-diversification-efficiency/004-3-compounding.md",
+    "requires": [
+      "skill-2-risk-and-return-bd66ff51b4"
+    ],
+    "links": [
+      "skill-4-diversification-281f7e2d17"
+    ]
+  },
+  {
+    "id": "skill-4-diversification-281f7e2d17",
+    "purpose": "4 diversification",
+    "source": "src/vibey_tools/skills/plugins/investment-strategy-personal-and-business/skills/invest-foundations-risk-compounding-diversification-efficiency/SKILL.md",
+    "output": "docs/microslices/skills/investment-strategy-personal-and-business/skills/invest-foundations-risk-compounding-diversification-efficiency/005-4-diversification.md",
+    "requires": [
+      "skill-3-compounding-e9bf5b5a66"
+    ],
+    "links": [
+      "skill-5-market-efficiency-honestly-9dc099ae0f"
+    ]
+  },
+  {
+    "id": "skill-5-market-efficiency-honestly-9dc099ae0f",
+    "purpose": "5 market efficiency honestly",
+    "source": "src/vibey_tools/skills/plugins/investment-strategy-personal-and-business/skills/invest-foundations-risk-compounding-diversification-efficiency/SKILL.md",
+    "output": "docs/microslices/skills/investment-strategy-personal-and-business/skills/invest-foundations-risk-compounding-diversification-efficiency/006-5-market-efficiency-honestly.md",
+    "requires": [
+      "skill-4-diversification-281f7e2d17"
+    ],
+    "links": []
+  }
+]

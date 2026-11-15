@@ -32,10 +32,10 @@ links: ["skill-1-systems-and-properties-3dcd1cfeaf"]
 | **⚠️ Turbulence** | **§22 → `thermo-dimensional-analysis-flows-turbulence-and-turbomachinery`** |
 | Compressible flow | §23 → `thermo-dimensional-analysis-flows-turbulence-and-turbomachinery` |
 | Turbomachinery | §24 → `thermo-dimensional-analysis-flows-turbulence-and-turbomachinery` |
-| **Conduction** | **§25 → `thermo-heat-transfer-conduction-convection-radiation-and-exchangers`** |
-| Convection | §26 → `thermo-heat-transfer-conduction-convection-radiation-and-exchangers` |
-| Radiation | §27 → `thermo-heat-transfer-conduction-convection-radiation-and-exchangers` |
-| Heat exchangers, boiling | §28 → `thermo-heat-transfer-conduction-convection-radiation-and-exchangers` |
+| **Conduction** | **§25 → `thermo-heat-transfer-conduction-convection-radiation-exchangers`** |
+| Convection | §26 → `thermo-heat-transfer-conduction-convection-radiation-exchangers` |
+| Radiation | §27 → `thermo-heat-transfer-conduction-convection-radiation-exchangers` |
+| Heat exchangers, boiling | §28 → `thermo-heat-transfer-conduction-convection-radiation-exchangers` |
 | **What's live** | **§29 → `thermo-reference`** |
 | Anti-patterns, misconceptions | §30–§31 → `thermo-reference` |
 | Numbers, books, quick ref | §32–§34 → `thermo-reference` |

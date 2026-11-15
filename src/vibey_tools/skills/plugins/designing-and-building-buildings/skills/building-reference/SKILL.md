@@ -5,7 +5,7 @@ description: "Use when correcting a construction misconception, looking up a spa
 
 # Buildings and Civil Structures: What's Live, Misconceptions, Numbers, and Sources
 
-> **Part 6 of 6** of the *Designing and Building Buildings and Other Civil Structures* reference (plugin `designing-and-building-buildings`), covering §24–§29. Sibling skills: `building-disciplines-site-brief-planning-and-design` (§0–§5), `building-structure-foundations-envelope-services-and-fire` (§6–§10), `building-accessibility-energy-drawings-bim-and-codes` (§11–§14), `building-procurement-cost-sequencing-materials-and-quality` (§15–§19), `building-site-safety-commissioning-retrofit-and-why-projects-fail` (§20–§23). Section numbers are shared across the set; a reference written as §N → `skill` points into that sibling skill.
+> **Part 6 of 6** of the *Designing and Building Buildings and Other Civil Structures* reference (plugin `designing-and-building-buildings`), covering §24–§29. Sibling skills: `building-disciplines-site-brief-planning-and-design` (§0–§5), `building-structure-foundations-envelope-services-and-fire` (§6–§10), `building-accessibility-energy-drawings-bim-and-codes` (§11–§14), `building-procurement-cost-sequencing-materials-and-quality` (§15–§19), `building-site-safety-commissioning-retrofit-and-project-failure` (§20–§23). Section numbers are shared across the set; a reference written as §N → `skill` points into that sibling skill.
 >
 > **Currency:** The engineering is settled. Two areas moved. See §24 for tall mass timber code adoption, and embodied carbon regulation.
 
@@ -17,7 +17,7 @@ description: "Use when correcting a construction misconception, looking up a spa
 > parties with different contracts, different liabilities and different incentives.**
 > ⚠️ **Most building failures are not engineering failures — they are COORDINATION
 > failures at the boundaries between disciplines and between design and construction**
-> (§23 → `building-site-safety-commissioning-retrofit-and-why-projects-fail`).
+> (§23 → `building-site-safety-commissioning-retrofit-and-project-failure`).
 >
 > **⚠️ GOTCHA** boxes mark the assumptions that cause litigation.
 >
@@ -133,7 +133,7 @@ locked in early.**
 
 > **⚠️ GOTCHA — the reuse path is the one with the biggest design implication, and it
 > inverts a default.** ⚠️ **If retaining 45% of an existing structure IS compliance, then
-> demolish-and-rebuild carries a regulatory cost that it previously didn't** (§22 → `building-site-safety-commissioning-retrofit-and-why-projects-fail`).
+> demolish-and-rebuild carries a regulatory cost that it previously didn't** (§22 → `building-site-safety-commissioning-retrofit-and-project-failure`).
 > **⚠️ Expect feasibility studies to start asking whether the frame can be kept.**
 > **⚠️ Note also the criticism: at least one commentator has questioned whether the
 > compliance thresholds were set too loosely to drive real reduction, and one practice
@@ -175,9 +175,9 @@ the CBSC vote, and a regional energy network summary, which agree with each othe
 | Construction failures happen to finished buildings | ⚠️ **Many happen during construction** (§17 → `building-procurement-cost-sequencing-materials-and-quality`) |
 | A part-built frame is stable | ⚠️ **No diaphragm, no lateral system. Brace it** (§6 → `building-structure-foundations-envelope-services-and-fire`, §17 → `building-procurement-cost-sequencing-materials-and-quality`) |
 | Design models predict energy use | ⚠️ **The performance gap is real and large** (§12 → `building-accessibility-energy-drawings-bim-and-codes`) |
-| Commissioning is a formality | ⚠️ **It's what makes the building work** (§21 → `building-site-safety-commissioning-retrofit-and-why-projects-fail`) |
-| Retrofit insulation is straightforwardly good | ⚠️ **It can rot an assembly that survived a century** (§22 → `building-site-safety-commissioning-retrofit-and-why-projects-fail`) |
-| Demolish-and-rebuild is carbon-neutral | ⚠️ **Reuse is an explicit CALGreen compliance path** (§22 → `building-site-safety-commissioning-retrofit-and-why-projects-fail`, §24.2) |
+| Commissioning is a formality | ⚠️ **It's what makes the building work** (§21 → `building-site-safety-commissioning-retrofit-and-project-failure`) |
+| Retrofit insulation is straightforwardly good | ⚠️ **It can rot an assembly that survived a century** (§22 → `building-site-safety-commissioning-retrofit-and-project-failure`) |
+| Demolish-and-rebuild is carbon-neutral | ⚠️ **Reuse is an explicit CALGreen compliance path** (§22 → `building-site-safety-commissioning-retrofit-and-project-failure`, §24.2) |
 | Heavy Timber and mass timber types are the same | ⚠️ **IV-HT relies on char; IV-A/B/C on rated protection** (§24.1) |
 | Mass timber is allowed everywhere now | ⚠️ **The subtypes don't exist in pre-2021 editions** (§24.1) |
 | Mandatory carbon measures must be driving change | ⚠️ **Some argue the thresholds are loose** (§24.2) |
@@ -242,9 +242,9 @@ the CBSC vote, and a regional energy network summary, which agree with each othe
 | Cost has ballooned | ⚠️ **Check the estimate stage and the reference class** (§16 → `building-procurement-cost-sequencing-materials-and-quality`) |
 | Which delivery method? | ⚠️ **Who can control which risk** (§15 → `building-procurement-cost-sequencing-materials-and-quality`) |
 | Structure isn't stable during erection | ⚠️ **Temporary works are engineered** (§17 → `building-procurement-cost-sequencing-materials-and-quality`) |
-| Building uses more energy than modelled | ⚠️ **The performance gap. Commission it** (§12 → `building-accessibility-energy-drawings-bim-and-codes`, §21 → `building-site-safety-commissioning-retrofit-and-why-projects-fail`) |
-| Keep the existing frame or demolish? | ⚠️ **45% reuse is a compliance path in California** (§22 → `building-site-safety-commissioning-retrofit-and-why-projects-fail`, §24.2) |
-| A detail changed on site | ⚠️ **Re-derive the analysis. Hyatt Regency** (§23 → `building-site-safety-commissioning-retrofit-and-why-projects-fail`) |
+| Building uses more energy than modelled | ⚠️ **The performance gap. Commission it** (§12 → `building-accessibility-energy-drawings-bim-and-codes`, §21 → `building-site-safety-commissioning-retrofit-and-project-failure`) |
+| Keep the existing frame or demolish? | ⚠️ **45% reuse is a compliance path in California** (§22 → `building-site-safety-commissioning-retrofit-and-project-failure`, §24.2) |
+| A detail changed on site | ⚠️ **Re-derive the analysis. Hyatt Regency** (§23 → `building-site-safety-commissioning-retrofit-and-project-failure`) |
 
 ### 28.2 Design review checklist
 - [ ] ⚠️ **Ground investigation adequate for the foundation assumed** (§2 → `building-disciplines-site-brief-planning-and-design`)
@@ -259,13 +259,13 @@ the CBSC vote, and a regional energy network summary, which agree with each othe
 - [ ] ⚠️ **Services space and risers allocated, with maintenance access** (§9 → `building-structure-foundations-envelope-services-and-fire`)
 - [ ] ⚠️ **Buildable with normal tolerances and a sensible sequence** (§5 → `building-disciplines-site-brief-planning-and-design`, §17 → `building-procurement-cost-sequencing-materials-and-quality`)
 - [ ] ⚠️ **Adopted code edition confirmed for the actual jurisdiction** (§14 → `building-accessibility-energy-drawings-bim-and-codes`)
-- [ ] Commissioning scope and time protected in the programme (§21 → `building-site-safety-commissioning-retrofit-and-why-projects-fail`)
+- [ ] Commissioning scope and time protected in the programme (§21 → `building-site-safety-commissioning-retrofit-and-project-failure`)
 
 ---
 
 ## §29. Method
 
-**§1–§23 → `building-disciplines-site-brief-planning-and-design`, `building-structure-foundations-envelope-services-and-fire`, `building-accessibility-energy-drawings-bim-and-codes`, `building-procurement-cost-sequencing-materials-and-quality`, `building-site-safety-commissioning-retrofit-and-why-projects-fail` rests on established professional practice and settled engineering** — **load
+**§1–§23 → `building-disciplines-site-brief-planning-and-design`, `building-structure-foundations-envelope-services-and-fire`, `building-accessibility-energy-drawings-bim-and-codes`, `building-procurement-cost-sequencing-materials-and-quality`, `building-site-safety-commissioning-retrofit-and-project-failure` rests on established professional practice and settled engineering** — **load
 paths and lateral systems, foundation selection, building physics, fire strategy, the
 documentation and procurement apparatus, and construction sequencing.** ⚠️ **None of it
 needed verification.**
@@ -310,7 +310,7 @@ $10–20k WBLCA cost are single-source and marked as reported.**
 have — EPBD, RE2020, RICS, London Plan, Caltrans and jurisdiction counts are named as
 unverified in-section.**
 
-**⚠️ The general lesson, which belongs in a document about buildings**: ⚠️ **§23 → `building-site-safety-commissioning-retrofit-and-why-projects-fail` lists the
+**⚠️ The general lesson, which belongs in a document about buildings**: ⚠️ **§23 → `building-site-safety-commissioning-retrofit-and-project-failure` lists the
 Hyatt Regency pattern — a change that looks like a detail silently invalidates the
 original analysis and nobody re-derives it.** **⚠️ Writing a currency section on top of
 failed searches is the same failure mode in a different medium, and the fix is the same:

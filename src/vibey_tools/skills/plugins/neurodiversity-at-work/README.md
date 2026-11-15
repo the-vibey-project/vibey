@@ -17,4 +17,4 @@ Educational. **Not medical, clinical, psychological or legal advice**, and nothi
 
 - `psychology-sociology-cultural-sciences` — neurodiversity and the evidence base (§15), and twice-exceptional adults (§30–§42).
 - `wellbeing-purpose-and-drive` — burnout, self-criticism and self-compassion, and the limits of individual technique.
-- `speaking-influence-and-community` — listening, rapport and difficult conversations (`speaking-listening-rapport-difficult-conversations-and-negotiation`).
+- `speaking-influence-and-community` — listening, rapport and difficult conversations (`speaking-listening-rapport-hard-conversations-and-negotiation`).

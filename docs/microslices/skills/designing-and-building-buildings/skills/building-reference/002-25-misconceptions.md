@@ -28,9 +28,9 @@ links: ["skill-26-numbers-01afc4696e"]
 | Construction failures happen to finished buildings | ⚠️ **Many happen during construction** (§17 → `building-procurement-cost-sequencing-materials-and-quality`) |
 | A part-built frame is stable | ⚠️ **No diaphragm, no lateral system. Brace it** (§6 → `building-structure-foundations-envelope-services-and-fire`, §17 → `building-procurement-cost-sequencing-materials-and-quality`) |
 | Design models predict energy use | ⚠️ **The performance gap is real and large** (§12 → `building-accessibility-energy-drawings-bim-and-codes`) |
-| Commissioning is a formality | ⚠️ **It's what makes the building work** (§21 → `building-site-safety-commissioning-retrofit-and-why-projects-fail`) |
-| Retrofit insulation is straightforwardly good | ⚠️ **It can rot an assembly that survived a century** (§22 → `building-site-safety-commissioning-retrofit-and-why-projects-fail`) |
-| Demolish-and-rebuild is carbon-neutral | ⚠️ **Reuse is an explicit CALGreen compliance path** (§22 → `building-site-safety-commissioning-retrofit-and-why-projects-fail`, §24.2) |
+| Commissioning is a formality | ⚠️ **It's what makes the building work** (§21 → `building-site-safety-commissioning-retrofit-and-project-failure`) |
+| Retrofit insulation is straightforwardly good | ⚠️ **It can rot an assembly that survived a century** (§22 → `building-site-safety-commissioning-retrofit-and-project-failure`) |
+| Demolish-and-rebuild is carbon-neutral | ⚠️ **Reuse is an explicit CALGreen compliance path** (§22 → `building-site-safety-commissioning-retrofit-and-project-failure`, §24.2) |
 | Heavy Timber and mass timber types are the same | ⚠️ **IV-HT relies on char; IV-A/B/C on rated protection** (§24.1) |
 | Mass timber is allowed everywhere now | ⚠️ **The subtypes don't exist in pre-2021 editions** (§24.1) |
 | Mandatory carbon measures must be driving change | ⚠️ **Some argue the thresholds are loose** (§24.2) |

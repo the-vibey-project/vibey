@@ -5,7 +5,7 @@ description: "Use when access accumulates faster than it is removed: the identit
 
 # IT Infrastructure and Governance: The Identity Lifecycle, Access Review, and Segregation of Duties
 
-> **Part 3 of 5** of the *IT Infrastructure and Governance* reference (plugin `it-infrastructure-governance`), covering §9–§11. Sibling skills: `itgov-infrastructure-layers-compute-storage-and-networking` (§0–§4), `itgov-directory-authentication-authorization-and-privileged-access` (§5–§8), `itgov-endpoints-continuity-itsm-and-vendor-risk` (§12–§19), `itgov-reference` (§20–§26). Section numbers are shared across the set; a reference written as §N → `skill` points into that sibling skill.
+> **Part 3 of 5** of the *IT Infrastructure and Governance* reference (plugin `it-infrastructure-governance`), covering §9–§11. Sibling skills: `itgov-infrastructure-layers-compute-storage-and-networking` (§0–§4), `itgov-directory-authn-authz-and-privileged-access` (§5–§8), `itgov-endpoints-continuity-itsm-and-vendor-risk` (§12–§19), `itgov-reference` (§20–§26). Section numbers are shared across the set; a reference written as §N → `skill` points into that sibling skill.
 >
 > **Currency:** RBAC theory, directory concepts, backup strategy and ITIL process are stable. Two areas moved. See §21 → `itgov-reference` for the phishing-resistant authentication mandate timeline and non-human identity governance.
 
@@ -20,7 +20,7 @@ description: "Use when access accumulates faster than it is removed: the identit
 > **The three ideas that organize this:**
 > 1. **⚠️ Identity is the perimeter.** The network boundary stopped being the control
 >    point years ago. **Every meaningful access decision now happens at authentication and
->    authorization time** (§5 → `itgov-directory-authentication-authorization-and-privileged-access`, §6 → `itgov-directory-authentication-authorization-and-privileged-access`).
+>    authorization time** (§5 → `itgov-directory-authn-authz-and-privileged-access`, §6 → `itgov-directory-authn-authz-and-privileged-access`).
 > 2. **⚠️ Access accumulates and never sheds by itself.** People change roles and keep old
 >    permissions; service accounts outlive their systems. **Privilege creep is the default
 >    state of any system without deliberate revocation** (§9, §10).
@@ -88,7 +88,7 @@ production unreviewed; request access and approve it; administer a system and au
 logs.**
 **⚠️ SoD is a combinatorial problem, not a per-permission one** — **each permission is
 fine; the combination is the violation**, ⚠️ **which is why it must be evaluated as a rule
-set across effective access, and why it interacts badly with nested groups** (§7 → `itgov-directory-authentication-authorization-and-privileged-access`).
+set across effective access, and why it interacts badly with nested groups** (§7 → `itgov-directory-authn-authz-and-privileged-access`).
 **⚠️ Compensating controls** where SoD is impossible — **and in small teams it frequently
 is.** **Detective controls, mandatory review, and logging with independent oversight are
 the honest answer for a five-person IT department, rather than pretending the separation

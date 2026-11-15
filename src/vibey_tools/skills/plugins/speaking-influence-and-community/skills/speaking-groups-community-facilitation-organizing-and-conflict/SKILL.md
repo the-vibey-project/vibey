@@ -5,7 +5,7 @@ description: "Use for groups and communities rather than individuals: how groups
 
 # Speaking, Influence and Community: How Groups Actually Work, Building a Community, Facilitation, Organizing and Mobilizing, Volunteers and Burnout, Community Conflict, and Communication Difference
 
-> **Part 5 of 6** of the *Public Speaking, Influence and Community* reference (plugin `speaking-influence-and-community`), covering §20–§26. Sibling skills: `speaking-what-the-field-knows-anxiety-audience-and-structure` (§0–§5), `speaking-language-delivery-visual-aids-and-practice` (§6–§11), `speaking-listening-rapport-difficult-conversations-and-negotiation` (§12–§17), `speaking-persuasion-and-the-ethics-of-influence` (§18–§19), `speaking-reference` (§27–§32). Section numbers are shared across the set; a reference written as §N → `skill` points into that sibling skill.
+> **Part 5 of 6** of the *Public Speaking, Influence and Community* reference (plugin `speaking-influence-and-community`), covering §20–§26. Sibling skills: `speaking-what-the-field-knows-anxiety-audience-and-structure` (§0–§5), `speaking-language-delivery-visual-aids-and-practice` (§6–§11), `speaking-listening-rapport-hard-conversations-and-negotiation` (§12–§17), `speaking-persuasion-and-the-ethics-of-influence` (§18–§19), `speaking-reference` (§27–§32). Section numbers are shared across the set; a reference written as §N → `skill` points into that sibling skill.
 >
 > **Currency:** The craft is old and stable. Two areas have moved. See §27 → `speaking-reference` for the status of the famous body-language claims, and what the persuasion evidence now shows.
 
@@ -161,7 +161,7 @@ people learn that effort produces outcomes, which is the belief the whole thing 
 
 ## §25. Community Conflict
 
-**⚠️ Conflict at group scale differs from §17 → `speaking-listening-rapport-difficult-conversations-and-negotiation`** — ⚠️ **it has an audience, factions form
+**⚠️ Conflict at group scale differs from §17 → `speaking-listening-rapport-hard-conversations-and-negotiation`** — ⚠️ **it has an audience, factions form
 fast, and history accumulates.**
 **⚠️ Address early and directly.** ⚠️ **Hoping it resolves is the standard mistake, and the
 cost of an awkward early conversation is always lower than the cost of the late one.**

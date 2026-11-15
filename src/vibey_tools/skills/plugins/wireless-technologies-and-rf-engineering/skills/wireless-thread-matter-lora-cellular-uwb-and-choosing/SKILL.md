@@ -5,7 +5,7 @@ description: "Use when selecting a radio technology: Thread, Zigbee and Matter a
 
 # Wireless Technologies and RF: Thread, Zigbee and Matter, LoRa and LPWAN, Cellular and Cellular IoT, UWB, Other Technologies, and Choosing a Radio
 
-> **Part 3 of 6** of the *Wireless Technologies: RF, Standards, Building and Programming* reference (plugin `wireless-technologies-and-rf-engineering`), covering §11–§16. Sibling skills: `wireless-propagation-link-budget-modulation-antennas-and-spectrum` (§0–§5), `wireless-wifi-bluetooth-ble-nfc-and-rfid` (§6–§10), `wireless-antenna-integration-certification-low-power-and-debugging` (§17–§21), `wireless-security-coexistence-and-positioning` (§22–§24), `wireless-reference` (§25–§30). Section numbers are shared across the set; a reference written as §N → `skill` points into that sibling skill.
+> **Part 3 of 6** of the *Wireless Technologies: RF, Standards, Building and Programming* reference (plugin `wireless-technologies-and-rf-engineering`), covering §11–§16. Sibling skills: `wireless-propagation-link-budget-modulation-antennas-spectrum` (§0–§5), `wireless-wifi-bluetooth-ble-nfc-and-rfid` (§6–§10), `wireless-antenna-integration-certification-low-power-debugging` (§17–§21), `wireless-security-coexistence-and-positioning` (§22–§24), `wireless-reference` (§25–§30). Section numbers are shared across the set; a reference written as §N → `skill` points into that sibling skill.
 >
 > **Currency:** The physics is permanent and the mature standards are stable. Two areas are moving. See §25 → `wireless-reference` for Wi-Fi's next generation, and Bluetooth ranging.
 
@@ -21,14 +21,14 @@ description: "Use when selecting a radio technology: Thread, Zigbee and Matter a
 > is nearly everywhere.
 >
 > **The three ideas that organize this document:**
-> 1. **⚠️ THE LINK BUDGET IS THE WHOLE GAME** (§2 → `wireless-propagation-link-budget-modulation-antennas-and-spectrum`). **Transmit power, antenna gains, path
+> 1. **⚠️ THE LINK BUDGET IS THE WHOLE GAME** (§2 → `wireless-propagation-link-budget-modulation-antennas-spectrum`). **Transmit power, antenna gains, path
 >    loss and receiver sensitivity determine whether a link works. Everything else is
 >    optimization within that envelope, and "add more power" is almost never the available
 >    lever because regulation caps it.**
-> 2. **⚠️ SPECTRUM IS A SHARED, CONTESTED, REGULATED RESOURCE** (§5 → `wireless-propagation-link-budget-modulation-antennas-and-spectrum`, §23 → `wireless-security-coexistence-and-positioning`). **You do not own
+> 2. **⚠️ SPECTRUM IS A SHARED, CONTESTED, REGULATED RESOURCE** (§5 → `wireless-propagation-link-budget-modulation-antennas-spectrum`, §23 → `wireless-security-coexistence-and-positioning`). **You do not own
 >    your channel. Unlicensed bands mean your neighbours, your own other radios, and
 >    physically unrelated devices all degrade you — and coexistence design is not optional.**
-> 3. **⚠️ THE ANTENNA IS THE MOST NEGLECTED COMPONENT AND THE MOST DECISIVE** (§4 → `wireless-propagation-link-budget-modulation-antennas-and-spectrum`, §17 → `wireless-antenna-integration-certification-low-power-and-debugging`).
+> 3. **⚠️ THE ANTENNA IS THE MOST NEGLECTED COMPONENT AND THE MOST DECISIVE** (§4 → `wireless-propagation-link-budget-modulation-antennas-spectrum`, §17 → `wireless-antenna-integration-certification-low-power-debugging`).
 >    **A superb radio with a badly integrated antenna performs worse than a mediocre radio
 >    with a good one, and antenna problems are usually designed in months before anyone
 >    measures them.**
@@ -84,7 +84,7 @@ telemetry — a live lesson about designing hardware around a network you don't 
 **⚠️ 5G's three service classes** are the useful framing: ⚠️ **eMBB (bandwidth), URLLC
 (latency and reliability), mMTC (device density) — and no deployment delivers all three at
 once.**
-**⚠️ mmWave versus sub-6 GHz** is §2 → `wireless-propagation-link-budget-modulation-antennas-and-spectrum`'s physics again: ⚠️ **enormous bandwidth, terrible
+**⚠️ mmWave versus sub-6 GHz** is §2 → `wireless-propagation-link-budget-modulation-antennas-spectrum`'s physics again: ⚠️ **enormous bandwidth, terrible
 propagation and building penetration, which is why mmWave coverage is patchy and sub-6 does
 the real work.**
 **⚠️ For IoT specifically**: ⚠️ **NB-IoT (deep indoor penetration, tiny data) and LTE-M
@@ -92,7 +92,7 @@ the real work.**
 make multi-year battery life possible on a cellular radio.**
 **⚠️ Practical concerns**: ⚠️ **eSIM/iSIM provisioning, roaming agreements and permanent
 roaming restrictions, module certification against carrier requirements (⚠️ which is
-separate from and additional to regulatory certification, §18 → `wireless-antenna-integration-certification-low-power-and-debugging`), and network sunset risk.**
+separate from and additional to regulatory certification, §18 → `wireless-antenna-integration-certification-low-power-debugging`), and network sunset risk.**
 
 ---
 
@@ -119,7 +119,7 @@ exactly the pressure that produced Bluetooth Channel Sounding** (§25.2 → `wir
 technically attractive and adoption has been slow.**
 **⚠️ 60 GHz (802.11ad/ay, WiGig)** — ⚠️ **multi-gigabit at room scale, blocked by a hand.**
 **⚠️ Satellite**: ⚠️ **LEO constellations, and direct-to-device messaging now appearing in
-phones — with latency and link budget both governed by §2 → `wireless-propagation-link-budget-modulation-antennas-and-spectrum`.**
+phones — with latency and link budget both governed by §2 → `wireless-propagation-link-budget-modulation-antennas-spectrum`.**
 **⚠️ Infrared** — ⚠️ **still ubiquitous in remotes, line-of-sight, no spectrum regulation.**
 **⚠️ Wireless power (Qi)** — ⚠️ **inductive coupling like NFC (§10 → `wireless-wifi-bluetooth-ble-nfc-and-rfid`), with alignment and
 foreign-object detection as the engineering problems.**

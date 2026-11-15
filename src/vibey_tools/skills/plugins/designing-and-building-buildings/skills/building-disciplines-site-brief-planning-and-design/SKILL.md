@@ -5,7 +5,7 @@ description: "Use at the front end of a project: the disciplines involved and ho
 
 # Buildings and Civil Structures: The Disciplines and the Lifecycle, Site and Ground, Brief and Programming, Planning, Zoning and Entitlement, and Architectural Design
 
-> **Part 1 of 6** of the *Designing and Building Buildings and Other Civil Structures* reference (plugin `designing-and-building-buildings`), covering §0–§5. Sibling skills: `building-structure-foundations-envelope-services-and-fire` (§6–§10), `building-accessibility-energy-drawings-bim-and-codes` (§11–§14), `building-procurement-cost-sequencing-materials-and-quality` (§15–§19), `building-site-safety-commissioning-retrofit-and-why-projects-fail` (§20–§23), `building-reference` (§24–§29). Section numbers are shared across the set; a reference written as §N → `skill` points into that sibling skill.
+> **Part 1 of 6** of the *Designing and Building Buildings and Other Civil Structures* reference (plugin `designing-and-building-buildings`), covering §0–§5. Sibling skills: `building-structure-foundations-envelope-services-and-fire` (§6–§10), `building-accessibility-energy-drawings-bim-and-codes` (§11–§14), `building-procurement-cost-sequencing-materials-and-quality` (§15–§19), `building-site-safety-commissioning-retrofit-and-project-failure` (§20–§23), `building-reference` (§24–§29). Section numbers are shared across the set; a reference written as §N → `skill` points into that sibling skill.
 >
 > **Currency:** The engineering is settled. Two areas moved. See §24 → `building-reference` for tall mass timber code adoption, and embodied carbon regulation.
 
@@ -17,7 +17,7 @@ description: "Use at the front end of a project: the disciplines involved and ho
 > parties with different contracts, different liabilities and different incentives.**
 > ⚠️ **Most building failures are not engineering failures — they are COORDINATION
 > failures at the boundaries between disciplines and between design and construction**
-> (§23 → `building-site-safety-commissioning-retrofit-and-why-projects-fail`).
+> (§23 → `building-site-safety-commissioning-retrofit-and-project-failure`).
 >
 > **⚠️ GOTCHA** boxes mark the assumptions that cause litigation.
 >
@@ -60,10 +60,10 @@ description: "Use at the front end of a project: the disciplines involved and ho
 | **⚠️ Construction sequencing** | **§17 → `building-procurement-cost-sequencing-materials-and-quality`** |
 | Materials in construction | §18 → `building-procurement-cost-sequencing-materials-and-quality` |
 | Quality and inspection | §19 → `building-procurement-cost-sequencing-materials-and-quality` |
-| Site safety | §20 → `building-site-safety-commissioning-retrofit-and-why-projects-fail` |
-| Commissioning and handover | §21 → `building-site-safety-commissioning-retrofit-and-why-projects-fail` |
-| Existing buildings | §22 → `building-site-safety-commissioning-retrofit-and-why-projects-fail` |
-| **⚠️ Why projects fail** | **§23 → `building-site-safety-commissioning-retrofit-and-why-projects-fail`** |
+| Site safety | §20 → `building-site-safety-commissioning-retrofit-and-project-failure` |
+| Commissioning and handover | §21 → `building-site-safety-commissioning-retrofit-and-project-failure` |
+| Existing buildings | §22 → `building-site-safety-commissioning-retrofit-and-project-failure` |
+| **⚠️ Why projects fail** | **§23 → `building-site-safety-commissioning-retrofit-and-project-failure`** |
 | **What's live** | **§24 → `building-reference`** |
 | Misconceptions, numbers | §25–§26 → `building-reference` |
 | Sources, quick ref, method | §27–§29 → `building-reference` |
@@ -89,7 +89,7 @@ description: "Use at the front end of a project: the disciplines involved and ho
 ```
 **⚠️ The lifecycle**: ⚠️ **feasibility → concept → schematic → design development →
 construction documents → tender → construction → commissioning → handover → operation →
-eventually adaptation or demolition** (§22 → `building-site-safety-commissioning-retrofit-and-why-projects-fail`).
+eventually adaptation or demolition** (§22 → `building-site-safety-commissioning-retrofit-and-project-failure`).
 > **⚠️ GOTCHA — the cost-influence curve is the single most important management fact in
 > this domain.** ⚠️ **The ability to influence cost is highest at the start and collapses
 > as design progresses, while expenditure does the opposite.** **⚠️ By the time

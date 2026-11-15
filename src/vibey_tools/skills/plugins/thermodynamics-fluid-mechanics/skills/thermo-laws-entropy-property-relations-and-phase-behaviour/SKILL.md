@@ -5,7 +5,7 @@ description: "Use when setting up a thermodynamic analysis: systems, properties 
 
 # Thermodynamics and Fluid Mechanics: Systems and Properties, the Zeroth and First Laws, the Second Law and Entropy, Property Relations, Equations of State, and Phase Behaviour
 
-> **Part 1 of 6** of the *Thermodynamics and Fluid Mechanics* reference (plugin `thermodynamics-fluid-mechanics`), covering §0–§7. Sibling skills: `thermo-cycles-exergy-combustion-and-psychrometrics` (§8–§12), `thermo-fluid-statics-control-volume-bernoulli-and-navier-stokes` (§13–§18), `thermo-dimensional-analysis-flows-turbulence-and-turbomachinery` (§19–§24), `thermo-heat-transfer-conduction-convection-radiation-and-exchangers` (§25–§28), `thermo-reference` (§29–§35). Section numbers are shared across the set; a reference written as §N → `skill` points into that sibling skill.
+> **Part 1 of 6** of the *Thermodynamics and Fluid Mechanics* reference (plugin `thermodynamics-fluid-mechanics`), covering §0–§7. Sibling skills: `thermo-cycles-exergy-combustion-and-psychrometrics` (§8–§12), `thermo-fluid-statics-control-volume-bernoulli-and-navier-stokes` (§13–§18), `thermo-dimensional-analysis-flows-turbulence-and-turbomachinery` (§19–§24), `thermo-heat-transfer-conduction-convection-radiation-exchangers` (§25–§28), `thermo-reference` (§29–§35). Section numbers are shared across the set; a reference written as §N → `skill` points into that sibling skill.
 >
 > **Currency:** The laws are permanent — Carnot 1824, Navier-Stokes 1845. Two areas of practice moved. See §29 → `thermo-reference` for CFD and turbulence modelling, and high-density thermal management.
 
@@ -62,10 +62,10 @@ description: "Use when setting up a thermodynamic analysis: systems, properties 
 | **⚠️ Turbulence** | **§22 → `thermo-dimensional-analysis-flows-turbulence-and-turbomachinery`** |
 | Compressible flow | §23 → `thermo-dimensional-analysis-flows-turbulence-and-turbomachinery` |
 | Turbomachinery | §24 → `thermo-dimensional-analysis-flows-turbulence-and-turbomachinery` |
-| **Conduction** | **§25 → `thermo-heat-transfer-conduction-convection-radiation-and-exchangers`** |
-| Convection | §26 → `thermo-heat-transfer-conduction-convection-radiation-and-exchangers` |
-| Radiation | §27 → `thermo-heat-transfer-conduction-convection-radiation-and-exchangers` |
-| Heat exchangers, boiling | §28 → `thermo-heat-transfer-conduction-convection-radiation-and-exchangers` |
+| **Conduction** | **§25 → `thermo-heat-transfer-conduction-convection-radiation-exchangers`** |
+| Convection | §26 → `thermo-heat-transfer-conduction-convection-radiation-exchangers` |
+| Radiation | §27 → `thermo-heat-transfer-conduction-convection-radiation-exchangers` |
+| Heat exchangers, boiling | §28 → `thermo-heat-transfer-conduction-convection-radiation-exchangers` |
 | **What's live** | **§29 → `thermo-reference`** |
 | Anti-patterns, misconceptions | §30–§31 → `thermo-reference` |
 | Numbers, books, quick ref | §32–§34 → `thermo-reference` |

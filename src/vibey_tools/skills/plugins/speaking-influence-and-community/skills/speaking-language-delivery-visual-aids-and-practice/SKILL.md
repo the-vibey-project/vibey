@@ -5,7 +5,7 @@ description: "Use for producing and delivering the talk itself: language written
 
 # Speaking, Influence and Community: Language for the Ear, Delivery, Visual Aids, Q&A and Hostility, Formats, and Practice
 
-> **Part 2 of 6** of the *Public Speaking, Influence and Community* reference (plugin `speaking-influence-and-community`), covering §6–§11. Sibling skills: `speaking-what-the-field-knows-anxiety-audience-and-structure` (§0–§5), `speaking-listening-rapport-difficult-conversations-and-negotiation` (§12–§17), `speaking-persuasion-and-the-ethics-of-influence` (§18–§19), `speaking-groups-community-facilitation-organizing-and-conflict` (§20–§26), `speaking-reference` (§27–§32). Section numbers are shared across the set; a reference written as §N → `skill` points into that sibling skill.
+> **Part 2 of 6** of the *Public Speaking, Influence and Community* reference (plugin `speaking-influence-and-community`), covering §6–§11. Sibling skills: `speaking-what-the-field-knows-anxiety-audience-and-structure` (§0–§5), `speaking-listening-rapport-hard-conversations-and-negotiation` (§12–§17), `speaking-persuasion-and-the-ethics-of-influence` (§18–§19), `speaking-groups-community-facilitation-organizing-and-conflict` (§20–§26), `speaking-reference` (§27–§32). Section numbers are shared across the set; a reference written as §N → `skill` points into that sibling skill.
 >
 > **Currency:** The craft is old and stable. Two areas have moved. See §27 → `speaking-reference` for the status of the famous body-language claims, and what the persuasion evidence now shows.
 

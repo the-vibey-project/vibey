@@ -70,7 +70,7 @@ methodology:**
 > growing.** **Do not quote a specific multiple as fact; do act on the direction.**
 
 **⚠️ Why NHIs break conventional IAM, which is the part that actually matters:**
-- **⚠️ They cannot use MFA.** **The entire §6 → `itgov-directory-authentication-authorization-and-privileged-access` control stack assumes a human who can be
+- **⚠️ They cannot use MFA.** **The entire §6 → `itgov-directory-authn-authz-and-privileged-access` control stack assumes a human who can be
   challenged.**
 - **⚠️ They never log out and are rarely retired.** **A credential issued for a 2019
   integration is still valid.** **One report found a majority of secrets confirmed exposed
@@ -84,7 +84,7 @@ methodology:**
   organizations take over 24 hours to rotate them.**
 
 **⚠️ Agentic AI is accelerating this rather than creating it.** **The service account
-problem is decades old** (§8 → `itgov-directory-authentication-authorization-and-privileged-access`); **what agents add is volume, autonomy, and access breadth —
+problem is decades old** (§8 → `itgov-directory-authn-authz-and-privileged-access`); **what agents add is volume, autonomy, and access breadth —
 an agent that reads, decides and acts needs entitlements a conventional service account
 wouldn't.** ⚠️ **Reported survey findings — that around 92% of organizations say current
 IAM tooling cannot manage AI agent identities, while a much smaller share have implemented
@@ -98,7 +98,7 @@ with no authentication at all** — **which, if approximately right, is a straig
 consequence of new infrastructure being deployed faster than its security patterns
 mature.**
 
-**⚠️ What actually works, and it's an extension of §8 → `itgov-directory-authentication-authorization-and-privileged-access` rather than something new:**
+**⚠️ What actually works, and it's an extension of §8 → `itgov-directory-authn-authz-and-privileged-access` rather than something new:**
 ```
 1. ⚠️ INVENTORY first — you cannot govern what you can't enumerate. Scan for
    secrets, tokens, service accounts and integration grants across environments

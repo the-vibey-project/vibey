@@ -18,7 +18,7 @@ it is profitable, and PROFIT IS NOT CASH — the gap is working capital.**
 return-maximization one — ⚠️ **and the counterparty and concentration risk of where cash is
 HELD is a real exposure, as depositors have periodically rediscovered.**
 **⚠️ Small business specifics**: ⚠️ **separate business and personal finances completely;
-understand that the owner's wealth is already concentrated in the business (§4 → `invest-foundations-risk-compounding-diversification-and-efficiency`); and
+understand that the owner's wealth is already concentrated in the business (§4 → `invest-foundations-risk-compounding-diversification-efficiency`); and
 ⚠️ recognize that "investing in the business" is a capital allocation decision competing
 with everything else, not automatically the best use of funds.**
 

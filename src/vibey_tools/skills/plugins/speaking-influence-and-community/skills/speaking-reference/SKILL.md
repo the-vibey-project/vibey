@@ -5,7 +5,7 @@ description: "Use when correcting a communication or influence misconception, lo
 
 # Speaking, Influence and Community: What's Live, Misconceptions, Numbers, and Sources
 
-> **Part 6 of 6** of the *Public Speaking, Influence and Community* reference (plugin `speaking-influence-and-community`), covering §27–§32. Sibling skills: `speaking-what-the-field-knows-anxiety-audience-and-structure` (§0–§5), `speaking-language-delivery-visual-aids-and-practice` (§6–§11), `speaking-listening-rapport-difficult-conversations-and-negotiation` (§12–§17), `speaking-persuasion-and-the-ethics-of-influence` (§18–§19), `speaking-groups-community-facilitation-organizing-and-conflict` (§20–§26). Section numbers are shared across the set; a reference written as §N → `skill` points into that sibling skill.
+> **Part 6 of 6** of the *Public Speaking, Influence and Community* reference (plugin `speaking-influence-and-community`), covering §27–§32. Sibling skills: `speaking-what-the-field-knows-anxiety-audience-and-structure` (§0–§5), `speaking-language-delivery-visual-aids-and-practice` (§6–§11), `speaking-listening-rapport-hard-conversations-and-negotiation` (§12–§17), `speaking-persuasion-and-the-ethics-of-influence` (§18–§19), `speaking-groups-community-facilitation-organizing-and-conflict` (§20–§26). Section numbers are shared across the set; a reference written as §N → `skill` points into that sibling skill.
 >
 > **Currency:** The craft is old and stable. Two areas have moved. See §27 for the status of the famous body-language claims, and what the persuasion evidence now shows.
 
@@ -154,12 +154,12 @@ across multiple independent published studies and I hold those more firmly.**
 | End with Q&A | ⚠️ **Close after it. The last words should be yours** (§5 → `speaking-what-the-field-knows-anxiety-audience-and-structure`, §9 → `speaking-language-delivery-visual-aids-and-practice`) |
 | "I don't know" damages credibility | ⚠️ **Bluffing does. Not knowing doesn't** (§9 → `speaking-language-delivery-visual-aids-and-practice`) |
 | Filler words are a serious problem | ⚠️ **Far less noticeable to audiences than to you** (§7 → `speaking-language-delivery-visual-aids-and-practice`) |
-| Mirroring builds rapport | ⚠️ **The deliberate version is detectable and costs trust** (§13 → `speaking-listening-rapport-difficult-conversations-and-negotiation`) |
-| Listening means waiting politely | ⚠️ **It's the mechanism of durable persuasion** (§12 → `speaking-listening-rapport-difficult-conversations-and-negotiation`, §18 → `speaking-persuasion-and-the-ethics-of-influence`) |
-| Someone describing a problem wants a solution | ⚠️ **Usually not. Ask which they want** (§12 → `speaking-listening-rapport-difficult-conversations-and-negotiation`) |
-| Intent is what matters | ⚠️ **You can't know theirs. Speak to impact** (§14 → `speaking-listening-rapport-difficult-conversations-and-negotiation`) |
-| The feedback sandwich softens criticism | ⚠️ **It gets learned and discounted. Be direct and kind** (§16 → `speaking-listening-rapport-difficult-conversations-and-negotiation`) |
-| Conflict means something is wrong | ⚠️ **No visible conflict usually means it's suppressed** (§17 → `speaking-listening-rapport-difficult-conversations-and-negotiation`) |
+| Mirroring builds rapport | ⚠️ **The deliberate version is detectable and costs trust** (§13 → `speaking-listening-rapport-hard-conversations-and-negotiation`) |
+| Listening means waiting politely | ⚠️ **It's the mechanism of durable persuasion** (§12 → `speaking-listening-rapport-hard-conversations-and-negotiation`, §18 → `speaking-persuasion-and-the-ethics-of-influence`) |
+| Someone describing a problem wants a solution | ⚠️ **Usually not. Ask which they want** (§12 → `speaking-listening-rapport-hard-conversations-and-negotiation`) |
+| Intent is what matters | ⚠️ **You can't know theirs. Speak to impact** (§14 → `speaking-listening-rapport-hard-conversations-and-negotiation`) |
+| The feedback sandwich softens criticism | ⚠️ **It gets learned and discounted. Be direct and kind** (§16 → `speaking-listening-rapport-hard-conversations-and-negotiation`) |
+| Conflict means something is wrong | ⚠️ **No visible conflict usually means it's suppressed** (§17 → `speaking-listening-rapport-hard-conversations-and-negotiation`) |
 | Facts change minds | ⚠️ **Facts help; identity-linked beliefs resist them** (§18 → `speaking-persuasion-and-the-ethics-of-influence`) |
 | Microtargeting is enormously effective | ⚠️ **Evidence conflicts; measured effects are small** (§27.2) |
 | Persuasion and manipulation differ by degree | ⚠️ **Structurally different. Apply the disclosure test** (§19 → `speaking-persuasion-and-the-ethics-of-influence`) |
@@ -204,10 +204,10 @@ across multiple independent published studies and I hold those more firmly.**
 
 | Source | Why |
 |---|---|
-| **Stone, Patton & Heen, *Difficult Conversations*** | ⚠️ **§14 → `speaking-listening-rapport-difficult-conversations-and-negotiation`. The three-conversations model** |
-| **Fisher & Ury, *Getting to Yes*** | ⚠️ **§15 → `speaking-listening-rapport-difficult-conversations-and-negotiation`. Interests vs positions, BATNA** |
-| **Patterson et al., *Crucial Conversations*** | §14 → `speaking-listening-rapport-difficult-conversations-and-negotiation`, §17 → `speaking-listening-rapport-difficult-conversations-and-negotiation` |
-| **Rogers on listening; Motivational Interviewing (Miller & Rollnick)** | ⚠️ **§12 → `speaking-listening-rapport-difficult-conversations-and-negotiation` — and MI has a real evidence base** |
+| **Stone, Patton & Heen, *Difficult Conversations*** | ⚠️ **§14 → `speaking-listening-rapport-hard-conversations-and-negotiation`. The three-conversations model** |
+| **Fisher & Ury, *Getting to Yes*** | ⚠️ **§15 → `speaking-listening-rapport-hard-conversations-and-negotiation`. Interests vs positions, BATNA** |
+| **Patterson et al., *Crucial Conversations*** | §14 → `speaking-listening-rapport-hard-conversations-and-negotiation`, §17 → `speaking-listening-rapport-hard-conversations-and-negotiation` |
+| **Rogers on listening; Motivational Interviewing (Miller & Rollnick)** | ⚠️ **§12 → `speaking-listening-rapport-hard-conversations-and-negotiation` — and MI has a real evidence base** |
 | **Cialdini, *Influence*** | ⚠️ **§18 → `speaking-persuasion-and-the-ethics-of-influence` — read alongside §19 → `speaking-persuasion-and-the-ethics-of-influence`, since it is also a manipulation manual** |
 | **Petty & Cacioppo, Elaboration Likelihood Model** | §18 → `speaking-persuasion-and-the-ethics-of-influence` |
 | **Broockman & Kalla on deep canvassing (Science, 2016)** | ⚠️ **§18 → `speaking-persuasion-and-the-ethics-of-influence`, §27.2 — durable attitude change, field experiment** |
@@ -229,9 +229,9 @@ across multiple independent published studies and I hold those more firmly.**
 | Talk is too long | ⚠️ **Cut a whole point, don't speak faster** (§4 → `speaking-what-the-field-knows-anxiety-audience-and-structure`) |
 | What goes on the slide? | ⚠️ **Not your notes. A handout is a separate document** (§8 → `speaking-language-delivery-visual-aids-and-practice`) |
 | Hostile question | ⚠️ **Answer the legitimate part calmly. The room is watching** (§9 → `speaking-language-delivery-visual-aids-and-practice`) |
-| They won't hear my feedback | ⚠️ **Behaviour not character; check the identity layer** (§14 → `speaking-listening-rapport-difficult-conversations-and-negotiation`, §16 → `speaking-listening-rapport-difficult-conversations-and-negotiation`) |
-| Conversation keeps escalating | ⚠️ **Pause. Arousal impairs the reasoning you need** (§17 → `speaking-listening-rapport-difficult-conversations-and-negotiation`) |
-| How do I actually change a mind? | ⚠️ **Listen first, then evidence. Not force** (§12 → `speaking-listening-rapport-difficult-conversations-and-negotiation`, §18 → `speaking-persuasion-and-the-ethics-of-influence`, §27.2) |
+| They won't hear my feedback | ⚠️ **Behaviour not character; check the identity layer** (§14 → `speaking-listening-rapport-hard-conversations-and-negotiation`, §16 → `speaking-listening-rapport-hard-conversations-and-negotiation`) |
+| Conversation keeps escalating | ⚠️ **Pause. Arousal impairs the reasoning you need** (§17 → `speaking-listening-rapport-hard-conversations-and-negotiation`) |
+| How do I actually change a mind? | ⚠️ **Listen first, then evidence. Not force** (§12 → `speaking-listening-rapport-hard-conversations-and-negotiation`, §18 → `speaking-persuasion-and-the-ethics-of-influence`, §27.2) |
 | Is this persuasion or manipulation? | ⚠️ **Apply the disclosure test** (§19 → `speaking-persuasion-and-the-ethics-of-influence`) |
 | Community has stalled | ⚠️ **Check onboarding and the founder bottleneck** (§21 → `speaking-groups-community-facilitation-organizing-and-conflict`) |
 | Meetings are frustrating | ⚠️ **Decide how you'll decide, before discussing** (§22 → `speaking-groups-community-facilitation-organizing-and-conflict`) |
@@ -253,11 +253,11 @@ across multiple independent published studies and I hold those more firmly.**
 - [ ] ⚠️ **Accessibility: captions, structure, visuals described** (§26 → `speaking-groups-community-facilitation-organizing-and-conflict`)
 
 ### 31.3 Before a difficult conversation
-- [ ] ⚠️ **What outcome do I actually want?** (§14 → `speaking-listening-rapport-difficult-conversations-and-negotiation`)
-- [ ] ⚠️ **What is MY contribution to this?** (§14 → `speaking-listening-rapport-difficult-conversations-and-negotiation`)
-- [ ] What might their story reasonably be? (§14 → `speaking-listening-rapport-difficult-conversations-and-negotiation`)
-- [ ] ⚠️ **Impact stated, intent not assumed** (§14 → `speaking-listening-rapport-difficult-conversations-and-negotiation`)
-- [ ] Private, unhurried, both parties functional (§14 → `speaking-listening-rapport-difficult-conversations-and-negotiation`)
+- [ ] ⚠️ **What outcome do I actually want?** (§14 → `speaking-listening-rapport-hard-conversations-and-negotiation`)
+- [ ] ⚠️ **What is MY contribution to this?** (§14 → `speaking-listening-rapport-hard-conversations-and-negotiation`)
+- [ ] What might their story reasonably be? (§14 → `speaking-listening-rapport-hard-conversations-and-negotiation`)
+- [ ] ⚠️ **Impact stated, intent not assumed** (§14 → `speaking-listening-rapport-hard-conversations-and-negotiation`)
+- [ ] Private, unhurried, both parties functional (§14 → `speaking-listening-rapport-hard-conversations-and-negotiation`)
 - [ ] ⚠️ **Am I engaging their reasoning or bypassing it?** (§19 → `speaking-persuasion-and-the-ethics-of-influence`)
 - [ ] ⚠️ **Is there a power asymmetry that changes what's fair?** (§19 → `speaking-persuasion-and-the-ethics-of-influence`)
 
@@ -265,7 +265,7 @@ across multiple independent published studies and I hold those more firmly.**
 
 ## §32. Method
 
-**§1–§26 → `speaking-what-the-field-knows-anxiety-audience-and-structure`, `speaking-language-delivery-visual-aids-and-practice`, `speaking-listening-rapport-difficult-conversations-and-negotiation`, `speaking-persuasion-and-the-ethics-of-influence`, `speaking-groups-community-facilitation-organizing-and-conflict` draws on long-established craft and on the more durable parts of the research
+**§1–§26 → `speaking-what-the-field-knows-anxiety-audience-and-structure`, `speaking-language-delivery-visual-aids-and-practice`, `speaking-listening-rapport-hard-conversations-and-negotiation`, `speaking-persuasion-and-the-ethics-of-influence`, `speaking-groups-community-facilitation-organizing-and-conflict` draws on long-established craft and on the more durable parts of the research
 literature** — **structure and comprehension, exposure for anxiety, the three-conversations
 model, interests versus positions, the tyranny of structurelessness, and the facilitation
 practices.** ⚠️ **I have tried throughout to mark which tier a claim sits in (§1 → `speaking-what-the-field-knows-anxiety-audience-and-structure`), because
@@ -276,10 +276,10 @@ and **the persuasion evidence** — ⚠️ **both chosen because they are places
 taught material is either wrong or has been overtaken, and where knowing the current state
 changes what you should actually do.**
 
-**Confidence.** **High** in §19 → `speaking-persuasion-and-the-ethics-of-influence` and §12 → `speaking-listening-rapport-difficult-conversations-and-negotiation`, which are the sections I'd most want read.
+**Confidence.** **High** in §19 → `speaking-persuasion-and-the-ethics-of-influence` and §12 → `speaking-listening-rapport-hard-conversations-and-negotiation`, which are the sections I'd most want read.
 ⚠️ **The disclosure test — would this still work if I told them exactly what I was doing? —
 is the most useful single tool here, because it converts a vague ethical unease into a
-question with an answer.** ⚠️ **And §12 → `speaking-listening-rapport-difficult-conversations-and-negotiation`'s finding that listening is not politeness but the
+question with an answer.** ⚠️ **And §12 → `speaking-listening-rapport-hard-conversations-and-negotiation`'s finding that listening is not politeness but the
 actual mechanism of durable persuasion is the thing that most changes how people behave once
 they believe it.**
 **⚠️ §24 → `speaking-groups-community-facilitation-organizing-and-conflict`'s specific bounded ask is the small practical technique with the largest effect on

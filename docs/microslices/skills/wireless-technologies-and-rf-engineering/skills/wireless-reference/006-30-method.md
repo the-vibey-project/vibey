@@ -8,7 +8,7 @@ links: []
 
 ## §30. Method
 
-**§1–§24 → `wireless-propagation-link-budget-modulation-antennas-and-spectrum`, `wireless-wifi-bluetooth-ble-nfc-and-rfid`, `wireless-thread-matter-lora-cellular-uwb-and-choosing`, `wireless-antenna-integration-certification-low-power-and-debugging`, `wireless-security-coexistence-and-positioning` rests on settled physics and mature standards** — **the link budget, free-space
+**§1–§24 → `wireless-propagation-link-budget-modulation-antennas-spectrum`, `wireless-wifi-bluetooth-ble-nfc-and-rfid`, `wireless-thread-matter-lora-cellular-uwb-and-choosing`, `wireless-antenna-integration-certification-low-power-debugging`, `wireless-security-coexistence-and-positioning` rests on settled physics and mature standards** — **the link budget, free-space
 path loss, OFDM, CSMA/CA, the GATT model, near-field coupling in NFC, and the
 certification regime.** ⚠️ **None needed verification; Friis published the transmission
 equation in 1946 and the Chu-Harrington limit on small antennas is not going to move.**
@@ -18,12 +18,12 @@ equation in 1946 and the Chu-Harrington limit on small antennas is not going to 
 FOR, the second because it puts secure ranging on the radio that is already in everything,
 which changes a real design decision.**
 
-**Confidence.** **High** in §2 → `wireless-propagation-link-budget-modulation-antennas-and-spectrum` and §4 → `wireless-propagation-link-budget-modulation-antennas-and-spectrum`, which are the sections I'd most want read.
+**Confidence.** **High** in §2 → `wireless-propagation-link-budget-modulation-antennas-spectrum` and §4 → `wireless-propagation-link-budget-modulation-antennas-spectrum`, which are the sections I'd most want read.
 ⚠️ **The link budget predicts more than any amount of protocol knowledge, and the dB
 intuition — 3 dB doubles, doubling distance costs 6 dB — is what lets you sanity-check a
-claim in your head.** ⚠️ **§4 → `wireless-propagation-link-budget-modulation-antennas-and-spectrum`'s "gain is directionality, not amplification" and "the ground
+claim in your head.** ⚠️ **§4 → `wireless-propagation-link-budget-modulation-antennas-spectrum`'s "gain is directionality, not amplification" and "the ground
 plane is part of the antenna" are the two corrections that most often prevent a product
-from being designed wrong months before anyone measures it.** **§19 → `wireless-antenna-integration-certification-low-power-and-debugging`'s point that sleep
+from being designed wrong months before anyone measures it.** **§19 → `wireless-antenna-integration-certification-low-power-debugging`'s point that sleep
 current usually dominates battery life is the one that most often saves a project.**
 
 **High** on §25.1's targets, which come from the IEEE 802.11bn PAR as reported by Samsung

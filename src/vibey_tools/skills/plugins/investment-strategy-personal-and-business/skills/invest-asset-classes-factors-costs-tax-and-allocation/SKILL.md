@@ -5,7 +5,7 @@ description: "Use when constructing or reviewing a portfolio's shape: the asset 
 
 # Investment Strategy: Asset Classes, Factors, Costs, Tax Concepts, and Asset Allocation
 
-> **Part 2 of 6** of the *Gold Standards for Investment Strategy* reference (plugin `investment-strategy-personal-and-business`), covering §6–§10. Sibling skills: `invest-foundations-risk-compounding-diversification-and-efficiency` (§0–§5), `invest-rebalancing-vehicles-accumulation-decumulation-and-behaviour` (§11–§15), `invest-business-capital-budgeting-cost-of-capital-and-valuation` (§16–§22), `invest-fraud-alternatives-and-advisor-conflicts` (§23–§25), `invest-reference` (§26–§31). Section numbers are shared across the set; a reference written as §N → `skill` points into that sibling skill.
+> **Part 2 of 6** of the *Gold Standards for Investment Strategy* reference (plugin `investment-strategy-personal-and-business`), covering §6–§10. Sibling skills: `invest-foundations-risk-compounding-diversification-efficiency` (§0–§5), `invest-rebalancing-vehicles-accumulation-decumulation-behaviour` (§11–§15), `invest-business-capital-budgeting-cost-of-capital-and-valuation` (§16–§22), `invest-fraud-alternatives-and-advisor-conflicts` (§23–§25), `invest-reference` (§26–§31). Section numbers are shared across the set; a reference written as §N → `skill` points into that sibling skill.
 >
 > **Currency:** The core findings are decades old. Two areas are genuinely live. See §26 → `invest-reference` for the active-versus-passive evidence, and private markets entering retirement accounts.
 
@@ -26,11 +26,11 @@ description: "Use when constructing or reviewing a portfolio's shape: the asset 
 > **The three ideas that organize this document:**
 > 1. **⚠️ COSTS are the only reliable input you control** (§8). **Returns are uncertain;
 >    fees are certain. Over decades the arithmetic is brutal and it compounds against you.**
-> 2. **⚠️ BEHAVIOUR dominates selection** (§15 → `invest-rebalancing-vehicles-accumulation-decumulation-and-behaviour`). **The gap between fund returns and
+> 2. **⚠️ BEHAVIOUR dominates selection** (§15 → `invest-rebalancing-vehicles-accumulation-decumulation-behaviour`). **The gap between fund returns and
 >    INVESTOR returns is real and well documented — most damage is self-inflicted through
 >    buying high and selling low, not through picking the wrong fund.**
 > 3. **⚠️ Diversification is the only thing in finance that is close to a free lunch**
->    (§4 → `invest-foundations-risk-compounding-diversification-and-efficiency`). **Everything else is a trade-off between risk, return and liquidity, and anyone
+>    (§4 → `invest-foundations-risk-compounding-diversification-efficiency`). **Everything else is a trade-off between risk, return and liquidity, and anyone
 >    offering you all three should be assumed to be hiding one.**
 
 ---
@@ -73,7 +73,7 @@ scrutiny; and factor premia can underperform for periods LONGER THAN MOST INVEST
 PATIENCE — a decade or more.**
 > **⚠️ GOTCHA — the practical problem with factor investing is not whether the factors are
 > real. It is that capturing them requires holding an underperforming strategy for a
-> decade without abandoning it** (§15 → `invest-rebalancing-vehicles-accumulation-decumulation-and-behaviour`), **and paying higher fees to do so** (§8).
+> decade without abandoning it** (§15 → `invest-rebalancing-vehicles-accumulation-decumulation-behaviour`), **and paying higher fees to do so** (§8).
 > **⚠️ Most investors who tilt end up selling the tilt at the bottom, which converts a
 > theoretical premium into a realized loss.**
 
@@ -101,7 +101,7 @@ PATIENCE — a decade or more.**
    and not the downside. ⚠️ Check for high-water marks and hurdles
 ```
 **⚠️ Where paying more can be justified**: ⚠️ **genuine planning and behavioural coaching
-(§15 → `invest-rebalancing-vehicles-accumulation-decumulation-and-behaviour`, §25 → `invest-fraud-alternatives-and-advisor-conflicts`), tax and estate complexity, and access to markets you cannot reach otherwise.**
+(§15 → `invest-rebalancing-vehicles-accumulation-decumulation-behaviour`, §25 → `invest-fraud-alternatives-and-advisor-conflicts`), tax and estate complexity, and access to markets you cannot reach otherwise.**
 **⚠️ Where it usually isn't: paying for stock selection** (§26.1 → `invest-reference`).
 
 ---
@@ -120,7 +120,7 @@ real advantage in taxable accounts beyond their lower fees.**
 **⚠️ Tax-loss harvesting** is real and constrained by wash-sale-type rules.
 > **⚠️ GOTCHA — do not let the tax tail wag the investment dog.** ⚠️ **Refusing to sell a
 > dangerously concentrated position because of the tax bill has destroyed more wealth than
-> the tax would have** (§4 → `invest-foundations-risk-compounding-diversification-and-efficiency`). **⚠️ And any structure whose primary purpose is tax avoidance
+> the tax would have** (§4 → `invest-foundations-risk-compounding-diversification-efficiency`). **⚠️ And any structure whose primary purpose is tax avoidance
 > rather than a real economic purpose deserves scrutiny** (§23 → `invest-fraud-alternatives-and-advisor-conflicts`).
 
 ---

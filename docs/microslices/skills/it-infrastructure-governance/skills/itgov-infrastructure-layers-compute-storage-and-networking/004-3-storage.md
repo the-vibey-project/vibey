@@ -21,6 +21,6 @@ either — they usually share the same storage and the same fate**), **replicati
 (sync vs async)**, **deduplication and compression.**
 **⚠️ Storage permissions are where file-level access governance actually lives**, and
 **NTFS/share permission interaction, inheritance, and the accumulated mess of nested
-groups is a perennial audit finding** (§7 → `itgov-directory-authentication-authorization-and-privileged-access`).
+groups is a perennial audit finding** (§7 → `itgov-directory-authn-authz-and-privileged-access`).
 
 ---

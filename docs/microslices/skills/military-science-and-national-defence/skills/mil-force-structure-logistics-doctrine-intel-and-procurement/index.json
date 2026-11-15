@@ -1,0 +1,70 @@
+[
+  {
+    "id": "skill-13-force-structure-5266be8997",
+    "purpose": "13 force structure",
+    "source": "src/vibey_tools/skills/plugins/military-science-and-national-defence/skills/mil-force-structure-logistics-doctrine-intel-and-procurement/SKILL.md",
+    "output": "docs/microslices/skills/military-science-and-national-defence/skills/mil-force-structure-logistics-doctrine-intel-and-procurement/001-13-force-structure.md",
+    "requires": [],
+    "links": [
+      "skill-14-logistics-906bf26ba2"
+    ]
+  },
+  {
+    "id": "skill-14-logistics-906bf26ba2",
+    "purpose": "14 logistics",
+    "source": "src/vibey_tools/skills/plugins/military-science-and-national-defence/skills/mil-force-structure-logistics-doctrine-intel-and-procurement/SKILL.md",
+    "output": "docs/microslices/skills/military-science-and-national-defence/skills/mil-force-structure-logistics-doctrine-intel-and-procurement/002-14-logistics.md",
+    "requires": [
+      "skill-13-force-structure-5266be8997"
+    ],
+    "links": [
+      "skill-15-doctrine-and-institutional-learning-c13fc9e7c5"
+    ]
+  },
+  {
+    "id": "skill-15-doctrine-and-institutional-learning-c13fc9e7c5",
+    "purpose": "15 doctrine and institutional learning",
+    "source": "src/vibey_tools/skills/plugins/military-science-and-national-defence/skills/mil-force-structure-logistics-doctrine-intel-and-procurement/SKILL.md",
+    "output": "docs/microslices/skills/military-science-and-national-defence/skills/mil-force-structure-logistics-doctrine-intel-and-procurement/003-15-doctrine-and-institutional-learning.md",
+    "requires": [
+      "skill-14-logistics-906bf26ba2"
+    ],
+    "links": [
+      "skill-16-intelligence-d9ba3b3a8e"
+    ]
+  },
+  {
+    "id": "skill-16-intelligence-d9ba3b3a8e",
+    "purpose": "16 intelligence",
+    "source": "src/vibey_tools/skills/plugins/military-science-and-national-defence/skills/mil-force-structure-logistics-doctrine-intel-and-procurement/SKILL.md",
+    "output": "docs/microslices/skills/military-science-and-national-defence/skills/mil-force-structure-logistics-doctrine-intel-and-procurement/004-16-intelligence.md",
+    "requires": [
+      "skill-15-doctrine-and-institutional-learning-c13fc9e7c5"
+    ],
+    "links": [
+      "skill-17-command-and-control-77b699fe69"
+    ]
+  },
+  {
+    "id": "skill-17-command-and-control-77b699fe69",
+    "purpose": "17 command and control",
+    "source": "src/vibey_tools/skills/plugins/military-science-and-national-defence/skills/mil-force-structure-logistics-doctrine-intel-and-procurement/SKILL.md",
+    "output": "docs/microslices/skills/military-science-and-national-defence/skills/mil-force-structure-logistics-doctrine-intel-and-procurement/005-17-command-and-control.md",
+    "requires": [
+      "skill-16-intelligence-d9ba3b3a8e"
+    ],
+    "links": [
+      "skill-18-defence-procurement-ab838e67ba"
+    ]
+  },
+  {
+    "id": "skill-18-defence-procurement-ab838e67ba",
+    "purpose": "18 defence procurement",
+    "source": "src/vibey_tools/skills/plugins/military-science-and-national-defence/skills/mil-force-structure-logistics-doctrine-intel-and-procurement/SKILL.md",
+    "output": "docs/microslices/skills/military-science-and-national-defence/skills/mil-force-structure-logistics-doctrine-intel-and-procurement/006-18-defence-procurement.md",
+    "requires": [
+      "skill-17-command-and-control-77b699fe69"
+    ],
+    "links": []
+  }
+]

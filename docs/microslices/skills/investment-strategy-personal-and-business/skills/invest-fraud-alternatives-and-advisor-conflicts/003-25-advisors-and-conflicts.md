@@ -22,6 +22,6 @@ links: []
 ```
 **⚠️ What good advice actually delivers**: ⚠️ **planning, tax and estate coordination,
 insurance review, and — most valuably — ⚠️ stopping you doing something stupid in a
-crisis** (§15 → `invest-rebalancing-vehicles-accumulation-decumulation-and-behaviour`). **⚠️ Not stock selection.**
+crisis** (§15 → `invest-rebalancing-vehicles-accumulation-decumulation-behaviour`). **⚠️ Not stock selection.**
 **⚠️ Verify credentials and registration independently**, and ⚠️ **be alert to §23's
 patterns even from licensed people.**

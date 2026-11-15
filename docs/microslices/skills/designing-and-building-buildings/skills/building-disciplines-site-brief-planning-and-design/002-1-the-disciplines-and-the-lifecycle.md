@@ -25,7 +25,7 @@ links: ["skill-2-site-and-ground-e12dfe25bd"]
 ```
 **⚠️ The lifecycle**: ⚠️ **feasibility → concept → schematic → design development →
 construction documents → tender → construction → commissioning → handover → operation →
-eventually adaptation or demolition** (§22 → `building-site-safety-commissioning-retrofit-and-why-projects-fail`).
+eventually adaptation or demolition** (§22 → `building-site-safety-commissioning-retrofit-and-project-failure`).
 > **⚠️ GOTCHA — the cost-influence curve is the single most important management fact in
 > this domain.** ⚠️ **The ability to influence cost is highest at the start and collapses
 > as design progresses, while expenditure does the opposite.** **⚠️ By the time

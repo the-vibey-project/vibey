@@ -8,7 +8,7 @@ links: []
 
 ## §31. Method
 
-**§1–§25 → `mil-theory-clausewitz-sun-tzu-and-sea-and-air-power`, `mil-levels-of-war-principles-and-decision-cycles`, `mil-deterrence-nuclear-strategy-alliances-and-grand-strategy`, `mil-force-structure-logistics-doctrine-intelligence-and-procurement`, `mil-modern-conflict-irregular-warfare-resilience-and-the-law` rests on an established academic and professional literature** — **Clausewitz and
+**§1–§25 → `mil-theory-clausewitz-sun-tzu-and-sea-and-air-power`, `mil-levels-of-war-principles-and-decision-cycles`, `mil-deterrence-nuclear-strategy-alliances-and-grand-strategy`, `mil-force-structure-logistics-doctrine-intel-and-procurement`, `mil-modern-conflict-irregular-warfare-resilience-and-the-law` rests on an established academic and professional literature** — **Clausewitz and
 the strategic canon, Schelling on deterrence and coercion, the levels of war, the logistics
 literature, military innovation studies, civil-military relations theory, and international
 humanitarian law.** ⚠️ **None needed verification; *On War* is from 1832 and Schelling's
@@ -21,7 +21,7 @@ whether a country is defended well are the ones in Parts II to IV, and they are 
 ones public discussion skips in favour of hardware.**
 
 **Two searches were run in August 2026**, on **Ukraine's demonstrated lessons** and
-**European rearmament** — ⚠️ **the first because §15 → `mil-force-structure-logistics-doctrine-intelligence-and-procurement`'s institutional-learning problem is
+**European rearmament** — ⚠️ **the first because §15 → `mil-force-structure-logistics-doctrine-intel-and-procurement`'s institutional-learning problem is
 being tested in public and the answer is genuinely disputed, the second because §11 → `mil-deterrence-nuclear-strategy-alliances-and-grand-strategy`'s
 burden-sharing argument has become a concrete commitment with measurable milestones.**
 

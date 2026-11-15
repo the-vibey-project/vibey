@@ -21,12 +21,12 @@ links: ["skill-28-concepts-and-figures-aa17384069"]
 | Compellence is deterrence in reverse | ⚠️ **Much harder — it requires visible compliance** (§8 → `mil-deterrence-nuclear-strategy-alliances-and-grand-strategy`) |
 | Nuclear deterrence has worked reliably | ⚠️ **Compatible with having been repeatedly lucky** (§9 → `mil-deterrence-nuclear-strategy-alliances-and-grand-strategy`) |
 | Alliances mainly aggregate power | ⚠️ **They also constrain members. Abandonment vs entrapment** (§11 → `mil-deterrence-nuclear-strategy-alliances-and-grand-strategy`) |
-| Support troops are overhead | ⚠️ **They're what makes combat power sustainable** (§13 → `mil-force-structure-logistics-doctrine-intelligence-and-procurement`, §14 → `mil-force-structure-logistics-doctrine-intelligence-and-procurement`) |
-| Wars are decided by weapons | ⚠️ **Protracted wars are decided by sustainment** (§14 → `mil-force-structure-logistics-doctrine-intelligence-and-procurement`) |
-| Militaries learn from experience | ⚠️ **Identifying a lesson ≠ changing the institution** (§15 → `mil-force-structure-logistics-doctrine-intelligence-and-procurement`, §26.1) |
-| Intelligence failure means missing information | ⚠️ **Usually failure to believe available warning** (§16 → `mil-force-structure-logistics-doctrine-intelligence-and-procurement`) |
-| Better comms enable better command | ⚠️ **They enable micromanagement from a distance** (§17 → `mil-force-structure-logistics-doctrine-intelligence-and-procurement`) |
-| Procurement overruns are mismanagement | ⚠️ **Structural — monopsony, requirements creep, politics** (§18 → `mil-force-structure-logistics-doctrine-intelligence-and-procurement`) |
+| Support troops are overhead | ⚠️ **They're what makes combat power sustainable** (§13 → `mil-force-structure-logistics-doctrine-intel-and-procurement`, §14 → `mil-force-structure-logistics-doctrine-intel-and-procurement`) |
+| Wars are decided by weapons | ⚠️ **Protracted wars are decided by sustainment** (§14 → `mil-force-structure-logistics-doctrine-intel-and-procurement`) |
+| Militaries learn from experience | ⚠️ **Identifying a lesson ≠ changing the institution** (§15 → `mil-force-structure-logistics-doctrine-intel-and-procurement`, §26.1) |
+| Intelligence failure means missing information | ⚠️ **Usually failure to believe available warning** (§16 → `mil-force-structure-logistics-doctrine-intel-and-procurement`) |
+| Better comms enable better command | ⚠️ **They enable micromanagement from a distance** (§17 → `mil-force-structure-logistics-doctrine-intel-and-procurement`) |
+| Procurement overruns are mismanagement | ⚠️ **Structural — monopsony, requirements creep, politics** (§18 → `mil-force-structure-logistics-doctrine-intel-and-procurement`) |
 | Cyber will produce a decisive strike | ⚠️ **Predicted for 20+ years. It's a shaping contest** (§20 → `mil-modern-conflict-irregular-warfare-resilience-and-the-law`) |
 | Microtargeting drives influence ops | ⚠️ **Measured effects are small; exhaustion is the aim** (§21 → `mil-modern-conflict-irregular-warfare-resilience-and-the-law`) |
 | Counterinsurgency is about territory | ⚠️ **Population and legitimacy — and outsiders can't supply it** (§22 → `mil-modern-conflict-irregular-warfare-resilience-and-the-law`) |

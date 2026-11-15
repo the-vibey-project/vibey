@@ -8,7 +8,7 @@ links: []
 
 ## §32. Method
 
-**§1–§26 → `speaking-what-the-field-knows-anxiety-audience-and-structure`, `speaking-language-delivery-visual-aids-and-practice`, `speaking-listening-rapport-difficult-conversations-and-negotiation`, `speaking-persuasion-and-the-ethics-of-influence`, `speaking-groups-community-facilitation-organizing-and-conflict` draws on long-established craft and on the more durable parts of the research
+**§1–§26 → `speaking-what-the-field-knows-anxiety-audience-and-structure`, `speaking-language-delivery-visual-aids-and-practice`, `speaking-listening-rapport-hard-conversations-and-negotiation`, `speaking-persuasion-and-the-ethics-of-influence`, `speaking-groups-community-facilitation-organizing-and-conflict` draws on long-established craft and on the more durable parts of the research
 literature** — **structure and comprehension, exposure for anxiety, the three-conversations
 model, interests versus positions, the tyranny of structurelessness, and the facilitation
 practices.** ⚠️ **I have tried throughout to mark which tier a claim sits in (§1 → `speaking-what-the-field-knows-anxiety-audience-and-structure`), because
@@ -19,10 +19,10 @@ and **the persuasion evidence** — ⚠️ **both chosen because they are places
 taught material is either wrong or has been overtaken, and where knowing the current state
 changes what you should actually do.**
 
-**Confidence.** **High** in §19 → `speaking-persuasion-and-the-ethics-of-influence` and §12 → `speaking-listening-rapport-difficult-conversations-and-negotiation`, which are the sections I'd most want read.
+**Confidence.** **High** in §19 → `speaking-persuasion-and-the-ethics-of-influence` and §12 → `speaking-listening-rapport-hard-conversations-and-negotiation`, which are the sections I'd most want read.
 ⚠️ **The disclosure test — would this still work if I told them exactly what I was doing? —
 is the most useful single tool here, because it converts a vague ethical unease into a
-question with an answer.** ⚠️ **And §12 → `speaking-listening-rapport-difficult-conversations-and-negotiation`'s finding that listening is not politeness but the
+question with an answer.** ⚠️ **And §12 → `speaking-listening-rapport-hard-conversations-and-negotiation`'s finding that listening is not politeness but the
 actual mechanism of durable persuasion is the thing that most changes how people behave once
 they believe it.**
 **⚠️ §24 → `speaking-groups-community-facilitation-organizing-and-conflict`'s specific bounded ask is the small practical technique with the largest effect on

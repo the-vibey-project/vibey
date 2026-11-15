@@ -5,7 +5,7 @@ description: "Use when preparing a talk or judging speaking advice: what this fi
 
 # Speaking, Influence and Community: What This Field Actually Knows, Speech Anxiety, Audience and Purpose, Structure, and Openings and Closings
 
-> **Part 1 of 6** of the *Public Speaking, Influence and Community* reference (plugin `speaking-influence-and-community`), covering §0–§5. Sibling skills: `speaking-language-delivery-visual-aids-and-practice` (§6–§11), `speaking-listening-rapport-difficult-conversations-and-negotiation` (§12–§17), `speaking-persuasion-and-the-ethics-of-influence` (§18–§19), `speaking-groups-community-facilitation-organizing-and-conflict` (§20–§26), `speaking-reference` (§27–§32). Section numbers are shared across the set; a reference written as §N → `skill` points into that sibling skill.
+> **Part 1 of 6** of the *Public Speaking, Influence and Community* reference (plugin `speaking-influence-and-community`), covering §0–§5. Sibling skills: `speaking-language-delivery-visual-aids-and-practice` (§6–§11), `speaking-listening-rapport-hard-conversations-and-negotiation` (§12–§17), `speaking-persuasion-and-the-ethics-of-influence` (§18–§19), `speaking-groups-community-facilitation-organizing-and-conflict` (§20–§26), `speaking-reference` (§27–§32). Section numbers are shared across the set; a reference written as §N → `skill` points into that sibling skill.
 >
 > **Currency:** The craft is old and stable. Two areas have moved. See §27 → `speaking-reference` for the status of the famous body-language claims, and what the persuasion evidence now shows.
 
@@ -51,12 +51,12 @@ description: "Use when preparing a talk or judging speaking advice: what this fi
 | Q&A and hostility | §9 → `speaking-language-delivery-visual-aids-and-practice` |
 | Formats | §10 → `speaking-language-delivery-visual-aids-and-practice` |
 | Practice and feedback | §11 → `speaking-language-delivery-visual-aids-and-practice` |
-| **⚠️ Listening** | **§12 → `speaking-listening-rapport-difficult-conversations-and-negotiation`** |
-| Rapport and trust | §13 → `speaking-listening-rapport-difficult-conversations-and-negotiation` |
-| **⚠️ Difficult conversations** | **§14 → `speaking-listening-rapport-difficult-conversations-and-negotiation`** |
-| Negotiation | §15 → `speaking-listening-rapport-difficult-conversations-and-negotiation` |
-| Feedback | §16 → `speaking-listening-rapport-difficult-conversations-and-negotiation` |
-| Conflict | §17 → `speaking-listening-rapport-difficult-conversations-and-negotiation` |
+| **⚠️ Listening** | **§12 → `speaking-listening-rapport-hard-conversations-and-negotiation`** |
+| Rapport and trust | §13 → `speaking-listening-rapport-hard-conversations-and-negotiation` |
+| **⚠️ Difficult conversations** | **§14 → `speaking-listening-rapport-hard-conversations-and-negotiation`** |
+| Negotiation | §15 → `speaking-listening-rapport-hard-conversations-and-negotiation` |
+| Feedback | §16 → `speaking-listening-rapport-hard-conversations-and-negotiation` |
+| Conflict | §17 → `speaking-listening-rapport-hard-conversations-and-negotiation` |
 | **⚠️ What actually persuades** | **§18 → `speaking-persuasion-and-the-ethics-of-influence`** |
 | **⚠️ The ethics of influence** | **§19 → `speaking-persuasion-and-the-ethics-of-influence`** |
 | How groups work | §20 → `speaking-groups-community-facilitation-organizing-and-conflict` |
