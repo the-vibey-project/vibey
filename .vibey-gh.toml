@@ -216,12 +216,18 @@ enabled = true
 required_checks  = [
   "gates", "Lint and static gates", "No-loss property suite (10,000 examples)",
   "VS Code extension (ubuntu-latest)", "VS Code extension (macos-latest)",
-  "No skip markers",
+  "No skip markers", "CI result",
 ]
 required_approvals = 1
 # The owner in .github/CODEOWNERS must approve a change to a protected path.
 require_code_owner_review = true
-bypass_actors    = ["OrganizationAdmin", "RepositoryRole:5"]
+# No bypass on develop (2026-11-15, the operator's decision): everything lands through the
+# merge queue, which proves a merge green against the tip it joins, so no seat may skip it.
+# The operator is still the required approver; what is gone is the seat that could merge past
+# a red or pending check. `main` keeps its bypass below: a promotion is one controlled rebase
+# and the queue is off there. "CI result" is the aggregate job in ci.yml, red when any job is
+# red, cancelled or never ran.
+bypass_actors    = []
 # No `minimum_coverage` here, on purpose (2026-11-12). GitHub's code-coverage rule is
 # evaluated on every push to the branch, and the merge queue pushes a commit, not a pull
 # request: the rule suite for every queue push read "Code coverage checks require a pull
