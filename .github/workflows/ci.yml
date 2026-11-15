@@ -1547,8 +1547,8 @@ jobs:
   # required on develop, so without this a job outside that set can fail and still merge.
   # `if: always()` is what makes it run (and report) after a failed or cancelled need,
   # instead of being skipped along with them: a SKIPPED required check counts as passing,
-  # so `!cancelled()` would let a cancelled run leave this one skipped and green. Nothing is
-  # required on it until the ruleset names it; meanwhile it reports and gates nothing.
+  # so `!cancelled()` would let a cancelled run leave this one skipped and green. It is a
+  # required check on develop ([rulesets.integration] in .vibey-gh.toml), so every job above counts.
   ci-result:
     name: CI result
     if: always()
