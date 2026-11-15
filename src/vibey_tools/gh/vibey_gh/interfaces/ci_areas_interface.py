@@ -23,12 +23,15 @@ class AreaDecision:
     declaration does not recognise -- and `reasons` names each, for a person to read.
     `owners` are the matrix-row owners (a package directory) the changed paths selected; an
     empty set means no narrowing is known and every row of the tier is selected.
+    `skip` is True only for a scheduled run whose commit is the last green one's: there is
+    nothing new to prove, so no area, no row and the `skip` tier (`CiAreasInterface.unchanged`).
     """
 
     areas: frozenset[str]
     full: bool
     reasons: tuple[str, ...]
     owners: frozenset[str] = frozenset()
+    skip: bool = False
 
 
 @runtime_checkable
@@ -53,6 +56,21 @@ class CiAreasInterface(Protocol):
 
     def full_decision(self, *reasons: str) -> AreaDecision:
         """The all-full decision: every declared area, `full`, with the reasons given."""
+        ...
+
+    @property
+    def skip_unchanged_events(self) -> tuple[str, ...]:
+        """The events that may skip when their commit is the last green run's (`[events]
+        skip_unchanged`); never one whose checks gate a merge, which is refused at load."""
+        ...
+
+    def unchanged(self, event: str, head: str, last_green: str) -> tuple[str, ...]:
+        """Why this run may skip -- `event` may skip and `head` IS `last_green`, both full
+        commit ids -- or empty, which runs it. A position in the data, never a timestamp."""
+        ...
+
+    def skip_decision(self, *reasons: str) -> AreaDecision:
+        """The skip decision: no area, no row, not `full`, tier `skip`, with the reasons given."""
         ...
 
     def rows(self, job: str, tier: str) -> list[dict[str, Any]]:
@@ -90,8 +108,12 @@ class CiAreasCommandInterface(Protocol):
         base_ref: str,
         fmt: str,
         paths: tuple[Path, Path, Path],
+        last_green: str = "",
     ) -> int:
-        """Print the decision for `base...head`; any doubt prints the full defaults."""
+        """Print the decision for `base...head`; any doubt prints the full defaults.
+
+        `last_green` is the head commit of the last green run of a skippable event: when it
+        is `head` the skip decision is printed and no diff is computed."""
         ...
 
     def matrix(self, *, job: str, tier: str, paths: tuple[Path, Path, Path]) -> int:

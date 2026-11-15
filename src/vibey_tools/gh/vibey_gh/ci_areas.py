@@ -19,6 +19,12 @@ Globs are `*` (anything but `/`), `**` (anything, crossing `/`) and `?` (one cha
 `/`), anchored to the whole path. A bare `*.md` therefore matches a root file only, which is
 why the root markdown is listed by exact name.
 
+The one decision that runs LESS than the diff asks for is the nightly's skip: a run of an
+event declared in `[events] skip_unchanged` (the schedule) whose commit is the head of the
+last green run of that event (`--last-green`, read by `vibey-gh ci-nightly last-green`) has
+nothing new to prove, and prints the `skip` tier. Both must be full commit ids, and an event
+whose checks gate a merge can never be declared skippable.
+
 A matrix job whose rows have an owner (`owner_key`, a package directory) selects, for a
 changed path, the owning row AND every row that installs it from the tree. The edges are not
 declared: they are read from each row's own `install` string (`pip install -e <path>`,
@@ -55,6 +61,13 @@ MATRICES_FILE = Path(".github/ci-matrices.toml")
 _DEFAULT_FULL_EVENTS = ("merge_group", "workflow_dispatch", "schedule")
 _DEFAULT_DIFF_EVENTS = ("pull_request", "push")
 _DEFAULT_FULL_BASE_REFS = ("main",)
+# SP1-B Task 4: the nightly is skipped when its commit is the last green nightly's.
+_DEFAULT_SKIP_UNCHANGED_EVENTS = ("schedule",)
+# Not a default and not configurable: the floor under `skip_unchanged`. The checks these
+# events run gate a merge, and a skipped required check passes on GitHub, so no map may
+# ever declare one of them skippable.
+_NEVER_SKIPPED = ("pull_request", "pull_request_target", "push", "merge_group")
+_COMMIT = re.compile(r"[0-9a-f]{40}")
 # How many paths one kind of reason names before it says "and N more". It only caps the
 # length of a stderr message and the job summary; it never changes a decision (every path
 # still counts toward `full`).
@@ -85,6 +98,15 @@ class CiAreas(CiAreasInterface):
         self._full_base_refs = tuple(
             self._names(events, "full_base_refs", where, _DEFAULT_FULL_BASE_REFS)
         )
+        self._skip_events = tuple(
+            self._names(events, "skip_unchanged", where, _DEFAULT_SKIP_UNCHANGED_EVENTS)
+        )
+        for event in self._skip_events:
+            if event in _NEVER_SKIPPED:
+                raise ValueError(
+                    f"{where} `skip_unchanged` names {event}, whose checks gate a merge: "
+                    "a skipped required check passes, so it can never be skipped"
+                )
         # Validated here, at load, so a broken map is found before a decision depends on it.
         # Every top-level entry is a job: a `[[tools]]` where `[tools]` belongs is refused,
         # not dropped.
@@ -352,6 +374,28 @@ class CiAreas(CiAreasInterface):
     def full_decision(self, *reasons: str) -> AreaDecision:
         return AreaDecision(frozenset(self._areas), True, tuple(reasons))
 
+    @property
+    def skip_unchanged_events(self) -> tuple[str, ...]:
+        return self._skip_events
+
+    def unchanged(self, event: str, head: str, last_green: str) -> tuple[str, ...]:
+        # Both must be full commit ids: an abbreviation, a ref or an empty value is a doubt,
+        # and a doubt runs the nightly.
+        if event not in self._skip_events:
+            return ()
+        if not (_COMMIT.fullmatch(head) and _COMMIT.fullmatch(last_green)):
+            return ()
+        if head != last_green:
+            return ()
+        reason = (
+            f"the {event} run's commit {head[:12]} is the last green {event} run's: "
+            "nothing changed since, so nothing runs"
+        )
+        return (reason,)
+
+    def skip_decision(self, *reasons: str) -> AreaDecision:
+        return AreaDecision(frozenset(), False, tuple(reasons), skip=True)
+
     def _matched(self, path: str) -> set[str]:
         return {name for name, globs in self._areas.items() if self._first(globs, path)}
 
@@ -429,6 +473,8 @@ class CiAreas(CiAreasInterface):
         if decision.full:
             return {"include": self.rows(job, "full")}
         rows = self.rows(job, "pr")
+        if decision.skip:
+            return {"include": []}
         spec = self._jobs[job]
         triggers = set(spec.get("areas", ())) | set(spec.get("select_on", ()))
         if not triggers & decision.areas:
@@ -448,7 +494,7 @@ class CiAreas(CiAreasInterface):
         out = {
             "areas": json.dumps(areas, separators=compact),
             "full": "true" if decision.full else "false",
-            "tier": "full" if decision.full else "pr",
+            "tier": "full" if decision.full else "skip" if decision.skip else "pr",
         }
         matrices: dict[str, str] = {}
         for job, spec in self._jobs.items():
@@ -501,6 +547,14 @@ class CiAreasCommand(CiAreasCommandInterface):
             "--base-ref", default="", help="the branch the change merges into or was pushed to"
         )
         parser.add_argument(
+            "--last-green",
+            default="",
+            help=(
+                "the head commit of the last green run of this event (`vibey-gh ci-nightly "
+                "last-green`); a skippable event whose --head is that commit runs nothing"
+            ),
+        )
+        parser.add_argument(
             "--format",
             choices=("github-output", "json"),
             default="github-output",
@@ -523,6 +577,7 @@ class CiAreasCommand(CiAreasCommandInterface):
             base_ref=args.base_ref,
             fmt=args.format,
             paths=cls._paths(args),
+            last_green=args.last_green,
         )
 
     @classmethod
@@ -549,6 +604,7 @@ class CiAreasCommand(CiAreasCommandInterface):
         base_ref: str,
         fmt: str,
         paths: tuple[Path, Path, Path],
+        last_green: str = "",
     ) -> int:
         """Print the decision for the diff `base...head`; any doubt prints the full defaults."""
         root, areas_path, matrices_path = paths
@@ -557,6 +613,12 @@ class CiAreasCommand(CiAreasCommandInterface):
         except Exception as exc:  # noqa: BLE001 - a broken map must widen, never fail the job
             print(f"vibey-gh: ci-areas: {exc}", file=sys.stderr)
             self._emit(self._fallback(areas_path, matrices_path), (str(exc),), fmt)
+            return 0
+        unchanged = ci.unchanged(event, head, last_green)
+        if unchanged:
+            for reason in unchanged:
+                print(f"vibey-gh: ci-areas: skip tier: {reason}", file=sys.stderr)
+            self._emit(ci.outputs(ci.skip_decision(*unchanged)), unchanged, fmt)
             return 0
         reasons = ci.gate(event, base_ref)
         if reasons:
