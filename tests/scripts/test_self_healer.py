@@ -243,11 +243,14 @@ def test_the_documentation_lane_is_the_same_runner_with_its_own_table() -> None:
     config = sh.settings(Path(__file__).resolve().parents[2], "docs_updater")
     assert config["prompt"] == "docs"
     names = [r["name"] for r in config["repair"]]
-    assert names[0].startswith("paper figures")
-    assert any("{integration_sha}" in part for part in config["repair"][0]["argv"])
+    # The release ledger is synced first, so the figures are drawn from a ledger that is current.
+    assert names[0].startswith("paper release ledger")
+    assert names[1].startswith("paper figures")
+    assert any("{integration_sha}" in part for part in config["repair"][1]["argv"])
     docs = sh.SelfHealer(FakeForge([]), FakeRunner(), config, Path("/repo"))
     for allowed in (
         "docs/paper.md",
+        "docs/paper_releases.toml",
         "docs/llms.txt",
         "README.md",
         "src/vibey_tools/gh/docs/cli.md",
