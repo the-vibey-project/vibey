@@ -1014,7 +1014,7 @@ wheels = [
 
 [[package]]
 name = "claudeloop"
-version = "0.3.1"
+version = "0.4.0"
 source = { editable = "src/vibey_runners/claude" }
 dependencies = [
     { name = "anthropic" },
@@ -1092,7 +1092,7 @@ wheels = [
 
 [[package]]
 name = "codexloop"
-version = "0.3.1"
+version = "0.4.0"
 source = { editable = "src/vibey_runners/codex" }
 dependencies = [
     { name = "anyio" },
@@ -4453,7 +4453,7 @@ wheels = [
 
 [[package]]
 name = "qwenloop"
-version = "0.3.1"
+version = "0.4.0"
 source = { editable = "src/vibey_runners/qwen" }
 dependencies = [
     { name = "aio-pika" },
@@ -5288,7 +5288,7 @@ wheels = [
 
 [[package]]
 name = "vibey-bootstrap"
-version = "0.3.1"
+version = "0.4.0"
 source = { editable = "src/vibey_tools/bootstrap" }
 dependencies = [
     { name = "aio-pika" },
@@ -5536,7 +5536,7 @@ provides-extras = ["dev", "test", "docs", "alerts", "health", "fastapi", "heartb
 
 [[package]]
 name = "vibey-engine"
-version = "0.3.1"
+version = "0.4.0"
 source = { editable = "." }
 dependencies = [
     { name = "aio-pika" },
@@ -5728,7 +5728,7 @@ provides-extras = ["operator", "skills", "azure", "bootstrap-all", "hub", "voice
 
 [[package]]
 name = "vibey-gh"
-version = "0.3.1"
+version = "0.4.0"
 source = { editable = "src/vibey_tools/gh" }
 
 [package.optional-dependencies]
@@ -5758,7 +5758,7 @@ provides-extras = ["dev"]
 
 [[package]]
 name = "vibey-runners-common"
-version = "0.3.1"
+version = "0.4.0"
 source = { editable = "src/vibey_runners/common" }
 
 [package.optional-dependencies]
