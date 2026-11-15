@@ -39,6 +39,7 @@ from vibey_gh.approval_check import ApprovalCheck
 from vibey_gh.branch_health import BranchHealth
 from vibey_gh.changelog import Changelog
 from vibey_gh.ci_areas import CiAreasCommand
+from vibey_gh.ci_nightly import CiNightly
 from vibey_gh.config import GhConfig, load_config
 from vibey_gh.contributor_setup import ContributorSetup
 from vibey_gh.fallback_pin import FallbackPinResolver
@@ -3084,6 +3085,12 @@ def main(argv: list[str] | None = None) -> int:
         help="print the full or pull-request rows of one CI matrix job from the declared map",
     )
     CiAreasCommand.declare_matrix(cm).set_defaults(func=CiAreasCommand.dispatch_matrix)
+
+    cn = sub.add_parser(
+        "ci-nightly",
+        help="the nightly full CI run: its last-green watermark and its red tracking issue",
+    )
+    CiNightly.declare(cn).set_defaults(func=CiNightly.dispatch)
 
     sm = sub.add_parser(
         "skip-marker-check",

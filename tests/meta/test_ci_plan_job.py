@@ -175,8 +175,12 @@ def test_the_jobs_read_the_plans_outputs_and_never_its_result() -> None:
         "image",
         "chart",
         "cluster-smoke",
+        # The nightly's two (SP1-B Task 4, tests/meta/test_ci_nightly.py): `lint` reads `tier`
+        # on a schedule only, and `nightly-report` runs on a schedule only.
+        "lint",
+        "nightly-report",
     }
-    assert "gates" not in consumers and "lint" not in consumers and "uv-lock" not in consumers
+    assert "gates" not in consumers and "uv-lock" not in consumers
 
 
 # --- the shell of the `vibey-gh ci-areas` step, executed -----------------------------------
@@ -259,7 +263,21 @@ CASES: list[tuple[str, dict[str, str], list[str]]] = [
         ["ci-areas", "--event", "merge_group", "--base", "b3", "--head", "h3"],
     ),
     ("workflow_dispatch", {}, ["ci-areas", "--event", "workflow_dispatch"]),
-    ("schedule", {}, ["ci-areas", "--event", "schedule"]),
+    (
+        "schedule",
+        {"PUSH_AFTER": "h5", "PUSH_REF_NAME": "develop", "LAST_GREEN": "g5"},
+        [
+            "ci-areas",
+            "--event",
+            "schedule",
+            "--head",
+            "h5",
+            "--base-ref",
+            "develop",
+            "--last-green",
+            "g5",
+        ],
+    ),
 ]
 
 
@@ -343,3 +361,4 @@ def test_the_cli_step_reads_every_github_value_from_env() -> None:
     assert env["PUSH_REF_NAME"] == "${{ github.ref_name }}"
     assert env["MQ_BASE_SHA"] == "${{ github.event.merge_group.base_sha }}"
     assert env["MQ_HEAD_SHA"] == "${{ github.event.merge_group.head_sha }}"
+    assert env["LAST_GREEN"] == "${{ steps.watermark.outputs.last_green }}"

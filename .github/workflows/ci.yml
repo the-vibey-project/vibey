@@ -13,6 +13,16 @@ on:
   # queue that rejects everything, for a reason nothing in the pull request explains
   # (ADR-0036).
   merge_group:
+  # The nightly full run (SP1-B Task 4). A pull request into develop runs only what its diff
+  # can affect, on a small matrix; every night the FULL matrix runs against develop's tip, so a
+  # row the pull-request tier dropped is still proven daily (`schedule` is a full-tier event in
+  # .github/ci-areas.toml). GitHub runs a cron only on the DEFAULT branch, which is develop:
+  # that is what makes this the integration branch's tip. 06:17 UTC, off the hour; the
+  # release-binaries nightly runs at 02:33. The `plan` job skips it when the tip is the head of
+  # the last GREEN nightly (`vibey-gh ci-nightly last-green`), and `nightly-report` keeps one
+  # issue open while it is red. Nothing in this workflow publishes anything.
+  schedule:
+    - cron: "17 6 * * *"
 
 # A superseded pull-request run is measurement nobody will ever read. Over the hundred CI
 # runs before this line was written, thirteen kept going after a newer commit replaced
@@ -37,9 +47,10 @@ concurrency:
   group: ci-${{ github.event_name }}-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
-# The token is read-only for every job. None of them writes, comments, publishes, pushes an
-# image or uses OIDC (audited in tests/meta/ci_job_limits.toml); a job that ever needs more
-# declares its own `permissions:` block and is listed there under [permission_exceptions].
+# The token is read-only by default. No job publishes, pushes an image or uses OIDC (audited in
+# tests/meta/ci_job_limits.toml); a job that needs more declares its own `permissions:` block and
+# is listed there under [permission_exceptions]: today `plan` (actions: read, the nightly's
+# watermark) and `nightly-report` (one tracking issue), both for the schedule alone.
 permissions:
   contents: read
 
@@ -78,6 +89,12 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     continue-on-error: true
+    # `actions: read` is for the nightly's watermark only: the `watermark` step, which runs on
+    # `schedule` alone, lists the workflow's runs. A pull request's run never passes the token
+    # to any step.
+    permissions:
+      actions: read
+      contents: read
     outputs:
       areas: ${{ steps.cli.outputs.areas || steps.defaults.outputs.areas }}
       full: ${{ steps.cli.outputs.full || steps.defaults.outputs.full }}
@@ -118,9 +135,26 @@ jobs:
           python-version: "3.12"
       - name: Install vibey-gh
         run: pip install -e src/vibey_tools/gh
+      # The nightly's watermark: the head commit of the last GREEN scheduled run of this
+      # workflow, from the Actions API (a position, never a time). It prints `last_green=` on
+      # any doubt and exits 0, and an empty watermark runs the nightly in full; if the step
+      # fails anyway, the `cli` step does not run and the job keeps the full defaults.
+      - name: Read the nightly's watermark
+        id: watermark
+        if: github.event_name == 'schedule'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          WORKFLOW_REF: ${{ github.workflow_ref }}
+          BRANCH: ${{ github.ref_name }}
+        run: |
+          set -euo pipefail
+          vibey-gh ci-nightly last-green --workflow-ref "$WORKFLOW_REF" --branch "$BRANCH" \
+            >> "$GITHUB_OUTPUT"
       - name: Decide the areas and the tier
         id: cli
         env:
+          LAST_GREEN: ${{ steps.watermark.outputs.last_green }}
           EVENT_NAME: ${{ github.event_name }}
           PR_BASE_SHA: ${{ github.event.pull_request.base.sha }}
           PR_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
@@ -159,8 +193,15 @@ jobs:
               head="${MQ_HEAD_SHA:-}"
               args+=(--base "$base" --head "$head")
               ;;
-            workflow_dispatch | schedule)
+            workflow_dispatch)
               note="$EVENT_NAME: full tier"
+              ;;
+            schedule)
+              # Full by event, unless the tip IS the last green nightly's head: then the CLI
+              # answers the `skip` tier. An empty watermark never matches, so it runs.
+              head="${PUSH_AFTER:-}"
+              note="nightly: full tier unless the tip is the last green nightly's (last green: ${LAST_GREEN:-none})"
+              args+=(--head "$head" --base-ref "${PUSH_REF_NAME:-}" --last-green "${LAST_GREEN:-}")
               ;;
             *)
               note="unrecognised event: left to the CLI, which answers full"
@@ -193,11 +234,20 @@ jobs:
 
   lint:
     name: Lint and static gates
-    needs: [uv-lock]
+    needs: [uv-lock, plan]
     runs-on: ubuntu-latest
     timeout-minutes: 20
     # The cheap static gates run before any heavy job starts, so a lint failure stops the
     # fan-out instead of being discovered after every matrix cell has been paid for.
+    #
+    # The `if:` is for the nightly alone. A scheduled run whose tip is the last green
+    # nightly's gets the `skip` tier, and skipping `lint` skips `gates` and every job that
+    # waits on it, while the plan's empty areas skip the rest. It can skip on `schedule` ONLY:
+    # the event test is written here, not left to the map, because this is a required check
+    # and a skipped required check passes. Otherwise it is the old implicit chain, spelled out:
+    # `!cancelled()` plus `uv-lock` by name, and `plan` read by its outputs only (an absent or
+    # partial plan leaves `tier` unequal to `skip`, so lint runs).
+    if: ${{ !cancelled() && needs.uv-lock.result == 'success' && (github.event_name != 'schedule' || needs.plan.outputs.tier != 'skip') }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -1597,3 +1647,40 @@ jobs:
               print("not green: " + ", ".join(bad))
               sys.exit(1)
           PY
+
+  # The nightly's one voice (SP1-B Task 4): after a scheduled run, `vibey-gh ci-nightly report`
+  # judges `ci-result` and keeps ONE tracking issue on the branch through the family's
+  # tracking-issue primitive -- opened, or brought current with a comment once per red run,
+  # and closed by the next green nightly. A skipped nightly (`tier == skip`) proved nothing and
+  # says nothing; neither does a cancelled one. It is the one job `ci-result` does not need:
+  # it needs `ci-result`, and it never runs on a pull request, a push or the merge queue.
+  nightly-report:
+    name: Nightly report
+    needs: [plan, ci-result]
+    if: ${{ !cancelled() && github.event_name == 'schedule' && needs.plan.outputs.tier != 'skip' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    # Least privilege: read this run's jobs, write the one issue, nothing else.
+    permissions:
+      actions: read
+      contents: read
+      issues: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install vibey-gh
+        run: pip install -e src/vibey_tools/gh
+      - name: Open, update or close the nightly's tracking issue
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          RUN_ID: ${{ github.run_id }}
+          RESULT: ${{ needs.ci-result.result }}
+        run: |
+          set -euo pipefail
+          vibey-gh ci-nightly report --run-id "$RUN_ID" --result "$RESULT" \
+            --ignore-job "CI result" --ignore-job "Nightly report" | tee -a "$GITHUB_STEP_SUMMARY"

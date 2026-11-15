@@ -314,7 +314,13 @@ step asserts one claim the Dockerfile makes), `chart` (Helm lint and golden
 render of every profile) and `cluster-smoke` (Helm install on minikube; each
 `Contract - …` step asserts one cluster behaviour). `tools-lint` additionally
 checks that both rendered copies of vibey-gh's managed automation — vibey-gh's
-own and the repository root's — have no drift.
+own and the repository root's — have no drift. Which of these run is decided by the
+`plan` job (`vibey-gh ci-areas` over `.github/ci-areas.toml`): a pull request into
+develop runs only the jobs its diff can affect, on a small matrix; the merge queue,
+anything aimed at main, and the nightly `schedule` (06:17 UTC, on develop's tip) run
+every job on the full matrix. The nightly is skipped when develop's tip is the head of
+the last green nightly, and a red one keeps one tracking issue open (`nightly-report`,
+`vibey-gh ci-nightly`).
 
 ## Where to go for everything else
 

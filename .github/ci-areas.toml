@@ -21,6 +21,12 @@ full = ["merge_group", "workflow_dispatch", "schedule"]
 diff = ["pull_request", "push"]
 # A pull request into the release branch (promotion) and a push to it run everything.
 full_base_refs = ["main"]
+# The nightly (SP1-B Task 4): a scheduled run whose commit is the head of the last GREEN
+# scheduled run has nothing new to prove, so it runs nothing (the `skip` tier). The watermark
+# is that commit, read from the Actions API by `vibey-gh ci-nightly last-green`: a position in
+# the data, never a time. pull_request, pull_request_target, push and merge_group are refused
+# here whatever this list says: their checks gate a merge, and a skipped required check passes.
+skip_unchanged = ["schedule"]
 
 [areas.python]
 paths = ["src/vibey/**", "tests/**"]

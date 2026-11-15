@@ -20,6 +20,10 @@ import yaml
 
 REPO = Path(__file__).resolve().parents[2]
 JOB = "ci-result"
+# The one job `ci-result` cannot need, because it needs `ci-result`: the nightly's report
+# (SP1-B Task 4). It runs after a scheduled run only, so it is never a check on a pull
+# request, a push or the merge queue.
+AFTER_CI_RESULT = {"nightly-report"}
 
 
 def _jobs() -> dict[str, Any]:
@@ -55,12 +59,29 @@ def test_ci_result_needs_every_other_job() -> None:
     # A pytest function is the collection contract, so ADR-0016 permits it here.
     jobs = _jobs()
     assert JOB in jobs, f"ci.yml has no `{JOB}` job"
-    expected = set(jobs) - {JOB}
+    expected = set(jobs) - {JOB} - AFTER_CI_RESULT
     actual = set(jobs[JOB]["needs"])
     assert actual == expected, (
         f"{JOB} must need every other job. Missing from needs: {sorted(expected - actual)}; "
         f"needs a job that does not exist: {sorted(actual - expected)}"
     )
+
+
+def test_the_only_job_ci_result_does_not_need_comes_after_it_and_only_on_a_schedule() -> None:
+    jobs = _jobs()
+    assert set(jobs) >= AFTER_CI_RESULT
+    for job in AFTER_CI_RESULT:
+        assert JOB in jobs[job]["needs"], f"{job} must come after {JOB}"
+        assert "github.event_name == 'schedule'" in str(jobs[job]["if"]), job
+
+
+def test_a_skipped_nightly_reads_as_green(tmp_path: Path) -> None:
+    # A nightly whose tip is the last green one's runs uv-lock and plan and skips the rest:
+    # that must not read as red.
+    results = {job: "skipped" for job in _jobs()[JOB]["needs"]}
+    results.update({"uv-lock": "success", "plan": "success"})
+    done = _run(_needs_json(results), tmp_path)
+    assert done.returncode == 0, done.stdout + done.stderr
 
 
 def test_ci_result_runs_even_when_a_needed_job_fails() -> None:
@@ -153,7 +174,8 @@ def test_lint_job_exists_after_uv_lock_with_its_declared_name() -> None:
     jobs = _jobs()
     assert LINT in jobs, "ci.yml has no `lint` job"
     assert jobs[LINT]["name"] == "Lint and static gates"
-    assert _needs(LINT) == {"uv-lock"}
+    # `plan` is read for the nightly's skip alone (tests/meta/test_ci_nightly.py).
+    assert _needs(LINT) == {"uv-lock", "plan"}
 
 
 def test_exactly_the_python_and_container_jobs_wait_for_lint() -> None:
@@ -162,7 +184,7 @@ def test_exactly_the_python_and_container_jobs_wait_for_lint() -> None:
     assert waiting == GATED_BY_LINT, (
         f"jobs gated by lint: {sorted(waiting)}; expected {sorted(GATED_BY_LINT)}"
     )
-    assert set(jobs) - {LINT, "ci-result", "uv-lock"} - REPORT_ONLY == (
+    assert set(jobs) - {LINT, "ci-result", "uv-lock"} - REPORT_ONLY - AFTER_CI_RESULT == (
         GATED_BY_LINT | UNGATED_BY_LINT
     )
 
