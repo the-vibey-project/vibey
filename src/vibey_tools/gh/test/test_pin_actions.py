@@ -248,3 +248,18 @@ def test_the_cli_registers_pin_actions(tmp_path: Path, monkeypatch: pytest.Monke
     pinned.write_text(f"  - uses: a/b@{SHA_A}\n")
     monkeypatch.chdir(tmp_path)
     assert cli.main(["pin-actions", str(pinned)]) == 0
+
+
+def test_apply_fails_for_a_line_it_could_not_rewrite_and_still_writes_the_rest(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    workflow = tmp_path / "w.yml"
+    workflow.write_text("  - uses: a/b@v4\n  - uses: odd/tail@v1 trailing words\n")
+    forge = FakeForge({"a/b/commits/v4": {"sha": SHA_A}, "odd/tail/commits/v1": {"sha": SHA_B}})
+    assert pinner(forge).run([workflow], apply=True) == 1
+    out = capsys.readouterr().out
+    assert f"{workflow}:2: odd/tail@v1 could not be rewritten" in out
+    assert "pinned" not in out.replace("could not be pinned", "")
+    assert workflow.read_text() == (
+        f"  - uses: a/b@{SHA_A} # v4\n  - uses: odd/tail@v1 trailing words\n"
+    )

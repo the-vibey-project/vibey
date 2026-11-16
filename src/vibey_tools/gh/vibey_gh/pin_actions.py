@@ -138,8 +138,16 @@ class PinActions(PinActionsInterface):
                 print(f"vibey-gh: pin-actions: {failure}")
             print("vibey-gh: pin-actions: nothing written; every file is as it was")
             return 1
+        stuck: list[ActionUse] = []
         for path, text in texts.items():
-            path.write_text(self.rewrite(text, shas), encoding="utf-8")
+            rewritten = self.rewrite(text, shas)
+            path.write_text(rewritten, encoding="utf-8")
+            stuck.extend(self.unpinned(rewritten, path))
+        if stuck:
+            for use in stuck:
+                print(f"{use.path}:{use.line}: {use.action}@{use.ref} could not be rewritten")
+            print(f"vibey-gh: pin-actions: {len(stuck)} could not be pinned; the rest were written")
+            return 1
         print(f"vibey-gh: pin-actions: pinned {len(uses)} uses to {len(shas)} commits")
         return 0
 
