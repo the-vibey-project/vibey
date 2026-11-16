@@ -13,6 +13,13 @@ updates:
     # Dependabot cannot ignore a FILE, only a dependency, so these names are the
     # actions the managed templates pin. Actions absent from this list are still
     # bumped normally wherever you use them.
+    #
+    # The same limit applies to the hand-written workflows: their SHA pins of these
+    # five actions (actions/checkout, actions/download-artifact, actions/setup-python,
+    # actions/upload-artifact, astral-sh/setup-uv) are NOT bumped by Dependabot either.
+    # Until `vibey-gh pin-actions` can refresh a pin to the current commit of its
+    # `# <ref>` comment, those pins move only by hand (and the managed ones by
+    # upgrading vibey-gh).
     ignore:
       - dependency-name: actions/checkout
       - dependency-name: actions/configure-pages

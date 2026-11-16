@@ -55,10 +55,10 @@ jobs:
     steps:
       # This checkout carries only the script and its record. The first hour itself is
       # performed in a second, empty directory, from a clone the script makes.
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
 
       - name: Install uv
-        uses: astral-sh/setup-uv@v7
+        uses: astral-sh/setup-uv@37802adc94f370d6bfd71619e3f0bf239e1f3b78 # v7
 
       - name: Perform the first hour
         id: measure
@@ -125,7 +125,7 @@ jobs:
       contents: read
       issues: write
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
 
       - name: Open this quarter's survey once
         env:

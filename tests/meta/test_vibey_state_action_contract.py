@@ -127,15 +127,17 @@ def test_actions_are_pinned_as_vibey_remote_pins_them() -> None:
         for step in steps(REMOTE)
         if "uses" in step and "@" in step["uses"]
     }
-    # The download half of an artifact handover is pinned as its upload half is.
-    upload = pinned["actions/upload-artifact"].split("@")[1]
-    pinned["actions/download-artifact"] = f"actions/download-artifact@{upload}"
+    # Each action is pinned to a commit. The download half of an artifact handover is a
+    # different repository from its upload half, so it has its own commit, not the upload's.
     for path in (ACTION, WRITE):
         for step in steps(path):
             uses = step.get("uses", "")
             if not uses or uses.startswith("./"):
                 continue
-            assert uses == pinned[uses.split("@")[0]], f"{path.name}: {uses}"
+            name, _, ref = uses.partition("@")
+            assert re.fullmatch(r"[0-9a-f]{40}", ref), f"{path.name}: {uses} is not a commit pin"
+            if name in pinned:
+                assert uses == pinned[name], f"{path.name}: {uses}"
 
 
 def test_the_declaration_is_where_the_gate_reads_it() -> None:

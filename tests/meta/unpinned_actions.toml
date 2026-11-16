@@ -3,4 +3,4 @@
 # Read by tests/meta/test_actions_are_pinned_by_sha.py. The ceiling may only fall:
 # the test fails when the count is above it, and fails again when the count is below
 # it, naming the number to lower it to (sub-doctrine 12.e).
-ceiling = 101
+ceiling = 0

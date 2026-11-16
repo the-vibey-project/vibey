@@ -96,7 +96,7 @@ jobs:
           fetch-depth: 0
           persist-credentials: false
 
-      - uses: astral-sh/setup-uv@v7
+      - uses: astral-sh/setup-uv@37802adc94f370d6bfd71619e3f0bf239e1f3b78 # v7
 
       # As continuation-prompts.yml starts one, but only the declared model: a measurement
       # under another model vouches for nothing, so there is no fallback to try.
@@ -135,7 +135,7 @@ jobs:
           canary run --shard "$SHARD" --out "$OUT" --work "${RUNNER_TEMP}/review-canary.work.jsonl"
 
       - name: Hand this shard's reviews over
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: review-canary-shard-${{ strategy.job-index }}
           path: ${{ runner.temp }}/review-canary-shards/
@@ -166,7 +166,7 @@ jobs:
           python-version: "3.12"
 
       - name: Take every shard's reviews
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
         with:
           pattern: review-canary-shard-*
           merge-multiple: true
@@ -185,7 +185,7 @@ jobs:
           } >> "$GITHUB_STEP_SUMMARY"
 
       - name: Hand the measurement over
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: review-canary
           path: |
@@ -213,7 +213,7 @@ jobs:
       # landed beside the tracked ones, the checks below read develop's own copies, and the
       # first measurement was reported "unchanged" (tests/meta/test_workflow_artifacts.py).
       - name: Take the measurement
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
         with:
           name: review-canary
           path: docs
