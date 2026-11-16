@@ -50,6 +50,7 @@ from vibey_gh.interfaces.contributor_setup_interface import ContributorSetupInte
 from vibey_gh.interfaces.fallback_pin_resolver_interface import FallbackPinResolverInterface
 from vibey_gh.interfaces.marketplace_renderer_interface import MarketplaceRendererInterface
 from vibey_gh.interfaces.paper_interface import RevisionReaderInterface
+from vibey_gh.pin_actions import PinActions
 from vibey_gh.profile_drift import ProfileDrift
 from vibey_gh.review_canary import ReviewCanary
 from vibey_gh.review_composition import PAID_HALVES, REVIEW_COMPOSER
@@ -3091,6 +3092,12 @@ def main(argv: list[str] | None = None) -> int:
         help="the nightly full CI run: its last-green watermark and its red tracking issue",
     )
     CiNightly.declare(cn).set_defaults(func=CiNightly.dispatch)
+
+    pa = sub.add_parser(
+        "pin-actions",
+        help="pin every GitHub Actions `uses:` to a commit SHA, the tag kept as a comment",
+    )
+    PinActions.declare(pa).set_defaults(func=PinActions.dispatch)
 
     sm = sub.add_parser(
         "skip-marker-check",
