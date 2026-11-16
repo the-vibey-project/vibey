@@ -1,0 +1,34 @@
+[
+  {
+    "id": "skill-1-the-social-risk-index-r-s-d620fe4994",
+    "purpose": "1 the social risk index r s",
+    "source": "src/vibey_tools/skills/plugins/individual-social-philosophy/skills/objective-risk-calculus/SKILL.md",
+    "output": "docs/microslices/skills/individual-social-philosophy/skills/objective-risk-calculus/001-1-the-social-risk-index-r-s.md",
+    "requires": [],
+    "links": [
+      "skill-2-the-six-empirical-observation-vectors-b687a3165f"
+    ]
+  },
+  {
+    "id": "skill-2-the-six-empirical-observation-vectors-b687a3165f",
+    "purpose": "2 the six empirical observation vectors",
+    "source": "src/vibey_tools/skills/plugins/individual-social-philosophy/skills/objective-risk-calculus/SKILL.md",
+    "output": "docs/microslices/skills/individual-social-philosophy/skills/objective-risk-calculus/002-2-the-six-empirical-observation-vectors.md",
+    "requires": [
+      "skill-1-the-social-risk-index-r-s-d620fe4994"
+    ],
+    "links": [
+      "skill-3-threat-typology-52aa11efee"
+    ]
+  },
+  {
+    "id": "skill-3-threat-typology-52aa11efee",
+    "purpose": "3 threat typology",
+    "source": "src/vibey_tools/skills/plugins/individual-social-philosophy/skills/objective-risk-calculus/SKILL.md",
+    "output": "docs/microslices/skills/individual-social-philosophy/skills/objective-risk-calculus/003-3-threat-typology.md",
+    "requires": [
+      "skill-2-the-six-empirical-observation-vectors-b687a3165f"
+    ],
+    "links": []
+  }
+]

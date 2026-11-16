@@ -1,0 +1,22 @@
+[
+  {
+    "id": "skill-core-doctrinal-principles-91ff1c02cc",
+    "purpose": "core doctrinal principles",
+    "source": "src/vibey_tools/skills/plugins/christian-marriage-and-family/skills/filial-piety-and-family-order/SKILL.md",
+    "output": "docs/microslices/skills/christian-marriage-and-family/skills/filial-piety-and-family-order/001-core-doctrinal-principles.md",
+    "requires": [],
+    "links": [
+      "skill-practical-family-protocols-ab7f97d044"
+    ]
+  },
+  {
+    "id": "skill-practical-family-protocols-ab7f97d044",
+    "purpose": "practical family protocols",
+    "source": "src/vibey_tools/skills/plugins/christian-marriage-and-family/skills/filial-piety-and-family-order/SKILL.md",
+    "output": "docs/microslices/skills/christian-marriage-and-family/skills/filial-piety-and-family-order/002-practical-family-protocols.md",
+    "requires": [
+      "skill-core-doctrinal-principles-91ff1c02cc"
+    ],
+    "links": []
+  }
+]

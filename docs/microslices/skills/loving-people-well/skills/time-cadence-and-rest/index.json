@@ -1,0 +1,70 @@
+[
+  {
+    "id": "skill-overview-bbf422dafd",
+    "purpose": "overview",
+    "source": "src/vibey_tools/skills/plugins/loving-people-well/skills/time-cadence-and-rest/SKILL.md",
+    "output": "docs/microslices/skills/loving-people-well/skills/time-cadence-and-rest/001-overview.md",
+    "requires": [],
+    "links": [
+      "skill-invocation-triggers-105cf5028d"
+    ]
+  },
+  {
+    "id": "skill-invocation-triggers-105cf5028d",
+    "purpose": "invocation triggers",
+    "source": "src/vibey_tools/skills/plugins/loving-people-well/skills/time-cadence-and-rest/SKILL.md",
+    "output": "docs/microslices/skills/loving-people-well/skills/time-cadence-and-rest/002-invocation-triggers.md",
+    "requires": [
+      "skill-overview-bbf422dafd"
+    ],
+    "links": [
+      "skill-input-schema-85620695fc"
+    ]
+  },
+  {
+    "id": "skill-input-schema-85620695fc",
+    "purpose": "input schema",
+    "source": "src/vibey_tools/skills/plugins/loving-people-well/skills/time-cadence-and-rest/SKILL.md",
+    "output": "docs/microslices/skills/loving-people-well/skills/time-cadence-and-rest/003-input-schema.md",
+    "requires": [
+      "skill-invocation-triggers-105cf5028d"
+    ],
+    "links": [
+      "skill-governing-principles-ced4ae6067"
+    ]
+  },
+  {
+    "id": "skill-governing-principles-ced4ae6067",
+    "purpose": "governing principles",
+    "source": "src/vibey_tools/skills/plugins/loving-people-well/skills/time-cadence-and-rest/SKILL.md",
+    "output": "docs/microslices/skills/loving-people-well/skills/time-cadence-and-rest/004-governing-principles.md",
+    "requires": [
+      "skill-input-schema-85620695fc"
+    ],
+    "links": [
+      "skill-operational-checklist-9b22fd5f1f"
+    ]
+  },
+  {
+    "id": "skill-operational-checklist-9b22fd5f1f",
+    "purpose": "operational checklist",
+    "source": "src/vibey_tools/skills/plugins/loving-people-well/skills/time-cadence-and-rest/SKILL.md",
+    "output": "docs/microslices/skills/loving-people-well/skills/time-cadence-and-rest/005-operational-checklist.md",
+    "requires": [
+      "skill-governing-principles-ced4ae6067"
+    ],
+    "links": [
+      "skill-failure-modes-eced949496"
+    ]
+  },
+  {
+    "id": "skill-failure-modes-eced949496",
+    "purpose": "failure modes",
+    "source": "src/vibey_tools/skills/plugins/loving-people-well/skills/time-cadence-and-rest/SKILL.md",
+    "output": "docs/microslices/skills/loving-people-well/skills/time-cadence-and-rest/006-failure-modes.md",
+    "requires": [
+      "skill-operational-checklist-9b22fd5f1f"
+    ],
+    "links": []
+  }
+]

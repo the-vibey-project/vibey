@@ -1,0 +1,70 @@
+[
+  {
+    "id": "skill-overview-f3ced47e1d",
+    "purpose": "overview",
+    "source": "src/vibey_tools/skills/plugins/loving-people-well/skills/memory-and-tracking/SKILL.md",
+    "output": "docs/microslices/skills/loving-people-well/skills/memory-and-tracking/001-overview.md",
+    "requires": [],
+    "links": [
+      "skill-invocation-triggers-e74fa1fbd9"
+    ]
+  },
+  {
+    "id": "skill-invocation-triggers-e74fa1fbd9",
+    "purpose": "invocation triggers",
+    "source": "src/vibey_tools/skills/plugins/loving-people-well/skills/memory-and-tracking/SKILL.md",
+    "output": "docs/microslices/skills/loving-people-well/skills/memory-and-tracking/002-invocation-triggers.md",
+    "requires": [
+      "skill-overview-f3ced47e1d"
+    ],
+    "links": [
+      "skill-input-schema-ed5c57a36a"
+    ]
+  },
+  {
+    "id": "skill-input-schema-ed5c57a36a",
+    "purpose": "input schema",
+    "source": "src/vibey_tools/skills/plugins/loving-people-well/skills/memory-and-tracking/SKILL.md",
+    "output": "docs/microslices/skills/loving-people-well/skills/memory-and-tracking/003-input-schema.md",
+    "requires": [
+      "skill-invocation-triggers-e74fa1fbd9"
+    ],
+    "links": [
+      "skill-governing-principles-b883af49bb"
+    ]
+  },
+  {
+    "id": "skill-governing-principles-b883af49bb",
+    "purpose": "governing principles",
+    "source": "src/vibey_tools/skills/plugins/loving-people-well/skills/memory-and-tracking/SKILL.md",
+    "output": "docs/microslices/skills/loving-people-well/skills/memory-and-tracking/004-governing-principles.md",
+    "requires": [
+      "skill-input-schema-ed5c57a36a"
+    ],
+    "links": [
+      "skill-operational-checklist-1139ba172a"
+    ]
+  },
+  {
+    "id": "skill-operational-checklist-1139ba172a",
+    "purpose": "operational checklist",
+    "source": "src/vibey_tools/skills/plugins/loving-people-well/skills/memory-and-tracking/SKILL.md",
+    "output": "docs/microslices/skills/loving-people-well/skills/memory-and-tracking/005-operational-checklist.md",
+    "requires": [
+      "skill-governing-principles-b883af49bb"
+    ],
+    "links": [
+      "skill-failure-modes-ccf75d76bf"
+    ]
+  },
+  {
+    "id": "skill-failure-modes-ccf75d76bf",
+    "purpose": "failure modes",
+    "source": "src/vibey_tools/skills/plugins/loving-people-well/skills/memory-and-tracking/SKILL.md",
+    "output": "docs/microslices/skills/loving-people-well/skills/memory-and-tracking/006-failure-modes.md",
+    "requires": [
+      "skill-operational-checklist-1139ba172a"
+    ],
+    "links": []
+  }
+]

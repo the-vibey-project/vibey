@@ -1,0 +1,70 @@
+[
+  {
+    "id": "skill-overview-37c6b5a405",
+    "purpose": "overview",
+    "source": "src/vibey_tools/skills/plugins/loving-people-well/skills/mercy-and-trust-edges/SKILL.md",
+    "output": "docs/microslices/skills/loving-people-well/skills/mercy-and-trust-edges/001-overview.md",
+    "requires": [],
+    "links": [
+      "skill-invocation-triggers-3bd5dfa888"
+    ]
+  },
+  {
+    "id": "skill-invocation-triggers-3bd5dfa888",
+    "purpose": "invocation triggers",
+    "source": "src/vibey_tools/skills/plugins/loving-people-well/skills/mercy-and-trust-edges/SKILL.md",
+    "output": "docs/microslices/skills/loving-people-well/skills/mercy-and-trust-edges/002-invocation-triggers.md",
+    "requires": [
+      "skill-overview-37c6b5a405"
+    ],
+    "links": [
+      "skill-input-schema-5aea5f5f2f"
+    ]
+  },
+  {
+    "id": "skill-input-schema-5aea5f5f2f",
+    "purpose": "input schema",
+    "source": "src/vibey_tools/skills/plugins/loving-people-well/skills/mercy-and-trust-edges/SKILL.md",
+    "output": "docs/microslices/skills/loving-people-well/skills/mercy-and-trust-edges/003-input-schema.md",
+    "requires": [
+      "skill-invocation-triggers-3bd5dfa888"
+    ],
+    "links": [
+      "skill-governing-principles-167e721ef5"
+    ]
+  },
+  {
+    "id": "skill-governing-principles-167e721ef5",
+    "purpose": "governing principles",
+    "source": "src/vibey_tools/skills/plugins/loving-people-well/skills/mercy-and-trust-edges/SKILL.md",
+    "output": "docs/microslices/skills/loving-people-well/skills/mercy-and-trust-edges/004-governing-principles.md",
+    "requires": [
+      "skill-input-schema-5aea5f5f2f"
+    ],
+    "links": [
+      "skill-operational-checklist-ebd1d1f608"
+    ]
+  },
+  {
+    "id": "skill-operational-checklist-ebd1d1f608",
+    "purpose": "operational checklist",
+    "source": "src/vibey_tools/skills/plugins/loving-people-well/skills/mercy-and-trust-edges/SKILL.md",
+    "output": "docs/microslices/skills/loving-people-well/skills/mercy-and-trust-edges/005-operational-checklist.md",
+    "requires": [
+      "skill-governing-principles-167e721ef5"
+    ],
+    "links": [
+      "skill-failure-modes-d025135989"
+    ]
+  },
+  {
+    "id": "skill-failure-modes-d025135989",
+    "purpose": "failure modes",
+    "source": "src/vibey_tools/skills/plugins/loving-people-well/skills/mercy-and-trust-edges/SKILL.md",
+    "output": "docs/microslices/skills/loving-people-well/skills/mercy-and-trust-edges/006-failure-modes.md",
+    "requires": [
+      "skill-operational-checklist-ebd1d1f608"
+    ],
+    "links": []
+  }
+]

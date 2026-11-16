@@ -1,0 +1,34 @@
+[
+  {
+    "id": "skill-1-the-five-concentric-spheres-cf1b2e8c9f",
+    "purpose": "1 the five concentric spheres",
+    "source": "src/vibey_tools/skills/plugins/individual-social-philosophy/skills/concentric-spheres-and-asymmetry/SKILL.md",
+    "output": "docs/microslices/skills/individual-social-philosophy/skills/concentric-spheres-and-asymmetry/001-1-the-five-concentric-spheres.md",
+    "requires": [],
+    "links": [
+      "skill-2-the-mathematical-asymmetry-of-trust-dd7717d504"
+    ]
+  },
+  {
+    "id": "skill-2-the-mathematical-asymmetry-of-trust-dd7717d504",
+    "purpose": "2 the mathematical asymmetry of trust",
+    "source": "src/vibey_tools/skills/plugins/individual-social-philosophy/skills/concentric-spheres-and-asymmetry/SKILL.md",
+    "output": "docs/microslices/skills/individual-social-philosophy/skills/concentric-spheres-and-asymmetry/002-2-the-mathematical-asymmetry-of-trust.md",
+    "requires": [
+      "skill-1-the-five-concentric-spheres-cf1b2e8c9f"
+    ],
+    "links": [
+      "skill-3-the-presentation-spectrum-public-decorum-and-covenantal-vulnerability-4b61375f76"
+    ]
+  },
+  {
+    "id": "skill-3-the-presentation-spectrum-public-decorum-and-covenantal-vulnerability-4b61375f76",
+    "purpose": "3 the presentation spectrum public decorum and covenantal vulnerability",
+    "source": "src/vibey_tools/skills/plugins/individual-social-philosophy/skills/concentric-spheres-and-asymmetry/SKILL.md",
+    "output": "docs/microslices/skills/individual-social-philosophy/skills/concentric-spheres-and-asymmetry/003-3-the-presentation-spectrum-public-decorum-and-covenantal-vulnerability.md",
+    "requires": [
+      "skill-2-the-mathematical-asymmetry-of-trust-dd7717d504"
+    ],
+    "links": []
+  }
+]

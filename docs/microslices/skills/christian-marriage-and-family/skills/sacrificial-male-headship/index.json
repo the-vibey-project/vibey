@@ -1,0 +1,22 @@
+[
+  {
+    "id": "skill-core-doctrinal-principles-4cc0cacd95",
+    "purpose": "core doctrinal principles",
+    "source": "src/vibey_tools/skills/plugins/christian-marriage-and-family/skills/sacrificial-male-headship/SKILL.md",
+    "output": "docs/microslices/skills/christian-marriage-and-family/skills/sacrificial-male-headship/001-core-doctrinal-principles.md",
+    "requires": [],
+    "links": [
+      "skill-husband-s-operational-discipline-9c726b632d"
+    ]
+  },
+  {
+    "id": "skill-husband-s-operational-discipline-9c726b632d",
+    "purpose": "husband s operational discipline",
+    "source": "src/vibey_tools/skills/plugins/christian-marriage-and-family/skills/sacrificial-male-headship/SKILL.md",
+    "output": "docs/microslices/skills/christian-marriage-and-family/skills/sacrificial-male-headship/002-husband-s-operational-discipline.md",
+    "requires": [
+      "skill-core-doctrinal-principles-4cc0cacd95"
+    ],
+    "links": []
+  }
+]

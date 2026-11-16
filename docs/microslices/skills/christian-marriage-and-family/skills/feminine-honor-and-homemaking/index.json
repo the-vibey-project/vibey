@@ -1,0 +1,22 @@
+[
+  {
+    "id": "skill-core-doctrinal-principles-36b514746d",
+    "purpose": "core doctrinal principles",
+    "source": "src/vibey_tools/skills/plugins/christian-marriage-and-family/skills/feminine-honor-and-homemaking/SKILL.md",
+    "output": "docs/microslices/skills/christian-marriage-and-family/skills/feminine-honor-and-homemaking/001-core-doctrinal-principles.md",
+    "requires": [],
+    "links": [
+      "skill-practical-homemaking-applications-16bce51690"
+    ]
+  },
+  {
+    "id": "skill-practical-homemaking-applications-16bce51690",
+    "purpose": "practical homemaking applications",
+    "source": "src/vibey_tools/skills/plugins/christian-marriage-and-family/skills/feminine-honor-and-homemaking/SKILL.md",
+    "output": "docs/microslices/skills/christian-marriage-and-family/skills/feminine-honor-and-homemaking/002-practical-homemaking-applications.md",
+    "requires": [
+      "skill-core-doctrinal-principles-36b514746d"
+    ],
+    "links": []
+  }
+]

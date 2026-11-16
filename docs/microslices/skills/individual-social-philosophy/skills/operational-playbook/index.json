@@ -1,0 +1,46 @@
+[
+  {
+    "id": "skill-1-phase-1-entry-and-peripheral-engagement-ed072d57ab",
+    "purpose": "1 phase 1 entry and peripheral engagement",
+    "source": "src/vibey_tools/skills/plugins/individual-social-philosophy/skills/operational-playbook/SKILL.md",
+    "output": "docs/microslices/skills/individual-social-philosophy/skills/operational-playbook/001-1-phase-1-entry-and-peripheral-engagement.md",
+    "requires": [],
+    "links": [
+      "skill-2-phase-2-micro-probing-and-probation-the-st-aelred-protocol-787aad4279"
+    ]
+  },
+  {
+    "id": "skill-2-phase-2-micro-probing-and-probation-the-st-aelred-protocol-787aad4279",
+    "purpose": "2 phase 2 micro probing and probation the st aelred protocol",
+    "source": "src/vibey_tools/skills/plugins/individual-social-philosophy/skills/operational-playbook/SKILL.md",
+    "output": "docs/microslices/skills/individual-social-philosophy/skills/operational-playbook/002-2-phase-2-micro-probing-and-probation-the-st-aelred-protocol.md",
+    "requires": [
+      "skill-1-phase-1-entry-and-peripheral-engagement-ed072d57ab"
+    ],
+    "links": [
+      "skill-3-phase-3-the-immediate-revocation-protocol-matthew-18-d2afc2eb63"
+    ]
+  },
+  {
+    "id": "skill-3-phase-3-the-immediate-revocation-protocol-matthew-18-d2afc2eb63",
+    "purpose": "3 phase 3 the immediate revocation protocol matthew 18",
+    "source": "src/vibey_tools/skills/plugins/individual-social-philosophy/skills/operational-playbook/SKILL.md",
+    "output": "docs/microslices/skills/individual-social-philosophy/skills/operational-playbook/003-3-phase-3-the-immediate-revocation-protocol-matthew-18.md",
+    "requires": [
+      "skill-2-phase-2-micro-probing-and-probation-the-st-aelred-protocol-787aad4279"
+    ],
+    "links": [
+      "skill-4-the-distinction-between-forgiveness-and-trust-3efc661c4f"
+    ]
+  },
+  {
+    "id": "skill-4-the-distinction-between-forgiveness-and-trust-3efc661c4f",
+    "purpose": "4 the distinction between forgiveness and trust",
+    "source": "src/vibey_tools/skills/plugins/individual-social-philosophy/skills/operational-playbook/SKILL.md",
+    "output": "docs/microslices/skills/individual-social-philosophy/skills/operational-playbook/004-4-the-distinction-between-forgiveness-and-trust.md",
+    "requires": [
+      "skill-3-phase-3-the-immediate-revocation-protocol-matthew-18-d2afc2eb63"
+    ],
+    "links": []
+  }
+]

@@ -1,0 +1,70 @@
+[
+  {
+    "id": "skill-overview-d24215ec35",
+    "purpose": "overview",
+    "source": "src/vibey_tools/skills/plugins/christian-courtship/skills/operational-courtship-playbook/SKILL.md",
+    "output": "docs/microslices/skills/christian-courtship/skills/operational-courtship-playbook/001-overview.md",
+    "requires": [],
+    "links": [
+      "skill-invocation-triggers-5a98a48389"
+    ]
+  },
+  {
+    "id": "skill-invocation-triggers-5a98a48389",
+    "purpose": "invocation triggers",
+    "source": "src/vibey_tools/skills/plugins/christian-courtship/skills/operational-courtship-playbook/SKILL.md",
+    "output": "docs/microslices/skills/christian-courtship/skills/operational-courtship-playbook/002-invocation-triggers.md",
+    "requires": [
+      "skill-overview-d24215ec35"
+    ],
+    "links": [
+      "skill-input-schema-ef4b6f042e"
+    ]
+  },
+  {
+    "id": "skill-input-schema-ef4b6f042e",
+    "purpose": "input schema",
+    "source": "src/vibey_tools/skills/plugins/christian-courtship/skills/operational-courtship-playbook/SKILL.md",
+    "output": "docs/microslices/skills/christian-courtship/skills/operational-courtship-playbook/003-input-schema.md",
+    "requires": [
+      "skill-invocation-triggers-5a98a48389"
+    ],
+    "links": [
+      "skill-situational-action-protocols-d2200979b0"
+    ]
+  },
+  {
+    "id": "skill-situational-action-protocols-d2200979b0",
+    "purpose": "situational action protocols",
+    "source": "src/vibey_tools/skills/plugins/christian-courtship/skills/operational-courtship-playbook/SKILL.md",
+    "output": "docs/microslices/skills/christian-courtship/skills/operational-courtship-playbook/004-situational-action-protocols.md",
+    "requires": [
+      "skill-input-schema-ef4b6f042e"
+    ],
+    "links": [
+      "skill-operational-checklist-27618b8f18"
+    ]
+  },
+  {
+    "id": "skill-operational-checklist-27618b8f18",
+    "purpose": "operational checklist",
+    "source": "src/vibey_tools/skills/plugins/christian-courtship/skills/operational-courtship-playbook/SKILL.md",
+    "output": "docs/microslices/skills/christian-courtship/skills/operational-courtship-playbook/005-operational-checklist.md",
+    "requires": [
+      "skill-situational-action-protocols-d2200979b0"
+    ],
+    "links": [
+      "skill-failure-modes-81911ee508"
+    ]
+  },
+  {
+    "id": "skill-failure-modes-81911ee508",
+    "purpose": "failure modes",
+    "source": "src/vibey_tools/skills/plugins/christian-courtship/skills/operational-courtship-playbook/SKILL.md",
+    "output": "docs/microslices/skills/christian-courtship/skills/operational-courtship-playbook/006-failure-modes.md",
+    "requires": [
+      "skill-operational-checklist-27618b8f18"
+    ],
+    "links": []
+  }
+]
