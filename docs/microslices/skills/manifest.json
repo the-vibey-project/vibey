@@ -635,6 +635,56 @@
     "count": 5
   },
   {
+    "source": "src/vibey_tools/skills/plugins/christian-courtship/skills/commitment-and-differentiation/SKILL.md",
+    "output": "docs/microslices/skills/christian-courtship/skills/commitment-and-differentiation",
+    "count": 6
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/christian-courtship/skills/concentric-boundaries-and-chastity/SKILL.md",
+    "output": "docs/microslices/skills/christian-courtship/skills/concentric-boundaries-and-chastity",
+    "count": 7
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/christian-courtship/skills/foundations-and-theology/SKILL.md",
+    "output": "docs/microslices/skills/christian-courtship/skills/foundations-and-theology",
+    "count": 6
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/christian-courtship/skills/operational-courtship-playbook/SKILL.md",
+    "output": "docs/microslices/skills/christian-courtship/skills/operational-courtship-playbook",
+    "count": 6
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/christian-courtship/skills/risk-calculus-and-quarantine/SKILL.md",
+    "output": "docs/microslices/skills/christian-courtship/skills/risk-calculus-and-quarantine",
+    "count": 7
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/christian-marriage-and-family/skills/biblical-parenting-and-discipline/SKILL.md",
+    "output": "docs/microslices/skills/christian-marriage-and-family/skills/biblical-parenting-and-discipline",
+    "count": 2
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/christian-marriage-and-family/skills/covenantal-marriage-theology/SKILL.md",
+    "output": "docs/microslices/skills/christian-marriage-and-family/skills/covenantal-marriage-theology",
+    "count": 2
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/christian-marriage-and-family/skills/feminine-honor-and-homemaking/SKILL.md",
+    "output": "docs/microslices/skills/christian-marriage-and-family/skills/feminine-honor-and-homemaking",
+    "count": 2
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/christian-marriage-and-family/skills/filial-piety-and-family-order/SKILL.md",
+    "output": "docs/microslices/skills/christian-marriage-and-family/skills/filial-piety-and-family-order",
+    "count": 2
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/christian-marriage-and-family/skills/sacrificial-male-headship/SKILL.md",
+    "output": "docs/microslices/skills/christian-marriage-and-family/skills/sacrificial-male-headship",
+    "count": 2
+  },
+  {
     "source": "src/vibey_tools/skills/plugins/christian-pastoral-care/skills/faith-integrated-self-compassion/SKILL.md",
     "output": "docs/microslices/skills/christian-pastoral-care/skills/faith-integrated-self-compassion",
     "count": 14
@@ -1900,6 +1950,31 @@
     "count": 4
   },
   {
+    "source": "src/vibey_tools/skills/plugins/individual-social-philosophy/skills/concentric-spheres-and-asymmetry/SKILL.md",
+    "output": "docs/microslices/skills/individual-social-philosophy/skills/concentric-spheres-and-asymmetry",
+    "count": 3
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/individual-social-philosophy/skills/foundations-and-methodology/SKILL.md",
+    "output": "docs/microslices/skills/individual-social-philosophy/skills/foundations-and-methodology",
+    "count": 4
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/individual-social-philosophy/skills/objective-risk-calculus/SKILL.md",
+    "output": "docs/microslices/skills/individual-social-philosophy/skills/objective-risk-calculus",
+    "count": 3
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/individual-social-philosophy/skills/operational-playbook/SKILL.md",
+    "output": "docs/microslices/skills/individual-social-philosophy/skills/operational-playbook",
+    "count": 4
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/individual-social-philosophy/skills/theological-and-historical-sources/SKILL.md",
+    "output": "docs/microslices/skills/individual-social-philosophy/skills/theological-and-historical-sources",
+    "count": 4
+  },
+  {
     "source": "src/vibey_tools/skills/plugins/investment-strategy-personal-and-business/skills/invest-asset-classes-factors-costs-tax-and-allocation/SKILL.md",
     "output": "docs/microslices/skills/investment-strategy-personal-and-business/skills/invest-asset-classes-factors-costs-tax-and-allocation",
     "count": 5
@@ -2032,6 +2107,31 @@
   {
     "source": "src/vibey_tools/skills/plugins/logistics-software-optimization/skills/logistics-why-projects-fail-complexity-and-modeling/SKILL.md",
     "output": "docs/microslices/skills/logistics-software-optimization/skills/logistics-why-projects-fail-complexity-and-modeling",
+    "count": 6
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/loving-people-well/skills/memory-and-tracking/SKILL.md",
+    "output": "docs/microslices/skills/loving-people-well/skills/memory-and-tracking",
+    "count": 6
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/loving-people-well/skills/mercy-and-trust-edges/SKILL.md",
+    "output": "docs/microslices/skills/loving-people-well/skills/mercy-and-trust-edges",
+    "count": 6
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/loving-people-well/skills/presence-and-focused-attention/SKILL.md",
+    "output": "docs/microslices/skills/loving-people-well/skills/presence-and-focused-attention",
+    "count": 6
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/loving-people-well/skills/release-and-surrender/SKILL.md",
+    "output": "docs/microslices/skills/loving-people-well/skills/release-and-surrender",
+    "count": 6
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/loving-people-well/skills/time-cadence-and-rest/SKILL.md",
+    "output": "docs/microslices/skills/loving-people-well/skills/time-cadence-and-rest",
     "count": 6
   },
   {
@@ -3763,6 +3863,11 @@
     "source": "src/vibey_tools/skills/plugins/ui-ux-design-principles/skills/ui-ux-writing-forms-research-and-ethics/SKILL.md",
     "output": "docs/microslices/skills/ui-ux-design-principles/skills/ui-ux-writing-forms-research-and-ethics",
     "count": 5
+  },
+  {
+    "source": "src/vibey_tools/skills/plugins/vibey/skills/vibey-chat-driver/SKILL.md",
+    "output": "docs/microslices/skills/vibey/skills/vibey-chat-driver",
+    "count": 3
   },
   {
     "source": "src/vibey_tools/skills/plugins/vibey-bootstrap/skills/vibey-bootstrap-core/SKILL.md",

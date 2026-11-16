@@ -1,0 +1,82 @@
+[
+  {
+    "id": "skill-overview-04091bfeb2",
+    "purpose": "overview",
+    "source": "src/vibey_tools/skills/plugins/christian-courtship/skills/concentric-boundaries-and-chastity/SKILL.md",
+    "output": "docs/microslices/skills/christian-courtship/skills/concentric-boundaries-and-chastity/001-overview.md",
+    "requires": [],
+    "links": [
+      "skill-invocation-triggers-2999bc1d8d"
+    ]
+  },
+  {
+    "id": "skill-invocation-triggers-2999bc1d8d",
+    "purpose": "invocation triggers",
+    "source": "src/vibey_tools/skills/plugins/christian-courtship/skills/concentric-boundaries-and-chastity/SKILL.md",
+    "output": "docs/microslices/skills/christian-courtship/skills/concentric-boundaries-and-chastity/002-invocation-triggers.md",
+    "requires": [
+      "skill-overview-04091bfeb2"
+    ],
+    "links": [
+      "skill-input-schema-01071265a6"
+    ]
+  },
+  {
+    "id": "skill-input-schema-01071265a6",
+    "purpose": "input schema",
+    "source": "src/vibey_tools/skills/plugins/christian-courtship/skills/concentric-boundaries-and-chastity/SKILL.md",
+    "output": "docs/microslices/skills/christian-courtship/skills/concentric-boundaries-and-chastity/003-input-schema.md",
+    "requires": [
+      "skill-invocation-triggers-2999bc1d8d"
+    ],
+    "links": [
+      "skill-the-five-concentric-spheres-1151c566de"
+    ]
+  },
+  {
+    "id": "skill-the-five-concentric-spheres-1151c566de",
+    "purpose": "the five concentric spheres",
+    "source": "src/vibey_tools/skills/plugins/christian-courtship/skills/concentric-boundaries-and-chastity/SKILL.md",
+    "output": "docs/microslices/skills/christian-courtship/skills/concentric-boundaries-and-chastity/004-the-five-concentric-spheres.md",
+    "requires": [
+      "skill-input-schema-01071265a6"
+    ],
+    "links": [
+      "skill-the-paramount-invariant-absolute-premarital-chastity-9fe03cda88"
+    ]
+  },
+  {
+    "id": "skill-the-paramount-invariant-absolute-premarital-chastity-9fe03cda88",
+    "purpose": "the paramount invariant absolute premarital chastity",
+    "source": "src/vibey_tools/skills/plugins/christian-courtship/skills/concentric-boundaries-and-chastity/SKILL.md",
+    "output": "docs/microslices/skills/christian-courtship/skills/concentric-boundaries-and-chastity/005-the-paramount-invariant-absolute-premarital-chastity.md",
+    "requires": [
+      "skill-the-five-concentric-spheres-1151c566de"
+    ],
+    "links": [
+      "skill-operational-checklist-e8a4b5ce17"
+    ]
+  },
+  {
+    "id": "skill-operational-checklist-e8a4b5ce17",
+    "purpose": "operational checklist",
+    "source": "src/vibey_tools/skills/plugins/christian-courtship/skills/concentric-boundaries-and-chastity/SKILL.md",
+    "output": "docs/microslices/skills/christian-courtship/skills/concentric-boundaries-and-chastity/006-operational-checklist.md",
+    "requires": [
+      "skill-the-paramount-invariant-absolute-premarital-chastity-9fe03cda88"
+    ],
+    "links": [
+      "skill-failure-modes-0641d7ef3f"
+    ]
+  },
+  {
+    "id": "skill-failure-modes-0641d7ef3f",
+    "purpose": "failure modes",
+    "source": "src/vibey_tools/skills/plugins/christian-courtship/skills/concentric-boundaries-and-chastity/SKILL.md",
+    "output": "docs/microslices/skills/christian-courtship/skills/concentric-boundaries-and-chastity/007-failure-modes.md",
+    "requires": [
+      "skill-operational-checklist-e8a4b5ce17"
+    ],
+    "links": []
+  }
+]

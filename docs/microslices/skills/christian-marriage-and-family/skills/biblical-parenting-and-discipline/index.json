@@ -1,0 +1,22 @@
+[
+  {
+    "id": "skill-core-doctrinal-principles-729de8da03",
+    "purpose": "core doctrinal principles",
+    "source": "src/vibey_tools/skills/plugins/christian-marriage-and-family/skills/biblical-parenting-and-discipline/SKILL.md",
+    "output": "docs/microslices/skills/christian-marriage-and-family/skills/biblical-parenting-and-discipline/001-core-doctrinal-principles.md",
+    "requires": [],
+    "links": [
+      "skill-implementation-protocols-8dbcd40acd"
+    ]
+  },
+  {
+    "id": "skill-implementation-protocols-8dbcd40acd",
+    "purpose": "implementation protocols",
+    "source": "src/vibey_tools/skills/plugins/christian-marriage-and-family/skills/biblical-parenting-and-discipline/SKILL.md",
+    "output": "docs/microslices/skills/christian-marriage-and-family/skills/biblical-parenting-and-discipline/002-implementation-protocols.md",
+    "requires": [
+      "skill-core-doctrinal-principles-729de8da03"
+    ],
+    "links": []
+  }
+]

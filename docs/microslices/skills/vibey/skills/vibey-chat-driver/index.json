@@ -1,0 +1,34 @@
+[
+  {
+    "id": "skill-1-one-command-setup-vibey-connect-9fa75fbd59",
+    "purpose": "1 one command setup vibey connect",
+    "source": "src/vibey_tools/skills/plugins/vibey/skills/vibey-chat-driver/SKILL.md",
+    "output": "docs/microslices/skills/vibey/skills/vibey-chat-driver/001-1-one-command-setup-vibey-connect.md",
+    "requires": [],
+    "links": [
+      "skill-2-security-boundary-the-scoped-agent-principal-046fb6537a"
+    ]
+  },
+  {
+    "id": "skill-2-security-boundary-the-scoped-agent-principal-046fb6537a",
+    "purpose": "2 security boundary the scoped agent principal",
+    "source": "src/vibey_tools/skills/plugins/vibey/skills/vibey-chat-driver/SKILL.md",
+    "output": "docs/microslices/skills/vibey/skills/vibey-chat-driver/002-2-security-boundary-the-scoped-agent-principal.md",
+    "requires": [
+      "skill-1-one-command-setup-vibey-connect-9fa75fbd59"
+    ],
+    "links": [
+      "skill-3-operator-workflow-in-chat-b1e30cb405"
+    ]
+  },
+  {
+    "id": "skill-3-operator-workflow-in-chat-b1e30cb405",
+    "purpose": "3 operator workflow in chat",
+    "source": "src/vibey_tools/skills/plugins/vibey/skills/vibey-chat-driver/SKILL.md",
+    "output": "docs/microslices/skills/vibey/skills/vibey-chat-driver/003-3-operator-workflow-in-chat.md",
+    "requires": [
+      "skill-2-security-boundary-the-scoped-agent-principal-046fb6537a"
+    ],
+    "links": []
+  }
+]

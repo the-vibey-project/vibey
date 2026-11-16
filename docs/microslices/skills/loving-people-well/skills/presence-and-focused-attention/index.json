@@ -1,0 +1,70 @@
+[
+  {
+    "id": "skill-overview-4d2069f863",
+    "purpose": "overview",
+    "source": "src/vibey_tools/skills/plugins/loving-people-well/skills/presence-and-focused-attention/SKILL.md",
+    "output": "docs/microslices/skills/loving-people-well/skills/presence-and-focused-attention/001-overview.md",
+    "requires": [],
+    "links": [
+      "skill-invocation-triggers-b60cb45b16"
+    ]
+  },
+  {
+    "id": "skill-invocation-triggers-b60cb45b16",
+    "purpose": "invocation triggers",
+    "source": "src/vibey_tools/skills/plugins/loving-people-well/skills/presence-and-focused-attention/SKILL.md",
+    "output": "docs/microslices/skills/loving-people-well/skills/presence-and-focused-attention/002-invocation-triggers.md",
+    "requires": [
+      "skill-overview-4d2069f863"
+    ],
+    "links": [
+      "skill-input-schema-7ee99519a1"
+    ]
+  },
+  {
+    "id": "skill-input-schema-7ee99519a1",
+    "purpose": "input schema",
+    "source": "src/vibey_tools/skills/plugins/loving-people-well/skills/presence-and-focused-attention/SKILL.md",
+    "output": "docs/microslices/skills/loving-people-well/skills/presence-and-focused-attention/003-input-schema.md",
+    "requires": [
+      "skill-invocation-triggers-b60cb45b16"
+    ],
+    "links": [
+      "skill-governing-principles-f351e977d5"
+    ]
+  },
+  {
+    "id": "skill-governing-principles-f351e977d5",
+    "purpose": "governing principles",
+    "source": "src/vibey_tools/skills/plugins/loving-people-well/skills/presence-and-focused-attention/SKILL.md",
+    "output": "docs/microslices/skills/loving-people-well/skills/presence-and-focused-attention/004-governing-principles.md",
+    "requires": [
+      "skill-input-schema-7ee99519a1"
+    ],
+    "links": [
+      "skill-operational-checklist-6bd597ff38"
+    ]
+  },
+  {
+    "id": "skill-operational-checklist-6bd597ff38",
+    "purpose": "operational checklist",
+    "source": "src/vibey_tools/skills/plugins/loving-people-well/skills/presence-and-focused-attention/SKILL.md",
+    "output": "docs/microslices/skills/loving-people-well/skills/presence-and-focused-attention/005-operational-checklist.md",
+    "requires": [
+      "skill-governing-principles-f351e977d5"
+    ],
+    "links": [
+      "skill-failure-modes-0c531d6813"
+    ]
+  },
+  {
+    "id": "skill-failure-modes-0c531d6813",
+    "purpose": "failure modes",
+    "source": "src/vibey_tools/skills/plugins/loving-people-well/skills/presence-and-focused-attention/SKILL.md",
+    "output": "docs/microslices/skills/loving-people-well/skills/presence-and-focused-attention/006-failure-modes.md",
+    "requires": [
+      "skill-operational-checklist-6bd597ff38"
+    ],
+    "links": []
+  }
+]

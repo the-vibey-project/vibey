@@ -1,0 +1,70 @@
+[
+  {
+    "id": "skill-overview-ab1f7be35d",
+    "purpose": "overview",
+    "source": "src/vibey_tools/skills/plugins/christian-courtship/skills/commitment-and-differentiation/SKILL.md",
+    "output": "docs/microslices/skills/christian-courtship/skills/commitment-and-differentiation/001-overview.md",
+    "requires": [],
+    "links": [
+      "skill-invocation-triggers-e7ca008a97"
+    ]
+  },
+  {
+    "id": "skill-invocation-triggers-e7ca008a97",
+    "purpose": "invocation triggers",
+    "source": "src/vibey_tools/skills/plugins/christian-courtship/skills/commitment-and-differentiation/SKILL.md",
+    "output": "docs/microslices/skills/christian-courtship/skills/commitment-and-differentiation/002-invocation-triggers.md",
+    "requires": [
+      "skill-overview-ab1f7be35d"
+    ],
+    "links": [
+      "skill-input-schema-6952f9cd32"
+    ]
+  },
+  {
+    "id": "skill-input-schema-6952f9cd32",
+    "purpose": "input schema",
+    "source": "src/vibey_tools/skills/plugins/christian-courtship/skills/commitment-and-differentiation/SKILL.md",
+    "output": "docs/microslices/skills/christian-courtship/skills/commitment-and-differentiation/003-input-schema.md",
+    "requires": [
+      "skill-invocation-triggers-e7ca008a97"
+    ],
+    "links": [
+      "skill-key-empirical-models-b38a8b3b33"
+    ]
+  },
+  {
+    "id": "skill-key-empirical-models-b38a8b3b33",
+    "purpose": "key empirical models",
+    "source": "src/vibey_tools/skills/plugins/christian-courtship/skills/commitment-and-differentiation/SKILL.md",
+    "output": "docs/microslices/skills/christian-courtship/skills/commitment-and-differentiation/004-key-empirical-models.md",
+    "requires": [
+      "skill-input-schema-6952f9cd32"
+    ],
+    "links": [
+      "skill-operational-checklist-c9ed8ee3de"
+    ]
+  },
+  {
+    "id": "skill-operational-checklist-c9ed8ee3de",
+    "purpose": "operational checklist",
+    "source": "src/vibey_tools/skills/plugins/christian-courtship/skills/commitment-and-differentiation/SKILL.md",
+    "output": "docs/microslices/skills/christian-courtship/skills/commitment-and-differentiation/005-operational-checklist.md",
+    "requires": [
+      "skill-key-empirical-models-b38a8b3b33"
+    ],
+    "links": [
+      "skill-failure-modes-df2a676137"
+    ]
+  },
+  {
+    "id": "skill-failure-modes-df2a676137",
+    "purpose": "failure modes",
+    "source": "src/vibey_tools/skills/plugins/christian-courtship/skills/commitment-and-differentiation/SKILL.md",
+    "output": "docs/microslices/skills/christian-courtship/skills/commitment-and-differentiation/006-failure-modes.md",
+    "requires": [
+      "skill-operational-checklist-c9ed8ee3de"
+    ],
+    "links": []
+  }
+]

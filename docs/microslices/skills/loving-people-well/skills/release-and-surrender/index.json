@@ -1,0 +1,70 @@
+[
+  {
+    "id": "skill-overview-d075ae1903",
+    "purpose": "overview",
+    "source": "src/vibey_tools/skills/plugins/loving-people-well/skills/release-and-surrender/SKILL.md",
+    "output": "docs/microslices/skills/loving-people-well/skills/release-and-surrender/001-overview.md",
+    "requires": [],
+    "links": [
+      "skill-invocation-triggers-5ebaa2000e"
+    ]
+  },
+  {
+    "id": "skill-invocation-triggers-5ebaa2000e",
+    "purpose": "invocation triggers",
+    "source": "src/vibey_tools/skills/plugins/loving-people-well/skills/release-and-surrender/SKILL.md",
+    "output": "docs/microslices/skills/loving-people-well/skills/release-and-surrender/002-invocation-triggers.md",
+    "requires": [
+      "skill-overview-d075ae1903"
+    ],
+    "links": [
+      "skill-input-schema-b64facb9c6"
+    ]
+  },
+  {
+    "id": "skill-input-schema-b64facb9c6",
+    "purpose": "input schema",
+    "source": "src/vibey_tools/skills/plugins/loving-people-well/skills/release-and-surrender/SKILL.md",
+    "output": "docs/microslices/skills/loving-people-well/skills/release-and-surrender/003-input-schema.md",
+    "requires": [
+      "skill-invocation-triggers-5ebaa2000e"
+    ],
+    "links": [
+      "skill-governing-principles-32f3383f6e"
+    ]
+  },
+  {
+    "id": "skill-governing-principles-32f3383f6e",
+    "purpose": "governing principles",
+    "source": "src/vibey_tools/skills/plugins/loving-people-well/skills/release-and-surrender/SKILL.md",
+    "output": "docs/microslices/skills/loving-people-well/skills/release-and-surrender/004-governing-principles.md",
+    "requires": [
+      "skill-input-schema-b64facb9c6"
+    ],
+    "links": [
+      "skill-operational-checklist-ded220eea8"
+    ]
+  },
+  {
+    "id": "skill-operational-checklist-ded220eea8",
+    "purpose": "operational checklist",
+    "source": "src/vibey_tools/skills/plugins/loving-people-well/skills/release-and-surrender/SKILL.md",
+    "output": "docs/microslices/skills/loving-people-well/skills/release-and-surrender/005-operational-checklist.md",
+    "requires": [
+      "skill-governing-principles-32f3383f6e"
+    ],
+    "links": [
+      "skill-failure-modes-f720f77f5f"
+    ]
+  },
+  {
+    "id": "skill-failure-modes-f720f77f5f",
+    "purpose": "failure modes",
+    "source": "src/vibey_tools/skills/plugins/loving-people-well/skills/release-and-surrender/SKILL.md",
+    "output": "docs/microslices/skills/loving-people-well/skills/release-and-surrender/006-failure-modes.md",
+    "requires": [
+      "skill-operational-checklist-ded220eea8"
+    ],
+    "links": []
+  }
+]

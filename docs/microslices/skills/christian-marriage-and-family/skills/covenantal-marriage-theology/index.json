@@ -1,0 +1,22 @@
+[
+  {
+    "id": "skill-foundational-doctrines-ead912fca2",
+    "purpose": "foundational doctrines",
+    "source": "src/vibey_tools/skills/plugins/christian-marriage-and-family/skills/covenantal-marriage-theology/SKILL.md",
+    "output": "docs/microslices/skills/christian-marriage-and-family/skills/covenantal-marriage-theology/001-foundational-doctrines.md",
+    "requires": [],
+    "links": [
+      "skill-diagnostic-and-pastoral-application-checklist-f82bc3986b"
+    ]
+  },
+  {
+    "id": "skill-diagnostic-and-pastoral-application-checklist-f82bc3986b",
+    "purpose": "diagnostic and pastoral application checklist",
+    "source": "src/vibey_tools/skills/plugins/christian-marriage-and-family/skills/covenantal-marriage-theology/SKILL.md",
+    "output": "docs/microslices/skills/christian-marriage-and-family/skills/covenantal-marriage-theology/002-diagnostic-and-pastoral-application-checklist.md",
+    "requires": [
+      "skill-foundational-doctrines-ead912fca2"
+    ],
+    "links": []
+  }
+]

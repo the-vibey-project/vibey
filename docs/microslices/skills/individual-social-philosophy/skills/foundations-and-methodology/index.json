@@ -1,0 +1,46 @@
+[
+  {
+    "id": "skill-1-scope-micro-sociology-and-macro-governance-c6effafd0d",
+    "purpose": "1 scope micro sociology and macro governance",
+    "source": "src/vibey_tools/skills/plugins/individual-social-philosophy/skills/foundations-and-methodology/SKILL.md",
+    "output": "docs/microslices/skills/individual-social-philosophy/skills/foundations-and-methodology/001-1-scope-micro-sociology-and-macro-governance.md",
+    "requires": [],
+    "links": [
+      "skill-2-anthropological-baseline-universal-fallenness-76957f3446"
+    ]
+  },
+  {
+    "id": "skill-2-anthropological-baseline-universal-fallenness-76957f3446",
+    "purpose": "2 anthropological baseline universal fallenness",
+    "source": "src/vibey_tools/skills/plugins/individual-social-philosophy/skills/foundations-and-methodology/SKILL.md",
+    "output": "docs/microslices/skills/individual-social-philosophy/skills/foundations-and-methodology/002-2-anthropological-baseline-universal-fallenness.md",
+    "requires": [
+      "skill-1-scope-micro-sociology-and-macro-governance-c6effafd0d"
+    ],
+    "links": [
+      "skill-3-the-christological-precedent-john-2-23-25-88e9be9b25"
+    ]
+  },
+  {
+    "id": "skill-3-the-christological-precedent-john-2-23-25-88e9be9b25",
+    "purpose": "3 the christological precedent john 2 23 25",
+    "source": "src/vibey_tools/skills/plugins/individual-social-philosophy/skills/foundations-and-methodology/SKILL.md",
+    "output": "docs/microslices/skills/individual-social-philosophy/skills/foundations-and-methodology/003-3-the-christological-precedent-john-2-23-25.md",
+    "requires": [
+      "skill-2-anthropological-baseline-universal-fallenness-76957f3446"
+    ],
+    "links": [
+      "skill-4-epistemic-method-triangulation-and-verification-5fd1923fbd"
+    ]
+  },
+  {
+    "id": "skill-4-epistemic-method-triangulation-and-verification-5fd1923fbd",
+    "purpose": "4 epistemic method triangulation and verification",
+    "source": "src/vibey_tools/skills/plugins/individual-social-philosophy/skills/foundations-and-methodology/SKILL.md",
+    "output": "docs/microslices/skills/individual-social-philosophy/skills/foundations-and-methodology/004-4-epistemic-method-triangulation-and-verification.md",
+    "requires": [
+      "skill-3-the-christological-precedent-john-2-23-25-88e9be9b25"
+    ],
+    "links": []
+  }
+]

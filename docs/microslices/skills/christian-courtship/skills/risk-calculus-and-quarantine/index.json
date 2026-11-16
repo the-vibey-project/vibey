@@ -1,0 +1,82 @@
+[
+  {
+    "id": "skill-overview-2e295391df",
+    "purpose": "overview",
+    "source": "src/vibey_tools/skills/plugins/christian-courtship/skills/risk-calculus-and-quarantine/SKILL.md",
+    "output": "docs/microslices/skills/christian-courtship/skills/risk-calculus-and-quarantine/001-overview.md",
+    "requires": [],
+    "links": [
+      "skill-invocation-triggers-d2c9f86ca1"
+    ]
+  },
+  {
+    "id": "skill-invocation-triggers-d2c9f86ca1",
+    "purpose": "invocation triggers",
+    "source": "src/vibey_tools/skills/plugins/christian-courtship/skills/risk-calculus-and-quarantine/SKILL.md",
+    "output": "docs/microslices/skills/christian-courtship/skills/risk-calculus-and-quarantine/002-invocation-triggers.md",
+    "requires": [
+      "skill-overview-2e295391df"
+    ],
+    "links": [
+      "skill-input-schema-1a86c2a14f"
+    ]
+  },
+  {
+    "id": "skill-input-schema-1a86c2a14f",
+    "purpose": "input schema",
+    "source": "src/vibey_tools/skills/plugins/christian-courtship/skills/risk-calculus-and-quarantine/SKILL.md",
+    "output": "docs/microslices/skills/christian-courtship/skills/risk-calculus-and-quarantine/003-input-schema.md",
+    "requires": [
+      "skill-invocation-triggers-d2c9f86ca1"
+    ],
+    "links": [
+      "skill-mathematical-formulations-1e6fa017b2"
+    ]
+  },
+  {
+    "id": "skill-mathematical-formulations-1e6fa017b2",
+    "purpose": "mathematical formulations",
+    "source": "src/vibey_tools/skills/plugins/christian-courtship/skills/risk-calculus-and-quarantine/SKILL.md",
+    "output": "docs/microslices/skills/christian-courtship/skills/risk-calculus-and-quarantine/004-mathematical-formulations.md",
+    "requires": [
+      "skill-input-schema-1a86c2a14f"
+    ],
+    "links": [
+      "skill-quarantine-and-revocation-circuit-breakers-e1848fd885"
+    ]
+  },
+  {
+    "id": "skill-quarantine-and-revocation-circuit-breakers-e1848fd885",
+    "purpose": "quarantine and revocation circuit breakers",
+    "source": "src/vibey_tools/skills/plugins/christian-courtship/skills/risk-calculus-and-quarantine/SKILL.md",
+    "output": "docs/microslices/skills/christian-courtship/skills/risk-calculus-and-quarantine/005-quarantine-and-revocation-circuit-breakers.md",
+    "requires": [
+      "skill-mathematical-formulations-1e6fa017b2"
+    ],
+    "links": [
+      "skill-operational-checklist-b4fbba4db4"
+    ]
+  },
+  {
+    "id": "skill-operational-checklist-b4fbba4db4",
+    "purpose": "operational checklist",
+    "source": "src/vibey_tools/skills/plugins/christian-courtship/skills/risk-calculus-and-quarantine/SKILL.md",
+    "output": "docs/microslices/skills/christian-courtship/skills/risk-calculus-and-quarantine/006-operational-checklist.md",
+    "requires": [
+      "skill-quarantine-and-revocation-circuit-breakers-e1848fd885"
+    ],
+    "links": [
+      "skill-failure-modes-02d18c11fa"
+    ]
+  },
+  {
+    "id": "skill-failure-modes-02d18c11fa",
+    "purpose": "failure modes",
+    "source": "src/vibey_tools/skills/plugins/christian-courtship/skills/risk-calculus-and-quarantine/SKILL.md",
+    "output": "docs/microslices/skills/christian-courtship/skills/risk-calculus-and-quarantine/007-failure-modes.md",
+    "requires": [
+      "skill-operational-checklist-b4fbba4db4"
+    ],
+    "links": []
+  }
+]

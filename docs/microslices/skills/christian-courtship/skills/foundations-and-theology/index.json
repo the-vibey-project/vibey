@@ -1,0 +1,70 @@
+[
+  {
+    "id": "skill-overview-38ed7d2b8e",
+    "purpose": "overview",
+    "source": "src/vibey_tools/skills/plugins/christian-courtship/skills/foundations-and-theology/SKILL.md",
+    "output": "docs/microslices/skills/christian-courtship/skills/foundations-and-theology/001-overview.md",
+    "requires": [],
+    "links": [
+      "skill-invocation-triggers-b99b188764"
+    ]
+  },
+  {
+    "id": "skill-invocation-triggers-b99b188764",
+    "purpose": "invocation triggers",
+    "source": "src/vibey_tools/skills/plugins/christian-courtship/skills/foundations-and-theology/SKILL.md",
+    "output": "docs/microslices/skills/christian-courtship/skills/foundations-and-theology/002-invocation-triggers.md",
+    "requires": [
+      "skill-overview-38ed7d2b8e"
+    ],
+    "links": [
+      "skill-input-schema-339acb465b"
+    ]
+  },
+  {
+    "id": "skill-input-schema-339acb465b",
+    "purpose": "input schema",
+    "source": "src/vibey_tools/skills/plugins/christian-courtship/skills/foundations-and-theology/SKILL.md",
+    "output": "docs/microslices/skills/christian-courtship/skills/foundations-and-theology/003-input-schema.md",
+    "requires": [
+      "skill-invocation-triggers-b99b188764"
+    ],
+    "links": [
+      "skill-theological-principles-044de69842"
+    ]
+  },
+  {
+    "id": "skill-theological-principles-044de69842",
+    "purpose": "theological principles",
+    "source": "src/vibey_tools/skills/plugins/christian-courtship/skills/foundations-and-theology/SKILL.md",
+    "output": "docs/microslices/skills/christian-courtship/skills/foundations-and-theology/004-theological-principles.md",
+    "requires": [
+      "skill-input-schema-339acb465b"
+    ],
+    "links": [
+      "skill-operational-checklist-aa434fbfd9"
+    ]
+  },
+  {
+    "id": "skill-operational-checklist-aa434fbfd9",
+    "purpose": "operational checklist",
+    "source": "src/vibey_tools/skills/plugins/christian-courtship/skills/foundations-and-theology/SKILL.md",
+    "output": "docs/microslices/skills/christian-courtship/skills/foundations-and-theology/005-operational-checklist.md",
+    "requires": [
+      "skill-theological-principles-044de69842"
+    ],
+    "links": [
+      "skill-failure-modes-d852596e0e"
+    ]
+  },
+  {
+    "id": "skill-failure-modes-d852596e0e",
+    "purpose": "failure modes",
+    "source": "src/vibey_tools/skills/plugins/christian-courtship/skills/foundations-and-theology/SKILL.md",
+    "output": "docs/microslices/skills/christian-courtship/skills/foundations-and-theology/006-failure-modes.md",
+    "requires": [
+      "skill-operational-checklist-aa434fbfd9"
+    ],
+    "links": []
+  }
+]
