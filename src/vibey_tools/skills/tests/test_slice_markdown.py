@@ -118,3 +118,57 @@ class SliceMarkdownFenceTest(unittest.TestCase):
     def test_only_the_requested_level_starting_a_line_is_a_boundary(self) -> None:
         text = "# Top\n### Three\n  ## indented\n##no space\n## Two  \r\n"
         self.assertEqual(self.titles(text), ["Two"])
+
+
+def _plugin(tmp_path: Path, body: str) -> Path:
+    """A plugin with a `book-release` skill (holding `body`) and a sibling `book-production`."""
+    release = tmp_path / "plugin" / "skills" / "book-release" / "SKILL.md"
+    production = tmp_path / "plugin" / "skills" / "book-production" / "SKILL.md"
+    release.parent.mkdir(parents=True)
+    production.parent.mkdir(parents=True)
+    release.write_text(f"# Release\n\n## References\n\n{body}\n", encoding="utf-8")
+    production.write_text("# Production\n\n## Phases 4 and 5\n\nText.\n", encoding="utf-8")
+    return release
+
+
+def _slice_text(source: Path, out: Path) -> str:
+    _module().slice_markdown(source, out)
+    return (out / "001-references.md").read_text(encoding="utf-8")
+
+
+def test_a_sibling_skill_link_points_at_that_skills_first_slice(tmp_path: Path) -> None:
+    source = _plugin(tmp_path, "- [Production](../book-production/SKILL.md) gates.")
+    text = _slice_text(source, tmp_path / "out")
+    assert "(../book-production/001-phases-4-and-5.md)" in text
+    assert "SKILL.md" not in text.split("---", 2)[2]
+
+
+def test_a_sibling_skill_link_keeps_its_fragment(tmp_path: Path) -> None:
+    source = _plugin(tmp_path, "[x](../book-production/SKILL.md#phase-4)")
+    assert "(../book-production/001-phases-4-and-5.md#phase-4)" in _slice_text(
+        source, tmp_path / "out"
+    )
+
+
+def test_other_links_are_left_untouched(tmp_path: Path) -> None:
+    body = (
+        "[a](https://example.com/SKILL.md) [b](#top) [c](../book-production/001-phases-4-and-5.md)"
+    )
+    source = _plugin(tmp_path, body)
+    assert body in _slice_text(source, tmp_path / "out")
+
+
+def test_an_unresolvable_sibling_is_left_and_reported(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    source = _plugin(tmp_path, "[x](../missing/SKILL.md)")
+    assert "(../missing/SKILL.md)" in _slice_text(source, tmp_path / "out")
+    assert "cannot resolve ../missing/SKILL.md" in capsys.readouterr().err
+
+
+def test_slicing_rewritten_output_changes_nothing(tmp_path: Path) -> None:
+    source = _plugin(tmp_path, "[x](../book-production/SKILL.md)")
+    first = _slice_text(source, tmp_path / "one")
+    body = first.split("---", 2)[2]
+    source.write_text(f"# Release\n{body}", encoding="utf-8")
+    assert _slice_text(source, tmp_path / "two").split("---", 2)[2] == body

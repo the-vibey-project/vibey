@@ -1,7 +1,8 @@
 # The documentation build's pins. Read by the `docs` job of ci.yml (a strict build on every
 # pull request that touches docs) and by release-surfaces.yml, which installs this file when
-# it exists. Keep them equal to [documentation] properdocs_version in .vibey-gh.toml and to
-# the pymdown-extensions pin release-surfaces.yml installs while [documentation] math is on.
+# it exists. Keep them equal to the properdocs_version default (1.6.7) in
+# src/vibey_tools/gh/vibey_gh/config.py, which .vibey-gh.toml does not override, and to the
+# pymdown-extensions==12.0 that release-surfaces.yml hard-codes while [documentation] math is on.
 properdocs==1.6.7
 properdocs-theme-mkdocs==1.6.7
 pymdown-extensions==12.0

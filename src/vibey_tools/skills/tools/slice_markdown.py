@@ -8,6 +8,7 @@ import argparse
 import hashlib
 import json
 import re
+import sys
 from dataclasses import asdict, dataclass
 from pathlib import Path
 
@@ -77,6 +78,39 @@ def _headings(text: str, level: int) -> list[tuple[int, str]]:
     return found
 
 
+# A relative link to a sibling skill's SKILL.md: `](../<skill>/SKILL.md)`, optionally `#fragment`.
+_SIBLING_SKILL_LINK = re.compile(
+    r"\]\(\.\./(?P<skill>[A-Za-z0-9_.-]+)/SKILL\.md(?P<fragment>#[^)\s]*)?\)"
+)
+
+
+def _link_sibling_skills(body: str, source: Path, level: int) -> str:
+    """Point `../<skill>/SKILL.md` at that skill's first slice.
+
+    A slice mirror holds numbered slices, never a SKILL.md, so a sibling link copied verbatim
+    resolves in the skill tree and breaks in the mirror (the strict docs build warns on it).
+    The first slice is named exactly as `slice_markdown` names it, from the target's own first
+    heading. A sibling that cannot be resolved is left as written and reported on stderr: an
+    invented path would only move the break.
+
+    Module-level for the same reason as the rest of this script (vibey ADR-0016): a
+    standalone tool, loaded by path, whose functions its tests call by name.
+    """
+
+    def replace(match: re.Match[str]) -> str:
+        skill = match["skill"]
+        target = source.parent.parent / skill / "SKILL.md"
+        first = _headings(target.read_text(encoding="utf-8"), level) if target.is_file() else []
+        if not first:
+            print(
+                f"warning: {source}: cannot resolve ../{skill}/SKILL.md to a slice", file=sys.stderr
+            )
+            return match[0]
+        return f"](../{skill}/001-{_slug(first[0][1])}.md{match['fragment'] or ''})"
+
+    return _SIBLING_SKILL_LINK.sub(replace, body)
+
+
 def slice_markdown(source: Path, destination: Path, level: int = 2) -> list[Slice]:
     text = source.read_text(encoding="utf-8")
     matches = _headings(text, level)
@@ -85,7 +119,7 @@ def slice_markdown(source: Path, destination: Path, level: int = 2) -> list[Slic
     chunks = []
     for index, (start, title) in enumerate(matches):
         end = matches[index + 1][0] if index + 1 < len(matches) else len(text)
-        chunks.append((title, text[start:end].strip() + "\n"))
+        chunks.append((title, _link_sibling_skills(text[start:end].strip() + "\n", source, level)))
     records: list[Slice] = []
     for index, (heading, body) in enumerate(chunks):
         slice_id = _id(source, heading, index)
