@@ -24,3 +24,9 @@ updates:
       - dependency-name: anthropics/claude-code-action
       - dependency-name: astral-sh/setup-uv
       - dependency-name: oras-project/setup-oras
+  # The two container bases in the Dockerfile are pinned by digest; this keeps the
+  # digests moving instead of freezing them.
+  - package-ecosystem: docker
+    directory: /deploy/docker
+    schedule:
+      interval: weekly

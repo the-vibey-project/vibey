@@ -1,6 +1,6 @@
 repos:
   - repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: v0.16.3
+    rev: 65dbdb59d2f2d9c3bdc343c566821ad3319ddaa3  # v0.16.3
     hooks:
       - id: ruff
         args: [--fix]
@@ -66,7 +66,7 @@ repos:
         stages: [pre-push]
 
   - repo: https://github.com/compilerla/conventional-pre-commit
-    rev: v3.4.0
+    rev: 406f0d1a4ffcd9eb0be9f0f6b824df619b38f41e  # v3.4.0
     hooks:
       - id: conventional-pre-commit
         stages: [commit-msg]

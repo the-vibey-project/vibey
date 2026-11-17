@@ -27,7 +27,7 @@
 # asserts that as well: `codex --version` prints the pinned version, and
 # neither node nor npm is on PATH.
 
-FROM ghcr.io/astral-sh/uv:0.9-python3.12-bookworm-slim AS build
+FROM ghcr.io/astral-sh/uv:0.9-python3.12-bookworm-slim@sha256:e5b65587bce7de595f299855d7385fe7fca39b8a74baa261ba1b7147afa78e58 AS build
 
 # The context-engine release is temporarily locked to an immutable Git commit
 # until it has a newly versioned wheel. Git remains confined to this disposable
@@ -152,7 +152,7 @@ COPY src/vibey_tools/gh/docs/javascripts/consent.js ./src/vibey_tools/gh/docs/ja
 RUN uv sync --frozen --no-dev --extra operator --extra skills
 
 
-FROM python:3.12-slim-bookworm AS runtime
+FROM python:3.12-slim-bookworm@sha256:935c3c5b12357a7e10caa9c1e6ca5692344d97cf229832ef584be2cec9fc03df AS runtime
 
 # tini is here for one reason, and it is not tidiness. Linux discards a signal sent to
 # PID 1 while its disposition is still SIG_DFL, so whatever runs as PID 1 must have its
