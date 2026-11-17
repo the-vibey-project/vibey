@@ -28,6 +28,21 @@ class ActionUse:
     ref: str
 
 
+@dataclass(frozen=True)
+class PinnedUse:
+    """One `uses:` reference already pinned to a commit: where it is, and what it stands for.
+
+    `ref` is the name the trailing `# <ref>` comment gives (`v4`, `release/v1`), the thing a
+    refresh asks the forge about; `None` when the line has no comment to read one from.
+    """
+
+    path: Path
+    line: int
+    action: str
+    sha: str
+    ref: str | None
+
+
 @runtime_checkable
 class PinActionsInterface(Protocol):
     """Finds every mutable `uses:` reference and rewrites it to the commit it names today.
@@ -60,4 +75,34 @@ class PinActionsInterface(Protocol):
         1 when there is one, else 0. With `apply`: resolve every unpinned use first and only
         then rewrite the files, so a ref that does not resolve leaves every file unchanged,
         says so, and returns 1."""
+        ...
+
+    def pinned(self, text: str, path: Path) -> list[PinnedUse]:
+        """The `uses:` values in `text` already pinned to a full 40-hex commit, each with
+        the ref its trailing comment names (`None` when there is none to read). Pure: no
+        network, no file read. Local `./` actions, `docker://` references and `uses:` text in
+        a `run:` block or a comment are not pins."""
+        ...
+
+    def restamp(self, text: str, shas: Mapping[tuple[str, str], str]) -> str:
+        """`text` with each pinned `(action, ref)` found in `shas` moved to that commit when
+        it differs, the `# <ref>` comment and everything else on the line left as it was.
+        Pure. A pin `shas` has no answer for, or one already on the answer, is untouched."""
+        ...
+
+    def refresh(self, paths: Sequence[Path], *, write: bool) -> int:
+        """Ask the forge what each pin's `# <ref>` names today and say which moved, as
+        `path:line` with the old and new commit. With `write`, rewrite the stale pins; without
+        it, touch no file (the freshness check). A pin that cannot be refreshed (no readable
+        ref, a ref that does not resolve, a use that is not pinned) is listed as
+        `path:line` and the run returns 1, never claiming a refresh it did not make; a
+        pin that is stale in check mode also returns 1. Pins of held actions are reported and
+        left alone. Idempotent."""
+        ...
+
+    def announce(self, paths: Sequence[Path]) -> int:
+        """The freshness check for automation: look at every pin as `refresh` does with
+        `write=False`, then keep ONE tracking issue open while a pin is stale or cannot be
+        checked, and close it when none is. Returns 0 once that is done, 1 when the check or
+        the issue could not be completed."""
         ...

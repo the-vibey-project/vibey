@@ -17,9 +17,10 @@ updates:
     # The same limit applies to the hand-written workflows: their SHA pins of these
     # five actions (actions/checkout, actions/download-artifact, actions/setup-python,
     # actions/upload-artifact, astral-sh/setup-uv) are NOT bumped by Dependabot either.
-    # Until `vibey-gh pin-actions` can refresh a pin to the current commit of its
-    # `# <ref>` comment, those pins move only by hand (and the managed ones by
-    # upgrading vibey-gh).
+    # `vibey-gh pin-actions --refresh` moves those pins to the current commit of their
+    # `# <ref>` comment, and pin-freshness.yml opens one issue weekly while any pin is
+    # stale ([pin_actions] in .vibey-gh.toml). The managed ones change only by upgrading
+    # vibey-gh.
     ignore:
       - dependency-name: actions/checkout
       - dependency-name: actions/configure-pages

@@ -1405,6 +1405,9 @@ what runs in the pipeline. This is a `vibey-gh` command, part of the same distri
 |---|---|
 | `vibey-gh pin-actions [PATH ...]` | Check. Name every `uses:` whose ref is not a full commit SHA, as `path:line`, and exit 1; exit 0 when none. Makes no network call. With no `PATH`, reads `.github/workflows/*.yml` and `.github/actions/*/action.yml`. |
 | `vibey-gh pin-actions --apply [PATH ...]` | Resolve each distinct `(action, ref)` once and rewrite `uses: owner/repo@v4` to `uses: owner/repo@<40-hex commit> # v4`, keeping any comment already on the line after it. An annotated tag gives the commit it points at; a reusable workflow is resolved in its own repository. A ref that does not resolve changes no file and exits 1. Idempotent. |
+| `vibey-gh pin-actions --refresh [PATH ...]` | Re-resolve the `# <ref>` comment of every pin and move a pin whose ref now names another commit (a floating `v4` follows the newest v4.x), printing `path:line: action (ref) <old> -> <new>`. A pin it cannot refresh (no readable ref, a ref that does not resolve, an expression, a use not yet pinned) is listed as `path:line` and the run exits 1; the rest still move. Actions in `[pin_actions] hold` are reported and left alone. Idempotent. |
+| `vibey-gh pin-actions --check-stale [PATH ...]` | The same look, no write: exit 1 when a pin is stale or cannot be checked. Needs the network, so it is not the offline check above. |
+| `vibey-gh pin-actions --check-stale --tracking-issue` | What `pin-freshness.yml` runs weekly: keeps ONE open issue (`pin-freshness`) while a pin is stale or unchecked, closes it when none is, and exits 0 once it has said so. |
 
 Every option is in the vibey-gh [CLI reference](https://github.com/the-vibey-project/vibey/blob/main/src/vibey_tools/gh/docs/cli.md).
 

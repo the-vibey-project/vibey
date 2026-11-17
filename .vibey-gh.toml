@@ -379,6 +379,14 @@ enabled = true
 "gates :: Gate 7 - pip-audit" = "uv run pip-audit --skip-editable"
 "No-loss property suite (10,000 examples)" = "uv run pytest -m noloss --hypothesis-profile=noloss -p no:cacheprovider"
 
+# `vibey-gh pin-actions --refresh` moves the commit pins of the hand-written workflows, which
+# Dependabot cannot (its ignore list protects the managed templates and is by dependency, not
+# file); pin-freshness.yml keeps one issue open while any pin is stale. `hold` leaves an
+# `owner/repo` on its current commit; `labels` must already exist.
+[pin_actions]
+hold = []
+labels = []
+
 [pr_automation]
 # The review, repair and conflict jobs load this tree's own vibey-skills marketplace, read
 # from the trusted default-branch checkout. It used to be cloned from

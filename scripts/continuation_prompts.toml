@@ -61,7 +61,7 @@ gather = [
 ]
 covers = [
   "ci.yml", "branch-health.yml", "ruleset-drift.yml", "repository-profile.yml",
-  "documentation-deep-scan.yml", "self-healer.yml", "vibey-quality-gates",
+  "documentation-deep-scan.yml", "self-healer.yml", "pin-freshness.yml", "vibey-quality-gates",
 ]
 
 [[prompt]]

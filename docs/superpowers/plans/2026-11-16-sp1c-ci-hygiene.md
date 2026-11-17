@@ -314,6 +314,20 @@ actions and updates the trailing version comment; the managed ones stay on the e
 
 ---
 
+### Decision (2026-11-17): how the pins stay fresh
+
+The final review found that Dependabot's `ignore:` list, which protects the managed workflow
+templates, also stops it bumping the five actions in the hand-written workflows, and that
+`pin-actions` only pinned refs that were not yet pinned. Options weighed: (a) narrow the ignore
+list (impossible: Dependabot ignores a dependency, not a file); (b) a scheduled workflow that
+runs `--refresh` and opens the pull request itself; (c) `--refresh` by hand plus a weekly check
+that opens one tracking issue. Chosen: (c), with `--refresh` and `--check-stale` in the tool.
+Moving a pin changes what runs in the pipeline, so a person reads that diff; (b) needs a token
+whose pull requests trigger CI and writes workflow files, a larger grant than an issue needs.
+The check is the 12.e half: it says out loud when a pin is stale or cannot be checked. Held
+actions and issue labels are configuration (`[pin_actions]` in `.vibey-gh.toml`), not code.
+Revisit (b) if the issues are acted on without ever being questioned.
+
 ## Not in this plan
 
 - **CI-D locked tenant installs** (`uv export --frozen` with hashes, nightly latest-dependency canary,

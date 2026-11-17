@@ -1511,6 +1511,17 @@ whose commit is no longer the tip, changes nothing.
 
 For each failed watched job the issue and its per-run comment carry the failed step (linked), the first failing test id with its job-log line, and the mapped command. A log that cannot be fetched (`actions: read` is needed) never stops the issue being filed; the field says it is unknown.
 
+## `[pin_actions]`
+
+`vibey-gh pin-actions --refresh` is the only thing that moves the commit pins of a repository's
+hand-written workflows: a pin never moves by itself, and Dependabot ignores a dependency, not a
+file. `pin-freshness.yml` runs `pin-actions --check-stale --tracking-issue` weekly.
+
+| Field | Type / default | Meaning |
+|---|---|---|
+| `hold` | string list / `[]` | `owner/repo` actions a refresh leaves on the commit they are on. A held pin is reported, never counted stale. |
+| `labels` | string list / `[]` | Labels applied when the stale-pin issue is opened. They must already exist. |
+
 ## `[documentation]`
 
 | Field | Type / default | Meaning |
