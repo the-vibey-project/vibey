@@ -268,6 +268,15 @@ jobs:
       - name: Install dependencies
         run: uv sync --extra dev
 
+      # zizmor audits .github/ for template injection, excessive permissions and unpinned refs.
+      # Installed from the lock with hashes (the gh tenant's `dev` extra), never downloaded
+      # unlocked; its finding count is a two-sided ratchet in tests/meta/workflow_lint_baseline.toml.
+      - name: Audit the workflows with zizmor
+        run: |
+          uv export --frozen --package vibey-gh --extra dev --no-emit-workspace \
+            | uv pip install --require-hashes -r -
+          uv run --no-sync python scripts/workflow_lint.py
+
       # TypeScript is the only authored JavaScript (sub-doctrine 9.f): the committed `.js` the
       # sites and Expo need is compiled from it, and tests/meta/test_typescript_artifacts.py
       # recompiles it here. With no compiler that test fails in CI rather than skipping.
