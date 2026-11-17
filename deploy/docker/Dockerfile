@@ -152,7 +152,7 @@ COPY src/vibey_tools/gh/docs/javascripts/consent.js ./src/vibey_tools/gh/docs/ja
 RUN uv sync --frozen --no-dev --extra operator --extra skills
 
 
-FROM python:3.12-slim-bookworm@sha256:935c3c5b12357a7e10caa9c1e6ca5692344d97cf229832ef584be2cec9fc03df AS runtime
+FROM python:3.15-slim-bookworm@sha256:96599df822d0e1c6bb700014a05c7f3c8cabc6e0f7ff3c4f9f69cee033b4b5d9 AS runtime
 
 # tini is here for one reason, and it is not tidiness. Linux discards a signal sent to
 # PID 1 while its disposition is still SIG_DFL, so whatever runs as PID 1 must have its
