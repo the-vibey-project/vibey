@@ -167,6 +167,7 @@ def test_the_jobs_read_the_plans_outputs_and_never_its_result() -> None:
         "postgres-compatibility",
         "tools",
         "tools-lint",
+        "docs",
         "krypton-app",
         "vibey-core",
         "app",

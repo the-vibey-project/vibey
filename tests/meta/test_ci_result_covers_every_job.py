@@ -119,6 +119,7 @@ GATED_BY_LINT = {
     "postgres-compatibility",
     "tools",
     "tools-lint",
+    "docs",
     "image",
     "cluster-smoke",
 }
