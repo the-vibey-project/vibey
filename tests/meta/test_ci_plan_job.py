@@ -102,10 +102,11 @@ def test_the_first_step_writes_the_all_full_defaults_before_anything_else() -> N
 
 def test_the_checkout_is_deep_and_keeps_no_credentials() -> None:
     (checkout,) = [s for s in _steps() if str(s.get("uses", "")).startswith("actions/checkout@")]
-    assert checkout["uses"] == "actions/checkout@v4"
+    # Pinned to a commit (the `# v4` comment is not parsed), so the name is what is asserted.
+    assert re.fullmatch(r"actions/checkout@[0-9a-f]{40}", checkout["uses"]), checkout["uses"]
     assert checkout["with"] == {"fetch-depth": 0, "persist-credentials": False}
     order = [s.get("id") or s.get("uses") for s in _steps()]
-    assert order.index("defaults") < order.index("actions/checkout@v4")
+    assert order.index("defaults") < order.index(checkout["uses"])
 
 
 def test_only_vibey_gh_is_installed_from_the_checkout() -> None:

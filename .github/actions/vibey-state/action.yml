@@ -118,7 +118,7 @@ runs:
     # write job finds state.vibey-export at the artifact's root.
     - name: Hand the sealed state to the write job
       if: inputs.step == 'close' && steps.state.outputs.state == 'true'
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
       with:
         name: ${{ steps.state.outputs.artifact }}
         path: ${{ steps.state.outputs.dir }}/
