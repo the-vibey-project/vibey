@@ -1,6 +1,159 @@
 # Made with ❤️ by [Vibey](https://the-vibey-project.github.io/vibey/), Developed by [Adam Matthew Steinberger](https://vibewithadam.matthewsteinberger.com/) ([@adammatthewsteinberger](https://github.com/adammatthewsteinberger/)).
 # Time limit for every job outside ci.yml, and the ratchet on the ones still without one.
-# Read by tests/meta/test_every_workflow_job_has_a_timeout.py.
+# Checked in both directions by tests/meta/test_every_workflow_job_has_a_timeout.py: a limit
+# listed here that the workflow does not carry fails, and so does a listed job that no longer
+# exists. ci.yml has its own file, tests/meta/ci_job_limits.toml, and its own test.
+#
+# THE RULE (the same as ci_job_limits.toml)
+#   limit = roundup5(max(2 x p90 minutes of the job's SLOWEST matrix cell, 10))
+#   never below 15 for a job that runs a real build or test suite, and never within 50% of the
+#   observed maximum. Where a job's own design waits longer than anything in the sample (a poll
+#   for an index or a Release), the limit clears the designed worst case, and says so.
+#   A job with no history is basis = "unmeasured" at 30 (default_timeout_minutes); no job below
+#   is in that state, every one has runs.
+#
+# THE MEASUREMENT
+#   Per-job durations are completed_at - started_at (queue wait excluded, because it does not
+#   count toward a timeout), read with GET-only `gh api` calls on 2026-11-16: for each workflow,
+#   the 20 most recent completed runs (fewer exist for minimum-specs, review-canary and
+#   autonomy-scorecard: 6, 6 and 5), every job in them that concluded success or failure. `n`
+#   below is the number of samples of the job; it is below 20 for a job that only runs on some
+#   branches or events. With n under 10 the p90 is, in effect, the maximum. Failed runs are
+#   included, none ran longer than the passing ones. Minutes are rounded to two decimals.
+#   scripts/ci_cost_baseline.py reports wall time per workflow, not per job, so it could not
+#   set these; the read was a throwaway script, not committed.
+#
+# THE CEILING
+#   `ceiling` is the count of jobs still without a limit. 29 of them are in managed workflows
+#   (rendered from src/vibey_tools/gh/vibey_gh/templates/workflows/), whose limits are written in
+#   the template, not here; the ceiling falls to 0 when that is done. The hand-written workflows
+#   are all covered. A job that is a reusable-workflow call (`uses:` at job level) is exempt.
+#
+# Each entry: timeout_minutes (what the workflow must say) and basis (measured | unmeasured |
+# kept), with the evidence beside it.
 
+# Used for a job that has no entry. A floor for a future job, not a limit anything relies on.
 default_timeout_minutes = 30
-ceiling = 53
+
+# Jobs still without a limit, all in managed workflows.
+ceiling = 29
+
+[jobs."autonomy-scorecard.yml.publish"]
+# n=5 p90=0.35 max=0.35, "Open the scorecard pull request". 2 x p90 = 0.7; rule 10.
+timeout_minutes = 10
+basis = "measured"
+
+[jobs."backlog-cleanup.yml.cleanup"]
+# n=20 p90=0.47 max=0.7, "Survey the backlog and apply only changes". 2 x p90 = 0.9; rule 10.
+timeout_minutes = 10
+basis = "measured"
+
+[jobs."backlog-cleanup.yml.publish"]
+# n=20 p90=1.7 max=2.7, "Publish changed expectations". 2 x p90 = 3.4; rule 10.
+timeout_minutes = 10
+basis = "measured"
+
+[jobs."delivery-estimate.yml.refresh"]
+# n=20 p90=0.48 max=0.92, "Refresh delivery estimate". 2 x p90 = 1.0; rule 10.
+timeout_minutes = 10
+basis = "measured"
+
+[jobs."delivery-estimate.yml.publish"]
+# n=20 p90=0.55 max=0.62, "Publish changed estimate ledger and report". 2 x p90 = 1.1; rule 10.
+timeout_minutes = 10
+basis = "measured"
+
+[jobs."delivery-estimate.yml.triage"]
+# n=20 p90=16.73 max=18.07, "Triage and order open issues". 2 x p90 = 33.5; rule 35. Reconciles triage over the open issues, so it grows with the backlog; 2 x 16.7 = 33.5 -> 35, 1.9 x the max.
+timeout_minutes = 35
+basis = "measured"
+
+[jobs."documentation-deep-scan.yml.scan"]
+# n=20 p90=0.4 max=0.42, "Audit and refresh documentation". 2 x p90 = 0.8; rule 10.
+timeout_minutes = 10
+basis = "measured"
+
+[jobs."krypton-app.yml.build"]
+# n=20 p90=0.35 max=0.38, "Build". 2 x p90 = 0.7; rule 15. Runs the test suite and builds the wheel and sdist: floor 15.
+timeout_minutes = 15
+basis = "measured"
+
+[jobs."krypton-app.yml.testpypi"]
+# n=8 p90=0.57 max=0.57, "Publish to TestPyPI". 2 x p90 = 1.1; rule 10.
+timeout_minutes = 10
+basis = "measured"
+
+[jobs."krypton-app.yml.verify-testpypi"]
+# n=8 p90=0.97 max=0.97, "Verify the TestPyPI artifact". 2 x p90 = 1.9; rule 10. Designed worst case: 20 polls x 30 s = 10 minutes waiting for the index, plus the install; the limit clears that, not just the sample.
+timeout_minutes = 20
+basis = "measured"
+
+[jobs."krypton-app.yml.pypi"]
+# n=3 p90=0.4 max=0.4, "Publish to PyPI". 2 x p90 = 0.8; rule 10.
+timeout_minutes = 10
+basis = "measured"
+
+[jobs."minimum-specs.yml.plan"]
+# n=5 p90=0.23 max=0.23, "Plan the measurement". 2 x p90 = 0.5; rule 10.
+timeout_minutes = 10
+basis = "measured"
+
+[jobs."minimum-specs.yml.publish"]
+# n=6 p90=0.33 max=0.33, "Open the remeasure pull request". 2 x p90 = 0.7; rule 10.
+timeout_minutes = 10
+basis = "measured"
+
+[jobs."openvsx.yml.publish"]
+# n=16 p90=0.57 max=1.25, "Publish the VS Code extension to Open VSX". 2 x p90 = 1.1; rule 10.
+timeout_minutes = 10
+basis = "measured"
+
+[jobs."release-binaries.yml.plan"]
+# n=20 p90=0.3 max=0.48, "Plan the release's binaries". 2 x p90 = 0.6; rule 10.
+timeout_minutes = 10
+basis = "measured"
+
+[jobs."release-binaries.yml.collect"]
+# n=11 p90=0.32 max=0.35, "Gather, check and checksum". 2 x p90 = 0.6; rule 10.
+timeout_minutes = 10
+basis = "measured"
+
+[jobs."release-binaries.yml.attach"]
+# n=3 p90=0.32 max=0.32, "Attach to the GitHub Release". 2 x p90 = 0.6; rule 10. Designed worst case: waits up to release_wait_s = 1800 s (scripts/release_binaries.toml) for github-release.yml to create the Release, then uploads; 45 clears that, not just the sample.
+timeout_minutes = 45
+basis = "measured"
+
+[jobs."release-binaries.yml.nightly"]
+# n=6 p90=0.5 max=0.5, "Publish the rolling nightly prerelease". 2 x p90 = 1.0; rule 10.
+timeout_minutes = 10
+basis = "measured"
+
+[jobs."review-canary.yml.publish"]
+# n=4 p90=0.37 max=0.37, "Open the measurement pull request". 2 x p90 = 0.7; rule 10.
+timeout_minutes = 10
+basis = "measured"
+
+[jobs."vibey-engine.yml.build"]
+# n=20 p90=0.52 max=0.55, "Build". 2 x p90 = 1.0; rule 15. Builds the wheel and sdist: counted as a real build, floor 15.
+timeout_minutes = 15
+basis = "measured"
+
+[jobs."vibey-engine.yml.testpypi"]
+# n=18 p90=0.57 max=0.68, "Publish to TestPyPI". 2 x p90 = 1.1; rule 10.
+timeout_minutes = 10
+basis = "measured"
+
+[jobs."vibey-engine.yml.verify-testpypi"]
+# n=18 p90=1.28 max=1.33, "Verify the TestPyPI artifact". 2 x p90 = 2.6; rule 10. Designed worst case: 20 polls x 30 s = 10 minutes waiting for the index, plus the install; the limit clears that, not just the sample.
+timeout_minutes = 20
+basis = "measured"
+
+[jobs."vibey-engine.yml.pypi"]
+# n=2 p90=0.52 max=0.52, "Publish to PyPI". 2 x p90 = 1.0; rule 10.
+timeout_minutes = 10
+basis = "measured"
+
+[jobs."vibey-engine.yml.realign"]
+# n=2 p90=0.32 max=0.32, "Realign develop with main". 2 x p90 = 0.6; rule 10.
+timeout_minutes = 10
+basis = "measured"

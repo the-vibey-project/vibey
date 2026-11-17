@@ -82,6 +82,7 @@ jobs:
       (github.event.workflow_run.conclusion == 'success' &&
        github.event.workflow_run.head_branch == 'main')
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     permissions:
       actions: read
       contents: read
@@ -699,6 +700,7 @@ jobs:
     needs: [plan, desktop-flatpak, desktop-tarball, desktop-macos, app-web, app-android, app-ios, vscode, python-dists]
     if: needs.plan.outputs.mode != 'skip'
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
@@ -742,6 +744,7 @@ jobs:
     needs: [plan, collect]
     if: needs.plan.outputs.mode == 'publish'
     runs-on: ubuntu-latest
+    timeout-minutes: 45
     permissions:
       contents: write            # upload the files to the release
       id-token: write            # sign the provenance attestation
@@ -800,6 +803,7 @@ jobs:
     needs: [plan, collect]
     if: needs.plan.outputs.mode == 'nightly'
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     permissions:
       contents: write            # create the prerelease, move its tag, replace its files
       id-token: write            # sign the provenance attestation
