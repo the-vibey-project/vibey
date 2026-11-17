@@ -13,6 +13,11 @@ updates:
     # Dependabot cannot ignore a FILE, only a dependency, so these names are the
     # actions the managed templates pin. Actions absent from this list are still
     # bumped normally wherever you use them.
+    #
+    # The same ignore also stops Dependabot bumping the SHA pins of these actions in the
+    # hand-written workflows. `vibey-gh pin-actions --refresh` moves those, and
+    # pin-freshness.yml opens one issue weekly while any pin is stale ([pin_actions] in
+    # .vibey-gh.toml). Managed templates still change only at their template.
     ignore:
       - dependency-name: actions/checkout
       - dependency-name: actions/configure-pages

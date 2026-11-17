@@ -3121,6 +3121,37 @@ class BranchHealthConfig:
 
 
 @dataclass(frozen=True)
+class PinActionsConfig:
+    """`[pin_actions]`: how `vibey-gh pin-actions` keeps the commit pins fresh.
+
+    A pin never moves by itself, and Dependabot cannot be told to skip only the managed
+    workflows, so `pin-actions --refresh` is the one path that moves the pins in the
+    hand-written files. `hold` names the `owner/repo` actions a refresh must leave on the
+    commit they are on (a version known bad, a release under review); a held pin is reported
+    and never counted stale. `labels` are applied when the weekly freshness check opens its
+    one tracking issue; they must already exist on the forge.
+    """
+
+    hold: tuple[str, ...] = ()
+    labels: tuple[str, ...] = ()
+
+    def __post_init__(self) -> None:
+        _unique_nonempty("pin_actions.hold", self.hold)
+        _unique_nonempty("pin_actions.labels", self.labels)
+        for action in self.hold:
+            if not re.fullmatch(r"[A-Za-z0-9][\w.-]*/[\w.-]+", action):
+                raise ValueError(f"pin_actions.hold entry {action!r} is not an owner/repo")
+
+    @classmethod
+    def from_table(cls, section: TomlTable) -> PinActionsConfig:
+        """`[pin_actions]` as TOML hands it over."""
+        return cls(
+            hold=tuple(section.get("hold", ())),
+            labels=tuple(section.get("labels", ())),
+        )
+
+
+@dataclass(frozen=True)
 class DocumentationConfig:
     enabled: bool = True
     ai_maintenance: bool = True
@@ -3708,6 +3739,7 @@ class GhConfig:
     advisories: AdvisoriesConfig = AdvisoriesConfig()
     forge_retry: ForgeRetryConfig = ForgeRetryConfig()
     branch_health: BranchHealthConfig = BranchHealthConfig()
+    pin_actions: PinActionsConfig = PinActionsConfig()
     documentation: DocumentationConfig = DocumentationConfig()
     marketplace: MarketplaceConfig = MarketplaceConfig()
     estimate: EstimateConfig = EstimateConfig()
@@ -4289,6 +4321,7 @@ def load_config(root: Path | None = None, config: Path | None = None) -> GhConfi
         advisories=AdvisoriesConfig.from_table(data.get("advisories", {})),
         forge_retry=ForgeRetryConfig.from_table(data.get("forge_retry", {})),
         branch_health=BranchHealthConfig.from_table(branch_health),
+        pin_actions=PinActionsConfig.from_table(data.get("pin_actions", {})),
         documentation=DocumentationConfig(
             enabled=documentation.get("enabled", True),
             ai_maintenance=documentation.get("ai_maintenance", True),
