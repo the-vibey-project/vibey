@@ -23,6 +23,7 @@ jobs:
       github.event.pull_request.head.ref != 'develop' &&
       github.event.pull_request.head.ref != 'main'
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     steps:
       - name: Reject unsafe or stale targets
         env:

@@ -64,6 +64,7 @@ jobs:
     name: Dispatch recovery evaluations
     if: github.event_name == 'schedule'
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     permissions:
       actions: write
       checks: read
@@ -114,6 +115,7 @@ jobs:
     name: Evaluate current head
     if: github.event_name != 'schedule'
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     permissions:
       actions: read
       checks: read
@@ -323,6 +325,7 @@ jobs:
       needs.evaluate.outputs.state != '' &&
       needs.evaluate.outputs.state != 'pending'
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     permissions:
       actions: write
       checks: write

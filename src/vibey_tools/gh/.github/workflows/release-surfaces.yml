@@ -36,6 +36,7 @@ jobs:
       github.event_name == 'workflow_dispatch' ||
       github.event.workflow_run.conclusion == 'success'
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     outputs:
       branch: ${{ steps.release.outputs.branch }}
       channel: ${{ steps.release.outputs.channel }}
@@ -103,6 +104,7 @@ jobs:
     name: GitHub Package (${{ needs.context.outputs.channel }})
     needs: context
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     outputs:
       # The exact released version, read from the wheel's own metadata below; the
       # attach job names the GitHub Release by it.
@@ -167,6 +169,7 @@ jobs:
     name: ProperDocs (${{ needs.context.outputs.channel }})
     needs: context
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     permissions:
       actions: read
       contents: read
@@ -1534,6 +1537,7 @@ jobs:
       (true || true) &&
       needs.context.outputs.branch == 'main'
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     permissions:
       actions: read
       contents: write

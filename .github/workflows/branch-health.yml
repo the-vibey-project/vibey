@@ -29,6 +29,7 @@ jobs:
       true &&
       github.event.workflow_run.event == 'push'
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     # Least privilege: read the run and its jobs, write issues, nothing else.
     permissions:
       actions: read

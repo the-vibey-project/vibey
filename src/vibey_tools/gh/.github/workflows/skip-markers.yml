@@ -34,6 +34,7 @@ jobs:
     name: No skip markers
     if: true
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     steps:
       # The configuration read -- what is enabled, who is exempt -- comes from the trusted
       # default branch, never from the pull request: a branch could otherwise exempt itself.
