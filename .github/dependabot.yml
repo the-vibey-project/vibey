@@ -14,10 +14,13 @@ updates:
     # actions the managed templates pin. Actions absent from this list are still
     # bumped normally wherever you use them.
     #
-    # The same ignore also stops Dependabot bumping the SHA pins of these actions in the
-    # hand-written workflows. `vibey-gh pin-actions --refresh` moves those, and
-    # pin-freshness.yml opens one issue weekly while any pin is stale ([pin_actions] in
-    # .vibey-gh.toml). Managed templates still change only at their template.
+    # The same limit applies to the hand-written workflows: their SHA pins of these
+    # five actions (actions/checkout, actions/download-artifact, actions/setup-python,
+    # actions/upload-artifact, astral-sh/setup-uv) are NOT bumped by Dependabot either.
+    # `vibey-gh pin-actions --refresh` moves those pins to the current commit of their
+    # `# <ref>` comment, and pin-freshness.yml opens one issue weekly while any pin is
+    # stale ([pin_actions] in .vibey-gh.toml). The managed ones change only by upgrading
+    # vibey-gh.
     ignore:
       - dependency-name: actions/checkout
       - dependency-name: actions/configure-pages

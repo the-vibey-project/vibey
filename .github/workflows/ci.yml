@@ -60,8 +60,8 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
-      - uses: actions/checkout@v4
-      - uses: astral-sh/setup-uv@v7
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: astral-sh/setup-uv@37802adc94f370d6bfd71619e3f0bf239e1f3b78 # v7
         with:
           enable-cache: true
       - name: Set up Python
@@ -125,12 +125,12 @@ jobs:
           postgres_matrix={"include":[{"postgres":14},{"postgres":15},{"postgres":16},{"postgres":17},{"postgres":18}]}
           desktop_matrix={"include":[{"distro":"ubuntu","runner":"ubuntu-latest","container":""},{"distro":"arch","runner":"ubuntu-latest","container":"archlinux:latest"},{"distro":"fedora","runner":"ubuntu-latest","container":"fedora:latest"},{"distro":"macos","runner":"macos-15","container":""}]}
           MATRICES
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
           # A shallow clone cannot diff base...head.
           fetch-depth: 0
           persist-credentials: false
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5
         with:
           python-version: "3.12"
       - name: Install vibey-gh
@@ -249,7 +249,7 @@ jobs:
     # partial plan leaves `tier` unequal to `skip`, so lint runs).
     if: ${{ !cancelled() && needs.uv-lock.result == 'success' && (github.event_name != 'schedule' || needs.plan.outputs.tier != 'skip') }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
           # Carried over from `gates`, where the paper's history figures are recomputed from
           # the full log (tests/meta/test_paper_figures.py). None of the gates in this job
@@ -258,7 +258,7 @@ jobs:
           fetch-depth: 0
 
       - name: Install uv
-        uses: astral-sh/setup-uv@v7
+        uses: astral-sh/setup-uv@37802adc94f370d6bfd71619e3f0bf239e1f3b78 # v7
         with:
           enable-cache: true
 
@@ -271,7 +271,7 @@ jobs:
       # TypeScript is the only authored JavaScript (sub-doctrine 9.f): the committed `.js` the
       # sites and Expo need is compiled from it, and tests/meta/test_typescript_artifacts.py
       # recompiles it here. With no compiler that test fails in CI rather than skipping.
-      - uses: actions/setup-node@v7.1.0
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version-file: .node-version
           cache: npm
@@ -344,14 +344,14 @@ jobs:
       VIBEY_TEST_RABBITMQ_USER: vibey
       VIBEY_TEST_RABBITMQ_PASSWORD: vibey
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
           # The paper's history figures are recomputed from the full log at their pinned
           # revision (tests/meta/test_paper_figures.py); a shallow clone cannot check them.
           fetch-depth: 0
 
       - name: Install uv
-        uses: astral-sh/setup-uv@v7
+        uses: astral-sh/setup-uv@37802adc94f370d6bfd71619e3f0bf239e1f3b78 # v7
         with:
           enable-cache: true
 
@@ -364,7 +364,7 @@ jobs:
       # TypeScript is the only authored JavaScript (sub-doctrine 9.f): the committed `.js` the
       # sites and Expo need is compiled from it, and tests/meta/test_typescript_artifacts.py
       # recompiles it here. With no compiler that test fails in CI rather than skipping.
-      - uses: actions/setup-node@v7.1.0
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version-file: .node-version
           cache: npm
@@ -398,7 +398,7 @@ jobs:
 
       - name: Keep the Hypothesis examples of a failed run
         if: failure()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: hypothesis-examples-gates
           path: .hypothesis
@@ -444,10 +444,10 @@ jobs:
     env:
       VIBEY_TEST_DATABASE_URL: postgresql://vibey:vibey@localhost:5432/vibey_test
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
 
       - name: Install uv
-        uses: astral-sh/setup-uv@v7
+        uses: astral-sh/setup-uv@37802adc94f370d6bfd71619e3f0bf239e1f3b78 # v7
         with:
           enable-cache: true
 
@@ -462,7 +462,7 @@ jobs:
 
       - name: Keep the Hypothesis examples of a failed run
         if: failure()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: hypothesis-examples-noloss
           path: .hypothesis
@@ -509,10 +509,10 @@ jobs:
     env:
       VIBEY_TEST_DATABASE_URL: postgresql://vibey:vibey@localhost:5432/vibey_test
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
 
       - name: Install uv
-        uses: astral-sh/setup-uv@v7
+        uses: astral-sh/setup-uv@37802adc94f370d6bfd71619e3f0bf239e1f3b78 # v7
         with:
           enable-cache: true
 
@@ -645,11 +645,11 @@ jobs:
       fail-fast: false
       matrix: ${{ fromJSON(needs.plan.outputs.tools_matrix) }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
           # vibey-gh's suite drives real git history.
           fetch-depth: 0
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5
         with:
           python-version: ${{ matrix.python }}
       # Only the network step below drives a real `uv`, in the one test that verifies a
@@ -658,7 +658,7 @@ jobs:
       # assumed: with `uv` off PATH entirely the suite is 1019 passed, 4 skipped, 100%
       # branch. So the install is scoped to the row that actually asks for it, instead of
       # being paid by all seven.
-      - uses: astral-sh/setup-uv@v3
+      - uses: astral-sh/setup-uv@caf0cab7a618c569241d31dcd442f54681755d39 # v3
         if: matrix.network_test
       - name: Install
         working-directory: ${{ matrix.dir }}
@@ -782,8 +782,8 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5
         with: { python-version: "3.12" }
       - name: vibey-gh - black, isort, mypy
         working-directory: src/vibey_tools/gh
@@ -831,8 +831,8 @@ jobs:
       run:
         working-directory: clients/krypton-app
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5
         with:
           python-version: "3.12"
       - name: Install the checkers
@@ -860,8 +860,8 @@ jobs:
       run:
         working-directory: packages/vibey-core
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v7.1.0
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version-file: .node-version
           cache: npm
@@ -874,7 +874,7 @@ jobs:
       # high or worse fails, except one somebody reviewed and dated, and every exception
       # honoured is printed with its expiry. GH_TOKEN reads the advisory database, which
       # says when a patched release replaces an exception.
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5
         with: { python-version: "3.12" }
       - name: No high-severity advisory in any dependency, but a declared, unexpired exception
         working-directory: .
@@ -907,8 +907,8 @@ jobs:
       run:
         working-directory: clients/app
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v7.1.0
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version-file: .node-version
           cache: npm
@@ -916,7 +916,7 @@ jobs:
       - name: Install from the app's own lockfile
         run: npm ci
       # As in @vibey/core: npm audit at high, less the declared, expiring exceptions.
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5
         with: { python-version: "3.12" }
       - name: No high-severity advisory in any dependency, but a declared, unexpired exception
         working-directory: .
@@ -951,8 +951,8 @@ jobs:
       run:
         working-directory: clients/vscode
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v7.1.0
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version-file: .node-version
           cache: npm
@@ -961,7 +961,7 @@ jobs:
         working-directory: .
         run: npm ci
       # As in @vibey/core: npm audit at high, less the declared, expiring exceptions.
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5
         with: { python-version: "3.12" }
       - name: No high-severity advisory in any dependency, but a declared, unexpired exception
         working-directory: .
@@ -985,7 +985,7 @@ jobs:
           npx vsce package --no-dependencies --out krypton-ubuntu-latest.vsix
           unzip -l krypton-ubuntu-latest.vsix | grep -q 'extension/out/node_modules/@vibey/core/dist/packages/vibey-core/src/index.js'
           unzip -l krypton-ubuntu-latest.vsix | grep -q 'extension/media/krypton.png'
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: krypton-vscode-ubuntu-latest
           path: clients/vscode/krypton-ubuntu-latest.vsix
@@ -1008,8 +1008,8 @@ jobs:
       run:
         working-directory: clients/vscode
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v7.1.0
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version-file: .node-version
           cache: npm
@@ -1018,7 +1018,7 @@ jobs:
         working-directory: .
         run: npm ci
       # As in @vibey/core: npm audit at high, less the declared, expiring exceptions.
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5
         with: { python-version: "3.12" }
       - name: No high-severity advisory in any dependency, but a declared, unexpired exception
         working-directory: .
@@ -1042,7 +1042,7 @@ jobs:
           npx vsce package --no-dependencies --out krypton-macos-latest.vsix
           unzip -l krypton-macos-latest.vsix | grep -q 'extension/out/node_modules/@vibey/core/dist/packages/vibey-core/src/index.js'
           unzip -l krypton-macos-latest.vsix | grep -q 'extension/media/krypton.png'
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: krypton-vscode-macos-latest
           path: clients/vscode/krypton-macos-latest.vsix
@@ -1121,7 +1121,7 @@ jobs:
             pkgconf-pkg-config glib2-devel json-glib-devel libsoup3-devel gtk4-devel \
             libadwaita-devel avahi-devel avahi-glib-devel desktop-file-utils appstream \
             glib-networking ca-certificates openssl libasan libubsan
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
       - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5
         if: matrix.distro == 'macos'
         with:
@@ -1195,19 +1195,19 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 45
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
 
       # arm64 is built under emulation. Slower than a native runner, but
       # the alternative is discovering on a customer's Graviton node that
       # the image was never built for it.
       - name: Set up QEMU
-        uses: docker/setup-qemu-action@v4
+        uses: docker/setup-qemu-action@99012661954931238ded8c8b007157a8430204e1 # v4
 
       - name: Set up Buildx
-        uses: docker/setup-buildx-action@v4
+        uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4
 
       - name: Build amd64
-        uses: docker/build-push-action@v7
+        uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7
         with:
           context: .
           file: deploy/docker/Dockerfile
@@ -1311,7 +1311,7 @@ jobs:
       # Built last: under emulation this is the slow half, and there is no
       # point paying for it when the amd64 contracts already failed.
       - name: Build arm64
-        uses: docker/build-push-action@v7
+        uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7
         with:
           context: .
           file: deploy/docker/Dockerfile
@@ -1336,12 +1336,12 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
 
       # Pinned, unlike cluster-smoke's: a golden is a byte comparison, and a
       # different helm may format the same manifest differently. Bump the pin
       # and regenerate the goldens together.
-      - uses: azure/setup-helm@v5
+      - uses: azure/setup-helm@2f5e7bc67f1f9972ab16657bb795f36d8f04de0e # v5
         with:
           version: v4.2.4
 
@@ -1358,16 +1358,16 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 45
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
 
-      - uses: medyagh/setup-minikube@latest
+      - uses: medyagh/setup-minikube@e9e035a86bbc3caea26a450bd4dbf9d0c453682e # v0.0.21
         with:
           cpus: 4
           memory: 10240m
 
       # Pinned: the contracts below depend on how `helm upgrade` waits, and Helm 4 changed
       # that (kstatus). An unpinned setup takes whatever release is newest that day.
-      - uses: azure/setup-helm@v5
+      - uses: azure/setup-helm@2f5e7bc67f1f9972ab16657bb795f36d8f04de0e # v5
         with:
           version: v4.3.0
 
@@ -1666,10 +1666,10 @@ jobs:
       contents: read
       issues: write
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
           persist-credentials: false
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5
         with:
           python-version: "3.12"
       - name: Install vibey-gh

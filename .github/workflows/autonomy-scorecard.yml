@@ -67,7 +67,7 @@ jobs:
             --out observed/forge.json
 
       - name: Hand the observation over
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: autonomy-observed-forge
           path: observed/forge.json
@@ -93,7 +93,7 @@ jobs:
           fetch-depth: 1
           persist-credentials: false
 
-      - uses: astral-sh/setup-uv@v7
+      - uses: astral-sh/setup-uv@37802adc94f370d6bfd71619e3f0bf239e1f3b78 # v7
 
       - name: Observe
         env:
@@ -105,7 +105,7 @@ jobs:
             python scripts/autonomy_scorecard.py observe --sources queue --out observed/queue.json
 
       - name: Hand the observation over
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: autonomy-observed-queue
           path: observed/queue.json
@@ -130,7 +130,7 @@ jobs:
           fetch-depth: 0
 
       - name: Take the observations
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
         with:
           pattern: autonomy-observed-*
           path: observed

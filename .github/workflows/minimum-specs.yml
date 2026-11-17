@@ -88,7 +88,7 @@ jobs:
           fetch-depth: 1
           persist-credentials: false
 
-      - uses: astral-sh/setup-uv@v7
+      - uses: astral-sh/setup-uv@37802adc94f370d6bfd71619e3f0bf239e1f3b78 # v7
 
       # A cell with no image for this architecture is recorded as skipped, with the
       # configuration's reason, without starting a container.
@@ -106,7 +106,7 @@ jobs:
             --runner-label "GitHub-hosted $RUNNER_LABEL"
 
       - name: Hand the cell's record over
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: minimum-specs-cell-${{ matrix.distro }}-${{ matrix.arch }}
           path: cells/
@@ -152,7 +152,7 @@ jobs:
           fetch-depth: 1
           persist-credentials: false
 
-      - uses: astral-sh/setup-uv@v7
+      - uses: astral-sh/setup-uv@37802adc94f370d6bfd71619e3f0bf239e1f3b78 # v7
 
       # psql drives the scratch database; GNU time samples the commands' peak memory
       # (`/usr/bin/time -v`); zstd unpacks Ollama's release if its installer is unreachable.
@@ -215,7 +215,7 @@ jobs:
           } >> "$GITHUB_STEP_SUMMARY"
 
       - name: Hand the measured files over
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: minimum-specs
           path: |
@@ -248,13 +248,13 @@ jobs:
       # develop's stale macOS figures (tests/meta/test_workflow_artifacts.py).
       - name: Take the measured files
         if: ${{ needs.measure.result == 'success' }}
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
         with:
           name: minimum-specs
           path: docs
 
       - name: Take the Linux cells' records
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
         with:
           pattern: minimum-specs-cell-*
           path: cells
