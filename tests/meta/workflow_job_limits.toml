@@ -1,0 +1,6 @@
+# Made with ❤️ by [Vibey](https://the-vibey-project.github.io/vibey/), Developed by [Adam Matthew Steinberger](https://vibewithadam.matthewsteinberger.com/) ([@adammatthewsteinberger](https://github.com/adammatthewsteinberger/)).
+# Time limit for every job outside ci.yml, and the ratchet on the ones still without one.
+# Read by tests/meta/test_every_workflow_job_has_a_timeout.py.
+
+default_timeout_minutes = 30
+ceiling = 53
