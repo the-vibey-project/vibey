@@ -1396,6 +1396,18 @@ This is a `vibey-gh` command, part of the same distribution:
 
 Every option is in the vibey-gh [CLI reference](https://github.com/the-vibey-project/vibey/blob/main/src/vibey_tools/gh/docs/cli.md).
 
+## `vibey-gh pin-actions`
+
+Pins every GitHub Actions `uses:` to the commit it names today, so a moved tag cannot change
+what runs in the pipeline. This is a `vibey-gh` command, part of the same distribution:
+
+| Command | What it does |
+|---|---|
+| `vibey-gh pin-actions [PATH ...]` | Check. Name every `uses:` whose ref is not a full commit SHA, as `path:line`, and exit 1; exit 0 when none. Makes no network call. With no `PATH`, reads `.github/workflows/*.yml` and `.github/actions/*/action.yml`. |
+| `vibey-gh pin-actions --apply [PATH ...]` | Resolve each distinct `(action, ref)` once and rewrite `uses: owner/repo@v4` to `uses: owner/repo@<40-hex commit> # v4`, keeping any comment already on the line after it. An annotated tag gives the commit it points at; a reusable workflow is resolved in its own repository. A ref that does not resolve changes no file and exits 1. Idempotent. |
+
+Every option is in the vibey-gh [CLI reference](https://github.com/the-vibey-project/vibey/blob/main/src/vibey_tools/gh/docs/cli.md).
+
 ## `vibey-gh sabbath`
 
 The Sabbath as the release tooling keeps it (sub-doctrine 8.i,
