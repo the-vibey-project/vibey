@@ -53,6 +53,7 @@ jobs:
     name: Evaluate current head
     if: github.event_name != 'schedule'
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     permissions:
       actions: read
       checks: read
@@ -430,6 +431,7 @@ jobs:
       (needs.evaluate.outputs.sovereign_whole != 'true' ||
        needs.evaluate.outputs.head_repo == github.repository)
     runs-on: ubuntu-24.04-arm
+    timeout-minutes: 325
     # No secrets. The local lane never needs the API key, and it must never hold a token
     # that could merge or mutate the repository.
     permissions:
@@ -1100,6 +1102,7 @@ jobs:
       (needs.evaluate.outputs.state == 'ready' ||
        needs.evaluate.outputs.state == 'review') && inputs.dry_run != true
     runs-on: ubuntu-latest
+    timeout-minutes: 120
     permissions:
       actions: read
       checks: read
@@ -1501,6 +1504,7 @@ jobs:
       (needs.evaluate.outputs.state == 'ready' ||
        needs.evaluate.outputs.state == 'review') && inputs.dry_run != true
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     permissions:
       contents: read
       pull-requests: write
@@ -1580,6 +1584,7 @@ jobs:
        (false &&
         needs.evaluate.outputs.state == 'conflict'))
     runs-on: ubuntu-latest
+    timeout-minutes: 30
     permissions:
       contents: write
       issues: write
@@ -1613,6 +1618,7 @@ jobs:
         needs.review.outputs.passed == 'false' &&
         needs.review.outputs.repairable == 'true'))
     runs-on: ubuntu-latest
+    timeout-minutes: 120
     permissions:
       actions: read
       checks: read
@@ -2155,6 +2161,7 @@ jobs:
       needs.repair-sovereign.result != 'skipped' &&
       needs.repair-sovereign.result != 'cancelled'
     runs-on: ubuntu-latest
+    timeout-minutes: 30
     permissions:
       contents: write
       pull-requests: write
@@ -2300,6 +2307,7 @@ jobs:
       needs.evaluate.outputs.state == 'conflict' &&
       needs.evaluate.outputs.fork != 'true' && inputs.dry_run != true
     runs-on: ubuntu-latest
+    timeout-minutes: 120
     permissions:
       contents: write
       id-token: write
@@ -2560,6 +2568,7 @@ jobs:
       contains(needs.evaluate.outputs.reason, 'budget is exhausted') &&
       inputs.dry_run != true
     runs-on: ubuntu-latest
+    timeout-minutes: 30
     permissions:
       issues: write
       pull-requests: write
@@ -2613,6 +2622,7 @@ jobs:
       needs.evaluate.outputs.state != 'pending' &&
       needs.evaluate.outputs.state != 'conflict'
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     permissions:
       actions: write
       checks: write

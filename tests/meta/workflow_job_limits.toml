@@ -9,8 +9,10 @@
 #   never below 15 for a job that runs a real build or test suite, and never within 50% of the
 #   observed maximum. Where a job's own design waits longer than anything in the sample (a poll
 #   for an index or a Release), the limit clears the designed worst case, and says so.
-#   A job with no history is basis = "unmeasured" at 30 (default_timeout_minutes); no job below
-#   is in that state, every one has runs.
+#   A job with no history is basis = "unmeasured" at 30 (default_timeout_minutes). Seven jobs
+#   below are in that state: four that only run git and gh calls (30), and three that hand a
+#   task to a model agent with --max-turns 80 to 120 (120, the allowance the repository's own
+#   pr_af.timeout_minutes gives its model review: 30 could kill a healthy agent run).
 #
 # THE MEASUREMENT
 #   Per-job durations are completed_at - started_at (queue wait excluded, because it does not
@@ -23,11 +25,24 @@
 #   scripts/ci_cost_baseline.py reports wall time per workflow, not per job, so it could not
 #   set these; the read was a throwaway script, not committed.
 #
+#   The managed workflows (the 29 jobs rendered from src/vibey_tools/gh/vibey_gh/templates/
+#   workflows/) were read the same way, also on 2026-11-16, in a second pass. For the nine
+#   workflows below the 20 newest runs hold every job at least 17 times and are used as they
+#   are: branch-health, changelog, conventional-commits, merge-train, promote-to-main,
+#   provenance, repository-profile, ruleset-drift, skip-markers. For pr-review, pr-evaluate,
+#   release-surfaces and github-release most jobs run on only some events, so the read is the
+#   300 most recent runs (since 2026-10-05, 2026-10-23 for pr-review, 2026-11-03 for pr-evaluate).
+#   automation-bootstrap has no run at all, ever. Where a job is in the sample under a matrix
+#   or a branch name ("GitHub Package (develop)", "(main)") the slowest cell is the one listed.
+#   Failed runs are included here too, and one job's failures ran LONGER than its passes:
+#   pr-review.yml.review-sovereign (see its entry).
+#
 # THE CEILING
-#   `ceiling` is the count of jobs still without a limit. 29 of them are in managed workflows
-#   (rendered from src/vibey_tools/gh/vibey_gh/templates/workflows/), whose limits are written in
-#   the template, not here; the ceiling falls to 0 when that is done. The hand-written workflows
-#   are all covered. A job that is a reusable-workflow call (`uses:` at job level) is exempt.
+#   `ceiling` is the count of jobs still without a limit. It is 0: the hand-written workflows
+#   carry theirs in the file, and the managed ones carry theirs in the template they are rendered
+#   from (src/vibey_tools/gh/vibey_gh/templates/workflows/, then `vibey-gh install` in the
+#   repository root and in src/vibey_tools/gh). A job that is a reusable-workflow call (`uses:`
+#   at job level) is exempt.
 #
 # Each entry: timeout_minutes (what the workflow must say) and basis (measured | unmeasured |
 # kept), with the evidence beside it.
@@ -35,8 +50,8 @@
 # Used for a job that has no entry. A floor for a future job, not a limit anything relies on.
 default_timeout_minutes = 30
 
-# Jobs still without a limit, all in managed workflows.
-ceiling = 29
+# Jobs still without a limit.
+ceiling = 0
 
 [jobs."autonomy-scorecard.yml.publish"]
 # n=5 p90=0.35 max=0.35, "Open the scorecard pull request". 2 x p90 = 0.7; rule 10.
@@ -155,5 +170,175 @@ basis = "measured"
 
 [jobs."vibey-engine.yml.realign"]
 # n=2 p90=0.32 max=0.32, "Realign develop with main". 2 x p90 = 0.6; rule 10.
+timeout_minutes = 10
+basis = "measured"
+
+# --- Managed workflows (templates under src/vibey_tools/gh/vibey_gh/templates/workflows/) ---
+
+[jobs."automation-bootstrap.yml.merge"]
+# n=0, "Verify and bootstrap automation repair": the workflow has never run (workflow_dispatch
+# for an administrator-authorised repair). It reads the checks of one pull request and runs
+# one `gh pr merge`; no loop, no sleep, no build.
+timeout_minutes = 30
+basis = "unmeasured"
+
+[jobs."branch-health.yml.alert"]
+# n=17 p90=0.57 max=0.58, "Track a red permanent branch". 2 x p90 = 1.1; rule 10.
+timeout_minutes = 10
+basis = "measured"
+
+[jobs."changelog.yml.check"]
+# n=19 p90=0.38 max=0.42, "Changelog fragment". 2 x p90 = 0.8; rule 10.
+timeout_minutes = 10
+basis = "measured"
+
+[jobs."conventional-commits.yml.enforce"]
+# n=19 p90=0.48 max=0.5, the job is unnamed, "enforce". 2 x p90 = 1.0; rule 10.
+timeout_minutes = 10
+basis = "measured"
+
+[jobs."github-release.yml.verify"]
+# n=9 p90=0.07 max=0.07 (300 runs), "Prove the release commit". 2 x p90 = 0.1; rule 10.
+timeout_minutes = 10
+basis = "measured"
+
+[jobs."github-release.yml.publish"]
+# n=9 p90=0.45 max=0.45 (300 runs), "Tag and publish". 2 x p90 = 0.9; rule 10.
+timeout_minutes = 10
+basis = "measured"
+
+[jobs."merge-train.yml.merge"]
+# n=20 p90=0.42 max=1.12, "merge". 2 x p90 = 0.8; rule 10.
+timeout_minutes = 10
+basis = "measured"
+
+[jobs."pr-evaluate.yml.recovery"]
+# n=7 p90=0.47 max=0.47 (300 runs), "Dispatch recovery evaluations". 2 x p90 = 0.9; rule 10.
+timeout_minutes = 10
+basis = "measured"
+
+[jobs."pr-evaluate.yml.evaluate"]
+# n=148 p90=0.6 max=0.98 (300 runs), "Evaluate current head". 2 x p90 = 1.2; rule 10.
+timeout_minutes = 10
+basis = "measured"
+
+[jobs."pr-evaluate.yml.gate"]
+# n=33 p90=0.13 max=0.15 (300 runs), "gate". 2 x p90 = 0.3; rule 10.
+timeout_minutes = 10
+basis = "measured"
+
+[jobs."pr-review.yml.evaluate"]
+# n=297 p90=0.37 max=1.2 (300 runs), "Evaluate current head". 2 x p90 = 0.7; rule 10.
+timeout_minutes = 10
+basis = "measured"
+
+[jobs."pr-review.yml.review-sovereign"]
+# n=124 p90=160.52 max=162.12 (300 runs), "Sovereign diff review". 2 x p90 = 321.0, so 325; 325
+# is 2.0 x the maximum. A model job, and the slow one: its passes take 2 to 3 minutes, and its
+# failures ran 160 minutes (the step "Review with the local model", 2h38m on one job, ending in
+# `local-review` exit 1: the model busy, then the retry). So p90 is the failures' time, by
+# design: the lane waits up to slot_wait_seconds (900) for the model, runs each of up to
+# max_chunks (6) parts under a deadline scaled to its size (about 20 minutes at the default
+# window), and retries a busy model once. A healthy 6-part review is about 2 hours, a busy-model
+# chain about 5, and 325 clears both while still ending a job the runner would otherwise hold
+# for GitHub's 360. A limit lower than 245 (1.5 x max) would cut reviews that already finish.
+timeout_minutes = 325
+basis = "measured"
+
+[jobs."pr-review.yml.review"]
+# n=0 in 300 runs, "Exact-head code and documentation review": the paid review is not declared
+# here ([pr_automation] paid_review), so the job is skipped. One claude-code-action call under
+# --max-turns 100. 30 minutes could cut a healthy agent run; 120 is pr_af.timeout_minutes'
+# default for the sibling model review, whose slowest run in the 300 was 42.63 minutes.
+timeout_minutes = 120
+basis = "unmeasured"
+
+[jobs."pr-review.yml.record-sovereign"]
+# n=5 p90=0.37 max=0.37 (300 runs), "Record the sovereign whole review". 2 x p90 = 0.7; rule 10.
+timeout_minutes = 10
+basis = "measured"
+
+[jobs."pr-review.yml.mirror-fork"]
+# n=0 in 300 runs ("Mirror fork for safe repair": fork pull requests only; none here). `pip install` plus one
+# `vibey-gh pr-automation mirror-fork` call; no loop, no model.
+timeout_minutes = 30
+basis = "unmeasured"
+
+[jobs."pr-review.yml.repair"]
+# n=0 in 300 runs, "Repair failed scans or review findings": needs the paid review's verdict, which is not declared here. One
+# claude-code-action call under --max-turns 120, then edits and a push. 30 minutes could cut a
+# healthy agent run; 120 as for review.
+timeout_minutes = 120
+basis = "unmeasured"
+
+[jobs."pr-review.yml.publish-sovereign-repair"]
+# n=0 in 300 runs, "Publish the open-weights repair": needs repair-sovereign, which has never run
+# here. Applies a prepared patch and pushes it; git and gh calls, no model, no loop.
+timeout_minutes = 30
+basis = "unmeasured"
+
+[jobs."pr-review.yml.resolve-conflict"]
+# n=0 in 300 runs, "Resolve merge conflicts": has never run here. One claude-code-action call under
+# --max-turns 80 over the materialized conflict set. 120 as for review.
+timeout_minutes = 120
+basis = "unmeasured"
+
+[jobs."pr-review.yml.escalate"]
+# n=0 in 300 runs, "Escalate exhausted repair lineage": has never run here. Two `gh` calls (a label and one comment).
+timeout_minutes = 30
+basis = "unmeasured"
+
+[jobs."pr-review.yml.gate"]
+# n=203 p90=0.12 max=0.23 (300 runs), "gate". 2 x p90 = 0.2; rule 10.
+timeout_minutes = 10
+basis = "measured"
+
+[jobs."promote-to-main.yml.promote"]
+# n=20 p90=0.45 max=12.5, "Promote". 2 x p90 = 0.9, rule 10, but 1.5 x the
+# maximum is 18.8, so 20. The 12.5-minute run is the outlier; the others finish in about a minute.
+timeout_minutes = 20
+basis = "measured"
+
+[jobs."provenance.yml.provenance"]
+# n=17 p90=0.67 max=2.25, "Provenance". 2 x p90 = 1.3; rule 10.
+timeout_minutes = 10
+basis = "measured"
+
+[jobs."release-surfaces.yml.context"]
+# n=201 p90=0.07 max=0.65 (300 runs), "Resolve successful release". 2 x p90 = 0.1; rule 10.
+timeout_minutes = 10
+basis = "measured"
+
+[jobs."release-surfaces.yml.package"]
+# n=192 p90=0.22 max=0.4 (300 runs), slowest cell "GitHub Package (develop)" ((main): n=9
+# p90=0.28 max=0.28). 2 x p90 = 0.5; rule 10. It packages files, it is not a build.
+timeout_minutes = 10
+basis = "measured"
+
+[jobs."release-surfaces.yml.docs"]
+# n=161 p90=5.6 max=8.62 (300 runs), slowest cell "ProperDocs (develop)" ((main): n=9 p90=5.45
+# max=5.45). 2 x p90 = 11.2; a real site build, so never below 15; 15 is 1.7 x the maximum.
+timeout_minutes = 15
+basis = "measured"
+
+[jobs."release-surfaces.yml.attach"]
+# n=8 p90=0.37 max=0.37 (300 runs), "Attach the book and the paper to the GitHub Release".
+# 2 x p90 = 0.7, but the job waits by design up to 10 minutes (20 x 30s) for the GitHub Release
+# to exist before it uploads, so the limit clears that worst case plus the upload: 15.
+timeout_minutes = 15
+basis = "measured"
+
+[jobs."repository-profile.yml.reconcile"]
+# n=13 p90=0.38 max=0.45, "Reconcile repository profile". 2 x p90 = 0.8; rule 10.
+timeout_minutes = 10
+basis = "measured"
+
+[jobs."ruleset-drift.yml.check"]
+# n=20 p90=0.25 max=0.25, "Live rulesets match the declaration". 2 x p90 = 0.5; rule 10.
+timeout_minutes = 10
+basis = "measured"
+
+[jobs."skip-markers.yml.check"]
+# n=19 p90=0.5 max=0.53, "No skip markers". 2 x p90 = 1.0; rule 10.
 timeout_minutes = 10
 basis = "measured"

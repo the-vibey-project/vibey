@@ -47,6 +47,7 @@ jobs:
     # a completed, successful `PR evaluate / gate` AND `PR review / gate` on the head
     # before merging anything.
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
       - name: Set up Python

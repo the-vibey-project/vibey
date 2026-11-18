@@ -32,6 +32,7 @@ jobs:
     name: Changelog fragment
     if: __VIBEY_GH_CHANGELOG_ENABLED__
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     # `issues: write` is what `gh label create` needs, to make sure the skip label exists
     # (labels belong to the issues API); nothing here writes code or comments.
     permissions:
