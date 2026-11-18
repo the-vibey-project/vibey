@@ -32,3 +32,81 @@
 # from 2026-10-23 until its own retire_when condition held: @azure/identity 4.14.1 accepts
 # @azure/msal-node 7.x, the lockfile now resolves 7.2.2 (past the fixed 7.1.0), and the check
 # reports the exception as matching nothing. Deleted rather than renewed, as the check asks.
+
+# picomatch, GHSA-fc5q-39xc-vjpf (high, CVSS 7.5): the advisory was widened to "through 4.0.7"
+# on 2026-11-17 and no patched release exists (4.0.7 is the latest on npm), so the only ways to
+# keep the gate are an exception or removing the dependents. Two entries, one per workspace,
+# because the evidence differs: one is measured, the other is by inspection.
+
+[[exception]]
+advisory = "GHSA-fc5q-39xc-vjpf"
+package = "picomatch"
+workspace = "."
+added = 2026-11-17
+# 30 days, the [advisories] maximum. The check also fails on its own, and says to take the fix,
+# the day a patched release exists.
+expires = 2026-12-17
+reason = """
+picomatch <= 4.0.7 (here 4.0.7): a crafted single-branch repeated extglob such as `+(*)` makes
+`analyzeRepeatedExtglob` in lib/parse.js skip its guard, so matching takes exponential time and
+blocks the event loop (ReDoS). The input that triggers it is a glob PATTERN. Evidence, from the
+lockfile on 2026-11-17 -- what was checked, and what was not:
+
+1. `npm ls picomatch --package-lock-only --omit=dev` in this workspace prints an empty tree.
+   Nothing in the production dependency tree reaches picomatch; this is a measurement, not an
+   inspection.
+2. The only chains are @vibey/core -> vite 8.3.5 -> picomatch and tinyglobby -> fdir -> picomatch,
+   and vitest 5.0.5 -> picomatch. package-lock.json marks picomatch and every one of its
+   dependents `dev: true`.
+3. vite, vitest and tinyglobby are given patterns by files the project's developers write (the
+   include and exclude lists in the vite and vitest configuration), not by a network client.
+   They run in `npm test` and in CI, never in anything that ships.
+
+NOT checked: the advisory's mechanism was not reproduced against 4.0.7. A contributor's pull
+request can change a vitest or vite config and so supply a pattern that hangs a CI job until its
+timeout; that author can already run arbitrary code in CI, so it adds no capability, but it is
+the one path by which hostile input reaches this package.
+"""
+retire_when = "picomatch publishes a release above 4.0.7 that the advisory lists as patched (this check then fails on its own and says to take the fix: refresh package-lock.json and delete this entry), or vite, vitest and tinyglobby stop depending on it"
+upstream = [
+  "https://github.com/advisories/GHSA-fc5q-39xc-vjpf",
+  "https://github.com/micromatch/picomatch",
+]
+
+[[exception]]
+advisory = "GHSA-fc5q-39xc-vjpf"
+package = "picomatch"
+workspace = "clients/app"
+added = 2026-11-17
+expires = 2026-12-17
+reason = """
+Same advisory and same mechanism as the root workspace entry above (a crafted extglob pattern
+blocks the event loop). Both lines are affected here: picomatch 4.0.7 (under @expo/cli,
+@expo/metro-config and tinyglobby) and 2.3.2 (the hoisted copy, under anymatch, micromatch and
+jest-util). Evidence, from the lockfile and the source tree on 2026-11-17 -- what was checked,
+and what was not:
+
+1. UNLIKE the root workspace, `npm ls picomatch --package-lock-only --omit=dev` is not empty
+   here: Expo's own tooling is declared under `dependencies` (this lockfile marks no package
+   `dev`), so picomatch IS in the declared production tree. The chains are expo -> @expo/cli;
+   expo -> @expo/metro-config; expo -> @expo/metro -> metro-file-map -> micromatch;
+   react-native -> tinyglobby; and expo-router -> @testing-library/react-native -> jest ->
+   anymatch / jest-util. Every one is the Expo CLI, the Metro bundler or the jest test runner,
+   which run on a developer's machine or in CI to build or test the app.
+2. None of the app's 82 own source files (.ts, .tsx, .js, .jsx outside node_modules) imports
+   picomatch, micromatch, anymatch, tinyglobby or fdir, and metro.config.js sets only
+   `resolver.extraNodeModules` and `resolver.nodeModulesPaths`: no glob pattern is configured.
+3. The patterns Expo and Metro match come from their configuration and from the project's file
+   layout, written by developers; they are not derived from a network client.
+
+NOT checked: the contents of an exported bundle (`expo export`), so that no picomatch code is
+inlined into what ships, was not inspected; whether the Expo or Metro development server passes
+any request-derived string to picomatch was not read from their source. This repository does not
+run either server in production. The case therefore rests on points 1 to 3, reachability by
+inspection, which is weaker than the root workspace's measurement.
+"""
+retire_when = "picomatch publishes a release above 4.0.7 that the advisory lists as patched and the 2.x line is fixed or its dependents (anymatch, micromatch, jest-util) move to a patched release (this check then fails on its own; refresh clients/app/package-lock.json and delete this entry), or Expo and Metro stop depending on it"
+upstream = [
+  "https://github.com/advisories/GHSA-fc5q-39xc-vjpf",
+  "https://github.com/micromatch/picomatch",
+]
