@@ -41,41 +41,6 @@
 [[exception]]
 advisory = "GHSA-fc5q-39xc-vjpf"
 package = "picomatch"
-workspace = "."
-added = 2026-11-17
-# 30 days, the [advisories] maximum. The check also fails on its own, and says to take the fix,
-# the day a patched release exists.
-expires = 2026-12-17
-reason = """
-picomatch <= 4.0.7 (here 4.0.7): a crafted single-branch repeated extglob such as `+(*)` makes
-`analyzeRepeatedExtglob` in lib/parse.js skip its guard, so matching takes exponential time and
-blocks the event loop (ReDoS). The input that triggers it is a glob PATTERN. Evidence, from the
-lockfile on 2026-11-17 -- what was checked, and what was not:
-
-1. `npm ls picomatch --package-lock-only --omit=dev` in this workspace prints an empty tree.
-   Nothing in the production dependency tree reaches picomatch; this is a measurement, not an
-   inspection.
-2. The only chains are @vibey/core -> vite 8.3.5 -> picomatch and tinyglobby -> fdir -> picomatch,
-   and vitest 5.0.5 -> picomatch. package-lock.json marks picomatch and every one of its
-   dependents `dev: true`.
-3. vite, vitest and tinyglobby are given patterns by files the project's developers write (the
-   include and exclude lists in the vite and vitest configuration), not by a network client.
-   They run in `npm test` and in CI, never in anything that ships.
-
-NOT checked: the advisory's mechanism was not reproduced against 4.0.7. A contributor's pull
-request can change a vitest or vite config and so supply a pattern that hangs a CI job until its
-timeout; that author can already run arbitrary code in CI, so it adds no capability, but it is
-the one path by which hostile input reaches this package.
-"""
-retire_when = "picomatch publishes a release above 4.0.7 that the advisory lists as patched (this check then fails on its own and says to take the fix: refresh package-lock.json and delete this entry), or vite, vitest and tinyglobby stop depending on it"
-upstream = [
-  "https://github.com/advisories/GHSA-fc5q-39xc-vjpf",
-  "https://github.com/micromatch/picomatch",
-]
-
-[[exception]]
-advisory = "GHSA-fc5q-39xc-vjpf"
-package = "picomatch"
 workspace = "clients/app"
 added = 2026-11-17
 expires = 2026-12-17
