@@ -38,3 +38,14 @@ updates:
     directory: /deploy/docker
     schedule:
       interval: weekly
+    # Digest updates of the same tag are wanted; a new Python minor or major is not. The
+    # virtualenv is built in the `uv` image's Python (3.12) and copied into the `python`
+    # runtime image, so the two must stay on the same minor version, and a bump of the runtime
+    # alone (3.12 to 3.15, #1920) broke the image: `ModuleNotFoundError: No module named
+    # 'vibey'`. Moving Python is a deliberate change to both stages, the pip paths in the
+    # Dockerfile and `requires-python`, so it is made by hand, not proposed weekly.
+    ignore:
+      - dependency-name: python
+        update-types:
+          - version-update:semver-minor
+          - version-update:semver-major
