@@ -119,6 +119,7 @@ jobs:
     # stale by `record`, so this runs unless the run was cancelled.
     if: ${{ !cancelled() }}
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     permissions:
       contents: write
       pull-requests: write
