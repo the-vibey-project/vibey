@@ -1,0 +1,11 @@
+# Made with ❤️ by [Vibey](https://the-vibey-project.github.io/vibey/), Developed by [Adam Matthew Steinberger](https://vibewithadam.matthewsteinberger.com/) ([@adammatthewsteinberger](https://github.com/adammatthewsteinberger/)).
+# How many findings zizmor reports over .github/workflows and .github/actions, held as a ratchet
+# by scripts/workflow_lint.py: above fails (a new finding), below fails (lower this number).
+# Keyed by tool name, each with the version and the date its count was measured; a second tool
+# is a second table. Measured on the tree with every action SHA-pinned (SP1-C Task 2), offline.
+# zizmor audits this repository's .github/ only: the managed templates under src/vibey_tools/gh/vibey_gh/templates/workflows/ and the gh tenant's rendered copy under src/vibey_tools/gh/.github/workflows/ are not audited directly (the repository root's rendered copies of the same templates are).
+
+[zizmor]
+count = 79
+version = "1.32.0"
+measured = "2026-11-16"

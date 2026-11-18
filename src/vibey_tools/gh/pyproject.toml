@@ -35,6 +35,7 @@ dev = [
     "pytest>=7.4", "pytest-cov>=4.1", "pytest-timeout>=2.3",
     "ruff>=0.5", "black>=24.0", "isort>=5.12", "mypy>=1.8",
     "pyyaml>=6.0",   # test/test_templates.py parses the shipped workflow templates
+    "zizmor>=1.32,<2",   # workflow security auditor, run by scripts/workflow_lint.py in CI's lint job
 ]
 
 [project.scripts]
