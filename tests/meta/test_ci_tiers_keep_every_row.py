@@ -46,6 +46,7 @@ AREA_JOBS: dict[str, tuple[str, ...]] = {
     "postgres-compatibility": ("uv-lock", "lint"),
     "tools": ("uv-lock", "lint"),
     "tools-lint": ("uv-lock", "lint"),
+    "docs": ("uv-lock", "lint"),
     "image": ("lint",),
     "cluster-smoke": ("lint",),
     "krypton-app": (),
@@ -704,8 +705,9 @@ def test_a_docs_only_diff_skips_the_heavy_jobs() -> None:
     ran = _would_run(outputs)
     # `tools` runs three PR rows: the suites of vibey-gh and vibey-skills read the root docs,
     # so the area map selects them on a docs change (.github/ci-matrices.toml `select_on`), and
-    # vibey-bootstrap installs vibey-gh from the tree, so it rides along.
-    assert ran == {"tools"}
+    # vibey-bootstrap installs vibey-gh from the tree, so it rides along. `docs` is the strict
+    # site build, the one job that exists to check exactly this diff.
+    assert ran == {"tools", "docs"}
     assert [row["package"] for row in json.loads(outputs["tools_matrix"])["include"]] == [
         "vibey-gh",
         "vibey-skills",

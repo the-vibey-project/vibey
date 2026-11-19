@@ -70,6 +70,14 @@ basis = "measured"
 timeout_minutes = 10
 basis = "measured"
 
+[jobs.docs]
+# unmeasured in CI: no run of it exists yet. One local `properdocs build --strict` of this tree
+# took 9, 9 and 10 s (Python 3.14, warm network cache); the rule gives roundup5(max(2 x 0.2, 10))
+# = 10, and the 15 floor for a real build applies, so the job (checkout, pip install, build) has
+# 20 for a first-run margin. Revisit with the first CI runs.
+timeout_minutes = 20
+basis = "unmeasured"
+
 [jobs.krypton-app]
 # n=12 p90=0.3 max=0.3, slowest cell: "krypton-app". Test-suite floor 15.
 timeout_minutes = 15
