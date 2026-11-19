@@ -364,3 +364,6 @@ def test_the_cli_step_reads_every_github_value_from_env() -> None:
     assert env["MQ_BASE_SHA"] == "${{ github.event.merge_group.base_sha }}"
     assert env["MQ_HEAD_SHA"] == "${{ github.event.merge_group.head_sha }}"
     assert env["LAST_GREEN"] == "${{ steps.watermark.outputs.last_green }}"
+
+
+# probe: a tests-only change, so the docs job should be skipped.
