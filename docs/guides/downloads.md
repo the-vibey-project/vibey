@@ -143,3 +143,6 @@ That file declares each target as one of three kinds:
 
 The release workflow builds from the same file. `python scripts/release_binaries.py check`
 fails when the workflow, this page and the file disagree.
+
+<!-- probe -->
+See [a page that does not exist](no-such-page-probe.md).
