@@ -600,7 +600,8 @@ async def test_ledger_markdown_reaches_the_client_escaped() -> None:
     await run_until(feed.follow("s", PID, after=0), lambda: feed.watermark("s") == 1)
 
     assert channel.said == [
-        "[build] TurnCompleted: \\!\\[x\\]\\(https://evil.example/b\\) \\# \\[ok\\]\\(https://e\\)"
+        "[build] TurnCompleted: \\!\\[x\\]\\(https\\[:\\]//evil.example/b\\) \\# "
+        "\\[ok\\]\\(https\\[:\\]//e\\)"
     ]
 
 
@@ -625,7 +626,7 @@ async def test_the_paused_message_shows_the_hubs_error_as_safe_text() -> None:
     await run_until(feed.follow("s", PID, after=0), lambda: bool(channel.updates))
 
     paused = channel.said[0]
-    assert "\\[x\\]\\(https://e\\)" in paused and "\n" not in paused
+    assert "\\[x\\]\\(https\\[:\\]//e\\)" in paused and "\n" not in paused
     assert "y" * 40 not in paused
 
 

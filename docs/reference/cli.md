@@ -312,8 +312,10 @@ and other hub data shown in a message (a project's name and repository, an error
 returned), was written by workers and models, so it is shown as text and nothing more: one line
 (every control, format, bidirectional or line-separator character becomes a space) with every
 Markdown special character escaped (`` \ ` * _ [ ] ( ) < > ! # | ~ & ``), so it can make no
-link, image, emphasis, code block, heading, table or HTML. A bare URL may still be made a link
-by the client.
+link, image, emphasis, code block, heading, table or HTML. The forms GFM would make a link of on
+their own are broken with a visible bracket: `https://` shows as `https[:]//`, `mailto:` as
+`mailto[:]`, a `www.` host as `www[.]`, and an address as `name[@]host`. A bare domain
+(`example.com`) is left as it is, and a client may still choose to link it.
 
 The feed polls the hub every [`[acp] live_poll_seconds`](configuration.md#acp) from the last
 event it sent (a position in the ledger, never a time), so nothing is skipped or sent twice

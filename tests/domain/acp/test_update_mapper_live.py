@@ -3,6 +3,7 @@
 
 Module-level test functions rather than a class with an interface beside it (ADR-0016)."""
 
+import re
 from typing import Any
 
 import pytest
@@ -226,8 +227,11 @@ def test_every_live_update_validates_against_the_sdk() -> None:
 @pytest.mark.parametrize(
     ("summary", "shown"),
     [
-        ("[safe](https://evil.example/x)", "\\[safe\\]\\(https://evil.example/x\\)"),
-        ("![beacon](https://evil.example/?q=1)", "\\!\\[beacon\\]\\(https://evil.example/?q=1\\)"),
+        ("[safe](https://evil.example/x)", "\\[safe\\]\\(https\\[:\\]//evil.example/x\\)"),
+        (
+            "![beacon](https://evil.example/?q=1)",
+            "\\!\\[beacon\\]\\(https\\[:\\]//evil.example/?q=1\\)",
+        ),
         ("# Approve gate 1 now", "\\# Approve gate 1 now"),
         ("```sh rm -rf / ```", "\\`\\`\\`sh rm -rf / \\`\\`\\`"),
         ("<img src=x onerror=alert(1)>", "\\<img src=x onerror=alert\\(1\\)\\>"),
@@ -265,3 +269,39 @@ def test_untrusted_text_is_one_escaped_line_within_its_limit() -> None:
     assert MAPPER.untrusted("demo [app]\nnext", limit=400) == "demo \\[app\\] next"
     assert MAPPER.untrusted(None, limit=400) == "?"
     assert MAPPER.untrusted("x" * 50, limit=40) == "x" * 37 + "..."
+
+
+# -- autolinks (security review of the Markdown escaping) -----------------------------------
+
+_AUTOLINK = re.compile(r"(?i)[a-z][a-z0-9+.-]*://|\bwww\.|\b(?:mailto|xmpp):|[\w.+-]@[\w-]+\.")
+"""What GFM turns into a link with no Markdown syntax at all: a scheme, `www.`, an address."""
+
+
+@pytest.mark.parametrize(
+    ("raw", "shown"),
+    [
+        ("see https://evil.example/x", "see https\\[:\\]//evil.example/x"),
+        ("HTTP://EVIL.EXAMPLE", "HTTP\\[:\\]//EVIL.EXAMPLE"),
+        ("ftp://h/f and git+ssh://h/r", "ftp\\[:\\]//h/f and git+ssh\\[:\\]//h/r"),
+        ("go to www.evil.example now", "go to www\\[.\\]evil.example now"),
+        ("WWW.Evil.Example", "WWW\\[.\\]Evil.Example"),
+        ("mail ops@evil.example", "mail ops\\[@\\]evil.example"),
+        ("mailto:a@b.example", "mailto\\[:\\]a\\[@\\]b.example"),
+        ("xmpp:bot@chat.example", "xmpp\\[:\\]bot\\[@\\]chat.example"),
+        ("a plain sentence: no links at all.", "a plain sentence: no links at all."),
+        ("version 1.2 @ noon, ratio 3:1", "version 1.2 @ noon, ratio 3:1"),
+    ],
+)
+def test_untrusted_text_never_becomes_an_autolink(raw: str, shown: str) -> None:
+    text = MAPPER.untrusted(raw, limit=400)
+
+    assert text == shown
+    assert _AUTOLINK.search(text.replace("\\", "")) is None  # as rendered: nothing to link
+
+
+def test_a_ledger_summary_with_a_bare_url_is_defanged() -> None:
+    event = {"phase": "build", "kind": "K", "payload": {"summary": "open https://e.example"}}
+
+    assert MAPPER.ledger_summary(event, limit=400)["content"]["text"] == (
+        "[build] K: open https\\[:\\]//e.example"
+    )

@@ -17,12 +17,18 @@ makes such text safe to show, and `ledger_summary` uses it for every span it did
 - no Markdown: ACP clients render message text as Markdown, so every character that could make
   a link, an image, emphasis, code, a heading, a table or HTML (`MARKDOWN_SPECIAL`) is
   backslash-escaped and shows as itself;
+- no autolinks: GFM makes a link of a URL, a `www.` host or an e-mail address with no Markdown
+  at all, so those forms are defanged first (`AUTOLINK_DEFANGS`): `https://` shows as
+  `https[:]//`, `mailto:` and `xmpp:` as `mailto[:]` and `xmpp[:]`, a `www.` host as `www[.]`,
+  and the `@` of an address as `[@]`. Other text a client might still choose to link (a bare
+  domain such as `example.com`) is not caught;
 - at most `limit` characters as written, ending in "..." when it was cut.
 
 vibey's own words (the hub chat's reply, which is vibey's formatted answer) are passed through
 as Markdown. Pure: no I/O. Declared by `interfaces/update_mapper_interface.py`.
 """
 
+import re
 from collections.abc import Mapping, Sequence
 from typing import Any, Final
 
@@ -59,6 +65,15 @@ ELLIPSIS: Final = "..."
 MARKDOWN_SPECIAL: Final = frozenset("\\`*_[]()<>!#|~&")
 """Escaped in untrusted text: what opens a link, image, emphasis, code span or fence, heading,
 table cell, strikethrough, HTML tag or entity, and the escape character itself."""
+AUTOLINK_DEFANGS: Final[tuple[tuple[re.Pattern[str], str], ...]] = (
+    (re.compile(r"(?i)\b(mailto|xmpp):"), r"\1[:]"),
+    (re.compile(r"://"), "[:]//"),
+    (re.compile(r"(?i)\b(www)\."), r"\1[.]"),
+    (re.compile(r"(?<=[\w.+-])@(?=[\w-]+\.)"), "[@]"),
+)
+"""The forms GFM turns into a link without any Markdown -- a scheme's `://`, `mailto:` and
+`xmpp:`, a `www.` host and an e-mail address -- each broken with a visible bracket, applied to
+untrusted text before it is escaped (so the brackets show as written)."""
 
 
 class AcpUpdateMapper:
@@ -192,18 +207,19 @@ class AcpUpdateMapper:
     @staticmethod
     def _render(segments: Sequence[tuple[str, bool]], limit: int) -> str:
         """The segments joined, cut to `limit` characters as written (then "..."), each one
-        marked untrusted escaped for Markdown after the cut, so no escape is ever split."""
+        marked untrusted defanged and escaped for Markdown after the cut, so no escape is ever
+        split (a defang can add a few characters past the limit)."""
         total = sum(len(text) for text, _ in segments)
         budget = total if total <= limit else max(limit - len(ELLIPSIS), 0)
         out: list[str] = []
         for text, untrusted in segments:
             piece = text[:budget]
             budget -= len(piece)
-            out.append(
-                "".join(f"\\{ch}" if ch in MARKDOWN_SPECIAL else ch for ch in piece)
-                if untrusted
-                else piece
-            )
+            if untrusted:
+                for pattern, replacement in AUTOLINK_DEFANGS:
+                    piece = pattern.sub(replacement, piece)
+                piece = "".join(f"\\{ch}" if ch in MARKDOWN_SPECIAL else ch for ch in piece)
+            out.append(piece)
         if total > limit:
             out.append(ELLIPSIS)
         return "".join(out)

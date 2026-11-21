@@ -74,9 +74,10 @@ class AcpUpdateMapperInterface(Protocol):
         ...
 
     def untrusted(self, value: Any, *, limit: int) -> str:
-        """Hub or ledger data made safe to show in a message: one line (every non-printable
-        character a space), every Markdown special character escaped, and at most `limit`
-        characters as written, ending in "..." when cut."""
+        """Hub or ledger data made safer to show in a message: one line (every non-printable
+        character a space), the forms GFM autolinks defanged (`https[:]//`, `mailto[:]`,
+        `www[.]`, `name[@]host`), every Markdown special character escaped, and at most `limit`
+        characters as written, ending in "..." when cut. A bare domain is not caught."""
         ...
 
     def available_commands(self, specs: Sequence[ChatSlashSpec]) -> dict[str, Any]:

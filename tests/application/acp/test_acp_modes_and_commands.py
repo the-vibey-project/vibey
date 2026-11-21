@@ -575,7 +575,7 @@ async def test_a_hub_error_in_the_folder_lookup_is_shown_as_safe_text() -> None:
     await new_session(agent)
     await until(lambda: len(channel.texts) == 1)
 
-    assert "down \\[x\\]\\(https://e\\) more" in channel.said[0]
+    assert "down \\[x\\]\\(https\\[:\\]//e\\) more" in channel.said[0]
     await agent.close()
 
 
@@ -603,5 +603,5 @@ async def test_the_following_message_shows_hub_data_as_safe_text() -> None:
     await until(lambda: any(t.startswith("Following project") for t in channel.said))
 
     following = next(t for t in channel.said if t.startswith("Following project"))
-    assert following.startswith("Following project \\[evil\\]\\(https://e\\) \\# x (")
+    assert following.startswith("Following project \\[evil\\]\\(https\\[:\\]//e\\) \\# x (")
     await agent.close()
