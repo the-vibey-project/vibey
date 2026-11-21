@@ -70,7 +70,9 @@ class _HubCall:
     """The `pending` frame's write. Once started it runs to the end even if the turn is
     cancelled, so a frame that reached the client is always closed by the settle."""
     task: asyncio.Task[HubTurn] | None = None
-    reported: bool = False
+    closing: asyncio.Task[None] | None = None
+    """The closing frame's write (`completed` or `failed`). Like the `pending` frame it runs to
+    the end even if the turn is cancelled, so the close the client was promised is sent once."""
 
 
 class AcpPromptTurn:
@@ -162,10 +164,10 @@ class AcpPromptTurn:
         except Exception as exc:
             # Any failure, not only a `VibeyError`: an unexpected one must still close the
             # tool call on the client's screen and end the turn, never leave it spinning.
-            call.reported = True
             failure = self._describe(exc)
-            await self._notify(
+            await self._close(
                 session,
+                call,
                 self._mapper.tool_call_update(call.call_id, ToolCallStatus.FAILED, failure),
             )
             await self._say(session, failure)
@@ -173,15 +175,17 @@ class AcpPromptTurn:
         if turn.project_id is not None:
             session.project_id = turn.project_id
         session.open_gates = turn.gates
-        call.reported = True
-        await self._notify(session, self._completed(call, turn))
+        await self._close(session, call, self._completed(call, turn))
         await self._say(session, turn.reply)
         await self._gates.offer(session, turn.gates, turn_id=turn_id)
         return StopReason.END_TURN
 
     async def _settle(self, session: AcpSessionContext, call: _HubCall) -> None:
         """Close an announced tool call the cancel interrupted, once and truthfully."""
-        if call.reported or call.announcing is None:
+        if call.closing is not None:
+            await asyncio.wait({call.closing})  # already closing: let that frame go out
+            return
+        if call.announcing is None:
             return
         await asyncio.wait({call.announcing})  # the pending frame goes out first
         if call.task is None:
@@ -216,6 +220,12 @@ class AcpPromptTurn:
             else self._completed(call, call.task.result())
         )
         await self._notify(session, update)
+
+    async def _close(
+        self, session: AcpSessionContext, call: _HubCall, update: Mapping[str, Any]
+    ) -> None:
+        call.closing = asyncio.ensure_future(self._notify(session, update))
+        await asyncio.shield(call.closing)
 
     @classmethod
     def _retrieve(cls, task: asyncio.Task[HubTurn]) -> None:

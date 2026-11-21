@@ -14,9 +14,15 @@ if TYPE_CHECKING:
 class GatePermissionMapperInterface(Protocol):
     """Turns an open gate into `session/request_permission` options, or says why it cannot."""
 
+    def gate_id(self, gate: Mapping[str, Any]) -> str | None:
+        """The gate's id in canonical UUID form, or None when it is not a UUID."""
+        ...
+
     def options_for(self, gate: Mapping[str, Any]) -> tuple[PermissionChoice, ...]:
-        """The options an editor may offer for `gate`, in order. Empty for a spend gate (by
-        kind or by flag), a gate whose answer is a value, and a gate with no usable option."""
+        """The options an editor may offer for `gate`, in order, ending with the agent's own
+        "Leave it open". Empty for a spend gate (by kind or by flag), the deployment opt-in, a
+        gate whose answer is a value, an unknown kind, a gate whose id is not a UUID and a
+        gate with no usable option."""
         ...
 
     def refusal_text(self, gate: Mapping[str, Any]) -> str:

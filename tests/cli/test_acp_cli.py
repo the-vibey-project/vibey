@@ -311,7 +311,7 @@ async def test_build_acp_agent_puts_an_open_gate_to_the_client_and_answers_throu
         {"sessionId": session["sessionId"], "prompt": [{"type": "text", "text": "/gates"}]},
     )
 
-    assert [o["kind"] for o in channel.offered[0]] == ["allow_once", "reject_once"]
+    assert [o["kind"] for o in channel.offered[0]] == ["allow_once", "reject_once", "reject_once"]
     answer = calls[-1]
     assert (answer.tool, answer.route) == ("vibey_answer_gate", f"/api/v1/gates/{gate_id}/answer")
     assert answer.body is not None and answer.body["answer"] == {"choice": "nope"}

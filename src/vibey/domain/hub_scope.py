@@ -166,6 +166,14 @@ deployment stage that provisions cloud resources: answering one needs `spend`, a
 `answer` alone is not enough. The REVIEW phase's opt-in to deployment is a generic
 `choice` gate and cannot be told apart by kind; ADR-0067 records that gap."""
 
+DEPLOYMENT_OPT_IN_PROMPT: Final = "Review accepted. Deploy to target infrastructure?"
+DEPLOYMENT_OPT_IN_OPTIONS: Final[tuple[str, str]] = ("local_only", "deploy")
+"""The REVIEW phase's deployment opt-in, as `review.deployment_choice` raises it: a `choice`
+gate with these options, `local_only` first and its default. Its kind cannot tell it apart
+(the ADR-0067 gap above), so a surface that must not answer it -- an editor over ACP, where a
+click would opt a project into provisioning real infrastructure -- recognises it by these
+options; the handler raises it from these constants, so the two cannot drift apart."""
+
 
 class HubScopePolicy:
     """Decides whether a set of granted scopes permits an action. Pure.

@@ -11,8 +11,13 @@ at most `[acp] max_gate_prompts_per_turn` of them, is put to the client once:
   open", a cancel, a timeout, a failure or an option the gate never offered answers nothing:
   silence is not consent (sub-doctrine 12.d), and nothing is ever answered on the operator's
   behalf.
-- A spend gate, or one whose answer is a value, is a message saying where to answer it. Money
-  is answered on the host, never from an editor.
+- A spend gate, the deployment opt-in, a gate whose answer is a value and a kind the mapper
+  does not know are each a message saying where to answer it. Money and real infrastructure
+  are answered on the host, never from an editor.
+- A gate whose id is not a UUID is never shown or used; one message per turn counts them.
+
+Every frame that announces or closes a gate's tool call runs to the end even if the turn is
+cancelled, so the close the client was promised is sent once and never dropped.
 
 Nothing is offered while the session's mode, or the hub's grant to agents, does not include
 `answer`: an observe session never answers a gate, and the gates are offered once it can.
@@ -55,10 +60,12 @@ class _GateCall:
 
     call_id: str
     request_id: str
-    announcing: asyncio.Task[None] | None = None
+    announcing: asyncio.Task[None]
     """The `pending` frame's write; it runs to the end even if the turn is cancelled."""
     answering: asyncio.Task[HubToolResult] | None = None
-    reported: bool = False
+    closing: asyncio.Task[None] | None = None
+    """The closing frame's write; like the `pending` frame it runs to the end under a cancel,
+    so the close is sent once and never dropped."""
 
 
 class AcpGatePrompter:
@@ -95,49 +102,55 @@ class AcpGatePrompter:
         if HubScope.ANSWER not in allowed:
             return
         offered = 0
+        invalid = 0
         for gate in gates:
-            gate_id = str(gate.get("gate_id") or "")
-            if not gate_id or gate_id in session.offered_gates:
+            gate_id = self._gates.gate_id(gate)
+            if gate_id is None:
+                # Never shown, never used: an id that is not a UUID could be anything.
+                key = f"invalid:{gate.get('gate_id')!r}"
+                if key not in session.offered_gates:
+                    session.offered_gates.add(key)
+                    invalid += 1
+                continue
+            if gate_id in session.offered_gates:
                 continue
             if offered >= self._settings.max_gate_prompts_per_turn:
-                return
+                break
             offered += 1
             # Marked before it is asked: a gate is put to the client once, however it ends.
             session.offered_gates.add(gate_id)
             choices = self._gates.options_for(gate)
             if not choices:
-                await self._notify(session, self._mapper.agent_text(self._gates.refusal_text(gate)))
+                refusal = self._gates.refusal_text({**gate, "gate_id": gate_id})
+                await self._notify(session, self._mapper.agent_text(refusal))
                 continue
+            call_id = f"{turn_id}-gate-{gate_id}"
             call = _GateCall(
-                call_id=f"{turn_id}-gate-{gate_id}",
+                call_id=call_id,
                 request_id=f"acp-{session.session_id}-{gate_id}",
+                announcing=asyncio.ensure_future(self._announce(session, gate, gate_id, call_id)),
             )
             try:
-                await self._ask(session, gate, gate_id, choices, call)
+                await self._ask(session, gate_id, choices, call)
             except asyncio.CancelledError:
-                await self._settle(session, call)
+                await self._settle(session, gate_id, call)
                 raise
+        if invalid:
+            await self._notify(
+                session,
+                self._mapper.agent_text(
+                    f"The hub listed {invalid} gate(s) whose id is not a UUID, so I did not "
+                    "offer them. Check `vibey gates` on the host."
+                ),
+            )
 
     async def _ask(
         self,
         session: AcpSessionContext,
-        gate: Mapping[str, Any],
         gate_id: str,
         choices: tuple[PermissionChoice, ...],
         call: _GateCall,
     ) -> None:
-        prompt = str(gate.get("prompt") or "")
-        call.announcing = asyncio.ensure_future(
-            self._notify(
-                session,
-                self._mapper.tool_call(
-                    call.call_id,
-                    f"Answer gate: {prompt}",
-                    ToolKind.OTHER,
-                    {"gate_id": gate_id, "kind": gate.get("kind"), "prompt": prompt},
-                ),
-            )
-        )
         await asyncio.shield(call.announcing)
         session.state.register_permission(call.call_id)
         try:
@@ -152,8 +165,7 @@ class AcpGatePrompter:
         # Only an option this gate offered can answer it; anything else is no answer at all.
         choice = next((c for c in choices if c.option_id == selected), None)
         if choice is None or choice.answer is None:
-            call.reported = True
-            await self._close(session, call.call_id, ToolCallStatus.FAILED, LEFT_OPEN)
+            await self._fail(session, call, LEFT_OPEN)
             return
         await self._notify(
             session, self._mapper.tool_call_update(call.call_id, ToolCallStatus.IN_PROGRESS)
@@ -168,44 +180,59 @@ class AcpGatePrompter:
         try:
             result = await asyncio.shield(call.answering)
         except Exception as exc:
-            call.reported = True
-            await self._close(session, call.call_id, ToolCallStatus.FAILED, self._describe(exc))
+            await self._fail(session, call, self._describe(exc))
             return
-        call.reported = True
-        if result.ok:
-            session.open_gates = tuple(
-                g for g in session.open_gates if str(g.get("gate_id")) != gate_id
-            )
-        await self._notify(session, self._answered(call.call_id, result))
+        await self._close(session, call, self._answered(session, gate_id, call.call_id, result))
 
-    async def _settle(self, session: AcpSessionContext, call: _GateCall) -> None:
+    async def _announce(
+        self, session: AcpSessionContext, gate: Mapping[str, Any], gate_id: str, call_id: str
+    ) -> None:
+        prompt = str(gate.get("prompt") or "")
+        await self._notify(
+            session,
+            self._mapper.tool_call(
+                call_id,
+                f"Answer gate: {prompt}",
+                ToolKind.OTHER,
+                {"gate_id": gate_id, "kind": gate.get("kind"), "prompt": prompt},
+            ),
+        )
+
+    async def _settle(self, session: AcpSessionContext, gate_id: str, call: _GateCall) -> None:
         """Close a gate's tool call the cancel interrupted, once and truthfully."""
-        if call.reported or call.announcing is None:
+        if call.closing is not None:
+            await asyncio.wait({call.closing})  # already closing: let that frame go out
             return
         await asyncio.wait({call.announcing})  # the pending frame goes out first
         if call.answering is None:
-            await self._close(session, call.call_id, ToolCallStatus.FAILED, LEFT_OPEN)
+            await self._fail(session, call, LEFT_OPEN)
             return
         done, _ = await asyncio.wait({call.answering}, timeout=self._settings.cancel_grace_seconds)
         if not done:
             self._STRAYS.add(call.answering)
             call.answering.add_done_callback(self._retrieve)
-            await self._close(
+            await self._fail(
                 session,
-                call.call_id,
-                ToolCallStatus.FAILED,
+                call,
                 "cancelled before the hub answered; the hub may still apply it "
                 f"(request id {call.request_id})",
             )
             return
         error = call.answering.exception()
         if error is not None:
-            await self._close(session, call.call_id, ToolCallStatus.FAILED, self._describe(error))
+            await self._fail(session, call, self._describe(error))
             return
-        await self._notify(session, self._answered(call.call_id, call.answering.result()))
+        answered = self._answered(session, gate_id, call.call_id, call.answering.result())
+        await self._close(session, call, answered)
 
-    def _answered(self, call_id: str, result: HubToolResult) -> dict[str, Any]:
+    def _answered(
+        self, session: AcpSessionContext, gate_id: str, call_id: str, result: HubToolResult
+    ) -> dict[str, Any]:
         if result.ok:
+            # Answered: the local view of open gates drops it, as the hub's list now does.
+            session.open_gates = tuple(
+                g for g in session.open_gates if self._gates.gate_id(g) != gate_id
+            )
             text = self._tools.truncate(result.text, limit=self._max_result_chars)
             return self._mapper.tool_call_update(call_id, ToolCallStatus.COMPLETED, text)
         refused = self._tools.truncate(
@@ -224,10 +251,15 @@ class AcpGatePrompter:
         """A `VibeyError`'s own message; any other failure named by its type as well."""
         return str(error) if isinstance(error, VibeyError) else f"{type(error).__name__}: {error}"
 
+    async def _fail(self, session: AcpSessionContext, call: _GateCall, text: str) -> None:
+        update = self._mapper.tool_call_update(call.call_id, ToolCallStatus.FAILED, text)
+        await self._close(session, call, update)
+
     async def _close(
-        self, session: AcpSessionContext, call_id: str, status: ToolCallStatus, text: str
+        self, session: AcpSessionContext, call: _GateCall, update: Mapping[str, Any]
     ) -> None:
-        await self._notify(session, self._mapper.tool_call_update(call_id, status, text))
+        call.closing = asyncio.ensure_future(self._notify(session, update))
+        await asyncio.shield(call.closing)
 
     async def _notify(self, session: AcpSessionContext, update: Mapping[str, Any]) -> None:
         await self._channel.notify_update(session.session_id, update)

@@ -17,7 +17,8 @@ class AcpGatePrompterInterface(Protocol):
     ) -> None:
         """Put the open gates the session has not seen yet to the client, oldest first and at
         most `[acp] max_gate_prompts_per_turn` of them: each answerable one as a permission
-        request, each spend or value gate as a message saying where to answer it.
+        request, every other one (spend, deployment opt-in, value, unknown kind) as a message
+        saying where to answer it.
 
         Runs inside a prompt turn that has begun on `session.state`. When the task running
         this is cancelled, the gate being asked is closed truthfully and the cancel propagates.

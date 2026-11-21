@@ -45,8 +45,17 @@ class FakeChannel:
         self._waiting: dict[str, list[asyncio.Future[None]]] = {}
         self.hold_at: dict[int, asyncio.Event] = {}
         """The update with this 1-based number is recorded, then waits for the event."""
+        self.hold_before: dict[int, asyncio.Event] = {}
+        """The update with this 1-based number waits for the event before it is recorded, as a
+        frame waiting for the peer's write lock; cancelled there, it is never sent."""
+        self.write_waiting = asyncio.Event()
+        """Set once an update is waiting on `hold_before`."""
 
     async def notify_update(self, session_id: str, update: Mapping[str, Any]) -> None:
+        waiting = self.hold_before.pop(len(self.updates) + 1, None)
+        if waiting is not None:
+            self.write_waiting.set()
+            await waiting.wait()
         self.sessions.append(session_id)
         self.updates.append(dict(update))
         gate = self.hold_at.get(len(self.updates))
@@ -193,7 +202,7 @@ def build_gates(
         chosen,
         AcpModes(chosen),
         AcpUpdateMapper(),
-        GatePermissionMapper(chosen.reject_words, HUB_CHAT),
+        GatePermissionMapper(chosen.reject_words),
         HOST_TOOL_CATALOG,
         max_result_chars=max_result_chars,
     )
