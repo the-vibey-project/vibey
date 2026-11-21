@@ -97,7 +97,8 @@ char *kr_pairing_claim_body(const char *code, const char *name);
 char *kr_pairing_refusal_message(guint status, const char *detail);
 
 /* What a scope the host grants lets this device do, in words, as the hub defines it
- * (src/vibey/domain/hub_scope.py, HubScope): view, answer, spend, run, bump, workflows.
+ * (src/vibey/domain/hub_scope.py, HubScope): view, answer, spend, run, bump, workflows,
+ * acp_sessions.
  * NULL for a scope krypton does not know. Static. */
 const char *kr_pairing_scope_description(const char *scope);
 

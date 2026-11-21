@@ -194,7 +194,7 @@ test_scope_descriptions(void)
     g_assert_cmpstr(kr_pairing_scope_description("workflows"), ==,
                     "Run vibey commands on the repository's GitHub-hosted runners");
     for (const char *const *scope = (const char *const[]){"view", "answer", "spend", "run",
-                                                          "bump", NULL};
+                                                          "bump", "acp_sessions", NULL};
          *scope != NULL; scope++)
         g_assert_nonnull(kr_pairing_scope_description(*scope));
     g_assert_null(kr_pairing_scope_description("admin"));
