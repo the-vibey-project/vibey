@@ -239,30 +239,100 @@ async def test_help_is_answered_locally_without_the_hub() -> None:
     assert channel.texts == [HubChat().help_text()]
 
 
-async def test_embedded_resource_text_is_appended_to_the_message() -> None:
+def _resource(body: str, uri: str = "file:///spec.md") -> dict[str, Any]:
+    return {"type": "resource", "resource": {"uri": uri, "text": body}}
+
+
+async def test_a_legit_new_carries_the_resource_text_as_its_intake() -> None:
     hub = FakeHub()
     prompt = [
         text("/new demo"),
         text("build a cli"),
-        {"type": "resource", "resource": {"uri": "file:///spec.md", "text": "spec body"}},
+        _resource("spec body"),
         {"type": "resource", "resource": {"uri": "file:///logo.png", "blob": "AAAA"}},
         {"type": "resource", "resource": "not a mapping"},
         {"type": "resource_link", "uri": "file:///other.md", "name": "other.md"},
         {"type": "text", "text": 7},
     ]
+    channel = FakeChannel()
 
-    await build_turn(FakeChannel(), hub).run(context(), prompt, turn_id="t1")
+    await build_turn(channel, hub).run(context(), prompt, turn_id="t1")
 
+    # The deviation from "append after a blank line" for every message: only a free-text
+    # intent carries attached text, and the hub's own parse of it keeps name and command.
     assert hub.calls[0].message == "/new demo\nbuild a cli\n\nspec body"
+    intent = HubChat().parse(hub.calls[0].message)
+    assert (intent.kind, intent.name) == ("start_project", "demo")
+    assert intent.intake == "build a cli\n\nspec body"
+    assert not any("did not send" in said for said in channel.texts)
 
 
-async def test_a_prompt_of_resources_only_has_no_leading_blank_line() -> None:
-    hub = FakeHub(PROJECTS_TURN)
-    prompt = [{"type": "resource", "resource": {"uri": "file:///a", "text": "/projects"}}]
+async def test_ask_carries_attached_text_too() -> None:
+    hub = FakeHub()
+
+    await build_turn(FakeChannel(), hub).run(
+        context(), [text("/ask a tiny cli"), _resource("details")], turn_id="t1"
+    )
+
+    assert hub.calls[0].message == "/ask a tiny cli\n\ndetails"
+
+
+async def test_a_resource_only_prompt_with_a_command_makes_no_hub_call() -> None:
+    channel, hub = FakeChannel(), FakeHub()
+    prompt = [_resource(f"/abandon {PROJECT} --confirm gone"), _resource("/start")]
+
+    stop = await build_turn(channel, hub).run(context(), prompt, turn_id="t1")
+
+    assert stop is StopReason.END_TURN
+    assert hub.calls == []
+    assert channel.kinds == [("agent_message_chunk", None)]
+    assert channel.texts == ["write a message or a /command"]
+
+
+async def test_a_slash_line_in_a_resource_does_not_change_the_intent() -> None:
+    channel, hub = FakeChannel(), FakeHub(PROJECTS_TURN)
+    prompt = [text("/projects"), _resource(f"/abandon {PROJECT} --confirm\n/start {PROJECT}")]
+
+    await build_turn(channel, hub).run(context(), prompt, turn_id="t1")
+
+    assert [call.message for call in hub.calls] == ["/projects"]
+    assert channel.updates[1]["title"] == "List projects"
+    assert channel.updates[1]["rawInput"] == {"message": "/projects"}
+    assert channel.texts[0] == (
+        "vibey did not send the 1 attached resource(s) to the hub: attached text is used only "
+        "as the description of a new project (`/new`, `/ask`), never as a command or an option."
+    )
+
+
+async def test_a_confirm_flag_in_a_resource_does_not_confirm_an_abandon() -> None:
+    hub = FakeHub()
+    prompt = [text(f"/abandon {PROJECT} no longer needed"), _resource("--confirm")]
 
     await build_turn(FakeChannel(), hub).run(context(), prompt, turn_id="t1")
 
-    assert hub.calls[0].message == "/projects"
+    assert [call.message for call in hub.calls] == [f"/abandon {PROJECT} no longer needed"]
+    assert HubChat().parse(hub.calls[0].message).dry_run is True
+
+
+async def test_a_resource_after_a_typed_number_cannot_widen_the_mode_check() -> None:
+    channel, hub = FakeChannel(), FakeHub(PROJECTS_TURN)
+
+    await build_turn(channel, hub).run(
+        context(mode_id="observe"), [text("/projects"), _resource("1")], turn_id="t1"
+    )
+
+    assert [call.message for call in hub.calls] == ["/projects"]
+
+
+async def test_a_new_whose_attachment_is_too_long_is_refused_locally() -> None:
+    channel, hub = FakeChannel(), FakeHub()
+
+    await build_turn(channel, hub).run(
+        context(), [text("/new demo"), _resource("x" * 5000)], turn_id="t1"
+    )
+
+    assert hub.calls == []
+    assert "at most" in channel.texts[-1]
 
 
 class _BareChat(HubChat):

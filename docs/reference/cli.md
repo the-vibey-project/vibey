@@ -210,7 +210,9 @@ would type it in the krypton app, `/` commands included, and shows on the client
 call (`pending`, `in_progress`, then `completed` or `failed`) followed by the hub's reply.
 A session starts in the [`[acp] default_mode`](configuration.md#acp): `observe` reads only;
 `drive` may also answer non-spending gates and start, pause or unwind work. A prompt the mode
-does not allow is answered with a message and never reaches the hub. `session/new` needs an
+does not allow is answered with a message and never reaches the hub. Only the text you type is read
+for a command or an option: an attached (embedded) resource is data, sent only as the
+description of a new project (`/new`, `/ask`) and otherwise dropped with a message saying so. `session/new` needs an
 absolute `cwd`; MCP servers a client offers are ignored, and the client is told so once.
 
 `session/cancel` ends the turn with stop reason `cancelled`. A hub call already sent cannot be

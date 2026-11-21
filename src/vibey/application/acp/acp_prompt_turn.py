@@ -8,6 +8,11 @@ before anything reaches the hub: the hub enforces the agent principal's scopes, 
 process knows the mode. The hub call is one tool call on the client's screen: `pending`, then
 `in_progress`, then `completed` or `failed`, then the hub's reply as a message.
 
+Only the text the user typed is parsed for a command and its options. An embedded resource is
+data: its text is sent only as the description a new project takes (`/new`, `/ask`), after a
+blank line, and is otherwise dropped with one message saying so. A prompt of resources alone
+therefore runs nothing.
+
 A cancel is the task running `run` being cancelled. A hub call already in flight cannot be
 taken back, so the turn waits up to `[acp] cancel_grace_seconds` for its real outcome before
 saying the hub may still apply it, names the request id, and lets the cancel propagate.
@@ -39,6 +44,9 @@ from vibey.domain.interfaces.hub_chat_interface import HubChatInterface
 
 ANSWER_GATE_TOOL: Final = "vibey_answer_gate"
 """The tool the hub runs when it reads a bare number as an answer to the oldest open gate."""
+FREE_TEXT_INTENTS: Final = frozenset({"start_project"})
+"""The intents whose free text an embedded resource may extend: `/new` and `/ask` take the
+rest of the message as the project's description, and neither reads a flag from it."""
 
 
 @dataclass(slots=True)
@@ -83,17 +91,24 @@ class AcpPromptTurn:
     async def run(
         self, session: AcpSessionContext, prompt: Sequence[Mapping[str, Any]], *, turn_id: str
     ) -> StopReason:
-        message = self._message(prompt)
+        typed, attached = self._blocks(prompt)
         try:
-            intent = self._chat.parse(message, project_id=session.project_id)
+            # The command is read from what the user typed and nothing else: an embedded
+            # resource is data, so its text can never choose a command or a flag.
+            intent = self._chat.parse(typed, project_id=session.project_id)
+            carried = intent.kind in FREE_TEXT_INTENTS
+            message = "\n\n".join([typed, *attached]) if carried else typed
+            self._chat.parse(message, project_id=session.project_id)  # the length bound, whole
         except LifecycleInvalid as exc:
             await self._say(session, str(exc))
             return StopReason.END_TURN
+        if attached and not carried:
+            await self._say(session, self._dropped(len(attached)))
         if intent.tool_name is None:
             # Only `/help` names no tool; it needs no hub and no scope.
             await self._say(session, self._chat.help_text())
             return StopReason.END_TURN
-        tool = self._admit(session, intent.tool_name, message)
+        tool = self._admit(session, intent.tool_name, typed)
         if isinstance(tool, str):
             await self._say(session, tool)
             return StopReason.END_TURN
@@ -231,20 +246,28 @@ class AcpPromptTurn:
     # -- prompt and output ----------------------------------------------------------------
 
     @staticmethod
-    def _message(prompt: Sequence[Mapping[str, Any]]) -> str:
-        """Text blocks joined by a newline; each embedded resource's text after a blank line."""
-        texts: list[str] = []
-        resources: list[str] = []
+    def _blocks(prompt: Sequence[Mapping[str, Any]]) -> tuple[str, list[str]]:
+        """What the user typed (text blocks joined by a newline) and each embedded resource's
+        text, kept apart: only the first is ever parsed for a command."""
+        typed: list[str] = []
+        attached: list[str] = []
         for block in prompt:
             kind = block.get("type")
             if kind == "text" and isinstance(block.get("text"), str):
-                texts.append(block["text"])
+                typed.append(block["text"])
             elif kind == "resource":
                 resource = block.get("resource")
                 if isinstance(resource, Mapping) and isinstance(resource.get("text"), str):
-                    resources.append(resource["text"])
-        head = ["\n".join(texts)] if texts else []
-        return "\n\n".join([*head, *resources])
+                    attached.append(resource["text"])
+        return "\n".join(typed), attached
+
+    @staticmethod
+    def _dropped(count: int) -> str:
+        return (
+            f"vibey did not send the {count} attached resource(s) to the hub: attached text is "
+            "used only as the description of a new project (`/new`, `/ask`), never as a "
+            "command or an option."
+        )
 
     async def _say(self, session: AcpSessionContext, text: str) -> None:
         await self._notify(session, self._mapper.agent_text(text))
