@@ -28,3 +28,8 @@ class GatePermissionMapperInterface(Protocol):
     def refusal_text(self, gate: Mapping[str, Any]) -> str:
         """What to tell the operator about a gate `options_for` does not offer."""
         ...
+
+    def spends(self, gate: Mapping[str, Any]) -> bool:
+        """Whether `gate` spends money: its kind is a spend kind, or the hub flags it
+        (`is_spend`, or `requires_scope == "spend"`). Such a gate is never offered."""
+        ...

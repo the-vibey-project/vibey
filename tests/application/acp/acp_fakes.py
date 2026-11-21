@@ -14,6 +14,7 @@ from uuid import UUID
 
 from vibey.application.acp.acp_agent import AcpAgent
 from vibey.application.acp.acp_gate_prompter import AcpGatePrompter
+from vibey.application.acp.acp_live_feed import AcpLiveFeed
 from vibey.application.acp.acp_prompt_turn import AcpPromptTurn
 from vibey.application.acp.dto import AcpSessionContext, HubToolResult, HubTurn, LedgerPage
 from vibey.domain.acp.gate_permission import GatePermissionMapper
@@ -135,6 +136,19 @@ class FakeHub:
         self.tool_error: Exception | None = None
         self.tool_release: asyncio.Event | None = None
         self.tool_entered = asyncio.Event()
+        self.projects: HubToolResult = HubToolResult(ok=True, status_code=200, text="[]")
+        """What `vibey_projects` answers (the session's cwd attach)."""
+        self.projects_release: asyncio.Event | None = None
+        self.projects_error: Exception | None = None
+        self.project_lookups: list[str] = []
+        """The request ids of `vibey_projects` calls; they are not in `tool_calls`, which holds
+        what a turn runs."""
+        self.ledger: list[dict[str, Any]] = []
+        """The project's ledger, served by `seq` when `pages` is empty."""
+        self.pages: list[LedgerPage | Exception] = []
+        """Scripted answers to `ledger_after`, used first and in order."""
+        self.ledger_calls: list[tuple[UUID, int, int]] = []
+        self.ledger_read = asyncio.Event()
 
     async def chat(self, message: str, *, project_id: UUID | None, request_id: str) -> HubTurn:
         self.calls.append(ChatCall(message, project_id, request_id))
@@ -148,6 +162,13 @@ class FakeHub:
     async def call_tool(
         self, name: str, arguments: Mapping[str, Any], *, request_id: str
     ) -> HubToolResult:
+        if name == "vibey_projects":
+            self.project_lookups.append(request_id)
+            if self.projects_release is not None:
+                await self.projects_release.wait()
+            if self.projects_error is not None:
+                raise self.projects_error
+            return self.projects
         self.tool_calls.append((name, dict(arguments), request_id))
         self.tool_entered.set()
         if self.tool_release is not None:
@@ -157,7 +178,15 @@ class FakeHub:
         return self.tool_result
 
     async def ledger_after(self, project_id: UUID, after: int, limit: int) -> LedgerPage:
-        return LedgerPage(events=(), last_seq=None)
+        self.ledger_calls.append((project_id, after, limit))
+        self.ledger_read.set()
+        if self.pages:
+            scripted = self.pages.pop(0)
+            if isinstance(scripted, Exception):
+                raise scripted
+            return scripted
+        events = tuple(event for event in self.ledger if event["seq"] > after)[:limit]
+        return LedgerPage(events=events, last_seq=events[-1]["seq"] if events else None)
 
     async def healthy(self) -> bool:
         return True
@@ -208,6 +237,17 @@ def build_gates(
     )
 
 
+def event(
+    seq: int, phase: str = "build", kind: str = "TurnCompleted", **payload: Any
+) -> dict[str, Any]:
+    """One ledger event as the hub's live page carries it; its summary names its `seq`."""
+    return {"seq": seq, "phase": phase, "kind": kind, "payload": {"summary": f"e{seq}", **payload}}
+
+
+def page(*events: dict[str, Any]) -> LedgerPage:
+    return LedgerPage(events=events, last_seq=events[-1]["seq"] if events else None)
+
+
 def build_agent(
     channel: FakeChannel,
     hub: FakeHub,
@@ -226,9 +266,15 @@ def build_agent(
         HUB_CHAT,
         HOST_TOOL_CATALOG,
         lambda: build_turn(channel, hub, settings=chosen),
+        feed=AcpLiveFeed(hub, channel, AcpUpdateMapper(), chosen, sleep=_yield),
         version="9.9.9",
         new_id=lambda: next(pool),
     )
+
+
+async def _yield(seconds: float) -> None:
+    """The live feed's wait in agent tests: it only yields, so a poll never stalls a test."""
+    await asyncio.sleep(0)
 
 
 def context(session_id: str = "s", *, mode_id: str = "drive") -> AcpSessionContext:

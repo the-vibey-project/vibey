@@ -315,3 +315,71 @@ async def test_build_acp_agent_puts_an_open_gate_to_the_client_and_answers_throu
     answer = calls[-1]
     assert (answer.tool, answer.route) == ("vibey_answer_gate", f"/api/v1/gates/{gate_id}/answer")
     assert answer.body is not None and answer.body["answer"] == {"choice": "nope"}
+
+
+def test_the_agent_is_closed_once_the_connection_ends() -> None:
+    # The live feeds poll in tasks of their own; none may outlive the connection (EOF).
+    events: list[str] = []
+    transport = _Transport(events, INITIALIZE)
+    closed: list[bool] = []
+
+    class _Closing:
+        def __init__(self, inner: AcpAgentInterface) -> None:
+            self._inner = inner
+            self.sessions = inner.sessions
+
+        async def handle_request(self, method: str, params: Mapping[str, Any]) -> Any:
+            return await self._inner.handle_request(method, params)
+
+        async def handle_notification(self, method: str, params: Mapping[str, Any]) -> None:
+            await self._inner.handle_notification(method, params)
+
+        async def close(self) -> None:
+            closed.append(True)
+            await self._inner.close()
+
+    def builder(*, settings: AcpSettings, channel: ClientChannelInterface) -> AcpAgentInterface:
+        return _Closing(build_acp_agent(settings=settings, channel=channel, gateway=_Gateway()))
+
+    AcpCommand(
+        transport=lambda: transport,
+        settings=_Loader(events, AcpSettings()),
+        config_path=lambda: Path("/work/vibey.toml"),
+        build_agent=builder,
+    ).run(no_bootstrap=True)
+
+    assert closed == [True]
+    assert len(transport.written) == 1
+
+
+async def test_build_acp_agent_follows_the_project_in_the_sessions_folder() -> None:
+    project_id = "7d6c2a8e-0c41-4c1e-9d0e-2f4b8f0a1b2c"
+    listing = [{"project_id": project_id, "name": "demo", "repo_path": "/work"}]
+    ledger = {
+        "project_id": project_id,
+        "events": [{"seq": 1, "phase": "build", "kind": "TurnCompleted", "payload": {}}],
+        "last_seq": 1,
+    }
+    calls: list[HubCall] = []
+
+    class _Hub(_Gateway):
+        def call(self, call: HubCall) -> HubGatewayResponse:
+            calls.append(call)
+            if call.tool == "vibey_projects":
+                return HubGatewayResponse(status_code=200, text=json.dumps(listing), ok=True)
+            return HubGatewayResponse(status_code=200, text=json.dumps(ledger), ok=True)
+
+    channel = _RecordingChannel()
+    agent = build_acp_agent(settings=AcpSettings(), channel=channel, gateway=_Hub())
+    await agent.handle_request("session/new", {"cwd": "/work/src", "mcpServers": []})
+    for _ in range(500):
+        if any(update["sessionUpdate"] == "plan" for update in channel.updates):
+            break
+        await asyncio.sleep(0.01)
+    await agent.close()
+
+    kinds = [update["sessionUpdate"] for update in channel.updates]
+    assert kinds[:2] == ["available_commands_update", "plan"]
+    reads = [call for call in calls if call.tool == "vibey_ledger_after"]
+    assert reads[0].route == f"/api/v1/projects/{project_id}/ledger/after"
+    assert reads[0].query == (("seq", "0"), ("limit", "200"))

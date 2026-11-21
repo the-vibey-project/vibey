@@ -15,6 +15,7 @@ from acp_fakes import FakeChannel, FakeHub, build_agent, text, until
 
 from tests.domain.acp.acp_wire import assert_wire_exact
 from vibey.application.acp.acp_agent import AcpAgent
+from vibey.application.acp.acp_live_feed import AcpLiveFeed
 from vibey.application.acp.dto import AcpSessionContext
 from vibey.application.acp.interfaces.acp_agent_interface import AcpAgentInterface
 from vibey.domain.acp.modes import AcpModes
@@ -115,8 +116,10 @@ async def test_session_new_returns_modes_with_the_default_mode() -> None:
     assert [mode["id"] for mode in result["modes"]["availableModes"]] == ["observe", "drive"]
     assert list(agent.sessions) == ["s"]
     assert not agent.sessions["s"].turn_active
+    await until(lambda: len(channel.updates) == 1)
     await asyncio.sleep(0)
-    assert channel.updates == []
+    # The `/` commands, and no message: no MCP server was offered and no project matched.
+    assert [u["sessionUpdate"] for u in channel.updates] == ["available_commands_update"]
 
 
 async def test_session_new_honours_a_configured_default_mode() -> None:
@@ -136,12 +139,12 @@ async def test_client_mcp_servers_are_ignored_with_one_message() -> None:
     ]
 
     result = await _new_session(agent, mcpServers=servers)
-    await until(lambda: len(channel.updates) == 1)
+    await until(lambda: len(channel.updates) == 2)
     await asyncio.sleep(0)
 
     assert result["sessionId"] == "s"
-    assert len(channel.updates) == 1
-    assert channel.sessions == ["s"]
+    assert len(channel.texts) == 1
+    assert channel.sessions == ["s", "s"]
     message = channel.texts[0]
     assert "2 MCP server(s)" in message
     assert "hub" in message
@@ -151,9 +154,10 @@ async def test_a_non_list_mcp_servers_value_is_not_counted() -> None:
     channel = FakeChannel()
 
     await _new_session(build_agent(channel, FakeHub()), mcpServers="fs")
+    await until(lambda: len(channel.updates) == 1)
     await asyncio.sleep(0)
 
-    assert channel.updates == []
+    assert channel.texts == []
 
 
 async def test_unknown_session_is_resource_not_found() -> None:
@@ -286,6 +290,7 @@ def _agent_with(turn: _ScriptedTurn) -> AcpAgent:
         HUB_CHAT,
         HOST_TOOL_CATALOG,
         lambda: turn,
+        feed=AcpLiveFeed(FakeHub(), FakeChannel(), AcpUpdateMapper(), settings),
         version="9.9.9",
         new_id=lambda: next(ids),
     )

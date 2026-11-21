@@ -448,6 +448,10 @@ async def _prompt_with_gate(
     hub.turn = gates_turn(gate())
     agent = build_agent(channel, hub, settings=settings)
     await agent.handle_request("session/new", {"cwd": "/work", "mcpServers": []})
+    # The `/` commands go out after the response; the counts below start after them.
+    await until(lambda: len(hub.project_lookups) == 1)
+    channel.updates.clear()
+    channel.sessions.clear()
     prompt = asyncio.create_task(
         agent.handle_request("session/prompt", {"sessionId": "s", "prompt": [text("/gates")]})
     )

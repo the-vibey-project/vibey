@@ -129,7 +129,7 @@ class GatePermissionMapper:
     def options_for(self, gate: Mapping[str, Any]) -> tuple[PermissionChoice, ...]:
         gate_id = self.gate_id(gate)
         kind = str(gate.get("kind") or "")
-        if gate_id is None or self._spends(gate) or self._opts_in(gate) or self._ambiguous(gate):
+        if gate_id is None or self.spends(gate) or self._opts_in(gate) or self._ambiguous(gate):
             return ()
         if kind in VERDICT_GATE_KINDS:
             return self._per_option(gate_id, "verdict", gate.get("options"))
@@ -156,7 +156,7 @@ class GatePermissionMapper:
             return NOT_A_UUID  # an id that is not a UUID could say anything: never echoed
         kind = gate.get("kind")
         host = _ON_THE_HOST.format(gate_id=gate_id)
-        if self._spends(gate):
+        if self.spends(gate):
             return f"Gate {gate_id} ({kind}) spends money, so I cannot answer it. {host}"
         if self._opts_in(gate):
             return (
@@ -177,7 +177,7 @@ class GatePermissionMapper:
         return f"Gate {gate_id} ({kind}) is not a kind I can answer from here. {host}"
 
     @staticmethod
-    def _spends(gate: Mapping[str, Any]) -> bool:
+    def spends(gate: Mapping[str, Any]) -> bool:
         return (
             str(gate.get("kind") or "") in SPEND_GATE_KINDS
             or bool(gate.get("is_spend"))

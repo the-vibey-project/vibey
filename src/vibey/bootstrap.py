@@ -18,6 +18,7 @@ from platformdirs import user_cache_path
 from vibey import __version__
 from vibey.application.acp.acp_agent import AcpAgent
 from vibey.application.acp.acp_gate_prompter import AcpGatePrompter
+from vibey.application.acp.acp_live_feed import AcpLiveFeed
 from vibey.application.acp.acp_prompt_turn import AcpPromptTurn
 from vibey.application.acp.interfaces.acp_agent_interface import AcpAgentInterface
 from vibey.application.acp.interfaces.acp_prompt_turn_interface import AcpPromptTurnInterface
@@ -1480,6 +1481,7 @@ def build_acp_agent(
         HUB_CHAT,
         HOST_TOOL_CATALOG,
         new_turn,
+        feed=AcpLiveFeed(hub, channel, mapper, settings),
         version=__version__,
         new_id=lambda: str(uuid4()),
     )

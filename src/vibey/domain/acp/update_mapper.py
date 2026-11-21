@@ -4,21 +4,49 @@
 Each method returns the `update` member of a `session/update` notification, with the
 protocol's camelCase keys, as JSON-ready dicts; `tests/domain/acp/test_update_mapper.py` holds
 every shape against the official SDK. A `notice` needs the client's `session.notices`
-capability, so without it the same words go out as an ordinary message. Pure: no I/O.
-Declared by `interfaces/update_mapper_interface.py`.
+capability, so without it the same words go out as an ordinary message.
+
+The live updates (`phase_plan`, `ledger_summary`) read what the hub's ledger says. A ledger
+event's phase, kind and text are untrusted data written by workers and models, so a summary is
+one line of plain text: every character Python does not count as printable (controls, format
+and bidi characters, line and paragraph separators) becomes a space, so an event cannot forge a
+second summary line or reorder the one it is in. Pure: no I/O. Declared by
+`interfaces/update_mapper_interface.py`.
 """
 
-from collections.abc import Mapping
+from collections.abc import Mapping, Sequence
 from typing import Any, Final
 
-from vibey.domain.acp.protocol import NoticeSeverity, ToolCallStatus, ToolKind
+from vibey.domain.acp.protocol import NoticeSeverity, PlanEntryStatus, ToolCallStatus, ToolKind
+from vibey.domain.hub_chat import ChatSlashSpec
 from vibey.domain.hub_scope import HubScope
+from vibey.domain.phase import Phase
 
 _KIND_FOR_SCOPE: Final[Mapping[HubScope, ToolKind]] = {
     HubScope.VIEW: ToolKind.READ,
     HubScope.RUN: ToolKind.EXECUTE,
 }
 """A hub scope's tool kind; every scope not listed is `other`."""
+
+PLAN_PHASES: Final[tuple[tuple[Phase, str, str], ...]] = (
+    (Phase.DESIGN, "Design", "high"),
+    (Phase.VISUAL_DESIGN, "Visual design", "high"),
+    (Phase.BUILD, "Build", "high"),
+    (Phase.REVIEW, "Review", "high"),
+    (Phase.DEPLOY_DESIGN, "Deploy design", "low"),
+    (Phase.DEPLOY_EXECUTE, "Deploy execute", "low"),
+    (Phase.DEPLOY_REVIEW, "Deploy review", "low"),
+)
+"""The plan's entries in order: phase, label and priority. Visual design is shown only once
+the project has been in it; the three deploy phases are dropped when a project finished
+without them."""
+_DEPLOY_PHASES: Final = frozenset(
+    {Phase.DEPLOY_DESIGN.value, Phase.DEPLOY_EXECUTE.value, Phase.DEPLOY_REVIEW.value}
+)
+_RANK: Final[Mapping[str, int]] = {
+    phase.value: rank for rank, (phase, _, _) in enumerate(PLAN_PHASES)
+}
+ELLIPSIS: Final = "..."
 
 
 class AcpUpdateMapper:
@@ -78,3 +106,72 @@ class AcpUpdateMapper:
 
     def tool_kind_for(self, scope: HubScope) -> ToolKind:
         return _KIND_FOR_SCOPE.get(scope, ToolKind.OTHER)
+
+    def phase_plan(self, phases_seen: Sequence[str], current: str) -> dict[str, Any]:
+        seen = {*phases_seen, current}
+        shown = [
+            entry
+            for entry in PLAN_PHASES
+            if entry[0] is not Phase.VISUAL_DESIGN or Phase.VISUAL_DESIGN.value in seen
+        ]
+        if current == Phase.DONE.value:
+            if not seen & _DEPLOY_PHASES:
+                shown = [entry for entry in shown if entry[0].value not in _DEPLOY_PHASES]
+            anchor = len(PLAN_PHASES)  # every entry is behind a finished project
+        else:
+            # The phase the plan stands at: the current one, or -- for `abandoned`, `intake`,
+            # the legacy `deploy` and a phase a newer vibey wrote -- the last plan phase the
+            # project was in, so an abandoned project keeps the statuses it had.
+            known = [_RANK[phase] for phase in (*phases_seen, current) if phase in _RANK]
+            anchor = known[-1] if known else -1
+        return {
+            "sessionUpdate": "plan",
+            "entries": [
+                {
+                    "content": label,
+                    "priority": priority,
+                    "status": self._status(_RANK[phase.value], anchor).value,
+                }
+                for phase, label, priority in shown
+            ],
+        }
+
+    def ledger_summary(self, event: Mapping[str, Any], *, limit: int) -> dict[str, Any]:
+        payload = event.get("payload")
+        summary: Any = None
+        if isinstance(payload, Mapping):
+            summary = payload.get("summary")
+            if not isinstance(summary, str):
+                summary = payload.get("message")
+        line = f"[{self._one_line(event.get('phase'))}] {self._one_line(event.get('kind'))}"
+        if isinstance(summary, str):
+            line = f"{line}: {self._one_line(summary)}"
+        if len(line) > limit:
+            line = line[: max(limit - len(ELLIPSIS), 0)] + ELLIPSIS
+        return self.agent_text(line)
+
+    def available_commands(self, specs: Sequence[ChatSlashSpec]) -> dict[str, Any]:
+        commands: list[dict[str, Any]] = []
+        for spec in specs:
+            command: dict[str, Any] = {"name": spec.slash, "description": spec.description}
+            _, _, hint = spec.usage.partition(" ")
+            if hint.strip():
+                command["input"] = {"hint": hint.strip()}
+            commands.append(command)
+        return {"sessionUpdate": "available_commands_update", "availableCommands": commands}
+
+    def current_mode(self, mode_id: str) -> dict[str, Any]:
+        return {"sessionUpdate": "current_mode_update", "currentModeId": mode_id}
+
+    @staticmethod
+    def _status(rank: int, anchor: int) -> PlanEntryStatus:
+        if rank < anchor:
+            return PlanEntryStatus.COMPLETED
+        if rank == anchor:
+            return PlanEntryStatus.IN_PROGRESS
+        return PlanEntryStatus.PENDING
+
+    @staticmethod
+    def _one_line(value: Any) -> str:
+        text = value if isinstance(value, str) else "?" if value is None else str(value)
+        return "".join(ch if ch.isprintable() else " " for ch in text)

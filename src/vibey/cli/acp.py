@@ -81,7 +81,11 @@ class AcpCommand:
             max_message_bytes=settings.max_message_bytes,
         )
         channel.attach(peer)
-        await peer.run()
+        try:
+            await peer.run()
+        finally:
+            # The live feeds poll in tasks of their own: none may outlive the connection.
+            await agent.close()
 
 
 ACP_COMMAND: Final[AcpCommandInterface] = AcpCommand()
