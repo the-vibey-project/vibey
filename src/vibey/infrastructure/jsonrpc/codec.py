@@ -43,6 +43,9 @@ class JsonRpcCodec:
     def encode(self, message: Mapping[str, Any]) -> str:
         return json.dumps(message)
 
+    def encode_strict(self, message: Mapping[str, Any]) -> str:
+        return json.dumps(message, allow_nan=False)
+
     def ok(self, msg_id: Any, result: Mapping[str, Any]) -> dict[str, Any]:
         return {"jsonrpc": "2.0", "id": msg_id, "result": dict(result)}
 

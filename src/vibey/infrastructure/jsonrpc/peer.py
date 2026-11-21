@@ -48,6 +48,9 @@ class JsonRpcPeer:
     handled in its own task, started in arrival order, so a notification (a cancel) is read and
     acted on while an earlier request is still running. One lock makes every outbound write one
     whole line. Lines passed to `write_line` are complete frames, trailing newline included.
+    At EOF in-flight handlers get `eof_grace_seconds` to finish before they are cancelled.
+    A failed write of a reader-loop reply (parse error, oversize) raises out of `run`; a failed
+    write of a handler's reply is logged to stderr and the peer carries on.
     """
 
     def __init__(
@@ -60,6 +63,7 @@ class JsonRpcPeer:
         codec: JsonRpcCodecInterface,
         id_prefix: str = "vibey",
         max_message_bytes: int = 16_777_216,
+        eof_grace_seconds: float = 5.0,
     ) -> None:
         self._reader = reader
         self._write_line = write_line
@@ -68,6 +72,7 @@ class JsonRpcPeer:
         self._codec = codec
         self._id_prefix = id_prefix
         self._max_message_bytes = max_message_bytes
+        self._eof_grace_seconds = eof_grace_seconds
         self._counter = itertools.count(1)
         self._write_lock = asyncio.Lock()
         self._pending: dict[str, _Pending] = {}
@@ -75,10 +80,12 @@ class JsonRpcPeer:
         self._closed = False
 
     async def run(self) -> None:
+        at_eof = False
         try:
             while True:
                 framed = await self._next_line()
                 if framed is None:
+                    at_eof = True
                     return
                 line, oversized = framed
                 if oversized:
@@ -92,7 +99,7 @@ class JsonRpcPeer:
                     continue
                 await self._take(line)
         finally:
-            await self._shutdown()
+            await self._shutdown(drain=at_eof)
 
     async def request(
         self, method: str, params: Mapping[str, Any], *, timeout: float | None = None
@@ -118,7 +125,14 @@ class JsonRpcPeer:
     ) -> tuple[str, ...]:
         cancelled: list[str] = []
         for msg_id, pending in list(self._pending.items()):
-            if not pending.future.done() and predicate(pending.method, pending.params):
+            if pending.future.done():
+                continue
+            try:
+                matches = predicate(pending.method, pending.params)
+            except Exception as exc:
+                self._log(f"cancel_outbound predicate failed for {msg_id}: {exc!r}")
+                continue
+            if matches:
                 pending.future.set_exception(PeerCancelled(f"request {msg_id} cancelled"))
                 cancelled.append(msg_id)
         return tuple(cancelled)
@@ -138,12 +152,16 @@ class JsonRpcPeer:
             except asyncio.IncompleteReadError as exc:
                 if not exc.partial and not oversized:
                     return None
-                return exc.partial, oversized or len(exc.partial) > self._max_message_bytes
+                return exc.partial, oversized or self._too_long(exc.partial)
             except asyncio.LimitOverrunError as exc:
                 await self._reader.readexactly(exc.consumed)
                 oversized = True
                 continue
-            return line, oversized or len(line) > self._max_message_bytes
+            return line, oversized or self._too_long(line)
+
+    def _too_long(self, line: bytes) -> bool:
+        """Whether the message, not counting its terminating newline, exceeds the bound."""
+        return len(line.removesuffix(b"\n")) > self._max_message_bytes
 
     async def _take(self, raw: bytes) -> None:
         try:
@@ -181,9 +199,11 @@ class JsonRpcPeer:
         msg_id = message.get("id")
         if params is not None and not isinstance(params, Mapping):
             if is_request:
-                await self._write_quietly(
-                    self._codec.error(
-                        msg_id, INVALID_PARAMS, "Invalid params: expected JSON object"
+                await self._send_quietly(
+                    self._frame(
+                        self._codec.error(
+                            msg_id, INVALID_PARAMS, "Invalid params: expected JSON object"
+                        )
                     )
                 )
             else:
@@ -206,7 +226,14 @@ class JsonRpcPeer:
             reply = self._codec.error(
                 msg_id, INTERNAL_ERROR, f"Internal error: {type(exc).__name__}"
             )
-        await self._write_quietly(reply)
+        try:
+            line = self._frame(reply)
+        except (TypeError, ValueError):
+            self._log(f"reply to {method!r} is not serialisable:\n{traceback.format_exc()}")
+            line = self._frame(
+                self._codec.error(msg_id, INTERNAL_ERROR, "Internal error: unserialisable result")
+            )
+        await self._send_quietly(line)
 
     async def _serve_notification(self, method: str, params: Mapping[str, Any]) -> None:
         try:
@@ -240,24 +267,32 @@ class JsonRpcPeer:
 
     # -- writing and teardown -------------------------------------------------------------
 
-    async def _write(self, message: Mapping[str, Any]) -> None:
-        line = self._codec.encode(message) + "\n"
+    def _frame(self, message: Mapping[str, Any]) -> str:
+        """One complete line. Strict JSON: NaN and Infinity are refused, never put on the wire."""
+        return self._codec.encode_strict(message) + "\n"
+
+    async def _send(self, line: str) -> None:
         async with self._write_lock:
             await self._write_line(line)
 
-    async def _write_quietly(self, message: Mapping[str, Any]) -> None:
-        """Write from a handler task: a dead stream or unserialisable reply is logged, not raised."""
+    async def _write(self, message: Mapping[str, Any]) -> None:
+        await self._send(self._frame(message))
+
+    async def _send_quietly(self, line: str) -> None:
+        """Send from a handler task: a dead output stream is logged, not raised."""
         try:
-            await self._write(message)
+            await self._send(line)
         except Exception as exc:
             self._log(f"could not write a reply: {type(exc).__name__}: {exc}")
 
-    async def _shutdown(self) -> None:
+    async def _shutdown(self, *, drain: bool) -> None:
         self._closed = True
         for pending in self._pending.values():
             if not pending.future.done():
                 pending.future.set_exception(PeerClosed("the peer's input has ended"))
         tasks = list(self._tasks)
+        if drain and tasks:
+            await asyncio.wait(tasks, timeout=self._eof_grace_seconds)
         for task in tasks:
             task.cancel()
         await asyncio.gather(*tasks, return_exceptions=True)

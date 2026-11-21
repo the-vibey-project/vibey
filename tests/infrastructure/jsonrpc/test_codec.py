@@ -124,3 +124,11 @@ def test_is_response() -> None:
     assert CODEC.is_response({"id": 1, "method": "m", "result": {}}) is False
     assert CODEC.is_response({"result": {}}) is False
     assert CODEC.is_response({"id": 1}) is False
+
+
+def test_encode_strict_refuses_nan_and_infinity_while_encode_keeps_its_bytes() -> None:
+    message = {"n": float("nan")}
+    assert CODEC.encode(message) == '{"n": NaN}'
+    with pytest.raises(ValueError):
+        CODEC.encode_strict(message)
+    assert CODEC.encode_strict({"a": 1}) == CODEC.encode({"a": 1})

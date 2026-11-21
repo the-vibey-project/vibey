@@ -1,8 +1,8 @@
 # Made with ❤️ by [Vibey](https://the-vibey-project.github.io/vibey/), Developed by [Adam Matthew Steinberger](https://vibewithadam.matthewsteinberger.com/) ([@adammatthewsteinberger](https://github.com/adammatthewsteinberger/)).
 """Unit tests for the asyncio JSON-RPC peer (SP-ACP Task 1).
 
-No test waits on the real clock: progress is driven by yielding to the loop until a condition
-holds. Module-level test functions rather than a class with an interface beside it (ADR-0016).
+Progress is driven by yielding to the loop until a condition holds; the only real waits are the
+two tiny timeouts (0.01s) that exercise a request timeout and the EOF grace period. Module-level test functions rather than a class with an interface beside it (ADR-0016).
 """
 
 from __future__ import annotations
@@ -44,7 +44,9 @@ def _line(**message: Any) -> bytes:
 class _Rig:
     """A peer on a test-fed StreamReader, recording what it writes and what its handlers see."""
 
-    def __init__(self, *, limit: int = 65536, max_message_bytes: int = 65536) -> None:
+    def __init__(
+        self, *, limit: int = 65536, max_message_bytes: int = 65536, grace: float = 5.0
+    ) -> None:
         self.reader = asyncio.StreamReader(limit=limit)
         self.chunks: list[str] = []
         self.requests: list[tuple[str, Mapping[str, Any]]] = []
@@ -60,6 +62,7 @@ class _Rig:
             codec=CODEC,
             id_prefix="test",
             max_message_bytes=max_message_bytes,
+            eof_grace_seconds=grace,
         )
         self.task: asyncio.Task[None] | None = None
 
@@ -433,7 +436,7 @@ async def test_a_reply_read_just_before_eof_still_resolves_its_request() -> None
 
 
 async def test_eof_stops_handlers_that_are_still_running() -> None:
-    rig = _Rig()
+    rig = _Rig(grace=0.01)
     cancelled = asyncio.Event()
 
     async def hang(method: str, params: Mapping[str, Any]) -> Mapping[str, Any]:
@@ -563,3 +566,173 @@ async def test_the_peer_never_writes_stdout(capsys: pytest.CaptureFixture[str]) 
     await pending
     await rig.finish()
     assert capsys.readouterr().out == ""
+
+
+async def test_a_request_fed_together_with_eof_still_gets_its_reply() -> None:
+    rig = _Rig()
+    rig.start()
+    rig.feed(_line(id=1, method="ping"))
+    await rig.finish()
+    assert [r["id"] for r in rig.replies] == [1]
+
+
+async def test_a_request_one_tick_before_eof_with_a_handler_that_awaits_gets_its_reply() -> None:
+    rig = _Rig()
+
+    async def once(method: str, params: Mapping[str, Any]) -> Mapping[str, Any]:
+        await asyncio.sleep(0)
+        await asyncio.sleep(0)
+        return {"done": True}
+
+    rig.request_handler = once
+    rig.start()
+    rig.feed(_line(id=1, method="m"))
+    await asyncio.sleep(0)
+    await rig.finish()
+    assert rig.replies == [{"jsonrpc": "2.0", "id": 1, "result": {"done": True}}]
+
+
+async def test_a_handler_that_never_finishes_is_cancelled_after_the_grace() -> None:
+    rig = _Rig(grace=0.01)
+    cancelled = asyncio.Event()
+
+    async def hang(method: str, params: Mapping[str, Any]) -> Mapping[str, Any]:
+        try:
+            await asyncio.Event().wait()
+        except asyncio.CancelledError:
+            cancelled.set()
+            raise
+        return {}
+
+    rig.request_handler = hang
+    rig.start()
+    rig.feed(_line(id=1, method="hang"))
+    await _until(lambda: rig.requests)
+    await rig.finish()
+    assert cancelled.is_set() and rig.chunks == []
+
+
+async def test_pending_outbound_fails_at_eof_without_waiting_for_the_grace() -> None:
+    rig = _Rig(grace=30.0)
+    seen: list[BaseException] = []
+
+    async def ask(method: str, params: Mapping[str, Any]) -> Mapping[str, Any]:
+        try:
+            return await rig.peer.request("q", {})
+        except PeerClosed as exc:
+            seen.append(exc)
+            raise
+
+    rig.request_handler = ask
+    rig.start()
+    rig.feed(_line(id=1, method="m"))
+    await _until(lambda: rig.chunks)
+    await rig.finish()
+    assert len(seen) == 1
+    assert [r.get("error", {}).get("code") for r in rig.replies[1:]] == [INTERNAL_ERROR]
+
+
+async def test_a_failed_reader_loop_write_stops_the_peer_without_the_grace() -> None:
+    rig = _Rig(grace=30.0)
+
+    async def dead(line: str) -> None:
+        raise BrokenPipeError("gone")
+
+    rig.write_hook = dead
+    rig.start()
+    rig.feed(b"{bad\n")
+    assert rig.task is not None
+    with pytest.raises(BrokenPipeError):
+        await asyncio.wait_for(rig.task, 5)
+
+
+class _Odd:
+    pass
+
+
+def _circular() -> dict[str, Any]:
+    loop: dict[str, Any] = {}
+    loop["self"] = loop
+    return loop
+
+
+@pytest.mark.parametrize(
+    "bad",
+    [lambda: {"x": object()}, _circular, lambda: {"x": float("nan")}, lambda: {"x": float("inf")}],
+)
+async def test_an_unserialisable_result_is_answered_with_an_internal_error(
+    bad: Callable[[], Any],
+) -> None:
+    rig = _Rig()
+
+    async def make(method: str, params: Mapping[str, Any]) -> Mapping[str, Any]:
+        return bad()  # type: ignore[no-any-return]
+
+    rig.request_handler = make
+    rig.start()
+    rig.feed(_line(id=3, method="m") + _line(id=4, method="m"))
+    await _until(lambda: len(rig.chunks) == 2)
+    for reply in rig.replies:
+        assert reply["error"] == {
+            "code": INTERNAL_ERROR,
+            "message": "Internal error: unserialisable result",
+        }
+    assert {r["id"] for r in rig.replies} == {3, 4}
+    await rig.finish()
+
+
+@pytest.mark.parametrize("bad", [lambda: {"x": object()}, _circular, lambda: float("nan")])
+async def test_unserialisable_rpc_error_data_is_answered_with_an_internal_error(
+    bad: Callable[[], Any],
+) -> None:
+    rig = _Rig()
+
+    async def refuse(method: str, params: Mapping[str, Any]) -> Mapping[str, Any]:
+        raise RpcError(-32000, "no", bad())
+
+    rig.request_handler = refuse
+    rig.start()
+    rig.feed(_line(id=1, method="m"))
+    await _until(lambda: rig.chunks)
+    assert rig.replies[0]["error"]["message"] == "Internal error: unserialisable result"
+    await rig.finish()
+
+
+async def test_a_message_of_exactly_the_bound_is_served_and_one_more_byte_is_refused() -> None:
+    rig = _Rig(limit=100, max_message_bytes=100)
+    base = json.dumps({"jsonrpc": "2.0", "id": 1, "method": "m", "params": {"p": ""}})
+    pad = 100 - len(base)
+    exact = json.dumps({"jsonrpc": "2.0", "id": 1, "method": "m", "params": {"p": "a" * pad}})
+    over = json.dumps({"jsonrpc": "2.0", "id": 2, "method": "m", "params": {"p": "a" * (pad + 1)}})
+    assert len(exact) == 100 and len(over) == 101
+    rig.start()
+    rig.feed(exact.encode() + b"\n" + over.encode() + b"\n")
+    await _until(lambda: len(rig.chunks) == 2)
+    codes = sorted(str(r.get("error", {}).get("code")) for r in rig.replies)
+    assert codes == [str(INVALID_REQUEST), "None"]
+    assert [r["id"] for r in rig.replies if "result" in r] == [1]
+    await rig.finish()
+
+
+async def test_a_predicate_that_raises_counts_as_no_match_and_is_logged(
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    rig = _Rig()
+    rig.start()
+    first = asyncio.create_task(rig.peer.request("bad", {}))
+    second = asyncio.create_task(rig.peer.request("good", {}))
+    await _until(lambda: len(rig.chunks) == 2)
+
+    def predicate(method: str, params: Mapping[str, Any]) -> bool:
+        if method == "bad":
+            raise RuntimeError("predicate blew up")
+        return True
+
+    assert rig.peer.cancel_outbound(predicate) == ("test-2",)
+    with pytest.raises(PeerCancelled):
+        await second
+    assert not first.done()
+    assert "predicate blew up" in capsys.readouterr().err
+    rig.feed(_line(id="test-1", result={}))
+    await first
+    await rig.finish()

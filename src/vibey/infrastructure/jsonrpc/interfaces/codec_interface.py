@@ -25,6 +25,10 @@ class JsonRpcCodecInterface(Protocol):
         """Serialise one message exactly as `json.dumps` does, with no trailing newline."""
         ...
 
+    def encode_strict(self, message: Mapping[str, Any]) -> str:
+        """As `encode`, but refuse NaN and Infinity (ValueError); for what a peer puts on the wire."""
+        ...
+
     def ok(self, msg_id: Any, result: Mapping[str, Any]) -> dict[str, Any]:
         """A success response."""
         ...
