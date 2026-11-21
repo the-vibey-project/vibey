@@ -19,6 +19,9 @@ Gate text is untrusted data written by workers and models. Three rules keep it d
     one plain space (U+0020) between words. Marks, controls, format, private-use, unassigned
     and surrogate code points, every other space and separator, and the glyphs known to render
     blank (`_BLANK_GLYPHS`) are all outside it;
+  - holds a right-to-left character or a bidirectional control (`_BIDI_REFUSED`): such text
+    can display in another order than it is sent, and vibey's own gate labels are English, so
+    refusing it fails safe;
   - mixes scripts inside one word (Latin "o" beside a Cyrillic "о"), read from the Unicode
     character names, with Han, Hiragana and Katakana counted as one script; or
   - reads the same as another label once normalised (NFKC, then case-folded): "no" and a
@@ -69,6 +72,10 @@ _ALLOWED_CATEGORIES: Final = frozenset(
 """Letters, numbers, punctuation and symbols: the only categories a gate label may use."""
 _BLANK_GLYPHS: Final = frozenset("\u115f\u1160\u2800\u3164\uffa0")
 """Allowed by category, but drawn as nothing: the Hangul fillers and the Braille blank."""
+_BIDI_REFUSED: Final = frozenset(
+    {"R", "AL", "AN", "RLE", "RLO", "RLI", "FSI", "LRE", "LRO", "LRI", "PDF", "PDI"}
+)
+"""Bidirectional classes that let a label display in another order than it is sent."""
 _ONE_SCRIPT: Final[Mapping[str, str]] = {
     "CJK": "HAN",
     "HIRAGANA": "HAN",
@@ -239,7 +246,9 @@ class GatePermissionMapper:
     @staticmethod
     def _plain_word(word: str) -> bool:
         if any(
-            unicodedata.category(ch) not in _ALLOWED_CATEGORIES or ch in _BLANK_GLYPHS
+            unicodedata.category(ch) not in _ALLOWED_CATEGORIES
+            or ch in _BLANK_GLYPHS
+            or unicodedata.bidirectional(ch) in _BIDI_REFUSED
             for ch in word
         ):
             return False

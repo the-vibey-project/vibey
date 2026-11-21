@@ -232,7 +232,8 @@ a turn, each once per session, and only in a mode that may answer gates (`drive`
   the label you see. A choice or verdict gate is not offered at all, and you are told to answer
   it on the host, when any label could be misread: it holds anything but letters, numbers,
   punctuation, symbols and single plain spaces (so no marks, controls, invisible or blank-looking
-  characters, or other spaces), it mixes scripts inside a word (a Cyrillic "о" in a Latin word),
+  characters, or other spaces), it holds right-to-left text or a bidirectional control (it could
+  display in another order than it is sent), it mixes scripts inside a word (a Cyrillic "о" in a Latin word),
   or it reads the same as another label once normalised ("no" and a full-width "ＮＯ", "Stop"
   and "stop"). A label counts as a refusal by [`reject_words`](configuration.md#acp) however it
   is spelled.

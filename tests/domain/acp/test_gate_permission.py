@@ -423,3 +423,24 @@ def test_ordinary_labels_in_any_one_script_are_still_offered(label: str) -> None
 
     assert choice.name == f"Answer: {label}"
     assert choice.answer == {"choice": label}
+
+
+# -- bidirectional text (fix round 5) ------------------------------------------------------
+
+BIDI_REFUSALS = {
+    "Hebrew": "כן",
+    "Arabic": "نعم",
+    "an RLO override": "‮good",
+    "Latin and Hebrew": "go עכשיו",
+    "Arabic-Indic digit": "go ٣",
+}
+
+
+@pytest.mark.parametrize("label", list(BIDI_REFUSALS.values()), ids=list(BIDI_REFUSALS))
+def test_a_right_to_left_label_refuses_the_whole_gate(label: str) -> None:
+    # Right-to-left text, its embeddings and its digits can display in another order than
+    # they are sent; vibey's own gate labels are English, so refusing them fails safe.
+    gate = _gate("choice", ["stop", label])
+
+    assert MAPPER.options_for(gate) == ()
+    assert AMBIGUOUS in MAPPER.refusal_text(gate)

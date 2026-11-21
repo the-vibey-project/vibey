@@ -835,3 +835,19 @@ async def test_a_gate_whose_options_hide_what_they_send_is_refused_to_the_host_o
         f"offer it. Answer it on the host (`vibey answer {G}`) or in the desktop or mobile app."
     ]
     assert session.offered_gates == {G}
+
+
+@pytest.mark.parametrize(
+    "label",
+    ["כן", "نعم", "‮good", "go עכשיו"],
+    ids=["Hebrew", "Arabic", "RLO", "mixed"],
+)
+async def test_a_right_to_left_label_sends_the_gate_to_the_host(label: str) -> None:
+    channel, hub = FakeChannel(), FakeHub()
+
+    session = await run_gates(channel, hub, gate(options=["stop", label]))
+
+    assert channel.permission_requests == []
+    assert hub.tool_calls == []
+    assert "cannot show unambiguously" in channel.texts[-1]
+    assert session.offered_gates == {G}
