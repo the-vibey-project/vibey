@@ -11,10 +11,12 @@ Gate text is untrusted data written by workers and models. Three rules keep it d
   The label is never parsed, so a label that looks like JSON cannot become structure in the
   answer the hub records.
 - Every option the gate supplies is shown under vibey's own prefix, "Answer: <label>", whatever
-  it says, so none can pass for one of vibey's options ("Leave it open" above all), not even a
-  lookalike in other characters. Invisible characters (control and format, such as a zero-width
-  space) are dropped from the shown label and runs of space collapsed; the answer keeps the
-  label exactly as the gate wrote it.
+  it says, so none can pass for one of vibey's options ("Leave it open" above all).
+- An option sends exactly what it shows. A gate any of whose options carries something the
+  operator cannot see -- a control or format character (a zero-width space, a bidi override),
+  a non-plain or doubled space -- is refused whole as ambiguous: offering the others alone could
+  hide the very option the operator meant. Only an exact repeat of a label is folded into one.
+  Lookalike letters from other scripts are shown as they are (a parked follow-up).
 - A gate id must be a UUID. Anything else is never offered and never repeated back.
 
 Some gates are never offered, and `refusal_text` tells the operator where to answer them:
@@ -99,7 +101,7 @@ class GatePermissionMapper:
     def options_for(self, gate: Mapping[str, Any]) -> tuple[PermissionChoice, ...]:
         gate_id = self.gate_id(gate)
         kind = str(gate.get("kind") or "")
-        if gate_id is None or self._spends(gate) or self._opts_in(gate):
+        if gate_id is None or self._spends(gate) or self._opts_in(gate) or self._ambiguous(gate):
             return ()
         if kind in VERDICT_GATE_KINDS:
             return self._per_option(gate_id, "verdict", gate.get("options"))
@@ -133,6 +135,11 @@ class GatePermissionMapper:
                 f"Gate {gate_id} ({kind}) opts the project into deployment, which can provision "
                 f"real infrastructure, so I cannot answer it. {host}"
             )
+        if self._ambiguous(gate):
+            return (
+                f"Gate {gate_id} ({kind}) has an option that does not show as what it would "
+                f"answer (hidden characters or irregular spacing), so I cannot offer it. {host}"
+            )
         if kind in VERDICT_GATE_KINDS or kind in CHOICE_GATE_KINDS or kind in GRANT_GATE_KEYS:
             return (
                 f"Gate {gate_id} ({kind}) needs a value. Answer it with "
@@ -162,21 +169,31 @@ class GatePermissionMapper:
         seen: set[str] = set()
         for index, option in enumerate(options):
             label = str(option).strip()
-            shown = self._shown(label)
-            folded = shown.casefold()
-            if not shown or folded in seen:
-                continue  # nothing an operator could see, or a label already offered
-            seen.add(folded)
-            rejects = folded in self._reject_words
+            if not label or label in seen:
+                continue  # nothing an operator could mean, or an exact repeat
+            seen.add(label)
+            rejects = label.casefold() in self._reject_words
             choices.append(
                 PermissionChoice(
                     option_id=f"{gate_id}:{index}",
-                    name=f"{GATE_OPTION_PREFIX}{shown}",
+                    name=f"{GATE_OPTION_PREFIX}{label}",
                     kind=PermissionKind.REJECT_ONCE if rejects else PermissionKind.ALLOW_ONCE,
                     answer={key: label},
                 )
             )
         return self._with_leave_open(gate_id, choices) if choices else ()
+
+    @classmethod
+    def _ambiguous(cls, gate: Mapping[str, Any]) -> bool:
+        """Whether a choice or verdict option would show as something other than it sends."""
+        options = gate.get("options")
+        kind = str(gate.get("kind") or "")
+        if kind not in VERDICT_GATE_KINDS and kind not in CHOICE_GATE_KINDS:
+            return False
+        if not isinstance(options, list):
+            return False
+        labels = [str(option).strip() for option in options]
+        return any(cls._shown(label) != label for label in labels)
 
     @staticmethod
     def _shown(label: str) -> str:

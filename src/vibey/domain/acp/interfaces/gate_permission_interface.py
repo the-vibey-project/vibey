@@ -21,8 +21,8 @@ class GatePermissionMapperInterface(Protocol):
     def options_for(self, gate: Mapping[str, Any]) -> tuple[PermissionChoice, ...]:
         """The options an editor may offer for `gate`, in order, ending with the agent's own
         "Leave it open". Empty for a spend gate (by kind or by flag), the deployment opt-in, a
-        gate whose answer is a value, an unknown kind, a gate whose id is not a UUID and a
-        gate with no usable option."""
+        gate whose answer is a value, an unknown kind, a gate whose id is not a UUID, a gate
+        with an option that would not send what it shows, and a gate with no usable option."""
         ...
 
     def refusal_text(self, gate: Mapping[str, Any]) -> str:

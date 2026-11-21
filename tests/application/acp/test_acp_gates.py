@@ -815,3 +815,23 @@ async def test_a_cancel_while_the_answer_close_waits_to_be_written_still_sends_i
     await asyncio.wait_for(prompt, 5)
 
     assert [u["status"] for u in gate_updates(channel)] == ["pending", "in_progress", "completed"]
+
+
+async def test_a_gate_whose_options_hide_what_they_send_is_refused_to_the_host_once() -> None:
+    # Review MR3-1: "s<ZWSP>top" would show as "stop" and hide the genuine "stop"; the whole
+    # gate goes to the host, once per session, and nothing reaches the hub.
+    channel, hub = FakeChannel(), FakeHub(gates_turn(gate(options=["s​top", "stop"])))
+    session = context()
+
+    await build_turn(channel, hub).run(session, [text("/gates")], turn_id="t1")
+    await build_turn(channel, hub).run(next_turn(session, "t2"), [text("/gates")], turn_id="t2")
+
+    assert channel.permission_requests == []
+    assert hub.tool_calls == []
+    refusals = [said for said in channel.texts if "does not show as what it would answer" in said]
+    assert refusals == [
+        f"Gate {G} (choice) has an option that does not show as what it would answer (hidden "
+        f"characters or irregular spacing), so I cannot offer it. Answer it on the host "
+        f"(`vibey answer {G}`) or in the desktop or mobile app."
+    ]
+    assert session.offered_gates == {G}

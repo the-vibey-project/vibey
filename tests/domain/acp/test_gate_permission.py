@@ -209,43 +209,79 @@ def test_a_verdict_gate_answers_with_a_verdict(kind: str) -> None:
     ]
 
 
-LOOKALIKES = [
+VISIBLE_LOOKALIKES = [
     "Leave it open",
     " leave IT open ",
-    "Leave\u00a0it open",  # no-break space
-    "Leave\u200bit open",  # zero-width space
-    "\u200bLeave it open\u200b",
-    "L\u0435ave it open",  # Cyrillic ie
-    "Leave  it open",  # two spaces
+    "L\u0435ave it open",  # Cyrillic ie (cross-script confusables: parked, review S3-1)
     "Leave it open.",
     "Accept the defaults",
     "ACKNOWLEDGE",
 ]
+HIDDEN_LOOKALIKES = [
+    "Leave\u00a0it open",  # no-break space
+    "Leave\u200bit open",  # zero-width space
+    "\u200bLeave it open\u200b",
+    "Leave  it open",  # two spaces
+    "Leave it open\u2060",  # word joiner
+]
+AMBIGUOUS = (
+    "has an option that does not show as what it would answer (hidden characters or "
+    "irregular spacing), so I cannot offer it."
+)
 
 
-@pytest.mark.parametrize("label", LOOKALIKES)
+@pytest.mark.parametrize("label", VISIBLE_LOOKALIKES)
 def test_no_gate_option_can_pose_as_an_agent_option(label: str) -> None:
     # Review M-2 and MR-1: every option the gate supplies is shown under vibey's own prefix,
-    # whatever it says, so none can read as vibey's "Leave it open". The answer is the label.
+    # whatever it says, so none can read as vibey's "Leave it open"; it sends what it shows.
     choices = MAPPER.options_for(_gate("choice", ["Stop", label]))
 
     gate_supplied = choices[:-1]
-    assert all(c.name.startswith("Answer: ") for c in gate_supplied)
+    assert [c.name for c in gate_supplied] == ["Answer: Stop", f"Answer: {label.strip()}"]
     assert gate_supplied[1].answer == {"choice": label.strip()}
     assert [c for c in choices if c.answer is None] == [OPEN]
     assert [c.name for c in choices].count(LEAVE_OPEN) == 1
 
 
-def test_invisible_characters_are_dropped_from_the_shown_label_only() -> None:
-    label = "Ship\u200b\u2060 it\u0007  now"
-    (choice, _) = MAPPER.options_for(_gate("choice", [label]))
+@pytest.mark.parametrize("label", HIDDEN_LOOKALIKES)
+def test_a_gate_with_an_option_that_hides_what_it_sends_is_refused_whole(label: str) -> None:
+    # Review MR3-1: an option is offered only when what it shows is exactly what it sends.
+    gate = _gate("choice", ["Stop", label])
 
-    assert choice.name == "Answer: Ship it now"
-    assert choice.answer == {"choice": label}
+    assert MAPPER.options_for(gate) == ()
+    assert MAPPER.refusal_text(gate) == (
+        f"Gate {G} (choice) {AMBIGUOUS} Answer it on the host (`vibey answer {G}`) or in the "
+        "desktop or mobile app."
+    )
 
 
-def test_an_option_that_shows_as_nothing_is_not_offered() -> None:
-    assert MAPPER.options_for(_gate("choice", ["\u200b\u200d", "go"]))[0].name == "Answer: go"
+@pytest.mark.parametrize(
+    "options",
+    [
+        ["s\u200btop", "stop"],  # the genuine "stop" must not vanish behind its twin
+        ["n\u200bo"],  # shows "no", would send something else
+        ["\u200b\u200d", "go"],  # an option that shows as nothing
+        ["go", "g\u0007o"],  # a control character
+        ["accept", "accept\u202e"],  # a bidi override
+    ],
+)
+def test_options_that_would_send_something_other_than_they_show_refuse_the_gate(
+    options: list[str],
+) -> None:
+    for kind in ("choice", "approval"):
+        gate = _gate(kind, options)
+        assert MAPPER.options_for(gate) == ()
+        assert AMBIGUOUS in MAPPER.refusal_text(gate)
+
+
+def test_an_exact_duplicate_is_offered_once() -> None:
+    choices = MAPPER.options_for(_gate("choice", ["stop", "go", "stop"]))
+
+    assert [(c.option_id, c.name) for c in choices] == [
+        (f"{G}:0", "Answer: stop"),
+        (f"{G}:1", "Answer: go"),
+        (f"{G}:open", LEAVE_OPEN),
+    ]
 
 
 def test_reject_words_are_configurable() -> None:
@@ -257,11 +293,14 @@ def test_reject_words_are_configurable() -> None:
 
 
 def test_an_empty_or_repeated_option_is_left_out_and_indices_stay_stable() -> None:
-    choices = MAPPER.options_for(_gate("choice", ["", "yes", 7, "YES", "  "]))
+    # Labels differing only in case look different, so both are offered; an exact repeat
+    # and an empty option are left out.
+    choices = MAPPER.options_for(_gate("choice", ["", "yes", 7, "YES", "  ", "yes"]))
 
     assert [(c.option_id, c.name) for c in choices] == [
         (f"{G}:1", "Answer: yes"),
         (f"{G}:2", "Answer: 7"),
+        (f"{G}:3", "Answer: YES"),
         (f"{G}:open", LEAVE_OPEN),
     ]
 
