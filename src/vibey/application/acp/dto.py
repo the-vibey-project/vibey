@@ -48,4 +48,9 @@ class AcpSessionContext:
     mode_id: str
     project_id: UUID | None = None
     offered_gates: set[str] = field(default_factory=set)
+    """Gates already put to the client in this session (asked, or refused with a reason), so
+    none is asked twice."""
     cwd: str = ""
+    open_gates: tuple[Mapping[str, Any], ...] = ()
+    """The open gates the hub listed with its last turn, oldest first. The local parse reads
+    them, as the hub's does, so `/answer 1` and a bare number mean here what they mean there."""

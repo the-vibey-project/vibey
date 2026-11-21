@@ -215,7 +215,31 @@ for a command or an option: an attached (embedded) resource is data, sent only a
 description of a new project (`/new`, `/ask`) and otherwise dropped with a message saying so. `session/new` needs an
 absolute `cwd`; MCP servers a client offers are ignored, and the client is told so once.
 
-`session/cancel` ends the turn with stop reason `cancelled`. A hub call already sent cannot be
+After the hub's reply, the open gates it listed that this session has not seen yet are put to
+the client, oldest first and at most [`[acp] max_gate_prompts_per_turn`](configuration.md#acp)
+a turn, each once per session, and only in a mode that may answer gates (`drive`):
+
+- A choice or verdict gate is a tool call titled `Answer gate: <prompt>` plus one
+  `session/request_permission`, with an option per choice (a choice in
+  [`[acp] reject_words`](configuration.md#acp) is offered as a refusal). A design question
+  gate offers "Accept the defaults" or "Leave it open"; a gate that takes any answer offers
+  "Acknowledge" or "Leave it open". The option you pick answers the gate through the hub
+  (`vibey_answer_gate`, request id `acp-<session id>-<gate id>`).
+- "Leave it open", a cancelled or failed request, no answer within
+  [`[acp] permission_timeout_seconds`](configuration.md#acp), or an option the gate never
+  offered answers nothing: the tool call closes `failed`, "left open; nothing was answered".
+- A spend gate (`budget_exhausted`, `deploy_*`, or any gate the hub flags as spending) is never
+  offered: you are told to answer it on the host (`vibey answer <gate id>`) or in the desktop
+  or mobile app. A gate whose answer is a value (a new cap) is not offered either: answer it
+  with `/answer <gate id> <value>`.
+
+The gates the hub last listed are also what `/answer 1` and a bare number mean in this session,
+as they are at the hub. A bare number is shown as a gate answer, the stricter of its two
+readings, and renamed for what the hub ran if that was a projects query.
+
+`session/cancel` ends the turn with stop reason `cancelled`, and a permission request still
+out is resolved as unanswered at once, so a client that never answers it cannot hold the turn.
+A hub call already sent, a gate's answer included, cannot be
 recalled: vibey waits up to `[acp] cancel_grace_seconds` for its real outcome and otherwise
 reports that the hub may still apply it, naming the request id
 (`acp-<session id>-<turn id>`), so you can find it in the ledger.

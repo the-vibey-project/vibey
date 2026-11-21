@@ -241,6 +241,9 @@ class _RecordingChannel:
     ) -> str | None:
         return None
 
+    def cancel_permissions(self, session_id: str) -> tuple[str, ...]:
+        return ()
+
 
 async def test_build_acp_agent_wires_a_working_agent() -> None:
     channel = _RecordingChannel()
@@ -258,3 +261,57 @@ async def test_build_acp_agent_wires_a_working_agent() -> None:
     assert list(agent.sessions) == [session_id]
     assert help_turn == {"stopReason": "end_turn"}
     assert "/projects" in channel.updates[-1]["content"]["text"]
+
+
+async def test_build_acp_agent_puts_an_open_gate_to_the_client_and_answers_through_the_hub() -> (
+    None
+):
+    gate_id = "3f1d2c4b-5a6e-4f70-8a9b-0c1d2e3f4a5b"
+    gate = {
+        "gate_id": gate_id,
+        "project_id": "7d6c2a8e-0c41-4c1e-9d0e-2f4b8f0a1b2c",
+        "kind": "choice",
+        "prompt": "Ship it?",
+        "options": ["ship", "nope"],
+        "default_answer": None,
+        "is_spend": False,
+        "requires_scope": "answer",
+        "grant_key": None,
+    }
+    turn = {"reply": "1 open gate(s)", "tool_calls": [], "gates": [gate], "project_id": None}
+    calls: list[HubCall] = []
+
+    class _Hub(_Gateway):
+        def agent_scopes(self) -> frozenset[HubScope]:
+            return frozenset({HubScope.VIEW, HubScope.ANSWER})
+
+        def call(self, call: HubCall) -> HubGatewayResponse:
+            calls.append(call)
+            text = json.dumps(turn) if call.tool == "vibey_chat" else '{"answered": true}'
+            return HubGatewayResponse(status_code=200, text=text, ok=True)
+
+    class _Picks(_RecordingChannel):
+        def __init__(self) -> None:
+            super().__init__()
+            self.offered: list[Any] = []
+
+        async def request_permission(
+            self, session_id: str, tool_call: Any, options: Any, *, timeout: float
+        ) -> str | None:
+            self.offered.append(list(options))
+            return str(options[1]["optionId"])
+
+    channel = _Picks()
+    agent = build_acp_agent(
+        settings=AcpSettings(reject_words=("nope",)), channel=channel, gateway=_Hub()
+    )
+    session = await agent.handle_request("session/new", {"cwd": "/work", "mcpServers": []})
+    await agent.handle_request(
+        "session/prompt",
+        {"sessionId": session["sessionId"], "prompt": [{"type": "text", "text": "/gates"}]},
+    )
+
+    assert [o["kind"] for o in channel.offered[0]] == ["allow_once", "reject_once"]
+    answer = calls[-1]
+    assert (answer.tool, answer.route) == ("vibey_answer_gate", f"/api/v1/gates/{gate_id}/answer")
+    assert answer.body is not None and answer.body["answer"] == {"choice": "nope"}

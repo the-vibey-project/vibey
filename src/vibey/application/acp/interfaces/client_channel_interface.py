@@ -31,3 +31,8 @@ class ClientChannelInterface(Protocol):
         """Ask the client with `session/request_permission`; the selected `optionId`, or None
         when the client answered `cancelled`, did not answer within `timeout`, or failed."""
         ...
+
+    def cancel_permissions(self, session_id: str) -> tuple[str, ...]:
+        """Resolve every permission request still out for `session_id` as unanswered (its
+        `request_permission` returns None) without waiting for the client; their request ids."""
+        ...

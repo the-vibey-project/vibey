@@ -5,6 +5,8 @@ Module-level test functions rather than a class with an interface beside it (ADR
 
 from __future__ import annotations
 
+import asyncio
+import json
 from collections.abc import Callable, Mapping
 from typing import Any
 
@@ -14,7 +16,9 @@ from acp.schema import RequestPermissionRequest, SessionNotification
 from tests.domain.acp.acp_wire import assert_wire_exact
 from vibey.application.acp.interfaces.client_channel_interface import ClientChannelInterface
 from vibey.infrastructure.acp.peer_client_channel import PeerClientChannel
+from vibey.infrastructure.jsonrpc.codec import CODEC
 from vibey.infrastructure.jsonrpc.errors import PeerCancelled, PeerClosed, RpcError
+from vibey.infrastructure.jsonrpc.peer import JsonRpcPeer
 
 TOOL_CALL = {"toolCallId": "t1-1", "title": "Answer a gate", "kind": "other", "status": "pending"}
 OPTIONS = [
@@ -116,3 +120,59 @@ async def test_a_client_error_timeout_or_closed_peer_is_none(error: Exception) -
     channel = _attached(_Peer(error=error))
 
     assert await channel.request_permission("s", TOOL_CALL, OPTIONS, timeout=1) is None
+
+
+async def test_cancel_permissions_resolves_only_that_sessions_requests_over_a_real_peer() -> None:
+    # A client that never answers must not hold a cancelled turn: the session's permission
+    # requests resolve as unanswered at once, and another session's request is untouched.
+    reader = asyncio.StreamReader()
+    sent: list[dict[str, Any]] = []
+
+    async def write(line: str) -> None:
+        sent.append(json.loads(line))
+
+    async def ignore(method: str, params: Mapping[str, Any]) -> Any:
+        return {}
+
+    peer = JsonRpcPeer(reader, write, on_request=ignore, on_notification=ignore, codec=CODEC)
+    serving = asyncio.create_task(peer.run())
+    channel = _attached(peer)  # type: ignore[arg-type]
+    ours = asyncio.create_task(channel.request_permission("s", TOOL_CALL, OPTIONS, timeout=30))
+    theirs = asyncio.create_task(channel.request_permission("s2", TOOL_CALL, OPTIONS, timeout=30))
+    while len(sent) < 2:
+        await asyncio.sleep(0)
+
+    cancelled = channel.cancel_permissions("s")
+
+    assert await asyncio.wait_for(ours, 5) is None
+    assert cancelled == (next(m["id"] for m in sent if m["params"]["sessionId"] == "s"),)
+    assert not theirs.done()
+    other = next(m["id"] for m in sent if m["params"]["sessionId"] == "s2")
+    answer = {"outcome": {"outcome": "selected", "optionId": "approve"}}
+    reader.feed_data(
+        (json.dumps({"jsonrpc": "2.0", "id": other, "result": answer}) + "\n").encode()
+    )
+    assert await asyncio.wait_for(theirs, 5) == "approve"
+    reader.feed_eof()
+    await asyncio.wait_for(serving, 10)
+
+
+def test_cancel_permissions_asks_the_peer_only_for_permission_requests_of_the_session() -> None:
+    seen: list[bool] = []
+
+    class _Recording(_Peer):
+        def cancel_outbound(
+            self, predicate: Callable[[str, Mapping[str, Any]], bool]
+        ) -> tuple[str, ...]:
+            seen.extend(
+                [
+                    predicate("session/request_permission", {"sessionId": "s"}),
+                    predicate("session/request_permission", {"sessionId": "s2"}),
+                    predicate("fs/read_text_file", {"sessionId": "s"}),
+                    predicate("session/request_permission", {}),
+                ]
+            )
+            return ("vibey-1",)
+
+    assert _attached(_Recording()).cancel_permissions("s") == ("vibey-1",)
+    assert seen == [True, False, False, False]

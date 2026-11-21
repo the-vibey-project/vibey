@@ -925,8 +925,8 @@ ACP, whatever is set here.
 | `default_mode` | string, one of `modes` | `"drive"` | The mode a new session starts in. |
 | `bootstrap_timeout_seconds` | integer, at least 1 | `120` | The longest one bootstrap step may take. |
 | `permission_timeout_seconds` | integer, at least 1 | `600` | How long a permission request waits for the client. Silence leaves the gate open; it is never consent. |
-| `max_gate_prompts_per_turn` | integer, at least 0 | `3` | Gate permission prompts one turn may raise; `0` raises none. |
-| `reject_words` | list of strings | `["reject", "decline", "deny", "no", "cancel"]` | Words in a gate's option labels that mark it as a refusal. Lower-cased when read; an empty word is refused. |
+| `max_gate_prompts_per_turn` | integer, at least 0 | `3` | How many open gates one turn may put to the client, oldest first: each answerable one as a permission request, each spend or value gate as a message saying where to answer it. `0` puts none. A gate is put to a session once. |
+| `reject_words` | list of strings | `["reject", "decline", "deny", "no", "cancel"]` | A gate option whose whole label, lower-cased, is one of these words is offered as a refusal (`reject_once`), every other as `allow_once`. Picking it still answers the gate with that option. Lower-cased when read; an empty word is refused. |
 | `live_poll_seconds` | number, at least 0.2 | `1.0` | How often the live ledger feed is polled. |
 | `live_message_chars` | integer, at least 40 | `400` | The longest ledger event summary sent as one update. |
 | `live_between_turns` | boolean | `true` | Whether ledger events keep streaming between prompt turns. |

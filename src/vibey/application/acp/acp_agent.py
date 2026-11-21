@@ -195,7 +195,10 @@ class AcpAgent:
             # A repeated cancel (Esc pressed twice, a client that resends) must not cancel the
             # turn again: that would interrupt the settle that reports the hub call's outcome.
             return
-        context.state.request_cancel()
+        if context.state.request_cancel():
+            # Permission requests were out: they resolve as unanswered now, so a client that
+            # never answers them cannot hold the turn, and none is ever read as an approval.
+            self._channel.cancel_permissions(context.session_id)
         task = self._turns.get(context.session_id)
         if task is not None:
             task.cancel()
