@@ -50,11 +50,15 @@ class HubGatewayResponse:
 def _default_starter() -> bool:
     """Run `vibey hub start` in a child process and return True when it exits 0.
 
-    Module-level by design: the default of `HubGateway`'s `starter` seam.
+    Module-level by design: the default of `HubGateway`'s `starter` seam. The child's stdin is
+    closed and its output captured: under `vibey mcp` and `vibey acp` this process's stdin and
+    stdout are the client's protocol streams, and neither the child nor a hub it leaves behind
+    may read or write them.
     """
     try:
         completed = subprocess.run(  # noqa: S603  # nosec B603
             [sys.executable, "-c", "from vibey.cli.main import run; run(['hub', 'start'])"],
+            stdin=subprocess.DEVNULL,
             capture_output=True,
             text=True,
             timeout=START_TIMEOUT_SECONDS,
@@ -85,14 +89,29 @@ class HubGateway:
         self._client = client
         self._starter = starter
         self._timeout = timeout
+        self._scopes: tuple[tuple[Path, int, int], frozenset[HubScope]] | None = None
+        """The scopes last read, with the `vibey.toml` they were read from (path, mtime, size;
+        -1, -1 when it did not exist)."""
 
     def agent_scopes(self) -> frozenset[HubScope]:
-        """The scopes declared for the agent principal, or `AGENT_DEFAULT_SCOPES` if config fails."""
+        """The scopes declared for the agent principal, or `AGENT_DEFAULT_SCOPES` if config fails.
+
+        Read again only when `vibey.toml` changed: `vibey acp` asks on every prompt, from its
+        event loop, and a `stat` is all that costs while the file stays as it was."""
+        path = self._config_path()
         try:
-            loaded = self._settings.load(self._config_path())
+            stat = path.stat()
+            seen = (path, stat.st_mtime_ns, stat.st_size)
+        except OSError:
+            seen = (path, -1, -1)
+        if self._scopes is not None and self._scopes[0] == seen:
+            return self._scopes[1]
+        try:
+            scopes = self._settings.load(path).agent_scopes
         except ConfigError:
-            return AGENT_DEFAULT_SCOPES
-        return loaded.agent_scopes
+            scopes = AGENT_DEFAULT_SCOPES
+        self._scopes = (seen, scopes)
+        return scopes
 
     def call(self, call: HubCall) -> HubGatewayResponse:
         settings = self._load_settings()
