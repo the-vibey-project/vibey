@@ -12,11 +12,19 @@ Gate text is untrusted data written by workers and models. Three rules keep it d
   answer the hub records.
 - Every option the gate supplies is shown under vibey's own prefix, "Answer: <label>", whatever
   it says, so none can pass for one of vibey's options ("Leave it open" above all).
-- An option sends exactly what it shows. A gate any of whose options carries something the
-  operator cannot see -- a control or format character (a zero-width space, a bidi override),
-  a non-plain or doubled space -- is refused whole as ambiguous: offering the others alone could
-  hide the very option the operator meant. Only an exact repeat of a label is folded into one.
-  Lookalike letters from other scripts are shown as they are (a parked follow-up).
+- An option sends exactly what it shows, and no two options read alike. A choice or verdict
+  gate is refused whole as ambiguous -- offering the others alone could hide the very option
+  the operator meant -- when any label:
+  - holds a character outside an allowlist: letters, numbers, punctuation and symbols, with
+    one plain space (U+0020) between words. Marks, controls, format, private-use, unassigned
+    and surrogate code points, every other space and separator, and the glyphs known to render
+    blank (`_BLANK_GLYPHS`) are all outside it;
+  - mixes scripts inside one word (Latin "o" beside a Cyrillic "о"), read from the Unicode
+    character names, with Han, Hiragana and Katakana counted as one script; or
+  - reads the same as another label once normalised (NFKC, then case-folded): "no" and a
+    full-width "ＮＯ", "Stop" and "stop".
+  Only an exact repeat of a label is folded into one. Whole words that are lookalikes in
+  another single script (a Cyrillic "сор" for "cop") are not caught: a parked follow-up.
 - A gate id must be a UUID. Anything else is never offered and never repeated back.
 
 Some gates are never offered, and `refusal_text` tells the operator where to answer them:
@@ -54,8 +62,21 @@ ACCEPT_DEFAULTS: Final = "Accept the defaults"
 ACKNOWLEDGE: Final = "Acknowledge"
 GATE_OPTION_PREFIX: Final = "Answer: "
 """Shown before every option a gate supplies; vibey's own options never carry it."""
-_INVISIBLE: Final = frozenset({"Cc", "Cf"})
-"""Unicode categories dropped from a shown label: control and format characters."""
+_ALLOWED_CATEGORIES: Final = frozenset(
+    {"Lu", "Ll", "Lt", "Lm", "Lo", "Nd", "Nl", "No"}
+    | {"Pc", "Pd", "Ps", "Pe", "Pi", "Pf", "Po", "Sm", "Sc", "Sk", "So"}
+)
+"""Letters, numbers, punctuation and symbols: the only categories a gate label may use."""
+_BLANK_GLYPHS: Final = frozenset("\u115f\u1160\u2800\u3164\uffa0")
+"""Allowed by category, but drawn as nothing: the Hangul fillers and the Braille blank."""
+_ONE_SCRIPT: Final[Mapping[str, str]] = {
+    "CJK": "HAN",
+    "HIRAGANA": "HAN",
+    "KATAKANA": "HAN",
+    "KATAKANA-HIRAGANA": "HAN",
+    "IDEOGRAPHIC": "HAN",
+}
+"""Scripts written together within one word, read as one: Japanese mixes all of these."""
 _OPT_IN: Final = frozenset(option.casefold() for option in DEPLOYMENT_OPT_IN_OPTIONS)
 _ON_THE_HOST: Final = (
     "Answer it on the host (`vibey answer {gate_id}`) or in the desktop or mobile app."
@@ -137,8 +158,9 @@ class GatePermissionMapper:
             )
         if self._ambiguous(gate):
             return (
-                f"Gate {gate_id} ({kind}) has an option that does not show as what it would "
-                f"answer (hidden characters or irregular spacing), so I cannot offer it. {host}"
+                f"Gate {gate_id} ({kind}) has options I cannot show unambiguously (unusual or "
+                "hidden characters, irregular spacing, mixed scripts, or labels that read "
+                f"alike), so I cannot offer it. {host}"
             )
         if kind in VERDICT_GATE_KINDS or kind in CHOICE_GATE_KINDS or kind in GRANT_GATE_KEYS:
             return (
@@ -172,7 +194,7 @@ class GatePermissionMapper:
             if not label or label in seen:
                 continue  # nothing an operator could mean, or an exact repeat
             seen.add(label)
-            rejects = label.casefold() in self._reject_words
+            rejects = self._normal(label) in self._reject_words
             choices.append(
                 PermissionChoice(
                     option_id=f"{gate_id}:{index}",
@@ -185,23 +207,49 @@ class GatePermissionMapper:
 
     @classmethod
     def _ambiguous(cls, gate: Mapping[str, Any]) -> bool:
-        """Whether a choice or verdict option would show as something other than it sends."""
+        """Whether a choice or verdict gate has a label the operator could misread."""
         options = gate.get("options")
         kind = str(gate.get("kind") or "")
         if kind not in VERDICT_GATE_KINDS and kind not in CHOICE_GATE_KINDS:
             return False
         if not isinstance(options, list):
             return False
-        labels = [str(option).strip() for option in options]
-        return any(cls._shown(label) != label for label in labels)
+        read: dict[str, str] = {}
+        for option in options:
+            label = str(option).strip()
+            if not label:
+                continue
+            if not cls._plain(label):
+                return True
+            normal = cls._normal(label)
+            if read.setdefault(normal, label) != label:
+                return True  # two different labels that read alike
+        return False
 
     @staticmethod
-    def _shown(label: str) -> str:
-        """`label` as the operator sees it: invisible characters dropped, spaces collapsed."""
-        visible = "".join(
-            ch for ch in label if ch.isspace() or unicodedata.category(ch) not in _INVISIBLE
-        )
-        return " ".join(visible.split())
+    def _normal(label: str) -> str:
+        return unicodedata.normalize("NFKC", label).casefold()
+
+    @classmethod
+    def _plain(cls, label: str) -> bool:
+        """Allowlisted characters only, one U+0020 between words, one script within a word."""
+        words = label.split(" ")
+        return all(word and cls._plain_word(word) for word in words)
+
+    @staticmethod
+    def _plain_word(word: str) -> bool:
+        if any(
+            unicodedata.category(ch) not in _ALLOWED_CATEGORIES or ch in _BLANK_GLYPHS
+            for ch in word
+        ):
+            return False
+        scripts = {
+            _ONE_SCRIPT.get(head, head)
+            for ch in unicodedata.normalize("NFKC", word)
+            if unicodedata.category(ch).startswith("L")
+            for head in (unicodedata.name(ch, "?").split()[0],)
+        }
+        return len(scripts) <= 1
 
     @staticmethod
     def _with_leave_open(

@@ -828,10 +828,10 @@ async def test_a_gate_whose_options_hide_what_they_send_is_refused_to_the_host_o
 
     assert channel.permission_requests == []
     assert hub.tool_calls == []
-    refusals = [said for said in channel.texts if "does not show as what it would answer" in said]
+    refusals = [said for said in channel.texts if "cannot show unambiguously" in said]
     assert refusals == [
-        f"Gate {G} (choice) has an option that does not show as what it would answer (hidden "
-        f"characters or irregular spacing), so I cannot offer it. Answer it on the host "
-        f"(`vibey answer {G}`) or in the desktop or mobile app."
+        f"Gate {G} (choice) has options I cannot show unambiguously (unusual or hidden "
+        "characters, irregular spacing, mixed scripts, or labels that read alike), so I cannot "
+        f"offer it. Answer it on the host (`vibey answer {G}`) or in the desktop or mobile app."
     ]
     assert session.offered_gates == {G}

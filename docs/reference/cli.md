@@ -229,9 +229,13 @@ a turn, each once per session, and only in a mode that may answer gates (`drive`
   label is never read as JSON or as a command.
 - Every option a gate supplies is shown as `Answer: <label>`, whatever it says, so none can
   pass for one of vibey's own options ("Leave it open" above all), and it answers with exactly
-  the label you see. A gate with an option that would answer with something you cannot see
-  (a hidden or control character, a zero-width or non-plain space, doubled spaces) is not
-  offered at all: you are told to answer it on the host.
+  the label you see. A choice or verdict gate is not offered at all, and you are told to answer
+  it on the host, when any label could be misread: it holds anything but letters, numbers,
+  punctuation, symbols and single plain spaces (so no marks, controls, invisible or blank-looking
+  characters, or other spaces), it mixes scripts inside a word (a Cyrillic "о" in a Latin word),
+  or it reads the same as another label once normalised ("no" and a full-width "ＮＯ", "Stop"
+  and "stop"). A label counts as a refusal by [`reject_words`](configuration.md#acp) however it
+  is spelled.
 - "Leave it open", a cancelled or failed request, no answer within
   [`[acp] permission_timeout_seconds`](configuration.md#acp), or an option the gate never
   offered answers nothing: the tool call closes `failed`, "left open; nothing was answered".

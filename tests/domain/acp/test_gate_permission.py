@@ -212,7 +212,6 @@ def test_a_verdict_gate_answers_with_a_verdict(kind: str) -> None:
 VISIBLE_LOOKALIKES = [
     "Leave it open",
     " leave IT open ",
-    "L\u0435ave it open",  # Cyrillic ie (cross-script confusables: parked, review S3-1)
     "Leave it open.",
     "Accept the defaults",
     "ACKNOWLEDGE",
@@ -225,8 +224,8 @@ HIDDEN_LOOKALIKES = [
     "Leave it open\u2060",  # word joiner
 ]
 AMBIGUOUS = (
-    "has an option that does not show as what it would answer (hidden characters or "
-    "irregular spacing), so I cannot offer it."
+    "has options I cannot show unambiguously (unusual or hidden characters, irregular "
+    "spacing, mixed scripts, or labels that read alike), so I cannot offer it."
 )
 
 
@@ -293,14 +292,11 @@ def test_reject_words_are_configurable() -> None:
 
 
 def test_an_empty_or_repeated_option_is_left_out_and_indices_stay_stable() -> None:
-    # Labels differing only in case look different, so both are offered; an exact repeat
-    # and an empty option are left out.
-    choices = MAPPER.options_for(_gate("choice", ["", "yes", 7, "YES", "  ", "yes"]))
+    choices = MAPPER.options_for(_gate("choice", ["", "yes", 7, "  ", "yes"]))
 
     assert [(c.option_id, c.name) for c in choices] == [
         (f"{G}:1", "Answer: yes"),
         (f"{G}:2", "Answer: 7"),
-        (f"{G}:3", "Answer: YES"),
         (f"{G}:open", LEAVE_OPEN),
     ]
 
@@ -358,3 +354,72 @@ def test_options_validate_against_the_sdk_permission_option() -> None:
                 "kind": choice.kind.value,
             }
             assert_wire_exact(PermissionOption, option)
+
+
+# -- an allowlist, not a denylist (fix round 4) --------------------------------------------
+
+ALLOWLIST_REFUSALS = {
+    "Mn, a combining mark": "Leave it opén",
+    "Me, an enclosing mark": "stop⃝",
+    "Mc, a spacing mark": "का",
+    "Co, private use": "go",
+    "Cn, unassigned": "go͸",
+    "Cs, a lone surrogate": "go\ud800",
+    "Zl, a line separator": "go now",
+    "Zp, a paragraph separator": "go now",
+    "Zs other than U+0020": "go now",
+    "U+3164 Hangul filler": "goㅤ",
+    "U+115F Hangul choseong filler": "ᅟgo",
+    "U+1160 Hangul jungseong filler": "goᅠ",
+    "U+FFA0 halfwidth Hangul filler": "goﾠ",
+    "U+2800 Braille blank": "go⠀",
+    "a Cyrillic letter inside a Latin word": "Lеave it open",
+    "a Greek letter inside a Latin word": "Stοp",
+}
+
+
+@pytest.mark.parametrize("label", list(ALLOWLIST_REFUSALS.values()), ids=list(ALLOWLIST_REFUSALS))
+def test_a_label_outside_the_allowlist_refuses_the_whole_gate(label: str) -> None:
+    for kind in ("choice", "approval"):
+        gate = _gate(kind, ["Stop", label])
+        assert MAPPER.options_for(gate) == ()
+        assert AMBIGUOUS in MAPPER.refusal_text(gate)
+
+
+@pytest.mark.parametrize(
+    "pair",
+    [["no", "ＮＯ"], ["Stop", "stop"], ["fi", "ﬁ"], ["go 2", "go ₂"]],
+    ids=["fullwidth", "case", "ligature", "subscript digit"],
+)
+def test_two_labels_that_normalise_alike_refuse_the_whole_gate(pair: list[str]) -> None:
+    gate = _gate("choice", pair)
+
+    assert MAPPER.options_for(gate) == ()
+    assert AMBIGUOUS in MAPPER.refusal_text(gate)
+
+
+def test_a_reject_word_cannot_be_dodged_by_spelling() -> None:
+    (choice, _) = MAPPER.options_for(_gate("choice", ["ＮＯ"]))  # fullwidth "NO"
+
+    assert choice.kind is PermissionKind.REJECT_ONCE
+    assert choice.answer == {"choice": "ＮＯ"}
+
+
+@pytest.mark.parametrize(
+    "label",
+    [
+        "Keep going",
+        "café",
+        "Ship v2.1 (beta)!",
+        "日本語のテスト",
+        "Привет мир",
+        "€ 5 → ok",
+        "x2 Ω",
+        "Ελληνικά",
+    ],
+)
+def test_ordinary_labels_in_any_one_script_are_still_offered(label: str) -> None:
+    (choice, _) = MAPPER.options_for(_gate("choice", [label]))
+
+    assert choice.name == f"Answer: {label}"
+    assert choice.answer == {"choice": label}
