@@ -35,7 +35,7 @@ command groups are marked with a trailing `…`.
 - **Watch and steer:** `watch`, `queue`…, `engines`, `loops`, `models`, `cost`, `budget`…, `ledger`…, `ultra`…, `retry`, `recover`, `abandon`
 - **Run the machinery:** `work`, `worker`, `serve`, `hub`…, `supervisor`…, `driver`…, `operator`
 - **Maintain:** `migrate`, `state`…, `sabbath`, `explain`
-- **Tools for agents:** `mcp`, `search`, `fetch`, `llm`…
+- **Tools for agents:** `mcp`, `acp`, `search`, `fetch`, `llm`…
 
 Bare `vibey`, and each bare command group, prints help.
 
@@ -181,6 +181,44 @@ never `spend`, `bump` or `workflows`). If no hub is running when a tool is calle
 `vibey_gates`, `vibey_answer_gate`, `vibey_budget`, `vibey_queue`, `vibey_ledger`,
 `vibey_loops`, `vibey_lanes`, `vibey_doctor`, `vibey_start_project`, `vibey_start_work`,
 `vibey_pause_work`, and `vibey_abandon_project` where `dry_run` defaults to `true`).
+
+## `vibey acp`
+
+Serve the Agent Client Protocol (ACP v1) over standard input and standard output, so an
+editor such as Zed, or any other ACP client, can drive vibey as an agent: JSON-RPC 2.0, one
+message per line.
+
+```bash
+vibey acp
+vibey acp --no-bootstrap
+```
+
+| Option | Default | What it does |
+|---|---|---|
+| `--no-bootstrap` | off | Turn [`[acp] auto_bootstrap`](configuration.md#acp) off for this process. |
+
+The client launches the command; you do not run it in a terminal. Its standard output
+carries protocol messages and nothing else: the command points file descriptor 1 at standard
+error before it does anything, so any other output, including a child process's, goes to
+standard error, where logging goes too. `[acp]` is read from `./vibey.toml`.
+
+Like [`vibey mcp`](#vibey-mcp), it reaches the local hub as the scoped `agent` principal
+(`<state_dir>/agent.token`) and never as the host, so the hub's
+[`[hub] agent_scopes`](configuration.md#hub) bound everything it does, and it never holds
+`spend`. Each prompt goes to the hub's chat endpoint (`POST /api/v1/chat/messages`) as you
+would type it in the krypton app, `/` commands included, and shows on the client as one tool
+call (`pending`, `in_progress`, then `completed` or `failed`) followed by the hub's reply.
+A session starts in the [`[acp] default_mode`](configuration.md#acp): `observe` reads only;
+`drive` may also answer non-spending gates and start, pause or unwind work. A prompt the mode
+does not allow is answered with a message and never reaches the hub. Only the text you type is read
+for a command or an option: an attached (embedded) resource is data, sent only as the
+description of a new project (`/new`, `/ask`) and otherwise dropped with a message saying so. `session/new` needs an
+absolute `cwd`; MCP servers a client offers are ignored, and the client is told so once.
+
+`session/cancel` ends the turn with stop reason `cancelled`. A hub call already sent cannot be
+recalled: vibey waits up to `[acp] cancel_grace_seconds` for its real outcome and otherwise
+reports that the hub may still apply it, naming the request id
+(`acp-<session id>-<turn id>`), so you can find it in the ledger.
 
 ## `vibey install`
 

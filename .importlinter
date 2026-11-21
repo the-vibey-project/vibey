@@ -82,6 +82,7 @@ type = forbidden
 source_modules =
     vibey.application.interfaces
     vibey.application.hub.interfaces
+    vibey.application.acp.interfaces
 forbidden_modules =
     vibey.application.*
     vibey.infrastructure
@@ -92,6 +93,7 @@ ignore_imports =
     vibey.application.interfaces.** -> vibey.application.design
     vibey.application.interfaces.** -> vibey.application.dto
     vibey.application.hub.interfaces.** -> vibey.application.dto
+    vibey.application.acp.interfaces.** -> vibey.application.acp.dto
 
     # The same rule, one layer down. `vibey.infrastructure.db.interfaces` and
     # The same rule, one layer down. `vibey.infrastructure.db.interfaces`,

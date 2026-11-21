@@ -930,7 +930,7 @@ ACP, whatever is set here.
 | `live_poll_seconds` | number, at least 0.2 | `1.0` | How often the live ledger feed is polled. |
 | `live_message_chars` | integer, at least 40 | `400` | The longest ledger event summary sent as one update. |
 | `live_between_turns` | boolean | `true` | Whether ledger events keep streaming between prompt turns. |
-| `cancel_grace_seconds` | number, at least 0 | `2.0` | How long a cancelled turn is given to wind down before it is ended. |
+| `cancel_grace_seconds` | number, at least 0 | `2.0` | How long a cancelled turn waits for a hub call already in flight to answer, so its real outcome can be reported; after that the turn ends saying the hub may still apply it, with the request id. |
 | `max_message_bytes` | integer, at least 65536 | `16777216` | The longest line the protocol peer accepts; a longer one is refused and the stream goes on. |
 | `pending_events_max` | integer, at least 1 | `1000` | How many session events the agent holds while the hub is unreachable. |
 
