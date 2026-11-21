@@ -369,7 +369,12 @@ The log is written behind the session and in order, so the hub being away never 
 what is queued is sent after each turn and each switch, from where the last send stopped. At
 most [`[acp] pending_events_max`](configuration.md#acp) events wait; past that the oldest is
 dropped and you are told once ("Session history"). If another `vibey acp` writes the same
-session (two windows that both loaded it), the second one stops keeping it and says so. When the
+session (two windows that both loaded it), the second one stops keeping it and says so. Any
+other refusal the hub gives for good (a 4xx other than 429) likewise stops only that session's
+history, with one notice and the hub's reason on stderr; every other session's goes on. A
+session opened in a folder whose name holds a control, format or bidi character (a zero-width
+joiner in an emoji name, a tab) is kept in its window only, and you are told once: the hub
+keeps no such folder. When the
 connection ends, what the hub's rate limit still holds back is waited for (from
 `live_poll_seconds`, doubling, at most `probe_seconds` in all); what is still unsent then is said
 on stderr and, while the editor can hear it, in a notice.

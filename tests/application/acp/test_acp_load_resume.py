@@ -673,7 +673,7 @@ async def test_a_load_replays_only_the_newest_events_and_says_the_rest_were_skip
     result = await _load(agent)
     shown = [u["sessionUpdate"] for u in channel.updates]
     assert shown[:2] == ["agent_message_chunk", "current_mode_update"]
-    assert "newest 2 events; the 5 before them are kept but not shown" in channel.said[0]
+    assert "newest 2 events; up to 5 before them are kept but not shown" in channel.said[0]
     assert ("events", SID, "/work") in hub.session_calls
     # Folded from the summary, not from what was replayed: the title is at seq 1.
     assert result["modes"]["currentModeId"] == "observe"
@@ -707,3 +707,45 @@ async def test_a_listed_folder_the_one_line_rule_would_change_is_passed_over() -
     agent, _, hub = _agent()
     hub.listing = ((_record(SID, cwd="/work‮"), _record(OTHER, cwd="/a\nb")), None)
     assert await agent.handle_request("session/list", {}) == {"sessions": []}
+
+
+async def test_no_lock_outlives_the_loads_and_closes_that_used_it() -> None:
+    hub = SlowHub()
+    hub.kept[SID] = ("/work", list(HISTORY))
+    agent, _, _ = _agent(hub=hub, feed=SpyFeed())
+    first = asyncio.create_task(_load(agent, "session/resume"))
+    second = asyncio.create_task(_load(agent, "session/resume"))
+    await hub.reading.wait()
+    assert set(agent._locks) == {SID}  # noqa: SLF001 -- held while the loads run
+    hub.release_reads.set()
+    await asyncio.gather(first, second)
+    assert agent._locks == {} and agent._lock_users == {}  # noqa: SLF001
+    await agent.handle_request("session/close", {"sessionId": SID})
+    assert agent._locks == {} and agent._lock_users == {}  # noqa: SLF001
+    await agent.close()
+
+
+async def test_a_session_in_a_folder_the_hub_refuses_never_blocks_another_sessions_log() -> None:
+    """A folder with a zero-width joiner (an emoji family name) is not printable: that session is
+    kept in its window only, and the other session's log reaches the hub in order."""
+    bad, good = SID, OTHER
+    hub = FakeHub()
+    channel = FakeChannel()
+    agent = build_agent(channel, hub, ids=(bad, good, "t1", "t2", "t3", "t4"))
+    agent._feed = SpyFeed()  # noqa: SLF001
+    await agent.handle_request("session/new", {"cwd": "/bad\u200dfolder", "mcpServers": []})
+    await agent.handle_request("session/new", {"cwd": "/good", "mcpServers": []})
+    for session_id in (bad, good):
+        await agent.handle_request(
+            "session/prompt", {"sessionId": session_id, "prompt": [text("hello")]}
+        )
+    await agent.close()
+    assert set(hub.kept) == {good}
+    assert [kind for _, kind, _ in hub.log(good)][:2] == ["title", "user_message"]
+    told = [
+        session_id
+        for session_id, update in zip(channel.sessions, channel.updates, strict=True)
+        if update["sessionUpdate"] == "agent_message_chunk"
+        and "its folder holds a character" in update["content"]["text"]
+    ]
+    assert told == [bad]

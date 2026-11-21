@@ -68,6 +68,12 @@ class SessionWritesThrottled(VibeyError):
     dropped while the agent runs."""
 
 
+class SessionRequestRefused(VibeyError):
+    """The hub refused a session request for good (a 4xx other than 429: a folder it does not
+    accept, a body too large, a malformed event). Sending it again cannot help: that session's
+    log stops, and every other session's goes on."""
+
+
 class InvalidSessionCursor(VibeyError):
     """A `session/list` cursor is not one the hub gave out."""
 

@@ -14,7 +14,9 @@ reading as a connection problem; `healthy`, which never raises, logs it and answ
 
 An ACP session's log goes through the hub's `/api/v1/acp/sessions` routes. A 403 or 404 there
 is `UnknownAcpSession` (the hub answers a session that is not the agent's, or not under that
-folder, as it answers one that does not exist), a 409 `SessionEventConflict`, a 429 `SessionWritesThrottled`, a 507 `AcpSessionLimitReached` (`[acp] sessions_max` or
+folder, as it answers one that does not exist), a 409 `SessionEventConflict`, a 429 `SessionWritesThrottled`, a 507 `AcpSessionLimitReached`, any other 4xx
+`SessionRequestRefused` (permanent for that request; only a 429, a 5xx or no answer is worth
+sending again) (`[acp] sessions_max` or
 `session_events_max` reached), and a 422 on a list
 `InvalidSessionCursor`; anything else refused is a `HubGatewayError` as elsewhere.
 
@@ -45,6 +47,7 @@ from vibey.domain.acp.session_log import (
     AcpSessionLimitReached,
     InvalidSessionCursor,
     SessionEventConflict,
+    SessionRequestRefused,
     SessionWritesThrottled,
     UnknownAcpSession,
 )
@@ -263,6 +266,11 @@ class AcpHubClient:
             raise AcpSessionLimitReached(f"the hub keeps no more: {response.text}")
         if response.status_code == 429:
             raise SessionWritesThrottled("the hub's rate limit refused it for now")
+        if 400 <= response.status_code < 500:
+            # Permanent for this request: resending it would be refused the same way.
+            raise SessionRequestRefused(
+                f"the hub refused it ({response.status_code}): {response.text}"
+            )
         return cls._accepted(response)
 
     @classmethod

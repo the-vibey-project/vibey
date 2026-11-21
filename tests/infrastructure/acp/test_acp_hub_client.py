@@ -20,6 +20,7 @@ from vibey.domain.acp.session_log import (
     AcpSessionLimitReached,
     InvalidSessionCursor,
     SessionEventConflict,
+    SessionRequestRefused,
     SessionWritesThrottled,
     UnknownAcpSession,
 )
@@ -368,7 +369,7 @@ async def test_a_cursor_the_hub_refuses_is_an_invalid_cursor() -> None:
     client = AcpHubClient(gateway=gateway)
     with pytest.raises(InvalidSessionCursor):
         await client.list_sessions(cwd=None, cursor="nope")
-    with pytest.raises(HubGatewayError):
+    with pytest.raises(SessionRequestRefused):
         await client.list_sessions(cwd=None, cursor=None)
 
 
@@ -418,3 +419,13 @@ async def test_a_summary_without_a_usable_newest_seq_reads_as_empty(newest: obje
     gateway = _Gateway(_ok({"newest_seq": newest}))
     summary = await AcpHubClient(gateway=gateway).session_summary(SID, cwd="/w")
     assert summary.newest_seq == 0
+
+
+@pytest.mark.parametrize("status", [400, 401, 413, 422])
+async def test_a_permanent_refusal_is_refused_and_a_passing_failure_is_not(status: int) -> None:
+    gateway = _Gateway(_ok({"detail": "no"}, status), _ok({"detail": "later"}, 503))
+    client = AcpHubClient(gateway=gateway)
+    with pytest.raises(SessionRequestRefused, match=str(status)):
+        await client.create_session(SID, "/w")
+    with pytest.raises(HubGatewayError):
+        await client.append_event(SID, 1, "plan", {})

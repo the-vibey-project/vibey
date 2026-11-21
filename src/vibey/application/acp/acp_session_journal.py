@@ -12,10 +12,16 @@ keeping that event and everything after it, so the next flush sends again from t
 the hub already holds is answered as stored (its `(session_id, seq)` is its idempotency key),
 so a resend after a lost answer writes nothing twice.
 
-Two failures cannot be cured by sending again, and stop the session's log instead of the
-queue: another event already at that `seq` (another `vibey acp` is writing the same session --
-two windows that loaded it), and a session the hub does not keep for this principal. The
-session's queued events are dropped and the client is told once.
+A failure that sending again cannot cure stops that session's log, never the queue: another
+event already at that `seq` (another `vibey acp` is writing the same session -- two windows
+that loaded it), a session the hub does not keep for this principal, a hub that keeps no more,
+and any other permanent refusal of the request (a 4xx other than 429). The session's queued
+events are dropped, the client is told once, and every other session's log goes on. Only a
+429, a 5xx or no answer at all holds the queue, to be sent again from there.
+
+A session opened in a folder the hub would refuse (one with a character that is not printable,
+as `AcpSessionReplay.folder` and the hub's create both judge it) is never queued at all: it is
+kept in its window only, and the client is told once.
 
 A session is kept only when the hub grants the agent principal `acp_sessions` (`[hub]
 agent_scopes`). Without it -- an operator narrowed the grant -- the session still works, in this
@@ -46,15 +52,18 @@ from typing import Any, Final
 
 from vibey.application.acp.interfaces.acp_hub_port_interface import AcpHubPortInterface
 from vibey.application.acp.interfaces.client_channel_interface import ClientChannelInterface
+from vibey.domain.acp.interfaces.session_replay_interface import AcpSessionReplayInterface
 from vibey.domain.acp.interfaces.update_mapper_interface import AcpUpdateMapperInterface
 from vibey.domain.acp.protocol import NoticeSeverity
 from vibey.domain.acp.session_log import (
     AcpSessionLimitReached,
     SessionEventConflict,
     SessionEventKind,
+    SessionRequestRefused,
     SessionWritesThrottled,
     UnknownAcpSession,
 )
+from vibey.domain.acp.session_replay import SESSION_REPLAY
 from vibey.domain.acp.settings import AcpSettings
 from vibey.domain.errors import VibeyError
 from vibey.domain.hub_scope import HubScope
@@ -81,6 +90,14 @@ UNGRANTED: Final = (
 UNSENT: Final = (
     "The hub's rate limit held back the last of this session's history as the connection "
     "ended, so it was not kept; loading this session later shows it without them."
+)
+UNKEEPABLE_FOLDER: Final = (
+    "This session's history is kept only in this window: its folder holds a character the hub "
+    "does not keep (a control, format or bidi character), so it cannot be loaded later."
+)
+REFUSED: Final = (
+    "The hub refused to keep this session's history, so it is not kept from here on; the "
+    "agent's log on stderr has the hub's reason."
 )
 UNKEPT: Final = (
     "The hub does not keep this session for vibey's agent principal, so its history is not "
@@ -110,8 +127,10 @@ class AcpSessionJournal:
         mapper: AcpUpdateMapperInterface,
         *,
         sleep: Callable[[float], Awaitable[None]] = asyncio.sleep,
+        replay: AcpSessionReplayInterface = SESSION_REPLAY,
     ) -> None:
         self._sleep = sleep
+        self._replay = replay
         self._hub = hub
         self._settings = settings
         self._channel = channel
@@ -130,6 +149,10 @@ class AcpSessionJournal:
 
     def open(self, session_id: str, cwd: str) -> None:
         if session_id in self._next or not self._granted(session_id):
+            return
+        if self._replay.folder(cwd) is None:
+            # The hub would refuse its create for good: kept here only, said once.
+            self._notice(session_id, UNKEEPABLE_FOLDER)
             return
         self._start(session_id, 0)
         self._unprompted[session_id] = (cwd, [])
@@ -213,7 +236,14 @@ class AcpSessionJournal:
             item = self._sending = self._queue[0]
             try:
                 await self._send(item)
-            except (SessionEventConflict, UnknownAcpSession, AcpSessionLimitReached) as exc:
+            except (
+                SessionEventConflict,
+                UnknownAcpSession,
+                AcpSessionLimitReached,
+                SessionRequestRefused,
+            ) as exc:
+                if isinstance(exc, SessionRequestRefused):
+                    _LOG.warning("the hub refused session %s's history: %s", item.session_id, exc)
                 self._stop(item.session_id, self._why(exc))
                 continue
             except SessionWritesThrottled:
@@ -248,6 +278,8 @@ class AcpSessionJournal:
     def _why(error: VibeyError) -> str:
         if isinstance(error, SessionEventConflict):
             return FORKED
+        if isinstance(error, SessionRequestRefused):
+            return REFUSED
         return FULL if isinstance(error, AcpSessionLimitReached) else UNKEPT
 
     def _start(self, session_id: str, last_seq: int) -> None:

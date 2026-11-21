@@ -695,3 +695,10 @@ class = "vibey.domain.acp.session_log.SessionWritesThrottled"
 title = "The hub's rate limit held back an ACP session write"
 cause = "The hub answered 429 to a write to an ACP session's log: the agent principal sent more than the hub's per-principal burst allows for now."
 fix = "Nothing to do: the write is kept and sent again by the next flush. At the end of a connection vibey acp waits for it within `[acp] probe_seconds`, and says on stderr what it could not send."
+
+[[error]]
+code = "E0089"
+class = "vibey.domain.acp.session_log.SessionRequestRefused"
+title = "The hub refused an ACP session request for good"
+cause = "The hub answered a session request with a 4xx other than 429: a folder it does not keep, a body it will not read, or an event it cannot accept. Sending it again would be refused the same way."
+fix = "Nothing to repair: that session's history stops being kept and every other session's goes on. The agent's log on stderr has the hub's reason; a folder with a control or bidi character in its name is the usual cause."

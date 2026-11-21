@@ -20,7 +20,9 @@ from vibey.application.acp.acp_session_journal import (
     FORKED,
     FULL,
     OVERFLOW,
+    REFUSED,
     UNGRANTED,
+    UNKEEPABLE_FOLDER,
     UNKEPT,
     UNSENT,
     AcpSessionJournal,
@@ -35,6 +37,7 @@ from vibey.domain.acp.session_log import (
     AcpSessionLimitReached,
     SessionEventConflict,
     SessionEventKind,
+    SessionRequestRefused,
     SessionWritesThrottled,
     UnknownAcpSession,
 )
@@ -522,3 +525,60 @@ async def test_past_the_cap_the_queue_keeps_every_create_and_drops_only_events()
     assert set(hub.kept) == {S, T}
     assert hub.log(T) == []
     assert [payload["text"] for _, _, payload in hub.log(S)] == ["later"]
+
+
+async def test_a_session_in_a_folder_the_hub_would_refuse_is_never_queued() -> None:
+    hub = FlakyHub()
+    channel = FakeChannel()
+    journal = _journal(hub, channel=channel)
+    journal.open(S, "/bad\u200dfolder")
+    journal.open(T, "/good")
+    assert journal.recording(S) is False
+    assert journal.record(S, MSG, {"text": "a"}) == 0
+    journal.record(T, MSG, {"text": "b"})
+    await journal.flush()
+    assert set(hub.kept) == {T} and hub.log(T) == [(1, "user_message", {"text": "b"})]
+    assert channel.sessions == [S] and channel.said == [f"Session history: {UNKEEPABLE_FOLDER}"]
+
+
+class RefusingHub(FlakyHub):
+    """Refuses, for good, the create or one append of session `S` only."""
+
+    def __init__(self, *, on_create: bool) -> None:
+        super().__init__()
+        self.on_create = on_create
+
+    async def create_session(self, session_id: str, cwd: str) -> None:
+        if self.on_create and session_id == S:
+            raise SessionRequestRefused("the hub refused it (422)")
+        await super().create_session(session_id, cwd)
+
+    async def append_event(
+        self, session_id: str, seq: int, kind: str, payload: Mapping[str, Any]
+    ) -> None:
+        if not self.on_create and session_id == S and seq == 2:
+            raise SessionRequestRefused("the hub refused it (413)")
+        await super().append_event(session_id, seq, kind, payload)
+
+
+@pytest.mark.parametrize("on_create", [True, False])
+async def test_a_permanent_refusal_stops_that_session_only(
+    on_create: bool, caplog: pytest.LogCaptureFixture
+) -> None:
+    """The refused session's log stops with one notice; the other's arrives, in order."""
+    hub = RefusingHub(on_create=on_create)
+    channel = FakeChannel()
+    journal = _journal(hub, channel=channel)
+    journal.open(S, "/work")
+    journal.open(T, "/work")
+    for n in (1, 2, 3):
+        journal.record(S, MSG, {"text": f"s{n}"})
+        journal.record(T, MSG, {"text": f"t{n}"})
+    with caplog.at_level(logging.WARNING):
+        await journal.flush()
+    assert [payload["text"] for _, _, payload in hub.log(T)] == ["t1", "t2", "t3"]
+    assert journal.recording(S) is False and journal.recording(T) is True
+    assert channel.said == [f"Session history: {REFUSED}"]
+    assert "the hub refused session" in caplog.text
+    if not on_create:
+        assert hub.log(S) == [(1, "user_message", {"text": "s1"})]  # what was kept stays

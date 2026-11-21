@@ -51,7 +51,7 @@ import asyncio
 import contextlib
 import json
 import logging
-from collections.abc import Callable, Coroutine, Mapping, Sequence
+from collections.abc import AsyncIterator, Callable, Coroutine, Mapping, Sequence
 from pathlib import PurePath
 from typing import Any, Final
 from uuid import UUID
@@ -102,9 +102,9 @@ from vibey.domain.jsonrpc_errors import (
 type TurnFactory = Callable[[], AcpPromptTurnInterface]
 
 PROJECTS_TOOL: Final = "vibey_projects"
+"""The hub tool that lists every project with its repository (`repo_path`)."""
 EMPTY_SUMMARY: Final = SessionSummary(newest_seq=0, mode=None, attach=None, title=None)
 """What a live session the hub does not keep loads as: nothing to show, nothing to fold."""
-"""The hub tool that lists every project with its repository (`repo_path`)."""
 _LOG: Final = logging.getLogger(__name__)
 
 
@@ -153,7 +153,9 @@ class AcpAgent:
         self._kept_project: dict[str, UUID] = {}
         """The project each session's log last recorded it attached to."""
         self._locks: dict[str, asyncio.Lock] = {}
-        """One per session a load or a close has named: they run one at a time."""
+        """One per session a load or a close is running or waiting on: they run one at a time.
+        Removed once nothing holds or waits on it, so it never outgrows the requests in flight."""
+        self._lock_users: dict[str, int] = {}
 
     @property
     def sessions(self) -> Mapping[str, AcpSessionStateInterface]:
@@ -346,7 +348,7 @@ class AcpAgent:
             raise RpcError(INVALID_PARAMS, "loading or resuming a session needs an absolute cwd")
         if not isinstance(session_id, str) or not self._replay.valid_session_id(session_id):
             raise self._no_session()
-        async with self._session_lock(session_id):
+        async with self._exclusive(session_id):
             return await self._load_held(session_id, cwd, replay=replay)
 
     async def _load_held(self, session_id: str, cwd: str, *, replay: bool) -> dict[str, Any]:
@@ -373,8 +375,9 @@ class AcpAgent:
         if replay and events and start:
             await self._say(
                 context,
-                f"Showing this session's newest {self._settings.replay_events_max} events; the "
-                f"{start} before them are kept but not shown (`[acp] replay_events_max`).",
+                f"Showing up to this session's newest {self._settings.replay_events_max} "
+                f"events; up to {start} before them are kept but not shown "
+                "(`[acp] replay_events_max`).",
             )
         for event in events:
             update = self._replay.replay(event.kind, event.payload, modes=self._settings.modes)
@@ -483,7 +486,7 @@ class AcpAgent:
             session_id not in self._contexts and session_id not in self._locks
         ):
             return {}
-        async with self._session_lock(session_id):
+        async with self._exclusive(session_id):
             return self._close_held(session_id)
 
     def _close_held(self, session_id: str) -> dict[str, Any]:
@@ -524,8 +527,20 @@ class AcpAgent:
         if self._journal.record(session_id, kind, payload):
             self._in_background(self._journal.flush())
 
-    def _session_lock(self, session_id: str) -> asyncio.Lock:
-        return self._locks.setdefault(session_id, asyncio.Lock())
+    @contextlib.asynccontextmanager
+    async def _exclusive(self, session_id: str) -> AsyncIterator[None]:
+        """Hold the session's lock; the lock is dropped once nothing holds or waits on it."""
+        lock = self._locks.setdefault(session_id, asyncio.Lock())
+        self._lock_users[session_id] = self._lock_users.get(session_id, 0) + 1
+        try:
+            async with lock:
+                yield
+        finally:
+            users = self._lock_users.pop(session_id) - 1
+            if users:
+                self._lock_users[session_id] = users
+            else:
+                del self._locks[session_id]
 
     @staticmethod
     def _no_session() -> RpcError:
