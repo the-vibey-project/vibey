@@ -9,7 +9,6 @@ four request methods (`initialize`, `ping`, `tools/list`, `tools/call`) and noti
 
 from __future__ import annotations
 
-import json
 from collections.abc import Callable, Mapping
 from typing import Any, Final, TextIO
 from uuid import uuid4
@@ -23,6 +22,13 @@ from vibey.domain.host_tools import (
     HostToolError,
 )
 from vibey.domain.interfaces.host_tools_interface import HostToolsInterface
+from vibey.infrastructure.jsonrpc.codec import CODEC
+from vibey.infrastructure.jsonrpc.errors import INVALID_PARAMS as INVALID_PARAMS
+from vibey.infrastructure.jsonrpc.errors import INVALID_REQUEST as INVALID_REQUEST
+from vibey.infrastructure.jsonrpc.errors import METHOD_NOT_FOUND as METHOD_NOT_FOUND
+from vibey.infrastructure.jsonrpc.errors import PARSE_ERROR as PARSE_ERROR
+from vibey.infrastructure.jsonrpc.errors import RpcError
+from vibey.infrastructure.jsonrpc.interfaces.codec_interface import JsonRpcCodecInterface
 from vibey.infrastructure.mcp.hub_gateway import HUB_GATEWAY
 from vibey.infrastructure.mcp.interfaces.hub_gateway_interface import HubGatewayInterface
 from vibey.infrastructure.mcp.interfaces.stdio_server_interface import McpStdioServerInterface
@@ -34,11 +40,6 @@ SUPPORTED_PROTOCOLS: Final[tuple[str, ...]] = (
     "2025-11-25",
 )
 LATEST_PROTOCOL: Final = SUPPORTED_PROTOCOLS[-1]
-
-PARSE_ERROR: Final = -32700
-INVALID_REQUEST: Final = -32600
-METHOD_NOT_FOUND: Final = -32601
-INVALID_PARAMS: Final = -32602
 
 
 class McpStdioServer:
@@ -55,12 +56,14 @@ class McpStdioServer:
         instructions: str = HOST_INSTRUCTIONS,
         request_id_factory: Callable[[], str] = lambda: f"mcp-{uuid4()}",
         max_response_chars: int = MAX_RESPONSE_CHARS,
+        codec: JsonRpcCodecInterface = CODEC,
     ) -> None:
         self._gateway = gateway
         self._tools = tools
         self._instructions = instructions
         self._request_id_factory = request_id_factory
         self._max_response_chars = max_response_chars
+        self._codec = codec
 
     def serve(self, stdin: TextIO, stdout: TextIO) -> None:
         """Read newline-delimited JSON-RPC messages from `stdin` and write replies to `stdout`."""
@@ -71,50 +74,41 @@ class McpStdioServer:
                 stdout.flush()
 
     def handle_line(self, line: str) -> str | None:
-        stripped = line.strip()
-        if not stripped:
+        if self._codec.is_blank(line):
             return None
         try:
-            parsed = json.loads(stripped)
-        except json.JSONDecodeError as exc:
-            return json.dumps(self._error(None, PARSE_ERROR, f"Parse error: {exc.msg}"))
-        if not isinstance(parsed, Mapping):
-            return json.dumps(
-                self._error(None, INVALID_REQUEST, "Invalid Request: expected JSON object")
-            )
+            parsed = self._codec.decode(line)
+        except RpcError as exc:
+            return self._codec.encode(self._codec.error(None, exc.code, exc.message))
         response = self.handle(parsed)
-        return json.dumps(response) if response is not None else None
+        return self._codec.encode(response) if response is not None else None
 
     def handle(self, message: Mapping[str, Any]) -> dict[str, Any] | None:
-        has_id = "id" in message
         msg_id = message.get("id")
-        if message.get("jsonrpc") != "2.0" or not isinstance(message.get("method"), str):
-            return self._error(
-                msg_id if has_id else None,
-                INVALID_REQUEST,
-                "Invalid Request: jsonrpc='2.0' and string method are required",
-            )
+        invalid = self._codec.validate(message)
+        if invalid is not None:
+            return invalid
         method: str = message["method"]
         params = message.get("params")
 
         # Notifications carry no `id` and never receive a reply.
-        if not has_id:
+        if "id" not in message:
             return None
 
         if params is not None and not isinstance(params, Mapping):
-            return self._error(msg_id, INVALID_PARAMS, "Invalid params: expected JSON object")
+            return self._codec.error(msg_id, INVALID_PARAMS, "Invalid params: expected JSON object")
         params_map: Mapping[str, Any] = params if isinstance(params, Mapping) else {}
 
         if method == "initialize":
-            return self._ok(msg_id, self._initialize(params_map))
+            return self._codec.ok(msg_id, self._initialize(params_map))
         if method == "ping":
-            return self._ok(msg_id, {})
+            return self._codec.ok(msg_id, {})
         if method == "tools/list":
             scopes = self._gateway.agent_scopes()
-            return self._ok(msg_id, {"tools": self._tools.mcp_definitions(scopes)})
+            return self._codec.ok(msg_id, {"tools": self._tools.mcp_definitions(scopes)})
         if method == "tools/call":
             return self._call_tool(msg_id, params_map)
-        return self._error(msg_id, METHOD_NOT_FOUND, f"Method not found: {method}")
+        return self._codec.error(msg_id, METHOD_NOT_FOUND, f"Method not found: {method}")
 
     def _initialize(self, params: Mapping[str, Any]) -> dict[str, Any]:
         requested = params.get("protocolVersion")
@@ -139,12 +133,12 @@ class McpStdioServer:
     def _call_tool(self, msg_id: Any, params: Mapping[str, Any]) -> dict[str, Any]:
         name = params.get("name")
         if not isinstance(name, str) or not name.strip():
-            return self._error(
+            return self._codec.error(
                 msg_id, INVALID_PARAMS, "Invalid params: tools/call requires string 'name'"
             )
         arguments = params.get("arguments")
         if arguments is not None and not isinstance(arguments, Mapping):
-            return self._error(
+            return self._codec.error(
                 msg_id, INVALID_PARAMS, "Invalid params: 'arguments' must be a JSON object"
             )
         scopes = self._gateway.agent_scopes()
@@ -180,25 +174,13 @@ class McpStdioServer:
 
     def _tool_result(self, msg_id: Any, text: str, *, is_error: bool) -> dict[str, Any]:
         bounded = self._tools.truncate(text, limit=self._max_response_chars)
-        return self._ok(
+        return self._codec.ok(
             msg_id,
             {
                 "content": [{"type": "text", "text": bounded}],
                 "isError": is_error,
             },
         )
-
-    @staticmethod
-    def _ok(msg_id: Any, result: Mapping[str, Any]) -> dict[str, Any]:
-        return {"jsonrpc": "2.0", "id": msg_id, "result": dict(result)}
-
-    @staticmethod
-    def _error(msg_id: Any, code: int, message: str) -> dict[str, Any]:
-        return {
-            "jsonrpc": "2.0",
-            "id": msg_id,
-            "error": {"code": code, "message": message},
-        }
 
 
 MCP_STDIO_SERVER: Final[McpStdioServerInterface] = McpStdioServer()
