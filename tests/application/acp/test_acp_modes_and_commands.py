@@ -605,3 +605,33 @@ async def test_the_following_message_shows_hub_data_as_safe_text() -> None:
     following = next(t for t in channel.said if t.startswith("Following project"))
     assert following.startswith("Following project \\[evil\\]\\(https\\[:\\]//e\\) \\# x (")
     await agent.close()
+
+
+async def test_a_downgrade_while_the_in_progress_frame_is_written_answers_nothing() -> None:
+    # Review 2, R2-M1: the switch lands while the gate's `in_progress` update waits to be
+    # written (a slow stdout); the answer must not be sent after it.
+    class SwitchDuringInProgress(FakeChannel):
+        agent: AcpAgent
+
+        async def notify_update(self, session_id: str, update: Any) -> None:
+            is_gate = str(update.get("toolCallId", "")).endswith(GATE)
+            if is_gate and update.get("status") == "in_progress":
+                await to_observe(self.agent, session_id)  # handled while this write waits
+            await super().notify_update(session_id, update)
+
+    channel, hub = SwitchDuringInProgress(), FakeHub()
+    channel.permission_answers = [f"{GATE}:0"]  # "yes", picked while still in drive
+    hub.turn = HubTurn(reply="One gate.", tool_calls=(), gates=(approval(),), project_id=None)
+    agent = build_agent(channel, hub)
+    channel.agent = agent
+    session_id = await new_session(agent)
+
+    await agent.handle_request(
+        "session/prompt", {"sessionId": session_id, "prompt": [text("/gates")]}
+    )
+
+    assert hub.tool_calls == []  # no vibey_answer_gate
+    gate_updates = [u for u in channel.updates if str(u.get("toolCallId", "")).endswith(GATE)]
+    assert gate_updates[-1]["status"] == "failed"
+    assert any(t.startswith(f"Nothing was answered for gate {GATE}") for t in channel.said)
+    await agent.close()

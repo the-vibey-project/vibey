@@ -21,9 +21,9 @@ cancelled, so the close the client was promised is sent once and never dropped.
 
 Nothing is offered while the session's mode, or the hub's grant to agents, does not include
 `answer`: an observe session never answers a gate, and the gates are offered once it can. The
-mode is read before each gate and again once the client has picked, before the answer is sent,
-so a switch to observe in the middle of a turn stops the next offer and discards a pick that
-came after it (the gate is asked again in drive).
+mode is read before each gate, once the client has picked, and again right before the answer is
+sent with nothing awaited in between, so a switch to observe in the middle of a turn stops the
+next offer and discards a pick it overtakes (the gate is asked again in drive).
 A cancel closes the gate being asked truthfully: an answer already sent gets
 `[acp] cancel_grace_seconds` to come back before the client is told the hub may still apply it.
 Declared by `interfaces/acp_gate_prompter_interface.py`.
@@ -173,17 +173,8 @@ class AcpGatePrompter:
             session.state.resolve_permission(call.call_id)
         if not self._may_answer(session):
             # The session left a mode that may answer while it was asked (`session/set_mode`
-            # also withdraws the request): whatever was picked answers nothing, and the gate is
-            # asked again once the session may answer it.
-            session.offered_gates.discard(gate_id)
-            await self._fail(session, call, LEFT_OPEN)
-            await self._notify(
-                session,
-                self._mapper.agent_text(
-                    f"Nothing was answered for gate {gate_id}: the session left drive mode "
-                    "while it was being asked. It is asked again after a switch back to drive."
-                ),
-            )
+            # also withdraws the request): whatever was picked answers nothing.
+            await self._withdrawn(session, gate_id, call)
             return
         # Only an option this gate offered can answer it; anything else is no answer at all.
         choice = next((c for c in choices if c.option_id == selected), None)
@@ -193,6 +184,11 @@ class AcpGatePrompter:
         await self._notify(
             session, self._mapper.tool_call_update(call.call_id, ToolCallStatus.IN_PROGRESS)
         )
+        if not self._may_answer(session):
+            # The switch landed while the `in_progress` frame was written. Read with nothing
+            # awaited between it and the send below, so no switch can slip in after it.
+            await self._withdrawn(session, gate_id, call)
+            return
         call.answering = asyncio.create_task(
             self._hub.call_tool(
                 ANSWER_GATE_TOOL,
@@ -206,6 +202,19 @@ class AcpGatePrompter:
             await self._fail(session, call, self._describe(exc))
             return
         await self._close(session, call, self._answered(session, gate_id, call.call_id, result))
+
+    async def _withdrawn(self, session: AcpSessionContext, gate_id: str, call: _GateCall) -> None:
+        """A pick the session's mode no longer allows: nothing is answered, the client is told
+        once, and the gate is asked again once the session may answer it."""
+        session.offered_gates.discard(gate_id)
+        await self._fail(session, call, LEFT_OPEN)
+        await self._notify(
+            session,
+            self._mapper.agent_text(
+                f"Nothing was answered for gate {gate_id}: the session left drive mode "
+                "while it was being asked. It is asked again after a switch back to drive."
+            ),
+        )
 
     def _may_answer(self, session: AcpSessionContext) -> bool:
         """Whether the session's mode, as it is now, and the hub's grant both allow answering."""
