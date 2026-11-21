@@ -1,25 +1,19 @@
 # Made with ❤️ by [Vibey](https://the-vibey-project.github.io/vibey/), Developed by [Adam Matthew Steinberger](https://vibewithadam.matthewsteinberger.com/) ([@adammatthewsteinberger](https://github.com/adammatthewsteinberger/)).
-"""JSON-RPC 2.0 error codes and the exceptions a peer raises."""
+"""JSON-RPC 2.0 error codes and the exceptions a peer raises.
+
+The codes and `RpcError` are protocol vocabulary held in `vibey/domain/jsonrpc_errors.py`, so
+the ACP agent in the application layer can raise them too (SP-ACP); they are re-exported here
+unchanged. The two exceptions below describe this peer's stream, so they stay here.
+"""
 
 from __future__ import annotations
 
-from typing import Any, Final
-
-PARSE_ERROR: Final = -32700
-INVALID_REQUEST: Final = -32600
-METHOD_NOT_FOUND: Final = -32601
-INVALID_PARAMS: Final = -32602
-INTERNAL_ERROR: Final = -32603
-
-
-class RpcError(Exception):
-    """A JSON-RPC error: raised by a handler to choose its reply, or by `request` for a remote one."""
-
-    def __init__(self, code: int, message: str, data: Any = None) -> None:
-        super().__init__(f"{code}: {message}")
-        self.code = code
-        self.message = message
-        self.data = data
+from vibey.domain.jsonrpc_errors import INTERNAL_ERROR as INTERNAL_ERROR
+from vibey.domain.jsonrpc_errors import INVALID_PARAMS as INVALID_PARAMS
+from vibey.domain.jsonrpc_errors import INVALID_REQUEST as INVALID_REQUEST
+from vibey.domain.jsonrpc_errors import METHOD_NOT_FOUND as METHOD_NOT_FOUND
+from vibey.domain.jsonrpc_errors import PARSE_ERROR as PARSE_ERROR
+from vibey.domain.jsonrpc_errors import RpcError as RpcError
 
 
 class PeerClosed(Exception):
