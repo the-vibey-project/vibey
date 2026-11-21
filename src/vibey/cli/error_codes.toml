@@ -660,3 +660,24 @@ class = "vibey.domain.acp.settings.InvalidAcpSettings"
 title = "The [acp] settings are invalid"
 cause = "An `[acp]` value is outside what its key allows. The message names the key."
 fix = "Correct that key in vibey.toml. docs/reference/configuration.md#acp lists every key and its bound."
+
+[[error]]
+code = "E0084"
+class = "vibey.domain.acp.session_log.SessionEventConflict"
+title = "An ACP session's log already holds another event there"
+cause = "The hub keeps each ACP session's log append-only: another event already holds that seq (two `vibey acp` processes are writing the same session, as two editor windows that both loaded it), or the session was already kept under another folder."
+fix = "Nothing is overwritten and nothing needs repairing. Keep one editor window per session; the window that was refused stops keeping the session's history and says so."
+
+[[error]]
+code = "E0085"
+class = "vibey.domain.acp.session_log.InvalidSessionCursor"
+title = "A session/list cursor the hub never gave out"
+cause = "A `session/list` request (or `GET /api/v1/acp/sessions`) carried a cursor that is not one the hub returned as `nextCursor`."
+fix = "List again without a cursor, then pass back only the `nextCursor` each page returns."
+
+[[error]]
+code = "E0086"
+class = "vibey.domain.acp.session_log.UnknownAcpSession"
+title = "No such ACP session for this folder"
+cause = "The hub keeps no session with that id for vibey's agent principal under that folder: it does not exist, belongs to another principal, or was kept under another folder. The hub says all three the same way."
+fix = "Open the session from the folder it was started in, or list the folder's sessions with `session/list`; a new session starts with `session/new`."

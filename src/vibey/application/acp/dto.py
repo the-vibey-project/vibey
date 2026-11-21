@@ -6,6 +6,7 @@ Imports only `vibey.domain`, so the `interfaces/` package may name these types.
 
 from collections.abc import Mapping
 from dataclasses import dataclass, field
+from datetime import datetime
 from typing import Any
 from uuid import UUID
 
@@ -39,6 +40,28 @@ class LedgerPage:
     last_seq: int | None
 
 
+@dataclass(frozen=True, slots=True)
+class SessionRecord:
+    """One ACP session as the hub keeps it: `updated_at` is when its newest event was
+    recorded (when it was created, before any), `title` its newest title event's and `closed`
+    whether its newest event is a close."""
+
+    session_id: str
+    cwd: str
+    title: str | None
+    updated_at: datetime
+    closed: bool
+
+
+@dataclass(frozen=True, slots=True)
+class SessionEvent:
+    """One event of an ACP session's log, as stored: untrusted data on its way back out."""
+
+    seq: int
+    kind: str
+    payload: Mapping[str, Any]
+
+
 @dataclass(slots=True)
 class AcpSessionContext:
     """One ACP session as the agent holds it. Mutable: the agent owns it and a turn updates it."""
@@ -54,3 +77,5 @@ class AcpSessionContext:
     open_gates: tuple[Mapping[str, Any], ...] = ()
     """The open gates the hub listed with its last turn, oldest first. The local parse reads
     them, as the hub's does, so `/answer 1` and a bare number mean here what they mean there."""
+    title: str | None = None
+    """The session's title, from its first message; None before one."""

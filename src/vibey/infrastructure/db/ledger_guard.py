@@ -138,6 +138,9 @@ APP_ROLE_GRANTS: Final = AppRoleGrants(
             "engine_health": ("SELECT", "INSERT", "UPDATE"),
             "rotation_cursor": ("SELECT", "INSERT", "UPDATE"),
             "human_gate": ("SELECT", "INSERT", "UPDATE"),
+            # ACP sessions and their logs (migration 0023): append-only, as the ledger is.
+            "acp_session": ("SELECT", "INSERT"),
+            "acp_session_event": ("SELECT", "INSERT"),
             # Read by the cluster preflight's migrations check; written only by the owner.
             "schema_migration": ("SELECT",),
         }

@@ -53,6 +53,9 @@ class HubAction(StrEnum):
     RUN_WORK = "run_work"
     BUMP_JOB = "bump_job"
     RUN_ON_WORKFLOWS = "run_on_workflows"
+    RECORD_ACP_SESSION = "record_acp_session"
+    """Keep an ACP session's own log (SP-ACP): create it, append to it, list and read it back.
+    Only the principal that created a session reads or writes it."""
 
 
 REQUIRED_SCOPE: Final[dict[HubAction, HubScope]] = {
@@ -62,6 +65,7 @@ REQUIRED_SCOPE: Final[dict[HubAction, HubScope]] = {
     HubAction.RUN_WORK: HubScope.RUN,
     HubAction.BUMP_JOB: HubScope.BUMP,
     HubAction.RUN_ON_WORKFLOWS: HubScope.WORKFLOWS,
+    HubAction.RECORD_ACP_SESSION: HubScope.VIEW,
 }
 """The one scope each action needs. Total over `HubAction`; a test holds it so."""
 

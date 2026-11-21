@@ -84,6 +84,29 @@ principal is checked again before every page, so one revoked while a feed is ope
 off at its next message. Events are carried exactly as `vibey ledger search --json`
 carries them.
 
+## ACP sessions
+
+`vibey acp` keeps each ACP session's history here (SP-ACP, migration 0023), because it holds
+no database credential. The routes exist only on a hub built with them (`vibey serve` always
+is). Each needs `view` (the `record_acp_session` action), and a session is read and written
+only by the principal that created it -- for `vibey acp`, the agent principal.
+
+| Route | Body | Does |
+|---|---|---|
+| `POST /api/v1/acp/sessions` | `{"session_id", "cwd"}` | Keeps a session; answers 201 `{"session_id"}`. Again with the same folder, a no-op; with another folder, 409. |
+| `GET /api/v1/acp/sessions?cwd=&cursor=&limit=` | none | `{"sessions": [{"session_id", "cwd", "title", "updated_at", "closed"}], "next_cursor"}`: this principal's sessions, newest first by their last event, at most `limit` (1 to 200). Pass `next_cursor` back as `cursor` for the next page; it is `null` on the last. |
+| `POST /api/v1/acp/sessions/{session_id}/events` | `{"seq", "kind", "payload"}` | Appends one event; answers `{"stored": true}`, also when the same event is already there. Another event at that `seq` is a 409: nothing is overwritten. |
+| `GET /api/v1/acp/sessions/{session_id}/events?after=&limit=&cwd=` | none | `{"events": [{"seq", "kind", "payload"}], "last_seq"}`: events after `after`, oldest first, at most `limit` (1 to 200). With `cwd`, only for a session kept under that folder. |
+
+`session_id` is a lower-case UUID. `kind` is one of `user_message`, `agent_message`,
+`tool_call`, `tool_call_update`, `plan`, `mode`, `attach`, `title` and `closed`. A session that
+does not exist, is another principal's, or (for a read naming `cwd`) was kept under another
+folder is refused with the same 403 and the same words, so a guessed id learns nothing. The log
+is append-only: the database refuses an update, a delete or a truncate of either table, and
+the application role holds only `SELECT` and `INSERT` on them. The list is a keyset over
+`(updated_at, session_id)`, so sessions sharing an instant are neither repeated nor skipped
+between pages; a cursor the hub never gave is a 422.
+
 ## Who may do what
 
 Every `/api/v1` route and `/api/metrics` needs a principal. On the host, that is the host
@@ -93,7 +116,7 @@ scopes the host granted it.
 
 | Scope | Permits |
 |---|---|
-| `view` | Every read above. |
+| `view` | Every read above, and keeping the principal's own ACP sessions ([ACP sessions](#acp-sessions)). |
 | `answer` | Answering a gate that does not spend. |
 | `spend` | Answering a gate that does (`budget_exhausted`, the `deploy_*` gates), with `answer`. |
 | `run` | Starting, pausing, resuming and unwinding a project ([Projects](#projects), [ADR-0091](../architecture/decisions/0091-devices-may-start-pause-and-unwind-projects.md)). |
@@ -166,11 +189,11 @@ Every pairing and revocation is written to every project's ledger as `HubDeviceP
 | Status | Meaning |
 |---|---|
 | 401 | The request proves no principal. Nothing else is said. |
-| 403 | The principal's scopes do not permit it, a device asked to manage pairings, a pairing code was wrong, spent or expired, or the repository does not admit the hub's bump. |
+| 403 | The principal's scopes do not permit it, a device asked to manage pairings, a pairing code was wrong, spent or expired, or the repository does not admit the hub's bump, or the ACP session is not this principal's (or not under that folder). |
 | 404 | No such project, open gate or paired device, or no workflows run this principal started. |
-| 409 | The gate was already answered by another request, the queue refused the reorder, or a project's folder or checkout is taken, or a shared worker stands in the way of a pause. |
+| 409 | The gate was already answered by another request, the queue refused the reorder, or a project's folder or checkout is taken, or a shared worker stands in the way of a pause, or an ACP session's log already holds another event at that `seq` (or the session another folder). |
 | 421 | The `Host` header is not one this hub answers (the DNS-rebinding defence). |
-| 422 | The body or a filter is malformed. |
+| 422 | The body or a filter is malformed, or an ACP session list's cursor is not one the hub gave. |
 | 429 | Too many requests (empty body). |
 | 503 | Pairing, or the workflows routes, are not enabled on this hub; or no `[hub] projects_root` is declared, or the host is resting (the Sabbath window). |
 

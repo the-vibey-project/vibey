@@ -19,6 +19,7 @@ from tests.infrastructure.db.query_counter import QueryCounter, QueryLog
 from vibey.application.dto import EnqueueRequest
 from vibey.domain.ledger import EventKind, Provenance, digest_event
 from vibey.domain.phase import Phase
+from vibey.infrastructure.db.acp_session_repository import PostgresAcpSessionRepository
 from vibey.infrastructure.db.job_repository import PostgresJobRepository
 from vibey.infrastructure.db.ledger_repository import PostgresLedgerRepository
 from vibey.infrastructure.engines.tailer import LedgerEventDraft
@@ -120,6 +121,31 @@ async def test_job_ack_stays_within_its_query_budget(
 
     assert acked is True
     check_budget("job_ack", log)
+
+
+SESSION = "00000000-0000-4000-8000-000000000001"
+
+
+async def test_an_acp_session_append_stays_within_its_query_budget(
+    migrated_pool: asyncpg.Pool, query_counter: QueryCounter
+) -> None:
+    repo = PostgresAcpSessionRepository(migrated_pool)
+    await repo.create(SESSION, "/work", "agent")
+    await repo.append(SESSION, 1, "plan", {"entries": []})
+    async with query_counter.count(migrated_pool) as log:
+        await repo.append(SESSION, 2, "plan", {"entries": []})
+    check_budget("acp_session_append", log)
+
+
+async def test_an_acp_session_list_stays_within_its_query_budget(
+    migrated_pool: asyncpg.Pool, query_counter: QueryCounter
+) -> None:
+    repo = PostgresAcpSessionRepository(migrated_pool)
+    await repo.create(SESSION, "/work", "agent")
+    await repo.list("agent", cwd=None, cursor=None, limit=10)
+    async with query_counter.count(migrated_pool) as log:
+        await repo.list("agent", cwd="/work", cursor=(datetime.now(UTC), SESSION), limit=10)
+    check_budget("acp_session_list", log)
 
 
 async def test_the_counter_counts_every_statement_in_the_block(

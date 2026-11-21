@@ -32,6 +32,13 @@ from uuid import UUID
 import asyncpg
 import typer
 
+from vibey.application.acp.acp_session_service import AcpSessionService
+from vibey.application.acp.interfaces.acp_session_repository_interface import (
+    AcpSessionRepositoryInterface,
+)
+from vibey.application.acp.interfaces.acp_session_service_interface import (
+    AcpSessionServiceInterface,
+)
 from vibey.application.dto import (
     GateAnswerOutcome,
     HumanGateRecord,
@@ -64,12 +71,14 @@ from vibey.cli.queue import QUEUE_PRESENTER
 from vibey.cli.status import STATUS_PRESENTER
 from vibey.domain.config import ConfigError
 from vibey.domain.hub_binding import HUB_BINDING, UndeclaredExposure
+from vibey.domain.hub_scope import HUB_SCOPES
 from vibey.domain.interfaces.hub_binding_interface import HubBindingPolicyInterface
 from vibey.domain.interfaces.ledger_query_interface import LedgerSearchResultInterface
 from vibey.domain.interfaces.queue_priority_interface import PriorityChangeInterface
 from vibey.domain.interfaces.run_ownership_interface import RunOwnershipInterface
 from vibey.domain.ledger import LedgerEvent
 from vibey.domain.run_ownership import RunOwnership
+from vibey.infrastructure.db.acp_session_repository import PostgresAcpSessionRepository
 from vibey.infrastructure.db.engine_health_repository import PostgresEngineHealthRepository
 from vibey.infrastructure.db.ledger_search_repository import PostgresLedgerSearchRepository
 from vibey.infrastructure.engines.descriptors import ALL_DESCRIPTORS
@@ -274,6 +283,7 @@ class DeferredHubAppFactory:
         pairing: HubPairingInterface | None = None,
         workflows: RemoteCommandServiceInterface | None = None,
         runs: RunOwnershipInterface | None = None,
+        acp_sessions: AcpSessionServiceInterface | None = None,
     ) -> "FastAPI":
         from vibey.infrastructure.hub.app import HUB_APP
 
@@ -286,6 +296,7 @@ class DeferredHubAppFactory:
             pairing=pairing,
             workflows=workflows,
             runs=runs,
+            acp_sessions=acp_sessions,
         )
 
 
@@ -317,8 +328,12 @@ class ServeCommand:
         advertiser: MdnsAdvertiserInterface | None = None,
         pairing_ledger: Callable[[asyncpg.Pool], PairingLedgerInterface] = (PostgresPairingLedger),
         lock: Callable[[Path], ServeLockInterface] = ServeLock,
+        acp_sessions: Callable[[asyncpg.Pool], AcpSessionServiceInterface] = (
+            lambda pool: AcpSessionService(PostgresAcpSessionRepository(pool), HUB_SCOPES)
+        ),
     ) -> None:
         self._lock = lock
+        self._acp_sessions = acp_sessions
         self._devices = devices
         self._certificate = certificate
         self._advertiser = advertiser if advertiser is not None else MdnsAdvertiser()
@@ -343,6 +358,8 @@ class ServeCommand:
             allowed_hosts=frozenset(),
             ready=self._never_ready,
             live=LedgerAnnouncements(self._never_connect),
+            # Present only so its routes are documented; nothing calls it.
+            acp_sessions=AcpSessionService(cast(AcpSessionRepositoryInterface, None), HUB_SCOPES),
         )
         return json.dumps(app.openapi(), indent=2, sort_keys=True) + "\n"
 
@@ -440,6 +457,7 @@ class ServeCommand:
                 pairing=pairing,
                 workflows=self.workflows(os.environ),
                 runs=runs,
+                acp_sessions=self._acp_sessions(resources.ledger._pool),
             )
             scheme = "https" if tls is not None else "http"
             typer.echo(f"vibey hub on {scheme}://{self._shown(bound)}:{listen}/api/v1")

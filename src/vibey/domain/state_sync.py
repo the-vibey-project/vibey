@@ -144,8 +144,14 @@ TABLES: Final[tuple[TableSpec, ...]] = (
 
 #: Tables in the database that are never synced, each for its reason: the migrator owns
 #: its own record, the next `seq` is derived from the ledger it numbers, and the sync's
-#: own watermark says where *this* database stands, which no other one shares.
-NOT_SYNCED: Final[frozenset[str]] = frozenset({"schema_migration", "event_seq", "state_sync"})
+#: own watermark says where *this* database stands, which no other one shares. An ACP
+#: session's log (migration 0023) belongs to the editor on this computer that kept it, under
+#: a folder of this computer; two computers appending to one session would diverge at a
+#: `seq`, and an append-only divergence refuses the whole merge, so a chat log could stop
+#: every project from syncing.
+NOT_SYNCED: Final[frozenset[str]] = frozenset(
+    {"schema_migration", "event_seq", "state_sync", "acp_session", "acp_session_event"}
+)
 
 
 class CanonicalJson:

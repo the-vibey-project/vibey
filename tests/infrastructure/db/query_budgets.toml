@@ -22,3 +22,11 @@ job_enqueue = 4
 
 # One UPDATE.
 job_ack = 1
+
+# One INSERT ... ON CONFLICT DO NOTHING inside a CTE that also says whether the row already
+# there is the same event (an ACP session's log, migration 0023). A second statement runs only
+# when neither holds, which a budget run never reaches.
+acp_session_append = 1
+
+# One keyset SELECT over a CTE (an ACP session list page).
+acp_session_list = 1
