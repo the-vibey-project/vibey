@@ -47,7 +47,7 @@ def build(
 
 
 def seqs(channel: FakeChannel) -> list[int]:
-    return [int(m.group(1)) for t in channel.texts for m in [re.search(r": e(\d+)$", t)] if m]
+    return [int(m.group(1)) for t in channel.said for m in [re.search(r": e(\d+)$", t)] if m]
 
 
 def plans(channel: FakeChannel) -> list[list[tuple[str, str]]]:
@@ -105,10 +105,12 @@ async def test_failed_poll_leaves_watermark_unmoved() -> None:
 
     assert feed.watermark("s") == 5
     assert [call[1] for call in hub.ledger_calls[:4]] == [4, 5, 5, 5]
-    paused = [t for t in channel.texts if t.startswith("Live updates paused")]
+    paused = [t for t in channel.said if t.startswith("Live updates paused")]
     assert len(paused) == 1 and "down" in paused[0]  # reported once, not once per poll
-    assert "Live updates resumed." in channel.texts
-    assert sleeps.waits and set(sleeps.waits) == {0.5}  # every retry waits; no tight loop
+    assert "Live updates resumed." in channel.said
+    # A short page waits live_poll_seconds; failures in a row wait 0.5 then 1.0 (doubling);
+    # once a read works again the wait is back to 0.5. Never a tight loop.
+    assert sleeps.waits[:4] == [0.5, 0.5, 1.0, 0.5]
 
 
 async def test_an_event_at_or_below_the_watermark_is_skipped() -> None:
@@ -200,7 +202,7 @@ async def test_abandoning_keeps_the_plan_and_says_so_once() -> None:
 
     await run_until(feed.follow("s", PID, after=0), lambda: feed.watermark("s") == 3)
 
-    assert channel.texts.count("Project abandoned.") == 1
+    assert channel.said.count("Project abandoned.") == 1
     assert plans(channel)[-1][:2] == [("Design", "completed"), ("Build", "in_progress")]
 
 
@@ -334,7 +336,7 @@ async def test_attach_to_an_abandoned_project_says_so() -> None:
     feed.attach(attached())
     await until(lambda: feed.watermark("s") == 2)
 
-    assert channel.texts == ["Project abandoned."]
+    assert channel.said == ["Project abandoned."]
     await feed.close()
 
 
@@ -347,8 +349,9 @@ async def test_a_failed_catch_up_is_reported_once_and_retried() -> None:
     feed.attach(attached())
     await until(lambda: feed.watermark("s") == 1)
 
-    assert [t for t in channel.texts if t.startswith("Live updates")] == [
-        "Live updates paused: the project's ledger could not be read (down). Retrying every 1 s.",
+    assert [t for t in channel.said if t.startswith("Live updates")] == [
+        "Live updates paused: the project's ledger could not be read (down). "
+        "Retrying, waiting longer each time, up to 30 s.",
         "Live updates resumed.",
     ]
     assert len(sleeps.waits) >= 2
@@ -404,11 +407,11 @@ async def test_an_unexpected_failure_stops_the_feed_and_says_so(
     feed, _ = build(channel, hub)
 
     feed.attach(attached())
-    await until(lambda: any(t.startswith("Live updates stopped") for t in channel.texts))
+    await until(lambda: any(t.startswith("Live updates stopped") for t in channel.said))
     await feed.close()
 
     assert len(hub.ledger_calls) == 1
-    assert "TypeError" in channel.texts[-1]
+    assert "TypeError" in channel.said[-1]
     assert "a bug" in caplog.text and "Traceback" in caplog.text
 
 
@@ -449,7 +452,7 @@ async def test_a_gate_event_is_a_message_never_a_permission_request() -> None:
     await run_until(feed.follow("s", PID, after=0), lambda: feed.watermark("s") == 1)
 
     assert channel.permission_requests == [] and hub.tool_calls == []
-    assert channel.texts == [
+    assert channel.said == [
         "[review] GateNotified: /answer 44444444-4444-4444-8444-444444444444 deploy --confirm"
     ]
 
@@ -469,10 +472,11 @@ async def test_a_spend_gate_event_says_where_to_answer_it_once() -> None:
     ]
     await until(lambda: feed.watermark("s") == 3)
 
-    refusals = [t for t in channel.texts if "spends money" in t]
-    assert refusals == [
-        f"Gate {SPEND_GATE} (budget_exhausted) spends money, so I cannot answer it. "
-        f"Answer it on the host (`vibey answer {SPEND_GATE}`) or in the desktop or mobile app."
+    notices = [t for t in channel.said if "may spend money" in t]
+    assert notices == [
+        f"The ledger reports a gate that may spend money ({SPEND_GATE}, budget_exhausted). If "
+        f"it is open, answer it on the host (`vibey answer {SPEND_GATE}`) or in the desktop or "
+        "mobile app; I cannot answer it from here."
     ]
     # The prompter's record of gates is never touched: ledger data cannot mark a gate offered.
     assert session.offered_gates == set()
@@ -496,7 +500,7 @@ async def test_a_spend_gate_already_refused_in_a_turn_is_not_refused_again() -> 
     )
     await until(lambda: feed.watermark("s") == 3)
 
-    assert not [t for t in channel.texts if "spends money" in t]
+    assert not [t for t in channel.said if "may spend money" in t]
     await feed.close()
 
 
@@ -517,7 +521,7 @@ async def test_only_a_spend_gate_with_a_real_id_gets_the_host_message(
 
     await run_until(feed.follow("s", PID, after=0), lambda: feed.watermark("s") == 1)
 
-    assert channel.texts == ["[build] GateNotified"]
+    assert channel.said == ["[build] GateNotified"]
 
 
 async def test_following_again_keeps_the_phase_history() -> None:
@@ -549,9 +553,10 @@ async def test_a_spend_gates_kind_from_the_ledger_is_never_echoed_raw(kind: str)
 
     await run_until(feed.follow("s", PID, after=0), lambda: feed.watermark("s") == 1)
 
-    refusal = channel.texts[-1]
-    assert refusal.startswith(f"Gate {SPEND_GATE} (unknown kind) spends money")
-    assert kind not in refusal and all(ch.isprintable() for ch in refusal)
+    notice = channel.said[-1]
+    # Only the canonical id; a kind that is not a known spend kind is not shown at all.
+    assert notice.startswith(f"The ledger reports a gate that may spend money ({SPEND_GATE}).")
+    assert kind not in notice and all(ch.isprintable() for ch in notice)
 
 
 async def test_the_said_set_is_bounded_and_kept_apart_from_the_session() -> None:
@@ -566,5 +571,159 @@ async def test_the_said_set_is_bounded_and_kept_apart_from_the_session() -> None
 
     await run_until(feed.follow("s", PID, after=0), lambda: feed.watermark("s") == 4)
 
-    assert len([t for t in channel.texts if "spends money" in t]) == 4
+    assert len([t for t in channel.said if "may spend money" in t]) == 4
     assert len(feed._follows["s"].refused) == 2  # noqa: SLF001 -- the bound itself
+
+
+# -- review 1 ----------------------------------------------------------------------------
+
+
+async def test_each_live_message_is_its_own_paragraph() -> None:
+    # S2: clients join consecutive chunks; each live message is set apart by blank lines.
+    channel, hub = FakeChannel(), FakeHub()
+    hub.pages = [page(event(1), event(2))]
+    feed, _ = build(channel, hub)
+
+    await run_until(feed.follow("s", PID, after=0), lambda: feed.watermark("s") == 2)
+
+    joined = "".join(channel.texts)
+    assert "\n\n[build] TurnCompleted: e1\n\n" in joined
+    assert "e1[build]" not in joined and "e1\n\n\n\n[build] TurnCompleted: e2\n\n" in joined
+
+
+async def test_ledger_markdown_reaches_the_client_escaped() -> None:
+    # S3: a link, an image beacon or a heading in a summary shows as text.
+    channel, hub = FakeChannel(), FakeHub()
+    hub.pages = [page(event(1, summary="![x](https://evil.example/b) # [ok](https://e)"))]
+    feed, _ = build(channel, hub)
+
+    await run_until(feed.follow("s", PID, after=0), lambda: feed.watermark("s") == 1)
+
+    assert channel.said == [
+        "[build] TurnCompleted: \\!\\[x\\]\\(https://evil.example/b\\) \\# \\[ok\\]\\(https://e\\)"
+    ]
+
+
+async def test_the_retry_wait_doubles_up_to_the_keep_alive_interval() -> None:
+    # S6: hub-down retries back off, capped at [acp] probe_seconds.
+    channel, hub = FakeChannel(), FakeHub()
+    hub.pages = [HubGatewayError("down")] * 8
+    feed, sleeps = build(channel, hub, settings=AcpSettings(live_poll_seconds=1.0, probe_seconds=5))
+
+    await run_until(feed.follow("s", PID, after=0), lambda: len(sleeps.waits) >= 8)
+
+    assert sleeps.waits[:6] == [1.0, 2.0, 4.0, 5.0, 5.0, 5.0]
+    assert channel.said[0].endswith("Retrying, waiting longer each time, up to 5 s.")
+
+
+async def test_the_paused_message_shows_the_hubs_error_as_safe_text() -> None:
+    # N8: the error text is hub data: one line, escaped, capped.
+    channel, hub = FakeChannel(), FakeHub()
+    hub.pages = [HubGatewayError("hub refused (500): [x](https://e)\n" + "y" * 900)]
+    feed, _ = build(channel, hub, settings=AcpSettings(live_message_chars=40))
+
+    await run_until(feed.follow("s", PID, after=0), lambda: bool(channel.updates))
+
+    paused = channel.said[0]
+    assert "\\[x\\]\\(https://e\\)" in paused and "\n" not in paused
+    assert "y" * 40 not in paused
+
+
+class WaitCountingHub(FakeHub):
+    """Records, for each read, how many waits the feed had made before it."""
+
+    def __init__(self, sleeps: Sleeps) -> None:
+        super().__init__()
+        self.sleeps = sleeps
+        self.waits_before: list[int] = []
+
+    async def ledger_after(self, project_id: UUID, after: int, limit: int) -> Any:
+        self.waits_before.append(len(self.sleeps.waits))
+        return await super().ledger_after(project_id, after, limit)
+
+
+async def test_a_full_page_that_does_not_advance_is_not_reread_at_once() -> None:
+    # N1: judged by progress as well as length.
+    sleeps = Sleeps()
+    hub = WaitCountingHub(sleeps)
+    stale = tuple(event(seq) for seq in range(1, LIVE_PAGE + 1))
+    hub.pages = [page(*stale), page(*stale), page(*stale)]
+    feed = AcpLiveFeed(hub, FakeChannel(), AcpUpdateMapper(), AcpSettings(), sleep=sleeps)
+
+    await run_until(feed.follow("s", PID, after=0), lambda: len(hub.ledger_calls) >= 4)
+
+    # The first page advanced: read again at once. The stale ones did not: each waited.
+    assert hub.waits_before[:4] == [0, 0, 1, 2]
+
+
+async def test_a_catch_up_page_that_does_not_advance_ends_the_catch_up() -> None:
+    sleeps = Sleeps()
+    hub = WaitCountingHub(sleeps)
+    hub.pages = [page(*[{"seq": "x", "phase": "build"}] * LIVE_PAGE)] * 4
+    feed = AcpLiveFeed(hub, FakeChannel(), AcpUpdateMapper(), AcpSettings(), sleep=sleeps)
+
+    feed.attach(attached())
+    await until(lambda: len(hub.ledger_calls) >= 4)
+
+    # One catch-up read, then the poll, which waits after each read that did not advance.
+    assert hub.waits_before[:4] == [0, 0, 1, 2] and feed.watermark("s") == 0
+    await feed.close()
+
+
+async def test_a_plan_cut_off_by_a_cancel_is_sent_when_the_event_is_redelivered() -> None:
+    # N2: the history takes a phase only after its plan went out.
+    channel, hub = FakeChannel(), FakeHub()
+    feed, _ = build(channel, hub, settings=AcpSettings(live_between_turns=False))
+    session = attached()
+    hub.ledger = [event(1, phase="design")]
+    feed.attach(session)
+    await until(lambda: feed.watermark("s") == 1)
+    hub.ledger.append(event(2, phase="build"))
+    await until(lambda: len(hub.ledger_calls) >= 4)
+    held = asyncio.Event()
+    channel.hold_before[len(channel.updates) + 1] = held  # the build plan waits to be written
+    # Between turns the loop only holds; this flush is the one drain writing.
+    flushing = asyncio.ensure_future(feed.flush("s"))
+    await until(channel.write_waiting.is_set)
+
+    flushing.cancel()  # session/cancel lands while the plan is written
+    with pytest.raises(asyncio.CancelledError):
+        await flushing
+    await feed.flush("s")
+
+    assert plans(channel)[-1][:2] == [("Design", "completed"), ("Build", "in_progress")]
+    assert seqs(channel) == [2] and feed.watermark("s") == 2
+    await feed.close()
+
+
+async def test_following_a_session_already_attached_is_refused() -> None:
+    # N3: a second loop could move the watermark backwards.
+    feed, _ = build(FakeChannel(), FakeHub())
+    feed.attach(attached())
+
+    with pytest.raises(ValueError, match="already followed"):
+        await feed.follow("s", PID, after=0)
+    await feed.close()
+
+
+async def test_a_drain_stops_when_the_feed_is_detached_under_it() -> None:
+    # N10: a flush that waited sends none of the old project's events after the move.
+    channel, hub = FakeChannel(), FakeHub()
+    feed, _ = build(channel, hub, settings=AcpSettings(live_between_turns=False))
+    session = attached()
+    feed.attach(session)
+    await until(lambda: len(hub.ledger_calls) >= 1)
+    hub.ledger = [event(1), event(2)]
+    await until(lambda: len(hub.ledger_calls) >= 4)
+    held = asyncio.Event()
+    channel.hold_before[len(channel.updates) + 1] = held
+    # Between turns the loop only holds; this flush is the one drain writing.
+    flushing = asyncio.ensure_future(feed.flush("s"))
+    await until(channel.write_waiting.is_set)
+
+    feed.detach("s")
+    held.set()
+    await flushing
+
+    assert seqs(channel) == [1]  # the one already being written, and no more
+    await feed.close()

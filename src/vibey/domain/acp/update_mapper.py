@@ -7,11 +7,20 @@ every shape against the official SDK. A `notice` needs the client's `session.not
 capability, so without it the same words go out as an ordinary message.
 
 The live updates (`phase_plan`, `ledger_summary`) read what the hub's ledger says. A ledger
-event's phase, kind and text are untrusted data written by workers and models, so a summary is
-one line of plain text: every character Python does not count as printable (controls, format
-and bidi characters, line and paragraph separators) becomes a space, so an event cannot forge a
-second summary line or reorder the one it is in. Pure: no I/O. Declared by
-`interfaces/update_mapper_interface.py`.
+event's phase, kind and text are untrusted data written by workers and models; so is any other
+hub data shown in a message (a project's name or path, an error the hub sent). `untrusted`
+makes such text safe to show, and `ledger_summary` uses it for every span it did not write:
+
+- one line: every character Python does not count as printable (controls, format and bidi
+  characters, line and paragraph separators) becomes a space, so it cannot forge a second line
+  or reorder the one it is in;
+- no Markdown: ACP clients render message text as Markdown, so every character that could make
+  a link, an image, emphasis, code, a heading, a table or HTML (`MARKDOWN_SPECIAL`) is
+  backslash-escaped and shows as itself;
+- at most `limit` characters as written, ending in "..." when it was cut.
+
+vibey's own words (the hub chat's reply, which is vibey's formatted answer) are passed through
+as Markdown. Pure: no I/O. Declared by `interfaces/update_mapper_interface.py`.
 """
 
 from collections.abc import Mapping, Sequence
@@ -47,6 +56,9 @@ _RANK: Final[Mapping[str, int]] = {
     phase.value: rank for rank, (phase, _, _) in enumerate(PLAN_PHASES)
 }
 ELLIPSIS: Final = "..."
+MARKDOWN_SPECIAL: Final = frozenset("\\`*_[]()<>!#|~&")
+"""Escaped in untrusted text: what opens a link, image, emphasis, code span or fence, heading,
+table cell, strikethrough, HTML tag or entity, and the escape character itself."""
 
 
 class AcpUpdateMapper:
@@ -143,12 +155,18 @@ class AcpUpdateMapper:
             summary = payload.get("summary")
             if not isinstance(summary, str):
                 summary = payload.get("message")
-        line = f"[{self._one_line(event.get('phase'))}] {self._one_line(event.get('kind'))}"
+        segments: list[tuple[str, bool]] = [
+            ("[", False),
+            (self._one_line(event.get("phase")), True),
+            ("] ", False),
+            (self._one_line(event.get("kind")), True),
+        ]
         if isinstance(summary, str):
-            line = f"{line}: {self._one_line(summary)}"
-        if len(line) > limit:
-            line = line[: max(limit - len(ELLIPSIS), 0)] + ELLIPSIS
-        return self.agent_text(line)
+            segments += [(": ", False), (self._one_line(summary), True)]
+        return self.agent_text(self._render(segments, limit))
+
+    def untrusted(self, value: Any, *, limit: int) -> str:
+        return self._render([(self._one_line(value), True)], limit)
 
     def available_commands(self, specs: Sequence[ChatSlashSpec]) -> dict[str, Any]:
         commands: list[dict[str, Any]] = []
@@ -170,6 +188,25 @@ class AcpUpdateMapper:
         if rank == anchor:
             return PlanEntryStatus.IN_PROGRESS
         return PlanEntryStatus.PENDING
+
+    @staticmethod
+    def _render(segments: Sequence[tuple[str, bool]], limit: int) -> str:
+        """The segments joined, cut to `limit` characters as written (then "..."), each one
+        marked untrusted escaped for Markdown after the cut, so no escape is ever split."""
+        total = sum(len(text) for text, _ in segments)
+        budget = total if total <= limit else max(limit - len(ELLIPSIS), 0)
+        out: list[str] = []
+        for text, untrusted in segments:
+            piece = text[:budget]
+            budget -= len(piece)
+            out.append(
+                "".join(f"\\{ch}" if ch in MARKDOWN_SPECIAL else ch for ch in piece)
+                if untrusted
+                else piece
+            )
+        if total > limit:
+            out.append(ELLIPSIS)
+        return "".join(out)
 
     @staticmethod
     def _one_line(value: Any) -> str:

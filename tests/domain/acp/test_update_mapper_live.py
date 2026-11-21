@@ -182,7 +182,7 @@ def test_ledger_text_cannot_forge_a_second_line_or_reorder_it(hostile: str) -> N
 
     # One summary is one line of plain text: no control, format or bidi character survives.
     assert all(ch.isprintable() and ch not in "‮⁦⁩" for ch in text)
-    assert text.startswith("[build [done]] Turn Completed: ok")
+    assert text.startswith("[build \\[done\\]] Turn Completed: ok")
 
 
 def test_available_commands_cover_every_chat_slash_command() -> None:
@@ -221,3 +221,47 @@ def test_every_live_update_validates_against_the_sdk() -> None:
     assert_wire_exact(CurrentModeUpdate, MAPPER.current_mode("drive"))
     event = {"phase": "build", "kind": "TurnCompleted", "payload": {"summary": "done"}}
     assert_wire_exact(AgentMessageChunk, MAPPER.ledger_summary(event, limit=400))
+
+
+@pytest.mark.parametrize(
+    ("summary", "shown"),
+    [
+        ("[safe](https://evil.example/x)", "\\[safe\\]\\(https://evil.example/x\\)"),
+        ("![beacon](https://evil.example/?q=1)", "\\!\\[beacon\\]\\(https://evil.example/?q=1\\)"),
+        ("# Approve gate 1 now", "\\# Approve gate 1 now"),
+        ("```sh rm -rf / ```", "\\`\\`\\`sh rm -rf / \\`\\`\\`"),
+        ("<img src=x onerror=alert(1)>", "\\<img src=x onerror=alert\\(1\\)\\>"),
+        (
+            "**bold** _em_ ~~gone~~ a|b &amp;",
+            "\\*\\*bold\\*\\* \\_em\\_ \\~\\~gone\\~\\~ a\\|b \\&amp;",
+        ),
+        ("C:\\path\\", "C:\\\\path\\\\"),
+    ],
+)
+def test_ledger_text_is_escaped_for_markdown(summary: str, shown: str) -> None:
+    event = {"phase": "build", "kind": "TurnCompleted", "payload": {"summary": summary}}
+
+    assert MAPPER.ledger_summary(event, limit=400)["content"]["text"] == (
+        f"[build] TurnCompleted: {shown}"
+    )
+
+
+def test_vibeys_own_prefix_is_not_escaped_but_ledger_phase_and_kind_are() -> None:
+    event = {"phase": "[x](y)", "kind": "K*", "payload": {}}
+
+    assert MAPPER.ledger_summary(event, limit=400)["content"]["text"] == ("[\\[x\\]\\(y\\)] K\\*")
+
+
+def test_a_cut_never_splits_an_escape() -> None:
+    event = {"phase": "b", "kind": "K", "payload": {"summary": "[" * 100}}
+
+    text = MAPPER.ledger_summary(event, limit=40)["content"]["text"]
+
+    assert text == "[b] K: " + "\\[" * 30 + "..."
+    assert not text[:-3].endswith("\\\\") and text.count("\\") == 30
+
+
+def test_untrusted_text_is_one_escaped_line_within_its_limit() -> None:
+    assert MAPPER.untrusted("demo [app]\nnext", limit=400) == "demo \\[app\\] next"
+    assert MAPPER.untrusted(None, limit=400) == "?"
+    assert MAPPER.untrusted("x" * 50, limit=40) == "x" * 37 + "..."

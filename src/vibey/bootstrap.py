@@ -1457,15 +1457,8 @@ def build_acp_agent(
     hub = AcpHubClient(gateway=gateway, tools=HOST_TOOL_CATALOG)
     modes = AcpModes(settings)
     mapper = AcpUpdateMapper()
-    gates = AcpGatePrompter(
-        channel,
-        hub,
-        settings,
-        modes,
-        mapper,
-        GatePermissionMapper(settings.reject_words),
-        HOST_TOOL_CATALOG,
-    )
+    gate_mapper = GatePermissionMapper(settings.reject_words)
+    gates = AcpGatePrompter(channel, hub, settings, modes, mapper, gate_mapper, HOST_TOOL_CATALOG)
 
     def new_turn() -> AcpPromptTurnInterface:
         return AcpPromptTurn(
@@ -1481,7 +1474,7 @@ def build_acp_agent(
         HUB_CHAT,
         HOST_TOOL_CATALOG,
         new_turn,
-        feed=AcpLiveFeed(hub, channel, mapper, settings),
+        feed=AcpLiveFeed(hub, channel, mapper, settings, gates=gate_mapper),
         version=__version__,
         new_id=lambda: str(uuid4()),
     )

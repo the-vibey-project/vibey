@@ -104,6 +104,11 @@ class FakeChannel:
         ]
 
     @property
+    def said(self) -> list[str]:
+        """The messages without the blank lines the live feed frames its own with."""
+        return [text.strip() for text in self.texts]
+
+    @property
     def kinds(self) -> list[tuple[str, str | None]]:
         return [(update["sessionUpdate"], update.get("status")) for update in self.updates]
 

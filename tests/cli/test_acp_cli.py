@@ -379,7 +379,8 @@ async def test_build_acp_agent_follows_the_project_in_the_sessions_folder() -> N
     await agent.close()
 
     kinds = [update["sessionUpdate"] for update in channel.updates]
-    assert kinds[:2] == ["available_commands_update", "plan"]
+    assert kinds[0] == "available_commands_update" and "plan" in kinds
+    assert any("Following project demo" in str(u.get("content")) for u in channel.updates)
     reads = [call for call in calls if call.tool == "vibey_ledger_after"]
     assert reads[0].route == f"/api/v1/projects/{project_id}/ledger/after"
     assert reads[0].query == (("seq", "0"), ("limit", "200"))

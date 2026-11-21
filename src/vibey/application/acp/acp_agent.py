@@ -35,7 +35,9 @@ Declared by `interfaces/acp_agent_interface.py`.
 from __future__ import annotations
 
 import asyncio
+import contextlib
 import json
+import logging
 from collections.abc import Callable, Coroutine, Mapping, Sequence
 from pathlib import PurePath
 from typing import Any, Final
@@ -72,6 +74,7 @@ type TurnFactory = Callable[[], AcpPromptTurnInterface]
 
 PROJECTS_TOOL: Final = "vibey_projects"
 """The hub tool that lists every project with its repository (`repo_path`)."""
+_LOG: Final = logging.getLogger(__name__)
 
 
 class AcpAgent:
@@ -284,16 +287,36 @@ class AcpAgent:
                 PROJECTS_TOOL, {}, request_id=f"acp-{context.session_id}-attach"
             )
         except VibeyError as exc:
-            await self._say(context, self._unlisted(str(exc)))
+            limit = self._settings.live_message_chars
+            await self._say(context, self._unlisted(self._mapper.untrusted(str(exc), limit=limit)))
+            return
+        except Exception as exc:
+            # A defect, not an unreachable hub: logged with its traceback and said once, so the
+            # folder is never silently left unfollowed.
+            _LOG.exception("listing the hub's projects for session %s failed", context.session_id)
+            await self._say(
+                context,
+                f"vibey could not follow this folder's project: {type(exc).__name__}. The "
+                "agent's log on stderr has the details; `/projects` lists them.",
+            )
             return
         if not listed.ok:
             await self._say(context, self._unlisted(f"the hub answered {listed.status_code}"))
             return
-        project = self._project_holding(context.cwd, listed.text)
-        if project is not None and context.project_id is None:
+        found = self._project_holding(context.cwd, listed.text)
+        if found is not None and context.project_id is None:
             # A turn that already named a project is the later, explicit choice: it stays.
+            project, name, repo = found
             context.project_id = project
             self._follow(context)
+            # The folder chose the default target of /start, /pause and /abandon: say which.
+            limit = self._settings.live_message_chars
+            await self._say(
+                context,
+                f"Following project {self._mapper.untrusted(name, limit=limit)} ({project}) "
+                f"from {self._mapper.untrusted(repo, limit=limit)}. A bare `/start`, `/pause` "
+                "or `/abandon` in this session now targets it.",
+            )
 
     def _follow(self, context: AcpSessionContext) -> None:
         """Follow the session's project, unless its feed already does."""
@@ -303,10 +326,12 @@ class AcpAgent:
             self._feed.attach(context)
 
     @staticmethod
-    def _project_holding(cwd: str, listing: str) -> UUID | None:
-        """The project whose repository holds `cwd`; the deepest when repositories nest, the
-        first listed (the newest) when two share one. The listing is the hub's data: an entry
-        without a UUID and an absolute repository path is passed over."""
+    def _project_holding(cwd: str, listing: str) -> tuple[UUID, str, str] | None:
+        """The project (id, name, repository) whose repository holds `cwd`; the deepest when
+        repositories nest, the first listed (the newest) when two share one. The listing is the
+        hub's data: an entry without a UUID and an absolute repository path is passed over. A
+        `cwd` with a `..` part matches nothing: compared as written, it could name a folder
+        outside the repository it seems to be in."""
         try:
             projects = json.loads(listing)
         except json.JSONDecodeError:
@@ -314,7 +339,9 @@ class AcpAgent:
         if not isinstance(projects, list):
             return None
         folder = PurePath(cwd)
-        best: tuple[int, UUID] | None = None
+        if ".." in folder.parts:
+            return None
+        best: tuple[int, UUID, str, str] | None = None
         for project in projects:
             if not isinstance(project, Mapping):
                 continue
@@ -329,8 +356,9 @@ class AcpAgent:
             except ValueError:
                 continue
             if best is None or len(root.parts) > best[0]:
-                best = (len(root.parts), project_id)
-        return best[1] if best is not None else None
+                name = project.get("name")
+                best = (len(root.parts), project_id, name if isinstance(name, str) else "", repo)
+        return best[1:] if best is not None else None
 
     @staticmethod
     def _unlisted(why: str) -> str:
@@ -354,4 +382,13 @@ class AcpAgent:
     def _in_background(self, work: Coroutine[Any, Any, None]) -> None:
         task = asyncio.create_task(work)
         self._background.add(task)
-        task.add_done_callback(self._background.discard)
+        task.add_done_callback(self._reap)
+
+    def _reap(self, task: asyncio.Task[None]) -> None:
+        # Every background task's outcome is read: a failure (a client gone mid-update, a
+        # defect) is logged with its traceback, never left "never retrieved".
+        self._background.discard(task)
+        with contextlib.suppress(asyncio.CancelledError):
+            error = task.exception()
+            if error is not None:
+                _LOG.error("a background ACP update failed", exc_info=error)

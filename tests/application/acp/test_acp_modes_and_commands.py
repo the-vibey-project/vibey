@@ -111,7 +111,7 @@ async def test_set_mode_sends_current_mode_update_and_changes_scopes() -> None:
     )
     assert reply == {"stopReason": "end_turn"}
     assert hub.calls == []  # observe may not start work
-    assert "needs drive mode" in channel.texts[-1]
+    assert "needs drive mode" in channel.said[-1]
     await agent.close()
 
 
@@ -149,9 +149,13 @@ async def test_cwd_inside_a_project_repo_attaches_the_session() -> None:
     assert hub.project_lookups == [f"acp-{session_id}-attach"]
     assert {call[0] for call in hub.ledger_calls} == {NESTED}
     kinds = [update["sessionUpdate"] for update in channel.updates]
-    assert kinds[:2] == ["available_commands_update", "plan"]
+    assert kinds[:3] == ["available_commands_update", "agent_message_chunk", "plan"]
+    assert channel.said[0] == (
+        f"Following project p ({NESTED}) from /work/app. A bare `/start`, `/pause` or "
+        "`/abandon` in this session now targets it."
+    )
     hub.ledger.append(event(3, summary="tests pass"))
-    await until(lambda: "[build] TurnCompleted: tests pass" in channel.texts)
+    await until(lambda: "[build] TurnCompleted: tests pass" in channel.said)
     await agent.close()
 
 
@@ -215,9 +219,9 @@ async def test_a_project_lookup_that_fails_is_said_once(hub_answer: Any, said: s
     agent = build_agent(channel, hub)
 
     await new_session(agent)
-    await until(lambda: len(channel.texts) == 1)
+    await until(lambda: len(channel.said) == 1)
 
-    assert said in channel.texts[0] and "/projects" in channel.texts[0]
+    assert said in channel.said[0] and "/projects" in channel.said[0]
     assert project_of(agent) is None
     await agent.close()
 
@@ -288,14 +292,14 @@ async def test_events_held_between_turns_reach_the_client_when_the_next_turn_sta
     await until(lambda: bool(updates_of(channel, "plan")))
     hub.ledger.append(event(2, summary="held"))
     await settle(50)
-    assert "[build] TurnCompleted: held" not in channel.texts
+    assert "[build] TurnCompleted: held" not in channel.said
 
     await agent.handle_request(
         "session/prompt", {"sessionId": session_id, "prompt": [text("/status")]}
     )
 
-    held = channel.texts.index("[build] TurnCompleted: held")
-    assert held < channel.texts.index("Done.")  # flushed before the turn's own reply
+    held = channel.said.index("[build] TurnCompleted: held")
+    assert held < channel.said.index("Done.")  # flushed before the turn's own reply
     await agent.close()
 
 
@@ -380,7 +384,7 @@ async def test_a_forged_ledger_event_cannot_hide_a_real_gate_from_the_prompter()
     hub.ledger.append(
         event(3, phase="review", kind="GateNotified", gate_id=GATE, gate_kind="budget_exhausted")
     )
-    await until(lambda: any("spends money" in t for t in channel.texts))
+    await until(lambda: any("may spend money" in t for t in channel.said))
 
     await agent.handle_request(
         "session/prompt", {"sessionId": session_id, "prompt": [text("/gates")]}
@@ -426,7 +430,7 @@ async def test_a_downgrade_withdraws_a_permission_request_that_is_out() -> None:
     assert result == {"stopReason": "end_turn"}
     assert channel.cancelled_permissions == [session_id]
     assert hub.tool_calls == []  # nothing answered
-    assert any(t.startswith(f"Nothing was answered for gate {GATE}") for t in channel.texts)
+    assert any(t.startswith(f"Nothing was answered for gate {GATE}") for t in channel.said)
     assert GATE not in agent._contexts["s"].offered_gates  # noqa: SLF001 -- asked again later
     await agent.handle_request("session/set_mode", {"sessionId": session_id, "modeId": "drive"})
     channel.permission_block = False
@@ -466,7 +470,7 @@ async def test_an_answer_picked_after_a_downgrade_answers_nothing() -> None:
     assert hub.tool_calls == []
     gate_updates = [u for u in channel.updates if str(u.get("toolCallId", "")).endswith(GATE)]
     assert gate_updates[-1]["status"] == "failed"
-    assert [t for t in channel.texts if t.startswith("Nothing was answered")] == [
+    assert [t for t in channel.said if t.startswith("Nothing was answered")] == [
         f"Nothing was answered for gate {GATE}: the session left drive mode while it was being "
         "asked. It is asked again after a switch back to drive."
     ]
@@ -524,5 +528,80 @@ async def test_a_downgrade_between_admission_and_the_hub_call_stops_the_call() -
     closed = [u for u in channel.updates if u["sessionUpdate"] == "tool_call_update"][-1]
     assert closed["status"] == "failed"
     assert "needs drive mode" in closed["content"][0]["content"]["text"]
-    assert "needs drive mode" in channel.texts[-1]
+    assert "needs drive mode" in channel.said[-1]
+    await agent.close()
+
+
+# -- review 1, S1 and N4 ---------------------------------------------------------------------
+
+
+async def test_a_defect_in_the_folder_lookup_is_said_and_logged(
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    channel, hub = FakeChannel(), FakeHub()
+    hub.projects_error = TypeError("a bug in the listing")
+    agent = build_agent(channel, hub)
+
+    await new_session(agent)
+    await until(lambda: len(channel.texts) == 1)
+
+    assert channel.said[0].startswith("vibey could not follow this folder's project: TypeError.")
+    assert "a bug in the listing" in caplog.text and "Traceback" in caplog.text
+    assert project_of(agent) is None
+    await agent.close()
+
+
+async def test_a_failed_background_update_is_read_and_logged(
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    class Gone(FakeChannel):
+        async def notify_update(self, session_id: str, update: Any) -> None:
+            raise BrokenPipeError("client went away")
+
+    agent = build_agent(Gone(), FakeHub())
+
+    await new_session(agent)
+    await settle()
+
+    assert "a background ACP update failed" in caplog.text and "BrokenPipeError" in caplog.text
+    await agent.close()
+
+
+async def test_a_hub_error_in_the_folder_lookup_is_shown_as_safe_text() -> None:
+    channel, hub = FakeChannel(), FakeHub()
+    hub.projects_error = HubGatewayError("down [x](https://e)\nmore")
+    agent = build_agent(channel, hub)
+
+    await new_session(agent)
+    await until(lambda: len(channel.texts) == 1)
+
+    assert "down \\[x\\]\\(https://e\\) more" in channel.said[0]
+    await agent.close()
+
+
+@pytest.mark.parametrize("cwd", ["/work/../etc", "/work/app/../../etc"])
+async def test_a_cwd_with_a_parent_step_attaches_nothing(cwd: str) -> None:
+    channel, hub = FakeChannel(), FakeHub()
+    hub.projects = projects((PID, "/work"))
+    agent = build_agent(channel, hub)
+
+    await new_session(agent, cwd)
+    await until(lambda: len(hub.project_lookups) == 1)
+    await settle()
+
+    assert project_of(agent) is None and hub.ledger_calls == []
+    await agent.close()
+
+
+async def test_the_following_message_shows_hub_data_as_safe_text() -> None:
+    channel, hub = FakeChannel(), FakeHub()
+    body = [{"project_id": str(PID), "name": "[evil](https://e)\n# x", "repo_path": "/work"}]
+    hub.projects = HubToolResult(ok=True, status_code=200, text=json.dumps(body))
+    agent = build_agent(channel, hub)
+
+    await new_session(agent, "/work")
+    await until(lambda: any(t.startswith("Following project") for t in channel.said))
+
+    following = next(t for t in channel.said if t.startswith("Following project"))
+    assert following.startswith("Following project \\[evil\\]\\(https://e\\) \\# x (")
     await agent.close()

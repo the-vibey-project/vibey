@@ -287,8 +287,10 @@ A session follows one project's ledger:
 - **Its folder, at the start.** vibey lists the hub's projects (`vibey_projects`, as the agent
   principal) and follows the one whose repository holds the session's `cwd`; when repositories
   nest, the deepest wins, and when two projects share one, the newest. The path is compared as
-  written, without resolving symbolic links. The same project is what a prompt's commands
-  (`/status`, `/gates`, `/start` ...) default to.
+  written: symbolic links are not resolved, case is not folded, and a `cwd` with a `..` part
+  follows nothing. You are told which project the session now follows ("Following project
+  <name> (<id>) from <repository>"), because it is what a prompt's commands default to: a bare
+  `/status`, `/gates`, `/start`, `/pause` or `/abandon` targets it.
 - **The hub, after every turn.** When the hub's reply names a project (`/status <id>`, `/new`),
   the session moves to it and follows its ledger instead, as krypton's chat does. The hub's
   reply is the later, explicit choice, so it wins over a folder lookup still in flight.
@@ -301,18 +303,31 @@ then on, every new ledger event is one message, `[<phase>] <kind>: <summary>` (a
 [`[acp] live_message_chars`](configuration.md#acp) characters), the plan is sent again when the
 phase changes (a review that sends the work back to Build reopens Review), a project finished
 without deploying drops the three deploy entries, and an abandoned one keeps its plan and is
-told once, "Project abandoned.". Ledger text is data: each summary is one line of plain text,
-with every control, format, bidirectional or line-separator character turned into a space.
+told once, "Project abandoned.". Each live message is its own paragraph (a blank line before
+and after), so it never runs into the next one or into the agent's own reply.
+
+Hub replies are passed through as Markdown; ledger summaries are escaped. The reply to a prompt
+is vibey's own formatted answer from the hub chat and is shown as written. Text from the ledger,
+and other hub data shown in a message (a project's name and repository, an error the hub
+returned), was written by workers and models, so it is shown as text and nothing more: one line
+(every control, format, bidirectional or line-separator character becomes a space) with every
+Markdown special character escaped (`` \ ` * _ [ ] ( ) < > ! # | ~ & ``), so it can make no
+link, image, emphasis, code block, heading, table or HTML. A bare URL may still be made a link
+by the client.
 
 The feed polls the hub every [`[acp] live_poll_seconds`](configuration.md#acp) from the last
 event it sent (a position in the ledger, never a time), so nothing is skipped or sent twice
 when the hub restarts. When the ledger cannot be read, you are told once ("Live updates
-paused"), the read is retried after the same wait, and "Live updates resumed." follows. With
+paused"), the read is retried after `live_poll_seconds`, then after twice that, and so on, up
+to [`[acp] probe_seconds`](configuration.md#acp), and "Live updates resumed." follows. With
 [`[acp] live_between_turns = false`](configuration.md#acp), events that arrive between turns
 are held (at most [`pending_events_max`](configuration.md#acp); no more is read until they are
 sent) and sent at the start of your next prompt. A gate's event is a message only, never a
-permission request: gates are put to you by a prompt turn, under its mode. A spend gate's event
-also says, once per session, to answer it on the host.
+permission request: gates are put to you by a prompt turn, under its mode, and nothing the feed
+reads can mark, answer or hide one. An event that says its gate spends money adds one notice,
+worded as what the ledger reports ("The ledger reports a gate that may spend money (<id>)"),
+saying to answer it on the host; it is said once per followed project (again after the session
+moves to another project and back).
 
 ## `vibey install`
 
