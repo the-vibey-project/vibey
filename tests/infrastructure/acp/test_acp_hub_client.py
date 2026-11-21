@@ -17,6 +17,7 @@ from vibey.application.acp.dto import HubToolResult, HubTurn, LedgerPage
 from vibey.application.acp.interfaces.acp_hub_port_interface import AcpHubPortInterface
 from vibey.domain.acp.session_log import (
     SESSION_PAGE,
+    AcpSessionLimitReached,
     InvalidSessionCursor,
     SessionEventConflict,
     UnknownAcpSession,
@@ -273,6 +274,7 @@ async def test_append_event_posts_one_event() -> None:
         (403, UnknownAcpSession),
         (404, UnknownAcpSession),
         (409, SessionEventConflict),
+        (507, AcpSessionLimitReached),
         (500, HubGatewayError),
     ],
 )

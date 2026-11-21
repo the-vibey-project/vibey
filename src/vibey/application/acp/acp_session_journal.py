@@ -13,6 +13,13 @@ queue: another event already at that `seq` (another `vibey acp` is writing the s
 two windows that loaded it), and a session the hub does not keep for this principal. The
 session's queued events are dropped and the client is told once.
 
+A session is kept only when the hub grants the agent principal `acp_sessions` (`[hub]
+agent_scopes`). Without it -- an operator narrowed the grant -- the session still works, in this
+process only: nothing is sent, and the client is told once. That holds in every mode: keeping a
+session's own record is not a run-class action, so observe keeps it as drive does. A hub that
+keeps no more for this principal (`[acp] sessions_max`, `session_events_max`) also stops the
+session's log, said once; what was kept stays as it was.
+
 The queue holds at most `[acp] pending_events_max` events. Past that, the oldest event that is
 not being sent is dropped -- never a session's create, which every later event of it needs --
 and the client is told once per session. Nothing that would grow without bound is kept while
@@ -32,9 +39,15 @@ from vibey.application.acp.interfaces.acp_hub_port_interface import AcpHubPortIn
 from vibey.application.acp.interfaces.client_channel_interface import ClientChannelInterface
 from vibey.domain.acp.interfaces.update_mapper_interface import AcpUpdateMapperInterface
 from vibey.domain.acp.protocol import NoticeSeverity
-from vibey.domain.acp.session_log import SessionEventConflict, SessionEventKind, UnknownAcpSession
+from vibey.domain.acp.session_log import (
+    AcpSessionLimitReached,
+    SessionEventConflict,
+    SessionEventKind,
+    UnknownAcpSession,
+)
 from vibey.domain.acp.settings import AcpSettings
 from vibey.domain.errors import VibeyError
+from vibey.domain.hub_scope import HubScope
 
 _LOG: Final = logging.getLogger(__name__)
 NOTICE_TITLE: Final = "Session history"
@@ -45,6 +58,15 @@ OVERFLOW: Final = (
 FORKED: Final = (
     "Another `vibey acp` is keeping this session's history too, so this one stopped: what "
     "this window shows from here on is not kept."
+)
+FULL: Final = (
+    "The hub keeps no more sessions, or no more of this session, for vibey's agent principal "
+    "(`[acp] sessions_max`, `session_events_max`), so this session's history is not kept from "
+    "here on. What was kept stays as it was."
+)
+UNGRANTED: Final = (
+    "This session's history is kept only in this window: `[hub] agent_scopes` does not grant "
+    "`acp_sessions`, so the hub cannot keep it and it cannot be loaded later."
 )
 UNKEPT: Final = (
     "The hub does not keep this session for vibey's agent principal, so its history is not "
@@ -87,14 +109,14 @@ class AcpSessionJournal:
         self._lock = asyncio.Lock()
 
     def open(self, session_id: str, cwd: str) -> None:
-        if session_id in self._next:
+        if session_id in self._next or not self._granted(session_id):
             return
         self._start(session_id, 0)
         self._queue.append(_Pending(session_id, 0, cwd=cwd))
 
     def resume(self, session_id: str, last_seq: int) -> None:
-        if session_id in self._open:
-            return  # already kept by this process: its own seq is the newer
+        if session_id in self._open or not self._granted(session_id):
+            return  # already kept by this process (its own seq is the newer), or not keepable
         self._start(session_id, last_seq)
 
     def record(self, session_id: str, kind: SessionEventKind, payload: Mapping[str, Any]) -> int:
@@ -128,10 +150,8 @@ class AcpSessionJournal:
             item = self._sending = self._queue[0]
             try:
                 await self._send(item)
-            except (SessionEventConflict, UnknownAcpSession) as exc:
-                self._stop(
-                    item.session_id, FORKED if isinstance(exc, SessionEventConflict) else UNKEPT
-                )
+            except (SessionEventConflict, UnknownAcpSession, AcpSessionLimitReached) as exc:
+                self._stop(item.session_id, self._why(exc))
                 continue
             except VibeyError:
                 return  # the hub is away: kept, and sent again from here by the next flush
@@ -150,6 +170,19 @@ class AcpSessionJournal:
             await self._hub.create_session(item.session_id, item.cwd)
         else:
             await self._hub.append_event(item.session_id, item.seq, item.kind, item.payload)
+
+    def _granted(self, session_id: str) -> bool:
+        """Whether the hub lets the agent principal keep sessions; said once when it does not."""
+        if HubScope.ACP_SESSIONS in self._hub.agent_scopes():
+            return True
+        self._notice(session_id, UNGRANTED)
+        return False
+
+    @staticmethod
+    def _why(error: VibeyError) -> str:
+        if isinstance(error, SessionEventConflict):
+            return FORKED
+        return FULL if isinstance(error, AcpSessionLimitReached) else UNKEPT
 
     def _start(self, session_id: str, last_seq: int) -> None:
         self._open.add(session_id)

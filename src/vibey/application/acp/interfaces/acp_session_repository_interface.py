@@ -19,15 +19,19 @@ if TYPE_CHECKING:
 
 @runtime_checkable
 class AcpSessionRepositoryInterface(Protocol):
-    async def create(self, session_id: str, cwd: str, created_by: str) -> None:
-        """Keep a session; a second create of the same id changes nothing (idempotent)."""
+    async def create(self, session_id: str, cwd: str, created_by: str, *, limit: int) -> bool:
+        """Keep a session while `created_by` holds fewer than `limit`. True when it was kept
+        now; False when it was not -- the id was already kept (a second create changes
+        nothing), or `created_by` already holds `limit` sessions."""
         ...
 
     async def append(
-        self, session_id: str, seq: int, kind: str, payload: Mapping[str, Any]
+        self, session_id: str, seq: int, kind: str, payload: Mapping[str, Any], *, limit: int
     ) -> bool:
-        """Append one event. True when it was written, or when the same event is already
-        there (a replay); `SessionEventConflict` when another event holds that `seq`."""
+        """Append one event while the session holds fewer than `limit`. True when it was
+        written, or when the same event is already there (a replay); `SessionEventConflict`
+        when another event holds that `seq`; `AcpSessionLimitReached` when the session is full.
+        Nothing already kept is ever dropped or changed."""
         ...
 
     async def events_after(

@@ -14,7 +14,8 @@ reading as a connection problem; `healthy`, which never raises, logs it and answ
 
 An ACP session's log goes through the hub's `/api/v1/acp/sessions` routes. A 403 or 404 there
 is `UnknownAcpSession` (the hub answers a session that is not the agent's, or not under that
-folder, as it answers one that does not exist), a 409 `SessionEventConflict`, and a 422 on a list
+folder, as it answers one that does not exist), a 409 `SessionEventConflict`, a 507 `AcpSessionLimitReached` (`[acp] sessions_max` or
+`session_events_max` reached), and a 422 on a list
 `InvalidSessionCursor`; anything else refused is a `HubGatewayError` as elsewhere.
 
 Declared by `application/acp/interfaces/acp_hub_port_interface.py::AcpHubPortInterface`.
@@ -40,6 +41,7 @@ from vibey.application.acp.dto import (
 from vibey.domain.acp.session_log import (
     SESSION_ID_SHAPE,
     SESSION_PAGE,
+    AcpSessionLimitReached,
     InvalidSessionCursor,
     SessionEventConflict,
     UnknownAcpSession,
@@ -229,6 +231,8 @@ class AcpHubClient:
             raise UnknownAcpSession("the hub keeps no such session for vibey's agent principal")
         if response.status_code == 409:
             raise SessionEventConflict(f"the hub refused it as a conflict: {response.text}")
+        if response.status_code == 507:
+            raise AcpSessionLimitReached(f"the hub keeps no more: {response.text}")
         return cls._accepted(response)
 
     @classmethod

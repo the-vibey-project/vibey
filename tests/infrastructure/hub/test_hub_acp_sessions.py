@@ -18,7 +18,7 @@ from fastapi import FastAPI
 from vibey.application.acp.acp_session_service import AcpSessionService
 from vibey.application.acp.dto import SessionEvent, SessionRecord
 from vibey.application.dto import HubPrincipal
-from vibey.domain.acp.session_log import SessionEventConflict
+from vibey.domain.acp.session_log import AcpSessionLimitReached, SessionEventConflict
 from vibey.domain.hub_binding import HUB_BINDING
 from vibey.domain.hub_scope import AGENT_DEFAULT_SCOPES, HUB_SCOPES, HubScope
 from vibey.infrastructure.hub.app import HubAppFactory
@@ -47,16 +47,22 @@ class Repository:
         self.sessions: dict[str, tuple[str, str]] = {}
         self.logs: dict[str, dict[int, tuple[str, dict[str, Any]]]] = {}
 
-    async def create(self, session_id: str, cwd: str, created_by: str) -> None:
-        self.sessions.setdefault(session_id, (created_by, cwd))
-        self.logs.setdefault(session_id, {})
+    async def create(self, session_id: str, cwd: str, created_by: str, *, limit: int) -> bool:
+        held = sum(1 for owner, _ in self.sessions.values() if owner == created_by)
+        if session_id in self.sessions or held >= limit:
+            return False
+        self.sessions[session_id] = (created_by, cwd)
+        self.logs[session_id] = {}
+        return True
 
     async def append(
-        self, session_id: str, seq: int, kind: str, payload: Mapping[str, Any]
+        self, session_id: str, seq: int, kind: str, payload: Mapping[str, Any], *, limit: int
     ) -> bool:
         log = self.logs[session_id]
         if seq in log and log[seq] != (kind, dict(payload)):
             raise SessionEventConflict(f"session {session_id} already holds seq {seq}")
+        if seq not in log and len(log) >= limit:
+            raise AcpSessionLimitReached(f"session {session_id} holds all the hub keeps")
         log[seq] = (kind, dict(payload))
         return True
 
@@ -104,6 +110,13 @@ class Blind:
         return HubPrincipal(name="agent", scopes=frozenset({HubScope.ANSWER}))
 
 
+class Viewer:
+    """Names a read-only paired device: `view` and nothing else."""
+
+    async def authenticate(self, request: HubRequest) -> HubPrincipal | None:
+        return HubPrincipal(name="agent", scopes=frozenset({HubScope.VIEW}))
+
+
 class Quiet:
     async def start(self) -> None: ...
 
@@ -113,7 +126,9 @@ class Quiet:
         raise AssertionError
 
 
-def _app(*, sessions: bool = True, authenticator: Any = None) -> tuple[FastAPI, Repository]:
+def _app(
+    *, sessions: bool = True, authenticator: Any = None, **caps: int
+) -> tuple[FastAPI, Repository]:
     repository = Repository()
 
     async def ready() -> bool:
@@ -131,7 +146,7 @@ def _app(*, sessions: bool = True, authenticator: Any = None) -> tuple[FastAPI, 
         allowed_hosts=HUB_BINDING.allowed_hosts(8765, frozenset()),
         ready=ready,
         live=Quiet(),  # type: ignore[arg-type]
-        acp_sessions=AcpSessionService(repository, HUB_SCOPES) if sessions else None,
+        acp_sessions=AcpSessionService(repository, HUB_SCOPES, **caps) if sessions else None,
     )
     return app, repository
 
@@ -240,7 +255,39 @@ async def test_a_principal_without_view_is_refused() -> None:
     app, _ = _app(authenticator=Blind())
     async with _client(app) as client:
         answer = await client.get(ROUTE, headers=AGENT)
-    assert answer.status_code == 403 and "may not keep ACP sessions" in answer.json()["detail"]
+    assert answer.status_code == 403 and "may not read ACP sessions" in answer.json()["detail"]
+
+
+async def test_a_read_only_device_may_read_but_never_create_or_append() -> None:
+    """`view` is a read: a paired device holding only it never makes the hub keep anything."""
+    app, repository = _app(authenticator=Viewer())
+    await repository.create(SID, "/work", "agent", limit=9)
+    async with _client(app) as client:
+        created = await client.post(ROUTE, headers=AGENT, json={"session_id": OTHER, "cwd": "/w"})
+        appended = await client.post(
+            f"{ROUTE}/{SID}/events",
+            headers=AGENT,
+            json={"seq": 1, "kind": "agent_message", "payload": {"text": "forged"}},
+        )
+        listed = await client.get(ROUTE, headers=AGENT)
+        read = await client.get(f"{ROUTE}/{SID}/events", headers=AGENT)
+    assert [created.status_code, appended.status_code] == [403, 403]
+    assert "may not keep ACP sessions" in created.json()["detail"]
+    assert [listed.status_code, read.status_code] == [200, 200]
+    assert set(repository.sessions) == {SID} and repository.logs[SID] == {}
+
+
+async def test_past_the_caps_a_write_is_507_and_nothing_kept_changes() -> None:
+    app, repository = _app(sessions_max=1, session_events_max=1)
+    async with _client(app) as client:
+        await client.post(ROUTE, headers=AGENT, json={"session_id": SID, "cwd": "/work"})
+        second = await client.post(ROUTE, headers=AGENT, json={"session_id": OTHER, "cwd": "/w"})
+        event = {"seq": 1, "kind": "plan", "payload": {}}
+        first = await client.post(f"{ROUTE}/{SID}/events", headers=AGENT, json=event)
+        full = await client.post(f"{ROUTE}/{SID}/events", headers=AGENT, json={**event, "seq": 2})
+    assert (first.status_code, second.status_code, full.status_code) == (200, 507, 507)
+    assert "sessions_max" in second.json()["detail"]
+    assert set(repository.sessions) == {SID} and repository.logs[SID] == {1: ("plan", {})}
 
 
 async def test_a_request_that_proves_nothing_is_refused() -> None:

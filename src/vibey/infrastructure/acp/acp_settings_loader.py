@@ -165,3 +165,7 @@ class AcpSettingsLoader:
         if key == "modes" and not items:
             raise ConfigError(source, f"[acp] {key} must not be empty")
         return items
+
+
+ACP_SETTINGS: Final = AcpSettingsLoader()
+"""The loader `vibey serve` reads `[acp] sessions_max` and `session_events_max` with."""

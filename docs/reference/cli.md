@@ -356,6 +356,14 @@ close. Live ledger messages and plans are not kept: they are re-read from the le
 call's input is not kept, and text past about 48 KiB of JSON is cut, ending in "...". The log
 is append-only, like the ledger.
 
+Keeping a session needs the hub to grant the agent principal `acp_sessions` (in the default
+[`[hub] agent_scopes`](configuration.md#hub)); it is not a run-class action, so an `observe`
+session keeps its record as a `drive` one does. Without the grant every prompt still works, and
+the session's history stays in this window only: you are told once ("Session history"). The
+hub keeps at most [`[acp] sessions_max`](configuration.md#acp) sessions for the agent principal
+and [`session_events_max`](configuration.md#acp) events per session; past either, the history
+from there on is not kept, you are told once, and nothing already kept changes.
+
 The log is written behind the session and in order, so the hub being away never slows a turn:
 what is queued is sent after each turn and each switch, from where the last send stopped. At
 most [`[acp] pending_events_max`](configuration.md#acp) events wait; past that the oldest is

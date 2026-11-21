@@ -69,6 +69,7 @@ from vibey.cli.loops import LOOPS, LOOPS_PRESENTER
 from vibey.cli.projects import PROJECTS_PRESENTER
 from vibey.cli.queue import QUEUE_PRESENTER
 from vibey.cli.status import STATUS_PRESENTER
+from vibey.domain.acp.settings import AcpSettings
 from vibey.domain.config import ConfigError
 from vibey.domain.hub_binding import HUB_BINDING, UndeclaredExposure
 from vibey.domain.hub_scope import HUB_SCOPES
@@ -78,6 +79,10 @@ from vibey.domain.interfaces.queue_priority_interface import PriorityChangeInter
 from vibey.domain.interfaces.run_ownership_interface import RunOwnershipInterface
 from vibey.domain.ledger import LedgerEvent
 from vibey.domain.run_ownership import RunOwnership
+from vibey.infrastructure.acp.acp_settings_loader import ACP_SETTINGS
+from vibey.infrastructure.acp.interfaces.acp_settings_loader_interface import (
+    AcpSettingsLoaderInterface,
+)
 from vibey.infrastructure.db.acp_session_repository import PostgresAcpSessionRepository
 from vibey.infrastructure.db.engine_health_repository import PostgresEngineHealthRepository
 from vibey.infrastructure.db.ledger_search_repository import PostgresLedgerSearchRepository
@@ -328,10 +333,17 @@ class ServeCommand:
         advertiser: MdnsAdvertiserInterface | None = None,
         pairing_ledger: Callable[[asyncpg.Pool], PairingLedgerInterface] = (PostgresPairingLedger),
         lock: Callable[[Path], ServeLockInterface] = ServeLock,
-        acp_sessions: Callable[[asyncpg.Pool], AcpSessionServiceInterface] = (
-            lambda pool: AcpSessionService(PostgresAcpSessionRepository(pool), HUB_SCOPES)
+        acp_sessions: Callable[[asyncpg.Pool, AcpSettings], AcpSessionServiceInterface] = (
+            lambda pool, acp: AcpSessionService(
+                PostgresAcpSessionRepository(pool),
+                HUB_SCOPES,
+                sessions_max=acp.sessions_max,
+                session_events_max=acp.session_events_max,
+            )
         ),
+        acp_settings: AcpSettingsLoaderInterface = ACP_SETTINGS,
     ) -> None:
+        self._acp_settings = acp_settings
         self._lock = lock
         self._acp_sessions = acp_sessions
         self._devices = devices
@@ -366,6 +378,9 @@ class ServeCommand:
     async def run(self, *, host: str | None, port: int | None) -> None:
         try:
             settings = self._settings.load(self._config_path())
+            # `[acp] sessions_max` and `session_events_max` bound what the hub keeps of ACP
+            # sessions, so a table the hub cannot read stops it here, as `[hub]` does.
+            acp = self._acp_settings.load(self._config_path())
             bound = self._binding.resolve(host, lan_declared=settings.lan)
         except (ConfigError, UndeclaredExposure) as exc:
             typer.echo(str(exc), err=True)
@@ -384,11 +399,13 @@ class ServeCommand:
             )
             raise typer.Exit(1)
         try:
-            await self._serve(settings, bound, listen)
+            await self._serve(settings, bound, listen, acp)
         finally:
             lock.release()
 
-    async def _serve(self, settings: HubSettings, bound: str, listen: int) -> None:
+    async def _serve(
+        self, settings: HubSettings, bound: str, listen: int, acp: AcpSettings
+    ) -> None:
         store = LocalTokenStore(settings.state_dir)
         try:
             token = store.token()
@@ -457,7 +474,7 @@ class ServeCommand:
                 pairing=pairing,
                 workflows=self.workflows(os.environ),
                 runs=runs,
-                acp_sessions=self._acp_sessions(resources.ledger._pool),
+                acp_sessions=self._acp_sessions(resources.ledger._pool, acp),
             )
             scheme = "https" if tls is not None else "http"
             typer.echo(f"vibey hub on {scheme}://{self._shown(bound)}:{listen}/api/v1")

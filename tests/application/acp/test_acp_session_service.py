@@ -19,13 +19,23 @@ from vibey.application.acp.interfaces.acp_session_service_interface import (
     AcpSessionServiceInterface,
 )
 from vibey.application.dto import HubPrincipal
-from vibey.domain.acp.session_log import InvalidSessionCursor, SessionEventConflict
+from vibey.domain.acp.session_log import (
+    AcpSessionLimitReached,
+    InvalidSessionCursor,
+    SessionEventConflict,
+)
 from vibey.domain.hub_scope import HUB_SCOPES, HubForbidden, HubScope
 
-AGENT = HubPrincipal(name="agent", scopes=frozenset({HubScope.VIEW, HubScope.ANSWER}))
-PHONE = HubPrincipal(name="phone", scopes=frozenset({HubScope.VIEW}))
+AGENT = HubPrincipal(
+    name="agent", scopes=frozenset({HubScope.VIEW, HubScope.ANSWER, HubScope.ACP_SESSIONS})
+)
+PHONE = HubPrincipal(name="phone", scopes=frozenset({HubScope.VIEW, HubScope.ACP_SESSIONS}))
+VIEWER = HubPrincipal(name="viewer", scopes=frozenset({HubScope.VIEW}))
+"""A read-only paired device: it may look, never write."""
 BLIND = HubPrincipal(name="blind", scopes=frozenset({HubScope.ANSWER, HubScope.RUN}))
 SID = "0f6f4c1e-8d6b-4f0e-9a51-6b1f3f1f9a01"
+OTHER = "0f6f4c1e-8d6b-4f0e-9a51-6b1f3f1f9a02"
+THIRD = "0f6f4c1e-8d6b-4f0e-9a51-6b1f3f1f9a03"
 NOW = datetime(2026, 11, 21, 12, 0, tzinfo=UTC)
 
 
@@ -38,16 +48,24 @@ class Repository:
         self.listed: list[tuple[str, str | None, tuple[datetime, str] | None, int]] = []
         self.records: tuple[SessionRecord, ...] = ()
 
-    async def create(self, session_id: str, cwd: str, created_by: str) -> None:
-        self.sessions.setdefault(session_id, (created_by, cwd))
-        self.logs.setdefault(session_id, {})
+    async def create(self, session_id: str, cwd: str, created_by: str, *, limit: int) -> bool:
+        held = sum(1 for owner, _ in self.sessions.values() if owner == created_by)
+        if session_id in self.sessions or held >= limit:
+            return False
+        self.sessions[session_id] = (created_by, cwd)
+        self.logs[session_id] = {}
+        return True
 
     async def append(
-        self, session_id: str, seq: int, kind: str, payload: Mapping[str, Any]
+        self, session_id: str, seq: int, kind: str, payload: Mapping[str, Any], *, limit: int
     ) -> bool:
         log = self.logs[session_id]
-        if seq in log and log[seq] != (kind, dict(payload)):
-            raise SessionEventConflict(f"seq {seq} is taken")
+        if seq in log:
+            if log[seq] != (kind, dict(payload)):
+                raise SessionEventConflict(f"seq {seq} is taken")
+            return True
+        if len(log) >= limit:
+            raise AcpSessionLimitReached(f"session {session_id} is full")
         log[seq] = (kind, dict(payload))
         return True
 
@@ -72,9 +90,9 @@ class Repository:
         return self.sessions.get(session_id)
 
 
-def _service() -> tuple[AcpSessionService, Repository]:
+def _service(**caps: int) -> tuple[AcpSessionService, Repository]:
     repository = Repository()
-    return AcpSessionService(repository, HUB_SCOPES), repository
+    return AcpSessionService(repository, HUB_SCOPES, **caps), repository
 
 
 def test_the_service_meets_its_declared_seam() -> None:
@@ -133,19 +151,59 @@ async def test_appending_to_a_session_never_created_is_refused() -> None:
     assert repository.logs == {}
 
 
-async def test_a_principal_without_view_is_refused_everything_before_any_read() -> None:
+async def test_a_principal_without_view_or_acp_sessions_is_refused_before_any_read() -> None:
     service, repository = _service()
-    await repository.create(SID, "/work", "blind")
+    await repository.create(SID, "/work", "blind", limit=9)
     calls = [
-        service.create(BLIND, SID, "/work"),
-        service.append(BLIND, SID, 1, "plan", {}),
-        service.events(BLIND, SID, after=0, limit=1, cwd=None),
-        service.list(BLIND, cwd=None, cursor=None, limit=1),
+        (service.create(BLIND, SID, "/work"), "may not keep ACP sessions"),
+        (service.append(BLIND, SID, 1, "plan", {}), "may not keep ACP sessions"),
+        (service.events(BLIND, SID, after=0, limit=1, cwd=None), "may not read ACP sessions"),
+        (service.list(BLIND, cwd=None, cursor=None, limit=1), "may not read ACP sessions"),
     ]
-    for call in calls:
-        with pytest.raises(HubForbidden, match="may not keep ACP sessions"):
+    for call, refusal in calls:
+        with pytest.raises(HubForbidden, match=refusal):
             await call
     assert repository.listed == [] and repository.logs[SID] == {}
+
+
+async def test_a_read_only_device_may_look_but_never_create_or_append() -> None:
+    """`view` alone is a read: it never makes the hub keep anything (security review)."""
+    service, repository = _service()
+    with pytest.raises(HubForbidden, match="may not keep ACP sessions"):
+        await service.create(VIEWER, SID, "/work")
+    await repository.create(SID, "/work", "viewer", limit=9)
+    with pytest.raises(HubForbidden, match="may not keep ACP sessions"):
+        await service.append(VIEWER, SID, 1, "agent_message", {"text": "x"})
+    assert await service.events(VIEWER, SID, after=0, limit=9, cwd=None) == ()
+    assert await service.list(VIEWER, cwd=None, cursor=None, limit=9) == ((), None)
+    assert repository.logs[SID] == {}
+
+
+async def test_past_sessions_max_a_new_session_is_refused_and_nothing_kept_changes() -> None:
+    service, repository = _service(sessions_max=2)
+    await service.create(AGENT, SID, "/work")
+    await service.create(AGENT, OTHER, "/work")
+    with pytest.raises(AcpSessionLimitReached, match=r"sessions_max"):
+        await service.create(AGENT, THIRD, "/work")
+    await service.create(AGENT, SID, "/work")  # one already kept: still a no-op at the cap
+    await service.create(PHONE, THIRD, "/work")  # the cap is each principal's own
+    assert set(repository.sessions) == {SID, OTHER, THIRD}
+    assert repository.sessions[THIRD] == ("phone", "/work")
+
+
+async def test_past_session_events_max_an_append_is_refused_and_nothing_kept_changes() -> None:
+    service, repository = _service(session_events_max=2)
+    await service.create(AGENT, SID, "/work")
+    await service.append(AGENT, SID, 1, "user_message", {"text": "a"})
+    await service.append(AGENT, SID, 2, "agent_message", {"text": "b"})
+    with pytest.raises(AcpSessionLimitReached):
+        await service.append(AGENT, SID, 3, "closed", {})
+    # A resend of what is kept is still answered as stored.
+    assert await service.append(AGENT, SID, 2, "agent_message", {"text": "b"}) is True
+    assert repository.logs[SID] == {
+        1: ("user_message", {"text": "a"}),
+        2: ("agent_message", {"text": "b"}),
+    }
 
 
 async def test_a_conflicting_append_is_refused_and_nothing_is_overwritten() -> None:

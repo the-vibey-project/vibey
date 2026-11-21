@@ -30,6 +30,8 @@ INTEGER_MINIMA: Final[Mapping[str, int]] = {
     "live_message_chars": 40,
     "max_message_bytes": 65_536,
     "pending_events_max": 1,
+    "sessions_max": 1,
+    "session_events_max": 1,
 }
 """The least each integer key may be."""
 FLOAT_MINIMA: Final[Mapping[str, float]] = {
@@ -67,6 +69,10 @@ class AcpSettings:
     cancel_grace_seconds: float = 2.0
     max_message_bytes: int = 16_777_216
     pending_events_max: int = 1000
+    sessions_max: int = 1000
+    """The most ACP sessions the hub keeps for one principal; past it a new one is refused."""
+    session_events_max: int = 100_000
+    """The most events the hub keeps in one session's log; past it an append is refused."""
 
     def __post_init__(self) -> None:
         for key, choices in (

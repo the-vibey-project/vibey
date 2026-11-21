@@ -23,10 +23,12 @@ from acp_fakes import FakeChannel, FakeHub, build_agent, text, until
 
 from tests.domain.acp.acp_wire import assert_wire_exact
 from vibey.application.acp.acp_agent import AcpAgent
+from vibey.application.acp.acp_session_journal import UNGRANTED
 from vibey.application.acp.dto import AcpSessionContext, HubTurn, SessionEvent, SessionRecord
 from vibey.domain.acp.protocol import RESOURCE_NOT_FOUND
 from vibey.domain.acp.session_log import InvalidSessionCursor, UnknownAcpSession
 from vibey.domain.acp.settings import AcpSettings
+from vibey.domain.hub_scope import HubScope
 from vibey.domain.jsonrpc_errors import INTERNAL_ERROR, INVALID_PARAMS, RpcError
 from vibey.infrastructure.mcp.hub_gateway import HubGatewayError
 
@@ -390,6 +392,31 @@ async def test_a_prompt_with_no_text_keeps_no_title() -> None:
     await agent.close()
     kinds = [kind for _, kind, _ in hub.log(SID)]
     assert "title" not in kinds and kinds[0] == "user_message"
+
+
+async def test_an_observe_session_still_keeps_its_own_record() -> None:
+    """Keeping the conversation's record is not a run-class action: observe keeps it too."""
+    agent, _, hub = _agent(feed=SpyFeed(), settings=AcpSettings(default_mode="observe"))
+    await agent.handle_request("session/new", {"cwd": "/work", "mcpServers": []})
+    await agent.handle_request("session/prompt", {"sessionId": SID, "prompt": [text("/status")]})
+    await agent.close()
+    kinds = [kind for _, kind, _ in hub.log(SID)]
+    assert kinds[:2] == ["title", "user_message"] and "agent_message" in kinds
+
+
+async def test_without_the_grant_prompts_work_and_the_session_is_kept_in_memory() -> None:
+    hub = FakeHub(scopes=frozenset({HubScope.VIEW, HubScope.ANSWER, HubScope.RUN}))
+    agent, channel, _ = _agent(hub=hub, feed=SpyFeed())
+    await agent.handle_request("session/new", {"cwd": "/work", "mcpServers": []})
+    result = await agent.handle_request(
+        "session/prompt", {"sessionId": SID, "prompt": [text("hello")]}
+    )
+    await agent.close()
+    assert result == {"stopReason": "end_turn"}
+    assert hub.kept == {} and hub.session_calls == []
+    assert [said for said in channel.said if said.startswith("Session history")] == [
+        f"Session history: {UNGRANTED}"
+    ]
 
 
 # -- close ----------------------------------------------------------------------------------

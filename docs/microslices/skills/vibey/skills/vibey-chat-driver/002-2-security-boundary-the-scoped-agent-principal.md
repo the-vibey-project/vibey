@@ -10,7 +10,7 @@ links: ["skill-3-operator-workflow-in-chat-b1e30cb405"]
 
 When a host LLM calls `vibey mcp`, it authenticates with `<state_dir>/agent.token`, **never** the host's owner token. The hub assigns `HubPrincipal(name="agent")` bounded by `[hub] agent_scopes` in `vibey.toml`:
 
-- **Default ceiling:** `["view", "answer", "run"]`
+- **Default ceiling:** `["view", "answer", "run", "acp_sessions"]` (`acp_sessions` only keeps the agent's own ACP session logs)
 - **Never granted to the agent principal:** `spend`, `bump`, `workflows`
 
 Consequences for your workflow:

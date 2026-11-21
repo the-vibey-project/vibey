@@ -23,19 +23,27 @@ from typing import Any, Final
 import asyncpg
 
 from vibey.application.acp.dto import SessionEvent, SessionRecord
-from vibey.domain.acp.session_log import SessionEventConflict
+from vibey.domain.acp.session_log import AcpSessionLimitReached, SessionEventConflict
 
+# Kept only while the principal holds fewer than `$4` sessions. The count is read from the
+# statement's snapshot, so appends racing in other connections can pass the cap by as many as
+# race; one `vibey acp` sends one write at a time.
 _CREATE: Final = """
-INSERT INTO acp_session (session_id, cwd, created_by) VALUES ($1, $2, $3)
+INSERT INTO acp_session (session_id, cwd, created_by)
+SELECT $1, $2, $3
+WHERE (SELECT count(*) FROM acp_session WHERE created_by = $3) < $4
 ON CONFLICT (session_id) DO NOTHING
+RETURNING 1
 """
 
 # The outer SELECT reads the snapshot from before the insert, so `same` sees only a row that
-# was already there.
+# was already there. An event is written only while the session holds fewer than `$5`, counted
+# in the same snapshot (as `_CREATE`, racing writers can pass the cap by as many as race).
 _APPEND: Final = """
 WITH inserted AS (
     INSERT INTO acp_session_event (session_id, seq, kind, payload)
-    VALUES ($1, $2, $3, $4::jsonb)
+    SELECT $1, $2, $3, $4::jsonb
+    WHERE (SELECT count(*) FROM acp_session_event WHERE session_id = $1) < $5
     ON CONFLICT (session_id, seq) DO NOTHING
     RETURNING 1
 )
@@ -47,9 +55,10 @@ SELECT EXISTS (SELECT 1 FROM inserted) AS inserted,
 """
 
 # Read again, in a statement of its own, only when the append found neither: a concurrent
-# identical append that committed after the first statement's snapshot is seen here.
+# identical append that committed after the first statement's snapshot is seen here, a
+# different event at the seq is a conflict, and no event there means the cap refused it.
 _SAME: Final = """
-SELECT kind = $3 AND payload = $4::jsonb FROM acp_session_event
+SELECT kind = $3 AND payload = $4::jsonb AS same FROM acp_session_event
 WHERE session_id = $1 AND seq = $2
 """
 
@@ -95,20 +104,25 @@ class PostgresAcpSessionRepository:
     def __init__(self, pool: asyncpg.Pool) -> None:
         self._pool = pool
 
-    async def create(self, session_id: str, cwd: str, created_by: str) -> None:
+    async def create(self, session_id: str, cwd: str, created_by: str, *, limit: int) -> bool:
         async with self._pool.acquire() as conn:
-            await conn.execute(_CREATE, session_id, cwd, created_by)
+            return await conn.fetchval(_CREATE, session_id, cwd, created_by, limit) is not None
 
     async def append(
-        self, session_id: str, seq: int, kind: str, payload: Mapping[str, Any]
+        self, session_id: str, seq: int, kind: str, payload: Mapping[str, Any], *, limit: int
     ) -> bool:
         document = json.dumps(dict(payload))
         async with self._pool.acquire() as conn:
-            row = await conn.fetchrow(_APPEND, session_id, seq, kind, document)
-            stored = row is not None and (row["inserted"] or row["same"])
-            if not stored:
-                stored = bool(await conn.fetchval(_SAME, session_id, seq, kind, document))
-        if not stored:
+            row = await conn.fetchrow(_APPEND, session_id, seq, kind, document, limit)
+            if row is not None and (row["inserted"] or row["same"]):
+                return True
+            held = await conn.fetchrow(_SAME, session_id, seq, kind, document)
+        if held is None:
+            raise AcpSessionLimitReached(
+                f"session {session_id} holds the most events the hub keeps for one session "
+                f"({limit}, [acp] session_events_max); nothing kept was changed"
+            )
+        if not held["same"]:
             raise SessionEventConflict(
                 f"session {session_id} already holds another event at seq {seq}"
             )

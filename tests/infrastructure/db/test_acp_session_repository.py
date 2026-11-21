@@ -16,12 +16,15 @@ import pytest
 from vibey.application.acp.interfaces.acp_session_repository_interface import (
     AcpSessionRepositoryInterface,
 )
-from vibey.domain.acp.session_log import SessionEventConflict
+from vibey.domain.acp.session_log import AcpSessionLimitReached, SessionEventConflict
 from vibey.infrastructure.db.acp_session_repository import PostgresAcpSessionRepository
 
 S1 = "00000000-0000-4000-8000-000000000001"
 S2 = "00000000-0000-4000-8000-000000000002"
 REFUSED = "append-only"
+
+LIMIT = 1000
+"""A cap no test here reaches, except where a test says otherwise."""
 
 
 def _sid(n: int) -> str:
@@ -37,18 +40,20 @@ async def test_create_is_idempotent_and_owner_names_creator_and_folder(
 ) -> None:
     repo = PostgresAcpSessionRepository(migrated_pool)
     assert await repo.owner(S1) is None
-    await repo.create(S1, "/work/a", "agent")
-    await repo.create(S1, "/work/other", "device")  # a second create changes nothing
+    await repo.create(S1, "/work/a", "agent", limit=LIMIT)
+    await repo.create(S1, "/work/other", "device", limit=LIMIT)  # a second create changes nothing
     assert await repo.owner(S1) == ("agent", "/work/a")
 
 
 async def test_append_is_idempotent_for_an_identical_replay(migrated_pool: asyncpg.Pool) -> None:
     repo = PostgresAcpSessionRepository(migrated_pool)
-    await repo.create(S1, "/work", "agent")
+    await repo.create(S1, "/work", "agent", limit=LIMIT)
     payload = {"text": "hi", "nested": {"b": 2, "a": 1}}
-    assert await repo.append(S1, 1, "user_message", payload) is True
+    assert await repo.append(S1, 1, "user_message", payload, limit=LIMIT) is True
     # The same event again, its keys in another order: answered as stored, written once.
-    assert await repo.append(S1, 1, "user_message", {"nested": {"a": 1, "b": 2}, "text": "hi"})
+    assert await repo.append(
+        S1, 1, "user_message", {"nested": {"a": 1, "b": 2}, "text": "hi"}, limit=LIMIT
+    )
     events = await repo.events_after(S1, 0, 10)
     assert [(e.seq, e.kind, dict(e.payload)) for e in events] == [(1, "user_message", payload)]
 
@@ -61,10 +66,10 @@ async def test_append_conflicting_payload_raises(
     migrated_pool: asyncpg.Pool, kind: str, payload: dict[str, str]
 ) -> None:
     repo = PostgresAcpSessionRepository(migrated_pool)
-    await repo.create(S1, "/work", "agent")
-    await repo.append(S1, 1, "user_message", {"text": "hi"})
+    await repo.create(S1, "/work", "agent", limit=LIMIT)
+    await repo.append(S1, 1, "user_message", {"text": "hi"}, limit=LIMIT)
     with pytest.raises(SessionEventConflict, match="seq 1"):
-        await repo.append(S1, 1, kind, payload)
+        await repo.append(S1, 1, kind, payload, limit=LIMIT)
     assert [dict(e.payload) for e in await repo.events_after(S1, 0, 10)] == [{"text": "hi"}]
 
 
@@ -73,7 +78,7 @@ async def test_a_concurrent_identical_append_is_answered_as_stored(
 ) -> None:
     """The second statement sees a row the first statement's snapshot could not."""
     repo = PostgresAcpSessionRepository(migrated_pool)
-    await repo.create(S1, "/work", "agent")
+    await repo.create(S1, "/work", "agent", limit=LIMIT)
     held = await migrated_pool.acquire()
     try:
         transaction = held.transaction()
@@ -83,8 +88,14 @@ async def test_a_concurrent_identical_append_is_answered_as_stored(
             "VALUES ($1, 1, 'plan', '{\"entries\": []}')",
             S1,
         )
-        racing = asyncio.create_task(repo.append(S1, 1, "plan", {"entries": []}))
-        await asyncio.sleep(0.2)  # the racing insert now waits on the held row
+        racing = asyncio.create_task(repo.append(S1, 1, "plan", {"entries": []}, limit=LIMIT))
+        # Wait, without the real clock, until the racing insert waits on the held row.
+        async with migrated_pool.acquire() as watcher:
+            while not await watcher.fetchval(
+                "SELECT count(*) > 0 FROM pg_stat_activity "
+                "WHERE wait_event_type = 'Lock' AND datname = current_database()"
+            ):
+                await asyncio.sleep(0)
         await transaction.commit()
         assert await racing is True
     finally:
@@ -94,21 +105,21 @@ async def test_a_concurrent_identical_append_is_answered_as_stored(
 async def test_an_event_needs_its_session_and_a_known_kind(migrated_pool: asyncpg.Pool) -> None:
     repo = PostgresAcpSessionRepository(migrated_pool)
     with pytest.raises(asyncpg.ForeignKeyViolationError):
-        await repo.append(S1, 1, "plan", {})
-    await repo.create(S1, "/work", "agent")
+        await repo.append(S1, 1, "plan", {}, limit=LIMIT)
+    await repo.create(S1, "/work", "agent", limit=LIMIT)
     with pytest.raises(asyncpg.CheckViolationError):
-        await repo.append(S1, 1, "request_permission", {})
+        await repo.append(S1, 1, "request_permission", {}, limit=LIMIT)
     with pytest.raises(asyncpg.CheckViolationError):
-        await repo.append(S1, 0, "plan", {})
+        await repo.append(S1, 0, "plan", {}, limit=LIMIT)
 
 
 async def test_events_after_reads_in_seq_order_from_the_watermark(
     migrated_pool: asyncpg.Pool,
 ) -> None:
     repo = PostgresAcpSessionRepository(migrated_pool)
-    await repo.create(S1, "/work", "agent")
+    await repo.create(S1, "/work", "agent", limit=LIMIT)
     for seq in (3, 1, 2, 4):
-        await repo.append(S1, seq, "agent_message", {"text": str(seq)})
+        await repo.append(S1, seq, "agent_message", {"text": str(seq)}, limit=LIMIT)
     assert [e.seq for e in await repo.events_after(S1, 1, 2)] == [2, 3]
     assert [e.seq for e in await repo.events_after(S1, 0, 10)] == [1, 2, 3, 4]
     assert await repo.events_after(S2, 0, 10) == ()
@@ -127,8 +138,8 @@ async def test_update_and_delete_are_refused_by_the_database(
     owner_pool: asyncpg.Pool, table: str, statement: str
 ) -> None:
     repo = PostgresAcpSessionRepository(owner_pool)
-    await repo.create(S1, "/work", "agent")
-    await repo.append(S1, 1, "user_message", {"text": "hi"})
+    await repo.create(S1, "/work", "agent", limit=LIMIT)
+    await repo.append(S1, 1, "user_message", {"text": "hi"}, limit=LIMIT)
     async with owner_pool.acquire() as conn:
         with pytest.raises(asyncpg.InsufficientPrivilegeError, match=REFUSED):
             await conn.execute(statement.format(t=table))
@@ -137,8 +148,8 @@ async def test_update_and_delete_are_refused_by_the_database(
 
 async def test_even_the_owner_cannot_rewrite_an_event(owner_pool: asyncpg.Pool) -> None:
     repo = PostgresAcpSessionRepository(owner_pool)
-    await repo.create(S1, "/work", "agent")
-    await repo.append(S1, 1, "user_message", {"text": "hi"})
+    await repo.create(S1, "/work", "agent", limit=LIMIT)
+    await repo.append(S1, 1, "user_message", {"text": "hi"}, limit=LIMIT)
     async with owner_pool.acquire() as conn:
         with pytest.raises(asyncpg.InsufficientPrivilegeError, match=REFUSED):
             await conn.execute("UPDATE acp_session_event SET kind = 'plan'")
@@ -195,10 +206,10 @@ async def test_list_is_newest_first_by_the_newest_event_and_says_title_and_close
     migrated_pool: asyncpg.Pool, owner_pool: asyncpg.Pool
 ) -> None:
     repo = PostgresAcpSessionRepository(migrated_pool)
-    await repo.create(S1, "/work", "agent")
-    await repo.create(S2, "/work", "agent")
-    await repo.append(S1, 1, "title", {"title": "first"})
-    await repo.append(S1, 2, "title", {"title": "second"})
+    await repo.create(S1, "/work", "agent", limit=LIMIT)
+    await repo.create(S2, "/work", "agent", limit=LIMIT)
+    await repo.append(S1, 1, "title", {"title": "first"}, limit=LIMIT)
+    await repo.append(S1, 2, "title", {"title": "second"}, limit=LIMIT)
     async with owner_pool.acquire() as conn:
         # S2 is older than S1's newest event, though it was created after S1.
         await conn.execute(
@@ -217,7 +228,7 @@ async def test_a_session_with_no_event_is_listed_by_when_it_was_created(
     migrated_pool: asyncpg.Pool,
 ) -> None:
     repo = PostgresAcpSessionRepository(migrated_pool)
-    await repo.create(S1, "/work", "agent")
+    await repo.create(S1, "/work", "agent", limit=LIMIT)
     (record,) = await repo.list("agent", cwd=None, cursor=None, limit=10)
     assert record.title is None and record.closed is False
     assert record.updated_at.tzinfo is not None
@@ -225,12 +236,43 @@ async def test_a_session_with_no_event_is_listed_by_when_it_was_created(
 
 async def test_list_is_scoped_to_the_creator(migrated_pool: asyncpg.Pool) -> None:
     repo = PostgresAcpSessionRepository(migrated_pool)
-    await repo.create(S1, "/work/a", "agent")
-    await repo.create(S2, "/work/b", "device")
-    await repo.create(_sid(3), "/work/b", "agent")
+    await repo.create(S1, "/work/a", "agent", limit=LIMIT)
+    await repo.create(S2, "/work/b", "device", limit=LIMIT)
+    await repo.create(_sid(3), "/work/b", "agent", limit=LIMIT)
     every = await repo.list("agent", cwd=None, cursor=None, limit=9)
     assert {r.session_id for r in every} == {S1, _sid(3)}
     mine = await repo.list("agent", cwd="/work/b", cursor=None, limit=9)
     assert [r.session_id for r in mine] == [_sid(3)]
     assert [r.session_id for r in await repo.list("device", cwd=None, cursor=None, limit=9)] == [S2]
     assert await repo.list("nobody", cwd=None, cursor=None, limit=9) == ()
+
+
+async def test_create_reports_whether_it_kept_the_session_and_stops_at_the_cap(
+    migrated_pool: asyncpg.Pool,
+) -> None:
+    repo = PostgresAcpSessionRepository(migrated_pool)
+    assert await repo.create(S1, "/work", "agent", limit=1) is True
+    assert await repo.create(S1, "/work", "agent", limit=1) is False  # already kept
+    assert await repo.create(S2, "/work", "agent", limit=1) is False  # the cap
+    assert await repo.create(S2, "/work", "device", limit=1) is True  # each principal's own
+    assert await repo.owner(S2) == ("device", "/work")
+
+
+async def test_past_the_event_cap_an_append_is_refused_and_nothing_kept_changes(
+    migrated_pool: asyncpg.Pool,
+) -> None:
+    repo = PostgresAcpSessionRepository(migrated_pool)
+    await repo.create(S1, "/work", "agent", limit=LIMIT)
+    await repo.append(S1, 1, "user_message", {"text": "a"}, limit=2)
+    await repo.append(S1, 2, "agent_message", {"text": "b"}, limit=2)
+    with pytest.raises(AcpSessionLimitReached, match="session_events_max"):
+        await repo.append(S1, 3, "closed", {}, limit=2)
+    # A resend of a kept event is still answered as stored, and a different one at a kept seq
+    # is still a conflict, never a cap.
+    assert await repo.append(S1, 2, "agent_message", {"text": "b"}, limit=2) is True
+    with pytest.raises(SessionEventConflict):
+        await repo.append(S1, 2, "agent_message", {"text": "c"}, limit=2)
+    assert [(e.seq, dict(e.payload)) for e in await repo.events_after(S1, 0, 10)] == [
+        (1, {"text": "a"}),
+        (2, {"text": "b"}),
+    ]

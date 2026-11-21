@@ -177,7 +177,7 @@ def _command(
 
 class _Gateway:
     def agent_scopes(self) -> frozenset[HubScope]:
-        return frozenset({HubScope.VIEW})
+        return frozenset({HubScope.VIEW, HubScope.ACP_SESSIONS})
 
     def call(self, call: HubCall) -> HubGatewayResponse:
         return HubGatewayResponse(status_code=200, text="{}", ok=True)

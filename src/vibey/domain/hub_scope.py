@@ -42,6 +42,9 @@ class HubScope(StrEnum):
     """Move a queued job to the front of its project's queue."""
     WORKFLOWS = "workflows"
     """Run a vibey command on the repository's GitHub-hosted runners (`vibey -w`, ADR-0085)."""
+    ACP_SESSIONS = "acp_sessions"
+    """Keep the principal's own ACP sessions on the hub: create one, append to its log (SP-ACP).
+    A write, so `view` is not enough; granted by default to the agent principal only."""
 
 
 class HubAction(StrEnum):
@@ -53,9 +56,11 @@ class HubAction(StrEnum):
     RUN_WORK = "run_work"
     BUMP_JOB = "bump_job"
     RUN_ON_WORKFLOWS = "run_on_workflows"
+    READ_ACP_SESSIONS = "read_acp_sessions"
+    """List the principal's own ACP sessions and read a session's log back (SP-ACP)."""
     RECORD_ACP_SESSION = "record_acp_session"
-    """Keep an ACP session's own log (SP-ACP): create it, append to it, list and read it back.
-    Only the principal that created a session reads or writes it."""
+    """Create an ACP session, or append to its log (a close is an append). Only the principal
+    that created a session reads or writes it."""
 
 
 REQUIRED_SCOPE: Final[dict[HubAction, HubScope]] = {
@@ -65,17 +70,20 @@ REQUIRED_SCOPE: Final[dict[HubAction, HubScope]] = {
     HubAction.RUN_WORK: HubScope.RUN,
     HubAction.BUMP_JOB: HubScope.BUMP,
     HubAction.RUN_ON_WORKFLOWS: HubScope.WORKFLOWS,
-    HubAction.RECORD_ACP_SESSION: HubScope.VIEW,
+    HubAction.READ_ACP_SESSIONS: HubScope.VIEW,
+    HubAction.RECORD_ACP_SESSION: HubScope.ACP_SESSIONS,
 }
 """The one scope each action needs. Total over `HubAction`; a test holds it so."""
 
 AGENT_DEFAULT_SCOPES: Final[frozenset[HubScope]] = frozenset(
-    {HubScope.VIEW, HubScope.ANSWER, HubScope.RUN}
+    {HubScope.VIEW, HubScope.ANSWER, HubScope.RUN, HubScope.ACP_SESSIONS}
 )
-"""What a host LLM driving vibey through MCP (ADR-0100) may do unless `[hub] agent_scopes` says
-otherwise: look, answer a gate that does not spend, and start, pause or unwind work. Never
-`spend`, `bump` or `workflows`: a model that has been argued out of its instructions must not
-be able to spend money by answering a budget gate, so the hub itself refuses it."""
+"""What a host LLM driving vibey through MCP (ADR-0100) or an editor over ACP may do unless
+`[hub] agent_scopes` says otherwise: look, answer a gate that does not spend, start, pause or
+unwind work, and keep its own ACP sessions' logs. Never `spend`, `bump` or `workflows`: a model
+that has been argued out of its instructions must not be able to spend money by answering a
+budget gate, so the hub itself refuses it. A paired device gets only what the host offers it,
+so `acp_sessions` is never a device's by default."""
 
 NEVER_FROM_THE_HUB: Final[frozenset[str]] = frozenset(
     {

@@ -88,8 +88,15 @@ carries them.
 
 `vibey acp` keeps each ACP session's history here (SP-ACP, migration 0023), because it holds
 no database credential. The routes exist only on a hub built with them (`vibey serve` always
-is). Each needs `view` (the `record_acp_session` action), and a session is read and written
-only by the principal that created it -- for `vibey acp`, the agent principal.
+is). Creating a session and appending to its log need `acp_sessions` (a write: `view` alone never
+makes the hub keep anything); listing and reading need `view`. A session is read and written
+only by the principal that created it -- for `vibey acp`, the agent principal, which holds
+`acp_sessions` by default; a paired device holds it only if the host offered it.
+
+What one principal can make the hub keep is bounded by `[acp] sessions_max` sessions and
+`[acp] session_events_max` events per session in the hub's `vibey.toml`
+([configuration](configuration.md#acp)). Past either, the write is refused with 507 and nothing
+already kept is dropped or changed.
 
 | Route | Body | Does |
 |---|---|---|
@@ -116,11 +123,12 @@ scopes the host granted it.
 
 | Scope | Permits |
 |---|---|
-| `view` | Every read above, and keeping the principal's own ACP sessions ([ACP sessions](#acp-sessions)). |
+| `view` | Every read above, including the principal's own ACP sessions ([ACP sessions](#acp-sessions)). |
 | `answer` | Answering a gate that does not spend. |
 | `spend` | Answering a gate that does (`budget_exhausted`, the `deploy_*` gates), with `answer`. |
 | `run` | Starting, pausing, resuming and unwinding a project ([Projects](#projects), [ADR-0091](../architecture/decisions/0091-devices-may-start-pause-and-unwind-projects.md)). |
 | `bump` | Bumping a job -- and only when the project's `[queue.priority] sources` admits `vibey-hub`. |
+| `acp_sessions` | Keeping the principal's own ACP sessions: creating one and appending to its log ([ACP sessions](#acp-sessions)). |
 | `workflows` | Sending a vibey command to the repository's GitHub-hosted runners, with the scopes of what the command does ([Workflows](#workflows)). |
 
 Nothing is permitted without a scope. And no scope, ever, can declare paid use, lift or
@@ -195,6 +203,7 @@ Every pairing and revocation is written to every project's ledger as `HubDeviceP
 | 421 | The `Host` header is not one this hub answers (the DNS-rebinding defence). |
 | 422 | The body or a filter is malformed, or an ACP session list's cursor is not one the hub gave. |
 | 429 | Too many requests (empty body). |
+| 507 | The principal holds `[acp] sessions_max` ACP sessions, or the session `[acp] session_events_max` events: nothing more is kept, and nothing kept changes. |
 | 503 | Pairing, or the workflows routes, are not enabled on this hub; or no `[hub] projects_root` is declared, or the host is resting (the Sabbath window). |
 
 Every response carries `Content-Security-Policy: default-src 'none'`, `X-Frame-Options:

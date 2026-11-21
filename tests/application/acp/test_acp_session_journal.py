@@ -18,7 +18,9 @@ from tests.domain.acp.acp_wire import assert_wire_exact
 from vibey.application.acp.acp_journaling_channel import AcpJournalingChannel
 from vibey.application.acp.acp_session_journal import (
     FORKED,
+    FULL,
     OVERFLOW,
+    UNGRANTED,
     UNKEPT,
     AcpSessionJournal,
 )
@@ -29,6 +31,7 @@ from vibey.application.acp.interfaces.client_channel_interface import ClientChan
 from vibey.domain.acp.protocol import ToolCallStatus
 from vibey.domain.acp.session_log import (
     STORED_EVENT_BYTES,
+    AcpSessionLimitReached,
     SessionEventConflict,
     SessionEventKind,
     UnknownAcpSession,
@@ -36,6 +39,7 @@ from vibey.domain.acp.session_log import (
 from vibey.domain.acp.session_replay import SESSION_REPLAY
 from vibey.domain.acp.settings import AcpSettings
 from vibey.domain.acp.update_mapper import AcpUpdateMapper
+from vibey.domain.hub_scope import HubScope
 from vibey.infrastructure.hub.app import MAX_BODY_BYTES
 from vibey.infrastructure.mcp.hub_gateway import HubGatewayError
 
@@ -229,6 +233,37 @@ async def test_a_session_the_hub_does_not_keep_stops_its_log() -> None:
     await journal.flush()
     assert channel.said == [f"Session history: {UNKEPT}"]
     assert journal.recording(S) is False
+
+
+async def test_without_the_acp_sessions_grant_a_session_is_kept_in_memory_and_said_once() -> None:
+    """An operator narrowed `[hub] agent_scopes`: nothing is sent, nothing fails, and the
+    client is told once that the history stays in this window."""
+    hub = FlakyHub()
+    hub.scopes = frozenset({HubScope.VIEW, HubScope.ANSWER, HubScope.RUN})
+    channel = FakeChannel()
+    journal = _journal(hub, channel=channel)
+    journal.open(S, "/work")
+    journal.resume(S, 3)
+    assert journal.recording(S) is False
+    assert journal.record(S, MSG, {"text": "x"}) == 0
+    await journal.flush()
+    await journal.flush()
+    assert hub.session_calls == [] and hub.attempts == []
+    assert channel.sessions == [S] and channel.said == [f"Session history: {UNGRANTED}"]
+
+
+async def test_a_hub_that_keeps_no_more_stops_the_log_and_says_so_once() -> None:
+    hub = FlakyHub()
+    hub.script[2] = AcpSessionLimitReached("the hub keeps no more")
+    channel = FakeChannel()
+    journal = _journal(hub, channel=channel)
+    journal.open(S, "/work")
+    for n in (1, 2, 3):
+        journal.record(S, MSG, {"text": str(n)})
+    await journal.flush()
+    assert hub.log(S) == [(1, "agent_message", {"text": "1"})]  # what was kept stays
+    assert journal.recording(S) is False
+    assert channel.said == [f"Session history: {FULL}"]
 
 
 async def test_a_defect_is_logged_and_the_event_kept(caplog: pytest.LogCaptureFixture) -> None:

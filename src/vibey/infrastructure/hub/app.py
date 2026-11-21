@@ -66,6 +66,7 @@ from vibey.domain.acp.session_log import (
     MAX_CWD_CHARS,
     SESSION_ID_SHAPE,
     SESSION_PAGE,
+    AcpSessionLimitReached,
     InvalidSessionCursor,
     SessionEventConflict,
     SessionEventKind,
@@ -151,6 +152,7 @@ ERROR_STATUS: Final[tuple[tuple[type[VibeyError], int], ...]] = (
     (GateAlreadyAnswered, 409),
     (SessionEventConflict, 409),
     (InvalidSessionCursor, 422),
+    (AcpSessionLimitReached, 507),
     (PriorityRefused, 403),
     (ReorderRefused, 409),
     (InvalidAnswer, 422),
@@ -830,6 +832,9 @@ class HubAppFactory:
             **REFUSED,
             403: {"description": "No such session of this principal's (under that folder)."},
         }
+        full: dict[int | str, dict[str, Any]] = {
+            507: {"description": "The principal or the session holds all the hub keeps."}
+        }
 
         @app.post(
             v1,
@@ -838,6 +843,7 @@ class HubAppFactory:
             status_code=201,
             responses={
                 **REFUSED,
+                **full,
                 409: {"description": "The session is kept under another folder."},
             },
         )
@@ -880,6 +886,7 @@ class HubAppFactory:
             summary="Append one event to an ACP session's log; the same event again is a no-op.",
             responses={
                 **not_yours,
+                **full,
                 409: {"description": "Another event already holds that seq."},
             },
         )

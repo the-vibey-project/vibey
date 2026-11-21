@@ -123,6 +123,7 @@ async def test_job_ack_stays_within_its_query_budget(
     check_budget("job_ack", log)
 
 
+LIMIT = 1000
 SESSION = "00000000-0000-4000-8000-000000000001"
 
 
@@ -130,10 +131,10 @@ async def test_an_acp_session_append_stays_within_its_query_budget(
     migrated_pool: asyncpg.Pool, query_counter: QueryCounter
 ) -> None:
     repo = PostgresAcpSessionRepository(migrated_pool)
-    await repo.create(SESSION, "/work", "agent")
-    await repo.append(SESSION, 1, "plan", {"entries": []})
+    await repo.create(SESSION, "/work", "agent", limit=LIMIT)
+    await repo.append(SESSION, 1, "plan", {"entries": []}, limit=LIMIT)
     async with query_counter.count(migrated_pool) as log:
-        await repo.append(SESSION, 2, "plan", {"entries": []})
+        await repo.append(SESSION, 2, "plan", {"entries": []}, limit=LIMIT)
     check_budget("acp_session_append", log)
 
 
@@ -141,7 +142,7 @@ async def test_an_acp_session_list_stays_within_its_query_budget(
     migrated_pool: asyncpg.Pool, query_counter: QueryCounter
 ) -> None:
     repo = PostgresAcpSessionRepository(migrated_pool)
-    await repo.create(SESSION, "/work", "agent")
+    await repo.create(SESSION, "/work", "agent", limit=LIMIT)
     await repo.list("agent", cwd=None, cursor=None, limit=10)
     async with query_counter.count(migrated_pool) as log:
         await repo.list("agent", cwd="/work", cursor=(datetime.now(UTC), SESSION), limit=10)

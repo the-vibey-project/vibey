@@ -58,6 +58,11 @@ class SessionEventConflict(VibeyError):
     kept under another folder. The log is append-only, so nothing is overwritten."""
 
 
+class AcpSessionLimitReached(VibeyError):
+    """The hub keeps no more for this principal: it holds `[acp] sessions_max` sessions, or the
+    session holds `[acp] session_events_max` events. Nothing kept is dropped or changed."""
+
+
 class InvalidSessionCursor(VibeyError):
     """A `session/list` cursor is not one the hub gave out."""
 

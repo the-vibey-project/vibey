@@ -681,3 +681,10 @@ class = "vibey.domain.acp.session_log.UnknownAcpSession"
 title = "No such ACP session for this folder"
 cause = "The hub keeps no session with that id for vibey's agent principal under that folder: it does not exist, belongs to another principal, or was kept under another folder. The hub says all three the same way."
 fix = "Open the session from the folder it was started in, or list the folder's sessions with `session/list`; a new session starts with `session/new`."
+
+[[error]]
+code = "E0087"
+class = "vibey.domain.acp.session_log.AcpSessionLimitReached"
+title = "The hub keeps no more ACP sessions for this principal"
+cause = "The principal already holds `[acp] sessions_max` sessions, or the session's log already holds `[acp] session_events_max` events. The write was refused; nothing kept was dropped or changed."
+fix = "Raise `[acp] sessions_max` or `session_events_max` in the hub's vibey.toml (docs/reference/configuration.md#acp) and restart the hub. The editor keeps working; the session's history from here on stays in its window."

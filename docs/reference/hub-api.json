@@ -174,7 +174,8 @@
           "spend",
           "run",
           "bump",
-          "workflows"
+          "workflows",
+          "acp_sessions"
         ],
         "title": "HubScope",
         "type": "string"
@@ -520,6 +521,9 @@
           },
           "429": {
             "description": "Too many requests."
+          },
+          "507": {
+            "description": "The principal or the session holds all the hub keeps."
           }
         },
         "security": [
@@ -700,6 +704,9 @@
           },
           "429": {
             "description": "Too many requests."
+          },
+          "507": {
+            "description": "The principal or the session holds all the hub keeps."
           }
         },
         "security": [
