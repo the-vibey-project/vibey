@@ -1,0 +1,102 @@
+# Made with ❤️ by [Vibey](https://the-vibey-project.github.io/vibey/), Developed by [Adam Matthew Steinberger](https://vibewithadam.matthewsteinberger.com/) ([@adammatthewsteinberger](https://github.com/adammatthewsteinberger/)).
+"""`vibey acp`: the Agent Client Protocol agent an editor launches over stdio (SP-ACP).
+
+An editor such as Zed starts `vibey acp` and speaks ACP v1 (JSON-RPC 2.0, one message per
+line) on its stdin and stdout. The first thing `run` does is guard stdout, so every byte that
+reaches it afterwards is a protocol frame; anything else in this process or its children that
+prints lands on stderr. The root callback has already pointed logging at stderr, and the guard
+also catches any handler still holding fd 1. Then `[acp]` is read from `./vibey.toml`, the
+agent is composed (`bootstrap.build_acp_agent`) and the peer serves until stdin closes.
+"""
+
+from __future__ import annotations
+
+import asyncio
+import dataclasses
+from collections.abc import Callable
+from pathlib import Path
+from typing import Annotated, Final
+
+import typer
+
+from vibey.bootstrap import build_acp_agent
+from vibey.cli.interfaces.acp_interface import AcpAgentBuilder, AcpCommandInterface
+from vibey.domain.acp.settings import AcpSettings
+from vibey.infrastructure.acp.acp_settings_loader import AcpSettingsLoader
+from vibey.infrastructure.acp.interfaces.acp_settings_loader_interface import (
+    AcpSettingsLoaderInterface,
+)
+from vibey.infrastructure.acp.interfaces.stdio_transport_interface import StdioTransportInterface
+from vibey.infrastructure.acp.peer_client_channel import PeerClientChannel
+from vibey.infrastructure.acp.stdio_transport import StdioTransport
+from vibey.infrastructure.jsonrpc.codec import CODEC
+from vibey.infrastructure.jsonrpc.peer import JsonRpcPeer
+
+
+class AcpCommand:
+    """Runs the ACP agent over standard input and a guarded standard output.
+
+    Declared by `interfaces/acp_interface.py::AcpCommandInterface`. `before_serve` runs after
+    the guard and before the peer starts: an ordinary seam, which is how the guard is proven
+    against a real `print`, `typer.echo` and an inheriting child.
+    """
+
+    def __init__(
+        self,
+        *,
+        transport: Callable[[], StdioTransportInterface] = StdioTransport,
+        settings: AcpSettingsLoaderInterface | None = None,
+        config_path: Callable[[], Path] = lambda: Path.cwd() / "vibey.toml",
+        build_agent: AcpAgentBuilder = build_acp_agent,
+        before_serve: Callable[[], None] = lambda: None,
+    ) -> None:
+        self._transport = transport
+        self._settings = settings if settings is not None else AcpSettingsLoader()
+        self._config_path = config_path
+        self._build_agent = build_agent
+        self._before_serve = before_serve
+
+    def run(self, *, no_bootstrap: bool) -> None:
+        transport = self._transport()
+        transport.guard()
+        self._before_serve()
+        settings = self._settings.load(self._config_path())
+        if no_bootstrap:
+            settings = dataclasses.replace(settings, auto_bootstrap=False)
+        asyncio.run(self._serve(transport, settings))
+
+    async def _serve(self, transport: StdioTransportInterface, settings: AcpSettings) -> None:
+        # One byte over the bound, so a message exactly `max_message_bytes` long plus its
+        # newline fits the reader; the peer refuses anything longer by name.
+        reader = await transport.reader(limit=settings.max_message_bytes + 1)
+        channel = PeerClientChannel()
+        agent = self._build_agent(settings=settings, channel=channel)
+        peer = JsonRpcPeer(
+            reader,
+            transport.write_line,
+            on_request=agent.handle_request,
+            on_notification=agent.handle_notification,
+            codec=CODEC,
+            id_prefix="vibey",
+            max_message_bytes=settings.max_message_bytes,
+        )
+        channel.attach(peer)
+        await peer.run()
+
+
+ACP_COMMAND: Final[AcpCommandInterface] = AcpCommand()
+
+
+def acp(
+    no_bootstrap: Annotated[
+        bool,
+        typer.Option(
+            "--no-bootstrap",
+            help="Do not run doctor or connect, load services or install anything for this "
+            "process, whatever [acp] auto_bootstrap says.",
+        ),
+    ] = False,
+) -> None:
+    """Serve the Agent Client Protocol (ACP) over stdio for an editor such as Zed."""
+    # Module-level function because Typer builds the command from a plain function signature.
+    ACP_COMMAND.run(no_bootstrap=no_bootstrap)

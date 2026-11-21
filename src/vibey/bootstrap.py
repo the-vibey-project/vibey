@@ -10,11 +10,17 @@ from dataclasses import dataclass, field
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from typing import Final
+from uuid import uuid4
 
 import asyncpg
 from platformdirs import user_cache_path
 
 from vibey import __version__
+from vibey.application.acp.acp_agent import AcpAgent
+from vibey.application.acp.acp_prompt_turn import AcpPromptTurn
+from vibey.application.acp.interfaces.acp_agent_interface import AcpAgentInterface
+from vibey.application.acp.interfaces.acp_prompt_turn_interface import AcpPromptTurnInterface
+from vibey.application.acp.interfaces.client_channel_interface import ClientChannelInterface
 from vibey.application.budget_source import LedgerBudgetSource
 from vibey.application.build_decompose_handler import BuildDecomposeHandler
 from vibey.application.build_dependency_wait import DeferringHandler, DependencyWait
@@ -113,6 +119,9 @@ from vibey.application.visual_handler import VisualInventoryHandler, VisualPlanH
 from vibey.application.wind_down import WindDownOrchestrator
 from vibey.application.worker import WorkerLoop
 from vibey.bootstrap_interface import WorkerGateSeamsInterface
+from vibey.domain.acp.modes import AcpModes
+from vibey.domain.acp.settings import AcpSettings
+from vibey.domain.acp.update_mapper import AcpUpdateMapper
 from vibey.domain.config import (
     DEFAULT_SURFACE_ADAPTER_TIMEOUT_SECONDS,
     BuildConfig,
@@ -124,6 +133,8 @@ from vibey.domain.config import (
 )
 from vibey.domain.engine import EngineId
 from vibey.domain.errors import VibeyError
+from vibey.domain.host_tools import HOST_TOOL_CATALOG
+from vibey.domain.hub_chat import HUB_CHAT
 from vibey.domain.interfaces.config_interface import (
     DesignResearchConfigInterface,
     QueueDefectConfigInterface,
@@ -132,6 +143,7 @@ from vibey.domain.interfaces.config_interface import (
 from vibey.domain.phase import Phase
 from vibey.domain.slicing import AutoSlicer
 from vibey.domain.worktree import WorktreeNaming
+from vibey.infrastructure.acp.acp_hub_client import AcpHubClient
 from vibey.infrastructure.azure.adapter import InMemoryAzureClientAdapter
 from vibey.infrastructure.build.automated_review_runner import SubprocessAutomatedReviewRunner
 from vibey.infrastructure.build.checkout import ProjectCheckoutLocator
@@ -190,6 +202,8 @@ from vibey.infrastructure.git.integration_branch import IntegrationBranch
 from vibey.infrastructure.git.worktree_manager import GitWorktreeManager
 from vibey.infrastructure.ledger.full_ledger_writer import write_full_ledger
 from vibey.infrastructure.logging import StructlogAppLogger
+from vibey.infrastructure.mcp.hub_gateway import HUB_GATEWAY
+from vibey.infrastructure.mcp.interfaces.hub_gateway_interface import HubGatewayInterface
 from vibey.infrastructure.messaging.in_memory import InMemoryMessaging
 from vibey.infrastructure.messaging.matrix import MatrixMessagingAdapter
 from vibey.infrastructure.notify import NotificationService
@@ -1421,6 +1435,40 @@ async def build_app(
             with suppress(asyncio.CancelledError):
                 await bus_recomputer_task
         await pool.close()
+
+
+def build_acp_agent(
+    *,
+    settings: AcpSettings,
+    channel: ClientChannelInterface,
+    gateway: HubGatewayInterface = HUB_GATEWAY,
+) -> AcpAgentInterface:
+    """Compose the ACP agent `vibey acp` serves (SP-ACP).
+
+    The hub is reached through the same `HubGateway` `vibey mcp` uses, as the scoped agent
+    principal; the chat parser and tool catalogue are the hub's own. Each prompt gets a fresh
+    `AcpPromptTurn`. Session and turn ids are random UUIDs, so a request id built from them
+    (`acp-<session>-<turn>`) never repeats across processes.
+    """
+    hub = AcpHubClient(gateway=gateway, tools=HOST_TOOL_CATALOG)
+    modes = AcpModes(settings)
+    mapper = AcpUpdateMapper()
+
+    def new_turn() -> AcpPromptTurnInterface:
+        return AcpPromptTurn(channel, hub, settings, modes, mapper, HUB_CHAT, HOST_TOOL_CATALOG)
+
+    return AcpAgent(
+        channel,
+        hub,
+        settings,
+        modes,
+        mapper,
+        HUB_CHAT,
+        HOST_TOOL_CATALOG,
+        new_turn,
+        version=__version__,
+        new_id=lambda: str(uuid4()),
+    )
 
 
 # Re-exported for the same reason `application/ports.py` re-exports the

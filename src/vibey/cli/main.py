@@ -41,6 +41,7 @@ from vibey.bootstrap import (
     build_visual_worker,
 )
 from vibey.cli.abandon import abandon as abandon_command
+from vibey.cli.acp import acp as acp_command
 from vibey.cli.budget import budget_app
 from vibey.cli.command_examples import CommandExamples
 from vibey.cli.connect import connect as connect_command
@@ -492,6 +493,7 @@ def new_project(
 
 app.command("serve")(serve_command)
 app.command("mcp")(mcp_command)
+app.command("acp")(acp_command)
 app.command("connect")(connect_command)
 app.add_typer(hub_app, name="hub")
 
