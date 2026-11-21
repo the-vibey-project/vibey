@@ -611,3 +611,52 @@ title = "The MCP server could not reach the local hub"
 cause = "The local hub is not running and could not be started, `agent.token` is missing, or the hub returned a non-JSON response."
 fix = "Start the local hub with `vibey hub start` or `vibey serve` and ensure `[hub] agent_scopes` is not empty in vibey.toml."
 
+
+[[error]]
+code = "E0077"
+class = "vibey.domain.acp.modes.UnknownMode"
+title = "The ACP session mode is not offered"
+cause = "The mode id is not one `[acp] modes` offers, so the session cannot start in it or switch to it."
+fix = "Use one of the modes the message lists, or add the mode to `[acp] modes` in vibey.toml (docs/reference/configuration.md#acp)."
+
+[[error]]
+code = "E0078"
+class = "vibey.domain.acp.session_state.TurnAlreadyRunning"
+title = "An ACP prompt turn is already running"
+cause = "A session/prompt arrived while the same session was still running a turn."
+fix = "Wait for the running turn to end, or send session/cancel first."
+
+[[error]]
+code = "E0079"
+class = "vibey.domain.acp.session_state.SessionClosed"
+title = "The ACP session is closed"
+cause = "A prompt was sent to a session that was closed."
+fix = "Start a new session with session/new, or reopen the old one with session/resume."
+
+[[error]]
+code = "E0080"
+class = "vibey.domain.acp.session_state.NoActiveTurn"
+title = "No ACP prompt turn is active"
+cause = "A permission was requested or a turn was finished with no prompt turn running on the session."
+fix = "This is a vibey bug rather than something to configure: report it with the ACP client's log and `vibey doctor`."
+
+[[error]]
+code = "E0081"
+class = "vibey.domain.acp.session_state.TurnCancelled"
+title = "The ACP turn was already cancelled"
+cause = "A permission request was raised after the turn was cancelled or its session closed."
+fix = "Nothing to do; the turn ends as cancelled and the next prompt starts clean."
+
+[[error]]
+code = "E0082"
+class = "vibey.domain.acp.session_state.PermissionsStillPending"
+title = "An ACP turn ended with permission requests still out"
+cause = "A turn was finished while a session/request_permission had no answer yet."
+fix = "This is a vibey bug rather than something to configure: report it with the ACP client's log and `vibey doctor`."
+
+[[error]]
+code = "E0083"
+class = "vibey.domain.acp.settings.InvalidAcpSettings"
+title = "The [acp] settings are invalid"
+cause = "An `[acp]` value is outside what its key allows. The message names the key."
+fix = "Correct that key in vibey.toml. docs/reference/configuration.md#acp lists every key and its bound."

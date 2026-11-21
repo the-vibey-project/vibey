@@ -233,6 +233,9 @@ dev = [
     # in the gate environment too -- not only behind the `hub` extra.
     "zeroconf>=0.136",
     "segno>=1.6",
+    # The official ACP SDK validates vibey's hand-rolled ACP messages in tests only (SP-ACP);
+    # it is never a runtime dependency, and nothing under src/ imports it.
+    "agent-client-protocol==1.0.0",
 ]
 
 # The source distribution carries what a source build needs and nothing else (budget and

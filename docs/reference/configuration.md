@@ -903,6 +903,46 @@ names = ["studio.local"]
 A bump from the hub is requested as the queue source `vibey-hub`; it lands only when
 [`[queue.priority]`](#queuepriority) `sources` names it.
 
+## `[acp]` { #acp }
+
+`vibey acp`, the Agent Client Protocol agent an editor such as Zed launches over stdio
+(SP-ACP). Read from `./vibey.toml`. Every key is optional; an unknown key, a value of the
+wrong type or one outside its bound is refused by name (`ConfigError`), never ignored. The
+spend gates (`budget_exhausted`, `deploy_*`) are not a key: they are never answerable over
+ACP, whatever is set here.
+
+| Key | Type | Default | Meaning |
+|---|---|---|---|
+| `auto_bootstrap` | boolean | `true` | The grant for `vibey acp` to run `vibey doctor` and `vibey connect` itself, load user-level services and keep them running. `false` skips all of it (and PostgreSQL and the keep-alive). |
+| `auto_connect` | boolean | `true` | Whether bootstrap runs the `vibey connect` step. |
+| `auto_services` | boolean | `true` | Whether bootstrap installs and loads the user-level services in `services`. Never system units, never sudo. |
+| `install_postgres` | `"ask"` or `"never"` | `"ask"` | `"ask"` offers the PostgreSQL install as an ACP `session/request_permission`; `"never"` never installs. |
+| `services` | list, each of `"hub"`, `"worker"` | `["hub", "worker"]` | The user-level services bootstrap keeps running. An empty list loads none. |
+| `restart` | `"always"` or `"on-failure"` | `"always"` | The service manager's restart policy for those units. |
+| `service_workdir` | string | `""` | Where the services run. Empty means the directory of `[supervisor] env_file`. |
+| `probe_seconds` | integer, at least 5 | `30` | How often the keep-alive probes the hub and the worker. |
+| `modes` | list, each of `"observe"`, `"drive"`; not empty | `["observe", "drive"]` | The session modes offered. `observe` reads; `drive` also answers non-spending gates and starts, pauses or unwinds work. Narrowed by `[hub] agent_scopes`, never widened. |
+| `default_mode` | string, one of `modes` | `"drive"` | The mode a new session starts in. |
+| `bootstrap_timeout_seconds` | integer, at least 1 | `120` | The longest one bootstrap step may take. |
+| `permission_timeout_seconds` | integer, at least 1 | `600` | How long a permission request waits for the client. Silence leaves the gate open; it is never consent. |
+| `max_gate_prompts_per_turn` | integer, at least 0 | `3` | Gate permission prompts one turn may raise; `0` raises none. |
+| `reject_words` | list of strings | `["reject", "decline", "deny", "no", "cancel"]` | Words in a gate's option labels that mark it as a refusal. Lower-cased when read; an empty word is refused. |
+| `live_poll_seconds` | number, at least 0.2 | `1.0` | How often the live ledger feed is polled. |
+| `live_message_chars` | integer, at least 40 | `400` | The longest ledger event summary sent as one update. |
+| `live_between_turns` | boolean | `true` | Whether ledger events keep streaming between prompt turns. |
+| `cancel_grace_seconds` | number, at least 0 | `2.0` | How long a cancelled turn is given to wind down before it is ended. |
+| `max_message_bytes` | integer, at least 65536 | `16777216` | The longest line the protocol peer accepts; a longer one is refused and the stream goes on. |
+| `pending_events_max` | integer, at least 1 | `1000` | How many session events the agent holds while the hub is unreachable. |
+
+```toml
+[acp]
+modes = ["observe", "drive"]
+default_mode = "observe"
+services = ["hub", "worker"]
+restart = "always"
+install_postgres = "ask"
+```
+
 ## `[queue.priority]` { #queuepriority }
 
 Who besides the operator may move a job to the front of the queue
