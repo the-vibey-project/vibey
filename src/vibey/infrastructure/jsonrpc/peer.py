@@ -31,6 +31,8 @@ from vibey.infrastructure.jsonrpc.interfaces.peer_interface import (
     RequestHandler,
 )
 
+_UNSERIALISABLE = "Internal error: unserialisable result"
+
 
 @dataclass(frozen=True)
 class _Pending:
@@ -200,11 +202,7 @@ class JsonRpcPeer:
         if params is not None and not isinstance(params, Mapping):
             if is_request:
                 await self._send_quietly(
-                    self._frame(
-                        self._codec.error(
-                            msg_id, INVALID_PARAMS, "Invalid params: expected JSON object"
-                        )
-                    )
+                    self._error_line(msg_id, INVALID_PARAMS, "Invalid params: expected JSON object")
                 )
             else:
                 self._log(f"dropped notification {method!r}: params is not a JSON object")
@@ -218,22 +216,41 @@ class JsonRpcPeer:
     async def _serve_request(self, msg_id: Any, method: str, params: Mapping[str, Any]) -> None:
         try:
             result = await self._on_request(method, params)
-            reply = self._codec.ok(msg_id, result)
+            line = self._ok_line(msg_id, method, result)
         except RpcError as exc:
-            reply = self._codec.error(msg_id, exc.code, exc.message, exc.data)
+            line = self._error_line(msg_id, exc.code, exc.message, exc.data)
         except Exception as exc:
             self._log(f"handler for {method!r} failed:\n{traceback.format_exc()}")
-            reply = self._codec.error(
-                msg_id, INTERNAL_ERROR, f"Internal error: {type(exc).__name__}"
-            )
+            line = self._error_line(msg_id, INTERNAL_ERROR, f"Internal error: {type(exc).__name__}")
+        await self._send_quietly(line)
+
+    def _ok_line(self, msg_id: Any, method: str, result: Mapping[str, Any]) -> str:
         try:
-            line = self._frame(reply)
+            return self._frame(self._codec.ok(msg_id, result))
         except (TypeError, ValueError):
             self._log(f"reply to {method!r} is not serialisable:\n{traceback.format_exc()}")
-            line = self._frame(
-                self._codec.error(msg_id, INTERNAL_ERROR, "Internal error: unserialisable result")
-            )
-        await self._send_quietly(line)
+            return self._error_line(msg_id, INTERNAL_ERROR, _UNSERIALISABLE)
+
+    def _error_line(self, msg_id: Any, code: int, message: str, data: Any = None) -> str:
+        """An error frame that always encodes.
+
+        A peer-supplied id can be NaN (`json.loads` accepts it) and a handler's `data` can be
+        anything, so the frame is retried without the offending part: first with a null id, then
+        with the generic unserialisable-result error, last with both. Every degraded reply is logged.
+        """
+        attempts = (
+            (msg_id, code, message, data),
+            (None, code, message, data),
+            (msg_id, INTERNAL_ERROR, _UNSERIALISABLE, None),
+        )
+        for attempt_id, attempt_code, attempt_message, attempt_data in attempts:
+            try:
+                return self._frame(
+                    self._codec.error(attempt_id, attempt_code, attempt_message, attempt_data)
+                )
+            except (TypeError, ValueError):
+                self._log(f"error reply {code} is not serialisable; degrading it")
+        return self._frame(self._codec.error(None, INTERNAL_ERROR, _UNSERIALISABLE))
 
     async def _serve_notification(self, method: str, params: Mapping[str, Any]) -> None:
         try:
@@ -291,11 +308,13 @@ class JsonRpcPeer:
             if not pending.future.done():
                 pending.future.set_exception(PeerClosed("the peer's input has ended"))
         tasks = list(self._tasks)
-        if drain and tasks:
-            await asyncio.wait(tasks, timeout=self._eof_grace_seconds)
-        for task in tasks:
-            task.cancel()
-        await asyncio.gather(*tasks, return_exceptions=True)
+        try:
+            if drain and tasks:
+                await asyncio.wait(tasks, timeout=self._eof_grace_seconds)
+        finally:
+            for task in tasks:
+                task.cancel()
+            await asyncio.gather(*tasks, return_exceptions=True)
 
     @staticmethod
     def _log(text: str) -> None:

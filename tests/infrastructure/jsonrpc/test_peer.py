@@ -2,7 +2,8 @@
 """Unit tests for the asyncio JSON-RPC peer (SP-ACP Task 1).
 
 Progress is driven by yielding to the loop until a condition holds; the only real waits are the
-two tiny timeouts (0.01s) that exercise a request timeout and the EOF grace period. Module-level test functions rather than a class with an interface beside it (ADR-0016).
+0.01s request timeout and the 0.01s EOF grace. Module-level test functions rather than a class
+with an interface beside it (ADR-0016).
 """
 
 from __future__ import annotations
@@ -736,3 +737,90 @@ async def test_a_predicate_that_raises_counts_as_no_match_and_is_logged(
     rig.feed(_line(id="test-1", result={}))
     await first
     await rig.finish()
+
+
+@pytest.mark.parametrize("bad_id", ["NaN", "Infinity", "-Infinity"])
+async def test_a_non_finite_request_id_still_gets_an_error_reply_with_a_null_id(
+    bad_id: str,
+) -> None:
+    rig = _Rig()
+
+    async def route(method: str, params: Mapping[str, Any]) -> Mapping[str, Any]:
+        if method == "refuse":
+            raise RpcError(-32000, "no", {"k": 1})
+        if method == "boom":
+            raise ValueError("x")
+        return {"fine": True}
+
+    rig.request_handler = route
+    rig.start()
+    for method in ("ok", "refuse", "boom"):
+        rig.feed(f'{{"jsonrpc": "2.0", "id": {bad_id}, "method": "{method}"}}\n'.encode())
+    await _until(lambda: len(rig.chunks) == 3)
+    replies = rig.replies
+    assert all(r["id"] is None for r in replies)
+    codes = sorted(r["error"]["code"] for r in replies)
+    assert codes == sorted([INTERNAL_ERROR, -32000, INTERNAL_ERROR])
+    refused = next(r for r in replies if r["error"]["code"] == -32000)
+    assert refused["error"]["data"] == {"k": 1}
+    await rig.finish()
+
+
+async def test_a_non_finite_id_on_the_invalid_params_path_is_answered_with_a_null_id() -> None:
+    rig = _Rig()
+    rig.start()
+    rig.feed(b'{"jsonrpc": "2.0", "id": NaN, "method": "m", "params": [1]}\n')
+    await _until(lambda: rig.chunks)
+    assert rig.replies[0]["id"] is None
+    assert rig.replies[0]["error"]["code"] == INVALID_PARAMS
+    await rig.finish()
+
+
+async def test_a_non_finite_id_with_unserialisable_error_data_still_gets_a_reply() -> None:
+    rig = _Rig()
+
+    async def refuse(method: str, params: Mapping[str, Any]) -> Mapping[str, Any]:
+        raise RpcError(-32000, "no", object())
+
+    rig.request_handler = refuse
+    rig.start()
+    rig.feed(b'{"jsonrpc": "2.0", "id": NaN, "method": "m"}\n')
+    await _until(lambda: rig.chunks)
+    assert rig.replies[0]["id"] is None
+    assert rig.replies[0]["error"]["message"] == "Internal error: unserialisable result"
+    await rig.finish()
+
+
+async def test_a_degraded_reply_is_logged(capsys: pytest.CaptureFixture[str]) -> None:
+    rig = _Rig()
+    rig.start()
+    rig.feed(b'{"jsonrpc": "2.0", "id": NaN, "method": "m"}\n')
+    await _until(lambda: rig.chunks)
+    await rig.finish()
+    assert "not serialisable" in capsys.readouterr().err
+
+
+async def test_cancelling_run_during_the_grace_cancels_the_handlers() -> None:
+    rig = _Rig(grace=30.0)
+    cancelled = asyncio.Event()
+
+    async def hang(method: str, params: Mapping[str, Any]) -> Mapping[str, Any]:
+        try:
+            await asyncio.Event().wait()
+        except asyncio.CancelledError:
+            cancelled.set()
+            raise
+        return {}
+
+    rig.request_handler = hang
+    rig.start()
+    rig.feed(_line(id=1, method="hang"))
+    await _until(lambda: rig.requests)
+    rig.reader.feed_eof()
+    for _ in range(5):
+        await asyncio.sleep(0)
+    assert rig.task is not None and not rig.task.done()
+    rig.task.cancel()
+    with pytest.raises(asyncio.CancelledError):
+        await rig.task
+    assert cancelled.is_set()
