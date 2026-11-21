@@ -7,35 +7,26 @@ refused by name as a `ConfigError` instead of ignored, so a typo never silently 
 setting to its default. Declared by `interfaces/acp_settings_loader_interface.py`.
 """
 
+import math
 import tomllib
 from collections.abc import Mapping
 from pathlib import Path
 from typing import Final
 
 from vibey.domain.acp.settings import (
+    FLOAT_MINIMA,
     INSTALL_POSTGRES_CHOICES,
+    INTEGER_MINIMA,
     KNOWN_MODES,
     KNOWN_SERVICES,
     RESTART_POLICIES,
     AcpSettings,
+    InvalidAcpSettings,
 )
 from vibey.domain.config import ConfigError
 
 _BOOLEANS: Final = ("auto_bootstrap", "auto_connect", "auto_services", "live_between_turns")
 _STRINGS: Final = ("service_workdir",)
-_INTEGER_MINIMA: Final[Mapping[str, int]] = {
-    "probe_seconds": 5,
-    "bootstrap_timeout_seconds": 1,
-    "permission_timeout_seconds": 1,
-    "max_gate_prompts_per_turn": 0,
-    "live_message_chars": 40,
-    "max_message_bytes": 65_536,
-    "pending_events_max": 1,
-}
-_FLOAT_MINIMA: Final[Mapping[str, float]] = {
-    "live_poll_seconds": 0.2,
-    "cancel_grace_seconds": 0.0,
-}
 _CHOICES: Final[Mapping[str, tuple[str, ...]]] = {
     "install_postgres": INSTALL_POSTGRES_CHOICES,
     "restart": RESTART_POLICIES,
@@ -49,8 +40,8 @@ _KNOWN: Final = frozenset(
     {
         *_BOOLEANS,
         *_STRINGS,
-        *_INTEGER_MINIMA,
-        *_FLOAT_MINIMA,
+        *INTEGER_MINIMA,
+        *FLOAT_MINIMA,
         *_CHOICES,
         *_SUBSETS,
         *_STRING_LISTS,
@@ -91,29 +82,27 @@ class AcpSettingsLoader:
         kwargs: dict[str, object] = {}
         for key, value in section.items():
             kwargs[key] = self._value(key, value, source)
-        settings = AcpSettings(**kwargs)  # type: ignore[arg-type]
-        if settings.default_mode not in settings.modes:
-            raise ConfigError(
-                source,
-                f"[acp] default_mode must be one of modes ({', '.join(settings.modes)}), "
-                f"not {settings.default_mode!r}",
-            )
-        return settings
+        try:
+            # kwargs is keyed by names _KNOWN admits and valued by the per-key checks above;
+            # mypy cannot see through the table, so the unpacking is typed loosely.
+            return AcpSettings(**kwargs)  # type: ignore[arg-type]
+        except InvalidAcpSettings as exc:
+            raise ConfigError(source, f"[acp] {exc}") from exc
 
     def _value(self, key: str, value: object, source: str) -> object:
         if key in _BOOLEANS:
             return self._boolean(key, value, source)
         if key in _STRINGS or key == "default_mode":
             return self._string(key, value, source)
-        if key in _INTEGER_MINIMA:
-            return self._integer(key, value, _INTEGER_MINIMA[key], source)
-        if key in _FLOAT_MINIMA:
-            return self._float(key, value, _FLOAT_MINIMA[key], source)
+        if key in INTEGER_MINIMA:
+            return self._integer(key, value, INTEGER_MINIMA[key], source)
+        if key in FLOAT_MINIMA:
+            return self._float(key, value, FLOAT_MINIMA[key], source)
         if key in _CHOICES:
             return self._choice(key, value, _CHOICES[key], source)
         if key in _SUBSETS:
             return self._subset(key, value, _SUBSETS[key], source)
-        return self._words(key, value, source)
+        return self._reject_words(key, value, source)
 
     @staticmethod
     def _boolean(key: str, value: object, source: str) -> bool:
@@ -140,6 +129,8 @@ class AcpSettingsLoader:
     def _float(key: str, value: object, minimum: float, source: str) -> float:
         if not isinstance(value, int | float) or isinstance(value, bool):
             raise ConfigError(source, f"[acp] {key} must be a number")
+        if not math.isfinite(value):
+            raise ConfigError(source, f"[acp] {key} must be a finite number, not {value}")
         if value < minimum:
             raise ConfigError(source, f"[acp] {key} must be at least {minimum}, not {value}")
         return float(value)
@@ -155,6 +146,12 @@ class AcpSettingsLoader:
         if not isinstance(value, list) or not all(isinstance(word, str) for word in value):
             raise ConfigError(source, f"[acp] {key} must be a list of strings")
         return tuple(value)
+
+    def _reject_words(self, key: str, value: object, source: str) -> tuple[str, ...]:
+        words = tuple(word.strip().lower() for word in self._words(key, value, source))
+        if not all(words):
+            raise ConfigError(source, f"[acp] {key} must not contain an empty word")
+        return words
 
     def _subset(
         self, key: str, value: object, known: tuple[str, ...], source: str

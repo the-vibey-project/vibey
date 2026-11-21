@@ -3,6 +3,7 @@
 
 import pytest
 from acp.schema import SessionModeState
+from acp_wire import assert_wire_exact
 
 from vibey.domain.acp.interfaces.modes_interface import AcpModesInterface
 from vibey.domain.acp.modes import AcpMode, AcpModes, UnknownMode
@@ -18,6 +19,14 @@ def test_observe_is_view_only_and_drive_never_contains_spend() -> None:
     assert modes.scopes_for("drive", frozenset(HubScope)) == AGENT_DEFAULT_SCOPES
 
 
+def test_no_mode_ever_grants_spend_bump_or_workflows() -> None:
+    modes = AcpModes(AcpSettings())
+    for mode in modes.available():
+        granted = modes.scopes_for(mode.id, frozenset(HubScope))
+        for forbidden in (HubScope.SPEND, HubScope.BUMP, HubScope.WORKFLOWS):
+            assert forbidden not in granted
+
+
 def test_drive_is_narrowed_by_hub_agent_scopes() -> None:
     assert AcpModes(AcpSettings()).scopes_for("drive", frozenset({HubScope.VIEW})) == {
         HubScope.VIEW
@@ -26,7 +35,9 @@ def test_drive_is_narrowed_by_hub_agent_scopes() -> None:
 
 
 def test_session_modes_dict_validates_against_the_sdk_schema() -> None:
-    state = SessionModeState.model_validate(AcpModes(AcpSettings()).session_modes("drive"))
+    payload = AcpModes(AcpSettings()).session_modes("drive")
+    assert_wire_exact(SessionModeState, payload)
+    state = SessionModeState.model_validate(payload)
     assert state.current_mode_id == "drive"
     assert [mode.id for mode in state.available_modes] == ["observe", "drive"]
 

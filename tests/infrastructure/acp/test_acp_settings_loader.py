@@ -104,6 +104,11 @@ pending_events_max = 1
     )
 
 
+def test_reject_words_are_lower_cased_and_trimmed() -> None:
+    loaded = AcpSettingsLoader().from_mapping({"reject_words": ["No", " DENY "]})
+    assert loaded.reject_words == ("no", "deny")
+
+
 def test_an_integer_is_accepted_for_a_float_key() -> None:
     loaded = AcpSettingsLoader().from_mapping({"live_poll_seconds": 2})
     assert loaded.live_poll_seconds == 2.0
@@ -157,6 +162,12 @@ def test_several_unknown_keys_are_all_named() -> None:
         ("cancel_grace_seconds", -0.5),
         ("pending_events_max", 0),
         ("service_workdir", 5),
+        ("live_poll_seconds", float("nan")),
+        ("live_poll_seconds", float("inf")),
+        ("cancel_grace_seconds", float("-inf")),
+        ("cancel_grace_seconds", float("inf")),
+        ("reject_words", [""]),
+        ("reject_words", ["  "]),
         ("live_between_turns", "true"),
     ],
 )

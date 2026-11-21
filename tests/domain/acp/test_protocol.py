@@ -6,6 +6,7 @@ from typing import Any, get_args
 
 import pytest
 from acp import schema
+from acp_wire import assert_wire_exact
 
 from vibey.domain.acp import protocol
 from vibey.domain.acp.protocol import (
@@ -45,29 +46,31 @@ def test_enums_match_the_sdk_schema_literals(
     assert {member.value for member in enum} == set(sdk_values)
 
 
-def test_enum_values_validate_through_the_sdk_models() -> None:
+def test_enum_values_are_wire_exact_through_the_sdk_models() -> None:
     for reason in StopReason:
-        schema.PromptResponse.model_validate({"stopReason": reason.value})
+        assert_wire_exact(schema.PromptResponse, {"stopReason": reason.value})
     for status in ToolCallStatus:
-        schema.ToolCallUpdate.model_validate({"toolCallId": "t", "status": status.value})
+        assert_wire_exact(schema.ToolCallUpdate, {"toolCallId": "t", "status": status.value})
     for kind in ToolKind:
-        schema.ToolCallUpdate.model_validate({"toolCallId": "t", "kind": kind.value})
+        assert_wire_exact(schema.ToolCallUpdate, {"toolCallId": "t", "kind": kind.value})
     for plan_status in PlanEntryStatus:
-        schema.PlanEntry.model_validate(
-            {"content": "c", "priority": "medium", "status": plan_status.value}
+        assert_wire_exact(
+            schema.PlanEntry,
+            {"content": "c", "priority": "medium", "status": plan_status.value},
         )
     for permission in PermissionKind:
-        schema.PermissionOption.model_validate(
-            {"optionId": "o", "name": "n", "kind": permission.value}
+        assert_wire_exact(
+            schema.PermissionOption,
+            {"optionId": "o", "name": "n", "kind": permission.value},
         )
 
 
 def test_notice_severities_validate_through_the_sdk_notice() -> None:
     assert {s.value for s in NoticeSeverity} == _literal_values(
         schema.Notice.model_fields["severity"].annotation
-    ) - {"str"}
+    )
     for severity in NoticeSeverity:
-        schema.Notice.model_validate({"severity": severity.value, "title": "t"})
+        assert_wire_exact(schema.Notice, {"severity": severity.value, "title": "t"})
 
 
 def test_protocol_version_is_the_sdks() -> None:

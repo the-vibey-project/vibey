@@ -25,6 +25,14 @@ class NoActiveTurn(VibeyError):
     """A permission was registered, or a turn finished, with no turn active."""
 
 
+class TurnCancelled(VibeyError):
+    """A permission was registered on a turn a cancel or a close already ended."""
+
+
+class PermissionsStillPending(VibeyError):
+    """A turn was finished while permission requests were still out on a live turn."""
+
+
 class AcpSessionState:
     """Declared by `interfaces/session_state_interface.py`."""
 
@@ -64,6 +72,8 @@ class AcpSessionState:
     def register_permission(self, request_id: str) -> None:
         if self._turn is None:
             raise NoActiveTurn(f"permission {request_id} asked outside a prompt turn")
+        if self._cancelled:
+            raise TurnCancelled(f"permission {request_id} asked after the turn was cancelled")
         self._pending.add(request_id)
 
     def resolve_permission(self, request_id: str) -> None:
@@ -79,10 +89,15 @@ class AcpSessionState:
     def finish_turn(self, proposed: StopReason) -> StopReason:
         if self._turn is None:
             raise NoActiveTurn(f"session {self.session_id} has no turn to finish")
+        if self._pending:
+            # A cancel already drained the set, so this is a live turn whose caller forgot
+            # to resolve a request; the turn stays active so the caller can.
+            raise PermissionsStillPending(
+                f"turn {self._turn} still has permissions out: {', '.join(sorted(self._pending))}"
+            )
         reason = StopReason.CANCELLED if self._cancelled else proposed
         self._turn = None
         self._cancelled = False
-        self._pending.clear()
         return reason
 
     def close(self) -> tuple[str, ...]:

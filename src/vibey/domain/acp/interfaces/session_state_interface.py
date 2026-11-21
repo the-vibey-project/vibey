@@ -32,7 +32,7 @@ class AcpSessionStateInterface(Protocol):
         ...
 
     def register_permission(self, request_id: str) -> None:
-        """Record a `session/request_permission` that is out; `NoActiveTurn` outside a turn."""
+        """Record a `session/request_permission` that is out; `NoActiveTurn` outside a turn, `TurnCancelled` once the turn is cancelled."""
         ...
 
     def resolve_permission(self, request_id: str) -> None:
@@ -45,7 +45,8 @@ class AcpSessionStateInterface(Protocol):
         ...
 
     def finish_turn(self, proposed: StopReason) -> StopReason:
-        """The one stop reason: `CANCELLED` when this turn was cancelled, else `proposed`."""
+        """The one stop reason: `CANCELLED` when this turn was cancelled, else `proposed`.
+        `PermissionsStillPending` (turn kept active) when a live turn still has requests out."""
         ...
 
     def close(self) -> tuple[str, ...]:
