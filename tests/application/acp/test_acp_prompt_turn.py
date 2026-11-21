@@ -473,7 +473,9 @@ async def test_cancel_before_the_hub_call_closes_the_tool_call_and_never_calls_t
     )
 
 
-async def test_cancel_while_the_tool_call_is_announced_sends_nothing_more() -> None:
+async def test_cancel_while_the_pending_frame_is_written_still_closes_the_tool_call() -> None:
+    # The transport finishes a frame it is cancelled during, so the client has `pending`;
+    # the turn must close it rather than leave it pending forever (review B-3).
     channel, hub = FakeChannel(), FakeHub()
     gate = channel.hold_at[1] = asyncio.Event()
     run = asyncio.create_task(
@@ -481,13 +483,59 @@ async def test_cancel_while_the_tool_call_is_announced_sends_nothing_more() -> N
     )
     await until(lambda: len(channel.updates) == 1)
 
-    gate.set()
     run.cancel()
+    await asyncio.sleep(0)
+    assert len(channel.updates) == 1  # the settle waits for the pending frame to go out
+    gate.set()
     with pytest.raises(asyncio.CancelledError):
         await run
 
     assert hub.calls == []
-    assert channel.kinds == [("tool_call", "pending")]
+    assert channel.kinds == [("tool_call", "pending"), ("tool_call_update", "failed")]
+    assert channel.updates[-1]["content"][0]["content"]["text"] == (
+        "cancelled before it was sent to the hub"
+    )
+
+
+async def test_an_unexpected_hub_failure_fails_the_tool_call_and_ends_the_turn() -> None:
+    channel = FakeChannel()
+    hub = FakeHub(error=OSError("state dir is read-only"))
+
+    stop = await build_turn(channel, hub).run(context(), [text("/projects")], turn_id="t1")
+
+    assert stop is StopReason.END_TURN
+    assert channel.kinds == [
+        ("tool_call", "pending"),
+        ("tool_call_update", "in_progress"),
+        ("tool_call_update", "failed"),
+        ("agent_message_chunk", None),
+    ]
+    assert channel.updates[2]["content"][0]["content"]["text"] == (
+        "OSError: state dir is read-only"
+    )
+    assert channel.texts == ["OSError: state dir is read-only"]
+
+
+async def test_an_unexpected_failure_within_grace_is_reported_by_type() -> None:
+    channel = FakeChannel()
+    hub = FakeHub(error=RuntimeError("executor shut down"))
+    hub.release = asyncio.Event()
+    run = asyncio.create_task(
+        build_turn(channel, hub, settings=AcpSettings(cancel_grace_seconds=5.0)).run(
+            context(), [text("/projects")], turn_id="t1"
+        )
+    )
+    await asyncio.wait_for(hub.entered.wait(), 5)
+
+    run.cancel()
+    await asyncio.sleep(0)
+    hub.release.set()
+    with pytest.raises(asyncio.CancelledError):
+        await run
+
+    assert channel.updates[-1]["content"][0]["content"]["text"] == (
+        "RuntimeError: executor shut down"
+    )
 
 
 async def test_cancel_after_the_outcome_was_reported_reports_nothing_twice() -> None:
@@ -618,3 +666,48 @@ async def test_cancel_through_the_peer_waits_for_the_hub_within_grace() -> None:
     assert wire.response(2) == {"jsonrpc": "2.0", "id": 2, "result": {"stopReason": "cancelled"}}
     assert channel.kinds[-1] == ("tool_call_update", "completed")
     assert all("error" not in line for line in wire.lines)
+
+
+async def test_a_repeated_cancel_during_grace_still_reports_the_request_id() -> None:
+    # Esc pressed twice: the second cancel must not interrupt the settle (review A-1).
+    channel, hub = FakeChannel(), FakeHub(PROJECTS_TURN)
+    hub.release = asyncio.Event()
+    agent = build_agent(channel, hub, settings=AcpSettings(cancel_grace_seconds=0.2))
+    await agent.handle_request("session/new", {"cwd": "/work", "mcpServers": []})
+    prompt = asyncio.create_task(
+        agent.handle_request("session/prompt", {"sessionId": "s", "prompt": [text("/projects")]})
+    )
+    await asyncio.wait_for(hub.entered.wait(), 5)
+
+    await agent.handle_notification("session/cancel", {"sessionId": "s"})
+    await asyncio.sleep(0.05)
+    await agent.handle_notification("session/cancel", {"sessionId": "s"})
+    result = await asyncio.wait_for(prompt, 5)
+
+    assert result == {"stopReason": "cancelled"}
+    assert channel.kinds[-1] == ("tool_call_update", "failed")
+    assert channel.updates[-1]["content"][0]["content"]["text"] == (
+        "cancelled before the hub answered; the hub may still apply it (request id acp-s-t1)"
+    )
+    hub.release.set()
+    await asyncio.sleep(0)
+
+
+async def test_a_repeated_cancel_within_grace_still_reports_the_real_outcome() -> None:
+    channel, hub = FakeChannel(), FakeHub(PROJECTS_TURN)
+    hub.release = asyncio.Event()
+    agent = build_agent(channel, hub, settings=AcpSettings(cancel_grace_seconds=5.0))
+    await agent.handle_request("session/new", {"cwd": "/work", "mcpServers": []})
+    prompt = asyncio.create_task(
+        agent.handle_request("session/prompt", {"sessionId": "s", "prompt": [text("/projects")]})
+    )
+    await asyncio.wait_for(hub.entered.wait(), 5)
+
+    await agent.handle_notification("session/cancel", {"sessionId": "s"})
+    await asyncio.sleep(0)
+    await agent.handle_notification("session/cancel", {"sessionId": "s"})
+    await asyncio.sleep(0)
+    hub.release.set()
+
+    assert await asyncio.wait_for(prompt, 5) == {"stopReason": "cancelled"}
+    assert channel.kinds[-1] == ("tool_call_update", "completed")

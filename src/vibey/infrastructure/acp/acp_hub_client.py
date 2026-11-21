@@ -106,7 +106,14 @@ class AcpHubClient:
         return self._gateway.agent_scopes()
 
     async def _send(self, call: HubCall) -> HubGatewayResponse:
-        return await asyncio.to_thread(self._gateway.call, call)
+        try:
+            return await asyncio.to_thread(self._gateway.call, call)
+        except VibeyError:
+            raise
+        except Exception as exc:
+            # The port promises a `VibeyError`; the gateway can let an OSError through (a state
+            # directory it cannot write) and the executor a RuntimeError once it is shut down.
+            raise HubGatewayError(f"the hub could not be reached: {exc}") from exc
 
     @staticmethod
     def _accepted(response: HubGatewayResponse) -> str:

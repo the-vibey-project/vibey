@@ -80,6 +80,25 @@ def test_acp_stdout_carries_only_protocol_lines_when_code_and_children_print(
     assert "noise" not in done.stdout.decode()
 
 
+def test_acp_with_stdin_from_dev_null_exits_at_eof(tmp_path: Path) -> None:
+    # `vibey acp --no-bootstrap </dev/null` must end, not hang (review A-2).
+    done = subprocess.run(
+        [
+            sys.executable,
+            "-c",
+            "from vibey.cli.acp import AcpCommand; AcpCommand().run(no_bootstrap=True)",
+        ],
+        cwd=tmp_path,
+        stdin=subprocess.DEVNULL,
+        capture_output=True,
+        check=False,
+        timeout=60,
+    )
+
+    assert done.returncode == 0, done.stderr.decode()
+    assert done.stdout == b""
+
+
 def test_acp_command_is_registered_next_to_mcp() -> None:
     names = [command.name for command in app.registered_commands]
     assert names.index("acp") == names.index("mcp") + 1

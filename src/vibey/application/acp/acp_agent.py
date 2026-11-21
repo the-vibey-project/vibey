@@ -191,7 +191,9 @@ class AcpAgent:
     def _cancel(self, params: Mapping[str, Any]) -> None:
         session_id = params.get("sessionId")
         context = self._contexts.get(session_id) if isinstance(session_id, str) else None
-        if context is None:
+        if context is None or context.state.cancel_requested:
+            # A repeated cancel (Esc pressed twice, a client that resends) must not cancel the
+            # turn again: that would interrupt the settle that reports the hub call's outcome.
             return
         context.state.request_cancel()
         task = self._turns.get(context.session_id)

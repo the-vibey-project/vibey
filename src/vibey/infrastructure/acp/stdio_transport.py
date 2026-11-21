@@ -17,6 +17,7 @@ from __future__ import annotations
 
 import asyncio
 import os
+import select
 import stat
 import sys
 import threading
@@ -49,7 +50,7 @@ class StdioTransport:
             pipe = os.fdopen(self._stdin_fd, "rb", buffering=0, closefd=False)
             await loop.connect_read_pipe(lambda: asyncio.StreamReaderProtocol(reader), pipe)
         else:
-            # A regular file (or anything else the loop cannot watch): read it in a daemon
+            # A regular file, a tty, /dev/null, anything the loop cannot watch: read it in a daemon
             # thread, so a read that never returns cannot hold the interpreter open at exit.
             threading.Thread(
                 target=self._pump, args=(loop, reader), name="vibey-acp-stdin", daemon=True
@@ -65,6 +66,7 @@ class StdioTransport:
             except asyncio.CancelledError:
                 interrupted = True
         if interrupted:
+            pending.exception()  # read, so a failed write is not logged as never retrieved
             raise asyncio.CancelledError
         pending.result()
 
@@ -72,16 +74,34 @@ class StdioTransport:
         fd = self._private_fd if self._private_fd is not None else self._stdout_fd
         view = memoryview(data)
         while view:
-            written = await asyncio.to_thread(os.write, fd, view)
+            written = await asyncio.to_thread(self._write_some, fd, view)
             view = view[written:]
 
+    @staticmethod
+    def _write_some(fd: int, data: memoryview) -> int:
+        """`os.write`, waiting for room when the fd is non-blocking and full.
+
+        `connect_read_pipe` makes stdin's open file description non-blocking, and a client that
+        gives one socket or tty for both stdin and stdout shares it with this fd; a write that
+        stopped at EAGAIN would otherwise leave half a frame on the wire.
+        """
+        while True:
+            try:
+                return os.write(fd, data)
+            except BlockingIOError:
+                select.select([], [fd], [])
+
     def _is_stream(self) -> bool:
-        """Whether stdin is something the event loop can watch: a pipe, a socket or a tty."""
+        """Whether stdin is a pipe or a socket, the only kinds the event loop is given.
+
+        A character device is not: `/dev/null` cannot be polled at all (kqueue says EINVAL),
+        so the loop would never see its EOF. It, a tty and a regular file use the thread reader.
+        """
         try:
             mode = os.fstat(self._stdin_fd).st_mode
         except OSError:
             return False
-        return stat.S_ISFIFO(mode) or stat.S_ISSOCK(mode) or stat.S_ISCHR(mode)
+        return stat.S_ISFIFO(mode) or stat.S_ISSOCK(mode)
 
     def _pump(self, loop: asyncio.AbstractEventLoop, reader: asyncio.StreamReader) -> None:
         while True:

@@ -55,7 +55,9 @@ class _HubCall:
 
     call_id: str
     request_id: str
-    announced: bool = False
+    announcing: asyncio.Task[None] | None = None
+    """The `pending` frame's write. Once started it runs to the end even if the turn is
+    cancelled, so a frame that reached the client is always closed by the settle."""
     task: asyncio.Task[HubTurn] | None = None
     reported: bool = False
 
@@ -127,10 +129,12 @@ class AcpPromptTurn:
         spec = self._spec(tool)
         title = spec.title if spec is not None else tool.title
         kind = self._mapper.tool_kind_for(tool.scope)
-        await self._notify(
-            session, self._mapper.tool_call(call.call_id, title, kind, {"message": message})
+        call.announcing = asyncio.ensure_future(
+            self._notify(
+                session, self._mapper.tool_call(call.call_id, title, kind, {"message": message})
+            )
         )
-        call.announced = True
+        await asyncio.shield(call.announcing)
         await self._notify(
             session, self._mapper.tool_call_update(call.call_id, ToolCallStatus.IN_PROGRESS)
         )
@@ -139,13 +143,16 @@ class AcpPromptTurn:
         )
         try:
             turn = await asyncio.shield(call.task)
-        except VibeyError as exc:
+        except Exception as exc:
+            # Any failure, not only a `VibeyError`: an unexpected one must still close the
+            # tool call on the client's screen and end the turn, never leave it spinning.
             call.reported = True
+            failure = self._describe(exc)
             await self._notify(
                 session,
-                self._mapper.tool_call_update(call.call_id, ToolCallStatus.FAILED, str(exc)),
+                self._mapper.tool_call_update(call.call_id, ToolCallStatus.FAILED, failure),
             )
-            await self._say(session, str(exc))
+            await self._say(session, failure)
             return StopReason.END_TURN
         if turn.project_id is not None:
             session.project_id = turn.project_id
@@ -156,8 +163,9 @@ class AcpPromptTurn:
 
     async def _settle(self, session: AcpSessionContext, call: _HubCall) -> None:
         """Close an announced tool call the cancel interrupted, once and truthfully."""
-        if call.reported or not call.announced:
+        if call.reported or call.announcing is None:
             return
+        await asyncio.wait({call.announcing})  # the pending frame goes out first
         if call.task is None:
             await self._notify(
                 session,
@@ -183,7 +191,9 @@ class AcpPromptTurn:
             return
         error = call.task.exception()
         update = (
-            self._mapper.tool_call_update(call.call_id, ToolCallStatus.FAILED, str(error))
+            self._mapper.tool_call_update(
+                call.call_id, ToolCallStatus.FAILED, self._describe(error)
+            )
             if error is not None
             else self._completed(call.call_id, call.task.result())
         )
@@ -196,6 +206,11 @@ class AcpPromptTurn:
         cls._STRAYS.discard(task)
         with contextlib.suppress(asyncio.CancelledError):
             task.exception()
+
+    @staticmethod
+    def _describe(error: BaseException) -> str:
+        """A `VibeyError`'s own message; any other failure named by its type as well."""
+        return str(error) if isinstance(error, VibeyError) else f"{type(error).__name__}: {error}"
 
     def _completed(self, call_id: str, turn: HubTurn) -> dict[str, Any]:
         text: str | None = None

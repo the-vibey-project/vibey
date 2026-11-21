@@ -13,6 +13,7 @@ import subprocess
 import sys
 import textwrap
 import threading
+import time
 from collections.abc import Iterator
 from pathlib import Path
 
@@ -232,3 +233,37 @@ async def test_a_closed_stdin_is_an_eof_not_a_hang() -> None:
     reader = await StdioTransport(stdin_fd=10_000).reader(limit=1024)
 
     assert await asyncio.wait_for(reader.read(), 10) == b""
+
+
+async def test_dev_null_stdin_reaches_eof(fds: _Fds) -> None:
+    # A character device cannot be polled (kqueue says EINVAL), so it must not go to the
+    # event loop, where its EOF would never be seen (review A-2).
+    fd = fds.add(os.open(os.devnull, os.O_RDONLY))
+
+    reader = await StdioTransport(stdin_fd=fd).reader(limit=1024)
+
+    assert await asyncio.wait_for(reader.read(), 10) == b""
+
+
+async def test_a_nonblocking_full_pipe_still_gets_the_whole_frame(fds: _Fds) -> None:
+    # A non-blocking stdout fills, `os.write` raises EAGAIN mid-frame; the writer must wait
+    # for room and carry on, never leave half a frame (review B-6).
+    out_read, out_write = fds.pipe()
+    os.set_blocking(out_write, False)
+    line = "z" * (1 << 20) + "\n"
+    received: list[bytes] = []
+
+    def slow_drain() -> None:
+        chunks = []
+        while chunk := os.read(out_read, 4096):
+            chunks.append(chunk)
+            time.sleep(0.0005)
+        received.append(b"".join(chunks))
+
+    reader = threading.Thread(target=slow_drain)
+    reader.start()
+    await StdioTransport(stdout_fd=out_write).write_line(line)
+    fds.close(out_write)
+    reader.join(60)
+
+    assert received == [line.encode()]

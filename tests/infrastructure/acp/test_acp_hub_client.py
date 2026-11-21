@@ -194,3 +194,14 @@ async def test_healthy_is_the_liveness_route() -> None:
 
 def test_agent_scopes_are_the_gateways() -> None:
     assert AcpHubClient(gateway=_Gateway()).agent_scopes() == frozenset({HubScope.VIEW})
+
+
+@pytest.mark.parametrize("error", [OSError("read-only state dir"), RuntimeError("shut down")])
+async def test_any_gateway_failure_surfaces_as_a_vibey_error(error: Exception) -> None:
+    client = AcpHubClient(gateway=_Gateway(error, error))
+
+    with pytest.raises(HubGatewayError, match="could not be reached") as caught:
+        await client.chat("/projects", project_id=None, request_id="r")
+
+    assert caught.value.__cause__ is error
+    assert await client.healthy() is False
