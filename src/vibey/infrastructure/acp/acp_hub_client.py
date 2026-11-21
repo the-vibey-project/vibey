@@ -12,6 +12,11 @@ Only a failure to reach the hub becomes "the hub could not be reached": the gate
 else is a defect and reaches the caller as itself, so it is logged with its traceback instead of
 reading as a connection problem; `healthy`, which never raises, logs it and answers False.
 
+An ACP session's log goes through the hub's `/api/v1/acp/sessions` routes. A 403 or 404 there
+is `UnknownAcpSession` (the hub answers a session that is not the agent's, or not under that
+folder, as it answers one that does not exist), a 409 `SessionEventConflict`, and a 422 on a list
+`InvalidSessionCursor`; anything else refused is a `HubGatewayError` as elsewhere.
+
 Declared by `application/acp/interfaces/acp_hub_port_interface.py::AcpHubPortInterface`.
 """
 
@@ -21,10 +26,24 @@ import asyncio
 import json
 import logging
 from collections.abc import Mapping
+from datetime import datetime
 from typing import Any, Final
 from uuid import UUID
 
-from vibey.application.acp.dto import HubToolResult, HubTurn, LedgerPage
+from vibey.application.acp.dto import (
+    HubToolResult,
+    HubTurn,
+    LedgerPage,
+    SessionEvent,
+    SessionRecord,
+)
+from vibey.domain.acp.session_log import (
+    SESSION_ID_SHAPE,
+    SESSION_PAGE,
+    InvalidSessionCursor,
+    SessionEventConflict,
+    UnknownAcpSession,
+)
 from vibey.domain.errors import VibeyError
 from vibey.domain.host_tools import HOST_TOOL_CATALOG, HubCall
 from vibey.domain.hub_scope import HubScope
@@ -33,6 +52,7 @@ from vibey.infrastructure.mcp.hub_gateway import HUB_GATEWAY, HubGatewayError, H
 from vibey.infrastructure.mcp.interfaces.hub_gateway_interface import HubGatewayInterface
 
 CHAT_ROUTE: Final = "/api/v1/chat/messages"
+SESSIONS_ROUTE: Final = "/api/v1/acp/sessions"
 LIVENESS_ROUTE: Final = "/health/live"
 _LOG: Final = logging.getLogger(__name__)
 
@@ -114,6 +134,83 @@ class AcpHubClient:
             return False
         return response.ok
 
+    async def create_session(self, session_id: str, cwd: str) -> None:
+        response = await self._send(
+            HubCall(
+                tool="vibey_acp_session",
+                method="POST",
+                route=SESSIONS_ROUTE,
+                body={"session_id": session_id, "cwd": cwd},
+            )
+        )
+        self._kept(response)
+
+    async def append_event(
+        self, session_id: str, seq: int, kind: str, payload: Mapping[str, Any]
+    ) -> None:
+        response = await self._send(
+            HubCall(
+                tool="vibey_acp_session_event",
+                method="POST",
+                route=self._events_route(session_id),
+                body={"seq": seq, "kind": kind, "payload": dict(payload)},
+            )
+        )
+        self._kept(response)
+
+    async def session_events(
+        self, session_id: str, after: int, *, cwd: str
+    ) -> tuple[SessionEvent, ...]:
+        events: list[SessionEvent] = []
+        cursor = after
+        while True:
+            response = await self._send(
+                HubCall(
+                    tool="vibey_acp_session_events",
+                    method="GET",
+                    route=self._events_route(session_id),
+                    query=(("after", str(cursor)), ("limit", str(SESSION_PAGE)), ("cwd", cwd)),
+                )
+            )
+            document = self._document(self._kept(response), "a page of session events")
+            page = [
+                SessionEvent(seq=item["seq"], kind=item["kind"], payload=item["payload"])
+                for item in self._mappings(document.get("events"))
+                if self._is_int(item.get("seq"))
+                and item["seq"] > cursor
+                and isinstance(item.get("kind"), str)
+                and isinstance(item.get("payload"), Mapping)
+            ]
+            events += page
+            # A short page is the end; so is a page that did not move past the cursor.
+            if len(page) < SESSION_PAGE:
+                return tuple(events)
+            cursor = max(event.seq for event in page)
+
+    async def list_sessions(
+        self, *, cwd: str | None, cursor: str | None
+    ) -> tuple[tuple[SessionRecord, ...], str | None]:
+        query: list[tuple[str, str]] = [("limit", str(SESSION_PAGE))]
+        if cwd is not None:
+            query.append(("cwd", cwd))
+        if cursor is not None:
+            query.append(("cursor", cursor))
+        response = await self._send(
+            HubCall(
+                tool="vibey_acp_sessions", method="GET", route=SESSIONS_ROUTE, query=tuple(query)
+            )
+        )
+        if response.status_code == 422 and cursor is not None:
+            raise InvalidSessionCursor("that cursor is not one the hub gave out")
+        document = self._document(self._kept(response), "a page of sessions")
+        records = tuple(
+            record
+            for item in self._mappings(document.get("sessions"))
+            if (record := self._record(item)) is not None
+        )
+        next_cursor = document.get("next_cursor")
+        return records, next_cursor if isinstance(next_cursor, str) else None
+
     def agent_scopes(self) -> frozenset[HubScope]:
         return self._gateway.agent_scopes()
 
@@ -124,6 +221,49 @@ class AcpHubClient:
             # The port promises a `VibeyError` for an unreachable hub; the gateway can let an
             # OSError through (a state directory it cannot write).
             raise HubGatewayError(f"the hub could not be reached: {exc}") from exc
+
+    @classmethod
+    def _kept(cls, response: HubGatewayResponse) -> str:
+        """A session route's answer, with its refusals as the port names them."""
+        if response.status_code in (403, 404):
+            raise UnknownAcpSession("the hub keeps no such session for vibey's agent principal")
+        if response.status_code == 409:
+            raise SessionEventConflict(f"the hub refused it as a conflict: {response.text}")
+        return cls._accepted(response)
+
+    @classmethod
+    def _record(cls, item: Mapping[str, Any]) -> SessionRecord | None:
+        """One listed session, or None when the hub's entry is not one."""
+        session_id, cwd, title = item.get("session_id"), item.get("cwd"), item.get("title")
+        stamp = item.get("updated_at")
+        if not isinstance(session_id, str) or not isinstance(cwd, str):
+            return None
+        if title is not None and not isinstance(title, str):
+            return None
+        try:
+            updated_at = datetime.fromisoformat(stamp) if isinstance(stamp, str) else None
+        except ValueError:
+            return None
+        if updated_at is None:
+            return None
+        return SessionRecord(
+            session_id=session_id,
+            cwd=cwd,
+            title=title,
+            updated_at=updated_at,
+            closed=item.get("closed") is True,
+        )
+
+    @staticmethod
+    def _events_route(session_id: str) -> str:
+        # Only an id in the shape vibey mints is ever put in a route.
+        if SESSION_ID_SHAPE.fullmatch(session_id) is None:
+            raise UnknownAcpSession("that is not a session id vibey made")
+        return f"{SESSIONS_ROUTE}/{session_id}/events"
+
+    @staticmethod
+    def _is_int(value: Any) -> bool:
+        return isinstance(value, int) and not isinstance(value, bool)
 
     @staticmethod
     def _accepted(response: HubGatewayResponse) -> str:

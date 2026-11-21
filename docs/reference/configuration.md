@@ -932,7 +932,7 @@ a key: they are never answerable over ACP, whatever is set here.
 | `live_between_turns` | boolean | `true` | Whether ledger events keep streaming between prompt turns. `false` holds the events that arrive between turns and sends them at the start of the next prompt. |
 | `cancel_grace_seconds` | number, at least 0 | `2.0` | How long a cancelled turn waits for a hub call already in flight to answer, so its real outcome can be reported; after that the turn ends saying the hub may still apply it, with the request id. |
 | `max_message_bytes` | integer, at least 65536 | `16777216` | The longest line the protocol peer accepts; a longer one is refused and the stream goes on. |
-| `pending_events_max` | integer, at least 1 | `1000` | How many session events the agent holds while the hub is unreachable, and how many ledger events the live feed holds between turns when `live_between_turns = false` (with that many held it reads no more until they are sent, so none is skipped), and how many spend-gate notices one feed remembers having said. |
+| `pending_events_max` | integer, at least 1 | `1000` | How many session events the agent holds while the hub is unreachable (past that the oldest waiting event is dropped, never a session's create, and the client is told once per session; [Sessions are kept](cli.md#sessions-are-kept-load-resume-list-and-close)), and how many ledger events the live feed holds between turns when `live_between_turns = false` (with that many held it reads no more until they are sent, so none is skipped), and how many spend-gate notices one feed remembers having said. |
 
 ```toml
 [acp]

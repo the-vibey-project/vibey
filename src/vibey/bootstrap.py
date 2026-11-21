@@ -18,8 +18,10 @@ from platformdirs import user_cache_path
 from vibey import __version__
 from vibey.application.acp.acp_agent import AcpAgent
 from vibey.application.acp.acp_gate_prompter import AcpGatePrompter
+from vibey.application.acp.acp_journaling_channel import AcpJournalingChannel
 from vibey.application.acp.acp_live_feed import AcpLiveFeed
 from vibey.application.acp.acp_prompt_turn import AcpPromptTurn
+from vibey.application.acp.acp_session_journal import AcpSessionJournal
 from vibey.application.acp.interfaces.acp_agent_interface import AcpAgentInterface
 from vibey.application.acp.interfaces.acp_prompt_turn_interface import AcpPromptTurnInterface
 from vibey.application.acp.interfaces.client_channel_interface import ClientChannelInterface
@@ -123,6 +125,7 @@ from vibey.application.worker import WorkerLoop
 from vibey.bootstrap_interface import WorkerGateSeamsInterface
 from vibey.domain.acp.gate_permission import GatePermissionMapper
 from vibey.domain.acp.modes import AcpModes
+from vibey.domain.acp.session_replay import SESSION_REPLAY
 from vibey.domain.acp.settings import AcpSettings
 from vibey.domain.acp.update_mapper import AcpUpdateMapper
 from vibey.domain.config import (
@@ -1453,17 +1456,21 @@ def build_acp_agent(
     `AcpPromptTurn`, which puts the open gates the hub lists to the client through one
     `AcpGatePrompter` (spend gates are never offered). Session and turn ids are random UUIDs, so a request id built from them
     (`acp-<session>-<turn>`) never repeats across processes.
+
+    The turn and the prompter write through `AcpJournalingChannel`, so what a turn shows is kept
+    in the session's log on the hub (`AcpSessionJournal`); the live feed and the agent's own
+    updates (commands, modes, a replay) go to the client directly and are not kept that way.
     """
     hub = AcpHubClient(gateway=gateway, tools=HOST_TOOL_CATALOG)
     modes = AcpModes(settings)
     mapper = AcpUpdateMapper()
     gate_mapper = GatePermissionMapper(settings.reject_words)
-    gates = AcpGatePrompter(channel, hub, settings, modes, mapper, gate_mapper, HOST_TOOL_CATALOG)
+    journal = AcpSessionJournal(hub, settings, channel, mapper)
+    kept = AcpJournalingChannel(channel, journal, SESSION_REPLAY)
+    gates = AcpGatePrompter(kept, hub, settings, modes, mapper, gate_mapper, HOST_TOOL_CATALOG)
 
     def new_turn() -> AcpPromptTurnInterface:
-        return AcpPromptTurn(
-            channel, hub, settings, modes, mapper, HUB_CHAT, HOST_TOOL_CATALOG, gates
-        )
+        return AcpPromptTurn(kept, hub, settings, modes, mapper, HUB_CHAT, HOST_TOOL_CATALOG, gates)
 
     return AcpAgent(
         channel,
@@ -1475,6 +1482,7 @@ def build_acp_agent(
         HOST_TOOL_CATALOG,
         new_turn,
         feed=AcpLiveFeed(hub, channel, mapper, settings, gates=gate_mapper),
+        journal=journal,
         version=__version__,
         new_id=lambda: str(uuid4()),
     )

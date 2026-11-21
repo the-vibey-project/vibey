@@ -16,6 +16,7 @@ from acp_fakes import FakeChannel, FakeHub, build_agent, text, until
 from tests.domain.acp.acp_wire import assert_wire_exact
 from vibey.application.acp.acp_agent import AcpAgent
 from vibey.application.acp.acp_live_feed import AcpLiveFeed
+from vibey.application.acp.acp_session_journal import AcpSessionJournal
 from vibey.application.acp.dto import AcpSessionContext
 from vibey.application.acp.interfaces.acp_agent_interface import AcpAgentInterface
 from vibey.domain.acp.modes import AcpModes
@@ -291,6 +292,7 @@ def _agent_with(turn: _ScriptedTurn) -> AcpAgent:
         HOST_TOOL_CATALOG,
         lambda: turn,
         feed=AcpLiveFeed(FakeHub(), FakeChannel(), AcpUpdateMapper(), settings),
+        journal=AcpSessionJournal(FakeHub(), settings, FakeChannel(), AcpUpdateMapper()),
         version="9.9.9",
         new_id=lambda: next(ids),
     )

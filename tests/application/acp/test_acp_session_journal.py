@@ -1,0 +1,326 @@
+# Made with ❤️ by [Vibey](https://the-vibey-project.github.io/vibey/), Developed by [Adam Matthew Steinberger](https://vibewithadam.matthewsteinberger.com/) ([@adammatthewsteinberger](https://github.com/adammatthewsteinberger/)).
+"""Each ACP session's log, written behind to the hub in order (SP-ACP Task 6), and the channel a
+prompt turn writes through so what it shows is kept.
+
+Module-level test functions rather than a class with an interface beside it (ADR-0016)."""
+
+import asyncio
+import json
+import logging
+from collections.abc import Mapping
+from typing import Any
+
+import pytest
+from acp.schema import SessionUpdateNotice
+from acp_fakes import FakeChannel, FakeHub
+
+from tests.domain.acp.acp_wire import assert_wire_exact
+from vibey.application.acp.acp_journaling_channel import AcpJournalingChannel
+from vibey.application.acp.acp_session_journal import (
+    FORKED,
+    OVERFLOW,
+    UNKEPT,
+    AcpSessionJournal,
+)
+from vibey.application.acp.interfaces.acp_session_journal_interface import (
+    AcpSessionJournalInterface,
+)
+from vibey.application.acp.interfaces.client_channel_interface import ClientChannelInterface
+from vibey.domain.acp.protocol import ToolCallStatus
+from vibey.domain.acp.session_log import (
+    STORED_EVENT_BYTES,
+    SessionEventConflict,
+    SessionEventKind,
+    UnknownAcpSession,
+)
+from vibey.domain.acp.session_replay import SESSION_REPLAY
+from vibey.domain.acp.settings import AcpSettings
+from vibey.domain.acp.update_mapper import AcpUpdateMapper
+from vibey.infrastructure.hub.app import MAX_BODY_BYTES
+from vibey.infrastructure.mcp.hub_gateway import HubGatewayError
+
+S = "0f6f4c1e-8d6b-4f0e-9a51-6b1f3f1f9a01"
+T = "0f6f4c1e-8d6b-4f0e-9a51-6b1f3f1f9a02"
+MSG = SessionEventKind.AGENT_MESSAGE
+NOTICES = {"session": {"notices": {}}}
+
+
+class FlakyHub(FakeHub):
+    """A hub whose appends fail as scripted, by seq: `away` (unreachable), `lost` (stored, but
+    the answer never came back), or an error to raise."""
+
+    def __init__(self) -> None:
+        super().__init__()
+        self.script: dict[int, str | Exception] = {}
+        self.in_flight = asyncio.Event()
+        self.hold: asyncio.Event | None = None
+        self.attempts: list[int] = []
+
+    async def append_event(
+        self, session_id: str, seq: int, kind: str, payload: Mapping[str, Any]
+    ) -> None:
+        self.attempts.append(seq)
+        if self.hold is not None:
+            self.in_flight.set()
+            await self.hold.wait()
+            self.hold = None
+        scripted = self.script.pop(seq, None)
+        if scripted == "away":
+            raise HubGatewayError("the hub could not be reached")
+        if isinstance(scripted, Exception):
+            raise scripted
+        await super().append_event(session_id, seq, kind, payload)
+        if scripted == "lost":
+            raise HubGatewayError("the hub did not answer")
+
+
+def _journal(
+    hub: FakeHub, *, channel: FakeChannel | None = None, pending: int = 1000
+) -> AcpSessionJournal:
+    return AcpSessionJournal(
+        hub,
+        AcpSettings(pending_events_max=pending),
+        channel or FakeChannel(),
+        AcpUpdateMapper(),
+    )
+
+
+def test_the_journal_and_the_channel_meet_their_declared_seams() -> None:
+    journal = _journal(FakeHub())
+    assert isinstance(journal, AcpSessionJournalInterface)
+    assert isinstance(
+        AcpJournalingChannel(FakeChannel(), journal, SESSION_REPLAY), ClientChannelInterface
+    )
+
+
+def test_an_event_the_hub_would_refuse_for_its_size_is_never_queued() -> None:
+    """The cut in `AcpSessionReplay.fit` leaves room for the event's own envelope under the
+    hub's body limit, whatever the payload holds."""
+    envelope = json.dumps({"seq": 2**63 - 1, "kind": "tool_call_update", "payload": {}})
+    assert STORED_EVENT_BYTES + len(envelope.encode()) < MAX_BODY_BYTES
+
+
+async def test_flush_sends_in_order_and_resumes_after_a_failure() -> None:
+    hub = FlakyHub()
+    journal = _journal(hub)
+    journal.open(S, "/work")
+    assert [journal.record(S, MSG, {"text": str(n)}) for n in (1, 2, 3)] == [1, 2, 3]
+    hub.script[2] = "away"
+
+    await journal.flush()
+    assert hub.log(S) == [(1, "agent_message", {"text": "1"})]
+    assert journal.persisted_seq(S) == 1
+
+    await journal.flush()
+    assert [seq for seq, _, _ in hub.log(S)] == [1, 2, 3]
+    assert journal.persisted_seq(S) == 3
+    assert hub.attempts == [1, 2, 2, 3]  # sent again from the failure, and only from there
+    await journal.flush()  # nothing queued: nothing sent
+    assert hub.attempts == [1, 2, 2, 3]
+
+
+async def test_a_resend_after_a_lost_answer_writes_nothing_twice() -> None:
+    hub = FlakyHub()
+    journal = _journal(hub)
+    journal.open(S, "/work")
+    journal.record(S, MSG, {"text": "once"})
+    hub.script[1] = "lost"
+    await journal.flush()
+    assert journal.persisted_seq(S) == 0
+    await journal.flush()
+    assert hub.log(S) == [(1, "agent_message", {"text": "once"})]
+    assert journal.persisted_seq(S) == 1
+
+
+async def test_a_new_sessions_create_goes_first_and_a_failed_create_holds_its_events() -> None:
+    hub = FlakyHub()
+    hub.session_error = HubGatewayError("away")
+    journal = _journal(hub)
+    journal.open(S, "/work")
+    journal.open(S, "/elsewhere")  # a second open changes nothing
+    journal.record(S, MSG, {"text": "x"})
+    await journal.flush()
+    assert hub.kept == {}
+    hub.session_error = None
+    await journal.flush()
+    assert hub.kept[S][0] == "/work" and hub.log(S) == [(1, "agent_message", {"text": "x"})]
+
+
+async def test_overflow_drops_oldest_and_notices_once() -> None:
+    hub = FlakyHub()
+    hub.session_error = HubGatewayError("away")
+    channel = FakeChannel()
+    journal = _journal(hub, channel=channel, pending=3)
+    journal.open(S, "/work")
+    for n in range(1, 6):
+        journal.record(S, MSG, {"text": str(n)})
+    await journal.flush()
+    await journal.flush()
+    assert channel.said == [f"Session history: {OVERFLOW}"]
+
+    hub.session_error = None
+    await journal.flush()
+    # The create is never the one dropped; the oldest events are.
+    assert hub.kept[S][0] == "/work"
+    assert [payload["text"] for _, _, payload in hub.log(S)] == ["4", "5"]
+    assert channel.said == [f"Session history: {OVERFLOW}"]
+
+
+async def test_the_notice_is_a_notice_when_the_client_takes_notices() -> None:
+    hub = FlakyHub()
+    hub.session_error = HubGatewayError("away")
+    channel = FakeChannel()
+    channel.client_capabilities = NOTICES
+    journal = _journal(hub, channel=channel, pending=1)
+    journal.open(S, "/work")
+    journal.record(S, MSG, {"text": "1"})
+    journal.record(S, MSG, {"text": "2"})
+    await journal.flush()
+    (update,) = channel.updates
+    assert update == {
+        "sessionUpdate": "notice",
+        "severity": "warning",
+        "title": "Session history",
+        "description": OVERFLOW,
+    }
+    assert_wire_exact(SessionUpdateNotice, update)
+
+
+async def test_the_event_being_sent_is_never_the_one_overflow_drops() -> None:
+    hub = FlakyHub()
+    hub.hold = asyncio.Event()
+    journal = _journal(hub, pending=2)
+    journal.resume(S, 0)
+    hub.kept[S] = ("/work", [])
+    journal.record(S, MSG, {"text": "1"})
+    flushing = asyncio.create_task(journal.flush())
+    await hub.in_flight.wait()
+    journal.record(S, MSG, {"text": "2"})
+    journal.record(S, MSG, {"text": "3"})  # over the cap while 1 is in flight: 2 is dropped
+    hub.hold.set()
+    await flushing
+    assert [payload["text"] for _, _, payload in hub.log(S)] == ["1", "3"]
+
+
+async def test_a_conflict_stops_that_sessions_log_and_says_so_once() -> None:
+    hub = FlakyHub()
+    channel = FakeChannel()
+    journal = _journal(hub, channel=channel)
+    journal.open(S, "/work")
+    journal.open(T, "/work")
+    journal.record(S, MSG, {"text": "a"})
+    journal.record(T, MSG, {"text": "b"})
+    journal.record(S, MSG, {"text": "c"})
+    hub.script[1] = SessionEventConflict("seq 1 is taken")
+    await journal.flush()
+    assert journal.recording(S) is False and journal.recording(T) is True
+    assert journal.record(S, MSG, {"text": "d"}) == 0
+    assert hub.log(S) == [] and hub.log(T) == [(1, "agent_message", {"text": "b"})]
+    assert channel.sessions == [S] and channel.said == [f"Session history: {FORKED}"]
+
+
+async def test_a_session_the_hub_does_not_keep_stops_its_log() -> None:
+    hub = FlakyHub()
+    hub.script[1] = UnknownAcpSession("no such session")
+    channel = FakeChannel()
+    journal = _journal(hub, channel=channel)
+    journal.open(S, "/work")
+    journal.record(S, MSG, {"text": "a"})
+    await journal.flush()
+    assert channel.said == [f"Session history: {UNKEPT}"]
+    assert journal.recording(S) is False
+
+
+async def test_a_defect_is_logged_and_the_event_kept(caplog: pytest.LogCaptureFixture) -> None:
+    hub = FlakyHub()
+    hub.script[1] = TypeError("a bug")
+    journal = _journal(hub)
+    journal.open(S, "/work")
+    journal.record(S, MSG, {"text": "a"})
+    with caplog.at_level(logging.ERROR):
+        await journal.flush()
+    assert "keeping session" in caplog.text and "TypeError: a bug" in caplog.text
+    await journal.flush()
+    assert hub.log(S) == [(1, "agent_message", {"text": "a"})]
+
+
+async def test_only_an_open_session_is_kept_and_a_close_is_its_last_event() -> None:
+    hub = FlakyHub()
+    journal = _journal(hub)
+    assert journal.record(S, MSG, {"text": "never opened"}) == 0
+    journal.open(S, "/work")
+    assert journal.record(S, SessionEventKind.CLOSED, {}) == 1
+    assert journal.record(S, MSG, {"text": "after the close"}) == 0
+    await journal.flush()
+    assert hub.log(S) == [(1, "closed", {})]
+
+
+async def test_a_resumed_session_continues_after_its_last_seq() -> None:
+    hub = FlakyHub()
+    hub.kept[S] = ("/work", [])
+    journal = _journal(hub)
+    journal.resume(S, 7)
+    assert journal.persisted_seq(S) == 7
+    assert journal.record(S, MSG, {"text": "x"}) == 8
+    journal.resume(S, 2)  # already kept here: its own seq stands
+    assert journal.record(S, MSG, {"text": "y"}) == 9
+    await journal.flush()
+    assert [seq for seq, _, _ in hub.log(S)] == [8, 9]
+
+
+async def test_a_closed_session_reopened_by_a_resume_is_kept_again() -> None:
+    hub = FlakyHub()
+    journal = _journal(hub)
+    journal.open(S, "/work")
+    journal.record(S, SessionEventKind.CLOSED, {})
+    journal.resume(S, 1)
+    assert journal.record(S, MSG, {"text": "back"}) == 2
+
+
+# -- the channel a turn writes through ------------------------------------------------------
+
+
+async def test_what_a_turn_showed_is_kept_once_the_client_was_sent_it() -> None:
+    hub = FlakyHub()
+    channel = FakeChannel()
+    journal = _journal(hub, channel=channel)
+    journal.open(S, "/work")
+    kept = AcpJournalingChannel(channel, journal, SESSION_REPLAY)
+    mapper = AcpUpdateMapper()
+    await kept.notify_update(S, mapper.agent_text("hi"))
+    await kept.notify_update(S, mapper.tool_call_update("t1-1", ToolCallStatus.IN_PROGRESS))
+    await kept.notify_update(S, mapper.current_mode("observe"))  # shown, not kept
+    assert len(channel.updates) == 3
+    await journal.flush()
+    assert hub.log(S) == [
+        (1, "agent_message", {"text": "hi"}),
+        (2, "tool_call_update", {"toolCallId": "t1-1", "status": "in_progress"}),
+    ]
+
+
+async def test_an_update_the_client_never_got_is_not_kept() -> None:
+    class Gone(FakeChannel):
+        async def notify_update(self, session_id: str, update: Mapping[str, Any]) -> None:
+            raise BrokenPipeError("the client went away")
+
+    journal = _journal(FlakyHub())
+    journal.open(S, "/work")
+    kept = AcpJournalingChannel(Gone(), journal, SESSION_REPLAY)
+    with pytest.raises(BrokenPipeError):
+        await kept.notify_update(S, AcpUpdateMapper().agent_text("hi"))
+    assert journal.record(S, MSG, {"text": "next"}) == 1
+
+
+async def test_permission_requests_pass_through_and_are_never_kept() -> None:
+    channel = FakeChannel()
+    channel.permission_answers = ["yes"]
+    journal = _journal(FlakyHub())
+    journal.open(S, "/work")
+    kept = AcpJournalingChannel(channel, journal, SESSION_REPLAY)
+    kept.client_capabilities = NOTICES
+    assert channel.client_capabilities == NOTICES and kept.client_capabilities == NOTICES
+    answer = await kept.request_permission(S, {"toolCallId": "x"}, [{"optionId": "yes"}], timeout=1)
+    assert answer == "yes"
+    assert kept.cancel_permissions(S) == ()
+    assert channel.cancelled_permissions == [S]
+    assert journal.record(S, MSG, {"text": "next"}) == 1
