@@ -76,6 +76,21 @@ def test_a_tool_call_update_with_text_carries_it_as_content() -> None:
     assert_wire_exact(ToolCallProgress, update)
 
 
+def test_a_tool_call_update_can_retitle_and_rekind_the_call() -> None:
+    update = MAPPER.tool_call_update(
+        "t1-1", ToolCallStatus.COMPLETED, "[]", title="List projects", kind=ToolKind.READ
+    )
+    assert update == {
+        "sessionUpdate": "tool_call_update",
+        "toolCallId": "t1-1",
+        "status": "completed",
+        "title": "List projects",
+        "kind": "read",
+        "content": [{"type": "content", "content": {"type": "text", "text": "[]"}}],
+    }
+    assert_wire_exact(ToolCallProgress, update)
+
+
 def test_an_empty_text_is_still_sent_as_content() -> None:
     update = MAPPER.tool_call_update("t1-1", ToolCallStatus.COMPLETED, "")
     assert update["content"][0]["content"]["text"] == ""

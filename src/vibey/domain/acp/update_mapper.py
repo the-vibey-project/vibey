@@ -43,13 +43,23 @@ class AcpUpdateMapper:
         }
 
     def tool_call_update(
-        self, tool_call_id: str, status: ToolCallStatus, text: str | None = None
+        self,
+        tool_call_id: str,
+        status: ToolCallStatus,
+        text: str | None = None,
+        *,
+        title: str | None = None,
+        kind: ToolKind | None = None,
     ) -> dict[str, Any]:
         update: dict[str, Any] = {
             "sessionUpdate": "tool_call_update",
             "toolCallId": tool_call_id,
             "status": status.value,
         }
+        if title is not None:
+            update["title"] = title
+        if kind is not None:
+            update["kind"] = kind.value
         if text is not None:
             update["content"] = [{"type": "content", "content": {"type": "text", "text": text}}]
         return update

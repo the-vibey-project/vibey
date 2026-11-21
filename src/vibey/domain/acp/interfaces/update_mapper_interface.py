@@ -30,9 +30,16 @@ class AcpUpdateMapperInterface(Protocol):
         ...
 
     def tool_call_update(
-        self, tool_call_id: str, status: ToolCallStatus, text: str | None = None
+        self,
+        tool_call_id: str,
+        status: ToolCallStatus,
+        text: str | None = None,
+        *,
+        title: str | None = None,
+        kind: ToolKind | None = None,
     ) -> dict[str, Any]:
-        """A status change of an announced tool call, with `text` as its content when given."""
+        """A status change of an announced tool call, with `text` as its content when given,
+        and a new `title` and `kind` when what ran is not what was announced."""
         ...
 
     def notice(
