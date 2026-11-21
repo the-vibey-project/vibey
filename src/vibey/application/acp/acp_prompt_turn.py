@@ -66,7 +66,7 @@ class _HubCall:
     request_id: str
     tool: HostTool
     """The tool the call was announced as."""
-    announcing: asyncio.Task[None] | None = None
+    announcing: asyncio.Task[None]
     """The `pending` frame's write. Once started it runs to the end even if the turn is
     cancelled, so a frame that reached the client is always closed by the settle."""
     task: asyncio.Task[HubTurn] | None = None
@@ -131,8 +131,12 @@ class AcpPromptTurn:
         if isinstance(tool, str):
             await self._say(session, tool)
             return StopReason.END_TURN
+        call_id = f"{turn_id}-1"
         call = _HubCall(
-            call_id=f"{turn_id}-1", request_id=f"acp-{session.session_id}-{turn_id}", tool=tool
+            call_id=call_id,
+            request_id=f"acp-{session.session_id}-{turn_id}",
+            tool=tool,
+            announcing=asyncio.ensure_future(self._announce(session, call_id, tool, message)),
         )
         try:
             return await self._call_hub(session, message, call, turn_id=turn_id)
@@ -145,13 +149,6 @@ class AcpPromptTurn:
     async def _call_hub(
         self, session: AcpSessionContext, message: str, call: _HubCall, *, turn_id: str
     ) -> StopReason:
-        title = self._title(call.tool)
-        kind = self._mapper.tool_kind_for(call.tool.scope)
-        call.announcing = asyncio.ensure_future(
-            self._notify(
-                session, self._mapper.tool_call(call.call_id, title, kind, {"message": message})
-            )
-        )
         await asyncio.shield(call.announcing)
         await self._notify(
             session, self._mapper.tool_call_update(call.call_id, ToolCallStatus.IN_PROGRESS)
@@ -180,12 +177,18 @@ class AcpPromptTurn:
         await self._gates.offer(session, turn.gates, turn_id=turn_id)
         return StopReason.END_TURN
 
+    async def _announce(
+        self, session: AcpSessionContext, call_id: str, tool: HostTool, message: str
+    ) -> None:
+        kind = self._mapper.tool_kind_for(tool.scope)
+        await self._notify(
+            session, self._mapper.tool_call(call_id, self._title(tool), kind, {"message": message})
+        )
+
     async def _settle(self, session: AcpSessionContext, call: _HubCall) -> None:
         """Close an announced tool call the cancel interrupted, once and truthfully."""
         if call.closing is not None:
             await asyncio.wait({call.closing})  # already closing: let that frame go out
-            return
-        if call.announcing is None:
             return
         await asyncio.wait({call.announcing})  # the pending frame goes out first
         if call.task is None:
