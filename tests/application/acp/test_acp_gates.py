@@ -246,14 +246,18 @@ async def test_a_refused_answer_fails_the_tool_call() -> None:
 
 
 @pytest.mark.parametrize(
-    ("error", "said"),
+    ("error", "said", "logged"),
     [
-        (HubGatewayError("the hub could not be reached: x"), "the hub could not be reached: x"),
-        (OSError("disk"), "OSError: disk"),
+        (
+            HubGatewayError("the hub could not be reached: x"),
+            "the hub could not be reached: x",
+            False,
+        ),
+        (OSError("disk"), "OSError: disk", True),
     ],
 )
 async def test_an_answer_that_fails_to_reach_the_hub_fails_the_tool_call(
-    error: Exception, said: str
+    error: Exception, said: str, logged: bool, caplog: pytest.LogCaptureFixture
 ) -> None:
     channel, hub = FakeChannel(), FakeHub()
     channel.permission_answers = [f"{G}:0"]
@@ -263,6 +267,7 @@ async def test_an_answer_that_fails_to_reach_the_hub_fails_the_tool_call(
 
     assert gate_updates(channel)[-1]["status"] == "failed"
     assert last_text(gate_updates(channel)[-1]) == said
+    assert ("Traceback" in caplog.text) is logged  # only a defect's traceback is logged
 
 
 async def test_a_long_answer_result_is_truncated() -> None:

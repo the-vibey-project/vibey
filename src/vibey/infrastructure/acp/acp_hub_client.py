@@ -7,6 +7,11 @@ principal (`<state_dir>/agent.token`), so the hub stays the one place scopes are
 no hub answers), so each call runs in a worker thread and never blocks the event loop that is
 reading `session/cancel`.
 
+Only a failure to reach the hub becomes "the hub could not be reached": the gateway's own
+`HubGatewayError`, or an `OSError` (a state directory it cannot write, a socket error). Anything
+else is a defect and reaches the caller as itself, so it is logged with its traceback instead of
+reading as a connection problem; `healthy`, which never raises, logs it and answers False.
+
 Declared by `application/acp/interfaces/acp_hub_port_interface.py::AcpHubPortInterface`.
 """
 
@@ -14,6 +19,7 @@ from __future__ import annotations
 
 import asyncio
 import json
+import logging
 from collections.abc import Mapping
 from typing import Any, Final
 from uuid import UUID
@@ -28,6 +34,7 @@ from vibey.infrastructure.mcp.interfaces.hub_gateway_interface import HubGateway
 
 CHAT_ROUTE: Final = "/api/v1/chat/messages"
 LIVENESS_ROUTE: Final = "/health/live"
+_LOG: Final = logging.getLogger(__name__)
 
 
 class AcpHubClient:
@@ -100,6 +107,11 @@ class AcpHubClient:
             )
         except VibeyError:
             return False
+        except Exception:
+            # Not an unreachable hub but a defect: the check still answers, and the traceback
+            # is kept so the defect is found rather than read as the hub being down.
+            _LOG.exception("the hub's liveness check failed unexpectedly")
+            return False
         return response.ok
 
     def agent_scopes(self) -> frozenset[HubScope]:
@@ -108,11 +120,9 @@ class AcpHubClient:
     async def _send(self, call: HubCall) -> HubGatewayResponse:
         try:
             return await asyncio.to_thread(self._gateway.call, call)
-        except VibeyError:
-            raise
-        except Exception as exc:
-            # The port promises a `VibeyError`; the gateway can let an OSError through (a state
-            # directory it cannot write) and the executor a RuntimeError once it is shut down.
+        except OSError as exc:
+            # The port promises a `VibeyError` for an unreachable hub; the gateway can let an
+            # OSError through (a state directory it cannot write).
             raise HubGatewayError(f"the hub could not be reached: {exc}") from exc
 
     @staticmethod

@@ -497,7 +497,9 @@ async def test_cancel_while_the_pending_frame_is_written_still_closes_the_tool_c
     )
 
 
-async def test_an_unexpected_hub_failure_fails_the_tool_call_and_ends_the_turn() -> None:
+async def test_an_unexpected_hub_failure_fails_the_tool_call_and_ends_the_turn(
+    caplog: pytest.LogCaptureFixture,
+) -> None:
     channel = FakeChannel()
     hub = FakeHub(error=OSError("state dir is read-only"))
 
@@ -514,6 +516,8 @@ async def test_an_unexpected_hub_failure_fails_the_tool_call_and_ends_the_turn()
         "OSError: state dir is read-only"
     )
     assert channel.texts == ["OSError: state dir is read-only"]
+    # Not a `VibeyError`, so a defect: its traceback is logged, not only its name sent.
+    assert "Traceback" in caplog.text and "state dir is read-only" in caplog.text
 
 
 async def test_an_unexpected_failure_within_grace_is_reported_by_type() -> None:

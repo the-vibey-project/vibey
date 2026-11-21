@@ -30,6 +30,7 @@ from __future__ import annotations
 import asyncio
 import contextlib
 import json
+import logging
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
 from typing import Any, ClassVar, Final
@@ -52,6 +53,7 @@ from vibey.domain.interfaces.host_tools_interface import HostToolsInterface
 from vibey.domain.interfaces.hub_chat_interface import HubChatInterface
 
 ANSWER_GATE_TOOL: Final = "vibey_answer_gate"
+_LOG: Final = logging.getLogger(__name__)
 """The tool the hub runs when it reads a bare number as an answer to the oldest open gate."""
 FREE_TEXT_INTENTS: Final = frozenset({"start_project"})
 """The intents whose free text an embedded resource may extend: `/new` and `/ask` take the
@@ -250,8 +252,12 @@ class AcpPromptTurn:
 
     @staticmethod
     def _describe(error: BaseException) -> str:
-        """A `VibeyError`'s own message; any other failure named by its type as well."""
-        return str(error) if isinstance(error, VibeyError) else f"{type(error).__name__}: {error}"
+        """A `VibeyError`'s own message. Any other failure is a defect: it is named by its type
+        as well, and logged with its traceback so it can be found."""
+        if isinstance(error, VibeyError):
+            return str(error)
+        _LOG.error("an ACP hub call failed unexpectedly", exc_info=error)
+        return f"{type(error).__name__}: {error}"
 
     def _completed(self, call: _HubCall, turn: HubTurn) -> dict[str, Any]:
         if not turn.tool_calls:

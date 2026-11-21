@@ -31,6 +31,7 @@ from __future__ import annotations
 import asyncio
 import contextlib
 import hashlib
+import logging
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
 from typing import Any, ClassVar, Final
@@ -50,6 +51,7 @@ from vibey.domain.hub_scope import HubScope
 from vibey.domain.interfaces.host_tools_interface import HostToolsInterface
 
 ANSWER_GATE_TOOL: Final = "vibey_answer_gate"
+_LOG: Final = logging.getLogger(__name__)
 LEFT_OPEN: Final = "left open; nothing was answered"
 """How a gate the operator did not answer is closed: picked "Leave it open", cancelled, timed
 out, failed, or answered with an option the gate never offered."""
@@ -253,8 +255,12 @@ class AcpGatePrompter:
 
     @staticmethod
     def _describe(error: BaseException) -> str:
-        """A `VibeyError`'s own message; any other failure named by its type as well."""
-        return str(error) if isinstance(error, VibeyError) else f"{type(error).__name__}: {error}"
+        """A `VibeyError`'s own message. Any other failure is a defect: it is named by its type
+        as well, and logged with its traceback so it can be found."""
+        if isinstance(error, VibeyError):
+            return str(error)
+        _LOG.error("an ACP hub call failed unexpectedly", exc_info=error)
+        return f"{type(error).__name__}: {error}"
 
     async def _fail(self, session: AcpSessionContext, call: _GateCall, text: str) -> None:
         update = self._mapper.tool_call_update(call.call_id, ToolCallStatus.FAILED, text)
