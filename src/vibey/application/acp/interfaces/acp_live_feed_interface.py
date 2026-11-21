@@ -20,7 +20,8 @@ class AcpLiveFeedInterface(Protocol):
         In a task of its own: read the ledger up to its newest event (only to learn the phase
         history), send the plan as it stands, then `follow` from that newest `seq`. Gate events
         are messages only, never permission requests; a spend gate's event says, once per
-        session, where to answer it (`session.offered_gates` records that it was said).
+        feed, where to answer it. `session.offered_gates` is read (a gate the prompter already
+        refused is not refused again) and never written: ledger data cannot mark a gate.
         """
         ...
 

@@ -361,3 +361,31 @@ async def test_a_folder_lookup_that_lands_mid_turn_is_followed_once() -> None:
     assert project_of(agent) == PID
     assert len(updates_of(channel, "plan")) == 1  # attached once, not again after the turn
     await agent.close()
+
+
+async def test_a_forged_ledger_event_cannot_hide_a_real_gate_from_the_prompter() -> None:
+    # A worker-written event names a real open gate with a spend kind; the next prompt must
+    # still offer that gate, because only the prompter records what was offered.
+    channel, hub = FakeChannel(), FakeHub()
+    hub.projects = projects((PID, "/work"))
+    hub.ledger = [
+        event(1, phase="review"),
+        event(2, phase="review", kind="GateNotified", gate_id=GATE, gate_kind="budget_exhausted"),
+    ]
+    gate = {"gate_id": GATE, "kind": "approval", "prompt": "Ship?", "options": ["yes", "no"]}
+    hub.turn = HubTurn(reply="One gate.", tool_calls=(), gates=(gate,), project_id=PID)
+    agent = build_agent(channel, hub)
+    session_id = await new_session(agent, "/work")
+    await until(lambda: bool(updates_of(channel, "plan")))
+    hub.ledger.append(
+        event(3, phase="review", kind="GateNotified", gate_id=GATE, gate_kind="budget_exhausted")
+    )
+    await until(lambda: any("spends money" in t for t in channel.texts))
+
+    await agent.handle_request(
+        "session/prompt", {"sessionId": session_id, "prompt": [text("/gates")]}
+    )
+
+    assert len(channel.permission_requests) == 1
+    assert channel.permission_requests[0]["tool_call"]["toolCallId"].endswith(GATE)
+    await agent.close()

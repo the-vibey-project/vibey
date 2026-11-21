@@ -16,8 +16,12 @@ replayed as messages: `/ledger` reads it.
 Ledger text is untrusted data. Every event becomes one plain-text message
 (`AcpUpdateMapperInterface.ledger_summary`) and nothing else: a gate event is never a
 permission request (gates are offered only by the prompt turn's `AcpGatePrompterInterface`,
-under the session's mode), and the only thing a gate event adds is the spend refusal, once per
-session, which says to answer that gate on the host -- the same words the prompter uses.
+under the session's mode), and the only thing a gate event adds is the spend refusal, which
+says to answer that gate on the host -- the same words the prompter uses, naming only a
+canonical UUID and a kind shaped like one. The feed never writes the session's
+`offered_gates`: that record belongs to the prompter, and an event a worker wrote must not be
+able to mark a real gate as already offered and so hide it. The refusals the feed has said are
+its own, bounded set.
 
 Declared by `interfaces/acp_live_feed_interface.py`.
 """
@@ -28,6 +32,7 @@ import asyncio
 import contextlib
 import logging
 from collections.abc import Awaitable, Callable, Mapping
+from collections.abc import Set as AbstractSet
 from dataclasses import dataclass, field
 from typing import Any, Final
 from uuid import UUID
@@ -60,7 +65,8 @@ class _Follow:
     project_id: UUID
     state: AcpSessionStateInterface | None
     """The session's turn state; None follows live whatever `live_between_turns` says."""
-    offered_gates: set[str]
+    offered_gates: AbstractSet[str]
+    """The prompter's record of the gates put to the session: read, never written."""
     watermark: int = 0
     history: list[str] = field(default_factory=list)
     """The phases the project has been in, oldest first, each change once."""
@@ -69,6 +75,9 @@ class _Follow:
     lock: asyncio.Lock = field(default_factory=asyncio.Lock)
     failing: bool = False
     task: asyncio.Task[None] | None = None
+    refused: dict[str, None] = field(default_factory=dict)
+    """The gates whose spend refusal this feed said, oldest first (an ordered set), at most
+    `pending_events_max`; past that the oldest is forgotten, at worst saying one again."""
 
     @property
     def cursor(self) -> int:
@@ -273,9 +282,13 @@ class AcpLiveFeed:
             "requires_scope": payload.get("requires_scope"),
         }
         gate_id = self._gates.gate_id(gate)
-        if gate_id is None or not self._gates.spends(gate) or gate_id in follow.offered_gates:
+        if gate_id is None or not self._gates.spends(gate):
             return None
-        follow.offered_gates.add(gate_id)
+        if gate_id in follow.refused or gate_id in follow.offered_gates:
+            return None  # said already, here or by the prompter
+        follow.refused[gate_id] = None
+        if len(follow.refused) > self._settings.pending_events_max:
+            del follow.refused[next(iter(follow.refused))]
         return self._gates.refusal_text(gate)
 
     # -- output ---------------------------------------------------------------------------
