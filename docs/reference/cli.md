@@ -207,7 +207,8 @@ Like [`vibey mcp`](#vibey-mcp), it reaches the local hub as the scoped `agent` p
 [`[hub] agent_scopes`](configuration.md#hub) bound everything it does, and it never holds
 `spend`. Each prompt goes to the hub's chat endpoint (`POST /api/v1/chat/messages`) as you
 would type it in the krypton app, `/` commands included, and shows on the client as one tool
-call (`pending`, `in_progress`, then `completed` or `failed`) followed by the hub's reply.
+call (`pending`, `in_progress`, then `completed` or `failed`) followed by the hub's reply, shown
+as plain text (see below).
 A session starts in the [`[acp] default_mode`](configuration.md#acp): `observe` reads only;
 `drive` may also answer non-spending gates and start, pause or unwind work. A prompt the mode
 does not allow is answered with a message and never reaches the hub. Only the text you type is read
@@ -267,6 +268,82 @@ A hub call already sent cannot be recalled: vibey waits up to `[acp] cancel_grac
 its real outcome and otherwise reports that the hub may still apply it, naming the request id
 so you can find it in the ledger: `acp-<session id>-<turn id>` for a prompt,
 `acp-<session id>-<gate id>` for a gate's answer.
+
+### Commands, modes and the live ledger
+
+Right after `session/new` answers, the client is sent every `/` command the hub's chat offers
+(`available_commands_update`: `/projects`, `/status`, `/gates`, `/answer`, `/budget`,
+`/queue`, `/ledger`, `/loops`, `/lanes`, `/doctor`, `/new`, `/start`, `/pause`, `/abandon`
+and `/help`), each with the rest of its usage as the input hint. `session/set_mode` switches a
+session between the [`[acp] modes`](configuration.md#acp) offered (a mode not offered is
+refused, `-32602`) and is confirmed with a `current_mode_update`. The switch applies at once,
+in the middle of a turn too. A switch to `observe` withdraws a permission request still out (it
+answers nothing), discards an answer picked after the switch (you are told nothing was
+answered), stops the turn's remaining gates, and stops a `drive` command whose hub call has not
+been sent yet. A gate held back in `observe` is put to you on the first turn after a switch to
+`drive`.
+
+A session follows one project's ledger:
+
+- **Its folder, at the start.** vibey lists the hub's projects (`vibey_projects`, as the agent
+  principal) and follows the one whose repository holds the session's `cwd`; when repositories
+  nest, the deepest wins, and when two projects share one, the newest. The path is compared as
+  written: symbolic links are not resolved, case is not folded, and a `cwd` with a `..` part
+  follows nothing. You are told which project the session now follows ("Following project
+  <name> (<id>) from <repository>"), because it is what a prompt's commands default to: a bare
+  `/status`, `/gates`, `/start`, `/pause` or `/abandon` targets it.
+- **The hub, after every turn.** When the hub's reply names a project (`/status <id>`, `/new`),
+  the session moves to it and follows its ledger instead, as krypton's chat does. The hub's
+  reply is the later, explicit choice, so it wins over a folder lookup still in flight.
+
+Following a project reads its whole ledger once, only to learn the phases it has been in, and
+sends the phase plan as it stands (`plan`: Design, Visual design once the project has been in
+it, Build, Review, then Deploy design, Deploy execute and Deploy review; done before the current
+phase, in progress at it, pending after it). History is not replayed: `/ledger` reads it. From
+then on, every new ledger event is one message, `[<phase>] <kind>: <summary>` (at most
+[`[acp] live_message_chars`](configuration.md#acp) characters), the plan is sent again when the
+phase changes (a review that sends the work back to Build reopens Review), a project finished
+without deploying drops the three deploy entries, and an abandoned one keeps its plan and is
+told once, "Project abandoned.". Each live message is its own paragraph (a blank line before
+and after), so it never runs into the next one or into the agent's own reply.
+
+Hub replies are shown as plain text, and so is every other piece of hub text: one rule for all
+of it. ACP clients render messages, tool-call titles and tool-call content as Markdown, and the
+hub's text quotes what workers, models and people wrote (a gate's prompt in the `/gates` reply, a
+project's name in `/status`, a refusal's body, a ledger summary). So:
+
+- **The reply to a prompt**, and vibey's own `/help`, keep their lines (each line break is a hard
+  break, a blank line a paragraph break), with every Markdown special character escaped and
+  leading spaces and list markers neutralised: a reply's own formatting is shown, not rendered.
+- **Ledger summaries, a refusal's body, an error, a gate's prompt in a tool-call title, a gate's
+  kind in a refusal, and a project's name and repository** are one line: every control, format,
+  bidirectional or line-separator character becomes a space, and every Markdown special
+  character is escaped (`` \ ` * _ [ ] ( ) < > ! # | ~ & ``). Even the brackets of vibey's own
+  `[<phase>]` prefix are escaped, so no link reference definition elsewhere can make it a link.
+- **A tool's result** (the JSON a hub call returned, or a gate answer's response) is a fenced code
+  block, with a fence longer than any run of backticks inside it, so nothing in it renders or
+  links and the JSON stays readable.
+- **Autolinks.** The forms GFM would make a link of on their own are broken with a visible
+  bracket: `https://` shows as `https[:]//`, `mailto:` as `mailto[:]`, a `www.` host as
+  `www[.]`, and an address as `name[@]host`. A bare domain (`example.com`) is left as it is,
+  and a client may still choose to link it.
+
+Escaping can make a message a little longer than the limit it was cut to. A gate's prompt is
+still sent unchanged in the tool call's `rawInput`, as data.
+
+The feed polls the hub every [`[acp] live_poll_seconds`](configuration.md#acp) from the last
+event it sent (a position in the ledger, never a time), so nothing is skipped or sent twice
+when the hub restarts. When the ledger cannot be read, you are told once ("Live updates
+paused"), the read is retried after `live_poll_seconds`, then after twice that, and so on, up
+to [`[acp] probe_seconds`](configuration.md#acp), and "Live updates resumed." follows. With
+[`[acp] live_between_turns = false`](configuration.md#acp), events that arrive between turns
+are held (at most [`pending_events_max`](configuration.md#acp); no more is read until they are
+sent) and sent at the start of your next prompt. A gate's event is a message only, never a
+permission request: gates are put to you by a prompt turn, under its mode, and nothing the feed
+reads can mark, answer or hide one. An event that says its gate spends money adds one notice,
+worded as what the ledger reports ("The ledger reports a gate that may spend money (<id>)"),
+saying to answer it on the host; it is said once per followed project (again after the session
+moves to another project and back).
 
 ## `vibey install`
 

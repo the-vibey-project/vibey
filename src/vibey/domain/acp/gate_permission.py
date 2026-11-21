@@ -28,7 +28,8 @@ Gate text is untrusted data written by workers and models. Three rules keep it d
     full-width "ＮＯ", "Stop" and "stop".
   Only an exact repeat of a label is folded into one. Whole words that are lookalikes in
   another single script (a Cyrillic "сор" for "cop") are not caught: a parked follow-up.
-- A gate id must be a UUID. Anything else is never offered and never repeated back.
+- A gate id must be a UUID. Anything else is never offered and never repeated back, and a
+  refusal names a gate's kind only when it is shaped like one (`_KIND_SHAPE`).
 
 Some gates are never offered, and `refusal_text` tells the operator where to answer them:
 
@@ -44,6 +45,7 @@ Some gates are never offered, and `refusal_text` tells the operator where to ans
 Pure: no I/O. Declared by `interfaces/gate_permission_interface.py`.
 """
 
+import re
 import unicodedata
 from collections.abc import Mapping
 from dataclasses import dataclass
@@ -51,6 +53,7 @@ from typing import Any, Final
 from uuid import UUID
 
 from vibey.domain.acp.protocol import PermissionKind
+from vibey.domain.acp.untrusted_text import UNTRUSTED_TEXT
 from vibey.domain.hub_chat import (
     ANY_ANSWER_GATE_KINDS,
     CHOICE_GATE_KINDS,
@@ -88,6 +91,11 @@ _OPT_IN: Final = frozenset(option.casefold() for option in DEPLOYMENT_OPT_IN_OPT
 _ON_THE_HOST: Final = (
     "Answer it on the host (`vibey answer {gate_id}`) or in the desktop or mobile app."
 )
+_KIND_SHAPE: Final = re.compile(r"[a-z][a-z0-9_]{0,63}")
+"""What a gate kind looks like (`budget_exhausted`, `publish_interview`): only a kind of this
+shape is repeated back. Anything else could carry a line break, a bidi control or a sentence
+of its own, so it is shown as `UNKNOWN_KIND`."""
+UNKNOWN_KIND: Final = "unknown kind"
 NOT_A_UUID: Final = (
     "The hub listed a gate whose id is not a UUID, so I did not offer it. "
     "Check `vibey gates` on the host."
@@ -129,7 +137,7 @@ class GatePermissionMapper:
     def options_for(self, gate: Mapping[str, Any]) -> tuple[PermissionChoice, ...]:
         gate_id = self.gate_id(gate)
         kind = str(gate.get("kind") or "")
-        if gate_id is None or self._spends(gate) or self._opts_in(gate) or self._ambiguous(gate):
+        if gate_id is None or self.spends(gate) or self._opts_in(gate) or self._ambiguous(gate):
             return ()
         if kind in VERDICT_GATE_KINDS:
             return self._per_option(gate_id, "verdict", gate.get("options"))
@@ -156,28 +164,31 @@ class GatePermissionMapper:
             return NOT_A_UUID  # an id that is not a UUID could say anything: never echoed
         kind = gate.get("kind")
         host = _ON_THE_HOST.format(gate_id=gate_id)
-        if self._spends(gate):
-            return f"Gate {gate_id} ({kind}) spends money, so I cannot answer it. {host}"
+        shaped = isinstance(kind, str) and _KIND_SHAPE.fullmatch(kind)
+        # Shaped like a kind, and still shown as untrusted text: one rule for all hub text.
+        shown = UNTRUSTED_TEXT.escape(kind) if shaped and isinstance(kind, str) else UNKNOWN_KIND
+        if self.spends(gate):
+            return f"Gate {gate_id} ({shown}) spends money, so I cannot answer it. {host}"
         if self._opts_in(gate):
             return (
-                f"Gate {gate_id} ({kind}) opts the project into deployment, which can provision "
+                f"Gate {gate_id} ({shown}) opts the project into deployment, which can provision "
                 f"real infrastructure, so I cannot answer it. {host}"
             )
         if self._ambiguous(gate):
             return (
-                f"Gate {gate_id} ({kind}) has options I cannot show unambiguously (unusual or "
+                f"Gate {gate_id} ({shown}) has options I cannot show unambiguously (unusual or "
                 "hidden characters, irregular spacing, mixed scripts, or labels that read "
                 f"alike), so I cannot offer it. {host}"
             )
         if kind in VERDICT_GATE_KINDS or kind in CHOICE_GATE_KINDS or kind in GRANT_GATE_KEYS:
             return (
-                f"Gate {gate_id} ({kind}) needs a value. Answer it with "
+                f"Gate {gate_id} ({shown}) needs a value. Answer it with "
                 f"`/answer {gate_id} <value>`."
             )
-        return f"Gate {gate_id} ({kind}) is not a kind I can answer from here. {host}"
+        return f"Gate {gate_id} ({shown}) is not a kind I can answer from here. {host}"
 
     @staticmethod
-    def _spends(gate: Mapping[str, Any]) -> bool:
+    def spends(gate: Mapping[str, Any]) -> bool:
         return (
             str(gate.get("kind") or "") in SPEND_GATE_KINDS
             or bool(gate.get("is_spend"))

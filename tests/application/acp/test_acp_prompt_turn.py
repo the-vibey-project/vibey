@@ -14,13 +14,24 @@ from uuid import UUID
 
 import pytest
 from acp.schema import PromptResponse, SessionNotification
-from acp_fakes import FakeChannel, FakeHub, build_agent, build_turn, context, text, until
+from acp_fakes import (
+    FakeChannel,
+    FakeHub,
+    build_agent,
+    build_turn,
+    context,
+    text,
+    unfenced,
+    until,
+)
 
 from tests.domain.acp.acp_wire import assert_wire_exact
 from vibey.application.acp.dto import HubTurn
 from vibey.application.acp.interfaces.acp_prompt_turn_interface import AcpPromptTurnInterface
 from vibey.domain.acp.protocol import StopReason
 from vibey.domain.acp.settings import AcpSettings
+from vibey.domain.acp.untrusted_text import UNTRUSTED_TEXT
+from vibey.domain.host_tools import MAX_RESPONSE_CHARS
 from vibey.domain.hub_chat import ChatIntent, ChatSlashSpec, HubChat
 from vibey.domain.hub_scope import HubForbidden, HubScope
 from vibey.infrastructure.jsonrpc.codec import CODEC
@@ -62,8 +73,9 @@ async def test_prompt_streams_tool_call_pending_in_progress_completed_then_reply
     assert start["rawInput"] == {"message": "/projects"}
     assert {update["toolCallId"] for update in channel.updates[:3]} == {"t1-1"}
     result_text = channel.updates[2]["content"][0]["content"]["text"]
-    assert json.loads(result_text) == [{"name": "demo", "phase": "BUILD"}]
-    assert channel.texts == ["1 project(s):\n- demo [BUILD]"]
+    assert json.loads(unfenced(result_text)) == [{"name": "demo", "phase": "BUILD"}]
+    # The hub reply as plain text: each line kept by a hard break, Markdown escaped.
+    assert channel.texts == ["1 project\\(s\\):\\\n\\- demo \\[BUILD\\]"]
     assert set(channel.sessions) == {"s"}
 
 
@@ -139,8 +151,8 @@ async def test_hub_refusal_marks_the_tool_call_failed_and_still_ends_turn() -> N
         ("agent_message_chunk", None),
     ]
     failed_text = channel.updates[2]["content"][0]["content"]["text"]
-    assert failed_text == "hub refused (403): scope run is not granted"
-    assert channel.texts == ["hub refused (403): scope run is not granted"]
+    assert failed_text == "hub refused \\(403\\): scope run is not granted"
+    assert channel.texts == ["hub refused \\(403\\): scope run is not granted"]
 
 
 async def test_observe_mode_refuses_run_intents_without_calling_the_hub() -> None:
@@ -236,7 +248,8 @@ async def test_help_is_answered_locally_without_the_hub() -> None:
     await build_turn(channel, hub).run(context(mode_id="observe"), [text("/help")], turn_id="t1")
 
     assert hub.calls == []
-    assert channel.texts == [HubChat().help_text()]
+    # vibey's own help, shown as plain text: `<gate-id>` would otherwise read as an HTML tag.
+    assert channel.texts == [UNTRUSTED_TEXT.block(HubChat().help_text(), limit=MAX_RESPONSE_CHARS)]
 
 
 def _resource(body: str, uri: str = "file:///spec.md") -> dict[str, Any]:
@@ -405,7 +418,7 @@ async def test_cancel_during_slow_hub_call_reports_real_outcome_within_grace() -
         ("tool_call_update", "in_progress"),
         ("tool_call_update", "completed"),
     ]
-    assert json.loads(channel.updates[2]["content"][0]["content"]["text"]) == [
+    assert json.loads(unfenced(channel.updates[2]["content"][0]["content"]["text"])) == [
         {"name": "demo", "phase": "BUILD"}
     ]
 
@@ -428,7 +441,7 @@ async def test_a_refusal_within_grace_is_reported_as_failed() -> None:
     with pytest.raises(asyncio.CancelledError):
         await run
     assert channel.kinds[-1] == ("tool_call_update", "failed")
-    assert channel.updates[-1]["content"][0]["content"]["text"] == "hub refused (403): no"
+    assert channel.updates[-1]["content"][0]["content"]["text"] == "hub refused \\(403\\): no"
 
 
 async def test_cancel_after_grace_reports_failed_with_request_id() -> None:
@@ -497,7 +510,9 @@ async def test_cancel_while_the_pending_frame_is_written_still_closes_the_tool_c
     )
 
 
-async def test_an_unexpected_hub_failure_fails_the_tool_call_and_ends_the_turn() -> None:
+async def test_an_unexpected_hub_failure_fails_the_tool_call_and_ends_the_turn(
+    caplog: pytest.LogCaptureFixture,
+) -> None:
     channel = FakeChannel()
     hub = FakeHub(error=OSError("state dir is read-only"))
 
@@ -514,6 +529,8 @@ async def test_an_unexpected_hub_failure_fails_the_tool_call_and_ends_the_turn()
         "OSError: state dir is read-only"
     )
     assert channel.texts == ["OSError: state dir is read-only"]
+    # Not a `VibeyError`, so a defect: its traceback is logged, not only its name sent.
+    assert "Traceback" in caplog.text and "state dir is read-only" in caplog.text
 
 
 async def test_an_unexpected_failure_within_grace_is_reported_by_type() -> None:
@@ -739,3 +756,47 @@ async def test_a_repeated_cancel_within_grace_still_reports_the_real_outcome() -
 
     assert await asyncio.wait_for(prompt, 5) == {"stopReason": "cancelled"}
     assert channel.kinds[-1] == ("tool_call_update", "completed")
+
+
+# -- review 2, O1/O2: hub replies and refusals are shown as plain text -----------------------
+
+
+async def test_a_hub_reply_quoting_a_gate_prompt_renders_no_markdown() -> None:
+    # The hub's /gates reply quotes model-written gate prompts; one of them could add a link,
+    # an image, or a link reference definition for vibey's own `[build]` prefix.
+    reply = (
+        "1 open gate(s):\n"
+        "1. [approval] Ship? ![b](https://evil.example/b)\n"
+        "   [build]: https://evil.example/x"
+    )
+    channel, hub = FakeChannel(), FakeHub(HubTurn(reply, (), (), None))
+
+    await build_turn(channel, hub).run(context(), [text("/gates")], turn_id="t1")
+
+    assert channel.texts[-1] == (
+        "1 open gate\\(s\\):\\\n"
+        "1\\. \\[approval\\] Ship? \\!\\[b\\]\\(https\\[:\\]//evil.example/b\\)\\\n"
+        "\\[build\\]: https\\[:\\]//evil.example/x"
+    )
+
+
+async def test_a_refusal_body_from_the_hub_is_one_untrusted_line() -> None:
+    channel = FakeChannel()
+    hub = FakeHub(error=HubForbidden("hub refused (403): <img src=x>\n[ok](https://e)"))
+
+    await build_turn(channel, hub).run(context(), [text("/projects")], turn_id="t1")
+
+    shown = "hub refused \\(403\\): \\<img src=x\\> \\[ok\\]\\(https\\[:\\]//e\\)"
+    assert channel.updates[2]["content"][0]["content"]["text"] == shown
+    assert channel.texts == [shown]
+
+
+async def test_a_tool_result_is_fenced_so_its_markdown_never_renders() -> None:
+    result = {"name": "vibey_projects", "result": [{"name": "[x](https://e) ```"}]}
+    channel, hub = FakeChannel(), FakeHub(HubTurn("ok", (result,), (), None))
+
+    await build_turn(channel, hub).run(context(), [text("/projects")], turn_id="t1")
+
+    shown = channel.updates[2]["content"][0]["content"]["text"]
+    assert shown.startswith("````\n") and shown.endswith("\n````")
+    assert json.loads(unfenced(shown)) == [{"name": "[x](https://e) ```"}]

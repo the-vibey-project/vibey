@@ -26,3 +26,8 @@ class AcpAgentInterface(Protocol):
     async def handle_notification(self, method: str, params: Mapping[str, Any]) -> None:
         """Act on one notification (`session/cancel`); an unknown one is ignored."""
         ...
+
+    async def close(self) -> None:
+        """Stop what runs beside the requests (live feeds, post-response updates) and wait for
+        it to end; called once the connection is over."""
+        ...

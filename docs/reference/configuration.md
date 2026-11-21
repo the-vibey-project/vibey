@@ -920,19 +920,19 @@ a key: they are never answerable over ACP, whatever is set here.
 | `services` | list, each of `"hub"`, `"worker"` | `["hub", "worker"]` | The user-level services bootstrap keeps running. An empty list loads none. |
 | `restart` | `"always"` or `"on-failure"` | `"always"` | The service manager's restart policy for those units. |
 | `service_workdir` | string | `""` | Where the services run. Empty means the directory of `[supervisor] env_file`. |
-| `probe_seconds` | integer, at least 5 | `30` | How often the keep-alive probes the hub and the worker. |
+| `probe_seconds` | integer, at least 5 | `30` | How often the keep-alive probes the hub and the worker. Also the longest the live ledger feed waits between retries while the hub cannot be read. |
 | `modes` | list, each of `"observe"`, `"drive"`; not empty | `["observe", "drive"]` | The session modes offered. `observe` reads; `drive` also answers non-spending gates and starts, pauses or unwinds work. Narrowed by `[hub] agent_scopes`, never widened. |
 | `default_mode` | string, one of `modes` | `"drive"` | The mode a new session starts in. |
 | `bootstrap_timeout_seconds` | integer, at least 1 | `120` | The longest one bootstrap step may take. |
 | `permission_timeout_seconds` | integer, at least 1 | `600` | How long a permission request waits for the client. Silence leaves the gate open; it is never consent. |
 | `max_gate_prompts_per_turn` | integer, at least 0 | `3` | How many open gates one turn may put to the client, oldest first: each answerable one as a permission request, every other one (spend, deployment opt-in, value, unknown kind, or a gate whose labels could be misread) as a message saying where to answer it. `0` puts none. A gate is put to a session once. |
 | `reject_words` | list of strings | `["reject", "decline", "deny", "no", "cancel"]` | A gate option whose whole label, normalised (NFKC) and case-folded, is one of these words is offered as a refusal (`reject_once`), every other as `allow_once`. Picking it still answers the gate with that option. Lower-cased when read; an empty word is refused. |
-| `live_poll_seconds` | number, at least 0.2 | `1.0` | How often the live ledger feed is polled. |
-| `live_message_chars` | integer, at least 40 | `400` | The longest ledger event summary sent as one update. |
-| `live_between_turns` | boolean | `true` | Whether ledger events keep streaming between prompt turns. |
+| `live_poll_seconds` | number, at least 0.2 | `1.0` | How often the live ledger feed polls the hub after a short page, and how long it waits before the first retry of a read that failed; each further failure in a row doubles the wait, up to `probe_seconds`. A full page that advanced is read again at once. |
+| `live_message_chars` | integer, at least 40 | `400` | The longest ledger event summary sent as one message (`[<phase>] <kind>: <summary>`); a longer one is cut to this length, ending in `...`. |
+| `live_between_turns` | boolean | `true` | Whether ledger events keep streaming between prompt turns. `false` holds the events that arrive between turns and sends them at the start of the next prompt. |
 | `cancel_grace_seconds` | number, at least 0 | `2.0` | How long a cancelled turn waits for a hub call already in flight to answer, so its real outcome can be reported; after that the turn ends saying the hub may still apply it, with the request id. |
 | `max_message_bytes` | integer, at least 65536 | `16777216` | The longest line the protocol peer accepts; a longer one is refused and the stream goes on. |
-| `pending_events_max` | integer, at least 1 | `1000` | How many session events the agent holds while the hub is unreachable. |
+| `pending_events_max` | integer, at least 1 | `1000` | How many session events the agent holds while the hub is unreachable, and how many ledger events the live feed holds between turns when `live_between_turns = false` (with that many held it reads no more until they are sent, so none is skipped), and how many spend-gate notices one feed remembers having said. |
 
 ```toml
 [acp]

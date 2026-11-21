@@ -6,6 +6,7 @@ Module-level test functions rather than a class with an interface beside it (ADR
 from __future__ import annotations
 
 import json
+import logging
 import threading
 from typing import Any
 from uuid import UUID
@@ -196,12 +197,40 @@ def test_agent_scopes_are_the_gateways() -> None:
     assert AcpHubClient(gateway=_Gateway()).agent_scopes() == frozenset({HubScope.VIEW})
 
 
-@pytest.mark.parametrize("error", [OSError("read-only state dir"), RuntimeError("shut down")])
-async def test_any_gateway_failure_surfaces_as_a_vibey_error(error: Exception) -> None:
-    client = AcpHubClient(gateway=_Gateway(error, error))
+async def test_an_os_failure_reaching_the_hub_surfaces_as_a_vibey_error() -> None:
+    error = OSError("read-only state dir")
+    client = AcpHubClient(gateway=_Gateway(error, error, error))
 
     with pytest.raises(HubGatewayError, match="could not be reached") as caught:
         await client.chat("/projects", project_id=None, request_id="r")
 
     assert caught.value.__cause__ is error
+    with pytest.raises(HubGatewayError, match="could not be reached"):
+        await client.ledger_after(PROJECT, 0, 10)
     assert await client.healthy() is False
+
+
+@pytest.mark.parametrize(
+    "error", [TypeError("bad call"), KeyError("missing"), RuntimeError("shut down")]
+)
+async def test_a_defect_is_not_reported_as_an_unreachable_hub(error: Exception) -> None:
+    # Only a transport failure is "the hub could not be reached": a bug reaches the caller as
+    # itself, so the peer logs it with its traceback instead of a misleading message.
+    client = AcpHubClient(gateway=_Gateway(error, error))
+
+    with pytest.raises(type(error)) as caught:
+        await client.chat("/projects", project_id=None, request_id="r")
+    assert caught.value is error
+    with pytest.raises(type(error)):
+        await client.call_tool("vibey_projects", {}, request_id="r")
+
+
+async def test_healthy_never_raises_and_logs_a_defect_with_its_traceback(
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    client = AcpHubClient(gateway=_Gateway(TypeError("bad call")))
+
+    with caplog.at_level(logging.ERROR):
+        assert await client.healthy() is False
+
+    assert "bad call" in caplog.text and "Traceback" in caplog.text

@@ -20,7 +20,10 @@ Every frame that announces or closes a gate's tool call runs to the end even if 
 cancelled, so the close the client was promised is sent once and never dropped.
 
 Nothing is offered while the session's mode, or the hub's grant to agents, does not include
-`answer`: an observe session never answers a gate, and the gates are offered once it can.
+`answer`: an observe session never answers a gate, and the gates are offered once it can. The
+mode is read before each gate, once the client has picked, and again right before the answer is
+sent with nothing awaited in between, so a switch to observe in the middle of a turn stops the
+next offer and discards a pick it overtakes (the gate is asked again in drive).
 A cancel closes the gate being asked truthfully: an answer already sent gets
 `[acp] cancel_grace_seconds` to come back before the client is told the hub may still apply it.
 Declared by `interfaces/acp_gate_prompter_interface.py`.
@@ -31,6 +34,7 @@ from __future__ import annotations
 import asyncio
 import contextlib
 import hashlib
+import logging
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
 from typing import Any, ClassVar, Final
@@ -50,6 +54,7 @@ from vibey.domain.hub_scope import HubScope
 from vibey.domain.interfaces.host_tools_interface import HostToolsInterface
 
 ANSWER_GATE_TOOL: Final = "vibey_answer_gate"
+_LOG: Final = logging.getLogger(__name__)
 LEFT_OPEN: Final = "left open; nothing was answered"
 """How a gate the operator did not answer is closed: picked "Leave it open", cancelled, timed
 out, failed, or answered with an option the gate never offered."""
@@ -99,8 +104,7 @@ class AcpGatePrompter:
     async def offer(
         self, session: AcpSessionContext, gates: Sequence[Mapping[str, Any]], *, turn_id: str
     ) -> None:
-        allowed = self._modes.scopes_for(session.mode_id, self._hub.agent_scopes())
-        if HubScope.ANSWER not in allowed:
+        if not self._may_answer(session):
             return
         offered = 0
         invalid = 0
@@ -119,6 +123,8 @@ class AcpGatePrompter:
                 continue
             if offered >= self._settings.max_gate_prompts_per_turn:
                 break
+            if not self._may_answer(session):
+                break  # switched to a mode that may not answer: the rest wait, unmarked
             offered += 1
             # Marked before it is asked: a gate is put to the client once, however it ends.
             session.offered_gates.add(gate_id)
@@ -165,6 +171,11 @@ class AcpGatePrompter:
             )
         finally:
             session.state.resolve_permission(call.call_id)
+        if not self._may_answer(session):
+            # The session left a mode that may answer while it was asked (`session/set_mode`
+            # also withdraws the request): whatever was picked answers nothing.
+            await self._withdrawn(session, gate_id, call)
+            return
         # Only an option this gate offered can answer it; anything else is no answer at all.
         choice = next((c for c in choices if c.option_id == selected), None)
         if choice is None or choice.answer is None:
@@ -173,6 +184,11 @@ class AcpGatePrompter:
         await self._notify(
             session, self._mapper.tool_call_update(call.call_id, ToolCallStatus.IN_PROGRESS)
         )
+        if not self._may_answer(session):
+            # The switch landed while the `in_progress` frame was written. Read with nothing
+            # awaited between it and the send below, so no switch can slip in after it.
+            await self._withdrawn(session, gate_id, call)
+            return
         call.answering = asyncio.create_task(
             self._hub.call_tool(
                 ANSWER_GATE_TOOL,
@@ -187,6 +203,24 @@ class AcpGatePrompter:
             return
         await self._close(session, call, self._answered(session, gate_id, call.call_id, result))
 
+    async def _withdrawn(self, session: AcpSessionContext, gate_id: str, call: _GateCall) -> None:
+        """A pick the session's mode no longer allows: nothing is answered, the client is told
+        once, and the gate is asked again once the session may answer it."""
+        session.offered_gates.discard(gate_id)
+        await self._fail(session, call, LEFT_OPEN)
+        await self._notify(
+            session,
+            self._mapper.agent_text(
+                f"Nothing was answered for gate {gate_id}: the session left drive mode "
+                "while it was being asked. It is asked again after a switch back to drive."
+            ),
+        )
+
+    def _may_answer(self, session: AcpSessionContext) -> bool:
+        """Whether the session's mode, as it is now, and the hub's grant both allow answering."""
+        allowed = self._modes.scopes_for(session.mode_id, self._hub.agent_scopes())
+        return HubScope.ANSWER in allowed
+
     async def _announce(
         self, session: AcpSessionContext, gate: Mapping[str, Any], gate_id: str, call_id: str
     ) -> None:
@@ -195,7 +229,10 @@ class AcpGatePrompter:
             session,
             self._mapper.tool_call(
                 call_id,
-                f"Answer gate: {prompt}",
+                # The prompt is model-written: one untrusted line in the title. `rawInput`
+                # carries it unchanged, as data.
+                "Answer gate: "
+                + self._mapper.untrusted(prompt, limit=self._settings.live_message_chars),
                 ToolKind.OTHER,
                 {"gate_id": gate_id, "kind": gate.get("kind"), "prompt": prompt},
             ),
@@ -239,8 +276,9 @@ class AcpGatePrompter:
                 g for g in session.open_gates if self._gates.gate_id(g) != gate_id
             )
             text = self._tools.truncate(result.text, limit=self._max_result_chars)
-            return self._mapper.tool_call_update(call_id, ToolCallStatus.COMPLETED, text)
-        refused = self._tools.truncate(
+            shown = self._mapper.untrusted_code(text, limit=len(text))
+            return self._mapper.tool_call_update(call_id, ToolCallStatus.COMPLETED, shown)
+        refused = self._mapper.untrusted(
             f"hub refused ({result.status_code}): {result.text}", limit=self._max_result_chars
         )
         return self._mapper.tool_call_update(call_id, ToolCallStatus.FAILED, refused)
@@ -251,10 +289,16 @@ class AcpGatePrompter:
         with contextlib.suppress(asyncio.CancelledError):
             task.exception()
 
-    @staticmethod
-    def _describe(error: BaseException) -> str:
-        """A `VibeyError`'s own message; any other failure named by its type as well."""
-        return str(error) if isinstance(error, VibeyError) else f"{type(error).__name__}: {error}"
+    def _describe(self, error: BaseException) -> str:
+        """A `VibeyError`'s own message. Any other failure is a defect: it is named by its type
+        as well, and logged with its traceback so it can be found. Either way the text can
+        quote the hub (a refusal's body), so it is shown as one untrusted line."""
+        if isinstance(error, VibeyError):
+            text = str(error)
+        else:
+            _LOG.error("an ACP hub call failed unexpectedly", exc_info=error)
+            text = f"{type(error).__name__}: {error}"
+        return self._mapper.untrusted(text, limit=self._max_result_chars)
 
     async def _fail(self, session: AcpSessionContext, call: _GateCall, text: str) -> None:
         update = self._mapper.tool_call_update(call.call_id, ToolCallStatus.FAILED, text)
