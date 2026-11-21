@@ -389,3 +389,140 @@ async def test_a_forged_ledger_event_cannot_hide_a_real_gate_from_the_prompter()
     assert len(channel.permission_requests) == 1
     assert channel.permission_requests[0]["tool_call"]["toolCallId"].endswith(GATE)
     await agent.close()
+
+
+# -- a switch to observe applies at once, in the middle of a turn (review 1, M1) -------------
+
+GATE_2 = "55555555-5555-4555-8555-555555555555"
+
+
+def approval(gate_id: str = GATE) -> dict[str, Any]:
+    return {"gate_id": gate_id, "kind": "approval", "prompt": "Ship?", "options": ["yes", "no"]}
+
+
+async def to_observe(agent: AcpAgent, session_id: str = "s") -> None:
+    reply = await agent.handle_request(
+        "session/set_mode", {"sessionId": session_id, "modeId": "observe"}
+    )
+    assert reply == {}
+
+
+async def test_a_downgrade_withdraws_a_permission_request_that_is_out() -> None:
+    channel, hub = FakeChannel(), FakeHub()
+    channel.permission_block = True  # the client has not answered yet
+    hub.turn = HubTurn(reply="One gate.", tool_calls=(), gates=(approval(),), project_id=None)
+    agent = build_agent(channel, hub)
+    session_id = await new_session(agent)
+    prompt = asyncio.create_task(
+        agent.handle_request(
+            "session/prompt", {"sessionId": session_id, "prompt": [text("/gates")]}
+        )
+    )
+    await asyncio.wait_for(channel.permission_asked.wait(), 5)
+
+    await to_observe(agent, session_id)
+    result = await asyncio.wait_for(prompt, 5)
+
+    assert result == {"stopReason": "end_turn"}
+    assert channel.cancelled_permissions == [session_id]
+    assert hub.tool_calls == []  # nothing answered
+    assert any(t.startswith(f"Nothing was answered for gate {GATE}") for t in channel.texts)
+    assert GATE not in agent._contexts["s"].offered_gates  # noqa: SLF001 -- asked again later
+    await agent.handle_request("session/set_mode", {"sessionId": session_id, "modeId": "drive"})
+    channel.permission_block = False
+    await agent.handle_request(
+        "session/prompt", {"sessionId": session_id, "prompt": [text("/gates")]}
+    )
+    assert len(channel.permission_requests) == 2
+    await agent.close()
+
+
+async def test_an_answer_picked_after_a_downgrade_answers_nothing() -> None:
+    # A client that does not honour the withdrawal and sends its pick anyway.
+    class LatePick(FakeChannel):
+        agent: AcpAgent
+
+        async def request_permission(
+            self, session_id: str, tool_call: Any, options: Any, *, timeout: float
+        ) -> str | None:
+            self.permission_requests.append({"tool_call": dict(tool_call)})
+            await to_observe(self.agent, session_id)
+            return f"{GATE}:0"  # "yes", picked after the switch
+
+        def cancel_permissions(self, session_id: str) -> tuple[str, ...]:
+            self.cancelled_permissions.append(session_id)
+            return ()
+
+    channel, hub = LatePick(), FakeHub()
+    hub.turn = HubTurn(reply="One gate.", tool_calls=(), gates=(approval(),), project_id=None)
+    agent = build_agent(channel, hub)
+    channel.agent = agent
+    session_id = await new_session(agent)
+
+    await agent.handle_request(
+        "session/prompt", {"sessionId": session_id, "prompt": [text("/gates")]}
+    )
+
+    assert hub.tool_calls == []
+    gate_updates = [u for u in channel.updates if str(u.get("toolCallId", "")).endswith(GATE)]
+    assert gate_updates[-1]["status"] == "failed"
+    assert [t for t in channel.texts if t.startswith("Nothing was answered")] == [
+        f"Nothing was answered for gate {GATE}: the session left drive mode while it was being "
+        "asked. It is asked again after a switch back to drive."
+    ]
+    await agent.close()
+
+
+async def test_a_downgrade_between_two_gates_stops_the_second_offer() -> None:
+    class SwitchAfterFirst(FakeChannel):
+        agent: AcpAgent
+
+        async def notify_update(self, session_id: str, update: Any) -> None:
+            await super().notify_update(session_id, update)
+            first_gate = str(update.get("toolCallId", "")).endswith(GATE)
+            if first_gate and update.get("status") == "completed":
+                await to_observe(self.agent, session_id)
+
+    channel, hub = SwitchAfterFirst(), FakeHub()
+    channel.permission_answers = [f"{GATE}:0"]
+    gates = (approval(GATE), approval(GATE_2))
+    hub.turn = HubTurn(reply="Two gates.", tool_calls=(), gates=gates, project_id=None)
+    agent = build_agent(channel, hub)
+    channel.agent = agent
+    session_id = await new_session(agent)
+
+    await agent.handle_request(
+        "session/prompt", {"sessionId": session_id, "prompt": [text("/gates")]}
+    )
+
+    assert [call[1]["gate_id"] for call in hub.tool_calls] == [GATE]  # only the first
+    assert len(channel.permission_requests) == 1
+    assert GATE_2 not in agent._contexts["s"].offered_gates  # noqa: SLF001 -- offered in drive
+    await agent.close()
+
+
+async def test_a_downgrade_between_admission_and_the_hub_call_stops_the_call() -> None:
+    class SwitchOnAnnounce(FakeChannel):
+        agent: AcpAgent
+
+        async def notify_update(self, session_id: str, update: Any) -> None:
+            await super().notify_update(session_id, update)
+            if update.get("sessionUpdate") == "tool_call":
+                await to_observe(self.agent, session_id)
+
+    channel, hub = SwitchOnAnnounce(), FakeHub()
+    agent = build_agent(channel, hub)
+    channel.agent = agent
+    session_id = await new_session(agent)
+
+    reply = await agent.handle_request(
+        "session/prompt", {"sessionId": session_id, "prompt": [text(f"/start {PID}")]}
+    )
+
+    assert reply == {"stopReason": "end_turn"}
+    assert hub.calls == []  # admitted under drive, never sent under observe
+    closed = [u for u in channel.updates if u["sessionUpdate"] == "tool_call_update"][-1]
+    assert closed["status"] == "failed"
+    assert "needs drive mode" in closed["content"][0]["content"]["text"]
+    assert "needs drive mode" in channel.texts[-1]
+    await agent.close()

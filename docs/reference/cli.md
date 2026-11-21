@@ -275,9 +275,12 @@ Right after `session/new` answers, the client is sent every `/` command the hub'
 `/queue`, `/ledger`, `/loops`, `/lanes`, `/doctor`, `/new`, `/start`, `/pause`, `/abandon`
 and `/help`), each with the rest of its usage as the input hint. `session/set_mode` switches a
 session between the [`[acp] modes`](configuration.md#acp) offered (a mode not offered is
-refused, `-32602`) and is confirmed with a `current_mode_update`. The switch applies from the
-next thing the session does: a gate held back in `observe` is put to you on the first turn after
-a switch to `drive`.
+refused, `-32602`) and is confirmed with a `current_mode_update`. The switch applies at once,
+in the middle of a turn too. A switch to `observe` withdraws a permission request still out (it
+answers nothing), discards an answer picked after the switch (you are told nothing was
+answered), stops the turn's remaining gates, and stops a `drive` command whose hub call has not
+been sent yet. A gate held back in `observe` is put to you on the first turn after a switch to
+`drive`.
 
 A session follows one project's ledger:
 

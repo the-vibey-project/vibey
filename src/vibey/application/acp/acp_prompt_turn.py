@@ -19,6 +19,9 @@ put to the client by `AcpGatePrompterInterface`: answerable ones as permission r
 ones as a message saying to answer them on the host. A bare number is announced as a gate
 answer, the stricter of its two readings, and renamed for what the hub actually ran.
 
+The mode is read when the prompt is admitted and again right before the hub call, so a switch
+to a narrower mode while the call is being announced still stops it.
+
 A cancel is the task running `run` being cancelled. A hub call already in flight cannot be
 taken back, so the turn waits up to `[acp] cancel_grace_seconds` for its real outcome before
 saying the hub may still apply it, names the request id, and lets the cancel propagate.
@@ -155,6 +158,17 @@ class AcpPromptTurn:
         await self._notify(
             session, self._mapper.tool_call_update(call.call_id, ToolCallStatus.IN_PROGRESS)
         )
+        # The mode is read again with nothing awaited before the send: a `session/set_mode`
+        # that landed while the call was announced applies to it.
+        admitted = self._admit(session, call.tool.name, message)
+        if isinstance(admitted, str):
+            await self._close(
+                session,
+                call,
+                self._mapper.tool_call_update(call.call_id, ToolCallStatus.FAILED, admitted),
+            )
+            await self._say(session, admitted)
+            return StopReason.END_TURN
         call.task = asyncio.create_task(
             self._hub.chat(message, project_id=session.project_id, request_id=call.request_id)
         )

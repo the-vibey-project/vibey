@@ -23,9 +23,11 @@ session follows -- and which one a prompt's commands default to -- comes from tw
 The hub's reply is the later and more explicit choice, so it wins: a folder lookup that ends
 after a turn already named a project changes nothing.
 
-`session/set_mode` changes what the session may do from its next step on: the prompt turn and
-the gate prompter both read the mode when they act, so a gate held back in observe mode is
-offered on the first turn after a switch to drive.
+`session/set_mode` applies at once, in the middle of a turn too. The prompt turn reads the mode
+again right before its hub call and the gate prompter before each gate and before it sends an
+answer, so a switch to observe stops what has not been sent yet; a permission request still out
+is withdrawn at once, and an answer picked after the switch answers nothing. A switch to drive
+offers the gates held back in observe on the next turn.
 
 Declared by `interfaces/acp_agent_interface.py`.
 """
@@ -61,6 +63,7 @@ from vibey.domain.acp.protocol import (
 from vibey.domain.acp.session_state import AcpSessionState, TurnAlreadyRunning
 from vibey.domain.acp.settings import AcpSettings
 from vibey.domain.errors import VibeyError
+from vibey.domain.hub_scope import HubScope
 from vibey.domain.interfaces.host_tools_interface import HostToolsInterface
 from vibey.domain.interfaces.hub_chat_interface import HubChatInterface
 from vibey.domain.jsonrpc_errors import INVALID_PARAMS, INVALID_REQUEST, METHOD_NOT_FOUND, RpcError
@@ -207,6 +210,10 @@ class AcpAgent:
                 INVALID_PARAMS, f"mode {mode_id!r} is not offered; the modes are: {offered}"
             )
         context.mode_id = mode_id
+        if HubScope.ANSWER not in self._modes.scopes_for(mode_id, self._hub.agent_scopes()):
+            # A permission request still out may not be answered any more: withdrawn at once,
+            # it resolves as unanswered, as under `session/cancel`.
+            self._channel.cancel_permissions(context.session_id)
         self._in_background(
             self._channel.notify_update(context.session_id, self._mapper.current_mode(mode_id))
         )
