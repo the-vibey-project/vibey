@@ -57,6 +57,7 @@ from typing import Any, Final
 from uuid import UUID
 
 from vibey.application.acp.dto import AcpSessionContext, SessionEvent, SessionSummary
+from vibey.application.acp.interfaces.acp_bootstrap_interface import AcpBootstrapInterface
 from vibey.application.acp.interfaces.acp_hub_port_interface import AcpHubPortInterface
 from vibey.application.acp.interfaces.acp_live_feed_interface import AcpLiveFeedInterface
 from vibey.application.acp.interfaces.acp_prompt_turn_interface import AcpPromptTurnInterface
@@ -131,6 +132,7 @@ class AcpAgent:
         version: str,
         new_id: Callable[[], str],
         replay: AcpSessionReplayInterface = SESSION_REPLAY,
+        bootstrap: AcpBootstrapInterface | None = None,
     ) -> None:
         self._channel = channel
         self._hub = hub
@@ -143,6 +145,7 @@ class AcpAgent:
         self._feed = feed
         self._journal = journal
         self._replay = replay
+        self._bootstrap = bootstrap
         self._version = version
         self._new_id = new_id
         self._contexts: dict[str, AcpSessionContext] = {}
@@ -240,6 +243,9 @@ class AcpAgent:
         # Sent from a task of its own: the peer writes this response before the task runs, and
         # an update naming a session the client has not been told of yet is refused.
         self._in_background(self._opened(context, ignored))
+        if self._bootstrap is not None:
+            # Doctor and connect run in a task of their own, written after this response.
+            self._bootstrap.start(session_id)
         return {
             "sessionId": session_id,
             "modes": self._modes.session_modes(self._settings.default_mode),
@@ -300,8 +306,12 @@ class AcpAgent:
         try:
             proposed = await task
         except asyncio.CancelledError:
-            if not context.state.cancel_requested:
-                # This handler itself was cancelled (the peer is shutting down), not the turn.
+            current = asyncio.current_task()
+            if not context.state.cancel_requested or (current is not None and current.cancelling()):
+                # This handler itself was cancelled (the peer is shutting down), not only the
+                # turn: its own cancellation is never swallowed, even when a `session/cancel`
+                # of the turn landed at the same moment.
+                task.cancel()
                 context.state.finish_turn(StopReason.CANCELLED)
                 raise
             proposed = StopReason.CANCELLED
@@ -317,6 +327,9 @@ class AcpAgent:
     async def _run_turn(
         self, context: AcpSessionContext, prompt: Sequence[Mapping[str, Any]], turn_id: str
     ) -> StopReason:
+        if self._bootstrap is not None:
+            # Inside the turn, so a cancel stops the wait and withdraws the PostgreSQL question.
+            await self._bootstrap.before_first_prompt(context)
         # What the live feed held back between turns goes out before the turn's own updates.
         await self._feed.flush(context.session_id)
         return await self._turn_factory().run(context, prompt, turn_id=turn_id)

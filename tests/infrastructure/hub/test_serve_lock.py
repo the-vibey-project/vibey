@@ -5,7 +5,7 @@ import os
 from pathlib import Path
 
 from vibey.infrastructure.hub.interfaces.serve_lock_interface import ServeLockInterface
-from vibey.infrastructure.hub.serve_lock import LOCK_FILE, ServeLock
+from vibey.infrastructure.hub.serve_lock import ACP_BOOTSTRAP_LOCK_FILE, LOCK_FILE, ServeLock
 
 
 def test_the_lock_meets_its_declared_seam(tmp_path: Path) -> None:
@@ -46,3 +46,18 @@ def test_releasing_without_holding_is_a_no_op(tmp_path: Path) -> None:
     assert lock.release() is None
     assert lock.holder() is None
     assert not (tmp_path / LOCK_FILE).exists()
+
+
+def test_another_job_takes_its_own_lock_beside_the_hubs(tmp_path: Path) -> None:
+    hub = ServeLock(tmp_path)
+    first = ServeLock(tmp_path, lock_file=ACP_BOOTSTRAP_LOCK_FILE)
+    second = ServeLock(tmp_path, lock_file=ACP_BOOTSTRAP_LOCK_FILE)
+
+    assert hub.acquire() is True
+    assert first.acquire() is True  # a different file: the hub's lock does not hold it
+    assert second.acquire() is False
+    first.release()
+    assert second.acquire() is True
+    assert (tmp_path / ACP_BOOTSTRAP_LOCK_FILE).exists()
+    second.release()
+    hub.release()
