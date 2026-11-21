@@ -512,3 +512,66 @@ def test_a_second_hub_is_refused_even_when_the_holder_wrote_no_pid(
         asyncio.run(command.run(host=None, port=None))
     assert getattr(caught.value, "exit_code", None) == 1
     assert "already running on this computer:" in capsys.readouterr().err
+
+
+def test_an_acp_table_the_hub_cannot_read_stops_it_before_anything_opens(
+    tmp_path: Path,
+) -> None:
+    """`[acp] sessions_max` bounds what the hub keeps, so a bad value is refused by name."""
+
+    def refuse() -> Any:
+        raise AssertionError("nothing may open")
+
+    toml = tmp_path / "vibey.toml"
+    toml.write_text("[acp]\nsessions_max = 0\n")
+    command = ServeCommand(
+        open_app=refuse,
+        server=Driven(lambda *_: asyncio.sleep(0)),
+        config_path=lambda: toml,
+    )
+    with pytest.raises(Exception) as caught:
+        asyncio.run(command.run(host=None, port=None))
+    assert getattr(caught.value, "exit_code", None) == 2
+
+
+@pytest.mark.integration
+@pytest.mark.usefixtures("_an_empty_database")
+def test_the_hub_keeps_acp_sessions_within_the_declared_caps(tmp_path: Path) -> None:
+    got: dict[str, httpx.Response] = {}
+    first = "00000000-0000-4000-8000-000000000001"
+    second = "00000000-0000-4000-8000-000000000002"
+
+    async def drive(client: httpx.AsyncClient, token: str) -> None:
+        auth = {"authorization": f"Bearer {token}"}
+        got["first"] = await client.post(
+            "/api/v1/acp/sessions", headers=auth, json={"session_id": first, "cwd": "/work"}
+        )
+        got["second"] = await client.post(
+            "/api/v1/acp/sessions", headers=auth, json={"session_id": second, "cwd": "/work"}
+        )
+        got["listed"] = await client.get("/api/v1/acp/sessions", headers=auth)
+
+    asyncio.run(
+        _command(tmp_path, Driven(drive), "\n[acp]\nsessions_max = 1\n").run(host=None, port=None)
+    )
+    assert got["first"].status_code == 201, got["first"].text
+    assert got["second"].status_code == 507 and "sessions_max" in got["second"].json()["detail"]
+    assert [s["session_id"] for s in got["listed"].json()["sessions"]] == [first]
+
+
+@pytest.mark.integration
+@pytest.mark.usefixtures("_an_empty_database")
+def test_an_editor_only_acp_key_never_stops_the_hub(tmp_path: Path) -> None:
+    """The hub reads only `[acp] sessions_max` and `session_events_max`; a mistake in any key
+    the editor reads stays the editor's to report."""
+    got: dict[str, httpx.Response] = {}
+
+    async def drive(client: httpx.AsyncClient, token: str) -> None:
+        got["ready"] = await client.get("/health/ready")
+
+    asyncio.run(
+        _command(tmp_path, Driven(drive), "\n[acp]\nreject_words = 3\nmodes = ['nope']\n").run(
+            host=None, port=None
+        )
+    )
+    assert got["ready"].json() == {"status": "ready"}

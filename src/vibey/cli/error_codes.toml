@@ -660,3 +660,45 @@ class = "vibey.domain.acp.settings.InvalidAcpSettings"
 title = "The [acp] settings are invalid"
 cause = "An `[acp]` value is outside what its key allows. The message names the key."
 fix = "Correct that key in vibey.toml. docs/reference/configuration.md#acp lists every key and its bound."
+
+[[error]]
+code = "E0084"
+class = "vibey.domain.acp.session_log.SessionEventConflict"
+title = "An ACP session's log already holds another event there"
+cause = "The hub keeps each ACP session's log append-only: another event already holds that seq (two `vibey acp` processes are writing the same session, as two editor windows that both loaded it), or the session was already kept under another folder."
+fix = "Nothing is overwritten and nothing needs repairing. Keep one editor window per session; the window that was refused stops keeping the session's history and says so."
+
+[[error]]
+code = "E0085"
+class = "vibey.domain.acp.session_log.InvalidSessionCursor"
+title = "A session/list cursor the hub never gave out"
+cause = "A `session/list` request (or `GET /api/v1/acp/sessions`) carried a cursor that is not one the hub returned as `nextCursor`."
+fix = "List again without a cursor, then pass back only the `nextCursor` each page returns."
+
+[[error]]
+code = "E0086"
+class = "vibey.domain.acp.session_log.UnknownAcpSession"
+title = "No such ACP session for this folder"
+cause = "The hub keeps no session with that id for vibey's agent principal under that folder: it does not exist, belongs to another principal, or was kept under another folder. The hub says all three the same way."
+fix = "Open the session from the folder it was started in, or list the folder's sessions with `session/list`; a new session starts with `session/new`."
+
+[[error]]
+code = "E0087"
+class = "vibey.domain.acp.session_log.AcpSessionLimitReached"
+title = "The hub keeps no more ACP sessions for this principal"
+cause = "The principal already holds `[acp] sessions_max` sessions, or the session's log already holds `[acp] session_events_max` events. The write was refused; nothing kept was dropped or changed."
+fix = "Raise `[acp] sessions_max` or `session_events_max` in the hub's vibey.toml (docs/reference/configuration.md#acp) and restart the hub. The editor keeps working; the session's history from here on stays in its window."
+
+[[error]]
+code = "E0088"
+class = "vibey.domain.acp.session_log.SessionWritesThrottled"
+title = "The hub's rate limit held back an ACP session write"
+cause = "The hub answered 429 to a write to an ACP session's log: the agent principal sent more than the hub's per-principal burst allows for now."
+fix = "Nothing to do: the write is kept and sent again by the next flush. At the end of a connection vibey acp waits for it within `[acp] probe_seconds`, and says on stderr what it could not send."
+
+[[error]]
+code = "E0089"
+class = "vibey.domain.acp.session_log.SessionRequestRefused"
+title = "The hub refused an ACP session request for good"
+cause = "The hub answered a session request with a 4xx other than 429: a folder it does not keep, a body it will not read, or an event it cannot accept. Sending it again would be refused the same way."
+fix = "Nothing to repair: that session's history stops being kept and every other session's goes on. The agent's log on stderr has the hub's reason; a folder with a control or bidi character in its name is the usual cause."

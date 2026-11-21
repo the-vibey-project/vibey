@@ -83,7 +83,7 @@ export type HubRefusal =
   | 'not-on-a-device';
 
 /** What the host may grant a device (hub-api.md, "Who may do what"). */
-export type HubScope = 'view' | 'answer' | 'spend' | 'run' | 'bump' | 'workflows';
+export type HubScope = 'view' | 'answer' | 'spend' | 'run' | 'bump' | 'workflows' | 'acp_sessions';
 
 /** Where a command sent to the repository's GitHub-hosted runners is (ADR-0085, `vibey -w`). */
 export type WorkflowRunState = 'queued' | 'running' | 'done' | 'failed';

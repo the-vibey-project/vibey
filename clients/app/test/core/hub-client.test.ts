@@ -446,7 +446,8 @@ describe('HubClient', () => {
   });
 
   it('describes every scope the host may grant, workflows among them', () => {
-    expect(Object.keys(HubClient.SCOPES)).toEqual(['view', 'answer', 'spend', 'run', 'bump', 'workflows']);
+    expect(Object.keys(HubClient.SCOPES)).toEqual(['view', 'answer', 'spend', 'run', 'bump', 'workflows', 'acp_sessions']);
+    expect(HubClient.SCOPES.acp_sessions).toBe("Keep its own editor (ACP) sessions' history on the hub");
     expect(HubClient.SCOPES.workflows).toBe("Run vibey commands on the repository's GitHub-hosted runners");
   });
 

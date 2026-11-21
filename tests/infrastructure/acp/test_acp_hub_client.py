@@ -13,8 +13,17 @@ from uuid import UUID
 
 import pytest
 
-from vibey.application.acp.dto import HubToolResult, HubTurn, LedgerPage
+from vibey.application.acp.dto import HubToolResult, HubTurn, LedgerPage, SessionSummary
 from vibey.application.acp.interfaces.acp_hub_port_interface import AcpHubPortInterface
+from vibey.domain.acp.session_log import (
+    SESSION_PAGE,
+    AcpSessionLimitReached,
+    InvalidSessionCursor,
+    SessionEventConflict,
+    SessionRequestRefused,
+    SessionWritesThrottled,
+    UnknownAcpSession,
+)
 from vibey.domain.errors import VibeyError
 from vibey.domain.host_tools import HostToolError, HubCall
 from vibey.domain.hub_scope import HubScope
@@ -234,3 +243,189 @@ async def test_healthy_never_raises_and_logs_a_defect_with_its_traceback(
         assert await client.healthy() is False
 
     assert "bad call" in caplog.text and "Traceback" in caplog.text
+
+
+# -- an ACP session's log -------------------------------------------------------------------
+
+SID = "0f6f4c1e-8d6b-4f0e-9a51-6b1f3f1f9a01"
+
+
+async def test_create_session_posts_the_id_and_folder() -> None:
+    gateway = _Gateway(_ok({"session_id": SID}, 201))
+    await AcpHubClient(gateway=gateway).create_session(SID, "/work")
+    assert gateway.calls == [
+        HubCall(
+            tool="vibey_acp_session",
+            method="POST",
+            route="/api/v1/acp/sessions",
+            body={"session_id": SID, "cwd": "/work"},
+        )
+    ]
+
+
+async def test_append_event_posts_one_event() -> None:
+    gateway = _Gateway(_ok({"stored": True}))
+    await AcpHubClient(gateway=gateway).append_event(SID, 3, "plan", {"entries": []})
+    assert gateway.calls[0].route == f"/api/v1/acp/sessions/{SID}/events"
+    assert gateway.calls[0].body == {"seq": 3, "kind": "plan", "payload": {"entries": []}}
+
+
+@pytest.mark.parametrize(
+    ("status", "error"),
+    [
+        (403, UnknownAcpSession),
+        (404, UnknownAcpSession),
+        (409, SessionEventConflict),
+        (507, AcpSessionLimitReached),
+        (500, HubGatewayError),
+    ],
+)
+async def test_a_refused_session_write_says_why(status: int, error: type[Exception]) -> None:
+    gateway = _Gateway(_ok({"detail": "no"}, status), _ok({"detail": "no"}, status))
+    client = AcpHubClient(gateway=gateway)
+    with pytest.raises(error):
+        await client.append_event(SID, 1, "plan", {})
+    with pytest.raises(error):
+        await client.create_session(SID, "/work")
+
+
+@pytest.mark.parametrize("session_id", ["s", "../x", SID.upper(), f"{SID}/../../gates"])
+async def test_only_an_id_vibey_mints_is_put_in_a_route(session_id: str) -> None:
+    gateway = _Gateway()
+    client = AcpHubClient(gateway=gateway)
+    with pytest.raises(UnknownAcpSession):
+        await client.append_event(session_id, 1, "plan", {})
+    with pytest.raises(UnknownAcpSession):
+        await client.session_events(session_id, 0, cwd="/work")
+    assert gateway.calls == []
+
+
+def _page(first: int, count: int) -> dict[str, Any]:
+    events = [{"seq": n, "kind": "plan", "payload": {}} for n in range(first, first + count)]
+    return {"events": events, "last_seq": first + count - 1 if count else None}
+
+
+async def test_session_events_pages_until_a_short_page() -> None:
+    gateway = _Gateway(_ok(_page(1, SESSION_PAGE)), _ok(_page(SESSION_PAGE + 1, 2)))
+    events = await AcpHubClient(gateway=gateway).session_events(SID, 0, cwd="/work dir")
+    assert [event.seq for event in events] == list(range(1, SESSION_PAGE + 3))
+    assert [call.query for call in gateway.calls] == [
+        (("after", "0"), ("limit", str(SESSION_PAGE)), ("cwd", "/work dir")),
+        (("after", str(SESSION_PAGE)), ("limit", str(SESSION_PAGE)), ("cwd", "/work dir")),
+    ]
+
+
+async def test_session_events_passes_over_what_is_not_an_event_after_the_cursor() -> None:
+    page = {
+        "events": [
+            {"seq": 1, "kind": "plan", "payload": {}},  # not after the cursor
+            {"seq": True, "kind": "plan", "payload": {}},
+            {"seq": 6, "kind": 3, "payload": {}},
+            {"seq": 7, "kind": "plan", "payload": []},
+            {"seq": 8, "kind": "plan", "payload": {"entries": []}},
+            "junk",
+        ]
+    }
+    events = await AcpHubClient(gateway=_Gateway(_ok(page))).session_events(SID, 5, cwd="/w")
+    assert [(e.seq, dict(e.payload)) for e in events] == [(8, {"entries": []})]
+
+
+@pytest.mark.parametrize("status", [403, 404])
+async def test_a_session_the_hub_does_not_keep_is_unknown(status: int) -> None:
+    gateway = _Gateway(_ok({"detail": "no session"}, status))
+    with pytest.raises(UnknownAcpSession):
+        await AcpHubClient(gateway=gateway).session_events(SID, 0, cwd="/work")
+
+
+async def test_list_sessions_reads_a_page_and_its_cursor() -> None:
+    stamp = "2026-11-21T12:00:00+00:00"
+    document = {
+        "sessions": [
+            {"session_id": SID, "cwd": "/w", "title": "t", "updated_at": stamp, "closed": True},
+            {"session_id": SID, "cwd": "/w", "title": None, "updated_at": stamp, "closed": 1},
+            {"session_id": 3, "cwd": "/w", "updated_at": stamp},
+            {"session_id": SID, "cwd": "/w", "title": 4, "updated_at": stamp},
+            {"session_id": SID, "cwd": "/w", "updated_at": "yesterday"},
+            {"session_id": SID, "cwd": "/w"},
+        ],
+        "next_cursor": "abc",
+    }
+    gateway = _Gateway(_ok(document))
+    records, cursor = await AcpHubClient(gateway=gateway).list_sessions(cwd="/w", cursor="x")
+    assert gateway.calls[0].query == (("limit", str(SESSION_PAGE)), ("cwd", "/w"), ("cursor", "x"))
+    assert [(r.title, r.closed) for r in records] == [("t", True), (None, False)]
+    assert records[0].updated_at.isoformat() == stamp
+    assert cursor == "abc"
+
+
+async def test_the_last_list_page_has_no_cursor() -> None:
+    gateway = _Gateway(_ok({"sessions": [], "next_cursor": None}))
+    assert await AcpHubClient(gateway=gateway).list_sessions(cwd=None, cursor=None) == ((), None)
+    assert gateway.calls[0].query == (("limit", str(SESSION_PAGE)),)
+
+
+async def test_a_cursor_the_hub_refuses_is_an_invalid_cursor() -> None:
+    gateway = _Gateway(_ok({"detail": "bad"}, 422), _ok({"detail": "bad"}, 422))
+    client = AcpHubClient(gateway=gateway)
+    with pytest.raises(InvalidSessionCursor):
+        await client.list_sessions(cwd=None, cursor="nope")
+    with pytest.raises(SessionRequestRefused):
+        await client.list_sessions(cwd=None, cursor=None)
+
+
+async def test_a_write_the_rate_limit_refused_is_throttled_not_lost() -> None:
+    gateway = _Gateway(_ok({"detail": "slow down"}, 429))
+    with pytest.raises(SessionWritesThrottled):
+        await AcpHubClient(gateway=gateway).append_event(SID, 1, "plan", {})
+
+
+async def test_a_full_page_with_a_malformed_entry_still_reads_on() -> None:
+    """The end of the log is a short page as the hub sent it, not after malformed entries are
+    passed over: otherwise the read stops early and the next seq collides."""
+    first = _page(1, SESSION_PAGE)
+    first["events"][5] = {"seq": 6, "kind": 3, "payload": {}}
+    gateway = _Gateway(_ok(first), _ok(_page(SESSION_PAGE + 1, 1)))
+    events = await AcpHubClient(gateway=gateway).session_events(SID, 0, cwd="/w")
+    assert len(gateway.calls) == 2
+    assert events[-1].seq == SESSION_PAGE + 1 and len(events) == SESSION_PAGE
+
+
+async def test_a_full_page_that_moves_nowhere_ends_the_read() -> None:
+    stale = {"events": [{"seq": 1, "kind": "plan", "payload": {}}] * SESSION_PAGE}
+    gateway = _Gateway(_ok(stale))
+    assert await AcpHubClient(gateway=gateway).session_events(SID, 5, cwd="/w") == ()
+    assert len(gateway.calls) == 1
+
+
+async def test_session_summary_reads_the_newest_seq_and_states() -> None:
+    document = {
+        "session_id": SID,
+        "newest_seq": 9,
+        "mode": {"modeId": "observe"},
+        "attach": None,
+        "title": ["not", "a", "mapping"],
+    }
+    gateway = _Gateway(_ok(document))
+    summary = await AcpHubClient(gateway=gateway).session_summary(SID, cwd="/w")
+    assert gateway.calls[0].route == f"/api/v1/acp/sessions/{SID}"
+    assert gateway.calls[0].query == (("cwd", "/w"),)
+    assert summary == SessionSummary(
+        newest_seq=9, mode={"modeId": "observe"}, attach=None, title=None
+    )
+
+
+@pytest.mark.parametrize("newest", [None, True, -3, "9"])
+async def test_a_summary_without_a_usable_newest_seq_reads_as_empty(newest: object) -> None:
+    gateway = _Gateway(_ok({"newest_seq": newest}))
+    summary = await AcpHubClient(gateway=gateway).session_summary(SID, cwd="/w")
+    assert summary.newest_seq == 0
+
+
+@pytest.mark.parametrize("status", [400, 401, 413, 422])
+async def test_a_permanent_refusal_is_refused_and_a_passing_failure_is_not(status: int) -> None:
+    gateway = _Gateway(_ok({"detail": "no"}, status), _ok({"detail": "later"}, 503))
+    client = AcpHubClient(gateway=gateway)
+    with pytest.raises(SessionRequestRefused, match=str(status)):
+        await client.create_session(SID, "/w")
+    with pytest.raises(HubGatewayError):
+        await client.append_event(SID, 1, "plan", {})

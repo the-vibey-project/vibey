@@ -575,7 +575,12 @@ async def test_a_device_needs_the_workflows_scope() -> None:
         (("workflows",), ["status"], "view"),
         (("workflows", "view", "answer"), ["answer", "g"], "spend"),
         (("workflows", "view"), ["queue", "bump", "j"], "bump"),
-        (("workflows", "view", "run", "bump", "answer", "spend"), ["new", "x"], ""),
+        (("workflows", "view", "run", "bump", "answer", "spend"), ["new", "x"], "acp_sessions"),
+        (
+            ("workflows", "view", "run", "bump", "answer", "spend", "acp_sessions"),
+            ["new", "x"],
+            "",
+        ),
     ],
 )
 async def test_workflows_alone_never_lets_a_device_do_what_its_other_scopes_do_not(

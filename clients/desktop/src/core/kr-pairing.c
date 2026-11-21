@@ -230,6 +230,7 @@ kr_pairing_scope_description(const char *scope)
         {"run", "Start, stop or wind down work"},
         {"bump", "Move a queued job to the front of its project's queue"},
         {"workflows", "Run vibey commands on the repository's GitHub-hosted runners"},
+        {"acp_sessions", "Keep its own editor (ACP) sessions' history on the hub"},
     };
     for (size_t i = 0; scope != NULL && i < G_N_ELEMENTS(SCOPES); i++) {
         if (g_str_equal(scope, SCOPES[i].scope))

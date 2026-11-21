@@ -15,7 +15,9 @@ from typing import Final
 
 from vibey.domain.acp.settings import (
     FLOAT_MINIMA,
+    HUB_KEYS,
     INSTALL_POSTGRES_CHOICES,
+    INTEGER_MAXIMA,
     INTEGER_MINIMA,
     KNOWN_MODES,
     KNOWN_SERVICES,
@@ -58,6 +60,18 @@ class AcpSettingsLoader:
     def load(self, path: Path) -> AcpSettings:
         if not path.exists():
             return AcpSettings()
+        return self._build(self._table(path), str(path))
+
+    def hub_settings(self, path: Path) -> AcpSettings:
+        """Only the keys the hub reads (`HUB_KEYS`), each checked; every other key -- the
+        editor's -- is left unread, so a mistake in one never stops `vibey serve`."""
+        if not path.exists():
+            return AcpSettings()
+        section = self._table(path)
+        return self._build({key: section[key] for key in HUB_KEYS if key in section}, str(path))
+
+    @staticmethod
+    def _table(path: Path) -> Mapping[str, object]:
         try:
             with path.open("rb") as handle:
                 document = tomllib.load(handle)
@@ -68,7 +82,7 @@ class AcpSettingsLoader:
         section = document.get("acp", {})
         if not isinstance(section, Mapping):
             raise ConfigError(str(path), "[acp] must be a table")
-        return self._build(section, str(path))
+        return section
 
     def from_mapping(self, section: Mapping[str, object]) -> AcpSettings:
         return self._build(section, _TABLE_SOURCE)
@@ -123,6 +137,10 @@ class AcpSettingsLoader:
             raise ConfigError(source, f"[acp] {key} must be an integer")
         if value < minimum:
             raise ConfigError(source, f"[acp] {key} must be at least {minimum}, not {value}")
+        if key in INTEGER_MAXIMA and value > INTEGER_MAXIMA[key]:
+            raise ConfigError(
+                source, f"[acp] {key} must be at most {INTEGER_MAXIMA[key]}, not {value}"
+            )
         return value
 
     @staticmethod
@@ -165,3 +183,7 @@ class AcpSettingsLoader:
         if key == "modes" and not items:
             raise ConfigError(source, f"[acp] {key} must not be empty")
         return items
+
+
+ACP_SETTINGS: Final = AcpSettingsLoader()
+"""The loader `vibey serve` reads `[acp] sessions_max` and `session_events_max` with."""

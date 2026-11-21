@@ -11,7 +11,7 @@ names = []            # extra Host names a request may use, e.g. "studio.local"
 state_dir = ""        # where the hub keeps its token and runtime file; "" = the default
 lane_roots = []       # where to look for lanes; [] = the directory `vibey serve` runs in
 projects_root = ""    # where a paired device may start projects (a folder per project); "" = nowhere
-agent_scopes = ["view", "answer", "run"]   # what a host LLM over MCP may do; [] = nothing
+agent_scopes = ["view", "answer", "run", "acp_sessions"]   # what a host LLM (MCP) or editor (ACP) may do; [] = nothing
 ```
 
 A missing file or table declares nothing, so the hub stays on loopback. A table that is

@@ -435,7 +435,13 @@ def test_the_host_token_does_not_open_the_agent_door_and_the_reverse() -> None:
 
 
 def test_the_agent_ceiling_is_look_answer_and_run_and_never_spend() -> None:
-    assert {HubScope.VIEW, HubScope.ANSWER, HubScope.RUN} == AGENT_DEFAULT_SCOPES
+    # `acp_sessions` keeps the agent's own ACP session logs (SP-ACP); it spends nothing.
+    assert {
+        HubScope.VIEW,
+        HubScope.ANSWER,
+        HubScope.RUN,
+        HubScope.ACP_SESSIONS,
+    } == AGENT_DEFAULT_SCOPES
     assert HubSettings().agent_scopes == AGENT_DEFAULT_SCOPES
 
 

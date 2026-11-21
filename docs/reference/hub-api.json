@@ -1,6 +1,62 @@
 {
   "components": {
     "schemas": {
+      "AcpSessionBody": {
+        "additionalProperties": false,
+        "description": "The body of `POST /api/v1/acp/sessions`: a session `vibey acp` keeps.",
+        "properties": {
+          "cwd": {
+            "description": "The absolute folder the session was opened in; printable characters only.",
+            "maxLength": 4096,
+            "minLength": 1,
+            "pattern": "^/",
+            "title": "Cwd",
+            "type": "string"
+          },
+          "session_id": {
+            "description": "The session's UUID.",
+            "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
+            "title": "Session Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "session_id",
+          "cwd"
+        ],
+        "title": "AcpSessionBody",
+        "type": "object"
+      },
+      "AcpSessionEventBody": {
+        "additionalProperties": false,
+        "description": "The body of `POST /api/v1/acp/sessions/{session_id}/events`: one event of its log.",
+        "properties": {
+          "kind": {
+            "$ref": "#/components/schemas/SessionEventKind",
+            "description": "What the event records."
+          },
+          "payload": {
+            "additionalProperties": true,
+            "description": "What it records; kept as given.",
+            "title": "Payload",
+            "type": "object"
+          },
+          "seq": {
+            "description": "The event's place in the session's log.",
+            "maximum": 9.223372036854776e+18,
+            "minimum": 1.0,
+            "title": "Seq",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "seq",
+          "kind",
+          "payload"
+        ],
+        "title": "AcpSessionEventBody",
+        "type": "object"
+      },
       "ChatMessageBody": {
         "additionalProperties": false,
         "description": "The body of `POST /api/v1/chat/messages`: a chat turn or `/` command.",
@@ -118,7 +174,8 @@
           "spend",
           "run",
           "bump",
-          "workflows"
+          "workflows",
+          "acp_sessions"
         ],
         "title": "HubScope",
         "type": "string"
@@ -186,6 +243,22 @@
         ],
         "title": "ProjectStartBody",
         "type": "object"
+      },
+      "SessionEventKind": {
+        "description": "What one row of a session's log records. The database holds the same closed set.",
+        "enum": [
+          "user_message",
+          "agent_message",
+          "tool_call",
+          "tool_call_update",
+          "plan",
+          "mode",
+          "attach",
+          "title",
+          "closed"
+        ],
+        "title": "SessionEventKind",
+        "type": "string"
       },
       "ValidationError": {
         "properties": {
@@ -302,6 +375,429 @@
         "summary": "vibey_bootstrap's metrics snapshot.",
         "tags": [
           "health"
+        ]
+      }
+    },
+    "/api/v1/acp/sessions": {
+      "get": {
+        "operationId": "list_acp_sessions_api_v1_acp_sessions_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "cwd",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 4096,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Cwd"
+            }
+          },
+          {
+            "in": "query",
+            "name": "cursor",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 1024,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Cursor"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 200,
+              "maximum": 200,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "description": "The request proves no principal."
+          },
+          "403": {
+            "description": "The principal's scopes do not permit this."
+          },
+          "411": {
+            "description": "A body was sent without a Content-Length."
+          },
+          "413": {
+            "description": "The body is larger than the hub reads."
+          },
+          "421": {
+            "description": "The Host header is not one this hub answers."
+          },
+          "422": {
+            "description": "The cursor is not one the hub gave."
+          },
+          "429": {
+            "description": "Too many requests."
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "This principal's ACP sessions, newest first, a page at a time.",
+        "tags": [
+          "acp"
+        ]
+      },
+      "post": {
+        "operationId": "create_acp_session_api_v1_acp_sessions_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AcpSessionBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "description": "The request proves no principal."
+          },
+          "403": {
+            "description": "The principal's scopes do not permit this."
+          },
+          "409": {
+            "description": "The session is kept under another folder."
+          },
+          "411": {
+            "description": "A body was sent without a Content-Length."
+          },
+          "413": {
+            "description": "The body is larger than the hub reads."
+          },
+          "421": {
+            "description": "The Host header is not one this hub answers."
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          },
+          "429": {
+            "description": "Too many requests."
+          },
+          "507": {
+            "description": "The principal or the session holds all the hub keeps."
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Keep an ACP session; creating it again with the same folder is a no-op.",
+        "tags": [
+          "acp"
+        ]
+      }
+    },
+    "/api/v1/acp/sessions/{session_id}": {
+      "get": {
+        "operationId": "acp_session_summary_api_v1_acp_sessions__session_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "session_id",
+            "required": true,
+            "schema": {
+              "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
+              "title": "Session Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "cwd",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 4096,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Cwd"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "description": "The request proves no principal."
+          },
+          "403": {
+            "description": "No such session of this principal's (under that folder)."
+          },
+          "411": {
+            "description": "A body was sent without a Content-Length."
+          },
+          "413": {
+            "description": "The body is larger than the hub reads."
+          },
+          "421": {
+            "description": "The Host header is not one this hub answers."
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          },
+          "429": {
+            "description": "Too many requests."
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "An ACP session's newest seq and its newest mode, attach and title events.",
+        "tags": [
+          "acp"
+        ]
+      }
+    },
+    "/api/v1/acp/sessions/{session_id}/events": {
+      "get": {
+        "operationId": "acp_events_api_v1_acp_sessions__session_id__events_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "session_id",
+            "required": true,
+            "schema": {
+              "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
+              "title": "Session Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "after",
+            "required": false,
+            "schema": {
+              "default": 0,
+              "maximum": 9223372036854775807,
+              "minimum": 0,
+              "title": "After",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 200,
+              "maximum": 200,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "cwd",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 4096,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Cwd"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "description": "The request proves no principal."
+          },
+          "403": {
+            "description": "No such session of this principal's (under that folder)."
+          },
+          "411": {
+            "description": "A body was sent without a Content-Length."
+          },
+          "413": {
+            "description": "The body is larger than the hub reads."
+          },
+          "421": {
+            "description": "The Host header is not one this hub answers."
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          },
+          "429": {
+            "description": "Too many requests."
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "An ACP session's events after a seq, oldest first.",
+        "tags": [
+          "acp"
+        ]
+      },
+      "post": {
+        "operationId": "append_acp_event_api_v1_acp_sessions__session_id__events_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "session_id",
+            "required": true,
+            "schema": {
+              "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
+              "title": "Session Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AcpSessionEventBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "description": "The request proves no principal."
+          },
+          "403": {
+            "description": "No such session of this principal's (under that folder)."
+          },
+          "409": {
+            "description": "Another event already holds that seq."
+          },
+          "411": {
+            "description": "A body was sent without a Content-Length."
+          },
+          "413": {
+            "description": "The body is larger than the hub reads."
+          },
+          "421": {
+            "description": "The Host header is not one this hub answers."
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          },
+          "429": {
+            "description": "Too many requests."
+          },
+          "507": {
+            "description": "The principal or the session holds all the hub keeps."
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Append one event to an ACP session's log; the same event again is a no-op.",
+        "tags": [
+          "acp"
         ]
       }
     },

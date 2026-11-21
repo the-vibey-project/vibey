@@ -42,6 +42,7 @@ from fastapi import (
     Depends,
     FastAPI,
     HTTPException,
+    Path,
     Query,
     Request,
     Security,
@@ -50,14 +51,26 @@ from fastapi import (
 )
 from fastapi.responses import HTMLResponse, JSONResponse, Response
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 from vibey_bootstrap.fastapi_middleware import install_middleware
 from vibey_bootstrap.metrics import build_metrics_snapshot
 from vibey_bootstrap.ratelimit import TokenBucket
 
+from vibey.application.acp.interfaces.acp_session_service_interface import (
+    AcpSessionServiceInterface,
+)
 from vibey.application.dto import HubPrincipal
 from vibey.application.hub.interfaces.hub_service_interface import HubServiceInterface
 from vibey.application.interfaces.remote_command import RemoteCommandServiceInterface
+from vibey.domain.acp.session_log import (
+    MAX_CWD_CHARS,
+    SESSION_ID_SHAPE,
+    SESSION_PAGE,
+    AcpSessionLimitReached,
+    InvalidSessionCursor,
+    SessionEventConflict,
+    SessionEventKind,
+)
 from vibey.domain.errors import (
     GateAlreadyAnswered,
     InvalidActorLabel,
@@ -137,6 +150,9 @@ ERROR_STATUS: Final[tuple[tuple[type[VibeyError], int], ...]] = (
     (UnknownGate, 404),
     (UnknownLane, 404),
     (GateAlreadyAnswered, 409),
+    (SessionEventConflict, 409),
+    (InvalidSessionCursor, 422),
+    (AcpSessionLimitReached, 507),
     (PriorityRefused, 403),
     (ReorderRefused, 409),
     (InvalidAnswer, 422),
@@ -248,6 +264,46 @@ class ChatMessageBody(BaseModel):
     )
 
 
+SESSION_ID_PATTERN: Final = f"^{SESSION_ID_SHAPE.pattern}$"
+CWD_PATTERN: Final = "^/"
+"""A session's folder is an absolute path."""
+MAX_SEQ: Final = 2**63 - 1
+"""The largest `seq` the database's `bigint` holds."""
+
+
+class AcpSessionBody(BaseModel):
+    """The body of `POST /api/v1/acp/sessions`: a session `vibey acp` keeps."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    session_id: str = Field(pattern=SESSION_ID_PATTERN, description="The session's UUID.")
+    cwd: str = Field(
+        min_length=1,
+        max_length=MAX_CWD_CHARS,
+        pattern=CWD_PATTERN,
+        description="The absolute folder the session was opened in; printable characters only.",
+    )
+
+    @field_validator("cwd")
+    @classmethod
+    def _printable(cls, value: str) -> str:
+        # A folder is shown in every editor's session picker and sent back on a load, so it can
+        # be neither escaped nor trusted: one with a control, format or bidi character is refused.
+        if not value.isprintable():
+            raise ValueError("cwd must hold printable characters only")
+        return value
+
+
+class AcpSessionEventBody(BaseModel):
+    """The body of `POST /api/v1/acp/sessions/{session_id}/events`: one event of its log."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    seq: int = Field(ge=1, le=MAX_SEQ, description="The event's place in the session's log.")
+    kind: SessionEventKind = Field(description="What the event records.")
+    payload: dict[str, Any] = Field(description="What it records; kept as given.")
+
+
 class HubAppFactory:
     """Builds the hub's FastAPI app.
 
@@ -275,6 +331,7 @@ class HubAppFactory:
         pairing: HubPairingInterface | None = None,
         workflows: RemoteCommandServiceInterface | None = None,
         runs: RunOwnershipInterface | None = None,
+        acp_sessions: AcpSessionServiceInterface | None = None,
     ) -> FastAPI:
         buckets: dict[str, TokenBucket] = {}
 
@@ -628,6 +685,9 @@ class HubAppFactory:
                 raise HTTPException(status_code=404, detail=UNKNOWN_RUN)
             return JSONResponse((await service.poll(request_id)).as_dict())
 
+        if acp_sessions is not None:
+            self._acp_routes(app, acp_sessions, who)
+
         def paired() -> HubPairingInterface:
             if pairing is None:
                 raise HTTPException(status_code=503, detail="pairing is not enabled on this hub")
@@ -769,6 +829,128 @@ class HubAppFactory:
                 return
 
         return app
+
+    @staticmethod
+    def _acp_routes(app: FastAPI, sessions: AcpSessionServiceInterface, who: Any) -> None:
+        """The routes `vibey acp` keeps its sessions through (SP-ACP), offered only when the
+        hub was built with a session service. A create and an append are authorised as
+        `record_acp_session` (`acp_sessions`), a list and a read as `read_acp_sessions`
+        (`view`), and a session is read and written only by the principal that created it."""
+        v1 = f"/api/v{HUB_API_VERSION}/acp/sessions"
+        session_path = Annotated[str, Path(pattern=SESSION_ID_PATTERN)]
+        not_yours = {
+            **REFUSED,
+            403: {"description": "No such session of this principal's (under that folder)."},
+        }
+        full: dict[int | str, dict[str, Any]] = {
+            507: {"description": "The principal or the session holds all the hub keeps."}
+        }
+
+        @app.post(
+            v1,
+            tags=["acp"],
+            summary="Keep an ACP session; creating it again with the same folder is a no-op.",
+            status_code=201,
+            responses={
+                **REFUSED,
+                **full,
+                409: {"description": "The session is kept under another folder."},
+            },
+        )
+        async def create_acp_session(caller: who, body: AcpSessionBody) -> JSONResponse:
+            await sessions.create(caller, body.session_id, body.cwd)
+            return JSONResponse({"session_id": body.session_id}, status_code=201)
+
+        @app.get(
+            v1,
+            tags=["acp"],
+            summary="This principal's ACP sessions, newest first, a page at a time.",
+            responses={**REFUSED, 422: {"description": "The cursor is not one the hub gave."}},
+        )
+        async def list_acp_sessions(
+            caller: who,
+            cwd: Annotated[str | None, Query(max_length=MAX_CWD_CHARS)] = None,
+            cursor: Annotated[str | None, Query(max_length=1024)] = None,
+            limit: Annotated[int, Query(ge=1, le=SESSION_PAGE)] = SESSION_PAGE,
+        ) -> JSONResponse:
+            records, next_cursor = await sessions.list(caller, cwd=cwd, cursor=cursor, limit=limit)
+            return JSONResponse(
+                {
+                    "sessions": [
+                        {
+                            "session_id": record.session_id,
+                            "cwd": record.cwd,
+                            "title": record.title,
+                            "updated_at": record.updated_at.isoformat(),
+                            "closed": record.closed,
+                        }
+                        for record in records
+                    ],
+                    "next_cursor": next_cursor,
+                }
+            )
+
+        @app.post(
+            f"{v1}/{{session_id}}/events",
+            tags=["acp"],
+            summary="Append one event to an ACP session's log; the same event again is a no-op.",
+            responses={
+                **not_yours,
+                **full,
+                409: {"description": "Another event already holds that seq."},
+            },
+        )
+        async def append_acp_event(
+            caller: who, session_id: session_path, body: AcpSessionEventBody
+        ) -> JSONResponse:
+            await sessions.append(caller, session_id, body.seq, body.kind.value, body.payload)
+            return JSONResponse({"stored": True})
+
+        @app.get(
+            f"{v1}/{{session_id}}",
+            tags=["acp"],
+            summary="An ACP session's newest seq and its newest mode, attach and title events.",
+            responses=not_yours,
+        )
+        async def acp_session_summary(
+            caller: who,
+            session_id: session_path,
+            cwd: Annotated[str | None, Query(max_length=MAX_CWD_CHARS)] = None,
+        ) -> JSONResponse:
+            summary = await sessions.summary(caller, session_id, cwd=cwd)
+            return JSONResponse(
+                {
+                    "session_id": session_id,
+                    "newest_seq": summary.newest_seq,
+                    "mode": dict(summary.mode) if summary.mode is not None else None,
+                    "attach": dict(summary.attach) if summary.attach is not None else None,
+                    "title": dict(summary.title) if summary.title is not None else None,
+                }
+            )
+
+        @app.get(
+            f"{v1}/{{session_id}}/events",
+            tags=["acp"],
+            summary="An ACP session's events after a seq, oldest first.",
+            responses=not_yours,
+        )
+        async def acp_events(
+            caller: who,
+            session_id: session_path,
+            after: Annotated[int, Query(ge=0, le=MAX_SEQ)] = 0,
+            limit: Annotated[int, Query(ge=1, le=SESSION_PAGE)] = SESSION_PAGE,
+            cwd: Annotated[str | None, Query(max_length=MAX_CWD_CHARS)] = None,
+        ) -> JSONResponse:
+            events = await sessions.events(caller, session_id, after=after, limit=limit, cwd=cwd)
+            return JSONResponse(
+                {
+                    "events": [
+                        {"seq": event.seq, "kind": event.kind, "payload": dict(event.payload)}
+                        for event in events
+                    ],
+                    "last_seq": events[-1].seq if events else None,
+                }
+            )
 
     def _harden(self, app: FastAPI, allowed_hosts: frozenset[str]) -> None:
         binding = self._binding

@@ -14,12 +14,24 @@ from uuid import UUID
 
 from vibey.application.acp.acp_agent import AcpAgent
 from vibey.application.acp.acp_gate_prompter import AcpGatePrompter
+from vibey.application.acp.acp_journaling_channel import AcpJournalingChannel
 from vibey.application.acp.acp_live_feed import AcpLiveFeed
 from vibey.application.acp.acp_prompt_turn import AcpPromptTurn
-from vibey.application.acp.dto import AcpSessionContext, HubToolResult, HubTurn, LedgerPage
+from vibey.application.acp.acp_session_journal import AcpSessionJournal
+from vibey.application.acp.dto import (
+    AcpSessionContext,
+    HubToolResult,
+    HubTurn,
+    LedgerPage,
+    SessionEvent,
+    SessionRecord,
+    SessionSummary,
+)
 from vibey.domain.acp.gate_permission import GatePermissionMapper
 from vibey.domain.acp.modes import AcpModes
 from vibey.domain.acp.protocol import StopReason
+from vibey.domain.acp.session_log import SessionEventConflict, UnknownAcpSession
+from vibey.domain.acp.session_replay import SESSION_REPLAY
 from vibey.domain.acp.session_state import AcpSessionState
 from vibey.domain.acp.settings import AcpSettings
 from vibey.domain.acp.update_mapper import AcpUpdateMapper
@@ -154,6 +166,14 @@ class FakeHub:
         """Scripted answers to `ledger_after`, used first and in order."""
         self.ledger_calls: list[tuple[UUID, int, int]] = []
         self.ledger_read = asyncio.Event()
+        self.kept: dict[str, tuple[str, list[SessionEvent]]] = {}
+        """The sessions the hub keeps: each one's folder and log."""
+        self.session_error: Exception | None = None
+        """Raised by every session call, as a hub that is away."""
+        self.session_calls: list[tuple[str, ...]] = []
+        self.listing: tuple[tuple[SessionRecord, ...], str | None] = ((), None)
+        self.list_error: Exception | None = None
+        self.list_calls: list[tuple[str | None, str | None]] = []
 
     async def chat(self, message: str, *, project_id: UUID | None, request_id: str) -> HubTurn:
         self.calls.append(ChatCall(message, project_id, request_id))
@@ -195,6 +215,70 @@ class FakeHub:
 
     async def healthy(self) -> bool:
         return True
+
+    async def create_session(self, session_id: str, cwd: str) -> None:
+        self.session_calls.append(("create", session_id))
+        if self.session_error is not None:
+            raise self.session_error
+        self.kept.setdefault(session_id, (cwd, []))
+
+    async def append_event(
+        self, session_id: str, seq: int, kind: str, payload: Mapping[str, Any]
+    ) -> None:
+        self.session_calls.append(("append", session_id, str(seq), kind))
+        if self.session_error is not None:
+            raise self.session_error
+        if session_id not in self.kept:
+            raise UnknownAcpSession("no such session")
+        log = self.kept[session_id][1]
+        held = next((event for event in log if event.seq == seq), None)
+        if held is not None:
+            if (held.kind, dict(held.payload)) != (kind, dict(payload)):
+                raise SessionEventConflict(f"seq {seq} is taken")
+            return
+        log.append(SessionEvent(seq=seq, kind=kind, payload=dict(payload)))
+
+    async def session_events(
+        self, session_id: str, after: int, *, cwd: str
+    ) -> tuple[SessionEvent, ...]:
+        self.session_calls.append(("events", session_id, cwd))
+        if self.session_error is not None:
+            raise self.session_error
+        kept = self.kept.get(session_id)
+        if kept is None or kept[0] != cwd:
+            raise UnknownAcpSession("no such session")
+        return tuple(sorted((e for e in kept[1] if e.seq > after), key=lambda e: e.seq))
+
+    async def session_summary(self, session_id: str, *, cwd: str) -> SessionSummary:
+        self.session_calls.append(("summary", session_id, cwd))
+        if self.session_error is not None:
+            raise self.session_error
+        kept = self.kept.get(session_id)
+        if kept is None or kept[0] != cwd:
+            raise UnknownAcpSession("no such session")
+        log = sorted(kept[1], key=lambda e: e.seq)
+
+        def newest(kind: str) -> Mapping[str, Any] | None:
+            return next((e.payload for e in reversed(log) if e.kind == kind), None)
+
+        return SessionSummary(
+            newest_seq=log[-1].seq if log else 0,
+            mode=newest("mode"),
+            attach=newest("attach"),
+            title=newest("title"),
+        )
+
+    async def list_sessions(
+        self, *, cwd: str | None, cursor: str | None
+    ) -> tuple[tuple[SessionRecord, ...], str | None]:
+        self.list_calls.append((cwd, cursor))
+        if self.list_error is not None:
+            raise self.list_error
+        return self.listing
+
+    def log(self, session_id: str) -> list[tuple[int, str, dict[str, Any]]]:
+        """A kept session's log as `(seq, kind, payload)`."""
+        return [(e.seq, e.kind, dict(e.payload)) for e in self.kept[session_id][1]]
 
     def agent_scopes(self) -> frozenset[HubScope]:
         return self.scopes
@@ -259,9 +343,14 @@ def build_agent(
     *,
     settings: AcpSettings | None = None,
     ids: Sequence[str] = ("s", "t1", "s2", "t2", "t3", "t4"),
+    journal: AcpSessionJournal | None = None,
 ) -> AcpAgent:
+    """The agent as `bootstrap.build_acp_agent` composes it: its turns write through the
+    journaling channel, so what they show is kept in the session's log."""
     chosen = settings or AcpSettings()
     pool = iter(ids)
+    kept = journal or AcpSessionJournal(hub, chosen, channel, AcpUpdateMapper())
+    journaled = AcpJournalingChannel(channel, kept, SESSION_REPLAY)
     return AcpAgent(
         channel,
         hub,
@@ -270,8 +359,9 @@ def build_agent(
         AcpUpdateMapper(),
         HUB_CHAT,
         HOST_TOOL_CATALOG,
-        lambda: build_turn(channel, hub, settings=chosen),
+        lambda: build_turn(journaled, hub, settings=chosen),  # type: ignore[arg-type]
         feed=AcpLiveFeed(hub, channel, AcpUpdateMapper(), chosen, sleep=_yield),
+        journal=kept,
         version="9.9.9",
         new_id=lambda: next(pool),
     )

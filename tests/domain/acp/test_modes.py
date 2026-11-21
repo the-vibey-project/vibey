@@ -16,7 +16,16 @@ def test_observe_is_view_only_and_drive_never_contains_spend() -> None:
     modes = AcpModes(AcpSettings())
     assert modes.scopes_for("observe", AGENT_DEFAULT_SCOPES) == {HubScope.VIEW}
     assert HubScope.SPEND not in modes.scopes_for("drive", frozenset(HubScope))
-    assert modes.scopes_for("drive", frozenset(HubScope)) == AGENT_DEFAULT_SCOPES
+    # A mode governs what a prompt turn may do; keeping the session's own log is not a turn's
+    # action, so `acp_sessions` is in no mode (the journal checks the hub's grant itself).
+    assert modes.scopes_for("drive", frozenset(HubScope)) == {
+        HubScope.VIEW,
+        HubScope.ANSWER,
+        HubScope.RUN,
+    }
+    assert AGENT_DEFAULT_SCOPES - modes.scopes_for("drive", frozenset(HubScope)) == {
+        HubScope.ACP_SESSIONS
+    }
 
 
 def test_no_mode_ever_grants_spend_bump_or_workflows() -> None:

@@ -177,7 +177,7 @@ def _command(
 
 class _Gateway:
     def agent_scopes(self) -> frozenset[HubScope]:
-        return frozenset({HubScope.VIEW})
+        return frozenset({HubScope.VIEW, HubScope.ACP_SESSIONS})
 
     def call(self, call: HubCall) -> HubGatewayResponse:
         return HubGatewayResponse(status_code=200, text="{}", ok=True)
@@ -312,7 +312,8 @@ async def test_build_acp_agent_puts_an_open_gate_to_the_client_and_answers_throu
     )
 
     assert [o["kind"] for o in channel.offered[0]] == ["allow_once", "reject_once", "reject_once"]
-    answer = calls[-1]
+    # The session's log goes to the hub behind the turn: the answer is the one gate call.
+    (answer,) = [call for call in calls if call.tool == "vibey_answer_gate"]
     assert (answer.tool, answer.route) == ("vibey_answer_gate", f"/api/v1/gates/{gate_id}/answer")
     assert answer.body is not None and answer.body["answer"] == {"choice": "nope"}
 

@@ -891,7 +891,7 @@ mean "not declared".
 | `state_dir` | the platform state directory + `/hub` | Where the host token (`token`, 0600), the scoped agent token (`agent.token`, 0600; ADR-0100), the key workflows request ids are bound to their starters under (`run.key`, 0600; ADR-0085) and the runtime record (`serving.json`) live. |
 | `lane_roots` | `[]` (the directory `vibey serve` runs in) | Where `/api/v1/lanes` looks for lanes: each root and every directory directly inside it. |
 | `projects_root` | `""` (nowhere) | The one folder a paired device holding `run` may start projects in: each project's folder is `<projects_root>/<name>`, made by the host (ADR-0091). Absolute, or starting with `~`. With none declared a device can pause, resume and unwind a project but cannot start one, and is told so. A device never names a path. |
-| `agent_scopes` | `["view", "answer", "run"]` | Scopes granted to the `agent` principal (`<state_dir>/agent.token`) used by `vibey mcp` when a frontier LLM or IDE connects over MCP (ADR-0100). Never includes `spend`, `bump` or `workflows` by default, so a host model cannot answer a spending gate (`budget_exhausted`, `deploy_*`). Set `agent_scopes = []` to disable agent token authentication entirely. |
+| `agent_scopes` | `["view", "answer", "run", "acp_sessions"]` | Scopes granted to the `agent` principal (`<state_dir>/agent.token`) used by `vibey mcp` when a frontier LLM or IDE connects over MCP (ADR-0100), and by `vibey acp` for an editor. `acp_sessions` lets it keep its own ACP sessions' logs on the hub (create and append; reading them back needs only `view`); without it `vibey acp` keeps each session's history in its window only and says so once. Paired devices get only the scopes the host offers them, so never `acp_sessions` by default. Never includes `spend`, `bump` or `workflows` by default, so a host model cannot answer a spending gate (`budget_exhausted`, `deploy_*`). Set `agent_scopes = []` to disable agent token authentication entirely. |
 
 ```toml
 [hub]
@@ -906,7 +906,9 @@ A bump from the hub is requested as the queue source `vibey-hub`; it lands only 
 ## `[acp]` { #acp }
 
 `vibey acp`, the Agent Client Protocol agent an editor such as Zed launches over stdio
-(SP-ACP). Read from `./vibey.toml`. Every key is optional; an unknown key, a value of the
+(SP-ACP). Read from `./vibey.toml`. The hub (`vibey serve`) reads only `sessions_max` and
+`session_events_max` from this table, so a mistake in any other key never stops the hub; it is
+the editor's to report. Every key is optional; an unknown key, a value of the
 wrong type or one outside its bound is refused by name (`ConfigError`), never ignored. The
 spend gates (`budget_exhausted`, `deploy_*`) and the deployment opt-in after REVIEW are not
 a key: they are never answerable over ACP, whatever is set here.
@@ -932,7 +934,10 @@ a key: they are never answerable over ACP, whatever is set here.
 | `live_between_turns` | boolean | `true` | Whether ledger events keep streaming between prompt turns. `false` holds the events that arrive between turns and sends them at the start of the next prompt. |
 | `cancel_grace_seconds` | number, at least 0 | `2.0` | How long a cancelled turn waits for a hub call already in flight to answer, so its real outcome can be reported; after that the turn ends saying the hub may still apply it, with the request id. |
 | `max_message_bytes` | integer, at least 65536 | `16777216` | The longest line the protocol peer accepts; a longer one is refused and the stream goes on. |
-| `pending_events_max` | integer, at least 1 | `1000` | How many session events the agent holds while the hub is unreachable, and how many ledger events the live feed holds between turns when `live_between_turns = false` (with that many held it reads no more until they are sent, so none is skipped), and how many spend-gate notices one feed remembers having said. |
+| `pending_events_max` | integer, at least 1 | `1000` | How many session events the agent holds while the hub is unreachable (past that the oldest waiting event is dropped, never a session's create, and the client is told once per session; [Sessions are kept](cli.md#sessions-are-kept-load-resume-list-and-close)), and how many ledger events the live feed holds between turns when `live_between_turns = false` (with that many held it reads no more until they are sent, so none is skipped), and how many spend-gate notices one feed remembers having said. |
+| `sessions_max` | integer, at least 1 | `1000` | Read by the hub (`vibey serve`): the most ACP sessions it keeps for one principal, over the hub's whole life. A session counts from its first prompt (a `session/new` never prompted costs nothing). The log is append-only, so nothing ever frees a slot: when the cap is hit, a new session is refused (507, E0087), kept sessions are never dropped or changed, and `vibey acp` keeps each new session in its window only and says so once. Raising the cap, or retiring old sessions (only the database owner can, as for the ledger), is the operator's decision; there is no retention rule. |
+| `session_events_max` | integer, at least 1 | `100000` | Read by the hub: the most events it keeps in one ACP session's log (a bound on each event's `seq`). When it is hit, an append is refused (507, E0087), the events already kept stay as they were, and `vibey acp` says once that the rest of the session is not kept. |
+| `replay_events_max` | integer, 1 to 10000 | `2000` | The most of a session's newest events `session/load` shows again; older ones stay kept and are said once to be skipped. A load reads them in pages of 200, so the bound keeps it inside the hub's per-principal burst of 120 requests. |
 
 ```toml
 [acp]
@@ -941,6 +946,10 @@ default_mode = "observe"
 services = ["hub", "worker"]
 restart = "always"
 install_postgres = "ask"
+replay_events_max = 2000
+# Read by the hub, not the editor:
+sessions_max = 1000
+session_events_max = 100000
 ```
 
 ## `[queue.priority]` { #queuepriority }

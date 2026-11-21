@@ -345,6 +345,69 @@ worded as what the ledger reports ("The ledger reports a gate that may spend mon
 saying to answer it on the host; it is said once per followed project (again after the session
 moves to another project and back).
 
+### Sessions are kept: load, resume, list and close
+
+Each session's history is kept by the hub (migration 0023, through the routes in
+[Hub API: ACP sessions](hub-api.md#acp-sessions)), as the scoped agent principal: `vibey acp`
+holds no database credential. What is kept is what a prompt turn showed you -- your messages,
+vibey's replies and messages, the tool calls and how each ended -- plus the session's title
+(the first line of its first message), each mode switch, each project it followed, and its
+close. Live ledger messages and plans are not kept: they are re-read from the ledger. A tool
+call's input is not kept, and text past about 48 KiB of JSON is cut, ending in "...". The log
+is append-only, like the ledger.
+
+A new session is kept from its first prompt: one never prompted costs the hub nothing. Keeping a
+session needs the hub to grant the agent principal `acp_sessions` (in the default
+[`[hub] agent_scopes`](configuration.md#hub)); it is not a run-class action, so an `observe`
+session keeps its record as a `drive` one does. Without the grant every prompt still works, and
+the session's history stays in this window only: you are told once ("Session history"). The
+hub keeps at most [`[acp] sessions_max`](configuration.md#acp) sessions for the agent principal
+and [`session_events_max`](configuration.md#acp) events per session; past either, the history
+from there on is not kept, you are told once, and nothing already kept changes.
+
+The log is written behind the session and in order, so the hub being away never slows a turn:
+what is queued is sent after each turn and each switch, from where the last send stopped. At
+most [`[acp] pending_events_max`](configuration.md#acp) events wait; past that the oldest is
+dropped and you are told once ("Session history"). If another `vibey acp` writes the same
+session (two windows that both loaded it), the second one stops keeping it and says so. Any
+other refusal the hub gives for good (a 4xx other than 429) likewise stops only that session's
+history, with one notice and the hub's reason on stderr; every other session's goes on. A
+session opened in a folder whose name holds a control, format or bidi character (a zero-width
+joiner in an emoji name, a tab) is kept in its window only, and you are told once: the hub
+keeps no such folder. When the
+connection ends, what the hub's rate limit still holds back is waited for (from
+`live_poll_seconds`, doubling, at most `probe_seconds` in all); what is still unsent then is said
+on stderr and, while the editor can hear it, in a notice.
+
+- `session/load` shows the newest [`[acp] replay_events_max`](configuration.md#acp) events of
+  the kept history again (older ones stay kept, and you are told once they were skipped),
+  before it answers: your messages as
+  `user_message_chunk`, vibey's as `agent_message_chunk`, the tool calls, and each mode switch.
+  Stored history is untrusted on the way back out: each event is rebuilt from the fields it
+  needs, each checked (an id's shape, a status, a kind, a mode `[acp] modes` offers), and its
+  text is shown by the same rule as live hub text -- a message as plain text with its lines
+  kept, a title as one line, a tool's result as a fenced code block. A replay never asks for a
+  permission, never answers or offers a gate, and runs nothing: the hub is only read.
+- `session/resume` restores the session's mode and project without showing its history: it
+  reads only the session's newest mode, project and title, never its log.
+- One load, resume or close of a session runs at a time: a close sent during a load ends what
+  the load put in place, and two loads of one session end on one session. A load while a turn
+  of that session runs is refused (`INVALID_REQUEST`); load it once the turn ends. A session
+  still open in this process that the hub never kept (not prompted yet, or kept only here)
+  loads as it is, with nothing to show.
+- Both answer with the session's modes, then send the `/` commands and follow the project it
+  last followed (or the folder's project, as after `session/new`). Loading a session that is
+  still open in this process keeps it as it is.
+- A session is found only by its id, in the shape vibey makes (a lower-case UUID), for the
+  folder it was started in. An id that is malformed, unknown, another principal's or another
+  folder's answers `RESOURCE_NOT_FOUND`, the same way each time.
+- `session/list` lists the sessions, newest first by their last event, with a title and the
+  time of that event, and a `nextCursor` while more remain; give `cwd` for one folder's.
+- `session/close` ends the session in this process: a running turn is cancelled (it answers
+  `cancelled`), its permission requests are withdrawn, its live feed stops, and the close is
+  kept. A later `session/prompt` answers `RESOURCE_NOT_FOUND`; closing a session that is
+  unknown or already closed answers `{}`. A closed session can be loaded or resumed again.
+
 ## `vibey install`
 
 Install local dependencies that vibey can manage explicitly.

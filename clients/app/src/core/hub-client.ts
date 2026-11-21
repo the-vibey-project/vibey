@@ -85,6 +85,7 @@ export class HubClient implements HubClientInterface {
     run: 'Start, pause, resume and unwind projects (the host chooses where a project lives)',
     bump: 'Bump a job to the front of the queue',
     workflows: "Run vibey commands on the repository's GitHub-hosted runners",
+    acp_sessions: "Keep its own editor (ACP) sessions' history on the hub",
   };
 
   /** The project-lifecycle routes' own refusals (ADR-0091); the hub's `detail` is added to each. */
