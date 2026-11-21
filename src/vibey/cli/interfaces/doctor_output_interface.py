@@ -10,7 +10,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, Protocol, runtime_checkable
 
 if TYPE_CHECKING:
-    from collections.abc import Awaitable, Callable, Sequence
+    from collections.abc import Callable, Sequence
 
     from vibey.infrastructure.postgres import PostgresStatus
 
@@ -67,13 +67,10 @@ class DoctorOutputInterface(Protocol):
         """One check of the in-cluster preflight."""
         ...
 
-    async def captured(self, run: Callable[[], Awaitable[bool]]) -> bool:
-        """Run a section that prints its own lines and report whether it passed. JSON reads
-        what it printed; text lets it print."""
-        ...
-
     def captured_sync(self, run: Callable[[], bool]) -> bool:
-        """`captured`, for a section that is not async."""
+        """Run something that prints its own lines and report whether it passed. JSON reads
+        what it printed; text lets it print. (A section that prints is captured by its own
+        doctor probe, `cli/doctor_probes.py`, which prints its lines again through this.)"""
         ...
 
     def finish(self, ok: bool) -> None:

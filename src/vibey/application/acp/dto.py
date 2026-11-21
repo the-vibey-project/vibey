@@ -7,10 +7,49 @@ Imports only `vibey.domain`, so the `interfaces/` package may name these types.
 from collections.abc import Mapping
 from dataclasses import dataclass, field
 from datetime import datetime
-from typing import Any
+from typing import Any, Literal
 from uuid import UUID
 
 from vibey.domain.acp.interfaces.session_state_interface import AcpSessionStateInterface
+
+type DoctorMark = Literal["PASS", "WARN", "FAIL", "UNKNOWN"]
+"""What a doctor check found: only `FAIL` fails `vibey doctor` and the bootstrap's doctor."""
+
+
+@dataclass(frozen=True, slots=True)
+class DoctorResult:
+    """One finding of a doctor check: its mark, the name of what was checked and why.
+
+    `lines` is the text the check printed for this finding, exactly as it printed it (a
+    continuation line included), so `vibey doctor` can print it again byte for byte; it is
+    empty for a finding the check only implied (a section that failed without a `FAIL`
+    line). Every field is the machine's own text, not the operator's: shown to an editor, it
+    goes through `UntrustedTextInterface` like any other text vibey did not write itself."""
+
+    mark: DoctorMark
+    name: str
+    detail: str
+    lines: tuple[str, ...] = ()
+
+
+@dataclass(frozen=True, slots=True)
+class PostgresReadiness:
+    """Whether a supported local PostgreSQL accepts connections, why not, and which package
+    manager (`brew`, `apt-get` or `dnf`) would install it; None when the host has none."""
+
+    ready: bool
+    detail: str
+    package_manager: str | None
+
+
+@dataclass(frozen=True, slots=True)
+class PostgresInstallOutcome:
+    """What an install did. `needs_password` is true when `sudo -n` refused for want of a
+    password, which vibey never asks for or types: the operator runs the install instead."""
+
+    ok: bool
+    detail: str
+    needs_password: bool
 
 
 @dataclass(frozen=True, slots=True)

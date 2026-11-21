@@ -21,7 +21,7 @@ from __future__ import annotations
 import io
 import json
 import re
-from collections.abc import Awaitable, Callable, Sequence
+from collections.abc import Callable, Sequence
 from contextlib import redirect_stdout
 from dataclasses import dataclass, replace
 from typing import Any
@@ -147,9 +147,6 @@ class TextDoctorOutput(DoctorOutputInterface):
     def cluster_check(self, mark: str, name: str, detail: str) -> None:
         typer.echo(DoctorFormat.cluster_line(mark, name, detail))
 
-    async def captured(self, run: Callable[[], Awaitable[bool]]) -> bool:
-        return await run()
-
     def captured_sync(self, run: Callable[[], bool]) -> bool:
         return run()
 
@@ -229,13 +226,6 @@ class JsonDoctorOutput(DoctorOutputInterface):
 
     def cluster_check(self, mark: str, name: str, detail: str) -> None:
         self._findings.append(DoctorFinding(name, mark, detail))
-
-    async def captured(self, run: Callable[[], Awaitable[bool]]) -> bool:
-        printed = io.StringIO()
-        with redirect_stdout(printed):
-            ok = await run()
-        self.lines(printed.getvalue().splitlines())
-        return ok
 
     def captured_sync(self, run: Callable[[], bool]) -> bool:
         printed = io.StringIO()
