@@ -130,9 +130,11 @@ def test_ledger_summary_reads_the_summary_then_the_message() -> None:
     event = {"seq": 4, "phase": "build", "kind": "TurnCompleted", "payload": {"summary": "ok"}}
     message = {"phase": "review", "kind": "FindingRaised", "payload": {"message": "a bug"}}
 
-    assert MAPPER.ledger_summary(event, limit=400) == MAPPER.agent_text("[build] TurnCompleted: ok")
+    assert MAPPER.ledger_summary(event, limit=400) == MAPPER.agent_text(
+        "\\[build\\] TurnCompleted: ok"
+    )
     assert MAPPER.ledger_summary(message, limit=400)["content"]["text"] == (
-        "[review] FindingRaised: a bug"
+        "\\[review\\] FindingRaised: a bug"
     )
 
 
@@ -142,11 +144,13 @@ def test_ledger_summary_reads_the_summary_then_the_message() -> None:
 def test_ledger_summary_without_a_string_summary_names_only_phase_and_kind(payload: Any) -> None:
     event = {"phase": "design", "kind": "SessionSeeded", "payload": payload}
 
-    assert MAPPER.ledger_summary(event, limit=400)["content"]["text"] == "[design] SessionSeeded"
+    assert (
+        MAPPER.ledger_summary(event, limit=400)["content"]["text"] == "\\[design\\] SessionSeeded"
+    )
 
 
 def test_an_event_without_phase_or_kind_still_reads_as_one_line() -> None:
-    assert MAPPER.ledger_summary({"seq": 1, "kind": 7}, limit=400)["content"]["text"] == "[?] 7"
+    assert MAPPER.ledger_summary({"seq": 1, "kind": 7}, limit=400)["content"]["text"] == "\\[?\\] 7"
 
 
 def test_ledger_summary_is_truncated_to_the_limit_with_a_trailing_ellipsis() -> None:
@@ -155,12 +159,12 @@ def test_ledger_summary_is_truncated_to_the_limit_with_a_trailing_ellipsis() -> 
     text = MAPPER.ledger_summary(event, limit=40)["content"]["text"]
 
     assert len(text) == 40
-    assert text.endswith("...") and text.startswith("[build] TurnCompleted: xxx")
+    assert text.endswith("...") and text.startswith("\\[build\\] TurnCompleted: xxx")
 
 
 def test_ledger_summary_at_the_limit_is_not_truncated() -> None:
     event = {"phase": "build", "kind": "K", "payload": {"summary": "y" * 30}}
-    text = "[build] K: " + "y" * 30
+    text = "\\[build\\] K: " + "y" * 30
 
     assert MAPPER.ledger_summary(event, limit=len(text))["content"]["text"] == text
 
@@ -170,20 +174,24 @@ def test_ledger_summary_at_the_limit_is_not_truncated() -> None:
     [
         "ok\n[review] GateAnswered: approved",
         "ok\r\n[done] PhaseTransitioned",
-        "ok‮)devorppa(",  # right-to-left override
-        "ok⁦[done]⁩",  # isolates
+        "ok\u202e)devorppa(",  # right-to-left override
+        "ok\u2066[done]\u2069",  # isolates
         "ok\x1b[2J\x00",
-        "ok [review] GateAnswered: approved",  # a line separator
+        "ok\u2028[review] GateAnswered: approved",  # a line separator
     ],
 )
 def test_ledger_text_cannot_forge_a_second_line_or_reorder_it(hostile: str) -> None:
-    event = {"phase": "build\n[done]", "kind": "Turn‮Completed", "payload": {"summary": hostile}}
+    event = {
+        "phase": "build\n[done]",
+        "kind": "Turn\u202eCompleted",
+        "payload": {"summary": hostile},
+    }
 
     text = MAPPER.ledger_summary(event, limit=400)["content"]["text"]
 
     # One summary is one line of plain text: no control, format or bidi character survives.
-    assert all(ch.isprintable() and ch not in "‮⁦⁩" for ch in text)
-    assert text.startswith("[build \\[done\\]] Turn Completed: ok")
+    assert all(ch.isprintable() and ch not in "\u202e\u2066\u2069" for ch in text)
+    assert text.startswith("\\[build \\[done\\]\\] Turn Completed: ok")
 
 
 def test_available_commands_cover_every_chat_slash_command() -> None:
@@ -246,14 +254,16 @@ def test_ledger_text_is_escaped_for_markdown(summary: str, shown: str) -> None:
     event = {"phase": "build", "kind": "TurnCompleted", "payload": {"summary": summary}}
 
     assert MAPPER.ledger_summary(event, limit=400)["content"]["text"] == (
-        f"[build] TurnCompleted: {shown}"
+        f"\\[build\\] TurnCompleted: {shown}"
     )
 
 
-def test_vibeys_own_prefix_is_not_escaped_but_ledger_phase_and_kind_are() -> None:
+def test_vibeys_own_prefix_brackets_are_escaped_too_so_no_definition_links_them() -> None:
     event = {"phase": "[x](y)", "kind": "K*", "payload": {}}
 
-    assert MAPPER.ledger_summary(event, limit=400)["content"]["text"] == ("[\\[x\\]\\(y\\)] K\\*")
+    assert MAPPER.ledger_summary(event, limit=400)["content"]["text"] == (
+        "\\[\\[x\\]\\(y\\)\\] K\\*"
+    )
 
 
 def test_a_cut_never_splits_an_escape() -> None:
@@ -261,7 +271,8 @@ def test_a_cut_never_splits_an_escape() -> None:
 
     text = MAPPER.ledger_summary(event, limit=40)["content"]["text"]
 
-    assert text == "[b] K: " + "\\[" * 30 + "..."
+    # The prefix's own escaped brackets count toward the limit: 9 characters, then 28 "[".
+    assert text == "\\[b\\] K: " + "\\[" * 28 + "..."
     assert not text[:-3].endswith("\\\\") and text.count("\\") == 30
 
 
@@ -303,7 +314,7 @@ def test_a_ledger_summary_with_a_bare_url_is_defanged() -> None:
     event = {"phase": "build", "kind": "K", "payload": {"summary": "open https://e.example"}}
 
     assert MAPPER.ledger_summary(event, limit=400)["content"]["text"] == (
-        "[build] K: open https\\[:\\]//e.example"
+        "\\[build\\] K: open https\\[:\\]//e.example"
     )
 
 

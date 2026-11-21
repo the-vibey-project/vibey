@@ -303,6 +303,13 @@ def next_turn(session: AcpSessionContext, turn_id: str) -> AcpSessionContext:
     return session
 
 
+def unfenced(shown: str) -> str:
+    """A tool result as it was before vibey fenced it as a code block."""
+    lines = shown.split("\n")
+    assert lines[0] == lines[-1] and set(lines[0]) == {"`"} and len(lines[0]) >= 3
+    return "\n".join(lines[1:-1])
+
+
 def text(value: str) -> dict[str, Any]:
     return {"type": "text", "text": value}
 

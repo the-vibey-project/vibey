@@ -69,15 +69,20 @@ class AcpUpdateMapperInterface(Protocol):
     def ledger_summary(self, event: Mapping[str, Any], *, limit: int) -> dict[str, Any]:
         """An `agent_message_chunk` "[phase] kind: summary" for one ledger event, the summary
         being the payload's `summary` or else its `message` when either is a string (omitted
-        otherwise); phase, kind and summary shown as `untrusted` text, the whole at most
-        `limit` characters as written with a trailing "..." when cut."""
+        otherwise); phase, kind and summary shown as untrusted text and the prefix's own
+        brackets escaped, the whole at most `limit` characters as written ("..." when cut)."""
         ...
 
     def untrusted(self, value: Any, *, limit: int) -> str:
-        """Hub or ledger data made safer to show in a message: one line (every non-printable
-        character a space), the forms GFM autolinks defanged (`https[:]//`, `mailto[:]`,
-        `www[.]`, `name[@]host`), every Markdown special character escaped, and at most `limit`
-        characters as written, ending in "..." when cut. A bare domain is not caught."""
+        """Hub or ledger data as one safe line (`UntrustedTextInterface.line`)."""
+        ...
+
+    def untrusted_block(self, value: Any, *, limit: int) -> str:
+        """Hub text written in lines, shown as plain text (`UntrustedTextInterface.block`)."""
+        ...
+
+    def untrusted_code(self, value: Any, *, limit: int) -> str:
+        """A tool's result as a fenced code block (`UntrustedTextInterface.code`)."""
         ...
 
     def available_commands(self, specs: Sequence[ChatSlashSpec]) -> dict[str, Any]:

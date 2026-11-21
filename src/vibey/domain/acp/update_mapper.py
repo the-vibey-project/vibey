@@ -8,31 +8,19 @@ capability, so without it the same words go out as an ordinary message.
 
 The live updates (`phase_plan`, `ledger_summary`) read what the hub's ledger says. A ledger
 event's phase, kind and text are untrusted data written by workers and models; so is any other
-hub data shown in a message (a project's name or path, an error the hub sent). `untrusted`
-makes such text safe to show, and `ledger_summary` uses it for every span it did not write:
-
-- one line: every character Python does not count as printable (controls, format and bidi
-  characters, line and paragraph separators) becomes a space, so it cannot forge a second line
-  or reorder the one it is in;
-- no Markdown: ACP clients render message text as Markdown, so every character that could make
-  a link, an image, emphasis, code, a heading, a table or HTML (`MARKDOWN_SPECIAL`) is
-  backslash-escaped and shows as itself;
-- no autolinks: GFM makes a link of a URL, a `www.` host or an e-mail address with no Markdown
-  at all, so those forms are defanged first (`AUTOLINK_DEFANGS`): `https://` shows as
-  `https[:]//`, `mailto:` and `xmpp:` as `mailto[:]` and `xmpp[:]`, a `www.` host as `www[.]`,
-  and the `@` of an address as `[@]`. Other text a client might still choose to link (a bare
-  domain such as `example.com`) is not caught;
-- at most `limit` characters as written, ending in "..." when it was cut.
-
-vibey's own words (the hub chat's reply, which is vibey's formatted answer) are passed through
-as Markdown. Pure: no I/O. Declared by `interfaces/update_mapper_interface.py`.
+hub data shown in a message. All of it goes through `UntrustedTextInterface` (one rule for all
+hub text: whole characters, cut, no autolinks, no Markdown), and `ledger_summary` escapes even
+the brackets of its own `[phase]` prefix, so a link reference definition elsewhere in the
+client's message cannot make that prefix a link. Pure: no I/O. Declared by
+`interfaces/update_mapper_interface.py`.
 """
 
-import re
 from collections.abc import Mapping, Sequence
 from typing import Any, Final
 
+from vibey.domain.acp.interfaces.untrusted_text_interface import UntrustedTextInterface
 from vibey.domain.acp.protocol import NoticeSeverity, PlanEntryStatus, ToolCallStatus, ToolKind
+from vibey.domain.acp.untrusted_text import UNTRUSTED_TEXT
 from vibey.domain.hub_chat import ChatSlashSpec
 from vibey.domain.hub_scope import HubScope
 from vibey.domain.phase import Phase
@@ -61,25 +49,13 @@ _DEPLOY_PHASES: Final = frozenset(
 _RANK: Final[Mapping[str, int]] = {
     phase.value: rank for rank, (phase, _, _) in enumerate(PLAN_PHASES)
 }
-ELLIPSIS: Final = "..."
-MARKDOWN_SPECIAL: Final = frozenset("\\`*_[]()<>!#|~&")
-"""Escaped in untrusted text: what opens a link, image, emphasis, code span or fence, heading,
-table cell, strikethrough, HTML tag or entity, and the escape character itself."""
-AUTOLINK_DEFANGS: Final[tuple[tuple[re.Pattern[str], str], ...]] = (
-    (re.compile(r"(?i)(mailto|xmpp):"), r"\1[:]"),
-    (re.compile(r"://"), "[:]//"),
-    (re.compile(r"(?i)(www)\."), r"\1[.]"),
-    (re.compile(r"(?<=[\w.+-])@(?=[\w-]+\.)"), "[@]"),
-)
-"""The forms GFM turns into a link without any Markdown -- a scheme's `://`, `mailto:` and
-`xmpp:`, a `www.` host and an e-mail address -- each broken with a visible bracket, applied to
-untrusted text before it is escaped (so the brackets show as written). No word boundary is
-required: GFM links `www.` after `_`, `*`, `~` or `(` too, so every `www.`, `mailto:` and
-`xmpp:` is defanged, even inside a longer word."""
 
 
 class AcpUpdateMapper:
     """Declared by `interfaces/update_mapper_interface.py`."""
+
+    def __init__(self, text: UntrustedTextInterface = UNTRUSTED_TEXT) -> None:
+        self._text = text
 
     def agent_text(self, text: str) -> dict[str, Any]:
         return {"sessionUpdate": "agent_message_chunk", "content": {"type": "text", "text": text}}
@@ -173,17 +149,23 @@ class AcpUpdateMapper:
             if not isinstance(summary, str):
                 summary = payload.get("message")
         segments: list[tuple[str, bool]] = [
-            ("[", False),
-            (self._one_line(event.get("phase")), True),
-            ("] ", False),
-            (self._one_line(event.get("kind")), True),
+            ("\\[", False),
+            (self._text.one_line(event.get("phase")), True),
+            ("\\] ", False),
+            (self._text.one_line(event.get("kind")), True),
         ]
         if isinstance(summary, str):
-            segments += [(": ", False), (self._one_line(summary), True)]
-        return self.agent_text(self._render(segments, limit))
+            segments += [(": ", False), (self._text.one_line(summary), True)]
+        return self.agent_text(self._text.render(segments, limit))
 
     def untrusted(self, value: Any, *, limit: int) -> str:
-        return self._render([(self._one_line(value), True)], limit)
+        return self._text.line(value, limit=limit)
+
+    def untrusted_block(self, value: Any, *, limit: int) -> str:
+        return self._text.block(value, limit=limit)
+
+    def untrusted_code(self, value: Any, *, limit: int) -> str:
+        return self._text.code(value, limit=limit)
 
     def available_commands(self, specs: Sequence[ChatSlashSpec]) -> dict[str, Any]:
         commands: list[dict[str, Any]] = []
@@ -205,28 +187,3 @@ class AcpUpdateMapper:
         if rank == anchor:
             return PlanEntryStatus.IN_PROGRESS
         return PlanEntryStatus.PENDING
-
-    @staticmethod
-    def _render(segments: Sequence[tuple[str, bool]], limit: int) -> str:
-        """The segments joined, cut to `limit` characters as written (then "..."), each one
-        marked untrusted defanged and escaped for Markdown after the cut, so no escape is ever
-        split (a defang can add a few characters past the limit)."""
-        total = sum(len(text) for text, _ in segments)
-        budget = total if total <= limit else max(limit - len(ELLIPSIS), 0)
-        out: list[str] = []
-        for text, untrusted in segments:
-            piece = text[:budget]
-            budget -= len(piece)
-            if untrusted:
-                for pattern, replacement in AUTOLINK_DEFANGS:
-                    piece = pattern.sub(replacement, piece)
-                piece = "".join(f"\\{ch}" if ch in MARKDOWN_SPECIAL else ch for ch in piece)
-            out.append(piece)
-        if total > limit:
-            out.append(ELLIPSIS)
-        return "".join(out)
-
-    @staticmethod
-    def _one_line(value: Any) -> str:
-        text = value if isinstance(value, str) else "?" if value is None else str(value)
-        return "".join(ch if ch.isprintable() else " " for ch in text)

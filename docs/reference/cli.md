@@ -207,7 +207,8 @@ Like [`vibey mcp`](#vibey-mcp), it reaches the local hub as the scoped `agent` p
 [`[hub] agent_scopes`](configuration.md#hub) bound everything it does, and it never holds
 `spend`. Each prompt goes to the hub's chat endpoint (`POST /api/v1/chat/messages`) as you
 would type it in the krypton app, `/` commands included, and shows on the client as one tool
-call (`pending`, `in_progress`, then `completed` or `failed`) followed by the hub's reply.
+call (`pending`, `in_progress`, then `completed` or `failed`) followed by the hub's reply, shown
+as plain text (see below).
 A session starts in the [`[acp] default_mode`](configuration.md#acp): `observe` reads only;
 `drive` may also answer non-spending gates and start, pause or unwind work. A prompt the mode
 does not allow is answered with a message and never reaches the hub. Only the text you type is read
@@ -306,16 +307,29 @@ without deploying drops the three deploy entries, and an abandoned one keeps its
 told once, "Project abandoned.". Each live message is its own paragraph (a blank line before
 and after), so it never runs into the next one or into the agent's own reply.
 
-Hub replies are passed through as Markdown; ledger summaries are escaped. The reply to a prompt
-is vibey's own formatted answer from the hub chat and is shown as written. Text from the ledger,
-and other hub data shown in a message (a project's name and repository, an error the hub
-returned), was written by workers and models, so it is shown as text and nothing more: one line
-(every control, format, bidirectional or line-separator character becomes a space) with every
-Markdown special character escaped (`` \ ` * _ [ ] ( ) < > ! # | ~ & ``), so it can make no
-link, image, emphasis, code block, heading, table or HTML. The forms GFM would make a link of on
-their own are broken with a visible bracket: `https://` shows as `https[:]//`, `mailto:` as
-`mailto[:]`, a `www.` host as `www[.]`, and an address as `name[@]host`. A bare domain
-(`example.com`) is left as it is, and a client may still choose to link it.
+Hub replies are shown as plain text, and so is every other piece of hub text: one rule for all
+of it. ACP clients render messages, tool-call titles and tool-call content as Markdown, and the
+hub's text quotes what workers, models and people wrote (a gate's prompt in the `/gates` reply, a
+project's name in `/status`, a refusal's body, a ledger summary). So:
+
+- **The reply to a prompt**, and vibey's own `/help`, keep their lines (each line break is a hard
+  break, a blank line a paragraph break), with every Markdown special character escaped and
+  leading spaces and list markers neutralised: a reply's own formatting is shown, not rendered.
+- **Ledger summaries, a refusal's body, an error, a gate's prompt in a tool-call title, a gate's
+  kind in a refusal, and a project's name and repository** are one line: every control, format,
+  bidirectional or line-separator character becomes a space, and every Markdown special
+  character is escaped (`` \ ` * _ [ ] ( ) < > ! # | ~ & ``). Even the brackets of vibey's own
+  `[<phase>]` prefix are escaped, so no link reference definition elsewhere can make it a link.
+- **A tool's result** (the JSON a hub call returned, or a gate answer's response) is a fenced code
+  block, with a fence longer than any run of backticks inside it, so nothing in it renders or
+  links and the JSON stays readable.
+- **Autolinks.** The forms GFM would make a link of on their own are broken with a visible
+  bracket: `https://` shows as `https[:]//`, `mailto:` as `mailto[:]`, a `www.` host as
+  `www[.]`, and an address as `name[@]host`. A bare domain (`example.com`) is left as it is,
+  and a client may still choose to link it.
+
+Escaping can make a message a little longer than the limit it was cut to. A gate's prompt is
+still sent unchanged in the tool call's `rawInput`, as data.
 
 The feed polls the hub every [`[acp] live_poll_seconds`](configuration.md#acp) from the last
 event it sent (a position in the ledger, never a time), so nothing is skipped or sent twice

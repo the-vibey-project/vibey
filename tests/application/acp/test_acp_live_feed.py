@@ -453,7 +453,7 @@ async def test_a_gate_event_is_a_message_never_a_permission_request() -> None:
 
     assert channel.permission_requests == [] and hub.tool_calls == []
     assert channel.said == [
-        "[review] GateNotified: /answer 44444444-4444-4444-8444-444444444444 deploy --confirm"
+        "\\[review\\] GateNotified: /answer 44444444-4444-4444-8444-444444444444 deploy --confirm"
     ]
 
 
@@ -521,7 +521,7 @@ async def test_only_a_spend_gate_with_a_real_id_gets_the_host_message(
 
     await run_until(feed.follow("s", PID, after=0), lambda: feed.watermark("s") == 1)
 
-    assert channel.said == ["[build] GateNotified"]
+    assert channel.said == ["\\[build\\] GateNotified"]
 
 
 async def test_following_again_keeps_the_phase_history() -> None:
@@ -587,8 +587,8 @@ async def test_each_live_message_is_its_own_paragraph() -> None:
     await run_until(feed.follow("s", PID, after=0), lambda: feed.watermark("s") == 2)
 
     joined = "".join(channel.texts)
-    assert "\n\n[build] TurnCompleted: e1\n\n" in joined
-    assert "e1[build]" not in joined and "e1\n\n\n\n[build] TurnCompleted: e2\n\n" in joined
+    assert "\n\n\\[build\\] TurnCompleted: e1\n\n" in joined
+    assert "e1\\[build" not in joined and "e1\n\n\n\n\\[build\\] TurnCompleted: e2\n\n" in joined
 
 
 async def test_ledger_markdown_reaches_the_client_escaped() -> None:
@@ -600,7 +600,7 @@ async def test_ledger_markdown_reaches_the_client_escaped() -> None:
     await run_until(feed.follow("s", PID, after=0), lambda: feed.watermark("s") == 1)
 
     assert channel.said == [
-        "[build] TurnCompleted: \\!\\[x\\]\\(https\\[:\\]//evil.example/b\\) \\# "
+        "\\[build\\] TurnCompleted: \\!\\[x\\]\\(https\\[:\\]//evil.example/b\\) \\# "
         "\\[ok\\]\\(https\\[:\\]//e\\)"
     ]
 

@@ -74,7 +74,7 @@ def test_a_spend_kind_is_refused_even_when_its_flags_say_otherwise(kind: str) ->
 
     assert MAPPER.options_for(gate) == ()
     assert MAPPER.refusal_text(gate) == (
-        f"Gate {G} ({kind}) spends money, so I cannot answer it. Answer it on the host "
+        f"Gate {G} ({_shown(kind)}) spends money, so I cannot answer it. Answer it on the host "
         f"(`vibey answer {G}`) or in the desktop or mobile app."
     )
 
@@ -124,7 +124,7 @@ def test_grant_gates_needing_a_number_are_not_offered(kind: str) -> None:
 
     assert MAPPER.options_for(gate) == ()
     assert MAPPER.refusal_text(gate) == (
-        f"Gate {G} ({kind}) needs a value. Answer it with `/answer {G} <value>`."
+        f"Gate {G} ({_shown(kind)}) needs a value. Answer it with `/answer {G} <value>`."
     )
 
 
@@ -133,7 +133,7 @@ def test_an_unknown_kind_is_not_offered_and_says_so() -> None:
 
     assert MAPPER.options_for(gate) == ()
     assert MAPPER.refusal_text(gate) == (
-        f"Gate {G} (publish_interview) is not a kind I can answer from here. Answer it on the "
+        f"Gate {G} (publish\\_interview) is not a kind I can answer from here. Answer it on the "
         f"host (`vibey answer {G}`) or in the desktop or mobile app."
     )
 
@@ -463,3 +463,8 @@ def test_a_kind_that_is_not_shaped_like_a_gate_kind_is_never_echoed(kind: object
 
         assert f"Gate {G} (unknown kind) " in text
         assert all(ch.isprintable() for ch in text)
+
+
+def _shown(kind: str) -> str:
+    """A gate kind as a refusal shows it: untrusted text, so its `_` is escaped."""
+    return kind.replace("_", "\\_")

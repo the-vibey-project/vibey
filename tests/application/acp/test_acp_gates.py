@@ -25,6 +25,7 @@ from acp_fakes import (
     context,
     next_turn,
     text,
+    unfenced,
     until,
 )
 
@@ -33,6 +34,7 @@ from vibey.application.acp.dto import HubToolResult, HubTurn
 from vibey.application.acp.interfaces.acp_gate_prompter_interface import (
     AcpGatePrompterInterface,
 )
+from vibey.domain.acp.gate_permission import GatePermissionMapper
 from vibey.domain.acp.settings import AcpSettings
 from vibey.domain.hub_chat import HUB_CHAT
 from vibey.domain.hub_scope import DEPLOYMENT_OPT_IN_OPTIONS, DEPLOYMENT_OPT_IN_PROMPT, HubScope
@@ -133,7 +135,7 @@ async def test_selected_allow_answers_the_gate_with_its_parsed_answer() -> None:
     assert updates[0]["title"] == "Answer gate: Ship it?"
     assert updates[0]["kind"] == "other"
     assert updates[0]["rawInput"] == {"gate_id": G, "kind": "choice", "prompt": "Ship it?"}
-    assert json.loads(last_text(updates[-1])) == {"answered": True}
+    assert json.loads(unfenced(last_text(updates[-1]))) == {"answered": True}
     for update in channel.updates:
         assert_wire_exact(SessionNotification, {"sessionId": "s", "update": update})
     assert session.offered_gates == {G}
@@ -241,7 +243,7 @@ async def test_a_refused_answer_fails_the_tool_call() -> None:
 
     update = gate_updates(channel)[-1]
     assert update["status"] == "failed"
-    assert last_text(update) == "hub refused (409): gate already answered"
+    assert last_text(update) == "hub refused \\(409\\): gate already answered"
     assert session.open_gates == (gate(),)
 
 
@@ -280,7 +282,10 @@ async def test_a_long_answer_result_is_truncated() -> None:
         context(), [text("/gates")], turn_id="t1"
     )
 
-    assert last_text(gate_updates(channel)[-1]) == "x" * 100 + "\n...[truncated 400 chars]"
+    # Shown as a fenced code block, as written.
+    assert (
+        unfenced(last_text(gate_updates(channel)[-1])) == "x" * 100 + "\n...[truncated 400 chars]"
+    )
 
 
 # -- what is never asked ------------------------------------------------------------------
@@ -294,7 +299,7 @@ async def test_spend_gate_in_a_turn_sends_no_permission_request(kind: str) -> No
 
     assert channel.permission_requests == [] and "on the host" in channel.texts[-1]
     assert channel.texts[-1] == (
-        f"Gate {G} ({kind}) spends money, so I cannot answer it. Answer it on the host "
+        f"Gate {G} ({_shown(kind)}) spends money, so I cannot answer it. Answer it on the host "
         f"(`vibey answer {G}`) or in the desktop or mobile app."
     )
     assert hub.tool_calls == []
@@ -318,7 +323,7 @@ async def test_a_value_gate_is_explained_not_asked() -> None:
     assert channel.permission_requests == []
     assert (
         channel.texts[-1]
-        == f"Gate {G} (attempts_exhausted) needs a value. Answer it with `/answer {G} <value>`."
+        == f"Gate {G} (attempts\\_exhausted) needs a value. Answer it with `/answer {G} <value>`."
     )
 
 
@@ -329,7 +334,7 @@ async def test_observe_mode_never_offers_a_gate() -> None:
 
     assert channel.permission_requests == []
     assert hub.tool_calls == []
-    assert channel.texts == ["2 open gate(s)"]
+    assert channel.texts == ["2 open gate\\(s\\)"]  # the hub reply, as plain text
     assert session.offered_gates == set()  # offered once the session can answer them
 
 
@@ -860,3 +865,54 @@ async def test_a_right_to_left_label_sends_the_gate_to_the_host(label: str) -> N
     assert hub.tool_calls == []
     assert "cannot show unambiguously" in channel.texts[-1]
     assert session.offered_gates == {G}
+
+
+def _shown(kind: str) -> str:
+    """A gate kind as a refusal shows it: untrusted text, so its `_` is escaped."""
+    return kind.replace("_", "\\_")
+
+
+# -- review 2, O1/O2: every piece of hub text is shown by one rule ----------------------------
+
+
+async def test_a_gate_prompt_in_a_tool_call_title_is_untrusted_text() -> None:
+    channel, hub = FakeChannel(), FakeHub()
+    hostile = {**gate(), "prompt": "Ship? ![b](https://evil.example/x)\n[build]: https://e.x"}
+
+    await run_gates(channel, hub, hostile)
+
+    title = gate_updates(channel)[0]["title"]
+    assert title == (
+        "Answer gate: Ship? \\!\\[b\\]\\(https\\[:\\]//evil.example/x\\) "
+        "\\[build\\]: https\\[:\\]//e.x"
+    )
+    assert gate_updates(channel)[0]["rawInput"]["prompt"] == hostile["prompt"]  # data, as is
+
+
+async def test_a_refused_answers_body_is_one_untrusted_line() -> None:
+    channel, hub = FakeChannel(), FakeHub()
+    channel.permission_answers = [f"{G}:0"]
+    hub.tool_result = HubToolResult(ok=False, status_code=422, text="bad\n# [x](http://e)")
+
+    await run_gates(channel, hub, gate())
+
+    assert last_text(gate_updates(channel)[-1]) == (
+        "hub refused \\(422\\): bad \\# \\[x\\]\\(http\\[:\\]//e\\)"
+    )
+
+
+async def test_an_answers_result_is_fenced_so_its_markdown_never_renders() -> None:
+    channel, hub = FakeChannel(), FakeHub()
+    channel.permission_answers = [f"{G}:0"]
+    hub.tool_result = HubToolResult(ok=True, status_code=200, text='{"note": "``` [x](http://e)"}')
+
+    await run_gates(channel, hub, gate())
+
+    shown = last_text(gate_updates(channel)[-1])
+    assert shown == '````\n{"note": "``` [x](http://e)"}\n````'  # a longer fence than inside
+
+
+def test_a_gate_kind_in_a_refusal_is_escaped() -> None:
+    refusal = GatePermissionMapper(("no",)).refusal_text({"gate_id": G, "kind": "x_y_z"})
+
+    assert "(x\\_y\\_z)" in refusal

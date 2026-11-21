@@ -155,7 +155,7 @@ async def test_cwd_inside_a_project_repo_attaches_the_session() -> None:
         "`/abandon` in this session now targets it."
     )
     hub.ledger.append(event(3, summary="tests pass"))
-    await until(lambda: "[build] TurnCompleted: tests pass" in channel.said)
+    await until(lambda: "\\[build\\] TurnCompleted: tests pass" in channel.said)
     await agent.close()
 
 
@@ -292,13 +292,13 @@ async def test_events_held_between_turns_reach_the_client_when_the_next_turn_sta
     await until(lambda: bool(updates_of(channel, "plan")))
     hub.ledger.append(event(2, summary="held"))
     await settle(50)
-    assert "[build] TurnCompleted: held" not in channel.said
+    assert "\\[build\\] TurnCompleted: held" not in channel.said
 
     await agent.handle_request(
         "session/prompt", {"sessionId": session_id, "prompt": [text("/status")]}
     )
 
-    held = channel.said.index("[build] TurnCompleted: held")
+    held = channel.said.index("\\[build\\] TurnCompleted: held")
     assert held < channel.said.index("Done.")  # flushed before the turn's own reply
     await agent.close()
 

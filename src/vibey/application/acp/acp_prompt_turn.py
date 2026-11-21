@@ -6,7 +6,10 @@ krypton, so the hub's own parser, scope check and tool catalogue decide what run
 parses the text locally only to learn which tool that is, so the session's mode can refuse it
 before anything reaches the hub: the hub enforces the agent principal's scopes, but only this
 process knows the mode. The hub call is one tool call on the client's screen: `pending`, then
-`in_progress`, then `completed` or `failed`, then the hub's reply as a message.
+`in_progress`, then `completed` or `failed`, then the hub's reply as a message. Everything the
+hub sent is shown by `UntrustedTextInterface`'s rule, since it quotes what models and people
+wrote: the reply as plain text (its lines kept), a refusal as one line, a tool's result as a
+fenced code block.
 
 Only the text the user typed is parsed for a command and its options. An embedded resource is
 data: its text is sent only as the description a new project takes (`/new`, `/ask`), after a
@@ -130,7 +133,7 @@ class AcpPromptTurn:
             await self._say(session, self._dropped(len(attached)))
         if intent.tool_name is None:
             # Only `/help` names no tool; it needs no hub and no scope.
-            await self._say(session, self._chat.help_text())
+            await self._say_plain(session, self._chat.help_text())
             return StopReason.END_TURN
         tool = self._admit(session, intent.tool_name, typed)
         if isinstance(tool, str):
@@ -189,7 +192,7 @@ class AcpPromptTurn:
             session.project_id = turn.project_id
         session.open_gates = turn.gates
         await self._close(session, call, self._completed(call, turn))
-        await self._say(session, turn.reply)
+        await self._say_plain(session, turn.reply)
         await self._gates.offer(session, turn.gates, turn_id=turn_id)
         return StopReason.END_TURN
 
@@ -264,21 +267,24 @@ class AcpPromptTurn:
         with contextlib.suppress(asyncio.CancelledError):
             task.exception()
 
-    @staticmethod
-    def _describe(error: BaseException) -> str:
+    def _describe(self, error: BaseException) -> str:
         """A `VibeyError`'s own message. Any other failure is a defect: it is named by its type
-        as well, and logged with its traceback so it can be found."""
+        as well, and logged with its traceback so it can be found. Either way the text can
+        quote the hub (a refusal's body), so it is shown as one untrusted line."""
         if isinstance(error, VibeyError):
-            return str(error)
-        _LOG.error("an ACP hub call failed unexpectedly", exc_info=error)
-        return f"{type(error).__name__}: {error}"
+            text = str(error)
+        else:
+            _LOG.error("an ACP hub call failed unexpectedly", exc_info=error)
+            text = f"{type(error).__name__}: {error}"
+        return self._mapper.untrusted(text, limit=self._max_result_chars)
 
     def _completed(self, call: _HubCall, turn: HubTurn) -> dict[str, Any]:
         if not turn.tool_calls:
             return self._mapper.tool_call_update(call.call_id, ToolCallStatus.COMPLETED)
         first = turn.tool_calls[0]
         rendered = json.dumps(first.get("result"), indent=2, default=str)
-        text = self._tools.truncate(rendered, limit=self._max_result_chars)
+        cut = self._tools.truncate(rendered, limit=self._max_result_chars)
+        text = self._mapper.untrusted_code(cut, limit=len(cut))
         ran = self._tools.by_name(str(first.get("name")))
         if ran is None or ran.name == call.tool.name:
             return self._mapper.tool_call_update(call.call_id, ToolCallStatus.COMPLETED, text)
@@ -361,6 +367,15 @@ class AcpPromptTurn:
             "used only as the description of a new project (`/new`, `/ask`), never as a "
             "command or an option."
         )
+
+    def _plain(self, text: str) -> str:
+        """Hub text written in lines (a reply, a tool's result) shown as plain text: it quotes
+        what models and people wrote, so no Markdown in it is rendered. Cut already."""
+        return self._mapper.untrusted_block(text, limit=max(len(text), self._max_result_chars))
+
+    async def _say_plain(self, session: AcpSessionContext, text: str) -> None:
+        cut = self._tools.truncate(text, limit=self._max_result_chars)
+        await self._say(session, self._plain(cut))
 
     async def _say(self, session: AcpSessionContext, text: str) -> None:
         await self._notify(session, self._mapper.agent_text(text))

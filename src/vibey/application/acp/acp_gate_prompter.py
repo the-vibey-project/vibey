@@ -229,7 +229,10 @@ class AcpGatePrompter:
             session,
             self._mapper.tool_call(
                 call_id,
-                f"Answer gate: {prompt}",
+                # The prompt is model-written: one untrusted line in the title. `rawInput`
+                # carries it unchanged, as data.
+                "Answer gate: "
+                + self._mapper.untrusted(prompt, limit=self._settings.live_message_chars),
                 ToolKind.OTHER,
                 {"gate_id": gate_id, "kind": gate.get("kind"), "prompt": prompt},
             ),
@@ -273,8 +276,9 @@ class AcpGatePrompter:
                 g for g in session.open_gates if self._gates.gate_id(g) != gate_id
             )
             text = self._tools.truncate(result.text, limit=self._max_result_chars)
-            return self._mapper.tool_call_update(call_id, ToolCallStatus.COMPLETED, text)
-        refused = self._tools.truncate(
+            shown = self._mapper.untrusted_code(text, limit=len(text))
+            return self._mapper.tool_call_update(call_id, ToolCallStatus.COMPLETED, shown)
+        refused = self._mapper.untrusted(
             f"hub refused ({result.status_code}): {result.text}", limit=self._max_result_chars
         )
         return self._mapper.tool_call_update(call_id, ToolCallStatus.FAILED, refused)
@@ -285,14 +289,16 @@ class AcpGatePrompter:
         with contextlib.suppress(asyncio.CancelledError):
             task.exception()
 
-    @staticmethod
-    def _describe(error: BaseException) -> str:
+    def _describe(self, error: BaseException) -> str:
         """A `VibeyError`'s own message. Any other failure is a defect: it is named by its type
-        as well, and logged with its traceback so it can be found."""
+        as well, and logged with its traceback so it can be found. Either way the text can
+        quote the hub (a refusal's body), so it is shown as one untrusted line."""
         if isinstance(error, VibeyError):
-            return str(error)
-        _LOG.error("an ACP hub call failed unexpectedly", exc_info=error)
-        return f"{type(error).__name__}: {error}"
+            text = str(error)
+        else:
+            _LOG.error("an ACP hub call failed unexpectedly", exc_info=error)
+            text = f"{type(error).__name__}: {error}"
+        return self._mapper.untrusted(text, limit=self._max_result_chars)
 
     async def _fail(self, session: AcpSessionContext, call: _GateCall, text: str) -> None:
         update = self._mapper.tool_call_update(call.call_id, ToolCallStatus.FAILED, text)

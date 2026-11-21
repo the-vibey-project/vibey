@@ -53,6 +53,7 @@ from typing import Any, Final
 from uuid import UUID
 
 from vibey.domain.acp.protocol import PermissionKind
+from vibey.domain.acp.untrusted_text import UNTRUSTED_TEXT
 from vibey.domain.hub_chat import (
     ANY_ANSWER_GATE_KINDS,
     CHOICE_GATE_KINDS,
@@ -163,7 +164,9 @@ class GatePermissionMapper:
             return NOT_A_UUID  # an id that is not a UUID could say anything: never echoed
         kind = gate.get("kind")
         host = _ON_THE_HOST.format(gate_id=gate_id)
-        shown = kind if isinstance(kind, str) and _KIND_SHAPE.fullmatch(kind) else UNKNOWN_KIND
+        shaped = isinstance(kind, str) and _KIND_SHAPE.fullmatch(kind)
+        # Shaped like a kind, and still shown as untrusted text: one rule for all hub text.
+        shown = UNTRUSTED_TEXT.escape(kind) if shaped and isinstance(kind, str) else UNKNOWN_KIND
         if self.spends(gate):
             return f"Gate {gate_id} ({shown}) spends money, so I cannot answer it. {host}"
         if self._opts_in(gate):
