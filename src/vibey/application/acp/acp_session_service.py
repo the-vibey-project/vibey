@@ -71,14 +71,11 @@ class AcpSessionService:
                 f"{principal.name} holds the most sessions the hub keeps for one principal "
                 f"({self._sessions_max}, [acp] sessions_max); nothing kept was changed"
             )
-        if kept is not None:
-            owner, folder = kept
-            if owner != principal.name:
-                raise self._unknown(session_id)
-            if folder != cwd:
-                raise SessionEventConflict(
-                    f"session {session_id} is already kept under another folder"
-                )
+        owner, folder = kept
+        if owner != principal.name:
+            raise self._unknown(session_id)
+        if folder != cwd:
+            raise SessionEventConflict(f"session {session_id} is already kept under another folder")
 
     async def append(
         self,
