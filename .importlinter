@@ -137,6 +137,7 @@ source_modules =
     vibey.infrastructure.tracker.interfaces
     vibey.infrastructure.hub.interfaces
     vibey.infrastructure.mcp.interfaces
+    vibey.infrastructure.jsonrpc.interfaces
 forbidden_modules =
     vibey.cli
     vibey.tui
