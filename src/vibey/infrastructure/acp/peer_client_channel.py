@@ -57,6 +57,15 @@ class PeerClientChannel:
         option_id = outcome.get("optionId")
         return option_id if isinstance(option_id, str) else None
 
+    def cancel_permissions(self, session_id: str) -> tuple[str, ...]:
+        # The protocol asks the client to answer `cancelled` after a `session/cancel`, but a
+        # client that never does must not hold the turn, so the requests resolve here.
+        return self._attached().cancel_outbound(
+            lambda method, params: (
+                method == REQUEST_PERMISSION and params.get("sessionId") == session_id
+            )
+        )
+
     def _attached(self) -> JsonRpcPeerInterface:
         if self._peer is None:
             raise RuntimeError("the ACP client channel is not attached to a peer yet")

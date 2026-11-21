@@ -558,6 +558,34 @@ async def test_cancel_after_the_outcome_was_reported_reports_nothing_twice() -> 
     ]
 
 
+@pytest.mark.parametrize(
+    ("hub", "closing"),
+    [
+        (FakeHub(PROJECTS_TURN), ("tool_call_update", "completed")),
+        (FakeHub(error=OSError("down")), ("tool_call_update", "failed")),
+    ],
+)
+async def test_a_cancel_while_the_close_waits_to_be_written_still_sends_it_once(
+    hub: FakeHub, closing: tuple[str, str]
+) -> None:
+    # Review S-3: the close waits for the write lock when the cancel lands; it must still go
+    # out, once, rather than be dropped with the tool call left in progress.
+    channel = FakeChannel()
+    held = channel.hold_before[3] = asyncio.Event()
+    run = asyncio.create_task(
+        build_turn(channel, hub).run(context(), [text("/projects")], turn_id="t1")
+    )
+    await asyncio.wait_for(channel.write_waiting.wait(), 5)
+
+    run.cancel()
+    await asyncio.sleep(0)
+    held.set()
+    with pytest.raises(asyncio.CancelledError):
+        await run
+
+    assert channel.kinds == [("tool_call", "pending"), ("tool_call_update", "in_progress"), closing]
+
+
 # -- through a real JSON-RPC peer -----------------------------------------------------------
 
 

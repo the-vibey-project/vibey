@@ -22,6 +22,7 @@ from vibey.application.ports import Clock, HumanGateRepository, JobRepository
 from vibey.application.worker import Failure, Outcome, Park, Success
 from vibey.domain.config import ConfigError, PublishConfig
 from vibey.domain.effort import Effort
+from vibey.domain.hub_scope import DEPLOYMENT_OPT_IN_OPTIONS, DEPLOYMENT_OPT_IN_PROMPT
 from vibey.domain.job import FailureClass, idempotency_key
 from vibey.domain.ledger import EventKind, LedgerEvent
 from vibey.domain.phase import Phase
@@ -64,9 +65,9 @@ class ReviewDeploymentChoiceHandler:
         if gate is None:
             request = HumanGateRequest(
                 kind="choice",
-                prompt="Review accepted. Deploy to target infrastructure?",
-                options=("local_only", "deploy"),
-                default_answer="local_only",
+                prompt=DEPLOYMENT_OPT_IN_PROMPT,
+                options=DEPLOYMENT_OPT_IN_OPTIONS,
+                default_answer=DEPLOYMENT_OPT_IN_OPTIONS[0],
             )
             raised_gate = await self._gates.raise_gate(job.project_id, job.id, request)
             return Park(request, gate=raised_gate)

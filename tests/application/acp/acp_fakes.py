@@ -13,9 +13,12 @@ from typing import Any
 from uuid import UUID
 
 from vibey.application.acp.acp_agent import AcpAgent
+from vibey.application.acp.acp_gate_prompter import AcpGatePrompter
 from vibey.application.acp.acp_prompt_turn import AcpPromptTurn
 from vibey.application.acp.dto import AcpSessionContext, HubToolResult, HubTurn, LedgerPage
+from vibey.domain.acp.gate_permission import GatePermissionMapper
 from vibey.domain.acp.modes import AcpModes
+from vibey.domain.acp.protocol import StopReason
 from vibey.domain.acp.session_state import AcpSessionState
 from vibey.domain.acp.settings import AcpSettings
 from vibey.domain.acp.update_mapper import AcpUpdateMapper
@@ -33,10 +36,26 @@ class FakeChannel:
         self.updates: list[dict[str, Any]] = []
         self.sessions: list[str] = []
         self.permission_requests: list[dict[str, Any]] = []
+        self.permission_answers: list[str | None] = []
+        """What each permission request answers, in order; None once they run out."""
+        self.permission_block = False
+        """Leave every permission request unanswered until `cancel_permissions` resolves it."""
+        self.permission_asked = asyncio.Event()
+        self.cancelled_permissions: list[str] = []
+        self._waiting: dict[str, list[asyncio.Future[None]]] = {}
         self.hold_at: dict[int, asyncio.Event] = {}
         """The update with this 1-based number is recorded, then waits for the event."""
+        self.hold_before: dict[int, asyncio.Event] = {}
+        """The update with this 1-based number waits for the event before it is recorded, as a
+        frame waiting for the peer's write lock; cancelled there, it is never sent."""
+        self.write_waiting = asyncio.Event()
+        """Set once an update is waiting on `hold_before`."""
 
     async def notify_update(self, session_id: str, update: Mapping[str, Any]) -> None:
+        waiting = self.hold_before.pop(len(self.updates) + 1, None)
+        if waiting is not None:
+            self.write_waiting.set()
+            await waiting.wait()
         self.sessions.append(session_id)
         self.updates.append(dict(update))
         gate = self.hold_at.get(len(self.updates))
@@ -52,9 +71,28 @@ class FakeChannel:
         timeout: float,
     ) -> str | None:
         self.permission_requests.append(
-            {"session": session_id, "tool_call": dict(tool_call), "options": list(options)}
+            {
+                "session": session_id,
+                "tool_call": dict(tool_call),
+                "options": list(options),
+                "timeout": timeout,
+            }
         )
-        return None
+        self.permission_asked.set()
+        if self.permission_block:
+            waiter: asyncio.Future[None] = asyncio.get_running_loop().create_future()
+            self._waiting.setdefault(session_id, []).append(waiter)
+            await waiter
+            return None
+        return self.permission_answers.pop(0) if self.permission_answers else None
+
+    def cancel_permissions(self, session_id: str) -> tuple[str, ...]:
+        self.cancelled_permissions.append(session_id)
+        waiters = self._waiting.pop(session_id, [])
+        for waiter in waiters:
+            if not waiter.done():
+                waiter.set_result(None)
+        return tuple(f"perm-{index}" for index, _ in enumerate(waiters))
 
     @property
     def texts(self) -> list[str]:
@@ -92,6 +130,11 @@ class FakeHub:
         self.calls: list[ChatCall] = []
         self.release: asyncio.Event | None = None
         self.entered = asyncio.Event()
+        self.tool_calls: list[tuple[str, dict[str, Any], str]] = []
+        self.tool_result = HubToolResult(ok=True, status_code=200, text='{"answered": true}')
+        self.tool_error: Exception | None = None
+        self.tool_release: asyncio.Event | None = None
+        self.tool_entered = asyncio.Event()
 
     async def chat(self, message: str, *, project_id: UUID | None, request_id: str) -> HubTurn:
         self.calls.append(ChatCall(message, project_id, request_id))
@@ -105,7 +148,13 @@ class FakeHub:
     async def call_tool(
         self, name: str, arguments: Mapping[str, Any], *, request_id: str
     ) -> HubToolResult:
-        return HubToolResult(ok=True, status_code=200, text="{}")
+        self.tool_calls.append((name, dict(arguments), request_id))
+        self.tool_entered.set()
+        if self.tool_release is not None:
+            await self.tool_release.wait()
+        if self.tool_error is not None:
+            raise self.tool_error
+        return self.tool_result
 
     async def ledger_after(self, project_id: UUID, after: int, limit: int) -> LedgerPage:
         return LedgerPage(events=(), last_seq=None)
@@ -133,6 +182,27 @@ def build_turn(
         AcpModes(chosen),
         AcpUpdateMapper(),
         chat,
+        HOST_TOOL_CATALOG,
+        build_gates(channel, hub, settings=chosen, max_result_chars=max_result_chars),
+        max_result_chars=max_result_chars,
+    )
+
+
+def build_gates(
+    channel: FakeChannel,
+    hub: FakeHub,
+    *,
+    settings: AcpSettings | None = None,
+    max_result_chars: int = MAX_RESPONSE_CHARS,
+) -> AcpGatePrompter:
+    chosen = settings or AcpSettings()
+    return AcpGatePrompter(
+        channel,
+        hub,
+        chosen,
+        AcpModes(chosen),
+        AcpUpdateMapper(),
+        GatePermissionMapper(chosen.reject_words),
         HOST_TOOL_CATALOG,
         max_result_chars=max_result_chars,
     )
@@ -162,14 +232,24 @@ def build_agent(
 
 
 def context(session_id: str = "s", *, mode_id: str = "drive") -> AcpSessionContext:
+    """A session with turn `t1` begun, as the agent hands it to a prompt turn."""
+    state = AcpSessionState(session_id)
+    state.begin_turn("t1")
     return AcpSessionContext(
         session_id=session_id,
-        state=AcpSessionState(session_id),
+        state=state,
         mode_id=mode_id,
         project_id=None,
         offered_gates=set(),
         cwd="/work",
     )
+
+
+def next_turn(session: AcpSessionContext, turn_id: str) -> AcpSessionContext:
+    """End the session's turn and begin `turn_id`, as the agent does between prompts."""
+    session.state.finish_turn(StopReason.END_TURN)
+    session.state.begin_turn(turn_id)
+    return session
 
 
 def text(value: str) -> dict[str, Any]:

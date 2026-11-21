@@ -17,6 +17,7 @@ from platformdirs import user_cache_path
 
 from vibey import __version__
 from vibey.application.acp.acp_agent import AcpAgent
+from vibey.application.acp.acp_gate_prompter import AcpGatePrompter
 from vibey.application.acp.acp_prompt_turn import AcpPromptTurn
 from vibey.application.acp.interfaces.acp_agent_interface import AcpAgentInterface
 from vibey.application.acp.interfaces.acp_prompt_turn_interface import AcpPromptTurnInterface
@@ -119,6 +120,7 @@ from vibey.application.visual_handler import VisualInventoryHandler, VisualPlanH
 from vibey.application.wind_down import WindDownOrchestrator
 from vibey.application.worker import WorkerLoop
 from vibey.bootstrap_interface import WorkerGateSeamsInterface
+from vibey.domain.acp.gate_permission import GatePermissionMapper
 from vibey.domain.acp.modes import AcpModes
 from vibey.domain.acp.settings import AcpSettings
 from vibey.domain.acp.update_mapper import AcpUpdateMapper
@@ -1447,15 +1449,27 @@ def build_acp_agent(
 
     The hub is reached through the same `HubGateway` `vibey mcp` uses, as the scoped agent
     principal; the chat parser and tool catalogue are the hub's own. Each prompt gets a fresh
-    `AcpPromptTurn`. Session and turn ids are random UUIDs, so a request id built from them
+    `AcpPromptTurn`, which puts the open gates the hub lists to the client through one
+    `AcpGatePrompter` (spend gates are never offered). Session and turn ids are random UUIDs, so a request id built from them
     (`acp-<session>-<turn>`) never repeats across processes.
     """
     hub = AcpHubClient(gateway=gateway, tools=HOST_TOOL_CATALOG)
     modes = AcpModes(settings)
     mapper = AcpUpdateMapper()
+    gates = AcpGatePrompter(
+        channel,
+        hub,
+        settings,
+        modes,
+        mapper,
+        GatePermissionMapper(settings.reject_words),
+        HOST_TOOL_CATALOG,
+    )
 
     def new_turn() -> AcpPromptTurnInterface:
-        return AcpPromptTurn(channel, hub, settings, modes, mapper, HUB_CHAT, HOST_TOOL_CATALOG)
+        return AcpPromptTurn(
+            channel, hub, settings, modes, mapper, HUB_CHAT, HOST_TOOL_CATALOG, gates
+        )
 
     return AcpAgent(
         channel,

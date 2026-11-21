@@ -13,6 +13,12 @@ data: its text is sent only as the description a new project takes (`/new`, `/as
 blank line, and is otherwise dropped with one message saying so. A prompt of resources alone
 therefore runs nothing.
 
+After the hub's reply, the open gates it listed become the session's (so the local parse reads
+`/answer 1` and a bare number as the hub does), and the ones the session has not seen yet are
+put to the client by `AcpGatePrompterInterface`: answerable ones as permission requests, spend
+ones as a message saying to answer them on the host. A bare number is announced as a gate
+answer, the stricter of its two readings, and renamed for what the hub actually ran.
+
 A cancel is the task running `run` being cancelled. A hub call already in flight cannot be
 taken back, so the turn waits up to `[acp] cancel_grace_seconds` for its real outcome before
 saying the hub may still apply it, names the request id, and lets the cancel propagate.
@@ -29,6 +35,9 @@ from dataclasses import dataclass
 from typing import Any, ClassVar, Final
 
 from vibey.application.acp.dto import AcpSessionContext, HubTurn
+from vibey.application.acp.interfaces.acp_gate_prompter_interface import (
+    AcpGatePrompterInterface,
+)
 from vibey.application.acp.interfaces.acp_hub_port_interface import AcpHubPortInterface
 from vibey.application.acp.interfaces.client_channel_interface import ClientChannelInterface
 from vibey.domain.acp.interfaces.modes_interface import AcpModesInterface
@@ -55,11 +64,15 @@ class _HubCall:
 
     call_id: str
     request_id: str
-    announcing: asyncio.Task[None] | None = None
+    tool: HostTool
+    """The tool the call was announced as."""
+    announcing: asyncio.Task[None]
     """The `pending` frame's write. Once started it runs to the end even if the turn is
     cancelled, so a frame that reached the client is always closed by the settle."""
     task: asyncio.Task[HubTurn] | None = None
-    reported: bool = False
+    closing: asyncio.Task[None] | None = None
+    """The closing frame's write (`completed` or `failed`). Like the `pending` frame it runs to
+    the end even if the turn is cancelled, so the close the client was promised is sent once."""
 
 
 class AcpPromptTurn:
@@ -78,9 +91,11 @@ class AcpPromptTurn:
         mapper: AcpUpdateMapperInterface,
         chat: HubChatInterface,
         tools: HostToolsInterface,
+        gates: AcpGatePrompterInterface,
         *,
         max_result_chars: int = MAX_RESPONSE_CHARS,
     ) -> None:
+        self._gates = gates
         self._channel = channel
         self._hub = hub
         self._settings = settings
@@ -97,10 +112,12 @@ class AcpPromptTurn:
         try:
             # The command is read from what the user typed and nothing else: an embedded
             # resource is data, so its text can never choose a command or a flag.
-            intent = self._chat.parse(typed, project_id=session.project_id)
+            known = session.open_gates
+            intent = self._chat.parse(typed, project_id=session.project_id, open_gates=known)
             carried = intent.kind in FREE_TEXT_INTENTS
             message = "\n\n".join([typed, *attached]) if carried else typed
-            self._chat.parse(message, project_id=session.project_id)  # the length bound, whole
+            # The length bound, over the whole message.
+            self._chat.parse(message, project_id=session.project_id, open_gates=known)
         except LifecycleInvalid as exc:
             await self._say(session, str(exc))
             return StopReason.END_TURN
@@ -114,9 +131,15 @@ class AcpPromptTurn:
         if isinstance(tool, str):
             await self._say(session, tool)
             return StopReason.END_TURN
-        call = _HubCall(call_id=f"{turn_id}-1", request_id=f"acp-{session.session_id}-{turn_id}")
+        call_id = f"{turn_id}-1"
+        call = _HubCall(
+            call_id=call_id,
+            request_id=f"acp-{session.session_id}-{turn_id}",
+            tool=tool,
+            announcing=asyncio.ensure_future(self._announce(session, call_id, tool, message)),
+        )
         try:
-            return await self._call_hub(session, message, tool, call)
+            return await self._call_hub(session, message, call, turn_id=turn_id)
         except asyncio.CancelledError:
             await self._settle(session, call)
             raise
@@ -124,16 +147,8 @@ class AcpPromptTurn:
     # -- the hub call ---------------------------------------------------------------------
 
     async def _call_hub(
-        self, session: AcpSessionContext, message: str, tool: HostTool, call: _HubCall
+        self, session: AcpSessionContext, message: str, call: _HubCall, *, turn_id: str
     ) -> StopReason:
-        spec = self._spec(tool)
-        title = spec.title if spec is not None else tool.title
-        kind = self._mapper.tool_kind_for(tool.scope)
-        call.announcing = asyncio.ensure_future(
-            self._notify(
-                session, self._mapper.tool_call(call.call_id, title, kind, {"message": message})
-            )
-        )
         await asyncio.shield(call.announcing)
         await self._notify(
             session, self._mapper.tool_call_update(call.call_id, ToolCallStatus.IN_PROGRESS)
@@ -146,29 +161,41 @@ class AcpPromptTurn:
         except Exception as exc:
             # Any failure, not only a `VibeyError`: an unexpected one must still close the
             # tool call on the client's screen and end the turn, never leave it spinning.
-            call.reported = True
             failure = self._describe(exc)
-            await self._notify(
+            await self._close(
                 session,
+                call,
                 self._mapper.tool_call_update(call.call_id, ToolCallStatus.FAILED, failure),
             )
             await self._say(session, failure)
             return StopReason.END_TURN
         if turn.project_id is not None:
             session.project_id = turn.project_id
-        call.reported = True
-        await self._notify(session, self._completed(call.call_id, turn))
+        session.open_gates = turn.gates
+        await self._close(session, call, self._completed(call, turn))
         await self._say(session, turn.reply)
+        await self._gates.offer(session, turn.gates, turn_id=turn_id)
         return StopReason.END_TURN
+
+    async def _announce(
+        self, session: AcpSessionContext, call_id: str, tool: HostTool, message: str
+    ) -> None:
+        kind = self._mapper.tool_kind_for(tool.scope)
+        await self._notify(
+            session, self._mapper.tool_call(call_id, self._title(tool), kind, {"message": message})
+        )
 
     async def _settle(self, session: AcpSessionContext, call: _HubCall) -> None:
         """Close an announced tool call the cancel interrupted, once and truthfully."""
-        if call.reported or call.announcing is None:
+        if call.closing is not None:
+            await asyncio.wait({call.closing})  # already closing: let that frame go out
+            self._read(call.closing)
             return
         await asyncio.wait({call.announcing})  # the pending frame goes out first
         if call.task is None:
-            await self._notify(
+            await self._close(
                 session,
+                call,
                 self._mapper.tool_call_update(
                     call.call_id, ToolCallStatus.FAILED, "cancelled before it was sent to the hub"
                 ),
@@ -179,8 +206,9 @@ class AcpPromptTurn:
             # The call keeps running in its thread; its outcome is read, not reported.
             self._STRAYS.add(call.task)
             call.task.add_done_callback(self._retrieve)
-            await self._notify(
+            await self._close(
                 session,
+                call,
                 self._mapper.tool_call_update(
                     call.call_id,
                     ToolCallStatus.FAILED,
@@ -195,9 +223,22 @@ class AcpPromptTurn:
                 call.call_id, ToolCallStatus.FAILED, self._describe(error)
             )
             if error is not None
-            else self._completed(call.call_id, call.task.result())
+            else self._completed(call, call.task.result())
         )
-        await self._notify(session, update)
+        await self._close(session, call, update)
+
+    async def _close(
+        self, session: AcpSessionContext, call: _HubCall, update: Mapping[str, Any]
+    ) -> None:
+        call.closing = asyncio.ensure_future(self._notify(session, update))
+        await asyncio.shield(call.closing)
+
+    @staticmethod
+    def _read(task: asyncio.Task[None]) -> None:
+        # A close the cancel waited for may itself have failed (the client went away); its
+        # outcome is read so asyncio does not log it as never retrieved.
+        with contextlib.suppress(asyncio.CancelledError):
+            task.exception()
 
     @classmethod
     def _retrieve(cls, task: asyncio.Task[HubTurn]) -> None:
@@ -212,21 +253,34 @@ class AcpPromptTurn:
         """A `VibeyError`'s own message; any other failure named by its type as well."""
         return str(error) if isinstance(error, VibeyError) else f"{type(error).__name__}: {error}"
 
-    def _completed(self, call_id: str, turn: HubTurn) -> dict[str, Any]:
-        text: str | None = None
-        if turn.tool_calls:
-            rendered = json.dumps(turn.tool_calls[0].get("result"), indent=2, default=str)
-            text = self._tools.truncate(rendered, limit=self._max_result_chars)
-        return self._mapper.tool_call_update(call_id, ToolCallStatus.COMPLETED, text)
+    def _completed(self, call: _HubCall, turn: HubTurn) -> dict[str, Any]:
+        if not turn.tool_calls:
+            return self._mapper.tool_call_update(call.call_id, ToolCallStatus.COMPLETED)
+        first = turn.tool_calls[0]
+        rendered = json.dumps(first.get("result"), indent=2, default=str)
+        text = self._tools.truncate(rendered, limit=self._max_result_chars)
+        ran = self._tools.by_name(str(first.get("name")))
+        if ran is None or ran.name == call.tool.name:
+            return self._mapper.tool_call_update(call.call_id, ToolCallStatus.COMPLETED, text)
+        # Announced as one reading of the message (a bare number as a gate answer), run as
+        # another: the client is told what actually ran.
+        return self._mapper.tool_call_update(
+            call.call_id,
+            ToolCallStatus.COMPLETED,
+            text,
+            title=self._title(ran),
+            kind=self._mapper.tool_kind_for(ran.scope),
+        )
 
     # -- the session mode -----------------------------------------------------------------
 
     def _admit(self, session: AcpSessionContext, tool_name: str, message: str) -> HostTool | str:
-        """The tool this message runs, or why the session's mode may not run it."""
+        """The tool this message is announced as, or why the session's mode may not run it."""
         names = [tool_name]
         if message.strip().isdigit():
-            # The local parse has no open gates, so it reads a bare number as a projects
-            # query; the hub, which has them, reads it as an answer. Hold it to both readings.
+            # The hub reads a bare number against its own, fresher list of open gates: as an
+            # answer to the oldest one, or a projects query when none matches. Hold it to both
+            # readings, and announce it as the stricter one (the last name).
             names.append(ANSWER_GATE_TOOL)
         granted = self._hub.agent_scopes()
         allowed = self._modes.scopes_for(session.mode_id, granted)
@@ -238,7 +292,7 @@ class AcpPromptTurn:
             if tool.scope not in allowed:
                 return self._needs(tool, granted)
             admitted.append(tool)
-        return admitted[0]
+        return admitted[-1]
 
     def _needs(self, tool: HostTool, granted: frozenset[HubScope]) -> str:
         spec = self._spec(tool)
@@ -250,6 +304,10 @@ class AcpPromptTurn:
             f"`{command}` needs the `{tool.scope.value}` scope, which this hub does not grant "
             "to agents ([hub] agent_scopes in vibey.toml)."
         )
+
+    def _title(self, tool: HostTool) -> str:
+        spec = self._spec(tool)
+        return spec.title if spec is not None else tool.title
 
     def _spec(self, tool: HostTool) -> ChatSlashSpec | None:
         """The `/` command that runs `tool`, if the chat offers one."""
