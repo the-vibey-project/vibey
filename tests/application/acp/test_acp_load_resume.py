@@ -749,3 +749,19 @@ async def test_a_session_in_a_folder_the_hub_refuses_never_blocks_another_sessio
         and "its folder holds a character" in update["content"]["text"]
     ]
     assert told == [bad]
+
+
+async def test_a_close_that_waited_on_a_load_that_found_nothing_answers_empty() -> None:
+    hub = SlowHub()
+    agent, _, _ = _agent(hub=hub, feed=SpyFeed())
+    loading = asyncio.create_task(_load(agent))
+    await hub.reading.wait()
+    closing = asyncio.create_task(agent.handle_request("session/close", {"sessionId": SID}))
+    await settle()
+    hub.release_reads.set()
+    with pytest.raises(RpcError) as caught:
+        await loading
+    assert caught.value.code == RESOURCE_NOT_FOUND
+    assert await closing == {}
+    assert agent._locks == {}  # noqa: SLF001
+    await agent.close()
