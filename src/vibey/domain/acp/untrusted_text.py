@@ -19,8 +19,8 @@ and paths, the hub chat's reply (which quotes all of those), a refusal's body, a
 - **No Markdown.** Every character that could open a link, image, emphasis, code span or
   fence, heading, table cell, strikethrough, HTML tag or entity (`MARKDOWN_SPECIAL`) is
   backslash-escaped. At the start of a line (`line`, and each line of a `block`), leading
-  spaces are dropped (no indented code block) and a list, quote or setext marker (`-`, `+`,
-  `=`, `1.`) is escaped too.
+  spaces are dropped (no indented code block) and a list, setext, table-delimiter or
+  ordered-item marker (`-`, `+`, `=`, `:`, `1.`) is escaped too.
 - **A block keeps its lines.** Each line ends in a hard break, so the client shows the lines as
   they were written; a blank line stays a paragraph break.
 - **Code is fenced.** A tool's result (JSON, or the hub's raw answer) is shown as a code block
@@ -47,9 +47,10 @@ AUTOLINK_DEFANGS: Final[tuple[tuple[re.Pattern[str], str], ...]] = (
 )
 """The forms GFM links with no Markdown at all, each broken with a visible bracket. No word
 boundary is required: GFM links `www.` after `_`, `*`, `~` or `(` too."""
-_LINE_MARKER: Final = re.compile(r"[-+=]|\d+\.")
-"""What makes a line a list item, a setext underline or an ordered item when it starts it
-(`*`, `#`, `>` and `)` are escaped everywhere already)."""
+_LINE_MARKER: Final = re.compile(r"[-+=:]|\d+\.")
+"""What makes a line a list item, a setext underline, a table delimiter row (`:-`, which needs
+no pipe) or an ordered item when it starts it (`*`, `#`, `>`, `|` and `)` are escaped everywhere
+already)."""
 _BACKTICKS: Final = re.compile(r"`+")
 HARD_BREAK: Final = "\\\n"
 """A backslash before a line break: CommonMark's hard line break."""

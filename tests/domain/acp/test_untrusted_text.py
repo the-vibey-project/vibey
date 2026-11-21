@@ -3,6 +3,9 @@
 
 Module-level test functions rather than a class with an interface beside it (ADR-0016)."""
 
+import itertools
+import re
+
 import pytest
 
 from vibey.domain.acp.interfaces.untrusted_text_interface import UntrustedTextInterface
@@ -94,3 +97,49 @@ def test_escape_defangs_and_escapes_without_cutting() -> None:
 
 def test_one_line_reads_none_as_a_question_mark() -> None:
     assert TEXT.one_line(None) == "?" and TEXT.one_line("a\nb") == "a b"
+
+
+# -- review 3, R3-M1: no line of a block may start structure ---------------------------------
+
+
+@pytest.mark.parametrize(
+    ("raw", "shown"),
+    [
+        ("a|b\n:-", "a\\|b\\\n\\:-"),  # a GFM table delimiter row needs no pipe
+        ("x\n :-:", "x\\\n\\:-:"),
+    ],
+)
+def test_a_block_line_cannot_start_a_table_delimiter_row(raw: str, shown: str) -> None:
+    assert TEXT.block(raw, limit=400) == shown
+
+
+_ALPHABET = ":-+=*_#>|~`1.)([]!< \t"
+"""Markdown-significant characters a line could start with."""
+_PLAIN_START = re.compile(r"[A-Za-z0-9.(]")
+"""What an output line may begin with unescaped: a letter or digit (unless it opens an ordered
+list item), or a character that starts nothing in CommonMark or GFM."""
+_ORDERED = re.compile(r"\d+[.)]")
+
+
+def _starts_structure(line: str) -> bool:
+    if not line or line.startswith("\\"):
+        return False  # empty, or an escape: shown as text
+    return _PLAIN_START.match(line) is None or _ORDERED.match(line) is not None
+
+
+def test_no_line_start_from_markdown_characters_survives_a_block() -> None:
+    # Every 1-3 character line start from `_ALPHABET`, on its own, after another line and
+    # before another line: no output line may begin with an unescaped structure token.
+    starts = [
+        "".join(chars) for size in (1, 2, 3) for chars in itertools.product(_ALPHABET, repeat=size)
+    ]
+    leaks = [
+        (layout, out_line)
+        for start in starts
+        for layout in (start, f"x\n{start}", f"{start}\nx", f"a|b\n{start}y")
+        for out_line in TEXT.block(layout, limit=400).split("\n")
+        if _starts_structure(out_line)
+    ]
+
+    assert len(starts) == 21 + 21**2 + 21**3
+    assert leaks == []
