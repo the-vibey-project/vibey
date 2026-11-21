@@ -305,3 +305,21 @@ def test_a_ledger_summary_with_a_bare_url_is_defanged() -> None:
     assert MAPPER.ledger_summary(event, limit=400)["content"]["text"] == (
         "[build] K: open https\\[:\\]//e.example"
     )
+
+
+@pytest.mark.parametrize(
+    ("raw", "shown"),
+    [
+        ("_www.evil.example", "\\_www\\[.\\]evil.example"),
+        ("*www.evil.example", "\\*www\\[.\\]evil.example"),
+        ("~www.evil.example", "\\~www\\[.\\]evil.example"),
+        ("(www.evil.example)", "\\(www\\[.\\]evil.example\\)"),
+        ("xwww.evil.example", "xwww\\[.\\]evil.example"),  # over-defanged: fine
+        ("_mailto:a@b.example", "\\_mailto\\[:\\]a\\[@\\]b.example"),
+        ("xmailto:x", "xmailto\\[:\\]x"),
+        ("_xmpp:bot", "\\_xmpp\\[:\\]bot"),
+    ],
+)
+def test_a_www_host_or_mailto_after_any_character_is_defanged(raw: str, shown: str) -> None:
+    # GFM autolinks `www.` after `_`, `*`, `~`, `(` or a space, where `\b` does not hold.
+    assert MAPPER.untrusted(raw, limit=400) == shown

@@ -66,14 +66,16 @@ MARKDOWN_SPECIAL: Final = frozenset("\\`*_[]()<>!#|~&")
 """Escaped in untrusted text: what opens a link, image, emphasis, code span or fence, heading,
 table cell, strikethrough, HTML tag or entity, and the escape character itself."""
 AUTOLINK_DEFANGS: Final[tuple[tuple[re.Pattern[str], str], ...]] = (
-    (re.compile(r"(?i)\b(mailto|xmpp):"), r"\1[:]"),
+    (re.compile(r"(?i)(mailto|xmpp):"), r"\1[:]"),
     (re.compile(r"://"), "[:]//"),
-    (re.compile(r"(?i)\b(www)\."), r"\1[.]"),
+    (re.compile(r"(?i)(www)\."), r"\1[.]"),
     (re.compile(r"(?<=[\w.+-])@(?=[\w-]+\.)"), "[@]"),
 )
 """The forms GFM turns into a link without any Markdown -- a scheme's `://`, `mailto:` and
 `xmpp:`, a `www.` host and an e-mail address -- each broken with a visible bracket, applied to
-untrusted text before it is escaped (so the brackets show as written)."""
+untrusted text before it is escaped (so the brackets show as written). No word boundary is
+required: GFM links `www.` after `_`, `*`, `~` or `(` too, so every `www.`, `mailto:` and
+`xmpp:` is defanged, even inside a longer word."""
 
 
 class AcpUpdateMapper:
