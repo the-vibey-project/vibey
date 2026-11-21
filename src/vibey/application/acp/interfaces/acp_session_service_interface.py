@@ -7,7 +7,7 @@ from collections.abc import Mapping
 from typing import TYPE_CHECKING, Any, Protocol, runtime_checkable
 
 if TYPE_CHECKING:
-    from vibey.application.acp.dto import SessionEvent, SessionRecord
+    from vibey.application.acp.dto import SessionEvent, SessionRecord, SessionSummary
     from vibey.application.dto import HubPrincipal
 
 
@@ -43,6 +43,13 @@ class AcpSessionServiceInterface(Protocol):
     ) -> tuple[SessionEvent, ...]:
         """`principal`'s session's events after `after`; when `cwd` is given, only for a
         session kept under that folder."""
+        ...
+
+    async def summary(
+        self, principal: HubPrincipal, session_id: str, *, cwd: str | None
+    ) -> SessionSummary:
+        """`principal`'s session's newest `seq` and newest mode, attach and title events; when
+        `cwd` is given, only for a session kept under that folder."""
         ...
 
     async def list(

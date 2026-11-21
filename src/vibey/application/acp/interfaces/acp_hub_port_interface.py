@@ -19,6 +19,7 @@ if TYPE_CHECKING:
         LedgerPage,
         SessionEvent,
         SessionRecord,
+        SessionSummary,
     )
     from vibey.domain.hub_scope import HubScope
 
@@ -52,7 +53,8 @@ class AcpHubPortInterface(Protocol):
     ) -> None:
         """Append one event to a session's log; sending the same event again is a no-op.
         `SessionEventConflict` when the log holds another event at `seq`, `UnknownAcpSession`
-        when the hub keeps no such session for the agent principal."""
+        when the hub keeps no such session for the agent principal, `AcpSessionLimitReached`
+        when it keeps no more, `SessionWritesThrottled` when its rate limit refused it for now."""
         ...
 
     async def session_events(
@@ -60,6 +62,11 @@ class AcpHubPortInterface(Protocol):
     ) -> tuple[SessionEvent, ...]:
         """Every event after `after`, oldest first, read page by page until a short page.
         `UnknownAcpSession` unless the agent principal keeps that session under `cwd`."""
+        ...
+
+    async def session_summary(self, session_id: str, *, cwd: str) -> SessionSummary:
+        """The session's newest `seq` and newest mode, attach and title events, without reading
+        its log. `UnknownAcpSession` unless the agent principal keeps it under `cwd`."""
         ...
 
     async def list_sessions(

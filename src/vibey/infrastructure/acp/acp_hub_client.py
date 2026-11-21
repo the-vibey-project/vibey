@@ -14,7 +14,7 @@ reading as a connection problem; `healthy`, which never raises, logs it and answ
 
 An ACP session's log goes through the hub's `/api/v1/acp/sessions` routes. A 403 or 404 there
 is `UnknownAcpSession` (the hub answers a session that is not the agent's, or not under that
-folder, as it answers one that does not exist), a 409 `SessionEventConflict`, a 507 `AcpSessionLimitReached` (`[acp] sessions_max` or
+folder, as it answers one that does not exist), a 409 `SessionEventConflict`, a 429 `SessionWritesThrottled`, a 507 `AcpSessionLimitReached` (`[acp] sessions_max` or
 `session_events_max` reached), and a 422 on a list
 `InvalidSessionCursor`; anything else refused is a `HubGatewayError` as elsewhere.
 
@@ -37,6 +37,7 @@ from vibey.application.acp.dto import (
     LedgerPage,
     SessionEvent,
     SessionRecord,
+    SessionSummary,
 )
 from vibey.domain.acp.session_log import (
     SESSION_ID_SHAPE,
@@ -44,6 +45,7 @@ from vibey.domain.acp.session_log import (
     AcpSessionLimitReached,
     InvalidSessionCursor,
     SessionEventConflict,
+    SessionWritesThrottled,
     UnknownAcpSession,
 )
 from vibey.domain.errors import VibeyError
@@ -175,19 +177,45 @@ class AcpHubClient:
                 )
             )
             document = self._document(self._kept(response), "a page of session events")
-            page = [
+            raw = document.get("events")
+            items = self._mappings(raw)
+            events += [
                 SessionEvent(seq=item["seq"], kind=item["kind"], payload=item["payload"])
-                for item in self._mappings(document.get("events"))
+                for item in items
                 if self._is_int(item.get("seq"))
                 and item["seq"] > cursor
                 and isinstance(item.get("kind"), str)
                 and isinstance(item.get("payload"), Mapping)
             ]
-            events += page
-            # A short page is the end; so is a page that did not move past the cursor.
-            if len(page) < SESSION_PAGE:
+            # The end is a short page as the hub sent it, counted before anything malformed is
+            # passed over, or a page that does not move past the cursor.
+            ahead = [item["seq"] for item in items if self._is_int(item.get("seq"))]
+            ahead = [seq for seq in ahead if seq > cursor]
+            if not isinstance(raw, list) or len(raw) < SESSION_PAGE or not ahead:
                 return tuple(events)
-            cursor = max(event.seq for event in page)
+            cursor = max(ahead)
+
+    async def session_summary(self, session_id: str, *, cwd: str) -> SessionSummary:
+        response = await self._send(
+            HubCall(
+                tool="vibey_acp_session_summary",
+                method="GET",
+                route=self._session_route(session_id),
+                query=(("cwd", cwd),),
+            )
+        )
+        document = self._document(self._kept(response), "a session summary")
+        newest = document.get("newest_seq")
+        mode, attach, title = (
+            value if isinstance(value := document.get(key), Mapping) else None
+            for key in ("mode", "attach", "title")
+        )
+        return SessionSummary(
+            newest_seq=newest if type(newest) is int and newest > 0 else 0,
+            mode=mode,
+            attach=attach,
+            title=title,
+        )
 
     async def list_sessions(
         self, *, cwd: str | None, cursor: str | None
@@ -233,6 +261,8 @@ class AcpHubClient:
             raise SessionEventConflict(f"the hub refused it as a conflict: {response.text}")
         if response.status_code == 507:
             raise AcpSessionLimitReached(f"the hub keeps no more: {response.text}")
+        if response.status_code == 429:
+            raise SessionWritesThrottled("the hub's rate limit refused it for now")
         return cls._accepted(response)
 
     @classmethod
@@ -258,12 +288,16 @@ class AcpHubClient:
             closed=item.get("closed") is True,
         )
 
+    @classmethod
+    def _events_route(cls, session_id: str) -> str:
+        return f"{cls._session_route(session_id)}/events"
+
     @staticmethod
-    def _events_route(session_id: str) -> str:
+    def _session_route(session_id: str) -> str:
         # Only an id in the shape vibey mints is ever put in a route.
         if SESSION_ID_SHAPE.fullmatch(session_id) is None:
             raise UnknownAcpSession("that is not a session id vibey made")
-        return f"{SESSIONS_ROUTE}/{session_id}/events"
+        return f"{SESSIONS_ROUTE}/{session_id}"
 
     @staticmethod
     def _is_int(value: Any) -> bool:

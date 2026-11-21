@@ -62,3 +62,10 @@ def test_default_mode_must_be_among_the_modes() -> None:
     with pytest.raises(InvalidAcpSettings, match="default_mode"):
         AcpSettings(modes=("observe",))
     assert AcpSettings(modes=("observe",), default_mode="observe").modes == ("observe",)
+
+
+def test_the_replay_bound_keeps_a_load_inside_the_hubs_burst() -> None:
+    assert AcpSettings().replay_events_max == 2000
+    assert AcpSettings(replay_events_max=10_000).replay_events_max == 10_000
+    with pytest.raises(InvalidAcpSettings, match="replay_events_max must be at most 10000"):
+        AcpSettings(replay_events_max=10_001)

@@ -62,6 +62,18 @@ class SessionEvent:
     payload: Mapping[str, Any]
 
 
+@dataclass(frozen=True, slots=True)
+class SessionSummary:
+    """What a load needs without reading a session's log: its newest `seq` (0 before any
+    event), and the payloads of its newest `mode`, `attach` and `title` events. Untrusted data,
+    as every stored event is."""
+
+    newest_seq: int
+    mode: Mapping[str, Any] | None
+    attach: Mapping[str, Any] | None
+    title: Mapping[str, Any] | None
+
+
 @dataclass(slots=True)
 class AcpSessionContext:
     """One ACP session as the agent holds it. Mutable: the agent owns it and a turn updates it."""

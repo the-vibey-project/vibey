@@ -149,6 +149,18 @@ async def test_an_acp_session_list_stays_within_its_query_budget(
     check_budget("acp_session_list", log)
 
 
+async def test_an_acp_session_summary_stays_within_its_query_budget(
+    migrated_pool: asyncpg.Pool, query_counter: QueryCounter
+) -> None:
+    repo = PostgresAcpSessionRepository(migrated_pool)
+    await repo.create(SESSION, "/work", "agent", limit=LIMIT)
+    await repo.append(SESSION, 1, "mode", {"modeId": "drive"}, limit=LIMIT)
+    await repo.summary(SESSION)
+    async with query_counter.count(migrated_pool) as log:
+        await repo.summary(SESSION)
+    check_budget("acp_session_summary", log)
+
+
 async def test_the_counter_counts_every_statement_in_the_block(
     migrated_pool: asyncpg.Pool, query_counter: QueryCounter
 ) -> None:

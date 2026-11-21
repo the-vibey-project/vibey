@@ -29,6 +29,10 @@ CREATE TABLE acp_session_event (
     PRIMARY KEY (session_id, seq)
 );
 
+-- A session's newest event of one kind (its mode, project, title) in one probe, so neither a
+-- list page nor a load reads a log from its start.
+CREATE INDEX acp_session_event_kind ON acp_session_event (session_id, kind, seq);
+
 CREATE TRIGGER acp_session_append_only
     BEFORE UPDATE OR DELETE ON acp_session
     FOR EACH ROW EXECUTE FUNCTION public.ledger_refuse_rewrite();

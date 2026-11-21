@@ -557,3 +557,21 @@ def test_the_hub_keeps_acp_sessions_within_the_declared_caps(tmp_path: Path) -> 
     assert got["first"].status_code == 201, got["first"].text
     assert got["second"].status_code == 507 and "sessions_max" in got["second"].json()["detail"]
     assert [s["session_id"] for s in got["listed"].json()["sessions"]] == [first]
+
+
+@pytest.mark.integration
+@pytest.mark.usefixtures("_an_empty_database")
+def test_an_editor_only_acp_key_never_stops_the_hub(tmp_path: Path) -> None:
+    """The hub reads only `[acp] sessions_max` and `session_events_max`; a mistake in any key
+    the editor reads stays the editor's to report."""
+    got: dict[str, httpx.Response] = {}
+
+    async def drive(client: httpx.AsyncClient, token: str) -> None:
+        got["ready"] = await client.get("/health/ready")
+
+    asyncio.run(
+        _command(tmp_path, Driven(drive), "\n[acp]\nreject_words = 3\nmodes = ['nope']\n").run(
+            host=None, port=None
+        )
+    )
+    assert got["ready"].json() == {"status": "ready"}

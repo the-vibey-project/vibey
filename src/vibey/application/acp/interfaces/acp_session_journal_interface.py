@@ -15,7 +15,9 @@ class AcpSessionJournalInterface(Protocol):
     """Each session's log, queued in order and written behind to the hub."""
 
     def open(self, session_id: str, cwd: str) -> None:
-        """Start keeping a new session: its create is queued first, its events from `seq` 1."""
+        """Start keeping a new session, its events from `seq` 1. Nothing reaches the hub until
+        its first prompt (`user_message`): then its create goes first, with what was held; a
+        session closed before any prompt is never kept."""
         ...
 
     def resume(self, session_id: str, last_seq: int) -> None:
@@ -43,4 +45,11 @@ class AcpSessionJournalInterface(Protocol):
         """Send what is queued, oldest first, stopping at the first failure and keeping the
         rest for the next flush. A conflict or a session the hub does not keep stops that
         session's log, and the client is told once. Never raises for the hub."""
+        ...
+
+    async def drain(self) -> None:
+        """At the end of the connection: flush, and while the hub's rate limit holds writes
+        back, wait (from `[acp] live_poll_seconds`, doubling) and flush again, for at most
+        `[acp] probe_seconds` in all. What is still unsent is said once on stderr and in a
+        notice to each session."""
         ...

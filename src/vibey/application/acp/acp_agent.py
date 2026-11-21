@@ -56,7 +56,7 @@ from pathlib import PurePath
 from typing import Any, Final
 from uuid import UUID
 
-from vibey.application.acp.dto import AcpSessionContext, SessionEvent
+from vibey.application.acp.dto import AcpSessionContext, SessionEvent, SessionSummary
 from vibey.application.acp.interfaces.acp_hub_port_interface import AcpHubPortInterface
 from vibey.application.acp.interfaces.acp_live_feed_interface import AcpLiveFeedInterface
 from vibey.application.acp.interfaces.acp_prompt_turn_interface import AcpPromptTurnInterface
@@ -102,6 +102,8 @@ from vibey.domain.jsonrpc_errors import (
 type TurnFactory = Callable[[], AcpPromptTurnInterface]
 
 PROJECTS_TOOL: Final = "vibey_projects"
+EMPTY_SUMMARY: Final = SessionSummary(newest_seq=0, mode=None, attach=None, title=None)
+"""What a live session the hub does not keep loads as: nothing to show, nothing to fold."""
 """The hub tool that lists every project with its repository (`repo_path`)."""
 _LOG: Final = logging.getLogger(__name__)
 
@@ -150,6 +152,8 @@ class AcpAgent:
         """The project each session's live feed follows."""
         self._kept_project: dict[str, UUID] = {}
         """The project each session's log last recorded it attached to."""
+        self._locks: dict[str, asyncio.Lock] = {}
+        """One per session a load or a close has named: they run one at a time."""
 
     @property
     def sessions(self) -> Mapping[str, AcpSessionStateInterface]:
@@ -173,7 +177,7 @@ class AcpAgent:
         if method == SESSION_LIST:
             return await self._list(params)
         if method == SESSION_CLOSE:
-            return self._close(params)
+            return await self._close(params)
         raise RpcError(METHOD_NOT_FOUND, f"Method not found: {method}")
 
     async def handle_notification(self, method: str, params: Mapping[str, Any]) -> None:
@@ -187,8 +191,10 @@ class AcpAgent:
             task.cancel()
         await asyncio.gather(*background, return_exceptions=True)
         await self._feed.close()
-        # What is still queued for the sessions' logs goes to the hub before the process ends.
-        await self._journal.flush()
+        # What is still queued for the sessions' logs goes to the hub before the process ends;
+        # what the hub's rate limit holds back is waited for, within a bound, and never lost
+        # without a word.
+        await self._journal.drain()
 
     # -- methods --------------------------------------------------------------------------
 
@@ -331,66 +337,89 @@ class AcpAgent:
     # -- the session's log ---------------------------------------------------------------
 
     async def _load(self, params: Mapping[str, Any], *, replay: bool) -> dict[str, Any]:
-        """`session/load` (`replay`: show the log, then answer) or `session/resume`."""
+        """`session/load` (`replay`: show the newest of the log, then answer) or
+        `session/resume`. One at a time per session, and never beside its close: the peer runs
+        each request in a task of its own, so two loads of one id, or a close during a load,
+        would otherwise each install a context of their own, or put back a closed one."""
         session_id, cwd = params.get("sessionId"), params.get("cwd")
         if not isinstance(cwd, str) or not PurePath(cwd).is_absolute():
             raise RpcError(INVALID_PARAMS, "loading or resuming a session needs an absolute cwd")
         if not isinstance(session_id, str) or not self._replay.valid_session_id(session_id):
             raise self._no_session()
+        async with self._session_lock(session_id):
+            return await self._load_held(session_id, cwd, replay=replay)
+
+    async def _load_held(self, session_id: str, cwd: str, *, replay: bool) -> dict[str, Any]:
         live = self._contexts.get(session_id)
         if live is not None and live.cwd != cwd:
             raise self._no_session()
+        if live is not None and live.state.turn_active:
+            raise RpcError(
+                INVALID_REQUEST, "a turn is running in this session: load it once the turn ends"
+            )
         # What this process still holds of any log goes first -- a live session's, or the close
-        # of one closed a moment ago -- so the hub has all of it and the next `seq` is free.
+        # of one closed a moment ago -- so the hub has all of it.
         await self._journal.flush()
+        summary = await self._read(
+            self._hub.session_summary(session_id, cwd=cwd), live, EMPTY_SUMMARY
+        )
+        start = max(summary.newest_seq - self._settings.replay_events_max, 0)
+        events: tuple[SessionEvent, ...] = ()
+        if replay and summary.newest_seq:
+            events = await self._read(
+                self._hub.session_events(session_id, start, cwd=cwd), live, ()
+            )
+        context = live if live is not None else self._fold(session_id, cwd, summary)
+        if replay and events and start:
+            await self._say(
+                context,
+                f"Showing this session's newest {self._settings.replay_events_max} events; the "
+                f"{start} before them are kept but not shown (`[acp] replay_events_max`).",
+            )
+        for event in events:
+            update = self._replay.replay(event.kind, event.payload, modes=self._settings.modes)
+            if update is not None:
+                await self._channel.notify_update(session_id, update)
+        self._journal.resume(session_id, summary.newest_seq)
+        # A live session keeps its own context, so `offered_gates` stays the one object the
+        # prompter writes and the live feed reads.
+        self._contexts[session_id] = context
+        if live is None and context.project_id is not None:
+            self._kept_project[session_id] = context.project_id
+        self._in_background(self._reopened(context))
+        return {"modes": self._modes.session_modes(context.mode_id)}
+
+    async def _read[T](
+        self, reading: Coroutine[Any, Any, T], live: AcpSessionContext | None, empty: T
+    ) -> T:
+        """One read of a session's log, its refusals as the client is told them. A live session
+        the hub does not keep (not prompted yet, or kept only here) reads as `empty`."""
         try:
-            events = await self._hub.session_events(session_id, 0, cwd=cwd)
+            return await reading
         except UnknownAcpSession as exc:
-            raise self._no_session() from exc
+            if live is None:
+                raise self._no_session() from exc
+            return empty
         except VibeyError as exc:
             raise RpcError(
                 INTERNAL_ERROR, f"vibey could not read the session from the hub: {exc}"
             ) from exc
-        context = live if live is not None else self._fold(session_id, cwd, events)
-        if replay:
-            for event in events:
-                update = self._replay.replay(event.kind, event.payload, modes=self._settings.modes)
-                if update is not None:
-                    await self._channel.notify_update(session_id, update)
-        self._journal.resume(session_id, max((event.seq for event in events), default=0))
-        # A live session keeps its own context, so `offered_gates` stays the one object the
-        # prompter writes and the live feed reads.
-        self._contexts[session_id] = context
-        self._in_background(self._reopened(context))
-        return {"modes": self._modes.session_modes(context.mode_id)}
 
-    def _fold(self, session_id: str, cwd: str, events: Sequence[SessionEvent]) -> AcpSessionContext:
+    def _fold(self, session_id: str, cwd: str, summary: SessionSummary) -> AcpSessionContext:
         """The session as its log leaves it: its newest mode this vibey offers, the project it
         last attached to, its title. A close in the log does not stay: a load reopens it."""
         context = AcpSessionContext(
             session_id=session_id,
             state=AcpSessionState(session_id),
-            mode_id=self._settings.default_mode,
-            project_id=None,
+            mode_id=self._replay.mode(summary.mode, modes=self._settings.modes)
+            or self._settings.default_mode,
+            project_id=self._replay.project(summary.attach),
             offered_gates=set(),
             cwd=cwd,
         )
-        for event in events:
-            if event.kind == SessionEventKind.MODE:
-                context.mode_id = (
-                    self._replay.mode(event.payload, modes=self._settings.modes) or context.mode_id
-                )
-            elif event.kind == SessionEventKind.ATTACH:
-                project = self._replay.project(event.payload)
-                if project is not None:
-                    context.project_id = project
-                    self._kept_project[session_id] = project
-            elif event.kind == SessionEventKind.TITLE:
-                title = event.payload.get("title")
-                if isinstance(title, str):
-                    context.title = self._replay.title(
-                        title, limit=self._settings.live_message_chars
-                    )
+        title = summary.title.get("title") if summary.title is not None else None
+        if isinstance(title, str):
+            context.title = self._replay.title(title, limit=self._settings.live_message_chars)
         return context
 
     async def _reopened(self, context: AcpSessionContext) -> None:
@@ -423,11 +452,12 @@ class AcpAgent:
             # The hub's data: a record that is not a session vibey would have kept is passed over.
             if not self._replay.valid_session_id(record.session_id):
                 continue
-            if not PurePath(record.cwd).is_absolute():
+            folder = self._replay.folder(record.cwd)
+            if folder is None:
                 continue
             info: dict[str, Any] = {
                 "sessionId": record.session_id,
-                "cwd": record.cwd,
+                "cwd": folder,
                 "updatedAt": record.updated_at.isoformat(),
             }
             title = (
@@ -443,11 +473,21 @@ class AcpAgent:
             result["nextCursor"] = next_cursor
         return result
 
-    def _close(self, params: Mapping[str, Any]) -> dict[str, Any]:
+    async def _close(self, params: Mapping[str, Any]) -> dict[str, Any]:
         """End the session here: its turn is cancelled, its permission requests withdrawn, its
-        feed stopped and its close recorded. An unknown or already closed one answers `{}`."""
+        feed stopped and its close recorded. An unknown or already closed one answers `{}`. A
+        load of the same session in progress finishes first: the close then ends what it put
+        in place, and nothing closed is ever put back."""
         session_id = params.get("sessionId")
-        context = self._contexts.pop(session_id, None) if isinstance(session_id, str) else None
+        if not isinstance(session_id, str) or (
+            session_id not in self._contexts and session_id not in self._locks
+        ):
+            return {}
+        async with self._session_lock(session_id):
+            return self._close_held(session_id)
+
+    def _close_held(self, session_id: str) -> dict[str, Any]:
+        context = self._contexts.pop(session_id, None)
         if context is None:
             return {}
         context.state.close()
@@ -483,6 +523,9 @@ class AcpAgent:
         """Keep one event and send it to the hub behind the request."""
         if self._journal.record(session_id, kind, payload):
             self._in_background(self._journal.flush())
+
+    def _session_lock(self, session_id: str) -> asyncio.Lock:
+        return self._locks.setdefault(session_id, asyncio.Lock())
 
     @staticmethod
     def _no_session() -> RpcError:

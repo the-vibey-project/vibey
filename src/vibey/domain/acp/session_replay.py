@@ -151,6 +151,15 @@ class AcpSessionReplay:
             return None
         return project if str(project) == raw else None
 
+    def folder(self, value: Any) -> str | None:
+        """A stored folder as a session picker may show it: through the one-line rule (no
+        control, format, bidi or line-separator character), and absolute. A folder the rule
+        would change is None: shown changed, a load naming it would never find the session."""
+        if not isinstance(value, str) or not value.startswith("/"):
+            return None
+        shown = self._text.one_line(value)
+        return shown if shown == value else None
+
     def valid_session_id(self, value: Any) -> bool:
         return isinstance(value, str) and SESSION_ID_SHAPE.fullmatch(value) is not None
 

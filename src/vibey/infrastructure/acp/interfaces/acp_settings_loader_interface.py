@@ -23,3 +23,8 @@ class AcpSettingsLoaderInterface(Protocol):
     def from_mapping(self, section: Mapping[str, object]) -> AcpSettings:
         """The table as already parsed; `ConfigError` names the offending key."""
         ...
+
+    def hub_settings(self, path: Path) -> AcpSettings:
+        """The defaults with only the keys the hub reads (`HUB_KEYS`) taken from `path`, each
+        checked; the editor's keys are never read, so a mistake in one never stops the hub."""
+        ...

@@ -25,6 +25,7 @@ from vibey.application.acp.dto import (
     LedgerPage,
     SessionEvent,
     SessionRecord,
+    SessionSummary,
 )
 from vibey.domain.acp.gate_permission import GatePermissionMapper
 from vibey.domain.acp.modes import AcpModes
@@ -247,6 +248,25 @@ class FakeHub:
         if kept is None or kept[0] != cwd:
             raise UnknownAcpSession("no such session")
         return tuple(sorted((e for e in kept[1] if e.seq > after), key=lambda e: e.seq))
+
+    async def session_summary(self, session_id: str, *, cwd: str) -> SessionSummary:
+        self.session_calls.append(("summary", session_id, cwd))
+        if self.session_error is not None:
+            raise self.session_error
+        kept = self.kept.get(session_id)
+        if kept is None or kept[0] != cwd:
+            raise UnknownAcpSession("no such session")
+        log = sorted(kept[1], key=lambda e: e.seq)
+
+        def newest(kind: str) -> Mapping[str, Any] | None:
+            return next((e.payload for e in reversed(log) if e.kind == kind), None)
+
+        return SessionSummary(
+            newest_seq=log[-1].seq if log else 0,
+            mode=newest("mode"),
+            attach=newest("attach"),
+            title=newest("title"),
+        )
 
     async def list_sessions(
         self, *, cwd: str | None, cursor: str | None

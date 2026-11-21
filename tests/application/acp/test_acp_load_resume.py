@@ -29,7 +29,7 @@ from vibey.domain.acp.protocol import RESOURCE_NOT_FOUND
 from vibey.domain.acp.session_log import InvalidSessionCursor, UnknownAcpSession
 from vibey.domain.acp.settings import AcpSettings
 from vibey.domain.hub_scope import HubScope
-from vibey.domain.jsonrpc_errors import INTERNAL_ERROR, INVALID_PARAMS, RpcError
+from vibey.domain.jsonrpc_errors import INTERNAL_ERROR, INVALID_PARAMS, INVALID_REQUEST, RpcError
 from vibey.infrastructure.mcp.hub_gateway import HubGatewayError
 
 SID = "0f6f4c1e-8d6b-4f0e-9a51-6b1f3f1f9a01"
@@ -201,7 +201,7 @@ async def test_replay_never_asks_answers_or_runs_anything() -> None:
 
     assert channel.permission_requests == []
     assert hub.calls == [] and hub.tool_calls == []
-    assert [call[0] for call in hub.session_calls] == ["events"]
+    assert [call[0] for call in hub.session_calls] == ["summary", "events"]
     assert {u["sessionUpdate"] for u in channel.updates} <= {
         "user_message_chunk",
         "agent_message_chunk",
@@ -292,7 +292,7 @@ async def test_a_live_session_is_not_found_from_another_folder() -> None:
     with pytest.raises(RpcError) as caught:
         await _load(agent, cwd="/elsewhere")
     assert caught.value.code == RESOURCE_NOT_FOUND
-    assert [call[0] for call in hub.session_calls] == ["create"]
+    assert hub.session_calls == []  # never prompted: never kept, never read
 
 
 async def test_a_session_whose_log_stopped_is_still_served_but_not_kept() -> None:
@@ -426,6 +426,7 @@ async def test_close_is_idempotent_and_unknown_close_is_empty_result() -> None:
     feed = SpyFeed()
     agent, _, hub = _agent(feed=feed)
     await agent.handle_request("session/new", {"cwd": "/work", "mcpServers": []})
+    await agent.handle_request("session/prompt", {"sessionId": SID, "prompt": [text("hi")]})
     for params in ({"sessionId": SID}, {"sessionId": SID}, {"sessionId": OTHER}, {}):
         result = await agent.handle_request("session/close", params)
         assert result == {}
@@ -487,6 +488,7 @@ async def test_a_closed_session_is_never_followed_again() -> None:
     feed = SpyFeed()
     agent, _, hub = _agent(feed=feed)
     await agent.handle_request("session/new", {"cwd": "/work", "mcpServers": []})
+    await agent.handle_request("session/prompt", {"sessionId": SID, "prompt": [text("hi")]})
     context = agent._contexts[SID]  # noqa: SLF001 -- the session as held
     await agent.handle_request("session/close", {"sessionId": SID})
     context.project_id = PID
@@ -495,7 +497,8 @@ async def test_a_closed_session_is_never_followed_again() -> None:
 
     assert feed.attached == [] and agent._followed == {}  # noqa: SLF001
     await agent.close()
-    assert [kind for _, kind, _ in hub.log(SID)] == ["closed"]
+    assert [kind for _, kind, _ in hub.log(SID)][-1] == "closed"
+    assert "attach" not in [kind for _, kind, _ in hub.log(SID)]
 
 
 async def test_a_folder_lookup_that_ends_after_the_close_follows_nothing() -> None:
@@ -587,3 +590,120 @@ async def test_a_list_the_hub_refuses_is_an_error(error: Exception, code: int) -
     with pytest.raises(RpcError) as caught:
         await agent.handle_request("session/list", {"cursor": "x"})
     assert caught.value.code == code
+
+
+# -- fix round 1: load and close of one session are never interleaved -----------------------
+
+
+class SlowHub(FakeHub):
+    """A hub whose session reads wait until `release` is set."""
+
+    def __init__(self) -> None:
+        super().__init__()
+        self.reading = asyncio.Event()
+        self.release_reads = asyncio.Event()
+
+    async def session_summary(self, session_id: str, *, cwd: str) -> Any:
+        self.reading.set()
+        await self.release_reads.wait()
+        return await super().session_summary(session_id, cwd=cwd)
+
+
+async def test_a_close_during_a_load_never_leaves_a_closed_session_installed() -> None:
+    hub = SlowHub()
+    feed = SpyFeed()
+    agent, _, _ = _agent(hub=hub, feed=feed)
+    await agent.handle_request("session/new", {"cwd": "/work", "mcpServers": []})
+    await agent.handle_request("session/prompt", {"sessionId": SID, "prompt": [text("hi")]})
+    await settle()
+    loading = asyncio.create_task(_load(agent))
+    await hub.reading.wait()
+    closing = asyncio.create_task(agent.handle_request("session/close", {"sessionId": SID}))
+    await settle()
+    assert not closing.done()  # the close waits for the load of the same session
+    hub.release_reads.set()
+    assert (await loading)["modes"]["currentModeId"] == "drive"
+    assert await closing == {}
+    assert SID not in agent.sessions
+    with pytest.raises(RpcError) as caught:
+        await agent.handle_request("session/prompt", {"sessionId": SID, "prompt": [text("x")]})
+    assert caught.value.code == RESOURCE_NOT_FOUND
+    await agent.close()
+
+
+async def test_two_overlapping_loads_end_on_one_context_and_one_offered_gates_object() -> None:
+    hub = SlowHub()
+    hub.kept[SID] = ("/work", list(HISTORY))
+    feed = SpyFeed()
+    agent, _, _ = _agent(hub=hub, feed=feed)
+    first = asyncio.create_task(_load(agent, "session/resume"))
+    second = asyncio.create_task(_load(agent, "session/resume"))
+    await hub.reading.wait()
+    hub.release_reads.set()
+    await asyncio.gather(first, second)
+    await until(lambda: len(feed.attached) >= 1)
+    await settle()
+    held = agent._contexts[SID]  # noqa: SLF001
+    assert all(context is held for context in feed.attached)
+    assert all(context.offered_gates is held.offered_gates for context in feed.attached)
+    await agent.close()
+
+
+async def test_a_load_while_a_turn_runs_is_refused() -> None:
+    hub = FakeHub()
+    hub.release = asyncio.Event()
+    agent, _, _ = _agent(hub=hub, feed=SpyFeed())
+    await agent.handle_request("session/new", {"cwd": "/work", "mcpServers": []})
+    turn = asyncio.create_task(
+        agent.handle_request("session/prompt", {"sessionId": SID, "prompt": [text("/projects")]})
+    )
+    await hub.entered.wait()
+    with pytest.raises(RpcError) as caught:
+        await _load(agent)
+    assert caught.value.code == INVALID_REQUEST
+    hub.release.set()
+    await turn
+    await agent.close()
+
+
+async def test_a_load_replays_only_the_newest_events_and_says_the_rest_were_skipped() -> None:
+    feed = SpyFeed()
+    agent, channel, hub = _agent(feed=feed, settings=AcpSettings(replay_events_max=2))
+    hub.kept[SID] = ("/work", list(HISTORY))  # 7 events: mode at 6, attach at 7
+    result = await _load(agent)
+    shown = [u["sessionUpdate"] for u in channel.updates]
+    assert shown[:2] == ["agent_message_chunk", "current_mode_update"]
+    assert "newest 2 events; the 5 before them are kept but not shown" in channel.said[0]
+    assert ("events", SID, "/work") in hub.session_calls
+    # Folded from the summary, not from what was replayed: the title is at seq 1.
+    assert result["modes"]["currentModeId"] == "observe"
+    await until(lambda: len(feed.attached) == 1)
+    assert feed.attached[0].title == "ship the greeter" and feed.attached[0].project_id == PID
+    await agent.close()
+
+
+async def test_a_resume_reads_only_the_summary() -> None:
+    agent, _, hub = _agent(feed=SpyFeed())
+    hub.kept[SID] = ("/work", list(HISTORY))
+    await _load(agent, "session/resume")
+    assert [call[0] for call in hub.session_calls] == ["summary"]
+    await agent.close()
+
+
+async def test_a_live_session_the_hub_does_not_keep_loads_from_its_context() -> None:
+    """Never prompted, so never kept: a load in the same process answers from the session as
+    it is, with nothing to show."""
+    agent, channel, _ = _agent(feed=SpyFeed())
+    await agent.handle_request("session/new", {"cwd": "/work", "mcpServers": []})
+    await settle()
+    channel.updates.clear()
+    result = await _load(agent)
+    assert result["modes"]["currentModeId"] == "drive"
+    assert not any(u["sessionUpdate"].endswith("message_chunk") for u in channel.updates)
+    await agent.close()
+
+
+async def test_a_listed_folder_the_one_line_rule_would_change_is_passed_over() -> None:
+    agent, _, hub = _agent()
+    hub.listing = ((_record(SID, cwd="/work‮"), _record(OTHER, cwd="/a\nb")), None)
+    assert await agent.handle_request("session/list", {}) == {"sessions": []}

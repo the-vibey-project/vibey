@@ -1066,6 +1066,7 @@ CREATE TABLE acp_session_event (
     recorded_at  timestamptz NOT NULL DEFAULT now(),
     PRIMARY KEY (session_id, seq)
 );
+CREATE INDEX acp_session_event_kind ON acp_session_event (session_id, kind, seq);
 ```
 
 - **Append-only, by trigger.** `public.ledger_refuse_rewrite()` refuses an UPDATE, a DELETE or
@@ -1075,7 +1076,15 @@ CREATE TABLE acp_session_event (
 - **Idempotent under replay.** An event is named by `(session_id, seq)`: sending the same event
   again is answered as stored, and a different event at a taken `seq` is refused, never written.
 - **Listed by a keyset** over `(updated_at, session_id)`, where `updated_at` is the newest
-  event's `recorded_at` (the session's `created_at` before any).
+  event's `recorded_at` (the session's `created_at` before any). The newest event is one probe
+  of the primary key and the newest of a kind one probe of `acp_session_event_kind`
+  `(session_id, kind, seq)`, so neither a list page nor a load's summary reads a log from its
+  start.
+- **Bounded per principal** by the hub's `[acp] sessions_max` (sessions, counted over the hub's
+  life; `vibey acp` creates one only with its first prompt) and `[acp] session_events_max` (a
+  bound on `seq`, so checking it never counts the log). A write past either is refused; nothing
+  kept is dropped. There is no retention rule: retiring old sessions is the operator's, with the
+  owner role, as for the ledger.
 - **Never synced** (`NOT_SYNCED`): a session belongs to the editor on this computer that kept it,
   and two computers appending to one session would diverge at a `seq`, which refuses a merge.
 

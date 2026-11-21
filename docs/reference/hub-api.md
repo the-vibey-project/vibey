@@ -96,23 +96,29 @@ only by the principal that created it -- for `vibey acp`, the agent principal, w
 What one principal can make the hub keep is bounded by `[acp] sessions_max` sessions and
 `[acp] session_events_max` events per session in the hub's `vibey.toml`
 ([configuration](configuration.md#acp)). Past either, the write is refused with 507 and nothing
-already kept is dropped or changed.
+already kept is dropped or changed. The session cap counts every session the principal ever
+kept (the log is append-only, so nothing frees a slot); raising it or retiring old sessions is the
+operator's decision. `vibey acp` creates a session only with its first prompt.
 
 | Route | Body | Does |
 |---|---|---|
 | `POST /api/v1/acp/sessions` | `{"session_id", "cwd"}` | Keeps a session; answers 201 `{"session_id"}`. Again with the same folder, a no-op; with another folder, 409. |
 | `GET /api/v1/acp/sessions?cwd=&cursor=&limit=` | none | `{"sessions": [{"session_id", "cwd", "title", "updated_at", "closed"}], "next_cursor"}`: this principal's sessions, newest first by their last event, at most `limit` (1 to 200). Pass `next_cursor` back as `cursor` for the next page; it is `null` on the last. |
 | `POST /api/v1/acp/sessions/{session_id}/events` | `{"seq", "kind", "payload"}` | Appends one event; answers `{"stored": true}`, also when the same event is already there. Another event at that `seq` is a 409: nothing is overwritten. |
+| `GET /api/v1/acp/sessions/{session_id}?cwd=` | none | `{"session_id", "newest_seq", "mode", "attach", "title"}`: the newest `seq` (0 before any event) and the payloads of the newest `mode`, `attach` and `title` events (`null` when there is none), each one index probe, so a load reads no more of the log than it shows. With `cwd`, only for a session kept under that folder. |
 | `GET /api/v1/acp/sessions/{session_id}/events?after=&limit=&cwd=` | none | `{"events": [{"seq", "kind", "payload"}], "last_seq"}`: events after `after`, oldest first, at most `limit` (1 to 200). With `cwd`, only for a session kept under that folder. |
 
-`session_id` is a lower-case UUID. `kind` is one of `user_message`, `agent_message`,
+`session_id` is a lower-case UUID, and `cwd` an absolute folder of printable characters only (a
+control, format, bidi or line-separator character is a 422: every editor's picker shows it). `kind` is one of `user_message`, `agent_message`,
 `tool_call`, `tool_call_update`, `plan`, `mode`, `attach`, `title` and `closed`. A session that
 does not exist, is another principal's, or (for a read naming `cwd`) was kept under another
 folder is refused with the same 403 and the same words, so a guessed id learns nothing. The log
 is append-only: the database refuses an update, a delete or a truncate of either table, and
 the application role holds only `SELECT` and `INSERT` on them. The list is a keyset over
 `(updated_at, session_id)`, so sessions sharing an instant are neither repeated nor skipped
-between pages; a cursor the hub never gave is a 422.
+between pages while the principal's sessions are quiet; a session that gets an event between two
+page reads moves to the front, so it can be skipped by the next page (the order is by activity,
+which moves). A cursor the hub never gave is a 422.
 
 ## Who may do what
 

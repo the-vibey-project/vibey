@@ -201,3 +201,27 @@ def test_an_unreadable_file_is_refused(tmp_path: Path) -> None:
 
 def test_the_implementation_satisfies_its_interface() -> None:
     assert isinstance(AcpSettingsLoader(), AcpSettingsLoaderInterface)
+
+
+def test_the_hub_reads_only_its_own_keys_so_an_editor_typo_never_stops_it(
+    tmp_path: Path,
+) -> None:
+    toml = tmp_path / "vibey.toml"
+    toml.write_text(
+        "[acp]\nsessions_max = 7\nsession_events_max = 9\nreject_words = 3\nmodes = ['x']\n"
+        "not_a_key = 1\n"
+    )
+    loader = AcpSettingsLoader()
+    with pytest.raises(ConfigError):
+        loader.load(toml)
+    caps = loader.hub_settings(toml)
+    assert (caps.sessions_max, caps.session_events_max) == (7, 9)
+    assert loader.hub_settings(tmp_path / "absent.toml") == AcpSettings()
+    toml.write_text("[acp]\nsessions_max = 0\n")
+    with pytest.raises(ConfigError, match="sessions_max must be at least 1"):
+        loader.hub_settings(toml)
+
+
+def test_a_replay_bound_past_its_maximum_is_refused_by_name() -> None:
+    with pytest.raises(ConfigError, match="replay_events_max must be at most 10000, not 10001"):
+        AcpSettingsLoader().from_mapping({"replay_events_max": 10_001})

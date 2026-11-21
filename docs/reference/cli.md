@@ -356,7 +356,8 @@ close. Live ledger messages and plans are not kept: they are re-read from the le
 call's input is not kept, and text past about 48 KiB of JSON is cut, ending in "...". The log
 is append-only, like the ledger.
 
-Keeping a session needs the hub to grant the agent principal `acp_sessions` (in the default
+A new session is kept from its first prompt: one never prompted costs the hub nothing. Keeping a
+session needs the hub to grant the agent principal `acp_sessions` (in the default
 [`[hub] agent_scopes`](configuration.md#hub)); it is not a run-class action, so an `observe`
 session keeps its record as a `drive` one does. Without the grant every prompt still works, and
 the session's history stays in this window only: you are told once ("Session history"). The
@@ -368,16 +369,27 @@ The log is written behind the session and in order, so the hub being away never 
 what is queued is sent after each turn and each switch, from where the last send stopped. At
 most [`[acp] pending_events_max`](configuration.md#acp) events wait; past that the oldest is
 dropped and you are told once ("Session history"). If another `vibey acp` writes the same
-session (two windows that both loaded it), the second one stops keeping it and says so.
+session (two windows that both loaded it), the second one stops keeping it and says so. When the
+connection ends, what the hub's rate limit still holds back is waited for (from
+`live_poll_seconds`, doubling, at most `probe_seconds` in all); what is still unsent then is said
+on stderr and, while the editor can hear it, in a notice.
 
-- `session/load` shows the kept history again, before it answers: your messages as
+- `session/load` shows the newest [`[acp] replay_events_max`](configuration.md#acp) events of
+  the kept history again (older ones stay kept, and you are told once they were skipped),
+  before it answers: your messages as
   `user_message_chunk`, vibey's as `agent_message_chunk`, the tool calls, and each mode switch.
   Stored history is untrusted on the way back out: each event is rebuilt from the fields it
   needs, each checked (an id's shape, a status, a kind, a mode `[acp] modes` offers), and its
   text is shown by the same rule as live hub text -- a message as plain text with its lines
   kept, a title as one line, a tool's result as a fenced code block. A replay never asks for a
   permission, never answers or offers a gate, and runs nothing: the hub is only read.
-- `session/resume` restores the session's mode and project without showing its history.
+- `session/resume` restores the session's mode and project without showing its history: it
+  reads only the session's newest mode, project and title, never its log.
+- One load, resume or close of a session runs at a time: a close sent during a load ends what
+  the load put in place, and two loads of one session end on one session. A load while a turn
+  of that session runs is refused (`INVALID_REQUEST`); load it once the turn ends. A session
+  still open in this process that the hub never kept (not prompted yet, or kept only here)
+  loads as it is, with nothing to show.
 - Both answer with the session's modes, then send the `/` commands and follow the project it
   last followed (or the folder's project, as after `session/new`). Loading a session that is
   still open in this process keeps it as it is.

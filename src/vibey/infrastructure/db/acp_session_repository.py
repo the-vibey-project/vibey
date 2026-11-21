@@ -22,7 +22,7 @@ from typing import Any, Final
 
 import asyncpg
 
-from vibey.application.acp.dto import SessionEvent, SessionRecord
+from vibey.application.acp.dto import SessionEvent, SessionRecord, SessionSummary
 from vibey.domain.acp.session_log import AcpSessionLimitReached, SessionEventConflict
 
 # Kept only while the principal holds fewer than `$4` sessions. The count is read from the
@@ -37,13 +37,14 @@ RETURNING 1
 """
 
 # The outer SELECT reads the snapshot from before the insert, so `same` sees only a row that
-# was already there. An event is written only while the session holds fewer than `$5`, counted
-# in the same snapshot (as `_CREATE`, racing writers can pass the cap by as many as race).
+# was already there. An event is written only at a `seq` of at most `$5`: `seq` is the event's
+# identity and the primary key, so a session never holds more than `$5` events, and the check
+# costs nothing however long the log is (never a count over it).
 _APPEND: Final = """
 WITH inserted AS (
     INSERT INTO acp_session_event (session_id, seq, kind, payload)
-    SELECT $1, $2, $3, $4::jsonb
-    WHERE (SELECT count(*) FROM acp_session_event WHERE session_id = $1) < $5
+    SELECT $1::text, $2::bigint, $3::text, $4::jsonb
+    WHERE $2::bigint <= $5::bigint
     ON CONFLICT (session_id, seq) DO NOTHING
     RETURNING 1
 )
@@ -69,24 +70,23 @@ ORDER BY seq
 LIMIT $3
 """
 
+# Each session's newest event is one probe of the primary key (`ORDER BY seq DESC LIMIT 1`)
+# and its newest title one probe of `(session_id, kind, seq)`: a page costs the same however long
+# the logs are. `updated_at` is the newest event's `recorded_at`.
 _LIST: Final = """
 WITH listed AS (
     SELECT s.session_id, s.cwd,
-           COALESCE(
-               (SELECT max(e.recorded_at) FROM acp_session_event e
-                WHERE e.session_id = s.session_id),
-               s.created_at
-           ) AS updated_at,
+           COALESCE(newest.recorded_at, s.created_at) AS updated_at,
            (SELECT e.payload->>'title' FROM acp_session_event e
             WHERE e.session_id = s.session_id AND e.kind = 'title'
             ORDER BY e.seq DESC LIMIT 1) AS title,
-           COALESCE(
-               (SELECT e.kind = 'closed' FROM acp_session_event e
-                WHERE e.session_id = s.session_id
-                ORDER BY e.seq DESC LIMIT 1),
-               false
-           ) AS closed
+           COALESCE(newest.kind = 'closed', false) AS closed
     FROM acp_session s
+    LEFT JOIN LATERAL (
+        SELECT e.recorded_at, e.kind FROM acp_session_event e
+        WHERE e.session_id = s.session_id
+        ORDER BY e.seq DESC LIMIT 1
+    ) newest ON true
     WHERE s.created_by = $1 AND ($2::text IS NULL OR s.cwd = $2)
 )
 SELECT session_id, cwd, updated_at, title, closed FROM listed
@@ -96,6 +96,20 @@ LIMIT $5
 """
 
 _OWNER: Final = "SELECT created_by, cwd FROM acp_session WHERE session_id = $1"
+
+# What a load needs without reading the log: its newest seq, and its newest mode, attach and
+# title. Four index probes, whatever the log's length.
+_SUMMARY: Final = """
+SELECT
+    (SELECT e.seq FROM acp_session_event e WHERE e.session_id = $1
+     ORDER BY e.seq DESC LIMIT 1) AS newest_seq,
+    (SELECT e.payload FROM acp_session_event e WHERE e.session_id = $1 AND e.kind = 'mode'
+     ORDER BY e.seq DESC LIMIT 1) AS mode,
+    (SELECT e.payload FROM acp_session_event e WHERE e.session_id = $1 AND e.kind = 'attach'
+     ORDER BY e.seq DESC LIMIT 1) AS attach,
+    (SELECT e.payload FROM acp_session_event e WHERE e.session_id = $1 AND e.kind = 'title'
+     ORDER BY e.seq DESC LIMIT 1) AS title
+"""
 
 
 class PostgresAcpSessionRepository:
@@ -164,3 +178,15 @@ class PostgresAcpSessionRepository:
         async with self._pool.acquire() as conn:
             row = await conn.fetchrow(_OWNER, session_id)
         return (row["created_by"], row["cwd"]) if row is not None else None
+
+    async def summary(self, session_id: str) -> SessionSummary:
+        async with self._pool.acquire() as conn:
+            # A SELECT of scalar subqueries returns exactly one row.
+            (row,) = await conn.fetch(_SUMMARY, session_id)
+        mode, attach, title = (
+            json.loads(row[column]) if row[column] is not None else None
+            for column in ("mode", "attach", "title")
+        )
+        return SessionSummary(
+            newest_seq=row["newest_seq"] or 0, mode=mode, attach=attach, title=title
+        )

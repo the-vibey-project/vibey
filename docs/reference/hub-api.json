@@ -6,7 +6,7 @@
         "description": "The body of `POST /api/v1/acp/sessions`: a session `vibey acp` keeps.",
         "properties": {
           "cwd": {
-            "description": "The absolute folder the session was opened in.",
+            "description": "The absolute folder the session was opened in; printable characters only.",
             "maxLength": 4096,
             "minLength": 1,
             "pattern": "^/",
@@ -532,6 +532,87 @@
           }
         ],
         "summary": "Keep an ACP session; creating it again with the same folder is a no-op.",
+        "tags": [
+          "acp"
+        ]
+      }
+    },
+    "/api/v1/acp/sessions/{session_id}": {
+      "get": {
+        "operationId": "acp_session_summary_api_v1_acp_sessions__session_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "session_id",
+            "required": true,
+            "schema": {
+              "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
+              "title": "Session Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "cwd",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 4096,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Cwd"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "description": "The request proves no principal."
+          },
+          "403": {
+            "description": "No such session of this principal's (under that folder)."
+          },
+          "411": {
+            "description": "A body was sent without a Content-Length."
+          },
+          "413": {
+            "description": "The body is larger than the hub reads."
+          },
+          "421": {
+            "description": "The Host header is not one this hub answers."
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          },
+          "429": {
+            "description": "Too many requests."
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "An ACP session's newest seq and its newest mode, attach and title events.",
         "tags": [
           "acp"
         ]

@@ -14,7 +14,7 @@ from typing import Any
 import pytest
 
 from vibey.application.acp.acp_session_service import AcpSessionService
-from vibey.application.acp.dto import SessionEvent, SessionRecord
+from vibey.application.acp.dto import SessionEvent, SessionRecord, SessionSummary
 from vibey.application.acp.interfaces.acp_session_service_interface import (
     AcpSessionServiceInterface,
 )
@@ -88,6 +88,21 @@ class Repository:
 
     async def owner(self, session_id: str) -> tuple[str, str] | None:
         return self.sessions.get(session_id)
+
+    async def summary(self, session_id: str) -> SessionSummary:
+        log = self.logs[session_id]
+
+        def newest(kind: str) -> dict[str, Any] | None:
+            return next(
+                (log[seq][1] for seq in sorted(log, reverse=True) if log[seq][0] == kind), None
+            )
+
+        return SessionSummary(
+            newest_seq=max(log, default=0),
+            mode=newest("mode"),
+            attach=newest("attach"),
+            title=newest("title"),
+        )
 
 
 def _service(**caps: int) -> tuple[AcpSessionService, Repository]:
@@ -262,3 +277,21 @@ async def test_a_cursor_the_hub_never_gave_is_refused(cursor: str) -> None:
     with pytest.raises(InvalidSessionCursor):
         await service.list(AGENT, cwd=None, cursor=cursor, limit=2)
     assert repository.listed == []
+
+
+async def test_a_summary_is_a_read_of_the_creators_session_under_its_folder() -> None:
+    service, _ = _service()
+    await service.create(AGENT, SID, "/work")
+    await service.append(AGENT, SID, 1, "mode", {"modeId": "observe"})
+    await service.append(AGENT, SID, 2, "user_message", {"text": "hi"})
+    summary = await service.summary(VIEWER_OF_AGENT, SID, cwd="/work")
+    assert summary == SessionSummary(
+        newest_seq=2, mode={"modeId": "observe"}, attach=None, title=None
+    )
+    for principal, cwd in ((PHONE, "/work"), (AGENT, "/elsewhere"), (BLIND, None)):
+        with pytest.raises(HubForbidden):
+            await service.summary(principal, SID, cwd=cwd)
+
+
+VIEWER_OF_AGENT = HubPrincipal(name="agent", scopes=frozenset({HubScope.VIEW}))
+"""The agent principal narrowed to `view`: it may still read its own sessions back."""

@@ -26,7 +26,7 @@ from collections.abc import Mapping
 from datetime import datetime
 from typing import Any
 
-from vibey.application.acp.dto import SessionEvent, SessionRecord
+from vibey.application.acp.dto import SessionEvent, SessionRecord, SessionSummary
 from vibey.application.acp.interfaces.acp_session_repository_interface import (
     AcpSessionRepositoryInterface,
 )
@@ -101,6 +101,12 @@ class AcpSessionService:
     ) -> tuple[SessionEvent, ...]:
         await self._owned(principal, session_id, cwd=cwd, action=HubAction.READ_ACP_SESSIONS)
         return await self._repository.events_after(session_id, after, limit)
+
+    async def summary(
+        self, principal: HubPrincipal, session_id: str, *, cwd: str | None
+    ) -> SessionSummary:
+        await self._owned(principal, session_id, cwd=cwd, action=HubAction.READ_ACP_SESSIONS)
+        return await self._repository.summary(session_id)
 
     async def list(
         self, principal: HubPrincipal, *, cwd: str | None, cursor: str | None, limit: int

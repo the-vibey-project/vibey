@@ -14,7 +14,7 @@ from typing import TYPE_CHECKING, Any, Protocol, runtime_checkable
 if TYPE_CHECKING:
     from datetime import datetime
 
-    from vibey.application.acp.dto import SessionEvent, SessionRecord
+    from vibey.application.acp.dto import SessionEvent, SessionRecord, SessionSummary
 
 
 @runtime_checkable
@@ -56,4 +56,9 @@ class AcpSessionRepositoryInterface(Protocol):
     async def owner(self, session_id: str) -> tuple[str, str] | None:
         """Who created the session and the folder it was kept under; None when there is no
         such session."""
+        ...
+
+    async def summary(self, session_id: str) -> SessionSummary:
+        """The session's newest `seq` and its newest mode, attach and title events, each read by
+        one index probe however long the log is."""
         ...

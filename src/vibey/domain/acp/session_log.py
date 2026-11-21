@@ -63,6 +63,11 @@ class AcpSessionLimitReached(VibeyError):
     session holds `[acp] session_events_max` events. Nothing kept is dropped or changed."""
 
 
+class SessionWritesThrottled(VibeyError):
+    """The hub's rate limit refused a session write for now (429): sent again later, never
+    dropped while the agent runs."""
+
+
 class InvalidSessionCursor(VibeyError):
     """A `session/list` cursor is not one the hub gave out."""
 

@@ -24,9 +24,14 @@ job_enqueue = 4
 job_ack = 1
 
 # One INSERT ... ON CONFLICT DO NOTHING inside a CTE that also says whether the row already
-# there is the same event (an ACP session's log, migration 0023). A second statement runs only
-# when neither holds, which a budget run never reaches.
+# there is the same event (an ACP session's log, migration 0023). Its cap is a bound on the seq,
+# never a count over the log. A second statement runs only when neither holds, which a budget
+# run never reaches.
 acp_session_append = 1
 
-# One keyset SELECT over a CTE (an ACP session list page).
+# One keyset SELECT over a CTE (an ACP session list page); each session's newest event is one
+# primary-key probe and its newest title one probe of (session_id, kind, seq).
 acp_session_list = 1
+
+# One SELECT of four index probes: a session's newest seq and newest mode, attach and title.
+acp_session_summary = 1

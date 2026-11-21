@@ -22,6 +22,7 @@ from vibey.application.acp.acp_session_journal import (
     OVERFLOW,
     UNGRANTED,
     UNKEPT,
+    UNSENT,
     AcpSessionJournal,
 )
 from vibey.application.acp.interfaces.acp_session_journal_interface import (
@@ -34,6 +35,7 @@ from vibey.domain.acp.session_log import (
     AcpSessionLimitReached,
     SessionEventConflict,
     SessionEventKind,
+    SessionWritesThrottled,
     UnknownAcpSession,
 )
 from vibey.domain.acp.session_replay import SESSION_REPLAY
@@ -45,7 +47,8 @@ from vibey.infrastructure.mcp.hub_gateway import HubGatewayError
 
 S = "0f6f4c1e-8d6b-4f0e-9a51-6b1f3f1f9a01"
 T = "0f6f4c1e-8d6b-4f0e-9a51-6b1f3f1f9a02"
-MSG = SessionEventKind.AGENT_MESSAGE
+MSG = SessionEventKind.USER_MESSAGE
+"""What a prompt records: the first one is what makes the hub keep a new session."""
 NOTICES = {"session": {"notices": {}}}
 
 
@@ -112,7 +115,7 @@ async def test_flush_sends_in_order_and_resumes_after_a_failure() -> None:
     hub.script[2] = "away"
 
     await journal.flush()
-    assert hub.log(S) == [(1, "agent_message", {"text": "1"})]
+    assert hub.log(S) == [(1, "user_message", {"text": "1"})]
     assert journal.persisted_seq(S) == 1
 
     await journal.flush()
@@ -132,7 +135,7 @@ async def test_a_resend_after_a_lost_answer_writes_nothing_twice() -> None:
     await journal.flush()
     assert journal.persisted_seq(S) == 0
     await journal.flush()
-    assert hub.log(S) == [(1, "agent_message", {"text": "once"})]
+    assert hub.log(S) == [(1, "user_message", {"text": "once"})]
     assert journal.persisted_seq(S) == 1
 
 
@@ -147,7 +150,7 @@ async def test_a_new_sessions_create_goes_first_and_a_failed_create_holds_its_ev
     assert hub.kept == {}
     hub.session_error = None
     await journal.flush()
-    assert hub.kept[S][0] == "/work" and hub.log(S) == [(1, "agent_message", {"text": "x"})]
+    assert hub.kept[S][0] == "/work" and hub.log(S) == [(1, "user_message", {"text": "x"})]
 
 
 async def test_overflow_drops_oldest_and_notices_once() -> None:
@@ -219,7 +222,7 @@ async def test_a_conflict_stops_that_sessions_log_and_says_so_once() -> None:
     await journal.flush()
     assert journal.recording(S) is False and journal.recording(T) is True
     assert journal.record(S, MSG, {"text": "d"}) == 0
-    assert hub.log(S) == [] and hub.log(T) == [(1, "agent_message", {"text": "b"})]
+    assert hub.log(S) == [] and hub.log(T) == [(1, "user_message", {"text": "b"})]
     assert channel.sessions == [S] and channel.said == [f"Session history: {FORKED}"]
 
 
@@ -261,7 +264,7 @@ async def test_a_hub_that_keeps_no_more_stops_the_log_and_says_so_once() -> None
     for n in (1, 2, 3):
         journal.record(S, MSG, {"text": str(n)})
     await journal.flush()
-    assert hub.log(S) == [(1, "agent_message", {"text": "1"})]  # what was kept stays
+    assert hub.log(S) == [(1, "user_message", {"text": "1"})]  # what was kept stays
     assert journal.recording(S) is False
     assert channel.said == [f"Session history: {FULL}"]
 
@@ -276,7 +279,7 @@ async def test_a_defect_is_logged_and_the_event_kept(caplog: pytest.LogCaptureFi
         await journal.flush()
     assert "keeping session" in caplog.text and "TypeError: a bug" in caplog.text
     await journal.flush()
-    assert hub.log(S) == [(1, "agent_message", {"text": "a"})]
+    assert hub.log(S) == [(1, "user_message", {"text": "a"})]
 
 
 async def test_only_an_open_session_is_kept_and_a_close_is_its_last_event() -> None:
@@ -284,10 +287,72 @@ async def test_only_an_open_session_is_kept_and_a_close_is_its_last_event() -> N
     journal = _journal(hub)
     assert journal.record(S, MSG, {"text": "never opened"}) == 0
     journal.open(S, "/work")
-    assert journal.record(S, SessionEventKind.CLOSED, {}) == 1
+    assert journal.record(S, MSG, {"text": "go"}) == 1
+    assert journal.record(S, SessionEventKind.CLOSED, {}) == 2
     assert journal.record(S, MSG, {"text": "after the close"}) == 0
     await journal.flush()
-    assert hub.log(S) == [(1, "closed", {})]
+    assert hub.log(S) == [(1, "user_message", {"text": "go"}), (2, "closed", {})]
+
+
+async def test_a_session_is_kept_only_from_its_first_prompt() -> None:
+    """A new session spends no slot of `[acp] sessions_max` until it is prompted: what is
+    recorded before (a mode, the folder's project) waits, and goes with the first prompt."""
+    hub = FlakyHub()
+    journal = _journal(hub)
+    journal.open(S, "/work")
+    assert journal.record(S, SessionEventKind.ATTACH, {"projectId": "p"}) == 1
+    assert journal.record(S, SessionEventKind.MODE, {"modeId": "observe"}) == 2
+    await journal.flush()
+    assert hub.session_calls == [] and journal.recording(S)
+    assert journal.record(S, SessionEventKind.TITLE, {"title": "t"}) == 3
+    assert journal.record(S, MSG, {"text": "go"}) == 4
+    await journal.flush()
+    assert hub.session_calls[0] == ("create", S)
+    assert [kind for _, kind, _ in hub.log(S)] == ["attach", "mode", "title", "user_message"]
+
+
+async def test_a_session_closed_before_any_prompt_is_never_kept() -> None:
+    hub = FlakyHub()
+    journal = _journal(hub)
+    journal.open(S, "/work")
+    journal.record(S, SessionEventKind.MODE, {"modeId": "observe"})
+    assert journal.record(S, SessionEventKind.CLOSED, {}) == 0
+    await journal.flush()
+    assert hub.session_calls == [] and journal.recording(S) is False
+
+
+async def test_what_waits_for_the_first_prompt_is_bounded() -> None:
+    channel = FakeChannel()
+    hub = FlakyHub()
+    journal = _journal(hub, channel=channel, pending=2)
+    journal.open(S, "/work")
+    for mode in ("observe", "drive", "observe"):
+        journal.record(S, SessionEventKind.MODE, {"modeId": mode})
+    journal.record(S, MSG, {"text": "go"})
+    await journal.flush()
+    # Three held past the cap of two: the oldest goes; the prompt then queues the create and
+    # three events past the cap, and the oldest go again. The create never does.
+    assert hub.session_calls[0] == ("create", S)
+    assert [seq for seq, _, _ in hub.log(S)] == [4]
+    assert channel.said == [f"Session history: {OVERFLOW}"]
+
+
+async def test_a_resume_never_lowers_the_next_seq() -> None:
+    """A load whose flush failed but whose read succeeded resumes at the hub's newest seq while
+    this process still holds later events: the next event follows those, it never collides."""
+    hub = FlakyHub()
+    hub.session_error = HubGatewayError("away")
+    journal = _journal(hub)
+    journal.open(S, "/work")
+    journal.record(S, MSG, {"text": "a"})
+    journal.record(S, MSG, {"text": "b"})
+    await journal.flush()
+    journal.record(S, SessionEventKind.CLOSED, {})  # 3; the session stops being kept here
+    journal.resume(S, 0)  # the hub knows nothing yet
+    assert journal.record(S, MSG, {"text": "c"}) == 4
+    hub.session_error = None
+    await journal.flush()
+    assert [seq for seq, _, _ in hub.log(S)] == [1, 2, 3, 4]
 
 
 async def test_a_resumed_session_continues_after_its_last_seq() -> None:
@@ -307,9 +372,10 @@ async def test_a_closed_session_reopened_by_a_resume_is_kept_again() -> None:
     hub = FlakyHub()
     journal = _journal(hub)
     journal.open(S, "/work")
+    journal.record(S, MSG, {"text": "go"})
     journal.record(S, SessionEventKind.CLOSED, {})
-    journal.resume(S, 1)
-    assert journal.record(S, MSG, {"text": "back"}) == 2
+    journal.resume(S, 2)
+    assert journal.record(S, MSG, {"text": "back"}) == 3
 
 
 # -- the channel a turn writes through ------------------------------------------------------
@@ -320,6 +386,7 @@ async def test_what_a_turn_showed_is_kept_once_the_client_was_sent_it() -> None:
     channel = FakeChannel()
     journal = _journal(hub, channel=channel)
     journal.open(S, "/work")
+    journal.record(S, MSG, {"text": "go"})
     kept = AcpJournalingChannel(channel, journal, SESSION_REPLAY)
     mapper = AcpUpdateMapper()
     await kept.notify_update(S, mapper.agent_text("hi"))
@@ -328,8 +395,9 @@ async def test_what_a_turn_showed_is_kept_once_the_client_was_sent_it() -> None:
     assert len(channel.updates) == 3
     await journal.flush()
     assert hub.log(S) == [
-        (1, "agent_message", {"text": "hi"}),
-        (2, "tool_call_update", {"toolCallId": "t1-1", "status": "in_progress"}),
+        (1, "user_message", {"text": "go"}),
+        (2, "agent_message", {"text": "hi"}),
+        (3, "tool_call_update", {"toolCallId": "t1-1", "status": "in_progress"}),
     ]
 
 
@@ -359,3 +427,79 @@ async def test_permission_requests_pass_through_and_are_never_kept() -> None:
     assert kept.cancel_permissions(S) == ()
     assert channel.cancelled_permissions == [S]
     assert journal.record(S, MSG, {"text": "next"}) == 1
+
+
+async def test_at_the_end_a_throttled_log_is_waited_for_within_a_bound() -> None:
+    hub = FlakyHub()
+    hub.script[2] = SessionWritesThrottled("429")
+    hub.script[3] = SessionWritesThrottled("429")
+    waits: list[float] = []
+
+    async def wait(seconds: float) -> None:
+        waits.append(seconds)
+
+    journal = AcpSessionJournal(
+        hub,
+        AcpSettings(live_poll_seconds=1.0, probe_seconds=5),
+        FakeChannel(),
+        AcpUpdateMapper(),
+        sleep=wait,
+    )
+    journal.open(S, "/work")
+    for n in (1, 2, 3):
+        journal.record(S, MSG, {"text": str(n)})
+    await journal.drain()
+    assert [seq for seq, _, _ in hub.log(S)] == [1, 2, 3]
+    assert waits == [1.0, 2.0]
+
+
+async def test_what_the_rate_limit_still_holds_at_the_end_is_said_never_lost_silently(
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    class Throttled(FlakyHub):
+        async def append_event(
+            self, session_id: str, seq: int, kind: str, payload: Mapping[str, Any]
+        ) -> None:
+            raise SessionWritesThrottled("429")
+
+    waits: list[float] = []
+
+    async def wait(seconds: float) -> None:
+        waits.append(seconds)
+
+    channel = FakeChannel()
+    journal = AcpSessionJournal(
+        Throttled(),
+        AcpSettings(live_poll_seconds=1.0, probe_seconds=5),
+        channel,
+        AcpUpdateMapper(),
+        sleep=wait,
+    )
+    journal.open(S, "/work")
+    journal.record(S, MSG, {"text": "a"})
+    journal.record(S, MSG, {"text": "b"})
+    with caplog.at_level(logging.WARNING):
+        await journal.drain()
+    assert waits == [1.0, 2.0, 4.0]  # 7 s waited: past the 5 s bound, so it stops
+    assert "2 ACP session event(s) were not kept" in caplog.text
+    assert channel.said == [f"Session history: {UNSENT}"]
+
+
+async def test_a_client_gone_at_the_end_does_not_stop_the_log(
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    class Gone(FakeChannel):
+        async def notify_update(self, session_id: str, update: Mapping[str, Any]) -> None:
+            raise BrokenPipeError("the client went away")
+
+    hub = FlakyHub()
+    hub.script[1] = SessionEventConflict("taken")
+    journal = _journal(hub, channel=Gone())
+    journal.open(S, "/work")
+    journal.open(T, "/work")
+    journal.record(S, MSG, {"text": "a"})
+    journal.record(T, MSG, {"text": "b"})
+    with caplog.at_level(logging.WARNING):
+        await journal.flush()
+    assert hub.log(T) == [(1, "user_message", {"text": "b"})]
+    assert "could not tell session" in caplog.text

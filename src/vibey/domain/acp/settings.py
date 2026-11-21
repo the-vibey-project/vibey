@@ -32,8 +32,18 @@ INTEGER_MINIMA: Final[Mapping[str, int]] = {
     "pending_events_max": 1,
     "sessions_max": 1,
     "session_events_max": 1,
+    "replay_events_max": 1,
 }
 """The least each integer key may be."""
+INTEGER_MAXIMA: Final[Mapping[str, int]] = {
+    "replay_events_max": 10_000,
+}
+"""The most each bounded integer key may be. A load reads the replayed tail in pages of 200, one
+request each, so 10000 events is 51 requests: inside the hub's per-principal burst of 120, with
+room left for the turns and `vibey mcp` that share it."""
+HUB_KEYS: Final = ("sessions_max", "session_events_max")
+"""The `[acp]` keys the hub (`vibey serve`) reads: the bounds on what it keeps of ACP sessions.
+Every other key is the editor's, and a mistake in one never stops the hub."""
 FLOAT_MINIMA: Final[Mapping[str, float]] = {
     "live_poll_seconds": 0.2,
     "cancel_grace_seconds": 0.0,
@@ -73,6 +83,9 @@ class AcpSettings:
     """The most ACP sessions the hub keeps for one principal; past it a new one is refused."""
     session_events_max: int = 100_000
     """The most events the hub keeps in one session's log; past it an append is refused."""
+    replay_events_max: int = 2000
+    """The most of a session's newest events `session/load` shows again; older ones are said to
+    be skipped, once."""
 
     def __post_init__(self) -> None:
         for key, choices in (
@@ -94,6 +107,9 @@ class AcpSettings:
             value = getattr(self, key)
             if not math.isfinite(value) or value < minimum:
                 raise InvalidAcpSettings(f"{key} must be a finite number of at least {minimum}")
+        for key, maximum in INTEGER_MAXIMA.items():
+            if getattr(self, key) > maximum:
+                raise InvalidAcpSettings(f"{key} must be at most {maximum}")
         if any(not word or word != word.lower() for word in self.reject_words):
             raise InvalidAcpSettings("reject_words must be non-empty lower-case words")
 

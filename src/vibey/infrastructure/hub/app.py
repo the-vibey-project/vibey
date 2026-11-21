@@ -51,7 +51,7 @@ from fastapi import (
 )
 from fastapi.responses import HTMLResponse, JSONResponse, Response
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 from vibey_bootstrap.fastapi_middleware import install_middleware
 from vibey_bootstrap.metrics import build_metrics_snapshot
 from vibey_bootstrap.ratelimit import TokenBucket
@@ -281,8 +281,17 @@ class AcpSessionBody(BaseModel):
         min_length=1,
         max_length=MAX_CWD_CHARS,
         pattern=CWD_PATTERN,
-        description="The absolute folder the session was opened in.",
+        description="The absolute folder the session was opened in; printable characters only.",
     )
+
+    @field_validator("cwd")
+    @classmethod
+    def _printable(cls, value: str) -> str:
+        # A folder is shown in every editor's session picker and sent back on a load, so it can
+        # be neither escaped nor trusted: one with a control, format or bidi character is refused.
+        if not value.isprintable():
+            raise ValueError("cwd must hold printable characters only")
+        return value
 
 
 class AcpSessionEventBody(BaseModel):
@@ -824,8 +833,9 @@ class HubAppFactory:
     @staticmethod
     def _acp_routes(app: FastAPI, sessions: AcpSessionServiceInterface, who: Any) -> None:
         """The routes `vibey acp` keeps its sessions through (SP-ACP), offered only when the
-        hub was built with a session service. Each is authorised as `record_acp_session`, and
-        a session is read and written only by the principal that created it."""
+        hub was built with a session service. A create and an append are authorised as
+        `record_acp_session` (`acp_sessions`), a list and a read as `read_acp_sessions`
+        (`view`), and a session is read and written only by the principal that created it."""
         v1 = f"/api/v{HUB_API_VERSION}/acp/sessions"
         session_path = Annotated[str, Path(pattern=SESSION_ID_PATTERN)]
         not_yours = {
@@ -895,6 +905,28 @@ class HubAppFactory:
         ) -> JSONResponse:
             await sessions.append(caller, session_id, body.seq, body.kind.value, body.payload)
             return JSONResponse({"stored": True})
+
+        @app.get(
+            f"{v1}/{{session_id}}",
+            tags=["acp"],
+            summary="An ACP session's newest seq and its newest mode, attach and title events.",
+            responses=not_yours,
+        )
+        async def acp_session_summary(
+            caller: who,
+            session_id: session_path,
+            cwd: Annotated[str | None, Query(max_length=MAX_CWD_CHARS)] = None,
+        ) -> JSONResponse:
+            summary = await sessions.summary(caller, session_id, cwd=cwd)
+            return JSONResponse(
+                {
+                    "session_id": session_id,
+                    "newest_seq": summary.newest_seq,
+                    "mode": dict(summary.mode) if summary.mode is not None else None,
+                    "attach": dict(summary.attach) if summary.attach is not None else None,
+                    "title": dict(summary.title) if summary.title is not None else None,
+                }
+            )
 
         @app.get(
             f"{v1}/{{session_id}}/events",

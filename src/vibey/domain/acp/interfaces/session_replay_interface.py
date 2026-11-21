@@ -55,6 +55,11 @@ class AcpSessionReplayInterface(Protocol):
         """A kept attach event's project, when it is a canonical UUID."""
         ...
 
+    def folder(self, value: Any) -> str | None:
+        """A stored folder as a picker may show it, through the one-line rule; None when it is
+        not absolute or the rule would change it."""
+        ...
+
     def valid_session_id(self, value: Any) -> bool:
         """Whether `value` is shaped like a session id vibey mints (`SESSION_ID_SHAPE`)."""
         ...

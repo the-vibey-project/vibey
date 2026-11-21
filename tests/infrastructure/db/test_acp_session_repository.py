@@ -91,11 +91,12 @@ async def test_a_concurrent_identical_append_is_answered_as_stored(
         racing = asyncio.create_task(repo.append(S1, 1, "plan", {"entries": []}, limit=LIMIT))
         # Wait, without the real clock, until the racing insert waits on the held row.
         async with migrated_pool.acquire() as watcher:
-            while not await watcher.fetchval(
+            while not racing.done() and not await watcher.fetchval(
                 "SELECT count(*) > 0 FROM pg_stat_activity "
                 "WHERE wait_event_type = 'Lock' AND datname = current_database()"
             ):
                 await asyncio.sleep(0)
+        assert not racing.done()  # it waits on the held row, as a concurrent append does
         await transaction.commit()
         assert await racing is True
     finally:
@@ -276,3 +277,60 @@ async def test_past_the_event_cap_an_append_is_refused_and_nothing_kept_changes(
         (1, {"text": "a"}),
         (2, {"text": "b"}),
     ]
+
+
+async def test_the_event_cap_is_on_the_seq_so_it_costs_nothing_however_long_the_log(
+    migrated_pool: asyncpg.Pool,
+) -> None:
+    """A seq past the cap is refused even when the log holds one event: the cap bounds the
+    primary key, so it never counts the log."""
+    repo = PostgresAcpSessionRepository(migrated_pool)
+    await repo.create(S1, "/work", "agent", limit=LIMIT)
+    await repo.append(S1, 1, "user_message", {"text": "a"}, limit=5)
+    with pytest.raises(AcpSessionLimitReached):
+        await repo.append(S1, 6, "user_message", {"text": "b"}, limit=5)
+    assert await repo.append(S1, 5, "user_message", {"text": "c"}, limit=5) is True
+
+
+async def test_a_summary_reads_the_newest_seq_and_the_newest_of_each_state(
+    migrated_pool: asyncpg.Pool,
+) -> None:
+    repo = PostgresAcpSessionRepository(migrated_pool)
+    await repo.create(S1, "/work", "agent", limit=LIMIT)
+    empty = await repo.summary(S1)
+    assert (empty.newest_seq, empty.mode, empty.attach, empty.title) == (0, None, None, None)
+    for seq, kind, payload in (
+        (1, "title", {"title": "first"}),
+        (2, "mode", {"modeId": "observe"}),
+        (3, "attach", {"projectId": "p1"}),
+        (4, "mode", {"modeId": "drive"}),
+        (5, "attach", {"projectId": "p2"}),
+        (6, "user_message", {"text": "x"}),
+    ):
+        await repo.append(S1, seq, kind, payload, limit=LIMIT)
+    summary = await repo.summary(S1)
+    assert summary.newest_seq == 6
+    assert dict(summary.mode or {}) == {"modeId": "drive"}
+    assert dict(summary.attach or {}) == {"projectId": "p2"}
+    assert dict(summary.title or {}) == {"title": "first"}
+
+
+async def test_list_reads_each_sessions_newest_event_by_its_seq(
+    migrated_pool: asyncpg.Pool, owner_pool: asyncpg.Pool
+) -> None:
+    """`updated_at` is the newest event's `recorded_at`: the event with the highest seq."""
+    repo = PostgresAcpSessionRepository(migrated_pool)
+    await repo.create(S1, "/work", "agent", limit=LIMIT)
+    stamp = datetime(2026, 11, 21, 12, 0, tzinfo=UTC)
+    async with owner_pool.acquire() as conn:
+        for seq, kind, when in ((1, "user_message", stamp), (2, "closed", stamp + timedelta(1))):
+            await conn.execute(
+                "INSERT INTO acp_session_event (session_id, seq, kind, payload, recorded_at) "
+                "VALUES ($1, $2, $3, '{}', $4)",
+                S1,
+                seq,
+                kind,
+                when,
+            )
+    (record,) = await repo.list("agent", cwd=None, cursor=None, limit=5)
+    assert record.updated_at == stamp + timedelta(1) and record.closed is True

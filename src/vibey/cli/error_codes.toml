@@ -688,3 +688,10 @@ class = "vibey.domain.acp.session_log.AcpSessionLimitReached"
 title = "The hub keeps no more ACP sessions for this principal"
 cause = "The principal already holds `[acp] sessions_max` sessions, or the session's log already holds `[acp] session_events_max` events. The write was refused; nothing kept was dropped or changed."
 fix = "Raise `[acp] sessions_max` or `session_events_max` in the hub's vibey.toml (docs/reference/configuration.md#acp) and restart the hub. The editor keeps working; the session's history from here on stays in its window."
+
+[[error]]
+code = "E0088"
+class = "vibey.domain.acp.session_log.SessionWritesThrottled"
+title = "The hub's rate limit held back an ACP session write"
+cause = "The hub answered 429 to a write to an ACP session's log: the agent principal sent more than the hub's per-principal burst allows for now."
+fix = "Nothing to do: the write is kept and sent again by the next flush. At the end of a connection vibey acp waits for it within `[acp] probe_seconds`, and says on stderr what it could not send."

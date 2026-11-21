@@ -379,8 +379,9 @@ class ServeCommand:
         try:
             settings = self._settings.load(self._config_path())
             # `[acp] sessions_max` and `session_events_max` bound what the hub keeps of ACP
-            # sessions, so a table the hub cannot read stops it here, as `[hub]` does.
-            acp = self._acp_settings.load(self._config_path())
+            # sessions, so a bad value of either stops it here, as `[hub]` does; the editor's
+            # keys in the same table are never read by the hub.
+            acp = self._acp_settings.hub_settings(self._config_path())
             bound = self._binding.resolve(host, lan_declared=settings.lan)
         except (ConfigError, UndeclaredExposure) as exc:
             typer.echo(str(exc), err=True)

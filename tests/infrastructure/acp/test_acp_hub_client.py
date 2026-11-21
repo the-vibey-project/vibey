@@ -13,13 +13,14 @@ from uuid import UUID
 
 import pytest
 
-from vibey.application.acp.dto import HubToolResult, HubTurn, LedgerPage
+from vibey.application.acp.dto import HubToolResult, HubTurn, LedgerPage, SessionSummary
 from vibey.application.acp.interfaces.acp_hub_port_interface import AcpHubPortInterface
 from vibey.domain.acp.session_log import (
     SESSION_PAGE,
     AcpSessionLimitReached,
     InvalidSessionCursor,
     SessionEventConflict,
+    SessionWritesThrottled,
     UnknownAcpSession,
 )
 from vibey.domain.errors import VibeyError
@@ -369,3 +370,51 @@ async def test_a_cursor_the_hub_refuses_is_an_invalid_cursor() -> None:
         await client.list_sessions(cwd=None, cursor="nope")
     with pytest.raises(HubGatewayError):
         await client.list_sessions(cwd=None, cursor=None)
+
+
+async def test_a_write_the_rate_limit_refused_is_throttled_not_lost() -> None:
+    gateway = _Gateway(_ok({"detail": "slow down"}, 429))
+    with pytest.raises(SessionWritesThrottled):
+        await AcpHubClient(gateway=gateway).append_event(SID, 1, "plan", {})
+
+
+async def test_a_full_page_with_a_malformed_entry_still_reads_on() -> None:
+    """The end of the log is a short page as the hub sent it, not after malformed entries are
+    passed over: otherwise the read stops early and the next seq collides."""
+    first = _page(1, SESSION_PAGE)
+    first["events"][5] = {"seq": 6, "kind": 3, "payload": {}}
+    gateway = _Gateway(_ok(first), _ok(_page(SESSION_PAGE + 1, 1)))
+    events = await AcpHubClient(gateway=gateway).session_events(SID, 0, cwd="/w")
+    assert len(gateway.calls) == 2
+    assert events[-1].seq == SESSION_PAGE + 1 and len(events) == SESSION_PAGE
+
+
+async def test_a_full_page_that_moves_nowhere_ends_the_read() -> None:
+    stale = {"events": [{"seq": 1, "kind": "plan", "payload": {}}] * SESSION_PAGE}
+    gateway = _Gateway(_ok(stale))
+    assert await AcpHubClient(gateway=gateway).session_events(SID, 5, cwd="/w") == ()
+    assert len(gateway.calls) == 1
+
+
+async def test_session_summary_reads_the_newest_seq_and_states() -> None:
+    document = {
+        "session_id": SID,
+        "newest_seq": 9,
+        "mode": {"modeId": "observe"},
+        "attach": None,
+        "title": ["not", "a", "mapping"],
+    }
+    gateway = _Gateway(_ok(document))
+    summary = await AcpHubClient(gateway=gateway).session_summary(SID, cwd="/w")
+    assert gateway.calls[0].route == f"/api/v1/acp/sessions/{SID}"
+    assert gateway.calls[0].query == (("cwd", "/w"),)
+    assert summary == SessionSummary(
+        newest_seq=9, mode={"modeId": "observe"}, attach=None, title=None
+    )
+
+
+@pytest.mark.parametrize("newest", [None, True, -3, "9"])
+async def test_a_summary_without_a_usable_newest_seq_reads_as_empty(newest: object) -> None:
+    gateway = _Gateway(_ok({"newest_seq": newest}))
+    summary = await AcpHubClient(gateway=gateway).session_summary(SID, cwd="/w")
+    assert summary.newest_seq == 0

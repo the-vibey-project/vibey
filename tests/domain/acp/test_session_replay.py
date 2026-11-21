@@ -369,3 +369,21 @@ def test_an_attach_names_a_project_only_by_its_canonical_uuid(payload: Any, expe
 )
 def test_a_session_id_is_valid_only_in_the_shape_vibey_mints(value: Any, valid: bool) -> None:
     assert REPLAY.valid_session_id(value) is valid
+
+
+@pytest.mark.parametrize(
+    ("value", "shown"),
+    [
+        ("/work/my_project", "/work/my_project"),
+        ("/work/[x](y)", "/work/[x](y)"),  # a field, not Markdown: shown as kept, loadable
+        ("/work‮evil", None),
+        ("/a\nb", None),
+        ("/a\x1b[31m", None),
+        ("relative", None),
+        (7, None),
+    ],
+)
+def test_a_stored_folder_reaches_a_picker_only_through_the_one_line_rule(
+    value: Any, shown: str | None
+) -> None:
+    assert REPLAY.folder(value) == shown

@@ -16,7 +16,7 @@ import pytest
 from fastapi import FastAPI
 
 from vibey.application.acp.acp_session_service import AcpSessionService
-from vibey.application.acp.dto import SessionEvent, SessionRecord
+from vibey.application.acp.dto import SessionEvent, SessionRecord, SessionSummary
 from vibey.application.dto import HubPrincipal
 from vibey.domain.acp.session_log import AcpSessionLimitReached, SessionEventConflict
 from vibey.domain.hub_binding import HUB_BINDING
@@ -101,6 +101,21 @@ class Repository:
 
     async def owner(self, session_id: str) -> tuple[str, str] | None:
         return self.sessions.get(session_id)
+
+    async def summary(self, session_id: str) -> SessionSummary:
+        log = self.logs[session_id]
+
+        def newest(kind: str) -> dict[str, Any] | None:
+            return next(
+                (log[seq][1] for seq in sorted(log, reverse=True) if log[seq][0] == kind), None
+            )
+
+        return SessionSummary(
+            newest_seq=max(log, default=0),
+            mode=newest("mode"),
+            attach=newest("attach"),
+            title=newest("title"),
+        )
 
 
 class Blind:
@@ -350,3 +365,34 @@ async def test_the_routes_are_documented_under_acp() -> None:
     assert set(paths[ROUTE]) == {"get", "post"}
     assert set(paths[f"{ROUTE}/{{session_id}}/events"]) == {"get", "post"}
     assert {paths[ROUTE]["post"]["tags"][0], paths[ROUTE]["get"]["tags"][0]} == {"acp"}
+
+
+async def test_the_summary_route_reads_newest_seq_and_states() -> None:
+    app, _ = _app()
+    async with _client(app) as client:
+        await client.post(ROUTE, headers=AGENT, json={"session_id": SID, "cwd": "/work"})
+        for seq, kind, payload in ((1, "attach", {"projectId": "p"}), (2, "title", {"title": "t"})):
+            await client.post(
+                f"{ROUTE}/{SID}/events",
+                headers=AGENT,
+                json={"seq": seq, "kind": kind, "payload": payload},
+            )
+        summary = await client.get(f"{ROUTE}/{SID}", headers=AGENT, params={"cwd": "/work"})
+        elsewhere = await client.get(f"{ROUTE}/{SID}", headers=AGENT, params={"cwd": "/b"})
+        theirs = await client.get(f"{ROUTE}/{SID}", headers=HOST_AUTH)
+    assert summary.json() == {
+        "session_id": SID,
+        "newest_seq": 2,
+        "mode": None,
+        "attach": {"projectId": "p"},
+        "title": {"title": "t"},
+    }
+    assert (elsewhere.status_code, theirs.status_code) == (403, 403)
+
+
+@pytest.mark.parametrize("cwd", ["/work\u202eevil", "/a\nb", "/a\x1b[31m", "/a\u2028b"])
+async def test_a_folder_with_a_character_that_is_not_printable_is_refused(cwd: str) -> None:
+    app, repository = _app()
+    async with _client(app) as client:
+        answer = await client.post(ROUTE, headers=AGENT, json={"session_id": SID, "cwd": cwd})
+    assert answer.status_code == 422 and repository.sessions == {}
