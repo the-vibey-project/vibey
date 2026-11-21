@@ -116,8 +116,8 @@ async def test_selected_allow_answers_the_gate_with_its_parsed_answer() -> None:
     assert asked["tool_call"] == {"toolCallId": call_id}
     assert asked["timeout"] == AcpSettings().permission_timeout_seconds
     assert asked["options"] == [
-        {"optionId": f"{G}:0", "name": "yes", "kind": "allow_once"},
-        {"optionId": f"{G}:1", "name": "no", "kind": "reject_once"},
+        {"optionId": f"{G}:0", "name": "Answer: yes", "kind": "allow_once"},
+        {"optionId": f"{G}:1", "name": "Answer: no", "kind": "reject_once"},
         {"optionId": f"{G}:open", "name": "Leave it open", "kind": "reject_once"},
     ]
     assert_wire_exact(
@@ -749,7 +749,7 @@ async def test_an_option_posing_as_leave_it_open_is_labelled_as_an_answer() -> N
     )
 
     names = [o["name"] for o in channel.permission_requests[0]["options"]]
-    assert names == ["Stop", "Answer: Leave it open", "Leave it open"]
+    assert names == ["Answer: Stop", "Answer: Leave it open", "Leave it open"]
     # The gate's own option answers the gate; the agent's answers nothing.
     assert hub.tool_calls == [
         ("vibey_answer_gate", {"gate_id": G, "answer": {"choice": "Leave it open"}}, f"acp-s-{G}")

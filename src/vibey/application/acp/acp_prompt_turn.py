@@ -189,11 +189,13 @@ class AcpPromptTurn:
         """Close an announced tool call the cancel interrupted, once and truthfully."""
         if call.closing is not None:
             await asyncio.wait({call.closing})  # already closing: let that frame go out
+            self._read(call.closing)
             return
         await asyncio.wait({call.announcing})  # the pending frame goes out first
         if call.task is None:
-            await self._notify(
+            await self._close(
                 session,
+                call,
                 self._mapper.tool_call_update(
                     call.call_id, ToolCallStatus.FAILED, "cancelled before it was sent to the hub"
                 ),
@@ -204,8 +206,9 @@ class AcpPromptTurn:
             # The call keeps running in its thread; its outcome is read, not reported.
             self._STRAYS.add(call.task)
             call.task.add_done_callback(self._retrieve)
-            await self._notify(
+            await self._close(
                 session,
+                call,
                 self._mapper.tool_call_update(
                     call.call_id,
                     ToolCallStatus.FAILED,
@@ -222,13 +225,20 @@ class AcpPromptTurn:
             if error is not None
             else self._completed(call, call.task.result())
         )
-        await self._notify(session, update)
+        await self._close(session, call, update)
 
     async def _close(
         self, session: AcpSessionContext, call: _HubCall, update: Mapping[str, Any]
     ) -> None:
         call.closing = asyncio.ensure_future(self._notify(session, update))
         await asyncio.shield(call.closing)
+
+    @staticmethod
+    def _read(task: asyncio.Task[None]) -> None:
+        # A close the cancel waited for may itself have failed (the client went away); its
+        # outcome is read so asyncio does not log it as never retrieved.
+        with contextlib.suppress(asyncio.CancelledError):
+            task.exception()
 
     @classmethod
     def _retrieve(cls, task: asyncio.Task[HubTurn]) -> None:

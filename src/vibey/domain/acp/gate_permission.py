@@ -10,8 +10,11 @@ Gate text is untrusted data written by workers and models. Three rules keep it d
 - An answer is built from an option's label alone (`{"choice": label}`, `{"verdict": label}`).
   The label is never parsed, so a label that looks like JSON cannot become structure in the
   answer the hub records.
-- No option may pose as one of the agent's own (`AGENT_LABELS`). An option whose label matches
-  one is shown as "Answer: <label>", because picking it answers the gate.
+- Every option the gate supplies is shown under vibey's own prefix, "Answer: <label>", whatever
+  it says, so none can pass for one of vibey's options ("Leave it open" above all), not even a
+  lookalike in other characters. Invisible characters (control and format, such as a zero-width
+  space) are dropped from the shown label and runs of space collapsed; the answer keeps the
+  label exactly as the gate wrote it.
 - A gate id must be a UUID. Anything else is never offered and never repeated back.
 
 Some gates are never offered, and `refusal_text` tells the operator where to answer them:
@@ -28,6 +31,7 @@ Some gates are never offered, and `refusal_text` tells the operator where to ans
 Pure: no I/O. Declared by `interfaces/gate_permission_interface.py`.
 """
 
+import unicodedata
 from collections.abc import Mapping
 from dataclasses import dataclass
 from typing import Any, Final
@@ -46,13 +50,17 @@ LEAVE_OPEN: Final = "Leave it open"
 """The agent's option that answers nothing; every offered gate ends with it."""
 ACCEPT_DEFAULTS: Final = "Accept the defaults"
 ACKNOWLEDGE: Final = "Acknowledge"
-AGENT_LABELS: Final = frozenset(
-    label.casefold() for label in (LEAVE_OPEN, ACCEPT_DEFAULTS, ACKNOWLEDGE)
-)
-"""Labels only the agent's own options carry; a gate option matching one is relabelled."""
+GATE_OPTION_PREFIX: Final = "Answer: "
+"""Shown before every option a gate supplies; vibey's own options never carry it."""
+_INVISIBLE: Final = frozenset({"Cc", "Cf"})
+"""Unicode categories dropped from a shown label: control and format characters."""
 _OPT_IN: Final = frozenset(option.casefold() for option in DEPLOYMENT_OPT_IN_OPTIONS)
 _ON_THE_HOST: Final = (
     "Answer it on the host (`vibey answer {gate_id}`) or in the desktop or mobile app."
+)
+NOT_A_UUID: Final = (
+    "The hub listed a gate whose id is not a UUID, so I did not offer it. "
+    "Check `vibey gates` on the host."
 )
 
 
@@ -113,7 +121,9 @@ class GatePermissionMapper:
         return ()
 
     def refusal_text(self, gate: Mapping[str, Any]) -> str:
-        gate_id = gate.get("gate_id")
+        gate_id = self.gate_id(gate)
+        if gate_id is None:
+            return NOT_A_UUID  # an id that is not a UUID could say anything: never echoed
         kind = gate.get("kind")
         host = _ON_THE_HOST.format(gate_id=gate_id)
         if self._spends(gate):
@@ -152,20 +162,29 @@ class GatePermissionMapper:
         seen: set[str] = set()
         for index, option in enumerate(options):
             label = str(option).strip()
-            folded = label.casefold()
-            if not label or folded in seen:
-                continue  # nothing an operator could mean, or a label already offered
+            shown = self._shown(label)
+            folded = shown.casefold()
+            if not shown or folded in seen:
+                continue  # nothing an operator could see, or a label already offered
             seen.add(folded)
-            rejects = label.lower() in self._reject_words
+            rejects = folded in self._reject_words
             choices.append(
                 PermissionChoice(
                     option_id=f"{gate_id}:{index}",
-                    name=f"Answer: {label}" if folded in AGENT_LABELS else label,
+                    name=f"{GATE_OPTION_PREFIX}{shown}",
                     kind=PermissionKind.REJECT_ONCE if rejects else PermissionKind.ALLOW_ONCE,
                     answer={key: label},
                 )
             )
         return self._with_leave_open(gate_id, choices) if choices else ()
+
+    @staticmethod
+    def _shown(label: str) -> str:
+        """`label` as the operator sees it: invisible characters dropped, spaces collapsed."""
+        visible = "".join(
+            ch for ch in label if ch.isspace() or unicodedata.category(ch) not in _INVISIBLE
+        )
+        return " ".join(visible.split())
 
     @staticmethod
     def _with_leave_open(

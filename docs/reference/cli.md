@@ -227,8 +227,10 @@ a turn, each once per session, and only in a mode that may answer gates (`drive`
   gate through the hub (`vibey_answer_gate`, request id `acp-<session id>-<gate id>`), with
   the option's label as the answer (`{"choice": <label>}` or `{"verdict": <label>}`); the
   label is never read as JSON or as a command.
-- A gate's own option labelled like one of vibey's ("Leave it open", "Accept the defaults",
-  "Acknowledge") is shown as `Answer: <label>`, because picking it answers the gate.
+- Every option a gate supplies is shown as `Answer: <label>`, whatever it says, so none can
+  pass for one of vibey's own options ("Leave it open" above all), not even a lookalike.
+  Invisible characters are dropped from the shown label; the answer is the label as the gate
+  wrote it.
 - "Leave it open", a cancelled or failed request, no answer within
   [`[acp] permission_timeout_seconds`](configuration.md#acp), or an option the gate never
   offered answers nothing: the tool call closes `failed`, "left open; nothing was answered".

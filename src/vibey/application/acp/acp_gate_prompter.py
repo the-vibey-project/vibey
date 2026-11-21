@@ -30,6 +30,7 @@ from __future__ import annotations
 
 import asyncio
 import contextlib
+import hashlib
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
 from typing import Any, ClassVar, Final
@@ -107,7 +108,9 @@ class AcpGatePrompter:
             gate_id = self._gates.gate_id(gate)
             if gate_id is None:
                 # Never shown, never used: an id that is not a UUID could be anything.
-                key = f"invalid:{gate.get('gate_id')!r}"
+                # Remembered by a digest, so a hostile id costs a bounded key.
+                raw = repr(gate.get("gate_id")).encode()
+                key = f"invalid:{hashlib.sha256(raw).hexdigest()}"
                 if key not in session.offered_gates:
                     session.offered_gates.add(key)
                     invalid += 1
@@ -121,7 +124,7 @@ class AcpGatePrompter:
             session.offered_gates.add(gate_id)
             choices = self._gates.options_for(gate)
             if not choices:
-                refusal = self._gates.refusal_text({**gate, "gate_id": gate_id})
+                refusal = self._gates.refusal_text(gate)
                 await self._notify(session, self._mapper.agent_text(refusal))
                 continue
             call_id = f"{turn_id}-gate-{gate_id}"
@@ -202,6 +205,8 @@ class AcpGatePrompter:
         """Close a gate's tool call the cancel interrupted, once and truthfully."""
         if call.closing is not None:
             await asyncio.wait({call.closing})  # already closing: let that frame go out
+            with contextlib.suppress(asyncio.CancelledError):
+                call.closing.exception()  # read, so a failed write is not logged as unread
             return
         await asyncio.wait({call.announcing})  # the pending frame goes out first
         if call.answering is None:

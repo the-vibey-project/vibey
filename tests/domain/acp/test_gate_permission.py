@@ -146,6 +146,12 @@ def test_a_gate_whose_id_is_not_a_uuid_is_not_offered(gate_id: Any) -> None:
 
     assert MAPPER.gate_id(gate) is None
     assert MAPPER.options_for(gate) == ()
+    # Never echoed back, whatever else is wrong with the gate.
+    for kind in ("budget_exhausted", "choice", "attempts_exhausted", "mystery"):
+        assert MAPPER.refusal_text({**gate, "kind": kind}) == (
+            "The hub listed a gate whose id is not a UUID, so I did not offer it. "
+            "Check `vibey gates` on the host."
+        )
 
 
 def test_a_gate_id_is_read_in_its_canonical_form() -> None:
@@ -170,9 +176,11 @@ def test_each_choice_answers_with_its_label_then_the_agent_leave_open() -> None:
 
     assert choices == (
         PermissionChoice(
-            f"{G}:0", "Keep going", PermissionKind.ALLOW_ONCE, {"choice": "Keep going"}
+            f"{G}:0", "Answer: Keep going", PermissionKind.ALLOW_ONCE, {"choice": "Keep going"}
         ),
-        PermissionChoice(f"{G}:1", "Decline", PermissionKind.REJECT_ONCE, {"choice": "Decline"}),
+        PermissionChoice(
+            f"{G}:1", "Answer: Decline", PermissionKind.REJECT_ONCE, {"choice": "Decline"}
+        ),
         OPEN,
     )
 
@@ -201,19 +209,43 @@ def test_a_verdict_gate_answers_with_a_verdict(kind: str) -> None:
     ]
 
 
-@pytest.mark.parametrize(
-    "label", ["Leave it open", " leave IT open ", "Accept the defaults", "ACKNOWLEDGE"]
-)
-def test_a_gate_option_cannot_pose_as_an_agent_option(label: str) -> None:
-    # Review M-2: an option labelled like the agent's own would answer the gate while the
-    # operator believed it answered nothing. It is shown as what it is: an answer.
+LOOKALIKES = [
+    "Leave it open",
+    " leave IT open ",
+    "Leave\u00a0it open",  # no-break space
+    "Leave\u200bit open",  # zero-width space
+    "\u200bLeave it open\u200b",
+    "L\u0435ave it open",  # Cyrillic ie
+    "Leave  it open",  # two spaces
+    "Leave it open.",
+    "Accept the defaults",
+    "ACKNOWLEDGE",
+]
+
+
+@pytest.mark.parametrize("label", LOOKALIKES)
+def test_no_gate_option_can_pose_as_an_agent_option(label: str) -> None:
+    # Review M-2 and MR-1: every option the gate supplies is shown under vibey's own prefix,
+    # whatever it says, so none can read as vibey's "Leave it open". The answer is the label.
     choices = MAPPER.options_for(_gate("choice", ["Stop", label]))
 
-    posed = choices[1]
-    assert posed.name == f"Answer: {label.strip()}"
-    assert posed.answer == {"choice": label.strip()}
+    gate_supplied = choices[:-1]
+    assert all(c.name.startswith("Answer: ") for c in gate_supplied)
+    assert gate_supplied[1].answer == {"choice": label.strip()}
+    assert [c for c in choices if c.answer is None] == [OPEN]
     assert [c.name for c in choices].count(LEAVE_OPEN) == 1
-    assert choices[-1] == OPEN
+
+
+def test_invisible_characters_are_dropped_from_the_shown_label_only() -> None:
+    label = "Ship\u200b\u2060 it\u0007  now"
+    (choice, _) = MAPPER.options_for(_gate("choice", [label]))
+
+    assert choice.name == "Answer: Ship it now"
+    assert choice.answer == {"choice": label}
+
+
+def test_an_option_that_shows_as_nothing_is_not_offered() -> None:
+    assert MAPPER.options_for(_gate("choice", ["\u200b\u200d", "go"]))[0].name == "Answer: go"
 
 
 def test_reject_words_are_configurable() -> None:
@@ -228,8 +260,8 @@ def test_an_empty_or_repeated_option_is_left_out_and_indices_stay_stable() -> No
     choices = MAPPER.options_for(_gate("choice", ["", "yes", 7, "YES", "  "]))
 
     assert [(c.option_id, c.name) for c in choices] == [
-        (f"{G}:1", "yes"),
-        (f"{G}:2", "7"),
+        (f"{G}:1", "Answer: yes"),
+        (f"{G}:2", "Answer: 7"),
         (f"{G}:open", LEAVE_OPEN),
     ]
 
