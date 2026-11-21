@@ -503,3 +503,22 @@ async def test_a_client_gone_at_the_end_does_not_stop_the_log(
         await journal.flush()
     assert hub.log(T) == [(1, "user_message", {"text": "b"})]
     assert "could not tell session" in caplog.text
+
+
+async def test_past_the_cap_the_queue_keeps_every_create_and_drops_only_events() -> None:
+    """With the hub away and a cap of one, two prompted sessions leave two creates queued: a
+    create is never dropped, since every later event of its session needs it."""
+    hub = FlakyHub()
+    hub.session_error = HubGatewayError("away")
+    journal = _journal(hub, pending=1)
+    for session_id in (S, T):
+        journal.open(session_id, "/work")
+        journal.record(session_id, MSG, {"text": session_id})
+    await journal.flush()
+    hub.session_error = None
+    await journal.flush()
+    journal.record(S, MSG, {"text": "later"})
+    await journal.flush()
+    assert set(hub.kept) == {S, T}
+    assert hub.log(T) == []
+    assert [payload["text"] for _, _, payload in hub.log(S)] == ["later"]
