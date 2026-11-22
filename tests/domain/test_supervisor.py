@@ -213,3 +213,80 @@ def test_an_interval_is_only_checked_for_a_state_sync_that_runs() -> None:
 def test_a_state_sync_without_its_env_file_is_refused() -> None:
     with pytest.raises(ValueError, match="state sync's environment file was not resolved"):
         SupervisorPlanner().services(SupervisorSettings(state_sync=True), PATHS)
+
+
+# --- the units `vibey acp` loads (SP-ACP, ADR-0101) ----------------------------------------
+
+
+def test_acp_services_plans_hub_and_worker_only_with_always_restart() -> None:
+    settings = SupervisorSettings(worker_args=("-j", "2"), state_sync=True)
+    hub, worker = SupervisorPlanner().acp_services(
+        settings, PATHS, names=("hub", "worker"), restart="always"
+    )
+
+    assert (hub.name, hub.label, hub.restart) == ("hub", "dev.vibey.hub", "always")
+    assert hub.argv == (*LAUNCH, "/opt/vibey/bin/vibey", "serve")
+    assert hub.log_path == "/home/op/.local/state/vibey/logs/hub.log"
+    assert hub.working_directory == "/srv/git/vibey"
+    assert (worker.name, worker.label, worker.restart) == ("worker", "dev.vibey.worker", "always")
+    assert worker.argv == (*LAUNCH, "/opt/vibey/bin/vibey", "worker", "--all-projects", "-j", "2")
+    assert worker.log_path == "/home/op/.local/state/vibey/logs/worker.log"
+
+
+def test_acp_services_plans_only_the_names_given_in_their_order() -> None:
+    planner = SupervisorPlanner()
+    (worker,) = planner.acp_services(
+        SupervisorSettings(), PATHS, names=("worker",), restart="on-failure"
+    )
+    assert (worker.name, worker.restart) == ("worker", "on-failure")
+    assert planner.acp_services(SupervisorSettings(), PATHS, names=(), restart="always") == ()
+    named = planner.acp_services(
+        SupervisorSettings(), PATHS, names=("worker", "hub"), restart="always"
+    )
+    assert [service.name for service in named] == ["worker", "hub"]
+
+
+def test_acp_services_never_plans_the_delivery_bridge_or_the_state_sync() -> None:
+    with pytest.raises(ValueError, match="hub or worker"):
+        SupervisorPlanner().acp_services(
+            SupervisorSettings(), PATHS, names=("delivery",), restart="always"
+        )
+
+
+@pytest.mark.parametrize(
+    "prefix",
+    ["", "dev vibey", "dev/vibey", "../evil", "dev.vibey\n", "-dev", "système", "a" * 200],
+)
+def test_acp_services_refuses_a_label_prefix_no_service_manager_should_be_handed(
+    prefix: str,
+) -> None:
+    with pytest.raises(ValueError, match="label_prefix"):
+        SupervisorPlanner().acp_services(
+            SupervisorSettings(label_prefix=prefix), PATHS, names=("hub",), restart="always"
+        )
+
+
+def test_the_supervisors_own_services_restart_on_failure_by_default() -> None:
+    assert all(
+        s.restart == "on-failure" for s in SupervisorPlanner().services(SupervisorSettings(), PATHS)
+    )
+
+
+def test_the_throttle_settings_have_documented_defaults() -> None:
+    settings = SupervisorSettings()
+    assert (settings.start_limit_interval_seconds, settings.start_limit_burst) == (600, 5)
+
+
+@pytest.mark.parametrize(
+    "settings",
+    [
+        SupervisorSettings(restart_seconds=0),
+        SupervisorSettings(start_limit_interval_seconds=0),
+        SupervisorSettings(start_limit_burst=0),
+    ],
+)
+def test_acp_services_refuses_a_throttle_that_would_let_a_unit_hot_loop(
+    settings: SupervisorSettings,
+) -> None:
+    with pytest.raises(ValueError, match="at least 1"):
+        SupervisorPlanner().acp_services(settings, PATHS, names=("hub",), restart="always")

@@ -32,9 +32,11 @@ from vibey.domain.acp.settings import AcpSettings
 from vibey.domain.host_tools import HubCall
 from vibey.domain.hub_scope import HubScope
 from vibey.infrastructure.acp.acp_postgres_installer import AcpPostgresInstaller
+from vibey.infrastructure.acp.acp_service_units import AcpServiceUnits
+from vibey.infrastructure.acp.bootstrap_lock import BootstrapLock
 from vibey.infrastructure.acp.host_connector import HostConnector
 from vibey.infrastructure.acp.peer_client_channel import PeerClientChannel
-from vibey.infrastructure.hub.serve_lock import ServeLock
+from vibey.infrastructure.acp.service_loader import ServiceLoader
 from vibey.infrastructure.hub.settings import HubSettings
 from vibey.infrastructure.mcp.hub_gateway import HubGateway, HubGatewayResponse
 from vibey.infrastructure.mcp.hub_start_policy import BoundedHubStarter
@@ -236,7 +238,9 @@ def test_the_agent_gets_doctors_sections_and_this_computers_bootstrap_parts() ->
     assert tuple(given["doctor_probes"]) == LOCAL_DOCTOR_PROBES
     assert isinstance(given["connector"], HostConnector)
     assert isinstance(given["postgres"], AcpPostgresInstaller)
-    assert isinstance(given["lock"], ServeLock)
+    assert isinstance(given["lock"], BootstrapLock)
+    assert isinstance(given["units"], AcpServiceUnits)
+    assert isinstance(given["loader"], ServiceLoader)
 
 
 def test_the_typer_function_runs_the_module_command(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -492,3 +496,118 @@ def test_an_unreadable_hub_table_still_gives_the_machine_a_home(tmp_path: Path) 
     machine = acp_machine(AcpSettings(), config_path=config)
 
     assert machine.lock._path.parent == HubSettings().state_dir  # type: ignore[attr-defined]
+
+
+# -- the user-level services (ADR-0101) ------------------------------------------------------
+
+
+class _Units:
+    def __init__(self) -> None:
+        self.labels: list[str] = []
+
+    def write(self, names: tuple[str, ...], restart: str) -> tuple[Any, ...]:
+        return ()
+
+    def label(self, name: str) -> str:
+        self.labels.append(name)
+        return f"dev.vibey.{name}"
+
+    def detached_hub_pid(self) -> int | None:
+        return None
+
+    def start_hub(self) -> bool:
+        raise AssertionError("the gateway never spawns a hub while the hub is a unit")
+
+
+class _ServiceLoader:
+    def __init__(self, action: str = "restarted") -> None:
+        self.action = action
+        self.restarts: list[str] = []
+
+    def available(self) -> bool:
+        return True
+
+    def state(self, label: str) -> str:
+        return "running"
+
+    def load(self, label: str, unit: str) -> Any:
+        raise AssertionError("not loaded here")
+
+    def restart(self, label: str) -> Any:
+        from vibey.application.acp.dto import UnitOutcome
+
+        self.restarts.append(label)
+        return UnitOutcome(label, "", self.action)  # type: ignore[arg-type]
+
+    def unload_commands(self, labels: Any) -> tuple[str, ...]:
+        return ()
+
+    def domain(self) -> str:
+        return "launchd gui/501"
+
+
+def test_with_services_the_gateway_restarts_the_hub_unit_instead_of_spawning_a_hub(
+    tmp_path: Path,
+) -> None:
+    units, loader = _Units(), _ServiceLoader()
+    agent = build_acp_agent(
+        settings=AcpSettings(),
+        channel=_RecordingChannel(),
+        units=units,  # type: ignore[arg-type]
+        loader=loader,  # type: ignore[arg-type]
+        lock=BootstrapLock(tmp_path),
+    )
+
+    starter = agent._hub._gateway._starter._starter  # type: ignore[attr-defined]
+    assert starter() is True
+    assert loader.restarts == ["dev.vibey.hub"] and units.labels == ["hub"]
+    loader.action = "failed"
+    assert starter() is False
+    boot = agent._bootstrap  # type: ignore[attr-defined]
+    assert boot._keep_alive is not None and boot._loader is loader and boot._units is units
+
+
+@pytest.mark.parametrize(
+    "settings",
+    [
+        AcpSettings(auto_services=False),
+        AcpSettings(auto_bootstrap=False),
+        AcpSettings(services=("worker",)),
+    ],
+)
+def test_without_the_grant_or_a_hub_unit_the_gateway_keeps_its_own_starter(
+    tmp_path: Path, settings: AcpSettings
+) -> None:
+    from vibey.infrastructure.mcp.hub_gateway import _default_starter
+
+    agent = build_acp_agent(
+        settings=settings,
+        channel=_RecordingChannel(),
+        units=_Units(),  # type: ignore[arg-type]
+        loader=_ServiceLoader(),  # type: ignore[arg-type]
+        lock=BootstrapLock(tmp_path),
+    )
+
+    starter = agent._hub._gateway._starter._starter  # type: ignore[attr-defined]
+    granted = settings.auto_bootstrap and settings.auto_services
+    assert (starter is _default_starter) is (not granted or "hub" not in settings.services)
+    boot = agent._bootstrap  # type: ignore[attr-defined]
+    if not granted:
+        assert boot is None
+
+
+def test_the_machine_loads_into_this_platforms_user_service_manager(tmp_path: Path) -> None:
+    config = tmp_path / "vibey.toml"
+    config.write_text(f"[hub]\nstate_dir = '{tmp_path / 'hub'}'\n")
+
+    machine = acp_machine(
+        AcpSettings(bootstrap_timeout_seconds=7, service_workdir="/srv/work"), config_path=config
+    )
+
+    assert isinstance(machine.units, AcpServiceUnits)
+    assert isinstance(machine.loader, ServiceLoader)
+    assert machine.units._workdir == "/srv/work"  # type: ignore[attr-defined]
+    assert machine.units._state_dir == tmp_path / "hub"  # type: ignore[attr-defined]
+    assert machine.loader._run._timeout == 7  # type: ignore[attr-defined]
+    expected = "launchd" if sys.platform == "darwin" else "systemd"
+    assert machine.loader._host.platform == expected  # type: ignore[attr-defined]

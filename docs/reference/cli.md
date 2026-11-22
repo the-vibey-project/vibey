@@ -408,7 +408,7 @@ on stderr and, while the editor can hear it, in a notice.
   kept. A later `session/prompt` answers `RESOURCE_NOT_FOUND`; closing a session that is
   unknown or already closed answers `{}`. A closed session can be loaded or resumed again.
 
-### Bootstrap: doctor, connect and PostgreSQL
+### Bootstrap: doctor, connect, services and PostgreSQL
 
 With [`[acp] auto_bootstrap`](configuration.md#acp) on (the default; `--no-bootstrap` turns it
 off for one process), `vibey acp` sets the computer up when an editor first connects. Nothing
@@ -432,9 +432,44 @@ here delays the answer: the steps start after `session/new` (or the first `sessi
    `<[hub] state_dir>/acp-connect-<version>.json` records which clients were connected; the next
    `vibey acp` of this version skips the step while every client installed then is in that
    record, so a `WARN`, or a client installed since, is tried again.
-3. Loading and keeping the user-level services running comes with a later release.
+3. **Services** (an `execute` tool call, "Keep vibey's services running"), when
+   [`[acp] auto_services`](configuration.md#acp) is on and `[acp] services` names any
+   ([ADR-0101](../architecture/decisions/0101-the-acp-agent-and-self-installing-services.md)).
+   Inside `<[hub] state_dir>/acp-bootstrap.lock` (waited for within
+   `bootstrap_timeout_seconds`), vibey writes one user-level unit per service --
+   `<[supervisor] label_prefix>.hub` runs `vibey serve`, `<label_prefix>.worker` runs
+   `vibey worker --all-projects`, each through `vibey supervisor exec --env-file <[supervisor]
+   env_file>` -- into `~/Library/LaunchAgents` (launchd) or `$XDG_CONFIG_HOME/systemd/user`
+   (systemd), with [`[acp] restart`](configuration.md#acp) (`always`: launchd `KeepAlive`,
+   systemd `Restart=always`) throttled by `[supervisor] restart_seconds` and, on systemd,
+   `start_limit_interval_seconds` / `start_limit_burst`. A unit is written atomically (mode
+   0644), never through a symbolic link, and a unit that differs from what vibey renders is
+   your edit: it is kept exactly as it is, and vibey neither loads nor restarts it. The
+   environment file is created from its template (mode 0600) when missing; a unit never carries
+   a secret, only the path of that file. Each unit is then loaded with `launchctl bootstrap
+   gui/<uid>` or `systemctl --user daemon-reload` and `enable --now`, unless it is already
+   loaded or running -- never into the `system` domain, never with `sudo`. A hub you started
+   yourself (`vibey hub start`) and that answers is left running: its unit is not loaded now,
+   and the keep-alive loads it once that hub has exited. The first time units are loaded, one
+   message names each label and the exact commands that unload them (`launchctl bootout
+   gui/<uid>/<label>` or `systemctl --user disable --now <label>.service`); set
+   `auto_services = false` so vibey does not load them again. vibey then waits for the hub to
+   answer, within `bootstrap_timeout_seconds`. When the service manager cannot be reached (no
+   login session's `gui/<uid>` domain, as over SSH, or no `systemctl --user` manager), vibey
+   runs `vibey hub start` once per process instead and says that nothing keeps the hub running.
 
-A session's first prompt waits for steps 1 and 2 at most
+   **Keep-alive.** While a session is open, vibey probes the units it loaded at the start of
+   every prompt and every [`[acp] probe_seconds`](configuration.md#acp): the hub by whether it
+   answers, the worker by whether the service manager says it runs. When one is down it takes
+   the bootstrap lock, probes again, and only then restarts what is still down (`launchctl
+   kickstart -k gui/<uid>/<label>`, `systemctl --user restart <label>.service`), each label at
+   most once per `probe_seconds`; two editor windows restart a dead hub once. Only the labels
+   vibey loaded, or found loaded exactly as it renders them, are ever restarted. One message is
+   said per change of a label's state (restarted, could not restart, running again), never one
+   per probe. While the hub is a unit, a read that finds no hub restarts its unit (at most once
+   per `hub_start_seconds`) instead of starting a second hub beside it.
+
+A session's first prompt waits for steps 1 to 3 at most
 [`[acp] bootstrap_timeout_seconds`](configuration.md#acp), then goes ahead and says so. A run
 that found no `FAIL` (and no connect `WARN`) is not repeated in this process; after one that did,
 the next session runs it again. Two runs never overlap.
@@ -461,11 +496,13 @@ the next session runs it again. Two runs never overlap.
    it goes on in the background, how it ends is logged on standard error and said in the
    session if it is still open.
 
-Connecting and installing change the computer, so they take turns within one `vibey acp`, and a
-second `vibey acp` (another editor window) leaves them to the first while it holds
-`<[hub] state_dir>/acp-bootstrap.lock` -- including until an install it allowed has ended.
+Connecting, loading services and installing change the computer, so they take turns within one
+`vibey acp`, and a second `vibey acp` (another editor window) leaves connecting and installing to
+the first while it holds `<[hub] state_dir>/acp-bootstrap.lock` -- including until an install it
+allowed has ended -- and waits for it before loading or restarting services.
 
-When a read of the hub finds no hub, `vibey acp` runs `vibey hub start` at most once per
+When a read of the hub finds no hub and the hub is not a unit vibey keeps (`auto_services` off,
+or `hub` not in `services`), `vibey acp` runs `vibey hub start` at most once per
 [`[acp] hub_start_seconds`](configuration.md#acp), on a thread of its own, with its standard
 input closed; a prompt, the live feed and the session log are told at once that the hub is
 away instead of waiting for it.
@@ -1505,7 +1542,7 @@ vibey supervisor install --platform systemd
 
 | Subcommand | Option | What it does |
 |---|---|---|
-| `supervisor install` | `--repo PATH` (`.`), `--out DIR`, `--platform launchd\|systemd`, `--config PATH` | Writes `<label_prefix>.worker` and `<label_prefix>.delivery` (and `<label_prefix>.state-sync` with `[supervisor] state_sync = true`) into the service manager's directory (`~/Library/LaunchAgents`, or `$XDG_CONFIG_HOME/systemd/user`), or `--out`. Creates the log directory, and the environment file from a commented template, readable by you alone, when it does not exist (an existing one is kept); with `state_sync`, the state sync's own `state-sync.env` the same way. Prints the `launchctl bootstrap` or `systemctl --user enable --now` commands that load them. Refuses, exit 78, a log directory, environment file, `vibey`, Python or `--repo` under a directory a reboot empties or inside a linked worktree (10.h), `vibey` not on `PATH`, and a `--repo` with no `scripts/triaged_delivery.py` unless `delivery = false`. `--config` defaults to `<repo>/vibey.toml`. |
+| `supervisor install` | `--repo PATH` (`.`), `--out DIR`, `--platform launchd\|systemd`, `--config PATH` | Writes `<label_prefix>.worker` and `<label_prefix>.delivery` (and `<label_prefix>.state-sync` with `[supervisor] state_sync = true`) into the service manager's directory (`~/Library/LaunchAgents`, or `$XDG_CONFIG_HOME/systemd/user`), or `--out`. Creates the log directory, and the environment file from a commented template, readable by you alone, when it does not exist (an existing one is kept); with `state_sync`, the state sync's own `state-sync.env` the same way. Each unit is written atomically (mode 0644) and replaces the one installed before; a unit path that is a symbolic link or not a regular file is not written, named on standard error, and the command exits 1. Prints the `launchctl bootstrap` or `systemctl --user enable --now` commands that load them; this command loads nothing (`vibey acp` loads only its own hub and worker units, ADR-0101). Refuses, exit 78, a log directory, environment file, `vibey`, Python or `--repo` under a directory a reboot empties or inside a linked worktree (10.h), `vibey` not on `PATH`, and a `--repo` with no `scripts/triaged_delivery.py` unless `delivery = false`. `--config` defaults to `<repo>/vibey.toml`. |
 | `supervisor status` | `--platform launchd\|systemd`, `--config PATH` | One line per service: `running`, `stopped`, `not loaded` or `not installed`, read from the unit file and `launchctl print` / `systemctl --user is-active`. Exit 0 only when every service runs, else 1. `--config` defaults to `./vibey.toml`. |
 | `supervisor exec` | `--env-file PATH` `-- COMMAND...` | What every unit runs. Reads `KEY=VALUE` lines from the file (`#` comments, an optional `export `, one pair of matching quotes removed, nothing expanded; a declared value wins over the inherited one), then replaces itself with COMMAND. Exit 2 with no command, 78 when the file is missing or a line is not a pair (named by line number, never quoted), 127 when COMMAND cannot run. |
 

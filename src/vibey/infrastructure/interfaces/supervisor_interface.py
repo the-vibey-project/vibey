@@ -28,6 +28,7 @@ class SupervisorHostInterface(Protocol):
     """One platform's places, and its service manager's answer about one unit."""
 
     platform: str
+    uid: int
 
     def unit_dir(self) -> Path:
         """Where the service manager looks for this user's units."""
@@ -49,4 +50,9 @@ class SupervisorHostInterface(Protocol):
 
     def load_commands(self, labels: Sequence[str], units: Sequence[Path]) -> list[str]:
         """The operator's own commands that load the units; vibey never runs them."""
+        ...
+
+    def unload_commands(self, labels: Sequence[str]) -> list[str]:
+        """The commands that stop and unload these labels in the user's own domain, as
+        `vibey acp` says them after loading its units (ADR-0101)."""
         ...

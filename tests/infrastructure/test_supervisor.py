@@ -275,3 +275,30 @@ def test_the_systemd_unit_restarts_on_failure_only_and_logs_durably() -> None:
     assert "StandardOutput=append:/home/op/logs/delivery.log" in lines
     assert "StandardError=append:/home/op/logs/delivery.log" in lines
     assert "WantedBy=default.target" in lines
+
+
+# --- what `vibey acp` adds (ADR-0101) ----------------------------------------------------
+
+
+def test_the_throttle_keys_are_read(tmp_path: Path) -> None:
+    config = tmp_path / "vibey.toml"
+    config.write_text("[supervisor]\nstart_limit_interval_seconds = 120\nstart_limit_burst = 3\n")
+    settings = SupervisorSettingsLoader().load(config)
+    assert (settings.start_limit_interval_seconds, settings.start_limit_burst) == (120, 3)
+
+
+def test_launchd_unload_commands_boot_out_each_label_from_the_users_own_domain() -> None:
+    assert _host("launchd").unload_commands(["dev.vibey.hub", "dev.vibey.worker"]) == [
+        "launchctl bootout gui/501/dev.vibey.hub",
+        "launchctl bootout gui/501/dev.vibey.worker",
+    ]
+
+
+def test_systemd_unload_commands_disable_and_stop_each_user_unit() -> None:
+    assert _host("systemd").unload_commands(["dev.vibey.hub", "dev.vibey.worker"]) == [
+        "systemctl --user disable --now dev.vibey.hub.service dev.vibey.worker.service"
+    ]
+
+
+def test_the_host_names_its_uid() -> None:
+    assert _host("launchd").uid == 501

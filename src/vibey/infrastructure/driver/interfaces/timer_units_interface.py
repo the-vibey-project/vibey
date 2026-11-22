@@ -24,11 +24,21 @@ class TimerUnitRendererInterface(Protocol):
     def launchd_service(
         self, service: SupervisedService, *, path_env: str, restart_seconds: int
     ) -> str:
-        """A launchd agent that starts `service` at load and restarts it after a failure."""
+        """A launchd agent that starts `service` at load and restarts it after a failure
+        (`on-failure`) or any exit (`always`, `KeepAlive` true), at most once per
+        `restart_seconds`. Raises ValueError for a value no property list can carry."""
         ...
 
     def systemd_service(
-        self, service: SupervisedService, *, path_env: str, restart_seconds: int
+        self,
+        service: SupervisedService,
+        *,
+        path_env: str,
+        restart_seconds: int,
+        start_limit_interval_seconds: int = 0,
+        start_limit_burst: int = 0,
     ) -> str:
-        """A systemd user service that restarts `service` after a failure."""
+        """A systemd user service that restarts `service` after a failure, or after any exit
+        (`always`, with the start limit when both are positive). An `on-failure` unit is
+        rendered as it always was. Raises ValueError for a value no unit can carry."""
         ...

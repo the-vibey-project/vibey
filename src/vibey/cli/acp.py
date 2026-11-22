@@ -88,6 +88,8 @@ class AcpCommand:
             connector=machine.connector,
             postgres=machine.postgres,
             lock=machine.lock,
+            units=machine.units,
+            loader=machine.loader,
         )
         peer = JsonRpcPeer(
             reader,

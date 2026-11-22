@@ -12,7 +12,7 @@ moves on. Correct one such statement a day, with the evidence that it was wrong.
 
 - **Mode when GitHub runs it daily:** act — may open a draft pull request; never merges, approves, releases or deletes.
 - **What it is for:** Find one statement in the documentation, the paper or the book that the repository contradicts, and correct it.
-- **Decision records:** 100, the newest 0100 — Host-driven MCP interface and chat-first krypton surfaces.
+- **Decision records:** 101, the newest 0101 — The ACP agent, and the user-level services it installs and keeps running.
 - **Lanes it keeps usable:** [Documentation updater](https://github.com/the-vibey-project/vibey/actions/workflows/docs-updater.yml).
 <!-- END GENERATED continuation:state -->
 

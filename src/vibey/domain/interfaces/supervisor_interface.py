@@ -9,7 +9,12 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, Protocol, runtime_checkable
 
 if TYPE_CHECKING:
-    from vibey.domain.supervisor import SupervisedService, SupervisorPaths, SupervisorSettings
+    from vibey.domain.supervisor import (
+        RestartPolicy,
+        SupervisedService,
+        SupervisorPaths,
+        SupervisorSettings,
+    )
 
 
 @runtime_checkable
@@ -25,6 +30,19 @@ class SupervisorPlannerInterface(Protocol):
     ) -> tuple[SupervisedService, ...]:
         """The worker, and the delivery bridge unless `[supervisor] delivery` is off.
         Raises ValueError on a setting no service could run with."""
+        ...
+
+    def acp_services(
+        self,
+        settings: SupervisorSettings,
+        paths: SupervisorPaths,
+        *,
+        names: tuple[str, ...],
+        restart: RestartPolicy,
+    ) -> tuple[SupervisedService, ...]:
+        """The hub and worker units `vibey acp` loads (ADR-0101), in `names` order. Raises
+        ValueError for any other name, a label prefix outside the closed alphabet, or a
+        throttle under 1."""
         ...
 
     def under(self, path: str, roots: tuple[str, ...]) -> str:

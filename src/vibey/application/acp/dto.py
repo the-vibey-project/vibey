@@ -56,6 +56,34 @@ class PostgresInstallOutcome:
     stopped: the install may still be changing the computer, so it is not reported as failed."""
 
 
+type UnitAction = Literal[
+    "created",
+    "unchanged",
+    "kept-differing",
+    "updated",
+    "loaded",
+    "already-loaded",
+    "restarted",
+    "deferred",
+    "failed",
+]
+"""What was done with one supervised unit: its file written (`created`, `updated`), found as
+vibey renders it (`unchanged`) or left as the operator edited it (`kept-differing`); the unit
+loaded, found loaded, restarted, left for later (`deferred`), or not (`failed`)."""
+
+
+@dataclass(frozen=True, slots=True)
+class UnitOutcome:
+    """One supervised unit, what was done with it, and why (ADR-0101). `detail` is the
+    machine's text (a service manager's answer, an OS error): shown to an editor, it goes
+    through `UntrustedTextInterface`."""
+
+    label: str
+    path: str
+    action: UnitAction
+    detail: str = ""
+
+
 @dataclass(frozen=True, slots=True)
 class HubTurn:
     """One chat turn the hub ran (`POST /api/v1/chat/messages`)."""
