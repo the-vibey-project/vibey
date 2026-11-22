@@ -51,8 +51,15 @@ from vibey.application.hub.interfaces.hub_service_interface import (
     HubDocument,
     HubServiceInterface,
 )
+from vibey.application.hub.interfaces.web_tools_service_interface import (
+    WebAuditPortInterface,
+    WebFetchPortInterface,
+    WebSearchPortInterface,
+    WebToolsServiceInterface,
+)
+from vibey.application.hub.web_tools_service import WebToolsService
 from vibey.application.interfaces.remote_command import RemoteCommandServiceInterface
-from vibey.bootstrap import AppResources, build_app, database_url
+from vibey.bootstrap import AppResources, acp_user_config, build_app, database_url
 from vibey.cli.budget import BUDGET_PRESENTER
 from vibey.cli.errors import EXIT_USAGE
 from vibey.cli.gates import GATES_PRESENTER
@@ -79,6 +86,7 @@ from vibey.domain.interfaces.queue_priority_interface import PriorityChangeInter
 from vibey.domain.interfaces.run_ownership_interface import RunOwnershipInterface
 from vibey.domain.ledger import LedgerEvent
 from vibey.domain.run_ownership import RunOwnership
+from vibey.domain.web_tools import WebToolSettings
 from vibey.infrastructure.acp.acp_settings_loader import ACP_SETTINGS
 from vibey.infrastructure.acp.interfaces.acp_settings_loader_interface import (
     AcpSettingsLoaderInterface,
@@ -126,6 +134,13 @@ from vibey.infrastructure.hub.serve_lock import ServeLock
 from vibey.infrastructure.hub.server import HUB_SERVER, LOCAL_NAMES
 from vibey.infrastructure.hub.settings import HUB_SETTINGS, HubSettings
 from vibey.infrastructure.hub.tls import HubCertificate, HubTls
+from vibey.infrastructure.hub.web_audit import PostgresWebAudit
+from vibey.infrastructure.web.guarded_fetch import GuardedPageFetch
+from vibey.infrastructure.web.hub_search import HubWebSearch
+from vibey.infrastructure.web.interfaces.web_settings_loader_interface import (
+    WebToolSettingsLoaderInterface,
+)
+from vibey.infrastructure.web.web_settings_loader import WEB_SETTINGS
 from vibey.tui.dashboard import fetch_dashboard_state
 
 if TYPE_CHECKING:
@@ -289,6 +304,7 @@ class DeferredHubAppFactory:
         workflows: RemoteCommandServiceInterface | None = None,
         runs: RunOwnershipInterface | None = None,
         acp_sessions: AcpSessionServiceInterface | None = None,
+        web: WebToolsServiceInterface | None = None,
     ) -> "FastAPI":
         from vibey.infrastructure.hub.app import HUB_APP
 
@@ -302,6 +318,7 @@ class DeferredHubAppFactory:
             workflows=workflows,
             runs=runs,
             acp_sessions=acp_sessions,
+            web=web,
         )
 
 
@@ -342,8 +359,22 @@ class ServeCommand:
             )
         ),
         acp_settings: AcpSettingsLoaderInterface = ACP_SETTINGS,
+        web_settings: WebToolSettingsLoaderInterface = WEB_SETTINGS,
+        user_config: Callable[[], Path] | None = None,
+        web_tools: Callable[[asyncpg.Pool, WebToolSettings], WebToolsServiceInterface] = (
+            lambda pool, settings: WebToolsService(
+                search=HubWebSearch(),
+                fetch=GuardedPageFetch(),
+                audit=PostgresWebAudit(pool),
+                settings=settings,
+            )
+        ),
     ) -> None:
         self._acp_settings = acp_settings
+        self._web_settings = web_settings
+        # Read when the hub starts, so a test may stand in for the person's own file.
+        self._user_config = user_config or (lambda: acp_user_config())
+        self._web_tools = web_tools
         self._lock = lock
         self._acp_sessions = acp_sessions
         self._devices = devices
@@ -370,8 +401,14 @@ class ServeCommand:
             allowed_hosts=frozenset(),
             ready=self._never_ready,
             live=LedgerAnnouncements(self._never_connect),
-            # Present only so its routes are documented; nothing calls it.
+            # Present only so their routes are documented; nothing calls them.
             acp_sessions=AcpSessionService(cast(AcpSessionRepositoryInterface, None), HUB_SCOPES),
+            web=WebToolsService(
+                search=cast(WebSearchPortInterface, None),
+                fetch=cast(WebFetchPortInterface, None),
+                audit=cast(WebAuditPortInterface, None),
+                settings=WebToolSettings(),
+            ),
         )
         return json.dumps(app.openapi(), indent=2, sort_keys=True) + "\n"
 
@@ -382,6 +419,8 @@ class ServeCommand:
             # sessions, so a bad value of either stops it here, as `[hub]` does; the editor's
             # keys in the same table are never read by the hub.
             acp = self._acp_settings.hub_settings(self._config_path())
+            # `[web]` is the person's (their own vibey.toml); the folder's may only tighten it.
+            web = self._web_settings.load_trusted(self._user_config(), self._config_path())
             bound = self._binding.resolve(host, lan_declared=settings.lan)
         except (ConfigError, UndeclaredExposure) as exc:
             typer.echo(str(exc), err=True)
@@ -400,12 +439,17 @@ class ServeCommand:
             )
             raise typer.Exit(1)
         try:
-            await self._serve(settings, bound, listen, acp)
+            await self._serve(settings, bound, listen, acp, web)
         finally:
             lock.release()
 
     async def _serve(
-        self, settings: HubSettings, bound: str, listen: int, acp: AcpSettings
+        self,
+        settings: HubSettings,
+        bound: str,
+        listen: int,
+        acp: AcpSettings,
+        web: WebToolSettings,
     ) -> None:
         store = LocalTokenStore(settings.state_dir)
         try:
@@ -476,6 +520,7 @@ class ServeCommand:
                 workflows=self.workflows(os.environ),
                 runs=runs,
                 acp_sessions=self._acp_sessions(resources.ledger._pool, acp),
+                web=self._web_tools(resources.ledger._pool, web),
             )
             scheme = "https" if tls is not None else "http"
             typer.echo(f"vibey hub on {scheme}://{self._shown(bound)}:{listen}/api/v1")

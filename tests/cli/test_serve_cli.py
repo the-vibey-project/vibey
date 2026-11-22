@@ -575,3 +575,62 @@ def test_an_editor_only_acp_key_never_stops_the_hub(tmp_path: Path) -> None:
         )
     )
     assert got["ready"].json() == {"status": "ready"}
+
+
+def test_a_wrong_web_setting_stops_the_hub_before_anything_opens(tmp_path: Path) -> None:
+    """`[web]` bounds what the hub may fetch, so a bad value is refused by name (ADR-0102)."""
+
+    def refuse() -> Any:
+        raise AssertionError("nothing may open")
+
+    toml = tmp_path / "vibey.toml"
+    toml.write_text("[web]\nallow_hosts = ['*.example.com']\n")
+    command = ServeCommand(
+        open_app=refuse,
+        server=Driven(lambda *_: asyncio.sleep(0)),
+        config_path=lambda: toml,
+    )
+    with pytest.raises(Exception) as caught:
+        asyncio.run(command.run(host=None, port=None))
+    assert getattr(caught.value, "exit_code", None) == 2
+
+
+@pytest.mark.integration
+@pytest.mark.usefixtures("_an_empty_database")
+def test_the_hub_serves_web_tools_under_the_persons_web_settings_narrowed_by_the_folders(
+    tmp_path: Path,
+) -> None:
+    """The person's own file sets `[web]`; the folder the hub started in may only tighten it. With
+    no project there is no ledger to record a use in, so nothing is fetched."""
+    got: dict[str, httpx.Response] = {}
+    mine = tmp_path / "me" / "vibey.toml"
+    mine.parent.mkdir()
+    mine.write_text("[web]\nfetches_per_hour = 2\nsearches_per_hour = 5\n")
+
+    async def drive(client: httpx.AsyncClient, token: str) -> None:
+        auth = {"authorization": f"Bearer {token}"}
+        body = {"url": "https://docs.example/"}
+        got["first"] = await client.post("/api/v1/web/fetch", headers=auth, json=body)
+        got["second"] = await client.post("/api/v1/web/fetch", headers=auth, json=body)
+        got["search"] = await client.post("/api/v1/web/search", headers=auth, json={"query": "q"})
+
+    state = tmp_path / "state"
+    (tmp_path / "vibey.toml").write_text(
+        f"[hub]\nstate_dir = '{state}'\n[web]\nfetches_per_hour = 1\nsearches_per_hour = 500\n"
+    )
+    server = Driven(drive)
+    server.state = state
+    command = ServeCommand(
+        server=server,
+        names=Names(),
+        config_path=lambda: tmp_path / "vibey.toml",
+        advertiser=Advertiser(),
+        user_config=lambda: mine,
+    )
+    asyncio.run(command.run(host=None, port=None))
+    assert got["first"].status_code == 503
+    assert "no project ledger" in got["first"].json()["detail"]
+    # The folder lowered the person's fetch budget of two to one.
+    assert got["second"].status_code == 429
+    assert "fetches_per_hour = 1" in got["second"].json()["detail"]
+    assert got["search"].status_code == 503

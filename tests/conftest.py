@@ -362,6 +362,23 @@ def _hermetic_web_search(request: pytest.FixtureRequest, monkeypatch: pytest.Mon
 
     nowhere = SearxngFiles(Path("/nonexistent-vibey-hermetic-test") / "searxng")
     monkeypatch.setattr(SearxngFiles, "personal", classmethod(lambda cls, folder=None: nowhere))
+    # Nor may the hub's `[web]` settings come from the developer's own vibey.toml (ADR-0102).
+    import vibey.cli.serve
+
+    monkeypatch.setattr(
+        vibey.cli.serve,
+        "acp_user_config",
+        lambda: Path("/nonexistent-vibey-hermetic-test") / "vibey.toml",
+    )
+    # And no fetch the hub makes may resolve a real name: a test injects its own resolver.
+    from vibey.infrastructure.web.guarded_fetch import GuardedPageFetch
+
+    if request.node.get_closest_marker("web_network") is None:
+        monkeypatch.setattr(
+            GuardedPageFetch,
+            "system_addresses",
+            staticmethod(lambda host, port: []),
+        )
     if request.node.get_closest_marker("web_network") is None:
 
         def refused(self: GuardedOpener, request: object, timeout: float) -> object:
