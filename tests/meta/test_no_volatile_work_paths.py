@@ -123,6 +123,12 @@ ALLOWED: tuple[tuple[str, str, str], ...] = (
         " container scratches in and loses on exit by design, never a host path, never work",
     ),
     (
+        "docs/architecture/decisions/0102-*.md",
+        r"--tmpfs /tmp",
+        "the SearXNG container's own /tmp tmpfs, in the record of its command line: inside the"
+        " container, not a host path where work is kept",
+    ),
+    (
         "docs/reference/cli.md",
         r"--tmpfs /tmp",
         "the SearXNG container's own /tmp tmpfs (ADR-0102), quoted from its command line: inside"
