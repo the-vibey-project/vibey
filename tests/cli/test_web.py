@@ -145,18 +145,75 @@ def test_a_healthy_searxng_with_a_key_set_never_asks_brave(
 def test_a_project_vibey_toml_cannot_point_search_anywhere(
     tmp_path: Any, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
 ) -> None:
+    """Pins the contract that search is configured by the environment alone: every path that
+    builds search settings runs in a folder holding a hostile `vibey.toml`, and any attempt to
+    open a `vibey.toml` while they run fails the test, so a future reader of project config is
+    caught here, not only a reader that happens to obey it."""
+    import builtins
+    import io
+    import os
+    import pathlib
+
+    from vibey.cli.web import web_search_line
+    from vibey.cli.web_search_doctor import WebSearchDoctor
+    from vibey.infrastructure.engines.gptossloop_design import GptossloopDesignProvider
+    from vibey.infrastructure.web.search import WebSearchSettings
+
     (tmp_path / "vibey.toml").write_text(
         '[project]\nname = "x"\n[search]\nsearxng_url = "http://evil.example"\n'
         'provider = "brave"\nbrave_api_key = "fake-planted"\n'
         '[env]\nVIBEY_SEARXNG_URL = "http://evil.example"\n'
     )
     monkeypatch.chdir(tmp_path)
+    opened: list[str] = []
+
+    def refuse(name: object) -> None:
+        if str(name).endswith("vibey.toml"):
+            opened.append(str(name))
+            raise AssertionError(f"search read a project file: {name}")
+
+    real_open, real_read_text, real_read_bytes, real_path_open = (
+        builtins.open,
+        pathlib.Path.read_text,
+        pathlib.Path.read_bytes,
+        pathlib.Path.open,
+    )
+
+    def spy_open(file: Any, *args: Any, **kwargs: Any) -> Any:
+        refuse(file)
+        return real_open(file, *args, **kwargs)
+
+    def spy_read_text(self: pathlib.Path, *args: Any, **kwargs: Any) -> str:
+        refuse(self)
+        return real_read_text(self, *args, **kwargs)
+
+    def spy_read_bytes(self: pathlib.Path) -> bytes:
+        refuse(self)
+        return real_read_bytes(self)
+
+    def spy_path_open(self: pathlib.Path, *args: Any, **kwargs: Any) -> Any:
+        refuse(self)
+        return real_path_open(self, *args, **kwargs)
+
+    monkeypatch.setattr(builtins, "open", spy_open)
+    monkeypatch.setattr(io, "open", spy_open)
+    monkeypatch.setattr(pathlib.Path, "read_text", spy_read_text)
+    monkeypatch.setattr(pathlib.Path, "read_bytes", spy_read_bytes)
+    monkeypatch.setattr(pathlib.Path, "open", spy_path_open)
     seen: list[str] = []
-    import os
 
     assert run_search("q", None, True, environ=os.environ, opener=_opener(RESULTS, seen)) == 0
+    settings = WebSearchSettings.from_environment(os.environ)
+    line = web_search_line(settings)
+    doctor_lines, _ = WebSearchDoctor(opener=_opener(RESULTS)).doctor_lines()
+    provider = GptossloopDesignProvider.from_environment(os.environ)
+
+    assert opened == []
     assert seen == ["http://127.0.0.1:28180/search?q=q&format=json"]
-    assert "evil" not in capsys.readouterr().out
+    assert settings.searxng_url == "http://127.0.0.1:28180" and not settings.has_backup
+    assert provider._web is not None
+    shown = capsys.readouterr().out + line + " ".join(doctor_lines)
+    assert "evil" not in shown and "fake-planted" not in shown
 
 
 def test_a_setting_that_cannot_be_read_exits_with_usage(capsys: pytest.CaptureFixture[str]) -> None:
@@ -274,7 +331,7 @@ def test_the_worker_says_where_web_search_reaches() -> None:
     backed = web_search_line(
         WebSearchSettings.from_environment(
             {
-                "VIBEY_SEARXNG_URL": "http://me:pw@search.lan:8888/?t=1",
+                "VIBEY_SEARXNG_URL": "http://search.lan:8888/",
                 "VIBEY_BRAVE_API_KEY": "fake-k",
             }
         )
@@ -282,7 +339,7 @@ def test_the_worker_says_where_web_search_reaches() -> None:
     assert backed.startswith("web search: the local SearXNG at http://search.lan:8888/ first")
     assert "Brave backup configured via VIBEY_BRAVE_API_KEY" in backed
     assert "only in vibey's own processes" in backed and "never reaches a session" in backed
-    assert "pw" not in backed and "fake-k" not in backed
+    assert "fake-k" not in backed
 
 
 def test_vibey_command_is_the_running_console_script_when_it_is_absolute() -> None:

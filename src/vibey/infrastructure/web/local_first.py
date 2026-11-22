@@ -48,11 +48,13 @@ class LocalFirstSearch:
         *,
         searxng_url: str,
         notice: BackupNoticeInterface = PROCESS_BACKUP_NOTICE,
+        in_session: bool = False,
     ) -> None:
         self._primary = primary
         self._backup = backup
         self._searxng_url = searxng_url
         self._notice = notice
+        self._in_session = in_session
 
     def __repr__(self) -> str:
         backup = "brave" if self._backup is not None else "none"
@@ -81,7 +83,13 @@ class LocalFirstSearch:
             if settings.brave_key is not None
             else None
         )
-        return cls(primary, backup, searxng_url=settings.searxng_url, notice=notice)
+        return cls(
+            primary,
+            backup,
+            searxng_url=settings.searxng_url,
+            notice=notice,
+            in_session=settings.in_session,
+        )
 
     def answer(self, query: str, limit: int) -> SearchAnswer:
         try:
@@ -91,9 +99,18 @@ class LocalFirstSearch:
         return SearchAnswer(hits=tuple(hits), backend="searxng")
 
     def _fall_back(self, query: str, limit: int, reason: str) -> SearchAnswer:
+        where = display_url(self._searxng_url)
+        if self._backup is None and self._in_session:
+            # A session never holds a Brave key, so it is never offered one here.
+            raise WebSearchError(
+                f"the local SearXNG at {where} did not answer ({reason}); an engine session has"
+                " no other search: the person running vibey can start or install that SearXNG"
+                " (`vibey doctor` on their machine says whether it answers)",
+                reason=reason,
+            )
         if self._backup is None:
             raise WebSearchError(
-                f"the local SearXNG at {display_url(self._searxng_url)} did not answer ({reason})"
+                f"the local SearXNG at {where} did not answer ({reason})"
                 " and no Brave backup is configured: start SearXNG there (`vibey doctor` says"
                 f" whether it answers) or point {SEARXNG_URL_ENV} at yours; a Brave key"
                 f" ({BRAVE_KEY_ENV} or {BRAVE_KEY_ALIAS_ENV}) is used only as a backup",

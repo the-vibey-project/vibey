@@ -30,6 +30,7 @@ from typing import Any, Final
 from vibey.application.acp.doctor_checks import DoctorChecks
 from vibey.cli.interfaces.web_search_doctor_interface import WebSearchDoctorInterface
 from vibey.domain.config import ConfigError
+from vibey.infrastructure.web.guarded_opener import GuardedOpener
 from vibey.infrastructure.web.search import (
     BRAVE_KEY_ALIAS_ENV,
     BRAVE_KEY_ENV,
@@ -69,6 +70,11 @@ class WebSearchDoctor:
         except ConfigError as exc:
             return [f"FAIL {NAME:<{_WIDTH}} {DoctorChecks.cleaned(str(exc), limit=400)}"], False
         where = DoctorChecks.cleaned(display_url(settings.searxng_url))
+        kind = (
+            "local SearXNG"
+            if GuardedOpener.is_loopback(settings.searxng_url)
+            else "SearXNG (not on this machine: queries leave it)"
+        )
         down = SearxngBackend(
             settings.searxng_url,
             timeout_seconds=settings.timeout_seconds,
@@ -77,7 +83,7 @@ class WebSearchDoctor:
         ).health()
         if down is None:
             expected = " (the expected instance)" if settings.searxng_instance else ""
-            local = f"PASS {NAME:<{_WIDTH}} local SearXNG answering at {where}{expected}"
+            local = f"PASS {NAME:<{_WIDTH}} {kind} answering at {where}{expected}"
         elif SearxngBackend.is_impostor(down):
             who, _, why = down.partition(" listening there ")
             local = (
@@ -87,7 +93,7 @@ class WebSearchDoctor:
             )
         else:
             local = (
-                f"WARN {NAME:<{_WIDTH}} local SearXNG not answering at {where}"
+                f"WARN {NAME:<{_WIDTH}} {kind} not answering at {where}"
                 f" ({DoctorChecks.cleaned(down)}): start SearXNG there with its JSON format"
                 f" enabled, or point {SEARXNG_URL_ENV} at yours; until then vibey's searches"
                 " fail, or go to Brave when a backup key is set"

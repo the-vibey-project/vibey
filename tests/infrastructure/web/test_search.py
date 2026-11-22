@@ -4,6 +4,8 @@ and Brave only as a backup (operator ruling 2026-11-21). Every key here is a fak
 
 import http.client
 import json
+import threading
+import time
 import urllib.error
 import urllib.request
 from typing import Any
@@ -15,6 +17,7 @@ from vibey.domain.config import ConfigError
 from vibey.infrastructure.web.guarded_opener import GuardedOpener
 from vibey.infrastructure.web.search import (
     DEFAULT_SEARXNG_URL,
+    IMPOSTOR,
     BraveBackend,
     SearxngBackend,
     WebSearchError,
@@ -267,8 +270,8 @@ def test_a_searxng_whose_engines_all_failed_has_failed() -> None:
     }
     with pytest.raises(WebSearchError) as caught:
         SearxngBackend("http://h", opener=_opener(body)).search("q", 5)
-    assert caught.value.reason == "every engine it asked failed (2 unresponsive)"
-    assert str(caught.value) == "searxng every engine it asked failed (2 unresponsive)"
+    assert caught.value.reason == "every engine it asked failed (1 unresponsive)"
+    assert str(caught.value) == "searxng every engine it asked failed (1 unresponsive)"
 
 
 def test_a_searxng_with_results_and_some_failed_engines_still_answers() -> None:
@@ -543,3 +546,149 @@ def test_the_identity_marker_and_ttl_are_read_from_the_environment() -> None:
     assert "WEBSEARCH_SEARXNG_INSTANCE" not in plain.session_environment()
     with pytest.raises(ConfigError, match="VIBEY_SEARCH_IDENTITY_TTL"):
         WebSearchSettings.from_environment({"VIBEY_SEARCH_IDENTITY_TTL": "0"})
+
+
+# -- review fix round 1 ------------------------------------------------------------------------
+
+DEEP = b"[" * 100_000 + b"]" * 100_000
+"""JSON nested deeper than Python's parser will go: it raises RecursionError, not ValueError."""
+
+
+def test_deeply_nested_json_at_config_is_not_searxng_and_never_raises() -> None:
+    backend = SearxngBackend("http://h", opener=_site(DEEP))
+    assert backend.health() == f"{IMPOSTOR} (its /config is not JSON)"
+    with pytest.raises(WebSearchError, match="its /config is not JSON"):
+        backend.search("q", 1)
+
+
+def test_deeply_nested_json_from_search_or_brave_is_a_failure() -> None:
+    with pytest.raises(WebSearchError, match="searxng did not answer with JSON"):
+        SearxngBackend("http://h", opener=_opener(DEEP)).search("q", 1)
+    with pytest.raises(WebSearchError, match="brave did not answer with JSON"):
+        BraveBackend("fake-k", opener=_opener(DEEP)).search("q", 1)
+
+
+ENGINES = {
+    **SEARXNG_CONFIG,
+    "engines": [
+        {"name": "duckduckgo", "enabled": True},
+        {"name": "wikipedia", "enabled": True},
+        {"name": "google", "enabled": False},
+        {"name": 7, "enabled": True},
+        "not an engine",
+    ],
+}
+
+
+@pytest.mark.parametrize(
+    "unresponsive",
+    [
+        [["duckduckgo", "timeout"]],
+        [["duckduckgo", "timeout"], ["google", "CAPTCHA"]],
+        [["duckduckgo"], "wikipedia", [], [7, "x"], {"wikipedia": 1}],
+    ],
+)
+def test_an_empty_answer_with_some_engines_unresponsive_is_a_partial_answer(
+    unresponsive: object,
+) -> None:
+    site = _site(ENGINES, {"results": [], "unresponsive_engines": unresponsive})
+    assert SearxngBackend("http://h", opener=site).search("q", 5) == []
+
+
+def test_an_empty_answer_with_every_enabled_engine_unresponsive_is_a_failure() -> None:
+    every = {"results": [], "unresponsive_engines": [["wikipedia", "x"], ["duckduckgo", "y"]]}
+    with pytest.raises(WebSearchError) as caught:
+        SearxngBackend("http://h", opener=_site(ENGINES, every)).search("q", 5)
+    assert caught.value.reason == "every engine it asked failed (2 unresponsive)"
+
+
+def test_an_empty_answer_from_a_searxng_with_no_engine_enabled_is_a_failure() -> None:
+    none_on = {**SEARXNG_CONFIG, "engines": [{"name": "google", "enabled": False}]}
+    with pytest.raises(WebSearchError, match="searxng has no engine enabled"):
+        SearxngBackend("http://h", opener=_site(none_on, {"results": []})).search("q", 5)
+    answered = {"results": [{"title": "T", "url": "https://t.example"}]}
+    hits = SearxngBackend("http://h2", opener=_site(none_on, answered)).search("q", 5)
+    assert [h.url for h in hits] == ["https://t.example"]
+
+
+@pytest.mark.parametrize(
+    ("key", "wrong"),
+    [
+        (key, wrong)
+        for key in ("instance_name", "version", "engines", "categories")
+        for wrong in (None, 7, "x" if key in {"engines", "categories"} else [])
+    ],
+)
+def test_every_identity_key_and_its_type_is_checked(key: str, wrong: object) -> None:
+    config = dict(SEARXNG_CONFIG)
+    if wrong is None:
+        del config[key]
+    else:
+        config[key] = wrong
+    assert SearxngBackend("http://h", opener=_site(config)).health() == (
+        f"{IMPOSTOR} (its /config is not SearXNG's)"
+    )
+
+
+@pytest.mark.parametrize(
+    ("url", "needle"),
+    [
+        ("http://127.0.0.1:abc", "port from 1 to 65535"),
+        ("http://127.0.0.1:99999", "port from 1 to 65535"),
+        ("http://127.0.0.1:0", "port from 1 to 65535"),
+        ("http://user:pw@127.0.0.1:28180", "user name or password"),
+        ("http://token@127.0.0.1:28180", "user name or password"),
+        ("http://127.0.0.1:28180/?x=1", "query or a fragment"),
+        ("http://127.0.0.1:28180/#f", "query or a fragment"),
+        ("http://127.0.0.1:28180/?", "query or a fragment"),
+        ("http://127.0.0.1:28180/a b", "spaces or control characters"),
+        ("http://:28180", "with a host"),
+    ],
+)
+def test_a_searxng_url_vibey_cannot_use_as_given_is_refused_without_echoing_it(
+    url: str, needle: str
+) -> None:
+    with pytest.raises(ConfigError, match=needle) as caught:
+        WebSearchSettings.from_environment({"VIBEY_SEARXNG_URL": url})
+    assert "pw" not in str(caught.value) and "token" not in str(caught.value)
+
+
+@pytest.mark.parametrize("url", ["http://127.0.0.1:abc/x", "http://127.0.0.1:99999", "nonsense"])
+def test_showing_a_url_never_raises(url: str) -> None:
+    assert display_url(url).startswith(("http://127.0.0.1/", "http://127.0.0.1", ":"))
+
+
+def test_a_result_carries_no_terminal_control_and_a_dirty_url_is_dropped() -> None:
+    body = {
+        "results": [
+            {
+                "title": "A\x1b]52;c;ZXZpbA==\x07B\x1b[2J",
+                "url": "https://a.example",
+                "content": "x\x9b31my\u202e\x7fz\tq\nr",
+            },
+            {"title": "evil", "url": "https://b.example/\x1b]8;;x\x07", "content": ""},
+            {"title": "spaced", "url": "https://c.example/a b", "content": ""},
+        ]
+    }
+    hits = SearxngBackend("http://h", opener=_opener(body)).search("q", 5)
+    assert [(h.title, h.url, h.snippet) for h in hits] == [("AB", "https://a.example", "xyz\tq\nr")]
+
+
+def test_an_answer_that_is_still_arriving_at_the_deadline_is_a_failure() -> None:
+    release = threading.Event()
+
+    def stuck(request: urllib.request.Request, timeout: float) -> FakeResponse:
+        release.wait(10)
+        return FakeResponse(SEARXNG_CONFIG)
+
+    try:
+        backend = SearxngBackend("http://h", opener=stuck, timeout_seconds=0.2)
+        started = time.monotonic()
+        assert backend.health() == "did not finish answering within 0.2s"
+        with pytest.raises(WebSearchError, match="searxng did not finish answering within 0.2s"):
+            backend.search("q", 1)
+        with pytest.raises(WebSearchError, match="brave did not finish answering within 0.2s"):
+            BraveBackend("fake-k", opener=stuck, timeout_seconds=0.2).search("q", 1)
+        assert time.monotonic() - started < 3
+    finally:
+        release.set()

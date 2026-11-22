@@ -276,3 +276,17 @@ def test_the_real_connection_is_pinned_to_the_checked_ip_but_still_names_the_hos
     with pytest.raises(OSError, match="stop here"):
         conn.connect()
     assert reached == [("93.184.216.34", 443 if scheme == "https" else 80)]
+
+
+@pytest.mark.parametrize(
+    ("kind", "body"),
+    [
+        ("text/html", b"<title>T\x1b]0;owned\x07</title><p>a\x1b]52;c;ZXZpbA==\x07b\x1b[2Jc</p>"),
+        ("text/plain", b"a\x1b]52;c;ZXZpbA==\x07b\x1b[2Jc"),
+    ],
+)
+def test_a_page_reaches_its_reader_with_no_terminal_control(kind: str, body: bytes) -> None:
+    conn = FakeConnection(FakeResponse(200, {"Content-Type": kind}, body))
+    fetcher, _ = _fetcher([conn])
+    page = fetcher.fetch("https://evil.example/")
+    assert page.text == "abc" and "\x1b" not in page.title + page.text

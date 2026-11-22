@@ -4,7 +4,25 @@
 from __future__ import annotations
 
 import urllib.request
-from typing import Any, Protocol, runtime_checkable
+from http.client import HTTPMessage
+from typing import IO, Any, Protocol, runtime_checkable
+
+
+@runtime_checkable
+class SameOriginRedirectsInterface(Protocol):
+    """A `urllib` redirect handler that follows a redirect only within its own origin."""
+
+    def redirect_request(
+        self,
+        req: urllib.request.Request,
+        fp: IO[bytes],
+        code: int,
+        msg: str,
+        headers: HTTPMessage,
+        newurl: str,
+    ) -> urllib.request.Request | None:
+        """The follow-up request, or None (the redirect is then raised as its HTTPError)."""
+        ...
 
 
 @runtime_checkable

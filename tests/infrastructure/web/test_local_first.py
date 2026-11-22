@@ -14,6 +14,7 @@ from typing import Any
 
 import pytest
 
+from tests.infrastructure.web.searxng_fakes import SEARXNG_CONFIG
 from vibey.infrastructure.web.backup_notice import PROCESS_BACKUP_NOTICE, BackupNotice
 from vibey.infrastructure.web.interfaces import (
     BackupNoticeInterface,
@@ -359,3 +360,56 @@ def test_from_the_settings_a_squatter_is_unavailable_and_the_backup_answers() ->
     plain = LocalFirstSearch.from_settings(WebSearchSettings.from_environment({}), opener=squatter)
     with pytest.raises(WebSearchError, match="something other than SearXNG is listening there"):
         plain.answer(QUERY, 2)
+
+
+def test_inside_a_session_a_failure_never_offers_a_brave_key() -> None:
+    told = WebSearchSettings.from_environment(
+        {"WEBSEARCH_PROVIDER": "searxng", "WEBSEARCH_SEARXNG_URL": "http://127.0.0.1:28180"}
+    )
+    assert told.in_session
+    opener, _ = _routing(urllib.error.URLError(ConnectionRefusedError()), BRAVE_BODY)
+    with pytest.raises(WebSearchError) as caught:
+        LocalFirstSearch.from_settings(told, opener=opener).answer(QUERY, 1)
+    said = str(caught.value)
+    assert "an engine session has no other search" in said and "vibey doctor" in said
+    assert "Brave" not in said and "BRAVE" not in said and "KEY" not in said
+    assert not WebSearchSettings.from_environment({}).in_session
+
+
+DEEP = b"[" * 100_000 + b"]" * 100_000
+
+
+@pytest.mark.parametrize("where", ["/config", "/search"])
+def test_deeply_nested_json_from_searxng_takes_the_backup_or_fails_cleanly(where: str) -> None:
+    def opener(request: urllib.request.Request, timeout: float) -> _Response:
+        url = request.full_url
+        if url.startswith("https://api.search.brave.com/"):
+            return _Response(json.dumps(BRAVE_BODY).encode())
+        if url.split("?")[0].endswith(where):
+            return _Response(DEEP)
+        return _Response(json.dumps(SEARXNG_CONFIG).encode())
+
+    keyed = WebSearchSettings.from_environment({"VIBEY_BRAVE_API_KEY": FAKE_KEY})
+    answer = LocalFirstSearch.from_settings(
+        keyed, opener=opener, notice=BackupNotice(write=lambda _: None)
+    ).answer(QUERY, 1)
+    assert answer.backend == "brave"
+    plain = LocalFirstSearch.from_settings(WebSearchSettings.from_environment({}), opener=opener)
+    with pytest.raises(WebSearchError, match="no Brave backup is configured"):
+        plain.answer(QUERY, 1)
+
+
+def test_deeply_nested_json_from_brave_is_a_named_failure_of_both() -> None:
+    def opener(request: urllib.request.Request, timeout: float) -> _Response:
+        if request.full_url.startswith("https://api.search.brave.com/"):
+            return _Response(DEEP)
+        raise ConnectionRefusedError
+
+    keyed = WebSearchSettings.from_environment({"VIBEY_BRAVE_API_KEY": FAKE_KEY})
+    search = LocalFirstSearch.from_settings(
+        keyed, opener=opener, notice=BackupNotice(write=lambda _: None)
+    )
+    with pytest.raises(
+        WebSearchError, match=r"the Brave backup failed too \(brave did not answer with JSON\)"
+    ):
+        search.answer(QUERY, 1)

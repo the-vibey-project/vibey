@@ -23,11 +23,11 @@ import urllib.request
 from http.client import HTTPMessage
 from typing import IO, Any
 
-_LOCAL_NAMES = frozenset({"localhost"})
 
+class SameOriginRedirects(urllib.request.HTTPRedirectHandler):
+    """Follows a redirect only within the origin it started from.
 
-class _SameOriginRedirects(urllib.request.HTTPRedirectHandler):
-    """Follows a redirect only within the origin it started from."""
+    Declared by `interfaces/guarded_opener_interface.py::SameOriginRedirectsInterface`."""
 
     def redirect_request(
         self,
@@ -51,7 +51,7 @@ class GuardedOpener:
 
     def __init__(self, base_url: str) -> None:
         self.direct = self.is_loopback(base_url)
-        handlers: list[urllib.request.BaseHandler] = [_SameOriginRedirects()]
+        handlers: list[urllib.request.BaseHandler] = [SameOriginRedirects()]
         if self.direct:
             handlers.append(urllib.request.ProxyHandler({}))
         self._director = urllib.request.build_opener(*handlers)
@@ -61,9 +61,10 @@ class GuardedOpener:
 
     @staticmethod
     def is_loopback(url: str) -> bool:
-        """Whether `url` names this machine: `localhost` or a loopback address."""
-        host = (urllib.parse.urlsplit(url).hostname or "").lower()
-        if host in _LOCAL_NAMES:
+        """Whether `url` names this machine: `localhost` or a name under it (RFC 6761), with or
+        without the root's trailing dot, or an address in 127.0.0.0/8 or ::1."""
+        host = (urllib.parse.urlsplit(url).hostname or "").lower().rstrip(".")
+        if host == "localhost" or host.endswith(".localhost"):
             return True
         try:
             return ipaddress.ip_address(host).is_loopback

@@ -14,7 +14,7 @@
 # `sleep(` hits are mostly subprocess script text (inside string literals, which an AST walk
 # never sees), fake-clock calls and waits of 0.05s or less.
 #
-# Remaining by directory: infrastructure 11, meta 5, cli 3, system 3 (total 22).
+# Remaining by directory: infrastructure 12, meta 5, cli 3, system 3 (total 23).
 
 [entries]
 "tests/cli/test_operational_commands.py::test_worker_parallelism_spawns_gathered_loops.sigterm" = { count = 1, reason = "yields to the loop so a real SIGTERM (os.kill) is delivered before the next claim; a fixed 0.1s yield, not a wait on a clock" }
@@ -38,3 +38,4 @@
 "tests/system/test_full_worker_faked.py::test_full_worker_drives_a_project_to_done_local" = { count = 1, reason = "idle step of a poll loop waiting on a WORK retry backoff in the full faked worker; the backoff is real asyncio time inside the worker" }
 "tests/system/test_full_worker_faked.py::test_full_worker_drives_the_deploy_stage_set_to_done_deployed" = { count = 1, reason = "idle step of a poll loop waiting on the full faked worker; the worker's own pacing is real asyncio time" }
 "tests/system/test_full_worker_faked.py::test_full_worker_survives_a_forced_wind_down_rotation" = { count = 1, reason = "idle step of a poll loop waiting on the full faked worker; the worker's own pacing is real asyncio time" }
+"tests/infrastructure/web/test_guarded_opener.py::_Handler.do_GET" = { count = 1, reason = "the loopback server under test must send its answer slowly (one byte per 0.1s, on its own daemon thread) to prove the search request's total deadline cuts it off; the test itself waits only the 0.5s deadline" }

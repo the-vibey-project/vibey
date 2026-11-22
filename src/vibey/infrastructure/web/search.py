@@ -38,7 +38,9 @@ from dataclasses import dataclass, field
 from typing import Any, ClassVar, Final
 
 from vibey.domain.config import ConfigError
+from vibey.infrastructure.web.bounded_request import BoundedRequest, DeadlineExceeded
 from vibey.infrastructure.web.guarded_opener import GuardedOpener
+from vibey.infrastructure.web.untrusted_text import UntrustedText
 
 #: An engine session never receives a `VIBEY_*` variable (doctrine: vibey's own configuration
 #: and credentials stay out of model-driven processes), so a session reads the same settings
@@ -80,6 +82,8 @@ _RESPONSE_LIMIT: Final = 2_000_000
 IMPOSTOR: Final = "something other than SearXNG is listening there"
 STRANGER: Final = "a SearXNG other than the expected one is listening there"
 _UNREACHABLE: Final = (OSError, ValueError, http.client.HTTPException)
+_UNPARSABLE: Final = (ValueError, RecursionError)
+"""JSON that cannot be read: malformed, or nested deeper than the parser will go."""
 """A request that did not complete: refused, timed out, reset, or a malformed status line."""
 
 
@@ -129,6 +133,9 @@ class WebSearchSettings:
     searxng_instance: str | None = None
     """The `instance_name` the SearXNG must answer with, when one is expected."""
     identity_ttl_seconds: float = DEFAULT_IDENTITY_TTL_SECONDS
+    in_session: bool = False
+    """Read inside an engine session (vibey told it `WEBSEARCH_PROVIDER`): no Brave key can be
+    there, so a failure never suggests one."""
 
     @property
     def has_backup(self) -> bool:
@@ -175,6 +182,7 @@ class WebSearchSettings:
             identity_ttl_seconds=_positive_float(
                 environ, SEARCH_IDENTITY_TTL_ENV, DEFAULT_IDENTITY_TTL_SECONDS
             ),
+            in_session=f"{SESSION_PREFIX}PROVIDER" in environ,
         )
 
     def session_environment(self) -> dict[str, str]:
@@ -193,6 +201,10 @@ class WebSearchSettings:
         if self.searxng_instance is not None:
             told[_alias(SEARXNG_INSTANCE_ENV)] = self.searxng_instance
         return told
+
+
+# The module-level functions below read the environment, check a value or shape a message for
+# the settings and both backends alike; none holds state, so none is a method of one of them.
 
 
 def _alias(name: str) -> str:
@@ -215,21 +227,39 @@ def _setting_name(environ: Mapping[str, str], name: str) -> str | None:
 
 
 def _check_http_url(value: str, name: str) -> None:
-    parts = urllib.parse.urlsplit(value)
-    if parts.scheme not in {"http", "https"} or not parts.netloc:
-        # Never echoed: a URL can carry credentials.
+    """Refuse a SearXNG URL vibey cannot use as given. The value is never echoed: it may carry
+    credentials. Credentials are refused outright, so none can reach a session's environment."""
+    try:
+        parts = urllib.parse.urlsplit(value)
+        port = parts.port
+    except ValueError:
+        raise ConfigError(
+            name, "must have a port from 1 to 65535 (the value is not shown)"
+        ) from None
+    if parts.scheme not in {"http", "https"} or not parts.hostname:
         raise ConfigError(name, "must be an http(s) URL with a host (the value is not shown)")
+    if port == 0:
+        raise ConfigError(name, "must have a port from 1 to 65535 (the value is not shown)")
+    if "@" in parts.netloc:
+        raise ConfigError(name, "must not carry a user name or password (the value is not shown)")
+    if parts.query or parts.fragment or value.rstrip().endswith(("?", "#")):
+        raise ConfigError(name, "must not carry a query or a fragment (the value is not shown)")
+    if not UntrustedText.is_clean_url(value):
+        raise ConfigError(name, "must not contain spaces or control characters")
 
 
 def display_url(url: str) -> str:
     """`url` as it may be shown: scheme, host, port and path, never its credentials, query or
-    fragment (a SearXNG URL is the person's own configuration, and may carry any of them)."""
+    fragment. Never raises: an unreadable port is left out."""
     parts = urllib.parse.urlsplit(url)
     host = parts.hostname or ""
     if ":" in host:
         host = f"[{host}]"
-    port = f":{parts.port}" if parts.port is not None else ""
-    return f"{parts.scheme}://{host}{port}{parts.path}"
+    try:
+        port = f":{parts.port}" if parts.port is not None else ""
+    except ValueError:
+        port = ""
+    return f"{parts.scheme}://{host}{port}{UntrustedText.clean(parts.path)}"
 
 
 def _positive_float(environ: Mapping[str, str], name: str, default: float) -> float:
@@ -259,11 +289,16 @@ def _bounded_int(environ: Mapping[str, str], name: str, default: int) -> int:
 
 
 def _plain(text: object) -> str:
-    return html.unescape(_TAG.sub("", str(text or ""))).strip()
+    """A result's title or snippet as plain, printable text: no tags, entities decoded, and no
+    terminal control (`UntrustedText`), in the terminal and in `--json` alike."""
+    return UntrustedText.clean(html.unescape(_TAG.sub("", str(text or "")))).strip()
 
 
 def _hit(title: object, url: object, snippet: object) -> SearchHit | None:
+    """One result, or None when its URL is not a clean http(s) address."""
     address = str(url or "").strip()
+    if not UntrustedText.is_clean_url(address):
+        return None
     if urllib.parse.urlsplit(address).scheme not in {"http", "https"}:
         return None
     return SearchHit(title=_plain(title) or address, url=address, snippet=_plain(snippet))
@@ -278,22 +313,31 @@ def _unreachable(exc: BaseException) -> str:
 
 
 def _failure(backend: str, reason: str) -> WebSearchError:
+    """The error a backend raises: its name, then the reason."""
     return WebSearchError(f"{backend} {reason}", reason=reason)
+
+
+def _late(timeout: float) -> str:
+    """The reason for an answer that did not finish within the total deadline."""
+    return f"did not finish answering within {timeout:g}s"
 
 
 def _get_json(
     opener: Callable[..., Any], request: urllib.request.Request, timeout: float, backend: str
 ) -> Mapping[str, Any]:
+    """A backend's JSON object, read whole within `timeout` seconds in all, or a `WebSearchError`
+    naming why not."""
     try:
-        with opener(request, timeout=timeout) as response:
-            raw = response.read(_RESPONSE_LIMIT)
+        raw = BoundedRequest(opener).fetch(request, deadline=timeout, limit=_RESPONSE_LIMIT).body
     except urllib.error.HTTPError as exc:
         raise _failure(backend, f"answered HTTP {exc.code}") from None
+    except DeadlineExceeded:
+        raise _failure(backend, _late(timeout)) from None
     except _UNREACHABLE as exc:
         raise _failure(backend, _unreachable(exc)) from None
     try:
         body = json.loads(raw)
-    except ValueError:
+    except _UNPARSABLE:
         raise _failure(backend, "did not answer with JSON") from None
     if not isinstance(body, dict):
         raise _failure(backend, "did not answer with a JSON object")
@@ -307,13 +351,19 @@ class SearxngBackend:
     `/config` (no query, no secret, no redirect) must answer SearXNG's JSON, with a string
     `instance_name` and `version` and lists of `engines` and `categories`, and, when an instance
     is expected (`VIBEY_SEARXNG_INSTANCE`), that `instance_name`. Anything else -- another
-    program on the port, HTML, other JSON, a redirect -- is "something other than SearXNG", a
-    failure like any other, and its search results are never read. A proof is kept for the whole
-    process, per address and expected instance, for `identity_ttl_seconds`, so a SearXNG that
-    is replaced is noticed; a refusal is never kept."""
+    program on the port, HTML, other JSON, an answer that came from anywhere but `/config` --
+    is "something other than SearXNG", a failure like any other, and its search results are
+    never read. A proof is kept for the whole process, per address and expected instance, for
+    `identity_ttl_seconds`: a SearXNG replaced within that window is believed until it ends. A
+    refusal is never kept.
+
+    An empty answer is a failure only when SearXNG could not have answered: it has no engine
+    enabled, or every engine it has enabled is among those it reports unresponsive. An empty
+    answer with some engines unresponsive is a partial answer, and stays the answer: the query
+    does not leave the machine for it."""
 
     name = "searxng"
-    _verified: ClassVar[dict[tuple[str, str | None], float]] = {}
+    _verified: ClassVar[dict[tuple[str, str | None], tuple[float, frozenset[str]]]] = {}
     _verifying: ClassVar[threading.Lock] = threading.Lock()
 
     def __init__(
@@ -334,18 +384,15 @@ class SearxngBackend:
         self._clock = clock
 
     def search(self, query: str, limit: int) -> list[SearchHit]:
-        self._believe()
+        enabled = self._believe()
         url = f"{self._base}/search?" + urllib.parse.urlencode({"q": query, "format": "json"})
         request = urllib.request.Request(url, headers={"Accept": "application/json"})  # nosec B310
         body = _get_json(self._opener, request, self._timeout, self.name)
         results = body.get("results")
         if not isinstance(results, list):
             raise _failure(self.name, "did not answer with a results list")
-        failed = body.get("unresponsive_engines")
-        if not results and isinstance(failed, list) and failed:
-            # A SearXNG whose every engine errored answers an empty list; that is a failure,
-            # not "nothing found". An empty list with no failed engine is an honest nothing.
-            raise _failure(self.name, f"every engine it asked failed ({len(failed)} unresponsive)")
+        if not results:
+            self._check_empty(enabled, body.get("unresponsive_engines"))
         hits = [
             hit
             for item in results
@@ -364,37 +411,60 @@ class SearxngBackend:
         """Whether `reason` says something answered that is not (our) SearXNG."""
         return reason.startswith((IMPOSTOR, STRANGER))
 
-    def _believe(self) -> None:
+    def _check_empty(self, enabled: frozenset[str], unresponsive: object) -> None:
+        """Raise when an empty answer means SearXNG could not answer at all."""
+        if not enabled:
+            raise _failure(self.name, "has no engine enabled")
+        # SearXNG lists each as `[name, why]`; anything else in the list names no engine.
+        failed = {
+            entry[0]
+            for entry in (unresponsive if isinstance(unresponsive, list) else [])
+            if isinstance(entry, list) and entry and isinstance(entry[0], str)
+        }
+        if enabled <= failed:
+            raise _failure(self.name, f"every engine it asked failed ({len(enabled)} unresponsive)")
+
+    def _believe(self) -> frozenset[str]:
+        """The engines the proved SearXNG has enabled; raises when it is not proved."""
         key = (self._base, self._instance)
         with self._verifying:
-            since = self._verified.get(key)
-        if since is not None and self._clock() - since < self._ttl:
-            return
-        reason = self._identify()
+            kept = self._verified.get(key)
+        if kept is not None and self._clock() - kept[0] < self._ttl:
+            return kept[1]
+        reason, enabled = self._identity()
         if reason is not None:
             raise _failure(self.name, reason)
         with self._verifying:
-            self._verified[key] = self._clock()
+            self._verified[key] = (self._clock(), enabled)
+        return enabled
 
     def _identify(self) -> str | None:
+        return self._identity()[0]
+
+    def _identity(self) -> tuple[str | None, frozenset[str]]:
+        """Why what answers at `/config` is not (our) SearXNG, or None and its enabled engines."""
         url = f"{self._base}/config"
         request = urllib.request.Request(  # nosec B310 - the configured SearXNG's own address
             url, headers={"Accept": "application/json"}
         )
+        none: frozenset[str] = frozenset()
         try:
-            with self._opener(request, timeout=self._timeout) as response:
-                landed = getattr(response, "url", None) or url
-                raw = response.read(_RESPONSE_LIMIT)
+            answered = BoundedRequest(self._opener).fetch(
+                request, deadline=self._timeout, limit=_RESPONSE_LIMIT
+            )
         except urllib.error.HTTPError as exc:
-            return f"answered HTTP {exc.code}"
+            return f"answered HTTP {exc.code}", none
+        except DeadlineExceeded:
+            return _late(self._timeout), none
         except _UNREACHABLE as exc:
-            return _unreachable(exc)
-        if landed != url:
-            return f"{IMPOSTOR} (its /config redirected)"
+            return _unreachable(exc), none
+        if answered.url != url:
+            # A same-origin redirect was followed by the opener; the answer is refused here.
+            return f"{IMPOSTOR} (its /config redirected)", none
         try:
-            config = json.loads(raw)
-        except ValueError:
-            return f"{IMPOSTOR} (its /config is not JSON)"
+            config = json.loads(answered.body)
+        except _UNPARSABLE:
+            return f"{IMPOSTOR} (its /config is not JSON)", none
         if not (
             isinstance(config, dict)
             and isinstance(config.get("instance_name"), str)
@@ -402,11 +472,18 @@ class SearxngBackend:
             and isinstance(config.get("engines"), list)
             and isinstance(config.get("categories"), list)
         ):
-            return f"{IMPOSTOR} (its /config is not SearXNG's)"
+            return f"{IMPOSTOR} (its /config is not SearXNG's)", none
         if self._instance is not None and config["instance_name"] != self._instance:
             # Neither name is said: the expected one is the person's, the other is untrusted.
-            return f"{STRANGER} (its instance_name is not {SEARXNG_INSTANCE_ENV})"
-        return None
+            return f"{STRANGER} (its instance_name is not {SEARXNG_INSTANCE_ENV})", none
+        enabled = frozenset(
+            engine["name"]
+            for engine in config["engines"]
+            if isinstance(engine, dict)
+            and isinstance(engine.get("name"), str)
+            and engine.get("enabled", True) is True
+        )
+        return None, enabled
 
 
 class BraveBackend:

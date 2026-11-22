@@ -15,7 +15,8 @@ itself written to steer it), so nothing about it is trusted:
 - Only text types are read, at most one megabyte, and the answer is plain text with scripts,
   styles and navigation removed.
 
-What comes back is untrusted data, and the caller says so.
+What comes back is untrusted data, and the caller says so. Its title and text carry no terminal
+escape sequence or control character (`untrusted_text.py`), in text output and `--json` alike.
 """
 
 import http.client
@@ -27,6 +28,7 @@ from typing import Final
 from urllib.parse import urljoin, urlsplit
 
 from vibey.infrastructure.notify.webhook import _pinned_connection_class, _resolve_safe_target
+from vibey.infrastructure.web.untrusted_text import UntrustedText
 
 DEFAULT_MAX_BYTES: Final = 1_000_000
 DEFAULT_MAX_CHARS: Final = 20_000
@@ -192,5 +194,7 @@ class PageFetcher:
             if kind in {"text/html", "application/xhtml+xml"}
             else ("", body.strip())
         )
+        # No terminal control survives into what is printed or handed on (`UntrustedText`).
+        title, text = UntrustedText.clean(title), UntrustedText.clean(text)
         truncated = clipped or len(text) > limit
         return FetchedPage(url=url, title=title, text=text[:limit], truncated=truncated)

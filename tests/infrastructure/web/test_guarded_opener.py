@@ -7,6 +7,7 @@ from __future__ import annotations
 
 import http.server
 import threading
+import time
 import urllib.error
 import urllib.request
 from collections.abc import Iterator
@@ -31,6 +32,19 @@ class _Handler(http.server.BaseHTTPRequestHandler):
             self.send_header("Location", "/landed")
             self.end_headers()
             return
+        if self.path.startswith("/drip"):
+            self.send_response(200)
+            self.send_header("Content-Type", "application/json")
+            self.send_header("Content-Length", "1000")
+            self.end_headers()
+            for _ in range(200):
+                try:
+                    self.wfile.write(b" ")
+                    self.wfile.flush()
+                except OSError:
+                    return
+                time.sleep(0.1)
+            return
         if self.path == "/redir/config":
             self.send_response(302)
             self.send_header("Location", "/landed")
@@ -53,7 +67,9 @@ class _Handler(http.server.BaseHTTPRequestHandler):
 
 
 def _serve() -> tuple[http.server.HTTPServer, str]:
-    server = http.server.HTTPServer(("127.0.0.1", 0), _Handler)
+    # Threaded, daemon handlers: a trickling answer never holds the fixture's shutdown.
+    server = http.server.ThreadingHTTPServer(("127.0.0.1", 0), _Handler)
+    server.daemon_threads = True
     threading.Thread(target=server.serve_forever, daemon=True).start()
     return server, f"http://127.0.0.1:{server.server_address[1]}"
 
@@ -117,6 +133,11 @@ def test_a_loopback_backend_is_reached_directly_never_through_a_proxy(
         ("http://127.0.0.1:8080", True),
         ("http://127.5.6.7/", True),
         ("http://localhost:8888", True),
+        ("http://localhost.:8888", True),
+        ("http://searx.localhost:8888", True),
+        ("http://LOCALHOST", True),
+        ("http://notlocalhost:8888", False),
+        ("http://localhost.example:8888", False),
         ("http://[::1]:8080/", True),
         ("http://search.lan:8080", False),
         ("https://api.search.brave.com/res/v1/web/search", False),
@@ -135,3 +156,13 @@ def test_a_searxng_identity_that_redirects_is_refused_even_within_the_origin(
     base, _ = servers
     said = SearxngBackend(f"{base}/redir", opener=GuardedOpener(base)).health()
     assert said == "something other than SearXNG is listening there (its /config redirected)"
+
+
+def test_a_listener_that_trickles_its_answer_is_cut_off_at_the_total_deadline(
+    servers: tuple[str, str],
+) -> None:
+    base, _ = servers
+    started = time.monotonic()
+    said = SearxngBackend(f"{base}/drip", opener=GuardedOpener(base), timeout_seconds=0.5).health()
+    assert said == "did not finish answering within 0.5s"
+    assert time.monotonic() - started < 3

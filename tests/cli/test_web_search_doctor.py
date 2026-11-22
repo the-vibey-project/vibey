@@ -80,11 +80,10 @@ def test_a_local_searxng_that_does_not_answer_is_a_warning_with_the_fix() -> Non
     )
 
 
-def test_the_url_is_shown_without_credentials_or_a_query() -> None:
-    environ = {"VIBEY_SEARXNG_URL": "http://me:pw@search.lan:8888/searx?token=t"}
+def test_the_url_is_shown_as_configured() -> None:
+    environ = {"VIBEY_SEARXNG_URL": "http://search.lan:8888/searx"}
     lines, _ = _doctor(environ, _answering()).doctor_lines()
-    assert "at http://search.lan:8888/searx" in lines[0]
-    assert "pw" not in lines[0] and "token" not in lines[0]
+    assert lines[0].endswith("answering at http://search.lan:8888/searx")
 
 
 def test_brave_named_as_the_provider_fails_doctor_because_the_worker_refuses_it() -> None:
@@ -195,3 +194,23 @@ def test_a_searxng_that_is_not_the_marked_instance_is_said_as_such() -> None:
         f"PASS {'web-search':<26} local SearXNG answering at http://127.0.0.1:28180"
         " (the expected instance)"
     )
+
+
+def test_a_searxng_off_this_machine_is_not_called_local() -> None:
+    lines, _ = _doctor({"VIBEY_SEARXNG_URL": "http://search.lan:8888"}, _answering()).doctor_lines()
+    assert lines[0].startswith(
+        f"PASS {'web-search':<26} SearXNG (not on this machine: queries leave it) answering at"
+    )
+    lines, _ = _doctor(
+        {"VIBEY_SEARXNG_URL": "http://localhost.:28180"}, _answering()
+    ).doctor_lines()
+    assert lines[0].startswith(f"PASS {'web-search':<26} local SearXNG answering at")
+
+
+@pytest.mark.parametrize(
+    "url", ["http://127.0.0.1:abc", "http://127.0.0.1:99999", "http://user:pw@127.0.0.1:28180"]
+)
+def test_a_searxng_url_the_worker_would_refuse_fails_doctor_without_echoing_it(url: str) -> None:
+    lines, ok = _doctor({"VIBEY_SEARXNG_URL": url}, _answering()).doctor_lines()
+    assert ok is False and lines[0].startswith(f"FAIL {'web-search':<26} VIBEY_SEARXNG_URL: ")
+    assert "pw" not in lines[0] and "99999" not in lines[0] and "abc" not in lines[0]
