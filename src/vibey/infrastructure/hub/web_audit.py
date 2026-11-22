@@ -82,7 +82,7 @@ class PostgresWebAudit:
                     LedgerEventDraft(
                         project_id=project.project_id,
                         cycle=project.cycle,
-                        phase=project.phase,  # type: ignore[arg-type]  # checked by _targets
+                        phase=project.phase,  # a known Phase: _targets refused any other
                         kind=kind,
                         engine_id=None,
                         job_id=None,
