@@ -37,7 +37,7 @@ class AcpConformanceClient:
         self._requests: list[dict[str, Any]] = []
         self._unexpected: list[str] = []
         self._changed = asyncio.Condition()
-        self._pick: Callable[[Mapping[str, Any]], str] | None = None
+        self._pick: Callable[[Mapping[str, Any]], str | None] | None = None
         self._holding = False
         self._released = asyncio.Event()
         self._release_option = ""
@@ -102,6 +102,9 @@ class AcpConformanceClient:
         shown: list[str] = []
         for _, update in self._updates:
             self._strings(update, shown)
+        for request in self._requests:
+            self._strings(request["options"], shown)
+            self._strings(request["tool_call"], shown)
         return shown
 
     @property
@@ -114,7 +117,7 @@ class AcpConformanceClient:
 
     # -- the permission policy ------------------------------------------------------------
 
-    def choose(self, pick: Callable[[Mapping[str, Any]], str]) -> None:
+    def choose(self, pick: Callable[[Mapping[str, Any]], str | None]) -> None:
         self._holding = False
         self._pick = pick
 

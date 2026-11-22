@@ -74,12 +74,17 @@ class IsolatedAcpAgentInterface(Protocol):
         ...
 
     def assert_left_no_process(self) -> None:
-        """No process is left in the agent's process group."""
+        """No process is left in the agent's process group (the last run, either kind)."""
         ...
 
     def assert_machine_untouched(self) -> None:
         """Only the stub's two files are in the state folder, the decoy folder was never made,
-        and no unit, client config or editor setting was written under the temporary home."""
+        and `assert_home_untouched` holds."""
+        ...
+
+    def assert_home_untouched(self) -> None:
+        """No file but the user's `vibey.toml` is under the temporary home and XDG folders: no
+        unit, client config, editor setting or marker. (Only the sealed folders are seen.)"""
         ...
 
     def run_with_stdin_from_dev_null(self, timeout: float) -> subprocess.CompletedProcess[bytes]:

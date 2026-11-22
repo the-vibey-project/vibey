@@ -33,8 +33,8 @@ class AcpConformanceClientInterface(Protocol):
 
     def displayed(self) -> list[str]:
         """Every string an editor would show from the updates received (titles, messages,
-        tool content, plan entries, command descriptions): `rawInput` and `_meta` are data,
-        not display, and are left out."""
+        tool content, plan entries, command descriptions, permission options): `rawInput`,
+        `rawOutput` and `_meta` are data, not display, and are left out."""
         ...
 
     @property
@@ -47,8 +47,9 @@ class AcpConformanceClientInterface(Protocol):
         """Any other client method the agent called (fs, terminal, extensions)."""
         ...
 
-    def choose(self, pick: Callable[[Mapping[str, Any]], str]) -> None:
-        """Answer each permission request at once with the option id `pick` returns."""
+    def choose(self, pick: Callable[[Mapping[str, Any]], str | None]) -> None:
+        """Answer each permission request at once with the option id `pick` returns (any id,
+        offered or not), or with the `cancelled` outcome when it returns None."""
         ...
 
     def hold(self) -> None:

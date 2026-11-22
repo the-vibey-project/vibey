@@ -1,20 +1,28 @@
 # Made with ❤️ by [Vibey](https://the-vibey-project.github.io/vibey/), Developed by [Adam Matthew Steinberger](https://vibewithadam.matthewsteinberger.com/) ([@adammatthewsteinberger](https://github.com/adammatthewsteinberger/)).
-"""A loopback stand-in for the hub, for the ACP conformance test (SP-ACP, Task 10).
+"""The hub `vibey acp` talks to in the ACP conformance test: the real one, over memory (Task 10).
 
 `vibey acp` reaches the hub through `HubGateway`, as the scoped agent principal: it reads the
 user's `[hub] state_dir`, presents `<state_dir>/agent.token` and finds the hub in
-`<state_dir>/serving.json`. This stub writes both files with the real `LocalTokenStore`, so the
-agent finds it exactly as it finds a hub `vibey serve` runs, and it listens on 127.0.0.1 only.
+`<state_dir>/serving.json`. This stub writes both files with the real `LocalTokenStore` and
+listens on 127.0.0.1 only, so the agent finds it exactly as it finds a hub `vibey serve` runs.
 
-Where the hub's own pure code says what an answer looks like, the stub uses it rather than a
-copy: `HUB_CHAT` parses the chat message and renders the turn (`summarize_turn`, which also
-flags spend gates as the hub does). The rest is the smallest faithful shape of each route the
-agent reads (`app.py`): the projects list, the live ledger page, a gate's answer, and the four
-`/api/v1/acp/sessions` routes with the hub's ownership and folder rules.
+Behind a small stdlib front, every request is answered by **the hub's own FastAPI app**
+(`HubAppFactory.build`): its routes, request models, error mapping, Host check, rate limit and
+the real `AgentTokenAuthenticator` with the default agent scopes. The app is built over the
+real `HubService` (so the chat parse and render, the gate dicts, the spend refusal of a gate
+answer and the documents are the hub's: `CliHubDocuments`), and the real `AcpSessionService`
+(ownership, folder and seq rules, the list cursor). Only the stores are memory: the repository
+ports those services call, given here as the few methods they use, over product records
+(`ProjectRecord`, `HumanGateRecord`, `LedgerEvent`). A hub contract change in any document the
+agent reads therefore reaches this test. What is still written here, and says so: a project's
+status document (`probes.status`; the agent only shows it as code), and the in-memory stores'
+own semantics (each mirrors its port's docstring; the Postgres stores have their own tests).
 
-It never drops a connection and never holds a request past `HOLD_SECONDS`, which is below the
-gateway's 15-second timeout: a transport error is the one thing that makes the agent run
-`vibey hub start`, and the conformance test must never start anything.
+The front holds a chat turn when a test asks (at most `HOLD_SECONDS`, below the gateway's 15 s
+timeout), refuses one folder's sessions with a synthetic 400 when a test asks (the real hub has
+no such refusal; it stands for any permanent 4xx), records every request and every answer the
+agent sent, and counts requests without the agent token. It never drops a connection: a
+transport error is what makes the agent run `vibey hub start`, which this test must never do.
 
 Declared by `interfaces/acp_stub_hub_interface.py`.
 """
@@ -26,27 +34,42 @@ import os
 import re
 import threading
 from collections.abc import Mapping, Sequence
+from dataclasses import replace
 from datetime import UTC, datetime
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
+from types import SimpleNamespace
 from typing import Any, Final
-from urllib.parse import parse_qs, urlsplit
+from urllib.parse import urlsplit
 from uuid import UUID
 
-from vibey.domain.acp.session_log import SessionEventKind
-from vibey.domain.errors import LifecycleInvalid
-from vibey.domain.hub_chat import HUB_CHAT
+from fastapi.testclient import TestClient
+
+from vibey.application.acp.acp_session_service import AcpSessionService
+from vibey.application.acp.dto import SessionEvent, SessionRecord, SessionSummary
+from vibey.application.dto import GateAnswerOutcome, HumanGateRecord, ProjectRecord
+from vibey.application.hub.hub_service import HubService
+from vibey.cli.serve import CliHubDocuments
+from vibey.domain.acp.session_log import AcpSessionLimitReached, SessionEventConflict
+from vibey.domain.errors import GateAlreadyAnswered, UnknownGate
+from vibey.domain.hub_binding import HUB_BINDING
+from vibey.domain.hub_scope import AGENT_DEFAULT_SCOPES, HUB_SCOPES
+from vibey.domain.ledger import LedgerEvent
+from vibey.infrastructure.hub.app import HubAppFactory
+from vibey.infrastructure.hub.authenticator import AgentTokenAuthenticator
+from vibey.infrastructure.hub.live import LedgerAnnouncements
 from vibey.infrastructure.hub.local_token import LocalTokenStore, ServingRecord
 
 HOLD_SECONDS: Final = 10.0
 """The longest a held chat turn waits: below `HubGateway`'s 15 s, so the agent never sees a
 timeout (an `httpx` error, which would make it try `vibey hub start`)."""
 WAIT_STEP_SECONDS: Final = 0.05
-"""How often a bounded wait re-checks its condition between notifications."""
-_SESSION: Final = re.compile(r"^/api/v1/acp/sessions/([0-9a-f-]{36})(/events)?$")
+"""How often the server thread checks whether it was asked to stop."""
+CHAT: Final = "/api/v1/chat/messages"
+SESSIONS: Final = "/api/v1/acp/sessions"
 _ANSWER: Final = re.compile(r"^/api/v1/gates/([0-9a-f-]{36})/answer$")
-_LEDGER: Final = re.compile(r"^/api/v1/projects/([0-9a-f-]{36})/ledger/after$")
-_KINDS: Final = frozenset(kind.value for kind in SessionEventKind)
+_UNUSED: Final = SimpleNamespace()
+"""A port `HubService` never calls on the routes the agent reaches: any use is a 500."""
 
 
 class StubHub:
@@ -57,14 +80,15 @@ class StubHub:
         self._token = ""
         self._server: ThreadingHTTPServer | None = None
         self._thread: threading.Thread | None = None
+        self._client: TestClient | None = None
         self._changed = threading.Condition()
-        self._projects: list[dict[str, Any]] = []
-        self._ledger: dict[str, list[dict[str, Any]]] = {}
-        self._gates: list[dict[str, Any]] = []
+        self._projects: dict[UUID, ProjectRecord] = {}
+        self._gates: dict[UUID, HumanGateRecord] = {}
+        self._ledger: dict[UUID, list[LedgerEvent]] = {}
+        self._sessions: dict[str, dict[str, Any]] = {}
         self._answers: list[tuple[str, Mapping[str, Any], str | None]] = []
         self._requests: list[tuple[str, str]] = []
         self._unauthorised = 0
-        self._sessions: dict[str, dict[str, Any]] = {}
         self._refused: set[str] = set()
         self._holding = False
         self._held = threading.Event()
@@ -81,7 +105,7 @@ class StubHub:
     def start(self) -> None:
         hub = self
 
-        class _Handler(BaseHTTPRequestHandler):
+        class _Front(BaseHTTPRequestHandler):
             def do_GET(self) -> None:  # noqa: N802 - the name http.server dispatches to
                 hub._serve(self, "GET")
 
@@ -92,8 +116,19 @@ class StubHub:
                 return None  # the agent's stderr is under test; the stub's own stays quiet
 
         self._token = self._store.agent_token()
-        self._server = ThreadingHTTPServer(("127.0.0.1", 0), _Handler)
+        self._server = ThreadingHTTPServer(("127.0.0.1", 0), _Front)
         self._server.daemon_threads = True
+        app = HubAppFactory().build(
+            self._service(),
+            authenticator=AgentTokenAuthenticator(self._token, AGENT_DEFAULT_SCOPES),
+            allowed_hosts=HUB_BINDING.allowed_hosts(self.port, frozenset()),
+            ready=self._ready,
+            live=LedgerAnnouncements(self._no_listen),
+            acp_sessions=AcpSessionService(self._session_store(), HUB_SCOPES),
+        )
+        self._client = TestClient(
+            app, base_url=f"http://127.0.0.1:{self.port}", raise_server_exceptions=False
+        )
         self._thread = threading.Thread(
             target=self._server.serve_forever,
             kwargs={"poll_interval": WAIT_STEP_SECONDS},
@@ -113,20 +148,20 @@ class StubHub:
 
     # -- scripting -----------------------------------------------------------------------
 
-    def set_projects(self, projects: Sequence[Mapping[str, Any]]) -> None:
+    def set_projects(self, projects: Sequence[ProjectRecord]) -> None:
         with self._changed:
-            self._projects = [dict(project) for project in projects]
+            self._projects = {project.project_id: project for project in projects}
 
-    def append_ledger(self, project_id: str, event: Mapping[str, Any]) -> None:
+    def append_ledger(self, event: LedgerEvent) -> None:
         with self._changed:
-            events = self._ledger.setdefault(project_id, [])
-            if event.get("seq") != len(events) + 1:
-                raise ValueError(f"the next seq of {project_id} is {len(events) + 1}")
-            events.append(dict(event))
+            events = self._ledger.setdefault(event.project_id, [])
+            if event.seq != len(events) + 1:
+                raise ValueError(f"the next seq of {event.project_id} is {len(events) + 1}")
+            events.append(event)
 
-    def set_gates(self, gates: Sequence[Mapping[str, Any]]) -> None:
+    def set_gates(self, gates: Sequence[HumanGateRecord]) -> None:
         with self._changed:
-            self._gates = [dict(gate) for gate in gates]
+            self._gates = {gate.gate_id: gate for gate in gates}
 
     def hold_chat(self) -> None:
         self._held.clear()
@@ -146,23 +181,30 @@ class StubHub:
 
     def forge_session_event(self, session_id: str, kind: str, payload: Mapping[str, Any]) -> int:
         with self._changed:
-            kept = self._sessions[session_id]
-            seq = max((event[0] for event in kept["events"]), default=0) + 1
-            kept["events"].append((seq, kind, dict(payload)))
-            kept["updated_at"] = datetime.now(UTC)
-            self._changed.notify_all()
-            return seq
+            seq = max(self._sessions[session_id]["log"], default=0) + 1
+        # Through the hub's own route, as any holder of the agent's key could write it.
+        response = self._app().post(
+            f"{SESSIONS}/{session_id}/events",
+            json={"seq": seq, "kind": kind, "payload": dict(payload)},
+            headers={"authorization": f"Bearer {self._token}"},
+        )
+        if response.status_code != 200:
+            raise AssertionError(f"the hub refused the forged event: {response.text}")
+        return seq
 
     def session_events(self, session_id: str) -> tuple[tuple[int, str, Mapping[str, Any]], ...]:
         with self._changed:
             kept = self._sessions.get(session_id)
-            return tuple(kept["events"]) if kept is not None else ()
+            log = kept["log"] if kept is not None else {}
+            return tuple((seq, *log[seq]) for seq in sorted(log))
 
     def wait_for_session_event(self, session_id: str, kind: str, timeout: float) -> bool:
+        def kept() -> bool:
+            session = self._sessions.get(session_id)
+            return session is not None and any(k == kind for k, _ in session["log"].values())
+
         with self._changed:
-            return self._changed.wait_for(
-                lambda: any(event[1] == kind for event in self._events_of(session_id)), timeout
-            )
+            return self._changed.wait_for(kept, timeout)
 
     @property
     def answers(self) -> tuple[tuple[str, Mapping[str, Any], str | None], ...]:
@@ -179,222 +221,235 @@ class StubHub:
         with self._changed:
             return self._unauthorised
 
-    # -- serving -------------------------------------------------------------------------
+    # -- the front -----------------------------------------------------------------------
 
     def _serve(self, request: BaseHTTPRequestHandler, method: str) -> None:
-        url = urlsplit(request.path)
-        query = {key: values[-1] for key, values in parse_qs(url.query).items()}
+        path = urlsplit(request.path).path
+        authorization = request.headers.get("authorization") or ""
+        length = int(request.headers.get("content-length") or 0)
+        raw = request.rfile.read(length) if length else b""
         with self._changed:
-            self._requests.append((method, url.path))
-            authorised = request.headers.get("authorization") == f"Bearer {self._token}"
-            if not authorised:
+            self._requests.append((method, path))
+            if authorization != f"Bearer {self._token}":
                 self._unauthorised += 1
-        if not authorised:
-            self._reply(request, 401, {"detail": "not the agent token"})
-            return
-        body: Mapping[str, Any] = {}
-        if method == "POST":
-            length = int(request.headers.get("content-length") or 0)
-            raw = request.rfile.read(length) if length else b"{}"
-            parsed = json.loads(raw or b"{}")
-            body = parsed if isinstance(parsed, Mapping) else {}
-        status, document = self._route(method, url.path, query, body)
-        self._reply(request, status, document)
-
-    def _route(
-        self, method: str, path: str, query: Mapping[str, str], body: Mapping[str, Any]
-    ) -> tuple[int, Any]:
-        if method == "GET" and path == "/health/live":
-            return 200, {"status": "ok"}
-        if method == "GET" and path == "/api/v1/projects":
-            with self._changed:
-                return 200, list(self._projects)
-        if method == "GET" and path == "/api/v1/gates":
-            return 200, {"gates": self._formatted_gates()}
-        if method == "POST" and path == "/api/v1/chat/messages":
-            return self._chat(body)
-        if method == "POST" and (answer := _ANSWER.match(path)):
-            return self._answer(answer.group(1), body)
-        if method == "GET" and (ledger := _LEDGER.match(path)):
-            return self._ledger_after(ledger.group(1), query)
-        if path == "/api/v1/acp/sessions":
-            return self._create(body) if method == "POST" else self._list(query)
-        if session := _SESSION.match(path):
-            session_id, events = session.group(1), session.group(2)
-            if method == "POST" and events:
-                return self._append(session_id, body)
-            if method == "GET" and events:
-                return self._events(session_id, query)
-            if method == "GET":
-                return self._summary(session_id, query)
-        return 404, {"detail": f"the stub hub has no {method} {path}"}
-
-    def _chat(self, body: Mapping[str, Any]) -> tuple[int, Any]:
-        if self._holding:
+        body = json.loads(raw) if raw else {}
+        if method == "POST" and path == CHAT and self._holding:
             self._held.set()
             self._release.wait(HOLD_SECONDS)
-        raw_project = body.get("project_id")
-        project = UUID(str(raw_project)) if raw_project else None
-        with self._changed:
-            gates = [dict(gate) for gate in self._gates]
-            projects = list(self._projects)
-        try:
-            intent = HUB_CHAT.parse(
-                str(body.get("message", "")), project_id=project, open_gates=gates
-            )
-        except LifecycleInvalid as exc:
-            return 422, {"detail": str(exc)}
-        if intent.kind == "help":
-            return 200, HUB_CHAT.summarize_turn(
-                intent=intent, tool_calls=(), gates=gates, project_id=project
-            )
-        results: dict[str, Any] = {
-            "projects": projects,
-            "gates": {"gates": [HUB_CHAT.format_gate_prompt(gate) for gate in gates]},
-            "status": {"project": {"name": "stub project", "phase": "build", "cycle": 1}},
-        }
-        call = {"name": intent.tool_name, "arguments": {}, "result": results.get(intent.kind, {})}
-        active = intent.project_id or project
-        return 200, HUB_CHAT.summarize_turn(
-            intent=intent, tool_calls=(call,), gates=gates, project_id=active
-        )
-
-    def _answer(self, gate_id: str, body: Mapping[str, Any]) -> tuple[int, Any]:
-        answer = body.get("answer")
-        request_id = body.get("request_id")
-        with self._changed:
-            self._answers.append(
-                (
-                    gate_id,
-                    dict(answer) if isinstance(answer, Mapping) else {},
-                    request_id if isinstance(request_id, str) else None,
+        if method == "POST" and (answer := _ANSWER.match(path)):
+            given, request_id = body.get("answer"), body.get("request_id")
+            with self._changed:
+                self._answers.append(
+                    (
+                        answer.group(1),
+                        dict(given) if isinstance(given, Mapping) else {},
+                        request_id if isinstance(request_id, str) else None,
+                    )
                 )
-            )
-            gate = next((g for g in self._gates if g.get("gate_id") == gate_id), None)
-            if gate is None:
-                return 404, {"detail": f"no open gate {gate_id}"}
-            if HUB_CHAT.format_gate_prompt(gate)["is_spend"]:
-                return 403, {"detail": "the agent principal may not answer a spending gate"}
-            self._gates.remove(gate)
-        return 200, {"gate_id": gate_id, "status": "answered", "replayed": False}
+        if method == "POST" and path == SESSIONS and body.get("cwd") in self._refused:
+            # Synthetic: the real hub refuses no folder; this stands for any permanent 4xx.
+            self._reply(request, 400, b'{"detail": "this stub refuses that folder"}')
+            return
+        headers = {"authorization": authorization}
+        if raw:
+            headers["content-type"] = "application/json"
+        response = self._app().request(method, request.path, content=raw or None, headers=headers)
+        self._reply(request, response.status_code, response.content)
 
-    def _ledger_after(self, project_id: str, query: Mapping[str, str]) -> tuple[int, Any]:
-        after, limit = int(query.get("seq", "0")), int(query.get("limit", "200"))
-        with self._changed:
-            events = [e for e in self._ledger.get(project_id, []) if e["seq"] > after][:limit]
-        return 200, {
-            "project_id": project_id,
-            "events": events,
-            "last_seq": events[-1]["seq"] if events else None,
-        }
-
-    def _formatted_gates(self) -> list[dict[str, Any]]:
-        with self._changed:
-            return [HUB_CHAT.format_gate_prompt(gate) for gate in self._gates]
-
-    # -- the ACP session routes ----------------------------------------------------------
-
-    def _create(self, body: Mapping[str, Any]) -> tuple[int, Any]:
-        session_id, cwd = str(body.get("session_id")), str(body.get("cwd"))
-        with self._changed:
-            if cwd in self._refused:
-                return 400, {"detail": "the stub hub refuses sessions kept under that folder"}
-            kept = self._sessions.get(session_id)
-            if kept is not None:
-                return (201, {"session_id": session_id}) if kept["cwd"] == cwd else (409, {})
-            self._sessions[session_id] = {
-                "cwd": cwd,
-                "events": [],
-                "updated_at": datetime.now(UTC),
-            }
-            self._changed.notify_all()
-        return 201, {"session_id": session_id}
-
-    def _append(self, session_id: str, body: Mapping[str, Any]) -> tuple[int, Any]:
-        seq, kind, payload = body.get("seq"), body.get("kind"), body.get("payload")
-        if not isinstance(seq, int) or kind not in _KINDS or not isinstance(payload, Mapping):
-            return 422, {"detail": "not an event"}
-        with self._changed:
-            kept = self._sessions.get(session_id)
-            if kept is None:
-                return 403, {"detail": "no such session of yours"}
-            same = next((event for event in kept["events"] if event[0] == seq), None)
-            if same is not None:
-                return (200, {"stored": True}) if same[1:] == (kind, payload) else (409, {})
-            kept["events"].append((seq, kind, dict(payload)))
-            kept["events"].sort(key=lambda event: event[0])
-            kept["updated_at"] = datetime.now(UTC)
-            self._changed.notify_all()
-        return 200, {"stored": True}
-
-    def _kept(self, session_id: str, query: Mapping[str, str]) -> dict[str, Any] | None:
-        kept = self._sessions.get(session_id)
-        if kept is None or ("cwd" in query and query["cwd"] != kept["cwd"]):
-            return None
-        return kept
-
-    def _events(self, session_id: str, query: Mapping[str, str]) -> tuple[int, Any]:
-        after, limit = int(query.get("after", "0")), int(query.get("limit", "200"))
-        with self._changed:
-            kept = self._kept(session_id, query)
-            if kept is None:
-                return 403, {"detail": "no such session of yours under that folder"}
-            events = [
-                {"seq": seq, "kind": kind, "payload": payload}
-                for seq, kind, payload in kept["events"]
-                if seq > after
-            ][:limit]
-        return 200, {"events": events, "last_seq": events[-1]["seq"] if events else None}
-
-    def _summary(self, session_id: str, query: Mapping[str, str]) -> tuple[int, Any]:
-        with self._changed:
-            kept = self._kept(session_id, query)
-            if kept is None:
-                return 403, {"detail": "no such session of yours under that folder"}
-            newest: dict[str, Any] = {}
-            for _, kind, payload in kept["events"]:
-                newest[kind] = payload
-            seqs = [event[0] for event in kept["events"]]
-        return 200, {
-            "session_id": session_id,
-            "newest_seq": max(seqs, default=0),
-            **{key: newest.get(key) for key in ("mode", "attach", "title")},
-        }
-
-    def _list(self, query: Mapping[str, str]) -> tuple[int, Any]:
-        with self._changed:
-            listed = [
-                (session_id, kept)
-                for session_id, kept in self._sessions.items()
-                if "cwd" not in query or kept["cwd"] == query["cwd"]
-            ]
-            listed.sort(key=lambda item: (item[1]["updated_at"], item[0]), reverse=True)
-            sessions = [
-                {
-                    "session_id": session_id,
-                    "cwd": kept["cwd"],
-                    "title": self._title(kept),
-                    "updated_at": kept["updated_at"].isoformat(),
-                    "closed": bool(kept["events"]) and kept["events"][-1][1] == "closed",
-                }
-                for session_id, kept in listed
-            ]
-        return 200, {"sessions": sessions, "next_cursor": None}
+    def _app(self) -> TestClient:
+        if self._client is None:
+            raise RuntimeError("the stub hub is not started")
+        return self._client
 
     @staticmethod
-    def _title(kept: Mapping[str, Any]) -> str | None:
-        titles = [payload.get("title") for _, kind, payload in kept["events"] if kind == "title"]
-        return titles[-1] if titles and isinstance(titles[-1], str) else None
-
-    def _events_of(self, session_id: str) -> list[tuple[int, str, Mapping[str, Any]]]:
-        kept = self._sessions.get(session_id)
-        return list(kept["events"]) if kept is not None else []
-
-    @staticmethod
-    def _reply(request: BaseHTTPRequestHandler, status: int, document: Any) -> None:
-        data = json.dumps(document).encode()
+    def _reply(request: BaseHTTPRequestHandler, status: int, data: bytes) -> None:
         request.send_response(status)
         request.send_header("content-type", "application/json")
         request.send_header("content-length", str(len(data)))
         request.end_headers()
         request.wfile.write(data)
+
+    # -- the hub's stores, in memory -----------------------------------------------------
+
+    def _service(self) -> HubService:
+        return HubService(
+            projects=SimpleNamespace(get=self._project, list_all=self._all_projects),
+            gates=SimpleNamespace(open_all=self._open_gates, open_for_project=self._open_for),
+            gate_lookup=SimpleNamespace(get=self._gate),
+            gate_answers=SimpleNamespace(answer=self._answer),
+            budgets=_UNUSED,
+            queue=_UNUSED,
+            ledger=_UNUSED,
+            ledger_range=SimpleNamespace(range=self._range),
+            documents=CliHubDocuments(),
+            probes=SimpleNamespace(status=self._status),
+            lifecycle=_UNUSED,
+        )
+
+    def _session_store(self) -> Any:
+        return SimpleNamespace(
+            create=self._create,
+            append=self._append,
+            events_after=self._events_after,
+            list=self._list,
+            owner=self._owner,
+            summary=self._summary,
+        )
+
+    @staticmethod
+    async def _ready() -> bool:
+        return True
+
+    @staticmethod
+    async def _no_listen() -> Any:
+        raise ConnectionRefusedError("the stub hub has no database to LISTEN on")
+
+    async def _project(self, project_id: UUID) -> ProjectRecord | None:
+        with self._changed:
+            return self._projects.get(project_id)
+
+    async def _all_projects(self) -> tuple[ProjectRecord, ...]:
+        with self._changed:
+            return tuple(self._projects.values())
+
+    async def _open_gates(self) -> tuple[HumanGateRecord, ...]:
+        with self._changed:
+            return tuple(gate for gate in self._gates.values() if gate.answered_at is None)
+
+    async def _open_for(self, project_id: UUID) -> tuple[HumanGateRecord, ...]:
+        return tuple(gate for gate in await self._open_gates() if gate.project_id == project_id)
+
+    async def _gate(self, gate_id: UUID) -> HumanGateRecord | None:
+        with self._changed:
+            return self._gates.get(gate_id)
+
+    async def _answer(
+        self,
+        gate_id: UUID,
+        answer: Mapping[str, object],
+        *,
+        by: str | None = None,
+        request_id: str | None = None,
+    ) -> GateAnswerOutcome:
+        with self._changed:
+            gate = self._gates.get(gate_id)
+            if gate is None:
+                raise UnknownGate(f"no gate {gate_id}")
+            if gate.answered_at is not None:
+                if request_id is not None and request_id == gate.answer_request_id:
+                    return GateAnswerOutcome(gate, replayed=True)
+                raise GateAlreadyAnswered(f"gate {gate_id} is already answered")
+            answered = replace(
+                gate,
+                answer=dict(answer),
+                answered_at=datetime.now(UTC),
+                answered_by=by,
+                answer_request_id=request_id,
+            )
+            self._gates[gate_id] = answered
+            return GateAnswerOutcome(answered)
+
+    async def _range(
+        self, project_id: UUID, *, from_seq: int, to_seq: int
+    ) -> tuple[LedgerEvent, ...]:
+        with self._changed:
+            events = self._ledger.get(project_id, [])
+            return tuple(event for event in events if from_seq <= event.seq <= to_seq)
+
+    async def _status(self, project_id: UUID) -> Any:
+        # Hand-written: the agent shows a status document only as a code block.
+        project = await self._project(project_id)
+        name = project.name if project is not None else "?"
+        return {"project": {"name": name, "phase": "BUILD", "cycle": 1}}
+
+    # -- the ACP session store, in memory (AcpSessionRepositoryInterface) ----------------
+
+    async def _create(self, session_id: str, cwd: str, created_by: str, *, limit: int) -> bool:
+        with self._changed:
+            held = sum(1 for s in self._sessions.values() if s["owner"] == created_by)
+            if session_id in self._sessions or held >= limit:
+                return False
+            self._sessions[session_id] = {
+                "owner": created_by,
+                "cwd": cwd,
+                "log": {},
+                "updated_at": datetime.now(UTC),
+            }
+            self._changed.notify_all()
+            return True
+
+    async def _append(
+        self, session_id: str, seq: int, kind: str, payload: Mapping[str, Any], *, limit: int
+    ) -> bool:
+        with self._changed:
+            session = self._sessions[session_id]
+            log: dict[int, tuple[str, dict[str, Any]]] = session["log"]
+            if seq in log:
+                if log[seq] != (kind, dict(payload)):
+                    raise SessionEventConflict(f"seq {seq} of {session_id} is taken")
+                return True
+            if len(log) >= limit:
+                raise AcpSessionLimitReached(f"session {session_id} is full")
+            log[seq] = (kind, dict(payload))
+            session["updated_at"] = datetime.now(UTC)
+            self._changed.notify_all()
+            return True
+
+    async def _events_after(
+        self, session_id: str, after: int, limit: int
+    ) -> tuple[SessionEvent, ...]:
+        with self._changed:
+            log = self._sessions[session_id]["log"]
+            seqs = [seq for seq in sorted(log) if seq > after][:limit]
+            return tuple(SessionEvent(seq, log[seq][0], log[seq][1]) for seq in seqs)
+
+    async def _list(
+        self,
+        created_by: str,
+        *,
+        cwd: str | None,
+        cursor: tuple[datetime, str] | None,
+        limit: int,
+    ) -> tuple[SessionRecord, ...]:
+        with self._changed:
+            found = sorted(
+                (
+                    (session["updated_at"], session_id, session)
+                    for session_id, session in self._sessions.items()
+                    if session["owner"] == created_by and cwd in (None, session["cwd"])
+                ),
+                key=lambda item: (item[0], item[1]),
+                reverse=True,
+            )
+            if cursor is not None:
+                found = [item for item in found if (item[0], item[1]) < cursor]
+            return tuple(self._record(sid, session) for _, sid, session in found[:limit])
+
+    async def _owner(self, session_id: str) -> tuple[str, str] | None:
+        with self._changed:
+            session = self._sessions.get(session_id)
+            return (session["owner"], session["cwd"]) if session is not None else None
+
+    async def _summary(self, session_id: str) -> SessionSummary:
+        with self._changed:
+            log = self._sessions[session_id]["log"]
+            newest = {kind: payload for _, (kind, payload) in sorted(log.items())}
+            return SessionSummary(
+                newest_seq=max(log, default=0),
+                mode=newest.get("mode"),
+                attach=newest.get("attach"),
+                title=newest.get("title"),
+            )
+
+    @staticmethod
+    def _record(session_id: str, session: Mapping[str, Any]) -> SessionRecord:
+        log = session["log"]
+        titles = [p.get("title") for _, (kind, p) in sorted(log.items()) if kind == "title"]
+        newest_kind = log[max(log)][0] if log else None
+        return SessionRecord(
+            session_id=session_id,
+            cwd=session["cwd"],
+            title=titles[-1] if titles and isinstance(titles[-1], str) else None,
+            updated_at=session["updated_at"],
+            closed=newest_kind == "closed",
+        )

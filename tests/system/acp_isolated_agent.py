@@ -8,7 +8,12 @@ transport. Nothing is inherited from the test's environment. The child gets a te
 XDG folders and an empty `PATH`, and every `VIBEY_*` endpoint the code reads points at a closed
 loopback port (9, discard), so the person's own `vibey.toml`, marker files, units, editor
 settings, database, models and the network are all out of its reach. An in-process guard
-fixture cannot reach a child; this environment is the child's guard.
+fixture cannot reach a child; this environment is the child's guard. The guard is the
+environment and the grant, not the checks after the run: nothing is inherited (no `VIBEY_*`,
+API key, proxy or `DOCKER_*`), `launchctl`, `systemctl` and a container runtime are run by bare
+name and cannot resolve on an empty `PATH`, and the bootstrap grant is off. The checks after
+the run (`assert_machine_untouched`, `assert_home_untouched`) see only the sealed folders: a
+write through an absolute path elsewhere would not show there.
 
 The grant is the user's file (ADR-0101): here it turns the whole bootstrap off (no doctor, no
 connect, no units, no PostgreSQL, no SearXNG) and names the stub hub's state folder. The
@@ -110,6 +115,8 @@ class IsolatedAcpAgent:
         self._work = root / "project"
         self._user_config = self._home / "unset"
         self._process: asyncio.subprocess.Process | None = None
+        self._finished: int | None = None
+        """The process group of a run through `run_with_stdin_from_dev_null`."""
         self._conn: ClientSideConnection | None = None
         self._sdk_reader: asyncio.StreamReader | None = None
         self._tasks: list[asyncio.Task[None]] = []
@@ -252,16 +259,23 @@ class IsolatedAcpAgent:
         return True
 
     def run_with_stdin_from_dev_null(self, timeout: float) -> subprocess.CompletedProcess[bytes]:
-        return subprocess.run(  # noqa: S603 - this interpreter, a fixed argument list
+        child = subprocess.Popen(  # noqa: S603 - this interpreter, a fixed argument list
             [sys.executable, "-c", AGENT_CODE],
             cwd=self._work,
             env=self.environment(),
             stdin=subprocess.DEVNULL,
-            capture_output=True,
-            timeout=timeout,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
             start_new_session=True,
-            check=False,
         )
+        self._finished = child.pid
+        try:
+            out, err = child.communicate(timeout=timeout)
+        except subprocess.TimeoutExpired:
+            os.killpg(child.pid, signal.SIGKILL)  # the whole group, not only the leader
+            child.communicate()
+            raise
+        return subprocess.CompletedProcess(child.args, child.returncode, out, err)
 
     async def _tee(self) -> None:
         process = self._running()
@@ -321,18 +335,25 @@ class IsolatedAcpAgent:
                     RESPONSES[asked].model_validate(message["result"])
 
     def assert_left_no_process(self) -> None:
-        process = self._running()
-        assert process.returncode is not None, "the agent is still running"
+        if self._process is not None:
+            assert self._process.returncode is not None, "the agent is still running"
+            group = self._process.pid
+        else:
+            assert self._finished is not None, "the agent was never run"
+            group = self._finished
         try:
-            os.killpg(process.pid, 0)
+            os.killpg(group, 0)
         except ProcessLookupError:
             return
-        raise AssertionError(f"a process outlived the agent in its group {process.pid}")
+        raise AssertionError(f"a process outlived the agent in its group {group}")
 
     def assert_machine_untouched(self) -> None:
         kept = sorted(path.name for path in self._state.iterdir())
         assert kept == sorted([AGENT_TOKEN_FILE, RUNTIME_FILE]), kept
         assert not self._decoy.exists(), "the project's [hub] state_dir was used"
+        self.assert_home_untouched()
+
+    def assert_home_untouched(self) -> None:
         written = sorted(
             path
             for folder in (self._home, self._xdg)

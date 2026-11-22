@@ -4,16 +4,19 @@
 from __future__ import annotations
 
 from collections.abc import Mapping, Sequence
-from typing import Any, Protocol, runtime_checkable
+from typing import TYPE_CHECKING, Any, Protocol, runtime_checkable
+
+if TYPE_CHECKING:
+    from vibey.application.dto import HumanGateRecord, ProjectRecord
+    from vibey.domain.ledger import LedgerEvent
 
 
 @runtime_checkable
 class StubHubInterface(Protocol):
-    """A loopback stand-in for the hub `vibey acp` speaks to, scripted by a test.
-
-    It serves the routes the agent reaches as the scoped agent principal, refuses any request
-    that does not carry `<state_dir>/agent.token`, and records what it was asked so a test can
-    assert on it. Every wait it offers is bounded and event-driven."""
+    """The hub `vibey acp` speaks to in the conformance test, scripted by a test: the hub's own
+    app and services over in-memory stores, behind a loopback front that records what it was
+    asked and counts requests without `<state_dir>/agent.token`. Every wait it offers is
+    bounded and event-driven."""
 
     @property
     def port(self) -> int:
@@ -29,16 +32,16 @@ class StubHubInterface(Protocol):
         """Release anything held, stop serving and join the server thread."""
         ...
 
-    def set_projects(self, projects: Sequence[Mapping[str, Any]]) -> None:
-        """What `GET /api/v1/projects` lists (the hub's `vibey projects --json` shape)."""
+    def set_projects(self, projects: Sequence[ProjectRecord]) -> None:
+        """The projects the hub holds (its documents render them as `vibey projects --json`)."""
         ...
 
-    def append_ledger(self, project_id: str, event: Mapping[str, Any]) -> None:
-        """Add one event to a project's ledger; `seq` must be the next one."""
+    def append_ledger(self, event: LedgerEvent) -> None:
+        """Add one event to its project's ledger; its `seq` must be the next one."""
         ...
 
-    def set_gates(self, gates: Sequence[Mapping[str, Any]]) -> None:
-        """The open gates, as the hub's gate rows (`gate_id`, `kind`, `prompt`, `options`, ...)."""
+    def set_gates(self, gates: Sequence[HumanGateRecord]) -> None:
+        """The gates the hub holds (open while `answered_at` is None)."""
         ...
 
     def hold_chat(self) -> None:
@@ -59,8 +62,8 @@ class StubHubInterface(Protocol):
         ...
 
     def forge_session_event(self, session_id: str, kind: str, payload: Mapping[str, Any]) -> int:
-        """Append an event to a kept session's log as another holder of the agent's key could;
-        returns its `seq`."""
+        """Append the next event to a kept session's log through the hub's own route, as any
+        holder of the agent's key could; returns its `seq`."""
         ...
 
     def session_events(self, session_id: str) -> tuple[tuple[int, str, Mapping[str, Any]], ...]:
