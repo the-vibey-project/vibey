@@ -50,7 +50,7 @@ CONTAINER_NAME: Final = "vibey-searxng"
 CONTAINER_PORT: Final = 8080
 """Where SearXNG listens inside its container (the image's default)."""
 SETTINGS_IN_CONTAINER: Final = "/etc/searxng/settings.yml"
-WRITABLE: Final = ("/etc/searxng", "/var/cache/searxng", "/tmp")
+WRITABLE: Final = ("/etc/searxng", "/var/cache/searxng", "/tmp")  # nosec B108 - in the container
 """What the container may write, each a tmpfs: its root is read-only. `/etc/searxng` is where
 the image's entrypoint keeps files it makes; the settings file is mounted over it, read-only."""
 PIDS_LIMIT: Final = 256
