@@ -69,6 +69,7 @@ from vibey.cli.interfaces.doctor_output_interface import DoctorOutputInterface
 from vibey.cli.ledger_publication import ledger_export, ledger_site
 from vibey.cli.ledger_search import PRESENTER, ledger_search
 from vibey.cli.llm import llm_app
+from vibey.cli.llm_tooling import LLM_TOOLING_SECTION
 from vibey.cli.loops import LOOPS
 from vibey.cli.mcp import mcp as mcp_command
 from vibey.cli.models import MODELS
@@ -1967,7 +1968,10 @@ def doctor(
         # - sub-doctrine 8.i's window, zone and location source (10.f); an unplaced host FAILs;
         # - gates waiting on a person nobody will tell: reported, never failed;
         # - #1189, whether the worker and the delivery bridge are kept running, and the newest
-        #   host-health record: missing is a WARN, a FAIL when `required = true` (12.e).
+        #   host-health record: missing is a WARN, a FAIL when `required = true` (12.e);
+        # - LLM tooling: per detected client, each surface vibey offers it (ACP agent, MCP
+        #   server, the vibey-chat-driver skill, the plugin), present, missing (a WARN, with the
+        #   command that fixes it) or not applicable. It only reads, and never fails doctor.
         # Each is built from the name it stands under here when doctor runs.
         checks = DoctorChecks(
             LOCAL_DOCTOR.for_doctor(
@@ -1979,6 +1983,7 @@ def doctor(
                 supervisor=SUPERVISOR.doctor_lines,
                 host_health=HOST_HEALTH.doctor_lines,
                 ollama_enabled=lambda: local.any_enabled,
+                llm_tooling=LLM_TOOLING_SECTION.doctor_lines,
             )
         )
         found: list[DoctorResult] = []

@@ -29,6 +29,18 @@
     "requires": [
       "skill-2-security-boundary-the-scoped-agent-principal-046fb6537a"
     ],
+    "links": [
+      "skill-4-driving-vibey-over-acp-zed-and-other-acp-clients-9cb332ba44"
+    ]
+  },
+  {
+    "id": "skill-4-driving-vibey-over-acp-zed-and-other-acp-clients-9cb332ba44",
+    "purpose": "4 driving vibey over acp zed and other acp clients",
+    "source": "src/vibey_tools/skills/plugins/vibey/skills/vibey-chat-driver/SKILL.md",
+    "output": "docs/microslices/skills/vibey/skills/vibey-chat-driver/004-4-driving-vibey-over-acp-zed-and-other-acp-clients.md",
+    "requires": [
+      "skill-3-operator-workflow-in-chat-b1e30cb405"
+    ],
     "links": []
   }
 ]

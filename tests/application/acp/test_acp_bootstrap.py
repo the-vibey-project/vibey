@@ -11,6 +11,7 @@ from __future__ import annotations
 
 import asyncio
 import contextlib
+import dataclasses
 import threading
 from collections.abc import AsyncIterator, Mapping
 from typing import Any
@@ -1164,3 +1165,35 @@ async def test_an_install_that_breaks_closes_its_tool_call() -> None:
     last = channel.tool_updates("bootstrap-postgres")[-1]
     assert last["status"] == "failed" and "RuntimeError" in str(last)
     await until(lambda: lock.released == 1)
+
+
+async def test_a_finding_too_long_for_one_message_says_where_to_read_it_whole() -> None:
+    channel = LoggingChannel()
+    snippet = '"agent_servers": {"vibey": {"command": "' + "/x" * 300 + '"}}'
+    boot = bootstrap(channel, probes=(Probe("t", DoctorResult("WARN", "zed:acp-agent", snippet)),))
+
+    boot.start("s")
+    await finished(boot)
+
+    shown = channel.tool_updates("bootstrap-doctor")[-1]["content"][0]["content"]["text"]
+    assert "vibey connect --dry-run" in shown and "prints it whole" in shown
+    short = DoctorResult("PASS", "zed:acp-agent", "present")
+    channel = LoggingChannel()
+    boot = bootstrap(channel, probes=(Probe("t", short),))
+    boot.start("s")
+    await finished(boot)
+    shown = channel.tool_updates("bootstrap-doctor")[-1]["content"][0]["content"]["text"]
+    assert "cut here" not in shown
+
+
+async def test_a_message_limit_too_small_for_the_note_is_cut_plainly() -> None:
+    channel = LoggingChannel()
+    long = DoctorResult("WARN", "zed:acp-agent", "y" * 500)
+    settings = dataclasses.replace(AcpSettings(), live_message_chars=60)
+    boot = bootstrap(channel, settings=settings, probes=(Probe("t", long),))
+
+    boot.start("s")
+    await finished(boot)
+
+    shown = channel.tool_updates("bootstrap-doctor")[-1]["content"][0]["content"]["text"]
+    assert "cut here" not in shown and len(shown) < 200

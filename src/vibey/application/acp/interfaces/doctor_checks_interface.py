@@ -25,6 +25,12 @@ class DoctorChecksInterface[P: DoctorProbeInterface](Protocol):
         ...
 
     @staticmethod
+    def cleaned(message: str, *, limit: int = ...) -> str:
+        """Machine text as one finding's detail: its first line, controls and separators made
+        spaces, a URL's credentials hidden, cut to `limit` characters."""
+        ...
+
+    @staticmethod
     def passed(results: Sequence[DoctorResult]) -> bool:
         """True when nothing was found `FAIL`."""
         ...

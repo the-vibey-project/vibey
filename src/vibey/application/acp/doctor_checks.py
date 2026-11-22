@@ -14,6 +14,7 @@ from __future__ import annotations
 import asyncio
 import logging
 import re
+import unicodedata
 from collections.abc import AsyncGenerator, Sequence
 from typing import Final
 
@@ -41,7 +42,7 @@ class DoctorChecks[P: DoctorProbeInterface]:
                 raise
             except Exception as exc:
                 _LOG.warning("the doctor check %s raised", probe.name, exc_info=exc)
-                detail = f"{type(exc).__name__}: {self._cleaned(str(exc))}"
+                detail = f"{type(exc).__name__}: {self.cleaned(str(exc))}"
                 results = (
                     DoctorResult("FAIL", probe.name, detail, (f"FAIL {probe.name:<20} {detail}",)),
                 )
@@ -54,12 +55,16 @@ class DoctorChecks[P: DoctorProbeInterface]:
         return tuple(found)
 
     @staticmethod
-    def _cleaned(message: str) -> str:
-        """A raised check's message as a finding says it: its first line, any URL's credentials
-        replaced by `***` (a DSN in an error must not reach a screen or an editor), cut."""
+    def cleaned(message: str, *, limit: int = DETAIL_CHARS) -> str:
+        """Machine text as a finding says it: its first line, every other control, format or
+        separator character a space, any URL's credentials replaced by `***` (a DSN in an
+        error must not reach a screen or an editor), cut to `limit` characters."""
         first = message.strip().splitlines()[0] if message.strip() else ""
+        first = "".join(
+            " " if unicodedata.category(char)[0] in "CZ" and char != " " else char for char in first
+        )
         first = CREDENTIALS.sub(r"\g<scheme>***@", first)
-        return first if len(first) <= DETAIL_CHARS else f"{first[: DETAIL_CHARS - 3]}..."
+        return first if len(first) <= limit else f"{first[: limit - 3]}..."
 
     @staticmethod
     def passed(results: Sequence[DoctorResult]) -> bool:

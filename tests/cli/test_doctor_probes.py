@@ -78,6 +78,7 @@ def test_the_editor_probes_run_in_doctors_order() -> None:
         "gate-notices",
         "supervisor",
         "host-health",
+        "llm-tooling",
     ]
 
 

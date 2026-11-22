@@ -59,6 +59,7 @@ from vibey.cli.interfaces.doctor_probes_interface import (
     LocalDoctorProbeInterface,
     LocalDoctorProbesInterface,
 )
+from vibey.cli.llm_tooling import LLM_TOOLING_SECTION
 from vibey.cli.sabbath import SABBATH
 from vibey.cli.serve import SERVE
 from vibey.cli.supervisor import SUPERVISOR
@@ -79,6 +80,9 @@ MARKS: Final[frozenset[str]] = frozenset({"PASS", "WARN", "FAIL", "UNKNOWN"})
 NAMED_MARKS: Final[dict[str, DoctorMark]] = {"OK": "PASS", "WARN": "WARN", "SKIP": "UNKNOWN"}
 """The Ollama line's marks, as a doctor result's."""
 SABBATH_PREFIX: Final = "sabbath"
+LLM_TOOLING: Final = "llm-tooling"
+"""The section that reports each detected client's LLM-facing surfaces (`cli/llm_tooling.py`);
+it never fails doctor."""
 
 
 class Emission(StrEnum):
@@ -322,6 +326,7 @@ class LocalDoctorProbes:
         supervisor: Callable[[], tuple[list[str], bool]],
         host_health: Callable[[], tuple[list[str], bool]],
         ollama_enabled: Callable[[], bool],
+        llm_tooling: Callable[[], tuple[list[str], bool]] | None = None,
     ) -> tuple[LocalDoctorProbeInterface, ...]:
         return (
             SectionProbe.printed("database-security", database_security),
@@ -334,6 +339,7 @@ class LocalDoctorProbes:
                 host_health=host_health,
                 ollama_enabled=ollama_enabled,
             ),
+            *(() if llm_tooling is None else (SectionProbe.listed(LLM_TOOLING, llm_tooling),)),
         )
 
     def for_editor(self) -> tuple[LocalDoctorProbeInterface, ...]:
@@ -348,6 +354,7 @@ class LocalDoctorProbes:
                 host_health=HOST_HEALTH.doctor_lines,
                 ollama_enabled=self._local_engine_on,
             ),
+            SectionProbe.listed(LLM_TOOLING, LLM_TOOLING_SECTION.doctor_lines),
         )
 
     @staticmethod

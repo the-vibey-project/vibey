@@ -93,3 +93,15 @@ async def test_a_raised_message_never_repeats_a_dsns_credentials_and_stays_one_c
     assert found[1].detail == "RuntimeError: "
     long = await DoctorChecks((_Probe("long", error=ValueError("y" * 500)),)).run()
     assert long[0].detail.endswith("...") and len(long[0].detail) < 230
+
+
+def test_cleaned_text_is_one_line_with_no_control_format_or_separator_character() -> None:
+    dirty = "path \x1b[31mred\x1b[0m ‮evil​ tab\there second\nthird"
+    clean = DoctorChecks.cleaned(dirty)
+    assert clean == "path  [31mred [0m  evil  tab here"
+    assert all(ch == " " or ch.isprintable() for ch in clean)
+    assert DoctorChecks.cleaned("https://u:p@h/x and more", limit=600) == (
+        "https://***@h/x and more"
+    )
+    assert DoctorChecks.cleaned("z" * 700, limit=600) == "z" * 597 + "..."
+    assert DoctorChecks.cleaned("   ") == ""

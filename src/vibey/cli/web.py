@@ -3,7 +3,8 @@
 
 Every engine has a shell, so every engine has these, including a local model whose own backend
 has no search and a local claudeloop profile that refuses Anthropic's server-side tools. They
-read the same environment as the research stage (`VIBEY_SEARXNG_URL`, `VIBEY_BRAVE_API_KEY`),
+read the same environment as the research stage (`VIBEY_SEARXNG_URL`, `VIBEY_BRAVE_API_KEY` or
+its alias `BRAVE_SEARCH_API_KEY`),
 and everything they print is marked as untrusted web content: data to read, never instructions.
 """
 
@@ -20,6 +21,7 @@ from vibey.cli.errors import EXIT_USAGE
 from vibey.domain.config import ConfigError
 from vibey.infrastructure.web.fetch import PageFetcher, WebFetchError
 from vibey.infrastructure.web.search import (
+    BRAVE_KEY_ALIAS_ENV,
     BRAVE_KEY_ENV,
     SEARXNG_URL_ENV,
     WebSearchError,
@@ -45,8 +47,9 @@ def web_search_line(settings: WebSearchSettings | None) -> str:
     """The worker's one-line statement of where web search reaches."""
     if settings is None:
         return (
-            f"web search: not configured (set {SEARXNG_URL_ENV} or {BRAVE_KEY_ENV}); research"
-            " that has no evidence file is recorded as a gap or parks a gate"
+            f"web search: not configured (set {SEARXNG_URL_ENV}, {BRAVE_KEY_ENV} or"
+            f" {BRAVE_KEY_ALIAS_ENV}); research that has no evidence file is recorded as a gap"
+            " or parks a gate"
         )
     if settings.session_environment():
         return (
@@ -54,8 +57,9 @@ def web_search_line(settings: WebSearchSettings | None) -> str:
             " (vibey search, vibey fetch)"
         )
     return (
-        f"web search: {settings.provider} for DESIGN research only; its key is never passed to"
-        " an engine session, so sessions have no search (use SearXNG for that)"
+        f"web search: {settings.provider} for DESIGN research only (configured via"
+        f" {settings.brave_key_env}); its key is never passed to an engine session, so"
+        " sessions have no search (use SearXNG for that)"
     )
 
 
@@ -76,7 +80,7 @@ def run_search(
     if settings is None:
         typer.echo(
             f"error: web search is not configured: set {SEARXNG_URL_ENV} (a self-hosted SearXNG)"
-            f" or {BRAVE_KEY_ENV} (the Brave Search API)"
+            f" or {BRAVE_KEY_ENV} (the Brave Search API; {BRAVE_KEY_ALIAS_ENV} also works)"
         )
         return EXIT_USAGE
     backend = backend_for(settings, **({"opener": opener} if opener else {}))

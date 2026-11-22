@@ -2,10 +2,16 @@
 """Search backends: a self-hosted SearXNG, or the Brave Search API.
 
 Both are configured by the environment alone, never by a file the model could read or a
-repository could commit (`VIBEY_SEARXNG_URL`, `VIBEY_BRAVE_API_KEY`). A search that is not
+repository could commit (`VIBEY_SEARXNG_URL`, `VIBEY_BRAVE_API_KEY`, or `BRAVE_SEARCH_API_KEY`,
+the name Brave's own tools read; vibey's own name wins when both are set). A search that is not
 configured is not an error: `WebSearchSettings.from_environment` returns None, and every
 caller then behaves as it did before search existed. A search that is configured and fails is
 a `WebSearchError` that names the backend and the cause, never the URL or the key.
+
+The Brave key stays in vibey's own processes. A session never receives it: not under
+`VIBEY_BRAVE_API_KEY` (no `VIBEY_*` name reaches one), and not under the alias, which the rule
+under every child's allow-list names (`process/child_environment.py`). Its value is never in a
+`repr`, a log line, an error or `vibey doctor`; what is said is which variable configured it.
 
 What comes back is untrusted text from the open web. It is returned as data (title, URL,
 snippet) and every surface that shows it says so.
@@ -18,7 +24,7 @@ import urllib.error
 import urllib.parse
 import urllib.request
 from collections.abc import Callable, Mapping
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Any, Final
 
 from vibey.domain.config import ConfigError
@@ -32,6 +38,12 @@ SESSION_PREFIX: Final = "WEBSEARCH_"
 SEARCH_PROVIDER_ENV: Final = "VIBEY_SEARCH_PROVIDER"
 SEARXNG_URL_ENV: Final = "VIBEY_SEARXNG_URL"
 BRAVE_KEY_ENV: Final = "VIBEY_BRAVE_API_KEY"
+BRAVE_KEY_ALIAS_ENV: Final = "BRAVE_SEARCH_API_KEY"
+"""The name Brave's own tools read the key from; `VIBEY_BRAVE_API_KEY` wins when both are set."""
+BRAVE_KEY_NAMES: Final = (BRAVE_KEY_ENV, "WEBSEARCH_BRAVE_API_KEY", BRAVE_KEY_ALIAS_ENV)
+"""Every name the Brave key is read under, in order: vibey's own, the `WEBSEARCH_*` form every
+`VIBEY_*` search setting has, and Brave's. None of them can reach a child process
+(`process/child_environment.py`)."""
 SEARCH_TIMEOUT_ENV: Final = "VIBEY_SEARCH_TIMEOUT"
 SEARCH_RESULTS_ENV: Final = "VIBEY_SEARCH_RESULTS"
 
@@ -60,27 +72,40 @@ class WebSearchSettings:
 
     provider: str
     searxng_url: str | None = None
-    brave_key: str | None = None
+    brave_key: str | None = field(default=None, repr=False)
     timeout_seconds: float = DEFAULT_TIMEOUT_SECONDS
     results: int = DEFAULT_RESULTS
+    brave_key_env: str | None = None
+    """Which variable the Brave key came from: what may be said, never the key."""
 
     @classmethod
     def from_environment(cls, environ: Mapping[str, str]) -> "WebSearchSettings | None":
         """The settings the environment declares, or None when search is not configured.
 
         `VIBEY_SEARCH_PROVIDER` (`searxng` or `brave`) chooses; unset, whichever backend
-        is configured is used, SearXNG first. Naming a provider whose setting is missing, or a
-        value that cannot be read, is refused by name rather than falling back.
+        is configured is used, SearXNG first. The Brave key is `VIBEY_BRAVE_API_KEY`, else
+        `BRAVE_SEARCH_API_KEY`. Naming a provider whose setting is missing, or a value that
+        cannot be read, is refused by name rather than falling back.
         """
         searxng = _setting(environ, SEARXNG_URL_ENV) or None
-        brave = _setting(environ, BRAVE_KEY_ENV) or None
+        # Exactly three names, first wins: vibey's own, its `WEBSEARCH_*` form, then Brave's.
+        brave_env, brave = next(
+            (
+                (name, value)
+                for name in BRAVE_KEY_NAMES
+                if (value := (environ.get(name) or "").strip())
+            ),
+            (None, None),
+        )
         chosen = _setting(environ, SEARCH_PROVIDER_ENV).lower()
         if chosen not in {"", "searxng", "brave"}:
             raise ConfigError(SEARCH_PROVIDER_ENV, f"must be searxng or brave, got {chosen!r}")
         if chosen == "searxng" and searxng is None:
             raise ConfigError(SEARCH_PROVIDER_ENV, f"searxng needs {SEARXNG_URL_ENV}")
         if chosen == "brave" and brave is None:
-            raise ConfigError(SEARCH_PROVIDER_ENV, f"brave needs {BRAVE_KEY_ENV}")
+            raise ConfigError(
+                SEARCH_PROVIDER_ENV, f"brave needs {BRAVE_KEY_ENV} or {BRAVE_KEY_ALIAS_ENV}"
+            )
         if not chosen:
             chosen = "searxng" if searxng is not None else "brave" if brave is not None else ""
         if not chosen:
@@ -93,6 +118,7 @@ class WebSearchSettings:
             brave_key=brave,
             timeout_seconds=_positive_float(environ, SEARCH_TIMEOUT_ENV, DEFAULT_TIMEOUT_SECONDS),
             results=_bounded_int(environ, SEARCH_RESULTS_ENV, DEFAULT_RESULTS),
+            brave_key_env=brave_env,
         )
 
     def session_environment(self) -> dict[str, str]:

@@ -10,7 +10,12 @@ from collections.abc import Sequence
 from typing import TYPE_CHECKING, Protocol, runtime_checkable
 
 if TYPE_CHECKING:
-    from vibey.domain.host_clients import ConnectPlanItem, HostClientSpec, McpLaunchCommand
+    from vibey.domain.host_clients import (
+        ClientProtocol,
+        ConnectPlanItem,
+        HostClientSpec,
+        McpLaunchCommand,
+    )
 
 
 @runtime_checkable
@@ -28,8 +33,28 @@ class HostClientsInterface(Protocol):
         *,
         which_vibey: str | None,
         python_executable: str,
+        protocol: ClientProtocol = "mcp",
     ) -> McpLaunchCommand:
-        """Resolve the command and args an MCP host should launch (`vibey mcp` or python fallback)."""
+        """Resolve the command and args a client should launch: `vibey mcp` (an MCP server) or
+        `vibey acp` (an ACP agent), or the Python fallback running the same."""
+        ...
+
+    def carries(
+        self, spec: HostClientSpec, launch: McpLaunchCommand, existing_content: str | None
+    ) -> bool:
+        """Whether a config's text already holds a `vibey` entry running `launch` (its command,
+        leading `args` and required `type`; the person's other keys and extra flags are theirs),
+        however it is laid out; a JSON file with comments or trailing commas is read leniently,
+        and one that cannot be parsed at all does not carry it. Only reads."""
+        ...
+
+    def names_vibey(self, spec: HostClientSpec, existing_content: str | None) -> bool:
+        """Whether the file holds any `vibey` entry at all, whatever it runs. Only reads."""
+        ...
+
+    def snippet(self, spec: HostClientSpec, launch: McpLaunchCommand) -> str:
+        """The `"<root key>": {"vibey": {...}}` text to paste into a JSON client's top-level
+        object by hand, exactly the entry `plan_one` would merge."""
         ...
 
     def plan_one(
@@ -41,8 +66,13 @@ class HostClientsInterface(Protocol):
         platform: str,
         launch: McpLaunchCommand,
         existing_content: str | None,
+        xdg_config_home: str | None = None,
     ) -> ConnectPlanItem:
-        """Compute the idempotent merge plan for one host client."""
+        """Compute the idempotent merge plan for one host client: `unchanged` (never
+        reformatted) when the file already carries a `vibey` entry running `launch`; otherwise
+        only the entry's `type`, `command` and leading `args` change, the person's other keys
+        and extra flags kept. A file that cannot be parsed -- not strict JSON, invalid TOML,
+        nested too deeply -- raises `HostClientError`, never anything else."""
         ...
 
     def resolve_clients(self, requested: Sequence[str] | None) -> tuple[HostClientSpec, ...]:

@@ -3,7 +3,7 @@ id: skill-3-operator-workflow-in-chat-b1e30cb405
 purpose: 3 operator workflow in chat
 source: src/vibey_tools/skills/plugins/vibey/skills/vibey-chat-driver/SKILL.md
 requires: ["skill-2-security-boundary-the-scoped-agent-principal-046fb6537a"]
-links: []
+links: ["skill-4-driving-vibey-over-acp-zed-and-other-acp-clients-9cb332ba44"]
 ---
 
 ## 3. Operator Workflow in Chat
@@ -32,3 +32,5 @@ When a project parks on a human gate:
 - `vibey_ledger(project_id="<uuid>", text="...", kind=["..."], limit=50)` — search the append-only audit ledger.
 - `vibey_budget(project_id="<uuid>")` — check cycle and project spend against caps.
 - `vibey_loops`, `vibey_lanes`, `vibey_doctor` — inspect local/paid engine availability, active runner lanes, and hub readiness.
+
+---
