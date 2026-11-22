@@ -554,6 +554,10 @@ class EventKind(StrEnum):
     # A DESIGN research topic not researched (`[design.research] on_unavailable =
     # "record_gap"`): topic, reason, cycle -- never a source. The spec states each one.
     RESEARCH_GAP_RECORDED = "ResearchGapRecorded"
+    # The hub's web search or fetch for a principal (ADR-0102): who, the outcome, the backend,
+    # and for a fetch the hosts it reached -- never the query, never a URL. Trusted only.
+    WEB_SEARCHED = "WebSearched"
+    WEB_FETCHED = "WebFetched"
 
 
 CLOSABLE: frozenset[EventKind] = frozenset({

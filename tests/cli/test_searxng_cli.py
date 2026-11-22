@@ -581,8 +581,14 @@ def test_doctors_section_asks_the_searxng_command_for_its_line(
     monkeypatch.setattr("vibey.cli.searxng.SEARXNG_COMMAND", Line())
     assert web_search_doctor._searxng_line() == "WARN searxng  stand-in"
     lines, ok = web_search_doctor.WEB_SEARCH_DOCTOR.doctor_lines()
-    assert ok and lines[-1] == "WARN searxng  stand-in"
-    assert [line.split()[1] for line in lines] == ["web-search", "web-search-backup", "searxng"]
+    # The hub's `web-tools` line (ADR-0102, Task 9b) comes after it, added last.
+    assert ok and lines[-2] == "WARN searxng  stand-in"
+    assert [line.split()[1] for line in lines] == [
+        "web-search",
+        "web-search-backup",
+        "searxng",
+        "web-tools",
+    ]
 
 
 # -- fix round 1 ----------------------------------------------------------------------------------

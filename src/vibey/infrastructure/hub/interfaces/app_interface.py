@@ -18,6 +18,9 @@ if TYPE_CHECKING:
         AcpSessionServiceInterface,
     )
     from vibey.application.hub.interfaces.hub_service_interface import HubServiceInterface
+    from vibey.application.hub.interfaces.web_tools_service_interface import (
+        WebToolsServiceInterface,
+    )
     from vibey.application.interfaces.remote_command import RemoteCommandServiceInterface
     from vibey.domain.interfaces.run_ownership_interface import RunOwnershipInterface
     from vibey.infrastructure.hub.interfaces.authenticator_interface import (
@@ -45,9 +48,10 @@ class HubAppFactoryInterface(Protocol):
         workflows: RemoteCommandServiceInterface | None = None,
         runs: RunOwnershipInterface | None = None,
         acp_sessions: AcpSessionServiceInterface | None = None,
+        web: WebToolsServiceInterface | None = None,
     ) -> FastAPI:
         """The app: Host allowlist, security headers, no CORS, principal before route. The
         workflows routes are offered only with both `workflows` and `runs`, the key their
         request ids are bound to their starters under; the ACP session routes only with
-        `acp_sessions`."""
+        `acp_sessions`; the web search and fetch routes only with `web` (ADR-0102)."""
         ...

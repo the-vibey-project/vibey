@@ -213,6 +213,10 @@ WITHHELD_KINDS: Final[frozenset[EventKind]] = frozenset(
         EventKind.JOB_PRIORITY_UNBUMPED,
         EventKind.JOB_PRIORITY_REFUSED,
         EventKind.QUEUE_REAPED,
+        # Who used the hub's web search and fetch, and which hosts a fetch reached: the
+        # operator's own record of what left the computer.
+        EventKind.WEB_SEARCHED,
+        EventKind.WEB_FETCHED,
     }
 )
 """Every kind the default rules withhold whole, named so that none is withheld -- or

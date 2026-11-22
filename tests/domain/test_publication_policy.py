@@ -141,6 +141,18 @@ def test_a_kind_not_on_the_allowlist_is_withheld_whole() -> None:
     assert decision.trim == NO_TRIM
 
 
+@pytest.mark.parametrize("value", ["WebSearched", "WebFetched"])
+def test_the_hubs_web_audit_is_withheld_whole(value: str) -> None:
+    """Who searched or fetched, through which backend, and which hosts a fetch reached
+    (ADR-0102): the operator's own record of what left the computer, never a public one."""
+    kind = EventKind(value)
+    decision = DEFAULT_POLICY.decide(
+        _event(kind=kind, payload={"tool": "fetch", "principal": "agent", "hosts": ["a.example"]})
+    )
+    assert decision.record is None
+    assert decision.withheld is WithheldReason.KIND_NOT_ALLOWLISTED
+
+
 @pytest.mark.parametrize("kind", sorted(ENGINE_CHATTER))
 def test_engine_chatter_is_withheld_even_when_allowlisted(kind: EventKind) -> None:
     rules = PublicationRules(allowed={kind: frozenset({"text"})})

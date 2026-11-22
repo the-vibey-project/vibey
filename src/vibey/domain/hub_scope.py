@@ -45,6 +45,11 @@ class HubScope(StrEnum):
     ACP_SESSIONS = "acp_sessions"
     """Keep the principal's own ACP sessions on the hub: create one, append to its log (SP-ACP).
     A write, so `view` is not enough; granted by default to the agent principal only."""
+    WEB = "web"
+    """Search the web and read one public page through the hub (`/api/v1/web/*`, ADR-0102). The
+    hub holds the Brave key and the fetch guards, and records each use on the ledger. A query and
+    a URL leave the computer, so this is its own grant: the agent principal's by default, never a
+    paired device's unless the host offers it."""
 
 
 class HubAction(StrEnum):
@@ -61,6 +66,11 @@ class HubAction(StrEnum):
     RECORD_ACP_SESSION = "record_acp_session"
     """Create an ACP session, or append to its log (a close is an append). Only the principal
     that created a session reads or writes it."""
+    WEB_SEARCH = "web_search"
+    """Search the web through the hub's local-first search (SearXNG first, Brave only as its
+    backup)."""
+    WEB_FETCH = "web_fetch"
+    """Read one public page through the hub's guarded fetch."""
 
 
 REQUIRED_SCOPE: Final[dict[HubAction, HubScope]] = {
@@ -72,18 +82,21 @@ REQUIRED_SCOPE: Final[dict[HubAction, HubScope]] = {
     HubAction.RUN_ON_WORKFLOWS: HubScope.WORKFLOWS,
     HubAction.READ_ACP_SESSIONS: HubScope.VIEW,
     HubAction.RECORD_ACP_SESSION: HubScope.ACP_SESSIONS,
+    HubAction.WEB_SEARCH: HubScope.WEB,
+    HubAction.WEB_FETCH: HubScope.WEB,
 }
 """The one scope each action needs. Total over `HubAction`; a test holds it so."""
 
 AGENT_DEFAULT_SCOPES: Final[frozenset[HubScope]] = frozenset(
-    {HubScope.VIEW, HubScope.ANSWER, HubScope.RUN, HubScope.ACP_SESSIONS}
+    {HubScope.VIEW, HubScope.ANSWER, HubScope.RUN, HubScope.ACP_SESSIONS, HubScope.WEB}
 )
 """What a host LLM driving vibey through MCP (ADR-0100) or an editor over ACP may do unless
 `[hub] agent_scopes` says otherwise: look, answer a gate that does not spend, start, pause or
-unwind work, and keep its own ACP sessions' logs. Never `spend`, `bump` or `workflows`: a model
+unwind work, keep its own ACP sessions' logs, and search the web and read a public page through
+the hub (`web`, bounded by `[web]`'s budgets and recorded on the ledger). Never `spend`, `bump` or `workflows`: a model
 that has been argued out of its instructions must not be able to spend money by answering a
 budget gate, so the hub itself refuses it. A paired device gets only what the host offers it,
-so `acp_sessions` is never a device's by default."""
+so neither `acp_sessions` nor `web` is ever a device's by default."""
 
 NEVER_FROM_THE_HUB: Final[frozenset[str]] = frozenset(
     {

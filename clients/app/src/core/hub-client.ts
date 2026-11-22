@@ -86,6 +86,7 @@ export class HubClient implements HubClientInterface {
     bump: 'Bump a job to the front of the queue',
     workflows: "Run vibey commands on the repository's GitHub-hosted runners",
     acp_sessions: "Keep its own editor (ACP) sessions' history on the hub",
+    web: 'Search the web and read public pages through the hub (recorded on the ledger)',
   };
 
   /** The project-lifecycle routes' own refusals (ADR-0091); the hub's `detail` is added to each. */

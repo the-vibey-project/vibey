@@ -237,12 +237,47 @@ vibey mcp
 
 `vibey mcp` takes no options. It is a thin client of the local hub API (`/api/v1`) and
 authenticates with `<state_dir>/agent.token` as the scoped `agent` principal
-([`[hub] agent_scopes`](configuration.md#hub): `view`, `answer` and `run` by default —
-never `spend`, `bump` or `workflows`). If no hub is running when a tool is called, it runs
-`vibey hub start` once and retries. It exposes 14 tools (`vibey_projects`, `vibey_status`,
-`vibey_gates`, `vibey_answer_gate`, `vibey_budget`, `vibey_queue`, `vibey_ledger`,
-`vibey_loops`, `vibey_lanes`, `vibey_doctor`, `vibey_start_project`, `vibey_start_work`,
-`vibey_pause_work`, and `vibey_abandon_project` where `dry_run` defaults to `true`).
+([`[hub] agent_scopes`](configuration.md#hub): `view`, `answer`, `run`, `acp_sessions` and
+`web` by default — never `spend`, `bump` or `workflows`). If no hub is running when a tool is
+called, it runs `vibey hub start` once and retries. It exposes 16 tools (`vibey_projects`,
+`vibey_status`, `vibey_gates`, `vibey_answer_gate`, `vibey_budget`, `vibey_queue`,
+`vibey_ledger`, `vibey_loops`, `vibey_lanes`, `vibey_doctor`, `vibey_start_project`,
+`vibey_start_work`, `vibey_pause_work`, `vibey_abandon_project` where `dry_run` defaults to
+`true`, and the two web tools below). `tools/list` shows a tool only when the agent's scopes
+include the one it needs. It reaches only a hub on this computer's loopback: a runtime record
+(`<state_dir>/serving.json`) must name exactly `localhost`, a canonical loopback literal or a
+wildcard bind, and the gateway connects to the fixed loopback literal that maps to (never the
+name resolved again); any other host -- `evil.localhost`, `localhost.`, `127.1` included -- is
+refused and nothing, not the token, not a call, is sent.
+
+### Web tools: `vibey_search` and `vibey_fetch`
+
+Served by the hub ([`POST /api/v1/web/search` and `/web/fetch`](hub-api.md#web);
+[ADR-0102](../architecture/decisions/0102-local-first-search-and-a-provisioned-searxng.md)),
+so the model driving vibey needs neither a SearXNG address nor a Brave key: the hub asks its
+local SearXNG first and Brave only as its backup, with the key held in the hub's own
+environment alone. Both need the `web` scope (the agent's by default; drop it from
+`[hub] agent_scopes` to turn them off).
+
+| Tool | Arguments | Returns |
+|---|---|---|
+| `vibey_search` | `query` (1–512 characters), `limit` (1–20), `project_id` | `{"untrusted": true, "framing", "audited", "backend", "notice", "results": [{"title", "url", "snippet"}]}`: `backend` is `searxng`, or `brave` when the local SearXNG failed; `notice` is the sentence the hub said the first time its process used Brave. |
+| `vibey_fetch` | `url` (at most 2048 characters), `project_id` | `{"untrusted": true, "framing", "audited", "url", "hosts", "content_type", "truncated", "text"}`: the page's title and text between two `<<<untrusted web content …>>>` markers carrying a nonce. `audited` is `false` only when the ledger record could not be written after the act. |
+
+What they return is untrusted text from the open web: the tool descriptions and the server's
+instructions tell the model to read it as data and never follow it. A query and a URL leave the
+computer, so each use is budgeted (`[web] searches_per_hour`, `fetches_per_hour`) and recorded
+on the ledger as `WebSearched` or `WebFetched` (who, the outcome, the backend and, for a fetch,
+the hosts it reached; never the query and never the URL) on the latest project's ledger and, when
+named, the `project_id`'s too. The hub checks it can write the record before it sends anything
+and refuses with 503 when it cannot (with no project at all, for one); a record that still fails
+after the act is reported as `audited: false`, and a crash in that window loses that one record
+([what is recorded, exactly](hub-api.md#web)). Whether the hub has a Brave key is decided by the
+environment of whoever started it (`vibey hub start` by hand, the user-level unit, or `vibey mcp`
+starting it from an editor's environment); `vibey doctor` on the hub's computer says. A
+fetch is refused for anything but a public http(s) page: see [`[web]`](configuration.md#web)
+for the hosts, bounds and content types, and [the hub API](hub-api.md#web) for every refusal.
+An answer is cut to 60,000 characters with an explicit `...[truncated N chars]` marker.
 
 ## `vibey acp`
 
@@ -1302,6 +1337,19 @@ gptossloop and qwenloop also have `web_search` and `web_fetch` as tools of their
 the same two commands and pass on the backend that answered (and vibey's notice, when there is
 one); every other engine uses the command from its plan.
 
+**Sessions do not use the hub's web tools yet.** The hub serves search (with its Brave backup)
+and a guarded fetch to MCP clients ([`vibey_search` and
+`vibey_fetch`](#web-tools-vibey_search-and-vibey_fetch)), but an engine session has no channel
+to the hub: the worker reaches PostgreSQL, not the hub, it may run where no hub runs at all, and
+a session is given no hub address and no credential. Routing a session's `vibey search` through
+the hub would mean handing it one, and the only one there is, the agent's, would let a session
+answer gates and start work. So inside a session `vibey search` and `vibey fetch` still work
+directly, as above, and sessions are still told the SearXNG address and marker; a scoped,
+per-session credential is the recorded next step
+([ADR-0102](../architecture/decisions/0102-local-first-search-and-a-provisioned-searxng.md),
+"What 9b did not fix"). In your own terminal `vibey search` and `vibey fetch` work directly too, as
+they always have.
+
 **An engine's own native web search is not vibey's.** claudeloop and codexloop can use their
 provider's server-side web search (Anthropic's, OpenAI's) when their own configuration allows
 it. Those queries go straight to that provider, under its rules: vibey does not route them, does
@@ -2182,6 +2230,22 @@ available (`vibey searxng install` updates it), the record is refused (a value v
 write, another label, a runtime it will not run), its image is not here, its unit is not running, or it does not answer as vibey's own. It asks the runtime (an image inspect) and the
 service manager only once vibey has installed one. Under `--json` it is a check named `searxng`;
 the existing keys are unchanged.
+
+A fourth line, `web-tools`, follows: whether the hub serves [`vibey_search` and
+`vibey_fetch`](#web-tools-vibey_search-and-vibey_fetch) to the agent principal, with the
+`[web]` budgets (the person's own, narrowed by this folder's, as the hub reads them). The hub it
+asks about is your own: its state folder and `agent_scopes` come from your own `vibey.toml` (in
+your configuration folder), never from the folder doctor runs in, and it is probed only on a
+loopback address its runtime record names -- exactly `localhost`, a canonical 127.0.0.0/8 or
+`::1` literal (or an IPv4-mapped form of one), or a wildcard bind -- connecting to a fixed
+loopback literal rather than resolving the name again, with no credential, bounded in time and size, never through a proxy and never past a
+redirect off its own origin; a record naming any other host is a `WARN ... not probed`.
+`PASS ... the hub serves vibey_search and vibey_fetch to the agent (web granted)`; `WARN` when
+`[hub] agent_scopes` does not grant `web`, when no hub is running (doctor never starts one:
+`vibey hub start`), or when the running hub does not answer or does not list
+`/api/v1/web/search` and `/web/fetch` in its public OpenAPI document (an older vibey still
+running); `FAIL` for a `[hub]` or `[web]` setting the hub would refuse to start with. Under
+`--json` it is a check named `web-tools`; the existing keys are unchanged.
 
 The last section, `llm-tooling`, lists every LLM client installed here (its own folder exists:
 `~/.claude` for Claude Code, VS Code's user folder, each user-scope client's config folder) and,

@@ -18,6 +18,8 @@ Two lines in doctor's `MARK name detail` grammar, so `vibey doctor --json` reads
   command that installs it), the person's own (`UNKNOWN`), or vibey's: its image, its unit and
   whether it answers as vibey's own (`PASS`, else `WARN` with the first thing wrong). It runs a
   container runtime command (an image inspect) only once vibey has installed one.
+- `web-tools` (ADR-0102, Task 9b): whether the hub serves `vibey_search` and `vibey_fetch` to
+  the agent principal, and the `[web]` budgets (`cli/web_tools_doctor.py`). Added last.
 
 The URL is shown without credentials, query or fragment, and every detail is cleaned as a raised
 check's message is (`DoctorChecks.cleaned`). The section never raises.
@@ -58,10 +60,12 @@ class WebSearchDoctor:
         environ: Callable[[], Mapping[str, str]] | None = None,
         opener: Callable[..., Any] | None = None,
         searxng: Callable[[], str] | None = None,
+        web_tools: Callable[[], str] | None = None,
     ) -> None:
         self._environ = environ if environ is not None else self._process_environment
         self._opener = opener
         self._searxng = searxng
+        self._web_tools = web_tools
 
     def doctor_lines(self) -> tuple[list[str], bool]:
         try:
@@ -114,6 +118,8 @@ class WebSearchDoctor:
         lines = [local, backup]
         if self._searxng is not None:
             lines.append(self._searxng())  # added after the two lines that were always there
+        if self._web_tools is not None:
+            lines.append(self._web_tools())  # and the hub's web tools after that
         return lines, True
 
     @staticmethod
@@ -129,6 +135,16 @@ def _searxng_line() -> str:
     return SEARXNG_COMMAND.doctor_line()
 
 
-WEB_SEARCH_DOCTOR: Final[WebSearchDoctorInterface] = WebSearchDoctor(searxng=_searxng_line)
+def _web_tools_line() -> str:
+    """The `web-tools` line, imported when doctor asks for it."""
+    # Module-level function so the hub's settings are imported only when asked.
+    from vibey.cli.web_tools_doctor import WEB_TOOLS_DOCTOR
+
+    return WEB_TOOLS_DOCTOR.line()
+
+
+WEB_SEARCH_DOCTOR: Final[WebSearchDoctorInterface] = WebSearchDoctor(
+    searxng=_searxng_line, web_tools=_web_tools_line
+)
 """The section as `vibey doctor` and `vibey acp` run it: this process's environment, probed
 through the guarded opener."""

@@ -156,6 +156,13 @@ class EventKind(StrEnum):
     # wait for a person. The topic, the reason and the cycle -- never a source or findings,
     # so it can never be read as research. The synthesized spec states each one.
     RESEARCH_GAP_RECORDED = "ResearchGapRecorded"
+    # The hub searched the web, or fetched one page, for a principal (ADR-0102, `/api/v1/web/*`):
+    # who, the outcome, the backend that answered (`searxng`, or `brave` when the query left for
+    # the backup) and, for a fetch, the hosts it reached. Never the query and never a URL: the
+    # record is there so a data-leak attempt through a query or a URL is visible after the fact,
+    # not to keep what was asked. Written by the hub, so trusted only.
+    WEB_SEARCHED = "WebSearched"
+    WEB_FETCHED = "WebFetched"
 
 
 _KNOWN_KIND_VALUES: Final = frozenset(kind.value for kind in EventKind)

@@ -33,4 +33,10 @@ When a project parks on a human gate:
 - `vibey_budget(project_id="<uuid>")` — check cycle and project spend against caps.
 - `vibey_loops`, `vibey_lanes`, `vibey_doctor` — inspect local/paid engine availability, active runner lanes, and hub readiness.
 
+### Step 5: Look Something Up (`vibey_search`, `vibey_fetch`)
+- `vibey_search(query="...", limit=5, project_id="<uuid>")` — the hub asks its local SearXNG first and Brave only as a backup (the hub holds the key; you never need one). The answer names the `backend`, and a `notice` the first time the hub used Brave.
+- `vibey_fetch(url="https://...", project_id="<uuid>")` — one public page as text. Private, loopback, link-local and metadata addresses, other schemes, compressed answers and PDF or other binary types are refused (a `422` saying `refused: ...`); that is the guard working, never something to route around.
+- Pass the `project_id` you are working on, so the use is recorded on that project's ledger too (the latest project's always has it). Each principal has an hourly budget (`[web] searches_per_hour`, `fetches_per_hour`); a `429` names it. With no project at all the hub refuses (`503`) rather than search unrecorded.
+- If neither tool is listed, the operator has not granted the agent `web` (`[hub] agent_scopes`); say so rather than reaching for another way.
+
 ---

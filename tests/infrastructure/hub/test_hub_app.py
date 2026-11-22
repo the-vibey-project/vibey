@@ -579,6 +579,11 @@ async def test_a_device_needs_the_workflows_scope() -> None:
         (
             ("workflows", "view", "run", "bump", "answer", "spend", "acp_sessions"),
             ["new", "x"],
+            "web",
+        ),
+        (
+            ("workflows", "view", "run", "bump", "answer", "spend", "acp_sessions", "web"),
+            ["new", "x"],
             "",
         ),
     ],

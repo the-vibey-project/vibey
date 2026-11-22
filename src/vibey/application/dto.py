@@ -520,6 +520,42 @@ class HubPrincipal:
     scopes: frozenset[HubScope] = frozenset()
 
 
+# The hub's web tools (ADR-0102): what the search and fetch adapters hand the service.
+
+
+@dataclass(frozen=True, slots=True)
+class WebHit:
+    """One search result: untrusted text from the open web, already cleaned of terminal control."""
+
+    title: str
+    url: str
+    snippet: str
+
+
+@dataclass(frozen=True, slots=True)
+class WebSearchAnswer:
+    """One query's results and the backend that answered (`searxng`, or `brave`, the backup);
+    `notice` is the once-per-hub-process sentence said when this was the first query to Brave."""
+
+    hits: tuple[WebHit, ...]
+    backend: str
+    notice: str | None = None
+
+
+@dataclass(frozen=True, slots=True)
+class WebPage:
+    """One fetched page as plain text: untrusted, cleaned of terminal control, at most the bound."""
+
+    url: str
+    """Where the page was read from, after any redirect."""
+    hosts: tuple[str, ...]
+    """Every host the fetch reached, in order: the first, then each redirect's."""
+    title: str
+    text: str
+    truncated: bool
+    content_type: str
+
+
 # The driver failover (ADR-0070): what its seams exchange.
 
 

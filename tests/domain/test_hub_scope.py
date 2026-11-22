@@ -6,6 +6,7 @@ import itertools
 import pytest
 
 from vibey.domain.hub_scope import (
+    AGENT_DEFAULT_SCOPES,
     HUB_SCOPES,
     NEVER_FROM_THE_HUB,
     REQUIRED_SCOPE,
@@ -28,6 +29,22 @@ def test_the_full_matrix_permits_exactly_the_required_scope() -> None:
             granted = frozenset(subset)
             for action in HubAction:
                 assert HUB_SCOPES.permits(granted, action) == (REQUIRED_SCOPE[action] in granted)
+
+
+def test_the_web_scope_alone_covers_search_and_fetch_and_is_the_agents_by_default() -> None:
+    """A query and a URL leave the computer (ADR-0102), so neither is a read: `view` reaches
+    neither, `web` reaches both, and the agent holds `web` unless `[hub] agent_scopes` drops it."""
+    web = frozenset({HubScope.WEB})
+    for action in (HubAction.WEB_SEARCH, HubAction.WEB_FETCH):
+        assert REQUIRED_SCOPE[action] is HubScope.WEB
+        assert HUB_SCOPES.permits(web, action)
+        assert not HUB_SCOPES.permits(frozenset(HubScope) - web, action)
+    assert {a for a in HubAction if HUB_SCOPES.permits(web, a)} == {
+        HubAction.WEB_SEARCH,
+        HubAction.WEB_FETCH,
+    }
+    assert HubScope.WEB in AGENT_DEFAULT_SCOPES
+    assert HubScope.WEB.value == "web"
 
 
 def test_view_cannot_answer_and_answer_cannot_spend() -> None:

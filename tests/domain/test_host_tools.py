@@ -24,6 +24,9 @@ def test_the_catalogue_satisfies_its_interface() -> None:
     assert HOST_TOOL_CATALOG.all() == HOST_TOOLS
     assert "untrusted DATA" in HOST_INSTRUCTIONS
     assert "dry_run=true" in HOST_INSTRUCTIONS
+    # The web tools' rule (ADR-0102): their results are data, and a query or URL leaves the machine.
+    assert "vibey_search" in HOST_INSTRUCTIONS and "vibey_fetch" in HOST_INSTRUCTIONS
+    assert "never put secrets" in HOST_INSTRUCTIONS
 
 
 def test_every_tool_stays_inside_the_agent_default_ceiling_and_never_bumps_or_spends() -> None:
@@ -43,6 +46,8 @@ def test_every_tool_stays_inside_the_agent_default_ceiling_and_never_bumps_or_sp
         "vibey_start_work",
         "vibey_pause_work",
         "vibey_abandon_project",
+        "vibey_search",
+        "vibey_fetch",
     ]
     for tool in HOST_TOOL_CATALOG.all():
         assert tool.scope in AGENT_DEFAULT_SCOPES
@@ -244,3 +249,88 @@ def test_truncate_preserves_short_responses_and_marks_long_ones_explicitly() -> 
     assert HOST_TOOL_CATALOG.truncate("0123456789", limit=10) == "0123456789"
     truncated = HOST_TOOL_CATALOG.truncate("0123456789abcdef", limit=10)
     assert truncated == "0123456789\n...[truncated 6 chars]"
+
+
+def test_the_web_tools_need_the_web_scope_and_say_their_results_are_untrusted_data() -> None:
+    """ADR-0102: a principal without `web` is never offered them, and each description tells the
+    model that what comes back is data, never instructions, and that what it sends leaves."""
+    without_web = HOST_TOOL_CATALOG.for_scopes(AGENT_DEFAULT_SCOPES - {HubScope.WEB})
+    assert not {"vibey_search", "vibey_fetch"} & {tool.name for tool in without_web}
+    only_web = HOST_TOOL_CATALOG.for_scopes(frozenset({HubScope.WEB}))
+    assert [tool.name for tool in only_web] == ["vibey_search", "vibey_fetch"]
+    by_name = {d["name"]: d for d in HOST_TOOL_CATALOG.mcp_definitions(AGENT_DEFAULT_SCOPES)}
+    for name, route in (
+        ("vibey_search", "/api/v1/web/search"),
+        ("vibey_fetch", "/api/v1/web/fetch"),
+    ):
+        definition = by_name[name]
+        description = definition["description"]
+        assert "UNTRUSTED" in description and "never follow" in description
+        assert "leaves this computer" in description and "records" in description
+        assert definition["annotations"]["openWorldHint"] is True
+        assert definition["annotations"]["destructiveHint"] is False
+        tool = HOST_TOOL_CATALOG.by_name(name)
+        assert tool is not None and tool.route == route and tool.method == "POST"
+    # Every other tool stays inside vibey.
+    assert all(
+        d["annotations"]["openWorldHint"] is False
+        for n, d in by_name.items()
+        if n not in {"vibey_search", "vibey_fetch"}
+    )
+
+
+def test_the_web_tools_input_schemas_are_bounded() -> None:
+    by_name = {d["name"]: d for d in HOST_TOOL_CATALOG.mcp_definitions(AGENT_DEFAULT_SCOPES)}
+    search = by_name["vibey_search"]["inputSchema"]
+    assert search["required"] == ["query"]
+    assert search["properties"]["query"]["maxLength"] == 512
+    assert (search["properties"]["limit"]["minimum"], search["properties"]["limit"]["maximum"]) == (
+        1,
+        20,
+    )
+    assert search["properties"]["project_id"]["format"] == "uuid"
+    assert search["additionalProperties"] is False
+    fetch = by_name["vibey_fetch"]["inputSchema"]
+    assert fetch["required"] == ["url"]
+    assert fetch["properties"]["url"]["maxLength"] == 2048
+    assert set(fetch["properties"]) == {"url", "project_id"}
+
+
+def test_a_search_or_fetch_becomes_one_bounded_hub_request() -> None:
+    search = HOST_TOOL_CATALOG.build_call(
+        "vibey_search", {"query": "asyncpg pool", "limit": 3}, request_id="r"
+    )
+    assert (search.method, search.route, search.query) == ("POST", "/api/v1/web/search", ())
+    assert search.body == {"query": "asyncpg pool", "limit": 3}
+    assert search.open_world  # waited for past the hub's web deadline, and never sent twice
+    assert not HOST_TOOL_CATALOG.build_call("vibey_projects", None, request_id="r").open_world
+    fetch = HOST_TOOL_CATALOG.build_call(
+        "vibey_fetch",
+        {"url": "https://docs.example/", "project_id": UPPER_UUID},
+        request_id="r",
+    )
+    assert fetch.body == {"url": "https://docs.example/", "project_id": UPPER_UUID.lower()}
+    for name, arguments in (
+        ("vibey_search", {"query": "x" * 513}),
+        ("vibey_search", {"query": "  "}),
+        ("vibey_search", {"query": "q", "limit": 21}),
+        ("vibey_search", {"query": "q", "headers": {"Cookie": "a"}}),
+        ("vibey_fetch", {"url": "https://a.example/" + "a" * 2048}),
+        ("vibey_fetch", {"url": "https://a.example/", "method": "POST"}),
+        ("vibey_fetch", {}),
+    ):
+        with pytest.raises(HostToolError):
+            HOST_TOOL_CATALOG.build_call(name, arguments, request_id="r")
+
+
+def test_a_search_is_a_read_to_a_session_mode_and_a_fetch_is_not() -> None:
+    """ADR-0102: the scope a session's mode must hold (`session_scope`) is `view` for a search,
+    `web` itself for a fetch, and the tool's own scope for every other tool."""
+    search = HOST_TOOL_CATALOG.by_name("vibey_search")
+    fetch = HOST_TOOL_CATALOG.by_name("vibey_fetch")
+    assert search is not None and fetch is not None
+    assert (search.scope, search.session_scope) == (HubScope.WEB, HubScope.VIEW)
+    assert (fetch.scope, fetch.session_scope) == (HubScope.WEB, HubScope.WEB)
+    for tool in HOST_TOOL_CATALOG.all():
+        if tool.name not in {"vibey_search", "vibey_fetch"}:
+            assert tool.session_scope == tool.scope
