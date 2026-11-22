@@ -253,9 +253,15 @@ class AcpBootstrap:
     # -- steps 1 to 3 ----------------------------------------------------------------------
 
     async def _run_steps(self, session_id: str) -> None:
-        doctor_ok = await self._doctor(session_id)
-        connect_ok = await self._connect(session_id)
-        services_ok = await self._services(session_id)
+        try:
+            doctor_ok = await self._doctor(session_id)
+            connect_ok = await self._connect(session_id)
+            services_ok = await self._services(session_id)
+        finally:
+            # Whatever happened, step 3 is over: a hub read may fall back to `vibey hub start`
+            # unless the keep-alive now owns the hub's unit.
+            if self._keep_alive is not None:
+                self._keep_alive.handed_over()
         self._healthy = doctor_ok and connect_ok and services_ok
 
     async def _doctor(self, session_id: str) -> bool:
@@ -635,7 +641,8 @@ class AcpBootstrap:
             why = (
                 f"vibey could not take its setup lock ({problem})"
                 if problem is not None
-                else "another vibey acp on this computer is setting it up"
+                else "vibey's setup lock is held (by another vibey acp on this computer, or by "
+                "this window's keep-alive while it brings the hub back)"
             )
             await self._say(
                 session_id,

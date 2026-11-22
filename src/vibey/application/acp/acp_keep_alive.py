@@ -108,10 +108,14 @@ class AcpKeepAlive:
         self._timer: asyncio.Task[None] | None = None
         self._loop: asyncio.AbstractEventLoop | None = None
         self._stopped = False
+        self._handover = "hub" in settings.services
+        """Step 3 has yet to say whether the hub is a unit this keep-alive owns: until it does,
+        nothing may start a second hub beside the unit it is about to load."""
 
     def manage(
         self, units: Mapping[str, str], *, hub_label: str | None, deferred: Iterable[str]
     ) -> None:
+        self._handover = False
         self._loop = asyncio.get_running_loop()
         self._managed = dict(units)
         self._hub_label = hub_label if hub_label in self._managed else None
@@ -128,6 +132,12 @@ class AcpKeepAlive:
             and self._hub_label is not None
             and self._hub_label not in self._deferred
         )
+
+    def awaiting_handover(self) -> bool:
+        return self._handover and not self._stopped
+
+    def handed_over(self) -> None:
+        self._handover = False
 
     def request_probe(self) -> None:
         loop = self._loop

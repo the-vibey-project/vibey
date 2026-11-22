@@ -10,6 +10,9 @@ this router:
   under the bootstrap lock, with its rate limit, after probing again -- so a read never restarts
   a hub that is still starting, never kicks a unit the keep-alive just restarted, and two
   windows restart it once.
+- **Step 3 has not handed the hub over yet** (`hub` is among `[acp] services` and the bootstrap's
+  services step has not ended): nothing is started; the read hears the hub is away. A hub started
+  now would hold the hub's lock, so the unit step 3 loads would restart behind it.
 - **Otherwise** (no unit loaded: the grant is off, no service manager, a failed load, an edited
   unit, or a hub running outside the service manager), the bounded `vibey hub start` fallback
   runs (`BoundedHubStarter`). It never touches a unit: an edited unit is never restarted, and a
@@ -41,5 +44,11 @@ class HubStartRouter:
             raise HubGatewayError(
                 "the hub is away; vibey's keep-alive is checking its service and restarts it if "
                 "it is down -- try again in a moment"
+            )
+        if keep_alive is not None and keep_alive.awaiting_handover():
+            # Step 3 is about to load the hub's unit: a hub started now would hold the hub's
+            # lock and leave the unit restarting behind it.
+            raise HubGatewayError(
+                "the hub is away; vibey is setting up its service -- try again in a moment"
             )
         return self._fallback()

@@ -106,7 +106,9 @@ crash loop is slowed on both and stopped only on systemd. In detail:
   manager); it takes the bootstrap lock and probes again before it does, restarts a label at
   most once per period, and holds the lock until a restarted hub answers. Probing the hub has no
   side effect, and a read that finds no hub while the keep-alive owns the unit only asks it to
-  probe (`HubStartRouter`); otherwise the bounded `vibey hub start` fallback runs. Notices are
+  probe (`HubStartRouter`). Until step 3 has ended, a read starts nothing (a hub started then
+  would hold the hub's lock and leave the unit restarting behind it); after it, when the
+  keep-alive owns no hub unit, the bounded `vibey hub start` fallback runs. Notices are
   said per change of state, twice at most per `[acp] notice_interval_seconds`, then a reminder
   per interval for a unit that keeps flapping.
 - **No service manager.** With none to load into (no login session's `gui/<uid>`, as over SSH,
@@ -134,9 +136,11 @@ project:
   (beside `supervisor.env`) and from the project's; `AcpSettingsTrust` merges them so the
   project only narrows, key by key. It may turn a switch off, never on; say
   `install_postgres = "never"`, never `"ask"`; drop a service or a mode, never add one (with
-  no mode in common the user's stand, and `default_mode` follows the merged modes); make a
-  rate slower, and a timeout or cap lower, never the reverse. `restart`, `service_workdir`
-  and `reject_words` are the user's alone, and a key the merge does not classify is the
+  no mode in common the user's stand, and `default_mode` follows the merged modes, never more
+  permissive than the user's: `observe` before `drive`); make a rate slower, and a timeout or
+  cap lower, never the reverse. `restart`, `service_workdir`, `reject_words`,
+  `notice_interval_seconds` and `install_timeout_seconds` (an install the user allowed is never
+  cut short by a project) are the user's alone, and a key the merge does not classify is the
   user's alone too, so a new key is closed until someone decides its direction. The
   trust-split loader is `AcpSettingsLoader.load_trusted`.
 - **No project `[supervisor]` or `[hub]`.** `vibey acp` reads both from the user's file only:

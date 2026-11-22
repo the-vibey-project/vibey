@@ -17,6 +17,7 @@ class HubStartRouterInterface(Protocol):
 
     def __call__(self) -> bool:
         """A hub read found no hub. While the keep-alive owns the hub's unit, ask it for a probe
-        and raise `HubGatewayError` at once (nothing is restarted here); otherwise run the
-        bounded `vibey hub start` fallback."""
+        and raise `HubGatewayError` at once (nothing is restarted here); while step 3 has yet to
+        hand the hub over, raise it too and start nothing; otherwise run the bounded
+        `vibey hub start` fallback."""
         ...

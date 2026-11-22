@@ -5,7 +5,7 @@ A cloned repository's `vibey.toml` is not the person's word: whatever it says, i
 grant off, drop a service, refuse PostgreSQL, or slow and shorten a bound -- never the reverse.
 Module-level test functions (ADR-0016)."""
 
-from dataclasses import fields
+from dataclasses import fields, replace
 
 import pytest
 
@@ -85,7 +85,7 @@ def test_rates_only_slow_down_and_bounds_only_shorten() -> None:
         }
     )
     assert TRUST.merge(user, eager, keys) == user
-    assert TRUST.merge(user, calm, keys) == calm
+    assert TRUST.merge(user, calm, keys) == replace(calm, install_timeout_seconds=1800)
 
 
 def test_every_key_is_classified_so_none_is_the_projects_to_widen() -> None:
@@ -149,7 +149,6 @@ LOOSER = {
     "session_events_max": 10**9,
     "replay_events_max": 10_000,
     "bootstrap_timeout_seconds": 10**6,
-    "install_timeout_seconds": 10**6,
 }
 STRICTER = {
     "max_gate_prompts_per_turn": 0,
@@ -162,7 +161,6 @@ STRICTER = {
     "session_events_max": 1,
     "replay_events_max": 1,
     "bootstrap_timeout_seconds": 1,
-    "install_timeout_seconds": 1,
 }
 
 
@@ -219,3 +217,24 @@ def test_a_hostile_project_that_sets_every_key_gains_nothing() -> None:
     assert merged.services == ("worker",)
     assert merged.service_workdir == ""
     assert (merged.hub_start_seconds, merged.probe_seconds) == (60, 30)
+
+
+def test_a_project_cannot_start_sessions_in_drive_when_the_user_starts_in_observe() -> None:
+    user = AcpSettings(modes=("observe", "drive"), default_mode="observe")
+    for keys in ({"default_mode"}, {"modes", "default_mode"}):
+        merged = TRUST.merge(user, AcpSettings(default_mode="drive"), frozenset(keys))
+        assert (merged.modes, merged.default_mode) == (("observe", "drive"), "observe")
+
+
+def test_a_project_can_start_sessions_in_observe_when_the_user_starts_in_drive() -> None:
+    user = AcpSettings(modes=("observe", "drive"), default_mode="drive")
+    merged = TRUST.merge(user, AcpSettings(default_mode="observe"), frozenset({"default_mode"}))
+    assert merged.default_mode == "observe"
+
+
+def test_a_project_cannot_cut_short_an_install_the_user_allowed() -> None:
+    user = AcpSettings(install_timeout_seconds=1800)
+    merged = TRUST.merge(
+        user, AcpSettings(install_timeout_seconds=1), frozenset({"install_timeout_seconds"})
+    )
+    assert merged.install_timeout_seconds == 1800

@@ -7,7 +7,7 @@ It runs exactly the commands vibey's loader issues, matched argv for argv, and n
 - `launchctl bootstrap gui/<uid> <absolute .plist>`
 - `launchctl kickstart -k gui/<uid>/<label>` and `launchctl bootout gui/<uid>/<label>`
 - `systemctl --user is-system-running`, `systemctl --user daemon-reload`
-- `systemctl --user is-active|restart <label>.service`
+- `systemctl --user is-active|restart|stop <label>.service`
 - `systemctl --user enable|disable --now <label>.service`
 
 `<uid>` is this user's own, and `<label>` is held to the closed alphabet `LABEL` (no leading
@@ -128,7 +128,7 @@ class ServiceManagerRunner:
         match shape:
             case ("systemctl", "--user", "is-system-running" | "daemon-reload"):
                 return True
-            case ("systemctl", "--user", "is-active" | "restart", unit):
+            case ("systemctl", "--user", "is-active" | "restart" | "stop", unit):
                 return cls._unit(unit)
             case ("systemctl", "--user", "enable" | "disable", "--now", unit):
                 return cls._unit(unit)

@@ -260,3 +260,13 @@ def test_the_hub_unit_and_vibey_acp_read_the_same_vibey_toml(
 
 class _Channel:
     client_capabilities: dict[str, Any] = {}
+
+
+def test_a_relative_xdg_config_home_never_makes_a_project_file_the_users(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    from vibey.bootstrap import acp_user_config
+
+    monkeypatch.setattr("vibey.bootstrap.user_config_path", lambda name: Path("rel") / name)
+    monkeypatch.setenv("HOME", str(tmp_path))
+    assert acp_user_config() == tmp_path / ".config" / "vibey" / "vibey.toml"

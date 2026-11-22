@@ -30,6 +30,16 @@ class AcpKeepAliveInterface(Protocol):
         outside the service manager. While it does, nothing else restarts or starts the hub."""
         ...
 
+    def awaiting_handover(self) -> bool:
+        """True from the start until step 3 has run (whatever its outcome) when `hub` is among
+        `[acp] services`: meanwhile no second hub may be started beside the unit it may load."""
+        ...
+
+    def handed_over(self) -> None:
+        """Step 3 is over (it ran, failed or was skipped): the hub is this keep-alive's only if
+        `manage` said so."""
+        ...
+
     def request_probe(self) -> None:
         """Ask for one probe soon, from any thread (a hub read that found no hub): it joins the
         probe already running, or starts one on the loop. Never restarts anything itself."""

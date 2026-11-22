@@ -12,13 +12,15 @@ widen, raise or loosen anything:
 - **`services`, `modes`**: the project may drop items, never add one; the result keeps the user's
   order. A project whose `modes` share none with the user's leaves the user's (a session is never
   refused, and nothing is widened). `default_mode` is the project's only if it survives in the
-  merged modes, else the user's if it survives, else the first merged mode.
+  merged modes and is no more permissive than the user's (`observe` < `drive`), else the user's
+  if it survives, else the first merged mode.
 - **Rates** (`hub_start_seconds`, `probe_seconds`, `live_poll_seconds`): slower, never faster.
 - **Bounds and caps** (every timeout, `prompt_probe_seconds`, `cancel_grace_seconds`, `max_gate_prompts_per_turn`, the
   message, event, session and replay limits): lower, never higher.
 - **The user's alone** (`restart`, `service_workdir`, `reject_words`,
-  `notice_interval_seconds`): a project value is ignored, since none of them has a direction
-  that is only stricter (a longer notice interval would quiet the keep-alive's warnings).
+  `notice_interval_seconds`, `install_timeout_seconds`): a project value is ignored, since none
+  of them has a direction that is only stricter (a longer notice interval would quiet the
+  keep-alive's warnings; a shorter install bound would cut short an install the user allowed).
 
 A key not named here is the user's alone, so a key added later is closed until it is classified.
 `[supervisor]` and `[hub]` are not merged at all for `vibey acp`'s machine: they are read from
@@ -31,12 +33,17 @@ from typing import Final
 from vibey.domain.acp.settings import AcpSettings
 
 SWITCHES: Final = ("auto_bootstrap", "auto_connect", "auto_services", "live_between_turns")
-USER_ONLY: Final = ("restart", "service_workdir", "reject_words", "notice_interval_seconds")
+USER_ONLY: Final = (
+    "restart",
+    "service_workdir",
+    "reject_words",
+    "notice_interval_seconds",
+    "install_timeout_seconds",
+)
 SLOWER_ONLY: Final = ("hub_start_seconds", "probe_seconds", "live_poll_seconds")
 LOWER_ONLY: Final = (
     "prompt_probe_seconds",
     "bootstrap_timeout_seconds",
-    "install_timeout_seconds",
     "permission_timeout_seconds",
     "cancel_grace_seconds",
     "max_gate_prompts_per_turn",
@@ -48,6 +55,8 @@ LOWER_ONLY: Final = (
     "replay_events_max",
 )
 NARROWED: Final = ("install_postgres", "services", "modes", "default_mode")
+_PERMISSIVENESS: Final = ("observe", "drive")
+"""The session modes from least to most permissive: a project may only start a session lower."""
 CLASSIFIED: Final = frozenset({*SWITCHES, *USER_ONLY, *SLOWER_ONLY, *LOWER_ONLY, *NARROWED})
 """Every key the merge knows; any other is the user's alone."""
 
@@ -84,7 +93,13 @@ class AcpSettingsTrust:
         if "modes" in project_keys:
             # Never widened, never emptied: no shared mode leaves the user's.
             modes = tuple(m for m in user.modes if m in project.modes) or user.modes
-        if "default_mode" in project_keys and project.default_mode in modes:
+        if (
+            "default_mode" in project_keys
+            and project.default_mode in modes
+            and _PERMISSIVENESS.index(project.default_mode)
+            <= _PERMISSIVENESS.index(user.default_mode)
+        ):
+            # Never a more permissive start than the user chose: drive over observe is refused.
             default = project.default_mode
         elif user.default_mode in modes:
             default = user.default_mode

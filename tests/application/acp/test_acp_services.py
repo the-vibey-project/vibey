@@ -133,6 +133,7 @@ class KeepAlive:
         self.detached: list[str] = []
         self.probes: list[str] = []
         self.stopped = False
+        self.handovers = 0
 
     def manage(
         self, units: Mapping[str, str], *, hub_label: str | None, deferred: Iterable[str]
@@ -141,6 +142,9 @@ class KeepAlive:
 
     def attach(self, session_id: str) -> None:
         self.attached.append(session_id)
+
+    def handed_over(self) -> None:
+        self.handovers += 1
 
     def detach(self, session_id: str) -> None:
         self.detached.append(session_id)
@@ -546,3 +550,13 @@ async def test_a_unit_file_that_cannot_be_written_closes_the_call_failed() -> No
     assert update["status"] == "failed"
     assert "PermissionError" in update["content"][0]["content"]["text"]
     assert loader.calls == []
+
+
+async def test_step_three_ending_any_way_hands_the_hub_over() -> None:
+    kept = KeepAlive()
+    await run(bootstrap(FakeChannel(), keep_alive=kept))
+    assert kept.handovers == 1
+    broken, failing = KeepAlive(), Units()
+    failing.error = OSError("disk gone")
+    await run(bootstrap(FakeChannel(), keep_alive=broken, units=failing))
+    assert broken.handovers == 1

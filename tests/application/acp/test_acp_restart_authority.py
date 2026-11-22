@@ -373,3 +373,59 @@ def test_the_router_is_its_interface() -> None:
     )
 
     assert isinstance(HubStartRouter(Fallback()), HubStartRouterInterface)
+
+
+async def test_a_fresh_machines_first_reads_start_no_hub_before_step_three_loads_the_unit(
+    tmp_path: Path,
+) -> None:
+    process, fallback = HubProcess(up=False), Fallback()
+    hub, router = _hub(tmp_path, process, fallback)
+    manager, clock, units = Manager(process), Clock(), Units()
+    kept = _keep_alive(tmp_path, manager, hub, clock, units)
+    router.attach(kept)
+
+    # session/new's hub reads, while doctor and connect still run: no detached hub is started.
+    for _ in range(3):
+        with pytest.raises(VibeyError, match="setting up its service"):
+            await hub.create_session("s", "/work")
+    assert fallback.starts == 0 and manager.calls == []
+
+    settings = AcpSettings(
+        services=("hub",), bootstrap_timeout_seconds=5, live_poll_seconds=0.2, probe_seconds=30
+    )
+    boot = AcpBootstrap(
+        settings,
+        None,
+        None,
+        None,
+        FakeChannel(),
+        AcpUpdateMapper(),
+        BootstrapLock(tmp_path / "lock"),
+        AcpModes(settings),
+        units=units,
+        loader=manager,
+        hub=hub,
+        keep_alive=kept,
+        sleep=_yield,
+    )
+    boot.start("s")
+    await asyncio.wait({boot._steps}, timeout=10)  # type: ignore[attr-defined, arg-type]
+
+    assert manager.calls == [("load", HUB)]  # step 3 loaded the unit; nothing raced it
+    assert kept.owns_hub() and fallback.starts == 0
+    await boot.close()
+
+
+async def test_once_step_three_failed_a_read_falls_back_to_hub_start(tmp_path: Path) -> None:
+    process, fallback = HubProcess(up=False), Fallback()
+    hub, router = _hub(tmp_path, process, fallback)
+    manager, clock = Manager(process), Clock()
+    kept = _keep_alive(tmp_path, manager, hub, clock)
+    router.attach(kept)
+    kept.handed_over()  # step 3 ended without a unit for the hub
+
+    with pytest.raises(VibeyError):
+        await hub.create_session("s", "/work")
+    assert fallback.starts == 1 and manager.calls == []
+    await kept.stop()
+    assert kept.awaiting_handover() is False

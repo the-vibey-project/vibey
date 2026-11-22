@@ -203,9 +203,11 @@ vibey acp unload
 Stops the services `vibey acp` loaded, for good, in your own user domain: for each label it
 recorded writing (`<[hub] state_dir>/acp-units.json`, `[hub]` from your own `vibey.toml`), it
 runs `launchctl bootout gui/<uid>/<label>` (when loaded) or `systemctl --user disable --now
-<label>.service`, through the same argv allowlist as the bootstrap, then deletes the unit file
-only while it is still exactly what vibey wrote. A unit you edited is unloaded and left in place,
-and the command says so (remove it yourself, or launchd loads it again at your next login). On
+<label>.service` (for a unit file deleted by hand, `systemctl --user stop` if it still runs, and
+nothing if not), through the same argv allowlist as the bootstrap, then deletes the unit file
+only while it is still exactly what vibey wrote. A unit you edited -- or one `vibey supervisor
+install` has since written under the same label -- is unloaded and left in place, and the
+command says so (remove it yourself, or launchd loads it again at your next login). On
 systemd it ends with `systemctl --user daemon-reload`. It prints what it did and is safe to run
 again. Exit 0 when everything was done, 1 when a unit would not unload, a file could not be
 removed, the service manager would not reload, or it runs as root; 2 for any other action than
@@ -506,9 +508,11 @@ here delays the answer: the steps start after `session/new` (or the first `sessi
    vibey loaded, or found loaded as it renders them, are ever restarted. Messages are said per
    change of a label's state (restarted, could not restart, running again), twice at most
    within [`[acp] notice_interval_seconds`](configuration.md#acp); a unit that keeps stopping
-   and starting is then reminded of once per that interval. When no unit of the hub is vibey's
-   (the grant is off, no service manager, a load that failed, a unit you edited, or a hub you
-   started yourself), a read that finds no hub runs `vibey hub start` at most once per
+   and starting is then reminded of once per that interval. Until this step has ended, a read
+   that finds no hub starts nothing and says the hub is away (a hub started then would leave the
+   unit this step loads restarting behind it). After it, when no unit of the hub is vibey's (the
+   grant is off, no service manager, a load that failed, a unit you edited, or a hub you started
+   yourself), a read that finds no hub runs `vibey hub start` at most once per
    `hub_start_seconds`, in your configuration folder.
 
 A session's first prompt waits for steps 1 to 3 at most

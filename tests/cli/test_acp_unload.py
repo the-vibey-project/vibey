@@ -204,3 +204,63 @@ def test_the_real_command_reads_the_users_own_file() -> None:
     from vibey.cli.acp_unload import ACP_UNLOAD
 
     assert ACP_UNLOAD._user_config is acp_user_config  # type: ignore[attr-defined]
+
+
+def test_on_systemd_a_unit_file_deleted_by_hand_unloads_cleanly_and_clears_the_record(
+    tmp_path: Path,
+) -> None:
+    from vibey.infrastructure.acp.service_loader import ServiceLoader
+
+    calls: list[tuple[str, ...]] = []
+
+    def manager(argv: Sequence[str]) -> tuple[int, str]:
+        calls.append(tuple(argv))
+        if "is-active" in argv:
+            return 3, "inactive"
+        return (1, "Unit file does not exist") if "disable" in argv else (0, "")
+
+    host = SupervisorHost(
+        "systemd",
+        home=tmp_path / "home",
+        environ={},
+        uid=501,
+        run=manager,
+        temp_roots=lambda: (Path("/volatile"),),
+    )
+    config = tmp_path / "cfg" / "vibey.toml"
+    config.parent.mkdir()
+    units = AcpServiceUnits(
+        host,
+        SupervisorInstaller(
+            host,
+            SupervisorPlanner(),
+            TimerUnitRenderer(),
+            which=lambda n: None,
+            python="/opt/vibey/bin/vibey",
+        ),
+        SupervisorPlanner(),
+        SupervisorSettingsLoader(),
+        config_path=config,
+        workdir="",
+        state_dir=tmp_path / "hub",
+        launcher="/opt/vibey/bin/vibey",
+        roots=(tmp_path,),
+    )
+    (hub,) = units.write(("hub",), "always")
+    Path(hub.path).unlink()  # deleted by hand
+    loader = ServiceLoader(host, manager, 501, euid=501)
+
+    def machine(settings: AcpSettings, *, user_config: Path) -> AcpMachine:
+        return AcpMachine(
+            connector=None,  # type: ignore[arg-type]
+            postgres=None,  # type: ignore[arg-type]
+            lock=None,  # type: ignore[arg-type]
+            units=units,
+            loader=loader,
+        )
+
+    command = AcpUnloadCommand(machine=machine, user_config=lambda: config, echo=lambda s: None)
+    assert command.run() == 0
+    assert units.recorded() == ()
+    assert not any("disable" in call for call in calls)
+    assert command.run() == 0  # and again

@@ -346,7 +346,7 @@ def test_the_runner_runs_an_absolute_binary_bounded_with_stdin_closed_and_no_sec
         ("launchctl", "submit", "-l", "x", "--", "/bin/sh"),
         ("launchctl", "print", "sudo"),
         ("launchctl",),
-        ("systemctl", "--user", "stop", "dev.vibey.hub.service"),
+        ("systemctl", "--user", "kill", "dev.vibey.hub.service"),
         ("systemctl", "--user"),
         (),
         # S8: the whole argv is matched, not the verb alone
@@ -397,6 +397,7 @@ def test_the_runner_refuses_anything_but_a_user_scoped_service_manager_command(
         ("systemctl", "--user", "daemon-reload"),
         ("systemctl", "--user", "is-active", "dev.vibey.hub.service"),
         ("systemctl", "--user", "restart", "dev.vibey.hub.service"),
+        ("systemctl", "--user", "stop", "dev.vibey.hub.service"),
         ("systemctl", "--user", "enable", "--now", "dev.vibey.hub.service"),
         ("systemctl", "--user", "disable", "--now", "dev.vibey.hub.service"),
     ],
@@ -469,6 +470,8 @@ def test_launchd_unload_boots_out_a_loaded_label_and_leaves_an_unloaded_one(tmp_
 def test_systemd_unload_disables_and_stops_and_forgets_the_files(tmp_path: Path) -> None:
     runner = Runner()
     loader = _loader(tmp_path, "systemd", runner)
+    Path(_unit(tmp_path, "systemd", "dev.vibey.hub")).parent.mkdir(parents=True)
+    Path(_unit(tmp_path, "systemd", "dev.vibey.hub")).write_text("[Unit]\n")
     assert loader.unload("dev.vibey.hub").action == "unloaded"
     assert loader.forget_unit_files().action == "unchanged"
     assert runner.calls == [
@@ -479,6 +482,9 @@ def test_systemd_unload_disables_and_stops_and_forgets_the_files(tmp_path: Path)
 
 
 def test_unload_failures_are_outcomes(tmp_path: Path) -> None:
+    unit = Path(_unit(tmp_path, "systemd", "dev.vibey.hub"))
+    unit.parent.mkdir(parents=True)
+    unit.write_text("[Unit]\n")
     assert _loader(tmp_path, "systemd", Runner(fail={"disable"})).unload(
         "dev.vibey.hub"
     ).action == ("failed")
@@ -497,3 +503,14 @@ def test_a_root_process_is_refused(tmp_path: Path) -> None:
     )
     assert "root" in ServiceLoader(host, Runner(), 0, euid=0).refused()
     assert _loader(tmp_path, "launchd", Runner()).refused() == ""
+
+
+def test_systemd_unload_of_a_file_deleted_by_hand_is_not_a_lasting_failure(tmp_path: Path) -> None:
+    runner = Runner()
+    assert _loader(tmp_path, "systemd", runner).unload("dev.vibey.hub").action == "not-loaded"
+    assert not any("disable" in call for call in runner.calls)
+
+    still = Runner(running={"dev.vibey.hub"})  # the file is gone, the process still runs
+    assert _loader(tmp_path, "systemd", still).unload("dev.vibey.hub").action == "unloaded"
+    assert ("systemctl", "--user", "stop", "dev.vibey.hub.service") in still.calls
+    _assert_user_scoped(still.calls)

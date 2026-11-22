@@ -1499,7 +1499,12 @@ def acp_user_config() -> Path:
     `supervisor.env`. What `vibey acp` may do outside the folder an editor opened -- load units,
     write client configs, install PostgreSQL -- is granted here, never by a project's file
     (ADR-0101)."""
-    return user_config_path("vibey") / "vibey.toml"
+    folder = user_config_path("vibey")
+    if not folder.is_absolute():
+        # A relative XDG_CONFIG_HOME would put "the user's" file inside whatever folder vibey
+        # runs in -- a project's. Refused, as `SupervisorHost` refuses it for its own paths.
+        folder = Path.home() / ".config" / "vibey"
+    return folder / "vibey.toml"
 
 
 def running_vibey() -> str | None:

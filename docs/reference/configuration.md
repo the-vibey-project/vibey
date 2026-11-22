@@ -922,15 +922,18 @@ configuration folder, `~/Library/Application Support/vibey/vibey.toml` on macOS 
 - `install_postgres`: the project may say `"never"`, never `"ask"`.
 - `services`, `modes`: the project may drop items, never add one; your order is kept. If the
   project's `modes` share none with yours, yours stand. `default_mode` is the project's only when
-  it is among the merged modes, else yours if it is, else the first merged mode.
+  it is among the merged modes and no more permissive than yours (`observe` before `drive`: a
+  project can start sessions in `observe` when you start them in `drive`, never the reverse),
+  else yours if it is among them, else the first merged mode.
 - `hub_start_seconds`, `probe_seconds`, `live_poll_seconds`: the project may make them longer,
   never shorter.
-- Every timeout and cap (`prompt_probe_seconds`, `bootstrap_timeout_seconds`, `install_timeout_seconds`,
+- Every timeout and cap (`prompt_probe_seconds`, `bootstrap_timeout_seconds`,
   `permission_timeout_seconds`, `cancel_grace_seconds`, `max_gate_prompts_per_turn`,
   `live_message_chars`, `max_message_bytes`, `pending_events_max`, `sessions_max`,
   `session_events_max`, `replay_events_max`): the project may lower it, never raise it.
-- `restart`, `service_workdir`, `reject_words`, `notice_interval_seconds`: yours alone; the
-  project's are ignored.
+- `restart`, `service_workdir`, `reject_words`, `notice_interval_seconds`,
+  `install_timeout_seconds`: yours alone; the project's are ignored (a project must not cut
+  short an install you allowed).
 
 For `vibey acp`, `[supervisor]` and `[hub]` are read from your own file only, never the
 project's: the units' labels, environment file, log folder and worker arguments, and the hub's

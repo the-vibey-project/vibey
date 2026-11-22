@@ -119,6 +119,14 @@ class ServiceLoader:
                 return self._done(
                     label, unit, ("launchctl", "bootout", f"gui/{self._uid}/{label}"), "unloaded"
                 )
+            if not Path(unit).exists():
+                # The file was deleted by hand: `disable` would fail on it for good. Stop what
+                # may still run from it, or say it is not loaded, so the record can be cleared.
+                if self._host.state(label) != "running":
+                    return UnitOutcome(label, unit, "not-loaded")
+                return self._done(
+                    label, unit, ("systemctl", "--user", "stop", f"{label}.service"), "unloaded"
+                )
             return self._done(
                 label,
                 unit,
