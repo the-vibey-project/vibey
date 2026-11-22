@@ -623,3 +623,100 @@ def test_a_resolver_that_raises_is_a_host_that_did_not_resolve() -> None:
 
     with pytest.raises(WebToolFailed, match="could not be resolved"):
         _fetch(Broken([]), "https://broken.example/")
+
+
+@pytest.mark.parametrize(
+    "charset", ["idna", "punycode", "undefined", "rot13", "base64", "zlib", "nonsense", "utf-7"]
+)
+def test_a_charset_that_is_not_a_text_codec_falls_back_to_utf8_and_never_raises(
+    charset: str,
+) -> None:
+    """The page's server names the charset; a codec that raises (`idna`, `punycode`,
+    `undefined`) or that is not text must never decide whether the fetch is recorded."""
+    body = "café \xff\xfe".encode("utf-8", "surrogateescape") + b"\xff\xfe\x80"
+    conn = Connection(Response(200, {"Content-Type": f"text/plain; charset={charset}"}, body))
+    page = _fetch(World([conn]), "https://odd-charset.example/")
+    assert page.text.startswith("café")
+    assert GuardedPageFetch.decoded(b"\x80abc", f"text/plain; charset={charset}") == "�abc"
+
+
+@pytest.mark.parametrize(
+    ("charset", "raw", "text"),
+    [
+        ("windows-1252", "café €".encode("cp1252"), "café €"),
+        ("ISO-8859-15", "€".encode("iso8859-15"), "€"),
+        ("shift_jis", "日本".encode("shift_jis"), "日本"),
+        ("utf-16", "hi".encode("utf-16"), "hi"),
+        ("gbk", "中".encode("gbk"), "中"),
+    ],
+)
+def test_a_declared_text_codec_is_used(charset: str, raw: bytes, text: str) -> None:
+    assert GuardedPageFetch.decoded(raw, f"text/plain; charset={charset}") == text
+
+
+def test_a_long_server_chosen_content_type_is_never_repeated() -> None:
+    kind = "text/" + "a" * 5_000
+    conn = Connection(Response(200, {"Content-Type": kind}, b"x"))
+    with pytest.raises(WebToolRefused) as raised:
+        _fetch(World([conn]), "https://long-type.example/")
+    assert "aaaa" not in str(raised.value) and "an unreadable type" in str(raised.value)
+    assert len(str(raised.value)) < 200
+
+
+def test_a_title_is_cut_to_its_bound() -> None:
+    body = b"<title>" + b"T" * 5_000 + b"</title><p>x</p>"
+    page = _fetch(World([_page(body)]), "https://long-title.example/")
+    assert page.title == "T" * 300
+    small = WebToolSettings(max_chars=120)
+    assert _fetch(World([_page(body)]), "https://long-title.example/", small).title == "T" * 120
+
+
+def test_the_real_lazy_connection_sends_nothing_once_the_caller_gave_up(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """The real `pinned_connect` opens its socket only when asked; the fetch asks for it before
+    it checks the deadline, so a socket that opens after the cancel carries no request."""
+    opened = threading.Event()
+    release = threading.Event()
+    sent: list[bytes] = []
+
+    class Sock:
+        def sendall(self, data: bytes) -> None:
+            sent.append(data)
+
+        def settimeout(self, value: float) -> None:
+            return None
+
+        def setsockopt(self, *args: Any) -> None:
+            return None
+
+        def shutdown(self, how: int) -> None:
+            return None
+
+        def close(self) -> None:
+            return None
+
+    def create_connection(address: tuple[str, int], *_: Any, **__: Any) -> Sock:
+        opened.set()
+        release.wait(5)  # the connect completes only after the caller has given up
+        return Sock()
+
+    monkeypatch.setattr(socket, "create_connection", create_connection)
+    fetcher = GuardedPageFetch(resolve=lambda host, port: [PUBLIC])
+    settings = WebToolSettings(timeout_seconds=0.2)
+    try:
+        with pytest.raises(WebToolFailed, match="within"):
+            asyncio.run(fetcher.fetch(_target("http://lazy.example/", settings), settings))
+        assert opened.is_set()
+    finally:
+        release.set()
+    _joined()
+    assert sent == []
+
+
+def test_a_text_codec_that_still_raises_falls_back_to_utf8(monkeypatch: pytest.MonkeyPatch) -> None:
+    """The allowlist is the first guard; the decode itself is the second."""
+    import vibey.infrastructure.web.guarded_fetch as guarded
+
+    monkeypatch.setattr(guarded, "TEXT_CODECS", guarded.TEXT_CODECS | {"idna"})
+    assert GuardedPageFetch.decoded(b"\x80ok", "text/plain; charset=idna") == "�ok"

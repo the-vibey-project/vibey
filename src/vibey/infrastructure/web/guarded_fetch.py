@@ -34,6 +34,7 @@ record. Declared by `interfaces/guarded_fetch_interface.py`; the port it fills i
 from __future__ import annotations
 
 import asyncio
+import codecs
 import contextlib
 import http.client
 import ipaddress
@@ -67,6 +68,31 @@ _REDIRECTS: Final = frozenset({301, 302, 303, 307, 308})
 _HTML: Final = frozenset({"text/html", "application/xhtml+xml"})
 _TYPE: Final = re.compile(r"^[a-z0-9][a-z0-9!#$&^_.+-]*/[a-z0-9][a-z0-9!#$&^_.+-]*$")
 _CHARSET: Final = re.compile(r"charset=([\w-]+)")
+_SHOWN_TYPE_CHARS: Final = 64
+"""The longest server-chosen content type a refusal repeats (it reaches the ledger)."""
+TITLE_CHARS: Final = 300
+"""The longest page title kept (and never more than `[web] max_chars`)."""
+TEXT_CODECS: Final = frozenset(
+    {
+        "utf-8",
+        "ascii",
+        "latin-1",
+        *(f"iso8859-{n}" for n in (*range(1, 12), *range(13, 17))),
+        *(f"cp{n}" for n in range(1250, 1259)),
+        "utf-16",
+        "utf-32",
+        "gbk",
+        "gb18030",
+        "big5",
+        "shift_jis",
+        "euc_jp",
+        "euc_kr",
+        "koi8-r",
+        "koi8-u",
+    }
+)
+"""The text codecs a page may name, as `codecs.lookup(...).name` spells them; any other falls
+back to UTF-8."""
 _CHUNK: Final = 64 * 1024
 """The most bytes one receive asks for."""
 
@@ -217,6 +243,11 @@ class GuardedPageFetch:
                 self._connect(current.scheme, current.host, current.port, address, left)
             )
             try:
+                # Connect now, not lazily inside `request`: a cancel that lands while the
+                # connection is being made is then seen before one byte is sent.
+                opened = getattr(connection, "connect", None)
+                if opened is not None:
+                    opened()
                 live.bound(connection)
                 connection.request("GET", current.target, headers=dict(HEADERS))
                 live.bound(connection)
@@ -236,6 +267,24 @@ class GuardedPageFetch:
         raise WebToolFailed(
             f"stopped after {settings.max_redirects} redirects", hosts=tuple(live.hosts)
         )
+
+    @staticmethod
+    def decoded(raw: bytes, header: str) -> str:
+        """`raw` as text in the page's declared charset when that is one of `TEXT_CODECS`, else
+        UTF-8; an undecodable byte is a replacement character. Never raises: the page's server
+        chooses the charset, and a codec that is not text (`idna`, `punycode`, `undefined`,
+        `rot13`) must never decide whether the fetch is recorded."""
+        found = _CHARSET.search(header)
+        try:
+            name = codecs.lookup(found.group(1)).name if found else "utf-8"
+        except LookupError:
+            name = "utf-8"
+        if name not in TEXT_CODECS:
+            name = "utf-8"
+        try:
+            return raw.decode(name, "replace")
+        except (LookupError, UnicodeError, ValueError):
+            return raw.decode("utf-8", "replace")
 
     def _follow(
         self, current: WebTarget, location: str, settings: WebToolSettings, hosts: tuple[str, ...]
@@ -298,7 +347,14 @@ class GuardedPageFetch:
         header = response.getheader("Content-Type") or ""
         kind = header.split(";")[0].strip().lower()
         if kind not in settings.content_types:
-            shown = kind if _TYPE.match(kind) else "an unreadable type" if kind else ""
+            # The server chose this text: shown only when short and plainly a type, never more.
+            shown = (
+                kind
+                if _TYPE.match(kind) and len(kind) <= _SHOWN_TYPE_CHARS
+                else "an unreadable type"
+                if kind
+                else ""
+            )
             raise WebToolRefused(
                 f"refused: not a page vibey reads ({shown or 'no content type'}): PDF, images "
                 "and other binary types are refused, never extracted",
@@ -315,19 +371,13 @@ class GuardedPageFetch:
                 break
             raw += chunk
         clipped = len(raw) > settings.max_bytes
-        charset = _CHARSET.search(header)
-        try:
-            body = raw[: settings.max_bytes].decode(
-                charset.group(1) if charset else "utf-8", "replace"
-            )
-        except LookupError:
-            body = raw[: settings.max_bytes].decode("utf-8", "replace")
+        body = GuardedPageFetch.decoded(bytes(raw[: settings.max_bytes]), header)
         title, text = html_to_text(body) if kind in _HTML else ("", body.strip())
         title, text = UntrustedText.clean(title), UntrustedText.clean(text)
         return WebPage(
             url=target.url,
             hosts=hosts,
-            title=title,
+            title=title[: min(settings.max_chars, TITLE_CHARS)],
             text=text[: settings.max_chars],
             truncated=clipped or len(text) > settings.max_chars,
             content_type=kind,

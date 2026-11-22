@@ -23,6 +23,11 @@ class GuardedPageFetchInterface(Protocol):
         """Every address the system resolves `host` to; none when the lookup fails."""
         ...
 
+    @staticmethod
+    def decoded(raw: bytes, header: str) -> str:
+        """`raw` decoded with the page's declared text codec, else UTF-8; never raises."""
+        ...
+
     async def fetch(self, target: WebTarget, settings: WebToolSettings) -> WebPage:
         """The page, or `WebToolRefused` / `WebToolFailed` carrying the hosts reached."""
         ...
