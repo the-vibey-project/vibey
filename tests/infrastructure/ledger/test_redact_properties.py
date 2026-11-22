@@ -3,14 +3,19 @@
 
 Idempotent: redacting what was redacted changes nothing, so a payload redacted on write
 and again on export is the same payload. Total: a secret at any nesting is gone, whatever
-the container it sits in. Exact: a payload that holds no secret comes back equal, so
-redaction never alters text it had no business touching.
+the container it sits in, and every byte of it is gone, even where credential shapes
+overlap or one credential is glued to the next. Order-free: the order the patterns are
+tried in never changes the result. Exact: a payload that holds no secret comes back equal,
+so redaction never alters text it had no business touching.
 
 Only string VALUES are scanned for secret patterns; a secret in a dictionary KEY is not
 redacted by redact_payload, and is out of scope here (keys are drawn from digits and spaces).
 """
 
-from hypothesis import given
+import re
+from collections.abc import Sequence
+
+from hypothesis import example, given
 from hypothesis import strategies as st
 
 from tests.ledger_strategies import (
@@ -20,7 +25,12 @@ from tests.ledger_strategies import (
     json_payloads,
     plain_payloads,
 )
-from vibey.infrastructure.ledger.redact import REDACTED, contains_secret, redact_payload
+from vibey.infrastructure.ledger.redact import (
+    REDACTED,
+    SecretTextRedactor,
+    contains_secret,
+    redact_payload,
+)
 
 _ALNUM = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
 _B64URL = _ALNUM + "_-"
@@ -104,6 +114,9 @@ def test_redacting_twice_is_redacting_once(payload: dict[str, object]) -> None:
 
 
 @given(planted=_planted())
+# The counterexample Hypothesis found (#1886 follow-up): a Bearer token whose tail opens like
+# an `sk-` key. The `sk-` pattern ran first and left "Bearer [REDACTED]".
+@example(planted=({"planted": "Bearer sk-" + "0" * 37 + " "}, "", " ", "Bearer sk-" + "0" * 37))
 def test_a_planted_secret_is_replaced_whole_and_nothing_else_is_touched(
     planted: tuple[dict[str, object], str, str, str],
 ) -> None:
@@ -114,6 +127,50 @@ def test_a_planted_secret_is_replaced_whole_and_nothing_else_is_touched(
     assert before + REDACTED + after in _leaves(redacted)
     assert secret not in repr(redacted)
     assert not contains_secret(redacted)
+
+
+@st.composite
+def _secret_soup(draw: st.DrawFn) -> tuple[str, list[tuple[int, int]]]:
+    """Secrets and plain words glued together with no separator, so one secret's text can
+    run into the next and the shapes overlap. Returns the text and where each secret sits."""
+    parts = draw(
+        st.lists(
+            st.one_of(
+                _SECRETS.map(lambda secret: (secret, True)),
+                PLAIN_WORDS.map(lambda word: (word, False)),
+            ),
+            max_size=4,
+        )
+    )
+    text, where = "", []
+    for part, is_secret in parts:
+        if is_secret:
+            where.append((len(text), len(text) + len(part)))
+        text += part
+    return text, where
+
+
+def _glued(*parts: str) -> tuple[str, list[tuple[int, int]]]:
+    starts = [sum(len(part) for part in parts[:index]) for index in range(len(parts))]
+    return "".join(parts), [
+        (start, start + len(part)) for start, part in zip(starts, parts, strict=True)
+    ]
+
+
+@given(soup=_secret_soup(), order=st.permutations(SecretTextRedactor.DEFAULT_PATTERNS))
+@example(soup=_glued("Bearer sk-" + "0" * 37), order=SecretTextRedactor.DEFAULT_PATTERNS[::-1])
+@example(soup=_glued("sk-" + "A" * 16, "sk-" + "B" * 16), order=SecretTextRedactor.DEFAULT_PATTERNS)
+def test_every_byte_of_every_secret_is_replaced_whatever_the_order_of_the_patterns(
+    soup: tuple[str, list[tuple[int, int]]], order: Sequence[re.Pattern[str]]
+) -> None:
+    text, secrets = soup
+    redactor = SecretTextRedactor()
+    spans = redactor.spans(text)
+    for start, stop in secrets:
+        assert any(low <= start and stop <= high for low, high in spans), text[start:stop]
+    redacted = redactor.redact(text)
+    assert SecretTextRedactor(order).redact(text) == redacted
+    assert redactor.redact(redacted) == redacted
 
 
 _NEAR_MISSES = [

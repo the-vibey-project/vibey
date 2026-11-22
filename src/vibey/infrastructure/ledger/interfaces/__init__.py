@@ -7,6 +7,7 @@ from vibey.infrastructure.ledger.interfaces.compression_interface import (
 from vibey.infrastructure.ledger.interfaces.full_ledger_writer_interface import (
     LedgerLinesInterface,
 )
+from vibey.infrastructure.ledger.interfaces.redact_interface import SecretTextRedactorInterface
 from vibey.infrastructure.ledger.interfaces.static_export_interface import (
     HtmlSafeJsonInterface,
     ShardHeaderCodecInterface,
@@ -18,5 +19,6 @@ __all__ = [
     "HtmlSafeJsonInterface",
     "LedgerLinesInterface",
     "LedgerTierStoreInterface",
+    "SecretTextRedactorInterface",
     "ShardHeaderCodecInterface",
 ]
