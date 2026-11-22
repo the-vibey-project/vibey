@@ -56,9 +56,11 @@ class SearxngFiles:
         self._token_hex = token_hex
 
     @classmethod
-    def personal(cls) -> SearxngFiles:
-        """The person's own: `<configuration folder>/searxng`."""
-        return cls(UserConfigFolder().path() / FOLDER)
+    def personal(cls, config_folder: Path | None = None) -> SearxngFiles:
+        """The person's own: `<their configuration folder>/searxng`, the folder `config_folder`
+        names when given (the one their `vibey.toml` was read from). Every caller finds the files
+        here, so one stand-in keeps a test suite off the person's own."""
+        return cls((config_folder or UserConfigFolder().path()) / FOLDER)
 
     @property
     def folder(self) -> Path:

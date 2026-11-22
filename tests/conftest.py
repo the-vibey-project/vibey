@@ -360,7 +360,7 @@ def _hermetic_web_search(request: pytest.FixtureRequest, monkeypatch: pytest.Mon
     from vibey.infrastructure.searxng.searxng_files import SearxngFiles
 
     nowhere = SearxngFiles(Path("/nonexistent-vibey-hermetic-test") / "searxng")
-    monkeypatch.setattr(SearxngFiles, "personal", classmethod(lambda cls: nowhere))
+    monkeypatch.setattr(SearxngFiles, "personal", classmethod(lambda cls, folder=None: nowhere))
     if request.node.get_closest_marker("web_network") is None:
 
         def refused(self: GuardedOpener, request: object, timeout: float) -> object:

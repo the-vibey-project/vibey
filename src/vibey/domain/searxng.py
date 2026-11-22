@@ -29,7 +29,6 @@ Pure: no I/O, no clock, no randomness (the random hex is handed in). Declared by
 
 import re
 from dataclasses import dataclass
-from pathlib import PurePosixPath
 from typing import Final
 
 from vibey.domain.supervisor import LABEL, SEARXNG
@@ -58,6 +57,12 @@ PIDS_LIMIT: Final = 256
 MEMORY_LIMIT: Final = "512m"
 _UNSAFE_PATH: Final = re.compile(r"[\x00-\x1f\x7f:,]")
 """Characters the `--volume` syntax would misread (`:` and `,` separate its fields)."""
+
+
+def _name(path: str) -> str:
+    """The last part of a POSIX path (pure string work: the domain imports no `pathlib`)."""
+    # Module-level function: a one-line string helper both the plan's checks and its argv use.
+    return path.rstrip("/").rpartition("/")[2]
 
 
 @dataclass(frozen=True, slots=True)
@@ -147,7 +152,7 @@ class SearxngPlan:
         self, provision: SearxngProvision, *, settings_path: str, uid: int, gid: int
     ) -> tuple[str, ...]:
         self.check(provision)
-        if not PurePosixPath(settings_path).is_absolute() or _UNSAFE_PATH.search(settings_path):
+        if not settings_path.startswith("/") or _UNSAFE_PATH.search(settings_path):
             raise ValueError(
                 "the settings file must be an absolute path without ':', ',' or control "
                 "characters, which the --volume syntax would misread"
@@ -155,7 +160,7 @@ class SearxngPlan:
         for value in (uid, gid):
             if isinstance(value, bool) or not isinstance(value, int) or value < 1:
                 raise ValueError("the container runs as your own user, never root")
-        keep_id = ("--userns=keep-id",) if PurePosixPath(provision.runtime).name == "podman" else ()
+        keep_id = ("--userns=keep-id",) if _name(provision.runtime) == "podman" else ()
         return (
             provision.runtime,
             "run",
@@ -213,11 +218,10 @@ class SearxngPlan:
 
     @staticmethod
     def _runtime(runtime: str) -> str:
-        path = PurePosixPath(runtime) if isinstance(runtime, str) else None
         if (
-            path is None
-            or not path.is_absolute()
-            or path.name not in RUNTIMES
+            not isinstance(runtime, str)
+            or not runtime.startswith("/")
+            or _name(runtime) not in RUNTIMES
             or re.search(r"[\x00-\x1f\x7f]", runtime)
         ):
             raise ValueError("the runtime must be the absolute path of podman or docker")

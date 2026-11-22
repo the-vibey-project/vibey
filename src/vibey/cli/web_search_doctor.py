@@ -14,6 +14,10 @@ Two lines in doctor's `MARK name detail` grammar, so `vibey doctor --json` reads
   to the Brave backup) until it does. A search setting the worker would refuse to start with is
   the one `FAIL`.
 - `web-search-backup`: whether a Brave key is configured, and by which variable; never the key.
+- `searxng` (ADR-0102): the SearXNG vibey installs itself -- not installed (`WARN`, with the
+  command that installs it), the person's own (`UNKNOWN`), or vibey's: its image, its unit and
+  whether it answers as vibey's own (`PASS`, else `WARN` with the first thing wrong). It runs a
+  container runtime command (an image inspect) only once vibey has installed one.
 
 The URL is shown without credentials, query or fragment, and every detail is cleaned as a raised
 check's message is (`DoctorChecks.cleaned`). The section never raises.
@@ -53,9 +57,11 @@ class WebSearchDoctor:
         *,
         environ: Callable[[], Mapping[str, str]] | None = None,
         opener: Callable[..., Any] | None = None,
+        searxng: Callable[[], str] | None = None,
     ) -> None:
         self._environ = environ if environ is not None else self._process_environment
         self._opener = opener
+        self._searxng = searxng
 
     def doctor_lines(self) -> tuple[list[str], bool]:
         try:
@@ -105,13 +111,24 @@ class WebSearchDoctor:
             else f"UNKNOWN {BACKUP_NAME:<{_WIDTH}} no Brave backup configured (optional:"
             f" {BRAVE_KEY_ENV} or {BRAVE_KEY_ALIAS_ENV}; used only when the local SearXNG fails)"
         )
-        return [local, backup], True
+        lines = [local, backup]
+        if self._searxng is not None:
+            lines.append(self._searxng())  # added after the two lines that were always there
+        return lines, True
 
     @staticmethod
     def _process_environment() -> Mapping[str, str]:
         return os.environ
 
 
-WEB_SEARCH_DOCTOR: Final[WebSearchDoctorInterface] = WebSearchDoctor()
+def _searxng_line() -> str:
+    """`vibey searxng`'s doctor line, imported when doctor asks for it."""
+    # Module-level function so the `vibey searxng` composition is imported only when asked.
+    from vibey.cli.searxng import SEARXNG_COMMAND
+
+    return SEARXNG_COMMAND.doctor_line()
+
+
+WEB_SEARCH_DOCTOR: Final[WebSearchDoctorInterface] = WebSearchDoctor(searxng=_searxng_line)
 """The section as `vibey doctor` and `vibey acp` run it: this process's environment, probed
 through the guarded opener."""

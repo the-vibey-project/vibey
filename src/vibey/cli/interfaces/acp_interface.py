@@ -16,6 +16,9 @@ if TYPE_CHECKING:
     from vibey.application.acp.interfaces.postgres_installer_interface import (
         PostgresInstallerInterface,
     )
+    from vibey.application.acp.interfaces.searxng_provisioner_interface import (
+        SearxngProvisionerInterface,
+    )
     from vibey.application.acp.interfaces.service_loader_interface import ServiceLoaderInterface
     from vibey.application.acp.interfaces.service_units_interface import ServiceUnitsInterface
     from vibey.domain.acp.settings import AcpSettings
@@ -43,4 +46,5 @@ class AcpAgentBuilder(Protocol):
         lock: BootstrapLockInterface | None,
         units: ServiceUnitsInterface | None,
         loader: ServiceLoaderInterface | None,
+        searxng: SearxngProvisionerInterface | None,
     ) -> AcpAgentInterface: ...

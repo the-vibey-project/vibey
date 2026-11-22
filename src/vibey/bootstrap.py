@@ -25,6 +25,7 @@ from vibey.application.acp.acp_journaling_channel import AcpJournalingChannel
 from vibey.application.acp.acp_keep_alive import AcpKeepAlive
 from vibey.application.acp.acp_live_feed import AcpLiveFeed
 from vibey.application.acp.acp_prompt_turn import AcpPromptTurn
+from vibey.application.acp.acp_searxng_step import AcpSearxngStep
 from vibey.application.acp.acp_session_journal import AcpSessionJournal
 from vibey.application.acp.doctor_checks import DoctorChecks
 from vibey.application.acp.interfaces.acp_agent_interface import AcpAgentInterface
@@ -37,6 +38,9 @@ from vibey.application.acp.interfaces.doctor_probe_interface import DoctorProbeI
 from vibey.application.acp.interfaces.host_connector_interface import HostConnectorInterface
 from vibey.application.acp.interfaces.postgres_installer_interface import (
     PostgresInstallerInterface,
+)
+from vibey.application.acp.interfaces.searxng_provisioner_interface import (
+    SearxngProvisionerInterface,
 )
 from vibey.application.acp.interfaces.service_loader_interface import ServiceLoaderInterface
 from vibey.application.acp.interfaces.service_units_interface import ServiceUnitsInterface
@@ -164,7 +168,7 @@ from vibey.domain.interfaces.config_interface import (
 )
 from vibey.domain.phase import Phase
 from vibey.domain.slicing import AutoSlicer
-from vibey.domain.supervisor import SupervisorPlanner
+from vibey.domain.supervisor import SEARXNG, SupervisorPlanner
 from vibey.domain.worktree import WorktreeNaming
 from vibey.infrastructure.acp.acp_command_runner import AcpCommandRunner
 from vibey.infrastructure.acp.acp_hub_client import AcpHubClient
@@ -249,6 +253,11 @@ from vibey.infrastructure.provision.agent_surface import AgentSurfaceProvisioner
 from vibey.infrastructure.publish.github import GitHubPublisher
 from vibey.infrastructure.queue_priority_grant import ProcessCaller, ProjectPriorityGrantReader
 from vibey.infrastructure.review_artifact_writer import FileReviewArtifactWriter
+from vibey.infrastructure.searxng.container_runtime import CONTAINER_VARIABLES, ContainerRuntime
+from vibey.infrastructure.searxng.interfaces.searxng_serve_interface import SearxngServeInterface
+from vibey.infrastructure.searxng.searxng_files import SearxngFiles
+from vibey.infrastructure.searxng.searxng_provisioner import SearxngProvisioner
+from vibey.infrastructure.searxng.searxng_serve import SearxngServe
 from vibey.infrastructure.secrets.in_memory import InMemorySecrets
 from vibey.infrastructure.secrets.openbao import OpenBaoSecretsAdapter
 from vibey.infrastructure.skills_context import compiler_from_config
@@ -1492,6 +1501,8 @@ class AcpMachine:
     lock: BootstrapLockInterface
     units: ServiceUnitsInterface | None = None
     loader: ServiceLoaderInterface | None = None
+    searxng: SearxngProvisionerInterface | None = None
+    """The local SearXNG vibey installs and runs (ADR-0102), in the user's configuration folder."""
 
 
 def acp_user_config() -> Path:
@@ -1549,6 +1560,20 @@ def acp_machine(
         run=runner,
     )
     planner = SupervisorPlanner()
+    units = AcpServiceUnits(
+        host,
+        SupervisorInstaller(
+            host, planner, TimerUnitRenderer(), which=lambda name: None, python=sys.executable
+        ),
+        planner,
+        SupervisorSettingsLoader(),
+        config_path=user_config,
+        workdir=settings.service_workdir,
+        state_dir=state_dir,
+        launcher=pinned,
+        start_hub=functools.partial(default_hub_starter, cwd=user_config.parent),
+        roots=(Path.home(),),
+    )
     return AcpMachine(
         connector=HostConnector(
             state_dir=state_dir,
@@ -1560,22 +1585,34 @@ def acp_machine(
             probe_runner=AcpCommandRunner(timeout_seconds=settings.bootstrap_timeout_seconds),
         ),
         lock=BootstrapLock(state_dir),
-        units=AcpServiceUnits(
-            host,
-            SupervisorInstaller(
-                host, planner, TimerUnitRenderer(), which=lambda name: None, python=sys.executable
-            ),
-            planner,
-            SupervisorSettingsLoader(),
-            config_path=user_config,
-            workdir=settings.service_workdir,
-            state_dir=state_dir,
-            launcher=pinned,
-            start_hub=functools.partial(default_hub_starter, cwd=user_config.parent),
-            roots=(Path.home(),),
-        ),
+        units=units,
         loader=ServiceLoader(host, runner, os.getuid(), euid=os.geteuid()),
+        searxng=SearxngProvisioner(
+            searxng_runtime(settings),
+            SearxngFiles.personal(user_config.parent),
+            label=lambda: units.label(SEARXNG),
+        ),
     )
+
+
+def searxng_runtime(settings: AcpSettings) -> ContainerRuntime:
+    """podman, else docker, driven through the ACP process-group runner with the variables a
+    runtime finds its daemon by: a pull bounded by `[acp] install_timeout_seconds`, every other
+    command by `bootstrap_timeout_seconds` (ADR-0102)."""
+    return ContainerRuntime(
+        runner=AcpCommandRunner(
+            timeout_seconds=settings.bootstrap_timeout_seconds, kept=CONTAINER_VARIABLES
+        ),
+        pull_runner=AcpCommandRunner(
+            timeout_seconds=settings.install_timeout_seconds, kept=CONTAINER_VARIABLES
+        ),
+    )
+
+
+def searxng_serve(settings: AcpSettings, *, user_config: Path) -> SearxngServeInterface:
+    """What the SearXNG unit runs: the person's record and settings, the runtime it names
+    (ADR-0102). Building it touches nothing."""
+    return SearxngServe(SearxngFiles.personal(user_config.parent), searxng_runtime(settings))
 
 
 def build_acp_agent(
@@ -1589,6 +1626,7 @@ def build_acp_agent(
     lock: BootstrapLockInterface | None = None,
     units: ServiceUnitsInterface | None = None,
     loader: ServiceLoaderInterface | None = None,
+    searxng: SearxngProvisionerInterface | None = None,
 ) -> AcpAgentInterface:
     """Compose the ACP agent `vibey acp` serves (SP-ACP).
 
@@ -1609,7 +1647,9 @@ def build_acp_agent(
     `AcpBootstrap` runs `doctor_probes`, `connector` and `postgres` under `[acp]`'s grant; each
     one left out is a step that says nothing, and with none of them there is no bootstrap.
     With `units` and `loader` it also loads the user-level services (step 3) and an
-    `AcpKeepAlive` keeps them running (ADR-0101). The gateway's starter is a `HubStartRouter`,
+    `AcpKeepAlive` keeps them running (ADR-0101); with `searxng` too, `AcpSearxngStep` offers the
+    local SearXNG once per process and step 3 keeps one vibey installed running (ADR-0102). The
+    gateway's starter is a `HubStartRouter`,
     deciding per call: while the keep-alive owns the hub's unit, a read that finds no hub only
     asks the keep-alive for a probe (it alone restarts the unit, under the lock); otherwise the
     bounded `vibey hub start` runs, in the user's configuration folder. Probing the hub
@@ -1650,6 +1690,13 @@ def build_acp_agent(
         if services and loader is not None:
             keep_alive = AcpKeepAlive(loader, hub, held, channel, mapper, settings, units=units)
             router.attach(keep_alive)
+        searxng_step = (
+            AcpSearxngStep(
+                settings, searxng, units, loader, channel, mapper, modes, keep_alive=keep_alive
+            )
+            if services and searxng is not None and units is not None and loader is not None
+            else None
+        )
         bootstrap = AcpBootstrap(
             settings,
             DoctorChecks(doctor_probes) if doctor_probes else None,
@@ -1663,6 +1710,7 @@ def build_acp_agent(
             loader=loader if services else None,
             hub=hub if services else None,
             keep_alive=keep_alive,
+            searxng=searxng_step,
         )
 
     def new_turn() -> AcpPromptTurnInterface:

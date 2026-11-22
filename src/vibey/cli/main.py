@@ -78,6 +78,7 @@ from vibey.cli.queue import queue_app
 from vibey.cli.recover import stop_workers
 from vibey.cli.retry import DEFAULT_MAX_ATTEMPTS, RETRY
 from vibey.cli.sabbath import SABBATH
+from vibey.cli.searxng import searxng_app
 from vibey.cli.serve import SERVE
 from vibey.cli.serve import serve as serve_command
 from vibey.cli.state import state_app
@@ -192,6 +193,7 @@ app.command("abandon")(abandon_command)
 app.add_typer(ultra_app, name="ultra")
 app.add_typer(driver_app, name="driver")
 app.add_typer(supervisor_app, name="supervisor")
+app.add_typer(searxng_app, name="searxng")
 app.add_typer(state_app, name="state")
 
 

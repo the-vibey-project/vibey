@@ -199,3 +199,4 @@ def test_the_personal_folder_is_in_the_persons_configuration_folder(
         "vibey.infrastructure.user_config_folder.user_config_path", lambda name: tmp_path / name
     )
     assert SearxngFiles.personal().folder == tmp_path / "vibey" / "searxng"
+    assert SearxngFiles.personal(tmp_path / "mine").folder == tmp_path / "mine" / "searxng"

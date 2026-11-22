@@ -117,6 +117,18 @@ ALLOWED: tuple[tuple[str, str, str], ...] = (
         " listens, not where work is kept",
     ),
     (
+        "src/vibey/domain/searxng.py",
+        r'"/tmp"\)',
+        "a tmpfs mounted at /tmp inside vibey's SearXNG container (ADR-0102): memory the"
+        " container scratches in and loses on exit by design, never a host path, never work",
+    ),
+    (
+        "docs/reference/cli.md",
+        r"--tmpfs /tmp",
+        "the SearXNG container's own /tmp tmpfs (ADR-0102), quoted from its command line: inside"
+        " the container, not a host path where work is kept",
+    ),
+    (
         ".claude/settings.json",
         r"\.s\.PGSQL\.5432",
         "the Postgres unix socket: a rendezvous point the server recreates at start",

@@ -13,6 +13,7 @@ from typing import TYPE_CHECKING, Protocol, runtime_checkable
 
 if TYPE_CHECKING:
     from vibey.application.acp.dto import SearxngOffer, SearxngPrepared
+    from vibey.domain.searxng import SearxngProvision
 
 
 @runtime_checkable
@@ -24,6 +25,14 @@ class SearxngProvisionerInterface(Protocol):
 
     def provisioned(self) -> bool:
         """Whether vibey installed its SearXNG for this person (a record it can believe)."""
+        ...
+
+    def record(self) -> SearxngProvision | None:
+        """The person's provision record, or None when there is none vibey can believe."""
+        ...
+
+    def image_present(self) -> bool:
+        """Whether the image the record names is here. Asks the runtime; downloads nothing."""
         ...
 
     def prepare(self) -> SearxngPrepared:
@@ -38,4 +47,8 @@ class SearxngProvisionerInterface(Protocol):
 
     def remove_container(self) -> str:
         """Remove vibey's container: "" when it is gone (or was), else why not."""
+        ...
+
+    def purge(self) -> list[str]:
+        """Remove the image the record names, the settings and the record; what was kept."""
         ...

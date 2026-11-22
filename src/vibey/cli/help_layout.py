@@ -108,6 +108,7 @@ PANELS: tuple[Panel, ...] = (
             Entry("mcp", "Serve the hub MCP tools over stdio for a host chat client"),
             Entry("acp", "Serve the Agent Client Protocol over stdio for an editor"),
             Entry("search", "Search the web through vibey's own backend"),
+            Entry("searxng", "Install, check or remove the local SearXNG search asks first"),
             Entry("fetch", "Read one public web page as plain text"),
             Entry("llm", "Follow the model conversation and its wire log"),
         ),

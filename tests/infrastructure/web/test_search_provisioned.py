@@ -23,7 +23,7 @@ MINE = SearxngProvision(IMAGE, 28199, "vibey-" + "1" * 32, "dev.vibey.searxng", 
 
 def _person(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> SearxngFiles:
     files = SearxngFiles(tmp_path / "person" / "searxng")
-    monkeypatch.setattr(SearxngFiles, "personal", classmethod(lambda cls: files))
+    monkeypatch.setattr(SearxngFiles, "personal", classmethod(lambda cls, folder=None: files))
     return files
 
 
