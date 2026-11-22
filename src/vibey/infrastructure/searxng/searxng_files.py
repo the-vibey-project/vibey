@@ -81,14 +81,28 @@ class SearxngFiles:
         return self._folder / SETTINGS_FILE
 
     def read(self) -> SearxngProvision | None:
+        raw = self._raw(RECORD_FILE)
+        return None if raw is None else self._parse(raw)
+
+    def read_installed(self) -> SearxngProvision | None:
+        raw = self._raw(RECORD_FILE)
+        return None if raw is None else self._plan.parse_installed(self._json(raw))
+
+    def settings_marker(self) -> str | None:
+        try:
+            raw = self._raw(SETTINGS_FILE)
+        except ValueError:
+            return None
+        return None if raw is None else self._plan.marker_in(raw.decode("utf-8", "replace"))
+
+    def _raw(self, name: str) -> bytes | None:
         folder = self._reading()
         if folder is None:
             return None
         try:
-            raw = self._read_file(folder, RECORD_FILE)
+            return self._read_file(folder, name)
         finally:
             os.close(folder)
-        return None if raw is None else self._parse(raw)
 
     def settings_ready(self) -> bool:
         try:
@@ -234,15 +248,20 @@ class SearxngFiles:
             os.close(fd)
 
     def _parse(self, raw: bytes) -> SearxngProvision:
+        return self._plan.parse(self._json(raw))
+
+    @staticmethod
+    def _json(raw: bytes) -> object:
         try:
-            data = json.loads(raw)
+            return json.loads(raw)
         except (ValueError, RecursionError):
             raise ValueError(f"{RECORD_FILE} is not JSON") from None
-        return self._plan.parse(data)
 
     def _parse_or_none(self, raw: bytes) -> SearxngProvision | None:
+        """The record as installed (an earlier pin's image is kept: updating it keeps its marker
+        and settings), or None when it is not one vibey wrote."""
         try:
-            return self._parse(raw)
+            return self._plan.parse_installed(self._json(raw))
         except ValueError:
             return None  # not vibey's record: made again, settings and all
 

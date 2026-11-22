@@ -74,6 +74,9 @@ class SearxngOffer:
     disabled: bool = False
     """The person stopped vibey's SearXNG for good (`vibey acp unload`, `vibey searxng
     uninstall`): nothing offers, loads or restarts it until `vibey searxng install`."""
+    outdated: str = ""
+    """`old -> new` digests when vibey installed it from an earlier pin: an update is offered
+    (never applied on its own); "" when it runs the pinned image or nothing is installed."""
 
 
 @dataclass(frozen=True, slots=True)

@@ -7,8 +7,9 @@ Before anything runs it checks, and refuses (said on standard error, the unit's 
 - there is no record, or one vibey would not have written (every value, the image equal to the
   pinned one), or one whose label is not this SearXNG's (`label`, from the person's own config);
 - `settings.yml` is not a regular file the person owns, closed to everyone else;
-- the recorded runtime fails `ContainerRuntime.vet` (trusted folder, file checks, the one a fresh
-  look finds);
+- the record was written for an earlier pinned image (it says how to update);
+- the recorded runtime fails `ContainerRuntime.vet` (trusted folder and file checks; it need not
+  be the runtime a fresh look would choose now);
 - the pinned image is not here -- it never pulls: nothing downloads when the person logs in;
 - a container of its name is there that vibey did not start for this user (no owner label).
 
@@ -89,6 +90,17 @@ class SearxngServe:
                 EXIT_CONFIG,
                 f"it was stopped for good (vibey acp unload, or uninstall); `{INSTALL_COMMAND}` "
                 "starts it again",
+            )
+        try:
+            installed = self._files.read_installed()
+        except ValueError:
+            installed = None  # refused below, with the strict reading's own reason
+        if installed is not None and not self._plan.pinned(installed.image):
+            return self._refuse(
+                EXIT_CONFIG,
+                f"it was installed from an earlier pinned image "
+                f"({self._plan.digest_of(installed.image)}), and this vibey runs only the one it "
+                f"pins now; `{INSTALL_COMMAND}` (or the editor's update offer) updates it",
             )
         try:
             provision = self._files.read()

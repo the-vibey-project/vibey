@@ -14,6 +14,7 @@ from __future__ import annotations
 
 import asyncio
 import contextlib
+import dataclasses
 import threading
 from collections.abc import AsyncIterator, Iterable, Mapping
 from typing import Any
@@ -27,6 +28,7 @@ from vibey.application.acp.acp_searxng_step import (
     NO_RUNTIME,
     NOT_NOW_OPTION,
     TOOL_SEARXNG,
+    UPDATE_OPTION,
     AcpSearxngStep,
 )
 from vibey.application.acp.dto import SearxngOffer, SearxngPrepared, UnitOutcome
@@ -167,6 +169,7 @@ class Loader:
         return UnitOutcome(label, unit, "loaded")
 
     def restart(self, label: str) -> UnitOutcome:
+        self.calls.append(("restart", label))
         return UnitOutcome(label, UNIT, "restarted")
 
     def unload(self, label: str) -> UnitOutcome:
@@ -565,13 +568,16 @@ async def test_running_as_root_loads_nothing() -> None:
     assert loader.calls == [] and "root" in world.shown()
 
 
-async def test_a_unit_running_already_is_not_loaded_again_but_kept_alive() -> None:
+async def test_a_unit_running_already_is_restarted_not_loaded_and_kept_alive() -> None:
+    """Review 2 (N-a): restarted, so it mounts the settings just written and runs the pinned
+    image."""
     world = World(loader=Loader(running=True))
     world.channel.permission_answers = [INSTALL_OPTION]
 
     await world.prompt()
 
-    assert world.loader.calls == [] and world.keep_alive.added == [{LABEL: UNIT}]
+    assert world.loader.calls == [("restart", LABEL)]
+    assert world.keep_alive.added == [{LABEL: UNIT}]
     assert world.final()["status"] == "completed"
 
 
@@ -955,3 +961,62 @@ async def test_the_never_notice_is_said_once_per_process() -> None:
     await boot._services("s")  # type: ignore[attr-defined]
     await boot._services("s2")  # type: ignore[attr-defined]
     assert len([t for t in channel.said if 'searxng = "never"' in t]) == 1
+
+
+# -- fix round 2: the update an earlier pin gets (review 2, R1) ----------------------------------
+
+
+def _outdated(**changes: object) -> Provisioner:
+    provisioner = Provisioner(provisioned=True, answering=True)
+    provisioner.found = dataclasses.replace(
+        provisioner.found, outdated="abababababab -> fc1d81d7e9d0", **changes
+    )
+    return provisioner
+
+
+async def test_an_earlier_pin_is_offered_as_an_update_and_restarts_the_running_unit() -> None:
+    world = World(provisioner=_outdated(), loader=Loader(running=True))
+    world.channel.permission_answers = [UPDATE_OPTION]
+
+    await world.prompt()
+
+    (asked,) = world.channel.permission_requests
+    title = asked["tool_call"]["title"]
+    assert title.startswith("Update vibey's SearXNG") and "abababababab -> fc1d81d7e9d0" in title
+    assert [o["optionId"] for o in asked["options"]] == [UPDATE_OPTION, NOT_NOW_OPTION]
+    assert [o["name"] for o in asked["options"]] == ["Update", "Not now"]
+    assert world.provisioner.prepares == 1
+    assert world.loader.calls == [("restart", LABEL)]
+    assert world.final()["status"] == "completed"
+
+
+@pytest.mark.parametrize("answer", [None, NOT_NOW_OPTION, INSTALL_OPTION])
+async def test_anything_but_update_leaves_the_old_container_running(answer: str | None) -> None:
+    world = World(provisioner=_outdated(), loader=Loader(running=True))
+    world.channel.permission_answers = [answer] if answer else []
+    await world.prompt()
+    assert not world.installed  # nothing pulled, written, loaded or restarted
+    assert world.final()["status"] == "failed"
+    await world.prompt()
+    assert len(world.channel.permission_requests) == 1  # once per process
+
+
+async def test_an_earlier_pin_is_never_offered_in_observe_or_when_stopped() -> None:
+    world = World(provisioner=_outdated())
+    await world.prompt(mode_id="observe")
+    stopped = World(provisioner=_outdated(disabled=True))
+    await stopped.prompt()
+    assert world.channel.permission_requests == [] and stopped.channel.permission_requests == []
+
+
+async def test_a_running_unit_that_will_not_restart_fails_the_update() -> None:
+    world = World(provisioner=_outdated(), loader=Loader(running=True))
+    world.channel.permission_answers = [UPDATE_OPTION]
+
+    def refuse(label: str) -> UnitOutcome:
+        return UnitOutcome(label, UNIT, "failed", "kickstart exited 3")
+
+    world.loader.restart = refuse  # type: ignore[method-assign]
+    await world.prompt()
+    assert "could not be restarted: kickstart exited 3" in world.shown()
+    assert world.final()["status"] == "failed"

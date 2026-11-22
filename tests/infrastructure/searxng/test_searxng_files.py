@@ -386,3 +386,31 @@ def test_a_record_vibey_did_not_write_is_made_again_with_its_settings(tmp_path: 
     (files.folder / RECORD_FILE).write_text('{"image": "x"}', "utf-8")
     again = _ensure(files)
     assert again.marker != first.marker and files.read() == again
+
+
+def test_a_record_of_an_earlier_pin_is_read_installed_only(tmp_path: Path) -> None:
+    from vibey.domain.searxng import SearxngPlan
+
+    earlier = "docker.io/searxng/searxng@sha256:" + "ab" * 32
+    old = SearxngFiles(tmp_path / "config" / "searxng", plan=SearxngPlan(pinned=earlier))
+    written = old.ensure(
+        image=earlier, port=28180, label="dev.vibey.searxng", runtime="/usr/bin/podman"
+    )
+    files = _files(tmp_path)
+    with pytest.raises(ValueError, match="pins"):
+        files.read()
+    assert files.read_installed() == written
+    assert files.settings_marker() == written.marker
+    updated = _ensure(files)  # an update keeps the marker and the settings
+    assert updated.marker == written.marker and files.read() == updated
+
+
+def test_the_settings_marker_is_none_without_believable_settings(tmp_path: Path) -> None:
+    files = _files(tmp_path)
+    assert files.settings_marker() is None
+    _ensure(files)
+    os.chmod(files.folder / SETTINGS_FILE, 0o644)
+    assert files.settings_marker() is None
+    assert files.read_installed() is not None
+    (files.folder / RECORD_FILE).unlink()
+    assert files.read_installed() is None

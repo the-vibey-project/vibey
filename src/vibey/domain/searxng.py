@@ -14,8 +14,9 @@ fixed here: what reaches a container runtime is decided in this module and nowhe
   value vibey would not have written, so a record that was changed can never widen the command
   line: an image other than the pinned one, a runtime that is not podman or docker in one of the
   trusted folders (`TRUSTED_RUNTIME_DIRS`), a label outside the service manager's closed alphabet,
-  a port outside 1-65535. (Infrastructure checks the runtime's file again, and that it is the one
-  a fresh look finds; the label is never taken from the record, only compared.)
+  a port outside 1-65535. (Infrastructure checks the runtime's file again; the label is never
+  taken from the record, only compared.) `parse_installed` reads a record of an earlier pin, to
+  recognise its SearXNG and update it, never to run it.
 - **The settings** are rendered from fixed text and two random hex values (`secret_key`, and the
   marker in `instance_name`), each checked against its alphabet, so neither can change the YAML's
   shape.
@@ -129,6 +130,12 @@ class SearxngPlan:
 
     def check(self, provision: SearxngProvision) -> None:
         self._image(provision.image)
+        self._installed(provision)
+
+    def _installed(self, provision: SearxngProvision) -> None:
+        """Every check but the pinned image's equality: what a record of an earlier pin holds."""
+        if not isinstance(provision.image, str) or not IMAGE_REF.fullmatch(provision.image):
+            raise ValueError("the image must be docker.io/searxng/searxng pinned by its digest")
         self._runtime(provision.runtime)
         port = provision.port
         if isinstance(port, bool) or not isinstance(port, int) or not 1 <= port <= 65535:
@@ -149,6 +156,11 @@ class SearxngPlan:
         }
 
     def parse(self, data: object) -> SearxngProvision:
+        provision = self.parse_installed(data)
+        self._image(provision.image)
+        return provision
+
+    def parse_installed(self, data: object) -> SearxngProvision:
         if not isinstance(data, dict):
             raise ValueError("the provision record is not a JSON object")
         try:
@@ -161,8 +173,16 @@ class SearxngPlan:
             )
         except KeyError as exc:
             raise ValueError(f"the provision record has no {exc.args[0]}") from None
-        self.check(provision)
+        self._installed(provision)
         return provision
+
+    def pinned(self, image: str) -> bool:
+        return image == self._pinned
+
+    def digest_of(self, image: str) -> str:
+        if not isinstance(image, str) or not IMAGE_REF.fullmatch(image):
+            raise ValueError("the image must be docker.io/searxng/searxng pinned by its digest")
+        return image.rpartition(":")[2][:12]
 
     def container_name(self, uid: int) -> str:
         return f"{self._prefix}-{self._uid(uid)}"

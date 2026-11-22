@@ -32,6 +32,17 @@ class SearxngFilesInterface(Protocol):
         vibey would not have written (an image other than the pinned one included)."""
         ...
 
+    def read_installed(self) -> SearxngProvision | None:
+        """The record as an earlier vibey may have written it: every check but the pinned image
+        (any SearXNG digest). For updating it and recognising its SearXNG, never for running it.
+        Raises ValueError as `read` does for anything else."""
+        ...
+
+    def settings_marker(self) -> str | None:
+        """The marker `settings.yml` names, read as carefully as the record; None when there is
+        no settings file vibey can believe."""
+        ...
+
     def settings_ready(self) -> bool:
         """Whether `settings.yml` exists as a regular file the person owns, closed to everyone
         else (never a link or a FIFO)."""

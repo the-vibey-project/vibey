@@ -199,14 +199,16 @@ def test_a_recorded_runtime_that_fails_its_vetting_runs_nothing(tmp_path: Path) 
     assert "writable by anyone" in world.said[0]
 
 
-def test_a_recorded_runtime_that_is_not_the_one_found_now_runs_nothing(tmp_path: Path) -> None:
+def test_a_runtime_installed_later_does_not_stop_the_recorded_one(tmp_path: Path) -> None:
+    """Review 2 (R2): podman beside the recorded docker (and preferred by `find`) changes
+    nothing at login: the recorded runtime still passes the trust checks and is run."""
     world = World(tmp_path)
     docker = world.bin / "docker"
     docker.write_text("#!/bin/sh\n", "utf-8")
     docker.chmod(0o755)
     world.install(str(docker))  # podman is there too, and preferred
-    assert world.serve() == EXIT_CONFIG
-    assert world.execs == [] and "finds now" in world.said[0]
+    assert world.serve() == 0
+    assert world.execs[0][0] == str(docker)
 
 
 def test_a_settings_file_swapped_for_a_link_runs_nothing(tmp_path: Path) -> None:
@@ -255,3 +257,14 @@ def test_a_refusal_goes_to_standard_error(
     serve = SearxngServe(SearxngFiles(tmp_path / "none"), world.runtime, label=lambda: LABEL)
     assert serve.run() == EXIT_CONFIG
     assert "vibey searxng install" in capsys.readouterr().err
+
+
+def test_a_record_of_an_earlier_pin_is_refused_with_the_update_path(tmp_path: Path) -> None:
+    """Review 2 (R1): never silently run another image; say how to update."""
+    world = World(tmp_path)
+    world.install()
+    world.edit_record(image="docker.io/searxng/searxng@sha256:" + "ab" * 32)
+    assert world.serve() == EXIT_CONFIG
+    assert world.execs == [] and world.runtime.calls == []
+    assert "earlier pinned image (abababababab)" in world.said[0]
+    assert "vibey searxng install" in world.said[0]

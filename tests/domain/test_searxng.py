@@ -298,3 +298,20 @@ def test_the_searxng_unit_runs_the_pinned_launcher_and_no_environment_file() -> 
     # container gets no secret but its own.
     assert unit.argv == ("/opt/vibey/bin/vibey", "searxng", "serve")
     assert unit.log_path == "/home/op/.local/state/vibey/logs/searxng.log"
+
+
+def test_a_record_of_an_earlier_pin_parses_installed_but_never_runs() -> None:
+    """Review 2 (R1): read to recognise and update it, refused for anything that runs it."""
+    earlier = SearxngProvision(OTHER, 28180, MARK, "dev.vibey.searxng", "/usr/bin/podman")
+    data = SearxngPlan(pinned=OTHER).record(earlier)
+    assert PLAN.parse_installed(data) == earlier
+    with pytest.raises(ValueError, match="pins"):
+        PLAN.parse(data)
+    with pytest.raises(ValueError, match="pins"):
+        PLAN.run_argv(earlier, settings_path=SETTINGS, uid=501, gid=20)
+    assert not PLAN.pinned(OTHER) and PLAN.pinned(IMAGE)
+    assert PLAN.digest_of(OTHER) == "ab" * 6
+    with pytest.raises(ValueError, match="digest"):
+        PLAN.digest_of("docker.io/searxng/searxng:latest")
+    with pytest.raises(ValueError, match="digest"):
+        PLAN.parse_installed({**data, "image": "docker.io/evil/searxng@sha256:" + "ab" * 32})

@@ -178,15 +178,28 @@ def test_every_command_refuses_a_recorded_runtime_outside_the_trusted_folders(
     assert runner.calls == []
 
 
-def test_a_recorded_runtime_that_is_not_the_one_found_now_is_refused(trusted: Trusted) -> None:
-    docker = trusted.binary(trusted.first, "docker")
-    trusted.binary(trusted.second, "podman")  # found first now: podman is preferred
-    runner = FakeRunner()
+@pytest.mark.parametrize(
+    "later",
+    [
+        ("second", "podman"),  # `brew install podman` beside Docker Desktop: podman is preferred
+        ("first", "docker"),  # a Homebrew docker CLI ahead of Docker Desktop's
+    ],
+)
+def test_a_runtime_installed_later_never_stops_the_recorded_one(
+    trusted: Trusted, later: tuple[str, str]
+) -> None:
+    """Review 2 (R2): `vet` is the trust checks only; `find` chooses the runtime at install."""
+    recorded = trusted.binary(
+        trusted.second if later == ("first", "docker") else trusted.first, "docker"
+    )
+    trusted.binary(getattr(trusted, later[0]), later[1])
+    runner = FakeRunner(PostgresCommandResult(0))
     runtime = trusted.runtime(runner)
-    assert "not the runtime vibey finds now" in runtime.vet(docker)
-    with pytest.raises(ValueError, match="finds now"):
-        runtime.image_present(docker, IMAGE)
-    assert runner.calls == []
+    assert runtime.find() != recorded
+    assert runtime.vet(recorded) == ""
+    assert runtime.image_present(recorded, IMAGE)
+    assert runtime.remove_image(recorded, IMAGE).ok
+    assert [call[0] for call in runner.calls] == [recorded, recorded]
 
 
 def test_image_present_asks_inspect_and_downloads_nothing(trusted: Trusted) -> None:

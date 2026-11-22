@@ -86,7 +86,7 @@ class SearxngProvisioner:
 
     def offer(self) -> SearxngOffer:
         own = next((name for name in OWN_URL_NAMES if self._environ.get(name, "").strip()), None)
-        record = self.record()
+        record = self.installed()
         answering = False
         if own is None:
             try:
@@ -105,7 +105,22 @@ class SearxngProvisioner:
             short=self._plan.short(self._image),
             port=self._port,
             disabled=self._files.disabled(),
+            outdated=self._outdated(record),
         )
+
+    def installed(self) -> SearxngProvision | None:
+        """The record as installed, possibly by an earlier pin (to recognise its SearXNG and to
+        update it, never to run it); None when there is none vibey can believe."""
+        try:
+            return self._checked_label(self._files.read_installed())
+        except ValueError:
+            return None
+
+    def _outdated(self, record: SearxngProvision | None) -> str:
+        """`old -> new` when the record names an image other than the pinned one, else ""."""
+        if record is None or self._plan.pinned(record.image):
+            return ""
+        return f"{self._plan.digest_of(record.image)} -> {self._plan.short(self._image)}"
 
     def provisioned(self) -> bool:
         return self.record() is not None
@@ -121,6 +136,12 @@ class SearxngProvisioner:
         try:
             record = self._believed()
         except ValueError as exc:
+            outdated = self._outdated(self.installed())
+            if outdated:
+                return (
+                    f"a newer pinned image is available ({outdated}); `vibey searxng install` "
+                    "updates it"
+                )
             return UntrustedText.clean(str(exc))
         if record is None:
             return ""
@@ -128,7 +149,9 @@ class SearxngProvisioner:
 
     def _believed(self) -> SearxngProvision | None:
         """The record, checked in full: the label is never taken from it, only compared."""
-        record = self._files.read()
+        return self._checked_label(self._files.read())
+
+    def _checked_label(self, record: SearxngProvision | None) -> SearxngProvision | None:
         if record is not None and record.label != self._label():
             raise ValueError(
                 f"its label {record.label} is not this SearXNG's ({self._label()}), so vibey "
@@ -145,8 +168,10 @@ class SearxngProvisioner:
     def busy(self) -> str:
         if not self._listening(self._port):
             return ""
-        record = self.record()
-        marker = record.marker if record is not None else None
+        # vibey's own instance is known by its marker: from the record as installed (an earlier
+        # pin's included, so an update is never refused as "not vibey's"), else from settings.yml.
+        record = self.installed()
+        marker = record.marker if record is not None else self._files.settings_marker()
         why = self._health(f"http://127.0.0.1:{self._port}", marker)
         if why is None and marker is not None:
             return ""  # vibey's own, answering
@@ -207,7 +232,7 @@ class SearxngProvisioner:
         return ""
 
     def answering(self) -> bool:
-        record = self.record()
+        record = self.installed()
         if record is None:
             return False
         return self._health(f"http://127.0.0.1:{record.port}", record.marker) is None

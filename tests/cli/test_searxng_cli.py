@@ -638,3 +638,29 @@ def test_doctor_says_a_refusal_first_and_a_stop() -> None:
     stopped.stopped = True
     line = World(stopped).command.doctor_line()
     assert line.startswith("UNKNOWN searxng") and "stopped for good" in line
+
+
+# -- fix round 2 ------------------------------------------------------------------------------------
+
+
+def test_status_says_a_newer_pinned_image_is_available() -> None:
+    provisioner = Provisioner(provisioned=True, outdated="abababababab -> fc1d81d7e9d0")
+    world = World(provisioner)
+    world.command.status()
+    assert any(
+        line.startswith("update      a newer pinned image is available (abababababab -> ")
+        for line in world.said
+    )
+
+
+def test_uninstall_says_when_it_cannot_mark_the_stop_and_goes_on() -> None:
+    world = World(Provisioner(provisioned=True))
+
+    def broken() -> None:
+        raise OSError("No space left on device \x1b[2J")
+
+    world.provisioner.disable = broken  # type: ignore[method-assign]
+    assert world.command.uninstall(purge=False) == 1
+    assert "rm" in world.provisioner.calls  # the rest of the cleanup still ran
+    line = next(s for s in world.said if "could not be marked" in s)
+    assert "\x1b" not in line

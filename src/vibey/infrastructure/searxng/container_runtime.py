@@ -7,8 +7,10 @@
   owned by root or the person, and any link must lead into `TRUSTED_RUNTIME_ROOTS`. With neither,
   vibey says how to install one and does nothing else.
 - **Every use vets it again.** `vet(runtime)` refuses a runtime (a recorded one, say) that fails
-  those checks or is not the one a fresh look finds, and every command here vets the runtime it
-  is handed before anything runs: a changed `provision.json` cannot make vibey run another binary.
+  those checks, and every command here vets the runtime it is handed before anything runs: a
+  changed `provision.json` cannot make vibey run a binary outside the trusted folders. It does not
+  require the runtime `find` would choose now: that only picks the runtime at install, so a second
+  runtime installed later never stops the recorded one.
 - **A container is removed only when it is vibey's.** Before `rm -f`, its labels are read: only a
   container carrying `vibey.searxng.owner=<this uid>` is removed. One of that name without it is
   left alone and said.
@@ -109,16 +111,11 @@ class ContainerRuntime:
         return self._found[0]
 
     def vet(self, runtime: str) -> str:
+        # The trust checks alone. A runtime installed later ahead of the recorded one (podman
+        # beside Docker Desktop, a Homebrew docker CLI) passes the same checks and must not stop
+        # serve, uninstall or purge: `find` only chooses the runtime at install.
         problem = self._problem(runtime)
-        if problem:
-            return f"{runtime} {problem}"
-        found = self.find()
-        if runtime != found:
-            return (
-                f"{runtime} is not the runtime vibey finds now ({found or 'none'}); "
-                "`vibey searxng install` records the one it finds"
-            )
-        return ""
+        return f"{runtime} {problem}" if problem else ""
 
     def _lookup(self) -> str | None:
         for name in RUNTIMES:

@@ -26,7 +26,21 @@ class SearxngPlanInterface(Protocol):
         ...
 
     def parse(self, data: object) -> SearxngProvision:
-        """A provision read back from `provision.json`, checked in full."""
+        """A provision read back from `provision.json`, checked in full: its image must be the
+        one this vibey pins."""
+        ...
+
+    def parse_installed(self, data: object) -> SearxngProvision:
+        """A provision checked in full but for the pin: a record of what an earlier vibey
+        installed (any SearXNG digest), read to update it, never to run it."""
+        ...
+
+    def pinned(self, image: str) -> bool:
+        """Whether `image` is the one this vibey pins."""
+        ...
+
+    def digest_of(self, image: str) -> str:
+        """The first twelve digest digits of any SearXNG image reference (pinned or not)."""
         ...
 
     def container_name(self, uid: int) -> str:

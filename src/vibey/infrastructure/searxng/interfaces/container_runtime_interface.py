@@ -24,8 +24,8 @@ class ContainerRuntimeInterface(Protocol):
 
     def vet(self, runtime: str) -> str:
         """Why `runtime` may not be run ("" when it may): not podman or docker in a trusted
-        folder, a link leading outside them, not a regular executable, writable by anyone,
-        someone else's, or not the one a fresh look finds."""
+        folder, a link leading outside them, not a regular executable, writable by anyone, or
+        someone else's. It need not be the one `find` would choose now."""
         ...
 
     def image_present(self, runtime: str, image: str) -> bool:

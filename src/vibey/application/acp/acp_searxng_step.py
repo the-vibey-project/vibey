@@ -71,6 +71,11 @@ SEARXNG_OPTIONS: Final[tuple[Mapping[str, str], ...]] = (
     },
     {"optionId": NOT_NOW_OPTION, "name": "Not now", "kind": PermissionKind.REJECT_ONCE.value},
 )
+UPDATE_OPTION: Final = "bootstrap-searxng:update"
+UPDATE_OPTIONS: Final[tuple[Mapping[str, str], ...]] = (
+    {"optionId": UPDATE_OPTION, "name": "Update", "kind": PermissionKind.ALLOW_ONCE.value},
+    {"optionId": NOT_NOW_OPTION, "name": "Not now", "kind": PermissionKind.REJECT_ONCE.value},
+)
 WRITTEN: Final = frozenset({"created", "unchanged", "updated"})
 NOT_ASKED: Final = "Not asked: the prompt was cancelled first. vibey asks at your next prompt."
 BACKUP: Final = (
@@ -237,10 +242,15 @@ class AcpSearxngStep:
             return None
 
     def _nothing_to_ask(self, found: SearxngOffer) -> bool:
-        if found.own_url or found.answering or found.provisioned or found.disabled:
-            # Theirs, already answering, kept running by step 3, or stopped for good by the
-            # person: `vibey searxng install` is the one way back from that.
+        if found.own_url or found.disabled:
+            # Theirs, or stopped for good by the person: `vibey searxng install` is the one way
+            # back from that.
             self._settled = True
+            return True
+        if found.outdated:
+            return False  # vibey's, from an earlier pin: the update is offered, never applied
+        if found.answering or found.provisioned:
+            self._settled = True  # already answering, or kept running by step 3
             return True
         return False
 
@@ -251,19 +261,33 @@ class AcpSearxngStep:
         the install lets it go when it has really ended, a cancel or not."""
         session_id = context.session_id
         asked = False
+        update = bool(found.outdated)
+        allow, options = (
+            (UPDATE_OPTION, UPDATE_OPTIONS) if update else (INSTALL_OPTION, SEARXNG_OPTIONS)
+        )
         try:
             await notify(
                 session_id,
-                self._mapper.tool_call(TOOL_SEARXNG, "Install SearXNG", ToolKind.EXECUTE, {}),
+                self._mapper.tool_call(
+                    TOOL_SEARXNG,
+                    "Update SearXNG" if update else "Install SearXNG",
+                    ToolKind.EXECUTE,
+                    {},
+                ),
             )
             if context.state.cancel_requested:
                 await self._end(notify, session_id, ToolCallStatus.FAILED, [NOT_ASKED])
                 return
+            runtime = self._untrusted(found.runtime or "")  # `outdated` is vibey's own hex
             title = (
-                f"Download and run SearXNG (searxng/searxng@sha256:{self._untrusted(found.short)}) "
-                f"in a container on 127.0.0.1:{found.port}? vibey searches it first; this "
-                f"downloads its container image with {self._untrusted(found.runtime or '')} and "
-                "keeps a container running."
+                f"Update vibey's SearXNG (searxng/searxng@sha256:"
+                f"{found.outdated})? vibey now pins a newer image; this downloads "
+                f"it with {runtime} and restarts the container on 127.0.0.1:{found.port}."
+                if update
+                else f"Download and run SearXNG (searxng/searxng@sha256:"
+                f"{self._untrusted(found.short)}) in a container on 127.0.0.1:{found.port}? vibey "
+                f"searches it first; this downloads its container image with {runtime} and keeps "
+                "a container running."
             )
             # Registered on the turn, so a `session/cancel` withdraws it at once and it resolves
             # as no answer: silence and a cancel are never consent.
@@ -273,12 +297,12 @@ class AcpSearxngStep:
                 selected = await self._channel.request_permission(
                     session_id,
                     {"toolCallId": TOOL_SEARXNG, "title": title},
-                    [dict(option) for option in SEARXNG_OPTIONS],
+                    [dict(option) for option in options],
                     timeout=self._settings.permission_timeout_seconds,
                 )
             finally:
                 context.state.resolve_permission(TOOL_SEARXNG)
-            if selected != INSTALL_OPTION or not self._may_run(context):
+            if selected != allow or not self._may_run(context):
                 await self._declined(notify, session_id)
                 return
             await notify(
@@ -382,7 +406,13 @@ class AcpSearxngStep:
                 f"{self._untrusted(self._loader.domain())} cannot be reached here, so nothing "
                 "keeps SearXNG running; run `vibey searxng serve` yourself to start it."
             )
-        if await asyncio.to_thread(self._loader.state, unit.label) != "running":
+        if await asyncio.to_thread(self._loader.state, unit.label) == "running":
+            # Running already (an update, or settings just made again): restarted, so the
+            # container runs the pinned image and mounts the settings now on disk.
+            restarted = await asyncio.to_thread(self._loader.restart, unit.label)
+            if restarted.action == "failed":
+                return f"{label}: could not be restarted: {self._untrusted(restarted.detail)}"
+        else:
             loaded = await asyncio.to_thread(self._loader.load, unit.label, unit.path)
             if loaded.action == "failed":
                 return f"{label}: could not be loaded: {self._untrusted(loaded.detail)}"

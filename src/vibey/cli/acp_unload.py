@@ -26,6 +26,7 @@ from typing import Final
 
 import typer
 
+from vibey.application.acp.doctor_checks import DoctorChecks
 from vibey.bootstrap import AcpMachine, acp_machine, acp_user_config
 from vibey.domain.supervisor import SEARXNG
 from vibey.infrastructure.acp.acp_settings_loader import AcpSettingsLoader
@@ -101,11 +102,19 @@ class AcpUnloadCommand:
                     "the SearXNG container is removed; its settings and image are kept "
                     "(`vibey searxng uninstall --purge` removes them)"
                 )
-            searxng.disable()
-            self._echo(
-                "SearXNG is stopped for good: no session loads it again until `vibey searxng "
-                "install`"
-            )
+            try:
+                searxng.disable()
+            except (OSError, ValueError) as exc:
+                failed = True
+                self._echo(
+                    f"SearXNG could not be marked stopped for good ({DoctorChecks.cleaned(str(exc))});"
+                    " a later session may load it again"
+                )
+            else:
+                self._echo(
+                    "SearXNG is stopped for good: no session loads it again until `vibey searxng "
+                    "install`"
+                )
         forgotten = loader.forget_unit_files()
         if forgotten.action == "failed":
             failed = True

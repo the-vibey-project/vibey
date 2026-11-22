@@ -336,3 +336,19 @@ def test_an_unreadable_supervisor_table_names_no_searxng_label(tmp_path: Path) -
     searxng = Searxng()
     _searxng_command(tmp_path, Manager(), units, [], searxng).run()
     assert searxng.removed == 0
+
+
+def test_unload_says_when_it_cannot_mark_the_stop_and_goes_on(tmp_path: Path) -> None:
+    units = _units(tmp_path)
+    units.write(("searxng",), "always")
+    said: list[str] = []
+    searxng = Searxng()
+
+    def broken() -> None:
+        raise ValueError("the folder is not yours")
+
+    searxng.disable = broken  # type: ignore[method-assign]
+    manager = Manager()
+    assert _searxng_command(tmp_path, manager, units, said, searxng).run() == 1
+    assert searxng.removed == 1 and ("forget", "") in manager.calls
+    assert any("could not be marked stopped for good" in s for s in said)

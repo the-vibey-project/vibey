@@ -32,6 +32,11 @@ class SearxngProvisionerInterface(Protocol):
         label must be this SearXNG's own, never taken from it)."""
         ...
 
+    def installed(self) -> SearxngProvision | None:
+        """The record as installed, an earlier pin's image included (to recognise its SearXNG
+        and to update it, never to run it); None when there is none vibey can believe."""
+        ...
+
     def refusal(self) -> str:
         """Why the recorded install may not be used ("" when it may, or there is none): a record
         vibey would not write, another label, or a runtime `vet` refuses. Cleaned."""

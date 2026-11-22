@@ -333,3 +333,60 @@ def test_the_default_listening_probe_connects_to_loopback(monkeypatch: pytest.Mo
     monkeypatch.setattr(socket, "create_connection", connect)
     assert SearxngProvisioner._connects(28180) and not SearxngProvisioner._connects(1)
     assert asked == [("127.0.0.1", 28180), ("127.0.0.1", 1)]
+
+
+# -- fix round 2: an install from an earlier pin (review 2, R1) -----------------------------------
+
+EARLIER = "docker.io/searxng/searxng@sha256:" + "ab" * 32
+
+
+def _installed_earlier(tmp_path: Path) -> str:
+    """What an earlier vibey, pinning `EARLIER`, wrote; its marker."""
+    from vibey.domain.searxng import SearxngPlan
+
+    earlier = SearxngFiles(tmp_path / "searxng", plan=SearxngPlan(pinned=EARLIER))
+    return earlier.ensure(
+        image=EARLIER, port=28180, label="dev.vibey.searxng", runtime=RUNTIME
+    ).marker
+
+
+def test_vibeys_own_searxng_from_an_earlier_pin_is_never_busy(tmp_path: Path) -> None:
+    marker = _installed_earlier(tmp_path)
+    health = Health(answering={("http://127.0.0.1:28180", marker)})
+    provisioner = _provisioner(tmp_path, listening=True, health=health)
+
+    assert provisioner.record() is None  # never run: it is not the pinned image
+    assert provisioner.installed() is not None
+    assert provisioner.busy() == ""
+    found = provisioner.offer()
+    assert found.answering and found.provisioned
+    assert found.outdated == f"{'ab' * 6} -> {SEARXNG_IMAGE.rpartition(':')[2][:12]}"
+    assert "a newer pinned image is available" in provisioner.refusal()
+    assert provisioner.answering()
+
+
+def test_an_update_keeps_the_marker_and_writes_the_pinned_image(tmp_path: Path) -> None:
+    marker = _installed_earlier(tmp_path)
+    provisioner = _provisioner(tmp_path)
+    assert provisioner.prepare().ok
+    record = provisioner.record()
+    assert record is not None and record.image == SEARXNG_IMAGE and record.marker == marker
+    assert provisioner.offer().outdated == "" and provisioner.refusal() == ""
+
+
+def test_the_settings_marker_names_vibeys_instance_when_the_record_is_unreadable(
+    tmp_path: Path,
+) -> None:
+    marker = _installed_earlier(tmp_path)
+    (tmp_path / "searxng" / "provision.json").write_text("not json", "utf-8")
+    health = Health(answering={("http://127.0.0.1:28180", marker)})
+    assert _provisioner(tmp_path, listening=True, health=health).busy() == ""
+
+
+def test_the_earlier_pins_record_alone_names_vibeys_instance(tmp_path: Path) -> None:
+    import os
+
+    marker = _installed_earlier(tmp_path)
+    os.chmod(tmp_path / "searxng" / "settings.yml", 0o644)  # settings vibey cannot believe
+    health = Health(answering={("http://127.0.0.1:28180", marker)})
+    assert _provisioner(tmp_path, listening=True, health=health).busy() == ""

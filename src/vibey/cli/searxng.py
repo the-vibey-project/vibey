@@ -112,6 +112,11 @@ class SearxngCommand:
             self._echo(f"image       {'here' if searxng.image_present() else 'not here'}")
             if label is not None:
                 self._echo(f"unit        {self._state(loader, label)}")
+        if found.outdated:
+            self._echo(
+                f"update      a newer pinned image is available ({found.outdated}); "
+                f"`{INSTALL_COMMAND}` updates it"
+            )
         if found.disabled:
             self._echo(f"stopped     for good; `{INSTALL_COMMAND}` starts it again")
         answering = searxng.answering() if record is not None else found.answering
@@ -210,11 +215,19 @@ class SearxngCommand:
             self._echo("the settings and the record are removed")
         else:
             self._echo("the settings, the record and the image are kept; --purge removes them")
-        searxng.disable()
-        self._echo(
-            f"it is stopped for good: no editor session loads or offers it again until "
-            f"`{INSTALL_COMMAND}`"
-        )
+        try:
+            searxng.disable()
+        except (OSError, ValueError) as exc:
+            failed = True
+            self._echo(
+                f"it could not be marked stopped for good ({DoctorChecks.cleaned(str(exc))}); "
+                "an editor session may load it again"
+            )
+        else:
+            self._echo(
+                f"it is stopped for good: no editor session loads or offers it again until "
+                f"`{INSTALL_COMMAND}`"
+            )
         return 1 if failed else 0
 
     def doctor_line(self) -> str:
