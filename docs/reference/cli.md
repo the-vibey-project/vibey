@@ -504,7 +504,8 @@ here delays the answer: the steps start after `session/new` (or the first `sessi
 
 1. **`vibey doctor`** (a `read` tool call): the local doctor's sections -- the database,
    password-less access, hub exposure, Ollama when a local engine runs, the Sabbath, gate
-   notices, the supervisor, host health and [LLM tooling](#vibey-connect-llm-tooling) (each
+   notices, the supervisor, host health, [web search](#local-first-search) and
+   [LLM tooling](#vibey-connect-llm-tooling) (each
    installed client's ACP agent, MCP server, skill and plugin; read in the folder the editor
    opened for the project-scope clients, never written) -- one update per finished section,
    then `completed`,
@@ -1184,35 +1185,80 @@ vibey fetch https://example.com --max-chars 20000
 ```
 
 The web, for any loop that can run a command, and for the sovereign DESIGN research stage.
-`search` lists results (title, URL, snippet) from the backend you configure; `fetch` reads one
-public page as plain text. Both print under an **untrusted** banner: what comes back is other
-people's text, to be read as data and never followed as instructions. Evidence handed to a
-DESIGN stage is the quoted retrieved text with its URLs, never a model's summary of it.
+`search` lists results (title, URL, snippet) and says which backend answered; `fetch` reads one
+public page as plain text and uses no search backend. Both print under an **untrusted** banner:
+what comes back is other people's text, to be read as data and never followed as instructions.
+Evidence handed to a DESIGN stage is the quoted retrieved text with its URLs, never a model's
+summary of it.
 
 `fetch` refuses a private, loopback, link-local or metadata address, re-checks every redirect
 hop, follows at most three, reads text types only and stops at 1 MB. A local file path in a
 query is removed before the query leaves the machine.
 
-Configuration is environment only (never `vibey.toml`, so a key cannot be committed). A search
-with no backend configured exits 2 and says how to configure one.
+<a id="local-first-search"></a>
+### Local first; Brave only as a backup
 
-| Backend | Set | Reaches |
-| --- | --- | --- |
-| SearXNG (keyless, self-hosted) | `VIBEY_SEARXNG_URL` | the DESIGN research stage **and** every engine session |
-| Brave Search | `VIBEY_BRAVE_API_KEY`, or `BRAVE_SEARCH_API_KEY` (the name Brave's own tools read; `VIBEY_BRAVE_API_KEY` wins when both are set) | the DESIGN research stage only: the key is never passed to a session |
+Every search vibey controls follows one rule, query by query: `vibey search`, the DESIGN
+research stage, and the `web_search` tool of gptossloop and qwenloop (which runs `vibey search`).
+
+| When | What happens |
+| --- | --- |
+| Always, first | The **local SearXNG** is asked: `VIBEY_SEARXNG_URL`, or `http://127.0.0.1:28180` (loopback, on vibey's own uncommon port, not the 8080 or 8888 other software listens on) when that is unset. Its JSON format must be enabled. A loopback SearXNG is reached directly, never through `HTTP_PROXY`. |
+| Before believing it | Whatever listens there must prove it is a SearXNG: a GET of its `/config` (no query, no secret, no redirect followed) must answer SearXNG's own JSON (a string `instance_name` and `version`, lists of `engines` and `categories`), and, when `VIBEY_SEARXNG_INSTANCE` is set, that `instance_name`. HTML, other JSON, a redirect, or another instance name is `something other than SearXNG is listening there`: a failure like any other below, and its search results are never read. A proof is kept by the process for `VIBEY_SEARCH_IDENTITY_TTL` seconds (default `60`) per address, so a SearXNG that is replaced is noticed; a refusal is never kept. |
+| SearXNG answers, even with no results | That is the answer. An empty list from a healthy SearXNG is not a failure, and Brave is not asked. |
+| SearXNG fails, and a Brave key is set | The query goes to **Brave**. SearXNG has failed when it is refused or unreachable, times out, answers any HTTP error, answers something that is not JSON or has no `results` list, or answers no results while reporting every engine it asked as unresponsive. The first time in a process, before the query is sent, one line goes to standard error: `local SearXNG unavailable (<reason>); this query went to Brave Search`. Later Brave answers in the same process carry only their marker (`backend: brave`). The line never holds the query or a URL. |
+| SearXNG fails, and no key is set | The search fails (exit 1), saying what was tried and where, and how to fix it: start SearXNG there, or point `VIBEY_SEARXNG_URL` at yours. `vibey doctor` says whether it answers. |
+| Brave fails too | The search fails (exit 1) and names both failures. |
+
+Nothing carries over between queries: the next one asks SearXNG first again. `VIBEY_SEARCH_PROVIDER`
+may be unset or `searxng`; **`brave` is refused** (exit 2, and `vibey worker` will not start),
+because Brave is never the primary. Set a key instead: it is used by itself when SearXNG is down.
+
+The Brave key is read from `VIBEY_BRAVE_API_KEY`, else `WEBSEARCH_BRAVE_API_KEY`, else
+`BRAVE_SEARCH_API_KEY` (the name Brave's own tools read). Every answer names its backend:
+`--json` carries `"backend"` (`searxng` or `brave`; `"provider"` is kept, with the same value,
+for readers written before it) and, on the answer that printed the standard-error line,
+`"notice"`; the text output has a `backend:` line under the banner. A DESIGN stage's evidence
+names it in its source (`web search (brave, the backup: local SearXNG unavailable): ...`).
+
+A SearXNG answer is untrusted data, read for at most `VIBEY_SEARCH_TIMEOUT` seconds and 2 MB. A
+redirect from SearXNG or Brave is followed only to the same scheme, host and port, so neither a
+query nor Brave's key header is carried to another host.
+
+The identity check keeps out a program that happens to hold the port first (another app's dev
+server, a container) and, with `VIBEY_SEARXNG_INSTANCE`, another SearXNG. It is not
+authentication: engine sessions run with no network sandbox, as you, so code a session runs can
+bind any unprivileged loopback port, including this one, and can read the instance marker.
+What it serves is still only untrusted text, read as data and never as instructions.
+
+Configuration is your own environment only, never `vibey.toml`: a project's file cannot point
+search at another host or supply a key.
+
+#### What engine sessions are told
 
 `vibey worker` tells every session that can run a command how to search (an appended "Web
-access" note in its plan, naming the absolute path of the running `vibey`), and passes the
-non-secret `WEBSEARCH_*` settings through to it. With only a Brave key configured, sessions are
-told nothing and have no search. The worker prints one line on stderr saying which of the two
-is in force and, for Brave, which variable configured it (`configured via
-BRAVE_SEARCH_API_KEY`), never the key. No session or gate can be given the key under any of
-its names (`VIBEY_BRAVE_API_KEY`, `WEBSEARCH_BRAVE_API_KEY`, `BRAVE_SEARCH_API_KEY`), even by a
-declared environment allow-list: a project that declared one is refused (see
-[`[engine_environment]`](configuration.md#engine_environment)).
+access" note in its plan, naming the absolute path of the running `vibey`), and gives it the
+non-secret settings: `WEBSEARCH_PROVIDER`, `WEBSEARCH_SEARXNG_URL`, `WEBSEARCH_TIMEOUT`,
+`WEBSEARCH_RESULTS`, `WEBSEARCH_IDENTITY_TTL` and, when set, `WEBSEARCH_SEARXNG_INSTANCE`, so a
+session's `vibey search` checks the same identity. It never gives a session the Brave key: no session or gate can be given it
+under any of its names (`VIBEY_BRAVE_API_KEY`, `WEBSEARCH_BRAVE_API_KEY`,
+`BRAVE_SEARCH_API_KEY`), even by a declared environment allow-list, and a project that declared
+one is refused (see [`[engine_environment]`](configuration.md#engine_environment)). So **inside
+a session there is no Brave backup**: a session's `vibey search` is the local SearXNG alone, and
+fails, saying so, while it is down. The backup serves vibey's own processes: `vibey search` run
+by you, and the DESIGN research stage. The worker prints one line on stderr naming the SearXNG
+address and whether a backup is configured, and by which variable (`configured via
+BRAVE_SEARCH_API_KEY`), never the key.
 
 gptossloop and qwenloop also have `web_search` and `web_fetch` as tools of their own, which run
-the same two commands; every other engine uses the command from its plan.
+the same two commands and pass on the backend that answered (and vibey's notice, when there is
+one); every other engine uses the command from its plan.
+
+**An engine's own native web search is not vibey's.** claudeloop and codexloop can use their
+provider's server-side web search (Anthropic's, OpenAI's) when their own configuration allows
+it. Those queries go straight to that provider, under its rules: vibey does not route them, does
+not see them, and this local-first rule does not cover them. A local claudeloop profile refuses
+that search.
 
 ## `vibey recover`
 
@@ -2034,6 +2080,19 @@ be. `PASS` when there are none, or when every waiting gate's project has a chann
 a failure: those gates are still listed by `vibey gates`, and each is recorded on the
 ledger as undeliverable ([`[notifications]`](configuration.md#notifications)).
 
+The `web-search` line asks the local SearXNG to prove it is one: a GET of its `/config` at
+`VIBEY_SEARXNG_URL`, or `http://127.0.0.1:28180`, bounded by `VIBEY_SEARCH_TIMEOUT`, carrying no
+query and no secret, always asked afresh. `PASS ... local SearXNG answering at <url>` (with `(the
+expected instance)` when `VIBEY_SEARXNG_INSTANCE` is set); `WARN ... not answering` with the
+reason and the fix; or `WARN ... something other than SearXNG is listening at <url>` (or `a
+SearXNG other than the expected one`), whose answers vibey will not use. Neither is ever a
+failure. The `web-search-backup` line says whether a
+Brave backup is configured, `PASS ... configured via <variable>` (never the key) or `UNKNOWN`
+when none is. A search setting the worker would refuse to start with (`VIBEY_SEARCH_PROVIDER =
+brave`, a URL that is not `http(s)`) is the one `FAIL`. The URL is shown without credentials,
+query or fragment. Under `--json` both are checks under those names; see
+[local first](#local-first-search).
+
 The last section, `llm-tooling`, lists every LLM client installed here (its own folder exists:
 `~/.claude` for Claude Code, VS Code's user folder, each user-scope client's config folder) and,
 one line each, its four surfaces -- `acp-agent`, `mcp-server`, `skill`, `plugin` -- as
@@ -2218,12 +2277,14 @@ Variables read by code under `src/vibey`:
 | `VIBEY_OLLAMA_RETRY_CONTEXT` | as `VIBEY_OLLAMA_TIMEOUT` | The largest context window the one retry of a cut-short reply may ask for, default `32768`, at least `4096`. A prompt that leaves too little of `VIBEY_OLLAMA_CONTEXT` for the reasoning and the answer fills the window, and asking again inside the same window only fails again; the retry instead opens as much as it needs, up to this. A configured `VIBEY_OLLAMA_CONTEXT` above it is never lowered. Set it equal to `VIBEY_OLLAMA_CONTEXT` to keep the retry inside that ceiling. Ollama reloads a model whose context changes, so a retry that grows the window pays a reload: raise `VIBEY_OLLAMA_CONTEXT` itself when that is the usual case. |
 | `VIBEY_OLLAMA_FIT` | as `VIBEY_OLLAMA_TIMEOUT` | Path to a fit record written by `vibey doctor --sovereign-fit`. When it matches, its measured context and output replace the two ceilings above; see [Local models](../guides/local-models-ollama.md#measuring-a-capacity-fit). Unset, unreadable or mismatched means the configured ceilings. |
 | `VIBEY_REVISION` | as `VIBEY_OLLAMA_FIT` | When set, a fit record is used only if its `revision` equals this value. |
-| `VIBEY_SEARXNG_URL` | `search`, `fetch`, `worker`, the sovereign DESIGN research stage | Base URL of a SearXNG instance with its JSON format enabled. Passed to engine sessions as `WEBSEARCH_SEARXNG_URL`. Queries go to that instance, so run your own if they are private. |
-| `VIBEY_BRAVE_API_KEY` | as `VIBEY_SEARXNG_URL` | A Brave Search key. Used by vibey's own processes only; never passed to a session. |
+| `VIBEY_SEARXNG_URL` | `search`, `worker`, `doctor`, the sovereign DESIGN research stage | Base URL of the local SearXNG, with its JSON format enabled; default `http://127.0.0.1:28180`. Always asked first ([local first](#local-first-search)). Passed to engine sessions as `WEBSEARCH_SEARXNG_URL`. Queries go to that instance, so keep it your own. |
+| `VIBEY_BRAVE_API_KEY` | as `VIBEY_SEARXNG_URL` | A Brave Search key: the backup, asked only when the local SearXNG fails, and said once on stderr when it is. Used by vibey's own processes only; never passed to a session. |
 | `BRAVE_SEARCH_API_KEY` | as `VIBEY_SEARXNG_URL` | The same Brave Search key under the name Brave's own tools read; used only when neither `VIBEY_BRAVE_API_KEY` nor its `WEBSEARCH_BRAVE_API_KEY` form is set. Used by vibey's own processes only: never passed to a session or a gate, not even by a declared allow-list, and never printed (the worker says only `configured via BRAVE_SEARCH_API_KEY`). |
-| `VIBEY_SEARCH_PROVIDER` | as `VIBEY_SEARXNG_URL` | `searxng` or `brave`; needed only when both are configured (SearXNG wins otherwise). |
-| `VIBEY_SEARCH_TIMEOUT` | as `VIBEY_SEARXNG_URL` | Seconds per search or fetch request. A bad value exits 2 before any engine starts. |
-| `VIBEY_SEARCH_RESULTS` | as `VIBEY_SEARXNG_URL` | How many results a search returns. |
+| `VIBEY_SEARCH_PROVIDER` | as `VIBEY_SEARXNG_URL` | `searxng`, or unset. `brave` is refused (exit 2): Brave is a backup only; set its key instead. |
+| `VIBEY_SEARCH_TIMEOUT` | as `VIBEY_SEARXNG_URL` | Seconds per search request, and for `doctor`'s SearXNG probe; default `15`. A bad value exits 2 before any engine starts. |
+| `VIBEY_SEARCH_RESULTS` | as `VIBEY_SEARXNG_URL` | How many results a search returns, `1` to `20`; default `5`. |
+| `VIBEY_SEARXNG_INSTANCE` | as `VIBEY_SEARXNG_URL` | Optional. The `instance_name` vibey's own SearXNG answers on `/config`; when set, a SearXNG that names itself anything else is not believed ([local first](#local-first-search)). Your own environment only: a project's `vibey.toml` cannot set it. Passed to sessions as `WEBSEARCH_SEARXNG_INSTANCE`; never printed. |
+| `VIBEY_SEARCH_IDENTITY_TTL` | as `VIBEY_SEARXNG_URL` | Seconds a SearXNG that proved its identity is believed before `/config` is asked again; default `60`. A value that is not a finite number above zero exits 2. |
 | `VIBEY_FEATURE_QWENLOOP` | `doctor`, `worker`, `loops` | `1`, `true`, `yes`, or `on` (case-insensitive) enables qwenloop, the runner on a Qwen model; any other set value disables it. When set it overrides config. When unset, `doctor` and `loops` fall back to `[features] qwenloop` in `./vibey.toml` and `worker` falls back to the project's stored config; with neither, qwenloop is off. |
 | `ANTHROPIC_API_KEY` | `doctor` auth fallback; `doctor --cluster` (which also accepts `ANTHROPIC_AUTH_TOKEN`) | claudeloop credentials. |
 | `OPENAI_API_KEY` | `doctor` auth fallback; `doctor --cluster` (which also accepts `AZURE_OPENAI_API_KEY`, `CODEX_API_KEY`) | codexloop credentials. |
