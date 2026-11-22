@@ -170,3 +170,10 @@ def test_serve_never_runs_the_container_as_root(tmp_path: Path, uid: int) -> Non
     serve = SearxngServe(world.files, world.runtime, execve=lambda *a: None, uid=lambda: uid)
     with pytest.raises(ValueError, match="root"):
         serve.run()
+
+
+def test_a_refusal_goes_to_standard_error(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    assert SearxngServe(SearxngFiles(tmp_path / "none"), Runtime()).run() == EXIT_CONFIG
+    assert "vibey searxng install" in capsys.readouterr().err

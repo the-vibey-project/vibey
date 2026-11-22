@@ -692,3 +692,158 @@ async def test_step_three_loads_and_keeps_a_provisioned_searxng_like_the_hub() -
 async def test_step_three_leaves_searxng_alone_without_the_grant(settings: AcpSettings) -> None:
     units, loader, keep_alive, _ = await _step_three(settings)
     assert units.writes == [] and loader.calls == [] and keep_alive.managed == []
+
+
+# -- the edges of the step --------------------------------------------------------------------
+
+
+async def test_a_machine_busy_in_this_window_leaves_the_offer_to_the_next_prompt() -> None:
+    uses: list[float] = []
+
+    @contextlib.asynccontextmanager
+    async def second_expires(seconds: float) -> AsyncIterator[None]:
+        uses.append(seconds)
+        async with asyncio.timeout(0 if len(uses) == 2 else None):
+            yield
+
+    world = World(step_timeout=second_expires)
+
+    async def never() -> tuple[bool, str | None]:
+        await asyncio.Event().wait()
+        return True, None
+
+    await world.step.offer(
+        context("s"), enter=never, leave=lambda: None, notify=world.channel.notify_update
+    )
+
+    assert any("still busy in this window" in t for t in world.channel.said)
+    assert world.step.pending and world.channel.permission_requests == []
+
+
+async def test_an_install_that_breaks_says_so_and_lets_the_machine_go() -> None:
+    world = World()
+    world.channel.permission_answers = [INSTALL_OPTION]
+
+    def broken() -> SearxngPrepared:
+        raise RuntimeError("boom")
+
+    world.provisioner.prepare = broken  # type: ignore[method-assign]
+    await world.prompt()
+
+    assert "The install broke: RuntimeError" in world.shown()
+    await asyncio.sleep(0)
+    assert world.balanced()
+
+
+async def test_a_cancel_that_lands_with_the_allow_installs_nothing() -> None:
+    world = World()
+    ctx = context("s")
+
+    async def allow_then_cancel(*args: Any, **kwargs: Any) -> str:
+        ctx.state.request_cancel()
+        return INSTALL_OPTION
+
+    world.channel.request_permission = allow_then_cancel  # type: ignore[method-assign]
+    await world.boot.before_first_prompt(ctx)
+
+    assert not world.installed and world.final()["status"] == "failed"
+
+
+async def test_a_cancel_before_the_question_is_sent_says_not_asked() -> None:
+    world = World()
+    world.channel.hold_before[1] = asyncio.Event()  # the tool call waits for the write lock
+    prompt = asyncio.create_task(world.prompt())
+    await world.channel.write_waiting.wait()
+    prompt.cancel()
+    with pytest.raises(asyncio.CancelledError):
+        await prompt
+    assert world.channel.permission_requests == [] and not world.installed
+    assert world.balanced()
+
+
+async def test_a_unit_found_loaded_is_kept_without_a_load_notice() -> None:
+    world = World()
+    world.channel.permission_answers = [INSTALL_OPTION]
+
+    def already(label: str, unit: str) -> UnitOutcome:
+        return UnitOutcome(label, unit, "already-loaded")
+
+    world.loader.load = already  # type: ignore[method-assign]
+    await world.prompt()
+
+    assert world.final()["status"] == "completed"
+    assert not any("vibey acp unload" in t for t in world.channel.said)
+
+
+async def test_without_a_keep_alive_the_install_still_completes() -> None:
+    world = World()
+    world.step._keep_alive = None  # type: ignore[attr-defined]
+    world.channel.permission_answers = [INSTALL_OPTION]
+    await world.prompt()
+    assert world.final()["status"] == "completed"
+
+
+async def test_an_allowed_install_that_fails_after_a_cancel_is_said_late() -> None:
+    provisioner = Provisioner()
+    provisioner.gate = threading.Event()
+    world = World(provisioner=provisioner)
+    world.channel.permission_answers = [INSTALL_OPTION]
+    real_prepare = provisioner.prepare
+
+    def failing() -> SearxngPrepared:
+        real_prepare()
+        raise RuntimeError("pull died")
+
+    provisioner.prepare = failing  # type: ignore[method-assign]
+    prompt = asyncio.create_task(world.prompt())
+    for _ in range(1000):
+        if provisioner.prepares:
+            break
+        await asyncio.sleep(0.001)
+    prompt.cancel()
+    with pytest.raises(asyncio.CancelledError):
+        await prompt
+    provisioner.gate.set()
+    for _ in range(1000):
+        if any("has ended: it failed" in t for t in world.channel.said):
+            break
+        await asyncio.sleep(0.001)
+    assert any("has ended: it failed" in t for t in world.channel.said)
+    assert world.balanced()
+
+
+async def test_close_silences_a_late_notice_still_being_sent() -> None:
+    provisioner = Provisioner()
+    provisioner.gate = threading.Event()
+    world = World(provisioner=provisioner)
+    world.channel.permission_answers = [INSTALL_OPTION]
+    prompt = asyncio.create_task(world.prompt())
+    for _ in range(1000):
+        if provisioner.prepares:
+            break
+        await asyncio.sleep(0.001)
+    prompt.cancel()
+    with pytest.raises(asyncio.CancelledError):
+        await prompt
+    real_notify = world.channel.notify_update
+
+    async def hold_the_late_one(session_id: str, update: Mapping[str, Any]) -> None:
+        if "has ended" in str(update):
+            await asyncio.Event().wait()  # the late notice never gets its write
+        await real_notify(session_id, update)
+
+    world.channel.notify_update = hold_the_late_one  # type: ignore[method-assign]
+    provisioner.gate.set()
+    for _ in range(1000):
+        if world.step._late:  # type: ignore[attr-defined]
+            break
+        await asyncio.sleep(0.001)
+    assert world.step._late  # type: ignore[attr-defined]
+    await world.boot.close()
+    assert not world.step._late  # type: ignore[attr-defined]
+
+
+async def test_an_unknown_mode_may_run_nothing() -> None:
+    world = World()
+    await world.prompt(mode_id="no-such-mode")
+    assert world.provisioner.offers == 0 and world.channel.updates == []

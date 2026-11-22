@@ -520,3 +520,25 @@ def test_serve_is_hidden_from_help() -> None:
     assert result.exit_code == 0
     assert "install" in result.output and "uninstall" in result.output
     assert "serve" not in result.output
+
+
+def test_doctor_with_no_user_level_services_says_unknown_quietly() -> None:
+    world = World(services=False)
+    line = world.command.doctor_line()
+    assert line.startswith("UNKNOWN searxng") and world.said == []
+
+
+def test_doctors_section_asks_the_searxng_command_for_its_line(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    from vibey.cli import web_search_doctor
+
+    class Line:
+        def doctor_line(self) -> str:
+            return "WARN searxng  stand-in"
+
+    monkeypatch.setattr("vibey.cli.searxng.SEARXNG_COMMAND", Line())
+    assert web_search_doctor._searxng_line() == "WARN searxng  stand-in"
+    lines, ok = web_search_doctor.WEB_SEARCH_DOCTOR.doctor_lines()
+    assert ok and lines[-1] == "WARN searxng  stand-in"
+    assert [line.split()[1] for line in lines] == ["web-search", "web-search-backup", "searxng"]

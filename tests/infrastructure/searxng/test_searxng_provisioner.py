@@ -207,3 +207,9 @@ def test_the_default_identity_check_is_9cs_with_the_marker(tmp_path: Path) -> No
     provisioner.prepare()
     # The suite refuses every connection the guarded opener makes: nothing answers.
     assert not provisioner.answering()
+
+
+def test_purge_with_the_image_removed_keeps_nothing(tmp_path: Path) -> None:
+    provisioner = _provisioner(tmp_path)
+    provisioner.prepare()
+    assert provisioner.purge() == [] and provisioner.record() is None

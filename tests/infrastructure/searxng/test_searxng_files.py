@@ -200,3 +200,25 @@ def test_the_personal_folder_is_in_the_persons_configuration_folder(
     )
     assert SearxngFiles.personal().folder == tmp_path / "vibey" / "searxng"
     assert SearxngFiles.personal(tmp_path / "mine").folder == tmp_path / "mine" / "searxng"
+
+
+def test_a_linked_folder_is_never_read(tmp_path: Path) -> None:
+    files = _files(tmp_path)
+    _ensure(files)
+    elsewhere = tmp_path / "moved"
+    os.replace(files.folder, elsewhere)
+    files.folder.symlink_to(elsewhere)
+    with pytest.raises(ValueError, match="link"):
+        files.read()
+
+
+def test_a_folder_someone_else_owns_is_refused(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    files = _files(tmp_path)
+    files.folder.mkdir(parents=True, mode=0o700)
+    real = os.getuid()
+    monkeypatch.setattr(os, "getuid", lambda: real + 1)
+    with pytest.raises(ValueError, match="not yours"):
+        _ensure(files)
+    assert list(files.folder.iterdir()) == []

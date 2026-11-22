@@ -339,3 +339,23 @@ def test_start_hub_runs_the_starter_once_per_call(tmp_path: Path) -> None:
     started: list[str] = []
     assert _units(tmp_path, started=started).start_hub() is True
     assert started == ["hub start"]
+
+
+def test_the_searxng_unit_runs_serve_with_no_env_file_and_is_recorded(tmp_path: Path) -> None:
+    """ADR-0102: the SearXNG unit is written like the hub's -- `always`, recorded by digest,
+    removed by unload only as written -- and runs `vibey searxng serve` directly: never through
+    `supervisor exec --env-file`, whose file holds the database URL."""
+    units = _units(tmp_path)
+    (unit,) = units.write(("searxng",), "always")
+    text = Path(unit.path).read_text("utf-8")
+
+    assert (unit.label, unit.action) == ("dev.vibey.searxng", "created")
+    assert (
+        f"<string>{LAUNCHER}</string>\n    <string>searxng</string>\n    <string>serve</string>"
+        in text
+    )
+    assert "--env-file" not in text and "supervisor.env" not in text
+    assert "<key>KeepAlive</key>" in text and "searxng.log" in text
+    assert units.waiting("searxng") == ""
+    assert units.recorded() == ("dev.vibey.searxng",)
+    assert units.remove("dev.vibey.searxng").action == "removed"
