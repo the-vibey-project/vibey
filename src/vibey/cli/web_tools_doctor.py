@@ -98,7 +98,7 @@ class WebToolsDoctor:
             return f"WARN {NAME:<{_WIDTH}} {DoctorChecks.cleaned(problem)}; {budgets}"
         return (
             f"PASS {NAME:<{_WIDTH}} the hub serves vibey_search and vibey_fetch to the agent "
-            f"(web granted); {budgets}"
+            f"(web granted in your own [hub]; each use needs a project to record it on); {budgets}"
         )
 
     def _hub_problem(self, state_dir: Path) -> str | None:
@@ -153,5 +153,5 @@ class WebToolsDoctor:
 
 
 WEB_TOOLS_DOCTOR: Final = WebToolsDoctor()
-"""The line as `vibey doctor` and `vibey acp` print it: this folder's `[hub]`, the person's
-`[web]`, and the hub on this computer."""
+"""The line as `vibey doctor` and `vibey acp` print it: the person's own `[hub]`, their `[web]`
+narrowed by this folder's, and the hub on this computer's loopback."""

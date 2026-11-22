@@ -939,9 +939,11 @@ deny_hosts = ["pastebin.com"]
 ```
 
 The budgets are kept in the hub's memory, per principal: restarting the hub starts every
-principal's hour afresh. Every use is recorded on the ledger whatever the budget says
-(`WebSearched`, `WebFetched`), and a fetch never reaches a private, loopback, link-local or
-metadata address whatever these keys say.
+principal's hour afresh. A request refused by its budget sends nothing and is not recorded; every
+search or fetch the hub makes is recorded as the [hub API](hub-api.md#web) says (and refused
+before it is made when its record cannot be written), whatever the budget. A fetch never reaches
+a private, loopback, link-local or metadata address whatever these keys say. Any port from 1 to
+65535 may be fetched; a `ports` key is parked.
 
 ## `[acp]` { #acp }
 

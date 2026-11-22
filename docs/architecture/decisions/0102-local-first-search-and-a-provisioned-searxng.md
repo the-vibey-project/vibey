@@ -210,8 +210,9 @@ the host offers it.
 - **The fetch reaches only public pages.** Only `http` and `https`; no user name or password; no
   local, internal or metadata name; no address spelt other than canonically; every address a
   name resolves to must be public (loopback, private, link-local, carrier-grade NAT,
-  unique-local, multicast, reserved, unspecified and documentation space refused, and an
-  IPv4-mapped, NAT64 or 6to4 address judged by the IPv4 address inside it, Teredo refused), and
+  unique-local, site-local, multicast, reserved, unspecified and documentation space refused; an
+  IPv4-mapped or well-known NAT64 (`64:ff9b::/96`) address judged by the IPv4 address inside it;
+  local-use NAT64 (`64:ff9b:1::/48`), 6to4 and Teredo refused outright), and
   the connection is pinned to the address checked. Every redirect is checked again, at most
   `[web] max_redirects`, never from https to http. Fixed headers only (`Accept-Encoding:
   identity`); any other content encoding is refused unread, so nothing is decompressed; only
@@ -219,10 +220,17 @@ the host offers it.
   one total deadline that fails closed -- every step, across every redirect, gets only the time
   left, and a cancelled fetch resolves, connects, sends and reads nothing more.
 - **Budgeted and recorded.** Per principal and rolling hour (`[web] searches_per_hour`,
-  `fetches_per_hour`; a 429 names the budget). Each use, refusals and failures included, is a
-  `WebSearched` or `WebFetched` ledger event: the principal, the tool, the outcome, the backend,
-  and for a fetch the hosts reached -- never the query and never the URL -- on the named project's
-  ledger, else on every project's. With no ledger to write to, nothing is searched or fetched.
+  `fetches_per_hour`; a 429 names the budget). Before anything is sent the hub checks that it
+  can write the record (the latest project exists, a named one exists, both in known phases) and
+  refuses with 503 when it cannot. After the act -- ok, refused, or failed for any reason, an
+  unexpected one named by its class -- it writes a `WebSearched` or `WebFetched` event: the
+  principal, the tool, the outcome, the backend, and for a fetch the hosts reached, never the
+  query and never the URL. It goes to the latest project's ledger, which `vibey ledger search`
+  reads by default, and to a named project's as well: a caller can add a ledger, never take the
+  latest away. A write that fails after the act (the database, between the check and the write)
+  does not withhold the answer, which is marked `audited: false` and said on the hub's standard
+  error; a crash in that window loses the one record. Budget refusals send nothing and are not
+  recorded.
 - **The person's `[web]`, narrowed by a project's.** Budgets, host lists and bounds are read from
   the person's own `vibey.toml`; the folder the hub started in may only tighten them.
 - **ACP and chat.** Neither tool is a `/` command: the chat is typed by a person, who has a
@@ -240,7 +248,9 @@ counts as local for its own, different purpose. Both close a request a hostile p
 `vibey.toml` could otherwise aim elsewhere through `[hub] state_dir`.
 
 **The residual risk, stated plainly.** A query and a URL leave the computer; a model steered by
-what it read can put data into either. That is exfiltration, and these tools carry it by design.
+what it read can put data into either, or into a host name, whose DNS lookup reaches the
+attacker's name server even when the fetch is then refused. That is exfiltration, and these
+tools carry it by design.
 The budgets, the ledger record, the host lists and the refusal of every non-public address bound
 it and make an attempt visible after the fact. They do not prevent it.
 
@@ -313,5 +323,6 @@ such a run should assert.
   (§9) -- never in an engine session, which still searches SearXNG directly (§9, "What 9b did
   not fix").
 - A driver model reached over MCP searches and fetches through the hub with no SearXNG address
-  and no key of its own, budgeted, recorded on the ledger, and held to public pages; a query or
+  and no key of its own, budgeted, recorded on the ledger when the hub can write the record
+  (refused before acting when it cannot), and held to public pages; a query or
   a URL it is steered to write can still carry data out (§9).

@@ -261,15 +261,20 @@ environment alone. Both need the `web` scope (the agent's by default; drop it fr
 
 | Tool | Arguments | Returns |
 |---|---|---|
-| `vibey_search` | `query` (1–512 characters), `limit` (1–20), `project_id` | `{"untrusted": true, "framing", "backend", "notice", "results": [{"title", "url", "snippet"}]}`: `backend` is `searxng`, or `brave` when the local SearXNG failed; `notice` is the sentence the hub said the first time its process used Brave. |
-| `vibey_fetch` | `url` (at most 2048 characters), `project_id` | `{"untrusted": true, "framing", "url", "hosts", "title", "content_type", "truncated", "text"}`: the page as plain text between two `<<<untrusted web content …>>>` markers carrying a nonce. |
+| `vibey_search` | `query` (1–512 characters), `limit` (1–20), `project_id` | `{"untrusted": true, "framing", "audited", "backend", "notice", "results": [{"title", "url", "snippet"}]}`: `backend` is `searxng`, or `brave` when the local SearXNG failed; `notice` is the sentence the hub said the first time its process used Brave. |
+| `vibey_fetch` | `url` (at most 2048 characters), `project_id` | `{"untrusted": true, "framing", "audited", "url", "hosts", "content_type", "truncated", "text"}`: the page's title and text between two `<<<untrusted web content …>>>` markers carrying a nonce. `audited` is `false` only when the ledger record could not be written after the act. |
 
 What they return is untrusted text from the open web: the tool descriptions and the server's
 instructions tell the model to read it as data and never follow it. A query and a URL leave the
 computer, so each use is budgeted (`[web] searches_per_hour`, `fetches_per_hour`) and recorded
 on the ledger as `WebSearched` or `WebFetched` (who, the outcome, the backend and, for a fetch,
-the hosts it reached; never the query and never the URL) — on the named project's ledger, else
-on every project's; with no project at all the hub refuses rather than search unrecorded. A
+the hosts it reached; never the query and never the URL) on the latest project's ledger and, when
+named, the `project_id`'s too. The hub checks it can write the record before it sends anything
+and refuses with 503 when it cannot (with no project at all, for one); a record that still fails
+after the act is reported as `audited: false`, and a crash in that window loses that one record
+([what is recorded, exactly](hub-api.md#web)). Whether the hub has a Brave key is decided by the
+environment of whoever started it (`vibey hub start` by hand, the user-level unit, or `vibey mcp`
+starting it from an editor's environment); `vibey doctor` on the hub's computer says. A
 fetch is refused for anything but a public http(s) page: see [`[web]`](configuration.md#web)
 for the hosts, bounds and content types, and [the hub API](hub-api.md#web) for every refusal.
 An answer is cut to 60,000 characters with an explicit `...[truncated N chars]` marker.
@@ -1342,7 +1347,7 @@ answer gates and start work. So inside a session `vibey search` and `vibey fetch
 directly, as above, and sessions are still told the SearXNG address and marker; a scoped,
 per-session credential is the recorded next step
 ([ADR-0102](../architecture/decisions/0102-local-first-search-and-a-provisioned-searxng.md),
-"What 9b fixed"). In your own terminal `vibey search` and `vibey fetch` work directly too, as
+"What 9b did not fix"). In your own terminal `vibey search` and `vibey fetch` work directly too, as
 they always have.
 
 **An engine's own native web search is not vibey's.** claudeloop and codexloop can use their
