@@ -894,7 +894,7 @@ mean "not declared".
 | `state_dir` | the platform state directory + `/hub` | Where the host token (`token`, 0600), the scoped agent token (`agent.token`, 0600; ADR-0100), the key workflows request ids are bound to their starters under (`run.key`, 0600; ADR-0085) and the runtime record (`serving.json`) live. |
 | `lane_roots` | `[]` (the directory `vibey serve` runs in) | Where `/api/v1/lanes` looks for lanes: each root and every directory directly inside it. |
 | `projects_root` | `""` (nowhere) | The one folder a paired device holding `run` may start projects in: each project's folder is `<projects_root>/<name>`, made by the host (ADR-0091). Absolute, or starting with `~`. With none declared a device can pause, resume and unwind a project but cannot start one, and is told so. A device never names a path. |
-| `agent_scopes` | `["view", "answer", "run", "acp_sessions"]` | Scopes granted to the `agent` principal (`<state_dir>/agent.token`) used by `vibey mcp` when a frontier LLM or IDE connects over MCP (ADR-0100), and by `vibey acp` for an editor. `acp_sessions` lets it keep its own ACP sessions' logs on the hub (create and append; reading them back needs only `view`); without it `vibey acp` keeps each session's history in its window only and says so once. Paired devices get only the scopes the host offers them, so never `acp_sessions` by default. Never includes `spend`, `bump` or `workflows` by default, so a host model cannot answer a spending gate (`budget_exhausted`, `deploy_*`). Set `agent_scopes = []` to disable agent token authentication entirely. |
+| `agent_scopes` | `["view", "answer", "run", "acp_sessions", "web"]` | Scopes granted to the `agent` principal (`<state_dir>/agent.token`) used by `vibey mcp` when a frontier LLM or IDE connects over MCP (ADR-0100), and by `vibey acp` for an editor. `acp_sessions` lets it keep its own ACP sessions' logs on the hub (create and append; reading them back needs only `view`); without it `vibey acp` keeps each session's history in its window only and says so once. `web` lets it search the web and read public pages through the hub (`vibey_search`, `vibey_fetch`; [`[web]`](#web) bounds them); drop it to turn them off. Paired devices get only the scopes the host offers them, so never `acp_sessions` or `web` by default. Never includes `spend`, `bump` or `workflows` by default, so a host model cannot answer a spending gate (`budget_exhausted`, `deploy_*`). Set `agent_scopes = []` to disable agent token authentication entirely. |
 
 ```toml
 [hub]
@@ -905,6 +905,43 @@ names = ["studio.local"]
 
 A bump from the hub is requested as the queue source `vibey-hub`; it lands only when
 [`[queue.priority]`](#queuepriority) `sources` names it.
+
+## `[web]` { #web }
+
+The hub's web search and fetch (`POST /api/v1/web/search` and `/web/fetch`, the MCP tools
+`vibey_search` and `vibey_fetch`; [ADR-0102](../architecture/decisions/0102-local-first-search-and-a-provisioned-searxng.md),
+[hub API](hub-api.md#web)): how often each principal may use them, which hosts a fetch may
+reach, and how much it reads. **Your own `vibey.toml` sets them** (the one in your configuration
+folder, `~/Library/Application Support/vibey/vibey.toml` on macOS, `$XDG_CONFIG_HOME/vibey/` on
+Linux). The `vibey.toml` of the folder the hub starts in may belong to a cloned repository, so it
+may only tighten: lower a budget or a bound, add a denied host, narrow the allowed hosts (a host
+must then be on both lists; nothing in common allows nothing) or drop content types -- never the
+reverse. An unknown key, or a value of the wrong type or out of range, stops the hub (exit 2)
+naming the file and the key. Where search itself goes (`VIBEY_SEARXNG_URL`, the Brave key) is the
+hub's environment's, never a file's: see [local first](cli.md#local-first-search).
+
+| Key | Default | Meaning |
+|---|---|---|
+| `searches_per_hour` | `60` | How many searches one principal may make in any rolling hour (0 to 100000; `0` turns search off). Past it, a 429 naming this key. |
+| `fetches_per_hour` | `30` | How many fetches one principal may make in any rolling hour (0 to 100000; `0` turns fetch off). |
+| `allow_hosts` | unset: any public host | When set, a fetch reaches only these hosts and their subdomains (`"python.org"` covers `docs.python.org`), after every redirect too. An empty list allows none. Host names only: no scheme, port, path, wildcard or address. |
+| `deny_hosts` | `[]` | Hosts a fetch never reaches, with their subdomains; wins over `allow_hosts`. |
+| `max_bytes` | `1000000` | The most bytes of a page read (1 to 50000000); a longer page is cut and says so. |
+| `max_chars` | `20000` | The most characters of text returned (100 to 1000000). |
+| `timeout_seconds` | `15` | The whole fetch, every redirect included, in seconds (above 0, at most 600): one deadline, never a fresh one per step. Search keeps its own `VIBEY_SEARCH_TIMEOUT`. |
+| `max_redirects` | `3` | The most redirects a fetch follows (0 to 10), each checked again. |
+| `content_types` | `["text/html", "application/xhtml+xml", "text/plain", "text/markdown", "application/json", "text/xml", "application/xml"]` | The types a fetch reads; anything else -- PDF, images, archives -- is refused, never extracted. Lowercase `type/subtype`, no wildcard. |
+
+```toml
+[web]
+fetches_per_hour = 10
+deny_hosts = ["pastebin.com"]
+```
+
+The budgets are kept in the hub's memory, per principal: restarting the hub starts every
+principal's hour afresh. Every use is recorded on the ledger whatever the budget says
+(`WebSearched`, `WebFetched`), and a fetch never reaches a private, loopback, link-local or
+metadata address whatever these keys say.
 
 ## `[acp]` { #acp }
 

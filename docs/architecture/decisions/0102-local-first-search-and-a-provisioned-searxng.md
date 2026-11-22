@@ -192,9 +192,60 @@ The marker tells vibey's SearXNG from another program on the port -- a dev serve
 SearXNG, a container someone else started. It does not stop code running as the same person:
 such code can bind 127.0.0.1:28180 while SearXNG is down, or read the marker from the record or a
 session's environment. The real answer is that engine sessions should not talk to SearXNG
-directly at all. Task 9b serves search and fetch to sessions from the hub, as MCP tools, so
-sessions are given no SearXNG address and no Brave key; until then this is a known limit, not a
-guarantee.
+directly at all. Task 9b (§9) serves search and fetch from the hub, as MCP tools; it does not yet
+reach engine sessions, for the reason §9 records, so for sessions this remains a known limit, not
+a guarantee.
+
+### 9. Search and fetch served from the hub (Task 9b, amendment of 2026-11-22)
+
+The hub is the one vibey process that holds the Brave key, so it serves both tools itself, to any
+principal holding the new `web` scope: `POST /api/v1/web/search` runs §1's policy in the hub's
+own process (the key read from the hub's environment and never returned, logged or recorded; the
+once-per-process notice handed back as `notice` on the answer that triggered it), and
+`POST /api/v1/web/fetch` is a guarded fetch of one page. The MCP server offers them as
+`vibey_search` and `vibey_fetch` (ADR-0100), listed only to an agent holding `web`. `web` is the
+agent principal's by default and honours `[hub] agent_scopes`; a paired device gets it only when
+the host offers it.
+
+- **The fetch reaches only public pages.** Only `http` and `https`; no user name or password; no
+  local, internal or metadata name; no address spelt other than canonically; every address a
+  name resolves to must be public (loopback, private, link-local, carrier-grade NAT,
+  unique-local, multicast, reserved, unspecified and documentation space refused, and an
+  IPv4-mapped, NAT64 or 6to4 address judged by the IPv4 address inside it, Teredo refused), and
+  the connection is pinned to the address checked. Every redirect is checked again, at most
+  `[web] max_redirects`, never from https to http. Fixed headers only (`Accept-Encoding:
+  identity`); any other content encoding is refused unread, so nothing is decompressed; only
+  `[web] content_types` are read (PDF refused, not extracted); bounded in bytes, characters and
+  one total deadline that fails closed -- every step, across every redirect, gets only the time
+  left, and a cancelled fetch resolves, connects, sends and reads nothing more.
+- **Budgeted and recorded.** Per principal and rolling hour (`[web] searches_per_hour`,
+  `fetches_per_hour`; a 429 names the budget). Each use, refusals and failures included, is a
+  `WebSearched` or `WebFetched` ledger event: the principal, the tool, the outcome, the backend,
+  and for a fetch the hosts reached -- never the query and never the URL -- on the named project's
+  ledger, else on every project's. With no ledger to write to, nothing is searched or fetched.
+- **The person's `[web]`, narrowed by a project's.** Budgets, host lists and bounds are read from
+  the person's own `vibey.toml`; the folder the hub started in may only tighten them.
+- **ACP and chat.** Neither tool is a `/` command: the chat is typed by a person, who has a
+  browser. The rule for when one is: a search is a read to a session's mode (observe may run it
+  when the hub grants `web`); a fetch needs `web` in the mode itself, and no mode holds it.
+
+**The residual risk, stated plainly.** A query and a URL leave the computer; a model steered by
+what it read can put data into either. That is exfiltration, and these tools carry it by design.
+The budgets, the ledger record, the host lists and the refusal of every non-public address bound
+it and make an attempt visible after the fact. They do not prevent it.
+
+**What 9b did not fix: engine sessions.** Sessions still run `vibey search` and `vibey fetch`
+directly (§1, §8): they are still told the SearXNG address and the marker, still have no Brave
+backup, and their fetch is still the older one. They have no channel to the hub: the worker
+reaches PostgreSQL, not the hub, may run on a machine (a Kubernetes pod) where no hub runs, and a
+session is given no hub address and no credential by design. The only hub credential there is
+for a model is the agent token, which also answers gates and starts work; handing it to a session
+would widen what a session can do, so 9b does not. The recommended next step is a session
+principal of its own: a short-lived capability the worker mints per session (bound to the job,
+holding `web` and nothing else, with its own budget), accepted by the hub, and given to the
+session through the overlay that today carries the SearXNG settings -- after which the overlay
+drops `WEBSEARCH_SEARXNG_URL` and the marker. Until then, code a session runs is as able to
+reach SearXNG, and to read the person's files, as it was.
 
 ## What is verified, and what is not
 
@@ -248,4 +299,9 @@ such a run should assert.
 - The Docker CLI's `currentContext` (in `~/.docker/config.json`, reached through `HOME`) can still
   name an ssh or tcp context: install and the unit read it alike, but "local" is only as good as
   that file.
-- The Brave backup is still reachable only in vibey's own processes, never in a session.
+- The Brave backup is reachable only in vibey's own processes -- the hub's web tools among them
+  (§9) -- never in an engine session, which still searches SearXNG directly (§9, "What 9b did
+  not fix").
+- A driver model reached over MCP searches and fetches through the hub with no SearXNG address
+  and no key of its own, budgeted, recorded on the ledger, and held to public pages; a query or
+  a URL it is steered to write can still carry data out (§9).
