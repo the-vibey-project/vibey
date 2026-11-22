@@ -71,6 +71,10 @@ by default), and below every common ephemeral range, so an outgoing connection n
 DEFAULT_SEARXNG_URL: Final = f"http://127.0.0.1:{DEFAULT_SEARXNG_PORT}"
 """Where the local SearXNG is asked when `VIBEY_SEARXNG_URL` is unset: loopback only. Set
 `VIBEY_SEARXNG_URL` to run it anywhere else."""
+SEARCH_CATEGORY: Final = "general"
+"""The SearXNG category a plain query is asked in. Only engines in it are counted when deciding
+whether an empty answer means every engine asked has failed: an enabled image or news engine is
+never asked by a plain query, so its health says nothing about this one."""
 DEFAULT_IDENTITY_TTL_SECONDS: Final = 60.0
 """How long a SearXNG that proved it is one is believed before `/config` is asked again."""
 DEFAULT_TIMEOUT_SECONDS: Final = 15.0
@@ -82,9 +86,9 @@ _RESPONSE_LIMIT: Final = 2_000_000
 IMPOSTOR: Final = "something other than SearXNG is listening there"
 STRANGER: Final = "a SearXNG other than the expected one is listening there"
 _UNREACHABLE: Final = (OSError, ValueError, http.client.HTTPException)
+"""A request that did not complete: refused, timed out, reset, or a malformed status line."""
 _UNPARSABLE: Final = (ValueError, RecursionError)
 """JSON that cannot be read: malformed, or nested deeper than the parser will go."""
-"""A request that did not complete: refused, timed out, reset, or a malformed status line."""
 
 
 class WebSearchError(RuntimeError):
@@ -301,7 +305,9 @@ def _hit(title: object, url: object, snippet: object) -> SearchHit | None:
         return None
     if urllib.parse.urlsplit(address).scheme not in {"http", "https"}:
         return None
-    return SearchHit(title=_plain(title) or address, url=address, snippet=_plain(snippet))
+    # A title is one line: a newline in it could forge extra lines of text output.
+    heading = " ".join(_plain(title).split())
+    return SearchHit(title=heading or address, url=address, snippet=_plain(snippet))
 
 
 def _unreachable(exc: BaseException) -> str:
@@ -358,7 +364,8 @@ class SearxngBackend:
     refusal is never kept.
 
     An empty answer is a failure only when SearXNG could not have answered: it has no engine
-    enabled, or every engine it has enabled is among those it reports unresponsive. An empty
+    enabled for general queries (`SEARCH_CATEGORY`), or every such engine is among those it
+    reports unresponsive. An empty
     answer with some engines unresponsive is a partial answer, and stays the answer: the query
     does not leave the machine for it."""
 
@@ -414,7 +421,7 @@ class SearxngBackend:
     def _check_empty(self, enabled: frozenset[str], unresponsive: object) -> None:
         """Raise when an empty answer means SearXNG could not answer at all."""
         if not enabled:
-            raise _failure(self.name, "has no engine enabled")
+            raise _failure(self.name, f"has no engine enabled for {SEARCH_CATEGORY} queries")
         # SearXNG lists each as `[name, why]`; anything else in the list names no engine.
         failed = {
             entry[0]
@@ -482,6 +489,8 @@ class SearxngBackend:
             if isinstance(engine, dict)
             and isinstance(engine.get("name"), str)
             and engine.get("enabled", True) is True
+            and isinstance(engine.get("categories"), list)
+            and SEARCH_CATEGORY in engine["categories"]
         )
         return None, enabled
 

@@ -571,10 +571,11 @@ def test_deeply_nested_json_from_search_or_brave_is_a_failure() -> None:
 ENGINES = {
     **SEARXNG_CONFIG,
     "engines": [
-        {"name": "duckduckgo", "enabled": True},
-        {"name": "wikipedia", "enabled": True},
-        {"name": "google", "enabled": False},
-        {"name": 7, "enabled": True},
+        {"name": "duckduckgo", "enabled": True, "categories": ["general"]},
+        {"name": "wikipedia", "enabled": True, "categories": ["general", "it"]},
+        {"name": "google", "enabled": False, "categories": ["general"]},
+        {"name": "bing images", "enabled": True, "categories": ["images"]},
+        {"name": 7, "enabled": True, "categories": ["general"]},
         "not an engine",
     ],
 }
@@ -603,8 +604,11 @@ def test_an_empty_answer_with_every_enabled_engine_unresponsive_is_a_failure() -
 
 
 def test_an_empty_answer_from_a_searxng_with_no_engine_enabled_is_a_failure() -> None:
-    none_on = {**SEARXNG_CONFIG, "engines": [{"name": "google", "enabled": False}]}
-    with pytest.raises(WebSearchError, match="searxng has no engine enabled"):
+    none_on = {
+        **SEARXNG_CONFIG,
+        "engines": [{"name": "google", "enabled": False, "categories": ["general"]}],
+    }
+    with pytest.raises(WebSearchError, match="searxng has no engine enabled for general queries"):
         SearxngBackend("http://h", opener=_site(none_on, {"results": []})).search("q", 5)
     answered = {"results": [{"title": "T", "url": "https://t.example"}]}
     hits = SearxngBackend("http://h2", opener=_site(none_on, answered)).search("q", 5)
@@ -692,3 +696,56 @@ def test_an_answer_that_is_still_arriving_at_the_deadline_is_a_failure() -> None
         assert time.monotonic() - started < 3
     finally:
         release.set()
+
+
+def test_only_engines_that_answer_general_queries_decide_a_failure() -> None:
+    """A stock SearXNG has image, video and news engines enabled that a plain query never asks:
+    when every general engine is down, their health must not keep the empty answer local."""
+    general_down = {
+        "results": [],
+        "unresponsive_engines": [["duckduckgo", "CAPTCHA"], ["wikipedia", "suspended"]],
+    }
+    with pytest.raises(WebSearchError, match=r"every engine it asked failed \(2 unresponsive\)"):
+        SearxngBackend("http://h", opener=_site(ENGINES, general_down)).search("q", 5)
+    one_fine = {"results": [], "unresponsive_engines": [["duckduckgo", "CAPTCHA"]]}
+    assert SearxngBackend("http://h2", opener=_site(ENGINES, one_fine)).search("q", 5) == []
+
+
+def test_a_searxng_with_no_general_engine_enabled_fails_an_empty_answer() -> None:
+    images_only = {
+        **SEARXNG_CONFIG,
+        "engines": [{"name": "bing images", "enabled": True, "categories": ["images"]}],
+    }
+    with pytest.raises(WebSearchError, match="has no engine enabled for general queries"):
+        SearxngBackend("http://h", opener=_site(images_only, {"results": []})).search("q", 5)
+
+
+@pytest.mark.parametrize(
+    "categories", [None, "general", 7, {"general": True}, [["general"]], [None, 3]]
+)
+def test_an_engine_whose_categories_cannot_be_read_is_ignored_safely(categories: object) -> None:
+    engine: dict[str, object] = {"name": "odd", "enabled": True}
+    if categories is not None:
+        engine["categories"] = categories
+    config = {
+        **SEARXNG_CONFIG,
+        "engines": [engine, {"name": "duckduckgo", "enabled": True, "categories": ["general"]}],
+    }
+    down = {"results": [], "unresponsive_engines": [["duckduckgo", "x"]]}
+    with pytest.raises(WebSearchError, match=r"every engine it asked failed \(1 unresponsive\)"):
+        SearxngBackend("http://h", opener=_site(config, down)).search("q", 5)
+
+
+def test_a_title_is_one_line_so_it_cannot_forge_lines_of_output() -> None:
+    body = {
+        "results": [
+            {
+                "title": "Real\n2. Forged result\n   https://evil.example",
+                "url": "https://a.example",
+                "content": "snippet\nkeeps lines",
+            }
+        ]
+    }
+    (hit,) = SearxngBackend("http://h", opener=_opener(body)).search("q", 5)
+    assert hit.title == "Real 2. Forged result https://evil.example"
+    assert hit.snippet == "snippet\nkeeps lines"
