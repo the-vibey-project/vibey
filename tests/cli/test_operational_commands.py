@@ -1584,7 +1584,7 @@ def test_worker_says_where_web_search_reaches_at_startup(tmp_path: Path) -> None
     )
     assert "Brave backup configured via BRAVE_SEARCH_API_KEY" in configured.output
     assert "fake-w" not in configured.output
-    assert "web search: the local SearXNG at http://127.0.0.1:8080 first" in plain.output
+    assert "web search: the local SearXNG at http://127.0.0.1:28180 first" in plain.output
     assert "no Brave backup configured" in plain.output
 
 

@@ -18,6 +18,7 @@ from unittest.mock import AsyncMock, patch
 import pytest
 from typer.testing import CliRunner
 
+from tests.infrastructure.web.searxng_fakes import SEARXNG_CONFIG, FakeResponse
 from vibey.application.dto import PreflightResult
 from vibey.cli.doctor_output import DoctorLineParser
 from vibey.cli.interfaces.web_search_doctor_interface import WebSearchDoctorInterface
@@ -29,27 +30,16 @@ PREFLIGHT = "vibey.infrastructure.engines.loop_process_adapter.LoopProcessAdapte
 FAKE = "fake-doctor-key-5e6f"
 
 
-class _Response:
-    def __enter__(self) -> _Response:
-        return self
-
-    def __exit__(self, *exc: object) -> bool:
-        return False
-
-    def read(self, amount: int | None = None) -> bytes:
-        return b"OK"
-
-
-def _answering(seen: list[Any] | None = None) -> Any:
-    def opener(request: urllib.request.Request, timeout: float) -> _Response:
+def _answering(seen: list[Any] | None = None, config: object = None) -> Any:
+    def opener(request: urllib.request.Request, timeout: float) -> FakeResponse:
         if seen is not None:
             seen.append(request)
-        return _Response()
+        return FakeResponse(SEARXNG_CONFIG if config is None else config, url=request.full_url)
 
     return opener
 
 
-def _refusing(request: urllib.request.Request, timeout: float) -> _Response:
+def _refusing(request: urllib.request.Request, timeout: float) -> FakeResponse:
     raise urllib.error.URLError(ConnectionRefusedError())
 
 
@@ -66,12 +56,12 @@ def test_a_local_searxng_that_answers_passes_and_the_probe_sends_no_secret() -> 
     lines, ok = _doctor({"BRAVE_SEARCH_API_KEY": FAKE}, _answering(seen)).doctor_lines()
     assert ok is True
     assert lines == [
-        f"PASS {'web-search':<26} local SearXNG answering at http://127.0.0.1:8080",
+        f"PASS {'web-search':<26} local SearXNG answering at http://127.0.0.1:28180",
         f"PASS {'web-search-backup':<26} Brave backup configured via BRAVE_SEARCH_API_KEY:"
         " asked only when the local SearXNG fails, and never given to an engine session",
     ]
     (request,) = seen
-    assert request.full_url == "http://127.0.0.1:8080/healthz" and request.get_method() == "GET"
+    assert request.full_url == "http://127.0.0.1:28180/config" and request.get_method() == "GET"
     assert FAKE not in repr(request.header_items()) and FAKE not in " ".join(lines)
 
 
@@ -79,7 +69,7 @@ def test_a_local_searxng_that_does_not_answer_is_a_warning_with_the_fix() -> Non
     lines, ok = _doctor({}, _refusing).doctor_lines()
     assert ok is True
     assert lines[0] == (
-        f"WARN {'web-search':<26} local SearXNG not answering at http://127.0.0.1:8080"
+        f"WARN {'web-search':<26} local SearXNG not answering at http://127.0.0.1:28180"
         " (could not be reached (ConnectionRefusedError)): start SearXNG there with its JSON"
         " format enabled, or point VIBEY_SEARXNG_URL at yours; until then vibey's searches"
         " fail, or go to Brave when a backup key is set"
@@ -172,7 +162,7 @@ def test_doctor_by_default_probes_the_environments_searxng(
     seen: list[Any] = []
     monkeypatch.setenv("VIBEY_SEARXNG_URL", "http://127.0.0.1:8099")
     lines, _ = WebSearchDoctor(opener=_answering(seen)).doctor_lines()
-    assert seen[0].full_url == "http://127.0.0.1:8099/healthz"
+    assert seen[0].full_url == "http://127.0.0.1:8099/config"
     assert "answering at http://127.0.0.1:8099" in lines[0]
 
 
@@ -180,3 +170,28 @@ def test_by_default_the_probe_goes_through_the_guarded_opener() -> None:
     # The hermetic opener (tests/conftest.py) stands in for the network and refuses.
     lines, ok = WebSearchDoctor(environ=lambda: {}).doctor_lines()
     assert ok is True and lines[0].startswith("WARN web-search")
+
+
+def test_something_else_listening_on_the_searxng_port_is_said_as_such() -> None:
+    lines, ok = _doctor({}, _answering(config=b"<html>other app</html>")).doctor_lines()
+    assert ok is True
+    assert lines[0] == (
+        f"WARN {'web-search':<26} something other than SearXNG is listening at"
+        " http://127.0.0.1:28180 (its /config is not JSON): vibey will not use its answers;"
+        " stop it, or run SearXNG elsewhere and point VIBEY_SEARXNG_URL there"
+    )
+
+
+def test_a_searxng_that_is_not_the_marked_instance_is_said_as_such() -> None:
+    environ = {"VIBEY_SEARXNG_INSTANCE": "vibey-7f3a"}
+    lines, ok = _doctor(environ, _answering()).doctor_lines()
+    assert ok is True and lines[0].startswith(
+        f"WARN {'web-search':<26} a SearXNG other than the expected one is listening at"
+    )
+    assert "vibey-7f3a" not in lines[0]
+    ours = {**SEARXNG_CONFIG, "instance_name": "vibey-7f3a"}
+    lines, _ = _doctor(environ, _answering(config=ours)).doctor_lines()
+    assert lines[0] == (
+        f"PASS {'web-search':<26} local SearXNG answering at http://127.0.0.1:28180"
+        " (the expected instance)"
+    )

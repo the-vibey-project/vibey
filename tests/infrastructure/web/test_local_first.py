@@ -299,7 +299,7 @@ def test_from_the_settings_the_fallback_sends_the_key_only_to_brave_and_shows_it
 
     assert answer.backend == "brave" and [h.url for h in answer.hits] == ["https://b.example"]
     first, second = sent
-    assert first.full_url.startswith("http://127.0.0.1:8080/search?")
+    assert first.full_url.startswith("http://127.0.0.1:28180/")
     assert first.get_header("X-subscription-token") is None
     assert second.get_header("X-subscription-token") == FAKE_KEY
     shown = " ".join([*said, repr(answer), repr(search), repr(settings), str(answer.notice)])
@@ -331,3 +331,31 @@ def test_from_the_settings_without_a_key_there_is_no_backup() -> None:
 def test_from_the_settings_the_process_notice_is_the_default() -> None:
     search = LocalFirstSearch.from_settings(WebSearchSettings.from_environment({}))
     assert search._notice is PROCESS_BACKUP_NOTICE
+
+
+def test_from_the_settings_a_squatter_is_unavailable_and_the_backup_answers() -> None:
+    said: list[str] = []
+    sent: list[Any] = []
+
+    def squatter(request: urllib.request.Request, timeout: float) -> _Response:
+        sent.append(request.full_url)
+        if request.full_url.startswith("https://api.search.brave.com/"):
+            return _Response(json.dumps(BRAVE_BODY).encode())
+        if request.full_url.endswith("/config"):
+            return _Response(b'{"status": "ok"}')
+        return _Response(b'{"results": [{"title": "Poison", "url": "https://poison.example"}]}')
+
+    settings = WebSearchSettings.from_environment({"VIBEY_BRAVE_API_KEY": FAKE_KEY})
+    search = LocalFirstSearch.from_settings(
+        settings, opener=squatter, notice=BackupNotice(write=said.append)
+    )
+    answer = search.answer(QUERY, 2)
+    assert answer.backend == "brave" and [h.url for h in answer.hits] == ["https://b.example"]
+    assert not [url for url in sent if "/search?" in url and "brave" not in url]
+    assert said == [
+        "local SearXNG unavailable (something other than SearXNG is listening there"
+        " (its /config is not SearXNG's)); this query went to Brave Search"
+    ]
+    plain = LocalFirstSearch.from_settings(WebSearchSettings.from_environment({}), opener=squatter)
+    with pytest.raises(WebSearchError, match="something other than SearXNG is listening there"):
+        plain.answer(QUERY, 2)

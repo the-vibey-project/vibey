@@ -10,6 +10,7 @@ from typing import Any
 
 import pytest
 
+from tests.infrastructure.web.searxng_fakes import SEARXNG_CONFIG, FakeResponse, is_config
 from vibey.domain.config import ConfigError
 from vibey.infrastructure.web.guarded_opener import GuardedOpener
 from vibey.infrastructure.web.search import (
@@ -39,9 +40,13 @@ class _Response:
 
 
 def _opener(body: object, seen: list[tuple[str, dict[str, str], float]] | None = None) -> Any:
+    """A SearXNG that identifies as one on `/config` and answers every other request with
+    `body`; `seen` records those other requests."""
     payload = body if isinstance(body, bytes) else json.dumps(body).encode()
 
-    def opener(request: urllib.request.Request, timeout: float) -> _Response:
+    def opener(request: urllib.request.Request, timeout: float) -> Any:
+        if is_config(request):
+            return FakeResponse(SEARXNG_CONFIG, url=request.full_url)
         if seen is not None:
             seen.append((request.full_url, dict(request.header_items()), timeout))
         return _Response(payload)
@@ -61,7 +66,7 @@ def _raising(error: BaseException) -> Any:
 
 def test_with_nothing_set_search_is_the_local_searxng_on_loopback() -> None:
     settings = WebSearchSettings.from_environment({})
-    assert DEFAULT_SEARXNG_URL == "http://127.0.0.1:8080"
+    assert DEFAULT_SEARXNG_URL == "http://127.0.0.1:28180"
     assert settings.searxng_url == DEFAULT_SEARXNG_URL
     assert settings.searxng_url_env is None
     assert settings.brave_key is None and settings.brave_key_env is None
@@ -181,6 +186,7 @@ def test_what_a_session_is_told_is_enough_to_rebuild_the_same_settings_without_t
         "WEBSEARCH_SEARXNG_URL": "http://127.0.0.1:8080",
         "WEBSEARCH_TIMEOUT": "9.0",
         "WEBSEARCH_RESULTS": "6",
+        "WEBSEARCH_IDENTITY_TTL": "60.0",
     }
     rebuilt = WebSearchSettings.from_environment(told)
     assert (rebuilt.searxng_url, rebuilt.timeout_seconds, rebuilt.results) == (
@@ -341,7 +347,9 @@ def test_a_url_error_without_an_exception_reason_is_named_by_its_own_type() -> N
 def test_what_is_read_from_a_backend_is_bounded() -> None:
     response = _Response(b'{"results": []}')
 
-    def opener(request: urllib.request.Request, timeout: float) -> _Response:
+    def opener(request: urllib.request.Request, timeout: float) -> Any:
+        if is_config(request):
+            return FakeResponse(SEARXNG_CONFIG, url=request.full_url)
         return response
 
     SearxngBackend("http://h", opener=opener).search("q", 1)
@@ -354,30 +362,135 @@ def test_each_backend_opens_through_the_guarded_opener_by_default() -> None:
     assert isinstance(searx._opener, GuardedOpener) and isinstance(brave._opener, GuardedOpener)
 
 
-# -- the health probe -----------------------------------------------------------------------
+# -- the identity check: only a SearXNG is believed ----------------------------------------
 
 
-def test_the_health_probe_is_a_bounded_get_of_healthz_with_no_secret() -> None:
-    seen: list[tuple[str, dict[str, str], float]] = []
-    response = _Response(b"OK")
+class _Clock:
+    def __init__(self) -> None:
+        self.now = 1000.0
 
-    def opener(request: urllib.request.Request, timeout: float) -> _Response:
-        seen.append((request.full_url, dict(request.header_items()), timeout))
-        assert request.get_method() == "GET" and request.data is None
+    def __call__(self) -> float:
+        return self.now
+
+
+def _site(config: object, body: object = None, *, redirected: bool = False) -> Any:
+    """Something listening where SearXNG should be: `config` on `/config`, `body` elsewhere."""
+    asked: list[str] = []
+
+    def opener(request: urllib.request.Request, timeout: float) -> FakeResponse:
+        asked.append(request.full_url)
+        if is_config(request):
+            landed = request.full_url + ("/login" if redirected else "")
+            return FakeResponse(config, url=landed)
+        return FakeResponse({"results": [{"title": "P", "url": "https://poison.example"}]}
+                            if body is None else body, url=request.full_url)  # fmt: skip
+
+    opener.asked = asked  # type: ignore[attr-defined]
+    return opener
+
+
+@pytest.mark.parametrize(
+    ("config", "why"),
+    [
+        (b"<html><body>Jenkins</body></html>", "its /config is not JSON"),
+        ({"status": "ok", "app": "something"}, "its /config is not SearXNG's"),
+        ([1, 2, 3], "its /config is not SearXNG's"),
+        ({**SEARXNG_CONFIG, "engines": "all"}, "its /config is not SearXNG's"),
+        ({**SEARXNG_CONFIG, "instance_name": 7}, "its /config is not SearXNG's"),
+    ],
+)
+def test_a_squatter_on_the_searxng_port_is_refused_and_its_results_never_read(
+    config: object, why: str
+) -> None:
+    site = _site(config)
+    with pytest.raises(WebSearchError) as caught:
+        SearxngBackend("http://127.0.0.1:28180", opener=site).search("q", 5)
+    assert caught.value.reason == f"something other than SearXNG is listening there ({why})"
+    assert [url.rsplit("/", 1)[-1] for url in site.asked] == ["config"]
+
+
+def test_a_config_that_redirects_is_refused() -> None:
+    site = _site(SEARXNG_CONFIG, redirected=True)
+    with pytest.raises(WebSearchError, match=r"its /config redirected"):
+        SearxngBackend("http://127.0.0.1:28180", opener=site).search("q", 5)
+
+
+def test_a_real_looking_searxng_is_believed_and_its_results_used() -> None:
+    site = _site(SEARXNG_CONFIG, {"results": [{"title": "R", "url": "https://r.example"}]})
+    hits = SearxngBackend("http://127.0.0.1:28180", opener=site).search("q", 5)
+    assert [h.url for h in hits] == ["https://r.example"]
+    assert site.asked[0] == "http://127.0.0.1:28180/config"
+
+
+def test_with_a_marker_only_the_marked_instance_is_believed() -> None:
+    copied = {**SEARXNG_CONFIG, "instance_name": "SearXNG"}
+    with pytest.raises(WebSearchError) as caught:
+        SearxngBackend("http://h", opener=_site(copied), instance="vibey-7f3a").search("q", 5)
+    assert caught.value.reason == (
+        "a SearXNG other than the expected one is listening there"
+        " (its instance_name is not VIBEY_SEARXNG_INSTANCE)"
+    )
+    assert 'SearXNG"' not in str(caught.value) and "vibey-7f3a" not in str(caught.value)
+    ours = {**SEARXNG_CONFIG, "instance_name": "vibey-7f3a"}
+    assert SearxngBackend("http://h", opener=_site(ours), instance="vibey-7f3a").search("q", 5)
+
+
+def test_an_identity_that_is_believed_is_kept_for_the_ttl_then_checked_again() -> None:
+    clock = _Clock()
+    site = _site(SEARXNG_CONFIG)
+    first = SearxngBackend("http://h", opener=site, identity_ttl_seconds=60, clock=clock)
+    first.search("a", 1)
+    # Another backend in the same process, at the same address, shares the verdict.
+    SearxngBackend("http://h", opener=site, identity_ttl_seconds=60, clock=clock).search("b", 1)
+    clock.now += 61
+    first.search("c", 1)
+    assert [url.split("?")[0].rsplit("/", 1)[-1] for url in site.asked] == [
+        "config", "search", "search", "config", "search",
+    ]  # fmt: skip
+
+
+def test_a_refused_identity_is_not_kept_so_a_real_searxng_is_noticed_at_once() -> None:
+    clock = _Clock()
+    squatter = _site({"app": "other"})
+    with pytest.raises(WebSearchError):
+        SearxngBackend("http://h", opener=squatter, clock=clock).search("q", 1)
+    real = _site(SEARXNG_CONFIG)
+    assert SearxngBackend("http://h", opener=real, clock=clock).search("q", 1)
+    assert real.asked[0] == "http://h/config"
+
+
+def test_a_marker_is_part_of_what_was_verified() -> None:
+    clock = _Clock()
+    SearxngBackend("http://h", opener=_site(SEARXNG_CONFIG), clock=clock).search("q", 1)
+    with pytest.raises(WebSearchError, match="other than the expected one"):
+        SearxngBackend(
+            "http://h", opener=_site(SEARXNG_CONFIG), clock=clock, instance="vibey-7f3a"
+        ).search("q", 1)
+
+
+def test_the_identity_request_is_a_bounded_get_with_no_query_and_no_secret() -> None:
+    seen: list[tuple[str, dict[str, str], float, bytes | None, str]] = []
+    response = FakeResponse(SEARXNG_CONFIG)
+
+    def opener(request: urllib.request.Request, timeout: float) -> FakeResponse:
+        seen.append(
+            (request.full_url, dict(request.header_items()), timeout, request.data, request.get_method())
+        )  # fmt: skip
         return response
 
-    probe = SearxngBackend("http://127.0.0.1:8080/", timeout_seconds=4, opener=opener)
+    probe = SearxngBackend("http://127.0.0.1:28180/", timeout_seconds=4, opener=opener)
     assert probe.health() is None
-    url, headers, timeout = seen[0]
-    assert url == "http://127.0.0.1:8080/healthz" and timeout == 4
-    assert set(headers) == {"Accept"} and response.asked == [1024]
+    assert seen == [
+        ("http://127.0.0.1:28180/config", {"Accept": "application/json"}, 4, None, "GET")
+    ]
+    assert response.asked == [2_000_000]
 
 
 @pytest.mark.parametrize(
     ("error", "said"),
     [
         (
-            urllib.error.HTTPError("http://h/healthz", 502, "x", {}, None),  # type: ignore[arg-type]
+            urllib.error.HTTPError("http://h/config", 502, "x", {}, None),  # type: ignore[arg-type]
             "answered HTTP 502",
         ),
         (
@@ -391,4 +504,42 @@ def test_the_health_probe_is_a_bounded_get_of_healthz_with_no_secret() -> None:
 def test_the_health_probe_says_why_searxng_is_not_answering(
     error: BaseException, said: str
 ) -> None:
-    assert SearxngBackend("http://h", opener=_raising(error)).health() == said
+    def raising(request: urllib.request.Request, timeout: float) -> FakeResponse:
+        raise error
+
+    assert SearxngBackend("http://h", opener=raising).health() == said
+
+
+def test_the_health_probe_says_when_something_else_is_listening() -> None:
+    said = SearxngBackend("http://h", opener=_site(b"<html>")).health()
+    assert said == "something other than SearXNG is listening there (its /config is not JSON)"
+    assert SearxngBackend.is_impostor(said)
+    assert not SearxngBackend.is_impostor("answered HTTP 502")
+    marked = SearxngBackend("http://h", opener=_site(SEARXNG_CONFIG), instance="m").health()
+    assert marked is not None and SearxngBackend.is_impostor(marked)
+
+
+def test_the_health_probe_never_uses_a_kept_verdict() -> None:
+    clock = _Clock()
+    site = _site(SEARXNG_CONFIG)
+    backend = SearxngBackend("http://h", opener=site, clock=clock)
+    backend.search("q", 1)
+    assert backend.health() is None
+    assert [u for u in site.asked if u.endswith("/config")] == ["http://h/config"] * 2
+
+
+def test_the_identity_marker_and_ttl_are_read_from_the_environment() -> None:
+    settings = WebSearchSettings.from_environment(
+        {"VIBEY_SEARXNG_INSTANCE": " vibey-7f3a ", "VIBEY_SEARCH_IDENTITY_TTL": "5"}
+    )
+    assert (settings.searxng_instance, settings.identity_ttl_seconds) == ("vibey-7f3a", 5.0)
+    told = settings.session_environment()
+    assert told["WEBSEARCH_SEARXNG_INSTANCE"] == "vibey-7f3a"
+    assert told["WEBSEARCH_IDENTITY_TTL"] == "5.0"
+    rebuilt = WebSearchSettings.from_environment(told)
+    assert (rebuilt.searxng_instance, rebuilt.identity_ttl_seconds) == ("vibey-7f3a", 5.0)
+    plain = WebSearchSettings.from_environment({})
+    assert plain.searxng_instance is None and plain.identity_ttl_seconds == 60.0
+    assert "WEBSEARCH_SEARXNG_INSTANCE" not in plain.session_environment()
+    with pytest.raises(ConfigError, match="VIBEY_SEARCH_IDENTITY_TTL"):
+        WebSearchSettings.from_environment({"VIBEY_SEARCH_IDENTITY_TTL": "0"})

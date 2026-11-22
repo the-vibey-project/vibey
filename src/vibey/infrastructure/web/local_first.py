@@ -68,7 +68,11 @@ class LocalFirstSearch:
     ) -> LocalFirstSearch:
         """The local SearXNG the settings name, with Brave behind it when they hold a key."""
         primary = SearxngBackend(
-            settings.searxng_url, timeout_seconds=settings.timeout_seconds, opener=opener
+            settings.searxng_url,
+            timeout_seconds=settings.timeout_seconds,
+            opener=opener,
+            instance=settings.searxng_instance,
+            identity_ttl_seconds=settings.identity_ttl_seconds,
         )
         backup = (
             BraveBackend(

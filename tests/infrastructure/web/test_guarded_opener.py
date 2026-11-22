@@ -15,6 +15,7 @@ import pytest
 
 from vibey.infrastructure.web.guarded_opener import GuardedOpener
 from vibey.infrastructure.web.interfaces import GuardedOpenerInterface
+from vibey.infrastructure.web.search import SearxngBackend
 
 pytestmark = pytest.mark.web_network
 
@@ -26,6 +27,11 @@ class _Handler(http.server.BaseHTTPRequestHandler):
     def do_GET(self) -> None:  # noqa: N802 - the stdlib's name
         _Handler.seen.append((self.path, self.headers.get("X-Subscription-Token")))
         if self.path.startswith("/same"):
+            self.send_response(302)
+            self.send_header("Location", "/landed")
+            self.end_headers()
+            return
+        if self.path == "/redir/config":
             self.send_response(302)
             self.send_header("Location", "/landed")
             self.end_headers()
@@ -121,3 +127,11 @@ def test_a_loopback_backend_is_reached_directly_never_through_a_proxy(
 def test_which_addresses_are_loopback(url: str, loopback: bool) -> None:
     assert GuardedOpener.is_loopback(url) is loopback
     assert GuardedOpener(url).direct is loopback
+
+
+def test_a_searxng_identity_that_redirects_is_refused_even_within_the_origin(
+    servers: tuple[str, str],
+) -> None:
+    base, _ = servers
+    said = SearxngBackend(f"{base}/redir", opener=GuardedOpener(base)).health()
+    assert said == "something other than SearXNG is listening there (its /config redirected)"

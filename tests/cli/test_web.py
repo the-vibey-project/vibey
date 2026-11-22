@@ -7,6 +7,7 @@ from typing import Any
 import pytest
 from typer.testing import CliRunner
 
+from tests.infrastructure.web.searxng_fakes import SEARXNG_CONFIG, FakeResponse, is_config
 from vibey.cli.main import app
 from vibey.cli.web import UNTRUSTED, run_fetch, run_search
 from vibey.infrastructure.web.backup_notice import BackupNotice
@@ -31,7 +32,9 @@ class _Response:
 
 
 def _opener(payload: object, seen: list[str] | None = None) -> Any:
-    def opener(request: Any, timeout: float) -> _Response:
+    def opener(request: Any, timeout: float) -> Any:
+        if is_config(request):
+            return FakeResponse(SEARXNG_CONFIG, url=request.full_url)
         if seen is not None:
             seen.append(request.full_url)
         return _Response(payload)
@@ -66,7 +69,7 @@ def test_with_nothing_set_a_search_asks_the_local_searxng_on_loopback(
 ) -> None:
     seen: list[str] = []
     assert run_search("q", None, True, environ={}, opener=_opener(RESULTS, seen)) == 0
-    assert seen == ["http://127.0.0.1:8080/search?q=q&format=json"]
+    assert seen == ["http://127.0.0.1:28180/search?q=q&format=json"]
     assert json.loads(capsys.readouterr().out)["backend"] == "searxng"
 
 
@@ -79,7 +82,7 @@ def test_with_searxng_down_and_no_key_the_search_fails_and_says_how_to_fix_it(
     )
     captured = capsys.readouterr()
     assert captured.out.startswith(
-        "error: the local SearXNG at http://127.0.0.1:8080 did not answer"
+        "error: the local SearXNG at http://127.0.0.1:28180 did not answer"
     )
     assert "no Brave backup is configured" in captured.out and "vibey doctor" in captured.out
     assert "private words" not in captured.out + captured.err
@@ -152,7 +155,7 @@ def test_a_project_vibey_toml_cannot_point_search_anywhere(
     import os
 
     assert run_search("q", None, True, environ=os.environ, opener=_opener(RESULTS, seen)) == 0
-    assert seen == ["http://127.0.0.1:8080/search?q=q&format=json"]
+    assert seen == ["http://127.0.0.1:28180/search?q=q&format=json"]
     assert "evil" not in capsys.readouterr().out
 
 
@@ -264,7 +267,7 @@ def test_the_worker_says_where_web_search_reaches() -> None:
 
     plain = web_search_line(WebSearchSettings.from_environment({}))
     assert plain == (
-        "web search: the local SearXNG at http://127.0.0.1:8080 first, for DESIGN research and"
+        "web search: the local SearXNG at http://127.0.0.1:28180 first, for DESIGN research and"
         " every engine session (vibey search, vibey fetch); no Brave backup configured"
         " (VIBEY_BRAVE_API_KEY or BRAVE_SEARCH_API_KEY sets one)"
     )
@@ -293,3 +296,23 @@ def test_vibey_command_falls_back_to_path_then_the_bare_name() -> None:
 
     assert vibey_command("python", which=lambda _: "/other/vibey") == "/other/vibey"
     assert vibey_command("vibey", which=lambda _: None) == "vibey"
+
+
+def test_a_squatter_on_the_searxng_port_is_never_believed_and_the_query_goes_to_the_backup(
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    def squatter(request: Any, timeout: float) -> Any:
+        if request.full_url.startswith("https://api.search.brave.com/"):
+            return _Response(BRAVE)
+        if is_config(request):
+            return FakeResponse(b"<html>some other app</html>", url=request.full_url)
+        return _Response({"results": [{"title": "Poison", "url": "https://poison.example"}]})
+
+    assert run_search("q", None, True, environ=KEY, opener=squatter, notice=BackupNotice()) == 0
+    captured = capsys.readouterr()
+    answer = json.loads(captured.out)
+    assert answer["backend"] == "brave" and "poison" not in captured.out
+    assert "something other than SearXNG is listening there" in captured.err
+    assert run_search("q", None, False, environ={}, opener=squatter) == 1
+    failed = capsys.readouterr().out
+    assert "something other than SearXNG is listening there" in failed and "Poison" not in failed

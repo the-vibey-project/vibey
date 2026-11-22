@@ -345,9 +345,16 @@ def _hermetic_web_search(request: pytest.FixtureRequest, monkeypatch: pytest.Mon
         "WEBSEARCH_TIMEOUT",
         "VIBEY_SEARCH_RESULTS",
         "WEBSEARCH_RESULTS",
+        "VIBEY_SEARXNG_INSTANCE",
+        "WEBSEARCH_SEARXNG_INSTANCE",
+        "VIBEY_SEARCH_IDENTITY_TTL",
+        "WEBSEARCH_IDENTITY_TTL",
     ):
         monkeypatch.delenv(name, raising=False)
     monkeypatch.setattr(backup_notice.PROCESS_BACKUP_NOTICE, "_said", False)
+    from vibey.infrastructure.web.search import SearxngBackend
+
+    monkeypatch.setattr(SearxngBackend, "_verified", {})
     if request.node.get_closest_marker("web_network") is None:
 
         def refused(self: GuardedOpener, request: object, timeout: float) -> object:
