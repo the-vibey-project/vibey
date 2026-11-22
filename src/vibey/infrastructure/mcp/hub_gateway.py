@@ -6,7 +6,14 @@ Mirrors `cli/hub_pair.py::HubPairCommand._call`, with two deliberate differences
    so the hub enforces `[hub] agent_scopes` (no `spend`, `bump` or `workflows`).
 2. When no hub is running (or a stale `serving.json` fails to answer), it invokes the `starter`
    seam once (`vibey hub start`) and retries before returning an error naming `vibey hub start`.
-3. It reaches only a hub on this computer's loopback: a runtime record naming any other host
+3. It sends a request at most once more, and only when the first never reached the hub (the
+   connection was refused or never made): a request that may have arrived -- a read timeout, a
+   reset after sending -- is never sent again, and the hub is not started over it. A web search
+   or fetch is not something to repeat: it would leave the computer twice and spend twice.
+4. A call to the open web (`vibey_search`, `vibey_fetch`) waits longer than the hub's own web
+   deadline (`[web] timeout_seconds`, and three search timeouts for SearXNG's identity check,
+   SearXNG and the Brave backup) plus `WEB_TIMEOUT_MARGIN`, so the hub always answers first.
+5. It reaches only a hub on this computer's loopback: a runtime record naming any other host
    (the record lives in `[hub] state_dir`, which a folder's `vibey.toml` can still name -- the
    parked `[hub]` trust split) is refused before the token, or a call -- a gate answer, a search
    query, a URL -- is sent anywhere (SP-ACP Task 9b).
@@ -14,9 +21,10 @@ Mirrors `cli/hub_pair.py::HubPairCommand._call`, with two deliberate differences
 
 from __future__ import annotations
 
+import os
 import subprocess  # nosec B404
 import sys
-from collections.abc import Callable
+from collections.abc import Callable, Mapping
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Final
@@ -28,13 +36,31 @@ from vibey.domain.errors import VibeyError
 from vibey.domain.host_tools import HubCall
 from vibey.domain.hub_scope import AGENT_DEFAULT_SCOPES, HubScope
 from vibey.domain.hub_target import HUB_TARGETS
+from vibey.domain.web_tools import WebToolSettings
 from vibey.infrastructure.hub.interfaces.settings_interface import HubSettingsLoaderInterface
 from vibey.infrastructure.hub.local_token import LocalTokenStore, ServingRecord
 from vibey.infrastructure.hub.settings import HUB_SETTINGS, HubSettings
 from vibey.infrastructure.hub.tls import CERT_FILE
 from vibey.infrastructure.mcp.interfaces.hub_gateway_interface import HubGatewayInterface
+from vibey.infrastructure.user_config_folder import UserConfigFolder
+from vibey.infrastructure.web.search import DEFAULT_TIMEOUT_SECONDS as DEFAULT_SEARCH_TIMEOUT
+from vibey.infrastructure.web.search import WebSearchSettings
+from vibey.infrastructure.web.web_settings_loader import WEB_SETTINGS
 
 START_TIMEOUT_SECONDS: Final = 15.0
+WEB_TIMEOUT_MARGIN: Final = 15.0
+"""Seconds a web call waits beyond the hub's own deadline for it, so the hub answers first."""
+_NEVER_ARRIVED: Final = (httpx.ConnectError, httpx.ConnectTimeout)
+"""Failures that prove the request never reached the hub: only these are sent again."""
+
+
+def personal_config() -> Path:
+    """The person's own `vibey.toml`, where `[web]` is granted.
+
+    Module-level by design: the default of `HubGateway`'s `user_config` seam, kept here so the
+    test suite can stand another in for the developer's own file."""
+    return UserConfigFolder().path() / "vibey.toml"
+
 
 type ClientFactory = Callable[..., httpx.Client]
 type HubStarter = Callable[[], bool]
@@ -97,12 +123,16 @@ class HubGateway:
         client: ClientFactory = httpx.Client,
         starter: HubStarter = _default_starter,
         timeout: float = 15.0,
+        user_config: Callable[[], Path] | None = None,
+        environ: Callable[[], Mapping[str, str]] = lambda: os.environ,
     ) -> None:
         self._settings = settings
         self._config_path = config_path
         self._client = client
         self._starter = starter
         self._timeout = timeout
+        self._user_config = user_config or (lambda: personal_config())
+        self._environ = environ
         self._scopes: tuple[tuple[Path, int, int, int, int], frozenset[HubScope]] | None = None
         """The scopes last read, with the `vibey.toml` they were read from (path, inode, mtime,
         ctime, size; all -1 when it did not exist)."""
@@ -158,6 +188,11 @@ class HubGateway:
         try:
             return self._send(settings, record, token, call)
         except httpx.HTTPError as first_exc:
+            if not isinstance(first_exc, _NEVER_ARRIVED):
+                raise HubGatewayError(
+                    f"the hub did not answer in time ({type(first_exc).__name__}); the request may "
+                    "have reached it, so it is not sent again"
+                ) from first_exc
             if not start:
                 raise HubGatewayError(f"the hub did not answer ({first_exc})") from first_exc
             if not self._starter():
@@ -181,6 +216,23 @@ class HubGateway:
             return self._settings.load(self._config_path())
         except ConfigError as exc:
             raise HubGatewayError(str(exc)) from exc
+
+    def _web_timeout(self) -> float:
+        """How long a web call waits: the hub's longest web deadline plus the margin. The
+        person's own `[web]` (narrowed by the folder's, as the hub reads it) and this process's
+        search timeout, which is the hub's when the two share an environment."""
+        try:
+            fetch = WEB_SETTINGS.load_trusted(self._user_config(), self._config_path())
+            deadline = fetch.timeout_seconds
+        except ConfigError:
+            deadline = WebToolSettings().timeout_seconds
+        try:
+            search = WebSearchSettings.from_environment(
+                self._environ(), provisioned=lambda: None
+            ).timeout_seconds
+        except ConfigError:
+            search = DEFAULT_SEARCH_TIMEOUT
+        return max(self._timeout, deadline, 3 * search) + WEB_TIMEOUT_MARGIN
 
     @staticmethod
     def _read_serving(store: LocalTokenStore) -> ServingRecord | None:
@@ -220,7 +272,7 @@ class HubGateway:
             base_url=f"{scheme}://{shown}:{record.port}",
             headers={"authorization": f"Bearer {token}"},
             verify=verify,
-            timeout=self._timeout,
+            timeout=self._web_timeout() if call.open_world else self._timeout,
         ) as http:
             response = http.request(
                 call.method,

@@ -347,7 +347,7 @@ class WebSearchBody(BaseModel):
     )
     project_id: UUID | None = Field(
         default=None,
-        description="The project whose ledger records this search; every project's when left out.",
+        description="Also record this search on this project's ledger; the latest project's always has it.",
     )
 
 
@@ -364,7 +364,7 @@ class WebFetchBody(BaseModel):
     )
     project_id: UUID | None = Field(
         default=None,
-        description="The project whose ledger records this fetch; every project's when left out.",
+        description="Also record this fetch on this project's ledger; the latest project's always has it.",
     )
 
 
@@ -1023,7 +1023,7 @@ class HubAppFactory:
     def _web_routes(app: FastAPI, web: WebToolsServiceInterface, who: Any) -> None:
         """The hub's web search and fetch (ADR-0102), offered only when the hub was built with
         its web tools. Both need the `web` scope, are budgeted per principal (`[web]`), and are
-        recorded on the ledger; what they return is untrusted data, and says so."""
+        recorded on the ledger when the hub can write the record; what they return is untrusted data, and says so."""
         refused: dict[int | str, dict[str, Any]] = {
             **REFUSED,
             404: {"description": "No such project to record the use on."},

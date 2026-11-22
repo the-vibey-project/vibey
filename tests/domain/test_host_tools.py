@@ -302,6 +302,8 @@ def test_a_search_or_fetch_becomes_one_bounded_hub_request() -> None:
     )
     assert (search.method, search.route, search.query) == ("POST", "/api/v1/web/search", ())
     assert search.body == {"query": "asyncpg pool", "limit": 3}
+    assert search.open_world  # waited for past the hub's web deadline, and never sent twice
+    assert not HOST_TOOL_CATALOG.build_call("vibey_projects", None, request_id="r").open_world
     fetch = HOST_TOOL_CATALOG.build_call(
         "vibey_fetch",
         {"url": "https://docs.example/", "project_id": UPPER_UUID},
