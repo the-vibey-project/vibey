@@ -40,6 +40,10 @@ SEARXNG_URL_ENV: Final = "VIBEY_SEARXNG_URL"
 BRAVE_KEY_ENV: Final = "VIBEY_BRAVE_API_KEY"
 BRAVE_KEY_ALIAS_ENV: Final = "BRAVE_SEARCH_API_KEY"
 """The name Brave's own tools read the key from; `VIBEY_BRAVE_API_KEY` wins when both are set."""
+BRAVE_KEY_NAMES: Final = (BRAVE_KEY_ENV, "WEBSEARCH_BRAVE_API_KEY", BRAVE_KEY_ALIAS_ENV)
+"""Every name the Brave key is read under, in order: vibey's own, the `WEBSEARCH_*` form every
+`VIBEY_*` search setting has, and Brave's. None of them can reach a child process
+(`process/child_environment.py`)."""
 SEARCH_TIMEOUT_ENV: Final = "VIBEY_SEARCH_TIMEOUT"
 SEARCH_RESULTS_ENV: Final = "VIBEY_SEARCH_RESULTS"
 
@@ -84,11 +88,12 @@ class WebSearchSettings:
         cannot be read, is refused by name rather than falling back.
         """
         searxng = _setting(environ, SEARXNG_URL_ENV) or None
+        # Exactly three names, first wins: vibey's own, its `WEBSEARCH_*` form, then Brave's.
         brave_env, brave = next(
             (
                 (name, value)
-                for name in (BRAVE_KEY_ENV, BRAVE_KEY_ALIAS_ENV)
-                if (value := _setting(environ, name))
+                for name in BRAVE_KEY_NAMES
+                if (value := (environ.get(name) or "").strip())
             ),
             (None, None),
         )

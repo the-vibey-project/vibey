@@ -63,9 +63,11 @@ class ForbiddenEnvironment:
         )
 
 
-# The one credential of vibey's that is read under a name outside `VIBEY_*`: the Brave Search
-# key's alias (`infrastructure/web/search.py`), which stays in vibey's own processes.
-VIBEY_CREDENTIAL_ALIASES = ("BRAVE_SEARCH_API_KEY",)
+# The credential of vibey's that is read under names outside `VIBEY_*`: the Brave Search key,
+# as `WEBSEARCH_BRAVE_API_KEY` and as `BRAVE_SEARCH_API_KEY` (`infrastructure/web/search.py`),
+# which stays in vibey's own processes. A project that passed either to its sessions or gates
+# is refused when the worker is built: give its own key another name in its own environment.
+VIBEY_CREDENTIAL_ALIASES = ("BRAVE_SEARCH_API_KEY", "WEBSEARCH_BRAVE_API_KEY")
 
 # vibey's own configuration and credentials (`VIBEY_PG_URL`, every `VIBEY_*_TOKEN`,
 # `_PASSWORD` and `_URL`, and the aliases above) and libpq's (`PGPASSWORD`, `PGHOST`,

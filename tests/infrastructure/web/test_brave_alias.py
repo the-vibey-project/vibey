@@ -161,3 +161,29 @@ def test_the_system_environment_every_child_starts_from_drops_it() -> None:
         ChildEnvironment(SYSTEM_ENVIRONMENT, source=source).build().get("BRAVE_SEARCH_API_KEY")
         is None
     )
+
+
+def test_there_is_no_fourth_name_for_the_key() -> None:
+    assert WebSearchSettings.from_environment({"WEBSEARCH_BRAVE_SEARCH_API_KEY": FAKE}) is None
+
+
+def test_the_websearch_form_is_read_and_named_as_itself() -> None:
+    settings = WebSearchSettings.from_environment({"WEBSEARCH_BRAVE_API_KEY": FAKE})
+    assert settings is not None and settings.brave_key_env == "WEBSEARCH_BRAVE_API_KEY"
+    line = web_search_line(settings)
+    assert "configured via WEBSEARCH_BRAVE_API_KEY" in line and FAKE not in line
+    both = WebSearchSettings.from_environment(
+        {"WEBSEARCH_BRAVE_API_KEY": FAKE, "BRAVE_SEARCH_API_KEY": OTHER}
+    )
+    assert both is not None and both.brave_key == FAKE
+
+
+@pytest.mark.parametrize("forbidden", [MODEL_SESSION_FORBIDDEN, GATE_FORBIDDEN])
+def test_no_allow_list_can_pass_the_websearch_form_to_a_child(forbidden: Any) -> None:
+    assert forbidden.forbids("WEBSEARCH_BRAVE_API_KEY")
+    with pytest.raises(ValueError, match="can never be passed"):
+        EnvironmentAllowList(["WEBSEARCH_BRAVE_API_KEY"], forbidden=forbidden)
+    wide = EnvironmentAllowList([], ["WEBSEARCH_"], forbidden=forbidden)
+    source = {"WEBSEARCH_BRAVE_API_KEY": FAKE, "WEBSEARCH_SEARXNG_URL": "http://h"}
+    env = ChildEnvironment(wide, source=source).build()
+    assert "WEBSEARCH_BRAVE_API_KEY" not in env and env["WEBSEARCH_SEARXNG_URL"] == "http://h"
