@@ -458,12 +458,31 @@ def test_the_machine_lives_under_the_hubs_state_dir(tmp_path: Path) -> None:
     config = tmp_path / "vibey.toml"
     config.write_text(f"[hub]\nstate_dir = '{tmp_path / 'hub'}'\n")
 
-    machine = acp_machine(AcpSettings(bootstrap_timeout_seconds=7), config_path=config)
+    machine = acp_machine(
+        AcpSettings(bootstrap_timeout_seconds=7, install_timeout_seconds=900), config_path=config
+    )
 
     assert machine.connector._marker.parent == tmp_path / "hub"  # type: ignore[attr-defined]
     assert machine.lock._path == tmp_path / "hub" / "acp-bootstrap.lock"  # type: ignore[attr-defined]
-    runner = machine.postgres._runner  # type: ignore[attr-defined]
-    assert runner._timeout == 7
+    assert machine.postgres._runner._timeout == 900  # type: ignore[attr-defined]
+    assert machine.postgres._probe_runner._timeout == 7  # type: ignore[attr-defined]
+
+
+def test_the_fallback_lock_honours_the_folders_hub_state_dir(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    (tmp_path / "vibey.toml").write_text(f"[hub]\nstate_dir = '{tmp_path / 'hub'}'\n")
+    monkeypatch.chdir(tmp_path)
+
+    agent = build_acp_agent(
+        settings=AcpSettings(),
+        channel=_RecordingChannel(),
+        gateway=_Gateway(),
+        doctor_probes=(_NoProbe(),),
+    )
+
+    lock = agent._bootstrap._lock  # type: ignore[attr-defined]
+    assert lock._path == tmp_path / "hub" / "acp-bootstrap.lock"
 
 
 def test_an_unreadable_hub_table_still_gives_the_machine_a_home(tmp_path: Path) -> None:

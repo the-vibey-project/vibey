@@ -1470,20 +1470,26 @@ class AcpMachine:
     lock: BootstrapLockInterface
 
 
-def acp_machine(settings: AcpSettings, *, config_path: Path) -> AcpMachine:
-    """The real `AcpMachine`, under the hub's state directory (`[hub] state_dir`, or its
-    default when `[hub]` cannot be read: the bootstrap then still has a place for its marker
-    and lock, and the doctor says what is wrong with `[hub]`). Building it touches nothing;
-    only the bootstrap's steps do. Each install command is bounded by
-    `[acp] bootstrap_timeout_seconds`."""
+def acp_state_dir(config_path: Path) -> Path:
+    """Where `vibey acp` keeps its connect marker and setup lock: the hub's state directory
+    (`[hub] state_dir`), or its default when `[hub]` cannot be read -- the bootstrap still has a
+    place for them, and the doctor says what is wrong with `[hub]`."""
     try:
-        state_dir = HUB_SETTINGS.load(config_path).state_dir
+        return HUB_SETTINGS.load(config_path).state_dir
     except ConfigError:
-        state_dir = HubSettings().state_dir
+        return HubSettings().state_dir
+
+
+def acp_machine(settings: AcpSettings, *, config_path: Path) -> AcpMachine:
+    """The real `AcpMachine`, under `acp_state_dir`. Building it touches nothing; only the
+    bootstrap's steps do. PostgreSQL's read-only checks are bounded by
+    `[acp] bootstrap_timeout_seconds`, each install command by `[acp] install_timeout_seconds`."""
+    state_dir = acp_state_dir(config_path)
     return AcpMachine(
         connector=HostConnector(state_dir=state_dir, version=__version__),
         postgres=AcpPostgresInstaller(
-            AcpCommandRunner(timeout_seconds=settings.bootstrap_timeout_seconds)
+            AcpCommandRunner(timeout_seconds=settings.install_timeout_seconds),
+            probe_runner=AcpCommandRunner(timeout_seconds=settings.bootstrap_timeout_seconds),
         ),
         lock=ServeLock(state_dir, lock_file=ACP_BOOTSTRAP_LOCK_FILE),
     )
@@ -1542,7 +1548,9 @@ def build_acp_agent(
             mapper,
             lock
             if lock is not None
-            else ServeLock(HubSettings().state_dir, lock_file=ACP_BOOTSTRAP_LOCK_FILE),
+            else ServeLock(
+                acp_state_dir(Path.cwd() / "vibey.toml"), lock_file=ACP_BOOTSTRAP_LOCK_FILE
+            ),
             modes,
         )
 

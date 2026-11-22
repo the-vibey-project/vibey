@@ -45,11 +45,15 @@ class PostgresReadiness:
 @dataclass(frozen=True, slots=True)
 class PostgresInstallOutcome:
     """What an install did. `needs_password` is true when `sudo -n` refused for want of a
-    password, which vibey never asks for or types: the operator runs the install instead."""
+    password, which vibey never asks for or types: the operator runs the install instead.
+    `still_running` is described at its field."""
 
     ok: bool
     detail: str
     needs_password: bool
+    still_running: bool = False
+    """A command overran its bound (`[acp] install_timeout_seconds`) and could not be confirmed
+    stopped: the install may still be changing the computer, so it is not reported as failed."""
 
 
 @dataclass(frozen=True, slots=True)

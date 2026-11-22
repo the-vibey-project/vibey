@@ -26,6 +26,7 @@ INTEGER_MINIMA: Final[Mapping[str, int]] = {
     "probe_seconds": 5,
     "hub_start_seconds": 1,
     "bootstrap_timeout_seconds": 1,
+    "install_timeout_seconds": 1,
     "permission_timeout_seconds": 1,
     "max_gate_prompts_per_turn": 0,
     "live_message_chars": 40,
@@ -74,6 +75,9 @@ class AcpSettings:
     modes: tuple[str, ...] = ("observe", "drive")
     default_mode: str = "drive"
     bootstrap_timeout_seconds: int = 120
+    install_timeout_seconds: int = 1800
+    """The longest one PostgreSQL install command may run before its process group is stopped
+    (SIGTERM, then SIGKILL); a package manager's real install takes minutes, not seconds."""
     permission_timeout_seconds: int = 600
     max_gate_prompts_per_turn: int = 3
     reject_words: tuple[str, ...] = ("reject", "decline", "deny", "no", "cancel")
