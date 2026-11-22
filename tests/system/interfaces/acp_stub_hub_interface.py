@@ -3,7 +3,7 @@
 
 from __future__ import annotations
 
-from collections.abc import Mapping, Sequence
+from collections.abc import Callable, Mapping, Sequence
 from typing import TYPE_CHECKING, Any, Protocol, runtime_checkable
 
 if TYPE_CHECKING:
@@ -82,6 +82,16 @@ class StubHubInterface(Protocol):
     @property
     def requests(self) -> tuple[tuple[str, str], ...]:
         """Every request served: `(method, path)`, in order."""
+        ...
+
+    @property
+    def faults(self) -> tuple[str, ...]:
+        """Each answer the hub's app gave that the agent could not read: a 5xx, a 422 (its own
+        request refused), or a 2xx missing a member the agent reads."""
+        ...
+
+    def watch_faults(self, callback: Callable[[], None]) -> None:
+        """Call `callback` (from the server thread) each time a fault is recorded."""
         ...
 
     @property

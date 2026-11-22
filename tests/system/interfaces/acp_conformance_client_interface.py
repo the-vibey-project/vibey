@@ -60,6 +60,10 @@ class AcpConformanceClientInterface(Protocol):
         """Answer the held requests now, selecting `option_id`."""
         ...
 
+    def poke(self) -> None:
+        """Wake every `wait_for` to read its condition again; safe from any thread."""
+        ...
+
     async def wait_for(self, check: Callable[[], bool], timeout: float) -> bool:
         """Whether `check()` held, re-read after every message, within `timeout` seconds."""
         ...

@@ -18,6 +18,15 @@ agent reads therefore reaches this test. What is still written here, and says so
 status document (`probes.status`; the agent only shows it as code), and the in-memory stores'
 own semantics (each mirrors its port's docstring; the Postgres stores have their own tests).
 
+The front forwards only `authorization` and `content-type` to the app, so the app's Host check
+sees the test client's host (`127.0.0.1:<port>`, the stub's own), never the agent's Host header.
+
+The front also fails fast on drift. Every answer the app gives the agent is checked against
+what the agent reads from it (`READS`: the members its parsers take, by route). An answer
+missing one, a 5xx or a 422 (the app refused the agent's own request) is recorded as a fault,
+and `watch_faults` callbacks are told at once. The test's waits stop on a fault, so a renamed
+field fails in moments instead of when a 30 s wait runs out.
+
 The front holds a chat turn when a test asks (at most `HOLD_SECONDS`, below the gateway's 15 s
 timeout), refuses one folder's sessions with a synthetic 400 when a test asks (the real hub has
 no such refusal; it stands for any permanent 4xx), records every request and every answer the
@@ -33,7 +42,7 @@ import json
 import os
 import re
 import threading
-from collections.abc import Mapping, Sequence
+from collections.abc import Callable, Mapping, Sequence
 from dataclasses import replace
 from datetime import UTC, datetime
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
@@ -68,6 +77,29 @@ WAIT_STEP_SECONDS: Final = 0.05
 CHAT: Final = "/api/v1/chat/messages"
 SESSIONS: Final = "/api/v1/acp/sessions"
 _ANSWER: Final = re.compile(r"^/api/v1/gates/([0-9a-f-]{36})/answer$")
+READS: Final[tuple[tuple[str, re.Pattern[str], str | None, tuple[str, ...]], ...]] = (
+    ("GET", re.compile(r"^/api/v1/projects$"), None, ("project_id", "name", "repo_path")),
+    (
+        "GET",
+        re.compile(r"^/api/v1/projects/[0-9a-f-]{36}/ledger/after$"),
+        "events",
+        ("seq", "kind", "phase", "payload"),
+    ),
+    ("POST", re.compile(r"^/api/v1/chat/messages$"), "gates", ("gate_id", "kind", "prompt")),
+    ("GET", re.compile(r"^/api/v1/acp/sessions$"), "sessions", ("session_id", "cwd", "updated_at")),
+    (
+        "GET",
+        re.compile(r"^/api/v1/acp/sessions/[0-9a-f-]{36}/events$"),
+        "events",
+        ("seq", "kind", "payload"),
+    ),
+)
+"""What the agent reads from each answer, by method and route: the list it reads (None: the
+answer is the list), and the members it takes from each item. Held to it when it is 2xx."""
+TOP_LEVEL: Final[Mapping[tuple[str, str], tuple[str, ...]]] = {
+    ("POST", CHAT): ("reply", "tool_calls", "gates", "project_id"),
+}
+"""Members the agent reads at the top of an answer, beside the list above."""
 _UNUSED: Final = SimpleNamespace()
 """A port `HubService` never calls on the routes the agent reaches: any use is a 500."""
 
@@ -89,6 +121,8 @@ class StubHub:
         self._answers: list[tuple[str, Mapping[str, Any], str | None]] = []
         self._requests: list[tuple[str, str]] = []
         self._unauthorised = 0
+        self._faults: list[str] = []
+        self._fault_watchers: list[Callable[[], None]] = []
         self._refused: set[str] = set()
         self._holding = False
         self._held = threading.Event()
@@ -217,6 +251,15 @@ class StubHub:
             return tuple(self._requests)
 
     @property
+    def faults(self) -> tuple[str, ...]:
+        with self._changed:
+            return tuple(self._faults)
+
+    def watch_faults(self, callback: Callable[[], None]) -> None:
+        with self._changed:
+            self._fault_watchers.append(callback)
+
+    @property
     def unauthorised(self) -> int:
         with self._changed:
             return self._unauthorised
@@ -254,7 +297,37 @@ class StubHub:
         if raw:
             headers["content-type"] = "application/json"
         response = self._app().request(method, request.path, content=raw or None, headers=headers)
+        fault = self._fault(method, path, response.status_code, response.content)
+        if fault is not None:
+            with self._changed:
+                self._faults.append(fault)
+                watchers = list(self._fault_watchers)
+            for watcher in watchers:
+                watcher()
         self._reply(request, response.status_code, response.content)
+
+    @staticmethod
+    def _fault(method: str, path: str, status: int, content: bytes) -> str | None:
+        """Why this answer is not one the agent can read, or None when it is."""
+        if status >= 500 or status == 422:
+            return f"{method} {path} answered {status}: {content[:300]!r}"
+        if not 200 <= status < 300:
+            return None
+        document = json.loads(content)
+        for key in TOP_LEVEL.get((method, path), ()):
+            if not isinstance(document, Mapping) or key not in document:
+                return f"{method} {path} has no {key!r}: {content[:300]!r}"
+        for verb, pattern, listed, members in READS:
+            if verb != method or not pattern.match(path):
+                continue
+            items = document if listed is None else document.get(listed)
+            if not isinstance(items, list):
+                return f"{method} {path} has no list {listed!r}: {content[:300]!r}"
+            for item in items:
+                missing = [m for m in members if not isinstance(item, Mapping) or m not in item]
+                if missing:
+                    return f"{method} {path}: an item has no {missing}: {item!r}"
+        return None
 
     def _app(self) -> TestClient:
         if self._client is None:
@@ -338,7 +411,9 @@ class StubHub:
             if gate.answered_at is not None:
                 if request_id is not None and request_id == gate.answer_request_id:
                     return GateAnswerOutcome(gate, replayed=True)
-                raise GateAlreadyAnswered(f"gate {gate_id} is already answered")
+                raise GateAlreadyAnswered(
+                    gate_id, answered_by=gate.answered_by, answered_at=gate.answered_at
+                )
             answered = replace(
                 gate,
                 answer=dict(answer),

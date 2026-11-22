@@ -118,7 +118,7 @@ async def _opened(conn: ClientSideConnection, folder: Path) -> str:
     return (await conn.new_session(cwd=str(folder), mcp_servers=[])).session_id
 
 
-def _prompt(text: str) -> list[TextContentBlock]:
+def _prompt(text: str) -> list[Any]:
     """A prompt of one text block. Module-level: a shared step, as `_opened`."""
     return [TextContentBlock(type="text", text=text)]
 
@@ -196,6 +196,24 @@ def _tool_calls(
     return frames
 
 
+def _client(stub: StubHub) -> AcpConformanceClient:
+    """The SDK client, woken whenever the stub records a fault, so a wait stops at once on
+    drift. Module-level: a shared step."""
+    client = AcpConformanceClient()
+    stub.watch_faults(client.poke)
+    return client
+
+
+async def _until(
+    client: AcpConformanceClient, stub: StubHub, check: Callable[[], bool], timeout: float
+) -> bool:
+    """`check` within `timeout`, but no longer once the hub's app gave the agent an answer it
+    cannot read: that fails here, with the fault, at once. Module-level: a shared wait."""
+    held = await client.wait_for(lambda: bool(stub.faults) or check(), timeout)
+    assert not stub.faults, stub.faults
+    return held
+
+
 def _permission_ids(agent: IsolatedAcpAgent) -> list[str]:
     """The JSON-RPC ids of the permission requests the agent wrote, in order. Module-level: a
     shared reading of the raw stdout."""
@@ -223,6 +241,7 @@ async def _assert_clean_finish(
     agent.assert_left_no_process()
     agent.assert_machine_untouched()
     assert stub.unauthorised == 0
+    assert stub.faults == ()
     assert client.unexpected == ()
     for text in client.displayed():
         assert not UNSAFE & set(text), text
@@ -236,7 +255,7 @@ async def test_initialize_new_session_and_the_folders_project_live(
     transition = EventKind.PHASE_TRANSITIONED
     stub.append_ledger(_event(1, transition, Phase.DESIGN, {"from": "intake", "to": "design"}))
     stub.append_ledger(_event(2, transition, Phase.BUILD, {"from": "design", "to": "build"}))
-    client = AcpConformanceClient()
+    client = _client(stub)
     conn = await agent.start(client)
 
     init = await conn.initialize(
@@ -266,7 +285,7 @@ async def test_initialize_new_session_and_the_folders_project_live(
     assert [mode.id for mode in new.modes.available_modes] == ["observe", "drive"]
 
     # The commands, then the project whose repository holds the folder: its plan as it stands.
-    assert await client.wait_for(lambda: "plan" in client.kinds(sid), WAIT)
+    assert await _until(client, stub, lambda: "plan" in client.kinds(sid), WAIT)
     commands = next(
         u["availableCommands"]
         for u in client.updates(sid)
@@ -280,8 +299,11 @@ async def test_initialize_new_session_and_the_folders_project_live(
         "in_progress",
         "pending",
     )
-    assert await client.wait_for(
-        lambda: any(f"Following project demo ({PROJECT})" in t for t in client.texts(sid)), WAIT
+    assert await _until(
+        client,
+        stub,
+        lambda: any(f"Following project demo ({PROJECT})" in t for t in client.texts(sid)),
+        WAIT,
     )
 
     # A new ledger event arrives as one escaped message; a gate notice that says its gate
@@ -296,8 +318,8 @@ async def test_initialize_new_session_and_the_folders_project_live(
         notice=0,
     ).payload()
     stub.append_ledger(_event(4, EventKind.GATE_NOTIFIED, Phase.BUILD, spend))
-    assert await client.wait_for(
-        lambda: any("may spend money" in t for t in client.texts(sid)), WAIT
+    assert await _until(
+        client, stub, lambda: any("may spend money" in t for t in client.texts(sid)), WAIT
     )
     texts = client.texts(sid)
     summary = next(t for t in texts if "VerdictRendered" in t)
@@ -325,7 +347,7 @@ async def test_a_turn_streams_and_offers_only_the_answerable_gate(
             _gate(G_OPT_IN, "choice", "deploy it?", ["local_only", "deploy"]),
         ]
     )
-    client = AcpConformanceClient()
+    client = _client(stub)
     client.choose(_option("Answer: yes"))
     conn = await agent.start(client)
     sid = await _opened(conn, agent.workdir)
@@ -431,13 +453,15 @@ async def test_observe_holds_gates_back_and_a_cancel_resolves_what_is_pending(
     stub, agent = sealed
     stub.set_projects([_project(agent.workdir.parent / "another-repository")])
     stub.set_gates([_gate(G_HELD, "choice", "ship it?", ["yes", "no"])])
-    client = AcpConformanceClient()
+    client = _client(stub)
     conn = await agent.start(client)
     sid = await _opened(conn, agent.workdir)
 
     # Observe: the turn runs, the gate is not offered.
     await conn.set_session_mode(session_id=sid, mode_id="observe")
-    assert await client.wait_for(
+    assert await _until(
+        client,
+        stub,
         lambda: (
             {"sessionUpdate": "current_mode_update", "currentModeId": "observe"}
             in client.updates(sid)
@@ -453,7 +477,7 @@ async def test_observe_holds_gates_back_and_a_cancel_resolves_what_is_pending(
     await conn.set_session_mode(session_id=sid, mode_id="drive")
     client.hold()
     turn = asyncio.create_task(conn.prompt(session_id=sid, prompt=_prompt("/gates")))
-    assert await client.wait_for(lambda: len(client.permission_requests) == 1, WAIT)
+    assert await _until(client, stub, lambda: len(client.permission_requests) == 1, WAIT)
     await conn.set_session_mode(session_id=sid, mode_id="observe")
     withdrawn = await asyncio.wait_for(turn, WAIT)
     assert withdrawn.stop_reason == "end_turn"
@@ -468,7 +492,7 @@ async def test_observe_holds_gates_back_and_a_cancel_resolves_what_is_pending(
     await conn.set_session_mode(session_id=sid, mode_id="drive")
     client.hold()
     turn = asyncio.create_task(conn.prompt(session_id=sid, prompt=_prompt("/gates")))
-    assert await client.wait_for(lambda: len(client.permission_requests) == 2, WAIT)
+    assert await _until(client, stub, lambda: len(client.permission_requests) == 2, WAIT)
     await conn.cancel(session_id=sid)
     cancelled = await asyncio.wait_for(turn, WAIT)
     assert cancelled.stop_reason == "cancelled"
@@ -477,7 +501,7 @@ async def test_observe_holds_gates_back_and_a_cancel_resolves_what_is_pending(
     assert await agent.wait_stderr(f"dropped response with unknown id {second!r}", WAIT)
     assert agent.stderr_text.count("dropped response with unknown id") == 2
     assert stub.answers == ()
-    asked = client.permission_requests[1]["tool_call"]["toolCallId"]
+    asked: str = list(client.permission_requests)[1]["tool_call"]["toolCallId"]
     closed = _tool_calls(client, sid)[asked][-1]
     assert closed["status"] == "failed" and "nothing was answered" in _content(closed)
 
@@ -510,7 +534,7 @@ async def test_sessions_list_close_load_and_resume_through_the_hub(
     stub, agent = sealed
     stub.set_projects([_project(agent.workdir.parent / "another-repository")])
     stub.set_gates([_gate(G_HISTORY, "choice", "keep going?", ["yes", "no"])])
-    client = AcpConformanceClient()
+    client = _client(stub)
     client.choose(_option("Answer: yes"))
     conn = await agent.start(client)
     folder = str(agent.workdir)
@@ -549,7 +573,9 @@ async def test_sessions_list_close_load_and_resume_through_the_hub(
     loaded = await conn.load_session(cwd=folder, session_id=sid, mcp_servers=[])
 
     assert loaded.modes is not None and loaded.modes.current_mode_id == "observe"
-    assert await client.wait_for(
+    assert await _until(
+        client,
+        stub,
         lambda: (
             "available_commands_update" in [u["sessionUpdate"] for u in client.updates(sid)[mark:]]
         ),
@@ -590,7 +616,9 @@ async def test_sessions_list_close_load_and_resume_through_the_hub(
     mark = len(client.updates(sid))
     resumed = await conn.resume_session(session_id=sid, cwd=folder)
     assert resumed.modes is not None and resumed.modes.current_mode_id == "observe"
-    assert await client.wait_for(
+    assert await _until(
+        client,
+        stub,
         lambda: any(
             u["sessionUpdate"] == "available_commands_update" for u in client.updates(sid)[mark:]
         ),
@@ -624,7 +652,7 @@ async def test_stdout_stays_protocol_only_while_the_agent_logs_to_stderr(
     noisy = agent.workdir / "noisy"
     noisy.mkdir()
     stub.refuse_sessions_under(str(noisy))
-    client = AcpConformanceClient()
+    client = _client(stub)
     conn = await agent.start(client)
     quiet = await _opened(conn, agent.workdir)
     loud = (await conn.new_session(cwd=str(noisy), mcp_servers=[])).session_id
@@ -634,8 +662,11 @@ async def test_stdout_stays_protocol_only_while_the_agent_logs_to_stderr(
     assert (await conn.prompt(session_id=loud, prompt=_prompt("/help"))).stop_reason == "end_turn"
     assert (await conn.prompt(session_id=quiet, prompt=_prompt("/help"))).stop_reason == "end_turn"
     assert await agent.wait_stderr("the hub refused session", WAIT)
-    assert await client.wait_for(
-        lambda: any(t.startswith("Session history:") for t in client.texts(loud)), WAIT
+    assert await _until(
+        client,
+        stub,
+        lambda: any(t.startswith("Session history:") for t in client.texts(loud)),
+        WAIT,
     )
     assert any("/new \\<name\\> \\<what to build\\>" in t for t in client.texts(quiet))
     assert await asyncio.to_thread(stub.wait_for_session_event, quiet, "user_message", WAIT)

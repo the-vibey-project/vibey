@@ -15,7 +15,7 @@ from __future__ import annotations
 
 import asyncio
 from collections.abc import Callable, Mapping
-from typing import Any, Final
+from typing import Any, Final, NoReturn
 
 from acp import RequestError
 from acp.schema import (
@@ -41,6 +41,11 @@ class AcpConformanceClient:
         self._holding = False
         self._released = asyncio.Event()
         self._release_option = ""
+        self._loop: asyncio.AbstractEventLoop | None = None
+        try:
+            self._loop = asyncio.get_running_loop()
+        except RuntimeError:
+            self._loop = None  # made outside a loop: `wait_for` records the one it runs on
 
     # -- what the SDK calls ---------------------------------------------------------------
 
@@ -76,7 +81,7 @@ class AcpConformanceClient:
         return await self._refuse("terminal/create")
 
     async def ext_method(self, method: str, params: dict[str, Any]) -> dict[str, Any]:
-        return await self._refuse(method)
+        await self._refuse(method)
 
     async def ext_notification(self, method: str, params: dict[str, Any]) -> None:
         async with self._changed:
@@ -143,7 +148,13 @@ class AcpConformanceClient:
             outcome=AllowedOutcome(option_id=chosen, outcome="selected")
         )
 
+    def poke(self) -> None:
+        loop = self._loop
+        if loop is not None and not loop.is_closed():
+            loop.call_soon_threadsafe(lambda: loop.create_task(self._notify()))
+
     async def wait_for(self, check: Callable[[], bool], timeout: float) -> bool:
+        self._loop = asyncio.get_running_loop()
         async with self._changed:
             try:
                 await asyncio.wait_for(self._changed.wait_for(check), timeout)
@@ -153,7 +164,11 @@ class AcpConformanceClient:
 
     # -- helpers --------------------------------------------------------------------------
 
-    async def _refuse(self, method: str) -> Any:
+    async def _notify(self) -> None:
+        async with self._changed:
+            self._changed.notify_all()
+
+    async def _refuse(self, method: str) -> NoReturn:
         async with self._changed:
             self._unexpected.append(method)
             self._changed.notify_all()
