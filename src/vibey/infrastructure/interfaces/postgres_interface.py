@@ -17,6 +17,10 @@ class PostgresLocalServiceInterface(Protocol):
         """Return the local PostgreSQL installation and readiness state."""
         ...
 
+    def package_manager(self) -> str | None:
+        """The package manager `install` would use, or None; runs nothing."""
+        ...
+
     def install(self) -> PostgresInstallResult:
         """Install and start a supported local PostgreSQL service."""
         ...

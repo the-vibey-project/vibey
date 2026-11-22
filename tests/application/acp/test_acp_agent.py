@@ -344,3 +344,23 @@ async def test_the_agent_itself_being_cancelled_ends_the_turn_and_propagates() -
 
     assert not agent.sessions["s"].turn_active
     assert not agent.sessions["s"].cancel_requested
+
+
+async def test_a_handler_cancelled_with_its_turn_never_swallows_its_own_cancel() -> None:
+    """B-11: the peer shutting down (the handler cancelled) at the moment a `session/cancel`
+    landed must still cancel the handler, not answer for it."""
+    hub = FakeHub()
+    hub.release = asyncio.Event()
+    agent = build_agent(FakeChannel(), hub, settings=AcpSettings(cancel_grace_seconds=0))
+    await _new_session(agent)
+    handler = asyncio.create_task(
+        agent.handle_request("session/prompt", {"sessionId": "s", "prompt": [text("/projects")]})
+    )
+    await asyncio.wait_for(hub.entered.wait(), 5)
+
+    await agent.handle_notification("session/cancel", {"sessionId": "s"})
+    handler.cancel()
+
+    with pytest.raises(asyncio.CancelledError):
+        await handler
+    assert not agent.sessions["s"].turn_active

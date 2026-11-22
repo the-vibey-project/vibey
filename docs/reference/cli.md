@@ -408,6 +408,68 @@ on stderr and, while the editor can hear it, in a notice.
   kept. A later `session/prompt` answers `RESOURCE_NOT_FOUND`; closing a session that is
   unknown or already closed answers `{}`. A closed session can be loaded or resumed again.
 
+### Bootstrap: doctor, connect and PostgreSQL
+
+With [`[acp] auto_bootstrap`](configuration.md#acp) on (the default; `--no-bootstrap` turns it
+off for one process), `vibey acp` sets the computer up when an editor first connects. Nothing
+here delays the answer: the steps start after `session/new` (or the first `session/load` or
+`session/resume`) has answered, as tool calls in that session.
+
+1. **`vibey doctor`** (a `read` tool call): the local doctor's sections -- the database,
+   password-less access, hub exposure, Ollama when a local engine runs, the Sabbath, gate
+   notices, the supervisor and host health -- one update per finished section, then `completed`,
+   or `failed` when one found `FAIL`. Nothing is printed: under `vibey acp` standard output is
+   the protocol stream.
+2. **`vibey connect`** (an `edit` tool call), when [`[acp] auto_connect`](configuration.md#acp)
+   is on: `vibey mcp` is registered with each user-level client whose config folder already
+   exists under your home folder (Claude Desktop, Codex, Cursor, Gemini CLI). A project file
+   (`.mcp.json`, `.vscode/mcp.json`) is never written, a client's folder is never created, a
+   config whose folder resolves (symlinks followed) outside your home folder is never written,
+   and neither is a config file that is itself a symbolic link. A
+   changed file is backed up to `<file>.vibey.bak` with the original's permissions, and the new
+   file replaces the old one atomically, no wider than it was. One client's broken file is a
+   `WARN` for that client while the others go on. When no client warned,
+   `<[hub] state_dir>/acp-connect-<version>.json` records which clients were connected; the next
+   `vibey acp` of this version skips the step while every client installed then is in that
+   record, so a `WARN`, or a client installed since, is tried again.
+3. Loading and keeping the user-level services running comes with a later release.
+
+A session's first prompt waits for steps 1 and 2 at most
+[`[acp] bootstrap_timeout_seconds`](configuration.md#acp), then goes ahead and says so. A run
+that found no `FAIL` (and no connect `WARN`) is not repeated in this process; after one that did,
+the next session runs it again. Two runs never overlap.
+
+4. **PostgreSQL**, inside the first prompt of a session whose mode may run (`drive`; never in
+   `observe`, which says once what is missing), at most once per process, and only with
+   [`[acp] install_postgres = "ask"`](configuration.md#acp). Its read-only check is bounded by
+   `bootstrap_timeout_seconds`. When it is not ready, the client is asked "Install PostgreSQL
+   with brew, apt-get or dnf? ..." with two options, **Install PostgreSQL** and **Not now**.
+   Only the first installs. Once the question is asked, "Not now", no answer within
+   [`permission_timeout_seconds`](configuration.md#acp), a `session/cancel`, any other answer or
+   a switch to `observe` installs nothing: the tool call ends `failed` and one message says what
+   is missing and that the hub runs degraded. A cancel that lands before the question is asked
+   leaves the question to your next prompt.
+
+   The install runs the same fixed commands as `vibey doctor --install-postgres`, with standard
+   input closed, output captured, a minimal environment, and `sudo -n`: vibey never asks for or
+   types a password. When sudo wants one, it says so; run `vibey doctor --install-postgres` in
+   your own terminal. Each command runs in a process group of its own, at most
+   [`[acp] install_timeout_seconds`](configuration.md#acp) (default 1800); past that the whole
+   group is sent SIGTERM and then SIGKILL. A command that cannot be stopped that way (a `sudo`
+   run as root) is not waited for, and is reported as possibly still running, not as failed.
+   A `session/cancel` during an install you allowed does not stop it: the tool call ends saying
+   it goes on in the background, how it ends is logged on standard error and said in the
+   session if it is still open.
+
+Connecting and installing change the computer, so they take turns within one `vibey acp`, and a
+second `vibey acp` (another editor window) leaves them to the first while it holds
+`<[hub] state_dir>/acp-bootstrap.lock` -- including until an install it allowed has ended.
+
+When a read of the hub finds no hub, `vibey acp` runs `vibey hub start` at most once per
+[`[acp] hub_start_seconds`](configuration.md#acp), on a thread of its own, with its standard
+input closed; a prompt, the live feed and the session log are told at once that the hub is
+away instead of waiting for it.
+
 ## `vibey install`
 
 Install local dependencies that vibey can manage explicitly.

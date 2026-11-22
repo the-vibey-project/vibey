@@ -33,3 +33,8 @@ class ServeCommandInterface(Protocol):
     def exposure_line(self) -> bool:
         """Prints `vibey doctor`'s `hub-exposure` line; False only on FAIL."""
         ...
+
+    def exposure_lines(self) -> tuple[list[str], bool]:
+        """The same line, returned rather than printed (for `vibey acp`, where stdout is the
+        protocol stream); False only on FAIL."""
+        ...

@@ -7,19 +7,25 @@ reaches it afterwards is a protocol frame; anything else in this process or its 
 prints lands on stderr. The root callback has already pointed logging at stderr, and the guard
 also catches any handler still holding fd 1. Then `[acp]` is read from `./vibey.toml`, the
 agent is composed (`bootstrap.build_acp_agent`) and the peer serves until stdin closes.
+
+The agent's bootstrap runs `vibey doctor`'s local sections (`LOCAL_DOCTOR_PROBES`, which never
+print) and, under `[acp]`'s grant, connects the user-scope clients and offers a PostgreSQL
+install (`bootstrap.acp_machine`).
 """
 
 from __future__ import annotations
 
 import asyncio
 import dataclasses
-from collections.abc import Callable
+from collections.abc import Callable, Sequence
 from pathlib import Path
 from typing import Annotated, Final
 
 import typer
 
-from vibey.bootstrap import build_acp_agent
+from vibey.application.acp.interfaces.doctor_probe_interface import DoctorProbeInterface
+from vibey.bootstrap import AcpMachine, acp_machine, build_acp_agent
+from vibey.cli.doctor_probes import LOCAL_DOCTOR_PROBES
 from vibey.cli.interfaces.acp_interface import AcpAgentBuilder, AcpCommandInterface
 from vibey.domain.acp.settings import AcpSettings
 from vibey.infrastructure.acp.acp_settings_loader import AcpSettingsLoader
@@ -49,12 +55,16 @@ class AcpCommand:
         config_path: Callable[[], Path] = lambda: Path.cwd() / "vibey.toml",
         build_agent: AcpAgentBuilder = build_acp_agent,
         before_serve: Callable[[], None] = lambda: None,
+        doctor_probes: Sequence[DoctorProbeInterface] = LOCAL_DOCTOR_PROBES,
+        machine: Callable[..., AcpMachine] = acp_machine,
     ) -> None:
         self._transport = transport
         self._settings = settings if settings is not None else AcpSettingsLoader()
         self._config_path = config_path
         self._build_agent = build_agent
         self._before_serve = before_serve
+        self._doctor_probes = doctor_probes
+        self._machine = machine
 
     def run(self, *, no_bootstrap: bool) -> None:
         transport = self._transport()
@@ -70,7 +80,15 @@ class AcpCommand:
         # newline fits the reader; the peer refuses anything longer by name.
         reader = await transport.reader(limit=settings.max_message_bytes + 1)
         channel = PeerClientChannel()
-        agent = self._build_agent(settings=settings, channel=channel)
+        machine = self._machine(settings, config_path=self._config_path())
+        agent = self._build_agent(
+            settings=settings,
+            channel=channel,
+            doctor_probes=self._doctor_probes,
+            connector=machine.connector,
+            postgres=machine.postgres,
+            lock=machine.lock,
+        )
         peer = JsonRpcPeer(
             reader,
             transport.write_line,

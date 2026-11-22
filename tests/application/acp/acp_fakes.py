@@ -27,6 +27,7 @@ from vibey.application.acp.dto import (
     SessionRecord,
     SessionSummary,
 )
+from vibey.application.acp.interfaces.acp_bootstrap_interface import AcpBootstrapInterface
 from vibey.domain.acp.gate_permission import GatePermissionMapper
 from vibey.domain.acp.modes import AcpModes
 from vibey.domain.acp.protocol import StopReason
@@ -344,6 +345,7 @@ def build_agent(
     settings: AcpSettings | None = None,
     ids: Sequence[str] = ("s", "t1", "s2", "t2", "t3", "t4"),
     journal: AcpSessionJournal | None = None,
+    bootstrap: AcpBootstrapInterface | None = None,
 ) -> AcpAgent:
     """The agent as `bootstrap.build_acp_agent` composes it: its turns write through the
     journaling channel, so what they show is kept in the session's log."""
@@ -364,6 +366,7 @@ def build_agent(
         journal=kept,
         version="9.9.9",
         new_id=lambda: next(pool),
+        bootstrap=bootstrap,
     )
 
 

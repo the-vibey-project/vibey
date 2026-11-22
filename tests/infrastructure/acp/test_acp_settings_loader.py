@@ -39,6 +39,8 @@ def test_the_defaults_are_the_documented_table() -> None:
     assert d.restart == "always"
     assert d.service_workdir == ""
     assert d.probe_seconds == 30
+    assert d.hub_start_seconds == 60
+    assert d.install_timeout_seconds == 1800
     assert d.modes == ("observe", "drive")
     assert d.default_mode == "drive"
     assert d.bootstrap_timeout_seconds == 120
@@ -66,6 +68,8 @@ services = ["worker"]
 restart = "on-failure"
 service_workdir = "/srv/vibey"
 probe_seconds = 5
+hub_start_seconds = 1
+install_timeout_seconds = 1
 modes = ["observe"]
 default_mode = "observe"
 bootstrap_timeout_seconds = 1
@@ -89,6 +93,8 @@ pending_events_max = 1
         restart="on-failure",
         service_workdir="/srv/vibey",
         probe_seconds=5,
+        hub_start_seconds=1,
+        install_timeout_seconds=1,
         modes=("observe",),
         default_mode="observe",
         bootstrap_timeout_seconds=1,
@@ -135,6 +141,8 @@ def test_several_unknown_keys_are_all_named() -> None:
     ("key", "value"),
     [
         ("probe_seconds", 4),
+        ("hub_start_seconds", 0),
+        ("install_timeout_seconds", 0),
         ("modes", []),
         ("modes", ["observe", "spend"]),
         ("default_mode", "spend"),

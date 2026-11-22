@@ -310,6 +310,11 @@ class PostgresLocalService:
                 return found
         return None
 
+    def package_manager(self) -> str | None:
+        """The package manager `install` would use (`brew`, `apt-get` or `dnf`), or None when
+        the host has none of them. Looks for the binaries only; runs nothing."""
+        return self._package_manager()
+
     def _package_manager(self) -> str | None:
         for candidate in ("brew", "apt-get", "dnf"):
             if self._which(candidate) is not None:

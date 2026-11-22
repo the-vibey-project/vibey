@@ -20,17 +20,24 @@ import pytest
 
 from vibey import __version__
 from vibey.application.acp.acp_agent import AcpAgent
+from vibey.application.acp.dto import DoctorResult
 from vibey.application.acp.interfaces.acp_agent_interface import AcpAgentInterface
 from vibey.application.acp.interfaces.client_channel_interface import ClientChannelInterface
-from vibey.bootstrap import build_acp_agent
+from vibey.bootstrap import acp_machine, build_acp_agent
 from vibey.cli.acp import ACP_COMMAND, AcpCommand, acp
+from vibey.cli.doctor_probes import LOCAL_DOCTOR_PROBES
 from vibey.cli.interfaces.acp_interface import AcpCommandInterface
 from vibey.cli.main import app
 from vibey.domain.acp.settings import AcpSettings
 from vibey.domain.host_tools import HubCall
 from vibey.domain.hub_scope import HubScope
+from vibey.infrastructure.acp.acp_postgres_installer import AcpPostgresInstaller
+from vibey.infrastructure.acp.host_connector import HostConnector
 from vibey.infrastructure.acp.peer_client_channel import PeerClientChannel
-from vibey.infrastructure.mcp.hub_gateway import HubGatewayResponse
+from vibey.infrastructure.hub.serve_lock import ServeLock
+from vibey.infrastructure.hub.settings import HubSettings
+from vibey.infrastructure.mcp.hub_gateway import HubGateway, HubGatewayResponse
+from vibey.infrastructure.mcp.hub_start_policy import BoundedHubStarter
 
 INITIALIZE = {
     "jsonrpc": "2.0",
@@ -157,12 +164,17 @@ def _command(
     transport: _Transport,
     settings: AcpSettings,
     built: list[tuple[AcpSettings, ClientChannelInterface]],
+    parts: list[dict[str, Any]] | None = None,
 ) -> tuple[AcpCommand, _Loader]:
     loader = _Loader(events, settings)
 
-    def builder(*, settings: AcpSettings, channel: ClientChannelInterface) -> AcpAgentInterface:
+    def builder(
+        *, settings: AcpSettings, channel: ClientChannelInterface, **given: Any
+    ) -> AcpAgentInterface:
         events.append("agent")
         built.append((settings, channel))
+        if parts is not None:
+            parts.append(given)
         return build_acp_agent(settings=settings, channel=channel, gateway=_Gateway())
 
     command = AcpCommand(
@@ -211,6 +223,20 @@ def test_no_bootstrap_turns_the_grant_off_for_this_process() -> None:
 
     assert built[0][0].auto_bootstrap is False
     assert built[0][0] == AcpSettings(auto_bootstrap=False)
+
+
+def test_the_agent_gets_doctors_sections_and_this_computers_bootstrap_parts() -> None:
+    events: list[str] = []
+    parts: list[dict[str, Any]] = []
+    command, _ = _command(events, _Transport(events), AcpSettings(), [], parts)
+
+    command.run(no_bootstrap=True)
+
+    given = parts[0]
+    assert tuple(given["doctor_probes"]) == LOCAL_DOCTOR_PROBES
+    assert isinstance(given["connector"], HostConnector)
+    assert isinstance(given["postgres"], AcpPostgresInstaller)
+    assert isinstance(given["lock"], ServeLock)
 
 
 def test_the_typer_function_runs_the_module_command(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -339,7 +365,9 @@ def test_the_agent_is_closed_once_the_connection_ends() -> None:
             closed.append(True)
             await self._inner.close()
 
-    def builder(*, settings: AcpSettings, channel: ClientChannelInterface) -> AcpAgentInterface:
+    def builder(
+        *, settings: AcpSettings, channel: ClientChannelInterface, **parts: Any
+    ) -> AcpAgentInterface:
         return _Closing(build_acp_agent(settings=settings, channel=channel, gateway=_Gateway()))
 
     AcpCommand(
@@ -385,3 +413,82 @@ async def test_build_acp_agent_follows_the_project_in_the_sessions_folder() -> N
     reads = [call for call in calls if call.tool == "vibey_ledger_after"]
     assert reads[0].route == f"/api/v1/projects/{project_id}/ledger/after"
     assert reads[0].query == (("seq", "0"), ("limit", "200"))
+
+
+class _NoProbe:
+    name = "nothing"
+
+    async def run(self) -> tuple[DoctorResult, ...]:
+        return (DoctorResult("PASS", "nothing", "fine"),)
+
+
+async def test_build_acp_agent_runs_the_bootstrap_after_session_new() -> None:
+    channel = _RecordingChannel()
+
+    agent = build_acp_agent(
+        settings=AcpSettings(), channel=channel, gateway=_Gateway(), doctor_probes=(_NoProbe(),)
+    )
+    await agent.handle_request("session/new", {"cwd": "/work", "mcpServers": []})
+    for _ in range(200):
+        if any(u.get("toolCallId") == "bootstrap-doctor" for u in channel.updates):
+            break
+        await asyncio.sleep(0)
+    await agent.close()
+
+    doctor = [u for u in channel.updates if u.get("toolCallId") == "bootstrap-doctor"]
+    assert doctor[0]["title"] == "vibey doctor"
+
+
+def test_build_acp_agent_bounds_its_own_hub_start() -> None:
+    agent = build_acp_agent(settings=AcpSettings(hub_start_seconds=5), channel=_RecordingChannel())
+
+    gateway = agent._hub._gateway  # type: ignore[attr-defined]
+    assert isinstance(gateway, HubGateway)
+    assert isinstance(gateway._starter, BoundedHubStarter)
+    assert gateway._starter._window == 5
+
+
+def test_build_acp_agent_without_bootstrap_parts_has_no_bootstrap() -> None:
+    agent = build_acp_agent(settings=AcpSettings(), channel=_RecordingChannel(), gateway=_Gateway())
+
+    assert agent._bootstrap is None  # type: ignore[attr-defined]
+
+
+def test_the_machine_lives_under_the_hubs_state_dir(tmp_path: Path) -> None:
+    config = tmp_path / "vibey.toml"
+    config.write_text(f"[hub]\nstate_dir = '{tmp_path / 'hub'}'\n")
+
+    machine = acp_machine(
+        AcpSettings(bootstrap_timeout_seconds=7, install_timeout_seconds=900), config_path=config
+    )
+
+    assert machine.connector._marker.parent == tmp_path / "hub"  # type: ignore[attr-defined]
+    assert machine.lock._path == tmp_path / "hub" / "acp-bootstrap.lock"  # type: ignore[attr-defined]
+    assert machine.postgres._runner._timeout == 900  # type: ignore[attr-defined]
+    assert machine.postgres._probe_runner._timeout == 7  # type: ignore[attr-defined]
+
+
+def test_the_fallback_lock_honours_the_folders_hub_state_dir(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    (tmp_path / "vibey.toml").write_text(f"[hub]\nstate_dir = '{tmp_path / 'hub'}'\n")
+    monkeypatch.chdir(tmp_path)
+
+    agent = build_acp_agent(
+        settings=AcpSettings(),
+        channel=_RecordingChannel(),
+        gateway=_Gateway(),
+        doctor_probes=(_NoProbe(),),
+    )
+
+    lock = agent._bootstrap._lock  # type: ignore[attr-defined]
+    assert lock._path == tmp_path / "hub" / "acp-bootstrap.lock"
+
+
+def test_an_unreadable_hub_table_still_gives_the_machine_a_home(tmp_path: Path) -> None:
+    config = tmp_path / "vibey.toml"
+    config.write_text("[hub]\nstate_dir = 3\n")
+
+    machine = acp_machine(AcpSettings(), config_path=config)
+
+    assert machine.lock._path.parent == HubSettings().state_dir  # type: ignore[attr-defined]

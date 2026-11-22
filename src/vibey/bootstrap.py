@@ -4,7 +4,7 @@
 import asyncio
 import os
 import platform
-from collections.abc import AsyncIterator, Awaitable, Callable, Mapping
+from collections.abc import AsyncIterator, Awaitable, Callable, Mapping, Sequence
 from contextlib import asynccontextmanager, suppress
 from dataclasses import dataclass, field
 from datetime import UTC, datetime, timedelta
@@ -17,14 +17,23 @@ from platformdirs import user_cache_path
 
 from vibey import __version__
 from vibey.application.acp.acp_agent import AcpAgent
+from vibey.application.acp.acp_bootstrap import AcpBootstrap
 from vibey.application.acp.acp_gate_prompter import AcpGatePrompter
 from vibey.application.acp.acp_journaling_channel import AcpJournalingChannel
 from vibey.application.acp.acp_live_feed import AcpLiveFeed
 from vibey.application.acp.acp_prompt_turn import AcpPromptTurn
 from vibey.application.acp.acp_session_journal import AcpSessionJournal
+from vibey.application.acp.doctor_checks import DoctorChecks
 from vibey.application.acp.interfaces.acp_agent_interface import AcpAgentInterface
+from vibey.application.acp.interfaces.acp_bootstrap_interface import AcpBootstrapInterface
 from vibey.application.acp.interfaces.acp_prompt_turn_interface import AcpPromptTurnInterface
+from vibey.application.acp.interfaces.bootstrap_lock_interface import BootstrapLockInterface
 from vibey.application.acp.interfaces.client_channel_interface import ClientChannelInterface
+from vibey.application.acp.interfaces.doctor_probe_interface import DoctorProbeInterface
+from vibey.application.acp.interfaces.host_connector_interface import HostConnectorInterface
+from vibey.application.acp.interfaces.postgres_installer_interface import (
+    PostgresInstallerInterface,
+)
 from vibey.application.budget_source import LedgerBudgetSource
 from vibey.application.build_decompose_handler import BuildDecomposeHandler
 from vibey.application.build_dependency_wait import DeferringHandler, DependencyWait
@@ -131,6 +140,7 @@ from vibey.domain.acp.update_mapper import AcpUpdateMapper
 from vibey.domain.config import (
     DEFAULT_SURFACE_ADAPTER_TIMEOUT_SECONDS,
     BuildConfig,
+    ConfigError,
     DesignResearchConfig,
     NotificationsConfig,
     QueueDefectConfig,
@@ -149,7 +159,10 @@ from vibey.domain.interfaces.config_interface import (
 from vibey.domain.phase import Phase
 from vibey.domain.slicing import AutoSlicer
 from vibey.domain.worktree import WorktreeNaming
+from vibey.infrastructure.acp.acp_command_runner import AcpCommandRunner
 from vibey.infrastructure.acp.acp_hub_client import AcpHubClient
+from vibey.infrastructure.acp.acp_postgres_installer import AcpPostgresInstaller
+from vibey.infrastructure.acp.host_connector import HostConnector
 from vibey.infrastructure.azure.adapter import InMemoryAzureClientAdapter
 from vibey.infrastructure.build.automated_review_runner import SubprocessAutomatedReviewRunner
 from vibey.infrastructure.build.checkout import ProjectCheckoutLocator
@@ -206,9 +219,12 @@ from vibey.infrastructure.files.nextcloud import NextcloudFilesAdapter
 from vibey.infrastructure.git.checkpoint import GitCheckpoint
 from vibey.infrastructure.git.integration_branch import IntegrationBranch
 from vibey.infrastructure.git.worktree_manager import GitWorktreeManager
+from vibey.infrastructure.hub.serve_lock import ACP_BOOTSTRAP_LOCK_FILE, ServeLock
+from vibey.infrastructure.hub.settings import HUB_SETTINGS, HubSettings
 from vibey.infrastructure.ledger.full_ledger_writer import write_full_ledger
 from vibey.infrastructure.logging import StructlogAppLogger
-from vibey.infrastructure.mcp.hub_gateway import HUB_GATEWAY
+from vibey.infrastructure.mcp.hub_gateway import HubGateway
+from vibey.infrastructure.mcp.hub_start_policy import BoundedHubStarter
 from vibey.infrastructure.mcp.interfaces.hub_gateway_interface import HubGatewayInterface
 from vibey.infrastructure.messaging.in_memory import InMemoryMessaging
 from vibey.infrastructure.messaging.matrix import MatrixMessagingAdapter
@@ -1443,31 +1459,100 @@ async def build_app(
         await pool.close()
 
 
+@dataclass(frozen=True, slots=True)
+class AcpMachine:
+    """What `vibey acp`'s bootstrap may change on this computer, once its grant allows it: the
+    clients' MCP registrations, a PostgreSQL install, and the lock that keeps a second editor
+    window from doing either at the same time. A value type (ADR-0016 exempts it)."""
+
+    connector: HostConnectorInterface
+    postgres: PostgresInstallerInterface
+    lock: BootstrapLockInterface
+
+
+def acp_state_dir(config_path: Path) -> Path:
+    """Where `vibey acp` keeps its connect marker and setup lock: the hub's state directory
+    (`[hub] state_dir`), or its default when `[hub]` cannot be read -- the bootstrap still has a
+    place for them, and the doctor says what is wrong with `[hub]`."""
+    try:
+        return HUB_SETTINGS.load(config_path).state_dir
+    except ConfigError:
+        return HubSettings().state_dir
+
+
+def acp_machine(settings: AcpSettings, *, config_path: Path) -> AcpMachine:
+    """The real `AcpMachine`, under `acp_state_dir`. Building it touches nothing; only the
+    bootstrap's steps do. PostgreSQL's read-only checks are bounded by
+    `[acp] bootstrap_timeout_seconds`, each install command by `[acp] install_timeout_seconds`."""
+    state_dir = acp_state_dir(config_path)
+    return AcpMachine(
+        connector=HostConnector(state_dir=state_dir, version=__version__),
+        postgres=AcpPostgresInstaller(
+            AcpCommandRunner(timeout_seconds=settings.install_timeout_seconds),
+            probe_runner=AcpCommandRunner(timeout_seconds=settings.bootstrap_timeout_seconds),
+        ),
+        lock=ServeLock(state_dir, lock_file=ACP_BOOTSTRAP_LOCK_FILE),
+    )
+
+
 def build_acp_agent(
     *,
     settings: AcpSettings,
     channel: ClientChannelInterface,
-    gateway: HubGatewayInterface = HUB_GATEWAY,
+    gateway: HubGatewayInterface | None = None,
+    doctor_probes: Sequence[DoctorProbeInterface] = (),
+    connector: HostConnectorInterface | None = None,
+    postgres: PostgresInstallerInterface | None = None,
+    lock: BootstrapLockInterface | None = None,
 ) -> AcpAgentInterface:
     """Compose the ACP agent `vibey acp` serves (SP-ACP).
 
-    The hub is reached through the same `HubGateway` `vibey mcp` uses, as the scoped agent
-    principal; the chat parser and tool catalogue are the hub's own. Each prompt gets a fresh
-    `AcpPromptTurn`, which puts the open gates the hub lists to the client through one
-    `AcpGatePrompter` (spend gates are never offered). Session and turn ids are random UUIDs, so a request id built from them
-    (`acp-<session>-<turn>`) never repeats across processes.
+    The hub is reached through a `HubGateway` like `vibey mcp`'s, as the scoped agent
+    principal; the chat parser and tool catalogue are the hub's own. Its starter is bounded
+    (`BoundedHubStarter`): a read that finds no hub hears "the hub is away" at once, and at most
+    one `vibey hub start` per `[acp] hub_start_seconds` runs, on a thread of its own. Each prompt
+    gets a fresh `AcpPromptTurn`, which puts the open gates the hub lists to the client through
+    one `AcpGatePrompter` (spend gates are never offered). Session and turn ids are random
+    UUIDs, so a request id built from them (`acp-<session>-<turn>`) never repeats across
+    processes.
 
     The turn and the prompter write through `AcpJournalingChannel`, so what a turn shows is kept
-    in the session's log on the hub (`AcpSessionJournal`); the live feed and the agent's own
-    updates (commands, modes, a replay) go to the client directly and are not kept that way.
+    in the session's log on the hub (`AcpSessionJournal`); the live feed, the agent's own
+    updates (commands, modes, a replay) and the bootstrap's go to the client directly and are
+    not kept that way.
+
+    `AcpBootstrap` runs `doctor_probes`, `connector` and `postgres` under `[acp]`'s grant; each
+    one left out is a step that says nothing, and with none of them there is no bootstrap.
+    `vibey acp` passes doctor's local sections and `acp_machine`'s parts.
     """
-    hub = AcpHubClient(gateway=gateway, tools=HOST_TOOL_CATALOG)
+    hub = AcpHubClient(
+        gateway=gateway
+        if gateway is not None
+        else HubGateway(starter=BoundedHubStarter(window_seconds=settings.hub_start_seconds)),
+        tools=HOST_TOOL_CATALOG,
+    )
     modes = AcpModes(settings)
     mapper = AcpUpdateMapper()
     gate_mapper = GatePermissionMapper(settings.reject_words)
     journal = AcpSessionJournal(hub, settings, channel, mapper)
     kept = AcpJournalingChannel(channel, journal, SESSION_REPLAY)
     gates = AcpGatePrompter(kept, hub, settings, modes, mapper, gate_mapper, HOST_TOOL_CATALOG)
+    bootstrap: AcpBootstrapInterface | None = None
+    if doctor_probes or connector is not None or postgres is not None:
+        bootstrap = AcpBootstrap(
+            settings,
+            DoctorChecks(doctor_probes) if doctor_probes else None,
+            connector,
+            postgres,
+            channel,
+            mapper,
+            lock
+            if lock is not None
+            else ServeLock(
+                acp_state_dir(Path.cwd() / "vibey.toml"), lock_file=ACP_BOOTSTRAP_LOCK_FILE
+            ),
+            modes,
+        )
 
     def new_turn() -> AcpPromptTurnInterface:
         return AcpPromptTurn(kept, hub, settings, modes, mapper, HUB_CHAT, HOST_TOOL_CATALOG, gates)
@@ -1485,6 +1570,7 @@ def build_acp_agent(
         journal=journal,
         version=__version__,
         new_id=lambda: str(uuid4()),
+        bootstrap=bootstrap,
     )
 
 

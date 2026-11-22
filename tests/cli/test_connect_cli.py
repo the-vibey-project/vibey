@@ -7,6 +7,7 @@ import json
 from pathlib import Path
 
 import pytest
+import typer
 from typer.testing import CliRunner
 
 from vibey.cli.connect import CONNECT_COMMAND, ConnectCommand
@@ -92,3 +93,21 @@ def test_connect_rejects_unknown_client_with_exit_2() -> None:
     result = runner.invoke(app, ["connect", "--client", "nope"])
     assert result.exit_code == 2
     assert "unknown client 'nope'" in result.output
+
+
+def test_connect_refuses_a_config_that_resolves_outside_home(tmp_path: Path) -> None:
+    home, outside = tmp_path / "home", tmp_path / "outside"
+    (home / ".cursor").mkdir(parents=True)
+    outside.mkdir()
+    (outside / "mcp.json").write_text("{}")
+    (home / ".cursor" / "mcp.json").symlink_to(outside / "mcp.json")
+    installer = HostInstaller(
+        home_dir=lambda: home, project_dir=lambda: tmp_path, platform="linux", which=lambda _n: None
+    )
+    command = ConnectCommand(installer=installer)
+
+    with pytest.raises(typer.Exit) as stopped:
+        command.run(clients=["cursor"], yes=True, dry_run=False, list_clients=False)
+
+    assert stopped.value.exit_code == 1
+    assert (outside / "mcp.json").read_text() == "{}"

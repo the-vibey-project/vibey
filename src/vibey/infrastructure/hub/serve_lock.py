@@ -18,13 +18,17 @@ from pathlib import Path
 from typing import Final
 
 LOCK_FILE: Final = "serve.lock"
+ACP_BOOTSTRAP_LOCK_FILE: Final = "acp-bootstrap.lock"
+"""The same lock, held by a `vibey acp` while it changes this computer (connects clients,
+installs PostgreSQL), so a second editor window leaves that to the first (SP-ACP)."""
 
 
 class ServeLock:
-    """The single-instance lock of the hub under `state_dir`."""
+    """The single-instance lock of the hub under `state_dir`, or of another single-holder job
+    named by `lock_file`."""
 
-    def __init__(self, state_dir: Path) -> None:
-        self._path = state_dir / LOCK_FILE
+    def __init__(self, state_dir: Path, *, lock_file: str = LOCK_FILE) -> None:
+        self._path = state_dir / lock_file
         self._state_dir = state_dir
         self._fd: int | None = None
 

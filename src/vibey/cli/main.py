@@ -23,6 +23,8 @@ from uuid import UUID, uuid4
 
 import typer
 
+from vibey.application.acp.doctor_checks import DoctorChecks
+from vibey.application.acp.dto import DoctorResult
 from vibey.application.design import DesignEvent
 from vibey.application.design_acceptance import DesignAcceptanceService
 from vibey.application.design_auto_accept import DesignAutoAccept
@@ -52,6 +54,7 @@ from vibey.cli.doctor_output import (
     JsonDoctorOutput,
     TextDoctorOutput,
 )
+from vibey.cli.doctor_probes import LOCAL_DATABASE_DOCTOR, LOCAL_DOCTOR
 from vibey.cli.driver import driver_app
 from vibey.cli.engines import ENGINES
 from vibey.cli.errors import EXIT_USAGE, guard, guarded
@@ -131,7 +134,6 @@ from vibey.infrastructure.engines.ollama_chat import (
     OLLAMA_URL_ENV,
     OllamaChatClient,
 )
-from vibey.infrastructure.engines.ollama_residency import OllamaResidency
 from vibey.infrastructure.engines.scripted_design import ScriptedDesignProvider
 from vibey.infrastructure.engines.scripted_visual import ScriptedVisualProvider
 from vibey.infrastructure.engines.wire_log import WIRE_LOG_ENV, default_wire_log_path
@@ -628,25 +630,9 @@ def _local_engines_from_toml(root: Path | None = None) -> LocalEngineSettings:
     return LocalEngineSettings.from_toml((root or Path.cwd()) / "vibey.toml", environ=os.environ)
 
 
-async def _passwordless_reach_section() -> bool:
-    """`vibey doctor`'s password-less-access line for the app DSN's database: FAIL, PASS
-    or UNKNOWN (SECURITY.md §5). False on FAIL: sub-doctrine 10.j (ADR-0061) makes
-    scram-sha-256 the only way in, so a password-less login is a failure, not a choice.
-
-    A module-level function because it is `doctor`'s own step, shared by nothing else,
-    like `_postgres_status_line` beside it; the check itself is
-    `PasswordlessReachProbe`.
-    """
-    from vibey.infrastructure.db.passwordless_reach import PasswordlessReachProbe, ReachVerdict
-
-    name = "db-passwordless"
-    dsn = os.environ.get("VIBEY_PG_URL", "").strip()
-    if not dsn:
-        typer.echo(f"UNKNOWN {name:<20} VIBEY_PG_URL is not set; nothing to check")
-        return True
-    finding = await PasswordlessReachProbe().probe(dsn)
-    typer.echo(f"{finding.verdict.mark} {name:<20} {finding.detail}")
-    return finding.verdict is not ReachVerdict.FAIL
+_passwordless_reach_section = LOCAL_DATABASE_DOCTOR.passwordless
+"""`vibey doctor`'s password-less-access line (SECURITY.md §5), now in `cli/doctor_probes.py`;
+kept under this name for the same reason as `_database_security_section`."""
 
 
 def _postgres_status_line(status: PostgresStatus) -> str:
@@ -1967,47 +1953,39 @@ def doctor(
             out.postgres_detail(local_postgres_status.detail)
             out.finish(False)
             raise typer.Exit(1)
-        # The database section. ADR-0055: whenever there is a database to ask, ask
-        # whether the application's role could rewrite the ledger -- a single-DSN install
-        # fails here until the roles are split, so the step cannot be forgotten silently
-        # (12.e). Beside it: keeping VIBEY_PG_URL out of every model-driven process
-        # protects nothing if the database lets the worker's OS user in without it.
-        database_ok = await out.captured(_database_security_section)
-        # TODO: `db-passwordless` (below) overlaps ADR-0055's `local-auth` (above); both
-        # now FAIL (sub-doctrine 10.j, ADR-0061); reviewers to decide whether to consolidate.
-        reach_ok = await out.captured(_passwordless_reach_section)
-        # A hub listening where vibey.toml does not declare it may is a FAIL (ADR-0067).
-        hub_ok = out.captured_sync(SERVE.exposure_line)
-        # A model Ollama holds at a context far above the one vibey asks for is reloaded by
-        # the first request, which is how a warm-up becomes a timeout. Said as a WARN, never
-        # a failure, and only for a host that runs a local engine at all.
-        if local.any_enabled:
-            out.say(await OllamaResidency().line(os.environ))
-        # Sub-doctrine 8.i: the window, the zone and where the location came from (10.f).
-        # A host no source could place is a FAIL -- the fallback times then rule.
-        sabbath_lines, sabbath_ok = SABBATH.doctor_lines()
-        out.lines(sabbath_lines)
-        # Gates waiting on a person nobody will tell: reported, not failed -- the default
-        # is notifications off, and the gates are still listed by `vibey gates`.
-        out.say(await GATE_NOTICE_DOCTOR.line())
-        # #1189: whether the worker and the delivery bridge are kept running. A missing
-        # supervisor is a WARN, a FAIL with `[supervisor] required = true` (12.e).
-        supervisor_lines, supervisor_ok = SUPERVISOR.doctor_lines()
-        out.lines(supervisor_lines)
-        # The machine itself: the newest weekly host-health record, its age and when the
-        # forecast says it needs replacing. Missing or stale is a WARN, a FAIL with
-        # `[host_health] required = true` (12.e).
-        health_lines, health_ok = HOST_HEALTH.doctor_lines()
-        out.lines(health_lines)
-        failed = (
-            (conformance and not all_ok)
-            or not database_ok
-            or not reach_ok
-            or not hub_ok
-            or not sabbath_ok
-            or not supervisor_ok
-            or not health_ok
+        # The local sections, one `DoctorChecks` pass in the order they have always printed
+        # (cli/doctor_probes.py; `vibey acp`'s bootstrap runs the same checks):
+        # - the database: ADR-0055's ledger guard and password-less access -- a single-DSN
+        #   install fails until the roles are split, so the step cannot be forgotten silently
+        #   (12.e) -- and beside it whether the database lets the worker's OS user in with no
+        #   password at all, which keeping VIBEY_PG_URL out of model processes cannot cover.
+        #   TODO: `db-passwordless` overlaps ADR-0055's `local-auth`; both now FAIL
+        #   (sub-doctrine 10.j, ADR-0061); reviewers to decide whether to consolidate.
+        # - a hub listening where vibey.toml does not declare it may (ADR-0067), a FAIL;
+        # - what Ollama holds, only when a local engine runs: a model held far above the context
+        #   vibey asks for is reloaded by the first request -- a WARN, never a failure;
+        # - sub-doctrine 8.i's window, zone and location source (10.f); an unplaced host FAILs;
+        # - gates waiting on a person nobody will tell: reported, never failed;
+        # - #1189, whether the worker and the delivery bridge are kept running, and the newest
+        #   host-health record: missing is a WARN, a FAIL when `required = true` (12.e).
+        # Each is built from the name it stands under here when doctor runs.
+        checks = DoctorChecks(
+            LOCAL_DOCTOR.for_doctor(
+                database_security=_database_security_section,
+                passwordless_reach=_passwordless_reach_section,
+                hub_exposure=SERVE.exposure_line,
+                sabbath=SABBATH.doctor_lines,
+                gate_notices=GATE_NOTICE_DOCTOR.line,
+                supervisor=SUPERVISOR.doctor_lines,
+                host_health=HOST_HEALTH.doctor_lines,
+                ollama_enabled=lambda: local.any_enabled,
+            )
         )
+        found: list[DoctorResult] = []
+        async for section, results in checks.each():
+            section.show(out, results)
+            found.extend(results)
+        failed = (conformance and not all_ok) or not checks.passed(found)
         out.finish(not failed)
         if failed:
             raise typer.Exit(1)
@@ -2059,30 +2037,9 @@ def doctor(
     asyncio.run(run_doctor())
 
 
-async def _database_security_section() -> bool:
-    """`vibey doctor`'s database section: the ledger guard and password-less access
-    (ADR-0055), printed as PASS, FAIL or UNKNOWN. False when either check failed.
-
-    A module-level function because it is `doctor`'s own step, shared by nothing
-    else; the checks themselves live in `DatabaseSecurityChecks`.
-    """
-    from vibey.infrastructure.cluster_preflight import DatabaseSecurityChecks, check_database
-
-    dsn = os.environ.get("VIBEY_PG_URL", "").strip()
-    if not dsn:
-        typer.echo(f"UNKNOWN {'ledger-guard':<20} VIBEY_PG_URL is not set; nothing to check")
-        return True
-    connected, conn = await check_database(dsn)
-    if conn is None:
-        typer.echo(f"FAIL {'ledger-guard':<20} {connected.detail}")
-        return False
-    try:
-        checks = await DatabaseSecurityChecks().run(conn, dsn)
-    finally:
-        await conn.close()
-    for check in checks:
-        typer.echo(f"{check.mark} {check.name:<20} {check.detail}")
-    return all(check.ok for check in checks)
+_database_security_section = LOCAL_DATABASE_DOCTOR.security
+"""`vibey doctor`'s database section (ADR-0055), now in `cli/doctor_probes.py`. Kept under this
+name, which `doctor` reads each time it runs, so what stands here is what doctor runs."""
 
 
 @app.command("migrate")
