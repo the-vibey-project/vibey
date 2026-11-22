@@ -537,3 +537,11 @@ def test_well_known_nat64_and_ipv4_mapped_forms_are_judged_by_the_ipv4_inside(
 
 def test_a_site_local_literal_is_refused_in_a_url() -> None:
     assert "public" in _refused("http://[fec0::1]/")
+
+
+@pytest.mark.parametrize("location", ["http://[::1", "http://[zz]/", "https://[", "//[::1/x"])
+def test_a_redirect_location_that_cannot_be_read_is_a_refusal_naming_no_url(location: str) -> None:
+    here = WEB_TOOL_POLICY.target("https://example.com/a", ANY)
+    with pytest.raises(WebToolRefused) as raised:
+        WEB_TOOL_POLICY.follow(here, location, ANY)
+    assert str(raised.value).startswith("refused: ") and "::1" not in str(raised.value)

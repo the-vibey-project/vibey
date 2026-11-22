@@ -58,8 +58,12 @@ class WebSearchPortInterface(Protocol):
 class WebFetchPortInterface(Protocol):
     """A guarded fetch of one page: connects only to checked public addresses."""
 
-    async def fetch(self, target: WebTarget, settings: WebToolSettings) -> WebPage:
-        """The page, or `WebToolRefused` / `WebToolFailed` carrying the hosts reached."""
+    async def fetch(
+        self, target: WebTarget, settings: WebToolSettings, reached: list[str] | None = None
+    ) -> WebPage:
+        """The page, or `WebToolRefused` / `WebToolFailed` carrying the hosts reached. Each host
+        is added to `reached`, when given, as the fetch reaches it, so the caller knows where the
+        fetch went whatever fails afterwards."""
         ...
 
 

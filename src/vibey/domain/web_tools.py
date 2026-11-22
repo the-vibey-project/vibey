@@ -138,6 +138,8 @@ class WebToolRefused(VibeyError):
         super().__init__(message)
         self.hosts = hosts
         """The hosts a fetch had already reached when it was refused (a redirect's, say)."""
+        self.audited: bool | None = None
+        """Whether the hub wrote this refusal's record; None until it tried."""
 
 
 class WebToolFailed(VibeyError):
@@ -151,6 +153,8 @@ class WebToolFailed(VibeyError):
         """The backends asked before it failed: a query that reached Brave left the computer."""
         self.hosts = hosts
         """The hosts a fetch reached before it failed."""
+        self.audited: bool | None = None
+        """Whether the hub wrote this failure's record; None until it tried."""
 
 
 class WebBudgetExhausted(VibeyError):
@@ -294,7 +298,14 @@ class WebToolPolicy:
         )
 
     def follow(self, current: WebTarget, location: str, settings: WebToolSettings) -> WebTarget:
-        landed = self.target(urljoin(current.url, location), settings)
+        try:
+            joined = urljoin(current.url, location)
+        except ValueError as exc:
+            # The page's server wrote the location: say why it is unreadable, never what it was.
+            raise WebToolRefused(
+                f"refused: the redirect's location could not be read ({type(exc).__name__})"
+            ) from None
+        landed = self.target(joined, settings)
         if current.scheme == "https" and landed.scheme == "http":
             raise WebToolRefused("refused: a redirect from https down to http")
         return landed

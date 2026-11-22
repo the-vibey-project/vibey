@@ -720,3 +720,61 @@ def test_a_text_codec_that_still_raises_falls_back_to_utf8(monkeypatch: pytest.M
 
     monkeypatch.setattr(guarded, "TEXT_CODECS", guarded.TEXT_CODECS | {"idna"})
     assert GuardedPageFetch.decoded(b"\x80ok", "text/plain; charset=idna") == "�ok"
+
+
+def test_a_malformed_location_is_a_refusal_with_the_host_it_came_from() -> None:
+    hop = Connection(Response(302, {"Location": "http://[::1"}))
+    reached: list[str] = []
+    fetcher = GuardedPageFetch(resolve=World([]).resolve, connect=World([hop]).connect)
+    with pytest.raises(WebToolRefused) as raised:
+        asyncio.run(fetcher.fetch(_target("https://drop.example/?d=x"), SETTINGS, reached))
+    assert raised.value.hosts == ("drop.example",) and reached == ["drop.example"]
+
+
+def test_an_unexpected_failure_after_a_redirect_keeps_both_hosts(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Text extraction (or anything else the hub did not expect) failing after the page answered
+    is a failure that still names every host the fetch reached."""
+    import vibey.infrastructure.web.guarded_fetch as guarded
+
+    def broken(markup: str) -> tuple[str, str]:
+        raise RecursionError("too deep")
+
+    monkeypatch.setattr(guarded, "html_to_text", broken)
+    hop = Connection(Response(302, {"Location": "https://cdn.example/x"}))
+    world = World([hop, _page()])
+    reached: list[str] = []
+    fetcher = GuardedPageFetch(resolve=world.resolve, connect=world.connect)
+    with pytest.raises(WebToolFailed, match="RecursionError") as raised:
+        asyncio.run(fetcher.fetch(_target("https://docs.example/"), SETTINGS, reached))
+    assert raised.value.hosts == ("docs.example", "cdn.example")
+    assert reached == ["docs.example", "cdn.example"]
+    assert "too deep" not in str(raised.value)
+
+
+def test_a_cancelled_request_cancels_the_fetch_so_nothing_more_is_sent() -> None:
+    """The hub shutting down cancels the request's task; the fetch's thread is cancelled with
+    it, and a connection it makes afterwards carries no request."""
+    gate = threading.Event()
+    conn = _page()
+
+    class Slow(World):
+        def connect(self, scheme: str, host: str, port: int, ip: str, timeout: float) -> Connection:
+            gate.wait(5)
+            return super().connect(scheme, host, port, ip, timeout)
+
+    world = Slow([conn])
+    fetcher = GuardedPageFetch(resolve=world.resolve, connect=world.connect)
+
+    async def drive() -> None:
+        task = asyncio.ensure_future(fetcher.fetch(_target("https://slow.example/"), SETTINGS))
+        await asyncio.sleep(0)
+        task.cancel()
+        with pytest.raises(asyncio.CancelledError):
+            await task
+
+    asyncio.run(drive())
+    gate.set()
+    _joined()
+    assert conn.closed and conn.requests == []

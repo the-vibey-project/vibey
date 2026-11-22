@@ -28,6 +28,9 @@ class GuardedPageFetchInterface(Protocol):
         """`raw` decoded with the page's declared text codec, else UTF-8; never raises."""
         ...
 
-    async def fetch(self, target: WebTarget, settings: WebToolSettings) -> WebPage:
-        """The page, or `WebToolRefused` / `WebToolFailed` carrying the hosts reached."""
+    async def fetch(
+        self, target: WebTarget, settings: WebToolSettings, reached: list[str] | None = None
+    ) -> WebPage:
+        """The page, or `WebToolRefused` / `WebToolFailed` carrying the hosts reached; each host
+        is also added to `reached`, when given, as the fetch reaches it."""
         ...

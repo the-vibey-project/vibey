@@ -63,7 +63,9 @@ class Fetch:
     def __init__(self) -> None:
         self.asked: list[WebTarget] = []
 
-    async def fetch(self, target: WebTarget, settings: WebToolSettings) -> WebPage:
+    async def fetch(
+        self, target: WebTarget, settings: WebToolSettings, reached: list[str] | None = None
+    ) -> WebPage:
         self.asked.append(target)
         return WebPage(
             url=target.url,
@@ -354,3 +356,18 @@ async def test_the_brave_key_never_leaves_the_hub_in_a_response_or_a_log(
     for text in (backup.text, failed.text, caplog.text, captured.out, captured.err):
         assert FAKE_KEY not in text
         assert QUERY not in text
+
+
+async def test_an_error_answer_says_whether_its_record_was_written() -> None:
+    class Down(Audit):
+        async def record(self, *args: Any) -> int:
+            raise RuntimeError("ledger down")
+
+    app, _, _ = _app(audit=Down())
+    async with _client(app) as client:
+        refused = await client.post(FETCH, headers=AGENT, json={"url": "http://127.0.0.1/"})
+    assert refused.status_code == 422 and refused.json()["audited"] is False
+    app, _, _ = _app()
+    async with _client(app) as client:
+        refused = await client.post(FETCH, headers=AGENT, json={"url": "http://127.0.0.1/"})
+    assert refused.json()["audited"] is True

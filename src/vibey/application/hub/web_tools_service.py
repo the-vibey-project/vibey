@@ -31,6 +31,7 @@ Declared by `interfaces/web_tools_service_interface.py::WebToolsServiceInterface
 
 from __future__ import annotations
 
+import asyncio
 import math
 import secrets
 import sys
@@ -117,14 +118,17 @@ class WebToolsService:
             answer = await self._search.search(asked, limit)
         except WebToolFailed as failed:
             backend = "+".join(failed.tried) or "none"
-            await self._quietly("search", principal, "failed", backend, project_id)
+            failed.audited = await self._quietly("search", principal, "failed", backend, project_id)
             raise
         except WebToolUnavailable:
             raise  # the hub's environment sets search up wrongly: nothing was sent
         except Exception as exc:  # noqa: BLE001 - any other failure is recorded, then named
             kind = type(exc).__name__
-            await self._quietly("search", principal, "failed", "unknown", project_id, reason=kind)
-            raise WebToolFailed(f"the search failed ({kind})") from None
+            wrapped = WebToolFailed(f"the search failed ({kind})")
+            wrapped.audited = await self._quietly(
+                "search", principal, "failed", "unknown", project_id, reason=kind
+            )
+            raise wrapped from None
         audited = await self._audited("search", principal, answer.backend, project_id)
         return {
             "untrusted": True,
@@ -143,21 +147,47 @@ class WebToolsService:
         self._authorise(principal, HubAction.WEB_FETCH, "fetch a web page")
         self._spend(principal, "fetch", self._settings.fetches_per_hour, "fetches_per_hour")
         await self._audit.ready(project_id)
+        # Where the fetch went, as it goes: the one fact its record exists for, kept whatever
+        # fails afterwards.
+        reached: list[str] = []
+        named: tuple[str, ...] = ()
+
+        def hosts(carried: tuple[str, ...] = ()) -> tuple[str, ...]:
+            return carried or tuple(reached) or named
+
         try:
             target = self._policy.target(url, self._settings)
-            page = await self._fetch.fetch(target, self._settings)
+            named = (target.host,)
+            page = await self._fetch.fetch(target, self._settings, reached)
         except WebToolRefused as refused:
-            await self._quietly(
-                "fetch", principal, "refused", DIRECT, project_id, refused.hosts, str(refused)
+            refused.audited = await self._quietly(
+                "fetch",
+                principal,
+                "refused",
+                DIRECT,
+                project_id,
+                hosts(refused.hosts),
+                str(refused),
             )
             raise
         except WebToolFailed as failed:
-            await self._quietly("fetch", principal, "failed", DIRECT, project_id, failed.hosts)
+            failed.audited = await self._quietly(
+                "fetch", principal, "failed", DIRECT, project_id, hosts(failed.hosts)
+            )
+            raise
+        except asyncio.CancelledError:
+            # The request went away (the hub stopping): what was sent is still recorded.
+            await self._quietly(
+                "fetch", principal, "failed", DIRECT, project_id, hosts(), "CancelledError"
+            )
             raise
         except Exception as exc:  # noqa: BLE001 - any other failure is recorded, then named
             kind = type(exc).__name__
-            await self._quietly("fetch", principal, "failed", DIRECT, project_id, reason=kind)
-            raise WebToolFailed(f"the page could not be fetched ({kind})") from None
+            wrapped = WebToolFailed(f"the page could not be fetched ({kind})", hosts=hosts())
+            wrapped.audited = await self._quietly(
+                "fetch", principal, "failed", DIRECT, project_id, hosts(), kind
+            )
+            raise wrapped from None
         audited = await self._audited("fetch", principal, DIRECT, project_id, page.hosts)
         marker = self._nonce()
         heading = f"Title: {page.title}\n\n" if page.title else ""
@@ -244,10 +274,16 @@ class WebToolsService:
         project_id: UUID | None,
         hosts: tuple[str, ...] = (),
         reason: str | None = None,
-    ) -> None:
-        """Record a refusal or a failure; a record that cannot be written never hides the
-        refusal or the failure it describes (the caller raises that next)."""
+    ) -> bool:
+        """Record a refusal or a failure; whether it was written. A record that cannot be
+        written never hides the refusal or the failure it describes (the caller raises that
+        next, carrying `audited: false`), and is said on standard error."""
         try:
             await self._record(tool, principal, outcome, backend, project_id, hosts, reason)
-        except Exception:  # noqa: BLE001 - the refusal or failure is what the caller is told
-            return
+        except Exception as exc:  # noqa: BLE001 - the refusal or failure is what the caller is told
+            self._warn(
+                f"web tools: the ledger record of a {outcome} {tool} by {principal.name} could "
+                f"not be written ({type(exc).__name__}); its answer is marked audited: false"
+            )
+            return False
+        return True

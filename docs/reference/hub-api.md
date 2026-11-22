@@ -185,12 +185,17 @@ when it cannot, it refuses with 503 and sends nothing. After the act it writes a
 `WebFetched` event: the principal, the tool, the outcome (`ok`, `failed` -- any failure, one the
 hub did not expect named by its class alone -- or `refused`), the backend (`searxng`, `brave`,
 `searxng+brave` for a search whose backup failed too, `unknown` when the search failed in a way
-that does not say, `direct` for a fetch) and, for a fetch, the hosts it reached. Never the query
+that does not say, `direct` for a fetch) and, for a fetch, every host it reached -- kept as the
+fetch goes, so whatever fails afterwards (a redirect the hub cannot read is a refusal) the record
+still says where it went. Never the query
 and never the URL. It goes to the **latest** project's ledger -- the one `vibey ledger search`
 reads when no project is named -- and, when the caller named a `project_id`, to that one's too:
 a caller can add a ledger, never take the latest away. If the write still fails after the act
 (the database failed in between), the answer is returned anyway, marked `"audited": false`, and
-the hub says so on its standard error; a crash in that window loses that one record. Refusals of
+the hub says so on its standard error; a refusal or failure whose record could not be written
+says the same (its error body carries `"audited": false`, `true` when it was written). A request
+cancelled mid-fetch (the hub stopping) cancels the fetch, which sends nothing more, and is recorded
+as `failed` when the ledger still takes it. A crash in that window loses that one record. Refusals of
 a query's bounds and budget refusals send nothing and are not recorded. Find the records with
 `vibey ledger search --kind WebFetched` or the `vibey_ledger` tool.
 

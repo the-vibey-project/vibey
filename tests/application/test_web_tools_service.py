@@ -66,9 +66,14 @@ class Fetch:
         )
         self.error = error
         self.asked: list[WebTarget] = []
+        self.reach: tuple[str, ...] = ()
 
-    async def fetch(self, target: WebTarget, settings: WebToolSettings) -> WebPage:
+    async def fetch(
+        self, target: WebTarget, settings: WebToolSettings, reached: list[str] | None = None
+    ) -> WebPage:
         self.asked.append(target)
+        if reached is not None:
+            reached.extend(self.reach)
         if self.error is not None:
             raise self.error
         return self.page
@@ -323,7 +328,7 @@ async def test_any_failure_after_the_act_began_is_recorded_by_its_class_and_name
         "principal": "agent",
         "outcome": "failed",
         "backend": "direct",
-        "hosts": [],
+        "hosts": ["example.com"],  # where the URL was going, whatever failed (R2-1)
         "reason": type(error).__name__,
     }
     assert searched == {
@@ -408,3 +413,51 @@ async def test_a_refusal_whose_record_cannot_be_written_is_still_a_refusal() -> 
     audit = Audit(record_error=WebToolUnavailable("ledger down"))
     with pytest.raises(WebToolRefused):
         await _service(audit=audit).fetch(AGENT, "http://127.0.0.1/")
+
+
+async def test_an_unexpected_failure_keeps_every_host_the_fetch_reached() -> None:
+    """The one fact a fetch record exists for: where it went. Whatever failed, the record names
+    the hosts the fetch had reached (R2-1)."""
+    audit = Audit()
+    fetch = Fetch(error=ValueError("Invalid IPv6 URL"))
+    fetch.reach = ("drop.example", "cdn.example")
+    with pytest.raises(WebToolFailed, match="ValueError"):
+        await _service(fetch=fetch, audit=audit).fetch(AGENT, SECRET_URL)
+    ((_, payload, _, _),) = audit.records
+    assert payload["hosts"] == ["drop.example", "cdn.example"]
+    # A port that reached nothing yet still names the host the URL was for.
+    bare = Audit()
+    with pytest.raises(WebToolFailed):
+        await _service(fetch=Fetch(error=KeyError("x")), audit=bare).fetch(AGENT, SECRET_URL)
+    assert bare.records[0][1]["hosts"] == ["example.com"]
+
+
+async def test_a_failure_whose_record_cannot_be_written_says_so() -> None:
+    warned: list[str] = []
+    audit = Audit(record_error=RuntimeError("db gone"))
+    with pytest.raises(WebToolRefused) as refused:
+        await _service(audit=audit, warned=warned).fetch(AGENT, "http://127.0.0.1/")
+    assert refused.value.audited is False
+    with pytest.raises(WebToolFailed) as failed:
+        await _service(fetch=Fetch(error=WebToolFailed("reset")), audit=audit, warned=warned).fetch(
+            AGENT, SECRET_URL
+        )
+    assert failed.value.audited is False
+    assert len(warned) == 2 and all("RuntimeError" in line for line in warned)
+    recorded = Audit()
+    with pytest.raises(WebToolRefused) as kept:
+        await _service(audit=recorded).fetch(AGENT, "http://127.0.0.1/")
+    assert kept.value.audited is True
+
+
+async def test_a_cancelled_fetch_is_recorded_as_failed_with_the_hosts_so_far() -> None:
+    import asyncio
+
+    audit = Audit()
+    fetch = Fetch(error=asyncio.CancelledError())
+    fetch.reach = ("slow.example",)
+    with pytest.raises(asyncio.CancelledError):
+        await _service(fetch=fetch, audit=audit).fetch(AGENT, SECRET_URL)
+    ((_, payload, _, _),) = audit.records
+    assert payload["outcome"] == "failed" and payload["reason"] == "CancelledError"
+    assert payload["hosts"] == ["slow.example"]

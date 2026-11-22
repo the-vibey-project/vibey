@@ -110,8 +110,11 @@ class _Live:
     has given up (`cancel`). Once cancelled, nothing more is resolved, connected, sent or read: a
     connection made after the cancel is closed the moment it is handed over."""
 
-    def __init__(self, deadline: float, clock: Callable[[], float]) -> None:
-        self.hosts: list[str] = []
+    def __init__(
+        self, deadline: float, clock: Callable[[], float], hosts: list[str] | None = None
+    ) -> None:
+        self.hosts: list[str] = hosts if hosts is not None else []
+        """The caller's own list when it gave one, so what was reached outlives any failure."""
         self._deadline = deadline
         self._clock = clock
         self._lock = threading.Lock()
@@ -190,11 +193,13 @@ class GuardedPageFetch:
             return []
         return [str(info[4][0]) for info in infos]
 
-    async def fetch(self, target: WebTarget, settings: WebToolSettings) -> WebPage:
+    async def fetch(
+        self, target: WebTarget, settings: WebToolSettings, reached: list[str] | None = None
+    ) -> WebPage:
         loop = asyncio.get_running_loop()
         done: asyncio.Future[WebPage] = loop.create_future()
         timeout = settings.timeout_seconds
-        live = _Live(self._clock() + timeout, self._clock)
+        live = _Live(self._clock() + timeout, self._clock, reached)
 
         def settle(result: WebPage | None, error: BaseException | None) -> None:
             if done.done():
@@ -212,8 +217,16 @@ class GuardedPageFetch:
                     None,
                     WebToolFailed(self._late(timeout), hosts=tuple(live.hosts)),
                 )
-            except BaseException as exc:  # noqa: BLE001 - handed to the waiting caller as is
+            except (WebToolRefused, WebToolFailed) as exc:
                 outcome = (None, exc)
+            except BaseException as exc:  # noqa: BLE001 - named by its class, with the hosts
+                outcome = (
+                    None,
+                    WebToolFailed(
+                        f"the page could not be fetched ({type(exc).__name__})",
+                        hosts=tuple(live.hosts),
+                    ),
+                )
             else:
                 outcome = (page, None)
             try:
@@ -227,6 +240,9 @@ class GuardedPageFetch:
         except TimeoutError:
             live.cancel()
             raise WebToolFailed(self._late(timeout), hosts=tuple(live.hosts)) from None
+        except asyncio.CancelledError:
+            live.cancel()  # the request went away (the hub stopping): send nothing more
+            raise
 
     @staticmethod
     def _late(timeout: float) -> str:

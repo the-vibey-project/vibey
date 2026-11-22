@@ -1093,7 +1093,12 @@ class HubAppFactory:
     def _errors(app: FastAPI) -> None:
         async def refused(_request: Request, exc: Exception) -> JSONResponse:
             status = next((code for kind, code in ERROR_STATUS if isinstance(exc, kind)), 500)
-            return JSONResponse({"detail": str(exc)}, status_code=status)
+            body: dict[str, object] = {"detail": str(exc)}
+            audited = getattr(exc, "audited", None)
+            if isinstance(audited, bool):
+                # A web tool's refusal or failure says whether its ledger record was written.
+                body["audited"] = audited
+            return JSONResponse(body, status_code=status)
 
         for kind, _code in ERROR_STATUS:
             app.add_exception_handler(kind, refused)
