@@ -224,3 +224,42 @@ def test_a_config_folder_symlinked_out_of_home_is_not_written(tmp_path: Path) ->
     cursor = next(r for r in results if r.name == "cursor")
     assert cursor.mark == "UNKNOWN" and "not inside your home folder" in cursor.detail
     assert list(outside.iterdir()) == []
+
+
+def test_zed_is_connected_as_an_acp_agent_server_when_it_is_installed(tmp_path: Path) -> None:
+    connector, home, _ = _connector(tmp_path)
+    (home / ".config" / "zed").mkdir(parents=True)
+
+    results = asyncio.run(connector.connect_detected())
+
+    settings = json.loads((home / ".config" / "zed" / "settings.json").read_text())
+    assert settings["agent_servers"]["vibey"] == {
+        "type": "custom",
+        "command": "/usr/local/bin/vibey",
+        "args": ["acp"],
+        "env": {},
+    }
+    assert {r.name: r.mark for r in results}["zed"] == "PASS"
+
+
+def test_commented_zed_settings_are_a_warn_with_the_snippet_and_never_rewritten(
+    tmp_path: Path,
+) -> None:
+    connector, home, _ = _connector(tmp_path)
+    (home / ".cursor").mkdir()
+    settings = home / ".config" / "zed" / "settings.json"
+    settings.parent.mkdir(parents=True)
+    commented = '// Zed settings\n{\n  "theme": "One Dark",\n}\n'
+    settings.write_text(commented)
+
+    results = {r.name: r for r in asyncio.run(connector.connect_detected())}
+
+    assert settings.read_text() == commented
+    assert not (settings.parent / "settings.json.vibey.bak").exists()
+    assert results["zed"].mark == "WARN"
+    assert results["zed"].detail.endswith(
+        '"agent_servers": {"vibey": {"type": "custom", "command": "/usr/local/bin/vibey", '
+        '"args": ["acp"], "env": {}}}'
+    )
+    assert results["cursor"].mark == "PASS"
+    assert not connector.already_connected()

@@ -1,5 +1,9 @@
 # Made with ❤️ by [Vibey](https://the-vibey-project.github.io/vibey/), Developed by [Adam Matthew Steinberger](https://vibewithadam.matthewsteinberger.com/) ([@adammatthewsteinberger](https://github.com/adammatthewsteinberger/)).
-"""`vibey acp`'s own `vibey connect` step: register `vibey mcp` with the clients installed here.
+"""`vibey acp`'s own `vibey connect` step: register vibey with the clients installed here.
+
+Each client gets the entry it speaks: `vibey mcp` for the MCP clients, `vibey acp` for Zed (an
+external agent server). A Zed settings file with comments is never rewritten: it is a `WARN`
+carrying the snippet to paste, unless it already carries the entry.
 
 `vibey connect` asks before it writes; this step runs under the operator's standing grant
 (`[acp] auto_bootstrap` and `auto_connect`), so it is held narrower than the command:

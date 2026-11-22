@@ -47,12 +47,15 @@ class LocalDoctorProbesInterface(Protocol):
         supervisor: Callable[[], tuple[list[str], bool]],
         host_health: Callable[[], tuple[list[str], bool]],
         ollama_enabled: Callable[[], bool],
+        llm_tooling: Callable[[], tuple[list[str], bool]] | None = None,
     ) -> tuple[LocalDoctorProbeInterface, ...]:
-        """The sections `vibey doctor` runs, from the printing helpers it names."""
+        """The sections `vibey doctor` runs, from the printing helpers it names; the LLM
+        tooling section last, when `llm_tooling` is given."""
         ...
 
     def for_editor(self) -> tuple[LocalDoctorProbeInterface, ...]:
-        """The same sections for `vibey acp`: nothing printed, the database read as lines."""
+        """The same sections for `vibey acp`: nothing printed, the database read as lines, and
+        the LLM tooling section last."""
         ...
 
 

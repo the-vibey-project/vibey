@@ -37,7 +37,7 @@ from vibey.infrastructure.mcp.interfaces.host_installer_interface import HostIns
 
 
 class HostInstaller:
-    """Builds and applies MCP host client registration plans.
+    """Builds and applies host client registration plans (MCP servers, and Zed's ACP agent).
 
     Declared by `interfaces/host_installer_interface.py::HostInstallerInterface`.
     """
@@ -61,14 +61,17 @@ class HostInstaller:
 
     def build_plan(self, requested: Sequence[str] | None = None) -> tuple[ConnectPlanItem, ...]:
         specs = self._catalog.resolve_clients(requested)
-        launch = self._catalog.resolve_launch(
-            which_vibey=self._which("vibey"),
-            python_executable=self._python_executable,
-        )
+        which_vibey = self._which("vibey")
         home = str(self._home_dir())
         proj = str(self._project_dir())
         items: list[ConnectPlanItem] = []
         for spec in specs:
+            # Each client launches what it speaks: `vibey mcp`, or `vibey acp` for Zed.
+            launch = self._catalog.resolve_launch(
+                which_vibey=which_vibey,
+                python_executable=self._python_executable,
+                protocol=spec.protocol,
+            )
             target = Path(
                 spec.config_path(home_dir=home, project_dir=proj, platform=self._platform)
             )
