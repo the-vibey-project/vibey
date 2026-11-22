@@ -49,7 +49,9 @@ class Response:
 
     def read(self, amount: int | None = None) -> bytes:
         self.asked.append(amount)
-        return self._body if amount is None else self._body[:amount]
+        size = len(self._body) if amount is None else amount
+        chunk, self._body = self._body[:size], self._body[size:]
+        return chunk
 
 
 class Connection:
@@ -111,7 +113,9 @@ def test_a_page_is_read_over_the_address_that_was_checked_with_fixed_headers_onl
     conn = _page()
     world = World([conn])
     page = _fetch(world, "https://docs.example/a?b=c")
-    assert world.made == [("https", "docs.example", 443, PUBLIC, 15.0)]
+    ((scheme, host, port, ip, timeout),) = world.made
+    assert (scheme, host, port, ip) == ("https", "docs.example", 443, PUBLIC)
+    assert timeout == pytest.approx(15.0, abs=1.0)  # the time left of the one deadline
     ((method, path, headers),) = conn.requests
     assert (method, path) == ("GET", "/a?b=c")
     assert headers == {
@@ -292,6 +296,7 @@ def test_the_body_is_read_to_the_byte_bound_and_the_text_cut_to_the_character_bo
     page = _fetch(
         World([conn]), "https://big.example/", WebToolSettings(max_bytes=1_000, max_chars=100)
     )
+    # One receive at a time, never more than the bound plus the one byte that says it was cut.
     assert conn._response is not None and conn._response.asked == [1_001]
     assert page.text == "x" * 100 and page.truncated
     short = Connection(Response(200, {"Content-Type": "text/plain"}, b"short"))
@@ -338,6 +343,9 @@ def test_the_whole_fetch_is_bounded_in_time_and_its_socket_is_shut_when_it_runs_
         def __init__(self) -> None:
             self.shut = False
 
+        def settimeout(self, value: float) -> None:
+            assert 0 < value <= 0.2
+
         def shutdown(self, how: int) -> None:
             assert how == socket.SHUT_RDWR
             self.shut = True
@@ -359,6 +367,9 @@ def test_the_whole_fetch_is_bounded_in_time_and_its_socket_is_shut_when_it_runs_
 
 def test_a_socket_that_will_not_shut_still_lets_the_deadline_pass() -> None:
     class Sock:
+        def settimeout(self, value: float) -> None:
+            return None
+
         def shutdown(self, how: int) -> None:
             raise OSError("already gone")
 
@@ -481,3 +492,134 @@ def test_a_fetch_that_ends_after_its_caller_has_gone_says_nothing_to_anyone() ->
         if thread.name == "vibey-web-fetch":
             thread.join(5)
             assert not thread.is_alive()
+
+
+class Clock:
+    """A clock the fakes move forward: real time never passes in these tests."""
+
+    def __init__(self) -> None:
+        self.now = 0.0
+
+    def __call__(self) -> float:
+        return self.now
+
+
+def _joined() -> None:
+    """Every thread the fetch started has ended: nothing outlives a cancelled fetch."""
+    for thread in threading.enumerate():
+        if thread.name in {"vibey-web-fetch", "vibey-web-resolve"}:
+            thread.join(5)
+            assert not thread.is_alive(), thread.name
+
+
+def test_a_resolver_that_answers_after_the_deadline_is_never_followed_by_a_connection() -> None:
+    gate = threading.Event()
+
+    class Late(World):
+        def resolve(self, host: str, port: int) -> list[str]:
+            gate.wait(5)
+            return [PUBLIC]
+
+    world = Late([_page()])
+    with pytest.raises(WebToolFailed, match="within 0.1s"):
+        _fetch(world, "https://late-dns.example/", WebToolSettings(timeout_seconds=0.1))
+    # The fetch's own thread is gone while the resolver still hangs: resolving has its own bound.
+    for thread in threading.enumerate():
+        if thread.name == "vibey-web-fetch":
+            thread.join(2)
+            assert not thread.is_alive()
+    gate.set()
+    _joined()
+    assert world.made == []
+
+
+def test_a_connection_made_after_the_caller_gave_up_is_closed_and_sends_nothing() -> None:
+    gate = threading.Event()
+    conn = _page()
+
+    class SlowConnect(World):
+        def connect(self, scheme: str, host: str, port: int, ip: str, timeout: float) -> Connection:
+            gate.wait(5)
+            return super().connect(scheme, host, port, ip, timeout)
+
+    world = SlowConnect([conn])
+    with pytest.raises(WebToolFailed, match="within"):
+        _fetch(world, "https://slow-connect.example/", WebToolSettings(timeout_seconds=0.1))
+    gate.set()
+    _joined()
+    assert conn.closed and conn.requests == []
+
+
+def test_every_step_is_bounded_by_the_time_left_of_the_one_deadline() -> None:
+    clock = Clock()
+
+    class Ticking(World):
+        def connect(self, scheme: str, host: str, port: int, ip: str, timeout: float) -> Connection:
+            clock.now += 4.0  # each connection takes four of the fifteen seconds
+            return super().connect(scheme, host, port, ip, timeout)
+
+    hops = [Connection(Response(302, {"Location": "/next"})) for _ in range(3)]
+    world = Ticking([*hops, _page()])
+    fetcher = GuardedPageFetch(resolve=world.resolve, connect=world.connect, clock=clock)
+    settings = WebToolSettings(timeout_seconds=15.0, max_redirects=5)
+    with pytest.raises(WebToolFailed, match="within 15s") as raised:
+        asyncio.run(fetcher.fetch(_target("https://hops.example/", settings), settings))
+    # Each connection was given only what was left, never a fresh fifteen seconds.
+    assert [made[4] for made in world.made] == [15.0, 11.0, 7.0, 3.0]
+    assert raised.value.hosts == ("hops.example",) * 4
+    _joined()
+
+
+def test_a_page_that_trickles_stops_when_the_deadline_passes() -> None:
+    clock = Clock()
+
+    class Trickling(Response):
+        def read(self, amount: int | None = None) -> bytes:
+            clock.now += 1.0  # one byte a second, for ever
+            self.asked.append(amount)
+            return b"x"
+
+    conn = Connection(Trickling(200, {"Content-Type": "text/plain"}))
+    world = World([conn])
+    fetcher = GuardedPageFetch(resolve=world.resolve, connect=world.connect, clock=clock)
+    settings = WebToolSettings(timeout_seconds=5.0)
+    with pytest.raises(WebToolFailed, match="within 5s"):
+        asyncio.run(fetcher.fetch(_target("https://trickle.example/", settings), settings))
+    assert conn._response is not None and len(conn._response.asked) == 5
+    assert conn.closed
+    _joined()
+
+
+def test_a_socket_is_given_the_time_left_before_each_blocking_step() -> None:
+    clock = Clock()
+    timeouts: list[float] = []
+
+    class Sock:
+        def settimeout(self, value: float) -> None:
+            timeouts.append(value)
+
+    class Measured(Connection):
+        def request(self, method: str, path: str, headers: dict[str, str]) -> None:
+            timeouts.append(self.timeout)  # what a lazy connect would be bounded by
+            clock.now += 2.0
+            super().request(method, path, headers)
+
+    conn = Measured(Response(200, {"Content-Type": "text/plain"}, b"ok"))
+    conn.sock = Sock()
+    world = World([conn])
+    fetcher = GuardedPageFetch(resolve=world.resolve, connect=world.connect, clock=clock)
+    settings = WebToolSettings(timeout_seconds=10.0)
+    asyncio.run(fetcher.fetch(_target("https://measured.example/", settings), settings))
+    # The socket and the connection before the request, then the socket before the response and
+    # before each receive.
+    assert timeouts == [10.0, 10.0, 8.0, 8.0, 8.0]
+    _joined()
+
+
+def test_a_resolver_that_raises_is_a_host_that_did_not_resolve() -> None:
+    class Broken(World):
+        def resolve(self, host: str, port: int) -> list[str]:
+            raise OSError("resolver down")
+
+    with pytest.raises(WebToolFailed, match="could not be resolved"):
+        _fetch(Broken([]), "https://broken.example/")
