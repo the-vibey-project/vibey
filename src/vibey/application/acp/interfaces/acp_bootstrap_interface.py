@@ -31,8 +31,18 @@ class AcpBootstrapInterface(Protocol):
         ...
 
     def start(self, session_id: str) -> None:
-        """Schedule steps 1 to 3 as one task, after `session/new` has answered. A no-op when
-        `[acp] auto_bootstrap` is off, while a run is going, or once one finished healthy."""
+        """Schedule steps 1 to 3 as one task, after `session/new` (or a load or resume) has
+        answered. A no-op when `[acp] auto_bootstrap` is off, while a run is going, once one
+        finished healthy, or after `close`."""
+        ...
+
+    def forget(self, session_id: str) -> None:
+        """The session was closed: nothing more is sent to it."""
+        ...
+
+    async def close(self) -> None:
+        """The connection ended: cancel and await the background steps, and send nothing more.
+        An install the operator allowed keeps running and holds its lock until it ends."""
         ...
 
     async def before_first_prompt(self, context: AcpSessionContext) -> None:

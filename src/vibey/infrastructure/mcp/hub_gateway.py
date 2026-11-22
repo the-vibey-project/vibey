@@ -89,21 +89,22 @@ class HubGateway:
         self._client = client
         self._starter = starter
         self._timeout = timeout
-        self._scopes: tuple[tuple[Path, int, int], frozenset[HubScope]] | None = None
-        """The scopes last read, with the `vibey.toml` they were read from (path, mtime, size;
-        -1, -1 when it did not exist)."""
+        self._scopes: tuple[tuple[Path, int, int, int, int], frozenset[HubScope]] | None = None
+        """The scopes last read, with the `vibey.toml` they were read from (path, inode, mtime,
+        ctime, size; all -1 when it did not exist)."""
 
     def agent_scopes(self) -> frozenset[HubScope]:
         """The scopes declared for the agent principal, or `AGENT_DEFAULT_SCOPES` if config fails.
 
-        Read again only when `vibey.toml` changed: `vibey acp` asks on every prompt, from its
-        event loop, and a `stat` is all that costs while the file stays as it was."""
+        Read again only when `vibey.toml` changed -- another inode (a file swapped in by a
+        rename), mtime, ctime or size: `vibey acp` asks on every prompt, from its event loop, and
+        a `stat` is all that costs while the file stays as it was."""
         path = self._config_path()
         try:
             stat = path.stat()
-            seen = (path, stat.st_mtime_ns, stat.st_size)
+            seen = (path, stat.st_ino, stat.st_mtime_ns, stat.st_ctime_ns, stat.st_size)
         except OSError:
-            seen = (path, -1, -1)
+            seen = (path, -1, -1, -1, -1)
         if self._scopes is not None and self._scopes[0] == seen:
             return self._scopes[1]
         try:

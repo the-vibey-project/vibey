@@ -74,3 +74,22 @@ def test_passed_means_no_fail_whatever_else_was_found() -> None:
 def test_the_checks_and_a_probe_satisfy_their_interfaces() -> None:
     assert isinstance(DoctorChecks(()), DoctorChecksInterface)
     assert isinstance(_Probe("p"), DoctorProbeInterface)
+
+
+async def test_a_raised_message_never_repeats_a_dsns_credentials_and_stays_one_cut_line() -> None:
+    leaky = _Probe(
+        "db",
+        error=ValueError(
+            "cannot parse postgresql://app:s3cret@db.internal:5432/vibey\nsecond line " + "x" * 400
+        ),
+    )
+    quiet = _Probe("quiet", error=RuntimeError())
+
+    found = await DoctorChecks((leaky, quiet)).run()
+
+    assert "s3cret" not in found[0].detail and "app:" not in found[0].detail
+    assert "postgresql://***@db.internal" in found[0].detail
+    assert "second line" not in found[0].detail
+    assert found[1].detail == "RuntimeError: "
+    long = await DoctorChecks((_Probe("long", error=ValueError("y" * 500)),)).run()
+    assert long[0].detail.endswith("...") and len(long[0].detail) < 230

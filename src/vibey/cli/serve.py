@@ -515,16 +515,21 @@ class ServeCommand:
         )
 
     def exposure_line(self) -> bool:
-        """`vibey doctor`'s `hub-exposure` line, printed; False only on FAIL. A `[hub]`
-        table that cannot be read is a FAIL: no declaration can be judged against it."""
+        """`vibey doctor`'s `hub-exposure` line, printed; False only on FAIL."""
+        lines, ok = self.exposure_lines()
+        for line in lines:
+            typer.echo(line)
+        return ok
+
+    def exposure_lines(self) -> tuple[list[str], bool]:
+        """The `hub-exposure` line, returned rather than printed, and False only on FAIL. A
+        `[hub]` table that cannot be read is a FAIL: no declaration can be judged against it."""
         try:
             settings = self._settings.load(self._config_path())
         except ConfigError as exc:
-            typer.echo(f"FAIL {'hub-exposure':<20} {exc}")
-            return False
+            return [f"FAIL {'hub-exposure':<20} {exc}"], False
         finding = self._exposure.run(settings, LocalTokenStore(settings.state_dir))
-        typer.echo(f"{finding.mark} {'hub-exposure':<20} {finding.detail}")
-        return finding.ok
+        return [f"{finding.mark} {'hub-exposure':<20} {finding.detail}"], finding.ok
 
     @staticmethod
     def _shown(host: str) -> str:

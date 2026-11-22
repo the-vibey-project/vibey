@@ -11,6 +11,7 @@ Module-level test functions rather than a class with an interface beside it (ADR
 
 from __future__ import annotations
 
+import os
 import subprocess
 import threading
 from collections.abc import Callable
@@ -213,3 +214,35 @@ def test_the_agent_scopes_are_read_again_only_when_the_file_changes(tmp_path: Pa
     gateway.agent_scopes()
     gateway.agent_scopes()
     assert settings.loads == 3
+
+
+def test_a_start_that_cannot_launch_is_not_left_running() -> None:
+    clock = Clock()
+
+    def no_threads(work: Callable[[], None]) -> None:
+        raise RuntimeError("can't start new thread")
+
+    bounded = BoundedHubStarter(Starter(True), window_seconds=60, clock=clock, launch=no_threads)
+
+    with pytest.raises(HubGatewayError, match="could not start it"):
+        bounded()
+    with pytest.raises(HubGatewayError, match="failed"):  # not "still starting it" for ever
+        bounded()
+    bounded.join(1)
+
+
+def test_a_file_swapped_in_by_rename_is_read_again(tmp_path: Path) -> None:
+    toml = tmp_path / "vibey.toml"
+    toml.write_text("[hub]\n")
+    settings = _CountingSettings()
+    gateway = HubGateway(settings=settings, config_path=lambda: toml)
+    gateway.agent_scopes()
+    stat = toml.stat()
+    other = tmp_path / "other.toml"
+    other.write_text("[hub]\n")  # the same size
+    os.utime(other, ns=(stat.st_atime_ns, stat.st_mtime_ns))  # and the same mtime
+    other.replace(toml)
+
+    gateway.agent_scopes()
+
+    assert settings.loads == 2

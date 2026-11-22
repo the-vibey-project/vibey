@@ -25,7 +25,6 @@ from vibey.cli.doctor_output import JsonDoctorOutput, TextDoctorOutput
 from vibey.cli.doctor_probes import (
     LOCAL_DATABASE_DOCTOR,
     LOCAL_DOCTOR,
-    LOCAL_DOCTOR_CHECKS,
     LOCAL_DOCTOR_PROBES,
     LocalDatabaseDoctor,
     SectionProbe,
@@ -61,7 +60,7 @@ async def test_printing_helpers_are_captured_not_leaked(
     _quiet_ollama(monkeypatch)
     monkeypatch.delenv("VIBEY_PG_URL", raising=False)
 
-    results = await LOCAL_DOCTOR_CHECKS.run()
+    results = await DoctorChecks(LOCAL_DOCTOR_PROBES).run()
 
     assert capsys.readouterr().out == ""
     names = {r.name for r in results}
@@ -377,3 +376,18 @@ async def test_output_without_a_final_newline_keeps_its_last_line() -> None:
     results = await SectionProbe.printed_sync("hub-exposure", unterminated).run()
 
     assert [r.lines for r in results] == [("PASS hub-exposure  loopback",)]
+
+
+def test_the_editor_set_swaps_stdout_for_no_section(monkeypatch: pytest.MonkeyPatch) -> None:
+    import contextlib as real
+
+    def never(*args: Any, **kwargs: Any) -> Any:
+        raise AssertionError("the editor's set redirected sys.stdout")
+
+    monkeypatch.setattr(real, "redirect_stdout", never)
+    _quiet_ollama(monkeypatch)
+    monkeypatch.delenv("VIBEY_PG_URL", raising=False)
+
+    results = asyncio.run(DoctorChecks(LOCAL_DOCTOR_PROBES).run())
+
+    assert "hub-exposure" in {r.name for r in results}

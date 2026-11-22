@@ -9,7 +9,9 @@ there, stdout is the protocol stream. So each section is wrapped as a `SectionPr
 - A section that **prints** runs with stdout redirected into a buffer (`contextlib.
   redirect_stdout`); a synchronous one runs on a worker thread, so a slow check never holds the
   event loop, and one printing capture at a time is allowed (`redirect_stdout` swaps the
-  process's `sys.stdout`).
+  process's `sys.stdout`). Only `vibey doctor` captures: the editor's set reads every section
+  as lines (`LocalDatabaseDoctor`'s line forms, `exposure_lines`), so under `vibey acp` nothing
+  swaps `sys.stdout` at all.
 - What a section printed or returned is read back line by line, in the grammar
   `doctor_output.DoctorLineParser` already reads for `--json`: `MARK name detail`, the Ollama
   line's `name MARK: detail` (`OK` as `PASS`, `SKIP` as `UNKNOWN`), the sabbath's
@@ -23,8 +25,8 @@ there, stdout is the protocol stream. So each section is wrapped as a `SectionPr
   for one that returned lines), so `vibey doctor` and `vibey doctor --json` stay byte for byte
   what they were.
 
-`LOCAL_DOCTOR_PROBES` and `LOCAL_DOCTOR_CHECKS` are the editor's set: the same sections in the
-order `vibey doctor` prints them, with the database read as lines (no capture across an await).
+`LOCAL_DOCTOR_PROBES` is the editor's set: the same sections in the order `vibey doctor` prints
+them, each read as lines (no capture, and none across an await).
 `vibey doctor` builds its own set from the printing helpers it names, through `for_doctor`, so
 whatever stands under those names when it runs is what runs. The two database sections moved
 here from `cli/main.py` (`LocalDatabaseDoctor`); `main.py` keeps their old names.
@@ -47,7 +49,6 @@ from typing import TYPE_CHECKING, ClassVar, Final, cast
 
 import typer
 
-from vibey.application.acp.doctor_checks import DoctorChecks
 from vibey.application.acp.dto import DoctorMark, DoctorResult
 from vibey.cli.doctor_output import DoctorLineParser
 from vibey.cli.gate_notices import GATE_NOTICE_DOCTOR
@@ -326,7 +327,7 @@ class LocalDoctorProbes:
             SectionProbe.printed("database-security", database_security),
             SectionProbe.printed("db-passwordless", passwordless_reach),
             *self._rest(
-                hub_exposure=hub_exposure,
+                hub_exposure=SectionProbe.printed_sync("hub-exposure", hub_exposure),
                 sabbath=sabbath,
                 gate_notices=gate_notices,
                 supervisor=supervisor,
@@ -340,7 +341,7 @@ class LocalDoctorProbes:
             SectionProbe.listed_async("database-security", LOCAL_DATABASE_DOCTOR.security_lines),
             SectionProbe.listed_async("db-passwordless", LOCAL_DATABASE_DOCTOR.passwordless_lines),
             *self._rest(
-                hub_exposure=SERVE.exposure_line,
+                hub_exposure=SectionProbe.listed("hub-exposure", SERVE.exposure_lines),
                 sabbath=SABBATH.doctor_lines,
                 gate_notices=GATE_NOTICE_DOCTOR.line,
                 supervisor=SUPERVISOR.doctor_lines,
@@ -352,7 +353,7 @@ class LocalDoctorProbes:
     @staticmethod
     def _rest(
         *,
-        hub_exposure: Callable[[], bool],
+        hub_exposure: SectionProbe,
         sabbath: Callable[[], tuple[list[str], bool]],
         gate_notices: Callable[[], Awaitable[str]],
         supervisor: Callable[[], tuple[list[str], bool]],
@@ -364,7 +365,7 @@ class LocalDoctorProbes:
             return await OllamaResidency().line(os.environ)
 
         return (
-            SectionProbe.printed_sync("hub-exposure", hub_exposure),
+            hub_exposure,
             SectionProbe.single("ollama", residency, when=ollama_enabled),
             SectionProbe.listed("sabbath", sabbath, prefix=SABBATH_PREFIX),
             SectionProbe.single("gate-notices", gate_notices),
@@ -383,5 +384,5 @@ class LocalDoctorProbes:
 
 LOCAL_DOCTOR: Final[LocalDoctorProbesInterface] = LocalDoctorProbes()
 LOCAL_DOCTOR_PROBES: Final[tuple[LocalDoctorProbeInterface, ...]] = LOCAL_DOCTOR.for_editor()
-"""Doctor's local sections as `vibey acp`'s bootstrap runs them, in `vibey doctor`'s order."""
-LOCAL_DOCTOR_CHECKS: Final = DoctorChecks(LOCAL_DOCTOR_PROBES)
+"""Doctor's local sections as `vibey acp`'s bootstrap runs them, in `vibey doctor`'s order;
+`bootstrap.build_acp_agent` wraps them in its own `DoctorChecks`."""

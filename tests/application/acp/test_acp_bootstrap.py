@@ -11,6 +11,7 @@ from __future__ import annotations
 
 import asyncio
 import contextlib
+import threading
 from collections.abc import AsyncIterator, Mapping
 from typing import Any
 
@@ -561,21 +562,72 @@ async def test_no_package_manager_asks_nothing_and_says_why() -> None:
     assert any("no package manager" in t for t in channel.said)
 
 
-async def test_a_cancel_while_asked_installs_nothing_and_is_not_asked_again() -> None:
+async def test_a_cancel_while_asked_closes_the_call_says_degraded_once_and_is_not_asked_again() -> (
+    None
+):
     channel = LoggingChannel()
     channel.permission_block = True
-    postgres = Postgres()
-    boot = bootstrap(channel, postgres=postgres)
+    postgres, lock = Postgres(), Lock()
+    boot = bootstrap(channel, postgres=postgres, lock=lock)
 
     asking = asyncio.create_task(boot.before_first_prompt(session()))
     await channel.permission_asked.wait()
-    channel.cancel_permissions("s")  # what `session/cancel` does first
-    asking.cancel()
+    channel.cancel_permissions("s")  # what `session/cancel` does first,
+    asking.cancel()  # and then it cancels the turn
     with pytest.raises(asyncio.CancelledError):
         await asking
 
+    assert channel.tool_updates("bootstrap-postgres")[-1]["status"] == "failed"
+    assert len([t for t in channel.said if "degraded" in t]) == 1
+    assert lock.released == 1
     await boot.before_first_prompt(session())
     assert postgres.installs == 0 and len(channel.permission_requests) == 1
+
+
+async def test_a_cancel_through_the_agent_while_asked_closes_the_call_with_one_message() -> None:
+    channel = LoggingChannel()
+    channel.permission_block = True
+    boot = bootstrap(channel, postgres=Postgres())
+    agent = build_agent(channel, FakeHub(), bootstrap=boot)
+    await agent.handle_request("session/new", {"cwd": "/work", "mcpServers": []})
+    prompt = asyncio.create_task(
+        agent.handle_request("session/prompt", {"sessionId": "s", "prompt": [text("/help")]})
+    )
+    await asyncio.wait_for(channel.permission_asked.wait(), 5)
+
+    await agent.handle_notification("session/cancel", {"sessionId": "s"})
+
+    assert await asyncio.wait_for(prompt, 5) == {"stopReason": "cancelled"}
+    statuses = [u.get("status") for u in channel.tool_updates("bootstrap-postgres")]
+    assert statuses == ["pending", "failed"]
+    assert len([t for t in channel.said if "degraded" in t]) == 1
+    await agent.close()
+
+
+async def test_a_cancel_before_the_question_leaves_step_four_to_the_next_prompt() -> None:
+    channel = LoggingChannel()
+    entered, release = threading.Event(), threading.Event()
+
+    class SlowCheck(Postgres):
+        def status(self) -> PostgresReadiness:
+            entered.set()
+            release.wait(5)
+            return super().status()
+
+    postgres = SlowCheck()
+    channel.permission_answers = [NOT_NOW_OPTION]
+    boot = bootstrap(channel, postgres=postgres)
+
+    checking = asyncio.create_task(boot.before_first_prompt(session()))
+    await asyncio.to_thread(entered.wait, 5)
+    checking.cancel()
+    with pytest.raises(asyncio.CancelledError):
+        await checking
+    release.set()
+
+    assert channel.updates == [] and not boot.done
+    await boot.before_first_prompt(session())  # asked now
+    assert len(channel.permission_requests) == 1
 
 
 async def test_two_sessions_prompting_at_once_are_asked_once() -> None:
@@ -699,10 +751,12 @@ async def test_without_checks_only_connect_runs() -> None:
     assert connector.calls == 1 and boot.healthy and boot.done
 
 
-async def test_a_connect_that_overruns_its_bound_fails_and_releases_the_lock() -> None:
+async def test_a_connect_cut_off_by_its_bound_holds_the_lock_until_its_thread_ends() -> None:
+    release = asyncio.Event()
+
     class Slow(Connector):
         async def connect_detected(self) -> tuple[DoctorResult, ...]:
-            await asyncio.Event().wait()
+            await release.wait()
             return ()
 
     channel, lock = LoggingChannel(), Lock()
@@ -713,7 +767,9 @@ async def test_a_connect_that_overruns_its_bound_fails_and_releases_the_lock() -
 
     last = channel.tool_updates("bootstrap-connect")[-1]
     assert last["status"] == "failed" and "vibey connect did not finish" in str(last)
-    assert lock.released == 1 and not boot.healthy
+    assert lock.released == 0 and not boot.healthy  # still writing: a second window waits
+    release.set()
+    await until(lambda: lock.released == 1)
 
 
 async def test_observe_with_postgres_ready_says_nothing() -> None:
@@ -790,3 +846,321 @@ async def test_a_bootstrap_that_breaks_is_logged_not_left_unread(
 
     assert "the ACP bootstrap failed" in caplog.text
     assert not boot.healthy
+
+
+# -- fix round 1: an allowed install outlives a cancel; the machine; close; load ---------
+
+
+class BlockingInstall(Postgres):
+    """An install that runs on its thread until `finish` is set."""
+
+    def __init__(self, **kwargs: Any) -> None:
+        super().__init__(**kwargs)
+        self.started, self.finish = threading.Event(), threading.Event()
+
+    def install(self) -> PostgresInstallOutcome:
+        self.started.set()
+        self.finish.wait(10)
+        return super().install()
+
+
+async def test_a_cancel_during_an_allowed_install_holds_the_lock_until_it_really_ends(
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    channel = LoggingChannel()
+    channel.permission_answers = [INSTALL_OPTION]
+    postgres, lock = BlockingInstall(), Lock()
+    boot = bootstrap(channel, postgres=postgres, lock=lock)
+
+    installing = asyncio.create_task(boot.before_first_prompt(session()))
+    await asyncio.to_thread(postgres.started.wait, 5)
+    installing.cancel()
+    with pytest.raises(asyncio.CancelledError):
+        await installing
+
+    last = channel.tool_updates("bootstrap-postgres")[-1]
+    assert last["status"] == "failed" and "goes on in the background" in str(last)
+    assert lock.released == 0  # a second window cannot start a second package-manager run
+    postgres.finish.set()
+    await until(lambda: lock.released == 1, spins=100_000)
+    await until(lambda: any("has ended" in t for t in channel.said), spins=100_000)
+    assert "installed/started" in caplog.text
+    assert postgres.installs == 1
+
+
+async def test_an_install_that_ends_after_the_window_closed_is_only_logged() -> None:
+    channel = LoggingChannel()
+    channel.permission_answers = [INSTALL_OPTION]
+    postgres, lock = (
+        BlockingInstall(outcome=PostgresInstallOutcome(False, "dnf broke", False)),
+        Lock(),
+    )
+    boot = bootstrap(channel, postgres=postgres, lock=lock)
+    installing = asyncio.create_task(boot.before_first_prompt(session()))
+    await asyncio.to_thread(postgres.started.wait, 5)
+    installing.cancel()
+    with pytest.raises(asyncio.CancelledError):
+        await installing
+
+    await boot.close()
+    postgres.finish.set()
+    await until(lambda: lock.released == 1, spins=100_000)
+
+    assert not any("has ended" in t for t in channel.said)
+
+
+async def test_an_install_that_may_still_be_running_is_not_called_failed() -> None:
+    channel = LoggingChannel()
+    channel.permission_answers = [INSTALL_OPTION]
+    unconfirmed = PostgresInstallOutcome(
+        ok=False,
+        detail="Homebrew could not install PostgreSQL",
+        needs_password=False,
+        still_running=True,
+    )
+    boot = bootstrap(channel, postgres=Postgres(outcome=unconfirmed))
+
+    await boot.before_first_prompt(session())
+
+    last = channel.tool_updates("bootstrap-postgres")[-1]
+    assert last["status"] == "completed" and "may still be running" in str(last)
+    assert not any("degraded" in t for t in channel.said)
+
+
+async def test_step_four_waits_for_this_windows_own_connect_never_blaming_another() -> None:
+    channel = LoggingChannel()
+    release = asyncio.Event()
+
+    class Slow(Connector):
+        async def connect_detected(self) -> tuple[DoctorResult, ...]:
+            await release.wait()
+            return (DoctorResult("PASS", "cursor", "updated"),)
+
+    class FlockLike(Lock):
+        """As `flock` on a new descriptor: a second take conflicts, even in this process."""
+
+        held = False
+
+        def acquire(self) -> bool:
+            if self.held:
+                return False
+            self.held = True
+            return super().acquire()
+
+        def release(self) -> None:
+            self.held = False
+            super().release()
+
+    channel.permission_answers = [NOT_NOW_OPTION]
+    boot = bootstrap(
+        channel, connector=Slow(), postgres=Postgres(), lock=FlockLike(), wait=_timed_out
+    )
+    boot.start("s")
+    await until(lambda: channel.tool_updates("bootstrap-connect") != [])
+
+    asking = asyncio.create_task(boot.before_first_prompt(session()))
+    await asyncio.sleep(0)
+    release.set()
+    await asyncio.wait_for(asking, 5)
+
+    assert len(channel.permission_requests) == 1
+    assert not any("another vibey acp" in t for t in channel.said)
+
+
+async def test_step_four_that_cannot_get_its_turn_in_time_is_asked_next_prompt() -> None:
+    channel = LoggingChannel()
+    hold = asyncio.Event()
+
+    class Slow(Connector):
+        async def connect_detected(self) -> tuple[DoctorResult, ...]:
+            await hold.wait()
+            return ()
+
+    in_prompt: list[float] = []
+    prompting = False
+
+    def third_expires(seconds: float) -> contextlib.AbstractAsyncContextManager[None]:
+        # Inside the prompt: 1, the PostgreSQL check; 2, the wait for this window's machine.
+        if prompting:
+            in_prompt.append(seconds)
+        return asyncio.timeout(0 if prompting and len(in_prompt) == 2 else 5)
+
+    boot = bootstrap(
+        channel, connector=Slow(), postgres=Postgres(), wait=_timed_out, step_timeout=third_expires
+    )
+    boot.start("s")
+    await until(lambda: channel.tool_updates("bootstrap-connect") != [])
+
+    prompting = True
+    await boot.before_first_prompt(session())
+    prompting = False
+
+    assert any("own connect step is still running" in t for t in channel.said)
+    assert channel.permission_requests == [] and not boot.done
+    hold.set()
+    await finished(boot)
+    channel.permission_answers = [NOT_NOW_OPTION]
+    await boot.before_first_prompt(session("s2"))
+    assert len(channel.permission_requests) == 1
+
+
+async def test_a_connect_while_step_four_holds_the_machine_is_not_called_healthy() -> None:
+    channel = LoggingChannel()
+    channel.permission_block = True
+    connector = Connector()
+    boot = bootstrap(channel, probes=(), connector=connector, postgres=Postgres())
+
+    asking = asyncio.create_task(boot.before_first_prompt(session()))
+    await channel.permission_asked.wait()
+    boot.start("s")
+    await finished(boot)
+
+    assert connector.calls == 0 and not boot.healthy
+    assert "busy with its PostgreSQL step" in str(channel.tool_updates("bootstrap-connect")[-1])
+    channel.cancel_permissions("s")
+    await asking
+
+
+async def test_a_check_that_overruns_is_said_once_and_the_prompt_goes_on() -> None:
+    channel = LoggingChannel()
+    entered, release = threading.Event(), threading.Event()
+
+    class Hung(Postgres):
+        def status(self) -> PostgresReadiness:
+            entered.set()
+            release.wait(5)
+            return super().status()
+
+    boot = bootstrap(channel, postgres=Hung(), step_timeout=_expires_at_once)
+
+    await boot.before_first_prompt(session())
+    await boot.before_first_prompt(session())
+    release.set()
+
+    assert len([t for t in channel.said if "could not check PostgreSQL within" in t]) == 1
+    assert channel.permission_requests == [] and boot.done is False  # steps never ran here
+
+
+async def test_an_observe_check_that_overruns_says_so() -> None:
+    channel = LoggingChannel()
+    release = threading.Event()
+
+    class Hung(Postgres):
+        def status(self) -> PostgresReadiness:
+            release.wait(5)
+            return super().status()
+
+    boot = bootstrap(channel, postgres=Hung(), step_timeout=_expires_at_once)
+
+    await boot.before_first_prompt(session(mode_id="observe"))
+    release.set()
+
+    assert any("could not check PostgreSQL within" in t for t in channel.said)
+
+
+async def test_close_cancels_the_steps_and_nothing_is_sent_after_it() -> None:
+    channel = LoggingChannel()
+    hold = asyncio.Event()
+    probe = Probe("slow", PASSED, hold=hold)
+    boot = bootstrap(channel, probes=(probe,))
+    boot.start("s")
+    await until(lambda: probe.ran == 1)
+
+    await boot.close()
+    sent = len(channel.updates)
+    boot.start("s2")
+    await boot.before_first_prompt(session())
+
+    assert boot.steps_finished and not boot.healthy
+    assert len(channel.updates) == sent
+
+
+async def test_a_session_closed_hears_nothing_more_from_the_bootstrap() -> None:
+    channel = LoggingChannel()
+    hold = asyncio.Event()
+    boot = bootstrap(channel, probes=(Probe("slow", PASSED, hold=hold),))
+    agent = build_agent(channel, FakeHub(), bootstrap=boot)
+    await agent.handle_request("session/new", {"cwd": "/work", "mcpServers": []})
+    await until(lambda: channel.tool_updates("bootstrap-doctor") != [])
+
+    await agent.handle_request("session/close", {"sessionId": "s"})
+    hold.set()
+    await finished(boot)
+
+    assert [u["sessionUpdate"] for u in channel.tool_updates("bootstrap-doctor")] == ["tool_call"]
+    await agent.close()
+
+
+async def test_a_load_starts_the_bootstrap_too() -> None:
+    channel = LoggingChannel()
+    hub = FakeHub()
+    hub.kept["0b6e2c2a-3d41-4a8e-9c55-0f7b1f2a9d11"] = ("/work", [])
+    boot = bootstrap(channel)
+    agent = build_agent(channel, hub, bootstrap=boot)
+
+    await agent.handle_request(
+        "session/resume", {"sessionId": "0b6e2c2a-3d41-4a8e-9c55-0f7b1f2a9d11", "cwd": "/work"}
+    )
+    await finished(boot)
+
+    assert channel.tool_updates("bootstrap-doctor")[0]["title"] == "vibey doctor"
+    await agent.close()
+
+
+async def test_a_cancel_while_the_question_is_announced_closes_it_as_not_asked() -> None:
+    channel = LoggingChannel()
+    channel.hold_at[1] = asyncio.Event()  # the `bootstrap-postgres` tool call is sent, then waits
+    postgres = Postgres()
+    boot = bootstrap(channel, postgres=postgres)
+
+    announcing = asyncio.create_task(boot.before_first_prompt(session()))
+    await until(lambda: len(channel.updates) == 1)
+    announcing.cancel()
+    with pytest.raises(asyncio.CancelledError):
+        await announcing
+
+    last = channel.tool_updates("bootstrap-postgres")[-1]
+    assert last["status"] == "failed" and "Not asked" in str(last)
+    assert channel.permission_requests == [] and not boot.done
+
+
+async def test_an_allowed_install_that_breaks_after_a_cancel_is_logged(
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    class Breaks(BlockingInstall):
+        def install(self) -> PostgresInstallOutcome:
+            super().install()
+            raise RuntimeError("the package database is locked")
+
+    channel = LoggingChannel()
+    channel.permission_answers = [INSTALL_OPTION]
+    postgres, lock = Breaks(), Lock()
+    boot = bootstrap(channel, postgres=postgres, lock=lock)
+    installing = asyncio.create_task(boot.before_first_prompt(session()))
+    await asyncio.to_thread(postgres.started.wait, 5)
+    installing.cancel()
+    with pytest.raises(asyncio.CancelledError):
+        await installing
+
+    postgres.finish.set()
+    await until(lambda: any("it failed" in t for t in channel.said), spins=100_000)
+
+    assert "the PostgreSQL install allowed over ACP failed" in caplog.text
+    assert lock.released == 1
+
+
+async def test_an_install_that_breaks_closes_its_tool_call() -> None:
+    class Breaks(Postgres):
+        def install(self) -> PostgresInstallOutcome:
+            raise RuntimeError("the package database is locked")
+
+    channel = LoggingChannel()
+    channel.permission_answers = [INSTALL_OPTION]
+    lock = Lock()
+    boot = bootstrap(channel, postgres=Breaks(), lock=lock)
+
+    await boot.before_first_prompt(session())
+
+    last = channel.tool_updates("bootstrap-postgres")[-1]
+    assert last["status"] == "failed" and "RuntimeError" in str(last)
+    await until(lambda: lock.released == 1)

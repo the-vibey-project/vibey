@@ -176,3 +176,51 @@ def test_a_target_outside_the_home_folder_is_never_written(tmp_path: Path) -> No
 def test_the_connector_satisfies_its_interface(tmp_path: Path) -> None:
     connector, _, _ = _connector(tmp_path)
     assert isinstance(connector, HostConnectorInterface)
+
+
+def test_a_warned_client_leaves_no_marker_so_the_next_run_tries_again(tmp_path: Path) -> None:
+    connector, home, _ = _connector(tmp_path)
+    (home / ".codex").mkdir()
+    (home / ".codex" / "config.toml").write_text("not = [valid")
+    (home / ".cursor").mkdir()
+
+    asyncio.run(connector.connect_detected())
+
+    assert not (tmp_path / "state" / f"acp-connect-{VERSION}.json").exists()
+    assert connector.already_connected() is False
+    (home / ".codex" / "config.toml").write_text("")
+    asyncio.run(connector.connect_detected())
+    assert connector.already_connected() is True
+
+
+def test_a_client_installed_after_the_marker_is_connected_next_time(tmp_path: Path) -> None:
+    connector, home, _ = _connector(tmp_path)
+    (home / ".cursor").mkdir()
+    asyncio.run(connector.connect_detected())
+    assert connector.already_connected() is True
+
+    (home / ".gemini").mkdir()  # Gemini CLI installed since
+
+    assert connector.already_connected() is False
+
+
+def test_a_marker_whose_clients_are_not_a_list_means_not_connected(tmp_path: Path) -> None:
+    connector, _, _ = _connector(tmp_path)
+    marker = tmp_path / "state" / f"acp-connect-{VERSION}.json"
+    marker.parent.mkdir()
+    marker.write_text(json.dumps({"version": VERSION, "clients": "cursor"}))
+
+    assert connector.already_connected() is False
+
+
+def test_a_config_folder_symlinked_out_of_home_is_not_written(tmp_path: Path) -> None:
+    connector, home, _ = _connector(tmp_path)
+    outside = tmp_path / "outside"
+    outside.mkdir()
+    (home / ".cursor").symlink_to(outside, target_is_directory=True)
+
+    results = asyncio.run(connector.connect_detected())
+
+    cursor = next(r for r in results if r.name == "cursor")
+    assert cursor.mark == "UNKNOWN" and "not inside your home folder" in cursor.detail
+    assert list(outside.iterdir()) == []

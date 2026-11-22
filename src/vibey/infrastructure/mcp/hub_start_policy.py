@@ -76,7 +76,16 @@ class BoundedHubStarter:
                 raise HubGatewayError(self._recent(now - self._ended))
             self._running = True
             self._idle.clear()
-        self._launch(self._attempt)
+        try:
+            self._launch(self._attempt)
+        except Exception as exc:
+            # No thread could start: nothing is running, and the window still counts.
+            with self._lock:
+                self._running = False
+                self._ended = self._clock()
+                self._worked = False
+            self._idle.set()
+            raise HubGatewayError(f"the hub is away; vibey could not start it ({exc})") from exc
         raise HubGatewayError(
             "the hub is away; vibey is starting it in the background with `vibey hub start` "
             "-- try again in a moment"

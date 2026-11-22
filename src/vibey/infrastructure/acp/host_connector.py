@@ -6,19 +6,23 @@
 
 - **User scope only.** A project-scoped client (Claude Code's `.mcp.json`, VS Code's
   `.vscode/mcp.json`) is a file in the repository the editor opened; it is never written here.
-- **Under the home folder only.** A target outside it is never written, whatever the catalogue
-  says.
+- **Inside the home folder only, after symlinks.** A target whose real path (every symlink
+  resolved) is not under the home folder's real path is never written (`UNKNOWN`, with that
+  reason); `HostInstaller` refuses one again as it writes.
 - **Installed clients only.** A client counts as installed when its config folder already
   exists; the step never creates one (`UNKNOWN`, not installed here).
 - **The same merge `vibey connect` makes** (`HostInstaller`): sibling servers are kept, a
-  changed file is backed up to `<file>.vibey.bak` first, and a file that already carries the
+  changed file is backed up to `<file>.vibey.bak` with the original's permissions, the new file
+  replaces the old one atomically and no wider than it was, and a file that already carries the
   entry is left as it is, so running again changes nothing.
 - **One client at a time.** A client whose file cannot be read, parsed or written is a `WARN`
   for that client, and the others still go on.
 
-Then `<state_dir>/acp-connect-<version>.json` records which clients are connected, so the next
-`vibey acp` of this version skips the step; a marker that is missing, unreadable or malformed
-only means the step runs again, which changes nothing that is already right.
+When every installed client is connected (no `WARN`), `<state_dir>/acp-connect-<version>.json`
+records which ones. The next `vibey acp` of this version skips the step only while the clients
+installed then are all in that record: a `WARN` is tried again, and so is a client installed
+since. A marker that is missing, unreadable or malformed only means the step runs again, which
+changes nothing that is already right.
 
 Declared by `application/acp/interfaces/host_connector_interface.py`.
 """
@@ -28,6 +32,7 @@ from __future__ import annotations
 import asyncio
 import json
 import os
+import sys
 from collections.abc import Callable
 from pathlib import Path
 
@@ -49,8 +54,10 @@ class HostConnector:
         installer: HostInstallerInterface = HOST_INSTALLER,
         catalog: HostClientsInterface = HOST_CLIENT_CATALOG,
         home_dir: Callable[[], Path] = Path.home,
+        platform: str = sys.platform,
     ) -> None:
         self._installer = installer
+        self._platform = platform
         self._catalog = catalog
         self._home_dir = home_dir
         self._state_dir = state_dir
@@ -65,10 +72,27 @@ class HostConnector:
             recorded = json.loads(self._marker.read_text(encoding="utf-8"))
         except (OSError, UnicodeDecodeError, json.JSONDecodeError):
             return False
-        return isinstance(recorded, dict) and recorded.get("version") == self._version
+        if not isinstance(recorded, dict) or recorded.get("version") != self._version:
+            return False
+        clients = recorded.get("clients")
+        if not isinstance(clients, list):
+            return False
+        return set(self._installed()) <= set(clients)
+
+    def _installed(self) -> list[str]:
+        """The user-scope clients whose config folder exists here now."""
+        home = str(self._home_dir())
+        return [
+            spec.client_id
+            for spec in self._catalog.all()
+            if spec.scope == "user"
+            and Path(
+                spec.config_path(home_dir=home, project_dir="", platform=self._platform)
+            ).parent.is_dir()
+        ]
 
     def _connect(self) -> tuple[DoctorResult, ...]:
-        home = Path(os.path.abspath(self._home_dir()))
+        home = Path(os.path.realpath(self._home_dir()))
         results: list[DoctorResult] = []
         connected: list[str] = []
         for spec in self._catalog.all():
@@ -78,6 +102,8 @@ class HostConnector:
             results.append(result)
             if result.mark == "PASS":
                 connected.append(spec.client_id)
+        if any(result.mark == "WARN" for result in results):
+            return tuple(results)  # not recorded: the next vibey acp tries again
         try:
             self._record(connected)
         except OSError as exc:
@@ -95,10 +121,15 @@ class HostConnector:
         try:
             plan = self._installer.build_plan([client_id])
             item = plan[0]
-            target = Path(os.path.abspath(item.target_path))
-            if not target.is_relative_to(home) or not target.parent.is_dir():
+            target = Path(item.target_path)
+            if not target.parent.is_dir():
                 return DoctorResult(
                     "UNKNOWN", client_id, f"not installed here ({target.parent} does not exist)"
+                )
+            real = Path(os.path.realpath(target))
+            if not real.is_relative_to(home):
+                return DoctorResult(
+                    "UNKNOWN", client_id, f"not written: {target} is not inside your home folder"
                 )
             if item.action == "unchanged":
                 return DoctorResult("PASS", client_id, f"already connected in {target}")

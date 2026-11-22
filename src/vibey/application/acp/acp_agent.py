@@ -191,6 +191,8 @@ class AcpAgent:
             self._cancel(params)
 
     async def close(self) -> None:
+        if self._bootstrap is not None:
+            await self._bootstrap.close()
         background = list(self._background)
         for task in background:
             task.cancel()
@@ -403,6 +405,9 @@ class AcpAgent:
         if live is None and context.project_id is not None:
             self._kept_project[session_id] = context.project_id
         self._in_background(self._reopened(context))
+        if self._bootstrap is not None:
+            # An editor that only reopens its last thread still gets doctor and connect.
+            self._bootstrap.start(session_id)
         return {"modes": self._modes.session_modes(context.mode_id)}
 
     async def _read[T](
@@ -507,6 +512,8 @@ class AcpAgent:
         if context is None:
             return {}
         context.state.close()
+        if self._bootstrap is not None:
+            self._bootstrap.forget(session_id)
         # Withdrawn here: `session/cancel` finds no session any more, so it could not.
         self._channel.cancel_permissions(context.session_id)
         task = self._turns.get(context.session_id)
