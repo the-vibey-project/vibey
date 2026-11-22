@@ -40,7 +40,7 @@ class SupervisorPlannerInterface(Protocol):
         names: tuple[str, ...],
         restart: RestartPolicy,
     ) -> tuple[SupervisedService, ...]:
-        """The hub and worker units `vibey acp` loads (ADR-0101), in `names` order. Raises
+        """The hub, worker and SearXNG units `vibey acp` loads (ADR-0101, ADR-0102), in `names` order. Raises
         ValueError for any other name, a label prefix outside the closed alphabet, or a
         throttle under 1."""
         ...

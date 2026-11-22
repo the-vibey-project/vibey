@@ -263,6 +263,7 @@ from vibey.infrastructure.supervisor import (
 from vibey.infrastructure.supervisor_installer import SupervisorInstaller
 from vibey.infrastructure.tracker.in_memory import InMemoryTracker
 from vibey.infrastructure.tracker.plane import PlaneTrackerAdapter
+from vibey.infrastructure.user_config_folder import UserConfigFolder
 
 
 @dataclass(frozen=True, slots=True)
@@ -1499,12 +1500,9 @@ def acp_user_config() -> Path:
     `supervisor.env`. What `vibey acp` may do outside the folder an editor opened -- load units,
     write client configs, install PostgreSQL -- is granted here, never by a project's file
     (ADR-0101)."""
-    folder = user_config_path("vibey")
-    if not folder.is_absolute():
-        # A relative XDG_CONFIG_HOME would put "the user's" file inside whatever folder vibey
-        # runs in -- a project's. Refused, as `SupervisorHost` refuses it for its own paths.
-        folder = Path.home() / ".config" / "vibey"
-    return folder / "vibey.toml"
+    # A relative XDG_CONFIG_HOME would put "the user's" file inside whatever folder vibey runs
+    # in -- a project's; `UserConfigFolder` refuses it, as `SupervisorHost` does for its paths.
+    return UserConfigFolder(user_config_path).path() / "vibey.toml"
 
 
 def running_vibey() -> str | None:

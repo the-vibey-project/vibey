@@ -93,6 +93,8 @@ class AcpKeepAlive:
         self._clock = clock
         self._sleep = sleep
         self._managed: dict[str, str] = {}
+        self._added: dict[str, str] = {}
+        """Labels `add` named: kept across a later `manage`."""
         self._hub_label: str | None = None
         self._deferred: set[str] = set()
         self._sessions: list[str] = []
@@ -117,12 +119,21 @@ class AcpKeepAlive:
     ) -> None:
         self._handover = False
         self._loop = asyncio.get_running_loop()
-        self._managed = dict(units)
+        self._managed = {**self._added, **units}
         self._hub_label = hub_label if hub_label in self._managed else None
         self._deferred = {label for label in deferred if label in self._managed}
         now = self._clock()
         for label in self._managed:
             # Just loaded, or found running: give it a probe period to come up first.
+            self._acted.setdefault(label, now)
+        self._run_timer()
+
+    def add(self, units: Mapping[str, str]) -> None:
+        self._loop = asyncio.get_running_loop()
+        self._added.update(units)
+        self._managed.update(units)
+        now = self._clock()
+        for label in units:
             self._acted.setdefault(label, now)
         self._run_timer()
 

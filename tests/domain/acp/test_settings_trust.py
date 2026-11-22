@@ -41,6 +41,14 @@ def test_a_project_can_refuse_postgresql_never_ask_for_it() -> None:
     assert TRUST.merge(never, ask, keys).install_postgres == "never"
 
 
+def test_a_project_can_refuse_searxng_never_ask_for_it() -> None:
+    ask, never = AcpSettings(searxng="ask"), AcpSettings(searxng="never")
+    keys = frozenset({"searxng"})
+    assert TRUST.merge(ask, never, keys).searxng == "never"
+    assert TRUST.merge(never, ask, keys).searxng == "never"
+    assert TRUST.merge(ask, ask, keys).searxng == "ask"
+
+
 def test_a_project_can_drop_a_service_never_add_one() -> None:
     worker_only = AcpSettings(services=("worker",))
     both = AcpSettings(services=("hub", "worker"))

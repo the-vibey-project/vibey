@@ -1,0 +1,64 @@
+# Made with ❤️ by [Vibey](https://the-vibey-project.github.io/vibey/), Developed by [Adam Matthew Steinberger](https://vibewithadam.matthewsteinberger.com/) ([@adammatthewsteinberger](https://github.com/adammatthewsteinberger/)).
+"""The contract of the SearXNG vibey provisions, its pure half (ADR-0102).
+
+Mirrors `vibey/domain/searxng.py` (ADR-0016). Interfaces declare; they never consume.
+"""
+
+from __future__ import annotations
+
+from typing import TYPE_CHECKING, Protocol, runtime_checkable
+
+if TYPE_CHECKING:
+    from vibey.domain.searxng import SearxngProvision
+
+
+@runtime_checkable
+class SearxngPlanInterface(Protocol):
+    """What reaches a container runtime, and what vibey writes for its SearXNG. Pure. Every
+    method raises ValueError, naming what is wrong, for a value vibey would not have made."""
+
+    def check(self, provision: SearxngProvision) -> None:
+        """Refuse a provision vibey would not have written."""
+        ...
+
+    def record(self, provision: SearxngProvision) -> dict[str, object]:
+        """The provision as `provision.json` holds it."""
+        ...
+
+    def parse(self, data: object) -> SearxngProvision:
+        """A provision read back from `provision.json`, checked in full."""
+        ...
+
+    def new_marker(self, hex32: str) -> str:
+        """The identity marker made from 32 random lower-case hex digits."""
+        ...
+
+    def settings_text(self, *, secret_key: str, marker: str) -> str:
+        """SearXNG's `settings.yml`: loopback-only, private, answering JSON, no telemetry."""
+        ...
+
+    def run_argv(
+        self, provision: SearxngProvision, *, settings_path: str, uid: int, gid: int
+    ) -> tuple[str, ...]:
+        """The one command line that runs the container (`vibey searxng serve` execs it)."""
+        ...
+
+    def pull_argv(self, runtime: str, image: str) -> tuple[str, ...]:
+        """Download the pinned image."""
+        ...
+
+    def image_argv(self, runtime: str, image: str) -> tuple[str, ...]:
+        """Ask whether the image is present (exit 0 when it is); downloads nothing."""
+        ...
+
+    def remove_argv(self, runtime: str) -> tuple[str, ...]:
+        """Remove vibey's container, running or not."""
+        ...
+
+    def remove_image_argv(self, runtime: str, image: str) -> tuple[str, ...]:
+        """Remove the pinned image."""
+        ...
+
+    def short(self, image: str) -> str:
+        """The first twelve hex digits of the image's digest, as it is said to a person."""
+        ...

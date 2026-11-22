@@ -355,6 +355,12 @@ def _hermetic_web_search(request: pytest.FixtureRequest, monkeypatch: pytest.Mon
     from vibey.infrastructure.web.search import SearxngBackend
 
     monkeypatch.setattr(SearxngBackend, "_verified", {})
+    # Nor may a test find the developer's own provisioned SearXNG (ADR-0102): the person's
+    # record is looked for in a folder that does not exist.
+    from vibey.infrastructure.searxng.searxng_files import SearxngFiles
+
+    nowhere = SearxngFiles(Path("/nonexistent-vibey-hermetic-test") / "searxng")
+    monkeypatch.setattr(SearxngFiles, "personal", classmethod(lambda cls: nowhere))
     if request.node.get_closest_marker("web_network") is None:
 
         def refused(self: GuardedOpener, request: object, timeout: float) -> object:

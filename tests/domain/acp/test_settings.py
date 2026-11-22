@@ -35,6 +35,8 @@ def test_no_mode_holds_spend_bump_or_workflows() -> None:
     ("field", "value"),
     [
         ("install_postgres", "yes"),
+        ("searxng", "yes"),
+        ("searxng", "always"),
         ("restart", "never"),
         ("services", ("delivery",)),
         ("services", ("hub", "hub")),

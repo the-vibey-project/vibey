@@ -56,6 +56,34 @@ class PostgresInstallOutcome:
     stopped: the install may still be changing the computer, so it is not reported as failed."""
 
 
+@dataclass(frozen=True, slots=True)
+class SearxngOffer:
+    """What is here, read-only, before vibey offers to install its SearXNG (ADR-0102).
+
+    `runtime` is podman or docker by absolute path, or None; `own_url` names the variable when
+    the person runs their own SearXNG (`VIBEY_SEARXNG_URL`); `answering` is true when a SearXNG
+    already passes the identity check; `provisioned` when vibey installed one before; `short`
+    and `port` are what the question says (the image's first twelve digest digits, the port)."""
+
+    runtime: str | None
+    own_url: str | None
+    answering: bool
+    provisioned: bool
+    short: str
+    port: int
+
+
+@dataclass(frozen=True, slots=True)
+class SearxngPrepared:
+    """How the download and the files went. `detail` is said to the person; a runtime's own text
+    in it is the machine's, so an editor gets it through `UntrustedTextInterface`.
+    `still_running` is a pull that overran its bound and could not be confirmed stopped."""
+
+    ok: bool
+    detail: str
+    still_running: bool = False
+
+
 type UnitAction = Literal[
     "created",
     "unchanged",

@@ -14,9 +14,12 @@ on both platforms, so the environment reaches it one way, read by one parser:
 launchd has no environment-file key, and giving systemd its own `EnvironmentFile=`
 would give the two platforms two dialects of the same file.
 
-`vibey acp` plans two of them for itself (`acp_services`, ADR-0101): the hub (`vibey serve`) and
-the worker, restarted `always` by the user's own service manager. Their labels reach a service
-manager's argv, so the label prefix is held to a closed alphabet here.
+`vibey acp` plans its own (`acp_services`, ADR-0101): the hub (`vibey serve`) and the worker,
+restarted `always` by the user's own service manager, and the local SearXNG it provisions
+(`vibey searxng serve`, ADR-0102). Their labels reach a service manager's argv, so the label
+prefix is held to a closed alphabet here. The SearXNG unit runs the launcher directly, never
+through `supervisor exec --env-file`: that file holds the database URL, and the container gets no
+secret but its own.
 """
 
 import re
@@ -28,6 +31,7 @@ type RestartPolicy = Literal["on-failure", "always"]
 
 HUB: Final = "hub"
 WORKER: Final = "worker"
+SEARXNG: Final = "searxng"
 DELIVERY: Final = "delivery"
 DELIVERY_SCRIPT: Final = "scripts/triaged_delivery.py"
 STATE_SYNC: Final = "state-sync"
@@ -36,7 +40,7 @@ STATE_SYNC: Final = "state-sync"
 _NAME: Final = re.compile(r"[A-Za-z_][A-Za-z0-9_]*")
 # What a launchd label and a systemd unit name may both be, with no path, space or specifier.
 LABEL: Final = re.compile(r"[A-Za-z0-9][A-Za-z0-9._-]{0,127}")
-_ACP_NAMES: Final = (HUB, WORKER)
+_ACP_NAMES: Final = (HUB, WORKER, SEARXNG)
 
 
 @dataclass(frozen=True)
@@ -156,7 +160,8 @@ class SupervisorPlanner:
         restart: RestartPolicy,
     ) -> tuple[SupervisedService, ...]:
         """The units `vibey acp` loads (ADR-0101), in `names` order: the hub runs `vibey serve`,
-        the worker as `services` runs it, each through `vibey supervisor exec` and logging to
+        the worker as `services` runs it, each through `vibey supervisor exec`, and the SearXNG
+        runs `vibey searxng serve` with no environment file (ADR-0102); each logs to
         `<log_dir>/<name>.log`. Never the delivery bridge or the state sync."""
         if not LABEL.fullmatch(f"{settings.label_prefix}.{WORKER}"):
             raise ValueError(
@@ -174,12 +179,17 @@ class SupervisorPlanner:
         planned: list[SupervisedService] = []
         for name in names:
             if name not in _ACP_NAMES:
-                raise ValueError(f"vibey acp keeps hub or worker running, not {name!r}")
+                raise ValueError(
+                    f"vibey acp keeps hub or worker (and its SearXNG) running, not {name!r}"
+                )
+            argv = (
+                (paths.vibey, SEARXNG, "serve") if name == SEARXNG else (*launcher, *commands[name])
+            )
             planned.append(
                 SupervisedService(
                     name=name,
                     label=f"{settings.label_prefix}.{name}",
-                    argv=(*launcher, *commands[name]),
+                    argv=argv,
                     working_directory=paths.repo,
                     log_path=f"{paths.log_dir}/{name}.log",
                     restart=restart,

@@ -20,6 +20,8 @@ KNOWN_MODES: Final = ("observe", "drive")
 """The session modes `modes` may name."""
 INSTALL_POSTGRES_CHOICES: Final = ("ask", "never")
 """`install_postgres`: ask through `session/request_permission`, or never install."""
+SEARXNG_CHOICES: Final = ("ask", "never")
+"""`searxng`: ask through `session/request_permission` to install the local SearXNG, or never."""
 RESTART_POLICIES: Final = ("always", "on-failure")
 """`restart`: the service manager's policy for the units `vibey acp` loads."""
 INTEGER_MINIMA: Final[Mapping[str, int]] = {
@@ -67,6 +69,9 @@ class AcpSettings:
     auto_connect: bool = True
     auto_services: bool = True
     install_postgres: str = "ask"
+    searxng: str = "ask"
+    """Whether `vibey acp` may offer to download and run the local SearXNG search asks first
+    (ADR-0102): `ask` asks once per process, `never` never does. The project may only say never."""
     services: tuple[str, ...] = ("hub", "worker")
     restart: str = "always"
     service_workdir: str = ""
@@ -106,6 +111,7 @@ class AcpSettings:
     def __post_init__(self) -> None:
         for key, choices in (
             ("install_postgres", INSTALL_POSTGRES_CHOICES),
+            ("searxng", SEARXNG_CHOICES),
             ("restart", RESTART_POLICIES),
         ):
             if getattr(self, key) not in choices:

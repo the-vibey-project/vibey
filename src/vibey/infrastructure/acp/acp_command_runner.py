@@ -56,7 +56,8 @@ SAFE_PATH: Final = (
 )
 """The PATH the commands see, before the folders of the executables resolved for them."""
 KEPT_VARIABLES: Final = ("HOME", "USER", "LOGNAME", "LANG", "LC_ALL", "LC_CTYPE", "TMPDIR")
-"""The only variables of this process's environment the commands see."""
+"""The only variables of this process's environment the commands see, unless a runner is made
+with its own `kept` (the container runtime adds the ones it finds its daemon by, ADR-0102)."""
 
 type Popen = Callable[..., subprocess.Popen[str]]
 type KillGroup = Callable[[int, int], None]
@@ -72,6 +73,7 @@ class AcpCommandRunner:
         timeout_seconds: float,
         stop_grace_seconds: float = 10.0,
         environ: Mapping[str, str] = os.environ,
+        kept: tuple[str, ...] = KEPT_VARIABLES,
         which: Which = shutil.which,
         popen: Popen = subprocess.Popen,
         kill_group: KillGroup = os.killpg,
@@ -82,7 +84,7 @@ class AcpCommandRunner:
         self._which = which
         self._popen = popen
         self._kill_group = kill_group
-        self._kept = {key: environ[key] for key in KEPT_VARIABLES if key in environ}
+        self._kept = {key: environ[key] for key in kept if key in environ}
         self._resolved: dict[str, str] = {}
         self._lock = threading.Lock()
 

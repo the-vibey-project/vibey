@@ -8,7 +8,7 @@ widen, raise or loosen anything:
 
 - **Switches** (`auto_bootstrap`, `auto_connect`, `auto_services`, `live_between_turns`): the
   project may turn one off, never on.
-- **`install_postgres`**: the project may say `never`, never `ask`.
+- **`install_postgres`, `searxng`**: the project may say `never`, never `ask`.
 - **`services`, `modes`**: the project may drop items, never add one; the result keeps the user's
   order. A project whose `modes` share none with the user's leaves the user's (a session is never
   refused, and nothing is widened). `default_mode` is the project's only if it survives in the
@@ -54,7 +54,7 @@ LOWER_ONLY: Final = (
     "session_events_max",
     "replay_events_max",
 )
-NARROWED: Final = ("install_postgres", "services", "modes", "default_mode")
+NARROWED: Final = ("install_postgres", "searxng", "services", "modes", "default_mode")
 _PERMISSIVENESS: Final = ("observe", "drive")
 """The session modes from least to most permissive: a project may only start a session lower."""
 CLASSIFIED: Final = frozenset({*SWITCHES, *USER_ONLY, *SLOWER_ONLY, *LOWER_ONLY, *NARROWED})
@@ -71,8 +71,9 @@ class AcpSettingsTrust:
         for key in SWITCHES:
             if key in project_keys:
                 changes[key] = getattr(user, key) and getattr(project, key)
-        if "install_postgres" in project_keys and project.install_postgres == "never":
-            changes["install_postgres"] = "never"
+        for key in ("install_postgres", "searxng"):
+            if key in project_keys and getattr(project, key) == "never":
+                changes[key] = "never"
         if "services" in project_keys:
             changes["services"] = tuple(s for s in user.services if s in project.services)
         for key in SLOWER_ONLY:

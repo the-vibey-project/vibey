@@ -10,7 +10,11 @@ configured; whether the local SearXNG actually answers is what `vibey doctor` re
 Both are configured by the person's own environment alone, never by a file the model could read
 or a repository could commit (`VIBEY_SEARXNG_URL`; `VIBEY_BRAVE_API_KEY`, or
 `BRAVE_SEARCH_API_KEY`, the name Brave's own tools read; vibey's own name wins when both are
-set). A project's `vibey.toml` cannot point search anywhere. A backend that fails raises
+set). A project's `vibey.toml` cannot point search anywhere. The one file search reads is the
+person's own record of the SearXNG vibey installed for them (`provision.json` in their
+configuration folder, ADR-0102): when their environment names neither `VIBEY_SEARXNG_URL` nor
+`VIBEY_SEARXNG_INSTANCE`, its loopback port and identity marker are used, so `vibey search` in any
+terminal finds that SearXNG and believes only it. A backend that fails raises
 `WebSearchError`, which names the backend and the cause, never the query, a URL's credentials
 or query string, or the key.
 
@@ -38,6 +42,8 @@ from dataclasses import dataclass, field
 from typing import Any, ClassVar, Final
 
 from vibey.domain.config import ConfigError
+from vibey.domain.searxng import SearxngProvision
+from vibey.infrastructure.searxng.searxng_files import SearxngFiles
 from vibey.infrastructure.web.bounded_request import BoundedRequest, DeadlineExceeded
 from vibey.infrastructure.web.guarded_opener import GuardedOpener
 from vibey.infrastructure.web.untrusted_text import UntrustedText
@@ -140,15 +146,26 @@ class WebSearchSettings:
     in_session: bool = False
     """Read inside an engine session (vibey told it `WEBSEARCH_PROVIDER`): no Brave key can be
     there, so a failure never suggests one."""
+    provisioned: bool = False
+    """The URL and marker came from the person's record of the SearXNG vibey installed."""
 
     @property
     def has_backup(self) -> bool:
         return self.brave_key is not None
 
     @classmethod
-    def from_environment(cls, environ: Mapping[str, str]) -> "WebSearchSettings":
+    def from_environment(
+        cls,
+        environ: Mapping[str, str],
+        *,
+        provisioned: Callable[[], SearxngProvision | None] | None = None,
+    ) -> "WebSearchSettings":
         """The settings the environment declares. Never None: search is always the local
-        SearXNG, at `VIBEY_SEARXNG_URL` or the loopback default.
+        SearXNG, at `VIBEY_SEARXNG_URL`, else at the port of the SearXNG vibey provisioned (its
+        record in the person's configuration folder, read by `provisioned`, by default
+        `SearxngFiles.personal().read`), else at the loopback default. The record is read only
+        when neither `VIBEY_SEARXNG_URL` nor `VIBEY_SEARXNG_INSTANCE` is set; one that cannot be
+        read, or holds a value vibey would not have written, is not used.
 
         The Brave key is `VIBEY_BRAVE_API_KEY`, else `WEBSEARCH_BRAVE_API_KEY`, else
         `BRAVE_SEARCH_API_KEY`, and is only ever a backup. `VIBEY_SEARCH_PROVIDER` may be unset
@@ -166,6 +183,14 @@ class WebSearchSettings:
         url_env = _setting_name(environ, SEARXNG_URL_ENV)
         searxng = _setting(environ, SEARXNG_URL_ENV) or DEFAULT_SEARXNG_URL
         _check_http_url(searxng, SEARXNG_URL_ENV)
+        instance = _setting(environ, SEARXNG_INSTANCE_ENV) or None
+        provision = (
+            _provisioned(provisioned or SearxngFiles.personal().read)
+            if url_env is None and instance is None
+            else None
+        )
+        if provision is not None:
+            searxng, instance = f"http://127.0.0.1:{provision.port}", provision.marker
         # Exactly three names, first wins: vibey's own, its `WEBSEARCH_*` form, then Brave's.
         brave_env, brave = next(
             (
@@ -182,11 +207,12 @@ class WebSearchSettings:
             results=_bounded_int(environ, SEARCH_RESULTS_ENV, DEFAULT_RESULTS),
             brave_key_env=brave_env,
             searxng_url_env=url_env,
-            searxng_instance=_setting(environ, SEARXNG_INSTANCE_ENV) or None,
+            searxng_instance=instance,
             identity_ttl_seconds=_positive_float(
                 environ, SEARCH_IDENTITY_TTL_ENV, DEFAULT_IDENTITY_TTL_SECONDS
             ),
             in_session=f"{SESSION_PREFIX}PROVIDER" in environ,
+            provisioned=provision is not None,
         )
 
     def session_environment(self) -> dict[str, str]:
@@ -220,6 +246,15 @@ def _alias(name: str) -> str:
 def _setting(environ: Mapping[str, str], name: str) -> str:
     """`name`'s value, else its `WEBSEARCH_*` alias, stripped; empty when neither is set."""
     return (environ.get(name) or environ.get(_alias(name)) or "").strip()
+
+
+def _provisioned(read: Callable[[], SearxngProvision | None]) -> SearxngProvision | None:
+    """The person's record of the SearXNG vibey installed, or None when there is none, or none
+    that can be believed (a link, not JSON, a value vibey would not have written)."""
+    try:
+        return read()
+    except (OSError, ValueError):
+        return None
 
 
 def _setting_name(environ: Mapping[str, str], name: str) -> str | None:
