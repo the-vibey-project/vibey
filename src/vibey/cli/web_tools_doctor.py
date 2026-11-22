@@ -24,7 +24,6 @@ raises. Declared by `interfaces/web_tools_doctor_interface.py` (ADR-0016).
 
 from __future__ import annotations
 
-import ipaddress
 import json
 import ssl
 import urllib.request
@@ -36,6 +35,7 @@ from vibey.application.acp.doctor_checks import DoctorChecks
 from vibey.bootstrap import acp_user_config
 from vibey.domain.config import ConfigError
 from vibey.domain.hub_scope import HubScope
+from vibey.domain.hub_target import HUB_TARGETS
 from vibey.infrastructure.hub.local_token import LocalTokenStore
 from vibey.infrastructure.hub.settings import HUB_SETTINGS
 from vibey.infrastructure.hub.tls import CERT_FILE
@@ -49,7 +49,6 @@ PROBE_SECONDS: Final = 3.0
 PROBE_BYTES: Final = 1_000_000
 """The most of the OpenAPI document read; it is about a tenth of that."""
 _WIDTH: Final = 26
-_WILDCARDS: Final = frozenset({"0.0.0.0", "::"})  # nosec B104 - compared, never bound
 
 type Probe = Callable[[str, Path | None], bytes]
 """Reads a URL on this computer's loopback, trusting `cafile` for https; at most `PROBE_BYTES`."""
@@ -112,8 +111,8 @@ class WebToolsDoctor:
                 "no hub is running, so vibey_search and vibey_fetch cannot answer until one is "
                 "(`vibey hub start`)"
             )
-        host = "127.0.0.1" if record.host in _WILDCARDS else record.host
-        if not self.is_loopback(host):
+        host = HUB_TARGETS.loopback_address(record.host)
+        if host is None:
             return "the hub's runtime record names a non-loopback address; not probed"
         shown = f"[{host}]" if ":" in host else host
         scheme = "https" if record.tls else "http"
@@ -131,17 +130,6 @@ class WebToolsDoctor:
                 "older vibey; `vibey hub stop` and `vibey hub start` run this one"
             )
         return None
-
-    @staticmethod
-    def is_loopback(host: str) -> bool:
-        """Whether `host` is this computer: `localhost` or an address in 127.0.0.0/8 or `::1`."""
-        name = host.lower().rstrip(".")
-        if name == "localhost":
-            return True
-        try:
-            return ipaddress.ip_address(name).is_loopback
-        except ValueError:
-            return False
 
     @staticmethod
     def loopback_document(url: str, cafile: Path | None) -> bytes:

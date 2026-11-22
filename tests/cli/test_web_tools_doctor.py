@@ -84,16 +84,41 @@ def test_a_running_hub_offering_the_routes_to_an_agent_holding_web_passes(tmp_pa
     assert world.asked == [("http://127.0.0.1:8765/api/v1/openapi.json", None)]
 
 
-@pytest.mark.parametrize("host", ["localhost", "127.0.0.1", "127.8.9.10", "::1", "0.0.0.0", "::"])
-def test_a_record_naming_this_computer_is_probed(tmp_path: Path, host: str) -> None:
+@pytest.mark.parametrize(
+    ("host", "probed"),
+    [
+        ("localhost", "127.0.0.1"),
+        ("127.0.0.1", "127.0.0.1"),
+        ("127.8.9.10", "127.8.9.10"),
+        ("::1", "[::1]"),
+        ("0.0.0.0", "127.0.0.1"),
+        ("::", "[::1]"),
+        ("::ffff:127.0.0.1", "127.0.0.1"),
+    ],
+)
+def test_a_record_naming_this_computer_is_probed_at_a_fixed_loopback_literal(
+    tmp_path: Path, host: str, probed: str
+) -> None:
     world = World(tmp_path)
     world.serving(host)
     assert world.doctor().line().startswith("PASS")
-    assert len(world.asked) == 1
+    assert world.asked == [(f"http://{probed}:8765/api/v1/openapi.json", None)]
 
 
 @pytest.mark.parametrize(
-    "host", ["203.0.113.9", "192.168.1.5", "evil.example", "localhost.evil.example"]
+    "host",
+    [
+        "203.0.113.9",
+        "192.168.1.5",
+        "evil.example",
+        "localhost.evil.example",
+        "evil.localhost",
+        "localhost.",
+        "LOCALHOST",
+        "127.1",
+        "0x7f.1",
+        "::ffff:10.0.0.1",
+    ],
 )
 def test_a_record_naming_another_host_is_never_probed(tmp_path: Path, host: str) -> None:
     world = World(tmp_path)

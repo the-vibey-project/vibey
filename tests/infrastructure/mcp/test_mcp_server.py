@@ -534,7 +534,10 @@ def test_the_web_tools_are_listed_only_to_an_agent_holding_web_and_refused_other
     )
 
 
-@pytest.mark.parametrize("host", ["203.0.113.9", "192.168.1.5", "hub.evil.example"])
+@pytest.mark.parametrize(
+    "host",
+    ["203.0.113.9", "192.168.1.5", "hub.evil.example", "evil.localhost", "localhost.", "127.1"],
+)
 def test_the_gateway_never_sends_the_agent_token_to_a_host_off_this_computer(
     tmp_path: Path, host: str
 ) -> None:
@@ -558,3 +561,17 @@ def test_the_gateway_never_sends_the_agent_token_to_a_host_off_this_computer(
     with pytest.raises(HubGatewayError, match="non-loopback"):
         gw.reach(call)
     assert fake.calls == [] and started == []
+
+
+def test_a_record_naming_localhost_is_reached_at_a_fixed_loopback_literal(tmp_path: Path) -> None:
+    """The name is never resolved again: what was checked is what is connected to."""
+    state = tmp_path / "state"
+    toml = tmp_path / "vibey.toml"
+    toml.write_text(f"[hub]\nstate_dir = '{state}'\n")
+    LocalTokenStore(state).record_serving(
+        ServingRecord(host="localhost", port=8765, pid=1, tls=False)
+    )
+    fake = _FakeHttpClient()
+    gw = HubGateway(config_path=lambda: toml, client=fake.factory, starter=lambda: False)
+    gw.call(HubCall(tool="vibey_projects", method="GET", route="/api/v1/projects"))
+    assert fake.calls[0]["base_url"] == "http://127.0.0.1:8765"

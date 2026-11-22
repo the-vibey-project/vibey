@@ -14,11 +14,6 @@ class WebToolsDoctorInterface(Protocol):
         ...
 
     @staticmethod
-    def is_loopback(host: str) -> bool:
-        """Whether `host` is this computer: `localhost`, 127.0.0.0/8 or `::1`."""
-        ...
-
-    @staticmethod
     def loopback_document(url: str, cafile: Path | None) -> bytes:
         """`url`'s body: no credential, no proxy, no redirect off its origin, bounded."""
         ...

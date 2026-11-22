@@ -27,14 +27,13 @@ from vibey.domain.config import ConfigError
 from vibey.domain.errors import VibeyError
 from vibey.domain.host_tools import HubCall
 from vibey.domain.hub_scope import AGENT_DEFAULT_SCOPES, HubScope
+from vibey.domain.hub_target import HUB_TARGETS
 from vibey.infrastructure.hub.interfaces.settings_interface import HubSettingsLoaderInterface
 from vibey.infrastructure.hub.local_token import LocalTokenStore, ServingRecord
 from vibey.infrastructure.hub.settings import HUB_SETTINGS, HubSettings
 from vibey.infrastructure.hub.tls import CERT_FILE
 from vibey.infrastructure.mcp.interfaces.hub_gateway_interface import HubGatewayInterface
-from vibey.infrastructure.web.guarded_opener import GuardedOpener
 
-WILDCARDS: Final = frozenset({"0.0.0.0", "::"})  # nosec B104 - compared, never bound
 START_TIMEOUT_SECONDS: Final = 15.0
 
 type ClientFactory = Callable[..., httpx.Client]
@@ -206,13 +205,15 @@ class HubGateway:
         token: str,
         call: HubCall,
     ) -> HubGatewayResponse:
-        host = "127.0.0.1" if record.host in WILDCARDS else record.host
-        shown = f"[{host}]" if ":" in host else host
-        if not GuardedOpener.is_loopback(f"http://{shown}/"):
+        # The record's host is untrusted: connect to the fixed loopback literal it maps to, never
+        # to its name resolved again, or to nothing at all.
+        host = HUB_TARGETS.loopback_address(record.host)
+        if host is None:
             raise HubGatewayError(
                 "the hub's runtime record names a non-loopback address; vibey reaches only a hub "
                 "on this computer's loopback, so nothing was sent"
             )
+        shown = f"[{host}]" if ":" in host else host
         scheme = "https" if record.tls else "http"
         verify: str | bool = str(settings.state_dir / CERT_FILE) if record.tls else True
         with self._client(

@@ -245,8 +245,10 @@ called, it runs `vibey hub start` once and retries. It exposes 16 tools (`vibey_
 `vibey_start_work`, `vibey_pause_work`, `vibey_abandon_project` where `dry_run` defaults to
 `true`, and the two web tools below). `tools/list` shows a tool only when the agent's scopes
 include the one it needs. It reaches only a hub on this computer's loopback: a runtime record
-(`<state_dir>/serving.json`) naming any other host is refused and nothing -- not the token, not a
-call -- is sent.
+(`<state_dir>/serving.json`) must name exactly `localhost`, a canonical loopback literal or a
+wildcard bind, and the gateway connects to the fixed loopback literal that maps to (never the
+name resolved again); any other host -- `evil.localhost`, `localhost.`, `127.1` included -- is
+refused and nothing, not the token, not a call, is sent.
 
 ### Web tools: `vibey_search` and `vibey_fetch`
 
@@ -2229,8 +2231,9 @@ A fourth line, `web-tools`, follows: whether the hub serves [`vibey_search` and
 `[web]` budgets (the person's own, narrowed by this folder's, as the hub reads them). The hub it
 asks about is your own: its state folder and `agent_scopes` come from your own `vibey.toml` (in
 your configuration folder), never from the folder doctor runs in, and it is probed only on a
-loopback address its runtime record names (`localhost`, 127.0.0.0/8, `::1`, or a wildcard
-bind), with no credential, bounded in time and size, never through a proxy and never past a
+loopback address its runtime record names -- exactly `localhost`, a canonical 127.0.0.0/8 or
+`::1` literal (or an IPv4-mapped form of one), or a wildcard bind -- connecting to a fixed
+loopback literal rather than resolving the name again, with no credential, bounded in time and size, never through a proxy and never past a
 redirect off its own origin; a record naming any other host is a `WARN ... not probed`.
 `PASS ... the hub serves vibey_search and vibey_fetch to the agent (web granted)`; `WARN` when
 `[hub] agent_scopes` does not grant `web`, when no hub is running (doctor never starts one:
