@@ -184,6 +184,7 @@ This index is generated from the documentation's navigation by `scripts/llms_txt
 - [0099 — Heretic v2 of GPT-OSS 20B is the sovereign default model](https://the-vibey-project.github.io/vibey/main/architecture/decisions/0099-heretic-v2-of-gpt-oss-20b-is-the-sovereign-default-model/)
 - [0100 — Host-driven MCP interface and chat-first krypton surfaces](https://the-vibey-project.github.io/vibey/main/architecture/decisions/0100-host-driven-mcp-interface-and-chat-first-surfaces/)
 - [0101 — The ACP agent, and the user-level services it installs and keeps running](https://the-vibey-project.github.io/vibey/main/architecture/decisions/0101-the-acp-agent-and-self-installing-services/)
+- [0102 — Local-first search, and the SearXNG vibey installs and runs itself](https://the-vibey-project.github.io/vibey/main/architecture/decisions/0102-local-first-search-and-a-provisioned-searxng/)
 
 ## Governance
 

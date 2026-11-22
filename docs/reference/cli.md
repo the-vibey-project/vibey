@@ -35,7 +35,7 @@ command groups are marked with a trailing `…`.
 - **Watch and steer:** `watch`, `queue`…, `engines`, `loops`, `models`, `cost`, `budget`…, `ledger`…, `ultra`…, `retry`, `recover`, `abandon`
 - **Run the machinery:** `work`, `worker`, `serve`, `hub`…, `supervisor`…, `driver`…, `operator`
 - **Maintain:** `migrate`, `state`…, `sabbath`, `explain`
-- **Tools for agents:** `mcp`, `acp`, `search`, `fetch`, `llm`…
+- **Tools for agents:** `mcp`, `acp`, `search`, `searxng`…, `fetch`, `llm`…
 
 Bare `vibey`, and each bare command group, prints help.
 
@@ -279,7 +279,10 @@ systemd it ends with `systemctl --user daemon-reload`. It prints what it did and
 again. Exit 0 when everything was done, 1 when a unit would not unload, a file could not be
 removed, the service manager would not reload, or it runs as root; 2 for any other action than
 `unload`. It does not change `[acp] auto_services`: set that to `false` in your own
-`vibey.toml`, or the next `vibey acp` loads them again.
+`vibey.toml`, or the next `vibey acp` loads them again. When one of the labels is the local
+SearXNG vibey installed ([`vibey searxng`](#vibey-searxng)), its container (`vibey-searxng`) is
+removed too (`<runtime> rm -f vibey-searxng`); its settings, record and image are kept, and
+`vibey searxng uninstall --purge` removes them. A container that will not go is said and exits 1.
 
 The client launches the command; you do not run it in a terminal. Its standard output
 carries protocol messages and nothing else: the command points file descriptor 1 at standard
@@ -617,6 +620,28 @@ the next session runs it again. Two runs never overlap.
    A `session/cancel` during an install you allowed does not stop it: the tool call ends saying
    it goes on in the background, how it ends is logged on standard error and said in the
    session if it is still open.
+
+5. **SearXNG** ([ADR-0102](../architecture/decisions/0102-local-first-search-and-a-provisioned-searxng.md)),
+   after step 4, inside a prompt of a session whose mode may run (never in `observe`), at most
+   once per process, and only with [`[acp] searxng = "ask"`](configuration.md#acp) and
+   `auto_services` on. Search asks a [local SearXNG first](#local-first-search); this step offers
+   to install one. Nothing is asked when your environment names your own (`VIBEY_SEARXNG_URL`),
+   when a SearXNG already answers the identity check, or when vibey installed one before. With no
+   container runtime (neither `podman` nor `docker` on your PATH) it says once how to get one and
+   does nothing else: vibey never installs a runtime. Otherwise the client is asked "Download and
+   run SearXNG (searxng/searxng@sha256:<first 12>) in a container on 127.0.0.1:28180? ..." with
+   **Install SearXNG** and **Not now**; only the first installs, and "Not now", no answer within
+   `permission_timeout_seconds`, a cancel, any other answer or a switch to `observe` install
+   nothing. On allow, in one `execute` tool call: the pinned image is pulled (each command in a
+   process group of its own, bounded by `install_timeout_seconds`), the settings and the record
+   are written in your configuration folder, the unit `<[supervisor] label_prefix>.searxng` is
+   written and loaded like the hub's (never over one you edited) and said with the commands that
+   unload it, and the step waits up to `bootstrap_timeout_seconds` for it to answer as vibey's
+   own. A part that fails says one reason; search then goes on asking the local SearXNG first and
+   Brave only as a backup. A cancel during an install you allowed does not stop it. Once vibey
+   has installed it, step 3 writes and loads its unit beside the hub's at each session start, and
+   the keep-alive restarts it like the worker. `vibey searxng install` does the same from a
+   terminal.
 
 Connecting, loading services and installing change the computer, so they take turns within one
 `vibey acp`, and a second `vibey acp` (another editor window) leaves connecting and installing to
@@ -1237,7 +1262,11 @@ bind any unprivileged loopback port, including this one, and can read the instan
 What it serves is still only untrusted text, read as data and never as instructions.
 
 Configuration is your own environment only, never `vibey.toml`: a project's file cannot point
-search at another host or supply a key.
+search at another host or supply a key. The one file search reads is your own record of the
+SearXNG vibey installed for you ([`vibey searxng`](#vibey-searxng)): when your environment sets
+neither `VIBEY_SEARXNG_URL` nor `VIBEY_SEARXNG_INSTANCE`, its loopback port and identity marker
+are used, so `vibey search` in any terminal asks that SearXNG and believes only it. Your
+environment wins whenever it names either.
 
 #### What engine sessions are told
 
@@ -1700,6 +1729,36 @@ left in `.vibey/driver/` and nothing is started. `CreditsExhausted` has no
 reset time; a window's reset only schedules the probe, and only a recorded
 successful probe hands back.
 
+## `vibey searxng`
+
+The local SearXNG [search asks first](#local-first-search), installed and kept running by vibey
+([ADR-0102](../architecture/decisions/0102-local-first-search-and-a-provisioned-searxng.md)).
+The editor's bootstrap offers the same install ([step 5](#bootstrap-doctor-connect-services-and-postgresql)).
+
+```bash
+vibey searxng install [--yes]
+vibey searxng status
+vibey searxng uninstall [--purge]
+```
+
+| Command | What it does |
+|---|---|
+| `install` | Prints what it will download and run, and asks (`--yes` answers yes for you; the question is still printed). Then it pulls the pinned image `docker.io/searxng/searxng@sha256:...` with `podman` (preferred) or `docker` from your PATH, writes `settings.yml` and `provision.json` in `<your configuration folder>/searxng/` (0700; files 0600, written atomically, never through a link), writes and loads the user-level unit `<[supervisor] label_prefix>.searxng` (restarted when one is already running), and waits up to `[acp] bootstrap_timeout_seconds` until the SearXNG answers as vibey's own. It refuses when your environment names your own SearXNG (`VIBEY_SEARXNG_URL`), when another SearXNG already answers on the port, with no runtime, and as root. Run it again to update to a newer pinned image. Exit 0 once it answers, 1 otherwise. |
+| `status` | The runtime, what vibey installed (image digest, port, unit label), whether the image is here, the unit's state and whether it answers as vibey's own. Always exit 0. |
+| `uninstall` | Unloads the unit and deletes its file only while it is exactly what vibey wrote, then removes the container. `--purge` also removes the image, `settings.yml` and `provision.json`. Safe to run again; exit 1 when something could not be done or as root. |
+| `serve` | Hidden: what the unit runs. It checks the record (every value), the settings file and that the image is here -- it never pulls, so nothing downloads at login -- removes a container a killed run left behind, then replaces itself with the runtime's one command line. Exit 78 when nothing is installed or the record is not one vibey wrote, 1 when the image is missing. |
+
+The container runs as `<runtime> run --rm --name vibey-searxng --pull=never --read-only --cap-drop
+ALL --security-opt no-new-privileges --pids-limit 256 --memory 512m [--userns=keep-id] --user
+<uid>:<gid> --publish 127.0.0.1:28180:8080 --volume <settings.yml>:/etc/searxng/settings.yml:ro
+--tmpfs /etc/searxng --tmpfs /var/cache/searxng --tmpfs /tmp <image>`: never privileged, never
+on the host network, never with the runtime's socket or a home folder, published on 127.0.0.1
+only, and given no secret but its own `secret_key`. The settings turn the limiter, the public
+instance flag, donation and contact links and metrics off, enable the JSON format, and name the
+instance `vibey-<random hex>`: the marker the identity check asks for. Everything is read from
+your own `vibey.toml` and configuration folder, never the folder the command runs in. Not yet
+run against a real container: ADR-0102 lists which flags need that check.
+
 ## `vibey supervisor`
 
 Keeps `vibey worker --all-projects` and the triaged-delivery bridge
@@ -2098,6 +2157,15 @@ brave`, a URL that is not `http(s)`) is the one `FAIL`. The URL is shown without
 query or fragment. Under `--json` both are checks under those names; see
 [local first](#local-first-search).
 
+A third line, `searxng`, follows them: the SearXNG vibey installs itself
+([`vibey searxng`](#vibey-searxng)). `WARN ... not installed by vibey` (with whether a runtime
+was found, and the command that installs one); `UNKNOWN` when your environment names your own
+(`VIBEY_SEARXNG_URL`); `PASS ... vibey's SearXNG answering as its own on 127.0.0.1:<port>`; or
+`WARN` with the first thing wrong -- its image is not here, its unit is not running, it does not
+answer as vibey's own, or vibey pins a newer image. It asks the runtime (an image inspect) and the
+service manager only once vibey has installed one. Under `--json` it is a check named `searxng`;
+the existing keys are unchanged.
+
 The last section, `llm-tooling`, lists every LLM client installed here (its own folder exists:
 `~/.claude` for Claude Code, VS Code's user folder, each user-scope client's config folder) and,
 one line each, its four surfaces -- `acp-agent`, `mcp-server`, `skill`, `plugin` -- as
@@ -2282,7 +2350,7 @@ Variables read by code under `src/vibey`:
 | `VIBEY_OLLAMA_RETRY_CONTEXT` | as `VIBEY_OLLAMA_TIMEOUT` | The largest context window the one retry of a cut-short reply may ask for, default `32768`, at least `4096`. A prompt that leaves too little of `VIBEY_OLLAMA_CONTEXT` for the reasoning and the answer fills the window, and asking again inside the same window only fails again; the retry instead opens as much as it needs, up to this. A configured `VIBEY_OLLAMA_CONTEXT` above it is never lowered. Set it equal to `VIBEY_OLLAMA_CONTEXT` to keep the retry inside that ceiling. Ollama reloads a model whose context changes, so a retry that grows the window pays a reload: raise `VIBEY_OLLAMA_CONTEXT` itself when that is the usual case. |
 | `VIBEY_OLLAMA_FIT` | as `VIBEY_OLLAMA_TIMEOUT` | Path to a fit record written by `vibey doctor --sovereign-fit`. When it matches, its measured context and output replace the two ceilings above; see [Local models](../guides/local-models-ollama.md#measuring-a-capacity-fit). Unset, unreadable or mismatched means the configured ceilings. |
 | `VIBEY_REVISION` | as `VIBEY_OLLAMA_FIT` | When set, a fit record is used only if its `revision` equals this value. |
-| `VIBEY_SEARXNG_URL` | `search`, `worker`, `doctor`, the sovereign DESIGN research stage | Base URL of the local SearXNG, with its JSON format enabled; default `http://127.0.0.1:28180`. No user name, password, query or fragment, and a port from 1 to 65535 if it names one (exit 2 otherwise). Always asked first ([local first](#local-first-search)). Passed to engine sessions as `WEBSEARCH_SEARXNG_URL`. Queries go to that instance, so keep it your own. |
+| `VIBEY_SEARXNG_URL` | `search`, `worker`, `doctor`, the sovereign DESIGN research stage | Base URL of the local SearXNG, with its JSON format enabled; default the one [`vibey searxng`](#vibey-searxng) installed (its record's loopback port, when neither this nor `VIBEY_SEARXNG_INSTANCE` is set), else `http://127.0.0.1:28180`. No user name, password, query or fragment, and a port from 1 to 65535 if it names one (exit 2 otherwise). Always asked first ([local first](#local-first-search)). Passed to engine sessions as `WEBSEARCH_SEARXNG_URL`. Queries go to that instance, so keep it your own. |
 | `VIBEY_BRAVE_API_KEY` | as `VIBEY_SEARXNG_URL` | A Brave Search key: the backup, asked only when the local SearXNG fails, and said once on stderr when it is. Used by vibey's own processes only; never passed to a session. |
 | `BRAVE_SEARCH_API_KEY` | as `VIBEY_SEARXNG_URL` | The same Brave Search key under the name Brave's own tools read; used only when neither `VIBEY_BRAVE_API_KEY` nor its `WEBSEARCH_BRAVE_API_KEY` form is set. Used by vibey's own processes only: never passed to a session or a gate, not even by a declared allow-list, and never printed (the worker says only `configured via BRAVE_SEARCH_API_KEY`). |
 | `VIBEY_SEARCH_PROVIDER` | as `VIBEY_SEARXNG_URL` | `searxng`, or unset. `brave` is refused (exit 2): Brave is a backup only; set its key instead. |

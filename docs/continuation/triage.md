@@ -11,7 +11,7 @@ closed one actually done, the forecast current.
 
 - **Mode when GitHub runs it weekly:** act — may open a draft pull request; never merges, approves, releases or deletes.
 - **What it is for:** Keep the backlog, the tracker and the roadmap truthful.
-- **Decision records:** 101, the newest 0101 — The ACP agent, and the user-level services it installs and keeps running.
+- **Decision records:** 102, the newest 0102 — Local-first search, and the SearXNG vibey installs and runs itself.
 - **Lanes it keeps usable:** [Backlog cleanup](https://github.com/the-vibey-project/vibey/actions/workflows/backlog-cleanup.yml), [Delivery estimate](https://github.com/the-vibey-project/vibey/actions/workflows/delivery-estimate.yml).
 <!-- END GENERATED continuation:state -->
 

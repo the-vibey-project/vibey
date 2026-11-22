@@ -215,4 +215,5 @@ nav:
           - "0099 — Heretic v2 of GPT-OSS 20B is the sovereign default model": architecture/decisions/0099-heretic-v2-of-gpt-oss-20b-is-the-sovereign-default-model.md
           - "0100 — Host-driven MCP interface and chat-first krypton surfaces": architecture/decisions/0100-host-driven-mcp-interface-and-chat-first-surfaces.md
           - "0101 — The ACP agent, and the user-level services it installs and keeps running": architecture/decisions/0101-the-acp-agent-and-self-installing-services.md
+          - "0102 — Local-first search, and the SearXNG vibey installs and runs itself": architecture/decisions/0102-local-first-search-and-a-provisioned-searxng.md
   - Research paper: paper.md
