@@ -1,17 +1,18 @@
 # Made with ❤️ by [Vibey](https://the-vibey-project.github.io/vibey/), Developed by [Adam Matthew Steinberger](https://vibewithadam.matthewsteinberger.com/) ([@adammatthewsteinberger](https://github.com/adammatthewsteinberger/)).
 """Each use of the hub's web search and fetch, written to the ledger (ADR-0102, SP-ACP 9b).
 
-A search or a fetch is recorded where its reader will look: on the ledger of the project the
-caller named (`project_id`), else -- like a pairing (`pairing_ledger.py`), since the principal
-could be working for any of them -- on every project's ledger, in one transaction. Filed under the
-project's cycle and phase, no engine, no job, `trusted`: the hub did it. `vibey ledger search
---kind WebFetched` and the `vibey_ledger` tool find it.
+A search or a fetch is recorded on the ledger of the **latest** project -- the one `vibey ledger
+search` and `vibey ledger show` read when no project is named -- and, when the caller named a
+project (`project_id`), on that project's too, deduplicated, in one transaction. The caller can
+add a ledger, never take the latest away: a model steered to name some old project cannot keep
+its record out of the person's default view. Filed under each project's cycle and phase, no
+engine, no job, `trusted`: the hub did it. `vibey ledger search --kind WebFetched` finds it.
 
-With no project at all there is no ledger to write to, and the hub refuses the use rather than
-make it unrecorded (`WebToolUnavailable`); a named project that does not exist is
-`UnknownProject`. A project in a phase this vibey does not know refuses the write and the
-transaction rolls back, so a record is never in some projects and silently missing from others
-(writers stay strict, vibey#287).
+`ready` checks everything `record` needs before the hub acts: a latest project exists (else
+`WebToolUnavailable`: no ledger to write to), a named project exists (else `UnknownProject`), and
+every target is in a phase this vibey knows (else `WebToolUnavailable`), so the write that
+follows the act fails only for a cause `ready` cannot see (the database itself). `record`
+refuses the same way and rolls back: a record is never on one ledger and missing from another.
 
 Declared by `interfaces/web_audit_interface.py`; the port it fills is the application's
 `WebAuditPortInterface`.
@@ -19,13 +20,13 @@ Declared by `interfaces/web_audit_interface.py`; the port it fills is the applic
 
 from collections.abc import Mapping
 from datetime import datetime
-from typing import Final
+from typing import Any, Final
 from uuid import UUID
 
 import asyncpg
 
 from vibey.domain.correlation import DELIVERY_CORRELATION
-from vibey.domain.errors import UnknownProject, WrongPhase
+from vibey.domain.errors import UnknownProject
 from vibey.domain.interfaces.correlation_interface import DeliveryCorrelationInterface
 from vibey.domain.ledger import EventKind, Provenance, digest_event
 from vibey.domain.phase import Phase
@@ -35,13 +36,13 @@ from vibey.infrastructure.db.ledger_repository import DEFAULT_EVENT_APPENDER
 from vibey.infrastructure.db.project_repository import PROJECT_ROWS
 from vibey.infrastructure.engines.tailer import LedgerEventDraft
 
-_EVERY: Final = "SELECT * FROM project ORDER BY id FOR KEY SHARE"
-_ONE: Final = "SELECT * FROM project WHERE id = $1 FOR KEY SHARE"
-_ANY: Final = "SELECT EXISTS (SELECT 1 FROM project)"
-_EXISTS: Final = "SELECT EXISTS (SELECT 1 FROM project WHERE id = $1)"
+_LATEST: Final = "SELECT * FROM project ORDER BY created_at DESC, id DESC LIMIT 1"
+"""The latest project, chosen exactly as `ProjectRepository.get_latest` chooses it."""
+_ONE: Final = "SELECT * FROM project WHERE id = $1"
+_LOCK: Final = " FOR KEY SHARE"
 NO_LEDGER: Final = (
     "the hub has no project ledger to record this use in, and it searches or fetches nothing "
-    "it cannot record: name a project_id, or start a project first"
+    "it cannot record: start a project first"
 )
 
 
@@ -63,11 +64,7 @@ class PostgresWebAudit:
 
     async def ready(self, project_id: UUID | None) -> None:
         async with self._pool.acquire() as conn:
-            if project_id is None:
-                if not await conn.fetchval(_ANY):
-                    raise WebToolUnavailable(NO_LEDGER)
-            elif not await conn.fetchval(_EXISTS, project_id):
-                raise UnknownProject(f"no project {project_id}")
+            await self._targets(conn, project_id, lock=False)
 
     async def record(
         self,
@@ -77,30 +74,15 @@ class PostgresWebAudit:
         project_id: UUID | None,
     ) -> int:
         body = dict(payload)
-        written = 0
         async with self._pool.acquire() as conn, conn.transaction():
-            rows = (
-                await conn.fetch(_EVERY)
-                if project_id is None
-                else await conn.fetch(_ONE, project_id)
-            )
-            if not rows:
-                if project_id is not None:
-                    raise UnknownProject(f"no project {project_id}")
-                raise WebToolUnavailable(NO_LEDGER)
-            for row in rows:
-                project = self._rows.to_record(row)
-                if not isinstance(project.phase, Phase):
-                    raise WrongPhase(
-                        f"project {project.project_id} is in phase {project.phase.value!r}, "
-                        "which this vibey does not know; it will not record a web use there"
-                    )
+            projects = await self._targets(conn, project_id, lock=True)
+            for project in projects:
                 await self._appender.append(
                     conn,
                     LedgerEventDraft(
                         project_id=project.project_id,
                         cycle=project.cycle,
-                        phase=project.phase,
+                        phase=project.phase,  # type: ignore[arg-type]  # checked by _targets
                         kind=kind,
                         engine_id=None,
                         job_id=None,
@@ -112,5 +94,26 @@ class PostgresWebAudit:
                         digest=digest_event(body),
                     ),
                 )
-                written += 1
-        return written
+        return len(projects)
+
+    async def _targets(self, conn: Any, project_id: UUID | None, *, lock: bool) -> list[Any]:
+        """The latest project, and the named one when it is another, each in a phase this vibey
+        knows; or the refusal that says which is missing."""
+        tail = _LOCK if lock else ""
+        latest = await conn.fetchrow(_LATEST + tail)
+        if latest is None:
+            raise WebToolUnavailable(NO_LEDGER)
+        rows = [latest]
+        if project_id is not None and project_id != latest["id"]:
+            named = await conn.fetchrow(_ONE + tail, project_id)
+            if named is None:
+                raise UnknownProject(f"no project {project_id}")
+            rows.append(named)
+        projects = [self._rows.to_record(row) for row in rows]
+        for project in projects:
+            if not isinstance(project.phase, Phase):
+                raise WebToolUnavailable(
+                    f"project {project.project_id} is in a phase this vibey does not know, so the "
+                    "hub cannot record a web use there and makes none; upgrade vibey"
+                )
+        return projects

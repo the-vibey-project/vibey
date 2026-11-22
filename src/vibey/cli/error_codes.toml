@@ -707,14 +707,14 @@ fix = "Nothing to repair: that session's history stops being kept and every othe
 code = "E0090"
 class = "vibey.domain.web_tools.WebToolRefused"
 title = "The hub will not make this web search or fetch"
-cause = "The query or limit is beyond its bounds, or the URL is one the hub never reaches: not http(s), carrying a user name or password, a local, internal or metadata name, an address that is not public (loopback, private, link-local, carrier-grade NAT, unique-local, multicast, reserved, IPv4-mapped or NAT64 around one), an address spelt other than canonically, a host in `[web] deny_hosts` or missing from `[web] allow_hosts`, a redirect from https down to http, a compressed answer, or a content type the hub does not read (PDF and other binary types are refused, never extracted). The refusal is recorded on the ledger; nothing more was sent."
+cause = "The query or limit is beyond its bounds, or the URL is one the hub never reaches: not http(s), carrying a user name or password, a local, internal or metadata name, an address that is not public (loopback, private, link-local, carrier-grade NAT, unique-local, multicast, reserved, IPv4-mapped or NAT64 around one), an address spelt other than canonically, a host in `[web] deny_hosts` or missing from `[web] allow_hosts`, a redirect from https down to http, a compressed answer, or a content type the hub does not read (PDF and other binary types are refused, never extracted). A refused URL is recorded on the ledger (a query or limit refused by its bounds sends nothing and is not); nothing more was sent."
 fix = "Use a public http(s) page the person's `[web]` lists allow (docs/reference/configuration.md#web). A refusal is the guard working: never try to reach a private address another way."
 
 [[error]]
 code = "E0091"
 class = "vibey.domain.web_tools.WebToolFailed"
 title = "Web search, or the page, did not answer"
-cause = "The local SearXNG failed and there was no Brave backup, or the backup failed too; or the page could not be resolved or reached, answered something other than 200, took longer than `[web] timeout_seconds` in all, or redirected more than `[web] max_redirects` times. The message names the cause, never the query or the URL, and the attempt is recorded on the ledger."
+cause = "The local SearXNG failed and there was no Brave backup, or the backup failed too; or the page could not be resolved or reached, answered something other than 200, took longer than `[web] timeout_seconds` in all, or redirected more than `[web] max_redirects` times. Any other failure after the hub began is named by its class alone. The message names the cause, never the query or the URL, and the attempt is recorded on the ledger when the hub can write the record."
 fix = "For search, run `vibey doctor` on the hub's computer: its `web-search` line says whether the local SearXNG answers (`vibey searxng install` sets one up). For a page, try it again later, or another page."
 
 [[error]]
@@ -728,5 +728,5 @@ fix = "Wait the seconds the message names, or raise the budget in your own vibey
 code = "E0093"
 class = "vibey.domain.web_tools.WebToolUnavailable"
 title = "The hub cannot serve web tools right now"
-cause = "No ledger can record the use (no project exists yet, or the ledger did not take the record), or the hub's own environment sets search up wrongly (`VIBEY_SEARCH_PROVIDER=brave`, a malformed `VIBEY_SEARXNG_URL`). The hub searches and fetches nothing it cannot record."
-fix = "Start a project (or name an existing one's `project_id`), or fix the search setting the message names in the hub's environment and restart the hub (`vibey doctor` checks it)."
+cause = "The hub cannot write the use's record, so it refuses before sending anything: no project exists yet, a named project or the latest one is in a phase this vibey does not know, or the hub's own environment sets search up wrongly (`VIBEY_SEARCH_PROVIDER=brave`, a malformed `VIBEY_SEARXNG_URL`). The hub checks it can record a use before making it; a record that fails after the act instead marks the answer `audited: false`."
+fix = "Start a project (or name an existing one's `project_id`), upgrade vibey if a project is in a phase it does not know, or fix the search setting the message names in the hub's environment and restart the hub (`vibey doctor` checks it)."

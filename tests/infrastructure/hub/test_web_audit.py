@@ -18,7 +18,7 @@ import pytest
 from tests.db_roles import TestDatabaseRoles
 from vibey.application.hub.interfaces.web_tools_service_interface import WebAuditPortInterface
 from vibey.bootstrap import build_app, migrations_dir
-from vibey.domain.errors import UnknownProject, WrongPhase
+from vibey.domain.errors import UnknownProject
 from vibey.domain.ledger import EventKind, Provenance
 from vibey.domain.ledger_query import LedgerQuery
 from vibey.domain.web_tools import WebToolUnavailable
@@ -54,41 +54,45 @@ async def test_with_no_project_there_is_no_ledger_to_record_a_use_in() -> None:
     async with build_app() as resources:
         audit = PostgresWebAudit(resources.ledger._pool)
         assert isinstance(audit, WebAuditPortInterface)
-        with pytest.raises(WebToolUnavailable, match="no project ledger"):
-            await audit.ready(None)
-        with pytest.raises(UnknownProject):
-            await audit.ready(uuid4())
-        with pytest.raises(WebToolUnavailable, match="no project ledger"):
-            await audit.record(EventKind.WEB_SEARCHED, {"tool": "search"}, AT, None)
+        for named in (None, uuid4()):
+            with pytest.raises(WebToolUnavailable, match="no project ledger"):
+                await audit.ready(named)
+            with pytest.raises(WebToolUnavailable, match="no project ledger"):
+                await audit.record(EventKind.WEB_SEARCHED, {"tool": "search"}, AT, named)
 
 
 @pytest.mark.integration
 @pytest.mark.usefixtures("_an_empty_database")
-async def test_a_use_is_recorded_on_the_named_project_alone_and_found_by_its_kind(
+async def test_a_use_is_recorded_on_the_latest_project_whatever_the_caller_names(
     tmp_path: Path,
 ) -> None:
+    """A model steered to name an old project cannot keep the record out of the person's default
+    view: the latest project's ledger, which `vibey ledger search` reads with no project named,
+    always has it; the named one has it too."""
     async with build_app() as resources:
-        named = await resources.projects.create("a", tmp_path / "a", max_cycles=1, config={})
-        other = await resources.projects.create("b", tmp_path / "b", max_cycles=1, config={})
+        old = await resources.projects.create("a", tmp_path / "a", max_cycles=1, config={})
+        middle = await resources.projects.create("b", tmp_path / "b", max_cycles=1, config={})
+        latest = await resources.projects.create("c", tmp_path / "c", max_cycles=1, config={})
         audit = PostgresWebAudit(resources.ledger._pool)
-        await audit.ready(named.project_id)
-        assert await audit.record(EventKind.WEB_FETCHED, FETCH, AT, named.project_id) == 1
-        events = await resources.ledger.all_for_project(named.project_id)
-        (fetched,) = [e for e in events if e.kind is EventKind.WEB_FETCHED]
-        assert fetched.payload == FETCH
-        assert fetched.provenance is Provenance.TRUSTED
-        assert fetched.engine_id is None and fetched.job_id is None
-        others = await resources.ledger.all_for_project(other.project_id)
-        assert not [e for e in others if e.kind is EventKind.WEB_FETCHED]
-        found = await PostgresLedgerSearchRepository(resources.ledger._pool).search(
-            named.project_id, LedgerQuery(kinds=frozenset({EventKind.WEB_FETCHED}))
-        )
-        assert [e.payload for e in found.events] == [FETCH]
+        await audit.ready(old.project_id)
+        assert await audit.record(EventKind.WEB_FETCHED, FETCH, AT, old.project_id) == 2
+        search = PostgresLedgerSearchRepository(resources.ledger._pool)
+        for project in (old, latest):
+            found = await search.search(
+                project.project_id, LedgerQuery(kinds=frozenset({EventKind.WEB_FETCHED}))
+            )
+            assert [e.payload for e in found.events] == [FETCH]
+            (fetched,) = found.events
+            assert fetched.provenance is Provenance.TRUSTED
+            assert fetched.engine_id is None and fetched.job_id is None
+        # A project neither latest nor named is not written.
+        between = await resources.ledger.all_for_project(middle.project_id)
+        assert not [e for e in between if e.kind is EventKind.WEB_FETCHED]
 
 
 @pytest.mark.integration
 @pytest.mark.usefixtures("_an_empty_database")
-async def test_a_use_no_project_was_named_for_is_recorded_on_every_projects_ledger(
+async def test_no_project_named_or_the_latest_named_is_one_record_on_the_latest(
     tmp_path: Path,
 ) -> None:
     async with build_app() as resources:
@@ -97,10 +101,13 @@ async def test_a_use_no_project_was_named_for_is_recorded_on_every_projects_ledg
         audit = PostgresWebAudit(resources.ledger._pool)
         await audit.ready(None)
         payload = {"tool": "search", "principal": "agent", "outcome": "ok", "backend": "searxng"}
-        assert await audit.record(EventKind.WEB_SEARCHED, payload, AT, None) == 2
-        for project in (first, second):
-            events = await resources.ledger.all_for_project(project.project_id)
-            assert [e.payload for e in events if e.kind is EventKind.WEB_SEARCHED] == [payload]
+        assert await audit.record(EventKind.WEB_SEARCHED, payload, AT, None) == 1
+        assert await audit.record(EventKind.WEB_SEARCHED, payload, AT, second.project_id) == 1
+        kinds = {EventKind.WEB_SEARCHED}
+        mine = await resources.ledger.all_for_project(second.project_id)
+        assert [e.payload for e in mine if e.kind in kinds] == [payload, payload]
+        others = await resources.ledger.all_for_project(first.project_id)
+        assert not [e for e in others if e.kind in kinds]
 
 
 @pytest.mark.integration
@@ -110,12 +117,16 @@ async def test_a_project_named_that_does_not_exist_is_never_written(tmp_path: Pa
         await resources.projects.create("a", tmp_path / "a", max_cycles=1, config={})
         audit = PostgresWebAudit(resources.ledger._pool)
         with pytest.raises(UnknownProject):
+            await audit.ready(uuid4())
+        with pytest.raises(UnknownProject):
             await audit.record(EventKind.WEB_FETCHED, FETCH, AT, uuid4())
 
 
 @pytest.mark.integration
 @pytest.mark.usefixtures("_an_empty_database")
-async def test_a_project_in_an_unknown_phase_refuses_the_whole_record(tmp_path: Path) -> None:
+async def test_a_project_in_an_unknown_phase_is_refused_before_the_act_and_at_the_write(
+    tmp_path: Path,
+) -> None:
     async with build_app() as resources:
         await resources.projects.create("a", tmp_path / "a", max_cycles=1, config={})
 
@@ -124,7 +135,9 @@ async def test_a_project_in_an_unknown_phase_refuses_the_whole_record(tmp_path: 
                 return SimpleNamespace(project_id=row["id"], cycle=1, phase=_Unknown())
 
         audit = PostgresWebAudit(resources.ledger._pool, rows=Rows())  # type: ignore[arg-type]
-        with pytest.raises(WrongPhase):
+        with pytest.raises(WebToolUnavailable, match="phase this vibey does not know"):
+            await audit.ready(None)
+        with pytest.raises(WebToolUnavailable, match="phase this vibey does not know"):
             await audit.record(EventKind.WEB_SEARCHED, {}, AT, None)
 
 
