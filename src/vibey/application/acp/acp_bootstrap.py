@@ -32,6 +32,12 @@
    during an install the operator allowed does not stop it: the tool call is closed saying so,
    the install's end is logged (and said, if the window is still open), and the lock below is
    held until it has really ended.
+5. **SearXNG** (ADR-0102), only inside a prompt turn, after step 4, and only when
+   `[acp] searxng = "ask"` and `auto_services` are on: `AcpSearxngStep` offers once per process
+   to download and run the local SearXNG search asks first, and installs only on the client's
+   explicit "Install SearXNG", inside the same machine turn and lock as steps 2 to 4. Once vibey
+   has installed it, step 3 writes and loads its unit beside the hub's and the keep-alive keeps it
+   running; `[acp] searxng = "never"` leaves it alone.
 
 Steps 1 to 3 run as one task started after `session/new` (or a load or resume) has answered,
 so a slow check never delays the answer; the first prompt of each session waits for that task
@@ -71,6 +77,7 @@ from vibey.application.acp.dto import (
 )
 from vibey.application.acp.interfaces.acp_hub_port_interface import AcpHubPortInterface
 from vibey.application.acp.interfaces.acp_keep_alive_interface import AcpKeepAliveInterface
+from vibey.application.acp.interfaces.acp_searxng_step_interface import AcpSearxngStepInterface
 from vibey.application.acp.interfaces.bootstrap_lock_interface import BootstrapLockInterface
 from vibey.application.acp.interfaces.client_channel_interface import ClientChannelInterface
 from vibey.application.acp.interfaces.doctor_checks_interface import DoctorChecksInterface
@@ -86,7 +93,7 @@ from vibey.domain.acp.modes import UnknownMode
 from vibey.domain.acp.protocol import PermissionKind, ToolCallStatus, ToolKind
 from vibey.domain.acp.settings import AcpSettings
 from vibey.domain.hub_scope import HubScope
-from vibey.domain.supervisor import HUB
+from vibey.domain.supervisor import HUB, SEARXNG
 
 TOOL_DOCTOR: Final = "bootstrap-doctor"
 TOOL_CONNECT: Final = "bootstrap-connect"
@@ -146,6 +153,7 @@ class AcpBootstrap:
         loader: ServiceLoaderInterface | None = None,
         hub: AcpHubPortInterface | None = None,
         keep_alive: AcpKeepAliveInterface | None = None,
+        searxng: AcpSearxngStepInterface | None = None,
         wait: StepWait | None = None,
         step_timeout: StepTimeout | None = None,
         sleep: Sleep = asyncio.sleep,
@@ -164,6 +172,9 @@ class AcpBootstrap:
         self._loader = loader
         self._hub = hub
         self._keep_alive = keep_alive
+        self._searxng = searxng
+        self._searxng_said = False
+        """The SearXNG held back by `[acp] searxng = "never"` was said: once per process."""
         self._sleep = sleep
         self._hub_started = False
         """`vibey hub start` ran once in place of a service manager: never again here."""
@@ -193,7 +204,8 @@ class AcpBootstrap:
             and self._settings.install_postgres == "ask"
             and not self._postgres_settled
         )
-        return self._healthy and not postgres_left
+        searxng_left = self._searxng is not None and self._searxng.pending
+        return self._healthy and not postgres_left and not searxng_left
 
     @property
     def steps_finished(self) -> bool:
@@ -226,6 +238,8 @@ class AcpBootstrap:
         self._closed = True
         if self._keep_alive is not None:
             await self._keep_alive.stop()
+        if self._searxng is not None:
+            await self._searxng.close()
         running = [task for task in (self._steps, *self._late) if task is not None]
         for task in running:
             task.cancel()
@@ -250,6 +264,26 @@ class AcpBootstrap:
                 context.session_id,
                 f"vibey could not check PostgreSQL: {type(exc).__name__}. The agent's log on "
                 f"stderr has the details; `{INSTALL_COMMAND}` checks it in your own terminal.",
+            )
+        await self._searxng_step(context)
+
+    async def _searxng_step(self, context: AcpSessionContext) -> None:
+        """Step 5: offered once per process, after PostgreSQL, inside the machine turn."""
+        if self._searxng is None:
+            return
+        try:
+            await self._searxng.offer(
+                context, enter=self._enter_machine, leave=self._leave_machine, notify=self._notify
+            )
+        except asyncio.CancelledError:
+            raise
+        except Exception as exc:
+            # A defect, not a refusal: logged with its traceback and said once; the prompt goes on.
+            _LOG.exception("the SearXNG step of the ACP bootstrap failed")
+            await self._say(
+                context.session_id,
+                f"vibey could not check its local SearXNG: {type(exc).__name__}. The agent's log "
+                "on stderr has the details; `vibey searxng status` checks it in your own terminal.",
             )
 
     # -- steps 1 to 3 ----------------------------------------------------------------------
@@ -346,10 +380,18 @@ class AcpBootstrap:
 
     async def _services(self, session_id: str) -> bool:
         units, loader, hub = self._units, self._loader, self._hub
-        names = self._settings.services
-        if units is None or loader is None or hub is None:
+        if units is None or loader is None or hub is None or not self._settings.auto_services:
             return True
-        if not self._settings.auto_services or not names:
+        names = self._settings.services
+        if self._searxng is not None:
+            if await asyncio.to_thread(self._searxng.wanted):
+                names = (*names, SEARXNG)  # vibey installed it before: kept running like the hub
+            elif not self._searxng_said:
+                self._searxng_said = True
+                said = await asyncio.to_thread(self._searxng.held_back)
+                if said:
+                    await self._say(session_id, said)
+        if not names:
             return True
         await self._notify(
             session_id,

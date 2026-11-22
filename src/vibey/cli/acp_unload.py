@@ -7,6 +7,10 @@ recorded writing (`<[hub] state_dir>/acp-units.json`), this unloads it in the us
 (`launchctl bootout gui/<uid>/<label>`, or `systemctl --user disable --now <label>.service`,
 through the same argv allowlist as the bootstrap) and deletes the unit file only while it is
 exactly what vibey wrote. A unit the operator edited is unloaded and left in place, and said so.
+When one of them is the local SearXNG (ADR-0102), its container is removed too (only one vibey
+started for this user), and it is marked stopped for good: no session loads or offers it again
+until `vibey searxng install`. Its settings, record and image are kept (`vibey searxng uninstall
+--purge` removes them).
 Run again, it finds nothing left. Everything is read from the user's own `vibey.toml`, never the
 folder it runs in. It does not change `[acp] auto_services`: a `vibey acp` that runs later loads
 them again unless that is set to false in the user's own `vibey.toml`.
@@ -22,7 +26,9 @@ from typing import Final
 
 import typer
 
+from vibey.application.acp.doctor_checks import DoctorChecks
 from vibey.bootstrap import AcpMachine, acp_machine, acp_user_config
+from vibey.domain.supervisor import SEARXNG
 from vibey.infrastructure.acp.acp_settings_loader import AcpSettingsLoader
 from vibey.infrastructure.acp.interfaces.acp_settings_loader_interface import (
     AcpSettingsLoaderInterface,
@@ -85,6 +91,30 @@ class AcpUnloadCommand:
                 self._echo(f"{label}: {_SAID[unloaded.action]}; {removed.path}: {removed.detail}")
             else:
                 self._echo(f"{label}: {_SAID[unloaded.action]}; {_SAID[removed.action]}")
+        searxng = parts.searxng
+        if searxng is not None and self._searxng_label(units.label) in labels:
+            why = searxng.remove_container()
+            if why:
+                failed = True
+                self._echo(f"the SearXNG container was not removed ({why})")
+            else:
+                self._echo(
+                    "the SearXNG container is removed; its settings and image are kept "
+                    "(`vibey searxng uninstall --purge` removes them)"
+                )
+            try:
+                searxng.disable()
+            except (OSError, ValueError) as exc:
+                failed = True
+                self._echo(
+                    f"SearXNG could not be marked stopped for good ({DoctorChecks.cleaned(str(exc))});"
+                    " a later session may load it again"
+                )
+            else:
+                self._echo(
+                    "SearXNG is stopped for good: no session loads it again until `vibey searxng "
+                    "install`"
+                )
         forgotten = loader.forget_unit_files()
         if forgotten.action == "failed":
             failed = True
@@ -94,6 +124,13 @@ class AcpUnloadCommand:
             f"false` is set in {user_config}"
         )
         return 1 if failed else 0
+
+    @staticmethod
+    def _searxng_label(label: Callable[[str], str]) -> str | None:
+        try:
+            return label(SEARXNG)
+        except ValueError:
+            return None  # `[supervisor]` cannot be read: no label is the SearXNG's
 
 
 ACP_UNLOAD: Final = AcpUnloadCommand()

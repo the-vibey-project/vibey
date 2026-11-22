@@ -25,6 +25,11 @@ class AcpKeepAliveInterface(Protocol):
         unit loaded) only once that process has gone, never stopped."""
         ...
 
+    def add(self, units: Mapping[str, str]) -> None:
+        """More labels vibey loaded, kept with those `manage` names (a later `manage` keeps them
+        too): the SearXNG unit its first install loads (ADR-0102)."""
+        ...
+
     def owns_hub(self) -> bool:
         """Whether the hub is a unit this keep-alive restarts: managed, and not a hub running
         outside the service manager. While it does, nothing else restarts or starts the hub."""

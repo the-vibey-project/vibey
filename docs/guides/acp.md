@@ -85,6 +85,16 @@ has every detail):
    "Install PostgreSQL with brew / apt-get / dnf?" and only **Install PostgreSQL** installs. vibey
    never types a password; if `sudo` wants one, run `vibey doctor --install-postgres` in your own
    terminal.
+5. **SearXNG**, right after, at the same prompt. vibey's search asks a local SearXNG first and
+   Brave only as a backup; when none is there, Zed asks "Download and run SearXNG
+   (searxng/searxng@sha256:...) in a container on 127.0.0.1:28180?" and only **Install SearXNG**
+   installs. vibey uses your own `podman` (or `docker`), found only in the usual install folders
+   (never your PATH), and never installs one; it pulls one image
+   pinned by its digest, writes its settings in your configuration folder, and loads a third
+   user-level unit, `dev.vibey.searxng`, kept running like the others. Nothing is asked when you
+   run your own (`VIBEY_SEARXNG_URL`) or one already answers. `[acp] searxng = "never"` in your
+   own `vibey.toml` stops the offer; `vibey searxng install` does the same from a terminal
+   ([`vibey searxng`](../reference/cli.md#vibey-searxng)).
 
 What may happen here is granted by your own `vibey.toml`, in your configuration folder
 (`~/Library/Application Support/vibey/vibey.toml` on macOS, `~/.config/vibey/vibey.toml` on
@@ -105,7 +115,9 @@ launchctl bootout gui/$UID/dev.vibey.hub; rm ~/Library/LaunchAgents/dev.vibey.hu
 systemctl --user disable --now dev.vibey.hub.service
 ```
 
-(and the same for `dev.vibey.worker`).
+(and the same for `dev.vibey.worker`). `vibey acp unload` also removes the SearXNG container and
+marks SearXNG stopped for good, so no session starts it again until `vibey searxng install`;
+`vibey searxng uninstall --purge` removes its image and settings too.
 
 ## Modes
 
@@ -166,4 +178,7 @@ reply names. Live ledger events stream into the session between turns. See
   to standard error, which Zed shows in its ACP logs (`dev: open acp logs`).
 - **The worker never starts.** It waits for `VIBEY_PG_URL` in the environment file
   (`[supervisor] env_file`); the services step says so. Set it, then open a new session.
+- **Search goes to Brave, or fails.** `vibey searxng status` says what is here: the runtime,
+  the image, the unit and whether the SearXNG answers as vibey's own; its log is `searxng.log`
+  beside the others. The `searxng` line of `vibey doctor` says the same in one line.
 - **Something looks wrong.** Run `vibey doctor` in a terminal: the same checks, printed.

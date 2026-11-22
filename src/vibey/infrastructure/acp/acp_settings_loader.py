@@ -28,6 +28,7 @@ from vibey.domain.acp.settings import (
     KNOWN_MODES,
     KNOWN_SERVICES,
     RESTART_POLICIES,
+    SEARXNG_CHOICES,
     AcpSettings,
     InvalidAcpSettings,
 )
@@ -38,6 +39,7 @@ _BOOLEANS: Final = ("auto_bootstrap", "auto_connect", "auto_services", "live_bet
 _STRINGS: Final = ("service_workdir",)
 _CHOICES: Final[Mapping[str, tuple[str, ...]]] = {
     "install_postgres": INSTALL_POSTGRES_CHOICES,
+    "searxng": SEARXNG_CHOICES,
     "restart": RESTART_POLICIES,
 }
 _SUBSETS: Final[Mapping[str, tuple[str, ...]]] = {

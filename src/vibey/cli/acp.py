@@ -97,6 +97,7 @@ class AcpCommand:
             lock=machine.lock,
             units=machine.units,
             loader=machine.loader,
+            searxng=machine.searxng,
         )
         peer = JsonRpcPeer(
             reader,

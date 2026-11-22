@@ -35,6 +35,7 @@ def test_the_defaults_are_the_documented_table() -> None:
     assert d.auto_connect is True
     assert d.auto_services is True
     assert d.install_postgres == "ask"
+    assert d.searxng == "ask"
     assert d.services == ("hub", "worker")
     assert d.restart == "always"
     assert d.service_workdir == ""
@@ -64,6 +65,7 @@ auto_bootstrap = false
 auto_connect = false
 auto_services = false
 install_postgres = "never"
+searxng = "never"
 services = ["worker"]
 restart = "on-failure"
 service_workdir = "/srv/vibey"
@@ -89,6 +91,7 @@ pending_events_max = 1
         auto_connect=False,
         auto_services=False,
         install_postgres="never",
+        searxng="never",
         services=("worker",),
         restart="on-failure",
         service_workdir="/srv/vibey",
@@ -153,6 +156,8 @@ def test_several_unknown_keys_are_all_named() -> None:
         ("restart", "never"),
         ("max_message_bytes", 1024),
         ("install_postgres", "yes"),
+        ("searxng", "yes"),
+        ("searxng", True),
         ("auto_bootstrap", "yes"),
         ("auto_connect", 1),
         ("probe_seconds", True),

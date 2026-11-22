@@ -264,3 +264,91 @@ def test_on_systemd_a_unit_file_deleted_by_hand_unloads_cleanly_and_clears_the_r
     assert units.recorded() == ()
     assert not any("disable" in call for call in calls)
     assert command.run() == 0  # and again
+
+
+class Searxng:
+    def __init__(self, why: str = "") -> None:
+        self.why = why
+        self.removed = 0
+        self.disabled = False
+
+    def remove_container(self) -> str:
+        self.removed += 1
+        return self.why
+
+    def disable(self) -> None:
+        self.disabled = True
+
+
+def _searxng_command(
+    tmp_path: Path, manager: Manager, units: AcpServiceUnits, said: list[str], searxng: Searxng
+) -> AcpUnloadCommand:
+    def machine(settings: AcpSettings, *, user_config: Path) -> AcpMachine:
+        return AcpMachine(
+            connector=None,  # type: ignore[arg-type]
+            postgres=None,  # type: ignore[arg-type]
+            lock=None,  # type: ignore[arg-type]
+            units=units,
+            loader=manager,  # type: ignore[arg-type]
+            searxng=searxng,  # type: ignore[arg-type]
+        )
+
+    return AcpUnloadCommand(
+        machine=machine, user_config=lambda: tmp_path / "cfg" / "vibey.toml", echo=said.append
+    )
+
+
+def test_unload_removes_the_searxng_container_and_keeps_its_files(tmp_path: Path) -> None:
+    units = _units(tmp_path)
+    (unit,) = units.write(("searxng",), "always")
+    manager, said, searxng = Manager(loaded={"dev.vibey.searxng"}), [], Searxng()
+
+    assert _searxng_command(tmp_path, manager, units, said, searxng).run() == 0
+
+    assert manager.calls[0] == ("unload", "dev.vibey.searxng")
+    assert searxng.removed == 1 and not Path(unit.path).exists()
+    assert any("SearXNG container is removed" in s and "kept" in s for s in said)
+    assert searxng.disabled  # stopped for good: no session loads it again
+    assert any("stopped for good" in s and "vibey searxng install" in s for s in said)
+
+
+def test_a_container_that_will_not_go_fails_the_unload(tmp_path: Path) -> None:
+    units = _units(tmp_path)
+    units.write(("searxng",), "always")
+    said: list[str] = []
+    command = _searxng_command(tmp_path, Manager(), units, said, Searxng("daemon down"))
+    assert command.run() == 1
+    assert any("daemon down" in s for s in said)
+
+
+def test_no_searxng_unit_removes_no_container(tmp_path: Path) -> None:
+    units = _units(tmp_path)
+    units.write(("hub",), "always")
+    searxng = Searxng()
+    assert _searxng_command(tmp_path, Manager(), units, [], searxng).run() == 0
+    assert searxng.removed == 0
+
+
+def test_an_unreadable_supervisor_table_names_no_searxng_label(tmp_path: Path) -> None:
+    units = _units(tmp_path)
+    units.write(("hub",), "always")
+    (tmp_path / "cfg" / "vibey.toml").write_text("[supervisor]\nlabel_prefix = 3\n", "utf-8")
+    searxng = Searxng()
+    _searxng_command(tmp_path, Manager(), units, [], searxng).run()
+    assert searxng.removed == 0
+
+
+def test_unload_says_when_it_cannot_mark_the_stop_and_goes_on(tmp_path: Path) -> None:
+    units = _units(tmp_path)
+    units.write(("searxng",), "always")
+    said: list[str] = []
+    searxng = Searxng()
+
+    def broken() -> None:
+        raise ValueError("the folder is not yours")
+
+    searxng.disable = broken  # type: ignore[method-assign]
+    manager = Manager()
+    assert _searxng_command(tmp_path, manager, units, said, searxng).run() == 1
+    assert searxng.removed == 1 and ("forget", "") in manager.calls
+    assert any("could not be marked stopped for good" in s for s in said)

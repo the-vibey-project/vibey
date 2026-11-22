@@ -623,3 +623,52 @@ async def test_a_requested_probe_from_another_thread_restarts_through_the_lock_o
     assert lock.holds == 1
     await kept.stop()
     kept.request_probe()  # stopped: nothing
+
+
+async def test_a_unit_added_later_is_restarted_and_survives_a_later_manage() -> None:
+    """The SearXNG unit step 5 loads (ADR-0102) is kept like the worker: restarted when the
+    service manager says it is down, and kept when step 3 hands over its own labels."""
+    searxng = "dev.vibey.searxng"
+    UNITS[searxng] = "/u/dev.vibey.searxng.plist"
+    try:
+        hub, channel, clock = Hub(), FakeChannel(), Clock()
+        loader = Loader(hub, running={WORKER})
+        loader.revives.add(searxng)
+        kept = keep_alive(hub, loader, channel, clock=clock)
+        kept.add({searxng: UNITS[searxng]})
+        kept.manage({HUB: UNITS[HUB], WORKER: UNITS[WORKER]}, hub_label=HUB, deferred=())
+        clock.now += 31  # past the grace a just-loaded unit gets
+
+        await kept.probe(context())
+
+        assert loader.calls == [("restart", searxng)]
+        assert any(searxng in text and "restarted" in text for text in channel.texts)
+        await kept.stop()
+    finally:
+        del UNITS[searxng]
+
+
+async def test_a_unit_stopped_for_good_is_let_go_never_restarted() -> None:
+    """`vibey acp unload` marks vibey's SearXNG stopped for good (ADR-0102): a keep-alive that
+    managed it lets it go instead of restarting it."""
+    hub, channel, clock = Hub(), FakeChannel(), Clock()
+    loader = Loader(hub, running={HUB})  # the worker is down
+    kept = AcpKeepAlive(
+        loader,
+        hub,
+        FreeLock(),
+        channel,
+        AcpUpdateMapper(),
+        AcpSettings(probe_seconds=30),
+        clock=clock,
+        sleep=_yield,
+        stopped=lambda label: label == WORKER,
+    )
+    kept.manage(UNITS, hub_label=HUB, deferred=())
+    clock.now += 31
+
+    await kept.probe(context())
+    await kept.probe(context())
+
+    assert loader.calls == [] and channel.texts == []
+    await kept.stop()
