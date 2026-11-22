@@ -73,7 +73,11 @@ class ConnectCommand:
             typer.echo("Cancelled; no files were modified.")
             raise typer.Exit(1)
 
-        self._installer.apply_plan(plan)
+        try:
+            self._installer.apply_plan(plan)
+        except HostClientError as exc:
+            typer.echo(f"Error: {exc}; no files were modified.", err=True)
+            raise typer.Exit(1) from exc
         for item in pending:
             backup_note = f" (backed up to {item.backup_path})" if item.backup_path else ""
             typer.echo(f"{item.action}: {item.client.client_id} -> {item.target_path}{backup_note}")
