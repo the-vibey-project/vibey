@@ -59,6 +59,7 @@ nav:
       - Downloads: guides/downloads.md
       - Visual tour & screenshots: guides/gallery.md
       - VS Code extension: guides/vscode-extension.md
+      - Drive vibey from Zed (ACP): guides/acp.md
       - Drive a project from anywhere: guides/drive-a-project.md
       - Kubernetes: guides/kubernetes.md
       - Greeter live demo: guides/greeter-live-demo.md

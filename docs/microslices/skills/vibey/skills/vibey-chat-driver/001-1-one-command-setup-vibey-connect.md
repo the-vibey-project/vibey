@@ -13,14 +13,16 @@ Register `vibey mcp` with your host clients:
 ```bash
 vibey connect          # shows the plan (create / update / unchanged), backs up existing files, merges idempotently
 vibey connect --yes    # non-interactive approval
-vibey connect --list   # list supported client IDs (claude_code, claude_desktop, codex, cursor, vscode, gemini_cli)
+vibey connect --list   # list supported client IDs (claude_code, claude_desktop, codex, cursor, vscode, gemini_cli, zed)
 ```
+
+Every entry runs the running install's own `vibey` by absolute path, never one found on `PATH`. After the plan, `vibey connect` (and `vibey doctor`, in its `llm-tooling` section) lists each installed client's surfaces -- `acp-agent`, `mcp-server`, `skill`, `plugin` -- as present, missing (with the exact command that fixes it) or not applicable.
 
 Or install via the Claude Code plugin marketplace:
 
 ```text
 /plugin marketplace add the-vibey-project/vibey
-/plugin install vibey@the-vibey-project
+/plugin install vibey@vibey
 ```
 
  When the first MCP tool call runs, `vibey mcp` connects to the local hub (`<state_dir>/serving.json`) and automatically runs `vibey hub start` if no hub is serving yet.
