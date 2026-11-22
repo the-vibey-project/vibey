@@ -11,7 +11,7 @@ import pytest
 
 from vibey.domain.acp.interfaces.settings_trust_interface import AcpSettingsTrustInterface
 from vibey.domain.acp.settings import AcpSettings
-from vibey.domain.acp.settings_trust import AcpSettingsTrust
+from vibey.domain.acp.settings_trust import CLASSIFIED, AcpSettingsTrust
 
 TRUST = AcpSettingsTrust()
 ALL = frozenset(item.name for item in fields(AcpSettings))
@@ -88,15 +88,116 @@ def test_rates_only_slow_down_and_bounds_only_shorten() -> None:
     assert TRUST.merge(user, calm, keys) == calm
 
 
-def test_session_keys_are_the_projects_and_modes_travel_together() -> None:
-    user = AcpSettings(default_mode="drive", live_message_chars=400)
-    project = AcpSettings(modes=("observe",), default_mode="observe", live_message_chars=80)
-    merged = TRUST.merge(user, project, frozenset({"modes", "live_message_chars"}))
-    assert (merged.modes, merged.default_mode, merged.live_message_chars) == (
-        ("observe",),
-        "observe",
-        80,
+def test_every_key_is_classified_so_none_is_the_projects_to_widen() -> None:
+    assert ALL == CLASSIFIED
+
+
+def test_a_project_cannot_widen_observe_only_to_drive() -> None:
+    user = AcpSettings(modes=("observe",), default_mode="observe")
+    project = AcpSettings(modes=("observe", "drive"), default_mode="drive")
+    for keys in ({"modes", "default_mode"}, {"default_mode"}, {"modes"}):
+        merged = TRUST.merge(user, project, frozenset(keys))
+        assert (merged.modes, merged.default_mode) == (("observe",), "observe")
+
+
+def test_a_project_can_narrow_drive_to_observe() -> None:
+    user = AcpSettings()  # observe and drive, drive by default
+    merged = TRUST.merge(
+        user,
+        AcpSettings(modes=("observe",), default_mode="observe"),
+        frozenset({"modes", "default_mode"}),
     )
+    assert (merged.modes, merged.default_mode) == (("observe",), "observe")
+
+
+def test_a_project_may_pick_the_default_among_the_users_modes() -> None:
+    merged = TRUST.merge(
+        AcpSettings(), AcpSettings(default_mode="observe"), frozenset({"default_mode"})
+    )
+    assert (merged.modes, merged.default_mode) == (("observe", "drive"), "observe")
+
+
+def test_modes_keep_the_users_order_and_a_default_that_survives() -> None:
+    user = AcpSettings(modes=("drive", "observe"), default_mode="drive")
+    project = AcpSettings(modes=("observe", "drive"), default_mode="observe")
+    merged = TRUST.merge(user, project, frozenset({"modes"}))
+    assert (merged.modes, merged.default_mode) == (("drive", "observe"), "drive")
+
+
+def test_a_default_lost_to_the_narrowing_falls_to_the_first_merged_mode() -> None:
+    user = AcpSettings(modes=("observe", "drive"), default_mode="drive")
+    project = AcpSettings(modes=("observe",), default_mode="observe")
+    merged = TRUST.merge(user, project, frozenset({"modes"}))
+    assert (merged.modes, merged.default_mode) == (("observe",), "observe")
+
+
+def test_modes_sharing_nothing_leave_the_users_never_an_empty_session() -> None:
+    user = AcpSettings(modes=("drive",), default_mode="drive")
+    project = AcpSettings(modes=("observe",), default_mode="observe")
+    merged = TRUST.merge(user, project, frozenset({"modes", "default_mode"}))
+    assert (merged.modes, merged.default_mode) == (("drive",), "drive")
+
+
+LOOSER = {
+    "max_gate_prompts_per_turn": 50,
+    "permission_timeout_seconds": 86_400,
+    "cancel_grace_seconds": 600.0,
+    "live_message_chars": 100_000,
+    "max_message_bytes": 1 << 30,
+    "pending_events_max": 10**7,
+    "sessions_max": 10**7,
+    "session_events_max": 10**9,
+    "replay_events_max": 10_000,
+    "bootstrap_timeout_seconds": 10**6,
+    "install_timeout_seconds": 10**6,
+}
+STRICTER = {
+    "max_gate_prompts_per_turn": 0,
+    "permission_timeout_seconds": 5,
+    "cancel_grace_seconds": 0.0,
+    "live_message_chars": 40,
+    "max_message_bytes": 65_536,
+    "pending_events_max": 1,
+    "sessions_max": 1,
+    "session_events_max": 1,
+    "replay_events_max": 1,
+    "bootstrap_timeout_seconds": 1,
+    "install_timeout_seconds": 1,
+}
+
+
+@pytest.mark.parametrize("key", sorted(LOOSER))
+def test_a_project_cannot_raise_a_cap_or_lengthen_a_bound(key: str) -> None:
+    user = AcpSettings()
+    merged = TRUST.merge(user, AcpSettings(**{key: LOOSER[key]}), frozenset({key}))
+    assert getattr(merged, key) == getattr(user, key)
+
+
+@pytest.mark.parametrize("key", sorted(STRICTER))
+def test_a_project_can_lower_a_cap_or_shorten_a_bound(key: str) -> None:
+    merged = TRUST.merge(AcpSettings(), AcpSettings(**{key: STRICTER[key]}), frozenset({key}))
+    assert getattr(merged, key) == STRICTER[key]
+
+
+def test_a_project_can_slow_the_live_feed_never_speed_it_up() -> None:
+    user = AcpSettings(live_poll_seconds=1.0)
+    keys = frozenset({"live_poll_seconds"})
+    assert TRUST.merge(user, AcpSettings(live_poll_seconds=0.2), keys).live_poll_seconds == 1.0
+    assert TRUST.merge(user, AcpSettings(live_poll_seconds=5.0), keys).live_poll_seconds == 5.0
+
+
+def test_a_project_can_hold_the_feed_between_turns_never_open_it() -> None:
+    keys = frozenset({"live_between_turns"})
+    held = AcpSettings(live_between_turns=False)
+    assert TRUST.merge(held, AcpSettings(), keys).live_between_turns is False
+    assert TRUST.merge(AcpSettings(), held, keys).live_between_turns is False
+
+
+def test_the_words_that_mark_a_refusal_are_the_users_alone() -> None:
+    user = AcpSettings(reject_words=("reject", "deny"))
+    project = AcpSettings(reject_words=("approve",))
+    merged = TRUST.merge(user, project, frozenset({"reject_words"}))
+    assert merged.reject_words == ("reject", "deny")
 
 
 def test_a_hostile_project_that_sets_every_key_gains_nothing() -> None:

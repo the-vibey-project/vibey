@@ -917,14 +917,19 @@ configuration folder, `~/Library/Application Support/vibey/vibey.toml` on macOS 
 `$XDG_CONFIG_HOME/vibey/vibey.toml` (else `~/.config/vibey/vibey.toml`) elsewhere, beside
 `supervisor.env` -- holds the powers. The project's `[acp]` may only narrow them:
 
-- `auto_bootstrap`, `auto_connect`, `auto_services`: the project may turn one off, never on.
+- `auto_bootstrap`, `auto_connect`, `auto_services`, `live_between_turns`: the project may turn
+  one off, never on.
 - `install_postgres`: the project may say `"never"`, never `"ask"`.
-- `services`: the project may drop a service, never add one.
-- `restart`, `service_workdir`: yours alone; the project's are ignored.
-- `hub_start_seconds`, `probe_seconds`: the project may make them longer, never shorter.
-  `bootstrap_timeout_seconds`, `install_timeout_seconds`: shorter, never longer.
-- Every other key shapes only the session in the editor and reaches nothing outside it: the
-  project's value wins over yours. `modes` and `default_mode` are taken together.
+- `services`, `modes`: the project may drop items, never add one; your order is kept. If the
+  project's `modes` share none with yours, yours stand. `default_mode` is the project's only when
+  it is among the merged modes, else yours if it is, else the first merged mode.
+- `hub_start_seconds`, `probe_seconds`, `live_poll_seconds`: the project may make them longer,
+  never shorter.
+- Every timeout and cap (`bootstrap_timeout_seconds`, `install_timeout_seconds`,
+  `permission_timeout_seconds`, `cancel_grace_seconds`, `max_gate_prompts_per_turn`,
+  `live_message_chars`, `max_message_bytes`, `pending_events_max`, `sessions_max`,
+  `session_events_max`, `replay_events_max`): the project may lower it, never raise it.
+- `restart`, `service_workdir`, `reject_words`: yours alone; the project's are ignored.
 
 For `vibey acp`, `[supervisor]` and `[hub]` are read from your own file only, never the
 project's: the units' labels, environment file, log folder and worker arguments, and the hub's

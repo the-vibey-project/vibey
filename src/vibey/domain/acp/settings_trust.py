@@ -2,39 +2,52 @@
 """Who may say what in `[acp]`: the user grants, a project only restricts (ADR-0101).
 
 `vibey acp` runs in whatever folder an editor opened, and that folder's `vibey.toml` came with
-the project: a cloned repository's file is not the person's word. Anything that reaches a
-service unit, a command line, or a file outside the project is therefore read from the user's
-own `vibey.toml` (their configuration folder), and the project's may only narrow it:
+the project: a cloned repository's file is not the person's word. Every `[acp]` key is therefore
+the user's (read from their own `vibey.toml`), and the project's file may only narrow it -- never
+widen, raise or loosen anything:
 
-- **Grants** (`auto_bootstrap`, `auto_connect`, `auto_services`): the project may turn one off,
-  never on.
+- **Switches** (`auto_bootstrap`, `auto_connect`, `auto_services`, `live_between_turns`): the
+  project may turn one off, never on.
 - **`install_postgres`**: the project may say `never`, never `ask`.
-- **`services`**: the project may drop a service, never add one.
-- **`restart`, `service_workdir`**: the user's alone.
-- **Rates** (`hub_start_seconds`, `probe_seconds`): the project may make them slower, never
-  faster. **Bounds** (`bootstrap_timeout_seconds`, `install_timeout_seconds`): shorter, never
-  longer.
-- **Every other key** shapes the session in the editor and reaches nothing outside it (modes,
-  gate prompts, the live feed, message sizes): the project's value wins over the user's, as a
-  project setting does. `modes` and `default_mode` are taken together, so they always agree.
+- **`services`, `modes`**: the project may drop items, never add one; the result keeps the user's
+  order. A project whose `modes` share none with the user's leaves the user's (a session is never
+  refused, and nothing is widened). `default_mode` is the project's only if it survives in the
+  merged modes, else the user's if it survives, else the first merged mode.
+- **Rates** (`hub_start_seconds`, `probe_seconds`, `live_poll_seconds`): slower, never faster.
+- **Bounds and caps** (every timeout, `cancel_grace_seconds`, `max_gate_prompts_per_turn`, the
+  message, event, session and replay limits): lower, never higher.
+- **The user's alone** (`restart`, `service_workdir`, `reject_words`): a project value is
+  ignored, since none of them has a direction that is only stricter.
 
+A key not named here is the user's alone, so a key added later is closed until it is classified.
 `[supervisor]` and `[hub]` are not merged at all for `vibey acp`'s machine: they are read from
 the user's file only. Declared by `interfaces/settings_trust_interface.py`.
 """
 
-from dataclasses import fields, replace
+from dataclasses import replace
 from typing import Final
 
 from vibey.domain.acp.settings import AcpSettings
 
-GRANTS: Final = ("auto_bootstrap", "auto_connect", "auto_services")
-USER_ONLY: Final = ("restart", "service_workdir")
-SLOWER_ONLY: Final = ("hub_start_seconds", "probe_seconds")
-SHORTER_ONLY: Final = ("bootstrap_timeout_seconds", "install_timeout_seconds")
-_MODES: Final = ("modes", "default_mode")
-_POWERS: Final = frozenset(
-    {*GRANTS, *USER_ONLY, *SLOWER_ONLY, *SHORTER_ONLY, "install_postgres", "services"}
+SWITCHES: Final = ("auto_bootstrap", "auto_connect", "auto_services", "live_between_turns")
+USER_ONLY: Final = ("restart", "service_workdir", "reject_words")
+SLOWER_ONLY: Final = ("hub_start_seconds", "probe_seconds", "live_poll_seconds")
+LOWER_ONLY: Final = (
+    "bootstrap_timeout_seconds",
+    "install_timeout_seconds",
+    "permission_timeout_seconds",
+    "cancel_grace_seconds",
+    "max_gate_prompts_per_turn",
+    "live_message_chars",
+    "max_message_bytes",
+    "pending_events_max",
+    "sessions_max",
+    "session_events_max",
+    "replay_events_max",
 )
+NARROWED: Final = ("install_postgres", "services", "modes", "default_mode")
+CLASSIFIED: Final = frozenset({*SWITCHES, *USER_ONLY, *SLOWER_ONLY, *LOWER_ONLY, *NARROWED})
+"""Every key the merge knows; any other is the user's alone."""
 
 
 class AcpSettingsTrust:
@@ -44,7 +57,7 @@ class AcpSettingsTrust:
         self, user: AcpSettings, project: AcpSettings, project_keys: frozenset[str]
     ) -> AcpSettings:
         changes: dict[str, object] = {}
-        for key in GRANTS:
+        for key in SWITCHES:
             if key in project_keys:
                 changes[key] = getattr(user, key) and getattr(project, key)
         if "install_postgres" in project_keys and project.install_postgres == "never":
@@ -54,13 +67,25 @@ class AcpSettingsTrust:
         for key in SLOWER_ONLY:
             if key in project_keys:
                 changes[key] = max(getattr(user, key), getattr(project, key))
-        for key in SHORTER_ONLY:
+        for key in LOWER_ONLY:
             if key in project_keys:
                 changes[key] = min(getattr(user, key), getattr(project, key))
-        if project_keys & set(_MODES):
-            changes.update({key: getattr(project, key) for key in _MODES})
-        for item in fields(AcpSettings):
-            key = item.name
-            if key in project_keys and key not in _POWERS and key not in _MODES:
-                changes[key] = getattr(project, key)
+        if project_keys & {"modes", "default_mode"}:
+            changes.update(self._modes(user, project, project_keys))
         return replace(user, **changes)  # type: ignore[arg-type]
+
+    @staticmethod
+    def _modes(
+        user: AcpSettings, project: AcpSettings, project_keys: frozenset[str]
+    ) -> dict[str, object]:
+        modes = user.modes
+        if "modes" in project_keys:
+            # Never widened, never emptied: no shared mode leaves the user's.
+            modes = tuple(m for m in user.modes if m in project.modes) or user.modes
+        if "default_mode" in project_keys and project.default_mode in modes:
+            default = project.default_mode
+        elif user.default_mode in modes:
+            default = user.default_mode
+        else:
+            default = modes[0]
+        return {"modes": modes, "default_mode": default}

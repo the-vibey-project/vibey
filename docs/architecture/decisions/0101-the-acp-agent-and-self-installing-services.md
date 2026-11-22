@@ -102,11 +102,13 @@ project:
 
 - **Two files.** `[acp]` is read from the user's own `vibey.toml` in their configuration folder
   (beside `supervisor.env`) and from the project's; `AcpSettingsTrust` merges them so the
-  project only narrows. It may turn a grant off, never on; say `install_postgres = "never"`,
-  never `"ask"`; drop a service, never add one; make a rate slower or a bound shorter. It never
-  sets `restart` or `service_workdir`. Keys that shape only the editor's session (modes, gate
-  prompts, the live feed) stay the project's to set. The trust-split loader is
-  `AcpSettingsLoader.load_trusted`.
+  project only narrows, key by key. It may turn a switch off, never on; say
+  `install_postgres = "never"`, never `"ask"`; drop a service or a mode, never add one (with
+  no mode in common the user's stand, and `default_mode` follows the merged modes); make a
+  rate slower, and a timeout or cap lower, never the reverse. `restart`, `service_workdir`
+  and `reject_words` are the user's alone, and a key the merge does not classify is the
+  user's alone too, so a new key is closed until someone decides its direction. The
+  trust-split loader is `AcpSettingsLoader.load_trusted`.
 - **No project `[supervisor]` or `[hub]`.** `vibey acp` reads both from the user's file only:
   unit labels, environment file, log folder, worker arguments, the hub's state folder, agent
   token and serving record. A hub it starts itself runs in the user's configuration folder.

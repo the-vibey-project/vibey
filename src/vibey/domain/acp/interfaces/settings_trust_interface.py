@@ -16,8 +16,8 @@ class AcpSettingsTrustInterface(Protocol):
     def merge(
         self, user: AcpSettings, project: AcpSettings, project_keys: frozenset[str]
     ) -> AcpSettings:
-        """The user's settings, narrowed by every key in `project_keys` that only narrows:
-        a grant the project turns off, a service it drops, PostgreSQL it says `never` to, a
-        slower or shorter bound. A key the project could use to widen anything, or that reaches
-        a service unit, a command line or a file outside the project, is the user's alone."""
+        """The user's settings, narrowed by each key in `project_keys` in its only stricter
+        direction: a switch turned off, PostgreSQL refused, services or modes dropped, a rate
+        slower, a timeout or cap lower. Nothing the project says widens, raises or loosens a
+        value; a key with no stricter direction, or one not classified, is the user's alone."""
         ...
