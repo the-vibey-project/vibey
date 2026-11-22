@@ -1,14 +1,24 @@
 # Made with ❤️ by [Vibey](https://the-vibey-project.github.io/vibey/), Developed by [Adam Matthew Steinberger](https://vibewithadam.matthewsteinberger.com/) ([@adammatthewsteinberger](https://github.com/adammatthewsteinberger/)).
 """The one runner `vibey acp` asks the user's service manager through (ADR-0101).
 
-It runs `launchctl` or `systemctl --user`, with only the verbs vibey's loader uses, and nothing
-else: an argv naming `sudo`, a shell, a `systemctl` without `--user`, the `system` launchd
-domain, or any other verb (`launchctl asuser` or `submit`, which run a command; `bootout`,
-`stop`, which vibey never issues) is refused before anything runs.
-The binary is looked up on a fixed system PATH, never the editor's; the child gets stdin closed,
-a minimal environment (the user's identity, locale, and the runtime directory and bus address
-`systemctl --user` finds the user manager by -- never a token or a database URL), and a bound
-on its time. Its output is cut to `OUTPUT_LIMIT`.
+It runs exactly the commands vibey's loader issues, matched argv for argv, and nothing else:
+
+- `launchctl print gui/<uid>` and `launchctl print gui/<uid>/<label>`
+- `launchctl bootstrap gui/<uid> <absolute .plist>`
+- `launchctl kickstart -k gui/<uid>/<label>` and `launchctl bootout gui/<uid>/<label>`
+- `systemctl --user is-system-running`, `systemctl --user daemon-reload`
+- `systemctl --user is-active|restart <label>.service`
+- `systemctl --user enable|disable --now <label>.service`
+
+`<uid>` is this user's own, and `<label>` is held to the closed alphabet `LABEL` (no leading
+`-`, no `/`, no space), so no other flag (`--system`, `--global`, `-H`, `-M`, `--root`), no other
+domain (`system`, `user/`, `pid/`, another uid's `gui/`), no other verb (`asuser`, `submit`), no
+`sudo` and no shell can be spelled through it. A refusal raises `PermissionError` before anything
+runs. The binary is looked up on a fixed system PATH, never the editor's; the child gets stdin
+closed, a minimal environment (the user's identity, locale, and the runtime directory and bus
+address `systemctl --user` finds the user manager by -- never a token or a database URL), and a
+bound on its time, past which it is a `TimeoutError` -- an unknown answer, never "not loaded".
+Its output is cut to `OUTPUT_LIMIT`.
 
 Declared by `interfaces/service_manager_runner_interface.py`.
 """
@@ -21,18 +31,13 @@ import subprocess  # nosec B404 -- a fixed argv checked below, never a shell
 from collections.abc import Callable, Mapping, Sequence
 from typing import Any, Final
 
+from vibey.domain.supervisor import LABEL
+
 SYSTEM_PATH: Final = "/usr/bin:/bin:/usr/sbin:/sbin"
 """Where `launchctl` and `systemctl` are looked for: the system's own folders only."""
 OUTPUT_LIMIT: Final = 65_536
 """The most of a command's output kept (`launchctl print` of one label is a few KiB)."""
-LAUNCHCTL_VERBS: Final = frozenset({"print", "bootstrap", "kickstart"})
-"""What vibey asks launchd: read a domain or label, load a unit, restart a label."""
-SYSTEMCTL_VERBS: Final = frozenset(
-    {"is-system-running", "is-active", "daemon-reload", "enable", "restart"}
-)
-"""What vibey asks `systemctl --user`: read the manager or a unit, load, restart."""
-TIMED_OUT: Final = 124
-REFUSED: Final = 126
+_CONTROL: Final = frozenset(chr(code) for code in (*range(0x20), 0x7F))
 _KEPT: Final = (
     "HOME",
     "USER",
@@ -53,19 +58,21 @@ class ServiceManagerRunner:
         self,
         *,
         timeout_seconds: float,
+        uid: int,
         run: Callable[..., Any] = subprocess.run,
         which: Callable[[str, str], str | None] = lambda name, path: shutil.which(name, path=path),
         environ: Mapping[str, str] | None = None,
     ) -> None:
         self._timeout = timeout_seconds
+        self._uid = uid
         self._run = run
         self._which = which
         self._environ = os.environ if environ is None else environ
 
     def __call__(self, argv: Sequence[str]) -> tuple[int, str]:
-        refusal = self.refusal(argv)
+        refusal = self.refusal(argv, self._uid)
         if refusal:
-            return REFUSED, f"refused: {refusal}"
+            raise PermissionError(f"refused: {refusal}")
         binary = self._which(argv[0], SYSTEM_PATH)
         if binary is None:
             raise FileNotFoundError(2, f"{argv[0]} is not on {SYSTEM_PATH}")
@@ -82,24 +89,61 @@ class ServiceManagerRunner:
                 timeout=self._timeout,
                 check=False,
             )
-        except subprocess.TimeoutExpired:
-            return TIMED_OUT, ""
+        except subprocess.TimeoutExpired as exc:
+            raise TimeoutError(
+                f"{argv[0]} {argv[1]} gave no answer within {self._timeout:g} s"
+            ) from exc
         return int(done.returncode), str(done.stdout or "")[:OUTPUT_LIMIT]
 
-    @staticmethod
-    def refusal(argv: Sequence[str]) -> str:
-        """Why `argv` is not a user-scoped service-manager command; "" when it is."""
-        if not argv:
+    @classmethod
+    def refusal(cls, argv: Sequence[str], uid: int) -> str:
+        """Why `argv` is not one of the commands vibey issues in user `uid`'s own domain; ""
+        when it is one, argv for argv."""
+        shape = tuple(argv)
+        if not shape:
             return "an empty command"
-        if "sudo" in argv:
-            return "vibey never runs sudo here"
-        if argv[0] == "systemctl":
-            if len(argv) < 3 or argv[1] != "--user":
-                return "systemctl without --user"
-            return "" if argv[2] in SYSTEMCTL_VERBS else f"systemctl --user {argv[2]}"
-        if argv[0] == "launchctl":
-            if any(part == "system" or part.startswith("system/") for part in argv):
-                return "the system launchd domain"
-            verb = argv[1] if len(argv) > 1 else ""
-            return "" if verb in LAUNCHCTL_VERBS else f"launchctl {verb}".rstrip()
-        return f"{argv[0]} is not launchctl or systemctl"
+        if shape[0] == "launchctl":
+            return (
+                ""
+                if cls._launchctl(shape, f"gui/{uid}")
+                else "not a launchctl command vibey issues"
+            )
+        if shape[0] == "systemctl":
+            return "" if cls._systemctl(shape) else "not a systemctl --user command vibey issues"
+        return f"{shape[0]} is not launchctl or systemctl"
+
+    @classmethod
+    def _launchctl(cls, shape: tuple[str, ...], gui: str) -> bool:
+        match shape:
+            case ("launchctl", "print", target):
+                return target == gui or cls._labelled(target, gui)
+            case ("launchctl", "bootstrap", domain, plist):
+                return domain == gui and cls._plist(plist)
+            case ("launchctl", "kickstart", "-k", target) | ("launchctl", "bootout", target):
+                return cls._labelled(target, gui)
+        return False
+
+    @classmethod
+    def _systemctl(cls, shape: tuple[str, ...]) -> bool:
+        match shape:
+            case ("systemctl", "--user", "is-system-running" | "daemon-reload"):
+                return True
+            case ("systemctl", "--user", "is-active" | "restart", unit):
+                return cls._unit(unit)
+            case ("systemctl", "--user", "enable" | "disable", "--now", unit):
+                return cls._unit(unit)
+        return False
+
+    @staticmethod
+    def _labelled(target: str, gui: str) -> bool:
+        return target.startswith(gui + "/") and LABEL.fullmatch(target[len(gui) + 1 :]) is not None
+
+    @staticmethod
+    def _unit(unit: str) -> bool:
+        return (
+            unit.endswith(".service") and LABEL.fullmatch(unit.removesuffix(".service")) is not None
+        )
+
+    @staticmethod
+    def _plist(path: str) -> bool:
+        return os.path.isabs(path) and path.endswith(".plist") and not _CONTROL.intersection(path)

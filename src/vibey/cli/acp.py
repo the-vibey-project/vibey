@@ -27,7 +27,9 @@ import typer
 
 from vibey.application.acp.interfaces.doctor_probe_interface import DoctorProbeInterface
 from vibey.bootstrap import AcpMachine, acp_machine, acp_user_config, build_acp_agent
+from vibey.cli.acp_unload import ACP_UNLOAD
 from vibey.cli.doctor_probes import LOCAL_DOCTOR_PROBES
+from vibey.cli.errors import EXIT_USAGE
 from vibey.cli.interfaces.acp_interface import AcpAgentBuilder, AcpCommandInterface
 from vibey.domain.acp.settings import AcpSettings
 from vibey.infrastructure.acp.acp_settings_loader import AcpSettingsLoader
@@ -117,6 +119,14 @@ ACP_COMMAND: Final[AcpCommandInterface] = AcpCommand()
 
 
 def acp(
+    action: Annotated[
+        str | None,
+        typer.Argument(
+            help="`unload`: stop the services vibey acp loaded, for good, and delete the unit "
+            "files vibey wrote. Without it, serve ACP over stdio.",
+            show_default=False,
+        ),
+    ] = None,
     no_bootstrap: Annotated[
         bool,
         typer.Option(
@@ -126,6 +136,13 @@ def acp(
         ),
     ] = False,
 ) -> None:
-    """Serve the Agent Client Protocol (ACP) over stdio for an editor such as Zed."""
+    """Serve the Agent Client Protocol (ACP) over stdio for an editor such as Zed; or, with
+    `unload`, stop the services it loaded (ADR-0101)."""
     # Module-level function because Typer builds the command from a plain function signature.
-    ACP_COMMAND.run(no_bootstrap=no_bootstrap)
+    if action is None:
+        ACP_COMMAND.run(no_bootstrap=no_bootstrap)
+        return
+    if action != "unload":
+        typer.echo(f"vibey acp: unknown action {action!r}; the only one is `unload`", err=True)
+        raise typer.Exit(EXIT_USAGE)
+    raise typer.Exit(ACP_UNLOAD.run())

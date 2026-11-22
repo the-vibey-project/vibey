@@ -24,6 +24,8 @@ RESTART_POLICIES: Final = ("always", "on-failure")
 """`restart`: the service manager's policy for the units `vibey acp` loads."""
 INTEGER_MINIMA: Final[Mapping[str, int]] = {
     "probe_seconds": 5,
+    "prompt_probe_seconds": 1,
+    "notice_interval_seconds": 60,
     "hub_start_seconds": 1,
     "bootstrap_timeout_seconds": 1,
     "install_timeout_seconds": 1,
@@ -69,6 +71,12 @@ class AcpSettings:
     restart: str = "always"
     service_workdir: str = ""
     probe_seconds: int = 30
+    prompt_probe_seconds: int = 10
+    """The longest a prompt waits for the keep-alive's probe (and a restart it starts) before it
+    goes ahead; the probe itself runs on to its end."""
+    notice_interval_seconds: int = 3600
+    """A unit that keeps stopping and starting is said once per change, twice at most, then
+    reminded of at most once per this many seconds."""
     hub_start_seconds: int = 60
     """The least time between two `vibey hub start` attempts when a hub read finds no hub; the
     attempt runs off the event loop, and every read in between hears "the hub is away" at once."""

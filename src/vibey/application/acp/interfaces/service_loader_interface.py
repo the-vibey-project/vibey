@@ -19,6 +19,10 @@ if TYPE_CHECKING:
 
 @runtime_checkable
 class ServiceLoaderInterface(Protocol):
+    def refused(self) -> str:
+        """Why no unit may be loaded by this process at all (it runs as root); "" when none."""
+        ...
+
     def available(self) -> bool:
         """Whether this user has a service manager to load units into now: launchd's
         `gui/<uid>` domain exists, or `systemctl --user` reaches a user manager."""
@@ -36,6 +40,17 @@ class ServiceLoaderInterface(Protocol):
 
     def restart(self, label: str) -> UnitOutcome:
         """Stop and start the loaded `label`: `restarted`, or `failed` with the answer."""
+        ...
+
+    def unload(self, label: str) -> UnitOutcome:
+        """Stop and unload `label` for good: `launchctl bootout` when it is loaded (the plist is
+        the caller's to remove), or `systemctl --user disable --now`: `unloaded`, `not-loaded`,
+        or `failed` with the answer."""
+        ...
+
+    def forget_unit_files(self) -> UnitOutcome:
+        """After unit files were removed, have the manager forget them (`systemctl --user
+        daemon-reload`; nothing on launchd): `unchanged`, or `failed` with the answer."""
         ...
 
     def unload_commands(self, labels: Sequence[str]) -> tuple[str, ...]:

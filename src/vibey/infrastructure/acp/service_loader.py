@@ -35,11 +35,22 @@ DETAIL_CHARS: Final = 400
 class ServiceLoader:
     """Declared by `ServiceLoaderInterface`."""
 
-    def __init__(self, host: SupervisorHostInterface, run: ServiceRunner, uid: int) -> None:
+    def __init__(
+        self, host: SupervisorHostInterface, run: ServiceRunner, uid: int, *, euid: int
+    ) -> None:
         self._host = host
         self._run = run
         self._uid = uid
+        self._euid = euid
         self._launchd = host.platform == LAUNCHD
+
+    def refused(self) -> str:
+        if self._euid == 0:
+            return (
+                "vibey acp is running as root, and root's user-level units are daemons with "
+                "root's power: vibey loads none of them; run your editor as yourself"
+            )
+        return ""
 
     def available(self) -> bool:
         try:
@@ -96,6 +107,35 @@ class ServiceLoader:
         except OSError as exc:
             return UnitOutcome(label, unit, "failed", self._cut(str(exc)))
 
+    def unload(self, label: str) -> UnitOutcome:
+        unit = str(self._host.unit_path(label)) if LABEL.fullmatch(label) else ""
+        if not LABEL.fullmatch(label):
+            return UnitOutcome(label, unit, "failed", "not a label vibey loads")
+        try:
+            if self._launchd:
+                code, _ = self._issue(("launchctl", "print", f"gui/{self._uid}/{label}"))
+                if code != 0:
+                    return UnitOutcome(label, unit, "not-loaded")
+                return self._done(
+                    label, unit, ("launchctl", "bootout", f"gui/{self._uid}/{label}"), "unloaded"
+                )
+            return self._done(
+                label,
+                unit,
+                ("systemctl", "--user", "disable", "--now", f"{label}.service"),
+                "unloaded",
+            )
+        except OSError as exc:
+            return UnitOutcome(label, unit, "failed", self._cut(str(exc)))
+
+    def forget_unit_files(self) -> UnitOutcome:
+        if self._launchd:
+            return UnitOutcome("", "", "unchanged")
+        try:
+            return self._done("", "", ("systemctl", "--user", "daemon-reload"), "unchanged")
+        except OSError as exc:
+            return UnitOutcome("", "", "failed", self._cut(str(exc)))
+
     def unload_commands(self, labels: Sequence[str]) -> tuple[str, ...]:
         return tuple(self._host.unload_commands(labels))
 
@@ -121,7 +161,7 @@ class ServiceLoader:
     def _issue(self, argv: tuple[str, ...]) -> tuple[int, str]:
         """Ask the runner, after checking once more that the argv is user-scoped: whatever
         runner the loader was given, it is never handed anything else."""
-        refusal = ServiceManagerRunner.refusal(argv)
+        refusal = ServiceManagerRunner.refusal(argv, self._uid)
         if refusal:
             raise PermissionError(f"refused: {refusal}")
         return self._run(argv)

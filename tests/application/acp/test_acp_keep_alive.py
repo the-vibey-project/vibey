@@ -16,6 +16,7 @@ from collections.abc import AsyncIterator
 from pathlib import Path
 from typing import Any
 
+import pytest
 from acp_fakes import FakeChannel, FakeHub, context, until
 
 from vibey.application.acp.acp_keep_alive import AcpKeepAlive
@@ -50,10 +51,14 @@ class Loader:
         self.revives: set[str] = {HUB, WORKER}
         """The labels a restart or load brings back up."""
         self.fail: set[str] = set()
+        self.idle: dict[str, str] = {}
+        """What the manager says of a label that is not running (default: failed)."""
         self._guard = threading.Lock()
 
     def state(self, label: str) -> str:
-        return "running" if label in self.running else "stopped (activating)"
+        if label in self.running:
+            return "running"
+        return self.idle.get(label, "stopped (failed)")
 
     def restart(self, label: str) -> UnitOutcome:
         with self._guard:
@@ -79,6 +84,8 @@ class FreeLock:
     def __init__(self, *, free: bool = True) -> None:
         self.free = free
         self.holds = 0
+        self.released_after_polls = -1
+        self.on_release: Any = None
 
     def acquire(self) -> bool:
         return self.free
@@ -90,6 +97,8 @@ class FreeLock:
     async def _held(self) -> AsyncIterator[bool]:
         self.holds += 1
         yield self.free
+        if self.on_release is not None:
+            self.on_release()
 
     def hold(self, timeout: float) -> Any:
         return self._held()
@@ -131,9 +140,15 @@ def keep_alive(
         settings or AcpSettings(probe_seconds=30),
         units=units,
         clock=clock or Clock(),
-        **({"sleep": sleep} if sleep is not None else {}),
+        sleep=sleep if sleep is not None else _yield,
     )
     return kept
+
+
+async def _yield(seconds: float) -> None:
+    """The keep-alive's waits in these tests only yield: a hub that never comes back costs no
+    real time."""
+    await asyncio.sleep(0)
 
 
 def test_the_keep_alive_is_its_interface() -> None:
@@ -256,7 +271,8 @@ async def test_crash_looping_worker_notices_once_per_transition() -> None:
     hub, channel, clock = Hub(), FakeChannel(), Clock()
     loader = Loader(hub, running=set())
     loader.revives = set()  # the worker exits again at once
-    kept = keep_alive(hub, loader, channel, clock=clock)
+    settings = AcpSettings(probe_seconds=30, notice_interval_seconds=60)
+    kept = keep_alive(hub, loader, channel, clock=clock, settings=settings)
     kept.manage(UNITS, hub_label=HUB, deferred=())
 
     for _ in range(5):
@@ -446,3 +462,164 @@ async def test_detaching_an_unknown_session_and_stopping_twice_are_harmless() ->
     await kept.stop()
     await kept.stop()
     assert kept._timer is None  # type: ignore[attr-defined]
+
+
+# -- fix round 2 ----------------------------------------------------------------------------------
+
+
+@pytest.mark.parametrize(
+    "state", ["stopped (activating)", "stopped (reloading)", "stopped", "unknown: no answer"]
+)
+async def test_a_unit_between_states_or_unknown_is_left_to_the_service_manager(
+    state: str,
+) -> None:
+    hub, clock = Hub(), Clock()
+    loader = Loader(hub, running=set())
+    loader.idle = {WORKER: state}
+    kept = keep_alive(hub, loader, FakeChannel(), clock=clock)
+    kept.manage(UNITS, hub_label=HUB, deferred=())
+    clock.now += 31
+    await kept.probe(context())
+    assert loader.calls == []
+    await kept.stop()
+
+
+async def test_a_unit_not_loaded_is_down() -> None:
+    hub, clock = Hub(), Clock()
+    loader = Loader(hub, running=set())
+    loader.idle = {WORKER: "not loaded"}
+    kept = keep_alive(hub, loader, FakeChannel(), clock=clock)
+    kept.manage(UNITS, hub_label=HUB, deferred=())
+    clock.now += 31
+    await kept.probe(context())
+    assert loader.calls == [("restart", WORKER)]
+    await kept.stop()
+
+
+async def test_a_flapping_unit_is_said_twice_then_reminded_once_per_interval() -> None:
+    hub, channel, clock = Hub(), FakeChannel(), Clock()
+    loader = Loader(hub, running=set())
+    settings = AcpSettings(probe_seconds=30, notice_interval_seconds=600)
+    kept = keep_alive(hub, loader, channel, clock=clock, settings=settings)
+    kept.manage(UNITS, hub_label=HUB, deferred=())
+
+    for turn in range(12):  # down at one probe, up at the next, for six minutes
+        clock.now += 31
+        if turn % 2 == 0:
+            loader.running.discard(WORKER)
+        await kept.probe(context())
+    assert len(channel.texts) == 2  # restarted, running again; then quiet
+    clock.now += 600
+    loader.running.discard(WORKER)
+    await kept.probe(context())
+    assert len(channel.texts) == 3
+    assert "keeps stopping and starting" in channel.texts[-1]
+    for _ in range(5):
+        clock.now += 31
+        loader.running.discard(WORKER)
+        await kept.probe(context())
+    assert len(channel.texts) == 3  # at most one reminder per interval
+    await kept.stop()
+
+
+async def test_a_steady_unit_is_no_longer_unsteady_after_an_interval() -> None:
+    hub, channel, clock = Hub(), FakeChannel(), Clock()
+    loader = Loader(hub, running=set())
+    settings = AcpSettings(probe_seconds=30, notice_interval_seconds=600)
+    kept = keep_alive(hub, loader, channel, clock=clock, settings=settings)
+    kept.manage(UNITS, hub_label=HUB, deferred=())
+    for turn in range(4):
+        clock.now += 31
+        if turn % 2 == 0:
+            loader.running.discard(WORKER)
+        await kept.probe(context())
+    assert kept._unsteady == {WORKER}  # type: ignore[attr-defined]
+    clock.now += 700
+    await kept.probe(context())  # up, and quiet for an interval
+    assert kept._unsteady == set()  # type: ignore[attr-defined]
+    await kept.stop()
+
+
+async def test_a_restarted_hub_holds_the_lock_until_it_answers() -> None:
+    hub, clock = Hub(up=False), Clock()
+    loader = Loader(hub)
+    loader.revives = set()  # the restart returns at once; the hub comes up three polls later
+    polls: list[float] = []
+
+    async def sleep(seconds: float) -> None:
+        polls.append(seconds)
+        if len(polls) == 3:
+            hub.up = True
+
+    lock = FreeLock()
+    lock.on_release = lambda: setattr(lock, "released_after_polls", len(polls))
+    kept = keep_alive(
+        hub,
+        loader,
+        FakeChannel(),
+        lock=lock,
+        clock=clock,
+        sleep=sleep,
+        settings=AcpSettings(probe_seconds=30, live_poll_seconds=0.5),
+    )
+    kept.manage(UNITS, hub_label=HUB, deferred=())
+    clock.now += 31
+    await kept.probe()
+    assert loader.calls == [("restart", HUB)]
+    assert polls == [0.5, 0.5, 0.5]
+    assert lock.released_after_polls == 3
+    await kept.stop()
+
+
+async def test_a_prompt_waits_for_the_probe_at_most_its_bound() -> None:
+    gate = asyncio.Event()
+
+    class Slow(Hub):
+        async def healthy(self) -> bool:
+            await gate.wait()
+            return True
+
+    hub = Slow()
+    kept = keep_alive(hub, Loader(hub), FakeChannel(), settings=AcpSettings(prompt_probe_seconds=1))
+    kept.manage(UNITS, hub_label=HUB, deferred=())
+    loop = asyncio.get_running_loop()
+    started = loop.time()
+    await kept.probe(context())
+    assert 0.9 <= loop.time() - started < 5
+    running = kept._current  # type: ignore[attr-defined]
+    assert running is not None and not running.done()  # the probe goes on without the prompt
+    await kept.probe(context("other"))  # shares the probe already running
+    assert kept._current is running  # type: ignore[attr-defined]
+    gate.set()
+    await asyncio.wait({running})
+    await kept.stop()
+
+
+async def test_the_keep_alive_owns_the_hub_only_while_it_manages_it_undeferred() -> None:
+    hub = Hub()
+    kept = keep_alive(hub, Loader(hub), FakeChannel())
+    assert kept.owns_hub() is False
+    kept.manage(UNITS, hub_label=HUB, deferred=(HUB,))
+    assert kept.owns_hub() is False  # a hub outside the service manager is not its unit
+    kept.manage(UNITS, hub_label=HUB, deferred=())
+    assert kept.owns_hub() is True
+    kept.manage({WORKER: UNITS[WORKER]}, hub_label=None, deferred=())
+    assert kept.owns_hub() is False  # an edited hub unit: not managed
+    await kept.stop()
+    assert kept.owns_hub() is False
+
+
+async def test_a_requested_probe_from_another_thread_restarts_through_the_lock_once() -> None:
+    hub, clock, lock = Hub(up=False), Clock(), FreeLock()
+    loader = Loader(hub)
+    kept = keep_alive(hub, loader, FakeChannel(), clock=clock, lock=lock)
+    kept.request_probe()  # nothing managed yet: nothing happens
+    kept.manage(UNITS, hub_label=HUB, deferred=())
+    clock.now += 31
+    await asyncio.gather(*(asyncio.to_thread(kept.request_probe) for _ in range(5)))
+    await until(lambda: kept._current is not None)  # type: ignore[attr-defined]
+    await asyncio.wait({kept._current})  # type: ignore[attr-defined]
+    assert loader.calls == [("restart", HUB)]
+    assert lock.holds == 1
+    await kept.stop()
+    kept.request_probe()  # stopped: nothing

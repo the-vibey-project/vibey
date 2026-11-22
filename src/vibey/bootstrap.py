@@ -172,6 +172,7 @@ from vibey.infrastructure.acp.acp_postgres_installer import AcpPostgresInstaller
 from vibey.infrastructure.acp.acp_service_units import AcpServiceUnits
 from vibey.infrastructure.acp.bootstrap_lock import BootstrapLock
 from vibey.infrastructure.acp.host_connector import HostConnector
+from vibey.infrastructure.acp.hub_start_router import HubStartRouter
 from vibey.infrastructure.acp.service_loader import ServiceLoader
 from vibey.infrastructure.acp.service_manager_runner import ServiceManagerRunner
 from vibey.infrastructure.azure.adapter import InMemoryAzureClientAdapter
@@ -235,8 +236,7 @@ from vibey.infrastructure.hub.settings import HUB_SETTINGS, HubSettings
 from vibey.infrastructure.ledger.full_ledger_writer import write_full_ledger
 from vibey.infrastructure.logging import StructlogAppLogger
 from vibey.infrastructure.mcp.host_installer import HostInstaller
-from vibey.infrastructure.mcp.hub_gateway import HubGateway, HubStarter
-from vibey.infrastructure.mcp.hub_gateway import _default_starter as _default_hub_starter
+from vibey.infrastructure.mcp.hub_gateway import HubGateway, default_hub_starter
 from vibey.infrastructure.mcp.hub_start_policy import BoundedHubStarter
 from vibey.infrastructure.mcp.interfaces.hub_gateway_interface import HubGatewayInterface
 from vibey.infrastructure.messaging.in_memory import InMemoryMessaging
@@ -1535,7 +1535,9 @@ def acp_machine(
     the units' files must lie in the user's home."""
     state_dir = acp_state_dir(user_config)
     pinned = launcher if launcher is not None else running_vibey()
-    runner = ServiceManagerRunner(timeout_seconds=settings.bootstrap_timeout_seconds)
+    runner = ServiceManagerRunner(
+        timeout_seconds=settings.bootstrap_timeout_seconds, uid=os.getuid()
+    )
     host = SupervisorHost(
         LAUNCHD if sys.platform == "darwin" else SYSTEMD,
         home=Path.home(),
@@ -1565,12 +1567,11 @@ def acp_machine(
             config_path=user_config,
             workdir=settings.service_workdir,
             state_dir=state_dir,
-            path_env=os.environ.get("PATH", ""),
             launcher=pinned,
-            start_hub=functools.partial(_default_hub_starter, cwd=user_config.parent),
+            start_hub=functools.partial(default_hub_starter, cwd=user_config.parent),
             roots=(Path.home(),),
         ),
-        loader=ServiceLoader(host, runner, os.getuid()),
+        loader=ServiceLoader(host, runner, os.getuid(), euid=os.geteuid()),
     )
 
 
@@ -1605,17 +1606,22 @@ def build_acp_agent(
     `AcpBootstrap` runs `doctor_probes`, `connector` and `postgres` under `[acp]`'s grant; each
     one left out is a step that says nothing, and with none of them there is no bootstrap.
     With `units` and `loader` it also loads the user-level services (step 3) and an
-    `AcpKeepAlive` keeps them running (ADR-0101). While `[acp] auto_services` keeps the hub, the
-    gateway's starter restarts the hub's unit (`launchctl kickstart` / `systemctl --user
-    restart`) instead of spawning `vibey hub start`, so no detached hub ever races the unit.
-    `vibey acp` passes doctor's local sections and `acp_machine`'s parts.
+    `AcpKeepAlive` keeps them running (ADR-0101). The gateway's starter is a `HubStartRouter`,
+    deciding per call: while the keep-alive owns the hub's unit, a read that finds no hub only
+    asks the keep-alive for a probe (it alone restarts the unit, under the lock); otherwise the
+    bounded `vibey hub start` runs, in the user's configuration folder. Probing the hub
+    (`healthy`) never starts or restarts it. `vibey acp` passes doctor's local sections and
+    `acp_machine`'s parts.
     """
     granted = settings.auto_bootstrap and settings.auto_services
     services = units is not None and loader is not None and granted
     # A hub `vibey acp` starts runs in the user's configuration folder and reads their file.
-    starter: HubStarter = functools.partial(_default_hub_starter, cwd=acp_user_config().parent)
-    if services and units is not None and loader is not None and "hub" in settings.services:
-        starter = _unit_starter(units, loader)
+    router = HubStartRouter(
+        BoundedHubStarter(
+            functools.partial(default_hub_starter, cwd=acp_user_config().parent),
+            window_seconds=settings.hub_start_seconds,
+        )
+    )
     hub = AcpHubClient(
         gateway=gateway
         if gateway is not None
@@ -1624,7 +1630,7 @@ def build_acp_agent(
             # (ADR-0101): the hub the units run reads the same file, and a project's
             # `vibey.toml` never decides where a token is made or which hub is spoken to.
             config_path=acp_user_config,
-            starter=BoundedHubStarter(starter, window_seconds=settings.hub_start_seconds),
+            starter=router,
         ),
         tools=HOST_TOOL_CATALOG,
     )
@@ -1640,6 +1646,7 @@ def build_acp_agent(
         keep_alive: AcpKeepAliveInterface | None = None
         if services and loader is not None:
             keep_alive = AcpKeepAlive(loader, hub, held, channel, mapper, settings, units=units)
+            router.attach(keep_alive)
         bootstrap = AcpBootstrap(
             settings,
             DoctorChecks(doctor_probes) if doctor_probes else None,
@@ -1673,18 +1680,6 @@ def build_acp_agent(
         new_id=lambda: str(uuid4()),
         bootstrap=bootstrap,
     )
-
-
-def _unit_starter(units: ServiceUnitsInterface, loader: ServiceLoaderInterface) -> HubStarter:
-    """The gateway's starter while the hub is a unit: restart the unit, never spawn a hub.
-
-    Module-level by design: a composition helper, as the rest of this module is; it returns
-    the starter `BoundedHubStarter` runs off the loop, once per `[acp] hub_start_seconds`."""
-
-    def start() -> bool:
-        return loader.restart(units.label("hub")).action != "failed"
-
-    return start
 
 
 # Re-exported for the same reason `application/ports.py` re-exports the

@@ -74,6 +74,11 @@ def _default_starter(cwd: Path | None = None) -> bool:
     return completed.returncode == 0
 
 
+default_hub_starter = _default_starter
+"""The public name of `vibey hub start` run as a child, for the composition root and `vibey acp`
+to give a `cwd` (the module-private name stays for the gateway's own default)."""
+
+
 class HubGateway:
     """Synchronous HTTP client from `vibey mcp` to the local hub using the agent token.
 
@@ -120,6 +125,16 @@ class HubGateway:
         return scopes
 
     def call(self, call: HubCall) -> HubGatewayResponse:
+        return self._call(call, start=True)
+
+    def reach(self, call: HubCall) -> HubGatewayResponse:
+        """`call` with no side effect on the hub: a missing or silent hub is an error at once,
+        and the starter is never run. A liveness probe goes this way, so probing whether the
+        hub is up never starts or restarts it (ADR-0101: the keep-alive is the one authority
+        that restarts a hub unit)."""
+        return self._call(call, start=False)
+
+    def _call(self, call: HubCall, *, start: bool) -> HubGatewayResponse:
         settings = self._load_settings()
         if not settings.agent_scopes:
             raise HubGatewayError(
@@ -133,10 +148,14 @@ class HubGateway:
 
         record = self._read_serving(store)
         if record is None:
+            if not start:
+                raise HubGatewayError("no hub is running on this computer")
             record = self._start_and_read(store)
         try:
             return self._send(settings, record, token, call)
         except httpx.HTTPError as first_exc:
+            if not start:
+                raise HubGatewayError(f"the hub did not answer ({first_exc})") from first_exc
             if not self._starter():
                 raise HubGatewayError(
                     f"the hub did not answer ({first_exc}); start it with `vibey hub start`"

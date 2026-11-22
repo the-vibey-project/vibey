@@ -235,3 +235,28 @@ def test_the_editors_gateway_finds_the_hub_through_the_users_file(
     agent = build_acp_agent(settings=AcpSettings(), channel=_Channel())  # type: ignore[arg-type]
 
     assert agent._hub._gateway._config_path() == user  # type: ignore[attr-defined]
+
+
+def test_the_hub_unit_and_vibey_acp_read_the_same_vibey_toml(
+    tmp_path: Path, project: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    from vibey.bootstrap import build_acp_agent
+
+    home = _home(tmp_path)
+    user = _user(home, f"[hub]\nstate_dir = '{home / 'state'}'\n")
+    parts = _run(project, user, home, monkeypatch)
+    monkeypatch.setattr("vibey.bootstrap.acp_user_config", lambda: user)
+    monkeypatch.chdir(project)
+
+    (hub,) = parts["units"].write(("hub",), "always")
+    agent = build_acp_agent(settings=parts["settings"], channel=_Channel())  # type: ignore[arg-type]
+
+    # `vibey serve` reads `./vibey.toml` in its working directory; `vibey acp` reads `[hub]`
+    # through its gateway's config path. Both are the user's own file, never the project's.
+    working = plistlib.loads(Path(hub.path).read_bytes())["WorkingDirectory"]
+    assert Path(working) / "vibey.toml" == user
+    assert agent._hub._gateway._config_path() == user  # type: ignore[attr-defined]
+
+
+class _Channel:
+    client_capabilities: dict[str, Any] = {}

@@ -38,7 +38,8 @@ class Units:
         self.writes: list[tuple[tuple[str, ...], str]] = []
         self.started = 0
         self.start_works = True
-        self.error: ValueError | None = None
+        self.error: Exception | None = None
+        self.waits: dict[str, str] = {}
 
     def write(self, names: tuple[str, ...], restart: str) -> tuple[UnitOutcome, ...]:
         self.writes.append((names, restart))
@@ -57,6 +58,18 @@ class Units:
     def detached_hub_pid(self) -> int | None:
         return self.pid
 
+    def waiting(self, name: str) -> str:
+        return self.waits.get(name, "")
+
+    def recorded(self) -> tuple[str, ...]:
+        return ()
+
+    def remove(self, label: str) -> UnitOutcome:
+        return UnitOutcome(label, "", "absent")
+
+    def label(self, name: str) -> str:
+        return LABELS[name]
+
     def start_hub(self) -> bool:
         self.started += 1
         return self.start_works
@@ -69,9 +82,13 @@ class Loader:
         self.calls: list[tuple[str, str]] = []
         self.fail: set[str] = set()
         self.already: set[str] = set()
+        self.refusal = ""
 
     def available(self) -> bool:
         return self.is_available
+
+    def refused(self) -> str:
+        return self.refusal
 
     def state(self, label: str) -> str:
         return "running" if label in self.running else "not loaded"
@@ -252,7 +269,8 @@ async def test_first_load_notices_the_unload_commands() -> None:
     assert "launchd gui/501" in notice
     assert f"launchctl bootout gui/501/{HUB}" in notice
     assert f"launchctl bootout gui/501/{WORKER}" in notice
-    assert "auto_services = false" in notice
+    assert "`vibey acp unload`" in notice
+    assert "auto_services = false" in notice and "your own vibey.toml" in notice
     assert kept.managed == [({HUB: PATHS[HUB], WORKER: PATHS[WORKER]}, HUB, [])]
     assert boot.healthy
 
@@ -487,3 +505,44 @@ async def test_without_a_loader_there_is_no_services_step() -> None:
     await run(boot)
     assert services_updates(channel) == []
     assert boot.healthy
+
+
+# -- fix round 2: root, a worker that would only crash, a write that breaks -------------------
+
+
+async def test_a_root_process_loads_nothing_and_starts_no_hub() -> None:
+    channel, units, loader = FakeChannel(), Units(), Loader()
+    loader.refusal = "vibey acp is running as root"
+    boot = bootstrap(channel, units=units, loader=loader)
+    await run(boot)
+    assert units.writes == [] and loader.calls == [] and units.started == 0
+    assert final(channel)["status"] == "failed"
+    assert "root" in final(channel)["content"][0]["content"]["text"]
+    assert not boot.healthy
+
+
+async def test_a_worker_without_a_database_is_neither_written_nor_loaded() -> None:
+    channel, units, loader, kept = FakeChannel(), Units(), Loader(), KeepAlive()
+    units.waits = {"worker": "set VIBEY_PG_URL in /home/op/supervisor.env"}
+    boot = bootstrap(channel, units=units, loader=loader, keep_alive=kept)
+
+    await run(boot)
+
+    assert units.writes == [(("hub",), "always")]
+    assert loader.calls == [("load", HUB)]
+    shown = final(channel)["content"][0]["content"]["text"]
+    assert final(channel)["status"] == "completed"
+    assert "worker: not loaded yet" in shown and "supervisor.env" in shown
+    assert kept.managed == [({HUB: PATHS[HUB]}, HUB, [])]
+    assert not boot.healthy  # the next session tries the worker again
+
+
+async def test_a_unit_file_that_cannot_be_written_closes_the_call_failed() -> None:
+    channel, units, loader = FakeChannel(), Units(), Loader()
+    units.error = PermissionError(13, "Permission denied: '/home/op/Library/Logs/vibey'")
+    boot = bootstrap(channel, units=units, loader=loader)
+    await run(boot)
+    update = final(channel)
+    assert update["status"] == "failed"
+    assert "PermissionError" in update["content"][0]["content"]["text"]
+    assert loader.calls == []

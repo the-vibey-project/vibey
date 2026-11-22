@@ -25,6 +25,16 @@ class AcpKeepAliveInterface(Protocol):
         unit loaded) only once that process has gone, never stopped."""
         ...
 
+    def owns_hub(self) -> bool:
+        """Whether the hub is a unit this keep-alive restarts: managed, and not a hub running
+        outside the service manager. While it does, nothing else restarts or starts the hub."""
+        ...
+
+    def request_probe(self) -> None:
+        """Ask for one probe soon, from any thread (a hub read that found no hub): it joins the
+        probe already running, or starts one on the loop. Never restarts anything itself."""
+        ...
+
     def attach(self, session_id: str) -> None:
         """Tell this session what the keep-alive does; the timer runs while any is attached."""
         ...
@@ -34,10 +44,12 @@ class AcpKeepAliveInterface(Protocol):
         ...
 
     async def probe(self, context: AcpSessionContext | None = None) -> None:
-        """Probe the managed units once; when the hub does not answer or a worker is not
-        running, take the bootstrap lock, probe again, and only then restart what is still
-        down -- at most once per `[acp] probe_seconds` per label. Says one notice per change of
-        a label's state, never one per probe. Never raises for a failed probe or restart."""
+        """Probe the managed units once (one probe at a time, shared); when the hub does not
+        answer or a worker is definitely down, take the bootstrap lock, probe again, and only
+        then restart what is still down -- at most once per `[acp] probe_seconds` per label --
+        holding the lock until a restarted hub answers. With a session's `context`, wait at
+        most `[acp] prompt_probe_seconds`; the probe goes on without the wait. Notices are said
+        per change of state, damped by `notice_interval_seconds`. Never raises."""
         ...
 
     def start(self) -> None:

@@ -16,9 +16,9 @@ if TYPE_CHECKING:
 @runtime_checkable
 class ServiceManagerRunnerInterface(Protocol):
     def __call__(self, argv: Sequence[str]) -> tuple[int, str]:
-        """Run one fixed `launchctl` or `systemctl --user` argv and return its exit code and
-        its standard output, cut to a bound. Anything else -- `sudo`, a shell, a `systemctl`
-        without `--user`, the `system` launchd domain -- is refused as a result, never run. The
-        binary is found on a fixed system PATH, stdin is closed, the environment is minimal
-        and the time bounded (an overrun is 124). Raises `OSError` when the binary is absent."""
+        """Run one of the fixed `launchctl` / `systemctl --user` commands vibey issues, in this
+        user's own domain, and return its exit code and standard output, cut to a bound.
+        Raises `PermissionError` for any other argv (nothing runs), `TimeoutError` when it gave
+        no answer within the bound, and `OSError` when the binary is absent. The binary is
+        found on a fixed system PATH, stdin is closed, the environment is minimal."""
         ...

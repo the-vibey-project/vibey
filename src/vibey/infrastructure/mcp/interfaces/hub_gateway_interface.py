@@ -21,3 +21,8 @@ class HubGatewayInterface(Protocol):
     def call(self, call: HubCall) -> HubGatewayResponse:
         """Execute ``call`` against the running hub, auto-starting it once if needed."""
         ...
+
+    def reach(self, call: HubCall) -> HubGatewayResponse:
+        """Execute ``call`` against the running hub, never starting it: a hub that is not
+        running, or does not answer, is a `HubGatewayError` at once."""
+        ...

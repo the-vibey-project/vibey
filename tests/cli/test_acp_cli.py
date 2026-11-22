@@ -35,6 +35,7 @@ from vibey.infrastructure.acp.acp_postgres_installer import AcpPostgresInstaller
 from vibey.infrastructure.acp.acp_service_units import AcpServiceUnits
 from vibey.infrastructure.acp.bootstrap_lock import BootstrapLock
 from vibey.infrastructure.acp.host_connector import HostConnector
+from vibey.infrastructure.acp.hub_start_router import HubStartRouter
 from vibey.infrastructure.acp.peer_client_channel import PeerClientChannel
 from vibey.infrastructure.acp.service_loader import ServiceLoader
 from vibey.infrastructure.hub.settings import HubSettings
@@ -456,8 +457,9 @@ def test_build_acp_agent_bounds_its_own_hub_start() -> None:
 
     gateway = agent._hub._gateway  # type: ignore[attr-defined]
     assert isinstance(gateway, HubGateway)
-    assert isinstance(gateway._starter, BoundedHubStarter)
-    assert gateway._starter._window == 5
+    assert isinstance(gateway._starter, HubStartRouter)
+    assert isinstance(gateway._starter._fallback, BoundedHubStarter)
+    assert gateway._starter._fallback._window == 5
 
 
 def test_build_acp_agent_without_bootstrap_parts_has_no_bootstrap() -> None:
@@ -560,9 +562,7 @@ class _ServiceLoader:
         return "launchd gui/501"
 
 
-def test_with_services_the_gateway_restarts_the_hub_unit_instead_of_spawning_a_hub(
-    tmp_path: Path,
-) -> None:
+def test_with_services_the_gateways_starter_defers_to_the_keep_alive(tmp_path: Path) -> None:
     units, loader = _Units(), _ServiceLoader()
     agent = build_acp_agent(
         settings=AcpSettings(),
@@ -572,13 +572,12 @@ def test_with_services_the_gateway_restarts_the_hub_unit_instead_of_spawning_a_h
         lock=BootstrapLock(tmp_path),
     )
 
-    starter = agent._hub._gateway._starter._starter  # type: ignore[attr-defined]
-    assert starter() is True
-    assert loader.restarts == ["dev.vibey.hub"] and units.labels == ["hub"]
-    loader.action = "failed"
-    assert starter() is False
+    router = agent._hub._gateway._starter  # type: ignore[attr-defined]
     boot = agent._bootstrap  # type: ignore[attr-defined]
-    assert boot._keep_alive is not None and boot._loader is loader and boot._units is units
+    assert isinstance(router, HubStartRouter)
+    assert router._keep_alive is boot._keep_alive is not None
+    assert boot._loader is loader and boot._units is units
+    assert loader.restarts == []  # composing restarts nothing
 
 
 @pytest.mark.parametrize(
@@ -589,10 +588,10 @@ def test_with_services_the_gateway_restarts_the_hub_unit_instead_of_spawning_a_h
         AcpSettings(services=("worker",)),
     ],
 )
-def test_without_the_grant_or_a_hub_unit_the_gateway_keeps_its_own_starter(
+def test_the_fallback_is_a_bounded_hub_start_in_the_users_folder(
     tmp_path: Path, settings: AcpSettings
 ) -> None:
-    from vibey.infrastructure.mcp.hub_gateway import _default_starter
+    from vibey.infrastructure.mcp.hub_gateway import default_hub_starter
 
     agent = build_acp_agent(
         settings=settings,
@@ -602,15 +601,15 @@ def test_without_the_grant_or_a_hub_unit_the_gateway_keeps_its_own_starter(
         lock=BootstrapLock(tmp_path),
     )
 
-    starter = agent._hub._gateway._starter._starter  # type: ignore[attr-defined]
+    router = agent._hub._gateway._starter  # type: ignore[attr-defined]
+    fallback = router._fallback
+    assert isinstance(fallback, BoundedHubStarter)
+    assert fallback._starter.func is default_hub_starter
+    assert fallback._starter.keywords == {"cwd": acp_user_config().parent}
     granted = settings.auto_bootstrap and settings.auto_services
-    own = getattr(starter, "func", None) is _default_starter
-    assert own is (not granted or "hub" not in settings.services)
-    if own:  # the hub it starts runs in the user's configuration folder, never the project
-        assert starter.keywords == {"cwd": acp_user_config().parent}
-    boot = agent._bootstrap  # type: ignore[attr-defined]
+    assert (router._keep_alive is not None) is granted
     if not granted:
-        assert boot is None
+        assert agent._bootstrap is None  # type: ignore[attr-defined]
 
 
 def test_the_machine_loads_into_this_platforms_user_service_manager(tmp_path: Path) -> None:

@@ -65,11 +65,17 @@ type UnitAction = Literal[
     "already-loaded",
     "restarted",
     "deferred",
+    "waiting",
+    "unloaded",
+    "not-loaded",
+    "removed",
+    "absent",
     "failed",
 ]
 """What was done with one supervised unit: its file written (`created`, `updated`), found as
 vibey renders it (`unchanged`) or left as the operator edited it (`kept-differing`); the unit
-loaded, found loaded, restarted, left for later (`deferred`), or not (`failed`)."""
+loaded, found loaded, restarted, left for later (`deferred`, `waiting`), unloaded or found not
+loaded, its file removed or found gone (`absent`), or not (`failed`)."""
 
 
 @dataclass(frozen=True, slots=True)

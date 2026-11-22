@@ -14,10 +14,11 @@ widen, raise or loosen anything:
   refused, and nothing is widened). `default_mode` is the project's only if it survives in the
   merged modes, else the user's if it survives, else the first merged mode.
 - **Rates** (`hub_start_seconds`, `probe_seconds`, `live_poll_seconds`): slower, never faster.
-- **Bounds and caps** (every timeout, `cancel_grace_seconds`, `max_gate_prompts_per_turn`, the
+- **Bounds and caps** (every timeout, `prompt_probe_seconds`, `cancel_grace_seconds`, `max_gate_prompts_per_turn`, the
   message, event, session and replay limits): lower, never higher.
-- **The user's alone** (`restart`, `service_workdir`, `reject_words`): a project value is
-  ignored, since none of them has a direction that is only stricter.
+- **The user's alone** (`restart`, `service_workdir`, `reject_words`,
+  `notice_interval_seconds`): a project value is ignored, since none of them has a direction
+  that is only stricter (a longer notice interval would quiet the keep-alive's warnings).
 
 A key not named here is the user's alone, so a key added later is closed until it is classified.
 `[supervisor]` and `[hub]` are not merged at all for `vibey acp`'s machine: they are read from
@@ -30,9 +31,10 @@ from typing import Final
 from vibey.domain.acp.settings import AcpSettings
 
 SWITCHES: Final = ("auto_bootstrap", "auto_connect", "auto_services", "live_between_turns")
-USER_ONLY: Final = ("restart", "service_workdir", "reject_words")
+USER_ONLY: Final = ("restart", "service_workdir", "reject_words", "notice_interval_seconds")
 SLOWER_ONLY: Final = ("hub_start_seconds", "probe_seconds", "live_poll_seconds")
 LOWER_ONLY: Final = (
+    "prompt_probe_seconds",
     "bootstrap_timeout_seconds",
     "install_timeout_seconds",
     "permission_timeout_seconds",

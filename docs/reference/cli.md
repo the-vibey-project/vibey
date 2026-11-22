@@ -191,11 +191,26 @@ message per line.
 ```bash
 vibey acp
 vibey acp --no-bootstrap
+vibey acp unload
 ```
 
 | Option | Default | What it does |
 |---|---|---|
 | `--no-bootstrap` | off | Turn [`[acp] auto_bootstrap`](configuration.md#acp) off for this process. |
+
+### `vibey acp unload` { #vibey-acp-unload }
+
+Stops the services `vibey acp` loaded, for good, in your own user domain: for each label it
+recorded writing (`<[hub] state_dir>/acp-units.json`, `[hub]` from your own `vibey.toml`), it
+runs `launchctl bootout gui/<uid>/<label>` (when loaded) or `systemctl --user disable --now
+<label>.service`, through the same argv allowlist as the bootstrap, then deletes the unit file
+only while it is still exactly what vibey wrote. A unit you edited is unloaded and left in place,
+and the command says so (remove it yourself, or launchd loads it again at your next login). On
+systemd it ends with `systemctl --user daemon-reload`. It prints what it did and is safe to run
+again. Exit 0 when everything was done, 1 when a unit would not unload, a file could not be
+removed, the service manager would not reload, or it runs as root; 2 for any other action than
+`unload`. It does not change `[acp] auto_services`: set that to `false` in your own
+`vibey.toml`, or the next `vibey acp` loads them again.
 
 The client launches the command; you do not run it in a terminal. Its standard output
 carries protocol messages and nothing else: the command points file descriptor 1 at standard
@@ -438,39 +453,63 @@ here delays the answer: the steps start after `session/new` (or the first `sessi
 3. **Services** (an `execute` tool call, "Keep vibey's services running"), when
    [`[acp] auto_services`](configuration.md#acp) is on and `[acp] services` names any
    ([ADR-0101](../architecture/decisions/0101-the-acp-agent-and-self-installing-services.md)).
-   Inside `<[hub] state_dir>/acp-bootstrap.lock` (waited for within
-   `bootstrap_timeout_seconds`), vibey writes one user-level unit per service --
-   `<[supervisor] label_prefix>.hub` runs `vibey serve`, `<label_prefix>.worker` runs
-   `vibey worker --all-projects`, each through `vibey supervisor exec --env-file <[supervisor]
-   env_file>` -- into `~/Library/LaunchAgents` (launchd) or `$XDG_CONFIG_HOME/systemd/user`
-   (systemd), with [`[acp] restart`](configuration.md#acp) (`always`: launchd `KeepAlive`,
-   systemd `Restart=always`) throttled by `[supervisor] restart_seconds` and, on systemd,
-   `start_limit_interval_seconds` / `start_limit_burst`. A unit is written atomically (mode
-   0644), never through a symbolic link, and a unit that differs from what vibey renders is
-   your edit: it is kept exactly as it is, and vibey neither loads nor restarts it. The
-   environment file is created from its template (mode 0600) when missing; a unit never carries
-   a secret, only the path of that file. Each unit is then loaded with `launchctl bootstrap
-   gui/<uid>` or `systemctl --user daemon-reload` and `enable --now`, unless it is already
-   loaded or running -- never into the `system` domain, never with `sudo`. A hub you started
-   yourself (`vibey hub start`) and that answers is left running: its unit is not loaded now,
-   and the keep-alive loads it once that hub has exited. The first time units are loaded, one
-   message names each label and the exact commands that unload them (`launchctl bootout
-   gui/<uid>/<label>` or `systemctl --user disable --now <label>.service`); set
-   `auto_services = false` so vibey does not load them again. vibey then waits for the hub to
-   answer, within `bootstrap_timeout_seconds`. When the service manager cannot be reached (no
-   login session's `gui/<uid>` domain, as over SSH, or no `systemctl --user` manager), vibey
-   runs `vibey hub start` once per process instead and says that nothing keeps the hub running.
+   Nothing is loaded when `vibey acp` runs as root (uid 0): root's user-level units would be
+   daemons with root's power, so the step fails saying so. Inside
+   `<[hub] state_dir>/acp-bootstrap.lock` (waited for within `bootstrap_timeout_seconds`),
+   vibey writes one user-level unit per service -- `<[supervisor] label_prefix>.hub` runs
+   `vibey serve` in your configuration folder (so it reads your own `vibey.toml`, the one
+   `vibey acp` read `[hub]` from), `<label_prefix>.worker` runs `vibey worker --all-projects` in
+   `[acp] service_workdir` or that folder, each through `vibey supervisor exec --env-file
+   <[supervisor] env_file>` -- into `~/Library/LaunchAgents` (launchd) or
+   `$XDG_CONFIG_HOME/systemd/user` (systemd), with [`[acp] restart`](configuration.md#acp)
+   (`always`: launchd `KeepAlive`, systemd `Restart=always`) throttled by `[supervisor]
+   restart_seconds` and, on systemd only, `start_limit_interval_seconds` /
+   `start_limit_burst` (launchd has no start limit: it keeps respawning a unit that exits, at
+   most once per `restart_seconds`). A unit runs the running install's own `vibey`, with a fixed
+   PATH (that `vibey`'s folder, then `/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:
+   /sbin`; set PATH in the environment file for more), never the editor's. A unit is written
+   atomically (mode 0644), never through a symbolic link, and its digest is kept in
+   `<[hub] state_dir>/acp-units.json`: a unit that still matches what vibey wrote is replaced
+   when vibey renders it differently (an upgrade), and one that matches nothing vibey wrote is
+   your edit -- kept exactly as it is, and vibey neither loads nor restarts it. The environment
+   file is created from its template (mode 0600) when missing; a unit never carries a secret,
+   only the path of that file. The worker is neither written nor loaded until that file sets
+   `VIBEY_PG_URL`: the step says so, and the next session tries again, so a fresh computer never
+   gets a worker that would only crash at every login. Each unit is then loaded with `launchctl
+   bootstrap gui/<uid>` or `systemctl --user daemon-reload` and `enable --now`, unless it is
+   already loaded or running -- never into the `system` domain, never with `sudo`. A hub you
+   started yourself (`vibey hub start`) that still holds the hub's lock and answers is left
+   running: its unit is not loaded now, and the keep-alive loads it once nothing holds that lock.
+   The first time units are loaded, one message names each label, says that
+   [`vibey acp unload`](#vibey-acp-unload) stops them for good, and gives the same by hand
+   (`launchctl bootout gui/<uid>/<label>; rm <the plist>` -- `bootout` alone lasts only until
+   your next login -- or `systemctl --user disable --now <label>.service`); set
+   `auto_services = false` in your own `vibey.toml` so vibey does not load them again. vibey
+   then waits for the hub to answer, within `bootstrap_timeout_seconds`, without restarting it.
+   When the service manager cannot be reached (no login session's `gui/<uid>` domain, as over
+   SSH, or no `systemctl --user` manager), vibey runs `vibey hub start` once per process instead
+   and says that nothing keeps the hub running.
 
    **Keep-alive.** While a session is open, vibey probes the units it loaded at the start of
-   every prompt and every [`[acp] probe_seconds`](configuration.md#acp): the hub by whether it
-   answers, the worker by whether the service manager says it runs. When one is down it takes
-   the bootstrap lock, probes again, and only then restarts what is still down (`launchctl
-   kickstart -k gui/<uid>/<label>`, `systemctl --user restart <label>.service`), each label at
-   most once per `probe_seconds`; two editor windows restart a dead hub once. Only the labels
-   vibey loaded, or found loaded exactly as it renders them, are ever restarted. One message is
-   said per change of a label's state (restarted, could not restart, running again), never one
-   per probe. While the hub is a unit, a read that finds no hub restarts its unit (at most once
-   per `hub_start_seconds`) instead of starting a second hub beside it.
+   every prompt (waiting at most [`[acp] prompt_probe_seconds`](configuration.md#acp); the probe
+   goes on without the prompt) and every [`[acp] probe_seconds`](configuration.md#acp), in any
+   mode (`observe` too: it is a grant on the machine, not a hub scope): the hub by whether it
+   answers, the worker by whether the service manager says it is not loaded or failed. A unit
+   between states (`activating` during its restart wait, `reloading`) or an answer that did not
+   come in time is left to the service manager. When one is down it takes the bootstrap lock,
+   probes again, and only then restarts what is still down (`launchctl kickstart -k
+   gui/<uid>/<label>`, `systemctl --user restart <label>.service`), each label at most once per
+   `probe_seconds`, and holds the lock until a restarted hub answers (within
+   `bootstrap_timeout_seconds`), so two editor windows restart a dead hub once. It is the only
+   thing that restarts the hub's unit: asking whether the hub is up never starts it, and a read
+   that finds no hub while the keep-alive owns the unit only asks it to probe. Only the labels
+   vibey loaded, or found loaded as it renders them, are ever restarted. Messages are said per
+   change of a label's state (restarted, could not restart, running again), twice at most
+   within [`[acp] notice_interval_seconds`](configuration.md#acp); a unit that keeps stopping
+   and starting is then reminded of once per that interval. When no unit of the hub is vibey's
+   (the grant is off, no service manager, a load that failed, a unit you edited, or a hub you
+   started yourself), a read that finds no hub runs `vibey hub start` at most once per
+   `hub_start_seconds`, in your configuration folder.
 
 A session's first prompt waits for steps 1 to 3 at most
 [`[acp] bootstrap_timeout_seconds`](configuration.md#acp), then goes ahead and says so. A run

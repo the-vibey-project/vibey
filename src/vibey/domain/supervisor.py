@@ -161,7 +161,7 @@ class SupervisorPlanner:
         if not LABEL.fullmatch(f"{settings.label_prefix}.{WORKER}"):
             raise ValueError(
                 "[supervisor] label_prefix must be letters, digits, '.', '_' or '-', starting "
-                "with a letter or digit, at most 120 characters"
+                "with a letter or digit, at most 121 characters"
             )
         for key in ("restart_seconds", "start_limit_interval_seconds", "start_limit_burst"):
             if getattr(settings, key) < 1:

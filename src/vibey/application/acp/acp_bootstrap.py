@@ -86,12 +86,14 @@ from vibey.domain.acp.modes import UnknownMode
 from vibey.domain.acp.protocol import PermissionKind, ToolCallStatus, ToolKind
 from vibey.domain.acp.settings import AcpSettings
 from vibey.domain.hub_scope import HubScope
+from vibey.domain.supervisor import HUB
 
 TOOL_DOCTOR: Final = "bootstrap-doctor"
 TOOL_CONNECT: Final = "bootstrap-connect"
 TOOL_POSTGRES: Final = "bootstrap-postgres"
 TOOL_SERVICES: Final = "bootstrap-services"
-HUB_SERVICE: Final = "hub"
+UNLOAD_COMMAND: Final = "vibey acp unload"
+"""What stops and removes the units `vibey acp` loaded, for good (ADR-0101)."""
 WRITTEN: Final = frozenset({"created", "unchanged", "updated"})
 """The unit file is the one vibey renders: vibey may load it and keep it running."""
 INSTALL_OPTION: Final = "bootstrap-postgres:install"
@@ -383,26 +385,43 @@ class AcpBootstrap:
         hub: AcpHubPortInterface,
         names: tuple[str, ...],
     ) -> bool:
+        refused = loader.refused()
+        if refused:
+            # As root: no unit, and no fallback hub either; said once in the tool call.
+            await self._end(
+                session_id, TOOL_SERVICES, ToolCallStatus.FAILED, [self._untrusted(refused)]
+            )
+            return False
         if not await asyncio.to_thread(loader.available):
             return await self._without_service_manager(session_id, units, loader)
+        waiting: dict[str, str] = {}
+        for name in names:
+            reason = await asyncio.to_thread(units.waiting, name)
+            if reason:
+                waiting[name] = reason
+        ready = tuple(name for name in names if name not in waiting)
         try:
-            written = await asyncio.to_thread(units.write, names, self._settings.restart)
-        except ValueError as exc:
+            written = await asyncio.to_thread(units.write, ready, self._settings.restart)
+        except Exception as exc:  # a cancel is a BaseException: it is never caught here
+            # A refusal (ValueError) or a file that cannot be written (OSError): the tool call is
+            # closed, never left spinning, and nothing is loaded.
             await self._end(
                 session_id,
                 TOOL_SERVICES,
                 ToolCallStatus.FAILED,
-                [f"No unit was written: {self._untrusted(str(exc))}"],
+                [f"No unit was written: {self._untrusted(f'{type(exc).__name__}: {exc}')}"],
             )
             return False
-        shown: list[str] = []
+        shown = [
+            f"{name}: not loaded yet: {self._untrusted(reason)}" for name, reason in waiting.items()
+        ]
         managed: dict[str, str] = {}
         deferred: list[str] = []
         loaded: list[str] = []
         hub_label: str | None = None
         failed = False
-        for name, outcome in zip(names, written, strict=True):
-            if name == HUB_SERVICE:
+        for name, outcome in zip(ready, written, strict=True):
+            if name == HUB:
                 hub_label = outcome.label
             said, kept = await self._load_one(name, outcome, loader, hub, deferred, loaded)
             shown.append(said)
@@ -419,7 +438,8 @@ class AcpBootstrap:
             await self._hub_answers(hub)
         status = ToolCallStatus.FAILED if failed else ToolCallStatus.COMPLETED
         await self._end(session_id, TOOL_SERVICES, status, shown)
-        return not failed
+        # A service still waiting is tried again when the next session starts.
+        return not failed and not waiting
 
     async def _load_one(
         self,
@@ -444,7 +464,7 @@ class AcpBootstrap:
         state = await asyncio.to_thread(loader.state, written.label)
         if state == "running":
             return f"{label}: already running.", written.path
-        if name == HUB_SERVICE:
+        if name == HUB:
             pid = await asyncio.to_thread(self._units.detached_hub_pid) if self._units else None
             if pid is not None and await hub.healthy():
                 deferred.append(written.label)
@@ -506,9 +526,10 @@ class AcpBootstrap:
             session_id,
             f"vibey loaded these user-level services into {self._untrusted(loader.domain())}: "
             f"{labels}. The service manager restarts them when they stop, and they start again "
-            "when you log in. To stop and unload them, run:\n\n"
-            f"{commands}\n\nand set `[acp] auto_services = false` in vibey.toml so vibey does "
-            "not load them again.",
+            f"when you log in. `{UNLOAD_COMMAND}` stops them for good: it unloads them and "
+            "deletes the unit files vibey wrote (never one you edited). By hand, the same is:"
+            f"\n\n{commands}\n\nSet `[acp] auto_services = false` in your own vibey.toml (in "
+            "your configuration folder) so vibey does not load them again.",
         )
 
     async def _wait_for_steps(self, context: AcpSessionContext) -> None:

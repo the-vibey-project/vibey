@@ -6,7 +6,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, Protocol, runtime_checkable
 
 if TYPE_CHECKING:
-    from collections.abc import Sequence
+    from collections.abc import Callable, Sequence
     from pathlib import Path
 
     from vibey.application.acp.dto import UnitOutcome
@@ -37,10 +37,12 @@ class SupervisorInstallerInterface(Protocol):
         out: Path | None,
         overwrite: bool,
         path_env: str,
+        ours: Callable[[str, str], bool] | None = None,
     ) -> tuple[UnitOutcome, ...]:
         """Write each service's unit into `out`, or the service manager's own directory, one
         outcome per service: `created`, `unchanged`, `updated` (only with `overwrite`),
-        `kept-differing` (an existing unit left as it is, without `overwrite`) or `failed`.
+        `kept-differing` (an existing unit left as it is, without `overwrite`, unless
+        `ours(label, its text)` says it is exactly what vibey wrote before) or `failed`.
         Atomic, mode 0644, never through a symbolic link. Raises ValueError, before writing
         anything, for a value no unit can carry."""
         ...

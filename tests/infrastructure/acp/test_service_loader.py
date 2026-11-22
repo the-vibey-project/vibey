@@ -75,7 +75,7 @@ def _loader(tmp_path: Path, platform: str, runner: Runner) -> ServiceLoader:
     host = SupervisorHost(
         platform, home=tmp_path, environ={}, uid=501, run=runner, temp_roots=lambda: ()
     )
-    return ServiceLoader(host, runner, 501)
+    return ServiceLoader(host, runner, 501, euid=501)
 
 
 def _unit(tmp_path: Path, platform: str, label: str) -> str:
@@ -99,7 +99,9 @@ def _assert_user_scoped(calls: list[tuple[str, ...]]) -> None:
 
 def test_the_loader_is_its_port(tmp_path: Path) -> None:
     assert isinstance(_loader(tmp_path, "launchd", Runner()), ServiceLoaderInterface)
-    assert isinstance(ServiceManagerRunner(timeout_seconds=5), ServiceManagerRunnerInterface)
+    assert isinstance(
+        ServiceManagerRunner(timeout_seconds=5, uid=501), ServiceManagerRunnerInterface
+    )
 
 
 @pytest.mark.parametrize("platform", ["launchd", "systemd"])
@@ -267,7 +269,8 @@ def test_a_unit_path_the_service_manager_would_not_read_issues_nothing(
 def test_the_loader_names_the_unload_commands(tmp_path: Path) -> None:
     loader = _loader(tmp_path, "launchd", Runner())
     assert loader.unload_commands(("dev.vibey.hub",)) == (
-        "launchctl bootout gui/501/dev.vibey.hub",
+        "launchctl bootout gui/501/dev.vibey.hub; "
+        f"rm {tmp_path / 'Library' / 'LaunchAgents' / 'dev.vibey.hub.plist'}",
     )
     assert loader.domain() == "launchd gui/501"
     assert _loader(tmp_path, "systemd", Runner()).domain() == "systemctl --user"
@@ -297,6 +300,7 @@ class Run:
 def _runner(run: Run, **kw: Any) -> ServiceManagerRunner:
     return ServiceManagerRunner(
         timeout_seconds=7,
+        uid=501,
         run=run,
         which=lambda name, path: f"/usr/bin/{name}",
         environ={
@@ -340,21 +344,67 @@ def test_the_runner_runs_an_absolute_binary_bounded_with_stdin_closed_and_no_sec
         ("sh", "-c", "launchctl print gui/501"),
         ("launchctl", "asuser", "501", "/bin/sh", "-c", "id"),
         ("launchctl", "submit", "-l", "x", "--", "/bin/sh"),
-        ("launchctl", "bootout", "gui/501/dev.vibey.hub"),
         ("launchctl", "print", "sudo"),
         ("launchctl",),
         ("systemctl", "--user", "stop", "dev.vibey.hub.service"),
         ("systemctl", "--user"),
         (),
+        # S8: the whole argv is matched, not the verb alone
+        ("systemctl", "--user", "restart", "-H", "evil.example", "x.service"),
+        ("systemctl", "--user", "enable", "--now", "--global", "x.service"),
+        ("systemctl", "--user", "restart", "--system", "x.service"),
+        ("systemctl", "--user", "restart", "-M", "other@", "x.service"),
+        ("systemctl", "--user", "enable", "--root=/", "x.service"),
+        ("systemctl", "--user", "restart", "--system"),
+        ("systemctl", "--user", "restart", "-H"),
+        ("systemctl", "--user", "restart", "x"),
+        ("systemctl", "--user", "restart", "a b.service"),
+        ("systemctl", "--user", "is-system-running", "--wait"),
+        ("launchctl", "kickstart", "-k", "gui/0/com.apple.Finder"),
+        ("launchctl", "kickstart", "-k", "gui/5010/dev.vibey.hub"),
+        ("launchctl", "bootstrap", "user/0", "/tmp/x.plist"),
+        ("launchctl", "bootstrap", "gui/0", "/tmp/x.plist"),
+        ("launchctl", "bootstrap", "gui/501", "relative.plist"),
+        ("launchctl", "bootstrap", "gui/501", "/tmp/x.sh"),
+        ("launchctl", "bootstrap", "gui/501", "/tmp/x\n.plist"),
+        ("launchctl", "print", "pid/1"),
+        ("launchctl", "print", "user/501"),
+        ("launchctl", "print", "gui/501/-x"),
+        ("launchctl", "kickstart", "gui/501/dev.vibey.hub"),
+        ("launchctl", "kickstart", "-kp", "gui/501/dev.vibey.hub"),
+        ("launchctl", "bootout", "gui/501"),
+        ("launchctl", "asuser", "501", "launchctl", "print", "gui/501"),
     ],
 )
 def test_the_runner_refuses_anything_but_a_user_scoped_service_manager_command(
     argv: tuple[str, ...],
 ) -> None:
     run = Run(Completed(0, ""))
-    code, out = _runner(run)(argv)
-    assert code != 0 and "refused" in out
+    with pytest.raises(PermissionError, match="refused"):
+        _runner(run)(argv)
     assert run.calls == []
+
+
+@pytest.mark.parametrize(
+    "argv",
+    [
+        ("launchctl", "print", "gui/501"),
+        ("launchctl", "print", "gui/501/dev.vibey.hub"),
+        ("launchctl", "bootstrap", "gui/501", "/home/op/Library/LaunchAgents/dev.vibey.hub.plist"),
+        ("launchctl", "kickstart", "-k", "gui/501/dev.vibey.hub"),
+        ("launchctl", "bootout", "gui/501/dev.vibey.hub"),
+        ("systemctl", "--user", "is-system-running"),
+        ("systemctl", "--user", "daemon-reload"),
+        ("systemctl", "--user", "is-active", "dev.vibey.hub.service"),
+        ("systemctl", "--user", "restart", "dev.vibey.hub.service"),
+        ("systemctl", "--user", "enable", "--now", "dev.vibey.hub.service"),
+        ("systemctl", "--user", "disable", "--now", "dev.vibey.hub.service"),
+    ],
+)
+def test_the_runner_runs_each_command_vibey_issues(argv: tuple[str, ...]) -> None:
+    run = Run(Completed(0, ""))
+    assert _runner(run)(argv) == (0, "")
+    assert run.calls[0][0][1:] == list(argv[1:])
 
 
 def test_the_runner_bounds_what_it_reads() -> None:
@@ -363,21 +413,30 @@ def test_the_runner_bounds_what_it_reads() -> None:
     assert len(out) == OUTPUT_LIMIT
 
 
-def test_a_command_that_overruns_is_124_never_raised() -> None:
+def test_a_command_that_overruns_is_an_unknown_answer_never_not_loaded(tmp_path: Path) -> None:
     run = Run(subprocess.TimeoutExpired(["launchctl"], 7))
-    assert _runner(run)(("launchctl", "print", "gui/501")) == (124, "")
+    with pytest.raises(TimeoutError, match="no answer"):
+        _runner(run)(("launchctl", "print", "gui/501"))
+    host = SupervisorHost(
+        "launchd", home=tmp_path, environ={}, uid=501, run=_runner(run), temp_roots=lambda: ()
+    )
+    assert host.state("dev.vibey.hub").startswith("unknown")
 
 
 def test_a_binary_that_is_not_found_raises_os_error_for_the_host_to_report() -> None:
     runner = ServiceManagerRunner(
-        timeout_seconds=7, run=Run(Completed(0, "")), which=lambda name, path: None, environ={}
+        timeout_seconds=7,
+        uid=501,
+        run=Run(Completed(0, "")),
+        which=lambda name, path: None,
+        environ={},
     )
     with pytest.raises(FileNotFoundError, match="launchctl"):
         runner(("launchctl", "print", "gui/501"))
 
 
 def test_the_real_runner_finds_binaries_on_the_fixed_path_only() -> None:
-    runner = ServiceManagerRunner(timeout_seconds=7)
+    runner = ServiceManagerRunner(timeout_seconds=7, uid=501)
     assert runner._which is not None
     assert runner._environ is not None
 
@@ -388,7 +447,53 @@ def test_the_loader_checks_every_argv_again_before_any_runner_sees_it(
     # Whatever runner it was given: a check that refuses stops the command before it runs.
     runner = Runner()
     loader = _loader(tmp_path, "launchd", runner)
-    monkeypatch.setattr(ServiceManagerRunner, "refusal", staticmethod(lambda argv: "no"))
+    monkeypatch.setattr(ServiceManagerRunner, "refusal", classmethod(lambda cls, argv, uid: "no"))
 
     assert loader.restart("dev.vibey.hub").action == "failed"
     assert runner.calls == []
+
+
+# -- unload (M4) and root (S10) ---------------------------------------------------------------
+
+
+def test_launchd_unload_boots_out_a_loaded_label_and_leaves_an_unloaded_one(tmp_path: Path) -> None:
+    runner = Runner(loaded={"dev.vibey.hub"})
+    loader = _loader(tmp_path, "launchd", runner)
+    assert loader.unload("dev.vibey.hub").action == "unloaded"
+    assert ("launchctl", "bootout", "gui/501/dev.vibey.hub") in runner.calls
+    assert loader.unload("dev.vibey.worker").action == "not-loaded"
+    assert ("launchctl", "bootout", "gui/501/dev.vibey.worker") not in runner.calls
+    _assert_user_scoped(runner.calls)
+
+
+def test_systemd_unload_disables_and_stops_and_forgets_the_files(tmp_path: Path) -> None:
+    runner = Runner()
+    loader = _loader(tmp_path, "systemd", runner)
+    assert loader.unload("dev.vibey.hub").action == "unloaded"
+    assert loader.forget_unit_files().action == "unchanged"
+    assert runner.calls == [
+        ("systemctl", "--user", "disable", "--now", "dev.vibey.hub.service"),
+        ("systemctl", "--user", "daemon-reload"),
+    ]
+    assert _loader(tmp_path, "launchd", Runner()).forget_unit_files().action == "unchanged"
+
+
+def test_unload_failures_are_outcomes(tmp_path: Path) -> None:
+    assert _loader(tmp_path, "systemd", Runner(fail={"disable"})).unload(
+        "dev.vibey.hub"
+    ).action == ("failed")
+    assert _loader(
+        tmp_path, "systemd", Runner(fail={"daemon-reload"})
+    ).forget_unit_files().action == ("failed")
+    broken = Runner(error=FileNotFoundError(2, "gone"))
+    assert _loader(tmp_path, "systemd", broken).forget_unit_files().action == "failed"
+    assert _loader(tmp_path, "launchd", broken).unload("dev.vibey.hub").action == "failed"
+    assert _loader(tmp_path, "launchd", Runner()).unload("a b").action == "failed"
+
+
+def test_a_root_process_is_refused(tmp_path: Path) -> None:
+    host = SupervisorHost(
+        "launchd", home=tmp_path, environ={}, uid=0, run=Runner(), temp_roots=lambda: ()
+    )
+    assert "root" in ServiceLoader(host, Runner(), 0, euid=0).refused()
+    assert _loader(tmp_path, "launchd", Runner()).refused() == ""

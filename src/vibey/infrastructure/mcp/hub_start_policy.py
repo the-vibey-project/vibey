@@ -29,7 +29,7 @@ import time
 from collections.abc import Callable
 from typing import Final
 
-from vibey.infrastructure.mcp.hub_gateway import HubGatewayError, HubStarter, _default_starter
+from vibey.infrastructure.mcp.hub_gateway import HubGatewayError, HubStarter, default_hub_starter
 
 type Launch = Callable[[Callable[[], None]], None]
 """Run the attempt somewhere other than the caller: a daemon thread, or inline in a test."""
@@ -48,7 +48,7 @@ class BoundedHubStarter:
 
     def __init__(
         self,
-        starter: HubStarter = _default_starter,
+        starter: HubStarter = default_hub_starter,
         *,
         window_seconds: float,
         clock: Callable[[], float] = time.monotonic,

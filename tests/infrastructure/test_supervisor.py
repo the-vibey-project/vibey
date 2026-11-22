@@ -289,8 +289,10 @@ def test_the_throttle_keys_are_read(tmp_path: Path) -> None:
 
 def test_launchd_unload_commands_boot_out_each_label_from_the_users_own_domain() -> None:
     assert _host("launchd").unload_commands(["dev.vibey.hub", "dev.vibey.worker"]) == [
-        "launchctl bootout gui/501/dev.vibey.hub",
-        "launchctl bootout gui/501/dev.vibey.worker",
+        "launchctl bootout gui/501/dev.vibey.hub; "
+        "rm /home/op/Library/LaunchAgents/dev.vibey.hub.plist",
+        "launchctl bootout gui/501/dev.vibey.worker; "
+        "rm /home/op/Library/LaunchAgents/dev.vibey.worker.plist",
     ]
 
 

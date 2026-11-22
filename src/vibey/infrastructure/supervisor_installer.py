@@ -51,13 +51,15 @@ UNIT_READ_LIMIT: Final = 1 << 20
 """The most of an existing unit read to compare it; a unit is a few hundred bytes."""
 
 ENV_TEMPLATE: Final = """\
-# The environment of vibey's supervised services (#1189), read by `vibey supervisor exec`
-# before it starts `vibey worker --all-projects` and the triaged-delivery bridge.
+# The environment of vibey's supervised services (#1189, ADR-0101), read by
+# `vibey supervisor exec` before it starts the hub (`vibey serve`), the worker
+# (`vibey worker --all-projects`) and the triaged-delivery bridge.
 #
 # KEY=VALUE, one per line. `#` starts a comment, `export ` is allowed, one pair of
 # matching quotes around a value is removed, and nothing is expanded ($HOME stays $HOME).
-# A value here wins over the service manager's own environment. Keep this file private:
-# `vibey supervisor install` created it readable by you alone.
+# A value here wins over the service manager's own environment (PATH included). Keep this
+# file private: `vibey supervisor install` or `vibey acp` created it readable by you alone.
+# `vibey acp` loads the worker only once VIBEY_PG_URL is set here.
 #
 # VIBEY_PG_URL=postgresql://vibey_app@localhost:5432/vibey
 # VIBEY_OLLAMA_URL=http://127.0.0.1:11434
@@ -191,6 +193,7 @@ class SupervisorInstaller:
         out: Path | None,
         overwrite: bool,
         path_env: str,
+        ours: Callable[[str, str], bool] | None = None,
     ) -> tuple[UnitOutcome, ...]:
         host = self._host
         # Every unit is rendered before any is written: a value no unit can carry writes none.
@@ -214,7 +217,7 @@ class SupervisorInstaller:
         try:
             return tuple(
                 self._write_one(
-                    directory, host.unit_path(service.label, target), service, text, overwrite
+                    directory, host.unit_path(service.label, target), service, text, overwrite, ours
                 )
                 for service, text in rendered
             )
@@ -237,25 +240,41 @@ class SupervisorInstaller:
         )
 
     def _write_one(
-        self, directory: int, unit: Path, service: SupervisedService, text: str, overwrite: bool
+        self,
+        directory: int,
+        unit: Path,
+        service: SupervisedService,
+        text: str,
+        overwrite: bool,
+        ours: Callable[[str, str], bool] | None,
     ) -> UnitOutcome:
         try:
             refusal = self._refusal(directory, unit.name)
             if refusal:
                 return UnitOutcome(service.label, str(unit), "failed", refusal)
-            return self._put(directory, unit, service, text, overwrite)
+            return self._put(directory, unit, service, text, overwrite, ours)
         except OSError as exc:
             return UnitOutcome(service.label, str(unit), "failed", exc.strerror or str(exc))
 
     def _put(
-        self, directory: int, unit: Path, service: SupervisedService, text: str, overwrite: bool
+        self,
+        directory: int,
+        unit: Path,
+        service: SupervisedService,
+        text: str,
+        overwrite: bool,
+        ours: Callable[[str, str], bool] | None,
     ) -> UnitOutcome:
         name = unit.name
         existing = self._existing(directory, name)
         if existing == text:
             return UnitOutcome(service.label, str(unit), "unchanged")
         if existing is not None and not overwrite:
-            return self._kept(service, unit)
+            if ours is None or not ours(service.label, existing):
+                return self._kept(service, unit)
+            # Exactly what vibey wrote before (an upgrade changed the rendering): its own to
+            # replace, never the operator's edit.
+            overwrite = True
         staged = self._stage(directory, name, text)
         try:
             if overwrite:
@@ -303,7 +322,8 @@ class SupervisorInstaller:
     def _existing(directory: int, name: str) -> str | None:
         """The unit's text, read without following a link; None when there is none."""
         try:
-            fd = os.open(name, os.O_RDONLY | os.O_NOFOLLOW, dir_fd=directory)
+            # O_NONBLOCK: a FIFO swapped in after the check never stalls the write.
+            fd = os.open(name, os.O_RDONLY | os.O_NOFOLLOW | os.O_NONBLOCK, dir_fd=directory)
         except FileNotFoundError:
             return None
         with os.fdopen(fd, "rb") as handle:

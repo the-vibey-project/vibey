@@ -181,10 +181,18 @@ class SupervisorHost:
         ]
 
     def unload_commands(self, labels: Sequence[str]) -> list[str]:
-        """What the operator runs to stop and unload the units `vibey acp` loaded: the
-        counterpart of `load_commands`, in the same user domain."""
+        """What the operator runs to stop the units `vibey acp` loaded for good: the
+        counterpart of `load_commands`, in the same user domain. On launchd that is `bootout`
+        and the plist removed (else it loads again at the next login); on systemd,
+        `disable --now`."""
         if self.platform == LAUNCHD:
-            return [f"launchctl bootout gui/{self._uid}/{label}" for label in labels]
+            # bootout alone lasts until the next login, when launchd loads every plist in
+            # LaunchAgents again: the plist goes too.
+            return [
+                f"launchctl bootout gui/{self._uid}/{label}; "
+                f"rm {shlex.quote(str(self.unit_path(label)))}"
+                for label in labels
+            ]
         services = " ".join(f"{label}.service" for label in labels)
         return [f"systemctl --user disable --now {services}"]
 
