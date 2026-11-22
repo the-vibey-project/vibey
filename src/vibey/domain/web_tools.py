@@ -17,8 +17,9 @@ This module decides, with no I/O, everything about that which can be decided wit
 - **The address** (`address_problem`): every address a name resolves to, and every literal one,
   must be public -- not loopback, private, link-local (the `169.254.169.254` metadata service),
   carrier-grade NAT (`100.64.0.0/10`), multicast, reserved, unspecified, unique-local
-  (`fd00:ec2::254`), site-local, or documentation space; an IPv4-mapped, NAT64 (`64:ff9b::/96`)
-  or 6to4 address is judged by the IPv4 address inside it, and Teredo is refused. The fetch
+  (`fd00:ec2::254`), site-local, or documentation space; an IPv4-mapped (`::ffff:0:0/96`) or
+  well-known NAT64 (`64:ff9b::/96`) address is judged by the IPv4 address inside it, and
+  local-use NAT64 (`64:ff9b:1::/48`), 6to4 (`2002::/16`) and Teredo are refused outright. The fetch
   adapter connects to the address it checked, never resolving the name again.
 - **Every redirect** (`follow`) is a new target, checked the same way, and never from https down
   to http.
@@ -103,7 +104,15 @@ LOCAL_SUFFIXES: Final = (
 )
 """Suffixes that name hosts on a private network, never on the public internet."""
 
-_NAT64: Final = (ipaddress.ip_network("64:ff9b::/96"), ipaddress.ip_network("64:ff9b:1::/48"))
+_NAT64: Final = ipaddress.ip_network("64:ff9b::/96")
+"""The well-known NAT64 prefix (RFC 6052 §2.1): its IPv4 address is the last 32 bits, and RFC 6052
+§3.1 forbids it for non-global IPv4 space, so it is judged by that address."""
+_NEVER_UNWRAPPED: Final = (
+    ipaddress.ip_network("64:ff9b:1::/48"),
+    ipaddress.ip_network("2002::/16"),
+)
+"""Local-use NAT64 (RFC 8215), whose IPv4 address may sit in other bits and which exists to reach
+non-global IPv4 space, and 6to4, whose sites' own hosts it can address: refused outright."""
 _LABEL: Final = re.compile(r"^[a-z0-9_]([a-z0-9_-]{0,61}[a-z0-9_])?$")
 _NUMERIC: Final = re.compile(r"^(0x[0-9a-f]*|[0-9]+)$")
 _CONTENT_TYPE: Final = re.compile(r"^[a-z0-9][a-z0-9!#$&^_.+-]*/[a-z0-9][a-z0-9!#$&^_.+-]*$")
@@ -298,8 +307,10 @@ class WebToolPolicy:
         if isinstance(ip, ipaddress.IPv6Address):
             if ip.teredo is not None:
                 return "not a public address (Teredo)"
-            embedded = ip.ipv4_mapped or ip.sixtofour
-            if embedded is None and any(ip in network for network in _NAT64):
+            if any(ip in network for network in _NEVER_UNWRAPPED):
+                return "not a public address (local-use NAT64 or 6to4)"
+            embedded = ip.ipv4_mapped
+            if embedded is None and ip in _NAT64:
                 embedded = ipaddress.IPv4Address(int(ip) & 0xFFFFFFFF)
             if embedded is not None:
                 return self.address_problem(str(embedded))

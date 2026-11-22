@@ -504,3 +504,36 @@ def test_a_failure_says_which_backends_it_asked() -> None:
     assert WebToolFailed("reset", hosts=("a.example",)).hosts == ("a.example",)
     assert WebToolRefused("inward", hosts=("a.example",)).hosts == ("a.example",)
     assert WebToolRefused("inward").hosts == ()
+
+
+@pytest.mark.parametrize(
+    "address",
+    [
+        "64:ff9b:1:7f00:0:100:808:808",  # local-use NAT64: its IPv4 sits in other bits
+        "64:ff9b:1:a00:0:100:808:808",
+        "64:ff9b:1:c0a8:1:0:808:808",
+        "64:ff9b:1::808:808",
+        "2002:808:808::1",  # 6to4 around a public address: a 6to4 site's own hosts
+        "2002:7f00:1::",
+        "2001:0:4136:e378:8000:63bf:3fff:fdd2",  # Teredo
+        "fec0::1",  # site-local, deprecated: global to Python's tables, refused here
+        "64:ff9b::7f00:1",  # well-known NAT64 around loopback
+        "64:ff9b::a9fe:a9fe",  # ... around the metadata service
+        "::ffff:10.0.0.1",
+    ],
+)
+def test_tunnelled_and_translated_forms_are_refused_unless_well_known_and_public(
+    address: str,
+) -> None:
+    assert WEB_TOOL_POLICY.address_problem(address) is not None
+
+
+@pytest.mark.parametrize("address", ["64:ff9b::808:808", "::ffff:8.8.8.8"])
+def test_well_known_nat64_and_ipv4_mapped_forms_are_judged_by_the_ipv4_inside(
+    address: str,
+) -> None:
+    assert WEB_TOOL_POLICY.address_problem(address) is None
+
+
+def test_a_site_local_literal_is_refused_in_a_url() -> None:
+    assert "public" in _refused("http://[fec0::1]/")
