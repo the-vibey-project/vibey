@@ -23,9 +23,40 @@ def test_observe_is_view_only_and_drive_never_contains_spend() -> None:
         HubScope.ANSWER,
         HubScope.RUN,
     }
+    # Nor is `web` (ADR-0102): no mode holds it, so no session fetches (see below).
     assert AGENT_DEFAULT_SCOPES - modes.scopes_for("drive", frozenset(HubScope)) == {
-        HubScope.ACP_SESSIONS
+        HubScope.ACP_SESSIONS,
+        HubScope.WEB,
     }
+
+
+def test_a_search_is_a_read_to_a_mode_and_a_fetch_needs_web_in_the_mode_itself() -> None:
+    """ADR-0102: a search may run in observe (a mode reads it as `view`) when the hub grants the
+    agent `web`; a fetch needs `web` in the session's mode, and no mode offered holds it. A tool
+    whose session scope is its own scope is admitted exactly as `scopes_for` says."""
+    modes = AcpModes(AcpSettings())
+    web = HubScope.WEB
+    for mode in ("observe", "drive"):
+        assert modes.admits(
+            mode, scope=web, session_scope=HubScope.VIEW, agent_scopes=AGENT_DEFAULT_SCOPES
+        )
+        assert not modes.admits(
+            mode, scope=web, session_scope=web, agent_scopes=frozenset(HubScope)
+        )
+        # Without `web` from the hub, not even a search.
+        assert not modes.admits(
+            mode,
+            scope=web,
+            session_scope=HubScope.VIEW,
+            agent_scopes=AGENT_DEFAULT_SCOPES - {web},
+        )
+    for scope in HubScope:
+        for mode in ("observe", "drive"):
+            assert modes.admits(
+                mode, scope=scope, session_scope=scope, agent_scopes=AGENT_DEFAULT_SCOPES
+            ) == (scope in modes.scopes_for(mode, AGENT_DEFAULT_SCOPES))
+    with pytest.raises(UnknownMode):
+        modes.admits("root", scope=web, session_scope=web, agent_scopes=AGENT_DEFAULT_SCOPES)
 
 
 def test_no_mode_ever_grants_spend_bump_or_workflows() -> None:

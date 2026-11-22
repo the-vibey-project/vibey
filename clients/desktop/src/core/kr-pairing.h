@@ -98,7 +98,7 @@ char *kr_pairing_refusal_message(guint status, const char *detail);
 
 /* What a scope the host grants lets this device do, in words, as the hub defines it
  * (src/vibey/domain/hub_scope.py, HubScope): view, answer, spend, run, bump, workflows,
- * acp_sessions.
+ * acp_sessions, web.
  * NULL for a scope krypton does not know. Static. */
 const char *kr_pairing_scope_description(const char *scope);
 

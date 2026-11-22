@@ -22,6 +22,18 @@ class AcpModesInterface(Protocol):
         """The mode's scopes intersected with the hub's grant; `UnknownMode` for an id not offered."""
         ...
 
+    def admits(
+        self,
+        mode_id: str,
+        *,
+        scope: HubScope,
+        session_scope: HubScope,
+        agent_scopes: frozenset[HubScope],
+    ) -> bool:
+        """Whether a session in `mode_id` may run a tool the hub authorises as `scope` and the
+        mode reads as `session_scope`: the mode must hold the second, the hub's grant the first."""
+        ...
+
     def session_modes(self, current: str) -> dict[str, Any]:
         """ACP's `SessionModeState` as a JSON-ready dict."""
         ...

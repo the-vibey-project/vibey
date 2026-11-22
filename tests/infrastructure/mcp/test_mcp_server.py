@@ -486,3 +486,49 @@ def test_mcp_cli_entrypoint_invokes_command(monkeypatch: pytest.MonkeyPatch) -> 
 
     mcp()
     assert called == 1
+
+
+def test_the_web_tools_are_listed_only_to_an_agent_holding_web_and_refused_otherwise() -> None:
+    """ADR-0102: `tools/list` hides `vibey_search` and `vibey_fetch` from an agent the hub does not
+    grant `web`, a call to either is refused before the hub is asked, and with `web` the call is
+    one bounded request to the hub's own route, its answer truncated with a marker."""
+    without = _StubGateway(scopes=AGENT_DEFAULT_SCOPES - {HubScope.WEB})
+    server = McpStdioServer(gateway=without, request_id_factory=lambda: "req-fixed")
+    listed = server.handle({"jsonrpc": "2.0", "id": 1, "method": "tools/list"})
+    assert listed is not None
+    names = {tool["name"] for tool in listed["result"]["tools"]}
+    assert not {"vibey_search", "vibey_fetch"} & names and "vibey_projects" in names
+    refused = server.handle(
+        {
+            "jsonrpc": "2.0",
+            "id": 2,
+            "method": "tools/call",
+            "params": {"name": "vibey_fetch", "arguments": {"url": "https://docs.example/"}},
+        }
+    )
+    assert refused is not None and refused["result"]["isError"] is True
+    assert "requires scope 'web'" in refused["result"]["content"][0]["text"]
+    assert without.calls == []
+
+    page = json.dumps({"untrusted": True, "text": "x" * 500})
+    granted = _StubGateway(response=HubGatewayResponse(200, page, True))
+    server = McpStdioServer(gateway=granted, request_id_factory=lambda: "r", max_response_chars=100)
+    listed = server.handle({"jsonrpc": "2.0", "id": 3, "method": "tools/list"})
+    assert listed is not None
+    assert {"vibey_search", "vibey_fetch"} <= {t["name"] for t in listed["result"]["tools"]}
+    answered = server.handle(
+        {
+            "jsonrpc": "2.0",
+            "id": 4,
+            "method": "tools/call",
+            "params": {"name": "vibey_search", "arguments": {"query": "asyncpg", "limit": 2}},
+        }
+    )
+    assert answered is not None and answered["result"]["isError"] is False
+    assert answered["result"]["content"][0]["text"].endswith("\n...[truncated 431 chars]")
+    (call,) = granted.calls
+    assert (call.method, call.route, call.body) == (
+        "POST",
+        "/api/v1/web/search",
+        {"query": "asyncpg", "limit": 2},
+    )

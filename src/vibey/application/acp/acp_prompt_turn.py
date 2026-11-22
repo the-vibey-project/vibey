@@ -309,13 +309,12 @@ class AcpPromptTurn:
             # readings, and announce it as the stricter one (the last name).
             names.append(ANSWER_GATE_TOOL)
         granted = self._hub.agent_scopes()
-        allowed = self._modes.scopes_for(session.mode_id, granted)
         admitted: list[HostTool] = []
         for name in names:
             tool = self._tools.by_name(name)
             if tool is None:
                 return f"vibey has no tool named `{name}`, so it cannot run that."
-            if tool.scope not in allowed:
+            if not self._admits(session.mode_id, tool, granted):
                 return self._needs(tool, granted)
             admitted.append(tool)
         return admitted[-1]
@@ -324,11 +323,18 @@ class AcpPromptTurn:
         spec = self._spec(tool)
         command = f"/{spec.slash}" if spec is not None else tool.name
         for mode in self._modes.available():
-            if tool.scope in self._modes.scopes_for(mode.id, granted):
+            if self._admits(mode.id, tool, granted):
                 return f"`{command}` needs {mode.id} mode; switch with the mode picker."
         return (
             f"`{command}` needs the `{tool.scope.value}` scope, which this hub does not grant "
             "to agents ([hub] agent_scopes in vibey.toml)."
+        )
+
+    def _admits(self, mode_id: str, tool: HostTool, granted: frozenset[HubScope]) -> bool:
+        """Whether a session in `mode_id` may run `tool`: the hub grants its scope, and the mode
+        holds the scope it reads the tool as (a search is a read to a mode, ADR-0102)."""
+        return self._modes.admits(
+            mode_id, scope=tool.scope, session_scope=tool.session_scope, agent_scopes=granted
         )
 
     def _title(self, tool: HostTool) -> str:
