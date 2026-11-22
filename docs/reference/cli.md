@@ -423,8 +423,9 @@ here delays the answer: the steps start after `session/new` (or the first `sessi
 2. **`vibey connect`** (an `edit` tool call), when [`[acp] auto_connect`](configuration.md#acp)
    is on: `vibey mcp` is registered with each user-level client whose config folder already
    exists under your home folder (Claude Desktop, Codex, Cursor, Gemini CLI). A project file
-   (`.mcp.json`, `.vscode/mcp.json`) is never written, a client's folder is never created, and a
-   config whose real path (symlinks followed) is outside your home folder is never written. A
+   (`.mcp.json`, `.vscode/mcp.json`) is never written, a client's folder is never created, a
+   config whose folder resolves (symlinks followed) outside your home folder is never written,
+   and neither is a config file that is itself a symbolic link. A
    changed file is backed up to `<file>.vibey.bak` with the original's permissions, and the new
    file replaces the old one atomically, no wider than it was. One client's broken file is a
    `WARN` for that client while the others go on. When no client warned,

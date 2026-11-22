@@ -6,13 +6,14 @@ keys. Module-level test functions rather than a class with an interface beside i
 
 from __future__ import annotations
 
+import dataclasses
 import json
 import os
 from pathlib import Path
 
 import pytest
 
-from vibey.domain.host_clients import HostClientError
+from vibey.domain.host_clients import ConnectPlanItem, HostClientError
 from vibey.infrastructure.mcp.host_installer import HostInstaller
 
 
@@ -60,23 +61,33 @@ def test_a_changed_config_and_its_backup_keep_the_originals_permissions(tmp_path
     assert json.loads(target.read_text())["mcpServers"]["other"]["env"]["KEY"] == "secret"
 
 
-def test_a_symlinked_config_inside_home_is_written_where_it_points(tmp_path: Path) -> None:
+def test_a_config_folder_symlinked_inside_home_is_written_where_it_points(tmp_path: Path) -> None:
     installer, home = _installer(tmp_path)
-    dotfiles = home / "dotfiles"
-    dotfiles.mkdir()
-    (dotfiles / "cursor.json").write_text("{}")
-    (home / ".cursor" / "mcp.json").symlink_to(dotfiles / "cursor.json")
+    dotfiles = home / "dotfiles" / "cursor"
+    dotfiles.mkdir(parents=True)
+    (home / ".cursor").rmdir()
+    (home / ".cursor").symlink_to(dotfiles, target_is_directory=True)
 
     _connect(installer)
 
-    assert (home / ".cursor" / "mcp.json").is_symlink()
-    assert "vibey" in json.loads((dotfiles / "cursor.json").read_text())["mcpServers"]
+    assert (home / ".cursor").is_symlink()
+    assert "vibey" in json.loads((dotfiles / "mcp.json").read_text())["mcpServers"]
+
+
+def test_a_config_file_that_is_a_symlink_is_refused_even_inside_home(tmp_path: Path) -> None:
+    installer, home = _installer(tmp_path)
+    (home / "dotfiles").mkdir()
+    (home / "dotfiles" / "cursor.json").write_text("{}")
+    (home / ".cursor" / "mcp.json").symlink_to(home / "dotfiles" / "cursor.json")
+
+    with pytest.raises(HostClientError, match="symbolic link"):
+        _connect(installer)
+
+    assert (home / "dotfiles" / "cursor.json").read_text() == "{}"
 
 
 @pytest.mark.parametrize("linked", ["file", "folder"])
-def test_a_config_under_home_that_resolves_outside_it_is_refused(
-    tmp_path: Path, linked: str
-) -> None:
+def test_a_user_config_that_resolves_outside_home_is_refused(tmp_path: Path, linked: str) -> None:
     installer, home = _installer(tmp_path)
     outside = tmp_path / "outside"
     outside.mkdir()
@@ -87,10 +98,60 @@ def test_a_config_under_home_that_resolves_outside_it_is_refused(
         (home / ".cursor").rmdir()
         (home / ".cursor").symlink_to(outside, target_is_directory=True)
 
-    with pytest.raises(HostClientError, match="outside your home folder"):
+    with pytest.raises(HostClientError, match="not inside your home folder|symbolic link"):
         _connect(installer)
 
     assert (outside / "mcp.json").read_text() == "{}"
+
+
+def _item(installer: HostInstaller, client: str, target: Path) -> ConnectPlanItem:
+    planned = installer.build_plan([client])[0]
+    return dataclasses.replace(planned, target_path=str(target), action="create", backup_path=None)
+
+
+def test_a_user_config_spelled_outside_home_is_refused(tmp_path: Path) -> None:
+    installer, _ = _installer(tmp_path)
+    elsewhere = tmp_path / "elsewhere"
+    elsewhere.mkdir()
+
+    with pytest.raises(HostClientError, match="not inside your home folder"):
+        installer.apply_plan([_item(installer, "cursor", elsewhere / "mcp.json")])
+
+    assert list(elsewhere.iterdir()) == []
+
+
+@pytest.mark.parametrize(
+    ("client", "relative"), [("claude_code", ".mcp.json"), ("vscode", ".vscode/mcp.json")]
+)
+def test_a_project_config_resolving_outside_the_project_is_refused(
+    tmp_path: Path, client: str, relative: str
+) -> None:
+    installer, _ = _installer(tmp_path)
+    project, outside = tmp_path / "project", tmp_path / "outside"
+    project.mkdir()
+    outside.mkdir()
+    target = project / relative
+    if "/" in relative:
+        target.parent.symlink_to(outside, target_is_directory=True)
+    else:
+        (outside / "mcp.json").write_text("{}")
+        target.symlink_to(outside / "mcp.json")
+
+    with pytest.raises(HostClientError, match="not inside the project folder|symbolic link"):
+        installer.apply_plan(installer.build_plan([client]))
+
+    assert [p.read_text() for p in outside.iterdir()] in ([], ["{}"])
+
+
+def test_a_project_config_inside_the_project_is_written(tmp_path: Path) -> None:
+    installer, _ = _installer(tmp_path)
+    project = tmp_path / "project"
+    (project / ".vscode").mkdir(parents=True)
+
+    installer.apply_plan(installer.build_plan(["claude_code", "vscode"]))
+
+    assert "vibey" in json.loads((project / ".mcp.json").read_text())["mcpServers"]
+    assert "vibey" in json.loads((project / ".vscode" / "mcp.json").read_text())["servers"]
 
 
 def test_a_backup_path_that_is_a_symlink_is_never_followed(tmp_path: Path) -> None:
@@ -100,10 +161,33 @@ def test_a_backup_path_that_is_a_symlink_is_never_followed(tmp_path: Path) -> No
     elsewhere.write_text("untouched")
     (home / ".cursor" / "mcp.json.vibey.bak").symlink_to(elsewhere)
 
-    with pytest.raises(OSError):
+    with pytest.raises(HostClientError, match="symbolic link"):
         _connect(installer)
 
     assert elsewhere.read_text() == "untouched"
+
+
+def test_a_link_swapped_in_after_the_check_is_never_followed(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    installer, home = _installer(tmp_path)
+    target = home / ".cursor" / "mcp.json"
+    target.write_text("{}")
+    outside = tmp_path / "outside.json"
+    outside.write_text("untouched")
+    checked = installer._folder
+
+    def then_swap(item: ConnectPlanItem) -> Path:
+        folder = checked(item)
+        target.unlink()
+        target.symlink_to(outside)  # a race: the check passed, then the file became a link
+        return folder
+
+    monkeypatch.setattr(installer, "_folder", then_swap)
+    with pytest.raises(OSError):
+        _connect(installer)
+
+    assert outside.read_text() == "untouched"
 
 
 def test_a_failed_write_leaves_the_old_config_and_no_temporary_file(
@@ -113,7 +197,7 @@ def test_a_failed_write_leaves_the_old_config_and_no_temporary_file(
     target = home / ".cursor" / "mcp.json"
     target.write_text("{}")
 
-    def broken(src: str, dst: str) -> None:
+    def broken(*args: object, **kwargs: object) -> None:
         raise OSError("disk full")
 
     monkeypatch.setattr(os, "replace", broken)
@@ -137,3 +221,35 @@ def test_a_file_that_appeared_after_the_plan_is_replaced_keeping_its_permissions
 
     assert target.stat().st_mode & 0o777 == 0o640
     assert not (home / ".cursor" / "mcp.json.vibey.bak").exists()
+
+
+def test_a_staged_file_that_cannot_be_written_is_removed(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    installer, home = _installer(tmp_path)
+
+    def broken(*args: object) -> None:
+        raise OSError("read-only file system")
+
+    monkeypatch.setattr(os, "fchmod", broken)
+    with pytest.raises(OSError, match="read-only"):
+        _connect(installer)
+
+    assert list((home / ".cursor").iterdir()) == []
+
+
+def test_a_backup_that_cannot_be_written_leaves_the_config_as_it_was(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    installer, home = _installer(tmp_path)
+    target = home / ".cursor" / "mcp.json"
+    target.write_text("{}")
+
+    def broken(*args: object) -> None:
+        raise OSError("quota exceeded")
+
+    monkeypatch.setattr(os, "fchmod", broken)
+    with pytest.raises(OSError, match="quota"):
+        _connect(installer)
+
+    assert target.read_text() == "{}"

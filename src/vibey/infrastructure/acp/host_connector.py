@@ -6,9 +6,10 @@
 
 - **User scope only.** A project-scoped client (Claude Code's `.mcp.json`, VS Code's
   `.vscode/mcp.json`) is a file in the repository the editor opened; it is never written here.
-- **Inside the home folder only, after symlinks.** A target whose real path (every symlink
-  resolved) is not under the home folder's real path is never written (`UNKNOWN`, with that
-  reason); `HostInstaller` refuses one again as it writes.
+- **Inside the home folder only, after symlinks.** A target whose folder's real path (every
+  symlink resolved) is not under the home folder's real path is never written (`UNKNOWN`, with
+  that reason); `HostInstaller` refuses one again as it writes, and refuses a config file that
+  is itself a symbolic link (a `WARN`).
 - **Installed clients only.** A client counts as installed when its config folder already
   exists; the step never creates one (`UNKNOWN`, not installed here).
 - **The same merge `vibey connect` makes** (`HostInstaller`): sibling servers are kept, a
@@ -126,8 +127,7 @@ class HostConnector:
                 return DoctorResult(
                     "UNKNOWN", client_id, f"not installed here ({target.parent} does not exist)"
                 )
-            real = Path(os.path.realpath(target))
-            if not real.is_relative_to(home):
+            if not Path(os.path.realpath(target.parent)).is_relative_to(home):
                 return DoctorResult(
                     "UNKNOWN", client_id, f"not written: {target} is not inside your home folder"
                 )
