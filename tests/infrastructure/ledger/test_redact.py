@@ -1,14 +1,16 @@
 # Made with ❤️ by [Vibey](https://the-vibey-project.github.io/vibey/), Developed by [Adam Matthew Steinberger](https://vibewithadam.matthewsteinberger.com/) ([@adammatthewsteinberger](https://github.com/adammatthewsteinberger/)).
-import re
-
 import pytest
 
 from vibey.domain.interfaces import CredentialRedactorInterface
-from vibey.infrastructure.ledger.interfaces import SecretTextRedactorInterface
+from vibey.infrastructure.ledger.interfaces import (
+    CredentialShapeInterface,
+    SecretTextRedactorInterface,
+)
 from vibey.infrastructure.ledger.redact import (
     CREDENTIAL_REDACTOR,
     REDACTED,
     CredentialRedactor,
+    CredentialShape,
     SecretTextRedactor,
     contains_secret,
     redact_payload,
@@ -98,14 +100,24 @@ def test_secrets_that_only_touch_are_still_replaced_one_by_one() -> None:
     assert redact_payload({"t": text}) == {"t": REDACTED + REDACTED}
 
 
-def test_the_secret_text_redactor_takes_its_patterns_as_configuration() -> None:
-    redactor = SecretTextRedactor((re.compile(r"needle"),))
+def test_the_secret_text_redactor_takes_its_shapes_as_configuration() -> None:
+    needle = CredentialShape("needle", (("", "0-9", 2, 3),))
+    redactor = SecretTextRedactor((needle,))
     assert isinstance(redactor, SecretTextRedactorInterface)
+    assert isinstance(needle, CredentialShapeInterface)
     key = "sk-" + "A" * 16
-    assert redactor.redact(f"a needle, {key}") == f"a {REDACTED}, {key}"
+    assert redactor.redact(f"a needle12, needle7, {key}") == f"a {REDACTED}, needle7, {key}"
+    assert redactor.redact("needle12345") == f"{REDACTED}45"  # a run is capped at its maximum
     assert SecretTextRedactor(()).redact("Bearer abcdefghijkl") == "Bearer abcdefghijkl"
-    assert SecretTextRedactor().redact(f"a needle, {key}") == f"a needle, {REDACTED}"
+    assert SecretTextRedactor().redact(f"a needle12, {key}") == f"a needle12, {REDACTED}"
     assert SecretTextRedactor().spans(f"{key} and {key}{key}") == [(0, 19), (24, 62)]
+
+
+def test_a_shape_needs_every_separator_and_every_run_minimum() -> None:
+    jwt = "eyJ" + "a" * 10 + "." + "b" * 10 + "." + "c" * 10
+    assert redact_payload({"t": jwt}) == {"t": REDACTED}
+    assert redact_payload({"t": jwt.replace(".", "_", 1)}) == {"t": jwt.replace(".", "_", 1)}
+    assert redact_payload({"t": jwt[:-1]}) == {"t": jwt[:-1]}
 
 
 def test_nested_mapping_is_redacted() -> None:

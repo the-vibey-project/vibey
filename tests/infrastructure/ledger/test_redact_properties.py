@@ -27,6 +27,7 @@ from tests.ledger_strategies import (
 )
 from vibey.infrastructure.ledger.redact import (
     REDACTED,
+    CredentialShape,
     SecretTextRedactor,
     contains_secret,
     redact_payload,
@@ -157,11 +158,11 @@ def _glued(*parts: str) -> tuple[str, list[tuple[int, int]]]:
     ]
 
 
-@given(soup=_secret_soup(), order=st.permutations(SecretTextRedactor.DEFAULT_PATTERNS))
-@example(soup=_glued("Bearer sk-" + "0" * 37), order=SecretTextRedactor.DEFAULT_PATTERNS[::-1])
-@example(soup=_glued("sk-" + "A" * 16, "sk-" + "B" * 16), order=SecretTextRedactor.DEFAULT_PATTERNS)
-def test_every_byte_of_every_secret_is_replaced_whatever_the_order_of_the_patterns(
-    soup: tuple[str, list[tuple[int, int]]], order: Sequence[re.Pattern[str]]
+@given(soup=_secret_soup(), order=st.permutations(SecretTextRedactor.DEFAULT_SHAPES))
+@example(soup=_glued("Bearer sk-" + "0" * 37), order=SecretTextRedactor.DEFAULT_SHAPES[::-1])
+@example(soup=_glued("sk-" + "A" * 16, "sk-" + "B" * 16), order=SecretTextRedactor.DEFAULT_SHAPES)
+def test_every_byte_of_every_secret_is_replaced_whatever_the_order_of_the_shapes(
+    soup: tuple[str, list[tuple[int, int]]], order: Sequence[CredentialShape]
 ) -> None:
     text, secrets = soup
     redactor = SecretTextRedactor()
@@ -171,6 +172,67 @@ def test_every_byte_of_every_secret_is_replaced_whatever_the_order_of_the_patter
     redacted = redactor.redact(text)
     assert SecretTextRedactor(order).redact(text) == redacted
     assert redactor.redact(redacted) == redacted
+
+
+_ORACLE_PATTERNS = (
+    re.compile(r"sk-[A-Za-z0-9]{16,}"),
+    re.compile(r"AKIA[0-9A-Z]{16}"),
+    re.compile(r"ghp_[A-Za-z0-9]{36,}"),
+    re.compile(r"xox[baprs]-[A-Za-z0-9-]{10,}"),
+    re.compile(r"AIza[0-9A-Za-z_-]{35}"),
+    re.compile(r"eyJ[A-Za-z0-9_-]{10,}\.[A-Za-z0-9_-]{10,}\.[A-Za-z0-9_-]{10,}"),
+    re.compile(r"Bearer\s+[A-Za-z0-9._-]{10,}"),
+)
+"""The credential regexes the shapes replaced, kept here as the specification."""
+
+
+def _oracle_spans(text: str) -> list[tuple[int, int]]:
+    """What the shapes must redact, by brute force: every regex tried at every start, the
+    overlapping matches merged. Quadratic, so only fit for short test strings."""
+    found = sorted(
+        match.span()
+        for pattern in _ORACLE_PATTERNS
+        for start in range(len(text))
+        if (match := pattern.match(text, start)) is not None
+    )
+    merged: list[tuple[int, int]] = []
+    for start, stop in found:
+        if merged and start < merged[-1][1]:
+            merged[-1] = (merged[-1][0], max(merged[-1][1], stop))
+        else:
+            merged.append((start, stop))
+    return merged
+
+
+_SHAPE_ALPHABET = st.sampled_from(
+    ["sk-", "AKIA", "ghp_", "xoxb-", "xoxz-", "AIza", "eyJ", "Bearer", " ", "\t", ".", "-", "_"]
+) | st.text(alphabet="aA0zZ9.-_ \t", min_size=1, max_size=20)
+
+
+@given(
+    text=st.one_of(
+        _secret_soup().map(lambda soup: soup[0]),
+        st.lists(_SHAPE_ALPHABET | _SECRETS, max_size=8).map("".join),
+    )
+)
+@example(
+    text="eyJ"
+    + "a" * 10
+    + "."
+    + "b" * 10
+    + "."
+    + "eyJ"
+    + "c" * 10
+    + "."
+    + "d" * 10
+    + "."
+    + "e" * 10
+)
+@example(text="Bearer \t\n " + "a" * 12 + "Bearer " + "b" * 10)
+def test_the_shapes_redact_exactly_what_the_credential_regexes_match_at_every_start(
+    text: str,
+) -> None:
+    assert SecretTextRedactor().spans(text) == _oracle_spans(text)
 
 
 _NEAR_MISSES = [
