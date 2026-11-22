@@ -179,7 +179,12 @@ class LlmToolingProbe:
             return "refused", str(exc).replace(str(target), shown)
         except (ValueError, RecursionError):  # the catalogue refuses these itself; held anyway
             return "refused", f"{shown} cannot be parsed; vibey does not rewrite it"
-        return "missing", f"{shown} does not carry the entry `vibey connect` writes"
+        if self._catalog.names_vibey(spec, text):
+            return (
+                "foreign",
+                f"{shown} has a `vibey` entry that is not the one `vibey connect` writes",
+            )
+        return "missing", f"no `vibey` entry in {shown}"
 
     def _read(self, path: Path, shown: str) -> tuple[str | None, str | None]:
         """The file's text (None when there is no file), or why it is not read."""

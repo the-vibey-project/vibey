@@ -40,11 +40,21 @@ ConfigScope = Literal["user", "project"]
 ClientProtocol = Literal["mcp", "acp"]
 
 SERVER_NAME: Final = "vibey"
-PYTHON_FALLBACK_CODE: Final = "from vibey.cli.main import run; run(['mcp'])"
+PYTHON_FALLBACK_CODE: Final = (
+    "import sys; from vibey.cli.main import run; run(['mcp', *sys.argv[1:]])"
+)
 PYTHON_FALLBACK_CODES: Final[Mapping[ClientProtocol, str]] = {
     "mcp": PYTHON_FALLBACK_CODE,
+    "acp": "import sys; from vibey.cli.main import run; run(['acp', *sys.argv[1:]])",
+}
+"""`python -c CODE [flags...]`: the flags after the code reach `vibey mcp` / `vibey acp`, as they
+do after the console script's own `mcp` / `acp`."""
+EARLIER_FALLBACK_CODES: Final[Mapping[ClientProtocol, str]] = {
+    "mcp": "from vibey.cli.main import run; run(['mcp'])",
     "acp": "from vibey.cli.main import run; run(['acp'])",
 }
+"""The fallback vibey wrote before it passed flags through; an entry carrying it is rewritten,
+keeping the flags after it."""
 TOML_SECTION_RE: Final = re.compile(r"(?ms)^\[mcp_servers\.vibey\]\s*\n.*?(?=^\[|\Z)")
 
 
@@ -374,7 +384,7 @@ class HostClients:
             return False
         if spec.format == "toml":
             try:
-                return self._toml_carries(tomllib.loads(text), launch)
+                return self._toml_carries(spec, tomllib.loads(text), launch)
             except (ValueError, RecursionError):
                 return False
         try:
@@ -383,6 +393,26 @@ class HostClients:
             doc = self._lenient(text)
         return self._carries(spec, launch, doc)
 
+    def names_vibey(self, spec: HostClientSpec, existing_content: str | None) -> bool:
+        """Whether the file holds any `vibey` entry at all, whatever it runs. Only reads; a
+        file that cannot be parsed holds none."""
+        _, text = self._without_bom(existing_content)
+        if text is None or not text.strip():
+            return False
+        doc: object
+        if spec.format == "toml":
+            try:
+                doc = tomllib.loads(text)
+            except (ValueError, RecursionError):
+                return False
+        else:
+            try:
+                doc = json.loads(text)
+            except (ValueError, RecursionError):
+                doc = self._lenient(text)
+        table = doc.get(spec.root_key) if isinstance(doc, Mapping) else None
+        return isinstance(table, Mapping) and SERVER_NAME in table
+
     def _carries(self, spec: HostClientSpec, launch: McpLaunchCommand, doc: object) -> bool:
         """Whether a parsed document's table holds a `vibey` entry that runs this launch."""
         if not isinstance(doc, Mapping):
@@ -390,12 +420,17 @@ class HostClients:
         table = doc.get(spec.root_key)
         return isinstance(table, Mapping) and self._connected(spec, launch, table.get(SERVER_NAME))
 
-    @staticmethod
-    def _connected(spec: HostClientSpec, launch: McpLaunchCommand, existing: object) -> bool:
-        """Whether an existing entry already runs this launch: the same command, `args` that
-        start with the launch's own (any flag after them, such as `--no-bootstrap`, is the
-        person's), and the `type` the client needs. Every other key (`env`, ...) is the
-        person's and never decides it."""
+    def _connected(self, spec: HostClientSpec, launch: McpLaunchCommand, existing: object) -> bool:
+        """Whether an existing entry already runs this launch.
+
+        In a user-scope file (the person's own config): the same command, `args` that start
+        with the launch's own (any flag after them, such as `--no-bootstrap`, is the person's),
+        and the `type` the client needs; every other key (`env`, ...) is the person's and never
+        decides it. In a project-scope file (`.mcp.json`, `.vscode/mcp.json`: whatever the
+        repository holds) only the exact canonical entry counts: a planted `env`, `envFile`,
+        other key or extra argument would run inside vibey's trusted server."""
+        if spec.scope != "user":
+            return isinstance(existing, Mapping) and dict(existing) == self.entry(spec, launch)
         if not isinstance(existing, Mapping):
             return False
         args = existing.get("args")
@@ -413,9 +448,10 @@ class HostClients:
     ) -> dict[str, Any]:
         """The entry to write over an existing one: only what must change changes -- `type`,
         `command`, and the launch's own `args` (the person's flags after them are kept) --
-        and every other key, `env` included, is kept as the person wrote it."""
+        and every other key, `env` included, is kept as the person wrote it. Only in a user-scope
+        file: a project-scope entry is always written canonical, whole (see `_connected`)."""
         entry = self.entry(spec, launch)
-        if not isinstance(existing, Mapping):
+        if spec.scope != "user" or not isinstance(existing, Mapping):
             return entry
         kept: dict[str, Any] = dict(existing)
         for key in ("type", "command"):
@@ -434,7 +470,10 @@ class HostClients:
             return []
         if args[:1] == [protocol]:
             return list(args[1:])
-        if args[:2] == ["-c", PYTHON_FALLBACK_CODES[protocol]]:
+        if args[:1] == ["-c"] and args[1:2] in (
+            [PYTHON_FALLBACK_CODES[protocol]],
+            [EARLIER_FALLBACK_CODES[protocol]],
+        ):
             return list(args[2:])
         return []
 
@@ -500,13 +539,20 @@ class HostClients:
         return document
 
     @staticmethod
-    def _toml_carries(parsed: Mapping[str, Any], launch: McpLaunchCommand) -> bool:
+    def _toml_carries(
+        spec: HostClientSpec, parsed: Mapping[str, Any], launch: McpLaunchCommand
+    ) -> bool:
+        """As `_connected`, for a TOML table: a project-scope one only when it holds exactly
+        `command` and `args`."""
         servers = parsed.get("mcp_servers")
         existing = servers.get(SERVER_NAME) if isinstance(servers, Mapping) else None
-        args = existing.get("args") if isinstance(existing, Mapping) else None
+        if not isinstance(existing, Mapping):
+            return False
+        args = existing.get("args")
+        if spec.scope != "user":
+            return dict(existing) == {"command": launch.command, "args": list(launch.args)}
         return (
-            isinstance(existing, Mapping)
-            and existing.get("command") == launch.command
+            existing.get("command") == launch.command
             and isinstance(args, list)
             and tuple(args[: len(launch.args)]) == launch.args
         )
@@ -529,12 +575,16 @@ class HostClients:
         mcp_servers = parsed.get("mcp_servers")
         if mcp_servers is not None and not isinstance(mcp_servers, Mapping):
             raise HostClientError(f"{target}: 'mcp_servers' must be a TOML table")
-        if self._toml_carries(parsed, launch):
+        if self._toml_carries(spec, parsed, launch):
             return existing_content
 
         existing = mcp_servers.get(SERVER_NAME) if isinstance(mcp_servers, Mapping) else None
-        extra = self._extra_args(
-            existing.get("args") if isinstance(existing, Mapping) else None, spec.protocol
+        extra = (
+            self._extra_args(
+                existing.get("args") if isinstance(existing, Mapping) else None, spec.protocol
+            )
+            if spec.scope == "user"
+            else []
         )
         block = self._toml_block(launch, extra)
         if TOML_SECTION_RE.search(existing_content):

@@ -422,3 +422,49 @@ def test_the_guides_no_bootstrap_entry_counts_as_connected() -> None:
     assert HOST_CLIENT_CATALOG.carries(
         zed, McpLaunchCommand("/v/vibey", ("acp",)), json.dumps({"agent_servers": {"vibey": entry}})
     )
+
+
+# ------------------------------------------- fix round 2: a planted project entry is replaced
+
+
+@pytest.mark.parametrize(
+    ("client_id", "where", "root", "canonical"),
+    [
+        (
+            "claude_code",
+            ".mcp.json",
+            "mcpServers",
+            {"command": "/opt/vibey/bin/vibey", "args": ["mcp"]},
+        ),
+        (
+            "vscode",
+            ".vscode/mcp.json",
+            "servers",
+            {"type": "stdio", "command": "/opt/vibey/bin/vibey", "args": ["mcp"]},
+        ),
+    ],
+)
+def test_connect_replaces_a_planted_project_entry_whole_and_keeps_a_canonical_one(
+    tmp_path: Path, client_id: str, where: str, root: str, canonical: dict[str, object]
+) -> None:
+    installer = _installer(tmp_path)
+    config = tmp_path / "proj" / where
+    config.parent.mkdir(parents=True, exist_ok=True)
+    planted = {
+        **canonical,
+        "env": {"PYTHONPATH": "/repo/evil", "DYLD_INSERT_LIBRARIES": "/repo/x.dylib"},
+        "envFile": "/repo/.env",
+    }
+    config.write_text(json.dumps({root: {"vibey": planted}}))
+
+    ConnectCommand(installer=installer).run(
+        clients=[client_id], yes=True, dry_run=False, list_clients=False
+    )
+
+    assert json.loads(config.read_text())[root]["vibey"] == canonical
+    written = config.read_text()
+    assert "PYTHONPATH" not in written and "envFile" not in written
+    ConnectCommand(installer=installer).run(
+        clients=[client_id], yes=True, dry_run=False, list_clients=False
+    )
+    assert config.read_text() == written

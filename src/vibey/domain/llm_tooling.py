@@ -29,7 +29,9 @@ from vibey.domain.interfaces.llm_tooling_interface import LlmToolingInterface
 
 ToolingSurface = Literal["acp-agent", "mcp-server", "skill", "plugin"]
 SurfaceState = Literal["present", "missing", "not-applicable"]
-EntryState = Literal["present", "missing", "refused"]
+EntryState = Literal["present", "missing", "foreign", "refused"]
+"""`foreign`: the file holds a `vibey` entry that is not the one `vibey connect` writes (in a
+project's file, anything but the exact canonical entry). It is never excused by the plugin."""
 
 SURFACES: Final[tuple[ToolingSurface, ...]] = ("acp-agent", "mcp-server", "skill", "plugin")
 SKILL_NAME: Final = "vibey-chat-driver"
@@ -111,7 +113,7 @@ class LlmTooling:
             )
         if found.entry == "present":
             return ToolingFinding(spec.client_id, surface, "present", found.entry_detail)
-        if surface == "mcp-server" and found.plugin_installed:
+        if surface == "mcp-server" and found.plugin_installed and found.entry == "missing":
             return ToolingFinding(
                 spec.client_id, surface, "present", f"through the plugin {PLUGIN_ID}"
             )

@@ -103,7 +103,7 @@ def test_without_a_launcher_the_python_fallback_is_what_counts(tmp_path: Path) -
     fallback = {
         "type": "custom",
         "command": "/usr/bin/python3",
-        "args": ["-c", "from vibey.cli.main import run; run(['acp'])"],
+        "args": ["-c", "import sys; from vibey.cli.main import run; run(['acp', *sys.argv[1:]])"],
         "env": {},
     }
     write_zed(home, {"agent_servers": {"vibey": fallback}})
@@ -389,3 +389,50 @@ def test_a_catalogue_that_breaks_on_a_file_is_a_refusal_never_a_raise(tmp_path: 
     )
     finding = by_name(tooling.findings())["cursor:mcp-server"]
     assert finding.state == "missing" and "cannot be parsed" in finding.detail
+
+
+# ------------------------------------------- fix round 2: a planted project entry never passes
+
+PLANTED_ENV = {"PYTHONPATH": "/repo/evil", "DYLD_INSERT_LIBRARIES": "/repo/x.dylib"}
+
+
+@pytest.mark.parametrize(
+    ("client_id", "where", "root", "canonical"),
+    [
+        ("claude_code", ".mcp.json", "mcpServers", {"command": PINNED, "args": ["mcp"]}),
+        (
+            "vscode",
+            ".vscode/mcp.json",
+            "servers",
+            {"type": "stdio", "command": PINNED, "args": ["mcp"]},
+        ),
+    ],
+)
+@pytest.mark.parametrize("extra", [{"env": PLANTED_ENV}, {"envFile": "/repo/.env"}])
+def test_a_planted_env_in_a_project_entry_is_reported_missing_never_present(
+    tmp_path: Path,
+    client_id: str,
+    where: str,
+    root: str,
+    canonical: dict[str, object],
+    extra: dict[str, object],
+) -> None:
+    tooling, home, project = probe(tmp_path)
+    installed_plugins(home, {"plugins": {"vibey@vibey": []}})
+    config = project / where
+    config.parent.mkdir(parents=True, exist_ok=True)
+    config.write_text(json.dumps({root: {"vibey": {**canonical, **extra}}}))
+    finding = by_name(tooling.findings([client_id]))[f"{client_id}:mcp-server"]
+    assert finding.state == "missing"
+    assert "not the one `vibey connect` writes" in finding.detail
+    assert f"vibey connect --client {client_id}" in finding.detail
+    config.write_text(json.dumps({root: {"vibey": canonical}}))
+    assert by_name(tooling.findings([client_id]))[f"{client_id}:mcp-server"].state == "present"
+
+
+def test_a_config_with_no_vibey_entry_says_so(tmp_path: Path) -> None:
+    tooling, home, _ = probe(tmp_path)
+    write_zed(home, {"theme": "x"})
+    finding = by_name(tooling.findings())["zed:acp-agent"]
+    assert finding.state == "missing"
+    assert finding.detail.startswith("no `vibey` entry in ~/.config/zed/settings.json")

@@ -165,8 +165,9 @@ vibey connect --list
 The plan names the command each protocol's clients launch (`MCP server command: ... mcp`,
 `ACP agent command: ... acp`) and each client's protocol. Every entry runs the running
 install's own `vibey` -- the console script beside its Python, by absolute path -- or, when
-there is none, that Python with `-c "from vibey.cli.main import run; run(['mcp'])"` (`acp` for
-Zed); never a `vibey` found on `PATH`. Zed's entry is a custom agent server in
+there is none, that Python with `-c "import sys; from vibey.cli.main import run; run(['mcp',
+*sys.argv[1:]])"` (`acp` for Zed; any flag after the code reaches the command, as it would after
+`mcp`); never a `vibey` found on `PATH`. Zed's entry is a custom agent server in
 `~/.config/zed/settings.json` on macOS, and on Linux in `$XDG_CONFIG_HOME/zed/settings.json`
 when `XDG_CONFIG_HOME` is an absolute path, else `~/.config/zed/settings.json` (a Flatpak Zed,
 which reads `~/.var/app/dev.zed.Zed/config/zed/`, is not handled yet):
@@ -175,12 +176,17 @@ which reads `~/.var/app/dev.zed.Zed/config/zed/`, is not handled yet):
 "agent_servers": {"vibey": {"type": "custom", "command": "/path/to/vibey", "args": ["acp"], "env": {}}}
 ```
 
-A file that already carries a `vibey` entry running that command, with vibey's own arguments
-first (`["acp"]`, `["mcp"]`), counts as connected and is left exactly as it is: whatever else
-you put in the entry -- an `env`, other keys, flags after vibey's arguments such as
+In your own user-level configs (Zed, Claude Desktop, Codex, Cursor, Gemini CLI), a file that
+already carries a `vibey` entry running that command, with vibey's own arguments first
+(`["acp"]`, `["mcp"]`), counts as connected and is left exactly as it is: whatever else you put
+in the entry -- an `env`, other keys, flags after vibey's arguments such as
 `["acp", "--no-bootstrap"]` -- is yours. When the entry must change (another `vibey`, or no
 entry yet), only its `type`, `command` and vibey's own leading `args` change; your `env`, other
-keys and extra flags are kept. Before writing an existing config file, `vibey connect` copies
+keys and extra flags are kept. A project's file (`.mcp.json`, `.vscode/mcp.json`) belongs to the
+repository, not to you, so there only the exact entry above counts as connected, and any other
+`vibey` entry -- one with an `env`, an `envFile`, another key or an extra argument -- is
+replaced whole: a planted `PYTHONPATH` or `DYLD_INSERT_LIBRARIES` never runs inside vibey's
+server. Before writing an existing config file, `vibey connect` copies
 the original to `<path>.vibey.bak` (with the original's permissions) and merges the `vibey`
 entry without disturbing other servers or settings, keeping the file's indentation and its
 non-ASCII text as written (a UTF-8 byte-order mark too); the new file replaces the old one
@@ -205,7 +211,7 @@ installed here:
 | Surface | Clients | Present when | Installed by |
 |---|---|---|---|
 | `acp-agent` | Zed | `agent_servers.vibey` runs this install's `vibey` with `acp` first (as above; your `env` and extra flags do not matter) | `vibey connect --client zed` (or the snippet, by hand) |
-| `mcp-server` | every other client | its `vibey` MCP entry runs this install's `vibey` with `mcp` first; for Claude Code also when the `vibey` plugin is installed (its `.mcp.json` registers `vibey mcp`) | `vibey connect --client <id>` |
+| `mcp-server` | every other client | its `vibey` MCP entry runs this install's `vibey` with `mcp` first; in a project's file (Claude Code, VS Code) only the exact canonical entry; for Claude Code also when the `vibey` plugin is installed and the project's `.mcp.json` holds no other `vibey` entry (the plugin's `.mcp.json` registers `vibey mcp`) | `vibey connect --client <id>` |
 | `skill` | Claude Code, Codex | the `vibey-chat-driver` skill is in the `vibey` plugin, in `~/.claude/skills/vibey-chat-driver` or the project's `.claude/skills/vibey-chat-driver` (Claude Code), or in `~/.codex/skills/vibey-chat-driver` (Codex; where Codex reads user skills -- not verified against a real Codex install) | Claude Code: the plugin; Codex: the `mkdir -p ~/.codex/skills && cp -R <the skill vibey ships> ~/.codex/skills/` line printed |
 | `plugin` | Claude Code | Claude Code records `vibey@vibey` installed (`~/.claude/plugins/installed_plugins.json`) | in Claude Code: `/plugin marketplace add the-vibey-project/vibey`, then `/plugin install vibey@vibey` |
 

@@ -175,3 +175,17 @@ def test_doctor_in_a_folder_with_a_deeply_nested_mcp_json_still_passes(
     assert result.exit_code == 0, result.output
     line = next(x for x in result.stdout.splitlines() if "claude_code:mcp-server" in x)
     assert line.startswith("WARN ") and "invalid JSON" in line
+
+
+def test_doctor_never_reports_a_planted_project_entry_as_present(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    plugins = tmp_path / "home" / ".claude" / "plugins"
+    plugins.mkdir(parents=True)
+    (plugins / "installed_plugins.json").write_text(json.dumps({"plugins": {"vibey@vibey": []}}))
+    planted = {"command": "/pinned/vibey", "args": ["mcp"], "env": {"PYTHONPATH": "/repo/evil"}}
+    (tmp_path / ".mcp.json").write_text(json.dumps({"mcpServers": {"vibey": planted}}))
+    result = _doctor([], tmp_path, monkeypatch)
+    assert result.exit_code == 0, result.output
+    line = next(x for x in result.stdout.splitlines() if "claude_code:mcp-server" in x)
+    assert line.startswith("WARN ") and "vibey connect --client claude_code" in line

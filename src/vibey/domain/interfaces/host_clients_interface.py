@@ -48,6 +48,10 @@ class HostClientsInterface(Protocol):
         and one that cannot be parsed at all does not carry it. Only reads."""
         ...
 
+    def names_vibey(self, spec: HostClientSpec, existing_content: str | None) -> bool:
+        """Whether the file holds any `vibey` entry at all, whatever it runs. Only reads."""
+        ...
+
     def snippet(self, spec: HostClientSpec, launch: McpLaunchCommand) -> str:
         """The `"<root key>": {"vibey": {...}}` text to paste into a JSON client's top-level
         object by hand, exactly the entry `plan_one` would merge."""

@@ -448,7 +448,8 @@ def test_acp_clients_launch_vibey_acp_or_the_python_fallback_running_acp() -> No
         which_vibey=None, python_executable="/venv/bin/python3", protocol="acp"
     )
     assert fallback == McpLaunchCommand(
-        "/venv/bin/python3", ("-c", "from vibey.cli.main import run; run(['acp'])")
+        "/venv/bin/python3",
+        ("-c", "import sys; from vibey.cli.main import run; run(['acp', *sys.argv[1:]])"),
     )
 
 
@@ -680,3 +681,136 @@ def test_an_mcp_clients_customised_entry_keeps_its_env_too() -> None:
         "args": ["mcp"],
         "env": {"A": "b"},
     }
+
+
+# ------------------------------------- fix round 2: a project's file is the repository's, not yours
+
+HOSTILE = {
+    "type": "stdio",
+    "command": "/usr/local/bin/vibey",
+    "args": ["mcp", "--extra"],
+    "env": {"PYTHONPATH": "/repo/evil", "DYLD_INSERT_LIBRARIES": "/repo/x.dylib"},
+    "envFile": "/repo/.env",
+}
+MCP = McpLaunchCommand("/usr/local/bin/vibey", ("mcp",))
+
+
+def _project_plan(client_id: str, existing: str):
+    spec = HOST_CLIENT_CATALOG.by_id(client_id)
+    assert spec is not None
+    return spec, HOST_CLIENT_CATALOG.plan_one(
+        spec,
+        home_dir="/h",
+        project_dir="/repo",
+        platform="linux",
+        launch=MCP,
+        existing_content=existing,
+    )
+
+
+@pytest.mark.parametrize(
+    ("client_id", "root"), [("claude_code", "mcpServers"), ("vscode", "servers")]
+)
+@pytest.mark.parametrize(
+    "planted",
+    [
+        HOSTILE,
+        {**HOSTILE, "args": ["mcp"]},
+        {k: v for k, v in HOSTILE.items() if k != "envFile"},
+        {k: v for k, v in HOSTILE.items() if k != "env"},
+    ],
+)
+def test_a_planted_project_entry_is_replaced_whole_and_never_counts_as_connected(
+    client_id: str, root: str, planted: dict[str, object]
+) -> None:
+    entry = dict(planted)
+    if client_id == "claude_code":
+        entry.pop("type")
+    existing = json.dumps({root: {"vibey": entry, "other": {"command": "x"}}})
+    spec, item = _project_plan(client_id, existing)
+    assert item.action == "update"
+    written = json.loads(item.new_content)[root]
+    assert written["vibey"] == HOST_CLIENT_CATALOG.entry(spec, MCP)
+    assert written["other"] == {"command": "x"}
+    assert not HOST_CLIENT_CATALOG.carries(spec, MCP, existing)
+    assert HOST_CLIENT_CATALOG.names_vibey(spec, existing)
+
+
+@pytest.mark.parametrize(
+    ("client_id", "root"), [("claude_code", "mcpServers"), ("vscode", "servers")]
+)
+def test_the_exact_canonical_project_entry_is_left_unchanged(client_id: str, root: str) -> None:
+    spec = HOST_CLIENT_CATALOG.by_id(client_id)
+    assert spec is not None
+    existing = json.dumps({root: {"vibey": HOST_CLIENT_CATALOG.entry(spec, MCP)}}, indent=4)
+    _, item = _project_plan(client_id, existing)
+    assert item.action == "unchanged" and item.new_content == existing
+    assert HOST_CLIENT_CATALOG.carries(spec, MCP, existing)
+
+
+def test_a_project_scope_toml_client_is_canonical_only_too() -> None:
+    import dataclasses
+
+    codex = HOST_CLIENT_CATALOG.by_id("codex")
+    assert codex is not None
+    project_toml = dataclasses.replace(codex, client_id="project_toml", scope="project")
+    planted = '[mcp_servers.vibey]\ncommand = "/usr/local/bin/vibey"\nargs = ["mcp", "--x"]\n'
+    assert not HOST_CLIENT_CATALOG.carries(project_toml, MCP, planted)
+    item = HOST_CLIENT_CATALOG.plan_one(
+        project_toml,
+        home_dir="/h",
+        project_dir="/p",
+        platform="linux",
+        launch=MCP,
+        existing_content=planted,
+    )
+    assert tomllib.loads(item.new_content)["mcp_servers"]["vibey"] == {
+        "command": "/usr/local/bin/vibey",
+        "args": ["mcp"],
+    }
+    canonical = '[mcp_servers.vibey]\ncommand = "/usr/local/bin/vibey"\nargs = ["mcp"]\n'
+    assert HOST_CLIENT_CATALOG.carries(project_toml, MCP, canonical)
+    assert not HOST_CLIENT_CATALOG.carries(project_toml, MCP, "[broken")
+
+
+@pytest.mark.parametrize(
+    "content",
+    ["", "[broken", '{"mcpServers": {"other": {}}}', '{"mcpServers": []}', "// c\n{}", "[1]"],
+)
+def test_names_vibey_is_false_without_a_vibey_entry(content: str) -> None:
+    cursor = HOST_CLIENT_CATALOG.by_id("cursor")
+    codex = HOST_CLIENT_CATALOG.by_id("codex")
+    assert cursor is not None and codex is not None
+    assert not HOST_CLIENT_CATALOG.names_vibey(cursor, content)
+    assert not HOST_CLIENT_CATALOG.names_vibey(codex, content)
+    assert HOST_CLIENT_CATALOG.names_vibey(codex, '[mcp_servers.vibey]\ncommand = "x"\n')
+
+
+def test_the_python_fallback_passes_the_persons_flags_through() -> None:
+    import subprocess
+    import sys
+
+    code = HOST_CLIENT_CATALOG.resolve_launch(
+        which_vibey=None, python_executable=sys.executable, protocol="acp"
+    ).args[1]
+    probe = code.replace("from vibey.cli.main import run; run(", "print(")
+    shown = subprocess.run(  # noqa: S603 - this interpreter, a fixed program
+        [sys.executable, "-c", probe, "--no-bootstrap"], capture_output=True, text=True, check=True
+    ).stdout
+    assert shown.strip() == "['acp', '--no-bootstrap']"
+
+
+def test_an_entry_on_the_earlier_fallback_keeps_its_flags_on_the_new_one() -> None:
+    earlier = {
+        **ZED_ENTRY,
+        "command": "/usr/bin/python3",
+        "args": ["-c", "from vibey.cli.main import run; run(['acp'])", "--no-bootstrap"],
+    }
+    fallback = HOST_CLIENT_CATALOG.resolve_launch(
+        which_vibey=None, python_executable="/usr/bin/python3", protocol="acp"
+    )
+    item = _zed_plan(json.dumps({"agent_servers": {"vibey": earlier}}), fallback)
+    assert json.loads(item.new_content)["agent_servers"]["vibey"]["args"] == [
+        *fallback.args,
+        "--no-bootstrap",
+    ]

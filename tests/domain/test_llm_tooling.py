@@ -109,3 +109,11 @@ def test_each_state_is_marked_as_doctor_marks_it_and_missing_never_fails() -> No
         for state in ("present", "missing", "not-applicable")
     }
     assert marks == {"present": "PASS", "missing": "WARN", "not-applicable": "UNKNOWN"}
+
+
+def test_a_foreign_entry_in_the_projects_file_is_missing_even_with_the_plugin() -> None:
+    foreign = ClientTooling(
+        "foreign", "./.mcp.json has a `vibey` entry that is not ...", plugin_installed=True
+    )
+    state, detail = states("claude_code", foreign)["mcp-server"]
+    assert state == "missing" and detail.endswith("run `vibey connect --client claude_code`")
