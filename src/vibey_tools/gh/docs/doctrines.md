@@ -880,6 +880,8 @@ about both parties.
 
 **12.o — reach only with a human's yes** *(ratified by the merge that carried this entry; ADR-0014)*: no cloud authority is exercised on a project's behalf, and none of its design work is sent to an external provider, without an explicit and durable human opt-in for that project, recorded in the ledger (7.c) and asked again whenever what it would permit changes. Silence, a default, a stale answer or a machine's inference is never consent, and a declined or unanswered opt-in leaves the work complete where it stands, locally. The rule is scoped to what ADR-0014 governs, deployment and design work sent out; a declared paid engine is the project's own declaration under 8.b, not this opt-in.
 
+**12.q — a driven surface acts within a declared grant** *(proposed; ratification requires the operator's merge)*: a surface a model drives (MCP, ACP, chat) holds a scoped principal that can never spend, and the hub, not the surface, enforces it. What such a surface keeps running on the person's machine runs as that person, at user level, never system-wide, and only while a grant declared in the person's own configuration says so; it says what it started and how to stop it. A step that needs more authority than the person's own is asked of the person through the surface's own prompt, runs without a password typed into the machine on their behalf, or does not run. Silence, a timeout or a dropped connection is never a yes (12.d).
+
 ---
 
 *The counts are sealed — twelve doctrines, ten rights, ten commandments — and the
