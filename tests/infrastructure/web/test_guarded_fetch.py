@@ -757,10 +757,12 @@ def test_a_cancelled_request_cancels_the_fetch_so_nothing_more_is_sent() -> None
     """The hub shutting down cancels the request's task; the fetch's thread is cancelled with
     it, and a connection it makes afterwards carries no request."""
     gate = threading.Event()
+    entered = threading.Event()
     conn = _page()
 
     class Slow(World):
         def connect(self, scheme: str, host: str, port: int, ip: str, timeout: float) -> Connection:
+            entered.set()  # the connection is being made when the request is cancelled
             gate.wait(5)
             return super().connect(scheme, host, port, ip, timeout)
 
@@ -769,7 +771,7 @@ def test_a_cancelled_request_cancels_the_fetch_so_nothing_more_is_sent() -> None
 
     async def drive() -> None:
         task = asyncio.ensure_future(fetcher.fetch(_target("https://slow.example/"), SETTINGS))
-        await asyncio.sleep(0)
+        assert await asyncio.to_thread(entered.wait, 5)
         task.cancel()
         with pytest.raises(asyncio.CancelledError):
             await task
