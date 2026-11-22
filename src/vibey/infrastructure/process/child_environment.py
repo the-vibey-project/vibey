@@ -63,17 +63,24 @@ class ForbiddenEnvironment:
         )
 
 
+# The one credential of vibey's that is read under a name outside `VIBEY_*`: the Brave Search
+# key's alias (`infrastructure/web/search.py`), which stays in vibey's own processes.
+VIBEY_CREDENTIAL_ALIASES = ("BRAVE_SEARCH_API_KEY",)
+
 # vibey's own configuration and credentials (`VIBEY_PG_URL`, every `VIBEY_*_TOKEN`,
-# `_PASSWORD` and `_URL`) and libpq's (`PGPASSWORD`, `PGHOST`, `PGSERVICEFILE`, ...),
-# which reach the same database without ever naming a DSN. Git's plumbing too: a gate
-# that inherits GIT_DIR from a hook operates on the wrong repository (#212).
-GATE_FORBIDDEN = ForbiddenEnvironment(prefixes=("VIBEY_", "PG", "GIT_"))
+# `_PASSWORD` and `_URL`, and the aliases above) and libpq's (`PGPASSWORD`, `PGHOST`,
+# `PGSERVICEFILE`, ...), which reach the same database without ever naming a DSN. Git's
+# plumbing too: a gate that inherits GIT_DIR from a hook operates on the wrong repository (#212).
+GATE_FORBIDDEN = ForbiddenEnvironment(
+    prefixes=("VIBEY_", "PG", "GIT_"), markers=VIBEY_CREDENTIAL_ALIASES
+)
 
 # A model session additionally never receives anything shaped like a database
 # credential, whoever declares it. A gate may be given its project's own test DSN; an
 # engine session may not be given any.
 MODEL_SESSION_FORBIDDEN = ForbiddenEnvironment(
-    prefixes=("VIBEY_", "PG"), markers=("DSN", "DATABASE_URL", "PASSWORD", "PASSWD")
+    prefixes=("VIBEY_", "PG"),
+    markers=("DSN", "DATABASE_URL", "PASSWORD", "PASSWD", *VIBEY_CREDENTIAL_ALIASES),
 )
 
 

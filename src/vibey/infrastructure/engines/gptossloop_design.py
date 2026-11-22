@@ -299,7 +299,7 @@ class GptossloopDesignProvider:
         elif document is None:
             web_note = (
                 " Web search is not configured (VIBEY_SEARXNG_URL for a self-hosted SearXNG,"
-                " or VIBEY_BRAVE_API_KEY)."
+                " or VIBEY_BRAVE_API_KEY or BRAVE_SEARCH_API_KEY)."
             )
         if document is None:
             raise SovereignResearchUnavailable(

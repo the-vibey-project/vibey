@@ -1124,13 +1124,15 @@ with no backend configured exits 2 and says how to configure one.
 | Backend | Set | Reaches |
 | --- | --- | --- |
 | SearXNG (keyless, self-hosted) | `VIBEY_SEARXNG_URL` | the DESIGN research stage **and** every engine session |
-| Brave Search | `VIBEY_BRAVE_API_KEY` | the DESIGN research stage only: the key is never passed to a session |
+| Brave Search | `VIBEY_BRAVE_API_KEY`, or `BRAVE_SEARCH_API_KEY` (the name Brave's own tools read; `VIBEY_BRAVE_API_KEY` wins when both are set) | the DESIGN research stage only: the key is never passed to a session |
 
 `vibey worker` tells every session that can run a command how to search (an appended "Web
 access" note in its plan, naming the absolute path of the running `vibey`), and passes the
 non-secret `WEBSEARCH_*` settings through to it. With only a Brave key configured, sessions are
 told nothing and have no search. The worker prints one line on stderr saying which of the two
-is in force.
+is in force and, for Brave, which variable configured it (`configured via
+BRAVE_SEARCH_API_KEY`), never the key. No session or gate can be given the key under either
+name, even by a declared environment allow-list.
 
 gptossloop and qwenloop also have `web_search` and `web_fetch` as tools of their own, which run
 the same two commands; every other engine uses the command from its plan.
@@ -2132,6 +2134,7 @@ Variables read by code under `src/vibey`:
 | `VIBEY_REVISION` | as `VIBEY_OLLAMA_FIT` | When set, a fit record is used only if its `revision` equals this value. |
 | `VIBEY_SEARXNG_URL` | `search`, `fetch`, `worker`, the sovereign DESIGN research stage | Base URL of a SearXNG instance with its JSON format enabled. Passed to engine sessions as `WEBSEARCH_SEARXNG_URL`. Queries go to that instance, so run your own if they are private. |
 | `VIBEY_BRAVE_API_KEY` | as `VIBEY_SEARXNG_URL` | A Brave Search key. Used by vibey's own processes only; never passed to a session. |
+| `BRAVE_SEARCH_API_KEY` | as `VIBEY_SEARXNG_URL` | The same Brave Search key under the name Brave's own tools read; used only when `VIBEY_BRAVE_API_KEY` is not set. Used by vibey's own processes only: never passed to a session or a gate, not even by a declared allow-list, and never printed (the worker says only `configured via BRAVE_SEARCH_API_KEY`). |
 | `VIBEY_SEARCH_PROVIDER` | as `VIBEY_SEARXNG_URL` | `searxng` or `brave`; needed only when both are configured (SearXNG wins otherwise). |
 | `VIBEY_SEARCH_TIMEOUT` | as `VIBEY_SEARXNG_URL` | Seconds per search or fetch request. A bad value exits 2 before any engine starts. |
 | `VIBEY_SEARCH_RESULTS` | as `VIBEY_SEARXNG_URL` | How many results a search returns. |

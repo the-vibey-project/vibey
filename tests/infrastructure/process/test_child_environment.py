@@ -159,10 +159,15 @@ def test_an_allow_list_that_already_holds_a_forbidden_name_cannot_be_narrowed_on
 
 
 def test_the_forbidden_rules_are_exactly_these() -> None:
-    assert ForbiddenEnvironment(prefixes=("VIBEY_", "PG", "GIT_")) == GATE_FORBIDDEN
+    # The Brave Search key's alias is vibey's credential under a non-`VIBEY_*` name.
+    assert (
+        ForbiddenEnvironment(prefixes=("VIBEY_", "PG", "GIT_"), markers=("BRAVE_SEARCH_API_KEY",))
+        == GATE_FORBIDDEN
+    )
     assert (
         ForbiddenEnvironment(
-            prefixes=("VIBEY_", "PG"), markers=("DSN", "DATABASE_URL", "PASSWORD", "PASSWD")
+            prefixes=("VIBEY_", "PG"),
+            markers=("DSN", "DATABASE_URL", "PASSWORD", "PASSWD", "BRAVE_SEARCH_API_KEY"),
         )
         == MODEL_SESSION_FORBIDDEN
     )
