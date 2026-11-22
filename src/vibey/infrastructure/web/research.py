@@ -7,8 +7,10 @@ plausible source that does not exist would slip in, and a spec that rests on res
 rest on what a page said. The reader of the evidence (synthesis) is a model, and it is told
 that this is untrusted text.
 
-The query is built from the project's objective, so it can leave the machine (the Brave backend
-sends it to Brave). Absolute file paths and backticks are removed from it first.
+The query is built from the project's objective. It goes to the local SearXNG; it leaves the
+machine only when that SearXNG failed and the Brave backup answered, which is said once on
+standard error and named in the evidence's source. Absolute file paths and backticks are
+removed from it first.
 """
 
 import re
@@ -16,7 +18,7 @@ from dataclasses import dataclass
 from typing import Final
 
 from vibey.infrastructure.web.fetch import PageFetcher, WebFetchError
-from vibey.infrastructure.web.interfaces import SearchBackendInterface
+from vibey.infrastructure.web.interfaces import LocalFirstSearchInterface
 
 QUERY_TEMPLATES: Final[dict[str, str]] = {
     "prior-art": "{context} existing implementations prior art",
@@ -49,7 +51,7 @@ def clean_context(context: str) -> str:
 class WebResearch:
     def __init__(
         self,
-        backend: SearchBackendInterface,
+        search: LocalFirstSearchInterface,
         fetcher: PageFetcher,
         *,
         results: int = 5,
@@ -57,7 +59,7 @@ class WebResearch:
         page_chars: int = 2500,
         total_chars: int = 7000,
     ) -> None:
-        self._backend = backend
+        self._search = search
         self._fetcher = fetcher
         self._results = results
         self._pages = pages
@@ -72,10 +74,11 @@ class WebResearch:
     def research(self, topic: str, context: str) -> WebEvidence | None:
         """Evidence for `topic` about `context`, or None when nothing usable was found.
 
-        Raises `WebSearchError` when the backend fails: that is a different fact from finding
+        Raises `WebSearchError` when no backend answered: that is a different fact from finding
         nothing, and the caller says which."""
         query = self.query_for(topic, context)
-        hits = self._backend.search(query, self._results)
+        answer = self._search.answer(query, self._results)
+        hits = answer.hits
         pieces: list[str] = []
         urls: list[str] = []
         for hit in hits:
@@ -96,9 +99,14 @@ class WebResearch:
             return None
         shown = ", ".join(urls[:3]) + (" and more" if len(urls) > 3 else "")
         body = "\n\n---\n\n".join(pieces)[: self._total_chars]
+        backend = (
+            "brave, the backup: local SearXNG unavailable"
+            if answer.backend == "brave"
+            else answer.backend
+        )
         return WebEvidence(
             title=f"Web research: {topic}",
-            source=f"web search ({self._backend.name}): {shown}",
+            source=f"web search ({backend}): {shown}",
             content=f"{BANNER}\n\n{body}",
             query=query,
         )

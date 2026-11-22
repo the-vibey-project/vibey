@@ -1,32 +1,18 @@
 # Made with ❤️ by [Vibey](https://the-vibey-project.github.io/vibey/), Developed by [Adam Matthew Steinberger](https://vibewithadam.matthewsteinberger.com/) ([@adammatthewsteinberger](https://github.com/adammatthewsteinberger/)).
-import os
+"""The configuration path the gptossloop DESIGN provider takes to its web search: the local
+SearXNG named by the environment (or the loopback default), with Brave only as a backup."""
+
+import pytest
 
 from vibey.infrastructure.engines.gptossloop_design import GptossloopDesignProvider
-
-# Helper to build provider
-
-
-def build_provider(env_vars):
-    env = dict(os.environ)
-    env.update(env_vars)
-    return GptossloopDesignProvider.from_environment(env)
+from vibey.infrastructure.web.local_first import LocalFirstSearch
+from vibey.infrastructure.web.search import SEARXNG_URL_ENV, SearxngBackend
 
 
-def test_searxng_backend_configured(monkeypatch):
-    env = {"VIBEY_SEARXNG_URL": "https://search.example.com"}
-    provider = build_provider(env)
+def test_the_provider_asks_the_configured_searxng(monkeypatch: pytest.MonkeyPatch) -> None:
+    provider = GptossloopDesignProvider.from_environment({SEARXNG_URL_ENV: "http://dummy"})
     assert provider._web is not None
-    assert provider._web._backend.name.lower() == "searxng"
-
-
-def test_brave_backend_configured(monkeypatch):
-    env = {"VIBEY_BRAVE_API_KEY": "fake-key"}
-    provider = build_provider(env)
-    assert provider._web is not None
-    assert provider._web._backend.name.lower() == "brave"
-
-
-def test_no_backend_configured(monkeypatch):
-    env = {}
-    provider = build_provider(env)
-    assert provider._web is None
+    search = provider._web._search
+    assert isinstance(search, LocalFirstSearch)
+    assert isinstance(search._primary, SearxngBackend) and search._primary.name == "searxng"
+    assert search._searxng_url == "http://dummy"

@@ -1,48 +1,34 @@
 # Made with ❤️ by [Vibey](https://the-vibey-project.github.io/vibey/), Developed by [Adam Matthew Steinberger](https://vibewithadam.matthewsteinberger.com/) ([@adammatthewsteinberger](https://github.com/adammatthewsteinberger/)).
-import os
+"""The settings the gptossloop DESIGN provider builds its web search from: the local SearXNG the
+environment names, and a Brave backup only when a key is set. Every key here is a fake."""
 
 import pytest
 
 from vibey.infrastructure.engines.gptossloop_design import GptossloopDesignProvider
-from vibey.infrastructure.web.search import (
-    SEARXNG_URL_ENV,
-    WebSearchSettings,
-    backend_for,
-)
+from vibey.infrastructure.web.local_first import LocalFirstSearch
+from vibey.infrastructure.web.search import SEARXNG_URL_ENV, BraveBackend, SearxngBackend
 
 
 @pytest.fixture
-def dummy_env(monkeypatch):
+def dummy_env(monkeypatch: pytest.MonkeyPatch) -> dict[str, str]:
     monkeypatch.setenv(SEARXNG_URL_ENV, "http://dummy")
-    # Ensure any other env that might affect is unset
-    monkeypatch.delenv("VIBEY_BRAVE_API_KEY", raising=False)
-    return os.environ
+    return {SEARXNG_URL_ENV: "http://dummy"}
 
 
-def test_gptossloop_design_web_search_configured(dummy_env):
-    # Create provider
+def test_gptossloop_design_web_search_configured(dummy_env: dict[str, str]) -> None:
     provider = GptossloopDesignProvider.from_environment(dummy_env)
-    # Provider should have a web backend
     assert provider._web is not None
-    # The backend should be from settings
-    settings = WebSearchSettings.from_environment(dummy_env)
-    assert settings is not None
-    backend = backend_for(settings)
-    # The provider's backend should match the constructed one
-    assert provider._web._backend.name == backend.name
+    search = provider._web._search
+    assert isinstance(search, LocalFirstSearch)
+    assert isinstance(search._primary, SearxngBackend) and search._backup is None
 
 
-# Verify that backend uses SearXNG provider name
-
-
-def test_searxng_backend_name(dummy_env):
-    settings = WebSearchSettings.from_environment(dummy_env)
-    assert settings is not None
-    backend = backend_for(settings)
-    assert backend.name == "searxng"
-
-
-"""
-These tests exercise the configuration path used by the gptossloop design provider
-to ensure that it properly uses the web search backend when the environment is set.
-"""
+def test_a_brave_key_adds_the_backup_behind_searxng(dummy_env: dict[str, str]) -> None:
+    provider = GptossloopDesignProvider.from_environment(
+        {**dummy_env, "VIBEY_BRAVE_API_KEY": "fake-key"}
+    )
+    assert provider._web is not None
+    search = provider._web._search
+    assert isinstance(search, LocalFirstSearch)
+    assert isinstance(search._primary, SearxngBackend)
+    assert isinstance(search._backup, BraveBackend)

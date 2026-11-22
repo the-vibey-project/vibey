@@ -99,6 +99,7 @@ worker finds no stored switch and each local engine sits at its default —
 | `VIBEY_ENGINES_MODE`, `VIBEY_ENGINES_OVERFLOW_AFTER_SECONDS`, `VIBEY_ENGINES_PAID_DAILY_CAP` | `vibey worker` (`bootstrap._engine_dispatch`, through `EngineDispatchConfigLoader`), and every whole-`vibey.toml` load | Override [`[engines] mode`, `overflow_after_seconds` and `paid_daily_cap`](#engine-dispatch). Set, they beat the project's stored config; empty counts as unset; a value that is not valid for its key fails building that project's worker. No value of `VIBEY_ENGINES_PAID_DAILY_CAP` means "uncapped". |
 | `VIBEY_DESIGN_RESEARCH_ON_UNAVAILABLE` | `bootstrap.build_app` (every worker), through the environment overlay | Overrides [`[design.research] on_unavailable`](#designresearch): `gate` or `record_gap`, exactly. Set, it beats `./vibey.toml`; empty counts as unset; any other value fails the start. How an unattended driver (`scripts/triaged_delivery.py --record-research-gaps`) opts a worker in without writing a file. |
 | `VIBEY_WORKFLOWS_REPOSITORY`, `VIBEY_WORKFLOWS_WORKFLOW`, `VIBEY_WORKFLOWS_REF`, `VIBEY_WORKFLOWS_POLL_SECONDS`, `VIBEY_WORKFLOWS_TIMEOUT_SECONDS` | `vibey -w` and the hub's `/api/v1/workflows/runs` routes (`RemoteWorkflowsSettingsLoader`, `infrastructure/workflows/gh_workflows.py`) | Where a command sent to the workflows runs and how long to wait for it (ADR-0085): the repository as `OWNER/NAME` (default: the working directory's git remote), the workflow file (default `vibey-remote.yml`), the branch (default: the repository's default branch), seconds between looks (default `10`) and seconds before giving up waiting (default `3600`). A wait that is not a positive number is refused with exit 2; on the hub it leaves the routes answering 503. |
+| `VIBEY_SEARXNG_URL`, `VIBEY_SEARXNG_INSTANCE`, `VIBEY_SEARCH_IDENTITY_TTL`, `VIBEY_SEARCH_TIMEOUT`, `VIBEY_SEARCH_RESULTS`, `VIBEY_SEARCH_PROVIDER`, `VIBEY_BRAVE_API_KEY` (or `BRAVE_SEARCH_API_KEY`) | `vibey search`, `vibey worker`, `vibey doctor`, the sovereign DESIGN research stage (`WebSearchSettings.from_environment`) | Web search, local first: the local SearXNG (default `http://127.0.0.1:28180`), which must prove on `/config` that it is one (and, with `VIBEY_SEARXNG_INSTANCE`, the expected one), and Brave only as a backup when it fails. Your own environment only: no `vibey.toml` key, project or user, sets any of them, so a project cannot point search elsewhere or supply a key. `VIBEY_SEARCH_PROVIDER=brave` is refused. Every value and default is in [local first search](cli.md#local-first-search). |
 | `VIBEY_STATE_REPOSITORY`, `VIBEY_STATE_BRANCH`, `VIBEY_STATE_PATH`, `VIBEY_STATE_PG_URL`, `VIBEY_STATE_KEY`, `VIBEY_STATE_KEY_FILE`, `VIBEY_STATE_CONFLICTS`, `VIBEY_STATE_ATTEMPTS` | `vibey state` (`StateSyncSettingsLoader`, `infrastructure/state/settings.py`) | Where the sealed state lives, which database it syncs, the key, the conflict rules and the retries ([State sync](#state-sync), ADR-0086). |
 
 ### Database roles { #database-roles }
@@ -1111,9 +1112,10 @@ max_children = 6
 
 What a DESIGN research job does when its provider can obtain no evidence. After the
 interview, DESIGN queues one `design.research` job per topic (`prior-art`, `libraries`,
-`api-docs`), and synthesis waits for all of them. The sovereign provider has no web
-access: it summarises reading the operator supplied in `VIBEY_EVIDENCE_DIR`, and with none
-it refuses rather than invent a source ([ADR-0027](../architecture/decisions/0027-sovereign-design-provider.md)).
+`api-docs`), and synthesis waits for all of them. The sovereign provider's model has no web
+access of its own: it summarises reading the operator supplied in `VIBEY_EVIDENCE_DIR`, or,
+with none, vibey searches and quotes what it finds ([local first](cli.md#local-first-search):
+the local SearXNG, Brave only as a backup); with neither it refuses rather than invent a source ([ADR-0027](../architecture/decisions/0027-sovereign-design-provider.md)).
 Refusing to fabricate is not negotiable (sub-doctrine 10.f); this key only decides what
 happens next.
 

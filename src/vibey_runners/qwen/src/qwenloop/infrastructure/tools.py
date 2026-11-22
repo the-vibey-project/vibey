@@ -38,8 +38,9 @@ _GLOB_CHARACTERS = frozenset("*?[")
 # `vibey search` and `vibey fetch` are bounded by their own timeouts; this is the backstop.
 _WEB_TIMEOUT_SECONDS = 90
 _WEB_NOT_CONFIGURED = (
-    "web search is not set up for this session: the worker that started it needs "
-    "VIBEY_SEARXNG_URL. Use the repository and what you already know instead."
+    "web search is not set up for this session: only a session a vibey worker started can "
+    "search (through vibey's local SearXNG). Use the repository and what you already know "
+    "instead."
 )
 _MCP_NOT_CONFIGURED = (
     "no MCP servers are set up for this session. Use the repository and what you already know "

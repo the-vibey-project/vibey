@@ -142,3 +142,70 @@ async def test_web_fetch_class_refuses_a_blank_url_on_its_own(tmp_path: Path) ->
     searcher = WebSearch(tmp_path, {"WEBSEARCH_PROVIDER": "searxng"})
 
     assert await searcher.fetch("  ") == {"error": "web_fetch needs a url: the page to read"}
+
+
+# -- local-first search: the tool follows vibey's policy, through `vibey search` ---------------
+
+_BRAVE_ANSWER = '{"untrusted": true, "backend": "brave", "provider": "brave", "results": []}'
+_NOTICE = (
+    "local SearXNG unavailable (could not be reached (ConnectionRefusedError)); "
+    "this query went to Brave Search"
+)
+
+
+@pytest.mark.asyncio
+async def test_the_answer_says_which_backend_answered_and_carries_vibeys_notice(
+    tmp_path: Path,
+) -> None:
+    tool = _mock_web_tool(tmp_path, f"echo '{_BRAVE_ANSWER}'; echo '{_NOTICE}' >&2")
+
+    result = await tool.execute("web_search", {"query": "q"})
+
+    assert result["content"] == _BRAVE_ANSWER + "\n"
+    assert result["backend"] == "brave" and result["notice"] == _NOTICE
+
+
+@pytest.mark.asyncio
+async def test_a_local_answer_says_searxng_and_carries_no_notice(tmp_path: Path) -> None:
+    tool = _mock_web_tool(tmp_path, """echo '{"backend": "searxng", "results": []}'""")
+
+    result = await tool.execute("web_search", {"query": "q"})
+
+    assert result["backend"] == "searxng" and "notice" not in result
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("stdout", ["not json", "[1, 2]", '{"backend": 3}'])
+async def test_an_answer_that_names_no_backend_is_passed_through_as_it_is(
+    tmp_path: Path, stdout: str
+) -> None:
+    tool = _mock_web_tool(tmp_path, f"echo '{stdout}'")
+
+    result = await tool.execute("web_search", {"query": "q"})
+
+    assert result["content"] == stdout + "\n" and "backend" not in result
+
+
+@pytest.mark.asyncio
+async def test_a_failure_carries_what_vibey_said_on_either_stream(tmp_path: Path) -> None:
+    tool = _mock_web_tool(tmp_path, "echo 'error: no SearXNG'; echo 'more' >&2; exit 1")
+
+    result = await tool.execute("web_search", {"query": "q"})
+
+    assert result == {"error": "error: no SearXNG\nmore"}
+
+
+@pytest.mark.asyncio
+async def test_the_brave_key_never_reaches_vibey_search_under_any_name(tmp_path: Path) -> None:
+    keys = {
+        "VIBEY_BRAVE_API_KEY": "fake-1",
+        "WEBSEARCH_BRAVE_API_KEY": "fake-2",
+        "BRAVE_SEARCH_API_KEY": "fake-3",
+    }
+    tool = _mock_web_tool(tmp_path, "env", **keys)
+
+    result = await tool.execute("web_search", {"query": "q"})
+
+    content = str(result["content"])
+    assert "WEBSEARCH_PROVIDER=searxng" in content
+    assert not any(name in content or value in content for name, value in keys.items())

@@ -86,6 +86,7 @@ from vibey.cli.supervisor import SUPERVISOR, supervisor_app
 from vibey.cli.ultra import ultra_app
 from vibey.cli.version_report import VERSION_REPORT
 from vibey.cli.web import fetch_command, search_command, vibey_command, web_search_line
+from vibey.cli.web_search_doctor import WEB_SEARCH_DOCTOR
 from vibey.cli.workflows import WORKFLOWS
 from vibey.domain.config import ConfigError
 from vibey.domain.design_default_scope import DefaultScope
@@ -1972,6 +1973,8 @@ def doctor(
         # - LLM tooling: per detected client, each surface vibey offers it (ACP agent, MCP
         #   server, the vibey-chat-driver skill, the plugin), present, missing (a WARN, with the
         #   command that fixes it) or not applicable. It only reads, and never fails doctor.
+        # - web search, before LLM tooling: whether the local SearXNG answers (a WARN when it
+        #   does not) and whether a Brave backup is configured, by variable, never the key.
         # Each is built from the name it stands under here when doctor runs.
         checks = DoctorChecks(
             LOCAL_DOCTOR.for_doctor(
@@ -1984,6 +1987,7 @@ def doctor(
                 host_health=HOST_HEALTH.doctor_lines,
                 ollama_enabled=lambda: local.any_enabled,
                 llm_tooling=LLM_TOOLING_SECTION.doctor_lines,
+                web_search=WEB_SEARCH_DOCTOR.doctor_lines,
             )
         )
         found: list[DoctorResult] = []
@@ -2491,9 +2495,10 @@ def worker(
             except ConfigError as exc:
                 typer.echo(f"error: {exc}", err=True)
                 raise typer.Exit(EXIT_USAGE) from exc
-            search_overlay = web_settings.session_environment() if web_settings else {}
-            if search_overlay:
-                search_overlay[COMMAND_VARIABLE] = vibey_command(sys.argv[0])
+            # Every session is told the local SearXNG and how to run `vibey search`; never the
+            # Brave key, so a session's search has no backup (web/local_first.py).
+            search_overlay = web_settings.session_environment()
+            search_overlay[COMMAND_VARIABLE] = vibey_command(sys.argv[0])
             typer.echo(web_search_line(web_settings), err=True)
             auto_answers: GateAutoAnswerSweepInterface | None = None
             if (
