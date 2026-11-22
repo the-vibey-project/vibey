@@ -1,6 +1,13 @@
 # Made with ❤️ by [Vibey](https://the-vibey-project.github.io/vibey/), Developed by [Adam Matthew Steinberger](https://vibewithadam.matthewsteinberger.com/) ([@adammatthewsteinberger](https://github.com/adammatthewsteinberger/)).
 """The units `vibey acp` keeps running, and the hub they serve, for the bootstrap (ADR-0101).
 
+**Trust (ADR-0101).** Everything here reaches a service unit, a command line or a file outside
+the project, so none of it comes from the folder the editor opened: `[supervisor]` is read from
+the user's own `vibey.toml` (`config_path`, in their configuration folder) only; the unit's
+`vibey` is the running install's own launcher (`launcher`), never a setting or a PATH lookup; and
+the environment file, the log folder and the working folder must resolve inside one of `roots`
+(the user's home), or nothing is written.
+
 `write` reads `[supervisor]` afresh, plans only the hub and the worker (`acp_services`; never the
 delivery bridge or the state sync), resolves their paths with the same refusals as
 `vibey supervisor install` (vibey found, nothing on volatile storage or in a linked worktree),
@@ -55,6 +62,8 @@ class AcpServiceUnits:
         workdir: str,
         state_dir: Path,
         path_env: str,
+        launcher: str | None,
+        roots: tuple[Path, ...],
         start_hub: HubStarter = _default_starter,
         alive: Callable[[int], bool] | None = None,
     ) -> None:
@@ -66,6 +75,8 @@ class AcpServiceUnits:
         self._workdir = workdir
         self._state_dir = state_dir
         self._path_env = path_env
+        self._launcher = launcher
+        self._roots = tuple(Path(os.path.realpath(root)) for root in roots)
         self._start_hub = start_hub
         self._alive = alive or self.alive
 
@@ -73,8 +84,22 @@ class AcpServiceUnits:
         policy = next((p for p in RESTART_POLICIES if p == restart), None)
         if policy is None:
             raise ValueError(f"[acp] restart must be always or on-failure, not {restart!r}")
+        if self._launcher is None:
+            raise ValueError(
+                "the running vibey has no `vibey` launcher beside its Python, so no unit can be "
+                "pinned to it; install vibey-engine into an environment with its scripts"
+            )
         # Only the hub and the worker: the delivery bridge and the state sync are never planned.
-        settings = replace(self._settings.load(self._config), delivery=False, state_sync=False)
+        # The launcher is the running install's: `[supervisor] vibey` and `python` never reach
+        # a unit vibey loads on its own (no Python is planned for the hub or the worker; the
+        # path rules check the launcher for both).
+        settings = replace(
+            self._settings.load(self._config),
+            delivery=False,
+            state_sync=False,
+            vibey=self._launcher,
+            python=self._launcher,
+        )
         env_file = Path(settings.env_file or str(self._host.default_env_file())).expanduser()
         if self._workdir:
             repo = Path(self._workdir).expanduser().absolute()
@@ -83,6 +108,12 @@ class AcpServiceUnits:
         else:
             repo = env_file.absolute().parent
         paths = self._installer.paths(settings, repo)
+        for key, value in (
+            ("[supervisor] env_file", paths.env_file),
+            ("[supervisor] log_dir", paths.log_dir),
+            ("[acp] service_workdir", paths.repo),
+        ):
+            self._contain(key, value)
         services = self._planner.acp_services(settings, paths, names=names, restart=policy)
         Path(paths.log_dir).mkdir(mode=0o700, parents=True, exist_ok=True)
         self._installer.env_file(Path(paths.env_file), ENV_TEMPLATE)
@@ -90,6 +121,14 @@ class AcpServiceUnits:
         return self._installer.write(
             services, settings, out=None, overwrite=False, path_env=self._path_env
         )
+
+    def _contain(self, key: str, value: str) -> None:
+        """Refuse a path that resolves outside the user's own folders (links followed)."""
+        real = Path(os.path.realpath(value))
+        if not any(real == root or root in real.parents for root in self._roots):
+            raise ValueError(
+                f"{key} {value} resolves outside your own folders, so vibey writes no unit for it"
+            )
 
     def label(self, name: str) -> str:
         return f"{self._settings.load(self._config).label_prefix}.{name}"

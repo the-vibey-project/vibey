@@ -5,8 +5,10 @@ An editor such as Zed starts `vibey acp` and speaks ACP v1 (JSON-RPC 2.0, one me
 line) on its stdin and stdout. The first thing `run` does is guard stdout, so every byte that
 reaches it afterwards is a protocol frame; anything else in this process or its children that
 prints lands on stderr. The root callback has already pointed logging at stderr, and the guard
-also catches any handler still holding fd 1. Then `[acp]` is read from `./vibey.toml`, the
-agent is composed (`bootstrap.build_acp_agent`) and the peer serves until stdin closes.
+also catches any handler still holding fd 1. Then `[acp]` is read -- the user's own
+`vibey.toml` (`bootstrap.acp_user_config`) grants, and `./vibey.toml`, the project the editor
+opened, may only narrow it (ADR-0101) -- the agent is composed (`bootstrap.build_acp_agent`) and
+the peer serves until stdin closes.
 
 The agent's bootstrap runs `vibey doctor`'s local sections (`LOCAL_DOCTOR_PROBES`, which never
 print) and, under `[acp]`'s grant, connects the user-scope clients and offers a PostgreSQL
@@ -24,7 +26,7 @@ from typing import Annotated, Final
 import typer
 
 from vibey.application.acp.interfaces.doctor_probe_interface import DoctorProbeInterface
-from vibey.bootstrap import AcpMachine, acp_machine, build_acp_agent
+from vibey.bootstrap import AcpMachine, acp_machine, acp_user_config, build_acp_agent
 from vibey.cli.doctor_probes import LOCAL_DOCTOR_PROBES
 from vibey.cli.interfaces.acp_interface import AcpAgentBuilder, AcpCommandInterface
 from vibey.domain.acp.settings import AcpSettings
@@ -53,6 +55,7 @@ class AcpCommand:
         transport: Callable[[], StdioTransportInterface] = StdioTransport,
         settings: AcpSettingsLoaderInterface | None = None,
         config_path: Callable[[], Path] = lambda: Path.cwd() / "vibey.toml",
+        user_config: Callable[[], Path] = acp_user_config,
         build_agent: AcpAgentBuilder = build_acp_agent,
         before_serve: Callable[[], None] = lambda: None,
         doctor_probes: Sequence[DoctorProbeInterface] = LOCAL_DOCTOR_PROBES,
@@ -61,6 +64,7 @@ class AcpCommand:
         self._transport = transport
         self._settings = settings if settings is not None else AcpSettingsLoader()
         self._config_path = config_path
+        self._user_config = user_config
         self._build_agent = build_agent
         self._before_serve = before_serve
         self._doctor_probes = doctor_probes
@@ -70,7 +74,8 @@ class AcpCommand:
         transport = self._transport()
         transport.guard()
         self._before_serve()
-        settings = self._settings.load(self._config_path())
+        # The user's own file grants; the project's (the folder the editor opened) only narrows.
+        settings = self._settings.load_trusted(self._user_config(), self._config_path())
         if no_bootstrap:
             settings = dataclasses.replace(settings, auto_bootstrap=False)
         asyncio.run(self._serve(transport, settings))
@@ -80,7 +85,7 @@ class AcpCommand:
         # newline fits the reader; the peer refuses anything longer by name.
         reader = await transport.reader(limit=settings.max_message_bytes + 1)
         channel = PeerClientChannel()
-        machine = self._machine(settings, config_path=self._config_path())
+        machine = self._machine(settings, user_config=self._user_config())
         agent = self._build_agent(
             settings=settings,
             channel=channel,

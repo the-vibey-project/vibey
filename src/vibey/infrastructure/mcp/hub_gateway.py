@@ -47,17 +47,22 @@ class HubGatewayResponse:
     ok: bool
 
 
-def _default_starter() -> bool:
+def _default_starter(cwd: Path | None = None) -> bool:
     """Run `vibey hub start` in a child process and return True when it exits 0.
 
     Module-level by design: the default of `HubGateway`'s `starter` seam. The child's stdin is
     closed and its output captured: under `vibey mcp` and `vibey acp` this process's stdin and
     stdout are the client's protocol streams, and neither the child nor a hub it leaves behind
-    may read or write them.
+    may read or write them. `cwd` is the folder the hub starts in, and so whose `vibey.toml` it
+    reads: `vibey acp` gives the user's own configuration folder (made, owner-only, if missing),
+    never the project an editor opened (ADR-0101).
     """
     try:
+        if cwd is not None:
+            cwd.mkdir(mode=0o700, parents=True, exist_ok=True)
         completed = subprocess.run(  # noqa: S603  # nosec B603
             [sys.executable, "-c", "from vibey.cli.main import run; run(['hub', 'start'])"],
+            cwd=cwd,
             stdin=subprocess.DEVNULL,
             capture_output=True,
             text=True,

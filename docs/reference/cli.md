@@ -411,7 +411,10 @@ on stderr and, while the editor can hear it, in a notice.
 ### Bootstrap: doctor, connect, services and PostgreSQL
 
 With [`[acp] auto_bootstrap`](configuration.md#acp) on (the default; `--no-bootstrap` turns it
-off for one process), `vibey acp` sets the computer up when an editor first connects. Nothing
+off for one process), `vibey acp` sets the computer up when an editor first connects. The grants
+come from your own `vibey.toml` in your configuration folder; the `vibey.toml` of the folder the
+editor opened can only turn them off or narrow them, and its `[supervisor]` and `[hub]` are never
+read here ([who may set what](configuration.md#acp)). Nothing
 here delays the answer: the steps start after `session/new` (or the first `session/load` or
 `session/resume`) has answered, as tool calls in that session.
 

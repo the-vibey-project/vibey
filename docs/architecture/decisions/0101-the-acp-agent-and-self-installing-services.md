@@ -92,7 +92,34 @@ stopped, never spun. In detail:
   or no `systemctl --user` manager), vibey runs `vibey hub start` once per process and says that
   nothing keeps it running.
 
-### 5. A privileged step is asked through the client, run non-interactively, or not run
+### 5. The user's own configuration grants; a project's only restricts
+
+An editor starts `vibey acp` in the folder it opened, and that folder's `vibey.toml` arrived with
+the project: a cloned repository's file is not the person's word, and read as one it could make
+vibey install a persistent unit that runs whatever the file names. So the project's file is
+untrusted for anything that reaches a service unit, a command line, or a file outside the
+project:
+
+- **Two files.** `[acp]` is read from the user's own `vibey.toml` in their configuration folder
+  (beside `supervisor.env`) and from the project's; `AcpSettingsTrust` merges them so the
+  project only narrows. It may turn a grant off, never on; say `install_postgres = "never"`,
+  never `"ask"`; drop a service, never add one; make a rate slower or a bound shorter. It never
+  sets `restart` or `service_workdir`. Keys that shape only the editor's session (modes, gate
+  prompts, the live feed) stay the project's to set. The trust-split loader is
+  `AcpSettingsLoader.load_trusted`.
+- **No project `[supervisor]` or `[hub]`.** `vibey acp` reads both from the user's file only:
+  unit labels, environment file, log folder, worker arguments, the hub's state folder, agent
+  token and serving record. A hub it starts itself runs in the user's configuration folder.
+- **Pinned commands.** Every unit, and every MCP entry the connect step writes into a client's
+  config, runs the running install's own `vibey` (the console script beside its interpreter),
+  never a configured path or a `PATH` lookup.
+- **Contained paths.** A unit's environment file, log folder and working folder must resolve
+  inside the user's home, links followed, or nothing is written and the refusal is said once.
+
+The default-true grant below is the user's, in the user's file: a project can withdraw it in its
+own folder, never extend it.
+
+### 6. A privileged step is asked through the client, run non-interactively, or not run
 
 The only step that needs more than the user's own authority is installing PostgreSQL. It is
 asked through the client's own permission prompt, inside a prompt turn of a session that may
@@ -100,7 +127,7 @@ run, at most once per process. Only the explicit "Install PostgreSQL" option ins
 install runs `sudo -n`: vibey never asks for a password and never types one. A sudo that wants
 one is told to the operator, with the command to run in their own terminal.
 
-### 6. One bootstrap lock per user
+### 7. One bootstrap lock per user
 
 Everything that changes the computer -- connecting clients, loading or restarting units,
 installing PostgreSQL -- holds `<[hub] state_dir>/acp-bootstrap.lock`, the hub's own `ServeLock`

@@ -32,6 +32,7 @@ def _units(
     config: str = "",
     started: list[str] | None = None,
     alive: object = None,
+    launcher: str | None = "/opt/vibey/bin/vibey",
 ) -> AcpServiceUnits:
     host = SupervisorHost(
         "launchd",
@@ -67,6 +68,8 @@ def _units(
         state_dir=tmp_path / "hub",
         path_env="/opt/vibey/bin:/usr/bin",
         start_hub=start,
+        launcher=launcher,
+        roots=(tmp_path,),
         **({"alive": alive} if alive is not None else {}),  # type: ignore[arg-type]
     )
 
@@ -198,3 +201,53 @@ def test_start_hub_runs_the_starter_once_per_call(tmp_path: Path) -> None:
     started: list[str] = []
     assert _units(tmp_path, started=started).start_hub() is True
     assert started == ["hub start"]
+
+
+# -- trust (ADR-0101) ---------------------------------------------------------------------------
+
+
+def test_the_unit_runs_the_running_install_never_a_configured_vibey(tmp_path: Path) -> None:
+    units = _units(
+        tmp_path, config='[supervisor]\nvibey = "/tmp/evil"\npython = "/tmp/evil-python"\n'
+    )
+    (hub,) = units.write(("hub",), "always")
+    text = Path(hub.path).read_text()
+    assert "/tmp/evil" not in text
+    assert plistlib.loads(text.encode())["ProgramArguments"][0] == "/opt/vibey/bin/vibey"
+
+
+def test_without_a_launcher_to_pin_nothing_is_written(tmp_path: Path) -> None:
+    with pytest.raises(ValueError, match="launcher"):
+        _units(tmp_path, launcher=None).write(("hub",), "always")
+    assert not (tmp_path / "home" / "Library" / "LaunchAgents").exists()
+
+
+@pytest.mark.parametrize(
+    ("config", "key"),
+    [
+        ('[supervisor]\nlog_dir = "/etc"\n', "log_dir"),
+        ('[supervisor]\nenv_file = "/etc/x.env"\n', "env_file"),
+    ],
+)
+def test_a_path_outside_the_users_folders_writes_nothing(
+    tmp_path: Path, config: str, key: str
+) -> None:
+    with pytest.raises(ValueError, match=key):
+        _units(tmp_path, config=config).write(("hub", "worker"), "always")
+    assert not (tmp_path / "home" / "Library" / "LaunchAgents").exists()
+
+
+def test_a_workdir_outside_the_users_folders_writes_nothing(tmp_path: Path) -> None:
+    with pytest.raises(ValueError, match="service_workdir"):
+        _units(tmp_path, workdir="/").write(("hub",), "always")
+    assert not (tmp_path / "home" / "Library" / "LaunchAgents").exists()
+
+
+def test_a_path_linked_out_of_the_users_folders_writes_nothing(tmp_path: Path) -> None:
+    outside = tmp_path.parent / f"{tmp_path.name}-outside"
+    outside.mkdir()
+    (tmp_path / "logs").symlink_to(outside)
+    with pytest.raises(ValueError, match="log_dir"):
+        _units(tmp_path, config=f'[supervisor]\nlog_dir = "{tmp_path / "logs"}"\n').write(
+            ("hub",), "always"
+        )

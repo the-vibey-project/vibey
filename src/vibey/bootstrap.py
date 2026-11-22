@@ -2,9 +2,9 @@
 """Composition root: the only module that wires concrete adapters to ports."""
 
 import asyncio
+import functools
 import os
 import platform
-import shutil
 import sys
 from collections.abc import AsyncIterator, Awaitable, Callable, Mapping, Sequence
 from contextlib import asynccontextmanager, suppress
@@ -15,7 +15,7 @@ from typing import Final
 from uuid import uuid4
 
 import asyncpg
-from platformdirs import user_cache_path
+from platformdirs import user_cache_path, user_config_path
 
 from vibey import __version__
 from vibey.application.acp.acp_agent import AcpAgent
@@ -234,6 +234,7 @@ from vibey.infrastructure.git.worktree_manager import GitWorktreeManager
 from vibey.infrastructure.hub.settings import HUB_SETTINGS, HubSettings
 from vibey.infrastructure.ledger.full_ledger_writer import write_full_ledger
 from vibey.infrastructure.logging import StructlogAppLogger
+from vibey.infrastructure.mcp.host_installer import HostInstaller
 from vibey.infrastructure.mcp.hub_gateway import HubGateway, HubStarter
 from vibey.infrastructure.mcp.hub_gateway import _default_starter as _default_hub_starter
 from vibey.infrastructure.mcp.hub_start_policy import BoundedHubStarter
@@ -1492,23 +1493,48 @@ class AcpMachine:
     loader: ServiceLoaderInterface | None = None
 
 
+def acp_user_config() -> Path:
+    """The user's own `vibey.toml`: in their configuration folder (`~/Library/Application
+    Support/vibey` on macOS, `$XDG_CONFIG_HOME/vibey` elsewhere), the folder that already holds
+    `supervisor.env`. What `vibey acp` may do outside the folder an editor opened -- load units,
+    write client configs, install PostgreSQL -- is granted here, never by a project's file
+    (ADR-0101)."""
+    return user_config_path("vibey") / "vibey.toml"
+
+
+def running_vibey() -> str | None:
+    """The running install's own `vibey` launcher, absolute: the console script beside this
+    interpreter. None when there is none. A unit or a client config vibey writes on its own
+    runs this, never a configured path or a PATH lookup (ADR-0101)."""
+    launcher = Path(sys.executable).parent / "vibey"
+    return str(launcher) if launcher.is_file() and os.access(launcher, os.X_OK) else None
+
+
 def acp_state_dir(config_path: Path) -> Path:
     """Where `vibey acp` keeps its connect marker and setup lock: the hub's state directory
-    (`[hub] state_dir`), or its default when `[hub]` cannot be read -- the bootstrap still has a
-    place for them, and the doctor says what is wrong with `[hub]`."""
+    (`[hub] state_dir` in the user's own `vibey.toml`), or its default when `[hub]` cannot be
+    read -- the bootstrap still has a place for them, and the doctor says what is wrong."""
     try:
         return HUB_SETTINGS.load(config_path).state_dir
     except ConfigError:
         return HubSettings().state_dir
 
 
-def acp_machine(settings: AcpSettings, *, config_path: Path) -> AcpMachine:
-    """The real `AcpMachine`, under `acp_state_dir`. Building it touches nothing; only the
-    bootstrap's steps do. PostgreSQL's read-only checks are bounded by
+def acp_machine(
+    settings: AcpSettings, *, user_config: Path, launcher: str | None = None
+) -> AcpMachine:
+    """The real `AcpMachine`, under `acp_state_dir(user_config)`. Building it touches nothing;
+    only the bootstrap's steps do. PostgreSQL's read-only checks are bounded by
     `[acp] bootstrap_timeout_seconds`, each install command by `[acp] install_timeout_seconds`.
     The service manager is this platform's (launchd on macOS, `systemd --user` elsewhere), asked
-    through `ServiceManagerRunner`, each command bounded by `bootstrap_timeout_seconds`."""
-    state_dir = acp_state_dir(config_path)
+    through `ServiceManagerRunner`, each command bounded by `bootstrap_timeout_seconds`.
+
+    Trust (ADR-0101): `[hub]` and `[supervisor]` come from `user_config` only, never the folder
+    the editor opened; the units and the clients' MCP entries run `launcher` (default: the
+    running install's, `running_vibey()`) or this interpreter, never a configured command; and
+    the units' files must lie in the user's home."""
+    state_dir = acp_state_dir(user_config)
+    pinned = launcher if launcher is not None else running_vibey()
     runner = ServiceManagerRunner(timeout_seconds=settings.bootstrap_timeout_seconds)
     host = SupervisorHost(
         LAUNCHD if sys.platform == "darwin" else SYSTEMD,
@@ -1519,7 +1545,11 @@ def acp_machine(settings: AcpSettings, *, config_path: Path) -> AcpMachine:
     )
     planner = SupervisorPlanner()
     return AcpMachine(
-        connector=HostConnector(state_dir=state_dir, version=__version__),
+        connector=HostConnector(
+            state_dir=state_dir,
+            version=__version__,
+            installer=HostInstaller(which=lambda name: pinned, python_executable=sys.executable),
+        ),
         postgres=AcpPostgresInstaller(
             AcpCommandRunner(timeout_seconds=settings.install_timeout_seconds),
             probe_runner=AcpCommandRunner(timeout_seconds=settings.bootstrap_timeout_seconds),
@@ -1528,14 +1558,17 @@ def acp_machine(settings: AcpSettings, *, config_path: Path) -> AcpMachine:
         units=AcpServiceUnits(
             host,
             SupervisorInstaller(
-                host, planner, TimerUnitRenderer(), which=shutil.which, python=sys.executable
+                host, planner, TimerUnitRenderer(), which=lambda name: None, python=sys.executable
             ),
             planner,
             SupervisorSettingsLoader(),
-            config_path=config_path,
+            config_path=user_config,
             workdir=settings.service_workdir,
             state_dir=state_dir,
             path_env=os.environ.get("PATH", ""),
+            launcher=pinned,
+            start_hub=functools.partial(_default_hub_starter, cwd=user_config.parent),
+            roots=(Path.home(),),
         ),
         loader=ServiceLoader(host, runner, os.getuid()),
     )
@@ -1579,14 +1612,19 @@ def build_acp_agent(
     """
     granted = settings.auto_bootstrap and settings.auto_services
     services = units is not None and loader is not None and granted
-    starter: HubStarter = _default_hub_starter
+    # A hub `vibey acp` starts runs in the user's configuration folder and reads their file.
+    starter: HubStarter = functools.partial(_default_hub_starter, cwd=acp_user_config().parent)
     if services and units is not None and loader is not None and "hub" in settings.services:
         starter = _unit_starter(units, loader)
     hub = AcpHubClient(
         gateway=gateway
         if gateway is not None
         else HubGateway(
-            starter=BoundedHubStarter(starter, window_seconds=settings.hub_start_seconds)
+            # `[hub]` -- the state folder, its agent token, the serving record -- is the user's
+            # (ADR-0101): the hub the units run reads the same file, and a project's
+            # `vibey.toml` never decides where a token is made or which hub is spoken to.
+            config_path=acp_user_config,
+            starter=BoundedHubStarter(starter, window_seconds=settings.hub_start_seconds),
         ),
         tools=HOST_TOOL_CATALOG,
     )
@@ -1598,7 +1636,7 @@ def build_acp_agent(
     gates = AcpGatePrompter(kept, hub, settings, modes, mapper, gate_mapper, HOST_TOOL_CATALOG)
     bootstrap: AcpBootstrapInterface | None = None
     if doctor_probes or connector is not None or postgres is not None or services:
-        held = lock if lock is not None else BootstrapLock(acp_state_dir(Path.cwd() / "vibey.toml"))
+        held = lock if lock is not None else BootstrapLock(acp_state_dir(acp_user_config()))
         keep_alive: AcpKeepAliveInterface | None = None
         if services and loader is not None:
             keep_alive = AcpKeepAlive(loader, hub, held, channel, mapper, settings, units=units)

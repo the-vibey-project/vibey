@@ -5,6 +5,11 @@ Mirrors `SupervisorSettingsLoader`: every key is optional and its default is
 `AcpSettings`'s, and an unknown key or a value of the wrong type or outside its bound is
 refused by name as a `ConfigError` instead of ignored, so a typo never silently reverts a
 setting to its default. Declared by `interfaces/acp_settings_loader_interface.py`.
+
+`vibey acp` reads with `load_trusted`: the user's own `vibey.toml` (their configuration folder)
+holds the powers, and the project's -- the folder the editor opened, which may be a repository
+someone else wrote -- can only narrow them (`AcpSettingsTrust`, ADR-0101). Both files are checked
+in full, so a mistake in either is still refused by name.
 """
 
 import math
@@ -13,6 +18,7 @@ from collections.abc import Mapping
 from pathlib import Path
 from typing import Final
 
+from vibey.domain.acp.interfaces.settings_trust_interface import AcpSettingsTrustInterface
 from vibey.domain.acp.settings import (
     FLOAT_MINIMA,
     HUB_KEYS,
@@ -25,6 +31,7 @@ from vibey.domain.acp.settings import (
     AcpSettings,
     InvalidAcpSettings,
 )
+from vibey.domain.acp.settings_trust import AcpSettingsTrust
 from vibey.domain.config import ConfigError
 
 _BOOLEANS: Final = ("auto_bootstrap", "auto_connect", "auto_services", "live_between_turns")
@@ -56,6 +63,16 @@ _TABLE_SOURCE: Final = "vibey.toml"
 
 class AcpSettingsLoader:
     """Declared by `interfaces/acp_settings_loader_interface.py`."""
+
+    def __init__(self, trust: AcpSettingsTrustInterface | None = None) -> None:
+        self._trust = trust or AcpSettingsTrust()
+
+    def load_trusted(self, user: Path, project: Path) -> AcpSettings:
+        mine = self.load(user)
+        if not project.exists() or project.resolve() == user.resolve():
+            return mine
+        keys = frozenset(self._table(project))
+        return self._trust.merge(mine, self.load(project), keys)
 
     def load(self, path: Path) -> AcpSettings:
         if not path.exists():

@@ -23,7 +23,7 @@ from vibey.application.acp.acp_agent import AcpAgent
 from vibey.application.acp.dto import DoctorResult
 from vibey.application.acp.interfaces.acp_agent_interface import AcpAgentInterface
 from vibey.application.acp.interfaces.client_channel_interface import ClientChannelInterface
-from vibey.bootstrap import acp_machine, build_acp_agent
+from vibey.bootstrap import acp_machine, acp_user_config, build_acp_agent
 from vibey.cli.acp import ACP_COMMAND, AcpCommand, acp
 from vibey.cli.doctor_probes import LOCAL_DOCTOR_PROBES
 from vibey.cli.interfaces.acp_interface import AcpCommandInterface
@@ -157,6 +157,12 @@ class _Loader:
         self.paths.append(path)
         return self.settings
 
+    def load_trusted(self, user: Path, project: Path) -> AcpSettings:
+        self.events.append("settings")
+        self.paths.append(project)
+        self.user = user
+        return self.settings
+
     def from_mapping(self, section: Mapping[str, object]) -> AcpSettings:
         return self.settings
 
@@ -183,6 +189,7 @@ def _command(
         transport=lambda: transport,
         settings=loader,
         config_path=lambda: Path("/work/vibey.toml"),
+        user_config=lambda: Path("/home/op/.config/vibey/vibey.toml"),
         build_agent=builder,
         before_serve=lambda: events.append("before_serve"),
     )
@@ -207,6 +214,7 @@ def test_run_guards_first_then_serves_initialize_over_the_transport() -> None:
 
     assert events == ["guard", "before_serve", "settings", "agent"]
     assert loader.paths == [Path("/work/vibey.toml")]
+    assert loader.user == Path("/home/op/.config/vibey/vibey.toml")
     assert transport.limit == 70_001
     assert built[0][0].auto_bootstrap is True
     assert isinstance(built[0][1], PeerClientChannel)
@@ -463,7 +471,7 @@ def test_the_machine_lives_under_the_hubs_state_dir(tmp_path: Path) -> None:
     config.write_text(f"[hub]\nstate_dir = '{tmp_path / 'hub'}'\n")
 
     machine = acp_machine(
-        AcpSettings(bootstrap_timeout_seconds=7, install_timeout_seconds=900), config_path=config
+        AcpSettings(bootstrap_timeout_seconds=7, install_timeout_seconds=900), user_config=config
     )
 
     assert machine.connector._marker.parent == tmp_path / "hub"  # type: ignore[attr-defined]
@@ -472,11 +480,17 @@ def test_the_machine_lives_under_the_hubs_state_dir(tmp_path: Path) -> None:
     assert machine.postgres._probe_runner._timeout == 7  # type: ignore[attr-defined]
 
 
-def test_the_fallback_lock_honours_the_folders_hub_state_dir(
+def test_the_fallback_lock_honours_the_users_hub_state_dir_never_the_projects(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    (tmp_path / "vibey.toml").write_text(f"[hub]\nstate_dir = '{tmp_path / 'hub'}'\n")
-    monkeypatch.chdir(tmp_path)
+    user = tmp_path / "user" / "vibey.toml"
+    user.parent.mkdir()
+    user.write_text(f"[hub]\nstate_dir = '{tmp_path / 'hub'}'\n")
+    project = tmp_path / "project"
+    project.mkdir()
+    (project / "vibey.toml").write_text(f"[hub]\nstate_dir = '{tmp_path / 'evil'}'\n")
+    monkeypatch.chdir(project)
+    monkeypatch.setattr("vibey.bootstrap.acp_user_config", lambda: user)
 
     agent = build_acp_agent(
         settings=AcpSettings(),
@@ -493,7 +507,7 @@ def test_an_unreadable_hub_table_still_gives_the_machine_a_home(tmp_path: Path) 
     config = tmp_path / "vibey.toml"
     config.write_text("[hub]\nstate_dir = 3\n")
 
-    machine = acp_machine(AcpSettings(), config_path=config)
+    machine = acp_machine(AcpSettings(), user_config=config)
 
     assert machine.lock._path.parent == HubSettings().state_dir  # type: ignore[attr-defined]
 
@@ -590,7 +604,10 @@ def test_without_the_grant_or_a_hub_unit_the_gateway_keeps_its_own_starter(
 
     starter = agent._hub._gateway._starter._starter  # type: ignore[attr-defined]
     granted = settings.auto_bootstrap and settings.auto_services
-    assert (starter is _default_starter) is (not granted or "hub" not in settings.services)
+    own = getattr(starter, "func", None) is _default_starter
+    assert own is (not granted or "hub" not in settings.services)
+    if own:  # the hub it starts runs in the user's configuration folder, never the project
+        assert starter.keywords == {"cwd": acp_user_config().parent}
     boot = agent._bootstrap  # type: ignore[attr-defined]
     if not granted:
         assert boot is None
@@ -601,7 +618,7 @@ def test_the_machine_loads_into_this_platforms_user_service_manager(tmp_path: Pa
     config.write_text(f"[hub]\nstate_dir = '{tmp_path / 'hub'}'\n")
 
     machine = acp_machine(
-        AcpSettings(bootstrap_timeout_seconds=7, service_workdir="/srv/work"), config_path=config
+        AcpSettings(bootstrap_timeout_seconds=7, service_workdir="/srv/work"), user_config=config
     )
 
     assert isinstance(machine.units, AcpServiceUnits)

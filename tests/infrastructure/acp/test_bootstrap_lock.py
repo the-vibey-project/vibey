@@ -46,23 +46,30 @@ async def test_second_holder_waits_then_times_out_false(tmp_path: Path) -> None:
 
 async def test_second_holder_gets_it_once_the_first_lets_go(tmp_path: Path) -> None:
     order: list[str] = []
-    first = BootstrapLock(tmp_path, poll_seconds=0.01)
-    second = BootstrapLock(tmp_path, poll_seconds=0.01)
+    first = BootstrapLock(tmp_path, poll_seconds=0.005)
+    second = BootstrapLock(tmp_path, poll_seconds=0.005)
+    held_first, let_go = asyncio.Event(), asyncio.Event()
 
     async def one() -> None:
         async with first.hold(1.0) as held:
             assert held
             order.append("first in")
-            await asyncio.sleep(0.1)
+            held_first.set()
+            await let_go.wait()
             order.append("first out")
 
     async def two() -> None:
-        await asyncio.sleep(0.02)
+        await held_first.wait()
         async with second.hold(5.0) as held:
             assert held
             order.append("second in")
 
-    await asyncio.gather(one(), two())
+    tasks = [asyncio.create_task(one()), asyncio.create_task(two())]
+    await held_first.wait()
+    await asyncio.sleep(0.02)  # the second is polling meanwhile
+    assert order == ["first in"]
+    let_go.set()
+    await asyncio.gather(*tasks)
     assert order == ["first in", "first out", "second in"]
 
 
@@ -113,7 +120,7 @@ async def test_a_cancel_while_holding_lets_the_lock_go(tmp_path: Path) -> None:
     async def holding() -> None:
         async with lock.hold(1.0):
             entered.set()
-            await asyncio.sleep(30)
+            await asyncio.Event().wait()  # held until cancelled
 
     task = asyncio.create_task(holding())
     await entered.wait()

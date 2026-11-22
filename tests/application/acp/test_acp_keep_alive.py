@@ -390,16 +390,18 @@ async def test_a_probe_that_breaks_is_logged_and_never_raises() -> None:
             raise RuntimeError("boom")
 
     hub = Broken()
-    kept = keep_alive(hub, Loader(hub), FakeChannel())
+    loader, channel = Loader(hub), FakeChannel()
+    kept = keep_alive(hub, loader, channel)
     kept.manage(UNITS, hub_label=HUB, deferred=())
-    await kept.probe(context())  # no exception
+    assert await kept.probe(context()) is None  # no exception
+    assert loader.calls == [] and channel.texts == []
     await kept.stop()
 
 
 async def test_a_probe_cancelled_is_cancelled_not_swallowed() -> None:
     class Hanging(Hub):
         async def healthy(self) -> bool:
-            await asyncio.sleep(30)
+            await asyncio.Event().wait()  # never answers
             return True
 
     hub = Hanging()
@@ -443,3 +445,4 @@ async def test_detaching_an_unknown_session_and_stopping_twice_are_harmless() ->
     kept.detach("never attached")
     await kept.stop()
     await kept.stop()
+    assert kept._timer is None  # type: ignore[attr-defined]

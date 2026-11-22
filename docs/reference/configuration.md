@@ -908,7 +908,34 @@ A bump from the hub is requested as the queue source `vibey-hub`; it lands only 
 ## `[acp]` { #acp }
 
 `vibey acp`, the Agent Client Protocol agent an editor such as Zed launches over stdio
-(SP-ACP). Read from `./vibey.toml`. The hub (`vibey serve`) reads only `sessions_max` and
+(SP-ACP).
+
+**Who may set what ([ADR-0101](../architecture/decisions/0101-the-acp-agent-and-self-installing-services.md)).**
+An editor starts `vibey acp` in whatever folder it opened, often a repository someone else
+wrote, so that folder's `./vibey.toml` is not your word. Your own `vibey.toml` -- in your
+configuration folder, `~/Library/Application Support/vibey/vibey.toml` on macOS and
+`$XDG_CONFIG_HOME/vibey/vibey.toml` (else `~/.config/vibey/vibey.toml`) elsewhere, beside
+`supervisor.env` -- holds the powers. The project's `[acp]` may only narrow them:
+
+- `auto_bootstrap`, `auto_connect`, `auto_services`: the project may turn one off, never on.
+- `install_postgres`: the project may say `"never"`, never `"ask"`.
+- `services`: the project may drop a service, never add one.
+- `restart`, `service_workdir`: yours alone; the project's are ignored.
+- `hub_start_seconds`, `probe_seconds`: the project may make them longer, never shorter.
+  `bootstrap_timeout_seconds`, `install_timeout_seconds`: shorter, never longer.
+- Every other key shapes only the session in the editor and reaches nothing outside it: the
+  project's value wins over yours. `modes` and `default_mode` are taken together.
+
+For `vibey acp`, `[supervisor]` and `[hub]` are read from your own file only, never the
+project's: the units' labels, environment file, log folder and worker arguments, and the hub's
+state folder, agent token and serving record. The units and the MCP entries `vibey connect`
+writes run the `vibey` of the running install (the console script beside its Python), never a
+configured path or a `PATH` lookup, and a unit's environment file, log folder and working folder
+must lie in your home folder, or nothing is written. A hub `vibey acp` starts itself runs in your
+configuration folder.
+
+Where both files say nothing, the defaults below apply, `auto_bootstrap` and `auto_services`
+included. The hub (`vibey serve`) reads only `sessions_max` and
 `session_events_max` from this table, so a mistake in any other key never stops the hub; it is
 the editor's to report. Every key is optional; an unknown key, a value of the
 wrong type or one outside its bound is refused by name (`ConfigError`), never ignored. The
