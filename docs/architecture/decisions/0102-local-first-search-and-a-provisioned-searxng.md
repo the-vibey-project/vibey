@@ -81,9 +81,11 @@ folders (`TRUSTED_RUNTIME_DIRS`: on macOS `/opt/homebrew/bin`, `/usr/local/bin`,
 `/snap/bin`), and a candidate must be a regular executable file, not writable by anyone, owned by
 root or the person, whose links lead only into `TRUSTED_RUNTIME_ROOTS` (Homebrew's Cellar, Docker
 Desktop's bundle, `/usr`, `/snap`). Every use -- `serve`, doctor, status, uninstall, purge --
-vets the recorded runtime again against those checks **and** against a fresh look: a record
-naming any other binary, or one no longer the runtime found, is refused with one cleaned notice
-and nothing is run. vibey never installs a runtime: with none, it says how to get one, once, and
+vets the recorded runtime again against those checks: a record naming any other binary is
+refused with one cleaned notice and nothing is run. The recorded runtime need not be the one a
+fresh look would choose now -- `find` only chooses at install -- so a second runtime installed
+later (podman beside Docker Desktop, a Homebrew docker CLI ahead of it) never stops `serve`,
+`uninstall` or `--purge`. vibey never installs a runtime: with none, it says how to get one, once, and
 does nothing else.
 
 The runtime sees the same small environment at install and in the unit (home, user, locale,
@@ -105,9 +107,15 @@ read-only API, no credentials. `scripts/searxng_image_digest.py` (standard libra
 is read again; a new digest is a reviewed change, never an automatic one, and no test touches the
 network (a test pins the constant's format). Every image reference that reaches a runtime must
 **equal** `SEARXNG_IMAGE` -- not merely look like `docker.io/searxng/searxng@sha256:<64 hex>`: a
-record naming any other digest is not believed, so after vibey pins a new one, `serve` refuses
-the old record until `vibey searxng install` pulls the new image and rewrites it (doctor and
-status say so). `vibey searxng serve` never pulls (`--pull=never`, and it
+record naming any other digest is never run. **Updating** follows a new pin: the old record is
+still read (every check but the pin) to recognise vibey's own instance by its marker -- so the
+port probe never calls it "not vibey's" -- and to offer the update. Doctor and status say "a
+newer pinned image is available (old -> new)"; the editor's step 5 asks once per process, in a
+session that may run things, "Update vibey's SearXNG (old -> new)?" with **Update** and **Not
+now**; and `vibey searxng install` updates it. On allow, the new image is pulled, the record
+rewritten with the same marker and settings, and the running unit restarted. Nothing updates on
+its own: until it is allowed, the old container keeps running, and `serve`, at its next start,
+refuses the old record with exit 78 and says how to update rather than run another image. `vibey searxng serve` never pulls (`--pull=never`, and it
 checks the image is present first), so nothing downloads when the person logs in.
 
 ### 5. One command line, decided in the domain
@@ -234,8 +242,10 @@ such a run should assert.
 - The bootstrap can download a container image on the person's word; it says so, once, and never
   at login. The question names the image and the port but not its size, which was not measured
   here (the digest was read with a `HEAD`, which carries none).
-- A new pinned digest is a change someone reviews; an installed SearXNG then stops until
-  `vibey searxng install` runs again (doctor and status say so).
-- A runtime installed somewhere else later (podman beside an existing docker) makes the recorded
-  one "not the one found now": `serve` refuses until `vibey searxng install` records it again.
+- A new pinned digest is a change someone reviews; an installed SearXNG is then offered the
+  update (editor, doctor, status), never updated on its own. The old image is left in the runtime
+  (disk only) until removed by hand.
+- The Docker CLI's `currentContext` (in `~/.docker/config.json`, reached through `HOME`) can still
+  name an ssh or tcp context: install and the unit read it alike, but "local" is only as good as
+  that file.
 - The Brave backup is still reachable only in vibey's own processes, never in a session.

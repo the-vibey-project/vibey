@@ -648,6 +648,13 @@ the next session runs it again. Two runs never overlap.
    the keep-alive restarts it like the worker -- unless it was stopped for good. With
    `[acp] searxng = "never"`, step 3 neither loads nor restarts an installed unit and says so once;
    the service manager still starts it at login until `vibey searxng uninstall`.
+   When vibey installed it from an earlier pinned image, the step offers the update instead,
+   once per process and never in `observe`: "Update vibey's SearXNG (searxng/searxng@sha256:<old>
+   -> <new>)? ..." with **Update** and **Not now**. Only **Update** pulls the new image, rewrites
+   the record (same marker and settings) and restarts the running unit; anything else leaves the
+   old container running, and the unit's `serve` refuses the old record at its next start, saying
+   how to update. A unit found running after any install is restarted, so it mounts the settings
+   on disk and runs the pinned image.
    `vibey searxng install` does the same from a terminal.
 
 Connecting, loading services and installing change the computer, so they take turns within one
@@ -1751,9 +1758,9 @@ vibey searxng uninstall [--purge]
 | Command | What it does |
 |---|---|
 | `install` | Prints what it will download and run, and asks; with `--yes` it still prints the question, then goes on. Holding the same setup lock as an editor's `vibey acp`, it pulls the pinned image `docker.io/searxng/searxng@sha256:...` with `podman` (preferred) or `docker` from vibey's trusted folders (never your PATH), writes `settings.yml` and `provision.json` as a pair in `<your configuration folder>/searxng/` (0700; files 0600, written atomically, never through a link), writes and loads the user-level unit `<[supervisor] label_prefix>.searxng` (restarted when one is already running), clears a stopped-for-good mark, and waits up to `[acp] bootstrap_timeout_seconds` until the SearXNG answers as vibey's own. It refuses when your environment names your own SearXNG (`VIBEY_SEARXNG_URL`), when anything that is not vibey's SearXNG listens on the port, when `DOCKER_HOST`/`CONTAINER_HOST` names a daemon that is not a local socket (a local one, and `DOCKER_CONTEXT`, `DOCKER_CONFIG`, `CONTAINER_CONNECTION`, are said to be ignored: the unit at login never has them), with no runtime, while another vibey holds the setup lock, and as root. Run it again to update to a newer pinned image, or to record a runtime that moved. Exit 0 once it answers, 1 otherwise. |
-| `status` | The runtime, why the recorded install is refused (when it is), what vibey installed (image digest, port, unit label), whether the image is here, the unit's state, whether it is stopped for good and whether it answers as vibey's own. Always exit 0. |
+| `status` | The runtime, why the recorded install is refused (when it is), "a newer pinned image is available (<old> -> <new>)" after a new pin, what vibey installed (image digest, port, unit label), whether the image is here, the unit's state, whether it is stopped for good and whether it answers as vibey's own. Always exit 0. |
 | `uninstall` | Holding the setup lock: unloads the unit labelled `<[supervisor] label_prefix>.searxng` -- from your own configuration, never from the record -- and deletes its file only while it is exactly what vibey wrote, removes the container (only one vibey started for you), and marks it stopped for good so no editor session loads or offers it again until `install`. `--purge` also removes the image, `settings.yml` and `provision.json`. Safe to run again; exit 1 when something could not be done, while another vibey holds the lock, or as root. |
-| `serve` | Hidden: what the unit runs. It checks the stop mark, the record (every value, the image equal to the pinned one, the label this configuration's), the settings file (yours alone, a regular file), the runtime (trusted folder, file checks, the one found now) and that the image is here -- it never pulls, so nothing downloads at login -- removes its own container a killed run left behind, then replaces itself with the runtime's one command line. Exit 78 for any refusal that only you can clear (the unit's throttle spaces its restarts; `status` and `doctor` say why), 1 when an old container would not go. |
+| `serve` | Hidden: what the unit runs. It checks the stop mark, the record (every value, the image equal to the pinned one, the label this configuration's; a record of an earlier pin is refused with the way to update), the settings file (yours alone, a regular file), the runtime (trusted folder, file checks) and that the image is here -- it never pulls, so nothing downloads at login -- removes its own container a killed run left behind, then replaces itself with the runtime's one command line. Exit 78 for any refusal that only you can clear (the unit's throttle spaces its restarts; `status` and `doctor` say why), 1 when an old container would not go. |
 
 The container runs as `<runtime> run --rm --name vibey-searxng-<uid> --label
 vibey.searxng.owner=<uid> --label vibey.searxng.image=<first 12> --pull=never --read-only
@@ -2170,9 +2177,9 @@ A third line, `searxng`, follows them: the SearXNG vibey installs itself
 ([`vibey searxng`](#vibey-searxng)). `WARN ... not installed by vibey` (with whether a runtime
 was found, and the command that installs one); `UNKNOWN` when your environment names your own
 (`VIBEY_SEARXNG_URL`) or when it is stopped for good; `PASS ... vibey's SearXNG answering as its
-own on 127.0.0.1:<port>`; or `WARN` with the first thing wrong -- the record is refused (a value
-vibey would not write, an image other than the pinned one, another label, a runtime it will not
-run), its image is not here, its unit is not running, or it does not answer as vibey's own. It asks the runtime (an image inspect) and the
+own on 127.0.0.1:<port>`; or `WARN` with the first thing wrong -- a newer pinned image is
+available (`vibey searxng install` updates it), the record is refused (a value vibey would not
+write, another label, a runtime it will not run), its image is not here, its unit is not running, or it does not answer as vibey's own. It asks the runtime (an image inspect) and the
 service manager only once vibey has installed one. Under `--json` it is a check named `searxng`;
 the existing keys are unchanged.
 
