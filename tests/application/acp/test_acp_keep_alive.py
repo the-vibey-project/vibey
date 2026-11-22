@@ -646,3 +646,29 @@ async def test_a_unit_added_later_is_restarted_and_survives_a_later_manage() -> 
         await kept.stop()
     finally:
         del UNITS[searxng]
+
+
+async def test_a_unit_stopped_for_good_is_let_go_never_restarted() -> None:
+    """`vibey acp unload` marks vibey's SearXNG stopped for good (ADR-0102): a keep-alive that
+    managed it lets it go instead of restarting it."""
+    hub, channel, clock = Hub(), FakeChannel(), Clock()
+    loader = Loader(hub, running={HUB})  # the worker is down
+    kept = AcpKeepAlive(
+        loader,
+        hub,
+        FreeLock(),
+        channel,
+        AcpUpdateMapper(),
+        AcpSettings(probe_seconds=30),
+        clock=clock,
+        sleep=_yield,
+        stopped=lambda label: label == WORKER,
+    )
+    kept.manage(UNITS, hub_label=HUB, deferred=())
+    clock.now += 31
+
+    await kept.probe(context())
+    await kept.probe(context())
+
+    assert loader.calls == [] and channel.texts == []
+    await kept.stop()

@@ -22,8 +22,13 @@ class AcpSearxngStepInterface(Protocol):
         ...
 
     def wanted(self) -> bool:
-        """Whether step 3 keeps vibey's SearXNG unit running: allowed, and installed before.
-        Blocking (it reads the person's record): run it off the loop."""
+        """Whether step 3 keeps vibey's SearXNG unit running: allowed, installed before, and not
+        stopped for good. Blocking (it reads the person's record): run it off the loop."""
+        ...
+
+    def held_back(self) -> str:
+        """What to say when vibey's SearXNG is installed and running from its unit while
+        `[acp] searxng = "never"` keeps this session from managing it; "" otherwise. Blocking."""
         ...
 
     async def offer(

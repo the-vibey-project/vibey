@@ -30,6 +30,7 @@ import typer
 from vibey.application.acp.acp_searxng_step import NO_RUNTIME
 from vibey.application.acp.doctor_checks import DoctorChecks
 from vibey.application.acp.dto import UnitOutcome
+from vibey.application.acp.interfaces.bootstrap_lock_interface import BootstrapLockInterface
 from vibey.application.acp.interfaces.searxng_provisioner_interface import (
     SearxngProvisionerInterface,
 )
@@ -39,7 +40,7 @@ from vibey.bootstrap import AcpMachine, acp_machine, acp_user_config, searxng_se
 from vibey.cli.interfaces.searxng_interface import SearxngCommandInterface
 from vibey.domain.acp.settings import AcpSettings
 from vibey.domain.config import ConfigError
-from vibey.domain.searxng import SEARXNG_IMAGE, SearxngPlan
+from vibey.domain.searxng import SearxngPlan
 from vibey.domain.supervisor import SEARXNG
 from vibey.infrastructure.acp.acp_settings_loader import AcpSettingsLoader
 from vibey.infrastructure.acp.interfaces.acp_settings_loader_interface import (
@@ -48,6 +49,7 @@ from vibey.infrastructure.acp.interfaces.acp_settings_loader_interface import (
 from vibey.infrastructure.searxng.interfaces.searxng_serve_interface import SearxngServeInterface
 
 EXIT_CONFIG: Final = 78
+INSTALL_COMMAND: Final = "vibey searxng install"
 NAME: Final = "searxng"
 _WIDTH: Final = 26
 WRITTEN: Final = frozenset({"created", "unchanged", "updated"})
@@ -90,23 +92,28 @@ class SearxngCommand:
         parts = self._parts()
         if parts is None:
             return EXIT_CONFIG
-        _, units, loader, searxng = parts
+        _, units, loader, searxng, _ = parts
         found = searxng.offer()
         record = searxng.record()
+        refusal = searxng.refusal()
+        label = self._label(units)
         self._echo(f"runtime     {found.runtime or 'none: install Podman or Docker'}")
         if found.own_url:
             self._echo(f"your own    {found.own_url} names your SearXNG; search asks it instead")
+        if refusal:
+            self._echo(f"refused     {refusal}")
         if record is None:
             self._echo("installed   no (`vibey searxng install` installs it)")
         else:
             self._echo(
                 f"installed   searxng/searxng@sha256:{self._plan.short(record.image)} on "
-                f"127.0.0.1:{record.port}, unit {record.label}"
+                f"127.0.0.1:{record.port}, unit {label}"
             )
             self._echo(f"image       {'here' if searxng.image_present() else 'not here'}")
-            self._echo(f"unit        {self._state(loader, record.label)}")
-            if record.image != SEARXNG_IMAGE:
-                self._echo("update      vibey pins a newer image; `vibey searxng install` pulls it")
+            if label is not None:
+                self._echo(f"unit        {self._state(loader, label)}")
+        if found.disabled:
+            self._echo(f"stopped     for good; `{INSTALL_COMMAND}` starts it again")
         answering = searxng.answering() if record is not None else found.answering
         said = "yes" if answering else "no"
         self._echo(f"answering   {said}{' (as vibey own)' if answering and record else ''}")
@@ -116,11 +123,21 @@ class SearxngCommand:
         parts = self._parts()
         if parts is None:
             return EXIT_CONFIG
-        settings, units, loader, searxng = parts
+        settings, units, loader, searxng, lock = parts
         refused = loader.refused()
         if refused:
             self._echo(f"vibey searxng install: {refused}")
             return 1
+        return self._holding(lock, lambda: self._install(settings, units, loader, searxng, yes))
+
+    def _install(
+        self,
+        settings: AcpSettings,
+        units: ServiceUnitsInterface,
+        loader: ServiceLoaderInterface,
+        searxng: SearxngProvisionerInterface,
+        yes: bool,
+    ) -> int:
         found = searxng.offer()
         if found.own_url:
             self._echo(
@@ -131,18 +148,18 @@ class SearxngCommand:
         if found.runtime is None:
             self._echo(NO_RUNTIME)
             return 1
-        if found.answering and not found.provisioned:
-            self._echo(
-                f"A SearXNG already answers on 127.0.0.1:{found.port}, and vibey installs none "
-                "over it. Nothing was installed."
-            )
+        busy = searxng.busy()
+        if busy:
+            self._echo(f"{busy}. Nothing was installed.")
             return 1
         question = (
             f"Download and run SearXNG (searxng/searxng@sha256:{found.short}) in a container on "
             f"127.0.0.1:{found.port} with {PurePath(found.runtime).name}? It is downloaded once "
             "and a container keeps running."
         )
-        if not yes and not self._confirm(question):
+        if yes:
+            self._echo(f"{question} [--yes: yes]")  # the question is said, answered in advance
+        elif not self._confirm(question):
             self._echo("Nothing was installed.")
             return 1
         prepared = searxng.prepare()
@@ -162,13 +179,23 @@ class SearxngCommand:
         parts = self._parts()
         if parts is None:
             return EXIT_CONFIG
-        _, units, loader, searxng = parts
+        _, units, loader, searxng, lock = parts
         refused = loader.refused()
         if refused:
             self._echo(f"vibey searxng uninstall: {refused}")
             return 1
-        record = searxng.record()
-        label = record.label if record is not None else self._label(units)
+        return self._holding(lock, lambda: self._uninstall(units, loader, searxng, purge))
+
+    def _uninstall(
+        self,
+        units: ServiceUnitsInterface,
+        loader: ServiceLoaderInterface,
+        searxng: SearxngProvisionerInterface,
+        purge: bool,
+    ) -> int:
+        # The label is this configuration's, never the record's: a record naming another label
+        # can never make this unload the hub (or anything but vibey's SearXNG).
+        label = self._label(units)
         failed = label is not None and not self._unload(loader, units, label)
         why = searxng.remove_container()
         if why:
@@ -183,6 +210,11 @@ class SearxngCommand:
             self._echo("the settings and the record are removed")
         else:
             self._echo("the settings, the record and the image are kept; --purge removes them")
+        searxng.disable()
+        self._echo(
+            f"it is stopped for good: no editor session loads or offers it again until "
+            f"`{INSTALL_COMMAND}`"
+        )
         return 1 if failed else 0
 
     def doctor_line(self) -> str:
@@ -196,7 +228,15 @@ class SearxngCommand:
         parts = self._parts(quiet=True)
         if parts is None:
             return f"UNKNOWN {NAME:<{_WIDTH}} could not read your own vibey.toml"
-        _, _, loader, searxng = parts
+        _, units, loader, searxng, _ = parts
+        refusal = searxng.refusal()
+        if refusal:
+            return f"WARN {NAME:<{_WIDTH}} vibey's SearXNG: {DoctorChecks.cleaned(refusal)}"
+        if searxng.disabled():
+            return (
+                f"UNKNOWN {NAME:<{_WIDTH}} vibey's SearXNG is stopped for good; "
+                f"`{INSTALL_COMMAND}` starts it again"
+            )
         record = searxng.record()
         if record is None:
             found = searxng.offer()
@@ -208,25 +248,24 @@ class SearxngCommand:
             runtime = (
                 f"{PurePath(found.runtime).name} found"
                 if found.runtime
-                else "no podman or docker on your PATH"
+                else "no podman or docker in vibey's trusted folders"
             )
             return (
                 f"WARN {NAME:<{_WIDTH}} not installed by vibey ({runtime}): `vibey searxng "
                 f"install` runs one on 127.0.0.1:{found.port}"
             )
         where = f"127.0.0.1:{record.port}"
+        label = self._label(units) or "its unit"
         if not searxng.image_present():
             problem = "its image is not here: `vibey searxng install` downloads it"
-        elif (state := self._state(loader, record.label)) != "running":
-            problem = f"unit {record.label} is {state}: `vibey searxng status` says more"
+        elif (state := self._state(loader, label)) != "running":
+            problem = f"unit {label} is {state}: `vibey searxng status` says more"
         elif not searxng.answering():
             problem = f"it does not answer as vibey's own on {where}; its unit log says why"
-        elif record.image != SEARXNG_IMAGE:
-            problem = "vibey pins a newer image: `vibey searxng install` pulls it"
         else:
             return (
                 f"PASS {NAME:<{_WIDTH}} vibey's SearXNG answering as its own on {where} "
-                f"(searxng/searxng@sha256:{self._plan.short(record.image)}, unit {record.label})"
+                f"(searxng/searxng@sha256:{self._plan.short(record.image)}, unit {label})"
             )
         return f"WARN {NAME:<{_WIDTH}} vibey's SearXNG: {problem}"
 
@@ -244,7 +283,11 @@ class SearxngCommand:
         self, *, quiet: bool = False
     ) -> (
         tuple[
-            AcpSettings, ServiceUnitsInterface, ServiceLoaderInterface, SearxngProvisionerInterface
+            AcpSettings,
+            ServiceUnitsInterface,
+            ServiceLoaderInterface,
+            SearxngProvisionerInterface,
+            BootstrapLockInterface,
         ]
         | None
     ):
@@ -257,7 +300,26 @@ class SearxngCommand:
             if not quiet:
                 self._echo("vibey searxng: this computer has no user-level services")
             return None
-        return settings, units, loader, searxng
+        return settings, units, loader, searxng, machine.lock
+
+    def _holding(self, lock: BootstrapLockInterface, work: Callable[[], int]) -> int:
+        """Run `work` holding the one setup lock per person that `vibey acp` holds, so an
+        editor's install and this command never write the same files at once."""
+        try:
+            held = lock.acquire()
+        except OSError as exc:
+            self._echo(f"vibey searxng: the setup lock could not be taken ({exc})")
+            return 1
+        if not held:
+            self._echo(
+                "vibey searxng: another vibey (an editor's `vibey acp`, or this command) is "
+                "changing this computer now; try again when it is done"
+            )
+            return 1
+        try:
+            return work()
+        finally:
+            lock.release()
 
     @staticmethod
     def _label(units: ServiceUnitsInterface) -> str | None:
@@ -295,7 +357,8 @@ class SearxngCommand:
             return False
         self._echo(
             f"{unit.label}: {done.action} into {loader.domain()}. `vibey searxng uninstall` "
-            "stops it for good; by hand: " + "; ".join(loader.unload_commands([unit.label]))
+            "stops it for good; by hand, the unit alone: "
+            + "; ".join(loader.unload_commands([unit.label]))
         )
         return True
 

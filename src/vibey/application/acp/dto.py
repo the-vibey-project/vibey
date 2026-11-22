@@ -71,6 +71,9 @@ class SearxngOffer:
     provisioned: bool
     short: str
     port: int
+    disabled: bool = False
+    """The person stopped vibey's SearXNG for good (`vibey acp unload`, `vibey searxng
+    uninstall`): nothing offers, loads or restarts it until `vibey searxng install`."""
 
 
 @dataclass(frozen=True, slots=True)

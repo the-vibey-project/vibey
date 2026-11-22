@@ -270,10 +270,14 @@ class Searxng:
     def __init__(self, why: str = "") -> None:
         self.why = why
         self.removed = 0
+        self.disabled = False
 
     def remove_container(self) -> str:
         self.removed += 1
         return self.why
+
+    def disable(self) -> None:
+        self.disabled = True
 
 
 def _searxng_command(
@@ -304,6 +308,8 @@ def test_unload_removes_the_searxng_container_and_keeps_its_files(tmp_path: Path
     assert manager.calls[0] == ("unload", "dev.vibey.searxng")
     assert searxng.removed == 1 and not Path(unit.path).exists()
     assert any("SearXNG container is removed" in s and "kept" in s for s in said)
+    assert searxng.disabled  # stopped for good: no session loads it again
+    assert any("stopped for good" in s and "vibey searxng install" in s for s in said)
 
 
 def test_a_container_that_will_not_go_fails_the_unload(tmp_path: Path) -> None:

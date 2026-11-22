@@ -11,11 +11,11 @@ from pathlib import Path
 
 import pytest
 
-from vibey.domain.searxng import SearxngProvision
+from vibey.domain.searxng import SEARXNG_IMAGE, SearxngProvision
 from vibey.infrastructure.searxng.searxng_files import SearxngFiles
 from vibey.infrastructure.web.search import DEFAULT_SEARXNG_URL, WebSearchSettings
 
-IMAGE = "docker.io/searxng/searxng@sha256:" + "ab" * 32
+IMAGE = SEARXNG_IMAGE
 _REAL_PERSONAL = SearxngFiles.__dict__["personal"]
 """Read at import, before the suite's hermetic fixture stands in for it."""
 MINE = SearxngProvision(IMAGE, 28199, "vibey-" + "1" * 32, "dev.vibey.searxng", "/usr/bin/podman")
@@ -29,8 +29,12 @@ def _person(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> SearxngFiles:
 
 def _provision(files: SearxngFiles, provision: SearxngProvision = MINE) -> None:
     files.folder.mkdir(parents=True, mode=0o700, exist_ok=True)
+    files.folder.chmod(0o700)
     (files.folder / "settings.yml").write_text("x", "utf-8")
-    (files.folder / "provision.json").write_text(
+    (files.folder / "settings.yml").chmod(0o600)
+    record = files.folder / "provision.json"
+    record.touch(mode=0o600)
+    record.write_text(
         json.dumps(
             {
                 "image": provision.image,
@@ -68,22 +72,25 @@ def test_the_persons_record_gives_the_url_and_the_marker(
 
 
 @pytest.mark.parametrize(
-    "environ",
+    ("environ", "url", "instance"),
     [
-        {"VIBEY_SEARXNG_URL": "http://127.0.0.1:9999"},
-        {"WEBSEARCH_SEARXNG_URL": "http://127.0.0.1:9999"},
-        {"VIBEY_SEARXNG_INSTANCE": "their-own"},
-        {"WEBSEARCH_SEARXNG_INSTANCE": "their-own"},
+        ({"VIBEY_SEARXNG_URL": "http://127.0.0.1:9999"}, "http://127.0.0.1:9999", None),
+        ({"WEBSEARCH_SEARXNG_URL": "http://127.0.0.1:9999"}, "http://127.0.0.1:9999", None),
+        ({"VIBEY_SEARXNG_INSTANCE": "their-own"}, DEFAULT_SEARXNG_URL, "their-own"),
+        ({"WEBSEARCH_SEARXNG_INSTANCE": "their-own"}, DEFAULT_SEARXNG_URL, "their-own"),
     ],
 )
 def test_the_persons_environment_wins_over_the_record(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, environ: dict[str, str]
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    environ: dict[str, str],
+    url: str,
+    instance: str | None,
 ) -> None:
     _provision(_person(tmp_path, monkeypatch))
     settings = WebSearchSettings.from_environment(environ)
     assert not settings.provisioned
-    assert settings.searxng_url in {"http://127.0.0.1:9999", DEFAULT_SEARXNG_URL}
-    assert settings.searxng_instance in {None, "their-own"}
+    assert (settings.searxng_url, settings.searxng_instance) == (url, instance)
 
 
 def test_a_record_vibey_would_not_have_written_is_ignored(
@@ -125,3 +132,15 @@ def test_the_default_reader_is_the_persons_own_folder(
     )
     _provision(SearxngFiles(tmp_path / "vibey" / "searxng"))
     assert WebSearchSettings.from_environment({}).searxng_instance == MINE.marker
+
+
+def test_a_fifo_for_a_record_never_hangs_search(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    import os
+
+    files = _person(tmp_path, monkeypatch)
+    files.folder.mkdir(parents=True, mode=0o700)
+    os.mkfifo(files.folder / "provision.json", 0o600)
+    settings = WebSearchSettings.from_environment({})
+    assert (settings.searxng_url, settings.provisioned) == (DEFAULT_SEARXNG_URL, False)

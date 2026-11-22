@@ -7,8 +7,10 @@ recorded writing (`<[hub] state_dir>/acp-units.json`), this unloads it in the us
 (`launchctl bootout gui/<uid>/<label>`, or `systemctl --user disable --now <label>.service`,
 through the same argv allowlist as the bootstrap) and deletes the unit file only while it is
 exactly what vibey wrote. A unit the operator edited is unloaded and left in place, and said so.
-When one of them is the local SearXNG (ADR-0102), its container (`vibey-searxng`) is removed too;
-its settings, record and image are kept (`vibey searxng uninstall --purge` removes them).
+When one of them is the local SearXNG (ADR-0102), its container is removed too (only one vibey
+started for this user), and it is marked stopped for good: no session loads or offers it again
+until `vibey searxng install`. Its settings, record and image are kept (`vibey searxng uninstall
+--purge` removes them).
 Run again, it finds nothing left. Everything is read from the user's own `vibey.toml`, never the
 folder it runs in. It does not change `[acp] auto_services`: a `vibey acp` that runs later loads
 them again unless that is set to false in the user's own `vibey.toml`.
@@ -99,6 +101,11 @@ class AcpUnloadCommand:
                     "the SearXNG container is removed; its settings and image are kept "
                     "(`vibey searxng uninstall --purge` removes them)"
                 )
+            searxng.disable()
+            self._echo(
+                "SearXNG is stopped for good: no session loads it again until `vibey searxng "
+                "install`"
+            )
         forgotten = loader.forget_unit_files()
         if forgotten.action == "failed":
             failed = True

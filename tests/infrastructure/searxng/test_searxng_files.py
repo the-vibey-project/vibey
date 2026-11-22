@@ -11,11 +11,16 @@ from pathlib import Path
 
 import pytest
 
-from vibey.domain.searxng import SearxngProvision
+from vibey.domain.searxng import SEARXNG_IMAGE, SearxngProvision
 from vibey.infrastructure.searxng.interfaces.searxng_files_interface import SearxngFilesInterface
-from vibey.infrastructure.searxng.searxng_files import RECORD_FILE, SETTINGS_FILE, SearxngFiles
+from vibey.infrastructure.searxng.searxng_files import (
+    DISABLED_FILE,
+    RECORD_FILE,
+    SETTINGS_FILE,
+    SearxngFiles,
+)
 
-IMAGE = "docker.io/searxng/searxng@sha256:" + "ab" * 32
+IMAGE = SEARXNG_IMAGE
 _REAL_PERSONAL = SearxngFiles.__dict__["personal"]
 """Read at import, before the suite's hermetic fixture stands in for it."""
 
@@ -154,12 +159,19 @@ def test_a_wider_folder_is_narrowed(tmp_path: Path) -> None:
 
 @pytest.mark.parametrize(
     "text",
-    ["not json", "[]", json.dumps({"image": IMAGE}), json.dumps({"port": 1}) + "x"],
+    [
+        "not json",
+        "[]",
+        json.dumps({"image": IMAGE}),
+        json.dumps({"port": 1}) + "x",
+        "[" * 100_000,
+    ],
 )
 def test_a_record_vibey_did_not_write_is_refused(tmp_path: Path, text: str) -> None:
     files = _files(tmp_path)
     files.folder.mkdir(parents=True, mode=0o700)
     (files.folder / RECORD_FILE).write_text(text, "utf-8")
+    (files.folder / RECORD_FILE).chmod(0o600)
     with pytest.raises(ValueError):
         files.read()
 
@@ -222,3 +234,155 @@ def test_a_folder_someone_else_owns_is_refused(
     with pytest.raises(ValueError, match="not yours"):
         _ensure(files)
     assert list(files.folder.iterdir()) == []
+
+
+# -- reading only what the person alone wrote (review B4) --------------------------------------
+
+
+@pytest.mark.parametrize("name", [RECORD_FILE, SETTINGS_FILE])
+def test_a_fifo_never_hangs_a_reader(tmp_path: Path, name: str) -> None:
+    files = _files(tmp_path)
+    _ensure(files)
+    (files.folder / name).unlink()
+    os.mkfifo(files.folder / name, 0o600)
+    if name == RECORD_FILE:
+        with pytest.raises(ValueError, match="not a regular file"):
+            files.read()
+    else:
+        assert not files.settings_ready()
+
+
+@pytest.mark.parametrize("mode", [0o640, 0o604, 0o660])
+def test_a_record_open_to_others_is_refused(tmp_path: Path, mode: int) -> None:
+    files = _files(tmp_path)
+    _ensure(files)
+    os.chmod(files.folder / RECORD_FILE, mode)
+    with pytest.raises(ValueError, match="yours alone"):
+        files.read()
+    os.chmod(files.folder / SETTINGS_FILE, mode)
+    assert not files.settings_ready()
+
+
+def test_a_folder_open_to_others_is_never_read(tmp_path: Path) -> None:
+    files = _files(tmp_path)
+    _ensure(files)
+    os.chmod(files.folder, 0o750)
+    with pytest.raises(ValueError, match="yours alone"):
+        files.read()
+    assert not files.settings_ready()
+    assert files.disabled()  # a folder vibey cannot believe never starts anything
+
+
+def test_a_record_someone_else_owns_is_refused(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    files = _files(tmp_path)
+    _ensure(files)
+    real = os.getuid()
+    real_fstat = os.fstat
+
+    def other_owner(fd: int) -> os.stat_result:
+        found = real_fstat(fd)
+        if stat.S_ISREG(found.st_mode):
+            values = list(found)
+            values[4] = real + 1  # st_uid
+            return os.stat_result(values)
+        return found
+
+    monkeypatch.setattr(os, "fstat", other_owner)
+    with pytest.raises(ValueError, match="yours alone"):
+        files.read()
+
+
+def test_a_record_larger_than_vibey_writes_is_refused(tmp_path: Path) -> None:
+    files = _files(tmp_path)
+    _ensure(files)
+    record = files.folder / RECORD_FILE
+    record.write_text(" " * (1 << 17), "utf-8")
+    with pytest.raises(ValueError, match="larger"):
+        files.read()
+
+
+# -- the pair is written together, or made again (review B7) ----------------------------------
+
+
+def test_a_failed_second_rename_leaves_no_half_pair(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    files = _files(tmp_path)
+    real_replace = os.replace
+
+    def crash_on_record(src: str, dst: str, **kwargs: object) -> None:
+        if dst == RECORD_FILE:
+            raise OSError(28, "No space left on device")
+        real_replace(src, dst, **kwargs)  # type: ignore[arg-type]
+
+    monkeypatch.setattr(os, "replace", crash_on_record)
+    with pytest.raises(OSError, match="space"):
+        _ensure(files)
+    monkeypatch.setattr(os, "replace", real_replace)
+    assert sorted(p.name for p in files.folder.iterdir()) == []  # neither, and no staging
+
+
+def test_a_pair_left_with_different_markers_is_made_again(tmp_path: Path) -> None:
+    """A crash between the two renames (or two writers interleaved) leaves new settings beside
+    the old record: the next ensure must not keep a pair that can never pass the check."""
+    files = _files(tmp_path)
+    first = _ensure(files)
+    settings = files.folder / SETTINGS_FILE
+    other = "vibey-" + "e" * 32
+    settings.write_text(settings.read_text("utf-8").replace(first.marker, other), "utf-8")
+
+    again = _ensure(files)
+
+    assert again.marker not in {first.marker, other}
+    assert f'instance_name: "{again.marker}"' in settings.read_text("utf-8")
+    assert files.read() == again
+
+
+def test_a_settings_file_vibey_cannot_believe_is_replaced(tmp_path: Path) -> None:
+    files = _files(tmp_path)
+    first = _ensure(files)
+    os.chmod(files.folder / SETTINGS_FILE, 0o644)
+    again = _ensure(files)
+    assert again.marker != first.marker
+    assert stat.S_IMODE((files.folder / SETTINGS_FILE).stat().st_mode) == 0o600
+
+
+# -- stopped for good (review B6) ---------------------------------------------------------------
+
+
+def test_disable_marks_it_and_enable_takes_the_mark_away(tmp_path: Path) -> None:
+    files = _files(tmp_path)
+    assert not files.disabled()
+    files.enable()  # nothing there: nothing to do
+    files.disable()
+    assert files.disabled()
+    assert stat.S_IMODE((files.folder / DISABLED_FILE).stat().st_mode) == 0o600
+    files.enable()
+    assert not files.disabled()
+    files.enable()  # idempotent
+
+
+def test_enable_narrows_a_wide_folder_first(tmp_path: Path) -> None:
+    files = _files(tmp_path)
+    files.disable()
+    os.chmod(files.folder, 0o755)
+    files.enable()
+    assert stat.S_IMODE(files.folder.stat().st_mode) == 0o700 and not files.disabled()
+
+
+def test_purge_takes_the_mark_with_it(tmp_path: Path) -> None:
+    files = _files(tmp_path)
+    _ensure(files)
+    files.disable()
+    assert files.purge() == (SETTINGS_FILE, RECORD_FILE)
+    assert not files.folder.exists()
+
+
+def test_a_record_vibey_did_not_write_is_made_again_with_its_settings(tmp_path: Path) -> None:
+    files = _files(tmp_path)
+    first = _ensure(files)
+    (files.folder / RECORD_FILE).write_text('{"image": "x"}', "utf-8")
+    again = _ensure(files)
+    assert again.marker != first.marker and files.read() == again

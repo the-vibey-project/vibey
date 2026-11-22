@@ -59,6 +59,7 @@ class Provisioner:
         self.probes = 0
         self.after_prepare: SearxngOffer | None = None
         self.gate: threading.Event | None = None
+        self.taken = ""
 
     def offer(self) -> SearxngOffer:
         self.offers += 1
@@ -79,6 +80,35 @@ class Provisioner:
 
     def remove_container(self) -> str:
         return ""
+
+    def record(self) -> None:
+        return None
+
+    def refusal(self) -> str:
+        return ""
+
+    def image_present(self) -> bool:
+        return False
+
+    def purge(self) -> list[str]:
+        return []
+
+    def disabled(self) -> bool:
+        return self.found.disabled
+
+    def disable(self) -> None:
+        self.found = SearxngOffer(
+            self.found.runtime,
+            self.found.own_url,
+            self.found.answering,
+            self.found.provisioned,
+            self.found.short,
+            self.found.port,
+            disabled=True,
+        )
+
+    def busy(self) -> str:
+        return self.taken
 
 
 class Units:
@@ -646,9 +676,14 @@ class Hub:
         return True
 
 
-async def _step_three(settings: AcpSettings) -> tuple[Units, Loader, Managing, Provisioner]:
-    channel, units, loader, keep_alive = FakeChannel(), Units(), Loader(), Managing()
+async def _step_three(
+    settings: AcpSettings, *, disabled: bool = False, channel: FakeChannel | None = None
+) -> tuple[Units, Loader, Managing, Provisioner]:
+    channel = channel or FakeChannel()
+    units, loader, keep_alive = Units(), Loader(), Managing()
     provisioner = Provisioner(provisioned=True)
+    if disabled:
+        provisioner.disable()
     mapper, modes = AcpUpdateMapper(), AcpModes(settings)
     step = AcpSearxngStep(settings, provisioner, units, loader, channel, mapper, modes)
     boot = AcpBootstrap(
@@ -847,3 +882,76 @@ async def test_an_unknown_mode_may_run_nothing() -> None:
     world = World()
     await world.prompt(mode_id="no-such-mode")
     assert world.provisioner.offers == 0 and world.channel.updates == []
+
+
+# -- fix round 1 ----------------------------------------------------------------------------------
+
+
+async def test_an_occupied_port_is_said_once_and_installs_nothing() -> None:
+    world = World()
+    world.provisioner.taken = "something already listens on 127.0.0.1:28180 (\x1b[2Ja dev server)"
+    await world.prompt()
+    await world.prompt()
+    busy = [t for t in world.channel.said if "already listens" in t]
+    assert len(busy) == 1 and "\x1b" not in busy[0]
+    assert world.channel.permission_requests == [] and not world.installed
+    assert world.lock.acquired == 0 and not world.step.pending
+
+
+async def test_a_searxng_stopped_for_good_is_never_offered_again() -> None:
+    world = World()
+    world.provisioner.disable()
+    world.channel.permission_answers = [INSTALL_OPTION]
+    await world.prompt()
+    assert world.channel.permission_requests == [] and not world.installed
+    assert not world.step.pending
+
+
+async def test_step_three_never_reloads_a_searxng_stopped_for_good() -> None:
+    units, loader, keep_alive, _ = await _step_three(AcpSettings(services=()), disabled=True)
+    assert units.writes == [] and loader.calls == [] and keep_alive.managed == []
+
+
+async def test_never_with_one_installed_says_it_keeps_running_from_its_unit_once() -> None:
+    channel = FakeChannel()
+    await _step_three(AcpSettings(services=(), searxng="never"), channel=channel)
+    said = [t for t in channel.said if 'searxng = "never"' in t]
+    assert len(said) == 1 and "vibey searxng uninstall" in said[0]
+
+
+async def test_never_with_it_stopped_says_nothing() -> None:
+    channel = FakeChannel()
+    await _step_three(AcpSettings(services=(), searxng="never"), channel=channel, disabled=True)
+    assert channel.said == []
+
+
+def test_held_back_is_empty_when_offered_or_not_installed() -> None:
+    world = World()
+    assert world.step.held_back() == ""
+    never = World(settings=AcpSettings(searxng="never"))
+    assert never.step.held_back() == ""  # nothing installed: nothing held back
+
+
+async def test_the_never_notice_is_said_once_per_process() -> None:
+    channel = FakeChannel()
+    settings = AcpSettings(services=(), searxng="never")
+    provisioner = Provisioner(provisioned=True)
+    mapper, modes = AcpUpdateMapper(), AcpModes(settings)
+    step = AcpSearxngStep(settings, provisioner, Units(), Loader(), channel, mapper, modes)
+    boot = AcpBootstrap(
+        settings,
+        None,
+        None,
+        None,
+        channel,
+        mapper,
+        Lock(),
+        modes,
+        units=Units(),
+        loader=Loader(),
+        hub=Hub(),  # type: ignore[arg-type]
+        searxng=step,
+    )
+    await boot._services("s")  # type: ignore[attr-defined]
+    await boot._services("s2")  # type: ignore[attr-defined]
+    assert len([t for t in channel.said if 'searxng = "never"' in t]) == 1

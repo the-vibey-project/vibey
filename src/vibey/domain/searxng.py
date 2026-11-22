@@ -12,12 +12,16 @@ fixed here: what reaches a container runtime is decided in this module and nowhe
   configuration folder) says which image was pulled, the loopback port, the identity marker the
   SearXNG answers with, its unit's label and the runtime's absolute path. `parse` refuses any
   value vibey would not have written, so a record that was changed can never widen the command
-  line: an image outside `IMAGE_REF`, a runtime that is not podman or docker, a label outside the
-  service manager's closed alphabet, a port outside 1-65535.
+  line: an image other than the pinned one, a runtime that is not podman or docker in one of the
+  trusted folders (`TRUSTED_RUNTIME_DIRS`), a label outside the service manager's closed alphabet,
+  a port outside 1-65535. (Infrastructure checks the runtime's file again, and that it is the one
+  a fresh look finds; the label is never taken from the record, only compared.)
 - **The settings** are rendered from fixed text and two random hex values (`secret_key`, and the
   marker in `instance_name`), each checked against its alphabet, so neither can change the YAML's
   shape.
-- **The command line** (`run_argv`): `--rm`, a fixed name, `--pull=never` (nothing downloads when
+- **The command line** (`run_argv`): `--rm`, a name of the person's own (`vibey-searxng-<uid>`)
+  and labels saying whose it is (`vibey.searxng.owner=<uid>`) and which image it runs, so vibey
+  never removes a container it did not start; `--pull=never` (nothing downloads when
   the unit starts), a read-only root, every capability dropped, no new privileges, a process and
   memory limit, the person's own user (podman maps it with `--userns=keep-id`), the port published
   on 127.0.0.1 only, the settings mounted read-only, and tmpfs for what SearXNG writes. Never
@@ -46,7 +50,28 @@ _SECRET: Final = re.compile(r"[0-9a-f]{64}")
 _HEX32: Final = re.compile(r"[0-9a-f]{32}")
 RUNTIMES: Final = ("podman", "docker")
 """The container runtimes vibey drives, in the order it prefers them."""
-CONTAINER_NAME: Final = "vibey-searxng"
+TRUSTED_RUNTIME_DIRS: Final[dict[str, tuple[str, ...]]] = {
+    "darwin": (
+        "/opt/homebrew/bin",
+        "/usr/local/bin",
+        "/usr/bin",
+        "/Applications/Docker.app/Contents/Resources/bin",
+    ),
+    "linux": ("/usr/bin", "/usr/local/bin", "/bin", "/snap/bin"),
+}
+"""The only folders a runtime is taken from, per platform, in order: never the PATH, which an
+editor may have taken from a project (a `bin/` it prepends, direnv). A record's runtime must lie
+in one of them."""
+TRUSTED_RUNTIME_ROOTS: Final[dict[str, tuple[str, ...]]] = {
+    "darwin": ("/opt/homebrew/", "/usr/local/", "/usr/", "/Applications/Docker.app/"),
+    "linux": ("/usr/", "/bin/", "/snap/"),
+}
+"""Where a runtime found in a trusted folder may point (Homebrew's links lead into its Cellar,
+Docker Desktop's into its app bundle): a link leading anywhere else is refused."""
+CONTAINER_PREFIX: Final = "vibey-searxng"
+OWNER_LABEL: Final = "vibey.searxng.owner"
+"""The label naming the uid whose container it is: vibey removes only a container carrying its own."""
+IMAGE_LABEL: Final = "vibey.searxng.image"
 CONTAINER_PORT: Final = 8080
 """Where SearXNG listens inside its container (the image's default)."""
 SETTINGS_IN_CONTAINER: Final = "/etc/searxng/settings.yml"
@@ -77,7 +102,30 @@ class SearxngProvision:
 
 
 class SearxngPlan:
-    """Declared by `interfaces/searxng_interface.py::SearxngPlanInterface`."""
+    """Declared by `interfaces/searxng_interface.py::SearxngPlanInterface`.
+
+    `pinned` is the one image it accepts (`SEARXNG_IMAGE`); `prefix` names the containers (a test
+    run against a real runtime uses its own, so it never touches the person's); `runtime_dirs`
+    are the folders a runtime may be in (every platform's trusted folders by default)."""
+
+    def __init__(
+        self,
+        *,
+        pinned: str = SEARXNG_IMAGE,
+        prefix: str = CONTAINER_PREFIX,
+        runtime_dirs: tuple[str, ...] | None = None,
+    ) -> None:
+        if not IMAGE_REF.fullmatch(pinned):
+            raise ValueError("the pinned image must be docker.io/searxng/searxng by its digest")
+        if not LABEL.fullmatch(prefix):
+            raise ValueError("a container prefix must be letters, digits, '.', '_' or '-'")
+        self._pinned = pinned
+        self._prefix = prefix
+        self._runtime_dirs = frozenset(
+            runtime_dirs
+            if runtime_dirs is not None
+            else (folder for dirs in TRUSTED_RUNTIME_DIRS.values() for folder in dirs)
+        )
 
     def check(self, provision: SearxngProvision) -> None:
         self._image(provision.image)
@@ -115,6 +163,13 @@ class SearxngPlan:
             raise ValueError(f"the provision record has no {exc.args[0]}") from None
         self.check(provision)
         return provision
+
+    def container_name(self, uid: int) -> str:
+        return f"{self._prefix}-{self._uid(uid)}"
+
+    def marker_in(self, settings_text: str) -> str | None:
+        found = re.search(r'^  instance_name: "(vibey-[0-9a-f]{32})"$', settings_text, re.MULTILINE)
+        return found.group(1) if found else None
 
     def new_marker(self, hex32: str) -> str:
         if not _HEX32.fullmatch(hex32):
@@ -158,15 +213,18 @@ class SearxngPlan:
                 "characters, which the --volume syntax would misread"
             )
         for value in (uid, gid):
-            if isinstance(value, bool) or not isinstance(value, int) or value < 1:
-                raise ValueError("the container runs as your own user, never root")
+            self._uid(value)
         keep_id = ("--userns=keep-id",) if _name(provision.runtime) == "podman" else ()
         return (
             provision.runtime,
             "run",
             "--rm",
             "--name",
-            CONTAINER_NAME,
+            self.container_name(uid),
+            "--label",
+            f"{OWNER_LABEL}={uid}",
+            "--label",
+            f"{IMAGE_LABEL}={self.short(provision.image)}",
             "--pull=never",
             "--read-only",
             "--cap-drop",
@@ -201,8 +259,18 @@ class SearxngPlan:
             self._image(image),
         )
 
-    def remove_argv(self, runtime: str) -> tuple[str, ...]:
-        return (self._runtime(runtime), "rm", "-f", CONTAINER_NAME)
+    def labels_argv(self, runtime: str, uid: int) -> tuple[str, ...]:
+        return (
+            self._runtime(runtime),
+            "container",
+            "inspect",
+            "--format",
+            "{{json .Config.Labels}}",
+            self.container_name(uid),
+        )
+
+    def remove_argv(self, runtime: str, uid: int) -> tuple[str, ...]:
+        return (self._runtime(runtime), "rm", "-f", self.container_name(uid))
 
     def remove_image_argv(self, runtime: str, image: str) -> tuple[str, ...]:
         return (self._runtime(runtime), "rmi", self._image(image))
@@ -210,19 +278,29 @@ class SearxngPlan:
     def short(self, image: str) -> str:
         return self._image(image).rpartition(":")[2][:12]
 
-    @staticmethod
-    def _image(image: str) -> str:
+    def _image(self, image: str) -> str:
         if not isinstance(image, str) or not IMAGE_REF.fullmatch(image):
             raise ValueError("the image must be docker.io/searxng/searxng pinned by its digest")
+        if image != self._pinned:
+            raise ValueError(
+                "the image is not the one this vibey pins; `vibey searxng install` updates it"
+            )
         return image
 
     @staticmethod
-    def _runtime(runtime: str) -> str:
+    def _uid(value: int) -> int:
+        if isinstance(value, bool) or not isinstance(value, int) or value < 1:
+            raise ValueError("the container runs as your own user, never root")
+        return value
+
+    def _runtime(self, runtime: str) -> str:
         if (
             not isinstance(runtime, str)
-            or not runtime.startswith("/")
             or _name(runtime) not in RUNTIMES
+            or runtime.rpartition("/")[0] not in self._runtime_dirs
             or re.search(r"[\x00-\x1f\x7f]", runtime)
         ):
-            raise ValueError("the runtime must be the absolute path of podman or docker")
+            raise ValueError(
+                "the runtime must be podman or docker in one of vibey's trusted folders"
+            )
         return runtime

@@ -25,6 +25,7 @@ import os
 import signal
 import sys
 from pathlib import Path
+from typing import Any
 
 import asyncpg
 import pytest
@@ -367,6 +368,47 @@ def _hermetic_web_search(request: pytest.FixtureRequest, monkeypatch: pytest.Mon
             raise ConnectionRefusedError("hermetic test: no search backend is reachable")
 
         monkeypatch.setattr(GuardedOpener, "__call__", refused)
+
+
+_RUNTIMES = frozenset({"docker", "podman"})
+
+
+@pytest.fixture(autouse=True)
+def _no_container_runtime(monkeypatch: pytest.MonkeyPatch) -> None:
+    """No test may run a real container runtime (ADR-0102): unless the opt-in
+    `VIBEY_TEST_SEARXNG_CONTAINER=1` is set, vibey finds no runtime in its trusted folders, nothing
+    listens on SearXNG's port, and any exec or subprocess of `docker` or `podman` fails loudly
+    instead of running. A test that drives the lookup or the probe injects its own folders or
+    seam."""
+    if os.environ.get("VIBEY_TEST_SEARXNG_CONTAINER") == "1":
+        return
+    import subprocess
+
+    from vibey.infrastructure.searxng.container_runtime import ContainerRuntime
+    from vibey.infrastructure.searxng.searxng_provisioner import SearxngProvisioner
+
+    monkeypatch.setattr(ContainerRuntime, "_lookup", lambda self: None)
+    monkeypatch.setattr(SearxngProvisioner, "_connects", staticmethod(lambda port: False))
+
+    def refuse(program: object) -> None:
+        if Path(str(program)).name in _RUNTIMES:
+            raise AssertionError(f"a test tried to run a real container runtime: {program}")
+
+    real_execve = os.execve
+
+    def guarded_execve(path: Any, argv: Any, env: Any) -> None:
+        refuse(path)
+        real_execve(path, argv, env)
+
+    monkeypatch.setattr(os, "execve", guarded_execve)
+    real_child = subprocess.Popen._execute_child  # type: ignore[attr-defined]
+
+    def guarded_child(self: Any, args: Any, executable: Any, *rest: Any, **kw: Any) -> Any:
+        first = args if isinstance(args, (str, bytes, os.PathLike)) else next(iter(args), "")
+        refuse(executable or first)
+        return real_child(self, args, executable, *rest, **kw)
+
+    monkeypatch.setattr(subprocess.Popen, "_execute_child", guarded_child)
 
 
 def pytest_unconfigure(config: pytest.Config) -> None:

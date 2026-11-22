@@ -17,6 +17,8 @@ from vibey.infrastructure.searxng.searxng_files import SearxngFiles
 from vibey.infrastructure.searxng.searxng_provisioner import SearxngProvisioner
 
 RUNTIME = "/opt/homebrew/bin/podman"
+_REAL_CONNECTS = SearxngProvisioner.__dict__["_connects"]
+"""Read at import, before the suite's guard stands in for it."""
 
 
 class Runtime:
@@ -28,23 +30,35 @@ class Runtime:
         self.calls: list[tuple[str, ...]] = []
         self.removed = RuntimeOutcome(ok=True)
         self.present = True
+        self.refuse = ""
 
     def find(self) -> str | None:
         return self.found
 
+    def vet(self, runtime: str) -> str:
+        return self.refuse
+
+    def _checked(self, runtime: str) -> None:
+        if self.refuse:
+            raise ValueError(self.refuse)
+
     def image_present(self, runtime: str, image: str) -> bool:
+        self._checked(runtime)
         self.calls.append(("inspect", runtime, image))
         return self.present
 
     def pull(self, runtime: str, image: str) -> RuntimeOutcome:
+        self._checked(runtime)
         self.calls.append(("pull", runtime, image))
         return self.pulled
 
-    def remove_container(self, runtime: str) -> RuntimeOutcome:
-        self.calls.append(("rm", runtime))
+    def remove_container(self, runtime: str, uid: int) -> RuntimeOutcome:
+        self._checked(runtime)
+        self.calls.append(("rm", runtime, str(uid)))
         return self.removed
 
     def remove_image(self, runtime: str, image: str) -> RuntimeOutcome:
+        self._checked(runtime)
         self.calls.append(("rmi", runtime, image))
         return self.removed
 
@@ -69,13 +83,17 @@ def _provisioner(
     *,
     environ: dict[str, str] | None = None,
     health: Health | None = None,
+    listening: bool = False,
+    label: str = "dev.vibey.searxng",
 ) -> SearxngProvisioner:
     return SearxngProvisioner(
         runtime or Runtime(),
         SearxngFiles(tmp_path / "searxng"),
-        label=lambda: "dev.vibey.searxng",
+        label=lambda: label,
         environ=environ or {},
         health=health or Health(),
+        listening=lambda port: listening,
+        uid=lambda: 501,
     )
 
 
@@ -175,7 +193,7 @@ def test_remove_container_uses_the_recorded_runtime(tmp_path: Path) -> None:
     runtime = Runtime()
     provisioner = _provisioner(tmp_path, runtime)
     assert provisioner.remove_container() == ""
-    assert runtime.calls == [("rm", RUNTIME)]
+    assert runtime.calls == [("rm", RUNTIME, "501")]
     runtime.removed = RuntimeOutcome(ok=False, detail="daemon down")
     assert provisioner.remove_container() == "daemon down"
     assert _provisioner(tmp_path, Runtime(found=None)).remove_container() == ""
@@ -213,3 +231,105 @@ def test_purge_with_the_image_removed_keeps_nothing(tmp_path: Path) -> None:
     provisioner = _provisioner(tmp_path)
     provisioner.prepare()
     assert provisioner.purge() == [] and provisioner.record() is None
+
+
+# -- fix round 1 ----------------------------------------------------------------------------------
+
+
+def test_a_record_naming_another_label_is_not_believed(tmp_path: Path) -> None:
+    _provisioner(tmp_path, label="dev.vibey.hub").prepare()
+    provisioner = _provisioner(tmp_path)
+    assert provisioner.record() is None and not provisioner.provisioned()
+    assert "label dev.vibey.hub" in provisioner.refusal()
+
+
+def test_the_refusal_names_a_runtime_vibey_will_not_run(tmp_path: Path) -> None:
+    runtime = Runtime()
+    provisioner = _provisioner(tmp_path, runtime)
+    assert provisioner.refusal() == ""  # nothing installed
+    provisioner.prepare()
+    assert provisioner.refusal() == ""
+    runtime.refuse = "/opt/homebrew/bin/podman \x1b[2Jis writable by anyone"
+    assert provisioner.refusal() == "/opt/homebrew/bin/podman is writable by anyone"
+    assert not provisioner.image_present()
+    assert "writable" in provisioner.remove_container()
+    assert provisioner.purge() == [f"the image was kept: {runtime.refuse}"]
+    assert ("rm", RUNTIME, "501") not in runtime.calls
+
+
+def test_a_refused_runtime_pulls_nothing(tmp_path: Path) -> None:
+    runtime = Runtime()
+    runtime.refuse = "is not there"
+    prepared = _provisioner(tmp_path, runtime).prepare()
+    assert not prepared.ok and prepared.detail == "is not there"
+
+
+@pytest.mark.parametrize("name", ["DOCKER_HOST", "CONTAINER_HOST"])
+@pytest.mark.parametrize("value", ["ssh://user@elsewhere", "tcp://10.0.0.5:2376"])
+def test_a_remote_daemon_installs_nothing(tmp_path: Path, name: str, value: str) -> None:
+    runtime = Runtime()
+    prepared = _provisioner(tmp_path, runtime, environ={name: value}).prepare()
+    assert not prepared.ok and f"unset {name}" in prepared.detail and runtime.calls == []
+
+
+def test_a_local_daemon_setting_is_said_to_be_ignored(tmp_path: Path) -> None:
+    environ = {"DOCKER_HOST": "unix:///Users/x/.colima/docker.sock", "DOCKER_CONTEXT": "colima"}
+    prepared = _provisioner(tmp_path, environ=environ).prepare()
+    assert prepared.ok and "DOCKER_HOST, DOCKER_CONTEXT are ignored" in prepared.detail
+    one = _provisioner(tmp_path, environ={"DOCKER_CONFIG": "/x"}).prepare()
+    assert "DOCKER_CONFIG is ignored" in one.detail
+
+
+def test_a_free_port_is_not_busy(tmp_path: Path) -> None:
+    health = Health()
+    assert _provisioner(tmp_path, health=health).busy() == ""
+    assert health.asked == []  # nothing listens: nothing asked
+
+
+def test_a_plain_listener_or_another_searxng_makes_the_port_busy(tmp_path: Path) -> None:
+    said = _provisioner(tmp_path, listening=True).busy()
+    assert "already listens on 127.0.0.1:28180" in said and "VIBEY_SEARXNG_URL" in said
+    stranger = Health(answering={("http://127.0.0.1:28180", None)})
+    assert "not vibey's" in _provisioner(tmp_path, listening=True, health=stranger).busy()
+
+
+def test_vibeys_own_searxng_on_the_port_is_not_busy(tmp_path: Path) -> None:
+    health = Health()
+    provisioner = _provisioner(tmp_path, listening=True, health=health)
+    provisioner.prepare()
+    record = provisioner.record()
+    assert record is not None
+    health.answering.add(("http://127.0.0.1:28180", record.marker))
+    assert provisioner.busy() == ""
+
+
+def test_prepare_takes_away_a_stop_and_disable_puts_it_back(tmp_path: Path) -> None:
+    provisioner = _provisioner(tmp_path)
+    provisioner.disable()
+    assert provisioner.disabled() and provisioner.offer().disabled
+    provisioner.prepare()
+    assert not provisioner.disabled()
+
+
+def test_the_default_listening_probe_connects_to_loopback(monkeypatch: pytest.MonkeyPatch) -> None:
+    import socket
+
+    monkeypatch.setattr(SearxngProvisioner, "_connects", _REAL_CONNECTS)
+    asked: list[tuple[str, int]] = []
+
+    class Conn:
+        def __enter__(self) -> Conn:
+            return self
+
+        def __exit__(self, *args: object) -> None:
+            return None
+
+    def connect(address: tuple[str, int], timeout: float) -> Conn:
+        asked.append(address)
+        if address[1] == 1:
+            raise ConnectionRefusedError
+        return Conn()
+
+    monkeypatch.setattr(socket, "create_connection", connect)
+    assert SearxngProvisioner._connects(28180) and not SearxngProvisioner._connects(1)
+    assert asked == [("127.0.0.1", 28180), ("127.0.0.1", 1)]

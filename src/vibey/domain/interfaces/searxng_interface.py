@@ -29,6 +29,14 @@ class SearxngPlanInterface(Protocol):
         """A provision read back from `provision.json`, checked in full."""
         ...
 
+    def container_name(self, uid: int) -> str:
+        """The person's own container's name, `vibey-searxng-<uid>`."""
+        ...
+
+    def marker_in(self, settings_text: str) -> str | None:
+        """The marker a `settings.yml` vibey wrote names in its `instance_name`; None when none."""
+        ...
+
     def new_marker(self, hex32: str) -> str:
         """The identity marker made from 32 random lower-case hex digits."""
         ...
@@ -51,8 +59,13 @@ class SearxngPlanInterface(Protocol):
         """Ask whether the image is present (exit 0 when it is); downloads nothing."""
         ...
 
-    def remove_argv(self, runtime: str) -> tuple[str, ...]:
-        """Remove vibey's container, running or not."""
+    def labels_argv(self, runtime: str, uid: int) -> tuple[str, ...]:
+        """Ask the labels of the container of `uid`'s name (exit non-zero when there is none)."""
+        ...
+
+    def remove_argv(self, runtime: str, uid: int) -> tuple[str, ...]:
+        """Remove the container of `uid`'s name, running or not (only after its labels say it
+        is vibey's own for that uid)."""
         ...
 
     def remove_image_argv(self, runtime: str, image: str) -> tuple[str, ...]:

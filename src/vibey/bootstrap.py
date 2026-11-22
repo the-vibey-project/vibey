@@ -1595,9 +1595,23 @@ def acp_machine(
     )
 
 
+def searxng_stopped(
+    units: ServiceUnitsInterface | None, searxng: SearxngProvisionerInterface | None, label: str
+) -> bool:
+    """Whether `label` is vibey's SearXNG unit and the person stopped it for good (`vibey acp
+    unload`): the keep-alive then lets go of it (ADR-0102)."""
+    if units is None or searxng is None:
+        return False
+    try:
+        mine = units.label(SEARXNG)
+    except ValueError:
+        return False
+    return label == mine and searxng.disabled()
+
+
 def searxng_runtime(settings: AcpSettings) -> ContainerRuntime:
-    """podman, else docker, driven through the ACP process-group runner with the variables a
-    runtime finds its daemon by: a pull bounded by `[acp] install_timeout_seconds`, every other
+    """podman, else docker from vibey's trusted folders, driven through the ACP process-group
+    runner with `CONTAINER_VARIABLES` only (never a `DOCKER_HOST`): a pull bounded by `[acp] install_timeout_seconds`, every other
     command by `bootstrap_timeout_seconds` (ADR-0102)."""
     return ContainerRuntime(
         runner=AcpCommandRunner(
@@ -1610,9 +1624,16 @@ def searxng_runtime(settings: AcpSettings) -> ContainerRuntime:
 
 
 def searxng_serve(settings: AcpSettings, *, user_config: Path) -> SearxngServeInterface:
-    """What the SearXNG unit runs: the person's record and settings, the runtime it names
-    (ADR-0102). Building it touches nothing."""
-    return SearxngServe(SearxngFiles.personal(user_config.parent), searxng_runtime(settings))
+    """What the SearXNG unit runs: the person's record and settings, the runtime vibey finds,
+    and the label `[supervisor] label_prefix` gives it in their own `vibey.toml` (ADR-0102).
+    Building it touches nothing."""
+
+    def label() -> str:
+        return f"{SupervisorSettingsLoader().load(user_config).label_prefix}.{SEARXNG}"
+
+    return SearxngServe(
+        SearxngFiles.personal(user_config.parent), searxng_runtime(settings), label=label
+    )
 
 
 def build_acp_agent(
@@ -1688,7 +1709,16 @@ def build_acp_agent(
         held = lock if lock is not None else BootstrapLock(acp_state_dir(acp_user_config()))
         keep_alive: AcpKeepAliveInterface | None = None
         if services and loader is not None:
-            keep_alive = AcpKeepAlive(loader, hub, held, channel, mapper, settings, units=units)
+            keep_alive = AcpKeepAlive(
+                loader,
+                hub,
+                held,
+                channel,
+                mapper,
+                settings,
+                units=units,
+                stopped=functools.partial(searxng_stopped, units, searxng),
+            )
             router.attach(keep_alive)
         searxng_step = (
             AcpSearxngStep(

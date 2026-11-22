@@ -9,6 +9,8 @@ the hub (`healthy`) has no side effect, and when a hub read finds no hub while t
 owns the hub's unit, the gateway asks for a probe (`request_probe`) instead of restarting
 anything itself.
 
+- **Never what the person stopped for good.** A label stopped since it was handed over (`vibey
+  acp unload`'s mark on vibey's SearXNG, asked through `stopped`) is let go, never restarted.
 - **Only vibey's own units.** It restarts only the labels it was told it manages: the units
   vibey loaded, or found loaded as it renders them. An edited unit, a label it did not load, or
   a hub running outside the service manager is never restarted, and that hub is never stopped:
@@ -80,6 +82,7 @@ class AcpKeepAlive:
         settings: AcpSettings,
         *,
         units: ServiceUnitsInterface | None = None,
+        stopped: Callable[[str], bool] | None = None,
         clock: Callable[[], float] = time.monotonic,
         sleep: Sleep = asyncio.sleep,
     ) -> None:
@@ -90,6 +93,8 @@ class AcpKeepAlive:
         self._mapper = mapper
         self._settings = settings
         self._units = units
+        self._stopped_for_good = stopped
+        """Whether the person stopped a label for good (`vibey acp unload`): never revived."""
         self._clock = clock
         self._sleep = sleep
         self._managed: dict[str, str] = {}
@@ -247,6 +252,12 @@ class AcpKeepAlive:
                 self._unsteady.discard(label)
 
     async def _revive(self, label: str) -> None:
+        stopped = self._stopped_for_good
+        if stopped is not None and await asyncio.to_thread(stopped, label):
+            # Stopped for good since it was handed over: let go of it, never restart it.
+            self._managed.pop(label, None)
+            self._added.pop(label, None)
+            return
         now = self._clock()
         if label in self._deferred:
             await self._take_over(label, now)

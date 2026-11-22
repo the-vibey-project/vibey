@@ -5,6 +5,7 @@ faked. Module-level test functions (ADR-0016)."""
 
 from __future__ import annotations
 
+import dataclasses
 from collections.abc import Iterable
 from pathlib import Path
 from typing import Any
@@ -48,10 +49,13 @@ class Provisioner:
         self.removed = ""
         self.purged: list[str] = []
         self.calls: list[str] = []
+        self.refused = ""
+        self.stopped = False
+        self.taken = ""
 
     def offer(self) -> SearxngOffer:
         self.calls.append("offer")
-        return self.found
+        return dataclasses.replace(self.found, disabled=self.stopped)
 
     def provisioned(self) -> bool:
         return self.kept is not None
@@ -76,6 +80,20 @@ class Provisioner:
     def remove_container(self) -> str:
         self.calls.append("rm")
         return self.removed
+
+    def refusal(self) -> str:
+        return self.refused
+
+    def disabled(self) -> bool:
+        return self.stopped
+
+    def disable(self) -> None:
+        self.calls.append("disable")
+        self.stopped = True
+
+    def busy(self) -> str:
+        self.calls.append("busy")
+        return self.taken
 
     def purge(self) -> list[str]:
         self.calls.append("purge")
@@ -163,6 +181,23 @@ class Settings:
         return AcpSettings(bootstrap_timeout_seconds=3, live_poll_seconds=1.0)
 
 
+class Lock:
+    def __init__(self) -> None:
+        self.free = True
+        self.error: OSError | None = None
+        self.held = 0
+        self.released = 0
+
+    def acquire(self) -> bool:
+        if self.error is not None:
+            raise self.error
+        self.held += self.free
+        return self.free
+
+    def release(self) -> None:
+        self.released += 1
+
+
 class Clock:
     def __init__(self) -> None:
         self.now = 0.0
@@ -193,13 +228,14 @@ class World:
         self.asked: list[str] = []
         self.clock = Clock()
         self.served: list[Path] = []
+        self.lock = Lock()
 
         def machine(settings: AcpSettings, *, user_config: Path) -> AcpMachine:
             assert user_config == USER
             return AcpMachine(
                 connector=None,  # type: ignore[arg-type]
                 postgres=None,  # type: ignore[arg-type]
-                lock=None,  # type: ignore[arg-type]
+                lock=self.lock,  # type: ignore[arg-type]
                 units=self.units if services else None,  # type: ignore[arg-type]
                 loader=self.loader,  # type: ignore[arg-type]
                 searxng=self.provisioner,  # type: ignore[arg-type]
@@ -245,7 +281,8 @@ def test_install_asks_then_pulls_writes_loads_and_waits() -> None:
 
     (question,) = world.asked
     assert "searxng/searxng@sha256:fc1d81d7e9d0" in question and "127.0.0.1:28180" in question
-    assert world.provisioner.calls[:2] == ["offer", "prepare"]
+    assert world.provisioner.calls[:3] == ["offer", "busy", "prepare"]
+    assert (world.lock.held, world.lock.released) == (1, 1)
     assert world.units.writes == [(("searxng",), "always")]
     assert world.loader.calls == [("load", LABEL)]
     assert "launchctl bootout gui/501/dev.vibey.searxng" in world.text
@@ -253,10 +290,13 @@ def test_install_asks_then_pulls_writes_loads_and_waits() -> None:
     assert world.settings.read == [USER]  # the person's own file, never the folder it runs in
 
 
-def test_yes_answers_in_advance_and_a_running_unit_is_restarted() -> None:
+def test_yes_answers_in_advance_still_prints_the_question_and_restarts_a_running_unit() -> None:
     world = World(loader=Loader(running=True))
     assert world.command.install(yes=True) == 0
     assert world.asked == [] and world.loader.calls == [("restart", LABEL)]
+    question = world.said[0]
+    assert question.startswith("Download and run SearXNG (searxng/searxng@sha256:")
+    assert "127.0.0.1:28180" in question and question.endswith("[--yes: yes]")
 
 
 def test_declining_installs_nothing() -> None:
@@ -271,7 +311,6 @@ def test_declining_installs_nothing() -> None:
     [
         ({"own_url": "VIBEY_SEARXNG_URL"}, "names your own SearXNG"),
         ({"runtime": None}, "found neither podman nor docker"),
-        ({"answering": True}, "already answers"),
     ],
 )
 def test_install_refuses_what_it_should_not_install_over(found: dict[str, Any], said: str) -> None:
@@ -348,15 +387,22 @@ def test_status_before_any_install() -> None:
     assert "answering   no" in world.said
 
 
-def test_status_says_an_older_image_and_an_unreachable_service_manager() -> None:
+def test_status_says_a_refusal_a_stop_and_an_unreachable_service_manager() -> None:
     provisioner = Provisioner(provisioned=True)
-    provisioner.kept = SearxngProvision(
-        "docker.io/searxng/searxng@sha256:" + "0" * 64, 28180, RECORD.marker, LABEL, RUNTIME
-    )
+    provisioner.refused = "the image is not the one this vibey pins"
+    provisioner.stopped = True
     world = World(provisioner, loader=Loader(available=False))
     world.command.status()
-    assert any(line.startswith("update") for line in world.said)
+    assert "refused     the image is not the one this vibey pins" in world.said
+    assert any(line.startswith("stopped     for good") for line in world.said)
     assert "unit        unknown: no service manager to ask" in world.said
+
+
+def test_status_with_an_unreadable_supervisor_table_says_no_unit_line() -> None:
+    world = World(Provisioner(provisioned=True))
+    world.units.label_error = True
+    world.command.status()
+    assert not any(line.startswith("unit") for line in world.said)
 
 
 def test_uninstall_unloads_removes_and_keeps_the_files() -> None:
@@ -437,7 +483,7 @@ def test_doctor_warns_when_vibey_installed_none() -> None:
     assert line.startswith("WARN searxng") and "vibey searxng install" in line
     assert "podman found" in line
     none = World(Provisioner(runtime=None)).command.doctor_line()
-    assert "no podman or docker on your PATH" in none
+    assert "no podman or docker in vibey's trusted folders" in none
 
 
 def test_doctor_says_unknown_for_the_persons_own() -> None:
@@ -450,7 +496,7 @@ def test_doctor_passes_vibeys_answering_searxng() -> None:
     assert line.startswith("PASS searxng") and "127.0.0.1:28180" in line
 
 
-@pytest.mark.parametrize("trouble", ["image", "unit", "answering", "older"])
+@pytest.mark.parametrize("trouble", ["image", "unit", "answering"])
 def test_doctor_warns_with_the_first_thing_wrong(trouble: str) -> None:
     provisioner = Provisioner(provisioned=True)
     loader = Loader(running=trouble != "unit")
@@ -458,17 +504,12 @@ def test_doctor_warns_with_the_first_thing_wrong(trouble: str) -> None:
         provisioner.present = False
     if trouble == "answering":
         provisioner.answers = False
-    if trouble == "older":
-        provisioner.kept = SearxngProvision(
-            "docker.io/searxng/searxng@sha256:" + "0" * 64, 28180, RECORD.marker, LABEL, RUNTIME
-        )
     line = World(provisioner, loader=loader).command.doctor_line()
     assert line.startswith("WARN searxng")
     expected = {
         "image": "image is not here",
         "unit": "is not loaded",
         "answering": "does not answer",
-        "older": "newer image",
     }
     assert expected[trouble] in line
 
@@ -542,3 +583,58 @@ def test_doctors_section_asks_the_searxng_command_for_its_line(
     lines, ok = web_search_doctor.WEB_SEARCH_DOCTOR.doctor_lines()
     assert ok and lines[-1] == "WARN searxng  stand-in"
     assert [line.split()[1] for line in lines] == ["web-search", "web-search-backup", "searxng"]
+
+
+# -- fix round 1 ----------------------------------------------------------------------------------
+
+
+def test_an_occupied_port_installs_nothing() -> None:
+    world = World()
+    world.provisioner.taken = "something already listens on 127.0.0.1:28180 (\x1b[2Ja dev server)"
+    assert world.command.install(yes=True) == 1
+    assert "prepare" not in world.provisioner.calls and "Nothing was installed" in world.text
+
+
+@pytest.mark.parametrize("command", ["install", "uninstall"])
+def test_install_and_uninstall_wait_for_no_one_holding_the_setup_lock(command: str) -> None:
+    world = World(Provisioner(provisioned=True))
+    world.lock.free = False
+    run = world.command.install if command == "install" else world.command.uninstall
+    code = run(yes=True) if command == "install" else run(purge=False)  # type: ignore[call-arg]
+    assert code == 1 and "another vibey" in world.text
+    assert world.provisioner.calls == [] and world.loader.calls == []
+    world = World()
+    world.lock.error = OSError("read-only file system")
+    assert world.command.uninstall(purge=False) == 1
+    assert "setup lock could not be taken" in world.text
+
+
+def test_uninstall_never_takes_the_label_from_the_record() -> None:
+    """A record naming the hub's label cannot make uninstall unload or remove the hub."""
+    provisioner = Provisioner(provisioned=True)
+    provisioner.kept = SearxngProvision(
+        RECORD.image, RECORD.port, RECORD.marker, "dev.vibey.hub", RECORD.runtime
+    )
+    world = World(provisioner)
+    world.command.uninstall(purge=False)
+    assert ("unload", "dev.vibey.hub") not in world.loader.calls
+    assert world.loader.calls[0] == ("unload", LABEL)
+    assert world.units.removed == [LABEL]
+
+
+def test_uninstall_stops_it_for_good() -> None:
+    world = World(Provisioner(provisioned=True))
+    assert world.command.uninstall(purge=True) == 0
+    assert world.provisioner.calls[-1] == "disable" and world.provisioner.stopped
+    assert "stopped for good" in world.text
+
+
+def test_doctor_says_a_refusal_first_and_a_stop() -> None:
+    provisioner = Provisioner(provisioned=True)
+    provisioner.refused = "/Users/x/project/bin/docker is not podman or docker in a trusted folder"
+    line = World(provisioner).command.doctor_line()
+    assert line.startswith("WARN searxng") and "trusted folder" in line
+    stopped = Provisioner()
+    stopped.stopped = True
+    line = World(stopped).command.doctor_line()
+    assert line.startswith("UNKNOWN searxng") and "stopped for good" in line

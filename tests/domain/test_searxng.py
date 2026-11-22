@@ -10,7 +10,6 @@ import pytest
 
 from vibey.domain.interfaces.searxng_interface import SearxngPlanInterface
 from vibey.domain.searxng import (
-    CONTAINER_NAME,
     IMAGE_REF,
     MARKER,
     SEARXNG_IMAGE,
@@ -21,7 +20,9 @@ from vibey.domain.supervisor import SupervisorPaths, SupervisorPlanner, Supervis
 
 PLAN = SearxngPlan()
 DIGEST = "sha256:" + "ab" * 32
-IMAGE = f"docker.io/searxng/searxng@{DIGEST}"
+IMAGE = SEARXNG_IMAGE
+OTHER = f"docker.io/searxng/searxng@{DIGEST}"
+SHORT = SEARXNG_IMAGE.rpartition(":")[2][:12]
 MARK = "vibey-" + "0f" * 16
 SECRET = "5e" * 32
 PROVISION = SearxngProvision(
@@ -42,6 +43,7 @@ def test_the_pinned_image_is_searxng_by_digest_and_never_a_tag() -> None:
 @pytest.mark.parametrize(
     "image",
     [
+        OTHER,
         "docker.io/searxng/searxng:latest",
         "searxng/searxng@" + DIGEST,
         "docker.io/searxng/searxng@sha256:" + "AB" * 32,
@@ -86,6 +88,9 @@ def test_the_record_round_trips() -> None:
         {**PLAN.record(PROVISION), "runtime": "podman"},
         {**PLAN.record(PROVISION), "runtime": "/bin/sh"},
         {**PLAN.record(PROVISION), "runtime": "/tmp/x/podman\n"},
+        {**PLAN.record(PROVISION), "runtime": "/Users/x/project/bin/docker"},
+        {**PLAN.record(PROVISION), "runtime": "/usr/bin/../../tmp/docker"},
+        {**PLAN.record(PROVISION), "image": OTHER},
         {**PLAN.record(PROVISION), "image": "docker.io/searxng/searxng:latest"},
     ],
 )
@@ -137,7 +142,11 @@ GOLDEN_PODMAN = (
     "run",
     "--rm",
     "--name",
-    "vibey-searxng",
+    "vibey-searxng-501",
+    "--label",
+    "vibey.searxng.owner=501",
+    "--label",
+    f"vibey.searxng.image={SHORT}",
     "--pull=never",
     "--read-only",
     "--cap-drop",
@@ -178,7 +187,12 @@ def test_docker_gets_the_same_flags_without_podmans_user_namespace() -> None:
         for part in GOLDEN_PODMAN
         if part != "--userns=keep-id"
     )
-    assert argv == tuple("1000:1000" if part == "501:20" else part for part in expected)
+    swapped = {
+        "501:20": "1000:1000",
+        "vibey-searxng-501": "vibey-searxng-1000",
+        "vibey.searxng.owner=501": "vibey.searxng.owner=1000",
+    }
+    assert argv == tuple(swapped.get(part, part) for part in expected)
 
 
 def test_the_container_never_gets_the_host_or_its_secrets() -> None:
@@ -218,7 +232,22 @@ def test_the_runtime_commands_are_fixed() -> None:
         "{{.Id}}",
         IMAGE,
     )
-    assert PLAN.remove_argv(PROVISION.runtime) == ("/usr/bin/podman", "rm", "-f", CONTAINER_NAME)
+    assert PLAN.remove_argv(PROVISION.runtime, 501) == (
+        "/usr/bin/podman",
+        "rm",
+        "-f",
+        "vibey-searxng-501",
+    )
+    assert PLAN.labels_argv(PROVISION.runtime, 501) == (
+        "/usr/bin/podman",
+        "container",
+        "inspect",
+        "--format",
+        "{{json .Config.Labels}}",
+        "vibey-searxng-501",
+    )
+    with pytest.raises(ValueError, match="never root"):
+        PLAN.remove_argv(PROVISION.runtime, 0)
     assert PLAN.remove_image_argv(PROVISION.runtime, IMAGE) == ("/usr/bin/podman", "rmi", IMAGE)
     with pytest.raises(ValueError):
         PLAN.pull_argv("/bin/sh", IMAGE)
@@ -227,7 +256,26 @@ def test_the_runtime_commands_are_fixed() -> None:
 
 
 def test_the_short_digest_is_its_first_twelve_hex() -> None:
-    assert PLAN.short(IMAGE) == "ab" * 6
+    assert PLAN.short(IMAGE) == SHORT and len(SHORT) == 12
+
+
+def test_only_the_pinned_image_is_accepted_and_a_plan_can_pin_another() -> None:
+    other = SearxngPlan(pinned=OTHER)
+    assert other.short(OTHER) == "ab" * 6
+    with pytest.raises(ValueError, match="pins"):
+        PLAN.short(OTHER)
+    with pytest.raises(ValueError, match="pinned image"):
+        SearxngPlan(pinned="docker.io/searxng/searxng:latest")
+    with pytest.raises(ValueError, match="prefix"):
+        SearxngPlan(prefix="a b")
+    assert SearxngPlan(prefix="vibey-searxng-test").container_name(7) == "vibey-searxng-test-7"
+
+
+def test_the_marker_is_read_back_from_settings_vibey_wrote() -> None:
+    text = PLAN.settings_text(secret_key=SECRET, marker=MARK)
+    assert PLAN.marker_in(text) == MARK
+    assert PLAN.marker_in(text.replace(MARK, "someone")) is None
+    assert PLAN.marker_in("") is None
 
 
 # --- the unit `vibey acp` loads for it (ADR-0101's planner) ---------------------------------

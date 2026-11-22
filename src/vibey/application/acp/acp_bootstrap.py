@@ -173,6 +173,8 @@ class AcpBootstrap:
         self._hub = hub
         self._keep_alive = keep_alive
         self._searxng = searxng
+        self._searxng_said = False
+        """The SearXNG held back by `[acp] searxng = "never"` was said: once per process."""
         self._sleep = sleep
         self._hub_started = False
         """`vibey hub start` ran once in place of a service manager: never again here."""
@@ -381,8 +383,14 @@ class AcpBootstrap:
         if units is None or loader is None or hub is None or not self._settings.auto_services:
             return True
         names = self._settings.services
-        if self._searxng is not None and await asyncio.to_thread(self._searxng.wanted):
-            names = (*names, SEARXNG)  # vibey installed it before: kept running like the hub
+        if self._searxng is not None:
+            if await asyncio.to_thread(self._searxng.wanted):
+                names = (*names, SEARXNG)  # vibey installed it before: kept running like the hub
+            elif not self._searxng_said:
+                self._searxng_said = True
+                said = await asyncio.to_thread(self._searxng.held_back)
+                if said:
+                    await self._say(session_id, said)
         if not names:
             return True
         await self._notify(

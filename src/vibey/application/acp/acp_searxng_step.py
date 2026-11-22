@@ -5,8 +5,10 @@
 **When it asks.** Only with `[acp] searxng = "ask"` and `auto_services` on (it loads a unit), in a
 session whose mode may run things (never in observe), and only when none of these holds: the
 person's environment names their own SearXNG (`VIBEY_SEARXNG_URL`), a SearXNG already passes the
-identity check, or vibey installed one before (step 3 then keeps its unit running). With no
-container runtime it says once how to get one, and nothing else.
+identity check, vibey installed one before (step 3 then keeps its unit running), or the person
+stopped it for good (`vibey acp unload`, `vibey searxng uninstall`). With no container runtime it
+says once how to get one, and nothing else; with something not vibey's SearXNG already listening
+on the port, it says so and asks nothing (a unit there would only fail at every login).
 
 **What it asks.** `session/request_permission`, titled with the image's digest, the port and what
 it costs: "Install SearXNG" (allow once) or "Not now" (reject once). Only that one option id, in a
@@ -130,7 +132,23 @@ class AcpSearxngStep:
         return self._allowed() and not self._settled
 
     def wanted(self) -> bool:
-        return self._allowed() and self._provisioner.provisioned()
+        return (
+            self._allowed() and self._provisioner.provisioned() and not self._provisioner.disabled()
+        )
+
+    def held_back(self) -> str:
+        if (
+            self._settings.auto_services
+            and self._settings.searxng == "never"
+            and self._provisioner.provisioned()
+            and not self._provisioner.disabled()
+        ):
+            return (
+                'vibey\'s SearXNG is installed, but `[acp] searxng = "never"`, so vibey neither '
+                "loads nor restarts its unit here. The service manager still starts it at login: "
+                "`vibey searxng uninstall` (or `vibey acp unload`) stops it for good."
+            )
+        return ""
 
     async def close(self) -> None:
         running = list(self._late)
@@ -164,6 +182,11 @@ class AcpSearxngStep:
         if found.runtime is None:
             self._settled = True
             await self._say(notify, session_id, NO_RUNTIME)
+            return
+        busy = await asyncio.to_thread(self._provisioner.busy)
+        if busy:
+            self._settled = True  # an occupied port would leave a unit failing at every login
+            await self._say(notify, session_id, f"{self._untrusted(busy)}. {BACKUP}")
             return
         try:
             async with self._step_timeout(self._settings.bootstrap_timeout_seconds):
@@ -214,8 +237,10 @@ class AcpSearxngStep:
             return None
 
     def _nothing_to_ask(self, found: SearxngOffer) -> bool:
-        if found.own_url or found.answering or found.provisioned:
-            self._settled = True  # theirs, already answering, or step 3 keeps vibey's running
+        if found.own_url or found.answering or found.provisioned or found.disabled:
+            # Theirs, already answering, kept running by step 3, or stopped for good by the
+            # person: `vibey searxng install` is the one way back from that.
+            self._settled = True
             return True
         return False
 
@@ -388,9 +413,10 @@ class AcpSearxngStep:
             f"vibey loaded `{self._untrusted(label)}` into "
             f"{self._untrusted(self._loader.domain())}: it runs SearXNG in a container on "
             "127.0.0.1 and starts again when you log in. "
-            f"`{UNLOAD_COMMAND}` stops it for good (and removes the container); by hand, the "
-            f'same is:\n\n{commands}\n\nSet `[acp] searxng = "never"` in your own vibey.toml so '
-            "vibey does not offer it again.",
+            f"`{UNLOAD_COMMAND}` stops it for good (it removes the container and marks it so no "
+            "session loads it again until `vibey searxng install`); by hand, the unit alone is:"
+            f'\n\n{commands}\n\nSet `[acp] searxng = "never"` in your own vibey.toml so vibey '
+            "does not offer it again.",
         )
 
     def _report_late(

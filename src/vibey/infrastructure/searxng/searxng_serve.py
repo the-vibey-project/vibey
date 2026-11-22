@@ -1,17 +1,28 @@
 # Made with ❤️ by [Vibey](https://the-vibey-project.github.io/vibey/), Developed by [Adam Matthew Steinberger](https://vibewithadam.matthewsteinberger.com/) ([@adammatthewsteinberger](https://github.com/adammatthewsteinberger/)).
 """`vibey searxng serve`: what the SearXNG unit runs (ADR-0102).
 
-It reads the person's provision record and checks every value in it (`SearxngPlan.parse`), checks
-the settings file is a regular file, checks the pinned image is already here -- it never pulls:
-nothing downloads when the person logs in -- removes a container a killed run left behind (same
-fixed name), then replaces itself (`execve`) with the runtime's one command line
-(`SearxngPlan.run_argv`). The runtime gets an environment of `CONTAINER_VARIABLES` and a fixed
-PATH, never this process's database URL, tokens or keys. The service manager owns the process
-from then on: stopping the unit stops the runtime, which stops and removes the container (`--rm`).
+Before anything runs it checks, and refuses (said on standard error, the unit's log) when:
 
-A refusal is said on standard error (the unit's log) and returns an exit code: 78 (EX_CONFIG)
-for nothing installed or a record vibey would not have written, 1 for a missing image or a
-runtime that would not remove the old container.
+- the person stopped it for good (`vibey acp unload`, `vibey searxng uninstall`);
+- there is no record, or one vibey would not have written (every value, the image equal to the
+  pinned one), or one whose label is not this SearXNG's (`label`, from the person's own config);
+- `settings.yml` is not a regular file the person owns, closed to everyone else;
+- the recorded runtime fails `ContainerRuntime.vet` (trusted folder, file checks, the one a fresh
+  look finds);
+- the pinned image is not here -- it never pulls: nothing downloads when the person logs in;
+- a container of its name is there that vibey did not start for this user (no owner label).
+
+Then it removes its own container a killed run left behind and replaces itself (`execve`) with
+the runtime's one command line (`SearxngPlan.run_argv`), with an environment of
+`CONTAINER_VARIABLES` and a fixed PATH: never this process's database URL, tokens, keys or a
+`DOCKER_HOST`. The service manager owns the process from then on: stopping the unit stops the
+runtime, which stops and removes the container (`--rm`).
+
+Exit codes: 78 (EX_CONFIG) for every refusal that can only change when the person acts -- the
+unit's throttle (launchd `ThrottleInterval`, systemd's start limit) spaces its restarts, and
+`vibey doctor` and `vibey searxng status` say why -- and 1 for a runtime that would not remove
+the old container (it may answer next time). Nothing raises: a value `run_argv` refuses (running
+as root) is a 78 too.
 
 Declared by `interfaces/searxng_serve_interface.py`.
 """
@@ -32,6 +43,7 @@ from vibey.infrastructure.searxng.interfaces.container_runtime_interface import 
     ContainerRuntimeInterface,
 )
 from vibey.infrastructure.searxng.interfaces.searxng_files_interface import SearxngFilesInterface
+from vibey.infrastructure.web.untrusted_text import UntrustedText
 
 EXIT_CONFIG: Final = 78
 INSTALL_COMMAND: Final = "vibey searxng install"
@@ -47,6 +59,7 @@ class SearxngServe:
         files: SearxngFilesInterface,
         runtime: ContainerRuntimeInterface,
         *,
+        label: Callable[[], str],
         plan: SearxngPlanInterface | None = None,
         execve: Execve = os.execve,
         environ: Mapping[str, str] = os.environ,
@@ -56,6 +69,7 @@ class SearxngServe:
     ) -> None:
         self._files = files
         self._runtime = runtime
+        self._label = label
         self._plan = plan or SearxngPlan()
         self._execve = execve
         self._environ = environ
@@ -65,6 +79,18 @@ class SearxngServe:
 
     def run(self) -> int:
         try:
+            return self._run()
+        except ValueError as exc:
+            return self._refuse(EXIT_CONFIG, UntrustedText.clean(str(exc)))
+
+    def _run(self) -> int:
+        if self._files.disabled():
+            return self._refuse(
+                EXIT_CONFIG,
+                f"it was stopped for good (vibey acp unload, or uninstall); `{INSTALL_COMMAND}` "
+                "starts it again",
+            )
+        try:
             provision = self._files.read()
         except ValueError as exc:
             return self._refuse(EXIT_CONFIG, f"the provision record is not one vibey wrote: {exc}")
@@ -72,27 +98,34 @@ class SearxngServe:
             return self._refuse(
                 EXIT_CONFIG, f"vibey has installed no SearXNG here; `{INSTALL_COMMAND}` does"
             )
+        if provision.label != self._label():
+            return self._refuse(
+                EXIT_CONFIG,
+                f"the record names another unit's label; `{INSTALL_COMMAND}` writes it again",
+            )
         if not self._files.settings_ready():
             return self._refuse(
                 EXIT_CONFIG,
-                f"{self._files.settings_path} is missing or not a file; `{INSTALL_COMMAND}` "
-                "writes it again",
+                f"{self._files.settings_path} is missing, not a file, or not yours alone; "
+                f"`{INSTALL_COMMAND}` writes it again",
             )
         runtime = provision.runtime
-        if not (os.path.isfile(runtime) and os.access(runtime, os.X_OK)):
-            return self._refuse(
-                EXIT_CONFIG,
-                f"{runtime} is gone; install podman or docker again, then `{INSTALL_COMMAND}`",
-            )
+        problem = self._runtime.vet(runtime)
+        if problem:
+            return self._refuse(EXIT_CONFIG, f"{problem}; nothing was run")
         if not self._runtime.image_present(runtime, provision.image):
             return self._refuse(
-                1,
+                EXIT_CONFIG,
                 f"the image {provision.image} is not here, and serve never downloads; "
                 f"`{INSTALL_COMMAND}` does",
             )
-        removed = self._runtime.remove_container(runtime)
+        removed = self._runtime.remove_container(runtime, self._uid())
         if not removed.ok:
-            return self._refuse(1, f"the old container could not be removed: {removed.detail}")
+            foreign = "vibey did not start" in removed.detail
+            return self._refuse(
+                EXIT_CONFIG if foreign else 1,
+                f"the old container could not be removed: {removed.detail}",
+            )
         argv = self._plan.run_argv(
             provision,
             settings_path=str(self._files.settings_path),

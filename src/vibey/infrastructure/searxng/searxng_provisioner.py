@@ -20,6 +20,7 @@ Declared by `application/acp/interfaces/searxng_provisioner_interface.py`.
 from __future__ import annotations
 
 import os
+import socket
 from collections.abc import Callable, Mapping
 from pathlib import PurePath
 from typing import Final
@@ -28,6 +29,7 @@ from vibey.application.acp.dto import SearxngOffer, SearxngPrepared
 from vibey.domain.config import ConfigError
 from vibey.domain.interfaces.searxng_interface import SearxngPlanInterface
 from vibey.domain.searxng import SEARXNG_IMAGE, SearxngPlan, SearxngProvision
+from vibey.infrastructure.searxng.container_runtime import DAEMON_VARIABLES
 from vibey.infrastructure.searxng.interfaces.container_runtime_interface import (
     ContainerRuntimeInterface,
 )
@@ -38,18 +40,24 @@ from vibey.infrastructure.web.search import (
     SearxngBackend,
     WebSearchSettings,
 )
+from vibey.infrastructure.web.untrusted_text import UntrustedText
 
 type Health = Callable[[str, str | None], str | None]
 """Why what answers at a URL is not (the expected) SearXNG, or None when it is."""
+type Listening = Callable[[int], bool]
+"""Whether anything accepts a connection on 127.0.0.1 at a port."""
 
 OWN_URL_NAMES: Final = (SEARXNG_URL_ENV, "WEBSEARCH_SEARXNG_URL")
 """The variables by which the person says they run their own SearXNG."""
 PROBE_SECONDS: Final = 5.0
 """One identity check's bound: the step polls it, so each poll is short."""
+REMOTE_DAEMON: Final = ("DOCKER_HOST", "CONTAINER_HOST")
+"""Variables that may name a daemon on another machine: install refuses one that is not a local
+socket, since the unit at login never has them and would talk to another daemon."""
 
 
 class SearxngProvisioner:
-    """Declared by `SearxngProvisionerInterface`. `health` is the identity-check seam."""
+    """Declared by `SearxngProvisionerInterface`. `health`, `listening` and `uid` are seams."""
 
     def __init__(
         self,
@@ -59,18 +67,22 @@ class SearxngProvisioner:
         label: Callable[[], str],
         environ: Mapping[str, str] = os.environ,
         health: Health | None = None,
+        listening: Listening | None = None,
         plan: SearxngPlanInterface | None = None,
         image: str = SEARXNG_IMAGE,
         port: int = DEFAULT_SEARXNG_PORT,
+        uid: Callable[[], int] = os.getuid,
     ) -> None:
         self._runtime = runtime
         self._files = files
         self._label = label
         self._environ = environ
         self._health: Health = health or self._identity
+        self._listening: Listening = listening or self._connects
         self._plan = plan or SearxngPlan()
         self._image = image
         self._port = port
+        self._uid = uid
 
     def offer(self) -> SearxngOffer:
         own = next((name for name in OWN_URL_NAMES if self._environ.get(name, "").strip()), None)
@@ -92,6 +104,7 @@ class SearxngProvisioner:
             provisioned=record is not None,
             short=self._plan.short(self._image),
             port=self._port,
+            disabled=self._files.disabled(),
         )
 
     def provisioned(self) -> bool:
@@ -100,16 +113,63 @@ class SearxngProvisioner:
     def record(self) -> SearxngProvision | None:
         """The person's record, or None when there is none vibey can believe."""
         try:
-            return self._files.read()
+            return self._believed()
         except ValueError:
             return None
 
+    def refusal(self) -> str:
+        try:
+            record = self._believed()
+        except ValueError as exc:
+            return UntrustedText.clean(str(exc))
+        if record is None:
+            return ""
+        return UntrustedText.clean(self._runtime.vet(record.runtime))
+
+    def _believed(self) -> SearxngProvision | None:
+        """The record, checked in full: the label is never taken from it, only compared."""
+        record = self._files.read()
+        if record is not None and record.label != self._label():
+            raise ValueError(
+                f"its label {record.label} is not this SearXNG's ({self._label()}), so vibey "
+                "uses nothing in it; `vibey searxng install` writes it again"
+            )
+        return record
+
+    def disabled(self) -> bool:
+        return self._files.disabled()
+
+    def disable(self) -> None:
+        self._files.disable()
+
+    def busy(self) -> str:
+        if not self._listening(self._port):
+            return ""
+        record = self.record()
+        marker = record.marker if record is not None else None
+        why = self._health(f"http://127.0.0.1:{self._port}", marker)
+        if why is None and marker is not None:
+            return ""  # vibey's own, answering
+        said = UntrustedText.clean(why or "a SearXNG that is not vibey's")
+        return (
+            f"something already listens on 127.0.0.1:{self._port} ({said}), so vibey installs "
+            "no SearXNG there; stop it, or set VIBEY_SEARXNG_URL to the SearXNG you run"
+        )
+
     def prepare(self) -> SearxngPrepared:
+        remote = self._remote_daemon()
+        if remote:
+            return SearxngPrepared(False, remote)
         runtime = self._runtime.find()
         if runtime is None:
-            return SearxngPrepared(False, "vibey found neither podman nor docker on your PATH")
+            return SearxngPrepared(
+                False, "vibey found neither podman nor docker in its trusted folders"
+            )
         name, short = PurePath(runtime).name, self._plan.short(self._image)
-        pulled = self._runtime.pull(runtime, self._image)
+        try:
+            pulled = self._runtime.pull(runtime, self._image)
+        except ValueError as exc:
+            return SearxngPrepared(False, str(exc))
         if not pulled.ok:
             return SearxngPrepared(
                 False,
@@ -122,11 +182,29 @@ class SearxngProvisioner:
             )
         except (OSError, ValueError) as exc:
             return SearxngPrepared(False, f"its settings could not be written: {exc}")
+        self._files.enable()
+        ignored = [key for key in DAEMON_VARIABLES if self._environ.get(key, "").strip()]
+        note = (
+            f" {', '.join(ignored)} {'is' if len(ignored) == 1 else 'are'} ignored: vibey and its "
+            "unit use the runtime's own default connection."
+            if ignored
+            else ""
+        )
         return SearxngPrepared(
             True,
             f"Downloaded searxng/searxng@sha256:{short} with {name}, and wrote its settings in "
-            f"{self._files.folder}.",
+            f"{self._files.folder}.{note}",
         )
+
+    def _remote_daemon(self) -> str:
+        for key in REMOTE_DAEMON:
+            value = self._environ.get(key, "").strip()
+            if value and not value.startswith("unix://"):
+                return (
+                    f"{key} names a daemon that is not a local socket; vibey runs SearXNG only on "
+                    f"this computer's own runtime, so unset {key} to install it"
+                )
+        return ""
 
     def answering(self) -> bool:
         record = self.record()
@@ -137,14 +215,22 @@ class SearxngProvisioner:
     def image_present(self) -> bool:
         """Whether the image vibey's record names is here (asks the runtime; downloads nothing)."""
         record = self.record()
-        return record is not None and self._runtime.image_present(record.runtime, record.image)
+        if record is None:
+            return False
+        try:
+            return self._runtime.image_present(record.runtime, record.image)
+        except ValueError:
+            return False  # a runtime vibey will not run: `refusal` says why
 
     def remove_container(self) -> str:
         record = self.record()
         runtime = record.runtime if record is not None else self._runtime.find()
         if runtime is None:
             return ""  # no runtime: no container of vibey's can be running
-        removed = self._runtime.remove_container(runtime)
+        try:
+            removed = self._runtime.remove_container(runtime, self._uid())
+        except ValueError as exc:
+            return str(exc)
         return "" if removed.ok else removed.detail
 
     def purge(self) -> list[str]:
@@ -152,12 +238,24 @@ class SearxngProvisioner:
         problems: list[str] = []
         record = self.record()
         if record is not None:
-            removed = self._runtime.remove_image(record.runtime, record.image)
-            if not removed.ok:
-                problems.append(f"the image was kept: {removed.detail}")
+            try:
+                removed = self._runtime.remove_image(record.runtime, record.image)
+            except ValueError as exc:
+                problems.append(f"the image was kept: {exc}")
+            else:
+                if not removed.ok:
+                    problems.append(f"the image was kept: {removed.detail}")
         self._files.purge()
         return problems
 
     @staticmethod
     def _identity(url: str, marker: str | None) -> str | None:
         return SearxngBackend(url, timeout_seconds=PROBE_SECONDS, instance=marker).health()
+
+    @staticmethod
+    def _connects(port: int) -> bool:
+        try:
+            with socket.create_connection(("127.0.0.1", port), timeout=1.0):
+                return True
+        except OSError:
+            return False

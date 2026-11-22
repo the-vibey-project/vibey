@@ -14,8 +14,14 @@ project: what search believes is the person's own, and so is what a unit mounts 
   (`vibey-<32 hex>`) are made with `secrets` and kept. A later install keeps the file and its
   marker; only a lost settings file is made again, with a new marker.
 - **`provision.json`** is the record: what was installed, read back with every value checked
-  (`SearxngPlan.parse`), so a changed record cannot widen the container's command line. It is
-  written last, so a record always names settings that exist.
+  (`SearxngPlan.parse`), so a changed record cannot widen the container's command line. The pair
+  is staged first and renamed settings-then-record; a failed second rename removes the first, and
+  a pair whose markers disagree (a crash between the renames) is made again, both files.
+- **Reading** opens without following links and non-blocking (a FIFO can never hang search,
+  doctor or `serve`), and refuses anything but a regular file the person owns, closed to everyone
+  else (0600 or narrower), within a size cap; the folder must be the person's and closed too.
+- **`disabled`** is the mark `vibey acp unload` and `vibey searxng uninstall` leave: stopped for
+  good until `vibey searxng install` removes it.
 
 Declared by `interfaces/searxng_files_interface.py`.
 """
@@ -38,6 +44,10 @@ from vibey.infrastructure.user_config_folder import UserConfigFolder
 FOLDER: Final = "searxng"
 SETTINGS_FILE: Final = "settings.yml"
 RECORD_FILE: Final = "provision.json"
+DISABLED_FILE: Final = "disabled"
+"""Present once `vibey acp unload` or `vibey searxng uninstall` stopped it for good: nothing
+loads, restarts, serves or offers it again until `vibey searxng install` removes the mark."""
+DISABLED: Final = "stopped for good by vibey acp unload or vibey searxng uninstall\n"
 _READ_LIMIT: Final = 1 << 16
 
 
@@ -71,62 +81,94 @@ class SearxngFiles:
         return self._folder / SETTINGS_FILE
 
     def read(self) -> SearxngProvision | None:
-        try:
-            folder = os.open(self._folder, os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW)
-        except FileNotFoundError:
+        folder = self._reading()
+        if folder is None:
             return None
-        except OSError as exc:
-            raise ValueError(f"{self._folder} is a link or not a folder: {exc}") from None
         try:
-            return self._read_at(folder)
+            raw = self._read_file(folder, RECORD_FILE)
         finally:
             os.close(folder)
-
-    def _read_at(self, folder: int) -> SearxngProvision | None:
-        try:
-            fd = os.open(RECORD_FILE, os.O_RDONLY | os.O_NOFOLLOW, dir_fd=folder)
-        except FileNotFoundError:
-            return None
-        except OSError as exc:
-            raise ValueError(
-                f"{RECORD_FILE} cannot be read (a link, or not a file): {exc}"
-            ) from None
-        with os.fdopen(fd, "rb") as handle:
-            raw = handle.read(_READ_LIMIT)
-        try:
-            data = json.loads(raw)
-        except (ValueError, RecursionError):
-            raise ValueError(f"{RECORD_FILE} is not JSON") from None
-        return self._plan.parse(data)
+        return None if raw is None else self._parse(raw)
 
     def settings_ready(self) -> bool:
         try:
-            found = os.lstat(self.settings_path)
-        except OSError:
+            folder = self._reading()
+            if folder is None:
+                return False
+            try:
+                return self._read_file(folder, SETTINGS_FILE) is not None
+            finally:
+                os.close(folder)
+        except ValueError:
             return False
-        return stat.S_ISREG(found.st_mode)
+
+    def disabled(self) -> bool:
+        try:
+            folder = self._reading()
+            if folder is None:
+                return False
+            try:
+                return self._read_file(folder, DISABLED_FILE) is not None
+            finally:
+                os.close(folder)
+        except ValueError:
+            return True  # a mark vibey cannot believe is not a reason to start anything
+
+    def disable(self) -> None:
+        folder = self._open_folder()
+        try:
+            self._publish(folder, [(DISABLED_FILE, self._stage(folder, DISABLED_FILE, DISABLED))])
+        finally:
+            os.close(folder)
+
+    def enable(self) -> None:
+        try:
+            folder = self._reading()
+        except ValueError:
+            folder = self._open_folder()  # narrows the folder, or refuses one not the person's
+        if folder is None:
+            return
+        try:
+            with contextlib.suppress(FileNotFoundError):
+                os.unlink(DISABLED_FILE, dir_fd=folder)
+        finally:
+            os.close(folder)
 
     def ensure(self, *, image: str, port: int, label: str, runtime: str) -> SearxngProvision:
         folder = self._open_folder()
         try:
-            try:
-                current = self._read_at(folder)
-            except ValueError:
-                current = None  # not vibey's record: made again below, settings and all
-            keep = current is not None and self._is_file(folder, SETTINGS_FILE)
+            current = self._believed(folder, RECORD_FILE)
+            settings = self._believed(folder, SETTINGS_FILE)
+            current_record = None if current is None else self._parse_or_none(current)
+            # The pair is kept only while it agrees: the settings must name the record's marker,
+            # or the identity check could never pass again (a crash between two writes, or two
+            # writers interleaved). Anything else is made again, both files at once.
+            keep = (
+                current_record is not None
+                and settings is not None
+                and self._plan.marker_in(settings.decode("utf-8", "replace"))
+                == current_record.marker
+            )
             marker = (
-                current.marker
-                if keep and current is not None
+                current_record.marker
+                if keep and current_record is not None
                 else self._plan.new_marker(self._token_hex(16))
             )
             provision = SearxngProvision(
                 image=image, port=port, marker=marker, label=label, runtime=runtime
             )
-            record = self._plan.record(provision)  # refuses a bad value before anything is written
-            if not keep:
-                text = self._plan.settings_text(secret_key=self._token_hex(32), marker=marker)
-                self._write(folder, SETTINGS_FILE, text)
-            self._write(folder, RECORD_FILE, json.dumps(record, indent=2) + "\n")
+            record = json.dumps(self._plan.record(provision), indent=2) + "\n"  # refuses first
+            staged: list[tuple[str, str]] = []
+            try:
+                if not keep:
+                    text = self._plan.settings_text(secret_key=self._token_hex(32), marker=marker)
+                    staged.append((SETTINGS_FILE, self._stage(folder, SETTINGS_FILE, text)))
+                staged.append((RECORD_FILE, self._stage(folder, RECORD_FILE, record)))
+                self._publish(folder, staged)
+            finally:
+                for _, name in staged:
+                    with contextlib.suppress(FileNotFoundError):
+                        os.unlink(name, dir_fd=folder)
         finally:
             os.close(folder)
         return provision
@@ -138,15 +180,77 @@ class SearxngFiles:
         except OSError:
             return ()
         try:
-            for name in (SETTINGS_FILE, RECORD_FILE):
+            for name in (SETTINGS_FILE, RECORD_FILE, DISABLED_FILE):
                 with contextlib.suppress(FileNotFoundError):
                     os.unlink(name, dir_fd=folder)
-                    removed.append(name)
+                    if name != DISABLED_FILE:
+                        removed.append(name)
         finally:
             os.close(folder)
         with contextlib.suppress(OSError):
             os.rmdir(self._folder)  # only when nothing else is in it
         return tuple(removed)
+
+    # -- reading -------------------------------------------------------------------------------
+
+    def _reading(self) -> int | None:
+        """The folder, opened without following a link and checked: the person's own, and open
+        to no one else. None when it does not exist."""
+        try:
+            folder = os.open(self._folder, os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW)
+        except FileNotFoundError:
+            return None
+        except OSError as exc:
+            raise ValueError(f"{self._folder} is a link or not a folder: {exc}") from None
+        found = os.fstat(folder)
+        if found.st_uid != os.getuid() or found.st_mode & 0o077:
+            os.close(folder)
+            raise ValueError(
+                f"{self._folder} is not yours alone (owner or mode), so vibey reads nothing there"
+            )
+        return folder
+
+    @staticmethod
+    def _read_file(folder: int, name: str) -> bytes | None:
+        """A file of the folder, or None when it is not there. Refused (ValueError): a link, a
+        FIFO or anything but a regular file (opened non-blocking, so nothing hangs), someone
+        else's, readable or writable by anyone but the person, or larger than vibey writes."""
+        try:
+            fd = os.open(name, os.O_RDONLY | os.O_NOFOLLOW | os.O_NONBLOCK, dir_fd=folder)
+        except FileNotFoundError:
+            return None
+        except OSError as exc:
+            raise ValueError(f"{name} cannot be read (a link, or not a file): {exc}") from None
+        try:
+            found = os.fstat(fd)
+            if not stat.S_ISREG(found.st_mode):
+                raise ValueError(f"{name} is not a regular file")
+            if found.st_uid != os.getuid() or found.st_mode & 0o077:
+                raise ValueError(f"{name} is not yours alone (owner or a mode wider than 0600)")
+            if found.st_size > _READ_LIMIT:
+                raise ValueError(f"{name} is larger than vibey ever writes it")
+            return os.read(fd, _READ_LIMIT)
+        finally:
+            os.close(fd)
+
+    def _parse(self, raw: bytes) -> SearxngProvision:
+        try:
+            data = json.loads(raw)
+        except (ValueError, RecursionError):
+            raise ValueError(f"{RECORD_FILE} is not JSON") from None
+        return self._plan.parse(data)
+
+    def _parse_or_none(self, raw: bytes) -> SearxngProvision | None:
+        try:
+            return self._parse(raw)
+        except ValueError:
+            return None  # not vibey's record: made again, settings and all
+
+    def _believed(self, folder: int, name: str) -> bytes | None:
+        try:
+            return self._read_file(folder, name)
+        except ValueError:
+            return None  # replaced below, never written through
 
     # -- writing -------------------------------------------------------------------------------
 
@@ -168,27 +272,31 @@ class SearxngFiles:
             os.fchmod(fd, 0o700)
         return fd
 
-    @staticmethod
-    def _is_file(folder: int, name: str) -> bool:
-        try:
-            found = os.stat(name, dir_fd=folder, follow_symlinks=False)
-        except OSError:
-            return False
-        return stat.S_ISREG(found.st_mode)
-
-    def _write(self, folder: int, name: str, text: str) -> None:
+    def _stage(self, folder: int, name: str, text: str) -> str:
+        """`text` in a new 0600 file beside `name`, synced: its name."""
         staged = f".{name}.{self._token_hex(8)}.tmp"
         fd = os.open(
             staged, os.O_WRONLY | os.O_CREAT | os.O_EXCL | os.O_NOFOLLOW, 0o600, dir_fd=folder
         )
+        with os.fdopen(fd, "w", encoding="utf-8") as handle:  # owns the descriptor from here
+            os.fchmod(handle.fileno(), 0o600)
+            handle.write(text)
+            handle.flush()
+            os.fsync(handle.fileno())
+        return staged
+
+    def _publish(self, folder: int, staged: list[tuple[str, str]]) -> None:
+        """Rename each staged file over its name, in order. When a later rename fails, the ones
+        already published by this call are removed, so a half-written pair is never left."""
+        done: list[str] = []
         try:
-            os.fchmod(fd, 0o600)
-            with os.fdopen(fd, "w", encoding="utf-8") as handle:
-                handle.write(text)
-                handle.flush()
-                os.fsync(handle.fileno())
-            os.replace(staged, name, src_dir_fd=folder, dst_dir_fd=folder)
+            for name, temporary in staged:
+                os.replace(temporary, name, src_dir_fd=folder, dst_dir_fd=folder)
+                done.append(name)
+        except OSError:
+            for name in done:
+                with contextlib.suppress(FileNotFoundError):
+                    os.unlink(name, dir_fd=folder)
+            raise
         finally:
-            with contextlib.suppress(FileNotFoundError):
-                os.unlink(staged, dir_fd=folder)
-        os.fsync(folder)
+            os.fsync(folder)

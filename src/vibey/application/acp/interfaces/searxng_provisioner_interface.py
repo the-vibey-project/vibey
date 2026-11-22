@@ -28,7 +28,28 @@ class SearxngProvisionerInterface(Protocol):
         ...
 
     def record(self) -> SearxngProvision | None:
-        """The person's provision record, or None when there is none vibey can believe."""
+        """The person's provision record, or None when there is none vibey can believe (its
+        label must be this SearXNG's own, never taken from it)."""
+        ...
+
+    def refusal(self) -> str:
+        """Why the recorded install may not be used ("" when it may, or there is none): a record
+        vibey would not write, another label, or a runtime `vet` refuses. Cleaned."""
+        ...
+
+    def disabled(self) -> bool:
+        """Whether the person stopped it for good (`vibey acp unload`, `vibey searxng
+        uninstall`)."""
+        ...
+
+    def disable(self) -> None:
+        """Stop it for good: nothing offers, loads, restarts or serves it until `vibey searxng
+        install` (whose `prepare` removes the mark)."""
+        ...
+
+    def busy(self) -> str:
+        """Why the port is taken ("" when free, or vibey's own SearXNG answers there): anything
+        listening on 127.0.0.1 there that is not SearXNG with vibey's marker. Cleaned."""
         ...
 
     def image_present(self) -> bool:
@@ -37,8 +58,9 @@ class SearxngProvisionerInterface(Protocol):
 
     def prepare(self) -> SearxngPrepared:
         """Download the pinned image (bounded by `[acp] install_timeout_seconds`), then write
-        the settings (once) and the provision record. Never raises for a runtime's refusal: the
-        outcome says it."""
+        the settings (once) and the provision record, and remove a `disable` mark. Refuses a
+        `DOCKER_HOST`/`CONTAINER_HOST` that is not a local socket. Never raises for a runtime's
+        refusal: the outcome says it."""
         ...
 
     def answering(self) -> bool:

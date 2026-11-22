@@ -28,15 +28,32 @@ class SearxngFilesInterface(Protocol):
 
     def read(self) -> SearxngProvision | None:
         """The provision record; None when there is none. Raises ValueError for one that is a
-        link, is not JSON, or holds a value vibey would not have written."""
+        link or a FIFO, someone else's or open to others, too large, not JSON, or holds a value
+        vibey would not have written (an image other than the pinned one included)."""
         ...
 
     def settings_ready(self) -> bool:
-        """Whether `settings.yml` exists as a regular file (never a link)."""
+        """Whether `settings.yml` exists as a regular file the person owns, closed to everyone
+        else (never a link or a FIFO)."""
+        ...
+
+    def disabled(self) -> bool:
+        """Whether the person stopped it for good (`vibey acp unload`, `vibey searxng
+        uninstall`); a mark vibey cannot believe counts as stopped."""
+        ...
+
+    def disable(self) -> None:
+        """Leave the mark that stops it for good."""
+        ...
+
+    def enable(self) -> None:
+        """Remove that mark (`vibey searxng install`)."""
         ...
 
     def ensure(self, *, image: str, port: int, label: str, runtime: str) -> SearxngProvision:
-        """Write the settings (once: a kept file keeps its secret and marker) and the record.
+        """Write the settings (once: a kept file keeps its secret and marker, while it names the
+        record's marker; otherwise both are made again) and the record, staged then renamed as a
+        pair.
         Raises ValueError, writing nothing, for a value vibey would not run, or for a folder
         that is a link or someone else's; `OSError` when a file cannot be written."""
         ...
