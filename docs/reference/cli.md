@@ -167,22 +167,32 @@ The plan names the command each protocol's clients launch (`MCP server command: 
 install's own `vibey` -- the console script beside its Python, by absolute path -- or, when
 there is none, that Python with `-c "from vibey.cli.main import run; run(['mcp'])"` (`acp` for
 Zed); never a `vibey` found on `PATH`. Zed's entry is a custom agent server in
-`~/.config/zed/settings.json` (macOS and Linux):
+`~/.config/zed/settings.json` on macOS, and on Linux in `$XDG_CONFIG_HOME/zed/settings.json`
+when `XDG_CONFIG_HOME` is an absolute path, else `~/.config/zed/settings.json` (a Flatpak Zed,
+which reads `~/.var/app/dev.zed.Zed/config/zed/`, is not handled yet):
 
 ```json
 "agent_servers": {"vibey": {"type": "custom", "command": "/path/to/vibey", "args": ["acp"], "env": {}}}
 ```
 
-Before writing an existing config file, `vibey connect` copies the original to
-`<path>.vibey.bak` (with the original's permissions) and merges the `vibey` entry
-idempotently without disturbing other servers or settings; the new file replaces the old one
+A file that already carries a `vibey` entry running that command, with vibey's own arguments
+first (`["acp"]`, `["mcp"]`), counts as connected and is left exactly as it is: whatever else
+you put in the entry -- an `env`, other keys, flags after vibey's arguments such as
+`["acp", "--no-bootstrap"]` -- is yours. When the entry must change (another `vibey`, or no
+entry yet), only its `type`, `command` and vibey's own leading `args` change; your `env`, other
+keys and extra flags are kept. Before writing an existing config file, `vibey connect` copies
+the original to `<path>.vibey.bak` (with the original's permissions) and merges the `vibey`
+entry without disturbing other servers or settings, keeping the file's indentation and its
+non-ASCII text as written (a UTF-8 byte-order mark too); the new file replaces the old one
 atomically, no wider than it was, never through a symbolic link, and only inside your home
 folder (user-scope clients) or the project folder (`.mcp.json`, `.vscode/mcp.json`).
 A JSON file vibey cannot read as strict JSON -- Zed's `settings.json` usually holds comments,
-and may hold trailing commas -- is never rewritten. If it already carries exactly the entry
-vibey would write, it counts as connected; otherwise that client is refused with the exact
-snippet to paste into the file's top-level object, on stderr, while the other clients are
-still connected, and the command exits 1. Re-running `vibey connect` when every selected client
+and may hold trailing commas -- is never rewritten, and neither is one nested too deeply to
+parse. If it already carries the entry, it counts as connected; otherwise that client is
+refused with the exact snippet to paste into the file's top-level object, on stderr (before any
+question), while the other clients are still connected, and the command exits 1. A config vibey
+may not read, or that is not UTF-8 or not valid TOML, is likewise one `Error:` line for that
+client and exit 1, never a traceback. Re-running `vibey connect` when every selected client
 already carries the entry prints `All selected clients are already connected.` and exits 0.
 Declining the interactive prompt exits 1 without modifying any file.
 
@@ -194,17 +204,20 @@ installed here:
 
 | Surface | Clients | Present when | Installed by |
 |---|---|---|---|
-| `acp-agent` | Zed | `agent_servers.vibey` is exactly the entry above | `vibey connect --client zed` (or the snippet, by hand) |
-| `mcp-server` | every other client | its `vibey` MCP entry is exactly what `vibey connect` writes; for Claude Code also when the `vibey` plugin is installed (its `.mcp.json` registers `vibey mcp`) | `vibey connect --client <id>` |
-| `skill` | Claude Code, Codex | the `vibey-chat-driver` skill is in the `vibey` plugin, or in `~/.claude/skills/vibey-chat-driver` (Claude Code) / `~/.codex/skills/vibey-chat-driver` (Codex) | Claude Code: the plugin; Codex: the `mkdir -p ~/.codex/skills && cp -R <the skill vibey ships> ~/.codex/skills/` line printed |
+| `acp-agent` | Zed | `agent_servers.vibey` runs this install's `vibey` with `acp` first (as above; your `env` and extra flags do not matter) | `vibey connect --client zed` (or the snippet, by hand) |
+| `mcp-server` | every other client | its `vibey` MCP entry runs this install's `vibey` with `mcp` first; for Claude Code also when the `vibey` plugin is installed (its `.mcp.json` registers `vibey mcp`) | `vibey connect --client <id>` |
+| `skill` | Claude Code, Codex | the `vibey-chat-driver` skill is in the `vibey` plugin, in `~/.claude/skills/vibey-chat-driver` or the project's `.claude/skills/vibey-chat-driver` (Claude Code), or in `~/.codex/skills/vibey-chat-driver` (Codex; where Codex reads user skills -- not verified against a real Codex install) | Claude Code: the plugin; Codex: the `mkdir -p ~/.codex/skills && cp -R <the skill vibey ships> ~/.codex/skills/` line printed |
 | `plugin` | Claude Code | Claude Code records `vibey@vibey` installed (`~/.claude/plugins/installed_plugins.json`) | in Claude Code: `/plugin marketplace add the-vibey-project/vibey`, then `/plugin install vibey@vibey` |
 
 Each line is `PASS <client>:<surface> present: ...`, `WARN <client>:<surface> missing: ...`
 with the exact command or snippet that fixes it, or `UNKNOWN <client>:<surface>
 not-applicable: ...` for a surface that client cannot have. vibey installs the two entries
 itself and only reports the skill and the plugin: those are installed by the client's own
-command. Reading them never writes, never follows a symbolic link, reads only a regular file of
-at most 1 MiB, and never reads a config whose folder resolves outside its scope's root.
+command. Reading them never writes, never reads a config file (or Claude Code's plugin record)
+that is itself a symbolic link, reads only a regular file of at most 1 MiB, never reads a config
+whose folder resolves outside its scope's root, and never raises: a file that cannot be parsed
+(nested too deeply included) is reported, and a folder that cannot be looked into counts as
+absent.
 
 ## `vibey mcp`
 
@@ -494,7 +507,9 @@ here delays the answer: the steps start after `session/new` (or the first `sessi
 2. **`vibey connect`** (an `edit` tool call), when [`[acp] auto_connect`](configuration.md#acp)
    is on: vibey is registered with each user-level client whose config folder already exists
    under your home folder -- `vibey mcp` with Claude Desktop, Codex, Cursor and Gemini CLI, and
-   `vibey acp` with Zed (`~/.config/zed`) -- each running the running install's own `vibey`.
+   `vibey acp` with Zed (`~/.config/zed`, or `$XDG_CONFIG_HOME/zed` on Linux) -- each running
+   the running install's own `vibey`; an existing `vibey` entry keeps your `env`, other keys and
+   extra flags.
    A Zed `settings.json` with comments is never rewritten: unless it already carries the entry,
    it is that client's `WARN`, with the snippet to paste. A project file
    (`.mcp.json`, `.vscode/mcp.json`) is never written, a client's folder is never created, a
@@ -1185,8 +1200,10 @@ access" note in its plan, naming the absolute path of the running `vibey`), and 
 non-secret `WEBSEARCH_*` settings through to it. With only a Brave key configured, sessions are
 told nothing and have no search. The worker prints one line on stderr saying which of the two
 is in force and, for Brave, which variable configured it (`configured via
-BRAVE_SEARCH_API_KEY`), never the key. No session or gate can be given the key under either
-name, even by a declared environment allow-list.
+BRAVE_SEARCH_API_KEY`), never the key. No session or gate can be given the key under any of
+its names (`VIBEY_BRAVE_API_KEY`, `WEBSEARCH_BRAVE_API_KEY`, `BRAVE_SEARCH_API_KEY`), even by a
+declared environment allow-list: a project that declared one is refused (see
+[`[engine_environment]`](configuration.md#engine_environment)).
 
 gptossloop and qwenloop also have `web_search` and `web_fetch` as tools of their own, which run
 the same two commands; every other engine uses the command from its plan.
@@ -2197,7 +2214,7 @@ Variables read by code under `src/vibey`:
 | `VIBEY_REVISION` | as `VIBEY_OLLAMA_FIT` | When set, a fit record is used only if its `revision` equals this value. |
 | `VIBEY_SEARXNG_URL` | `search`, `fetch`, `worker`, the sovereign DESIGN research stage | Base URL of a SearXNG instance with its JSON format enabled. Passed to engine sessions as `WEBSEARCH_SEARXNG_URL`. Queries go to that instance, so run your own if they are private. |
 | `VIBEY_BRAVE_API_KEY` | as `VIBEY_SEARXNG_URL` | A Brave Search key. Used by vibey's own processes only; never passed to a session. |
-| `BRAVE_SEARCH_API_KEY` | as `VIBEY_SEARXNG_URL` | The same Brave Search key under the name Brave's own tools read; used only when `VIBEY_BRAVE_API_KEY` is not set. Used by vibey's own processes only: never passed to a session or a gate, not even by a declared allow-list, and never printed (the worker says only `configured via BRAVE_SEARCH_API_KEY`). |
+| `BRAVE_SEARCH_API_KEY` | as `VIBEY_SEARXNG_URL` | The same Brave Search key under the name Brave's own tools read; used only when neither `VIBEY_BRAVE_API_KEY` nor its `WEBSEARCH_BRAVE_API_KEY` form is set. Used by vibey's own processes only: never passed to a session or a gate, not even by a declared allow-list, and never printed (the worker says only `configured via BRAVE_SEARCH_API_KEY`). |
 | `VIBEY_SEARCH_PROVIDER` | as `VIBEY_SEARXNG_URL` | `searxng` or `brave`; needed only when both are configured (SearXNG wins otherwise). |
 | `VIBEY_SEARCH_TIMEOUT` | as `VIBEY_SEARXNG_URL` | Seconds per search or fetch request. A bad value exits 2 before any engine starts. |
 | `VIBEY_SEARCH_RESULTS` | as `VIBEY_SEARXNG_URL` | How many results a search returns. |

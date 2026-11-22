@@ -19,7 +19,7 @@ vibey connect --yes    # non-interactive approval
 vibey connect --list   # list supported client IDs (claude_code, claude_desktop, codex, cursor, vscode, gemini_cli, zed)
 ```
 
-Every entry runs the running install's own `vibey` by absolute path, never one found on `PATH`. After the plan, `vibey connect` (and `vibey doctor`, in its `llm-tooling` section) lists each installed client's surfaces -- `acp-agent`, `mcp-server`, `skill`, `plugin` -- as present, missing (with the exact command that fixes it) or not applicable.
+Every entry runs the running install's own `vibey` by absolute path, never one found on `PATH`; an existing `vibey` entry keeps the person's `env`, other keys and extra flags. After the plan, `vibey connect` lists the surfaces of the clients it planned, and `vibey doctor` (its `llm-tooling` section) those of every installed client -- `acp-agent`, `mcp-server`, `skill`, `plugin` -- as present, missing (with the exact command that fixes it) or not applicable.
 
 Or install via the Claude Code plugin marketplace:
 
@@ -80,7 +80,7 @@ When a project parks on a human gate:
 In Zed (or any Agent Client Protocol client) vibey is the agent itself, not a tool server: the editor launches `vibey acp` over stdio, and each prompt goes to the hub's chat as you would type it in the krypton app, `/` commands included.
 
 ### Connecting
-- `vibey connect --client zed --yes` writes `"agent_servers": {"vibey": {"type": "custom", "command": "<absolute vibey>", "args": ["acp"], "env": {}}}` into `~/.config/zed/settings.json`, keeping every other setting.
+- `vibey connect --client zed --yes` writes `"agent_servers": {"vibey": {"type": "custom", "command": "<absolute vibey>", "args": ["acp"], "env": {}}}` into `~/.config/zed/settings.json` (on Linux `$XDG_CONFIG_HOME/zed/settings.json` when that is absolute), keeping every other setting and anything the person added to the entry (`env`, flags after `acp` such as `--no-bootstrap`).
 - Zed's settings file usually holds `//` comments. vibey never rewrites a file that is not strict JSON: it prints the exact snippet to paste instead, and once pasted it counts as connected. Show the person that snippet; do not try to rewrite the file yourself.
 - On the first session, `vibey acp` runs `vibey doctor` and `vibey connect`, loads the user-level `dev.vibey.hub` and `dev.vibey.worker` units (launchd `gui/<uid>` or `systemd --user`; never `sudo`, never a system unit) and keeps them running. `vibey acp unload` undoes it. What it may do is granted only by the person's own `vibey.toml` in their configuration folder; the opened project's `vibey.toml` can only narrow it.
 

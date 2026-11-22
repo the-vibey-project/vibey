@@ -18,8 +18,9 @@ vibey connect --yes
 vibey connect --client zed --yes
 ```
 
-It writes a custom agent server into `~/.config/zed/settings.json` (the same path on macOS and
-Linux), keeping every other setting and agent server, and copies the file it changed to
+It writes a custom agent server into `~/.config/zed/settings.json` (on Linux,
+`$XDG_CONFIG_HOME/zed/settings.json` when `XDG_CONFIG_HOME` is set to an absolute path),
+keeping every other setting and agent server, and copies the file it changed to
 `settings.json.vibey.bak` first:
 
 ```json
@@ -30,7 +31,10 @@ Linux), keeping every other setting and agent server, and copies the file it cha
 
 `command` is the running install's own `vibey`, by absolute path, never whatever `vibey` is
 first on `PATH` (Zed starts agents with a minimal `PATH`). `vibey connect --dry-run` shows
-the plan without writing anything.
+the plan without writing anything. The entry is yours to extend: an `env`, other keys, or
+flags after `acp` (such as `--no-bootstrap`) are kept by every later `vibey connect`, which
+changes only `type`, `command` and the leading `acp` when it has to, and leaves a file that
+already runs this `vibey` exactly as it is.
 
 **A settings file with comments.** Zed's own `settings.json` usually starts with `//`
 comments, and Zed accepts trailing commas. vibey never rewrites a file it cannot read as strict
@@ -48,8 +52,9 @@ Then open the agent panel in Zed and pick **vibey** as the agent.
 
 `vibey connect` (and `vibey doctor`, in its `llm-tooling` section) lists, for each client
 installed here, each surface vibey offers it: the ACP agent entry (Zed), the MCP server entry
-(every other client), the `vibey-chat-driver` skill (Claude Code and Codex) and the `vibey`
-plugin (Claude Code). A missing one is named with the command that fixes it; see
+(every other client), the `vibey-chat-driver` skill (Claude Code and Codex; the Codex folder,
+`~/.codex/skills`, is where Codex reads user skills but has not been verified against a real
+Codex install) and the `vibey` plugin (Claude Code). A missing one is named with the command that fixes it; see
 [LLM tooling](../reference/cli.md#vibey-connect-llm-tooling). vibey writes the two entries
 itself. The skill and the plugin are installed by the client's own command, for example in
 Claude Code:
@@ -85,8 +90,9 @@ What may happen here is granted by your own `vibey.toml`, in your configuration 
 (`~/Library/Application Support/vibey/vibey.toml` on macOS, `~/.config/vibey/vibey.toml` on
 Linux). The `vibey.toml` of the folder Zed opened can only turn steps off or narrow them
 ([who may set what](../reference/configuration.md#acp)). Turn the whole bootstrap off with
-`auto_bootstrap = false` there, or for one launch with `vibey acp --no-bootstrap` as the agent's
-`args`.
+`auto_bootstrap = false` there, or for this editor with `"args": ["acp", "--no-bootstrap"]` in
+the agent's entry: `vibey connect` and `vibey doctor` count that entry as connected and keep the
+flag.
 
 **Undo it.** `vibey acp unload` stops and removes the units vibey loaded (a unit you edited is
 unloaded and left in place). Then set `auto_services = false` in your own `vibey.toml`, or the
