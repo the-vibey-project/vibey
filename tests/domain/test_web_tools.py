@@ -199,7 +199,7 @@ def test_an_address_that_is_not_public_is_refused(url: str) -> None:
 
 @pytest.mark.parametrize("port", ["0", "65536", "99999", "-1", "http"])
 def test_a_port_outside_one_to_65535_is_refused(port: str) -> None:
-    _refused(f"https://example.com:{port}/")
+    assert "port" in _refused(f"https://example.com:{port}/")
 
 
 @pytest.mark.parametrize(
@@ -213,7 +213,7 @@ def test_a_port_outside_one_to_65535_is_refused(port: str) -> None:
     ],
 )
 def test_a_url_with_a_space_or_a_control_character_is_refused(url: str) -> None:
-    _refused(url)
+    assert "space or a control character" in _refused(url)
 
 
 def test_an_overlong_url_is_refused_before_it_is_read() -> None:
