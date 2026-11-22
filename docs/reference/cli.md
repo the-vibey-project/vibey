@@ -244,7 +244,9 @@ called, it runs `vibey hub start` once and retries. It exposes 16 tools (`vibey_
 `vibey_ledger`, `vibey_loops`, `vibey_lanes`, `vibey_doctor`, `vibey_start_project`,
 `vibey_start_work`, `vibey_pause_work`, `vibey_abandon_project` where `dry_run` defaults to
 `true`, and the two web tools below). `tools/list` shows a tool only when the agent's scopes
-include the one it needs.
+include the one it needs. It reaches only a hub on this computer's loopback: a runtime record
+(`<state_dir>/serving.json`) naming any other host is refused and nothing -- not the token, not a
+call -- is sent.
 
 ### Web tools: `vibey_search` and `vibey_fetch`
 
@@ -2224,7 +2226,12 @@ the existing keys are unchanged.
 
 A fourth line, `web-tools`, follows: whether the hub serves [`vibey_search` and
 `vibey_fetch`](#web-tools-vibey_search-and-vibey_fetch) to the agent principal, with the
-`[web]` budgets (the person's own, narrowed by this folder's, as the hub reads them).
+`[web]` budgets (the person's own, narrowed by this folder's, as the hub reads them). The hub it
+asks about is your own: its state folder and `agent_scopes` come from your own `vibey.toml` (in
+your configuration folder), never from the folder doctor runs in, and it is probed only on a
+loopback address its runtime record names (`localhost`, 127.0.0.0/8, `::1`, or a wildcard
+bind), with no credential, bounded in time and size, never through a proxy and never past a
+redirect off its own origin; a record naming any other host is a `WARN ... not probed`.
 `PASS ... the hub serves vibey_search and vibey_fetch to the agent (web granted)`; `WARN` when
 `[hub] agent_scopes` does not grant `web`, when no hub is running (doctor never starts one:
 `vibey hub start`), or when the running hub does not answer or does not list

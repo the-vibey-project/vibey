@@ -532,3 +532,29 @@ def test_the_web_tools_are_listed_only_to_an_agent_holding_web_and_refused_other
         "/api/v1/web/search",
         {"query": "asyncpg", "limit": 2},
     )
+
+
+@pytest.mark.parametrize("host", ["203.0.113.9", "192.168.1.5", "hub.evil.example"])
+def test_the_gateway_never_sends_the_agent_token_to_a_host_off_this_computer(
+    tmp_path: Path, host: str
+) -> None:
+    """The runtime record is read from a state folder a folder's vibey.toml can name (the parked
+    `[hub]` trust split); whatever it says, the agent token and the call -- a search query or a
+    URL among them -- go only to loopback (SP-ACP Task 9b)."""
+    state = tmp_path / "state"
+    toml = tmp_path / "vibey.toml"
+    toml.write_text(f"[hub]\nstate_dir = '{state}'\n")
+    LocalTokenStore(state).record_serving(ServingRecord(host=host, port=8765, pid=1, tls=False))
+    fake = _FakeHttpClient()
+    started: list[bool] = []
+    gw = HubGateway(
+        config_path=lambda: toml, client=fake.factory, starter=lambda: started.append(True) or True
+    )
+    call = HubCall(
+        tool="vibey_search", method="POST", route="/api/v1/web/search", body={"query": "q"}
+    )
+    with pytest.raises(HubGatewayError, match="non-loopback"):
+        gw.call(call)
+    with pytest.raises(HubGatewayError, match="non-loopback"):
+        gw.reach(call)
+    assert fake.calls == [] and started == []

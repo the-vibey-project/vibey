@@ -229,6 +229,12 @@ the host offers it.
   browser. The rule for when one is: a search is a read to a session's mode (observe may run it
   when the hub grants `web`); a fetch needs `web` in the mode itself, and no mode holds it.
 
+**Reaching the hub is held to this computer.** `vibey doctor`'s `web-tools` line reads the
+person's own `[hub]` (never the folder's) and probes only a loopback address the runtime record
+names, with no credential; the MCP gateway refuses a runtime record naming any host off
+loopback before the agent token or a call is sent. Both close a request a hostile project's
+`vibey.toml` could otherwise aim elsewhere through `[hub] state_dir`.
+
 **The residual risk, stated plainly.** A query and a URL leave the computer; a model steered by
 what it read can put data into either. That is exfiltration, and these tools carry it by design.
 The budgets, the ledger record, the host lists and the refusal of every non-public address bound

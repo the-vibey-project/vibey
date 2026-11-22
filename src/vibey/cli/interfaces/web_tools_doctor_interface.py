@@ -1,6 +1,7 @@
 # Made with ❤️ by [Vibey](https://the-vibey-project.github.io/vibey/), Developed by [Adam Matthew Steinberger](https://vibewithadam.matthewsteinberger.com/) ([@adammatthewsteinberger](https://github.com/adammatthewsteinberger/)).
 """The seam of `cli/web_tools_doctor.py` (ADR-0016). Interfaces declare; they never consume."""
 
+from pathlib import Path
 from typing import Protocol, runtime_checkable
 
 
@@ -10,4 +11,14 @@ class WebToolsDoctorInterface(Protocol):
 
     def line(self) -> str:
         """One `MARK web-tools detail` line; never raises."""
+        ...
+
+    @staticmethod
+    def is_loopback(host: str) -> bool:
+        """Whether `host` is this computer: `localhost`, 127.0.0.0/8 or `::1`."""
+        ...
+
+    @staticmethod
+    def loopback_document(url: str, cafile: Path | None) -> bytes:
+        """`url`'s body: no credential, no proxy, no redirect off its origin, bounded."""
         ...

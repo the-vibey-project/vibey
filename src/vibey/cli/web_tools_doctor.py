@@ -13,18 +13,24 @@ doctor --json` reads it as one more check and no key changes):
   running hub does not answer, or does not offer the routes (an older vibey still running).
 - `FAIL`: a `[hub]` or `[web]` setting the hub would refuse to start with.
 
-The budgets are the person's `[web]`, narrowed by the folder's (the hub reads them the same
-way). Every detail is cleaned as a raised check's is (`DoctorChecks.cleaned`); the line never
+The hub this line asks about is the person's own: its state folder and `agent_scopes` come from
+their own `vibey.toml` (`bootstrap.acp_user_config`), never from the folder doctor runs in, which
+may be a cloned repository's (ADR-0101's trust model). The probe goes only to a loopback address
+named by the hub's runtime record -- a record naming any other host is a `WARN` and nothing is
+sent -- with no credential, bounded in time and size, and no redirect off its own origin. The
+budgets are the person's `[web]`, narrowed by the folder's (the hub reads them the same way). Every detail is cleaned as a raised check's is (`DoctorChecks.cleaned`); the line never
 raises. Declared by `interfaces/web_tools_doctor_interface.py` (ADR-0016).
 """
 
 from __future__ import annotations
 
+import ipaddress
+import json
+import ssl
+import urllib.request
 from collections.abc import Callable
 from pathlib import Path
-from typing import Any, Final
-
-import httpx
+from typing import Final
 
 from vibey.application.acp.doctor_checks import DoctorChecks
 from vibey.bootstrap import acp_user_config
@@ -33,15 +39,20 @@ from vibey.domain.hub_scope import HubScope
 from vibey.infrastructure.hub.local_token import LocalTokenStore
 from vibey.infrastructure.hub.settings import HUB_SETTINGS
 from vibey.infrastructure.hub.tls import CERT_FILE
+from vibey.infrastructure.web.bounded_request import BoundedRequest, DeadlineExceeded
+from vibey.infrastructure.web.guarded_opener import SameOriginRedirects
 from vibey.infrastructure.web.web_settings_loader import WEB_SETTINGS
 
 NAME: Final = "web-tools"
 ROUTES: Final = ("/api/v1/web/search", "/api/v1/web/fetch")
 PROBE_SECONDS: Final = 3.0
+PROBE_BYTES: Final = 1_000_000
+"""The most of the OpenAPI document read; it is about a tenth of that."""
 _WIDTH: Final = 26
 _WILDCARDS: Final = frozenset({"0.0.0.0", "::"})  # nosec B104 - compared, never bound
 
-type Get = Callable[..., httpx.Response]
+type Probe = Callable[[str, Path | None], bytes]
+"""Reads a URL on this computer's loopback, trusting `cafile` for https; at most `PROBE_BYTES`."""
 
 
 class WebToolsDoctor:
@@ -52,11 +63,11 @@ class WebToolsDoctor:
         *,
         config_path: Callable[[], Path] = lambda: Path.cwd() / "vibey.toml",
         user_config: Callable[[], Path] | None = None,
-        get: Get = httpx.get,
+        probe: Probe | None = None,
     ) -> None:
         self._config_path = config_path
         self._user_config = user_config or (lambda: acp_user_config())
-        self._get = get
+        self._probe = probe if probe is not None else self.loopback_document
 
     def line(self) -> str:
         try:
@@ -66,10 +77,11 @@ class WebToolsDoctor:
             return f"UNKNOWN {NAME:<{_WIDTH}} could not check the hub's web tools ({reason})"
 
     def _line(self) -> str:
-        project = self._config_path()
+        mine = self._user_config()
         try:
-            hub = HUB_SETTINGS.load(project)
-            web = WEB_SETTINGS.load_trusted(self._user_config(), project)
+            # The person's own hub: never a state folder a project's vibey.toml names.
+            hub = HUB_SETTINGS.load(mine)
+            web = WEB_SETTINGS.load_trusted(mine, self._config_path())
         except ConfigError as exc:
             return f"FAIL {NAME:<{_WIDTH}} {DoctorChecks.cleaned(str(exc), limit=400)}"
         budgets = (
@@ -101,17 +113,17 @@ class WebToolsDoctor:
                 "(`vibey hub start`)"
             )
         host = "127.0.0.1" if record.host in _WILDCARDS else record.host
+        if not self.is_loopback(host):
+            return "the hub's runtime record names a non-loopback address; not probed"
         shown = f"[{host}]" if ":" in host else host
         scheme = "https" if record.tls else "http"
-        verify: Any = str(state_dir / CERT_FILE) if record.tls else True
+        cafile = state_dir / CERT_FILE if record.tls else None
         try:
-            response = self._get(
-                f"{scheme}://{shown}:{record.port}/api/v1/openapi.json",
-                verify=verify,
-                timeout=PROBE_SECONDS,
+            document = json.loads(
+                self._probe(f"{scheme}://{shown}:{record.port}/api/v1/openapi.json", cafile)
             )
-            paths = response.json().get("paths", {})
-        except (httpx.HTTPError, OSError, ValueError, AttributeError) as exc:
+            paths = document.get("paths", {})
+        except (OSError, ValueError, AttributeError, RecursionError, DeadlineExceeded) as exc:
             return f"the running hub did not answer ({type(exc).__name__})"
         if not all(route in paths for route in ROUTES):
             return (
@@ -119,6 +131,37 @@ class WebToolsDoctor:
                 "older vibey; `vibey hub stop` and `vibey hub start` run this one"
             )
         return None
+
+    @staticmethod
+    def is_loopback(host: str) -> bool:
+        """Whether `host` is this computer: `localhost` or an address in 127.0.0.0/8 or `::1`."""
+        name = host.lower().rstrip(".")
+        if name == "localhost":
+            return True
+        try:
+            return ipaddress.ip_address(name).is_loopback
+        except ValueError:
+            return False
+
+    @staticmethod
+    def loopback_document(url: str, cafile: Path | None) -> bytes:
+        """`url`'s body, read with no credential, no proxy and no redirect off its own origin,
+        within `PROBE_SECONDS` and `PROBE_BYTES` (`BoundedRequest`)."""
+        handlers: list[urllib.request.BaseHandler] = [
+            SameOriginRedirects(),
+            urllib.request.ProxyHandler({}),
+        ]
+        if cafile is not None:
+            handlers.append(
+                urllib.request.HTTPSHandler(context=ssl.create_default_context(cafile=str(cafile)))
+            )
+        opener = urllib.request.build_opener(*handlers)
+        request = urllib.request.Request(url, headers={"Accept": "application/json"})  # nosec B310
+        return (
+            BoundedRequest(lambda r, timeout: opener.open(r, timeout=timeout))
+            .fetch(request, deadline=PROBE_SECONDS, limit=PROBE_BYTES)
+            .body
+        )
 
 
 WEB_TOOLS_DOCTOR: Final = WebToolsDoctor()

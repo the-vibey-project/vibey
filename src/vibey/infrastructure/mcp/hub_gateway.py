@@ -6,6 +6,10 @@ Mirrors `cli/hub_pair.py::HubPairCommand._call`, with two deliberate differences
    so the hub enforces `[hub] agent_scopes` (no `spend`, `bump` or `workflows`).
 2. When no hub is running (or a stale `serving.json` fails to answer), it invokes the `starter`
    seam once (`vibey hub start`) and retries before returning an error naming `vibey hub start`.
+3. It reaches only a hub on this computer's loopback: a runtime record naming any other host
+   (the record lives in `[hub] state_dir`, which a folder's `vibey.toml` can still name -- the
+   parked `[hub]` trust split) is refused before the token, or a call -- a gate answer, a search
+   query, a URL -- is sent anywhere (SP-ACP Task 9b).
 """
 
 from __future__ import annotations
@@ -28,6 +32,7 @@ from vibey.infrastructure.hub.local_token import LocalTokenStore, ServingRecord
 from vibey.infrastructure.hub.settings import HUB_SETTINGS, HubSettings
 from vibey.infrastructure.hub.tls import CERT_FILE
 from vibey.infrastructure.mcp.interfaces.hub_gateway_interface import HubGatewayInterface
+from vibey.infrastructure.web.guarded_opener import GuardedOpener
 
 WILDCARDS: Final = frozenset({"0.0.0.0", "::"})  # nosec B104 - compared, never bound
 START_TIMEOUT_SECONDS: Final = 15.0
@@ -203,6 +208,11 @@ class HubGateway:
     ) -> HubGatewayResponse:
         host = "127.0.0.1" if record.host in WILDCARDS else record.host
         shown = f"[{host}]" if ":" in host else host
+        if not GuardedOpener.is_loopback(f"http://{shown}/"):
+            raise HubGatewayError(
+                "the hub's runtime record names a non-loopback address; vibey reaches only a hub "
+                "on this computer's loopback, so nothing was sent"
+            )
         scheme = "https" if record.tls else "http"
         verify: str | bool = str(settings.state_dir / CERT_FILE) if record.tls else True
         with self._client(
