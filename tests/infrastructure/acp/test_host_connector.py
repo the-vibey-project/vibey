@@ -32,6 +32,7 @@ def _connector(tmp_path: Path, *, platform: str = "linux") -> tuple[HostConnecto
         project_dir=lambda: project,
         platform=platform,
         which=lambda _name: "/usr/local/bin/vibey",
+        environ={},
     )
     connector = HostConnector(
         installer=installer,
@@ -39,6 +40,7 @@ def _connector(tmp_path: Path, *, platform: str = "linux") -> tuple[HostConnecto
         home_dir=lambda: home,
         state_dir=state,
         version=VERSION,
+        environ={},
     )
     return connector, home, project
 
@@ -263,3 +265,73 @@ def test_commented_zed_settings_are_a_warn_with_the_snippet_and_never_rewritten(
     )
     assert results["cursor"].mark == "PASS"
     assert not connector.already_connected()
+
+
+def test_a_deeply_nested_config_is_that_clients_warn_never_a_crash(tmp_path: Path) -> None:
+    connector, home, _ = _connector(tmp_path)
+    (home / ".cursor").mkdir()
+    (home / ".codex").mkdir()
+    (home / ".cursor" / "mcp.json").write_text("// c\n" + "[" * 200_000)
+    (home / ".codex" / "config.toml").write_text("x = " + "[" * 200_000)
+    (home / ".gemini").mkdir()
+
+    results = {r.name: r for r in asyncio.run(connector.connect_detected())}
+
+    assert results["cursor"].mark == "WARN" and "invalid JSON" in results["cursor"].detail
+    assert results["codex"].mark == "WARN" and "invalid TOML" in results["codex"].detail
+    assert results["gemini_cli"].mark == "PASS"
+
+
+def test_the_unattended_step_keeps_a_customised_zed_entry(tmp_path: Path) -> None:
+    connector, home, _ = _connector(tmp_path)
+    settings = home / ".config" / "zed" / "settings.json"
+    settings.parent.mkdir(parents=True)
+    mine = {
+        "type": "custom",
+        "command": "/old/vibey",
+        "args": ["acp", "--no-bootstrap"],
+        "env": {"VIBEY_CONFIG": "/x"},
+    }
+    settings.write_text(json.dumps({"agent_servers": {"vibey": mine}}))
+
+    asyncio.run(connector.connect_detected())
+
+    written = json.loads(settings.read_text())["agent_servers"]["vibey"]
+    assert written == {**mine, "command": "/usr/local/bin/vibey"}
+
+
+def test_a_config_folder_that_cannot_be_looked_into_is_not_installed(tmp_path: Path) -> None:
+    import os
+
+    if os.geteuid() == 0:
+        pytest.skip("root can look into anything")
+    connector, home, _ = _connector(tmp_path)
+    (home / ".config" / "zed").mkdir(parents=True)
+    (home / ".config").chmod(0)
+    try:
+        results = {r.name: r.mark for r in asyncio.run(connector.connect_detected())}
+        connected = connector.already_connected()
+    finally:
+        (home / ".config").chmod(0o700)
+    assert results["zed"] == "UNKNOWN"
+    assert connected is True
+
+
+def test_an_installer_aiming_at_a_folder_that_is_not_there_writes_nothing(tmp_path: Path) -> None:
+    elsewhere = tmp_path / "elsewhere"
+    _, home, _ = _connector(tmp_path)
+    (home / ".cursor").mkdir()
+    connector = HostConnector(
+        installer=HostInstaller(
+            home_dir=lambda: elsewhere, project_dir=lambda: tmp_path, platform="linux"
+        ),
+        home_dir=lambda: home,
+        state_dir=tmp_path / "state",
+        version=VERSION,
+        environ={},
+    )
+
+    results = {r.name: r for r in asyncio.run(connector.connect_detected())}
+
+    assert results["cursor"].mark == "UNKNOWN" and "does not exist" in results["cursor"].detail
+    assert not elsewhere.exists()

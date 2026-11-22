@@ -27,7 +27,7 @@ import secrets
 import shutil
 import stat
 import sys
-from collections.abc import Callable, Sequence
+from collections.abc import Callable, Mapping, Sequence
 from pathlib import Path
 from typing import Final
 
@@ -51,6 +51,7 @@ class HostInstaller:
         platform: str = sys.platform,
         which: Callable[[str], str | None] = shutil.which,
         python_executable: str = sys.executable,
+        environ: Mapping[str, str] = os.environ,
     ) -> None:
         self._catalog = catalog
         self._home_dir = home_dir
@@ -58,12 +59,14 @@ class HostInstaller:
         self._platform = platform
         self._which = which
         self._python_executable = python_executable
+        self._environ = environ
 
     def build_plan(self, requested: Sequence[str] | None = None) -> tuple[ConnectPlanItem, ...]:
         specs = self._catalog.resolve_clients(requested)
         which_vibey = self._which("vibey")
         home = str(self._home_dir())
         proj = str(self._project_dir())
+        xdg = self._environ.get("XDG_CONFIG_HOME")  # Zed on Linux follows it when absolute
         items: list[ConnectPlanItem] = []
         for spec in specs:
             # Each client launches what it speaks: `vibey mcp`, or `vibey acp` for Zed.
@@ -73,7 +76,9 @@ class HostInstaller:
                 protocol=spec.protocol,
             )
             target = Path(
-                spec.config_path(home_dir=home, project_dir=proj, platform=self._platform)
+                spec.config_path(
+                    home_dir=home, project_dir=proj, platform=self._platform, xdg_config_home=xdg
+                )
             )
             existing = target.read_text(encoding="utf-8") if target.exists() else None
             items.append(
@@ -84,6 +89,7 @@ class HostInstaller:
                     platform=self._platform,
                     launch=launch,
                     existing_content=existing,
+                    xdg_config_home=xdg,
                 )
             )
         return tuple(items)

@@ -13,9 +13,12 @@ repository an editor opened.
   at most `MAX_BYTES`: a FIFO or a device in a config's place is reported, never read.
 - **Inside the scope's root only.** A config whose folder resolves (symlinks followed) outside
   the home folder (user scope) or the project folder (project scope) is reported, not read.
-- **The entry `vibey connect` would write.** An entry counts as present only when it is exactly
-  what `vibey connect` writes now, with the same pinned launcher (the running install's own
-  `vibey`, or the Python fallback), so a config pointing at another `vibey` says so.
+- **The entry `vibey connect` would write.** An entry counts as present only when it runs the
+  same pinned launcher (the running install's own `vibey`, or the Python fallback) with vibey's
+  arguments first, so a config pointing at another `vibey` says so; the person's own `env` and
+  extra flags do not matter.
+- **Total.** A file that cannot be parsed (nested too deeply included) is reported, and a folder
+  that cannot be looked into (`PermissionError`) counts as absent: reading never raises.
 
 Declared by `interfaces/llm_tooling_probe_interface.py`.
 """
@@ -29,7 +32,7 @@ import os
 import shlex
 import stat
 import sys
-from collections.abc import Callable, Sequence
+from collections.abc import Callable, Mapping, Sequence
 from pathlib import Path
 from typing import Final
 
@@ -52,6 +55,8 @@ SKILL_FOLDERS: Final[dict[str, Path]] = {
     "codex": Path(".codex") / "skills",
 }
 """The user-level skills folder of each client that reads one, under the home folder."""
+PROJECT_SKILLS: Final = Path(".claude") / "skills"
+"""Claude Code's skills folder inside a project, which it reads too."""
 REPOSITORY_SKILL: Final = (
     f"copy .agents/skills/{SKILL_NAME} from https://github.com/the-vibey-project/vibey "
     "into ~/.codex/skills/"
@@ -74,6 +79,7 @@ class LlmToolingProbe:
         platform: str = sys.platform,
         python_executable: str = sys.executable,
         shipped_skill: Callable[[], Path | None] | None = None,
+        environ: Mapping[str, str] = os.environ,
     ) -> None:
         self._launcher = launcher
         self._catalog = catalog
@@ -83,13 +89,20 @@ class LlmToolingProbe:
         self._platform = platform
         self._python = python_executable
         self._shipped = shipped_skill or self.shipped_skill
+        self._environ = environ
 
     def detected(self) -> tuple[HostClientSpec, ...]:
         home = str(self._home_dir())
+        xdg = self._environ.get("XDG_CONFIG_HOME")
         return tuple(
             spec
             for spec in self._catalog.all()
-            if Path(spec.presence_path(home_dir=home, platform=self._platform)).is_dir()
+            if self._is(
+                Path(
+                    spec.presence_path(home_dir=home, platform=self._platform, xdg_config_home=xdg)
+                ),
+                Path.is_dir,
+            )
         )
 
     def findings(self, client_ids: Sequence[str] | None = None) -> tuple[ToolingFinding, ...]:
@@ -105,7 +118,7 @@ class LlmToolingProbe:
                 entry,
                 detail,
                 plugin_installed=plugin and spec.client_id == "claude_code",
-                skill_at=self._skill_at(spec, home),
+                skill_at=self._skill_at(spec, home, project),
                 skill_install=install,
             )
             found.extend(self._tooling.findings(spec, tooling))
@@ -129,7 +142,12 @@ class LlmToolingProbe:
         self, spec: HostClientSpec, launcher: str | None, home: Path, project: Path
     ) -> tuple[EntryState, str]:
         target = Path(
-            spec.config_path(home_dir=str(home), project_dir=str(project), platform=self._platform)
+            spec.config_path(
+                home_dir=str(home),
+                project_dir=str(project),
+                platform=self._platform,
+                xdg_config_home=self._environ.get("XDG_CONFIG_HOME"),
+            )
         )
         shown = self._shown(target, home)
         root, where = (
@@ -145,9 +163,9 @@ class LlmToolingProbe:
         launch = self._catalog.resolve_launch(
             which_vibey=launcher, python_executable=self._python, protocol=spec.protocol
         )
-        if self._catalog.carries(spec, launch, text):
-            return "present", f"in {shown}"
         try:
+            if self._catalog.carries(spec, launch, text):
+                return "present", f"in {shown}"
             self._catalog.plan_one(
                 spec,
                 home_dir=str(home),
@@ -155,9 +173,12 @@ class LlmToolingProbe:
                 platform=self._platform,
                 launch=launch,
                 existing_content=text,
+                xdg_config_home=self._environ.get("XDG_CONFIG_HOME"),
             )
         except HostClientError as exc:
             return "refused", str(exc).replace(str(target), shown)
+        except (ValueError, RecursionError):  # the catalogue refuses these itself; held anyway
+            return "refused", f"{shown} cannot be parsed; vibey does not rewrite it"
         return "missing", f"{shown} does not carry the entry `vibey connect` writes"
 
     def _read(self, path: Path, shown: str) -> tuple[str | None, str | None]:
@@ -190,17 +211,33 @@ class LlmToolingProbe:
             return False
         try:
             record = json.loads(text)
-        except ValueError:
+        except (ValueError, RecursionError):
             return False
         plugins = record.get("plugins") if isinstance(record, dict) else None
         return isinstance(plugins, dict) and PLUGIN_ID in plugins
 
-    def _skill_at(self, spec: HostClientSpec, home: Path) -> str | None:
+    def _skill_at(self, spec: HostClientSpec, home: Path, project: Path) -> str | None:
+        """Where the skill is: the client's user-level skills folder, or, for Claude Code,
+        the project's own `.claude/skills` (only looked at, never read)."""
         folder = SKILL_FOLDERS.get(spec.client_id)
         if folder is None:
             return None
-        skill = home / folder / SKILL_NAME
-        return self._shown(skill, home) if (skill / "SKILL.md").is_file() else None
+        places = [home / folder / SKILL_NAME]
+        if spec.client_id == "claude_code":
+            places.append(project / PROJECT_SKILLS / SKILL_NAME)
+        for skill in places:
+            if self._is(skill / "SKILL.md", Path.is_file):
+                return self._shown(skill, home)
+        return None
+
+    @staticmethod
+    def _is(path: Path, test: Callable[[Path], bool]) -> bool:
+        """`test(path)`, False when the path cannot be looked at (`PermissionError` on a folder
+        that is not searchable, which `Path.is_dir` raises on Python 3.12 and 3.13)."""
+        try:
+            return test(path)
+        except OSError:
+            return False
 
     def _skill_install(self) -> str:
         shipped = self._shipped()

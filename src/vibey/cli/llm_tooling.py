@@ -10,7 +10,8 @@ step shows them through its own cleaning:
     WARN claude_code:plugin        missing: in Claude Code run /plugin marketplace add ...
     UNKNOWN cursor:skill           not-applicable: vibey ships no vibey-chat-driver skill ...
 
-A missing surface is a `WARN`, never a `FAIL`: the section never fails doctor. Each detail is
+A missing surface is a `WARN`, never a `FAIL`: the section never fails doctor, and it never
+raises -- a probe that breaks on what it read is one `UNKNOWN llm-tooling` line saying so. Each detail is
 machine text read from files, so it is cleaned as a raised check's message is
 (`DoctorChecks.cleaned`): one line, no control, format or separator character, no URL
 credentials, cut at `DETAIL_CHARS` -- long enough to keep a snippet to paste whole.
@@ -42,7 +43,11 @@ class LlmToolingSection:
         self._probe = probe
 
     def lines(self, client_ids: Sequence[str] | None = None) -> list[str]:
-        found = self._probe.findings(client_ids)
+        try:
+            found = self._probe.findings(client_ids)
+        except Exception as exc:  # noqa: BLE001 - the section never fails doctor, whatever it read
+            reason = DoctorChecks.cleaned(f"{type(exc).__name__}: {exc}", limit=DETAIL_CHARS)
+            return [f"UNKNOWN {NAME:<26} could not read the clients' configurations ({reason})"]
         if not found:
             return [f"UNKNOWN {NAME:<26} no supported LLM client is installed here"]
         return [

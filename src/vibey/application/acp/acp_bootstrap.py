@@ -112,6 +112,8 @@ POSTGRES_OPTIONS: Final[tuple[Mapping[str, str], ...]] = (
 )
 NOT_ASKED: Final = "Not asked: the prompt was cancelled first. vibey asks at your next prompt."
 _LOG: Final = logging.getLogger(__name__)
+CUT_NOTE: Final = " ... (cut here; `vibey doctor` or `vibey connect --dry-run` prints it whole)"
+"""Ends a finding cut to the message limit."""
 
 type StepWait = Callable[[asyncio.Task[None], float], Awaitable[bool]]
 """Wait for the background steps up to a number of seconds; True when they finished."""
@@ -847,7 +849,13 @@ class AcpBootstrap:
             return False
 
     def _finding(self, result: DoctorResult) -> str:
+        """One finding as a line, at most `[acp] live_message_chars` long. A longer one (a
+        refusal carrying the snippet to paste) is cut saying where to read it whole, so a cut
+        snippet is never mistaken for one to paste."""
         said = f"{result.mark} {result.name}" + (f": {result.detail}" if result.detail else "")
+        limit = self._settings.live_message_chars
+        if len(said) > limit and limit > 2 * len(CUT_NOTE):
+            said = said[: limit - len(CUT_NOTE)] + CUT_NOTE
         return self._untrusted(said)
 
     def _untrusted(self, text: str) -> str:

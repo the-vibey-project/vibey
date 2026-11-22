@@ -9,11 +9,16 @@ Follows the REA-style host registration workflow (plan -> approval -> backup -> 
   `[sys.executable, "-c", ...]` when there is none (`pyproject.toml` has no `__main__.py`, only
   `vibey = vibey.cli.main:run`).
 - Merges into existing JSON or TOML config files without overwriting sibling servers or keys,
-  and reports `unchanged` when the file already carries the exact entry.
+  and reports `unchanged` -- never rewriting or reformatting the file -- when it already carries
+  a `vibey` entry running the same command with the same leading arguments. An entry the person
+  customised keeps everything vibey does not need to change: its `env`, other keys, and flags
+  after vibey's own arguments (`["acp", "--no-bootstrap"]`). A rewrite keeps the file's
+  indentation and its non-ASCII text.
 - Never rewrites a JSON file it cannot read as strict JSON. Editors such as Zed keep comments
   and trailing commas in their settings; such a file is read leniently only to see whether it
   already carries the entry (then it is `unchanged`), and is otherwise refused with the exact
-  snippet to paste by hand.
+  snippet to paste by hand. A file nested too deeply to parse is refused the same way, never
+  with a traceback.
 
 Pure: no I/O, no `pathlib`, no `os.environ`, no clock. Paths are manipulated as strings.
 """
@@ -70,10 +75,23 @@ class HostClientSpec:
     entry_type: str | None = None
     """When set, the entry's `type` and an empty `env` (Zed's custom agent servers)."""
 
-    def config_path(self, *, home_dir: str, project_dir: str, platform: str) -> str:
+    def config_path(
+        self,
+        *,
+        home_dir: str,
+        project_dir: str,
+        platform: str,
+        xdg_config_home: str | None = None,
+    ) -> str:
+        """Where the client's config lives. `xdg_config_home` is the environment's
+        `XDG_CONFIG_HOME`, used only where the client honours it (Zed on Linux) and only when
+        absolute; Zed on macOS always reads `~/.config/zed`."""
         home = home_dir.rstrip("/")
         proj = project_dir.rstrip("/")
         if self.client_id == "zed":
+            xdg = (xdg_config_home or "").rstrip("/")
+            if platform != "darwin" and xdg.startswith("/"):
+                return f"{xdg}/zed/settings.json"
             return f"{home}/.config/zed/settings.json"
         if self.client_id == "claude_code":
             return f"{proj}/.mcp.json"
@@ -90,7 +108,9 @@ class HostClientSpec:
         # gemini_cli
         return f"{home}/.gemini/settings.json"
 
-    def presence_path(self, *, home_dir: str, platform: str) -> str:
+    def presence_path(
+        self, *, home_dir: str, platform: str, xdg_config_home: str | None = None
+    ) -> str:
         """The folder whose existence says this client is installed for this user: its
         config folder for a user-scope client, its own user folder for a project-scope one."""
         home = home_dir.rstrip("/")
@@ -100,7 +120,9 @@ class HostClientSpec:
             if platform == "darwin":
                 return f"{home}/Library/Application Support/Code"
             return f"{home}/.config/Code"
-        config = self.config_path(home_dir=home, project_dir="", platform=platform)
+        config = self.config_path(
+            home_dir=home, project_dir="", platform=platform, xdg_config_home=xdg_config_home
+        )
         return config.rsplit("/", 1)[0]
 
 
@@ -258,12 +280,18 @@ class HostClients:
         platform: str,
         launch: McpLaunchCommand,
         existing_content: str | None,
+        xdg_config_home: str | None = None,
     ) -> ConnectPlanItem:
-        target = spec.config_path(home_dir=home_dir, project_dir=project_dir, platform=platform)
+        target = spec.config_path(
+            home_dir=home_dir,
+            project_dir=project_dir,
+            platform=platform,
+            xdg_config_home=xdg_config_home,
+        )
         if spec.format == "json":
             merged = self._merge_json(spec, launch, existing_content, target)
         else:
-            merged = self._merge_toml(launch, existing_content, target)
+            merged = self._merge_toml(spec, launch, existing_content, target)
 
         if existing_content is None:
             return ConnectPlanItem(
@@ -299,21 +327,27 @@ class HostClients:
         existing_content: str | None,
         target: str,
     ) -> str:
-        if existing_content is None or not existing_content.strip():
+        bom, text = self._without_bom(existing_content)
+        if text is None or not text.strip():
             doc: dict[str, Any] = {}
         else:
             try:
-                parsed = json.loads(existing_content)
-            except json.JSONDecodeError as exc:
-                if self._carries(spec, launch, self._lenient(existing_content)):
-                    return existing_content  # pasted by hand: already right, never rewritten
+                parsed = json.loads(text)
+            except (ValueError, RecursionError) as exc:
+                # RecursionError: deep nesting (a hostile `[[[[...`), which the decoder does not
+                # report as a JSONDecodeError. Either way the file is not rewritten.
+                if self._carries(spec, launch, self._lenient(text)):
+                    return existing_content or ""  # pasted by hand: already right, kept as is
+                why = exc.msg if isinstance(exc, json.JSONDecodeError) else "nested too deeply"
                 raise HostClientError(
-                    f"{target}: invalid JSON ({exc.msg}): not strict JSON (comments or trailing "
+                    f"{target}: invalid JSON ({why}): not strict JSON (comments or trailing "
                     "commas), so vibey does not rewrite it. Add this to its top-level object by "
                     f"hand: {self.snippet(spec, launch)}"
                 ) from exc
             if not isinstance(parsed, dict):
                 raise HostClientError(f"{target}: expected a top-level JSON object")
+            if self._carries(spec, launch, parsed):
+                return existing_content or ""  # already connected: not reformatted
             doc = dict(parsed)
 
         existing_table = doc.get(spec.root_key)
@@ -324,34 +358,103 @@ class HostClients:
         else:
             raise HostClientError(f"{target}: {spec.root_key!r} must be a JSON object")
 
-        servers[SERVER_NAME] = self.entry(spec, launch)
+        servers[SERVER_NAME] = self._updated(spec, launch, servers.get(SERVER_NAME))
         doc[spec.root_key] = servers
-        return json.dumps(doc, indent=2) + "\n"
+        return bom + json.dumps(doc, indent=self._indent(text), ensure_ascii=False) + "\n"
 
     def carries(
         self, spec: HostClientSpec, launch: McpLaunchCommand, existing_content: str | None
     ) -> bool:
-        """Whether `existing_content` already holds exactly the entry `plan_one` would merge,
-        however it is laid out (a JSON file with comments is read leniently). Only reads."""
-        if existing_content is None or not existing_content.strip():
+        """Whether `existing_content` already holds a `vibey` entry that runs this launch,
+        however it is laid out (a JSON file with comments is read leniently) and whatever else
+        the person added to it (`_connected`). A file that cannot be parsed at all -- nested too
+        deeply included -- does not. Only reads."""
+        _, text = self._without_bom(existing_content)
+        if text is None or not text.strip():
             return False
         if spec.format == "toml":
             try:
-                return self._toml_carries(tomllib.loads(existing_content), launch)
-            except tomllib.TOMLDecodeError:
+                return self._toml_carries(tomllib.loads(text), launch)
+            except (ValueError, RecursionError):
                 return False
         try:
-            doc = json.loads(existing_content)
-        except json.JSONDecodeError:
-            doc = self._lenient(existing_content)
+            doc = json.loads(text)
+        except (ValueError, RecursionError):
+            doc = self._lenient(text)
         return self._carries(spec, launch, doc)
 
     def _carries(self, spec: HostClientSpec, launch: McpLaunchCommand, doc: object) -> bool:
-        """Whether a parsed document already holds exactly the entry vibey would write."""
+        """Whether a parsed document's table holds a `vibey` entry that runs this launch."""
         if not isinstance(doc, Mapping):
             return False
         table = doc.get(spec.root_key)
-        return isinstance(table, Mapping) and table.get(SERVER_NAME) == self.entry(spec, launch)
+        return isinstance(table, Mapping) and self._connected(spec, launch, table.get(SERVER_NAME))
+
+    @staticmethod
+    def _connected(spec: HostClientSpec, launch: McpLaunchCommand, existing: object) -> bool:
+        """Whether an existing entry already runs this launch: the same command, `args` that
+        start with the launch's own (any flag after them, such as `--no-bootstrap`, is the
+        person's), and the `type` the client needs. Every other key (`env`, ...) is the
+        person's and never decides it."""
+        if not isinstance(existing, Mapping):
+            return False
+        args = existing.get("args")
+        wanted = spec.entry_type or ("stdio" if spec.include_stdio_type else None)
+        return (
+            existing.get("command") == launch.command
+            and isinstance(args, list)
+            and tuple(args[: len(launch.args)]) == launch.args
+            and (wanted is None or existing.get("type") == wanted)
+            and (spec.entry_type is None or isinstance(existing.get("env", {}), Mapping))
+        )
+
+    def _updated(
+        self, spec: HostClientSpec, launch: McpLaunchCommand, existing: object
+    ) -> dict[str, Any]:
+        """The entry to write over an existing one: only what must change changes -- `type`,
+        `command`, and the launch's own `args` (the person's flags after them are kept) --
+        and every other key, `env` included, is kept as the person wrote it."""
+        entry = self.entry(spec, launch)
+        if not isinstance(existing, Mapping):
+            return entry
+        kept: dict[str, Any] = dict(existing)
+        for key in ("type", "command"):
+            if key in entry:
+                kept[key] = entry[key]
+        kept["args"] = [*launch.args, *self._extra_args(existing.get("args"), spec.protocol)]
+        if spec.entry_type is not None and not isinstance(kept.get("env"), Mapping):
+            kept["env"] = {}
+        return kept
+
+    @staticmethod
+    def _extra_args(args: object, protocol: ClientProtocol) -> list[str]:
+        """The person's own flags after vibey's launch arguments (`["acp", "--no-bootstrap"]`
+        keeps `--no-bootstrap`), whichever launcher wrote them; none for any other shape."""
+        if not isinstance(args, list) or not all(isinstance(arg, str) for arg in args):
+            return []
+        if args[:1] == [protocol]:
+            return list(args[1:])
+        if args[:2] == ["-c", PYTHON_FALLBACK_CODES[protocol]]:
+            return list(args[2:])
+        return []
+
+    @staticmethod
+    def _without_bom(text: str | None) -> tuple[str, str | None]:
+        """A UTF-8 byte-order mark, kept apart so the rest is read as JSON or TOML and a
+        rewrite puts it back."""
+        if text is not None and text.startswith("\ufeff"):
+            return "\ufeff", text[1:]
+        return "", text
+
+    @staticmethod
+    def _indent(text: str | None) -> int | str:
+        """The file's own indentation unit (its first indented line's), so a rewrite keeps the
+        file's style; two spaces for a new file."""
+        found = re.search(r"\n([ \t]+)\S", text or "")
+        if found is None:
+            return 2
+        unit = found.group(1)
+        return unit if "\t" in unit else len(unit)
 
     @staticmethod
     def _lenient(text: str) -> object | None:
@@ -392,7 +495,7 @@ class HostClients:
                 i += 1
         try:
             document: object = json.loads("".join(out))
-        except json.JSONDecodeError:
+        except (ValueError, RecursionError):
             return None
         return document
 
@@ -400,42 +503,54 @@ class HostClients:
     def _toml_carries(parsed: Mapping[str, Any], launch: McpLaunchCommand) -> bool:
         servers = parsed.get("mcp_servers")
         existing = servers.get(SERVER_NAME) if isinstance(servers, Mapping) else None
+        args = existing.get("args") if isinstance(existing, Mapping) else None
         return (
             isinstance(existing, Mapping)
             and existing.get("command") == launch.command
-            and tuple(existing.get("args", ())) == launch.args
+            and isinstance(args, list)
+            and tuple(args[: len(launch.args)]) == launch.args
         )
 
-    @staticmethod
     def _merge_toml(
+        self,
+        spec: HostClientSpec,
         launch: McpLaunchCommand,
         existing_content: str | None,
         target: str,
     ) -> str:
-        block = (
-            "[mcp_servers.vibey]\n"
-            f"command = {json.dumps(launch.command)}\n"
-            f"args = [{', '.join(json.dumps(a) for a in launch.args)}]\n"
-        )
         if existing_content is None or not existing_content.strip():
-            return block
+            return self._toml_block(launch, [])
 
         try:
             parsed = tomllib.loads(existing_content)
-        except tomllib.TOMLDecodeError as exc:
+        except (ValueError, RecursionError) as exc:
             raise HostClientError(f"{target}: invalid TOML ({exc})") from exc
 
         mcp_servers = parsed.get("mcp_servers")
         if mcp_servers is not None and not isinstance(mcp_servers, Mapping):
             raise HostClientError(f"{target}: 'mcp_servers' must be a TOML table")
-        if HostClients._toml_carries(parsed, launch):
+        if self._toml_carries(parsed, launch):
             return existing_content
 
+        existing = mcp_servers.get(SERVER_NAME) if isinstance(mcp_servers, Mapping) else None
+        extra = self._extra_args(
+            existing.get("args") if isinstance(existing, Mapping) else None, spec.protocol
+        )
+        block = self._toml_block(launch, extra)
         if TOML_SECTION_RE.search(existing_content):
-            return TOML_SECTION_RE.sub(block, existing_content, count=1)
+            return TOML_SECTION_RE.sub(lambda _: block, existing_content, count=1)
 
         trimmed = existing_content.rstrip()
         return f"{trimmed}\n\n{block}"
+
+    @staticmethod
+    def _toml_block(launch: McpLaunchCommand, extra: Sequence[str]) -> str:
+        args = (*launch.args, *extra)
+        return (
+            "[mcp_servers.vibey]\n"
+            f"command = {json.dumps(launch.command)}\n"
+            f"args = [{', '.join(json.dumps(a) for a in args)}]\n"
+        )
 
 
 HOST_CLIENT_CATALOG: Final[HostClientsInterface] = HostClients()

@@ -38,13 +38,12 @@ import asyncio
 import json
 import os
 import sys
-from collections.abc import Callable
+from collections.abc import Callable, Mapping
 from pathlib import Path
 
 from vibey.application.acp.dto import DoctorResult
-from vibey.domain.host_clients import HOST_CLIENT_CATALOG, HostClientError
+from vibey.domain.host_clients import HOST_CLIENT_CATALOG, HostClientError, HostClientSpec
 from vibey.domain.interfaces.host_clients_interface import HostClientsInterface
-from vibey.infrastructure.mcp.host_installer import HOST_INSTALLER
 from vibey.infrastructure.mcp.interfaces.host_installer_interface import HostInstallerInterface
 
 
@@ -56,12 +55,16 @@ class HostConnector:
         *,
         state_dir: Path,
         version: str,
-        installer: HostInstallerInterface = HOST_INSTALLER,
+        installer: HostInstallerInterface,
         catalog: HostClientsInterface = HOST_CLIENT_CATALOG,
         home_dir: Callable[[], Path] = Path.home,
         platform: str = sys.platform,
+        environ: Mapping[str, str] = os.environ,
     ) -> None:
+        # `installer` has no default: the one wired in (`bootstrap.acp_machine`) writes the
+        # running install's own launcher, and a PATH-resolving default would be a trap.
         self._installer = installer
+        self._environ = environ
         self._platform = platform
         self._catalog = catalog
         self._home_dir = home_dir
@@ -87,14 +90,27 @@ class HostConnector:
     def _installed(self) -> list[str]:
         """The user-scope clients whose config folder exists here now."""
         home = str(self._home_dir())
+        xdg = self._environ.get("XDG_CONFIG_HOME")
         return [
             spec.client_id
             for spec in self._catalog.all()
             if spec.scope == "user"
-            and Path(
-                spec.config_path(home_dir=home, project_dir="", platform=self._platform)
-            ).parent.is_dir()
+            and self._folder_exists(
+                Path(
+                    spec.config_path(
+                        home_dir=home, project_dir="", platform=self._platform, xdg_config_home=xdg
+                    )
+                ).parent
+            )
         ]
+
+    @staticmethod
+    def _folder_exists(folder: Path) -> bool:
+        """Whether the folder is there; one that cannot be looked into counts as absent."""
+        try:
+            return folder.is_dir()
+        except OSError:
+            return False
 
     def _connect(self) -> tuple[DoctorResult, ...]:
         home = Path(os.path.realpath(self._home_dir()))
@@ -103,7 +119,7 @@ class HostConnector:
         for spec in self._catalog.all():
             if spec.scope != "user":
                 continue
-            result = self._one(spec.client_id, home)
+            result = self._one(spec, home)
             results.append(result)
             if result.mark == "PASS":
                 connected.append(spec.client_id)
@@ -122,12 +138,23 @@ class HostConnector:
             )
         return tuple(results)
 
-    def _one(self, client_id: str, home: Path) -> DoctorResult:
+    def _one(self, spec: HostClientSpec, home: Path) -> DoctorResult:
+        client_id = spec.client_id
+        folder = Path(
+            spec.config_path(
+                home_dir=str(self._home_dir()),
+                project_dir="",
+                platform=self._platform,
+                xdg_config_home=self._environ.get("XDG_CONFIG_HOME"),
+            )
+        ).parent
+        if not self._folder_exists(folder):
+            return DoctorResult("UNKNOWN", client_id, f"not installed here ({folder} is not there)")
         try:
             plan = self._installer.build_plan([client_id])
             item = plan[0]
             target = Path(item.target_path)
-            if not target.parent.is_dir():
+            if not self._folder_exists(target.parent):
                 return DoctorResult(
                     "UNKNOWN", client_id, f"not installed here ({target.parent} does not exist)"
                 )
@@ -138,7 +165,7 @@ class HostConnector:
             if item.action == "unchanged":
                 return DoctorResult("PASS", client_id, f"already connected in {target}")
             self._installer.apply_plan(plan)
-        except (HostClientError, OSError, UnicodeDecodeError) as exc:
+        except (HostClientError, OSError, ValueError, RecursionError) as exc:
             return DoctorResult("WARN", client_id, f"not connected: {exc}")
         backup = f" (the old file is in {item.backup_path})" if item.backup_path else ""
         return DoctorResult("PASS", client_id, f"{item.action}d {target}{backup}")

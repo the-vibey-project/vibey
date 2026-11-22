@@ -25,6 +25,7 @@ from typing import Annotated, Final
 
 import typer
 
+from vibey.application.acp.doctor_checks import DoctorChecks
 from vibey.bootstrap import running_vibey
 from vibey.cli.errors import EXIT_USAGE
 from vibey.cli.interfaces.connect_interface import ConnectCommandInterface
@@ -41,6 +42,8 @@ from vibey.infrastructure.mcp.host_installer import HostInstaller
 from vibey.infrastructure.mcp.interfaces.host_installer_interface import HostInstallerInterface
 
 PROTOCOL_TITLES: Final = {"mcp": "MCP server command", "acp": "ACP agent command"}
+REFUSAL_CHARS: Final = 2000
+"""Long enough for a refusal's snippet to be printed whole."""
 
 
 class ConnectCommand:
@@ -88,6 +91,8 @@ class ConnectCommand:
         self._print_plan(plan)
         for spec, _ in refused:
             typer.echo(f"  [refused  ] {spec.client_id:<15} ({spec.protocol})")
+        for spec, why in refused:  # before any question, so a "no" still shows the snippet
+            typer.echo(f"Error: {spec.client_id} was not connected: {why}", err=True)
         pending = [item for item in plan if item.action != "unchanged"]
         if dry_run or not pending:
             if not pending and not refused:
@@ -104,6 +109,9 @@ class ConnectCommand:
         except HostClientError as exc:
             typer.echo(f"Error: {exc}; no files were modified.", err=True)
             raise typer.Exit(1) from exc
+        except OSError as exc:
+            typer.echo(f"Error: a file could not be written: {self._cleaned(exc)}", err=True)
+            raise typer.Exit(1) from exc
         for item in pending:
             backup_note = f" (backed up to {item.backup_path})" if item.backup_path else ""
             typer.echo(f"{item.action}: {item.client.client_id} -> {item.target_path}{backup_note}")
@@ -111,29 +119,34 @@ class ConnectCommand:
 
     def _plan(
         self, specs: Sequence[HostClientSpec]
-    ) -> tuple[list[ConnectPlanItem], list[tuple[HostClientSpec, HostClientError]]]:
-        """Each client planned on its own, so one file vibey will not rewrite never stops the
-        others."""
+    ) -> tuple[list[ConnectPlanItem], list[tuple[HostClientSpec, str]]]:
+        """Each client planned on its own, so one file vibey will not rewrite -- or cannot read,
+        or cannot parse -- never stops the others. Each refusal is one cleaned line."""
         plan: list[ConnectPlanItem] = []
-        refused: list[tuple[HostClientSpec, HostClientError]] = []
+        refused: list[tuple[HostClientSpec, str]] = []
         for spec in specs:
             try:
                 plan.extend(self._installer.build_plan([spec.client_id]))
-            except HostClientError as exc:
-                refused.append((spec, exc))
+            except (HostClientError, OSError, ValueError, RecursionError) as exc:
+                refused.append((spec, self._cleaned(exc)))
         return plan, refused
+
+    @staticmethod
+    def _cleaned(exc: BaseException) -> str:
+        """vibey's own refusal as it is (it ends with the snippet to paste); anything else as
+        its type and first line. One line either way, with no control character."""
+        said = str(exc) if isinstance(exc, HostClientError) else f"{type(exc).__name__}: {exc}"
+        return DoctorChecks.cleaned(said, limit=REFUSAL_CHARS)
 
     def _finish(
         self,
         specs: Sequence[HostClientSpec],
-        refused: Sequence[tuple[HostClientSpec, HostClientError]],
+        refused: Sequence[tuple[HostClientSpec, str]],
     ) -> None:
         if self._tooling is not None:
             typer.echo("LLM tooling:")
             for line in self._tooling.lines([spec.client_id for spec in specs]):
                 typer.echo(line)
-        for spec, exc in refused:
-            typer.echo(f"Error: {spec.client_id} was not connected: {exc}", err=True)
         if refused:
             raise typer.Exit(1)
 

@@ -42,9 +42,10 @@ class HostClientsInterface(Protocol):
     def carries(
         self, spec: HostClientSpec, launch: McpLaunchCommand, existing_content: str | None
     ) -> bool:
-        """Whether a config's text already holds exactly the entry `plan_one` would merge,
-        however it is laid out; a JSON file with comments or trailing commas is read leniently.
-        Only reads."""
+        """Whether a config's text already holds a `vibey` entry running `launch` (its command,
+        leading `args` and required `type`; the person's other keys and extra flags are theirs),
+        however it is laid out; a JSON file with comments or trailing commas is read leniently,
+        and one that cannot be parsed at all does not carry it. Only reads."""
         ...
 
     def snippet(self, spec: HostClientSpec, launch: McpLaunchCommand) -> str:
@@ -61,8 +62,13 @@ class HostClientsInterface(Protocol):
         platform: str,
         launch: McpLaunchCommand,
         existing_content: str | None,
+        xdg_config_home: str | None = None,
     ) -> ConnectPlanItem:
-        """Compute the idempotent merge plan for one host client."""
+        """Compute the idempotent merge plan for one host client: `unchanged` (never
+        reformatted) when the file already carries a `vibey` entry running `launch`; otherwise
+        only the entry's `type`, `command` and leading `args` change, the person's other keys
+        and extra flags kept. A file that cannot be parsed -- not strict JSON, invalid TOML,
+        nested too deeply -- raises `HostClientError`, never anything else."""
         ...
 
     def resolve_clients(self, requested: Sequence[str] | None) -> tuple[HostClientSpec, ...]:

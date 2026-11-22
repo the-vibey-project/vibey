@@ -107,6 +107,7 @@ def _doctor(args: list[str], tmp_path: Path, monkeypatch: pytest.MonkeyPatch):
             project_dir=lambda: tmp_path,
             platform="linux",
             shipped_skill=lambda: None,
+            environ={},
         )
     )
     with (
@@ -146,3 +147,31 @@ def test_doctor_json_carries_the_surfaces_as_checks_and_no_new_key(
         "zed:skill": "UNKNOWN",
         "zed:plugin": "UNKNOWN",
     }
+
+
+class _Broken:
+    def detected(self) -> tuple[()]:
+        return ()
+
+    def findings(self, client_ids: Sequence[str] | None = None) -> tuple[ToolingFinding, ...]:
+        raise RecursionError("maximum recursion depth exceeded\x1b[2J")
+
+
+def test_a_probe_that_breaks_is_one_unknown_line_and_never_fails_doctor() -> None:
+    lines, ok = LlmToolingSection(_Broken()).doctor_lines()
+    assert ok is True
+    assert lines == [
+        f"UNKNOWN {'llm-tooling':<26} could not read the clients' configurations "
+        "(RecursionError: maximum recursion depth exceeded [2J)"
+    ]
+
+
+def test_doctor_in_a_folder_with_a_deeply_nested_mcp_json_still_passes(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    (tmp_path / "home" / ".claude").mkdir(parents=True)
+    (tmp_path / ".mcp.json").write_text("// c\n" + "[" * 200_000)
+    result = _doctor([], tmp_path, monkeypatch)
+    assert result.exit_code == 0, result.output
+    line = next(x for x in result.stdout.splitlines() if "claude_code:mcp-server" in x)
+    assert line.startswith("WARN ") and "invalid JSON" in line

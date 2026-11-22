@@ -257,3 +257,168 @@ def test_the_cli_writes_the_running_installs_own_vibey_never_one_found_on_path(
     plan = connect_module.PINNED_INSTALLER.build_plan(["cursor", "zed"])
     assert [item.launch.command for item in plan] == ["/pinned/bin/vibey"] * 2
     assert [item.launch.args for item in plan] == [("mcp",), ("acp",)]
+
+
+# ----------------------------------------------- fix round 1: hostile and customised files
+
+
+def test_a_deeply_nested_project_config_is_refused_and_the_others_still_connect(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    installer = _installer(tmp_path)
+    (tmp_path / "proj" / ".mcp.json").write_text("[" * 200_000)
+    with pytest.raises(typer.Exit) as stopped:
+        ConnectCommand(installer=installer).run(
+            clients=["claude_code", "cursor"], yes=True, dry_run=False, list_clients=False
+        )
+    assert stopped.value.exit_code == 1
+    assert (tmp_path / "home" / ".cursor" / "mcp.json").exists()
+    err = capsys.readouterr().err
+    assert "claude_code was not connected" in err and "nested too deeply" in err
+    assert (tmp_path / "proj" / ".mcp.json").read_text() == "[" * 200_000
+
+
+@pytest.mark.parametrize(
+    ("content", "says"),
+    [
+        (b"\xff\xfe{", "UnicodeDecodeError"),
+        ("x = " + "[" * 200_000, "invalid TOML"),
+    ],
+)
+def test_an_unreadable_or_unparseable_config_is_one_line_for_that_client(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str], content: bytes | str, says: str
+) -> None:
+    installer = _installer(tmp_path)
+    codex = tmp_path / "home" / ".codex" / "config.toml"
+    codex.parent.mkdir(parents=True)
+    if isinstance(content, bytes):
+        codex.write_bytes(content)
+    else:
+        codex.write_text(content)
+    with pytest.raises(typer.Exit):
+        ConnectCommand(installer=installer).run(
+            clients=["codex", "cursor"], yes=True, dry_run=False, list_clients=False
+        )
+    err = [line for line in capsys.readouterr().err.splitlines() if line]
+    assert len(err) == 1 and err[0].startswith("Error: codex was not connected: ")
+    assert says in err[0]
+
+
+def test_a_config_vibey_may_not_read_is_refused_for_that_client_only(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    import os
+
+    if os.geteuid() == 0:
+        pytest.skip("root reads anything")
+    installer = _installer(tmp_path)
+    cursor = tmp_path / "home" / ".cursor" / "mcp.json"
+    cursor.parent.mkdir(parents=True)
+    cursor.write_text("{}")
+    cursor.chmod(0)
+    try:
+        with pytest.raises(typer.Exit):
+            ConnectCommand(installer=installer).run(
+                clients=["cursor", "zed"], yes=True, dry_run=False, list_clients=False
+            )
+    finally:
+        cursor.chmod(0o600)
+    assert "PermissionError" in capsys.readouterr().err
+    assert (tmp_path / "home" / ".config" / "zed" / "settings.json").exists()
+
+
+def test_a_write_that_fails_is_one_error_line_not_a_traceback(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    class _Failing:
+        def build_plan(self, requested=None):
+            return _installer(tmp_path).build_plan(requested)
+
+        def apply_plan(self, plan):
+            raise OSError(28, "No space left on device")
+
+    with pytest.raises(typer.Exit) as stopped:
+        ConnectCommand(installer=_Failing()).run(
+            clients=["cursor"], yes=True, dry_run=False, list_clients=False
+        )
+    assert stopped.value.exit_code == 1
+    assert "a file could not be written: OSError: [Errno 28] No space left" in (
+        capsys.readouterr().err
+    )
+
+
+def test_a_customised_zed_entry_is_kept_through_a_connect(tmp_path: Path) -> None:
+    installer = _installer(tmp_path)
+    zed = tmp_path / "home" / ".config" / "zed" / "settings.json"
+    zed.parent.mkdir(parents=True)
+    mine = {
+        "type": "custom",
+        "command": "/old/vibey",
+        "args": ["acp", "--no-bootstrap"],
+        "env": {"VIBEY_CONFIG": "/x"},
+    }
+    zed.write_text(
+        json.dumps(
+            {"buffer_font_family": "Fira Código", "agent_servers": {"vibey": mine}},
+            indent=4,
+            ensure_ascii=False,
+        )
+    )
+    ConnectCommand(installer=installer).run(
+        clients=["zed"], yes=True, dry_run=False, list_clients=False
+    )
+    text = zed.read_text()
+    assert "Fira Código" in text and '\n    "agent_servers"' in text
+    assert json.loads(text)["agent_servers"]["vibey"] == {**mine, "command": "/opt/vibey/bin/vibey"}
+    before = zed.read_text()
+    ConnectCommand(installer=installer).run(
+        clients=["zed"], yes=True, dry_run=False, list_clients=False
+    )
+    assert zed.read_text() == before
+
+
+def test_the_refusal_is_shown_even_when_the_question_is_declined(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    installer = _installer(tmp_path)
+    zed = tmp_path / "home" / ".config" / "zed" / "settings.json"
+    zed.parent.mkdir(parents=True)
+    zed.write_text(COMMENTED_ZED)
+    with pytest.raises(typer.Exit):
+        ConnectCommand(installer=installer, confirm=lambda _: False).run(
+            clients=["zed", "cursor"], yes=False, dry_run=False, list_clients=False
+        )
+    assert '"args": ["acp"]' in capsys.readouterr().err
+
+
+def test_zed_on_linux_is_written_where_xdg_config_home_points(tmp_path: Path) -> None:
+    home = tmp_path / "home"
+    xdg = home / ".xdg"
+    installer = HostInstaller(
+        home_dir=lambda: home,
+        project_dir=lambda: tmp_path,
+        platform="linux",
+        which=lambda _: "/opt/vibey/bin/vibey",
+        environ={"XDG_CONFIG_HOME": str(xdg)},
+    )
+    home.mkdir()
+    ConnectCommand(installer=installer).run(
+        clients=["zed"], yes=True, dry_run=False, list_clients=False
+    )
+    assert (xdg / "zed" / "settings.json").exists()
+    assert not (home / ".config").exists()
+
+
+def test_the_guides_no_bootstrap_entry_counts_as_connected() -> None:
+    import re
+
+    from vibey.domain.host_clients import HOST_CLIENT_CATALOG, McpLaunchCommand
+
+    guide = (Path(__file__).parents[2] / "docs" / "guides" / "acp.md").read_text()
+    args = json.loads(re.search(r'"args": (\["acp", "--no-bootstrap"\])', guide).group(1))
+    zed = HOST_CLIENT_CATALOG.by_id("zed")
+    assert zed is not None
+    entry = {"type": "custom", "command": "/v/vibey", "args": args, "env": {}}
+    assert HOST_CLIENT_CATALOG.carries(
+        zed, McpLaunchCommand("/v/vibey", ("acp",)), json.dumps({"agent_servers": {"vibey": entry}})
+    )

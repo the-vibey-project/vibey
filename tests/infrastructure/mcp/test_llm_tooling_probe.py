@@ -41,6 +41,7 @@ def probe(
             platform="linux",
             python_executable="/usr/bin/python3",
             shipped_skill=lambda: shipped,
+            environ={},
         ),
         home,
         project,
@@ -281,3 +282,110 @@ def test_the_probe_writes_nothing(tmp_path: Path) -> None:
     tooling.findings()
     tooling.findings(["claude_code", "vscode", "cursor", "gemini_cli", "claude_desktop"])
     assert sorted((p, p.stat().st_mtime_ns) for p in tmp_path.rglob("*")) == before
+
+
+# ------------------------------------------------------------- fix round 1: never raises
+
+DEEP = ["[" * 200_000, "// c\n" + "[" * 200_000]
+
+
+@pytest.mark.parametrize("content", DEEP)
+def test_a_project_config_nested_too_deeply_is_reported_never_raised(
+    tmp_path: Path, content: str
+) -> None:
+    tooling, _, project = probe(tmp_path)
+    (project / ".mcp.json").write_text(content)
+    finding = by_name(tooling.findings(["claude_code"]))["claude_code:mcp-server"]
+    assert finding.state == "missing" and "invalid JSON" in finding.detail
+
+
+def test_a_codex_config_nested_too_deeply_is_reported_never_raised(tmp_path: Path) -> None:
+    tooling, home, _ = probe(tmp_path)
+    (home / ".codex").mkdir()
+    (home / ".codex" / "config.toml").write_text("x = " + "[" * 200_000)
+    finding = by_name(tooling.findings())["codex:mcp-server"]
+    assert finding.state == "missing" and "invalid TOML" in finding.detail
+
+
+def test_a_plugin_record_nested_too_deeply_means_no_plugin(tmp_path: Path) -> None:
+    tooling, home, _ = probe(tmp_path)
+    installed_plugins(home, "[" * 200_000)
+    assert by_name(tooling.findings())["claude_code:plugin"].state == "missing"
+
+
+def test_a_folder_that_cannot_be_looked_into_counts_as_absent(tmp_path: Path) -> None:
+    if os.geteuid() == 0:
+        pytest.skip("root can look into anything")
+    tooling, home, _ = probe(tmp_path)
+    (home / ".config" / "zed").mkdir(parents=True)
+    (home / ".claude").mkdir()
+    (home / ".config").chmod(0)
+    try:
+        found = by_name(tooling.findings())
+        named = by_name(tooling.findings(["zed", "claude_code"]))
+    finally:
+        (home / ".config").chmod(0o700)
+    assert "zed:acp-agent" not in found and "claude_code:skill" in found
+    assert named["zed:acp-agent"].state == "missing"
+
+
+def test_an_entry_with_the_persons_own_flags_and_env_is_present(tmp_path: Path) -> None:
+    tooling, home, _ = probe(tmp_path)
+    mine = {**ZED_ENTRY, "args": ["acp", "--no-bootstrap"], "env": {"A": "b"}}
+    write_zed(home, {"agent_servers": {"vibey": mine}})
+    assert by_name(tooling.findings())["zed:acp-agent"].state == "present"
+
+
+def test_zed_on_linux_is_read_where_xdg_config_home_points(tmp_path: Path) -> None:
+    home, project, xdg = tmp_path / "home", tmp_path / "project", tmp_path / "home" / ".xdg"
+    project.mkdir()
+    (xdg / "zed").mkdir(parents=True)
+    (xdg / "zed" / "settings.json").write_text(json.dumps({"agent_servers": {"vibey": ZED_ENTRY}}))
+    tooling = LlmToolingProbe(
+        launcher=lambda: PINNED,
+        home_dir=lambda: home,
+        project_dir=lambda: project,
+        platform="linux",
+        shipped_skill=lambda: None,
+        environ={"XDG_CONFIG_HOME": str(xdg)},
+    )
+    finding = by_name(tooling.findings())["zed:acp-agent"]
+    assert finding.state == "present" and finding.detail == "in ~/.xdg/zed/settings.json"
+
+
+def test_claude_codes_skill_in_the_projects_own_folder_counts(tmp_path: Path) -> None:
+    tooling, _, project = probe(tmp_path)
+    skill = project / ".claude" / "skills" / "vibey-chat-driver"
+    skill.mkdir(parents=True)
+    (skill / "SKILL.md").write_text("x")
+    finding = by_name(tooling.findings(["claude_code"]))["claude_code:skill"]
+    assert finding.state == "present" and finding.detail.endswith(
+        "project/.claude/skills/vibey-chat-driver"
+    )
+
+
+def test_a_catalogue_that_breaks_on_a_file_is_a_refusal_never_a_raise(tmp_path: Path) -> None:
+    from vibey.domain.host_clients import HOST_CLIENT_CATALOG
+
+    class _Breaking:
+        def __getattr__(self, name: str) -> object:
+            return getattr(HOST_CLIENT_CATALOG, name)
+
+        def carries(self, *_args: object) -> bool:
+            raise RecursionError("too deep")
+
+    home, project = tmp_path / "home", tmp_path / "project"
+    (home / ".cursor").mkdir(parents=True)
+    project.mkdir()
+    (home / ".cursor" / "mcp.json").write_text("{}")
+    tooling = LlmToolingProbe(
+        launcher=lambda: PINNED,
+        catalog=_Breaking(),  # type: ignore[arg-type]
+        home_dir=lambda: home,
+        project_dir=lambda: project,
+        platform="linux",
+        shipped_skill=lambda: None,
+        environ={},
+    )
+    finding = by_name(tooling.findings())["cursor:mcp-server"]
+    assert finding.state == "missing" and "cannot be parsed" in finding.detail

@@ -496,3 +496,187 @@ def test_carries_reads_the_entry_however_the_file_is_laid_out() -> None:
     assert not HOST_CLIENT_CATALOG.carries(codex, McpLaunchCommand("vibey", ("mcp",)), toml)
     assert not HOST_CLIENT_CATALOG.carries(codex, mcp, "[broken")
     assert not HOST_CLIENT_CATALOG.carries(codex, mcp, 'mcp_servers = "x"\n')
+
+
+# ------------------------------------------------------- fix round 1: hostile and customised files
+
+DEEP_JSON = ["[" * 200_000, "// c\n" + "[" * 200_000, '{"agent_servers": ' + "[" * 200_000]
+
+
+@pytest.mark.parametrize("content", DEEP_JSON)
+def test_json_nested_too_deeply_is_refused_with_the_snippet_never_a_traceback(content: str) -> None:
+    with pytest.raises(HostClientError, match=r'"agent_servers": \{"vibey"'):
+        _zed_plan(content)
+    zed = HOST_CLIENT_CATALOG.by_id("zed")
+    assert zed is not None
+    assert not HOST_CLIENT_CATALOG.carries(zed, ZED_LAUNCH, content)
+
+
+def test_toml_nested_too_deeply_is_refused_never_a_traceback() -> None:
+    codex = HOST_CLIENT_CATALOG.by_id("codex")
+    assert codex is not None
+    deep = "x = " + "[" * 200_000
+    mcp = McpLaunchCommand("/usr/local/bin/vibey", ("mcp",))
+    with pytest.raises(HostClientError, match="invalid TOML"):
+        HOST_CLIENT_CATALOG.plan_one(
+            codex,
+            home_dir="/h",
+            project_dir="/p",
+            platform="linux",
+            launch=mcp,
+            existing_content=deep,
+        )
+    assert not HOST_CLIENT_CATALOG.carries(codex, mcp, deep)
+
+
+def test_a_customised_zed_entry_keeps_its_env_extra_args_and_keys_through_a_connect() -> None:
+    mine = {
+        "type": "custom",
+        "command": "/old/bin/vibey",
+        "args": ["acp", "--no-bootstrap"],
+        "env": {"VIBEY_CONFIG": "/x"},
+        "default_mode": "observe",
+    }
+    item = _zed_plan(json.dumps({"agent_servers": {"vibey": mine}}))
+    assert item.action == "update"
+    assert json.loads(item.new_content)["agent_servers"]["vibey"] == {
+        **mine,
+        "command": "/usr/local/bin/vibey",
+    }
+
+
+def test_an_entry_running_the_pinned_launcher_with_extra_flags_and_env_is_connected() -> None:
+    mine = {**ZED_ENTRY, "args": ["acp", "--no-bootstrap"], "env": {"A": "b"}}
+    existing = json.dumps({"agent_servers": {"vibey": mine}})
+    item = _zed_plan(existing)
+    assert item.action == "unchanged" and item.new_content == existing
+    zed = HOST_CLIENT_CATALOG.by_id("zed")
+    assert zed is not None
+    assert HOST_CLIENT_CATALOG.carries(zed, ZED_LAUNCH, existing)
+
+
+@pytest.mark.parametrize(
+    "entry",
+    [
+        {**ZED_ENTRY, "args": ["mcp"]},
+        {**ZED_ENTRY, "type": "stdio"},
+        {**ZED_ENTRY, "env": "not a table"},
+        {**ZED_ENTRY, "args": "acp"},
+        "not an object",
+    ],
+)
+def test_an_entry_that_does_not_run_vibey_acp_is_rewritten(entry: object) -> None:
+    item = _zed_plan(json.dumps({"agent_servers": {"vibey": entry}}))
+    assert item.action == "update"
+    written = json.loads(item.new_content)["agent_servers"]["vibey"]
+    assert written["command"] == "/usr/local/bin/vibey" and written["args"][0] == "acp"
+    assert written["type"] == "custom" and isinstance(written["env"], dict)
+
+
+def test_a_python_fallback_entry_keeps_its_flags_when_the_launcher_changes() -> None:
+    fallback = {
+        **ZED_ENTRY,
+        "command": "/usr/bin/python3",
+        "args": ["-c", "from vibey.cli.main import run; run(['acp'])", "--no-bootstrap"],
+    }
+    item = _zed_plan(json.dumps({"agent_servers": {"vibey": fallback}}))
+    assert json.loads(item.new_content)["agent_servers"]["vibey"]["args"] == [
+        "acp",
+        "--no-bootstrap",
+    ]
+
+
+def test_a_file_already_carrying_the_entry_is_never_reformatted() -> None:
+    laid_out = json.dumps(
+        {"buffer_font_family": "Fira Código", "agent_servers": {"vibey": ZED_ENTRY}},
+        indent=4,
+        ensure_ascii=True,
+    )
+    item = _zed_plan(laid_out)
+    assert item.action == "unchanged" and item.new_content == laid_out
+
+
+def test_a_rewrite_keeps_non_ascii_text_and_the_files_indentation() -> None:
+    four = json.dumps({"buffer_font_family": "Fira Código"}, indent=4, ensure_ascii=False)
+    item = _zed_plan(four)
+    assert "Fira Código" in item.new_content
+    assert '\n    "buffer_font_family"' in item.new_content
+    tabbed = '{\n\t"theme": "x"\n}'
+    assert '\n\t"theme"' in _zed_plan(tabbed).new_content
+    assert '\n  "agent_servers"' in _zed_plan("{}").new_content
+
+
+def test_a_byte_order_mark_is_read_past_and_kept() -> None:
+    bom = "﻿" + json.dumps({"theme": "x"})
+    item = _zed_plan(bom)
+    assert item.new_content.startswith("﻿{")
+    assert json.loads(item.new_content[1:])["agent_servers"]["vibey"] == ZED_ENTRY
+    carried = "﻿" + json.dumps({"agent_servers": {"vibey": ZED_ENTRY}})
+    assert _zed_plan(carried).action == "unchanged"
+
+
+def test_a_codex_entry_keeps_its_extra_flags_and_counts_as_connected_with_them() -> None:
+    codex = HOST_CLIENT_CATALOG.by_id("codex")
+    assert codex is not None
+    mcp = McpLaunchCommand("/usr/local/bin/vibey", ("mcp",))
+
+    def plan(content: str):
+        return HOST_CLIENT_CATALOG.plan_one(
+            codex,
+            home_dir="/h",
+            project_dir="/p",
+            platform="linux",
+            launch=mcp,
+            existing_content=content,
+        )
+
+    connected = '[mcp_servers.vibey]\ncommand = "/usr/local/bin/vibey"\nargs = ["mcp", "--x"]\n'
+    assert plan(connected).action == "unchanged"
+    old = '[mcp_servers.vibey]\ncommand = "/old/vibey"\nargs = ["mcp", "--x"]\n'
+    assert tomllib.loads(plan(old).new_content)["mcp_servers"]["vibey"]["args"] == ["mcp", "--x"]
+    assert not HOST_CLIENT_CATALOG.carries(codex, mcp, '[mcp_servers.vibey]\ncommand = "x"\n')
+
+
+def test_zed_on_linux_follows_an_absolute_xdg_config_home_and_macos_never_does() -> None:
+    zed = HOST_CLIENT_CATALOG.by_id("zed")
+    assert zed is not None
+
+    def where(platform: str, xdg: str | None) -> str:
+        return zed.config_path(
+            home_dir="/home/a", project_dir="/p", platform=platform, xdg_config_home=xdg
+        )
+
+    assert where("linux", "/home/a/.xdg/") == "/home/a/.xdg/zed/settings.json"
+    assert where("linux", "relative/xdg") == "/home/a/.config/zed/settings.json"
+    assert where("linux", None) == "/home/a/.config/zed/settings.json"
+    assert where("darwin", "/home/a/.xdg") == "/home/a/.config/zed/settings.json"
+    assert zed.presence_path(home_dir="/home/a", platform="linux", xdg_config_home="/x") == "/x/zed"
+    item = HOST_CLIENT_CATALOG.plan_one(
+        zed,
+        home_dir="/home/a",
+        project_dir="/p",
+        platform="linux",
+        launch=ZED_LAUNCH,
+        existing_content=None,
+        xdg_config_home="/x",
+    )
+    assert item.target_path == "/x/zed/settings.json"
+
+
+def test_an_mcp_clients_customised_entry_keeps_its_env_too() -> None:
+    cursor = HOST_CLIENT_CATALOG.by_id("cursor")
+    assert cursor is not None
+    mine = {"command": "/old/vibey", "args": ["mcp"], "env": {"A": "b"}}
+    item = HOST_CLIENT_CATALOG.plan_one(
+        cursor,
+        home_dir="/h",
+        project_dir="/p",
+        platform="linux",
+        launch=McpLaunchCommand("/usr/local/bin/vibey", ("mcp",)),
+        existing_content=json.dumps({"mcpServers": {"vibey": mine}}),
+    )
+    assert json.loads(item.new_content)["mcpServers"]["vibey"] == {
+        "command": "/usr/local/bin/vibey",
+        "args": ["mcp"],
+        "env": {"A": "b"},
+    }
