@@ -321,6 +321,41 @@ def _hermetic_host_health(
     monkeypatch.setattr(HOST_HEALTH, "_root", empty)
 
 
+@pytest.fixture(autouse=True)
+def _hermetic_web_search(request: pytest.FixtureRequest, monkeypatch: pytest.MonkeyPatch) -> None:
+    """Web search is local-first: with nothing set, vibey asks a SearXNG on loopback, and with a
+    Brave key it falls back to Brave. No test may reach either for real, nor read a real key
+    from the developer's own environment. So every test starts with none of the search settings
+    set, every connection the search opener would make is refused (SearXNG is down, and so is
+    Brave), and the once-per-process Brave notice is fresh. A test that injects its own opener
+    is unaffected; one marked `web_network` runs the real opener against its own loopback
+    server."""
+    from vibey.infrastructure.web import backup_notice
+    from vibey.infrastructure.web.guarded_opener import GuardedOpener
+    from vibey.infrastructure.web.search import BRAVE_KEY_NAMES
+
+    for name in (
+        *BRAVE_KEY_NAMES,
+        "BRAVE_SEARCH_API_KEY",
+        "VIBEY_SEARXNG_URL",
+        "WEBSEARCH_SEARXNG_URL",
+        "VIBEY_SEARCH_PROVIDER",
+        "WEBSEARCH_PROVIDER",
+        "VIBEY_SEARCH_TIMEOUT",
+        "WEBSEARCH_TIMEOUT",
+        "VIBEY_SEARCH_RESULTS",
+        "WEBSEARCH_RESULTS",
+    ):
+        monkeypatch.delenv(name, raising=False)
+    monkeypatch.setattr(backup_notice.PROCESS_BACKUP_NOTICE, "_said", False)
+    if request.node.get_closest_marker("web_network") is None:
+
+        def refused(self: GuardedOpener, request: object, timeout: float) -> object:
+            raise ConnectionRefusedError("hermetic test: no search backend is reachable")
+
+        monkeypatch.setattr(GuardedOpener, "__call__", refused)
+
+
 def pytest_unconfigure(config: pytest.Config) -> None:
     if _BASE_DSN is not None:
         with contextlib.suppress(Exception):

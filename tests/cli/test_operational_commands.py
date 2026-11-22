@@ -1573,15 +1573,30 @@ def test_worker_says_where_web_search_reaches_at_startup(tmp_path: Path) -> None
     with patch("vibey.infrastructure.db.notifier.PostgresJobReadyNotifier") as mock_notifier_cls:
         mock_notifier_cls.return_value = AsyncMock()
         configured = runner.invoke(
-            app, ["worker", "--once"], env={"VIBEY_SEARXNG_URL": "http://127.0.0.1:8080"}
+            app,
+            ["worker", "--once"],
+            env={"VIBEY_SEARXNG_URL": "http://127.0.0.1:8081", "BRAVE_SEARCH_API_KEY": "fake-w"},
         )
-        plain = runner.invoke(
-            app, ["worker", "--once"], env={"VIBEY_SEARXNG_URL": "", "VIBEY_BRAVE_API_KEY": ""}
-        )
+        plain = runner.invoke(app, ["worker", "--once"], env={"VIBEY_SEARXNG_URL": ""})
     assert (
-        "web search: searxng for DESIGN research and for every engine session" in configured.output
+        "web search: the local SearXNG at http://127.0.0.1:8081 first, for DESIGN research and"
+        " every engine session" in configured.output
     )
-    assert "web search: not configured" in plain.output
+    assert "Brave backup configured via BRAVE_SEARCH_API_KEY" in configured.output
+    assert "fake-w" not in configured.output
+    assert "web search: the local SearXNG at http://127.0.0.1:8080 first" in plain.output
+    assert "no Brave backup configured" in plain.output
+
+
+def test_worker_refuses_to_start_when_brave_is_named_the_provider() -> None:
+    result = runner.invoke(
+        app,
+        ["worker", "--once"],
+        env={"VIBEY_SEARCH_PROVIDER": "brave", "VIBEY_BRAVE_API_KEY": "fake-k"},
+    )
+    assert result.exit_code == 2
+    assert "VIBEY_SEARCH_PROVIDER" in result.output and "backup" in result.output
+    assert "fake-k" not in result.output
 
 
 def test_worker_refuses_to_start_with_a_web_search_setting_it_cannot_read() -> None:

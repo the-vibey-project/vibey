@@ -60,8 +60,14 @@ from vibey.infrastructure.engines.interfaces.validated_ask_interface import (
 from vibey.infrastructure.engines.ollama_chat import OllamaChatClient
 from vibey.infrastructure.engines.validated_ask import ValidatedAsk
 from vibey.infrastructure.web.fetch import PageFetcher
+from vibey.infrastructure.web.local_first import LocalFirstSearch
 from vibey.infrastructure.web.research import WebResearch
-from vibey.infrastructure.web.search import WebSearchError, WebSearchSettings, backend_for
+from vibey.infrastructure.web.search import (
+    DEFAULT_SEARXNG_URL,
+    SEARXNG_URL_ENV,
+    WebSearchError,
+    WebSearchSettings,
+)
 
 # Re-exported: the refusal moved to the domain so the research handler can catch it
 # without importing infrastructure, and this import path should not break.
@@ -226,14 +232,14 @@ class GptossloopDesignProvider:
         """The provider with its evidence directory read from `VIBEY_EVIDENCE_DIR`.
 
         Unset (or empty) means no evidence directory: research then refuses rather than
-        inventing a source, and the research job parks a `research_evidence` gate.
+        inventing a source, and the research job parks a `research_evidence` gate. Web research
+        always asks the local SearXNG first (`VIBEY_SEARXNG_URL`, else loopback), and the Brave
+        backup only when that fails and a key is set (`web/local_first.py`).
         """
         evidence = environ.get(EVIDENCE_DIR_ENV)
         settings = WebSearchSettings.from_environment(environ)
-        web = (
-            WebResearch(backend_for(settings), PageFetcher(), results=settings.results)
-            if settings is not None
-            else None
+        web = WebResearch(
+            LocalFirstSearch.from_settings(settings), PageFetcher(), results=settings.results
         )
         return cls(chat=chat, evidence_dir=Path(evidence) if evidence else None, web=web)
 
@@ -280,9 +286,9 @@ class GptossloopDesignProvider:
     async def research_with_context(self, topic: str, context: str) -> ResearchResult:
         """`research`, told what the project is about so a web search can be about it.
 
-        The operator's own reading always wins. Only when there is none, and web search is
-        configured, vibey searches and quotes what it finds, with its URLs: never a model's
-        summary of it, and never from recollection."""
+        The operator's own reading always wins. Only when there is none does vibey search (the
+        local SearXNG, or the Brave backup when SearXNG failed) and quote what it finds, with
+        its URLs: never a model's summary of it, and never from recollection."""
         document = self._evidence_for(topic)
         web_note = ""
         if document is None and self._web is not None:
@@ -298,8 +304,8 @@ class GptossloopDesignProvider:
                 web_note = " Web search found nothing usable for it."
         elif document is None:
             web_note = (
-                " Web search is not configured (VIBEY_SEARXNG_URL for a self-hosted SearXNG,"
-                " or VIBEY_BRAVE_API_KEY or BRAVE_SEARCH_API_KEY)."
+                " Web search is not set up for this provider (vibey's local SearXNG, at"
+                f" {SEARXNG_URL_ENV} or {DEFAULT_SEARXNG_URL})."
             )
         if document is None:
             raise SovereignResearchUnavailable(

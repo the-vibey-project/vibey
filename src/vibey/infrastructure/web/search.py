@@ -1,12 +1,18 @@
 # Made with ❤️ by [Vibey](https://the-vibey-project.github.io/vibey/), Developed by [Adam Matthew Steinberger](https://vibewithadam.matthewsteinberger.com/) ([@adammatthewsteinberger](https://github.com/adammatthewsteinberger/)).
-"""Search backends: a self-hosted SearXNG, or the Brave Search API.
+"""Search backends: a local SearXNG first, always, and the Brave Search API only as a backup.
 
-Both are configured by the environment alone, never by a file the model could read or a
-repository could commit (`VIBEY_SEARXNG_URL`, `VIBEY_BRAVE_API_KEY`, or `BRAVE_SEARCH_API_KEY`,
-the name Brave's own tools read; vibey's own name wins when both are set). A search that is not
-configured is not an error: `WebSearchSettings.from_environment` returns None, and every
-caller then behaves as it did before search existed. A search that is configured and fails is
-a `WebSearchError` that names the backend and the cause, never the URL or the key.
+Operator ruling (2026-11-21): all search vibey controls asks a **local** SearXNG. Its address is
+`VIBEY_SEARXNG_URL`, else `DEFAULT_SEARXNG_URL` (loopback). Brave answers a query only when that
+SearXNG failed and a key is configured (`local_first.LocalFirstSearch` applies the rule), and is
+never the primary: `VIBEY_SEARCH_PROVIDER=brave` is refused. Search is therefore always
+configured; whether the local SearXNG actually answers is what `vibey doctor` reports.
+
+Both are configured by the person's own environment alone, never by a file the model could read
+or a repository could commit (`VIBEY_SEARXNG_URL`; `VIBEY_BRAVE_API_KEY`, or
+`BRAVE_SEARCH_API_KEY`, the name Brave's own tools read; vibey's own name wins when both are
+set). A project's `vibey.toml` cannot point search anywhere. A backend that fails raises
+`WebSearchError`, which names the backend and the cause, never the query, a URL's credentials
+or query string, or the key.
 
 The Brave key stays in vibey's own processes. A session never receives it: not under
 `VIBEY_BRAVE_API_KEY` (no `VIBEY_*` name reaches one), and not under the alias, which the rule
@@ -14,10 +20,12 @@ under every child's allow-list names (`process/child_environment.py`). Its value
 `repr`, a log line, an error or `vibey doctor`; what is said is which variable configured it.
 
 What comes back is untrusted text from the open web. It is returned as data (title, URL,
-snippet) and every surface that shows it says so.
+snippet), read at most `_RESPONSE_LIMIT` bytes within the configured timeout, and every surface
+that shows it says so.
 """
 
 import html
+import http.client
 import json
 import re
 import urllib.error
@@ -28,6 +36,7 @@ from dataclasses import dataclass, field
 from typing import Any, Final
 
 from vibey.domain.config import ConfigError
+from vibey.infrastructure.web.guarded_opener import GuardedOpener
 
 #: An engine session never receives a `VIBEY_*` variable (doctrine: vibey's own configuration
 #: and credentials stay out of model-driven processes), so a session reads the same settings
@@ -47,16 +56,27 @@ BRAVE_KEY_NAMES: Final = (BRAVE_KEY_ENV, "WEBSEARCH_BRAVE_API_KEY", BRAVE_KEY_AL
 SEARCH_TIMEOUT_ENV: Final = "VIBEY_SEARCH_TIMEOUT"
 SEARCH_RESULTS_ENV: Final = "VIBEY_SEARCH_RESULTS"
 
+DEFAULT_SEARXNG_URL: Final = "http://127.0.0.1:8080"
+"""Where the local SearXNG is asked when `VIBEY_SEARXNG_URL` is unset: loopback, SearXNG's own
+default port. Set `VIBEY_SEARXNG_URL` to run it anywhere else."""
 DEFAULT_TIMEOUT_SECONDS: Final = 15.0
 DEFAULT_RESULTS: Final = 5
 MAX_RESULTS: Final = 20
 _BRAVE_ENDPOINT: Final = "https://api.search.brave.com/res/v1/web/search"
 _TAG = re.compile(r"<[^>]+>")
 _RESPONSE_LIMIT: Final = 2_000_000
+_HEALTH_LIMIT: Final = 1024
+_UNREACHABLE: Final = (OSError, ValueError, http.client.HTTPException)
+"""A request that did not complete: refused, timed out, reset, or a malformed status line."""
 
 
 class WebSearchError(RuntimeError):
-    """A configured search backend failed. The message never carries a URL or a key."""
+    """A search backend failed. The message never carries the query, a URL's credentials or
+    query string, or a key; `reason` is the cause alone, without the backend's name."""
+
+    def __init__(self, message: str, *, reason: str | None = None) -> None:
+        super().__init__(message)
+        self.reason = message if reason is None else reason
 
 
 @dataclass(frozen=True, slots=True)
@@ -67,27 +87,58 @@ class SearchHit:
 
 
 @dataclass(frozen=True, slots=True)
-class WebSearchSettings:
-    """Which backend to ask, and how long and how much to ask for."""
+class SearchAnswer:
+    """One query's hits, and which backend answered them.
 
-    provider: str
-    searxng_url: str | None = None
+    `backend` is `searxng`, or `brave` when the local SearXNG failed and the backup answered;
+    then `fallback_reason` says why (cleaned, never the query), and `notice` is the sentence said
+    on standard error when this was the first query of the process to go to Brave."""
+
+    hits: tuple[SearchHit, ...]
+    backend: str
+    notice: str | None = None
+    fallback_reason: str | None = None
+
+
+@dataclass(frozen=True, slots=True)
+class WebSearchSettings:
+    """Where the local SearXNG is, whether there is a Brave backup, and how long and how much to
+    ask for."""
+
+    searxng_url: str = DEFAULT_SEARXNG_URL
     brave_key: str | None = field(default=None, repr=False)
     timeout_seconds: float = DEFAULT_TIMEOUT_SECONDS
     results: int = DEFAULT_RESULTS
     brave_key_env: str | None = None
     """Which variable the Brave key came from: what may be said, never the key."""
+    searxng_url_env: str | None = None
+    """Which variable set the SearXNG URL; None when it is the default."""
+
+    @property
+    def has_backup(self) -> bool:
+        return self.brave_key is not None
 
     @classmethod
-    def from_environment(cls, environ: Mapping[str, str]) -> "WebSearchSettings | None":
-        """The settings the environment declares, or None when search is not configured.
+    def from_environment(cls, environ: Mapping[str, str]) -> "WebSearchSettings":
+        """The settings the environment declares. Never None: search is always the local
+        SearXNG, at `VIBEY_SEARXNG_URL` or the loopback default.
 
-        `VIBEY_SEARCH_PROVIDER` (`searxng` or `brave`) chooses; unset, whichever backend
-        is configured is used, SearXNG first. The Brave key is `VIBEY_BRAVE_API_KEY`, else
-        `BRAVE_SEARCH_API_KEY`. Naming a provider whose setting is missing, or a value that
-        cannot be read, is refused by name rather than falling back.
-        """
-        searxng = _setting(environ, SEARXNG_URL_ENV) or None
+        The Brave key is `VIBEY_BRAVE_API_KEY`, else `WEBSEARCH_BRAVE_API_KEY`, else
+        `BRAVE_SEARCH_API_KEY`, and is only ever a backup. `VIBEY_SEARCH_PROVIDER` may be unset
+        or `searxng`; `brave`, or a value that cannot be read, is refused by name."""
+        chosen = _setting(environ, SEARCH_PROVIDER_ENV).lower()
+        if chosen == "brave":
+            raise ConfigError(
+                SEARCH_PROVIDER_ENV,
+                "Brave is a backup only, never the primary: leave this unset (or searxng) and set"
+                f" {BRAVE_KEY_ENV} or {BRAVE_KEY_ALIAS_ENV}; vibey then asks Brave only when the"
+                " local SearXNG fails, and says so",
+            )
+        if chosen not in {"", "searxng"}:
+            raise ConfigError(SEARCH_PROVIDER_ENV, f"must be searxng (or unset), got {chosen!r}")
+        url_env = _setting_name(environ, SEARXNG_URL_ENV)
+        searxng = _setting(environ, SEARXNG_URL_ENV) or DEFAULT_SEARXNG_URL
+        _check_http_url(searxng, SEARXNG_URL_ENV)
         # Exactly three names, first wins: vibey's own, its `WEBSEARCH_*` form, then Brave's.
         brave_env, brave = next(
             (
@@ -97,38 +148,19 @@ class WebSearchSettings:
             ),
             (None, None),
         )
-        chosen = _setting(environ, SEARCH_PROVIDER_ENV).lower()
-        if chosen not in {"", "searxng", "brave"}:
-            raise ConfigError(SEARCH_PROVIDER_ENV, f"must be searxng or brave, got {chosen!r}")
-        if chosen == "searxng" and searxng is None:
-            raise ConfigError(SEARCH_PROVIDER_ENV, f"searxng needs {SEARXNG_URL_ENV}")
-        if chosen == "brave" and brave is None:
-            raise ConfigError(
-                SEARCH_PROVIDER_ENV, f"brave needs {BRAVE_KEY_ENV} or {BRAVE_KEY_ALIAS_ENV}"
-            )
-        if not chosen:
-            chosen = "searxng" if searxng is not None else "brave" if brave is not None else ""
-        if not chosen:
-            return None
-        if searxng is not None:
-            _check_http_url(searxng, SEARXNG_URL_ENV)
         return cls(
-            provider=chosen,
             searxng_url=searxng,
             brave_key=brave,
             timeout_seconds=_positive_float(environ, SEARCH_TIMEOUT_ENV, DEFAULT_TIMEOUT_SECONDS),
             results=_bounded_int(environ, SEARCH_RESULTS_ENV, DEFAULT_RESULTS),
             brave_key_env=brave_env,
+            searxng_url_env=url_env,
         )
 
     def session_environment(self) -> dict[str, str]:
-        """What an engine session may be told about search: the SearXNG address and limits.
-
-        Nothing secret. A session cannot be given the Brave key (a command the model chose
-        could read it), so with Brave configured this is empty and search stays with vibey's own
-        research stage."""
-        if self.provider != "searxng" or self.searxng_url is None:
-            return {}
+        """What an engine session is told about search: the local SearXNG's address and the
+        limits. Nothing secret: a session is never given the Brave key (a command the model chose
+        could read it), so a session's `vibey search` has no backup."""
         return {
             f"{SESSION_PREFIX}PROVIDER": "searxng",
             f"{SESSION_PREFIX}SEARXNG_URL": self.searxng_url,
@@ -148,11 +180,30 @@ def _setting(environ: Mapping[str, str], name: str) -> str:
     return (environ.get(name) or environ.get(_alias(name)) or "").strip()
 
 
+def _setting_name(environ: Mapping[str, str], name: str) -> str | None:
+    """Which of `name` and its alias `_setting` read, or None when neither is set."""
+    for candidate in (name, _alias(name)):
+        if (environ.get(candidate) or "").strip():
+            return candidate
+    return None
+
+
 def _check_http_url(value: str, name: str) -> None:
     parts = urllib.parse.urlsplit(value)
     if parts.scheme not in {"http", "https"} or not parts.netloc:
         # Never echoed: a URL can carry credentials.
         raise ConfigError(name, "must be an http(s) URL with a host (the value is not shown)")
+
+
+def display_url(url: str) -> str:
+    """`url` as it may be shown: scheme, host, port and path, never its credentials, query or
+    fragment (a SearXNG URL is the person's own configuration, and may carry any of them)."""
+    parts = urllib.parse.urlsplit(url)
+    host = parts.hostname or ""
+    if ":" in host:
+        host = f"[{host}]"
+    port = f":{parts.port}" if parts.port is not None else ""
+    return f"{parts.scheme}://{host}{port}{parts.path}"
 
 
 def _positive_float(environ: Mapping[str, str], name: str, default: float) -> float:
@@ -192,25 +243,39 @@ def _hit(title: object, url: object, snippet: object) -> SearchHit | None:
     return SearchHit(title=_plain(title) or address, url=address, snippet=_plain(snippet))
 
 
+def _unreachable(exc: BaseException) -> str:
+    """Why a request did not complete, by exception type alone: an error's own text can carry
+    the URL, and so the query."""
+    cause = exc.reason if isinstance(exc, urllib.error.URLError) else None
+    kind = type(cause if isinstance(cause, BaseException) else exc).__name__
+    return f"could not be reached ({kind})"
+
+
+def _failure(backend: str, reason: str) -> WebSearchError:
+    return WebSearchError(f"{backend} {reason}", reason=reason)
+
+
 def _get_json(
     opener: Callable[..., Any], request: urllib.request.Request, timeout: float, backend: str
 ) -> Mapping[str, Any]:
     try:
         with opener(request, timeout=timeout) as response:
-            body = json.loads(response.read(_RESPONSE_LIMIT))
+            raw = response.read(_RESPONSE_LIMIT)
     except urllib.error.HTTPError as exc:
-        raise WebSearchError(f"{backend} answered HTTP {exc.code}") from None
-    except (OSError, ValueError) as exc:
-        raise WebSearchError(
-            f"{backend} could not be reached or understood ({type(exc).__name__})"
-        ) from None
+        raise _failure(backend, f"answered HTTP {exc.code}") from None
+    except _UNREACHABLE as exc:
+        raise _failure(backend, _unreachable(exc)) from None
+    try:
+        body = json.loads(raw)
+    except ValueError:
+        raise _failure(backend, "did not answer with JSON") from None
     if not isinstance(body, dict):
-        raise WebSearchError(f"{backend} did not answer with a JSON object")
+        raise _failure(backend, "did not answer with a JSON object")
     return body
 
 
 class SearxngBackend:
-    """A self-hosted SearXNG's JSON API: no key, and the queries stay on your machine."""
+    """A SearXNG's JSON API: no key, and on loopback the queries stay on your machine."""
 
     name = "searxng"
 
@@ -219,28 +284,50 @@ class SearxngBackend:
         base_url: str,
         *,
         timeout_seconds: float = DEFAULT_TIMEOUT_SECONDS,
-        opener: Callable[..., Any] = urllib.request.urlopen,
+        opener: Callable[..., Any] | None = None,
     ) -> None:
         self._base = base_url.rstrip("/")
         self._timeout = timeout_seconds
-        self._opener = opener
+        self._opener = opener if opener is not None else GuardedOpener(base_url)
 
     def search(self, query: str, limit: int) -> list[SearchHit]:
         url = f"{self._base}/search?" + urllib.parse.urlencode({"q": query, "format": "json"})
         request = urllib.request.Request(url, headers={"Accept": "application/json"})  # nosec B310
         body = _get_json(self._opener, request, self._timeout, self.name)
         results = body.get("results")
+        if not isinstance(results, list):
+            raise _failure(self.name, "did not answer with a results list")
+        failed = body.get("unresponsive_engines")
+        if not results and isinstance(failed, list) and failed:
+            # A SearXNG whose every engine errored answers an empty list; that is a failure,
+            # not "nothing found". An empty list with no failed engine is an honest nothing.
+            raise _failure(self.name, f"every engine it asked failed ({len(failed)} unresponsive)")
         hits = [
             hit
-            for item in (results if isinstance(results, list) else [])
+            for item in results
             if isinstance(item, dict)
             and (hit := _hit(item.get("title"), item.get("url"), item.get("content")))
         ]
         return hits[:limit]
 
+    def health(self) -> str | None:
+        """None when the SearXNG answers its `/healthz`, else why not. A bounded GET with no
+        query and no secret, for `vibey doctor`; it never raises."""
+        request = urllib.request.Request(  # nosec B310 - the configured SearXNG's own address
+            f"{self._base}/healthz", headers={"Accept": "text/plain"}
+        )
+        try:
+            with self._opener(request, timeout=self._timeout) as response:
+                response.read(_HEALTH_LIMIT)
+        except urllib.error.HTTPError as exc:
+            return f"answered HTTP {exc.code}"
+        except _UNREACHABLE as exc:
+            return _unreachable(exc)
+        return None
+
 
 class BraveBackend:
-    """The Brave Search API. It needs a key, and the query goes to Brave."""
+    """The Brave Search API: the backup. It needs a key, and the query goes to Brave."""
 
     name = "brave"
 
@@ -249,11 +336,14 @@ class BraveBackend:
         api_key: str,
         *,
         timeout_seconds: float = DEFAULT_TIMEOUT_SECONDS,
-        opener: Callable[..., Any] = urllib.request.urlopen,
+        opener: Callable[..., Any] | None = None,
     ) -> None:
         self._key = api_key
         self._timeout = timeout_seconds
-        self._opener = opener
+        self._opener = opener if opener is not None else GuardedOpener(_BRAVE_ENDPOINT)
+
+    def __repr__(self) -> str:
+        return "BraveBackend(api_key=<hidden>)"
 
     def search(self, query: str, limit: int) -> list[SearchHit]:
         url = _BRAVE_ENDPOINT + "?" + urllib.parse.urlencode({"q": query, "count": limit})
@@ -270,16 +360,3 @@ class BraveBackend:
             and (hit := _hit(item.get("title"), item.get("url"), item.get("description")))
         ]
         return hits[:limit]
-
-
-def backend_for(
-    settings: WebSearchSettings, *, opener: Callable[..., Any] = urllib.request.urlopen
-) -> SearxngBackend | BraveBackend:
-    """The backend the settings chose."""
-    if settings.provider == "searxng" and settings.searxng_url is not None:
-        return SearxngBackend(
-            settings.searxng_url, timeout_seconds=settings.timeout_seconds, opener=opener
-        )
-    return BraveBackend(
-        settings.brave_key or "", timeout_seconds=settings.timeout_seconds, opener=opener
-    )

@@ -3,19 +3,22 @@
 
 from vibey.infrastructure.web.fetch import FetchedPage, WebFetchError
 from vibey.infrastructure.web.research import BANNER, WebResearch, clean_context
-from vibey.infrastructure.web.search import SearchHit
+from vibey.infrastructure.web.search import SearchAnswer, SearchHit
 
 
 class FakeBackend:
-    name = "fake"
+    """A local-first search that answers as told: from SearXNG unless told it fell back."""
 
-    def __init__(self, hits: list[SearchHit]) -> None:
+    def __init__(self, hits: list[SearchHit], *, fallback: str | None = None) -> None:
         self.hits = hits
+        self.fallback = fallback
         self.asked: list[tuple[str, int]] = []
 
-    def search(self, query: str, limit: int) -> list[SearchHit]:
+    def answer(self, query: str, limit: int) -> SearchAnswer:
         self.asked.append((query, limit))
-        return self.hits
+        if self.fallback is None:
+            return SearchAnswer(hits=tuple(self.hits), backend="searxng")
+        return SearchAnswer(hits=tuple(self.hits), backend="brave", fallback_reason=self.fallback)
 
 
 class FakeFetcher:
@@ -65,7 +68,7 @@ def test_pages_are_fetched_and_quoted_with_their_urls_not_summarized() -> None:
     assert backend.asked == [("Build X libraries packages", 4)]
     assert fetcher.asked == [("https://a.example/1", 900), ("https://b.example/2", 900)]
     assert found.title == "Web research: libraries"
-    assert found.source == "web search (fake): https://a.example/1, https://b.example/2"
+    assert found.source == "web search (searxng): https://a.example/1, https://b.example/2"
     assert found.content.startswith(BANNER)
     assert "Source: https://a.example/1\nTitle: Title 1\n\nAlpha text" in found.content
     assert "---" in found.content and "Beta text" in found.content
@@ -75,7 +78,7 @@ def test_a_page_that_cannot_be_fetched_is_skipped_and_the_next_one_is_used() -> 
     backend = FakeBackend(_hits("https://bad.example", "https://ok.example"))
     fetcher = FakeFetcher({"https://ok.example": "fine"}, broken={"https://bad.example"})
     found = WebResearch(backend, fetcher, pages=1).research("prior-art", "c")
-    assert found is not None and found.source == "web search (fake): https://ok.example"
+    assert found is not None and found.source == "web search (searxng): https://ok.example"
 
 
 def test_no_more_pages_are_fetched_than_asked_for_and_a_long_source_list_is_cut() -> None:
@@ -117,3 +120,13 @@ def test_fetching_stops_once_enough_pages_are_in_even_when_the_search_found_more
     fetcher = FakeFetcher({u: u for u in urls})
     found = WebResearch(FakeBackend(_hits(*urls)), fetcher, pages=2).research("prior-art", "c")
     assert found is not None and [u for u, _ in fetcher.asked] == urls[:2]
+
+
+def test_evidence_that_came_from_the_brave_backup_says_so_in_its_source() -> None:
+    backend = FakeBackend(_hits("https://a.example"), fallback="answered HTTP 502")
+    fetcher = FakeFetcher({"https://a.example": "text"})
+    found = WebResearch(backend, fetcher).research("prior-art", "c")
+    assert found is not None
+    assert found.source == (
+        "web search (brave, the backup: local SearXNG unavailable): https://a.example"
+    )

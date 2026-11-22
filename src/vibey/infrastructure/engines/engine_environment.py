@@ -117,9 +117,9 @@ class EngineEnvironmentPolicy:
     def web_search_command(self) -> str | None:
         """The `vibey` a session runs to search the web, or None when sessions have no search.
 
-        Only the worker's own overlay turns it on (SearXNG configured, and the path of the
-        running `vibey` known): a Brave key is never passed to a session, so Brave alone means
-        sessions have no search and must not be told they do."""
+        Only the worker's own overlay turns it on: the worker gives every session the local
+        SearXNG's address and the path of the running `vibey`. A Brave key is never passed to a
+        session, so a session's search is the local SearXNG alone, with no backup."""
         if "WEBSEARCH_PROVIDER" not in self._overlay:
             return None
         return self._overlay.get("WEBSEARCH_COMMAND", "vibey")

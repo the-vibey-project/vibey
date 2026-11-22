@@ -63,6 +63,7 @@ from vibey.cli.llm_tooling import LLM_TOOLING_SECTION
 from vibey.cli.sabbath import SABBATH
 from vibey.cli.serve import SERVE
 from vibey.cli.supervisor import SUPERVISOR
+from vibey.cli.web_search_doctor import WEB_SEARCH_DOCTOR
 from vibey.infrastructure.engines.local_engines import LocalEngineSettings
 from vibey.infrastructure.engines.ollama_residency import OllamaResidency
 
@@ -83,6 +84,9 @@ SABBATH_PREFIX: Final = "sabbath"
 LLM_TOOLING: Final = "llm-tooling"
 """The section that reports each detected client's LLM-facing surfaces (`cli/llm_tooling.py`);
 it never fails doctor."""
+WEB_SEARCH: Final = "web-search"
+"""The section that reports whether the local SearXNG answers and whether a Brave backup is
+configured (`cli/web_search_doctor.py`); a SearXNG that is down is a WARN, never a FAIL."""
 
 
 class Emission(StrEnum):
@@ -327,6 +331,7 @@ class LocalDoctorProbes:
         host_health: Callable[[], tuple[list[str], bool]],
         ollama_enabled: Callable[[], bool],
         llm_tooling: Callable[[], tuple[list[str], bool]] | None = None,
+        web_search: Callable[[], tuple[list[str], bool]] | None = None,
     ) -> tuple[LocalDoctorProbeInterface, ...]:
         return (
             SectionProbe.printed("database-security", database_security),
@@ -339,6 +344,7 @@ class LocalDoctorProbes:
                 host_health=host_health,
                 ollama_enabled=ollama_enabled,
             ),
+            *(() if web_search is None else (SectionProbe.listed(WEB_SEARCH, web_search),)),
             *(() if llm_tooling is None else (SectionProbe.listed(LLM_TOOLING, llm_tooling),)),
         )
 
@@ -354,6 +360,7 @@ class LocalDoctorProbes:
                 host_health=HOST_HEALTH.doctor_lines,
                 ollama_enabled=self._local_engine_on,
             ),
+            SectionProbe.listed(WEB_SEARCH, WEB_SEARCH_DOCTOR.doctor_lines),
             SectionProbe.listed(LLM_TOOLING, LLM_TOOLING_SECTION.doctor_lines),
         )
 

@@ -3,8 +3,9 @@
 
 import pytest
 
-from vibey.infrastructure.engines.descriptors import CLAUDELOOP, CODEXLOOP
+from vibey.infrastructure.engines.descriptors import CLAUDELOOP, CODEXLOOP, GPTOSSLOOP
 from vibey.infrastructure.engines.engine_environment import EngineEnvironmentPolicy
+from vibey.infrastructure.web.search import BRAVE_KEY_NAMES, WebSearchSettings
 
 TOLD = {"WEBSEARCH_PROVIDER": "searxng", "WEBSEARCH_SEARXNG_URL": "http://127.0.0.1:8080"}
 WORKER = {
@@ -53,3 +54,18 @@ def test_an_overlay_cannot_smuggle_in_a_forbidden_variable() -> None:
     policy = EngineEnvironmentPolicy().with_overlay({"VIBEY_PG_URL": "postgresql://x"})
     with pytest.raises(ValueError, match="can never be passed to a child process"):
         policy.environment(CLAUDELOOP, source=WORKER)
+
+
+@pytest.mark.parametrize("descriptor", [CLAUDELOOP, CODEXLOOP, GPTOSSLOOP])
+def test_with_a_brave_backup_configured_no_session_receives_the_key(descriptor: object) -> None:
+    """The backup is vibey's alone: the worker that holds a key under every one of its names
+    tells a session the local SearXNG and nothing else, and no name of the key gets through."""
+    keyed = {**WORKER, **{name: f"fake-{n}" for n, name in enumerate(BRAVE_KEY_NAMES)}}
+    settings = WebSearchSettings.from_environment(keyed)
+    assert settings.has_backup
+    policy = EngineEnvironmentPolicy().with_overlay(settings.session_environment())
+    env = policy.environment(descriptor, source=keyed).build()  # type: ignore[arg-type]
+    assert env["WEBSEARCH_SEARXNG_URL"] == "http://127.0.0.1:8080"
+    assert not set(BRAVE_KEY_NAMES) & set(env)
+    assert not [value for value in env.values() if value.startswith("fake-")]
+    assert policy.web_search_command() == "vibey"
