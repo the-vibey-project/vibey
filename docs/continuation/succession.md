@@ -12,7 +12,7 @@ name below still exists where it says, and changes nothing.
 
 - **Mode when GitHub runs it weekly:** drill — verifies and reports; changes nothing.
 - **What it is for:** Hand the project to a new steward: what they must hold, where it is declared, and how to verify it.
-- **Decision records:** 100, the newest 0100 — Host-driven MCP interface and chat-first krypton surfaces.
+- **Decision records:** 101, the newest 0101 — The ACP agent, and the user-level services it installs and keeps running.
 <!-- END GENERATED continuation:state -->
 
 ## The prompt

@@ -129,8 +129,9 @@ class AcpHubClient:
 
     async def healthy(self) -> bool:
         try:
+            # `reach`, never `call`: asking whether the hub is up never starts or restarts it.
             response = await self._send(
-                HubCall(tool="vibey_health", method="GET", route=LIVENESS_ROUTE)
+                HubCall(tool="vibey_health", method="GET", route=LIVENESS_ROUTE), start=False
             )
         except VibeyError:
             return False
@@ -247,9 +248,10 @@ class AcpHubClient:
     def agent_scopes(self) -> frozenset[HubScope]:
         return self._gateway.agent_scopes()
 
-    async def _send(self, call: HubCall) -> HubGatewayResponse:
+    async def _send(self, call: HubCall, *, start: bool = True) -> HubGatewayResponse:
+        send = self._gateway.call if start else self._gateway.reach
         try:
-            return await asyncio.to_thread(self._gateway.call, call)
+            return await asyncio.to_thread(send, call)
         except OSError as exc:
             # The port promises a `VibeyError` for an unreachable hub; the gateway can let an
             # OSError through (a state directory it cannot write).

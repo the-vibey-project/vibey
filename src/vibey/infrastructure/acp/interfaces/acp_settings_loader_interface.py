@@ -20,6 +20,12 @@ class AcpSettingsLoaderInterface(Protocol):
         """The table in `path`, or every default when the file or the table is absent."""
         ...
 
+    def load_trusted(self, user: Path, project: Path) -> AcpSettings:
+        """`vibey acp`'s settings: the user's `[acp]` in `user` (their configuration folder),
+        narrowed -- never widened -- by the project's in `project` (ADR-0101). Either file may
+        be absent; a malformed one is still a `ConfigError`."""
+        ...
+
     def from_mapping(self, section: Mapping[str, object]) -> AcpSettings:
         """The table as already parsed; `ConfigError` names the offending key."""
         ...

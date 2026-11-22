@@ -9,7 +9,18 @@
 2. **Connect** (`tool_call` "vibey connect", `edit`), when `[acp] auto_connect` is on and the
    clients installed here are not all recorded as connected for this vibey version: `vibey mcp`
    is registered with them, never a project file and never a folder it would have to make.
-3. **Services** -- loading and keeping the hub and the worker running -- is SP-ACP Task 8's.
+3. **Services** (`tool_call` "Keep vibey's services running", `execute`), when
+   `[acp] auto_services` is on and `[acp] services` names any (ADR-0101): inside the bootstrap
+   lock, the units for `services` are written (`restart = [acp] restart`), never replacing one
+   the operator edited, and each is loaded into the user's own service manager unless it is
+   already running. A hub already running outside the service manager is left alone -- its unit
+   is not loaded now, and the keep-alive takes over when it exits -- and an edited unit is
+   neither loaded nor restarted. The first load says which labels were loaded and the exact
+   commands that unload them. Then the hub is polled until it answers, within
+   `bootstrap_timeout_seconds`. With no service manager reachable (no `gui/<uid>` domain, no
+   `systemctl --user`), `vibey hub start` runs once per process instead, and the operator is
+   told nothing keeps it running. What it manages is handed to the keep-alive
+   (`AcpKeepAlive`), which every prompt probes first.
 4. **PostgreSQL**, only inside a prompt turn and only when `[acp] install_postgres = "ask"`: when
    it is not ready, the client is asked with `session/request_permission`, and only the
    "Install PostgreSQL" option installs. "Not now", a timeout, a cancel, any other option id
@@ -29,10 +40,11 @@ once, never again once a run finished healthy, and run again only when a new ses
 after an unhealthy run -- never in a loop. Step 4 is asked at most once per process; its
 read-only check is bounded by `bootstrap_timeout_seconds` too.
 
-Steps 2 and 4 change the computer. Within this process they take turns (an in-process lock,
+Steps 2 to 4 change the computer. Within this process they take turns (an in-process lock,
 held by a worker thread that outlives its step until the thread ends); across processes they
-hold `<state_dir>/acp-bootstrap.lock`, so a second editor window leaves them to the first, and
-only another process holding it is reported as one. The lock file is taken and let go without an
+hold `<state_dir>/acp-bootstrap.lock`, so a second editor window leaves steps 2 and 4 to the
+first, and only another process holding it is reported as one. Step 3 waits for the lock within
+its bound instead, then finds what the other window loaded already running. The lock file is taken and let go without an
 `await` in between that a cancel could fall into.
 
 Every text from a check, the connector or the installer is the machine's, not vibey's: it
@@ -51,7 +63,14 @@ from collections.abc import Awaitable, Callable, Mapping
 from contextlib import AbstractAsyncContextManager
 from typing import Any, Final
 
-from vibey.application.acp.dto import AcpSessionContext, DoctorResult, PostgresInstallOutcome
+from vibey.application.acp.dto import (
+    AcpSessionContext,
+    DoctorResult,
+    PostgresInstallOutcome,
+    UnitOutcome,
+)
+from vibey.application.acp.interfaces.acp_hub_port_interface import AcpHubPortInterface
+from vibey.application.acp.interfaces.acp_keep_alive_interface import AcpKeepAliveInterface
 from vibey.application.acp.interfaces.bootstrap_lock_interface import BootstrapLockInterface
 from vibey.application.acp.interfaces.client_channel_interface import ClientChannelInterface
 from vibey.application.acp.interfaces.doctor_checks_interface import DoctorChecksInterface
@@ -59,16 +78,24 @@ from vibey.application.acp.interfaces.host_connector_interface import HostConnec
 from vibey.application.acp.interfaces.postgres_installer_interface import (
     PostgresInstallerInterface,
 )
+from vibey.application.acp.interfaces.service_loader_interface import ServiceLoaderInterface
+from vibey.application.acp.interfaces.service_units_interface import ServiceUnitsInterface
 from vibey.domain.acp.interfaces.modes_interface import AcpModesInterface
 from vibey.domain.acp.interfaces.update_mapper_interface import AcpUpdateMapperInterface
 from vibey.domain.acp.modes import UnknownMode
 from vibey.domain.acp.protocol import PermissionKind, ToolCallStatus, ToolKind
 from vibey.domain.acp.settings import AcpSettings
 from vibey.domain.hub_scope import HubScope
+from vibey.domain.supervisor import HUB
 
 TOOL_DOCTOR: Final = "bootstrap-doctor"
 TOOL_CONNECT: Final = "bootstrap-connect"
 TOOL_POSTGRES: Final = "bootstrap-postgres"
+TOOL_SERVICES: Final = "bootstrap-services"
+UNLOAD_COMMAND: Final = "vibey acp unload"
+"""What stops and removes the units `vibey acp` loaded, for good (ADR-0101)."""
+WRITTEN: Final = frozenset({"created", "unchanged", "updated"})
+"""The unit file is the one vibey renders: vibey may load it and keep it running."""
 INSTALL_OPTION: Final = "bootstrap-postgres:install"
 NOT_NOW_OPTION: Final = "bootstrap-postgres:not-now"
 INSTALL_COMMAND: Final = "vibey doctor --install-postgres"
@@ -90,13 +117,16 @@ type StepWait = Callable[[asyncio.Task[None], float], Awaitable[bool]]
 """Wait for the background steps up to a number of seconds; True when they finished."""
 type StepTimeout = Callable[[float], AbstractAsyncContextManager[Any]]
 """The bound one step runs under (`asyncio.timeout`); it raises `TimeoutError` when it ends."""
+type Sleep = Callable[[float], Awaitable[None]]
 
 
 class AcpBootstrap:
     """Declared by `interfaces/acp_bootstrap_interface.py::AcpBootstrapInterface`.
 
     `checks`, `connector` and `postgres` are each optional: a step with nothing to run says
-    nothing. `wait` and `step_timeout` are the clock seams (`asyncio.wait`, `asyncio.timeout`).
+    nothing. Step 3 runs with `units`, `loader` and `hub` all given; `keep_alive` is told what
+    it manages. `wait`, `step_timeout` and `sleep` are the clock seams (`asyncio.wait`,
+    `asyncio.timeout`, `asyncio.sleep`).
     """
 
     def __init__(
@@ -110,8 +140,13 @@ class AcpBootstrap:
         lock: BootstrapLockInterface,
         modes: AcpModesInterface,
         *,
+        units: ServiceUnitsInterface | None = None,
+        loader: ServiceLoaderInterface | None = None,
+        hub: AcpHubPortInterface | None = None,
+        keep_alive: AcpKeepAliveInterface | None = None,
         wait: StepWait | None = None,
         step_timeout: StepTimeout | None = None,
+        sleep: Sleep = asyncio.sleep,
     ) -> None:
         self._settings = settings
         self._checks = checks
@@ -123,6 +158,13 @@ class AcpBootstrap:
         self._modes = modes
         self._wait = wait or self._bounded_wait
         self._step_timeout: StepTimeout = step_timeout or asyncio.timeout
+        self._units = units
+        self._loader = loader
+        self._hub = hub
+        self._keep_alive = keep_alive
+        self._sleep = sleep
+        self._hub_started = False
+        """`vibey hub start` ran once in place of a service manager: never again here."""
         self._steps: asyncio.Task[None] | None = None
         self._healthy = False
         self._waited: set[str] = set()
@@ -160,6 +202,8 @@ class AcpBootstrap:
         return self._healthy
 
     def start(self, session_id: str) -> None:
+        if self._keep_alive is not None and self._settings.auto_bootstrap and not self._closed:
+            self._keep_alive.attach(session_id)
         if not self._settings.auto_bootstrap or self._healthy or self._closed:
             return
         if self._steps is not None and not self._steps.done():
@@ -173,9 +217,13 @@ class AcpBootstrap:
 
     def forget(self, session_id: str) -> None:
         self._gone.add(session_id)
+        if self._keep_alive is not None:
+            self._keep_alive.detach(session_id)
 
     async def close(self) -> None:
         self._closed = True
+        if self._keep_alive is not None:
+            await self._keep_alive.stop()
         running = [task for task in (self._steps, *self._late) if task is not None]
         for task in running:
             task.cancel()
@@ -185,6 +233,9 @@ class AcpBootstrap:
         if not self._settings.auto_bootstrap:
             return
         await self._wait_for_steps(context)
+        if self._keep_alive is not None:
+            # Every prompt: a hub that stopped answering is restarted before the turn needs it.
+            await self._keep_alive.probe(context)
         try:
             await self._postgres_step(context)
         except asyncio.CancelledError:
@@ -202,10 +253,16 @@ class AcpBootstrap:
     # -- steps 1 to 3 ----------------------------------------------------------------------
 
     async def _run_steps(self, session_id: str) -> None:
-        doctor_ok = await self._doctor(session_id)
-        connect_ok = await self._connect(session_id)
-        # Step 3 (load and keep the user-level services running) is SP-ACP Task 8's.
-        self._healthy = doctor_ok and connect_ok
+        try:
+            doctor_ok = await self._doctor(session_id)
+            connect_ok = await self._connect(session_id)
+            services_ok = await self._services(session_id)
+        finally:
+            # Whatever happened, step 3 is over: a hub read may fall back to `vibey hub start`
+            # unless the keep-alive now owns the hub's unit.
+            if self._keep_alive is not None:
+                self._keep_alive.handed_over()
+        self._healthy = doctor_ok and connect_ok and services_ok
 
     async def _doctor(self, session_id: str) -> bool:
         checks = self._checks
@@ -283,6 +340,204 @@ class AcpBootstrap:
         await self._end(session_id, TOOL_CONNECT, status, shown or ["No client to connect."])
         return not failed
 
+    # -- step 3: the user-level services ----------------------------------------------------
+
+    async def _services(self, session_id: str) -> bool:
+        units, loader, hub = self._units, self._loader, self._hub
+        names = self._settings.services
+        if units is None or loader is None or hub is None:
+            return True
+        if not self._settings.auto_services or not names:
+            return True
+        await self._notify(
+            session_id,
+            self._mapper.tool_call(
+                TOOL_SERVICES, "Keep vibey's services running", ToolKind.EXECUTE, {}
+            ),
+        )
+        seconds = self._settings.bootstrap_timeout_seconds
+        try:
+            async with self._step_timeout(seconds), self._machine, self._lock.hold(seconds) as held:
+                if not held:
+                    await self._end(
+                        session_id,
+                        TOOL_SERVICES,
+                        ToolCallStatus.FAILED,
+                        [
+                            "Another vibey acp on this computer held the setup lock past "
+                            f"{seconds} s (`[acp] bootstrap_timeout_seconds`); this window loads "
+                            "nothing now and tries again when its next session starts."
+                        ],
+                    )
+                    return False
+                return await self._load_services(session_id, units, loader, hub, names)
+        except TimeoutError:
+            await self._end(
+                session_id,
+                TOOL_SERVICES,
+                ToolCallStatus.FAILED,
+                [
+                    f"{self._overran('Loading vibey services')} The hub may still be starting: "
+                    "`vibey supervisor status` and the logs under `[supervisor] log_dir` say why."
+                ],
+            )
+            return False
+
+    async def _load_services(
+        self,
+        session_id: str,
+        units: ServiceUnitsInterface,
+        loader: ServiceLoaderInterface,
+        hub: AcpHubPortInterface,
+        names: tuple[str, ...],
+    ) -> bool:
+        refused = loader.refused()
+        if refused:
+            # As root: no unit, and no fallback hub either; said once in the tool call.
+            await self._end(
+                session_id, TOOL_SERVICES, ToolCallStatus.FAILED, [self._untrusted(refused)]
+            )
+            return False
+        if not await asyncio.to_thread(loader.available):
+            return await self._without_service_manager(session_id, units, loader)
+        waiting: dict[str, str] = {}
+        for name in names:
+            reason = await asyncio.to_thread(units.waiting, name)
+            if reason:
+                waiting[name] = reason
+        ready = tuple(name for name in names if name not in waiting)
+        try:
+            written = await asyncio.to_thread(units.write, ready, self._settings.restart)
+        except Exception as exc:  # a cancel is a BaseException: it is never caught here
+            # A refusal (ValueError) or a file that cannot be written (OSError): the tool call is
+            # closed, never left spinning, and nothing is loaded.
+            await self._end(
+                session_id,
+                TOOL_SERVICES,
+                ToolCallStatus.FAILED,
+                [f"No unit was written: {self._untrusted(f'{type(exc).__name__}: {exc}')}"],
+            )
+            return False
+        shown = [
+            f"{name}: not loaded yet: {self._untrusted(reason)}" for name, reason in waiting.items()
+        ]
+        managed: dict[str, str] = {}
+        deferred: list[str] = []
+        loaded: list[str] = []
+        hub_label: str | None = None
+        failed = False
+        for name, outcome in zip(ready, written, strict=True):
+            if name == HUB:
+                hub_label = outcome.label
+            said, kept = await self._load_one(name, outcome, loader, hub, deferred, loaded)
+            shown.append(said)
+            failed = failed or kept is None and outcome.action != "kept-differing"
+            if kept is not None:
+                managed[outcome.label] = kept
+        # Handed over and said before the hub is waited for: a poll the step's bound cuts short
+        # never leaves loaded units unmanaged or unsaid.
+        if self._keep_alive is not None and managed:
+            self._keep_alive.manage(managed, hub_label=hub_label, deferred=deferred)
+        if loaded:
+            await self._say_loaded(session_id, loader, loaded)
+        if hub_label in managed:
+            await self._hub_answers(hub)
+        status = ToolCallStatus.FAILED if failed else ToolCallStatus.COMPLETED
+        await self._end(session_id, TOOL_SERVICES, status, shown)
+        # A service still waiting is tried again when the next session starts.
+        return not failed and not waiting
+
+    async def _load_one(
+        self,
+        name: str,
+        written: UnitOutcome,
+        loader: ServiceLoaderInterface,
+        hub: AcpHubPortInterface,
+        deferred: list[str],
+        loaded: list[str],
+    ) -> tuple[str, str | None]:
+        """Load one written unit unless it runs already; what to show for it, and the unit
+        file the keep-alive may manage (None: not vibey's to keep running)."""
+        label = self._untrusted(written.label)
+        if written.action == "kept-differing":
+            return (
+                f"{label}: {self._untrusted(written.path)} differs from what vibey renders, so "
+                "it is kept as you edited it; vibey neither loads nor restarts it.",
+                None,
+            )
+        if written.action not in WRITTEN:
+            return f"{label}: the unit was not written: {self._untrusted(written.detail)}", None
+        state = await asyncio.to_thread(loader.state, written.label)
+        if state == "running":
+            return f"{label}: already running.", written.path
+        if name == HUB:
+            pid = await asyncio.to_thread(self._units.detached_hub_pid) if self._units else None
+            if pid is not None and await hub.healthy():
+                deferred.append(written.label)
+                return (
+                    f"{label}: the hub is running outside the service manager (pid {pid}); "
+                    "keep-alive takes it over when it exits.",
+                    written.path,
+                )
+        outcome = await asyncio.to_thread(loader.load, written.label, written.path)
+        if outcome.action == "failed":
+            return f"{label}: could not be loaded: {self._untrusted(outcome.detail)}", None
+        if outcome.action == "loaded":
+            loaded.append(written.label)
+            return f"{label}: loaded.", written.path
+        return f"{label}: already loaded.", written.path
+
+    async def _hub_answers(self, hub: AcpHubPortInterface) -> None:
+        """Poll the hub until it answers; the step's own bound ends the wait."""
+        while not await hub.healthy():
+            await self._sleep(self._settings.live_poll_seconds)
+
+    async def _without_service_manager(
+        self, session_id: str, units: ServiceUnitsInterface, loader: ServiceLoaderInterface
+    ) -> bool:
+        """No service manager to load into: `vibey hub start` once per process, said."""
+        domain = self._untrusted(loader.domain())
+        if self._hub_started:
+            await self._end(
+                session_id,
+                TOOL_SERVICES,
+                ToolCallStatus.COMPLETED,
+                [f"{domain} cannot be reached here, and vibey already started the hub once."],
+            )
+            return True
+        self._hub_started = True
+        worked = await asyncio.to_thread(units.start_hub)
+        said = (
+            f"{domain} cannot be reached on this computer (no login session's `gui` domain, or "
+            "no `systemctl --user` manager), so vibey cannot keep its services running here. "
+            + (
+                "It started the hub once with `vibey hub start`; nothing restarts it if it stops."
+                if worked
+                else "It tried `vibey hub start` once, and that failed; run it yourself to see why."
+            )
+        )
+        status = ToolCallStatus.COMPLETED if worked else ToolCallStatus.FAILED
+        await self._end(session_id, TOOL_SERVICES, status, [said])
+        await self._say(session_id, said)
+        return worked
+
+    async def _say_loaded(
+        self, session_id: str, loader: ServiceLoaderInterface, loaded: list[str]
+    ) -> None:
+        labels = ", ".join(f"`{self._untrusted(label)}`" for label in loaded)
+        commands = self._mapper.untrusted_code(
+            "\n".join(loader.unload_commands(loaded)), limit=self._settings.live_message_chars
+        )
+        await self._say(
+            session_id,
+            f"vibey loaded these user-level services into {self._untrusted(loader.domain())}: "
+            f"{labels}. The service manager restarts them when they stop, and they start again "
+            f"when you log in. `{UNLOAD_COMMAND}` stops them for good: it unloads them and "
+            "deletes the unit files vibey wrote (never one you edited). By hand, the same is:"
+            f"\n\n{commands}\n\nSet `[acp] auto_services = false` in your own vibey.toml (in "
+            "your configuration folder) so vibey does not load them again.",
+        )
+
     async def _wait_for_steps(self, context: AcpSessionContext) -> None:
         steps = self._steps
         session_id = context.session_id
@@ -293,7 +548,8 @@ class AcpBootstrap:
         if not await self._wait(steps, seconds):
             await self._say(
                 session_id,
-                f"vibey's own setup (`vibey doctor`, `vibey connect`) is still running after "
+                f"vibey's own setup (`vibey doctor`, `vibey connect`, its services) is still "
+                f"running after "
                 f"{seconds} s (`[acp] bootstrap_timeout_seconds`); this prompt goes ahead "
                 "without it.",
             )
@@ -385,7 +641,8 @@ class AcpBootstrap:
             why = (
                 f"vibey could not take its setup lock ({problem})"
                 if problem is not None
-                else "another vibey acp on this computer is setting it up"
+                else "vibey's setup lock is held (by another vibey acp on this computer, or by "
+                "this window's keep-alive while it brings the hub back)"
             )
             await self._say(
                 session_id,

@@ -2,8 +2,10 @@
 """Composition root: the only module that wires concrete adapters to ports."""
 
 import asyncio
+import functools
 import os
 import platform
+import sys
 from collections.abc import AsyncIterator, Awaitable, Callable, Mapping, Sequence
 from contextlib import asynccontextmanager, suppress
 from dataclasses import dataclass, field
@@ -13,19 +15,21 @@ from typing import Final
 from uuid import uuid4
 
 import asyncpg
-from platformdirs import user_cache_path
+from platformdirs import user_cache_path, user_config_path
 
 from vibey import __version__
 from vibey.application.acp.acp_agent import AcpAgent
 from vibey.application.acp.acp_bootstrap import AcpBootstrap
 from vibey.application.acp.acp_gate_prompter import AcpGatePrompter
 from vibey.application.acp.acp_journaling_channel import AcpJournalingChannel
+from vibey.application.acp.acp_keep_alive import AcpKeepAlive
 from vibey.application.acp.acp_live_feed import AcpLiveFeed
 from vibey.application.acp.acp_prompt_turn import AcpPromptTurn
 from vibey.application.acp.acp_session_journal import AcpSessionJournal
 from vibey.application.acp.doctor_checks import DoctorChecks
 from vibey.application.acp.interfaces.acp_agent_interface import AcpAgentInterface
 from vibey.application.acp.interfaces.acp_bootstrap_interface import AcpBootstrapInterface
+from vibey.application.acp.interfaces.acp_keep_alive_interface import AcpKeepAliveInterface
 from vibey.application.acp.interfaces.acp_prompt_turn_interface import AcpPromptTurnInterface
 from vibey.application.acp.interfaces.bootstrap_lock_interface import BootstrapLockInterface
 from vibey.application.acp.interfaces.client_channel_interface import ClientChannelInterface
@@ -34,6 +38,8 @@ from vibey.application.acp.interfaces.host_connector_interface import HostConnec
 from vibey.application.acp.interfaces.postgres_installer_interface import (
     PostgresInstallerInterface,
 )
+from vibey.application.acp.interfaces.service_loader_interface import ServiceLoaderInterface
+from vibey.application.acp.interfaces.service_units_interface import ServiceUnitsInterface
 from vibey.application.budget_source import LedgerBudgetSource
 from vibey.application.build_decompose_handler import BuildDecomposeHandler
 from vibey.application.build_dependency_wait import DeferringHandler, DependencyWait
@@ -158,11 +164,17 @@ from vibey.domain.interfaces.config_interface import (
 )
 from vibey.domain.phase import Phase
 from vibey.domain.slicing import AutoSlicer
+from vibey.domain.supervisor import SupervisorPlanner
 from vibey.domain.worktree import WorktreeNaming
 from vibey.infrastructure.acp.acp_command_runner import AcpCommandRunner
 from vibey.infrastructure.acp.acp_hub_client import AcpHubClient
 from vibey.infrastructure.acp.acp_postgres_installer import AcpPostgresInstaller
+from vibey.infrastructure.acp.acp_service_units import AcpServiceUnits
+from vibey.infrastructure.acp.bootstrap_lock import BootstrapLock
 from vibey.infrastructure.acp.host_connector import HostConnector
+from vibey.infrastructure.acp.hub_start_router import HubStartRouter
+from vibey.infrastructure.acp.service_loader import ServiceLoader
+from vibey.infrastructure.acp.service_manager_runner import ServiceManagerRunner
 from vibey.infrastructure.azure.adapter import InMemoryAzureClientAdapter
 from vibey.infrastructure.build.automated_review_runner import SubprocessAutomatedReviewRunner
 from vibey.infrastructure.build.checkout import ProjectCheckoutLocator
@@ -205,6 +217,7 @@ from vibey.infrastructure.db.visual_inventory_repository import FileVisualInvent
 from vibey.infrastructure.deploy.state_repository import FileDeploymentStateRepository
 from vibey.infrastructure.docs.bookstack import BookStackDocsAdapter
 from vibey.infrastructure.docs.in_memory import InMemoryDocs
+from vibey.infrastructure.driver.timer_units import TimerUnitRenderer
 from vibey.infrastructure.email.forward_email import ForwardEmailAdapter
 from vibey.infrastructure.email.in_memory import InMemoryEmail
 from vibey.infrastructure.engines.descriptors import BY_ENGINE_ID, DEFAULT_DESCRIPTORS
@@ -219,11 +232,11 @@ from vibey.infrastructure.files.nextcloud import NextcloudFilesAdapter
 from vibey.infrastructure.git.checkpoint import GitCheckpoint
 from vibey.infrastructure.git.integration_branch import IntegrationBranch
 from vibey.infrastructure.git.worktree_manager import GitWorktreeManager
-from vibey.infrastructure.hub.serve_lock import ACP_BOOTSTRAP_LOCK_FILE, ServeLock
 from vibey.infrastructure.hub.settings import HUB_SETTINGS, HubSettings
 from vibey.infrastructure.ledger.full_ledger_writer import write_full_ledger
 from vibey.infrastructure.logging import StructlogAppLogger
-from vibey.infrastructure.mcp.hub_gateway import HubGateway
+from vibey.infrastructure.mcp.host_installer import HostInstaller
+from vibey.infrastructure.mcp.hub_gateway import HubGateway, default_hub_starter
 from vibey.infrastructure.mcp.hub_start_policy import BoundedHubStarter
 from vibey.infrastructure.mcp.interfaces.hub_gateway_interface import HubGatewayInterface
 from vibey.infrastructure.messaging.in_memory import InMemoryMessaging
@@ -241,6 +254,13 @@ from vibey.infrastructure.secrets.openbao import OpenBaoSecretsAdapter
 from vibey.infrastructure.skills_context import compiler_from_config
 from vibey.infrastructure.sms.in_memory import InMemorySms
 from vibey.infrastructure.sms.kannel import KannelSmsAdapter
+from vibey.infrastructure.supervisor import (
+    LAUNCHD,
+    SYSTEMD,
+    SupervisorHost,
+    SupervisorSettingsLoader,
+)
+from vibey.infrastructure.supervisor_installer import SupervisorInstaller
 from vibey.infrastructure.tracker.in_memory import InMemoryTracker
 from vibey.infrastructure.tracker.plane import PlaneTrackerAdapter
 
@@ -1462,36 +1482,101 @@ async def build_app(
 @dataclass(frozen=True, slots=True)
 class AcpMachine:
     """What `vibey acp`'s bootstrap may change on this computer, once its grant allows it: the
-    clients' MCP registrations, a PostgreSQL install, and the lock that keeps a second editor
-    window from doing either at the same time. A value type (ADR-0016 exempts it)."""
+    clients' MCP registrations, a PostgreSQL install, the user-level hub and worker units and the
+    service manager that loads them (ADR-0101), and the one lock per user that keeps a second
+    editor window from doing any of it at the same time. A value type (ADR-0016 exempts it)."""
 
     connector: HostConnectorInterface
     postgres: PostgresInstallerInterface
     lock: BootstrapLockInterface
+    units: ServiceUnitsInterface | None = None
+    loader: ServiceLoaderInterface | None = None
+
+
+def acp_user_config() -> Path:
+    """The user's own `vibey.toml`: in their configuration folder (`~/Library/Application
+    Support/vibey` on macOS, `$XDG_CONFIG_HOME/vibey` elsewhere), the folder that already holds
+    `supervisor.env`. What `vibey acp` may do outside the folder an editor opened -- load units,
+    write client configs, install PostgreSQL -- is granted here, never by a project's file
+    (ADR-0101)."""
+    folder = user_config_path("vibey")
+    if not folder.is_absolute():
+        # A relative XDG_CONFIG_HOME would put "the user's" file inside whatever folder vibey
+        # runs in -- a project's. Refused, as `SupervisorHost` refuses it for its own paths.
+        folder = Path.home() / ".config" / "vibey"
+    return folder / "vibey.toml"
+
+
+def running_vibey() -> str | None:
+    """The running install's own `vibey` launcher, absolute: the console script beside this
+    interpreter. None when there is none. A unit or a client config vibey writes on its own
+    runs this, never a configured path or a PATH lookup (ADR-0101)."""
+    launcher = Path(sys.executable).parent / "vibey"
+    return str(launcher) if launcher.is_file() and os.access(launcher, os.X_OK) else None
 
 
 def acp_state_dir(config_path: Path) -> Path:
     """Where `vibey acp` keeps its connect marker and setup lock: the hub's state directory
-    (`[hub] state_dir`), or its default when `[hub]` cannot be read -- the bootstrap still has a
-    place for them, and the doctor says what is wrong with `[hub]`."""
+    (`[hub] state_dir` in the user's own `vibey.toml`), or its default when `[hub]` cannot be
+    read -- the bootstrap still has a place for them, and the doctor says what is wrong."""
     try:
         return HUB_SETTINGS.load(config_path).state_dir
     except ConfigError:
         return HubSettings().state_dir
 
 
-def acp_machine(settings: AcpSettings, *, config_path: Path) -> AcpMachine:
-    """The real `AcpMachine`, under `acp_state_dir`. Building it touches nothing; only the
-    bootstrap's steps do. PostgreSQL's read-only checks are bounded by
-    `[acp] bootstrap_timeout_seconds`, each install command by `[acp] install_timeout_seconds`."""
-    state_dir = acp_state_dir(config_path)
+def acp_machine(
+    settings: AcpSettings, *, user_config: Path, launcher: str | None = None
+) -> AcpMachine:
+    """The real `AcpMachine`, under `acp_state_dir(user_config)`. Building it touches nothing;
+    only the bootstrap's steps do. PostgreSQL's read-only checks are bounded by
+    `[acp] bootstrap_timeout_seconds`, each install command by `[acp] install_timeout_seconds`.
+    The service manager is this platform's (launchd on macOS, `systemd --user` elsewhere), asked
+    through `ServiceManagerRunner`, each command bounded by `bootstrap_timeout_seconds`.
+
+    Trust (ADR-0101): `[hub]` and `[supervisor]` come from `user_config` only, never the folder
+    the editor opened; the units and the clients' MCP entries run `launcher` (default: the
+    running install's, `running_vibey()`) or this interpreter, never a configured command; and
+    the units' files must lie in the user's home."""
+    state_dir = acp_state_dir(user_config)
+    pinned = launcher if launcher is not None else running_vibey()
+    runner = ServiceManagerRunner(
+        timeout_seconds=settings.bootstrap_timeout_seconds, uid=os.getuid()
+    )
+    host = SupervisorHost(
+        LAUNCHD if sys.platform == "darwin" else SYSTEMD,
+        home=Path.home(),
+        environ=os.environ,
+        uid=os.getuid(),
+        run=runner,
+    )
+    planner = SupervisorPlanner()
     return AcpMachine(
-        connector=HostConnector(state_dir=state_dir, version=__version__),
+        connector=HostConnector(
+            state_dir=state_dir,
+            version=__version__,
+            installer=HostInstaller(which=lambda name: pinned, python_executable=sys.executable),
+        ),
         postgres=AcpPostgresInstaller(
             AcpCommandRunner(timeout_seconds=settings.install_timeout_seconds),
             probe_runner=AcpCommandRunner(timeout_seconds=settings.bootstrap_timeout_seconds),
         ),
-        lock=ServeLock(state_dir, lock_file=ACP_BOOTSTRAP_LOCK_FILE),
+        lock=BootstrapLock(state_dir),
+        units=AcpServiceUnits(
+            host,
+            SupervisorInstaller(
+                host, planner, TimerUnitRenderer(), which=lambda name: None, python=sys.executable
+            ),
+            planner,
+            SupervisorSettingsLoader(),
+            config_path=user_config,
+            workdir=settings.service_workdir,
+            state_dir=state_dir,
+            launcher=pinned,
+            start_hub=functools.partial(default_hub_starter, cwd=user_config.parent),
+            roots=(Path.home(),),
+        ),
+        loader=ServiceLoader(host, runner, os.getuid(), euid=os.geteuid()),
     )
 
 
@@ -1504,6 +1589,8 @@ def build_acp_agent(
     connector: HostConnectorInterface | None = None,
     postgres: PostgresInstallerInterface | None = None,
     lock: BootstrapLockInterface | None = None,
+    units: ServiceUnitsInterface | None = None,
+    loader: ServiceLoaderInterface | None = None,
 ) -> AcpAgentInterface:
     """Compose the ACP agent `vibey acp` serves (SP-ACP).
 
@@ -1523,12 +1610,33 @@ def build_acp_agent(
 
     `AcpBootstrap` runs `doctor_probes`, `connector` and `postgres` under `[acp]`'s grant; each
     one left out is a step that says nothing, and with none of them there is no bootstrap.
-    `vibey acp` passes doctor's local sections and `acp_machine`'s parts.
+    With `units` and `loader` it also loads the user-level services (step 3) and an
+    `AcpKeepAlive` keeps them running (ADR-0101). The gateway's starter is a `HubStartRouter`,
+    deciding per call: while the keep-alive owns the hub's unit, a read that finds no hub only
+    asks the keep-alive for a probe (it alone restarts the unit, under the lock); otherwise the
+    bounded `vibey hub start` runs, in the user's configuration folder. Probing the hub
+    (`healthy`) never starts or restarts it. `vibey acp` passes doctor's local sections and
+    `acp_machine`'s parts.
     """
+    granted = settings.auto_bootstrap and settings.auto_services
+    services = units is not None and loader is not None and granted
+    # A hub `vibey acp` starts runs in the user's configuration folder and reads their file.
+    router = HubStartRouter(
+        BoundedHubStarter(
+            functools.partial(default_hub_starter, cwd=acp_user_config().parent),
+            window_seconds=settings.hub_start_seconds,
+        )
+    )
     hub = AcpHubClient(
         gateway=gateway
         if gateway is not None
-        else HubGateway(starter=BoundedHubStarter(window_seconds=settings.hub_start_seconds)),
+        else HubGateway(
+            # `[hub]` -- the state folder, its agent token, the serving record -- is the user's
+            # (ADR-0101): the hub the units run reads the same file, and a project's
+            # `vibey.toml` never decides where a token is made or which hub is spoken to.
+            config_path=acp_user_config,
+            starter=router,
+        ),
         tools=HOST_TOOL_CATALOG,
     )
     modes = AcpModes(settings)
@@ -1538,7 +1646,12 @@ def build_acp_agent(
     kept = AcpJournalingChannel(channel, journal, SESSION_REPLAY)
     gates = AcpGatePrompter(kept, hub, settings, modes, mapper, gate_mapper, HOST_TOOL_CATALOG)
     bootstrap: AcpBootstrapInterface | None = None
-    if doctor_probes or connector is not None or postgres is not None:
+    if doctor_probes or connector is not None or postgres is not None or services:
+        held = lock if lock is not None else BootstrapLock(acp_state_dir(acp_user_config()))
+        keep_alive: AcpKeepAliveInterface | None = None
+        if services and loader is not None:
+            keep_alive = AcpKeepAlive(loader, hub, held, channel, mapper, settings, units=units)
+            router.attach(keep_alive)
         bootstrap = AcpBootstrap(
             settings,
             DoctorChecks(doctor_probes) if doctor_probes else None,
@@ -1546,12 +1659,12 @@ def build_acp_agent(
             postgres,
             channel,
             mapper,
-            lock
-            if lock is not None
-            else ServeLock(
-                acp_state_dir(Path.cwd() / "vibey.toml"), lock_file=ACP_BOOTSTRAP_LOCK_FILE
-            ),
+            held,
             modes,
+            units=units if services else None,
+            loader=loader if services else None,
+            hub=hub if services else None,
+            keep_alive=keep_alive,
         )
 
     def new_turn() -> AcpPromptTurnInterface:

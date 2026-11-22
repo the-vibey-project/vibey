@@ -858,8 +858,10 @@ What `vibey supervisor install` renders, and what `vibey supervisor status` and
 | `delivery_interval_seconds` | integer | `300` | The bridge's `--interval`; at least 1. |
 | `delivery_args` | list of strings | `[]` | Appended to the bridge's command, e.g. `["--answer-design-defaults"]`. |
 | `worker_args` | list of strings | `[]` | Appended to `vibey worker --all-projects`, e.g. `["-j", "2", "--provider", "gptossloop"]`. |
-| `restart_seconds` | integer | `30` | How long after a failed exit the service manager restarts a service (launchd `ThrottleInterval`, systemd `RestartSec`). |
-| `label_prefix` | string | `"dev.vibey"` | Units are `<label_prefix>.worker` and `<label_prefix>.delivery`, and `<label_prefix>.state-sync` with `state_sync = true`. |
+| `restart_seconds` | integer | `30` | How long after a failed exit the service manager restarts a service (launchd `ThrottleInterval`, systemd `RestartSec`); for the units `vibey acp` loads with `[acp] restart = "always"`, after any exit. At least 1 for those. |
+| `start_limit_interval_seconds` | integer | `600` | systemd `StartLimitIntervalSec` of the `always` units `vibey acp` loads ([ADR-0101](../architecture/decisions/0101-the-acp-agent-and-self-installing-services.md)): the window `start_limit_burst` is counted in. At least 1. Not rendered into `vibey supervisor install`'s units. |
+| `start_limit_burst` | integer | `5` | systemd `StartLimitBurst` of those units: after this many starts within the window, systemd stops restarting a unit that keeps exiting, and `vibey acp`'s keep-alive says once that it could not restart it. At least 1. |
+| `label_prefix` | string | `"dev.vibey"` | Units are `<label_prefix>.worker` and `<label_prefix>.delivery`, and `<label_prefix>.state-sync` with `state_sync = true`; `vibey acp` loads `<label_prefix>.hub` and `<label_prefix>.worker`, and refuses a prefix outside letters, digits, `.`, `_` and `-` (starting with a letter or digit). |
 | `required` | boolean | `false` | `true` turns `vibey doctor`'s `WARN` for a missing or stopped service into a `FAIL`. |
 | `state_sync` | boolean | `false` | `true` adds a third service, `state-sync`, which runs `vibey state sync --every <state_sync_interval_seconds>` ([State sync](#state-sync), ADR-0086). Off unless declared. |
 | `state_sync_interval_seconds` | integer | `300` | Seconds between the service's syncs; at least 1 when `state_sync` is on. |
@@ -906,7 +908,43 @@ A bump from the hub is requested as the queue source `vibey-hub`; it lands only 
 ## `[acp]` { #acp }
 
 `vibey acp`, the Agent Client Protocol agent an editor such as Zed launches over stdio
-(SP-ACP). Read from `./vibey.toml`. The hub (`vibey serve`) reads only `sessions_max` and
+(SP-ACP).
+
+**Who may set what ([ADR-0101](../architecture/decisions/0101-the-acp-agent-and-self-installing-services.md)).**
+An editor starts `vibey acp` in whatever folder it opened, often a repository someone else
+wrote, so that folder's `./vibey.toml` is not your word. Your own `vibey.toml` -- in your
+configuration folder, `~/Library/Application Support/vibey/vibey.toml` on macOS and
+`$XDG_CONFIG_HOME/vibey/vibey.toml` (else `~/.config/vibey/vibey.toml`) elsewhere, beside
+`supervisor.env` -- holds the powers. The project's `[acp]` may only narrow them:
+
+- `auto_bootstrap`, `auto_connect`, `auto_services`, `live_between_turns`: the project may turn
+  one off, never on.
+- `install_postgres`: the project may say `"never"`, never `"ask"`.
+- `services`, `modes`: the project may drop items, never add one; your order is kept. If the
+  project's `modes` share none with yours, yours stand. `default_mode` is the project's only when
+  it is among the merged modes and no more permissive than yours (`observe` before `drive`: a
+  project can start sessions in `observe` when you start them in `drive`, never the reverse),
+  else yours if it is among them, else the first merged mode.
+- `hub_start_seconds`, `probe_seconds`, `live_poll_seconds`: the project may make them longer,
+  never shorter.
+- Every timeout and cap (`prompt_probe_seconds`, `bootstrap_timeout_seconds`,
+  `permission_timeout_seconds`, `cancel_grace_seconds`, `max_gate_prompts_per_turn`,
+  `live_message_chars`, `max_message_bytes`, `pending_events_max`, `sessions_max`,
+  `session_events_max`, `replay_events_max`): the project may lower it, never raise it.
+- `restart`, `service_workdir`, `reject_words`, `notice_interval_seconds`,
+  `install_timeout_seconds`: yours alone; the project's are ignored (a project must not cut
+  short an install you allowed).
+
+For `vibey acp`, `[supervisor]` and `[hub]` are read from your own file only, never the
+project's: the units' labels, environment file, log folder and worker arguments, and the hub's
+state folder, agent token and serving record. The units and the MCP entries `vibey connect`
+writes run the `vibey` of the running install (the console script beside its Python), never a
+configured path or a `PATH` lookup, and a unit's environment file, log folder and working folder
+must lie in your home folder, or nothing is written. A hub `vibey acp` starts itself runs in your
+configuration folder.
+
+Where both files say nothing, the defaults below apply, `auto_bootstrap` and `auto_services`
+included. The hub (`vibey serve`) reads only `sessions_max` and
 `session_events_max` from this table, so a mistake in any other key never stops the hub; it is
 the editor's to report. Every key is optional; an unknown key, a value of the
 wrong type or one outside its bound is refused by name (`ConfigError`), never ignored. The
@@ -915,23 +953,25 @@ a key: they are never answerable over ACP, whatever is set here.
 
 | Key | Type | Default | Meaning |
 |---|---|---|---|
-| `auto_bootstrap` | boolean | `true` | The grant for `vibey acp` to run `vibey doctor` and `vibey connect` itself, load user-level services and keep them running. `false` skips all of it (and PostgreSQL and the keep-alive). The doctor and connect steps start after the first `session/new` has answered, never before it ([Bootstrap](cli.md#bootstrap-doctor-connect-and-postgresql)). |
+| `auto_bootstrap` | boolean | `true` | The grant for `vibey acp` to run `vibey doctor` and `vibey connect` itself, load user-level services and keep them running. `false` skips all of it (and PostgreSQL and the keep-alive). The doctor and connect steps start after the first `session/new` has answered, never before it ([Bootstrap](cli.md#bootstrap-doctor-connect-services-and-postgresql)). |
 | `auto_connect` | boolean | `true` | Whether bootstrap runs the `vibey connect` step: `vibey mcp` is registered with each user-level client whose config folder already exists under your home folder (Claude Desktop, Codex, Cursor, Gemini CLI), never a project file, never a folder it would have to create, never a config whose folder resolves (symlinks followed) outside your home folder, and never a config file that is itself a symbolic link. A changed file is backed up to `.vibey.bak` with the original's permissions and replaced atomically. When no client warned, `<[hub] state_dir>/acp-connect-<version>.json` records the clients connected, and the step is skipped while every client installed then is in it: a client that warned, or one installed since, is tried again. |
-| `auto_services` | boolean | `true` | Whether bootstrap installs and loads the user-level services in `services`. Never system units, never sudo. |
+| `auto_services` | boolean | `true` | Whether bootstrap writes, loads and keeps running the user-level units for `services` ([ADR-0101](../architecture/decisions/0101-the-acp-agent-and-self-installing-services.md)): launchd `gui/<uid>` or `systemctl --user` only, never a system unit, never `sudo`, never as root. A unit you edited is kept as it is and neither loaded nor restarted; a hub you started yourself is left running. The first load names each label and how to stop them: [`vibey acp unload`](cli.md#vibey-acp-unload), or by hand. `false` writes, loads and restarts nothing, and a read that finds no hub runs `vibey hub start` instead (`hub_start_seconds`). Ruled on by the operator on 2026-11-20 as the default grant; a project's `vibey.toml` can turn it off, never on. |
 | `install_postgres` | `"ask"` or `"never"` | `"ask"` | `"ask"` offers the PostgreSQL install as an ACP `session/request_permission`, inside the first prompt of a session in a mode that may run (never in `observe`), at most once per process; only its "Install PostgreSQL" option installs, with `sudo -n` (vibey never asks for or types a password: when sudo wants one, run `vibey doctor --install-postgres` yourself). A refusal, a timeout or a cancel once asked installs nothing and says the hub runs degraded. `"never"` never installs. |
-| `services` | list, each of `"hub"`, `"worker"` | `["hub", "worker"]` | The user-level services bootstrap keeps running. An empty list loads none. |
-| `restart` | `"always"` or `"on-failure"` | `"always"` | The service manager's restart policy for those units. |
-| `service_workdir` | string | `""` | Where the services run. Empty means the directory of `[supervisor] env_file`. |
-| `probe_seconds` | integer, at least 5 | `30` | How often the keep-alive probes the hub and the worker. Also the longest the live ledger feed waits between retries while the hub cannot be read. |
-| `hub_start_seconds` | integer, at least 1 | `60` | When a read of the hub finds no hub (the live feed, the session log, a prompt), `vibey acp` runs `vibey hub start` at most once in this many seconds, on a thread of its own; every read meanwhile is told at once that the hub is away, and a failed start is remembered until the window passes. `vibey mcp` is unaffected. |
+| `services` | list, each of `"hub"`, `"worker"` | `["hub", "worker"]` | The user-level services bootstrap keeps running: `<[supervisor] label_prefix>.hub` runs `vibey serve` in your configuration folder, `<label_prefix>.worker` runs `vibey worker --all-projects` (with `[supervisor] worker_args`), each through `vibey supervisor exec --env-file <[supervisor] env_file>` and the running install's own `vibey`, logging to `<[supervisor] log_dir>/hub.log` and `worker.log`. The worker is loaded only once the environment file sets `VIBEY_PG_URL`. Never the delivery bridge or the state sync. An empty list loads none. |
+| `restart` | `"always"` or `"on-failure"` | `"always"` | The service manager's restart policy for those units: `always` is launchd `KeepAlive` true and systemd `Restart=always`. Either way a restart waits `[supervisor] restart_seconds`. On systemd an `always` unit stops being restarted after `[supervisor] start_limit_burst` starts within `start_limit_interval_seconds`; launchd has no such limit and keeps respawning a unit that exits, at most once per `restart_seconds`. |
+| `service_workdir` | string | `""` | Where the worker runs (an existing folder in your home folder). Empty means your configuration folder. The hub always runs in your configuration folder, so it reads your own `vibey.toml`. |
+| `probe_seconds` | integer, at least 5 | `30` | How often the keep-alive probes the hub and the worker while a session is open (it also probes at the start of every prompt); the least time between two restarts of one unit, and the time a unit just loaded or restarted gets to come up; and how long a keep-alive waits for another window's bootstrap lock. Also the longest the live ledger feed waits between retries while the hub cannot be read. |
+| `prompt_probe_seconds` | integer, at least 1 | `10` | The longest a prompt waits for the keep-alive's probe (and a restart it starts) before it goes ahead; the probe itself runs on to its end. |
+| `notice_interval_seconds` | integer, at least 60 | `3600` | The keep-alive says a unit's change of state (restarted, could not restart, running again) at most twice within this many seconds; a unit that keeps stopping and starting is then reminded of once per interval. Yours alone: a project's value is ignored. |
+| `hub_start_seconds` | integer, at least 1 | `60` | When a read of the hub finds no hub (the live feed, the session log, a prompt) and no unit of the hub is vibey's to restart (the grant is off, no service manager, a failed load, an edited unit, or a hub you started yourself), `vibey acp` runs `vibey hub start` in your configuration folder at most once in this many seconds, on a thread of its own; every read meanwhile is told at once that the hub is away, and a failed start is remembered until the window passes. While the keep-alive owns the hub's unit, such a read only asks the keep-alive to probe. `vibey mcp` is unaffected. |
 | `modes` | list, each of `"observe"`, `"drive"`; not empty | `["observe", "drive"]` | The session modes offered. `observe` reads; `drive` also answers non-spending gates and starts, pauses or unwinds work. Narrowed by `[hub] agent_scopes`, never widened. |
 | `default_mode` | string, one of `modes` | `"drive"` | The mode a new session starts in. |
-| `bootstrap_timeout_seconds` | integer, at least 1 | `120` | The longest one bootstrap step (doctor, connect) may take, the longest a session's first prompt waits for them before it goes ahead, and the bound on the PostgreSQL readiness check. An install command has its own bound, `install_timeout_seconds`. |
+| `bootstrap_timeout_seconds` | integer, at least 1 | `120` | The longest one bootstrap step (doctor, connect, services) may take, the longest a session's first prompt waits for them before it goes ahead, the bound on the PostgreSQL readiness check, and on each `launchctl` / `systemctl --user` command. An install command has its own bound, `install_timeout_seconds`. |
 | `install_timeout_seconds` | integer, at least 1 | `1800` | The longest one PostgreSQL install command (`brew install`, `apt-get install`, ...) may run once the client allowed the install. It runs in a process group of its own; past the bound the whole group is sent SIGTERM, then SIGKILL after a grace. A command that cannot be stopped that way (a `sudo` run as root) is not waited for and is reported as possibly still running. |
 | `permission_timeout_seconds` | integer, at least 1 | `600` | How long a permission request waits for the client. Silence leaves the gate open; it is never consent. |
 | `max_gate_prompts_per_turn` | integer, at least 0 | `3` | How many open gates one turn may put to the client, oldest first: each answerable one as a permission request, every other one (spend, deployment opt-in, value, unknown kind, or a gate whose labels could be misread) as a message saying where to answer it. `0` puts none. A gate is put to a session once. |
 | `reject_words` | list of strings | `["reject", "decline", "deny", "no", "cancel"]` | A gate option whose whole label, normalised (NFKC) and case-folded, is one of these words is offered as a refusal (`reject_once`), every other as `allow_once`. Picking it still answers the gate with that option. Lower-cased when read; an empty word is refused. |
-| `live_poll_seconds` | number, at least 0.2 | `1.0` | How often the live ledger feed polls the hub after a short page, and how long it waits before the first retry of a read that failed; each further failure in a row doubles the wait, up to `probe_seconds`. A full page that advanced is read again at once. |
+| `live_poll_seconds` | number, at least 0.2 | `1.0` | How often the live ledger feed polls the hub after a short page, and how long it waits before the first retry of a read that failed; each further failure in a row doubles the wait, up to `probe_seconds`. A full page that advanced is read again at once. Also how often the services step polls the hub it loaded until it answers. |
 | `live_message_chars` | integer, at least 40 | `400` | The longest ledger event summary sent as one message (`[<phase>] <kind>: <summary>`); a longer one is cut to this length, ending in `...`. |
 | `live_between_turns` | boolean | `true` | Whether ledger events keep streaming between prompt turns. `false` holds the events that arrive between turns and sends them at the start of the next prompt. |
 | `cancel_grace_seconds` | number, at least 0 | `2.0` | How long a cancelled turn waits for a hub call already in flight to answer, so its real outcome can be reported; after that the turn ends saying the hub may still apply it, with the request id. |

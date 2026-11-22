@@ -47,17 +47,22 @@ class HubGatewayResponse:
     ok: bool
 
 
-def _default_starter() -> bool:
+def _default_starter(cwd: Path | None = None) -> bool:
     """Run `vibey hub start` in a child process and return True when it exits 0.
 
     Module-level by design: the default of `HubGateway`'s `starter` seam. The child's stdin is
     closed and its output captured: under `vibey mcp` and `vibey acp` this process's stdin and
     stdout are the client's protocol streams, and neither the child nor a hub it leaves behind
-    may read or write them.
+    may read or write them. `cwd` is the folder the hub starts in, and so whose `vibey.toml` it
+    reads: `vibey acp` gives the user's own configuration folder (made, owner-only, if missing),
+    never the project an editor opened (ADR-0101).
     """
     try:
+        if cwd is not None:
+            cwd.mkdir(mode=0o700, parents=True, exist_ok=True)
         completed = subprocess.run(  # noqa: S603  # nosec B603
             [sys.executable, "-c", "from vibey.cli.main import run; run(['hub', 'start'])"],
+            cwd=cwd,
             stdin=subprocess.DEVNULL,
             capture_output=True,
             text=True,
@@ -67,6 +72,11 @@ def _default_starter() -> bool:
     except OSError:
         return False
     return completed.returncode == 0
+
+
+default_hub_starter = _default_starter
+"""The public name of `vibey hub start` run as a child, for the composition root and `vibey acp`
+to give a `cwd` (the module-private name stays for the gateway's own default)."""
 
 
 class HubGateway:
@@ -115,6 +125,16 @@ class HubGateway:
         return scopes
 
     def call(self, call: HubCall) -> HubGatewayResponse:
+        return self._call(call, start=True)
+
+    def reach(self, call: HubCall) -> HubGatewayResponse:
+        """`call` with no side effect on the hub: a missing or silent hub is an error at once,
+        and the starter is never run. A liveness probe goes this way, so probing whether the
+        hub is up never starts or restarts it (ADR-0101: the keep-alive is the one authority
+        that restarts a hub unit)."""
+        return self._call(call, start=False)
+
+    def _call(self, call: HubCall, *, start: bool) -> HubGatewayResponse:
         settings = self._load_settings()
         if not settings.agent_scopes:
             raise HubGatewayError(
@@ -128,10 +148,14 @@ class HubGateway:
 
         record = self._read_serving(store)
         if record is None:
+            if not start:
+                raise HubGatewayError("no hub is running on this computer")
             record = self._start_and_read(store)
         try:
             return self._send(settings, record, token, call)
         except httpx.HTTPError as first_exc:
+            if not start:
+                raise HubGatewayError(f"the hub did not answer ({first_exc})") from first_exc
             if not self._starter():
                 raise HubGatewayError(
                     f"the hub did not answer ({first_exc}); start it with `vibey hub start`"

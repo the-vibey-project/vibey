@@ -233,3 +233,53 @@ def test_the_hub_reads_only_its_own_keys_so_an_editor_typo_never_stops_it(
 def test_a_replay_bound_past_its_maximum_is_refused_by_name() -> None:
     with pytest.raises(ConfigError, match="replay_events_max must be at most 10000, not 10001"):
         AcpSettingsLoader().from_mapping({"replay_events_max": 10_001})
+
+
+# -- the trust split (ADR-0101) ---------------------------------------------------------------
+
+
+def test_the_project_file_only_narrows_the_users(tmp_path: Path) -> None:
+    user = tmp_path / "user" / "vibey.toml"
+    user.parent.mkdir()
+    user.write_text("[acp]\nauto_services = false\nprobe_seconds = 60\n")
+    project = tmp_path / "project" / "vibey.toml"
+    project.parent.mkdir()
+    project.write_text(
+        '[acp]\nauto_services = true\nservice_workdir = "/tmp/evil"\nprobe_seconds = 5\n'
+        'install_postgres = "never"\nlive_message_chars = 80\n'
+        '[supervisor]\nvibey = "/tmp/evil"\nlabel_prefix = "a;b"\n'
+    )
+
+    settings = AcpSettingsLoader().load_trusted(user, project)
+
+    assert settings.auto_services is False
+    assert settings.service_workdir == ""
+    assert settings.probe_seconds == 60
+    assert settings.install_postgres == "never"
+    assert settings.live_message_chars == 80
+
+
+def test_a_project_that_turns_services_off_stops_them(tmp_path: Path) -> None:
+    project = tmp_path / "vibey.toml"
+    project.write_text("[acp]\nauto_services = false\n")
+    settings = AcpSettingsLoader().load_trusted(tmp_path / "missing" / "vibey.toml", project)
+    assert settings.auto_services is False
+
+
+def test_with_no_files_every_default_and_the_grant_ruled_on_stands(tmp_path: Path) -> None:
+    settings = AcpSettingsLoader().load_trusted(tmp_path / "a.toml", tmp_path / "b.toml")
+    assert settings == AcpSettings()
+    assert settings.auto_bootstrap and settings.auto_services
+
+
+def test_the_users_own_file_opened_as_the_project_is_read_once(tmp_path: Path) -> None:
+    user = tmp_path / "vibey.toml"
+    user.write_text('[acp]\nservice_workdir = "/home/op/vibey"\n')
+    assert AcpSettingsLoader().load_trusted(user, user).service_workdir == "/home/op/vibey"
+
+
+def test_a_malformed_project_file_is_still_refused_by_name(tmp_path: Path) -> None:
+    project = tmp_path / "vibey.toml"
+    project.write_text("[acp]\nauto_servics = false\n")
+    with pytest.raises(ConfigError, match="auto_servics"):
+        AcpSettingsLoader().load_trusted(tmp_path / "user.toml", project)

@@ -4,7 +4,10 @@ the platform's default places, and the service manager asked what it runs.
 
 Reading is all this does to the service manager. Loading or unloading a unit is the
 operator's own `launchctl` / `systemctl --user` command, which `vibey supervisor
-install` prints (as `vibey driver timer` does, ADR-0070).
+install` prints (as `vibey driver timer` does, ADR-0070). The one exception is `vibey acp`,
+which loads its own hub and worker units in the user's domain under `[acp]`'s grant, through
+`infrastructure/acp/service_loader.py`, and names the commands here that unload them
+(`unload_commands`; ADR-0101).
 """
 
 import shlex
@@ -36,6 +39,8 @@ _INTEGERS: Final = (
     "delivery_interval_seconds",
     "restart_seconds",
     "state_sync_interval_seconds",
+    "start_limit_interval_seconds",
+    "start_limit_burst",
 )
 _BOOLEANS: Final = ("delivery", "required", "state_sync")
 _ARGV: Final = ("worker_args", "delivery_args", "state_sync_args")
@@ -109,6 +114,7 @@ class SupervisorHost:
         self._home = home
         self._environ = environ
         self._uid = uid
+        self.uid = uid
         self._run = run
         self._temp_roots = temp_roots
 
@@ -173,6 +179,22 @@ class SupervisorHost:
             f"systemctl --user enable --now {services}",
             'loginctl enable-linger "$USER"  # keep them running with nobody logged in',
         ]
+
+    def unload_commands(self, labels: Sequence[str]) -> list[str]:
+        """What the operator runs to stop the units `vibey acp` loaded for good: the
+        counterpart of `load_commands`, in the same user domain. On launchd that is `bootout`
+        and the plist removed (else it loads again at the next login); on systemd,
+        `disable --now`."""
+        if self.platform == LAUNCHD:
+            # bootout alone lasts until the next login, when launchd loads every plist in
+            # LaunchAgents again: the plist goes too.
+            return [
+                f"launchctl bootout gui/{self._uid}/{label}; "
+                f"rm {shlex.quote(str(self.unit_path(label)))}"
+                for label in labels
+            ]
+        services = " ".join(f"{label}.service" for label in labels)
+        return [f"systemctl --user disable --now {services}"]
 
     def _xdg(self, key: str, fallback: str) -> Path:
         value = self._environ.get(key, "")

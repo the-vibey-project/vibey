@@ -13,12 +13,20 @@ Every service is started through `vibey supervisor exec --env-file <file> -- <ar
 on both platforms, so the environment reaches it one way, read by one parser:
 launchd has no environment-file key, and giving systemd its own `EnvironmentFile=`
 would give the two platforms two dialects of the same file.
+
+`vibey acp` plans two of them for itself (`acp_services`, ADR-0101): the hub (`vibey serve`) and
+the worker, restarted `always` by the user's own service manager. Their labels reach a service
+manager's argv, so the label prefix is held to a closed alphabet here.
 """
 
 import re
 from dataclasses import dataclass
-from typing import Final
+from typing import Final, Literal
 
+type RestartPolicy = Literal["on-failure", "always"]
+"""When the service manager restarts a unit: after a failed exit, or after any exit."""
+
+HUB: Final = "hub"
 WORKER: Final = "worker"
 DELIVERY: Final = "delivery"
 DELIVERY_SCRIPT: Final = "scripts/triaged_delivery.py"
@@ -26,6 +34,9 @@ STATE_SYNC: Final = "state-sync"
 
 # POSIX shell names: what a process environment can carry and a shell can read back.
 _NAME: Final = re.compile(r"[A-Za-z_][A-Za-z0-9_]*")
+# What a launchd label and a systemd unit name may both be, with no path, space or specifier.
+LABEL: Final = re.compile(r"[A-Za-z0-9][A-Za-z0-9._-]{0,127}")
+_ACP_NAMES: Final = (HUB, WORKER)
 
 
 @dataclass(frozen=True)
@@ -50,6 +61,11 @@ class SupervisorSettings:
     state_sync_interval_seconds: int = 300
     state_sync_env_file: str = ""
     state_sync_args: tuple[str, ...] = ()
+    start_limit_interval_seconds: int = 600
+    """systemd `StartLimitIntervalSec` of an `always` unit: the window its burst is counted in."""
+    start_limit_burst: int = 5
+    """systemd `StartLimitBurst` of an `always` unit: the starts in that window before systemd
+    stops restarting it (a crash loop is stopped and said, never spun)."""
 
 
 @dataclass(frozen=True)
@@ -61,6 +77,7 @@ class SupervisedService:
     argv: tuple[str, ...]
     working_directory: str
     log_path: str
+    restart: RestartPolicy = "on-failure"
 
 
 @dataclass(frozen=True)
@@ -129,6 +146,46 @@ class SupervisorPlanner:
             log_path=f"{paths.log_dir}/{STATE_SYNC}.log",
         )
         return (*planned, state_sync)
+
+    def acp_services(
+        self,
+        settings: SupervisorSettings,
+        paths: SupervisorPaths,
+        *,
+        names: tuple[str, ...],
+        restart: RestartPolicy,
+    ) -> tuple[SupervisedService, ...]:
+        """The units `vibey acp` loads (ADR-0101), in `names` order: the hub runs `vibey serve`,
+        the worker as `services` runs it, each through `vibey supervisor exec` and logging to
+        `<log_dir>/<name>.log`. Never the delivery bridge or the state sync."""
+        if not LABEL.fullmatch(f"{settings.label_prefix}.{WORKER}"):
+            raise ValueError(
+                "[supervisor] label_prefix must be letters, digits, '.', '_' or '-', starting "
+                "with a letter or digit, at most 121 characters"
+            )
+        for key in ("restart_seconds", "start_limit_interval_seconds", "start_limit_burst"):
+            if getattr(settings, key) < 1:
+                raise ValueError(f"[supervisor] {key} must be at least 1")
+        launcher = (paths.vibey, "supervisor", "exec", "--env-file", paths.env_file, "--")
+        commands = {
+            HUB: (paths.vibey, "serve"),
+            WORKER: (paths.vibey, "worker", "--all-projects", *settings.worker_args),
+        }
+        planned: list[SupervisedService] = []
+        for name in names:
+            if name not in _ACP_NAMES:
+                raise ValueError(f"vibey acp keeps hub or worker running, not {name!r}")
+            planned.append(
+                SupervisedService(
+                    name=name,
+                    label=f"{settings.label_prefix}.{name}",
+                    argv=(*launcher, *commands[name]),
+                    working_directory=paths.repo,
+                    log_path=f"{paths.log_dir}/{name}.log",
+                    restart=restart,
+                )
+            )
+        return tuple(planned)
 
     @staticmethod
     def _delivery(

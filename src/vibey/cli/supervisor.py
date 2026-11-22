@@ -4,7 +4,9 @@
 - `vibey supervisor install` renders a launchd agent (macOS) or a systemd user service
   (Linux) for `vibey worker --all-projects` and for `scripts/triaged_delivery.py
   --interval N`, from `[supervisor]` in `vibey.toml`, and prints the operator's own
-  command that loads them. vibey never loads a unit into the operator's session.
+  command that loads them. This command never loads a unit; `vibey acp` loads its own hub
+  and worker units, under `[acp]`'s grant only (ADR-0101). The paths and the writing are
+  `infrastructure/supervisor_installer.py`'s, shared with `vibey acp`.
 - `vibey supervisor status` asks the service manager whether each one runs.
 - `vibey supervisor exec --env-file FILE -- ARGV...` is what every unit runs: it reads
   the declared environment file, then replaces itself with ARGV.
@@ -28,9 +30,7 @@ from vibey.domain.interfaces.supervisor_interface import (
     SupervisorPlannerInterface,
 )
 from vibey.domain.supervisor import (
-    DELIVERY_SCRIPT,
     EnvFileParser,
-    SupervisorPaths,
     SupervisorPlanner,
     SupervisorSettings,
 )
@@ -38,6 +38,9 @@ from vibey.infrastructure.driver.interfaces.timer_units_interface import (
     TimerUnitRendererInterface,
 )
 from vibey.infrastructure.driver.timer_units import TimerUnitRenderer
+from vibey.infrastructure.interfaces.supervisor_installer_interface import (
+    SupervisorInstallerInterface,
+)
 from vibey.infrastructure.interfaces.supervisor_interface import (
     SupervisorHostInterface,
     SupervisorSettingsLoaderInterface,
@@ -48,6 +51,14 @@ from vibey.infrastructure.supervisor import (
     SupervisorHost,
     SupervisorSettingsLoader,
 )
+from vibey.infrastructure.supervisor_installer import (
+    ENV_TEMPLATE,
+    STATE_ENV_NAME,
+    STATE_ENV_TEMPLATE,
+    SupervisorInstaller,
+)
+
+__all__ = ["ENV_TEMPLATE", "STATE_ENV_NAME", "STATE_ENV_TEMPLATE", "SupervisorCommand"]
 
 EXIT_CONFIG: Final = 78
 """EX_CONFIG: a setting no supervised service could run with, as the storm tools use it."""
@@ -55,33 +66,6 @@ EXIT_CONFIG: Final = 78
 EXIT_NOT_FOUND: Final = 127
 
 DEFAULT_PLATFORM: Final = LAUNCHD if sys.platform == "darwin" else SYSTEMD
-
-ENV_TEMPLATE: Final = """\
-# The environment of vibey's supervised services (#1189), read by `vibey supervisor exec`
-# before it starts `vibey worker --all-projects` and the triaged-delivery bridge.
-#
-# KEY=VALUE, one per line. `#` starts a comment, `export ` is allowed, one pair of
-# matching quotes around a value is removed, and nothing is expanded ($HOME stays $HOME).
-# A value here wins over the service manager's own environment. Keep this file private:
-# `vibey supervisor install` created it readable by you alone.
-#
-# VIBEY_PG_URL=postgresql://vibey_app@localhost:5432/vibey
-# VIBEY_OLLAMA_URL=http://127.0.0.1:11434
-# GH_TOKEN=            # the bridge's gh, if it cannot reach your login keychain here
-"""
-
-STATE_ENV_NAME: Final = "state-sync.env"
-STATE_ENV_TEMPLATE: Final = """\
-# The environment of `vibey state sync --every N` (ADR-0086), the supervised state sync.
-# Its own file, never the worker's: the sync's database role writes every synced table,
-# more than the application role may (ADR-0055). Keep it private: it was created readable
-# by you alone. Same syntax as supervisor.env.
-#
-# VIBEY_STATE_PG_URL=postgresql://vibey@localhost:5432/vibey
-# VIBEY_STATE_REPOSITORY=OWNER/NAME
-# GH_TOKEN=            # if gh cannot reach your login keychain here
-# VIBEY_STATE_KEY=     # only if the keychain or the key file cannot be read here
-"""
 
 Execute = Callable[[str, list[str], Mapping[str, str]], object]
 
@@ -122,10 +106,11 @@ class SupervisorCommand(SupervisorCommandInterface):
         except ValueError as exc:
             typer.echo(str(exc), err=True)
             return EXIT_USAGE
+        installer = self._installer(host)
         repo = repo.expanduser().resolve()
         try:
             settings = self._loader.load(config or repo / "vibey.toml")
-            paths = self._paths(host, settings, repo)
+            paths = installer.paths(settings, repo)
             services = self._planner.services(settings, paths)
         except ValueError as exc:
             typer.echo(f"vibey supervisor install: {exc}", err=True)
@@ -133,29 +118,31 @@ class SupervisorCommand(SupervisorCommandInterface):
 
         Path(paths.log_dir).mkdir(parents=True, exist_ok=True)
         env_file = Path(paths.env_file)
-        created = self._env_file(env_file, ENV_TEMPLATE)
-        if paths.state_env_file and self._env_file(Path(paths.state_env_file), STATE_ENV_TEMPLATE):
+        created = installer.env_file(env_file, ENV_TEMPLATE)
+        if paths.state_env_file and installer.env_file(
+            Path(paths.state_env_file), STATE_ENV_TEMPLATE
+        ):
             typer.echo(
                 f"environment: {paths.state_env_file} (created from the template: fill it in)"
             )
 
         target = (out.expanduser().resolve() if out is not None else None) or host.unit_dir()
-        target.mkdir(parents=True, exist_ok=True)
-        path_env = self._env().get("PATH", "")
-        units: list[Path] = []
-        for service in services:
-            unit = host.unit_path(service.label, target)
-            render = (
-                self._renderer.launchd_service
-                if host.platform == LAUNCHD
-                else self._renderer.systemd_service
+        try:
+            outcomes = installer.write(
+                services, settings, out=out, overwrite=True, path_env=self._env().get("PATH", "")
             )
-            unit.write_text(
-                render(service, path_env=path_env, restart_seconds=settings.restart_seconds),
-                encoding="utf-8",
-            )
-            units.append(unit)
-            typer.echo(f"wrote {unit}")
+        except ValueError as exc:
+            typer.echo(f"vibey supervisor install: {exc}", err=True)
+            return EXIT_CONFIG
+        failed = False
+        for outcome in outcomes:
+            if outcome.action == "failed":
+                typer.echo(f"vibey supervisor install: {outcome.path}: {outcome.detail}", err=True)
+                failed = True
+            else:
+                typer.echo(f"wrote {outcome.path}")
+        if failed:
+            return 1
 
         state = "created from the template: fill it in" if created else "kept as it was"
         typer.echo(f"environment: {env_file} ({state})")
@@ -163,83 +150,16 @@ class SupervisorCommand(SupervisorCommandInterface):
         if target != host.unit_dir():
             typer.echo(f"note: the service manager reads {host.unit_dir()}, not {target}")
         typer.echo("load them with:")
-        for line in host.load_commands([s.label for s in services], units):
+        for line in host.load_commands(
+            [s.label for s in services], [Path(outcome.path) for outcome in outcomes]
+        ):
             typer.echo(f"  {line}")
         return 0
 
-    @staticmethod
-    def _env_file(path: Path, template: str) -> bool:
-        """Create `path` from `template`, readable by its owner alone; whether it was."""
-        if path.exists():
-            return False
-        path.parent.mkdir(parents=True, exist_ok=True)
-        path.write_text(template, encoding="utf-8")
-        path.chmod(0o600)
-        return True
-
-    def _paths(
-        self, host: SupervisorHostInterface, settings: SupervisorSettings, repo: Path
-    ) -> SupervisorPaths:
-        vibey = settings.vibey or self._which("vibey") or ""
-        if not vibey:
-            raise ValueError("vibey is not on PATH: set [supervisor] vibey to its full path")
-        paths = SupervisorPaths(
-            vibey=self._absolute(vibey),
-            python=self._absolute(settings.python or self._python),
-            repo=str(repo),
-            env_file=self._absolute(settings.env_file or str(host.default_env_file())),
-            log_dir=self._absolute(settings.log_dir or str(host.default_log_dir())),
-            state_env_file=self._absolute(
-                settings.state_sync_env_file
-                or str(host.default_env_file().with_name(STATE_ENV_NAME))
-            )
-            if settings.state_sync
-            else "",
+    def _installer(self, host: SupervisorHostInterface) -> SupervisorInstallerInterface:
+        return SupervisorInstaller(
+            host, self._planner, self._renderer, which=self._which, python=self._python
         )
-        roots = host.volatile_roots()
-        for key, value in (
-            ("log_dir", paths.log_dir),
-            ("env_file", paths.env_file),
-            ("state_sync_env_file", paths.state_env_file or paths.env_file),
-            ("vibey", paths.vibey),
-            ("python", paths.python),
-            ("--repo", paths.repo),
-        ):
-            root = self._planner.under(os.path.realpath(value), roots) or self._planner.under(
-                value, roots
-            )
-            named = key if key.startswith("--") else f"[supervisor] {key}"
-            if root:
-                raise ValueError(
-                    f"{value} is under {root}, which a reboot empties (sub-doctrine 10.h): "
-                    f"move it somewhere durable with {named}"
-                )
-            worktree = self._linked_worktree(value)
-            if worktree:
-                raise ValueError(
-                    f"{value} is inside the linked worktree {worktree}, which is deleted when "
-                    f"its lane ends (sub-doctrine 10.h): use your main checkout or an "
-                    f"installed vibey, with {named}"
-                )
-        if settings.delivery and not (repo / DELIVERY_SCRIPT).is_file():
-            raise ValueError(
-                f"no {DELIVERY_SCRIPT} under {repo}: pass --repo <your vibey checkout>, "
-                "or set [supervisor] delivery = false to supervise the worker alone"
-            )
-        return paths
-
-    @staticmethod
-    def _linked_worktree(path: str) -> str:
-        """The linked worktree `path` lies in, or "". A linked worktree's `.git` is a file
-        naming the repository it belongs to; a main checkout's is a directory."""
-        for parent in (Path(path), *Path(path).parents):
-            if (parent / ".git").is_file():
-                return str(parent)
-        return ""
-
-    @staticmethod
-    def _absolute(path: str) -> str:
-        return str(Path(path).expanduser().absolute())
 
     # --- status and doctor ------------------------------------------------------------
 

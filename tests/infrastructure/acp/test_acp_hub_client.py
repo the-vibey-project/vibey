@@ -39,6 +39,7 @@ class _Gateway:
     def __init__(self, *responses: HubGatewayResponse | Exception) -> None:
         self._responses = list(responses)
         self.calls: list[HubCall] = []
+        self.reached: list[HubCall] = []
         self.threads: list[int] = []
 
     def agent_scopes(self) -> frozenset[HubScope]:
@@ -51,6 +52,10 @@ class _Gateway:
         if isinstance(response, Exception):
             raise response
         return response
+
+    def reach(self, call: HubCall) -> HubGatewayResponse:
+        self.reached.append(call)
+        return self.call(call)
 
 
 def _ok(document: Any, status: int = 200) -> HubGatewayResponse:
@@ -200,6 +205,7 @@ async def test_healthy_is_the_liveness_route() -> None:
         False,
     ]
     assert gateway.calls[0] == HubCall(tool="vibey_health", method="GET", route="/health/live")
+    assert gateway.reached == gateway.calls  # never through the starting `call`
 
 
 def test_agent_scopes_are_the_gateways() -> None:

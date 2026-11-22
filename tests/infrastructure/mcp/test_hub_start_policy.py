@@ -183,6 +183,24 @@ def test_the_default_starter_runs_with_stdin_closed_and_output_captured(
     assert _default_starter() is True
     assert seen["stdin"] is subprocess.DEVNULL
     assert seen["capture_output"] is True
+    assert seen["cwd"] is None
+
+
+def test_the_default_starter_starts_the_hub_in_the_folder_given_making_it_private(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    seen: dict[str, Any] = {}
+
+    def run(argv: Any, **kwargs: Any) -> subprocess.CompletedProcess[str]:
+        seen.update(kwargs)
+        return subprocess.CompletedProcess(argv, 0)
+
+    monkeypatch.setattr(subprocess, "run", run)
+    folder = tmp_path / "config" / "vibey"
+
+    assert _default_starter(cwd=folder) is True
+    assert seen["cwd"] == folder
+    assert folder.is_dir() and folder.stat().st_mode & 0o777 == 0o700
 
 
 # -- B-8: the agent scopes are read again only when vibey.toml changes -------------------
