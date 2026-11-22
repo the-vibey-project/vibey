@@ -37,14 +37,25 @@ and never in observe mode. It is asked with `session/request_permission` ("Downl
 SearXNG (searxng/searxng@sha256:<first 12>) in a container on 127.0.0.1:<port>? ..."), and only
 the "Install SearXNG" option installs; "Not now", a cancel, a timeout, any other option id, or a
 switch to observe installs nothing. It is not asked when the person's environment names their own
-SearXNG (`VIBEY_SEARXNG_URL`), when a SearXNG already passes the identity check, or when vibey
-installed one before. `[acp] searxng = "ask" | "never"` governs it (default `ask`); it needs
+SearXNG (`VIBEY_SEARXNG_URL`), when a SearXNG already passes the identity check, when vibey
+installed one before, or when the person stopped it for good (below). Before asking, the port is
+probed: anything listening on 127.0.0.1 there that is not SearXNG with vibey's marker -- a dev
+server, someone else's SearXNG -- means nothing is asked and the reason is said, so no unit is
+left failing at every login. `[acp] searxng = "ask" | "never"` governs it (default `ask`); it needs
 `auto_services` too, since it loads a unit. Like `install_postgres`, a project's `vibey.toml` may
 only say `never`.
 
 `vibey searxng install` does the same from a terminal, without an editor: it prints the question
-and asks (`--yes` is the person's answer in advance). `vibey searxng status`, `uninstall
-[--purge]` and the hidden `serve` complete the group.
+and asks; with `--yes` (the person's answer in advance) it still prints the question, then goes
+on. It and `uninstall` take the same cross-process `acp-bootstrap.lock` the editor's step holds,
+so the two never write the same files at once. `vibey searxng status`, `uninstall [--purge]` and
+the hidden `serve` complete the group.
+
+**Stopped for good.** `vibey acp unload` and `vibey searxng uninstall` leave a `disabled` mark in
+the person's SearXNG folder: from then on step 3 never loads the unit, the keep-alive lets go of
+it, step 5 never asks again and `serve` refuses to run -- until `vibey searxng install` removes the
+mark. `[acp] searxng = "never"` stops step 3 from loading or restarting an installed unit and says
+so; it does not unload one, and the service manager still starts it at login until `uninstall`.
 
 On allow: the image is pulled through the ACP process-group runner (no shell, stdin closed, its
 own process group stopped as a whole past `[acp] install_timeout_seconds`, a minimal
@@ -62,9 +73,25 @@ the hub's at every session start, and the keep-alive restarts it like the worker
 
 SearXNG is a Python web application with its own dependency tree; a container is the one form in
 which it runs the same way on macOS and on Linux, and stops cleanly. vibey uses the person's own
-runtime -- `podman` preferred, else `docker` -- found once on their PATH and kept as an absolute
-path. vibey never installs a runtime: with none, it says how to get one, once, and does nothing
-else.
+runtime -- `podman` preferred, else `docker` -- found once, and **never on the PATH**: an editor
+launched from a project may have that project's `bin/` (direnv, `node_modules/.bin`) first, and
+the runtime is recorded and run again at every login. It is looked for only in fixed trusted
+folders (`TRUSTED_RUNTIME_DIRS`: on macOS `/opt/homebrew/bin`, `/usr/local/bin`, `/usr/bin`,
+`/Applications/Docker.app/Contents/Resources/bin`; on Linux `/usr/bin`, `/usr/local/bin`, `/bin`,
+`/snap/bin`), and a candidate must be a regular executable file, not writable by anyone, owned by
+root or the person, whose links lead only into `TRUSTED_RUNTIME_ROOTS` (Homebrew's Cellar, Docker
+Desktop's bundle, `/usr`, `/snap`). Every use -- `serve`, doctor, status, uninstall, purge --
+vets the recorded runtime again against those checks **and** against a fresh look: a record
+naming any other binary, or one no longer the runtime found, is refused with one cleaned notice
+and nothing is run. vibey never installs a runtime: with none, it says how to get one, once, and
+does nothing else.
+
+The runtime sees the same small environment at install and in the unit (home, user, locale,
+temporary folder, the rootless runtime's folder and bus) and never `DOCKER_HOST`,
+`DOCKER_CONTEXT`, `DOCKER_CONFIG`, `CONTAINER_HOST` or `CONTAINER_CONNECTION`: a login unit has
+none of them, so install and the unit always talk to the runtime's own default daemon. Install
+refuses a `DOCKER_HOST`/`CONTAINER_HOST` that is not a local socket (it would publish the port
+and mount the settings on another machine), and says when a local one is ignored.
 
 ### 4. The image is pinned by digest, and refreshed by a reviewed change
 
@@ -77,15 +104,19 @@ multi-platform index, with an anonymous pull token and a `HEAD` of the manifest 
 read-only API, no credentials. `scripts/searxng_image_digest.py` (standard library only) is how it
 is read again; a new digest is a reviewed change, never an automatic one, and no test touches the
 network (a test pins the constant's format). Every image reference that reaches a runtime must
-match `docker.io/searxng/searxng@sha256:<64 hex>`; a tag, another repository or another registry
-is refused before any command runs. `vibey searxng serve` never pulls (`--pull=never`, and it
+**equal** `SEARXNG_IMAGE` -- not merely look like `docker.io/searxng/searxng@sha256:<64 hex>`: a
+record naming any other digest is not believed, so after vibey pins a new one, `serve` refuses
+the old record until `vibey searxng install` pulls the new image and rewrites it (doctor and
+status say so). `vibey searxng serve` never pulls (`--pull=never`, and it
 checks the image is present first), so nothing downloads when the person logs in.
 
 ### 5. One command line, decided in the domain
 
 `SearxngPlan.run_argv` is the whole container command:
 
-    <runtime> run --rm --name vibey-searxng --pull=never --read-only
+    <runtime> run --rm --name vibey-searxng-<uid>
+      --label vibey.searxng.owner=<uid> --label vibey.searxng.image=<first 12>
+      --pull=never --read-only
       --cap-drop ALL --security-opt no-new-privileges --pids-limit 256 --memory 512m
       [--userns=keep-id, podman only] --user <your uid>:<your gid>
       --publish 127.0.0.1:<port>:8080
@@ -97,15 +128,31 @@ Never `--privileged`, never the host network, never the runtime's socket, never 
 environment variable. The port is published on 127.0.0.1 only. The container gets one secret,
 its own `secret_key`, inside the settings it mounts read-only. The unit runs `vibey searxng
 serve` (the running install's own launcher, ADR-0101), never through `supervisor exec
---env-file`: that file holds the database URL. `serve` checks the record and the image, removes a
-container a killed run left behind, and `execve`s the runtime with an environment of the
-variables a runtime finds its daemon by and a fixed PATH.
+--env-file`: that file holds the database URL. `serve` checks the record, the label, the settings
+file, the runtime and the image, removes a container a killed run left behind, and `execve`s the
+runtime with that small environment and a fixed PATH.
+
+The container's name carries the person's uid, and its labels say whose it is: on a shared
+rootful daemon names are daemon-wide, so vibey removes a container of its name (`serve` at every
+start, `uninstall`, `acp unload`) only after `inspect` shows `vibey.searxng.owner=<this uid>`. A
+container of that name without it is left alone and said.
+
+A refusal `serve` cannot get past without the person (no record, a record vibey would not write,
+stopped for good, a runtime it will not run, no image) exits 78, never with a traceback: the unit's
+throttle (launchd's `ThrottleInterval`, systemd's start limit) spaces the restarts, and doctor and
+`vibey searxng status` say why. A container that would not go exits 1, which may pass next time.
 
 ### 6. The settings, the record, and where search finds them
 
 Both live in the person's own configuration folder, `<config>/searxng/` (0700), written
 atomically (staged `O_EXCL|O_NOFOLLOW`, 0600, synced, renamed), never through a link, and refused
-in a folder that is a link or someone else's:
+in a folder that is a link or someone else's. They are read the same careful way: opened without
+following a link and non-blocking (a FIFO never hangs search, doctor or `serve`), and refused
+unless each is a regular file the person owns, closed to everyone else (0600 or narrower), within
+a size cap, in a folder that is the person's and closed too. The pair is staged and renamed
+settings-then-record; a failed second rename removes the first; and a pair whose markers
+disagree -- a crash between the renames, or two writers interleaved -- is made again, both files,
+instead of being kept as a pair that could never pass the identity check:
 
 - `settings.yml`, written once: `use_default_settings: true`, a random 32-byte hex
   `server.secret_key` from `secrets`, `server.limiter: false` and `public_instance: false`
@@ -124,7 +171,10 @@ environment still wins.
 
 Everything that reaches disk, a command line or a unit comes from the person's own configuration:
 the image and argv are constants, the label is `[supervisor] label_prefix` from their own
-`vibey.toml`, the folder is their configuration folder, the launcher is the running install's. A
+`vibey.toml` -- never taken from the record (a record naming another label, the hub's say, is
+not believed, so it can never make `uninstall` unload anything but the SearXNG unit) -- the
+folder is their configuration folder, the launcher is the running install's, and the runtime
+comes from the trusted folders. A
 project's `vibey.toml` can only say `[acp] searxng = "never"`. No sudo, no root (the loader
 refuses as root, and the container never runs as uid 0), user-level units only.
 
@@ -144,8 +194,12 @@ Verified here, by tests that fake every runtime and network call: the argv (a go
 digest format, the writers' modes, atomicity and link refusal, the search precedence against a
 hostile project folder, the bootstrap step's table (ask, never, observe, cancel, timeout, reject,
 unknown option, already answering, the person's own URL, no runtime, a second window), the unit
-planning, the keep-alive, `acp unload` removing the container, and the doctor line; each security
-rule has a test that fails against a naive implementation.
+planning, the keep-alive, `acp unload` removing the container, and the doctor line; and, from the
+first review: the trusted-folder runtime and its vetting by every consumer, the label never taken
+from the record, the owner label before any removal, the FIFO and mode checks, the pair written
+together or made again, the stop mark, the port probe and the refused remote daemon. Each
+security rule has a test that fails against a naive implementation, and the suite itself fails any
+test that would exec or spawn a real `docker` or `podman`.
 
 **Not verified: nothing was pulled or run against a real container.** The flag set is chosen for
 the image as it is documented, and these need a real run before release: that the image's
@@ -155,16 +209,33 @@ its own files; that `--cap-drop ALL` leaves it nothing it needs (an image that s
 drops to its own user would need `SETUID`/`SETGID`); that a 0600 settings file is readable through
 the mount under rootful docker, rootless podman, podman machine and Docker Desktop; that SELinux
 hosts (Fedora) need `:Z` on the volume; and that SIGTERM to the runtime client stops and removes
-the container on both runtimes. An opt-in test (`VIBEY_TEST_SEARXNG_CONTAINER=1`) documents what
+the container on both runtimes. Three of these are probably failures, not just unknowns:
+
+- **Rootless Docker** maps the host uid to root inside its user namespace, so `--user <uid>:<gid>`
+  becomes a subordinate uid that probably **cannot read** a 0600 settings file the host user
+  owns. Rootless podman has `--userns=keep-id`; rootless Docker has no equivalent flag.
+- **SELinux (Fedora)**: a container under `container_t` is probably denied reading a file
+  labelled `config_home_t` without relabelling, so the volume probably needs `:Z` (or `:z`) there.
+  vibey does not add it yet.
+- **Docker before 28 on Linux**: ports published on 127.0.0.1 could be reached by other machines
+  on the same layer-2 segment (an upstream issue fixed in 28). "Published on 127.0.0.1 only" is
+  only as good as the runtime's own forwarding rules.
+
+Also unverified: that `rm -f` of a container that is already gone, and `inspect` of one that never
+existed, say "no such container" in the words vibey matches. An opt-in test (`VIBEY_TEST_SEARXNG_CONTAINER=1`) documents what
 such a run should assert.
 
 ## Consequences
 
-- A person who allows it gets local search that works on a fresh computer, kept running and
-  undone by `vibey acp unload` (the container) or `vibey searxng uninstall --purge` (everything).
+- A person who allows it gets local search that works on a fresh computer, kept running, and
+  stopped for good by `vibey acp unload` or `vibey searxng uninstall` (the unit, the container,
+  and a mark so no session starts it again) until `vibey searxng install`; `--purge` also
+  removes the image and the files.
 - The bootstrap can download a container image on the person's word; it says so, once, and never
   at login. The question names the image and the port but not its size, which was not measured
   here (the digest was read with a `HEAD`, which carries none).
-- A new pinned digest is a change someone reviews; an installed SearXNG is updated by running
-  `vibey searxng install` again (doctor says when vibey pins a newer image).
+- A new pinned digest is a change someone reviews; an installed SearXNG then stops until
+  `vibey searxng install` runs again (doctor and status say so).
+- A runtime installed somewhere else later (podman beside an existing docker) makes the recorded
+  one "not the one found now": `serve` refuses until `vibey searxng install` records it again.
 - The Brave backup is still reachable only in vibey's own processes, never in a session.

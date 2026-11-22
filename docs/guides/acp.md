@@ -88,7 +88,8 @@ has every detail):
 5. **SearXNG**, right after, at the same prompt. vibey's search asks a local SearXNG first and
    Brave only as a backup; when none is there, Zed asks "Download and run SearXNG
    (searxng/searxng@sha256:...) in a container on 127.0.0.1:28180?" and only **Install SearXNG**
-   installs. vibey uses your own `podman` (or `docker`) and never installs one; it pulls one image
+   installs. vibey uses your own `podman` (or `docker`), found only in the usual install folders
+   (never your PATH), and never installs one; it pulls one image
    pinned by its digest, writes its settings in your configuration folder, and loads a third
    user-level unit, `dev.vibey.searxng`, kept running like the others. Nothing is asked when you
    run your own (`VIBEY_SEARXNG_URL`) or one already answers. `[acp] searxng = "never"` in your
@@ -114,7 +115,8 @@ launchctl bootout gui/$UID/dev.vibey.hub; rm ~/Library/LaunchAgents/dev.vibey.hu
 systemctl --user disable --now dev.vibey.hub.service
 ```
 
-(and the same for `dev.vibey.worker`). `vibey acp unload` also removes the SearXNG container;
+(and the same for `dev.vibey.worker`). `vibey acp unload` also removes the SearXNG container and
+marks SearXNG stopped for good, so no session starts it again until `vibey searxng install`;
 `vibey searxng uninstall --purge` removes its image and settings too.
 
 ## Modes

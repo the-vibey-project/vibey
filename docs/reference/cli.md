@@ -280,9 +280,11 @@ again. Exit 0 when everything was done, 1 when a unit would not unload, a file c
 removed, the service manager would not reload, or it runs as root; 2 for any other action than
 `unload`. It does not change `[acp] auto_services`: set that to `false` in your own
 `vibey.toml`, or the next `vibey acp` loads them again. When one of the labels is the local
-SearXNG vibey installed ([`vibey searxng`](#vibey-searxng)), its container (`vibey-searxng`) is
-removed too (`<runtime> rm -f vibey-searxng`); its settings, record and image are kept, and
-`vibey searxng uninstall --purge` removes them. A container that will not go is said and exits 1.
+SearXNG vibey installed ([`vibey searxng`](#vibey-searxng)), its container
+(`vibey-searxng-<uid>`) is removed too -- only after its labels show vibey started it for you --
+and it is marked stopped for good: no session loads, restarts or offers it again until
+`vibey searxng install`. Its settings, record and image are kept (`vibey searxng uninstall
+--purge` removes them). A container that will not go is said and exits 1.
 
 The client launches the command; you do not run it in a terminal. Its standard output
 carries protocol messages and nothing else: the command points file descriptor 1 at standard
@@ -626,9 +628,12 @@ the next session runs it again. Two runs never overlap.
    once per process, and only with [`[acp] searxng = "ask"`](configuration.md#acp) and
    `auto_services` on. Search asks a [local SearXNG first](#local-first-search); this step offers
    to install one. Nothing is asked when your environment names your own (`VIBEY_SEARXNG_URL`),
-   when a SearXNG already answers the identity check, or when vibey installed one before. With no
-   container runtime (neither `podman` nor `docker` on your PATH) it says once how to get one and
-   does nothing else: vibey never installs a runtime. Otherwise the client is asked "Download and
+   when a SearXNG already answers the identity check, when vibey installed one before, or when you
+   stopped it for good (`vibey acp unload`, `vibey searxng uninstall`). With no container runtime
+   (neither `podman` nor `docker` in vibey's trusted folders -- never looked up on your PATH) it
+   says once how to get one and does nothing else: vibey never installs a runtime. When something
+   that is not vibey's SearXNG already listens on 127.0.0.1:28180, it says so and asks nothing.
+   Otherwise the client is asked "Download and
    run SearXNG (searxng/searxng@sha256:<first 12>) in a container on 127.0.0.1:28180? ..." with
    **Install SearXNG** and **Not now**; only the first installs, and "Not now", no answer within
    `permission_timeout_seconds`, a cancel, any other answer or a switch to `observe` install
@@ -640,8 +645,10 @@ the next session runs it again. Two runs never overlap.
    own. A part that fails says one reason; search then goes on asking the local SearXNG first and
    Brave only as a backup. A cancel during an install you allowed does not stop it. Once vibey
    has installed it, step 3 writes and loads its unit beside the hub's at each session start, and
-   the keep-alive restarts it like the worker. `vibey searxng install` does the same from a
-   terminal.
+   the keep-alive restarts it like the worker -- unless it was stopped for good. With
+   `[acp] searxng = "never"`, step 3 neither loads nor restarts an installed unit and says so once;
+   the service manager still starts it at login until `vibey searxng uninstall`.
+   `vibey searxng install` does the same from a terminal.
 
 Connecting, loading services and installing change the computer, so they take turns within one
 `vibey acp`, and a second `vibey acp` (another editor window) leaves connecting and installing to
@@ -1743,13 +1750,15 @@ vibey searxng uninstall [--purge]
 
 | Command | What it does |
 |---|---|
-| `install` | Prints what it will download and run, and asks (`--yes` answers yes for you; the question is still printed). Then it pulls the pinned image `docker.io/searxng/searxng@sha256:...` with `podman` (preferred) or `docker` from your PATH, writes `settings.yml` and `provision.json` in `<your configuration folder>/searxng/` (0700; files 0600, written atomically, never through a link), writes and loads the user-level unit `<[supervisor] label_prefix>.searxng` (restarted when one is already running), and waits up to `[acp] bootstrap_timeout_seconds` until the SearXNG answers as vibey's own. It refuses when your environment names your own SearXNG (`VIBEY_SEARXNG_URL`), when another SearXNG already answers on the port, with no runtime, and as root. Run it again to update to a newer pinned image. Exit 0 once it answers, 1 otherwise. |
-| `status` | The runtime, what vibey installed (image digest, port, unit label), whether the image is here, the unit's state and whether it answers as vibey's own. Always exit 0. |
-| `uninstall` | Unloads the unit and deletes its file only while it is exactly what vibey wrote, then removes the container. `--purge` also removes the image, `settings.yml` and `provision.json`. Safe to run again; exit 1 when something could not be done or as root. |
-| `serve` | Hidden: what the unit runs. It checks the record (every value), the settings file and that the image is here -- it never pulls, so nothing downloads at login -- removes a container a killed run left behind, then replaces itself with the runtime's one command line. Exit 78 when nothing is installed or the record is not one vibey wrote, 1 when the image is missing. |
+| `install` | Prints what it will download and run, and asks; with `--yes` it still prints the question, then goes on. Holding the same setup lock as an editor's `vibey acp`, it pulls the pinned image `docker.io/searxng/searxng@sha256:...` with `podman` (preferred) or `docker` from vibey's trusted folders (never your PATH), writes `settings.yml` and `provision.json` as a pair in `<your configuration folder>/searxng/` (0700; files 0600, written atomically, never through a link), writes and loads the user-level unit `<[supervisor] label_prefix>.searxng` (restarted when one is already running), clears a stopped-for-good mark, and waits up to `[acp] bootstrap_timeout_seconds` until the SearXNG answers as vibey's own. It refuses when your environment names your own SearXNG (`VIBEY_SEARXNG_URL`), when anything that is not vibey's SearXNG listens on the port, when `DOCKER_HOST`/`CONTAINER_HOST` names a daemon that is not a local socket (a local one, and `DOCKER_CONTEXT`, `DOCKER_CONFIG`, `CONTAINER_CONNECTION`, are said to be ignored: the unit at login never has them), with no runtime, while another vibey holds the setup lock, and as root. Run it again to update to a newer pinned image, or to record a runtime that moved. Exit 0 once it answers, 1 otherwise. |
+| `status` | The runtime, why the recorded install is refused (when it is), what vibey installed (image digest, port, unit label), whether the image is here, the unit's state, whether it is stopped for good and whether it answers as vibey's own. Always exit 0. |
+| `uninstall` | Holding the setup lock: unloads the unit labelled `<[supervisor] label_prefix>.searxng` -- from your own configuration, never from the record -- and deletes its file only while it is exactly what vibey wrote, removes the container (only one vibey started for you), and marks it stopped for good so no editor session loads or offers it again until `install`. `--purge` also removes the image, `settings.yml` and `provision.json`. Safe to run again; exit 1 when something could not be done, while another vibey holds the lock, or as root. |
+| `serve` | Hidden: what the unit runs. It checks the stop mark, the record (every value, the image equal to the pinned one, the label this configuration's), the settings file (yours alone, a regular file), the runtime (trusted folder, file checks, the one found now) and that the image is here -- it never pulls, so nothing downloads at login -- removes its own container a killed run left behind, then replaces itself with the runtime's one command line. Exit 78 for any refusal that only you can clear (the unit's throttle spaces its restarts; `status` and `doctor` say why), 1 when an old container would not go. |
 
-The container runs as `<runtime> run --rm --name vibey-searxng --pull=never --read-only --cap-drop
-ALL --security-opt no-new-privileges --pids-limit 256 --memory 512m [--userns=keep-id] --user
+The container runs as `<runtime> run --rm --name vibey-searxng-<uid> --label
+vibey.searxng.owner=<uid> --label vibey.searxng.image=<first 12> --pull=never --read-only
+--cap-drop ALL --security-opt no-new-privileges --pids-limit 256 --memory 512m [--userns=keep-id]
+--user
 <uid>:<gid> --publish 127.0.0.1:28180:8080 --volume <settings.yml>:/etc/searxng/settings.yml:ro
 --tmpfs /etc/searxng --tmpfs /var/cache/searxng --tmpfs /tmp <image>`: never privileged, never
 on the host network, never with the runtime's socket or a home folder, published on 127.0.0.1
@@ -2160,9 +2169,10 @@ query or fragment. Under `--json` both are checks under those names; see
 A third line, `searxng`, follows them: the SearXNG vibey installs itself
 ([`vibey searxng`](#vibey-searxng)). `WARN ... not installed by vibey` (with whether a runtime
 was found, and the command that installs one); `UNKNOWN` when your environment names your own
-(`VIBEY_SEARXNG_URL`); `PASS ... vibey's SearXNG answering as its own on 127.0.0.1:<port>`; or
-`WARN` with the first thing wrong -- its image is not here, its unit is not running, it does not
-answer as vibey's own, or vibey pins a newer image. It asks the runtime (an image inspect) and the
+(`VIBEY_SEARXNG_URL`) or when it is stopped for good; `PASS ... vibey's SearXNG answering as its
+own on 127.0.0.1:<port>`; or `WARN` with the first thing wrong -- the record is refused (a value
+vibey would not write, an image other than the pinned one, another label, a runtime it will not
+run), its image is not here, its unit is not running, or it does not answer as vibey's own. It asks the runtime (an image inspect) and the
 service manager only once vibey has installed one. Under `--json` it is a check named `searxng`;
 the existing keys are unchanged.
 
