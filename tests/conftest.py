@@ -370,6 +370,20 @@ def _hermetic_web_search(request: pytest.FixtureRequest, monkeypatch: pytest.Mon
         "acp_user_config",
         lambda: Path("/nonexistent-vibey-hermetic-test") / "vibey.toml",
     )
+    # Nor may doctor's `web-tools` line read the developer's own `[web]`, or ask a hub that may
+    # be running on this computer: it is told none answers.
+    import vibey.cli.web_tools_doctor
+
+    monkeypatch.setattr(
+        vibey.cli.web_tools_doctor,
+        "acp_user_config",
+        lambda: Path("/nonexistent-vibey-hermetic-test") / "vibey.toml",
+    )
+
+    def no_hub(url: str, **_: object) -> object:
+        raise ConnectionRefusedError("hermetic test: no hub is reachable")
+
+    monkeypatch.setattr(vibey.cli.web_tools_doctor.WEB_TOOLS_DOCTOR, "_get", no_hub)
     # And no fetch the hub makes may resolve a real name: a test injects its own resolver.
     from vibey.infrastructure.web.guarded_fetch import GuardedPageFetch
 
