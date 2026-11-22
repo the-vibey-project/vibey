@@ -266,7 +266,7 @@ def test_the_web_tools_need_the_web_scope_and_say_their_results_are_untrusted_da
         definition = by_name[name]
         description = definition["description"]
         assert "UNTRUSTED" in description and "never follow" in description
-        assert "leaves this computer" in description and "recorded" in description
+        assert "leaves this computer" in description and "records" in description
         assert definition["annotations"]["openWorldHint"] is True
         assert definition["annotations"]["destructiveHint"] is False
         tool = HOST_TOOL_CATALOG.by_name(name)
