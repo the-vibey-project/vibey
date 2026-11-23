@@ -35,6 +35,18 @@ class TomlTrustedTableReader:
         self._open = opener or self._open_nonblocking
 
     def read_table(self, path: Path, table: str) -> Mapping[str, object] | None:
+        text = self.read_text(path)
+        if text is None:
+            return None
+        section = self.parse(path, text).get(table, {})
+        if not isinstance(section, dict):
+            raise ConfigError(str(path), f"[{table}] must be a table")
+        return section
+
+    def read_text(self, path: Path) -> str | None:
+        """The whole file as text, read the bounded way this class reads every file, or None when
+        there is none. Raises `ConfigError` naming the file and nothing else. Not part of the
+        application port: `TomlTrustedTableWriter` reads the file it rewrites through it."""
         try:
             descriptor = self._open(path)
         except (FileNotFoundError, NotADirectoryError):
@@ -49,15 +61,19 @@ class TomlTrustedTableReader:
         if len(data) > MAX_CONFIG_BYTES:
             raise ConfigError(str(path), f"is larger than {MAX_CONFIG_BYTES} bytes")
         try:
-            document = tomllib.loads(data.decode("utf-8"))
-        except ValueError as exc:  # a TOMLDecodeError, or bytes that are not UTF-8
+            return data.decode("utf-8")
+        except ValueError as exc:  # bytes that are not UTF-8
+            raise ConfigError(str(path), f"is not valid TOML: {exc}") from exc
+
+    @staticmethod
+    def parse(path: Path, text: str) -> dict[str, object]:
+        """`text` as a TOML document; `ConfigError` naming `path` when it is not one."""
+        try:
+            return tomllib.loads(text)
+        except ValueError as exc:  # a TOMLDecodeError
             raise ConfigError(str(path), f"is not valid TOML: {exc}") from exc
         except RecursionError as exc:  # tomllib recurses: ~500 nested `[` is about 1 KB
             raise ConfigError(str(path), "is not valid TOML: nested too deeply") from exc
-        section = document.get(table, {})
-        if not isinstance(section, dict):
-            raise ConfigError(str(path), f"[{table}] must be a table")
-        return section
 
     def same_file(self, first: Path, second: Path) -> bool:
         try:
