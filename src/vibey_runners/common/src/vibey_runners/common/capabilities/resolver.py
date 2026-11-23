@@ -40,7 +40,8 @@ are made one safe line and capped at `description_limit` characters, and skipped
 (`SafeText`).
 
 On any failure the run's folder is removed, and only `CapabilityResolutionError` (and its two
-subclasses) escapes: a plain `ValueError` from a collaborator is wrapped. Declared by
+subclasses) escapes: a plain `ValueError` or `RuntimeError` (a `RecursionError`, say) from a
+collaborator is wrapped. Declared by
 `interfaces/resolver_interface.py::CapabilityResolverInterface`.
 """
 
@@ -64,6 +65,7 @@ from vibey_runners.common.capabilities.interfaces.lock_interface import Capabili
 from vibey_runners.common.capabilities.interfaces.manifest_interface import (
     MarketplaceManifestInterface,
 )
+from vibey_runners.common.capabilities.interfaces.path_probe_interface import PathProbeInterface
 from vibey_runners.common.capabilities.interfaces.safe_text_interface import SafeTextInterface
 from vibey_runners.common.capabilities.interfaces.skill_index_interface import (
     SkillIndexInterface,
@@ -80,6 +82,7 @@ from vibey_runners.common.capabilities.manifest_error import ManifestError
 from vibey_runners.common.capabilities.marketplace_catalog import MarketplaceCatalog
 from vibey_runners.common.capabilities.marketplace_spec import MarketplaceSpec
 from vibey_runners.common.capabilities.names import NAME_PATTERN
+from vibey_runners.common.capabilities.path_probe import PathProbe
 from vibey_runners.common.capabilities.plugin_spec import PluginSpec
 from vibey_runners.common.capabilities.safe_text import MIN_LIMIT, SafeText
 from vibey_runners.common.capabilities.skill_catalog import SkillCatalog
@@ -135,6 +138,7 @@ class CapabilityResolver:
         skills: SkillIndexInterface | None = None,
         copier: SnapshotCopierInterface | None = None,
         text: SafeTextInterface | None = None,
+        probe: PathProbeInterface | None = None,
         description_limit: int = DESCRIPTION_MAX_CHARS,
         max_snapshot_entries: int = SNAPSHOT_MAX_ENTRIES,
         max_snapshot_bytes: int = SNAPSHOT_MAX_BYTES,
@@ -157,6 +161,7 @@ class CapabilityResolver:
         self._skills = skills or SkillIndex()
         self._copier = copier or SnapshotCopier()
         self._text = text or SafeText()
+        self._probe = probe or PathProbe()  # resolves the same on every Python
         self._description_limit = description_limit
         self._max_entries = max_snapshot_entries
         self._max_bytes = max_snapshot_bytes
@@ -190,7 +195,9 @@ class CapabilityResolver:
         except BaseException as exc:
             if run is not None:
                 shutil.rmtree(run, ignore_errors=True)  # an unverified copy is never left behind
-            if isinstance(exc, ValueError) and not isinstance(exc, CapabilityResolutionError):
+            if isinstance(exc, ValueError | RuntimeError) and not isinstance(
+                exc, CapabilityResolutionError
+            ):
                 raise CapabilityResolutionError(f"the bundle cannot be resolved: {exc}") from exc
             raise
         servers = tuple(s for s in bundle.mcp_servers if s.name not in bundle.disabled)
@@ -283,7 +290,7 @@ class CapabilityResolver:
     def _shipped_scope(self, name: str, root: Path) -> list[PurePosixPath]:
         """What the shipped marketplace's lock covers: its manifest and every plugin folder its
         manifest lists, relative to `root`."""
-        base = root.resolve()
+        base = self._probe.real(root)
         catalog = self._read_manifest(name, root)
         listed = [self._relative(name, entry.directory, base) for entry in catalog.plugins.values()]
         return [MANIFEST_PATH, *listed]
@@ -337,7 +344,7 @@ class CapabilityResolver:
         """Copies the manifest and the `wanted` plugins' folders to `target`, checks the copy
         against `records`, and returns each plugin's folder in the copy and the symlinks left
         out."""
-        base = root.resolve()
+        base = self._probe.real(root)
         original = self._read_manifest(name, root)
         items = [MANIFEST_PATH]
         for plugin in wanted:
@@ -366,7 +373,7 @@ class CapabilityResolver:
                     f"{self._why_not(snapshot, plugin.name)}"
                 )
             folders[plugin.name] = entry.directory
-        here = target.resolve()
+        here = self._probe.real(target)
         return folders, [
             (here / where, self._text.clean(reason, REASON_MAX_CHARS)) for where, reason in left_out
         ]

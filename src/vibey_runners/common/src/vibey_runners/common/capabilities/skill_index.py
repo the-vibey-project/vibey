@@ -79,19 +79,19 @@ class SkillIndex:
         for plugin_dir in plugin_dirs:
             try:
                 self._plugin(plugin_dir, skills, skipped)
-            except (OSError, RuntimeError) as exc:  # RuntimeError: a symlink loop on 3.12
+            except OSError as exc:  # a folder the file system will not let it look at
                 skipped.append((plugin_dir, f"cannot be read: {exc}"))
         return SkillCatalog(tuple(skills), tuple(skipped))
 
     def _plugin(
         self, plugin_dir: Path, skills: list[SkillEntry], skipped: list[tuple[Path, str]]
     ) -> None:
-        base = plugin_dir.resolve()
+        base = self._probe.real(plugin_dir)
         if not self._probe.is_dir(base):
             skipped.append((plugin_dir, "the plugin folder does not exist"))
             return
         folder = plugin_dir / "skills"
-        resolved = folder.resolve()
+        resolved = self._probe.real(folder)
         reason = self._unsafe(resolved, base)
         if reason:
             skipped.append((folder, reason))
@@ -124,7 +124,7 @@ class SkillIndex:
         for skill_dir in candidates:
             try:
                 entry, reason, where = self._skill(plugin_dir.name, base, skill_dir)
-            except (OSError, RuntimeError) as exc:  # e.g. a skill folder that cannot be searched
+            except OSError as exc:  # e.g. a skill folder that cannot be searched
                 entry, reason, where = None, f"cannot be read: {exc}", skill_dir
             if entry is not None and entry.name in names:
                 reason = f"names the skill {entry.name} twice in {plugin_dir.name}"
@@ -147,10 +147,10 @@ class SkillIndex:
         self, plugin: str, base: Path, skill_dir: Path
     ) -> tuple[SkillEntry | None, str, Path]:
         """The entry, or None with the reason and the path the reason is about."""
-        reason = self._unsafe(skill_dir.resolve(), base)
+        reason = self._unsafe(self._probe.real(skill_dir), base)
         if reason:
             return None, reason, skill_dir
-        path = (skill_dir / SKILL_FILE).resolve()
+        path = self._probe.real(skill_dir / SKILL_FILE)
         reason = self._unsafe(path, base)
         if reason:
             return None, reason, skill_dir / SKILL_FILE

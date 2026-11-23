@@ -51,3 +51,14 @@ def unsearchable(folder: Path) -> Iterator[Path]:
         yield folder
     finally:
         folder.chmod(0o700)
+
+
+def symlink_loop(path: Path) -> Path:
+    """`path` as a symlink to itself: a loop every Python's `stat` meets as ELOOP, which 3.12's
+    `Path.resolve()` raised as `RuntimeError` and later versions do not. Skipped where symlinks
+    cannot be made."""
+    try:
+        path.symlink_to(path.name)
+    except (OSError, NotImplementedError):  # pragma: no cover - only where links cannot be made
+        pytest.skip("this operating system cannot create a symlink here")
+    return path

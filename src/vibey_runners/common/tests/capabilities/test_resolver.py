@@ -17,6 +17,7 @@ from collections.abc import Callable, Mapping, Sequence
 from pathlib import Path, PurePosixPath
 
 import pytest
+from fakes import symlink_loop
 
 from vibey_runners.common.capabilities.bundle import BundleSpec
 from vibey_runners.common.capabilities.capability_resolution_error import (
@@ -313,6 +314,23 @@ def test_no_plain_value_error_escapes_resolve(tmp_path: Path) -> None:
     assert type(error.value) is CapabilityResolutionError
 
 
+def test_a_recursion_error_from_a_collaborator_becomes_a_resolution_error(
+    tmp_path: Path,
+) -> None:
+    acme = _acme(tmp_path)
+
+    class TooDeep:
+        def build(self, plugin_dirs: Sequence[Path]) -> SkillCatalog:
+            raise RecursionError("maximum recursion depth exceeded")
+
+    with pytest.raises(CapabilityResolutionError, match="maximum recursion depth") as error:
+        _resolver(tmp_path, skills=TooDeep()).resolve(
+            _acme_bundle(), (_locked("acme", acme),), {"acme": acme}
+        )
+    assert type(error.value) is CapabilityResolutionError
+    assert _runs(tmp_path) == []
+
+
 def test_a_value_error_from_a_collaborator_becomes_a_resolution_error(tmp_path: Path) -> None:
     acme = _acme(tmp_path)
 
@@ -324,6 +342,49 @@ def test_a_value_error_from_a_collaborator_becomes_a_resolution_error(tmp_path: 
         _resolver(tmp_path, skills=Broken()).resolve(
             _acme_bundle(), (_locked("acme", acme),), {"acme": acme}
         )
+    assert _runs(tmp_path) == []
+
+
+def test_a_shipped_root_that_is_a_symlink_loop_is_the_same_error_on_every_python(
+    tmp_path: Path,
+) -> None:
+    root = symlink_loop(tmp_path / "shipped")
+    with pytest.raises(CapabilityResolutionError) as error:
+        _resolver(tmp_path).resolve(_bundle(), (), {"vibey": root})
+    assert type(error.value) is CapabilityResolutionError
+    assert (
+        str(error.value) == f"the marketplace vibey: the marketplace folder {root} does not exist"
+    )
+    assert _runs(tmp_path) == []
+
+
+def test_a_locked_root_that_is_a_symlink_loop_is_the_same_error_on_every_python(
+    tmp_path: Path,
+) -> None:
+    acme = _acme(tmp_path)
+    entry = _locked("acme", acme)
+    loop = symlink_loop(tmp_path / "loop")
+    with pytest.raises(CapabilityResolutionError) as error:
+        _resolver(tmp_path).resolve(_acme_bundle(), (entry,), {"acme": loop})
+    assert type(error.value) is CapabilityResolutionError
+    assert str(error.value) == f"the marketplace acme cannot be read: {loop} is not a folder"
+
+
+def test_a_locked_plugin_source_that_is_a_symlink_loop_is_the_same_error_on_every_python(
+    tmp_path: Path,
+) -> None:
+    acme = _acme(tmp_path)
+    manifest = acme / ".claude-plugin/marketplace.json"
+    document = json.loads(manifest.read_text(encoding="utf-8"))
+    document["plugins"][0]["source"] = "./plugins/loop"
+    manifest.write_text(json.dumps(document), encoding="utf-8")
+    symlink_loop(acme / "plugins" / "loop")
+    with pytest.raises(CapabilityResolutionError) as error:
+        _resolver(tmp_path).resolve(_acme_bundle(), (_locked("acme", acme),), {"acme": acme})
+    assert type(error.value) is CapabilityResolutionError
+    assert (
+        str(error.value) == "the marketplace acme has no plugin linting: its folder does not exist"
+    )
     assert _runs(tmp_path) == []
 
 

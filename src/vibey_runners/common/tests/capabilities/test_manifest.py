@@ -10,7 +10,7 @@ from pathlib import Path
 from typing import Any
 
 import pytest
-from fakes import RecordingReader, unsearchable
+from fakes import RecordingReader, symlink_loop, unsearchable
 
 from vibey_runners.common.capabilities.git_folder_guard import GitFolderGuard
 from vibey_runners.common.capabilities.interfaces.manifest_interface import (
@@ -19,6 +19,7 @@ from vibey_runners.common.capabilities.interfaces.manifest_interface import (
 from vibey_runners.common.capabilities.manifest import (
     MANIFEST_MAX_BYTES,
     MAX_PLUGINS,
+    MISSING_FOLDER,
     MarketplaceManifest,
 )
 from vibey_runners.common.capabilities.manifest_error import ManifestError
@@ -314,3 +315,51 @@ def test_a_plugins_folder_that_cannot_be_searched_is_named_not_skipped(
     with unsearchable(root / "plugins"):
         error = _refused(root, reader)
     assert "(linting): its folder cannot be read" in str(error)
+
+
+# -- a symlink loop: the same exception type and message on Python 3.12, 3.13 and 3.14 --------
+
+
+def test_a_marketplace_root_that_is_a_symlink_loop_does_not_exist(
+    tmp_path: Path, reader: RecordingReader
+) -> None:
+    root = symlink_loop(tmp_path / "acme")
+    error = _refused(root, reader)
+    assert type(error) is ManifestError
+    assert str(error) == f"the marketplace folder {root} does not exist"
+
+
+def test_a_manifest_folder_that_is_a_symlink_loop_is_no_manifest(
+    tmp_path: Path, reader: RecordingReader
+) -> None:
+    root = tmp_path / "acme"
+    root.mkdir()
+    symlink_loop(root / ".claude-plugin")
+    error = _refused(root, reader)
+    assert type(error) is ManifestError
+    assert str(error) == f"{root} has no .claude-plugin/marketplace.json"
+    assert reader.paths == []
+
+
+def test_a_plugin_source_that_is_a_symlink_loop_is_one_missing_folder_row(
+    tmp_path: Path, reader: RecordingReader
+) -> None:
+    plugins = [{"name": "x", "source": "./plugins/x"}, {"name": "ok", "source": "./plugins/ok"}]
+    root = _marketplace(tmp_path / "acme", plugins, make=("plugins/ok",))
+    symlink_loop(root / "plugins" / "x")
+    catalog = _read(root, reader)
+    assert list(catalog.plugins) == ["ok"]
+    assert catalog.skipped == (("x", MISSING_FOLDER),)
+
+
+def test_a_deeply_nested_manifest_is_a_manifest_error(
+    tmp_path: Path, reader: RecordingReader
+) -> None:
+    root = _marketplace(tmp_path / "acme", [])
+    (root / ".claude-plugin" / "marketplace.json").write_text(
+        '{"plugins": ' + "[" * 1_000_000,
+        encoding="utf-8",  # deep enough on 3.14's C stack too
+    )
+    error = _refused(root, reader)
+    assert type(error) is ManifestError
+    assert "nested too deeply" in str(error)

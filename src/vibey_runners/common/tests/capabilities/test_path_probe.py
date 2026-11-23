@@ -10,6 +10,7 @@ import os
 from pathlib import Path
 
 import pytest
+from fakes import symlink_loop
 
 from vibey_runners.common.capabilities.interfaces.path_probe_interface import PathProbeInterface
 from vibey_runners.common.capabilities.path_probe import DIR, FILE, OTHER, PathProbe
@@ -61,3 +62,23 @@ def test_any_other_error_is_raised(tmp_path: Path, code: int) -> None:
         with pytest.raises(OSError) as error:
             check(tmp_path)
         assert error.value.errno == code
+
+
+def test_real_never_raises_for_a_symlink_loop_and_the_probe_reads_it_as_absent(
+    tmp_path: Path,
+) -> None:
+    """`Path.resolve()` raised `RuntimeError` for a loop on 3.12 and returns a path on 3.13+;
+    `real` returns a path on every Python, and `kind` says nothing usable is there."""
+    loop = symlink_loop(tmp_path / "loop")
+    probe = PathProbe()
+    real = probe.real(loop / "inside")
+    assert isinstance(real, Path) and real.is_absolute()
+    assert probe.kind(real) is None and probe.kind(loop) is None
+
+
+def test_real_is_resolve_for_an_ordinary_path(tmp_path: Path) -> None:
+    (tmp_path / "dir").mkdir()
+    (tmp_path / "link").symlink_to("dir")
+    probe = PathProbe()
+    assert probe.real(tmp_path / "link" / "x") == (tmp_path / "dir" / "x").resolve()
+    assert probe.real(tmp_path / "dir" / ".." / "dir") == (tmp_path / "dir").resolve()

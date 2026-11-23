@@ -6,7 +6,10 @@
 as missing on 3.14 and raised on 3.12 -- a wrong "has no manifest", or a plugin skipped in silence.
 This probe makes one `stat` (or `lstat`) call and treats only the errors 3.12's pathlib treated as
 "not there" (`ABSENT`: ENOENT, ENOTDIR, EBADF, ELOOP) as an absent path; any other error is raised,
-for the caller to name. Declared by `interfaces/path_probe_interface.py::PathProbeInterface`.
+for the caller to name. `real` resolves a path the way `Path.resolve()` does on 3.13 and later
+(`os.path.realpath`, never strict): 3.12's `resolve()` raised `RuntimeError` for a symlink loop
+where 3.13+ return a path, so every caller resolves through `real` and then asks `kind`, which
+reads the loop (ELOOP) as absent on every version. Declared by `interfaces/path_probe_interface.py::PathProbeInterface`.
 """
 
 from __future__ import annotations
@@ -48,6 +51,9 @@ class PathProbe:
         if stat_module.S_ISDIR(mode):
             return DIR
         return OTHER
+
+    def real(self, path: Path) -> Path:
+        return Path(os.path.realpath(path))
 
     def is_dir(self, path: Path) -> bool:
         return self.kind(path) == DIR

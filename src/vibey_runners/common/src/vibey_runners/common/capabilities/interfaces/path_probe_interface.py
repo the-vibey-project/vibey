@@ -15,6 +15,11 @@ class PathProbeInterface(Protocol):
         Any other `OSError` -- a folder that cannot be searched -- is raised."""
         ...
 
+    def real(self, path: Path) -> Path:
+        """`path` made absolute with every symlink resolved, as far as it resolves; never raises
+        for a symlink loop (3.12's `Path.resolve()` did), so a loop reaches `kind` as absent."""
+        ...
+
     def is_dir(self, path: Path) -> bool:
         """`kind(path) == "dir"`; raises as `kind` does."""
         ...
