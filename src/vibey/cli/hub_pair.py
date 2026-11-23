@@ -151,7 +151,14 @@ class HubPairCommand:
             typer.echo(str(exc), err=True)
             raise typer.Exit(2) from exc
         store = LocalTokenStore(settings.state_dir)
-        record = store.serving()
+        try:
+            record = store.serving()
+        except (OSError, ValueError) as exc:
+            # A malformed record of your own (pid <= 1, a port out of range, not JSON): one
+            # line, as `vibey hub status` says it, never a traceback (SP-ACP Task 11b, N2-4).
+            said = DoctorChecks.cleaned(str(exc))
+            typer.echo(f"hub record unreadable: {said}", err=True)
+            raise typer.Exit(2) from exc
         if record is None:
             typer.echo("no hub is running here: start one with `vibey serve`", err=True)
             raise typer.Exit(EXIT_NOT_RUNNING)

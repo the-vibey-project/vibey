@@ -469,3 +469,33 @@ def test_a_missing_certificate_or_an_unreadable_token_is_one_line(
     monkeypatch.setattr(LocalTokenStore, "token", refused)
     assert pytest.raises(typer.Exit, plain.devices).value.exit_code == 2
     assert hub.requests == [] and "PermissionError" in capsys.readouterr().err
+
+
+# -- Task 11b: an unreadable record is one line, never a traceback (review 2 N2-4) --------------
+
+
+@pytest.mark.parametrize(
+    "content",
+    [
+        "[]",
+        "{not json",
+        json.dumps({"host": "127.0.0.1", "port": 8765, "pid": -1}),
+        json.dumps({"host": "127.0.0.1", "port": 70000, "pid": 4242}),
+        json.dumps({"host": "127.0.0.1", "port": 8765, "pid": True}),
+    ],
+)
+def test_an_unreadable_record_is_one_line_and_nothing_is_sent(
+    tmp_path: Path,
+    content: str,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    hub = Hub([])
+    command = _command(tmp_path, hub, record=RUNNING)
+    (tmp_path / "state" / "serving.json").write_text(content)
+    read: list[bool] = []
+    monkeypatch.setattr(LocalTokenStore, "token", lambda self: read.append(True) or "t")
+    assert pytest.raises(typer.Exit, command.devices).value.exit_code == 2
+    assert hub.requests == [] and read == []
+    err = capsys.readouterr().err
+    assert err.startswith("hub record unreadable: ") and len(err.strip().splitlines()) == 1
