@@ -7,15 +7,17 @@ git reads far more than URLs as a place to fetch from -- `ext::<command>` runs a
 this computer, and an argument that starts with `-` is an option -- so a source is classified here,
 against an allowlist, before anything is written or run:
 
-- **git**, over one of three protocols: an `https://` URL with a host and no credentials (a
-  token in the URL would be written into `vibey.toml`), an `ssh://` URL with a host (a user is
-  fine, a password is not), a `git://` URL, or the scp-like `user@host:path`. Infrastructure
-  hands git only these, after `--`, with `protocol.allow=never` and these three allowed.
+- **git**, over one of two protocols: an `https://` URL with a host and no credentials (a token in
+  the URL would be written into `vibey.toml`), or ssh -- an `ssh://` URL with a host (a plain user
+  name is fine: letters, digits, `.`, `_`, `-`, starting with a letter or digit, never
+  %-encoded; a password is not) or the scp-like `user@host:path`. Infrastructure hands git only
+  these, after `--`, with `protocol.allow=never` and these two allowed. `git://` is refused like
+  `http://`: both are plaintext with no integrity, so an on-path attacker could serve any tree.
 - **local**: an absolute folder path. It is copied without git, so git never reads a local
   repository. A relative path is refused: it would be read from the folder vibey runs in, which
   may be a project's.
 
-Everything else -- `file://`, `http://`, a `<helper>::`, a relative or `~` path, a leading `-`, a host
+Everything else -- `file://`, `http://`, `git://`, a `<helper>::`, a relative or `~` path, a leading `-`, a host
 that is not a plain name or address, whitespace, control characters -- is a
 `MarketplaceSourceError` naming why (a `::` is refused where git would read it as a helper: right
 after the leading scheme characters, so an IPv6 host such as `https://[::1]/x` is still a URL). A
@@ -38,8 +40,8 @@ from vibey_runners.common.capabilities.bundle import BundleSpec
 from vibey_runners.common.capabilities.bundle_error import BundleError
 
 SourceKind = Literal["git", "local"]
-SourceProtocol = Literal["https", "ssh", "git", "local"]
-GIT_PROTOCOLS: Final[tuple[SourceProtocol, ...]] = ("https", "ssh", "git")
+SourceProtocol = Literal["https", "ssh", "local"]
+GIT_PROTOCOLS: Final[tuple[SourceProtocol, ...]] = ("https", "ssh")
 """The only protocols git is allowed for a marketplace (its `protocol.<name>.allow`)."""
 REF_MAX_CHARS: Final = 255
 _REF: Final = re.compile(r"[A-Za-z0-9][A-Za-z0-9._/-]*")
@@ -51,10 +53,14 @@ _SCP: Final = re.compile(
     r"(?P<user>[A-Za-z0-9._-]+)@(?P<host>[A-Za-z0-9](?:[A-Za-z0-9.-]*[A-Za-z0-9])?)"
     r":(?P<path>[A-Za-z0-9._~][^:]*)"
 )
-_SCHEMES: Final[dict[str, SourceProtocol]] = {"https": "https", "ssh": "ssh", "git": "git"}
+_USER: Final = re.compile(r"[A-Za-z0-9][A-Za-z0-9._-]*")
+"""A user name in an `ssh://` URL: the shape `_SCP` holds a user to, so it can never be read as
+an ssh option."""
+_SCHEMES: Final[dict[str, SourceProtocol]] = {"https": "https", "ssh": "ssh"}
 REFUSED: Final = (
-    "is not a source vibey fetches: give an https://, ssh:// or git:// URL, user@host:path, or an "
-    "absolute folder path (file://, http://, transport helpers and relative paths are refused)"
+    "is not a source vibey fetches: give an https:// or ssh:// URL, user@host:path, or an "
+    "absolute folder path (file://, http://, git://, transport helpers and relative paths are "
+    "refused)"
 )
 
 
@@ -131,6 +137,12 @@ class MarketplaceSourceRule:
             raise MarketplaceSourceError(
                 f"source {text!r} must not carry credentials (they would be written into "
                 "vibey.toml); use ssh with your agent, or a URL without them"
+            )
+        userinfo = parts.netloc.rpartition("@")[0]
+        if user is not None and ("%" in userinfo or not _USER.fullmatch(user)):
+            raise MarketplaceSourceError(
+                f"source {text!r} must name a plain user: letters, digits, '.', '_' and '-', "
+                "starting with a letter or digit, never %-encoded"
             )
         return protocol
 

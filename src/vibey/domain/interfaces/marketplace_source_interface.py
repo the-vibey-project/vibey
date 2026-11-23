@@ -15,10 +15,10 @@ if TYPE_CHECKING:
 @runtime_checkable
 class MarketplaceSourceRuleInterface(Protocol):
     def classify(self, source: str) -> MarketplaceSource:
-        """`source` as git (an `https://`, `ssh://` or `git://` URL with a plain host and no
-        credentials, or `user@host:path`) or local (an absolute folder path, copied without
+        """`source` as git (an `https://` URL with a plain host and no credentials, an `ssh://`
+        URL with a plain host and user, or `user@host:path`) or local (an absolute folder path, copied without
         git). Raises `MarketplaceSourceError` naming why for anything else: a transport helper
-        (`::`), `file://`, `http://`, a relative or `~` path, `..`, a leading `-`, whitespace or
+        (`::`), `file://`, `http://`, `git://`, a relative or `~` path, `..`, a leading `-`, whitespace or
         control characters."""
         ...
 
