@@ -5,12 +5,14 @@ the marketplace, or nothing is read (SP-LOOPS Task 4, Review Focus 1 and 2)."""
 from __future__ import annotations
 
 import json
+import os
 from pathlib import Path
 from typing import Any
 
 import pytest
 from fakes import RecordingReader
 
+from vibey_runners.common.capabilities.git_folder_guard import GitFolderGuard
 from vibey_runners.common.capabilities.interfaces.manifest_interface import (
     MarketplaceManifestInterface,
 )
@@ -255,3 +257,28 @@ def test_a_manifest_inside_the_root_git_folder_is_refused(
     (root / ".claude-plugin").symlink_to(stored / ".claude-plugin")
     assert "inside the marketplace's .git" in str(_refused(root, reader))
     assert reader.paths == []
+
+
+def test_a_plugin_folder_that_is_the_git_folder_by_identity_is_refused(
+    tmp_path: Path, reader: RecordingReader
+) -> None:
+    root = _marketplace(
+        tmp_path / "acme", [{"name": "hidden", "source": "./stash"}], make=(".git", "stash")
+    )
+    real = root.resolve()
+
+    def aliasing(path: Path) -> os.stat_result:  # as a case-insensitive file system would
+        return os.stat(real / ".git" if path == real / "stash" else path)
+
+    manifest = MarketplaceManifest(reader, guard=GitFolderGuard(stat=aliasing))
+    with pytest.raises(ManifestError, match="inside the marketplace's .git"):
+        manifest.read(root)
+
+
+def test_a_source_naming_a_case_variant_of_git_is_refused(
+    tmp_path: Path, reader: RecordingReader
+) -> None:
+    root = _marketplace(
+        tmp_path / "acme", [{"name": "hidden", "source": "./.GIT/stash"}], make=(".GIT/stash",)
+    )
+    assert "inside the marketplace's .git" in str(_refused(root, reader))

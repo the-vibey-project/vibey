@@ -9,7 +9,8 @@ link swapped in after the `lstat` is refused), a folder by its presence, and an 
 differs from a plain one. Anything else -- a FIFO, a socket, a device -- is refused rather than
 opened, since opening a FIFO blocks. The root's own `.git` (the clone's folder, or a worktree's
 gitfile) is metadata git rewrites without the content changing -- a `git fetch` touches nothing
-else -- so it alone is left out. A `.git` anywhere deeper is hashed like any other entry: content
+else -- so it alone is left out, decided by `GitFolderGuard.is_root_git` (a name that folds to
+`.git` and the same file as `root/.git`), the rule the loaders refuse by. A `.git` anywhere deeper is hashed like any other entry: content
 the digest skipped must never be content a loader can read, and `MarketplaceManifest` and
 `SkillIndex` refuse anything that resolves into the root's `.git` for the same reason.
 
@@ -39,8 +40,12 @@ from typing import Final
 
 from vibey_runners.common.capabilities.file_reader import BoundedFileReader
 from vibey_runners.common.capabilities.file_too_large_error import FileTooLargeError
+from vibey_runners.common.capabilities.git_folder_guard import GitFolderGuard
 from vibey_runners.common.capabilities.interfaces.file_reader_interface import (
     FileReaderInterface,
+)
+from vibey_runners.common.capabilities.interfaces.git_folder_guard_interface import (
+    GitFolderGuardInterface,
 )
 from vibey_runners.common.capabilities.lock_entry import LockEntry
 from vibey_runners.common.capabilities.lock_error import LockError
@@ -51,8 +56,6 @@ LOCK_MAX_BYTES: Final = 1024 * 1024
 """The largest lock file read."""
 MAX_TREE_ENTRIES: Final = 100_000
 """The most files, folders and links one marketplace tree may hold to be locked."""
-ROOT_SKIPPED_NAMES: Final = frozenset({".git"})
-"""Names left out of a tree's digest, at the root only: never deeper."""
 DIGEST_PATTERN: Final = re.compile(r"sha256:[0-9a-f]{64}")
 _KEYS: Final = frozenset({"version", "entries", "checksum"})
 _ENTRY_KEYS: Final = frozenset({"marketplace", "source", "ref", "digest"})
@@ -67,8 +70,10 @@ class CapabilityLock:
         reader: FileReaderInterface | None = None,
         lister: Callable[[Path], Sequence[str]] = os.listdir,
         fsync: Callable[[int], None] = os.fsync,
+        guard: GitFolderGuardInterface | None = None,
     ) -> None:
         self._reader = reader or BoundedFileReader()
+        self._guard = guard or GitFolderGuard()
         self._lister = lister
         self._fsync = fsync
 
@@ -84,7 +89,7 @@ class CapabilityLock:
             folder = pending.pop()
             names = list(self._lister(root / folder))
             if folder == PurePosixPath():
-                names = [name for name in names if name not in ROOT_SKIPPED_NAMES]
+                names = [name for name in names if not self._guard.is_root_git(root, root / name)]
             count += len(names)
             if count > MAX_TREE_ENTRIES:
                 raise LockError(f"{root} holds more than {MAX_TREE_ENTRIES} entries")

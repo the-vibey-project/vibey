@@ -16,6 +16,7 @@ import pytest
 from hypothesis import given, settings
 from hypothesis import strategies as st
 
+from vibey_runners.common.capabilities.git_folder_guard import GitFolderGuard
 from vibey_runners.common.capabilities.interfaces.lock_interface import CapabilityLockInterface
 from vibey_runners.common.capabilities.lock import (
     LOCK_MAX_BYTES,
@@ -314,3 +315,38 @@ def test_a_lock_that_is_not_an_object_is_refused(tmp_path: Path) -> None:
     path.write_text("[]\n", encoding="utf-8")
     with pytest.raises(LockError, match="JSON object"):
         CapabilityLock().read(path)
+
+
+def _stat_as(root: Path, *, case_insensitive: bool) -> object:
+    """The identity seam: whether `.git` and `.GIT` at `root` are one folder (a case-insensitive
+    file system) or two (a case-sensitive one), the same on every operating system."""
+
+    def fake(path: Path) -> os.stat_result:
+        if path == root / ".git":
+            if not case_insensitive:
+                raise FileNotFoundError(path)
+            return os.stat(root / ".GIT")
+        return os.stat(path)
+
+    return fake
+
+
+@pytest.mark.parametrize(("case_insensitive", "skipped"), [(True, True), (False, False)])
+def test_the_root_git_skip_follows_file_identity(
+    tmp_path: Path, case_insensitive: bool, skipped: bool
+) -> None:
+    bare = _tree(tmp_path / "bare", {"a.txt": b"x"})
+    root = _tree(tmp_path / "clone", {"a.txt": b"x", ".GIT/index": b"metadata or content"})
+    guard = GitFolderGuard(stat=_stat_as(root, case_insensitive=case_insensitive))  # type: ignore[arg-type]
+    digest = CapabilityLock(guard=guard).digest_tree(root)
+    assert (digest == CapabilityLock().digest_tree(bare)) is skipped
+
+
+def test_a_root_entry_sharing_the_git_identity_under_another_name_is_hashed(
+    tmp_path: Path,
+) -> None:
+    root = _tree(tmp_path / "clone", {"a.txt": b"x", ".git/index": b"i"})
+    (root / "alias").symlink_to(root / ".git", target_is_directory=True)
+    without = _tree(tmp_path / "bare", {"a.txt": b"x"})
+    # Only a name that folds to `.git` is a candidate; the alias is content (a link, by its text).
+    assert CapabilityLock().digest_tree(root) != CapabilityLock().digest_tree(without)

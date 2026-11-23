@@ -6,8 +6,9 @@ Each plugin folder is the bound: it was itself contained in its marketplace by
 `MarketplaceManifest`, so a skills folder, a skill folder or a SKILL.md that resolves (through a
 symlink) outside its plugin's folder is outside the locked marketplace content as far as this
 plugin is concerned, and is skipped as `OUTSIDE` without being read. A path through a `.git`
-folder below the plugin is skipped as `INSIDE_GIT`: the lock leaves the marketplace root's `.git`
-out of its digest, so nothing in one may be loaded. Only the frontmatter's
+folder below the plugin -- by case-folded name at any depth, or by file identity with the plugin
+folder's own `.git` (`GitFolderGuard`) -- is skipped as `INSIDE_GIT`: the lock leaves the
+marketplace root's `.git` out of its digest, so nothing in one may be loaded. Only the frontmatter's
 `name` and `description` are kept (design Decision 10: bodies are fetched on demand). A file over
 `SKILL_MAX_BYTES`, one that is not UTF-8 or cannot be opened, and a malformed frontmatter are each
 skipped with a named reason; the index never raises for what a plugin contains.
@@ -25,11 +26,15 @@ from vibey_runners.common.capabilities.file_reader import BoundedFileReader
 from vibey_runners.common.capabilities.file_too_large_error import FileTooLargeError
 from vibey_runners.common.capabilities.frontmatter import SkillFrontmatter
 from vibey_runners.common.capabilities.frontmatter_error import FrontmatterError
+from vibey_runners.common.capabilities.git_folder_guard import GitFolderGuard
 from vibey_runners.common.capabilities.interfaces.file_reader_interface import (
     FileReaderInterface,
 )
 from vibey_runners.common.capabilities.interfaces.frontmatter_interface import (
     SkillFrontmatterInterface,
+)
+from vibey_runners.common.capabilities.interfaces.git_folder_guard_interface import (
+    GitFolderGuardInterface,
 )
 from vibey_runners.common.capabilities.names import NAME_PATTERN
 from vibey_runners.common.capabilities.skill_catalog import SkillCatalog
@@ -53,8 +58,10 @@ class SkillIndex:
         self,
         reader: FileReaderInterface | None = None,
         frontmatter: SkillFrontmatterInterface | None = None,
+        guard: GitFolderGuardInterface | None = None,
     ) -> None:
         self._reader = reader or BoundedFileReader()
+        self._guard = guard or GitFolderGuard()
         self._frontmatter = frontmatter or SkillFrontmatter()
 
     def build(self, plugin_dirs: Sequence[Path]) -> SkillCatalog:
@@ -94,12 +101,11 @@ class SkillIndex:
             names.add(entry.name)
             skills.append(entry)
 
-    @staticmethod
-    def _unsafe(resolved: Path, base: Path) -> str:
+    def _unsafe(self, resolved: Path, base: Path) -> str:
         """Why `resolved` may not be read for the plugin at `base`, or "" when it may."""
         if not resolved.is_relative_to(base):
             return OUTSIDE
-        if ".git" in resolved.relative_to(base).parts:
+        if self._guard.inside(base, resolved, any_depth=True):
             return INSIDE_GIT
         return ""
 

@@ -5,11 +5,13 @@ Review Focus 2 and 5)."""
 
 from __future__ import annotations
 
+import os
 from pathlib import Path
 
 import pytest
 from fakes import RecordingReader
 
+from vibey_runners.common.capabilities.git_folder_guard import GitFolderGuard
 from vibey_runners.common.capabilities.interfaces.skill_index_interface import (
     SkillIndexInterface,
 )
@@ -266,4 +268,28 @@ def test_a_skill_file_symlinked_into_git_metadata_is_skipped(tmp_path: Path) -> 
     (plugin / ".git" / "SKILL.md").write_text(VALID.format(name="x"), encoding="utf-8")
     (plugin / "skills" / "x").mkdir(parents=True)
     (plugin / "skills" / "x" / "SKILL.md").symlink_to(plugin / ".git" / "SKILL.md")
+    assert _only_skip(plugin)[1] == INSIDE_GIT
+
+
+def test_a_skills_folder_that_is_the_git_folder_by_identity_is_skipped(tmp_path: Path) -> None:
+    plugin = tmp_path / "market"  # a plugin whose folder is the marketplace root
+    (plugin / ".git").mkdir(parents=True)
+    _skill(plugin, "lint", VALID.format(name="lint"))
+    real = plugin.resolve()
+
+    def aliasing(path: Path) -> os.stat_result:  # as a case-insensitive file system would
+        return os.stat(real / ".git" if path == real / "skills" else path)
+
+    catalog = SkillIndex(guard=GitFolderGuard(stat=aliasing)).build([plugin])
+    assert catalog.skills == ()
+    assert catalog.skipped == ((plugin / "skills", INSIDE_GIT),)
+
+
+def test_a_skill_folder_named_a_case_variant_of_git_is_skipped(tmp_path: Path) -> None:
+    plugin = _plugin(tmp_path)
+    hidden = plugin / ".Git" / "hidden"
+    hidden.mkdir(parents=True)
+    (hidden / "SKILL.md").write_text(VALID.format(name="hidden"), encoding="utf-8")
+    (plugin / "skills").mkdir()
+    (plugin / "skills" / "hidden").symlink_to(hidden)
     assert _only_skip(plugin)[1] == INSIDE_GIT

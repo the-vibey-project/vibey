@@ -6,7 +6,8 @@ A marketplace may come from the network, so its manifest is hostile until shown 
 plugin's `source` is checked twice: lexically first -- an absolute or home-relative path, or one
 with a `..` part, is refused before the file system is touched -- and then by resolving the
 folder (symlinks followed) and requiring `relative_to(root.resolve())` and not inside the root's
-`.git`, which the lock's digest leaves out (`CapabilityLock`). Any such failure refuses
+`.git` (by file identity and by case-folded name, `GitFolderGuard`), which the lock's digest
+leaves out (`CapabilityLock`). Any such failure refuses
 the whole marketplace (`ManifestError`): a manifest that tries to point outside itself is not
 trusted for any of its plugins. The manifest is read through the bounded reader, capped at
 `MANIFEST_MAX_BYTES`, and every field is checked. A plugin that is merely unusable here (a remote
@@ -25,8 +26,12 @@ from typing import Final
 
 from vibey_runners.common.capabilities.file_reader import BoundedFileReader
 from vibey_runners.common.capabilities.file_too_large_error import FileTooLargeError
+from vibey_runners.common.capabilities.git_folder_guard import GitFolderGuard
 from vibey_runners.common.capabilities.interfaces.file_reader_interface import (
     FileReaderInterface,
+)
+from vibey_runners.common.capabilities.interfaces.git_folder_guard_interface import (
+    GitFolderGuardInterface,
 )
 from vibey_runners.common.capabilities.manifest_error import ManifestError
 from vibey_runners.common.capabilities.marketplace_catalog import MarketplaceCatalog
@@ -38,7 +43,6 @@ MANIFEST_MAX_BYTES: Final = 2 * 1024 * 1024
 """The largest manifest read. vibey's own, with 157 plugins, is about 150 KiB."""
 MAX_PLUGINS: Final = 1024
 """The most plugins one manifest may list."""
-GIT_FOLDER: Final = ".git"
 INSIDE_GIT: Final = "inside the marketplace's .git, which the lock does not cover"
 REMOTE_SOURCE: Final = "its source is not a folder in the marketplace"
 MISSING_FOLDER: Final = "its folder does not exist"
@@ -47,8 +51,13 @@ MISSING_FOLDER: Final = "its folder does not exist"
 class MarketplaceManifest:
     """Declared by `interfaces/manifest_interface.py::MarketplaceManifestInterface`."""
 
-    def __init__(self, reader: FileReaderInterface | None = None) -> None:
+    def __init__(
+        self,
+        reader: FileReaderInterface | None = None,
+        guard: GitFolderGuardInterface | None = None,
+    ) -> None:
         self._reader = reader or BoundedFileReader()
+        self._guard = guard or GitFolderGuard()
 
     def read(self, root: Path) -> MarketplaceCatalog:
         base = root.resolve()
@@ -57,7 +66,7 @@ class MarketplaceManifest:
         manifest = (base / MANIFEST_PATH).resolve()
         if not manifest.is_relative_to(base):
             raise ManifestError(f"{root}: {MANIFEST_PATH} resolves outside the marketplace")
-        if manifest.is_relative_to(base / GIT_FOLDER):
+        if self._guard.inside(base, manifest):
             raise ManifestError(f"{root}: {MANIFEST_PATH} resolves {INSIDE_GIT}")
         if not manifest.is_file():
             raise ManifestError(f"{root} has no {MANIFEST_PATH}")
@@ -118,8 +127,7 @@ class MarketplaceManifest:
             raise ManifestError(f"{where}.description must be a string")
         return name, description
 
-    @staticmethod
-    def _folder(base: Path, source: str, where: str) -> Path:
+    def _folder(self, base: Path, source: str, where: str) -> Path:
         if any(ord(char) < 0x20 for char in source):
             raise ManifestError(f"{where}: source contains control characters")
         relative = PurePosixPath(source)
@@ -130,6 +138,6 @@ class MarketplaceManifest:
         directory = (base / relative).resolve()
         if not directory.is_relative_to(base):
             raise ManifestError(f"{where}: its folder resolves outside the marketplace")
-        if directory.is_relative_to(base / GIT_FOLDER):
+        if self._guard.inside(base, directory):
             raise ManifestError(f"{where}: its folder resolves {INSIDE_GIT}")
         return directory
