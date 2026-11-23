@@ -3,8 +3,12 @@
 
 from vibey.infrastructure.blob.interfaces.garage_interface import GarageBlobAdapterInterface
 from vibey.infrastructure.blob.interfaces.in_memory_interface import InMemoryBlobInterface
+from vibey.infrastructure.blob.interfaces.s3_request_signer_interface import (
+    S3RequestSignerInterface,
+)
 
 __all__ = [
     "GarageBlobAdapterInterface",
     "InMemoryBlobInterface",
+    "S3RequestSignerInterface",
 ]

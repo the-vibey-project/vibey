@@ -1,18 +1,14 @@
 # Made with ❤️ by [Vibey](https://the-vibey-project.github.io/vibey/), Developed by [Adam Matthew Steinberger](https://vibewithadam.matthewsteinberger.com/) ([@adammatthewsteinberger](https://github.com/adammatthewsteinberger/)).
 """Garage Blob adapter implementing the Blob storage port (ADR-0042).
 
-Self-hosted Garage over its S3-compatible API with stdlib only. S3 signs
-every request with Signature Version 4 (HMAC-SHA256 chain over the canonical
-request) -- implemented here rather than pulled in, because the port needs
-four calls and a client library would be a heavier dependency than the
- eighty lines the signature takes.
+Self-hosted Garage over its S3-compatible API with stdlib only. Every request is signed with
+Signature Version 4 by the family's one signer, `S3RequestSigner` (extracted from this module so
+the run input store reuses it; ADR-0105 OR-3, sub-doctrine 10.e).
 """
 
 from __future__ import annotations
 
 import asyncio
-import hashlib
-import hmac
 import re
 import urllib.error
 import urllib.parse
@@ -22,27 +18,7 @@ from typing import Any
 
 from vibey.application.interfaces.blob import BlobPort
 from vibey.domain.config import DEFAULT_SURFACE_ADAPTER_TIMEOUT_SECONDS
-
-_SERVICE = "s3"
-_ALGORITHM = "AWS4-HMAC-SHA256"
-
-
-def _hmac(key: bytes, message: str) -> bytes:
-    return hmac.new(key, message.encode("utf-8"), hashlib.sha256).digest()
-
-
-def _signature(
-    *,
-    secret_key: str,
-    region: str,
-    datestamp: str,
-    string_to_sign: str,
-) -> str:
-    scope_date = _hmac(f"AWS4{secret_key}".encode(), datestamp)
-    scope_region = hmac.new(scope_date, region.encode(), hashlib.sha256).digest()
-    scope_service = hmac.new(scope_region, _SERVICE.encode(), hashlib.sha256).digest()
-    signing = hmac.new(scope_service, b"aws4_request", hashlib.sha256).digest()
-    return hmac.new(signing, string_to_sign.encode(), hashlib.sha256).hexdigest()
+from vibey.infrastructure.blob.s3_request_signer import S3RequestSigner
 
 
 def _canonical_uri(bucket: str, key: str) -> str:
@@ -50,6 +26,11 @@ def _canonical_uri(bucket: str, key: str) -> str:
     if key:
         parts.extend(urllib.parse.quote(part, safe="") for part in key.split("/"))
     return "/" + "/".join(parts)
+
+
+def _now() -> datetime:
+    """The signing clock, read through this module's `datetime` so a test can fix it."""
+    return datetime.now(UTC)
 
 
 class GarageBlobAdapter(BlobPort):
@@ -66,12 +47,10 @@ class GarageBlobAdapter(BlobPort):
         if timeout <= 0:
             raise ValueError("timeout must be positive")
         self._url = url.strip().rstrip("/")
-        self._access_key = access_key
-        self._secret_key = secret_key
-        self._region = region
         self._opener = opener
         self._timeout = timeout
         self._host = urllib.parse.urlsplit(self._url).netloc
+        self._signer = S3RequestSigner(access_key, secret_key, region, clock=_now)
 
     def _signed_request(
         self,
@@ -80,33 +59,13 @@ class GarageBlobAdapter(BlobPort):
         body: bytes | None,
         content_type: str | None,
     ) -> urllib.request.Request:
-        payload_hash = hashlib.sha256(body or b"").hexdigest()
-        now = datetime.now(UTC)
-        amz_date = now.strftime("%Y%m%dT%H%M%SZ")
-        datestamp = now.strftime("%Y%m%d")
-        headers = {
-            "host": self._host,
-            "x-amz-content-sha256": payload_hash,
-            "x-amz-date": amz_date,
-        }
-        if content_type is not None:
-            headers["content-type"] = content_type
-        names = sorted(headers)
-        canonical_headers = "".join(f"{name}:{headers[name]}\n" for name in names)
-        canonical = "\n".join([method, uri, "", canonical_headers, ";".join(names), payload_hash])
-        scope = f"{datestamp}/{self._region}/{_SERVICE}/aws4_request"
-        string_to_sign = "\n".join(
-            [_ALGORITHM, amz_date, scope, hashlib.sha256(canonical.encode()).hexdigest()]
-        )
-        signature = _signature(
-            secret_key=self._secret_key,
-            region=self._region,
-            datestamp=datestamp,
-            string_to_sign=string_to_sign,
-        )
-        headers["Authorization"] = (
-            f"{_ALGORITHM} Credential={self._access_key}/{scope}, "
-            f"SignedHeaders={';'.join(names)}, Signature={signature}"
+        headers = self._signer.headers(
+            method=method,
+            host=self._host,
+            canonical_uri=uri,
+            query={},
+            body=body or b"",
+            signed=None if content_type is None else {"content-type": content_type},
         )
         return urllib.request.Request(  # nosec B310 - https-only endpoints are config
             f"{self._url}{uri}", data=body, headers=headers, method=method
