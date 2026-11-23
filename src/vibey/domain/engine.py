@@ -140,7 +140,8 @@ class EngineAffordances:
     `None` is unknown: nothing in the tree shows it either way, and no menu is offered for
     it. A value is set on a descriptor only where the runner's own code or `--help` shows it,
     and `evidence` names where, by the field it proves. Never from memory or a vendor's
-    marketing.
+    marketing. An unknown field may carry evidence too, starting `unknown: `, saying why it
+    is unknown -- a withdrawn claim keeps its reason.
     """
 
     images: bool | None = None

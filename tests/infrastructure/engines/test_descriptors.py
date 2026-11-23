@@ -273,10 +273,15 @@ def test_a_boolean_flag_takes_no_value_so_the_word_after_it_is_a_positional() ->
 
 @pytest.mark.parametrize("descriptor", ALL_DESCRIPTORS, ids=lambda d: d.engine_id.value)
 def test_every_capability_that_is_set_names_its_proof(descriptor) -> None:  # type: ignore[no-untyped-def]
+    """A value that is set names where it is shown. An unknown value may say why it is unknown
+    -- a withdrawn claim keeps the reason it was withdrawn -- and then says so first."""
     affordances = descriptor.affordances
     for name in AFFORDANCE_FIELDS:
         if getattr(affordances, name) is None:
-            assert name not in affordances.evidence, f"{descriptor.engine_id}: {name}"
+            reason = affordances.evidence.get(name)
+            assert reason is None or reason.startswith("unknown: "), (
+                f"{descriptor.engine_id}: {name}"
+            )
         else:
             assert affordances.evidence.get(name, "").strip(), f"{descriptor.engine_id}: {name}"
     assert set(affordances.evidence) <= set(AFFORDANCE_FIELDS)
@@ -317,7 +322,8 @@ def test_the_capabilities_each_runner_shows() -> None:
     context = PluginSystem.SKILLS_CONTEXT
     assert shown == {
         "claudeloop": (*claude, True),
-        "codexloop": (None, True, True, None, context, True, None, None),
+        # No MCP code in codexloop: unknown, not yes (SP-LOOPS Task 1).
+        "codexloop": (None, True, True, None, context, None, None, None),
         "gptossloop": (False, True, True, False, context, True, False, True),
         "qwenloop": (False, True, True, False, context, True, False, True),
         # The same binary, but a local backend cannot serve web search.
@@ -333,7 +339,7 @@ def test_the_gaps_between_each_lane_and_full_access_are_pinned() -> None:
     gaps = {d.engine_id.value: d.affordances.full_access_gaps() for d in ALL_DESCRIPTORS}
     assert gaps == {
         "claudeloop": (),
-        "codexloop": ("skills", "plugins", "web_search"),
+        "codexloop": ("skills", "plugins", "mcp", "web_search"),
         "gptossloop": ("skills", "plugins"),
         "qwenloop": ("skills", "plugins"),
         "claudeloop-local": ("web_search",),

@@ -245,12 +245,16 @@ CODEXLOOP = EngineDescriptor(
         files=True,
         paste_text=True,
         plugins=PluginSystem.SKILLS_CONTEXT,
-        mcp=True,
+        # Unknown, not yes: no code under codexloop passes an MCP server to Codex. Whatever
+        # Codex's own configuration mounts is Codex's, unverified from this tree (SP-LOOPS
+        # Phase 8 waits on an operator-run check against a real Codex).
+        mcp=None,
         evidence={
-            "mcp": "its exec argv overrides only approval, sandbox, network and effort and "
-            "passes nothing that suppresses Codex's own configuration, and its doctor checks "
-            "the MCP servers that configuration declares (codexloop "
-            "infrastructure/agent/argv.py, infrastructure/doctor_env.py)",
+            "mcp": "unknown: codexloop has no MCP code -- its exec argv carries only approval, "
+            "sandbox, network, effort and `--add-dir` (codexloop infrastructure/agent/argv.py), "
+            "and its doctor only lists the OAuth MCP servers a caller names "
+            "(infrastructure/doctor_env.py); whether Codex's own configuration mounts any is "
+            "not shown by this tree",
             "files": "it runs in the worktree as its working directory, and its exec argv "
             "carries `--add-dir` (codexloop infrastructure/agent/argv.py)",
             "paste_text": "`prompt TEXT --now|--next-turn` (codexloop cli/commands/prompt.py); "

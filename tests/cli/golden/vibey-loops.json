@@ -798,9 +798,9 @@
             "paste_text": true,
             "paste_images": null,
             "plugins": "skills-context",
-            "mcp": true,
+            "mcp": null,
             "evidence": {
-              "mcp": "its exec argv overrides only approval, sandbox, network and effort and passes nothing that suppresses Codex's own configuration, and its doctor checks the MCP servers that configuration declares (codexloop infrastructure/agent/argv.py, infrastructure/doctor_env.py)",
+              "mcp": "unknown: codexloop has no MCP code -- its exec argv carries only approval, sandbox, network, effort and `--add-dir` (codexloop infrastructure/agent/argv.py), and its doctor only lists the OAuth MCP servers a caller names (infrastructure/doctor_env.py); whether Codex's own configuration mounts any is not shown by this tree",
               "files": "it runs in the worktree as its working directory, and its exec argv carries `--add-dir` (codexloop infrastructure/agent/argv.py)",
               "paste_text": "`prompt TEXT --now|--next-turn` (codexloop cli/commands/prompt.py); the plan itself is text",
               "plugins": "when the project sets skills_context.mode = inject, vibey appends the vibey-skills context packet to the plan's text before the run starts (vibey application/build_implement_handler.py), whichever engine runs it"
