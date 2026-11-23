@@ -15,9 +15,10 @@ from vibey.infrastructure.loops.records import PruneReport
 @runtime_checkable
 class SnapshotPrunerInterface(Protocol):
     def prune(self, snapshots: Path, *, older_than_seconds: float) -> PruneReport:
-        """Removes each `run-*` folder directly in `snapshots` last changed more than
-        `older_than_seconds` ago. A `run-*` entry that is a symlink or not a folder, and a
-        `snapshots` that is itself a symlink, are named in `refused` and never followed or
-        removed; nothing else is touched. No folder is nothing to do. Raises `ValueError` for a
+        """Removes each `run-*` folder directly in `snapshots` with no change at its top (the
+        folder or any entry directly in it) for more than `older_than_seconds`. A `run-*` entry
+        that is a symlink or not a folder, a `snapshots` that is itself a symlink, and a folder
+        that cannot be listed are named in `refused` and never followed or removed; nothing else
+        is touched. No folder is nothing to do. Raises `ValueError` for a
         negative age."""
         ...

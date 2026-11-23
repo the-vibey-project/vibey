@@ -275,3 +275,124 @@ def test_a_copy_of_the_same_name_that_cannot_be_hashed_is_replaced(tmp_path: Pat
     os.mkfifo(old_root / "pipe")
     assert store.update(ACME).root == old_root
     assert not (old_root / "pipe").exists()
+
+
+# -- review 1: one lock across place, lock and prune; OSError; stale staging -------------------
+
+
+def _other_tree(label: str) -> FakeFetcher:
+    return FakeFetcher(
+        files={".claude-plugin/marketplace.json": _manifest(()), "version.txt": label}
+    )
+
+
+def test_an_update_finishing_inside_another_ones_fetch_cannot_delete_the_locked_copy(
+    tmp_path: Path,
+) -> None:
+    """B runs whole while A is still fetching (the branch moved between them); A then commits.
+    Whatever finishes last, the lock names a copy that exists, and only unnamed copies go."""
+    inner = _store(tmp_path, _other_tree("B"))
+
+    class FetchingWhileBUpdates(FakeFetcher):
+        def fetch(self, source: MarketplaceSource, ref: str | None, into: Path) -> FetchResult:
+            inner.update(ACME)  # B: places, locks and prunes, all inside A's fetch
+            return _other_tree("A").fetch(source, ref, into)
+
+    outer = _store(tmp_path, FetchingWhileBUpdates())
+    a = outer.update(ACME)
+    (entry,) = CapabilityLock().read(outer.lock_path)
+    assert entry == a.entry
+    assert (a.root / "version.txt").read_text(encoding="utf-8") == "A"
+    assert _children(outer.marketplaces / "acme") == [a.root.name]
+
+
+def test_an_update_that_meets_another_holding_the_lock_waits_then_gives_up(
+    tmp_path: Path,
+) -> None:
+    """A holds the lock's file lock from placing its copy to pruning; B, a second store with
+    its own lock, tries to commit meanwhile (driven from inside A's lock write, no threads):
+    it waits the bounded time by a fake clock and fails, placing nothing, and A's copy stays."""
+    from vibey_runners.common.capabilities.sidecar_lock import SidecarLock
+
+    now = [0.0]
+
+    def sleep(seconds: float) -> None:
+        now[0] += seconds
+
+    patient = SidecarLock(clock=lambda: now[0], sleep=sleep, timeout_seconds=1.0)
+    other = _store(tmp_path, _other_tree("B"), locker=CapabilityLock(file_lock=patient))
+    errors: list[str] = []
+
+    class OverlappingLock(CapabilityLock):
+        def update(
+            self, path: Path, put: Sequence[LockEntry] = (), drop: Collection[str] = ()
+        ) -> tuple[LockEntry, ...]:
+            try:
+                other.update(ACME)
+            except MarketplaceFetchError as exc:
+                errors.append(str(exc))
+            assert len(_children(other.marketplaces / "acme")) == 1  # B placed nothing
+            return super().update(path, put, drop)
+
+    a = _store(tmp_path, _other_tree("A"), locker=OverlappingLock()).update(ACME)
+    assert len(errors) == 1 and "cannot be locked" in errors[0] and "another vibey" in errors[0]
+    assert CapabilityLock().read(a.root.parents[2] / "lock.json") == (a.entry,)
+    assert _children(a.root.parent) == [a.root.name]
+
+
+def test_a_lock_that_cannot_be_read_back_removes_no_copy(tmp_path: Path) -> None:
+    store, _, old_root = _locked_once(tmp_path)
+
+    class UnreadableAfterWriting(CapabilityLock):
+        def __init__(self) -> None:
+            super().__init__()
+            self.written = False
+
+        def update(
+            self, path: Path, put: Sequence[LockEntry] = (), drop: Collection[str] = ()
+        ) -> tuple[LockEntry, ...]:
+            result = super().update(path, put, drop)
+            self.written = True
+            return result
+
+        def read(self, path: Path) -> tuple[LockEntry, ...]:
+            if self.written:
+                raise LockError(f"{path}: checksum does not match its entries")
+            return super().read(path)
+
+    update = _store(tmp_path, _other_tree("new"), locker=UnreadableAfterWriting()).update(ACME)
+    assert sorted(_children(store.marketplaces / "acme")) == sorted(
+        [old_root.name, update.root.name]
+    )
+
+
+def test_a_failure_of_the_stores_own_folders_is_a_fetch_error(tmp_path: Path) -> None:
+    error = PermissionError(13, "Permission denied", "/somewhere")
+    with pytest.raises(MarketplaceFetchError, match="acme cannot be updated: .*Permission denied"):
+        _store(tmp_path, FakeFetcher(error=error)).update(ACME)
+
+
+def test_an_update_sweeps_staging_folders_a_killed_update_left(tmp_path: Path) -> None:
+    import os
+
+    store = _store(tmp_path, FakeFetcher(), clock=lambda: 10_000.0, stale_seconds=600.0)
+    store.marketplaces.mkdir(parents=True)
+    old, fresh = store.marketplaces / ".staging-old", store.marketplaces / ".staging-fresh"
+    for folder, stamp in ((old, 9_000.0), (fresh, 9_900.0)):
+        (folder / "tree").mkdir(parents=True)
+        os.utime(folder, (stamp, stamp))
+    outside = tmp_path / "outside"
+    outside.mkdir()
+    (outside / "keep").write_text("keep", encoding="utf-8")
+    (store.marketplaces / ".staging-link").symlink_to(outside)
+    os.utime(store.marketplaces / ".staging-link", (1.0, 1.0), follow_symlinks=False)
+    (store.marketplaces / ".staging-file").write_text("x", encoding="utf-8")
+    os.utime(store.marketplaces / ".staging-file", (1.0, 1.0))
+    store.update(ACME)
+    assert _children(store.marketplaces) == [
+        ".staging-file",
+        ".staging-fresh",
+        ".staging-link",
+        "acme",
+    ]
+    assert (outside / "keep").read_text(encoding="utf-8") == "keep"

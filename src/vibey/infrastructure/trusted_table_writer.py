@@ -23,6 +23,10 @@ writer, kept small, for any table a command owns:
   whatever it was, and a missing folder is made 0700. A symlinked `vibey.toml` (dotfiles) is
   written where it points and stays a link: the link is the person's choice.
 
+The writer takes no lock of its own: a caller that reads a table, changes it and writes it back
+holds `SidecarLock` beside the file for the whole round (`vibey loops` does), so two at once cannot
+lose a change.
+
 Values are what TOML holds exactly and `tomllib` gives back: strings, booleans, integers, lists
 and tables. Anything else is refused. Declared by
 `interfaces/trusted_table_writer_interface.py::TrustedTableWriterInterface`.

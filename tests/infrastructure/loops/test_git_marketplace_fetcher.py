@@ -125,47 +125,80 @@ def test_every_git_call_runs_with_only_the_allowed_protocols_and_no_hooks(tmp_pa
         assert f"core.hooksPath={os.devnull}" in pairs
         assert {"submodule.recurse=false", "fetch.recurseSubmodules=false"} <= pairs
         assert "core.fsmonitor=false" in pairs
-        assert env["GIT_ALLOW_PROTOCOL"] == "https:ssh:git"
-    assert ALLOWED_PROTOCOLS == ("https", "ssh", "git")
+        assert env["GIT_ALLOW_PROTOCOL"] == "https:ssh"
+    assert ALLOWED_PROTOCOLS == ("https", "ssh")
 
 
-def test_git_sees_a_scrubbed_environment_with_its_own_configuration_neutralised(
-    tmp_path: Path,
-) -> None:
+ENVIRON = {
+    "PATH": "/usr/bin",
+    "HOME": "/home/me",
+    "SSH_AUTH_SOCK": "/tmp/agent.sock",
+    "GIT_SSH_COMMAND": "evil",
+    "GIT_DIR": "/elsewhere",
+    "GIT_EXEC_PATH": "/evil",
+    "GIT_ASKPASS": "/evil/askpass",
+    "VIBEY_HUB_TOKEN": "fake-hub-token",
+    "BRAVE_API_KEY": "fake-brave-key",
+}
+FIXED = {
+    "LANG": "C",
+    "LC_ALL": "C",
+    "GIT_CONFIG_GLOBAL": os.devnull,
+    "GIT_CONFIG_SYSTEM": os.devnull,
+    "GIT_CONFIG_NOSYSTEM": "1",
+    "GIT_TERMINAL_PROMPT": "0",
+    "GIT_ALLOW_PROTOCOL": "https:ssh",
+    "GIT_LFS_SKIP_SMUDGE": "1",
+    "GIT_NO_REPLACE_OBJECTS": "1",
+    "GIT_SSH_COMMAND": "ssh -o BatchMode=yes",
+}
+
+
+def test_an_ssh_fetch_sees_a_scrubbed_environment_with_the_persons_ssh(tmp_path: Path) -> None:
     git = FakeGit()
-    environ = {
+    source = MARKETPLACE_SOURCE_RULE.classify("git@example.test:acme/marketplace.git")
+    _fetcher(git, environ=ENVIRON).fetch(source, None, tmp_path / "tree")
+    assert git.calls[0][1] == {
         "PATH": "/usr/bin",
         "HOME": "/home/me",
         "SSH_AUTH_SOCK": "/tmp/agent.sock",
-        "GIT_SSH_COMMAND": "evil",
-        "GIT_DIR": "/elsewhere",
-        "GIT_EXEC_PATH": "/evil",
-        "GIT_ASKPASS": "/evil/askpass",
-        "VIBEY_HUB_TOKEN": "fake-hub-token",
-        "BRAVE_API_KEY": "fake-brave-key",
+        **FIXED,
     }
-    _fetcher(git, environ=environ).fetch(HTTPS, None, tmp_path / "tree")
+
+
+def test_an_https_fetch_gets_an_empty_home_of_its_own_and_no_ssh(tmp_path: Path) -> None:
+    """No ~/.gitconfig (on any git) and no ~/.netrc is read for https; the folder is gone after."""
+    seen: list[tuple[str, bool, int]] = []
+
+    class Looking(FakeGit):
+        def __call__(
+            self, argv: Sequence[str], env: Mapping[str, str], cwd: Path, timeout: float
+        ) -> subprocess.CompletedProcess[str]:
+            home = Path(env["HOME"])
+            seen.append((env["HOME"], home.is_dir(), home.stat().st_mode & 0o777))
+            assert list(home.iterdir()) == []
+            return super().__call__(argv, env, cwd, timeout)
+
+    git = Looking()
+    _fetcher(git, environ=ENVIRON).fetch(HTTPS, None, tmp_path / "tree")
     env = git.calls[0][1]
-    assert env == {
-        "PATH": "/usr/bin",
-        "HOME": "/home/me",
-        "SSH_AUTH_SOCK": "/tmp/agent.sock",
-        "LANG": "C",
-        "LC_ALL": "C",
-        "GIT_CONFIG_GLOBAL": os.devnull,
-        "GIT_CONFIG_SYSTEM": os.devnull,
-        "GIT_CONFIG_NOSYSTEM": "1",
-        "GIT_TERMINAL_PROMPT": "0",
-        "GIT_ALLOW_PROTOCOL": "https:ssh:git",
-        "GIT_LFS_SKIP_SMUDGE": "1",
-        "GIT_NO_REPLACE_OBJECTS": "1",
-        "GIT_SSH_COMMAND": "ssh -o BatchMode=yes",
-    }
+    assert env == {"PATH": "/usr/bin", "HOME": seen[0][0], **FIXED}
+    assert {row for row in seen} == {(seen[0][0], True, 0o700)}
+    assert Path(seen[0][0]).parent == tmp_path
+    assert not Path(seen[0][0]).exists()
+
+
+def test_the_https_home_is_removed_when_the_fetch_fails(tmp_path: Path) -> None:
+    git = FakeGit(fail="fetch")
+    with pytest.raises(MarketplaceFetchError):
+        _fetcher(git).fetch(HTTPS, None, tmp_path / "tree")
+    assert sorted(p.name for p in tmp_path.iterdir()) == ["tree"]
 
 
 def test_a_missing_path_or_home_is_not_invented(tmp_path: Path) -> None:
     git = FakeGit()
-    _fetcher(git, environ={}).fetch(HTTPS, None, tmp_path / "tree")
+    source = MARKETPLACE_SOURCE_RULE.classify("ssh://example.test/acme.git")
+    _fetcher(git, environ={}).fetch(source, None, tmp_path / "tree")
     env = git.calls[0][1]
     assert env["PATH"] == os.defpath
     assert "HOME" not in env and "SSH_AUTH_SOCK" not in env
@@ -251,9 +284,8 @@ def test_a_staging_folder_that_already_exists_is_refused(tmp_path: Path) -> None
         _fetcher(FakeGit()).fetch(HTTPS, None, tmp_path / "tree")
 
 
-def test_the_real_runner_runs_a_command_with_no_stdin_and_a_timeout(tmp_path: Path) -> None:
-    """The default runner, exercised with `true`/`printf` rather than git: no network."""
-    result = GitMarketplaceFetcher.run_command(
-        ["printf", "%s", "ok"], {"PATH": os.defpath}, tmp_path, 10.0
-    )
-    assert (result.returncode, result.stdout) == (0, "ok")
+def test_the_default_runner_is_the_bounded_one() -> None:
+    from vibey.infrastructure.loops.bounded_process_runner import BoundedProcessRunner
+
+    runner = GitMarketplaceFetcher()._runner  # noqa: SLF001
+    assert isinstance(getattr(runner, "__self__", None), BoundedProcessRunner)

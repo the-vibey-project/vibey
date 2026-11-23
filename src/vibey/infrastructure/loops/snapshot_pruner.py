@@ -4,10 +4,13 @@
 Each run's verified copy (`CapabilityResolver`, `<store>/snapshots/run-*`) is made fresh and
 nothing removed it after the run. A stale copy is disk, and it is also reachable by relative path
 from a later run's plugin, so removing it is containment. `vibey loops snapshots prune` removes
-the `run-*` folders directly in the person's snapshot folder that were last changed more than an
-age ago (7 days unless the person says otherwise), with `shutil.rmtree`, which never follows a
-symlink inside what it removes. A `run-*` entry that is a symlink or not a folder, and a snapshot
-folder that is itself a symlink, are named and left alone. Wiring the removal to the end of each
+the `run-*` folders directly in the person's snapshot folder that have had no change at their top
+-- the folder itself or any entry directly in it -- for longer than an age (7 days unless the person
+says otherwise): N days of inactivity is the rule, so a run still changing its snapshot is kept, but
+one that has sat untouched that long is removed even if it is still running. Removal is
+`shutil.rmtree`, which never follows a symlink inside what it removes. A `run-*` entry that is a
+symlink or not a folder, a snapshot folder that is itself a symlink, and a folder that cannot be
+listed are named and left alone. Wiring the removal to the end of each
 run, and a sweep when a worker starts, belongs to the phase that wires runs (Phase 4). Declared by
 `interfaces/snapshot_pruner_interface.py::SnapshotPrunerInterface`.
 """
@@ -54,7 +57,11 @@ class SnapshotPruner:
         cutoff = self._clock() - older_than_seconds
         removed: list[Path] = []
         refused: list[tuple[Path, str]] = []
-        for name in sorted(os.listdir(snapshots)):
+        try:
+            names = sorted(os.listdir(snapshots))
+        except OSError as exc:  # a file where the folder should be, a folder not yours, ...
+            return PruneReport((), ((snapshots, f"cannot be listed: {exc}"),))
+        for name in names:
             if not name.startswith(RUN_PREFIX):
                 continue
             path = snapshots / name
@@ -63,7 +70,14 @@ class SnapshotPruner:
                 refused.append((path, LINK))
             elif not stat.S_ISDIR(status.st_mode):
                 refused.append((path, NOT_A_FOLDER))
-            elif status.st_mtime < cutoff:
+            else:
+                try:
+                    newest = self._newest(path, status.st_mtime)
+                except OSError as exc:
+                    refused.append((path, f"cannot be listed: {exc}"))
+                    continue
+                if newest >= cutoff:
+                    continue
                 try:
                     self._remove(path)
                 except OSError as exc:
@@ -71,3 +85,12 @@ class SnapshotPruner:
                 else:
                     removed.append(path)
         return PruneReport(tuple(removed), tuple(refused))
+
+    @staticmethod
+    def _newest(run: Path, own: float) -> float:
+        """The latest change at the top of a run folder: the folder itself and each entry
+        directly in it (never following a link). A run is old after that long without one."""
+        newest = own
+        for entry in os.scandir(run):
+            newest = max(newest, entry.stat(follow_symlinks=False).st_mtime)
+        return newest

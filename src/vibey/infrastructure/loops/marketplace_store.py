@@ -29,6 +29,7 @@ import os
 import shutil
 import stat
 import tempfile
+import time
 from collections.abc import Callable, Iterable, Mapping, Sequence
 from pathlib import Path
 from typing import Final
@@ -46,7 +47,8 @@ from vibey_runners.common.capabilities.manifest_error import ManifestError
 from vibey_runners.common.capabilities.marketplace_spec import MarketplaceSpec
 
 from vibey.domain.interfaces.marketplace_source_interface import MarketplaceSourceRuleInterface
-from vibey.domain.marketplace_source import MARKETPLACE_SOURCE_RULE
+from vibey.domain.marketplace_source import MARKETPLACE_SOURCE_RULE, MarketplaceSource
+from vibey.infrastructure.loops.git_marketplace_fetcher import TIMEOUT_SECONDS
 from vibey.infrastructure.loops.interfaces.marketplace_fetcher_interface import (
     MarketplaceFetcherInterface,
 )
@@ -57,6 +59,8 @@ from vibey.infrastructure.loops.records import MarketplaceUpdate
 LOCK_FILE: Final = "lock.json"
 MARKETPLACES: Final = "marketplaces"
 SNAPSHOTS: Final = "snapshots"
+STALE_STAGING_SECONDS: Final = 2 * TIMEOUT_SECONDS
+"""A staging folder this old outlived any fetch: a killed update left it, and the next removes it."""
 _STAGING: Final = ".staging-"
 _TREE: Final = "tree"
 
@@ -74,6 +78,8 @@ class MarketplaceStore:
         manifest: MarketplaceManifestInterface | None = None,
         rule: MarketplaceSourceRuleInterface = MARKETPLACE_SOURCE_RULE,
         max_bytes: int = MAX_BYTES,
+        clock: Callable[[], float] = time.time,
+        stale_seconds: float = STALE_STAGING_SECONDS,
     ) -> None:
         if not folder.is_absolute():
             raise ValueError(f"the loops store must be an absolute folder, not {folder}")
@@ -84,6 +90,8 @@ class MarketplaceStore:
         self._manifest = manifest or MarketplaceManifest()
         self._rule = rule
         self._max_bytes = max_bytes
+        self._clock = clock
+        self._stale = stale_seconds
 
     @property
     def lock_path(self) -> Path:
@@ -107,25 +115,42 @@ class MarketplaceStore:
         source = self._rule.classify(spec.source)
         if spec.ref is not None:
             self._rule.check_ref(spec.ref)
+        try:
+            return self._update(spec, source)
+        except OSError as exc:  # the store's own folders: a full disk, a folder not yours, ...
+            raise MarketplaceFetchError(f"{spec.name} cannot be updated: {exc}") from exc
+
+    def _update(self, spec: MarketplaceSpec, source: MarketplaceSource) -> MarketplaceUpdate:
         self.marketplaces.mkdir(mode=0o700, parents=True, exist_ok=True)
         os.chmod(self.marketplaces, 0o700)
+        self._sweep()
         staging = Path(tempfile.mkdtemp(prefix=_STAGING, dir=self.marketplaces))
         try:
-            tree = staging / _TREE
-            fetched = self._fetchers[source.kind].fetch(source, spec.ref, tree)
-            digest = self._checked(spec.name, tree)
-            root, made = self._placed(spec.name, tree, digest)
+            fetched = self._fetchers[source.kind].fetch(source, spec.ref, staging / _TREE)
+            digest = self._checked(spec.name, staging / _TREE)
             entry = LockEntry(spec.name, spec.source, spec.ref, digest)
             try:
-                self._locker.update(self.lock_path, put=[entry])
-            except (LockError, OSError) as exc:
-                if made:
-                    shutil.rmtree(root, ignore_errors=True)
+                with self._locker.exclusive(self.lock_path):
+                    root = self._committed(spec.name, staging / _TREE, entry)
+            except LockError as exc:  # another update held the lock past the bounded wait
                 raise MarketplaceFetchError(f"{spec.name} cannot be locked: {exc}") from exc
         finally:
             shutil.rmtree(staging, ignore_errors=True)
-        self._forget(spec.name, keep=root)
         return MarketplaceUpdate(entry, root, fetched)
+
+    def _committed(self, name: str, tree: Path, entry: LockEntry) -> Path:
+        """Under the lock's own file lock: the copy placed, its entry written, and only then
+        every copy the lock no longer names removed. Neither of two overlapping updates can
+        remove the copy the lock names when the other finishes."""
+        root, made = self._placed(name, tree, entry.digest)
+        try:
+            self._locker.update(self.lock_path, put=[entry])
+        except (LockError, OSError) as exc:
+            if made:
+                shutil.rmtree(root, ignore_errors=True)
+            raise MarketplaceFetchError(f"{name} cannot be locked: {exc}") from exc
+        self._forget(name)
+        return root
 
     def roots(self, lock: Sequence[LockEntry], declared: Iterable[str] = ()) -> dict[str, Path]:
         roots = {name: self.marketplaces / name for name in declared}
@@ -170,11 +195,31 @@ class MarketplaceStore:
         os.rename(tree, root)
         return root, True
 
-    def _forget(self, name: str, *, keep: Path) -> None:
-        """Removes every other copy of `name`: the lock no longer names them."""
+    def _forget(self, name: str) -> None:
+        """Removes every copy of `name` the lock, read again now, does not name. A lock that
+        cannot be read removes nothing."""
+        try:
+            named = {
+                entry.digest.removeprefix("sha256:")
+                for entry in self._locker.read(self.lock_path)
+                if entry.marketplace == name
+            }
+        except LockError:
+            return
         for folder in (self.marketplaces / name).iterdir():
-            if folder != keep:
+            if folder.name not in named:
                 shutil.rmtree(folder, ignore_errors=True)
+
+    def _sweep(self) -> None:
+        """Removes `.staging-*` folders an update left behind when it was killed: those older
+        than `stale_seconds`, which is past any fetch's deadline. A symlink or file is left."""
+        cutoff = self._clock() - self._stale
+        for entry in os.scandir(self.marketplaces):
+            if not entry.name.startswith(_STAGING):
+                continue
+            status = entry.stat(follow_symlinks=False)
+            if stat.S_ISDIR(status.st_mode) and status.st_mtime < cutoff:
+                shutil.rmtree(entry.path, ignore_errors=True)
 
     def _version(self, name: str, digest: str) -> Path:
         return self.marketplaces / name / digest.removeprefix("sha256:")

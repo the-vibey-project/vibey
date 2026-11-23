@@ -28,6 +28,7 @@ def _run(snapshots: Path, name: str, age_days: float) -> Path:
     (folder / "vibey" / "plugins" / "p").mkdir(parents=True)
     (folder / "vibey" / "plugins" / "p" / "SKILL.md").write_text("x", encoding="utf-8")
     stamp = NOW - age_days * DAY
+    os.utime(folder / "vibey", (stamp, stamp))
     os.utime(folder, (stamp, stamp))
     return folder
 
@@ -96,3 +97,37 @@ def test_a_folder_that_cannot_be_removed_is_named(tmp_path: Path) -> None:
 def test_a_negative_age_is_refused(tmp_path: Path) -> None:
     with pytest.raises(ValueError, match="at least 0"):
         SnapshotPruner().prune(tmp_path, older_than_seconds=-1.0)
+
+
+def test_a_run_whose_top_still_changes_is_kept(tmp_path: Path) -> None:
+    snapshots = tmp_path / "snapshots"
+    run = _run(snapshots, "run-busy", 30)
+    stamp = NOW - 1 * DAY
+    os.utime(run / "vibey", (stamp, stamp))  # its marketplace folder changed a day ago
+    report = SnapshotPruner(clock=lambda: NOW).prune(snapshots, older_than_seconds=7 * DAY)
+    assert report == PruneReport((), ())
+    assert run.is_dir()
+
+
+def test_a_snapshot_path_that_is_a_file_is_reported_not_raised(tmp_path: Path) -> None:
+    snapshots = tmp_path / "snapshots"
+    snapshots.write_text("not a folder", encoding="utf-8")
+    report = SnapshotPruner(clock=lambda: NOW).prune(snapshots, older_than_seconds=DAY)
+    assert report.removed == ()
+    ((path, reason),) = report.refused
+    assert path == snapshots and reason.startswith("cannot be listed:")
+
+
+def test_a_run_folder_that_cannot_be_listed_is_left_and_named(tmp_path: Path) -> None:
+    snapshots = tmp_path / "snapshots"
+    run = _run(snapshots, "run-locked", 30)
+    run.chmod(0o000)
+    try:
+        if os.access(run, os.R_OK):  # root reads anything: the case cannot be made here
+            pytest.skip("running as root")
+        report = SnapshotPruner(clock=lambda: NOW).prune(snapshots, older_than_seconds=DAY)
+    finally:
+        run.chmod(0o700)
+    ((path, reason),) = report.refused
+    assert path == run and reason.startswith("cannot be listed:")
+    assert run.is_dir()
