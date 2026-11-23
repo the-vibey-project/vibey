@@ -25,8 +25,9 @@ def _hub(state: Path) -> HubCertificate:
     return certificate
 
 
-def _handshake(client: ssl.SSLContext, server_state: Path, host: str = "127.0.0.1") -> None:
-    """A TLS handshake between `client` and a server presenting `server_state`'s certificate."""
+def _handshake(client: ssl.SSLContext, server_state: Path, host: str = "127.0.0.1") -> str | None:
+    """A TLS handshake between `client` and a server presenting `server_state`'s certificate;
+    the protocol version the client settled on."""
     server_context = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
     server_context.load_cert_chain(server_state / CERT_FILE, server_state / KEY_FILE)
     to_server, to_client = ssl.MemoryBIO(), ssl.MemoryBIO()
@@ -50,13 +51,13 @@ def _handshake(client: ssl.SSLContext, server_state: Path, host: str = "127.0.0.
                 pass
         to_client.write(s_out.read())
         if client_done and server_done:
-            return
+            return tls_client.version()
     raise AssertionError("the handshake never finished")
 
 
 def test_the_hubs_own_certificate_is_trusted(tmp_path: Path) -> None:
     hub = _hub(tmp_path / "hub")
-    _handshake(hub.client_context(), tmp_path / "hub")
+    assert _handshake(hub.client_context(), tmp_path / "hub") in {"TLSv1.2", "TLSv1.3"}
 
 
 def test_a_different_certificate_is_refused(tmp_path: Path) -> None:
