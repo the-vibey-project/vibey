@@ -1,0 +1,121 @@
+# Made with ❤️ by [Vibey](https://the-vibey-project.github.io/vibey/), Developed by [Adam Matthew Steinberger](https://vibewithadam.matthewsteinberger.com/) ([@adammatthewsteinberger](https://github.com/adammatthewsteinberger/)).
+"""Indexes the skills a set of plugins holds, from `skills/*/SKILL.md` frontmatter (SP-LOOPS
+Task 4; Review Focus 2 and 5).
+
+Each plugin folder is the bound: it was itself contained in its marketplace by
+`MarketplaceManifest`, so a skills folder, a skill folder or a SKILL.md that resolves (through a
+symlink) outside its plugin's folder is outside the locked marketplace content as far as this
+plugin is concerned, and is skipped as `OUTSIDE` without being read. Only the frontmatter's
+`name` and `description` are kept (design Decision 10: bodies are fetched on demand). A file over
+`SKILL_MAX_BYTES`, one that is not UTF-8 or cannot be opened, and a malformed frontmatter are each
+skipped with a named reason; the index never raises for what a plugin contains.
+
+Declared by `interfaces/skill_index_interface.py::SkillIndexInterface`.
+"""
+
+from __future__ import annotations
+
+from collections.abc import Sequence
+from pathlib import Path
+from typing import Final
+
+from vibey_runners.common.capabilities.file_reader import BoundedFileReader
+from vibey_runners.common.capabilities.file_too_large_error import FileTooLargeError
+from vibey_runners.common.capabilities.frontmatter import SkillFrontmatter
+from vibey_runners.common.capabilities.frontmatter_error import FrontmatterError
+from vibey_runners.common.capabilities.interfaces.file_reader_interface import (
+    FileReaderInterface,
+)
+from vibey_runners.common.capabilities.interfaces.frontmatter_interface import (
+    SkillFrontmatterInterface,
+)
+from vibey_runners.common.capabilities.names import NAME_PATTERN
+from vibey_runners.common.capabilities.skill_catalog import SkillCatalog
+from vibey_runners.common.capabilities.skill_entry import SkillEntry
+
+SKILL_FILE: Final = "SKILL.md"
+SKILL_MAX_BYTES: Final = 64 * 1024
+"""The largest SKILL.md indexed (the plan's 64 KiB). vibey's largest is well under it."""
+MAX_SKILLS_PER_PLUGIN: Final = 256
+"""The most skill folders read from one plugin; the rest are skipped by name."""
+OUTSIDE: Final = "outside the marketplace"
+
+
+class SkillIndex:
+    """Declared by `interfaces/skill_index_interface.py::SkillIndexInterface`."""
+
+    def __init__(
+        self,
+        reader: FileReaderInterface | None = None,
+        frontmatter: SkillFrontmatterInterface | None = None,
+    ) -> None:
+        self._reader = reader or BoundedFileReader()
+        self._frontmatter = frontmatter or SkillFrontmatter()
+
+    def build(self, plugin_dirs: Sequence[Path]) -> SkillCatalog:
+        skills: list[SkillEntry] = []
+        skipped: list[tuple[Path, str]] = []
+        for plugin_dir in plugin_dirs:
+            self._plugin(plugin_dir, skills, skipped)
+        return SkillCatalog(tuple(skills), tuple(skipped))
+
+    def _plugin(
+        self, plugin_dir: Path, skills: list[SkillEntry], skipped: list[tuple[Path, str]]
+    ) -> None:
+        base = plugin_dir.resolve()
+        if not base.is_dir():
+            skipped.append((plugin_dir, "the plugin folder does not exist"))
+            return
+        folder = plugin_dir / "skills"
+        resolved = folder.resolve()
+        if not resolved.is_relative_to(base):
+            skipped.append((folder, OUTSIDE))
+            return
+        if not resolved.is_dir():
+            return
+        names: set[str] = set()
+        candidates = sorted(entry for entry in resolved.iterdir() if entry.is_dir())
+        for over in candidates[MAX_SKILLS_PER_PLUGIN:]:
+            skipped.append((over, f"past the {MAX_SKILLS_PER_PLUGIN}-skill limit of one plugin"))
+        for skill_dir in candidates[:MAX_SKILLS_PER_PLUGIN]:
+            entry, reason, where = self._skill(plugin_dir.name, base, skill_dir)
+            if entry is not None and entry.name in names:
+                reason = f"names the skill {entry.name} twice in {plugin_dir.name}"
+                entry = None
+            if entry is None:
+                skipped.append((where, reason))
+                continue
+            names.add(entry.name)
+            skills.append(entry)
+
+    def _skill(
+        self, plugin: str, base: Path, skill_dir: Path
+    ) -> tuple[SkillEntry | None, str, Path]:
+        """The entry, or None with the reason and the path the reason is about."""
+        if not skill_dir.resolve().is_relative_to(base):
+            return None, OUTSIDE, skill_dir
+        path = (skill_dir / SKILL_FILE).resolve()
+        if not path.is_relative_to(base):
+            return None, OUTSIDE, skill_dir / SKILL_FILE
+        if not path.is_file():
+            return None, f"has no {SKILL_FILE}", skill_dir
+        try:
+            text = self._reader.read_text(path, SKILL_MAX_BYTES)
+            meta = self._frontmatter.parse(text)
+        except FileTooLargeError:
+            return None, f"is larger than {SKILL_MAX_BYTES} bytes", path
+        except UnicodeDecodeError:
+            return None, "is not UTF-8", path
+        except FrontmatterError as exc:
+            return None, str(exc), path
+        except OSError as exc:
+            return None, f"cannot be read: {exc}", path
+        name = meta.get("name", "").strip()
+        description = meta.get("description", "").strip()
+        if not name:
+            return None, "frontmatter has no name", path
+        if NAME_PATTERN.fullmatch(name) is None:
+            return None, f"frontmatter name {name!r} is not a plain name", path
+        if not description:
+            return None, "frontmatter has no description", path
+        return SkillEntry(plugin, name, description, path), "", path

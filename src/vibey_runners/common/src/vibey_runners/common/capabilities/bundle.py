@@ -46,6 +46,7 @@ from vibey_runners.common.capabilities.defaults import (
 )
 from vibey_runners.common.capabilities.marketplace_spec import MarketplaceSpec
 from vibey_runners.common.capabilities.mcp_server_spec import McpServerSpec, McpTrust
+from vibey_runners.common.capabilities.names import NAME_PATTERN
 from vibey_runners.common.capabilities.plugin_spec import PluginSpec
 
 MAX_ENTRIES: Final = 256
@@ -58,7 +59,6 @@ _KEYS: Final = frozenset({"marketplaces", "plugins", "mcp_servers", "skills", "d
 _MARKETPLACE_KEYS: Final = frozenset({"name", "source", "ref"})
 _SERVER_KEYS: Final = frozenset({"name", "trust", "command", "url", "env_allow"})
 _TRUST: Final[tuple[McpTrust, ...]] = ("local", "remote")
-_NAME: Final = re.compile(r"[A-Za-z0-9][A-Za-z0-9._-]{0,127}")
 _ENV_NAME: Final = re.compile(r"[A-Za-z_][A-Za-z0-9_]{0,127}")
 
 
@@ -136,7 +136,7 @@ class BundleSpec:
 
     @staticmethod
     def _name(value: object, path: str) -> str:
-        if not isinstance(value, str) or _NAME.fullmatch(value) is None:
+        if not isinstance(value, str) or NAME_PATTERN.fullmatch(value) is None:
             raise BundleError(
                 path,
                 "must be a name of letters, digits, '.', '_' or '-', starting with a letter or "
@@ -199,7 +199,7 @@ class BundleSpec:
         for index, entry in enumerate(cls._list(value, path)):
             where = f"{path}[{index}]"
             parts = entry.split("@") if isinstance(entry, str) else []
-            if len(parts) != 2 or not all(_NAME.fullmatch(part) for part in parts):
+            if len(parts) != 2 or not all(NAME_PATTERN.fullmatch(part) for part in parts):
                 raise BundleError(where, "must be written name@marketplace")
             name, marketplace = parts
             if marketplace not in declared:
