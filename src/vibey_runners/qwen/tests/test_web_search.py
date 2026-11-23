@@ -166,6 +166,37 @@ async def test_the_answer_says_which_backend_answered_and_carries_vibeys_notice(
 
 
 @pytest.mark.asyncio
+async def test_the_notice_is_vibeys_own_notice_only_bounded_and_one_line_each(
+    tmp_path: Path,
+) -> None:
+    """SP-ACP Task 9c, P-9c-1: standard error may carry anything (a warning, a library's
+    traceback, terminal escapes); the tool's `notice` is only vibey's own backup notice, each
+    line cleaned of non-printable characters, the whole bounded."""
+    noise = "Traceback (most recent call last): secret=abc\\033[2J"
+    hostile = f"{_NOTICE} \\033]8;;http://x\\a" + "y" * 900
+    tool = _mock_web_tool(
+        tmp_path,
+        f"echo '{_BRAVE_ANSWER}'; printf '%b\\n' '{noise}' '{hostile}' >&2",
+    )
+
+    result = await tool.execute("web_search", {"query": "q"})
+
+    notice = str(result["notice"])
+    assert notice.startswith(_NOTICE) and "Traceback" not in notice and "secret" not in notice
+    assert all(ch.isprintable() for ch in notice)
+    assert len(notice) <= 500
+
+
+@pytest.mark.asyncio
+async def test_standard_error_without_vibeys_notice_carries_no_notice(tmp_path: Path) -> None:
+    tool = _mock_web_tool(tmp_path, f"echo '{_BRAVE_ANSWER}'; echo 'a warning' >&2")
+
+    result = await tool.execute("web_search", {"query": "q"})
+
+    assert "notice" not in result
+
+
+@pytest.mark.asyncio
 async def test_a_local_answer_says_searxng_and_carries_no_notice(tmp_path: Path) -> None:
     tool = _mock_web_tool(tmp_path, """echo '{"backend": "searxng", "results": []}'""")
 

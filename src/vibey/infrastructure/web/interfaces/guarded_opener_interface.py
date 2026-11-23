@@ -3,7 +3,9 @@
 
 from __future__ import annotations
 
+import http.client
 import urllib.request
+from collections.abc import Callable
 from http.client import HTTPMessage
 from typing import IO, Any, Protocol, runtime_checkable
 
@@ -35,4 +37,47 @@ class GuardedOpenerInterface(Protocol):
 
     def __call__(self, request: urllib.request.Request, timeout: float) -> Any:
         """The response, as `urllib.request.urlopen` returns it."""
+        ...
+
+    def abort(self, thread_id: int) -> None:
+        """Shut down the sockets of the connections thread `thread_id` opened."""
+        ...
+
+    def connection(
+        self, kind: type[http.client.HTTPConnection]
+    ) -> Callable[..., http.client.HTTPConnection]:
+        """A maker of `kind` connections that records each one under the thread making it."""
+        ...
+
+    def threads(self) -> frozenset[int]:
+        """The threads, still running, whose connections are recorded."""
+        ...
+
+
+@runtime_checkable
+class AbortableOpenerInterface(Protocol):
+    """An opener that can shut down what one thread of its own opened, so a request abandoned at
+    its deadline does not keep that thread (SP-ACP Task 9c, P-9c-3)."""
+
+    def __call__(self, request: urllib.request.Request, timeout: float) -> Any:
+        """The response, as `urllib.request.urlopen` returns it."""
+        ...
+
+    def abort(self, thread_id: int) -> None:
+        """Shut down the sockets of the connections opened in thread `thread_id`, so a read
+        blocked in that thread returns at once; a connection not yet connected is skipped."""
+        ...
+
+
+@runtime_checkable
+class TrackedHandlerInterface(Protocol):
+    """`urllib`'s http and https handler, opening each connection through its opener's
+    `connection`, so the opener knows which thread opened it."""
+
+    def http_open(self, req: urllib.request.Request) -> http.client.HTTPResponse:
+        """Open `req` over plain http."""
+        ...
+
+    def https_open(self, req: urllib.request.Request) -> http.client.HTTPResponse:
+        """Open `req` over TLS."""
         ...

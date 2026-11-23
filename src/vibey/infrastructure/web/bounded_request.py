@@ -5,8 +5,10 @@ A socket timeout bounds each read, not the request: a listener that sends one by
 it every time -- in the status line, the headers or the body -- holds a reader for as long as it
 likes. So the whole request (open, headers, body up to `limit` bytes) runs on a daemon thread
 and the caller waits at most the deadline. When the deadline passes, the caller gets
-`DeadlineExceeded` and moves on; the thread is left to end when its socket does (it is a daemon,
-so it never holds the process open), and its result is dropped.
+`DeadlineExceeded` and moves on, and its result is dropped. An opener that can abort what a
+thread opened (`AbortableOpenerInterface`, as `GuardedOpener` can) is told to, so the thread's
+sockets are shut down and it ends at once (SP-ACP Task 9c, P-9c-3); with any other opener the
+thread is left to end when its socket does (a daemon, it never holds the process open).
 
 Declared by `interfaces/bounded_request_interface.py` (ADR-0016).
 """
@@ -55,6 +57,11 @@ class BoundedRequest:
         worker.start()
         worker.join(deadline)
         if not outcome:
+            # `AbortableOpenerInterface`, by its method: the interface module cannot be
+            # imported here without a cycle (the search backends import this module).
+            abort = getattr(self._opener, "abort", None)
+            if callable(abort) and worker.ident is not None:
+                abort(worker.ident)
             raise DeadlineExceeded(f"no complete answer within {deadline:g}s")
         result = outcome[0]
         if isinstance(result, BaseException):

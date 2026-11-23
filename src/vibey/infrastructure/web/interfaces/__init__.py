@@ -4,8 +4,10 @@
 from vibey.infrastructure.web.interfaces.backup_notice_interface import BackupNoticeInterface
 from vibey.infrastructure.web.interfaces.bounded_request_interface import BoundedRequestInterface
 from vibey.infrastructure.web.interfaces.guarded_opener_interface import (
+    AbortableOpenerInterface,
     GuardedOpenerInterface,
     SameOriginRedirectsInterface,
+    TrackedHandlerInterface,
 )
 from vibey.infrastructure.web.interfaces.local_first_search_interface import (
     LocalFirstSearchInterface,
@@ -14,11 +16,13 @@ from vibey.infrastructure.web.interfaces.search_backend_interface import SearchB
 from vibey.infrastructure.web.interfaces.untrusted_text_interface import UntrustedTextInterface
 
 __all__ = [
+    "AbortableOpenerInterface",
     "BackupNoticeInterface",
     "BoundedRequestInterface",
     "GuardedOpenerInterface",
     "LocalFirstSearchInterface",
     "SameOriginRedirectsInterface",
+    "TrackedHandlerInterface",
     "SearchBackendInterface",
     "UntrustedTextInterface",
 ]
