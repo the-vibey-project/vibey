@@ -536,3 +536,26 @@ def test_a_lock_held_before_its_pid_is_written_is_a_starting_hub(
     assert _exit(lambda: command.start(1)) == 1  # it never comes up within the bound
     assert processes.spawned == []
     assert "the hub is still starting" in capsys.readouterr().err
+
+
+def test_while_start_waits_a_live_record_of_another_pid_is_never_its_hub(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """The record names a live process (77) while the lock is the launched hub's (9001): not a
+    hub starting over a stale record, so `start` keeps waiting, quietly, and never reports 77."""
+    command, processes, store, _ = _setup(tmp_path)
+    processes.live.add(77)
+    processes.spawn_mode = "hangs"
+    original = processes.spawn
+
+    def planted(argv: Sequence[str], log: Path, *, cwd: Path) -> int:
+        pid = original(argv, log, cwd=cwd)
+        store.record_serving(ServingRecord("127.0.0.1", 8765, 77))
+        return pid
+
+    processes.spawn = planted  # type: ignore[method-assign]
+    assert _exit(lambda: command.start(1)) == 1
+    captured = capsys.readouterr()
+    assert "hub started" not in captured.out and "disagree" not in captured.err
+    assert "did not come up within 1s (pid 9001 is still starting)" in captured.err
+    assert processes.terminated == []
