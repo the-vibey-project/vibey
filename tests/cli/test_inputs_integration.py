@@ -3,7 +3,7 @@
 
 The composition root's own service (`bootstrap.run_inputs_app`) runs: the project is read from
 the database, the input is a file in the person's state folder (here pytest's), keyed by project id, and the ledger holds one
-`ArtifactProduced` event whose payload is exactly the digest, kind and size. Nothing of the
+`ArtifactProduced` event whose payload is exactly the digest, kind, size and name digest. Nothing of the
 input enters Postgres but that digest. The person's own `vibey.toml` is a file in pytest's
 temporary folder, never the real one.
 """
@@ -11,6 +11,7 @@ temporary folder, never the real one.
 from __future__ import annotations
 
 import asyncio
+import hashlib
 import json
 import os
 from collections.abc import Iterator
@@ -110,7 +111,14 @@ def test_an_added_file_is_stored_on_disk_and_only_its_digest_reaches_the_ledger(
         (
             EventKind.ARTIFACT_PRODUCED,
             Phase.BUILD,
-            {"artifact_type": "vibey_run_input", "digest": digest, "kind": "file", "size": 16},
+            {
+                "artifact_type": "vibey_run_input",
+                "digest": digest,
+                "kind": "file",
+                "size": 16,
+                # The name's SHA-256 (fix round 1, review I2), never the name itself.
+                "name_digest": hashlib.sha256(b"spec.md").hexdigest(),
+            },
             None,
         )
     ]
