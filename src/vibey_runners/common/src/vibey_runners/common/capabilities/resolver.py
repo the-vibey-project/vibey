@@ -24,7 +24,10 @@ bytes only, no hard links, no symlinks, at most `max_snapshot_entries` entries a
 `max_snapshot_bytes` bytes for the whole snapshot), and the copy's own records are compared with
 the records whose digest matched the lock: a file swapped after the check is a `LockMismatchError`,
 never loaded. The manifest is then read again, from the copy, and the skills are indexed from the
-copy. A symlink inside a selected plugin is not copied and is named in the skipped rows.
+copy. A symlink inside a selected plugin is not copied and is named in the skipped rows, and so
+is an entry whose name is not plain visible text (`SafeText.is_plain`): it is left out with
+everything below it, and its row names the plain parent folder with the name escaped, so every
+path a snapshot carries stays a real `Path` and is still safe to print.
 
 **What a model or terminal sees.** A skill a disabled name names is dropped; a skill name two
 plugins share goes to the first in bundle order and the later one is a skipped row. Descriptions
@@ -75,7 +78,7 @@ from vibey_runners.common.capabilities.marketplace_catalog import MarketplaceCat
 from vibey_runners.common.capabilities.marketplace_spec import MarketplaceSpec
 from vibey_runners.common.capabilities.names import NAME_PATTERN
 from vibey_runners.common.capabilities.plugin_spec import PluginSpec
-from vibey_runners.common.capabilities.safe_text import SafeText
+from vibey_runners.common.capabilities.safe_text import MIN_LIMIT, SafeText
 from vibey_runners.common.capabilities.skill_catalog import SkillCatalog
 from vibey_runners.common.capabilities.skill_entry import SkillEntry
 from vibey_runners.common.capabilities.skill_index import SkillIndex
@@ -96,6 +99,12 @@ SNAPSHOT_MAX_ENTRIES: Final = 10_000
 SNAPSHOT_MAX_BYTES: Final = 64 * 1024 * 1024
 """The most bytes one run's snapshot may hold; vibey's whole shipped marketplace is about 15 MiB."""
 LINK_NOT_COPIED: Final = "a symlink, which a snapshot never copies"
+UNPLAIN_NAME: Final = (
+    "holds {}, whose name is not plain visible text (a control, bidi or invisible character); "
+    "a snapshot never copies it"
+)
+"""The reason for an entry left out for its name: the row names its parent folder, and the name
+appears only escaped (`ascii()`), so nothing a row carries can drive a terminal."""
 COPY_CHANGED: Final = "a file changed while it was copied into the run's snapshot"
 _RUN_PREFIX: Final = "run-"
 _SYMLINK: Final = "L"
@@ -129,13 +138,13 @@ class CapabilityResolver:
     ) -> None:
         self._lock_path = self._absolute(lock_path, "the lock file")
         self._snapshots = self._absolute(snapshots, "the snapshot folder")
-        for option, value in (
-            ("description_limit", description_limit),
-            ("max_snapshot_entries", max_snapshot_entries),
-            ("max_snapshot_bytes", max_snapshot_bytes),
+        for option, value, least in (
+            ("description_limit", description_limit, MIN_LIMIT),
+            ("max_snapshot_entries", max_snapshot_entries, 1),
+            ("max_snapshot_bytes", max_snapshot_bytes, 1),
         ):
-            if value < 1:
-                raise ValueError(f"{option} must be at least 1, not {value}")
+            if value < least:
+                raise ValueError(f"{option} must be at least {least}, not {value}")
         try:
             self._shipped_source = BundleSpec.option_safe_text(shipped_source, "shipped_source")
         except BundleError as exc:
@@ -314,7 +323,7 @@ class CapabilityResolver:
                     f"{self._why_not(original, plugin.name)}"
                 )
             items.append(PurePosixPath(entry.directory.relative_to(base).as_posix()))
-        plan, links = self._plan(records, items)
+        plan, left_out = self._plan(records, items)
         budget.bytes -= self._copier.copy(
             root, plan, target, max_entries=budget.entries, max_bytes=budget.bytes
         )
@@ -333,7 +342,9 @@ class CapabilityResolver:
                 )
             folders[plugin.name] = entry.directory
         here = target.resolve()
-        return folders, [(here / link.path, LINK_NOT_COPIED) for link in links]
+        return folders, [
+            (here / where, self._text.clean(reason, REASON_MAX_CHARS)) for where, reason in left_out
+        ]
 
     def _read_manifest(self, name: str, root: Path) -> MarketplaceCatalog:
         try:
@@ -345,23 +356,31 @@ class CapabilityResolver:
     def _why_not(catalog: MarketplaceCatalog, plugin: str) -> str:
         return dict(catalog.skipped).get(plugin, "its manifest does not list it")
 
-    @staticmethod
     def _plan(
-        records: Sequence[TreeRecord], items: Sequence[PurePosixPath]
-    ) -> tuple[list[TreeRecord], list[TreeRecord]]:
+        self, records: Sequence[TreeRecord], items: Sequence[PurePosixPath]
+    ) -> tuple[list[TreeRecord], list[tuple[PurePosixPath, str]]]:
         """The folders and files to copy (each item, everything under it, and the folders
-        above it) and the symlinks under an item, which are not copied."""
+        above it), and what is left out, each as the place in the copy a row names and why: a
+        symlink under an item, and an entry whose name is not plain text (with everything below
+        it), named by its plain parent folder so that no path a row carries can hold a control,
+        bidi or invisible character."""
         plan: list[TreeRecord] = []
-        links: list[TreeRecord] = []
+        left_out: list[tuple[PurePosixPath, str]] = []
         for record in records:
             path = PurePosixPath(record.path)
             inside = any(path == item or item in path.parents for item in items)
-            if record.kind == _SYMLINK:
-                if inside:
-                    links.append(record)
-            elif inside or any(path in item.parents for item in items):
+            if not inside and not any(path in item.parents for item in items):
+                continue
+            unplain = [i for i, part in enumerate(path.parts) if not self._text.is_plain(part)]
+            if unplain:
+                if unplain[0] == len(path.parts) - 1:  # the top unplain entry, named once
+                    left_out.append((path.parent, UNPLAIN_NAME.format(ascii(path.name))))
+            elif record.kind == _SYMLINK:
+                if inside:  # a symlink above an item leaves that item out of the copy anyway
+                    left_out.append((path, LINK_NOT_COPIED))
+            else:
                 plan.append(record)
-        return plan, links
+        return plan, left_out
 
     # -- what the run sees ------------------------------------------------------------------------
 

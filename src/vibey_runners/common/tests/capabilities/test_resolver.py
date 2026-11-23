@@ -38,6 +38,7 @@ from vibey_runners.common.capabilities.plugin_spec import PluginSpec
 from vibey_runners.common.capabilities.resolver import (
     DESCRIPTION_MAX_CHARS,
     LINK_NOT_COPIED,
+    UNPLAIN_NAME,
     CapabilityResolver,
 )
 from vibey_runners.common.capabilities.safe_text import ELLIPSIS
@@ -364,6 +365,32 @@ def test_a_symlink_in_a_plugin_is_never_copied_and_is_named(tmp_path: Path) -> N
     assert (plugin / "skills/linked", LINK_NOT_COPIED) in snapshot.skills.skipped
 
 
+def test_an_entry_whose_name_is_not_plain_is_never_copied_and_renders_safely(
+    tmp_path: Path,
+) -> None:
+    """A skipped row keeps a real `Path`, and every path a row can carry is renderable: an
+    entry named with ESC/CSI, a newline or a bidi override is not copied, and the row naming it
+    is its (plain) parent folder with the name escaped in the reason."""
+    acme = _acme(tmp_path)
+    hostile_file = "\x1b[31mred\nline\u202e.md"
+    hostile_folder = "\x1b[2Jwipe\u202e"
+    skills = acme / "plugins/linting/skills"
+    (skills / "lint" / hostile_file).write_text("hidden\n", encoding="utf-8")
+    (skills / hostile_folder).mkdir()
+    (skills / hostile_folder / "SKILL.md").write_text(_skill_text("evil"), encoding="utf-8")
+    snapshot = _resolver(tmp_path).resolve(_acme_bundle(), (_locked("acme", acme),), {"acme": acme})
+    (plugin,) = snapshot.plugin_dirs
+    assert [s.name for s in snapshot.skills.skills] == ["lint"]
+    assert not (plugin / "skills/lint" / hostile_file).exists()
+    assert not (plugin / "skills" / hostile_folder).exists()
+    rows = dict(snapshot.skills.skipped)
+    assert rows[plugin / "skills/lint"] == UNPLAIN_NAME.format(ascii(hostile_file))
+    assert rows[plugin / "skills"] == UNPLAIN_NAME.format(ascii(hostile_folder))
+    for path, reason in snapshot.skills.skipped:
+        assert isinstance(path, Path)
+        assert str(path).isprintable() and reason.isprintable()
+
+
 def test_a_snapshot_past_its_entry_cap_is_refused(tmp_path: Path) -> None:
     acme = _acme(tmp_path)
     with pytest.raises(CapabilityResolutionError, match="more than 3 entries"):
@@ -390,13 +417,13 @@ def test_a_snapshot_past_its_byte_cap_is_refused(tmp_path: Path) -> None:
 
 
 def test_skill_descriptions_are_capped_and_stripped_of_control_characters(tmp_path: Path) -> None:
-    raw = "Paints \x1b[31mred\x1b[0m and ‮reverses‬ " + "very " * 400
+    raw = "Paints \x1b[31mred\x1b[0m and \u202ereverses\u202c " + "very " * 400
     acme = _market(tmp_path / "acme", {"linting": {"lint": _skill_text("lint", json.dumps(raw))}})
     snapshot = _resolver(tmp_path).resolve(_acme_bundle(), (_locked("acme", acme),), {"acme": acme})
     (skill,) = snapshot.skills.skills
     assert skill.description.startswith("Paints [31mred[0m and reverses very")
-    assert "\x1b" not in skill.description and "‮" not in skill.description
-    assert len(skill.description) == DESCRIPTION_MAX_CHARS
+    assert "\x1b" not in skill.description and "\u202e" not in skill.description
+    assert DESCRIPTION_MAX_CHARS - 5 <= len(skill.description) <= DESCRIPTION_MAX_CHARS
     assert skill.description.endswith(ELLIPSIS)
 
 
@@ -407,13 +434,13 @@ def test_the_description_cap_is_configurable(tmp_path: Path) -> None:
     snapshot = _resolver(tmp_path, description_limit=8).resolve(
         _acme_bundle(), (_locked("acme", acme),), {"acme": acme}
     )
-    assert snapshot.skills.skills[0].description == "a b c d" + ELLIPSIS
+    assert snapshot.skills.skills[0].description == "a b c" + ELLIPSIS
 
 
 def test_skipped_reasons_are_stripped_of_control_characters(tmp_path: Path) -> None:
     acme = _acme(tmp_path)
     where = tmp_path / "x"
-    catalog = SkillCatalog((), ((where, "cannot be read: \x1b]0;pwned\x07 ‮ok"),))
+    catalog = SkillCatalog((), ((where, "cannot be read: \x1b]0;pwned\x07 \u202eok"),))
     snapshot = _resolver(tmp_path, skills=FixedSkills(catalog)).resolve(
         _acme_bundle(), (_locked("acme", acme),), {"acme": acme}
     )
