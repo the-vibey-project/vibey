@@ -1494,7 +1494,7 @@ engine — `gptossloop is on unless switched off by VIBEY_FEATURE_GPTOSSLOOP=0, 
 by its key under [features] in vibey.toml` for the on-by-default one, `<engine>
 is switched on by <VARIABLE>=1, ...` for the others — then each engine's capabilities
 (`<engine> capabilities: yes ...; no ...; unknown ...`, in the `--json` key order, with
-`plugins` showing its system in brackets and an empty group left out), and any notes.
+`plugins` showing its system in parentheses and an empty group left out), and any notes.
 
 `--json` prints one object:
 

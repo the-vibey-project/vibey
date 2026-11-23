@@ -166,10 +166,18 @@ Each descriptor (`domain/engine.py::EngineDescriptor`) declares:
 - `supports_cwd_flag` (default `True`; codexloop: `False`) and `plan_flag`
   (default `None` = positional plan path; no current engine sets one)
 - `affordances` — `EngineAffordances`: `images`, `files`, `paste_text`,
-  `paste_images`, `plugins` (`PluginSystem`) and `mcp`, each `True`, `False` or
-  `None` (unknown, the default). `evidence` names, for every value that is set,
-  where the runner's own code shows it; a set value without evidence fails a
-  test. Never set one from memory or a vendor's marketing
+  `paste_images`, `plugins` (`PluginSystem`), `mcp`, `skills` and `web_search`,
+  each `True`, `False` or `None` (unknown, the default); `vibey loops --json`
+  reports every one. `evidence` names, for every value that is set, where the
+  runner's own code shows it; a set value without evidence fails a test. An
+  unknown value may carry evidence too, and then it must start `unknown: ` and
+  say why (a withdrawn claim keeps its reason); only an unknown value may. Every
+  `True` value and every `plugins` value also needs a `RunnerFact` in
+  `tests/meta/loop_runner_facts.py`: the file that implements it and a literal
+  string that file contains. `tests/meta/test_loop_capability_evidence.py` fails
+  a claim with no fact, a needle that left its file, and a fact no claim uses.
+  No code, no claim: leave it `None`. Never set one from memory or a vendor's
+  marketing
 - `controls` — `EngineControls`: `stop`, `wind_down` and `prompt` as argv
   templates after the binary (`{run_id}`, `{cwd}`, `{text}`), `None` where the
   runner has no such verb or does not act on it. Tests read every template against

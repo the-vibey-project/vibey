@@ -77,8 +77,25 @@ graph (`domain/slicing.py`), so validation, the queue and idempotency are unchan
   Servers that are not stdio are reported, not dropped. It does not load skills or plugins.
 - **codexloop MCP** is shown: its argv suppresses nothing of Codex's own configuration and its
   doctor checks the servers that configuration declares.
+  *(Withdrawn 2026-11-22: see the amendment at the foot.)*
 
 ## Not done, and why
 
 - **codexloop skills and web search** are unknown: the `codex` binary is not installed here to
   probe, and nothing in the runner's code shows either. They stay gaps, pinned.
+
+## Amendment, 2026-11-22: codexloop's MCP claim is withdrawn
+
+The bullet "**codexloop MCP** is shown" above was wrong, and SP-LOOPS Task 1 withdrew it. Nothing
+under `src/vibey_runners/codex/` mounts an MCP server. Its exec argv
+(`infrastructure/agent/argv.py`) carries only the model, approval, sandbox, network, effort,
+`--add-dir` and output options. Its doctor (`infrastructure/doctor_env.py`) never discovers servers
+from Codex's configuration: it only lists the OAuth servers a caller names, and its bootstrap names
+none. So codexloop's `mcp` is now `None` (unknown), with evidence that starts `unknown: ` and says
+why. codexloop's full-access gaps are `skills`, `plugins`, `mcp` and `web_search`. MCP joins skills
+and web search as gaps pinned until an operator-run check against a real Codex (SP-LOOPS Phase 8).
+
+Every claim that a descriptor's affordance is `True`, or names a plugin system, is now pinned to the
+code that implements it: one `RunnerFact` in `tests/meta/loop_runner_facts.py`, checked by
+`tests/meta/test_loop_capability_evidence.py`. A claim with no fact fails that test, so a claim like
+the withdrawn one can no longer pass on prose alone.
