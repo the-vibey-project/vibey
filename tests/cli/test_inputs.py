@@ -54,7 +54,9 @@ class _Ledger:
     def __init__(self) -> None:
         self.events: list[EngineEvent] = []
 
-    async def record(self, *, project_id: UUID, cycle: int, event: EngineEvent) -> None:
+    async def record(
+        self, *, project_id: UUID, cycle: int, event: EngineEvent, job_id: UUID | None = None
+    ) -> None:
         self.events.append(event)
 
 

@@ -2,8 +2,9 @@
 """Records a run input on the append-only ledger: its digest, kind and size, never its content
 (SP-LOOPS Phase 3; design Decision 6).
 
-An input is a person's act outside any job, so the event has no job, no engine and no causing
-run; it is a BUILD-phase event because BUILD runs are what inputs are given to. Translation goes
+An add is a person's act outside any job, so its event has no job; the event recording what a
+BUILD run was given carries that run's job id (fix round 2, N6). Neither has an engine or a
+causing run; both are BUILD-phase events because BUILD runs are what inputs are given to. Translation goes
 through `translate_event`, the same one every BUILD event goes through. Declared by
 `interfaces/run_input_ledger_interface.py::PostgresRunInputLedgerInterface`.
 """
@@ -33,14 +34,16 @@ class PostgresRunInputLedger:
         self._ledger = ledger
         self._correlation = correlation
 
-    async def record(self, *, project_id: UUID, cycle: int, event: EngineEvent) -> None:
+    async def record(
+        self, *, project_id: UUID, cycle: int, event: EngineEvent, job_id: UUID | None = None
+    ) -> None:
         draft = translate_event(
             event,
             project_id=project_id,
             cycle=cycle,
             phase=Phase.BUILD,
             engine_id=None,
-            job_id=None,
+            job_id=job_id,
             correlation_id=self._correlation.for_project(project_id).value,
             provenance=Provenance.TRUSTED,
         )

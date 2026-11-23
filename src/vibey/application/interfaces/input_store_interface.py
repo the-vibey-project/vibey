@@ -24,6 +24,12 @@ class InputStoreInterface(Protocol):
         or written; it checks no limit and no name (the service does)."""
         ...
 
+    def restore(self, project_id: UUID, data: bytes) -> str:
+        """Writes `data`'s object afresh (atomically, over whatever is there) and returns its
+        digest, appending no index row: the repair of an input that already has its row, so it
+        is not a new item (fix round 2, N5). Raises `InputStoreError` as `put` does."""
+        ...
+
     def get(self, project_id: UUID, digest: str, *, size: int) -> bytes:
         """The exact bytes stored under `digest`, which its index row says are `size` long.
         Raises `InputStoreError` for a digest that is not one, an object that is missing, not a

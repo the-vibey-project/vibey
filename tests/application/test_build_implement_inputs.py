@@ -64,8 +64,13 @@ class _Projects:
 
 
 class _Ledger:
-    async def record(self, *, project_id: UUID, cycle: int, event: EngineEvent) -> None:
-        return None
+    def __init__(self) -> None:
+        self.job_ids: list[UUID | None] = []
+
+    async def record(
+        self, *, project_id: UUID, cycle: int, event: EngineEvent, job_id: UUID | None = None
+    ) -> None:
+        self.job_ids.append(job_id)
 
 
 class _World:
@@ -87,12 +92,13 @@ class _World:
             created_at=AT,
             updated_at=AT,
         )
+        self.ledger = _Ledger()
         self.store = HashAddressedInputStore(tmp_path / "state" / "inputs", FixedClock())
         self.projects = _Projects(record)
         self.inputs = RunInputsService(
             store=self.store,
             projects=self.projects,
-            ledger=_Ledger(),
+            ledger=self.ledger,
             clock=FixedClock(),
             limits=RunInputsSettings,
             writer=NoFollowFiles(),
@@ -174,7 +180,9 @@ class _RefusingInputs:
     async def listed(self, project_id: UUID) -> InputListing:
         raise AssertionError("not called")
 
-    async def materialize(self, project_id: UUID, run_id: UUID, worktree_path: Path) -> RunInputs:
+    async def materialize(
+        self, project_id: UUID, run_id: UUID, worktree_path: Path, *, job_id: UUID | None = None
+    ) -> RunInputs:
         raise InputStoreError(f"{worktree_path}/.vibey: is a symlink or not a folder")
 
 
@@ -211,3 +219,10 @@ async def test_limits_that_cannot_be_read_fail_the_run_before_any_engine_session
     assert isinstance(outcome, Failure)
     assert "max_items must be positive" in outcome.detail
     assert getattr(engine, "specs", []) == []
+
+
+async def test_the_run_event_is_recorded_under_the_build_jobs_id(tmp_path: Path) -> None:
+    world = _World(tmp_path)
+    await world.add("paste", "paste", b"words")
+    await world.run(inputs=world.inputs)
+    assert world.ledger.job_ids == [None, world.job.id]

@@ -27,9 +27,12 @@ class RunInputsInterface(Protocol):
         as unreadable. Raises `UnknownProject` or `InputStoreError`."""
         ...
 
-    async def materialize(self, project_id: UUID, run_id: UUID, worktree_path: Path) -> RunInputs:
+    async def materialize(
+        self, project_id: UUID, run_id: UUID, worktree_path: Path, *, job_id: UUID | None = None
+    ) -> RunInputs:
         """Writes the project's inputs into `worktree_path / ".vibey/inputs/<run_id>/"` and
         returns the run's input value; with no inputs, writes nothing and returns an empty value.
-        Idempotent for one `run_id`. Raises `UnknownProject` or `InputStoreError` (an object
+        Idempotent for one `run_id`. One ledger event, under `job_id`, records the digests the
+        run was actually given. Raises `UnknownProject` or `InputStoreError` (an object
         whose bytes no longer match its digest is never copied)."""
         ...

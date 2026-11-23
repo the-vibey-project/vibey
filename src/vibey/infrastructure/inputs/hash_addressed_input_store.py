@@ -71,16 +71,30 @@ class HashAddressedInputStore:
     def put(self, project_id: UUID, kind: InputKind, name: str, data: bytes) -> RunInput:
         item = RunInput(digest=RUN_INPUT_RULE.digest_of(data), kind=kind, name=name, size=len(data))
         line = self._line(item)
+        folder, shard = self._folders(project_id, item.digest)
+        if not self._intact(shard / item.digest, item.digest):
+            self._files.write(shard, item.digest, data)
+        self._files.append(folder / INDEX, line, max_bytes=self._max_line)
+        return item
+
+    def restore(self, project_id: UUID, data: bytes) -> str:
+        digest = RUN_INPUT_RULE.digest_of(data)
+        _, shard = self._folders(project_id, digest)
+        self._files.write(shard, digest, data)
+        return digest
+
+    @property
+    def root(self) -> Path:
+        return self._root
+
+    def _folders(self, project_id: UUID, digest: str) -> tuple[Path, Path]:
+        """The project's folder and the object's shard, made (0700) and lstat-checked."""
         try:
             os.makedirs(self._root, FOLDER_MODE, exist_ok=True)
         except OSError as exc:
             raise InputStoreError(f"{self._root}: the input store cannot be made: {exc}") from exc
         folder = self._files.made(self._root, (str(project_id),))
-        shard = self._files.made(folder, (OBJECTS, item.digest[:2]))
-        if not self._intact(shard / item.digest, item.digest):
-            self._files.write(shard, item.digest, data)
-        self._files.append(folder / INDEX, line, max_bytes=self._max_line)
-        return item
+        return folder, self._files.made(folder, (OBJECTS, digest[:2]))
 
     def get(self, project_id: UUID, digest: str, *, size: int) -> bytes:
         if not RUN_INPUT_RULE.is_digest(digest):

@@ -279,3 +279,14 @@ def test_adding_the_bytes_again_repairs_a_changed_object(tmp_path: Path) -> None
     store.put(PID, "paste", "paste", b"original")
     assert store.get(PID, item.digest, size=item.size) == b"original"
     assert stat.S_IMODE(path.stat().st_mode) == 0o600
+
+
+def test_restore_rewrites_an_object_and_adds_no_row(tmp_path: Path) -> None:
+    store = _store(tmp_path)
+    item = store.put(PID, "paste", "paste", b"original")
+    path = _folder(tmp_path) / "objects" / item.digest[:2] / item.digest
+    path.write_bytes(b"changed")
+    assert store.restore(PID, b"original") == item.digest
+    assert store.get(PID, item.digest, size=item.size) == b"original"
+    assert len(_index_lines(tmp_path)) == 1
+    assert store.root == tmp_path / "state" / "inputs"

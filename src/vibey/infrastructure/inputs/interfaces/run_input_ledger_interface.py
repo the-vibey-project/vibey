@@ -16,6 +16,6 @@ from vibey.application.interfaces.run_input_ledger_interface import RunInputLedg
 @runtime_checkable
 class PostgresRunInputLedgerInterface(RunInputLedgerInterface, Protocol):
     """`RunInputLedgerInterface` over the one append-only event log: each event is appended as
-    phase BUILD, with no job, no engine and no causing run, provenance `trusted` (vibey wrote
+    phase BUILD, with the given job id (none for an add), no engine and no causing run, provenance `trusted` (vibey wrote
     it), under the project's delivery correlation id. An event kind the ledger does not know is
     a `ValueError`, never a silently dropped record."""

@@ -66,3 +66,11 @@ def test_the_adapter_meets_both_interfaces() -> None:
     adapter = _adapter(_Ledger())
     assert isinstance(adapter, RunInputLedgerInterface)
     assert isinstance(adapter, PostgresRunInputLedgerInterface)
+
+
+def test_a_run_event_carries_the_job_id_it_is_given() -> None:
+    fake = _Ledger()
+    job_id = uuid4()
+    event = EngineEvent(kind=EventKind.ARTIFACT_PRODUCED.value, at=AT, payload={})
+    asyncio.run(_adapter(fake).record(project_id=uuid4(), cycle=1, event=event, job_id=job_id))
+    assert fake.drafts[0].job_id == job_id

@@ -405,7 +405,9 @@ class BuildImplementHandler:
         run_id = uuid4()
         if self._inputs is not None:
             try:
-                given = await self._inputs.materialize(job.project_id, run_id, worktree_path)
+                given = await self._inputs.materialize(
+                    job.project_id, run_id, worktree_path, job_id=job.id
+                )
             except (InputStoreError, UnknownProject, ConfigError) as refused:
                 return Failure(
                     FailureClass.VIBEY, f"the run inputs could not be given to the run: {refused}"

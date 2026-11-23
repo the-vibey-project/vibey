@@ -56,8 +56,12 @@ class _Ledger:
     def __init__(self) -> None:
         self.events: list[dict[str, Any]] = []
 
-    async def record(self, *, project_id: UUID, cycle: int, event: EngineEvent) -> None:
-        self.events.append({"project_id": project_id, "cycle": cycle, "event": event})
+    async def record(
+        self, *, project_id: UUID, cycle: int, event: EngineEvent, job_id: UUID | None = None
+    ) -> None:
+        self.events.append(
+            {"project_id": project_id, "cycle": cycle, "event": event, "job_id": job_id}
+        )
 
 
 class _World:
@@ -279,6 +283,9 @@ class _NamingStore:
 
     def get(self, project_id: UUID, digest: str, *, size: int) -> bytes:
         return self._inner.get(project_id, digest, size=size)
+
+    def restore(self, project_id: UUID, data: bytes) -> str:
+        return self._inner.restore(project_id, data)
 
     def listed(self, project_id: UUID) -> InputListing:
         items = self._inner.listed(project_id).items
@@ -685,7 +692,9 @@ def test_a_control_character_in_a_name_stays_escaped_in_the_prompt(tmp_path: Pat
 
 
 class _FailingLedger:
-    async def record(self, *, project_id: UUID, cycle: int, event: EngineEvent) -> None:
+    async def record(
+        self, *, project_id: UUID, cycle: int, event: EngineEvent, job_id: UUID | None = None
+    ) -> None:
         raise RuntimeError("the ledger is down")
 
 
@@ -730,3 +739,98 @@ def test_a_ledger_failure_on_a_run_is_raised_before_any_engine_could_start(
     )
     with pytest.raises(RuntimeError, match="ledger is down"):
         world.materialize()
+
+
+# -- fix round 2: N1, N5, N6 ----------------------------------------------------------------------
+
+
+def test_the_run_event_lists_only_the_file_that_survived_a_same_named_replacement(
+    tmp_path: Path,
+) -> None:
+    # Re-review N1: the earlier spec.md is not in the run, so it is not in the event either.
+    world = _World(tmp_path)
+    world.add("file", "spec.md", b"version one")
+    second = world.add("file", "spec.md", b"version two")
+    paste = world.add("paste", "paste", b"words")
+    world.materialize()
+    digests = world.ledger.events[-1]["event"].payload["digests"]
+    assert digests == [paste.digest, second.digest]
+
+
+def _corrupt(world: _World, item: RunInput) -> None:
+    (world.folder / "objects" / item.digest[:2] / item.digest).write_bytes(b"changed on disk!")
+
+
+def test_a_repair_at_max_items_is_not_a_new_item(tmp_path: Path) -> None:
+    # Re-review N5: E0094's "add it again" works even at the limit, and adds no row.
+    world = _World(tmp_path, RunInputsSettings(max_items=2))
+    first = world.add("paste", "paste", b"first")
+    world.add("file", "spec.md", b"spec")
+    _corrupt(world, first)
+    repaired = world.add("paste", "paste", b"first")
+    assert repaired == first
+    assert world.rows() == 2
+    assert world.store.get(world.project_id, first.digest, size=first.size) == b"first"
+    event: EngineEvent = world.ledger.events[-1]["event"]
+    assert event.payload == {
+        "artifact_type": "vibey_run_input_repaired",
+        "digest": first.digest,
+        "kind": "paste",
+        "size": 5,
+    }
+
+
+def test_a_repaired_paste_is_given_once(tmp_path: Path) -> None:
+    world = _World(tmp_path)
+    item = world.add("paste", "paste", b"only once")
+    _corrupt(world, item)
+    world.add("paste", "paste", b"only once")
+    inputs = world.materialize()
+    assert inputs.prompt_section.count("only once") == 1
+    assert inputs.paste_file is not None
+    assert inputs.paste_file.read_text() == "### Paste 1\n\nonly once\n"
+
+
+def test_a_lost_object_is_repaired_the_same_way(tmp_path: Path) -> None:
+    world = _World(tmp_path)
+    item = world.add("file", "spec.md", b"bytes")
+    (world.folder / "objects" / item.digest[:2] / item.digest).unlink()
+    world.add("file", "spec.md", b"bytes")
+    assert world.rows() == 1
+    assert world.store.get(world.project_id, item.digest, size=item.size) == b"bytes"
+
+
+def test_the_same_intact_bytes_again_are_still_a_second_row(tmp_path: Path) -> None:
+    # Only a repair skips the row: an intact re-add is a new add (plan review focus 3).
+    world = _World(tmp_path)
+    world.add("paste", "paste", b"twice")
+    world.add("paste", "paste", b"twice")
+    assert world.rows() == 2
+
+
+def test_a_repair_is_recorded_before_the_object_is_written(tmp_path: Path) -> None:
+    world = _World(tmp_path)
+    item = world.add("paste", "paste", b"words")
+    _corrupt(world, item)
+    world.service = RunInputsService(
+        store=world.store,
+        projects=world.projects,
+        ledger=_FailingLedger(),
+        clock=_Clock(),
+        limits=RunInputsSettings,
+        writer=NoFollowFiles(),
+    )
+    with pytest.raises(RuntimeError, match="ledger is down"):
+        world.add("paste", "paste", b"words")
+    path = world.folder / "objects" / item.digest[:2] / item.digest
+    assert path.read_bytes() == b"changed on disk!"
+
+
+def test_the_run_event_carries_the_build_jobs_id(tmp_path: Path) -> None:
+    # Re-review N6.
+    world = _World(tmp_path)
+    world.add("paste", "paste", b"words")
+    job_id = uuid4()
+    asyncio.run(world.service.materialize(world.project_id, uuid4(), world.worktree, job_id=job_id))
+    assert world.ledger.events[-1]["job_id"] == job_id
+    assert world.ledger.events[0]["job_id"] is None  # the add: a person's act, no job

@@ -9,6 +9,7 @@ never consume.
 
 from __future__ import annotations
 
+from pathlib import Path
 from typing import Protocol, runtime_checkable
 
 from vibey.application.interfaces.input_store_interface import InputStoreInterface
@@ -21,3 +22,8 @@ class HashAddressedInputStoreInterface(InputStoreInterface, Protocol):
     <digest>` holds each input's bytes once (0600) and `index.jsonl` (0600) one JSON line per
     add. Every folder, read and write goes through `NoFollowFilesInterface`: a symlink is
     refused, never followed. No lock and no thread: the append is the commit."""
+
+    @property
+    def root(self) -> Path:
+        """The store's root: `bootstrap.run_inputs_root()` for the CLI and the worker alike."""
+        ...
