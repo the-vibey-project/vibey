@@ -21,14 +21,25 @@ class MarketplaceRendererInterface(Protocol):
         """The manifest as data: name, owner, metadata, and every member's plugins."""
         ...
 
+    def build_packaged(self, cfg: GhConfig) -> dict[str, Any]:
+        """`build` with every `./` source flattened to `./plugins/<its last segment>`.
+
+        The shape a package that ships every plugin tree side by side needs. Two plugins
+        whose folders share a last segment raise `MarketplaceError`.
+        """
+        ...
+
     def render(self, cfg: GhConfig) -> str:
         """The exact text `write` puts on disk — deterministic for the same members."""
         ...
 
     def write(self, cfg: GhConfig) -> Path:
-        """Write the manifest to its fixed path under the root and return that path."""
+        """Write the manifest to its fixed path under the root and return that path.
+
+        With `[marketplace] packaged` set, the packaged rendering is written as well.
+        """
         ...
 
     def check(self, cfg: GhConfig) -> tuple[bool, str]:
-        """Whether the file on disk is what the members render to, and why not."""
+        """Whether the file(s) on disk are what the members render to, and why not."""
         ...

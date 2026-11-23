@@ -250,11 +250,106 @@ def test_check_reports_a_member_defect_as_a_failed_check(workspace: GhConfig):
     assert not ok and message == f"{MEMBERS[1]}/{MANIFEST_PATH} is missing"
 
 
+# --- the packaged rendering -----------------------------------------------------------
+
+PACKAGED = "src/packaged/marketplace.json"
+
+
+def test_packaged_rendering_flattens_every_source_to_plugins(tmp_path: Path):
+    cfg = _workspace(tmp_path, packaged=PACKAGED)
+    renderer = MarketplaceRenderer()
+    root = renderer.build(cfg)
+    packaged = renderer.build_packaged(cfg)
+    assert [p["name"] for p in packaged["plugins"]] == [p["name"] for p in root["plugins"]]
+    for flat, rooted in zip(packaged["plugins"], root["plugins"], strict=True):
+        assert flat["source"] == f"./plugins/{Path(rooted['source']).name}"
+        assert {k: v for k, v in flat.items() if k != "source"} == {
+            k: v for k, v in rooted.items() if k != "source"
+        }
+    assert {k: v for k, v in packaged.items() if k != "plugins"} == {
+        k: v for k, v in root.items() if k != "plugins"
+    }
+
+
+def test_packaged_rendering_passes_a_remote_source_through(tmp_path: Path):
+    remote = {"name": "far", "source": {"source": "github", "repo": "o/r"}}
+    _member(tmp_path, "m", "m", [remote, _plugin("near")])
+    cfg = GhConfig(
+        root=tmp_path,
+        marketplace=MarketplaceConfig(name="x", members=("m",), packaged=PACKAGED),
+    )
+    plugins = MarketplaceRenderer().build_packaged(cfg)["plugins"]
+    assert plugins == [remote, {**_plugin("near"), "source": "./plugins/near"}]
+
+
+def test_packaged_write_and_check_cover_both_outputs(tmp_path: Path):
+    cfg = _workspace(tmp_path, packaged=PACKAGED)
+    renderer = MarketplaceRenderer()
+    renderer.write(cfg)
+    written = json.loads((tmp_path / PACKAGED).read_text(encoding="utf-8"))
+    assert written == renderer.build_packaged(cfg)
+    ok, message = renderer.check(cfg)
+    assert ok and f"; {PACKAGED} is its packaged rendering" in message
+
+
+def test_packaged_check_reports_a_missing_packaged_manifest(tmp_path: Path):
+    cfg = _workspace(tmp_path, packaged=PACKAGED)
+    renderer = MarketplaceRenderer()
+    renderer.write(cfg)
+    (tmp_path / PACKAGED).unlink()
+    ok, message = renderer.check(cfg)
+    assert not ok and message == f"{PACKAGED} is missing — run `vibey-gh marketplace`"
+
+
+def test_packaged_check_reports_drift_when_a_member_gains_a_plugin(tmp_path: Path):
+    cfg = _workspace(tmp_path, packaged=PACKAGED)
+    renderer = MarketplaceRenderer()
+    renderer.write(cfg)
+    packaged_before = (tmp_path / PACKAGED).read_text(encoding="utf-8")
+    _member(tmp_path, MEMBERS[1], "gh", [_plugin("gh-dev"), _plugin("gh-new")], version=9)
+    # The root alone re-rendered: the packaged copy is what drifted.
+    (tmp_path / MANIFEST_PATH).write_text(renderer.render(cfg), encoding="utf-8")
+    assert (tmp_path / PACKAGED).read_text(encoding="utf-8") == packaged_before
+    ok, message = renderer.check(cfg)
+    assert not ok and message == (
+        f"{PACKAGED} is out of date with its members — run `vibey-gh marketplace`"
+    )
+
+
+def test_packaged_is_not_rendered_when_unset(workspace: GhConfig):
+    renderer = MarketplaceRenderer()
+    renderer.write(workspace)
+    assert sorted(
+        p.relative_to(workspace.root).as_posix() for p in workspace.root.rglob("marketplace.json")
+    ) == sorted([MANIFEST_PATH, *(f"{m}/{MANIFEST_PATH}" for m in MEMBERS)])
+    ok, message = renderer.check(workspace)
+    assert ok and "packaged" not in message
+
+
+def test_two_plugin_folders_with_one_name_are_refused_for_packaging(tmp_path: Path):
+    _member(tmp_path, "a", "a", [_plugin("one", "./plugins/same")])
+    _member(tmp_path, "b", "b", [_plugin("two", "./plugins/same")])
+    cfg = GhConfig(
+        root=tmp_path,
+        marketplace=MarketplaceConfig(name="x", members=("a", "b"), packaged=PACKAGED),
+    )
+    renderer = MarketplaceRenderer()
+    with pytest.raises(MarketplaceError, match="'one' and 'two' both live in a folder"):
+        renderer.build_packaged(cfg)
+    with pytest.raises(MarketplaceError, match="both live in a folder"):
+        renderer.write(cfg)
+    assert not (tmp_path / MANIFEST_PATH).exists() and not (tmp_path / PACKAGED).exists()
+    ok, message = renderer.check(cfg)
+    assert not ok and "both live in a folder named 'same'" in message
+
+
 # --- configuration -------------------------------------------------------------------
 
 
 def test_the_default_declares_no_marketplace():
-    assert MarketplaceConfig() == MarketplaceConfig(name="", members=(), description="")
+    assert MarketplaceConfig() == MarketplaceConfig(
+        name="", members=(), description="", packaged=""
+    )
 
 
 @pytest.mark.parametrize(
@@ -270,6 +365,12 @@ def test_the_default_declares_no_marketplace():
         ({"name": "x", "members": ("a b",)}, "repository-relative"),
         ({"name": "x", "members": ("a", "a")}, "must be unique"),
         ({"name": "x", "members": ("",)}, "must be non-empty"),
+        ({"packaged": "p.json"}, "packaged is set but marketplace.members is empty"),
+        ({"name": "x", "members": ("a",), "packaged": "/abs.json"}, "repository-relative"),
+        ({"name": "x", "members": ("a",), "packaged": "~/p.json"}, "repository-relative"),
+        ({"name": "x", "members": ("a",), "packaged": "a/../p.json"}, "repository-relative"),
+        ({"name": "x", "members": ("a",), "packaged": "p.txt"}, "repository-relative"),
+        ({"name": "x", "members": ("a",), "packaged": "a b.json"}, "repository-relative"),
     ],
 )
 def test_the_configuration_refuses_what_claude_code_would_choke_on(kwargs: dict, message: str):
@@ -314,6 +415,12 @@ def test_doctor_knows_the_section_and_names_a_misspelt_key(repo: Path):
 
 def test_load_config_reads_the_marketplace_section(repo: Path):
     assert load_config().marketplace == MarketplaceConfig(name="vibey", members=MEMBERS)
+
+
+def test_load_config_reads_the_packaged_key(repo: Path):
+    config = repo / ".vibey-gh.toml"
+    config.write_text(config.read_text() + f'packaged = "{PACKAGED}"\n')
+    assert load_config().marketplace.packaged == PACKAGED
 
 
 def test_load_config_defaults_to_no_marketplace(repo: Path):

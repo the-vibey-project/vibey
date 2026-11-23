@@ -23,6 +23,7 @@ from vibey_runners.common.capabilities.interfaces.resolver_interface import (
 from vibey_runners.common.capabilities.interfaces.sidecar_lock_interface import (
     SidecarLockInterface,
 )
+from vibey_runners.common.capabilities.manifest import MANIFEST_PATH as LOOPS_MANIFEST
 from vibey_runners.common.capabilities.resolver import CapabilityResolver
 from vibey_runners.common.capabilities.sidecar_lock import SidecarLock
 from vibey_skills import marketplace_root
@@ -1636,15 +1637,33 @@ def loops_shipped_source() -> str:
     return f"{ENGINE_DISTRIBUTION} {version}"
 
 
+def loops_shipped_root() -> Path:
+    """The folder the shipped marketplace is read and locked from.
+
+    Installed, it is the wheel's `vibey_skills/marketplace/`, whose manifest is the packaged
+    rendering of the repository's root manifest (every plugin, SP-LOOPS Phase 3c). From a
+    source checkout `vibey_skills.marketplace_root()` falls back to the skills tenant, whose
+    own manifest lists only that tenant's plugins; the repository root's manifest lists every
+    member's, so a checkout locks that one instead. The resolver's shipped lock covers only the
+    manifest and the folders it lists (`CapabilityResolver._shipped_scope`), so the rest of the
+    checkout is not read."""
+    root = marketplace_root()
+    repository = Path(__file__).resolve().parents[2]
+    tenant = repository / "src" / "vibey_tools" / "skills"
+    if root.resolve() == tenant.resolve() and (repository / LOOPS_MANIFEST).is_file():
+        return repository
+    return root
+
+
 def loops_marketplace_store(user_config: Path) -> MarketplaceStoreInterface:
     """The person's marketplace store, `<their configuration folder>/loops`: the lock, the
     fetched marketplaces and the run snapshots. `user_config` is `acp_user_config()`, never a
     project's file. git sources go through `GitMarketplaceFetcher`, absolute folders through
-    `LocalMarketplaceCopier`; the shipped marketplace is the wheel's (`vibey_skills`)."""
+    `LocalMarketplaceCopier`; the shipped marketplace is `loops_shipped_root()`."""
     return MarketplaceStore(
         user_config.parent / LOOPS_STORE,
         fetchers={"git": GitMarketplaceFetcher(), "local": LocalMarketplaceCopier()},
-        shipped_root=marketplace_root,
+        shipped_root=loops_shipped_root,
     )
 
 

@@ -1616,6 +1616,7 @@ marketplace under its own name. Empty `members` renders nothing and checks nothi
 | `name` | string / empty | The root marketplace's own name — what users type after `@` in `/plugin install <plugin>@<name>`. Kebab-case, required when `members` is set. Claude Code registers one marketplace per name per user, so this must differ from every member's own name (this repository's root is `vibey`; the packaged vibey-skills stays `vibey-skills`). |
 | `members` | string list / empty | Repository-relative directories each holding a `.claude-plugin/marketplace.json`, in the order their plugins appear in the root. No absolute paths, no `..`, no whitespace or shell metacharacters. |
 | `description` | string / empty | The root manifest's human description. Empty derives one from the plugin count and the members. |
+| `packaged` | string / empty | A repository-relative `.json` path for a second rendering: the root manifest with every `./` source flattened to `./plugins/<the source folder's last segment>`, for a package that ships every member's plugin trees side by side under one `plugins/` folder. `vibey-gh marketplace` writes it beside the root manifest and `check` reports drift in either. Two plugins whose folders share a last segment are refused. Empty renders and checks nothing. |
 
 Rendering is strict, and every failure names the member: a manifest that is missing,
 unreadable, has no `name`, no `owner.name` or no `plugins`; a plugin entry with no `name` or
@@ -1628,6 +1629,7 @@ passes through untouched.
 [marketplace]
 name = "vibey"
 members = ["src/vibey_tools/skills", "src/vibey_tools/gh"]
+packaged = "src/vibey_tools/skills/packaged/marketplace.json"
 ```
 
 ## Advanced debug environment

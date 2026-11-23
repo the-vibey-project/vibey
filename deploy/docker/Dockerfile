@@ -143,7 +143,8 @@ COPY src/vibey_tools/gh/vibey_gh/ ./src/vibey_tools/gh/vibey_gh/
 COPY src/vibey_tools/bootstrap/vibey_bootstrap/ ./src/vibey_tools/bootstrap/vibey_bootstrap/
 COPY src/vibey_tools/skills/src/vibey_skills/ ./src/vibey_tools/skills/src/vibey_skills/
 COPY src/vibey_tools/skills/plugins/ ./src/vibey_tools/skills/plugins/
-COPY src/vibey_tools/skills/.claude-plugin/marketplace.json ./src/vibey_tools/skills/.claude-plugin/
+COPY src/vibey_tools/gh/plugins/ ./src/vibey_tools/gh/plugins/
+COPY src/vibey_tools/skills/packaged/marketplace.json ./src/vibey_tools/skills/packaged/
 COPY src/vibey_tools/gh/docs/stylesheets/vibey.css ./src/vibey_tools/gh/docs/stylesheets/
 COPY src/vibey_tools/gh/docs/javascripts/channel.js ./src/vibey_tools/gh/docs/javascripts/
 COPY src/vibey_tools/gh/docs/javascripts/math.js ./src/vibey_tools/gh/docs/javascripts/

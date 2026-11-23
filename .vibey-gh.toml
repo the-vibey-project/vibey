@@ -60,6 +60,8 @@ content_paths = [
   "src/vibey_tools/skills/src/",
   "src/vibey_tools/skills/plugins/",
   "src/vibey_tools/skills/.claude-plugin/marketplace.json",
+  "src/vibey_tools/skills/packaged/",
+  "src/vibey_tools/gh/plugins/",
 ]
 # clients/: since #1317 every release attaches the client apps' binaries (desktop, mobile, web,
 # VS Code), so a client change is releasable content. Without it a client-only change derived
@@ -337,6 +339,8 @@ require_for = [
   "src/vibey_tools/skills/src/*",
   "src/vibey_tools/skills/plugins/*",
   "src/vibey_tools/skills/.claude-plugin/marketplace.json",
+  "src/vibey_tools/skills/packaged/*",
+  "src/vibey_tools/gh/plugins/*",
   "pyproject.toml",
 ]
 
@@ -653,6 +657,12 @@ tag_prefix = "vibey-v"
 # still ships its manifest as `vibey-skills`.
 name = "vibey"
 members = ["src/vibey_tools/skills", "src/vibey_tools/gh"]
+# The wheel's default marketplace: the same manifest with every source flattened to
+# `./plugins/<name>`, because the wheel ships both members' plugin trees side by side under
+# `vibey_skills/marketplace/plugins/`. Rendered, never hand-kept, so every install carries
+# exactly the root's plugins (SP-LOOPS Phase 3c, operator ruling OR-4). It lives under `/src`
+# because the sdist includes only `/src`, and `uv build` builds the wheel from the sdist.
+packaged = "src/vibey_tools/skills/packaged/marketplace.json"
 
 [documentation]
 # Governance in plain sight (sub-doctrine 7.b): the canon is published on every channel site,

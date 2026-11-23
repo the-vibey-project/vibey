@@ -5,6 +5,12 @@ This file follows Keep a Changelog and semantic versioning conventions.
 
 ## Unreleased
 
+- **Feature:** `[marketplace] packaged` renders a second copy of the root marketplace for a
+  package that ships every member's plugin trees side by side under one `plugins/` folder:
+  every `./` source becomes `./plugins/<the source folder's last segment>`, two plugins whose
+  folders share that name are refused, `vibey-gh marketplace` writes both files and `check`
+  reports drift in either. vibey's wheel uses it, so every install carries exactly the root's
+  plugins rather than one member's. Unset, nothing changes.
 - **Fix:** the merge train no longer closes a pull request it did not merge. With auto-merge
   allowed and the approving review still missing, `gh pr merge` exits 0 having only enabled
   auto-merge; `merge_train.merge` read that exit code as a merge, the train deleted the head
