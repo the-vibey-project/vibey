@@ -981,7 +981,8 @@ configuration folder, `~/Library/Application Support/vibey/vibey.toml` on macOS 
 - Every timeout and cap (`prompt_probe_seconds`, `bootstrap_timeout_seconds`,
   `permission_timeout_seconds`, `cancel_grace_seconds`, `max_gate_prompts_per_turn`,
   `live_message_chars`, `max_message_bytes`, `pending_events_max`, `sessions_max`,
-  `session_events_max`, `replay_events_max`): the project may lower it, never raise it.
+  `session_events_max`, `replay_events_max`, `gate_options_max`, `gate_label_chars_max`): the
+  project may lower it, never raise it.
 - `restart`, `service_workdir`, `reject_words`, `notice_interval_seconds`,
   `install_timeout_seconds`: yours alone; the project's are ignored (a project must not cut
   short an install you allowed).
@@ -1022,6 +1023,8 @@ a key: they are never answerable over ACP, whatever is set here.
 | `install_timeout_seconds` | integer, at least 1 | `1800` | The longest one PostgreSQL install command (`brew install`, `apt-get install`, ...) may run once the client allowed the install. It runs in a process group of its own; past the bound the whole group is sent SIGTERM, then SIGKILL after a grace. A command that cannot be stopped that way (a `sudo` run as root) is not waited for and is reported as possibly still running. |
 | `permission_timeout_seconds` | integer, at least 1 | `600` | How long a permission request waits for the client. Silence leaves the gate open; it is never consent. |
 | `max_gate_prompts_per_turn` | integer, at least 0 | `3` | How many open gates one turn may put to the client, oldest first: each answerable one as a permission request, every other one (spend, deployment opt-in, value, unknown kind, or a gate whose labels could be misread) as a message saying where to answer it. `0` puts none. A gate is put to a session once. |
+| `gate_options_max` | integer, 1 to 1000 | `20` | The most options a choice or verdict gate may list and still be offered in the editor. A gate with more is not offered: like a gate whose labels could be misread, it is a message naming its id and saying to answer it on the host (`vibey gates`), since a client shows every option and a wall of them could hide the one you mean. |
+| `gate_label_chars_max` | integer, 1 to 10000 | `200` | The longest an option's label may be, after trimming, and its gate still be offered in the editor; a gate with a longer label is refused the same way. |
 | `reject_words` | list of strings | `["reject", "decline", "deny", "no", "cancel"]` | A gate option whose whole label, normalised (NFKC) and case-folded, is one of these words is offered as a refusal (`reject_once`), every other as `allow_once`. Picking it still answers the gate with that option. Lower-cased when read; an empty word is refused. |
 | `live_poll_seconds` | number, at least 0.2 | `1.0` | How often the live ledger feed polls the hub after a short page, and how long it waits before the first retry of a read that failed; each further failure in a row doubles the wait, up to `probe_seconds`. A full page that advanced is read again at once. Also how often the services step polls the hub it loaded until it answers. |
 | `live_message_chars` | integer, at least 40 | `400` | The longest ledger event summary sent as one message (`[<phase>] <kind>: <summary>`); a longer one is cut to this length, ending in `...`. |

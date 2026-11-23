@@ -1700,7 +1700,7 @@ def build_acp_agent(
     )
     modes = AcpModes(settings)
     mapper = AcpUpdateMapper()
-    gate_mapper = GatePermissionMapper(settings.reject_words)
+    gate_mapper = GatePermissionMapper.from_settings(settings)
     journal = AcpSessionJournal(hub, settings, channel, mapper)
     kept = AcpJournalingChannel(channel, journal, SESSION_REPLAY)
     gates = AcpGatePrompter(kept, hub, settings, modes, mapper, gate_mapper, HOST_TOOL_CATALOG)

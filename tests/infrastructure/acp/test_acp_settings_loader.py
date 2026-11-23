@@ -288,3 +288,14 @@ def test_a_malformed_project_file_is_still_refused_by_name(tmp_path: Path) -> No
     project.write_text("[acp]\nauto_servics = false\n")
     with pytest.raises(ConfigError, match="auto_servics"):
         AcpSettingsLoader().load_trusted(tmp_path / "user.toml", project)
+
+
+def test_the_gate_caps_are_read_and_bounded_by_name() -> None:
+    loaded = AcpSettingsLoader().from_mapping({"gate_options_max": 5, "gate_label_chars_max": 80})
+    assert (loaded.gate_options_max, loaded.gate_label_chars_max) == (5, 80)
+    defaults = AcpSettingsLoader().from_mapping({})
+    assert (defaults.gate_options_max, defaults.gate_label_chars_max) == (20, 200)
+    with pytest.raises(ConfigError, match="gate_options_max must be at most 1000"):
+        AcpSettingsLoader().from_mapping({"gate_options_max": 1001})
+    with pytest.raises(ConfigError, match="gate_label_chars_max"):
+        AcpSettingsLoader().from_mapping({"gate_label_chars_max": 0})

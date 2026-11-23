@@ -110,7 +110,7 @@ class AcpLiveFeed:
         self._channel = channel
         self._mapper = mapper
         self._settings = settings
-        self._gates = gates if gates is not None else GatePermissionMapper(settings.reject_words)
+        self._gates = gates if gates is not None else GatePermissionMapper.from_settings(settings)
         self._sleep = sleep
         self._follows: dict[str, _Follow] = {}
         self._tasks: set[asyncio.Task[None]] = set()

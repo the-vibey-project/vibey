@@ -377,7 +377,10 @@ a turn, each once per session, and only in a mode that may answer gates (`drive`
   characters, or other spaces), it holds right-to-left text or a bidirectional control (it could
   display in another order than it is sent), it mixes scripts inside a word (a Cyrillic "о" in a Latin word),
   or it reads the same as another label once normalised ("no" and a full-width "ＮＯ", "Stop"
-  and "stop"). A label counts as a refusal by [`reject_words`](configuration.md#acp) however it
+  and "stop"). It is likewise answered on the host when it lists more options than
+  [`[acp] gate_options_max`](configuration.md#acp) (20) or any label is longer than
+  `gate_label_chars_max` (200): a client shows every option, and a wall of them could hide the
+  one you mean. A label counts as a refusal by [`reject_words`](configuration.md#acp) however it
   is spelled.
 - "Leave it open", a cancelled or failed request, no answer within
   [`[acp] permission_timeout_seconds`](configuration.md#acp), or an option the gate never

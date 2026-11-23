@@ -468,3 +468,47 @@ def test_a_kind_that_is_not_shaped_like_a_gate_kind_is_never_echoed(kind: object
 def _shown(kind: str) -> str:
     """A gate kind as a refusal shows it: untrusted text, so its `_` is escaped."""
     return kind.replace("_", "\\_")
+
+
+# -- Task 11a: caps on a gate's options --------------------------------------------------------
+
+
+def _choices(options: list[object]) -> dict[str, object]:
+    return {"gate_id": G, "kind": "choice", "options": options}
+
+
+def test_a_gate_with_more_options_than_the_cap_is_refused_like_an_ambiguous_one() -> None:
+    capped = GatePermissionMapper(("no",), options_max=3, label_chars_max=200)
+    assert len(capped.options_for(_choices(["a", "b", "c"]))) == 4  # three and leave-open
+    over = _choices(["a", "b", "c", "d"])
+    assert capped.options_for(over) == ()
+    said = capped.refusal_text(over)
+    assert "gate_options_max = 3" in said and G in said
+
+
+def test_a_label_longer_than_the_cap_refuses_the_whole_gate() -> None:
+    capped = GatePermissionMapper(("no",), options_max=20, label_chars_max=10)
+    assert capped.options_for(_choices(["short", "  ten chars"])) != ()  # ten once trimmed
+    over = _choices(["short", "x" * 11])
+    assert capped.options_for(over) == ()
+    assert "gate_label_chars_max = 10" in capped.refusal_text(over)
+
+
+def test_the_caps_measure_only_choice_and_verdict_gates() -> None:
+    capped = GatePermissionMapper(("no",), options_max=1, label_chars_max=1)
+    question = {"gate_id": G, "kind": "question", "options": ["a", "b", "c"]}
+    assert capped.options_for(question) != ()
+    assert capped.options_for({"gate_id": G, "kind": "choice", "options": "a,b"}) == ()
+
+
+def test_the_defaults_and_the_settings_caps_reach_the_mapper() -> None:
+    settings = AcpSettings(gate_options_max=2, gate_label_chars_max=5)
+    mapper = GatePermissionMapper.from_settings(settings)
+    assert mapper.options_for(_choices(["a", "b", "c"])) == ()
+    assert mapper.options_for(_choices(["abcdef"])) == ()
+    assert mapper.options_for(_choices(["a", "b"])) != ()
+    default = GatePermissionMapper(("no",))
+    assert default.options_for(_choices([f"o{n}" for n in range(20)])) != ()
+    assert default.options_for(_choices([f"o{n}" for n in range(21)])) == ()
+    assert default.options_for(_choices(["y" * 200])) != ()
+    assert default.options_for(_choices(["y" * 201])) == ()
