@@ -131,3 +131,23 @@ def test_a_run_folder_that_cannot_be_listed_is_left_and_named(tmp_path: Path) ->
     ((path, reason),) = report.refused
     assert path == run and reason.startswith("cannot be listed:")
     assert run.is_dir()
+
+
+def test_a_run_folder_that_vanishes_before_it_is_looked_at_is_skipped(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    import vibey.infrastructure.loops.snapshot_pruner as module
+
+    snapshots = tmp_path / "snapshots"
+    gone = _run(snapshots, "run-gone", 30)
+    kept = _run(snapshots, "run-old", 30)
+    real_lstat = os.lstat
+
+    def lstat(path: object, **options: object) -> os.stat_result:
+        if not options and Path(str(path)) == gone:
+            raise FileNotFoundError(2, "No such file or directory", str(path))
+        return real_lstat(path, **options)  # type: ignore[arg-type]
+
+    monkeypatch.setattr(module.os, "lstat", lstat)
+    report = SnapshotPruner(clock=lambda: NOW).prune(snapshots, older_than_seconds=DAY)
+    assert report == PruneReport((kept,), ())

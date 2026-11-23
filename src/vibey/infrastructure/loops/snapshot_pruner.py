@@ -65,7 +65,10 @@ class SnapshotPruner:
             if not name.startswith(RUN_PREFIX):
                 continue
             path = snapshots / name
-            status = os.lstat(path)
+            try:
+                status = os.lstat(path)
+            except FileNotFoundError:
+                continue  # removed meanwhile (another prune, a run's own cleanup)
             if stat.S_ISLNK(status.st_mode):
                 refused.append((path, LINK))
             elif not stat.S_ISDIR(status.st_mode):

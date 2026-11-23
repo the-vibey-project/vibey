@@ -19,6 +19,7 @@ class BoundedProcessRunnerInterface(Protocol):
         """Runs `argv` (never through a shell) with exactly `env`, in `cwd`, with no stdin, in
         a process group of its own. Returns at most the first `output_bytes` of its stdout and
         the last `output_bytes` of its stderr. Past `timeout` seconds the whole group is killed
-        and `subprocess.TimeoutExpired` raised; `FileNotFoundError` when `argv[0]` is not
+        and `subprocess.TimeoutExpired` raised; any other exception while it waits (a Ctrl-C)
+        kills the whole group too and is raised again; `FileNotFoundError` when `argv[0]` is not
         there."""
         ...

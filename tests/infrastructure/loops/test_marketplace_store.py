@@ -372,27 +372,60 @@ def test_a_failure_of_the_stores_own_folders_is_a_fetch_error(tmp_path: Path) ->
         _store(tmp_path, FakeFetcher(error=error)).update(ACME)
 
 
-def test_an_update_sweeps_staging_folders_a_killed_update_left(tmp_path: Path) -> None:
+def _aged(path: Path, stamp: float) -> None:
     import os
 
+    os.utime(path, (stamp, stamp), follow_symlinks=False)
+
+
+def test_an_update_sweeps_staging_folders_a_killed_update_left(tmp_path: Path) -> None:
     store = _store(tmp_path, FakeFetcher(), clock=lambda: 10_000.0, stale_seconds=600.0)
     store.marketplaces.mkdir(parents=True)
-    old, fresh = store.marketplaces / ".staging-old", store.marketplaces / ".staging-fresh"
-    for folder, stamp in ((old, 9_000.0), (fresh, 9_900.0)):
-        (folder / "tree").mkdir(parents=True)
-        os.utime(folder, (stamp, stamp))
+    old = store.marketplaces / ".staging-old"
+    (old / "tree" / ".git").mkdir(parents=True)
+    bare = store.marketplaces / ".staging-bare"  # killed before its tree was made
+    bare.mkdir()
+    linked = store.marketplaces / ".staging-linked"  # its tree is a symlink: never followed
+    linked.mkdir()
     outside = tmp_path / "outside"
     outside.mkdir()
     (outside / "keep").write_text("keep", encoding="utf-8")
+    (linked / "tree").symlink_to(outside)
+    for path in (old / "tree" / ".git", old / "tree", old, bare, linked / "tree", linked):
+        _aged(path, 9_000.0)
     (store.marketplaces / ".staging-link").symlink_to(outside)
-    os.utime(store.marketplaces / ".staging-link", (1.0, 1.0), follow_symlinks=False)
+    _aged(store.marketplaces / ".staging-link", 1.0)
     (store.marketplaces / ".staging-file").write_text("x", encoding="utf-8")
-    os.utime(store.marketplaces / ".staging-file", (1.0, 1.0))
+    _aged(store.marketplaces / ".staging-file", 1.0)
     store.update(ACME)
-    assert _children(store.marketplaces) == [
-        ".staging-file",
-        ".staging-fresh",
-        ".staging-link",
-        "acme",
-    ]
+    assert _children(store.marketplaces) == [".staging-file", ".staging-link", "acme"]
     assert (outside / "keep").read_text(encoding="utf-8") == "keep"
+
+
+def test_a_staging_folder_still_changing_inside_is_not_swept(tmp_path: Path) -> None:
+    """Its own mtime is old, but git is still writing into its tree: a live update owns it."""
+    store = _store(tmp_path, FakeFetcher(), clock=lambda: 10_000.0, stale_seconds=600.0)
+    live = store.marketplaces / ".staging-live"
+    (live / "tree" / ".git").mkdir(parents=True)
+    _aged(live / "tree" / ".git", 9_990.0)
+    for path in (live / "tree", live):
+        _aged(path, 9_000.0)
+    store.update(ACME)
+    assert ".staging-live" in _children(store.marketplaces)
+
+
+def test_a_staging_folder_that_cannot_be_looked_into_is_left(tmp_path: Path) -> None:
+    import os
+
+    store = _store(tmp_path, FakeFetcher(), clock=lambda: 10_000.0, stale_seconds=600.0)
+    closed = store.marketplaces / ".staging-closed"
+    closed.mkdir(parents=True)
+    _aged(closed, 1.0)
+    closed.chmod(0o000)
+    try:
+        if os.access(closed, os.R_OK):  # root reads anything: the case cannot be made here
+            pytest.skip("running as root")
+        store.update(ACME)
+        assert ".staging-closed" in _children(store.marketplaces)
+    finally:
+        closed.chmod(0o700)

@@ -8,8 +8,9 @@ would keep writing into a staging folder the caller has already removed, and a h
 stream "remote:" lines until the deadline. So the command runs in a session of its own
 (`start_new_session`), its stdout and stderr go to unnamed temporary files rather than memory, only
 the first `output_bytes` of stdout and the last `output_bytes` of stderr are read back, and the
-whole group is sent SIGKILL when the command times out and again (harmlessly) when it ends, so no
-helper outlives it. The temporary files still grow on disk for as long as the deadline allows.
+whole group is sent SIGKILL when the wait ends in any exception -- a timeout, a Ctrl-C
+(`KeyboardInterrupt`, which the terminal sends to vibey's group, not git's) -- and again
+(harmlessly) when the command ends, so no helper outlives it. The temporary files still grow on disk for as long as the deadline allows.
 Declared by `interfaces/bounded_process_runner_interface.py::BoundedProcessRunnerInterface`.
 """
 
@@ -57,7 +58,7 @@ class BoundedProcessRunner:
             )
             try:
                 code = process.wait(timeout=timeout)
-            except subprocess.TimeoutExpired:
+            except BaseException:  # a timeout, a Ctrl-C, anything: git never outlives the call
                 self._kill(process.pid)
                 process.wait()
                 raise
@@ -65,7 +66,9 @@ class BoundedProcessRunner:
             return subprocess.CompletedProcess(list(argv), code, self._head(out), self._tail(err))
 
     def _kill(self, group: int) -> None:
-        with contextlib.suppress(ProcessLookupError):  # the group is already gone
+        # ESRCH: the group is gone. EPERM: on macOS, a group whose members are all zombies not
+        # yet reaped answers EPERM rather than ESRCH; there is nothing left to kill either way.
+        with contextlib.suppress(ProcessLookupError, PermissionError):
             self._killpg(group, signal.SIGKILL)
 
     def _head(self, stream: IO[bytes]) -> str:

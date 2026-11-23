@@ -49,12 +49,15 @@ def test_output_is_read_back_capped_stdout_from_the_start_stderr_from_the_end(
 class FakeProcess:
     pid = 4242
 
-    def __init__(self, times_out: bool) -> None:
+    def __init__(self, times_out: bool, interrupt: bool = False) -> None:
         self.waits: list[float | None] = []
         self._times_out = times_out
+        self._interrupt = interrupt
 
     def wait(self, timeout: float | None = None) -> int:
         self.waits.append(timeout)
+        if self._interrupt and len(self.waits) == 1:
+            raise KeyboardInterrupt
         if self._times_out and len(self.waits) == 1:
             raise subprocess.TimeoutExpired(["git"], timeout or 0.0)
         return 0
@@ -77,9 +80,31 @@ def test_a_timeout_kills_the_whole_group_and_reaps_it(tmp_path: Path) -> None:
     assert seen["start_new_session"] is True and seen["stdin"] == subprocess.DEVNULL
 
 
-def test_a_finished_command_has_its_group_swept_and_a_gone_group_is_fine(tmp_path: Path) -> None:
+def test_a_ctrl_c_while_git_runs_kills_its_group_and_is_raised_again(tmp_path: Path) -> None:
+    """git runs in a session of its own, so the terminal's SIGINT never reaches it: the runner
+    kills the group itself on any exception from the wait (review 2, N1)."""
+    process = FakeProcess(times_out=False, interrupt=True)
+    killed: list[tuple[int, int]] = []
+    runner = BoundedProcessRunner(
+        popen=lambda argv, **o: process, killpg=lambda g, s: killed.append((g, s))
+    )
+    with pytest.raises(KeyboardInterrupt):
+        runner.run(["git", "fetch"], ENV, tmp_path, 300.0)
+    assert killed == [(4242, signal.SIGKILL)]
+    assert process.waits == [300.0, None]
+
+
+@pytest.mark.parametrize(
+    "error",
+    [ProcessLookupError(3, "No such process"), PermissionError(1, "Operation not permitted")],
+)
+def test_a_finished_command_has_its_group_swept_and_a_gone_group_is_fine(
+    tmp_path: Path, error: OSError
+) -> None:
+    """ESRCH, or EPERM as macOS answers for a group of unreaped zombies: nothing to kill."""
+
     def gone(group: int, sig: int) -> None:
-        raise ProcessLookupError(3, "No such process")
+        raise error
 
     runner = BoundedProcessRunner(popen=lambda argv, **o: FakeProcess(False), killpg=gone)
     assert runner.run(["git", "init"], ENV, tmp_path, 5.0).returncode == 0

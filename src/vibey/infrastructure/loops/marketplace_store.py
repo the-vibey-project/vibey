@@ -59,8 +59,10 @@ from vibey.infrastructure.loops.records import MarketplaceUpdate
 LOCK_FILE: Final = "lock.json"
 MARKETPLACES: Final = "marketplaces"
 SNAPSHOTS: Final = "snapshots"
-STALE_STAGING_SECONDS: Final = 2 * TIMEOUT_SECONDS
-"""A staging folder this old outlived any fetch: a killed update left it, and the next removes it."""
+STALE_STAGING_SECONDS: Final = 12 * TIMEOUT_SECONDS
+"""A staging folder with no change this long outlived any update -- git's whole deadline
+(`TIMEOUT_SECONDS`), the lock's bounded wait and a large local copy, with a wide margin: a killed
+update left it, and the next update removes it."""
 _STAGING: Final = ".staging-"
 _TREE: Final = "tree"
 
@@ -211,15 +213,35 @@ class MarketplaceStore:
                 shutil.rmtree(folder, ignore_errors=True)
 
     def _sweep(self) -> None:
-        """Removes `.staging-*` folders an update left behind when it was killed: those older
-        than `stale_seconds`, which is past any fetch's deadline. A symlink or file is left."""
+        """Removes `.staging-*` folders an update left behind when it was killed: those with no
+        change for `stale_seconds` -- the newest mtime of the folder, its entries and the entries
+        of its `tree` -- which is past any live update's deadline. A symlink or file is left, and
+        so is a folder that vanishes or cannot be looked at meanwhile: another update may own
+        it."""
         cutoff = self._clock() - self._stale
         for entry in os.scandir(self.marketplaces):
             if not entry.name.startswith(_STAGING):
                 continue
-            status = entry.stat(follow_symlinks=False)
-            if stat.S_ISDIR(status.st_mode) and status.st_mtime < cutoff:
+            try:
+                status = entry.stat(follow_symlinks=False)
+                if not stat.S_ISDIR(status.st_mode):
+                    continue
+                newest = self._newest(Path(entry.path), status.st_mtime)
+            except OSError:
+                continue
+            if newest < cutoff:
                 shutil.rmtree(entry.path, ignore_errors=True)
+
+    @staticmethod
+    def _newest(staging: Path, own: float) -> float:
+        """The latest change in a staging folder: itself, its entries and its tree's entries."""
+        newest = own
+        for folder in (staging, staging / _TREE):
+            if not os.path.lexists(folder) or os.path.islink(folder):
+                continue
+            for entry in os.scandir(folder):
+                newest = max(newest, entry.stat(follow_symlinks=False).st_mtime)
+        return newest
 
     def _version(self, name: str, digest: str) -> Path:
         return self.marketplaces / name / digest.removeprefix("sha256:")
