@@ -133,10 +133,10 @@ class AcpAgent:
         new_id: Callable[[], str],
         replay: AcpSessionReplayInterface = SESSION_REPLAY,
         bootstrap: AcpBootstrapInterface | None = None,
-        fold_case: bool = False,
+        fold_case: Callable[[str], bool] = lambda path: False,
     ) -> None:
-        # Whether folder names are compared without case, as on a case-insensitive volume
-        # (macOS by default): the composition root decides it for this computer.
+        # Whether a folder's volume folds case: the composition root asks the volume itself
+        # (a macOS volume may be case-sensitive); here it is only called.
         self._fold_case = fold_case
         self._channel = channel
         self._hub = hub
@@ -597,7 +597,8 @@ class AcpAgent:
         if not listed.ok:
             await self._say(context, self._unlisted(f"the hub answered {listed.status_code}"))
             return
-        found = self._project_holding(context.cwd, listed.text, fold_case=self._fold_case)
+        fold = self._fold_case(context.cwd)
+        found = self._project_holding(context.cwd, listed.text, fold_case=fold)
         if found is not None and context.project_id is None and not context.state.closed:
             # A turn that already named a project is the later, explicit choice: it stays.
             project, name, repo = found
@@ -625,25 +626,35 @@ class AcpAgent:
             self._followed[context.session_id] = project
             self._feed.attach(context)
 
-    @staticmethod
+    @classmethod
     def _project_holding(
-        cwd: str, listing: str, *, fold_case: bool = False
+        cls, cwd: str, listing: str, *, fold_case: bool = False
     ) -> tuple[UUID, str, str] | None:
         """The project (id, name, repository) whose repository holds `cwd`; the deepest when
         repositories nest, the first listed (the newest) when two share one. The listing is the
         hub's data: an entry without a UUID and an absolute repository path is passed over. A
         `cwd` with a `..` part matches nothing: compared as written, it could name a folder
-        outside the repository it seems to be in. With `fold_case` (a case-insensitive volume)
-        `/Work/App` is the folder `/work/app`; symbolic links are never resolved."""
+        outside the repository it seems to be in. Symbolic links are never resolved. With
+        `fold_case` (the folder's volume is case-insensitive) a repository in another case is
+        the fallback only: an exact match always wins, and case folds as the volume does
+        (`str.lower`, never Unicode case folding: `ß` is not `ss`)."""
         try:
             projects = json.loads(listing)
         except json.JSONDecodeError:
             return None
-        if not isinstance(projects, list):
+        if not isinstance(projects, list) or ".." in PurePath(cwd).parts:
             return None
-        folder = PurePath(cwd.casefold() if fold_case else cwd)
-        if ".." in folder.parts:
-            return None
+        found = cls._deepest(cwd, projects, str)
+        if found is None and fold_case:
+            found = cls._deepest(cwd, projects, str.lower)
+        return found
+
+    @staticmethod
+    def _deepest(
+        cwd: str, projects: list[Any], seen: Callable[[str], str]
+    ) -> tuple[UUID, str, str] | None:
+        """The deepest listed repository holding `cwd`, both compared as `seen` shows them."""
+        folder = PurePath(seen(cwd))
         best: tuple[int, UUID, str, str] | None = None
         for project in projects:
             if not isinstance(project, Mapping):
@@ -651,7 +662,7 @@ class AcpAgent:
             repo, raw_id = project.get("repo_path"), project.get("project_id")
             if not isinstance(repo, str) or not isinstance(raw_id, str):
                 continue
-            root = PurePath(repo.casefold() if fold_case else repo)
+            root = PurePath(seen(repo))
             if not root.is_absolute() or (root != folder and root not in folder.parents):
                 continue
             try:
