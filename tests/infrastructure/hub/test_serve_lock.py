@@ -5,6 +5,8 @@ import fcntl
 import os
 from pathlib import Path
 
+import pytest
+
 from vibey.infrastructure.hub.interfaces.serve_lock_interface import ServeLockInterface
 from vibey.infrastructure.hub.serve_lock import (
     ACP_BOOTSTRAP_LOCK_FILE,
@@ -164,3 +166,32 @@ def test_a_lock_that_is_never_probed_can_refuse_at_once(tmp_path: Path) -> None:
         assert pauses == []
     finally:
         first.release()
+
+
+def test_a_release_whose_truncate_fails_still_lets_the_lock_go(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Task 11b review N-4: emptying the pid is best kept, but it must never keep the lock held.
+    The module's own `os` is stood in for (never the process's), raising on `ftruncate` only."""
+    from vibey.infrastructure.hub import serve_lock as module
+
+    class _Os:
+        def __getattr__(self, name: str) -> object:
+            return getattr(os, name)
+
+        @staticmethod
+        def ftruncate(fd: int, length: int) -> None:
+            raise OSError(5, "Input/output error")
+
+    state = tmp_path / "state"
+    hub = ServeLock(state)
+    assert hub.acquire() is True
+    monkeypatch.setattr(module, "os", _Os())
+    with pytest.raises(OSError, match="Input/output"):
+        hub.release()
+    monkeypatch.setattr(module, "os", os)
+    assert hub.held_by() is None  # the flock went with the descriptor
+    assert hub._fd is None
+    next_hub = ServeLock(state)
+    assert next_hub.acquire() is True
+    next_hub.release()

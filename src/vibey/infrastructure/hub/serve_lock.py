@@ -14,10 +14,12 @@ Two narrow windows, closed as far as a single file allows (SP-ACP Task 11b):
 - **A clean exit leaves no pid behind.** `release` empties the file before it lets go, so the
   next hub, between its `flock` and its own write, reads as "held, no pid yet" (0), never as
   the hub that left. A hub that *crashed* cannot empty it: until the next holder has written,
-  its pid stays in the file. Closing that last window needs a pid published apart from the
-  lock (a new file renamed into place while already locked), a change of this lock's on-disk
-  protocol, so it is left open: it needs a crash, a restart, the dead pid reused and a `vibey
-  hub stop` landing in the microseconds between a `flock` and a `write`.
+  its pid stays in the file. That last window is left open: it needs a crash, a restart, the
+  dead pid reused and a `vibey hub stop` landing in the microseconds between a `flock` and a
+  `write`. Two ways would close it, neither taken: publishing the pid apart from the lock (a
+  new file renamed into place while already locked), which changes this lock's on-disk
+  protocol; or having `stop` probe again after a pause and refuse when the answer changed,
+  which costs every `stop` that pause for a window this narrow.
 - **A probe never costs a starting hub its lock.** `held_by` holds a shared lock for an
   instant; a hub whose exclusive attempt lands in that instant would conclude another hub runs.
   `acquire` therefore tries again `contention_retries` times, `contention_pause` apart: a real
@@ -124,6 +126,8 @@ class ServeLock:
         """Lets go of the lock, its pid emptied first so no later reader takes the next holder
         for this one; a no-op when this process does not hold it."""
         if self._fd is not None:
-            os.ftruncate(self._fd, 0)
-            os.close(self._fd)
-            self._fd = None
+            fd, self._fd = self._fd, None
+            try:
+                os.ftruncate(fd, 0)
+            finally:
+                os.close(fd)  # a failed truncate never keeps the lock held
