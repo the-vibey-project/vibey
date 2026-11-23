@@ -182,9 +182,11 @@ already carries a `vibey` entry running that command, with vibey's own arguments
 in the entry -- an `env`, other keys, flags after vibey's arguments such as
 `["acp", "--no-bootstrap"]` -- is yours. After `acp` only `--no-bootstrap` may follow: an
 entry such as `["acp", "unload"]` would run another command, so it does not count as connected,
-and a rewrite keeps `--no-bootstrap` alone. When the entry must change (another `vibey`, or no
-entry yet), only its `type`, `command` and vibey's own leading `args` change; your `env`, other
-keys and extra flags are kept. In a project's TOML file, every `[mcp_servers.vibey.*]`
+and a rewrite keeps `--no-bootstrap` alone. After `mcp` nothing may follow, since `vibey mcp`
+takes no flags: `["mcp", "--x"]` would fail to start the client's server, so it does not count as
+connected, and a rewrite drops the flag. When the entry must change (another `vibey`, or no
+entry yet), only its `type`, `command` and vibey's own leading `args` change; your `env` and other
+keys are kept, and so is `--no-bootstrap` after `acp`. In a project's TOML file, every `[mcp_servers.vibey.*]`
 sub-table (an `env` one, say) is dropped on a rewrite. A project's file (`.mcp.json`, `.vscode/mcp.json`) belongs to the
 repository, not to you, so there only the exact entry above counts as connected, and any other
 `vibey` entry -- one with an `env`, an `envFile`, another key or an extra argument -- is
@@ -218,8 +220,8 @@ installed here:
 
 | Surface | Clients | Present when | Installed by |
 |---|---|---|---|
-| `acp-agent` | Zed | `agent_servers.vibey` runs this install's `vibey` with `acp` first (as above; your `env` and extra flags do not matter) | `vibey connect --client zed` (or the snippet, by hand) |
-| `mcp-server` | every other client | its `vibey` MCP entry runs this install's `vibey` with `mcp` first; in a project's file (Claude Code, VS Code) only the exact canonical entry; for Claude Code also when the `vibey` plugin is installed and the project's `.mcp.json` holds no other `vibey` entry (the plugin's `.mcp.json` registers `vibey mcp`) | `vibey connect --client <id>` |
+| `acp-agent` | Zed | `agent_servers.vibey` runs this install's `vibey` with `acp` first (as above; your `env` and `--no-bootstrap` do not matter) | `vibey connect --client zed` (or the snippet, by hand) |
+| `mcp-server` | every other client | its `vibey` MCP entry runs this install's `vibey` with `mcp` and nothing after it; in a project's file (Claude Code, VS Code) only the exact canonical entry; for Claude Code also when the `vibey` plugin is installed and the project's `.mcp.json` holds no other `vibey` entry (the plugin's `.mcp.json` registers `vibey mcp`) | `vibey connect --client <id>` |
 | `skill` | Claude Code, Codex | the `vibey-chat-driver` skill is in the `vibey` plugin, in `~/.claude/skills/vibey-chat-driver` or the project's `.claude/skills/vibey-chat-driver` (Claude Code), or in `~/.codex/skills/vibey-chat-driver` (Codex; where Codex reads user skills -- not verified against a real Codex install) | Claude Code: the plugin; Codex: the `mkdir -p ~/.codex/skills && cp -R <the skill vibey ships> ~/.codex/skills/` line printed |
 | `plugin` | Claude Code | Claude Code records `vibey@vibey` installed (`~/.claude/plugins/installed_plugins.json`) | in Claude Code: `/plugin marketplace add the-vibey-project/vibey`, then `/plugin install vibey@vibey` |
 
@@ -582,7 +584,7 @@ here delays the answer: the steps start after `session/new` (or the first `sessi
    under your home folder -- `vibey mcp` with Claude Desktop, Codex, Cursor and Gemini CLI, and
    `vibey acp` with Zed (`~/.config/zed`, or `$XDG_CONFIG_HOME/zed` on Linux) -- each running
    the running install's own `vibey`; an existing `vibey` entry keeps your `env`, other keys and
-   extra flags.
+   the flags vibey's command takes (`--no-bootstrap` after `acp`; none after `mcp`).
    A Zed `settings.json` with comments is never rewritten: unless it already carries the entry,
    it is that client's `WARN`, with the snippet to paste. A project file
    (`.mcp.json`, `.vscode/mcp.json`) is never written, a client's folder is never created, a

@@ -61,11 +61,15 @@ TOML_SUBTABLE_RE: Final = re.compile(
 )
 """A `[mcp_servers.vibey.<name>]` sub-table (an `env` one, say), dropped from a project-scope
 file on a rewrite: it would hand the repository's settings to vibey's server (SP-ACP Task 11a)."""
-OWN_FLAGS: Final[Mapping[ClientProtocol, frozenset[str]]] = {"acp": frozenset({"--no-bootstrap"})}
-"""For a protocol named here, the only flags a person's own entry may carry after vibey's launch
-arguments and still count as connected (and be kept on a rewrite): `vibey acp --no-bootstrap`.
-`["acp", "unload"]` runs another command entirely, so it is not vibey's entry (SP-ACP Task 11a).
-A protocol not named keeps whatever follows, as before."""
+OWN_FLAGS: Final[Mapping[ClientProtocol, frozenset[str]]] = {
+    "acp": frozenset({"--no-bootstrap"}),
+    "mcp": frozenset(),
+}
+"""Per protocol, the only flags a person's own entry may carry after vibey's launch arguments and
+still count as connected (and be kept on a rewrite): `vibey acp --no-bootstrap`, and nothing at
+all after `vibey mcp`, which takes no flags. `["acp", "unload"]` runs another command entirely,
+so it is not vibey's entry (SP-ACP Task 11a); `["mcp", "--x"]` would fail to start the client's
+server, so it is not connected either, and a rewrite drops the flag (SP-ACP Task 11b, N-4)."""
 
 
 class HostClientError(VibeyError):
@@ -497,14 +501,12 @@ class HostClients:
             after = args[2:]
         else:
             return []
-        allowed = OWN_FLAGS.get(protocol)
-        return [arg for arg in after if allowed is None or arg in allowed]
+        return [arg for arg in after if arg in OWN_FLAGS[protocol]]
 
     @staticmethod
     def _own_flags(protocol: ClientProtocol, flags: Sequence[object]) -> bool:
         """Whether every one of `flags` is one the person may add for `protocol`."""
-        allowed = OWN_FLAGS.get(protocol)
-        return allowed is None or all(flag in allowed for flag in flags)
+        return all(flag in OWN_FLAGS[protocol] for flag in flags)
 
     @staticmethod
     def _without_bom(text: str | None) -> tuple[str, str | None]:
