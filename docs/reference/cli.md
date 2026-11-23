@@ -30,7 +30,7 @@ accepted as the old name of `gptossloop`).
 needs them (the footer of that help holds four commands to copy). Commands that are
 command groups are marked with a trailing `…`.
 
-- **Start here:** `connect`, `doctor`, `install`, `new`, `projects`, `status`
+- **Start here:** `connect`, `doctor`, `install`, `new`, `inputs`…, `projects`, `status`
 - **Decisions that are yours:** `gates`, `answer`, `design`…, `visual`…, `deploy`…
 - **Watch and steer:** `watch`, `queue`…, `engines`, `loops`, `models`, `cost`, `budget`…, `ledger`…, `ultra`…, `retry`, `recover`, `abandon`
 - **Run the machinery:** `work`, `worker`, `serve`, `hub`…, `supervisor`…, `driver`…, `operator`

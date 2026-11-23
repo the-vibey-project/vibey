@@ -133,6 +133,7 @@ from vibey.application.interfaces.gate_notices import (
 )
 from vibey.application.interfaces.gate_timeouts import GateTimeoutSweepInterface
 from vibey.application.interfaces.observability import Logger
+from vibey.application.interfaces.run_inputs_interface import RunInputsInterface
 from vibey.application.interfaces.sabbath import SabbathGateInterface
 from vibey.application.interfaces.ultra_control import UltraControlServiceInterface
 from vibey.application.job_dispatcher import JobDispatcher
@@ -148,6 +149,8 @@ from vibey.application.review_deployment_choice_handler import ReviewDeploymentC
 from vibey.application.review_publish_handler import ReviewPublishHandler
 from vibey.application.review_triage_handler import ReviewTriageHandler
 from vibey.application.rotation_handoff import RotationHandoffService
+from vibey.application.run_inputs_service import RunInputsService
+from vibey.application.run_inputs_settings import RunInputsSettingsLoader
 from vibey.application.ultra_control import UltraControlService
 from vibey.application.visual_handler import VisualInventoryHandler, VisualPlanHandler
 from vibey.application.wind_down import WindDownOrchestrator
@@ -178,6 +181,7 @@ from vibey.domain.interfaces.config_interface import (
     QueueReapConfigInterface,
 )
 from vibey.domain.phase import Phase
+from vibey.domain.run_input import RunInputsSettings
 from vibey.domain.slicing import AutoSlicer
 from vibey.domain.supervisor import SEARXNG, SupervisorPlanner
 from vibey.domain.worktree import WorktreeNaming
@@ -249,6 +253,8 @@ from vibey.infrastructure.git.checkpoint import GitCheckpoint
 from vibey.infrastructure.git.integration_branch import IntegrationBranch
 from vibey.infrastructure.git.worktree_manager import GitWorktreeManager
 from vibey.infrastructure.hub.settings import HUB_SETTINGS, HubSettings
+from vibey.infrastructure.inputs.hash_addressed_input_store import HashAddressedInputStore
+from vibey.infrastructure.inputs.run_input_ledger import PostgresRunInputLedger
 from vibey.infrastructure.ledger.full_ledger_writer import write_full_ledger
 from vibey.infrastructure.logging import StructlogAppLogger
 from vibey.infrastructure.loops.git_marketplace_fetcher import GitMarketplaceFetcher
@@ -1549,6 +1555,32 @@ def loops_bundle_settings() -> LoopsBundleSettings:
     """`[loops]`, read with the ADR-0101 trust rule over the on-disk table reader (SP-LOOPS).
     The person's path for `load` is `acp_user_config()`."""
     return LoopsBundleSettings(TomlTrustedTableReader())
+
+
+def run_inputs_settings_loader() -> RunInputsSettingsLoader:
+    """`[inputs]`, read from the person's own file only over the on-disk table reader (SP-LOOPS
+    Phase 3). The person's path for `load` is `acp_user_config()`."""
+    return RunInputsSettingsLoader(TomlTrustedTableReader())
+
+
+def run_inputs_service(resources: AppResources, settings: RunInputsSettings) -> RunInputsService:
+    """A project's run inputs (SP-LOOPS Phase 3): the hash-addressed store under each project's
+    `<repo_path>/.vibey`, the project records, and the ledger adapter that records each add's
+    digest, kind and size. Composition only."""
+    return RunInputsService(
+        store=HashAddressedInputStore(resources.clock),
+        projects=resources.projects,
+        ledger=PostgresRunInputLedger(resources.ledger),
+        clock=resources.clock,
+        settings=settings,
+    )
+
+
+@asynccontextmanager
+async def run_inputs_app(settings: RunInputsSettings) -> AsyncIterator[RunInputsInterface]:
+    """`run_inputs_service` over a freshly opened app: what `vibey inputs` runs."""
+    async with build_app() as resources:
+        yield run_inputs_service(resources, settings)
 
 
 LOOPS_STORE: Final = "loops"

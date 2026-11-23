@@ -65,6 +65,7 @@ from vibey.cli.gates import GATES
 from vibey.cli.help_layout import HelpLayout
 from vibey.cli.host_health import HOST_HEALTH
 from vibey.cli.hub_pair import hub_app
+from vibey.cli.inputs import inputs_app
 from vibey.cli.interfaces.doctor_output_interface import DoctorOutputInterface
 from vibey.cli.ledger_publication import ledger_export, ledger_site
 from vibey.cli.ledger_search import PRESENTER, ledger_search
@@ -1361,6 +1362,7 @@ def engines(
         asyncio.run(ENGINES.run(project_id, as_json=as_json))
 
 
+app.add_typer(inputs_app, name="inputs")
 loops_app = typer.Typer(name="loops", invoke_without_command=True)
 app.add_typer(loops_app, name="loops")
 loops_app.add_typer(marketplace_app, name="marketplace")
