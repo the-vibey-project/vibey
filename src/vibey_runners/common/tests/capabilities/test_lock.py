@@ -4,6 +4,7 @@ follows a symlink, written atomically and read whole or not at all (SP-LOOPS Tas
 
 from __future__ import annotations
 
+import fcntl
 import hashlib
 import json
 import os
@@ -617,3 +618,83 @@ def test_a_whole_tree_scope_covers_every_other_item(tmp_path: Path) -> None:
     whole = CapabilityLock(lister=lister).tree_records(root, [*SCOPE, PurePosixPath()])
     assert sorted(listed) == sorted(set(listed))
     assert whole == CapabilityLock().tree_records(root, [PurePosixPath()])
+
+
+def test_a_scope_item_does_not_swallow_a_sibling_that_shares_its_name_prefix(
+    tmp_path: Path,
+) -> None:
+    """`plugins/a` is not an ancestor of `plugins/ab`: the outermost walk compares path parts,
+    never string prefixes, so both are walked and nothing under `plugins/ab` is lost."""
+    root = _tree(
+        tmp_path,
+        {
+            ".claude-plugin/marketplace.json": b"{}",
+            "plugins/a/one.md": b"1",
+            "plugins/ab/two.md": b"2",
+        },
+    )
+    scope = [PurePosixPath("plugins/a"), PurePosixPath("plugins/ab")]
+    paths = [record.path for record in CapabilityLock().tree_records(root, scope)]
+    assert paths == ["plugins", "plugins/a", "plugins/a/one.md", "plugins/ab", "plugins/ab/two.md"]
+
+
+# -- update: a read-modify-write under a file lock ----------------------------------------------
+
+
+class _RecordingFlock:
+    """Stands in for `fcntl.flock`, recording each call (no second process is needed)."""
+
+    def __init__(self) -> None:
+        self.calls: list[int] = []
+
+    def __call__(self, descriptor: int, operation: int) -> None:
+        os.fstat(descriptor)  # the descriptor is open while it is locked
+        self.calls.append(operation)
+
+
+def test_update_replaces_in_place_adds_at_the_end_and_drops(tmp_path: Path) -> None:
+    lock_path = tmp_path / "state" / "loops.lock"
+    CapabilityLock().write(lock_path, ENTRIES)
+    flock = _RecordingFlock()
+    newer = LockEntry("vibey", "vibey-engine 9.9.9", None, "sha256:" + "c" * 64)
+    added = LockEntry("zeta", "https://example.test/zeta.git", None, "sha256:" + "d" * 64)
+    result = CapabilityLock(flock=flock).update(lock_path, put=[added, newer], drop=["acme"])
+    assert result == (newer, added)
+    assert CapabilityLock().read(lock_path) == (newer, added)
+    assert flock.calls == [fcntl.LOCK_EX]
+    sidecar = lock_path.with_name(".loops.lock.flock")
+    assert stat.S_IMODE(sidecar.stat().st_mode) == 0o600
+
+
+def test_update_of_a_missing_lock_makes_its_folder_and_the_lock(tmp_path: Path) -> None:
+    lock_path = tmp_path / "new" / "loops.lock"
+    assert CapabilityLock().update(lock_path, put=ENTRIES[:1]) == ENTRIES[:1]
+    assert CapabilityLock().read(lock_path) == ENTRIES[:1]
+
+
+def test_a_failed_update_leaves_the_lock_and_releases_the_file_lock(tmp_path: Path) -> None:
+    lock_path = tmp_path / "loops.lock"
+    CapabilityLock().write(lock_path, ENTRIES)
+    before = lock_path.read_bytes()
+    opened: list[int] = []
+
+    def flock(descriptor: int, operation: int) -> None:
+        opened.append(descriptor)
+
+    bad = LockEntry("bad name!", "x", None, DIGEST)
+    with pytest.raises(LockError):
+        CapabilityLock(flock=flock).update(lock_path, put=[bad])
+    assert lock_path.read_bytes() == before
+    with pytest.raises(OSError):  # the sidecar's descriptor was closed, so its lock is gone
+        os.fstat(opened[0])
+
+
+def test_update_never_opens_its_sidecar_through_a_symlink(tmp_path: Path) -> None:
+    lock_path = tmp_path / "loops.lock"
+    target = tmp_path / "elsewhere"
+    target.write_text("not the sidecar", encoding="utf-8")
+    lock_path.with_name(".loops.lock.flock").symlink_to(target)
+    with pytest.raises(OSError):
+        CapabilityLock().update(lock_path, put=ENTRIES[:1])
+    assert target.read_text(encoding="utf-8") == "not the sidecar"
+    assert not lock_path.exists()

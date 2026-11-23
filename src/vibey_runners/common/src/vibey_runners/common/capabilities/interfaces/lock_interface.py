@@ -3,7 +3,7 @@
 
 from __future__ import annotations
 
-from collections.abc import Sequence
+from collections.abc import Collection, Sequence
 from pathlib import Path, PurePosixPath
 from typing import Protocol, runtime_checkable
 
@@ -40,6 +40,17 @@ class CapabilityLockInterface(Protocol):
         """Replaces `path` atomically (a temporary file beside it, fsynced, renamed over it)
         with mode 0600. Raises `LockError`, writing nothing, for a malformed entry; on any
         failure the previous lock is left as it was and no temporary file remains."""
+        ...
+
+    def update(
+        self, path: Path, put: Sequence[LockEntry] = (), drop: Collection[str] = ()
+    ) -> tuple[LockEntry, ...]:
+        """Reads `path`, replaces the entry of each marketplace `put` names (in place; a new one
+        is added at the end), removes the marketplaces `drop` names, writes the result as `write`
+        does and returns it -- all while holding an exclusive lock on a sidecar file beside
+        `path`, so two updates never lose each other's entries. Raises as `read` and `write` do,
+        and `OSError` when the sidecar cannot be made or locked (it is never opened through a
+        symlink)."""
         ...
 
     def read(self, path: Path) -> tuple[LockEntry, ...]:

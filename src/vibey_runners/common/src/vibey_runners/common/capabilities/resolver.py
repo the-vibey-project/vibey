@@ -314,13 +314,26 @@ class CapabilityResolver:
                 f"the marketplace {name} cannot be read: {exc}"
             ) from exc
 
+    def lock_shipped(self, root: Path) -> LockEntry:
+        name = DEFAULT_MARKETPLACE_NAME
+        try:
+            root = self._absolute(root, f"the folder of the marketplace {name}")
+            records = self._records(name, root, self._shipped_scope(name, root))
+            entry = LockEntry(
+                name, self._shipped_source, None, self._locker.digest_records(records)
+            )
+        except (ValueError, RuntimeError) as exc:
+            if isinstance(exc, CapabilityResolutionError):
+                raise
+            raise CapabilityResolutionError(f"the marketplace {name} cannot lock: {exc}") from exc
+        self._lock_itself(entry)
+        return entry
+
     def _lock_itself(self, entry: LockEntry) -> None:
         """Adds or replaces the shipped marketplace's entry in the person's lock file, keeping
-        every other entry as the file holds it now."""
+        every other entry as the file holds it now (under the lock's own file lock)."""
         try:
-            current = self._locker.read(self._lock_path)
-            kept = [other for other in current if other.marketplace != entry.marketplace]
-            self._locker.write(self._lock_path, [*kept, entry])
+            self._locker.update(self._lock_path, put=[entry])
         except (LockError, OSError) as exc:
             raise CapabilityResolutionError(
                 f"the marketplace {entry.marketplace} cannot lock itself: {exc}"

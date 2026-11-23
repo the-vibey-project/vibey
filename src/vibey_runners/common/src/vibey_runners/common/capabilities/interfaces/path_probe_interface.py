@@ -17,7 +17,10 @@ class PathProbeInterface(Protocol):
 
     def real(self, path: Path) -> Path:
         """`path` made absolute with every symlink resolved, as far as it resolves; never raises
-        for a symlink loop (3.12's `Path.resolve()` did), so a loop reaches `kind` as absent."""
+        for a symlink loop (3.12's `Path.resolve()` did), so a loop reaches `kind` as absent.
+        Call it only on `..`-free input: on 3.12, `os.path.realpath` of a path holding a looping
+        component followed by `..` normalises the `..` away lexically and returns a path that
+        is not resolved, where 3.13 and later resolve it; every caller rejects `..` first."""
         ...
 
     def is_dir(self, path: Path) -> bool:

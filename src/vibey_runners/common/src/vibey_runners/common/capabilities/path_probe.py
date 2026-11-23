@@ -53,6 +53,8 @@ class PathProbe:
         return OTHER
 
     def real(self, path: Path) -> Path:
+        """Only for `..`-free input: on 3.12 a looping component followed by `..` is normalised
+        lexically, not resolved (3.13 and later resolve it); every caller rejects `..` first."""
         return Path(os.path.realpath(path))
 
     def is_dir(self, path: Path) -> bool:
