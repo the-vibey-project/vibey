@@ -36,11 +36,19 @@ approved, and when vibey may reach the network to get it.
    to run.
 4. **The network only on the person's word.** `vibey loops marketplace update` is the one
    command that fetches. Its sources are an allowlist -- git over `https` (no credentials in the
-   URL), `ssh` or `git`, or an absolute folder copied without git -- and git runs four fixed
-   commands with the source after `--`, `protocol.allow=never` plus those three, the person's and
-   the system's git configuration not read, no hooks, submodules or LFS, a scrubbed environment
-   and one deadline. The store's copy is named by its digest, and the lock entry is written only
-   after the copy is checked: the lock is the commit point, so a failed update changes nothing.
+   URL) or `ssh` (a plain user name), or an absolute folder copied without git. `git://` is
+   refused like `http://`: both are plaintext with no integrity, and a tree an on-path attacker
+   served would be locked as trusted. git runs four fixed commands with the source after `--`,
+   `protocol.allow=never` plus those two, `GIT_CONFIG_GLOBAL`/`GIT_CONFIG_SYSTEM` at the null
+   device (honoured from git 2.32), an empty `HOME` of its own for an https source (so neither
+   `~/.gitconfig` nor `~/.netrc` is read on any git) and the person's `HOME` and ssh agent only for
+   ssh (where a git older than 2.32 still reads `~/.gitconfig`), no hooks, submodules or LFS, a
+   scrubbed environment, one deadline, and each call in a process group killed whole on a timeout
+   with its output read back capped. The store's copy is named by its digest; the copy is placed,
+   its lock entry written and every copy the lock no longer names removed under one hold of the
+   lock's own file lock (a bounded wait), so the lock is the commit point: a failed update changes
+   nothing, and overlapping updates cannot remove the copy the lock names. A change to `[loops]`
+   holds the same kind of lock beside `vibey.toml`.
    The family's guarded web fetch (ADR-0102) is not used: it fetches pages as bounded text, not
    repository trees.
 5. **One table writer.** vibey had no writer of `vibey.toml`. `TomlTrustedTableWriter` changes
@@ -59,8 +67,15 @@ approved, and when vibey may reach the network to get it.
   removal at the end of each run and a sweep at worker start belong to the phase that wires runs
   (SP-LOOPS Phase 4), which must also load only from the snapshot's plugin folders.
 - The size cap on a git fetch is checked after the fetch, so a hostile remote can use disk for as
-  long as git's deadline allows. Private https repositories need ssh (the person's credential
-  helpers are deliberately not read).
+  long as git's deadline allows. Private https repositories need ssh: neither the person's
+  credential helpers nor `~/.netrc` are read for https.
+- A run snapshot is aged by the newest change at its top, so `snapshots prune` removes a run that
+  has been inactive that long even if it still runs; Phase 4 should mark a live run (a lease or a
+  marker the pruner honours).
+- The file locks are `fcntl.flock`, POSIX only, like the rest of the family today; Windows is
+  backlog #1097.
+- An MCP server's `env_allow` never names a secret (a token, key, password or the Brave key):
+  what a server prints reaches the model.
 - Not yet run against a real git server or a real `/plugin marketplace add`: the git flags are
   tested against a recording runner only, and the operator-run checks the SP-LOOPS reviews list
   stay open.
