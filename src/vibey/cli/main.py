@@ -71,6 +71,13 @@ from vibey.cli.ledger_search import PRESENTER, ledger_search
 from vibey.cli.llm import llm_app
 from vibey.cli.llm_tooling import LLM_TOOLING_SECTION
 from vibey.cli.loops import LOOPS
+from vibey.cli.loops_bundle import (
+    marketplace_app,
+    mcp_app,
+    plugin_app,
+    skills_app,
+    snapshots_app,
+)
 from vibey.cli.mcp import mcp as mcp_command
 from vibey.cli.models import MODELS
 from vibey.cli.projects import PROJECTS
@@ -1354,8 +1361,18 @@ def engines(
         asyncio.run(ENGINES.run(project_id, as_json=as_json))
 
 
-@app.command("loops")
+loops_app = typer.Typer(name="loops", invoke_without_command=True)
+app.add_typer(loops_app, name="loops")
+loops_app.add_typer(marketplace_app, name="marketplace")
+loops_app.add_typer(plugin_app, name="plugin")
+loops_app.add_typer(mcp_app, name="mcp")
+loops_app.add_typer(skills_app, name="skills")
+loops_app.add_typer(snapshots_app, name="snapshots")
+
+
+@loops_app.callback(invoke_without_command=True)
 def loops(
+    ctx: typer.Context,
     as_json: Annotated[
         bool,
         typer.Option(
@@ -1368,10 +1385,13 @@ def loops(
     """List the two loops, their engines at every effort, and what each engine can do.
 
     Needs no database and no network: the local switches are read as `vibey doctor`
-    reads them, from the environment and then ./vibey.toml.
+    reads them, from the environment and then ./vibey.toml. The subcommands manage what
+    every loop is given (marketplaces, plugins, MCP servers, skills), in your own
+    vibey.toml only.
     """
-    with guard():
-        LOOPS.run(as_json=as_json)
+    if ctx.invoked_subcommand is None:
+        with guard():
+            LOOPS.run(as_json=as_json)
 
 
 @app.command("models")
