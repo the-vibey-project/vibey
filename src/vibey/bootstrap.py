@@ -3,6 +3,7 @@
 
 import asyncio
 import functools
+import importlib.metadata
 import os
 import platform
 import sys
@@ -16,6 +17,15 @@ from uuid import uuid4
 
 import asyncpg
 from platformdirs import user_cache_path, user_config_path
+from vibey_runners.common.capabilities.interfaces.resolver_interface import (
+    CapabilityResolverInterface,
+)
+from vibey_runners.common.capabilities.interfaces.sidecar_lock_interface import (
+    SidecarLockInterface,
+)
+from vibey_runners.common.capabilities.resolver import CapabilityResolver
+from vibey_runners.common.capabilities.sidecar_lock import SidecarLock
+from vibey_skills import marketplace_root
 
 from vibey import __version__
 from vibey.application.acp.acp_agent import AcpAgent
@@ -241,6 +251,13 @@ from vibey.infrastructure.git.worktree_manager import GitWorktreeManager
 from vibey.infrastructure.hub.settings import HUB_SETTINGS, HubSettings
 from vibey.infrastructure.ledger.full_ledger_writer import write_full_ledger
 from vibey.infrastructure.logging import StructlogAppLogger
+from vibey.infrastructure.loops.git_marketplace_fetcher import GitMarketplaceFetcher
+from vibey.infrastructure.loops.interfaces.marketplace_store_interface import (
+    MarketplaceStoreInterface,
+)
+from vibey.infrastructure.loops.local_marketplace_copier import LocalMarketplaceCopier
+from vibey.infrastructure.loops.marketplace_store import MarketplaceStore
+from vibey.infrastructure.loops.snapshot_pruner import SnapshotPruner
 from vibey.infrastructure.mcp.host_installer import HostInstaller
 from vibey.infrastructure.mcp.hub_gateway import HubGateway, default_hub_starter
 from vibey.infrastructure.mcp.hub_start_policy import BoundedHubStarter
@@ -275,6 +292,7 @@ from vibey.infrastructure.supervisor_installer import SupervisorInstaller
 from vibey.infrastructure.tracker.in_memory import InMemoryTracker
 from vibey.infrastructure.tracker.plane import PlaneTrackerAdapter
 from vibey.infrastructure.trusted_table_reader import TomlTrustedTableReader
+from vibey.infrastructure.trusted_table_writer import TomlTrustedTableWriter
 from vibey.infrastructure.user_config_folder import UserConfigFolder
 
 
@@ -1531,6 +1549,65 @@ def loops_bundle_settings() -> LoopsBundleSettings:
     """`[loops]`, read with the ADR-0101 trust rule over the on-disk table reader (SP-LOOPS).
     The person's path for `load` is `acp_user_config()`."""
     return LoopsBundleSettings(TomlTrustedTableReader())
+
+
+LOOPS_STORE: Final = "loops"
+"""The loop capability store's folder, beside the person's own `vibey.toml` (SP-LOOPS Task 7)."""
+ENGINE_DISTRIBUTION: Final = "vibey-engine"
+
+
+def loops_table_reader() -> TomlTrustedTableReader:
+    """The on-disk reader of one `vibey.toml` table, as `[loops]` commands read the person's own
+    raw table before they change it (SP-LOOPS Task 7)."""
+    return TomlTrustedTableReader()
+
+
+def loops_table_writer() -> TomlTrustedTableWriter:
+    """The one writer of a `vibey.toml` table (comments outside it kept, 0600, atomic)."""
+    return TomlTrustedTableWriter()
+
+
+def loops_shipped_source() -> str:
+    """What the marketplace in the installed wheel is locked as: the installed release,
+    `vibey-engine <version>` from the package metadata (this module's version when vibey runs
+    from a tree with no metadata). An upgrade is a new source, so the shipped marketplace locks
+    itself again; the same release with other content is a mismatch (SP-LOOPS Task 6)."""
+    try:
+        version = importlib.metadata.version(ENGINE_DISTRIBUTION)
+    except importlib.metadata.PackageNotFoundError:
+        version = __version__
+    return f"{ENGINE_DISTRIBUTION} {version}"
+
+
+def loops_marketplace_store(user_config: Path) -> MarketplaceStoreInterface:
+    """The person's marketplace store, `<their configuration folder>/loops`: the lock, the
+    fetched marketplaces and the run snapshots. `user_config` is `acp_user_config()`, never a
+    project's file. git sources go through `GitMarketplaceFetcher`, absolute folders through
+    `LocalMarketplaceCopier`; the shipped marketplace is the wheel's (`vibey_skills`)."""
+    return MarketplaceStore(
+        user_config.parent / LOOPS_STORE,
+        fetchers={"git": GitMarketplaceFetcher(), "local": LocalMarketplaceCopier()},
+        shipped_root=marketplace_root,
+    )
+
+
+def loops_resolver(store: MarketplaceStoreInterface) -> CapabilityResolverInterface:
+    """The resolver over `store`'s lock and snapshot folder, the shipped marketplace locked as
+    `loops_shipped_source()`."""
+    return CapabilityResolver(
+        store.lock_path, store.snapshots, shipped_source=loops_shipped_source()
+    )
+
+
+def loops_config_lock() -> SidecarLockInterface:
+    """The file lock `vibey loops` holds beside the person's `vibey.toml` while it reads, changes
+    and writes `[loops]` (`.vibey.toml.flock`, a bounded wait)."""
+    return SidecarLock()
+
+
+def loops_snapshot_pruner() -> SnapshotPruner:
+    """What `vibey loops snapshots prune` removes old run snapshots with."""
+    return SnapshotPruner()
 
 
 def acp_state_dir(config_path: Path) -> Path:

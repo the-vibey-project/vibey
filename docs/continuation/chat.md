@@ -43,7 +43,7 @@ minutes, not seconds. It always replies — with an answer, or with the reason i
 
 - **How it runs:** whenever a trusted person writes `/vibey` in an issue or pull request, or runs the Chat workflow — it answers; asked to act, it may open a draft pull request; it never merges, approves, releases or deletes.
 - **What it is for:** Answer a trusted person who writes /vibey in an issue, a pull request or the Actions tab.
-- **Decision records:** 102, the newest 0102 — Local-first search, and the SearXNG vibey installs and runs itself.
+- **Decision records:** 103, the newest 0103 — The loop capability bundle: declared by the person, locked by content, fetched only on their word.
 - **Lanes it keeps usable:** [Chat](https://github.com/the-vibey-project/vibey/actions/workflows/chat.yml), [vibey (remote command)](https://github.com/the-vibey-project/vibey/actions/workflows/vibey-remote.yml), [vibey state (write back)](https://github.com/the-vibey-project/vibey/actions/workflows/vibey-state-write.yml).
 - **Agent skills it relies on:** `.claude/skills/vibey-chat-driver/SKILL.md`.
 <!-- END GENERATED continuation:state -->

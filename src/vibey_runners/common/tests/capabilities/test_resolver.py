@@ -864,3 +864,49 @@ def test_the_research_skills_resolve_from_the_marketplace_this_checkout_ships(
     } <= names
     assert all(skill.plugin == RESEARCH for skill in snapshot.skills.skills)
     assert all(isinstance(skill, SkillEntry) for skill in snapshot.skills.skills)
+
+
+# -- lock_shipped: what `vibey loops marketplace update vibey` does ------------------------------
+
+
+def test_lock_shipped_relocks_the_shipped_marketplace_whatever_the_lock_held(
+    tmp_path: Path,
+) -> None:
+    """The same release with other content is a mismatch for a run, so the person needs a way to
+    accept it: `lock_shipped` re-hashes the shipped tree and writes it, keeping every other
+    entry."""
+    shipped = _shipped(tmp_path)
+    lock_path = tmp_path / "state" / "loops.lock"
+    acme = _acme(tmp_path)
+    CapabilityLock().write(
+        lock_path,
+        [LockEntry("vibey", SHIPPED_SOURCE, None, "sha256:" + "0" * 64), _locked("acme", acme)],
+    )
+    (shipped / "plugins" / RESEARCH / "README.md").write_text("edited\n", encoding="utf-8")
+    entry = _resolver(tmp_path).lock_shipped(shipped)
+    assert entry == LockEntry("vibey", SHIPPED_SOURCE, None, _shipped_digest(shipped))
+    assert CapabilityLock().read(lock_path) == (entry, _locked("acme", acme))
+    snapshot = _resolver(tmp_path).resolve(_bundle(), (entry,), {"vibey": shipped})
+    assert [d.name for d in snapshot.plugin_dirs] == [RESEARCH]
+
+
+def test_lock_shipped_needs_an_absolute_root(tmp_path: Path) -> None:
+    with pytest.raises(CapabilityResolutionError, match="absolute"):
+        _resolver(tmp_path).lock_shipped(Path("relative/shipped"))
+
+
+def test_lock_shipped_of_an_unreadable_tree_writes_nothing(tmp_path: Path) -> None:
+    root = symlink_loop(tmp_path / "shipped")
+    with pytest.raises(CapabilityResolutionError, match="does not exist"):
+        _resolver(tmp_path).lock_shipped(root)
+    assert not (tmp_path / "state" / "loops.lock").exists()
+
+
+def test_lock_shipped_wraps_a_value_or_recursion_error(tmp_path: Path) -> None:
+    class TooDeep:
+        def read(self, root: Path) -> MarketplaceCatalog:
+            raise RecursionError("maximum recursion depth exceeded")
+
+    with pytest.raises(CapabilityResolutionError, match="cannot lock: maximum recursion") as error:
+        _resolver(tmp_path, manifest=TooDeep()).lock_shipped(_shipped(tmp_path))
+    assert type(error.value) is CapabilityResolutionError

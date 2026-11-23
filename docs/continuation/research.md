@@ -11,7 +11,7 @@ bending a protocol to fit an outcome.
 
 - **Mode when GitHub runs it weekly:** act — may open a draft pull request; never merges, approves, releases or deletes.
 - **What it is for:** Keep every weekly measurement and every registered study running without breaking its protocol.
-- **Decision records:** 102, the newest 0102 — Local-first search, and the SearXNG vibey installs and runs itself.
+- **Decision records:** 103, the newest 0103 — The loop capability bundle: declared by the person, locked by content, fetched only on their word.
 - **Lanes it keeps usable:** [Review canary](https://github.com/the-vibey-project/vibey/actions/workflows/review-canary.yml), [Minimum specs](https://github.com/the-vibey-project/vibey/actions/workflows/minimum-specs.yml), [Host health](https://github.com/the-vibey-project/vibey/actions/workflows/host-health.yml), [Autonomy scorecard](https://github.com/the-vibey-project/vibey/actions/workflows/autonomy-scorecard.yml), [First hour](https://github.com/the-vibey-project/vibey/actions/workflows/first-hour.yml), [Continuation prompts](https://github.com/the-vibey-project/vibey/actions/workflows/continuation-prompts.yml).
 <!-- END GENERATED continuation:state -->
 

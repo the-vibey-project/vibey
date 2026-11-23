@@ -587,3 +587,48 @@ def test_loops_bundle_settings_let_only_a_config_error_out(
         assert exc.path == str(hostile)
     else:
         assert all(notice.isascii() and notice.isprintable() for notice in loaded.notices)
+
+
+def test_the_loops_store_is_beside_the_persons_own_vibey_toml(tmp_path: Path) -> None:
+    """SP-LOOPS Task 7: the lock, the marketplaces and the run snapshots live in the person's
+    configuration folder, beside the file `acp_user_config()` names, never a project's."""
+    store = bootstrap.loops_marketplace_store(tmp_path / "config" / "vibey.toml")
+    assert store.lock_path == tmp_path / "config" / "loops" / "lock.json"
+    assert store.marketplaces == tmp_path / "config" / "loops" / "marketplaces"
+    assert store.snapshots == tmp_path / "config" / "loops" / "snapshots"
+    from vibey_skills import marketplace_root
+
+    assert store.shipped_root() == marketplace_root()
+    resolver = bootstrap.loops_resolver(store)
+    assert resolver._shipped_source == bootstrap.loops_shipped_source()  # noqa: SLF001
+
+
+def test_the_shipped_marketplace_is_locked_as_the_installed_release(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    import importlib.metadata
+
+    assert bootstrap.loops_shipped_source() == (
+        f"vibey-engine {importlib.metadata.version('vibey-engine')}"
+    )
+    monkeypatch.setattr(importlib.metadata, "version", lambda name: "7.8.9")
+    assert bootstrap.loops_shipped_source() == "vibey-engine 7.8.9"
+
+    def missing(name: str) -> str:
+        raise importlib.metadata.PackageNotFoundError(name)
+
+    monkeypatch.setattr(importlib.metadata, "version", missing)
+    assert bootstrap.loops_shipped_source() == f"vibey-engine {bootstrap.__version__}"
+
+
+def test_the_loops_table_seams_are_the_toml_reader_and_writer() -> None:
+    from vibey.infrastructure.loops.snapshot_pruner import SnapshotPruner
+    from vibey.infrastructure.trusted_table_reader import TomlTrustedTableReader
+    from vibey.infrastructure.trusted_table_writer import TomlTrustedTableWriter
+
+    assert isinstance(bootstrap.loops_table_reader(), TomlTrustedTableReader)
+    assert isinstance(bootstrap.loops_table_writer(), TomlTrustedTableWriter)
+    assert isinstance(bootstrap.loops_snapshot_pruner(), SnapshotPruner)
+    from vibey_runners.common.capabilities.sidecar_lock import SidecarLock
+
+    assert isinstance(bootstrap.loops_config_lock(), SidecarLock)

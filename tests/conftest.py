@@ -414,6 +414,16 @@ def _hermetic_web_search(request: pytest.FixtureRequest, monkeypatch: pytest.Mon
         "own_config",
         lambda: Path("/nonexistent-vibey-hermetic-test") / "vibey.toml",
     )
+    # Nor may `vibey loops marketplace | plugin | mcp | skills | snapshots` read or write the
+    # developer's own `[loops]`, lock or store (SP-LOOPS Task 7): the person's file is looked
+    # for in a folder that does not exist, so a write fails instead of landing there.
+    import vibey.cli.loops_bundle
+
+    monkeypatch.setattr(
+        vibey.cli.loops_bundle,
+        "acp_user_config",
+        lambda: Path("/nonexistent-vibey-hermetic-test") / "vibey.toml",
+    )
     # Nor may the MCP gateway read the developer's own `[hub]` or `[web]`.
     import vibey.infrastructure.mcp.hub_gateway
 

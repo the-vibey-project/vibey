@@ -27,3 +27,12 @@ class CapabilityResolverInterface(Protocol):
         locked, and `CapabilityResolutionError` for anything else that stops the run; on any
         failure no snapshot folder is left behind."""
         ...
+
+    def lock_shipped(self, root: Path) -> LockEntry:
+        """Hashes the shipped marketplace at `root` (an absolute path; its manifest and every
+        plugin folder the manifest lists, never bytecode) and writes that digest to the
+        person's lock file under the resolver's `shipped_source`, whatever the lock held before:
+        what `vibey loops marketplace update vibey` does after an edit or an upgrade. Returns the
+        entry written. Raises `CapabilityResolutionError` when the tree cannot be read or the
+        lock cannot be written."""
+        ...

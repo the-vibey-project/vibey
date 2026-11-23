@@ -977,6 +977,71 @@ before it is made when its record cannot be written), whatever the budget. A fet
 a private, loopback, link-local or metadata address whatever these keys say. Any port from 1 to
 65535 may be fetched; a `ports` key is parked.
 
+## `[loops]` { #loops }
+
+What every loop is given -- the marketplaces its plugins come from, the plugins, the MCP servers
+and the skills every loop is pointed at -- as one bundle (SP-LOOPS;
+[ADR-0103](../architecture/decisions/0103-the-loop-capability-bundle.md)). **Your own
+`vibey.toml` declares it** (the one in your configuration folder,
+`~/Library/Application Support/vibey/vibey.toml` on macOS, `$XDG_CONFIG_HOME/vibey/` on Linux);
+the [`vibey loops marketplace | plugin | mcp`](cli.md#vibey-loops-marketplace-plugin-mcp-skills-snapshots)
+commands write it for you and change nothing else in the file. Every key, at every level, is known
+or refused naming its key path (`loops.mcp_servers[0].url: ...`), so a typo never silently drops
+a capability.
+
+| Key | Default | Meaning |
+|---|---|---|
+| `plugins` | `["currency-research@vibey"]` | The plugins every loop is given, written `name@marketplace`; the marketplace must be declared below or be `vibey`, the one that ships with vibey. Absent: the research-methodology plugin. `[]`: none. At most 256, each once. |
+| `skills` | `[]` | Skill names every loop is pointed at. |
+| `disable` | `[]` | Names of plugins, MCP servers or skills to leave out. |
+| `[[loops.marketplaces]]` | none | A marketplace you added: `name` (a plain name; `vibey` is reserved), `source` (an `https://` or `ssh://` URL, `user@host:path`, or an absolute folder; `git://` and `http://` are refused as plaintext) and an optional `ref` (a branch, tag or commit to pin). `vibey loops marketplace update` fetches and locks it; until then a run that needs it stops and says so. |
+| `[[loops.mcp_servers]]` | none | An MCP server: `name`, `trust` and either `command` (for `trust = "local"`: a stdio server, its argv as a list, never run through a shell) or `url` (for `trust = "remote"`: `https://` with a host, no credentials). `env_allow` names the only environment variables a local server keeps, never one that carries a secret (a token, key, password or the Brave key). Trust decides egress, budget and which sessions mount a server; a server's output is always data, never instruction. |
+
+Names are letters, digits, `.`, `_` and `-`, starting with a letter or digit, at most 128
+characters. A source or ref may not start with `-`, hold control characters or run past 4096
+characters.
+
+```toml
+[loops]
+plugins = ["currency-research@vibey", "linting@acme"]
+disable = ["old-skill"]
+
+[[loops.marketplaces]]
+name = "acme"
+source = "https://example.test/acme/marketplace.git"
+ref = "v1.2.0"
+
+[[loops.mcp_servers]]
+name = "files"
+trust = "local"
+command = ["fake-mcp", "--stdio"]
+env_allow = ["HOME"]
+
+[[loops.mcp_servers]]
+name = "tickets"
+trust = "remote"
+url = "https://mcp.example.test/v1"
+```
+
+**What a project may do.** The `vibey.toml` of the folder a run starts in may belong to a cloned
+repository, so its `[loops]` is heard on one key only: `disable`, held to the same rule as your
+own (at most 256 plain names, each once). It can take a plugin, skill or server away from its own
+runs, never add a marketplace, plugin, server or skill. Every other key it carries is dropped and
+named in a notice (the key escaped, at most 16 named), never applied. The `vibey loops`
+subcommands do not read a project's file at all.
+
+**The lock and the store.** Beside your `vibey.toml` vibey keeps `loops/`: `lock.json` (each
+marketplace's source, ref and the digest of its tree, written atomically, 0600), the fetched
+copies (`loops/marketplaces/<name>/<digest>/`) and each run's verified copy of its plugins
+(`loops/snapshots/run-*/`, which `vibey loops snapshots prune` removes after a week). The
+marketplace that ships with vibey locks itself the first time it is used, as
+`vibey-engine <installed version>`, and again after an upgrade; a marketplace you added is
+locked only by `vibey loops marketplace update`. A run never fetches: it copies what the lock
+names into its own snapshot, checks the copy against the lock and loads only the copy, and stops
+naming `vibey loops marketplace update <name>` when a marketplace is not locked or its files
+changed since. Nothing yet changes how a loop runs: the loops apply the snapshot from SP-LOOPS
+Phase 4 on.
+
 ## `[acp]` { #acp }
 
 `vibey acp`, the Agent Client Protocol agent an editor such as Zed launches over stdio
