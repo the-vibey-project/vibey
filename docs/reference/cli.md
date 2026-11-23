@@ -1286,9 +1286,17 @@ what comes back is other people's text, to be read as data and never followed as
 Evidence handed to a DESIGN stage is the quoted retrieved text with its URLs, never a model's
 summary of it.
 
-`fetch` refuses a private, loopback, link-local or metadata address, re-checks every redirect
-hop, follows at most three, reads text types only and stops at 1 MB. A local file path in a
-query is removed before the query leaves the machine.
+`fetch` -- and so the `web_fetch` tool of gptossloop and qwenloop, which runs it, and the DESIGN
+research's page reads -- goes through the same guarded fetch the hub serves agents
+(`vibey_fetch`), never a weaker one: every spelling of an address is read the way the hub reads
+it (decimal, octal and hex IPv4, IPv6, IPv4-mapped and NAT64 forms judged by the address inside),
+local, internal and metadata names are refused, every address a name resolves to must be public
+and the one checked is the one connected to, every redirect is checked again and never goes from
+https down to http, nothing compressed is read, and only text types, within
+[`[web]`](configuration.md#web)'s bounds, host lists and one deadline in all. `[web]` is your own
+`vibey.toml`'s, narrowed by the current folder's; `--max-chars` may lower `[web] max_chars`,
+never raise it. It spends no hub budget and writes no ledger record. A local file path in a query
+is removed before the query leaves the machine.
 
 <a id="local-first-search"></a>
 ### Local first; Brave only as a backup

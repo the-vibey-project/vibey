@@ -400,6 +400,11 @@ def _hermetic_web_search(request: pytest.FixtureRequest, monkeypatch: pytest.Mon
         "personal_config",
         lambda: Path("/nonexistent-vibey-hermetic-test") / "vibey.toml",
     )
+    # Nor may `vibey fetch` or the DESIGN research read the developer's own `[web]` (Task 11a).
+    from vibey.domain.web_tools import WebToolSettings
+    from vibey.infrastructure.web import page_fetcher
+
+    monkeypatch.setattr(page_fetcher, "own_web_settings", WebToolSettings)
     # And no fetch the hub makes may resolve a real name: a test injects its own resolver.
     from vibey.infrastructure.web.guarded_fetch import GuardedPageFetch
 

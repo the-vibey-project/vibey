@@ -17,8 +17,9 @@ import re
 from dataclasses import dataclass
 from typing import Final
 
-from vibey.infrastructure.web.fetch import PageFetcher, WebFetchError
+from vibey.infrastructure.web.fetch import WebFetchError
 from vibey.infrastructure.web.interfaces import LocalFirstSearchInterface
+from vibey.infrastructure.web.interfaces.page_fetcher_interface import PageFetcherInterface
 
 QUERY_TEMPLATES: Final[dict[str, str]] = {
     "prior-art": "{context} existing implementations prior art",
@@ -52,7 +53,7 @@ class WebResearch:
     def __init__(
         self,
         search: LocalFirstSearchInterface,
-        fetcher: PageFetcher,
+        fetcher: PageFetcherInterface,
         *,
         results: int = 5,
         pages: int = 3,

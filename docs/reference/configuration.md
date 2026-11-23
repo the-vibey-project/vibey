@@ -927,6 +927,9 @@ must then be on both lists; nothing in common allows nothing) or drop content ty
 reverse. An unknown key, or a value of the wrong type or out of range, stops the hub (exit 2)
 naming the file and the key. Where search itself goes (`VIBEY_SEARXNG_URL`, the Brave key) is the
 hub's environment's, never a file's: see [local first](cli.md#local-first-search).
+`vibey fetch`, the `web_fetch` tool of gptossloop and qwenloop and the DESIGN research's page
+reads use the same hosts, bounds and content types (your own `[web]`, narrowed by the folder
+they run in), with no budget (SP-ACP Task 11a).
 
 | Key | Default | Meaning |
 |---|---|---|
