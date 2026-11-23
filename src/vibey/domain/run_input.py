@@ -16,6 +16,7 @@ from __future__ import annotations
 
 import hashlib
 import ipaddress
+import json
 import re
 from collections.abc import Mapping
 from dataclasses import dataclass, field
@@ -229,6 +230,15 @@ class InputListing:
 
 
 @dataclass(frozen=True, slots=True)
+class StoreProbe:
+    """What one probe of a run input store found (`vibey doctor`'s `run-inputs` line): whether it
+    answered as a store should, and the words that say so. Never a credential."""
+
+    reachable: bool
+    detail: str
+
+
+@dataclass(frozen=True, slots=True)
 class RunInputsSettings:
     """`[inputs]`: how much a project's run inputs may hold (ADR-0018: each a key, these its
     defaults). Read only from the person's own `vibey.toml`; a project's file is never heard."""
@@ -308,6 +318,24 @@ class RunInputRule:
 
     def is_digest(self, text: str) -> bool:
         return _DIGEST.fullmatch(text) is not None
+
+    def row_of(self, line: bytes) -> RunInput | None:
+        try:
+            row = json.loads(line)
+        except ValueError:  # not JSON, or not UTF-8
+            return None
+        if not isinstance(row, dict):
+            return None
+        digest, kind, name, size = (row.get(key) for key in ("digest", "kind", "name", "size"))
+        if not (isinstance(digest, str) and self.is_digest(digest)):
+            return None
+        if kind not in INPUT_KINDS or not isinstance(name, str):
+            return None
+        if self.valid_name(name) is not None:
+            return None  # an index is data a person or a bucket's writer can edit: check names
+        if not isinstance(size, int) or isinstance(size, bool) or size < 0:
+            return None
+        return RunInput(digest=digest, kind=cast(InputKind, kind), name=name, size=size)
 
 
 RUN_INPUT_RULE: Final[RunInputRuleInterface] = RunInputRule()

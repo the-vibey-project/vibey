@@ -131,6 +131,12 @@ class InputStoreError(VibeyError):
     its digest (SP-LOOPS Phase 3). Nothing was added."""
 
 
+class InputStoreUnavailable(InputStoreError):
+    """The person's run input store did not answer: a network store (`[inputs] store =
+    "seaweedfs"`) that could not be reached, timed out, or answered with a server error
+    (ADR-0105). Retryable: nothing about the inputs is wrong, and nothing was added."""
+
+
 class RunInputRefused(VibeyError):
     """A run input vibey will not add: a kind that is not `paste` or `file`, a name that is not
     one path segment, or more than the person's `[inputs]` limits allow (SP-LOOPS Phase 3).

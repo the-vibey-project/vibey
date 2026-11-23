@@ -34,7 +34,6 @@ from uuid import UUID
 from vibey.application.interfaces.system import Clock
 from vibey.domain.errors import InputStoreError
 from vibey.domain.run_input import (
-    INPUT_KINDS,
     RUN_INPUT_RULE,
     InputKind,
     InputListing,
@@ -150,20 +149,6 @@ class HashAddressedInputStore:
 
     @staticmethod
     def _row(line: bytes) -> RunInput | None:
-        """One index line as a run input, or None when it is not one this store writes."""
-        try:
-            row = json.loads(line)
-        except ValueError:  # not JSON, or not UTF-8
-            return None
-        if not isinstance(row, dict):
-            return None
-        digest, kind, name, size = (row.get(key) for key in ("digest", "kind", "name", "size"))
-        if not (isinstance(digest, str) and RUN_INPUT_RULE.is_digest(digest)):
-            return None
-        if kind not in INPUT_KINDS or not isinstance(name, str):
-            return None
-        if RUN_INPUT_RULE.valid_name(name) is not None:
-            return None  # the index is a file a person can edit: a name is checked as it is read
-        if not isinstance(size, int) or isinstance(size, bool) or size < 0:
-            return None
-        return RunInput(digest=digest, kind=kind, name=name, size=size)
+        """One index line as a run input, or None when it is not one this store writes (the
+        one rule every store reads its index through: `RunInputRule.row_of`)."""
+        return RUN_INPUT_RULE.row_of(line)

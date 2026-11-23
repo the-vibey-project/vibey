@@ -744,3 +744,10 @@ class = "vibey.domain.errors.RunInputRefused"
 title = "vibey will not add this run input"
 cause = "A run input's kind is not `paste` or `file`, its name is not one path segment (empty, `.` or `..`, a `/`, `\\` or NUL, or more than 255 bytes), a file's name differs from another file input's only in case or Unicode form (on many filesystems the two are one file), or adding it would pass a limit in the `[inputs]` table of your own vibey.toml: `max_item_bytes` for one input, `max_project_bytes` for all of a project's inputs together, `max_items` for how many. Nothing was written."
 fix = "Give the input a plain file name (or the very same name, to replace that file), make it smaller, or raise the limit the message names in the `[inputs]` table of your own vibey.toml (a project's own file is never heard on limits)."
+
+[[error]]
+code = "E0096"
+class = "vibey.domain.errors.InputStoreUnavailable"
+title = "The run input store did not answer"
+cause = "`[inputs] store = \"seaweedfs\"` names a store on the network, and it could not be reached, took longer than `[inputs] timeout_seconds`, or answered with a server error (5xx). The message names the store (scheme, host, bucket and prefix) and the kind of failure, never a credential. Nothing was added, and a BUILD run that needed its inputs did not start its engine."
+fix = "Check that the store at the named endpoint is running and reachable from this computer (`vibey doctor` probes it on its `run-inputs` line), then try again; a BUILD job is retried. A store that should be local belongs in `[inputs] store = \"local\"` instead."

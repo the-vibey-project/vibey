@@ -6,7 +6,10 @@ Implemented by `domain/run_input.py`. Interfaces declare; they never consume.
 
 from __future__ import annotations
 
-from typing import Protocol, runtime_checkable
+from typing import TYPE_CHECKING, Protocol, runtime_checkable
+
+if TYPE_CHECKING:
+    from vibey.domain.run_input import RunInput
 
 
 @runtime_checkable
@@ -24,4 +27,12 @@ class RunInputRuleInterface(Protocol):
 
     def is_digest(self, text: str) -> bool:
         """Whether `text` is a digest this rule makes: exactly 64 lowercase hex digits."""
+        ...
+
+    def row_of(self, line: bytes) -> RunInput | None:
+        """One index row (a JSON object: digest, kind, name, size, and anything else) as the run
+        input it records, or None when it is not one a store writes: not JSON or not UTF-8, not
+        an object, a digest that is not one, a kind that is not `paste` or `file`, a name this
+        rule refuses, or a size that is not a non-negative integer. Every store reads its index
+        through this one rule, so a row a local store skips a network store skips too."""
         ...
