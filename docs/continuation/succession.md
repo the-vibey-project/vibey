@@ -12,7 +12,7 @@ name below still exists where it says, and changes nothing.
 
 - **Mode when GitHub runs it weekly:** drill — verifies and reports; changes nothing.
 - **What it is for:** Hand the project to a new steward: what they must hold, where it is declared, and how to verify it.
-- **Decision records:** 102, the newest 0102 — Local-first search, and the SearXNG vibey installs and runs itself.
+- **Decision records:** 103, the newest 0103 — The loop capability bundle: declared by the person, locked by content, fetched only on their word.
 <!-- END GENERATED continuation:state -->
 
 ## The prompt

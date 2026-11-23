@@ -103,7 +103,7 @@ reads any run.
 | `2` | Usage error: a bad global flag (see above); typer's own validation (missing argument, malformed UUID, a value outside an option's minimum or maximum, unknown option); `install` without `--postgres`; `doctor --install-postgres` with `--cluster`; `new --skills-context-mode` outside `off`/`shadow`/`inject`; `answer` mode conflicts or a `--raw` value that is not a JSON object; `abandon` without `--reason`, or with a `--reason` or `--by` that cannot be recorded; `worker` with an unknown `--engines` id, an `--engines` list matching none of the worker's engines, an unknown `--provider`, or an unknown `--azure` value; `doctor --cluster` with an unknown `--engines` id or `--provider`; `doctor --engines` or `--provider` without `--cluster`; `doctor --record` whose target project declares a forbidden `engine_environment` entry; `new` whose `vibey.toml` declares a malformed or forbidden `[gates]` or `[engine_environment]` entry. |
 | `3` | Blocked by a domain rule, in a guarded command. Prints `Error: <message>` on stderr, plus a next-step hint for some error types and, last, the error's permanent code (``(E0040: run `vibey explain E0040`)``). See [Error codes](errors.md). |
 | `130` | Interrupted with Ctrl-C, in a guarded command (prints `Interrupted.`). |
-| `78` | A supervisor setting no service could run with (EX_CONFIG): `supervisor install` or `supervisor status` with an unreadable `[supervisor]` table, a path on volatile storage or inside a linked worktree, `vibey` not on `PATH`, or no delivery bridge under `--repo`; `supervisor exec` with a missing or malformed environment file. |
+| `78` | Your own `vibey.toml` cannot be read or rewritten for `vibey loops marketplace`, `plugin`, `mcp` or `skills` (EX_CONFIG). A supervisor setting no service could run with: `supervisor install` or `supervisor status` with an unreadable `[supervisor]` table, a path on volatile storage or inside a linked worktree, `vibey` not on `PATH`, or no delivery bridge under `--repo`; `supervisor exec` with a missing or malformed environment file. |
 | `75` | Resting for the Sabbath (sub-doctrine 8.i, [ADR-0072](../architecture/decisions/0072-the-sabbath-kept-where-the-machine-stands.md)): `new` or `work` declined, said why and when it resumes, and changed nothing. Paused, not failed. |
 
 ### Guarded and unguarded commands
@@ -1653,6 +1653,58 @@ What the runners' own code shows today:
 | `claudeloop`, `claudeloop-local` | files, pasted text, `claude-plugins` (`run --plugin`), MCP (`run --connector`), skills (`run --skill`); web search for `claudeloop` (`run --web-search`) and none for `claudeloop-local`, whose local backend cannot serve it; images and pasted images unknown | `--run-id` and `--cwd` for each; `prompt TEXT --now` | `event_type+payload` |
 | `codexloop` | files, pasted text, `skills-context`; MCP, skills, web search, images and pasted images unknown (no codexloop code passes an MCP server to Codex) | `--run-id` for each and no `--cwd`: run it in the worktree; `prompt TEXT --now` | `type` |
 | `gptossloop`, `qwenloop` | files, pasted text, `skills-context`, MCP (the `mcp_list` and `mcp_call` tools, over the stdio servers the operator declared), web search (the `web_search` and `web_fetch` tools, through `vibey search` and `vibey fetch`); no images, no pasted images, no skills (text messages and a fixed tool set) | each takes the run id positionally, with `--cwd`; `prompt RUN_ID TEXT`, which its runner adds to the conversation at the next turn boundary | `type` |
+
+## `vibey loops marketplace | plugin | mcp | skills | snapshots`
+
+What every loop is given: the marketplaces its plugins come from, the plugins, the MCP servers
+and the skills, declared once in [`[loops]`](configuration.md#loops) of **your own**
+`vibey.toml` (SP-LOOPS; [ADR-0103](../architecture/decisions/0103-the-loop-capability-bundle.md)).
+A run never fetches anything: it uses only what the lock holds.
+
+```bash
+vibey loops marketplace add acme https://example.test/acme/marketplace.git --ref v1.2.0
+vibey loops marketplace update acme
+vibey loops plugin add linting@acme
+vibey loops mcp add files --local --env-allow HOME -- fake-mcp --stdio
+vibey loops mcp add tickets --remote https://mcp.example.test/v1
+vibey loops skills list --json
+```
+
+Every one of these commands reads and writes only your own `vibey.toml` (in your configuration
+folder: `~/Library/Application Support/vibey` on macOS, `$XDG_CONFIG_HOME/vibey` elsewhere) and
+the store beside it, `<your configuration folder>/loops/`: `lock.json`, one fetched copy of each
+marketplace in `marketplaces/<name>/<digest>/`, and each run's verified copy in
+`snapshots/run-*/`. The `vibey.toml` of the folder you run them in is never read or written: a
+project may only narrow `[loops]`, and only for its own runs. None of them reaches the network,
+except `marketplace update` of a git source.
+
+A change is checked whole by the rule every run reads `[loops]` with before it is written, and is
+written by changing `[loops]` alone: every other byte of the file, comments included, stays as it
+was, and the file is replaced atomically with mode 0600 (a missing file and folder are made, the
+folder 0700; a symlinked `vibey.toml` is written where it points). A comment *inside* `[loops]`
+would be lost by the rewrite, so the command refuses instead, writes nothing, and prints the whole
+table to paste. Names and descriptions that come from a marketplace, skipped rows and what git
+said are printed as one line of visible characters (no control, bidi or invisible characters);
+`--json` prints the values as they are.
+
+| Command | Options | What it does |
+|---|---|---|
+| `marketplace add NAME SOURCE` | `--ref REF` | Declares a marketplace in `[loops] marketplaces`; fetches and locks nothing (`marketplace update` does). `NAME` is a plain name (letters, digits, `.`, `_`, `-`; `vibey` is reserved for the marketplace that ships with vibey). `SOURCE` is an `https://` URL with a host and no credentials, an `ssh://` or `git://` URL, `user@host:path`, or an absolute folder path (copied without git). Refused: a git transport helper (`ext::...`, any `<name>::`), `file://`, `http://`, a relative or `~` path, `..`, a source starting with `-` (put `--` before the arguments to pass one at all), whitespace or control characters. `--ref` pins a branch, tag or full commit id (letters, digits, `.`, `_`, `-`, `/`; no `..`, `//`, trailing `/` or `.lock`); a folder takes no ref. |
+| `marketplace update [NAME]` | | Fetches, checks and locks one marketplace, or with no `NAME` the shipped one and every declared one. A git source is fetched shallow, at the pinned ref (or the remote's `HEAD`), into a fresh 0700 staging folder: `git init --template=`, `git fetch --depth=1 --no-tags --no-recurse-submodules -- SOURCE REF`, `git checkout --detach FETCH_HEAD`, with only the `https`, `ssh` and `git` protocols allowed (`protocol.allow=never` plus each, and `GIT_ALLOW_PROTOCOL`), your global and the system git configuration not read (so no `insteadOf`, credential helper, filter or alias), no hooks, submodules or LFS smudge, ssh in batch mode, no prompt, and only `PATH`, `HOME` and `SSH_AUTH_SOCK` from your environment; the four git calls share a 300-second deadline. A full commit id as the ref must be the commit fetched. A folder source is copied file by file without git (no links, no FIFOs). The copy must then be at most 256 MiB, hash as a tree and hold a readable `.claude-plugin/marketplace.json`; only then is it moved into place and its lock entry (marketplace, source, ref, digest) written, and only once the lock names it are older copies removed. A failure at any step leaves the old copy and the old lock as they were. `vibey` re-hashes the marketplace in the installed wheel and locks it as `vibey-engine <installed version>`: what you run after looking at a change a run refused. Prints `NAME locked sha256:...` (with the commit and source), and each symlink left out. |
+| `marketplace list` | `--json` | Each marketplace with its state, from the lock alone (nothing is fetched or hashed): `locked`; `not locked`; `lock pins another source or ref` (`[loops]` was changed since the last update); for the shipped one also `locks itself at first use` and `locks itself again at next use (a new release)`. `--json` prints `{"lock": PATH, "marketplaces": [{"name", "source", "ref", "shipped", "state", "digest"}]}`, the shipped marketplace first. |
+| `plugin add NAME@MARKETPLACE` | | Adds the plugin to `[loops] plugins`. The marketplace must be declared (or be `vibey`). The first change writes the research default (`currency-research@vibey`) out with it; a plugin already listed changes nothing. |
+| `plugin remove NAME` | | Removes every `[loops] plugins` entry named `NAME` (the research default included, which leaves `plugins = []`). Exit 1 when there is none. |
+| `mcp add NAME` | `--local -- CMD ARG...`, `--remote URL`, `--env-allow VAR` (repeatable) | Adds an MCP server to `[loops] mcp_servers`: exactly one of `--local`, a stdio server whose command and arguments after `--` are stored as given and never passed through a shell, or `--remote`, an `https://` URL with a host and no credentials (port 0 refused). `--env-allow` names a variable a local server keeps from the scrubbed environment it runs in. |
+| `mcp list` | `--json` | The MCP servers in your own `[loops]` (less any you disabled). `--json` prints `{"mcp_servers": [{"name", "trust", "command", "url", "env_allow"}]}`; `command` is the argv list or `null`, `url` the URL or `null`. |
+| `skills list` | `--json` | Resolves the bundle exactly as a run would, from the lock and with no network, into a run snapshot, prints its skills and removes that snapshot. On a fresh install, with no `[loops]` and no lock, it lists the research skills from the marketplace in the wheel (which locks itself at first use). A person-added marketplace with no lock entry, or one whose files changed since it was locked, stops it with the `marketplace update` command to run. `--json` prints `{"digest", "skills": [{"plugin", "name", "description"}], "skipped": [{"path", "reason"}]}`; `path` is relative to the snapshot (`<marketplace>/plugins/...`), and a description is the one-line text a run carries (at most 1024 characters). |
+| `snapshots prune` | `--older-than-days N` (`7`, at least `1`) | Removes the `run-*` folders in `<your configuration folder>/loops/snapshots/` last changed more than `N` days ago. A `run-*` entry that is a symlink or not a folder, and a snapshot folder that is itself a symlink, are named and never followed or removed. Nothing else is touched. |
+
+Exit codes: `0` done (also `plugin add` of a plugin already listed); `1` a fetch, a check or the
+lock failed (`marketplace update`, `skills list`), the lock file cannot be read, or `plugin
+remove` found nothing to remove; `2` a name, plugin, source, ref, URL, command or flag vibey
+refuses (and typer's own usage errors), or `marketplace update` of a name `[loops]` does not
+declare; `78` your `vibey.toml` cannot be read (or its `[loops]` is refused) or cannot be
+rewritten. `marketplace update` with no name returns the highest code of its marketplaces.
 
 ## `vibey models`
 

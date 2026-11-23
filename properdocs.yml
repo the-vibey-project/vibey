@@ -216,4 +216,5 @@ nav:
           - "0100 — Host-driven MCP interface and chat-first krypton surfaces": architecture/decisions/0100-host-driven-mcp-interface-and-chat-first-surfaces.md
           - "0101 — The ACP agent, and the user-level services it installs and keeps running": architecture/decisions/0101-the-acp-agent-and-self-installing-services.md
           - "0102 — Local-first search, and the SearXNG vibey installs and runs itself": architecture/decisions/0102-local-first-search-and-a-provisioned-searxng.md
+          - "0103 — The loop capability bundle: declared by the person, locked by content, fetched only on their word": architecture/decisions/0103-the-loop-capability-bundle.md
   - Research paper: paper.md
