@@ -125,3 +125,12 @@ def test_the_cli_reference_no_longer_says_a_handed_off_run_gets_no_section() -> 
     assert "Inputs stay on this machine" not in inputs
     assert "is given exactly the inputs the run it replaces was given" in inputs
     assert 'store = "seaweedfs"' in inputs
+
+
+def test_the_cli_reference_documents_the_correction_events_and_what_unblocks_a_project() -> None:
+    """Fix review M4: the sentence the error says is the one the reference says."""
+    from vibey.application.run_inputs_service import BLOCKED_UNTIL_READDED
+
+    inputs = " ".join(_section(CLI_DOC, "## `vibey inputs").split())
+    assert "`vibey_run_input_failed`" in inputs and "`vibey_run_input_repaired`" in inputs
+    assert BLOCKED_UNTIL_READDED in inputs

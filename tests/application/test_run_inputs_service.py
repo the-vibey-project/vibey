@@ -25,7 +25,7 @@ import pytest
 import vibey.application.run_inputs_service as run_inputs_service_module
 from vibey.application.dto import EngineEvent, ProjectRecord, RunInputs
 from vibey.application.interfaces.run_inputs_interface import RunInputsInterface
-from vibey.application.run_inputs_service import RunInputsService
+from vibey.application.run_inputs_service import BLOCKED_UNTIL_READDED, RunInputsService
 from vibey.domain.errors import InputStoreError, RunInputRefused, UnknownProject
 from vibey.domain.input_ledger import INPUT_LEDGER, RecordedInputs
 from vibey.domain.ledger import EventKind
@@ -945,7 +945,8 @@ def test_a_store_missing_an_input_the_ledger_records_is_a_loud_failure(tmp_path:
     assert elsewhere.describe() in message
     assert "lacks 1 input(s) the ledger records for this project" in message
     assert f"file {digest_of(b'spec')} (4 bytes)" in message  # names what to add again
-    assert "Point [inputs]" in message
+    assert "point [inputs]" in message
+    assert BLOCKED_UNTIL_READDED in message
     assert not (world.worktree / ".vibey").exists()
 
 
@@ -1225,8 +1226,11 @@ def test_a_ledger_that_fails_on_the_correction_keeps_the_stores_error(tmp_path: 
         limits=lambda: world.limits,
         writer=NoFollowFiles(),
     )
-    with pytest.raises(InputStoreError, match="could not be appended"):
+    with pytest.raises(InputStoreError, match="could not be appended") as caught:
         asyncio.run(failing.add(world.project_id, "file", "lost.md", b"lost"))
+    # Fix review M4: the second failure is said, with what unblocks the project.
+    assert "the ledger could not be corrected either" in str(caught.value)
+    assert BLOCKED_UNTIL_READDED in str(caught.value)
     # The add stands uncorrected: a run names it, and adding the bytes again fulfils it.
     world.ledger = ledger
     world.service = RunInputsService(
@@ -1237,8 +1241,9 @@ def test_a_ledger_that_fails_on_the_correction_keeps_the_stores_error(tmp_path: 
         limits=lambda: world.limits,
         writer=NoFollowFiles(),
     )
-    with pytest.raises(InputStoreError, match=f"file {digest_of(b'lost')} \\(4 bytes\\)"):
+    with pytest.raises(InputStoreError, match=f"file {digest_of(b'lost')} \\(4 bytes\\)") as run:
         world.materialize()
+    assert BLOCKED_UNTIL_READDED in str(run.value)
     again = world.add("file", "lost.md", b"lost")
     adds = [e for e in ledger.events if e["event"].payload["artifact_type"] == "vibey_run_input"]
     assert len(adds) == 1  # the dangling add was fulfilled, not doubled
@@ -1253,3 +1258,36 @@ def test_a_planted_row_does_not_count_against_max_items(tmp_path: Path) -> None:
     world = _World(tmp_path, RunInputsSettings(max_items=1))
     world.store.put(world.project_id, "paste", "paste", b"planted")
     assert world.add("paste", "paste", b"mine").digest == digest_of(b"mine")
+
+
+def test_an_unavailable_store_keeps_its_class_when_the_correction_also_fails(
+    tmp_path: Path,
+) -> None:
+    """The CLI's exit code follows the class (69 for a store that did not answer)."""
+    from vibey.domain.errors import InputStoreUnavailable
+
+    world = _World(tmp_path)
+
+    class _Unanswering(_ThreadStore):
+        def put(self, project_id: UUID, kind: Any, name: str, data: bytes) -> RunInput:
+            raise InputStoreUnavailable("seaweedfs store https://h.test/b/p: not reachable (X)")
+
+    class _NoCorrection(_Ledger):
+        async def record(
+            self, *, project_id: UUID, cycle: int, event: EngineEvent, job_id: UUID | None = None
+        ) -> None:
+            if event.payload.get("artifact_type") == "vibey_run_input_failed":
+                raise RuntimeError("the ledger is down")
+            await super().record(project_id=project_id, cycle=cycle, event=event, job_id=job_id)
+
+    service = RunInputsService(
+        store=_Unanswering(world.store),
+        projects=world.projects,
+        ledger=_NoCorrection(),
+        clock=_Clock(),
+        limits=lambda: world.limits,
+        writer=NoFollowFiles(),
+    )
+    with pytest.raises(InputStoreUnavailable) as caught:
+        asyncio.run(service.add(world.project_id, "paste", "paste", b"words"))
+    assert BLOCKED_UNTIL_READDED in str(caught.value)

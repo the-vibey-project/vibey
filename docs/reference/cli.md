@@ -925,7 +925,14 @@ inputs` section, and nothing added since the handoff is given. A pinned input th
 holds parks the job as a `handoff_inputs_missing` gate; a store that does not answer is retried.
 A follow-up enqueued before this existed keeps the seed alone.
 Each add is one `ArtifactProduced` event with exactly `artifact_type` (`vibey_run_input`),
-`digest`, `kind`, `size` and `name_digest` (the SHA-256 of the name).
+`digest`, `kind`, `size` and `name_digest` (the SHA-256 of the name). An add writes the stored
+object, then this event, then the index row. Two correction events carry the same fields: when
+the row cannot be written after the event, `vibey_run_input_failed` cancels that add; when the
+same bytes are added again for an add whose row is missing, `vibey_run_input_repaired` records
+that the add was fulfilled (it also records a damaged or lost object rewritten in place). If
+neither the row nor the correction could be written, the add stands with no row, and the error
+says so: BUILD runs of this project are blocked until the input is added again with the same
+bytes, name and kind (`vibey inputs add`).
 
 Names are printed through vibey's text cleaner (no control, bidi or invisible characters);
 `--json` prints the values as they are.
