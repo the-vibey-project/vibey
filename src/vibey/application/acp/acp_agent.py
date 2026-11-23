@@ -635,27 +635,19 @@ class AcpAgent:
         hub's data: an entry without a UUID and an absolute repository path is passed over. A
         `cwd` with a `..` part matches nothing: compared as written, it could name a folder
         outside the repository it seems to be in. Symbolic links are never resolved. With
-        `fold_case` (the folder's volume is case-insensitive) a repository in another case is
-        the fallback only: an exact match always wins, and case folds as the volume does
-        (`str.lower`, never Unicode case folding: `ß` is not `ss`)."""
+        `fold_case` (the folder's volume is case-insensitive) a repository in another case
+        holds it too, the deepest still winning; between two equally deep, the exact one wins.
+        Case folds as the volume does (`str.lower`, never Unicode case folding: `ß` is not
+        `ss`)."""
         try:
             projects = json.loads(listing)
         except json.JSONDecodeError:
             return None
         if not isinstance(projects, list) or ".." in PurePath(cwd).parts:
             return None
-        found = cls._deepest(cwd, projects, str)
-        if found is None and fold_case:
-            found = cls._deepest(cwd, projects, str.lower)
-        return found
-
-    @staticmethod
-    def _deepest(
-        cwd: str, projects: list[Any], seen: Callable[[str], str]
-    ) -> tuple[UUID, str, str] | None:
-        """The deepest listed repository holding `cwd`, both compared as `seen` shows them."""
-        folder = PurePath(seen(cwd))
-        best: tuple[int, UUID, str, str] | None = None
+        seen: Callable[[str], str] = str.lower if fold_case else str
+        folder, exact_folder = PurePath(seen(cwd)), PurePath(cwd)
+        best: tuple[tuple[int, bool], UUID, str, str] | None = None
         for project in projects:
             if not isinstance(project, Mapping):
                 continue
@@ -669,9 +661,11 @@ class AcpAgent:
                 project_id = UUID(raw_id)
             except ValueError:
                 continue
-            if best is None or len(root.parts) > best[0]:
+            exact = PurePath(repo)
+            rank = (len(root.parts), exact == exact_folder or exact in exact_folder.parents)
+            if best is None or rank > best[0]:
                 name = project.get("name")
-                best = (len(root.parts), project_id, name if isinstance(name, str) else "", repo)
+                best = (rank, project_id, name if isinstance(name, str) else "", repo)
         return best[1:] if best is not None else None
 
     @staticmethod

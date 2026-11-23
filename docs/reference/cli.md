@@ -452,9 +452,9 @@ A session follows one project's ledger:
   nest, the deepest wins, and when two projects share one, the newest. The path is compared as
   written: symbolic links are not resolved, and a `cwd` with a `..` part follows nothing. When
   the folder's own volume is case-insensitive (asked of the volume: macOS's default, not a
-  case-sensitive APFS volume), a repository in another case is the fallback (`/Work/App` is
-  `/work/app`), an exact match always wins, and case folds as the volume does (`ß` is not
-  `ss`); elsewhere case is never folded. You are told which project the session now follows ("Following project
+  case-sensitive APFS volume), a repository in another case holds it too (`/Work/App` is
+  `/work/app`): the deepest still wins, an exact match breaks a tie, and case folds as the
+  volume does (`ß` is not `ss`); elsewhere case is never folded. You are told which project the session now follows ("Following project
   <name> (<id>) from <repository>"), because it is what a prompt's commands default to: a bare
   `/status`, `/gates`, `/start`, `/pause` or `/abandon` targets it.
 - **The hub, after every turn.** When the hub's reply names a project (`/status <id>`, `/new`),

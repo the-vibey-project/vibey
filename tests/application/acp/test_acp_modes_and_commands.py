@@ -633,6 +633,22 @@ async def test_an_exact_match_wins_over_one_in_another_case() -> None:
     await agent.close()
 
 
+async def test_on_a_folding_volume_the_deepest_repository_wins_whatever_its_case() -> None:
+    """Review 2 minor (d): where case folds, `/work/app` and `/Work/App/sub` both hold
+    `/work/app/sub/x`; the deeper one wins, as everywhere ("the deepest wins"), and an exact match
+    only breaks a tie."""
+    channel, hub = FakeChannel(), FakeHub()
+    hub.projects = projects((PID, "/work/app"), (NESTED, "/Work/App/sub"))
+    agent = build_agent(channel, hub, fold_case=lambda path: True)
+
+    await new_session(agent, "/work/app/sub/x")
+    await until(lambda: len(hub.project_lookups) == 1)
+    await settle()
+
+    assert project_of(agent) == NESTED
+    await agent.close()
+
+
 async def test_case_folds_as_the_volume_does_not_as_unicode_casefold_does() -> None:
     """APFS folds `A`/`a`, never `ß` to `ss`: `/work/STRASSE` is not `/work/straße`."""
     channel, hub = FakeChannel(), FakeHub()
