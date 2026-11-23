@@ -357,3 +357,20 @@ def test_the_searxng_unit_names_its_own_label_to_serve() -> None:
         SupervisorSettings(label_prefix="org.me"), PATHS, names=("searxng",), restart="always"
     )
     assert unit.argv == ("/opt/vibey/bin/vibey", "searxng", "serve", "--label", "org.me.searxng")
+
+
+def test_a_docker_command_can_be_pinned_to_the_local_endpoint_that_was_checked() -> None:
+    """Review 2 minor (b): every docker call serve and install make goes to the endpoint just
+    checked (`-H`), never to whatever context is current a moment later."""
+    docker, sock = "/usr/bin/docker", "unix:///Users/op/.docker/run/docker.sock"
+    assert PLAN.image_argv(docker, IMAGE, host=sock)[:4] == (docker, "-H", sock, "image")
+    assert PLAN.pull_argv(docker, IMAGE, host=sock) == (docker, "-H", sock, "pull", IMAGE)
+    assert PLAN.labels_argv(docker, 501, host=sock)[:3] == (docker, "-H", sock)
+    assert PLAN.remove_argv(docker, 501, host=sock)[:3] == (docker, "-H", sock)
+    assert PLAN.remove_image_argv(docker, OTHER, host=sock) == (docker, "-H", sock, "rmi", OTHER)
+    assert PLAN.pull_argv(docker, IMAGE) == (docker, "pull", IMAGE)  # unpinned: as before
+    for refused in ("ssh://me@far", "tcp://127.0.0.1:2375", "unix:///x y", "unix:///x\n"):
+        with pytest.raises(ValueError, match="local"):
+            PLAN.pull_argv(docker, IMAGE, host=refused)
+    with pytest.raises(ValueError, match="docker"):
+        PLAN.pull_argv("/usr/bin/podman", IMAGE, host=sock)

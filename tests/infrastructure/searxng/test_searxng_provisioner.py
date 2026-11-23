@@ -41,6 +41,8 @@ class Runtime:
         self.where: str | None = ""
         """What `endpoint` says: docker's context endpoint, "" for podman, None unreadable."""
         self.image_removed = RuntimeOutcome(ok=True)
+        self.hosts: list[str] = []
+        """The endpoint each runtime command was pinned to ("" for none)."""
 
     is_local = staticmethod(ContainerRuntime.is_local)
 
@@ -66,19 +68,22 @@ class Runtime:
         self.calls.append(("inspect", runtime, image))
         return self.present
 
-    def pull(self, runtime: str, image: str) -> RuntimeOutcome:
+    def pull(self, runtime: str, image: str, *, host: str = "") -> RuntimeOutcome:
         self._checked(runtime)
         self.calls.append(("pull", runtime, image))
+        self.hosts.append(host)
         return self.pulled
 
-    def remove_container(self, runtime: str, uid: int) -> RuntimeOutcome:
+    def remove_container(self, runtime: str, uid: int, *, host: str = "") -> RuntimeOutcome:
         self._checked(runtime)
         self.calls.append(("rm", runtime, str(uid)))
+        self.hosts.append(host)
         return self.removed
 
-    def remove_image(self, runtime: str, image: str) -> RuntimeOutcome:
+    def remove_image(self, runtime: str, image: str, *, host: str = "") -> RuntimeOutcome:
         self._checked(runtime)
         self.calls.append(("rmi", runtime, image))
+        self.hosts.append(host)
         return self.removed if not self.removed.ok else self.image_removed
 
 
@@ -602,3 +607,15 @@ def test_an_earlier_image_already_gone_is_never_said_to_be_removed(tmp_path: Pat
     assert prepared.ok and "was removed" not in prepared.detail
     assert f"The earlier image (sha256:{'ab' * 6}) was not in podman any more." in prepared.detail
     assert runtime.calls[-1] == ("rmi", RUNTIME, EARLIER)  # with the runtime that pulled it
+
+
+def test_the_pull_and_the_earlier_images_removal_go_to_the_endpoint_checked(
+    tmp_path: Path,
+) -> None:
+    """Review 2 minor (b): install checks docker's context, then pulls (and removes an earlier
+    pin's container and image) at that same local endpoint, never the context current later."""
+    _installed_earlier(tmp_path)
+    runtime = Runtime()
+    runtime.where = "unix:///var/run/docker.sock"
+    assert _provisioner(tmp_path, runtime).prepare().ok
+    assert runtime.hosts == ["unix:///var/run/docker.sock"] * 3  # pull, rm, rmi

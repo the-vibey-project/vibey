@@ -65,24 +65,24 @@ class SearxngPlanInterface(Protocol):
         """The one command line that runs the container (`vibey searxng serve` execs it)."""
         ...
 
-    def pull_argv(self, runtime: str, image: str) -> tuple[str, ...]:
-        """Download the pinned image."""
+    def pull_argv(self, runtime: str, image: str, *, host: str = "") -> tuple[str, ...]:
+        """Download the pinned image. With `host`, docker's `-H <host>` (a local endpoint only)."""
         ...
 
-    def image_argv(self, runtime: str, image: str) -> tuple[str, ...]:
+    def image_argv(self, runtime: str, image: str, *, host: str = "") -> tuple[str, ...]:
         """Ask whether the image is present (exit 0 when it is); downloads nothing."""
         ...
 
-    def labels_argv(self, runtime: str, uid: int) -> tuple[str, ...]:
+    def labels_argv(self, runtime: str, uid: int, *, host: str = "") -> tuple[str, ...]:
         """Ask the labels of the container of `uid`'s name (exit non-zero when there is none)."""
         ...
 
-    def remove_argv(self, runtime: str, uid: int) -> tuple[str, ...]:
+    def remove_argv(self, runtime: str, uid: int, *, host: str = "") -> tuple[str, ...]:
         """Remove the container of `uid`'s name, running or not (only after its labels say it
         is vibey's own for that uid)."""
         ...
 
-    def remove_image_argv(self, runtime: str, image: str) -> tuple[str, ...]:
+    def remove_image_argv(self, runtime: str, image: str, *, host: str = "") -> tuple[str, ...]:
         """Remove a SearXNG image named by its digest: the pinned one, or an earlier pin's
         after an update; never any other image."""
         ...

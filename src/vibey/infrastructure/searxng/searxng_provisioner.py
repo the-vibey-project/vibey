@@ -252,7 +252,7 @@ class SearxngProvisioner:
                     "socket; vibey runs SearXNG only on this computer's own runtime, so "
                     f"`{name} context use default` (or another local context) to install it",
                 )
-            pulled = self._runtime.pull(runtime, self._image)
+            pulled = self._runtime.pull(runtime, self._image, host=where)
         except ValueError as exc:
             return SearxngPrepared(False, str(exc))
         if not pulled.ok:
@@ -275,14 +275,16 @@ class SearxngProvisioner:
             if ignored
             else ""
         )
-        removed = self._remove_earlier(runtime, earlier)
+        removed = self._remove_earlier(runtime, earlier, where)
         return SearxngPrepared(
             True,
             f"Downloaded searxng/searxng@sha256:{short} with {name}, and wrote its settings in "
             f"{self._files.folder}.{note}{removed}",
         )
 
-    def _remove_earlier(self, runtime: str, earlier: SearxngProvision | None) -> str:
+    def _remove_earlier(
+        self, runtime: str, earlier: SearxngProvision | None, where: str = ""
+    ) -> str:
         """After an update: the earlier pin's container (which holds its image; the unit starts
         the new one), then its image, each with the runtime the earlier record names -- the one
         that pulled it, which an update always keeps (`_install_runtime`). What happened, as a
@@ -292,8 +294,11 @@ class SearxngProvisioner:
         digest = self._plan.digest_of(earlier.image)
         owner = earlier.runtime
         name = PurePath(owner).name
-        stopped = self._runtime.remove_container(owner, self._uid())
-        gone = self._runtime.remove_image(owner, earlier.image) if stopped.ok else stopped
+        host = where if owner == runtime else ""  # the endpoint checked is this runtime's
+        stopped = self._runtime.remove_container(owner, self._uid(), host=host)
+        gone = (
+            self._runtime.remove_image(owner, earlier.image, host=host) if stopped.ok else stopped
+        )
         if gone.ok and gone.detail == NOTHING_TO_REMOVE:
             return f" The earlier image (sha256:{digest}) was not in {name} any more."
         if gone.ok:

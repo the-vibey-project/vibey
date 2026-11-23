@@ -36,6 +36,8 @@ class Runtime(ContainerRuntime):
         self.present = True
         self.removed = RuntimeOutcome(ok=True)
         self.calls: list[str] = []
+        self.hosts: list[str] = []
+        """The endpoint each runtime command was pinned to ("" for none)."""
         self.where: str | None = ""
         """Docker's context endpoint as `endpoint` reads it ("" for podman, None unreadable)."""
 
@@ -44,18 +46,20 @@ class Runtime(ContainerRuntime):
         self.calls.append("context")
         return self.where
 
-    def image_present(self, runtime: str, image: str) -> bool:
+    def image_present(self, runtime: str, image: str, *, host: str = "") -> bool:
         # Not vetted here, so the tests pin serve's own vetting (the real one vets again).
         self.calls.append("inspect")
+        self.hosts.append(host)
         return self.present
 
     def pull(self, runtime: str, image: str) -> RuntimeOutcome:
         self.calls.append("pull")
         return RuntimeOutcome(ok=True)
 
-    def remove_container(self, runtime: str, uid: int) -> RuntimeOutcome:
+    def remove_container(self, runtime: str, uid: int, *, host: str = "") -> RuntimeOutcome:
         self._checked(runtime)
         self.calls.append(f"rm {uid}")
+        self.hosts.append(host)
         return self.removed
 
 
@@ -329,6 +333,8 @@ def test_the_run_is_pinned_to_the_local_context_it_was_checked_against(tmp_path:
     assert world.serve() == 0
     ((_, _, env),) = world.execs
     assert env["DOCKER_HOST"] == "unix:///Users/op/.docker/run/docker.sock"
+    # The calls before the exec go to that endpoint too (review 2 minor (b)).
+    assert world.runtime.hosts == ["unix:///Users/op/.docker/run/docker.sock"] * 2
 
 
 def test_podman_runs_with_no_docker_host(tmp_path: Path) -> None:
@@ -337,3 +343,13 @@ def test_podman_runs_with_no_docker_host(tmp_path: Path) -> None:
     assert world.serve() == 0
     ((_, _, env),) = world.execs
     assert "DOCKER_HOST" not in env
+
+
+def test_the_unload_hint_quotes_the_units_label(tmp_path: Path) -> None:
+    """Review 2 minor (f): the label comes from the unit file; the commands to paste quote it."""
+    world = World(tmp_path)
+    world.install()
+    world.unit = "old prefix;touch x.searxng"
+    assert world.serve() == EXIT_CONFIG
+    assert "`launchctl bootout gui/$(id -u)/'old prefix;touch x.searxng'`" in world.said[0]
+    assert "`systemctl --user disable --now 'old prefix;touch x.searxng'`" in world.said[0]

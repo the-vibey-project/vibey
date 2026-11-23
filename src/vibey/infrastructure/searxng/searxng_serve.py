@@ -21,8 +21,9 @@ Before anything runs it checks, and refuses (said on standard error, the unit's 
 
 Then it removes its own container a killed run left behind and replaces itself (`execve`) with
 the runtime's one command line (`SearxngPlan.run_argv`), with an environment of
-`CONTAINER_VARIABLES` and a fixed PATH: never this process's database URL, tokens, keys or a
-`DOCKER_HOST`. The service manager owns the process from then on: stopping the unit stops the
+`CONTAINER_VARIABLES` and a fixed PATH: never this process's database URL, tokens, keys or
+`DOCKER_HOST`; for docker, `DOCKER_HOST` is the local endpoint just checked, as is every docker
+call before the exec (`-H`). The service manager owns the process from then on: stopping the unit stops the
 runtime, which stops and removes the container (`--rm`).
 
 Exit codes: 78 (EX_CONFIG) for every refusal that can only change when the person acts -- the
@@ -37,6 +38,7 @@ Declared by `interfaces/searxng_serve_interface.py`.
 from __future__ import annotations
 
 import os
+import shlex
 import sys
 from collections.abc import Callable, Mapping
 from pathlib import PurePath
@@ -100,12 +102,13 @@ class SearxngServe:
                 "starts it again",
             )
         if self._unit is not None and self._unit != self._label():
+            quoted = shlex.quote(self._unit)  # from the unit file: pasted as a command
             return self._refuse(
                 EXIT_CONFIG,
                 f"this unit is {self._unit}, but your [supervisor] label_prefix now makes "
                 f"vibey's SearXNG unit {self._label()}: it is left from an earlier prefix, so "
-                f"it runs nothing; unload it (`launchctl bootout gui/$(id -u)/{self._unit}` on "
-                f"macOS, `systemctl --user disable --now {self._unit}` on Linux) and remove its "
+                f"it runs nothing; unload it (`launchctl bootout gui/$(id -u)/{quoted}` on "
+                f"macOS, `systemctl --user disable --now {quoted}` on Linux) and remove its "
                 "file",
             )
         try:
@@ -151,13 +154,13 @@ class SearxngServe:
                 "daemon, so nothing was run; switch back to a local context (`docker context "
                 "use default`)",
             )
-        if not self._runtime.image_present(runtime, provision.image):
+        if not self._runtime.image_present(runtime, provision.image, host=where or ""):
             return self._refuse(
                 EXIT_CONFIG,
                 f"the image {provision.image} is not here, and serve never downloads; "
                 f"`{INSTALL_COMMAND}` does",
             )
-        removed = self._runtime.remove_container(runtime, self._uid())
+        removed = self._runtime.remove_container(runtime, self._uid(), host=where or "")
         if not removed.ok:
             foreign = "vibey did not start" in removed.detail
             return self._refuse(

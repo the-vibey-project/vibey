@@ -327,9 +327,10 @@ such a run should assert.
 - The Docker CLI's `currentContext` (in `~/.docker/config.json`, reached through `HOME`) can name
   an ssh or tcp context: install and the unit's `serve` both ask `docker context inspect` (which
   contacts no daemon) and refuse a context whose endpoint is not a local socket (`unix://`,
-  `npipe://`) or that cannot be read; `serve` then runs the container with `DOCKER_HOST` pinned
-  to the endpoint it just checked, so a later `docker context use <remote>` refuses at login
-  (78) rather than starting SearXNG on another machine (SP-ACP Task 11b-ii).
+  `npipe://`) or that cannot be read; every docker call after the check -- install's pull,
+  serve's image check and old-container removal (`-H <endpoint>`) and the container's run
+  (`DOCKER_HOST`) -- goes to the endpoint just checked, so a later `docker context use <remote>`
+  refuses at login (78) rather than starting SearXNG on another machine (SP-ACP Task 11b-ii).
 - With both podman and docker found, a podman that does not answer `podman info` (a podman
   machine that is stopped) gives way to a docker that does -- asked with `docker info` only when
   docker's context is local, so choosing never contacts another machine; when neither answers,

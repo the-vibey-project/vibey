@@ -17,6 +17,9 @@ if TYPE_CHECKING:
 
 @runtime_checkable
 class ContainerRuntimeInterface(Protocol):
+    """Each command may be pinned (`host`) to the local docker endpoint a caller checked
+    (`endpoint`), so it goes there whatever context is current by then; "" for none."""
+
     def find(self) -> str | None:
         """podman, else docker, found once in vibey's trusted folders (never the PATH), and only
         one that passes `vet`'s checks on its file; None when neither. With both found, a podman
@@ -43,20 +46,20 @@ class ContainerRuntimeInterface(Protocol):
         the one `find` would choose now."""
         ...
 
-    def image_present(self, runtime: str, image: str) -> bool:
+    def image_present(self, runtime: str, image: str, *, host: str = "") -> bool:
         """Whether the image is already here. Downloads nothing."""
         ...
 
-    def pull(self, runtime: str, image: str) -> RuntimeOutcome:
+    def pull(self, runtime: str, image: str, *, host: str = "") -> RuntimeOutcome:
         """Download the image, bounded by the install bound."""
         ...
 
-    def remove_container(self, runtime: str, uid: int) -> RuntimeOutcome:
+    def remove_container(self, runtime: str, uid: int, *, host: str = "") -> RuntimeOutcome:
         """Remove `uid`'s container, running or not, only when its labels say vibey started it
         for `uid`; an absent one is removed already, and one without that label is left and
         said."""
         ...
 
-    def remove_image(self, runtime: str, image: str) -> RuntimeOutcome:
+    def remove_image(self, runtime: str, image: str, *, host: str = "") -> RuntimeOutcome:
         """Remove the image; an absent one is removed already."""
         ...

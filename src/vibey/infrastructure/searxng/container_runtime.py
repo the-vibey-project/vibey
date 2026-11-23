@@ -47,6 +47,7 @@ from typing import Final
 
 from vibey.domain.interfaces.searxng_interface import SearxngPlanInterface
 from vibey.domain.searxng import (
+    LOCAL_ENDPOINTS,
     OWNER_LABEL,
     RUNTIMES,
     TRUSTED_RUNTIME_DIRS,
@@ -71,8 +72,6 @@ DAEMON_VARIABLES: Final = (
     "DOCKER_CONFIG",
 )
 """What would point a runtime at another daemon. Never passed on: a login unit has none of them."""
-LOCAL_ENDPOINTS: Final = ("unix://", "npipe://")
-"""How a runtime endpoint on this computer starts: a socket or a named pipe."""
 NOTHING_TO_REMOVE: Final = "nothing to remove"
 """The detail of a removal that found nothing: ok, but nothing was removed."""
 ABSENT: Final = ("no such container", "no such image", "image not known", "no such object")
@@ -210,16 +209,16 @@ class ContainerRuntime:
             raise ValueError(UntrustedText.clean(str(refusal)))
         return runtime
 
-    def image_present(self, runtime: str, image: str) -> bool:
-        argv = self._plan.image_argv(self._checked(runtime), image)
+    def image_present(self, runtime: str, image: str, *, host: str = "") -> bool:
+        argv = self._plan.image_argv(self._checked(runtime), image, host=host)
         return self._runner(argv).returncode == 0
 
-    def pull(self, runtime: str, image: str) -> RuntimeOutcome:
-        argv = self._plan.pull_argv(self._checked(runtime), image)
+    def pull(self, runtime: str, image: str, *, host: str = "") -> RuntimeOutcome:
+        argv = self._plan.pull_argv(self._checked(runtime), image, host=host)
         return self._outcome(argv, self._pull_runner(argv), self._pull_runner)
 
-    def remove_container(self, runtime: str, uid: int) -> RuntimeOutcome:
-        probe = self._plan.labels_argv(self._checked(runtime), uid)
+    def remove_container(self, runtime: str, uid: int, *, host: str = "") -> RuntimeOutcome:
+        probe = self._plan.labels_argv(self._checked(runtime), uid, host=host)
         found = self._runner(probe)
         if found.returncode != 0:
             return self._outcome(probe, found, self._runner, absent_ok=True)
@@ -237,11 +236,11 @@ class ContainerRuntime:
                     "yourself"
                 ),
             )
-        argv = self._plan.remove_argv(runtime, uid)
+        argv = self._plan.remove_argv(runtime, uid, host=host)
         return self._outcome(argv, self._runner(argv), self._runner, absent_ok=True)
 
-    def remove_image(self, runtime: str, image: str) -> RuntimeOutcome:
-        argv = self._plan.remove_image_argv(self._checked(runtime), image)
+    def remove_image(self, runtime: str, image: str, *, host: str = "") -> RuntimeOutcome:
+        argv = self._plan.remove_image_argv(self._checked(runtime), image, host=host)
         return self._outcome(argv, self._runner(argv), self._runner, absent_ok=True)
 
     @staticmethod

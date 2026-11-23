@@ -462,3 +462,19 @@ def test_a_docker_whose_context_is_remote_is_never_asked_whether_it_answers(
 )
 def test_which_endpoints_are_this_computers_own(where: str | None, local: bool) -> None:
     assert ContainerRuntime.is_local(where) is local
+
+
+def test_each_command_carries_the_endpoint_it_is_pinned_to(trusted: Trusted) -> None:
+    docker = trusted.binary(trusted.first, "docker")
+    sock = "unix:///var/run/docker.sock"
+    runner = FakeRunner(
+        PostgresCommandResult(0), PostgresCommandResult(0, stdout='{"vibey.searxng.owner": "501"}')
+    )
+    puller = FakeRunner()
+    runtime = trusted.runtime(runner, puller, uid=501)
+    assert runtime.image_present(docker, IMAGE, host=sock)
+    assert runtime.pull(docker, IMAGE, host=sock).ok
+    assert runtime.remove_container(docker, 501, host=sock).ok
+    assert runtime.remove_image(docker, IMAGE, host=sock).ok
+    assert all(call[1:3] == ("-H", sock) for call in runner.calls + puller.calls)
+    assert len(runner.calls) == 4 and len(puller.calls) == 1
