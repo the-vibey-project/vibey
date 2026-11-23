@@ -288,7 +288,10 @@ environment of whoever started it (`vibey hub start` by hand, the user-level uni
 starting it from an editor's environment); `vibey doctor` on the hub's computer says. A
 fetch is refused for anything but a public http(s) page: see [`[web]`](configuration.md#web)
 for the hosts, bounds and content types, and [the hub API](hub-api.md#web) for every refusal.
-An answer is cut to 60,000 characters with an explicit `...[truncated N chars]` marker.
+An answer is cut to 60,000 characters with an explicit `...[truncated N chars]` marker; a
+`vibey_fetch` answer longer than that (`[web] max_chars` raised past it) is cut inside its
+marked block instead, so it still parses, says `"truncated": true`, and keeps its closing
+marker. A failed search names the cause and the backends tried, never where SearXNG listens.
 
 ## `vibey acp`
 
@@ -2273,7 +2276,9 @@ A fourth line, `web-tools`, follows: whether the hub serves [`vibey_search` and
 `vibey_fetch`](#web-tools-vibey_search-and-vibey_fetch) to the agent principal, with the
 `[web]` budgets (the person's own, narrowed by this folder's, as the hub reads them). The hub it
 asks about is your own: its state folder and `agent_scopes` come from your own `vibey.toml` (in
-your configuration folder), never from the folder doctor runs in, and it is probed only on a
+your configuration folder), never from the folder doctor runs in, which may only narrow
+`agent_scopes` -- read by the same rule `vibey mcp` uses, so a `PASS` here is exactly when its
+`tools/list` offers the two tools -- and it is probed only on a
 loopback address its runtime record names -- exactly `localhost`, a canonical 127.0.0.0/8 or
 `::1` literal (or an IPv4-mapped form of one), or a wildcard bind -- connecting to a fixed
 loopback literal rather than resolving the name again, with no credential, bounded in time and size, never through a proxy and never past a

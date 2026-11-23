@@ -126,3 +126,19 @@ def test_the_default_reads_the_hubs_own_environment(monkeypatch: pytest.MonkeyPa
     monkeypatch.setenv("VIBEY_SEARCH_PROVIDER", "brave")
     with pytest.raises(WebToolUnavailable):
         asyncio.run(HubWebSearch().search("q", 1))
+
+
+@pytest.mark.parametrize("environ", [{}, {"BRAVE_SEARCH_API_KEY": FAKE_KEY}])
+def test_a_failure_never_tells_the_hubs_caller_the_searxng_address(
+    environ: dict[str, str],
+) -> None:
+    """P-9b-8 (SP-ACP Task 11a): the model driving vibey needs no SearXNG address, so a failure
+    names the cause and the backends tried, never where SearXNG listens."""
+    secret = "http://10.9.8.7:18888"
+    failing = _down_then(urllib.error.HTTPError("https://x", 500, "down", None, io.BytesIO()))  # type: ignore[arg-type]
+    with pytest.raises(WebToolFailed) as raised:
+        asyncio.run(_search({**environ, "VIBEY_SEARXNG_URL": secret}, failing).search(QUERY, 5))
+    said = str(raised.value)
+    assert "10.9.8.7" not in said and "18888" not in said
+    assert said.startswith("no search backend answered: the hub's local SearXNG ")
+    assert "vibey doctor" in said

@@ -714,7 +714,7 @@ fix = "Use a public http(s) page the person's `[web]` lists allow (docs/referenc
 code = "E0091"
 class = "vibey.domain.web_tools.WebToolFailed"
 title = "Web search, or the page, did not answer"
-cause = "The local SearXNG failed and there was no Brave backup, or the backup failed too; or the page could not be resolved or reached, answered something other than 200, took longer than `[web] timeout_seconds` in all, or redirected more than `[web] max_redirects` times. Any other failure after the hub began is named by its class alone. The message names the cause, never the query or the URL, and the attempt is recorded on the ledger when the hub can write the record."
+cause = "The local SearXNG failed and there was no Brave backup, or the backup failed too; or the page could not be resolved or reached, answered something other than 200, took longer than `[web] timeout_seconds` in all, or redirected more than `[web] max_redirects` times. Any other failure after the hub began is named by its class alone. The message names the cause, never the query, the URL or the local SearXNG's address, and the attempt is recorded on the ledger when the hub can write the record."
 fix = "For search, run `vibey doctor` on the hub's computer: its `web-search` line says whether the local SearXNG answers (`vibey searxng install` sets one up). For a page, try it again later, or another page."
 
 [[error]]

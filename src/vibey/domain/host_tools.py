@@ -20,6 +20,7 @@ Pure: no I/O, no network, no clock, no random UUID generation (the caller suppli
 
 from __future__ import annotations
 
+import json
 import re
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
@@ -42,6 +43,10 @@ MAX_NAME_CHARS: Final = 128
 MAX_LEDGER_LIMIT: Final = 200
 DEFAULT_LEDGER_LIMIT: Final = 50
 MAX_RESPONSE_CHARS: Final = 60_000
+_BLOCK_OPEN: Final = "<<<untrusted web content "
+_BLOCK_CLOSE: Final = "<<<end of untrusted web content "
+"""How the hub opens and closes the nonce-marked block a fetch's page sits in
+(`application/hub/web_tools_service.py`)."""
 
 HOST_INSTRUCTIONS: Final = (
     "You are driving vibey, a queue-based six-phase conductor for autonomous software delivery. "
@@ -619,8 +624,42 @@ class HostTools:
     def truncate(self, text: str, *, limit: int = MAX_RESPONSE_CHARS) -> str:
         if len(text) <= limit:
             return text
+        fitted = self._fit_framed(text, limit)
+        if fitted is not None:
+            return fitted
         dropped = len(text) - limit
         return f"{text[:limit]}\n...[truncated {dropped} chars]"
+
+    @staticmethod
+    def _fit_framed(text: str, limit: int) -> str | None:
+        """A hub fetch answer (JSON whose `text` is one nonce-marked block) cut inside the block,
+        so it still parses and its closing marker survives (P-9b-9, SP-ACP Task 11a): the page's
+        words are what is dropped, never vibey's framing. None for any other text."""
+        try:
+            document = json.loads(text)
+        except (ValueError, RecursionError):
+            return None
+        if not isinstance(document, dict):
+            return None
+        framed = document.get("text")
+        if not isinstance(framed, str) or not framed.startswith(_BLOCK_OPEN):
+            return None
+        opening, _, rest = framed.partition("\n")
+        body, newline, closing = rest.rpartition("\n")
+        if not newline or not closing.startswith(_BLOCK_CLOSE) or not closing.endswith(">>>"):
+            return None
+        kept = len(body)
+        while True:
+            cut = len(body) - kept
+            note = f"\n...[cut {cut} chars to fit the answer]" if cut else ""
+            document["text"] = f"{opening}\n{body[:kept]}{note}\n{closing}"
+            document["truncated"] = True
+            answer = json.dumps(document, ensure_ascii=False)
+            if len(answer) <= limit:
+                return answer
+            if kept == 0:
+                return None
+            kept = max(0, kept - max(len(answer) - limit, 64))
 
     def format_query(self, query: Sequence[tuple[str, str]]) -> str:
         if not query:

@@ -15,7 +15,9 @@ doctor --json` reads it as one more check and no key changes):
 
 The hub this line asks about is the person's own: its state folder and `agent_scopes` come from
 their own `vibey.toml` (`bootstrap.acp_user_config`), never from the folder doctor runs in, which
-may be a cloned repository's (ADR-0101's trust model). The probe goes only to a loopback address
+may be a cloned repository's (ADR-0101's trust model); that folder may only narrow `agent_scopes`,
+read by the one rule `vibey mcp` uses (`HubSettingsLoader.load_trusted`), so the line and the
+MCP server's `tools/list` never disagree (SP-ACP Task 11a, P-9b-11). The probe goes only to a loopback address
 named by the hub's runtime record -- a record naming any other host is a `WARN` and nothing is
 sent -- with no credential, bounded in time and size, and no redirect off its own origin. The
 budgets are the person's `[web]`, narrowed by the folder's (the hub reads them the same way). Every detail is cleaned as a raised check's is (`DoctorChecks.cleaned`); the line never
@@ -78,8 +80,10 @@ class WebToolsDoctor:
     def _line(self) -> str:
         mine = self._user_config()
         try:
-            # The person's own hub: never a state folder a project's vibey.toml names.
-            hub = HUB_SETTINGS.load(mine)
+            # The person's own hub: never a state folder a project's vibey.toml names. Its
+            # `agent_scopes` narrowed by this folder's, read exactly as `vibey mcp` reads them
+            # (`load_trusted`), so a PASS here is what `tools/list` offers (P-9b-11).
+            hub = HUB_SETTINGS.load_trusted(mine, self._config_path())
             web = WEB_SETTINGS.load_trusted(mine, self._config_path())
         except ConfigError as exc:
             return f"FAIL {NAME:<{_WIDTH}} {DoctorChecks.cleaned(str(exc), limit=400)}"
