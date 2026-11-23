@@ -1060,10 +1060,33 @@ files (never the project's keys). A project file that cannot be read changes not
 | `max_project_bytes` | `8388608` (8 MiB) | The most all of one project's inputs may hold together. |
 | `max_items` | `64` | The most inputs one project may have. |
 | `max_prompt_bytes` | `65536` (64 KiB) | The most pasted text (UTF-8 bytes, all pastes together) inlined into a run's prompt; a paste past it is named, with its place in the run's `paste.md`, instead, so a 32k-token model's context stays usable. |
+| `store` | `local` | Where the inputs are stored: `local` (your state folder, or `store_dir`) or `seaweedfs` (a bucket on an S3 endpoint you name; [ADR-0105](../architecture/decisions/0105-run-input-store-backends.md), proposed). |
+| `store_dir` | unset (your state folder) | `local` only: an absolute folder to store the inputs in instead of `<state folder>/inputs/`. Naming it takes the state-folder environment out of where a worker looks. |
+| `endpoint` | unset | `seaweedfs` only, required: `https://host[:port]` of the S3 gateway. No user info, path, query or fragment; plain `http` only for `localhost`, `127.0.0.1` or `::1`. |
+| `bucket` | unset | `seaweedfs` only, required: the bucket, which must already exist (vibey never creates one). |
+| `prefix` | `vibey/inputs` | `seaweedfs` only: the key prefix under the bucket; `/`-separated segments of `A-Z a-z 0-9 . _ -`. |
+| `region` | `us-east-1` | `seaweedfs` only: the region the requests are signed for (S3 SigV4). |
+| `access_key_env` | `VIBEY_INPUTS_ACCESS_KEY` | `seaweedfs` only: the environment variable holding the access key. |
+| `secret_key_env` | `VIBEY_INPUTS_SECRET_KEY` | `seaweedfs` only: the environment variable holding the secret key. |
+| `timeout_seconds` | `10.0` | `seaweedfs` only: how long one request to the store may take. |
 
-Every value is a positive integer (`true` is not one), an unknown key is refused naming the
+Every limit is a positive integer (`true` is not one), an unknown key is refused naming the
 key, and `max_item_bytes` may not be more than `max_project_bytes`; a refused table stops
 `vibey inputs add` with exit 78 and a BUILD run that has inputs to give with a failure naming it.
+A store key that does nothing for the chosen `store` is refused too, so a typo cannot hide.
+
+**`[inputs]` holds no credential.** A key named `access_key`, `secret_key`, `password` or
+`token` is refused, and the message never repeats its value: put the two credentials in the
+environment variables `access_key_env` and `secret_key_env` name. They are never written to a
+log, an error, a URL or `vibey doctor` output.
+
+```toml
+[inputs]
+store = "seaweedfs"
+endpoint = "https://files.example.org:8333"
+bucket = "vibey-inputs"
+# The credentials are read from VIBEY_INPUTS_ACCESS_KEY and VIBEY_INPUTS_SECRET_KEY.
+```
 
 ```toml
 [inputs]
@@ -1076,8 +1099,11 @@ max_prompt_bytes = 32768
 The limits are checked when an input is added, against the project's inputs so far, and read
 again each time a BUILD run with inputs starts: an input that no longer fits (say after
 `max_items` was lowered) is withheld from that run and counted in its prompt, never deleted.
-The store itself is in your state folder, not here; see
-[`vibey inputs`](cli.md#vibey-inputs).
+With the default `store = "local"` the store is in your state folder (or `store_dir`); see
+[`vibey inputs`](cli.md#vibey-inputs). Either way the ledger, not the store, decides which
+inputs exist: a BUILD run whose store lacks an input the ledger records for the project fails
+before its engine starts and names the store it read, and an object in the store that the ledger
+never recorded is withheld and counted, never given.
 
 ## `[acp]` { #acp }
 
