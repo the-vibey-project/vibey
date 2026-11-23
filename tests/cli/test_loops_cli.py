@@ -184,6 +184,8 @@ def test_the_document_has_the_contracts_shape_without_a_database() -> None:
                 "paste_images",
                 "plugins",
                 "mcp",
+                "skills",
+                "web_search",
                 "evidence",
             ]
             assert list(engine["controls"]) == ["stop", "wind_down", "prompt"]
@@ -272,6 +274,23 @@ def test_a_paid_engine_is_listed_as_on_with_no_switch_and_its_model_chooser_note
     assert claudeloop["capabilities"]["plugins"] == "claude-plugins"
     assert claudeloop["plan_flag"] is None
     assert _engine(document, "codexloop")["supports_cwd_flag"] is False
+
+
+def test_every_capability_a_descriptor_holds_is_in_the_document() -> None:
+    """`skills` and `web_search` are reported beside the rest, and an unknown stays `null`:
+    codexloop's MCP is unknown since no codexloop code mounts a server (SP-LOOPS Task 1)."""
+    document = _document()
+    claudeloop = _engine(document, "claudeloop")["capabilities"]
+    codexloop = _engine(document, "codexloop")["capabilities"]
+
+    assert claudeloop["skills"] is True
+    assert claudeloop["web_search"] is True
+    assert "--web-search" in claudeloop["evidence"]["web_search"]
+    assert _engine(document, "claudeloop-local")["capabilities"]["web_search"] is False
+    assert _engine(document, "gptossloop")["capabilities"]["skills"] is False
+    assert (codexloop["mcp"], codexloop["skills"], codexloop["web_search"]) == (None, None, None)
+    assert codexloop["evidence"]["mcp"].startswith("unknown: ")
+    assert "skills" not in codexloop["evidence"]
 
 
 def test_only_a_runner_that_acts_on_a_mid_run_prompt_offers_a_prompt_control() -> None:
@@ -427,6 +446,18 @@ def test_the_table_says_what_each_effort_passes_and_how_to_switch_a_local_engine
         "  gptossloop is on unless switched off by VIBEY_FEATURE_GPTOSSLOOP=0, or by its key "
         "under [features] in vibey.toml"
     ) in lines
+    assert (
+        "  claudeloop capabilities: yes files, paste_text, plugins (claude-plugins), mcp, "
+        "skills, web_search; unknown images, paste_images"
+    ) in lines
+    assert (
+        "  codexloop capabilities: yes files, paste_text, plugins (skills-context); unknown "
+        "images, paste_images, mcp, skills, web_search"
+    ) in lines
+    assert (
+        "  gptossloop capabilities: yes files, paste_text, plugins (skills-context), mcp, "
+        "web_search; no images, paste_images, skills"
+    ) in lines
     assert [line for line in lines if line.startswith("  note on ")] == [
         f"  note on qwenloop: {RENAMED_ENGINES[EngineId.QWENLOOP]}"
     ]
@@ -471,6 +502,8 @@ def test_an_engine_that_declares_nothing_reports_every_fact_as_null() -> None:
         "paste_images": None,
         "plugins": None,
         "mcp": None,
+        "skills": None,
+        "web_search": None,
         "evidence": {},
     }
     assert engine["controls"] == {"stop": None, "wind_down": None, "prompt": None}

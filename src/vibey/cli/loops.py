@@ -102,6 +102,7 @@ class LoopsPresenter:
                     f"  {name} is switched on by {engine.switch}=1, or by its key under "
                     "[features] in vibey.toml"
                 )
+            lines.append(self._capability_line(name, engine.descriptor.affordances))
             lines += [f"  note on {name}: {note}" for note in engine.notes]
         return lines
 
@@ -204,8 +205,27 @@ class LoopsPresenter:
             "paste_images": affordances.paste_images,
             "plugins": affordances.plugins.value if affordances.plugins is not None else None,
             "mcp": affordances.mcp,
+            "skills": affordances.skills,
+            "web_search": affordances.web_search,
             "evidence": dict(affordances.evidence),
         }
+
+    @classmethod
+    def _capability_line(cls, name: str, affordances: EngineAffordances) -> str:
+        """Every capability the engine is shown to have, shown not to have, and not known to
+        have, in the document's key order; a group with nothing in it is left out."""
+        groups: dict[str, list[str]] = {"yes": [], "no": [], "unknown": []}
+        for key, value in cls._capabilities(affordances).items():
+            if key == "evidence":
+                continue
+            if value is None:
+                groups["unknown"].append(key)
+            elif value is False:
+                groups["no"].append(key)
+            else:
+                groups["yes"].append(key if value is True else f"{key} ({value})")
+        said = "; ".join(f"{group} {', '.join(keys)}" for group, keys in groups.items() if keys)
+        return f"  {name} capabilities: {said}"
 
     @staticmethod
     def _controls(descriptor: EngineDescriptor) -> dict[str, object]:
