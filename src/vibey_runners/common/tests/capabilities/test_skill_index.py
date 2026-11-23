@@ -311,3 +311,72 @@ def test_stray_files_do_not_crowd_skills_out_of_the_limit(tmp_path: Path) -> Non
     catalog = SkillIndex().build([plugin])
     assert [skill.name for skill in catalog.skills] == ["z-real"]
     assert catalog.skipped == ()
+
+
+def _can_link(path: Path, target: Path) -> None:
+    try:
+        path.symlink_to(target)
+    except (OSError, NotImplementedError):  # pragma: no cover - only where links cannot be made
+        pytest.skip("this operating system cannot create a symlink here")
+
+
+def _modes_bind(folder: Path) -> None:
+    """Skip unless a mode-000 `folder` really refuses this process."""
+    if hasattr(os, "geteuid") and os.geteuid() == 0:  # pragma: no cover - root ignores modes
+        pytest.skip("permissions do not bind the superuser")
+    try:
+        os.listdir(folder)
+    except PermissionError:
+        return
+    pytest.skip("this file system does not enforce folder permissions")  # pragma: no cover
+
+
+def test_a_skills_entry_linked_to_itself_is_skipped_not_raised(tmp_path: Path) -> None:
+    plugin = _plugin(tmp_path)
+    _skill(plugin, "lint", VALID.format(name="lint"))
+    loop = plugin / "skills" / "loop"
+    _can_link(loop, loop)
+    catalog = SkillIndex().build([plugin])
+    assert [skill.name for skill in catalog.skills] == ["lint"]
+    ((path, reason),) = catalog.skipped
+    assert path.name == "loop"
+    assert reason.startswith("cannot be read")
+
+
+def test_a_dangling_symlink_in_skills_is_quietly_not_a_skill(tmp_path: Path) -> None:
+    plugin = _plugin(tmp_path)
+    _skill(plugin, "lint", VALID.format(name="lint"))
+    _can_link(plugin / "skills" / "gone", plugin / "nowhere")
+    catalog = SkillIndex().build([plugin])
+    assert [skill.name for skill in catalog.skills] == ["lint"]
+    assert catalog.skipped == ()
+
+
+def test_a_skill_folder_that_cannot_be_searched_is_skipped_not_raised(tmp_path: Path) -> None:
+    plugin = _plugin(tmp_path)
+    _skill(plugin, "lint", VALID.format(name="lint"))
+    locked = _skill(plugin, "locked", VALID.format(name="locked")).parent
+    locked.chmod(0o000)
+    try:
+        _modes_bind(locked)
+        catalog = SkillIndex().build([plugin])
+        assert [skill.name for skill in catalog.skills] == ["lint"]
+        ((path, reason),) = catalog.skipped
+        assert path.name == "locked" and reason.startswith("cannot be read")
+    finally:
+        locked.chmod(0o700)
+
+
+def test_a_skills_folder_that_cannot_be_listed_is_skipped_not_raised(tmp_path: Path) -> None:
+    plugin = _plugin(tmp_path)
+    _skill(plugin, "lint", VALID.format(name="lint"))
+    folder = plugin / "skills"
+    folder.chmod(0o000)
+    try:
+        _modes_bind(folder)
+        catalog = SkillIndex().build([plugin])
+        assert catalog.skills == ()
+        ((path, reason),) = catalog.skipped
+        assert path == plugin and reason.startswith("cannot be read")
+    finally:
+        folder.chmod(0o700)

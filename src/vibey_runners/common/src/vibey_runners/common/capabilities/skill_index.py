@@ -11,7 +11,9 @@ folder's own `.git` (`GitFolderGuard`) -- is skipped as `INSIDE_GIT`: the lock l
 marketplace root's `.git` out of its digest, so nothing in one may be loaded. Only the frontmatter's
 `name` and `description` are kept (design Decision 10: bodies are fetched on demand). A file over
 `SKILL_MAX_BYTES`, one that is not UTF-8 or cannot be opened, and a malformed frontmatter are each
-skipped with a named reason; the index never raises for what a plugin contains.
+skipped with a named reason; so is any entry, skill folder or `skills/` folder the file system
+will not let it look at (a symlink loop, a folder that cannot be searched). The index never raises
+for what a plugin contains.
 
 Declared by `interfaces/skill_index_interface.py::SkillIndexInterface`.
 """
@@ -69,7 +71,10 @@ class SkillIndex:
         skills: list[SkillEntry] = []
         skipped: list[tuple[Path, str]] = []
         for plugin_dir in plugin_dirs:
-            self._plugin(plugin_dir, skills, skipped)
+            try:
+                self._plugin(plugin_dir, skills, skipped)
+            except (OSError, RuntimeError) as exc:  # RuntimeError: a symlink loop on 3.12
+                skipped.append((plugin_dir, f"cannot be read: {exc}"))
         return SkillCatalog(tuple(skills), tuple(skipped))
 
     def _plugin(
@@ -91,8 +96,15 @@ class SkillIndex:
         # One scan, classified from the directory entry (no stat for a plain file or folder;
         # a symlink is followed). Only skill folders count toward the limit, so stray files
         # cannot crowd skills out; folders past it are one skipped row, never stat'ed again.
+        folders: list[Path] = []
         with os.scandir(resolved) as scan:
-            folders = sorted(Path(entry.path) for entry in scan if entry.is_dir())
+            for listed in scan:
+                try:
+                    if listed.is_dir():  # a symlink to itself raises ELOOP here
+                        folders.append(Path(listed.path))
+                except OSError as exc:
+                    skipped.append((Path(listed.path), f"cannot be read: {exc}"))
+        folders.sort()
         if len(folders) > MAX_SKILLS_PER_PLUGIN:
             over = len(folders) - MAX_SKILLS_PER_PLUGIN
             skipped.append(
@@ -104,7 +116,10 @@ class SkillIndex:
             )
         candidates = folders[:MAX_SKILLS_PER_PLUGIN]
         for skill_dir in candidates:
-            entry, reason, where = self._skill(plugin_dir.name, base, skill_dir)
+            try:
+                entry, reason, where = self._skill(plugin_dir.name, base, skill_dir)
+            except (OSError, RuntimeError) as exc:  # e.g. a skill folder that cannot be searched
+                entry, reason, where = None, f"cannot be read: {exc}", skill_dir
             if entry is not None and entry.name in names:
                 reason = f"names the skill {entry.name} twice in {plugin_dir.name}"
                 entry = None
