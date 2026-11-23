@@ -5,6 +5,7 @@ review's findings on invisible characters)."""
 
 from __future__ import annotations
 
+import time
 import unicodedata
 
 import pytest
@@ -17,6 +18,7 @@ from vibey_runners.common.capabilities.safe_text import (
     INVISIBLE,
     MAX_MARKS,
     MIN_LIMIT,
+    RAW_FACTOR,
     SafeText,
 )
 
@@ -126,6 +128,23 @@ def test_text_exactly_at_the_limit_is_not_cut() -> None:
 
 def test_the_limit_is_counted_after_cleaning() -> None:
     assert _clean("ab\x1b\x1b\x1bcd", 4) == "abcd"
+
+
+def test_a_megabyte_of_combining_marks_costs_what_the_limit_allows() -> None:
+    """CPython 3.12's NFKC is quadratic in a run of combining marks of alternating classes (about
+    0.5 s for 80k marks), so the raw text is cut to `RAW_FACTOR` times the limit before it is
+    normalised: the cost follows the limit, not the input."""
+    hostile = "a" + "\u0301\u0316" * 500_000  # 1 MB of marks, classes 230 and 220 alternating
+    started = time.perf_counter()
+    cleaned = SafeText().clean(hostile, 1024)
+    elapsed = time.perf_counter() - started
+    assert elapsed < 2.0  # generous: well under 10 ms on a laptop
+    assert len(cleaned) <= 1024 and cleaned.endswith(ELLIPSIS)
+
+
+def test_text_cut_before_cleaning_still_shows_the_cut() -> None:
+    raw = "a" + " " * (20 * RAW_FACTOR) + "b"  # the "b" lies past what is read
+    assert _clean(raw, 20) == "a" + ELLIPSIS
 
 
 def test_a_limit_too_small_for_the_mark_is_refused() -> None:

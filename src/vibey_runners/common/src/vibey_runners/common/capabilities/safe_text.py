@@ -14,8 +14,10 @@ everything else -- controls (so ESC and the sequences it starts), format charact
 zero-width characters, tag characters), surrogates, private-use and unassigned code points -- is
 removed. The result is normalised again (a removal can let a base and its mark compose), runs of
 space collapse and the ends are trimmed; text still longer than the limit is cut and ends in
-`ELLIPSIS`, so a cut is never silent. Each step is one pass over the text, and cleaning cleaned
-text changes nothing. `is_plain` asks the same of a file or folder name, without normalising it.
+`ELLIPSIS`, so a cut is never silent. Before any of this the raw text is cut to `RAW_FACTOR` times
+the limit (and the result then always ends in `ELLIPSIS`): CPython 3.12's NFKC is quadratic in a
+long run of combining marks, so the cost follows the limit, never the input. Each step is one pass
+over that bounded text, and cleaning cleaned text changes nothing. `is_plain` asks the same of a file or folder name, without normalising it.
 Declared by `interfaces/safe_text_interface.py::SafeTextInterface`.
 """
 
@@ -28,6 +30,8 @@ ELLIPSIS: Final = "..."
 """Three full stops rather than U+2026, which NFKC would turn into them: cleaning a cut text again
 must not change it."""
 MIN_LIMIT: Final = len(ELLIPSIS) + 1
+RAW_FACTOR: Final = 4
+"""At most `RAW_FACTOR * limit` characters of the raw text are read at all."""
 MAX_MARKS: Final = 3
 """The most combining marks kept after one base character."""
 INVISIBLE: Final = frozenset(
@@ -56,9 +60,10 @@ class SafeText:
     def clean(self, text: str, limit: int) -> str:
         if limit < MIN_LIMIT:
             raise ValueError(f"a text limit must be at least {MIN_LIMIT}, not {limit}")
-        kept = self._keep(unicodedata.normalize("NFKC", text))
+        raw_limit = limit * RAW_FACTOR
+        kept = self._keep(unicodedata.normalize("NFKC", text[:raw_limit]))
         line = " ".join(unicodedata.normalize("NFKC", kept).split())
-        if len(line) <= limit:
+        if len(text) <= raw_limit and len(line) <= limit:
             return line
         return line[: limit - len(ELLIPSIS)].rstrip() + ELLIPSIS
 
