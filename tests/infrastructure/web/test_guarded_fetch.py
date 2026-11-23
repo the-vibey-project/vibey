@@ -780,3 +780,38 @@ def test_a_cancelled_request_cancels_the_fetch_so_nothing_more_is_sent() -> None
     gate.set()
     _joined()
     assert conn.closed and conn.requests == []
+
+
+def test_a_late_answer_while_the_caller_is_still_running_is_dropped_by_the_loop() -> None:
+    """The deadline passed and the caller moved on, but its event loop is still running when the
+    fetch's thread finishes: the thread's answer reaches the loop and is dropped there, since
+    nobody waits for it any more. Driven deterministically (the loop outlives the thread): which
+    of this and the closed-loop case a racing test reaches depends on the scheduler, which made
+    the Linux runner's coverage differ from macOS's."""
+    gate = threading.Event()
+
+    class Late(Connection):
+        def getresponse(self) -> Response:
+            gate.wait(5)
+            return Response(200, {"Content-Type": "text/plain"}, b"late")
+
+        def close(self) -> None:
+            self.closed = True  # a close that does not release it: the answer comes later
+
+    world = World([Late()])
+    fetcher = GuardedPageFetch(resolve=world.resolve, connect=world.connect)
+    settings = WebToolSettings(timeout_seconds=0.1)
+
+    async def drive() -> None:
+        with pytest.raises(WebToolFailed, match="within"):
+            await fetcher.fetch(_target("https://late.example/", settings), settings)
+        gate.set()
+        threads = [t for t in threading.enumerate() if t.name == "vibey-web-fetch"]
+        for thread in threads:
+            await asyncio.to_thread(thread.join, 5)
+            assert not thread.is_alive()
+        # The thread handed its answer to this loop before it ended; let the loop run it.
+        for _ in range(3):
+            await asyncio.sleep(0)
+
+    asyncio.run(drive())
