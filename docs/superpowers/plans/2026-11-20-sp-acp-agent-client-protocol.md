@@ -10,6 +10,74 @@
 
 **Spec:** the master plan `docs/superpowers/plans/2026-11-10-vibey-optimization-program.md`, section SP-ACP (added by the concurrent "what is left" rewrite), carrying the operator-approved design of 2026-11-20. The approved design is restated in "Approved design" below so this plan stands alone. The protocol reference is <https://agentclientprotocol.com/protocol/overview> and its schema page.
 
+## Status (as of 2026-11-22)
+
+Tasks 1 to 10 have landed on `develop`, together with three added tasks and two fixes. Task 11a is in progress and Task 11b has not started. Pull requests are in `the-vibey-project/vibey`.
+
+| Task | PR | Note |
+|---|---|---|
+| 1. Shared JSON-RPC peer | #1936 | Stdlib peer; the MCP server is re-pointed at it |
+| 2. Domain types, settings, state machine | #1937 | `[acp]` table and the session state machine |
+| 3. `vibey acp` initialize, session/new, prompt, cancel | #1938 | Prompt turn over the hub chat |
+| 4. Gates as permission requests | #1939 | Spend gates never offered |
+| 5. Live ledger feed, slash commands, modes | #1940 | Ledger polled into updates |
+| 6. Session persistence | #1941 | Migration 0023; load, resume, list, close |
+| 7. Doctor checks and bootstrap steps 1, 2, 4 | #1942 | Doctor, connect, PostgreSQL via permission prompt |
+| 8. User-level units, keep-alive, ADR-0101, `vibey acp unload` | #1943 | Hub and worker units |
+| Canon proposal, sub-doctrine 12.q | #1944 | Merged by the operator |
+| 9. Zed `agent_servers` registration, docs | #1945 | Also the LLM-tooling report and the `BRAVE_SEARCH_API_KEY` alias |
+| 9c (added). Local-first search | #1946 | SearXNG primary, Brave only a backup, identity check |
+| 9d (added). vibey installs and runs the local SearXNG | #1948 | ADR-0102 |
+| 9b (added). Search and fetch served from the hub | #1949 | MCP tools behind a `web` scope |
+| Fix: redactor overlap and linear time | #1951 | Related to 9b |
+| Fix: Linux coverage for the guarded fetch | #1952 | Related to 9b |
+| 10. Conformance test with the official SDK client | #1953 | `agent-client-protocol` 1.0.0 |
+| 11a. Security sweep of parked items | none yet | In progress, not landed |
+| 11b. UX and cleanup nits | none yet | Not started |
+
+Tasks 9b, 9c and 9d were added by the operator on 2026-11-21. The task sections below are the plan as written; "Differences from this plan as built" lists where the build departed from them.
+
+## Differences from this plan as built
+
+Each of these was accepted in review.
+
+- The chat planner class is `HubChat`, not `HubChatPlanner`, as fact 2 below already says.
+- The SDK conformance test fronts the real hub FastAPI app instead of the stdlib stub hub Task 10 describes.
+- Tasks 9b, 9c and 9d were added: search and fetch served from the hub behind a `web` scope, local-first search, and vibey installing and running the SearXNG.
+- ACP settings are read from the person's own user configuration, not from the project's `vibey.toml`. The project file is untrusted: it cannot grant anything, and may only narrow.
+- `vibey acp unload` was added to stop and unload the units the bootstrap loaded.
+- Gate options are shown as `Answer: <label>`, with an agent-owned `<gate>:open` option.
+- Session records need the `acp_sessions` scope, with caps `sessions_max` and `session_events_max`.
+- Loading a session is bounded by `replay_events_max`.
+
+## What the operator must still run
+
+None of the following has been run. Each needs a host this series was not tested on.
+
+- **The manual end to end in PR #1953's description.** It was not run: it needs Zed, a clean account, real `launchctl` or `systemctl`, and a container runtime. Follow the checklist in that PR body and record each observation with its time and command output.
+- **The opt-in real-container test.** It has never been run:
+  `VIBEY_TEST_SEARXNG_CONTAINER=1 uv run pytest tests/infrastructure/searxng/test_searxng_real_container.py`
+- **SearXNG container flags, unverified against the real image:**
+  - a read-only filesystem with tmpfs mounts
+  - `--cap-drop ALL`
+  - reading the 0600 settings file through a read-only mount (rootless Docker, and Fedora with SELinux needing `:Z`)
+  - SIGTERM stopping the container so that `--rm` removes it
+  - the pid and memory limits
+  - old Docker exposing ports published on 127.0.0.1 to the LAN
+- **`launchctl` and `systemctl --user` behaviour,** never run:
+  - availability over SSH
+  - restart after systemd's start limit
+  - the shape of launchd `print` output across macOS versions
+
+### Known follow-ups not done
+
+- Engine sessions through the hub, with a per-session `web`-only principal minted by the worker. Engine sessions still talk to SearXNG directly, and the identity check is not authentication.
+- Modern API-key redaction shapes: `sk-ant-`, `sk-proj-`, `gho_` and `ghs_`, `github_pat_`, `ASIA`, and a lowercase `bearer`.
+- A wire-log Bearer token split across chunks.
+- A `RecursionError` in redaction on very deep nesting.
+- A scan-and-rotate of old ledger rows that may hold redaction fragments.
+- Flatpak Zed, `CODEX_HOME` and `CLAUDE_CONFIG_DIR` paths.
+
 ## Approved design (operator rulings of 2026-11-20, binding)
 
 - vibey is the ACP agent over stdio JSON-RPC 2.0, `protocolVersion: 1`. Zed or any ACP client launches it as `vibey acp`. No new console script.
