@@ -1069,6 +1069,7 @@ files (never the project's keys). A project file that cannot be read changes not
 | `access_key_env` | `VIBEY_INPUTS_ACCESS_KEY` | `seaweedfs` only: the environment variable holding the access key. |
 | `secret_key_env` | `VIBEY_INPUTS_SECRET_KEY` | `seaweedfs` only: the environment variable holding the secret key. |
 | `timeout_seconds` | `10.0` | `seaweedfs` only: how long one request to the store may take. |
+| `max_listed_rows` | `1024` | `seaweedfs` only: the most index rows one listing of a project reads (one request each). A project whose index lists more is refused, never read in part: a bound on what another writer of a shared bucket can make a run fetch. |
 
 Every limit is a positive integer (`true` is not one), an unknown key is refused naming the
 key, and `max_item_bytes` may not be more than `max_project_bytes`; a refused table stops

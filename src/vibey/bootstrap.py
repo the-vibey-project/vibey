@@ -1595,9 +1595,16 @@ def run_inputs_location() -> InputStoreLocation:
 
 
 def run_inputs_http_client(location: InputStoreLocation) -> httpx.Client:
-    """The HTTP client a SeaweedFS input store speaks through: `[inputs] timeout_seconds`, and
-    no redirect followed, so every request goes to the endpoint the person named (ADR-0105)."""
-    return httpx.Client(timeout=location.timeout_seconds, follow_redirects=False)
+    """The HTTP client a SeaweedFS input store speaks through: `[inputs] timeout_seconds`, no
+    redirect followed and no proxy taken from the environment, so every request goes to the
+    endpoint the person named (ADR-0105)."""
+    return httpx.Client(
+        timeout=location.timeout_seconds,
+        follow_redirects=False,
+        # No proxy from the environment: signed requests go to the endpoint, and nowhere else
+        # (review N5).
+        trust_env=False,
+    )
 
 
 def seaweedfs_input_store(

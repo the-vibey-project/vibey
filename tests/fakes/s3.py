@@ -13,7 +13,7 @@ from __future__ import annotations
 
 from collections.abc import Callable
 from datetime import UTC, datetime
-from urllib.parse import parse_qsl, unquote
+from urllib.parse import parse_qsl, quote, unquote
 from xml.sax.saxutils import escape
 
 import httpx
@@ -57,7 +57,8 @@ class FakeS3:
 
     def handle(self, request: httpx.Request) -> httpx.Response:
         self.requests.append(request)
-        self._check_signature(request)
+        if not self._signature_matches(request):
+            return _error(403, "SignatureDoesNotMatch")
         override = self.answer(request)
         if override is not None:
             return override
@@ -101,19 +102,24 @@ class FakeS3:
         )
         return httpx.Response(200, content=body.encode())
 
-    def _check_signature(self, request: httpx.Request) -> None:
+    def _signature_matches(self, request: httpx.Request) -> bool:
+        """Signs the request again as S3 does: over the DECODED key re-encoded strictly (so a
+        store that signs one string and sends another fails here, as it would there), the query
+        as sent, and the body. A mismatch is S3's 403 `SignatureDoesNotMatch`."""
         when = datetime.strptime(request.headers["x-amz-date"], "%Y%m%dT%H%M%SZ").replace(
             tzinfo=UTC
         )
         signer = S3RequestSigner(ACCESS, self._secret, REGION, clock=lambda: when)
-        raw_path = request.url.raw_path.decode().split("?", 1)[0]
+        decoded = unquote(request.url.raw_path.decode().split("?", 1)[0])
+        canonical_uri = "/".join(quote(segment, safe="-_.~") for segment in decoded.split("/"))
         query = dict(parse_qsl(request.url.query.decode(), keep_blank_values=True))
-        assert signer.canonical_query(query) == request.url.query.decode(), "sent != signed"
+        if signer.canonical_query(query) != request.url.query.decode():
+            return False
         expected = signer.headers(
             method=request.method,
             host=request.url.netloc.decode(),
-            canonical_uri=raw_path,
+            canonical_uri=canonical_uri,
             query=query,
             body=request.read(),
         )
-        assert request.headers["authorization"] == expected["Authorization"], "bad signature"
+        return request.headers.get("authorization") == expected["Authorization"]

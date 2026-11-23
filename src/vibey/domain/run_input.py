@@ -58,6 +58,7 @@ _REMOTE_KEYS: Final = frozenset(
         "access_key_env",
         "secret_key_env",
         "timeout_seconds",
+        "max_listed_rows",
     }
 )
 _STORE_KEYS: Final = frozenset({"store", "store_dir"}) | _REMOTE_KEYS
@@ -82,6 +83,10 @@ class InputStoreLocation:
     access_key_env: str = "VIBEY_INPUTS_ACCESS_KEY"
     secret_key_env: str = "VIBEY_INPUTS_SECRET_KEY"
     timeout_seconds: float = 10.0
+    max_listed_rows: int = 1024
+    """The most index rows one listing of a project reads from a SeaweedFS store: a bound on the
+    requests a run makes when another writer of a shared bucket plants rows (16 times the
+    default `max_items`). A listing past it is refused, never read in part."""
 
     def __post_init__(self) -> None:
         if self.kind not in STORE_KINDS:
@@ -140,6 +145,12 @@ class InputStoreLocation:
                 f"[inputs] timeout_seconds must be a positive number, not {ascii(timeout)[:32]}"
             )
 
+        rows = self.max_listed_rows
+        if isinstance(rows, bool) or not isinstance(rows, int) or rows < 1:
+            raise ValueError(
+                f"[inputs] max_listed_rows must be a positive integer, not {ascii(rows)[:32]}"
+            )
+
     def describe(self) -> str:
         """The store in words for doctor and errors: scheme, host, bucket and prefix, or the
         local folder. Never a credential (none is held here) and never user info (refused)."""
@@ -182,8 +193,9 @@ class InputStoreLocation:
                 if not isinstance(value, str):
                     raise ValueError(f"[inputs] {key} must be a string")
                 values[key] = value
-        if "timeout_seconds" in table:
-            values["timeout_seconds"] = table["timeout_seconds"]
+        for key in ("timeout_seconds", "max_listed_rows"):
+            if key in table:
+                values[key] = table[key]
         return cls(**values)  # type: ignore[arg-type]  # each value is checked in __post_init__
 
 

@@ -232,7 +232,7 @@ def test_a_row_that_is_not_json_is_skipped_and_counted(row: bytes) -> None:
     fake = FakeS3()
     store = _store(fake)
     store.put(PID, "file", "a.txt", b"abc")
-    fake.objects[f"vibey/inputs/{PID}/index/00000000000000000000-zz.json"] = row
+    fake.objects[f"vibey/inputs/{PID}/index/00000000000000000000-{'f' * 32}.json"] = row
     listing = store.listed(PID)
     assert listing.skipped == 1
     assert [item.name for item in listing.items] == ["a.txt"]
@@ -489,3 +489,134 @@ def test_probe_says_why_it_failed_and_never_raises(answer: object, detail: str) 
 
 def test_describe_is_the_locations() -> None:
     assert _store(FakeS3()).describe() == LOCATION.describe()
+
+
+# -- fix round 1: keys, bounds, hostile listings, error classes (review I1, N2-N6) -------------
+
+
+def test_a_key_with_a_space_signs_as_it_is_sent() -> None:
+    """The signed path is the percent-encoded path, so S3 (and the fake, which re-signs the
+    decoded key as S3 does) agrees: no 403."""
+    fake = FakeS3()
+    store = _store(fake)
+    key = "vibey/inputs/odd key/ünïcode~x.txt"
+    status, _, _ = store._exchange("PUT", key, body=b"x", max_bytes=10)  # noqa: SLF001
+    assert status == 200
+    assert fake.objects[key] == b"x"
+    assert b"odd%20key" in fake.requests[-1].url.raw_path
+
+
+def test_a_store_signing_with_the_wrong_secret_gets_s3s_403() -> None:
+    fake = FakeS3(secret="another-secret")
+    with pytest.raises(InputStoreError, match="refused the credentials"):
+        _store(fake).listed(PID)
+
+
+@pytest.mark.parametrize(
+    "planted",
+    [
+        "a b.json",
+        "../../../other/x.json",
+        "00000000000000000000-zz.json",
+        "sub/00000000000000000000-" + "0" * 32 + ".json",
+        "00000000000000000000-" + "0" * 32 + ".json?x",
+    ],
+)
+def test_a_planted_key_is_skipped_and_never_fetched(planted: str) -> None:
+    fake = FakeS3()
+    store = _store(fake)
+    store.put(PID, "file", "a.txt", b"abc")
+    fake.objects[f"vibey/inputs/{PID}/index/{planted}"] = b"{}"
+    before = len(fake.requests)
+    listing = store.listed(PID)
+    assert [item.name for item in listing.items] == ["a.txt"]
+    assert listing.skipped == 1
+    fetched = [r for r in fake.requests[before:] if "list-type" not in r.url.params]
+    assert len(fetched) == 1  # the one real row; the planted key was never requested
+
+
+def test_a_listing_past_max_listed_rows_is_refused_unread() -> None:
+    fake = FakeS3()
+    location = InputStoreLocation(
+        kind="seaweedfs", endpoint=ENDPOINT, bucket=BUCKET, max_listed_rows=2
+    )
+    store = _store(fake, location=location)
+    for n in range(3):
+        store.put(PID, "paste", "paste", f"p{n}".encode())
+    before = len(fake.requests)
+    with pytest.raises(
+        InputStoreError, match="lists 3 rows; \\[inputs\\] max_listed_rows reads at most 2"
+    ):
+        store.listed(PID)
+    assert all("list-type" in r.url.params for r in fake.requests[before:])
+
+
+def _page(token: str | None, keys: tuple[str, ...] = ()) -> httpx.Response:
+    contents = "".join(f"<Contents><Key>{k}</Key></Contents>" for k in keys)
+    truncated = "true" if token else "false"
+    tail = f"<NextContinuationToken>{token}</NextContinuationToken>" if token else ""
+    return httpx.Response(
+        200,
+        content=(
+            f"<ListBucketResult><IsTruncated>{truncated}</IsTruncated>{contents}{tail}"
+            "</ListBucketResult>"
+        ).encode(),
+    )
+
+
+def test_a_repeated_continuation_token_is_refused_not_followed_forever() -> None:
+    fake = FakeS3()
+    fake.answer = lambda request: _page("same") if "list-type" in request.url.params else None
+    with pytest.raises(InputStoreError, match="repeated a continuation token"):
+        _store(fake).listed(PID)
+    assert len(fake.requests) == 2
+
+
+def test_a_listing_that_never_ends_is_refused_at_the_page_bound() -> None:
+    fake = FakeS3()
+    counter = iter(range(10_000))
+    fake.answer = lambda request: (
+        _page(f"t{next(counter)}") if "list-type" in request.url.params else None
+    )
+    location = InputStoreLocation(
+        kind="seaweedfs", endpoint=ENDPOINT, bucket=BUCKET, max_listed_rows=3
+    )
+    with pytest.raises(InputStoreError, match="ran past 4 pages"):
+        _store(fake, location=location).listed(PID)
+    assert len(fake.requests) == 4
+
+
+@pytest.mark.parametrize(
+    "body",
+    [
+        b"\xef\xbb\xbf<ListBucketResult/>",
+        "<?xml version='1.0' encoding='utf-16'?><!DOCTYPE x><a/>".encode("utf-16"),
+        b"<ListBucketResult>\x00</ListBucketResult>",
+    ],
+)
+def test_a_listing_that_is_not_plain_utf8_is_refused(body: bytes) -> None:
+    fake = FakeS3()
+    fake.answer = lambda request: (
+        httpx.Response(200, content=body) if "list-type" in request.url.params else None
+    )
+    with pytest.raises(InputStoreError, match="not plain UTF-8"):
+        _store(fake).listed(PID)
+
+
+@pytest.mark.parametrize(
+    "error",
+    [httpx.DecodingError("bad gzip"), httpx.InvalidURL("bad"), ValueError("x"), OverflowError("x")],
+)
+def test_an_error_httpx_raises_outside_the_transport_is_a_store_error_not_a_crash(
+    error: Exception,
+) -> None:
+    fake = FakeS3()
+
+    def fail(request: httpx.Request) -> httpx.Response:
+        raise error
+
+    fake.answer = fail
+    with pytest.raises(InputStoreError) as caught:
+        _store(fake).restore(PID, b"abc")
+    assert not isinstance(caught.value, InputStoreUnavailable)
+    assert type(error).__name__ in str(caught.value)

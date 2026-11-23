@@ -223,3 +223,10 @@ def test_missing_credential_variables_refuse_at_composition_naming_the_variables
         bootstrap.run_inputs_store(resources, _seaweed())
     assert f"reads its credentials from {named}," in str(caught.value)
     assert str(tmp_path / "vibey.toml") in str(caught.value)
+
+
+def test_the_store_client_takes_no_proxy_from_the_environment() -> None:
+    """Review N5: signed requests go to the endpoint and nowhere else."""
+    with bootstrap.run_inputs_http_client(_seaweed()) as client:
+        assert client.trust_env is False
+        assert client.follow_redirects is False

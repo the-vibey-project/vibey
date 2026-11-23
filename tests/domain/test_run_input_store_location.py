@@ -193,3 +193,15 @@ def test_ordinary_variable_names_are_still_accepted(name: str) -> None:
 def test_a_timeout_that_is_not_finite_is_refused(value: float) -> None:
     with pytest.raises(ValueError, match="timeout_seconds must be a positive number"):
         RunInputsSettings.from_table({**SEAWEED, "timeout_seconds": value})
+
+
+@pytest.mark.parametrize("rows", [0, -1, True, "10", 1.5])
+def test_max_listed_rows_must_be_a_positive_integer(rows: object) -> None:
+    with pytest.raises(ValueError, match="max_listed_rows must be a positive integer"):
+        RunInputsSettings.from_table({**SEAWEED, "max_listed_rows": rows})
+
+
+def test_max_listed_rows_is_a_seaweedfs_key() -> None:
+    assert InputStoreLocation.from_table({**SEAWEED, "max_listed_rows": 9}).max_listed_rows == 9
+    with pytest.raises(ValueError, match="max_listed_rows does nothing"):
+        RunInputsSettings.from_table({"max_listed_rows": 9})

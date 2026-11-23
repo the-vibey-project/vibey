@@ -34,6 +34,7 @@ from __future__ import annotations
 
 import json
 import re
+import urllib.parse
 import uuid
 from collections.abc import Callable, Mapping
 from datetime import UTC, datetime, timedelta
@@ -132,7 +133,20 @@ class SeaweedFsInputStore:
     def listed(self, project_id: UUID) -> InputListing:
         items: list[RunInput] = []
         skipped = 0
-        for key in self._keys(f"{self._base(project_id)}/index/"):
+        prefix = f"{self._base(project_id)}/index/"
+        row_key = re.compile(re.escape(prefix) + r"\d{20}-[0-9a-f]{32}\.json")
+        listed = self._keys(prefix)
+        # Only keys this store writes are read: a key another writer planted (a `..`, a space,
+        # a leading slash, another layout) is skipped and counted, never fetched (review I1).
+        keys = [key for key in listed if row_key.fullmatch(key) is not None]
+        skipped += len(listed) - len(keys)
+        if len(keys) > self._location.max_listed_rows:
+            raise InputStoreError(
+                f"{self.describe()}: the project's index lists {len(keys)} rows; [inputs] "
+                f"max_listed_rows reads at most {self._location.max_listed_rows}, so the store "
+                "was not read"
+            )
+        for key in keys:
             status, _, body = self._exchange("GET", key, max_bytes=MAX_ROW_BYTES)
             if status == 404 and self._code(body) != "NoSuchBucket":
                 skipped += 1  # listed, then gone: a row no longer there is not given
@@ -177,7 +191,12 @@ class SeaweedFsInputStore:
         `max_bytes + 1` bytes of its body (of an error answer, at most `MAX_ROW_BYTES + 1`, enough
         for its S3 error code). With `expected`, a 200 whose `Content-Length` is not
         `expected` is answered with no body read at all."""
-        uri = f"/{self._bucket}" + (f"/{key}" if key else "")
+        # Every segment percent-encoded as S3 canonicalises it, so the path signed is the path
+        # sent (`canonical_uri` is already encoded: S3RequestSignerInterface; review I1).
+        uri = "/" + "/".join(
+            urllib.parse.quote(segment, safe="-_.~")
+            for segment in (self._bucket, *(key.split("/") if key else ()))
+        )
         query = dict(query or {})
         headers = self._signer.headers(
             method=method, host=self._host, canonical_uri=uri, query=query, body=body
@@ -204,6 +223,12 @@ class SeaweedFsInputStore:
         except httpx.TransportError as exc:
             raise InputStoreUnavailable(
                 f"{self.describe()}: not reachable ({type(exc).__name__})"
+            ) from None
+        except (httpx.HTTPError, httpx.InvalidURL, ValueError, OverflowError) as exc:
+            # A request httpx would not make or an answer it could not decode: not a store
+            # that is down, so not retryable (review N6).
+            raise InputStoreError(
+                f"{self.describe()}: the request failed ({type(exc).__name__})"
             ) from None
 
     def _raise_for(self, status: int, body: bytes) -> None:
@@ -257,7 +282,10 @@ class SeaweedFsInputStore:
         """Every key under `prefix`, in the store's (lexical) order, over every page."""
         keys: list[str] = []
         token: str | None = None
-        while True:
+        seen: set[str] = set()
+        # A page holds at least one key or the listing is over, so more pages than the row
+        # bound allows (plus the last) is a server that never ends it (review N4).
+        for _ in range(self._location.max_listed_rows + 1):
             query = {"list-type": "2", "prefix": prefix}
             if token is not None:
                 query["continuation-token"] = token
@@ -267,6 +295,15 @@ class SeaweedFsInputStore:
             keys.extend(page)
             if token is None:
                 return keys
+            if token in seen:
+                raise InputStoreError(
+                    f"{self.describe()}: the listing repeated a continuation token; refused"
+                )
+            seen.add(token)
+        raise InputStoreError(
+            f"{self.describe()}: the listing ran past {self._location.max_listed_rows + 1} pages; "
+            "refused"
+        )
 
     def _page(self, body: bytes) -> tuple[list[str], str | None]:
         """One ListObjectsV2 page: its keys and, when it is truncated, the next token."""
@@ -274,6 +311,11 @@ class SeaweedFsInputStore:
             raise InputStoreError(
                 f"{self.describe()}: a listing page is over {self._max_listing} bytes; refused "
                 "unread"
+            )
+        if body.startswith((b"\xef\xbb\xbf", b"\xff\xfe", b"\xfe\xff")) or b"\x00" in body:
+            # A UTF-16 or UTF-32 page would hide a DOCTYPE from the byte search below (N3).
+            raise InputStoreError(
+                f"{self.describe()}: a listing page is not plain UTF-8; refused unread"
             )
         lowered = body.lower()
         if any(marker in lowered for marker in _HOSTILE):
