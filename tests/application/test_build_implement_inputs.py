@@ -226,3 +226,20 @@ async def test_the_run_event_is_recorded_under_the_build_jobs_id(tmp_path: Path)
     await world.add("paste", "paste", b"words")
     await world.run(inputs=world.inputs)
     assert world.ledger.job_ids == [None, world.job.id]
+
+
+async def test_a_store_root_that_cannot_be_read_fails_the_run_before_the_engine_starts(
+    tmp_path: Path,
+) -> None:
+    # Re-review N7: a project with index rows whose store root the worker cannot read fails
+    # loudly before engine.start, never starting with no inputs.
+    world = _World(tmp_path)
+    await world.add("paste", "paste", b"words")
+    root = tmp_path / "state" / "inputs"
+    root.rename(tmp_path / "state" / "moved")
+    root.write_bytes(b"a file where the store root belongs")
+    outcome, engine, _ = await world.run(inputs=world.inputs)
+    assert isinstance(outcome, Failure)
+    assert outcome.failure_class is FailureClass.VIBEY
+    assert "the run inputs could not be given to the run" in outcome.detail
+    assert getattr(engine, "specs", []) == []
