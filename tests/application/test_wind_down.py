@@ -385,3 +385,92 @@ async def test_a_kind_this_vibey_does_not_know_is_handed_on_whole(tmp_path: Path
     # The spend-shaped payload is not spend this vibey can account for.
     assert envelope.budget.dollars_spent == 0.25
     assert envelope.budget.turns_spent == 3
+
+
+# --- the run inputs the outgoing run was given (SP-LOOPS Phase 3c, Task 7) ---------------------
+
+D_PASTE, D_FILE = "a" * 64, "b" * 64
+
+
+def _given_event(project_id: UUID, seq: int, job_id: UUID, digests: object) -> LedgerEvent:
+    payload = {"artifact_type": "vibey_run_inputs_given", "run_id": "r", "digests": digests}
+    return replace(
+        _event(project_id, seq, EventKind.ARTIFACT_PRODUCED, payload),
+        job_id=job_id,
+        provenance=Provenance.TRUSTED,
+    )
+
+
+async def _wind_down_with(
+    tmp_path: Path, project_id: UUID, extra: tuple[LedgerEvent, ...], job: object
+) -> tuple[object, FakeJobRepository, _FakeHandoffStore]:
+    events = _ledger_events(project_id, question_text="cap retries at 5?") + extra
+    orchestrator, handoffs, jobs, _ = await _orchestrator(project_id, events)
+    outcome = await orchestrator.execute(
+        job=job,  # type: ignore[arg-type]
+        worktree_path=tmp_path,
+        engine_id=EngineId.CLAUDELOOP,
+        effort=Effort.LOW,
+        stop=_STOP,
+    )
+    return outcome, jobs, handoffs
+
+
+async def test_the_follow_up_payload_pins_the_inputs_the_outgoing_run_was_given(
+    tmp_path: Path,
+) -> None:
+    project_id = uuid4()
+    job = _wind_down_job(project_id)
+    other = uuid4()
+    outcome, jobs, _ = await _wind_down_with(
+        tmp_path,
+        project_id,
+        (
+            _given_event(project_id, 7, job.id, [D_PASTE]),
+            _given_event(project_id, 8, job.id, [D_PASTE, D_FILE]),
+            _given_event(project_id, 9, other, ["c" * 64]),
+        ),
+        job,
+    )
+    assert isinstance(outcome, Success)
+    follow_up = next(j for j in jobs._jobs.values() if j.state is JobState.READY)
+    assert follow_up.payload["handoff_input_digests"] == [D_PASTE, D_FILE]
+
+
+async def test_a_run_given_no_inputs_pins_an_empty_list(tmp_path: Path) -> None:
+    project_id = uuid4()
+    outcome, jobs, _ = await _wind_down_with(tmp_path, project_id, (), _wind_down_job(project_id))
+    assert isinstance(outcome, Success)
+    follow_up = next(j for j in jobs._jobs.values() if j.state is JobState.READY)
+    assert follow_up.payload["handoff_input_digests"] == []
+
+
+async def test_the_seed_prompt_bytes_are_unchanged_by_the_pin(tmp_path: Path) -> None:
+    from vibey.application.seed_prompt import render_seed_prompt
+
+    project_id = uuid4()
+    job = _wind_down_job(project_id)
+    outcome, jobs, handoffs = await _wind_down_with(
+        tmp_path, project_id, (_given_event(project_id, 7, job.id, [D_PASTE]),), job
+    )
+    assert isinstance(outcome, Success)
+    (envelope,) = handoffs.envelopes
+    assert envelope.gate.ok
+    follow_up = next(j for j in jobs._jobs.values() if j.state is JobState.READY)
+    assert follow_up.payload["seed_prompt"] == render_seed_prompt(envelope.brief)
+    assert D_PASTE not in follow_up.payload["seed_prompt"]
+
+
+async def test_a_given_event_that_cannot_be_pinned_parks_before_anything_is_recorded(
+    tmp_path: Path,
+) -> None:
+    project_id = uuid4()
+    job = _wind_down_job(project_id)
+    outcome, jobs, handoffs = await _wind_down_with(
+        tmp_path, project_id, (_given_event(project_id, 7, job.id, ["not-hex"]),), job
+    )
+    assert isinstance(outcome, Park)
+    assert outcome.request.kind == "handoff_gate_failed"
+    assert "cannot be pinned" in outcome.request.prompt
+    assert handoffs.envelopes == []
+    assert not [j for j in jobs._jobs.values() if j.state is JobState.READY]

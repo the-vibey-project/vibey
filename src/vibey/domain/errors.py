@@ -137,6 +137,12 @@ class InputStoreUnavailable(InputStoreError):
     (ADR-0105). Retryable: nothing about the inputs is wrong, and nothing was added."""
 
 
+class HandoffInputsMissing(VibeyError):
+    """A handed-off BUILD run cannot be given the inputs its predecessor was given: a digest the
+    wind-down pinned has no row or no object in the store, or the run would be given others
+    (SP-LOOPS Phase 3c). Never a silent partial: the job parks for a person."""
+
+
 class RunInputRefused(VibeyError):
     """A run input vibey will not add: a kind that is not `paste` or `file`, a name that is not
     one path segment, or more than the person's `[inputs]` limits allow (SP-LOOPS Phase 3).

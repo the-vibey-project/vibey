@@ -296,8 +296,25 @@ ledger projections (the VISUAL_DESIGN stage adds `context/visual/`).
 The brief itself travels as text: `application/seed_prompt.py::render_seed_prompt`
 renders it, `WindDownOrchestrator` stores the result in the follow-up
 `build.implement` job's `seed_prompt` payload, and `build_implement_handler` uses
-it verbatim as that job's prompt. The envelope is persisted in the `handoff` table
+it verbatim as the start of that job's prompt. The envelope is persisted in the `handoff` table
 ([data-model](data-model.md) §3.7).
+
+**The run inputs follow the seed (SP-LOOPS Phase 3c).** The incoming prompt is the seed,
+byte for byte, then -- when the outgoing run was given run inputs -- `"\n\n"` and the same
+fenced `## Run inputs` data section a fresh run gets. The section is not inside the brief:
+the brief's fields are instructions to the next engine and pasted text is data, R10's
+denylist would park valid handoffs whose pasted logs merely contain its words, and it would
+change the brief's shape. Instead the wind-down pins the digests the outgoing run was given
+(its latest `vibey_run_inputs_given` event, `domain/handoff_inputs.py`) into the follow-up's
+payload as `handoff_input_digests` (`[]` for none), and the incoming run is given exactly
+those, in that order: nothing added since the handoff, nothing withheld by a limit lowered
+since. The handler refuses to start the engine unless the digests it gave equal the pin. A
+pinned input missing from the store parks the job for a person (`handoff_inputs_missing`); a
+store that does not answer is a retry. Neither is ever a silent partial. A follow-up with no
+pin (enqueued before this change) keeps the seed alone. `verify` and rules R1 to R10 are
+unchanged: the input events in the range trip none of them (`tests/domain/test_noloss.py::
+test_input_events_in_the_range_never_trip_a_rule`), and making the pin a gate rule (R11) waits
+for a `WARN` gate mode (§9; operator ruling OR-5).
 
 **Planned, not yet written:** `handoff/brief.json` (the envelope),
 `handoff/brief.md` (a readable rendering), `context/` regenerated from ledger

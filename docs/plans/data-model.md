@@ -958,7 +958,7 @@ event records it. No gate row is deleted, and a later answer is refused as a sec
 `choice`, `approval`, `attempts_exhausted`, `budget_exhausted`,
 `escalation_exhausted`, `verify_repair_exhausted`, `integrate_repair_exhausted`,
 `handoff_gate_failed`,
-`too_many_wind_downs`, `research_evidence`, `deploy_interview`, `deploy_acceptance`,
+`handoff_inputs_missing`, `too_many_wind_downs`, `research_evidence`, `deploy_interview`, `deploy_acceptance`,
 `deploy_demo_review` and `deploy_failure_triage`. Bounded repair and escalation
 ladders park on these gates rather than failing (ADR-0024). Gates are answered
 with `vibey answer GATE_ID`.

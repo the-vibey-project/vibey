@@ -31,6 +31,12 @@ NAME_MAX_BYTES: Final = 255
 """The longest a run input's name may be, in UTF-8 bytes: the common file-name limit."""
 _DIGEST: Final = re.compile(r"[0-9a-f]{64}")
 
+GIVEN_ARTIFACT_TYPE: Final = "vibey_run_inputs_given"
+"""The artifact type of the ledger event recording the digests one BUILD run was given."""
+HANDOFF_INPUTS_KEY: Final = "handoff_input_digests"
+"""The key of a wind-down follow-up's payload that pins the digests the outgoing run was given,
+so the handed-off run is given exactly those (SP-LOOPS Phase 3c, Task 7)."""
+
 StoreKind = Literal["local", "seaweedfs"]
 STORE_KINDS: Final[tuple[StoreKind, ...]] = ("local", "seaweedfs")
 _BUCKET: Final = re.compile(r"[a-z0-9][a-z0-9.-]{1,61}[a-z0-9]")

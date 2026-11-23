@@ -98,6 +98,7 @@ EVERY_KIND: list[tuple[str, tuple[str, ...], str | None, str]] = [
     ("foreign_branch", (), None, "--raw '{}'"),
     ("handoff_gate_failed", (), None, "--raw '<json>'"),
     ("too_many_wind_downs", (), None, "--raw '<json>'"),
+    ("handoff_inputs_missing", (), None, "--raw '<json>'"),
 ]
 
 

@@ -1184,7 +1184,7 @@ anywhere in `src/vibey` without an entry there.
 | `verify_repair_exhausted`, `integrate_repair_exhausted` | `vibey answer ID --raw '{"max_rounds": N}'` | BUILD's verify and integrate repair loops. |
 | `delivery_exhausted`, `research_evidence`, `engine_misconfigured` | `vibey answer ID --raw '{}'` | Any answer retries, once the cause outside vibey is fixed. |
 | `foreign_branch` | `vibey answer ID --raw '{}'` | BUILD found a branch it cannot prove this project created and touched nothing. Check whose it is, move it aside (`git branch -m`), then answer: the retry cuts a fresh branch ([ADR-0008](../architecture/decisions/0008-worktree-isolation.md)). |
-| `handoff_gate_failed`, `too_many_wind_downs`, and any kind not listed | `vibey answer ID --raw '<json>'` | Nothing reads a particular answer; you write it. |
+| `handoff_gate_failed`, `too_many_wind_downs`, `handoff_inputs_missing`, and any kind not listed | `vibey answer ID --raw '<json>'` | Nothing reads a particular answer; you write it. |
 
 A verdict or choice uses the gate's declared default, else its first option;
 `options` in `--json` lists the rest. `N` and `<json>` are placeholders, and

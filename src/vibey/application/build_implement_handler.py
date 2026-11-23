@@ -73,6 +73,7 @@ from vibey.domain.engine import EXIT_CODE_WIND_DOWN, IsolationLevel
 from vibey.domain.errors import (
     EscalationExhausted,
     ForeignBranchRefused,
+    HandoffInputsMissing,
     InputStoreError,
     UnknownProject,
 )
@@ -82,12 +83,14 @@ from vibey.domain.job import (
     DEFECT_GATE_KIND,
     ESCALATION_EXHAUSTED_GATE_KIND,
     FOREIGN_BRANCH_GATE_KIND,
+    HANDOFF_INPUTS_GATE_KIND,
     FailureClass,
     idempotency_key,
 )
 from vibey.domain.ledger import EventKind
 from vibey.domain.phase import Phase
 from vibey.domain.provision import ProvisionSpec
+from vibey.domain.run_input import HANDOFF_INPUTS_KEY, RUN_INPUT_RULE
 from vibey.domain.ultra import ULTRA_PAYLOAD_KEY, ULTRA_POLICY, UltraState, UltraVerdict
 
 _EMPTY_PROVISION_SPEC = ProvisionSpec((), ())
@@ -401,18 +404,65 @@ class BuildImplementHandler:
 
         # The run's inputs (SP-LOOPS Phase 3): the person's pastes and files, written into the
         # worktree and fenced into the prompt as data, the same for every engine. A wind-down
-        # seed stays byte-for-byte (the no-loss gate verified it); its files are still there.
+        # seed stays a byte-exact prefix (the no-loss gate verified it). When the wind-down
+        # pinned the inputs the outgoing run was given (Phase 3c), the run is given exactly
+        # those and their section follows the seed; a pin that cannot be honoured parks the job
+        # for a person, and a store that does not answer is a retry -- never a silent partial.
+        # A seed with no pin (a job enqueued before the pin existed) keeps the seed alone.
         run_id = uuid4()
         if self._inputs is not None:
+            handed_off = isinstance(seed, str) and bool(seed)
+            pin = job.payload.get(HANDOFF_INPUTS_KEY) if handed_off else None
+            pinned: tuple[str, ...] | None = None
+            if pin is not None:
+                if not (
+                    isinstance(pin, list | tuple)
+                    and all(isinstance(d, str) and RUN_INPUT_RULE.is_digest(d) for d in pin)
+                ):
+                    return Park(
+                        HumanGateRequest(
+                            kind=HANDOFF_INPUTS_GATE_KIND,
+                            prompt=(
+                                f"work item {item!r} was handed off, but the run inputs its "
+                                "payload pins are not a list of digests. How should it proceed?"
+                            ),
+                        )
+                    )
+                pinned = tuple(pin)
             try:
                 given = await self._inputs.materialize(
-                    job.project_id, run_id, worktree_path, job_id=job.id
+                    job.project_id, run_id, worktree_path, job_id=job.id, pinned=pinned
+                )
+            except HandoffInputsMissing as missing:
+                return Park(
+                    HumanGateRequest(
+                        kind=HANDOFF_INPUTS_GATE_KIND,
+                        prompt=(
+                            f"work item {item!r} was handed off, but it cannot be given the run "
+                            f"inputs the run it replaces was given: {missing}. Add the input "
+                            "again or fix [inputs], then answer to retry."
+                        ),
+                    )
                 )
             except (InputStoreError, UnknownProject, ConfigError) as refused:
                 return Failure(
                     FailureClass.VIBEY, f"the run inputs could not be given to the run: {refused}"
                 )
-            if given.prompt_section and not (isinstance(seed, str) and seed):
+            if pinned is not None and given.digests != pinned:
+                return Park(
+                    HumanGateRequest(
+                        kind=HANDOFF_INPUTS_GATE_KIND,
+                        prompt=(
+                            f"work item {item!r} was handed off, but the run inputs it would be "
+                            f"given ({len(given.digests)}) are not the {len(pinned)} the run it "
+                            "replaces was given. How should it proceed?"
+                        ),
+                    )
+                )
+            if handed_off:
+                if pinned is not None and given.prompt_section:
+                    prompt = f"{seed}\n\n{given.prompt_section}"
+            elif given.prompt_section:
                 prompt = f"{prompt.rstrip()}\n\n{given.prompt_section}"
         handle = await self._engine.start(
             RunSpec(

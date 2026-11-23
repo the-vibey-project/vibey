@@ -61,6 +61,9 @@ FOREIGN_BRANCH_GATE_KIND: Final = "foreign_branch"
 """BUILD's gate when a branch it meant to create or reuse cannot be proved to be this
 project's own (`ForeignBranchRefused`). Retrying cannot change whose branch it is, so the
 job parks at once: a person checks the branch, moves it aside, and answers to retry."""
+HANDOFF_INPUTS_GATE_KIND: Final = "handoff_inputs_missing"
+"""A handed-off BUILD run cannot be given exactly the run inputs the run it replaces was given
+(SP-LOOPS Phase 3c): a person decides, never a silent partial."""
 
 QUEUE_GATE_KINDS: Final = frozenset(
     {ATTEMPTS_EXHAUSTED_GATE_KIND, DELIVERY_EXHAUSTED_GATE_KIND, DEFECT_GATE_KIND}

@@ -751,3 +751,10 @@ class = "vibey.domain.errors.InputStoreUnavailable"
 title = "The run input store did not answer"
 cause = "`[inputs] store = \"seaweedfs\"` names a store on the network, and it could not be reached, took longer than `[inputs] timeout_seconds`, or answered with a server error (5xx). The message names the store (scheme, host, bucket and prefix) and the kind of failure, never a credential. Nothing was added, and a BUILD run that needed its inputs did not start its engine."
 fix = "Check that the store at the named endpoint is running and reachable from this computer (`vibey doctor` probes it on its `run-inputs` line), then try again; a BUILD job is retried. A store that should be local belongs in `[inputs] store = \"local\"` instead."
+
+[[error]]
+code = "E0097"
+class = "vibey.domain.errors.HandoffInputsMissing"
+title = "A handed-off run cannot be given the inputs its predecessor had"
+cause = "A BUILD run wound down and handed off to another engine. The wind-down pinned the digests of the run inputs the outgoing run was given, and the incoming run must be given exactly those, after the seed the no-loss gate verified. One of them has no row or no stored object in the store `[inputs]` names (the store was changed, emptied, or is another one), so the job was parked rather than started without it."
+fix = "Add the missing input again with `vibey inputs add` (the message names its digest), or point `[inputs]` in your own vibey.toml back at the store it was added to, then answer the gate (`vibey answer ID --raw '<json>'`) to retry the job."

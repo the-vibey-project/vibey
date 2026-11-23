@@ -1046,3 +1046,85 @@ def test_a_store_that_does_not_answer_during_an_add_is_not_taken_for_a_lost_obje
     with pytest.raises(InputStoreUnavailable):
         asyncio.run(service.add(world.project_id, "paste", "paste", b"words"))
     assert len(world.ledger.events) == events  # no repair was recorded
+
+
+# -- a handed-off run's pinned inputs (SP-LOOPS Phase 3c, Task 7) -------------------------------
+
+
+def test_an_empty_pin_gives_nothing_and_writes_nothing(tmp_path: Path) -> None:
+    world = _World(tmp_path)
+    world.add("paste", "paste", b"words")
+    events = len(world.ledger.events)
+    given = asyncio.run(
+        world.service.materialize(world.project_id, uuid4(), world.worktree, pinned=())
+    )
+    assert given == RunInputs(prompt_section="", attachments_dir=None, paste_file=None)
+    assert len(world.ledger.events) == events
+    assert not (world.worktree / ".vibey").exists()
+
+
+def test_a_pin_gives_exactly_its_digests_in_order(tmp_path: Path) -> None:
+    world = _World(tmp_path)
+    world.add("paste", "paste", b"one")
+    world.add("file", "spec.md", b"spec")
+    world.add("paste", "paste", b"two")
+    first = world.materialize()
+    assert first.digests == (digest_of(b"one"), digest_of(b"two"), digest_of(b"spec"))
+    pinned = asyncio.run(
+        world.service.materialize(world.project_id, uuid4(), world.worktree, pinned=first.digests)
+    )
+    assert pinned.digests == first.digests
+    assert pinned.attachments_dir is not None
+    assert [p.name for p in pinned.attachments_dir.iterdir()] == ["spec.md"]
+
+
+def test_the_same_bytes_as_a_paste_and_a_file_cannot_be_told_apart_and_say_so(
+    tmp_path: Path,
+) -> None:
+    """A pin holds digests only, so the same bytes given as a paste and as a file resolve to the
+    latest rows and may come back in another order: `digests` then differs from the pin, which
+    the BUILD handler parks for a person -- never a silent partial (recorded limit)."""
+    world = _World(tmp_path)
+    world.add("paste", "paste", b"same")
+    world.add("file", "same.txt", b"same")
+    world.add("paste", "paste", b"later")
+    first = world.materialize()
+    pinned = asyncio.run(
+        world.service.materialize(world.project_id, uuid4(), world.worktree, pinned=first.digests)
+    )
+    assert sorted(pinned.digests) == sorted(first.digests)
+    assert pinned.digests != first.digests
+
+
+def test_a_pinned_digest_the_ledger_never_recorded_is_missing(tmp_path: Path) -> None:
+    from vibey.domain.errors import HandoffInputsMissing
+
+    world = _World(tmp_path)
+    world.store.put(world.project_id, "paste", "paste", b"planted")
+    with pytest.raises(HandoffInputsMissing, match="has no input"):
+        asyncio.run(
+            world.service.materialize(
+                world.project_id, uuid4(), world.worktree, pinned=(digest_of(b"planted"),)
+            )
+        )
+
+
+def test_a_store_that_does_not_answer_for_a_pinned_input_is_not_missing(tmp_path: Path) -> None:
+    from vibey.domain.errors import InputStoreUnavailable
+
+    world = _World(tmp_path)
+    world.add("paste", "paste", b"words")
+    service = RunInputsService(
+        store=_UnavailableStore(world.store),
+        projects=world.projects,
+        ledger=world.ledger,
+        clock=_Clock(),
+        limits=lambda: world.limits,
+        writer=NoFollowFiles(),
+    )
+    with pytest.raises(InputStoreUnavailable):
+        asyncio.run(
+            service.materialize(
+                world.project_id, uuid4(), world.worktree, pinned=(digest_of(b"words"),)
+            )
+        )
