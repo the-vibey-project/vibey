@@ -12,7 +12,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, Protocol, runtime_checkable
 
 if TYPE_CHECKING:
-    from vibey.infrastructure.searxng.container_runtime import RuntimeOutcome
+    from vibey.infrastructure.searxng.container_runtime import RuntimeOutcome, RuntimeRefusal
 
 
 @runtime_checkable
@@ -22,10 +22,11 @@ class ContainerRuntimeInterface(Protocol):
         one that passes `vet`'s checks on its file; None when neither."""
         ...
 
-    def vet(self, runtime: str) -> str:
-        """Why `runtime` may not be run ("" when it may): not podman or docker in a trusted
-        folder, a link leading outside them, not a regular executable, writable by its group or anyone, or
-        someone else's. It need not be the one `find` would choose now."""
+    def vet(self, runtime: str) -> RuntimeRefusal | None:
+        """Why `runtime` may not be run (None when it may), as a typed `RuntimeProblem`: not
+        podman or docker in a trusted folder, a link leading outside them, not there, not a
+        regular executable, writable by its group or anyone, or someone else's. It need not be
+        the one `find` would choose now."""
         ...
 
     def image_present(self, runtime: str, image: str) -> bool:

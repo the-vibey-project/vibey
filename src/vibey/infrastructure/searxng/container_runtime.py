@@ -8,7 +8,8 @@
   any link must lead into `TRUSTED_RUNTIME_ROOTS`. With neither, vibey says how to install one
   and does nothing else.
 - **Every use vets it again.** `vet(runtime)` refuses a runtime (a recorded one, say) that fails
-  those checks, and every command here vets the runtime it is handed before anything runs: a
+  those checks -- as a `RuntimeRefusal` naming a typed `RuntimeProblem`, so a caller telling a
+  runtime that is gone from one that is refused never matches English text (SP-ACP Task 11b) -- and every command here vets the runtime it is handed before anything runs: a
   changed `provision.json` cannot make vibey run a binary outside the trusted folders. It does not
   require the runtime `find` would choose now: that only picks the runtime at install, so a second
   runtime installed later never stops the recorded one.
@@ -40,6 +41,7 @@ import stat
 import sys
 from collections.abc import Callable
 from dataclasses import dataclass
+from enum import StrEnum
 from pathlib import PurePath
 from typing import Final
 
@@ -83,6 +85,28 @@ class RuntimeOutcome:
     still_running: bool = False
 
 
+class RuntimeProblem(StrEnum):
+    """Why `ContainerRuntime.vet` refuses a runtime; each value is how a refusal says it."""
+
+    UNTRUSTED_PLACE = "is not podman or docker in one of vibey's trusted folders"
+    LEADS_OUTSIDE = "leads outside vibey's trusted folders"
+    GONE = "is not there"
+    NOT_EXECUTABLE = "is not an executable file"
+    SHARED_WRITE = "is writable by anyone but its owner"
+    FOREIGN_OWNER = "belongs to someone else"
+
+
+@dataclass(frozen=True, slots=True)
+class RuntimeRefusal:
+    """A runtime `vet` refuses, and why. A value type; its text is the runtime then the reason."""
+
+    runtime: str
+    reason: RuntimeProblem
+
+    def __str__(self) -> str:
+        return f"{self.runtime} {self.reason.value}"
+
+
 class ContainerRuntime:
     """Declared by `ContainerRuntimeInterface`. `platform`, `dirs`, `roots` and `uid` are seams."""
 
@@ -111,46 +135,46 @@ class ContainerRuntime:
             self._found = (self._lookup(),)
         return self._found[0]
 
-    def vet(self, runtime: str) -> str:
+    def vet(self, runtime: str) -> RuntimeRefusal | None:
         # The trust checks alone. A runtime installed later ahead of the recorded one (podman
         # beside Docker Desktop, a Homebrew docker CLI) passes the same checks and must not stop
         # serve, uninstall or purge: `find` only chooses the runtime at install.
         problem = self._problem(runtime)
-        return f"{runtime} {problem}" if problem else ""
+        return RuntimeRefusal(runtime, problem) if problem is not None else None
 
     def _lookup(self) -> str | None:
         for name in RUNTIMES:
             for folder in self._dirs:
                 candidate = f"{folder}/{name}"
-                if os.path.lexists(candidate) and not self._problem(candidate):
+                if os.path.lexists(candidate) and self._problem(candidate) is None:
                     return candidate
         return None
 
-    def _problem(self, path: str) -> str:
-        """Why `path` may not be run as a runtime, or ""."""
+    def _problem(self, path: str) -> RuntimeProblem | None:
+        """Why `path` may not be run as a runtime, or None."""
         folder, _, name = path.rpartition("/")
         if folder not in self._dirs or name not in RUNTIMES:
-            return "is not podman or docker in one of vibey's trusted folders"
+            return RuntimeProblem.UNTRUSTED_PLACE
         real = os.path.realpath(path)
         if not any(real.startswith(root) for root in self._roots):
-            return "leads outside vibey's trusted folders"
+            return RuntimeProblem.LEADS_OUTSIDE
         try:
             found = os.stat(real)
         except OSError:
-            return "is not there"
+            return RuntimeProblem.GONE
         if not stat.S_ISREG(found.st_mode) or not os.access(real, os.X_OK):
-            return "is not an executable file"
+            return RuntimeProblem.NOT_EXECUTABLE
         if found.st_mode & 0o022:
             # Writable by its group too is writable by someone other than its owner.
-            return "is writable by anyone but its owner"
+            return RuntimeProblem.SHARED_WRITE
         if found.st_uid not in (0, self._uid()):
-            return "belongs to someone else"
-        return ""
+            return RuntimeProblem.FOREIGN_OWNER
+        return None
 
     def _checked(self, runtime: str) -> str:
-        problem = self.vet(runtime)
-        if problem:
-            raise ValueError(UntrustedText.clean(problem))
+        refusal = self.vet(runtime)
+        if refusal is not None:
+            raise ValueError(UntrustedText.clean(str(refusal)))
         return runtime
 
     def image_present(self, runtime: str, image: str) -> bool:

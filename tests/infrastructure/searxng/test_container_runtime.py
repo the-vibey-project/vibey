@@ -19,6 +19,7 @@ from vibey.infrastructure.searxng.container_runtime import (
     CONTAINER_VARIABLES,
     DAEMON_VARIABLES,
     ContainerRuntime,
+    RuntimeProblem,
 )
 from vibey.infrastructure.searxng.interfaces.container_runtime_interface import (
     ContainerRuntimeInterface,
@@ -128,24 +129,26 @@ def test_a_homebrew_link_into_its_cellar_is_a_runtime(trusted: Trusted) -> None:
     (trusted.first / "docker").symlink_to(real)
     runtime = trusted.runtime()
     assert runtime.find() == str(trusted.first / "docker")
-    assert runtime.vet(str(trusted.first / "docker")) == ""
+    assert runtime.vet(str(trusted.first / "docker")) is None
 
 
 @pytest.mark.parametrize(
-    "spoil",
+    ("spoil", "reason"),
     [
-        "link-outside",
-        "world-writable",
-        "group-writable",
-        "not-executable",
-        "a-folder",
-        "someone-else",
-        "gone",
+        ("link-outside", RuntimeProblem.LEADS_OUTSIDE),
+        ("world-writable", RuntimeProblem.SHARED_WRITE),
+        ("group-writable", RuntimeProblem.SHARED_WRITE),
+        ("not-executable", RuntimeProblem.NOT_EXECUTABLE),
+        ("a-folder", RuntimeProblem.NOT_EXECUTABLE),
+        ("someone-else", RuntimeProblem.FOREIGN_OWNER),
+        ("gone", RuntimeProblem.GONE),
     ],
 )
 def test_a_candidate_that_fails_a_check_is_skipped_and_vetted_out(
-    trusted: Trusted, spoil: str
+    trusted: Trusted, spoil: str, reason: RuntimeProblem
 ) -> None:
+    """Task 11b (review 2 N2-5): `vet` says why as a typed reason, not only as English text, so
+    a caller telling "gone" apart never matches a wording."""
     candidate = trusted.first / "podman"
     uid = None
     if spoil == "link-outside":
@@ -167,7 +170,9 @@ def test_a_candidate_that_fails_a_check_is_skipped_and_vetted_out(
         uid = os.getuid() + 1
     runtime = trusted.runtime(uid=uid)
     assert runtime.find() is None
-    assert runtime.vet(str(candidate)).startswith(str(candidate))
+    refusal = runtime.vet(str(candidate))
+    assert refusal is not None and refusal.reason is reason and refusal.runtime == str(candidate)
+    assert str(refusal) == f"{candidate} {reason.value}"
 
 
 def test_every_command_refuses_a_recorded_runtime_outside_the_trusted_folders(
@@ -206,7 +211,7 @@ def test_a_runtime_installed_later_never_stops_the_recorded_one(
     runner = FakeRunner(PostgresCommandResult(0))
     runtime = trusted.runtime(runner)
     assert runtime.find() != recorded
-    assert runtime.vet(recorded) == ""
+    assert runtime.vet(recorded) is None
     assert runtime.image_present(recorded, IMAGE)
     assert runtime.remove_image(recorded, IMAGE).ok
     assert [call[0] for call in runner.calls] == [recorded, recorded]
@@ -365,4 +370,6 @@ def test_a_runtime_inside_a_trusted_root_but_not_a_trusted_folder_is_refused(
     cellar = trusted.root / "Cellar" / "bin"
     cellar.mkdir(parents=True)
     stray = trusted.binary(cellar, "podman")  # under the trusted root, in no trusted folder
-    assert "trusted folders" in trusted.runtime().vet(stray)
+    refusal = trusted.runtime().vet(stray)
+    assert refusal is not None and refusal.reason is RuntimeProblem.UNTRUSTED_PLACE
+    assert "trusted folders" in str(refusal)
