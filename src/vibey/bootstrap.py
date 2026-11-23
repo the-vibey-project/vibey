@@ -16,7 +16,7 @@ from typing import Final
 from uuid import uuid4
 
 import asyncpg
-from platformdirs import user_cache_path, user_config_path
+from platformdirs import user_cache_path, user_config_path, user_state_path
 from vibey_runners.common.capabilities.interfaces.resolver_interface import (
     CapabilityResolverInterface,
 )
@@ -133,6 +133,7 @@ from vibey.application.interfaces.gate_notices import (
 )
 from vibey.application.interfaces.gate_timeouts import GateTimeoutSweepInterface
 from vibey.application.interfaces.observability import Logger
+from vibey.application.interfaces.run_inputs_interface import RunInputsInterface
 from vibey.application.interfaces.sabbath import SabbathGateInterface
 from vibey.application.interfaces.ultra_control import UltraControlServiceInterface
 from vibey.application.job_dispatcher import JobDispatcher
@@ -148,6 +149,8 @@ from vibey.application.review_deployment_choice_handler import ReviewDeploymentC
 from vibey.application.review_publish_handler import ReviewPublishHandler
 from vibey.application.review_triage_handler import ReviewTriageHandler
 from vibey.application.rotation_handoff import RotationHandoffService
+from vibey.application.run_inputs_service import RunInputsService
+from vibey.application.run_inputs_settings import RunInputsSettingsLoader
 from vibey.application.ultra_control import UltraControlService
 from vibey.application.visual_handler import VisualInventoryHandler, VisualPlanHandler
 from vibey.application.wind_down import WindDownOrchestrator
@@ -178,6 +181,7 @@ from vibey.domain.interfaces.config_interface import (
     QueueReapConfigInterface,
 )
 from vibey.domain.phase import Phase
+from vibey.domain.run_input import RunInputsSettings
 from vibey.domain.slicing import AutoSlicer
 from vibey.domain.supervisor import SEARXNG, SupervisorPlanner
 from vibey.domain.worktree import WorktreeNaming
@@ -249,6 +253,9 @@ from vibey.infrastructure.git.checkpoint import GitCheckpoint
 from vibey.infrastructure.git.integration_branch import IntegrationBranch
 from vibey.infrastructure.git.worktree_manager import GitWorktreeManager
 from vibey.infrastructure.hub.settings import HUB_SETTINGS, HubSettings
+from vibey.infrastructure.inputs.hash_addressed_input_store import HashAddressedInputStore
+from vibey.infrastructure.inputs.no_follow_files import NoFollowFiles
+from vibey.infrastructure.inputs.run_input_ledger import PostgresRunInputLedger
 from vibey.infrastructure.ledger.full_ledger_writer import write_full_ledger
 from vibey.infrastructure.logging import StructlogAppLogger
 from vibey.infrastructure.loops.git_marketplace_fetcher import GitMarketplaceFetcher
@@ -294,6 +301,7 @@ from vibey.infrastructure.tracker.plane import PlaneTrackerAdapter
 from vibey.infrastructure.trusted_table_reader import TomlTrustedTableReader
 from vibey.infrastructure.trusted_table_writer import TomlTrustedTableWriter
 from vibey.infrastructure.user_config_folder import UserConfigFolder
+from vibey.infrastructure.user_state_folder import UserStateFolder
 
 
 @dataclass(frozen=True, slots=True)
@@ -748,6 +756,10 @@ def build_full_worker(
         metrics=metrics,
     )
     skills_context = compiler_from_config(project.config, repo_path=repo_root)
+    # The person's pastes and files, given to every BUILD run the same way (SP-LOOPS Phase 3).
+    # The `[inputs]` limits are read from the person's own `vibey.toml` at each run that has
+    # inputs to give (fix round 1, R-B), never from the project's.
+    run_inputs = run_inputs_service(resources, run_inputs_limits)
     # One runner for every gate command -- build.verify's gates and diff,
     # build.integrate's gates, REVIEW's automated checks -- built from the
     # project's `gates` config (per-command timeout, kill grace, Python-env
@@ -797,6 +809,7 @@ def build_full_worker(
             ultra_ledger=resources.ledger,
             checkpoint=GitCheckpoint(),
             specs=resources.design_specs,
+            inputs=run_inputs,
         )
         return _recording(handler, adapter, meter)
 
@@ -1549,6 +1562,50 @@ def loops_bundle_settings() -> LoopsBundleSettings:
     """`[loops]`, read with the ADR-0101 trust rule over the on-disk table reader (SP-LOOPS).
     The person's path for `load` is `acp_user_config()`."""
     return LoopsBundleSettings(TomlTrustedTableReader())
+
+
+def run_inputs_settings_loader() -> RunInputsSettingsLoader:
+    """`[inputs]`, read from the person's own file only over the on-disk table reader (SP-LOOPS
+    Phase 3). The person's path for `load` is `acp_user_config()`."""
+    return RunInputsSettingsLoader(TomlTrustedTableReader())
+
+
+def run_inputs_limits() -> RunInputsSettings:
+    """`[inputs]` from the person's own `vibey.toml`, read when a BUILD run is given its inputs
+    (so a change binds the next run, and a worker with no inputs to give reads nothing); a
+    project's file is never heard on limits (fix round 1: R-B, R-H)."""
+    return run_inputs_settings_loader().load(acp_user_config(), None).settings
+
+
+def run_inputs_root() -> Path:
+    """Where every project's run inputs are stored: `inputs/` in the person's own state folder,
+    one folder per project id, never inside a checkout (SP-LOOPS Phase 3, fix round 1: R-A)."""
+    return UserStateFolder(user_state_path).inputs()
+
+
+def run_inputs_service(
+    resources: AppResources, limits: Callable[[], RunInputsSettings]
+) -> RunInputsService:
+    """A project's run inputs (SP-LOOPS Phase 3): the hash-addressed store under
+    `run_inputs_root()`, the one no-follow file adapter for it and the run folders, the project
+    records, and the ledger adapter that records each add's
+    digest, kind and size. Composition only."""
+    files = NoFollowFiles()
+    return RunInputsService(
+        store=HashAddressedInputStore(run_inputs_root(), resources.clock, files=files),
+        projects=resources.projects,
+        ledger=PostgresRunInputLedger(resources.ledger),
+        clock=resources.clock,
+        limits=limits,
+        writer=files,
+    )
+
+
+@asynccontextmanager
+async def run_inputs_app(settings: RunInputsSettings) -> AsyncIterator[RunInputsInterface]:
+    """`run_inputs_service` over a freshly opened app: what `vibey inputs` runs."""
+    async with build_app() as resources:
+        yield run_inputs_service(resources, lambda: settings)
 
 
 LOOPS_STORE: Final = "loops"

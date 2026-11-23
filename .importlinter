@@ -65,6 +65,20 @@ forbidden_modules =
     vibey.cli
     vibey.tui
 
+# The run inputs service keeps the rules and reaches the disk only through its ports
+# (`InputStoreInterface`, `RunFolderWriterInterface`; SP-LOOPS Phase 3 fix round 1, R-E): the
+# no-follow file adapter, the store and the person's state folder are infrastructure's, wired in
+# `bootstrap.py`. tests/application/test_run_inputs_service.py also checks it calls no `os` file
+# function itself.
+[importlinter:contract:run-inputs-through-ports]
+name = run inputs service reaches the disk only through its ports
+type = forbidden
+source_modules =
+    vibey.application.run_inputs_service
+forbidden_modules =
+    vibey.infrastructure
+    vibey.bootstrap
+
 # The interfaces packages are the bottom of their layer: they declare the
 # seams, so they must never import the code that consumes them.
 #
@@ -144,6 +158,7 @@ source_modules =
     vibey.infrastructure.jsonrpc.interfaces
     vibey.infrastructure.acp.interfaces
     vibey.infrastructure.loops.interfaces
+    vibey.infrastructure.inputs.interfaces
 forbidden_modules =
     vibey.cli
     vibey.tui

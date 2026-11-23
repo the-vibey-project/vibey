@@ -50,6 +50,7 @@ PANELS: tuple[Panel, ...] = (
             Entry("doctor", "Check this machine is ready: PostgreSQL, engines, auth"),
             Entry("install", "Install the local dependencies vibey can manage"),
             Entry("new", "Start a project and its first design interview"),
+            Entry("inputs", "Give every BUILD run of a project a pasted text or file"),
             Entry("projects", "List every project with its phase and open gates"),
             Entry("status", "Show a project, the queue and the engine circuits"),
         ),

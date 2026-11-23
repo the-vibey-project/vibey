@@ -55,10 +55,12 @@ from vibey.application.interfaces import (
     TelemetryTracer,
 )
 from vibey.application.interfaces.design import DesignSpecRepository
+from vibey.application.interfaces.run_inputs_interface import RunInputsInterface
 from vibey.application.ports import Clock, EngineAdapter, HumanGateRepository, JobRepository
 from vibey.application.wind_down import WindDownOrchestrator
 from vibey.application.worker import Defer, Failure, Outcome, Park, Success
 from vibey.domain.budget import BudgetLedger
+from vibey.domain.config import ConfigError
 from vibey.domain.correlation import DELIVERY_CORRELATION
 from vibey.domain.effort import (
     BUILD_LADDER_EXHAUSTED,
@@ -68,7 +70,12 @@ from vibey.domain.effort import (
     forces_rotation,
 )
 from vibey.domain.engine import EXIT_CODE_WIND_DOWN, IsolationLevel
-from vibey.domain.errors import EscalationExhausted, ForeignBranchRefused
+from vibey.domain.errors import (
+    EscalationExhausted,
+    ForeignBranchRefused,
+    InputStoreError,
+    UnknownProject,
+)
 from vibey.domain.interfaces.correlation_interface import DeliveryCorrelationInterface
 from vibey.domain.interfaces.ultra_interface import UltraPassInterface, UltraPolicyInterface
 from vibey.domain.job import (
@@ -110,7 +117,9 @@ class BuildImplementHandler:
         ultra_ledger: LedgerReader | None = None,
         checkpoint: BuildCheckpoint | None = None,
         ultra_policy: UltraPolicyInterface = ULTRA_POLICY,
+        inputs: RunInputsInterface | None = None,
     ) -> None:
+        self._inputs = inputs
         self._correlation = correlation
         self._ultra_ledger = ultra_ledger
         self._checkpoint = checkpoint
@@ -390,7 +399,21 @@ class BuildImplementHandler:
             if context.should_inject:
                 prompt = f"{prompt.rstrip()}\n\n{context.markdown.lstrip()}"
 
+        # The run's inputs (SP-LOOPS Phase 3): the person's pastes and files, written into the
+        # worktree and fenced into the prompt as data, the same for every engine. A wind-down
+        # seed stays byte-for-byte (the no-loss gate verified it); its files are still there.
         run_id = uuid4()
+        if self._inputs is not None:
+            try:
+                given = await self._inputs.materialize(
+                    job.project_id, run_id, worktree_path, job_id=job.id
+                )
+            except (InputStoreError, UnknownProject, ConfigError) as refused:
+                return Failure(
+                    FailureClass.VIBEY, f"the run inputs could not be given to the run: {refused}"
+                )
+            if given.prompt_section and not (isinstance(seed, str) and seed):
+                prompt = f"{prompt.rstrip()}\n\n{given.prompt_section}"
         handle = await self._engine.start(
             RunSpec(
                 run_id=run_id,
