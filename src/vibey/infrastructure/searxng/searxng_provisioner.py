@@ -59,7 +59,17 @@ RUNTIME_GONE_REMEDY: Final = (
     "run `vibey searxng uninstall --purge` and then `vibey searxng install` to use the one vibey "
     "finds now"
 )
-"""What to do when the runtime vibey recorded is gone or no longer trusted (SP-ACP Task 11a)."""
+"""What to do when the runtime vibey recorded is not there any more (SP-ACP Task 11a)."""
+RUNTIME_REFUSED_REMEDY: Final = (
+    "vibey keeps its SearXNG with the runtime it was installed with, and no longer trusts it: "
+    "fix it (writable by its owner alone, `chmod g-w,o-w`, in one of vibey's trusted folders), "
+    "or stop the old container with it yourself, then run `vibey searxng uninstall --purge` and "
+    "`vibey searxng install` to use the one vibey finds now"
+)
+"""What to do when the recorded runtime is there but refused: its old container may still run
+and hold SearXNG's port, so a fresh install alone would collide with it (review 1 S-3)."""
+GONE: Final = "is not there"
+"""How `ContainerRuntime.vet` ends when the runtime's file is missing."""
 
 
 class SearxngProvisioner:
@@ -153,7 +163,17 @@ class SearxngProvisioner:
         if record is None:
             return ""
         problem = self._runtime.vet(record.runtime)
-        return UntrustedText.clean(f"{problem}; {RUNTIME_GONE_REMEDY}" if problem else "")
+        return UntrustedText.clean(f"{problem}; {self._remedy(problem)}" if problem else "")
+
+    @staticmethod
+    def _remedy(problem: str) -> str:
+        """The remedy for a recorded runtime `vet` refuses: one that is gone can only be put
+        back or replaced; one that is there but refused may still run the old container."""
+        return RUNTIME_GONE_REMEDY if problem.endswith(GONE) else RUNTIME_REFUSED_REMEDY
+
+    def runtime_gone(self) -> bool:
+        record = self.installed()
+        return record is not None and self._runtime.vet(record.runtime).endswith(GONE)
 
     def _believed(self) -> SearxngProvision | None:
         """The record, checked in full: the label is never taken from it, only compared."""
@@ -241,7 +261,7 @@ class SearxngProvisioner:
             return self._runtime.find(), ""
         problem = self._runtime.vet(record.runtime)
         if problem:
-            return record.runtime, UntrustedText.clean(f"{problem}; {RUNTIME_GONE_REMEDY}")
+            return record.runtime, UntrustedText.clean(f"{problem}; {self._remedy(problem)}")
         return record.runtime, ""
 
     def _remote_daemon(self) -> str:

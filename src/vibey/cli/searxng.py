@@ -204,16 +204,31 @@ class SearxngCommand:
         # can never make this unload the hub (or anything but vibey's SearXNG).
         label = self._label(units)
         failed = label is not None and not self._unload(loader, units, label)
+        gone = searxng.runtime_gone()
         why = searxng.remove_container()
-        if why:
+        if why and gone:
+            # Expected, not a failure: with its runtime gone, nothing of vibey's runs from it.
+            self._echo(
+                "the runtime vibey installed with is gone, so no container of vibey's runs "
+                "from it: there is none to remove"
+            )
+        elif why:
             failed = True
             self._echo(f"the container was not removed: {why}")
         else:
             self._echo("the container is removed (or there was none)")
         if purge:
+            kept_any = False
             for kept in searxng.purge():
-                failed = True
-                self._echo(kept)
+                kept_any = True
+                failed = failed or not gone
+                if not gone:
+                    self._echo(kept)
+            if kept_any and gone:
+                self._echo(
+                    "the image stays wherever that runtime kept it: put the runtime back to "
+                    "remove it, or leave it"
+                )
             self._echo("the settings and the record are removed")
         else:
             self._echo("the settings, the record and the image are kept; --purge removes them")

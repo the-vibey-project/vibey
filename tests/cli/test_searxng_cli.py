@@ -52,6 +52,10 @@ class Provisioner:
         self.refused = ""
         self.stopped = False
         self.taken = ""
+        self.gone = False
+
+    def runtime_gone(self) -> bool:
+        return self.gone
 
     def offer(self) -> SearxngOffer:
         self.calls.append("offer")
@@ -420,6 +424,21 @@ def test_uninstall_purge_removes_the_image_and_the_files() -> None:
     world.provisioner.purged = ["the image was kept: image in use"]
     assert world.command.uninstall(purge=True) == 1
     assert "image in use" in world.text
+
+
+def test_uninstall_purge_with_the_recorded_runtime_gone_is_expected_not_a_failure() -> None:
+    """Review 1 S-3: the remedy for a runtime that is gone is purge-then-install, so that purge
+    succeeds (exit 0), saying why there was nothing of its runtime to remove."""
+    world = World(Provisioner(provisioned=True))
+    world.provisioner.gone = True
+    world.provisioner.removed = "/opt/homebrew/bin/podman is not there"
+    world.provisioner.purged = ["the image was kept: /opt/homebrew/bin/podman is not there"]
+    assert world.command.uninstall(purge=True) == 0
+    text = world.text
+    assert "the runtime vibey installed with is gone" in text
+    assert "the image stays wherever that runtime kept it" in text
+    assert "was not removed" not in text and "the image was kept" not in text
+    assert "the settings and the record are removed" in text
 
 
 def test_uninstall_with_nothing_installed_uses_the_configured_label() -> None:

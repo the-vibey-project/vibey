@@ -251,7 +251,7 @@ def test_the_refusal_names_a_runtime_vibey_will_not_run(tmp_path: Path) -> None:
     assert provisioner.refusal() == ""
     runtime.refuse = "/opt/homebrew/bin/podman \x1b[2Jis writable by anyone"
     assert provisioner.refusal().startswith("/opt/homebrew/bin/podman is writable by anyone; ")
-    assert "`vibey searxng uninstall --purge` and then `vibey searxng install`" in (
+    assert "`vibey searxng uninstall --purge` and `vibey searxng install`" in (
         provisioner.refusal()
     )
     assert not provisioner.image_present()
@@ -459,3 +459,27 @@ def test_doctor_says_how_to_fix_a_recorded_runtime_that_is_gone(tmp_path: Path) 
         "put that runtime back, or run `vibey searxng uninstall --purge` and then "
         "`vibey searxng install` to use the one vibey finds now"
     )
+
+
+def test_the_remedy_follows_the_cause_and_gone_is_told_apart(tmp_path: Path) -> None:
+    """Review 1 S-3: a runtime that is gone can be put back or replaced; one that is there but
+    refused may still run the old container, so that is said first."""
+    from vibey.infrastructure.searxng.searxng_provisioner import (
+        RUNTIME_GONE_REMEDY,
+        RUNTIME_REFUSED_REMEDY,
+    )
+
+    runtime = Runtime()
+    provisioner = _provisioner(tmp_path, runtime)
+    assert not provisioner.runtime_gone()  # nothing installed
+    provisioner.prepare()
+    assert not provisioner.runtime_gone()
+    runtime.refuse = f"{RUNTIME} is not there"
+    assert provisioner.refusal().endswith(RUNTIME_GONE_REMEDY)
+    assert provisioner.runtime_gone()
+    runtime.refuse = f"{RUNTIME} is writable by anyone but its owner"
+    assert provisioner.refusal().endswith(RUNTIME_REFUSED_REMEDY)
+    assert "chmod g-w,o-w" in provisioner.refusal()
+    assert not provisioner.runtime_gone()
+    prepared = provisioner.prepare()
+    assert not prepared.ok and prepared.detail.endswith(RUNTIME_REFUSED_REMEDY)

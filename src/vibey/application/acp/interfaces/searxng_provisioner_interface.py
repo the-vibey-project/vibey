@@ -42,6 +42,11 @@ class SearxngProvisionerInterface(Protocol):
         vibey would not write, another label, or a runtime `vet` refuses. Cleaned."""
         ...
 
+    def runtime_gone(self) -> bool:
+        """Whether the runtime vibey installed with is not there any more: then no container
+        of vibey's runs from it, and nothing of it can be removed from here."""
+        ...
+
     def disabled(self) -> bool:
         """Whether the person stopped it for good (`vibey acp unload`, `vibey searxng
         uninstall`)."""
