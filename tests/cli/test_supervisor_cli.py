@@ -536,3 +536,19 @@ def test_the_subcommands_reach_the_command(recorder: _Recorder) -> None:
 def test_exec_with_nothing_after_the_separator_reaches_the_command(recorder: _Recorder) -> None:
     runner.invoke(app, ["supervisor", "exec", "--env-file", "e.env"])
     assert recorder.calls == [("exec", (Path("e.env"), []))]
+
+
+def test_the_service_manager_never_reads_the_callers_stdin(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Under `vibey acp` stdin is the editor's protocol (Task 11a; review 1 S-4): pinned by the
+    argument, never by a real child reading fd 0, which is execnet's under xdist."""
+    import subprocess
+
+    seen: dict[str, object] = {}
+
+    def run(argv: list[str], **kwargs: object) -> subprocess.CompletedProcess[str]:
+        seen.update(kwargs)
+        return subprocess.CompletedProcess(argv, 0, "ok\n", "")
+
+    monkeypatch.setattr(subprocess, "run", run)
+    assert SupervisorCommand.service_manager(("launchctl", "print")) == (0, "ok\n")
+    assert seen["stdin"] is subprocess.DEVNULL

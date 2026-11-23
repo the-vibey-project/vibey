@@ -1,0 +1,1 @@
+* **The Sabbath location helper starts with standard input closed:** `sabbath_location`'s helper (`CoreLocationCLI` on macOS, GeoClue's `where-am-i` on Linux) now runs with `stdin=DEVNULL`, so under `vibey acp`, where the parent's standard input is the editor's protocol stream, a helper can never read a byte of it.
