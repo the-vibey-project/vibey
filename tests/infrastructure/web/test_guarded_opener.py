@@ -5,7 +5,9 @@ is reached directly, never through a proxy. Runs against a real server on loopba
 
 from __future__ import annotations
 
+import http.client
 import http.server
+import io
 import threading
 import time
 import urllib.error
@@ -16,7 +18,7 @@ import pytest
 
 from vibey.infrastructure.web.guarded_opener import GuardedOpener
 from vibey.infrastructure.web.interfaces import GuardedOpenerInterface
-from vibey.infrastructure.web.search import SearxngBackend
+from vibey.infrastructure.web.search import BraveBackend, SearxngBackend, WebSearchError
 
 pytestmark = pytest.mark.web_network
 
@@ -166,3 +168,63 @@ def test_a_listener_that_trickles_its_answer_is_cut_off_at_the_total_deadline(
     said = SearxngBackend(f"{base}/drip", opener=GuardedOpener(base), timeout_seconds=0.5).health()
     assert said == "did not finish answering within 0.5s"
     assert time.monotonic() - started < 3
+
+
+class _Wire:
+    """Stands in for the network under `http.client`: records each request a connection sends
+    (to whom, through which tunnel, with which headers) and answers it with `answer`."""
+
+    def __init__(self, answer: bytes) -> None:
+        self.answer = answer
+        self.sent: list[tuple[str, int | None, str | None, str, dict[str, str]]] = []
+
+    def request(
+        self, connection: http.client.HTTPConnection, method: str, url: str, *a: object, **k: object
+    ) -> None:
+        headers = dict(k.get("headers") or (a[1] if len(a) > 1 else {}))  # type: ignore[call-overload]
+        tunnel = getattr(connection, "_tunnel_host", None)
+        self.sent.append((connection.host, connection.port, tunnel, url, headers))
+
+    def response(self, connection: http.client.HTTPConnection) -> http.client.HTTPResponse:
+        class _Sock:
+            def makefile(_self, *args: object) -> io.BytesIO:  # noqa: N805 - a stand-in
+                return io.BytesIO(self.answer)
+
+        answer = http.client.HTTPResponse(_Sock(), method="GET")  # type: ignore[arg-type]
+        answer.begin()
+        return answer
+
+
+def test_a_proxy_that_redirects_brave_elsewhere_never_carries_the_key_there(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """SP-ACP Task 9c, P-9c-2: Brave is reached through the environment's proxy; a 302 from
+    there to another origin is refused by the real `GuardedOpener`, so the key header reaches
+    no one but the first request's tunnel to Brave. The wire is stood in for: no socket opens."""
+    wire = _Wire(
+        b"HTTP/1.1 302 Found\r\nLocation: https://elsewhere.example/stolen\r\n"
+        b"Content-Length: 0\r\n\r\n"
+    )
+
+    def request(connection: http.client.HTTPConnection, *args: object, **kwargs: object) -> None:
+        wire.request(connection, *args, **kwargs)  # type: ignore[arg-type]
+
+    def getresponse(connection: http.client.HTTPConnection) -> http.client.HTTPResponse:
+        return wire.response(connection)
+
+    for kind in (http.client.HTTPConnection, http.client.HTTPSConnection):
+        monkeypatch.setattr(kind, "request", request)
+        monkeypatch.setattr(kind, "getresponse", getresponse)
+    for name in ("no_proxy", "NO_PROXY", "all_proxy", "ALL_PROXY"):
+        monkeypatch.delenv(name, raising=False)
+    monkeypatch.setenv("https_proxy", "http://127.0.0.1:3128")
+    monkeypatch.setenv("HTTPS_PROXY", "http://127.0.0.1:3128")
+
+    with pytest.raises(WebSearchError, match="HTTP 302"):
+        BraveBackend("fake-key").search("q", 1)
+
+    assert len(wire.sent) == 1
+    host, port, tunnel, url, headers = wire.sent[0]
+    assert (host, port, tunnel) == ("127.0.0.1", 3128, "api.search.brave.com")
+    assert url.startswith("/res/v1/web/search?") and headers["X-Subscription-Token"] == "fake-key"
+    assert not any("elsewhere" in str(sent) for sent in wire.sent)

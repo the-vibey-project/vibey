@@ -12,6 +12,7 @@ readers (doctrine 7). `docs/reference/hub-api.json` is held equal to `--openapi`
 import asyncio
 import json
 import os
+import socket
 from collections.abc import Awaitable, Callable
 from pathlib import Path
 from typing import Any
@@ -34,6 +35,7 @@ from vibey.infrastructure.hub.lanes import LaneScanner
 from vibey.infrastructure.hub.local_token import LocalTokenStore, ServingRecord
 from vibey.infrastructure.hub.mdns import MdnsAdvertiser
 from vibey.infrastructure.hub.serve_lock import ServeLock
+from vibey.infrastructure.hub.server import UvicornServer
 from vibey.infrastructure.hub.settings import HubSettings
 
 runner = CliRunner(env={"_TYPER_FORCE_DISABLE_TERMINAL": "1"})
@@ -41,6 +43,23 @@ REPO_ROOT = Path(__file__).resolve().parents[2]
 COMMITTED = REPO_ROOT / "docs" / "reference" / "hub-api.json"
 
 type Drive = Callable[[httpx.AsyncClient, str], Awaitable[None]]
+
+
+class Bound:
+    """What `Driven.bind` hands back: the address as it was asked for; nothing listens."""
+
+    def __init__(self, host: str, port: int) -> None:
+        self.address = (host, port)
+        self.closed = False
+
+    def getsockname(self) -> tuple[str, int]:
+        return self.address
+
+    def close(self) -> None:
+        self.closed = True
+
+    def dup(self) -> "Bound":
+        return Bound(*self.address)
 
 
 class Driven:
@@ -51,8 +70,14 @@ class Driven:
         self.state: Path | None = None
         self.bound: tuple[str, int] | None = None
         self.app: FastAPI | None = None
+        self.sockets: list[Any] = []
 
-    async def serve(self, app: FastAPI, *, host: str, port: int, tls: Any = None) -> None:
+    def bind(self, host: str, port: int) -> list[Any]:
+        self.sockets.append(Bound(host, port))
+        return [self.sockets[-1]]
+
+    async def serve(self, app: FastAPI, *, sockets: Any, tls: Any = None) -> None:
+        host, port = sockets[0].getsockname()[:2]
         self.bound, self.app, self.tls = (host, port), app, tls
         shown = f"[{host}]" if ":" in host else host
         transport = httpx.ASGITransport(app=app)
@@ -321,6 +346,121 @@ def test_the_hub_speaks_the_clis_contract_end_to_end(tmp_path: Path) -> None:
     assert [e["seq"] for e in after["events"]] == list(range(1, after["last_seq"] + 1))
     assert got["tail"].status_code == 404
     assert not (tmp_path / "state" / "serving.json").exists()
+    assert [sock.closed for sock in server.sockets] == [True]
+
+
+class Ordered(Driven):
+    """A server that checks the hub's record at each step: none while the port is being
+    bound, and one naming the bound socket's own port while serving."""
+
+    def __init__(self, drive: Drive, *, real: bool = False) -> None:
+        super().__init__(drive)
+        self._real = real
+        self.recorded: list[ServingRecord | None] = []
+
+    def bind(self, host: str, port: int) -> list[Any]:
+        assert self.state is not None
+        self.recorded.append(LocalTokenStore(self.state).serving())
+        if not self._real:
+            return super().bind(host, port)
+        bound = UvicornServer().bind(host, port)
+        self.sockets.extend(bound)
+        return bound
+
+    async def serve(self, app: FastAPI, *, sockets: Any, tls: Any = None) -> None:
+        assert self.state is not None
+        record = LocalTokenStore(self.state).serving()
+        self.recorded.append(record)
+        if self._real:
+            assert record is not None
+            # The port the record names is the one this hub's socket listens on, now.
+            assert record.port == sockets[0].getsockname()[1] != 0
+            with socket.create_connection((record.host, record.port), timeout=5):
+                pass
+        await super().serve(app, sockets=sockets, tls=tls)
+
+
+@pytest.mark.integration
+@pytest.mark.usefixtures("_an_empty_database")
+def test_the_record_is_written_only_once_the_port_is_bound(tmp_path: Path) -> None:
+    """SP-ACP Task 11b, review S-1: the port is bound before `serving.json` names it."""
+    server = Ordered(lambda *_: asyncio.sleep(0))
+    asyncio.run(_command(tmp_path, server).run(host=None, port=None))
+    first, during = server.recorded
+    assert first is None
+    assert during is not None and (during.host, during.port) == ("127.0.0.1", 8765)
+
+
+@pytest.mark.integration
+@pytest.mark.usefixtures("_an_empty_database")
+def test_a_real_loopback_bind_on_port_0_is_the_port_the_record_names(tmp_path: Path) -> None:
+    server = Ordered(lambda *_: asyncio.sleep(0), real=True)
+    asyncio.run(_command(tmp_path, server).run(host=None, port=0))
+    first, during = server.recorded
+    assert first is None and during is not None and during.port > 0
+    assert server.sockets[0].fileno() == -1  # closed once the hub stopped
+    assert not (tmp_path / "state" / "serving.json").exists()
+
+
+def _held(port: int) -> bool:
+    """Whether something on this computer still holds `port` on loopback."""
+    try:
+        with socket.create_server(("127.0.0.1", port)):
+            return False
+    except OSError:
+        return True
+
+
+@pytest.mark.integration
+@pytest.mark.usefixtures("_an_empty_database")
+def test_the_record_is_cleared_before_the_hubs_port_is_let_go(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Review 1 M-2: uvicorn's shutdown closes the sockets it was handed first, then waits for
+    open connections. The hub keeps its own until `serving.json` is cleared, so the record never
+    names a port nobody holds: the port is held at the clear, and free only after it."""
+    held_at_clear: list[bool] = []
+    real_clear = LocalTokenStore.clear_serving
+
+    def clear(self: LocalTokenStore, pid: int) -> None:
+        held_at_clear.append(_held(port[0]))
+        real_clear(self, pid)
+
+    monkeypatch.setattr(LocalTokenStore, "clear_serving", clear)
+    port: list[int] = []
+
+    class Closing(Ordered):
+        async def serve(self, app: FastAPI, *, sockets: Any, tls: Any = None) -> None:
+            port.append(sockets[0].getsockname()[1])
+            for sock in sockets:
+                sock.close()  # as uvicorn's shutdown does, first
+            assert _held(port[0])  # the hub's own socket still holds it
+
+    asyncio.run(
+        _command(tmp_path, Closing(lambda *_: asyncio.sleep(0), real=True)).run(host=None, port=0)
+    )
+    assert held_at_clear == [True]
+    assert not _held(port[0])  # let go once the record was gone
+
+
+def test_a_port_that_cannot_be_bound_writes_no_record_and_opens_nothing(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    def refuse() -> Any:
+        raise AssertionError("nothing may open")
+
+    class Taken(Driven):
+        def bind(self, host: str, port: int) -> list[Any]:
+            raise OSError(48, "Address already in use")
+
+    server = Taken(lambda *_: asyncio.sleep(0))
+    command = _command(tmp_path, server)
+    command._open_app = refuse  # type: ignore[assignment]
+    with pytest.raises(Exception) as caught:
+        asyncio.run(command.run(host=None, port=None))
+    assert getattr(caught.value, "exit_code", None) == 1
+    assert not (tmp_path / "state" / "serving.json").exists()
+    assert "could not listen on 127.0.0.1:8765: Address already in use" in capsys.readouterr().err
 
 
 @pytest.mark.integration
@@ -339,6 +479,24 @@ def test_a_repository_that_does_not_admit_the_hub_refuses_its_bump(tmp_path: Pat
 
     asyncio.run(_command(tmp_path, Driven(drive)).run(host=None, port=None))
     assert got["bump"].status_code == 403
+
+
+@pytest.mark.integration
+@pytest.mark.usefixtures("_an_empty_database")
+def test_an_advertisement_that_fails_leaves_no_record(tmp_path: Path) -> None:
+    """Review 2: the mDNS registration runs after the record is written; when it fails (a name
+    taken on the network, no multicast) the record is cleared all the same."""
+
+    class Refusing(Advertiser):
+        async def advertise(self, **fields: Any) -> "Advertiser":
+            raise RuntimeError("NonUniqueNameException")
+
+    server = Driven(lambda *_: asyncio.sleep(0))
+    command = _command(tmp_path, server, "lan = true\nport = 9100\n", Refusing())
+    with pytest.raises(RuntimeError, match="NonUniqueName"):
+        asyncio.run(command.run(host="192.168.1.20", port=None))
+    assert not (tmp_path / "state" / "serving.json").exists()
+    assert server.app is None  # never served
 
 
 @pytest.mark.integration

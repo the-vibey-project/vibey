@@ -10,14 +10,12 @@ from __future__ import annotations
 
 import asyncio
 import contextlib
-import threading
-import time
 from collections.abc import AsyncIterator
 from pathlib import Path
 from typing import Any
 
 import pytest
-from acp_fakes import FakeChannel, FakeHub, context, until
+from acp_fakes import FakeChannel, FakeHub, context
 
 from vibey.application.acp.acp_keep_alive import AcpKeepAlive
 from vibey.application.acp.dto import UnitOutcome
@@ -53,7 +51,6 @@ class Loader:
         self.fail: set[str] = set()
         self.idle: dict[str, str] = {}
         """What the manager says of a label that is not running (default: failed)."""
-        self._guard = threading.Lock()
 
     def state(self, label: str) -> str:
         if label in self.running:
@@ -61,9 +58,7 @@ class Loader:
         return self.idle.get(label, "stopped (failed)")
 
     def restart(self, label: str) -> UnitOutcome:
-        with self._guard:
-            self.calls.append(("restart", label))
-        time.sleep(0.02)  # the service manager takes a moment: another window may wait on it
+        self.calls.append(("restart", label))
         return self._done(label, "restarted")
 
     def load(self, label: str, unit: str) -> UnitOutcome:
@@ -141,8 +136,41 @@ def keep_alive(
         units=units,
         clock=clock or Clock(),
         sleep=sleep if sleep is not None else _yield,
+        offload=_inline,
     )
     return kept
+
+
+async def _inline(call: Any, *args: Any) -> Any:
+    """The service manager's calls run inline: no thread, so every test is ordered by the loop
+    alone and never by how fast a worker thread is scheduled (develop CI, Linux)."""
+    return call(*args)
+
+
+class Ticks:
+    """The timer's sleep, driven by the test: each sleep records its seconds and waits until the
+    test lets one tick through. No real time passes and nothing is polled."""
+
+    def __init__(self) -> None:
+        self.asked: list[float] = []
+        self._pending: list[asyncio.Future[None]] = []
+        self._asleep = asyncio.Event()
+
+    async def __call__(self, seconds: float) -> None:
+        self.asked.append(seconds)
+        woken: asyncio.Future[None] = asyncio.get_running_loop().create_future()
+        self._pending.append(woken)
+        self._asleep.set()
+        await woken
+
+    async def asleep(self) -> None:
+        """Return once the timer is waiting in its next sleep."""
+        await self._asleep.wait()
+        self._asleep.clear()
+
+    def tick(self) -> None:
+        """Let the timer's sleep end: one period passes."""
+        self._pending.pop(0).set_result(None)
 
 
 async def _yield(seconds: float) -> None:
@@ -188,7 +216,8 @@ async def test_dead_hub_is_restarted_and_noticed_once() -> None:
 
     assert loader.calls.count(("restart", HUB)) == 4
     restarted = [t for t in channel.texts if "restarted" in t]
-    assert len(restarted) == 1 and HUB in restarted[0]
+    # A unit label is shown exactly, in a code span: copied, it names the unit.
+    assert len(restarted) == 1 and f"`{HUB}`" in restarted[0]
 
     hub.up = True
     clock.now += 31
@@ -370,23 +399,20 @@ async def test_without_a_way_to_ask_about_the_detached_hub_it_is_taken_over() ->
 async def test_the_timer_probes_every_period_while_a_session_is_attached() -> None:
     hub = Hub(up=True)
     loader = Loader(hub)
-    ticks: list[float] = []
-    gate = asyncio.Event()
-
-    async def sleep(seconds: float) -> None:
-        ticks.append(seconds)
-        if len(ticks) > 2:
-            await gate.wait()
-
+    ticks = Ticks()
     kept = keep_alive(
-        hub, loader, FakeChannel(), sleep=sleep, settings=AcpSettings(probe_seconds=7)
+        hub, loader, FakeChannel(), sleep=ticks, settings=AcpSettings(probe_seconds=7)
     )
     kept.manage(UNITS, hub_label=HUB, deferred=())
-    assert ticks == []  # no session yet: no timer
+    assert ticks.asked == [] and kept._timer is None  # type: ignore[attr-defined]  # no session
+
     kept.attach("s")
-    await until(lambda: len(ticks) >= 3)
-    assert ticks[:3] == [7.0, 7.0, 7.0]
-    assert hub.probes == 2
+    await ticks.asleep()
+    assert ticks.asked == [7.0] and hub.probes == 0  # a period first, then a probe
+    for period in (1, 2):
+        ticks.tick()
+        await ticks.asleep()  # the probe ran to its end before the next period began
+        assert hub.probes == period and ticks.asked == [7.0] * (period + 1)
 
     kept.detach("s")
     await asyncio.sleep(0)
@@ -616,8 +642,10 @@ async def test_a_requested_probe_from_another_thread_restarts_through_the_lock_o
     kept.request_probe()  # nothing managed yet: nothing happens
     kept.manage(UNITS, hub_label=HUB, deferred=())
     clock.now += 31
-    await asyncio.gather(*(asyncio.to_thread(kept.request_probe) for _ in range(5)))
-    await until(lambda: kept._current is not None)  # type: ignore[attr-defined]
+    for _ in range(5):  # as a hub read does, from its own thread: posted to the loop
+        kept.request_probe()
+    await asyncio.sleep(0)  # the loop runs what was posted: one shared probe
+    assert kept._current is not None  # type: ignore[attr-defined]
     await asyncio.wait({kept._current})  # type: ignore[attr-defined]
     assert loader.calls == [("restart", HUB)]
     assert lock.holds == 1
@@ -642,7 +670,7 @@ async def test_a_unit_added_later_is_restarted_and_survives_a_later_manage() -> 
         await kept.probe(context())
 
         assert loader.calls == [("restart", searxng)]
-        assert any(searxng in text and "restarted" in text for text in channel.texts)
+        assert any(f"`{searxng}`" in text and "restarted" in text for text in channel.texts)
         await kept.stop()
     finally:
         del UNITS[searxng]

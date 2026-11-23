@@ -9,6 +9,9 @@ restart, an overlapping page) is at or below it and skipped. A failure is report
 retried after `[acp] live_poll_seconds`, the wait doubling with each failure in a row up to
 `[acp] probe_seconds` (never longer than the keep-alive's own interval); a short page is
 followed by `live_poll_seconds`, and a full page that moved the cursor is read again at once.
+A project the hub no longer has (`UnknownProject`, a 404) was removed, not away: it is said once
+and the feed stops. "Paused", "resumed" and "stopped" are `notice` updates for a client that
+declares `session.notices`, and messages for any other.
 
 Every message the feed sends is its own paragraph (a blank line before and after), so it never
 runs into the next one or into the agent's own reply: ACP clients join consecutive message
@@ -50,15 +53,19 @@ from vibey.domain.acp.gate_permission import GatePermissionMapper
 from vibey.domain.acp.interfaces.gate_permission_interface import GatePermissionMapperInterface
 from vibey.domain.acp.interfaces.session_state_interface import AcpSessionStateInterface
 from vibey.domain.acp.interfaces.update_mapper_interface import AcpUpdateMapperInterface
+from vibey.domain.acp.protocol import NoticeSeverity
 from vibey.domain.acp.settings import AcpSettings
-from vibey.domain.errors import VibeyError
+from vibey.domain.errors import UnknownProject, VibeyError
 from vibey.domain.hub_scope import SPEND_GATE_KINDS
 from vibey.domain.phase import Phase
 
 LIVE_PAGE: Final = 200
 """The most events one read asks for: the hub's own bound on a live page."""
 ABANDONED_TEXT: Final = "Project abandoned."
-RESUMED_TEXT: Final = "Live updates resumed."
+PAUSED_TITLE: Final = "Live updates paused"
+RESUMED_TITLE: Final = "Live updates resumed"
+STOPPED_TITLE: Final = "Live updates stopped"
+RESUMED_TEXT: Final = "the project's ledger is read again."
 _LOG: Final = logging.getLogger(__name__)
 
 type Sleep = Callable[[float], Awaitable[None]]
@@ -136,7 +143,10 @@ class AcpLiveFeed:
             follow = _Follow(session_id, project_id, None, set())
             self._follows[session_id] = follow
         follow.watermark = after
-        await self._poll(follow)
+        try:
+            await self._poll(follow)
+        except UnknownProject:
+            await self._gone(follow)
 
     def watermark(self, session_id: str) -> int:
         follow = self._follows.get(session_id)
@@ -167,16 +177,21 @@ class AcpLiveFeed:
             await self._poll(follow)
         except asyncio.CancelledError:
             raise
+        except UnknownProject:
+            with contextlib.suppress(Exception):
+                await self._gone(follow)
         except Exception as exc:
             # A defect, or a client that went away: hub failures are `VibeyError`s and are
             # retried in the loop, so whatever reaches here would only fail again. It is logged
             # with its traceback and the feed stops, rather than retrying it in a loop.
             _LOG.exception("the live feed for session %s stopped", follow.session_id)
             with contextlib.suppress(Exception):
-                await self._say(
+                await self._status(
                     follow,
-                    f"Live updates stopped: {type(exc).__name__}. The agent's log on stderr "
-                    "has the details; reopen the session to start them again.",
+                    NoticeSeverity.ERROR,
+                    STOPPED_TITLE,
+                    f"{type(exc).__name__}. The agent's log on stderr has the details; reopen "
+                    "the session to start them again.",
                 )
 
     async def _catch_up(self, follow: _Follow) -> None:
@@ -226,19 +241,23 @@ class AcpLiveFeed:
     async def _read(self, follow: _Follow, after: int, limit: int) -> LedgerPage | None:
         try:
             read = await self._hub.ledger_after(follow.project_id, after, limit)
+        except UnknownProject:
+            raise  # removed for good, not away: the feed stops (`_gone`)
         except VibeyError as exc:
             follow.failures += 1
             if follow.failures == 1:
                 why = self._mapper.untrusted(str(exc), limit=self._settings.live_message_chars)
-                await self._say(
+                await self._status(
                     follow,
-                    f"Live updates paused: the project's ledger could not be read ({why}). "
-                    f"Retrying, waiting longer each time, up to {self._cap():g} s.",
+                    NoticeSeverity.WARNING,
+                    PAUSED_TITLE,
+                    f"the project's ledger could not be read ({why}). Retrying, waiting longer "
+                    f"each time, up to {self._cap():g} s.",
                 )
             return None
         if follow.failures:
             follow.failures = 0
-            await self._say(follow, RESUMED_TEXT)
+            await self._status(follow, NoticeSeverity.INFO, RESUMED_TITLE, RESUMED_TEXT)
         return read
 
     def _cap(self) -> float:
@@ -336,6 +355,30 @@ class AcpLiveFeed:
 
     async def _say(self, follow: _Follow, text: str) -> None:
         await self._say_update(follow, self._mapper.agent_text(text))
+
+    async def _gone(self, follow: _Follow) -> None:
+        """Said once when the hub has no such project any more (a 404): it was removed, so the
+        feed stops rather than retrying it for ever (Task 5 review N8)."""
+        await self._status(
+            follow,
+            NoticeSeverity.ERROR,
+            STOPPED_TITLE,
+            f"the hub has no project {follow.project_id} any more. `/projects` lists the "
+            "projects it has.",
+        )
+
+    async def _status(
+        self, follow: _Follow, severity: NoticeSeverity, title: str, description: str
+    ) -> None:
+        """The feed's own state (paused, resumed, stopped): a `notice` for a client that declares
+        `session.notices`, else a message reading "<title>: <description>" (Task 5 review N7)."""
+        session = self._channel.client_capabilities.get("session")
+        notices = isinstance(session, Mapping) and isinstance(session.get("notices"), Mapping)
+        update = self._mapper.notice(title, severity, description, client_notices=notices)
+        if notices:
+            await self._notify(follow, update)
+        else:
+            await self._say_update(follow, update)
 
     async def _say_update(self, follow: _Follow, update: Mapping[str, Any]) -> None:
         """A message as its own paragraph: blank lines keep it apart from what is around it."""

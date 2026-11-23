@@ -229,10 +229,27 @@ async def test_an_unreadable_stdin_is_an_eof_not_a_hang(tmp_path: Path, fds: _Fd
     assert await asyncio.wait_for(reader.read(), 10) == b""
 
 
+def _never_open_fd() -> int:
+    """A descriptor number this process can never hold: at or past its open-file limit (and
+    within a C int). Unlike a fixed number such as 10000, nothing else in the run can have it
+    open (SP-ACP Task 3 review B-12)."""
+    import resource
+
+    soft, _ = resource.getrlimit(resource.RLIMIT_NOFILE)
+    largest = 2**31 - 1
+    return largest if soft == resource.RLIM_INFINITY else min(soft, largest)
+
+
+def test_the_closed_descriptor_is_one_no_process_could_have_open() -> None:
+    fd = _never_open_fd()
+    with pytest.raises(OSError):
+        os.fstat(fd)
+
+
 async def test_a_closed_stdin_is_an_eof_not_a_hang() -> None:
-    # Nothing in this process holds fd 10000, so fstat fails and the thread reader, whose
+    # No descriptor this process can have open, so fstat fails and the thread reader, whose
     # first read fails too, ends the stream at once.
-    reader = await StdioTransport(stdin_fd=10_000).reader(limit=1024)
+    reader = await StdioTransport(stdin_fd=_never_open_fd()).reader(limit=1024)
 
     assert await asyncio.wait_for(reader.read(), 10) == b""
 

@@ -137,6 +137,26 @@ async def test_a_turn_without_a_project_keeps_the_sessions_project() -> None:
     assert session.project_id == PROJECT
 
 
+async def test_the_hub_is_asked_with_the_project_the_command_was_parsed_with() -> None:
+    """SP-ACP Task 11b-ii, Task 5 review N9: a folder lookup that lands while the turn is
+    announced moves the session's project, but the hub re-parses the command with the project
+    the turn parsed it with, never the new one."""
+    channel, hub = FakeChannel(), FakeHub(PROJECTS_TURN)
+    session = context()
+    session.project_id = PROJECT
+    gate = channel.hold_at[1] = asyncio.Event()  # the pending tool call is being sent
+    run = asyncio.create_task(
+        build_turn(channel, hub).run(session, [text("/status")], turn_id="t1")
+    )
+    await until(lambda: len(channel.updates) == 1)
+
+    session.project_id = UUID("22222222-2222-4222-8222-222222222222")  # the folder's, late
+    gate.set()
+    await run
+
+    assert [call.project_id for call in hub.calls] == [PROJECT]
+
+
 async def test_hub_refusal_marks_the_tool_call_failed_and_still_ends_turn() -> None:
     channel = FakeChannel()
     hub = FakeHub(error=HubForbidden("hub refused (403): scope run is not granted"))
@@ -775,8 +795,8 @@ async def test_a_hub_reply_quoting_a_gate_prompt_renders_no_markdown() -> None:
 
     assert channel.texts[-1] == (
         "1 open gate\\(s\\):\\\n"
-        "1\\. \\[approval\\] Ship? \\!\\[b\\]\\(https\\[:\\]//evil.example/b\\)\\\n"
-        "\\[build\\]: https\\[:\\]//evil.example/x"
+        "1\\. \\[approval\\] Ship? \\!\\[b\\]\\(https\\[:\\]//evil\\[.\\]example/b\\)\\\n"
+        "\\[build\\]: https\\[:\\]//evil\\[.\\]example/x"
     )
 
 

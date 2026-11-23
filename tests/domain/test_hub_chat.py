@@ -114,6 +114,18 @@ def test_parse_new_and_ask_slash() -> None:
     assert len(long_word.name or "") == 48
 
 
+def test_an_ask_names_its_project_from_its_first_paragraph_only() -> None:
+    """SP-ACP Task 3 review B-12: an ACP prompt sends what was typed, a blank line, then any
+    attached resource; the name comes from what was typed, never from the attachment, however
+    few words were typed. The whole message is still the project's description."""
+    asked = HUB_CHAT.parse("/ask parser\n\nimport os, sys and the attached file")
+    assert asked.name == "parser"
+    assert asked.intake == "parser\n\nimport os, sys and the attached file"
+
+    lines = HUB_CHAT.parse("/ask a markdown\nparser please\n\nATTACHED")
+    assert lines.name == "a-markdown-parser-please"
+
+
 def test_parse_abandon_slash() -> None:
     with pytest.raises(LifecycleInvalid, match="select a project"):
         HUB_CHAT.parse("/abandon no longer needed")

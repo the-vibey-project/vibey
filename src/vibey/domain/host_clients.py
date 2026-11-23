@@ -28,7 +28,7 @@ from __future__ import annotations
 import json
 import re
 import tomllib
-from collections.abc import Mapping, Sequence
+from collections.abc import Callable, Mapping, Sequence
 from dataclasses import dataclass
 from typing import Any, Final, Literal
 
@@ -72,6 +72,62 @@ so it is not vibey's entry (SP-ACP Task 11a); `["mcp", "--x"]` would fail to sta
 server, so it is not connected either, and a rewrite drops the flag (SP-ACP Task 11b, N-4)."""
 
 
+ZED_FLATPAK_ID: Final = "dev.zed.Zed"
+"""Flatpak's id for Zed: its app folder is `~/.var/app/<id>`, its config `<that>/config/zed`."""
+
+
+@dataclass(frozen=True, slots=True)
+class ClientHomes:
+    """Where clients keep their config when the person moved it: `XDG_CONFIG_HOME` (Zed on
+    Linux), `CODEX_HOME` (Codex), `CLAUDE_CONFIG_DIR` (Claude Code), each honoured only when
+    absolute, and whether Zed is the Flatpak one. A value type; `from_environ` reads it."""
+
+    xdg_config_home: str | None = None
+    codex_home: str | None = None
+    claude_config_dir: str | None = None
+    zed_flatpak: bool = False
+    """Zed runs from Flatpak (Linux): its app folder is there and no native Zed config is."""
+
+    @classmethod
+    def from_environ(
+        cls,
+        environ: Mapping[str, str],
+        *,
+        home_dir: str,
+        platform: str,
+        is_dir: Callable[[str], bool],
+    ) -> ClientHomes:
+        """The homes `environ` names (absolute ones only, trailing slashes dropped). `is_dir`
+        is the caller's look at the file system, asked only on Linux for Zed's two folders."""
+
+        def absolute(name: str) -> str | None:
+            value = environ.get(name, "").rstrip("/")
+            return value if value.startswith("/") else None
+
+        homes = cls(
+            xdg_config_home=absolute("XDG_CONFIG_HOME"),
+            codex_home=absolute("CODEX_HOME"),
+            claude_config_dir=absolute("CLAUDE_CONFIG_DIR"),
+        )
+        if platform == "darwin":
+            return homes
+        home = home_dir.rstrip("/")
+        native = f"{homes.xdg_config_home or f'{home}/.config'}/zed"
+        flatpak = is_dir(f"{home}/.var/app/{ZED_FLATPAK_ID}") and not is_dir(native)
+        return cls(homes.xdg_config_home, homes.codex_home, homes.claude_config_dir, flatpak)
+
+    def codex(self, home_dir: str) -> str:
+        """Codex's own folder: `CODEX_HOME`, else `~/.codex`."""
+        return self.codex_home or f"{home_dir.rstrip('/')}/.codex"
+
+    def claude(self, home_dir: str) -> str:
+        """Claude Code's own folder: `CLAUDE_CONFIG_DIR`, else `~/.claude`."""
+        return self.claude_config_dir or f"{home_dir.rstrip('/')}/.claude"
+
+
+NO_HOMES: Final = ClientHomes()
+
+
 class HostClientError(VibeyError):
     """An unknown client id or an unparseable existing host configuration file."""
 
@@ -105,17 +161,19 @@ class HostClientSpec:
         home_dir: str,
         project_dir: str,
         platform: str,
-        xdg_config_home: str | None = None,
+        homes: ClientHomes = NO_HOMES,
     ) -> str:
-        """Where the client's config lives. `xdg_config_home` is the environment's
-        `XDG_CONFIG_HOME`, used only where the client honours it (Zed on Linux) and only when
-        absolute; Zed on macOS always reads `~/.config/zed`."""
+        """Where the client's config lives. `homes` are where the person moved clients' config:
+        Zed on Linux follows a Flatpak install, else `XDG_CONFIG_HOME` (macOS always reads
+        `~/.config/zed`); Codex follows `CODEX_HOME`."""
         home = home_dir.rstrip("/")
         proj = project_dir.rstrip("/")
         if self.client_id == "zed":
-            xdg = (xdg_config_home or "").rstrip("/")
+            if platform != "darwin" and homes.zed_flatpak:
+                return f"{home}/.var/app/{ZED_FLATPAK_ID}/config/zed/settings.json"
+            xdg = homes.xdg_config_home or ""
             if platform != "darwin" and xdg.startswith("/"):
-                return f"{xdg}/zed/settings.json"
+                return f"{xdg.rstrip('/')}/zed/settings.json"
             return f"{home}/.config/zed/settings.json"
         if self.client_id == "claude_code":
             return f"{proj}/.mcp.json"
@@ -124,7 +182,7 @@ class HostClientSpec:
                 return f"{home}/Library/Application Support/Claude/claude_desktop_config.json"
             return f"{home}/.config/Claude/claude_desktop_config.json"
         if self.client_id == "codex":
-            return f"{home}/.codex/config.toml"
+            return f"{homes.codex(home)}/config.toml"
         if self.client_id == "cursor":
             return f"{home}/.cursor/mcp.json"
         if self.client_id == "vscode":
@@ -132,22 +190,27 @@ class HostClientSpec:
         # gemini_cli
         return f"{home}/.gemini/settings.json"
 
-    def presence_path(
-        self, *, home_dir: str, platform: str, xdg_config_home: str | None = None
-    ) -> str:
+    def presence_path(self, *, home_dir: str, platform: str, homes: ClientHomes = NO_HOMES) -> str:
         """The folder whose existence says this client is installed for this user: its
         config folder for a user-scope client, its own user folder for a project-scope one."""
         home = home_dir.rstrip("/")
         if self.client_id == "claude_code":
-            return f"{home}/.claude"
+            return homes.claude(home)
         if self.client_id == "vscode":
             if platform == "darwin":
                 return f"{home}/Library/Application Support/Code"
             return f"{home}/.config/Code"
-        config = self.config_path(
-            home_dir=home, project_dir="", platform=platform, xdg_config_home=xdg_config_home
-        )
+        config = self.config_path(home_dir=home, project_dir="", platform=platform, homes=homes)
         return config.rsplit("/", 1)[0]
+
+    def skills_folder(self, *, home_dir: str, homes: ClientHomes = NO_HOMES) -> str | None:
+        """The client's user-level skills folder, for those that read one (Claude Code, Codex);
+        None for the others."""
+        if self.client_id == "claude_code":
+            return f"{homes.claude(home_dir)}/skills"
+        if self.client_id == "codex":
+            return f"{homes.codex(home_dir)}/skills"
+        return None
 
 
 @dataclass(frozen=True, slots=True)
@@ -304,13 +367,10 @@ class HostClients:
         platform: str,
         launch: McpLaunchCommand,
         existing_content: str | None,
-        xdg_config_home: str | None = None,
+        homes: ClientHomes = NO_HOMES,
     ) -> ConnectPlanItem:
         target = spec.config_path(
-            home_dir=home_dir,
-            project_dir=project_dir,
-            platform=platform,
-            xdg_config_home=xdg_config_home,
+            home_dir=home_dir, project_dir=project_dir, platform=platform, homes=homes
         )
         if spec.format == "json":
             merged = self._merge_json(spec, launch, existing_content, target)

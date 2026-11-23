@@ -232,6 +232,7 @@ class World:
         self.asked: list[str] = []
         self.clock = Clock()
         self.served: list[Path] = []
+        self.unit_labels: list[str | None] = []
         self.lock = Lock()
 
         def machine(settings: AcpSettings, *, user_config: Path) -> AcpMachine:
@@ -252,8 +253,11 @@ class World:
         world = self
 
         class Serve:
-            def __init__(self, settings: AcpSettings, *, user_config: Path) -> None:
+            def __init__(
+                self, settings: AcpSettings, *, user_config: Path, unit: str | None
+            ) -> None:
                 world.served.append(user_config)
+                world.unit_labels.append(unit)
 
             def run(self) -> int:
                 return 0
@@ -491,7 +495,8 @@ def test_no_user_level_services_is_said() -> None:
 def test_serve_runs_the_persons_own_serve() -> None:
     world = World()
     assert world.command.serve() == 0
-    assert world.served == [USER]
+    assert world.command.serve(unit="dev.vibey.searxng") == 0
+    assert world.served == [USER, USER] and world.unit_labels == [None, "dev.vibey.searxng"]
 
 
 # -- doctor's line ------------------------------------------------------------------------------
@@ -564,7 +569,11 @@ def test_doctor_never_raises() -> None:
         (["searxng", "install"], ("install", {"yes": False})),
         (["searxng", "status"], ("status", {})),
         (["searxng", "uninstall", "--purge"], ("uninstall", {"purge": True})),
-        (["searxng", "serve"], ("serve", {})),
+        (["searxng", "serve"], ("serve", {"unit": None})),
+        (
+            ["searxng", "serve", "--label", "dev.vibey.searxng"],
+            ("serve", {"unit": "dev.vibey.searxng"}),
+        ),
     ],
 )
 def test_the_commands_reach_the_command_object(

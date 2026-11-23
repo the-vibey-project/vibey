@@ -51,7 +51,9 @@ def test_a_message_is_kept_as_the_text_it_read_not_the_markdown_it_was_sent_as()
     kind, payload = kept
     assert kind is SessionEventKind.AGENT_MESSAGE
     # The defang brackets stay: they are part of how the text read.
-    assert payload == {"text": "projects:\n- [demo](https[:]//x.example) budget_exhausted\n\nnext"}
+    assert payload == {
+        "text": "projects:\n- [demo](https[:]//x[.]example) budget_exhausted\n\nnext"
+    }
 
 
 def test_a_replayed_message_reads_as_it_did_live() -> None:

@@ -906,10 +906,10 @@ a container with no init process -- writes a record every reader refuses: `vibey
 init (`docker run --init`, or `tini` as the entrypoint, as the shipped image does) so it gets a
 pid of its own.
 
-The lock proves that the process the record names is alive and is the hub, not that it already
-listens on the recorded port: a hub writes its record a moment before it binds, so another local
-account that bound the port first could receive a token in the milliseconds before the hub's
-failed bind clears the record (binding first is parked, SP-ACP Task 11b-ii). The lock is a
+The lock proves that the process the record names is alive and is the hub, and the recorded
+port is that hub's while the record exists: a hub binds and listens on its port before it
+writes the record and lets it go only after clearing it, and one that cannot bind writes none.
+The lock is a
 `flock`, so `state_dir` must be on a local filesystem that every vibey process on this computer
 shares: on a share where `flock` is not seen across it -- a Docker Desktop VM share, NFS -- a
 running hub reads as stale to `vibey hub`, `pair`, `vibey mcp` and `vibey acp`, and `vibey serve`

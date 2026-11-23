@@ -6,7 +6,9 @@ first and `attach`ed to the peer once both exist. A permission request that the 
 fails or never answers within its timeout is `None`: the caller treats it as no answer, so an
 open gate stays open (silence is not consent, sub-doctrine 12.d).
 
-Declared by `application/acp/interfaces/client_channel_interface.py::ClientChannelInterface`.
+Declared by `interfaces/peer_client_channel_interface.py::PeerClientChannelInterface`, which
+extends `application/acp/interfaces/client_channel_interface.py::ClientChannelInterface` with
+`attach`.
 """
 
 from __future__ import annotations
@@ -20,7 +22,7 @@ from vibey.infrastructure.jsonrpc.interfaces.peer_interface import JsonRpcPeerIn
 
 
 class PeerClientChannel:
-    """Declared by `application/acp/interfaces/client_channel_interface.py`."""
+    """Declared by `interfaces/peer_client_channel_interface.py::PeerClientChannelInterface`."""
 
     def __init__(self) -> None:
         self.client_capabilities: Mapping[str, Any] = {}

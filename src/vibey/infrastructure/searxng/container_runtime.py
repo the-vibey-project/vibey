@@ -47,6 +47,7 @@ from typing import Final
 
 from vibey.domain.interfaces.searxng_interface import SearxngPlanInterface
 from vibey.domain.searxng import (
+    LOCAL_ENDPOINTS,
     OWNER_LABEL,
     RUNTIMES,
     TRUSTED_RUNTIME_DIRS,
@@ -71,6 +72,8 @@ DAEMON_VARIABLES: Final = (
     "DOCKER_CONFIG",
 )
 """What would point a runtime at another daemon. Never passed on: a login unit has none of them."""
+NOTHING_TO_REMOVE: Final = "nothing to remove"
+"""The detail of a removal that found nothing: ok, but nothing was removed."""
 ABSENT: Final = ("no such container", "no such image", "image not known", "no such object")
 """What a runtime says when there was nothing to remove: removed already, not a failure."""
 _DETAIL_LIMIT: Final = 300
@@ -142,13 +145,42 @@ class ContainerRuntime:
         problem = self._problem(runtime)
         return RuntimeRefusal(runtime, problem) if problem is not None else None
 
+    def endpoint(self, runtime: str) -> str | None:
+        argv = self._plan.context_argv(self._checked(runtime))
+        if argv is None:
+            return ""
+        result = self._runner(argv)
+        if result.returncode != 0:
+            return None  # unknown: never taken as local (review 1 I-3)
+        lines = [line.strip() for line in UntrustedText.clean(result.stdout).splitlines()]
+        found = next((line for line in lines if line), "")[:_DETAIL_LIMIT]
+        return found or None
+
+    @staticmethod
+    def is_local(where: str | None) -> bool:
+        return where is not None and (where == "" or where.startswith(LOCAL_ENDPOINTS))
+
     def _lookup(self) -> str | None:
+        found: list[str] = []
         for name in RUNTIMES:
             for folder in self._dirs:
                 candidate = f"{folder}/{name}"
                 if os.path.lexists(candidate) and self._problem(candidate) is None:
-                    return candidate
-        return None
+                    found.append(candidate)
+                    break
+        if len(found) < 2:
+            return found[0] if found else None
+        # Both are here: the first that answers (a podman whose machine is stopped does not,
+        # while Docker's daemon may), else podman, whose own error then says what is wrong.
+        answering = (runtime for runtime in found if self._answers(runtime))
+        return next(answering, found[0])
+
+    def _answers(self, runtime: str) -> bool:
+        # `info` contacts the daemon: a context on another machine is never contacted merely
+        # to choose a runtime; reading the context contacts none (review 1 I-3).
+        if not self.is_local(self.endpoint(runtime)):
+            return False
+        return self._runner(self._plan.info_argv(runtime)).returncode == 0
 
     def _problem(self, path: str) -> RuntimeProblem | None:
         """Why `path` may not be run as a runtime, or None."""
@@ -177,16 +209,16 @@ class ContainerRuntime:
             raise ValueError(UntrustedText.clean(str(refusal)))
         return runtime
 
-    def image_present(self, runtime: str, image: str) -> bool:
-        argv = self._plan.image_argv(self._checked(runtime), image)
+    def image_present(self, runtime: str, image: str, *, host: str = "") -> bool:
+        argv = self._plan.image_argv(self._checked(runtime), image, host=host)
         return self._runner(argv).returncode == 0
 
-    def pull(self, runtime: str, image: str) -> RuntimeOutcome:
-        argv = self._plan.pull_argv(self._checked(runtime), image)
+    def pull(self, runtime: str, image: str, *, host: str = "") -> RuntimeOutcome:
+        argv = self._plan.pull_argv(self._checked(runtime), image, host=host)
         return self._outcome(argv, self._pull_runner(argv), self._pull_runner)
 
-    def remove_container(self, runtime: str, uid: int) -> RuntimeOutcome:
-        probe = self._plan.labels_argv(self._checked(runtime), uid)
+    def remove_container(self, runtime: str, uid: int, *, host: str = "") -> RuntimeOutcome:
+        probe = self._plan.labels_argv(self._checked(runtime), uid, host=host)
         found = self._runner(probe)
         if found.returncode != 0:
             return self._outcome(probe, found, self._runner, absent_ok=True)
@@ -204,11 +236,11 @@ class ContainerRuntime:
                     "yourself"
                 ),
             )
-        argv = self._plan.remove_argv(runtime, uid)
+        argv = self._plan.remove_argv(runtime, uid, host=host)
         return self._outcome(argv, self._runner(argv), self._runner, absent_ok=True)
 
-    def remove_image(self, runtime: str, image: str) -> RuntimeOutcome:
-        argv = self._plan.remove_image_argv(self._checked(runtime), image)
+    def remove_image(self, runtime: str, image: str, *, host: str = "") -> RuntimeOutcome:
+        argv = self._plan.remove_image_argv(self._checked(runtime), image, host=host)
         return self._outcome(argv, self._runner(argv), self._runner, absent_ok=True)
 
     @staticmethod
@@ -223,7 +255,7 @@ class ContainerRuntime:
             return RuntimeOutcome(ok=True)
         said = result.stderr.lower()
         if absent_ok and any(phrase in said for phrase in ABSENT):
-            return RuntimeOutcome(ok=True, detail="nothing to remove")
+            return RuntimeOutcome(ok=True, detail=NOTHING_TO_REMOVE)
         lines = [
             line
             for line in (UntrustedText.clean(raw).strip() for raw in result.stderr.splitlines())

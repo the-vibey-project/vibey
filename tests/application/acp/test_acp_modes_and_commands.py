@@ -593,6 +593,76 @@ async def test_a_cwd_with_a_parent_step_attaches_nothing(cwd: str) -> None:
     await agent.close()
 
 
+@pytest.mark.parametrize(("fold", "followed"), [(True, PID), (False, None)])
+async def test_a_folder_in_another_case_is_its_project_only_on_a_case_folding_volume(
+    fold: bool, followed: UUID | None
+) -> None:
+    """SP-ACP Task 11b-ii, Task 5 review N4: on a case-insensitive volume `/Work/App` is the
+    folder `/work/app`, so it follows that project; on a case-sensitive one it is another
+    folder and follows nothing. The volume is asked about the session's own folder."""
+    channel, hub = FakeChannel(), FakeHub()
+    hub.projects = projects((PID, "/work/app"))
+    asked: list[str] = []
+
+    def folds(path: str) -> bool:
+        asked.append(path)
+        return fold
+
+    agent = build_agent(channel, hub, fold_case=folds)
+
+    await new_session(agent, "/Work/App/src")
+    await until(lambda: len(hub.project_lookups) == 1)
+    await settle()
+
+    assert project_of(agent) == followed and asked == ["/Work/App/src"]
+    await agent.close()
+
+
+async def test_an_exact_match_wins_over_one_in_another_case() -> None:
+    """Review 1 I-2: with `/work/app` and `/work/App` both projects, a session in
+    `/work/App/src` follows `/work/App` even where case folds: folding is only the fallback."""
+    channel, hub = FakeChannel(), FakeHub()
+    hub.projects = projects((PID, "/work/app"), (NESTED, "/work/App"))  # newest first
+    agent = build_agent(channel, hub, fold_case=lambda path: True)
+
+    await new_session(agent, "/work/App/src")
+    await until(lambda: len(hub.project_lookups) == 1)
+    await settle()
+
+    assert project_of(agent) == NESTED
+    await agent.close()
+
+
+async def test_on_a_folding_volume_the_deepest_repository_wins_whatever_its_case() -> None:
+    """Review 2 minor (d): where case folds, `/work/app` and `/Work/App/sub` both hold
+    `/work/app/sub/x`; the deeper one wins, as everywhere ("the deepest wins"), and an exact match
+    only breaks a tie."""
+    channel, hub = FakeChannel(), FakeHub()
+    hub.projects = projects((PID, "/work/app"), (NESTED, "/Work/App/sub"))
+    agent = build_agent(channel, hub, fold_case=lambda path: True)
+
+    await new_session(agent, "/work/app/sub/x")
+    await until(lambda: len(hub.project_lookups) == 1)
+    await settle()
+
+    assert project_of(agent) == NESTED
+    await agent.close()
+
+
+async def test_case_folds_as_the_volume_does_not_as_unicode_casefold_does() -> None:
+    """APFS folds `A`/`a`, never `ß` to `ss`: `/work/STRASSE` is not `/work/straße`."""
+    channel, hub = FakeChannel(), FakeHub()
+    hub.projects = projects((PID, "/work/straße"))
+    agent = build_agent(channel, hub, fold_case=lambda path: True)
+
+    await new_session(agent, "/work/STRASSE")
+    await until(lambda: len(hub.project_lookups) == 1)
+    await settle()
+
+    assert project_of(agent) is None
+    await agent.close()
+
+
 async def test_the_following_message_shows_hub_data_as_safe_text() -> None:
     channel, hub = FakeChannel(), FakeHub()
     body = [{"project_id": str(PID), "name": "[evil](https://e)\n# x", "repo_path": "/work"}]

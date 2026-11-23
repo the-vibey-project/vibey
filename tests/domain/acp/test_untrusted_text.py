@@ -49,7 +49,7 @@ def test_a_block_cannot_define_a_link_reference() -> None:
     # every later `[build]` in the client's message into a link.
     shown = TEXT.block("Ship it?\n   [build]: https://evil.example/x", limit=400)
 
-    assert shown == "Ship it?\\\n\\[build\\]: https\\[:\\]//evil.example/x"
+    assert shown == "Ship it?\\\n\\[build\\]: https\\[:\\]//evil\\[.\\]example/x"
 
 
 def test_a_block_is_cut_to_its_limit() -> None:
@@ -143,3 +143,27 @@ def test_no_line_start_from_markdown_characters_survives_a_block() -> None:
 
     assert len(starts) == 21 + 21**2 + 21**3
     assert leaks == []
+
+
+# -- review 2 R-2: an inline code span, the twin of `code` -----------------------------------
+
+
+@pytest.mark.parametrize(
+    ("raw", "shown"),
+    [
+        ("dev.vibey.hub", "`dev.vibey.hub`"),  # shown exactly: copied, it names the unit
+        ("[x](https://e.example) *y*", "`[x](https://e.example) *y*`"),  # nothing renders
+        ("a`b", "``a`b``"),  # a fence longer than any run inside
+        ("a``b", "```a``b```"),
+        ("`lead", "`` `lead ``"),  # padded, so the fence is not read as the text's own
+        ("trail`", "`` trail` ``"),
+        ("ok\nnext\x1b[2J‮", "`ok next [2J `"),  # one line, nothing non-printable
+    ],
+)
+def test_a_code_span_shows_its_text_exactly_on_one_line(raw: str, shown: str) -> None:
+    assert TEXT.code_span(raw, limit=400) == shown
+
+
+def test_a_code_span_is_cut_like_code() -> None:
+    assert TEXT.code_span("x" * 50, limit=10) == "`" + "x" * 7 + "...`"
+    assert TEXT.code_span(None, limit=10) == "`?`"

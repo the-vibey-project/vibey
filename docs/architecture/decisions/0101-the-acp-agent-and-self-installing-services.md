@@ -135,11 +135,14 @@ crash loop is slowed on both and stopped only on systemd. In detail:
   the pid apart from the lock would close it, but changes the lock's on-disk protocol; so would
   a `stop` that probes the lock again after a pause and refuses when the answer changed, which
   was not chosen because every `stop` would pay that pause for a window of a few syscalls.
-  The lock proves that the process the record names is alive and is the hub, **not** that it
-  already listens on the recorded port: the hub writes its record before uvicorn binds, so in
-  the milliseconds before a failed bind clears the record, another local account that bound
-  the port first could receive a token. Binding before the record is written is parked
-  (SP-ACP Task 11b-ii). Refusing pid 1 means a
+  The lock proves that the process the record names is alive and is the hub. Since SP-ACP
+  Task 11b-ii the recorded port is that hub's too, from the record's writing to its clearing:
+  `vibey serve` binds and listens on every address its host resolves to (one port) first,
+  writes the record, then hands uvicorn *duplicates* of those sockets (`sockets=`), so uvicorn
+  never binds one of its own; uvicorn closes what it was handed first as it stops and then waits
+  for open connections, so the hub's own sockets keep the port until the record is cleared and
+  are closed only after it. A hub that cannot bind its port writes no record and exits 1.
+  Refusing pid 1 means a
   `vibey serve` run as PID 1 with no init (a bare container) writes a record every reader
   refuses: run it under an init (the shipped image runs `tini`).
 

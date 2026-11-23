@@ -176,6 +176,7 @@ from vibey.infrastructure.acp.acp_hub_client import AcpHubClient
 from vibey.infrastructure.acp.acp_postgres_installer import AcpPostgresInstaller
 from vibey.infrastructure.acp.acp_service_units import AcpServiceUnits
 from vibey.infrastructure.acp.bootstrap_lock import BootstrapLock
+from vibey.infrastructure.acp.folder_case import FOLDER_CASE
 from vibey.infrastructure.acp.host_connector import HostConnector
 from vibey.infrastructure.acp.hub_start_router import HubStartRouter
 from vibey.infrastructure.acp.service_loader import ServiceLoader
@@ -1631,16 +1632,21 @@ def searxng_runtime(settings: AcpSettings) -> ContainerRuntime:
     )
 
 
-def searxng_serve(settings: AcpSettings, *, user_config: Path) -> SearxngServeInterface:
+def searxng_serve(
+    settings: AcpSettings, *, user_config: Path, unit: str | None = None
+) -> SearxngServeInterface:
     """What the SearXNG unit runs: the person's record and settings, the runtime vibey finds,
-    and the label `[supervisor] label_prefix` gives it in their own `vibey.toml` (ADR-0102).
-    Building it touches nothing."""
+    and the label `[supervisor] label_prefix` gives it in their own `vibey.toml` (ADR-0102);
+    `unit` is the label the unit says it was loaded under. Building it touches nothing."""
 
     def label() -> str:
         return f"{SupervisorSettingsLoader().load(user_config).label_prefix}.{SEARXNG}"
 
     return SearxngServe(
-        SearxngFiles.personal(user_config.parent), searxng_runtime(settings), label=label
+        SearxngFiles.personal(user_config.parent),
+        searxng_runtime(settings),
+        label=label,
+        unit=unit,
     )
 
 
@@ -1656,6 +1662,7 @@ def build_acp_agent(
     units: ServiceUnitsInterface | None = None,
     loader: ServiceLoaderInterface | None = None,
     searxng: SearxngProvisionerInterface | None = None,
+    fold_case: Callable[[str], bool] = FOLDER_CASE.folds,
 ) -> AcpAgentInterface:
     """Compose the ACP agent `vibey acp` serves (SP-ACP).
 
@@ -1768,6 +1775,9 @@ def build_acp_agent(
         version=__version__,
         new_id=lambda: str(uuid4()),
         bootstrap=bootstrap,
+        # A session's folder matches its project's repository in another case only where the
+        # folder's own volume folds case (asked of the volume, never assumed from the platform).
+        fold_case=fold_case,
     )
 
 

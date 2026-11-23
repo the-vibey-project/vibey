@@ -36,19 +36,30 @@ class Runtime(ContainerRuntime):
         self.present = True
         self.removed = RuntimeOutcome(ok=True)
         self.calls: list[str] = []
+        self.hosts: list[str] = []
+        """The endpoint each runtime command was pinned to ("" for none)."""
+        self.where: str | None = ""
+        """Docker's context endpoint as `endpoint` reads it ("" for podman, None unreadable)."""
 
-    def image_present(self, runtime: str, image: str) -> bool:
+    def endpoint(self, runtime: str) -> str | None:
+        self._checked(runtime)
+        self.calls.append("context")
+        return self.where
+
+    def image_present(self, runtime: str, image: str, *, host: str = "") -> bool:
         # Not vetted here, so the tests pin serve's own vetting (the real one vets again).
         self.calls.append("inspect")
+        self.hosts.append(host)
         return self.present
 
     def pull(self, runtime: str, image: str) -> RuntimeOutcome:
         self.calls.append("pull")
         return RuntimeOutcome(ok=True)
 
-    def remove_container(self, runtime: str, uid: int) -> RuntimeOutcome:
+    def remove_container(self, runtime: str, uid: int, *, host: str = "") -> RuntimeOutcome:
         self._checked(runtime)
         self.calls.append(f"rm {uid}")
+        self.hosts.append(host)
         return self.removed
 
 
@@ -70,6 +81,8 @@ class World:
         self.execs: list[tuple[str, list[str], dict[str, str]]] = []
         self.said: list[str] = []
         self.label = LABEL
+        self.unit: str | None = None
+        """The label the unit was loaded under (`--label`); None for a unit written before."""
         self.uid = 501
         self.environ = {
             "HOME": "/home/op",
@@ -97,6 +110,7 @@ class World:
             self.files,
             self.runtime,
             label=lambda: self.label,
+            unit=self.unit,
             plan=self.plan,
             execve=execve,
             environ=self.environ,
@@ -136,7 +150,7 @@ def test_serve_execs_the_one_command_line_with_a_minimal_environment(tmp_path: P
         assert gone not in env
     assert "/tmp/evil" not in env["PATH"]
     assert env["PATH"].split(os.pathsep)[0] == str(world.runtime_path.parent)
-    assert world.runtime.calls == ["inspect", "rm 501"]  # its own leftover first; no pull
+    assert world.runtime.calls == ["context", "inspect", "rm 501"]  # leftover first; no pull
 
 
 def test_nothing_installed_is_a_configuration_refusal(tmp_path: Path) -> None:
@@ -268,3 +282,74 @@ def test_a_record_of_an_earlier_pin_is_refused_with_the_update_path(tmp_path: Pa
     assert world.execs == [] and world.runtime.calls == []
     assert "earlier pinned image (abababababab)" in world.said[0]
     assert "vibey searxng install" in world.said[0]
+
+
+def test_a_unit_left_from_an_earlier_label_prefix_runs_nothing(tmp_path: Path) -> None:
+    """SP-ACP Task 11b-ii, P-9d-5: after `[supervisor] label_prefix` changed, the unit loaded
+    under the old label still runs serve. It is not this configuration's unit, so it refuses
+    (78, under the unit's throttle) and says how to unload it, rather than starting a second
+    container beside the current unit's."""
+    world = World(tmp_path)
+    world.install()
+    world.unit = "old.prefix.searxng"
+    assert world.serve() == EXIT_CONFIG
+    assert world.execs == [] and world.runtime.calls == []
+    assert world.said == [
+        "vibey searxng serve: this unit is old.prefix.searxng, but your [supervisor] "
+        f"label_prefix now makes vibey's SearXNG unit {LABEL}: it is left from an earlier "
+        "prefix, so it runs nothing; unload it (`launchctl bootout gui/$(id -u)/"
+        "old.prefix.searxng` on macOS, `systemctl --user disable --now old.prefix.searxng` on "
+        "Linux) and remove its file"
+    ]
+
+
+def test_the_current_units_label_serves(tmp_path: Path) -> None:
+    world = World(tmp_path)
+    world.install()
+    world.unit = LABEL
+    assert world.serve() == 0 and len(world.execs) == 1
+
+
+@pytest.mark.parametrize("where", ["ssh://me@far.example", "tcp://10.0.0.2:2376", None])
+def test_a_docker_context_moved_off_this_computer_since_install_runs_nothing(
+    tmp_path: Path, where: str | None
+) -> None:
+    """Review 1 I-3: a later `docker context use <remote>` never starts SearXNG on another
+    machine at login: serve reads the context again and refuses (78) before anything runs."""
+    world = World(tmp_path)
+    world.install()
+    world.runtime.where = where
+    assert world.serve() == EXIT_CONFIG
+    assert world.execs == [] and world.runtime.calls == ["context"]
+    assert "not this computer's own daemon" in world.said[0]
+
+
+def test_the_run_is_pinned_to_the_local_context_it_was_checked_against(tmp_path: Path) -> None:
+    """The context is read once and the run is pinned to it (`DOCKER_HOST`), so a context
+    switched between the check and the exec cannot move it."""
+    world = World(tmp_path)
+    world.install()
+    world.runtime.where = "unix:///Users/op/.docker/run/docker.sock"
+    assert world.serve() == 0
+    ((_, _, env),) = world.execs
+    assert env["DOCKER_HOST"] == "unix:///Users/op/.docker/run/docker.sock"
+    # The calls before the exec go to that endpoint too (review 2 minor (b)).
+    assert world.runtime.hosts == ["unix:///Users/op/.docker/run/docker.sock"] * 2
+
+
+def test_podman_runs_with_no_docker_host(tmp_path: Path) -> None:
+    world = World(tmp_path)
+    world.install()
+    assert world.serve() == 0
+    ((_, _, env),) = world.execs
+    assert "DOCKER_HOST" not in env
+
+
+def test_the_unload_hint_quotes_the_units_label(tmp_path: Path) -> None:
+    """Review 2 minor (f): the label comes from the unit file; the commands to paste quote it."""
+    world = World(tmp_path)
+    world.install()
+    world.unit = "old prefix;touch x.searxng"
+    assert world.serve() == EXIT_CONFIG
+    assert "`launchctl bootout gui/$(id -u)/'old prefix;touch x.searxng'`" in world.said[0]
+    assert "`systemctl --user disable --now 'old prefix;touch x.searxng'`" in world.said[0]

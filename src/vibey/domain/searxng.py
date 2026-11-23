@@ -50,6 +50,8 @@ MARKER: Final = re.compile(r"vibey-[0-9a-f]{32}")
 _SECRET: Final = re.compile(r"[0-9a-f]{64}")
 _HEX32: Final = re.compile(r"[0-9a-f]{32}")
 RUNTIMES: Final = ("podman", "docker")
+LOCAL_ENDPOINTS: Final = ("unix://", "npipe://")
+"""How a runtime endpoint on this computer starts: a socket or a named pipe."""
 """The container runtimes vibey drives, in the order it prefers them."""
 TRUSTED_RUNTIME_DIRS: Final[dict[str, tuple[str, ...]]] = {
     "darwin": (
@@ -266,12 +268,12 @@ class SearxngPlan:
             provision.image,
         )
 
-    def pull_argv(self, runtime: str, image: str) -> tuple[str, ...]:
-        return (self._runtime(runtime), "pull", self._image(image))
+    def pull_argv(self, runtime: str, image: str, *, host: str = "") -> tuple[str, ...]:
+        return (*self._at(runtime, host), "pull", self._image(image))
 
-    def image_argv(self, runtime: str, image: str) -> tuple[str, ...]:
+    def image_argv(self, runtime: str, image: str, *, host: str = "") -> tuple[str, ...]:
         return (
-            self._runtime(runtime),
+            *self._at(runtime, host),
             "image",
             "inspect",
             "--format",
@@ -279,9 +281,9 @@ class SearxngPlan:
             self._image(image),
         )
 
-    def labels_argv(self, runtime: str, uid: int) -> tuple[str, ...]:
+    def labels_argv(self, runtime: str, uid: int, *, host: str = "") -> tuple[str, ...]:
         return (
-            self._runtime(runtime),
+            *self._at(runtime, host),
             "container",
             "inspect",
             "--format",
@@ -289,11 +291,24 @@ class SearxngPlan:
             self.container_name(uid),
         )
 
-    def remove_argv(self, runtime: str, uid: int) -> tuple[str, ...]:
-        return (self._runtime(runtime), "rm", "-f", self.container_name(uid))
+    def remove_argv(self, runtime: str, uid: int, *, host: str = "") -> tuple[str, ...]:
+        return (*self._at(runtime, host), "rm", "-f", self.container_name(uid))
 
-    def remove_image_argv(self, runtime: str, image: str) -> tuple[str, ...]:
-        return (self._runtime(runtime), "rmi", self._image(image))
+    def remove_image_argv(self, runtime: str, image: str, *, host: str = "") -> tuple[str, ...]:
+        # An earlier pin's image may be removed too (after an update): SearXNG's by digest
+        # only, never a tag and never another repository's.
+        if not isinstance(image, str) or not IMAGE_REF.fullmatch(image):
+            raise ValueError("the image must be docker.io/searxng/searxng pinned by its digest")
+        return (*self._at(runtime, host), "rmi", image)
+
+    def info_argv(self, runtime: str) -> tuple[str, ...]:
+        return (self._runtime(runtime), "info")
+
+    def context_argv(self, runtime: str) -> tuple[str, ...] | None:
+        checked = self._runtime(runtime)
+        if _name(checked) != "docker":
+            return None
+        return (checked, "context", "inspect", "--format", "{{.Endpoints.docker.Host}}")
 
     def short(self, image: str) -> str:
         return self._image(image).rpartition(":")[2][:12]
@@ -312,6 +327,19 @@ class SearxngPlan:
         if isinstance(value, bool) or not isinstance(value, int) or value < 1:
             raise ValueError("the container runs as your own user, never root")
         return value
+
+    def _at(self, runtime: str, host: str) -> tuple[str, ...]:
+        """The runtime, and with `host` docker's `-H <host>`: the local endpoint a caller checked,
+        so the command goes there whatever context is current by then. Only a `unix://` socket
+        or an `npipe://` pipe, with no space or control character, is ever named."""
+        checked = self._runtime(runtime)
+        if not host:
+            return (checked,)
+        if _name(checked) != "docker":
+            raise ValueError("only docker is pinned to an endpoint")
+        if not host.startswith(LOCAL_ENDPOINTS) or re.search(r"[\s\x00-\x1f\x7f]", host):
+            raise ValueError("the endpoint must be a local socket or pipe")
+        return (checked, "-H", host)
 
     def _runtime(self, runtime: str) -> str:
         if (

@@ -324,7 +324,7 @@ async def test_initialize_new_session_and_the_folders_project_live(
     texts = client.texts(sid)
     summary = next(t for t in texts if "VerdictRendered" in t)
     assert "\\[build\\] VerdictRendered: \\*\\*pwn\\*\\* \\[click\\]" in summary
-    assert "https\\[:\\]//evil.example" in summary and "https://" not in summary
+    assert "https\\[:\\]//evil\\[.\\]example" in summary and "https://" not in summary
     assert any("\\[build\\] GateNotified" in t for t in texts)
     notice = next(t for t in texts if "may spend money" in t)
     assert f"({G_LIVE_SPEND}, budget_exhausted)" in notice
@@ -384,7 +384,7 @@ async def test_a_turn_streams_and_offers_only_the_answerable_gate(
     gate_frames = calls[gate_call]
     title = gate_frames[0]["title"]
     assert title.startswith("Answer gate: \\*\\*pwn\\*\\* \\[click\\]")
-    assert "https\\[:\\]//evil.example" in title and "https://" not in title
+    assert "https\\[:\\]//evil\\[.\\]example" in title and "https://" not in title
     assert gate_frames[-1]["status"] == "completed"
 
     # The two spend gates and the deployment opt-in: refused, each with where to answer it.

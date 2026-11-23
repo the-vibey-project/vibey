@@ -328,6 +328,8 @@ async def test_only_the_install_option_installs_and_says_each_part() -> None:
     assert world.final()["status"] == "completed"
     assert "answers as vibey's own on 127.0.0.1:28180" in world.shown()
     assert any("vibey acp unload" in t and "launchctl bootout" in t for t in world.channel.said)
+    # The label is shown exactly, in a code span (review 2 R-2): copied, it names the unit.
+    assert any(f"vibey loaded `{LABEL}` into" in t for t in world.channel.said)
     assert world.balanced() and world.lock.acquired == 1
     assert not world.step.pending
 

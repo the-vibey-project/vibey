@@ -1,0 +1,1 @@
+`/ask` (in the hub's chat, krypton and `vibey acp`) now names the new project from the first paragraph of the message only, so a file or selection attached to an ACP prompt never becomes part of the project's name when fewer than four words were typed; the whole message is still the project's description.

@@ -40,6 +40,7 @@ import logging
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
 from typing import Any, ClassVar, Final
+from uuid import UUID
 
 from vibey.application.acp.dto import AcpSessionContext, HubTurn
 from vibey.application.acp.interfaces.acp_gate_prompter_interface import (
@@ -74,6 +75,10 @@ class _HubCall:
     request_id: str
     tool: HostTool
     """The tool the call was announced as."""
+    project_id: UUID | None
+    """The project the command was parsed with, which the hub is asked with: a folder lookup
+    that moves the session's project while the call is announced never changes what this turn
+    runs (SP-ACP Task 11b-ii, Task 5 review N9)."""
     announcing: asyncio.Task[None]
     """The `pending` frame's write. Once started it runs to the end even if the turn is
     cancelled, so a frame that reached the client is always closed by the settle."""
@@ -117,15 +122,16 @@ class AcpPromptTurn:
         self, session: AcpSessionContext, prompt: Sequence[Mapping[str, Any]], *, turn_id: str
     ) -> StopReason:
         typed, attached = self._blocks(prompt)
+        project = session.project_id
         try:
             # The command is read from what the user typed and nothing else: an embedded
             # resource is data, so its text can never choose a command or a flag.
             known = session.open_gates
-            intent = self._chat.parse(typed, project_id=session.project_id, open_gates=known)
+            intent = self._chat.parse(typed, project_id=project, open_gates=known)
             carried = intent.kind in FREE_TEXT_INTENTS
             message = "\n\n".join([typed, *attached]) if carried else typed
             # The length bound, over the whole message.
-            self._chat.parse(message, project_id=session.project_id, open_gates=known)
+            self._chat.parse(message, project_id=project, open_gates=known)
         except LifecycleInvalid as exc:
             await self._say(session, str(exc))
             return StopReason.END_TURN
@@ -144,6 +150,7 @@ class AcpPromptTurn:
             call_id=call_id,
             request_id=f"acp-{session.session_id}-{turn_id}",
             tool=tool,
+            project_id=project,
             announcing=asyncio.ensure_future(self._announce(session, call_id, tool, message)),
         )
         try:
@@ -173,7 +180,7 @@ class AcpPromptTurn:
             await self._say(session, admitted)
             return StopReason.END_TURN
         call.task = asyncio.create_task(
-            self._hub.chat(message, project_id=session.project_id, request_id=call.request_id)
+            self._hub.chat(message, project_id=call.project_id, request_id=call.request_id)
         )
         try:
             turn = await asyncio.shield(call.task)

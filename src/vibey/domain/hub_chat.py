@@ -444,7 +444,9 @@ class HubChat(HubChatInterface):
         if not rest:
             raise LifecycleInvalid("usage: `/new <project-name> <what to build>`")
         if is_ask:
-            slug = self._derive_slug(rest)
+            # Named from the first paragraph: an ACP prompt carries what was typed, a blank
+            # line, then any attached resource, which must never name the project.
+            slug = self._derive_slug(rest.split("\n\n", 1)[0])
             return ChatIntent(
                 kind="start_project",
                 tool_name="vibey_start_project",

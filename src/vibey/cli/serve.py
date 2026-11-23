@@ -21,6 +21,7 @@ presenters, the TUI's dashboard read and the infrastructure together.
 import asyncio
 import json
 import os
+import socket
 import time
 from collections.abc import Awaitable, Callable, Mapping, Sequence
 from contextlib import AbstractAsyncContextManager
@@ -451,6 +452,34 @@ class ServeCommand:
         acp: AcpSettings,
         web: WebToolSettings,
     ) -> None:
+        # The port first, before anything opens and before the record names it: a record is
+        # only ever written for a port this hub already holds (SP-ACP Task 11b, review S-1).
+        try:
+            sockets = self._server.bind(bound, listen)
+        except OSError as exc:
+            typer.echo(
+                f"could not listen on {self._shown(bound)}:{listen}: {exc.strerror or exc}",
+                err=True,
+            )
+            raise typer.Exit(1) from exc
+        try:
+            await self._serve_on(settings, bound, sockets, acp, web)
+        finally:
+            # Only now, the record cleared (`_serve_on`'s own finally): until here these keep
+            # the port, though uvicorn closed its duplicates first thing as it stopped.
+            for sock in sockets:
+                sock.close()
+
+    async def _serve_on(
+        self,
+        settings: HubSettings,
+        bound: str,
+        sockets: list[socket.socket],
+        acp: AcpSettings,
+        web: WebToolSettings,
+    ) -> None:
+        # The port the sockets hold: the one asked for, or the system's pick for port 0.
+        listen = int(sockets[0].getsockname()[1])
         store = LocalTokenStore(settings.state_dir)
         try:
             token = store.token()
@@ -527,14 +556,26 @@ class ServeCommand:
             typer.echo(f"host token: {settings.state_dir / 'token'} (owner-only)")
             if tls is not None:
                 typer.echo(f"certificate fingerprint (sha256): {tls.fingerprint}")
+            # Written only now that the socket listens: the port it names is this hub's.
             store.record_serving(
                 ServingRecord(host=bound, port=listen, pid=os.getpid(), tls=tls is not None)
             )
-            advert = await self._advertise(names, listen, tls)
+            advert: AdvertisementInterface | None = None
+            copies: list[socket.socket] = []
             try:
-                await self._server.serve(app, host=bound, port=listen, tls=tls)
+                # Inside the `try`: a registration that fails still clears the record.
+                advert = await self._advertise(names, listen, tls)
+                # Duplicates: uvicorn closes what it is handed before it waits for open
+                # connections, for as long as they last, while this record still names the
+                # port. The hub's own sockets keep it until the record is cleared
+                # (review 1 M-2).
+                for sock in sockets:
+                    copies.append(sock.dup())
+                await self._server.serve(app, sockets=copies, tls=tls)
             finally:
                 store.clear_serving(os.getpid())
+                for copy in copies:
+                    copy.close()  # closed by uvicorn already; a second close does nothing
                 if advert is not None:
                     await advert.close()
                 await live.stop()

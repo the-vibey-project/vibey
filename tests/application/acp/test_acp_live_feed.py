@@ -20,6 +20,7 @@ from vibey.application.acp.interfaces.acp_live_feed_interface import AcpLiveFeed
 from vibey.domain.acp.protocol import StopReason
 from vibey.domain.acp.settings import AcpSettings
 from vibey.domain.acp.update_mapper import AcpUpdateMapper
+from vibey.domain.errors import UnknownProject
 from vibey.infrastructure.mcp.hub_gateway import HubGatewayError
 
 PID = UUID("11111111-1111-4111-8111-111111111111")
@@ -107,7 +108,7 @@ async def test_failed_poll_leaves_watermark_unmoved() -> None:
     assert [call[1] for call in hub.ledger_calls[:4]] == [4, 5, 5, 5]
     paused = [t for t in channel.said if t.startswith("Live updates paused")]
     assert len(paused) == 1 and "down" in paused[0]  # reported once, not once per poll
-    assert "Live updates resumed." in channel.said
+    assert "Live updates resumed: the project's ledger is read again." in channel.said
     # A short page waits live_poll_seconds; failures in a row wait 0.5 then 1.0 (doubling);
     # once a read works again the wait is back to 0.5. Never a tight loop.
     assert sleeps.waits[:4] == [0.5, 0.5, 1.0, 0.5]
@@ -352,7 +353,7 @@ async def test_a_failed_catch_up_is_reported_once_and_retried() -> None:
     assert [t for t in channel.said if t.startswith("Live updates")] == [
         "Live updates paused: the project's ledger could not be read (down). "
         "Retrying, waiting longer each time, up to 30 s.",
-        "Live updates resumed.",
+        "Live updates resumed: the project's ledger is read again.",
     ]
     assert len(sleeps.waits) >= 2
     await feed.close()
@@ -413,6 +414,51 @@ async def test_an_unexpected_failure_stops_the_feed_and_says_so(
     assert len(hub.ledger_calls) == 1
     assert "TypeError" in channel.said[-1]
     assert "a bug" in caplog.text and "Traceback" in caplog.text
+
+
+async def test_a_client_with_notices_is_told_the_feeds_state_as_notices() -> None:
+    """SP-ACP Task 11b-ii, Task 5 review N7: "paused", "resumed" and "stopped" are `notice`
+    updates, each with its severity, for a client that declares `session.notices`."""
+    channel, hub = FakeChannel(), FakeHub()
+    channel.client_capabilities = {"session": {"notices": {}}}
+    hub.pages = [HubGatewayError("down"), page(event(1)), TypeError("a bug")]
+    feed, _ = build(channel, hub)
+
+    feed.attach(attached())
+    await until(lambda: any(u.get("severity") == "error" for u in channel.updates))
+    await feed.close()
+
+    notices = [u for u in channel.updates if u["sessionUpdate"] == "notice"]
+    assert [(n["severity"], n["title"]) for n in notices] == [
+        ("warning", "Live updates paused"),
+        ("info", "Live updates resumed"),
+        ("error", "Live updates stopped"),
+    ]
+    assert notices[0]["description"] == (
+        "the project's ledger could not be read (down). Retrying, waiting longer each time, "
+        "up to 30 s."
+    )
+    assert notices[2]["description"].startswith("TypeError.")
+
+
+async def test_a_project_the_hub_no_longer_has_stops_the_feed_and_says_so_once() -> None:
+    """SP-ACP Task 11b-ii, Task 5 review N8: a 404 is a project that was removed, not a hub
+    that is away: said once, and the feed stops rather than retrying it for ever."""
+    channel, hub = FakeChannel(), FakeHub()
+    hub.pages = [UnknownProject(f"the hub has no project {PID}")]
+    feed, sleeps = build(channel, hub)
+
+    feed.attach(attached())
+    await until(lambda: any(t.startswith("Live updates stopped") for t in channel.said))
+    for _ in range(50):
+        await asyncio.sleep(0)
+    await feed.close()
+
+    assert len(hub.ledger_calls) == 1 and sleeps.waits == []
+    assert channel.said == [
+        f"Live updates stopped: the hub has no project {PID} any more. `/projects` lists the "
+        "projects it has."
+    ]
 
 
 async def test_a_client_that_is_gone_ends_the_feed_quietly() -> None:
@@ -600,7 +646,7 @@ async def test_ledger_markdown_reaches_the_client_escaped() -> None:
     await run_until(feed.follow("s", PID, after=0), lambda: feed.watermark("s") == 1)
 
     assert channel.said == [
-        "\\[build\\] TurnCompleted: \\!\\[x\\]\\(https\\[:\\]//evil.example/b\\) \\# "
+        "\\[build\\] TurnCompleted: \\!\\[x\\]\\(https\\[:\\]//evil\\[.\\]example/b\\) \\# "
         "\\[ok\\]\\(https\\[:\\]//e\\)"
     ]
 
@@ -728,3 +774,16 @@ async def test_a_drain_stops_when_the_feed_is_detached_under_it() -> None:
 
     assert seqs(channel) == [1]  # the one already being written, and no more
     await feed.close()
+
+
+async def test_following_a_project_the_hub_no_longer_has_ends_the_follow() -> None:
+    channel, hub = FakeChannel(), FakeHub()
+    hub.pages = [UnknownProject(f"the hub has no project {PID}")]
+    feed, _ = build(channel, hub)
+
+    await feed.follow("s", PID, after=0)  # returns: there is nothing left to follow
+
+    assert channel.said == [
+        f"Live updates stopped: the hub has no project {PID} any more. `/projects` lists the "
+        "projects it has."
+    ]

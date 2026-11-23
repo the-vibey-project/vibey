@@ -24,7 +24,7 @@ from vibey.domain.acp.session_log import (
     SessionWritesThrottled,
     UnknownAcpSession,
 )
-from vibey.domain.errors import VibeyError
+from vibey.domain.errors import UnknownProject, VibeyError
 from vibey.domain.host_tools import HostToolError, HubCall
 from vibey.domain.hub_scope import HubScope
 from vibey.infrastructure.acp.acp_hub_client import AcpHubClient
@@ -185,10 +185,20 @@ async def test_ledger_after_without_an_integer_last_seq_is_none(last_seq: object
 
 
 async def test_a_refused_ledger_page_raises() -> None:
-    gateway = _Gateway(HubGatewayResponse(status_code=404, text="no project", ok=False))
+    gateway = _Gateway(HubGatewayResponse(status_code=500, text="broken", ok=False))
 
-    with pytest.raises(HubGatewayError, match=r"hub refused \(404\)"):
+    with pytest.raises(HubGatewayError, match=r"hub refused \(500\)"):
         await AcpHubClient(gateway=gateway).ledger_after(PROJECT, 0, 10)
+
+
+async def test_a_ledger_page_of_a_project_the_hub_does_not_have_is_an_unknown_project() -> None:
+    """SP-ACP Task 11b-ii, Task 5 review N8: the hub answers 404 for a project it no longer
+    has, which is said by its type, so the feed can tell it from a hub that is away."""
+    gateway = _Gateway(HubGatewayResponse(status_code=404, text="[x](https://e)", ok=False))
+
+    with pytest.raises(UnknownProject) as caught:
+        await AcpHubClient(gateway=gateway).ledger_after(PROJECT, 0, 10)
+    assert str(caught.value) == f"the hub has no project {PROJECT}"
 
 
 async def test_healthy_is_the_liveness_route() -> None:

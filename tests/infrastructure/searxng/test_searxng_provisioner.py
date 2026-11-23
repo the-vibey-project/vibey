@@ -13,6 +13,7 @@ from vibey.application.acp.interfaces.searxng_provisioner_interface import (
 )
 from vibey.domain.searxng import SEARXNG_IMAGE
 from vibey.infrastructure.searxng.container_runtime import (
+    ContainerRuntime,
     RuntimeOutcome,
     RuntimeProblem,
     RuntimeRefusal,
@@ -37,6 +38,17 @@ class Runtime:
         self.refuse: RuntimeProblem | None = None
         self.shown: str | None = None
         """The name the refusal gives the runtime, when not the one asked about."""
+        self.where: str | None = ""
+        """What `endpoint` says: docker's context endpoint, "" for podman, None unreadable."""
+        self.image_removed = RuntimeOutcome(ok=True)
+        self.hosts: list[str] = []
+        """The endpoint each runtime command was pinned to ("" for none)."""
+
+    is_local = staticmethod(ContainerRuntime.is_local)
+
+    def endpoint(self, runtime: str) -> str | None:
+        self.calls.append(("context", runtime))
+        return self.where
 
     def find(self) -> str | None:
         return self.found
@@ -56,20 +68,23 @@ class Runtime:
         self.calls.append(("inspect", runtime, image))
         return self.present
 
-    def pull(self, runtime: str, image: str) -> RuntimeOutcome:
+    def pull(self, runtime: str, image: str, *, host: str = "") -> RuntimeOutcome:
         self._checked(runtime)
         self.calls.append(("pull", runtime, image))
+        self.hosts.append(host)
         return self.pulled
 
-    def remove_container(self, runtime: str, uid: int) -> RuntimeOutcome:
+    def remove_container(self, runtime: str, uid: int, *, host: str = "") -> RuntimeOutcome:
         self._checked(runtime)
         self.calls.append(("rm", runtime, str(uid)))
+        self.hosts.append(host)
         return self.removed
 
-    def remove_image(self, runtime: str, image: str) -> RuntimeOutcome:
+    def remove_image(self, runtime: str, image: str, *, host: str = "") -> RuntimeOutcome:
         self._checked(runtime)
         self.calls.append(("rmi", runtime, image))
-        return self.removed
+        self.hosts.append(host)
+        return self.removed if not self.removed.ok else self.image_removed
 
 
 class Health:
@@ -148,7 +163,7 @@ def test_prepare_pulls_the_pinned_image_then_writes_the_files(tmp_path: Path) ->
     prepared = provisioner.prepare()
 
     assert prepared.ok and "podman" in prepared.detail
-    assert runtime.calls == [("pull", RUNTIME, SEARXNG_IMAGE)]
+    assert runtime.calls == [("context", RUNTIME), ("pull", RUNTIME, SEARXNG_IMAGE)]
     record = provisioner.record()
     assert record is not None
     assert (record.image, record.port, record.label, record.runtime) == (
@@ -428,7 +443,12 @@ def test_an_update_pulls_with_the_recorded_runtime_not_the_one_found_now(tmp_pat
     provisioner = _provisioner(tmp_path, runtime)
     assert provisioner.offer().runtime == RUNTIME
     assert provisioner.prepare().ok
-    assert runtime.calls == [("pull", RUNTIME, SEARXNG_IMAGE)]
+    assert runtime.calls == [
+        ("context", RUNTIME),
+        ("pull", RUNTIME, SEARXNG_IMAGE),
+        ("rm", RUNTIME, "501"),
+        ("rmi", RUNTIME, EARLIER),
+    ]
     record = provisioner.record()
     assert record is not None and record.runtime == RUNTIME
 
@@ -512,3 +532,90 @@ def test_gone_is_told_apart_by_the_reason_never_by_the_wording(tmp_path: Path) -
     runtime.vet = lambda path: Worded(path, RuntimeProblem.FOREIGN_OWNER)  # type: ignore[method-assign]
     assert not provisioner.runtime_gone()
     assert provisioner.refusal().endswith(RUNTIME_REFUSED_REMEDY)
+
+
+# -- SP-ACP Task 11b-ii: the earlier pin's image, and docker's context --------------------------
+
+
+def test_an_update_removes_the_earlier_pins_container_then_its_image(tmp_path: Path) -> None:
+    """P-9d-6: once the new image is pulled and recorded, the old container (which holds the
+    old image) is removed -- the unit starts the new one -- and then the old image."""
+    _installed_earlier(tmp_path)
+    runtime = Runtime()
+    prepared = _provisioner(tmp_path, runtime).prepare()
+    assert prepared.ok
+    assert runtime.calls[-2:] == [("rm", RUNTIME, "501"), ("rmi", RUNTIME, EARLIER)]
+    assert f"The earlier image (sha256:{'ab' * 6}) was removed." in prepared.detail
+
+
+def test_an_earlier_image_that_cannot_be_removed_is_said_and_the_update_stands(
+    tmp_path: Path,
+) -> None:
+    _installed_earlier(tmp_path)
+    runtime = Runtime()
+    runtime.image_removed = RuntimeOutcome(ok=False, detail="image is in use")
+    prepared = _provisioner(tmp_path, runtime).prepare()
+    assert prepared.ok
+    assert f"The earlier image (sha256:{'ab' * 6}) was kept (image is in use);" in prepared.detail
+    assert f"`podman rmi {EARLIER}` removes it" in prepared.detail
+
+
+def test_a_fresh_install_removes_nothing(tmp_path: Path) -> None:
+    runtime = Runtime()
+    assert _provisioner(tmp_path, runtime).prepare().ok
+    assert [call[0] for call in runtime.calls] == ["context", "pull"]
+
+
+@pytest.mark.parametrize("where", ["ssh://me@far.example", "tcp://10.0.0.2:2376"])
+def test_a_docker_context_on_another_machine_installs_nothing(tmp_path: Path, where: str) -> None:
+    """P-9d-8: the Docker CLI's current context points at another machine."""
+    runtime = Runtime(found=DOCKER)
+    runtime.where = where
+    prepared = _provisioner(tmp_path, runtime).prepare()
+    assert not prepared.ok
+    assert prepared.detail == (
+        f"docker's current context points at {where}, a daemon that is not a local socket; "
+        "vibey runs SearXNG only on this computer's own runtime, so `docker context use "
+        "default` (or another local context) to install it"
+    )
+    assert [call[0] for call in runtime.calls] == ["context"]
+
+
+def test_a_docker_context_that_cannot_be_read_installs_nothing(tmp_path: Path) -> None:
+    """Review 1 I-3: fail closed: a context vibey cannot read is never taken as local."""
+    runtime = Runtime(found=DOCKER)
+    runtime.where = None
+    prepared = _provisioner(tmp_path, runtime).prepare()
+    assert not prepared.ok and "could not be read" in prepared.detail
+    assert [call[0] for call in runtime.calls] == ["context"]
+
+
+@pytest.mark.parametrize("where", ["unix:///var/run/docker.sock", "npipe:////./pipe/docker", ""])
+def test_a_local_docker_context_installs(tmp_path: Path, where: str) -> None:
+    runtime = Runtime(found=DOCKER)
+    runtime.where = where
+    assert _provisioner(tmp_path, runtime).prepare().ok
+
+
+def test_an_earlier_image_already_gone_is_never_said_to_be_removed(tmp_path: Path) -> None:
+    """Review 1 I-4: `rmi` of an image that is not there counts as removed for an uninstall,
+    but an update says what happened: it was not there."""
+    _installed_earlier(tmp_path)
+    runtime = Runtime()
+    runtime.image_removed = RuntimeOutcome(ok=True, detail="nothing to remove")
+    prepared = _provisioner(tmp_path, runtime).prepare()
+    assert prepared.ok and "was removed" not in prepared.detail
+    assert f"The earlier image (sha256:{'ab' * 6}) was not in podman any more." in prepared.detail
+    assert runtime.calls[-1] == ("rmi", RUNTIME, EARLIER)  # with the runtime that pulled it
+
+
+def test_the_pull_and_the_earlier_images_removal_go_to_the_endpoint_checked(
+    tmp_path: Path,
+) -> None:
+    """Review 2 minor (b): install checks docker's context, then pulls (and removes an earlier
+    pin's container and image) at that same local endpoint, never the context current later."""
+    _installed_earlier(tmp_path)
+    runtime = Runtime()
+    runtime.where = "unix:///var/run/docker.sock"
+    assert _provisioner(tmp_path, runtime).prepare().ok
+    assert runtime.hosts == ["unix:///var/run/docker.sock"] * 3  # pull, rm, rmi

@@ -3,6 +3,7 @@
 
 from __future__ import annotations
 
+import re
 from collections.abc import Sequence
 from typing import Any, Protocol, runtime_checkable
 
@@ -27,6 +28,12 @@ class UntrustedTextInterface(Protocol):
         than any run of backticks inside, so nothing in it renders or links."""
         ...
 
+    def code_span(self, value: Any, *, limit: int) -> str:
+        """`value` as an inline code span, the twin of `code`: one line, cut to `limit`
+        characters (then "..."), nothing escaped or defanged, in a backtick fence longer than
+        any run inside (padded when the text starts or ends with a backtick)."""
+        ...
+
     def render(self, segments: Sequence[tuple[str, bool]], limit: int) -> str:
         """The segments joined and cut to `limit` characters as written (then "..."), each one
         marked untrusted defanged and escaped after the cut. For spans in the middle of a line
@@ -35,6 +42,12 @@ class UntrustedTextInterface(Protocol):
 
     def escape(self, text: str) -> str:
         """`text` defanged and escaped, with no cut and nothing else changed."""
+        ...
+
+    @staticmethod
+    def defang_host(found: re.Match[str]) -> str:
+        """A dotted name (`BARE_HOST`'s match) with every dot bracketed when its last label has
+        a top-level domain's shape and is not one of vibey's local suffixes; else as it was."""
         ...
 
     def one_line(self, value: Any) -> str:

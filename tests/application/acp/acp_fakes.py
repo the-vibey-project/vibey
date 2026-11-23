@@ -7,7 +7,7 @@ check (`tests/cli/test_error_codes_are_complete.py`) when both run in one worker
 from __future__ import annotations
 
 import asyncio
-from collections.abc import Mapping, Sequence
+from collections.abc import Callable, Mapping, Sequence
 from dataclasses import dataclass
 from typing import Any
 from uuid import UUID
@@ -346,6 +346,7 @@ def build_agent(
     ids: Sequence[str] = ("s", "t1", "s2", "t2", "t3", "t4"),
     journal: AcpSessionJournal | None = None,
     bootstrap: AcpBootstrapInterface | None = None,
+    fold_case: Callable[[str], bool] = lambda path: False,
 ) -> AcpAgent:
     """The agent as `bootstrap.build_acp_agent` composes it: its turns write through the
     journaling channel, so what they show is kept in the session's log."""
@@ -367,6 +368,7 @@ def build_agent(
         version="9.9.9",
         new_id=lambda: next(pool),
         bootstrap=bootstrap,
+        fold_case=fold_case,
     )
 
 

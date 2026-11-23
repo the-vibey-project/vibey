@@ -35,7 +35,12 @@ from collections.abc import Callable, Mapping, Sequence
 from pathlib import Path
 from typing import Final
 
-from vibey.domain.host_clients import HOST_CLIENT_CATALOG, ConnectPlanItem, HostClientError
+from vibey.domain.host_clients import (
+    HOST_CLIENT_CATALOG,
+    ClientHomes,
+    ConnectPlanItem,
+    HostClientError,
+)
 from vibey.domain.interfaces.host_clients_interface import HostClientsInterface
 from vibey.infrastructure.mcp.interfaces.host_installer_interface import HostInstallerInterface
 
@@ -70,7 +75,11 @@ class HostInstaller:
         which_vibey = self._which("vibey")
         home = str(self._home_dir())
         proj = str(self._project_dir())
-        xdg = self._environ.get("XDG_CONFIG_HOME")  # Zed on Linux follows it when absolute
+        # Where the person moved clients' config: XDG_CONFIG_HOME (Zed on Linux), a Flatpak
+        # Zed, CODEX_HOME, CLAUDE_CONFIG_DIR; each honoured only when absolute.
+        homes = ClientHomes.from_environ(
+            self._environ, home_dir=home, platform=self._platform, is_dir=os.path.isdir
+        )
         items: list[ConnectPlanItem] = []
         for spec in specs:
             # Each client launches what it speaks: `vibey mcp`, or `vibey acp` for Zed.
@@ -81,7 +90,7 @@ class HostInstaller:
             )
             target = Path(
                 spec.config_path(
-                    home_dir=home, project_dir=proj, platform=self._platform, xdg_config_home=xdg
+                    home_dir=home, project_dir=proj, platform=self._platform, homes=homes
                 )
             )
             existing = target.read_text(encoding="utf-8") if target.exists() else None
@@ -93,7 +102,7 @@ class HostInstaller:
                     platform=self._platform,
                     launch=launch,
                     existing_content=existing,
-                    xdg_config_home=xdg,
+                    homes=homes,
                 )
             )
         return tuple(items)

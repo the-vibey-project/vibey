@@ -167,6 +167,9 @@ class AcpUpdateMapper:
     def untrusted_code(self, value: Any, *, limit: int) -> str:
         return self._text.code(value, limit=limit)
 
+    def untrusted_code_span(self, value: Any, *, limit: int) -> str:
+        return self._text.code_span(value, limit=limit)
+
     def available_commands(self, specs: Sequence[ChatSlashSpec]) -> dict[str, Any]:
         commands: list[dict[str, Any]] = []
         for spec in specs:

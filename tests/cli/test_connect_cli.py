@@ -500,3 +500,41 @@ def test_a_file_swapped_to_a_link_mid_write_is_that_clients_warn_and_the_others_
     assert "Too many levels of symbolic links" in warn and "\x1b" not in warn
     assert "zed ->" in captured.out
     assert (tmp_path / "home" / ".config" / "zed" / "settings.json").exists()
+
+
+def test_a_flatpak_zed_is_written_in_its_own_folder(tmp_path: Path) -> None:
+    """SP-ACP Task 11b-ii: a Flatpak Zed reads `~/.var/app/dev.zed.Zed/config/zed/`, not
+    `~/.config/zed`; with no native Zed config there, that is where vibey writes."""
+    home = tmp_path / "home"
+    flatpak = home / ".var" / "app" / "dev.zed.Zed"
+    flatpak.mkdir(parents=True)
+    installer = HostInstaller(
+        home_dir=lambda: home,
+        project_dir=lambda: tmp_path,
+        platform="linux",
+        which=lambda _: "/opt/vibey/bin/vibey",
+        environ={},
+    )
+    ConnectCommand(installer=installer).run(
+        clients=["zed"], yes=True, dry_run=False, list_clients=False
+    )
+    assert (flatpak / "config" / "zed" / "settings.json").exists()
+    assert not (home / ".config").exists()
+
+
+def test_codex_home_is_where_codex_is_written(tmp_path: Path) -> None:
+    home = tmp_path / "home"
+    codex = home / "codex-home"
+    codex.mkdir(parents=True)
+    installer = HostInstaller(
+        home_dir=lambda: home,
+        project_dir=lambda: tmp_path,
+        platform="linux",
+        which=lambda _: "/opt/vibey/bin/vibey",
+        environ={"CODEX_HOME": str(codex)},
+    )
+    ConnectCommand(installer=installer).run(
+        clients=["codex"], yes=True, dry_run=False, list_clients=False
+    )
+    assert "[mcp_servers.vibey]" in (codex / "config.toml").read_text()
+    assert not (home / ".codex").exists()

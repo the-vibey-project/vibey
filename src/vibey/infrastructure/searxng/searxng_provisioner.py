@@ -10,6 +10,11 @@
   and the record in the person's configuration folder (`SearxngFiles`). The image, the port and
   the runtime are vibey's and the label is `[supervisor] label_prefix` from the person's own
   `vibey.toml`: nothing here comes from a project.
+- **An update** (the record names an earlier pin's image) removes, once the new image is pulled
+  and recorded, the old container -- the unit starts the new one -- and then the old image; one
+  that cannot be removed is said, with the command that removes it, and the update stands.
+- **Docker's own context** must be a local socket: the CLI's current context
+  (`~/.docker/config.json`) may point at another machine even with no `DOCKER_HOST`.
 - **`answering`** is the identity check against vibey's own record: its loopback port, its marker.
   It is not authentication (ADR-0102): code running as the same person could bind the port while
   SearXNG is down, or read the marker.
@@ -31,6 +36,7 @@ from vibey.domain.interfaces.searxng_interface import SearxngPlanInterface
 from vibey.domain.searxng import SEARXNG_IMAGE, SearxngPlan, SearxngProvision
 from vibey.infrastructure.searxng.container_runtime import (
     DAEMON_VARIABLES,
+    NOTHING_TO_REMOVE,
     RuntimeProblem,
     RuntimeRefusal,
 )
@@ -229,8 +235,24 @@ class SearxngProvisioner:
                 False, "vibey found neither podman nor docker in its trusted folders"
             )
         name, short = PurePath(runtime).name, self._plan.short(self._image)
+        earlier = self.installed()
         try:
-            pulled = self._runtime.pull(runtime, self._image)
+            where = self._runtime.endpoint(runtime)
+            if where is None:
+                return SearxngPrepared(
+                    False,
+                    f"{name}'s current context could not be read, so vibey cannot tell it is "
+                    "this computer's own daemon and installs nothing; `docker context ls` says "
+                    "which it is",
+                )
+            if not self._runtime.is_local(where):
+                return SearxngPrepared(
+                    False,
+                    f"{name}'s current context points at {where}, a daemon that is not a local "
+                    "socket; vibey runs SearXNG only on this computer's own runtime, so "
+                    f"`{name} context use default` (or another local context) to install it",
+                )
+            pulled = self._runtime.pull(runtime, self._image, host=where)
         except ValueError as exc:
             return SearxngPrepared(False, str(exc))
         if not pulled.ok:
@@ -253,10 +275,37 @@ class SearxngProvisioner:
             if ignored
             else ""
         )
+        removed = self._remove_earlier(runtime, earlier, where)
         return SearxngPrepared(
             True,
             f"Downloaded searxng/searxng@sha256:{short} with {name}, and wrote its settings in "
-            f"{self._files.folder}.{note}",
+            f"{self._files.folder}.{note}{removed}",
+        )
+
+    def _remove_earlier(
+        self, runtime: str, earlier: SearxngProvision | None, where: str = ""
+    ) -> str:
+        """After an update: the earlier pin's container (which holds its image; the unit starts
+        the new one), then its image, each with the runtime the earlier record names -- the one
+        that pulled it, which an update always keeps (`_install_runtime`). What happened, as a
+        sentence to add; "" when there was no earlier image (SP-ACP Task 11b-ii, P-9d-6)."""
+        if earlier is None or earlier.image == self._image:
+            return ""
+        digest = self._plan.digest_of(earlier.image)
+        owner = earlier.runtime
+        name = PurePath(owner).name
+        host = where if owner == runtime else ""  # the endpoint checked is this runtime's
+        stopped = self._runtime.remove_container(owner, self._uid(), host=host)
+        gone = (
+            self._runtime.remove_image(owner, earlier.image, host=host) if stopped.ok else stopped
+        )
+        if gone.ok and gone.detail == NOTHING_TO_REMOVE:
+            return f" The earlier image (sha256:{digest}) was not in {name} any more."
+        if gone.ok:
+            return f" The earlier image (sha256:{digest}) was removed."
+        return (
+            f" The earlier image (sha256:{digest}) was kept ({UntrustedText.clean(gone.detail)}); "
+            f"`{name} rmi {earlier.image}` removes it once nothing uses it."
         )
 
     def _install_runtime(self) -> tuple[str | None, str]:

@@ -84,11 +84,11 @@ class SearxngCommand:
 
     # -- the commands --------------------------------------------------------------------------
 
-    def serve(self) -> int:
+    def serve(self, unit: str | None = None) -> int:
         settings = self._read_settings()
         if settings is None:
             return EXIT_CONFIG
-        return self._serve(settings, user_config=self._user_config()).run()
+        return self._serve(settings, user_config=self._user_config(), unit=unit).run()
 
     def status(self) -> int:
         parts = self._parts()
@@ -460,6 +460,11 @@ def uninstall_cmd(
 
 
 @searxng_app.command("serve", hidden=True)
-def serve_cmd() -> None:
+def serve_cmd(
+    label: Annotated[
+        str | None,
+        typer.Option("--label", help="The label of the unit that runs it (the unit passes it)."),
+    ] = None,
+) -> None:
     """What the SearXNG unit runs: check, then exec the container runtime. Never downloads."""
-    raise typer.Exit(SEARXNG_COMMAND.serve())
+    raise typer.Exit(SEARXNG_COMMAND.serve(unit=label))

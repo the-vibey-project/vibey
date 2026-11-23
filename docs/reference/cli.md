@@ -168,9 +168,12 @@ install's own `vibey` -- the console script beside its Python, by absolute path 
 there is none, that Python with `-c "import sys; from vibey.cli.main import run; run(['mcp',
 *sys.argv[1:]])"` (`acp` for Zed; any flag after the code reaches the command, as it would after
 `mcp`); never a `vibey` found on `PATH`. Zed's entry is a custom agent server in
-`~/.config/zed/settings.json` on macOS, and on Linux in `$XDG_CONFIG_HOME/zed/settings.json`
-when `XDG_CONFIG_HOME` is an absolute path, else `~/.config/zed/settings.json` (a Flatpak Zed,
-which reads `~/.var/app/dev.zed.Zed/config/zed/`, is not handled yet):
+`~/.config/zed/settings.json` on macOS. On Linux it is in a Flatpak Zed's own
+`~/.var/app/dev.zed.Zed/config/zed/settings.json` when that app folder exists and no native Zed
+config folder does, else in `$XDG_CONFIG_HOME/zed/settings.json` when `XDG_CONFIG_HOME` is an
+absolute path, else `~/.config/zed/settings.json`. Codex's config is `$CODEX_HOME/config.toml`
+and Claude Code's own folder `$CLAUDE_CONFIG_DIR` when those are absolute paths (else
+`~/.codex` and `~/.claude`); `vibey doctor`'s skill and plugin checks follow them too:
 
 ```json
 "agent_servers": {"vibey": {"type": "custom", "command": "/path/to/vibey", "args": ["acp"], "env": {}}}
@@ -222,8 +225,8 @@ installed here:
 |---|---|---|---|
 | `acp-agent` | Zed | `agent_servers.vibey` runs this install's `vibey` with `acp` first (as above; your `env` and `--no-bootstrap` do not matter) | `vibey connect --client zed` (or the snippet, by hand) |
 | `mcp-server` | every other client | its `vibey` MCP entry runs this install's `vibey` with `mcp` and nothing after it; in a project's file (Claude Code, VS Code) only the exact canonical entry; for Claude Code also when the `vibey` plugin is installed and the project's `.mcp.json` holds no other `vibey` entry (the plugin's `.mcp.json` registers `vibey mcp`) | `vibey connect --client <id>` |
-| `skill` | Claude Code, Codex | the `vibey-chat-driver` skill is in the `vibey` plugin, in `~/.claude/skills/vibey-chat-driver` or the project's `.claude/skills/vibey-chat-driver` (Claude Code), or in `~/.codex/skills/vibey-chat-driver` (Codex; where Codex reads user skills -- not verified against a real Codex install) | Claude Code: the plugin; Codex: the `mkdir -p ~/.codex/skills && cp -R <the skill vibey ships> ~/.codex/skills/` line printed |
-| `plugin` | Claude Code | Claude Code records `vibey@vibey` installed (`~/.claude/plugins/installed_plugins.json`) | in Claude Code: `/plugin marketplace add the-vibey-project/vibey`, then `/plugin install vibey@vibey` |
+| `skill` | Claude Code, Codex | the `vibey-chat-driver` skill is in the `vibey` plugin, in `~/.claude/skills/vibey-chat-driver` or the project's `.claude/skills/vibey-chat-driver` (Claude Code), or in `~/.codex/skills/vibey-chat-driver` (Codex; where Codex reads user skills -- not verified against a real Codex install); `$CLAUDE_CONFIG_DIR/skills` and `$CODEX_HOME/skills` when those are set | Claude Code: the plugin; Codex: the `mkdir -p ~/.codex/skills && cp -R <the skill vibey ships> ~/.codex/skills/` line printed (with `$CODEX_HOME/skills` in place of `~/.codex/skills` when it is set; every path in the line is shell-quoted, `~/` left bare so it still expands) |
+| `plugin` | Claude Code | Claude Code records `vibey@vibey` installed (`~/.claude/plugins/installed_plugins.json`, or under `$CLAUDE_CONFIG_DIR`) | in Claude Code: `/plugin marketplace add the-vibey-project/vibey`, then `/plugin install vibey@vibey` |
 
 Each line is `PASS <client>:<surface> present: ...`, `WARN <client>:<surface> missing: ...`
 with the exact command or snippet that fixes it, or `UNKNOWN <client>:<surface>
@@ -270,11 +273,14 @@ dead hub's port may since have been bound by another account, so a record whose 
 holds, or another process holds, is no hub -- the agent token is not read, nothing is sent, and
 a tool call starts the hub as when there is no record at all.
 
-The lock proves that the process the record names is alive and is the hub; it does **not**
-prove that process already owns the recorded port. A hub writes its record a moment before it
-binds, so if another local account bound that port first, a token sent in the milliseconds
-before the hub's failed bind clears its record would reach that account (binding first is
-parked, SP-ACP Task 11b-ii).
+The lock proves that the process the record names is alive and is the hub, and the record's
+port is that hub's own while the hub holds its lock: `vibey serve` binds and listens on the
+port before it writes the record and keeps it until the record is cleared, stopping included
+(a hub killed outright leaves a record naming a free port, which the lock check reads as no
+hub), and a hub that cannot bind it (another account holds it, say) writes no record at all
+and exits 1. A host name binds every address it resolves to, on that one port (`localhost`:
+127.0.0.1 and ::1); an address in a family this computer does not have, or that no interface
+has, is skipped, and the hub exits 1 when none is left or an address is held or forbidden.
 
 ### Web tools: `vibey_search` and `vibey_fetch`
 
@@ -444,13 +450,18 @@ A session follows one project's ledger:
 - **Its folder, at the start.** vibey lists the hub's projects (`vibey_projects`, as the agent
   principal) and follows the one whose repository holds the session's `cwd`; when repositories
   nest, the deepest wins, and when two projects share one, the newest. The path is compared as
-  written: symbolic links are not resolved, case is not folded, and a `cwd` with a `..` part
-  follows nothing. You are told which project the session now follows ("Following project
+  written: symbolic links are not resolved, and a `cwd` with a `..` part follows nothing. When
+  the folder's own volume is case-insensitive (asked of the volume: macOS's default, not a
+  case-sensitive APFS volume), a repository in another case holds it too (`/Work/App` is
+  `/work/app`): the deepest still wins, an exact match breaks a tie, and case folds as the
+  volume does (`ß` is not `ss`); elsewhere case is never folded. You are told which project the session now follows ("Following project
   <name> (<id>) from <repository>"), because it is what a prompt's commands default to: a bare
   `/status`, `/gates`, `/start`, `/pause` or `/abandon` targets it.
 - **The hub, after every turn.** When the hub's reply names a project (`/status <id>`, `/new`),
   the session moves to it and follows its ledger instead, as krypton's chat does. The hub's
-  reply is the later, explicit choice, so it wins over a folder lookup still in flight.
+  reply is the later, explicit choice, so it wins over a folder lookup still in flight; a
+  folder lookup that lands while a prompt is being sent never changes the project that prompt
+  was read with.
 
 Following a project reads its whole ledger once, only to learn the phases it has been in, and
 sends the phase plan as it stands (`plan`: Design, Visual design once the project has been in
@@ -481,8 +492,15 @@ project's name in `/status`, a refusal's body, a ledger summary). So:
   links and the JSON stays readable.
 - **Autolinks.** The forms GFM would make a link of on their own are broken with a visible
   bracket: `https://` shows as `https[:]//`, `mailto:` as `mailto[:]`, a `www.` host as
-  `www[.]`, and an address as `name[@]host`. A bare domain (`example.com`) is left as it is,
-  and a client may still choose to link it.
+  `www[.]`, an address as `name[@]host`, and every dot of any dotted name whose last label has
+  a top-level domain's shape (two or more characters starting with a letter of any script, or a
+  punycode `xn--` label), as `evil[.]com`, `docs[.]evil[.]co[.]uk`, `evil[.]xn--p1ai` or
+  `README[.]md`; a Unicode full stop a browser reads as a dot (`。`, `．`, `｡`, `․`) is bracketed
+  the same way (`evil。com` shows as `evil[.]com`). The only names left as written are two-label
+  ones ending in a suffix of vibey's own files that is no top-level domain (`.toml`, `.env`,
+  `.json`, `.yaml`, `.lock`, `.log` and a few more: `vibey.toml`; never `evil.com.toml`, and a
+  unit label such as `dev.vibey.hub` shows as `dev[.]vibey[.]hub`), and those with no such last
+  label (`1.2.3`, `e.g.`).
 
 Escaping can make a message a little longer than the limit it was cut to. A gate's prompt is
 still sent unchanged in the tool call's `rawInput`, as data, deliberately: the title shows a cut
@@ -493,7 +511,12 @@ The feed polls the hub every [`[acp] live_poll_seconds`](configuration.md#acp) f
 event it sent (a position in the ledger, never a time), so nothing is skipped or sent twice
 when the hub restarts. When the ledger cannot be read, you are told once ("Live updates
 paused"), the read is retried after `live_poll_seconds`, then after twice that, and so on, up
-to [`[acp] probe_seconds`](configuration.md#acp), and "Live updates resumed." follows. With
+to [`[acp] probe_seconds`](configuration.md#acp), and "Live updates resumed" follows. When the
+hub no longer has the project (it answers 404: the project was removed), you are told once
+("Live updates stopped: the hub has no project <id> any more") and the feed stops instead of
+retrying for ever. A client that declares `session.notices` gets these three as `notice`
+updates (paused a warning, resumed an info, stopped an error); any other gets them as messages,
+"<title>: <what happened>". With
 [`[acp] live_between_turns = false`](configuration.md#acp), events that arrive between turns
 are held (at most [`pending_events_max`](configuration.md#acp); no more is read until they are
 sent) and sent at the start of your next prompt. A gate's event is a message only, never a
@@ -901,10 +924,10 @@ process id -1, 0 or 1, or a port outside 1 to 65535, is unreadable and never act
 `devices` and `revoke` say so in one line (exit 2).
 
 The lock that `pair`, `devices`, `revoke`, `vibey mcp` and `vibey acp` check before sending a
-token proves that the process the record names is alive and is the hub; it does **not** prove
-that process already owns the recorded port. A hub writes its record a moment before it binds, so if another local account bound that port first, a token sent in the milliseconds
-before the hub's failed bind clears its record would reach that account (binding first is
-parked, SP-ACP Task 11b-ii).
+token proves that the process the record names is alive and is the hub. The recorded port is
+that hub's own while the hub holds its lock: `vibey serve` binds and listens on it before
+it writes the record and lets it go only after clearing the record, and a hub that cannot bind
+it writes no record and exits 1 ("could not listen on ...").
 
 | Command | What it does |
 |---|---|

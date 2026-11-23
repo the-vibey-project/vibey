@@ -165,8 +165,8 @@ class HubPairCommand:
             raise typer.Exit(EXIT_NOT_RUNNING)
         if self._holder(settings.state_dir) != record.pid:
             # A record whose process does not hold the hub's lock is stale, and its port may be
-            # another account's (SP-ACP Task 11a). The lock proves the process, not the port:
-            # see the module docstring of `hub_gateway.py` (point 7).
+            # another account's (SP-ACP Task 11a). A live hub's record names a port it already
+            # holds: see the module docstring of `hub_gateway.py` (point 7).
             typer.echo(
                 "no hub holds the lock its runtime record names, so the record is stale and "
                 "nothing was sent: start one with `vibey hub start`",

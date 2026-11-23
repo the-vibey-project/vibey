@@ -17,9 +17,26 @@ if TYPE_CHECKING:
 
 @runtime_checkable
 class ContainerRuntimeInterface(Protocol):
+    """Each command may be pinned (`host`) to the local docker endpoint a caller checked
+    (`endpoint`), so it goes there whatever context is current by then; "" for none."""
+
     def find(self) -> str | None:
         """podman, else docker, found once in vibey's trusted folders (never the PATH), and only
-        one that passes `vet`'s checks on its file; None when neither."""
+        one that passes `vet`'s checks on its file; None when neither. With both found, a podman
+        that does not answer (`podman info` fails: its machine is stopped) gives way to a docker
+        that does; when neither answers, podman."""
+        ...
+
+    def endpoint(self, runtime: str) -> str | None:
+        """The endpoint of docker's current CLI context (`unix://...`, `ssh://...`), cleaned of
+        terminal control and read without contacting any daemon; "" for podman; None when it
+        cannot be read."""
+        ...
+
+    @staticmethod
+    def is_local(where: str | None) -> bool:
+        """Whether `endpoint`'s answer is this computer's own daemon: "" (podman), a `unix://`
+        socket or an `npipe://` pipe; never None (unreadable) or `ssh://`/`tcp://`."""
         ...
 
     def vet(self, runtime: str) -> RuntimeRefusal | None:
@@ -29,20 +46,20 @@ class ContainerRuntimeInterface(Protocol):
         the one `find` would choose now."""
         ...
 
-    def image_present(self, runtime: str, image: str) -> bool:
+    def image_present(self, runtime: str, image: str, *, host: str = "") -> bool:
         """Whether the image is already here. Downloads nothing."""
         ...
 
-    def pull(self, runtime: str, image: str) -> RuntimeOutcome:
+    def pull(self, runtime: str, image: str, *, host: str = "") -> RuntimeOutcome:
         """Download the image, bounded by the install bound."""
         ...
 
-    def remove_container(self, runtime: str, uid: int) -> RuntimeOutcome:
+    def remove_container(self, runtime: str, uid: int, *, host: str = "") -> RuntimeOutcome:
         """Remove `uid`'s container, running or not, only when its labels say vibey started it
         for `uid`; an absent one is removed already, and one without that label is left and
         said."""
         ...
 
-    def remove_image(self, runtime: str, image: str) -> RuntimeOutcome:
+    def remove_image(self, runtime: str, image: str, *, host: str = "") -> RuntimeOutcome:
         """Remove the image; an absent one is removed already."""
         ...

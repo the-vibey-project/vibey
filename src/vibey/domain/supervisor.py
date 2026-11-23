@@ -182,13 +182,18 @@ class SupervisorPlanner:
                 raise ValueError(
                     f"vibey acp keeps hub or worker (and its SearXNG) running, not {name!r}"
                 )
+            label = f"{settings.label_prefix}.{name}"
+            # The SearXNG unit names its own label to serve, so a unit left loaded from an
+            # earlier `label_prefix` refuses rather than running beside the current one.
             argv = (
-                (paths.vibey, SEARXNG, "serve") if name == SEARXNG else (*launcher, *commands[name])
+                (paths.vibey, SEARXNG, "serve", "--label", label)
+                if name == SEARXNG
+                else (*launcher, *commands[name])
             )
             planned.append(
                 SupervisedService(
                     name=name,
-                    label=f"{settings.label_prefix}.{name}",
+                    label=label,
                     argv=argv,
                     working_directory=paths.repo,
                     log_path=f"{paths.log_dir}/{name}.log",
