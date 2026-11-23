@@ -17,6 +17,7 @@ from __future__ import annotations
 import hashlib
 import ipaddress
 import json
+import math
 import re
 from collections.abc import Mapping
 from dataclasses import dataclass, field
@@ -121,13 +122,20 @@ class InputStoreLocation:
             ("access_key_env", self.access_key_env),
             ("secret_key_env", self.secret_key_env),
         ):
-            if _ENV_NAME.fullmatch(name) is None:
+            if _ENV_NAME.fullmatch(name) is None or _looks_like_a_key(name):
+                # The value is never repeated: a person who wrote the credential itself where
+                # its variable's name belongs would otherwise see it in an error and a log.
                 raise ValueError(
                     f"[inputs] {key} must name an environment variable (A-Z, 0-9 and '_', not "
-                    f"starting with a digit), not {ascii(name)[:72]}"
+                    "starting with a digit, and not a key itself); the value given is not shown"
                 )
         timeout = self.timeout_seconds
-        if isinstance(timeout, bool) or not isinstance(timeout, int | float) or timeout <= 0:
+        if (
+            isinstance(timeout, bool)
+            or not isinstance(timeout, int | float)
+            or not math.isfinite(timeout)
+            or timeout <= 0
+        ):
             raise ValueError(
                 f"[inputs] timeout_seconds must be a positive number, not {ascii(timeout)[:32]}"
             )
@@ -200,6 +208,13 @@ def _check_endpoint(endpoint: str) -> None:
             "[inputs] endpoint may use plain http only for localhost, 127.0.0.1 or ::1; "
             "credentials are never sent over plain http to another host"
         )
+
+
+def _looks_like_a_key(name: str) -> bool:
+    """Whether a would-be variable name looks like a credential instead: 16 or more characters
+    with no `_` (an access key id such as `AKIA...` is 20 upper-case letters and digits), or more
+    than 64. Module-level for the same reason as `_check_endpoint`: one rule, one caller."""
+    return (len(name) >= 16 and "_" not in name) or len(name) > 64
 
 
 def _is_loopback(host: str) -> bool:

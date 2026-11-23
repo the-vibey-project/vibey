@@ -12,6 +12,7 @@ from __future__ import annotations
 import os
 from collections.abc import Mapping
 from pathlib import Path
+from uuid import uuid4
 
 import httpx
 import pytest
@@ -243,3 +244,61 @@ def test_the_default_seams_read_your_own_file(
     assert doctor._user_config() == bootstrap.acp_user_config()  # noqa: SLF001
     assert doctor._state_root() == bootstrap.run_inputs_root()  # noqa: SLF001
     assert doctor._environ() is os.environ  # noqa: SLF001
+
+
+SECRET_40 = "wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY"
+
+
+@pytest.mark.parametrize("secret", [SECRET_40, "AKIAIOSFODNN7EXAMPLEAKIAIOSFODNN7EXAMPLE"])
+def test_a_secret_in_secret_key_env_never_reaches_any_output(
+    tmp_path: Path,
+    secret: str,
+    caplog: pytest.LogCaptureFixture,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    """Review B2, across every surface that reads [inputs]: doctor, `vibey inputs`, and the
+    worker's composition. A 40-character secret appears in no line, error or log record."""
+    import logging
+
+    from typer.testing import CliRunner
+
+    import vibey.cli.inputs as inputs_module
+    from vibey import bootstrap
+    from vibey.cli.inputs import InputsCommands
+    from vibey.cli.main import app
+    from vibey.domain.config import ConfigError
+
+    table = SEAWEED + f'secret_key_env = "{secret}"\n'
+    config = tmp_path / "config" / "vibey.toml"
+    config.parent.mkdir()
+    config.write_text(table)
+    with caplog.at_level(logging.DEBUG):
+        lines, _ = RunInputsDoctor(
+            user_config=lambda: config,
+            settings=RunInputsSettingsLoader(TomlTrustedTableReader()),
+            environ=lambda: {**ENV, secret: "x"},
+        ).doctor_lines()
+        assert all(secret not in line for line in lines)
+
+        commands = InputsCommands(
+            settings=RunInputsSettingsLoader(TomlTrustedTableReader()),
+            user_config=lambda: config,
+            project_config=lambda: tmp_path / "none" / "vibey.toml",
+        )
+        mp = pytest.MonkeyPatch()
+        mp.setattr(inputs_module, "INPUTS", commands)
+        mp.setattr(bootstrap, "acp_user_config", lambda: config)
+        try:
+            runner = CliRunner()
+            for args in (("add", str(uuid4()), "--paste", "x"), ("list", str(uuid4()))):
+                result = runner.invoke(app, ["inputs", *args])
+                assert result.exit_code == 78
+                assert secret not in result.output
+            with pytest.raises(ConfigError) as caught:
+                bootstrap.run_inputs_location()
+            assert secret not in str(caught.value)
+        finally:
+            mp.undo()
+    assert all(secret not in record.getMessage() for record in caplog.records)
+    captured = capsys.readouterr()
+    assert secret not in captured.out and secret not in captured.err

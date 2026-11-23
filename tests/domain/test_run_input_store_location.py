@@ -161,3 +161,35 @@ def test_describe_names_scheme_host_bucket_and_prefix_only() -> None:
     assert "KEY_VAR" not in location.describe() and "SECRET_VAR" not in location.describe()
     assert InputStoreLocation().describe() == "local store at your state folder"
     assert InputStoreLocation(store_dir="/srv/in").describe() == "local store at /srv/in"
+
+
+SECRET_40 = "wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY"
+UPPER_40 = "AKIAIOSFODNN7EXAMPLEAKIAIOSFODNN7EXAMPLE"
+UPPER_20 = "AKIAIOSFODNN7EXAMPLE"
+
+
+@pytest.mark.parametrize("secret", [SECRET_40, UPPER_40, UPPER_20, "A" * 65])
+@pytest.mark.parametrize("key", ["access_key_env", "secret_key_env"])
+def test_a_credential_written_where_its_variable_belongs_is_never_echoed(
+    key: str, secret: str
+) -> None:
+    """Review B2: the refusal names the key, never the value it refused."""
+    with pytest.raises(ValueError) as caught:
+        RunInputsSettings.from_table({**SEAWEED, key: secret})
+    message = str(caught.value)
+    assert secret not in message
+    assert key in message and "the value given is not shown" in message
+
+
+@pytest.mark.parametrize(
+    "name", ["MY_KEY", "VIBEY_INPUTS_SECRET_KEY", "AWS_SECRET_ACCESS_KEY", "SHORTNAME"]
+)
+def test_ordinary_variable_names_are_still_accepted(name: str) -> None:
+    location = InputStoreLocation.from_table({**SEAWEED, "secret_key_env": name})
+    assert location.secret_key_env == name
+
+
+@pytest.mark.parametrize("value", [float("nan"), float("inf"), float("-inf")])
+def test_a_timeout_that_is_not_finite_is_refused(value: float) -> None:
+    with pytest.raises(ValueError, match="timeout_seconds must be a positive number"):
+        RunInputsSettings.from_table({**SEAWEED, "timeout_seconds": value})
