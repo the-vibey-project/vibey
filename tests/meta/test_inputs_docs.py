@@ -96,3 +96,32 @@ def test_the_configuration_reference_states_each_default() -> None:
         if ("unset" if default is None else f"`{default}`") not in rows.get(key, "")
     }
     assert not wrong, f"docs/reference/configuration.md's [inputs] defaults differ: {wrong}"
+
+
+def test_the_cli_reference_gives_exit_69_in_both_exit_tables() -> None:
+    """Phase 3c Task 8 (fix round 1, review I6): `vibey inputs` exits 69 when the store does not
+    answer, and both the global table and the command's own list say so."""
+    from vibey.cli.inputs import EXIT_UNAVAILABLE
+
+    assert EXIT_UNAVAILABLE == 69
+    exits = _section(CLI_DOC, "## Exit codes and errors")
+    assert "| `69` |" in exits and "vibey inputs" in exits
+    inputs = " ".join(_section(CLI_DOC, "## `vibey inputs").split())
+    assert "`69` the store did not answer" in inputs
+
+
+def test_the_cli_reference_describes_the_run_inputs_doctor_line() -> None:
+    from vibey.cli.run_inputs_doctor import NAME
+
+    text = CLI_DOC.read_text(encoding="utf-8")
+    assert f"The `{NAME}` line" in text
+    for phrase in ("reachable; credentials from", "is not set", "made on the first add"):
+        assert phrase in " ".join(text.split()), phrase
+
+
+def test_the_cli_reference_no_longer_says_a_handed_off_run_gets_no_section() -> None:
+    inputs = " ".join(_section(CLI_DOC, "## `vibey inputs").split())
+    assert "a known gap, ADR-0104" not in inputs
+    assert "Inputs stay on this machine" not in inputs
+    assert "is given exactly the inputs the run it replaces was given" in inputs
+    assert 'store = "seaweedfs"' in inputs
