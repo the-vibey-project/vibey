@@ -742,5 +742,5 @@ fix = "Check the path the message names: remove a symlink or stray file vibey di
 code = "E0095"
 class = "vibey.domain.errors.RunInputRefused"
 title = "vibey will not add this run input"
-cause = "A run input's kind is not `paste` or `file`, its name is not one path segment (empty, `.` or `..`, a `/`, `\\` or NUL, or more than 255 bytes), or adding it would pass a limit in the `[inputs]` table of your own vibey.toml: `max_item_bytes` for one input, `max_project_bytes` for all of a project's inputs together, `max_items` for how many. Nothing was written."
-fix = "Give the input a plain file name, make it smaller, or raise the limit the message names in the `[inputs]` table of your own vibey.toml (a project's own file is never heard on limits)."
+cause = "A run input's kind is not `paste` or `file`, its name is not one path segment (empty, `.` or `..`, a `/`, `\\` or NUL, or more than 255 bytes), a file's name differs from another file input's only in case or Unicode form (on many filesystems the two are one file), or adding it would pass a limit in the `[inputs]` table of your own vibey.toml: `max_item_bytes` for one input, `max_project_bytes` for all of a project's inputs together, `max_items` for how many. Nothing was written."
+fix = "Give the input a plain file name (or the very same name, to replace that file), make it smaller, or raise the limit the message names in the `[inputs]` table of your own vibey.toml (a project's own file is never heard on limits)."

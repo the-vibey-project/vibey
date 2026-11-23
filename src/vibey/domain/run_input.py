@@ -59,6 +59,10 @@ class RunInputsSettings:
     """The most all of one project's inputs may hold together (8 MiB)."""
     max_items: int = 64
     """The most inputs one project may have."""
+    max_prompt_bytes: int = 65_536
+    """The most pasted text (UTF-8 bytes, all pastes together) inlined into a run's prompt; a
+    paste past it is named, with its path in the run's `paste.md`, instead (64 KiB: a 32k-token
+    model's context stays usable)."""
 
     @classmethod
     def from_table(cls, table: Mapping[str, object]) -> RunInputsSettings:
@@ -66,7 +70,7 @@ class RunInputsSettings:
         `ValueError` naming the key for an unknown key, a value that is not a positive integer
         (a bool is not one), and a `max_item_bytes` over `max_project_bytes`."""
         defaults = cls()
-        known = {"max_item_bytes", "max_project_bytes", "max_items"}
+        known = {"max_item_bytes", "max_project_bytes", "max_items", "max_prompt_bytes"}
         for key in table:
             if key not in known:
                 raise ValueError(

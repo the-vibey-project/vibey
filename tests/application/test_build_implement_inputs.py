@@ -32,6 +32,7 @@ from vibey.application.dto import (
 from vibey.application.interfaces.run_inputs_interface import RunInputsInterface
 from vibey.application.run_inputs_service import RunInputsService
 from vibey.application.worker import Failure, Success
+from vibey.domain.config import ConfigError
 from vibey.domain.errors import InputStoreError
 from vibey.domain.job import FailureClass
 from vibey.domain.phase import Phase
@@ -86,12 +87,14 @@ class _World:
             created_at=AT,
             updated_at=AT,
         )
+        self.store = HashAddressedInputStore(tmp_path / "state" / "inputs", FixedClock())
+        self.projects = _Projects(record)
         self.inputs = RunInputsService(
-            store=HashAddressedInputStore(tmp_path / "state" / "inputs", FixedClock()),
-            projects=_Projects(record),
+            store=self.store,
+            projects=self.projects,
             ledger=_Ledger(),
             clock=FixedClock(),
-            settings=RunInputsSettings(),
+            limits=RunInputsSettings,
             writer=NoFollowFiles(),
         )
 
@@ -184,4 +187,27 @@ async def test_inputs_that_cannot_be_given_fail_the_run_before_any_engine_sessio
     assert outcome.failure_class is FailureClass.VIBEY
     assert "run inputs" in outcome.detail
     assert "symlink" in outcome.detail
+    assert getattr(engine, "specs", []) == []
+
+
+async def test_limits_that_cannot_be_read_fail_the_run_before_any_engine_session(
+    tmp_path: Path,
+) -> None:
+    world = _World(tmp_path)
+    await world.add("paste", "paste", b"words")
+
+    def unreadable() -> RunInputsSettings:
+        raise ConfigError("/home/person/.config/vibey/vibey.toml", "max_items must be positive")
+
+    broken = RunInputsService(
+        store=world.store,
+        projects=world.projects,
+        ledger=_Ledger(),
+        clock=FixedClock(),
+        limits=unreadable,
+        writer=NoFollowFiles(),
+    )
+    outcome, engine, _ = await world.run(inputs=broken)
+    assert isinstance(outcome, Failure)
+    assert "max_items must be positive" in outcome.detail
     assert getattr(engine, "specs", []) == []

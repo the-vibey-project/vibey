@@ -59,13 +59,16 @@ def test_the_defaults_are_one_mib_eight_mib_and_sixty_four_items() -> None:
     assert settings.max_item_bytes == 1_048_576
     assert settings.max_project_bytes == 8_388_608
     assert settings.max_items == 64
+    assert settings.max_prompt_bytes == 65_536
 
 
 def test_from_table_reads_each_key() -> None:
     settings = RunInputsSettings.from_table(
-        {"max_item_bytes": 10, "max_project_bytes": 20, "max_items": 3}
+        {"max_item_bytes": 10, "max_project_bytes": 20, "max_items": 3, "max_prompt_bytes": 7}
     )
-    assert settings == RunInputsSettings(max_item_bytes=10, max_project_bytes=20, max_items=3)
+    assert settings == RunInputsSettings(
+        max_item_bytes=10, max_project_bytes=20, max_items=3, max_prompt_bytes=7
+    )
 
 
 def test_an_empty_table_is_the_defaults() -> None:
@@ -73,7 +76,9 @@ def test_an_empty_table_is_the_defaults() -> None:
 
 
 @pytest.mark.parametrize("value", [0, -1, "1", 1.5, True, None])
-@pytest.mark.parametrize("key", ["max_item_bytes", "max_project_bytes", "max_items"])
+@pytest.mark.parametrize(
+    "key", ["max_item_bytes", "max_project_bytes", "max_items", "max_prompt_bytes"]
+)
 def test_a_value_that_is_not_a_positive_integer_is_refused(key: str, value: object) -> None:
     with pytest.raises(ValueError, match=key):
         RunInputsSettings.from_table({key: value})

@@ -757,9 +757,9 @@ def build_full_worker(
     )
     skills_context = compiler_from_config(project.config, repo_path=repo_root)
     # The person's pastes and files, given to every BUILD run the same way (SP-LOOPS Phase 3).
-    # `materialize` reads no `[inputs]` limit (only `vibey inputs add` does), so the defaults
-    # stand in and the worker never reads the person's own `vibey.toml` for them.
-    run_inputs = run_inputs_service(resources, RunInputsSettings())
+    # The `[inputs]` limits are read from the person's own `vibey.toml` at each run that has
+    # inputs to give (fix round 1, R-B), never from the project's.
+    run_inputs = run_inputs_service(resources, run_inputs_limits)
     # One runner for every gate command -- build.verify's gates and diff,
     # build.integrate's gates, REVIEW's automated checks -- built from the
     # project's `gates` config (per-command timeout, kill grace, Python-env
@@ -1570,13 +1570,22 @@ def run_inputs_settings_loader() -> RunInputsSettingsLoader:
     return RunInputsSettingsLoader(TomlTrustedTableReader())
 
 
+def run_inputs_limits() -> RunInputsSettings:
+    """`[inputs]` from the person's own `vibey.toml`, read when a BUILD run is given its inputs
+    (so a change binds the next run, and a worker with no inputs to give reads nothing); a
+    project's file is never heard on limits (fix round 1: R-B, R-H)."""
+    return run_inputs_settings_loader().load(acp_user_config(), None).settings
+
+
 def run_inputs_root() -> Path:
     """Where every project's run inputs are stored: `inputs/` in the person's own state folder,
     one folder per project id, never inside a checkout (SP-LOOPS Phase 3, fix round 1: R-A)."""
     return UserStateFolder(user_state_path).inputs()
 
 
-def run_inputs_service(resources: AppResources, settings: RunInputsSettings) -> RunInputsService:
+def run_inputs_service(
+    resources: AppResources, limits: Callable[[], RunInputsSettings]
+) -> RunInputsService:
     """A project's run inputs (SP-LOOPS Phase 3): the hash-addressed store under
     `run_inputs_root()`, the one no-follow file adapter for it and the run folders, the project
     records, and the ledger adapter that records each add's
@@ -1587,7 +1596,7 @@ def run_inputs_service(resources: AppResources, settings: RunInputsSettings) -> 
         projects=resources.projects,
         ledger=PostgresRunInputLedger(resources.ledger),
         clock=resources.clock,
-        settings=settings,
+        limits=limits,
         writer=files,
     )
 
@@ -1596,7 +1605,7 @@ def run_inputs_service(resources: AppResources, settings: RunInputsSettings) -> 
 async def run_inputs_app(settings: RunInputsSettings) -> AsyncIterator[RunInputsInterface]:
     """`run_inputs_service` over a freshly opened app: what `vibey inputs` runs."""
     async with build_app() as resources:
-        yield run_inputs_service(resources, settings)
+        yield run_inputs_service(resources, lambda: settings)
 
 
 LOOPS_STORE: Final = "loops"

@@ -91,7 +91,7 @@ class _World:
             projects=_Projects(self.record),
             ledger=self.ledger,
             clock=_Clock(),
-            settings=settings,
+            limits=lambda: settings,
             writer=NoFollowFiles(),
         )
 
@@ -323,3 +323,16 @@ def test_the_default_seams_are_the_composition_roots() -> None:
     assert isinstance(commands._settings, RunInputsSettingsLoader)  # noqa: SLF001
     assert commands._user_config() == bootstrap.acp_user_config()  # noqa: SLF001
     assert commands._project_config() == Path.cwd() / "vibey.toml"  # noqa: SLF001
+
+
+def test_a_file_name_colliding_by_case_is_exit_2(world: _World) -> None:
+    # Review finding 7 (R-G).
+    first = world.tmp / "a" / "spec.md"
+    second = world.tmp / "b" / "SPEC.md"
+    for path in (first, second):
+        path.parent.mkdir()
+        path.write_bytes(path.parent.name.encode())
+    assert _run("add", str(world.project_id), "--file", str(first))[0] == 0
+    code, output = _run("add", str(world.project_id), "--file", str(second))
+    assert code == 2
+    assert "only in case" in output

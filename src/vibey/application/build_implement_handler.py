@@ -60,6 +60,7 @@ from vibey.application.ports import Clock, EngineAdapter, HumanGateRepository, J
 from vibey.application.wind_down import WindDownOrchestrator
 from vibey.application.worker import Defer, Failure, Outcome, Park, Success
 from vibey.domain.budget import BudgetLedger
+from vibey.domain.config import ConfigError
 from vibey.domain.correlation import DELIVERY_CORRELATION
 from vibey.domain.effort import (
     BUILD_LADDER_EXHAUSTED,
@@ -405,7 +406,7 @@ class BuildImplementHandler:
         if self._inputs is not None:
             try:
                 given = await self._inputs.materialize(job.project_id, run_id, worktree_path)
-            except (InputStoreError, UnknownProject) as refused:
+            except (InputStoreError, UnknownProject, ConfigError) as refused:
                 return Failure(
                     FailureClass.VIBEY, f"the run inputs could not be given to the run: {refused}"
                 )
