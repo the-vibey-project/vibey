@@ -97,20 +97,24 @@ class InputLedger:
 
     def reconcile(self, rows: Sequence[RunInput], recorded: RecordedInputs) -> Reconciled:
         used: set[int] = set()
-        given: list[RunInput] = []
-        missing: list[RecordedInput] = []
-        for add in recorded.added:
+        taken: dict[int, int] = {}  # add position -> row index
+        # Adds that record a name digest choose first, then the adds recorded before names were
+        # (which match a row of any name) take what is left, so an older add can never take
+        # the one row a newer named add needs (fix review M2). The order given stays the
+        # ledger's.
+        adds = list(enumerate(recorded.added))
+        for position, add in [a for a in adds if a[1].name_digest is not None] + [
+            a for a in adds if a[1].name_digest is None
+        ]:
             index = next(
                 (i for i, row in enumerate(rows) if i not in used and add.matches(row)), None
             )
-            if index is None:
-                missing.append(add)
-            else:
+            if index is not None:
                 used.add(index)
-                given.append(rows[index])
-        return Reconciled(
-            given=tuple(given), unrecorded=len(rows) - len(used), missing=tuple(missing)
-        )
+                taken[position] = index
+        given = tuple(rows[taken[position]] for position, _ in adds if position in taken)
+        missing = tuple(add for position, add in adds if position not in taken)
+        return Reconciled(given=given, unrecorded=len(rows) - len(used), missing=missing)
 
     @staticmethod
     def _parse(seq: int, payload: Mapping[str, object]) -> RecordedInput | None:

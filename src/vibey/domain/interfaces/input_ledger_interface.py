@@ -25,8 +25,9 @@ class InputLedgerInterface(Protocol):
         ...
 
     def reconcile(self, rows: Sequence[RunInput], recorded: RecordedInputs) -> Reconciled:
-        """Matches index rows to recorded adds one to one, in ledger order: each add takes the
-        first unused row with its digest, kind, size and (when the add records one) name
-        digest. `given` is the matched rows in ledger order; `unrecorded` counts rows no add
+        """Matches index rows to recorded adds one to one: each add takes the first unused row
+        with its digest, kind, size and (when the add records one) name digest. Adds with a
+        name digest choose first, then adds recorded before names were; `given` is in ledger
+        order either way. `given` is the matched rows in ledger order; `unrecorded` counts rows no add
         took; `missing` lists the adds no row matched."""
         ...

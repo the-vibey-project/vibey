@@ -121,3 +121,14 @@ def test_a_recorded_input_says_what_it_is() -> None:
     record = RecordedInput(1, D1, "file", 3, None)
     assert record.describe() == f"file {D1} (3 bytes)"
     assert RecordedInputs(added=(record,)).added == (record,)
+
+
+def test_a_legacy_add_cannot_take_the_row_a_named_add_needs() -> None:
+    """Fix review M2, the reproduced case: ledger [L (no name digest), N (b.txt)], rows listed as
+    [b.txt, a.txt]. Greedy ledger-order matching let L take b.txt and left N missing."""
+    recorded = INPUT_LEDGER.recorded([(1, _add(D1, name=None)), (2, _add(D1, name="b.txt"))])
+    rows = [_row(D1, name="b.txt"), _row(D1, name="a.txt")]
+    reconciled = INPUT_LEDGER.reconcile(rows, recorded)
+    assert reconciled.missing == ()
+    assert [r.name for r in reconciled.given] == ["a.txt", "b.txt"]  # ledger order: L, then N
+    assert reconciled.unrecorded == 0
