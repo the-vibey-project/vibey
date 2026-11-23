@@ -65,18 +65,6 @@ forbidden_modules =
     vibey.cli
     vibey.tui
 
-# The interfaces packages are the bottom of their layer: they declare the
-# seams, so they must never import the code that consumes them.
-#
-# The consumers are mostly `vibey.application`'s own modules, and until #263 this
-# contract named none of them: an interface importing `vibey.application.worker` was
-# reported KEPT, and so was every other planted import from inside the layer.
-# `vibey.application.*` names them all, including modules added later. A forbidden contract
-# skips any pair where one module contains the other, so the source is not forbidden from
-# itself. The two ignored imports are a seam's vocabulary, not its consumers:
-# `design` and `dto` hold the records a seam's signatures name, and both import
-# only `vibey.domain` and dependency-free family packages (`dto` names the loop
-# capability bundle from `vibey_runners.common.capabilities`).
 # The run inputs service keeps the rules and reaches the disk only through its ports
 # (`InputStoreInterface`, `RunFolderWriterInterface`; SP-LOOPS Phase 3 fix round 1, R-E): the
 # no-follow file adapter, the store and the person's state folder are infrastructure's, wired in
@@ -91,6 +79,18 @@ forbidden_modules =
     vibey.infrastructure
     vibey.bootstrap
 
+# The interfaces packages are the bottom of their layer: they declare the
+# seams, so they must never import the code that consumes them.
+#
+# The consumers are mostly `vibey.application`'s own modules, and until #263 this
+# contract named none of them: an interface importing `vibey.application.worker` was
+# reported KEPT, and so was every other planted import from inside the layer.
+# `vibey.application.*` names them all, including modules added later. A forbidden contract
+# skips any pair where one module contains the other, so the source is not forbidden from
+# itself. The two ignored imports are a seam's vocabulary, not its consumers:
+# `design` and `dto` hold the records a seam's signatures name, and both import
+# only `vibey.domain` and dependency-free family packages (`dto` names the loop
+# capability bundle from `vibey_runners.common.capabilities`).
 [importlinter:contract:interfaces-declare-only]
 name = Interfaces declare seams, never consume them
 type = forbidden
