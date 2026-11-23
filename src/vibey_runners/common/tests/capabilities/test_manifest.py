@@ -10,7 +10,7 @@ from pathlib import Path
 from typing import Any
 
 import pytest
-from fakes import RecordingReader
+from fakes import RecordingReader, unsearchable
 
 from vibey_runners.common.capabilities.git_folder_guard import GitFolderGuard
 from vibey_runners.common.capabilities.interfaces.manifest_interface import (
@@ -282,3 +282,35 @@ def test_a_source_naming_a_case_variant_of_git_is_refused(
         tmp_path / "acme", [{"name": "hidden", "source": "./.GIT/stash"}], make=(".GIT/stash",)
     )
     assert "inside the marketplace's .git" in str(_refused(root, reader))
+
+
+# -- a folder that cannot be searched: the same answer on Python 3.12, 3.13 and 3.14 ----------
+
+
+def test_a_marketplace_folder_that_cannot_be_looked_at_is_named(
+    tmp_path: Path, reader: RecordingReader
+) -> None:
+    root = _marketplace(tmp_path / "outer" / "acme", [])
+    with unsearchable(tmp_path / "outer"):
+        error = _refused(root, reader)
+    assert "the marketplace folder" in str(error) and "cannot be read" in str(error)
+
+
+def test_a_manifest_folder_that_cannot_be_searched_is_named_not_missing(
+    tmp_path: Path, reader: RecordingReader
+) -> None:
+    root = _marketplace(tmp_path / "acme", [])
+    with unsearchable(root / ".claude-plugin"):
+        error = _refused(root, reader)
+    assert ".claude-plugin/marketplace.json cannot be read" in str(error)
+    assert "has no" not in str(error)
+
+
+def test_a_plugins_folder_that_cannot_be_searched_is_named_not_skipped(
+    tmp_path: Path, reader: RecordingReader
+) -> None:
+    plugins = [{"name": "linting", "source": "./plugins/linting"}]
+    root = _marketplace(tmp_path / "acme", plugins, make=("plugins/linting",))
+    with unsearchable(root / "plugins"):
+        error = _refused(root, reader)
+    assert "(linting): its folder cannot be read" in str(error)

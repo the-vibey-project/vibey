@@ -103,6 +103,7 @@ forbidden_modules = [
     "vibey_runners.common.capabilities.git_folder_guard",
     "vibey_runners.common.capabilities.lock",
     "vibey_runners.common.capabilities.manifest",
+    "vibey_runners.common.capabilities.path_probe",
     "vibey_runners.common.capabilities.resolver",
     "vibey_runners.common.capabilities.safe_text",
     "vibey_runners.common.capabilities.skill_index",

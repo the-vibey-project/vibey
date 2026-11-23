@@ -9,7 +9,7 @@ import os
 from pathlib import Path
 
 import pytest
-from fakes import RecordingReader
+from fakes import RecordingReader, unsearchable
 
 from vibey_runners.common.capabilities.git_folder_guard import GitFolderGuard
 from vibey_runners.common.capabilities.interfaces.skill_index_interface import (
@@ -380,3 +380,25 @@ def test_a_skills_folder_that_cannot_be_listed_is_skipped_not_raised(tmp_path: P
         assert path == plugin and reason.startswith("cannot be read")
     finally:
         folder.chmod(0o700)
+
+
+def test_a_plugin_folder_that_cannot_be_looked_at_is_a_named_row(tmp_path: Path) -> None:
+    plugin = _plugin(tmp_path)
+    _skill(plugin, "lint", VALID.format(name="lint"))
+    with unsearchable(plugin.parent):
+        catalog = SkillIndex().build([plugin])
+    assert catalog.skills == ()
+    ((path, reason),) = catalog.skipped
+    assert path == plugin and reason.startswith("cannot be read")
+
+
+def test_a_plugin_whose_skills_cannot_be_searched_is_a_named_row_not_silence(
+    tmp_path: Path,
+) -> None:
+    plugin = _plugin(tmp_path)
+    _skill(plugin, "lint", VALID.format(name="lint"))
+    with unsearchable(plugin):
+        catalog = SkillIndex().build([plugin])
+    assert catalog.skills == ()
+    ((path, reason),) = catalog.skipped
+    assert path == plugin and reason.startswith("cannot be read")

@@ -20,9 +20,7 @@ Declared by `interfaces/skill_index_interface.py::SkillIndexInterface`.
 
 from __future__ import annotations
 
-import errno
 import os
-import stat
 from collections.abc import Sequence
 from pathlib import Path
 from typing import Final
@@ -41,7 +39,9 @@ from vibey_runners.common.capabilities.interfaces.frontmatter_interface import (
 from vibey_runners.common.capabilities.interfaces.git_folder_guard_interface import (
     GitFolderGuardInterface,
 )
+from vibey_runners.common.capabilities.interfaces.path_probe_interface import PathProbeInterface
 from vibey_runners.common.capabilities.names import NAME_PATTERN
+from vibey_runners.common.capabilities.path_probe import PathProbe
 from vibey_runners.common.capabilities.skill_catalog import SkillCatalog
 from vibey_runners.common.capabilities.skill_entry import SkillEntry
 
@@ -50,8 +50,6 @@ SKILL_MAX_BYTES: Final = 64 * 1024
 """The largest SKILL.md indexed (the plan's 64 KiB). vibey's largest is well under it."""
 MAX_SKILLS_PER_PLUGIN: Final = 256
 """The most skill folders of one plugin looked at; the rest are one skipped row."""
-_ABSENT: Final = frozenset({errno.ENOENT, errno.ENOTDIR, errno.EBADF, errno.ELOOP})
-"""The errors pathlib before 3.14 read as "not there"; any other is a failure to name."""
 OUTSIDE: Final = "outside the marketplace"
 INSIDE_GIT: Final = "inside a .git folder"
 """The lock leaves the marketplace root's `.git` out of its digest, and the index cannot tell a
@@ -66,10 +64,14 @@ class SkillIndex:
         reader: FileReaderInterface | None = None,
         frontmatter: SkillFrontmatterInterface | None = None,
         guard: GitFolderGuardInterface | None = None,
+        probe: PathProbeInterface | None = None,
     ) -> None:
         self._reader = reader or BoundedFileReader()
         self._guard = guard or GitFolderGuard()
         self._frontmatter = frontmatter or SkillFrontmatter()
+        # The same answer on every Python: a folder that cannot be searched raises, and is named
+        # as a skipped row by `build`, never read as missing (3.14's `is_dir` would say False).
+        self._probe = probe or PathProbe()
 
     def build(self, plugin_dirs: Sequence[Path]) -> SkillCatalog:
         skills: list[SkillEntry] = []
@@ -85,7 +87,7 @@ class SkillIndex:
         self, plugin_dir: Path, skills: list[SkillEntry], skipped: list[tuple[Path, str]]
     ) -> None:
         base = plugin_dir.resolve()
-        if not base.is_dir():
+        if not self._probe.is_dir(base):
             skipped.append((plugin_dir, "the plugin folder does not exist"))
             return
         folder = plugin_dir / "skills"
@@ -94,7 +96,7 @@ class SkillIndex:
         if reason:
             skipped.append((folder, reason))
             return
-        if not resolved.is_dir():
+        if not self._probe.is_dir(resolved):
             return
         names: set[str] = set()
         # One scan, classified from the directory entry (no stat for a plain file or folder;
@@ -141,19 +143,6 @@ class SkillIndex:
             return INSIDE_GIT
         return ""
 
-    @staticmethod
-    def _is_file(path: Path) -> bool:
-        """`Path.is_file`, with the same answer on every Python: a path that is not there is
-        False, and any other failure (a skill folder that cannot be searched) raises, for the
-        caller to name. Python 3.14's `is_file` answers False for every `OSError`, which made a
-        permission problem read as a missing SKILL.md."""
-        try:
-            return stat.S_ISREG(os.stat(path).st_mode)
-        except OSError as exc:
-            if exc.errno in _ABSENT:
-                return False
-            raise
-
     def _skill(
         self, plugin: str, base: Path, skill_dir: Path
     ) -> tuple[SkillEntry | None, str, Path]:
@@ -165,7 +154,7 @@ class SkillIndex:
         reason = self._unsafe(path, base)
         if reason:
             return None, reason, skill_dir / SKILL_FILE
-        if not self._is_file(path):
+        if not self._probe.is_file(path):
             return None, f"has no {SKILL_FILE}", skill_dir
         try:
             text = self._reader.read_text(path, SKILL_MAX_BYTES)

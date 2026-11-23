@@ -11,9 +11,10 @@ import random
 import stat
 import tempfile
 from collections.abc import Sequence
-from pathlib import Path
+from pathlib import Path, PurePosixPath
 
 import pytest
+from fakes import unsearchable
 from hypothesis import given, settings
 from hypothesis import strategies as st
 
@@ -441,3 +442,148 @@ def test_a_deeply_nested_lock_is_a_lock_error(tmp_path: Path) -> None:
     path.write_text("[" * 200_000 + "\n", encoding="utf-8")
     with pytest.raises(LockError, match="not a complete lock file"):
         CapabilityLock().read(path)
+
+
+# -- a folder that cannot be searched: the same answer on Python 3.12, 3.13 and 3.14 ----------
+
+
+def test_a_root_that_cannot_be_looked_at_raises_rather_than_reading_as_no_folder(
+    tmp_path: Path,
+) -> None:
+    root = _tree(tmp_path / "outer" / "market", {"a.txt": b"x"})
+    with unsearchable(tmp_path / "outer"), pytest.raises(PermissionError):
+        CapabilityLock().tree_records(root)
+
+
+def test_a_lock_in_a_folder_that_cannot_be_searched_is_refused_not_empty(tmp_path: Path) -> None:
+    path = tmp_path / "state" / "loops.lock"
+    CapabilityLock().write(path, ENTRIES)
+    with unsearchable(path.parent), pytest.raises(LockError, match="cannot be read"):
+        CapabilityLock().read(path)
+
+
+# -- a scoped digest: the manifest and the plugin folders it lists, never bytecode ------------
+
+SCOPE = (PurePosixPath(".claude-plugin/marketplace.json"), PurePosixPath("plugins/p"))
+
+
+def _shipped(root: Path) -> Path:
+    return _tree(
+        root,
+        {
+            ".claude-plugin/marketplace.json": b"{}",
+            "plugins/p/skills/s/SKILL.md": b"skill",
+            "plugins/p/scripts/tool.py": b"print()",
+            "plugins/unlisted/README.md": b"r",
+            "src/module.py": b"code",
+            "tests/test_module.py": b"test",
+        },
+    )
+
+
+@pytest.mark.parametrize(
+    "change",
+    [
+        lambda root: _tree(root, {"plugins/p/scripts/__pycache__/tool.cpython-312.pyc": b"\0"}),
+        lambda root: _tree(root, {"plugins/p/scripts/tool.pyc": b"\0", "plugins/p/x.pyo": b"\0"}),
+        lambda root: _tree(root, {"__pycache__/x.pyc": b"\0", "tests/test_new.py": b"t"}),
+        lambda root: _tree(root, {"src/module.py": b"edited", "plugins/unlisted/new": b"n"}),
+        lambda root: _tree(root, {".claude-plugin/plugin.json": b"{}"}),
+    ],
+)
+def test_a_scoped_digest_ignores_bytecode_and_everything_outside_it(
+    tmp_path: Path, change: object
+) -> None:
+    root = _shipped(tmp_path)
+    lock = CapabilityLock()
+    before = lock.digest_tree(root, SCOPE)
+    change(root)  # type: ignore[operator]
+    assert lock.digest_tree(root, SCOPE) == before
+
+
+@pytest.mark.parametrize(
+    "change",
+    [
+        lambda root: _tree(root, {"plugins/p/skills/s/SKILL.md": b"changed"}),
+        lambda root: _tree(root, {"plugins/p/new.md": b"new"}),
+        lambda root: _tree(root, {".claude-plugin/marketplace.json": b'{"plugins": []}'}),
+        lambda root: (root / "plugins/p/scripts/tool.py").chmod(0o755),
+    ],
+)
+def test_a_scoped_digest_sees_every_change_inside_it(tmp_path: Path, change: object) -> None:
+    root = _shipped(tmp_path)
+    (root / "plugins/p/scripts/tool.py").chmod(0o644)
+    lock = CapabilityLock()
+    before = lock.digest_tree(root, SCOPE)
+    change(root)  # type: ignore[operator]
+    assert lock.digest_tree(root, SCOPE) != before
+
+
+def test_a_checkout_and_an_install_of_the_same_marketplace_hash_alike(tmp_path: Path) -> None:
+    checkout = _shipped(tmp_path / "checkout")
+    installed = _tree(
+        tmp_path / "installed",
+        {
+            ".claude-plugin/marketplace.json": b"{}",
+            "plugins/p/skills/s/SKILL.md": b"skill",
+            "plugins/p/scripts/tool.py": b"print()",
+            "plugins/p/scripts/__pycache__/tool.cpython-314.pyc": b"\0",
+        },
+    )
+    for root in (checkout, installed):
+        (root / "plugins/p/scripts/tool.py").chmod(0o644)
+    lock = CapabilityLock()
+    assert lock.digest_tree(checkout, SCOPE) == lock.digest_tree(installed, SCOPE)
+    assert lock.digest_tree(checkout) != lock.digest_tree(installed)  # the whole tree differs
+
+
+def test_a_scoped_record_set_holds_the_folders_above_each_item(tmp_path: Path) -> None:
+    root = _shipped(tmp_path)
+    paths = [record.path for record in CapabilityLock().tree_records(root, SCOPE)]
+    assert paths == [
+        ".claude-plugin",
+        ".claude-plugin/marketplace.json",
+        "plugins",
+        "plugins/p",
+        "plugins/p/scripts",
+        "plugins/p/scripts/tool.py",
+        "plugins/p/skills",
+        "plugins/p/skills/s",
+        "plugins/p/skills/s/SKILL.md",
+    ]
+
+
+def test_a_scope_of_the_whole_tree_still_leaves_bytecode_and_the_root_git_out(
+    tmp_path: Path,
+) -> None:
+    root = _tree(tmp_path, {"a.txt": b"x", "__pycache__/a.pyc": b"\0", ".git/HEAD": b"ref"})
+    paths = [record.path for record in CapabilityLock().tree_records(root, [PurePosixPath()])]
+    assert paths == ["a.txt"]
+
+
+def test_a_scope_through_a_symlink_stops_at_the_link(tmp_path: Path) -> None:
+    root = _tree(tmp_path / "market", {"real/p/a.txt": b"x"})
+    (root / "plugins").symlink_to("real")
+    records = CapabilityLock().tree_records(root, [PurePosixPath("plugins/p")])
+    assert [(record.path, record.kind) for record in records] == [("plugins", "L")]
+
+
+def test_scoped_bytecode_items_and_overlaps_are_handled(tmp_path: Path) -> None:
+    root = _shipped(tmp_path)
+    lock = CapabilityLock()
+    scope = [*SCOPE, PurePosixPath("plugins/p/skills"), PurePosixPath("plugins/__pycache__")]
+    assert lock.tree_records(root, scope) == lock.tree_records(root, SCOPE)
+
+
+@pytest.mark.parametrize("item", ["/etc", "../outside", "plugins/../.."])
+def test_a_scope_that_leaves_the_tree_is_refused(tmp_path: Path, item: str) -> None:
+    root = _shipped(tmp_path)
+    with pytest.raises(LockError, match="not a path inside"):
+        CapabilityLock().tree_records(root, [PurePosixPath(item)])
+
+
+def test_a_scope_past_the_entry_limit_is_refused(tmp_path: Path) -> None:
+    root = _shipped(tmp_path)
+    lister = lambda folder: [f"n{i}" for i in range(MAX_TREE_ENTRIES + 1)]  # noqa: E731
+    with pytest.raises(LockError, match="more than"):
+        CapabilityLock(lister=lister).tree_records(root, [PurePosixPath("plugins/p")])
