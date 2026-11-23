@@ -37,7 +37,7 @@ import time
 from collections.abc import Callable, Sequence
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Annotated, Final
+from typing import Annotated, Final, NoReturn
 
 import typer
 
@@ -124,6 +124,9 @@ class HubEngineCommand:
             pid = self._processes.spawn(
                 self._argv, settings.state_dir / LOG_FILE, cwd=self._config_path().parent
             )
+        # Waiting on a starting hub that had written no pid yet: its lock is all there is to
+        # watch until it writes one (SP-ACP Task 11b, review N-3).
+        unwritten = pid == 0
         deadline = self._clock() + timeout
         while self._clock() < deadline:
             running = self._running(settings, quiet=True)
@@ -131,18 +134,26 @@ class HubEngineCommand:
                 note = "" if running.pid == pid else " (another process won the start)"
                 typer.echo(f"hub started: {self._describe(running)}{note}")
                 return
+            if unwritten and not pid:
+                holder = self._holder(settings.state_dir)
+                if holder is None:
+                    self._exited(settings)  # its lock dropped: the hub it named is gone
+                pid = holder or 0  # 0 while the holder has still not written its pid
             if pid and not self._processes.alive(pid):
-                typer.echo(
-                    f"the hub exited before it was ready; see {settings.state_dir / LOG_FILE}",
-                    err=True,
-                )
-                raise typer.Exit(1)
+                self._exited(settings)
             self._sleep(POLL_SECONDS)
         still = f"pid {pid} is still starting" if pid else "the hub is still starting"
         typer.echo(
             f"the hub did not come up within {timeout:g}s ({still}); "
             f"see {settings.state_dir / LOG_FILE}",
             err=True,
+        )
+        raise typer.Exit(1)
+
+    @staticmethod
+    def _exited(settings: HubSettings) -> NoReturn:
+        typer.echo(
+            f"the hub exited before it was ready; see {settings.state_dir / LOG_FILE}", err=True
         )
         raise typer.Exit(1)
 

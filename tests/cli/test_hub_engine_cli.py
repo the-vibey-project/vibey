@@ -538,6 +538,51 @@ def test_a_lock_held_before_its_pid_is_written_is_a_starting_hub(
     assert "the hub is still starting" in capsys.readouterr().err
 
 
+def test_a_starting_hub_with_no_pid_yet_that_dies_is_reported_as_gone_at_once(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """SP-ACP Task 11b, review N-3: `start` first sees a hub starting with no pid written; it
+    dies (its lock drops) while `start` waits. `start` says so at once, never "still starting"
+    after the whole timeout."""
+    command, processes, store, clock = _setup(tmp_path)
+    processes.live.add(77)
+    store.record_serving(ServingRecord("127.0.0.1", 8765, 77))
+    processes.locked = 0
+
+    def dies() -> None:
+        processes.locked = None
+
+    clock.on_sleep.append(dies)
+    assert _exit(lambda: command.start(15)) == 1
+    assert clock.now < 1  # one poll, not the whole timeout
+    assert processes.spawned == []
+    err = capsys.readouterr().err
+    assert "exited before it was ready" in err and "still starting" not in err
+
+
+def test_a_starting_hub_that_writes_its_pid_is_then_watched_by_that_pid(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """Once the starting hub's pid is written, `start` follows that process: when it dies,
+    `start` says the hub exited, rather than waiting out the timeout."""
+    command, processes, store, clock = _setup(tmp_path)
+    processes.live.add(77)
+    store.record_serving(ServingRecord("127.0.0.1", 8765, 77))
+    processes.locked = 0
+    steps = iter([lambda: processes.live.add(4242), lambda: processes.live.discard(4242)])
+
+    def writes_then_dies() -> None:
+        step = next(steps, None)
+        if step is not None:
+            step()
+        processes.locked = 4242
+
+    clock.on_sleep.append(writes_then_dies)
+    assert _exit(lambda: command.start(15)) == 1
+    assert clock.now < 1
+    assert "exited before it was ready" in capsys.readouterr().err
+
+
 def test_while_start_waits_a_live_record_of_another_pid_is_never_its_hub(
     tmp_path: Path, capsys: pytest.CaptureFixture[str]
 ) -> None:

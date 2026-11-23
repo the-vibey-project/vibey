@@ -10,6 +10,8 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, Protocol, runtime_checkable
 
 if TYPE_CHECKING:
+    import socket
+
     from fastapi import FastAPI
 
     from vibey.infrastructure.hub.tls import HubTls
@@ -17,10 +19,18 @@ if TYPE_CHECKING:
 
 @runtime_checkable
 class HubServerInterface(Protocol):
-    """Serves an ASGI app on one address until stopped."""
+    """Serves an ASGI app on one address until stopped.
 
-    async def serve(self, app: FastAPI, *, host: str, port: int, tls: HubTls | None = None) -> None:
-        """Returns when the server stops."""
+    The address is bound first, on its own, so the hub can write its record only once the port
+    is its own (SP-ACP Task 11b): a record never names a port another process holds."""
+
+    def bind(self, host: str, port: int) -> socket.socket:
+        """A socket bound to `host:port` and already listening (port 0: one the system picks).
+        Raises `OSError` when the address cannot be had; nothing is left open then."""
+        ...
+
+    async def serve(self, app: FastAPI, *, sock: socket.socket, tls: HubTls | None = None) -> None:
+        """Serves on `sock`, which `bind` returned; returns when the server stops."""
         ...
 
 

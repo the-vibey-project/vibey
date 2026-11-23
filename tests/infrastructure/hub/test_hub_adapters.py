@@ -331,15 +331,83 @@ async def test_the_server_runs_uvicorn_without_trusting_proxies(
 ) -> None:
     seen: dict[str, Any] = {}
 
-    async def serve(self: uvicorn.Server) -> None:
+    async def serve(self: uvicorn.Server, sockets: list[socket.socket] | None = None) -> None:
         seen["config"] = self.config
 
     monkeypatch.setattr(uvicorn.Server, "serve", serve)
     app = FastAPI()
-    await UvicornServer().serve(app, host="127.0.0.1", port=9999)
+    with UvicornServer().bind("127.0.0.1", 0) as sock:
+        await UvicornServer().serve(app, sock=sock)
     config = seen["config"]
-    assert (config.host, config.port, config.proxy_headers) == ("127.0.0.1", 9999, False)
+    assert config.proxy_headers is False
     assert config.server_header is False and config.app is app
+
+
+async def test_the_server_serves_on_the_socket_it_was_handed(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """uvicorn never binds an address of its own: it is handed the socket the hub bound before
+    it wrote its record (SP-ACP Task 11b, review S-1)."""
+    handed: list[Any] = []
+
+    async def serve(self: uvicorn.Server, sockets: list[socket.socket] | None = None) -> None:
+        handed.append(sockets)
+
+    monkeypatch.setattr(uvicorn.Server, "serve", serve)
+    with UvicornServer().bind("127.0.0.1", 0) as sock:
+        await UvicornServer().serve(FastAPI(), sock=sock)
+    assert handed == [[sock]]
+
+
+def test_bind_listens_on_loopback_at_once_and_on_the_port_the_system_picked() -> None:
+    """A real bind on port 0: the socket is the port's owner and accepts a connection before
+    any server runs, so a record written after it names a port the hub already holds."""
+    with UvicornServer().bind("127.0.0.1", 0) as sock:
+        host, port = sock.getsockname()[:2]
+        assert host == "127.0.0.1" and port > 0
+        with socket.create_connection(("127.0.0.1", port), timeout=5):
+            pass  # queued by the kernel: the socket listens
+        # The port is the hub's: nobody else can bind it while the socket is open.
+        with pytest.raises(OSError), UvicornServer().bind("127.0.0.1", port):
+            pass
+
+
+def test_bind_refuses_an_address_it_cannot_have_and_leaves_nothing_open(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    made: list[socket.socket] = []
+    real = socket.socket
+
+    def tracked(*args: Any, **kwargs: Any) -> socket.socket:
+        made.append(real(*args, **kwargs))
+        return made[-1]
+
+    monkeypatch.setattr(socket, "socket", tracked)
+    with pytest.raises(OSError):
+        UvicornServer().bind("192.0.2.1", 0)  # TEST-NET-1: never this computer's
+    assert made and all(sock.fileno() == -1 for sock in made)
+
+
+def test_an_ipv6_literal_is_bound_as_ipv6(monkeypatch: pytest.MonkeyPatch) -> None:
+    families: list[int] = []
+
+    class Socket:
+        def __init__(self, family: int, kind: int) -> None:
+            families.append(family)
+
+        def setsockopt(self, *args: object) -> None:
+            return None
+
+        def bind(self, address: object) -> None:
+            raise OSError("no IPv6 here")
+
+        def close(self) -> None:
+            return None
+
+    monkeypatch.setattr(socket, "socket", Socket)
+    with pytest.raises(OSError):
+        UvicornServer().bind("::1", 0)
+    assert families == [socket.AF_INET6]
 
 
 def test_this_computers_names_include_its_mdns_name_and_addresses(

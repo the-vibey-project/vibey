@@ -31,10 +31,9 @@ Mirrors `cli/hub_pair.py::HubPairCommand._call`; what it does, differences from 
    plain http a dead hub's port may since have been bound by another account. A record whose
    lock nobody holds, or another process holds, is no hub: the agent token is not read and
    nothing is sent (SP-ACP Task 11b, review 1 S-5); `call` runs the starter as for no record at
-   all. The lock proves the process the record names is alive and is the hub, not that it
-   already listens on the port: a hub writes its record a moment before it binds, so a call in
-   the milliseconds before a failed bind clears the record could reach an account that bound the
-   port first (binding first is parked, SP-ACP Task 11b-ii).
+   all. The lock proves the process the record names is alive and is the hub; the port is that
+   hub's too, because a hub binds and listens on its port before it writes the record, and one
+   that cannot bind writes none (SP-ACP Task 11b-ii, review S-1).
 """
 
 from __future__ import annotations

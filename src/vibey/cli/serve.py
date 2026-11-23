@@ -21,6 +21,7 @@ presenters, the TUI's dashboard read and the infrastructure together.
 import asyncio
 import json
 import os
+import socket
 import time
 from collections.abc import Awaitable, Callable, Mapping, Sequence
 from contextlib import AbstractAsyncContextManager
@@ -451,6 +452,31 @@ class ServeCommand:
         acp: AcpSettings,
         web: WebToolSettings,
     ) -> None:
+        # The port first, before anything opens and before the record names it: a record is
+        # only ever written for a port this hub already holds (SP-ACP Task 11b, review S-1).
+        try:
+            sock = self._server.bind(bound, listen)
+        except OSError as exc:
+            typer.echo(
+                f"could not listen on {self._shown(bound)}:{listen}: {exc.strerror or exc}",
+                err=True,
+            )
+            raise typer.Exit(1) from exc
+        try:
+            await self._serve_on(settings, bound, sock, acp, web)
+        finally:
+            sock.close()
+
+    async def _serve_on(
+        self,
+        settings: HubSettings,
+        bound: str,
+        sock: socket.socket,
+        acp: AcpSettings,
+        web: WebToolSettings,
+    ) -> None:
+        # The port the socket holds: the one asked for, or the system's pick for port 0.
+        listen = int(sock.getsockname()[1])
         store = LocalTokenStore(settings.state_dir)
         try:
             token = store.token()
@@ -527,12 +553,13 @@ class ServeCommand:
             typer.echo(f"host token: {settings.state_dir / 'token'} (owner-only)")
             if tls is not None:
                 typer.echo(f"certificate fingerprint (sha256): {tls.fingerprint}")
+            # Written only now that the socket listens: the port it names is this hub's.
             store.record_serving(
                 ServingRecord(host=bound, port=listen, pid=os.getpid(), tls=tls is not None)
             )
             advert = await self._advertise(names, listen, tls)
             try:
-                await self._server.serve(app, host=bound, port=listen, tls=tls)
+                await self._server.serve(app, sock=sock, tls=tls)
             finally:
                 store.clear_serving(os.getpid())
                 if advert is not None:
