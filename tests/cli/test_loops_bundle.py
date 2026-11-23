@@ -662,3 +662,114 @@ def test_discarding_touches_only_run_folders_inside_the_snapshots(tmp_path: Path
     LoopsBundleCommands._discard(snapshot, snapshots)
     assert outside.is_dir() and snapshots.is_dir()
     assert not (snapshots / "run-1").exists()
+
+
+# -- review 1 -----------------------------------------------------------------------------------
+
+
+@pytest.mark.parametrize(
+    ("args", "reason"),
+    [
+        (["acme", "git://example.test/acme.git"], "is not a source vibey fetches"),
+        (["acme", "ssh://-oProxyCommand=x@host/p"], "plain user"),
+        (["acme", "ssh://u%2d@host/p"], "plain user"),
+    ],
+)
+def test_marketplace_add_refuses_plaintext_git_and_an_option_shaped_user(
+    cli: Paths, args: list[str], reason: str
+) -> None:
+    code, out = _run("marketplace", "add", *args)
+    assert code == 2 and reason in out
+    assert not cli.config.exists()
+
+
+@pytest.mark.parametrize("name", ["VIBEY_HUB_TOKEN", "VIBEY_BRAVE_API_KEY", "GITHUB_TOKEN"])
+def test_mcp_add_refuses_to_hand_a_server_a_secret(cli: Paths, name: str) -> None:
+    code, out = _run("mcp", "add", "files", "--local", "--env-allow", name, "--", "srv")
+    assert code == 2 and "carries a secret" in out
+    assert not cli.config.exists()
+
+
+def test_success_lines_show_the_persons_text_as_one_safe_line(tmp_path: Path) -> None:
+    echoed: list[str] = []
+    commands = _commands(tmp_path, echoed=echoed)
+    source = "https://example.test/acme‮.git"
+    assert commands.marketplace_add("acme", source, None) == 0
+    assert commands.marketplace_update("acme") == 0
+    assert all("‮" not in line for line in echoed)
+    assert any(line.startswith("acme locked sha256:") for line in echoed)
+
+
+def test_a_bare_update_reports_each_marketplace_and_goes_on_after_a_failure(
+    tmp_path: Path,
+) -> None:
+    class FailingFor(FakeFetcher):
+        def fetch(self, source: MarketplaceSource, ref: str | None, into: Path) -> FetchResult:
+            if "first" in source.text:
+                raise PermissionError(13, "Permission denied", str(into))
+            return super().fetch(source, ref, into)
+
+    echoed: list[str] = []
+    commands = _commands(tmp_path, fetcher=FailingFor(), echoed=echoed)
+    commands.marketplace_add("first", "https://example.test/first.git", None)
+    commands.marketplace_add("second", "https://example.test/second.git", None)
+    assert commands.marketplace_update(None) == 1
+    text = "\n".join(echoed)
+    assert "first not updated: first cannot be updated: [Errno 13] Permission denied" in text
+    assert "second locked sha256:" in text and "vibey locked sha256:" in text
+    names = [
+        entry.marketplace for entry in CapabilityLock().read(Paths(tmp_path).store / "lock.json")
+    ]
+    assert sorted(names) == ["second", "vibey"]
+
+
+def test_a_change_holds_the_lock_beside_vibey_toml_while_it_writes(tmp_path: Path) -> None:
+    import fcntl
+
+    paths = Paths(tmp_path)
+    sidecar = paths.config.with_name(".vibey.toml.flock")
+    held: list[bool] = []
+
+    class Checking(TomlTrustedTableWriter):
+        def write_table(self, path: Path, table: str, values: object) -> None:  # type: ignore[override]
+            descriptor = os.open(sidecar, os.O_RDWR)
+            try:
+                fcntl.flock(descriptor, fcntl.LOCK_EX | fcntl.LOCK_NB)
+                held.append(False)
+            except BlockingIOError:
+                held.append(True)
+            finally:
+                os.close(descriptor)
+            super().write_table(path, table, values)  # type: ignore[arg-type]
+
+    commands = _commands(tmp_path)
+    commands._writer = Checking()  # noqa: SLF001 - the one seam this test swaps
+    assert commands.plugin_remove("currency-research") == 0
+    assert held == [True]
+
+
+def test_a_change_while_another_holds_the_lock_waits_then_exits_1(tmp_path: Path) -> None:
+    from vibey_runners.common.capabilities.sidecar_lock import SidecarLock
+
+    paths = Paths(tmp_path)
+    now = [0.0]
+
+    def sleep(seconds: float) -> None:
+        now[0] += seconds
+
+    echoed: list[str] = []
+    commands = _commands(tmp_path, echoed=echoed)
+    commands._config_lock = SidecarLock(clock=lambda: now[0], sleep=sleep, timeout_seconds=1.0)  # noqa: SLF001
+    with SidecarLock().held(paths.config):
+        assert commands.plugin_remove("currency-research") == 1
+    assert "being changed by another vibey" in echoed[-1]
+    assert not paths.config.exists()
+
+
+def test_a_lock_beside_vibey_toml_that_cannot_be_made_is_exit_78(tmp_path: Path) -> None:
+    paths = Paths(tmp_path)
+    paths.config.parent.mkdir(parents=True)
+    paths.config.with_name(".vibey.toml.flock").symlink_to(tmp_path / "elsewhere")
+    echoed: list[str] = []
+    assert _commands(tmp_path, echoed=echoed).plugin_remove("currency-research") == 78
+    assert "cannot be locked for a change" in echoed[-1]

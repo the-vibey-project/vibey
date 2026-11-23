@@ -57,6 +57,9 @@ from vibey_runners.common.capabilities.interfaces.resolver_interface import (
     CapabilityResolverInterface,
 )
 from vibey_runners.common.capabilities.interfaces.safe_text_interface import SafeTextInterface
+from vibey_runners.common.capabilities.interfaces.sidecar_lock_interface import (
+    SidecarLockInterface,
+)
 from vibey_runners.common.capabilities.lock_entry import LockEntry
 from vibey_runners.common.capabilities.lock_error import LockError
 from vibey_runners.common.capabilities.marketplace_spec import MarketplaceSpec
@@ -72,6 +75,7 @@ from vibey.application.interfaces.trusted_table_reader_interface import (
 from vibey.bootstrap import (
     acp_user_config,
     loops_bundle_settings,
+    loops_config_lock,
     loops_marketplace_store,
     loops_resolver,
     loops_shipped_source,
@@ -136,6 +140,7 @@ class LoopsBundleCommands:
             loops_resolver
         ),
         pruner: SnapshotPrunerInterface | None = None,
+        config_lock: SidecarLockInterface | None = None,
         shipped_source: Callable[[], str] = loops_shipped_source,
         rule: MarketplaceSourceRuleInterface = MARKETPLACE_SOURCE_RULE,
         text: SafeTextInterface | None = None,
@@ -148,6 +153,7 @@ class LoopsBundleCommands:
         self._store = store
         self._resolver = resolver
         self._pruner = pruner or loops_snapshot_pruner()
+        self._config_lock = config_lock or loops_config_lock()
         self._shipped_source = shipped_source
         self._rule = rule
         self._text = text or SafeText()
@@ -170,8 +176,10 @@ class LoopsBundleCommands:
                 entry["ref"] = ref
             raw["marketplaces"] = [*self._rows(raw, "marketplaces"), entry]
             return (
-                f"added the marketplace {name} ({source}); nothing is fetched until "
-                f"`vibey loops marketplace update {name}`",
+                self._clean(
+                    f"added the marketplace {name} ({source}); nothing is fetched until "
+                    f"`vibey loops marketplace update {name}`"
+                ),
                 True,
             )
 
@@ -213,18 +221,18 @@ class LoopsBundleCommands:
             entry = self._resolver(store).lock_shipped(store.shipped_root())
         except (CapabilityResolutionError, OSError) as exc:
             raise _Stop(EXIT_FAILED, f"vibey not updated: {self._clean(exc)}") from exc
-        self._echo(f"vibey locked {entry.digest} ({entry.source})")
+        self._echo(self._clean(f"vibey locked {entry.digest} ({entry.source})"))
 
     def _update_declared(self, store: MarketplaceStoreInterface, spec: MarketplaceSpec) -> None:
         try:
             update = store.update(spec)
         except MarketplaceSourceError as exc:
             raise _Stop(EXIT_USAGE, f"{spec.name} not updated: {exc}") from exc
-        except MarketplaceFetchError as exc:
+        except (MarketplaceFetchError, OSError) as exc:
             raise _Stop(EXIT_FAILED, f"{spec.name} not updated: {self._clean(exc)}") from exc
         commit = update.fetched.commit
         at = f" at commit {commit}" if commit else ""
-        self._echo(f"{spec.name} locked {update.entry.digest}{at} from {spec.source}")
+        self._echo(self._clean(f"{spec.name} locked {update.entry.digest}{at} from {spec.source}"))
         for path in update.fetched.left_out:
             self._echo(f"{spec.name} left out {self._clean(path)} (a symlink is never copied)")
 
@@ -459,8 +467,19 @@ class LoopsBundleCommands:
 
     def _change(self, change: Callable[[dict[str, object]], tuple[str, bool]]) -> int:
         """Reads the person's `[loops]` as written, checks it, applies `change`, checks the
-        result with the bundle's own rule and writes it with the one table writer."""
+        result with the bundle's own rule and writes it with the one table writer -- all while it
+        holds a file lock beside the file (`SidecarLock`, a bounded wait), so two commands at
+        once cannot lose a change."""
         path = self._user_config()
+        try:
+            with self._config_lock.held(path):
+                return self._changed(path, change)
+        except LockError as exc:
+            raise _Stop(EXIT_FAILED, f"vibey loops: {exc}") from exc
+        except OSError as exc:  # the lock beside the file cannot be made
+            raise ConfigError(str(path), f"cannot be locked for a change: {exc}") from exc
+
+    def _changed(self, path: Path, change: Callable[[dict[str, object]], tuple[str, bool]]) -> int:
         raw = dict(self._reader.read_table(path, TABLE) or {})
         try:
             BundleSpec.from_mapping(raw)
@@ -535,9 +554,7 @@ def marketplace_add_cmd(
     name: Annotated[str, typer.Argument(help="A plain name: letters, digits, '.', '_', '-'.")],
     source: Annotated[
         str,
-        typer.Argument(
-            help="An https://, ssh:// or git:// URL, user@host:path, or an absolute folder."
-        ),
+        typer.Argument(help="An https:// or ssh:// URL, user@host:path, or an absolute folder."),
     ],
     ref: Annotated[
         str | None, typer.Option("--ref", help="The branch, tag or commit to pin (git only).")

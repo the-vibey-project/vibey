@@ -629,3 +629,6 @@ def test_the_loops_table_seams_are_the_toml_reader_and_writer() -> None:
     assert isinstance(bootstrap.loops_table_reader(), TomlTrustedTableReader)
     assert isinstance(bootstrap.loops_table_writer(), TomlTrustedTableWriter)
     assert isinstance(bootstrap.loops_snapshot_pruner(), SnapshotPruner)
+    from vibey_runners.common.capabilities.sidecar_lock import SidecarLock
+
+    assert isinstance(bootstrap.loops_config_lock(), SidecarLock)

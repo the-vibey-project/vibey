@@ -20,7 +20,11 @@ from platformdirs import user_cache_path, user_config_path
 from vibey_runners.common.capabilities.interfaces.resolver_interface import (
     CapabilityResolverInterface,
 )
+from vibey_runners.common.capabilities.interfaces.sidecar_lock_interface import (
+    SidecarLockInterface,
+)
 from vibey_runners.common.capabilities.resolver import CapabilityResolver
+from vibey_runners.common.capabilities.sidecar_lock import SidecarLock
 from vibey_skills import marketplace_root
 
 from vibey import __version__
@@ -1593,6 +1597,12 @@ def loops_resolver(store: MarketplaceStoreInterface) -> CapabilityResolverInterf
     return CapabilityResolver(
         store.lock_path, store.snapshots, shipped_source=loops_shipped_source()
     )
+
+
+def loops_config_lock() -> SidecarLockInterface:
+    """The file lock `vibey loops` holds beside the person's `vibey.toml` while it reads, changes
+    and writes `[loops]` (`.vibey.toml.flock`, a bounded wait)."""
+    return SidecarLock()
 
 
 def loops_snapshot_pruner() -> SnapshotPruner:
