@@ -13,6 +13,7 @@ it undeclared they are never consulted, and only loopback names are answered.
 from __future__ import annotations
 
 import socket
+from collections.abc import Sequence
 from typing import TYPE_CHECKING, Final
 
 if TYPE_CHECKING:
@@ -28,27 +29,42 @@ class UvicornServer:
     """Serves an app on one address until stopped.
 
     The address is bound by `bind`, before the hub writes its record, and uvicorn is handed
-    that socket: it never binds one of its own. So the record never names a port another
+    those sockets: it never binds one of its own. So the record never names a port another
     process holds, even for the moment between the record and the bind (SP-ACP Task 11b).
 
     Declared by `interfaces/server_interface.py::HubServerInterface`."""
 
-    def bind(self, host: str, port: int) -> socket.socket:
-        # As uvicorn would bind it: IPv6 for a literal with a colon, the address reusable
-        # after an earlier hub's connections linger in TIME_WAIT. Never inheritable (Python's
-        # default), so a child the hub starts does not keep the port.
-        family = socket.AF_INET6 if ":" in host else socket.AF_INET
-        sock = socket.socket(family, socket.SOCK_STREAM)
+    def bind(self, host: str, port: int) -> list[socket.socket]:
+        # As uvicorn's own bind did (asyncio's `create_server`): every address the name
+        # resolves to -- `localhost` is 127.0.0.1 and ::1 -- each IPv6 one IPv6-only so the two
+        # never collide, the address reusable after an earlier hub's connections linger in
+        # TIME_WAIT. With port 0, every address after the first takes the first one's port, so
+        # the record names one port they all hold. Never inheritable (Python's default), so a
+        # child the hub starts does not keep the port. Any failure closes what was bound.
+        answers = socket.getaddrinfo(host, port, type=socket.SOCK_STREAM, flags=socket.AI_PASSIVE)
+        addresses = list(dict.fromkeys((family, sockaddr) for family, _, _, _, sockaddr in answers))
+        if not addresses:
+            raise OSError(f"{host} resolves to no address")
+        bound: list[socket.socket] = []
         try:
-            sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-            sock.bind((host, port))
-            sock.listen(BACKLOG)
+            for family, sockaddr in addresses:
+                sock = socket.socket(family, socket.SOCK_STREAM)
+                bound.append(sock)
+                sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+                if family == socket.AF_INET6:
+                    sock.setsockopt(socket.IPPROTO_IPV6, socket.IPV6_V6ONLY, 1)
+                taken = bound[0].getsockname()[1] if len(bound) > 1 else sockaddr[1]
+                sock.bind((sockaddr[0], taken, *sockaddr[2:]))
+                sock.listen(BACKLOG)
         except BaseException:
-            sock.close()
+            for sock in bound:
+                sock.close()
             raise
-        return sock
+        return bound
 
-    async def serve(self, app: FastAPI, *, sock: socket.socket, tls: HubTls | None = None) -> None:
+    async def serve(
+        self, app: FastAPI, *, sockets: Sequence[socket.socket], tls: HubTls | None = None
+    ) -> None:
         # Imported here, not at module level: uvicorn ships in the optional `hub` extra, and
         # `vibey serve` imports this module, so a top-level import would break every `vibey`
         # command on an install without the extra (the container image is one).
@@ -66,7 +82,7 @@ class UvicornServer:
             ssl_certfile=str(tls.cert_path) if tls is not None else None,
             ssl_keyfile=str(tls.key_path) if tls is not None else None,
         )
-        await uvicorn.Server(config).serve(sockets=[sock])
+        await uvicorn.Server(config).serve(sockets=list(sockets))
 
 
 class LocalNames:

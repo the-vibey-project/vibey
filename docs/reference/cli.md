@@ -274,9 +274,11 @@ holds, or another process holds, is no hub -- the agent token is not read, nothi
 a tool call starts the hub as when there is no record at all.
 
 The lock proves that the process the record names is alive and is the hub, and the record's
-port is that hub's own: `vibey serve` binds and listens on the port before it writes the
-record, and a hub that cannot bind it (another account holds it, say) writes no record at all
-and exits 1.
+port is that hub's own for as long as the record exists: `vibey serve` binds and listens on the
+port before it writes the record and keeps it until the record is cleared, stopping included,
+and a hub that cannot bind it (another account holds it, say) writes no record at all and
+exits 1. A host name binds every address it resolves to, on that one port (`localhost`:
+127.0.0.1 and ::1).
 
 ### Web tools: `vibey_search` and `vibey_fetch`
 
@@ -917,8 +919,9 @@ process id -1, 0 or 1, or a port outside 1 to 65535, is unreadable and never act
 
 The lock that `pair`, `devices`, `revoke`, `vibey mcp` and `vibey acp` check before sending a
 token proves that the process the record names is alive and is the hub. The recorded port is
-that hub's own: `vibey serve` binds and listens on it before it writes the record, and a hub
-that cannot bind it writes no record and exits 1 ("could not listen on ...").
+that hub's own for as long as the record exists: `vibey serve` binds and listens on it before
+it writes the record and lets it go only after clearing the record, and a hub that cannot bind
+it writes no record and exits 1 ("could not listen on ...").
 
 | Command | What it does |
 |---|---|

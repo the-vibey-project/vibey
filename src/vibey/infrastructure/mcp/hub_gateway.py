@@ -32,8 +32,9 @@ Mirrors `cli/hub_pair.py::HubPairCommand._call`; what it does, differences from 
    lock nobody holds, or another process holds, is no hub: the agent token is not read and
    nothing is sent (SP-ACP Task 11b, review 1 S-5); `call` runs the starter as for no record at
    all. The lock proves the process the record names is alive and is the hub; the port is that
-   hub's too, because a hub binds and listens on its port before it writes the record, and one
-   that cannot bind writes none (SP-ACP Task 11b-ii, review S-1).
+   hub's too while the record exists: a hub binds and listens on its port before it writes the
+   record and lets it go only after clearing it (uvicorn gets duplicates), and one that cannot
+   bind writes none (SP-ACP Task 11b-ii, reviews S-1 and M-2).
 """
 
 from __future__ import annotations

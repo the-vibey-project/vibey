@@ -336,78 +336,136 @@ async def test_the_server_runs_uvicorn_without_trusting_proxies(
 
     monkeypatch.setattr(uvicorn.Server, "serve", serve)
     app = FastAPI()
-    with UvicornServer().bind("127.0.0.1", 0) as sock:
-        await UvicornServer().serve(app, sock=sock)
+    sockets = UvicornServer().bind("127.0.0.1", 0)
+    try:
+        await UvicornServer().serve(app, sockets=sockets)
+    finally:
+        for sock in sockets:
+            sock.close()
     config = seen["config"]
     assert config.proxy_headers is False
     assert config.server_header is False and config.app is app
 
 
-async def test_the_server_serves_on_the_socket_it_was_handed(
+async def test_uvicorn_serves_on_the_sockets_it_is_handed_and_binds_none(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """uvicorn never binds an address of its own: it is handed the socket the hub bound before
-    it wrote its record (SP-ACP Task 11b, review S-1)."""
-    handed: list[Any] = []
+    handed: list[list[socket.socket] | None] = []
 
     async def serve(self: uvicorn.Server, sockets: list[socket.socket] | None = None) -> None:
         handed.append(sockets)
 
     monkeypatch.setattr(uvicorn.Server, "serve", serve)
-    with UvicornServer().bind("127.0.0.1", 0) as sock:
-        await UvicornServer().serve(FastAPI(), sock=sock)
-    assert handed == [[sock]]
+    sockets = UvicornServer().bind("127.0.0.1", 0)
+    try:
+        await UvicornServer().serve(FastAPI(), sockets=sockets)
+    finally:
+        for sock in sockets:
+            sock.close()
+    assert handed == [sockets]
 
 
 def test_bind_listens_on_loopback_at_once_and_on_the_port_the_system_picked() -> None:
     """A real bind on port 0: the socket is the port's owner and accepts a connection before
     any server runs, so a record written after it names a port the hub already holds."""
-    with UvicornServer().bind("127.0.0.1", 0) as sock:
+    (sock,) = UvicornServer().bind("127.0.0.1", 0)
+    with sock:
         host, port = sock.getsockname()[:2]
         assert host == "127.0.0.1" and port > 0
         with socket.create_connection(("127.0.0.1", port), timeout=5):
             pass  # queued by the kernel: the socket listens
-        # The port is the hub's: nobody else can bind it while the socket is open.
-        with pytest.raises(OSError), UvicornServer().bind("127.0.0.1", port):
-            pass
+        with pytest.raises(OSError):
+            UvicornServer().bind("127.0.0.1", port)  # the port is the hub's
 
 
-def test_bind_refuses_an_address_it_cannot_have_and_leaves_nothing_open(
+def test_a_name_binds_every_address_it_resolves_to_on_one_port() -> None:
+    """Review 1 I-5: as uvicorn's own bind did, a name binds each address it resolves to
+    (`localhost`: 127.0.0.1, and ::1 where it resolves); with port 0 they share the port the
+    first was given, so the record names one port they all hold."""
+    sockets = UvicornServer().bind("localhost", 0)
+    try:
+        ports = {sock.getsockname()[1] for sock in sockets}
+        assert len(ports) == 1 and ports != {0}
+        families = {sock.family for sock in sockets}
+        assert socket.AF_INET in families
+    finally:
+        for sock in sockets:
+            sock.close()
+
+
+class _FakeSocket:
+    made: "list[_FakeSocket]" = []
+    refuse: set[str] = set()
+
+    def __init__(self, family: int, kind: int, proto: int = 0) -> None:
+        self.family, self.options, self.address, self.closed = family, [], None, False
+        _FakeSocket.made.append(self)
+
+    def setsockopt(self, *option: object) -> None:
+        self.options.append(option)
+
+    def bind(self, address: tuple[Any, ...]) -> None:
+        if address[0] in _FakeSocket.refuse:
+            raise OSError("cannot assign requested address")
+        self.address = (address[0], address[1] or 5555, *address[2:])
+
+    def listen(self, backlog: int) -> None:
+        return None
+
+    def getsockname(self) -> tuple[Any, ...]:
+        assert self.address is not None
+        return self.address
+
+    def close(self) -> None:
+        self.closed = True
+
+
+def _resolving(monkeypatch: pytest.MonkeyPatch, *addresses: tuple[int, tuple[Any, ...]]) -> None:
+    _FakeSocket.made, _FakeSocket.refuse = [], set()
+    monkeypatch.setattr(socket, "socket", _FakeSocket)
+    monkeypatch.setattr(
+        socket,
+        "getaddrinfo",
+        lambda *a, **k: [
+            (family, socket.SOCK_STREAM, 6, "", sockaddr) for family, sockaddr in addresses
+        ],
+    )
+
+
+def test_every_address_after_the_first_takes_the_first_ones_port(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    made: list[socket.socket] = []
-    real = socket.socket
+    _resolving(
+        monkeypatch,
+        (socket.AF_INET6, ("::1", 0, 0, 0)),
+        (socket.AF_INET, ("127.0.0.1", 0)),
+        (socket.AF_INET, ("127.0.0.1", 0)),  # a duplicate answer is bound once
+    )
+    sockets = UvicornServer().bind("localhost", 0)
+    assert [(s.family, s.address) for s in sockets] == [
+        (socket.AF_INET6, ("::1", 5555, 0, 0)),
+        (socket.AF_INET, ("127.0.0.1", 5555)),
+    ]
+    # An IPv6 socket is IPv6 only, so it never collides with the IPv4 one on the same port.
+    assert (socket.IPPROTO_IPV6, socket.IPV6_V6ONLY, 1) in sockets[0].options
 
-    def tracked(*args: Any, **kwargs: Any) -> socket.socket:
-        made.append(real(*args, **kwargs))
-        return made[-1]
 
-    monkeypatch.setattr(socket, "socket", tracked)
+def test_an_address_that_cannot_be_bound_leaves_nothing_open(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    _resolving(
+        monkeypatch, (socket.AF_INET, ("127.0.0.1", 0)), (socket.AF_INET6, ("fe80::1", 0, 0, 2))
+    )
+    _FakeSocket.refuse = {"fe80::1"}
     with pytest.raises(OSError):
-        UvicornServer().bind("192.0.2.1", 0)  # TEST-NET-1: never this computer's
-    assert made and all(sock.fileno() == -1 for sock in made)
+        UvicornServer().bind("box.local", 0)
+    assert _FakeSocket.made and all(sock.closed for sock in _FakeSocket.made)
 
 
-def test_an_ipv6_literal_is_bound_as_ipv6(monkeypatch: pytest.MonkeyPatch) -> None:
-    families: list[int] = []
-
-    class Socket:
-        def __init__(self, family: int, kind: int) -> None:
-            families.append(family)
-
-        def setsockopt(self, *args: object) -> None:
-            return None
-
-        def bind(self, address: object) -> None:
-            raise OSError("no IPv6 here")
-
-        def close(self) -> None:
-            return None
-
-    monkeypatch.setattr(socket, "socket", Socket)
-    with pytest.raises(OSError):
-        UvicornServer().bind("::1", 0)
-    assert families == [socket.AF_INET6]
+def test_a_name_that_resolves_to_nothing_is_refused(monkeypatch: pytest.MonkeyPatch) -> None:
+    _resolving(monkeypatch)
+    with pytest.raises(OSError, match="resolves to no address"):
+        UvicornServer().bind("nowhere.invalid", 0)
 
 
 def test_this_computers_names_include_its_mdns_name_and_addresses(

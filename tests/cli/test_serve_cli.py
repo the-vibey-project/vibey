@@ -58,6 +58,9 @@ class Bound:
     def close(self) -> None:
         self.closed = True
 
+    def dup(self) -> "Bound":
+        return Bound(*self.address)
+
 
 class Driven:
     """A server that serves nothing: it hands the built app to `drive`, then returns."""
@@ -69,12 +72,12 @@ class Driven:
         self.app: FastAPI | None = None
         self.sockets: list[Any] = []
 
-    def bind(self, host: str, port: int) -> Any:
+    def bind(self, host: str, port: int) -> list[Any]:
         self.sockets.append(Bound(host, port))
-        return self.sockets[-1]
+        return [self.sockets[-1]]
 
-    async def serve(self, app: FastAPI, *, sock: Any, tls: Any = None) -> None:
-        host, port = sock.getsockname()[:2]
+    async def serve(self, app: FastAPI, *, sockets: Any, tls: Any = None) -> None:
+        host, port = sockets[0].getsockname()[:2]
         self.bound, self.app, self.tls = (host, port), app, tls
         shown = f"[{host}]" if ":" in host else host
         transport = httpx.ASGITransport(app=app)
@@ -355,25 +358,26 @@ class Ordered(Driven):
         self._real = real
         self.recorded: list[ServingRecord | None] = []
 
-    def bind(self, host: str, port: int) -> Any:
+    def bind(self, host: str, port: int) -> list[Any]:
         assert self.state is not None
         self.recorded.append(LocalTokenStore(self.state).serving())
         if not self._real:
             return super().bind(host, port)
-        self.sockets.append(UvicornServer().bind(host, port))
-        return self.sockets[-1]
+        bound = UvicornServer().bind(host, port)
+        self.sockets.extend(bound)
+        return bound
 
-    async def serve(self, app: FastAPI, *, sock: Any, tls: Any = None) -> None:
+    async def serve(self, app: FastAPI, *, sockets: Any, tls: Any = None) -> None:
         assert self.state is not None
         record = LocalTokenStore(self.state).serving()
         self.recorded.append(record)
         if self._real:
             assert record is not None
             # The port the record names is the one this hub's socket listens on, now.
-            assert record.port == sock.getsockname()[1] != 0
+            assert record.port == sockets[0].getsockname()[1] != 0
             with socket.create_connection((record.host, record.port), timeout=5):
                 pass
-        await super().serve(app, sock=sock, tls=tls)
+        await super().serve(app, sockets=sockets, tls=tls)
 
 
 @pytest.mark.integration
@@ -398,6 +402,47 @@ def test_a_real_loopback_bind_on_port_0_is_the_port_the_record_names(tmp_path: P
     assert not (tmp_path / "state" / "serving.json").exists()
 
 
+def _held(port: int) -> bool:
+    """Whether something on this computer still holds `port` on loopback."""
+    try:
+        with socket.create_server(("127.0.0.1", port)):
+            return False
+    except OSError:
+        return True
+
+
+@pytest.mark.integration
+@pytest.mark.usefixtures("_an_empty_database")
+def test_the_record_is_cleared_before_the_hubs_port_is_let_go(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Review 1 M-2: uvicorn's shutdown closes the sockets it was handed first, then waits for
+    open connections. The hub keeps its own until `serving.json` is cleared, so the record never
+    names a port nobody holds: the port is held at the clear, and free only after it."""
+    held_at_clear: list[bool] = []
+    real_clear = LocalTokenStore.clear_serving
+
+    def clear(self: LocalTokenStore, pid: int) -> None:
+        held_at_clear.append(_held(port[0]))
+        real_clear(self, pid)
+
+    monkeypatch.setattr(LocalTokenStore, "clear_serving", clear)
+    port: list[int] = []
+
+    class Closing(Ordered):
+        async def serve(self, app: FastAPI, *, sockets: Any, tls: Any = None) -> None:
+            port.append(sockets[0].getsockname()[1])
+            for sock in sockets:
+                sock.close()  # as uvicorn's shutdown does, first
+            assert _held(port[0])  # the hub's own socket still holds it
+
+    asyncio.run(
+        _command(tmp_path, Closing(lambda *_: asyncio.sleep(0), real=True)).run(host=None, port=0)
+    )
+    assert held_at_clear == [True]
+    assert not _held(port[0])  # let go once the record was gone
+
+
 def test_a_port_that_cannot_be_bound_writes_no_record_and_opens_nothing(
     tmp_path: Path, capsys: pytest.CaptureFixture[str]
 ) -> None:
@@ -405,7 +450,7 @@ def test_a_port_that_cannot_be_bound_writes_no_record_and_opens_nothing(
         raise AssertionError("nothing may open")
 
     class Taken(Driven):
-        def bind(self, host: str, port: int) -> Any:
+        def bind(self, host: str, port: int) -> list[Any]:
             raise OSError(48, "Address already in use")
 
     server = Taken(lambda *_: asyncio.sleep(0))
