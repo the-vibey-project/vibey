@@ -93,3 +93,41 @@ def test_the_image_copies_both_manifests_and_asserts_the_lookup() -> None:
     ci = (REPO / ".github" / "workflows" / "ci.yml").read_text(encoding="utf-8")
     assert "Image contract - the shipped marketplace is found and carries every root plugin" in ci
     assert "loops_shipped_root" in ci
+
+
+def _image_probe() -> str:
+    """The Python the image contract step runs inside the built image, read from ci.yml."""
+    ci = (REPO / ".github" / "workflows" / "ci.yml").read_text(encoding="utf-8")
+    step = ci.split("Image contract - the shipped marketplace is found", 1)[1]
+    body = step.split("<<'PY'\n", 1)[1].split("\n          PY\n", 1)[0]
+    return "\n".join(line.removeprefix("          ") for line in body.splitlines())
+
+
+def test_the_image_probe_passes_on_this_checkout(
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    exec(compile(_image_probe(), "<image-probe>", "exec"), {"__name__": "__main__"})  # noqa: S102
+    assert capsys.readouterr().out.strip() == str(len(_plugins(REPO)))
+
+
+def test_the_image_probe_fails_when_a_listed_plugin_folder_is_absent(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """Fix review M1: an image whose manifest lists a plugin whose folder was not copied fails
+    the contract step, naming the plugin, even though the count matches."""
+    (tmp_path / ".claude-plugin").mkdir()
+    manifest = {
+        "name": "vibey",
+        "plugins": [
+            {"name": "present", "source": "./src/a/plugins/present"},
+            {"name": "dropped", "source": "./src/b/plugins/dropped"},
+        ],
+    }
+    (tmp_path / ".claude-plugin" / "marketplace.json").write_text(json.dumps(manifest))
+    (tmp_path / "src/a/plugins/present/.claude-plugin").mkdir(parents=True)
+    (tmp_path / "src/a/plugins/present/.claude-plugin/plugin.json").write_text("{}")
+    monkeypatch.setattr(bootstrap, "loops_shipped_root", lambda: tmp_path)
+    with pytest.raises(SystemExit) as exited:
+        exec(compile(_image_probe(), "<image-probe>", "exec"), {"__name__": "__main__"})  # noqa: S102
+    assert exited.value.code == 1
+    assert "plugin folders missing from the image: dropped" in capsys.readouterr().err
