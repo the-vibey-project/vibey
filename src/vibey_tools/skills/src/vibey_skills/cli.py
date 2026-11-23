@@ -8,7 +8,7 @@ Commands:
     list         show plugins, their skills, and trigger descriptions
     install      copy skill directories into ~/.claude/skills (or --dest)
     path         print the packaged plugins root
-    marketplace  print the packaged marketplace.json path, for /plugin marketplace add
+    marketplace  print the packaged marketplace folder, for /plugin marketplace add
 
 The console script is ``vibey-skills``. ``vibe-skills`` — the short alias from the
 ``vibe-engineering-skills`` era — is kept as a deprecated entry point that prints one
@@ -28,7 +28,7 @@ from . import (
     __version__,
     iter_skills,
     marketplace_manifest,
-    marketplace_manifest_path,
+    marketplace_root,
     plugins_root,
 )
 
@@ -223,7 +223,9 @@ def cmd_path(_args: argparse.Namespace) -> int:
 
 
 def cmd_marketplace(_args: argparse.Namespace) -> int:
-    print(marketplace_manifest_path())
+    # The folder that holds `.claude-plugin/`, the form `/plugin marketplace add` takes: plugin
+    # sources (`./plugins/<name>`) resolve against it, never against the manifest file's folder.
+    print(marketplace_root())
     return 0
 
 
@@ -334,7 +336,7 @@ def build_parser() -> argparse.ArgumentParser:
 
     p_market = sub.add_parser(
         "marketplace",
-        help="print the packaged marketplace.json path, for /plugin marketplace add",
+        help="print the packaged marketplace folder, for /plugin marketplace add",
     )
     p_market.set_defaults(func=cmd_marketplace)
 

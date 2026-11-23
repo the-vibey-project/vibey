@@ -80,7 +80,8 @@ ai-and-data  (0.2.0, ai, 4 skills)
 …
 ```
 
-`vibey-skills marketplace` prints the packaged manifest path for `/plugin marketplace add`;
+`vibey-skills marketplace` prints the packaged marketplace folder (the one holding
+`.claude-plugin/`) for `/plugin marketplace add <folder>`;
 `--dest`, `--link`, `--dry-run`, and `--force` are covered in the
 [Usage docs](https://github.com/the-vibey-project/vibey/blob/develop/src/vibey_tools/skills/docs/usage.md).
 

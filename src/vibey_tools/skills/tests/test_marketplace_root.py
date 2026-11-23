@@ -5,11 +5,14 @@ tests/meta/test_wheel_ships_default_marketplace.py."""
 
 from __future__ import annotations
 
+import contextlib
+import io
 import unittest
 from pathlib import Path
 from unittest.mock import patch
 
 import vibey_skills
+from vibey_skills.cli import main
 
 TENANT = Path(__file__).resolve().parents[1]
 
@@ -40,6 +43,19 @@ class MarketplaceRootTests(unittest.TestCase):
             self.assertRaisesRegex(FileNotFoundError, "installation looks incomplete"),
         ):
             vibey_skills.marketplace_root()
+
+
+class MarketplaceCommandTests(unittest.TestCase):
+    def test_the_marketplace_command_prints_the_folder_plugin_marketplace_add_takes(self) -> None:
+        """`/plugin marketplace add <path>` resolves `./plugins/<name>` against the folder that
+        holds `.claude-plugin/`, so the command prints that folder, not the manifest file."""
+        out = io.StringIO()
+        with contextlib.redirect_stdout(out):
+            code = main(["marketplace"])
+        self.assertEqual(code, 0)
+        printed = Path(out.getvalue().strip())
+        self.assertEqual(printed, vibey_skills.marketplace_root())
+        self.assertTrue((printed / ".claude-plugin" / "marketplace.json").is_file())
 
 
 if __name__ == "__main__":
