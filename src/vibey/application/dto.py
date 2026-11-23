@@ -745,3 +745,18 @@ class TrustedRunInputsSettings:
 
     settings: RunInputsSettings
     notices: tuple[str, ...] = ()
+
+
+@dataclass(frozen=True, slots=True)
+class RunInputs:
+    """One BUILD run's input value, written into its worktree before the engine starts.
+
+    ``prompt_section`` is appended to the run's prompt: the pasted texts and the attached files'
+    paths, fenced as data under a line saying it is not instructions (design Decision 3); ``""``
+    when the project has no inputs. ``attachments_dir`` (`.vibey/inputs/<run>/attachments/`)
+    holds each file input once under its name, and ``paste_file`` (`.vibey/inputs/<run>/
+    paste.md`) the pasted texts; each is None when there is nothing of its kind."""
+
+    prompt_section: str
+    attachments_dir: Path | None
+    paste_file: Path | None

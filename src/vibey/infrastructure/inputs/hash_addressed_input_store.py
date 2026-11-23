@@ -211,6 +211,8 @@ class HashAddressedInputStore:
             return None
         if kind not in INPUT_KINDS or not isinstance(name, str):
             return None
+        if RUN_INPUT_RULE.valid_name(name) is not None:
+            return None  # the index is a file a person can edit: a name is checked as it is read
         if not isinstance(size, int) or isinstance(size, bool) or size < 0:
             return None
         return RunInput(digest=digest, kind=kind, name=name, size=size)

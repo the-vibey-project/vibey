@@ -180,6 +180,9 @@ def test_listed_skips_a_torn_last_line_with_a_count_and_never_raises(tmp_path: P
         b'{"digest": "' + b"a" * 64 + b'", "kind": "file", "name": "a", "size": -1}\n',
         b'{"digest": "' + b"a" * 64 + b'", "kind": "file", "name": "a", "size": true}\n',
         b'{"digest": 7, "kind": "file", "name": "a", "size": 1}\n',
+        b'{"digest": "' + b"a" * 64 + b'", "kind": "file", "name": "../escape", "size": 1}\n',
+        b'{"digest": "' + b"a" * 64 + b'", "kind": "file", "name": "a/b", "size": 1}\n',
+        b'{"digest": "' + b"a" * 64 + b'", "kind": "file", "name": "..", "size": 1}\n',
     ],
 )
 def test_listed_skips_a_line_it_cannot_read_as_a_row(tmp_path: Path, line: bytes) -> None:

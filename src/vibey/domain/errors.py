@@ -124,10 +124,21 @@ class UnknownProject(VibeyError):
 
 
 class InputStoreError(VibeyError):
-    """A project's run input store could not be made, read or written: a folder that cannot
-    be made, a symlink or other non-regular file where the store keeps its own, an index line
+    """A project's run input store, or a run's inputs folder in its worktree, could not be
+    made, read or written: a folder that cannot be made, a symlink or other non-regular file
+    where vibey keeps its own (never followed), a platform with no `O_NOFOLLOW`, an index line
     too long to append in one write, a short write, or an object whose bytes no longer match
     its digest (SP-LOOPS Phase 3). Nothing was added."""
+
+
+class RunInputRefused(VibeyError):
+    """A run input vibey will not add: a kind that is not `paste` or `file`, a name that is not
+    one path segment, or more than the person's `[inputs]` limits allow (SP-LOOPS Phase 3).
+    Nothing was written."""
+
+    def __init__(self, reason: str) -> None:
+        super().__init__(reason)
+        self.reason = reason
 
 
 class UnknownLane(VibeyError, LookupError):

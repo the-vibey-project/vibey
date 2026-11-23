@@ -734,6 +734,13 @@ fix = "Start a project (or name an existing one's `project_id`), upgrade vibey i
 [[error]]
 code = "E0094"
 class = "vibey.domain.errors.InputStoreError"
-title = "A project's run input store cannot be made, read or written"
-cause = "The store under the project's `.vibey/inputs` folder could not be made or written (a folder that cannot be created, a full disk), something other than the store's own folder or file is where it keeps one (a symlink is refused, never followed), an index line is too long to append in one write, or a stored object's bytes no longer match its digest. Nothing was added."
+title = "A project's run inputs cannot be stored, read or written into a run"
+cause = "The store under the project's `.vibey/inputs` folder, or a BUILD run's `.vibey/inputs/<run>` folder in its worktree, could not be made or written (a folder that cannot be created, a full disk), something other than vibey's own folder or file is where it keeps one (a symlink is refused, never followed: a cloned repository can commit `.vibey` as one), the platform cannot open a file without following a symlink, an index line is too long to append in one write, or a stored object's bytes no longer match its digest. Nothing was added, and nothing was written outside the worktree."
 fix = "Check the path the message names: remove a symlink or stray file vibey did not put there, free space, or fix the folder's permissions, then add the input again. An object that no longer matches its digest was changed on disk; add that input again to store it afresh."
+
+[[error]]
+code = "E0095"
+class = "vibey.domain.errors.RunInputRefused"
+title = "vibey will not add this run input"
+cause = "A run input's kind is not `paste` or `file`, its name is not one path segment (empty, `.` or `..`, a `/`, `\\` or NUL, or more than 255 bytes), or adding it would pass a limit in the `[inputs]` table of your own vibey.toml: `max_item_bytes` for one input, `max_project_bytes` for all of a project's inputs together, `max_items` for how many. Nothing was written."
+fix = "Give the input a plain file name, make it smaller, or raise the limit the message names in the `[inputs]` table of your own vibey.toml (a project's own file is never heard on limits)."
