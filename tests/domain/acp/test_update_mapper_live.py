@@ -334,3 +334,36 @@ def test_a_ledger_summary_with_a_bare_url_is_defanged() -> None:
 def test_a_www_host_or_mailto_after_any_character_is_defanged(raw: str, shown: str) -> None:
     # GFM autolinks `www.` after `_`, `*`, `~`, `(` or a space, where `\b` does not hold.
     assert MAPPER.untrusted(raw, limit=400) == shown
+
+
+_BARE_DOMAIN = re.compile(
+    r"(?i)[\w-]+\.(?:[a-z]{2}|com|org|net|io|app|dev|[^\W\d_a-z]{2,})(?![\w-])"
+)
+"""A host with no scheme and no `www.` (`evil.com`, `a.b.co/x`), which a client that links
+"fuzzy" domains (linkify-it, VS Code's chat) turns into a link."""
+
+
+@pytest.mark.parametrize(
+    ("raw", "shown"),
+    [
+        ("open evil.com now", "open evil\\[.\\]com now"),
+        ("see docs.evil.co.uk/x?q=1", "see docs\\[.\\]evil\\[.\\]co\\[.\\]uk/x?q=1"),
+        ("(EVIL.COM)", "\\(EVIL\\[.\\]COM\\)"),
+        ("пример.рф", "пример\\[.\\]рф"),
+        ("x_y.app", "x\\_y\\[.\\]app"),
+        ("ops@evil.io", "ops\\[@\\]evil\\[.\\]io"),
+        ("https://evil.com/x", "https\\[:\\]//evil\\[.\\]com/x"),
+        ("edited README.md", "edited README\\[.\\]md"),  # .md is a country's: linked too
+        ("version 1.2.3, e.g. 3.5x", "version 1.2.3, e.g. 3.5x"),
+        ("end. Next", "end. Next"),
+        # No top-level domain a client links: vibey's own names stay as they are.
+        ("dev.vibey.hub and vibey.toml", "dev.vibey.hub and vibey.toml"),
+    ],
+)
+def test_a_bare_domain_is_defanged_like_a_full_url(raw: str, shown: str) -> None:
+    """SP-ACP Task 11b-ii: a host with no scheme and no `www.`, under a top-level domain a
+    client links, is broken with a visible bracket at every dot, as a URL's scheme is."""
+    text = MAPPER.untrusted(raw, limit=400)
+
+    assert text == shown
+    assert _BARE_DOMAIN.search(text.replace("\\", "")) is None  # as rendered: nothing to link

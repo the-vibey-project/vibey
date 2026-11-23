@@ -443,13 +443,16 @@ A session follows one project's ledger:
 - **Its folder, at the start.** vibey lists the hub's projects (`vibey_projects`, as the agent
   principal) and follows the one whose repository holds the session's `cwd`; when repositories
   nest, the deepest wins, and when two projects share one, the newest. The path is compared as
-  written: symbolic links are not resolved, case is not folded, and a `cwd` with a `..` part
-  follows nothing. You are told which project the session now follows ("Following project
+  written: symbolic links are not resolved, and a `cwd` with a `..` part follows nothing. On
+  macOS, whose volumes fold case by default, case is folded (`/Work/App` is the repository
+  `/work/app`); elsewhere it is not. You are told which project the session now follows ("Following project
   <name> (<id>) from <repository>"), because it is what a prompt's commands default to: a bare
   `/status`, `/gates`, `/start`, `/pause` or `/abandon` targets it.
 - **The hub, after every turn.** When the hub's reply names a project (`/status <id>`, `/new`),
   the session moves to it and follows its ledger instead, as krypton's chat does. The hub's
-  reply is the later, explicit choice, so it wins over a folder lookup still in flight.
+  reply is the later, explicit choice, so it wins over a folder lookup still in flight; a
+  folder lookup that lands while a prompt is being sent never changes the project that prompt
+  was read with.
 
 Following a project reads its whole ledger once, only to learn the phases it has been in, and
 sends the phase plan as it stands (`plan`: Design, Visual design once the project has been in
@@ -480,8 +483,11 @@ project's name in `/status`, a refusal's body, a ledger summary). So:
   links and the JSON stays readable.
 - **Autolinks.** The forms GFM would make a link of on their own are broken with a visible
   bracket: `https://` shows as `https[:]//`, `mailto:` as `mailto[:]`, a `www.` host as
-  `www[.]`, and an address as `name[@]host`. A bare domain (`example.com`) is left as it is,
-  and a client may still choose to link it.
+  `www[.]`, an address as `name[@]host`, and a bare host under a top-level domain a client
+  links on its own (any two letters, every country's; `com`, `org`, `net`, `io`, `app`, `dev`
+  and the other common ones; any non-ASCII one) with every dot bracketed, as `evil[.]com`,
+  `docs[.]evil[.]co[.]uk` or `README[.]md`. A name under no such domain (`dev.vibey.hub`,
+  `vibey.toml`) is left as it is.
 
 Escaping can make a message a little longer than the limit it was cut to. A gate's prompt is
 still sent unchanged in the tool call's `rawInput`, as data, deliberately: the title shows a cut
@@ -492,7 +498,12 @@ The feed polls the hub every [`[acp] live_poll_seconds`](configuration.md#acp) f
 event it sent (a position in the ledger, never a time), so nothing is skipped or sent twice
 when the hub restarts. When the ledger cannot be read, you are told once ("Live updates
 paused"), the read is retried after `live_poll_seconds`, then after twice that, and so on, up
-to [`[acp] probe_seconds`](configuration.md#acp), and "Live updates resumed." follows. With
+to [`[acp] probe_seconds`](configuration.md#acp), and "Live updates resumed" follows. When the
+hub no longer has the project (it answers 404: the project was removed), you are told once
+("Live updates stopped: the hub has no project <id> any more") and the feed stops instead of
+retrying for ever. A client that declares `session.notices` gets these three as `notice`
+updates (paused a warning, resumed an info, stopped an error); any other gets them as messages,
+"<title>: <what happened>". With
 [`[acp] live_between_turns = false`](configuration.md#acp), events that arrive between turns
 are held (at most [`pending_events_max`](configuration.md#acp); no more is read until they are
 sent) and sent at the start of your next prompt. A gate's event is a message only, never a

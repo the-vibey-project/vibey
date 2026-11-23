@@ -3,6 +3,7 @@
 
 from __future__ import annotations
 
+import re
 from collections.abc import Sequence
 from typing import Any, Protocol, runtime_checkable
 
@@ -35,6 +36,12 @@ class UntrustedTextInterface(Protocol):
 
     def escape(self, text: str) -> str:
         """`text` defanged and escaped, with no cut and nothing else changed."""
+        ...
+
+    @staticmethod
+    def defang_host(found: re.Match[str]) -> str:
+        """A bare host (`BARE_HOST`'s match) with every dot bracketed when its last label is a
+        top-level domain a client links; anything else as it was."""
         ...
 
     def one_line(self, value: Any) -> str:

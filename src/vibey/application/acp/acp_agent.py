@@ -133,7 +133,11 @@ class AcpAgent:
         new_id: Callable[[], str],
         replay: AcpSessionReplayInterface = SESSION_REPLAY,
         bootstrap: AcpBootstrapInterface | None = None,
+        fold_case: bool = False,
     ) -> None:
+        # Whether folder names are compared without case, as on a case-insensitive volume
+        # (macOS by default): the composition root decides it for this computer.
+        self._fold_case = fold_case
         self._channel = channel
         self._hub = hub
         self._settings = settings
@@ -593,7 +597,7 @@ class AcpAgent:
         if not listed.ok:
             await self._say(context, self._unlisted(f"the hub answered {listed.status_code}"))
             return
-        found = self._project_holding(context.cwd, listed.text)
+        found = self._project_holding(context.cwd, listed.text, fold_case=self._fold_case)
         if found is not None and context.project_id is None and not context.state.closed:
             # A turn that already named a project is the later, explicit choice: it stays.
             project, name, repo = found
@@ -622,19 +626,22 @@ class AcpAgent:
             self._feed.attach(context)
 
     @staticmethod
-    def _project_holding(cwd: str, listing: str) -> tuple[UUID, str, str] | None:
+    def _project_holding(
+        cwd: str, listing: str, *, fold_case: bool = False
+    ) -> tuple[UUID, str, str] | None:
         """The project (id, name, repository) whose repository holds `cwd`; the deepest when
         repositories nest, the first listed (the newest) when two share one. The listing is the
         hub's data: an entry without a UUID and an absolute repository path is passed over. A
         `cwd` with a `..` part matches nothing: compared as written, it could name a folder
-        outside the repository it seems to be in."""
+        outside the repository it seems to be in. With `fold_case` (a case-insensitive volume)
+        `/Work/App` is the folder `/work/app`; symbolic links are never resolved."""
         try:
             projects = json.loads(listing)
         except json.JSONDecodeError:
             return None
         if not isinstance(projects, list):
             return None
-        folder = PurePath(cwd)
+        folder = PurePath(cwd.casefold() if fold_case else cwd)
         if ".." in folder.parts:
             return None
         best: tuple[int, UUID, str, str] | None = None
@@ -644,7 +651,7 @@ class AcpAgent:
             repo, raw_id = project.get("repo_path"), project.get("project_id")
             if not isinstance(repo, str) or not isinstance(raw_id, str):
                 continue
-            root = PurePath(repo)
+            root = PurePath(repo.casefold() if fold_case else repo)
             if not root.is_absolute() or (root != folder and root not in folder.parents):
                 continue
             try:

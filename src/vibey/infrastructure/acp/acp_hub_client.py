@@ -51,7 +51,7 @@ from vibey.domain.acp.session_log import (
     SessionWritesThrottled,
     UnknownAcpSession,
 )
-from vibey.domain.errors import VibeyError
+from vibey.domain.errors import UnknownProject, VibeyError
 from vibey.domain.host_tools import HOST_TOOL_CATALOG, HubCall
 from vibey.domain.hub_scope import HubScope
 from vibey.domain.interfaces.host_tools_interface import HostToolsInterface
@@ -118,6 +118,10 @@ class AcpHubClient:
                 query=(("seq", str(after)), ("limit", str(limit))),
             )
         )
+        if response.status_code == 404:
+            # The hub has no such project (removed): said by its type, never retried as a hub
+            # that is away (SP-ACP Task 11b-ii, Task 5 review N8).
+            raise UnknownProject(f"the hub has no project {project_id}")
         document = self._document(self._accepted(response), "a ledger page")
         last_seq = document.get("last_seq")
         return LedgerPage(

@@ -346,6 +346,7 @@ def build_agent(
     ids: Sequence[str] = ("s", "t1", "s2", "t2", "t3", "t4"),
     journal: AcpSessionJournal | None = None,
     bootstrap: AcpBootstrapInterface | None = None,
+    fold_case: bool = False,
 ) -> AcpAgent:
     """The agent as `bootstrap.build_acp_agent` composes it: its turns write through the
     journaling channel, so what they show is kept in the session's log."""
@@ -367,6 +368,7 @@ def build_agent(
         version="9.9.9",
         new_id=lambda: next(pool),
         bootstrap=bootstrap,
+        fold_case=fold_case,
     )
 
 

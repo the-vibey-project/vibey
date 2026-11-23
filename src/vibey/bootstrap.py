@@ -1656,6 +1656,7 @@ def build_acp_agent(
     units: ServiceUnitsInterface | None = None,
     loader: ServiceLoaderInterface | None = None,
     searxng: SearxngProvisionerInterface | None = None,
+    fold_case: bool = sys.platform == "darwin",
 ) -> AcpAgentInterface:
     """Compose the ACP agent `vibey acp` serves (SP-ACP).
 
@@ -1768,6 +1769,9 @@ def build_acp_agent(
         version=__version__,
         new_id=lambda: str(uuid4()),
         bootstrap=bootstrap,
+        # A session's folder matches its project's repository without case on macOS, whose
+        # volumes fold case by default; elsewhere `/Work` and `/work` are two folders.
+        fold_case=fold_case,
     )
 
 

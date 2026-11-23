@@ -593,6 +593,25 @@ async def test_a_cwd_with_a_parent_step_attaches_nothing(cwd: str) -> None:
     await agent.close()
 
 
+@pytest.mark.parametrize(("fold", "followed"), [(True, PID), (False, None)])
+async def test_a_folder_in_another_case_is_its_project_only_on_a_case_folding_volume(
+    fold: bool, followed: UUID | None
+) -> None:
+    """SP-ACP Task 11b-ii, Task 5 review N4: on a case-insensitive volume (macOS by default)
+    `/Work/App` is the folder `/work/app`, so it follows that project; elsewhere it is another
+    folder and follows nothing."""
+    channel, hub = FakeChannel(), FakeHub()
+    hub.projects = projects((PID, "/work/app"))
+    agent = build_agent(channel, hub, fold_case=fold)
+
+    await new_session(agent, "/Work/App/src")
+    await until(lambda: len(hub.project_lookups) == 1)
+    await settle()
+
+    assert project_of(agent) == followed
+    await agent.close()
+
+
 async def test_the_following_message_shows_hub_data_as_safe_text() -> None:
     channel, hub = FakeChannel(), FakeHub()
     body = [{"project_id": str(PID), "name": "[evil](https://e)\n# x", "repo_path": "/work"}]
