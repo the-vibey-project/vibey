@@ -12,7 +12,7 @@ name below still exists where it says, and changes nothing.
 
 - **Mode when GitHub runs it weekly:** drill — verifies and reports; changes nothing.
 - **What it is for:** Hand the project to a new steward: what they must hold, where it is declared, and how to verify it.
-- **Decision records:** 103, the newest 0103 — The loop capability bundle: declared by the person, locked by content, fetched only on their word.
+- **Decision records:** 104, the newest 0104 — Run inputs: hash-addressed in the person's state, given to every BUILD run the same way.
 <!-- END GENERATED continuation:state -->
 
 ## The prompt

@@ -3,7 +3,8 @@
 (SP-LOOPS Phase 3, Task 5; design Goal 4 and Decision 6).
 
 - `add PROJECT_ID (--paste TEXT | --paste-stdin | --file PATH)` stores one input in the
-  project's `.vibey/inputs` and records its digest, kind and size on the ledger, never its
+  person's own state folder under the project's id (`inputs/<project id>/`, never inside the
+  checkout; ADR-0104) and records its digest, kind and size on the ledger, never its
   content. Exactly one source is given. `--file` opens the path without following a symlink and
   refuses anything but a regular file (a folder, a device, a FIFO), and refuses one over
   `[inputs] max_item_bytes` from its size before reading a byte; `--paste-stdin` reads at most
