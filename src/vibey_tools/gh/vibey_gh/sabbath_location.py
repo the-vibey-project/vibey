@@ -78,7 +78,15 @@ class ResolvedLocation:
 def _run(argv: Sequence[str]) -> tuple[int, str]:
     """Run a location helper; a helper that hangs or cannot start is simply absent."""
     try:
-        done = subprocess.run(list(argv), capture_output=True, text=True, timeout=15, check=False)
+        # Never the caller's stdin: under `vibey acp` it carries the editor's protocol.
+        done = subprocess.run(
+            list(argv),
+            stdin=subprocess.DEVNULL,
+            capture_output=True,
+            text=True,
+            timeout=15,
+            check=False,
+        )
     except (OSError, subprocess.SubprocessError):
         return 127, ""
     return done.returncode, done.stdout

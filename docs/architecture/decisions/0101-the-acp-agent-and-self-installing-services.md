@@ -35,8 +35,11 @@ user with a hub that is "away" on every prompt until they find the right page of
 output, through one stdlib peer shared by both directions (the client's requests and vibey's own
 `session/request_permission`). Standard output is the protocol stream alone: a guard redirects
 every other write. The children vibey starts for this decision (the service manager, `vibey hub
-start`, a PostgreSQL install) get standard input closed; the children `vibey doctor`'s own
-sections start still inherit it (a known gap, parked for a stdin guard in the transport).
+start`, a PostgreSQL install) get standard input closed. Standard input is guarded too (SP-ACP
+Task 11a): the protocol's input is read through a private, non-inheritable duplicate and fd 0 is
+pointed at `/dev/null`, so a child `vibey doctor`'s own sections start (a service-manager query,
+the Sabbath location lookup), or any other, reads nothing and can never take a byte of the
+client's messages; those two also start with standard input closed.
 
 ### 2. Every action goes through the hub, as the agent principal
 

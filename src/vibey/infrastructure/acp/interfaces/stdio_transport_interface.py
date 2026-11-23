@@ -13,7 +13,9 @@ class StdioTransportInterface(Protocol):
 
     def guard(self) -> int:
         """Keep a private, non-inheritable duplicate of stdout for protocol frames; point fd 1
-        at stderr and `sys.stdout` at `sys.stderr`. Returns the private fd."""
+        at stderr and `sys.stdout` at `sys.stderr`. Keep a private, non-inheritable duplicate of
+        stdin for the protocol's input and point fd 0 at `/dev/null`, so no child can read it.
+        Returns the private stdout fd."""
         ...
 
     async def reader(self, limit: int) -> asyncio.StreamReader:

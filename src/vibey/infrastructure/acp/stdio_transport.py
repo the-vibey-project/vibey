@@ -7,6 +7,11 @@ inherit fd 1, so policing writers cannot hold that line. `guard` moves the line 
 keeps a private duplicate of the real stdout for protocol frames, then points fd 1 itself at
 stderr, so a stray `print`, a `typer.echo` and an inheriting child all land on stderr.
 
+stdin is guarded the same way (SP-ACP Task 11a): the protocol's input is read through a private,
+non-inheritable duplicate, and fd 0 itself is pointed at `/dev/null`. A child a doctor section
+starts (a service-manager query, the Sabbath location lookup) or anything else in the process
+that reads stdin then reads nothing, and can never take a byte of the client's messages.
+
 Frames are written with `os.write` in a worker thread until every byte is out. A frame whose
 write is cancelled is still written whole before the cancel propagates: half a line would
 corrupt the stream, and the peer's write lock is released as soon as the cancel is raised.
@@ -16,6 +21,7 @@ Declared by `interfaces/stdio_transport_interface.py`.
 from __future__ import annotations
 
 import asyncio
+import contextlib
 import os
 import select
 import stat
@@ -35,19 +41,35 @@ class StdioTransport:
         self._stdout_fd = stdout_fd
         self._stderr_fd = stderr_fd
         self._private_fd: int | None = None
+        self._input_fd = stdin_fd
+        """Where the protocol's input is read: stdin itself, or its private duplicate after
+        `guard`."""
 
     def guard(self) -> int:
+        # stdin first: were it closed, its number would be the lowest free one, and the stdout
+        # duplicate below would take it -- and be read as the protocol's input.
+        self._guard_stdin()
         private = os.dup(self._stdout_fd)  # not inheritable: a child never sees the protocol
         os.dup2(self._stderr_fd, self._stdout_fd)
         sys.stdout = sys.stderr
         self._private_fd = private
         return private
 
+    def _guard_stdin(self) -> None:
+        # Not inheritable either: only this process reads the client's messages. A closed stdin
+        # has nothing to keep, and its number becomes /dev/null below.
+        with contextlib.suppress(OSError):
+            self._input_fd = os.dup(self._stdin_fd)
+        null = os.open(os.devnull, os.O_RDONLY)
+        if null != self._stdin_fd:  # a closed stdin's number is the lowest free one: kept open
+            os.dup2(null, self._stdin_fd)
+            os.close(null)
+
     async def reader(self, limit: int) -> asyncio.StreamReader:
         loop = asyncio.get_running_loop()
         reader = asyncio.StreamReader(limit=limit, loop=loop)
         if self._is_stream():
-            pipe = os.fdopen(self._stdin_fd, "rb", buffering=0, closefd=False)
+            pipe = os.fdopen(self._input_fd, "rb", buffering=0, closefd=False)
             await loop.connect_read_pipe(lambda: asyncio.StreamReaderProtocol(reader), pipe)
         else:
             # A regular file, a tty, /dev/null, anything the loop cannot watch: read it in a daemon
@@ -98,7 +120,7 @@ class StdioTransport:
         so the loop would never see its EOF. It, a tty and a regular file use the thread reader.
         """
         try:
-            mode = os.fstat(self._stdin_fd).st_mode
+            mode = os.fstat(self._input_fd).st_mode
         except OSError:
             return False
         return stat.S_ISFIFO(mode) or stat.S_ISSOCK(mode)
@@ -106,7 +128,7 @@ class StdioTransport:
     def _pump(self, loop: asyncio.AbstractEventLoop, reader: asyncio.StreamReader) -> None:
         while True:
             try:
-                chunk = os.read(self._stdin_fd, READ_CHUNK_BYTES)
+                chunk = os.read(self._input_fd, READ_CHUNK_BYTES)
             except OSError:
                 chunk = b""  # an unreadable stdin ends the stream instead of hanging it
             if not chunk:
