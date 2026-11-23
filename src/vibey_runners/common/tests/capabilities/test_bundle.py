@@ -4,10 +4,13 @@ anything else (SP-LOOPS Task 3)."""
 
 from __future__ import annotations
 
+import contextlib
 from collections.abc import Mapping
 from typing import Any
 
 import pytest
+from hypothesis import given, settings
+from hypothesis import strategies as st
 
 from vibey_runners.common.capabilities.bundle import (
     MAX_ENTRIES,
@@ -143,7 +146,16 @@ def test_a_remote_server_may_not_also_name_a_command() -> None:
         "file:///etc/passwd",
         "https://",
         "https://person:fake-secret@mcp.example.test/",
+        "https://fake-token@mcp.example.test/",
         "https://mcp.example.test/\n",
+        "https://mcp.example.test/\x1b[2J",
+        "https://[::1/x",
+        "https://[zz]/",
+        "https://exa mple.test/",
+        "https://mcp.example.test:99999/",
+        "https://mcp.example.test:0/",
+        "https://mcp.example.test:port/",
+        "https://mcp.example.test/" + "x" * MAX_TEXT,
         7,
     ],
 )
@@ -314,3 +326,49 @@ def test_a_bundle_error_carries_its_path_and_reason() -> None:
     assert (error.path, error.reason) == ("loops.x", "is wrong")
     assert str(error) == "loops.x: is wrong"
     assert isinstance(error, ValueError)
+
+
+@pytest.mark.parametrize(
+    "disable",
+    ["x", [3], ["../x"], ["\x1b[2J"], ["a", "a"], [f"n{i}" for i in range(MAX_ENTRIES + 1)]],
+)
+def test_a_disable_list_from_anywhere_gets_the_one_name_rule(disable: object) -> None:
+    with pytest.raises(BundleError) as caught:
+        BundleSpec.disable_names(disable)
+    assert caught.value.path.startswith("loops.disable")
+
+
+def test_a_valid_disable_list_is_its_names() -> None:
+    assert BundleSpec.disable_names(["a", "b.c"]) == ("a", "b.c")
+
+
+KEYS = [
+    "marketplaces",
+    "plugins",
+    "mcp_servers",
+    "skills",
+    "disable",
+    "name",
+    "source",
+    "ref",
+    "trust",
+    "command",
+    "url",
+    "env_allow",
+]
+_SCALARS = st.none() | st.booleans() | st.integers() | st.floats() | st.text(max_size=40)
+_VALUES = st.recursive(
+    _SCALARS,
+    lambda inner: (
+        st.lists(inner, max_size=4)
+        | st.dictionaries(st.sampled_from(KEYS) | st.text(max_size=8), inner, max_size=4)
+    ),
+    max_leaves=20,
+)
+
+
+@settings(max_examples=300, deadline=None)
+@given(raw=st.dictionaries(st.sampled_from(KEYS), _VALUES, max_size=5))
+def test_any_table_is_a_bundle_or_a_bundle_error(raw: dict[str, object]) -> None:
+    with contextlib.suppress(BundleError):  # anything else escaping fails the property
+        BundleSpec.from_mapping(raw)

@@ -96,7 +96,13 @@ class BundleSpec:
             skills=cls._names(raw.get("skills", []), f"{_ROOT}.skills"),
             disabled=frozenset(),
         )
-        return bundle.narrowed_by(cls._names(raw.get("disable", []), f"{_ROOT}.disable"))
+        return bundle.narrowed_by(cls.disable_names(raw.get("disable", [])))
+
+    @classmethod
+    def disable_names(cls, raw: object) -> tuple[str, ...]:
+        """A `disable` list, from the person's file or a project's, held to one rule: a list of
+        at most `MAX_ENTRIES` plain names, each once. Raises `BundleError` at `loops.disable`."""
+        return cls._names(raw, f"{_ROOT}.disable")
 
     def narrowed_by(self, disabled: Iterable[str]) -> BundleSpec:
         off = frozenset(disabled)
@@ -256,10 +262,19 @@ class BundleSpec:
         if value is None:
             raise BundleError(path, "is required for a remote server")
         url = cls._text(value, path)
-        parts = urlsplit(url)
-        if parts.scheme != "https" or not parts.hostname:
+        try:
+            # urlsplit, and the hostname, port and userinfo reads, raise ValueError for a
+            # malformed bracketed host or a port that is not a number in range.
+            parts = urlsplit(url)
+            host, port = parts.hostname, parts.port
+            credentials = parts.username is not None or parts.password is not None
+        except ValueError as exc:
+            raise BundleError(path, "must be an https:// URL with a host") from exc
+        if parts.scheme != "https" or not host or any(c.isspace() for c in parts.netloc):
             raise BundleError(path, "must be an https:// URL with a host")
-        if parts.username is not None or parts.password is not None:
+        if port == 0:
+            raise BundleError(path, "must not name port 0")
+        if credentials:
             raise BundleError(path, "must not carry credentials")
         return url
 

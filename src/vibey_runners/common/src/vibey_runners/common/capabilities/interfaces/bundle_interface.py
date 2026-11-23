@@ -31,6 +31,12 @@ class BundleSpecInterface(Protocol):
     @property
     def disabled(self) -> frozenset[str]: ...
 
+    @classmethod
+    def disable_names(cls, raw: object) -> tuple[str, ...]:
+        """A `disable` list, from the person's file or a project's, held to the same rule: at
+        most 256 plain names, each once. Raises `BundleError` at `loops.disable`."""
+        ...
+
     def narrowed_by(self, disabled: Iterable[str]) -> Self:
         """This bundle without the plugins, MCP servers and skills named in `disabled`, with
         those names added to `disabled` (so a skill inside a kept plugin is dropped later too).
