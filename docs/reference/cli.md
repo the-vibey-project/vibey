@@ -473,7 +473,9 @@ project's name in `/status`, a refusal's body, a ledger summary). So:
   and a client may still choose to link it.
 
 Escaping can make a message a little longer than the limit it was cut to. A gate's prompt is
-still sent unchanged in the tool call's `rawInput`, as data.
+still sent unchanged in the tool call's `rawInput`, as data, deliberately: the title shows a cut
+line, and `rawInput` is where a client finds the whole of it; `[acp] gate_options_max` and
+`gate_label_chars_max` bound what the operator is asked to pick from.
 
 The feed polls the hub every [`[acp] live_poll_seconds`](configuration.md#acp) from the last
 event it sent (a position in the ledger, never a time), so nothing is skipped or sent twice

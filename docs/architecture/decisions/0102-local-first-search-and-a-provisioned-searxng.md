@@ -259,7 +259,11 @@ it and make an attempt visible after the fact. They do not prevent it.
 
 **What 9b did not fix: engine sessions.** Sessions still run `vibey search` and `vibey fetch`
 directly (§1, §8): they are still told the SearXNG address and the marker, still have no Brave
-backup, and their fetch is still the older one. They have no channel to the hub: the worker
+backup, and their fetch was the older one until SP-ACP Task 11a: `vibey fetch` (and so the
+local runners' `web_fetch`) now runs this same guarded fetch, with the person's `[web]` narrowed
+by the worktree's. It spends no `[web] fetches_per_hour` budget and writes no ledger record, as
+before: a session's model can fetch without the hub's limit, a stated decision until sessions
+reach the hub (P-9b-1). They have no channel to the hub: the worker
 reaches PostgreSQL, not the hub, may run on a machine (a Kubernetes pod) where no hub runs, and a
 session is given no hub address and no credential by design. The only hub credential there is
 for a model is the agent token, which also answers gates and starts work; handing it to a session

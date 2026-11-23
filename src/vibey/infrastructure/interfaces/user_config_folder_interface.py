@@ -17,3 +17,7 @@ class UserConfigFolderInterface(Protocol):
     def path(self) -> Path:
         """The person's configuration folder, always absolute; it may not exist yet."""
         ...
+
+    def vibey_toml(self) -> Path:
+        """The person's own `vibey.toml` in that folder: the one file every grant comes from."""
+        ...

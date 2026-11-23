@@ -43,9 +43,7 @@ def own_web_settings() -> WebToolSettings:
 
     Module-level by design: the default of `PageFetcher`'s `settings` seam, kept here so the test
     suite can stand another in for the developer's own file."""
-    return WEB_SETTINGS.load_trusted(
-        UserConfigFolder().path() / "vibey.toml", Path.cwd() / "vibey.toml"
-    )
+    return WEB_SETTINGS.load_trusted(UserConfigFolder().vibey_toml(), Path.cwd() / "vibey.toml")
 
 
 class PageFetcher:
@@ -71,7 +69,10 @@ class PageFetcher:
         except ConfigError as exc:
             raise WebFetchError(f"[web] cannot be read: {exc}") from None
         if max_chars is not None and max_chars < settings.max_chars:
-            settings = replace(settings, max_chars=max_chars)
+            try:
+                settings = replace(settings, max_chars=max_chars)
+            except ValueError as exc:  # below what `[web] max_chars` allows (review 1 N-3)
+                raise WebFetchError(str(exc)) from None
         try:
             target = self._policy.target(url, settings)
             page = asyncio.run(self._fetch.fetch(target, settings))

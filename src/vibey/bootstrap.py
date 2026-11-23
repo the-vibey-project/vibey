@@ -1513,7 +1513,7 @@ def acp_user_config() -> Path:
     (ADR-0101)."""
     # A relative XDG_CONFIG_HOME would put "the user's" file inside whatever folder vibey runs
     # in -- a project's; `UserConfigFolder` refuses it, as `SupervisorHost` does for its paths.
-    return UserConfigFolder(user_config_path).path() / "vibey.toml"
+    return UserConfigFolder(user_config_path).vibey_toml()
 
 
 def running_vibey() -> str | None:

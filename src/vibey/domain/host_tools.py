@@ -634,7 +634,11 @@ class HostTools:
     def _fit_framed(text: str, limit: int) -> str | None:
         """A hub fetch answer (JSON whose `text` is one nonce-marked block) cut inside the block,
         so it still parses and its closing marker survives (P-9b-9, SP-ACP Task 11a): the page's
-        words are what is dropped, never vibey's framing. None for any other text."""
+        words are what is dropped, never vibey's framing. None for any other text, and when even
+        an empty block would not fit -- which the hub's own bounds rule out at the 60,000
+        default (the title is inside the block, the URL at most 2048 characters, at most eleven
+        hosts, a content type at most 64), so only a far smaller `limit` meets it; the plain cut
+        then applies (review 1 N-2)."""
         try:
             document = json.loads(text)
         except (ValueError, RecursionError):

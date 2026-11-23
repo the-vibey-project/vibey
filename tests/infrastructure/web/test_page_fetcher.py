@@ -312,3 +312,10 @@ def test_the_settings_are_the_persons_own_narrowed_by_the_folder(
 def test_a_page_reaches_its_reader_with_no_terminal_control(kind: str, body: bytes) -> None:
     page = _fetcher(World([_text(body, kind)])).fetch("https://evil.example/")
     assert page.text == "abc" and "\x1b" not in page.title + page.text
+
+
+def test_a_max_chars_below_the_bound_is_a_fetch_error_never_a_crash() -> None:
+    world = World()
+    with pytest.raises(WebFetchError, match="max_chars"):
+        _fetcher(world).fetch("https://a.example/", max_chars=10)
+    assert world.made == []

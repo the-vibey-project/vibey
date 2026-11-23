@@ -65,7 +65,7 @@ def own_config() -> Path:
 
     Module-level by design: the default of `HubPairCommand`'s `config_path` seam, kept here so
     the test suite can stand another in for the developer's own file."""
-    return UserConfigFolder().path() / "vibey.toml"
+    return UserConfigFolder().vibey_toml()
 
 
 def _render_qr(uri: str) -> str | None:
