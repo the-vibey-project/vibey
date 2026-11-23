@@ -187,6 +187,7 @@ This index is generated from the documentation's navigation by `scripts/llms_txt
 - [0102 — Local-first search, and the SearXNG vibey installs and runs itself](https://the-vibey-project.github.io/vibey/main/architecture/decisions/0102-local-first-search-and-a-provisioned-searxng/)
 - [0103 — The loop capability bundle: declared by the person, locked by content, fetched only on their word](https://the-vibey-project.github.io/vibey/main/architecture/decisions/0103-the-loop-capability-bundle/)
 - [0104 — Run inputs: hash-addressed in the person's state, given to every BUILD run the same way](https://the-vibey-project.github.io/vibey/main/architecture/decisions/0104-run-inputs-hash-addressed/)
+- [0105 — Where run inputs are stored: your state folder by default, or a SeaweedFS bucket you name](https://the-vibey-project.github.io/vibey/main/architecture/decisions/0105-run-input-store-backends/)
 
 ## Governance
 
