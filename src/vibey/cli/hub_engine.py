@@ -24,11 +24,18 @@ up here, so the desktop app, the VS Code extension and a terminal agree on one r
   holds is refused (exit 1), and `stop` signals only the process that holds the lock and wrote
   the pid the record names. A record naming pid -1, 0 or 1, or a port outside 1..65535, is
   malformed (`LocalTokenStore.serving`).
+- **A hub starting over a stale record is starting** (SP-ACP Task 11b). A hub takes its lock
+  before it replaces an earlier hub's record, so for a moment the lock's holder and the record
+  disagree. When the holder has not written its pid yet, or the record's pid is no longer alive,
+  that is a hub starting, not a conflict: `status` says so (exit 3), `stop` signals nothing
+  (exit 1), and `start` waits for that hub instead of launching another. A live pid in the
+  record and another pid on the lock is still refused as a disagreement (exit 1).
 """
 
 import sys
 import time
 from collections.abc import Callable, Sequence
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Annotated, Final
 
@@ -50,6 +57,19 @@ EXIT_NOT_RUNNING: Final = 3
 LOG_FILE: Final = "hub.log"
 POLL_SECONDS: Final = 0.1
 DEFAULT_TIMEOUT: Final = 15.0
+
+
+@dataclass(frozen=True, slots=True)
+class HubStarting:
+    """A hub holding the lock that has not yet replaced an earlier hub's record. A value type."""
+
+    pid: int
+    """The pid the holder wrote, or 0 while it has not written one."""
+
+    def describe(self) -> str:
+        if self.pid:
+            return f"a hub (pid {self.pid}) is starting"
+        return "a hub is starting (its pid is not written yet)"
 
 
 class HubEngineCommand:
@@ -82,6 +102,9 @@ class HubEngineCommand:
 
     def status(self) -> None:
         running = self._running(self._load())
+        if isinstance(running, HubStarting):
+            typer.echo(f"{running.describe()}; it is not ready yet")
+            raise typer.Exit(EXIT_NOT_RUNNING)
         if running is None:
             raise typer.Exit(EXIT_NOT_RUNNING)
         typer.echo(self._describe(running))
@@ -89,29 +112,35 @@ class HubEngineCommand:
     def start(self, timeout: float) -> None:
         settings = self._load()
         running = self._running(settings)
-        if running is not None:
+        if isinstance(running, ServingRecord):
             typer.echo(f"hub already running: {self._describe(running)}")
             return
-        # In your configuration folder: the hub reads the `[hub]` this command just read.
-        pid = self._processes.spawn(
-            self._argv, settings.state_dir / LOG_FILE, cwd=self._config_path().parent
-        )
+        if isinstance(running, HubStarting):
+            # Another start launched it: wait for that hub, never launch a second.
+            typer.echo(f"{running.describe()}; waiting for it")
+            pid = running.pid
+        else:
+            # In your configuration folder: the hub reads the `[hub]` this command just read.
+            pid = self._processes.spawn(
+                self._argv, settings.state_dir / LOG_FILE, cwd=self._config_path().parent
+            )
         deadline = self._clock() + timeout
         while self._clock() < deadline:
             running = self._running(settings, quiet=True)
-            if running is not None:
+            if isinstance(running, ServingRecord):
                 note = "" if running.pid == pid else " (another process won the start)"
                 typer.echo(f"hub started: {self._describe(running)}{note}")
                 return
-            if not self._processes.alive(pid):
+            if pid and not self._processes.alive(pid):
                 typer.echo(
                     f"the hub exited before it was ready; see {settings.state_dir / LOG_FILE}",
                     err=True,
                 )
                 raise typer.Exit(1)
             self._sleep(POLL_SECONDS)
+        still = f"pid {pid} is still starting" if pid else "the hub is still starting"
         typer.echo(
-            f"the hub did not come up within {timeout:g}s (pid {pid} is still starting); "
+            f"the hub did not come up within {timeout:g}s ({still}); "
             f"see {settings.state_dir / LOG_FILE}",
             err=True,
         )
@@ -120,6 +149,13 @@ class HubEngineCommand:
     def stop(self, timeout: float) -> None:
         settings = self._load()
         running = self._running(settings)
+        if isinstance(running, HubStarting):
+            typer.echo(
+                f"{running.describe()} and has not written its record yet, so nothing was "
+                "signalled; run `vibey hub stop` again once it is up",
+                err=True,
+            )
+            raise typer.Exit(1)
         if running is None:
             typer.echo("hub is not running")
             return
@@ -144,10 +180,15 @@ class HubEngineCommand:
             typer.echo(str(exc), err=True)
             raise typer.Exit(2) from exc
 
-    def _running(self, settings: HubSettings, *, quiet: bool = False) -> ServingRecord | None:
+    def _running(
+        self, settings: HubSettings, *, quiet: bool = False
+    ) -> ServingRecord | HubStarting | None:
         """The hub's record when the process holding the hub's lock is the one it names; None,
         saying why unless `quiet`, when there is no record, it is malformed, or no process holds
-        the lock (stale). A lock held by another process is refused (exit 1) unless `quiet`."""
+        the lock (stale). `HubStarting` when the lock's holder has not yet replaced an earlier
+        hub's record: it has written no pid yet, or the record's pid is no longer alive. A lock
+        held by another process while the record's pid lives is refused (exit 1) unless
+        `quiet`."""
         try:
             record = LocalTokenStore(settings.state_dir).serving()
         except ValueError as exc:
@@ -164,6 +205,8 @@ class HubEngineCommand:
                 typer.echo(f"hub is not running (stale record from pid {record.pid})")
             return None
         if holder != record.pid:
+            if holder == 0 or not self._processes.alive(record.pid):
+                return HubStarting(holder)
             if quiet:
                 return None  # a hub starting now holds the lock before it writes its record
             typer.echo(

@@ -879,9 +879,14 @@ so the hub reads the same `[hub]`: a cloned repository's `vibey.toml` can no lon
 state folder the hub keeps its tokens in, or the record and process `stop` acts on. Whether a
 hub runs is asked of the hub's own lock, `<state_dir>/serve.lock`, never of a process id alone:
 a record whose lock nobody holds is stale (never a running hub, and nothing is signalled), one
-whose lock another process holds is refused (exit 1, "the two disagree"), and `stop` signals only
-the process that holds the lock and names itself in the record. A record naming process id -1, 0
-or 1, or a port outside 1 to 65535, is unreadable and never acted on.
+whose lock another process holds while the record's process is still alive is refused (exit 1,
+"the two disagree"), and `stop` signals only the process that holds the lock and names itself in
+the record. A hub takes its lock before it replaces an earlier hub's record, so while the lock's
+holder has not written its process id yet, or the record names a process that is gone, a hub is
+**starting**: `status` says so (exit 3), `stop` signals nothing and says to run it again once the
+hub is up (exit 1), and `start` waits for that hub instead of launching a second. A record naming
+process id -1, 0 or 1, or a port outside 1 to 65535, is unreadable and never acted on; `pair`,
+`devices` and `revoke` say so in one line (exit 2).
 
 | Command | What it does |
 |---|---|
