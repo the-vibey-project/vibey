@@ -5,7 +5,8 @@
 A marketplace may come from the network, so its manifest is hostile until shown otherwise. Each
 plugin's `source` is checked twice: lexically first -- an absolute or home-relative path, or one
 with a `..` part, is refused before the file system is touched -- and then by resolving the
-folder (symlinks followed) and requiring `relative_to(root.resolve())`. Either failure refuses
+folder (symlinks followed) and requiring `relative_to(root.resolve())` and not inside the root's
+`.git`, which the lock's digest leaves out (`CapabilityLock`). Any such failure refuses
 the whole marketplace (`ManifestError`): a manifest that tries to point outside itself is not
 trusted for any of its plugins. The manifest is read through the bounded reader, capped at
 `MANIFEST_MAX_BYTES`, and every field is checked. A plugin that is merely unusable here (a remote
@@ -37,6 +38,8 @@ MANIFEST_MAX_BYTES: Final = 2 * 1024 * 1024
 """The largest manifest read. vibey's own, with 157 plugins, is about 150 KiB."""
 MAX_PLUGINS: Final = 1024
 """The most plugins one manifest may list."""
+GIT_FOLDER: Final = ".git"
+INSIDE_GIT: Final = "inside the marketplace's .git, which the lock does not cover"
 REMOTE_SOURCE: Final = "its source is not a folder in the marketplace"
 MISSING_FOLDER: Final = "its folder does not exist"
 
@@ -54,6 +57,8 @@ class MarketplaceManifest:
         manifest = (base / MANIFEST_PATH).resolve()
         if not manifest.is_relative_to(base):
             raise ManifestError(f"{root}: {MANIFEST_PATH} resolves outside the marketplace")
+        if manifest.is_relative_to(base / GIT_FOLDER):
+            raise ManifestError(f"{root}: {MANIFEST_PATH} resolves {INSIDE_GIT}")
         if not manifest.is_file():
             raise ManifestError(f"{root} has no {MANIFEST_PATH}")
         document = self._document(manifest)
@@ -125,4 +130,6 @@ class MarketplaceManifest:
         directory = (base / relative).resolve()
         if not directory.is_relative_to(base):
             raise ManifestError(f"{where}: its folder resolves outside the marketplace")
+        if directory.is_relative_to(base / GIT_FOLDER):
+            raise ManifestError(f"{where}: its folder resolves {INSIDE_GIT}")
         return directory

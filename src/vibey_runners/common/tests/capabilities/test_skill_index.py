@@ -16,6 +16,7 @@ from vibey_runners.common.capabilities.interfaces.skill_index_interface import (
 from vibey_runners.common.capabilities.manifest import MarketplaceManifest
 from vibey_runners.common.capabilities.skill_entry import SkillEntry
 from vibey_runners.common.capabilities.skill_index import (
+    INSIDE_GIT,
     MAX_SKILLS_PER_PLUGIN,
     OUTSIDE,
     SKILL_MAX_BYTES,
@@ -236,3 +237,33 @@ def test_the_shipped_research_plugin_indexes_cleanly() -> None:
         "research-editing-a-reference-skill",
     } <= names
     assert index.skipped == ()
+
+
+def test_a_skills_folder_symlinked_into_git_metadata_is_skipped(tmp_path: Path) -> None:
+    plugin = tmp_path / "market"  # a plugin whose folder is the marketplace root
+    _skill(plugin / ".git" / "stash", "hidden", VALID.format(name="hidden"))
+    (plugin / "skills").symlink_to(plugin / ".git" / "stash" / "skills")
+    reader = RecordingReader()
+    assert _only_skip(plugin, reader) == (plugin / "skills", INSIDE_GIT)
+    assert reader.paths == []
+
+
+def test_a_skill_folder_symlinked_into_git_metadata_is_skipped(tmp_path: Path) -> None:
+    plugin = _plugin(tmp_path)
+    hidden = plugin / ".git" / "hidden"
+    hidden.mkdir(parents=True)
+    (hidden / "SKILL.md").write_text(VALID.format(name="hidden"), encoding="utf-8")
+    (plugin / "skills").mkdir()
+    (plugin / "skills" / "hidden").symlink_to(hidden)
+    reader = RecordingReader()
+    assert _only_skip(plugin, reader)[1] == INSIDE_GIT
+    assert reader.paths == []
+
+
+def test_a_skill_file_symlinked_into_git_metadata_is_skipped(tmp_path: Path) -> None:
+    plugin = _plugin(tmp_path)
+    (plugin / ".git").mkdir()
+    (plugin / ".git" / "SKILL.md").write_text(VALID.format(name="x"), encoding="utf-8")
+    (plugin / "skills" / "x").mkdir(parents=True)
+    (plugin / "skills" / "x" / "SKILL.md").symlink_to(plugin / ".git" / "SKILL.md")
+    assert _only_skip(plugin)[1] == INSIDE_GIT

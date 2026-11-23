@@ -24,6 +24,7 @@ dev = [
     "mypy>=1.10",
     "ruff>=0.6",
     "import-linter>=2.0",
+    "hypothesis>=6.100",
 ]
 
 [tool.hatch.build.targets.wheel]
@@ -99,6 +100,7 @@ forbidden_modules = [
     "vibey_runners.common.capabilities.bundle",
     "vibey_runners.common.capabilities.file_reader",
     "vibey_runners.common.capabilities.frontmatter",
+    "vibey_runners.common.capabilities.lock",
     "vibey_runners.common.capabilities.manifest",
     "vibey_runners.common.capabilities.skill_index",
 ]

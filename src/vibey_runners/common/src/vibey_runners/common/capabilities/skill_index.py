@@ -5,7 +5,9 @@ Task 4; Review Focus 2 and 5).
 Each plugin folder is the bound: it was itself contained in its marketplace by
 `MarketplaceManifest`, so a skills folder, a skill folder or a SKILL.md that resolves (through a
 symlink) outside its plugin's folder is outside the locked marketplace content as far as this
-plugin is concerned, and is skipped as `OUTSIDE` without being read. Only the frontmatter's
+plugin is concerned, and is skipped as `OUTSIDE` without being read. A path through a `.git`
+folder below the plugin is skipped as `INSIDE_GIT`: the lock leaves the marketplace root's `.git`
+out of its digest, so nothing in one may be loaded. Only the frontmatter's
 `name` and `description` are kept (design Decision 10: bodies are fetched on demand). A file over
 `SKILL_MAX_BYTES`, one that is not UTF-8 or cannot be opened, and a malformed frontmatter are each
 skipped with a named reason; the index never raises for what a plugin contains.
@@ -39,6 +41,9 @@ SKILL_MAX_BYTES: Final = 64 * 1024
 MAX_SKILLS_PER_PLUGIN: Final = 256
 """The most skill folders read from one plugin; the rest are skipped by name."""
 OUTSIDE: Final = "outside the marketplace"
+INSIDE_GIT: Final = "inside a .git folder"
+"""The lock leaves the marketplace root's `.git` out of its digest, and the index cannot tell a
+plugin's own folder from the root, so no path through a `.git` below a plugin is read at all."""
 
 
 class SkillIndex:
@@ -68,8 +73,9 @@ class SkillIndex:
             return
         folder = plugin_dir / "skills"
         resolved = folder.resolve()
-        if not resolved.is_relative_to(base):
-            skipped.append((folder, OUTSIDE))
+        reason = self._unsafe(resolved, base)
+        if reason:
+            skipped.append((folder, reason))
             return
         if not resolved.is_dir():
             return
@@ -88,15 +94,26 @@ class SkillIndex:
             names.add(entry.name)
             skills.append(entry)
 
+    @staticmethod
+    def _unsafe(resolved: Path, base: Path) -> str:
+        """Why `resolved` may not be read for the plugin at `base`, or "" when it may."""
+        if not resolved.is_relative_to(base):
+            return OUTSIDE
+        if ".git" in resolved.relative_to(base).parts:
+            return INSIDE_GIT
+        return ""
+
     def _skill(
         self, plugin: str, base: Path, skill_dir: Path
     ) -> tuple[SkillEntry | None, str, Path]:
         """The entry, or None with the reason and the path the reason is about."""
-        if not skill_dir.resolve().is_relative_to(base):
-            return None, OUTSIDE, skill_dir
+        reason = self._unsafe(skill_dir.resolve(), base)
+        if reason:
+            return None, reason, skill_dir
         path = (skill_dir / SKILL_FILE).resolve()
-        if not path.is_relative_to(base):
-            return None, OUTSIDE, skill_dir / SKILL_FILE
+        reason = self._unsafe(path, base)
+        if reason:
+            return None, reason, skill_dir / SKILL_FILE
         if not path.is_file():
             return None, f"has no {SKILL_FILE}", skill_dir
         try:

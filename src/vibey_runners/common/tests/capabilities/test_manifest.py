@@ -225,3 +225,33 @@ def test_the_marketplace_that_ships_with_vibey_reads_with_the_research_plugin() 
     assert "currency-research" in catalog.plugins
     assert catalog.plugins["currency-research"].directory.is_dir()
     assert catalog.skipped == ()
+
+
+def test_a_source_inside_the_root_git_folder_is_refused(
+    tmp_path: Path, reader: RecordingReader
+) -> None:
+    root = _marketplace(
+        tmp_path / "acme", [{"name": "hidden", "source": "./.git/stash"}], make=(".git/stash",)
+    )
+    assert "inside the marketplace's .git" in str(_refused(root, reader))
+
+
+def test_a_plugin_folder_symlinked_into_the_root_git_folder_is_refused(
+    tmp_path: Path, reader: RecordingReader
+) -> None:
+    root = _marketplace(
+        tmp_path / "acme", [{"name": "hidden", "source": "./plugins/hidden"}], make=(".git/x",)
+    )
+    (root / "plugins").mkdir()
+    (root / "plugins" / "hidden").symlink_to(root / ".git" / "x")
+    assert "inside the marketplace's .git" in str(_refused(root, reader))
+
+
+def test_a_manifest_inside_the_root_git_folder_is_refused(
+    tmp_path: Path, reader: RecordingReader
+) -> None:
+    stored = _marketplace(tmp_path / "acme" / ".git" / "stored", [])
+    root = tmp_path / "acme"
+    (root / ".claude-plugin").symlink_to(stored / ".claude-plugin")
+    assert "inside the marketplace's .git" in str(_refused(root, reader))
+    assert reader.paths == []
