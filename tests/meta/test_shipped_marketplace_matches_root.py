@@ -115,3 +115,21 @@ def test_a_changed_field_is_drift(tmp_path: Path) -> None:
     (member / ".claude-plugin" / "marketplace.json").write_text(json.dumps(manifest))
     ok, message = renderer.check(cfg)
     assert not ok and "out of date" in message
+
+
+def test_the_rename_and_the_handoff_inputs_are_in_the_release_notes() -> None:
+    """Review N8: the user-visible changes of Tasks 0 and 7 reach the changelog, and ADR-0034 no
+    longer promises that `<plugin>@vibey-skills` is the packaged route."""
+    fragments = " ".join(
+        " ".join(path.read_text(encoding="utf-8").split())
+        for path in (REPO / "changelog.d").glob("*.md")
+    )
+    assert "renamed from `vibey-skills` to `vibey`" in fragments
+    assert "`handoff_inputs_missing`" in fragments
+    adr = " ".join(
+        (REPO / "docs" / "architecture" / "decisions" / "0034-one-marketplace-at-the-root.md")
+        .read_text(encoding="utf-8")
+        .split()
+    )
+    assert "`<plugin>@vibey-skills` remains the packaged route" not in adr
+    assert "Amended by SP-LOOPS Phase 3c" in adr

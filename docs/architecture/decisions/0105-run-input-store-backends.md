@@ -86,6 +86,15 @@ surfaced five rulings. The operator approved the recommended option for each:
    store. Rows in the store that the ledger never recorded are withheld and counted, so a third
    party who can write a shared bucket cannot plant an input into a project's runs. This closes
    the N7 limit for both backends.
+   Fix round 1 (review I2-I4) made the match exact and the reading lazy: rows are matched to
+   recorded adds one to one, in ledger order, on digest, kind, size and the SHA-256 of the name
+   (the add event's `name_digest`; the ledger still holds no name), so a planted older version of
+   a file, a re-kinded paste or a planted size is withheld rather than given. An add writes the
+   object, then the record, then the row; a row that fails after its record is cancelled by a
+   `vibey_run_input_failed` correction, and the same bytes added again fulfil an add left without
+   a row. A project nothing was added to reads no store, and the worker composes its store on
+   first use, so a broken `[inputs]` table, or credential variables a service manager does not
+   pass, fail only the runs that have inputs to give.
 5. **`vibey doctor` says which store is in force, where its configuration came from, and
    whether it answers** (a `run-inputs` section). Doctor is a person's explicit act, so its one
    network probe is not a run fetching on its own.

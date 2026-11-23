@@ -58,8 +58,13 @@ not a root-level script's.
 
 **A name of its own.** The one-per-name rule makes `vibey` the only name that lets the
 repository marketplace and the packaged `vibey-skills` marketplace be registered side by
-side. `<plugin>@vibey` is what the README teaches; `<plugin>@vibey-skills` remains the
-packaged route.
+side. `<plugin>@vibey` is what the README teaches. *Amended by SP-LOOPS Phase 3c (operator
+ruling OR-4, 2026-11-23):* the wheel no longer ships the skills tenant's own `vibey-skills`
+manifest. It ships `[marketplace] packaged`, a second rendering of this root manifest with every
+source flattened to `./plugins/<folder>`, under the root's name `vibey` and with all of the
+root's plugins (157 then, including the four `vibey-gh-*` ones). So `<plugin>@vibey` is the
+route from an install too, and `<plugin>@vibey-skills` resolves only for a marketplace added
+from the skills tenant's own folder in a checkout, whose manifest is unchanged.
 
 **Containment is checked, not assumed.** Every rewritten source must start with `./`, carry
 no `..` and no backslash, and resolve to a directory holding `.claude-plugin/plugin.json`
