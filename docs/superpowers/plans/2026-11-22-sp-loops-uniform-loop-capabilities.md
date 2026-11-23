@@ -21,7 +21,7 @@
 - A capability claim needs evidence (`EngineAffordances.evidence`); unknown is `None`, never `True`.
 - `domain/` stays pure (AST-enforced). Code lives in classes with an interface beside each (`services/interfaces/`). TypeScript, never JavaScript.
 - 100% branch coverage per layer, verified with xdist and an empty Missing column. No test depends on thread timing, sleeps, the platform, the network, or a real docker/podman/launchctl/systemctl.
-- Never read or print real keys (fake values in tests). Conventional Commits with `Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>`; run `git commit` and `git push` in the foreground; never `--no-verify`.
+- Never read or print real keys (fake values in tests). Conventional Commits, each ending with a `Co-Authored-By:` trailer naming the model that wrote it (implementers: `Claude Opus 5.5 <noreply@anthropic.com>`); run `git commit` and `git push` in the foreground; never `--no-verify`.
 - Pushes and test runs in a worktree use `VIBEY_TEST_TEMPLATE_DB=<a worktree-only name>`.
 
 ## Review Focus
