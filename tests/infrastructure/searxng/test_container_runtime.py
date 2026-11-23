@@ -133,7 +133,15 @@ def test_a_homebrew_link_into_its_cellar_is_a_runtime(trusted: Trusted) -> None:
 
 @pytest.mark.parametrize(
     "spoil",
-    ["link-outside", "world-writable", "not-executable", "a-folder", "someone-else", "gone"],
+    [
+        "link-outside",
+        "world-writable",
+        "group-writable",
+        "not-executable",
+        "a-folder",
+        "someone-else",
+        "gone",
+    ],
 )
 def test_a_candidate_that_fails_a_check_is_skipped_and_vetted_out(
     trusted: Trusted, spoil: str
@@ -144,6 +152,8 @@ def test_a_candidate_that_fails_a_check_is_skipped_and_vetted_out(
         candidate.symlink_to(trusted.binary(trusted.outside, "podman"))
     elif spoil == "world-writable":
         trusted.binary(trusted.first, "podman", 0o777)
+    elif spoil == "group-writable":
+        trusted.binary(trusted.first, "podman", 0o775)  # 9d N-e: refused, as the docs say
     elif spoil == "not-executable":
         trusted.binary(trusted.first, "podman", 0o644)
     elif spoil == "a-folder":

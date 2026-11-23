@@ -4,7 +4,6 @@
 import os
 import signal
 import sys
-import time
 from pathlib import Path
 
 import pytest
@@ -51,13 +50,17 @@ def test_terminate_says_false_for_a_process_that_is_already_gone(
     assert HubProcesses().terminate(4242) is False
 
 
-def test_spawn_runs_the_program_detached_with_its_output_in_the_log(tmp_path: Path) -> None:
+def test_spawn_runs_the_program_detached_in_its_folder_with_its_output_in_the_log(
+    tmp_path: Path,
+) -> None:
+    """The hub runs in the person's configuration folder, made owner-only (Task 11a M-2)."""
     log = tmp_path / "state" / "hub.log"
-    pid = HubProcesses().spawn([sys.executable, "-c", "print('hub says hi')"], log)
+    folder = tmp_path / "config" / "vibey"
+    pid = HubProcesses().spawn(
+        [sys.executable, "-c", "import os; print('hub says hi in', os.getcwd())"], log, cwd=folder
+    )
     assert pid > 0
-    deadline = time.monotonic() + 10
-    while time.monotonic() < deadline and "hub says hi" not in log.read_text():
-        time.sleep(0.05)
-    assert "hub says hi" in log.read_text()
+    os.waitpid(pid, 0)  # it has ended, so its output is all there: no polling
+    assert f"hub says hi in {os.path.realpath(folder)}" in log.read_text()
     assert (tmp_path / "state").stat().st_mode & 0o077 == 0
-    os.waitpid(pid, 0)
+    assert folder.stat().st_mode & 0o777 == 0o700

@@ -22,6 +22,6 @@ class HubProcessesInterface(Protocol):
         """Asks the process to stop cleanly; False when it is already gone."""
         ...
 
-    def spawn(self, argv: Sequence[str], log: Path) -> int:
-        """Starts `argv` detached, output to `log`, and returns its process id."""
+    def spawn(self, argv: Sequence[str], log: Path, *, cwd: Path) -> int:
+        """Starts `argv` detached in `cwd`, output to `log`, and returns its process id."""
         ...

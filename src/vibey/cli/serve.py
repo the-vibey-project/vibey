@@ -568,9 +568,13 @@ class ServeCommand:
 
     def exposure_lines(self) -> tuple[list[str], bool]:
         """The `hub-exposure` line, returned rather than printed, and False only on FAIL. A
-        `[hub]` table that cannot be read is a FAIL: no declaration can be judged against it."""
+        `[hub]` table that cannot be read is a FAIL: no declaration can be judged against it.
+
+        About your own hub: `[hub]` and its record come from your own `vibey.toml`, never the
+        folder doctor runs in, whose planted record could otherwise claim a loopback-only hub
+        while yours listens elsewhere (SP-ACP Task 11a)."""
         try:
-            settings = self._settings.load(self._config_path())
+            settings = self._settings.load(self._user_config())
         except ConfigError as exc:
             return [f"FAIL {'hub-exposure':<20} {exc}"], False
         finding = self._exposure.run(settings, LocalTokenStore(settings.state_dir))

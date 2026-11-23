@@ -59,8 +59,8 @@ from vibey.infrastructure.engines.interfaces.validated_ask_interface import (
 )
 from vibey.infrastructure.engines.ollama_chat import OllamaChatClient
 from vibey.infrastructure.engines.validated_ask import ValidatedAsk
-from vibey.infrastructure.web.fetch import PageFetcher
 from vibey.infrastructure.web.local_first import LocalFirstSearch
+from vibey.infrastructure.web.page_fetcher import PageFetcher
 from vibey.infrastructure.web.research import WebResearch
 from vibey.infrastructure.web.search import (
     DEFAULT_SEARXNG_URL,

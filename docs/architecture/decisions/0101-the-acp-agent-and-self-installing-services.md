@@ -35,8 +35,11 @@ user with a hub that is "away" on every prompt until they find the right page of
 output, through one stdlib peer shared by both directions (the client's requests and vibey's own
 `session/request_permission`). Standard output is the protocol stream alone: a guard redirects
 every other write. The children vibey starts for this decision (the service manager, `vibey hub
-start`, a PostgreSQL install) get standard input closed; the children `vibey doctor`'s own
-sections start still inherit it (a known gap, parked for a stdin guard in the transport).
+start`, a PostgreSQL install) get standard input closed. Standard input is guarded too (SP-ACP
+Task 11a): the protocol's input is read through a private, non-inheritable duplicate and fd 0 is
+pointed at `/dev/null`, so a child `vibey doctor`'s own sections start (a service-manager query,
+the Sabbath location lookup), or any other, reads nothing and can never take a byte of the
+client's messages; those two also start with standard input closed.
 
 ### 2. Every action goes through the hub, as the agent principal
 
@@ -114,6 +117,12 @@ crash loop is slowed on both and stopped only on systemd. In detail:
 - **No service manager.** With none to load into (no login session's `gui/<uid>`, as over SSH,
   or no `systemctl --user` manager), vibey runs `vibey hub start` once per process and says that
   nothing keeps it running.
+- *Amended (SP-ACP Task 11a):* `vibey hub start | stop | status` read `[hub]` from the user's own
+  `vibey.toml` and start `vibey serve` in the user's configuration folder, whatever folder they
+  run in, so they and the units agree on one state folder. Whether a hub runs is asked of its
+  lock (`ServeLock.held_by`, the one probe `detached_hub_pid` also uses), and `stop` signals only
+  the lock's holder when the record names that same pid; a record naming pid -1, 0 or 1 is
+  malformed.
 
 **Verified, and not yet verified (10.f).** Verified by tests: the rendering (the `on-failure`
 output byte for byte), the escaping, the file writes and refusals, the trust split, the argv

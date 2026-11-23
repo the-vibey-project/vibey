@@ -39,7 +39,9 @@ def _gateway(tmp_path: Path, starts: list[str], *, serving: bool) -> HubGateway:
     config = tmp_path / "vibey.toml"
     config.write_text(f'[hub]\nstate_dir = "{state}"\n')
     if serving:
-        (state / "serving.json").write_text(json.dumps({"host": "127.0.0.1", "port": 9, "pid": 1}))
+        (state / "serving.json").write_text(
+            json.dumps({"host": "127.0.0.1", "port": 9, "pid": 4242})
+        )
 
     def starter() -> bool:
         starts.append("start")

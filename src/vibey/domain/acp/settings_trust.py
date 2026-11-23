@@ -16,7 +16,8 @@ widen, raise or loosen anything:
   if it survives, else the first merged mode.
 - **Rates** (`hub_start_seconds`, `probe_seconds`, `live_poll_seconds`): slower, never faster.
 - **Bounds and caps** (every timeout, `prompt_probe_seconds`, `cancel_grace_seconds`, `max_gate_prompts_per_turn`, the
-  message, event, session and replay limits): lower, never higher.
+  message, event, session and replay limits, `gate_options_max`, `gate_label_chars_max`): lower,
+  never higher.
 - **The user's alone** (`restart`, `service_workdir`, `reject_words`,
   `notice_interval_seconds`, `install_timeout_seconds`): a project value is ignored, since none
   of them has a direction that is only stricter (a longer notice interval would quiet the
@@ -53,6 +54,8 @@ LOWER_ONLY: Final = (
     "sessions_max",
     "session_events_max",
     "replay_events_max",
+    "gate_options_max",
+    "gate_label_chars_max",
 )
 NARROWED: Final = ("install_postgres", "searxng", "services", "modes", "default_mode")
 _PERMISSIVENESS: Final = ("observe", "drive")

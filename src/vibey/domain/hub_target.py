@@ -51,6 +51,41 @@ class HubTargetPolicy:
                 address = address.ipv4_mapped
         return str(address) if address.is_loopback else None
 
+    def lan_address(self, host: str) -> str | None:
+        """The address literal to connect to for a host the person named on the command line
+        (`vibey hub pair --host`), or None: this computer's loopback as `loopback_address`
+        reads it, or an address literal -- never a name, never a zone -- on a private network
+        (`PRIVATE_NETWORKS`). A runtime record never reaches here: only the person's own word
+        may send a hub credential off the loopback."""
+        loopback = self.loopback_address(host)
+        if loopback is not None:
+            return loopback
+        literal = host[1:-1] if host.startswith("[") and host.endswith("]") else host
+        try:
+            address = ipaddress.ip_address(literal)
+        except ValueError:
+            return None
+        if isinstance(address, ipaddress.IPv6Address):
+            if address.scope_id is not None:
+                return None
+            if address.ipv4_mapped is not None:
+                address = address.ipv4_mapped
+        if any(address in network for network in PRIVATE_NETWORKS):
+            return str(address)
+        return None
+
+
+PRIVATE_NETWORKS: Final = (
+    ipaddress.ip_network("10.0.0.0/8"),
+    ipaddress.ip_network("172.16.0.0/12"),
+    ipaddress.ip_network("192.168.0.0/16"),
+    ipaddress.ip_network("100.64.0.0/10"),
+    ipaddress.ip_network("fc00::/7"),
+)
+"""The networks a hub may be paired over by `--host`: RFC 1918, the shared address space (RFC
+6598, where an overlay such as Tailscale lives) and IPv6 unique local addresses. Not link-local
+(`169.254.0.0/16` holds the clouds' metadata service; `fe80::/10` needs a zone), not a public
+address, not a name."""
 
 HUB_TARGETS: Final = HubTargetPolicy()
 """The one predicate every sender of a hub credential consults. Stateless."""

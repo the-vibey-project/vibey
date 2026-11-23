@@ -253,3 +253,36 @@ def test_a_backup_that_cannot_be_written_leaves_the_config_as_it_was(
         _connect(installer)
 
     assert target.read_text() == "{}"
+
+
+def test_a_backup_hard_linked_to_another_file_is_cut_loose_not_written_through(
+    tmp_path: Path,
+) -> None:
+    """Task 7 review-2 NIT 2: `.vibey.bak` hard-linked to another file once had the old config
+    written into that file, and its mode changed (SP-ACP Task 11a)."""
+    installer, home = _installer(tmp_path)
+    target = home / ".cursor" / "mcp.json"
+    target.write_text('{"mcpServers": {"other": {"command": "x"}}}')
+    target.chmod(0o600)
+    precious = tmp_path / "precious.txt"
+    precious.write_text("keep me")
+    precious.chmod(0o644)
+    backup = home / ".cursor" / "mcp.json.vibey.bak"
+    os.link(precious, backup)
+
+    _connect(installer)
+
+    assert precious.read_text() == "keep me" and precious.stat().st_mode & 0o777 == 0o644
+    assert '"other"' in backup.read_text() and backup.stat().st_nlink == 1
+    assert backup.stat().st_mode & 0o777 == 0o600
+
+
+def test_new_project_configs_are_owner_only(tmp_path: Path) -> None:
+    installer, _ = _installer(tmp_path)
+    project = tmp_path / "project"
+    (project / ".vscode").mkdir(parents=True)
+
+    installer.apply_plan(installer.build_plan(["claude_code", "vscode"]))
+
+    assert (project / ".mcp.json").stat().st_mode & 0o777 == 0o600
+    assert (project / ".vscode" / "mcp.json").stat().st_mode & 0o777 == 0o600

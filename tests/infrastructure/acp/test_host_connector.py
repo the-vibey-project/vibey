@@ -11,6 +11,7 @@ from __future__ import annotations
 
 import asyncio
 import json
+import os
 from pathlib import Path
 
 import pytest
@@ -122,7 +123,11 @@ def test_the_marker_lists_what_was_connected_and_says_so_afterwards(tmp_path: Pa
     asyncio.run(connector.connect_detected())
 
     marker = tmp_path / "state" / f"acp-connect-{VERSION}.json"
-    assert json.loads(marker.read_text()) == {"version": VERSION, "clients": ["cursor"]}
+    assert json.loads(marker.read_text()) == {
+        "version": VERSION,
+        "clients": ["cursor"],
+        "settled": {},
+    }
     assert marker.stat().st_mode & 0o777 == 0o600
     assert connector.already_connected() is True
 
@@ -335,3 +340,86 @@ def test_an_installer_aiming_at_a_folder_that_is_not_there_writes_nothing(tmp_pa
 
     assert results["cursor"].mark == "UNKNOWN" and "does not exist" in results["cursor"].detail
     assert not elsewhere.exists()
+
+
+def test_a_dotfile_linked_config_is_settled_until_its_link_changes(tmp_path: Path) -> None:
+    """Task 7 review-2 NIT 6: a config that is a symbolic link is never written, and once
+    recorded with where it points it is not tried at every launch (SP-ACP Task 11a)."""
+    connector, home, _ = _connector(tmp_path)
+    dotfiles = tmp_path / "dotfiles"
+    dotfiles.mkdir()
+    (dotfiles / "mcp.json").write_text('{"mcpServers": {}}')
+    (home / ".cursor").mkdir()
+    (home / ".cursor" / "mcp.json").symlink_to(dotfiles / "mcp.json")
+    (home / ".codex").mkdir()
+
+    results = asyncio.run(connector.connect_detected())
+
+    cursor = next(r for r in results if r.name == "cursor")
+    assert cursor.mark == "WARN" and "symbolic link" in cursor.detail
+    assert (dotfiles / "mcp.json").read_text() == '{"mcpServers": {}}'
+    marker = json.loads((tmp_path / "state" / f"acp-connect-{VERSION}.json").read_text())
+    assert marker["clients"] == ["codex"]
+    assert marker["settled"] == {"cursor": f"link:{dotfiles / 'mcp.json'}"}
+    assert connector.already_connected() is True
+    # The link now points elsewhere: the step runs again.
+    (dotfiles / "other.json").write_text("{}")
+    (home / ".cursor" / "mcp.json").unlink()
+    (home / ".cursor" / "mcp.json").symlink_to(dotfiles / "other.json")
+    assert connector.already_connected() is False
+
+
+def test_a_folder_outside_home_is_settled_until_it_moves_inside(tmp_path: Path) -> None:
+    connector, home, _ = _connector(tmp_path)
+    outside = tmp_path / "outside"
+    outside.mkdir()
+    (home / ".cursor").symlink_to(outside, target_is_directory=True)
+
+    asyncio.run(connector.connect_detected())
+
+    marker = json.loads((tmp_path / "state" / f"acp-connect-{VERSION}.json").read_text())
+    assert marker["settled"] == {"cursor": f"outside:{os.path.realpath(outside)}"}
+    assert connector.already_connected() is True
+    inside = home / "cursor-config"
+    inside.mkdir()
+    (home / ".cursor").unlink()
+    (home / ".cursor").symlink_to(inside, target_is_directory=True)
+    assert connector.already_connected() is False
+
+
+def test_a_marker_whose_settled_clients_are_not_a_table_means_not_connected(
+    tmp_path: Path,
+) -> None:
+    connector, _, _ = _connector(tmp_path)
+    marker = tmp_path / "state" / f"acp-connect-{VERSION}.json"
+    marker.parent.mkdir()
+    marker.write_text(json.dumps({"version": VERSION, "clients": [], "settled": ["cursor"]}))
+    assert connector.already_connected() is False
+
+
+def test_an_already_connected_linked_config_passes_and_is_never_rewritten(tmp_path: Path) -> None:
+    connector, home, _ = _connector(tmp_path)
+    (home / ".cursor").mkdir()
+    asyncio.run(connector.connect_detected())
+    dotfiles = tmp_path / "dotfiles"
+    dotfiles.mkdir()
+    (home / ".cursor" / "mcp.json").rename(dotfiles / "mcp.json")
+    (home / ".cursor" / "mcp.json").symlink_to(dotfiles / "mcp.json")
+
+    results = asyncio.run(connector.connect_detected())
+
+    assert next(r for r in results if r.name == "cursor").mark == "PASS"
+
+
+def test_a_link_that_cannot_be_read_is_not_a_settled_state(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    link = tmp_path / "home" / "x.json"
+    link.parent.mkdir()
+    link.symlink_to(tmp_path / "nowhere")
+
+    def unreadable(path: object) -> str:
+        raise OSError("gone")
+
+    monkeypatch.setattr(os, "readlink", unreadable)
+    assert HostConnector._unwritable(link, Path(os.path.realpath(tmp_path / "home"))) is None

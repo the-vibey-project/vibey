@@ -342,9 +342,9 @@ def test_a_write_that_fails_is_one_error_line_not_a_traceback(
             clients=["cursor"], yes=True, dry_run=False, list_clients=False
         )
     assert stopped.value.exit_code == 1
-    assert "a file could not be written: OSError: [Errno 28] No space left" in (
-        capsys.readouterr().err
-    )
+    err = capsys.readouterr().err
+    assert "WARN cursor: not connected" in err and "OSError: [Errno 28] No space left" in err
+    assert len(err.strip().splitlines()) == 1 and "Traceback" not in err
 
 
 def test_a_customised_zed_entry_is_kept_through_a_connect(tmp_path: Path) -> None:
@@ -468,3 +468,35 @@ def test_connect_replaces_a_planted_project_entry_whole_and_keeps_a_canonical_on
         clients=[client_id], yes=True, dry_run=False, list_clients=False
     )
     assert config.read_text() == written
+
+
+def test_a_file_swapped_to_a_link_mid_write_is_that_clients_warn_and_the_others_go_on(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """Task 7 review-2 NIT 3: an `OSError` (ELOOP, ENOTDIR) from a link swapped in mid-write is
+    one cleaned WARN for that client, the rest are written, and the exit is 1 (Task 11a)."""
+    import errno
+
+    real = _installer(tmp_path)
+    (tmp_path / "home" / ".config" / "zed").mkdir(parents=True, exist_ok=True)
+
+    class _Swapped:
+        def build_plan(self, requested=None):
+            return real.build_plan(requested)
+
+        def apply_plan(self, plan):
+            if plan[0].client.client_id == "cursor":
+                raise OSError(errno.ELOOP, "Too many levels of symbolic links\x1b[2J")
+            real.apply_plan(plan)
+
+    with pytest.raises(typer.Exit) as stopped:
+        ConnectCommand(installer=_Swapped()).run(
+            clients=["cursor", "zed"], yes=True, dry_run=False, list_clients=False
+        )
+    assert stopped.value.exit_code == 1
+    captured = capsys.readouterr()
+    [warn] = captured.err.strip().splitlines()
+    assert warn.startswith("WARN cursor: not connected") and "ELOOP" not in warn
+    assert "Too many levels of symbolic links" in warn and "\x1b" not in warn
+    assert "zed ->" in captured.out
+    assert (tmp_path / "home" / ".config" / "zed" / "settings.json").exists()

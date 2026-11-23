@@ -180,9 +180,12 @@ In your own user-level configs (Zed, Claude Desktop, Codex, Cursor, Gemini CLI),
 already carries a `vibey` entry running that command, with vibey's own arguments first
 (`["acp"]`, `["mcp"]`), counts as connected and is left exactly as it is: whatever else you put
 in the entry -- an `env`, other keys, flags after vibey's arguments such as
-`["acp", "--no-bootstrap"]` -- is yours. When the entry must change (another `vibey`, or no
+`["acp", "--no-bootstrap"]` -- is yours. After `acp` only `--no-bootstrap` may follow: an
+entry such as `["acp", "unload"]` would run another command, so it does not count as connected,
+and a rewrite keeps `--no-bootstrap` alone. When the entry must change (another `vibey`, or no
 entry yet), only its `type`, `command` and vibey's own leading `args` change; your `env`, other
-keys and extra flags are kept. A project's file (`.mcp.json`, `.vscode/mcp.json`) belongs to the
+keys and extra flags are kept. In a project's TOML file, every `[mcp_servers.vibey.*]`
+sub-table (an `env` one, say) is dropped on a rewrite. A project's file (`.mcp.json`, `.vscode/mcp.json`) belongs to the
 repository, not to you, so there only the exact entry above counts as connected, and any other
 `vibey` entry -- one with an `env`, an `envFile`, another key or an extra argument -- is
 replaced whole: a planted `PYTHONPATH` or `DYLD_INSERT_LIBRARIES` never runs inside vibey's
@@ -190,8 +193,13 @@ server. Before writing an existing config file, `vibey connect` copies
 the original to `<path>.vibey.bak` (with the original's permissions) and merges the `vibey`
 entry without disturbing other servers or settings, keeping the file's indentation and its
 non-ASCII text as written (a UTF-8 byte-order mark too); the new file replaces the old one
-atomically, no wider than it was, never through a symbolic link, and only inside your home
-folder (user-scope clients) or the project folder (`.mcp.json`, `.vscode/mcp.json`).
+atomically, no wider than it was (a new file, a project's `.mcp.json` or `.vscode/mcp.json`
+included, is 0600), never through a symbolic link, and only inside your home folder (user-scope
+clients) or the project folder (`.mcp.json`, `.vscode/mcp.json`). The old `.vibey.bak` is
+removed and a new one created, so a backup that was a hard link to another file never writes into
+that file. Each client is written on its own: a file that cannot be written, or is swapped to a
+link mid-write, is one `WARN <client>: not connected ...` line on stderr for that client, the
+others are still written, and the command exits 1.
 A JSON file vibey cannot read as strict JSON -- Zed's `settings.json` usually holds comments,
 and may hold trailing commas -- is never rewritten, and neither is one nested too deeply to
 parse. If it already carries the entry, it counts as connected; otherwise that client is
@@ -238,8 +246,14 @@ vibey mcp
 `vibey mcp` takes no options. It is a thin client of the local hub API (`/api/v1`) and
 authenticates with `<state_dir>/agent.token` as the scoped `agent` principal
 ([`[hub] agent_scopes`](configuration.md#hub): `view`, `answer`, `run`, `acp_sessions` and
-`web` by default — never `spend`, `bump` or `workflows`). If no hub is running when a tool is
-called, it runs `vibey hub start` once and retries. It exposes 16 tools (`vibey_projects`,
+`web` by default — never `spend`, `bump` or `workflows`). `[hub]` is read from your own
+`vibey.toml`, in your configuration folder (`~/Library/Application Support/vibey` on macOS,
+`$XDG_CONFIG_HOME/vibey` elsewhere): the state folder, so the agent token and the runtime
+record, and the ceiling on `agent_scopes`. The `vibey.toml` of the folder the client opened may
+be a cloned repository's, so it is heard on `agent_scopes` only, and only to narrow (what both
+grant is kept); its `state_dir` and every other `[hub]` key are ignored, and a `[hub]` there
+that cannot be read is refused. If no hub is running when a tool is called, it runs
+`vibey hub start` once, in your configuration folder, and retries. It exposes 16 tools (`vibey_projects`,
 `vibey_status`, `vibey_gates`, `vibey_answer_gate`, `vibey_budget`, `vibey_queue`,
 `vibey_ledger`, `vibey_loops`, `vibey_lanes`, `vibey_doctor`, `vibey_start_project`,
 `vibey_start_work`, `vibey_pause_work`, `vibey_abandon_project` where `dry_run` defaults to
@@ -277,7 +291,10 @@ environment of whoever started it (`vibey hub start` by hand, the user-level uni
 starting it from an editor's environment); `vibey doctor` on the hub's computer says. A
 fetch is refused for anything but a public http(s) page: see [`[web]`](configuration.md#web)
 for the hosts, bounds and content types, and [the hub API](hub-api.md#web) for every refusal.
-An answer is cut to 60,000 characters with an explicit `...[truncated N chars]` marker.
+An answer is cut to 60,000 characters with an explicit `...[truncated N chars]` marker; a
+`vibey_fetch` answer longer than that (`[web] max_chars` raised past it) is cut inside its
+marked block instead, so it still parses, says `"truncated": true`, and keeps its closing
+marker. A failed search names the cause and the backends tried, never where SearXNG listens.
 
 ## `vibey acp`
 
@@ -360,7 +377,10 @@ a turn, each once per session, and only in a mode that may answer gates (`drive`
   characters, or other spaces), it holds right-to-left text or a bidirectional control (it could
   display in another order than it is sent), it mixes scripts inside a word (a Cyrillic "о" in a Latin word),
   or it reads the same as another label once normalised ("no" and a full-width "ＮＯ", "Stop"
-  and "stop"). A label counts as a refusal by [`reject_words`](configuration.md#acp) however it
+  and "stop"). It is likewise answered on the host when it lists more options than
+  [`[acp] gate_options_max`](configuration.md#acp) (20) or any label is longer than
+  `gate_label_chars_max` (200): a client shows every option, and a wall of them could hide the
+  one you mean. A label counts as a refusal by [`reject_words`](configuration.md#acp) however it
   is spelled.
 - "Leave it open", a cancelled or failed request, no answer within
   [`[acp] permission_timeout_seconds`](configuration.md#acp), or an option the gate never
@@ -453,7 +473,9 @@ project's name in `/status`, a refusal's body, a ledger summary). So:
   and a client may still choose to link it.
 
 Escaping can make a message a little longer than the limit it was cut to. A gate's prompt is
-still sent unchanged in the tool call's `rawInput`, as data.
+still sent unchanged in the tool call's `rawInput`, as data, deliberately: the title shows a cut
+line, and `rawInput` is where a client finds the whole of it; `[acp] gate_options_max` and
+`gate_label_chars_max` bound what the operator is asked to pick from.
 
 The feed polls the hub every [`[acp] live_poll_seconds`](configuration.md#acp) from the last
 event it sent (a position in the ledger, never a time), so nothing is skipped or sent twice
@@ -564,10 +586,14 @@ here delays the answer: the steps start after `session/new` (or the first `sessi
    and neither is a config file that is itself a symbolic link. A
    changed file is backed up to `<file>.vibey.bak` with the original's permissions, and the new
    file replaces the old one atomically, no wider than it was. One client's broken file is a
-   `WARN` for that client while the others go on. When no client warned,
-   `<[hub] state_dir>/acp-connect-<version>.json` records which clients were connected; the next
-   `vibey acp` of this version skips the step while every client installed then is in that
-   record, so a `WARN`, or a client installed since, is tried again.
+   `WARN` for that client while the others go on. When no client warned (but for the settled
+   ones below), `<[hub] state_dir>/acp-connect-<version>.json` records which clients were
+   connected, and which are settled: a client whose folder resolves outside your home folder, or
+   whose config is a symbolic link (a dotfile-managed config; a `WARN` saying to add the entry by
+   hand where it points), is recorded with that folder's real path or the link's target. The
+   next `vibey acp` of this version skips the step while every client installed is in that
+   record as it stands now, so another `WARN`, a client installed since, or a settled client
+   whose folder or link changed is tried again.
 3. **Services** (an `execute` tool call, "Keep vibey's services running"), when
    [`[acp] auto_services`](configuration.md#acp) is on and `[acp] services` names any
    ([ADR-0101](../architecture/decisions/0101-the-acp-agent-and-self-installing-services.md)).
@@ -845,17 +871,41 @@ Every krypton UI offers the same start, stop and status actions, and they are th
 commands. **Closing a UI never stops the hub**: `start` launches it detached from the
 terminal and the session, its output in `<state_dir>/hub.log`, and only `stop` ends it.
 `stop` sends SIGTERM so the hub shuts down cleanly and clears its own record; it never sends
-SIGKILL, and a hub that is slow to stop is reported as still stopping (exit 1). A record
-whose process is gone is reported as stale, never as a running hub.
+SIGKILL, and a hub that is slow to stop is reported as still stopping (exit 1).
+
+All three read `[hub]` from your own `vibey.toml`, in your configuration folder, never from the
+current directory, and `start` launches `vibey serve` in that configuration folder (made 0700),
+so the hub reads the same `[hub]`: a cloned repository's `vibey.toml` can no longer choose the
+state folder the hub keeps its tokens in, or the record and process `stop` acts on. Whether a
+hub runs is asked of the hub's own lock, `<state_dir>/serve.lock`, never of a process id alone:
+a record whose lock nobody holds is stale (never a running hub, and nothing is signalled), one
+whose lock another process holds is refused (exit 1, "the two disagree"), and `stop` signals only
+the process that holds the lock and names itself in the record. A record naming process id -1, 0
+or 1, or a port outside 1 to 65535, is unreadable and never acted on.
 
 | Command | What it does |
 |---|---|
 | `vibey hub status` | Says whether the hub runs and where (`http://127.0.0.1:8765/api/v1 (pid N)`). Exit 3 when it does not. |
-| `vibey hub start [--timeout SECONDS]` | Starts the hub in the background unless one already runs (then it says so and exits 0), and waits, 15 seconds by default, until the hub has said where it listens. Exit 1 if it exits first or does not come up. Reads `vibey.toml` from the current directory like `vibey serve`. |
+| `vibey hub start [--timeout SECONDS]` | Starts the hub in the background unless one already runs (then it says so and exits 0), and waits, 15 seconds by default, until the hub has said where it listens. Exit 1 if it exits first or does not come up. Reads your own `vibey.toml` and starts the hub in your configuration folder. |
 | `vibey hub stop [--timeout SECONDS]` | Asks the running hub to stop and waits for it to go. Exit 0 when none runs. |
-| `vibey hub pair --scope SCOPE [--scope SCOPE ...]` | Offers a pairing of the named scopes (`view`, `answer`, `spend`, `run`, `bump`; at least one) and shows a QR code, the 6-digit code (valid two minutes, once), the pairing URI and the certificate fingerprint. |
-| `vibey hub devices` | Lists the paired devices: id, name, scopes. Never a key. |
-| `vibey hub revoke DEVICE_ID` | Revokes a device. It is refused from its very next request. |
+| `vibey hub pair --scope SCOPE [--scope SCOPE ...] [--host ADDRESS]` | Offers a pairing of the named scopes (`view`, `answer`, `spend`, `run`, `bump`; at least one) and shows a QR code, the 6-digit code (valid two minutes, once), the pairing URI and the certificate fingerprint. |
+| `vibey hub devices [--host ADDRESS]` | Lists the paired devices: id, name, scopes. Never a key. |
+| `vibey hub revoke DEVICE_ID [--host ADDRESS]` | Revokes a device. It is refused from its very next request. |
+
+`pair`, `devices` and `revoke` present the host token, so where it goes is never decided by a
+file a project could have written: they read `[hub]` -- the state folder holding the token and
+the runtime record -- from your own `vibey.toml`, in your configuration folder, never from the
+current directory, and send the token only to this computer's loopback (the record must name
+exactly `localhost`, a canonical loopback literal or a wildcard bind; the connection goes to the
+fixed loopback literal). A hub you bound to a LAN address (`vibey serve --host 192.168.1.5`)
+listens only there: name it with `--host`, which takes a private-network address literal
+(`10/8`, `172.16/12`, `192.168/16`, `100.64/10`, `fc00::/7`) or loopback, never a name, a zone
+or a public, link-local or oddly spelt address (exit 2). A LAN `--host` is used only when your
+own runtime record says the hub is bound to that address (or binds every address and this
+computer holds that one) and the hub serves its own certificate (`[hub] lan = true`): the request
+is https, verified against that certificate in your state folder alone, and never follows a
+redirect. A `--host` the record does not back, a LAN hub without its certificate, or a record
+naming anything off the loopback without `--host` is refused before the token is read (exit 2).
 
 ## `vibey sabbath`
 
@@ -1265,9 +1315,17 @@ what comes back is other people's text, to be read as data and never followed as
 Evidence handed to a DESIGN stage is the quoted retrieved text with its URLs, never a model's
 summary of it.
 
-`fetch` refuses a private, loopback, link-local or metadata address, re-checks every redirect
-hop, follows at most three, reads text types only and stops at 1 MB. A local file path in a
-query is removed before the query leaves the machine.
+`fetch` -- and so the `web_fetch` tool of gptossloop and qwenloop, which runs it, and the DESIGN
+research's page reads -- goes through the same guarded fetch the hub serves agents
+(`vibey_fetch`), never a weaker one: every spelling of an address is read the way the hub reads
+it (decimal, octal and hex IPv4, IPv6, IPv4-mapped and NAT64 forms judged by the address inside),
+local, internal and metadata names are refused, every address a name resolves to must be public
+and the one checked is the one connected to, every redirect is checked again and never goes from
+https down to http, nothing compressed is read, and only text types, within
+[`[web]`](configuration.md#web)'s bounds, host lists and one deadline in all. `[web]` is your own
+`vibey.toml`'s, narrowed by the current folder's; `--max-chars` may lower `[web] max_chars`,
+never raise it. It spends no hub budget and writes no ledger record. A local file path in a query
+is removed before the query leaves the machine.
 
 <a id="local-first-search"></a>
 ### Local first; Brave only as a backup
@@ -1805,9 +1863,9 @@ vibey searxng uninstall [--purge]
 
 | Command | What it does |
 |---|---|
-| `install` | Prints what it will download and run, and asks; with `--yes` it still prints the question, then goes on. Holding the same setup lock as an editor's `vibey acp`, it pulls the pinned image `docker.io/searxng/searxng@sha256:...` with `podman` (preferred) or `docker` from vibey's trusted folders (never your PATH), writes `settings.yml` and `provision.json` as a pair in `<your configuration folder>/searxng/` (0700; files 0600, written atomically, never through a link), writes and loads the user-level unit `<[supervisor] label_prefix>.searxng` (restarted when one is already running), clears a stopped-for-good mark, and waits up to `[acp] bootstrap_timeout_seconds` until the SearXNG answers as vibey's own. It refuses when your environment names your own SearXNG (`VIBEY_SEARXNG_URL`), when anything that is not vibey's SearXNG listens on the port, when `DOCKER_HOST`/`CONTAINER_HOST` names a daemon that is not a local socket (a local one, and `DOCKER_CONTEXT`, `DOCKER_CONFIG`, `CONTAINER_CONNECTION`, are said to be ignored: the unit at login never has them), with no runtime, while another vibey holds the setup lock, and as root. Run it again to update to a newer pinned image, or to record a runtime that moved. Exit 0 once it answers, 1 otherwise. |
+| `install` | Prints what it will download and run, and asks; with `--yes` it still prints the question, then goes on. Holding the same setup lock as an editor's `vibey acp`, it pulls the pinned image `docker.io/searxng/searxng@sha256:...` with `podman` (preferred) or `docker` from vibey's trusted folders (never your PATH), writes `settings.yml` and `provision.json` as a pair in `<your configuration folder>/searxng/` (0700; files 0600, written atomically, never through a link), writes and loads the user-level unit `<[supervisor] label_prefix>.searxng` (restarted when one is already running), clears a stopped-for-good mark, and waits up to `[acp] bootstrap_timeout_seconds` until the SearXNG answers as vibey's own. It refuses when your environment names your own SearXNG (`VIBEY_SEARXNG_URL`), when anything that is not vibey's SearXNG listens on the port, when `DOCKER_HOST`/`CONTAINER_HOST` names a daemon that is not a local socket (a local one, and `DOCKER_CONTEXT`, `DOCKER_CONFIG`, `CONTAINER_CONNECTION`, are said to be ignored: the unit at login never has them), with no runtime, while another vibey holds the setup lock, and as root. Run it again to update to a newer pinned image: an update, and every re-install over an existing record, pulls with the runtime vibey installed with (trust-checked again), never one found later, so the image stays in the daemon it was in; when that runtime is gone it refuses, saying to put it back or to run `uninstall --purge` and then `install` to use the one vibey finds now; when it is there but no longer trusted (writable by its group, say) it says to fix it, or to stop the old container with it yourself first, since that container may still hold SearXNG's port (`doctor` and `status` say the same). Exit 0 once it answers, 1 otherwise. |
 | `status` | The runtime, why the recorded install is refused (when it is), "a newer pinned image is available (<old> -> <new>)" after a new pin, what vibey installed (image digest, port, unit label), whether the image is here, the unit's state, whether it is stopped for good and whether it answers as vibey's own. Always exit 0. |
-| `uninstall` | Holding the setup lock: unloads the unit labelled `<[supervisor] label_prefix>.searxng` -- from your own configuration, never from the record -- and deletes its file only while it is exactly what vibey wrote, removes the container (only one vibey started for you), and marks it stopped for good so no editor session loads or offers it again until `install`. `--purge` also removes the image, `settings.yml` and `provision.json`. Safe to run again; exit 1 when something could not be done, while another vibey holds the lock, or as root. |
+| `uninstall` | Holding the setup lock: unloads the unit labelled `<[supervisor] label_prefix>.searxng` -- from your own configuration, never from the record -- and deletes its file only while it is exactly what vibey wrote, removes the container (only one vibey started for you, asked of the runtime it was installed with, an earlier pin's install included), and marks it stopped for good so no editor session loads or offers it again until `install`. `--purge` also removes the image, `settings.yml` and `provision.json`; when the runtime vibey installed with is gone, there is no container or image of it to reach, and that is said as expected, not a failure. Safe to run again; exit 1 when something could not be done, while another vibey holds the lock, or as root. |
 | `serve` | Hidden: what the unit runs. It checks the stop mark, the record (every value, the image equal to the pinned one, the label this configuration's; a record of an earlier pin is refused with the way to update), the settings file (yours alone, a regular file), the runtime (trusted folder, file checks) and that the image is here -- it never pulls, so nothing downloads at login -- removes its own container a killed run left behind, then replaces itself with the runtime's one command line. Exit 78 for any refusal that only you can clear (the unit's throttle spaces its restarts; `status` and `doctor` say why), 1 when an old container would not go. |
 
 The container runs as `<runtime> run --rm --name vibey-searxng-<uid> --label
@@ -2184,8 +2242,8 @@ Each prints `PASS`, `FAIL` or `UNKNOWN`, and doctor exits 1 if either fails:
 
 With `VIBEY_PG_URL` unset, `ledger-guard` prints `UNKNOWN` and nothing is checked.
 
-The `hub-exposure` line asks whether a running hub (`vibey serve`) listens where
-`vibey.toml` says it may: `PASS` on loopback or on a LAN address `[hub] lan = true`
+The `hub-exposure` line asks whether your running hub (`vibey serve`) listens where your own
+`vibey.toml` (in your configuration folder, never the folder doctor runs in) says it may: `PASS` on loopback or on a LAN address `[hub] lan = true`
 declares, `FAIL` on an undeclared one (the exit is then 1), and `UNKNOWN` when no hub is
 running or its runtime record names a process that is gone. A `[hub]` table that cannot be
 read is a `FAIL`.
@@ -2235,7 +2293,9 @@ A fourth line, `web-tools`, follows: whether the hub serves [`vibey_search` and
 `vibey_fetch`](#web-tools-vibey_search-and-vibey_fetch) to the agent principal, with the
 `[web]` budgets (the person's own, narrowed by this folder's, as the hub reads them). The hub it
 asks about is your own: its state folder and `agent_scopes` come from your own `vibey.toml` (in
-your configuration folder), never from the folder doctor runs in, and it is probed only on a
+your configuration folder), never from the folder doctor runs in, which may only narrow
+`agent_scopes` -- read by the same rule `vibey mcp` uses, so a `PASS` here is exactly when its
+`tools/list` offers the two tools -- and it is probed only on a
 loopback address its runtime record names -- exactly `localhost`, a canonical 127.0.0.0/8 or
 `::1` literal (or an IPv4-mapped form of one), or a wildcard bind -- connecting to a fixed
 loopback literal rather than resolving the name again, with no credential, bounded in time and size, never through a proxy and never past a

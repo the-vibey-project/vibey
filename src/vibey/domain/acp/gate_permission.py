@@ -28,6 +28,10 @@ Gate text is untrusted data written by workers and models. Three rules keep it d
     full-width "ＮＯ", "Stop" and "stop".
   Only an exact repeat of a label is folded into one. Whole words that are lookalikes in
   another single script (a Cyrillic "сор" for "cop") are not caught: a parked follow-up.
+- A choice or verdict gate listing more options than `[acp] gate_options_max`, or any label
+  longer than `gate_label_chars_max`, is refused the same way (SP-ACP Task 11a): a client shows
+  every option, and a wall of them, or one label that runs off the dialog, could hide the one
+  the operator meant.
 - A gate id must be a UUID. Anything else is never offered and never repeated back, and a
   refusal names a gate's kind only when it is shaped like one (`_KIND_SHAPE`).
 
@@ -49,10 +53,15 @@ import re
 import unicodedata
 from collections.abc import Mapping
 from dataclasses import dataclass
-from typing import Any, Final
+from typing import Any, Final, Self
 from uuid import UUID
 
 from vibey.domain.acp.protocol import PermissionKind
+from vibey.domain.acp.settings import (
+    DEFAULT_GATE_LABEL_CHARS_MAX,
+    DEFAULT_GATE_OPTIONS_MAX,
+    AcpSettings,
+)
 from vibey.domain.acp.untrusted_text import UNTRUSTED_TEXT
 from vibey.domain.hub_chat import (
     ANY_ANSWER_GATE_KINDS,
@@ -119,8 +128,25 @@ class PermissionChoice:
 class GatePermissionMapper:
     """Declared by `interfaces/gate_permission_interface.py::GatePermissionMapperInterface`."""
 
-    def __init__(self, reject_words: tuple[str, ...]) -> None:
+    def __init__(
+        self,
+        reject_words: tuple[str, ...],
+        *,
+        options_max: int = DEFAULT_GATE_OPTIONS_MAX,
+        label_chars_max: int = DEFAULT_GATE_LABEL_CHARS_MAX,
+    ) -> None:
         self._reject_words = frozenset(reject_words)
+        self._options_max = options_max
+        self._label_chars_max = label_chars_max
+
+    @classmethod
+    def from_settings(cls, settings: AcpSettings) -> Self:
+        """The mapper `[acp]` describes: its reject words and its caps on a gate's options."""
+        return cls(
+            settings.reject_words,
+            options_max=settings.gate_options_max,
+            label_chars_max=settings.gate_label_chars_max,
+        )
 
     def gate_id(self, gate: Mapping[str, Any]) -> str | None:
         raw = gate.get("gate_id")
@@ -137,7 +163,13 @@ class GatePermissionMapper:
     def options_for(self, gate: Mapping[str, Any]) -> tuple[PermissionChoice, ...]:
         gate_id = self.gate_id(gate)
         kind = str(gate.get("kind") or "")
-        if gate_id is None or self.spends(gate) or self._opts_in(gate) or self._ambiguous(gate):
+        if (
+            gate_id is None
+            or self.spends(gate)
+            or self._opts_in(gate)
+            or self._over_caps(gate)
+            or self._ambiguous(gate)
+        ):
             return ()
         if kind in VERDICT_GATE_KINDS:
             return self._per_option(gate_id, "verdict", gate.get("options"))
@@ -173,6 +205,12 @@ class GatePermissionMapper:
             return (
                 f"Gate {gate_id} ({shown}) opts the project into deployment, which can provision "
                 f"real infrastructure, so I cannot answer it. {host}"
+            )
+        if self._over_caps(gate):
+            return (
+                f"Gate {gate_id} ({shown}) lists more options, or a longer label, than I show "
+                f"([acp] gate_options_max = {self._options_max}, gate_label_chars_max = "
+                f"{self._label_chars_max}), so I cannot offer it. {host}"
             )
         if self._ambiguous(gate):
             return (
@@ -222,6 +260,19 @@ class GatePermissionMapper:
                 )
             )
         return self._with_leave_open(gate_id, choices) if choices else ()
+
+    def _over_caps(self, gate: Mapping[str, Any]) -> bool:
+        """Whether a choice or verdict gate lists more options, or a longer label, than `[acp]`
+        lets the editor show. Measured before any label is read further."""
+        options = gate.get("options")
+        kind = str(gate.get("kind") or "")
+        if kind not in VERDICT_GATE_KINDS and kind not in CHOICE_GATE_KINDS:
+            return False
+        if not isinstance(options, list):
+            return False
+        return len(options) > self._options_max or any(
+            len(str(option).strip()) > self._label_chars_max for option in options
+        )
 
     @classmethod
     def _ambiguous(cls, gate: Mapping[str, Any]) -> bool:

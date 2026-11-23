@@ -13,10 +13,16 @@ Mirrors `cli/hub_pair.py::HubPairCommand._call`, with two deliberate differences
 4. A call to the open web (`vibey_search`, `vibey_fetch`) waits longer than the hub's own web
    deadline (`[web] timeout_seconds`, and three search timeouts for SearXNG's identity check,
    SearXNG and the Brave backup) plus `WEB_TIMEOUT_MARGIN`, so the hub always answers first.
-5. It reaches only a hub on this computer's loopback: a runtime record naming any other host
-   (the record lives in `[hub] state_dir`, which a folder's `vibey.toml` can still name -- the
-   parked `[hub]` trust split) is refused before the token, or a call -- a gate answer, a search
-   query, a URL -- is sent anywhere (SP-ACP Task 9b).
+5. `[hub]` is the person's own (`config_path`, their configuration folder's `vibey.toml`): the
+   state folder -- so the agent token and the runtime record -- and the ceiling on
+   `agent_scopes`. The `vibey.toml` of the folder the client opened (`project_config`) may be a
+   cloned repository's: it may only narrow `agent_scopes` and `[web]`, never name a state folder
+   (SP-ACP Task 11a, the Task 8 trust split). A hub this gateway starts runs in the person's
+   configuration folder, so it reads the same file.
+6. It reaches only a hub on this computer's loopback: a runtime record naming any other host is
+   refused before the token, or a call -- a gate answer, a search query, a URL -- is sent
+   anywhere, and the connection goes to the fixed loopback literal `HUB_TARGETS` returns, never
+   to the record's name resolved again (SP-ACP Task 9b).
 """
 
 from __future__ import annotations
@@ -34,7 +40,7 @@ import httpx
 from vibey.domain.config import ConfigError
 from vibey.domain.errors import VibeyError
 from vibey.domain.host_tools import HubCall
-from vibey.domain.hub_scope import AGENT_DEFAULT_SCOPES, HubScope
+from vibey.domain.hub_scope import HubScope
 from vibey.domain.hub_target import HUB_TARGETS
 from vibey.domain.web_tools import WebToolSettings
 from vibey.infrastructure.hub.interfaces.settings_interface import HubSettingsLoaderInterface
@@ -55,15 +61,17 @@ _NEVER_ARRIVED: Final = (httpx.ConnectError, httpx.ConnectTimeout)
 
 
 def personal_config() -> Path:
-    """The person's own `vibey.toml`, where `[web]` is granted.
+    """The person's own `vibey.toml`, where `[hub]` and `[web]` are granted.
 
     Module-level by design: the default of `HubGateway`'s `user_config` seam, kept here so the
     test suite can stand another in for the developer's own file."""
-    return UserConfigFolder().path() / "vibey.toml"
+    return UserConfigFolder().vibey_toml()
 
 
 type ClientFactory = Callable[..., httpx.Client]
 type HubStarter = Callable[[], bool]
+type _Seen = tuple[Path, int, int, int, int]
+"""A file as last seen: path, inode, mtime, ctime and size (all -1 when it did not exist)."""
 
 
 class HubGatewayError(VibeyError):
@@ -119,44 +127,52 @@ class HubGateway:
         self,
         *,
         settings: HubSettingsLoaderInterface = HUB_SETTINGS,
-        config_path: Callable[[], Path] = lambda: Path.cwd() / "vibey.toml",
+        config_path: Callable[[], Path] = lambda: personal_config(),
+        project_config: Callable[[], Path] = lambda: Path.cwd() / "vibey.toml",
         client: ClientFactory = httpx.Client,
-        starter: HubStarter = _default_starter,
+        starter: HubStarter | None = None,
         timeout: float = 15.0,
-        user_config: Callable[[], Path] | None = None,
         environ: Callable[[], Mapping[str, str]] = lambda: os.environ,
     ) -> None:
         self._settings = settings
         self._config_path = config_path
+        self._project_config = project_config
         self._client = client
-        self._starter = starter
+        # A hub this gateway starts runs in the person's configuration folder, so it reads their
+        # `[hub]` -- the same state folder this gateway reads the record and token from.
+        self._starter = starter or (lambda: _default_starter(self._config_path().parent))
         self._timeout = timeout
-        self._user_config = user_config or (lambda: personal_config())
         self._environ = environ
-        self._scopes: tuple[tuple[Path, int, int, int, int], frozenset[HubScope]] | None = None
-        """The scopes last read, with the `vibey.toml` they were read from (path, inode, mtime,
-        ctime, size; all -1 when it did not exist)."""
+        self._scopes: tuple[tuple[_Seen, _Seen], frozenset[HubScope]] | None = None
+        """The scopes last read, with the two `vibey.toml` files they were read from."""
 
     def agent_scopes(self) -> frozenset[HubScope]:
-        """The scopes declared for the agent principal, or `AGENT_DEFAULT_SCOPES` if config fails.
+        """The scopes declared for the agent principal -- the person's own, narrowed by the
+        opened folder's -- or none at all when either file cannot be read: a folder could
+        otherwise break its own `[hub]` on purpose to have the defaults listed, wider than what
+        the person granted (SP-ACP Task 11a). Calls refuse in that case too, and doctor FAILs.
 
-        Read again only when `vibey.toml` changed -- another inode (a file swapped in by a
-        rename), mtime, ctime or size: `vibey acp` asks on every prompt, from its event loop, and
-        a `stat` is all that costs while the file stays as it was."""
-        path = self._config_path()
-        try:
-            stat = path.stat()
-            seen = (path, stat.st_ino, stat.st_mtime_ns, stat.st_ctime_ns, stat.st_size)
-        except OSError:
-            seen = (path, -1, -1, -1, -1)
+        Read again only when either `vibey.toml` changed -- another inode (a file swapped in by
+        a rename), mtime, ctime or size: `vibey acp` asks on every prompt, from its event loop,
+        and a `stat` is all that costs while the files stay as they were."""
+        user, project = self._config_path(), self._project_config()
+        seen = (self._seen(user), self._seen(project))
         if self._scopes is not None and self._scopes[0] == seen:
             return self._scopes[1]
         try:
-            scopes = self._settings.load(path).agent_scopes
+            scopes = self._settings.load_trusted(user, project).agent_scopes
         except ConfigError:
-            scopes = AGENT_DEFAULT_SCOPES
+            scopes = frozenset()
         self._scopes = (seen, scopes)
         return scopes
+
+    @staticmethod
+    def _seen(path: Path) -> _Seen:
+        try:
+            stat = path.stat()
+        except OSError:
+            return (path, -1, -1, -1, -1)
+        return (path, stat.st_ino, stat.st_mtime_ns, stat.st_ctime_ns, stat.st_size)
 
     def call(self, call: HubCall) -> HubGatewayResponse:
         return self._call(call, start=True)
@@ -213,7 +229,7 @@ class HubGateway:
 
     def _load_settings(self) -> HubSettings:
         try:
-            return self._settings.load(self._config_path())
+            return self._settings.load_trusted(self._config_path(), self._project_config())
         except ConfigError as exc:
             raise HubGatewayError(str(exc)) from exc
 
@@ -222,7 +238,7 @@ class HubGateway:
         person's own `[web]` (narrowed by the folder's, as the hub reads it) and this process's
         search timeout, which is the hub's when the two share an environment."""
         try:
-            fetch = WEB_SETTINGS.load_trusted(self._user_config(), self._config_path())
+            fetch = WEB_SETTINGS.load_trusted(self._config_path(), self._project_config())
             deadline = fetch.timeout_seconds
         except ConfigError:
             deadline = WebToolSettings().timeout_seconds

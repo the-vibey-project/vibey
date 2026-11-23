@@ -96,6 +96,9 @@ class _BrokenSettings:
     def load(self, path: Path) -> HubSettings:
         raise ConfigError("hub.agent_scopes", "bad config")
 
+    def load_trusted(self, user: Path, project: Path) -> HubSettings:
+        return self.load(user)
+
 
 def test_interfaces_are_satisfied() -> None:
     assert isinstance(HUB_GATEWAY, HubGatewayInterface)
@@ -120,7 +123,7 @@ def test_default_starter_returns_true_on_zero_and_false_on_oserror(
     assert _default_starter() is False
 
 
-def test_gateway_agent_scopes_reads_settings_and_falls_back_on_config_error(
+def test_gateway_agent_scopes_reads_settings_and_grants_nothing_on_config_error(
     tmp_path: Path,
 ) -> None:
     toml = tmp_path / "vibey.toml"
@@ -129,7 +132,7 @@ def test_gateway_agent_scopes_reads_settings_and_falls_back_on_config_error(
     assert gw.agent_scopes() == frozenset({HubScope.VIEW})
 
     broken = HubGateway(settings=_BrokenSettings(), config_path=lambda: toml)
-    assert broken.agent_scopes() == AGENT_DEFAULT_SCOPES
+    assert broken.agent_scopes() == frozenset()  # never the defaults (Task 11a S-2)
 
 
 def test_gateway_sends_agent_token_and_maps_wildcard_and_ipv6_hosts(tmp_path: Path) -> None:
@@ -551,7 +554,7 @@ def test_the_gateway_never_sends_the_agent_token_to_a_host_off_this_computer(
     state = tmp_path / "state"
     toml = tmp_path / "vibey.toml"
     toml.write_text(f"[hub]\nstate_dir = '{state}'\n")
-    LocalTokenStore(state).record_serving(ServingRecord(host=host, port=8765, pid=1, tls=False))
+    LocalTokenStore(state).record_serving(ServingRecord(host=host, port=8765, pid=4242, tls=False))
     fake = _FakeHttpClient()
     started: list[bool] = []
     gw = HubGateway(
@@ -573,7 +576,7 @@ def test_a_record_naming_localhost_is_reached_at_a_fixed_loopback_literal(tmp_pa
     toml = tmp_path / "vibey.toml"
     toml.write_text(f"[hub]\nstate_dir = '{state}'\n")
     LocalTokenStore(state).record_serving(
-        ServingRecord(host="localhost", port=8765, pid=1, tls=False)
+        ServingRecord(host="localhost", port=8765, pid=4242, tls=False)
     )
     fake = _FakeHttpClient()
     gw = HubGateway(config_path=lambda: toml, client=fake.factory, starter=lambda: False)
@@ -612,14 +615,13 @@ def test_a_request_that_may_have_reached_the_hub_is_never_sent_again(
     state = tmp_path / "state"
     toml = tmp_path / "vibey.toml"
     toml.write_text(f"[hub]\nstate_dir = '{state}'\n")
-    LocalTokenStore(state).record_serving(ServingRecord(host="127.0.0.1", port=8765, pid=1))
+    LocalTokenStore(state).record_serving(ServingRecord(host="127.0.0.1", port=8765, pid=4242))
     fake = _TimedOut(error)
     started: list[bool] = []
     gw = HubGateway(
         config_path=lambda: toml,
         client=fake.factory,
         starter=lambda: started.append(True) or True,
-        user_config=lambda: tmp_path / "none.toml",
     )
     call = HubCall(
         tool="vibey_fetch",
@@ -638,14 +640,14 @@ def test_a_web_call_waits_longer_than_the_hubs_own_web_deadline(tmp_path: Path) 
     toml = tmp_path / "vibey.toml"
     toml.write_text(f"[hub]\nstate_dir = '{state}'\n")
     mine = tmp_path / "me.toml"
-    mine.write_text("[web]\ntimeout_seconds = 90\n")
-    LocalTokenStore(state).record_serving(ServingRecord(host="127.0.0.1", port=8765, pid=1))
+    mine.write_text(f"[hub]\nstate_dir = '{state}'\n[web]\ntimeout_seconds = 90\n")
+    LocalTokenStore(state).record_serving(ServingRecord(host="127.0.0.1", port=8765, pid=4242))
     fake = _FakeHttpClient()
     gw = HubGateway(
-        config_path=lambda: toml,
+        config_path=lambda: mine,
         client=fake.factory,
         starter=lambda: False,
-        user_config=lambda: mine,
+        project_config=lambda: tmp_path / "absent.toml",
         environ=lambda: {"VIBEY_SEARCH_TIMEOUT": "10"},
     )
     web = HubCall(tool="vibey_fetch", method="POST", route="/api/v1/web/fetch", open_world=True)
@@ -658,18 +660,17 @@ def test_a_web_call_waits_longer_than_the_hubs_own_web_deadline(tmp_path: Path) 
         config_path=lambda: toml,
         client=fake.factory,
         starter=lambda: False,
-        user_config=lambda: tmp_path / "none.toml",
         environ=lambda: {"VIBEY_SEARCH_TIMEOUT": "20"},
     )
     slow.call(web)
     assert fake.calls[-1]["timeout"] == 3 * 20.0 + 15.0
     # A [web] or search setting that cannot be read leaves the defaults, never a failure.
-    mine.write_text("[web]\ntimeout_seconds = 'x'\n")
+    mine.write_text(f"[hub]\nstate_dir = '{state}'\n[web]\ntimeout_seconds = 'x'\n")
     broken = HubGateway(
         config_path=lambda: toml,
         client=fake.factory,
         starter=lambda: False,
-        user_config=lambda: mine,
+        project_config=lambda: mine,
         environ=lambda: {"VIBEY_SEARCH_PROVIDER": "brave"},
     )
     broken.call(web)

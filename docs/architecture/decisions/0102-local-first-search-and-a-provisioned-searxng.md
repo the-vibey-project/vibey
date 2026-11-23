@@ -78,14 +78,17 @@ launched from a project may have that project's `bin/` (direnv, `node_modules/.b
 the runtime is recorded and run again at every login. It is looked for only in fixed trusted
 folders (`TRUSTED_RUNTIME_DIRS`: on macOS `/opt/homebrew/bin`, `/usr/local/bin`, `/usr/bin`,
 `/Applications/Docker.app/Contents/Resources/bin`; on Linux `/usr/bin`, `/usr/local/bin`, `/bin`,
-`/snap/bin`), and a candidate must be a regular executable file, not writable by anyone, owned by
+`/snap/bin`), and a candidate must be a regular executable file, writable by nobody but its owner (Task 11a: not by its group either), owned by
 root or the person, whose links lead only into `TRUSTED_RUNTIME_ROOTS` (Homebrew's Cellar, Docker
 Desktop's bundle, `/usr`, `/snap`). Every use -- `serve`, doctor, status, uninstall, purge --
 vets the recorded runtime again against those checks: a record naming any other binary is
 refused with one cleaned notice and nothing is run. The recorded runtime need not be the one a
 fresh look would choose now -- `find` only chooses at install -- so a second runtime installed
 later (podman beside Docker Desktop, a Homebrew docker CLI ahead of it) never stops `serve`,
-`uninstall` or `--purge`. vibey never installs a runtime: with none, it says how to get one, once, and
+`uninstall` or `--purge`. An update -- and any install over an existing record -- pulls with the
+recorded runtime, trust-checked again, never the one `find` would choose now, and the container
+and image of an earlier pin's install are removed through it too; when it is gone, install
+refuses and says how to move (`uninstall --purge`, then `install`) (SP-ACP Task 11a). vibey never installs a runtime: with none, it says how to get one, once, and
 does nothing else.
 
 The runtime sees the same small environment at install and in the unit (home, user, locale,
@@ -256,7 +259,11 @@ it and make an attempt visible after the fact. They do not prevent it.
 
 **What 9b did not fix: engine sessions.** Sessions still run `vibey search` and `vibey fetch`
 directly (§1, §8): they are still told the SearXNG address and the marker, still have no Brave
-backup, and their fetch is still the older one. They have no channel to the hub: the worker
+backup, and their fetch was the older one until SP-ACP Task 11a: `vibey fetch` (and so the
+local runners' `web_fetch`) now runs this same guarded fetch, with the person's `[web]` narrowed
+by the worktree's. It spends no `[web] fetches_per_hour` budget and writes no ledger record, as
+before: a session's model can fetch without the hub's limit, a stated decision until sessions
+reach the hub (P-9b-1). They have no channel to the hub: the worker
 reaches PostgreSQL, not the hub, may run on a machine (a Kubernetes pod) where no hub runs, and a
 session is given no hub address and no credential by design. The only hub credential there is
 for a model is the agent token, which also answers gates and starts work; handing it to a session

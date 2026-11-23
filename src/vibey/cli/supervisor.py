@@ -263,7 +263,12 @@ class SupervisorCommand(SupervisorCommandInterface):
     def service_manager(argv: Sequence[str]) -> tuple[int, str]:
         """The service manager, asked: the one real `ServiceRunner` the host is given."""
         done = subprocess.run(  # nosec B603 -- fixed argv from SupervisorHost, never a shell
-            list(argv), capture_output=True, text=True, check=False, timeout=30
+            list(argv),
+            stdin=subprocess.DEVNULL,  # under `vibey acp` stdin is the client's protocol
+            capture_output=True,
+            text=True,
+            check=False,
+            timeout=30,
         )
         return done.returncode, done.stdout
 

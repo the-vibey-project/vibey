@@ -56,6 +56,16 @@ EARLIER_FALLBACK_CODES: Final[Mapping[ClientProtocol, str]] = {
 """The fallback vibey wrote before it passed flags through; an entry carrying it is rewritten,
 keeping the flags after it."""
 TOML_SECTION_RE: Final = re.compile(r"(?ms)^\[mcp_servers\.vibey\]\s*\n.*?(?=^\[|\Z)")
+TOML_SUBTABLE_RE: Final = re.compile(
+    r"(?ms)^\[\[?\s*mcp_servers\s*\.\s*vibey\s*\..*?\]\]?[^\n]*\n.*?(?=^\[|\Z)"
+)
+"""A `[mcp_servers.vibey.<name>]` sub-table (an `env` one, say), dropped from a project-scope
+file on a rewrite: it would hand the repository's settings to vibey's server (SP-ACP Task 11a)."""
+OWN_FLAGS: Final[Mapping[ClientProtocol, frozenset[str]]] = {"acp": frozenset({"--no-bootstrap"})}
+"""For a protocol named here, the only flags a person's own entry may carry after vibey's launch
+arguments and still count as connected (and be kept on a rewrite): `vibey acp --no-bootstrap`.
+`["acp", "unload"]` runs another command entirely, so it is not vibey's entry (SP-ACP Task 11a).
+A protocol not named keeps whatever follows, as before."""
 
 
 class HostClientError(VibeyError):
@@ -437,10 +447,19 @@ class HostClients:
         wanted = spec.entry_type or ("stdio" if spec.include_stdio_type else None)
         return (
             existing.get("command") == launch.command
-            and isinstance(args, list)
-            and tuple(args[: len(launch.args)]) == launch.args
+            and self._runs(spec, launch, args)
             and (wanted is None or existing.get("type") == wanted)
             and (spec.entry_type is None or isinstance(existing.get("env", {}), Mapping))
+        )
+
+    @staticmethod
+    def _runs(spec: HostClientSpec, launch: McpLaunchCommand, args: object) -> bool:
+        """Whether `args` are the launch's own, followed only by flags the person may add
+        (`OWN_FLAGS`): never another subcommand such as `unload`."""
+        return (
+            isinstance(args, list)
+            and tuple(args[: len(launch.args)]) == launch.args
+            and HostClients._own_flags(spec.protocol, args[len(launch.args) :])
         )
 
     def _updated(
@@ -465,17 +484,27 @@ class HostClients:
     @staticmethod
     def _extra_args(args: object, protocol: ClientProtocol) -> list[str]:
         """The person's own flags after vibey's launch arguments (`["acp", "--no-bootstrap"]`
-        keeps `--no-bootstrap`), whichever launcher wrote them; none for any other shape."""
+        keeps `--no-bootstrap`), whichever launcher wrote them, and only those `OWN_FLAGS`
+        allows; none for any other shape."""
         if not isinstance(args, list) or not all(isinstance(arg, str) for arg in args):
             return []
         if args[:1] == [protocol]:
-            return list(args[1:])
-        if args[:1] == ["-c"] and args[1:2] in (
+            after = args[1:]
+        elif args[:1] == ["-c"] and args[1:2] in (
             [PYTHON_FALLBACK_CODES[protocol]],
             [EARLIER_FALLBACK_CODES[protocol]],
         ):
-            return list(args[2:])
-        return []
+            after = args[2:]
+        else:
+            return []
+        allowed = OWN_FLAGS.get(protocol)
+        return [arg for arg in after if allowed is None or arg in allowed]
+
+    @staticmethod
+    def _own_flags(protocol: ClientProtocol, flags: Sequence[object]) -> bool:
+        """Whether every one of `flags` is one the person may add for `protocol`."""
+        allowed = OWN_FLAGS.get(protocol)
+        return allowed is None or all(flag in allowed for flag in flags)
 
     @staticmethod
     def _without_bom(text: str | None) -> tuple[str, str | None]:
@@ -548,13 +577,10 @@ class HostClients:
         existing = servers.get(SERVER_NAME) if isinstance(servers, Mapping) else None
         if not isinstance(existing, Mapping):
             return False
-        args = existing.get("args")
         if spec.scope != "user":
             return dict(existing) == {"command": launch.command, "args": list(launch.args)}
-        return (
-            existing.get("command") == launch.command
-            and isinstance(args, list)
-            and tuple(args[: len(launch.args)]) == launch.args
+        return existing.get("command") == launch.command and HostClients._runs(
+            spec, launch, existing.get("args")
         )
 
     def _merge_toml(
@@ -587,11 +613,29 @@ class HostClients:
             else []
         )
         block = self._toml_block(launch, extra)
-        if TOML_SECTION_RE.search(existing_content):
-            return TOML_SECTION_RE.sub(lambda _: block, existing_content, count=1)
+        content = existing_content
+        if spec.scope != "user":
+            # The repository's file: none of its `mcp_servers.vibey.*` sub-tables survive.
+            content = TOML_SUBTABLE_RE.sub("", content)
+        if TOML_SECTION_RE.search(content):
+            merged = TOML_SECTION_RE.sub(lambda _: block, content, count=1)
+        else:
+            merged = f"{content.rstrip()}\n\n{block}"
+        if spec.scope != "user" and not self._toml_rewritten(spec, merged, launch):
+            # A spelling the rewrite cannot reach (a quoted or dotted key): never written half.
+            raise HostClientError(
+                f"{target}: its vibey entry is spelt in a way vibey cannot rewrite safely; "
+                "remove every mcp_servers.vibey table and run vibey connect again"
+            )
+        return merged
 
-        trimmed = existing_content.rstrip()
-        return f"{trimmed}\n\n{block}"
+    @staticmethod
+    def _toml_rewritten(spec: HostClientSpec, merged: str, launch: McpLaunchCommand) -> bool:
+        """Whether a rewritten project file reads back as carrying exactly vibey's entry."""
+        try:
+            return HostClients._toml_carries(spec, tomllib.loads(merged), launch)
+        except ValueError:
+            return False
 
     @staticmethod
     def _toml_block(launch: McpLaunchCommand, extra: Sequence[str]) -> str:

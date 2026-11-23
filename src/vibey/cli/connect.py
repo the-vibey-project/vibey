@@ -104,18 +104,25 @@ class ConnectCommand:
             typer.echo("Cancelled; no files were modified.")
             raise typer.Exit(1)
 
-        try:
-            self._installer.apply_plan(plan)
-        except HostClientError as exc:
-            typer.echo(f"Error: {exc}; no files were modified.", err=True)
-            raise typer.Exit(1) from exc
-        except OSError as exc:
-            typer.echo(f"Error: a file could not be written: {self._cleaned(exc)}", err=True)
-            raise typer.Exit(1) from exc
+        failed = False
         for item in pending:
+            # One client at a time, as `vibey acp`'s connect step does: a refusal, or a file
+            # swapped to a link mid-write (an `OSError`), is one cleaned WARN for that client.
+            try:
+                self._installer.apply_plan([item])
+            except (HostClientError, OSError) as exc:
+                failed = True
+                typer.echo(
+                    f"WARN {item.client.client_id}: not connected, {item.target_path} was not "
+                    f"changed: {self._cleaned(exc)}",
+                    err=True,
+                )
+                continue
             backup_note = f" (backed up to {item.backup_path})" if item.backup_path else ""
             typer.echo(f"{item.action}: {item.client.client_id} -> {item.target_path}{backup_note}")
         self._finish(specs, refused)
+        if failed:
+            raise typer.Exit(1)
 
     def _plan(
         self, specs: Sequence[HostClientSpec]

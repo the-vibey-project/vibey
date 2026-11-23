@@ -246,3 +246,13 @@ def test_a_project_cannot_cut_short_an_install_the_user_allowed() -> None:
         user, AcpSettings(install_timeout_seconds=1), frozenset({"install_timeout_seconds"})
     )
     assert merged.install_timeout_seconds == 1800
+
+
+def test_a_project_may_lower_the_gate_caps_never_raise_them() -> None:
+    """SP-ACP Task 11a: the caps on a gate's options are the person's; a project only lowers."""
+    user = AcpSettings(gate_options_max=10, gate_label_chars_max=100)
+    keys = frozenset({"gate_options_max", "gate_label_chars_max"})
+    wider = AcpSettings(gate_options_max=1000, gate_label_chars_max=10_000)
+    narrower = AcpSettings(gate_options_max=3, gate_label_chars_max=40)
+    assert TRUST.merge(user, wider, keys) == user
+    assert TRUST.merge(user, narrower, keys) == narrower

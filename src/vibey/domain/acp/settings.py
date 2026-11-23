@@ -39,14 +39,22 @@ INTEGER_MINIMA: Final[Mapping[str, int]] = {
     "sessions_max": 1,
     "session_events_max": 1,
     "replay_events_max": 1,
+    "gate_options_max": 1,
+    "gate_label_chars_max": 1,
 }
 """The least each integer key may be."""
 INTEGER_MAXIMA: Final[Mapping[str, int]] = {
     "replay_events_max": 10_000,
+    "gate_options_max": 1_000,
+    "gate_label_chars_max": 10_000,
 }
 """The most each bounded integer key may be. A load reads the replayed tail in pages of 200, one
 request each, so 10000 events is 51 requests: inside the hub's per-principal burst of 120, with
 room left for the turns and `vibey mcp` that share it."""
+DEFAULT_GATE_OPTIONS_MAX: Final = 20
+"""`gate_options_max` unset: a gate listing more options than this is answered on the host."""
+DEFAULT_GATE_LABEL_CHARS_MAX: Final = 200
+"""`gate_label_chars_max` unset: the longest option label a gate offered in the editor has."""
 HUB_KEYS: Final = ("sessions_max", "session_events_max")
 """The `[acp]` keys the hub (`vibey serve`) reads: the bounds on what it keeps of ACP sessions.
 Every other key is the editor's, and a mistake in one never stops the hub."""
@@ -94,6 +102,11 @@ class AcpSettings:
     permission_timeout_seconds: int = 600
     max_gate_prompts_per_turn: int = 3
     reject_words: tuple[str, ...] = ("reject", "decline", "deny", "no", "cancel")
+    gate_options_max: int = DEFAULT_GATE_OPTIONS_MAX
+    """The most options a choice or verdict gate may list and still be offered in the editor;
+    a gate with more is refused like an ambiguous one and answered on the host (Task 11a)."""
+    gate_label_chars_max: int = DEFAULT_GATE_LABEL_CHARS_MAX
+    """The longest an option's label may be and its gate still be offered in the editor."""
     live_poll_seconds: float = 1.0
     live_message_chars: int = 400
     live_between_turns: bool = True

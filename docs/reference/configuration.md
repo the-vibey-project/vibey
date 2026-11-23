@@ -886,13 +886,24 @@ ones: with no `[hub]` table the hub listens on loopback only. An unknown key, or
 the wrong type, is refused rather than ignored, so a misspelt `lan` can never silently
 mean "not declared".
 
+`vibey serve` reads the `[hub]` of the folder it runs in; every hub vibey starts for you
+(`vibey hub start`, the user-level unit, `vibey mcp` and `vibey acp`) runs it in your
+configuration folder. Everything that *sends* a hub
+credential, picks which hub to talk to or acts on its record -- `vibey mcp`, `vibey acp`,
+`vibey hub start`, `stop`, `status`, `pair`, `devices` and `revoke`, and `vibey doctor`'s
+`hub-exposure` and `web-tools` lines -- reads `[hub]` from your own
+`vibey.toml`, in your configuration folder, never from the folder it runs in, which may be a
+cloned repository's. A folder's `vibey.toml` is heard there on `agent_scopes` only, and only to
+narrow it; its `state_dir` never decides where a token is read or which record is believed
+(SP-ACP Task 11a).
+
 | Key | Default | Meaning |
 |---|---|---|
 | `lan` | `false` | `true` declares that `vibey serve --host <LAN address>` may listen off loopback. Without it such an address is refused (exit 2), and `vibey doctor` fails a hub found listening on one. |
 | `port` | `8765` | The port `vibey serve` listens on when `--port` is not given. |
 | `names` | `[]` | Extra names a request may carry in `Host` when the LAN is declared, e.g. `"studio.local"`. The computer's own host name, its `.local` name and its addresses are always admitted then. |
 | `state_dir` | the platform state directory + `/hub` | Where the host token (`token`, 0600), the scoped agent token (`agent.token`, 0600; ADR-0100), the key workflows request ids are bound to their starters under (`run.key`, 0600; ADR-0085) and the runtime record (`serving.json`) live. |
-| `lane_roots` | `[]` (the directory `vibey serve` runs in) | Where `/api/v1/lanes` looks for lanes: each root and every directory directly inside it. |
+| `lane_roots` | `[]` (the directory `vibey serve` runs in; for a hub started by `vibey hub start`, your configuration folder) | Where `/api/v1/lanes` looks for lanes: each root and every directory directly inside it. List the folders you keep lanes in here when the hub is started by `vibey hub start` or by the user-level unit. |
 | `projects_root` | `""` (nowhere) | The one folder a paired device holding `run` may start projects in: each project's folder is `<projects_root>/<name>`, made by the host (ADR-0091). Absolute, or starting with `~`. With none declared a device can pause, resume and unwind a project but cannot start one, and is told so. A device never names a path. |
 | `agent_scopes` | `["view", "answer", "run", "acp_sessions", "web"]` | Scopes granted to the `agent` principal (`<state_dir>/agent.token`) used by `vibey mcp` when a frontier LLM or IDE connects over MCP (ADR-0100), and by `vibey acp` for an editor. `acp_sessions` lets it keep its own ACP sessions' logs on the hub (create and append; reading them back needs only `view`); without it `vibey acp` keeps each session's history in its window only and says so once. `web` lets it search the web and read public pages through the hub (`vibey_search`, `vibey_fetch`; [`[web]`](#web) bounds them); drop it to turn them off. Paired devices get only the scopes the host offers them, so never `acp_sessions` or `web` by default. Never includes `spend`, `bump` or `workflows` by default, so a host model cannot answer a spending gate (`budget_exhausted`, `deploy_*`). Set `agent_scopes = []` to disable agent token authentication entirely. |
 
@@ -919,6 +930,9 @@ must then be on both lists; nothing in common allows nothing) or drop content ty
 reverse. An unknown key, or a value of the wrong type or out of range, stops the hub (exit 2)
 naming the file and the key. Where search itself goes (`VIBEY_SEARXNG_URL`, the Brave key) is the
 hub's environment's, never a file's: see [local first](cli.md#local-first-search).
+`vibey fetch`, the `web_fetch` tool of gptossloop and qwenloop and the DESIGN research's page
+reads use the same hosts, bounds and content types (your own `[web]`, narrowed by the folder
+they run in), with no budget (SP-ACP Task 11a).
 
 | Key | Default | Meaning |
 |---|---|---|
@@ -970,7 +984,8 @@ configuration folder, `~/Library/Application Support/vibey/vibey.toml` on macOS 
 - Every timeout and cap (`prompt_probe_seconds`, `bootstrap_timeout_seconds`,
   `permission_timeout_seconds`, `cancel_grace_seconds`, `max_gate_prompts_per_turn`,
   `live_message_chars`, `max_message_bytes`, `pending_events_max`, `sessions_max`,
-  `session_events_max`, `replay_events_max`): the project may lower it, never raise it.
+  `session_events_max`, `replay_events_max`, `gate_options_max`, `gate_label_chars_max`): the
+  project may lower it, never raise it.
 - `restart`, `service_workdir`, `reject_words`, `notice_interval_seconds`,
   `install_timeout_seconds`: yours alone; the project's are ignored (a project must not cut
   short an install you allowed).
@@ -994,7 +1009,7 @@ a key: they are never answerable over ACP, whatever is set here.
 | Key | Type | Default | Meaning |
 |---|---|---|---|
 | `auto_bootstrap` | boolean | `true` | The grant for `vibey acp` to run `vibey doctor` and `vibey connect` itself, load user-level services and keep them running. `false` skips all of it (and PostgreSQL and the keep-alive). The doctor and connect steps start after the first `session/new` has answered, never before it ([Bootstrap](cli.md#bootstrap-doctor-connect-services-and-postgresql)). |
-| `auto_connect` | boolean | `true` | Whether bootstrap runs the `vibey connect` step: vibey is registered with each user-level client whose config folder already exists under your home folder (`vibey mcp` with Claude Desktop, Codex, Cursor and Gemini CLI; `vibey acp` with Zed, whose `settings.json` is never rewritten when it holds comments -- that is a `WARN` with the snippet to paste), never a project file, never a folder it would have to create, never a config whose folder resolves (symlinks followed) outside your home folder, and never a config file that is itself a symbolic link. A changed file is backed up to `.vibey.bak` with the original's permissions and replaced atomically. When no client warned, `<[hub] state_dir>/acp-connect-<version>.json` records the clients connected, and the step is skipped while every client installed then is in it: a client that warned, or one installed since, is tried again. |
+| `auto_connect` | boolean | `true` | Whether bootstrap runs the `vibey connect` step: vibey is registered with each user-level client whose config folder already exists under your home folder (`vibey mcp` with Claude Desktop, Codex, Cursor and Gemini CLI; `vibey acp` with Zed, whose `settings.json` is never rewritten when it holds comments -- that is a `WARN` with the snippet to paste), never a project file, never a folder it would have to create, never a config whose folder resolves (symlinks followed) outside your home folder, and never a config file that is itself a symbolic link. A changed file is backed up to `.vibey.bak` with the original's permissions and replaced atomically. A backup that was a hard link to another file is removed and made afresh, never written through. When no client warned (but for settled ones), `<[hub] state_dir>/acp-connect-<version>.json` records the clients connected and the settled ones -- a client whose folder resolves outside your home folder, or whose config is a symbolic link, with that folder's real path or the link's target -- and the step is skipped while every client installed is in it as it stands now: a client that warned otherwise, one installed since, or a settled one whose folder or link changed is tried again. |
 | `auto_services` | boolean | `true` | Whether bootstrap writes, loads and keeps running the user-level units for `services` ([ADR-0101](../architecture/decisions/0101-the-acp-agent-and-self-installing-services.md)): launchd `gui/<uid>` or `systemctl --user` only, never a system unit, never `sudo`, never as root. A unit you edited is kept as it is and neither loaded nor restarted; a hub you started yourself is left running. The first load names each label and how to stop them: [`vibey acp unload`](cli.md#vibey-acp-unload), or by hand. `false` writes, loads and restarts nothing, and a read that finds no hub runs `vibey hub start` instead (`hub_start_seconds`). Ruled on by the operator on 2026-11-20 as the default grant; a project's `vibey.toml` can turn it off, never on. |
 | `install_postgres` | `"ask"` or `"never"` | `"ask"` | `"ask"` offers the PostgreSQL install as an ACP `session/request_permission`, inside the first prompt of a session in a mode that may run (never in `observe`), at most once per process; only its "Install PostgreSQL" option installs, with `sudo -n` (vibey never asks for or types a password: when sudo wants one, run `vibey doctor --install-postgres` yourself). A refusal, a timeout or a cancel once asked installs nothing and says the hub runs degraded. `"never"` never installs. |
 | `searxng` | `"ask"` or `"never"` | `"ask"` | `"ask"` offers to download and run the local SearXNG that search asks first ([ADR-0102](../architecture/decisions/0102-local-first-search-and-a-provisioned-searxng.md)) as an ACP `session/request_permission`, after the PostgreSQL step, inside a prompt of a session in a mode that may run (never in `observe`), at most once per process, and only with `auto_services` on; never when your environment names your own SearXNG (`VIBEY_SEARXNG_URL`), one already answers, or vibey installed one before. Only its "Install SearXNG" option pulls the pinned image with podman or docker (never installing a runtime) and loads the unit `<label_prefix>.searxng`, which step 3 then keeps running. `"never"` never offers it, and step 3 then neither loads nor restarts an installed unit and says so once -- but it does not unload it: the service manager still starts it at every login until `vibey searxng uninstall` (or `vibey acp unload`), which stops it for good. `vibey searxng install` installs it from a terminal whatever this says. |
@@ -1011,6 +1026,8 @@ a key: they are never answerable over ACP, whatever is set here.
 | `install_timeout_seconds` | integer, at least 1 | `1800` | The longest one PostgreSQL install command (`brew install`, `apt-get install`, ...) may run once the client allowed the install. It runs in a process group of its own; past the bound the whole group is sent SIGTERM, then SIGKILL after a grace. A command that cannot be stopped that way (a `sudo` run as root) is not waited for and is reported as possibly still running. |
 | `permission_timeout_seconds` | integer, at least 1 | `600` | How long a permission request waits for the client. Silence leaves the gate open; it is never consent. |
 | `max_gate_prompts_per_turn` | integer, at least 0 | `3` | How many open gates one turn may put to the client, oldest first: each answerable one as a permission request, every other one (spend, deployment opt-in, value, unknown kind, or a gate whose labels could be misread) as a message saying where to answer it. `0` puts none. A gate is put to a session once. |
+| `gate_options_max` | integer, 1 to 1000 | `20` | The most options a choice or verdict gate may list and still be offered in the editor. A gate with more is not offered: like a gate whose labels could be misread, it is a message naming its id and saying to answer it on the host (`vibey gates`), since a client shows every option and a wall of them could hide the one you mean. |
+| `gate_label_chars_max` | integer, 1 to 10000 | `200` | The longest an option's label may be, after trimming, and its gate still be offered in the editor; a gate with a longer label is refused the same way. |
 | `reject_words` | list of strings | `["reject", "decline", "deny", "no", "cancel"]` | A gate option whose whole label, normalised (NFKC) and case-folded, is one of these words is offered as a refusal (`reject_once`), every other as `allow_once`. Picking it still answers the gate with that option. Lower-cased when read; an empty word is refused. |
 | `live_poll_seconds` | number, at least 0.2 | `1.0` | How often the live ledger feed polls the hub after a short page, and how long it waits before the first retry of a read that failed; each further failure in a row doubles the wait, up to `probe_seconds`. A full page that advanced is read again at once. Also how often the services step polls the hub it loaded until it answers. |
 | `live_message_chars` | integer, at least 40 | `400` | The longest ledger event summary sent as one message (`[<phase>] <kind>: <summary>`); a longer one is cut to this length, ending in `...`. |

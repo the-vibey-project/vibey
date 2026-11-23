@@ -30,3 +30,8 @@ class UserConfigFolder:
         if not folder.is_absolute():
             folder = Path.home() / ".config" / "vibey"
         return folder
+
+    def vibey_toml(self) -> Path:
+        """The person's own `vibey.toml`: the one place `bootstrap.acp_user_config`, the MCP
+        gateway, `vibey hub` and `vibey fetch` find it (SP-ACP Task 11a, review 1 N-6)."""
+        return self.path() / "vibey.toml"

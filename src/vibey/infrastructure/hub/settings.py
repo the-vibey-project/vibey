@@ -21,7 +21,7 @@ a misspelt `lan` never silently means "not declared".
 """
 
 import tomllib
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from pathlib import Path
 from typing import Any, Final
 
@@ -58,10 +58,32 @@ class HubSettingsLoader:
     Declared by `interfaces/settings_interface.py::HubSettingsLoaderInterface`."""
 
     def load(self, path: Path) -> HubSettings:
+        return self.from_table(self._table(path))
+
+    def load_trusted(self, user: Path, project: Path) -> HubSettings:
+        """`[hub]` as the person grants it, narrowed by a project's (SP-ACP Task 11a).
+
+        Every key comes from `user`, the person's own `vibey.toml` -- the state folder, so the
+        agent token and the runtime record, and the ceiling on what an agent may do. The
+        `vibey.toml` of the folder a client opened (`project`) may be a cloned repository's, so
+        the one key it is heard on is `agent_scopes`, and only to narrow: what is kept is what
+        both grant. A project that declares no `agent_scopes` changes nothing; one whose `[hub]`
+        cannot be read is refused (`ConfigError`), never ignored."""
+        mine = self.load(user)
+        if not project.exists() or project.resolve() == user.resolve():
+            return mine
+        table = self._table(project)
+        if "agent_scopes" not in table:
+            return mine
+        narrowed = self._agent_scopes(table["agent_scopes"])
+        return replace(mine, agent_scopes=mine.agent_scopes & narrowed)
+
+    @staticmethod
+    def _table(path: Path) -> dict[str, Any]:
         try:
             text = path.read_text()
         except FileNotFoundError:
-            return HubSettings()
+            return {}
         except (OSError, UnicodeDecodeError) as exc:
             raise ConfigError(str(path), f"cannot be read: {exc}") from exc
         try:
@@ -71,7 +93,7 @@ class HubSettingsLoader:
         table = data.get("hub", {})
         if not isinstance(table, dict):
             raise ConfigError("hub", "must be a table")
-        return self.from_table(table)
+        return table
 
     def from_table(self, table: dict[str, Any]) -> HubSettings:
         unknown = sorted(set(table) - KEYS)

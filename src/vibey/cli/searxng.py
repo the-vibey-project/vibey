@@ -51,6 +51,8 @@ from vibey.infrastructure.searxng.interfaces.searxng_serve_interface import Sear
 EXIT_CONFIG: Final = 78
 INSTALL_COMMAND: Final = "vibey searxng install"
 NAME: Final = "searxng"
+REFUSAL_CHARS: Final = 500
+"""The most of a refusal doctor repeats: the cause and what to do about it."""
 _WIDTH: Final = 26
 WRITTEN: Final = frozenset({"created", "unchanged", "updated"})
 
@@ -202,16 +204,31 @@ class SearxngCommand:
         # can never make this unload the hub (or anything but vibey's SearXNG).
         label = self._label(units)
         failed = label is not None and not self._unload(loader, units, label)
+        gone = searxng.runtime_gone()
         why = searxng.remove_container()
-        if why:
+        if why and gone:
+            # Expected, not a failure: with its runtime gone, nothing of vibey's runs from it.
+            self._echo(
+                "the runtime vibey installed with is gone, so no container of vibey's runs "
+                "from it: there is none to remove"
+            )
+        elif why:
             failed = True
             self._echo(f"the container was not removed: {why}")
         else:
             self._echo("the container is removed (or there was none)")
         if purge:
+            kept_any = False
             for kept in searxng.purge():
-                failed = True
-                self._echo(kept)
+                kept_any = True
+                failed = failed or not gone
+                if not gone:
+                    self._echo(kept)
+            if kept_any and gone:
+                self._echo(
+                    "the image stays wherever that runtime kept it: put the runtime back to "
+                    "remove it, or leave it"
+                )
             self._echo("the settings and the record are removed")
         else:
             self._echo("the settings, the record and the image are kept; --purge removes them")
@@ -244,7 +261,9 @@ class SearxngCommand:
         _, units, loader, searxng, _ = parts
         refusal = searxng.refusal()
         if refusal:
-            return f"WARN {NAME:<{_WIDTH}} vibey's SearXNG: {DoctorChecks.cleaned(refusal)}"
+            # Long enough for the remedy a refusal carries (9d N-j, SP-ACP Task 11a).
+            said = DoctorChecks.cleaned(refusal, limit=REFUSAL_CHARS)
+            return f"WARN {NAME:<{_WIDTH}} vibey's SearXNG: {said}"
         if searxng.disabled():
             return (
                 f"UNKNOWN {NAME:<{_WIDTH}} vibey's SearXNG is stopped for good; "

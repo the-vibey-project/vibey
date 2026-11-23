@@ -3,6 +3,7 @@
 
 from __future__ import annotations
 
+import dataclasses
 import json
 import tomllib
 
@@ -12,8 +13,10 @@ from vibey.domain.host_clients import (
     HOST_CLIENT_CATALOG,
     HOST_CLIENTS,
     PYTHON_FALLBACK_CODE,
+    ConnectPlanItem,
     HostClientError,
     HostClients,
+    HostClientSpec,
     McpLaunchCommand,
 )
 from vibey.domain.interfaces.host_clients_interface import HostClientsInterface
@@ -814,3 +817,61 @@ def test_an_entry_on_the_earlier_fallback_keeps_its_flags_on_the_new_one() -> No
         *fallback.args,
         "--no-bootstrap",
     ]
+
+
+@pytest.mark.parametrize("args", [["acp", "unload"], ["acp", "--no-bootstrap", "unload"]])
+def test_a_zed_entry_running_another_acp_command_is_not_connected(args: list[str]) -> None:
+    """Task 9 review-3 NIT-2 (SP-ACP Task 11a): `["acp", "unload"]` would run `vibey acp unload`,
+    not the agent: only `--no-bootstrap` may follow `acp`, and a rewrite keeps only that."""
+    mine = {**ZED_ENTRY, "args": args, "env": {"A": "b"}}
+    existing = json.dumps({"agent_servers": {"vibey": mine}})
+    zed = HOST_CLIENT_CATALOG.by_id("zed")
+    assert zed is not None
+    assert not HOST_CLIENT_CATALOG.carries(zed, ZED_LAUNCH, existing)
+    item = _zed_plan(existing)
+    assert item.action == "update"
+    written = json.loads(item.new_content)["agent_servers"]["vibey"]
+    assert written["args"] == ["acp", *(["--no-bootstrap"] if "--no-bootstrap" in args else [])]
+    assert written["env"] == {"A": "b"}
+    assert _zed_plan(item.new_content).action == "unchanged"
+
+
+def _project_codex() -> HostClientSpec:
+    codex = HOST_CLIENT_CATALOG.by_id("codex")
+    assert codex is not None
+    return dataclasses.replace(codex, scope="project")
+
+
+def _project_toml_plan(content: str) -> ConnectPlanItem:
+    return HOST_CLIENT_CATALOG.plan_one(
+        _project_codex(),
+        home_dir="/h",
+        project_dir="/p",
+        platform="linux",
+        launch=McpLaunchCommand("/usr/local/bin/vibey", ("mcp",)),
+        existing_content=content,
+    )
+
+
+def test_a_project_toml_env_sub_table_does_not_survive_a_rewrite() -> None:
+    """Task 9 review-3 NIT-1 (SP-ACP Task 11a): in a project's TOML file a
+    `[mcp_servers.vibey.env]` sub-table would hand the repository's settings to vibey's server,
+    and kept the plan from ever settling."""
+    planted = (
+        '[other]\nkey = 1\n\n[mcp_servers.vibey]\ncommand = "/old/vibey"\nargs = ["mcp"]\n\n'
+        '[mcp_servers.vibey.env]\nPYTHONPATH = "/planted"\n\n'
+        '[[mcp_servers.vibey.hooks]]\nrun = "x"\n\n[mcp_servers.other]\ncommand = "o"\n'
+    )
+    item = _project_toml_plan(planted)
+    assert item.action == "update"
+    parsed = tomllib.loads(item.new_content)
+    assert parsed["mcp_servers"]["vibey"] == {"command": "/usr/local/bin/vibey", "args": ["mcp"]}
+    assert parsed["mcp_servers"]["other"] == {"command": "o"} and parsed["other"] == {"key": 1}
+    assert "planted" not in item.new_content
+    assert _project_toml_plan(item.new_content).action == "unchanged"
+
+
+def test_a_project_toml_entry_spelt_out_of_reach_is_refused_never_half_written() -> None:
+    quoted = '[mcp_servers."vibey"]\ncommand = "/old/vibey"\nargs = ["mcp"]\nenv = { A = "1" }\n'
+    with pytest.raises(HostClientError, match="cannot rewrite safely"):
+        _project_toml_plan(quoted)

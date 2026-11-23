@@ -104,11 +104,13 @@ def test_guard_in_process_points_the_stdout_fd_at_stderr(
 ) -> None:
     out_read, out_write = fds.pipe()
     err_read, err_write = fds.pipe()
+    in_read, _ = fds.pipe()  # never the test process's own fd 0
     monkeypatch.setattr(sys, "stdout", sys.stdout)  # restored after the test
-    transport = StdioTransport(stdin_fd=0, stdout_fd=out_write, stderr_fd=err_write)
+    transport = StdioTransport(stdin_fd=in_read, stdout_fd=out_write, stderr_fd=err_write)
 
     private = transport.guard()
     fds.add(private)
+    fds.add(transport._input_fd)
     os.write(out_write, b"noise")
     os.write(private, b"frame\n")
     inheritable = os.get_inheritable(private)
@@ -267,3 +269,134 @@ async def test_a_nonblocking_full_pipe_still_gets_the_whole_frame(fds: _Fds) -> 
     reader.join(60)
 
     assert received == [line.encode()]
+
+
+def test_guard_gives_children_a_stdin_that_holds_no_protocol_bytes() -> None:
+    """A child a doctor section starts inherits fd 0; after `guard` that is /dev/null, so it
+    reads nothing, and every byte the client sent is still there for the protocol reader
+    (SP-ACP Task 11a)."""
+    script = textwrap.dedent(
+        """
+        import asyncio, subprocess, sys
+        from vibey.infrastructure.acp.stdio_transport import StdioTransport
+
+        transport = StdioTransport()
+        private = transport.guard()
+        child = subprocess.run(
+            [sys.executable, "-c", "import sys; sys.stderr.write(repr(sys.stdin.buffer.read()))"],
+            capture_output=True,
+            check=True,
+        )
+        own = sys.stdin.buffer.read()
+
+        async def protocol() -> bytes:
+            return await (await transport.reader(limit=1024)).read()
+
+        got = asyncio.run(protocol())
+        import os
+        os.write(private, repr((child.stderr, own, got)).encode() + b"\\n")
+        """
+    )
+
+    done = subprocess.run(
+        [sys.executable, "-c", script],
+        cwd=REPO,
+        input=b'{"jsonrpc":"2.0","id":1,"method":"initialize"}\n',
+        capture_output=True,
+        check=False,
+        timeout=60,
+    )
+
+    assert done.returncode == 0, done.stderr.decode()
+    assert done.stdout.decode().strip() == repr(
+        (b"b''", b"", b'{"jsonrpc":"2.0","id":1,"method":"initialize"}\n')
+    )
+
+
+def test_guard_with_stdin_closed_leaves_fd0_on_dev_null() -> None:
+    script = textwrap.dedent(
+        """
+        import asyncio, os, stat
+        from vibey.infrastructure.acp.stdio_transport import StdioTransport
+
+        os.close(0)
+        transport = StdioTransport()
+        private = transport.guard()
+        held = stat.S_ISCHR(os.fstat(0).st_mode)
+
+        async def protocol() -> bytes:
+            return await (await transport.reader(limit=1024)).read()
+
+        os.write(private, repr((held, asyncio.run(protocol()))).encode())
+        """
+    )
+
+    done = subprocess.run(
+        [sys.executable, "-c", script], cwd=REPO, capture_output=True, check=False, timeout=60
+    )
+
+    assert done.returncode == 0, done.stderr.decode()
+    assert done.stdout == repr((True, b"")).encode()
+
+
+def test_guard_in_process_reads_the_protocol_through_a_private_stdin(
+    fds: _Fds, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    in_read, in_write = fds.pipe()
+    _, out_write = fds.pipe()
+    _, err_write = fds.pipe()
+    monkeypatch.setattr(sys, "stdout", sys.stdout)
+    os.write(in_write, b"frame\n")
+    fds.close(in_write)
+    transport = StdioTransport(stdin_fd=in_read, stdout_fd=out_write, stderr_fd=err_write)
+
+    fds.add(transport.guard())
+    private_in = fds.add(transport._input_fd)
+
+    assert private_in != in_read and not os.get_inheritable(private_in)
+    assert os.read(in_read, 10) == b""  # the stdin number now reads /dev/null
+
+    async def protocol() -> bytes:
+        return await (await transport.reader(limit=1024)).read()
+
+    assert asyncio.run(protocol()) == b"frame\n"
+
+
+def test_guard_in_process_with_stdin_closed_keeps_dev_null_on_its_number(
+    fds: _Fds, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """The in-process twin of the subprocess test above: a closed stdin cannot be duplicated,
+    and its number, the lowest free one, is where /dev/null opens and is kept (measured, not
+    only proven). The number is one this test holds, standing in for the closed one, so no
+    other fd in the process is ever touched."""
+    import errno
+    import stat
+
+    _, out_write = fds.pipe()
+    _, err_write = fds.pipe()
+    stand_in, _ = fds.pipe()
+    monkeypatch.setattr(sys, "stdout", sys.stdout)
+    real_open, real_dup = os.open, os.dup
+
+    def closed_dup(fd: int) -> int:
+        if fd == stand_in:
+            raise OSError(errno.EBADF, "Bad file descriptor")
+        return real_dup(fd)
+
+    def lowest_free(path: str, flags: int, *args: int) -> int:
+        opened = real_open(path, flags, *args)
+        os.dup2(opened, stand_in)
+        os.close(opened)
+        return stand_in
+
+    transport = StdioTransport(stdin_fd=stand_in, stdout_fd=out_write, stderr_fd=err_write)
+    monkeypatch.setattr(os, "dup", closed_dup)
+    monkeypatch.setattr(os, "open", lowest_free)
+    try:
+        private = transport.guard()
+    finally:
+        monkeypatch.setattr(os, "open", real_open)
+        monkeypatch.setattr(os, "dup", real_dup)
+    fds.add(private)
+
+    assert transport._input_fd == stand_in and stat.S_ISCHR(os.fstat(stand_in).st_mode)

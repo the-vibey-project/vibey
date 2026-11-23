@@ -8,7 +8,8 @@ and the Brave backup -- whose key is in the hub's environment and nowhere else -
 SearXNG failed. The first query of the hub's life to go to Brave says so once
 (`PROCESS_BACKUP_NOTICE`, on the hub's standard error) and the sentence is handed back with that
 answer as its `notice`. The key is never in an answer, an error or a log line: 9c's backends name a
-failure by its cause alone.
+failure by its cause alone, and a failure the hub hands its caller never names the SearXNG address
+either (SP-ACP Task 11a): the model driving vibey needs none.
 
 A search setting the hub's environment gets wrong (`VIBEY_SEARCH_PROVIDER=brave`, a malformed
 `VIBEY_SEARXNG_URL`) is `WebToolUnavailable`, not a failure: nothing was sent. Declared by
@@ -58,7 +59,18 @@ class HubWebSearch:
             answer = await asyncio.to_thread(engine.answer, query, limit or settings.results)
         except WebSearchError as exc:
             tried = ("searxng", "brave") if settings.has_backup else ("searxng",)
-            raise WebToolFailed(str(exc), tried=tried) from None
+            # The hub's caller needs no SearXNG address, so it is never told one (P-9b-8): the
+            # cause alone, which backends were tried, and where to look.
+            backup = (
+                "; the Brave backup failed too"
+                if settings.has_backup
+                else "; the hub has no Brave backup"
+            )
+            raise WebToolFailed(
+                f"no search backend answered: the hub's local SearXNG {exc.reason}{backup}; "
+                "`vibey doctor` on the hub's computer says why",
+                tried=tried,
+            ) from None
         return WebSearchAnswer(
             hits=tuple(WebHit(hit.title, hit.url, hit.snippet) for hit in answer.hits),
             backend=answer.backend,

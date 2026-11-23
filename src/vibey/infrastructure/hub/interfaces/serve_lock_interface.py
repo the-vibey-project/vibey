@@ -20,6 +20,11 @@ class ServeLockInterface(Protocol):
         """The holder's process id as it wrote it, or None."""
         ...
 
+    def held_by(self) -> int | None:
+        """None when no process holds the lock now; else the pid the holder wrote (0 when none
+        yet). Asked of the lock, never of a pid."""
+        ...
+
     def release(self) -> None:
         """Lets go of the lock if this process holds it."""
         ...

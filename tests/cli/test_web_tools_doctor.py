@@ -311,3 +311,32 @@ def test_the_real_probe_never_goes_through_a_proxy(
     for name in ("no_proxy", "NO_PROXY"):
         monkeypatch.delenv(name, raising=False)
     assert json.loads(LOOPBACK_DOCUMENT(f"{hub}/api/v1/openapi.json", None)) == json.loads(DOCUMENT)
+
+
+@pytest.mark.parametrize(
+    ("folder", "offered"),
+    [
+        ("", True),
+        ("[hub]\nagent_scopes = ['view', 'web']\n", True),
+        ("[hub]\nagent_scopes = ['view', 'answer']\n", False),
+        ("[hub]\nagent_scopes = []\n", False),
+    ],
+)
+def test_the_line_and_the_mcp_tools_list_agree(tmp_path: Path, folder: str, offered: bool) -> None:
+    """P-9b-11 (SP-ACP Task 11a): doctor's PASS and what `vibey mcp` offers in `tools/list` are
+    read by one rule -- the person's `[hub]`, narrowed by the folder's -- so they never disagree."""
+    from vibey.domain.host_tools import HOST_TOOL_CATALOG
+    from vibey.domain.hub_scope import HubScope
+    from vibey.infrastructure.mcp.hub_gateway import HubGateway
+
+    world = World(tmp_path)
+    world.folder(folder)
+    world.serving()
+    gateway = HubGateway(
+        config_path=lambda: world.user, project_config=lambda: tmp_path / "vibey.toml"
+    )
+    listed = {tool.name for tool in HOST_TOOL_CATALOG.for_scopes(gateway.agent_scopes())}
+    line = world.doctor().line()
+    assert line.startswith("PASS" if offered else "WARN")
+    assert ("vibey_fetch" in listed) is offered
+    assert (HubScope.WEB in gateway.agent_scopes()) is offered

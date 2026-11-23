@@ -171,7 +171,7 @@ def _client_for(process: HubProcess) -> Any:
 def _hub(tmp_path: Path, process: HubProcess, fallback: Fallback) -> tuple[AcpHubClient, Any]:
     state = tmp_path / "hub"
     state.mkdir(mode=0o700, exist_ok=True)
-    (state / "serving.json").write_text(json.dumps({"host": "127.0.0.1", "port": 9, "pid": 1}))
+    (state / "serving.json").write_text(json.dumps({"host": "127.0.0.1", "port": 9, "pid": 4242}))
     config = tmp_path / "vibey.toml"
     config.write_text(f'[hub]\nstate_dir = "{state}"\n')
     router = HubStartRouter(

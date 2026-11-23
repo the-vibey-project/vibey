@@ -172,7 +172,7 @@ def test_serve_prints_the_openapi_document_through_typer(monkeypatch: pytest.Mon
 def test_doctors_hub_exposure_line(tmp_path: Path) -> None:
     state = tmp_path / "state"
     toml = tmp_path / "vibey.toml"
-    command = ServeCommand(config_path=lambda: toml)
+    command = ServeCommand(config_path=lambda: tmp_path / "absent.toml", user_config=lambda: toml)
     toml.write_text(f"[hub]\nstate_dir = '{state}'\n")
     LocalTokenStore(state).record_serving(
         ServingRecord(host="0.0.0.0", port=8765, pid=os.getpid())  # nosec B104 - a record

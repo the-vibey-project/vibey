@@ -23,9 +23,11 @@ import typer
 from vibey.cli.errors import EXIT_USAGE
 from vibey.domain.config import ConfigError
 from vibey.infrastructure.web.backup_notice import PROCESS_BACKUP_NOTICE
-from vibey.infrastructure.web.fetch import PageFetcher, WebFetchError
+from vibey.infrastructure.web.fetch import WebFetchError
 from vibey.infrastructure.web.interfaces import BackupNoticeInterface
+from vibey.infrastructure.web.interfaces.page_fetcher_interface import PageFetcherInterface
 from vibey.infrastructure.web.local_first import LocalFirstSearch
+from vibey.infrastructure.web.page_fetcher import PageFetcher
 from vibey.infrastructure.web.search import (
     BRAVE_KEY_ALIAS_ENV,
     BRAVE_KEY_ENV,
@@ -116,8 +118,11 @@ def run_search(
     return 0
 
 
-def run_fetch(url: str, max_chars: int | None, as_json: bool, *, fetcher: PageFetcher) -> int:
-    """Fetch one page as text, print, and return the exit code."""
+def run_fetch(
+    url: str, max_chars: int | None, as_json: bool, *, fetcher: PageFetcherInterface
+) -> int:
+    """Fetch one page as text through the guarded fetch the hub serves agents (SP-ACP Task 11a),
+    print, and return the exit code."""
     try:
         page = fetcher.fetch(url, max_chars=max_chars)
     except WebFetchError as exc:
@@ -165,7 +170,7 @@ def fetch_command(
     ] = None,
     as_json: Annotated[bool, typer.Option("--json", help="Machine-readable output")] = False,
 ) -> None:
-    """Read one public web page as plain text. Private and internal addresses are refused."""
+    """Read one public web page as plain text, guarded as the hub's own fetch is ([web])."""
     code = run_fetch(url, max_chars, as_json, fetcher=PageFetcher())
     if code:
         raise typer.Exit(code)

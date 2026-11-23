@@ -308,7 +308,7 @@ def test_the_commands_are_wired_into_vibey_and_exit_with_their_codes() -> None:
     down = runner.invoke(app, ["search", "react"])
     assert down.exit_code == 1 and "no Brave backup is configured" in down.output
     refused = runner.invoke(app, ["fetch", "http://localhost:9/", "--max-chars", "500"])
-    assert refused.exit_code == 1 and "not a public http(s) address" in refused.output
+    assert refused.exit_code == 1 and "refused: not a public host name" in refused.output
 
 
 def test_a_command_that_succeeds_exits_zero(monkeypatch: pytest.MonkeyPatch) -> None:

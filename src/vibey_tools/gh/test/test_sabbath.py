@@ -273,6 +273,21 @@ def test_a_helper_that_cannot_start_is_absent():
     assert location_run(("true",))[0] == 0
 
 
+def test_a_location_helper_never_reads_the_callers_stdin(monkeypatch):
+    """Under `vibey acp` stdin carries the editor's protocol: the helper gets none of it."""
+    import subprocess
+
+    seen = {}
+
+    def run(argv, **kwargs):
+        seen.update(kwargs)
+        return subprocess.CompletedProcess(argv, 0, "51.5,-0.1\n", "")
+
+    monkeypatch.setattr(subprocess, "run", run)
+    assert location_run(("where-am-i",)) == (0, "51.5,-0.1\n")
+    assert seen["stdin"] is subprocess.DEVNULL
+
+
 def test_the_zone_table_maps_a_zone_to_its_reference_city(tmp_path):
     table = tmp_path / "zone1970.tab"
     table.write_text(

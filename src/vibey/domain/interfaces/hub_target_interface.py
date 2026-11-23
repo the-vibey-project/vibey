@@ -14,3 +14,8 @@ class HubTargetPolicyInterface(Protocol):
     def loopback_address(self, host: str) -> str | None:
         """The loopback literal to connect to for a record naming `host`, or None."""
         ...
+
+    def lan_address(self, host: str) -> str | None:
+        """The address literal to connect to for a host the person named on the command line:
+        loopback, or a private-network address literal (never a name or a zone); else None."""
+        ...

@@ -321,7 +321,7 @@ def build_gates(
         chosen,
         AcpModes(chosen),
         AcpUpdateMapper(),
-        GatePermissionMapper(chosen.reject_words),
+        GatePermissionMapper.from_settings(chosen),
         HOST_TOOL_CATALOG,
         max_result_chars=max_result_chars,
     )

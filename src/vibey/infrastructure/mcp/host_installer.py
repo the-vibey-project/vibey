@@ -15,6 +15,9 @@
 - **Never through a symlinked file.** A config or `.vibey.bak` that is itself a symbolic link
   is refused. The files are opened and renamed relative to the resolved folder's descriptor,
   with `O_NOFOLLOW`, so a link swapped in after the check is never followed either.
+- **Never through a hard link.** The old `.vibey.bak` is removed and the new one created with
+  `O_EXCL`, so a backup that was a hard link to another file never writes into that file
+  (SP-ACP Task 11a); every staged file is created the same way.
 
 Every target of a plan is checked before any file is written; a refusal is a
 `HostClientError`.
@@ -22,6 +25,7 @@ Every target of a plan is checked before any file is written; a refusal is a
 
 from __future__ import annotations
 
+import contextlib
 import os
 import secrets
 import shutil
@@ -123,9 +127,14 @@ class HostInstaller:
         try:
             mode, old = self._read(name, directory)
             if old is not None and item.backup_path is not None:
-                self._create(Path(item.backup_path).name, directory, old, mode, replace=True)
+                backup = Path(item.backup_path).name
+                # Unlinked, then made afresh: an old backup hard-linked to another file is cut
+                # loose from it rather than written through.
+                with contextlib.suppress(FileNotFoundError):
+                    os.unlink(backup, dir_fd=directory)
+                self._create(backup, directory, old, mode)
             staged = f".{name}.{secrets.token_hex(6)}.tmp"
-            self._create(staged, directory, item.new_content, mode, replace=False)
+            self._create(staged, directory, item.new_content, mode)
             try:
                 os.replace(staged, name, src_dir_fd=directory, dst_dir_fd=directory)
             except BaseException:
@@ -146,16 +155,16 @@ class HostInstaller:
             return stat.S_IMODE(os.fstat(handle.fileno()).st_mode), handle.read()
 
     @staticmethod
-    def _create(name: str, directory: int, text: str, mode: int, *, replace: bool) -> None:
-        flags = os.O_WRONLY | os.O_CREAT | os.O_NOFOLLOW | (os.O_TRUNC if replace else os.O_EXCL)
+    def _create(name: str, directory: int, text: str, mode: int) -> None:
+        """A new file `name` holding `text` with `mode`; never one that was already there."""
+        flags = os.O_WRONLY | os.O_CREAT | os.O_EXCL | os.O_NOFOLLOW
         handle = os.fdopen(os.open(name, flags, mode, dir_fd=directory), "w", encoding="utf-8")
         try:
             with handle:
                 os.fchmod(handle.fileno(), mode)
                 handle.write(text)
         except BaseException:
-            if not replace:
-                os.unlink(name, dir_fd=directory)
+            os.unlink(name, dir_fd=directory)
             raise
 
 
