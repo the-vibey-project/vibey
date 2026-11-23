@@ -24,6 +24,7 @@ remain documented inputs for future wiring.
  | `./vibey.toml`, `[queue.reap]`, `[queue.defect]` and `[bus]` -- or, with no `./vibey.toml`, the environment alone (`VIBEY_QUEUE_REAP_*`, `VIBEY_QUEUE_DEFECT_*`, `VIBEY_BUS_*`) | `bootstrap.build_app` (every command that opens the queue), via `load_config_from_path` or `EnvironmentConfigLoader` | The queue reaper's thresholds and broker policy ([`[queue.reap]`](#queuereap)), when an exhausted job is a defect ([`[queue.defect]`](#queuedefect)), and the bus it inspects. A cluster pod has no `vibey.toml` in its working directory, so the chart's environment is what composes both there (ADR-0056). A malformed environment value fails the start; a `./vibey.toml` that does not parse is skipped, as `build_app` has always skipped it, and the environment alone is read. `[notifications] sweep_interval_seconds` is read from the same `./vibey.toml`, for the gate-reminder sweep every idle worker runs. |
  | `./vibey.toml`, `[queue.reap]`, `[queue.defect]` and `[bus]` -- or, with no `./vibey.toml`, the environment alone (`VIBEY_QUEUE_REAP_*`, `VIBEY_QUEUE_DEFECT_*`, `VIBEY_BUS_*`) | `bootstrap.build_app` (every command that opens the queue), via `load_config_from_path` or `EnvironmentConfigLoader` | The queue reaper's thresholds and broker policy ([`[queue.reap]`](#queuereap)), when an exhausted job is a defect ([`[queue.defect]`](#queuedefect)), and the bus it inspects. A cluster pod has no `vibey.toml` in its working directory, so the chart's environment is what composes both there (ADR-0056). A malformed environment value fails the start; a `./vibey.toml` that does not parse is skipped for the surfaces, but its `[queue.reap]` table is read strictly and malformed values fail the start rather than falling back to defaults. |
  | `./vibey.toml`, `[design.research]` -- or, with no `./vibey.toml`, the environment alone (`VIBEY_DESIGN_RESEARCH_ON_UNAVAILABLE`) | `bootstrap.build_app`, handed to every worker's `design.research` handler | What DESIGN research does when its provider can obtain no evidence ([`[design.research]`](#designresearch)): wait for a person (the default) or record the topic as not researched. A `./vibey.toml` that does not parse is skipped, and the environment alone is read, so the policy falls back to the default -- a person waits -- unless the environment declares otherwise. |
+ | Your own `vibey.toml` (in your configuration folder, never `./vibey.toml`), `[inputs]` | `vibey inputs add`, and each BUILD run that has run inputs to give (`bootstrap.run_inputs_limits`, through `RunInputsSettingsLoader`) | How much a project's run inputs may hold and how much pasted text a run's prompt inlines ([`[inputs]`](#inputs)). A project's `[inputs]` table is never applied; one notice says so. |
  | The project's stored record (the `project` row: `max_cycles` column and `config` JSON) | `vibey worker`, lifecycle repository, and job handlers | Cycle cap, per-cycle spend and turn caps, skills-context policy, [gate commands](#gates), [what an engine session may see of the environment](#engine_environment), notification delivery, telemetry, and (in principle) the `features` local-engine switches — see below. |
  | Environment variables | See [Environment variables](#environment-variables) | Database DSN, the migration-lock wait, the local-engine switches, the sovereign DESIGN provider's evidence directory. |
 
@@ -1041,6 +1042,42 @@ names into its own snapshot, checks the copy against the lock and loads only the
 naming `vibey loops marketplace update <name>` when a marketplace is not locked or its files
 changed since. Nothing yet changes how a loop runs: the loops apply the snapshot from SP-LOOPS
 Phase 4 on.
+
+## `[inputs]` { #inputs }
+
+How much a project's run inputs may hold: the pasted texts and files
+[`vibey inputs add`](cli.md#vibey-inputs) stores and every BUILD run of the project is given
+(SP-LOOPS Phase 3; [ADR-0104](../architecture/decisions/0104-run-inputs-hash-addressed.md)).
+**Only your own `vibey.toml` declares it** (the one in your configuration folder,
+`~/Library/Application Support/vibey/vibey.toml` on macOS, `$XDG_CONFIG_HOME/vibey/` on Linux).
+Limits are yours to set: a cloned repository that could raise them could fill your disk, so the
+`[inputs]` table of a project's `vibey.toml` is never applied, and one notice names the two
+files (never the project's keys). A project file that cannot be read changes nothing either.
+
+| Key | Default | Meaning |
+|---|---|---|
+| `max_item_bytes` | `1048576` (1 MiB) | The largest one pasted text or file may be. |
+| `max_project_bytes` | `8388608` (8 MiB) | The most all of one project's inputs may hold together. |
+| `max_items` | `64` | The most inputs one project may have. |
+| `max_prompt_bytes` | `65536` (64 KiB) | The most pasted text (UTF-8 bytes, all pastes together) inlined into a run's prompt; a paste past it is named, with its place in the run's `paste.md`, instead, so a 32k-token model's context stays usable. |
+
+Every value is a positive integer (`true` is not one), an unknown key is refused naming the
+key, and `max_item_bytes` may not be more than `max_project_bytes`; a refused table stops
+`vibey inputs add` with exit 78 and a BUILD run that has inputs to give with a failure naming it.
+
+```toml
+[inputs]
+max_item_bytes = 2097152
+max_project_bytes = 16777216
+max_items = 32
+max_prompt_bytes = 32768
+```
+
+The limits are checked when an input is added, against the project's inputs so far, and read
+again each time a BUILD run with inputs starts: an input that no longer fits (say after
+`max_items` was lowered) is withheld from that run and counted in its prompt, never deleted.
+The store itself is in your state folder, not here; see
+[`vibey inputs`](cli.md#vibey-inputs).
 
 ## `[acp]` { #acp }
 

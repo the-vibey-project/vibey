@@ -11,7 +11,7 @@ smallest slice that ships on its own: tested, reviewed, and honest about what is
 
 - **Mode when GitHub runs it daily:** act — may open a draft pull request; never merges, approves, releases or deletes.
 - **What it is for:** Take this run's backlog item and land its smallest shippable, tested slice.
-- **Decision records:** 103, the newest 0103 — The loop capability bundle: declared by the person, locked by content, fetched only on their word.
+- **Decision records:** 104, the newest 0104 — Run inputs: hash-addressed in the person's state, given to every BUILD run the same way.
 - **Lanes it keeps usable:** [Backlog killer](https://github.com/the-vibey-project/vibey/actions/workflows/backlog-killer.yml), [Backlog splitter](https://github.com/the-vibey-project/vibey/actions/workflows/backlog-splitter.yml).
 <!-- END GENERATED continuation:state -->
 
