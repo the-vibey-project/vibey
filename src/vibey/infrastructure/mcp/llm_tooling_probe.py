@@ -260,8 +260,14 @@ class LlmToolingProbe:
         shipped = self._shipped()
         if shipped is None:
             return REPOSITORY_SKILL
-        shown = self._shown(skills, home)
-        where = shown if shown.startswith("~/") else shlex.quote(shown)
+        # Every path in the line is quoted: it is printed as the exact command to paste, and
+        # `CODEX_HOME` may hold a space or `;`. Under home, `~/` stays unquoted so the shell
+        # still expands it (review 1 M-3).
+        where = (
+            f"~/{shlex.quote(str(skills.relative_to(home)))}"
+            if skills.is_relative_to(home)
+            else shlex.quote(str(skills))
+        )
         return f"mkdir -p {where} && cp -R {shlex.quote(str(shipped))} {where}/"
 
     @staticmethod

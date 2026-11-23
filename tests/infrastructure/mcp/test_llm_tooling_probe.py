@@ -492,3 +492,33 @@ def test_a_flatpak_zed_is_read_in_its_own_folder(tmp_path: Path) -> None:
     finding = by_name(tooling.findings())["zed:acp-agent"]
     assert finding.state == "present"
     assert finding.detail == "in ~/.var/app/dev.zed.Zed/config/zed/settings.json"
+
+
+def test_the_skill_install_line_quotes_a_codex_home_it_would_otherwise_break_on(
+    tmp_path: Path,
+) -> None:
+    """Review 1 M-3: the line doctor prints as the exact command must never split on, or run,
+    what `CODEX_HOME` contains: under home it is `~/` and the rest quoted."""
+    import shlex
+
+    shipped = tmp_path / "shipped" / "vibey-chat-driver"
+    codex = tmp_path / "home" / "my codex;touch /tmp/pwn"
+    tooling, _, _ = probe(tmp_path, shipped=shipped, environ={"CODEX_HOME": str(codex)})
+    codex.mkdir(parents=True)
+    detail = by_name(tooling.findings())["codex:skill"].detail
+    line = detail.removeprefix("vibey-chat-driver: ")
+    target = "~/'my codex;touch /tmp/pwn/skills'"
+    assert line == f"mkdir -p {target} && cp -R {shlex.quote(str(shipped))} {target}/"
+    words = shlex.split(line)
+    assert words[:3] == ["mkdir", "-p", "~/my codex;touch /tmp/pwn/skills"] and ";" not in words
+
+
+def test_a_codex_home_outside_home_is_quoted_whole(tmp_path: Path) -> None:
+    shipped = tmp_path / "shipped" / "vibey-chat-driver"
+    codex = tmp_path / "elsewhere $(x)"
+    tooling, _, _ = probe(tmp_path, shipped=shipped, environ={"CODEX_HOME": str(codex)})
+    codex.mkdir(parents=True)
+    detail = by_name(tooling.findings())["codex:skill"].detail
+    import shlex
+
+    assert shlex.split(detail.removeprefix("vibey-chat-driver: "))[2] == f"{codex}/skills"
