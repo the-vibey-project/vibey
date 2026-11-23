@@ -296,6 +296,13 @@ jobs:
       - name: Gate 0 - governance corpus index
         run: uv run vibey-gh corpus-index --check
 
+      # The root marketplace and the wheel's packaged rendering of it are generated files:
+      # either one out of step with the members' manifests -- a plugin's version, description
+      # or source changed and nothing re-rendered -- fails here, not in a shipped install
+      # (SP-LOOPS Phase 3c, review I5).
+      - name: Gate 0 - marketplace manifests match their members
+        run: uv run vibey-gh marketplace --check
+
       - name: Gate 1 - ruff check
         run: uv run ruff check .
 

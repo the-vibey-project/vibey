@@ -67,3 +67,51 @@ def test_the_wheel_maps_every_root_plugin_tree_and_the_packaged_manifest() -> No
     packaged = PACKAGED.relative_to(REPO).as_posix()
     assert packaged in shipped
     assert include[packaged] == "vibey_skills/marketplace/.claude-plugin/marketplace.json"
+
+
+def test_the_packaged_manifest_is_exactly_the_fresh_rendering() -> None:
+    """Review I5: every field, not only names and sources. A plugin's version, description or
+    category changed in a member and not re-rendered fails here (and CI's Gate 0 runs
+    `vibey-gh marketplace --check` over both files)."""
+    from vibey_gh.config import load_config
+    from vibey_gh.marketplace import MarketplaceRenderer
+
+    renderer = MarketplaceRenderer()
+    cfg = load_config(REPO)
+    assert _load(PACKAGED) == renderer.build_packaged(cfg)
+    assert _load(ROOT_MANIFEST) == renderer.build(cfg)
+    ok, message = renderer.check(cfg)
+    assert ok, message
+
+
+def test_ci_runs_the_marketplace_drift_check() -> None:
+    ci = (REPO / ".github" / "workflows" / "ci.yml").read_text(encoding="utf-8")
+    assert "run: uv run vibey-gh marketplace --check" in ci
+
+
+def test_a_changed_field_is_drift(tmp_path: Path) -> None:
+    """The check the gate runs compares whole files: one field changed is caught."""
+    from vibey_gh.config import GhConfig, MarketplaceConfig
+    from vibey_gh.marketplace import MarketplaceRenderer
+
+    member = tmp_path / "m"
+    (member / ".claude-plugin").mkdir(parents=True)
+    (member / "plugins" / "p" / ".claude-plugin").mkdir(parents=True)
+    (member / "plugins" / "p" / ".claude-plugin" / "plugin.json").write_text("{}")
+    manifest = {
+        "name": "m",
+        "owner": {"name": "o"},
+        "plugins": [{"name": "p", "source": "./plugins/p", "version": "1.0.0"}],
+    }
+    (member / ".claude-plugin" / "marketplace.json").write_text(json.dumps(manifest))
+    cfg = GhConfig(
+        root=tmp_path,
+        marketplace=MarketplaceConfig(name="x", members=("m",), packaged="packaged.json"),
+    )
+    renderer = MarketplaceRenderer()
+    renderer.write(cfg)
+    assert renderer.check(cfg)[0]
+    manifest["plugins"][0]["version"] = "1.0.1"
+    (member / ".claude-plugin" / "marketplace.json").write_text(json.dumps(manifest))
+    ok, message = renderer.check(cfg)
+    assert not ok and "out of date" in message
