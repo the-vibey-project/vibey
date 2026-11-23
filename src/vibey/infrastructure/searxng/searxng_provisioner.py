@@ -54,6 +54,12 @@ PROBE_SECONDS: Final = 5.0
 REMOTE_DAEMON: Final = ("DOCKER_HOST", "CONTAINER_HOST")
 """Variables that may name a daemon on another machine: install refuses one that is not a local
 socket, since the unit at login never has them and would talk to another daemon."""
+RUNTIME_GONE_REMEDY: Final = (
+    "vibey keeps its SearXNG with the runtime it was installed with: put that runtime back, or "
+    "run `vibey searxng uninstall --purge` and then `vibey searxng install` to use the one vibey "
+    "finds now"
+)
+"""What to do when the runtime vibey recorded is gone or no longer trusted (SP-ACP Task 11a)."""
 
 
 class SearxngProvisioner:
@@ -98,7 +104,8 @@ class SearxngProvisioner:
             else:
                 answering = self._health(settings.searxng_url, settings.searxng_instance) is None
         return SearxngOffer(
-            runtime=self._runtime.find(),
+            # The runtime an install or update would use, so the question names it.
+            runtime=record.runtime if record is not None else self._runtime.find(),
             own_url=own,
             answering=answering,
             provisioned=record is not None,
@@ -145,7 +152,8 @@ class SearxngProvisioner:
             return UntrustedText.clean(str(exc))
         if record is None:
             return ""
-        return UntrustedText.clean(self._runtime.vet(record.runtime))
+        problem = self._runtime.vet(record.runtime)
+        return UntrustedText.clean(f"{problem}; {RUNTIME_GONE_REMEDY}" if problem else "")
 
     def _believed(self) -> SearxngProvision | None:
         """The record, checked in full: the label is never taken from it, only compared."""
@@ -185,7 +193,9 @@ class SearxngProvisioner:
         remote = self._remote_daemon()
         if remote:
             return SearxngPrepared(False, remote)
-        runtime = self._runtime.find()
+        runtime, problem = self._install_runtime()
+        if problem:
+            return SearxngPrepared(False, problem)
         if runtime is None:
             return SearxngPrepared(
                 False, "vibey found neither podman nor docker in its trusted folders"
@@ -221,6 +231,19 @@ class SearxngProvisioner:
             f"{self._files.folder}.{note}",
         )
 
+    def _install_runtime(self) -> tuple[str | None, str]:
+        """The runtime an install or an update uses, and why it may not (SP-ACP Task 11a): the
+        one vibey installed its SearXNG with (an earlier pin's record included), trust-checked
+        again, so an update never moves it to another daemon; with no record, the one `find`
+        chooses now."""
+        record = self.installed()
+        if record is None:
+            return self._runtime.find(), ""
+        problem = self._runtime.vet(record.runtime)
+        if problem:
+            return record.runtime, UntrustedText.clean(f"{problem}; {RUNTIME_GONE_REMEDY}")
+        return record.runtime, ""
+
     def _remote_daemon(self) -> str:
         for key in REMOTE_DAEMON:
             value = self._environ.get(key, "").strip()
@@ -248,7 +271,9 @@ class SearxngProvisioner:
             return False  # a runtime vibey will not run: `refusal` says why
 
     def remove_container(self) -> str:
-        record = self.record()
+        # The record as installed, an earlier pin's included: its container lives in the
+        # runtime it names, not necessarily the one `find` would choose now.
+        record = self.installed()
         runtime = record.runtime if record is not None else self._runtime.find()
         if runtime is None:
             return ""  # no runtime: no container of vibey's can be running
@@ -261,7 +286,7 @@ class SearxngProvisioner:
     def purge(self) -> list[str]:
         """Remove the image vibey's record names and both files; what could not be removed."""
         problems: list[str] = []
-        record = self.record()
+        record = self.installed()  # an earlier pin's image is removed from where it was pulled
         if record is not None:
             try:
                 removed = self._runtime.remove_image(record.runtime, record.image)

@@ -3,9 +3,10 @@
 
 - **Found in trusted folders only, never installed.** `find` looks for `podman`, then `docker`,
   in `TRUSTED_RUNTIME_DIRS` for this platform, once -- never on the PATH, which an editor may have
-  taken from a project. A candidate must be a regular executable file, not writable by anyone,
-  owned by root or the person, and any link must lead into `TRUSTED_RUNTIME_ROOTS`. With neither,
-  vibey says how to install one and does nothing else.
+  taken from a project. A candidate must be a regular executable file, writable by nobody but its
+  owner (neither its group nor anyone else; SP-ACP Task 11a), owned by root or the person, and
+  any link must lead into `TRUSTED_RUNTIME_ROOTS`. With neither, vibey says how to install one
+  and does nothing else.
 - **Every use vets it again.** `vet(runtime)` refuses a runtime (a recorded one, say) that fails
   those checks, and every command here vets the runtime it is handed before anything runs: a
   changed `provision.json` cannot make vibey run a binary outside the trusted folders. It does not
@@ -139,8 +140,9 @@ class ContainerRuntime:
             return "is not there"
         if not stat.S_ISREG(found.st_mode) or not os.access(real, os.X_OK):
             return "is not an executable file"
-        if found.st_mode & 0o002:
-            return "is writable by anyone"
+        if found.st_mode & 0o022:
+            # Writable by its group too is writable by someone other than its owner.
+            return "is writable by anyone but its owner"
         if found.st_uid not in (0, self._uid()):
             return "belongs to someone else"
         return ""

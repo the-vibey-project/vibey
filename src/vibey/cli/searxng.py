@@ -51,6 +51,8 @@ from vibey.infrastructure.searxng.interfaces.searxng_serve_interface import Sear
 EXIT_CONFIG: Final = 78
 INSTALL_COMMAND: Final = "vibey searxng install"
 NAME: Final = "searxng"
+REFUSAL_CHARS: Final = 500
+"""The most of a refusal doctor repeats: the cause and what to do about it."""
 _WIDTH: Final = 26
 WRITTEN: Final = frozenset({"created", "unchanged", "updated"})
 
@@ -244,7 +246,9 @@ class SearxngCommand:
         _, units, loader, searxng, _ = parts
         refusal = searxng.refusal()
         if refusal:
-            return f"WARN {NAME:<{_WIDTH}} vibey's SearXNG: {DoctorChecks.cleaned(refusal)}"
+            # Long enough for the remedy a refusal carries (9d N-j, SP-ACP Task 11a).
+            said = DoctorChecks.cleaned(refusal, limit=REFUSAL_CHARS)
+            return f"WARN {NAME:<{_WIDTH}} vibey's SearXNG: {said}"
         if searxng.disabled():
             return (
                 f"UNKNOWN {NAME:<{_WIDTH}} vibey's SearXNG is stopped for good; "

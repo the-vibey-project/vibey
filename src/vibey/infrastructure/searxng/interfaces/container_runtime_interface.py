@@ -24,7 +24,7 @@ class ContainerRuntimeInterface(Protocol):
 
     def vet(self, runtime: str) -> str:
         """Why `runtime` may not be run ("" when it may): not podman or docker in a trusted
-        folder, a link leading outside them, not a regular executable, writable by anyone, or
+        folder, a link leading outside them, not a regular executable, writable by its group or anyone, or
         someone else's. It need not be the one `find` would choose now."""
         ...
 

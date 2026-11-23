@@ -486,6 +486,16 @@ def test_doctor_warns_when_vibey_installed_none() -> None:
     assert "no podman or docker in vibey's trusted folders" in none
 
 
+def test_doctor_says_how_to_fix_a_recorded_runtime_that_is_gone() -> None:
+    """9d N-j (SP-ACP Task 11a): the whole remedy reaches the line, not cut at 200 characters."""
+    from vibey.infrastructure.searxng.searxng_provisioner import RUNTIME_GONE_REMEDY
+
+    provisioner = Provisioner(provisioned=True)
+    provisioner.refused = f"{RUNTIME} is not there; {RUNTIME_GONE_REMEDY}"
+    line = World(provisioner).command.doctor_line()
+    assert line.startswith("WARN searxng") and line.endswith(RUNTIME_GONE_REMEDY)
+
+
 def test_doctor_says_unknown_for_the_persons_own() -> None:
     line = World(Provisioner(own_url="VIBEY_SEARXNG_URL")).command.doctor_line()
     assert line.startswith("UNKNOWN searxng") and "VIBEY_SEARXNG_URL" in line

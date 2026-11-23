@@ -250,7 +250,10 @@ def test_the_refusal_names_a_runtime_vibey_will_not_run(tmp_path: Path) -> None:
     provisioner.prepare()
     assert provisioner.refusal() == ""
     runtime.refuse = "/opt/homebrew/bin/podman \x1b[2Jis writable by anyone"
-    assert provisioner.refusal() == "/opt/homebrew/bin/podman is writable by anyone"
+    assert provisioner.refusal().startswith("/opt/homebrew/bin/podman is writable by anyone; ")
+    assert "`vibey searxng uninstall --purge` and then `vibey searxng install`" in (
+        provisioner.refusal()
+    )
     assert not provisioner.image_present()
     assert "writable" in provisioner.remove_container()
     assert provisioner.purge() == [f"the image was kept: {runtime.refuse}"]
@@ -390,3 +393,69 @@ def test_the_earlier_pins_record_alone_names_vibeys_instance(tmp_path: Path) -> 
     os.chmod(tmp_path / "searxng" / "settings.yml", 0o644)  # settings vibey cannot believe
     health = Health(answering={("http://127.0.0.1:28180", marker)})
     assert _provisioner(tmp_path, listening=True, health=health).busy() == ""
+
+
+# -- Task 11a: the recorded runtime is the one an update, a removal and a purge use ----------------
+
+DOCKER = "/usr/local/bin/docker"
+
+
+class RecordedGone(Runtime):
+    """The runtime vibey recorded no longer passes its checks; the one found now does."""
+
+    def vet(self, runtime: str) -> str:
+        return f"{runtime} is not there" if runtime == RUNTIME else ""
+
+    def _checked(self, runtime: str) -> None:
+        if self.vet(runtime):
+            raise ValueError(self.vet(runtime))
+
+
+def test_an_update_pulls_with_the_recorded_runtime_not_the_one_found_now(tmp_path: Path) -> None:
+    """9d N-h: podman recorded, docker found first now: the update stays with podman."""
+    _installed_earlier(tmp_path)
+    runtime = Runtime(found=DOCKER)
+    provisioner = _provisioner(tmp_path, runtime)
+    assert provisioner.offer().runtime == RUNTIME
+    assert provisioner.prepare().ok
+    assert runtime.calls == [("pull", RUNTIME, SEARXNG_IMAGE)]
+    record = provisioner.record()
+    assert record is not None and record.runtime == RUNTIME
+
+
+def test_an_update_whose_recorded_runtime_vanished_pulls_nothing_and_says_how_to_fix(
+    tmp_path: Path,
+) -> None:
+    _installed_earlier(tmp_path)
+    runtime = RecordedGone(found=DOCKER)
+    provisioner = _provisioner(tmp_path, runtime)
+    prepared = provisioner.prepare()
+    assert not prepared.ok and prepared.detail.startswith(f"{RUNTIME} is not there; ")
+    assert "`vibey searxng uninstall --purge`" in prepared.detail
+    assert runtime.calls == []
+    assert provisioner.record() is None  # nothing was rewritten to the other runtime
+
+
+def test_removal_and_purge_of_an_outdated_install_use_its_recorded_runtime(
+    tmp_path: Path,
+) -> None:
+    """9d N-i: the container and image of an earlier pin live where it was installed."""
+    _installed_earlier(tmp_path)
+    runtime = Runtime(found=DOCKER)
+    provisioner = _provisioner(tmp_path, runtime)
+    assert provisioner.remove_container() == ""
+    assert provisioner.purge() == []
+    assert runtime.calls == [("rm", RUNTIME, "501"), ("rmi", RUNTIME, EARLIER)]
+
+
+def test_doctor_says_how_to_fix_a_recorded_runtime_that_is_gone(tmp_path: Path) -> None:
+    """9d N-j: the refusal doctor shows names the remedy."""
+    runtime = Runtime()
+    provisioner = _provisioner(tmp_path, runtime)
+    provisioner.prepare()
+    runtime.refuse = f"{RUNTIME} is not there"
+    assert provisioner.refusal() == (
+        f"{RUNTIME} is not there; vibey keeps its SearXNG with the runtime it was installed with: "
+        "put that runtime back, or run `vibey searxng uninstall --purge` and then "
+        "`vibey searxng install` to use the one vibey finds now"
+    )

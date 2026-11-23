@@ -78,14 +78,17 @@ launched from a project may have that project's `bin/` (direnv, `node_modules/.b
 the runtime is recorded and run again at every login. It is looked for only in fixed trusted
 folders (`TRUSTED_RUNTIME_DIRS`: on macOS `/opt/homebrew/bin`, `/usr/local/bin`, `/usr/bin`,
 `/Applications/Docker.app/Contents/Resources/bin`; on Linux `/usr/bin`, `/usr/local/bin`, `/bin`,
-`/snap/bin`), and a candidate must be a regular executable file, not writable by anyone, owned by
+`/snap/bin`), and a candidate must be a regular executable file, writable by nobody but its owner (Task 11a: not by its group either), owned by
 root or the person, whose links lead only into `TRUSTED_RUNTIME_ROOTS` (Homebrew's Cellar, Docker
 Desktop's bundle, `/usr`, `/snap`). Every use -- `serve`, doctor, status, uninstall, purge --
 vets the recorded runtime again against those checks: a record naming any other binary is
 refused with one cleaned notice and nothing is run. The recorded runtime need not be the one a
 fresh look would choose now -- `find` only chooses at install -- so a second runtime installed
 later (podman beside Docker Desktop, a Homebrew docker CLI ahead of it) never stops `serve`,
-`uninstall` or `--purge`. vibey never installs a runtime: with none, it says how to get one, once, and
+`uninstall` or `--purge`. An update -- and any install over an existing record -- pulls with the
+recorded runtime, trust-checked again, never the one `find` would choose now, and the container
+and image of an earlier pin's install are removed through it too; when it is gone, install
+refuses and says how to move (`uninstall --purge`, then `install`) (SP-ACP Task 11a). vibey never installs a runtime: with none, it says how to get one, once, and
 does nothing else.
 
 The runtime sees the same small environment at install and in the unit (home, user, locale,
