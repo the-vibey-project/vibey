@@ -34,6 +34,7 @@ from vibey.domain.interfaces.budget_caps_interface import (
 from vibey.domain.job import FailureClass, StoredJobState
 from vibey.domain.phase import Phase, StoredPhase
 from vibey.domain.queue_reap import PolicyOutcome, ReapVerdict
+from vibey.domain.run_input import RunInputsSettings
 
 
 @dataclass(frozen=True, slots=True)
@@ -731,4 +732,16 @@ class TrustedLoopsBundle:
     person is told so rather than left to wonder (ADR-0101, SP-LOOPS Task 3)."""
 
     bundle: BundleSpec
+    notices: tuple[str, ...] = ()
+
+
+@dataclass(frozen=True, slots=True)
+class TrustedRunInputsSettings:
+    """The `[inputs]` limits as the person sets them, and what a project tried to say.
+
+    ``settings`` comes from the person's own `vibey.toml` only. ``notices`` holds one line when
+    a project's file carried an `[inputs]` table: it was ignored, never applied, and the person
+    is told so (ADR-0101; SP-LOOPS Phase 3)."""
+
+    settings: RunInputsSettings
     notices: tuple[str, ...] = ()

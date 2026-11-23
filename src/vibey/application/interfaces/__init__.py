@@ -223,6 +223,9 @@ from vibey.application.interfaces.review import (
     AutomatedReviewRunner,
     ReviewArtifactWriter,
 )
+from vibey.application.interfaces.run_inputs_settings_interface import (
+    RunInputsSettingsLoaderInterface,
+)
 from vibey.application.interfaces.sabbath import SabbathGateInterface
 from vibey.application.interfaces.secrets import SecretsPort
 from vibey.application.interfaces.siem import SiemPort
@@ -259,6 +262,7 @@ __all__ = [
     "StateStore",
     "StateSyncServiceInterface",
     "RemoteCommandServiceInterface",
+    "RunInputsSettingsLoaderInterface",
     "RemoteWorkflowForge",
     "DefectGateInterface",
     "ResearchGapRecordsInterface",

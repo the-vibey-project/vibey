@@ -16,6 +16,7 @@ from __future__ import annotations
 
 import hashlib
 import re
+from collections.abc import Mapping
 from dataclasses import dataclass
 from typing import Final, Literal
 
@@ -45,6 +46,45 @@ class InputListing:
 
     items: tuple[RunInput, ...]
     skipped: int
+
+
+@dataclass(frozen=True, slots=True)
+class RunInputsSettings:
+    """`[inputs]`: how much a project's run inputs may hold (ADR-0018: each a key, these its
+    defaults). Read only from the person's own `vibey.toml`; a project's file is never heard."""
+
+    max_item_bytes: int = 1_048_576
+    """The largest one pasted text or file may be (1 MiB)."""
+    max_project_bytes: int = 8_388_608
+    """The most all of one project's inputs may hold together (8 MiB)."""
+    max_items: int = 64
+    """The most inputs one project may have."""
+
+    @classmethod
+    def from_table(cls, table: Mapping[str, object]) -> RunInputsSettings:
+        """The settings an `[inputs]` table declares, each missing key its default. Raises
+        `ValueError` naming the key for an unknown key, a value that is not a positive integer
+        (a bool is not one), and a `max_item_bytes` over `max_project_bytes`."""
+        defaults = cls()
+        known = {"max_item_bytes", "max_project_bytes", "max_items"}
+        for key in table:
+            if key not in known:
+                raise ValueError(
+                    f"[inputs] {ascii(key)[:64]} is not a setting; the keys are "
+                    f"{', '.join(sorted(known))}"
+                )
+        values: dict[str, int] = {}
+        for key in sorted(known):
+            value = table.get(key, getattr(defaults, key))
+            if not isinstance(value, int) or isinstance(value, bool) or value < 1:
+                raise ValueError(f"[inputs] {key} must be a positive integer, not {value!r}")
+            values[key] = value
+        if values["max_item_bytes"] > values["max_project_bytes"]:
+            raise ValueError(
+                f"[inputs] max_item_bytes ({values['max_item_bytes']}) is more than "
+                f"max_project_bytes ({values['max_project_bytes']})"
+            )
+        return cls(**values)
 
 
 class RunInputRule:
