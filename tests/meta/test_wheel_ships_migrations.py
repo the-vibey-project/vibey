@@ -39,12 +39,15 @@ pytestmark = pytest.mark.slow
 
 @pytest.fixture(scope="module")
 def wheel(tmp_path_factory: pytest.TempPathFactory) -> Path:
-    """The wheel `uv build` produces from this checkout, built once for the module."""
+    """The wheel `uv build --offline` produces from this checkout, built once for the module.
+
+    Offline: the build backend (hatchling) comes from uv's cache, which `uv sync` filled, so the
+    build never asks a package index (no test may need the network)."""
     uv = shutil.which("uv")
     assert uv is not None, "uv is not on PATH; the release builds the wheel with it"
     out = tmp_path_factory.mktemp("wheel")
     subprocess.run(  # noqa: S603 -- a fixed argv; uv's path comes from shutil.which
-        [uv, "build", "--wheel", "--out-dir", str(out), str(REPO)],
+        [uv, "build", "--wheel", "--offline", "--out-dir", str(out), str(REPO)],
         check=True,
         capture_output=True,
         text=True,

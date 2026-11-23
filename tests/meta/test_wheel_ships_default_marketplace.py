@@ -14,8 +14,10 @@ copied so the wheel carries one copy of the 15 MiB tree.
 
 Like tests/meta/test_wheel_ships_migrations.py, this builds the real wheel -- the artifact PyPI
 receives -- once for the module, and asserts on its file list and on code run from its unpacked
-contents. The build reads only this checkout (no network: `uv build` of a pure-Python project with
-its build backend already cached), and the assertions depend on no file order or timing.
+contents. The build reads only this checkout and uv's cache: `uv build --offline` takes the build
+backend from the cache `uv sync` filled and never asks a package index (without `--offline`, uv
+resolves hatchling against the index even with a warm cache). The assertions depend on no file
+order or timing.
 
 Module-level test functions rather than a class with an interface beside it (ADR-0016), following
 tests/meta/test_shipped_trees_are_reachable.py: pytest collects `test_*` functions, and the rule is
@@ -58,12 +60,15 @@ pytestmark = pytest.mark.slow
 
 @pytest.fixture(scope="module")
 def wheel(tmp_path_factory: pytest.TempPathFactory) -> Path:
-    """The wheel `uv build` produces from this checkout, built once for the module."""
+    """The wheel `uv build --offline` produces from this checkout, built once for the module.
+
+    Offline: the build backend (hatchling) comes from uv's cache, which `uv sync` filled, so the
+    build never asks a package index (no test may need the network)."""
     uv = shutil.which("uv")
     assert uv is not None, "uv is not on PATH; the release builds the wheel with it"
     out = tmp_path_factory.mktemp("wheel")
     subprocess.run(  # noqa: S603 -- a fixed argv; uv's path comes from shutil.which
-        [uv, "build", "--wheel", "--out-dir", str(out), str(REPO)],
+        [uv, "build", "--wheel", "--offline", "--out-dir", str(out), str(REPO)],
         check=True,
         capture_output=True,
         text=True,
