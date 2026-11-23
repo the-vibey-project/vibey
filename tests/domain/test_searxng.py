@@ -296,7 +296,13 @@ def test_the_searxng_unit_runs_the_pinned_launcher_and_no_environment_file() -> 
     assert (unit.name, unit.label, unit.restart) == ("searxng", "dev.vibey.searxng", "always")
     # Never through `supervisor exec --env-file`: that file holds the database URL, and the
     # container gets no secret but its own.
-    assert unit.argv == ("/opt/vibey/bin/vibey", "searxng", "serve")
+    assert unit.argv == (
+        "/opt/vibey/bin/vibey",
+        "searxng",
+        "serve",
+        "--label",
+        "dev.vibey.searxng",
+    )
     assert unit.log_path == "/home/op/.local/state/vibey/logs/searxng.log"
 
 
@@ -315,3 +321,39 @@ def test_a_record_of_an_earlier_pin_parses_installed_but_never_runs() -> None:
         PLAN.digest_of("docker.io/searxng/searxng:latest")
     with pytest.raises(ValueError, match="digest"):
         PLAN.parse_installed({**data, "image": "docker.io/evil/searxng@sha256:" + "ab" * 32})
+
+
+# -- SP-ACP Task 11b-ii: the parked 9d items --------------------------------------------------
+
+
+def test_an_earlier_pins_image_may_be_removed_but_never_another_image() -> None:
+    """P-9d-6: the image of an earlier pin is removed after an update; only SearXNG's, by
+    digest, is ever named to `rmi`."""
+    assert PLAN.remove_image_argv(PROVISION.runtime, OTHER) == ("/usr/bin/podman", "rmi", OTHER)
+    for refused in ("docker.io/searxng/searxng:latest", "docker.io/evil/evil@" + DIGEST):
+        with pytest.raises(ValueError):
+            PLAN.remove_image_argv(PROVISION.runtime, refused)
+
+
+def test_info_and_the_docker_context_are_asked_with_fixed_argv() -> None:
+    """P-9d-1 and P-9d-8: whether a runtime answers, and where docker's context points."""
+    assert PLAN.info_argv("/usr/bin/podman") == ("/usr/bin/podman", "info")
+    assert PLAN.context_argv("/usr/bin/docker") == (
+        "/usr/bin/docker",
+        "context",
+        "inspect",
+        "--format",
+        "{{.Endpoints.docker.Host}}",
+    )
+    assert PLAN.context_argv("/usr/bin/podman") is None  # podman has no docker context
+    with pytest.raises(ValueError):
+        PLAN.info_argv("/bin/sh")
+
+
+def test_the_searxng_unit_names_its_own_label_to_serve() -> None:
+    """P-9d-5: the unit says which label it was loaded under, so a unit left from an earlier
+    `[supervisor] label_prefix` refuses to run beside the current one."""
+    (unit,) = SupervisorPlanner().acp_services(
+        SupervisorSettings(label_prefix="org.me"), PATHS, names=("searxng",), restart="always"
+    )
+    assert unit.argv == ("/opt/vibey/bin/vibey", "searxng", "serve", "--label", "org.me.searxng")

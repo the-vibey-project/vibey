@@ -1631,16 +1631,21 @@ def searxng_runtime(settings: AcpSettings) -> ContainerRuntime:
     )
 
 
-def searxng_serve(settings: AcpSettings, *, user_config: Path) -> SearxngServeInterface:
+def searxng_serve(
+    settings: AcpSettings, *, user_config: Path, unit: str | None = None
+) -> SearxngServeInterface:
     """What the SearXNG unit runs: the person's record and settings, the runtime vibey finds,
-    and the label `[supervisor] label_prefix` gives it in their own `vibey.toml` (ADR-0102).
-    Building it touches nothing."""
+    and the label `[supervisor] label_prefix` gives it in their own `vibey.toml` (ADR-0102);
+    `unit` is the label the unit says it was loaded under. Building it touches nothing."""
 
     def label() -> str:
         return f"{SupervisorSettingsLoader().load(user_config).label_prefix}.{SEARXNG}"
 
     return SearxngServe(
-        SearxngFiles.personal(user_config.parent), searxng_runtime(settings), label=label
+        SearxngFiles.personal(user_config.parent),
+        searxng_runtime(settings),
+        label=label,
+        unit=unit,
     )
 
 

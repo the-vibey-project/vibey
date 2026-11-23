@@ -142,13 +142,33 @@ class ContainerRuntime:
         problem = self._problem(runtime)
         return RuntimeRefusal(runtime, problem) if problem is not None else None
 
+    def endpoint(self, runtime: str) -> str:
+        argv = self._plan.context_argv(self._checked(runtime))
+        if argv is None:
+            return ""
+        result = self._runner(argv)
+        if result.returncode != 0:
+            return ""  # unknown: the pull then says what is wrong
+        lines = [line.strip() for line in UntrustedText.clean(result.stdout).splitlines()]
+        return next((line for line in lines if line), "")[:_DETAIL_LIMIT]
+
     def _lookup(self) -> str | None:
+        found: list[str] = []
         for name in RUNTIMES:
             for folder in self._dirs:
                 candidate = f"{folder}/{name}"
                 if os.path.lexists(candidate) and self._problem(candidate) is None:
-                    return candidate
-        return None
+                    found.append(candidate)
+                    break
+        if len(found) < 2:
+            return found[0] if found else None
+        # Both are here: the first that answers (a podman whose machine is stopped does not,
+        # while Docker's daemon may), else podman, whose own error then says what is wrong.
+        answering = (runtime for runtime in found if self._answers(runtime))
+        return next(answering, found[0])
+
+    def _answers(self, runtime: str) -> bool:
+        return self._runner(self._plan.info_argv(runtime)).returncode == 0
 
     def _problem(self, path: str) -> RuntimeProblem | None:
         """Why `path` may not be run as a runtime, or None."""

@@ -8,8 +8,9 @@ from typing import Protocol, runtime_checkable
 
 @runtime_checkable
 class SearxngCommandInterface(Protocol):
-    def serve(self) -> int:
-        """What the unit runs: exec the container runtime, or the exit code of a refusal."""
+    def serve(self, unit: str | None = None) -> int:
+        """What the unit runs: exec the container runtime, or the exit code of a refusal.
+        `unit` is the label the unit was loaded under, when the unit says it."""
         ...
 
     def status(self) -> int:

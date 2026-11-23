@@ -70,6 +70,8 @@ class World:
         self.execs: list[tuple[str, list[str], dict[str, str]]] = []
         self.said: list[str] = []
         self.label = LABEL
+        self.unit: str | None = None
+        """The label the unit was loaded under (`--label`); None for a unit written before."""
         self.uid = 501
         self.environ = {
             "HOME": "/home/op",
@@ -97,6 +99,7 @@ class World:
             self.files,
             self.runtime,
             label=lambda: self.label,
+            unit=self.unit,
             plan=self.plan,
             execve=execve,
             environ=self.environ,
@@ -268,3 +271,29 @@ def test_a_record_of_an_earlier_pin_is_refused_with_the_update_path(tmp_path: Pa
     assert world.execs == [] and world.runtime.calls == []
     assert "earlier pinned image (abababababab)" in world.said[0]
     assert "vibey searxng install" in world.said[0]
+
+
+def test_a_unit_left_from_an_earlier_label_prefix_runs_nothing(tmp_path: Path) -> None:
+    """SP-ACP Task 11b-ii, P-9d-5: after `[supervisor] label_prefix` changed, the unit loaded
+    under the old label still runs serve. It is not this configuration's unit, so it refuses
+    (78, under the unit's throttle) and says how to unload it, rather than starting a second
+    container beside the current unit's."""
+    world = World(tmp_path)
+    world.install()
+    world.unit = "old.prefix.searxng"
+    assert world.serve() == EXIT_CONFIG
+    assert world.execs == [] and world.runtime.calls == []
+    assert world.said == [
+        "vibey searxng serve: this unit is old.prefix.searxng, but your [supervisor] "
+        f"label_prefix now makes vibey's SearXNG unit {LABEL}: it is left from an earlier "
+        "prefix, so it runs nothing; unload it (`launchctl bootout gui/$(id -u)/"
+        "old.prefix.searxng` on macOS, `systemctl --user disable --now old.prefix.searxng` on "
+        "Linux) and remove its file"
+    ]
+
+
+def test_the_current_units_label_serves(tmp_path: Path) -> None:
+    world = World(tmp_path)
+    world.install()
+    world.unit = LABEL
+    assert world.serve() == 0 and len(world.execs) == 1

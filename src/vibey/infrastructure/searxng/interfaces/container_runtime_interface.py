@@ -19,7 +19,14 @@ if TYPE_CHECKING:
 class ContainerRuntimeInterface(Protocol):
     def find(self) -> str | None:
         """podman, else docker, found once in vibey's trusted folders (never the PATH), and only
-        one that passes `vet`'s checks on its file; None when neither."""
+        one that passes `vet`'s checks on its file; None when neither. With both found, a podman
+        that does not answer (`podman info` fails: its machine is stopped) gives way to a docker
+        that does; when neither answers, podman."""
+        ...
+
+    def endpoint(self, runtime: str) -> str:
+        """The endpoint of docker's current CLI context (`unix://...`, `ssh://...`), cleaned of
+        terminal control; "" for podman or when it cannot be read."""
         ...
 
     def vet(self, runtime: str) -> RuntimeRefusal | None:

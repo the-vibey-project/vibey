@@ -321,11 +321,21 @@ such a run should assert.
   at login. The question names the image and the port but not its size, which was not measured
   here (the digest was read with a `HEAD`, which carries none).
 - A new pinned digest is a change someone reviews; an installed SearXNG is then offered the
-  update (editor, doctor, status), never updated on its own. The old image is left in the runtime
-  (disk only) until removed by hand.
-- The Docker CLI's `currentContext` (in `~/.docker/config.json`, reached through `HOME`) can still
-  name an ssh or tcp context: install and the unit read it alike, but "local" is only as good as
-  that file.
+  update (editor, doctor, status), never updated on its own. Once the update is pulled and
+  recorded, the old container is removed (the unit starts the new one) and then the old image;
+  one the runtime will not remove is said, with the `rmi` that removes it (SP-ACP Task 11b-ii).
+- The Docker CLI's `currentContext` (in `~/.docker/config.json`, reached through `HOME`) can name
+  an ssh or tcp context: install asks `docker context inspect` first and refuses one whose
+  endpoint is not a local socket (`unix://`, `npipe://`); a context it cannot read is not
+  refused, and the pull then says what is wrong (SP-ACP Task 11b-ii).
+- With both podman and docker found, a podman that does not answer `podman info` (a podman
+  machine that is stopped) gives way to a docker that does; when neither answers, podman is
+  kept and its own error says why (SP-ACP Task 11b-ii).
+- The SearXNG unit runs `vibey searxng serve --label <its own label>`. A unit left loaded from
+  an earlier `[supervisor] label_prefix` therefore refuses (78, under the unit's throttle) and
+  says how to unload it, rather than running a second container that the current unit's would
+  keep removing (SP-ACP Task 11b-ii). A unit written before this has no `--label` and is checked
+  as before; `vibey searxng install` rewrites it.
 - The Brave backup is reachable only in vibey's own processes -- the hub's web tools among them
   (§9) -- never in an engine session, which still searches SearXNG directly (§9, "What 9b did
   not fix").

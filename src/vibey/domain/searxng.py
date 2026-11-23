@@ -293,7 +293,20 @@ class SearxngPlan:
         return (self._runtime(runtime), "rm", "-f", self.container_name(uid))
 
     def remove_image_argv(self, runtime: str, image: str) -> tuple[str, ...]:
-        return (self._runtime(runtime), "rmi", self._image(image))
+        # An earlier pin's image may be removed too (after an update): SearXNG's by digest
+        # only, never a tag and never another repository's.
+        if not isinstance(image, str) or not IMAGE_REF.fullmatch(image):
+            raise ValueError("the image must be docker.io/searxng/searxng pinned by its digest")
+        return (self._runtime(runtime), "rmi", image)
+
+    def info_argv(self, runtime: str) -> tuple[str, ...]:
+        return (self._runtime(runtime), "info")
+
+    def context_argv(self, runtime: str) -> tuple[str, ...] | None:
+        checked = self._runtime(runtime)
+        if _name(checked) != "docker":
+            return None
+        return (checked, "context", "inspect", "--format", "{{.Endpoints.docker.Host}}")
 
     def short(self, image: str) -> str:
         return self._image(image).rpartition(":")[2][:12]

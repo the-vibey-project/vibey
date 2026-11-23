@@ -83,7 +83,16 @@ class SearxngPlanInterface(Protocol):
         ...
 
     def remove_image_argv(self, runtime: str, image: str) -> tuple[str, ...]:
-        """Remove the pinned image."""
+        """Remove a SearXNG image named by its digest: the pinned one, or an earlier pin's
+        after an update; never any other image."""
+        ...
+
+    def info_argv(self, runtime: str) -> tuple[str, ...]:
+        """Ask whether the runtime answers (exit 0): a podman whose machine is stopped does not."""
+        ...
+
+    def context_argv(self, runtime: str) -> tuple[str, ...] | None:
+        """For docker, print the endpoint of the CLI's current context; None for podman."""
         ...
 
     def short(self, image: str) -> str:

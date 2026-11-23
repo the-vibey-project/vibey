@@ -4,6 +4,9 @@
 Before anything runs it checks, and refuses (said on standard error, the unit's log) when:
 
 - the person stopped it for good (`vibey acp unload`, `vibey searxng uninstall`);
+- the unit that runs it was loaded under another label (`--label`) than the person's
+  `[supervisor] label_prefix` now gives: it is left from an earlier prefix, and running beside
+  the current unit the two would remove each other's container;
 - there is no record, or one vibey would not have written (every value, the image equal to the
   pinned one), or one whose label is not this SearXNG's (`label`, from the person's own config);
 - `settings.yml` is not a regular file the person owns, closed to everyone else;
@@ -61,6 +64,7 @@ class SearxngServe:
         runtime: ContainerRuntimeInterface,
         *,
         label: Callable[[], str],
+        unit: str | None = None,
         plan: SearxngPlanInterface | None = None,
         execve: Execve = os.execve,
         environ: Mapping[str, str] = os.environ,
@@ -71,6 +75,7 @@ class SearxngServe:
         self._files = files
         self._runtime = runtime
         self._label = label
+        self._unit = unit
         self._plan = plan or SearxngPlan()
         self._execve = execve
         self._environ = environ
@@ -90,6 +95,15 @@ class SearxngServe:
                 EXIT_CONFIG,
                 f"it was stopped for good (vibey acp unload, or uninstall); `{INSTALL_COMMAND}` "
                 "starts it again",
+            )
+        if self._unit is not None and self._unit != self._label():
+            return self._refuse(
+                EXIT_CONFIG,
+                f"this unit is {self._unit}, but your [supervisor] label_prefix now makes "
+                f"vibey's SearXNG unit {self._label()}: it is left from an earlier prefix, so "
+                f"it runs nothing; unload it (`launchctl bootout gui/$(id -u)/{self._unit}` on "
+                f"macOS, `systemctl --user disable --now {self._unit}` on Linux) and remove its "
+                "file",
             )
         try:
             installed = self._files.read_installed()

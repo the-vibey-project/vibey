@@ -211,10 +211,11 @@ def test_a_runtime_installed_later_never_stops_the_recorded_one(
     runner = FakeRunner(PostgresCommandResult(0))
     runtime = trusted.runtime(runner)
     assert runtime.find() != recorded
+    asked = len(runner.calls)  # with both found, `find` asks the first whether it answers
     assert runtime.vet(recorded) is None
     assert runtime.image_present(recorded, IMAGE)
     assert runtime.remove_image(recorded, IMAGE).ok
-    assert [call[0] for call in runner.calls] == [recorded, recorded]
+    assert [call[0] for call in runner.calls[asked:]] == [recorded, recorded]
 
 
 def test_image_present_asks_inspect_and_downloads_nothing(trusted: Trusted) -> None:
@@ -373,3 +374,50 @@ def test_a_runtime_inside_a_trusted_root_but_not_a_trusted_folder_is_refused(
     refusal = trusted.runtime().vet(stray)
     assert refusal is not None and refusal.reason is RuntimeProblem.UNTRUSTED_PLACE
     assert "trusted folders" in str(refusal)
+
+
+# -- SP-ACP Task 11b-ii: a podman machine that is down, docker's context ----------------------
+
+
+def test_a_podman_that_does_not_answer_falls_back_to_a_docker_that_does(trusted: Trusted) -> None:
+    """P-9d-1: podman is found first, but its machine is stopped (`podman info` fails) while
+    Docker's daemon answers: docker is the runtime."""
+    docker = trusted.binary(trusted.first, "docker")
+    podman = trusted.binary(trusted.second, "podman")
+    runner = FakeRunner(
+        PostgresCommandResult(125, stderr="Cannot connect to Podman"), PostgresCommandResult(0)
+    )
+    assert trusted.runtime(runner).find() == docker
+    assert runner.calls == [(podman, "info"), (docker, "info")]
+
+
+def test_podman_stays_the_choice_when_neither_answers(trusted: Trusted) -> None:
+    trusted.binary(trusted.first, "docker")
+    podman = trusted.binary(trusted.second, "podman")
+    runner = FakeRunner(PostgresCommandResult(1))
+    assert trusted.runtime(runner).find() == podman  # its own error then says what is wrong
+
+
+def test_a_single_runtime_is_never_asked_whether_it_answers(trusted: Trusted) -> None:
+    podman = trusted.binary(trusted.first, "podman")
+    runner = FakeRunner(PostgresCommandResult(1))
+    assert trusted.runtime(runner).find() == podman
+    assert runner.calls == []
+
+
+def test_dockers_context_endpoint_is_read_and_podmans_is_none(trusted: Trusted) -> None:
+    """P-9d-8: the Docker CLI's current context (`~/.docker/config.json`) may point at another
+    machine even with no `DOCKER_HOST`."""
+    docker = trusted.binary(trusted.first, "docker")
+    podman = trusted.binary(trusted.second, "podman")
+    runner = FakeRunner(PostgresCommandResult(0, stdout="ssh://me@far.example\n"))
+    runtime = trusted.runtime(runner)
+    assert runtime.endpoint(docker) == "ssh://me@far.example"
+    assert runtime.endpoint(podman) == ""
+    assert runner.calls == [
+        (docker, "context", "inspect", "--format", "{{.Endpoints.docker.Host}}")
+    ]
+    failing = trusted.runtime(FakeRunner(PostgresCommandResult(1, stderr="no contexts")))
+    assert failing.endpoint(docker) == ""  # unknown: the pull says what is wrong
+    hostile = trusted.runtime(FakeRunner(PostgresCommandResult(0, stdout="tcp://x\x1b[2J\n")))
+    assert hostile.endpoint(docker) == "tcp://x"  # cleaned of terminal escapes
