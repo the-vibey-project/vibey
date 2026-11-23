@@ -13,7 +13,6 @@ redacted by redact_payload, and is out of scope here (keys are drawn from digits
 """
 
 import re
-from collections.abc import Sequence
 
 from hypothesis import example, given
 from hypothesis import strategies as st
@@ -27,7 +26,6 @@ from tests.ledger_strategies import (
 )
 from vibey.infrastructure.ledger.redact import (
     REDACTED,
-    CredentialShape,
     SecretTextRedactor,
     contains_secret,
     redact_payload,
@@ -158,11 +156,14 @@ def _glued(*parts: str) -> tuple[str, list[tuple[int, int]]]:
     ]
 
 
-@given(soup=_secret_soup(), order=st.permutations(SecretTextRedactor.DEFAULT_SHAPES))
-@example(soup=_glued("Bearer sk-" + "0" * 37), order=SecretTextRedactor.DEFAULT_SHAPES[::-1])
-@example(soup=_glued("sk-" + "A" * 16, "sk-" + "B" * 16), order=SecretTextRedactor.DEFAULT_SHAPES)
-def test_every_byte_of_every_secret_is_replaced_whatever_the_order_of_the_shapes(
-    soup: tuple[str, list[tuple[int, int]]], order: Sequence[CredentialShape]
+# The order of the shapes is not a parameter here: the redactor merges every shape's
+# matches in start order, so order-independence holds by construction and a permutation
+# check would prove nothing. What can go wrong is coverage, checked byte by byte.
+@given(soup=_secret_soup())
+@example(soup=_glued("Bearer sk-" + "0" * 37))
+@example(soup=_glued("sk-" + "A" * 16, "sk-" + "B" * 16))
+def test_every_byte_of_every_secret_is_replaced(
+    soup: tuple[str, list[tuple[int, int]]],
 ) -> None:
     text, secrets = soup
     redactor = SecretTextRedactor()
@@ -170,7 +171,6 @@ def test_every_byte_of_every_secret_is_replaced_whatever_the_order_of_the_shapes
     for start, stop in secrets:
         assert any(low <= start and stop <= high for low, high in spans), text[start:stop]
     redacted = redactor.redact(text)
-    assert SecretTextRedactor(order).redact(text) == redacted
     assert redactor.redact(redacted) == redacted
 
 
@@ -204,9 +204,24 @@ def _oracle_spans(text: str) -> list[tuple[int, int]]:
     return merged
 
 
+_LOOK_ALIKES = [
+    "\u00a0",  # no-break space: whitespace to `\s`
+    "\u2028",  # line separator: whitespace to `\s`
+    "\x85",  # next line: whitespace to `\s`
+    "\x1c",  # file separator: whitespace to `\s`
+    "\u3000",  # ideographic space: whitespace to `\s`
+    "\u200b",  # zero-width space: NOT whitespace to `\s`
+    "\uff11",  # fullwidth digit one: not in any ASCII class
+    "\u0661",  # Arabic-Indic digit one: not in any ASCII class
+    "\u212a",  # Kelvin sign, a K look-alike
+]
+"""Characters at the edges of the shapes' classes, so the `\\s` and ASCII-only boundaries
+stay pinned to what the regexes did."""
+
 _SHAPE_ALPHABET = st.sampled_from(
     ["sk-", "AKIA", "ghp_", "xoxb-", "xoxz-", "AIza", "eyJ", "Bearer", " ", "\t", ".", "-", "_"]
-) | st.text(alphabet="aA0zZ9.-_ \t", min_size=1, max_size=20)
+    + _LOOK_ALIKES
+) | st.text(alphabet="aA0zZ9.-_ \t" + "".join(_LOOK_ALIKES), min_size=1, max_size=20)
 
 
 @given(

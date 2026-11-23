@@ -113,6 +113,38 @@ def test_the_secret_text_redactor_takes_its_shapes_as_configuration() -> None:
     assert SecretTextRedactor().spans(f"{key} and {key}{key}") == [(0, 19), (24, 62)]
 
 
+@pytest.mark.parametrize(
+    ("prefix", "segments", "complaint"),
+    [
+        ("a+", (("", "0-9", 1, None),), "bounded"),
+        ("(sk)-", (("", "0-9", 1, None),), "bounded"),
+        ("sk|ak", (("", "0-9", 1, None),), "bounded"),
+        ("", (("", "0-9", 1, None),), "bounded"),
+        ("x\\[", (("", "0-9", 1, None),), "bracket"),
+        ("x[^a]", (("", "0-9", 1, None),), "bracket"),
+        ("key", (("", "0-9\\]", 1, None),), "bracket"),
+        ("key", (("", "0-9", 1, None), ("[", "a-z", 1, None)), "bracket"),
+        ("key", (("", "0-9", -1, None),), "minimum"),
+        ("key", (("", "0-9", 4, 3),), "maximum"),
+        ("key", (("", "0-9.", 1, None), (".", "a-z", 1, None)), "separator"),
+        ("key", (("", "a-z", 1, None), ("", "x-z0-9", 1, None)), "share"),
+        # `\s` and `\w` are disjoint over every code point; then `\w` and `a` share one.
+        ("key", (("", "\\s", 1, None), ("", "\\w", 1, None), ("", "a", 1, None)), "share"),
+        ("RED", (("", "A-Z", 1, None),), "marker"),
+    ],
+)
+def test_a_shape_the_matcher_cannot_honour_is_refused_when_it_is_made(
+    prefix: str, segments: tuple[tuple[str, str, int, int | None], ...], complaint: str
+) -> None:
+    with pytest.raises(ValueError, match=complaint):
+        CredentialShape(prefix, segments)
+
+
+def test_every_default_shape_passes_its_own_checks() -> None:
+    for shape in SecretTextRedactor.DEFAULT_SHAPES:
+        assert CredentialShape(shape.prefix, shape.segments) == shape
+
+
 def test_a_shape_needs_every_separator_and_every_run_minimum() -> None:
     jwt = "eyJ" + "a" * 10 + "." + "b" * 10 + "." + "c" * 10
     assert redact_payload({"t": jwt}) == {"t": REDACTED}

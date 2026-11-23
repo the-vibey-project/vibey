@@ -6,18 +6,20 @@ engine is rotated in next. Pure text transform -- no I/O, safe to unit test
 without a database, and applied by the ledger repository immediately
 before a payload is persisted."""
 
+import heapq
 import re
-from bisect import bisect_right
-from collections.abc import Callable, Iterator, Mapping, Sequence
+import sys
+from collections.abc import Iterator, Mapping, Sequence
 from dataclasses import dataclass
-from functools import cached_property
-from typing import Final
+from functools import cache, cached_property
+from typing import Final, cast
 
 from vibey.domain.interfaces.publication_policy_interface import CredentialRedactorInterface
 from vibey.infrastructure.ledger.interfaces.redact_interface import (
     CredentialShapeInterface,
+    RunCursorFactory,
+    RunCursorInterface,
     SecretTextRedactorInterface,
-    TextRunIndexInterface,
 )
 
 REDACTED = "[REDACTED]"
@@ -34,65 +36,145 @@ separator is literal text that must come first (often empty); the class is a reg
 character-class body such as `A-Za-z0-9`; `maximum` is None for an unbounded run."""
 
 
-class TextRunIndex:
-    """Where each maximal run of a character class ends, in one piece of text.
+class RunCursor:
+    """Where a run of one character class ends, remembering only the last run it read.
 
-    A class is indexed the first time it is asked for, by one linear regex pass over the
-    text, and every lookup after that is a binary search: so a credential's extent costs
-    one lookup per segment, however many candidate credentials share one long run.
+    Lookups for one segment of one shape never move backwards (each candidate starts
+    after the one before it, and every segment's extent grows with its start), so a
+    lookup inside the remembered run costs nothing and any other reads only characters
+    no earlier lookup read. Each cursor therefore reads each character at most once, in
+    constant memory -- unlike an index of every run in the text, which held 70 times the
+    text in memory once a single prefix appeared in it.
     """
 
-    def __init__(self, text: str) -> None:
+    def __init__(self, text: str, run: re.Pattern[str]) -> None:
         self._text = text
-        self._runs: dict[str, tuple[list[int], list[int]]] = {}
+        self._run = run
+        self._low = 0
+        self._high = 0
+        self._scanned = 0
 
-    def end(self, char_class: str, index: int) -> int:
-        if char_class not in self._runs:
-            spans = [run.span() for run in re.finditer(f"[{char_class}]+", self._text)]
-            self._runs[char_class] = ([start for start, _ in spans], [stop for _, stop in spans])
-        starts, stops = self._runs[char_class]
-        slot = bisect_right(starts, index) - 1
-        if slot >= 0 and index < stops[slot]:
-            return stops[slot]
-        return index
+    @property
+    def scanned(self) -> int:
+        return self._scanned
+
+    def end(self, index: int) -> int:
+        if self._low <= index < self._high:
+            return self._high
+        # `[class]*` matches at every index, so the match is never None.
+        stop = cast(re.Match[str], self._run.match(self._text, index)).end()
+        self._scanned += stop - index
+        self._low, self._high = index, stop
+        return stop
+
+
+_PREFIX_ATOM = r"\\[sSdDwW]|\\[^A-Za-z0-9]|\[(?:\\.|[^\]\\])+\]|[^\\\[\]()*+?{}|.^$]"
+"""One character's worth of prefix: an escaped punctuation mark, a class shorthand, a
+character class, or a plain character. No quantifier, group, alternation, anchor or dot."""
 
 
 @dataclass(frozen=True)
 class CredentialShape:
     """One vendor's credential: a short prefix, then character-class runs.
 
-    `prefix` is a regex that must match a bounded amount of text (a literal, or a literal
-    with a character class in it, such as `xox[baprs]-`). Each segment then takes the
-    longest run of its class, capped at its maximum, and fails below its minimum. That is
-    exactly what the equivalent regex matches provided no separator character, and no
-    character of the next segment's class, is in a run's own class -- true of every
-    default shape, and checked against the regexes in the property suite.
+    The prefix is a fixed number of single-character atoms (see `_PREFIX_ATOM`). Each
+    segment then takes the longest run of its class, capped at its maximum, and fails
+    below its minimum. That is exactly what the equivalent regex matches when no
+    separator character, and no character of the next segment's class, is in a run's
+    own class; and redaction stays idempotent when nothing in a shape can match a
+    square bracket or match inside the marker. `__post_init__` refuses any shape that
+    breaks one of those conditions, so a configured shape cannot silently diverge.
     """
 
     prefix: str
     segments: tuple[Segment, ...]
 
-    @cached_property
-    def _starts(self) -> re.Pattern[str]:
-        # A lookahead finds every start, including one inside another prefix.
-        return re.compile(f"(?=({self.prefix}))")
+    def __post_init__(self) -> None:
+        self._check_prefix()
+        for index, (separator, char_class, minimum, maximum) in enumerate(self.segments):
+            if minimum < 0:
+                raise ValueError(f"segment {index}: the minimum {minimum} is negative")
+            if maximum is not None and maximum < max(minimum, 1):
+                raise ValueError(f"segment {index}: the maximum {maximum} is below the minimum")
+            if "[" in separator or "]" in separator or re.search(f"[{char_class}]", "[]"):
+                raise ValueError(f"segment {index}: a separator or class takes a square bracket")
+            if index:
+                self._check_boundary(index, separator, char_class)
+        if next(self.matches(REDACTED, RunCursor), None) is not None:
+            raise ValueError(f"the shape {self.prefix!r} matches inside the marker {REDACTED}")
 
-    def matches(self, text: str, runs: TextRunIndexInterface) -> Iterator[tuple[int, int]]:
-        for candidate in self._starts.finditer(text):
-            stop = self._extent(text, candidate.end(1), runs)
+    def _check_prefix(self) -> None:
+        if not re.fullmatch(f"(?:{_PREFIX_ATOM})+", self.prefix):
+            raise ValueError(
+                f"the prefix {self.prefix!r} must match a bounded amount of text: plain or "
+                "escaped characters and character classes, no quantifier, group or alternation"
+            )
+        for atom in re.findall(_PREFIX_ATOM, self.prefix):
+            if re.fullmatch(atom, "[") or re.fullmatch(atom, "]"):
+                raise ValueError(f"the prefix {self.prefix!r} can match a square bracket")
+
+    def _check_boundary(self, index: int, separator: str, char_class: str) -> None:
+        before = self.segments[index - 1][1]
+        if separator:
+            if re.fullmatch(f"[{before}]", separator[0]):
+                raise ValueError(f"segment {index}: the separator is inside the run before it")
+            return
+        probe = _characters_either_class_can_match(before, char_class)
+        if re.search(f"(?=[{before}])[{char_class}]", probe):
+            raise ValueError(f"segments {index - 1} and {index} share a character")
+
+    @cached_property
+    def _start(self) -> re.Pattern[str]:
+        return re.compile(self.prefix)
+
+    @cached_property
+    def _runs(self) -> tuple[re.Pattern[str], ...]:
+        return tuple(re.compile(f"[{char_class}]*") for _, char_class, _, _ in self.segments)
+
+    def matches(self, text: str, cursor_factory: RunCursorFactory) -> Iterator[tuple[int, int]]:
+        cursors = [cursor_factory(text, run) for run in self._runs]
+        # Restarting one character on finds a start inside another prefix too, and a
+        # literal-led pattern keeps the regex engine's fast literal search.
+        candidate = self._start.search(text)
+        while candidate is not None:
+            stop = self._extent(text, candidate.end(), cursors)
             if stop is not None:
                 yield candidate.start(), stop
+            candidate = self._start.search(text, candidate.start() + 1)
 
-    def _extent(self, text: str, position: int, runs: TextRunIndexInterface) -> int | None:
-        for separator, char_class, minimum, maximum in self.segments:
+    def _extent(self, text: str, position: int, cursors: list[RunCursorInterface]) -> int | None:
+        for (separator, _, minimum, maximum), cursor in zip(self.segments, cursors, strict=True):
             if not text.startswith(separator, position):
                 return None
             position += len(separator)
-            available = runs.end(char_class, position) - position
+            available = cursor.end(position) - position
             if available < minimum:
                 return None
             position += available if maximum is None else min(available, maximum)
         return position
+
+
+_ASCII = "".join(map(chr, range(128)))
+
+
+def _characters_either_class_can_match(first: str, second: str) -> str:
+    """Every character two classes could share, to search for one they both match.
+
+    A class body that is ASCII, has no escape and is not negated can only match ASCII, so
+    when either class is one of those, the 128 ASCII characters are enough; otherwise every
+    code point is (1.1 million, about 20 ms to build, so only for an unusual shape). A
+    module function, beside `_every_character`, because the frozen `CredentialShape`
+    checks itself while it is being made and must not carry the large string."""
+    for body in (first, second):
+        if body.isascii() and "\\" not in body and not body.startswith("^"):
+            return _ASCII
+    return _every_character()
+
+
+@cache
+def _every_character() -> str:
+    """Every code point once, built at the first check that needs it."""
+    return "".join(map(chr, range(sys.maxunicode + 1)))
 
 
 _ALNUM = "A-Za-z0-9"
@@ -103,22 +185,27 @@ class SecretTextRedactor:
     """Replaces every vendor-shaped credential in free text with one `REDACTED` marker.
 
     A byte is replaced when any shape, matched at any start in the ORIGINAL text, covers
-    it; overlapping matches are merged into one span before anything is replaced.
+    it; overlapping matches are merged into one span as they stream out, in start order.
 
     Substituting one regex after another instead let a shorter shape inside a longer
     credential win: in `Bearer sk-AAAAAAAAAAAAAAAA.rest` the `sk-` key was replaced first,
     the Bearer pattern could no longer match across the marker, and "Bearer" and ".rest"
     -- bytes of the token -- survived. Resuming each regex where its last match ended
-    missed a credential glued to the one before it (`sk-…sk-…`), and restarting it at
-    every start instead was quadratic -- 31 seconds on `"xoxb-" * 100000`, a denial of
-    service on the ledger append path. The shapes are matched at every start, each in
-    one run lookup per segment (see `TextRunIndex`), so the cost is O(n log n) in the
-    length of the text, never quadratic.
+    missed a credential glued to the one before it (`sk-…sk-…`); restarting it at every
+    start was quadratic (31 seconds on `"xoxb-" * 100000`); and indexing every run of a
+    class in the text held up to 70 times the text in memory. Now each candidate start
+    costs one cursor lookup per segment, each cursor reads each character at most once,
+    and the matches are merged without being collected: time is linear in the text
+    (each shape's prefix search, plus each segment's cursor) and memory is constant
+    beyond the result.
+
+    One search for any prefix at all comes first: most strings -- every log event, every
+    streamed word -- hold none, and are returned as they are.
 
     Merged spans make the result independent of the order of the shapes, and idempotent:
-    no default shape can match a square bracket, so none matches across or inside a
-    marker, and a second pass finds nothing the first did not. Spans that only touch
-    stay separate, one marker each.
+    no shape can match a square bracket or inside the marker (`CredentialShape` checks
+    it), so a second pass finds nothing the first did not. Spans that only touch stay
+    separate, one marker each.
     """
 
     DEFAULT_SHAPES: Final[tuple[CredentialShape, ...]] = (
@@ -139,30 +226,40 @@ class SecretTextRedactor:
     def __init__(
         self,
         shapes: Sequence[CredentialShapeInterface] = DEFAULT_SHAPES,
-        index_factory: Callable[[str], TextRunIndexInterface] = TextRunIndex,
+        cursor_factory: RunCursorFactory = RunCursor,
     ) -> None:
         self._shapes = tuple(shapes)
-        self._index_factory = index_factory
+        self._cursor_factory = cursor_factory
+        self._any_prefix = re.compile("|".join(f"(?:{shape.prefix})" for shape in self._shapes))
 
     def redact(self, text: str) -> str:
+        if self._any_prefix.search(text) is None:
+            return text
         pieces: list[str] = []
         cursor = 0
-        for start, stop in self.spans(text):
+        for start, stop in self._merged(text):
             pieces += [text[cursor:start], REDACTED]
             cursor = stop
         pieces.append(text[cursor:])
         return "".join(pieces)
 
     def spans(self, text: str) -> list[tuple[int, int]]:
-        runs = self._index_factory(text)
-        found = sorted(span for shape in self._shapes for span in shape.matches(text, runs))
-        merged: list[tuple[int, int]] = []
-        for start, stop in found:
-            if merged and start < merged[-1][1]:
-                merged[-1] = (merged[-1][0], max(merged[-1][1], stop))
-            else:
-                merged.append((start, stop))
-        return merged
+        if self._any_prefix.search(text) is None:
+            return []
+        return list(self._merged(text))
+
+    def _merged(self, text: str) -> Iterator[tuple[int, int]]:
+        streams = [shape.matches(text, self._cursor_factory) for shape in self._shapes]
+        current: tuple[int, int] | None = None
+        for start, stop in heapq.merge(*streams):
+            if current is not None and start < current[1]:
+                current = (current[0], max(current[1], stop))
+                continue
+            if current is not None:
+                yield current
+            current = (start, stop)
+        if current is not None:
+            yield current
 
 
 _TEXT_REDACTOR: Final[SecretTextRedactorInterface] = SecretTextRedactor()
@@ -213,10 +310,10 @@ the interface so `mypy --strict` checks the class against its declared seam."""
 __all__ = [
     "CREDENTIAL_REDACTOR",
     "REDACTED",
+    "RunCursor",
     "CredentialRedactor",
     "CredentialShape",
     "SecretTextRedactor",
-    "TextRunIndex",
     "contains_secret",
     "redact_payload",
 ]

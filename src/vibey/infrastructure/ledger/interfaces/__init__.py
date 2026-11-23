@@ -9,8 +9,9 @@ from vibey.infrastructure.ledger.interfaces.full_ledger_writer_interface import 
 )
 from vibey.infrastructure.ledger.interfaces.redact_interface import (
     CredentialShapeInterface,
+    RunCursorFactory,
+    RunCursorInterface,
     SecretTextRedactorInterface,
-    TextRunIndexInterface,
 )
 from vibey.infrastructure.ledger.interfaces.static_export_interface import (
     HtmlSafeJsonInterface,
@@ -24,7 +25,8 @@ __all__ = [
     "HtmlSafeJsonInterface",
     "LedgerLinesInterface",
     "LedgerTierStoreInterface",
+    "RunCursorFactory",
+    "RunCursorInterface",
     "SecretTextRedactorInterface",
     "ShardHeaderCodecInterface",
-    "TextRunIndexInterface",
 ]
