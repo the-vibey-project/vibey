@@ -883,7 +883,7 @@ async def test_a_gate_prompt_in_a_tool_call_title_is_untrusted_text() -> None:
 
     title = gate_updates(channel)[0]["title"]
     assert title == (
-        "Answer gate: Ship? \\!\\[b\\]\\(https\\[:\\]//evil.example/x\\) "
+        "Answer gate: Ship? \\!\\[b\\]\\(https\\[:\\]//evil\\[.\\]example/x\\) "
         "\\[build\\]: https\\[:\\]//e.x"
     )
     assert gate_updates(channel)[0]["rawInput"]["prompt"] == hostile["prompt"]  # data, as is

@@ -483,11 +483,13 @@ project's name in `/status`, a refusal's body, a ledger summary). So:
   links and the JSON stays readable.
 - **Autolinks.** The forms GFM would make a link of on their own are broken with a visible
   bracket: `https://` shows as `https[:]//`, `mailto:` as `mailto[:]`, a `www.` host as
-  `www[.]`, an address as `name[@]host`, and a bare host under a top-level domain a client
-  links on its own (any two letters, every country's; `com`, `org`, `net`, `io`, `app`, `dev`
-  and the other common ones; any non-ASCII one) with every dot bracketed, as `evil[.]com`,
-  `docs[.]evil[.]co[.]uk` or `README[.]md`. A name under no such domain (`dev.vibey.hub`,
-  `vibey.toml`) is left as it is.
+  `www[.]`, an address as `name[@]host`, and every dot of any dotted name whose last label has
+  a top-level domain's shape (two or more characters starting with a letter of any script, or a
+  punycode `xn--` label), as `evil[.]com`, `docs[.]evil[.]co[.]uk`, `evil[.]xn--p1ai` or
+  `README[.]md`. The only names left as written are those ending in a suffix of vibey's own
+  files and units that is no top-level domain (`.toml`, `.env`, `.json`, `.yaml`, `.lock`,
+  `.log`, `.hub`, `.worker`, `.searxng` and a few more: `vibey.toml`, `dev.vibey.hub`), and those
+  with no such last label (`1.2.3`, `e.g.`).
 
 Escaping can make a message a little longer than the limit it was cut to. A gate's prompt is
 still sent unchanged in the tool call's `rawInput`, as data, deliberately: the title shows a cut

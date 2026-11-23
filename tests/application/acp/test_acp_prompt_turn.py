@@ -795,8 +795,8 @@ async def test_a_hub_reply_quoting_a_gate_prompt_renders_no_markdown() -> None:
 
     assert channel.texts[-1] == (
         "1 open gate\\(s\\):\\\n"
-        "1\\. \\[approval\\] Ship? \\!\\[b\\]\\(https\\[:\\]//evil.example/b\\)\\\n"
-        "\\[build\\]: https\\[:\\]//evil.example/x"
+        "1\\. \\[approval\\] Ship? \\!\\[b\\]\\(https\\[:\\]//evil\\[.\\]example/b\\)\\\n"
+        "\\[build\\]: https\\[:\\]//evil\\[.\\]example/x"
     )
 
 

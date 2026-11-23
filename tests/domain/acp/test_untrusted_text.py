@@ -49,7 +49,7 @@ def test_a_block_cannot_define_a_link_reference() -> None:
     # every later `[build]` in the client's message into a link.
     shown = TEXT.block("Ship it?\n   [build]: https://evil.example/x", limit=400)
 
-    assert shown == "Ship it?\\\n\\[build\\]: https\\[:\\]//evil.example/x"
+    assert shown == "Ship it?\\\n\\[build\\]: https\\[:\\]//evil\\[.\\]example/x"
 
 
 def test_a_block_is_cut_to_its_limit() -> None:

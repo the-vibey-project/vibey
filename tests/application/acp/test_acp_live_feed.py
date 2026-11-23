@@ -646,7 +646,7 @@ async def test_ledger_markdown_reaches_the_client_escaped() -> None:
     await run_until(feed.follow("s", PID, after=0), lambda: feed.watermark("s") == 1)
 
     assert channel.said == [
-        "\\[build\\] TurnCompleted: \\!\\[x\\]\\(https\\[:\\]//evil.example/b\\) \\# "
+        "\\[build\\] TurnCompleted: \\!\\[x\\]\\(https\\[:\\]//evil\\[.\\]example/b\\) \\# "
         "\\[ok\\]\\(https\\[:\\]//e\\)"
     ]
 

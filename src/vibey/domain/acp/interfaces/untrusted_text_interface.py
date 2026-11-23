@@ -40,8 +40,8 @@ class UntrustedTextInterface(Protocol):
 
     @staticmethod
     def defang_host(found: re.Match[str]) -> str:
-        """A bare host (`BARE_HOST`'s match) with every dot bracketed when its last label is a
-        top-level domain a client links; anything else as it was."""
+        """A dotted name (`BARE_HOST`'s match) with every dot bracketed when its last label has
+        a top-level domain's shape and is not one of vibey's local suffixes; else as it was."""
         ...
 
     def one_line(self, value: Any) -> str:

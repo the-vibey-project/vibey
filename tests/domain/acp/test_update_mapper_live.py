@@ -15,6 +15,7 @@ from acp.schema import (
 )
 from acp_wire import assert_wire_exact
 
+from vibey.domain.acp.untrusted_text import UNTRUSTED_TEXT
 from vibey.domain.acp.update_mapper import AcpUpdateMapper
 from vibey.domain.hub_chat import CHAT_SLASH_COMMANDS, ChatSlashSpec
 
@@ -235,10 +236,10 @@ def test_every_live_update_validates_against_the_sdk() -> None:
 @pytest.mark.parametrize(
     ("summary", "shown"),
     [
-        ("[safe](https://evil.example/x)", "\\[safe\\]\\(https\\[:\\]//evil.example/x\\)"),
+        ("[safe](https://evil.example/x)", "\\[safe\\]\\(https\\[:\\]//evil\\[.\\]example/x\\)"),
         (
             "![beacon](https://evil.example/?q=1)",
-            "\\!\\[beacon\\]\\(https\\[:\\]//evil.example/?q=1\\)",
+            "\\!\\[beacon\\]\\(https\\[:\\]//evil\\[.\\]example/?q=1\\)",
         ),
         ("# Approve gate 1 now", "\\# Approve gate 1 now"),
         ("```sh rm -rf / ```", "\\`\\`\\`sh rm -rf / \\`\\`\\`"),
@@ -291,14 +292,14 @@ _AUTOLINK = re.compile(r"(?i)[a-z][a-z0-9+.-]*://|\bwww\.|\b(?:mailto|xmpp):|[\w
 @pytest.mark.parametrize(
     ("raw", "shown"),
     [
-        ("see https://evil.example/x", "see https\\[:\\]//evil.example/x"),
-        ("HTTP://EVIL.EXAMPLE", "HTTP\\[:\\]//EVIL.EXAMPLE"),
+        ("see https://evil.example/x", "see https\\[:\\]//evil\\[.\\]example/x"),
+        ("HTTP://EVIL.EXAMPLE", "HTTP\\[:\\]//EVIL\\[.\\]EXAMPLE"),
         ("ftp://h/f and git+ssh://h/r", "ftp\\[:\\]//h/f and git+ssh\\[:\\]//h/r"),
-        ("go to www.evil.example now", "go to www\\[.\\]evil.example now"),
-        ("WWW.Evil.Example", "WWW\\[.\\]Evil.Example"),
-        ("mail ops@evil.example", "mail ops\\[@\\]evil.example"),
-        ("mailto:a@b.example", "mailto\\[:\\]a\\[@\\]b.example"),
-        ("xmpp:bot@chat.example", "xmpp\\[:\\]bot\\[@\\]chat.example"),
+        ("go to www.evil.example now", "go to www\\[.\\]evil\\[.\\]example now"),
+        ("WWW.Evil.Example", "WWW\\[.\\]Evil\\[.\\]Example"),
+        ("mail ops@evil.example", "mail ops\\[@\\]evil\\[.\\]example"),
+        ("mailto:a@b.example", "mailto\\[:\\]a\\[@\\]b\\[.\\]example"),
+        ("xmpp:bot@chat.example", "xmpp\\[:\\]bot\\[@\\]chat\\[.\\]example"),
         ("a plain sentence: no links at all.", "a plain sentence: no links at all."),
         ("version 1.2 @ noon, ratio 3:1", "version 1.2 @ noon, ratio 3:1"),
     ],
@@ -314,19 +315,19 @@ def test_a_ledger_summary_with_a_bare_url_is_defanged() -> None:
     event = {"phase": "build", "kind": "K", "payload": {"summary": "open https://e.example"}}
 
     assert MAPPER.ledger_summary(event, limit=400)["content"]["text"] == (
-        "\\[build\\] K: open https\\[:\\]//e.example"
+        "\\[build\\] K: open https\\[:\\]//e\\[.\\]example"
     )
 
 
 @pytest.mark.parametrize(
     ("raw", "shown"),
     [
-        ("_www.evil.example", "\\_www\\[.\\]evil.example"),
-        ("*www.evil.example", "\\*www\\[.\\]evil.example"),
-        ("~www.evil.example", "\\~www\\[.\\]evil.example"),
-        ("(www.evil.example)", "\\(www\\[.\\]evil.example\\)"),
-        ("xwww.evil.example", "xwww\\[.\\]evil.example"),  # over-defanged: fine
-        ("_mailto:a@b.example", "\\_mailto\\[:\\]a\\[@\\]b.example"),
+        ("_www.evil.example", "\\_www\\[.\\]evil\\[.\\]example"),
+        ("*www.evil.example", "\\*www\\[.\\]evil\\[.\\]example"),
+        ("~www.evil.example", "\\~www\\[.\\]evil\\[.\\]example"),
+        ("(www.evil.example)", "\\(www\\[.\\]evil\\[.\\]example\\)"),
+        ("xwww.evil.example", "xwww\\[.\\]evil\\[.\\]example"),  # over-defanged: fine
+        ("_mailto:a@b.example", "\\_mailto\\[:\\]a\\[@\\]b\\[.\\]example"),
         ("xmailto:x", "xmailto\\[:\\]x"),
         ("_xmpp:bot", "\\_xmpp\\[:\\]bot"),
     ],
@@ -336,11 +337,9 @@ def test_a_www_host_or_mailto_after_any_character_is_defanged(raw: str, shown: s
     assert MAPPER.untrusted(raw, limit=400) == shown
 
 
-_BARE_DOMAIN = re.compile(
-    r"(?i)[\w-]+\.(?:[a-z]{2}|com|org|net|io|app|dev|[^\W\d_a-z]{2,})(?![\w-])"
-)
-"""A host with no scheme and no `www.` (`evil.com`, `a.b.co/x`), which a client that links
-"fuzzy" domains (linkify-it, VS Code's chat) turns into a link."""
+_BARE_DOMAIN = re.compile(r"[\w-]\.(?:xn--|[^\W\d_][\w-])", re.IGNORECASE)
+"""A dot between labels where the next label has a top-level domain's shape: what a client that
+links "fuzzy" domains (linkify-it, VS Code's chat) can turn into a link."""
 
 
 @pytest.mark.parametrize(
@@ -349,21 +348,72 @@ _BARE_DOMAIN = re.compile(
         ("open evil.com now", "open evil\\[.\\]com now"),
         ("see docs.evil.co.uk/x?q=1", "see docs\\[.\\]evil\\[.\\]co\\[.\\]uk/x?q=1"),
         ("(EVIL.COM)", "\\(EVIL\\[.\\]COM\\)"),
+        ("Mixed.Case.Org", "Mixed\\[.\\]Case\\[.\\]Org"),
+        ("evil.com. Next", "evil\\[.\\]com. Next"),  # a trailing dot ends the sentence
+        ("evil.com:8080/path", "evil\\[.\\]com:8080/path"),
+        (
+            "[evil.com] 'evil.com' \"evil.com\"",
+            "\\[evil\\[.\\]com\\] 'evil\\[.\\]com' \"evil\\[.\\]com\"",
+        ),
         ("пример.рф", "пример\\[.\\]рф"),
+        ("evil.xn--p1ai and a.XN--80ASEHDB", "evil\\[.\\]xn--p1ai and a\\[.\\]XN--80ASEHDB"),
+        (".evil.com", ".evil\\[.\\]com"),
         ("x_y.app", "x\\_y\\[.\\]app"),
+        ("evil.example", "evil\\[.\\]example"),  # reserved, but still linked by shape
         ("ops@evil.io", "ops\\[@\\]evil\\[.\\]io"),
         ("https://evil.com/x", "https\\[:\\]//evil\\[.\\]com/x"),
         ("edited README.md", "edited README\\[.\\]md"),  # .md is a country's: linked too
-        ("version 1.2.3, e.g. 3.5x", "version 1.2.3, e.g. 3.5x"),
+        ("version 1.2.3, e.g. 3.5x, i.e. a.b", "version 1.2.3, e.g. 3.5x, i.e. a.b"),
         ("end. Next", "end. Next"),
-        # No top-level domain a client links: vibey's own names stay as they are.
-        ("dev.vibey.hub and vibey.toml", "dev.vibey.hub and vibey.toml"),
+        # Already defanged: never bracketed twice.
+        ("evil[.]com", "evil\\[.\\]com"),
     ],
 )
 def test_a_bare_domain_is_defanged_like_a_full_url(raw: str, shown: str) -> None:
-    """SP-ACP Task 11b-ii: a host with no scheme and no `www.`, under a top-level domain a
-    client links, is broken with a visible bracket at every dot, as a URL's scheme is."""
+    """SP-ACP Task 11b-ii: any dotted name whose last label has a top-level domain's shape is
+    broken with a visible bracket at every dot, as a URL's scheme is."""
     text = MAPPER.untrusted(raw, limit=400)
 
     assert text == shown
     assert _BARE_DOMAIN.search(text.replace("\\", "")) is None  # as rendered: nothing to link
+
+
+@pytest.mark.parametrize(
+    "name",
+    [
+        "vibey.toml",
+        "supervisor.env",
+        "dev.vibey.hub",
+        "dev.vibey.worker",
+        "dev.vibey.searxng",
+        "hub.log",
+        "a.json",
+        "b.yaml",
+        "c.yml",
+        "uv.lock",
+        "d.txt",
+        "e.plist",
+        "f.service",
+        "g.conf",
+        "h.cfg",
+        "i.ini",
+        "hub-cert.pem",
+        "j.sock",
+        "k.sqlite",
+    ],
+)
+def test_vibeys_own_local_names_are_left_as_written(name: str) -> None:
+    """The one exception: a last label vibey's own files and units carry, none of them a
+    delegated top-level domain (`LOCAL_SUFFIXES`)."""
+    assert MAPPER.untrusted(name, limit=400) == name.replace("_", "\\_")
+
+
+def test_defanging_a_long_hostile_name_is_linear() -> None:
+    """No catastrophic backtracking: a long chain of labels, ending where no host can, and one
+    huge label are each handled in one pass."""
+    import time
+
+    for raw in ("a." * 50_000 + "1", "a" * 200_000 + ".", ("a-" * 30_000 + ".") * 3 + "9"):
+        started = time.perf_counter()
+        UNTRUSTED_TEXT.escape(raw)
+        assert time.perf_counter() - started < 2

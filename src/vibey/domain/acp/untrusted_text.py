@@ -13,13 +13,14 @@ and paths, the hub chat's reply (which quotes all of those), a refusal's body, a
   comes first, so it never splits an escape; defanging and escaping can then make the text a
   little longer than `limit`.
 - **No autolinks.** GFM links a URL, a `www.` host or an e-mail address with no Markdown at all,
-  and a client that links "fuzzy" domains (linkify-it's default) links a bare host too, so those
-  forms are broken with a visible bracket (`AUTOLINK_DEFANGS`): `https[:]//`, `mailto[:]`,
-  `xmpp[:]`, `www[.]`, `name[@]host`, and every dot of a bare host whose last label is a
-  top-level domain such a client links (`FUZZY_TLDS`, any two letters -- every country's --
-  or any non-ASCII one): `evil[.]com`, `docs[.]evil[.]co[.]uk`, `README[.]md` (`.md` is a
-  country's). A name whose last label is no such domain (`dev.vibey.hub`, `vibey.toml`), a
-  number with dots (`1.2.3`) and a word ending in a dot are left as they are.
+  and a client that links "fuzzy" domains links a bare host too, so those forms are broken with
+  a visible bracket (`AUTOLINK_DEFANGS`): `https[:]//`, `mailto[:]`, `xmpp[:]`, `www[.]`,
+  `name[@]host`, and every dot of any dotted name whose last label is a top-level domain's
+  shape -- two or more characters starting with a letter of any script, or a punycode
+  `xn--` label: `evil[.]com`, `docs[.]evil[.]co[.]uk`, `evil[.]xn--p1ai`, `README[.]md`.
+  The only names left as written are those whose last label is in `LOCAL_SUFFIXES`, suffixes
+  vibey's own files and units carry that are no delegated top-level domain (`vibey.toml`,
+  `dev.vibey.hub`), and those with no such last label at all (`1.2.3`, `e.g.`).
 - **No Markdown.** Every character that could open a link, image, emphasis, code span or
   fence, heading, table cell, strikethrough, HTML tag or entity (`MARKDOWN_SPECIAL`) is
   backslash-escaped. At the start of a line (`line`, and each line of a `block`), leading
@@ -43,22 +44,20 @@ ELLIPSIS: Final = "..."
 MARKDOWN_SPECIAL: Final = frozenset("\\`*_[]()<>!#|~&")
 """Escaped everywhere in untrusted text: what opens a link, image, emphasis, code span or
 fence, heading, table cell, strikethrough, HTML tag or entity, and the escape itself."""
-BARE_HOST: Final = re.compile(r"(?<![\w-])(?:[\w-]+\.)+([^\W\d_]{2,63})(?![\w-])")
-"""A host with no scheme: labels joined by dots, the last of them letters (group 1). A number
-with dots (`1.2.3`) has no such last label."""
-FUZZY_TLDS: Final = frozenset(
+BARE_HOST: Final = re.compile(r"(?<![\w-])[\w-]++(?:\.[\w-]++)+")
+"""A dotted name: labels joined by single dots, starting where no label character comes before
+it. Possessive, with no alternation, so it is linear in the text's length; `defang_host` judges
+its last label."""
+LOCAL_SUFFIXES: Final = frozenset(
     {
-        # linkify-it's default list (VS Code's and many Markdown renderers' fuzzy links).
-        *("biz", "com", "edu", "gov", "net", "org", "pro", "web", "xxx", "aero", "asia"),
-        *("coop", "info", "museum", "name", "shop"),
-        # The most-registered newer ones and the other generic ones, which a client with the
-        # full list links; ordinary English words that are also domains are left out.
-        *("app", "dev", "xyz", "online", "site", "club", "tech", "cloud", "blog", "wiki"),
-        *("zip", "mov", "mobi", "tel", "jobs", "travel", "cat", "int", "mil", "arpa"),
+        *("toml", "env", "json", "yaml", "yml", "lock", "log", "txt", "plist", "service"),
+        *("conf", "cfg", "ini", "pem", "sock", "sqlite"),
+        # vibey's unit labels: `<label_prefix>.hub`, `.worker`, `.searxng`.
+        *("hub", "worker", "searxng"),
     }
 )
-"""Top-level domains a bare host is linked under, besides any two letters (every country's
-domain) and any non-ASCII label (`.рф`)."""
+"""Last labels left as written: suffixes vibey's own files and units carry, none of them a
+delegated top-level domain, so no client links a name ending in one."""
 _LINE_MARKER: Final = re.compile(r"[-+=:]|\d+\.")
 """What makes a line a list item, a setext underline, a table delimiter row (`:-`, which needs
 no pipe) or an ordered item when it starts it (`*`, `#`, `>`, `|` and `)` are escaped everywhere
@@ -119,12 +118,12 @@ class UntrustedText:
 
     @staticmethod
     def defang_host(found: re.Match[str]) -> str:
-        """A bare host with every dot bracketed, when its last label is a domain a client links;
-        anything else as it was."""
-        host, tld = found.group(0), found.group(1)
-        lowered = tld.lower()
-        linked = not tld.isascii() or len(tld) == 2 or lowered in FUZZY_TLDS
-        return host.replace(".", "[.]") if linked else host
+        """A dotted name with every dot bracketed when its last label has a top-level domain's
+        shape (2+ characters from a letter, or `xn--`) and is not in `LOCAL_SUFFIXES`."""
+        name = found.group(0)
+        last = name.rsplit(".", 1)[1].lower()
+        shaped = last.startswith("xn--") or (len(last) >= 2 and last[0].isalpha())
+        return name.replace(".", "[.]") if shaped and last not in LOCAL_SUFFIXES else name
 
     def one_line(self, value: Any) -> str:
         return self._one_line(value)
