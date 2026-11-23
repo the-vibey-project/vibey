@@ -1,11 +1,14 @@
 # Made with ❤️ by [Vibey](https://the-vibey-project.github.io/vibey/), Developed by [Adam Matthew Steinberger](https://vibewithadam.matthewsteinberger.com/) ([@adammatthewsteinberger](https://github.com/adammatthewsteinberger/)).
 """The MCP hub gateway: forwards validated host-LLM tool calls to the running hub (ADR-0100).
 
-Mirrors `cli/hub_pair.py::HubPairCommand._call`, with two deliberate differences:
+Mirrors `cli/hub_pair.py::HubPairCommand._call`; what it does, differences from pair included:
 1. It presents `<state_dir>/agent.token` (`LocalTokenStore.agent_token()`), never the host token,
    so the hub enforces `[hub] agent_scopes` (no `spend`, `bump` or `workflows`).
-2. When no hub is running (or a stale `serving.json` fails to answer), it invokes the `starter`
-   seam once (`vibey hub start`) and retries before returning an error naming `vibey hub start`.
+2. When no hub is running -- no record, a malformed one, or one whose lock its process does not
+   hold (point 7), with no connection tried -- it invokes the `starter` seam once (`vibey hub
+   start`) and reads the record again; when a live record's hub refuses the connection, it does
+   the same and retries once (point 3). Either way it then fails with an error naming `vibey hub
+   start`.
 3. It sends a request at most once more, and only when the first never reached the hub (the
    connection was refused or never made): a request that may have arrived -- a read timeout, a
    reset after sending -- is never sent again, and the hub is not started over it. A web search
@@ -25,10 +28,13 @@ Mirrors `cli/hub_pair.py::HubPairCommand._call`, with two deliberate differences
    to the record's name resolved again (SP-ACP Task 9b).
 7. It believes a runtime record only while the process it names holds the hub's lock
    (`ServeLock.held_by`, the check `vibey hub pair` makes for the host token): on loopback over
-   plain http nothing else proves the listener is the hub, and a dead hub's port may since have
-   been bound by another account. A record whose lock nobody holds, or another process holds,
-   is no hub: the agent token is not read and nothing is sent (SP-ACP Task 11b, review 1 S-5);
-   `call` runs the starter as for no record at all.
+   plain http a dead hub's port may since have been bound by another account. A record whose
+   lock nobody holds, or another process holds, is no hub: the agent token is not read and
+   nothing is sent (SP-ACP Task 11b, review 1 S-5); `call` runs the starter as for no record at
+   all. The lock proves the process the record names is alive and is the hub, not that it
+   already listens on the port: a hub writes its record a moment before it binds, so a call in
+   the milliseconds before a failed bind clears the record could reach an account that bound the
+   port first (binding first is parked, SP-ACP Task 11b-ii).
 """
 
 from __future__ import annotations

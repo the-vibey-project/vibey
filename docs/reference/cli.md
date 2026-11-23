@@ -270,6 +270,12 @@ dead hub's port may since have been bound by another account, so a record whose 
 holds, or another process holds, is no hub -- the agent token is not read, nothing is sent, and
 a tool call starts the hub as when there is no record at all.
 
+The lock proves that the process the record names is alive and is the hub; it does **not**
+prove that process already owns the recorded port. A hub writes its record a moment before it
+binds, so if another local account bound that port first, a token sent in the milliseconds
+before the hub's failed bind clears its record would reach that account (binding first is
+parked, SP-ACP Task 11b-ii).
+
 ### Web tools: `vibey_search` and `vibey_fetch`
 
 Served by the hub ([`POST /api/v1/web/search` and `/web/fetch`](hub-api.md#web);
@@ -893,6 +899,12 @@ holder has not written its process id yet, or the record names a process that is
 hub is up (exit 1), and `start` waits for that hub instead of launching a second. A record naming
 process id -1, 0 or 1, or a port outside 1 to 65535, is unreadable and never acted on; `pair`,
 `devices` and `revoke` say so in one line (exit 2).
+
+The lock that `pair`, `devices`, `revoke`, `vibey mcp` and `vibey acp` check before sending a
+token proves that the process the record names is alive and is the hub; it does **not** prove
+that process already owns the recorded port. A hub writes its record a moment before it binds, so if another local account bound that port first, a token sent in the milliseconds
+before the hub's failed bind clears its record would reach that account (binding first is
+parked, SP-ACP Task 11b-ii).
 
 | Command | What it does |
 |---|---|

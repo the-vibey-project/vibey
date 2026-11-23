@@ -125,13 +125,21 @@ crash loop is slowed on both and stopped only on systemd. In detail:
   malformed.
 - *Amended (SP-ACP Task 11b):* the MCP/ACP gateway reads and sends the agent token only while
   the record's pid holds the hub's lock, as `vibey hub pair` does for the host token: on
-  loopback over plain http nothing else proves the listener is the hub. A lock held with no pid
+  loopback over plain http a dead hub's port may since have been bound by another account
+  (what the lock does not prove is said below). A lock held with no pid
   written yet, or by another pid while the record's own process is gone, is a hub *starting*,
   not a disagreement: `status` says so, `stop` signals nothing, and `start` waits for that hub.
   `release` empties the pid before it lets go, and `acquire` retries briefly so a probe's
   instant never costs a starting hub its lock; a crashed hub's pid can still be read in the
-  instant between the next holder's `flock` and its write, a window closed only by publishing
-  the pid apart from the lock (an on-disk protocol change, not made). Refusing pid 1 means a
+  instant between the next holder's `flock` and its write. That window is left open. Publishing
+  the pid apart from the lock would close it, but changes the lock's on-disk protocol; so would
+  a `stop` that probes the lock again after a pause and refuses when the answer changed, which
+  was not chosen because every `stop` would pay that pause for a window of a few syscalls.
+  The lock proves that the process the record names is alive and is the hub, **not** that it
+  already listens on the recorded port: the hub writes its record before uvicorn binds, so in
+  the milliseconds before a failed bind clears the record, another local account that bound
+  the port first could receive a token. Binding before the record is written is parked
+  (SP-ACP Task 11b-ii). Refusing pid 1 means a
   `vibey serve` run as PID 1 with no init (a bare container) writes a record every reader
   refuses: run it under an init (the shipped image runs `tini`).
 
