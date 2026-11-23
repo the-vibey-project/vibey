@@ -127,11 +127,18 @@ class CapabilityLock:
     def _scope(
         self, root: Path, within: Sequence[PurePosixPath], records: dict[str, TreeRecord]
     ) -> list[PurePosixPath]:
-        """Records each item of `within` and the folders above it; returns the folders to walk."""
-        starts: list[PurePosixPath] = []
+        """Records each outermost item of `within` and the folders above it; returns the folders
+        to walk. An item inside another item is covered by that item's walk, so it is dropped:
+        walking it again would hash its files twice and count them twice against the cap."""
         for item in within:
             if item.is_absolute() or ".." in item.parts:
                 raise LockError(f"{item} is not a path inside {root}")
+        outermost: list[PurePosixPath] = []
+        for item in sorted(set(within), key=lambda item: len(item.parts)):
+            if not any(item.parts[: len(kept.parts)] == kept.parts for kept in outermost):
+                outermost.append(item)
+        starts: list[PurePosixPath] = []
+        for item in outermost:
             if not item.parts:
                 starts.append(item)  # the whole tree, still without bytecode
                 continue

@@ -587,3 +587,33 @@ def test_a_scope_past_the_entry_limit_is_refused(tmp_path: Path) -> None:
     lister = lambda folder: [f"n{i}" for i in range(MAX_TREE_ENTRIES + 1)]  # noqa: E731
     with pytest.raises(LockError, match="more than"):
         CapabilityLock(lister=lister).tree_records(root, [PurePosixPath("plugins/p")])
+
+
+def test_a_listed_folder_inside_another_is_walked_once(tmp_path: Path) -> None:
+    """A plugin listed inside another listed plugin is covered by the outer walk: walking it again
+    would hash its files twice and count them twice against `MAX_TREE_ENTRIES`."""
+    root = _shipped(tmp_path)
+    _tree(root, {"plugins/p/nested/inner.md": b"i"})
+    listed: list[str] = []
+
+    def lister(folder: Path) -> Sequence[str]:
+        listed.append(folder.relative_to(root).as_posix())
+        return os.listdir(folder)
+
+    scope = [*SCOPE, PurePosixPath("plugins/p/nested"), PurePosixPath("plugins/p")]
+    records = CapabilityLock(lister=lister).tree_records(root, scope)
+    assert sorted(listed) == sorted(set(listed))
+    assert records == CapabilityLock().tree_records(root, SCOPE)
+
+
+def test_a_whole_tree_scope_covers_every_other_item(tmp_path: Path) -> None:
+    root = _shipped(tmp_path)
+    listed: list[str] = []
+
+    def lister(folder: Path) -> Sequence[str]:
+        listed.append(folder.relative_to(root).as_posix())
+        return os.listdir(folder)
+
+    whole = CapabilityLock(lister=lister).tree_records(root, [*SCOPE, PurePosixPath()])
+    assert sorted(listed) == sorted(set(listed))
+    assert whole == CapabilityLock().tree_records(root, [PurePosixPath()])
