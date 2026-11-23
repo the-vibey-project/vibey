@@ -10,6 +10,15 @@ lists who is paired; `revoke` refuses a device from its next request.
 
 Over a declared LAN the hub serves its own certificate, and these commands trust exactly
 that certificate (the file in the state directory) and nothing else.
+
+The host token is the most powerful credential the hub has, so where it goes is never decided by
+a file a project could have written (SP-ACP Task 11a): `[hub]` -- the state folder holding the
+token and the runtime record -- comes from the person's own `vibey.toml`, in their configuration
+folder, never the folder the command runs in. The token goes only to this computer's loopback,
+by the fixed literal `HUB_TARGETS.loopback_address` gives the record's host, unless the person
+names a private-network address literal with `--host` (a hub bound to a LAN address with
+`vibey serve --host 192.168.x.y` listens only there); a record naming anything else is refused
+before anything is sent.
 """
 
 from collections.abc import Callable
@@ -23,17 +32,31 @@ from vibey.cli.hub_engine import start, status, stop
 from vibey.cli.interfaces.hub_pair_interface import HubPairCommandInterface
 from vibey.domain.config import ConfigError
 from vibey.domain.hub_scope import HubScope
+from vibey.domain.hub_target import HUB_TARGETS
 from vibey.infrastructure.hub.interfaces.settings_interface import HubSettingsLoaderInterface
 from vibey.infrastructure.hub.local_token import LocalTokenStore
 from vibey.infrastructure.hub.settings import HUB_SETTINGS
 from vibey.infrastructure.hub.tls import CERT_FILE
+from vibey.infrastructure.user_config_folder import UserConfigFolder
 
 EXIT_NOT_RUNNING: Final = 3
 """The exit code when no hub is running to talk to."""
 
-WILDCARDS: Final = frozenset({"0.0.0.0", "::"})  # nosec B104 - compared, never bound
-
 type Transport = Callable[..., httpx.Client]
+
+HOST_HELP: Final = (
+    "The hub's address on your network, for a hub `vibey serve --host` bound to one: a "
+    "private-network address literal (10/8, 172.16/12, 192.168/16, 100.64/10, fc00::/7). "
+    "Without it the host token goes only to this computer's loopback."
+)
+
+
+def own_config() -> Path:
+    """The person's own `vibey.toml`, in their configuration folder.
+
+    Module-level by design: the default of `HubPairCommand`'s `config_path` seam, kept here so
+    the test suite can stand another in for the developer's own file."""
+    return UserConfigFolder().path() / "vibey.toml"
 
 
 def _render_qr(uri: str) -> str | None:
@@ -58,7 +81,7 @@ class HubPairCommand:
         self,
         *,
         settings: HubSettingsLoaderInterface = HUB_SETTINGS,
-        config_path: Callable[[], Path] = lambda: Path.cwd() / "vibey.toml",
+        config_path: Callable[[], Path] = lambda: own_config(),
         client: Transport = httpx.Client,
         qr: Callable[[str], str | None] = _render_qr,
     ) -> None:
@@ -67,7 +90,7 @@ class HubPairCommand:
         self._client = client
         self._qr = qr
 
-    def pair(self, scopes: list[str]) -> None:
+    def pair(self, scopes: list[str], host: str | None = None) -> None:
         """Offers a pairing of `scopes` and shows it."""
         if not scopes:
             typer.echo("name at least one --scope: a pairing grants nothing by default", err=True)
@@ -77,7 +100,7 @@ class HubPairCommand:
         except ValueError as exc:
             typer.echo(f"unknown scope: {exc}", err=True)
             raise typer.Exit(2) from exc
-        offer = self._call("POST", "/pairing/offers", {"scopes": parsed})
+        offer = self._call("POST", "/pairing/offers", {"scopes": parsed}, host)
         qr = self._qr(str(offer["uri"]))
         if qr is not None:
             typer.echo(qr)
@@ -87,20 +110,28 @@ class HubPairCommand:
         if offer.get("fingerprint"):
             typer.echo(f"certificate fingerprint (sha256): {offer['fingerprint']}")
 
-    def devices(self) -> None:
+    def devices(self, host: str | None = None) -> None:
         """Lists the paired devices."""
-        listed = self._call("GET", "/devices", None)
+        listed = self._call("GET", "/devices", None, host)
         if not listed:
             typer.echo("no paired devices")
         for device in listed:
             typer.echo(f"{device['device_id']}  {device['name']}  {', '.join(device['scopes'])}")
 
-    def revoke(self, device_id: str) -> None:
+    def revoke(self, device_id: str, host: str | None = None) -> None:
         """Revokes a device; refused from its next request."""
-        self._call("DELETE", f"/devices/{device_id}", None)
+        self._call("DELETE", f"/devices/{device_id}", None, host)
         typer.echo(f"revoked {device_id}")
 
-    def _call(self, method: str, route: str, body: dict[str, Any] | None) -> Any:
+    def _call(self, method: str, route: str, body: dict[str, Any] | None, named: str | None) -> Any:
+        target = None if named is None else HUB_TARGETS.lan_address(named)
+        if named is not None and target is None:
+            typer.echo(
+                "--host must be this computer's loopback or an address literal on a private "
+                "network (10/8, 172.16/12, 192.168/16, 100.64/10, fc00::/7), not a name",
+                err=True,
+            )
+            raise typer.Exit(2)
         try:
             settings = self._settings.load(self._config_path())
         except ConfigError as exc:
@@ -111,7 +142,15 @@ class HubPairCommand:
         if record is None:
             typer.echo("no hub is running here: start one with `vibey serve`", err=True)
             raise typer.Exit(EXIT_NOT_RUNNING)
-        host = "127.0.0.1" if record.host in WILDCARDS else record.host
+        host = target if target is not None else HUB_TARGETS.loopback_address(record.host)
+        if host is None:
+            # The record's host is not certainly this computer: nothing, not the token, is sent.
+            typer.echo(
+                "the hub's runtime record names an address off this computer's loopback, so "
+                "nothing was sent; if your hub listens on a LAN address, name it with --host",
+                err=True,
+            )
+            raise typer.Exit(2)
         shown = f"[{host}]" if ":" in host else host
         scheme = "https" if record.tls else "http"
         # The hub's own certificate, and only it, when it serves one.
@@ -155,18 +194,24 @@ def pair(
             "at least one.",
         ),
     ],
+    host: Annotated[str | None, typer.Option("--host", help=HOST_HELP)] = None,
 ) -> None:
     """Show a QR code and a 6-digit code a device claims within two minutes."""
-    HUB_PAIR.pair(scope)
+    HUB_PAIR.pair(scope, host)
 
 
 @hub_app.command("devices")
-def devices() -> None:
+def devices(
+    host: Annotated[str | None, typer.Option("--host", help=HOST_HELP)] = None,
+) -> None:
     """List the paired devices."""
-    HUB_PAIR.devices()
+    HUB_PAIR.devices(host)
 
 
 @hub_app.command("revoke")
-def revoke(device_id: Annotated[str, typer.Argument(help="The device to revoke.")]) -> None:
+def revoke(
+    device_id: Annotated[str, typer.Argument(help="The device to revoke.")],
+    host: Annotated[str | None, typer.Option("--host", help=HOST_HELP)] = None,
+) -> None:
     """Revoke a device: refused from its next request."""
-    HUB_PAIR.revoke(device_id)
+    HUB_PAIR.revoke(device_id, host)

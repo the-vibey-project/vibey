@@ -887,7 +887,8 @@ the wrong type, is refused rather than ignored, so a misspelt `lan` can never si
 mean "not declared".
 
 `vibey serve` reads the `[hub]` of the folder it runs in. Everything that *sends* a hub
-credential or picks which hub to talk to -- `vibey mcp` and `vibey acp` -- reads `[hub]` from your own
+credential or picks which hub to talk to -- `vibey mcp`, `vibey acp`, and `vibey hub pair`,
+`devices` and `revoke` -- reads `[hub]` from your own
 `vibey.toml`, in your configuration folder, never from the folder it runs in, which may be a
 cloned repository's. A folder's `vibey.toml` is heard there on `agent_scopes` only, and only to
 narrow it; its `state_dir` never decides where a token is read or which record is believed

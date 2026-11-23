@@ -859,9 +859,20 @@ whose process is gone is reported as stale, never as a running hub.
 | `vibey hub status` | Says whether the hub runs and where (`http://127.0.0.1:8765/api/v1 (pid N)`). Exit 3 when it does not. |
 | `vibey hub start [--timeout SECONDS]` | Starts the hub in the background unless one already runs (then it says so and exits 0), and waits, 15 seconds by default, until the hub has said where it listens. Exit 1 if it exits first or does not come up. Reads `vibey.toml` from the current directory like `vibey serve`. |
 | `vibey hub stop [--timeout SECONDS]` | Asks the running hub to stop and waits for it to go. Exit 0 when none runs. |
-| `vibey hub pair --scope SCOPE [--scope SCOPE ...]` | Offers a pairing of the named scopes (`view`, `answer`, `spend`, `run`, `bump`; at least one) and shows a QR code, the 6-digit code (valid two minutes, once), the pairing URI and the certificate fingerprint. |
-| `vibey hub devices` | Lists the paired devices: id, name, scopes. Never a key. |
-| `vibey hub revoke DEVICE_ID` | Revokes a device. It is refused from its very next request. |
+| `vibey hub pair --scope SCOPE [--scope SCOPE ...] [--host ADDRESS]` | Offers a pairing of the named scopes (`view`, `answer`, `spend`, `run`, `bump`; at least one) and shows a QR code, the 6-digit code (valid two minutes, once), the pairing URI and the certificate fingerprint. |
+| `vibey hub devices [--host ADDRESS]` | Lists the paired devices: id, name, scopes. Never a key. |
+| `vibey hub revoke DEVICE_ID [--host ADDRESS]` | Revokes a device. It is refused from its very next request. |
+
+`pair`, `devices` and `revoke` present the host token, so where it goes is never decided by a
+file a project could have written: they read `[hub]` -- the state folder holding the token and
+the runtime record -- from your own `vibey.toml`, in your configuration folder, never from the
+current directory, and send the token only to this computer's loopback (the record must name
+exactly `localhost`, a canonical loopback literal or a wildcard bind; the connection goes to the
+fixed loopback literal). A hub you bound to a LAN address (`vibey serve --host 192.168.1.5`)
+listens only there: name it with `--host`, which takes a private-network address literal
+(`10/8`, `172.16/12`, `192.168/16`, `100.64/10`, `fc00::/7`) or loopback, never a name, a zone
+or a public, link-local or oddly spelt address (exit 2). A record naming anything off the
+loopback without `--host` is refused before anything is sent (exit 2).
 
 ## `vibey sabbath`
 

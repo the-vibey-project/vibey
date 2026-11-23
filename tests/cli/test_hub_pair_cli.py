@@ -25,6 +25,8 @@ from vibey.cli.main import app
 from vibey.infrastructure.hub.local_token import LocalTokenStore, ServingRecord
 
 runner = CliRunner()
+_OWN_CONFIG = module.own_config
+"""The real lookup, taken before the suite's hermetic fixture stands another in."""
 
 
 class Hub:
@@ -176,20 +178,98 @@ def test_the_typer_commands_reach_the_command(monkeypatch: pytest.MonkeyPatch) -
     calls: list[tuple[str, Any]] = []
 
     class Recorder:
-        def pair(self, scopes: list[str]) -> None:
-            calls.append(("pair", scopes))
+        def pair(self, scopes: list[str], host: str | None = None) -> None:
+            calls.append(("pair", scopes, host))
 
-        def devices(self) -> None:
-            calls.append(("devices", None))
+        def devices(self, host: str | None = None) -> None:
+            calls.append(("devices", None, host))
 
-        def revoke(self, device_id: str) -> None:
-            calls.append(("revoke", device_id))
+        def revoke(self, device_id: str, host: str | None = None) -> None:
+            calls.append(("revoke", device_id, host))
 
     monkeypatch.setattr(module, "HUB_PAIR", Recorder())
-    for args in (["hub", "pair", "--scope", "view"], ["hub", "devices"], ["hub", "revoke", "d1"]):
+    for args in (
+        ["hub", "pair", "--scope", "view"],
+        ["hub", "devices"],
+        ["hub", "revoke", "d1"],
+        ["hub", "pair", "--scope", "view", "--host", "192.168.1.5"],
+        ["hub", "devices", "--host", "10.0.0.2"],
+        ["hub", "revoke", "d1", "--host", "fd00::2"],
+    ):
         result = runner.invoke(app, args)
         assert result.exit_code == 0, result.output
-    assert calls == [("pair", ["view"]), ("devices", None), ("revoke", "d1")]
+    assert calls == [
+        ("pair", ["view"], None),
+        ("devices", None, None),
+        ("revoke", "d1", None),
+        ("pair", ["view"], "192.168.1.5"),
+        ("devices", None, "10.0.0.2"),
+        ("revoke", "d1", "fd00::2"),
+    ]
+
+
+@pytest.mark.parametrize(
+    "host", ["192.168.1.5", "203.0.113.9", "evil.localhost", "localhost.", "attacker.example"]
+)
+def test_a_record_off_the_loopback_is_never_sent_the_host_token(tmp_path: Path, host: str) -> None:
+    """The record may name a LAN address the person bound the hub to, or a planted one: either
+    way the host token goes nowhere until the person names the address with --host."""
+    hub = Hub([])
+    command = _command(tmp_path, hub, record=ServingRecord(host=host, port=8765, pid=1))
+    with pytest.raises(typer.Exit) as caught:
+        command.devices()
+    assert caught.value.exit_code == 2 and hub.requests == []
+
+
+def test_the_person_names_a_lan_hub_with_host(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    hub = Hub(OFFER)
+    lan = ServingRecord(host="192.168.1.5", port=8765, pid=1, tls=True)
+    _command(tmp_path, hub, record=lan).pair(["view"], "192.168.1.5")
+    assert str(hub.requests[0].url) == "https://192.168.1.5:8765/api/v1/pairing/offers"
+    assert hub.opened["verify"] == str(tmp_path / "state" / "hub-cert.pem")
+    assert "code: 123456" in capsys.readouterr().out
+
+
+@pytest.mark.parametrize(
+    "host", ["studio.local", "8.8.8.8", "169.254.169.254", "fe80::1%en0", "0xc0.0xa8.1.5"]
+)
+def test_host_must_be_a_private_network_literal(tmp_path: Path, host: str) -> None:
+    hub = Hub([])
+    command = _command(tmp_path, hub, record=RUNNING)
+    with pytest.raises(typer.Exit) as caught:
+        command.revoke("d1", host)
+    assert caught.value.exit_code == 2 and hub.requests == []
+
+
+def test_the_token_and_record_are_the_persons_own_never_the_folders(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """A cloned repository's vibey.toml names a state folder with a planted record and token:
+    the command neither reads them nor sends anything there."""
+    mine = tmp_path / "mine"
+    _command(mine, Hub(), record=RUNNING)
+    monkeypatch.setattr(module, "own_config", lambda: mine / "vibey.toml")
+    cloned = tmp_path / "cloned"
+    cloned.mkdir()
+    planted = LocalTokenStore(cloned / "state")
+    planted.record_serving(ServingRecord(host="127.0.0.1", port=4444, pid=1))
+    (cloned / "vibey.toml").write_text(f"[hub]\nstate_dir = '{cloned / 'state'}'\n")
+    monkeypatch.chdir(cloned)
+    hub = Hub([])
+    HubPairCommand(client=hub).devices()
+    [sent] = hub.requests
+    assert str(sent.url) == "http://127.0.0.1:8765/api/v1/devices"
+    token = (mine / "state" / "token").read_text().strip()
+    assert sent.headers["authorization"] == f"Bearer {token}"
+    assert not (cloned / "state" / "token").exists()
+
+
+def test_the_persons_own_vibey_toml_is_in_their_configuration_folder() -> None:
+    from vibey.infrastructure.user_config_folder import UserConfigFolder
+
+    assert _OWN_CONFIG() == UserConfigFolder().path() / "vibey.toml"
 
 
 def test_a_serving_record_whose_tls_is_not_a_boolean_is_refused(tmp_path: Path) -> None:

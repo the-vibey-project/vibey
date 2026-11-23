@@ -384,7 +384,15 @@ def _hermetic_web_search(request: pytest.FixtureRequest, monkeypatch: pytest.Mon
         raise ConnectionRefusedError("hermetic test: no hub is reachable")
 
     monkeypatch.setattr(vibey.cli.web_tools_doctor.WEB_TOOLS_DOCTOR, "_probe", no_hub)
-    # Nor may the MCP gateway read the developer's own `[web]` for a web call's timeout.
+    # Nor may `vibey hub pair | devices | revoke` read the developer's own `[hub]` (Task 11a).
+    import vibey.cli.hub_pair
+
+    monkeypatch.setattr(
+        vibey.cli.hub_pair,
+        "own_config",
+        lambda: Path("/nonexistent-vibey-hermetic-test") / "vibey.toml",
+    )
+    # Nor may the MCP gateway read the developer's own `[hub]` or `[web]`.
     import vibey.infrastructure.mcp.hub_gateway
 
     monkeypatch.setattr(
