@@ -56,3 +56,40 @@ def test_a_checkout_without_a_root_manifest_keeps_the_tenant(
     monkeypatch.setattr(bootstrap, "marketplace_root", lambda: tenant)
     monkeypatch.setattr(bootstrap, "LOOPS_MANIFEST", Path("no-such") / "marketplace.json")
     assert bootstrap.loops_shipped_root() == tenant
+
+
+def test_a_tenant_without_its_manifest_still_finds_the_root_one(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Review B1: in the editable image `marketplace_root()` can raise; the repository root's
+    manifest is still the shipped marketplace."""
+
+    def missing() -> Path:
+        raise FileNotFoundError("no marketplace")
+
+    monkeypatch.setattr(bootstrap, "marketplace_root", missing)
+    assert bootstrap.loops_shipped_root() == REPO
+
+
+def test_no_manifest_anywhere_is_a_named_error(monkeypatch: pytest.MonkeyPatch) -> None:
+    def missing() -> Path:
+        raise FileNotFoundError("no marketplace")
+
+    monkeypatch.setattr(bootstrap, "marketplace_root", missing)
+    monkeypatch.setattr(bootstrap, "LOOPS_MANIFEST", Path("no-such") / "marketplace.json")
+    with pytest.raises(FileNotFoundError, match="no shipped marketplace"):
+        bootstrap.loops_shipped_root()
+
+
+def test_the_image_copies_both_manifests_and_asserts_the_lookup() -> None:
+    """Review B1's regression guard, on the files that build and check the image."""
+    dockerfile = (REPO / "deploy" / "docker" / "Dockerfile").read_text(encoding="utf-8")
+    assert "COPY .claude-plugin/marketplace.json ./.claude-plugin/" in dockerfile
+    assert (
+        "COPY src/vibey_tools/skills/.claude-plugin/marketplace.json "
+        "./src/vibey_tools/skills/.claude-plugin/" in dockerfile
+    )
+    assert "COPY --from=build /app/.claude-plugin /app/.claude-plugin" in dockerfile
+    ci = (REPO / ".github" / "workflows" / "ci.yml").read_text(encoding="utf-8")
+    assert "Image contract - the shipped marketplace is found and carries every root plugin" in ci
+    assert "loops_shipped_root" in ci

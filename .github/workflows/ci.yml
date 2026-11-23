@@ -1328,6 +1328,17 @@ jobs:
       # package root that never reaches the build context does not fail the build, it
       # just is not there. tests/meta/test_shipped_trees_are_reachable.py catches the
       # omission in the manifest; this catches it in the artifact.
+      # The image installs the project editable, so the shipped marketplace is found through
+      # the source layout, not the wheel's (SP-LOOPS Phase 3c, review B1): every lock and
+      # every run's capability bundle reads it. This asserts the lookup works in the artifact
+      # and finds every plugin the repository root's manifest lists.
+      - name: Image contract - the shipped marketplace is found and carries every root plugin
+        run: |
+          want=$(python3 -c 'import json; print(len(json.load(open(".claude-plugin/marketplace.json"))["plugins"]))')
+          got=$(docker run --rm --entrypoint python vibey:ci -c 'import json; from vibey.bootstrap import loops_shipped_root; root = loops_shipped_root(); print(len(json.load(open(root / ".claude-plugin" / "marketplace.json"))["plugins"]))')
+          echo "shipped marketplace plugins=$got (root manifest: $want)"
+          test -n "$got" && test "$got" = "$want"
+
       - name: Image contract - every console script is on PATH
         run: |
           docker run --rm --entrypoint sh vibey:ci -c '

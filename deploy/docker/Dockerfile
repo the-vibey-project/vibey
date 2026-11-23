@@ -145,6 +145,14 @@ COPY src/vibey_tools/skills/src/vibey_skills/ ./src/vibey_tools/skills/src/vibey
 COPY src/vibey_tools/skills/plugins/ ./src/vibey_tools/skills/plugins/
 COPY src/vibey_tools/gh/plugins/ ./src/vibey_tools/gh/plugins/
 COPY src/vibey_tools/skills/packaged/marketplace.json ./src/vibey_tools/skills/packaged/
+# The image installs the project EDITABLE, so `vibey_skills` imports from the source tree, not
+# from the wheel's `vibey_skills/marketplace/`. Its `marketplace_root()` then needs the skills
+# tenant's own manifest beside `plugins/`, and the shipped marketplace vibey locks
+# (`bootstrap.loops_shipped_root()`) is the repository root's manifest, which lists both
+# members' plugins (SP-LOOPS Phase 3c). Both manifests come along; the image contract step
+# "the shipped marketplace is found" asserts the lookup and its plugin count.
+COPY src/vibey_tools/skills/.claude-plugin/marketplace.json ./src/vibey_tools/skills/.claude-plugin/
+COPY .claude-plugin/marketplace.json ./.claude-plugin/
 COPY src/vibey_tools/gh/docs/stylesheets/vibey.css ./src/vibey_tools/gh/docs/stylesheets/
 COPY src/vibey_tools/gh/docs/javascripts/channel.js ./src/vibey_tools/gh/docs/javascripts/
 COPY src/vibey_tools/gh/docs/javascripts/math.js ./src/vibey_tools/gh/docs/javascripts/
@@ -195,6 +203,7 @@ RUN useradd --create-home --uid 10001 vibey
 WORKDIR /app
 COPY --from=build /app/.venv /app/.venv
 COPY --from=build /app/src /app/src
+COPY --from=build /app/.claude-plugin /app/.claude-plugin
 RUN ln -s /app/src/vibey/infrastructure/db/migrations /app/migrations
 
 # The codex executable alone, plus the license and notice it ships under.

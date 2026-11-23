@@ -1711,11 +1711,22 @@ def loops_shipped_root() -> Path:
     member's, so a checkout locks that one instead. The resolver's shipped lock covers only the
     manifest and the folders it lists (`CapabilityResolver._shipped_scope`), so the rest of the
     checkout is not read."""
-    root = marketplace_root()
     repository = Path(__file__).resolve().parents[2]
     tenant = repository / "src" / "vibey_tools" / "skills"
-    if root.resolve() == tenant.resolve() and (repository / LOOPS_MANIFEST).is_file():
+    try:
+        root: Path | None = marketplace_root()
+    except FileNotFoundError:
+        # An editable install whose skills tenant carries no manifest of its own (review B1):
+        # the repository root's, when it is there, is still the shipped marketplace.
+        root = None
+    in_checkout = root is None or root.resolve() == tenant.resolve()
+    if in_checkout and (repository / LOOPS_MANIFEST).is_file():
         return repository
+    if root is None:
+        raise FileNotFoundError(
+            f"no shipped marketplace: neither the skills tenant nor {repository} carries "
+            f"{LOOPS_MANIFEST}"
+        )
     return root
 
 
