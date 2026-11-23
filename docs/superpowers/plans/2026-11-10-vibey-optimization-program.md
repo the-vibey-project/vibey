@@ -33,6 +33,21 @@ Each row was verified against `origin/develop`. Items listed here are not repeat
 | Pre-1.0 versioning and the 0.4.0 release | #1898, #1899, #1909 |
 | Paper release counts from a tracked ledger | #1913 |
 | SP5 architecture review written into the plan, SP1-C plan | #1895, #1917 |
+| SP-ACP Task 1 shared JSON-RPC peer | #1936 |
+| SP-ACP Task 2 domain types, settings and state machine | #1937 |
+| SP-ACP Task 3 `vibey acp` initialize, session, prompt, cancel | #1938 |
+| SP-ACP Task 4 gates as permission requests | #1939 |
+| SP-ACP Task 5 live ledger feed, slash commands, modes | #1940 |
+| SP-ACP Task 6 session persistence (migration 0023, load, resume, list, close) | #1941 |
+| SP-ACP Task 7 doctor checks and bootstrap steps 1, 2 and 4 | #1942 |
+| SP-ACP Task 8 user-level hub and worker units, keep-alive, ADR-0101, `vibey acp unload` | #1943 |
+| Canon sub-doctrine 12.q proposal (merged by the operator) | #1944 |
+| SP-ACP Task 9 Zed `agent_servers` registration, LLM-tooling report, `BRAVE_SEARCH_API_KEY` alias, ACP docs | #1945 |
+| SP-ACP Task 9c local-first search (SearXNG primary, Brave only a backup, identity check), added 2026-11-21 | #1946 |
+| SP-ACP Task 9d vibey installs and runs the local SearXNG (ADR-0102), added 2026-11-21 | #1948 |
+| SP-ACP Task 9b search and fetch served from the hub as MCP tools behind a `web` scope, added 2026-11-21 | #1949 |
+| SP-ACP related fixes: redactor overlap and linear time, Linux coverage for the guarded fetch | #1951, #1952 |
+| SP-ACP Task 10 conformance test with the official `agent-client-protocol` 1.0.0 SDK client | #1953 |
 
 ## Global Constraints
 
@@ -60,8 +75,8 @@ Each row was verified against `origin/develop`. Items listed here are not repeat
 
 ## Order
 
-1. **SP-ACP** (next).
-2. **SP0 leftovers.**
+1. **SP-ACP** (landed, Tasks 1 to 10 and the added 9b, 9c and 9d; Task 11a, the security sweep of parked items, is in progress and Task 11b, UX and cleanup nits, is not started).
+2. **SP0 leftovers** (next).
 3. **SP1 remainder.**
 4. **SP2-B, then SP2-C.**
 5. **SP3.** It runs unattended in parallel from now on. Start the Claude Security scan when SP-ACP starts.
@@ -73,20 +88,17 @@ Hot files keep a fixed order:
 - `src/vibey/cli/main.py` (2,929 lines): SP-ACP adds one module only, then the SP5 split, then SP8 (P12).
 - `ollama_chat.py`, `fit.py`, `slots.py`: SP6 (canonical client), then SP9 (P7/P8).
 
-## SP-ACP (next): full Agent Client Protocol support
+## SP-ACP (landed): full Agent Client Protocol support
 
-Full sub-plan: [`2026-11-20-sp-acp-agent-client-protocol.md`](2026-11-20-sp-acp-agent-client-protocol.md). It is written by a separate agent and lands as its own PRs. This is the summary.
+Full sub-plan, with the per-task status table, the differences from the plan as built, and what the operator must still run: [`2026-11-20-sp-acp-agent-client-protocol.md`](2026-11-20-sp-acp-agent-client-protocol.md).
 
-`vibey acp` speaks ACP v1 (JSON-RPC 2.0 over stdio). Vibey is the ACP agent; the editor or driver LLM is the client. The goal: a driver LLM fully drives vibey, and on a machine where nobody ran `vibey doctor` or `vibey connect --yes`, vibey runs both itself and keeps its services running.
+`vibey acp` speaks ACP v1 (JSON-RPC 2.0 over stdio) and vibey is the ACP agent. Tasks 1 to 10 are on `develop` (#1936 to #1945, #1953), together with the tasks the operator added on 2026-11-21 (9b, 9c, 9d: #1949, #1946, #1948) and two related fixes (#1951, #1952). The ACP agent reuses the hub's scoped agent principal, turns open gates the agent may answer into permission requests, never offers a spend gate, persists sessions, and on a machine with no prior setup runs doctor and connect and loads user-level hub, worker and SearXNG units. The canon proposal for sub-doctrine 12.q (#1944) was merged by the operator.
 
-- **Prompts and tools.** `session/prompt` goes through the existing `HubChatPlanner` and the hub as the scoped agent principal. Each hub tool call streams as `tool_call` and `tool_call_update`, and replies stream as message chunks.
-- **Live project.** While a session is attached, the `/projects/{id}/live` ledger stream becomes `session/update` notifications, and the six phases become a `plan`.
-- **Gates.** An open `human_gate` the agent may answer becomes `session/request_permission`. Spend gates (`budget_exhausted`, `deploy_*`) are never offered; the operator is told to answer on the host.
-- **Sessions.** `load`, `list`, `close` and `resume` persist in PostgreSQL through a new migration.
-- **Bootstrap.** On `session/new`, an idempotent `AcpBootstrap` runs doctor and connect, loads user-level launchd or systemd units for the hub and worker with restart on death, and asks through the permission prompt before any step that needs sudo (installing PostgreSQL). A health probe restarts a dead hub or worker. Everything is configurable under a new `[acp]` table in `vibey.toml`.
-- **Build.** Hand-rolled on a shared stdlib JSON-RPC peer factored out of the MCP server. The official `agent-client-protocol` 1.0.0 SDK is a dev-only dependency, used as the conformance client in tests.
-- **Governance.** ADR-0101 (the ACP agent and self-installing services) reverses the supervisor's "never load units" rule to "user-level units only, under an explicit grant". The canon sub-doctrine PR is the operator's merge.
-- **Done when:** the conformance test drives `vibey acp` as a subprocess through initialize, new, prompt, permission, cancel and load; the existing MCP stdio tests stay green; and a clean-account run shows the units loaded, the hub restarted after a kill, a non-spend gate answered, and a spend gate refused.
+Left in this series:
+- **Task 11a:** security sweep of parked items. In progress, not landed.
+- **Task 11b:** UX and cleanup nits. Not started.
+- **Operator runs:** the manual end-to-end checklist, the opt-in real-container SearXNG test, and the launchd and systemd checks. None has been run. They are listed in the sub-plan.
+- **Known follow-ups:** engine sessions through the hub (a per-session `web`-only principal), modern API-key redaction shapes, and the others listed in the sub-plan.
 
 ## SP0 Leftovers
 
@@ -274,6 +286,15 @@ CI-E (the strict docs build on pull requests) is landed, so this can start once 
 - **Rules:** generated files change at their source; skill changes go to all four agent trees; the canon goes in a PR the operator merges; a new sub-doctrine and ADR record the house style.
 
 ## Decisions
+
+Answered by the operator on 2026-11-20 and 2026-11-21 (SP-ACP):
+- **Hand-rolled ACP.** ACP is hand-rolled on a shared stdlib JSON-RPC peer. The official `agent-client-protocol` SDK is a dev-only conformance client.
+- **Install and load.** vibey installs and loads user-level launchd or systemd services (hub, worker, SearXNG), with `[acp] auto_bootstrap`, `auto_connect` and `auto_services` all defaulting to true. Privileged steps are asked through `session/request_permission`, never by sudo with a password. Spend gates and the deployment opt-in are never offered over ACP; the operator answers them on the host.
+- **Untrusted project file.** The project's `vibey.toml` is untrusted. Grants come only from the person's own configuration, and a project may only narrow.
+- **Local search first.** All search that vibey controls uses a local SearXNG first. Brave is only a backup: used automatically when SearXNG gives no usable answer and a key exists, never silently, and never as the primary (`VIBEY_SEARCH_PROVIDER=brave` is refused).
+- **vibey runs the SearXNG.** vibey installs and runs it: a digest-pinned image, loopback only, behind a permission prompt, with no automatic updates.
+- **Search served from the hub.** Search and fetch are served from the hub behind the `web` scope, with budgets, allow and deny lists, and a ledger audit of every use (the host only, never the query or the URL).
+- **Identity check, not authentication.** The identity check is not authentication, and engine sessions still talk to SearXNG directly. The real fix, a per-session `web`-only principal minted by the worker, is not done.
 
 Answered by the operator on 2026-11-20:
 - **Always-on services.** ACP installs and loads user-level launchd or systemd units for the hub and worker (no sudo) and restarts them if they die. Steps that need sudo, such as installing PostgreSQL, go through ACP's permission prompt.
