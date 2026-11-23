@@ -36,6 +36,9 @@ from vibey.infrastructure.acp.acp_settings_loader import AcpSettingsLoader
 from vibey.infrastructure.acp.interfaces.acp_settings_loader_interface import (
     AcpSettingsLoaderInterface,
 )
+from vibey.infrastructure.acp.interfaces.peer_client_channel_interface import (
+    PeerClientChannelInterface,
+)
 from vibey.infrastructure.acp.interfaces.stdio_transport_interface import StdioTransportInterface
 from vibey.infrastructure.acp.peer_client_channel import PeerClientChannel
 from vibey.infrastructure.acp.stdio_transport import StdioTransport
@@ -86,7 +89,8 @@ class AcpCommand:
         # One byte over the bound, so a message exactly `max_message_bytes` long plus its
         # newline fits the reader; the peer refuses anything longer by name.
         reader = await transport.reader(limit=settings.max_message_bytes + 1)
-        channel = PeerClientChannel()
+        # Typed as its own interface, so `mypy --strict` checks the class against it.
+        channel: PeerClientChannelInterface = PeerClientChannel()
         machine = self._machine(settings, user_config=self._user_config())
         agent = self._build_agent(
             settings=settings,

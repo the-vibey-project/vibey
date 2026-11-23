@@ -68,6 +68,19 @@ def test_the_channel_satisfies_the_application_port() -> None:
     assert channel.client_capabilities == {}
 
 
+def test_attach_is_declared_by_the_channels_own_interface() -> None:
+    """SP-ACP Task 3 review B-9: `attach`, which the CLI calls, is declared beside the class
+    by an interface that extends the application port, not only on the concrete class."""
+    from vibey.infrastructure.acp.interfaces.peer_client_channel_interface import (
+        PeerClientChannelInterface,
+    )
+
+    channel = PeerClientChannel()
+    assert isinstance(channel, PeerClientChannelInterface)
+    assert ClientChannelInterface in PeerClientChannelInterface.__mro__
+    assert "attach" in PeerClientChannelInterface.__dict__
+
+
 async def test_an_unattached_channel_refuses_to_send() -> None:
     with pytest.raises(RuntimeError, match="not attached"):
         await PeerClientChannel().notify_update("s", {"sessionUpdate": "agent_message_chunk"})
