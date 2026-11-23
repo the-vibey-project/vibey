@@ -13,6 +13,7 @@ from tests.application.fakes import FakeHumanGateRepository, FakeJobRepository, 
 from vibey import bootstrap
 from vibey.application.design import DesignEvent
 from vibey.application.dto import ProjectRecord
+from vibey.application.loops_bundle_settings import LoopsBundleSettings
 from vibey.bootstrap import (
     _engine_run_deadline,
     _independence_policy,
@@ -505,3 +506,16 @@ def test_an_unusable_deadline_never_switches_the_limit_off() -> None:
         assert _engine_run_deadline(config, environ={}) == timedelta(minutes=240)
     environ = {"VIBEY_ENGINE_MAX_RUN_MINUTES": "0"}
     assert _engine_run_deadline({}, environ=environ) == timedelta(minutes=240)
+
+
+def test_loops_bundle_settings_read_real_files_through_the_toml_reader(tmp_path: Path) -> None:
+    """The composition root wires the `[loops]` trust rule to the on-disk table reader."""
+    settings = bootstrap.loops_bundle_settings()
+    assert isinstance(settings, LoopsBundleSettings)
+    mine = tmp_path / "mine.toml"
+    mine.write_text("[loops]\nplugins = []\n", encoding="utf-8")
+    project = tmp_path / "repo.toml"
+    project.write_text("[loops]\nmarketplaces = []\n", encoding="utf-8")
+    loaded = settings.load(mine, project)
+    assert loaded.bundle.plugins == ()
+    assert len(loaded.notices) == 1
