@@ -754,6 +754,10 @@ def build_full_worker(
         metrics=metrics,
     )
     skills_context = compiler_from_config(project.config, repo_path=repo_root)
+    # The person's pastes and files, given to every BUILD run the same way (SP-LOOPS Phase 3).
+    # `materialize` reads no `[inputs]` limit (only `vibey inputs add` does), so the defaults
+    # stand in and the worker never reads the person's own `vibey.toml` for them.
+    run_inputs = run_inputs_service(resources, RunInputsSettings())
     # One runner for every gate command -- build.verify's gates and diff,
     # build.integrate's gates, REVIEW's automated checks -- built from the
     # project's `gates` config (per-command timeout, kill grace, Python-env
@@ -803,6 +807,7 @@ def build_full_worker(
             ultra_ledger=resources.ledger,
             checkpoint=GitCheckpoint(),
             specs=resources.design_specs,
+            inputs=run_inputs,
         )
         return _recording(handler, adapter, meter)
 
