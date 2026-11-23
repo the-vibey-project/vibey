@@ -336,3 +336,15 @@ def test_a_file_name_colliding_by_case_is_exit_2(world: _World) -> None:
     code, output = _run("add", str(world.project_id), "--file", str(second))
     assert code == 2
     assert "only in case" in output
+
+
+@pytest.mark.parametrize("text", ["[inputs\nnot toml", "inputs = 3\n"])
+def test_a_malformed_project_file_in_the_folder_does_not_change_the_exit_code(
+    world: _World, text: str
+) -> None:
+    # Review finding 8 (R-H).
+    world.project_config.write_text(text)
+    code, output = _run("add", str(world.project_id), "--paste", "hi")
+    assert code == 0, output
+    assert "cannot be read" in output
+    assert world.opened_with == [RunInputsSettings()]

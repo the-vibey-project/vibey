@@ -148,3 +148,31 @@ def test_the_real_reader_over_a_project_folder_file(tmp_path: Path) -> None:
 
 def test_the_loader_meets_its_interface() -> None:
     assert isinstance(RunInputsSettingsLoader(FakeTables({})), RunInputsSettingsLoaderInterface)
+
+
+class _BrokenProjectTables(FakeTables):
+    def read_table(self, path: Path, table: str) -> Mapping[str, object] | None:
+        if path == PROJECT:
+            raise ConfigError(str(path), "is not valid TOML")
+        return super().read_table(path, table)
+
+
+def test_a_project_file_that_cannot_be_read_is_a_notice_never_an_error() -> None:
+    # Review finding 8 (R-H): a cloned repository's broken file cannot block the person.
+    loaded = RunInputsSettingsLoader(_BrokenProjectTables({USER: {"max_items": 3}})).load(
+        USER, PROJECT
+    )
+    assert loaded.settings.max_items == 3
+    [notice] = loaded.notices
+    assert "cannot be read" in notice
+    assert str(USER) in notice
+
+
+def test_a_malformed_project_file_on_disk_changes_nothing(tmp_path: Path) -> None:
+    user = tmp_path / "vibey.toml"
+    project = tmp_path / "repo" / "vibey.toml"
+    project.parent.mkdir()
+    project.write_text("[inputs\nmax_items = = 1\n")
+    loaded = RunInputsSettingsLoader(TomlTrustedTableReader()).load(user, project)
+    assert loaded.settings == RunInputsSettings()
+    assert len(loaded.notices) == 1
