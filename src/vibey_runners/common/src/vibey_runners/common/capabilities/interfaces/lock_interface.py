@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 from collections.abc import Collection, Sequence
+from contextlib import AbstractContextManager
 from pathlib import Path, PurePosixPath
 from typing import Protocol, runtime_checkable
 
@@ -42,6 +43,13 @@ class CapabilityLockInterface(Protocol):
         failure the previous lock is left as it was and no temporary file remains."""
         ...
 
+    def exclusive(self, path: Path) -> AbstractContextManager[None]:
+        """Holds the lock file's own sidecar lock for the `with` block (re-entrant within this
+        instance, so `update` inside it does not wait on itself): for a caller that must change
+        more than the file under one hold. Raises `LockError` after a bounded wait for another
+        holder."""
+        ...
+
     def update(
         self, path: Path, put: Sequence[LockEntry] = (), drop: Collection[str] = ()
     ) -> tuple[LockEntry, ...]:
@@ -49,8 +57,8 @@ class CapabilityLockInterface(Protocol):
         is added at the end), removes the marketplaces `drop` names, writes the result as `write`
         does and returns it -- all while holding an exclusive lock on a sidecar file beside
         `path`, so two updates never lose each other's entries. Raises as `read` and `write` do,
-        and `OSError` when the sidecar cannot be made or locked (it is never opened through a
-        symlink)."""
+        `LockError` when another holder keeps the sidecar lock past the bounded wait, and
+        `OSError` when the sidecar cannot be made (it is never opened through a symlink)."""
         ...
 
     def read(self, path: Path) -> tuple[LockEntry, ...]:

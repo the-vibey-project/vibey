@@ -372,3 +372,35 @@ _VALUES = st.recursive(
 def test_any_table_is_a_bundle_or_a_bundle_error(raw: dict[str, object]) -> None:
     with contextlib.suppress(BundleError):  # anything else escaping fails the property
         BundleSpec.from_mapping(raw)
+
+
+@pytest.mark.parametrize(
+    "name",
+    [
+        "VIBEY_HUB_TOKEN",
+        "VIBEY_AGENT_TOKEN",
+        "VIBEY_BRAVE_API_KEY",
+        "BRAVE_SEARCH_API_KEY",
+        "WEBSEARCH_BRAVE_API_KEY",
+        "GITHUB_TOKEN",
+        "github_token",
+        "MY_SECRET_VALUE",
+        "DB_PASSWORD",
+        "OPENAI_API_KEY",
+        "SIGNING_KEY",
+        "brave_anything",
+    ],
+)
+def test_env_allow_never_hands_a_server_a_secret(name: str) -> None:
+    """A local MCP server's output reaches the model, so a loop's server may not keep the host or
+    agent token, a Brave key or anything named like a secret (Global Constraint 3)."""
+    servers = [{"name": "f", "trust": "local", "command": ["x"], "env_allow": ["HOME", name]}]
+    refusal = _refusal(_with(mcp_servers=servers))
+    assert refusal.path == "loops.mcp_servers[0].env_allow[1]"
+    assert "secret" in refusal.reason
+
+
+@pytest.mark.parametrize("name", ["HOME", "LANG", "PATH", "KEYBOARD_LAYOUT", "MONKEY"])
+def test_env_allow_keeps_plain_names(name: str) -> None:
+    servers = [{"name": "f", "trust": "local", "command": ["x"], "env_allow": [name]}]
+    assert BundleSpec.from_mapping({"mcp_servers": servers}).mcp_servers[0].env_allow == (name,)

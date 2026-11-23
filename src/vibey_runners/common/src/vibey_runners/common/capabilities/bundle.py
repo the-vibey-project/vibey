@@ -16,7 +16,7 @@ ref = "v1.2.0"                                           # optional pin
 name = "files"
 trust = "local"                                          # local: stdio, needs `command`
 command = ["fake-mcp", "--stdio"]
-env_allow = ["HOME"]                                     # the only variables it keeps
+env_allow = ["HOME"]                                     # the only variables it keeps (never a secret)
 
 [[loops.mcp_servers]]
 name = "tickets"
@@ -60,6 +60,20 @@ _MARKETPLACE_KEYS: Final = frozenset({"name", "source", "ref"})
 _SERVER_KEYS: Final = frozenset({"name", "trust", "command", "url", "env_allow"})
 _TRUST: Final[tuple[McpTrust, ...]] = ("local", "remote")
 _ENV_NAME: Final = re.compile(r"[A-Za-z_][A-Za-z0-9_]{0,127}")
+SECRET_ENV_NAMES: Final = frozenset(
+    {
+        "VIBEY_HUB_TOKEN",
+        "VIBEY_AGENT_TOKEN",
+        "VIBEY_BRAVE_API_KEY",
+        "BRAVE_SEARCH_API_KEY",
+        "WEBSEARCH_BRAVE_API_KEY",
+    }
+)
+"""Variables that carry the host token, the agent token or a Brave key, named outright."""
+SECRET_ENV_PATTERN: Final = re.compile(r"TOKEN|SECRET|PASSWORD|API_KEY|_KEY$|BRAVE", re.I)
+"""Any other variable named like a secret: a local MCP server's output reaches the model, so it
+never keeps one (Global Constraint 3: a loop never receives the host or agent token or a Brave
+key)."""
 
 
 @dataclass(frozen=True, slots=True)
@@ -289,4 +303,12 @@ class BundleSpec:
         names = cls._list(value, path)
         if not all(isinstance(n, str) and _ENV_NAME.fullmatch(n) for n in names):
             raise BundleError(path, "must be a list of environment variable names")
+        for index, name in enumerate(names):
+            text = str(name)
+            if text.upper() in SECRET_ENV_NAMES or SECRET_ENV_PATTERN.search(text):
+                raise BundleError(
+                    f"{path}[{index}]",
+                    "names a variable that carries a secret (a token, key or password); a "
+                    "server never keeps one, since what it prints reaches the model",
+                )
         return tuple(str(n) for n in names)

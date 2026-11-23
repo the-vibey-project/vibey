@@ -641,28 +641,42 @@ def test_a_scope_item_does_not_swallow_a_sibling_that_shares_its_name_prefix(
 # -- update: a read-modify-write under a file lock ----------------------------------------------
 
 
-class _RecordingFlock:
-    """Stands in for `fcntl.flock`, recording each call (no second process is needed)."""
+def _free(sidecar: Path) -> bool:
+    """Whether a second open file description can take the sidecar's lock right now."""
+    descriptor = os.open(sidecar, os.O_RDWR)
+    try:
+        fcntl.flock(descriptor, fcntl.LOCK_EX | fcntl.LOCK_NB)
+    except BlockingIOError:
+        return False
+    finally:
+        os.close(descriptor)
+    return True
+
+
+class _CheckingLock(CapabilityLock):
+    """The real lock, recording whether the sidecar was held while the file was written."""
 
     def __init__(self) -> None:
-        self.calls: list[int] = []
+        super().__init__()
+        self.held_while_writing: list[bool] = []
 
-    def __call__(self, descriptor: int, operation: int) -> None:
-        os.fstat(descriptor)  # the descriptor is open while it is locked
-        self.calls.append(operation)
+    def write(self, path: Path, entries: Sequence[LockEntry]) -> None:
+        self.held_while_writing.append(not _free(path.with_name(f".{path.name}.flock")))
+        super().write(path, entries)
 
 
 def test_update_replaces_in_place_adds_at_the_end_and_drops(tmp_path: Path) -> None:
     lock_path = tmp_path / "state" / "loops.lock"
     CapabilityLock().write(lock_path, ENTRIES)
-    flock = _RecordingFlock()
+    locker = _CheckingLock()
     newer = LockEntry("vibey", "vibey-engine 9.9.9", None, "sha256:" + "c" * 64)
     added = LockEntry("zeta", "https://example.test/zeta.git", None, "sha256:" + "d" * 64)
-    result = CapabilityLock(flock=flock).update(lock_path, put=[added, newer], drop=["acme"])
+    result = locker.update(lock_path, put=[added, newer], drop=["acme"])
     assert result == (newer, added)
     assert CapabilityLock().read(lock_path) == (newer, added)
-    assert flock.calls == [fcntl.LOCK_EX]
+    assert locker.held_while_writing == [True]  # another descriptor was refused meanwhile ...
     sidecar = lock_path.with_name(".loops.lock.flock")
+    assert _free(sidecar)  # ... and granted once update returned
     assert stat.S_IMODE(sidecar.stat().st_mode) == 0o600
 
 
@@ -676,17 +690,40 @@ def test_a_failed_update_leaves_the_lock_and_releases_the_file_lock(tmp_path: Pa
     lock_path = tmp_path / "loops.lock"
     CapabilityLock().write(lock_path, ENTRIES)
     before = lock_path.read_bytes()
-    opened: list[int] = []
-
-    def flock(descriptor: int, operation: int) -> None:
-        opened.append(descriptor)
-
     bad = LockEntry("bad name!", "x", None, DIGEST)
     with pytest.raises(LockError):
-        CapabilityLock(flock=flock).update(lock_path, put=[bad])
+        CapabilityLock().update(lock_path, put=[bad])
     assert lock_path.read_bytes() == before
-    with pytest.raises(OSError):  # the sidecar's descriptor was closed, so its lock is gone
-        os.fstat(opened[0])
+    assert _free(lock_path.with_name(".loops.lock.flock"))
+
+
+def test_exclusive_holds_the_update_lock_and_update_inside_it_does_not_wait(
+    tmp_path: Path,
+) -> None:
+    lock_path = tmp_path / "loops.lock"
+    locker = CapabilityLock()
+    with locker.exclusive(lock_path):
+        assert not _free(lock_path.with_name(".loops.lock.flock"))
+        assert locker.update(lock_path, put=ENTRIES[:1]) == ENTRIES[:1]
+        assert not _free(lock_path.with_name(".loops.lock.flock"))
+    assert _free(lock_path.with_name(".loops.lock.flock"))
+
+
+def test_an_update_while_another_holds_the_lock_gives_up_after_a_bounded_wait(
+    tmp_path: Path,
+) -> None:
+    from vibey_runners.common.capabilities.sidecar_lock import SidecarLock
+
+    lock_path = tmp_path / "loops.lock"
+    now = [0.0]
+
+    def sleep(seconds: float) -> None:
+        now[0] += seconds
+
+    patient = SidecarLock(clock=lambda: now[0], sleep=sleep, timeout_seconds=1.0)
+    with CapabilityLock().exclusive(lock_path), pytest.raises(LockError, match="another vibey"):
+        CapabilityLock(file_lock=patient).update(lock_path, put=ENTRIES[:1])
+    assert not lock_path.exists()
 
 
 def test_update_never_opens_its_sidecar_through_a_symlink(tmp_path: Path) -> None:

@@ -39,10 +39,12 @@ deliberate one -- anyone who can write the file can recompute it, so it is no ev
 The lock folder is the person's own and is protected by its permissions (0600). It is written to a
 temporary file beside the lock, fsynced, renamed over it and the folder fsynced, with mode 0600 from
 the moment it exists; a failure removes the temporary file and leaves the old lock. A change to some
-entries (`update`) reads, changes and writes the lock while it holds an exclusive `flock` on a
-sidecar file beside it (`.<lock name>.flock`, 0600, never opened through a symlink), so a run that
-locks the shipped marketplace and a `vibey loops marketplace update` at the same moment cannot drop
-each other's entry. It is read whole
+entries (`update`) reads, changes and writes the lock while it holds an exclusive lock on a sidecar
+file beside it (`SidecarLock`: `.<lock name>.flock`, 0600, never opened through a symlink, a
+bounded wait), so a run that locks the shipped marketplace and a `vibey loops marketplace update`
+at the same moment cannot drop each other's entry; `exclusive` holds the same lock for a caller
+that changes more than the file (the store places a copy, writes the entry and prunes old copies
+under one hold). It is read whole
 through the bounded reader (never through a symlink) and must end in the newline the writer puts
 there, parse, carry exactly its keys, match its checksum and hold only well-formed entries -- or it
 raises `LockError` and returns nothing. A missing lock is no entries: nothing has been locked yet.
@@ -52,7 +54,6 @@ Declared by `interfaces/lock_interface.py::CapabilityLockInterface`.
 
 from __future__ import annotations
 
-import fcntl
 import hashlib
 import json
 import os
@@ -60,6 +61,7 @@ import re
 import stat
 import tempfile
 from collections.abc import Callable, Collection, Sequence
+from contextlib import AbstractContextManager
 from dataclasses import asdict
 from pathlib import Path, PurePosixPath
 from typing import Final
@@ -76,10 +78,14 @@ from vibey_runners.common.capabilities.interfaces.git_folder_guard_interface imp
     GitFolderGuardInterface,
 )
 from vibey_runners.common.capabilities.interfaces.path_probe_interface import PathProbeInterface
+from vibey_runners.common.capabilities.interfaces.sidecar_lock_interface import (
+    SidecarLockInterface,
+)
 from vibey_runners.common.capabilities.lock_entry import LockEntry
 from vibey_runners.common.capabilities.lock_error import LockError
 from vibey_runners.common.capabilities.names import NAME_PATTERN
 from vibey_runners.common.capabilities.path_probe import PathProbe
+from vibey_runners.common.capabilities.sidecar_lock import SidecarLock
 from vibey_runners.common.capabilities.tree_record import TreeRecord
 
 VERSION: Final = 1
@@ -93,7 +99,6 @@ _ENTRY_KEYS: Final = frozenset({"marketplace", "source", "ref", "digest"})
 _CHUNK: Final = 1024 * 1024
 BYTECODE_FOLDER: Final = "__pycache__"
 BYTECODE_SUFFIXES: Final = (".pyc", ".pyo")
-_SIDECAR: Final = os.O_RDWR | os.O_CREAT | os.O_NOFOLLOW | os.O_CLOEXEC
 
 
 class CapabilityLock:
@@ -106,14 +111,14 @@ class CapabilityLock:
         fsync: Callable[[int], None] = os.fsync,
         guard: GitFolderGuardInterface | None = None,
         probe: PathProbeInterface | None = None,
-        flock: Callable[[int, int], None] = fcntl.flock,
+        file_lock: SidecarLockInterface | None = None,
     ) -> None:
         self._reader = reader or BoundedFileReader()
         self._guard = guard or GitFolderGuard()
         self._probe = probe or PathProbe()
         self._lister = lister
         self._fsync = fsync
-        self._flock = flock
+        self._file_lock = file_lock or SidecarLock()
 
     # -- the digest --------------------------------------------------------------------------
 
@@ -253,13 +258,13 @@ class CapabilityLock:
         finally:
             os.close(folder)
 
+    def exclusive(self, path: Path) -> AbstractContextManager[None]:
+        return self._file_lock.held(path)
+
     def update(
         self, path: Path, put: Sequence[LockEntry] = (), drop: Collection[str] = ()
     ) -> tuple[LockEntry, ...]:
-        path.parent.mkdir(mode=0o700, parents=True, exist_ok=True)
-        sidecar = os.open(path.with_name(f".{path.name}.flock"), _SIDECAR, 0o600)
-        try:
-            self._flock(sidecar, fcntl.LOCK_EX)
+        with self.exclusive(path):
             replacing = {entry.marketplace: entry for entry in put}
             entries = [
                 replacing.pop(entry.marketplace, entry)
@@ -269,8 +274,6 @@ class CapabilityLock:
             entries.extend(entry for entry in put if entry.marketplace in replacing)
             self.write(path, entries)
             return tuple(entries)
-        finally:
-            os.close(sidecar)  # closing the descriptor releases the flock
 
     def read(self, path: Path) -> tuple[LockEntry, ...]:
         try:
