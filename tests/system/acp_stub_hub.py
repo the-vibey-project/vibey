@@ -3,8 +3,10 @@
 
 `vibey acp` reaches the hub through `HubGateway`, as the scoped agent principal: it reads the
 user's `[hub] state_dir`, presents `<state_dir>/agent.token` and finds the hub in
-`<state_dir>/serving.json`. This stub writes both files with the real `LocalTokenStore` and
-listens on 127.0.0.1 only, so the agent finds it exactly as it finds a hub `vibey serve` runs.
+`<state_dir>/serving.json`. This stub writes both files with the real `LocalTokenStore`, holds
+the hub's own lock (`ServeLock`, as `vibey serve` does: the gateway believes a record only while
+the process it names holds it, SP-ACP Task 11b) and listens on 127.0.0.1 only, so the agent finds
+it exactly as it finds a hub `vibey serve` runs.
 
 Behind a small stdlib front, every request is answered by **the hub's own FastAPI app**
 (`HubAppFactory.build`): its routes, request models, error mapping, Host check, rate limit and
@@ -68,6 +70,7 @@ from vibey.infrastructure.hub.app import HubAppFactory
 from vibey.infrastructure.hub.authenticator import AgentTokenAuthenticator
 from vibey.infrastructure.hub.live import LedgerAnnouncements
 from vibey.infrastructure.hub.local_token import LocalTokenStore, ServingRecord
+from vibey.infrastructure.hub.serve_lock import ServeLock
 
 HOLD_SECONDS: Final = 10.0
 """The longest a held chat turn waits: below `HubGateway`'s 15 s, so the agent never sees a
@@ -109,6 +112,7 @@ class StubHub:
 
     def __init__(self, state_dir: Path) -> None:
         self._store = LocalTokenStore(state_dir)
+        self._lock = ServeLock(state_dir)
         self._token = ""
         self._server: ThreadingHTTPServer | None = None
         self._thread: threading.Thread | None = None
@@ -170,6 +174,8 @@ class StubHub:
             daemon=True,
         )
         self._thread.start()
+        if not self._lock.acquire():
+            raise RuntimeError("another hub holds this state folder's lock")
         self._store.record_serving(ServingRecord(host="127.0.0.1", port=self.port, pid=os.getpid()))
 
     def stop(self) -> None:
@@ -179,6 +185,7 @@ class StubHub:
             self._server.server_close()
         if self._thread is not None:
             self._thread.join(timeout=HOLD_SECONDS)
+        self._lock.release()
 
     # -- scripting -----------------------------------------------------------------------
 

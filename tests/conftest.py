@@ -24,6 +24,7 @@ import getpass
 import os
 import signal
 import sys
+from collections.abc import Iterator
 from pathlib import Path
 from typing import Any
 
@@ -33,6 +34,7 @@ from hypothesis import HealthCheck, settings
 
 from tests.db_reaper import BackgroundReap, HoldMark, TestDatabaseHold, TestDatabaseReaper
 from tests.db_roles import TestDatabaseRoles
+from tests.fakes.hub_lock import HubLockHolder
 from vibey.infrastructure.db.migration_catalog import MigrationCatalog
 from vibey.infrastructure.db.migrator import apply_migrations, discover_migrations
 
@@ -260,6 +262,17 @@ def pytest_configure(config: pytest.Config) -> None:
     os.environ["VIBEY_TEST_APP_DATABASE_URL"] = app_dsn
     os.environ["VIBEY_PG_URL"] = app_dsn
     os.environ.pop("VIBEY_PG_MIGRATE_URL", None)
+
+
+@pytest.fixture
+def hub_lock() -> Iterator[HubLockHolder]:
+    """The hub's lock held by this test as a running hub holds it (`tests/fakes/hub_lock.py`),
+    so a runtime record written through it names a live hub; every lock is let go after."""
+    holder = HubLockHolder()
+    try:
+        yield holder
+    finally:
+        holder.close()
 
 
 class _WeekdayIndependentSabbath:

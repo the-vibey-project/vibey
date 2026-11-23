@@ -29,6 +29,7 @@ import httpx
 import pytest
 from acp_fakes import FakeChannel, context
 
+from tests.fakes.hub_lock import HubLockHolder
 from vibey.application.acp.acp_bootstrap import TOOL_SERVICES, AcpBootstrap
 from vibey.application.acp.acp_keep_alive import AcpKeepAlive
 from vibey.application.acp.dto import UnitOutcome
@@ -168,10 +169,15 @@ def _client_for(process: HubProcess) -> Any:
     return Client
 
 
-def _hub(tmp_path: Path, process: HubProcess, fallback: Fallback) -> tuple[AcpHubClient, Any]:
+def _hub(
+    tmp_path: Path, process: HubProcess, fallback: Fallback, lock: HubLockHolder
+) -> tuple[AcpHubClient, Any]:
+    """The hub, as its process holding the hub's lock and its record (a real flock): whether it
+    answers is `process`'s to say."""
     state = tmp_path / "hub"
     state.mkdir(mode=0o700, exist_ok=True)
     (state / "serving.json").write_text(json.dumps({"host": "127.0.0.1", "port": 9, "pid": 4242}))
+    lock.hold(state, 4242)
     config = tmp_path / "vibey.toml"
     config.write_text(f'[hub]\nstate_dir = "{state}"\n')
     router = HubStartRouter(
@@ -209,9 +215,11 @@ def _keep_alive(
     )
 
 
-async def test_probing_the_hub_never_starts_or_restarts_it(tmp_path: Path) -> None:
+async def test_probing_the_hub_never_starts_or_restarts_it(
+    tmp_path: Path, hub_lock: HubLockHolder
+) -> None:
     process, fallback = HubProcess(up=False), Fallback()
-    hub, router = _hub(tmp_path, process, fallback)
+    hub, router = _hub(tmp_path, process, fallback, hub_lock)
     manager, clock = Manager(process), Clock()
     kept = _keep_alive(tmp_path, manager, hub, clock)
     router.attach(kept)
@@ -224,9 +232,11 @@ async def test_probing_the_hub_never_starts_or_restarts_it(tmp_path: Path) -> No
     await kept.stop()
 
 
-async def test_one_probe_of_a_dead_hub_restarts_it_once(tmp_path: Path) -> None:
+async def test_one_probe_of_a_dead_hub_restarts_it_once(
+    tmp_path: Path, hub_lock: HubLockHolder
+) -> None:
     process, fallback = HubProcess(up=False), Fallback()
-    hub, router = _hub(tmp_path, process, fallback)
+    hub, router = _hub(tmp_path, process, fallback, hub_lock)
     manager, clock = Manager(process), Clock()
     kept = _keep_alive(tmp_path, manager, hub, clock)
     router.attach(kept)
@@ -241,14 +251,14 @@ async def test_one_probe_of_a_dead_hub_restarts_it_once(tmp_path: Path) -> None:
     await kept.stop()
 
 
-async def test_two_windows_restart_a_slow_hub_once(tmp_path: Path) -> None:
+async def test_two_windows_restart_a_slow_hub_once(tmp_path: Path, hub_lock: HubLockHolder) -> None:
     process = HubProcess(up=False)
     manager, clock = Manager(process), Clock()
     windows = []
     for name in ("one", "two"):
         folder = tmp_path / name
         folder.mkdir()
-        hub, router = _hub(folder, process, Fallback())
+        hub, router = _hub(folder, process, Fallback(), hub_lock)
         kept = _keep_alive(tmp_path, manager, hub, clock)  # one lock folder for both
         router.attach(kept)
         kept.manage(UNITS, hub_label=HUB, deferred=())
@@ -264,9 +274,11 @@ async def test_two_windows_restart_a_slow_hub_once(tmp_path: Path) -> None:
         await window.stop()
 
 
-async def test_a_read_that_finds_no_hub_only_asks_the_keep_alive(tmp_path: Path) -> None:
+async def test_a_read_that_finds_no_hub_only_asks_the_keep_alive(
+    tmp_path: Path, hub_lock: HubLockHolder
+) -> None:
     process, fallback = HubProcess(up=False), Fallback()
-    hub, router = _hub(tmp_path, process, fallback)
+    hub, router = _hub(tmp_path, process, fallback, hub_lock)
     manager, clock = Manager(process), Clock()
     kept = _keep_alive(tmp_path, manager, hub, clock)
     router.attach(kept)
@@ -285,9 +297,11 @@ async def test_a_read_that_finds_no_hub_only_asks_the_keep_alive(tmp_path: Path)
     await kept.stop()
 
 
-async def test_step_three_never_restarts_the_hub_it_just_loaded(tmp_path: Path) -> None:
+async def test_step_three_never_restarts_the_hub_it_just_loaded(
+    tmp_path: Path, hub_lock: HubLockHolder
+) -> None:
     process, fallback = HubProcess(up=False), Fallback()
-    hub, router = _hub(tmp_path, process, fallback)
+    hub, router = _hub(tmp_path, process, fallback, hub_lock)
     manager, clock = Manager(process), Clock()
     units = Units()
     kept = _keep_alive(tmp_path, manager, hub, clock, units)
@@ -323,9 +337,11 @@ async def test_step_three_never_restarts_the_hub_it_just_loaded(tmp_path: Path) 
     await boot.close()
 
 
-async def test_a_deferred_hub_is_never_restarted_a_read_runs_the_fallback(tmp_path: Path) -> None:
+async def test_a_deferred_hub_is_never_restarted_a_read_runs_the_fallback(
+    tmp_path: Path, hub_lock: HubLockHolder
+) -> None:
     process, fallback = HubProcess(up=False), Fallback()
-    hub, router = _hub(tmp_path, process, fallback)
+    hub, router = _hub(tmp_path, process, fallback, hub_lock)
     manager, clock = Manager(process), Clock()
     kept = _keep_alive(tmp_path, manager, hub, clock, Units(pid=4242))
     router.attach(kept)
@@ -342,10 +358,10 @@ async def test_a_deferred_hub_is_never_restarted_a_read_runs_the_fallback(tmp_pa
 
 
 async def test_an_edited_hub_unit_is_never_restarted_a_read_runs_the_fallback(
-    tmp_path: Path,
+    tmp_path: Path, hub_lock: HubLockHolder
 ) -> None:
     process, fallback = HubProcess(up=False), Fallback()
-    hub, router = _hub(tmp_path, process, fallback)
+    hub, router = _hub(tmp_path, process, fallback, hub_lock)
     manager, clock = Manager(process), Clock()
     kept = _keep_alive(tmp_path, manager, hub, clock)
     router.attach(kept)
@@ -359,9 +375,11 @@ async def test_an_edited_hub_unit_is_never_restarted_a_read_runs_the_fallback(
     await kept.stop()
 
 
-async def test_with_nothing_managed_a_read_runs_the_fallback(tmp_path: Path) -> None:
+async def test_with_nothing_managed_a_read_runs_the_fallback(
+    tmp_path: Path, hub_lock: HubLockHolder
+) -> None:
     process, fallback = HubProcess(up=False), Fallback()
-    hub, router = _hub(tmp_path, process, fallback)
+    hub, router = _hub(tmp_path, process, fallback, hub_lock)
     with pytest.raises(VibeyError):
         await hub.chat("/projects", project_id=None, request_id="r")
     assert fallback.starts == 1  # no keep-alive attached at all: today's `vibey hub start`
@@ -376,10 +394,10 @@ def test_the_router_is_its_interface() -> None:
 
 
 async def test_a_fresh_machines_first_reads_start_no_hub_before_step_three_loads_the_unit(
-    tmp_path: Path,
+    tmp_path: Path, hub_lock: HubLockHolder
 ) -> None:
     process, fallback = HubProcess(up=False), Fallback()
-    hub, router = _hub(tmp_path, process, fallback)
+    hub, router = _hub(tmp_path, process, fallback, hub_lock)
     manager, clock, units = Manager(process), Clock(), Units()
     kept = _keep_alive(tmp_path, manager, hub, clock, units)
     router.attach(kept)
@@ -416,9 +434,11 @@ async def test_a_fresh_machines_first_reads_start_no_hub_before_step_three_loads
     await boot.close()
 
 
-async def test_once_step_three_failed_a_read_falls_back_to_hub_start(tmp_path: Path) -> None:
+async def test_once_step_three_failed_a_read_falls_back_to_hub_start(
+    tmp_path: Path, hub_lock: HubLockHolder
+) -> None:
     process, fallback = HubProcess(up=False), Fallback()
-    hub, router = _hub(tmp_path, process, fallback)
+    hub, router = _hub(tmp_path, process, fallback, hub_lock)
     manager, clock = Manager(process), Clock()
     kept = _keep_alive(tmp_path, manager, hub, clock)
     router.attach(kept)

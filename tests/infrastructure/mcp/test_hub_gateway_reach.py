@@ -13,6 +13,7 @@ from typing import Any
 import httpx
 import pytest
 
+from tests.fakes.hub_lock import HubLockHolder
 from vibey.domain.host_tools import HubCall
 from vibey.infrastructure.mcp.hub_gateway import HubGateway, HubGatewayError
 
@@ -33,7 +34,9 @@ class _Refused:
         raise httpx.ConnectError("connection refused")
 
 
-def _gateway(tmp_path: Path, starts: list[str], *, serving: bool) -> HubGateway:
+def _gateway(
+    tmp_path: Path, starts: list[str], *, serving: bool, lock: HubLockHolder | None = None
+) -> HubGateway:
     state = tmp_path / "hub"
     state.mkdir(mode=0o700)
     config = tmp_path / "vibey.toml"
@@ -42,6 +45,8 @@ def _gateway(tmp_path: Path, starts: list[str], *, serving: bool) -> HubGateway:
         (state / "serving.json").write_text(
             json.dumps({"host": "127.0.0.1", "port": 9, "pid": 4242})
         )
+        if lock is not None:
+            lock.hold(state, 4242)  # its process holds the hub's lock and does not answer
 
     def starter() -> bool:
         starts.append("start")
@@ -57,15 +62,17 @@ def test_reach_with_no_hub_running_is_an_error_and_starts_nothing(tmp_path: Path
     assert starts == []
 
 
-def test_reach_to_a_silent_hub_is_an_error_and_restarts_nothing(tmp_path: Path) -> None:
+def test_reach_to_a_silent_hub_is_an_error_and_restarts_nothing(
+    tmp_path: Path, hub_lock: HubLockHolder
+) -> None:
     starts: list[str] = []
     with pytest.raises(HubGatewayError, match="did not answer"):
-        _gateway(tmp_path, starts, serving=True).reach(LIVE)
+        _gateway(tmp_path, starts, serving=True, lock=hub_lock).reach(LIVE)
     assert starts == []
 
 
-def test_call_still_starts_the_hub_once(tmp_path: Path) -> None:
+def test_call_still_starts_the_hub_once(tmp_path: Path, hub_lock: HubLockHolder) -> None:
     starts: list[str] = []
     with pytest.raises(HubGatewayError):
-        _gateway(tmp_path, starts, serving=True).call(LIVE)
+        _gateway(tmp_path, starts, serving=True, lock=hub_lock).call(LIVE)
     assert starts == ["start"]

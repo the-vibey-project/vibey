@@ -14,6 +14,7 @@ import httpx
 import pytest
 from typer.testing import CliRunner
 
+from tests.fakes.hub_lock import HubLockHolder
 from vibey.cli.interfaces.mcp_interface import McpCommandInterface
 from vibey.cli.mcp import MCP_COMMAND, McpCommand
 from vibey.domain.config import ConfigError
@@ -135,7 +136,9 @@ def test_gateway_agent_scopes_reads_settings_and_grants_nothing_on_config_error(
     assert broken.agent_scopes() == frozenset()  # never the defaults (Task 11a S-2)
 
 
-def test_gateway_sends_agent_token_and_maps_wildcard_and_ipv6_hosts(tmp_path: Path) -> None:
+def test_gateway_sends_agent_token_and_maps_wildcard_and_ipv6_hosts(
+    tmp_path: Path, hub_lock: HubLockHolder
+) -> None:
     state = tmp_path / "state"
     toml = tmp_path / "vibey.toml"
     toml.write_text(f"[hub]\nstate_dir = '{state}'\n")
@@ -143,8 +146,9 @@ def test_gateway_sends_agent_token_and_maps_wildcard_and_ipv6_hosts(tmp_path: Pa
     host_token = store.token()
     agent_token = store.agent_token()
     assert agent_token != host_token
-    store.record_serving(
-        ServingRecord(host="0.0.0.0", port=8765, pid=1234, tls=False)  # nosec B104
+    hub_lock.serve(
+        state,
+        ServingRecord(host="0.0.0.0", port=8765, pid=1234, tls=False),  # nosec B104
     )
 
     fake = _FakeHttpClient(status_code=200, text='[{"name":"demo"}]')
@@ -170,7 +174,7 @@ def test_gateway_sends_agent_token_and_maps_wildcard_and_ipv6_hosts(tmp_path: Pa
     assert sent["params"] == [("limit", "10")]
 
     # IPv6 + TLS path
-    store.record_serving(ServingRecord(host="::1", port=9000, pid=1234, tls=True))
+    hub_lock.serve(state, ServingRecord(host="::1", port=9000, pid=1234, tls=True))
     res_tls = gw.call(
         HubCall(
             tool="vibey_start_project",
@@ -187,18 +191,17 @@ def test_gateway_sends_agent_token_and_maps_wildcard_and_ipv6_hosts(tmp_path: Pa
 
 
 def test_gateway_starts_hub_when_not_running_or_when_first_request_fails(
-    tmp_path: Path,
+    tmp_path: Path, hub_lock: HubLockHolder
 ) -> None:
     state = tmp_path / "state"
     toml = tmp_path / "vibey.toml"
     toml.write_text(f"[hub]\nstate_dir = '{state}'\n")
-    store = LocalTokenStore(state)
     started = 0
 
     def start_hub() -> bool:
         nonlocal started
         started += 1
-        store.record_serving(ServingRecord(host="127.0.0.1", port=8765, pid=99, tls=False))
+        hub_lock.serve(state, ServingRecord(host="127.0.0.1", port=8765, pid=99, tls=False))
         return True
 
     fake = _FakeHttpClient(status_code=200, text='{"ok":true}')
@@ -214,7 +217,7 @@ def test_gateway_starts_hub_when_not_running_or_when_first_request_fails(
     assert res2.ok is True and started == 2 and len(flaky.calls) == 2
 
 
-def test_gateway_error_paths(tmp_path: Path) -> None:
+def test_gateway_error_paths(tmp_path: Path, hub_lock: HubLockHolder) -> None:
     state = tmp_path / "state"
     toml = tmp_path / "vibey.toml"
 
@@ -234,6 +237,8 @@ def test_gateway_error_paths(tmp_path: Path) -> None:
     store = LocalTokenStore(state)
     store.agent_token()
     (state / "agent.token").chmod(0o644)
+    # A live hub: the token is read only once a hub holding its lock is found (Task 11b).
+    hub_lock.serve(state, ServingRecord(host="127.0.0.1", port=8765, pid=99, tls=False))
     gw_bad_tok = HubGateway(config_path=lambda: toml, starter=lambda: False)
     with pytest.raises(HubGatewayError, match="agent token unusable"):
         gw_bad_tok.call(HubCall(tool="vibey_projects", method="GET", route="/api/v1/projects"))
@@ -246,7 +251,7 @@ def test_gateway_error_paths(tmp_path: Path) -> None:
         gw_no_hub.call(HubCall(tool="vibey_projects", method="GET", route="/api/v1/projects"))
 
     # 5. Serving record exists, request fails, starter returns False
-    store.record_serving(ServingRecord(host="127.0.0.1", port=8765, pid=99, tls=False))
+    hub_lock.serve(state, ServingRecord(host="127.0.0.1", port=8765, pid=99, tls=False))
     always_down = _FakeHttpClient(fail_times=5)
     gw_down = HubGateway(
         config_path=lambda: toml, client=always_down.factory, starter=lambda: False
@@ -266,7 +271,7 @@ def test_gateway_error_paths(tmp_path: Path) -> None:
         gw_cleared.call(HubCall(tool="vibey_projects", method="GET", route="/api/v1/projects"))
 
     # 7. Starter returns True and serving.json exists, but second attempt also fails
-    store.record_serving(ServingRecord(host="127.0.0.1", port=8765, pid=99, tls=False))
+    hub_lock.serve(state, ServingRecord(host="127.0.0.1", port=8765, pid=99, tls=False))
     gw_still_down = HubGateway(
         config_path=lambda: toml, client=always_down.factory, starter=lambda: True
     )
@@ -546,7 +551,7 @@ def test_the_web_tools_are_listed_only_to_an_agent_holding_web_and_refused_other
     ["203.0.113.9", "192.168.1.5", "hub.evil.example", "evil.localhost", "localhost.", "127.1"],
 )
 def test_the_gateway_never_sends_the_agent_token_to_a_host_off_this_computer(
-    tmp_path: Path, host: str
+    tmp_path: Path, host: str, hub_lock: HubLockHolder
 ) -> None:
     """The runtime record is read from a state folder a folder's vibey.toml can name (the parked
     `[hub]` trust split); whatever it says, the agent token and the call -- a search query or a
@@ -554,7 +559,7 @@ def test_the_gateway_never_sends_the_agent_token_to_a_host_off_this_computer(
     state = tmp_path / "state"
     toml = tmp_path / "vibey.toml"
     toml.write_text(f"[hub]\nstate_dir = '{state}'\n")
-    LocalTokenStore(state).record_serving(ServingRecord(host=host, port=8765, pid=4242, tls=False))
+    hub_lock.serve(state, ServingRecord(host=host, port=8765, pid=4242, tls=False))
     fake = _FakeHttpClient()
     started: list[bool] = []
     gw = HubGateway(
@@ -570,14 +575,14 @@ def test_the_gateway_never_sends_the_agent_token_to_a_host_off_this_computer(
     assert fake.calls == [] and started == []
 
 
-def test_a_record_naming_localhost_is_reached_at_a_fixed_loopback_literal(tmp_path: Path) -> None:
+def test_a_record_naming_localhost_is_reached_at_a_fixed_loopback_literal(
+    tmp_path: Path, hub_lock: HubLockHolder
+) -> None:
     """The name is never resolved again: what was checked is what is connected to."""
     state = tmp_path / "state"
     toml = tmp_path / "vibey.toml"
     toml.write_text(f"[hub]\nstate_dir = '{state}'\n")
-    LocalTokenStore(state).record_serving(
-        ServingRecord(host="localhost", port=8765, pid=4242, tls=False)
-    )
+    hub_lock.serve(state, ServingRecord(host="localhost", port=8765, pid=4242, tls=False))
     fake = _FakeHttpClient()
     gw = HubGateway(config_path=lambda: toml, client=fake.factory, starter=lambda: False)
     gw.call(HubCall(tool="vibey_projects", method="GET", route="/api/v1/projects"))
@@ -608,14 +613,14 @@ class _TimedOut(_FakeHttpClient):
     ],
 )
 def test_a_request_that_may_have_reached_the_hub_is_never_sent_again(
-    tmp_path: Path, error: httpx.HTTPError
+    tmp_path: Path, error: httpx.HTTPError, hub_lock: HubLockHolder
 ) -> None:
     """A fetch that timed out went out once and spent one unit of budget: sending it again would
     leave the computer twice. Nor is the hub started over it (SP-ACP Task 9b)."""
     state = tmp_path / "state"
     toml = tmp_path / "vibey.toml"
     toml.write_text(f"[hub]\nstate_dir = '{state}'\n")
-    LocalTokenStore(state).record_serving(ServingRecord(host="127.0.0.1", port=8765, pid=4242))
+    hub_lock.serve(state, ServingRecord(host="127.0.0.1", port=8765, pid=4242))
     fake = _TimedOut(error)
     started: list[bool] = []
     gw = HubGateway(
@@ -635,13 +640,15 @@ def test_a_request_that_may_have_reached_the_hub_is_never_sent_again(
     assert len(fake.calls) == 1 and started == []
 
 
-def test_a_web_call_waits_longer_than_the_hubs_own_web_deadline(tmp_path: Path) -> None:
+def test_a_web_call_waits_longer_than_the_hubs_own_web_deadline(
+    tmp_path: Path, hub_lock: HubLockHolder
+) -> None:
     state = tmp_path / "state"
     toml = tmp_path / "vibey.toml"
     toml.write_text(f"[hub]\nstate_dir = '{state}'\n")
     mine = tmp_path / "me.toml"
     mine.write_text(f"[hub]\nstate_dir = '{state}'\n[web]\ntimeout_seconds = 90\n")
-    LocalTokenStore(state).record_serving(ServingRecord(host="127.0.0.1", port=8765, pid=4242))
+    hub_lock.serve(state, ServingRecord(host="127.0.0.1", port=8765, pid=4242))
     fake = _FakeHttpClient()
     gw = HubGateway(
         config_path=lambda: mine,

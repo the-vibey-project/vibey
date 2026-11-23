@@ -21,9 +21,10 @@ from typing import Any
 import httpx
 import pytest
 
+from tests.fakes.hub_lock import HubLockHolder
 from vibey.domain.host_tools import HubCall
 from vibey.domain.hub_scope import HubScope
-from vibey.infrastructure.hub.local_token import LocalTokenStore, ServingRecord
+from vibey.infrastructure.hub.local_token import ServingRecord
 from vibey.infrastructure.hub.settings import HubSettings
 from vibey.infrastructure.mcp.hub_gateway import HubGateway, HubGatewayError, _default_starter
 from vibey.infrastructure.mcp.hub_start_policy import BoundedHubStarter
@@ -140,7 +141,7 @@ def test_a_starter_that_raises_counts_as_a_failed_start() -> None:
 
 
 def test_the_gateway_reports_the_hub_away_at_once_through_the_bounded_starter(
-    tmp_path: Path,
+    tmp_path: Path, hub_lock: HubLockHolder
 ) -> None:
     state = tmp_path / "state"
     toml = tmp_path / "vibey.toml"
@@ -151,9 +152,8 @@ def test_the_gateway_reports_the_hub_away_at_once_through_the_bounded_starter(
     for _ in range(3):  # no hub was ever started: no serving record
         with pytest.raises(HubGatewayError, match="the hub is away"):
             gateway.call(CALL)
-    LocalTokenStore(state).record_serving(
-        ServingRecord(host="127.0.0.1", port=1, pid=4242, tls=False)
-    )
+    # A hub holding its lock whose port refuses: the starter is asked once more.
+    hub_lock.serve(state, ServingRecord(host="127.0.0.1", port=1, pid=4242, tls=False))
 
     def refused(**kwargs: Any) -> Any:
         raise httpx.ConnectError("refused")

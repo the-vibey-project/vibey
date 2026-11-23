@@ -262,7 +262,11 @@ include the one it needs. It reaches only a hub on this computer's loopback: a r
 (`<state_dir>/serving.json`) must name exactly `localhost`, a canonical loopback literal or a
 wildcard bind, and the gateway connects to the fixed loopback literal that maps to (never the
 name resolved again); any other host -- `evil.localhost`, `localhost.`, `127.1` included -- is
-refused and nothing, not the token, not a call, is sent.
+refused and nothing, not the token, not a call, is sent. The record is believed only while the
+process it names holds the hub's lock (`<state_dir>/serve.lock`), as for `vibey hub pair`: a
+dead hub's port may since have been bound by another account, so a record whose lock nobody
+holds, or another process holds, is no hub -- the agent token is not read, nothing is sent, and
+a tool call starts the hub as when there is no record at all.
 
 ### Web tools: `vibey_search` and `vibey_fetch`
 

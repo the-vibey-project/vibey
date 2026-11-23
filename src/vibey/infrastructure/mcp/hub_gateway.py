@@ -23,6 +23,12 @@ Mirrors `cli/hub_pair.py::HubPairCommand._call`, with two deliberate differences
    refused before the token, or a call -- a gate answer, a search query, a URL -- is sent
    anywhere, and the connection goes to the fixed loopback literal `HUB_TARGETS` returns, never
    to the record's name resolved again (SP-ACP Task 9b).
+7. It believes a runtime record only while the process it names holds the hub's lock
+   (`ServeLock.held_by`, the check `vibey hub pair` makes for the host token): on loopback over
+   plain http nothing else proves the listener is the hub, and a dead hub's port may since have
+   been bound by another account. A record whose lock nobody holds, or another process holds,
+   is no hub: the agent token is not read and nothing is sent (SP-ACP Task 11b, review 1 S-5);
+   `call` runs the starter as for no record at all.
 """
 
 from __future__ import annotations
@@ -45,6 +51,7 @@ from vibey.domain.hub_target import HUB_TARGETS
 from vibey.domain.web_tools import WebToolSettings
 from vibey.infrastructure.hub.interfaces.settings_interface import HubSettingsLoaderInterface
 from vibey.infrastructure.hub.local_token import LocalTokenStore, ServingRecord
+from vibey.infrastructure.hub.serve_lock import ServeLock
 from vibey.infrastructure.hub.settings import HUB_SETTINGS, HubSettings
 from vibey.infrastructure.hub.tls import CERT_FILE
 from vibey.infrastructure.mcp.interfaces.hub_gateway_interface import HubGatewayInterface
@@ -133,7 +140,9 @@ class HubGateway:
         starter: HubStarter | None = None,
         timeout: float = 15.0,
         environ: Callable[[], Mapping[str, str]] = lambda: os.environ,
+        holder: Callable[[Path], int | None] = lambda state: ServeLock(state).held_by(),
     ) -> None:
+        self._holder = holder
         self._settings = settings
         self._config_path = config_path
         self._project_config = project_config
@@ -191,16 +200,16 @@ class HubGateway:
                 "agent access is disabled on this hub ([hub] agent_scopes = [] in vibey.toml)"
             )
         store = LocalTokenStore(settings.state_dir)
+        record = self._live(settings, store)
+        if record is None:
+            if not start:
+                raise HubGatewayError("no hub is running on this computer")
+            record = self._start_and_read(settings, store)
+        # Read only now: a record no lock-holding hub backs is never sent the token.
         try:
             token = store.agent_token()
         except (PermissionError, ValueError) as exc:
             raise HubGatewayError(f"agent token unusable: {exc}") from exc
-
-        record = self._read_serving(store)
-        if record is None:
-            if not start:
-                raise HubGatewayError("no hub is running on this computer")
-            record = self._start_and_read(store)
         try:
             return self._send(settings, record, token, call)
         except httpx.HTTPError as first_exc:
@@ -215,7 +224,7 @@ class HubGateway:
                 raise HubGatewayError(
                     f"the hub did not answer ({first_exc}); start it with `vibey hub start`"
                 ) from first_exc
-            refreshed = self._read_serving(store)
+            refreshed = self._live(settings, store)
             if refreshed is None:
                 raise HubGatewayError(
                     "no hub is running after `vibey hub start`; run `vibey hub start` to inspect"
@@ -250,16 +259,20 @@ class HubGateway:
             search = DEFAULT_SEARCH_TIMEOUT
         return max(self._timeout, deadline, 3 * search) + WEB_TIMEOUT_MARGIN
 
-    @staticmethod
-    def _read_serving(store: LocalTokenStore) -> ServingRecord | None:
+    def _live(self, settings: HubSettings, store: LocalTokenStore) -> ServingRecord | None:
+        """The runtime record while the process it names holds the hub's lock; None when there
+        is no record, it is malformed, or no process -- or another one -- holds the lock."""
         try:
-            return store.serving()
+            record = store.serving()
         except ValueError:
             return None
+        if record is None or self._holder(settings.state_dir) != record.pid:
+            return None
+        return record
 
-    def _start_and_read(self, store: LocalTokenStore) -> ServingRecord:
+    def _start_and_read(self, settings: HubSettings, store: LocalTokenStore) -> ServingRecord:
         self._starter()
-        record = self._read_serving(store)
+        record = self._live(settings, store)
         if record is None:
             raise HubGatewayError(
                 "no hub is running on this computer; start one with `vibey hub start`"
