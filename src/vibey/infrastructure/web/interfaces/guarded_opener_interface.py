@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import http.client
+import threading
 import urllib.request
 from collections.abc import Callable
 from http.client import HTTPMessage
@@ -39,18 +40,19 @@ class GuardedOpenerInterface(Protocol):
         """The response, as `urllib.request.urlopen` returns it."""
         ...
 
-    def abort(self, thread_id: int) -> None:
-        """Shut down the sockets of the connections thread `thread_id` opened."""
+    def abort(self, thread: threading.Thread) -> None:
+        """Shut down the sockets the connections made in `thread` connected."""
         ...
 
     def connection(
         self, kind: type[http.client.HTTPConnection]
     ) -> Callable[..., http.client.HTTPConnection]:
-        """A maker of `kind` connections that records each one under the thread making it."""
+        """A maker of `kind` connections whose `connect` records the socket it connected under
+        the thread making the connection."""
         ...
 
-    def threads(self) -> frozenset[int]:
-        """The threads, still running, whose connections are recorded."""
+    def threads(self) -> frozenset[threading.Thread]:
+        """The threads, still running, whose sockets are recorded."""
         ...
 
 
@@ -63,9 +65,9 @@ class AbortableOpenerInterface(Protocol):
         """The response, as `urllib.request.urlopen` returns it."""
         ...
 
-    def abort(self, thread_id: int) -> None:
-        """Shut down the sockets of the connections opened in thread `thread_id`, so a read
-        blocked in that thread returns at once; a connection not yet connected is skipped."""
+    def abort(self, thread: threading.Thread) -> None:
+        """Shut down the sockets connected in `thread` (the object, never a reusable ident), so
+        a read blocked there -- status line, headers or body -- returns at once."""
         ...
 
 

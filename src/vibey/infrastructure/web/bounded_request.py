@@ -60,8 +60,8 @@ class BoundedRequest:
             # `AbortableOpenerInterface`, by its method: the interface module cannot be
             # imported here without a cycle (the search backends import this module).
             abort = getattr(self._opener, "abort", None)
-            if callable(abort) and worker.ident is not None:
-                abort(worker.ident)
+            if callable(abort):
+                abort(worker)  # the Thread itself: its ident may already be another's
             raise DeadlineExceeded(f"no complete answer within {deadline:g}s")
         result = outcome[0]
         if isinstance(result, BaseException):

@@ -12,11 +12,14 @@ A SearXNG on a loopback address is reached directly, never through `HTTP_PROXY` 
 does. A backend elsewhere (an operator's remote SearXNG, Brave) uses the environment's proxy
 settings as any other request would.
 
-Each connection is made through the opener's `connection`, which records it under the thread
-making it, so `abort(thread)` can shut down the sockets of a request abandoned at its deadline
-(`BoundedRequest`): the reader blocked in that thread wakes and ends, rather than living as long
-as a listener that trickles its answer likes (SP-ACP Task 9c, P-9c-3). What a finished thread
-made is forgotten the next time a connection is made.
+Each connection is made through the opener's `connection`, whose `connect` records the socket
+it connected under the `threading.Thread` making it (the object itself: a thread's ident is
+reused once it ends). `abort(thread)` shuts those sockets down, so a request abandoned at its
+deadline (`BoundedRequest`) wakes and ends in whatever it was reading -- the status line, the
+headers or the body -- rather than living as long as a listener that trickles its answer likes
+(SP-ACP Task 9c, P-9c-3). The socket is recorded, not the connection: once the headers are in,
+urllib closes the connection's own handle and reads the body from the socket's file alone.
+What a finished thread connected is forgotten.
 
 Declared by `interfaces/guarded_opener_interface.py` (ADR-0016).
 """
@@ -81,7 +84,7 @@ class GuardedOpener:
     def __init__(self, base_url: str) -> None:
         self.direct = self.is_loopback(base_url)
         self._lock = threading.Lock()
-        self._made: dict[int, list[http.client.HTTPConnection]] = {}
+        self._sockets: dict[threading.Thread, list[socket.socket]] = {}
         handlers: list[urllib.request.BaseHandler] = [SameOriginRedirects(), TrackedHandler(self)]
         if self.direct:
             handlers.append(urllib.request.ProxyHandler({}))
@@ -95,31 +98,41 @@ class GuardedOpener:
     ) -> Callable[..., http.client.HTTPConnection]:
         def made(host: str, **kwargs: Any) -> http.client.HTTPConnection:
             connection = kind(host, **kwargs)
-            running = {thread.ident for thread in threading.enumerate()}
-            with self._lock:
-                for gone in [ident for ident in self._made if ident not in running]:
-                    del self._made[gone]
-                self._made.setdefault(threading.get_ident(), []).append(connection)
+            thread = threading.current_thread()
+            connect = connection.connect
+
+            def connected() -> None:
+                connect()
+                if connection.sock is not None:
+                    self._record(thread, connection.sock)
+
+            # This connection's own `connect`, wrapped: it is what urllib calls (TLS and a
+            # proxy's tunnel included), and the socket it leaves is the one to shut down.
+            setattr(connection, "connect", connected)  # noqa: B010 - an instance's method
             return connection
 
         return made
 
-    def abort(self, thread_id: int) -> None:
+    def _record(self, thread: threading.Thread, sock: socket.socket) -> None:
         with self._lock:
-            made = self._made.pop(thread_id, [])
-        for connection in made:
-            sock = connection.sock
-            if sock is None:
-                continue  # not connected yet: its connect is bounded by its own timeout
+            for gone in [held for held in self._sockets if not held.is_alive()]:
+                del self._sockets[gone]
+            self._sockets.setdefault(thread, []).append(sock)
+
+    def abort(self, thread: threading.Thread) -> None:
+        with self._lock:
+            sockets = self._sockets.pop(thread, [])
+        for sock in sockets:
             # Shut down, never closed from here: the thread reading it still owns the
             # descriptor, and closes it as it unwinds. The base class's method, so a TLS
-            # socket's own state is never touched from this thread.
+            # socket's own state is never touched from this thread. A socket closed for good
+            # has no descriptor (-1): that `OSError` is all it can raise.
             with contextlib.suppress(OSError):
                 socket.socket.shutdown(sock, socket.SHUT_RDWR)
 
-    def threads(self) -> frozenset[int]:
+    def threads(self) -> frozenset[threading.Thread]:
         with self._lock:
-            return frozenset(self._made)
+            return frozenset(thread for thread in self._sockets if thread.is_alive())
 
     @staticmethod
     def is_loopback(url: str) -> bool:
