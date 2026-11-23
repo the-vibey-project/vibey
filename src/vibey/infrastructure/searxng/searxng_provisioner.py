@@ -36,6 +36,7 @@ from vibey.domain.interfaces.searxng_interface import SearxngPlanInterface
 from vibey.domain.searxng import SEARXNG_IMAGE, SearxngPlan, SearxngProvision
 from vibey.infrastructure.searxng.container_runtime import (
     DAEMON_VARIABLES,
+    NOTHING_TO_REMOVE,
     RuntimeProblem,
     RuntimeRefusal,
 )
@@ -60,8 +61,6 @@ OWN_URL_NAMES: Final = (SEARXNG_URL_ENV, "WEBSEARCH_SEARXNG_URL")
 """The variables by which the person says they run their own SearXNG."""
 PROBE_SECONDS: Final = 5.0
 """One identity check's bound: the step polls it, so each poll is short."""
-LOCAL_ENDPOINTS: Final = ("unix://", "npipe://")
-"""How a runtime endpoint on this computer starts: a socket or a named pipe."""
 REMOTE_DAEMON: Final = ("DOCKER_HOST", "CONTAINER_HOST")
 """Variables that may name a daemon on another machine: install refuses one that is not a local
 socket, since the unit at login never has them and would talk to another daemon."""
@@ -239,7 +238,14 @@ class SearxngProvisioner:
         earlier = self.installed()
         try:
             where = self._runtime.endpoint(runtime)
-            if where and not where.startswith(LOCAL_ENDPOINTS):
+            if where is None:
+                return SearxngPrepared(
+                    False,
+                    f"{name}'s current context could not be read, so vibey cannot tell it is "
+                    "this computer's own daemon and installs nothing; `docker context ls` says "
+                    "which it is",
+                )
+            if not self._runtime.is_local(where):
                 return SearxngPrepared(
                     False,
                     f"{name}'s current context points at {where}, a daemon that is not a local "
@@ -278,16 +284,20 @@ class SearxngProvisioner:
 
     def _remove_earlier(self, runtime: str, earlier: SearxngProvision | None) -> str:
         """After an update: the earlier pin's container (which holds its image; the unit starts
-        the new one), then its image. What happened, as a sentence to add; "" when there was no
-        earlier image (SP-ACP Task 11b-ii, P-9d-6)."""
+        the new one), then its image, each with the runtime the earlier record names -- the one
+        that pulled it, which an update always keeps (`_install_runtime`). What happened, as a
+        sentence to add; "" when there was no earlier image (SP-ACP Task 11b-ii, P-9d-6)."""
         if earlier is None or earlier.image == self._image:
             return ""
         digest = self._plan.digest_of(earlier.image)
-        stopped = self._runtime.remove_container(runtime, self._uid())
-        gone = self._runtime.remove_image(runtime, earlier.image) if stopped.ok else stopped
+        owner = earlier.runtime
+        name = PurePath(owner).name
+        stopped = self._runtime.remove_container(owner, self._uid())
+        gone = self._runtime.remove_image(owner, earlier.image) if stopped.ok else stopped
+        if gone.ok and gone.detail == NOTHING_TO_REMOVE:
+            return f" The earlier image (sha256:{digest}) was not in {name} any more."
         if gone.ok:
             return f" The earlier image (sha256:{digest}) was removed."
-        name = PurePath(runtime).name
         return (
             f" The earlier image (sha256:{digest}) was kept ({UntrustedText.clean(gone.detail)}); "
             f"`{name} rmi {earlier.image}` removes it once nothing uses it."

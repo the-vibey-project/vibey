@@ -36,6 +36,13 @@ class Runtime(ContainerRuntime):
         self.present = True
         self.removed = RuntimeOutcome(ok=True)
         self.calls: list[str] = []
+        self.where: str | None = ""
+        """Docker's context endpoint as `endpoint` reads it ("" for podman, None unreadable)."""
+
+    def endpoint(self, runtime: str) -> str | None:
+        self._checked(runtime)
+        self.calls.append("context")
+        return self.where
 
     def image_present(self, runtime: str, image: str) -> bool:
         # Not vetted here, so the tests pin serve's own vetting (the real one vets again).
@@ -139,7 +146,7 @@ def test_serve_execs_the_one_command_line_with_a_minimal_environment(tmp_path: P
         assert gone not in env
     assert "/tmp/evil" not in env["PATH"]
     assert env["PATH"].split(os.pathsep)[0] == str(world.runtime_path.parent)
-    assert world.runtime.calls == ["inspect", "rm 501"]  # its own leftover first; no pull
+    assert world.runtime.calls == ["context", "inspect", "rm 501"]  # leftover first; no pull
 
 
 def test_nothing_installed_is_a_configuration_refusal(tmp_path: Path) -> None:
@@ -297,3 +304,36 @@ def test_the_current_units_label_serves(tmp_path: Path) -> None:
     world.install()
     world.unit = LABEL
     assert world.serve() == 0 and len(world.execs) == 1
+
+
+@pytest.mark.parametrize("where", ["ssh://me@far.example", "tcp://10.0.0.2:2376", None])
+def test_a_docker_context_moved_off_this_computer_since_install_runs_nothing(
+    tmp_path: Path, where: str | None
+) -> None:
+    """Review 1 I-3: a later `docker context use <remote>` never starts SearXNG on another
+    machine at login: serve reads the context again and refuses (78) before anything runs."""
+    world = World(tmp_path)
+    world.install()
+    world.runtime.where = where
+    assert world.serve() == EXIT_CONFIG
+    assert world.execs == [] and world.runtime.calls == ["context"]
+    assert "not this computer's own daemon" in world.said[0]
+
+
+def test_the_run_is_pinned_to_the_local_context_it_was_checked_against(tmp_path: Path) -> None:
+    """The context is read once and the run is pinned to it (`DOCKER_HOST`), so a context
+    switched between the check and the exec cannot move it."""
+    world = World(tmp_path)
+    world.install()
+    world.runtime.where = "unix:///Users/op/.docker/run/docker.sock"
+    assert world.serve() == 0
+    ((_, _, env),) = world.execs
+    assert env["DOCKER_HOST"] == "unix:///Users/op/.docker/run/docker.sock"
+
+
+def test_podman_runs_with_no_docker_host(tmp_path: Path) -> None:
+    world = World(tmp_path)
+    world.install()
+    assert world.serve() == 0
+    ((_, _, env),) = world.execs
+    assert "DOCKER_HOST" not in env

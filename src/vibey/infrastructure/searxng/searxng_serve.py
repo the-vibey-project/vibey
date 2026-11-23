@@ -13,6 +13,9 @@ Before anything runs it checks, and refuses (said on standard error, the unit's 
 - the record was written for an earlier pinned image (it says how to update);
 - the recorded runtime fails `ContainerRuntime.vet` (trusted folder and file checks; it need not
   be the runtime a fresh look would choose now);
+- docker's current context is not this computer's own daemon (or cannot be read): a later
+  `docker context use <remote>` never starts SearXNG on another machine at login, and the run is
+  pinned (`DOCKER_HOST`) to the local endpoint it was checked against;
 - the pinned image is not here -- it never pulls: nothing downloads when the person logs in;
 - a container of its name is there that vibey did not start for this user (no owner label).
 
@@ -139,6 +142,15 @@ class SearxngServe:
         refusal = self._runtime.vet(runtime)
         if refusal is not None:
             return self._refuse(EXIT_CONFIG, f"{refusal}; nothing was run")
+        where = self._runtime.endpoint(runtime)
+        if not self._runtime.is_local(where):
+            said = "could not be read" if where is None else f"points at {where}"
+            return self._refuse(
+                EXIT_CONFIG,
+                f"{PurePath(runtime).name}'s current context {said}, not this computer's own "
+                "daemon, so nothing was run; switch back to a local context (`docker context "
+                "use default`)",
+            )
         if not self._runtime.image_present(runtime, provision.image):
             return self._refuse(
                 EXIT_CONFIG,
@@ -159,6 +171,8 @@ class SearxngServe:
             gid=self._gid(),
         )
         kept = {key: self._environ[key] for key in CONTAINER_VARIABLES if key in self._environ}
+        if where:
+            kept["DOCKER_HOST"] = where  # pinned to the local endpoint just checked
         path = dict.fromkeys([str(PurePath(runtime).parent), *SAFE_PATH])
         self._execve(argv[0], list(argv), {**kept, "PATH": os.pathsep.join(path)})
         return 0  # reached only when `execve` is a stand-in

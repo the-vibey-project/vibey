@@ -24,9 +24,16 @@ class ContainerRuntimeInterface(Protocol):
         that does; when neither answers, podman."""
         ...
 
-    def endpoint(self, runtime: str) -> str:
+    def endpoint(self, runtime: str) -> str | None:
         """The endpoint of docker's current CLI context (`unix://...`, `ssh://...`), cleaned of
-        terminal control; "" for podman or when it cannot be read."""
+        terminal control and read without contacting any daemon; "" for podman; None when it
+        cannot be read."""
+        ...
+
+    @staticmethod
+    def is_local(where: str | None) -> bool:
+        """Whether `endpoint`'s answer is this computer's own daemon: "" (podman), a `unix://`
+        socket or an `npipe://` pipe; never None (unreadable) or `ssh://`/`tcp://`."""
         ...
 
     def vet(self, runtime: str) -> RuntimeRefusal | None:

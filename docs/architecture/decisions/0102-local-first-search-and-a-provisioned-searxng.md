@@ -325,12 +325,16 @@ such a run should assert.
   recorded, the old container is removed (the unit starts the new one) and then the old image;
   one the runtime will not remove is said, with the `rmi` that removes it (SP-ACP Task 11b-ii).
 - The Docker CLI's `currentContext` (in `~/.docker/config.json`, reached through `HOME`) can name
-  an ssh or tcp context: install asks `docker context inspect` first and refuses one whose
-  endpoint is not a local socket (`unix://`, `npipe://`); a context it cannot read is not
-  refused, and the pull then says what is wrong (SP-ACP Task 11b-ii).
+  an ssh or tcp context: install and the unit's `serve` both ask `docker context inspect` (which
+  contacts no daemon) and refuse a context whose endpoint is not a local socket (`unix://`,
+  `npipe://`) or that cannot be read; `serve` then runs the container with `DOCKER_HOST` pinned
+  to the endpoint it just checked, so a later `docker context use <remote>` refuses at login
+  (78) rather than starting SearXNG on another machine (SP-ACP Task 11b-ii).
 - With both podman and docker found, a podman that does not answer `podman info` (a podman
-  machine that is stopped) gives way to a docker that does; when neither answers, podman is
-  kept and its own error says why (SP-ACP Task 11b-ii).
+  machine that is stopped) gives way to a docker that does -- asked with `docker info` only when
+  docker's context is local, so choosing never contacts another machine; when neither answers,
+  podman is kept and its own error says why (SP-ACP Task 11b-ii). Podman's own remote
+  connections are not inspected.
 - The SearXNG unit runs `vibey searxng serve --label <its own label>`. A unit left loaded from
   an earlier `[supervisor] label_prefix` therefore refuses (78, under the unit's throttle) and
   says how to unload it, rather than running a second container that the current unit's would

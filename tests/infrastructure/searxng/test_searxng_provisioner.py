@@ -13,6 +13,7 @@ from vibey.application.acp.interfaces.searxng_provisioner_interface import (
 )
 from vibey.domain.searxng import SEARXNG_IMAGE
 from vibey.infrastructure.searxng.container_runtime import (
+    ContainerRuntime,
     RuntimeOutcome,
     RuntimeProblem,
     RuntimeRefusal,
@@ -37,11 +38,13 @@ class Runtime:
         self.refuse: RuntimeProblem | None = None
         self.shown: str | None = None
         """The name the refusal gives the runtime, when not the one asked about."""
-        self.where = ""
-        """What `endpoint` says: docker's context endpoint, "" for podman or unknown."""
+        self.where: str | None = ""
+        """What `endpoint` says: docker's context endpoint, "" for podman, None unreadable."""
         self.image_removed = RuntimeOutcome(ok=True)
 
-    def endpoint(self, runtime: str) -> str:
+    is_local = staticmethod(ContainerRuntime.is_local)
+
+    def endpoint(self, runtime: str) -> str | None:
         self.calls.append(("context", runtime))
         return self.where
 
@@ -573,8 +576,29 @@ def test_a_docker_context_on_another_machine_installs_nothing(tmp_path: Path, wh
     assert [call[0] for call in runtime.calls] == ["context"]
 
 
+def test_a_docker_context_that_cannot_be_read_installs_nothing(tmp_path: Path) -> None:
+    """Review 1 I-3: fail closed: a context vibey cannot read is never taken as local."""
+    runtime = Runtime(found=DOCKER)
+    runtime.where = None
+    prepared = _provisioner(tmp_path, runtime).prepare()
+    assert not prepared.ok and "could not be read" in prepared.detail
+    assert [call[0] for call in runtime.calls] == ["context"]
+
+
 @pytest.mark.parametrize("where", ["unix:///var/run/docker.sock", "npipe:////./pipe/docker", ""])
-def test_a_local_or_unknown_docker_context_installs(tmp_path: Path, where: str) -> None:
+def test_a_local_docker_context_installs(tmp_path: Path, where: str) -> None:
     runtime = Runtime(found=DOCKER)
     runtime.where = where
     assert _provisioner(tmp_path, runtime).prepare().ok
+
+
+def test_an_earlier_image_already_gone_is_never_said_to_be_removed(tmp_path: Path) -> None:
+    """Review 1 I-4: `rmi` of an image that is not there counts as removed for an uninstall,
+    but an update says what happened: it was not there."""
+    _installed_earlier(tmp_path)
+    runtime = Runtime()
+    runtime.image_removed = RuntimeOutcome(ok=True, detail="nothing to remove")
+    prepared = _provisioner(tmp_path, runtime).prepare()
+    assert prepared.ok and "was removed" not in prepared.detail
+    assert f"The earlier image (sha256:{'ab' * 6}) was not in podman any more." in prepared.detail
+    assert runtime.calls[-1] == ("rmi", RUNTIME, EARLIER)  # with the runtime that pulled it

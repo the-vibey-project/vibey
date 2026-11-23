@@ -385,10 +385,16 @@ def test_a_podman_that_does_not_answer_falls_back_to_a_docker_that_does(trusted:
     docker = trusted.binary(trusted.first, "docker")
     podman = trusted.binary(trusted.second, "podman")
     runner = FakeRunner(
-        PostgresCommandResult(125, stderr="Cannot connect to Podman"), PostgresCommandResult(0)
+        PostgresCommandResult(125, stderr="Cannot connect to Podman"),
+        PostgresCommandResult(0, stdout="unix:///var/run/docker.sock\n"),
+        PostgresCommandResult(0),
     )
     assert trusted.runtime(runner).find() == docker
-    assert runner.calls == [(podman, "info"), (docker, "info")]
+    assert runner.calls == [
+        (podman, "info"),
+        (docker, "context", "inspect", "--format", "{{.Endpoints.docker.Host}}"),
+        (docker, "info"),
+    ]
 
 
 def test_podman_stays_the_choice_when_neither_answers(trusted: Trusted) -> None:
@@ -418,6 +424,41 @@ def test_dockers_context_endpoint_is_read_and_podmans_is_none(trusted: Trusted) 
         (docker, "context", "inspect", "--format", "{{.Endpoints.docker.Host}}")
     ]
     failing = trusted.runtime(FakeRunner(PostgresCommandResult(1, stderr="no contexts")))
-    assert failing.endpoint(docker) == ""  # unknown: the pull says what is wrong
+    assert failing.endpoint(docker) is None  # unknown: refused, never taken as local
+    empty = trusted.runtime(FakeRunner(PostgresCommandResult(0, stdout="\n")))
+    assert empty.endpoint(docker) is None
     hostile = trusted.runtime(FakeRunner(PostgresCommandResult(0, stdout="tcp://x\x1b[2J\n")))
     assert hostile.endpoint(docker) == "tcp://x"  # cleaned of terminal escapes
+
+
+def test_a_docker_whose_context_is_remote_is_never_asked_whether_it_answers(
+    trusted: Trusted,
+) -> None:
+    """Review 1 I-3: choosing a runtime never connects to another machine: `docker info` on a
+    remote context would. The context's endpoint is read first (no daemon contacted)."""
+    docker = trusted.binary(trusted.first, "docker")
+    podman = trusted.binary(trusted.second, "podman")
+    runner = FakeRunner(
+        PostgresCommandResult(125, stderr="podman machine stopped"),
+        PostgresCommandResult(0, stdout="ssh://me@far.example\n"),
+    )
+    assert trusted.runtime(runner).find() == podman
+    assert runner.calls == [
+        (podman, "info"),
+        (docker, "context", "inspect", "--format", "{{.Endpoints.docker.Host}}"),
+    ]
+
+
+@pytest.mark.parametrize(
+    ("where", "local"),
+    [
+        ("", True),  # podman: no Docker context
+        ("unix:///var/run/docker.sock", True),
+        ("npipe:////./pipe/docker_engine", True),
+        ("ssh://me@far", False),
+        ("tcp://127.0.0.1:2375", False),
+        (None, False),  # unreadable: never taken as local
+    ],
+)
+def test_which_endpoints_are_this_computers_own(where: str | None, local: bool) -> None:
+    assert ContainerRuntime.is_local(where) is local

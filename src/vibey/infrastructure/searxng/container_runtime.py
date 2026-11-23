@@ -71,6 +71,10 @@ DAEMON_VARIABLES: Final = (
     "DOCKER_CONFIG",
 )
 """What would point a runtime at another daemon. Never passed on: a login unit has none of them."""
+LOCAL_ENDPOINTS: Final = ("unix://", "npipe://")
+"""How a runtime endpoint on this computer starts: a socket or a named pipe."""
+NOTHING_TO_REMOVE: Final = "nothing to remove"
+"""The detail of a removal that found nothing: ok, but nothing was removed."""
 ABSENT: Final = ("no such container", "no such image", "image not known", "no such object")
 """What a runtime says when there was nothing to remove: removed already, not a failure."""
 _DETAIL_LIMIT: Final = 300
@@ -142,15 +146,20 @@ class ContainerRuntime:
         problem = self._problem(runtime)
         return RuntimeRefusal(runtime, problem) if problem is not None else None
 
-    def endpoint(self, runtime: str) -> str:
+    def endpoint(self, runtime: str) -> str | None:
         argv = self._plan.context_argv(self._checked(runtime))
         if argv is None:
             return ""
         result = self._runner(argv)
         if result.returncode != 0:
-            return ""  # unknown: the pull then says what is wrong
+            return None  # unknown: never taken as local (review 1 I-3)
         lines = [line.strip() for line in UntrustedText.clean(result.stdout).splitlines()]
-        return next((line for line in lines if line), "")[:_DETAIL_LIMIT]
+        found = next((line for line in lines if line), "")[:_DETAIL_LIMIT]
+        return found or None
+
+    @staticmethod
+    def is_local(where: str | None) -> bool:
+        return where is not None and (where == "" or where.startswith(LOCAL_ENDPOINTS))
 
     def _lookup(self) -> str | None:
         found: list[str] = []
@@ -168,6 +177,10 @@ class ContainerRuntime:
         return next(answering, found[0])
 
     def _answers(self, runtime: str) -> bool:
+        # `info` contacts the daemon: a context on another machine is never contacted merely
+        # to choose a runtime; reading the context contacts none (review 1 I-3).
+        if not self.is_local(self.endpoint(runtime)):
+            return False
         return self._runner(self._plan.info_argv(runtime)).returncode == 0
 
     def _problem(self, path: str) -> RuntimeProblem | None:
@@ -243,7 +256,7 @@ class ContainerRuntime:
             return RuntimeOutcome(ok=True)
         said = result.stderr.lower()
         if absent_ok and any(phrase in said for phrase in ABSENT):
-            return RuntimeOutcome(ok=True, detail="nothing to remove")
+            return RuntimeOutcome(ok=True, detail=NOTHING_TO_REMOVE)
         lines = [
             line
             for line in (UntrustedText.clean(raw).strip() for raw in result.stderr.splitlines())
