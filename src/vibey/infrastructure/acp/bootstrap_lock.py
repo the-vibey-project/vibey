@@ -37,7 +37,7 @@ class BootstrapLock:
         self._state_dir = state_dir
         self._path = state_dir / ACP_BOOTSTRAP_LOCK_FILE
         self._poll = poll_seconds
-        self._held = ServeLock(state_dir, lock_file=ACP_BOOTSTRAP_LOCK_FILE)
+        self._held = ServeLock(state_dir, lock_file=ACP_BOOTSTRAP_LOCK_FILE, contention_retries=0)
 
     def acquire(self) -> bool:
         return self._held.acquire()
@@ -50,7 +50,7 @@ class BootstrapLock:
 
     @contextlib.asynccontextmanager
     async def _holding(self, timeout: float) -> AsyncIterator[bool]:
-        lock = ServeLock(self._state_dir, lock_file=ACP_BOOTSTRAP_LOCK_FILE)
+        lock = ServeLock(self._state_dir, lock_file=ACP_BOOTSTRAP_LOCK_FILE, contention_retries=0)
         held = await self._take(lock, timeout)
         try:
             yield held

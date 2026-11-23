@@ -58,6 +58,7 @@ from pydantic import BaseModel
 from tests.domain.acp.acp_wire import assert_wire_exact
 from vibey.bootstrap import acp_user_config
 from vibey.infrastructure.hub.local_token import AGENT_TOKEN_FILE, RUNTIME_FILE
+from vibey.infrastructure.hub.serve_lock import LOCK_FILE
 
 AGENT_CODE: Final = "from vibey.cli.main import run; run(['acp'])"
 """What the `vibey` console script runs, with `acp` as its arguments."""
@@ -349,7 +350,8 @@ class IsolatedAcpAgent:
 
     def assert_machine_untouched(self) -> None:
         kept = sorted(path.name for path in self._state.iterdir())
-        assert kept == sorted([AGENT_TOKEN_FILE, RUNTIME_FILE]), kept
+        # The stub hub's own files (token, record, its lock): nothing else in the state folder.
+        assert kept == sorted([AGENT_TOKEN_FILE, RUNTIME_FILE, LOCK_FILE]), kept
         assert not self._decoy.exists(), "the project's [hub] state_dir was used"
         self.assert_home_untouched()
 

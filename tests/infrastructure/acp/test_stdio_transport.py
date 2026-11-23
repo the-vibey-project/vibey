@@ -368,7 +368,8 @@ def test_guard_in_process_with_stdin_closed_keeps_dev_null_on_its_number(
     """The in-process twin of the subprocess test above: a closed stdin cannot be duplicated,
     and its number, the lowest free one, is where /dev/null opens and is kept (measured, not
     only proven). The number is one this test holds, standing in for the closed one, so no
-    other fd in the process is ever touched."""
+    other fd in the process is ever touched. The transport's own `dup` and `open_null` seams
+    stand in for the closed descriptor -- never a process-wide patch of `os` (Task 11b, N-7)."""
     import errno
     import stat
 
@@ -376,27 +377,25 @@ def test_guard_in_process_with_stdin_closed_keeps_dev_null_on_its_number(
     _, err_write = fds.pipe()
     stand_in, _ = fds.pipe()
     monkeypatch.setattr(sys, "stdout", sys.stdout)
-    real_open, real_dup = os.open, os.dup
 
     def closed_dup(fd: int) -> int:
         if fd == stand_in:
             raise OSError(errno.EBADF, "Bad file descriptor")
-        return real_dup(fd)
+        return os.dup(fd)
 
-    def lowest_free(path: str, flags: int, *args: int) -> int:
-        opened = real_open(path, flags, *args)
+    def lowest_free() -> int:
+        opened = os.open(os.devnull, os.O_RDONLY)
         os.dup2(opened, stand_in)
         os.close(opened)
         return stand_in
 
-    transport = StdioTransport(stdin_fd=stand_in, stdout_fd=out_write, stderr_fd=err_write)
-    monkeypatch.setattr(os, "dup", closed_dup)
-    monkeypatch.setattr(os, "open", lowest_free)
-    try:
-        private = transport.guard()
-    finally:
-        monkeypatch.setattr(os, "open", real_open)
-        monkeypatch.setattr(os, "dup", real_dup)
-    fds.add(private)
+    transport = StdioTransport(
+        stdin_fd=stand_in,
+        stdout_fd=out_write,
+        stderr_fd=err_write,
+        dup=closed_dup,
+        open_null=lowest_free,
+    )
+    fds.add(transport.guard())
 
     assert transport._input_fd == stand_in and stat.S_ISCHR(os.fstat(stand_in).st_mode)

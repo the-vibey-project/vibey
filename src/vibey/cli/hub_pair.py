@@ -24,6 +24,7 @@ certificate alone, and never follows a redirect. Every check comes before the to
 anything else is refused before anything is sent.
 """
 
+import ssl
 from collections.abc import Callable
 from pathlib import Path
 from typing import Annotated, Any, Final
@@ -43,7 +44,7 @@ from vibey.infrastructure.hub.local_token import LocalTokenStore, ServingRecord
 from vibey.infrastructure.hub.serve_lock import ServeLock
 from vibey.infrastructure.hub.server import LOCAL_NAMES
 from vibey.infrastructure.hub.settings import HUB_SETTINGS
-from vibey.infrastructure.hub.tls import CERT_FILE
+from vibey.infrastructure.hub.tls import CERT_FILE, HubCertificate
 from vibey.infrastructure.user_config_folder import UserConfigFolder
 
 EXIT_NOT_RUNNING: Final = 3
@@ -151,13 +152,21 @@ class HubPairCommand:
             typer.echo(str(exc), err=True)
             raise typer.Exit(2) from exc
         store = LocalTokenStore(settings.state_dir)
-        record = store.serving()
+        try:
+            record = store.serving()
+        except (OSError, ValueError) as exc:
+            # A malformed record of your own (pid <= 1, a port out of range, not JSON): one
+            # line, as `vibey hub status` says it, never a traceback (SP-ACP Task 11b, N2-4).
+            said = DoctorChecks.cleaned(str(exc))
+            typer.echo(f"hub record unreadable: {said}", err=True)
+            raise typer.Exit(2) from exc
         if record is None:
             typer.echo("no hub is running here: start one with `vibey serve`", err=True)
             raise typer.Exit(EXIT_NOT_RUNNING)
         if self._holder(settings.state_dir) != record.pid:
-            # Nothing proves the listener is the hub unless the process the record names holds
-            # the hub's lock: a stale record's port may be another account's (SP-ACP Task 11a).
+            # A record whose process does not hold the hub's lock is stale, and its port may be
+            # another account's (SP-ACP Task 11a). The lock proves the process, not the port:
+            # see the module docstring of `hub_gateway.py` (point 7).
             typer.echo(
                 "no hub holds the lock its runtime record names, so the record is stale and "
                 "nothing was sent: start one with `vibey hub start`",
@@ -172,10 +181,12 @@ class HubPairCommand:
             raise typer.Exit(2)
         shown = f"[{host}]" if ":" in host else host
         scheme = "https" if record.tls else "http"
-        # The hub's own certificate, and only it, when it serves one: a file as `verify` is the
-        # only authority trusted (never the system's store, never no verification).
-        verify: str | bool = str(cert) if record.tls else True
         try:
+            # The hub's own certificate, and only it, when it serves one: a context whose only
+            # authority it is (never the system's store, never no verification; Task 11b).
+            verify: ssl.SSLContext | bool = (
+                HubCertificate(settings.state_dir).client_context() if record.tls else True
+            )
             token = store.token()
             opened = self._client(
                 base_url=f"{scheme}://{shown}:{record.port}/api/v1",

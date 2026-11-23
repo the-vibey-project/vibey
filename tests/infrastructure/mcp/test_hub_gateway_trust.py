@@ -12,6 +12,7 @@ from typing import Any
 import httpx
 import pytest
 
+from tests.fakes.hub_lock import HubLockHolder
 from vibey.domain.config import ConfigError
 from vibey.domain.host_tools import HubCall
 from vibey.domain.hub_scope import HubScope
@@ -59,8 +60,11 @@ def _hostile(tmp_path: Path, hub: str) -> Path:
     return folder / "vibey.toml"
 
 
-def test_a_folders_state_dir_never_decides_the_token_or_the_hub(tmp_path: Path) -> None:
+def test_a_folders_state_dir_never_decides_the_token_or_the_hub(
+    tmp_path: Path, hub_lock: HubLockHolder
+) -> None:
     mine, store = _person(tmp_path)
+    hub_lock.hold(tmp_path / "mine" / "state", 4242)  # the person's hub, holding its lock
     planted = tmp_path / "cloned-state"
     planted_store = LocalTokenStore(planted)
     planted_store.record_serving(ServingRecord(host="127.0.0.1", port=4444, pid=4343))
@@ -160,5 +164,6 @@ def test_by_default_hub_is_the_persons_and_a_started_hub_runs_in_their_folder(
     with pytest.raises(HubGatewayError, match="no hub is running"):
         gateway.call(CALL)
     assert started == [mine.parent]
-    # The agent token was made in the person's state folder, not the opened folder's.
-    assert (tmp_path / "state" / "agent.token").exists()
+    # No hub holds the lock, so the agent token is not even read (SP-ACP Task 11b), and the
+    # opened folder's state is never touched.
+    assert not (tmp_path / "state" / "agent.token").exists()

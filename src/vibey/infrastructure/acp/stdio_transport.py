@@ -27,6 +27,7 @@ import select
 import stat
 import sys
 import threading
+from collections.abc import Callable
 from typing import Final
 
 READ_CHUNK_BYTES: Final = 65_536
@@ -36,7 +37,20 @@ READ_CHUNK_BYTES: Final = 65_536
 class StdioTransport:
     """Declared by `interfaces/stdio_transport_interface.py::StdioTransportInterface`."""
 
-    def __init__(self, *, stdin_fd: int = 0, stdout_fd: int = 1, stderr_fd: int = 2) -> None:
+    def __init__(
+        self,
+        *,
+        stdin_fd: int = 0,
+        stdout_fd: int = 1,
+        stderr_fd: int = 2,
+        dup: Callable[[int], int] = os.dup,
+        open_null: Callable[[], int] = lambda: os.open(os.devnull, os.O_RDONLY),
+    ) -> None:
+        """`dup` and `open_null` are how `guard` duplicates a descriptor and opens /dev/null:
+        seams, so a test stands in for a closed stdin without patching `os` for the whole
+        process (SP-ACP Task 11b, review 1 N-7)."""
+        self._dup = dup
+        self._open_null = open_null
         self._stdin_fd = stdin_fd
         self._stdout_fd = stdout_fd
         self._stderr_fd = stderr_fd
@@ -49,7 +63,7 @@ class StdioTransport:
         # stdin first: were it closed, its number would be the lowest free one, and the stdout
         # duplicate below would take it -- and be read as the protocol's input.
         self._guard_stdin()
-        private = os.dup(self._stdout_fd)  # not inheritable: a child never sees the protocol
+        private = self._dup(self._stdout_fd)  # not inheritable: a child never sees the protocol
         os.dup2(self._stderr_fd, self._stdout_fd)
         sys.stdout = sys.stderr
         self._private_fd = private
@@ -59,8 +73,8 @@ class StdioTransport:
         # Not inheritable either: only this process reads the client's messages. A closed stdin
         # has nothing to keep, and its number becomes /dev/null below.
         with contextlib.suppress(OSError):
-            self._input_fd = os.dup(self._stdin_fd)
-        null = os.open(os.devnull, os.O_RDONLY)
+            self._input_fd = self._dup(self._stdin_fd)
+        null = self._open_null()
         if null != self._stdin_fd:  # a closed stdin's number is the lowest free one: kept open
             os.dup2(null, self._stdin_fd)
             os.close(null)

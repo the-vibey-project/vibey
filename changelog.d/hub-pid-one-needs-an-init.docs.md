@@ -1,0 +1,1 @@
+The `[hub]` configuration reference and ADR-0101 now say that a `vibey serve` running as PID 1 with no init (a bare container) writes a runtime record every reader refuses, because a record naming process id 1 is malformed: run it under an init (`docker run --init`, or `tini` as the shipped image does).

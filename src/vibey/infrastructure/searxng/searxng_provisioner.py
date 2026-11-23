@@ -29,7 +29,11 @@ from vibey.application.acp.dto import SearxngOffer, SearxngPrepared
 from vibey.domain.config import ConfigError
 from vibey.domain.interfaces.searxng_interface import SearxngPlanInterface
 from vibey.domain.searxng import SEARXNG_IMAGE, SearxngPlan, SearxngProvision
-from vibey.infrastructure.searxng.container_runtime import DAEMON_VARIABLES
+from vibey.infrastructure.searxng.container_runtime import (
+    DAEMON_VARIABLES,
+    RuntimeProblem,
+    RuntimeRefusal,
+)
 from vibey.infrastructure.searxng.interfaces.container_runtime_interface import (
     ContainerRuntimeInterface,
 )
@@ -68,8 +72,6 @@ RUNTIME_REFUSED_REMEDY: Final = (
 )
 """What to do when the recorded runtime is there but refused: its old container may still run
 and hold SearXNG's port, so a fresh install alone would collide with it (review 1 S-3)."""
-GONE: Final = "is not there"
-"""How `ContainerRuntime.vet` ends when the runtime's file is missing."""
 
 
 class SearxngProvisioner:
@@ -162,18 +164,24 @@ class SearxngProvisioner:
             return UntrustedText.clean(str(exc))
         if record is None:
             return ""
-        problem = self._runtime.vet(record.runtime)
-        return UntrustedText.clean(f"{problem}; {self._remedy(problem)}" if problem else "")
+        refusal = self._runtime.vet(record.runtime)
+        return UntrustedText.clean(f"{refusal}; {self._remedy(refusal)}" if refusal else "")
 
     @staticmethod
-    def _remedy(problem: str) -> str:
+    def _remedy(refusal: RuntimeRefusal) -> str:
         """The remedy for a recorded runtime `vet` refuses: one that is gone can only be put
-        back or replaced; one that is there but refused may still run the old container."""
-        return RUNTIME_GONE_REMEDY if problem.endswith(GONE) else RUNTIME_REFUSED_REMEDY
+        back or replaced; one that is there but refused may still run the old container. Told
+        apart by the typed reason, never by the wording (SP-ACP Task 11b, review 2 N2-5)."""
+        if refusal.reason is RuntimeProblem.GONE:
+            return RUNTIME_GONE_REMEDY
+        return RUNTIME_REFUSED_REMEDY
 
     def runtime_gone(self) -> bool:
         record = self.installed()
-        return record is not None and self._runtime.vet(record.runtime).endswith(GONE)
+        if record is None:
+            return False
+        refusal = self._runtime.vet(record.runtime)
+        return refusal is not None and refusal.reason is RuntimeProblem.GONE
 
     def _believed(self) -> SearxngProvision | None:
         """The record, checked in full: the label is never taken from it, only compared."""
@@ -259,9 +267,9 @@ class SearxngProvisioner:
         record = self.installed()
         if record is None:
             return self._runtime.find(), ""
-        problem = self._runtime.vet(record.runtime)
-        if problem:
-            return record.runtime, UntrustedText.clean(f"{problem}; {self._remedy(problem)}")
+        refusal = self._runtime.vet(record.runtime)
+        if refusal is not None:
+            return record.runtime, UntrustedText.clean(f"{refusal}; {self._remedy(refusal)}")
         return record.runtime, ""
 
     def _remote_daemon(self) -> str:

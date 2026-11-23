@@ -9,6 +9,7 @@ tests/infrastructure/hub/test_hub_pairing.py.
 
 import json
 import os
+import ssl
 import sys
 from pathlib import Path
 from typing import Any
@@ -18,6 +19,7 @@ import pytest
 import typer
 from typer.testing import CliRunner
 
+from tests.fakes.tls_handshake import TlsHandshake
 from vibey.cli import hub_pair as module
 from vibey.cli.hub_pair import HUB_PAIR, HubPairCommand, _render_qr
 from vibey.cli.interfaces.hub_pair_interface import HubPairCommandInterface
@@ -119,14 +121,30 @@ def test_pair_needs_known_scopes(tmp_path: Path, scopes: list[str]) -> None:
     assert caught.value.exit_code == 2
 
 
+def _certificate(state: Path) -> None:
+    """The hub's own certificate in its state folder, as `vibey serve` makes it."""
+    TlsHandshake.certificate(state)
+
+
+def _pinned(verify: object, state: Path, elsewhere: Path) -> None:
+    """What a TLS request trusts: a context whose only authority is the hub's own certificate
+    in `state` (`HubCertificate.client_context`), never a path httpx would read itself, and not
+    some other single certificate (Task 11b, review N-6)."""
+    assert isinstance(verify, ssl.SSLContext)
+    assert verify.cert_store_stats()["x509"] == 1
+    assert verify.verify_mode is ssl.CERT_REQUIRED and verify.check_hostname
+    assert TlsHandshake.trusts_only(verify, state, elsewhere)
+
+
 def test_a_tls_hub_is_reached_over_https_trusting_only_its_own_certificate(
     tmp_path: Path,
 ) -> None:
     hub = Hub([])
     record = ServingRecord(host="0.0.0.0", port=9100, pid=os.getpid(), tls=True)  # nosec B104
+    _certificate(tmp_path / "state")
     _command(tmp_path, hub, record=record).devices()
     assert str(hub.requests[0].url) == "https://127.0.0.1:9100/api/v1/devices"
-    assert hub.opened["verify"] == str(tmp_path / "state" / "hub-cert.pem")
+    _pinned(hub.opened["verify"], tmp_path / "state", tmp_path / "other")
 
 
 def test_an_ipv6_hub_is_bracketed(tmp_path: Path) -> None:
@@ -246,7 +264,7 @@ def _lan(
     certificate (or none)."""
     _command(tmp_path, hub, record=record)
     if cert:
-        (tmp_path / "state" / "hub-cert.pem").write_text("-----BEGIN CERTIFICATE-----\n")
+        _certificate(tmp_path / "state")
     read: list[bool] = []
     real = LocalTokenStore.token
 
@@ -273,7 +291,7 @@ def test_the_person_names_a_lan_hub_with_host_over_its_own_certificate(
     command, _ = _lan(tmp_path, hub, lan, monkeypatch)
     command.pair(["view"], "192.168.1.5")
     assert str(hub.requests[0].url) == "https://192.168.1.5:8765/api/v1/pairing/offers"
-    assert hub.opened["verify"] == str(tmp_path / "state" / "hub-cert.pem")
+    _pinned(hub.opened["verify"], tmp_path / "state", tmp_path / "other")
     assert hub.opened["follow_redirects"] is False
     assert "code: 123456" in capsys.readouterr().out
 
@@ -469,3 +487,33 @@ def test_a_missing_certificate_or_an_unreadable_token_is_one_line(
     monkeypatch.setattr(LocalTokenStore, "token", refused)
     assert pytest.raises(typer.Exit, plain.devices).value.exit_code == 2
     assert hub.requests == [] and "PermissionError" in capsys.readouterr().err
+
+
+# -- Task 11b: an unreadable record is one line, never a traceback (review 2 N2-4) --------------
+
+
+@pytest.mark.parametrize(
+    "content",
+    [
+        "[]",
+        "{not json",
+        json.dumps({"host": "127.0.0.1", "port": 8765, "pid": -1}),
+        json.dumps({"host": "127.0.0.1", "port": 70000, "pid": 4242}),
+        json.dumps({"host": "127.0.0.1", "port": 8765, "pid": True}),
+    ],
+)
+def test_an_unreadable_record_is_one_line_and_nothing_is_sent(
+    tmp_path: Path,
+    content: str,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    hub = Hub([])
+    command = _command(tmp_path, hub, record=RUNNING)
+    (tmp_path / "state" / "serving.json").write_text(content)
+    read: list[bool] = []
+    monkeypatch.setattr(LocalTokenStore, "token", lambda self: read.append(True) or "t")
+    assert pytest.raises(typer.Exit, command.devices).value.exit_code == 2
+    assert hub.requests == [] and read == []
+    err = capsys.readouterr().err
+    assert err.startswith("hub record unreadable: ") and len(err.strip().splitlines()) == 1

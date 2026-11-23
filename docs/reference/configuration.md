@@ -897,12 +897,30 @@ cloned repository's. A folder's `vibey.toml` is heard there on `agent_scopes` on
 narrow it; its `state_dir` never decides where a token is read or which record is believed
 (SP-ACP Task 11a).
 
+A runtime record (`<state_dir>/serving.json`) is believed only while the process it names holds
+the hub's lock (`<state_dir>/serve.lock`), and a record naming process id -1, 0 or 1 is refused
+as malformed, since a signal aimed by it would reach every process of your account, your own
+process group, or init (SP-ACP Tasks 11a and 11b). So a `vibey serve` running as **PID 1** -- in
+a container with no init process -- writes a record every reader refuses: `vibey hub status`,
+`stop`, `pair`, `vibey mcp` and `vibey acp` all treat that hub as not running. Run it under an
+init (`docker run --init`, or `tini` as the entrypoint, as the shipped image does) so it gets a
+pid of its own.
+
+The lock proves that the process the record names is alive and is the hub, not that it already
+listens on the recorded port: a hub writes its record a moment before it binds, so another local
+account that bound the port first could receive a token in the milliseconds before the hub's
+failed bind clears the record (binding first is parked, SP-ACP Task 11b-ii). The lock is a
+`flock`, so `state_dir` must be on a local filesystem that every vibey process on this computer
+shares: on a share where `flock` is not seen across it -- a Docker Desktop VM share, NFS -- a
+running hub reads as stale to `vibey hub`, `pair`, `vibey mcp` and `vibey acp`, and `vibey serve`
+cannot keep to one hub per user.
+
 | Key | Default | Meaning |
 |---|---|---|
 | `lan` | `false` | `true` declares that `vibey serve --host <LAN address>` may listen off loopback. Without it such an address is refused (exit 2), and `vibey doctor` fails a hub found listening on one. |
 | `port` | `8765` | The port `vibey serve` listens on when `--port` is not given. |
 | `names` | `[]` | Extra names a request may carry in `Host` when the LAN is declared, e.g. `"studio.local"`. The computer's own host name, its `.local` name and its addresses are always admitted then. |
-| `state_dir` | the platform state directory + `/hub` | Where the host token (`token`, 0600), the scoped agent token (`agent.token`, 0600; ADR-0100), the key workflows request ids are bound to their starters under (`run.key`, 0600; ADR-0085) and the runtime record (`serving.json`) live. |
+| `state_dir` | the platform state directory + `/hub` | Where the host token (`token`, 0600), the scoped agent token (`agent.token`, 0600; ADR-0100), the key workflows request ids are bound to their starters under (`run.key`, 0600; ADR-0085), the runtime record (`serving.json`) and the hub's lock (`serve.lock`) live. A local filesystem where `flock` works (not a Docker Desktop VM share or NFS; see above). |
 | `lane_roots` | `[]` (the directory `vibey serve` runs in; for a hub started by `vibey hub start`, your configuration folder) | Where `/api/v1/lanes` looks for lanes: each root and every directory directly inside it. List the folders you keep lanes in here when the hub is started by `vibey hub start` or by the user-level unit. |
 | `projects_root` | `""` (nowhere) | The one folder a paired device holding `run` may start projects in: each project's folder is `<projects_root>/<name>`, made by the host (ADR-0091). Absolute, or starting with `~`. With none declared a device can pause, resume and unwind a project but cannot start one, and is told so. A device never names a path. |
 | `agent_scopes` | `["view", "answer", "run", "acp_sessions", "web"]` | Scopes granted to the `agent` principal (`<state_dir>/agent.token`) used by `vibey mcp` when a frontier LLM or IDE connects over MCP (ADR-0100), and by `vibey acp` for an editor. `acp_sessions` lets it keep its own ACP sessions' logs on the hub (create and append; reading them back needs only `view`); without it `vibey acp` keeps each session's history in its window only and says so once. `web` lets it search the web and read public pages through the hub (`vibey_search`, `vibey_fetch`; [`[web]`](#web) bounds them); drop it to turn them off. Paired devices get only the scopes the host offers them, so never `acp_sessions` or `web` by default. Never includes `spend`, `bump` or `workflows` by default, so a host model cannot answer a spending gate (`budget_exhausted`, `deploy_*`). Set `agent_scopes = []` to disable agent token authentication entirely. |

@@ -1,0 +1,1 @@
+`vibey connect`, `vibey doctor` and `vibey acp`'s connect step no longer count a user-level `vibey mcp` entry (Claude Desktop, Codex, Cursor, Gemini CLI) as connected when flags follow `mcp`: `vibey mcp` takes none, so such an entry would fail to start the client's server. A rewrite now drops them, as it already kept only `--no-bootstrap` after `acp`.

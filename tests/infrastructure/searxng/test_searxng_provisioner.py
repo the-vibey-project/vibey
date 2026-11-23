@@ -12,7 +12,11 @@ from vibey.application.acp.interfaces.searxng_provisioner_interface import (
     SearxngProvisionerInterface,
 )
 from vibey.domain.searxng import SEARXNG_IMAGE
-from vibey.infrastructure.searxng.container_runtime import RuntimeOutcome
+from vibey.infrastructure.searxng.container_runtime import (
+    RuntimeOutcome,
+    RuntimeProblem,
+    RuntimeRefusal,
+)
 from vibey.infrastructure.searxng.searxng_files import SearxngFiles
 from vibey.infrastructure.searxng.searxng_provisioner import SearxngProvisioner
 
@@ -30,17 +34,22 @@ class Runtime:
         self.calls: list[tuple[str, ...]] = []
         self.removed = RuntimeOutcome(ok=True)
         self.present = True
-        self.refuse = ""
+        self.refuse: RuntimeProblem | None = None
+        self.shown: str | None = None
+        """The name the refusal gives the runtime, when not the one asked about."""
 
     def find(self) -> str | None:
         return self.found
 
-    def vet(self, runtime: str) -> str:
-        return self.refuse
+    def vet(self, runtime: str) -> RuntimeRefusal | None:
+        if self.refuse is None:
+            return None
+        return RuntimeRefusal(self.shown or runtime, self.refuse)
 
     def _checked(self, runtime: str) -> None:
-        if self.refuse:
-            raise ValueError(self.refuse)
+        refusal = self.vet(runtime)
+        if refusal is not None:
+            raise ValueError(str(refusal))
 
     def image_present(self, runtime: str, image: str) -> bool:
         self._checked(runtime)
@@ -249,22 +258,22 @@ def test_the_refusal_names_a_runtime_vibey_will_not_run(tmp_path: Path) -> None:
     assert provisioner.refusal() == ""  # nothing installed
     provisioner.prepare()
     assert provisioner.refusal() == ""
-    runtime.refuse = "/opt/homebrew/bin/podman \x1b[2Jis writable by anyone"
-    assert provisioner.refusal().startswith("/opt/homebrew/bin/podman is writable by anyone; ")
+    runtime.refuse, runtime.shown = RuntimeProblem.SHARED_WRITE, f"{RUNTIME}\x1b[2J"
+    assert provisioner.refusal().startswith(f"{RUNTIME} is writable by anyone but its owner; ")
     assert "`vibey searxng uninstall --purge` and `vibey searxng install`" in (
         provisioner.refusal()
     )
     assert not provisioner.image_present()
     assert "writable" in provisioner.remove_container()
-    assert provisioner.purge() == [f"the image was kept: {runtime.refuse}"]
+    assert provisioner.purge() == [f"the image was kept: {runtime.vet(RUNTIME)}"]
     assert ("rm", RUNTIME, "501") not in runtime.calls
 
 
 def test_a_refused_runtime_pulls_nothing(tmp_path: Path) -> None:
     runtime = Runtime()
-    runtime.refuse = "is not there"
+    runtime.refuse = RuntimeProblem.GONE
     prepared = _provisioner(tmp_path, runtime).prepare()
-    assert not prepared.ok and prepared.detail == "is not there"
+    assert not prepared.ok and prepared.detail == f"{RUNTIME} is not there"
 
 
 @pytest.mark.parametrize("name", ["DOCKER_HOST", "CONTAINER_HOST"])
@@ -403,12 +412,13 @@ DOCKER = "/usr/local/bin/docker"
 class RecordedGone(Runtime):
     """The runtime vibey recorded no longer passes its checks; the one found now does."""
 
-    def vet(self, runtime: str) -> str:
-        return f"{runtime} is not there" if runtime == RUNTIME else ""
+    def vet(self, runtime: str) -> RuntimeRefusal | None:
+        return RuntimeRefusal(runtime, RuntimeProblem.GONE) if runtime == RUNTIME else None
 
     def _checked(self, runtime: str) -> None:
-        if self.vet(runtime):
-            raise ValueError(self.vet(runtime))
+        refusal = self.vet(runtime)
+        if refusal is not None:
+            raise ValueError(str(refusal))
 
 
 def test_an_update_pulls_with_the_recorded_runtime_not_the_one_found_now(tmp_path: Path) -> None:
@@ -453,7 +463,7 @@ def test_doctor_says_how_to_fix_a_recorded_runtime_that_is_gone(tmp_path: Path) 
     runtime = Runtime()
     provisioner = _provisioner(tmp_path, runtime)
     provisioner.prepare()
-    runtime.refuse = f"{RUNTIME} is not there"
+    runtime.refuse = RuntimeProblem.GONE
     assert provisioner.refusal() == (
         f"{RUNTIME} is not there; vibey keeps its SearXNG with the runtime it was installed with: "
         "put that runtime back, or run `vibey searxng uninstall --purge` and then "
@@ -474,12 +484,31 @@ def test_the_remedy_follows_the_cause_and_gone_is_told_apart(tmp_path: Path) -> 
     assert not provisioner.runtime_gone()  # nothing installed
     provisioner.prepare()
     assert not provisioner.runtime_gone()
-    runtime.refuse = f"{RUNTIME} is not there"
+    runtime.refuse = RuntimeProblem.GONE
     assert provisioner.refusal().endswith(RUNTIME_GONE_REMEDY)
     assert provisioner.runtime_gone()
-    runtime.refuse = f"{RUNTIME} is writable by anyone but its owner"
+    runtime.refuse = RuntimeProblem.SHARED_WRITE
     assert provisioner.refusal().endswith(RUNTIME_REFUSED_REMEDY)
     assert "chmod g-w,o-w" in provisioner.refusal()
     assert not provisioner.runtime_gone()
     prepared = provisioner.prepare()
     assert not prepared.ok and prepared.detail.endswith(RUNTIME_REFUSED_REMEDY)
+
+
+def test_gone_is_told_apart_by_the_reason_never_by_the_wording(tmp_path: Path) -> None:
+    """Review 2 N2-5: the remedy and `runtime_gone` follow `vet`'s typed reason. A refusal whose
+    text happens to end as a gone one's does (a runtime named so), but whose reason is another,
+    is never taken for gone."""
+    from vibey.infrastructure.searxng.searxng_provisioner import RUNTIME_REFUSED_REMEDY
+
+    runtime = Runtime()
+    provisioner = _provisioner(tmp_path, runtime)
+    provisioner.prepare()
+
+    class Worded(RuntimeRefusal):
+        def __str__(self) -> str:
+            return f"{self.runtime} is not there"
+
+    runtime.vet = lambda path: Worded(path, RuntimeProblem.FOREIGN_OWNER)  # type: ignore[method-assign]
+    assert not provisioner.runtime_gone()
+    assert provisioner.refusal().endswith(RUNTIME_REFUSED_REMEDY)

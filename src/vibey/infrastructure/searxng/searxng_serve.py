@@ -122,9 +122,9 @@ class SearxngServe:
                 f"`{INSTALL_COMMAND}` writes it again",
             )
         runtime = provision.runtime
-        problem = self._runtime.vet(runtime)
-        if problem:
-            return self._refuse(EXIT_CONFIG, f"{problem}; nothing was run")
+        refusal = self._runtime.vet(runtime)
+        if refusal is not None:
+            return self._refuse(EXIT_CONFIG, f"{refusal}; nothing was run")
         if not self._runtime.image_present(runtime, provision.image):
             return self._refuse(
                 EXIT_CONFIG,

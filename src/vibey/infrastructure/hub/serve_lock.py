@@ -9,11 +9,30 @@ behind (a stale `serving.json` is a different file and is reported as stale). Th
 writes its process id into the file for the message a second hub prints; the lock itself
 is the flock, not the pid.
 
+Two narrow windows, closed as far as a single file allows (SP-ACP Task 11b):
+
+- **A clean exit leaves no pid behind.** `release` empties the file before it lets go, so the
+  next hub, between its `flock` and its own write, reads as "held, no pid yet" (0), never as
+  the hub that left. A hub that *crashed* cannot empty it: until the next holder has written,
+  its pid stays in the file. That last window is left open: it needs a crash, a restart, the
+  dead pid reused and a `vibey hub stop` landing in the microseconds between a `flock` and a
+  `write`. Two ways would close it, neither taken: publishing the pid apart from the lock (a
+  new file renamed into place while already locked), which changes this lock's on-disk
+  protocol; or having `stop` probe again after a pause and refuse when the answer changed,
+  which costs every `stop` that pause for a window this narrow.
+- **A probe never costs a starting hub its lock.** `held_by` holds a shared lock for an
+  instant; a hub whose exclusive attempt lands in that instant would conclude another hub runs.
+  `acquire` therefore tries again `contention_retries` times, `contention_pause` apart: a real
+  holder keeps the lock for its whole life, a probe for microseconds. A lock nobody probes
+  (`vibey acp`'s bootstrap lock, polled from an event loop) takes `contention_retries=0`.
+
 Declared by `interfaces/serve_lock_interface.py` (ADR-0016).
 """
 
 import fcntl
 import os
+import time
+from collections.abc import Callable
 from pathlib import Path
 from typing import Final
 
@@ -21,28 +40,51 @@ LOCK_FILE: Final = "serve.lock"
 ACP_BOOTSTRAP_LOCK_FILE: Final = "acp-bootstrap.lock"
 """The same lock, held by a `vibey acp` while it changes this computer (connects clients,
 installs PostgreSQL), so a second editor window leaves that to the first (SP-ACP)."""
+CONTENTION_RETRIES: Final = 2
+"""How many more times `acquire` tries after a refusal, in case a probe held it for an instant."""
+CONTENTION_PAUSE_SECONDS: Final = 0.01
+"""The pause between those tries: far longer than a probe holds its shared lock."""
 
 
 class ServeLock:
     """The single-instance lock of the hub under `state_dir`, or of another single-holder job
     named by `lock_file`."""
 
-    def __init__(self, state_dir: Path, *, lock_file: str = LOCK_FILE) -> None:
+    def __init__(
+        self,
+        state_dir: Path,
+        *,
+        lock_file: str = LOCK_FILE,
+        contention_retries: int = CONTENTION_RETRIES,
+        contention_pause: float = CONTENTION_PAUSE_SECONDS,
+        sleep: Callable[[float], None] = time.sleep,
+    ) -> None:
         self._path = state_dir / lock_file
         self._state_dir = state_dir
         self._fd: int | None = None
+        self._retries = contention_retries
+        self._pause = contention_pause
+        self._sleep = sleep
 
     def acquire(self) -> bool:
-        """True when this process now holds the lock; False when another process does.
-        The state directory is made owner-only like the token's, and the file is opened
-        without following a symlink."""
+        """True when this process now holds the lock; False when another process does --
+        still refused after `contention_retries` more tries, so a probe's instant is never taken
+        for a holder. The state directory is made owner-only like the token's, and the file is
+        opened without following a symlink."""
         self._state_dir.mkdir(mode=0o700, parents=True, exist_ok=True)
         fd = os.open(self._path, os.O_RDWR | os.O_CREAT | os.O_NOFOLLOW, 0o600)
-        try:
-            fcntl.flock(fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
-        except BlockingIOError:
-            os.close(fd)
-            return False
+        tries = self._retries
+        while True:
+            try:
+                fcntl.flock(fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
+                break
+            except BlockingIOError:
+                if tries <= 0:
+                    os.close(fd)
+                    return False
+                tries -= 1
+                self._sleep(self._pause)
+        # Held: whatever the file says is the last holder's, until this write replaces it.
         os.ftruncate(fd, 0)
         os.write(fd, str(os.getpid()).encode())
         self._fd = fd
@@ -81,7 +123,11 @@ class ServeLock:
             os.close(fd)
 
     def release(self) -> None:
-        """Lets go of the lock; a no-op when this process does not hold it."""
+        """Lets go of the lock, its pid emptied first so no later reader takes the next holder
+        for this one; a no-op when this process does not hold it."""
         if self._fd is not None:
-            os.close(self._fd)
-            self._fd = None
+            fd, self._fd = self._fd, None
+            try:
+                os.ftruncate(fd, 0)
+            finally:
+                os.close(fd)  # a failed truncate never keeps the lock held

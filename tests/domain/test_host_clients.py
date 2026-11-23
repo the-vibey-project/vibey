@@ -619,7 +619,10 @@ def test_a_byte_order_mark_is_read_past_and_kept() -> None:
     assert _zed_plan(carried).action == "unchanged"
 
 
-def test_a_codex_entry_keeps_its_extra_flags_and_counts_as_connected_with_them() -> None:
+def test_a_codex_entry_with_extra_flags_is_not_connected_and_is_rewritten_without_them() -> None:
+    """SP-ACP Task 11b (review 1 N-4): `vibey mcp` takes no flags at all, so an entry carrying
+    one would fail to start the client's server; it is not vibey's entry as it stands, and a
+    rewrite drops what `vibey mcp` would refuse -- the rule `vibey acp`'s entry already has."""
     codex = HOST_CLIENT_CATALOG.by_id("codex")
     assert codex is not None
     mcp = McpLaunchCommand("/usr/local/bin/vibey", ("mcp",))
@@ -634,10 +637,14 @@ def test_a_codex_entry_keeps_its_extra_flags_and_counts_as_connected_with_them()
             existing_content=content,
         )
 
-    connected = '[mcp_servers.vibey]\ncommand = "/usr/local/bin/vibey"\nargs = ["mcp", "--x"]\n'
-    assert plan(connected).action == "unchanged"
+    flagged = '[mcp_servers.vibey]\ncommand = "/usr/local/bin/vibey"\nargs = ["mcp", "--x"]\n'
+    assert plan(flagged).action != "unchanged"
+    assert not HOST_CLIENT_CATALOG.carries(codex, mcp, flagged)
+    assert tomllib.loads(plan(flagged).new_content)["mcp_servers"]["vibey"]["args"] == ["mcp"]
     old = '[mcp_servers.vibey]\ncommand = "/old/vibey"\nargs = ["mcp", "--x"]\n'
-    assert tomllib.loads(plan(old).new_content)["mcp_servers"]["vibey"]["args"] == ["mcp", "--x"]
+    assert tomllib.loads(plan(old).new_content)["mcp_servers"]["vibey"]["args"] == ["mcp"]
+    plain = '[mcp_servers.vibey]\ncommand = "/usr/local/bin/vibey"\nargs = ["mcp"]\n'
+    assert plan(plain).action == "unchanged" and HOST_CLIENT_CATALOG.carries(codex, mcp, plain)
     assert not HOST_CLIENT_CATALOG.carries(codex, mcp, '[mcp_servers.vibey]\ncommand = "x"\n')
 
 

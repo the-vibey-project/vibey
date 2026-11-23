@@ -11,6 +11,7 @@ from typing import TYPE_CHECKING, Protocol, runtime_checkable
 
 if TYPE_CHECKING:
     import datetime as _dt
+    import ssl
 
     from vibey.infrastructure.hub.tls import HubTls
 
@@ -21,4 +22,8 @@ class HubCertificateInterface(Protocol):
 
     def ensure(self, names: frozenset[str], now: _dt.datetime) -> HubTls:
         """The certificate files and fingerprint, made on first call."""
+        ...
+
+    def client_context(self) -> ssl.SSLContext:
+        """A client TLS context trusting this hub's own certificate alone, name checked."""
         ...

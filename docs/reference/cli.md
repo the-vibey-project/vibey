@@ -182,9 +182,11 @@ already carries a `vibey` entry running that command, with vibey's own arguments
 in the entry -- an `env`, other keys, flags after vibey's arguments such as
 `["acp", "--no-bootstrap"]` -- is yours. After `acp` only `--no-bootstrap` may follow: an
 entry such as `["acp", "unload"]` would run another command, so it does not count as connected,
-and a rewrite keeps `--no-bootstrap` alone. When the entry must change (another `vibey`, or no
-entry yet), only its `type`, `command` and vibey's own leading `args` change; your `env`, other
-keys and extra flags are kept. In a project's TOML file, every `[mcp_servers.vibey.*]`
+and a rewrite keeps `--no-bootstrap` alone. After `mcp` nothing may follow, since `vibey mcp`
+takes no flags: `["mcp", "--x"]` would fail to start the client's server, so it does not count as
+connected, and a rewrite drops the flag. When the entry must change (another `vibey`, or no
+entry yet), only its `type`, `command` and vibey's own leading `args` change; your `env` and other
+keys are kept, and so is `--no-bootstrap` after `acp`. In a project's TOML file, every `[mcp_servers.vibey.*]`
 sub-table (an `env` one, say) is dropped on a rewrite. A project's file (`.mcp.json`, `.vscode/mcp.json`) belongs to the
 repository, not to you, so there only the exact entry above counts as connected, and any other
 `vibey` entry -- one with an `env`, an `envFile`, another key or an extra argument -- is
@@ -218,8 +220,8 @@ installed here:
 
 | Surface | Clients | Present when | Installed by |
 |---|---|---|---|
-| `acp-agent` | Zed | `agent_servers.vibey` runs this install's `vibey` with `acp` first (as above; your `env` and extra flags do not matter) | `vibey connect --client zed` (or the snippet, by hand) |
-| `mcp-server` | every other client | its `vibey` MCP entry runs this install's `vibey` with `mcp` first; in a project's file (Claude Code, VS Code) only the exact canonical entry; for Claude Code also when the `vibey` plugin is installed and the project's `.mcp.json` holds no other `vibey` entry (the plugin's `.mcp.json` registers `vibey mcp`) | `vibey connect --client <id>` |
+| `acp-agent` | Zed | `agent_servers.vibey` runs this install's `vibey` with `acp` first (as above; your `env` and `--no-bootstrap` do not matter) | `vibey connect --client zed` (or the snippet, by hand) |
+| `mcp-server` | every other client | its `vibey` MCP entry runs this install's `vibey` with `mcp` and nothing after it; in a project's file (Claude Code, VS Code) only the exact canonical entry; for Claude Code also when the `vibey` plugin is installed and the project's `.mcp.json` holds no other `vibey` entry (the plugin's `.mcp.json` registers `vibey mcp`) | `vibey connect --client <id>` |
 | `skill` | Claude Code, Codex | the `vibey-chat-driver` skill is in the `vibey` plugin, in `~/.claude/skills/vibey-chat-driver` or the project's `.claude/skills/vibey-chat-driver` (Claude Code), or in `~/.codex/skills/vibey-chat-driver` (Codex; where Codex reads user skills -- not verified against a real Codex install) | Claude Code: the plugin; Codex: the `mkdir -p ~/.codex/skills && cp -R <the skill vibey ships> ~/.codex/skills/` line printed |
 | `plugin` | Claude Code | Claude Code records `vibey@vibey` installed (`~/.claude/plugins/installed_plugins.json`) | in Claude Code: `/plugin marketplace add the-vibey-project/vibey`, then `/plugin install vibey@vibey` |
 
@@ -262,7 +264,17 @@ include the one it needs. It reaches only a hub on this computer's loopback: a r
 (`<state_dir>/serving.json`) must name exactly `localhost`, a canonical loopback literal or a
 wildcard bind, and the gateway connects to the fixed loopback literal that maps to (never the
 name resolved again); any other host -- `evil.localhost`, `localhost.`, `127.1` included -- is
-refused and nothing, not the token, not a call, is sent.
+refused and nothing, not the token, not a call, is sent. The record is believed only while the
+process it names holds the hub's lock (`<state_dir>/serve.lock`), as for `vibey hub pair`: a
+dead hub's port may since have been bound by another account, so a record whose lock nobody
+holds, or another process holds, is no hub -- the agent token is not read, nothing is sent, and
+a tool call starts the hub as when there is no record at all.
+
+The lock proves that the process the record names is alive and is the hub; it does **not**
+prove that process already owns the recorded port. A hub writes its record a moment before it
+binds, so if another local account bound that port first, a token sent in the milliseconds
+before the hub's failed bind clears its record would reach that account (binding first is
+parked, SP-ACP Task 11b-ii).
 
 ### Web tools: `vibey_search` and `vibey_fetch`
 
@@ -578,7 +590,7 @@ here delays the answer: the steps start after `session/new` (or the first `sessi
    under your home folder -- `vibey mcp` with Claude Desktop, Codex, Cursor and Gemini CLI, and
    `vibey acp` with Zed (`~/.config/zed`, or `$XDG_CONFIG_HOME/zed` on Linux) -- each running
    the running install's own `vibey`; an existing `vibey` entry keeps your `env`, other keys and
-   extra flags.
+   the flags vibey's command takes (`--no-bootstrap` after `acp`; none after `mcp`).
    A Zed `settings.json` with comments is never rewritten: unless it already carries the entry,
    it is that client's `WARN`, with the snippet to paste. A project file
    (`.mcp.json`, `.vscode/mcp.json`) is never written, a client's folder is never created, a
@@ -879,9 +891,20 @@ so the hub reads the same `[hub]`: a cloned repository's `vibey.toml` can no lon
 state folder the hub keeps its tokens in, or the record and process `stop` acts on. Whether a
 hub runs is asked of the hub's own lock, `<state_dir>/serve.lock`, never of a process id alone:
 a record whose lock nobody holds is stale (never a running hub, and nothing is signalled), one
-whose lock another process holds is refused (exit 1, "the two disagree"), and `stop` signals only
-the process that holds the lock and names itself in the record. A record naming process id -1, 0
-or 1, or a port outside 1 to 65535, is unreadable and never acted on.
+whose lock another process holds while the record's process is still alive is refused (exit 1,
+"the two disagree"), and `stop` signals only the process that holds the lock and names itself in
+the record. A hub takes its lock before it replaces an earlier hub's record, so while the lock's
+holder has not written its process id yet, or the record names a process that is gone, a hub is
+**starting**: `status` says so (exit 3), `stop` signals nothing and says to run it again once the
+hub is up (exit 1), and `start` waits for that hub instead of launching a second. A record naming
+process id -1, 0 or 1, or a port outside 1 to 65535, is unreadable and never acted on; `pair`,
+`devices` and `revoke` say so in one line (exit 2).
+
+The lock that `pair`, `devices`, `revoke`, `vibey mcp` and `vibey acp` check before sending a
+token proves that the process the record names is alive and is the hub; it does **not** prove
+that process already owns the recorded port. A hub writes its record a moment before it binds, so if another local account bound that port first, a token sent in the milliseconds
+before the hub's failed bind clears its record would reach that account (binding first is
+parked, SP-ACP Task 11b-ii).
 
 | Command | What it does |
 |---|---|

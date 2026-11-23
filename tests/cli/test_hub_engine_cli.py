@@ -307,7 +307,9 @@ def test_a_hostile_folders_record_is_never_read_signalled_or_started_in(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
 ) -> None:
     """A cloned repository's vibey.toml names a state folder with a planted record whose pid
-    is alive and even holds a lock: `vibey hub` reads the person's own state folder instead."""
+    is alive, and the lock probe says that pid holds the lock: were the folder's `[hub]` read,
+    `stop` would signal it and `status` would report it. `vibey hub` reads the person's own
+    state folder instead, which has no record (Task 11b, review 2 N2-6)."""
     mine = tmp_path / "config"
     mine.mkdir()
     (mine / "vibey.toml").write_text(f"[hub]\nstate_dir = '{tmp_path / 'my-state'}'\n")
@@ -322,7 +324,7 @@ def test_a_hostile_folders_record_is_never_read_signalled_or_started_in(
     processes = Processes(LocalTokenStore(tmp_path / "my-state"), clock)
     processes.hub(77)
     command = HubEngineCommand(
-        processes=processes, sleep=clock.sleep, clock=clock, holder=lambda state: None
+        processes=processes, sleep=clock.sleep, clock=clock, holder=lambda state: 77
     )
     command.stop(1)
     assert processes.terminated == [] and "hub is not running" in capsys.readouterr().out
@@ -456,3 +458,104 @@ def test_start_never_takes_a_stale_record_for_the_hub_it_launched(
     captured = capsys.readouterr()
     assert captured.out.count("stale record from pid 5") == 1  # said once, before the start
     assert "exited before it was ready" in captured.err
+
+
+# -- Task 11b: a hub starting over a stale record is "starting", never a disagreement (N2-3) ----
+
+
+def _starting_over_a_stale_record(
+    tmp_path: Path,
+) -> tuple[HubEngineCommand, Processes, LocalTokenStore, Clock]:
+    """An earlier hub (pid 5) died and left its record; a new hub (pid 9001) holds the lock
+    and has not yet replaced the record."""
+    command, processes, store, clock = _setup(tmp_path)
+    store.record_serving(ServingRecord("127.0.0.1", 8765, 5))
+    processes.hub(9001)
+    return command, processes, store, clock
+
+
+def test_status_says_a_hub_is_starting_not_that_the_two_disagree(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    command, *_ = _starting_over_a_stale_record(tmp_path)
+    assert _exit(command.status) == 3
+    captured = capsys.readouterr()
+    assert "a hub (pid 9001) is starting" in captured.out
+    assert "disagree" not in captured.out + captured.err
+
+
+def test_stop_of_a_starting_hub_signals_nothing_and_says_why(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    command, processes, *_ = _starting_over_a_stale_record(tmp_path)
+    assert _exit(lambda: command.stop(1)) == 1
+    assert processes.terminated == []
+    captured = capsys.readouterr()
+    assert (
+        "a hub (pid 9001) is starting" in captured.err and "nothing was signalled" in captured.err
+    )
+    assert "disagree" not in captured.out + captured.err
+
+
+def test_start_waits_for_a_hub_another_start_launched_instead_of_launching_one(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    command, processes, store, clock = _starting_over_a_stale_record(tmp_path)
+    clock.on_sleep.append(lambda: store.record_serving(ServingRecord("127.0.0.1", 8765, 9001)))
+    command.start(15)
+    assert processes.spawned == []
+    captured = capsys.readouterr()
+    assert "a hub (pid 9001) is starting" in captured.out
+    assert "hub started: http://127.0.0.1:8765/api/v1 (pid 9001)" in captured.out
+    assert "disagree" not in captured.out + captured.err
+
+
+def test_start_reports_a_starting_hub_that_dies_before_it_is_ready(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    command, processes, *_ = _starting_over_a_stale_record(tmp_path)
+    processes.live.discard(9001)  # it dies while `start` waits (the fake still says it holds)
+    assert _exit(lambda: command.start(15)) == 1
+    assert processes.spawned == []
+    assert "exited before it was ready" in capsys.readouterr().err
+
+
+def test_a_lock_held_before_its_pid_is_written_is_a_starting_hub(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """`held_by` says 0 while the holder has not written its pid: starting, even when the
+    record's own pid is alive (a reused one, say), and nothing is signalled."""
+    command, processes, store, clock = _setup(tmp_path)
+    processes.live.add(77)
+    store.record_serving(ServingRecord("127.0.0.1", 8765, 77))
+    processes.locked = 0
+    assert _exit(command.status) == 3
+    assert "a hub is starting (its pid is not written yet)" in capsys.readouterr().out
+    assert _exit(lambda: command.stop(1)) == 1
+    assert processes.terminated == []
+    assert _exit(lambda: command.start(1)) == 1  # it never comes up within the bound
+    assert processes.spawned == []
+    assert "the hub is still starting" in capsys.readouterr().err
+
+
+def test_while_start_waits_a_live_record_of_another_pid_is_never_its_hub(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """The record names a live process (77) while the lock is the launched hub's (9001): not a
+    hub starting over a stale record, so `start` keeps waiting, quietly, and never reports 77."""
+    command, processes, store, _ = _setup(tmp_path)
+    processes.live.add(77)
+    processes.spawn_mode = "hangs"
+    original = processes.spawn
+
+    def planted(argv: Sequence[str], log: Path, *, cwd: Path) -> int:
+        pid = original(argv, log, cwd=cwd)
+        store.record_serving(ServingRecord("127.0.0.1", 8765, 77))
+        return pid
+
+    processes.spawn = planted  # type: ignore[method-assign]
+    assert _exit(lambda: command.start(1)) == 1
+    captured = capsys.readouterr()
+    assert "hub started" not in captured.out and "disagree" not in captured.err
+    assert "did not come up within 1s (pid 9001 is still starting)" in captured.err
+    assert processes.terminated == []

@@ -12,12 +12,20 @@ Both files are written owner-only (0600) into the hub's 0700 state directory, cr
 exclusively and never through a symlink, beside the host token. ADR-0068 names OpenBao
 (`SecretsPort`) as where the key should live; until a store is wired into `vibey serve`,
 the file has the host token's protection and no less.
+
+vibey's own clients of the hub -- `vibey hub pair | devices | revoke` and the MCP/ACP gateway --
+trust it the same way: `client_context` is a TLS context whose only authority is this one
+certificate (never the system's store), with the name checked, read without following a link
+and only while it is this account's alone (SP-ACP Task 11b; it replaces passing the file's path
+as httpx's `verify`, which httpx deprecates).
 """
 
 import datetime as _dt
 import hashlib
 import ipaddress
 import os
+import ssl
+import stat
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Final
@@ -68,6 +76,14 @@ class HubCertificate:
         pem = self._read(cert_path)
         return HubTls(cert_path=cert_path, key_path=key_path, fingerprint=self.fingerprint(pem))
 
+    def client_context(self) -> ssl.SSLContext:
+        """A client TLS context that trusts this hub's certificate and nothing else: no system
+        store, no other authority, the hostname checked. The file is read without following a
+        link and refused unless it is this account's alone; a missing or unreadable one raises
+        `OSError` (`ssl.SSLError` is one), a file that is not text `ValueError`."""
+        pem = self._read(self._dir / CERT_FILE)
+        return ssl.create_default_context(cadata=pem.decode("ascii"))
+
     @staticmethod
     def fingerprint(pem: bytes) -> str:
         """The SHA-256 of the certificate's DER encoding, as lower-case hex."""
@@ -107,9 +123,19 @@ class HubCertificate:
 
     @staticmethod
     def _read(path: Path) -> bytes:
-        fd = os.open(path, os.O_RDONLY | os.O_NOFOLLOW)
-        with os.fdopen(fd, "rb") as handle:
-            status = os.fstat(handle.fileno())
+        """The file's bytes: opened without following a link and without waiting (a FIFO in its
+        place never blocks the open), and refused unless it is a regular file of this account's
+        alone, all checked on the open descriptor (SP-ACP Task 11b)."""
+        fd = os.open(path, os.O_RDONLY | os.O_NOFOLLOW | os.O_NONBLOCK)
+        try:
+            status = os.fstat(fd)
+            if not stat.S_ISREG(status.st_mode):
+                raise PermissionError(f"{path} is not a regular file; refusing to use it")
             if status.st_uid != os.getuid() or status.st_mode & 0o077:
                 raise PermissionError(f"{path} is not this account's alone; refusing to use it")
+            os.set_blocking(fd, True)
+        except BaseException:
+            os.close(fd)
+            raise
+        with os.fdopen(fd, "rb") as handle:
             return handle.read()
