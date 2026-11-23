@@ -5,6 +5,7 @@ Each reads or writes real files in a temporary directory; nothing here needs a n
 or a database.
 """
 
+import errno
 import json
 import os
 import socket
@@ -395,9 +396,14 @@ def test_a_name_binds_every_address_it_resolves_to_on_one_port() -> None:
 
 class _FakeSocket:
     made: "list[_FakeSocket]" = []
-    refuse: set[str] = set()
+    refuse: dict[str, int] = {}
+    """Addresses whose `bind` fails, with the errno it fails with."""
+    no_family: set[int] = set()
+    """Families this host does not have: `socket()` fails with EAFNOSUPPORT."""
 
     def __init__(self, family: int, kind: int, proto: int = 0) -> None:
+        if family in _FakeSocket.no_family:
+            raise OSError(errno.EAFNOSUPPORT, "Address family not supported by protocol")
         self.family, self.options, self.address, self.closed = family, [], None, False
         _FakeSocket.made.append(self)
 
@@ -406,7 +412,7 @@ class _FakeSocket:
 
     def bind(self, address: tuple[Any, ...]) -> None:
         if address[0] in _FakeSocket.refuse:
-            raise OSError("cannot assign requested address")
+            raise OSError(_FakeSocket.refuse[address[0]], "refused")
         self.address = (address[0], address[1] or 5555, *address[2:])
 
     def listen(self, backlog: int) -> None:
@@ -421,7 +427,7 @@ class _FakeSocket:
 
 
 def _resolving(monkeypatch: pytest.MonkeyPatch, *addresses: tuple[int, tuple[Any, ...]]) -> None:
-    _FakeSocket.made, _FakeSocket.refuse = [], set()
+    _FakeSocket.made, _FakeSocket.refuse, _FakeSocket.no_family = [], {}, set()
     monkeypatch.setattr(socket, "socket", _FakeSocket)
     monkeypatch.setattr(
         socket,
@@ -450,16 +456,50 @@ def test_every_address_after_the_first_takes_the_first_ones_port(
     assert (socket.IPPROTO_IPV6, socket.IPV6_V6ONLY, 1) in sockets[0].options
 
 
-def test_an_address_that_cannot_be_bound_leaves_nothing_open(
-    monkeypatch: pytest.MonkeyPatch,
+@pytest.mark.parametrize("code", [errno.EADDRINUSE, errno.EACCES])
+def test_an_address_held_or_forbidden_stops_the_hub_and_leaves_nothing_open(
+    monkeypatch: pytest.MonkeyPatch, code: int
 ) -> None:
+    """Review 2 R-1: an address another account holds (or may not be had) is never skipped:
+    skipping it would let that account answer the hub's clients there."""
+    _resolving(monkeypatch, (socket.AF_INET, ("127.0.0.1", 0)), (socket.AF_INET6, ("::1", 0, 0, 0)))
+    _FakeSocket.refuse = {"::1": code}
+    with pytest.raises(OSError) as caught:
+        UvicornServer().bind("localhost", 0)
+    assert caught.value.errno == code
+    assert len(_FakeSocket.made) == 2 and all(sock.closed for sock in _FakeSocket.made)
+
+
+def test_a_family_this_host_does_not_have_is_skipped(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Review 2 R-1, as asyncio's own bind: `::1 localhost` in /etc/hosts on a host with IPv6
+    compiled out or disabled. Nobody can hold an address in a family the host does not have."""
+    _resolving(monkeypatch, (socket.AF_INET6, ("::1", 0, 0, 0)), (socket.AF_INET, ("127.0.0.1", 0)))
+    _FakeSocket.no_family = {socket.AF_INET6}
+    sockets = UvicornServer().bind("localhost", 0)
+    assert [(s.family, s.address) for s in sockets] == [(socket.AF_INET, ("127.0.0.1", 5555))]
+
+
+def test_an_address_this_host_cannot_assign_is_skipped(monkeypatch: pytest.MonkeyPatch) -> None:
+    """EADDRNOTAVAIL: IPv6 enabled in the kernel but not on any interface (bpo-30945)."""
+    _resolving(monkeypatch, (socket.AF_INET, ("127.0.0.1", 0)), (socket.AF_INET6, ("::1", 0, 0, 0)))
+    _FakeSocket.refuse = {"::1": errno.EADDRNOTAVAIL}
+    sockets = UvicornServer().bind("localhost", 0)
+    assert [s.address for s in sockets] == [("127.0.0.1", 5555)]
+    skipped = _FakeSocket.made[1]
+    assert skipped.closed and not sockets[0].closed
+
+
+def test_a_name_whose_every_address_is_skipped_is_refused(monkeypatch: pytest.MonkeyPatch) -> None:
     _resolving(
-        monkeypatch, (socket.AF_INET, ("127.0.0.1", 0)), (socket.AF_INET6, ("fe80::1", 0, 0, 2))
+        monkeypatch,
+        (socket.AF_INET6, ("::1", 0, 0, 0)),
+        (socket.AF_INET, ("127.0.0.1", 0)),
     )
-    _FakeSocket.refuse = {"fe80::1"}
-    with pytest.raises(OSError):
-        UvicornServer().bind("box.local", 0)
-    assert _FakeSocket.made and all(sock.closed for sock in _FakeSocket.made)
+    _FakeSocket.no_family = {socket.AF_INET6}
+    _FakeSocket.refuse = {"127.0.0.1": errno.EADDRNOTAVAIL}
+    with pytest.raises(OSError, match="resolves to no address it can bind"):
+        UvicornServer().bind("localhost", 0)
+    assert all(sock.closed for sock in _FakeSocket.made)
 
 
 def test_a_name_that_resolves_to_nothing_is_refused(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -593,3 +633,17 @@ def test_agent_scopes_must_be_a_list_of_names(raw: object) -> None:
 def test_an_agent_scope_the_hub_does_not_define_is_refused_and_the_list_is_shown() -> None:
     with pytest.raises(ConfigError, match="view, answer, spend, run, bump, workflows"):
         HubSettingsLoader().from_table({"agent_scopes": ["root"]})
+
+
+def test_a_socket_that_cannot_be_made_for_another_reason_stops_the_hub(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    _resolving(monkeypatch, (socket.AF_INET, ("127.0.0.1", 0)))
+
+    def no_descriptors(*args: object) -> socket.socket:
+        raise OSError(errno.EMFILE, "Too many open files")
+
+    monkeypatch.setattr(socket, "socket", no_descriptors)
+    with pytest.raises(OSError) as caught:
+        UvicornServer().bind("127.0.0.1", 0)
+    assert caught.value.errno == errno.EMFILE

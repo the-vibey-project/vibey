@@ -560,15 +560,22 @@ class ServeCommand:
             store.record_serving(
                 ServingRecord(host=bound, port=listen, pid=os.getpid(), tls=tls is not None)
             )
-            advert = await self._advertise(names, listen, tls)
+            advert: AdvertisementInterface | None = None
+            copies: list[socket.socket] = []
             try:
+                # Inside the `try`: a registration that fails still clears the record.
+                advert = await self._advertise(names, listen, tls)
                 # Duplicates: uvicorn closes what it is handed before it waits for open
                 # connections, for as long as they last, while this record still names the
                 # port. The hub's own sockets keep it until the record is cleared
                 # (review 1 M-2).
-                await self._server.serve(app, sockets=[sock.dup() for sock in sockets], tls=tls)
+                for sock in sockets:
+                    copies.append(sock.dup())
+                await self._server.serve(app, sockets=copies, tls=tls)
             finally:
                 store.clear_serving(os.getpid())
+                for copy in copies:
+                    copy.close()  # closed by uvicorn already; a second close does nothing
                 if advert is not None:
                     await advert.close()
                 await live.stop()

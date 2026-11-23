@@ -483,6 +483,24 @@ def test_a_repository_that_does_not_admit_the_hub_refuses_its_bump(tmp_path: Pat
 
 @pytest.mark.integration
 @pytest.mark.usefixtures("_an_empty_database")
+def test_an_advertisement_that_fails_leaves_no_record(tmp_path: Path) -> None:
+    """Review 2: the mDNS registration runs after the record is written; when it fails (a name
+    taken on the network, no multicast) the record is cleared all the same."""
+
+    class Refusing(Advertiser):
+        async def advertise(self, **fields: Any) -> "Advertiser":
+            raise RuntimeError("NonUniqueNameException")
+
+    server = Driven(lambda *_: asyncio.sleep(0))
+    command = _command(tmp_path, server, "lan = true\nport = 9100\n", Refusing())
+    with pytest.raises(RuntimeError, match="NonUniqueName"):
+        asyncio.run(command.run(host="192.168.1.20", port=None))
+    assert not (tmp_path / "state" / "serving.json").exists()
+    assert server.app is None  # never served
+
+
+@pytest.mark.integration
+@pytest.mark.usefixtures("_an_empty_database")
 def test_a_declared_lan_answers_this_computers_names(tmp_path: Path) -> None:
     got: dict[str, httpx.Response] = {}
 
