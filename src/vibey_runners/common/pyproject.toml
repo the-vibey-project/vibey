@@ -88,3 +88,13 @@ forbidden_modules = [
     "vibey_runners.common.application.usecases",
     "vibey_runners.common.infrastructure.memory_probe",
 ]
+
+# The loop capability layer (SP-LOOPS): its seams may name the records their signatures
+# carry (the `*_spec`, entry and catalog modules), never the classes that implement them.
+[[tool.importlinter.contracts]]
+name = "Capability interfaces declare seams, never consume them"
+type = "forbidden"
+source_modules = ["vibey_runners.common.capabilities.interfaces"]
+forbidden_modules = [
+    "vibey_runners.common.capabilities.bundle",
+]
