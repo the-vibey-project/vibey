@@ -24,6 +24,7 @@ dev = [
     "mypy>=1.10",
     "ruff>=0.6",
     "import-linter>=2.0",
+    "hypothesis>=6.100",
 ]
 
 [tool.hatch.build.targets.wheel]
@@ -87,4 +88,20 @@ source_modules = [
 forbidden_modules = [
     "vibey_runners.common.application.usecases",
     "vibey_runners.common.infrastructure.memory_probe",
+]
+
+# The loop capability layer (SP-LOOPS): its seams may name the records their signatures
+# carry (the `*_spec`, entry and catalog modules), never the classes that implement them.
+[[tool.importlinter.contracts]]
+name = "Capability interfaces declare seams, never consume them"
+type = "forbidden"
+source_modules = ["vibey_runners.common.capabilities.interfaces"]
+forbidden_modules = [
+    "vibey_runners.common.capabilities.bundle",
+    "vibey_runners.common.capabilities.file_reader",
+    "vibey_runners.common.capabilities.frontmatter",
+    "vibey_runners.common.capabilities.git_folder_guard",
+    "vibey_runners.common.capabilities.lock",
+    "vibey_runners.common.capabilities.manifest",
+    "vibey_runners.common.capabilities.skill_index",
 ]

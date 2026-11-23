@@ -153,6 +153,9 @@ from vibey.application.interfaces.local_install import (
     LocalStackInstallerInterface,
 )
 from vibey.application.interfaces.loops import LoopCatalogInterface
+from vibey.application.interfaces.loops_bundle_settings_interface import (
+    LoopsBundleSettingsInterface,
+)
 from vibey.application.interfaces.messaging import MessagingPort
 from vibey.application.interfaces.observability import (
     Logger,
@@ -233,6 +236,9 @@ from vibey.application.interfaces.system import (
     Clock,
 )
 from vibey.application.interfaces.tracker import IssueTrackerPort
+from vibey.application.interfaces.trusted_table_reader_interface import (
+    TrustedTableReaderInterface,
+)
 from vibey.application.interfaces.ultra_control import (
     UltraControlServiceInterface,
     UltraControlStore,
@@ -270,6 +276,7 @@ __all__ = [
     "TelemetryMetrics",
     "TelemetrySpan",
     "TelemetryTracer",
+    "TrustedTableReaderInterface",
     "AutomatedFinding",
     "AutomatedReviewRunner",
     "DependencyInstaller",
@@ -352,6 +359,7 @@ __all__ = [
     "LedgerSitePlanInterface",
     "LedgerSiteWriter",
     "LoopCatalogInterface",
+    "LoopsBundleSettingsInterface",
     "MergeOutcome",
     "Outcome",
     "Park",

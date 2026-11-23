@@ -75,7 +75,8 @@ forbidden_modules =
 # skips any pair where one module contains the other, so the source is not forbidden from
 # itself. The two ignored imports are a seam's vocabulary, not its consumers:
 # `design` and `dto` hold the records a seam's signatures name, and both import
-# only `vibey.domain`.
+# only `vibey.domain` and dependency-free family packages (`dto` names the loop
+# capability bundle from `vibey_runners.common.capabilities`).
 [importlinter:contract:interfaces-declare-only]
 name = Interfaces declare seams, never consume them
 type = forbidden

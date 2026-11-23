@@ -1,6 +1,7 @@
 # Made with ❤️ by [Vibey](https://the-vibey-project.github.io/vibey/), Developed by [Adam Matthew Steinberger](https://vibewithadam.matthewsteinberger.com/) ([@adammatthewsteinberger](https://github.com/adammatthewsteinberger/)).
 import ast
 import logging
+import os
 from datetime import UTC, datetime
 from pathlib import Path
 from types import SimpleNamespace
@@ -13,6 +14,7 @@ from tests.application.fakes import FakeHumanGateRepository, FakeJobRepository, 
 from vibey import bootstrap
 from vibey.application.design import DesignEvent
 from vibey.application.dto import ProjectRecord
+from vibey.application.loops_bundle_settings import LoopsBundleSettings
 from vibey.bootstrap import (
     _engine_run_deadline,
     _independence_policy,
@@ -21,6 +23,7 @@ from vibey.bootstrap import (
     build_visual_worker,
     qwenloop_enabled,
 )
+from vibey.domain.config import ConfigError
 from vibey.domain.engine import EngineId
 from vibey.domain.job import JobState
 from vibey.domain.phase import Phase
@@ -505,3 +508,82 @@ def test_an_unusable_deadline_never_switches_the_limit_off() -> None:
         assert _engine_run_deadline(config, environ={}) == timedelta(minutes=240)
     environ = {"VIBEY_ENGINE_MAX_RUN_MINUTES": "0"}
     assert _engine_run_deadline({}, environ=environ) == timedelta(minutes=240)
+
+
+def test_loops_bundle_settings_read_real_files_through_the_toml_reader(tmp_path: Path) -> None:
+    """The composition root wires the `[loops]` trust rule to the on-disk table reader."""
+    settings = bootstrap.loops_bundle_settings()
+    assert isinstance(settings, LoopsBundleSettings)
+    mine = tmp_path / "mine.toml"
+    mine.write_text("[loops]\nplugins = []\n", encoding="utf-8")
+    project = tmp_path / "repo.toml"
+    project.write_text("[loops]\nmarketplaces = []\n", encoding="utf-8")
+    loaded = settings.load(mine, project)
+    assert loaded.bundle.plugins == ()
+    assert len(loaded.notices) == 1
+
+
+def _hostile(tmp_path: Path, kind: str) -> Path:
+    """One hostile `vibey.toml`, as a cloned repository (or a broken dotfile) could carry."""
+    folder = tmp_path / kind
+    folder.mkdir()
+    path = folder / "vibey.toml"
+    if kind == "deep-arrays":
+        path.write_text("x = " + "[" * 600 + "]" * 600 + "\n", encoding="utf-8")
+    elif kind == "deep-tables":
+        path.write_text("x = " + "{a=" * 600 + "1" + "}" * 600 + "\n", encoding="utf-8")
+    elif kind == "deep-disable":
+        path.write_text("[loops]\ndisable = " + "[" * 600 + "]" * 600 + "\n", encoding="utf-8")
+    elif kind == "self-symlink":
+        try:
+            path.symlink_to(path)
+        except (OSError, NotImplementedError):  # pragma: no cover
+            pytest.skip("this operating system cannot create a symlink here")
+    elif kind == "fifo":
+        if not hasattr(os, "mkfifo"):  # pragma: no cover
+            pytest.skip("no FIFOs on this operating system")
+        os.mkfifo(path)
+    elif kind == "directory":
+        path.mkdir()
+    elif kind == "huge":
+        path.write_bytes(b"#" * (2 * 1024 * 1024))
+    elif kind == "nul-bytes":
+        path.write_bytes(b'[loops]\nskills = ["a\x00b"]\n')
+    elif kind == "invalid-utf8":
+        path.write_bytes(b'[loops]\nskills = ["\xff"]\n')
+    elif kind == "control-key":
+        path.write_text('[loops]\n"\\u001b[2J" = 1\n', encoding="utf-8")
+    return path
+
+
+HOSTILE = (
+    "deep-arrays",
+    "deep-tables",
+    "deep-disable",
+    "self-symlink",
+    "fifo",
+    "directory",
+    "huge",
+    "nul-bytes",
+    "invalid-utf8",
+    "control-key",
+)
+
+
+@pytest.mark.parametrize("whose", ["project", "person"])
+@pytest.mark.parametrize("kind", HOSTILE)
+def test_loops_bundle_settings_let_only_a_config_error_out(
+    tmp_path: Path, kind: str, whose: str
+) -> None:
+    """Whatever file sits at either path, `load` returns a bundle or raises ConfigError naming
+    that file: nothing else escapes (review 2, R1)."""
+    hostile = _hostile(tmp_path, kind)
+    mine = tmp_path / "mine.toml"
+    mine.write_text("[loops]\nplugins = []\n", encoding="utf-8")
+    user, project = (mine, hostile) if whose == "project" else (hostile, None)
+    try:
+        loaded = bootstrap.loops_bundle_settings().load(user, project)
+    except ConfigError as exc:
+        assert exc.path == str(hostile)
+    else:
+        assert all(notice.isascii() and notice.isprintable() for notice in loaded.notices)

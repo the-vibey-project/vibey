@@ -9,6 +9,8 @@ from datetime import datetime
 from pathlib import Path
 from uuid import UUID
 
+from vibey_runners.common.capabilities.bundle import BundleSpec
+
 from vibey.domain.budget import BudgetLedger
 from vibey.domain.circuit import StoredCircuitState
 from vibey.domain.effort import Effort
@@ -718,3 +720,15 @@ class GateReminderReport:
     @property
     def ok(self) -> bool:
         return not self.unreadable
+
+
+@dataclass(frozen=True, slots=True)
+class TrustedLoopsBundle:
+    """The loop capability bundle as the person grants it, and what a project tried to say.
+
+    ``bundle`` is the person's own `[loops]` narrowed by the project's `disable`. ``notices``
+    names every other `[loops]` key a project carried: each was dropped, never applied, and the
+    person is told so rather than left to wonder (ADR-0101, SP-LOOPS Task 3)."""
+
+    bundle: BundleSpec
+    notices: tuple[str, ...] = ()
