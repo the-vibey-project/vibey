@@ -8,51 +8,17 @@ thread. Module-level test functions (ADR-0016)."""
 
 from __future__ import annotations
 
-import datetime as _dt
+import os
 import ssl
 from pathlib import Path
 
 import pytest
 
-from vibey.infrastructure.hub.tls import CERT_FILE, KEY_FILE, HubCertificate
+from tests.fakes.tls_handshake import TlsHandshake
+from vibey.infrastructure.hub.tls import CERT_FILE, HubCertificate
 
-NOW = _dt.datetime(2026, 11, 22, tzinfo=_dt.UTC)
-
-
-def _hub(state: Path) -> HubCertificate:
-    certificate = HubCertificate(state)
-    certificate.ensure(frozenset({"127.0.0.1"}), NOW)
-    return certificate
-
-
-def _handshake(client: ssl.SSLContext, server_state: Path, host: str = "127.0.0.1") -> str | None:
-    """A TLS handshake between `client` and a server presenting `server_state`'s certificate;
-    the protocol version the client settled on."""
-    server_context = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
-    server_context.load_cert_chain(server_state / CERT_FILE, server_state / KEY_FILE)
-    to_server, to_client = ssl.MemoryBIO(), ssl.MemoryBIO()
-    s_in, s_out = ssl.MemoryBIO(), ssl.MemoryBIO()
-    tls_client = client.wrap_bio(to_client, to_server, server_hostname=host)
-    tls_server = server_context.wrap_bio(s_in, s_out, server_side=True)
-    client_done = server_done = False
-    for _ in range(20):
-        if not client_done:
-            try:
-                tls_client.do_handshake()
-                client_done = True
-            except ssl.SSLWantReadError:
-                pass
-        s_in.write(to_server.read())
-        if not server_done:
-            try:
-                tls_server.do_handshake()
-                server_done = True
-            except (ssl.SSLWantReadError, ssl.SSLError):
-                pass
-        to_client.write(s_out.read())
-        if client_done and server_done:
-            return tls_client.version()
-    raise AssertionError("the handshake never finished")
+_hub = TlsHandshake.certificate
+_handshake = TlsHandshake.run
 
 
 def test_the_hubs_own_certificate_is_trusted(tmp_path: Path) -> None:
@@ -91,3 +57,20 @@ def test_a_certificate_that_is_missing_open_to_others_or_a_link_is_never_trusted
     (tmp_path / "linked" / CERT_FILE).symlink_to(tmp_path / "real" / CERT_FILE)
     with pytest.raises(OSError):
         HubCertificate(tmp_path / "linked").client_context()
+
+
+def test_a_certificate_that_is_not_a_regular_file_is_refused_without_waiting(
+    tmp_path: Path,
+) -> None:
+    """Task 11b review S-2: a FIFO of the account's own (mode 0600) in the certificate's place
+    would make a plain `open` wait for a writer forever. It is opened without blocking and
+    refused on its `fstat`, as is a folder."""
+    state = tmp_path / "fifo"
+    state.mkdir(mode=0o700)
+    os.mkfifo(state / CERT_FILE, 0o600)
+    with pytest.raises(PermissionError, match="not a regular file"):
+        HubCertificate(state).client_context()
+    folder = tmp_path / "folder"
+    (folder / CERT_FILE).mkdir(mode=0o700, parents=True)
+    with pytest.raises(PermissionError, match="not a regular file"):
+        HubCertificate(folder).client_context()

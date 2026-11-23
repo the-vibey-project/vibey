@@ -25,6 +25,7 @@ import hashlib
 import ipaddress
 import os
 import ssl
+import stat
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Final
@@ -122,9 +123,19 @@ class HubCertificate:
 
     @staticmethod
     def _read(path: Path) -> bytes:
-        fd = os.open(path, os.O_RDONLY | os.O_NOFOLLOW)
-        with os.fdopen(fd, "rb") as handle:
-            status = os.fstat(handle.fileno())
+        """The file's bytes: opened without following a link and without waiting (a FIFO in its
+        place never blocks the open), and refused unless it is a regular file of this account's
+        alone, all checked on the open descriptor (SP-ACP Task 11b)."""
+        fd = os.open(path, os.O_RDONLY | os.O_NOFOLLOW | os.O_NONBLOCK)
+        try:
+            status = os.fstat(fd)
+            if not stat.S_ISREG(status.st_mode):
+                raise PermissionError(f"{path} is not a regular file; refusing to use it")
             if status.st_uid != os.getuid() or status.st_mode & 0o077:
                 raise PermissionError(f"{path} is not this account's alone; refusing to use it")
+            os.set_blocking(fd, True)
+        except BaseException:
+            os.close(fd)
+            raise
+        with os.fdopen(fd, "rb") as handle:
             return handle.read()
