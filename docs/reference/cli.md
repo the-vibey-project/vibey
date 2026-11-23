@@ -190,8 +190,13 @@ server. Before writing an existing config file, `vibey connect` copies
 the original to `<path>.vibey.bak` (with the original's permissions) and merges the `vibey`
 entry without disturbing other servers or settings, keeping the file's indentation and its
 non-ASCII text as written (a UTF-8 byte-order mark too); the new file replaces the old one
-atomically, no wider than it was, never through a symbolic link, and only inside your home
-folder (user-scope clients) or the project folder (`.mcp.json`, `.vscode/mcp.json`).
+atomically, no wider than it was (a new file, a project's `.mcp.json` or `.vscode/mcp.json`
+included, is 0600), never through a symbolic link, and only inside your home folder (user-scope
+clients) or the project folder (`.mcp.json`, `.vscode/mcp.json`). The old `.vibey.bak` is
+removed and a new one created, so a backup that was a hard link to another file never writes into
+that file. Each client is written on its own: a file that cannot be written, or is swapped to a
+link mid-write, is one `WARN <client>: not connected ...` line on stderr for that client, the
+others are still written, and the command exits 1.
 A JSON file vibey cannot read as strict JSON -- Zed's `settings.json` usually holds comments,
 and may hold trailing commas -- is never rewritten, and neither is one nested too deeply to
 parse. If it already carries the entry, it counts as connected; otherwise that client is
@@ -570,10 +575,14 @@ here delays the answer: the steps start after `session/new` (or the first `sessi
    and neither is a config file that is itself a symbolic link. A
    changed file is backed up to `<file>.vibey.bak` with the original's permissions, and the new
    file replaces the old one atomically, no wider than it was. One client's broken file is a
-   `WARN` for that client while the others go on. When no client warned,
-   `<[hub] state_dir>/acp-connect-<version>.json` records which clients were connected; the next
-   `vibey acp` of this version skips the step while every client installed then is in that
-   record, so a `WARN`, or a client installed since, is tried again.
+   `WARN` for that client while the others go on. When no client warned (but for the settled
+   ones below), `<[hub] state_dir>/acp-connect-<version>.json` records which clients were
+   connected, and which are settled: a client whose folder resolves outside your home folder, or
+   whose config is a symbolic link (a dotfile-managed config; a `WARN` saying to add the entry by
+   hand where it points), is recorded with that folder's real path or the link's target. The
+   next `vibey acp` of this version skips the step while every client installed is in that
+   record as it stands now, so another `WARN`, a client installed since, or a settled client
+   whose folder or link changed is tried again.
 3. **Services** (an `execute` tool call, "Keep vibey's services running"), when
    [`[acp] auto_services`](configuration.md#acp) is on and `[acp] services` names any
    ([ADR-0101](../architecture/decisions/0101-the-acp-agent-and-self-installing-services.md)).

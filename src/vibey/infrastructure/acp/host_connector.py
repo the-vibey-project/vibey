@@ -23,11 +23,16 @@ carrying the snippet to paste, unless it already carries the entry.
 - **One client at a time.** A client whose file cannot be read, parsed or written is a `WARN`
   for that client, and the others still go on.
 
-When every installed client is connected (no `WARN`), `<state_dir>/acp-connect-<version>.json`
-records which ones. The next `vibey acp` of this version skips the step only while the clients
-installed then are all in that record: a `WARN` is tried again, and so is a client installed
-since. A marker that is missing, unreadable or malformed only means the step runs again, which
-changes nothing that is already right.
+When every installed client is settled (no `WARN` but a settled one),
+`<state_dir>/acp-connect-<version>.json` records which ones. A client is settled when it is
+connected, or when vibey will never write it as things stand: its config folder resolves outside
+the home folder, or its config file is a symbolic link (a dotfile-managed config, a `WARN` with
+what to do). Such a client is recorded with that state -- the folder's real path, or where the
+link points -- so it is not tried at every launch, and is tried again the moment the state
+changes (SP-ACP Task 11a). The next `vibey acp` of this version skips the step only while every
+client installed is in that record as it stands now: any other `WARN` is tried again, and so is
+a client installed since. A marker that is missing, unreadable or malformed only means the step
+runs again, which changes nothing that is already right.
 
 Declared by `application/acp/interfaces/host_connector_interface.py`.
 """
@@ -83,25 +88,49 @@ class HostConnector:
         if not isinstance(recorded, dict) or recorded.get("version") != self._version:
             return False
         clients = recorded.get("clients")
-        if not isinstance(clients, list):
+        settled = recorded.get("settled", {})
+        if not isinstance(clients, list) or not isinstance(settled, dict):
             return False
-        return set(self._installed()) <= set(clients)
-
-    def _installed(self) -> list[str]:
-        """The user-scope clients whose config folder exists here now."""
-        home = str(self._home_dir())
-        xdg = self._environ.get("XDG_CONFIG_HOME")
-        return [
-            spec.client_id
-            for spec in self._catalog.all()
-            if spec.scope == "user"
-            and self._folder_exists(
-                Path(
-                    spec.config_path(
-                        home_dir=home, project_dir="", platform=self._platform, xdg_config_home=xdg
-                    )
-                ).parent
+        home = Path(os.path.realpath(self._home_dir()))
+        return all(
+            spec.client_id in clients
+            or (
+                spec.client_id in settled
+                and settled[spec.client_id] == self._unwritable(self._target(spec), home)
             )
+            for spec in self._installed()
+        )
+
+    def _target(self, spec: HostClientSpec) -> Path:
+        """Where `spec`'s user-scope config lives on this computer."""
+        return Path(
+            spec.config_path(
+                home_dir=str(self._home_dir()),
+                project_dir="",
+                platform=self._platform,
+                xdg_config_home=self._environ.get("XDG_CONFIG_HOME"),
+            )
+        )
+
+    @staticmethod
+    def _unwritable(target: Path, home: Path) -> str | None:
+        """Why vibey will never write `target` as things stand, as a state that changes when
+        the reason does: its folder's real path outside the home folder, or the link the file
+        is. None when it may be written."""
+        folder = Path(os.path.realpath(target.parent))
+        if not folder.is_relative_to(home):
+            return f"outside:{folder}"
+        try:
+            return f"link:{os.readlink(target)}" if target.is_symlink() else None
+        except OSError:
+            return None
+
+    def _installed(self) -> list[HostClientSpec]:
+        """The user-scope clients whose config folder exists here now."""
+        return [
+            spec
+            for spec in self._catalog.all()
+            if spec.scope == "user" and self._folder_exists(self._target(spec).parent)
         ]
 
     @staticmethod
@@ -116,17 +145,24 @@ class HostConnector:
         home = Path(os.path.realpath(self._home_dir()))
         results: list[DoctorResult] = []
         connected: list[str] = []
+        settled: dict[str, str] = {}
+        unsettled = False
         for spec in self._catalog.all():
             if spec.scope != "user":
                 continue
             result = self._one(spec, home)
             results.append(result)
+            state = self._unwritable(self._target(spec), home)
             if result.mark == "PASS":
                 connected.append(spec.client_id)
-        if any(result.mark == "WARN" for result in results):
+            elif state is not None:
+                settled[spec.client_id] = state
+            elif result.mark == "WARN":
+                unsettled = True
+        if unsettled:
             return tuple(results)  # not recorded: the next vibey acp tries again
         try:
-            self._record(connected)
+            self._record(connected, settled)
         except OSError as exc:
             results.append(
                 DoctorResult(
@@ -164,16 +200,24 @@ class HostConnector:
                 )
             if item.action == "unchanged":
                 return DoctorResult("PASS", client_id, f"already connected in {target}")
+            if target.is_symlink():
+                return DoctorResult(
+                    "WARN",
+                    client_id,
+                    f"not connected: {target} is a symbolic link (a dotfile-managed config?) and "
+                    "vibey never writes through one; add vibey's entry by hand in the file it "
+                    "points to",
+                )
             self._installer.apply_plan(plan)
         except (HostClientError, OSError, ValueError, RecursionError) as exc:
             return DoctorResult("WARN", client_id, f"not connected: {exc}")
         backup = f" (the old file is in {item.backup_path})" if item.backup_path else ""
         return DoctorResult("PASS", client_id, f"{item.action}d {target}{backup}")
 
-    def _record(self, connected: list[str]) -> None:
+    def _record(self, connected: list[str], settled: dict[str, str]) -> None:
         self._state_dir.mkdir(mode=0o700, parents=True, exist_ok=True)
         staged = self._marker.with_name(f"{self._marker.name}.tmp")
         fd = os.open(staged, os.O_WRONLY | os.O_CREAT | os.O_TRUNC | os.O_NOFOLLOW, 0o600)
         with os.fdopen(fd, "w", encoding="utf-8") as handle:
-            json.dump({"version": self._version, "clients": connected}, handle)
+            json.dump({"version": self._version, "clients": connected, "settled": settled}, handle)
         os.replace(staged, self._marker)
