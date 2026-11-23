@@ -71,8 +71,9 @@ def test_abort_shuts_down_the_connections_this_thread_opened(
 
 def test_a_connection_with_no_socket_yet_is_skipped() -> None:
     opener = GuardedOpener("http://127.0.0.1:1")
-    opener.connection(http.client.HTTPConnection)("127.0.0.1", timeout=1)
+    made = opener.connection(http.client.HTTPConnection)("127.0.0.1", timeout=1)
     opener.abort(threading.get_ident())  # connecting had not begun: nothing to shut down
+    assert made.sock is None and opener.threads() == frozenset()
 
 
 def test_a_finished_threads_connections_are_forgotten() -> None:
