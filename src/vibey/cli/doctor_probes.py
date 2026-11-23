@@ -60,6 +60,7 @@ from vibey.cli.interfaces.doctor_probes_interface import (
     LocalDoctorProbesInterface,
 )
 from vibey.cli.llm_tooling import LLM_TOOLING_SECTION
+from vibey.cli.run_inputs_doctor import RUN_INPUTS_DOCTOR
 from vibey.cli.sabbath import SABBATH
 from vibey.cli.serve import SERVE
 from vibey.cli.supervisor import SUPERVISOR
@@ -84,6 +85,9 @@ SABBATH_PREFIX: Final = "sabbath"
 LLM_TOOLING: Final = "llm-tooling"
 """The section that reports each detected client's LLM-facing surfaces (`cli/llm_tooling.py`);
 it never fails doctor."""
+RUN_INPUTS: Final = "run-inputs"
+"""The section that names the run input store `[inputs]` puts in force, the config file it came
+from, and whether it answers (`cli/run_inputs_doctor.py`; SP-LOOPS Phase 3c, ADR-0105)."""
 WEB_SEARCH: Final = "web-search"
 """The section that reports whether the local SearXNG answers and whether a Brave backup is
 configured (`cli/web_search_doctor.py`); a SearXNG that is down is a WARN, never a FAIL."""
@@ -332,6 +336,7 @@ class LocalDoctorProbes:
         ollama_enabled: Callable[[], bool],
         llm_tooling: Callable[[], tuple[list[str], bool]] | None = None,
         web_search: Callable[[], tuple[list[str], bool]] | None = None,
+        run_inputs: Callable[[], tuple[list[str], bool]] | None = None,
     ) -> tuple[LocalDoctorProbeInterface, ...]:
         return (
             SectionProbe.printed("database-security", database_security),
@@ -344,6 +349,7 @@ class LocalDoctorProbes:
                 host_health=host_health,
                 ollama_enabled=ollama_enabled,
             ),
+            *(() if run_inputs is None else (SectionProbe.listed(RUN_INPUTS, run_inputs),)),
             *(() if web_search is None else (SectionProbe.listed(WEB_SEARCH, web_search),)),
             *(() if llm_tooling is None else (SectionProbe.listed(LLM_TOOLING, llm_tooling),)),
         )
@@ -360,6 +366,7 @@ class LocalDoctorProbes:
                 host_health=HOST_HEALTH.doctor_lines,
                 ollama_enabled=self._local_engine_on,
             ),
+            SectionProbe.listed(RUN_INPUTS, RUN_INPUTS_DOCTOR.doctor_lines),
             SectionProbe.listed(WEB_SEARCH, WEB_SEARCH_DOCTOR.doctor_lines),
             SectionProbe.listed(LLM_TOOLING, LLM_TOOLING_SECTION.doctor_lines),
         )

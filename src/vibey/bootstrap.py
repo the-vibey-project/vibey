@@ -1594,21 +1594,26 @@ def run_inputs_location() -> InputStoreLocation:
     return run_inputs_settings_loader().load(acp_user_config(), None).settings.store
 
 
-def run_inputs_store(
-    resources: AppResources, location: InputStoreLocation | None = None
-) -> InputStoreInterface:
-    """The run input store `[inputs]` names (`location`, else `run_inputs_location()`): the
-    hash-addressed store at `store_dir` or `run_inputs_root()`, or the SeaweedFS store over the
-    S3 API, signed by the family's one signer with the credentials read from the two
-    environment variables `[inputs]` names. A variable that is unset or empty is a
-    `ConfigError` naming the variable, never a value. The CLI and the worker both build their
-    store here, so they cannot disagree about where inputs live (N7). Composition only."""
-    where = location if location is not None else run_inputs_location()
-    if where.kind == "local":
-        root = Path(where.store_dir) if where.store_dir is not None else run_inputs_root()
-        return HashAddressedInputStore(root, resources.clock, files=NoFollowFiles())
+def run_inputs_http_client(location: InputStoreLocation) -> httpx.Client:
+    """The HTTP client a SeaweedFS input store speaks through: `[inputs] timeout_seconds`, and
+    no redirect followed, so every request goes to the endpoint the person named (ADR-0105)."""
+    return httpx.Client(timeout=location.timeout_seconds, follow_redirects=False)
+
+
+def seaweedfs_input_store(
+    location: InputStoreLocation,
+    clock: Clock | None = None,
+    *,
+    client: httpx.Client | None = None,
+    environ: Mapping[str, str] | None = None,
+) -> SeaweedFsInputStore:
+    """The SeaweedFS input store `location` names, signed by the family's one signer with the
+    credentials read from the two environment variables `[inputs]` names (in `environ`, else
+    this process's environment). A variable that is unset or empty is a `ConfigError` naming
+    the variable, never a value. Composition only."""
+    env = environ if environ is not None else os.environ
     unset = [
-        name for name in (where.access_key_env, where.secret_key_env) if not os.environ.get(name)
+        name for name in (location.access_key_env, location.secret_key_env) if not env.get(name)
     ]
     if unset:
         raise ConfigError(
@@ -1617,14 +1622,28 @@ def run_inputs_store(
             "is not set in this environment",
         )
     signer = S3RequestSigner(
-        os.environ[where.access_key_env], os.environ[where.secret_key_env], where.region
+        env[location.access_key_env], env[location.secret_key_env], location.region
     )
     return SeaweedFsInputStore(
-        where,
-        resources.clock,
+        location,
+        clock if clock is not None else SystemClock(),
         signer=signer,
-        client=httpx.Client(timeout=where.timeout_seconds, follow_redirects=False),
+        client=client if client is not None else run_inputs_http_client(location),
     )
+
+
+def run_inputs_store(
+    resources: AppResources, location: InputStoreLocation | None = None
+) -> InputStoreInterface:
+    """The run input store `[inputs]` names (`location`, else `run_inputs_location()`): the
+    hash-addressed store at `store_dir` or `run_inputs_root()`, or `seaweedfs_input_store`. The
+    CLI and the worker both build their store here, so they cannot disagree about where inputs
+    live (N7). Composition only."""
+    where = location if location is not None else run_inputs_location()
+    if where.kind == "local":
+        root = Path(where.store_dir) if where.store_dir is not None else run_inputs_root()
+        return HashAddressedInputStore(root, resources.clock, files=NoFollowFiles())
+    return seaweedfs_input_store(where, resources.clock)
 
 
 def run_inputs_service(

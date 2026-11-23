@@ -85,6 +85,7 @@ from vibey.cli.projects import PROJECTS
 from vibey.cli.queue import queue_app
 from vibey.cli.recover import stop_workers
 from vibey.cli.retry import DEFAULT_MAX_ATTEMPTS, RETRY
+from vibey.cli.run_inputs_doctor import RUN_INPUTS_DOCTOR
 from vibey.cli.sabbath import SABBATH
 from vibey.cli.searxng import searxng_app
 from vibey.cli.serve import SERVE
@@ -1997,6 +1998,9 @@ def doctor(
         # - LLM tooling: per detected client, each surface vibey offers it (ACP agent, MCP
         #   server, the vibey-chat-driver skill, the plugin), present, missing (a WARN, with the
         #   command that fixes it) or not applicable. It only reads, and never fails doctor.
+        # - run inputs (ADR-0105): which store `[inputs]` puts in force, the config file it came
+        #   from, and whether it answers (one ListObjectsV2 for a SeaweedFS store; credentials
+        #   named by variable, never shown). A worker whose store resolves elsewhere (N7) shows.
         # - web search, before LLM tooling: whether the local SearXNG answers (a WARN when it
         #   does not) and whether a Brave backup is configured, by variable, never the key.
         # Each is built from the name it stands under here when doctor runs.
@@ -2012,6 +2016,7 @@ def doctor(
                 ollama_enabled=lambda: local.any_enabled,
                 llm_tooling=LLM_TOOLING_SECTION.doctor_lines,
                 web_search=WEB_SEARCH_DOCTOR.doctor_lines,
+                run_inputs=RUN_INPUTS_DOCTOR.doctor_lines,
             )
         )
         found: list[DoctorResult] = []
