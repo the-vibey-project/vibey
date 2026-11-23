@@ -15,6 +15,10 @@ clone's folder, or a worktree's gitfile) is metadata git rewrites without the co
 content a loader can read, and `MarketplaceManifest` and `SkillIndex` refuse anything that resolves
 into the root's `.git` for the same reason.
 
+The digest is made of `TreeRecord`s (`tree_records`, then `digest_records`), and both are public so
+the run snapshot (`CapabilityResolver`) can compare its copy, record by record, against the very
+records whose digest matched the lock.
+
 **The file.** JSON, one object: `version`, the `entries`, and a `checksum` (sha256 of the entries'
 canonical JSON). The checksum is unkeyed: it catches a corrupted or hand-edited lock, not a
 deliberate one -- anyone who can write the file can recompute it, so it is no evidence of tampering.
@@ -55,6 +59,7 @@ from vibey_runners.common.capabilities.interfaces.git_folder_guard_interface imp
 from vibey_runners.common.capabilities.lock_entry import LockEntry
 from vibey_runners.common.capabilities.lock_error import LockError
 from vibey_runners.common.capabilities.names import NAME_PATTERN
+from vibey_runners.common.capabilities.tree_record import TreeRecord
 
 VERSION: Final = 1
 LOCK_MAX_BYTES: Final = 1024 * 1024
@@ -85,9 +90,12 @@ class CapabilityLock:
     # -- the digest --------------------------------------------------------------------------
 
     def digest_tree(self, root: Path) -> str:
+        return self.digest_records(self.tree_records(root))
+
+    def tree_records(self, root: Path) -> tuple[TreeRecord, ...]:
         if not root.is_dir():
             raise LockError(f"{root} is not a folder")
-        records: list[tuple[bytes, bytes, bytes]] = []
+        records: list[TreeRecord] = []
         pending = [PurePosixPath()]
         count = 0
         while pending:
@@ -101,31 +109,39 @@ class CapabilityLock:
             for name in names:
                 relative = folder / name
                 kind, payload = self._record(root / relative)
-                records.append((os.fsencode(relative.as_posix()), kind, payload))
-                if kind == b"D":
+                records.append(TreeRecord(relative.as_posix(), kind, payload))
+                if kind == "D":
                     pending.append(relative)
+        return tuple(sorted(records, key=self._order))
+
+    def digest_records(self, records: Sequence[TreeRecord]) -> str:
         digest = hashlib.sha256()
-        for key, kind, payload in sorted(records):
+        for key, kind, payload in sorted(self._order(record) for record in records):
             digest.update(kind + b"\0" + key + b"\0" + payload + b"\0")
         return f"sha256:{digest.hexdigest()}"
 
-    def _record(self, path: Path) -> tuple[bytes, bytes]:
+    @staticmethod
+    def _order(record: TreeRecord) -> tuple[bytes, bytes, bytes]:
+        """The bytes a record is sorted and framed by: the path as the file system spells it."""
+        return os.fsencode(record.path), record.kind.encode(), record.payload.encode()
+
+    def _record(self, path: Path) -> tuple[str, str]:
         mode = os.lstat(path).st_mode
         if stat.S_ISLNK(mode):
             target = os.fsencode(os.readlink(path))
-            return b"L", hashlib.sha256(target).hexdigest().encode()
+            return "L", hashlib.sha256(target).hexdigest()
         if stat.S_ISDIR(mode):
-            return b"D", b""
+            return "D", ""
         if stat.S_ISREG(mode):
-            return (b"X" if mode & stat.S_IXUSR else b"F"), self._file_digest(path)
+            return ("X" if mode & stat.S_IXUSR else "F"), self._file_digest(path)
         raise LockError(f"{path} is not a file, folder or symlink")
 
-    def _file_digest(self, path: Path) -> bytes:
+    def _file_digest(self, path: Path) -> str:
         digest = hashlib.sha256()
         with os.fdopen(self._reader.open_regular(path), "rb") as handle:
             for chunk in iter(lambda: handle.read(_CHUNK), b""):
                 digest.update(chunk)
-        return digest.hexdigest().encode()
+        return digest.hexdigest()
 
     # -- the file ----------------------------------------------------------------------------
 

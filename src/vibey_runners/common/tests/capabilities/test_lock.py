@@ -4,6 +4,7 @@ follows a symlink, written atomically and read whole or not at all (SP-LOOPS Tas
 
 from __future__ import annotations
 
+import hashlib
 import json
 import os
 import random
@@ -25,6 +26,7 @@ from vibey_runners.common.capabilities.lock import (
 )
 from vibey_runners.common.capabilities.lock_entry import LockEntry
 from vibey_runners.common.capabilities.lock_error import LockError
+from vibey_runners.common.capabilities.tree_record import TreeRecord
 
 DIGEST = "sha256:" + "a" * 64
 ENTRIES = (
@@ -87,6 +89,38 @@ def test_a_digest_is_a_sha256_name(tmp_path: Path) -> None:
     assert digest.startswith("sha256:")
     assert len(digest) == len("sha256:") + 64
     assert isinstance(CapabilityLock(), CapabilityLockInterface)
+
+
+def _pinned_tree(root: Path) -> Path:
+    _tree(root, {"a.txt": b"x", "d/b.txt": b"y", "run.sh": b"#!"})
+    (root / "a.txt").chmod(0o644)
+    (root / "d/b.txt").chmod(0o644)
+    (root / "run.sh").chmod(0o755)
+    (root / "d/link").symlink_to("../a.txt")
+    return root
+
+
+def test_the_digest_of_a_fixed_tree_is_pinned(tmp_path: Path) -> None:
+    """Locks already on disk must keep matching: the framing never changes silently."""
+    root = _pinned_tree(tmp_path)
+    assert CapabilityLock().digest_tree(root) == (
+        "sha256:28aa44f1935441a387186e2a6b72a48a4b274edacef18a249ef4040ce39f384d"
+    )
+
+
+def test_the_tree_records_are_what_the_digest_is_made_of(tmp_path: Path) -> None:
+    root = _pinned_tree(tmp_path)
+    lock = CapabilityLock()
+    records = lock.tree_records(root)
+    by_path = {record.path: record for record in records}
+    assert sorted(by_path) == ["a.txt", "d", "d/b.txt", "d/link", "run.sh"]
+    assert by_path["d"] == TreeRecord("d", "D", "")
+    assert by_path["a.txt"].kind == "F"
+    assert by_path["a.txt"].payload == hashlib.sha256(b"x").hexdigest()
+    assert by_path["run.sh"].kind == "X"
+    assert by_path["d/link"] == TreeRecord("d/link", "L", hashlib.sha256(b"../a.txt").hexdigest())
+    assert lock.digest_records(records) == lock.digest_tree(root)
+    assert lock.digest_records(tuple(reversed(records))) == lock.digest_tree(root)
 
 
 def test_changing_one_byte_changes_the_digest(tmp_path: Path) -> None:
