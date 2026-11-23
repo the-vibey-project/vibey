@@ -897,6 +897,15 @@ cloned repository's. A folder's `vibey.toml` is heard there on `agent_scopes` on
 narrow it; its `state_dir` never decides where a token is read or which record is believed
 (SP-ACP Task 11a).
 
+A runtime record (`<state_dir>/serving.json`) is believed only while the process it names holds
+the hub's lock (`<state_dir>/serve.lock`), and a record naming process id -1, 0 or 1 is refused
+as malformed, since a signal aimed by it would reach every process of your account, your own
+process group, or init (SP-ACP Tasks 11a and 11b). So a `vibey serve` running as **PID 1** -- in
+a container with no init process -- writes a record every reader refuses: `vibey hub status`,
+`stop`, `pair`, `vibey mcp` and `vibey acp` all treat that hub as not running. Run it under an
+init (`docker run --init`, or `tini` as the entrypoint, as the shipped image does) so it gets a
+pid of its own.
+
 | Key | Default | Meaning |
 |---|---|---|
 | `lan` | `false` | `true` declares that `vibey serve --host <LAN address>` may listen off loopback. Without it such an address is refused (exit 2), and `vibey doctor` fails a hub found listening on one. |

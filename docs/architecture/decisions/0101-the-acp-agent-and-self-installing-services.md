@@ -123,6 +123,17 @@ crash loop is slowed on both and stopped only on systemd. In detail:
   lock (`ServeLock.held_by`, the one probe `detached_hub_pid` also uses), and `stop` signals only
   the lock's holder when the record names that same pid; a record naming pid -1, 0 or 1 is
   malformed.
+- *Amended (SP-ACP Task 11b):* the MCP/ACP gateway reads and sends the agent token only while
+  the record's pid holds the hub's lock, as `vibey hub pair` does for the host token: on
+  loopback over plain http nothing else proves the listener is the hub. A lock held with no pid
+  written yet, or by another pid while the record's own process is gone, is a hub *starting*,
+  not a disagreement: `status` says so, `stop` signals nothing, and `start` waits for that hub.
+  `release` empties the pid before it lets go, and `acquire` retries briefly so a probe's
+  instant never costs a starting hub its lock; a crashed hub's pid can still be read in the
+  instant between the next holder's `flock` and its write, a window closed only by publishing
+  the pid apart from the lock (an on-disk protocol change, not made). Refusing pid 1 means a
+  `vibey serve` run as PID 1 with no init (a bare container) writes a record every reader
+  refuses: run it under an init (the shipped image runs `tini`).
 
 **Verified, and not yet verified (10.f).** Verified by tests: the rendering (the `on-failure`
 output byte for byte), the escaping, the file writes and refusals, the trust split, the argv
