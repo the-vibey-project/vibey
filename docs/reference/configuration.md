@@ -24,7 +24,7 @@ remain documented inputs for future wiring.
  | `./vibey.toml`, `[queue.reap]`, `[queue.defect]` and `[bus]` -- or, with no `./vibey.toml`, the environment alone (`VIBEY_QUEUE_REAP_*`, `VIBEY_QUEUE_DEFECT_*`, `VIBEY_BUS_*`) | `bootstrap.build_app` (every command that opens the queue), via `load_config_from_path` or `EnvironmentConfigLoader` | The queue reaper's thresholds and broker policy ([`[queue.reap]`](#queuereap)), when an exhausted job is a defect ([`[queue.defect]`](#queuedefect)), and the bus it inspects. A cluster pod has no `vibey.toml` in its working directory, so the chart's environment is what composes both there (ADR-0056). A malformed environment value fails the start; a `./vibey.toml` that does not parse is skipped, as `build_app` has always skipped it, and the environment alone is read. `[notifications] sweep_interval_seconds` is read from the same `./vibey.toml`, for the gate-reminder sweep every idle worker runs. |
  | `./vibey.toml`, `[queue.reap]`, `[queue.defect]` and `[bus]` -- or, with no `./vibey.toml`, the environment alone (`VIBEY_QUEUE_REAP_*`, `VIBEY_QUEUE_DEFECT_*`, `VIBEY_BUS_*`) | `bootstrap.build_app` (every command that opens the queue), via `load_config_from_path` or `EnvironmentConfigLoader` | The queue reaper's thresholds and broker policy ([`[queue.reap]`](#queuereap)), when an exhausted job is a defect ([`[queue.defect]`](#queuedefect)), and the bus it inspects. A cluster pod has no `vibey.toml` in its working directory, so the chart's environment is what composes both there (ADR-0056). A malformed environment value fails the start; a `./vibey.toml` that does not parse is skipped for the surfaces, but its `[queue.reap]` table is read strictly and malformed values fail the start rather than falling back to defaults. |
  | `./vibey.toml`, `[design.research]` -- or, with no `./vibey.toml`, the environment alone (`VIBEY_DESIGN_RESEARCH_ON_UNAVAILABLE`) | `bootstrap.build_app`, handed to every worker's `design.research` handler | What DESIGN research does when its provider can obtain no evidence ([`[design.research]`](#designresearch)): wait for a person (the default) or record the topic as not researched. A `./vibey.toml` that does not parse is skipped, and the environment alone is read, so the policy falls back to the default -- a person waits -- unless the environment declares otherwise. |
- | Your own `vibey.toml` (in your configuration folder, never `./vibey.toml`), `[inputs]` | `vibey inputs add`, and each BUILD run that has run inputs to give (`bootstrap.run_inputs_limits`, through `RunInputsSettingsLoader`) | How much a project's run inputs may hold and how much pasted text a run's prompt inlines ([`[inputs]`](#inputs)). A project's `[inputs]` table is never applied; one notice says so. |
+ | Your own `vibey.toml` (in your configuration folder, never `./vibey.toml`), `[inputs]` | `vibey inputs add` and `list`, `vibey doctor`'s `run-inputs` line, and each BUILD run that has run inputs to give (`bootstrap.run_inputs_limits` and the store composed on first use, through `RunInputsSettingsLoader`). The worker never reads it at start: a run of a project nothing was added to reads no `[inputs]` at all | Where a project's run inputs are stored, how much they may hold and how much pasted text a run's prompt inlines ([`[inputs]`](#inputs)). A project's `[inputs]` table is never applied; one notice says so. |
  | The project's stored record (the `project` row: `max_cycles` column and `config` JSON) | `vibey worker`, lifecycle repository, and job handlers | Cycle cap, per-cycle spend and turn caps, skills-context policy, [gate commands](#gates), [what an engine session may see of the environment](#engine_environment), notification delivery, telemetry, and (in principle) the `features` local-engine switches — see below. |
  | Environment variables | See [Environment variables](#environment-variables) | Database DSN, the migration-lock wait, the local-engine switches, the sovereign DESIGN provider's evidence directory. |
 
@@ -1060,10 +1060,38 @@ files (never the project's keys). A project file that cannot be read changes not
 | `max_project_bytes` | `8388608` (8 MiB) | The most all of one project's inputs may hold together. |
 | `max_items` | `64` | The most inputs one project may have. |
 | `max_prompt_bytes` | `65536` (64 KiB) | The most pasted text (UTF-8 bytes, all pastes together) inlined into a run's prompt; a paste past it is named, with its place in the run's `paste.md`, instead, so a 32k-token model's context stays usable. |
+| `store` | `local` | Where the inputs are stored: `local` (your state folder, or `store_dir`) or `seaweedfs` (a bucket on an S3 endpoint you name; [ADR-0105](../architecture/decisions/0105-run-input-store-backends.md), proposed). |
+| `store_dir` | unset (your state folder) | `local` only: an absolute folder to store the inputs in instead of `<state folder>/inputs/`. Naming it takes the state-folder environment out of where a worker looks. |
+| `endpoint` | unset | `seaweedfs` only, required: `https://host[:port]` of the S3 gateway. No user info, path, query or fragment; plain `http` only for `localhost`, `127.0.0.1` or `::1`. |
+| `bucket` | unset | `seaweedfs` only, required: the bucket, which must already exist (vibey never creates one). |
+| `prefix` | `vibey/inputs` | `seaweedfs` only: the key prefix under the bucket; `/`-separated segments of `A-Z a-z 0-9 . _ -`. |
+| `region` | `us-east-1` | `seaweedfs` only: the region the requests are signed for (S3 SigV4). |
+| `access_key_env` | `VIBEY_INPUTS_ACCESS_KEY` | `seaweedfs` only: the environment variable holding the access key. |
+| `secret_key_env` | `VIBEY_INPUTS_SECRET_KEY` | `seaweedfs` only: the environment variable holding the secret key. |
+| `timeout_seconds` | `10.0` | `seaweedfs` only: how long one request to the store may take. |
+| `max_listed_rows` | `1024` | `seaweedfs` only: the most index rows one listing of a project reads (one request each). A project whose index lists more is refused, never read in part: a bound on what another writer of a shared bucket can make a run fetch. |
 
-Every value is a positive integer (`true` is not one), an unknown key is refused naming the
+Every limit is a positive integer (`true` is not one), an unknown key is refused naming the
 key, and `max_item_bytes` may not be more than `max_project_bytes`; a refused table stops
-`vibey inputs add` with exit 78 and a BUILD run that has inputs to give with a failure naming it.
+`vibey inputs add` or `list` with exit 78 and a BUILD run that has inputs to give with a failure
+naming it. The worker reads `[inputs]`, and a SeaweedFS store's credential variables, only when a
+BUILD run has inputs to give -- never when it starts -- so a broken table, or variables a service
+manager's session does not carry, fail only those runs; DESIGN, REVIEW and runs of projects
+nothing was added to are untouched. `vibey doctor`'s `run-inputs` line is the early warning.
+A store key that does nothing for the chosen `store` is refused too, so a typo cannot hide.
+
+**`[inputs]` holds no credential.** A key named `access_key`, `secret_key`, `password` or
+`token` is refused, and the message never repeats its value: put the two credentials in the
+environment variables `access_key_env` and `secret_key_env` name. They are never written to a
+log, an error, a URL or `vibey doctor` output.
+
+```toml
+[inputs]
+store = "seaweedfs"
+endpoint = "https://files.example.org:8333"
+bucket = "vibey-inputs"
+# The credentials are read from VIBEY_INPUTS_ACCESS_KEY and VIBEY_INPUTS_SECRET_KEY.
+```
 
 ```toml
 [inputs]
@@ -1076,8 +1104,11 @@ max_prompt_bytes = 32768
 The limits are checked when an input is added, against the project's inputs so far, and read
 again each time a BUILD run with inputs starts: an input that no longer fits (say after
 `max_items` was lowered) is withheld from that run and counted in its prompt, never deleted.
-The store itself is in your state folder, not here; see
-[`vibey inputs`](cli.md#vibey-inputs).
+With the default `store = "local"` the store is in your state folder (or `store_dir`); see
+[`vibey inputs`](cli.md#vibey-inputs). Either way the ledger, not the store, decides which
+inputs exist: a BUILD run whose store lacks an input the ledger records for the project fails
+before its engine starts and names the store it read, and an object in the store that the ledger
+never recorded is withheld and counted, never given.
 
 ## `[acp]` { #acp }
 

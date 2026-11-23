@@ -553,3 +553,65 @@ def test_rewording_without_carrying_the_id_still_fails() -> None:
     result = verify(ledger=ledger, brief=brief, ref=_ref_for(ledger), budget=ZERO_BUDGET)
 
     assert not result.ok
+
+
+# --- run inputs in the range (SP-LOOPS Phase 3c, Task 7; operator ruling OR-5) -----------------
+
+
+def test_input_events_in_the_range_never_trip_a_rule() -> None:
+    """A run's inputs are recorded as `ArtifactProduced` events (each add, its repair, and what
+    each run was given) carrying no `referenced_by_open_item`. In the range a handoff verifies,
+    they trip none of the ten rules under STRICT: the input pin is a handoff check beside the
+    gate, never a gate rule, and `verify` is unchanged."""
+    import asyncio
+
+    from vibey.application.brief_producer import DeterministicBriefProducer
+
+    digest_a, digest_b = "a" * 64, "b" * 64
+    ledger = (
+        _event(1, EventKind.SESSION_SEEDED, {"seed_digest": "d1"}),
+        _event(
+            2,
+            EventKind.ARTIFACT_PRODUCED,
+            {"artifact_type": "vibey_run_input", "digest": digest_a, "kind": "paste", "size": 9},
+        ),
+        _event(
+            3,
+            EventKind.ARTIFACT_PRODUCED,
+            {"artifact_type": "vibey_run_input", "digest": digest_b, "kind": "file", "size": 4},
+        ),
+        _event(
+            4,
+            EventKind.ARTIFACT_PRODUCED,
+            {
+                "artifact_type": "vibey_run_input_repaired",
+                "digest": digest_b,
+                "kind": "file",
+                "size": 4,
+            },
+        ),
+        _event(
+            5,
+            EventKind.ARTIFACT_PRODUCED,
+            {
+                "artifact_type": "vibey_run_inputs_given",
+                "run_id": str(uuid4()),
+                "digests": [digest_a, digest_b],
+            },
+        ),
+        _event(
+            6,
+            EventKind.VERDICT_RENDERED,
+            {"complete": False, "remaining_work": ["finish the relay"]},
+        ),
+    )
+    brief = asyncio.run(
+        DeterministicBriefProducer(events=ledger).produce(
+            attempt=1, mode=GateMode.STRICT, violations=()
+        )
+    )
+    result = verify(
+        ledger=ledger, brief=brief, ref=_ref_for(ledger), budget=ZERO_BUDGET, mode=GateMode.STRICT
+    )
+    assert result.ok is True, result.violations
+    assert result.rules_run == tuple(GateRule)

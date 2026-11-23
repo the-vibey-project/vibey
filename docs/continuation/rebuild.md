@@ -12,7 +12,7 @@ and proves the result passes its own gates, without publishing anything.
 
 - **Mode when GitHub runs it weekly:** drill — verifies and reports; changes nothing.
 - **What it is for:** Reconstitute the project from any surviving copy if the forge, the runner or the operator is gone.
-- **Decision records:** 104, the newest 0104 — Run inputs: hash-addressed in the person's state, given to every BUILD run the same way.
+- **Decision records:** 105, the newest 0105 — Where run inputs are stored: your state folder by default, or a SeaweedFS bucket you name.
 <!-- END GENERATED continuation:state -->
 
 ## The prompt

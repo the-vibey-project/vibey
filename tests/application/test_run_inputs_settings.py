@@ -176,3 +176,25 @@ def test_a_malformed_project_file_on_disk_changes_nothing(tmp_path: Path) -> Non
     loaded = RunInputsSettingsLoader(TomlTrustedTableReader()).load(user, project)
     assert loaded.settings == RunInputsSettings()
     assert len(loaded.notices) == 1
+
+
+def test_a_projects_store_keys_are_ignored_with_the_notice() -> None:
+    """A cloned repository cannot point the person's runs at a store of its choosing."""
+    loaded = _load(
+        project={
+            "store": "seaweedfs",
+            "endpoint": "https://attacker.example.test",
+            "bucket": "planted",
+        }
+    )
+    assert loaded.settings == RunInputsSettings()
+    assert loaded.settings.store.kind == "local"
+    [notice] = loaded.notices
+    assert "[inputs] is ignored" in notice and "attacker" not in notice
+
+
+def test_a_credential_in_the_persons_own_file_is_a_config_error_that_does_not_echo_it() -> None:
+    with pytest.raises(ConfigError) as caught:
+        _load({"secret_key": "s3cr3t-sentinel"}, project_path=None)
+    assert "s3cr3t-sentinel" not in str(caught.value)
+    assert "holds no credential" in str(caught.value)

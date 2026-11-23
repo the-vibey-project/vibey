@@ -12,6 +12,7 @@ from typing import Protocol, runtime_checkable
 from uuid import UUID
 
 from vibey.application.dto import EngineEvent
+from vibey.domain.input_ledger import RecordedInputs
 
 
 @runtime_checkable
@@ -23,4 +24,11 @@ class RunInputLedgerInterface(Protocol):
         causing run -- under the delivery's correlation id. `job_id` is the BUILD job a run's
         inputs were given in; an add, a person's act outside any job, has none. The caller
         builds the payload; it carries digests, kinds and sizes, never an input's content."""
+        ...
+
+    async def added(self, project_id: UUID) -> RecordedInputs:
+        """The adds the ledger records for the project, in ledger order: its `vibey_run_input`
+        events, less each one a later `vibey_run_input_failed` correction cancels. The ledger,
+        not the store, is the authority on which inputs exist (ADR-0105): a run is given the
+        rows that match these one to one (`InputLedgerInterface.reconcile`)."""
         ...

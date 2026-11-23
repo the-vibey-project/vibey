@@ -8,10 +8,14 @@ reads the run's prompt and its worktree, so what reaches this engine is what rea
 
 from __future__ import annotations
 
+from collections.abc import Sequence
 from dataclasses import replace
 from datetime import UTC, datetime
 from pathlib import Path
+from typing import Any
 from uuid import UUID, uuid4
+
+import pytest
 
 from tests.application.fakes import FakeJobRepository, handle_leased, make_job
 from tests.application.test_build_implement_handler import (
@@ -31,12 +35,20 @@ from vibey.application.dto import (
 )
 from vibey.application.interfaces.run_inputs_interface import RunInputsInterface
 from vibey.application.run_inputs_service import RunInputsService
-from vibey.application.worker import Failure, Success
+from vibey.application.worker import Failure, Park, Success
 from vibey.domain.config import ConfigError
-from vibey.domain.errors import InputStoreError
+from vibey.domain.errors import InputStoreError, InputStoreUnavailable
+from vibey.domain.input_ledger import INPUT_LEDGER, RecordedInputs
 from vibey.domain.job import FailureClass
 from vibey.domain.phase import Phase
-from vibey.domain.run_input import InputKind, InputListing, RunInput, RunInputsSettings
+from vibey.domain.run_input import (
+    GIVEN_ARTIFACT_TYPE,
+    HANDOFF_INPUTS_KEY,
+    InputKind,
+    InputListing,
+    RunInput,
+    RunInputsSettings,
+)
 from vibey.infrastructure.engines.descriptors import CLAUDELOOP
 from vibey.infrastructure.engines.scripted import ScriptedEngine
 from vibey.infrastructure.inputs.hash_addressed_input_store import HashAddressedInputStore
@@ -66,11 +78,16 @@ class _Projects:
 class _Ledger:
     def __init__(self) -> None:
         self.job_ids: list[UUID | None] = []
+        self.payloads: list[dict[str, Any]] = []
 
     async def record(
         self, *, project_id: UUID, cycle: int, event: EngineEvent, job_id: UUID | None = None
     ) -> None:
         self.job_ids.append(job_id)
+        self.payloads.append(dict(event.payload))
+
+    async def added(self, project_id: UUID) -> RecordedInputs:
+        return INPUT_LEDGER.recorded(enumerate(self.payloads))
 
 
 class _World:
@@ -154,21 +171,209 @@ async def test_with_no_inputs_the_prompt_is_byte_identical_to_before(tmp_path: P
     assert not (worktree / ".vibey" / "inputs").exists()
 
 
-async def test_a_wind_down_seed_reaches_the_engine_verbatim_and_the_files_are_still_there(
+SEED = "Objective: resume without losing [q-77]."
+
+
+async def _pin_of(world: _World) -> list[str]:
+    """What an outgoing run was given, as the wind-down pins it: one fresh materialize."""
+    worktree = world.tmp / "outgoing"
+    worktree.mkdir(exist_ok=True)
+    given = await world.inputs.materialize(world.job.project_id, uuid4(), worktree)
+    return list(given.digests)
+
+
+async def test_a_wind_down_seed_is_the_byte_exact_prefix_and_the_pinned_section_follows(
     tmp_path: Path,
 ) -> None:
     world = _World(tmp_path)
     await world.add("paste", "paste", b"pasted words")
     await world.add("file", "spec.md", b"bytes")
-    seed = "Objective: resume without losing [q-77]."
+    pin = await _pin_of(world)
 
-    outcome, engine, worktree = await world.run(inputs=world.inputs, payload={"seed_prompt": seed})
+    outcome, engine, worktree = await world.run(
+        inputs=world.inputs, payload={"seed_prompt": SEED, HANDOFF_INPUTS_KEY: pin}
+    )
 
     assert isinstance(outcome, Success)
-    assert engine.specs[0].prompt == seed
+    run_id = UUID(str(outcome.result["run_id"]))
+    # The section a fresh run with the same inputs and the same run id gets.
+    (tmp_path / "fresh").mkdir()
+    fresh = await world.inputs.materialize(world.job.project_id, run_id, tmp_path / "fresh")
+    prompt = engine.specs[0].prompt
+    assert prompt.startswith(SEED)
+    assert prompt[len(SEED) :] == "\n\n" + fresh.prompt_section
     run_id = outcome.result["run_id"]
     assert (worktree / ".vibey" / "inputs" / str(run_id) / "paste.md").is_file()
     assert (worktree / ".vibey" / "inputs" / str(run_id) / "attachments" / "spec.md").is_file()
+
+
+async def test_a_legacy_seed_payload_without_a_pin_reaches_the_engine_byte_for_byte(
+    tmp_path: Path,
+) -> None:
+    world = _World(tmp_path)
+    await world.add("paste", "paste", b"pasted words")
+    await world.add("file", "spec.md", b"bytes")
+
+    outcome, engine, worktree = await world.run(inputs=world.inputs, payload={"seed_prompt": SEED})
+
+    assert isinstance(outcome, Success)
+    assert engine.specs[0].prompt == SEED
+    run_id = outcome.result["run_id"]
+    assert (worktree / ".vibey" / "inputs" / str(run_id) / "paste.md").is_file()
+
+
+async def test_an_empty_pin_gives_the_seed_byte_for_byte(tmp_path: Path) -> None:
+    world = _World(tmp_path)
+    await world.add("paste", "paste", b"added after the handoff")
+    outcome, engine, worktree = await world.run(
+        inputs=world.inputs, payload={"seed_prompt": SEED, HANDOFF_INPUTS_KEY: []}
+    )
+    assert isinstance(outcome, Success)
+    assert engine.specs[0].prompt == SEED
+    assert not (worktree / ".vibey" / "inputs").exists()
+
+
+async def test_an_input_added_after_the_handoff_is_not_given_to_the_incoming_run(
+    tmp_path: Path,
+) -> None:
+    world = _World(tmp_path)
+    await world.add("paste", "paste", b"before")
+    pin = await _pin_of(world)
+    await world.add("paste", "paste", b"after the handoff")
+    outcome, engine, _ = await world.run(
+        inputs=world.inputs, payload={"seed_prompt": SEED, HANDOFF_INPUTS_KEY: pin}
+    )
+    assert isinstance(outcome, Success)
+    assert "after the handoff" not in engine.specs[0].prompt
+    given = [p for p in world.ledger.payloads if p.get("artifact_type") == GIVEN_ARTIFACT_TYPE]
+    assert tuple(given[-1]["digests"]) == tuple(pin)
+
+
+async def test_limits_lowered_after_the_handoff_do_not_withhold_a_pinned_input(
+    tmp_path: Path,
+) -> None:
+    world = _World(tmp_path)
+    await world.add("paste", "paste", b"one")
+    await world.add("paste", "paste", b"two")
+    pin = await _pin_of(world)
+    lowered = RunInputsService(
+        store=world.store,
+        projects=world.projects,
+        ledger=world.ledger,
+        clock=FixedClock(),
+        limits=lambda: RunInputsSettings(max_items=1),
+        writer=NoFollowFiles(),
+    )
+    outcome, engine, _ = await world.run(
+        inputs=lowered, payload={"seed_prompt": SEED, HANDOFF_INPUTS_KEY: pin}
+    )
+    assert isinstance(outcome, Success)
+    assert "one" in engine.specs[0].prompt and "two" in engine.specs[0].prompt
+    assert "withheld" not in engine.specs[0].prompt
+
+
+async def test_a_pinned_input_missing_from_the_store_parks_the_job_for_a_person(
+    tmp_path: Path,
+) -> None:
+    world = _World(tmp_path)
+    await world.add("paste", "paste", b"words")
+    pin = await _pin_of(world)
+    empty = RunInputsService(
+        store=HashAddressedInputStore(tmp_path / "other" / "inputs", FixedClock()),
+        projects=world.projects,
+        ledger=world.ledger,
+        clock=FixedClock(),
+        limits=RunInputsSettings,
+        writer=NoFollowFiles(),
+    )
+    outcome, engine, _ = await world.run(
+        inputs=empty, payload={"seed_prompt": SEED, HANDOFF_INPUTS_KEY: pin}
+    )
+    assert isinstance(outcome, Park)
+    assert outcome.request.kind == "handoff_inputs_missing"
+    assert pin[0] in outcome.request.prompt
+    assert getattr(engine, "specs", []) == []
+
+
+async def test_a_pinned_object_that_no_longer_matches_parks_the_job(tmp_path: Path) -> None:
+    world = _World(tmp_path)
+    await world.add("file", "spec.md", b"bytes")
+    pin = await _pin_of(world)
+    [obj] = [
+        p for p in (tmp_path / "state" / "inputs").rglob("*") if p.is_file() and p.name == pin[0]
+    ]
+    obj.write_bytes(b"BYTES")
+    outcome, engine, _ = await world.run(
+        inputs=world.inputs, payload={"seed_prompt": SEED, HANDOFF_INPUTS_KEY: pin}
+    )
+    assert isinstance(outcome, Park)
+    assert outcome.request.kind == "handoff_inputs_missing"
+    assert getattr(engine, "specs", []) == []
+
+
+@pytest.mark.parametrize("pin", [["not-a-digest"], "a" * 64, [7]])
+async def test_a_pin_that_is_not_a_list_of_digests_parks_the_job(
+    tmp_path: Path, pin: object
+) -> None:
+    world = _World(tmp_path)
+    outcome, engine, _ = await world.run(
+        inputs=world.inputs, payload={"seed_prompt": SEED, HANDOFF_INPUTS_KEY: pin}
+    )
+    assert isinstance(outcome, Park)
+    assert outcome.request.kind == "handoff_inputs_missing"
+    assert getattr(engine, "specs", []) == []
+
+
+class _OtherDigestsInputs:
+    """Inputs that give a handed-off run something other than its pin."""
+
+    async def add(self, project_id: UUID, kind: InputKind, name: str, data: bytes) -> RunInput:
+        raise AssertionError("not called")
+
+    async def listed(self, project_id: UUID) -> InputListing:
+        raise AssertionError("not called")
+
+    async def materialize(
+        self,
+        project_id: UUID,
+        run_id: UUID,
+        worktree_path: Path,
+        *,
+        job_id: UUID | None = None,
+        pinned: Sequence[str] | None = None,
+    ) -> RunInputs:
+        return RunInputs(
+            prompt_section="## Run inputs\n", attachments_dir=None, paste_file=None, digests=()
+        )
+
+
+async def test_given_digests_other_than_the_pin_park_the_job(tmp_path: Path) -> None:
+    world = _World(tmp_path)
+    outcome, engine, _ = await world.run(
+        inputs=_OtherDigestsInputs(), payload={"seed_prompt": SEED, HANDOFF_INPUTS_KEY: ["a" * 64]}
+    )
+    assert isinstance(outcome, Park)
+    assert outcome.request.kind == "handoff_inputs_missing"
+    assert "are not the 1" in outcome.request.prompt
+    assert getattr(engine, "specs", []) == []
+
+
+class _UnreachableInputs(_OtherDigestsInputs):
+    async def materialize(self, *args: object, **kwargs: object) -> RunInputs:
+        raise InputStoreUnavailable("seaweedfs store https://h.test/b/p: not reachable (X)")
+
+
+async def test_an_unreachable_store_on_a_handed_off_run_is_a_retry_not_a_park(
+    tmp_path: Path,
+) -> None:
+    world = _World(tmp_path)
+    outcome, engine, _ = await world.run(
+        inputs=_UnreachableInputs(), payload={"seed_prompt": SEED, HANDOFF_INPUTS_KEY: ["a" * 64]}
+    )
+    assert isinstance(outcome, Failure)
+    assert outcome.failure_class is FailureClass.VIBEY
+    assert "not reachable" in outcome.detail
+    assert getattr(engine, "specs", []) == []
 
 
 class _RefusingInputs:
@@ -181,7 +386,13 @@ class _RefusingInputs:
         raise AssertionError("not called")
 
     async def materialize(
-        self, project_id: UUID, run_id: UUID, worktree_path: Path, *, job_id: UUID | None = None
+        self,
+        project_id: UUID,
+        run_id: UUID,
+        worktree_path: Path,
+        *,
+        job_id: UUID | None = None,
+        pinned: Sequence[str] | None = None,
     ) -> RunInputs:
         raise InputStoreError(f"{worktree_path}/.vibey: is a symlink or not a folder")
 
@@ -210,7 +421,7 @@ async def test_limits_that_cannot_be_read_fail_the_run_before_any_engine_session
     broken = RunInputsService(
         store=world.store,
         projects=world.projects,
-        ledger=_Ledger(),
+        ledger=world.ledger,
         clock=FixedClock(),
         limits=unreadable,
         writer=NoFollowFiles(),
@@ -242,4 +453,98 @@ async def test_a_store_root_that_cannot_be_read_fails_the_run_before_the_engine_
     assert isinstance(outcome, Failure)
     assert outcome.failure_class is FailureClass.VIBEY
     assert "the run inputs could not be given to the run" in outcome.detail
+    assert getattr(engine, "specs", []) == []
+
+
+async def test_a_store_missing_inputs_the_ledger_records_fails_the_run_before_the_engine_starts(
+    tmp_path: Path,
+) -> None:
+    # SP-LOOPS Phase 3c, Task 5 (the N7 limit): a worker whose store resolves elsewhere -- another
+    # state or config folder, a wrong bucket -- sees an empty store; the ledger says inputs were
+    # added, so the run fails loudly instead of starting with none.
+    world = _World(tmp_path)
+    await world.add("paste", "paste", b"words")
+    empty = HashAddressedInputStore(tmp_path / "another-state" / "inputs", FixedClock())
+    elsewhere = RunInputsService(
+        store=empty,
+        projects=world.projects,
+        ledger=world.ledger,
+        clock=FixedClock(),
+        limits=RunInputsSettings,
+        writer=NoFollowFiles(),
+    )
+    outcome, engine, _ = await world.run(inputs=elsewhere)
+    assert isinstance(outcome, Failure)
+    assert outcome.failure_class is FailureClass.VIBEY
+    assert empty.describe() in outcome.detail
+    assert "lacks 1 input(s) the ledger records" in outcome.detail
+    assert getattr(engine, "specs", []) == []
+
+
+class _RepositoryLedger:
+    """The ledger repository the composed service's adapter reads: the add events it was given."""
+
+    def __init__(self, payloads: list[dict[str, Any]]) -> None:
+        self.payloads = payloads
+
+    async def append(self, draft: Any) -> None:
+        self.payloads.append(dict(draft.payload))
+
+    async def artifacts_of_type(self, project_id: UUID, types: Any) -> tuple[Any, ...]:
+        from types import SimpleNamespace
+
+        return tuple(
+            SimpleNamespace(seq=n, payload=p)
+            for n, p in enumerate(self.payloads)
+            if p.get("artifact_type") in types
+        )
+
+
+@pytest.mark.parametrize(
+    "table",
+    [
+        '[inputs]\nsecret_key = "s3cr3t"\n',
+        '[inputs]\nstore = "seaweedfs"\nendpoint = "https://h.test"\nbucket = "vibey-inputs"\n',
+    ],
+)
+async def test_a_broken_inputs_table_fails_only_runs_that_have_inputs(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, table: str
+) -> None:
+    """Review I4: the worker composes its run inputs without reading `[inputs]` or the store's
+    credentials; a BUILD job with no inputs runs, and one with inputs fails naming the cause."""
+    from types import SimpleNamespace
+
+    from vibey import bootstrap
+
+    config = tmp_path / "config" / "vibey.toml"
+    config.parent.mkdir()
+    config.write_text(table)
+    monkeypatch.setattr(bootstrap, "acp_user_config", lambda: config)
+    monkeypatch.delenv("VIBEY_INPUTS_ACCESS_KEY", raising=False)
+    monkeypatch.delenv("VIBEY_INPUTS_SECRET_KEY", raising=False)
+    world = _World(tmp_path)
+    payloads: list[dict[str, Any]] = []
+    resources = SimpleNamespace(
+        clock=FixedClock(), projects=world.projects, ledger=_RepositoryLedger(payloads)
+    )
+    service = bootstrap.run_inputs_service(resources, bootstrap.run_inputs_limits)  # type: ignore[arg-type]
+
+    outcome, engine, _ = await world.run(inputs=service)
+    assert isinstance(outcome, Success)
+    _, without, _ = await world.run(inputs=None)
+    assert engine.specs[0].prompt == without.specs[0].prompt
+
+    payloads.append(
+        {
+            "artifact_type": "vibey_run_input",
+            "digest": "a" * 64,
+            "kind": "paste",
+            "size": 1,
+        }
+    )
+    outcome, engine, _ = await world.run(inputs=service)
+    assert isinstance(outcome, Failure)
+    assert outcome.failure_class is FailureClass.VIBEY
+    assert str(config) in outcome.detail
+    assert "s3cr3t" not in outcome.detail
     assert getattr(engine, "specs", []) == []

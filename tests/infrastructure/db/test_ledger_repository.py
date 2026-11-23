@@ -95,6 +95,35 @@ async def test_range_returns_events_in_seq_order(
     assert [e.seq for e in events] == [2, 3, 4]
 
 
+async def test_artifacts_of_type_reads_only_those_artifacts_in_order(
+    migrated_pool: asyncpg.Pool, project_id: UUID
+) -> None:
+    repo = PostgresLedgerRepository(migrated_pool)
+
+    def artifact(kind: str, digest: str) -> LedgerEventDraft:
+        payload = {"artifact_type": kind, "digest": digest}
+        return _draft(
+            project_id,
+            kind=EventKind.ARTIFACT_PRODUCED,
+            provenance=Provenance.TRUSTED,
+            payload=payload,
+            digest=digest_event(payload),
+        )
+
+    await repo.append(artifact("vibey_run_input", "a" * 64))
+    await repo.append(_draft(project_id))  # another kind of event
+    await repo.append(artifact("vibey_run_inputs_given", "c" * 64))
+    await repo.append(artifact("vibey_run_input_repaired", "b" * 64))
+
+    events = await repo.artifacts_of_type(
+        project_id, ("vibey_run_input", "vibey_run_input_repaired")
+    )
+
+    assert [e.payload["digest"] for e in events] == ["a" * 64, "b" * 64]
+    assert [e.seq for e in events] == [1, 4]
+    assert await repo.artifacts_of_type(uuid4(), ("vibey_run_input",)) == ()
+
+
 async def test_latest_seq_reflects_appends(migrated_pool: asyncpg.Pool, project_id: UUID) -> None:
     repo = PostgresLedgerRepository(migrated_pool)
     assert await repo.latest_seq(project_id) == 0

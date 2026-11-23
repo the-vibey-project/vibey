@@ -17,6 +17,11 @@ Three properties are load-bearing:
 - **a name of its own**: Claude Code registers one marketplace per name per user, and each
   member's package still ships its own manifest under its own name, so the root carries
   `[marketplace] name` rather than borrowing a member's.
+
+`[marketplace] packaged` adds a second rendering of the same manifest for a package that
+ships every member's plugin trees flat under one `plugins/` folder (vibey's wheel). It is
+the root manifest with each source rewritten to `./plugins/<last segment>`, so the package
+carries exactly the root's plugins and never a hand-kept list of its own.
 """
 
 from __future__ import annotations
@@ -89,18 +94,47 @@ class MarketplaceRenderer:
             "plugins": plugins,
         }
 
+    def build_packaged(self, cfg: GhConfig) -> dict[str, Any]:
+        manifest = self.build(cfg)
+        flattened: list[dict[str, Any]] = []
+        folder_of: dict[str, str] = {}
+        for plugin in manifest["plugins"]:
+            source = plugin["source"]
+            if not isinstance(source, str):
+                # A remote source is fetched, never shipped, so it stays as it is.
+                flattened.append(dict(plugin))
+                continue
+            folder = PurePosixPath(source).name
+            if folder in folder_of:
+                raise MarketplaceError(
+                    f"plugins {folder_of[folder]!r} and {plugin['name']!r} both live in a"
+                    f" folder named {folder!r}; a packaged marketplace holds one plugins/"
+                    f"{folder}"
+                )
+            folder_of[folder] = plugin["name"]
+            flattened.append({**plugin, "source": f"./plugins/{folder}"})
+        return {**manifest, "plugins": flattened}
+
     def render(self, cfg: GhConfig) -> str:
         return self._dumps(self.build(cfg))
 
     def write(self, cfg: GhConfig) -> Path:
         target = cfg.root / MANIFEST_PATH
         target.parent.mkdir(parents=True, exist_ok=True)
-        target.write_text(self.render(cfg), encoding="utf-8")
+        text = self.render(cfg)
+        if cfg.marketplace.packaged:
+            # Built before either file is written, so a refusal leaves both untouched.
+            packaged_text = self._dumps(self.build_packaged(cfg))
+            packaged = cfg.root / cfg.marketplace.packaged
+            packaged.parent.mkdir(parents=True, exist_ok=True)
+            packaged.write_text(packaged_text, encoding="utf-8")
+        target.write_text(text, encoding="utf-8")
         return target
 
     def check(self, cfg: GhConfig) -> tuple[bool, str]:
         try:
             manifest = self.build(cfg)
+            packaged = self.build_packaged(cfg) if cfg.marketplace.packaged else None
         except MarketplaceError as exc:
             return False, str(exc)
         target = cfg.root / MANIFEST_PATH
@@ -110,9 +144,20 @@ class MarketplaceRenderer:
             return False, (
                 f"{MANIFEST_PATH} is out of date with its members — run `vibey-gh marketplace`"
             )
+        packaged_note = ""
+        if packaged is not None:
+            where = cfg.marketplace.packaged
+            packaged_path = cfg.root / where
+            if not packaged_path.is_file():
+                return False, f"{where} is missing — run `vibey-gh marketplace`"
+            if packaged_path.read_text(encoding="utf-8") != self._dumps(packaged):
+                return False, (
+                    f"{where} is out of date with its members — run `vibey-gh marketplace`"
+                )
+            packaged_note = f"; {where} is its packaged rendering"
         return True, (
             f"{MANIFEST_PATH} matches its {len(cfg.marketplace.members)} member(s):"
-            f" {len(manifest['plugins'])} plugin(s) as {manifest['name']!r}"
+            f" {len(manifest['plugins'])} plugin(s) as {manifest['name']!r}{packaged_note}"
         )
 
     @staticmethod

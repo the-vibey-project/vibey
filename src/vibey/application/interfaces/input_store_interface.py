@@ -42,3 +42,8 @@ class InputStoreInterface(Protocol):
         (a torn line after a crash among them); a project with no store is an empty listing.
         Raises `InputStoreError` only when the store itself cannot be read."""
         ...
+
+    def describe(self) -> str:
+        """Where this store is, in words for an error or `vibey doctor`: the local folder, or
+        the remote store's scheme, host, bucket and prefix. Never a credential."""
+        ...

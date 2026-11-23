@@ -3430,6 +3430,12 @@ class MarketplaceConfig:
     members: tuple[str, ...] = ()
     # The manifest's human description. Empty derives one from the members.
     description: str = ""
+    # A second rendering for a package that ships the plugin trees flat, side by side
+    # under one `plugins/` folder (vibey's wheel): every source becomes
+    # `./plugins/<the source folder's last segment>`. A repository-relative path to the
+    # `.json` it is written to; empty renders and checks nothing, which is every adopter
+    # that ships no such package.
+    packaged: str = ""
 
     def __post_init__(self) -> None:
         _unique_nonempty("marketplace.members", self.members)
@@ -3450,6 +3456,19 @@ class MarketplaceConfig:
             )
         if self.name and not self.members:
             raise ValueError("marketplace.name is set but marketplace.members is empty")
+        if self.packaged:
+            if not self.members:
+                raise ValueError("marketplace.packaged is set but marketplace.members is empty")
+            if (
+                self.packaged.startswith(("/", "~"))
+                or ".." in PurePosixPath(self.packaged).parts
+                or not self.packaged.endswith(".json")
+                or any(char.isspace() or char in "'\"$`\\" for char in self.packaged)
+            ):
+                raise ValueError(
+                    "marketplace.packaged must be a repository-relative .json path without"
+                    f" '..', whitespace or shell metacharacters: {self.packaged!r}"
+                )
 
 
 @dataclass(frozen=True)
@@ -4396,6 +4415,7 @@ def load_config(root: Path | None = None, config: Path | None = None) -> GhConfi
             name=marketplace.get("name", ""),
             members=tuple(marketplace.get("members", ())),
             description=marketplace.get("description", ""),
+            packaged=marketplace.get("packaged", ""),
         ),
     )
 

@@ -17,8 +17,11 @@ The pipeline, in order, is the whole point of the no-loss design:
 4. Bound the livelock (TooManyWindDowns -> park) and select the next
    engine via RotationHandoffService.
 5. Persist the HandoffEnvelope, then enqueue the follow-up
-   ``build.implement`` whose payload carries the rendered seed prompt and
-   whose requirement excludes the engine that wound down.
+   ``build.implement`` whose payload carries the rendered seed prompt, the
+   digests of the run inputs the outgoing run was given (``HANDOFF_INPUTS_KEY``,
+   ``[]`` when none; SP-LOOPS Phase 3c), and whose requirement excludes the
+   engine that wound down. The pin is a handoff check beside the gate, not a
+   gate rule (operator ruling OR-5); ``noloss.verify`` is unchanged.
 
 The winding-down job itself settles Success: wind-down is a graceful
 capacity event, not a failure, and must not burn the escalation ladder.
@@ -51,9 +54,11 @@ from vibey.domain.handoff import (
     LedgerRef,
     RepoState,
 )
+from vibey.domain.handoff_inputs import HANDOFF_INPUTS
 from vibey.domain.job import idempotency_key
 from vibey.domain.ledger import EventKind, LedgerEvent
 from vibey.domain.phase import Phase
+from vibey.domain.run_input import HANDOFF_INPUTS_KEY
 
 LedgerWriter = Callable[[Sequence[LedgerEvent], Path], LedgerRef]
 """Writes the full ledger to a file and returns its range reference --
@@ -123,11 +128,28 @@ class WindDownOrchestrator:
         # carries item_id/stage, closed by human gates, not by handoff
         # closables), and earlier cycles were sealed by their own reviews
         # -- mixing them into the gate would check the wrong closures.
+        everything = await self._ledger.all_for_project(job.project_id)
         events = tuple(
-            event
-            for event in await self._ledger.all_for_project(job.project_id)
-            if event.cycle == job.cycle and event.phase is Phase.BUILD
+            event for event in everything if event.cycle == job.cycle and event.phase is Phase.BUILD
         )
+        # The run inputs the outgoing run was given, pinned for the follow-up (SP-LOOPS Phase
+        # 3c): a handoff check beside the gate, not a gate rule (OR-5). A pin that cannot be
+        # read parks here, before anything is recorded, as a failed gate does.
+        try:
+            # Matched on the job alone, across cycles: the given event is recorded under the
+            # project's cycle, which can differ from the job's (review N7).
+            pinned_inputs = HANDOFF_INPUTS.pinned(everything, job.id) or ()
+        except ValueError as exc:
+            return Park(
+                HumanGateRequest(
+                    kind="handoff_gate_failed",
+                    prompt=(
+                        f"work item {work_item_id!r} wound down on {engine_id.value} but the "
+                        f"run inputs it was given cannot be pinned for the next engine: {exc}. "
+                        "How should the handoff proceed?"
+                    ),
+                )
+            )
         budget = _budget_from_events(events)
         ref = self._write_ledger(events, worktree_path / ".vibey" / "handoff" / "ledger.jsonl")
 
@@ -230,6 +252,7 @@ class WindDownOrchestrator:
                 payload={
                     **job.payload,
                     "seed_prompt": seed_prompt,
+                    HANDOFF_INPUTS_KEY: list(pinned_inputs),
                     "wind_down_count": decision.wind_down_count,
                     "previous_engine_id": engine_id.value,
                 },

@@ -4,6 +4,7 @@ value (SP-LOOPS Phase 3; design Goal 4). Interfaces declare; they never consume.
 
 from __future__ import annotations
 
+from collections.abc import Sequence
 from pathlib import Path
 from typing import Protocol, runtime_checkable
 from uuid import UUID
@@ -28,11 +29,24 @@ class RunInputsInterface(Protocol):
         ...
 
     async def materialize(
-        self, project_id: UUID, run_id: UUID, worktree_path: Path, *, job_id: UUID | None = None
+        self,
+        project_id: UUID,
+        run_id: UUID,
+        worktree_path: Path,
+        *,
+        job_id: UUID | None = None,
+        pinned: Sequence[str] | None = None,
     ) -> RunInputs:
         """Writes the project's inputs into `worktree_path / ".vibey/inputs/<run_id>/"` and
         returns the run's input value; with no inputs, writes nothing and returns an empty value.
         Idempotent for one `run_id`. One ledger event, under `job_id`, records the digests the
         run was actually given. Raises `UnknownProject` or `InputStoreError` (an object
-        whose bytes no longer match its digest is never copied)."""
+        whose bytes no longer match its digest is never copied).
+
+        With `pinned` (a handed-off run; SP-LOOPS Phase 3c), the run is given exactly those
+        digests, in that order, each read from its latest index row: no limit but
+        `max_prompt_bytes` is applied again (withholding now would drop what the outgoing engine
+        had; what is not inlined stays in `paste.md`), and no input added since is given. A
+        pinned digest with no row or no object raises `HandoffInputsMissing`. An empty pin gives
+        nothing and writes nothing."""
         ...

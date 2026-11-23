@@ -103,7 +103,8 @@ reads any run.
 | `2` | Usage error: a bad global flag (see above); typer's own validation (missing argument, malformed UUID, a value outside an option's minimum or maximum, unknown option); `install` without `--postgres`; `doctor --install-postgres` with `--cluster`; `new --skills-context-mode` outside `off`/`shadow`/`inject`; `answer` mode conflicts or a `--raw` value that is not a JSON object; `abandon` without `--reason`, or with a `--reason` or `--by` that cannot be recorded; `worker` with an unknown `--engines` id, an `--engines` list matching none of the worker's engines, an unknown `--provider`, or an unknown `--azure` value; `doctor --cluster` with an unknown `--engines` id or `--provider`; `doctor --engines` or `--provider` without `--cluster`; `doctor --record` whose target project declares a forbidden `engine_environment` entry; `new` whose `vibey.toml` declares a malformed or forbidden `[gates]` or `[engine_environment]` entry; `inputs add` with a refused input, or with anything but exactly one of `--paste`, `--paste-stdin` and `--file`. |
 | `3` | Blocked by a domain rule, in a guarded command. Prints `Error: <message>` on stderr, plus a next-step hint for some error types and, last, the error's permanent code (``(E0040: run `vibey explain E0040`)``). See [Error codes](errors.md). |
 | `130` | Interrupted with Ctrl-C, in a guarded command (prints `Interrupted.`). |
-| `78` | Your own `vibey.toml` cannot be read or rewritten for `vibey loops marketplace`, `plugin`, `mcp` or `skills`, or cannot be read (or its `[inputs]` is refused) for `vibey inputs add` (EX_CONFIG); the run input store cannot be made, read or written for `vibey inputs add` or `list`. A supervisor setting no service could run with: `supervisor install` or `supervisor status` with an unreadable `[supervisor]` table, a path on volatile storage or inside a linked worktree, `vibey` not on `PATH`, or no delivery bridge under `--repo`; `supervisor exec` with a missing or malformed environment file. |
+| `78` | Your own `vibey.toml` cannot be read or rewritten for `vibey loops marketplace`, `plugin`, `mcp` or `skills`, or cannot be read (or its `[inputs]` is refused) for `vibey inputs add` or `list` (EX_CONFIG); the run input store's credential variables are not set, or the store cannot be made, read or written, for `vibey inputs add` or `list`. A supervisor setting no service could run with: `supervisor install` or `supervisor status` with an unreadable `[supervisor]` table, a path on volatile storage or inside a linked worktree, `vibey` not on `PATH`, or no delivery bridge under `--repo`; `supervisor exec` with a missing or malformed environment file. |
+| `69` | The run input store `[inputs]` names did not answer, for `vibey inputs add` or `list` (EX_UNAVAILABLE): a SeaweedFS store that could not be reached, timed out or answered 5xx. Nothing was added; try again later. |
 | `75` | Resting for the Sabbath (sub-doctrine 8.i, [ADR-0072](../architecture/decisions/0072-the-sabbath-kept-where-the-machine-stands.md)): `new` or `work` declined, said why and when it resumes, and changed nothing. Paused, not failed. |
 
 ### Guarded and unguarded commands
@@ -858,12 +859,13 @@ the new project is created beside them, and they stay readable by id.
 
 The pasted texts and files every BUILD run of a project is given: add, list.
 
-Every BUILD run of the project that does not start from a handoff seed gets the same inputs, in
-its worktree and in its prompt, through one path, whichever loop runs it (SP-LOOPS Phase 3;
-[ADR-0104](../architecture/decisions/0104-run-inputs-hash-addressed.md)). A run that starts from
-a handoff seed gets them in its worktree only; see "What a run gets" below.
-They are added here, before the runs that should see them. The ledger records each input's
-digest, kind and size, never its content, and nothing of them enters PostgreSQL.
+Every BUILD run of the project gets the same inputs, in its worktree and in its prompt, through
+one path, whichever loop runs it (SP-LOOPS Phase 3;
+[ADR-0104](../architecture/decisions/0104-run-inputs-hash-addressed.md)). A run handed off from
+another engine gets exactly the inputs the run it replaces was given, after the seed (Phase 3c);
+see "What a run gets" below. They are added here, before the runs that should see them. The
+ledger records each input's digest, kind, size and name digest, never its content or its name,
+and nothing of them enters PostgreSQL.
 
 ```bash
 vibey inputs add 3f2a9c4e-0000-4000-8000-000000000001 --file ./spec.md
@@ -882,15 +884,29 @@ in your configuration folder. An `[inputs]` table in the `vibey.toml` of the fol
 command in is never applied; a notice says so, naming the two files and none of the project's
 keys.
 
-**Where they are kept.** In your own state folder, keyed by project id:
-`<state folder>/inputs/<project id>/`, where the state folder is
+**Where they are kept.** Where [`[inputs] store`](configuration.md#inputs) says
+([ADR-0105](../architecture/decisions/0105-run-input-store-backends.md), proposed). With the
+default, `store = "local"`, in your own state folder (or the absolute `store_dir` you name),
+keyed by project id: `<state folder>/inputs/<project id>/`, where the state folder is
 `~/Library/Application Support/vibey` on macOS and `$XDG_STATE_HOME/vibey` elsewhere
 (`~/.local/state/vibey` when `XDG_STATE_HOME` is unset or relative). Never inside the project's
 checkout, which a cloned repository controls. Each input's bytes are stored once under their
 SHA-256 digest (`objects/<first two hex digits>/<digest>`, 0600), and every add appends one line
 to `index.jsonl` (digest, kind, name, size and when); the folders are 0700. The same bytes added
-twice are stored once and indexed twice. Inputs stay on this machine: a job that moves to
-another machine does not take them.
+twice are stored once and indexed twice. A local store stays on this machine: a job that moves
+to another machine does not take its inputs. With `store = "seaweedfs"` they are kept in a bucket
+you name on a SeaweedFS S3 gateway (`<prefix>/<project id>/objects/...`, and one object per index
+row), which every worker holding the endpoint and the two credential variables reads over the
+network; vibey never creates the bucket.
+
+**The ledger decides what exists.** A run is given the stored rows that match the ledger's
+recorded adds one to one, in the order they were added: same digest, kind, size and name. A row
+in the store that no add matches (another writer of a shared bucket, an older version of a file
+re-planted) is withheld and counted in the run's prompt. An add the store lacks fails the run
+before its engine starts, naming the input (kind, digest, size): point `[inputs]` at the store it
+was added to, or add the same bytes again, which fulfils the recorded add. A project nothing was
+ever added to reads no store at all, so a broken `[inputs]` table fails only runs that have
+inputs to give.
 
 **What a run gets.** When a BUILD run starts, the inputs that fit `[inputs]` as it stands then
 are written into its worktree: each file once, under its name, in
@@ -902,20 +918,31 @@ instructions.`, with the pastes inside a fence that no run of backticks in them 
 in `paste.md`) and the attached files listed with their paths and sizes. Bytes of a paste that
 are not UTF-8, and NULs, are shown as U+FFFD and counted in a note, and inputs withheld because
 they no longer fit the limits are counted too. One `vibey_run_inputs_given` event records the
-digests the run was given. A BUILD run started from a wind-down seed handed over from another
-engine gets the folder in its worktree and the event, but its prompt is the seed unchanged, with
-no `## Run inputs` section: the seed passed the no-loss gate byte for byte, so the model is not
-told the folder exists (a known gap, ADR-0104).
+digests the run was given. A BUILD run handed over from another engine at a wind-down is given
+exactly the inputs the run it replaces was given (the wind-down pins their digests in the
+follow-up job): its prompt is the gate-verified seed, byte for byte, then the same `## Run
+inputs` section, and nothing added since the handoff is given. A pinned input the store no longer
+holds parks the job as a `handoff_inputs_missing` gate; a store that does not answer is retried.
+A follow-up enqueued before this existed keeps the seed alone.
 Each add is one `ArtifactProduced` event with exactly `artifact_type` (`vibey_run_input`),
-`digest`, `kind` and `size`.
+`digest`, `kind`, `size` and `name_digest` (the SHA-256 of the name). An add writes the stored
+object, then this event, then the index row. Two correction events carry the same fields: when
+the row cannot be written after the event, `vibey_run_input_failed` cancels that add; when the
+same bytes are added again for an add whose row is missing, `vibey_run_input_repaired` records
+that the add was fulfilled (it also records a damaged or lost object rewritten in place). If
+neither the row nor the correction could be written, the add stands with no row, and the error
+says so: BUILD runs of this project are blocked until the input is added again with the same
+bytes, name and kind (`vibey inputs add`).
 
 Names are printed through vibey's text cleaner (no control, bidi or invisible characters);
 `--json` prints the values as they are.
 
 Exit codes: `0` done; `1` an unknown project; `2` a refused input, or not exactly one source
-(and typer's own usage errors); `78` your `vibey.toml` cannot be read or its `[inputs]` is
-refused (`add`), or the store cannot be made, read or written. There is no ACP intake yet (an
-`/input` command for embedded resources): see ADR-0104.
+(and typer's own usage errors); `69` the store did not answer (a SeaweedFS store unreachable,
+timed out or answering 5xx; try again later); `78` your `vibey.toml` cannot be read or its
+`[inputs]` is refused (`add` and `list`), the store's credential variables are not set, or the
+store cannot be made, read or written. There is no ACP intake yet (an `/input` command for
+embedded resources): see ADR-0104.
 
 ## `vibey serve`
 
@@ -1184,7 +1211,7 @@ anywhere in `src/vibey` without an entry there.
 | `verify_repair_exhausted`, `integrate_repair_exhausted` | `vibey answer ID --raw '{"max_rounds": N}'` | BUILD's verify and integrate repair loops. |
 | `delivery_exhausted`, `research_evidence`, `engine_misconfigured` | `vibey answer ID --raw '{}'` | Any answer retries, once the cause outside vibey is fixed. |
 | `foreign_branch` | `vibey answer ID --raw '{}'` | BUILD found a branch it cannot prove this project created and touched nothing. Check whose it is, move it aside (`git branch -m`), then answer: the retry cuts a fresh branch ([ADR-0008](../architecture/decisions/0008-worktree-isolation.md)). |
-| `handoff_gate_failed`, `too_many_wind_downs`, and any kind not listed | `vibey answer ID --raw '<json>'` | Nothing reads a particular answer; you write it. |
+| `handoff_gate_failed`, `too_many_wind_downs`, `handoff_inputs_missing`, and any kind not listed | `vibey answer ID --raw '<json>'` | Nothing reads a particular answer; you write it. |
 
 A verdict or choice uses the gate's declared default, else its first option;
 `options` in `--json` lists the rest. `N` and `<json>` are placeholders, and
@@ -2428,6 +2455,20 @@ be. `PASS` when there are none, or when every waiting gate's project has a chann
 `UNKNOWN` when `VIBEY_PG_URL` is unset or the gates cannot be read. It is a report, never
 a failure: those gates are still listed by `vibey gates`, and each is recorded on the
 ledger as undeliverable ([`[notifications]`](configuration.md#notifications)).
+
+The `run-inputs` line, after `host-health`, names the run input store your own
+[`[inputs]`](configuration.md#inputs) puts in force and the config file it came from (or
+`default; <file> does not exist`), so a worker whose store resolves elsewhere -- another state or
+config folder, a wrong bucket -- can be told from your shell. A local store is `PASS run-inputs
+local store at <path> (from <file>)`, with `; made on the first add` while the folder does not
+exist yet under a writable parent; a symlink where the folder belongs, a file there, or a folder
+it cannot write is a `FAIL`. A SeaweedFS store is probed with one ListObjectsV2 of at most one key
+under its prefix: `PASS run-inputs seaweedfs store <scheme://host/bucket/prefix> (from <file>):
+reachable; credentials from <ACCESS_VAR>, <SECRET_VAR>`, or a `FAIL` that says `not reachable
+(<error class>)`, `refused the credentials in <ACCESS_VAR>, <SECRET_VAR>`, `bucket <b> does not
+exist`, or `<VAR> is not set`. Credentials are named by their variables, never shown. Your own
+`vibey.toml` that cannot be read, and any exception, are `UNKNOWN`. Doctor is your explicit act,
+so its one request to a network store is not a run fetching on its own.
 
 The `web-search` line asks the local SearXNG to prove it is one: a GET of its `/config` at
 `VIBEY_SEARXNG_URL`, or `http://127.0.0.1:28180`, bounded by `VIBEY_SEARCH_TIMEOUT`, carrying no

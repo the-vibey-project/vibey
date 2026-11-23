@@ -46,6 +46,8 @@ from tests.meta.wheel_artifact import build_wheel, unpack
 
 REPO = Path(__file__).resolve().parents[2]
 TENANT = REPO / "src" / "vibey_tools" / "skills"
+PACKAGED = TENANT / "packaged" / "marketplace.json"
+ROOT_MANIFEST = REPO / ".claude-plugin" / "marketplace.json"
 ROOT = "vibey_skills/marketplace"
 MANIFEST = f"{ROOT}/.claude-plugin/marketplace.json"
 RESEARCH_SKILLS = {
@@ -93,13 +95,21 @@ def _source_plugin(name: str) -> list[str]:
     return files
 
 
-def test_the_wheel_carries_the_marketplace_manifest_where_a_marketplace_has_it(
-    names: list[str], wheel: Path
-) -> None:
+def test_the_wheel_manifest_is_the_packaged_rendering(names: list[str], wheel: Path) -> None:
+    """The manifest a marketplace reads is the packaged rendering of the root one (Phase 3c)."""
     assert MANIFEST in names
     with zipfile.ZipFile(wheel) as archive:
         shipped = archive.read(MANIFEST)
-    assert shipped == (TENANT / ".claude-plugin" / "marketplace.json").read_bytes()
+    assert shipped == PACKAGED.read_bytes()
+
+
+def test_the_wheel_carries_every_root_plugin_with_its_plugin_json(names: list[str]) -> None:
+    root = json.loads(ROOT_MANIFEST.read_text(encoding="utf-8"))
+    assert root["plugins"], "the root manifest lists no plugin"
+    present = set(names)
+    for plugin in root["plugins"]:
+        folder = Path(plugin["source"]).name
+        assert f"{ROOT}/plugins/{folder}/.claude-plugin/plugin.json" in present, plugin["name"]
 
 
 @pytest.mark.parametrize("plugin", DEFAULT_RESEARCH_PLUGINS)
@@ -118,7 +128,10 @@ def test_the_marketplace_root_holds_the_marketplace_and_nothing_else(names: list
 
 def test_the_wheel_carries_one_copy_of_the_plugins_tree(names: list[str]) -> None:
     skill_files = [name for name in names if name.endswith("/SKILL.md")]
-    source = list((TENANT / "plugins").glob("*/skills/*/SKILL.md"))
+    source = [
+        *(TENANT / "plugins").glob("*/skills/*/SKILL.md"),
+        *(REPO / "src" / "vibey_tools" / "gh" / "plugins").glob("*/skills/*/SKILL.md"),
+    ]
     assert len(skill_files) == len(source)
     assert all(name.startswith(f"{ROOT}/plugins/") for name in skill_files)
     assert "vibey_skills/marketplace.json" not in names
@@ -173,15 +186,44 @@ def test_code_imported_from_the_wheel_finds_the_marketplace(unpacked: Path, tmp_
     assert found["skill"].resolve().is_relative_to(root / "plugins")
 
 
-def test_a_checkout_and_the_wheel_lock_the_shipped_marketplace_alike(
+def test_the_wheel_locks_the_same_plugin_files_a_checkout_locks(
     unpacked: Path, tmp_path: Path
 ) -> None:
-    """The shipped lock covers the manifest and the plugin folders it lists, never bytecode: the
-    lock a source checkout writes (its marketplace folder also holds sources and tests) is the
-    lock an installed wheel matches, so moving between them is no `LockMismatchError`."""
-    lock_path = tmp_path / "loops.lock"
-    resolver = CapabilityResolver(lock_path, tmp_path / "snapshots", shipped_source=SHIPPED_SOURCE)
-    resolver.resolve(BundleSpec.default(), (), {DEFAULT_MARKETPLACE_NAME: TENANT})
-    locked = CapabilityLock().read(lock_path)
-    resolver.resolve(BundleSpec.default(), locked, {DEFAULT_MARKETPLACE_NAME: unpacked / ROOT})
-    assert CapabilityLock().read(lock_path) == locked  # matched, so nothing was locked again
+    """The shipped lock covers the manifest and the plugin folders it lists, never bytecode.
+
+    Since Phase 3c a checkout locks the repository root's manifest, whose sources name each
+    member's folder, while the wheel's packaged manifest names `./plugins/<folder>`; the two
+    manifests differ in their sources, so their digests differ and a person who moves between
+    a checkout and an install of the same release re-locks with `vibey loops lock` (recorded in
+    the Phase 3c ledger). What must not differ is the plugin content: every plugin file the
+    wheel locks is byte for byte the file the checkout locks.
+    """
+    locker = CapabilityLock()
+    resolver = CapabilityResolver(
+        tmp_path / "loops.lock", tmp_path / "snapshots", shipped_source=SHIPPED_SOURCE
+    )
+    checkout = {
+        r.path: r
+        for r in locker.tree_records(REPO, resolver._shipped_scope(DEFAULT_MARKETPLACE_NAME, REPO))  # noqa: SLF001
+    }
+    wheel_root = unpacked / ROOT
+    wheel = {
+        r.path: r
+        for r in locker.tree_records(
+            wheel_root,
+            resolver._shipped_scope(DEFAULT_MARKETPLACE_NAME, wheel_root),  # noqa: SLF001
+        )
+    }
+    root = json.loads(ROOT_MANIFEST.read_text(encoding="utf-8"))
+    flat = {
+        f"plugins/{Path(p['source']).name}": p["source"].removeprefix("./") for p in root["plugins"]
+    }
+    compared = 0
+    for path, record in wheel.items():
+        head = "/".join(path.split("/")[:2])
+        if head not in flat:
+            continue  # the manifest, and the `plugins` folder entry above the plugins
+        twin = checkout[flat[head] + path.removeprefix(head)]
+        assert (twin.kind, twin.payload) == (record.kind, record.payload), path
+        compared += 1
+    assert compared > len(root["plugins"])

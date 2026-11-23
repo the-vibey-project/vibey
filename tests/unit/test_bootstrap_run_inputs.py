@@ -62,6 +62,13 @@ class _Ledger:
     async def append(self, draft: Any) -> None:
         self.drafts.append(draft)
 
+    async def artifacts_of_type(self, project_id: UUID, types: Any) -> tuple[Any, ...]:
+        return tuple(
+            SimpleNamespace(seq=n, payload=d.payload)
+            for n, d in enumerate(self.drafts)
+            if d.payload.get("artifact_type") in types
+        )
+
 
 def _resources(tmp_path: Path) -> tuple[Any, UUID]:
     project_id = uuid4()
@@ -100,14 +107,16 @@ def test_vibey_inputs_composes_through_run_inputs_service(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     resources, _ = _resources(tmp_path)
-    calls: list[tuple[Any, Callable[[], RunInputsSettings]]] = []
+    calls: list[tuple[Any, Callable[[], RunInputsSettings], Any]] = []
 
     @asynccontextmanager
     async def fake_app() -> AsyncIterator[Any]:
         yield resources
 
-    def recording(given: Any, limits: Callable[[], RunInputsSettings]) -> RunInputsService:
-        calls.append((given, limits))
+    def recording(
+        given: Any, limits: Callable[[], RunInputsSettings], location: Any = None
+    ) -> RunInputsService:
+        calls.append((given, limits, location))
         return RunInputsService.__new__(RunInputsService)
 
     monkeypatch.setattr(bootstrap, "build_app", fake_app)
@@ -119,6 +128,112 @@ def test_vibey_inputs_composes_through_run_inputs_service(
             pass
 
     asyncio.run(open_it())
-    [(given, limits)] = calls
+    [(given, limits, location)] = calls
     assert given is resources
     assert limits() == settings
+    assert location == settings.store  # the store is the one the same file names
+
+
+# -- the store [inputs] names (SP-LOOPS Phase 3c, Task 5; ADR-0105) ----------------------------
+
+
+def test_the_location_is_the_persons_own_inputs_table(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    from vibey.domain.run_input import InputStoreLocation
+
+    config = tmp_path / "vibey.toml"
+    monkeypatch.setattr(bootstrap, "acp_user_config", lambda: config)
+    assert bootstrap.run_inputs_location() == InputStoreLocation()
+    config.write_text('[inputs]\nstore_dir = "/srv/vibey/inputs"\n')
+    assert bootstrap.run_inputs_location() == InputStoreLocation(store_dir="/srv/vibey/inputs")
+
+
+def test_store_local_with_store_dir_uses_that_folder(tmp_path: Path) -> None:
+    from vibey.domain.run_input import InputStoreLocation
+    from vibey.infrastructure.inputs.hash_addressed_input_store import HashAddressedInputStore
+
+    resources, _ = _resources(tmp_path)
+    folder = tmp_path / "named" / "inputs"
+    store = bootstrap.run_inputs_store(resources, InputStoreLocation(store_dir=str(folder)))
+    assert isinstance(store, HashAddressedInputStore)
+    assert store.root == folder
+
+
+def test_store_local_without_store_dir_is_the_state_folder(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    from vibey.infrastructure.inputs.hash_addressed_input_store import HashAddressedInputStore
+
+    root = tmp_path / "state" / "inputs"
+    monkeypatch.setattr(bootstrap, "run_inputs_root", lambda: root)
+    monkeypatch.setattr(bootstrap, "acp_user_config", lambda: tmp_path / "absent.toml")
+    resources, _ = _resources(tmp_path)
+    store = bootstrap.run_inputs_store(resources)  # no location: the person's own [inputs]
+    assert isinstance(store, HashAddressedInputStore)
+    assert store.root == root
+
+
+SEAWEED_ENDPOINT = "https://files.example.test:8333"
+
+
+def _seaweed() -> Any:
+    from vibey.domain.run_input import InputStoreLocation
+
+    return InputStoreLocation(
+        kind="seaweedfs",
+        endpoint=SEAWEED_ENDPOINT,
+        bucket="vibey-inputs",
+        region="garage",
+        access_key_env="P3C_TEST_ACCESS",
+        secret_key_env="P3C_TEST_SECRET",
+        timeout_seconds=4,
+    )
+
+
+def test_store_seaweedfs_composes_the_seaweedfs_store_with_the_shared_signer(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    from vibey.infrastructure.blob.s3_request_signer import S3RequestSigner
+    from vibey.infrastructure.inputs.seaweedfs_input_store import SeaweedFsInputStore
+
+    monkeypatch.setenv("P3C_TEST_ACCESS", "FAKEACCESS")
+    monkeypatch.setenv("P3C_TEST_SECRET", "fake-secret-sentinel")
+    resources, _ = _resources(tmp_path)
+    store = bootstrap.run_inputs_store(resources, _seaweed())
+    assert isinstance(store, SeaweedFsInputStore)
+    signer = store._signer  # noqa: SLF001
+    assert isinstance(signer, S3RequestSigner)
+    assert signer.access_key == "FAKEACCESS"
+    assert "fake-secret-sentinel" not in repr(signer)
+    client = store._client  # noqa: SLF001
+    assert client.follow_redirects is False
+    assert client.timeout.read == 4
+    assert store.describe() == _seaweed().describe()
+    client.close()
+
+
+@pytest.mark.parametrize(
+    ("present", "named"),
+    [({}, "P3C_TEST_ACCESS, P3C_TEST_SECRET"), ({"P3C_TEST_ACCESS": "x"}, "P3C_TEST_SECRET")],
+)
+def test_missing_credential_variables_refuse_at_composition_naming_the_variables(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, present: dict[str, str], named: str
+) -> None:
+    monkeypatch.delenv("P3C_TEST_ACCESS", raising=False)
+    monkeypatch.delenv("P3C_TEST_SECRET", raising=False)
+    for key, value in present.items():
+        monkeypatch.setenv(key, value)
+    monkeypatch.setattr(bootstrap, "acp_user_config", lambda: tmp_path / "vibey.toml")
+    resources, _ = _resources(tmp_path)
+    with pytest.raises(ConfigError) as caught:
+        bootstrap.run_inputs_store(resources, _seaweed())
+    assert f"reads its credentials from {named}," in str(caught.value)
+    assert str(tmp_path / "vibey.toml") in str(caught.value)
+
+
+def test_the_store_client_takes_no_proxy_from_the_environment() -> None:
+    """Review N5: signed requests go to the endpoint and nowhere else."""
+    with bootstrap.run_inputs_http_client(_seaweed()) as client:
+        assert client.trust_env is False
+        assert client.follow_redirects is False

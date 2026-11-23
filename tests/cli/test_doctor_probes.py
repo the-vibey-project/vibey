@@ -78,6 +78,7 @@ def test_the_editor_probes_run_in_doctors_order() -> None:
         "gate-notices",
         "supervisor",
         "host-health",
+        "run-inputs",
         "web-search",
         "llm-tooling",
     ]
@@ -393,3 +394,30 @@ def test_the_editor_set_swaps_stdout_for_no_section(monkeypatch: pytest.MonkeyPa
     results = asyncio.run(DoctorChecks(LOCAL_DOCTOR_PROBES).run())
 
     assert "hub-exposure" in {r.name for r in results}
+
+
+def test_the_section_is_in_doctor_and_in_the_editor_probes() -> None:
+    """`vibey doctor` runs the run-inputs section when it is handed one, right after host
+    health; the editor's set always has it (SP-LOOPS Phase 3c, Task 6)."""
+    from vibey.cli.doctor_probes import LOCAL_DOCTOR, RUN_INPUTS
+
+    async def section() -> bool:
+        return True
+
+    def lines() -> tuple[list[str], bool]:
+        return [], True
+
+    common = {
+        "database_security": section,
+        "passwordless_reach": section,
+        "hub_exposure": lambda: True,
+        "sabbath": lines,
+        "gate_notices": lambda: section(),
+        "supervisor": lines,
+        "host_health": lines,
+        "ollama_enabled": lambda: False,
+    }
+    names = [p.name for p in LOCAL_DOCTOR.for_doctor(**common, run_inputs=lines)]  # type: ignore[arg-type]
+    assert names[names.index("host-health") + 1] == RUN_INPUTS == "run-inputs"
+    assert RUN_INPUTS not in [p.name for p in LOCAL_DOCTOR.for_doctor(**common)]  # type: ignore[arg-type]
+    assert RUN_INPUTS in [p.name for p in LOCAL_DOCTOR.for_editor()]

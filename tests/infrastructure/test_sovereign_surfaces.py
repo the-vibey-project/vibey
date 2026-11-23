@@ -1563,18 +1563,25 @@ async def test_garage_adapter_object_errors() -> None:
 
 
 def test_garage_signing_is_deterministic_and_shaped() -> None:
-    from vibey.infrastructure.blob.garage import _canonical_uri, _signature
+    from datetime import UTC, datetime
+
+    from vibey.infrastructure.blob.garage import _canonical_uri
+    from vibey.infrastructure.blob.s3_request_signer import S3RequestSigner
 
     assert _canonical_uri("b", "a/b c") == "/b/a/b%20c"
-    first = _signature(
-        secret_key="sk", region="us-east-1", datestamp="20260101", string_to_sign="s"
+    signer = S3RequestSigner(
+        "ak", "sk", "us-east-1", clock=lambda: datetime(2026, 1, 1, tzinfo=UTC)
     )
-    second = _signature(
-        secret_key="sk", region="us-east-1", datestamp="20260101", string_to_sign="s"
+    first, second = (
+        signer.headers(method="GET", host="h", canonical_uri="/b", query={}, body=b"")[
+            "Authorization"
+        ]
+        for _ in range(2)
     )
     assert first == second
-    assert len(first) == 64
-    assert all(c in "0123456789abcdef" for c in first)
+    signature = first.rsplit("Signature=", 1)[1]
+    assert len(signature) == 64
+    assert all(c in "0123456789abcdef" for c in signature)
 
 
 @pytest.mark.asyncio

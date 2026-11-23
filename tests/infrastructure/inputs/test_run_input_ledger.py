@@ -74,3 +74,39 @@ def test_a_run_event_carries_the_job_id_it_is_given() -> None:
     event = EngineEvent(kind=EventKind.ARTIFACT_PRODUCED.value, at=AT, payload={})
     asyncio.run(_adapter(fake).record(project_id=uuid4(), cycle=1, event=event, job_id=job_id))
     assert fake.drafts[0].job_id == job_id
+
+
+class _ReadingLedger(_Ledger):
+    def __init__(self, events: list[object]) -> None:
+        super().__init__()
+        self.events = events
+        self.asked: list[tuple[object, tuple[str, ...]]] = []
+
+    async def artifacts_of_type(self, project_id: object, types: tuple[str, ...]) -> list[object]:
+        self.asked.append((project_id, tuple(types)))
+        return self.events
+
+
+def test_added_is_the_live_adds_in_ledger_order() -> None:
+    from types import SimpleNamespace
+
+    from vibey.domain.input_ledger import RecordedInput
+
+    project_id = uuid4()
+    add = {"artifact_type": "vibey_run_input", "kind": "paste", "size": 1}
+    fake = _ReadingLedger(
+        [
+            SimpleNamespace(seq=3, payload={**add, "digest": "a" * 64}),
+            SimpleNamespace(seq=5, payload={**add, "digest": "b" * 64}),
+            SimpleNamespace(
+                seq=6,
+                payload={**add, "artifact_type": "vibey_run_input_failed", "digest": "b" * 64},
+            ),
+            SimpleNamespace(seq=7, payload={**add, "digest": 7}),
+        ]
+    )
+    added = asyncio.run(
+        PostgresRunInputLedger(cast(PostgresLedgerRepository, fake)).added(project_id)
+    )
+    assert added.added == (RecordedInput(3, "a" * 64, "paste", 1, None),)
+    assert fake.asked == [(project_id, ("vibey_run_input", "vibey_run_input_failed"))]

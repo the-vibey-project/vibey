@@ -596,9 +596,7 @@ def test_the_loops_store_is_beside_the_persons_own_vibey_toml(tmp_path: Path) ->
     assert store.lock_path == tmp_path / "config" / "loops" / "lock.json"
     assert store.marketplaces == tmp_path / "config" / "loops" / "marketplaces"
     assert store.snapshots == tmp_path / "config" / "loops" / "snapshots"
-    from vibey_skills import marketplace_root
-
-    assert store.shipped_root() == marketplace_root()
+    assert store.shipped_root() == bootstrap.loops_shipped_root()
     resolver = bootstrap.loops_resolver(store)
     assert resolver._shipped_source == bootstrap.loops_shipped_source()  # noqa: SLF001
 

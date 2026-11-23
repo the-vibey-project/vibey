@@ -49,10 +49,12 @@ class LocalDoctorProbesInterface(Protocol):
         ollama_enabled: Callable[[], bool],
         llm_tooling: Callable[[], tuple[list[str], bool]] | None = None,
         web_search: Callable[[], tuple[list[str], bool]] | None = None,
+        run_inputs: Callable[[], tuple[list[str], bool]] | None = None,
     ) -> tuple[LocalDoctorProbeInterface, ...]:
-        """The sections `vibey doctor` runs, from the printing helpers it names; the web-search
-        section after host health when `web_search` is given, and the LLM tooling section last,
-        when `llm_tooling` is given."""
+        """The sections `vibey doctor` runs, from the printing helpers it names; the run-inputs
+        section after host health when `run_inputs` is given, the web-search section after it
+        when `web_search` is given, and the LLM tooling section last, when `llm_tooling` is
+        given."""
         ...
 
     def for_editor(self) -> tuple[LocalDoctorProbeInterface, ...]:

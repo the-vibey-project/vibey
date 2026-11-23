@@ -6,7 +6,8 @@ The CLI reference is written by hand, so the help text the code prints is checke
 against the page: a flag or a sentence changed in one place and not the other is a reader told
 something the command no longer says. The `[inputs]` keys and their defaults are read from
 `RunInputsSettings` itself, so a key added or a default changed in code fails here until the
-configuration reference says so too (ADR-0018: each limit a key; ADR-0104).
+configuration reference says so too (ADR-0018: each limit a key; ADR-0104). The store keys
+are `InputStoreLocation`'s fields, its `kind` written as the key `store` (ADR-0105).
 """
 
 from __future__ import annotations
@@ -17,7 +18,7 @@ from pathlib import Path
 import typer.main
 
 from vibey.cli.inputs import inputs_app
-from vibey.domain.run_input import RunInputsSettings
+from vibey.domain.run_input import InputStoreLocation, RunInputsSettings
 
 DOCS = Path(__file__).resolve().parents[2] / "docs" / "reference"
 CLI_DOC = DOCS / "cli.md"
@@ -71,16 +72,65 @@ def _inputs_rows() -> dict[str, str]:
     return rows
 
 
+def _keys_and_defaults() -> dict[str, object]:
+    """Every `[inputs]` key and its default, from the code: the limits, then the store keys."""
+    limits = RunInputsSettings()
+    store = InputStoreLocation()
+    keys: dict[str, object] = {
+        f.name: getattr(limits, f.name) for f in fields(RunInputsSettings) if f.name != "store"
+    }
+    for f in fields(InputStoreLocation):
+        keys["store" if f.name == "kind" else f.name] = getattr(store, f.name)
+    return keys
+
+
 def test_the_configuration_reference_names_every_inputs_key() -> None:
-    assert set(_inputs_rows()) == {f.name for f in fields(RunInputsSettings)}
+    assert set(_inputs_rows()) == set(_keys_and_defaults())
 
 
 def test_the_configuration_reference_states_each_default() -> None:
-    defaults = RunInputsSettings()
     rows = _inputs_rows()
     wrong = {
-        f.name: rows.get(f.name)
-        for f in fields(RunInputsSettings)
-        if f"`{getattr(defaults, f.name)}`" not in rows.get(f.name, "")
+        key: rows.get(key)
+        for key, default in _keys_and_defaults().items()
+        if ("unset" if default is None else f"`{default}`") not in rows.get(key, "")
     }
     assert not wrong, f"docs/reference/configuration.md's [inputs] defaults differ: {wrong}"
+
+
+def test_the_cli_reference_gives_exit_69_in_both_exit_tables() -> None:
+    """Phase 3c Task 8 (fix round 1, review I6): `vibey inputs` exits 69 when the store does not
+    answer, and both the global table and the command's own list say so."""
+    from vibey.cli.inputs import EXIT_UNAVAILABLE
+
+    assert EXIT_UNAVAILABLE == 69
+    exits = _section(CLI_DOC, "## Exit codes and errors")
+    assert "| `69` |" in exits and "vibey inputs" in exits
+    inputs = " ".join(_section(CLI_DOC, "## `vibey inputs").split())
+    assert "`69` the store did not answer" in inputs
+
+
+def test_the_cli_reference_describes_the_run_inputs_doctor_line() -> None:
+    from vibey.cli.run_inputs_doctor import NAME
+
+    text = CLI_DOC.read_text(encoding="utf-8")
+    assert f"The `{NAME}` line" in text
+    for phrase in ("reachable; credentials from", "is not set", "made on the first add"):
+        assert phrase in " ".join(text.split()), phrase
+
+
+def test_the_cli_reference_no_longer_says_a_handed_off_run_gets_no_section() -> None:
+    inputs = " ".join(_section(CLI_DOC, "## `vibey inputs").split())
+    assert "a known gap, ADR-0104" not in inputs
+    assert "Inputs stay on this machine" not in inputs
+    assert "is given exactly the inputs the run it replaces was given" in inputs
+    assert 'store = "seaweedfs"' in inputs
+
+
+def test_the_cli_reference_documents_the_correction_events_and_what_unblocks_a_project() -> None:
+    """Fix review M4: the sentence the error says is the one the reference says."""
+    from vibey.application.run_inputs_service import BLOCKED_UNTIL_READDED
+
+    inputs = " ".join(_section(CLI_DOC, "## `vibey inputs").split())
+    assert "`vibey_run_input_failed`" in inputs and "`vibey_run_input_repaired`" in inputs
+    assert BLOCKED_UNTIL_READDED in inputs

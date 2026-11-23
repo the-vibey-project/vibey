@@ -16,6 +16,7 @@ from typing import Final
 from uuid import uuid4
 
 import asyncpg
+import httpx
 from platformdirs import user_cache_path, user_config_path, user_state_path
 from vibey_runners.common.capabilities.interfaces.resolver_interface import (
     CapabilityResolverInterface,
@@ -23,6 +24,7 @@ from vibey_runners.common.capabilities.interfaces.resolver_interface import (
 from vibey_runners.common.capabilities.interfaces.sidecar_lock_interface import (
     SidecarLockInterface,
 )
+from vibey_runners.common.capabilities.manifest import MANIFEST_PATH as LOOPS_MANIFEST
 from vibey_runners.common.capabilities.resolver import CapabilityResolver
 from vibey_runners.common.capabilities.sidecar_lock import SidecarLock
 from vibey_skills import marketplace_root
@@ -132,6 +134,7 @@ from vibey.application.interfaces.gate_notices import (
     GateReminderInterface,
 )
 from vibey.application.interfaces.gate_timeouts import GateTimeoutSweepInterface
+from vibey.application.interfaces.input_store_interface import InputStoreInterface
 from vibey.application.interfaces.observability import Logger
 from vibey.application.interfaces.run_inputs_interface import RunInputsInterface
 from vibey.application.interfaces.sabbath import SabbathGateInterface
@@ -181,7 +184,7 @@ from vibey.domain.interfaces.config_interface import (
     QueueReapConfigInterface,
 )
 from vibey.domain.phase import Phase
-from vibey.domain.run_input import RunInputsSettings
+from vibey.domain.run_input import InputStoreLocation, RunInputsSettings
 from vibey.domain.slicing import AutoSlicer
 from vibey.domain.supervisor import SEARXNG, SupervisorPlanner
 from vibey.domain.worktree import WorktreeNaming
@@ -196,6 +199,7 @@ from vibey.infrastructure.acp.hub_start_router import HubStartRouter
 from vibey.infrastructure.acp.service_loader import ServiceLoader
 from vibey.infrastructure.acp.service_manager_runner import ServiceManagerRunner
 from vibey.infrastructure.azure.adapter import InMemoryAzureClientAdapter
+from vibey.infrastructure.blob.s3_request_signer import S3RequestSigner
 from vibey.infrastructure.build.automated_review_runner import SubprocessAutomatedReviewRunner
 from vibey.infrastructure.build.checkout import ProjectCheckoutLocator
 from vibey.infrastructure.build.gate_runner import SubprocessGateRunner
@@ -254,8 +258,10 @@ from vibey.infrastructure.git.integration_branch import IntegrationBranch
 from vibey.infrastructure.git.worktree_manager import GitWorktreeManager
 from vibey.infrastructure.hub.settings import HUB_SETTINGS, HubSettings
 from vibey.infrastructure.inputs.hash_addressed_input_store import HashAddressedInputStore
+from vibey.infrastructure.inputs.lazy_input_store import LazyInputStore
 from vibey.infrastructure.inputs.no_follow_files import NoFollowFiles
 from vibey.infrastructure.inputs.run_input_ledger import PostgresRunInputLedger
+from vibey.infrastructure.inputs.seaweedfs_input_store import SeaweedFsInputStore
 from vibey.infrastructure.ledger.full_ledger_writer import write_full_ledger
 from vibey.infrastructure.logging import StructlogAppLogger
 from vibey.infrastructure.loops.git_marketplace_fetcher import GitMarketplaceFetcher
@@ -1578,34 +1584,104 @@ def run_inputs_limits() -> RunInputsSettings:
 
 
 def run_inputs_root() -> Path:
-    """Where every project's run inputs are stored: `inputs/` in the person's own state folder,
-    one folder per project id, never inside a checkout (SP-LOOPS Phase 3, fix round 1: R-A)."""
+    """Where every project's run inputs are stored by default: `inputs/` in the person's own
+    state folder, one folder per project id, never inside a checkout (SP-LOOPS Phase 3, fix
+    round 1: R-A). `[inputs] store_dir` names another folder (ADR-0105)."""
     return UserStateFolder(user_state_path).inputs()
 
 
+def run_inputs_location() -> InputStoreLocation:
+    """`[inputs] store` and its keys, from the person's own `vibey.toml` only (ADR-0105)."""
+    return run_inputs_settings_loader().load(acp_user_config(), None).settings.store
+
+
+def run_inputs_http_client(location: InputStoreLocation) -> httpx.Client:
+    """The HTTP client a SeaweedFS input store speaks through: `[inputs] timeout_seconds`, no
+    redirect followed and no proxy taken from the environment, so every request goes to the
+    endpoint the person named (ADR-0105)."""
+    return httpx.Client(
+        timeout=location.timeout_seconds,
+        follow_redirects=False,
+        # No proxy from the environment: signed requests go to the endpoint, and nowhere else
+        # (review N5).
+        trust_env=False,
+    )
+
+
+def seaweedfs_input_store(
+    location: InputStoreLocation,
+    clock: Clock | None = None,
+    *,
+    client: httpx.Client | None = None,
+    environ: Mapping[str, str] | None = None,
+) -> SeaweedFsInputStore:
+    """The SeaweedFS input store `location` names, signed by the family's one signer with the
+    credentials read from the two environment variables `[inputs]` names (in `environ`, else
+    this process's environment). A variable that is unset or empty is a `ConfigError` naming
+    the variable, never a value. Composition only."""
+    env = environ if environ is not None else os.environ
+    unset = [
+        name for name in (location.access_key_env, location.secret_key_env) if not env.get(name)
+    ]
+    if unset:
+        raise ConfigError(
+            str(acp_user_config()),
+            f'[inputs] store = "seaweedfs" reads its credentials from {", ".join(unset)}, which '
+            "is not set in this environment",
+        )
+    signer = S3RequestSigner(
+        env[location.access_key_env], env[location.secret_key_env], location.region
+    )
+    return SeaweedFsInputStore(
+        location,
+        clock if clock is not None else SystemClock(),
+        signer=signer,
+        client=client if client is not None else run_inputs_http_client(location),
+    )
+
+
+def run_inputs_store(
+    resources: AppResources, location: InputStoreLocation | None = None
+) -> InputStoreInterface:
+    """The run input store `[inputs]` names (`location`, else `run_inputs_location()`): the
+    hash-addressed store at `store_dir` or `run_inputs_root()`, or `seaweedfs_input_store`. The
+    CLI and the worker both build their store here, so they cannot disagree about where inputs
+    live (N7). Composition only."""
+    where = location if location is not None else run_inputs_location()
+    if where.kind == "local":
+        root = Path(where.store_dir) if where.store_dir is not None else run_inputs_root()
+        return HashAddressedInputStore(root, resources.clock, files=NoFollowFiles())
+    return seaweedfs_input_store(where, resources.clock)
+
+
 def run_inputs_service(
-    resources: AppResources, limits: Callable[[], RunInputsSettings]
+    resources: AppResources,
+    limits: Callable[[], RunInputsSettings],
+    location: InputStoreLocation | None = None,
 ) -> RunInputsService:
-    """A project's run inputs (SP-LOOPS Phase 3): the hash-addressed store under
-    `run_inputs_root()`, the one no-follow file adapter for it and the run folders, the project
-    records, and the ledger adapter that records each add's
-    digest, kind and size. Composition only."""
-    files = NoFollowFiles()
+    """A project's run inputs (SP-LOOPS Phase 3): the store `run_inputs_store` composes, the
+    one no-follow file adapter for the run folders, the project records, and the ledger adapter
+    that records each add's digest, kind and size and says which inputs were added. Composition
+    only."""
     return RunInputsService(
-        store=HashAddressedInputStore(run_inputs_root(), resources.clock, files=files),
+        # Composed on first use (review I4): a worker reads `[inputs]` and the store's
+        # credentials only when a BUILD run has inputs to give, so a broken table or unset
+        # variables fail that run, never the worker's start.
+        store=LazyInputStore(lambda: run_inputs_store(resources, location)),
         projects=resources.projects,
         ledger=PostgresRunInputLedger(resources.ledger),
         clock=resources.clock,
         limits=limits,
-        writer=files,
+        writer=NoFollowFiles(),
     )
 
 
 @asynccontextmanager
 async def run_inputs_app(settings: RunInputsSettings) -> AsyncIterator[RunInputsInterface]:
-    """`run_inputs_service` over a freshly opened app: what `vibey inputs` runs."""
+    """`run_inputs_service` over a freshly opened app: what `vibey inputs` runs. Its store is the
+    one `settings` names, the same file the limits came from."""
     async with build_app() as resources:
-        yield run_inputs_service(resources, lambda: settings)
+        yield run_inputs_service(resources, lambda: settings, settings.store)
 
 
 LOOPS_STORE: Final = "loops"
@@ -1636,15 +1712,44 @@ def loops_shipped_source() -> str:
     return f"{ENGINE_DISTRIBUTION} {version}"
 
 
+def loops_shipped_root() -> Path:
+    """The folder the shipped marketplace is read and locked from.
+
+    Installed, it is the wheel's `vibey_skills/marketplace/`, whose manifest is the packaged
+    rendering of the repository's root manifest (every plugin, SP-LOOPS Phase 3c). From a
+    source checkout `vibey_skills.marketplace_root()` falls back to the skills tenant, whose
+    own manifest lists only that tenant's plugins; the repository root's manifest lists every
+    member's, so a checkout locks that one instead. The resolver's shipped lock covers only the
+    manifest and the folders it lists (`CapabilityResolver._shipped_scope`), so the rest of the
+    checkout is not read."""
+    repository = Path(__file__).resolve().parents[2]
+    tenant = repository / "src" / "vibey_tools" / "skills"
+    try:
+        root: Path | None = marketplace_root()
+    except FileNotFoundError:
+        # An editable install whose skills tenant carries no manifest of its own (review B1):
+        # the repository root's, when it is there, is still the shipped marketplace.
+        root = None
+    in_checkout = root is None or root.resolve() == tenant.resolve()
+    if in_checkout and (repository / LOOPS_MANIFEST).is_file():
+        return repository
+    if root is None:
+        raise FileNotFoundError(
+            f"no shipped marketplace: neither the skills tenant nor {repository} carries "
+            f"{LOOPS_MANIFEST}"
+        )
+    return root
+
+
 def loops_marketplace_store(user_config: Path) -> MarketplaceStoreInterface:
     """The person's marketplace store, `<their configuration folder>/loops`: the lock, the
     fetched marketplaces and the run snapshots. `user_config` is `acp_user_config()`, never a
     project's file. git sources go through `GitMarketplaceFetcher`, absolute folders through
-    `LocalMarketplaceCopier`; the shipped marketplace is the wheel's (`vibey_skills`)."""
+    `LocalMarketplaceCopier`; the shipped marketplace is `loops_shipped_root()`."""
     return MarketplaceStore(
         user_config.parent / LOOPS_STORE,
         fetchers={"git": GitMarketplaceFetcher(), "local": LocalMarketplaceCopier()},
-        shipped_root=marketplace_root,
+        shipped_root=loops_shipped_root,
     )
 
 

@@ -43,6 +43,7 @@ from vibey.domain.job import (
     DELIVERY_EXHAUSTED_GATE_KIND,
     ESCALATION_EXHAUSTED_GATE_KIND,
     FOREIGN_BRANCH_GATE_KIND,
+    HANDOFF_INPUTS_GATE_KIND,
 )
 from vibey.domain.repair_convergence import REPAIR_NOT_CONVERGING_GATE_KIND
 
@@ -182,6 +183,9 @@ ANSWER_RULES: Final[Mapping[str, AnswerRuleInterface]] = MappingProxyType(
         # again unless something outside vibey changed, so the person writes the answer.
         "handoff_gate_failed": FREE_FORM,
         "too_many_wind_downs": FREE_FORM,
+        # build_implement_handler: a handed-off run cannot be given its predecessor's inputs.
+        # The fix (add the input again, fix [inputs]) happens outside; answering retries.
+        HANDOFF_INPUTS_GATE_KIND: FREE_FORM,
     }
 )
 """Every gate kind vibey raises today, and how it is answered."""

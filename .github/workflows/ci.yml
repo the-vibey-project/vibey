@@ -296,6 +296,13 @@ jobs:
       - name: Gate 0 - governance corpus index
         run: uv run vibey-gh corpus-index --check
 
+      # The root marketplace and the wheel's packaged rendering of it are generated files:
+      # either one out of step with the members' manifests -- a plugin's version, description
+      # or source changed and nothing re-rendered -- fails here, not in a shipped install
+      # (SP-LOOPS Phase 3c, review I5).
+      - name: Gate 0 - marketplace manifests match their members
+        run: uv run vibey-gh marketplace --check
+
       - name: Gate 1 - ruff check
         run: uv run ruff check .
 
@@ -1328,6 +1335,35 @@ jobs:
       # package root that never reaches the build context does not fail the build, it
       # just is not there. tests/meta/test_shipped_trees_are_reachable.py catches the
       # omission in the manifest; this catches it in the artifact.
+      # The image installs the project editable, so the shipped marketplace is found through
+      # the source layout, not the wheel's (SP-LOOPS Phase 3c, review B1): every lock and
+      # every run's capability bundle reads it. This asserts the lookup works in the artifact
+      # and finds every plugin the repository root's manifest lists.
+      - name: Image contract - the shipped marketplace is found and carries every root plugin
+        run: |
+          want=$(python3 -c 'import json; print(len(json.load(open(".claude-plugin/marketplace.json"))["plugins"]))')
+          # Every entry's plugin folder must be in the image too, not only the manifest that
+          # lists it: a dropped plugins COPY would otherwise pass on the count (fix review M1).
+          got=$(docker run --rm -i --entrypoint python vibey:ci - <<'PY'
+          import json
+          import sys
+          from vibey.bootstrap import loops_shipped_root
+          root = loops_shipped_root()
+          plugins = json.load(open(root / ".claude-plugin" / "marketplace.json"))["plugins"]
+          missing = [
+              p["name"]
+              for p in plugins
+              if not (root / p["source"] / ".claude-plugin" / "plugin.json").is_file()
+          ]
+          if missing:
+              print("plugin folders missing from the image: " + ", ".join(missing), file=sys.stderr)
+              sys.exit(1)
+          print(len(plugins))
+          PY
+          )
+          echo "shipped marketplace plugins=$got (root manifest: $want)"
+          test -n "$got" && test "$got" = "$want"
+
       - name: Image contract - every console script is on PATH
         run: |
           docker run --rm --entrypoint sh vibey:ci -c '

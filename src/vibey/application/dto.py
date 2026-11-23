@@ -760,3 +760,6 @@ class RunInputs:
     prompt_section: str
     attachments_dir: Path | None
     paste_file: Path | None
+    digests: tuple[str, ...] = ()
+    """What the run was given, in the order its `vibey_run_inputs_given` event records them:
+    every paste, then the files that survived the later-add-wins rule. Empty with no inputs."""

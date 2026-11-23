@@ -275,6 +275,9 @@ include = [
 # beside `plugins/`) and holding nothing else: it is the default marketplace a run locks by
 # content (SP-LOOPS, design Decision 1), so no Python module may live in it to write
 # `__pycache__` into the locked tree (tests/meta/test_wheel_ships_default_marketplace.py).
+# Both members' plugin trees land side by side in its `plugins/`, and its manifest is the
+# packaged rendering of the root one (`[marketplace] packaged` in .vibey-gh.toml), so every
+# install carries exactly the root's plugins (SP-LOOPS Phase 3c, operator ruling OR-4).
 [tool.hatch.build.targets.wheel]
 packages = [
     "src/vibey",
@@ -310,7 +313,8 @@ packages = [
 
 [tool.hatch.build.targets.wheel.force-include]
 "src/vibey_tools/skills/plugins" = "vibey_skills/marketplace/plugins"
-"src/vibey_tools/skills/.claude-plugin/marketplace.json" = "vibey_skills/marketplace/.claude-plugin/marketplace.json"
+"src/vibey_tools/gh/plugins" = "vibey_skills/marketplace/plugins"
+"src/vibey_tools/skills/packaged/marketplace.json" = "vibey_skills/marketplace/.claude-plugin/marketplace.json"
 "src/vibey_tools/gh/docs/stylesheets/vibey.css" = "vibey_gh/templates/release/vibey.css"
 "src/vibey_tools/gh/docs/javascripts/channel.js" = "vibey_gh/templates/release/channel.js"
 "src/vibey_tools/gh/docs/javascripts/math.js" = "vibey_gh/templates/release/math.js"
