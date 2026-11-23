@@ -225,3 +225,68 @@ def test_a_connect_that_left_no_socket_records_none(monkeypatch: pytest.MonkeyPa
     opener = GuardedOpener("http://127.0.0.1:1")
     opener.connection(http.client.HTTPConnection)("127.0.0.1", timeout=1).connect()
     assert opener.threads() == frozenset()
+
+
+def _in_thread(work: Any) -> tuple[threading.Thread, list[BaseException]]:
+    raised: list[BaseException] = []
+
+    def run() -> None:
+        try:
+            work()
+        except BaseException as exc:  # noqa: BLE001 - recorded for the test to read
+            raised.append(exc)
+
+    thread = threading.Thread(target=run)
+    return thread, raised
+
+
+def test_a_connect_that_completes_after_the_abort_is_shut_down_at_once(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Security review of the M-1 fix: a hop already connecting when the deadline aborts its
+    thread finishes after the abort; its fresh socket is shut down at once and the request
+    unwinds, never stored for nobody to shut down."""
+    wire, go, entered = _Wire(), threading.Event(), threading.Event()
+
+    def slow_connect(self: http.client.HTTPConnection) -> None:
+        entered.set()
+        go.wait(5)
+        self.sock = wire.ours
+
+    monkeypatch.setattr(http.client.HTTPConnection, "connect", slow_connect)
+    opener = GuardedOpener("http://127.0.0.1:1")
+    thread, raised = _in_thread(
+        lambda: opener.connection(http.client.HTTPConnection)("127.0.0.1", timeout=1).connect()
+    )
+    thread.start()
+    assert entered.wait(5)
+    opener.abort(thread)  # the deadline passes while the connect is still under way
+    go.set()
+    thread.join(5)
+    assert [type(exc) for exc in raised] == [ConnectionAbortedError]
+    wire.peer.settimeout(5)
+    assert wire.peer.recv(1) == b""  # shut down, not left open
+    assert opener.threads() == frozenset()
+    wire.ours.close()
+    wire.peer.close()
+
+
+def test_no_hop_connects_once_its_thread_was_aborted(monkeypatch: pytest.MonkeyPatch) -> None:
+    connects: list[str] = []
+    monkeypatch.setattr(http.client.HTTPConnection, "connect", lambda self: connects.append("x"))
+    opener = GuardedOpener("http://127.0.0.1:1")
+    ready, go = threading.Event(), threading.Event()
+
+    def later_hop() -> None:
+        made = opener.connection(http.client.HTTPConnection)("127.0.0.1", timeout=1)
+        ready.set()
+        go.wait(5)
+        made.connect()  # a redirect's next hop, after the deadline
+
+    thread, raised = _in_thread(later_hop)
+    thread.start()
+    assert ready.wait(5)
+    opener.abort(thread)
+    go.set()
+    thread.join(5)
+    assert connects == [] and [type(exc) for exc in raised] == [ConnectionAbortedError]

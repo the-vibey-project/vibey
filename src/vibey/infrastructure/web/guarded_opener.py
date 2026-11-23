@@ -19,7 +19,10 @@ deadline (`BoundedRequest`) wakes and ends in whatever it was reading -- the sta
 headers or the body -- rather than living as long as a listener that trickles its answer likes
 (SP-ACP Task 9c, P-9c-3). The socket is recorded, not the connection: once the headers are in,
 urllib closes the connection's own handle and reads the body from the socket's file alone.
-What a finished thread connected is forgotten.
+What a finished thread connected is forgotten. A thread once aborted stays aborted (a weak set,
+so it never grows past the threads alive): a hop that was still connecting has its new socket
+shut down at once, and no later hop (a redirect's) connects at all; both raise
+`ConnectionAbortedError`, so the request unwinds.
 
 Declared by `interfaces/guarded_opener_interface.py` (ADR-0016).
 """
@@ -33,9 +36,13 @@ import socket
 import threading
 import urllib.parse
 import urllib.request
+import weakref
 from collections.abc import Callable
 from http.client import HTTPMessage
-from typing import IO, Any
+from typing import IO, Any, Final
+
+ABANDONED: Final = "the request was abandoned at its deadline"
+"""Why a hop of an aborted request is refused, or its late socket shut down."""
 
 
 class SameOriginRedirects(urllib.request.HTTPRedirectHandler):
@@ -85,6 +92,7 @@ class GuardedOpener:
         self.direct = self.is_loopback(base_url)
         self._lock = threading.Lock()
         self._sockets: dict[threading.Thread, list[socket.socket]] = {}
+        self._aborted: weakref.WeakSet[threading.Thread] = weakref.WeakSet()
         handlers: list[urllib.request.BaseHandler] = [SameOriginRedirects(), TrackedHandler(self)]
         if self.direct:
             handlers.append(urllib.request.ProxyHandler({}))
@@ -102,6 +110,9 @@ class GuardedOpener:
             connect = connection.connect
 
             def connected() -> None:
+                with self._lock:
+                    if thread in self._aborted:
+                        raise ConnectionAbortedError(ABANDONED)
                 connect()
                 if connection.sock is not None:
                     self._record(thread, connection.sock)
@@ -115,20 +126,31 @@ class GuardedOpener:
 
     def _record(self, thread: threading.Thread, sock: socket.socket) -> None:
         with self._lock:
-            for gone in [held for held in self._sockets if not held.is_alive()]:
-                del self._sockets[gone]
-            self._sockets.setdefault(thread, []).append(sock)
+            late = thread in self._aborted
+            if not late:
+                for gone in [held for held in self._sockets if not held.is_alive()]:
+                    del self._sockets[gone]
+                self._sockets.setdefault(thread, []).append(sock)
+        if late:
+            # Connected after its thread was aborted: never kept for nobody to shut down.
+            self._shut(sock)
+            raise ConnectionAbortedError(ABANDONED)
 
     def abort(self, thread: threading.Thread) -> None:
         with self._lock:
+            self._aborted.add(thread)
             sockets = self._sockets.pop(thread, [])
         for sock in sockets:
-            # Shut down, never closed from here: the thread reading it still owns the
-            # descriptor, and closes it as it unwinds. The base class's method, so a TLS
-            # socket's own state is never touched from this thread. A socket closed for good
-            # has no descriptor (-1): that `OSError` is all it can raise.
-            with contextlib.suppress(OSError):
-                socket.socket.shutdown(sock, socket.SHUT_RDWR)
+            self._shut(sock)
+
+    @staticmethod
+    def _shut(sock: socket.socket) -> None:
+        # Shut down, never closed from here: the thread reading it still owns the descriptor,
+        # and closes it as it unwinds. The base class's method, so a TLS socket's own state is
+        # never touched from this thread. A socket closed for good has no descriptor (-1):
+        # that `OSError` is all it can raise.
+        with contextlib.suppress(OSError):
+            socket.socket.shutdown(sock, socket.SHUT_RDWR)
 
     def threads(self) -> frozenset[threading.Thread]:
         with self._lock:
