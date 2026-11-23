@@ -471,7 +471,9 @@ def test_each_command_carries_the_endpoint_it_is_pinned_to(trusted: Trusted) -> 
         PostgresCommandResult(0), PostgresCommandResult(0, stdout='{"vibey.searxng.owner": "501"}')
     )
     puller = FakeRunner()
-    runtime = trusted.runtime(runner, puller, uid=501)
+    # The runtime's owner check is this process's own uid (the planted file is ours); 501 below
+    # is only the container's owner label, never the file's owner (develop CI runs as 1001).
+    runtime = trusted.runtime(runner, puller)
     assert runtime.image_present(docker, IMAGE, host=sock)
     assert runtime.pull(docker, IMAGE, host=sock).ok
     assert runtime.remove_container(docker, 501, host=sock).ok
