@@ -30,7 +30,7 @@ What it does not model, on purpose:
 """
 
 import json
-from collections.abc import Iterable
+from collections.abc import Iterable, Sequence
 from dataclasses import replace
 from datetime import UTC
 from typing import Protocol
@@ -38,7 +38,7 @@ from uuid import UUID, uuid4
 
 import asyncpg
 
-from vibey.domain.ledger import LedgerEvent, digest_event
+from vibey.domain.ledger import EventKind, LedgerEvent, digest_event
 from vibey.infrastructure.engines.tailer import LedgerEventDraft
 from vibey.infrastructure.ledger.redact import redact_payload
 
@@ -58,6 +58,10 @@ class LedgerRepository(Protocol):
     ) -> tuple[LedgerEvent, ...]: ...
 
     async def all_for_project(self, project_id: UUID) -> tuple[LedgerEvent, ...]: ...
+
+    async def artifacts_of_type(
+        self, project_id: UUID, artifact_types: Sequence[str]
+    ) -> tuple[LedgerEvent, ...]: ...
 
     async def latest_seq(self, project_id: UUID) -> int: ...
 
@@ -130,6 +134,17 @@ class InMemoryLedgerRepository:
     async def all_for_project(self, project_id: UUID) -> tuple[LedgerEvent, ...]:
         # `WHERE project_id = $1 ORDER BY seq`.
         return tuple(self._copy(event) for event in self._ordered(project_id))
+
+    async def artifacts_of_type(
+        self, project_id: UUID, artifact_types: Sequence[str]
+    ) -> tuple[LedgerEvent, ...]:
+        # `kind = 'ArtifactProduced' AND payload->>'artifact_type' = ANY($3) ORDER BY seq`.
+        return tuple(
+            self._copy(event)
+            for event in self._ordered(project_id)
+            if event.kind is EventKind.ARTIFACT_PRODUCED
+            and event.payload.get("artifact_type") in artifact_types
+        )
 
     async def latest_seq(self, project_id: UUID) -> int:
         # `max(seq)`, read as 0 when the project has no events.

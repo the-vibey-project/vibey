@@ -16,6 +16,7 @@ from typing import Final
 from uuid import uuid4
 
 import asyncpg
+import httpx
 from platformdirs import user_cache_path, user_config_path, user_state_path
 from vibey_runners.common.capabilities.interfaces.resolver_interface import (
     CapabilityResolverInterface,
@@ -133,6 +134,7 @@ from vibey.application.interfaces.gate_notices import (
     GateReminderInterface,
 )
 from vibey.application.interfaces.gate_timeouts import GateTimeoutSweepInterface
+from vibey.application.interfaces.input_store_interface import InputStoreInterface
 from vibey.application.interfaces.observability import Logger
 from vibey.application.interfaces.run_inputs_interface import RunInputsInterface
 from vibey.application.interfaces.sabbath import SabbathGateInterface
@@ -182,7 +184,7 @@ from vibey.domain.interfaces.config_interface import (
     QueueReapConfigInterface,
 )
 from vibey.domain.phase import Phase
-from vibey.domain.run_input import RunInputsSettings
+from vibey.domain.run_input import InputStoreLocation, RunInputsSettings
 from vibey.domain.slicing import AutoSlicer
 from vibey.domain.supervisor import SEARXNG, SupervisorPlanner
 from vibey.domain.worktree import WorktreeNaming
@@ -197,6 +199,7 @@ from vibey.infrastructure.acp.hub_start_router import HubStartRouter
 from vibey.infrastructure.acp.service_loader import ServiceLoader
 from vibey.infrastructure.acp.service_manager_runner import ServiceManagerRunner
 from vibey.infrastructure.azure.adapter import InMemoryAzureClientAdapter
+from vibey.infrastructure.blob.s3_request_signer import S3RequestSigner
 from vibey.infrastructure.build.automated_review_runner import SubprocessAutomatedReviewRunner
 from vibey.infrastructure.build.checkout import ProjectCheckoutLocator
 from vibey.infrastructure.build.gate_runner import SubprocessGateRunner
@@ -257,6 +260,7 @@ from vibey.infrastructure.hub.settings import HUB_SETTINGS, HubSettings
 from vibey.infrastructure.inputs.hash_addressed_input_store import HashAddressedInputStore
 from vibey.infrastructure.inputs.no_follow_files import NoFollowFiles
 from vibey.infrastructure.inputs.run_input_ledger import PostgresRunInputLedger
+from vibey.infrastructure.inputs.seaweedfs_input_store import SeaweedFsInputStore
 from vibey.infrastructure.ledger.full_ledger_writer import write_full_ledger
 from vibey.infrastructure.logging import StructlogAppLogger
 from vibey.infrastructure.loops.git_marketplace_fetcher import GitMarketplaceFetcher
@@ -1579,34 +1583,75 @@ def run_inputs_limits() -> RunInputsSettings:
 
 
 def run_inputs_root() -> Path:
-    """Where every project's run inputs are stored: `inputs/` in the person's own state folder,
-    one folder per project id, never inside a checkout (SP-LOOPS Phase 3, fix round 1: R-A)."""
+    """Where every project's run inputs are stored by default: `inputs/` in the person's own
+    state folder, one folder per project id, never inside a checkout (SP-LOOPS Phase 3, fix
+    round 1: R-A). `[inputs] store_dir` names another folder (ADR-0105)."""
     return UserStateFolder(user_state_path).inputs()
 
 
+def run_inputs_location() -> InputStoreLocation:
+    """`[inputs] store` and its keys, from the person's own `vibey.toml` only (ADR-0105)."""
+    return run_inputs_settings_loader().load(acp_user_config(), None).settings.store
+
+
+def run_inputs_store(
+    resources: AppResources, location: InputStoreLocation | None = None
+) -> InputStoreInterface:
+    """The run input store `[inputs]` names (`location`, else `run_inputs_location()`): the
+    hash-addressed store at `store_dir` or `run_inputs_root()`, or the SeaweedFS store over the
+    S3 API, signed by the family's one signer with the credentials read from the two
+    environment variables `[inputs]` names. A variable that is unset or empty is a
+    `ConfigError` naming the variable, never a value. The CLI and the worker both build their
+    store here, so they cannot disagree about where inputs live (N7). Composition only."""
+    where = location if location is not None else run_inputs_location()
+    if where.kind == "local":
+        root = Path(where.store_dir) if where.store_dir is not None else run_inputs_root()
+        return HashAddressedInputStore(root, resources.clock, files=NoFollowFiles())
+    unset = [
+        name for name in (where.access_key_env, where.secret_key_env) if not os.environ.get(name)
+    ]
+    if unset:
+        raise ConfigError(
+            str(acp_user_config()),
+            f'[inputs] store = "seaweedfs" reads its credentials from {", ".join(unset)}, which '
+            "is not set in this environment",
+        )
+    signer = S3RequestSigner(
+        os.environ[where.access_key_env], os.environ[where.secret_key_env], where.region
+    )
+    return SeaweedFsInputStore(
+        where,
+        resources.clock,
+        signer=signer,
+        client=httpx.Client(timeout=where.timeout_seconds, follow_redirects=False),
+    )
+
+
 def run_inputs_service(
-    resources: AppResources, limits: Callable[[], RunInputsSettings]
+    resources: AppResources,
+    limits: Callable[[], RunInputsSettings],
+    location: InputStoreLocation | None = None,
 ) -> RunInputsService:
-    """A project's run inputs (SP-LOOPS Phase 3): the hash-addressed store under
-    `run_inputs_root()`, the one no-follow file adapter for it and the run folders, the project
-    records, and the ledger adapter that records each add's
-    digest, kind and size. Composition only."""
-    files = NoFollowFiles()
+    """A project's run inputs (SP-LOOPS Phase 3): the store `run_inputs_store` composes, the
+    one no-follow file adapter for the run folders, the project records, and the ledger adapter
+    that records each add's digest, kind and size and says which inputs were added. Composition
+    only."""
     return RunInputsService(
-        store=HashAddressedInputStore(run_inputs_root(), resources.clock, files=files),
+        store=run_inputs_store(resources, location),
         projects=resources.projects,
         ledger=PostgresRunInputLedger(resources.ledger),
         clock=resources.clock,
         limits=limits,
-        writer=files,
+        writer=NoFollowFiles(),
     )
 
 
 @asynccontextmanager
 async def run_inputs_app(settings: RunInputsSettings) -> AsyncIterator[RunInputsInterface]:
-    """`run_inputs_service` over a freshly opened app: what `vibey inputs` runs."""
+    """`run_inputs_service` over a freshly opened app: what `vibey inputs` runs. Its store is the
+    one `settings` names, the same file the limits came from."""
     async with build_app() as resources:
-        yield run_inputs_service(resources, lambda: settings)
+        yield run_inputs_service(resources, lambda: settings, settings.store)
 
 
 LOOPS_STORE: Final = "loops"

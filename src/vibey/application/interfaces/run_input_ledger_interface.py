@@ -24,3 +24,11 @@ class RunInputLedgerInterface(Protocol):
         inputs were given in; an add, a person's act outside any job, has none. The caller
         builds the payload; it carries digests, kinds and sizes, never an input's content."""
         ...
+
+    async def added(self, project_id: UUID) -> frozenset[str]:
+        """The digests of every input the ledger records as added to the project: its
+        `vibey_run_input` and `vibey_run_input_repaired` events. The ledger, not the store, is
+        the authority on which inputs exist (ADR-0105): a store missing one of these is the
+        wrong store or a damaged one, and a row in the store none of these names was never
+        added through vibey."""
+        ...

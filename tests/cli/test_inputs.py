@@ -59,6 +59,9 @@ class _Ledger:
     ) -> None:
         self.events.append(event)
 
+    async def added(self, project_id: UUID) -> frozenset[str]:
+        return frozenset(e.payload["digest"] for e in self.events if "digest" in e.payload)
+
 
 class _World:
     def __init__(self, tmp_path: Path) -> None:
@@ -350,3 +353,105 @@ def test_a_malformed_project_file_in_the_folder_does_not_change_the_exit_code(
     assert code == 0, output
     assert "cannot be read" in output
     assert world.opened_with == [RunInputsSettings()]
+
+
+# -- the store [inputs] names (SP-LOOPS Phase 3c, Task 5) --------------------------------------
+
+
+class _UnreachableStore:
+    """A network store that does not answer."""
+
+    def __getattr__(self, name: str) -> object:
+        from vibey.domain.errors import InputStoreUnavailable
+
+        def fail(*args: object, **kwargs: object) -> object:
+            raise InputStoreUnavailable(
+                "seaweedfs store https://files.example.test:8333/b/p: not reachable (ConnectError)"
+            )
+
+        if name == "describe":
+            return lambda: "seaweedfs store https://files.example.test:8333/b/p"
+        return fail
+
+
+def test_an_unreachable_store_is_exit_69_and_names_the_store_not_the_key(
+    world: _World, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    from vibey.cli.inputs import EXIT_UNAVAILABLE
+
+    monkeypatch.setenv("VIBEY_INPUTS_SECRET_KEY", "s3cr3t-sentinel")
+
+    @asynccontextmanager
+    async def unreachable(settings: RunInputsSettings) -> AsyncIterator[RunInputsInterface]:
+        yield RunInputsService(
+            store=_UnreachableStore(),  # type: ignore[arg-type]
+            projects=_Projects(world.record),
+            ledger=world.ledger,
+            clock=_Clock(),
+            limits=lambda: settings,
+            writer=NoFollowFiles(),
+        )
+
+    monkeypatch.setattr(
+        inputs_module,
+        "INPUTS",
+        InputsCommands(
+            open_service=unreachable,
+            settings=RunInputsSettingsLoader(TomlTrustedTableReader()),
+            user_config=lambda: world.user_config,
+            project_config=lambda: world.project_config,
+        ),
+    )
+    for args in (("add", str(world.project_id), "--paste", "hi"), ("list", str(world.project_id))):
+        code, output = _run(*args)
+        assert code == EXIT_UNAVAILABLE == 69
+        assert "seaweedfs store https://files.example.test:8333/b/p" in output
+        assert "not reachable" in output
+        assert "s3cr3t-sentinel" not in output
+
+
+def test_list_reads_the_store_from_your_own_file(world: _World) -> None:
+    world.user_config.write_text('[inputs]\nstore_dir = "/srv/vibey/inputs"\n')
+    code, _ = _run("list", str(world.project_id))
+    assert code == 0
+    assert world.opened_with[-1].store.store_dir == "/srv/vibey/inputs"
+
+
+def test_a_list_with_an_unreadable_inputs_table_is_exit_78(world: _World) -> None:
+    world.user_config.write_text('[inputs]\nsecret_key = "s3cr3t-sentinel"\n')
+    code, output = _run("list", str(world.project_id))
+    assert code == EXIT_CONFIG
+    assert "holds no credential" in output and "s3cr3t-sentinel" not in output
+
+
+def test_credentials_missing_at_composition_are_exit_78(
+    world: _World, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    from vibey.domain.config import ConfigError
+
+    class _Refusing:
+        async def __aenter__(self) -> RunInputsInterface:
+            raise ConfigError(
+                str(world.user_config), "reads its credentials from X, which is not set"
+            )
+
+        async def __aexit__(self, *exc: object) -> None:
+            return None
+
+    def refusing(settings: RunInputsSettings) -> _Refusing:
+        return _Refusing()
+
+    monkeypatch.setattr(
+        inputs_module,
+        "INPUTS",
+        InputsCommands(
+            open_service=refusing,
+            settings=RunInputsSettingsLoader(TomlTrustedTableReader()),
+            user_config=lambda: world.user_config,
+            project_config=lambda: world.project_config,
+        ),
+    )
+    for args in (("add", str(world.project_id), "--paste", "hi"), ("list", str(world.project_id))):
+        code, output = _run(*args)
+        assert code == EXIT_CONFIG
+        assert "reads its credentials from X" in output

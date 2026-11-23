@@ -19,8 +19,13 @@ and the notice saying so is printed.
 output prints it through the resolver's own cleaner (`SafeText`). `--json` prints the values as
 they are, typed.
 
-Exit codes: 0 done; 1 an unknown project; 2 a refused input, or not exactly one source; 78 the
-person's `vibey.toml` cannot be read, or the store cannot be made, read or written. Declared by
+Exit codes: 0 done; 1 an unknown project; 2 a refused input, or not exactly one source; 69
+(EX_UNAVAILABLE) the store `[inputs]` names did not answer (a network store unreachable, timed
+out or failing; retry later); 78 the person's `vibey.toml` cannot be read, the store's
+credentials are not in the environment, or the store cannot be made, read or written.
+
+**Which store.** Both commands read the person's own `[inputs]` for where the store is
+(ADR-0105); `list` reads it for that alone, printing no notice, so `--json` stays one document. Declared by
 `interfaces/inputs_interface.py::InputsCommandsInterface`.
 """
 
@@ -49,11 +54,18 @@ from vibey.application.interfaces.run_inputs_settings_interface import (
 from vibey.bootstrap import acp_user_config, run_inputs_app, run_inputs_settings_loader
 from vibey.cli.interfaces.inputs_interface import InputsCommandsInterface
 from vibey.domain.config import ConfigError
-from vibey.domain.errors import InputStoreError, RunInputRefused, UnknownProject
+from vibey.domain.errors import (
+    InputStoreError,
+    InputStoreUnavailable,
+    RunInputRefused,
+    UnknownProject,
+)
 from vibey.domain.run_input import InputKind, InputListing, RunInput, RunInputsSettings
 
 EXIT_UNKNOWN: Final = 1
 EXIT_REFUSED: Final = 2
+EXIT_UNAVAILABLE: Final = 69
+"""EX_UNAVAILABLE (sysexits.h): the store did not answer; nothing is wrong with the input."""
 EXIT_CONFIG: Final = 78
 LINE_CHARS: Final = 300
 """The most of one line of a person's text (a name, a path, a reason) a printed line carries."""
@@ -112,7 +124,10 @@ class InputsCommands:
         except UnknownProject:
             self._echo(f"unknown project {project_id}")
             return EXIT_UNKNOWN
-        except InputStoreError as exc:
+        except InputStoreUnavailable as exc:
+            self._echo(self._clean(f"vibey inputs: {exc}"))
+            return EXIT_UNAVAILABLE
+        except (InputStoreError, ConfigError) as exc:
             self._echo(self._clean(f"vibey inputs: {exc}"))
             return EXIT_CONFIG
         self._echo(
@@ -124,11 +139,16 @@ class InputsCommands:
 
     def list(self, project_id: UUID, *, as_json: bool) -> int:
         try:
-            listing = asyncio.run(self._listed(project_id))
+            # Read for where the store is; a list checks no limit, and prints no notice.
+            settings = self._settings.load(self._user_config(), None).settings
+            listing = asyncio.run(self._listed(settings, project_id))
         except UnknownProject:
             self._echo(f"unknown project {project_id}")
             return EXIT_UNKNOWN
-        except InputStoreError as exc:
+        except InputStoreUnavailable as exc:
+            self._echo(self._clean(f"vibey inputs: {exc}"))
+            return EXIT_UNAVAILABLE
+        except (InputStoreError, ConfigError) as exc:
             self._echo(self._clean(f"vibey inputs: {exc}"))
             return EXIT_CONFIG
         if as_json:
@@ -203,9 +223,8 @@ class InputsCommands:
         async with self._open_service(limits) as service:
             return await service.add(project_id, kind, name, data)
 
-    async def _listed(self, project_id: UUID) -> InputListing:
-        # Listing reads no limit; the defaults stand in for them.
-        async with self._open_service(RunInputsSettings()) as service:
+    async def _listed(self, settings: RunInputsSettings, project_id: UUID) -> InputListing:
+        async with self._open_service(settings) as service:
             return await service.listed(project_id)
 
     @staticmethod

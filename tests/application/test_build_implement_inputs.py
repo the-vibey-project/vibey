@@ -11,6 +11,7 @@ from __future__ import annotations
 from dataclasses import replace
 from datetime import UTC, datetime
 from pathlib import Path
+from typing import Any
 from uuid import UUID, uuid4
 
 from tests.application.fakes import FakeJobRepository, handle_leased, make_job
@@ -66,11 +67,20 @@ class _Projects:
 class _Ledger:
     def __init__(self) -> None:
         self.job_ids: list[UUID | None] = []
+        self.payloads: list[dict[str, Any]] = []
 
     async def record(
         self, *, project_id: UUID, cycle: int, event: EngineEvent, job_id: UUID | None = None
     ) -> None:
         self.job_ids.append(job_id)
+        self.payloads.append(dict(event.payload))
+
+    async def added(self, project_id: UUID) -> frozenset[str]:
+        return frozenset(
+            p["digest"]
+            for p in self.payloads
+            if p.get("artifact_type") in ("vibey_run_input", "vibey_run_input_repaired")
+        )
 
 
 class _World:
@@ -242,4 +252,29 @@ async def test_a_store_root_that_cannot_be_read_fails_the_run_before_the_engine_
     assert isinstance(outcome, Failure)
     assert outcome.failure_class is FailureClass.VIBEY
     assert "the run inputs could not be given to the run" in outcome.detail
+    assert getattr(engine, "specs", []) == []
+
+
+async def test_a_store_missing_inputs_the_ledger_records_fails_the_run_before_the_engine_starts(
+    tmp_path: Path,
+) -> None:
+    # SP-LOOPS Phase 3c, Task 5 (the N7 limit): a worker whose store resolves elsewhere -- another
+    # state or config folder, a wrong bucket -- sees an empty store; the ledger says inputs were
+    # added, so the run fails loudly instead of starting with none.
+    world = _World(tmp_path)
+    await world.add("paste", "paste", b"words")
+    empty = HashAddressedInputStore(tmp_path / "another-state" / "inputs", FixedClock())
+    elsewhere = RunInputsService(
+        store=empty,
+        projects=world.projects,
+        ledger=world.ledger,
+        clock=FixedClock(),
+        limits=RunInputsSettings,
+        writer=NoFollowFiles(),
+    )
+    outcome, engine, _ = await world.run(inputs=elsewhere)
+    assert isinstance(outcome, Failure)
+    assert outcome.failure_class is FailureClass.VIBEY
+    assert empty.describe() in outcome.detail
+    assert "holds 0 of the 1 inputs the ledger records" in outcome.detail
     assert getattr(engine, "specs", []) == []

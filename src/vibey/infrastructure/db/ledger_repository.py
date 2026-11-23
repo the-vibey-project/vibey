@@ -184,6 +184,26 @@ class PostgresLedgerRepository:
             )
             return tuple(EVENT_ROWS.to_event(r) for r in rows)
 
+    async def artifacts_of_type(
+        self, project_id: UUID, artifact_types: Sequence[str]
+    ) -> tuple[LedgerEvent, ...]:
+        """The project's `ArtifactProduced` events whose payload's `artifact_type` is one of
+        `artifact_types`, in ledger order: a narrow read, so a caller that needs one kind of
+        record does not load the whole log."""
+        async with self._pool.acquire() as conn:
+            rows = await conn.fetch(
+                """
+                SELECT * FROM event
+                WHERE project_id = $1 AND kind = $2
+                  AND payload->>'artifact_type' = ANY($3::text[])
+                ORDER BY seq
+                """,
+                project_id,
+                EventKind.ARTIFACT_PRODUCED.value,
+                list(artifact_types),
+            )
+            return tuple(EVENT_ROWS.to_event(r) for r in rows)
+
     async def latest_seq(self, project_id: UUID) -> int:
         async with self._pool.acquire() as conn:
             value = await conn.fetchval(

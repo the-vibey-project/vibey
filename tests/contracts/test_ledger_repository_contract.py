@@ -42,7 +42,9 @@ from vibey.infrastructure.ledger.redact import REDACTED
 
 ROLES = TestDatabaseRoles.from_environ(os.environ)
 AT = datetime(2026, 11, 11, 9, 30, 15, 123456, tzinfo=UTC)
-LEDGER_METHODS = frozenset({"append", "range", "all_for_project", "latest_seq"})
+LEDGER_METHODS = frozenset(
+    {"append", "range", "all_for_project", "artifacts_of_type", "latest_seq"}
+)
 
 
 class Level(IntEnum):
@@ -124,7 +126,7 @@ async def append_n(ledger: Ledger, project_id: UUID, n: int) -> list[LedgerEvent
 
 def test_the_repository_is_the_declared_interface_and_only_appends(ledger: Ledger) -> None:
     # class_contracts.py PostgresLedgerRepositoryInterface: append, range, all_for_project,
-    # latest_seq -- and nothing that could rewrite or remove an event (CLAUDE.md: "The
+    # artifacts_of_type (a narrow read, SP-LOOPS Phase 3c), latest_seq -- and nothing that could rewrite or remove an event (CLAUDE.md: "The
     # ledger is append-only. No updates, no deletes.").
     assert isinstance(ledger.repo, PostgresLedgerRepositoryInterface)
     public = {
@@ -416,6 +418,24 @@ async def test_range_is_the_inclusive_slice_of_all_for_project(ledger: Ledger) -
         for high in range(-1, 8):
             got = await ledger.repo.range(project, from_seq=low, to_seq=high)
             assert got == tuple(e for e in everything if low <= e.seq <= high), (low, high)
+
+
+async def test_artifacts_of_type_is_the_matching_artifacts_of_all_for_project(
+    ledger: Ledger,
+) -> None:
+    # artifacts_of_type: `kind = 'ArtifactProduced' AND payload->>'artifact_type' = ANY($3)
+    # ORDER BY seq` -- the same events all_for_project returns, filtered, in the same order.
+    project = await ledger.new_project()
+    for artifact_type in ("vibey_run_input", "other", "vibey_run_input_repaired"):
+        await ledger.repo.append(
+            draft(project, {"artifact_type": artifact_type}, kind=EventKind.ARTIFACT_PRODUCED)
+        )
+    await ledger.repo.append(draft(project, {"artifact_type": "vibey_run_input"}))
+    everything = await ledger.repo.all_for_project(project)
+    got = await ledger.repo.artifacts_of_type(
+        project, ("vibey_run_input", "vibey_run_input_repaired")
+    )
+    assert got == (everything[0], everything[2])
 
 
 async def test_latest_seq_is_the_number_of_events(ledger: Ledger) -> None:

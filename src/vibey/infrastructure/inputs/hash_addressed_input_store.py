@@ -86,6 +86,9 @@ class HashAddressedInputStore:
     def root(self) -> Path:
         return self._root
 
+    def describe(self) -> str:
+        return f"local store at {self._root}"
+
     def _folders(self, project_id: UUID, digest: str) -> tuple[Path, Path]:
         """The project's folder and the object's shard, made (0700) and lstat-checked."""
         try:

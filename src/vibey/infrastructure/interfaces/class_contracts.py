@@ -8,7 +8,7 @@ without making application code depend on a concrete implementation.
 
 from __future__ import annotations
 
-from collections.abc import Mapping
+from collections.abc import Mapping, Sequence
 from pathlib import Path
 from typing import TYPE_CHECKING, Protocol, runtime_checkable
 
@@ -137,6 +137,10 @@ class PostgresLedgerRepositoryInterface(Protocol):
     ) -> tuple[object, ...]: ...
 
     async def all_for_project(self, project_id: object) -> tuple[object, ...]: ...
+
+    async def artifacts_of_type(
+        self, project_id: object, artifact_types: Sequence[str]
+    ) -> tuple[object, ...]: ...
 
     async def latest_seq(self, project_id: object) -> int: ...
 

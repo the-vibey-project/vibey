@@ -2,9 +2,17 @@
 """A project's run inputs: added once, given to every BUILD run the same way (SP-LOOPS Phase 3,
 Task 4; design Goal 4, Decisions 3 and 6; fix round 1).
 
-**Where.** A project's inputs are stored in the person's own state folder, keyed by project
-id (`InputStoreInterface`; R-A): never inside the checkout, which a cloned repository controls.
-Inputs do not follow a job to another machine (Decision 5).
+**Where.** A project's inputs are stored where the person's own `[inputs]` says, keyed by
+project id (`InputStoreInterface`; R-A): their state folder by default, never inside the
+checkout, which a cloned repository controls; or, opt-in, a SeaweedFS bucket they name, which a
+run reads over the network (ADR-0105, amending Decisions 5 and 6 for store reads only). Every
+store call runs off the event loop (`asyncio.to_thread`), so a remote store never stalls a
+worker's lease heartbeat.
+
+**The ledger is the authority.** A run's inputs are the stored ones the ledger records as added
+(`RunInputLedgerInterface.added`). A store lacking any of those fails the run before its engine
+starts, naming the store (the wrong state folder, config folder or bucket otherwise runs without
+inputs, silently); a stored row the ledger never recorded is withheld and counted.
 
 **Adding.** A kind, a name and the `[inputs]` limits are checked before anything is written,
 so a refusal writes nothing. A file whose name equals another file input's once case and Unicode
@@ -39,6 +47,7 @@ Declared by `interfaces/run_inputs_interface.py::RunInputsInterface`.
 
 from __future__ import annotations
 
+import asyncio
 import json
 import unicodedata
 from collections.abc import Callable, Sequence
@@ -53,7 +62,12 @@ from vibey.application.interfaces.projects import ProjectLookup
 from vibey.application.interfaces.run_folder_writer_interface import RunFolderWriterInterface
 from vibey.application.interfaces.run_input_ledger_interface import RunInputLedgerInterface
 from vibey.application.interfaces.system import Clock
-from vibey.domain.errors import InputStoreError, RunInputRefused, UnknownProject
+from vibey.domain.errors import (
+    InputStoreError,
+    InputStoreUnavailable,
+    RunInputRefused,
+    UnknownProject,
+)
 from vibey.domain.ledger import EventKind
 from vibey.domain.run_input import (
     INPUT_KINDS,
@@ -109,10 +123,10 @@ class RunInputsService:
         if reason is not None:
             raise RunInputRefused(f"the name {ascii(name)[:80]} {reason}")
         cycle = await self._project(project_id)
-        held = self._store.listed(project_id).items
+        held = (await asyncio.to_thread(self._store.listed, project_id)).items
         digest = RUN_INPUT_RULE.digest_of(data)
         already = any(h.digest == digest and h.kind == kind and h.name == name for h in held)
-        if already and not self._intact(project_id, digest, len(data)):
+        if already and not await self._intact(project_id, digest, len(data)):
             return await self._repair(project_id, cycle, kind, name, data)
         limits = self._limits()
         if len(data) > limits.max_item_bytes:
@@ -146,18 +160,24 @@ class RunInputsService:
                 "size": item.size,
             },
         )
-        return self._store.put(project_id, kind, name, data)
+        return await asyncio.to_thread(self._store.put, project_id, kind, name, data)
 
     async def listed(self, project_id: UUID) -> InputListing:
         await self._project(project_id)
-        return self._store.listed(project_id)
+        return await asyncio.to_thread(self._store.listed, project_id)
 
     async def materialize(
         self, project_id: UUID, run_id: UUID, worktree_path: Path, *, job_id: UUID | None = None
     ) -> RunInputs:
         cycle = await self._project(project_id)
-        items = self._store.listed(project_id).items
-        if not items:
+        stored = (await asyncio.to_thread(self._store.listed, project_id)).items
+        recorded = await self._ledger.added(project_id)
+        self._refuse_a_store_missing_recorded_inputs(stored, recorded)
+        # A row the ledger never recorded was not added through vibey -- planted by another
+        # writer of a shared bucket, say -- so it is withheld and counted, never given.
+        items = [item for item in stored if item.digest in recorded]
+        unrecorded = len(stored) - len(items)
+        if not items and not unrecorded:
             return RunInputs(prompt_section="", attachments_dir=None, paste_file=None)
         limits = self._limits()
         given, withheld = self._within(items, limits)
@@ -167,17 +187,14 @@ class RunInputsService:
                 files.pop(self._key(item.name), None)  # the later add wins, in its own place
                 files[self._key(item.name)] = item
         pasted = [item for item in given if item.kind == "paste"]
-        pastes = [
-            self._paste(self._store.get(project_id, item.digest, size=item.size)) for item in pasted
-        ]
+        pastes = [self._paste(await self._get(project_id, item)) for item in pasted]
         parts = (STATE_FOLDER, "inputs", str(run_id))
         relative = Path(*parts)
         base = self._writer.made(worktree_path, parts)
         attachments = self._writer.made(base, ("attachments",)) if files else None
         if attachments is not None:
             for item in files.values():
-                data = self._store.get(project_id, item.digest, size=item.size)
-                self._writer.write(attachments, item.name, data)
+                self._writer.write(attachments, item.name, await self._get(project_id, item))
         paste_file = None
         if pastes:
             body = "\n".join(
@@ -194,6 +211,7 @@ class RunInputsService:
             relative / "paste.md",
             budget=limits.max_prompt_bytes,
             withheld=withheld,
+            unrecorded=unrecorded,
         )
         await self._record(
             project_id,
@@ -236,13 +254,37 @@ class RunInputsService:
             job_id=job_id,
         )
 
-    def _intact(self, project_id: UUID, digest: str, size: int) -> bool:
-        """Whether the stored object for `digest` is there, `size` long, with its bytes."""
+    async def _intact(self, project_id: UUID, digest: str, size: int) -> bool:
+        """Whether the stored object for `digest` is there, `size` long, with its bytes. A store
+        that does not answer is not a missing object: `InputStoreUnavailable` propagates."""
         try:
-            self._store.get(project_id, digest, size=size)
+            await asyncio.to_thread(self._store.get, project_id, digest, size=size)
+        except InputStoreUnavailable:
+            raise
         except InputStoreError:
             return False
         return True
+
+    async def _get(self, project_id: UUID, item: RunInput) -> bytes:
+        """One stored input's bytes, read off the event loop (a remote store blocks)."""
+        return await asyncio.to_thread(self._store.get, project_id, item.digest, size=item.size)
+
+    def _refuse_a_store_missing_recorded_inputs(
+        self, stored: Sequence[RunInput], recorded: frozenset[str]
+    ) -> None:
+        """The ledger is the authority on which inputs exist (ADR-0105): a store that lacks an
+        input the ledger records as added is the wrong store (another state or config folder, a
+        wrong bucket) or a damaged one, and a run given only what it holds would run without
+        inputs, silently (the Phase 3 N7 limit). So the run fails before its engine starts."""
+        present = {item.digest for item in stored}
+        missing = recorded - present
+        if missing:
+            raise InputStoreError(
+                f"the {self._store.describe()} holds {len(recorded) - len(missing)} of the "
+                f"{len(recorded)} inputs the ledger records for this project; point [inputs] in "
+                "your own vibey.toml at the store they were added to, or add the missing inputs "
+                "again"
+            )
 
     async def _repair(
         self, project_id: UUID, cycle: int, kind: InputKind, name: str, data: bytes
@@ -261,7 +303,7 @@ class RunInputsService:
                 "size": item.size,
             },
         )
-        self._store.restore(project_id, data)
+        await asyncio.to_thread(self._store.restore, project_id, data)
         return item
 
     @staticmethod
@@ -324,6 +366,7 @@ class RunInputsService:
         *,
         budget: int,
         withheld: int,
+        unrecorded: int = 0,
     ) -> str:
         blocks: list[str] = []
         spent = 0
@@ -358,6 +401,12 @@ class RunInputsService:
                 "",
                 f"Note: {withheld} more input(s) were withheld: over the person's [inputs] "
                 "limits as they stand.",
+            ]
+        if unrecorded:
+            lines += [
+                "",
+                f"Note: {unrecorded} more stored input(s) were withheld: the ledger has no "
+                "record of them being added.",
             ]
         return "\n".join(lines) + "\n"
 
