@@ -127,13 +127,14 @@ class LlmToolingProbe:
     @staticmethod
     def shipped_skill() -> Path | None:
         """The `vibey-chat-driver` skill folder this install carries: in the wheel
-        (`vibey_skills/plugins/...`), or in the source tree an editable install runs from."""
+        (`vibey_skills/marketplace/plugins/...`), or in the source tree an editable install runs
+        from."""
         try:
             package = Path(str(importlib.resources.files("vibey_skills")))
         except ModuleNotFoundError:  # pragma: no cover - vibey-engine always ships vibey_skills
             return None
         within = Path("plugins") / "vibey" / "skills" / SKILL_NAME
-        for root in (package, package.parent.parent):
+        for root in (package / "marketplace", package.parent.parent):
             if (root / within / "SKILL.md").is_file():
                 return root / within
         return None  # pragma: no cover - a broken install
