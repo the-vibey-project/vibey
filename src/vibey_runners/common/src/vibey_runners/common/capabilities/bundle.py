@@ -162,6 +162,12 @@ class BundleSpec:
         return value
 
     @classmethod
+    def option_safe_text(cls, value: object, path: str) -> str:
+        """A source or ref anywhere (the bundle, the lock): non-empty, at most `MAX_TEXT`
+        characters, no control characters, never starting with `-`. Raises `BundleError`."""
+        return cls._not_an_option(value, path)
+
+    @classmethod
     def _not_an_option(cls, value: object, path: str) -> str:
         text = cls._text(value, path)
         if text.startswith("-"):

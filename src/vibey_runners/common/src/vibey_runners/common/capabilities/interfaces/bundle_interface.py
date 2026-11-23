@@ -37,6 +37,12 @@ class BundleSpecInterface(Protocol):
         most 256 plain names, each once. Raises `BundleError` at `loops.disable`."""
         ...
 
+    @classmethod
+    def option_safe_text(cls, value: object, path: str) -> str:
+        """A source or ref anywhere (the bundle, the lock): non-empty, bounded, free of control
+        characters and never starting with `-`. Raises `BundleError` at `path`."""
+        ...
+
     def narrowed_by(self, disabled: Iterable[str]) -> Self:
         """This bundle without the plugins, MCP servers and skills named in `disabled`, with
         those names added to `disabled` (so a skill inside a kept plugin is dropped later too).

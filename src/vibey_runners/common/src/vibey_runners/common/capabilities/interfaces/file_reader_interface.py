@@ -13,5 +13,12 @@ class FileReaderInterface(Protocol):
         """The UTF-8 text of `path`, never more than `limit` bytes of it. Raises
         `FileTooLargeError` past the limit, `UnicodeDecodeError` for bytes that are not UTF-8,
         and `OSError` when the file cannot be opened -- including when `path` itself is a
-        symlink, which is never followed."""
+        symlink, which is never followed. A FIFO, folder or device raises
+        `NotRegularFileError` (an `OSError`) without blocking."""
+        ...
+
+    def open_regular(self, path: Path) -> int:
+        """A read-only descriptor for `path`, opened without following a final symlink and
+        without blocking, or `NotRegularFileError` when it is not a regular file. The caller
+        closes it."""
         ...

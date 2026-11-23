@@ -44,7 +44,7 @@ SKILL_FILE: Final = "SKILL.md"
 SKILL_MAX_BYTES: Final = 64 * 1024
 """The largest SKILL.md indexed (the plan's 64 KiB). vibey's largest is well under it."""
 MAX_SKILLS_PER_PLUGIN: Final = 256
-"""The most skill folders read from one plugin; the rest are skipped by name."""
+"""The most entries of one plugin's `skills/` folder looked at; the rest are one skipped row."""
 OUTSIDE: Final = "outside the marketplace"
 INSIDE_GIT: Final = "inside a .git folder"
 """The lock leaves the marketplace root's `.git` out of its digest, and the index cannot tell a
@@ -87,10 +87,19 @@ class SkillIndex:
         if not resolved.is_dir():
             return
         names: set[str] = set()
-        candidates = sorted(entry for entry in resolved.iterdir() if entry.is_dir())
-        for over in candidates[MAX_SKILLS_PER_PLUGIN:]:
-            skipped.append((over, f"past the {MAX_SKILLS_PER_PLUGIN}-skill limit of one plugin"))
-        for skill_dir in candidates[:MAX_SKILLS_PER_PLUGIN]:
+        # Names only (no stat) for the whole folder; only the first MAX_SKILLS_PER_PLUGIN are
+        # looked at, and everything past them is one skipped row, not one row each.
+        entries = sorted(resolved.iterdir())
+        if len(entries) > MAX_SKILLS_PER_PLUGIN:
+            over = len(entries) - MAX_SKILLS_PER_PLUGIN
+            skipped.append(
+                (
+                    resolved,
+                    f"{over} more entries past the {MAX_SKILLS_PER_PLUGIN}-entry limit of one plugin",
+                )
+            )
+        candidates = [entry for entry in entries[:MAX_SKILLS_PER_PLUGIN] if entry.is_dir()]
+        for skill_dir in candidates:
             entry, reason, where = self._skill(plugin_dir.name, base, skill_dir)
             if entry is not None and entry.name in names:
                 reason = f"names the skill {entry.name} twice in {plugin_dir.name}"

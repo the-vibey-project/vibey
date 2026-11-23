@@ -22,3 +22,6 @@ class RecordingReader:
         if path in self._fail:
             raise self._fail[path]
         return self._real.read_text(path, limit)
+
+    def open_regular(self, path: Path) -> int:
+        return self._real.open_regular(path)

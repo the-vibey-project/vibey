@@ -218,14 +218,21 @@ def test_a_missing_plugin_folder_is_skipped(tmp_path: Path) -> None:
     assert SkillIndex().build([gone]).skipped == ((gone, "the plugin folder does not exist"),)
 
 
-def test_skills_past_the_limit_are_skipped_by_name(tmp_path: Path) -> None:
+def test_entries_past_the_limit_are_one_skipped_row_and_never_read(tmp_path: Path) -> None:
     plugin = _plugin(tmp_path)
-    for index in range(MAX_SKILLS_PER_PLUGIN + 1):
-        (plugin / "skills" / f"s{index:04d}").mkdir(parents=True)
-    catalog = SkillIndex().build([plugin])
-    over = [reason for _, reason in catalog.skipped if "limit" in reason]
-    assert len(over) == 1
-    assert f"past the {MAX_SKILLS_PER_PLUGIN}-skill limit" in over[0]
+    for index in range(MAX_SKILLS_PER_PLUGIN + 5):
+        _skill(plugin, f"s{index:04d}", VALID.format(name=f"s{index:04d}"))
+    reader = RecordingReader()
+    catalog = SkillIndex(reader).build([plugin])
+    assert len(catalog.skills) == MAX_SKILLS_PER_PLUGIN
+    over = [(path, reason) for path, reason in catalog.skipped]
+    assert over == [
+        (
+            (plugin / "skills").resolve(),
+            f"5 more entries past the {MAX_SKILLS_PER_PLUGIN}-entry limit of one plugin",
+        )
+    ]
+    assert len(reader.paths) == MAX_SKILLS_PER_PLUGIN
 
 
 def test_the_shipped_research_plugin_indexes_cleanly() -> None:

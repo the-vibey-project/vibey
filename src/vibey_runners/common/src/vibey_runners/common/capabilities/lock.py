@@ -5,7 +5,7 @@
 **The digest.** `digest_tree` lists the tree itself (never trusting listing order: every record
 is collected, then sorted by its relative path's bytes), `lstat`s each entry and never follows a
 symlink: a link is hashed by its target text, a file by its content (opened `O_NOFOLLOW`, so a
-link swapped in after the `lstat` is refused), a folder by its presence, and an executable file
+link swapped in after the `lstat` is refused, and so is anything not a regular file), a folder by its presence, and an executable file
 differs from a plain one. Anything else -- a FIFO, a socket, a device -- is refused rather than
 opened, since opening a FIFO blocks. The root's own `.git` (the clone's folder, or a worktree's
 gitfile) is metadata git rewrites without the content changing -- a `git fetch` touches nothing
@@ -15,7 +15,9 @@ the digest skipped must never be content a loader can read, and `MarketplaceMani
 `SkillIndex` refuse anything that resolves into the root's `.git` for the same reason.
 
 **The file.** JSON, one object: `version`, the `entries`, and a `checksum` (sha256 of the
-entries' canonical JSON). It is written to a temporary file beside the lock, fsynced, renamed
+entries' canonical JSON). The checksum is unkeyed: it catches a corrupted or hand-edited lock,
+not a deliberate one -- anyone who can write the file can recompute it, so it is no evidence of
+tampering. The lock folder is the person's own and is protected by its permissions (0600). It is written to a temporary file beside the lock, fsynced, renamed
 over it and the folder fsynced, with mode 0600 from the moment it exists; a failure removes the
 temporary file and leaves the old lock. It is read whole through the bounded reader (never
 through a symlink) and must end in the newline the writer puts there, parse, carry exactly its
@@ -38,6 +40,8 @@ from dataclasses import asdict
 from pathlib import Path, PurePosixPath
 from typing import Final
 
+from vibey_runners.common.capabilities.bundle import BundleSpec
+from vibey_runners.common.capabilities.bundle_error import BundleError
 from vibey_runners.common.capabilities.file_reader import BoundedFileReader
 from vibey_runners.common.capabilities.file_too_large_error import FileTooLargeError
 from vibey_runners.common.capabilities.git_folder_guard import GitFolderGuard
@@ -115,11 +119,9 @@ class CapabilityLock:
             return (b"X" if mode & stat.S_IXUSR else b"F"), self._file_digest(path)
         raise LockError(f"{path} is not a file, folder or symlink")
 
-    @staticmethod
-    def _file_digest(path: Path) -> bytes:
+    def _file_digest(self, path: Path) -> bytes:
         digest = hashlib.sha256()
-        descriptor = os.open(path, os.O_RDONLY | os.O_NOFOLLOW | os.O_CLOEXEC)
-        with os.fdopen(descriptor, "rb") as handle:
+        with os.fdopen(self._reader.open_regular(path), "rb") as handle:
             for chunk in iter(lambda: handle.read(_CHUNK), b""):
                 digest.update(chunk)
         return digest.hexdigest().encode()
@@ -203,10 +205,14 @@ class CapabilityLock:
         ref, digest = item["ref"], item["digest"]
         if not isinstance(marketplace, str) or NAME_PATTERN.fullmatch(marketplace) is None:
             raise LockError(f"{where}: marketplace must be a plain name")
-        if not isinstance(source, str) or not source:
-            raise LockError(f"{where}: source must be a non-empty string")
-        if ref is not None and (not isinstance(ref, str) or not ref):
-            raise LockError(f"{where}: ref must be a non-empty string or null")
+        try:
+            # The bundle's own rule for a source and a ref: what `[loops]` refuses, the lock
+            # cannot carry either (a later git call may be handed either).
+            source = BundleSpec.option_safe_text(source, f"{where}: source")
+            if ref is not None:
+                ref = BundleSpec.option_safe_text(ref, f"{where}: ref")
+        except BundleError as exc:
+            raise LockError(str(exc)) from exc
         if not isinstance(digest, str) or DIGEST_PATTERN.fullmatch(digest) is None:
             raise LockError(f"{where}: digest must be sha256:<64 hex digits>")
         return LockEntry(marketplace, source, ref, digest)

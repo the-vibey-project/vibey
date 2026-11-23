@@ -240,7 +240,9 @@ def _rewrite(path: Path, edit: object) -> None:
         (lambda d: d.update(checksum="sha256:" + "0" * 64), "checksum"),
     ],
 )
-def test_a_tampered_lock_is_refused(tmp_path: Path, edit: object, reason: str) -> None:
+def test_a_corrupted_or_hand_edited_lock_is_refused(
+    tmp_path: Path, edit: object, reason: str
+) -> None:
     path = tmp_path / "loops.lock"
     CapabilityLock().write(path, ENTRIES)
     _rewrite(path, edit)
@@ -350,3 +352,50 @@ def test_a_root_entry_sharing_the_git_identity_under_another_name_is_hashed(
     without = _tree(tmp_path / "bare", {"a.txt": b"x"})
     # Only a name that folds to `.git` is a candidate; the alias is content (a link, by its text).
     assert CapabilityLock().digest_tree(root) != CapabilityLock().digest_tree(without)
+
+
+@pytest.mark.skipif(not hasattr(os, "mkfifo"), reason="no FIFOs on this operating system")
+def test_a_fifo_at_the_lock_path_is_refused_without_hanging(tmp_path: Path) -> None:
+    fifo = tmp_path / "loops.lock"
+    os.mkfifo(fifo)
+    with pytest.raises(LockError, match="not a regular file"):
+        CapabilityLock().read(fifo)
+
+
+def test_a_write_fsyncs_the_file_and_then_its_folder(tmp_path: Path) -> None:
+    kinds: list[str] = []
+
+    def recording(descriptor: int) -> None:
+        mode = os.fstat(descriptor).st_mode
+        kinds.append("folder" if stat.S_ISDIR(mode) else "file")
+        os.fsync(descriptor)
+
+    CapabilityLock(fsync=recording).write(tmp_path / "loops.lock", ENTRIES)
+    assert kinds == ["file", "folder"]
+
+
+@pytest.mark.parametrize(
+    ("field", "value"),
+    [
+        ("source", "-uupload-pack=evil"),
+        ("source", "https://e.test/\x1b[2J"),
+        pytest.param("source", "x" * 4097, id="source-overlong"),
+        ("ref", "--force"),
+        ("ref", "v1\n"),
+    ],
+)
+def test_a_lock_entry_holds_its_source_and_ref_to_the_bundle_rule(
+    tmp_path: Path, field: str, value: str
+) -> None:
+    path = tmp_path / "loops.lock"
+    fields = {"marketplace": "acme", "source": "s", "ref": None, "digest": DIGEST, field: value}
+    with pytest.raises(LockError, match=field):
+        CapabilityLock().write(path, (LockEntry(**fields),))  # type: ignore[arg-type]
+    assert not path.exists()
+    CapabilityLock().write(path, ENTRIES)
+    document = json.loads(path.read_text(encoding="utf-8"))
+    document["entries"] = [fields]
+    document["checksum"] = CapabilityLock.checksum(document["entries"])
+    path.write_text(json.dumps(document) + "\n", encoding="utf-8")
+    with pytest.raises(LockError, match=field):
+        CapabilityLock().read(path)

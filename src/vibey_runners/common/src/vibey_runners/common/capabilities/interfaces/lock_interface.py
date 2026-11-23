@@ -28,6 +28,7 @@ class CapabilityLockInterface(Protocol):
 
     def read(self, path: Path) -> tuple[LockEntry, ...]:
         """Every entry in `path`, or none when there is no lock yet. Raises `LockError` for a
-        lock that is truncated, tampered with, oversized, a symlink or malformed, and never
+        lock that is truncated, corrupted or hand-edited, oversized, a symlink, not a regular
+        file or malformed, and never
         returns part of one."""
         ...

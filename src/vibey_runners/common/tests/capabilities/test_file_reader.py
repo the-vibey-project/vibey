@@ -3,6 +3,7 @@
 
 from __future__ import annotations
 
+import os
 from pathlib import Path
 
 import pytest
@@ -12,6 +13,7 @@ from vibey_runners.common.capabilities.file_too_large_error import FileTooLargeE
 from vibey_runners.common.capabilities.interfaces.file_reader_interface import (
     FileReaderInterface,
 )
+from vibey_runners.common.capabilities.not_regular_file_error import NotRegularFileError
 
 
 def test_a_file_at_the_cap_is_read(tmp_path: Path) -> None:
@@ -45,3 +47,16 @@ def test_bytes_that_are_not_utf8_are_refused(tmp_path: Path) -> None:
     path.write_bytes(b"\xff\xfe")
     with pytest.raises(UnicodeDecodeError):
         BoundedFileReader().read_text(path, 100)
+
+
+@pytest.mark.skipif(not hasattr(os, "mkfifo"), reason="no FIFOs on this operating system")
+def test_a_fifo_is_refused_without_blocking(tmp_path: Path) -> None:
+    fifo = tmp_path / "pipe"
+    os.mkfifo(fifo)
+    with pytest.raises(NotRegularFileError):
+        BoundedFileReader().read_text(fifo, 100)
+
+
+def test_a_folder_is_refused_as_not_a_regular_file(tmp_path: Path) -> None:
+    with pytest.raises(NotRegularFileError, match="not a regular file"):
+        BoundedFileReader().read_text(tmp_path, 100)
