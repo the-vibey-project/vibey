@@ -153,6 +153,9 @@ from vibey.application.interfaces.local_install import (
     LocalStackInstallerInterface,
 )
 from vibey.application.interfaces.loops import LoopCatalogInterface
+from vibey.application.interfaces.loops_bundle_settings_interface import (
+    LoopsBundleSettingsInterface,
+)
 from vibey.application.interfaces.messaging import MessagingPort
 from vibey.application.interfaces.observability import (
     Logger,
@@ -352,6 +355,7 @@ __all__ = [
     "LedgerSitePlanInterface",
     "LedgerSiteWriter",
     "LoopCatalogInterface",
+    "LoopsBundleSettingsInterface",
     "MergeOutcome",
     "Outcome",
     "Park",
