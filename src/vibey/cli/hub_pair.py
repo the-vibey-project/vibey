@@ -17,8 +17,11 @@ token and the runtime record -- comes from the person's own `vibey.toml`, in the
 folder, never the folder the command runs in. The token goes only to this computer's loopback,
 by the fixed literal `HUB_TARGETS.loopback_address` gives the record's host, unless the person
 names a private-network address literal with `--host` (a hub bound to a LAN address with
-`vibey serve --host 192.168.x.y` listens only there); a record naming anything else is refused
-before anything is sent.
+`vibey serve --host 192.168.x.y` listens only there). A LAN address is used only when the
+person's own record says the hub is bound there (or binds every address and this computer holds
+that one) and the hub serves its own certificate: the request is https, verified against that
+certificate alone, and never follows a redirect. Every check comes before the token is read;
+anything else is refused before anything is sent.
 """
 
 from collections.abc import Callable
@@ -33,14 +36,18 @@ from vibey.cli.interfaces.hub_pair_interface import HubPairCommandInterface
 from vibey.domain.config import ConfigError
 from vibey.domain.hub_scope import HubScope
 from vibey.domain.hub_target import HUB_TARGETS
+from vibey.infrastructure.hub.interfaces.server_interface import LocalNamesInterface
 from vibey.infrastructure.hub.interfaces.settings_interface import HubSettingsLoaderInterface
-from vibey.infrastructure.hub.local_token import LocalTokenStore
+from vibey.infrastructure.hub.local_token import LocalTokenStore, ServingRecord
+from vibey.infrastructure.hub.server import LOCAL_NAMES
 from vibey.infrastructure.hub.settings import HUB_SETTINGS
 from vibey.infrastructure.hub.tls import CERT_FILE
 from vibey.infrastructure.user_config_folder import UserConfigFolder
 
 EXIT_NOT_RUNNING: Final = 3
 """The exit code when no hub is running to talk to."""
+
+WILDCARDS: Final = frozenset({"0.0.0.0", "::"})  # nosec B104 - compared, never bound
 
 type Transport = Callable[..., httpx.Client]
 
@@ -84,7 +91,9 @@ class HubPairCommand:
         config_path: Callable[[], Path] = lambda: own_config(),
         client: Transport = httpx.Client,
         qr: Callable[[str], str | None] = _render_qr,
+        local_names: LocalNamesInterface = LOCAL_NAMES,
     ) -> None:
+        self._local_names = local_names
         self._settings = settings
         self._config_path = config_path
         self._client = client
@@ -142,34 +151,75 @@ class HubPairCommand:
         if record is None:
             typer.echo("no hub is running here: start one with `vibey serve`", err=True)
             raise typer.Exit(EXIT_NOT_RUNNING)
-        host = target if target is not None else HUB_TARGETS.loopback_address(record.host)
+        cert = settings.state_dir / CERT_FILE
+        problem, host = self._where(record, target, cert)
         if host is None:
-            # The record's host is not certainly this computer: nothing, not the token, is sent.
-            typer.echo(
-                "the hub's runtime record names an address off this computer's loopback, so "
-                "nothing was sent; if your hub listens on a LAN address, name it with --host",
-                err=True,
-            )
+            # Every check comes before the token is read: nothing, not the token, is sent.
+            typer.echo(f"{problem}; nothing was sent", err=True)
             raise typer.Exit(2)
         shown = f"[{host}]" if ":" in host else host
         scheme = "https" if record.tls else "http"
-        # The hub's own certificate, and only it, when it serves one.
-        verify: str | bool = str(settings.state_dir / CERT_FILE) if record.tls else True
+        # The hub's own certificate, and only it, when it serves one: a file as `verify` is the
+        # only authority trusted (never the system's store, never no verification).
+        verify: str | bool = str(cert) if record.tls else True
         with self._client(
             base_url=f"{scheme}://{shown}:{record.port}/api/v1",
             headers={"authorization": f"Bearer {store.token()}"},
             verify=verify,
             timeout=10.0,
+            follow_redirects=False,
         ) as client:
             try:
                 response = client.request(method, route, json=body)
             except httpx.HTTPError as exc:
-                typer.echo(f"the hub did not answer: {exc}", err=True)
+                typer.echo(f"the hub did not answer ({type(exc).__name__})", err=True)
                 raise typer.Exit(EXIT_NOT_RUNNING) from exc
+        if 300 <= response.status_code < 400:
+            # The token never follows a redirect, wherever it points.
+            typer.echo(
+                f"the hub answered with a redirect ({response.status_code}); it is not followed",
+                err=True,
+            )
+            raise typer.Exit(1)
         if response.status_code >= 400:
             typer.echo(f"refused ({response.status_code}): {response.text}", err=True)
             raise typer.Exit(1)
         return response.json()
+
+    def _where(
+        self, record: ServingRecord, named: str | None, cert: Path
+    ) -> tuple[str, str | None]:
+        """The address the host token may go to, or why it may go nowhere.
+
+        Without `--host`: the fixed loopback literal the record's host maps to. With a loopback
+        `--host`: that literal, when the record's hub is on the loopback too. With a LAN address:
+        only when the person's own record says the hub is bound there -- the same address, or a
+        wildcard bind and an address this computer holds -- and the hub serves its own
+        certificate (the token never crosses a network in the clear)."""
+        on_loopback = HUB_TARGETS.loopback_address(record.host)
+        if named is None:
+            if on_loopback is None:
+                return (
+                    "the hub's runtime record names an address off this computer's loopback; if "
+                    "your hub listens on a LAN address, name it with --host",
+                    None,
+                )
+            return "", on_loopback
+        if HUB_TARGETS.loopback_address(named) is not None:
+            if on_loopback is None:
+                return "--host names the loopback, but the hub is not listening there", None
+            return "", named
+        bound = record.host in WILDCARDS and named in self._local_names.names(record.host)
+        if not bound and HUB_TARGETS.lan_address(record.host) != named:
+            return "--host is not the address the running hub is bound to", None
+        if not record.tls or not cert.is_file():
+            return (
+                "the hub on that LAN address does not serve its own certificate, so the host "
+                "token would cross the network in the clear; declare `[hub] lan = true` and "
+                "restart it with `vibey serve --host <address>` so it serves one",
+                None,
+            )
+        return "", named
 
 
 HUB_PAIR: Final[HubPairCommandInterface] = HubPairCommand()

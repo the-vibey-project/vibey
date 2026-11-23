@@ -871,8 +871,12 @@ exactly `localhost`, a canonical loopback literal or a wildcard bind; the connec
 fixed loopback literal). A hub you bound to a LAN address (`vibey serve --host 192.168.1.5`)
 listens only there: name it with `--host`, which takes a private-network address literal
 (`10/8`, `172.16/12`, `192.168/16`, `100.64/10`, `fc00::/7`) or loopback, never a name, a zone
-or a public, link-local or oddly spelt address (exit 2). A record naming anything off the
-loopback without `--host` is refused before anything is sent (exit 2).
+or a public, link-local or oddly spelt address (exit 2). A LAN `--host` is used only when your
+own runtime record says the hub is bound to that address (or binds every address and this
+computer holds that one) and the hub serves its own certificate (`[hub] lan = true`): the request
+is https, verified against that certificate in your state folder alone, and never follows a
+redirect. A `--host` the record does not back, a LAN hub without its certificate, or a record
+naming anything off the loopback without `--host` is refused before the token is read (exit 2).
 
 ## `vibey sabbath`
 

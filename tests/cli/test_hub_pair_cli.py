@@ -221,15 +221,131 @@ def test_a_record_off_the_loopback_is_never_sent_the_host_token(tmp_path: Path, 
     assert caught.value.exit_code == 2 and hub.requests == []
 
 
-def test_the_person_names_a_lan_hub_with_host(
-    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+class Names:
+    """This computer's own names and addresses, as `LocalNames` would report them."""
+
+    def __init__(self, *addresses: str) -> None:
+        self.addresses = frozenset(addresses)
+
+    def names(self, bound: str) -> frozenset[str]:
+        return self.addresses
+
+
+def _lan(
+    tmp_path: Path,
+    hub: Hub,
+    record: ServingRecord,
+    monkeypatch: pytest.MonkeyPatch,
+    *,
+    names: Names | None = None,
+    cert: bool = True,
+) -> tuple[HubPairCommand, list[bool]]:
+    """A command whose token reads are counted, beside the person's state with a hub
+    certificate (or none)."""
+    _command(tmp_path, hub, record=record)
+    if cert:
+        (tmp_path / "state" / "hub-cert.pem").write_text("-----BEGIN CERTIFICATE-----\n")
+    read: list[bool] = []
+    real = LocalTokenStore.token
+
+    def counted(self: LocalTokenStore) -> str:
+        read.append(True)
+        return real(self)
+
+    monkeypatch.setattr(LocalTokenStore, "token", counted)
+    command = HubPairCommand(
+        config_path=lambda: tmp_path / "vibey.toml",
+        client=hub,
+        qr=lambda uri: None,
+        local_names=names or Names(),
+    )
+    return command, read
+
+
+def test_the_person_names_a_lan_hub_with_host_over_its_own_certificate(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str], monkeypatch: pytest.MonkeyPatch
 ) -> None:
     hub = Hub(OFFER)
     lan = ServingRecord(host="192.168.1.5", port=8765, pid=1, tls=True)
-    _command(tmp_path, hub, record=lan).pair(["view"], "192.168.1.5")
+    command, _ = _lan(tmp_path, hub, lan, monkeypatch)
+    command.pair(["view"], "192.168.1.5")
     assert str(hub.requests[0].url) == "https://192.168.1.5:8765/api/v1/pairing/offers"
     assert hub.opened["verify"] == str(tmp_path / "state" / "hub-cert.pem")
+    assert hub.opened["follow_redirects"] is False
     assert "code: 123456" in capsys.readouterr().out
+
+
+def test_a_wildcard_hub_is_reached_on_an_address_this_computer_holds(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    hub = Hub([])
+    wild = ServingRecord(host="0.0.0.0", port=8765, pid=1, tls=True)  # nosec B104
+    command, _ = _lan(tmp_path, hub, wild, monkeypatch, names=Names("10.0.0.4", "studio"))
+    command.devices("10.0.0.4")
+    assert str(hub.requests[0].url) == "https://10.0.0.4:8765/api/v1/devices"
+
+
+@pytest.mark.parametrize(
+    ("record", "named", "names", "cert", "why"),
+    [
+        (ServingRecord("192.168.1.5", 8765, 1, tls=False), "192.168.1.5", (), True, "clear"),
+        (ServingRecord("192.168.1.5", 8765, 1, tls=True), "192.168.1.5", (), False, "clear"),
+        (ServingRecord("192.168.1.5", 8765, 1, tls=True), "192.168.1.6", (), True, "bound to"),
+        (ServingRecord("0.0.0.0", 8765, 1, tls=True), "10.0.0.9", ("10.0.0.4",), True, "bound to"),  # nosec B104
+        (ServingRecord("192.168.1.5", 8765, 1, tls=True), "127.0.0.1", (), True, "loopback"),
+    ],
+)
+def test_a_lan_host_the_record_does_not_back_is_refused_before_the_token_is_read(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+    record: ServingRecord,
+    named: str,
+    names: tuple[str, ...],
+    cert: bool,
+    why: str,
+) -> None:
+    hub = Hub([])
+    command, read = _lan(tmp_path, hub, record, monkeypatch, names=Names(*names), cert=cert)
+    with pytest.raises(typer.Exit) as caught:
+        command.devices(named)
+    assert caught.value.exit_code == 2 and hub.requests == [] and read == []
+    err = capsys.readouterr().err
+    assert why in err and "nothing was sent" in err
+
+
+def test_a_loopback_host_reaches_a_loopback_hub_over_http(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    hub = Hub([])
+    command, read = _lan(tmp_path, hub, RUNNING, monkeypatch, cert=False)
+    command.devices("127.0.0.1")
+    assert str(hub.requests[0].url) == "http://127.0.0.1:8765/api/v1/devices" and read == [True]
+
+
+def test_a_redirect_is_never_followed(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    hub = Hub(status=302)
+    original = hub.__call__
+
+    def redirecting(**fields: Any) -> httpx.Client:
+        client = original(**fields)
+
+        def handle(request: httpx.Request) -> httpx.Response:
+            hub.requests.append(request)
+            return httpx.Response(302, headers={"Location": "https://attacker.example/x"})
+
+        client._transport = httpx.MockTransport(handle)
+        return client
+
+    command = _command(tmp_path, hub, record=RUNNING)
+    command._client = redirecting
+    with pytest.raises(typer.Exit) as caught:
+        command.devices()
+    assert caught.value.exit_code == 1 and len(hub.requests) == 1
+    err = capsys.readouterr().err
+    assert "redirect (302)" in err and "attacker" not in err
 
 
 @pytest.mark.parametrize(
