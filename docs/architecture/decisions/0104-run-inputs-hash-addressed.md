@@ -85,10 +85,9 @@ found three facts the parent plan's outline had wrong, ruled there as R1 to R3 a
    every command to a hub host tool, and an ACP turn is sent whole to the hub's chat route,
    whose messages are capped at 4000 characters against a 1 MiB item limit. ACP intake therefore
    needs either the hub route Decision 6 defers or a local write from the `vibey acp` process
-   outside the agent principal the hub enforces. That choice is the operator's. No plan or issue
-   exists for it yet; the split and its four findings are tracked in the Phase 3b ledger,
-   `.superpowers/sdd/2026-11-23-sp-loops-phase3b/progress.md` (Task 7 ruling), until one is
-   written.
+   outside the agent principal the hub enforces. The Task 7 ACP intake is therefore a follow-up
+   that needs an operator choice between a hub route and a local write (see the pull request
+   description for the change that carries this record); no plan or issue exists for it yet.
 
 ## Consequences
 
@@ -100,7 +99,8 @@ found three facts the parent plan's outline had wrong, ruled there as R1 to R3 a
   `## Run inputs` section; the run gets the worktree folder but its model is not told it exists,
   and its `vibey_run_inputs_given` event over-reports what the model was shown. Follow-up: carry
   the section into the seed before the no-loss gate verifies it (or a second, gated section after
-  it), recorded with the ACP split in the Phase 3b ledger until a plan exists.
+  it). No plan or issue exists for it yet; the pull request description for the change that
+  carries this record names it with the ACP follow-up.
 - The CLI is the only intake until the ACP follow-up lands; krypton and a hub route come later
   (Decision 6).
 - Inputs are on one machine. A job reclaimed by a worker on another machine runs without them,
