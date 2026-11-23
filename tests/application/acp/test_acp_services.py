@@ -269,11 +269,7 @@ async def test_first_load_notices_the_unload_commands() -> None:
     assert loader.calls == [("load", HUB), ("load", WORKER)]
     assert final(channel)["status"] == "completed"
     notice = channel.texts[-1]
-    hub, worker = (
-        HUB.replace(".", "\\[.\\]"),
-        WORKER.replace(".", "\\[.\\]"),
-    )  # shown as untrusted text
-    assert f"`{hub}`" in notice and f"`{worker}`" in notice
+    assert f"`{HUB}`" in notice and f"`{WORKER}`" in notice
     assert "launchd gui/501" in notice
     assert f"launchctl bootout gui/501/{HUB}" in notice
     assert f"launchctl bootout gui/501/{WORKER}" in notice

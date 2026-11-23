@@ -440,7 +440,7 @@ class AcpSearxngStep:
         await self._say(
             notify,
             session_id,
-            f"vibey loaded `{self._untrusted(label)}` into "
+            f"vibey loaded {self._mapper.untrusted_code_span(label, limit=self._settings.live_message_chars)} into "
             f"{self._untrusted(self._loader.domain())}: it runs SearXNG in a container on "
             "127.0.0.1 and starts again when you log in. "
             f"`{UNLOAD_COMMAND}` stops it for good (it removes the container and marks it so no "

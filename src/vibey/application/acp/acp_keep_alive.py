@@ -384,7 +384,8 @@ class AcpKeepAlive:
                 _LOG.warning("the keep-alive could not tell session %s", session_id, exc_info=True)
 
     def _shown(self, label: str) -> str:
-        return f"`{self._untrusted(label)}`"
+        # Exactly, in a code span: copied for `launchctl` or `systemctl`, it names the unit.
+        return self._mapper.untrusted_code_span(label, limit=self._settings.live_message_chars)
 
     def _untrusted(self, text: str) -> str:
         return self._mapper.untrusted(text, limit=self._settings.live_message_chars)

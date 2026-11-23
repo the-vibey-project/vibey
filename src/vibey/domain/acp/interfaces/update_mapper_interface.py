@@ -85,6 +85,11 @@ class AcpUpdateMapperInterface(Protocol):
         """A tool's result as a fenced code block (`UntrustedTextInterface.code`)."""
         ...
 
+    def untrusted_code_span(self, value: Any, *, limit: int) -> str:
+        """A name shown exactly in backticks, such as a unit's label
+        (`UntrustedTextInterface.code_span`)."""
+        ...
+
     def available_commands(self, specs: Sequence[ChatSlashSpec]) -> dict[str, Any]:
         """An `available_commands_update` naming every `/` command, each with its usage after
         the command word as the input hint when it takes one."""

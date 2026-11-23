@@ -29,6 +29,11 @@ and paths, the hub chat's reply (which quotes all of those), a refusal's body, a
   ordered-item marker (`-`, `+`, `=`, `:`, `1.`) is escaped too.
 - **A block keeps its lines.** Each line ends in a hard break, so the client shows the lines as
   they were written; a blank line stays a paragraph break.
+- **A code span shows a name exactly** (`code_span`): the inline twin of `code`, for a value
+  shown in backticks (a unit's label): one line, cut the same way, nothing escaped or defanged
+  -- Markdown gives a backslash no meaning inside a code span, so an escape there would only be
+  shown -- with a backtick fence longer than any run inside, padded when the text starts or ends
+  with a backtick.
 - **Code is fenced.** A tool's result (JSON, or the hub's raw answer) is shown as a code block
   (`code`): nothing inside one renders as Markdown or becomes a link, and the fence is longer
   than any run of backticks in the text, so the text cannot close it. Its lines keep their
@@ -102,6 +107,15 @@ class UntrustedText:
         longest = max((len(run) for run in _BACKTICKS.findall(body)), default=0)
         fence = "`" * max(3, longest + 1)
         return f"{fence}\n{body}\n{fence}"
+
+    def code_span(self, value: Any, *, limit: int) -> str:
+        text = self._one_line(value)
+        if len(text) > limit:
+            text = text[: max(limit - len(ELLIPSIS), 0)] + ELLIPSIS
+        longest = max((len(run) for run in _BACKTICKS.findall(text)), default=0)
+        fence = "`" * (longest + 1)
+        padded = f" {text} " if text.startswith("`") or text.endswith("`") else text
+        return f"{fence}{padded}{fence}"
 
     def render(self, segments: Sequence[tuple[str, bool]], limit: int) -> str:
         total = sum(len(text) for text, _ in segments)

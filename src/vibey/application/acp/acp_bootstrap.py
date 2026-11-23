@@ -568,7 +568,9 @@ class AcpBootstrap:
     async def _say_loaded(
         self, session_id: str, loader: ServiceLoaderInterface, loaded: list[str]
     ) -> None:
-        labels = ", ".join(f"`{self._untrusted(label)}`" for label in loaded)
+        limit = self._settings.live_message_chars
+        # Exactly, in code spans: copied, each names its unit (review 2 R-2).
+        labels = ", ".join(self._mapper.untrusted_code_span(label, limit=limit) for label in loaded)
         commands = self._mapper.untrusted_code(
             "\n".join(loader.unload_commands(loaded)), limit=self._settings.live_message_chars
         )
