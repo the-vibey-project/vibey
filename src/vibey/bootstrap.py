@@ -126,6 +126,7 @@ from vibey.application.interfaces.observability import Logger
 from vibey.application.interfaces.sabbath import SabbathGateInterface
 from vibey.application.interfaces.ultra_control import UltraControlServiceInterface
 from vibey.application.job_dispatcher import JobDispatcher
+from vibey.application.loops_bundle_settings import LoopsBundleSettings
 from vibey.application.preflight import ConductorPreflight
 from vibey.application.project_abandonment import ProjectAbandonment
 from vibey.application.project_budget import ProjectBudgetService
@@ -272,6 +273,7 @@ from vibey.infrastructure.supervisor import (
 from vibey.infrastructure.supervisor_installer import SupervisorInstaller
 from vibey.infrastructure.tracker.in_memory import InMemoryTracker
 from vibey.infrastructure.tracker.plane import PlaneTrackerAdapter
+from vibey.infrastructure.trusted_table_reader import TomlTrustedTableReader
 from vibey.infrastructure.user_config_folder import UserConfigFolder
 
 
@@ -1522,6 +1524,12 @@ def running_vibey() -> str | None:
     runs this, never a configured path or a PATH lookup (ADR-0101)."""
     launcher = Path(sys.executable).parent / "vibey"
     return str(launcher) if launcher.is_file() and os.access(launcher, os.X_OK) else None
+
+
+def loops_bundle_settings() -> LoopsBundleSettings:
+    """`[loops]`, read with the ADR-0101 trust rule over the on-disk table reader (SP-LOOPS).
+    The person's path for `load` is `acp_user_config()`."""
+    return LoopsBundleSettings(TomlTrustedTableReader())
 
 
 def acp_state_dir(config_path: Path) -> Path:

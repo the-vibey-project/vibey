@@ -236,6 +236,9 @@ from vibey.application.interfaces.system import (
     Clock,
 )
 from vibey.application.interfaces.tracker import IssueTrackerPort
+from vibey.application.interfaces.trusted_table_reader_interface import (
+    TrustedTableReaderInterface,
+)
 from vibey.application.interfaces.ultra_control import (
     UltraControlServiceInterface,
     UltraControlStore,
@@ -273,6 +276,7 @@ __all__ = [
     "TelemetryMetrics",
     "TelemetrySpan",
     "TelemetryTracer",
+    "TrustedTableReaderInterface",
     "AutomatedFinding",
     "AutomatedReviewRunner",
     "DependencyInstaller",
