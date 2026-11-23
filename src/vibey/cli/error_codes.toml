@@ -730,3 +730,10 @@ class = "vibey.domain.web_tools.WebToolUnavailable"
 title = "The hub cannot serve web tools right now"
 cause = "The hub cannot write the use's record, so it refuses before sending anything: no project exists yet, a named project or the latest one is in a phase this vibey does not know, or the hub's own environment sets search up wrongly (`VIBEY_SEARCH_PROVIDER=brave`, a malformed `VIBEY_SEARXNG_URL`). The hub checks it can record a use before making it; a record that fails after the act instead marks the answer `audited: false`."
 fix = "Start a project (or name an existing one's `project_id`), upgrade vibey if a project is in a phase it does not know, or fix the search setting the message names in the hub's environment and restart the hub (`vibey doctor` checks it)."
+
+[[error]]
+code = "E0094"
+class = "vibey.domain.errors.InputStoreError"
+title = "A project's run input store cannot be made, read or written"
+cause = "The store under the project's `.vibey/inputs` folder could not be made or written (a folder that cannot be created, a full disk), something other than the store's own folder or file is where it keeps one (a symlink is refused, never followed), an index line is too long to append in one write, or a stored object's bytes no longer match its digest. Nothing was added."
+fix = "Check the path the message names: remove a symlink or stray file vibey did not put there, free space, or fix the folder's permissions, then add the input again. An object that no longer matches its digest was changed on disk; add that input again to store it afresh."

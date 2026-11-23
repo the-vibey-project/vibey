@@ -124,6 +124,7 @@ from vibey.application.interfaces.gates import (
     GateLookup,
     HumanGateRepository,
 )
+from vibey.application.interfaces.input_store_interface import InputStoreInterface
 from vibey.application.interfaces.ledger import (
     BriefProducer,
     BuildLedger,
@@ -358,6 +359,7 @@ __all__ = [
     "LedgerSiteBuilderInterface",
     "LedgerSitePlanInterface",
     "LedgerSiteWriter",
+    "InputStoreInterface",
     "LoopCatalogInterface",
     "LoopsBundleSettingsInterface",
     "MergeOutcome",

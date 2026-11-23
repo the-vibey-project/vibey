@@ -144,6 +144,7 @@ source_modules =
     vibey.infrastructure.jsonrpc.interfaces
     vibey.infrastructure.acp.interfaces
     vibey.infrastructure.loops.interfaces
+    vibey.infrastructure.inputs.interfaces
 forbidden_modules =
     vibey.cli
     vibey.tui

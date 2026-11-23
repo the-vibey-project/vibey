@@ -123,6 +123,13 @@ class UnknownProject(VibeyError):
     """No project exists with the given id."""
 
 
+class InputStoreError(VibeyError):
+    """A project's run input store could not be made, read or written: a folder that cannot
+    be made, a symlink or other non-regular file where the store keeps its own, an index line
+    too long to append in one write, a short write, or an object whose bytes no longer match
+    its digest (SP-LOOPS Phase 3). Nothing was added."""
+
+
 class UnknownLane(VibeyError, LookupError):
     """No listed lane has the given events file. The hub reads only files it found as
     lanes, so a path that is not one is refused rather than opened (ADR-0067)."""
