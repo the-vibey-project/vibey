@@ -67,6 +67,8 @@ def _command(
         config_path=lambda: tmp_path / "vibey.toml",
         client=hub,
         qr=qr if qr is not None else (lambda uri: f"[QR {uri}]"),
+        # The recorded hub holds its lock (a real flock is in the tests that prove the probe).
+        holder=lambda state: record.pid if record is not None else None,
     )
 
 
@@ -129,7 +131,7 @@ def test_a_tls_hub_is_reached_over_https_trusting_only_its_own_certificate(
 
 def test_an_ipv6_hub_is_bracketed(tmp_path: Path) -> None:
     hub = Hub([])
-    _command(tmp_path, hub, record=ServingRecord(host="::1", port=1, pid=1)).devices()
+    _command(tmp_path, hub, record=ServingRecord(host="::1", port=1, pid=4242)).devices()
     assert str(hub.requests[0].url) == "http://[::1]:1/api/v1/devices"
 
 
@@ -215,7 +217,7 @@ def test_a_record_off_the_loopback_is_never_sent_the_host_token(tmp_path: Path, 
     """The record may name a LAN address the person bound the hub to, or a planted one: either
     way the host token goes nowhere until the person names the address with --host."""
     hub = Hub([])
-    command = _command(tmp_path, hub, record=ServingRecord(host=host, port=8765, pid=1))
+    command = _command(tmp_path, hub, record=ServingRecord(host=host, port=8765, pid=4242))
     with pytest.raises(typer.Exit) as caught:
         command.devices()
     assert caught.value.exit_code == 2 and hub.requests == []
@@ -258,6 +260,7 @@ def _lan(
         client=hub,
         qr=lambda uri: None,
         local_names=names or Names(),
+        holder=lambda state: record.pid,
     )
     return command, read
 
@@ -266,7 +269,7 @@ def test_the_person_names_a_lan_hub_with_host_over_its_own_certificate(
     tmp_path: Path, capsys: pytest.CaptureFixture[str], monkeypatch: pytest.MonkeyPatch
 ) -> None:
     hub = Hub(OFFER)
-    lan = ServingRecord(host="192.168.1.5", port=8765, pid=1, tls=True)
+    lan = ServingRecord(host="192.168.1.5", port=8765, pid=4242, tls=True)
     command, _ = _lan(tmp_path, hub, lan, monkeypatch)
     command.pair(["view"], "192.168.1.5")
     assert str(hub.requests[0].url) == "https://192.168.1.5:8765/api/v1/pairing/offers"
@@ -279,7 +282,7 @@ def test_a_wildcard_hub_is_reached_on_an_address_this_computer_holds(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     hub = Hub([])
-    wild = ServingRecord(host="0.0.0.0", port=8765, pid=1, tls=True)  # nosec B104
+    wild = ServingRecord(host="0.0.0.0", port=8765, pid=4242, tls=True)  # nosec B104
     command, _ = _lan(tmp_path, hub, wild, monkeypatch, names=Names("10.0.0.4", "studio"))
     command.devices("10.0.0.4")
     assert str(hub.requests[0].url) == "https://10.0.0.4:8765/api/v1/devices"
@@ -288,11 +291,17 @@ def test_a_wildcard_hub_is_reached_on_an_address_this_computer_holds(
 @pytest.mark.parametrize(
     ("record", "named", "names", "cert", "why"),
     [
-        (ServingRecord("192.168.1.5", 8765, 1, tls=False), "192.168.1.5", (), True, "clear"),
-        (ServingRecord("192.168.1.5", 8765, 1, tls=True), "192.168.1.5", (), False, "clear"),
-        (ServingRecord("192.168.1.5", 8765, 1, tls=True), "192.168.1.6", (), True, "bound to"),
-        (ServingRecord("0.0.0.0", 8765, 1, tls=True), "10.0.0.9", ("10.0.0.4",), True, "bound to"),  # nosec B104
-        (ServingRecord("192.168.1.5", 8765, 1, tls=True), "127.0.0.1", (), True, "loopback"),
+        (ServingRecord("192.168.1.5", 8765, 4242, tls=False), "192.168.1.5", (), True, "clear"),
+        (ServingRecord("192.168.1.5", 8765, 4242, tls=True), "192.168.1.5", (), False, "clear"),
+        (ServingRecord("192.168.1.5", 8765, 4242, tls=True), "192.168.1.6", (), True, "bound to"),
+        (
+            ServingRecord("0.0.0.0", 8765, 4242, tls=True),
+            "10.0.0.9",
+            ("10.0.0.4",),
+            True,
+            "bound to",
+        ),  # nosec B104
+        (ServingRecord("192.168.1.5", 8765, 4242, tls=True), "127.0.0.1", (), True, "loopback"),
     ],
 )
 def test_a_lan_host_the_record_does_not_back_is_refused_before_the_token_is_read(
@@ -370,11 +379,11 @@ def test_the_token_and_record_are_the_persons_own_never_the_folders(
     cloned = tmp_path / "cloned"
     cloned.mkdir()
     planted = LocalTokenStore(cloned / "state")
-    planted.record_serving(ServingRecord(host="127.0.0.1", port=4444, pid=1))
+    planted.record_serving(ServingRecord(host="127.0.0.1", port=4444, pid=4242))
     (cloned / "vibey.toml").write_text(f"[hub]\nstate_dir = '{cloned / 'state'}'\n")
     monkeypatch.chdir(cloned)
     hub = Hub([])
-    HubPairCommand(client=hub).devices()
+    HubPairCommand(client=hub, holder=lambda state: RUNNING.pid).devices()
     [sent] = hub.requests
     assert str(sent.url) == "http://127.0.0.1:8765/api/v1/devices"
     token = (mine / "state" / "token").read_text().strip()
@@ -396,3 +405,67 @@ def test_a_serving_record_whose_tls_is_not_a_boolean_is_refused(tmp_path: Path) 
     (tmp_path / "serving.json").write_text(json.dumps(dict(record, tls="yes")))
     with pytest.raises(ValueError, match="tls"):
         store.serving()
+
+
+# -- Task 11a fix round: the lock proves the listener is the hub (S-5); one-line errors (N-5) ----
+
+
+def test_a_stale_record_whose_lock_nobody_holds_is_sent_nothing(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """A real lock probe: no process holds `serve.lock`, so the record's port may be anyone's."""
+    from vibey.infrastructure.hub.serve_lock import ServeLock
+
+    hub = Hub([])
+    command = _command(tmp_path, hub, record=RUNNING)
+    command._holder = lambda state: ServeLock(state).held_by()
+    read: list[bool] = []
+    monkeypatch.setattr(LocalTokenStore, "token", lambda self: read.append(True) or "t")
+    assert pytest.raises(typer.Exit, command.devices).value.exit_code == 3
+    assert hub.requests == [] and read == []
+    assert "stale" in capsys.readouterr().err
+
+
+def test_the_hub_holding_its_lock_is_sent_the_request(tmp_path: Path) -> None:
+    """A real flock taken in this process, its pid written as a hub writes it."""
+    from vibey.infrastructure.hub.serve_lock import ServeLock
+
+    hub = Hub([])
+    command = _command(tmp_path, hub, record=RUNNING)  # RUNNING names this process's pid
+    command._holder = lambda state: ServeLock(state).held_by()
+    lock = ServeLock(tmp_path / "state")
+    assert lock.acquire()
+    try:
+        command.devices()
+    finally:
+        lock.release()
+    assert len(hub.requests) == 1
+
+
+def test_a_lock_held_by_another_pid_is_not_this_records_hub(tmp_path: Path) -> None:
+    hub = Hub([])
+    command = _command(tmp_path, hub, record=RUNNING)
+    command._holder = lambda state: RUNNING.pid + 1
+    assert pytest.raises(typer.Exit, command.devices).value.exit_code == 3
+    assert hub.requests == []
+
+
+def test_a_missing_certificate_or_an_unreadable_token_is_one_line(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    tls = ServingRecord(host="127.0.0.1", port=8765, pid=os.getpid(), tls=True)
+    command = _command(tmp_path, Hub([]), record=tls)
+    command._client = httpx.Client  # the real client: it reads the (missing) certificate
+    assert pytest.raises(typer.Exit, command.devices).value.exit_code == 2
+    err = capsys.readouterr().err
+    assert err.startswith("the hub's token or certificate could not be read: ")
+    assert len(err.strip().splitlines()) == 1
+
+    def refused(self: LocalTokenStore) -> str:
+        raise PermissionError("state folder is open to other accounts")
+
+    hub = Hub([])
+    plain = _command(tmp_path / "b", hub, record=RUNNING)
+    monkeypatch.setattr(LocalTokenStore, "token", refused)
+    assert pytest.raises(typer.Exit, plain.devices).value.exit_code == 2
+    assert hub.requests == [] and "PermissionError" in capsys.readouterr().err

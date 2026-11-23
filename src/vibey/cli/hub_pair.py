@@ -31,6 +31,7 @@ from typing import Annotated, Any, Final
 import httpx
 import typer
 
+from vibey.application.acp.doctor_checks import DoctorChecks
 from vibey.cli.hub_engine import start, status, stop
 from vibey.cli.interfaces.hub_pair_interface import HubPairCommandInterface
 from vibey.domain.config import ConfigError
@@ -39,6 +40,7 @@ from vibey.domain.hub_target import HUB_TARGETS
 from vibey.infrastructure.hub.interfaces.server_interface import LocalNamesInterface
 from vibey.infrastructure.hub.interfaces.settings_interface import HubSettingsLoaderInterface
 from vibey.infrastructure.hub.local_token import LocalTokenStore, ServingRecord
+from vibey.infrastructure.hub.serve_lock import ServeLock
 from vibey.infrastructure.hub.server import LOCAL_NAMES
 from vibey.infrastructure.hub.settings import HUB_SETTINGS
 from vibey.infrastructure.hub.tls import CERT_FILE
@@ -92,8 +94,10 @@ class HubPairCommand:
         client: Transport = httpx.Client,
         qr: Callable[[str], str | None] = _render_qr,
         local_names: LocalNamesInterface = LOCAL_NAMES,
+        holder: Callable[[Path], int | None] = lambda state: ServeLock(state).held_by(),
     ) -> None:
         self._local_names = local_names
+        self._holder = holder
         self._settings = settings
         self._config_path = config_path
         self._client = client
@@ -151,6 +155,15 @@ class HubPairCommand:
         if record is None:
             typer.echo("no hub is running here: start one with `vibey serve`", err=True)
             raise typer.Exit(EXIT_NOT_RUNNING)
+        if self._holder(settings.state_dir) != record.pid:
+            # Nothing proves the listener is the hub unless the process the record names holds
+            # the hub's lock: a stale record's port may be another account's (SP-ACP Task 11a).
+            typer.echo(
+                "no hub holds the lock its runtime record names, so the record is stale and "
+                "nothing was sent: start one with `vibey hub start`",
+                err=True,
+            )
+            raise typer.Exit(EXIT_NOT_RUNNING)
         cert = settings.state_dir / CERT_FILE
         problem, host = self._where(record, target, cert)
         if host is None:
@@ -162,13 +175,21 @@ class HubPairCommand:
         # The hub's own certificate, and only it, when it serves one: a file as `verify` is the
         # only authority trusted (never the system's store, never no verification).
         verify: str | bool = str(cert) if record.tls else True
-        with self._client(
-            base_url=f"{scheme}://{shown}:{record.port}/api/v1",
-            headers={"authorization": f"Bearer {store.token()}"},
-            verify=verify,
-            timeout=10.0,
-            follow_redirects=False,
-        ) as client:
+        try:
+            token = store.token()
+            opened = self._client(
+                base_url=f"{scheme}://{shown}:{record.port}/api/v1",
+                headers={"authorization": f"Bearer {token}"},
+                verify=verify,
+                timeout=10.0,
+                follow_redirects=False,
+            )
+        except (OSError, ValueError) as exc:
+            # The token's or the certificate's file: one line, never a traceback (Task 11a N-5).
+            said = DoctorChecks.cleaned(f"{type(exc).__name__}: {exc}")
+            typer.echo(f"the hub's token or certificate could not be read: {said}", err=True)
+            raise typer.Exit(2) from exc
+        with opened as client:
             try:
                 response = client.request(method, route, json=body)
             except httpx.HTTPError as exc:

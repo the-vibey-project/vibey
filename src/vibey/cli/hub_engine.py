@@ -12,9 +12,18 @@ up here, so the desktop app, the VS Code extension and a terminal agree on one r
   so the hub shuts down cleanly and clears its own record. It never sends SIGKILL; a hub
   that is slow to stop is reported as still stopping.
 
-Whether a hub runs is read from `<state_dir>/serving.json` (the hub's own record) and a
-process-existence check; a record whose process is gone is reported as stale, never as a
-running hub.
+- **Your own hub, never a folder's** (SP-ACP Task 11a). `[hub]` -- the state folder, so the
+  tokens, the record and the lock -- comes from your own `vibey.toml`, in your configuration
+  folder (`bootstrap.acp_user_config`), never the folder the command runs in, which may be a
+  cloned repository's. `start` launches `vibey serve` in that configuration folder, so the hub
+  reads the same `[hub]`.
+- **A signal goes only to the hub's lock holder.** Whether a hub runs is read from
+  `<state_dir>/serving.json` (the hub's record) and asked of the hub's own lock,
+  `<state_dir>/serve.lock` (`ServeLock.held_by`), never of a pid alone, which may have been
+  reused or planted: a record whose lock nobody holds is stale, one whose lock another process
+  holds is refused (exit 1), and `stop` signals only the process that holds the lock and wrote
+  the pid the record names. A record naming pid -1, 0 or 1, or a port outside 1..65535, is
+  malformed (`LocalTokenStore.serving`).
 """
 
 import sys
@@ -25,12 +34,14 @@ from typing import Annotated, Final
 
 import typer
 
+from vibey.bootstrap import acp_user_config
 from vibey.cli.interfaces.hub_engine_interface import HubEngineCommandInterface
 from vibey.domain.config import ConfigError
 from vibey.infrastructure.hub.interfaces.processes_interface import HubProcessesInterface
 from vibey.infrastructure.hub.interfaces.settings_interface import HubSettingsLoaderInterface
 from vibey.infrastructure.hub.local_token import LocalTokenStore, ServingRecord
 from vibey.infrastructure.hub.processes import HUB_PROCESSES
+from vibey.infrastructure.hub.serve_lock import ServeLock
 from vibey.infrastructure.hub.settings import HUB_SETTINGS, HubSettings
 
 EXIT_NOT_RUNNING: Final = 3
@@ -50,7 +61,7 @@ class HubEngineCommand:
         self,
         *,
         settings: HubSettingsLoaderInterface = HUB_SETTINGS,
-        config_path: Callable[[], Path] = lambda: Path.cwd() / "vibey.toml",
+        config_path: Callable[[], Path] = lambda: acp_user_config(),
         processes: HubProcessesInterface = HUB_PROCESSES,
         argv: Sequence[str] = (
             sys.executable,
@@ -59,7 +70,9 @@ class HubEngineCommand:
         ),
         sleep: Callable[[float], None] = time.sleep,
         clock: Callable[[], float] = time.monotonic,
+        holder: Callable[[Path], int | None] = lambda state: ServeLock(state).held_by(),
     ) -> None:
+        self._holder = holder
         self._settings = settings
         self._config_path = config_path
         self._processes = processes
@@ -79,7 +92,10 @@ class HubEngineCommand:
         if running is not None:
             typer.echo(f"hub already running: {self._describe(running)}")
             return
-        pid = self._processes.spawn(self._argv, settings.state_dir / LOG_FILE)
+        # In your configuration folder: the hub reads the `[hub]` this command just read.
+        pid = self._processes.spawn(
+            self._argv, settings.state_dir / LOG_FILE, cwd=self._config_path().parent
+        )
         deadline = self._clock() + timeout
         while self._clock() < deadline:
             running = self._running(settings, quiet=True)
@@ -129,8 +145,9 @@ class HubEngineCommand:
             raise typer.Exit(2) from exc
 
     def _running(self, settings: HubSettings, *, quiet: bool = False) -> ServingRecord | None:
-        """The hub's record when its process exists; None, saying why unless `quiet`, when
-        there is no record, it is malformed, or its process is gone (stale)."""
+        """The hub's record when the process holding the hub's lock is the one it names; None,
+        saying why unless `quiet`, when there is no record, it is malformed, or no process holds
+        the lock (stale). A lock held by another process is refused (exit 1) unless `quiet`."""
         try:
             record = LocalTokenStore(settings.state_dir).serving()
         except ValueError as exc:
@@ -141,10 +158,20 @@ class HubEngineCommand:
             if not quiet:
                 typer.echo("hub is not running")
             return None
-        if not self._processes.alive(record.pid):
+        holder = self._holder(settings.state_dir)
+        if holder is None:
             if not quiet:
                 typer.echo(f"hub is not running (stale record from pid {record.pid})")
             return None
+        if holder != record.pid:
+            if quiet:
+                return None  # a hub starting now holds the lock before it writes its record
+            typer.echo(
+                f"the hub's lock is held by pid {holder}, but its record names pid {record.pid}: "
+                "the two disagree, so nothing was signalled or trusted",
+                err=True,
+            )
+            raise typer.Exit(1)
         return record
 
     @staticmethod

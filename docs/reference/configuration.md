@@ -886,9 +886,12 @@ ones: with no `[hub]` table the hub listens on loopback only. An unknown key, or
 the wrong type, is refused rather than ignored, so a misspelt `lan` can never silently
 mean "not declared".
 
-`vibey serve` reads the `[hub]` of the folder it runs in. Everything that *sends* a hub
-credential or picks which hub to talk to -- `vibey mcp`, `vibey acp`, and `vibey hub pair`,
-`devices` and `revoke` -- reads `[hub]` from your own
+`vibey serve` reads the `[hub]` of the folder it runs in; every hub vibey starts for you
+(`vibey hub start`, the user-level unit, `vibey mcp` and `vibey acp`) runs it in your
+configuration folder. Everything that *sends* a hub
+credential, picks which hub to talk to or acts on its record -- `vibey mcp`, `vibey acp`,
+`vibey hub start`, `stop`, `status`, `pair`, `devices` and `revoke`, and `vibey doctor`'s
+`hub-exposure` and `web-tools` lines -- reads `[hub]` from your own
 `vibey.toml`, in your configuration folder, never from the folder it runs in, which may be a
 cloned repository's. A folder's `vibey.toml` is heard there on `agent_scopes` only, and only to
 narrow it; its `state_dir` never decides where a token is read or which record is believed

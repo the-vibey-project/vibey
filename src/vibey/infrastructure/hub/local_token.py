@@ -137,8 +137,20 @@ class LocalTokenStore:
         if not isinstance(data, dict):
             raise ValueError(f"{path} is not a JSON object")
         host, port, pid = data.get("host"), data.get("port"), data.get("pid")
-        if not isinstance(host, str) or not isinstance(port, int) or not isinstance(pid, int):
+        if (
+            not isinstance(host, str)
+            or not isinstance(port, int)
+            or not isinstance(pid, int)
+            or isinstance(port, bool)
+            or isinstance(pid, bool)
+        ):
             raise ValueError(f"{path} does not name a host, port and pid")
+        if not 1 <= port <= 65535:
+            raise ValueError(f"{path} names a port outside 1 to 65535")
+        if pid <= 1:
+            # -1 is every process of this account, 0 its own process group, 1 init: a record
+            # naming one is never a hub's, and no signal may be aimed by it (SP-ACP Task 11a).
+            raise ValueError(f"{path} names a process id that is not a hub's")
         tls = data.get("tls", False)
         if not isinstance(tls, bool):
             raise ValueError(f"{path} says tls is {tls!r}, not true or false")

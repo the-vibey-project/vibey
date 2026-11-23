@@ -151,7 +151,9 @@ def test_the_gateway_reports_the_hub_away_at_once_through_the_bounded_starter(
     for _ in range(3):  # no hub was ever started: no serving record
         with pytest.raises(HubGatewayError, match="the hub is away"):
             gateway.call(CALL)
-    LocalTokenStore(state).record_serving(ServingRecord(host="127.0.0.1", port=1, pid=1, tls=False))
+    LocalTokenStore(state).record_serving(
+        ServingRecord(host="127.0.0.1", port=1, pid=4242, tls=False)
+    )
 
     def refused(**kwargs: Any) -> Any:
         raise httpx.ConnectError("refused")

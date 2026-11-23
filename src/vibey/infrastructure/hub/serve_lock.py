@@ -57,6 +57,29 @@ class ServeLock:
             return None
         return int(text) if text.isdigit() else None
 
+    def held_by(self) -> int | None:
+        """Whether a process holds the lock now, asked of the lock itself (never of a pid that
+        may have been reused): None when no process holds it (or it was never made), else the
+        process id the holder wrote -- 0 when it has not written one yet.
+
+        The probe takes a shared, non-blocking flock on its own open file description, which
+        fails only while an exclusive holder has it; it never writes, and it is let go at once.
+        The one implementation `vibey hub` and `vibey acp`'s service units share (SP-ACP 11a)."""
+        try:
+            fd = os.open(self._path, os.O_RDONLY | os.O_NOFOLLOW)
+        except OSError:
+            return None  # no lock file: no hub has ever run here
+        try:
+            try:
+                fcntl.flock(fd, fcntl.LOCK_SH | fcntl.LOCK_NB)
+            except BlockingIOError:
+                text = os.read(fd, 32).decode("ascii", errors="replace").strip()
+                return int(text) if text.isdigit() else 0
+            fcntl.flock(fd, fcntl.LOCK_UN)
+            return None
+        finally:
+            os.close(fd)
+
     def release(self) -> None:
         """Lets go of the lock; a no-op when this process does not hold it."""
         if self._fd is not None:

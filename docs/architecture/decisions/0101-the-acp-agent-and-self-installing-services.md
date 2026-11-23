@@ -117,6 +117,12 @@ crash loop is slowed on both and stopped only on systemd. In detail:
 - **No service manager.** With none to load into (no login session's `gui/<uid>`, as over SSH,
   or no `systemctl --user` manager), vibey runs `vibey hub start` once per process and says that
   nothing keeps it running.
+- *Amended (SP-ACP Task 11a):* `vibey hub start | stop | status` read `[hub]` from the user's own
+  `vibey.toml` and start `vibey serve` in the user's configuration folder, whatever folder they
+  run in, so they and the units agree on one state folder. Whether a hub runs is asked of its
+  lock (`ServeLock.held_by`, the one probe `detached_hub_pid` also uses), and `stop` signals only
+  the lock's holder when the record names that same pid; a record naming pid -1, 0 or 1 is
+  malformed.
 
 **Verified, and not yet verified (10.f).** Verified by tests: the rendering (the `on-failure`
 output byte for byte), the escaping, the file writes and refusals, the trust split, the argv

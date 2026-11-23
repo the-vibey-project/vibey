@@ -61,3 +61,29 @@ def test_another_job_takes_its_own_lock_beside_the_hubs(tmp_path: Path) -> None:
     assert (tmp_path / ACP_BOOTSTRAP_LOCK_FILE).exists()
     second.release()
     hub.release()
+
+
+def test_held_by_asks_the_lock_itself(tmp_path: Path) -> None:
+    """SP-ACP Task 11a: liveness is the flock, never a pid. A real flock in this process: the
+    probe's shared lock on another open file description conflicts with it."""
+    state = tmp_path / "state"
+    probe = ServeLock(state)
+    assert probe.held_by() is None  # never made: no hub has run here
+    hub = ServeLock(state)
+    assert hub.acquire() is True
+    assert probe.held_by() == os.getpid()
+    os.truncate(state / LOCK_FILE, 0)  # held, before its holder has written a pid
+    assert probe.held_by() == 0
+    hub.release()
+    assert probe.held_by() is None  # the file is there, nobody holds it
+    assert hub.acquire() is True  # the probe never kept a lock of its own
+    hub.release()
+
+
+def test_held_by_never_follows_a_link(tmp_path: Path) -> None:
+    state = tmp_path / "state"
+    state.mkdir()
+    elsewhere = tmp_path / "elsewhere.lock"
+    elsewhere.write_text("4242")
+    (state / LOCK_FILE).symlink_to(elsewhere)
+    assert ServeLock(state).held_by() is None

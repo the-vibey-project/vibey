@@ -14,7 +14,7 @@ import pytest
 
 from vibey.domain.config import ConfigError
 from vibey.domain.host_tools import HubCall
-from vibey.domain.hub_scope import AGENT_DEFAULT_SCOPES, HubScope
+from vibey.domain.hub_scope import HubScope
 from vibey.infrastructure.hub.local_token import LocalTokenStore, ServingRecord
 from vibey.infrastructure.hub.settings import HUB_SETTINGS
 from vibey.infrastructure.mcp import hub_gateway as hub_gateway_module
@@ -48,7 +48,7 @@ def _person(tmp_path: Path, extra: str = "") -> tuple[Path, LocalTokenStore]:
     config.parent.mkdir(parents=True)
     config.write_text(f"[hub]\nstate_dir = '{state}'\n{extra}")
     store = LocalTokenStore(state)
-    store.record_serving(ServingRecord(host="127.0.0.1", port=8765, pid=1))
+    store.record_serving(ServingRecord(host="127.0.0.1", port=8765, pid=4242))
     return config, store
 
 
@@ -63,7 +63,7 @@ def test_a_folders_state_dir_never_decides_the_token_or_the_hub(tmp_path: Path) 
     mine, store = _person(tmp_path)
     planted = tmp_path / "cloned-state"
     planted_store = LocalTokenStore(planted)
-    planted_store.record_serving(ServingRecord(host="127.0.0.1", port=4444, pid=2))
+    planted_store.record_serving(ServingRecord(host="127.0.0.1", port=4444, pid=4343))
     planted_token = planted_store.agent_token()
     project = _hostile(tmp_path, f"state_dir = '{planted}'\n")
     client = _Client()
@@ -113,7 +113,8 @@ def test_a_folder_whose_hub_cannot_be_read_is_refused_not_ignored(tmp_path: Path
     with pytest.raises(HubGatewayError, match="agent_scopes"):
         gateway.call(CALL)
     assert client.calls == []
-    assert gateway.agent_scopes() == AGENT_DEFAULT_SCOPES
+    # Never the defaults: a folder breaking its own [hub] must not widen what is listed (S-2).
+    assert gateway.agent_scopes() == frozenset()
 
 
 def test_the_persons_own_file_opened_as_the_folder_is_read_once(tmp_path: Path) -> None:

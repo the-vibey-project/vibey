@@ -869,13 +869,22 @@ Every krypton UI offers the same start, stop and status actions, and they are th
 commands. **Closing a UI never stops the hub**: `start` launches it detached from the
 terminal and the session, its output in `<state_dir>/hub.log`, and only `stop` ends it.
 `stop` sends SIGTERM so the hub shuts down cleanly and clears its own record; it never sends
-SIGKILL, and a hub that is slow to stop is reported as still stopping (exit 1). A record
-whose process is gone is reported as stale, never as a running hub.
+SIGKILL, and a hub that is slow to stop is reported as still stopping (exit 1).
+
+All three read `[hub]` from your own `vibey.toml`, in your configuration folder, never from the
+current directory, and `start` launches `vibey serve` in that configuration folder (made 0700),
+so the hub reads the same `[hub]`: a cloned repository's `vibey.toml` can no longer choose the
+state folder the hub keeps its tokens in, or the record and process `stop` acts on. Whether a
+hub runs is asked of the hub's own lock, `<state_dir>/serve.lock`, never of a process id alone:
+a record whose lock nobody holds is stale (never a running hub, and nothing is signalled), one
+whose lock another process holds is refused (exit 1, "the two disagree"), and `stop` signals only
+the process that holds the lock and names itself in the record. A record naming process id -1, 0
+or 1, or a port outside 1 to 65535, is unreadable and never acted on.
 
 | Command | What it does |
 |---|---|
 | `vibey hub status` | Says whether the hub runs and where (`http://127.0.0.1:8765/api/v1 (pid N)`). Exit 3 when it does not. |
-| `vibey hub start [--timeout SECONDS]` | Starts the hub in the background unless one already runs (then it says so and exits 0), and waits, 15 seconds by default, until the hub has said where it listens. Exit 1 if it exits first or does not come up. Reads `vibey.toml` from the current directory like `vibey serve`. |
+| `vibey hub start [--timeout SECONDS]` | Starts the hub in the background unless one already runs (then it says so and exits 0), and waits, 15 seconds by default, until the hub has said where it listens. Exit 1 if it exits first or does not come up. Reads your own `vibey.toml` and starts the hub in your configuration folder. |
 | `vibey hub stop [--timeout SECONDS]` | Asks the running hub to stop and waits for it to go. Exit 0 when none runs. |
 | `vibey hub pair --scope SCOPE [--scope SCOPE ...] [--host ADDRESS]` | Offers a pairing of the named scopes (`view`, `answer`, `spend`, `run`, `bump`; at least one) and shows a QR code, the 6-digit code (valid two minutes, once), the pairing URI and the certificate fingerprint. |
 | `vibey hub devices [--host ADDRESS]` | Lists the paired devices: id, name, scopes. Never a key. |
@@ -2231,8 +2240,8 @@ Each prints `PASS`, `FAIL` or `UNKNOWN`, and doctor exits 1 if either fails:
 
 With `VIBEY_PG_URL` unset, `ledger-guard` prints `UNKNOWN` and nothing is checked.
 
-The `hub-exposure` line asks whether a running hub (`vibey serve`) listens where
-`vibey.toml` says it may: `PASS` on loopback or on a LAN address `[hub] lan = true`
+The `hub-exposure` line asks whether your running hub (`vibey serve`) listens where your own
+`vibey.toml` (in your configuration folder, never the folder doctor runs in) says it may: `PASS` on loopback or on a LAN address `[hub] lan = true`
 declares, `FAIL` on an undeclared one (the exit is then 1), and `UNKNOWN` when no hub is
 running or its runtime record names a process that is gone. A `[hub]` table that cannot be
 read is a `FAIL`.

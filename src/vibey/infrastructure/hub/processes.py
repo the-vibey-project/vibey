@@ -3,7 +3,8 @@
 
 Behind one class so the commands are tested without starting or signalling a real
 process. A signal is only ever sent to a process id the hub itself recorded in its
-owner-only state directory, and `terminate` is SIGTERM: the hub stops cleanly and clears
+owner-only state directory and that holds the hub's lock (the caller checks), and `terminate`
+is SIGTERM: the hub stops cleanly and clears
 its own record. Nothing here sends SIGKILL.
 
 Declared by `interfaces/processes_interface.py` (ADR-0016).
@@ -41,14 +42,16 @@ class HubProcesses:
             return False
         return True
 
-    def spawn(self, argv: Sequence[str], log: Path) -> int:
-        """Starts `argv` detached from this terminal and session, its output appended to
-        `log`, and returns its process id. Closing the program that started it, or its
-        terminal, does not stop it."""
+    def spawn(self, argv: Sequence[str], log: Path, *, cwd: Path) -> int:
+        """Starts `argv` detached from this terminal and session, in `cwd` (made owner-only
+        when missing), its output appended to `log`, and returns its process id. Closing the
+        program that started it, or its terminal, does not stop it."""
         log.parent.mkdir(mode=0o700, parents=True, exist_ok=True)
+        cwd.mkdir(mode=0o700, parents=True, exist_ok=True)
         with open(log, "ab") as out:  # noqa: PTH123 - the descriptor is handed to the child
             process = subprocess.Popen(  # nosec B603 - fixed argv, shell disabled
                 list(argv),
+                cwd=cwd,
                 stdin=subprocess.DEVNULL,
                 stdout=out,
                 stderr=out,

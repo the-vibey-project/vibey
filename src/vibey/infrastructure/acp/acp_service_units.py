@@ -33,7 +33,6 @@ Declared by `application/acp/interfaces/service_units_interface.py`.
 from __future__ import annotations
 
 import contextlib
-import fcntl
 import hashlib
 import json
 import os
@@ -49,7 +48,7 @@ from vibey.domain.interfaces.supervisor_interface import (
     SupervisorPlannerInterface,
 )
 from vibey.domain.supervisor import LABEL, WORKER, EnvFileParser, RestartPolicy
-from vibey.infrastructure.hub.serve_lock import LOCK_FILE
+from vibey.infrastructure.hub.serve_lock import ServeLock
 from vibey.infrastructure.interfaces.supervisor_installer_interface import (
     SupervisorInstallerInterface,
 )
@@ -257,22 +256,7 @@ class AcpServiceUnits:
         return f"{self._settings.load(self._config).label_prefix}.{name}"
 
     def detached_hub_pid(self) -> int | None:
-        path = self._state_dir / LOCK_FILE
-        try:
-            fd = os.open(path, os.O_RDONLY | os.O_NOFOLLOW)
-        except OSError:
-            return None  # no lock file: no hub has ever run here
-        try:
-            try:
-                # Shared and non-blocking: it never writes, and fails only while a hub holds it.
-                fcntl.flock(fd, fcntl.LOCK_SH | fcntl.LOCK_NB)
-            except BlockingIOError:
-                text = os.read(fd, 32).decode("ascii", errors="replace").strip()
-                return int(text) if text.isdigit() else 0
-            fcntl.flock(fd, fcntl.LOCK_UN)
-            return None
-        finally:
-            os.close(fd)
+        return ServeLock(self._state_dir).held_by()
 
     def start_hub(self) -> bool:
         return self._start_hub()

@@ -40,7 +40,7 @@ import httpx
 from vibey.domain.config import ConfigError
 from vibey.domain.errors import VibeyError
 from vibey.domain.host_tools import HubCall
-from vibey.domain.hub_scope import AGENT_DEFAULT_SCOPES, HubScope
+from vibey.domain.hub_scope import HubScope
 from vibey.domain.hub_target import HUB_TARGETS
 from vibey.domain.web_tools import WebToolSettings
 from vibey.infrastructure.hub.interfaces.settings_interface import HubSettingsLoaderInterface
@@ -148,7 +148,9 @@ class HubGateway:
 
     def agent_scopes(self) -> frozenset[HubScope]:
         """The scopes declared for the agent principal -- the person's own, narrowed by the
-        opened folder's -- or `AGENT_DEFAULT_SCOPES` if config fails.
+        opened folder's -- or none at all when either file cannot be read: a folder could
+        otherwise break its own `[hub]` on purpose to have the defaults listed, wider than what
+        the person granted (SP-ACP Task 11a). Calls refuse in that case too, and doctor FAILs.
 
         Read again only when either `vibey.toml` changed -- another inode (a file swapped in by
         a rename), mtime, ctime or size: `vibey acp` asks on every prompt, from its event loop,
@@ -160,7 +162,7 @@ class HubGateway:
         try:
             scopes = self._settings.load_trusted(user, project).agent_scopes
         except ConfigError:
-            scopes = AGENT_DEFAULT_SCOPES
+            scopes = frozenset()
         self._scopes = (seen, scopes)
         return scopes
 
