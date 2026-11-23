@@ -3,10 +3,11 @@
 
 Callers resolve a path and check that it stays inside its marketplace before reading it; opening
 with `O_NOFOLLOW` then refuses a symlink swapped in at the last component between that check and
-this read. It also opens without blocking and refuses, from the open descriptor, anything that
-is not a regular file (`NotRegularFileError`), so a FIFO, a folder or a device swapped in after
-an `is_file()` check is never waited on or read. At most `limit + 1` bytes are ever read, so an oversized file costs one cap of memory,
-not its size. Declared by `interfaces/file_reader_interface.py::FileReaderInterface`.
+this read. It also opens without blocking and refuses, from the open descriptor, anything that is
+not a regular file (`NotRegularFileError`), so a FIFO, a folder or a device swapped in after an
+`is_file()` check is never waited on or read. At most `limit + 1` bytes are ever read, so an
+oversized file costs one cap of memory, not its size. Declared by
+`interfaces/file_reader_interface.py::FileReaderInterface`.
 """
 
 from __future__ import annotations

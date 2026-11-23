@@ -339,7 +339,8 @@ def test_the_root_git_skip_follows_file_identity(
 ) -> None:
     bare = _tree(tmp_path / "bare", {"a.txt": b"x"})
     root = _tree(tmp_path / "clone", {"a.txt": b"x", ".GIT/index": b"metadata or content"})
-    guard = GitFolderGuard(stat=_stat_as(root, case_insensitive=case_insensitive))  # type: ignore[arg-type]
+    seam = _stat_as(root, case_insensitive=case_insensitive)
+    guard = GitFolderGuard(stat=seam)  # type: ignore[arg-type]
     digest = CapabilityLock(guard=guard).digest_tree(root)
     assert (digest == CapabilityLock().digest_tree(bare)) is skipped
 
@@ -398,4 +399,11 @@ def test_a_lock_entry_holds_its_source_and_ref_to_the_bundle_rule(
     document["checksum"] = CapabilityLock.checksum(document["entries"])
     path.write_text(json.dumps(document) + "\n", encoding="utf-8")
     with pytest.raises(LockError, match=field):
+        CapabilityLock().read(path)
+
+
+def test_a_deeply_nested_lock_is_a_lock_error(tmp_path: Path) -> None:
+    path = tmp_path / "loops.lock"
+    path.write_text("[" * 200_000 + "\n", encoding="utf-8")
+    with pytest.raises(LockError, match="not a complete lock file"):
         CapabilityLock().read(path)

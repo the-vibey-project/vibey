@@ -18,6 +18,7 @@ Declared by `interfaces/skill_index_interface.py::SkillIndexInterface`.
 
 from __future__ import annotations
 
+import os
 from collections.abc import Sequence
 from pathlib import Path
 from typing import Final
@@ -44,7 +45,7 @@ SKILL_FILE: Final = "SKILL.md"
 SKILL_MAX_BYTES: Final = 64 * 1024
 """The largest SKILL.md indexed (the plan's 64 KiB). vibey's largest is well under it."""
 MAX_SKILLS_PER_PLUGIN: Final = 256
-"""The most entries of one plugin's `skills/` folder looked at; the rest are one skipped row."""
+"""The most skill folders of one plugin looked at; the rest are one skipped row."""
 OUTSIDE: Final = "outside the marketplace"
 INSIDE_GIT: Final = "inside a .git folder"
 """The lock leaves the marketplace root's `.git` out of its digest, and the index cannot tell a
@@ -87,18 +88,21 @@ class SkillIndex:
         if not resolved.is_dir():
             return
         names: set[str] = set()
-        # Names only (no stat) for the whole folder; only the first MAX_SKILLS_PER_PLUGIN are
-        # looked at, and everything past them is one skipped row, not one row each.
-        entries = sorted(resolved.iterdir())
-        if len(entries) > MAX_SKILLS_PER_PLUGIN:
-            over = len(entries) - MAX_SKILLS_PER_PLUGIN
+        # One scan, classified from the directory entry (no stat for a plain file or folder;
+        # a symlink is followed). Only skill folders count toward the limit, so stray files
+        # cannot crowd skills out; folders past it are one skipped row, never stat'ed again.
+        with os.scandir(resolved) as scan:
+            folders = sorted(Path(entry.path) for entry in scan if entry.is_dir())
+        if len(folders) > MAX_SKILLS_PER_PLUGIN:
+            over = len(folders) - MAX_SKILLS_PER_PLUGIN
             skipped.append(
                 (
                     resolved,
-                    f"{over} more entries past the {MAX_SKILLS_PER_PLUGIN}-entry limit of one plugin",
+                    f"{over} more skill folders past the {MAX_SKILLS_PER_PLUGIN}-folder limit "
+                    "of one plugin",
                 )
             )
-        candidates = [entry for entry in entries[:MAX_SKILLS_PER_PLUGIN] if entry.is_dir()]
+        candidates = folders[:MAX_SKILLS_PER_PLUGIN]
         for skill_dir in candidates:
             entry, reason, where = self._skill(plugin_dir.name, base, skill_dir)
             if entry is not None and entry.name in names:

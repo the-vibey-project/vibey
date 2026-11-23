@@ -2,27 +2,28 @@
 """The marketplace lock: what each marketplace's tree hashed to when the person locked it
 (SP-LOOPS Task 5; design Decision 1).
 
-**The digest.** `digest_tree` lists the tree itself (never trusting listing order: every record
-is collected, then sorted by its relative path's bytes), `lstat`s each entry and never follows a
-symlink: a link is hashed by its target text, a file by its content (opened `O_NOFOLLOW`, so a
-link swapped in after the `lstat` is refused, and so is anything not a regular file), a folder by its presence, and an executable file
-differs from a plain one. Anything else -- a FIFO, a socket, a device -- is refused rather than
-opened, since opening a FIFO blocks. The root's own `.git` (the clone's folder, or a worktree's
-gitfile) is metadata git rewrites without the content changing -- a `git fetch` touches nothing
-else -- so it alone is left out, decided by `GitFolderGuard.is_root_git` (a name that folds to
-`.git` and the same file as `root/.git`), the rule the loaders refuse by. A `.git` anywhere deeper is hashed like any other entry: content
-the digest skipped must never be content a loader can read, and `MarketplaceManifest` and
-`SkillIndex` refuse anything that resolves into the root's `.git` for the same reason.
+**The digest.** `digest_tree` lists the tree itself (never trusting listing order: every record is
+collected, then sorted by its relative path's bytes), `lstat`s each entry and never follows a
+symlink: a link is hashed by its target text, a file by its content (opened `O_NOFOLLOW`, so a link
+swapped in after the `lstat` is refused, and so is anything not a regular file), a folder by its
+presence, and an executable file differs from a plain one. Anything else -- a FIFO, a socket, a
+device -- is refused rather than opened, since opening a FIFO blocks. The root's own `.git` (the
+clone's folder, or a worktree's gitfile) is metadata git rewrites without the content changing -- a
+`git fetch` touches nothing else -- so it alone is left out, decided by `GitFolderGuard.is_root_git`
+(a name that folds to `.git` and the same file as `root/.git`), the rule the loaders refuse by. A
+`.git` anywhere deeper is hashed like any other entry: content the digest skipped must never be
+content a loader can read, and `MarketplaceManifest` and `SkillIndex` refuse anything that resolves
+into the root's `.git` for the same reason.
 
-**The file.** JSON, one object: `version`, the `entries`, and a `checksum` (sha256 of the
-entries' canonical JSON). The checksum is unkeyed: it catches a corrupted or hand-edited lock,
-not a deliberate one -- anyone who can write the file can recompute it, so it is no evidence of
-tampering. The lock folder is the person's own and is protected by its permissions (0600). It is written to a temporary file beside the lock, fsynced, renamed
-over it and the folder fsynced, with mode 0600 from the moment it exists; a failure removes the
-temporary file and leaves the old lock. It is read whole through the bounded reader (never
-through a symlink) and must end in the newline the writer puts there, parse, carry exactly its
-keys, match its checksum and hold only well-formed entries -- or it raises `LockError` and
-returns nothing. A missing lock is no entries: nothing has been locked yet.
+**The file.** JSON, one object: `version`, the `entries`, and a `checksum` (sha256 of the entries'
+canonical JSON). The checksum is unkeyed: it catches a corrupted or hand-edited lock, not a
+deliberate one -- anyone who can write the file can recompute it, so it is no evidence of tampering.
+The lock folder is the person's own and is protected by its permissions (0600). It is written to a
+temporary file beside the lock, fsynced, renamed over it and the folder fsynced, with mode 0600 from
+the moment it exists; a failure removes the temporary file and leaves the old lock. It is read whole
+through the bounded reader (never through a symlink) and must end in the newline the writer puts
+there, parse, carry exactly its keys, match its checksum and hold only well-formed entries -- or it
+raises `LockError` and returns nothing. A missing lock is no entries: nothing has been locked yet.
 
 Declared by `interfaces/lock_interface.py::CapabilityLockInterface`.
 """
@@ -176,6 +177,8 @@ class CapabilityLock:
             document = json.loads(text)
         except ValueError as exc:
             raise LockError(f"{path} is not a complete lock file: {exc}") from exc
+        except RecursionError as exc:  # deep enough nesting exhausts json's recursion
+            raise LockError(f"{path} is not a complete lock file: nested too deeply") from exc
         return self._entries(document, str(path))
 
     def _entries(self, document: object, where: str) -> tuple[LockEntry, ...]:

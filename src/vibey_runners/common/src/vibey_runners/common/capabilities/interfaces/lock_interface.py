@@ -15,8 +15,8 @@ class CapabilityLockInterface(Protocol):
     def digest_tree(self, root: Path) -> str:
         """`sha256:<hex>` over every path under `root` (sorted, relative; only the root's own
         `.git` excluded) with each file's content digest, each symlink's target text (never
-        followed) and each folder's presence. Independent of listing order. Raises `LockError` for a tree that
-        cannot be locked (a FIFO or device, too many entries, `root` not a folder) and
+        followed) and each folder's presence. Independent of listing order. Raises `LockError` for a
+        tree that cannot be locked (a FIFO or device, too many entries, `root` not a folder) and
         `OSError` when the file system refuses a read."""
         ...
 

@@ -3,9 +3,9 @@
 
 ```toml
 [loops]
-plugins = ["currency-research@vibey", "linting@acme"]   # name@marketplace; absent = the research set
+plugins = ["currency-research@vibey", "linting@acme"]   # name@marketplace; absent = research
 skills = ["research-search-and-source-quality"]          # skills every loop is pointed at
-disable = ["old-skill"]                                  # plugins, MCP servers or skills to switch off
+disable = ["old-skill"]                                  # plugins, servers or skills to drop
 
 [[loops.marketplaces]]
 name = "acme"

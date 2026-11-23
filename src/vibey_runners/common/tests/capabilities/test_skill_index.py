@@ -229,7 +229,7 @@ def test_entries_past_the_limit_are_one_skipped_row_and_never_read(tmp_path: Pat
     assert over == [
         (
             (plugin / "skills").resolve(),
-            f"5 more entries past the {MAX_SKILLS_PER_PLUGIN}-entry limit of one plugin",
+            f"5 more skill folders past the {MAX_SKILLS_PER_PLUGIN}-folder limit of one plugin",
         )
     ]
     assert len(reader.paths) == MAX_SKILLS_PER_PLUGIN
@@ -300,3 +300,14 @@ def test_a_skill_folder_named_a_case_variant_of_git_is_skipped(tmp_path: Path) -
     (plugin / "skills").mkdir()
     (plugin / "skills" / "hidden").symlink_to(hidden)
     assert _only_skip(plugin)[1] == INSIDE_GIT
+
+
+def test_stray_files_do_not_crowd_skills_out_of_the_limit(tmp_path: Path) -> None:
+    plugin = _plugin(tmp_path)
+    (plugin / "skills").mkdir()
+    for index in range(MAX_SKILLS_PER_PLUGIN + 10):
+        (plugin / "skills" / f"a-note-{index:04d}.md").write_text("x", encoding="utf-8")
+    _skill(plugin, "z-real", VALID.format(name="z-real"))
+    catalog = SkillIndex().build([plugin])
+    assert [skill.name for skill in catalog.skills] == ["z-real"]
+    assert catalog.skipped == ()
