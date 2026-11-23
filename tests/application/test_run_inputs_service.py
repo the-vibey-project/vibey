@@ -27,6 +27,7 @@ from vibey.application.dto import EngineEvent, ProjectRecord, RunInputs
 from vibey.application.interfaces.run_inputs_interface import RunInputsInterface
 from vibey.application.run_inputs_service import RunInputsService
 from vibey.domain.errors import InputStoreError, RunInputRefused, UnknownProject
+from vibey.domain.input_ledger import INPUT_LEDGER, RecordedInputs
 from vibey.domain.ledger import EventKind
 from vibey.domain.phase import Phase
 from vibey.domain.run_input import InputListing, RunInput, RunInputsSettings, digest_of
@@ -63,13 +64,11 @@ class _Ledger:
             {"project_id": project_id, "cycle": cycle, "event": event, "job_id": job_id}
         )
 
-    async def added(self, project_id: UUID) -> frozenset[str]:
-        return frozenset(
-            e["event"].payload["digest"]
-            for e in self.events
+    async def added(self, project_id: UUID) -> RecordedInputs:
+        return INPUT_LEDGER.recorded(
+            (seq, e["event"].payload)
+            for seq, e in enumerate(self.events)
             if e["project_id"] == project_id
-            and e["event"].payload.get("artifact_type")
-            in ("vibey_run_input", "vibey_run_input_repaired")
         )
 
 
@@ -330,7 +329,8 @@ def test_materialize_refuses_a_name_that_is_not_directly_in_attachments(
     tmp_path: Path, name: str
 ) -> None:
     world = _World(tmp_path)
-    world.add("file", "spec.md", b"bytes")
+    world.store.put(world.project_id, "file", "spec.md", b"bytes")
+    world.record_added(b"bytes")  # an add with no name digest, so the renamed row matches it
     world.service = RunInputsService(
         store=_NamingStore(world.store, name),
         projects=world.projects,
@@ -536,12 +536,14 @@ def test_the_ledger_payload_holds_digest_kind_and_size_and_never_content(
     assert recorded["cycle"] == 2
     assert event.kind == EventKind.ARTIFACT_PRODUCED.value
     assert event.at == AT
-    assert set(event.payload) == {"artifact_type", "digest", "kind", "size"}
+    assert set(event.payload) == {"artifact_type", "digest", "kind", "size", "name_digest"}
     assert event.payload == {
         "artifact_type": "vibey_run_input",
         "digest": digest_of(b"secret words"),
         "kind": "paste",
         "size": 12,
+        # The name's SHA-256, never the name (fix round 1, review I2).
+        "name_digest": digest_of(b"paste"),
     }
     assert "secret" not in repr(event.payload)
 
@@ -726,20 +728,23 @@ def test_a_control_character_in_a_name_stays_escaped_in_the_prompt(tmp_path: Pat
 
 
 class _FailingLedger:
-    def __init__(self, added: frozenset[str] = frozenset()) -> None:
-        self._added = added
+    def __init__(self, added: RecordedInputs | None = None) -> None:
+        self._added = added or RecordedInputs(added=())
 
     async def record(
         self, *, project_id: UUID, cycle: int, event: EngineEvent, job_id: UUID | None = None
     ) -> None:
         raise RuntimeError("the ledger is down")
 
-    async def added(self, project_id: UUID) -> frozenset[str]:
+    async def added(self, project_id: UUID) -> RecordedInputs:
         return self._added
 
 
-def test_a_ledger_failure_on_add_stores_nothing(tmp_path: Path) -> None:
-    # Review finding 9 (R-I): the record comes first, so no object is ever stored unrecorded.
+def test_a_ledger_failure_on_add_leaves_no_row_and_nothing_a_run_is_given(
+    tmp_path: Path,
+) -> None:
+    # Fix round 1, review I3: the object is written first, then the record, then the row. A
+    # ledger that fails leaves an object no row names: nothing is listed, nothing is given.
     world = _World(tmp_path)
     world.service = RunInputsService(
         store=world.store,
@@ -751,17 +756,19 @@ def test_a_ledger_failure_on_add_stores_nothing(tmp_path: Path) -> None:
     )
     with pytest.raises(RuntimeError, match="ledger is down"):
         world.add("paste", "paste", b"words")
-    assert world.objects() == []
+    assert len(world.objects()) == 1
     assert world.rows() == 0
 
 
-def test_a_store_failure_after_the_record_is_an_error_not_a_silent_gap(tmp_path: Path) -> None:
+def test_a_store_failure_before_the_record_records_nothing(tmp_path: Path) -> None:
+    # Fix round 1, review I3: the object comes first, so a store that cannot take it leaves
+    # no recorded add for the ledger cross-check to miss.
     world = _World(tmp_path)
     digest = digest_of(b"words")
     (world.folder / "objects" / digest[:2] / digest).mkdir(parents=True)  # where it would go
     with pytest.raises(InputStoreError, match="not a regular file"):
         world.add("paste", "paste", b"words")
-    assert len(world.ledger.events) == 1  # an event with no object: the safer audit error
+    assert world.ledger.events == []
 
 
 def test_a_ledger_failure_on_a_run_is_raised_before_any_engine_could_start(
@@ -772,7 +779,21 @@ def test_a_ledger_failure_on_a_run_is_raised_before_any_engine_could_start(
     world.service = RunInputsService(
         store=world.store,
         projects=world.projects,
-        ledger=_FailingLedger(frozenset({digest_of(b"words")})),
+        ledger=_FailingLedger(
+            INPUT_LEDGER.recorded(
+                [
+                    (
+                        1,
+                        {
+                            "artifact_type": "vibey_run_input",
+                            "digest": digest_of(b"words"),
+                            "kind": "paste",
+                            "size": 5,
+                        },
+                    )
+                ]
+            )
+        ),
         clock=_Clock(),
         limits=RunInputsSettings,
         writer=NoFollowFiles(),
@@ -817,6 +838,7 @@ def test_a_repair_at_max_items_is_not_a_new_item(tmp_path: Path) -> None:
         "digest": first.digest,
         "kind": "paste",
         "size": 5,
+        "name_digest": digest_of(b"paste"),
     }
 
 
@@ -855,7 +877,7 @@ def test_a_repair_is_recorded_before_the_object_is_written(tmp_path: Path) -> No
     world.service = RunInputsService(
         store=world.store,
         projects=world.projects,
-        ledger=_FailingLedger(),
+        ledger=_FailingLedger(asyncio.run(world.ledger.added(world.project_id))),
         clock=_Clock(),
         limits=RunInputsSettings,
         writer=NoFollowFiles(),
@@ -895,13 +917,12 @@ def test_rows_the_ledger_never_recorded_are_withheld_and_counted(tmp_path: Path)
     assert run_event["event"].payload["digests"] == [digest_of(b"recorded words")]
 
 
-def test_only_unrecorded_rows_still_give_the_run_the_notice(tmp_path: Path) -> None:
+def test_only_unrecorded_rows_give_nothing_and_no_store_is_read(tmp_path: Path) -> None:
+    # Fix round 1, review I4: with no recorded add the run reads no store at all.
     world = _World(tmp_path)
     world.store.put(world.project_id, "file", "planted.md", b"planted")
     given = world.materialize()
-    assert "planted" not in given.prompt_section.replace("planted.md", "")
-    assert "1 more stored input(s) were withheld" in given.prompt_section
-    assert given.attachments_dir is None and given.paste_file is None
+    assert given == RunInputs(prompt_section="", attachments_dir=None, paste_file=None)
 
 
 def test_a_store_missing_an_input_the_ledger_records_is_a_loud_failure(tmp_path: Path) -> None:
@@ -922,32 +943,17 @@ def test_a_store_missing_an_input_the_ledger_records_is_a_loud_failure(tmp_path:
         asyncio.run(moved.materialize(world.project_id, uuid4(), world.worktree))
     message = str(caught.value)
     assert elsewhere.describe() in message
-    assert "holds 1 of the 2 inputs the ledger records for this project" in message
-    assert "point [inputs]" in message
+    assert "lacks 1 input(s) the ledger records for this project" in message
+    assert f"file {digest_of(b'spec')} (4 bytes)" in message  # names what to add again
+    assert "Point [inputs]" in message
     assert not (world.worktree / ".vibey").exists()
 
 
-def test_a_repaired_input_counts_as_recorded(tmp_path: Path) -> None:
+def test_an_add_recorded_before_names_were_matches_a_row_of_any_name(tmp_path: Path) -> None:
     world = _World(tmp_path)
-    world.ledger.events.append(
-        {
-            "project_id": world.project_id,
-            "cycle": 1,
-            "event": EngineEvent(
-                kind=EventKind.ARTIFACT_PRODUCED.value,
-                at=AT,
-                payload={
-                    "artifact_type": "vibey_run_input_repaired",
-                    "digest": digest_of(b"fixed"),
-                    "kind": "paste",
-                    "size": 5,
-                },
-            ),
-            "job_id": None,
-        }
-    )
-    world.store.put(world.project_id, "paste", "paste", b"fixed")
-    assert "fixed" in world.materialize().prompt_section
+    world.store.put(world.project_id, "paste", "paste", b"legacy")
+    world.record_added(b"legacy", kind="paste")  # no name_digest: recorded before fix round 1
+    assert "legacy" in world.materialize().prompt_section
 
 
 def test_with_no_inputs_and_no_add_events_the_prompt_is_unchanged(tmp_path: Path) -> None:
@@ -1128,3 +1134,122 @@ def test_a_store_that_does_not_answer_for_a_pinned_input_is_not_missing(tmp_path
                 world.project_id, uuid4(), world.worktree, pinned=(digest_of(b"words"),)
             )
         )
+
+
+# -- fix round 1: rows held to the ledger one to one, and a failed row corrected (I2, I3) ---------
+
+
+def test_a_planted_older_version_of_a_file_does_not_roll_the_run_back(tmp_path: Path) -> None:
+    world = _World(tmp_path)
+    world.add("file", "spec.md", b"version one")
+    world.add("file", "spec.md", b"version two")
+    world.store.put(world.project_id, "file", "spec.md", b"version one")  # planted, newer row
+    given = world.materialize()
+    assert given.attachments_dir is not None
+    assert (given.attachments_dir / "spec.md").read_bytes() == b"version two"
+    assert "1 more stored input(s) were withheld" in given.prompt_section
+
+
+def test_a_recorded_paste_planted_as_a_file_is_not_given_as_one(tmp_path: Path) -> None:
+    world = _World(tmp_path)
+    world.add("paste", "paste", b"words")
+    world.store.put(world.project_id, "file", "words.txt", b"words")
+    given = world.materialize()
+    assert given.attachments_dir is None
+    assert "1 more stored input(s) were withheld" in given.prompt_section
+
+
+def test_a_planted_row_with_an_oversized_size_fails_nothing(tmp_path: Path) -> None:
+    world = _World(tmp_path)
+    item = world.add("paste", "paste", b"words")
+    row = {"digest": item.digest, "kind": "paste", "name": "paste", "size": 10**10, "at": "x"}
+    with (world.folder / "index.jsonl").open("a") as handle:
+        handle.write(json.dumps(row) + "\n")
+    given = world.materialize()
+    assert "words" in given.prompt_section
+    assert "1 more stored input(s) were withheld" in given.prompt_section
+
+
+def test_a_duplicated_paste_row_is_given_once(tmp_path: Path) -> None:
+    world = _World(tmp_path)
+    world.add("paste", "paste", b"only once")
+    world.store.put(world.project_id, "paste", "paste", b"only once")  # a second, planted row
+    assert world.materialize().prompt_section.count("only once") == 1
+
+
+class _RowFailingStore(_ThreadStore):
+    """The real store, except that writing an index row fails after the object was stored."""
+
+    def put(self, project_id: UUID, kind: Any, name: str, data: bytes) -> RunInput:
+        raise InputStoreError("the index could not be appended")
+
+
+def test_a_row_that_fails_after_the_record_is_corrected_and_blocks_no_run(
+    tmp_path: Path,
+) -> None:
+    world = _World(tmp_path)
+    world.add("paste", "paste", b"kept")
+    failing = RunInputsService(
+        store=_RowFailingStore(world.store),
+        projects=world.projects,
+        ledger=world.ledger,
+        clock=_Clock(),
+        limits=lambda: world.limits,
+        writer=NoFollowFiles(),
+    )
+    with pytest.raises(InputStoreError, match="could not be appended"):
+        asyncio.run(failing.add(world.project_id, "file", "lost.md", b"lost"))
+    types = [e["event"].payload["artifact_type"] for e in world.ledger.events]
+    assert types[-2:] == ["vibey_run_input", "vibey_run_input_failed"]
+    given = world.materialize()  # the cancelled add is not missing
+    assert "kept" in given.prompt_section
+
+
+def test_a_ledger_that_fails_on_the_correction_keeps_the_stores_error(tmp_path: Path) -> None:
+    world = _World(tmp_path)
+
+    class _RecordsOnce(_Ledger):
+        async def record(
+            self, *, project_id: UUID, cycle: int, event: EngineEvent, job_id: UUID | None = None
+        ) -> None:
+            if event.payload.get("artifact_type") == "vibey_run_input_failed":
+                raise RuntimeError("the ledger is down")
+            await super().record(project_id=project_id, cycle=cycle, event=event, job_id=job_id)
+
+    ledger = _RecordsOnce()
+    failing = RunInputsService(
+        store=_RowFailingStore(world.store),
+        projects=world.projects,
+        ledger=ledger,
+        clock=_Clock(),
+        limits=lambda: world.limits,
+        writer=NoFollowFiles(),
+    )
+    with pytest.raises(InputStoreError, match="could not be appended"):
+        asyncio.run(failing.add(world.project_id, "file", "lost.md", b"lost"))
+    # The add stands uncorrected: a run names it, and adding the bytes again fulfils it.
+    world.ledger = ledger
+    world.service = RunInputsService(
+        store=world.store,
+        projects=world.projects,
+        ledger=ledger,
+        clock=_Clock(),
+        limits=lambda: world.limits,
+        writer=NoFollowFiles(),
+    )
+    with pytest.raises(InputStoreError, match=f"file {digest_of(b'lost')} \\(4 bytes\\)"):
+        world.materialize()
+    again = world.add("file", "lost.md", b"lost")
+    adds = [e for e in ledger.events if e["event"].payload["artifact_type"] == "vibey_run_input"]
+    assert len(adds) == 1  # the dangling add was fulfilled, not doubled
+    assert ledger.events[-1]["event"].payload["artifact_type"] == "vibey_run_input_repaired"
+    given = world.materialize()
+    assert given.attachments_dir is not None
+    assert (given.attachments_dir / "lost.md").read_bytes() == b"lost"
+    assert again.digest == digest_of(b"lost")
+
+
+def test_a_planted_row_does_not_count_against_max_items(tmp_path: Path) -> None:
+    world = _World(tmp_path, RunInputsSettings(max_items=1))
+    world.store.put(world.project_id, "paste", "paste", b"planted")
+    assert world.add("paste", "paste", b"mine").digest == digest_of(b"mine")

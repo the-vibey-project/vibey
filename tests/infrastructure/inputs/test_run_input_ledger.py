@@ -87,22 +87,26 @@ class _ReadingLedger(_Ledger):
         return self.events
 
 
-def test_added_is_the_digests_of_every_add_and_repair_event() -> None:
+def test_added_is_the_live_adds_in_ledger_order() -> None:
     from types import SimpleNamespace
 
+    from vibey.domain.input_ledger import RecordedInput
+
     project_id = uuid4()
+    add = {"artifact_type": "vibey_run_input", "kind": "paste", "size": 1}
     fake = _ReadingLedger(
         [
-            SimpleNamespace(payload={"artifact_type": "vibey_run_input", "digest": "a" * 64}),
+            SimpleNamespace(seq=3, payload={**add, "digest": "a" * 64}),
+            SimpleNamespace(seq=5, payload={**add, "digest": "b" * 64}),
             SimpleNamespace(
-                payload={"artifact_type": "vibey_run_input_repaired", "digest": "b" * 64}
+                seq=6,
+                payload={**add, "artifact_type": "vibey_run_input_failed", "digest": "b" * 64},
             ),
-            SimpleNamespace(payload={"artifact_type": "vibey_run_input", "digest": 7}),
-            SimpleNamespace(payload={"artifact_type": "vibey_run_input"}),
+            SimpleNamespace(seq=7, payload={**add, "digest": 7}),
         ]
     )
     added = asyncio.run(
         PostgresRunInputLedger(cast(PostgresLedgerRepository, fake)).added(project_id)
     )
-    assert added == frozenset({"a" * 64, "b" * 64})
-    assert fake.asked == [(project_id, ("vibey_run_input", "vibey_run_input_repaired"))]
+    assert added.added == (RecordedInput(3, "a" * 64, "paste", 1, None),)
+    assert fake.asked == [(project_id, ("vibey_run_input", "vibey_run_input_failed"))]

@@ -12,6 +12,7 @@ from typing import Protocol, runtime_checkable
 from uuid import UUID
 
 from vibey.application.dto import EngineEvent
+from vibey.domain.input_ledger import RecordedInputs
 
 
 @runtime_checkable
@@ -25,10 +26,9 @@ class RunInputLedgerInterface(Protocol):
         builds the payload; it carries digests, kinds and sizes, never an input's content."""
         ...
 
-    async def added(self, project_id: UUID) -> frozenset[str]:
-        """The digests of every input the ledger records as added to the project: its
-        `vibey_run_input` and `vibey_run_input_repaired` events. The ledger, not the store, is
-        the authority on which inputs exist (ADR-0105): a store missing one of these is the
-        wrong store or a damaged one, and a row in the store none of these names was never
-        added through vibey."""
+    async def added(self, project_id: UUID) -> RecordedInputs:
+        """The adds the ledger records for the project, in ledger order: its `vibey_run_input`
+        events, less each one a later `vibey_run_input_failed` correction cancels. The ledger,
+        not the store, is the authority on which inputs exist (ADR-0105): a run is given the
+        rows that match these one to one (`InputLedgerInterface.reconcile`)."""
         ...

@@ -29,6 +29,11 @@ class RunInputRuleInterface(Protocol):
         """Whether `text` is a digest this rule makes: exactly 64 lowercase hex digits."""
         ...
 
+    def name_digest(self, name: str) -> str:
+        """The SHA-256 of a run input's name, as the ledger records it beside the digest: the
+        ledger holds no name, and this lets a row under another name be told apart."""
+        ...
+
     def row_of(self, line: bytes) -> RunInput | None:
         """One index row (a JSON object: digest, kind, name, size, and anything else) as the run
         input it records, or None when it is not one a store writes: not JSON or not UTF-8, not

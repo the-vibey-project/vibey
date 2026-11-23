@@ -24,6 +24,7 @@ from vibey.application.seed_prompt import render_seed_prompt
 from vibey.application.worker import Success
 from vibey.domain.effort import Effort
 from vibey.domain.engine import EngineId
+from vibey.domain.input_ledger import INPUT_LEDGER, RecordedInputs
 from vibey.domain.job import JobState
 from vibey.domain.ledger import EventKind, LedgerEvent, Provenance, digest_event
 from vibey.domain.phase import Phase
@@ -69,12 +70,8 @@ class _SharedLedger:
             )
         )
 
-    async def added(self, project_id: UUID) -> frozenset[str]:
-        return frozenset(
-            str(e.payload["digest"])
-            for e in self.events
-            if e.payload.get("artifact_type") in ("vibey_run_input", "vibey_run_input_repaired")
-        )
+    async def added(self, project_id: UUID) -> RecordedInputs:
+        return INPUT_LEDGER.recorded((e.seq, e.payload) for e in self.events)
 
 
 class _Projects:

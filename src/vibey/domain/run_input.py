@@ -352,6 +352,9 @@ class RunInputRule:
     def is_digest(self, text: str) -> bool:
         return _DIGEST.fullmatch(text) is not None
 
+    def name_digest(self, name: str) -> str:
+        return hashlib.sha256(name.encode("utf-8", errors="surrogatepass")).hexdigest()
+
     def row_of(self, line: bytes) -> RunInput | None:
         try:
             row = json.loads(line)

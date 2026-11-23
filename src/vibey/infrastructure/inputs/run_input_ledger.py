@@ -16,14 +16,21 @@ from uuid import UUID
 
 from vibey.application.dto import EngineEvent
 from vibey.domain.correlation import DELIVERY_CORRELATION
+from vibey.domain.input_ledger import (
+    ADDED_ARTIFACT_TYPE,
+    FAILED_ARTIFACT_TYPE,
+    INPUT_LEDGER,
+    RecordedInputs,
+)
 from vibey.domain.interfaces.correlation_interface import DeliveryCorrelationInterface
 from vibey.domain.ledger import Provenance
 from vibey.domain.phase import Phase
 from vibey.infrastructure.db.ledger_repository import PostgresLedgerRepository
 from vibey.infrastructure.engines.tailer import translate_event
 
-ADDED_TYPES: Final = ("vibey_run_input", "vibey_run_input_repaired")
-"""The artifact types that record an input being stored: an add, and the repair of one."""
+ADDED_TYPES: Final = (ADDED_ARTIFACT_TYPE, FAILED_ARTIFACT_TYPE)
+"""The artifact types that say which inputs exist: an add, and the correction of one whose row
+was never written. A repair rewrites an object and adds no row, so it is not one of them."""
 
 
 class PostgresRunInputLedger:
@@ -55,8 +62,6 @@ class PostgresRunInputLedger:
             raise ValueError(f"the ledger has no event kind {event.kind!r}; nothing was recorded")
         await self._ledger.append(draft)
 
-    async def added(self, project_id: UUID) -> frozenset[str]:
+    async def added(self, project_id: UUID) -> RecordedInputs:
         events = await self._ledger.artifacts_of_type(project_id, ADDED_TYPES)
-        return frozenset(
-            digest for event in events if isinstance(digest := event.payload.get("digest"), str)
-        )
+        return INPUT_LEDGER.recorded((event.seq, event.payload) for event in events)

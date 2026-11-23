@@ -27,6 +27,7 @@ from vibey.application.run_inputs_settings import RunInputsSettingsLoader
 from vibey.cli.inputs import EXIT_CONFIG, EXIT_REFUSED, EXIT_UNKNOWN, InputsCommands
 from vibey.cli.interfaces.inputs_interface import InputsCommandsInterface
 from vibey.cli.main import app
+from vibey.domain.input_ledger import INPUT_LEDGER, RecordedInputs
 from vibey.domain.phase import Phase
 from vibey.domain.run_input import RunInputsSettings
 from vibey.infrastructure.inputs.hash_addressed_input_store import HashAddressedInputStore
@@ -59,8 +60,8 @@ class _Ledger:
     ) -> None:
         self.events.append(event)
 
-    async def added(self, project_id: UUID) -> frozenset[str]:
-        return frozenset(e.payload["digest"] for e in self.events if "digest" in e.payload)
+    async def added(self, project_id: UUID) -> RecordedInputs:
+        return INPUT_LEDGER.recorded((seq, e.payload) for seq, e in enumerate(self.events))
 
 
 class _World:

@@ -62,6 +62,13 @@ class _Ledger:
     async def append(self, draft: Any) -> None:
         self.drafts.append(draft)
 
+    async def artifacts_of_type(self, project_id: UUID, types: Any) -> tuple[Any, ...]:
+        return tuple(
+            SimpleNamespace(seq=n, payload=d.payload)
+            for n, d in enumerate(self.drafts)
+            if d.payload.get("artifact_type") in types
+        )
+
 
 def _resources(tmp_path: Path) -> tuple[Any, UUID]:
     project_id = uuid4()

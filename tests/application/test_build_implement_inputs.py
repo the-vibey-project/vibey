@@ -38,6 +38,7 @@ from vibey.application.run_inputs_service import RunInputsService
 from vibey.application.worker import Failure, Park, Success
 from vibey.domain.config import ConfigError
 from vibey.domain.errors import InputStoreError, InputStoreUnavailable
+from vibey.domain.input_ledger import INPUT_LEDGER, RecordedInputs
 from vibey.domain.job import FailureClass
 from vibey.domain.phase import Phase
 from vibey.domain.run_input import (
@@ -85,12 +86,8 @@ class _Ledger:
         self.job_ids.append(job_id)
         self.payloads.append(dict(event.payload))
 
-    async def added(self, project_id: UUID) -> frozenset[str]:
-        return frozenset(
-            p["digest"]
-            for p in self.payloads
-            if p.get("artifact_type") in ("vibey_run_input", "vibey_run_input_repaired")
-        )
+    async def added(self, project_id: UUID) -> RecordedInputs:
+        return INPUT_LEDGER.recorded(enumerate(self.payloads))
 
 
 class _World:
@@ -424,7 +421,7 @@ async def test_limits_that_cannot_be_read_fail_the_run_before_any_engine_session
     broken = RunInputsService(
         store=world.store,
         projects=world.projects,
-        ledger=_Ledger(),
+        ledger=world.ledger,
         clock=FixedClock(),
         limits=unreadable,
         writer=NoFollowFiles(),
@@ -480,5 +477,74 @@ async def test_a_store_missing_inputs_the_ledger_records_fails_the_run_before_th
     assert isinstance(outcome, Failure)
     assert outcome.failure_class is FailureClass.VIBEY
     assert empty.describe() in outcome.detail
-    assert "holds 0 of the 1 inputs the ledger records" in outcome.detail
+    assert "lacks 1 input(s) the ledger records" in outcome.detail
+    assert getattr(engine, "specs", []) == []
+
+
+class _RepositoryLedger:
+    """The ledger repository the composed service's adapter reads: the add events it was given."""
+
+    def __init__(self, payloads: list[dict[str, Any]]) -> None:
+        self.payloads = payloads
+
+    async def append(self, draft: Any) -> None:
+        self.payloads.append(dict(draft.payload))
+
+    async def artifacts_of_type(self, project_id: UUID, types: Any) -> tuple[Any, ...]:
+        from types import SimpleNamespace
+
+        return tuple(
+            SimpleNamespace(seq=n, payload=p)
+            for n, p in enumerate(self.payloads)
+            if p.get("artifact_type") in types
+        )
+
+
+@pytest.mark.parametrize(
+    "table",
+    [
+        '[inputs]\nsecret_key = "s3cr3t"\n',
+        '[inputs]\nstore = "seaweedfs"\nendpoint = "https://h.test"\nbucket = "vibey-inputs"\n',
+    ],
+)
+async def test_a_broken_inputs_table_fails_only_runs_that_have_inputs(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, table: str
+) -> None:
+    """Review I4: the worker composes its run inputs without reading `[inputs]` or the store's
+    credentials; a BUILD job with no inputs runs, and one with inputs fails naming the cause."""
+    from types import SimpleNamespace
+
+    from vibey import bootstrap
+
+    config = tmp_path / "config" / "vibey.toml"
+    config.parent.mkdir()
+    config.write_text(table)
+    monkeypatch.setattr(bootstrap, "acp_user_config", lambda: config)
+    monkeypatch.delenv("VIBEY_INPUTS_ACCESS_KEY", raising=False)
+    monkeypatch.delenv("VIBEY_INPUTS_SECRET_KEY", raising=False)
+    world = _World(tmp_path)
+    payloads: list[dict[str, Any]] = []
+    resources = SimpleNamespace(
+        clock=FixedClock(), projects=world.projects, ledger=_RepositoryLedger(payloads)
+    )
+    service = bootstrap.run_inputs_service(resources, bootstrap.run_inputs_limits)  # type: ignore[arg-type]
+
+    outcome, engine, _ = await world.run(inputs=service)
+    assert isinstance(outcome, Success)
+    _, without, _ = await world.run(inputs=None)
+    assert engine.specs[0].prompt == without.specs[0].prompt
+
+    payloads.append(
+        {
+            "artifact_type": "vibey_run_input",
+            "digest": "a" * 64,
+            "kind": "paste",
+            "size": 1,
+        }
+    )
+    outcome, engine, _ = await world.run(inputs=service)
+    assert isinstance(outcome, Failure)
+    assert outcome.failure_class is FailureClass.VIBEY
+    assert str(config) in outcome.detail
+    assert "s3cr3t" not in outcome.detail
     assert getattr(engine, "specs", []) == []

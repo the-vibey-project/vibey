@@ -258,6 +258,7 @@ from vibey.infrastructure.git.integration_branch import IntegrationBranch
 from vibey.infrastructure.git.worktree_manager import GitWorktreeManager
 from vibey.infrastructure.hub.settings import HUB_SETTINGS, HubSettings
 from vibey.infrastructure.inputs.hash_addressed_input_store import HashAddressedInputStore
+from vibey.infrastructure.inputs.lazy_input_store import LazyInputStore
 from vibey.infrastructure.inputs.no_follow_files import NoFollowFiles
 from vibey.infrastructure.inputs.run_input_ledger import PostgresRunInputLedger
 from vibey.infrastructure.inputs.seaweedfs_input_store import SeaweedFsInputStore
@@ -1663,7 +1664,10 @@ def run_inputs_service(
     that records each add's digest, kind and size and says which inputs were added. Composition
     only."""
     return RunInputsService(
-        store=run_inputs_store(resources, location),
+        # Composed on first use (review I4): a worker reads `[inputs]` and the store's
+        # credentials only when a BUILD run has inputs to give, so a broken table or unset
+        # variables fail that run, never the worker's start.
+        store=LazyInputStore(lambda: run_inputs_store(resources, location)),
         projects=resources.projects,
         ledger=PostgresRunInputLedger(resources.ledger),
         clock=resources.clock,
