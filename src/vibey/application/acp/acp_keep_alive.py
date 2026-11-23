@@ -42,7 +42,7 @@ import logging
 import math
 import time
 from collections.abc import Awaitable, Callable, Iterable, Mapping
-from typing import Final
+from typing import Any, Final
 
 from vibey.application.acp.dto import AcpSessionContext
 from vibey.application.acp.interfaces.acp_hub_port_interface import AcpHubPortInterface
@@ -64,6 +64,9 @@ unknown, or between states -- is left to it."""
 _LOG: Final = logging.getLogger(__name__)
 
 type Sleep = Callable[[float], Awaitable[None]]
+type Offload = Callable[..., Awaitable[Any]]
+"""Runs a blocking call (the service manager, the units' files) off the event loop:
+`asyncio.to_thread`, or inline where a test drives the loop itself."""
 
 
 class AcpKeepAlive:
@@ -85,7 +88,9 @@ class AcpKeepAlive:
         stopped: Callable[[str], bool] | None = None,
         clock: Callable[[], float] = time.monotonic,
         sleep: Sleep = asyncio.sleep,
+        offload: Offload = asyncio.to_thread,
     ) -> None:
+        self._offload = offload
         self._loader = loader
         self._hub = hub
         self._lock = lock
@@ -234,7 +239,7 @@ class AcpKeepAlive:
             if label == self._hub_label:
                 if not await self._hub.healthy():
                     down.add(label)
-            elif await asyncio.to_thread(self._loader.state, label) in DOWN_STATES:
+            elif await self._offload(self._loader.state, label) in DOWN_STATES:
                 down.add(label)
         return down
 
@@ -253,7 +258,7 @@ class AcpKeepAlive:
 
     async def _revive(self, label: str) -> None:
         stopped = self._stopped_for_good
-        if stopped is not None and await asyncio.to_thread(stopped, label):
+        if stopped is not None and await self._offload(stopped, label):
             # Stopped for good since it was handed over: let go of it, never restart it.
             self._managed.pop(label, None)
             self._added.pop(label, None)
@@ -265,7 +270,7 @@ class AcpKeepAlive:
         if now - self._acted.get(label, float("-inf")) < self._settings.probe_seconds:
             return
         self._acted[label] = now
-        outcome = await asyncio.to_thread(self._loader.restart, label)
+        outcome = await self._offload(self._loader.restart, label)
         if outcome.action == "failed":
             await self._tell(
                 label,
@@ -297,7 +302,7 @@ class AcpKeepAlive:
     async def _take_over(self, label: str, now: float) -> None:
         """A hub outside the service manager stopped answering. While it still holds the hub's
         lock it is left alone (never stopped); once nothing holds it, its unit is loaded."""
-        pid = await asyncio.to_thread(self._units.detached_hub_pid) if self._units else None
+        pid = await self._offload(self._units.detached_hub_pid) if self._units else None
         if pid is not None:
             held = f" (pid {pid})" if pid > 0 else ""
             await self._tell(
@@ -311,7 +316,7 @@ class AcpKeepAlive:
         if now - self._acted.get(label, float("-inf")) < self._settings.probe_seconds:
             return
         self._acted[label] = now
-        outcome = await asyncio.to_thread(self._loader.load, label, self._managed[label])
+        outcome = await self._offload(self._loader.load, label, self._managed[label])
         if outcome.action == "failed":
             await self._tell(
                 label,
