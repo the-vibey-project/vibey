@@ -493,10 +493,12 @@ project's name in `/status`, a refusal's body, a ledger summary). So:
   `www[.]`, an address as `name[@]host`, and every dot of any dotted name whose last label has
   a top-level domain's shape (two or more characters starting with a letter of any script, or a
   punycode `xn--` label), as `evil[.]com`, `docs[.]evil[.]co[.]uk`, `evil[.]xn--p1ai` or
-  `README[.]md`. The only names left as written are those ending in a suffix of vibey's own
-  files and units that is no top-level domain (`.toml`, `.env`, `.json`, `.yaml`, `.lock`,
-  `.log`, `.hub`, `.worker`, `.searxng` and a few more: `vibey.toml`, `dev.vibey.hub`), and those
-  with no such last label (`1.2.3`, `e.g.`).
+  `README[.]md`; a Unicode full stop a browser reads as a dot (`。`, `．`, `｡`, `․`) is bracketed
+  the same way (`evil。com` shows as `evil[.]com`). The only names left as written are two-label
+  ones ending in a suffix of vibey's own files that is no top-level domain (`.toml`, `.env`,
+  `.json`, `.yaml`, `.lock`, `.log` and a few more: `vibey.toml`; never `evil.com.toml`, and a
+  unit label such as `dev.vibey.hub` shows as `dev[.]vibey[.]hub`), and those with no such last
+  label (`1.2.3`, `e.g.`).
 
 Escaping can make a message a little longer than the limit it was cut to. A gate's prompt is
 still sent unchanged in the tool call's `rawInput`, as data, deliberately: the title shows a cut

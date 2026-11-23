@@ -17,10 +17,11 @@ and paths, the hub chat's reply (which quotes all of those), a refusal's body, a
   a visible bracket (`AUTOLINK_DEFANGS`): `https[:]//`, `mailto[:]`, `xmpp[:]`, `www[.]`,
   `name[@]host`, and every dot of any dotted name whose last label is a top-level domain's
   shape -- two or more characters starting with a letter of any script, or a punycode
-  `xn--` label: `evil[.]com`, `docs[.]evil[.]co[.]uk`, `evil[.]xn--p1ai`, `README[.]md`.
-  The only names left as written are those whose last label is in `LOCAL_SUFFIXES`, suffixes
-  vibey's own files and units carry that are no delegated top-level domain (`vibey.toml`,
-  `dev.vibey.hub`), and those with no such last label at all (`1.2.3`, `e.g.`).
+  `xn--` label -- and every Unicode full stop a browser reads as a dot (`FULL_STOPS`): `evil[.]com`,
+  `docs[.]evil[.]co[.]uk`, `evil[.]xn--p1ai`, `evil[.]com` from `evil。com`, `README[.]md`.
+  The only names left as written are two-label ones whose last label is in `LOCAL_SUFFIXES`,
+  suffixes of vibey's own files that are no delegated top-level domain (`vibey.toml`; never
+  `evil.com.toml`), and those with no such last label at all (`1.2.3`, `e.g.`).
 - **No Markdown.** Every character that could open a link, image, emphasis, code span or
   fence, heading, table cell, strikethrough, HTML tag or entity (`MARKDOWN_SPECIAL`) is
   backslash-escaped. At the start of a line (`line`, and each line of a `block`), leading
@@ -44,20 +45,23 @@ ELLIPSIS: Final = "..."
 MARKDOWN_SPECIAL: Final = frozenset("\\`*_[]()<>!#|~&")
 """Escaped everywhere in untrusted text: what opens a link, image, emphasis, code span or
 fence, heading, table cell, strikethrough, HTML tag or entity, and the escape itself."""
-BARE_HOST: Final = re.compile(r"(?<![\w-])[\w-]++(?:\.[\w-]++)+")
-"""A dotted name: labels joined by single dots, starting where no label character comes before
-it. Possessive, with no alternation, so it is linear in the text's length; `defang_host` judges
-its last label."""
+FULL_STOPS: Final = ".\u3002\uff0e\uff61\u2024\ufe52"
+"""The dot, and the Unicode full stops a browser reads as one in a host name (ideographic,
+fullwidth, halfwidth ideographic, one dot leader, small full stop: NFKC folds each to `.`)."""
+BARE_HOST: Final = re.compile(rf"(?<![\w-])[\w-]++(?:[{FULL_STOPS}][\w-]++)+")
+"""A dotted name: labels joined by single dots (any of `FULL_STOPS`), starting where no label
+character comes before it. Possessive, with no alternation, so it is linear in the text's
+length; `defang_host` judges it."""
+_DOTS: Final = re.compile(f"[{FULL_STOPS}]")
 LOCAL_SUFFIXES: Final = frozenset(
     {
         *("toml", "env", "json", "yaml", "yml", "lock", "log", "txt", "plist", "service"),
         *("conf", "cfg", "ini", "pem", "sock", "sqlite"),
-        # vibey's unit labels: `<label_prefix>.hub`, `.worker`, `.searxng`.
-        *("hub", "worker", "searxng"),
     }
 )
-"""Last labels left as written: suffixes vibey's own files and units carry, none of them a
-delegated top-level domain, so no client links a name ending in one."""
+"""Last labels of a two-label name left as written: suffixes vibey's own files carry, none of
+them a delegated top-level domain, so no client links `vibey.toml`. A longer name ending in one
+(`evil.com.toml`, a unit label `dev.vibey.hub`) is bracketed like any other."""
 _LINE_MARKER: Final = re.compile(r"[-+=:]|\d+\.")
 """What makes a line a list item, a setext underline, a table delimiter row (`:-`, which needs
 no pipe) or an ordered item when it starts it (`*`, `#`, `>`, `|` and `)` are escaped everywhere
@@ -118,12 +122,16 @@ class UntrustedText:
 
     @staticmethod
     def defang_host(found: re.Match[str]) -> str:
-        """A dotted name with every dot bracketed when its last label has a top-level domain's
-        shape (2+ characters from a letter, or `xn--`) and is not in `LOCAL_SUFFIXES`."""
+        """A dotted name with every dot (any of `FULL_STOPS`) bracketed when its last label has
+        a top-level domain's shape (2+ characters from a letter, or `xn--`), unless it is a
+        two-label name whose last label is in `LOCAL_SUFFIXES` (`vibey.toml`; never
+        `evil.com.toml`, where a host hides before the suffix)."""
         name = found.group(0)
-        last = name.rsplit(".", 1)[1].lower()
+        labels = _DOTS.split(name)
+        last = labels[-1].lower()
         shaped = last.startswith("xn--") or (len(last) >= 2 and last[0].isalpha())
-        return name.replace(".", "[.]") if shaped and last not in LOCAL_SUFFIXES else name
+        local = len(labels) == 2 and last in LOCAL_SUFFIXES
+        return _DOTS.sub("[.]", name) if shaped and not local else name
 
     def one_line(self, value: Any) -> str:
         return self._one_line(value)

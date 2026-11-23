@@ -188,14 +188,16 @@ async def test_dead_hub_is_restarted_and_noticed_once() -> None:
 
     assert loader.calls.count(("restart", HUB)) == 4
     restarted = [t for t in channel.texts if "restarted" in t]
-    assert len(restarted) == 1 and HUB in restarted[0]
+    # A unit label is shown as untrusted text: every dot bracketed (no client links it).
+    assert len(restarted) == 1 and HUB.replace(".", "\\[.\\]") in restarted[0]
 
     hub.up = True
     clock.now += 31
     await kept.probe(context())
     clock.now += 31
     await kept.probe(context())
-    assert [t for t in channel.texts if "running again" in t] == [f"`{HUB}` is running again."]
+    shown = HUB.replace(".", "\\[.\\]")
+    assert [t for t in channel.texts if "running again" in t] == [f"`{shown}` is running again."]
     await kept.stop()
 
 
@@ -642,7 +644,8 @@ async def test_a_unit_added_later_is_restarted_and_survives_a_later_manage() -> 
         await kept.probe(context())
 
         assert loader.calls == [("restart", searxng)]
-        assert any(searxng in text and "restarted" in text for text in channel.texts)
+        shown = searxng.replace(".", "\\[.\\]")
+        assert any(shown in text and "restarted" in text for text in channel.texts)
         await kept.stop()
     finally:
         del UNITS[searxng]

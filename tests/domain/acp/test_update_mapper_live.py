@@ -383,9 +383,6 @@ def test_a_bare_domain_is_defanged_like_a_full_url(raw: str, shown: str) -> None
     [
         "vibey.toml",
         "supervisor.env",
-        "dev.vibey.hub",
-        "dev.vibey.worker",
-        "dev.vibey.searxng",
         "hub.log",
         "a.json",
         "b.yaml",
@@ -403,9 +400,27 @@ def test_a_bare_domain_is_defanged_like_a_full_url(raw: str, shown: str) -> None
     ],
 )
 def test_vibeys_own_local_names_are_left_as_written(name: str) -> None:
-    """The one exception: a last label vibey's own files and units carry, none of them a
-    delegated top-level domain (`LOCAL_SUFFIXES`)."""
+    """The one exception: a two-label name whose last label is a suffix vibey's own files carry,
+    none of them a delegated top-level domain (`LOCAL_SUFFIXES`)."""
     assert MAPPER.untrusted(name, limit=400) == name.replace("_", "\\_")
+
+
+@pytest.mark.parametrize(
+    ("raw", "shown"),
+    [
+        # Review 1: the exemption never covers a host hidden before a local suffix.
+        ("evil.com.toml", "evil\\[.\\]com\\[.\\]toml"),
+        ("dev.vibey.hub", "dev\\[.\\]vibey\\[.\\]hub"),
+        # Unicode full stops a browser treats as dots are bracketed like one.
+        ("evil\u3002com", "evil\\[.\\]com"),
+        ("evil\uff0ecom", "evil\\[.\\]com"),
+        ("evil\uff61com", "evil\\[.\\]com"),
+        ("evil\u2024com", "evil\\[.\\]com"),
+        ("docs\u3002evil.co\uff0euk", "docs\\[.\\]evil\\[.\\]co\\[.\\]uk"),
+    ],
+)
+def test_no_host_hides_behind_a_local_suffix_or_another_full_stop(raw: str, shown: str) -> None:
+    assert MAPPER.untrusted(raw, limit=400) == shown
 
 
 def test_defanging_a_long_hostile_name_is_linear() -> None:
