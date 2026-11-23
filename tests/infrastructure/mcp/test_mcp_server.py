@@ -96,6 +96,9 @@ class _BrokenSettings:
     def load(self, path: Path) -> HubSettings:
         raise ConfigError("hub.agent_scopes", "bad config")
 
+    def load_trusted(self, user: Path, project: Path) -> HubSettings:
+        return self.load(user)
+
 
 def test_interfaces_are_satisfied() -> None:
     assert isinstance(HUB_GATEWAY, HubGatewayInterface)
@@ -619,7 +622,6 @@ def test_a_request_that_may_have_reached_the_hub_is_never_sent_again(
         config_path=lambda: toml,
         client=fake.factory,
         starter=lambda: started.append(True) or True,
-        user_config=lambda: tmp_path / "none.toml",
     )
     call = HubCall(
         tool="vibey_fetch",
@@ -638,14 +640,14 @@ def test_a_web_call_waits_longer_than_the_hubs_own_web_deadline(tmp_path: Path) 
     toml = tmp_path / "vibey.toml"
     toml.write_text(f"[hub]\nstate_dir = '{state}'\n")
     mine = tmp_path / "me.toml"
-    mine.write_text("[web]\ntimeout_seconds = 90\n")
+    mine.write_text(f"[hub]\nstate_dir = '{state}'\n[web]\ntimeout_seconds = 90\n")
     LocalTokenStore(state).record_serving(ServingRecord(host="127.0.0.1", port=8765, pid=1))
     fake = _FakeHttpClient()
     gw = HubGateway(
-        config_path=lambda: toml,
+        config_path=lambda: mine,
         client=fake.factory,
         starter=lambda: False,
-        user_config=lambda: mine,
+        project_config=lambda: tmp_path / "absent.toml",
         environ=lambda: {"VIBEY_SEARCH_TIMEOUT": "10"},
     )
     web = HubCall(tool="vibey_fetch", method="POST", route="/api/v1/web/fetch", open_world=True)
@@ -658,18 +660,17 @@ def test_a_web_call_waits_longer_than_the_hubs_own_web_deadline(tmp_path: Path) 
         config_path=lambda: toml,
         client=fake.factory,
         starter=lambda: False,
-        user_config=lambda: tmp_path / "none.toml",
         environ=lambda: {"VIBEY_SEARCH_TIMEOUT": "20"},
     )
     slow.call(web)
     assert fake.calls[-1]["timeout"] == 3 * 20.0 + 15.0
     # A [web] or search setting that cannot be read leaves the defaults, never a failure.
-    mine.write_text("[web]\ntimeout_seconds = 'x'\n")
+    mine.write_text(f"[hub]\nstate_dir = '{state}'\n[web]\ntimeout_seconds = 'x'\n")
     broken = HubGateway(
         config_path=lambda: toml,
         client=fake.factory,
         starter=lambda: False,
-        user_config=lambda: mine,
+        project_config=lambda: mine,
         environ=lambda: {"VIBEY_SEARCH_PROVIDER": "brave"},
     )
     broken.call(web)

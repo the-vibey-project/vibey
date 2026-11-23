@@ -40,6 +40,12 @@ At the same time, two architectural constraints from ADR-0068 and SD-01 bind eve
   by default; `[]` disables agent access completely). Because the hub enforces scopes per
   route and per gate kind, a host LLM cannot answer a spending gate (`budget_exhausted`,
   `deploy_*`) even if instructed to do so.
+- *Amended (SP-ACP Task 11a):* `vibey mcp` reads `[hub]` from the person's own `vibey.toml`
+  (their configuration folder), never from the folder the client opened: that folder may be a
+  cloned repository, and its `state_dir` would otherwise decide which agent token is presented
+  to which runtime record's address. The opened folder's `vibey.toml` is heard on
+  `agent_scopes` only, and only to narrow; a hub `vibey mcp` starts runs in the person's
+  configuration folder, as `vibey acp`'s does (ADR-0101).
 
 ### 2. `vibey mcp`, `vibey connect`, and the `vibey-chat-driver` skill
 

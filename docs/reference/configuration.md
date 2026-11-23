@@ -886,6 +886,13 @@ ones: with no `[hub]` table the hub listens on loopback only. An unknown key, or
 the wrong type, is refused rather than ignored, so a misspelt `lan` can never silently
 mean "not declared".
 
+`vibey serve` reads the `[hub]` of the folder it runs in. Everything that *sends* a hub
+credential or picks which hub to talk to -- `vibey mcp` and `vibey acp` -- reads `[hub]` from your own
+`vibey.toml`, in your configuration folder, never from the folder it runs in, which may be a
+cloned repository's. A folder's `vibey.toml` is heard there on `agent_scopes` only, and only to
+narrow it; its `state_dir` never decides where a token is read or which record is believed
+(SP-ACP Task 11a).
+
 | Key | Default | Meaning |
 |---|---|---|
 | `lan` | `false` | `true` declares that `vibey serve --host <LAN address>` may listen off loopback. Without it such an address is refused (exit 2), and `vibey doctor` fails a hub found listening on one. |

@@ -214,6 +214,9 @@ class _CountingSettings:
         self.loads += 1
         return HubSettings(agent_scopes=frozenset({HubScope.VIEW}))
 
+    def load_trusted(self, user: Path, project: Path) -> HubSettings:
+        return self.load(user)
+
 
 def test_the_agent_scopes_are_read_again_only_when_the_file_changes(tmp_path: Path) -> None:
     toml = tmp_path / "vibey.toml"

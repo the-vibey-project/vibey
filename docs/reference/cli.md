@@ -238,8 +238,14 @@ vibey mcp
 `vibey mcp` takes no options. It is a thin client of the local hub API (`/api/v1`) and
 authenticates with `<state_dir>/agent.token` as the scoped `agent` principal
 ([`[hub] agent_scopes`](configuration.md#hub): `view`, `answer`, `run`, `acp_sessions` and
-`web` by default — never `spend`, `bump` or `workflows`). If no hub is running when a tool is
-called, it runs `vibey hub start` once and retries. It exposes 16 tools (`vibey_projects`,
+`web` by default — never `spend`, `bump` or `workflows`). `[hub]` is read from your own
+`vibey.toml`, in your configuration folder (`~/Library/Application Support/vibey` on macOS,
+`$XDG_CONFIG_HOME/vibey` elsewhere): the state folder, so the agent token and the runtime
+record, and the ceiling on `agent_scopes`. The `vibey.toml` of the folder the client opened may
+be a cloned repository's, so it is heard on `agent_scopes` only, and only to narrow (what both
+grant is kept); its `state_dir` and every other `[hub]` key are ignored, and a `[hub]` there
+that cannot be read is refused. If no hub is running when a tool is called, it runs
+`vibey hub start` once, in your configuration folder, and retries. It exposes 16 tools (`vibey_projects`,
 `vibey_status`, `vibey_gates`, `vibey_answer_gate`, `vibey_budget`, `vibey_queue`,
 `vibey_ledger`, `vibey_loops`, `vibey_lanes`, `vibey_doctor`, `vibey_start_project`,
 `vibey_start_work`, `vibey_pause_work`, `vibey_abandon_project` where `dry_run` defaults to

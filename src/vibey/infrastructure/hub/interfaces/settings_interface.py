@@ -23,6 +23,12 @@ class HubSettingsLoaderInterface(Protocol):
         """`[hub]` from the vibey.toml at `path`. Raises `ConfigError` when malformed."""
         ...
 
+    def load_trusted(self, user: Path, project: Path) -> HubSettings:
+        """`[hub]` from the person's own vibey.toml at `user`, with `agent_scopes` narrowed by
+        the project's at `project` (never widened; no other project key is heard). Raises
+        `ConfigError` when either is malformed."""
+        ...
+
     def from_table(self, table: dict[str, Any]) -> HubSettings:
         """`[hub]` from an already-parsed table."""
         ...
