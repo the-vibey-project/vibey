@@ -1,9 +1,17 @@
 # Made with ❤️ by [Vibey](https://the-vibey-project.github.io/vibey/), Developed by [Adam Matthew Steinberger](https://vibewithadam.matthewsteinberger.com/) ([@adammatthewsteinberger](https://github.com/adammatthewsteinberger/)).
+import pytest
+
 from vibey.domain.interfaces import CredentialRedactorInterface
+from vibey.infrastructure.ledger.interfaces import (
+    CredentialShapeInterface,
+    SecretTextRedactorInterface,
+)
 from vibey.infrastructure.ledger.redact import (
     CREDENTIAL_REDACTOR,
     REDACTED,
     CredentialRedactor,
+    CredentialShape,
+    SecretTextRedactor,
     contains_secret,
     redact_payload,
 )
@@ -45,6 +53,103 @@ def test_bearer_token_is_redacted() -> None:
     payload = {"header": "Authorization: Bearer abcdefghij1234567890"}
     result = redact_payload(payload)
     assert "abcdefghij1234567890" not in result["header"]
+
+
+def test_a_bearer_token_that_opens_like_an_openai_key_is_replaced_whole() -> None:
+    # The Hypothesis counterexample to the planted-secret property (#1886): the `sk-` pattern
+    # used to run first and leave "Bearer [REDACTED]", after which the Bearer pattern could
+    # no longer match, so the scheme word and anything past the `sk-` run stayed behind.
+    text = "Bearer sk-" + "0" * 37 + " "
+    assert redact_payload({"t": text}) == {"t": f"{REDACTED} "}
+
+
+@pytest.mark.parametrize(
+    "secret",
+    [
+        "Bearer sk-AAAAAAAAAAAAAAAA.tokenpart2",
+        "Bearer AKIA0000000000000000moresecret",
+        "Bearer eyJaaaaaaaaaa.bbbbbbbbbb.cccccccccc.dddd",
+        "xoxb-abc-sk-AAAAAAAAAAAAAAAA-tail",
+        "eyJaaaaaaaaaa.sk-AAAAAAAAAAAAAAAA.cccccccccc",
+        "AIza" + "a" * 8 + "sk-" + "B" * 16 + "c" * 8,
+    ],
+)
+def test_no_byte_of_a_secret_survives_a_shorter_pattern_matching_inside_it(secret: str) -> None:
+    # Each credential holds a shorter vendor shape inside it. Replacing the shorter match
+    # first used to break the longer pattern's match, so the bytes past it survived.
+    assert redact_payload({"t": f"x {secret} y"}) == {"t": f"x {REDACTED} y"}
+
+
+@pytest.mark.parametrize(
+    "glued",
+    [
+        "sk-" + "A" * 16 + "sk-" + "B" * 16,
+        "ghp_" + "a" * 36 + "ghp_" + "b" * 36,
+        "AIza" + "x" * 31 + "AKIA" + "AKIA" + "C" * 16,
+        "Bearer abcdefghijBearer klmnopqrstuv",
+    ],
+)
+def test_a_secret_glued_to_the_one_before_it_is_redacted_to_its_last_byte(glued: str) -> None:
+    # The second credential's prefix starts inside the first one's match, so scanning on
+    # from where that match ended skipped it, and its body survived whole.
+    assert redact_payload({"t": f"x {glued} y"}) == {"t": f"x {REDACTED} y"}
+
+
+def test_secrets_that_only_touch_are_still_replaced_one_by_one() -> None:
+    text = "AKIA" + "A" * 16 + "AKIA" + "B" * 16
+    assert redact_payload({"t": text}) == {"t": REDACTED + REDACTED}
+
+
+def test_the_secret_text_redactor_takes_its_shapes_as_configuration() -> None:
+    needle = CredentialShape("needle", (("", "0-9", 2, 3),))
+    redactor = SecretTextRedactor((needle,))
+    assert isinstance(redactor, SecretTextRedactorInterface)
+    assert isinstance(needle, CredentialShapeInterface)
+    key = "sk-" + "A" * 16
+    assert redactor.redact(f"a needle12, needle7, {key}") == f"a {REDACTED}, needle7, {key}"
+    assert redactor.redact("needle12345") == f"{REDACTED}45"  # a run is capped at its maximum
+    assert SecretTextRedactor(()).redact("Bearer abcdefghijkl") == "Bearer abcdefghijkl"
+    assert SecretTextRedactor().redact(f"a needle12, {key}") == f"a needle12, {REDACTED}"
+    assert SecretTextRedactor().spans(f"{key} and {key}{key}") == [(0, 19), (24, 62)]
+
+
+@pytest.mark.parametrize(
+    ("prefix", "segments", "complaint"),
+    [
+        ("a+", (("", "0-9", 1, None),), "bounded"),
+        ("(sk)-", (("", "0-9", 1, None),), "bounded"),
+        ("sk|ak", (("", "0-9", 1, None),), "bounded"),
+        ("", (("", "0-9", 1, None),), "bounded"),
+        ("x\\[", (("", "0-9", 1, None),), "bracket"),
+        ("x[^a]", (("", "0-9", 1, None),), "bracket"),
+        ("key", (("", "0-9\\]", 1, None),), "bracket"),
+        ("key", (("", "0-9", 1, None), ("[", "a-z", 1, None)), "bracket"),
+        ("key", (("", "0-9", -1, None),), "minimum"),
+        ("key", (("", "0-9", 4, 3),), "maximum"),
+        ("key", (("", "0-9.", 1, None), (".", "a-z", 1, None)), "separator"),
+        ("key", (("", "a-z", 1, None), ("", "x-z0-9", 1, None)), "share"),
+        # `\s` and `\w` are disjoint over every code point; then `\w` and `a` share one.
+        ("key", (("", "\\s", 1, None), ("", "\\w", 1, None), ("", "a", 1, None)), "share"),
+        ("RED", (("", "A-Z", 1, None),), "marker"),
+    ],
+)
+def test_a_shape_the_matcher_cannot_honour_is_refused_when_it_is_made(
+    prefix: str, segments: tuple[tuple[str, str, int, int | None], ...], complaint: str
+) -> None:
+    with pytest.raises(ValueError, match=complaint):
+        CredentialShape(prefix, segments)
+
+
+def test_every_default_shape_passes_its_own_checks() -> None:
+    for shape in SecretTextRedactor.DEFAULT_SHAPES:
+        assert CredentialShape(shape.prefix, shape.segments) == shape
+
+
+def test_a_shape_needs_every_separator_and_every_run_minimum() -> None:
+    jwt = "eyJ" + "a" * 10 + "." + "b" * 10 + "." + "c" * 10
+    assert redact_payload({"t": jwt}) == {"t": REDACTED}
+    assert redact_payload({"t": jwt.replace(".", "_", 1)}) == {"t": jwt.replace(".", "_", 1)}
+    assert redact_payload({"t": jwt[:-1]}) == {"t": jwt[:-1]}
 
 
 def test_nested_mapping_is_redacted() -> None:

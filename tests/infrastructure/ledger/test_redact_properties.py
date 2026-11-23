@@ -3,14 +3,18 @@
 
 Idempotent: redacting what was redacted changes nothing, so a payload redacted on write
 and again on export is the same payload. Total: a secret at any nesting is gone, whatever
-the container it sits in. Exact: a payload that holds no secret comes back equal, so
-redaction never alters text it had no business touching.
+the container it sits in, and every byte of it is gone, even where credential shapes
+overlap or one credential is glued to the next. Order-free: the order the patterns are
+tried in never changes the result. Exact: a payload that holds no secret comes back equal,
+so redaction never alters text it had no business touching.
 
 Only string VALUES are scanned for secret patterns; a secret in a dictionary KEY is not
 redacted by redact_payload, and is out of scope here (keys are drawn from digits and spaces).
 """
 
-from hypothesis import given
+import re
+
+from hypothesis import example, given
 from hypothesis import strategies as st
 
 from tests.ledger_strategies import (
@@ -20,7 +24,12 @@ from tests.ledger_strategies import (
     json_payloads,
     plain_payloads,
 )
-from vibey.infrastructure.ledger.redact import REDACTED, contains_secret, redact_payload
+from vibey.infrastructure.ledger.redact import (
+    REDACTED,
+    SecretTextRedactor,
+    contains_secret,
+    redact_payload,
+)
 
 _ALNUM = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
 _B64URL = _ALNUM + "_-"
@@ -104,6 +113,9 @@ def test_redacting_twice_is_redacting_once(payload: dict[str, object]) -> None:
 
 
 @given(planted=_planted())
+# The counterexample Hypothesis found (#1886 follow-up): a Bearer token whose tail opens like
+# an `sk-` key. The `sk-` pattern ran first and left "Bearer [REDACTED]".
+@example(planted=({"planted": "Bearer sk-" + "0" * 37 + " "}, "", " ", "Bearer sk-" + "0" * 37))
 def test_a_planted_secret_is_replaced_whole_and_nothing_else_is_touched(
     planted: tuple[dict[str, object], str, str, str],
 ) -> None:
@@ -114,6 +126,128 @@ def test_a_planted_secret_is_replaced_whole_and_nothing_else_is_touched(
     assert before + REDACTED + after in _leaves(redacted)
     assert secret not in repr(redacted)
     assert not contains_secret(redacted)
+
+
+@st.composite
+def _secret_soup(draw: st.DrawFn) -> tuple[str, list[tuple[int, int]]]:
+    """Secrets and plain words glued together with no separator, so one secret's text can
+    run into the next and the shapes overlap. Returns the text and where each secret sits."""
+    parts = draw(
+        st.lists(
+            st.one_of(
+                _SECRETS.map(lambda secret: (secret, True)),
+                PLAIN_WORDS.map(lambda word: (word, False)),
+            ),
+            max_size=4,
+        )
+    )
+    text, where = "", []
+    for part, is_secret in parts:
+        if is_secret:
+            where.append((len(text), len(text) + len(part)))
+        text += part
+    return text, where
+
+
+def _glued(*parts: str) -> tuple[str, list[tuple[int, int]]]:
+    starts = [sum(len(part) for part in parts[:index]) for index in range(len(parts))]
+    return "".join(parts), [
+        (start, start + len(part)) for start, part in zip(starts, parts, strict=True)
+    ]
+
+
+# The order of the shapes is not a parameter here: the redactor merges every shape's
+# matches in start order, so order-independence holds by construction and a permutation
+# check would prove nothing. What can go wrong is coverage, checked byte by byte.
+@given(soup=_secret_soup())
+@example(soup=_glued("Bearer sk-" + "0" * 37))
+@example(soup=_glued("sk-" + "A" * 16, "sk-" + "B" * 16))
+def test_every_byte_of_every_secret_is_replaced(
+    soup: tuple[str, list[tuple[int, int]]],
+) -> None:
+    text, secrets = soup
+    redactor = SecretTextRedactor()
+    spans = redactor.spans(text)
+    for start, stop in secrets:
+        assert any(low <= start and stop <= high for low, high in spans), text[start:stop]
+    redacted = redactor.redact(text)
+    assert redactor.redact(redacted) == redacted
+
+
+_ORACLE_PATTERNS = (
+    re.compile(r"sk-[A-Za-z0-9]{16,}"),
+    re.compile(r"AKIA[0-9A-Z]{16}"),
+    re.compile(r"ghp_[A-Za-z0-9]{36,}"),
+    re.compile(r"xox[baprs]-[A-Za-z0-9-]{10,}"),
+    re.compile(r"AIza[0-9A-Za-z_-]{35}"),
+    re.compile(r"eyJ[A-Za-z0-9_-]{10,}\.[A-Za-z0-9_-]{10,}\.[A-Za-z0-9_-]{10,}"),
+    re.compile(r"Bearer\s+[A-Za-z0-9._-]{10,}"),
+)
+"""The credential regexes the shapes replaced, kept here as the specification."""
+
+
+def _oracle_spans(text: str) -> list[tuple[int, int]]:
+    """What the shapes must redact, by brute force: every regex tried at every start, the
+    overlapping matches merged. Quadratic, so only fit for short test strings."""
+    found = sorted(
+        match.span()
+        for pattern in _ORACLE_PATTERNS
+        for start in range(len(text))
+        if (match := pattern.match(text, start)) is not None
+    )
+    merged: list[tuple[int, int]] = []
+    for start, stop in found:
+        if merged and start < merged[-1][1]:
+            merged[-1] = (merged[-1][0], max(merged[-1][1], stop))
+        else:
+            merged.append((start, stop))
+    return merged
+
+
+_LOOK_ALIKES = [
+    "\u00a0",  # no-break space: whitespace to `\s`
+    "\u2028",  # line separator: whitespace to `\s`
+    "\x85",  # next line: whitespace to `\s`
+    "\x1c",  # file separator: whitespace to `\s`
+    "\u3000",  # ideographic space: whitespace to `\s`
+    "\u200b",  # zero-width space: NOT whitespace to `\s`
+    "\uff11",  # fullwidth digit one: not in any ASCII class
+    "\u0661",  # Arabic-Indic digit one: not in any ASCII class
+    "\u212a",  # Kelvin sign, a K look-alike
+]
+"""Characters at the edges of the shapes' classes, so the `\\s` and ASCII-only boundaries
+stay pinned to what the regexes did."""
+
+_SHAPE_ALPHABET = st.sampled_from(
+    ["sk-", "AKIA", "ghp_", "xoxb-", "xoxz-", "AIza", "eyJ", "Bearer", " ", "\t", ".", "-", "_"]
+    + _LOOK_ALIKES
+) | st.text(alphabet="aA0zZ9.-_ \t" + "".join(_LOOK_ALIKES), min_size=1, max_size=20)
+
+
+@given(
+    text=st.one_of(
+        _secret_soup().map(lambda soup: soup[0]),
+        st.lists(_SHAPE_ALPHABET | _SECRETS, max_size=8).map("".join),
+    )
+)
+@example(
+    text="eyJ"
+    + "a" * 10
+    + "."
+    + "b" * 10
+    + "."
+    + "eyJ"
+    + "c" * 10
+    + "."
+    + "d" * 10
+    + "."
+    + "e" * 10
+)
+@example(text="Bearer \t\n " + "a" * 12 + "Bearer " + "b" * 10)
+def test_the_shapes_redact_exactly_what_the_credential_regexes_match_at_every_start(
+    text: str,
+) -> None:
+    assert SecretTextRedactor().spans(text) == _oracle_spans(text)
 
 
 _NEAR_MISSES = [
