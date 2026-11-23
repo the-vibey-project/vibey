@@ -33,9 +33,11 @@ from vibey_runners.common.capabilities.interfaces.file_reader_interface import (
 from vibey_runners.common.capabilities.interfaces.git_folder_guard_interface import (
     GitFolderGuardInterface,
 )
+from vibey_runners.common.capabilities.interfaces.path_probe_interface import PathProbeInterface
 from vibey_runners.common.capabilities.manifest_error import ManifestError
 from vibey_runners.common.capabilities.marketplace_catalog import MarketplaceCatalog
 from vibey_runners.common.capabilities.names import NAME_PATTERN
+from vibey_runners.common.capabilities.path_probe import DIR, FILE, PathProbe
 from vibey_runners.common.capabilities.plugin_entry import PluginEntry
 
 MANIFEST_PATH: Final = PurePosixPath(".claude-plugin") / "marketplace.json"
@@ -55,20 +57,22 @@ class MarketplaceManifest:
         self,
         reader: FileReaderInterface | None = None,
         guard: GitFolderGuardInterface | None = None,
+        probe: PathProbeInterface | None = None,
     ) -> None:
         self._reader = reader or BoundedFileReader()
         self._guard = guard or GitFolderGuard()
+        self._probe = probe or PathProbe()
 
     def read(self, root: Path) -> MarketplaceCatalog:
-        base = root.resolve()
-        if not base.is_dir():
+        base = self._probe.real(root)
+        if not self._probed(base, f"the marketplace folder {root}", DIR):
             raise ManifestError(f"the marketplace folder {root} does not exist")
-        manifest = (base / MANIFEST_PATH).resolve()
+        manifest = self._probe.real(base / MANIFEST_PATH)
         if not manifest.is_relative_to(base):
             raise ManifestError(f"{root}: {MANIFEST_PATH} resolves outside the marketplace")
         if self._guard.inside(base, manifest):
             raise ManifestError(f"{root}: {MANIFEST_PATH} resolves {INSIDE_GIT}")
-        if not manifest.is_file():
+        if not self._probed(manifest, f"{root}: {MANIFEST_PATH}", FILE):
             raise ManifestError(f"{root} has no {MANIFEST_PATH}")
         document = self._document(manifest)
         plugins: dict[str, PluginEntry] = {}
@@ -82,11 +86,19 @@ class MarketplaceManifest:
                 skipped.append((name, REMOTE_SOURCE))
                 continue
             directory = self._folder(base, source, f"{where} ({name})")
-            if not directory.is_dir():
+            if not self._probed(directory, f"{where} ({name}): its folder", DIR):
                 skipped.append((name, MISSING_FOLDER))
                 continue
             plugins[name] = PluginEntry(name, directory, description)
         return MarketplaceCatalog(MappingProxyType(plugins), tuple(skipped))
+
+    def _probed(self, path: Path, what: str, kind: str) -> bool:
+        """Whether `path` is a `kind`. A path the file system will not let it look at (a folder
+        that cannot be searched) is a `ManifestError`, the same on every Python, never "missing"."""
+        try:
+            return self._probe.kind(path) == kind
+        except OSError as exc:
+            raise ManifestError(f"{what} cannot be read: {exc}") from exc
 
     def _document(self, manifest: Path) -> object:
         try:
@@ -101,6 +113,8 @@ class MarketplaceManifest:
             return json.loads(text)
         except ValueError as exc:
             raise ManifestError(f"{manifest} is not JSON: {exc}") from exc
+        except RecursionError as exc:  # deep enough nesting exhausts json's recursion
+            raise ManifestError(f"{manifest} is not JSON: nested too deeply") from exc
 
     @staticmethod
     def _entries(document: object, manifest: Path) -> Sequence[Mapping[str, object]]:
@@ -135,7 +149,7 @@ class MarketplaceManifest:
             raise ManifestError(f"{where}: source {source!r} is absolute")
         if ".." in relative.parts:
             raise ManifestError(f"{where}: source {source!r} climbs out of the marketplace")
-        directory = (base / relative).resolve()
+        directory = self._probe.real(base / relative)
         if not directory.is_relative_to(base):
             raise ManifestError(f"{where}: its folder resolves outside the marketplace")
         if self._guard.inside(base, directory):

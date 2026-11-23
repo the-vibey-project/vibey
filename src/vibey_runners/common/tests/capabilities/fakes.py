@@ -1,9 +1,15 @@
 # Made with ❤️ by [Vibey](https://the-vibey-project.github.io/vibey/), Developed by [Adam Matthew Steinberger](https://vibewithadam.matthewsteinberger.com/) ([@adammatthewsteinberger](https://github.com/adammatthewsteinberger/)).
-"""Fakes for the capability tests: a reader that records what it was asked to read."""
+"""Fakes for the capability tests: a reader that records what it was asked to read, and a folder
+made readable but not searchable."""
 
 from __future__ import annotations
 
+import os
+from collections.abc import Iterator
+from contextlib import contextmanager
 from pathlib import Path
+
+import pytest
 
 from vibey_runners.common.capabilities.file_reader import BoundedFileReader
 
@@ -25,3 +31,34 @@ class RecordingReader:
 
     def open_regular(self, path: Path) -> int:
         return self._real.open_regular(path)
+
+
+@contextmanager
+def unsearchable(folder: Path) -> Iterator[Path]:
+    """`folder` at mode 0600 (its names can be listed, nothing in it can be looked at) for the
+    block; skipped where that does not bind this process (the superuser, or a file system that
+    does not enforce modes). The case Python 3.12 and 3.14's pathlib answer differently."""
+    if hasattr(os, "geteuid") and os.geteuid() == 0:  # pragma: no cover - root ignores modes
+        pytest.skip("permissions do not bind the superuser")
+    folder.chmod(0o600)
+    try:
+        try:
+            os.stat(folder / "probe")
+        except PermissionError:
+            pass
+        except FileNotFoundError:  # pragma: no cover - modes not enforced here
+            pytest.skip("this file system does not enforce folder permissions")
+        yield folder
+    finally:
+        folder.chmod(0o700)
+
+
+def symlink_loop(path: Path) -> Path:
+    """`path` as a symlink to itself: a loop every Python's `stat` meets as ELOOP, which 3.12's
+    `Path.resolve()` raised as `RuntimeError` and later versions do not. Skipped where symlinks
+    cannot be made."""
+    try:
+        path.symlink_to(path.name)
+    except (OSError, NotImplementedError):  # pragma: no cover - only where links cannot be made
+        pytest.skip("this operating system cannot create a symlink here")
+    return path

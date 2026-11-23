@@ -270,7 +270,11 @@ include = [
 # tenants that already used it: content that must land somewhere it does not live. The
 # plugins tree has to stay at the repository root because Claude Code requires
 # `.claude-plugin/marketplace.json` there, and vibey-gh's release assets are documentation
-# sources served as package data.
+# sources served as package data. In the wheel the plugins tree and its manifest land together
+# in `vibey_skills/marketplace/`, laid out as a marketplace (`.claude-plugin/marketplace.json`
+# beside `plugins/`) and holding nothing else: it is the default marketplace a run locks by
+# content (SP-LOOPS, design Decision 1), so no Python module may live in it to write
+# `__pycache__` into the locked tree (tests/meta/test_wheel_ships_default_marketplace.py).
 [tool.hatch.build.targets.wheel]
 packages = [
     "src/vibey",
@@ -305,8 +309,8 @@ packages = [
 "src/vibey_tools/skills/src/vibey_skills" = "vibey_skills"
 
 [tool.hatch.build.targets.wheel.force-include]
-"src/vibey_tools/skills/plugins" = "vibey_skills/plugins"
-"src/vibey_tools/skills/.claude-plugin/marketplace.json" = "vibey_skills/marketplace.json"
+"src/vibey_tools/skills/plugins" = "vibey_skills/marketplace/plugins"
+"src/vibey_tools/skills/.claude-plugin/marketplace.json" = "vibey_skills/marketplace/.claude-plugin/marketplace.json"
 "src/vibey_tools/gh/docs/stylesheets/vibey.css" = "vibey_gh/templates/release/vibey.css"
 "src/vibey_tools/gh/docs/javascripts/channel.js" = "vibey_gh/templates/release/channel.js"
 "src/vibey_tools/gh/docs/javascripts/math.js" = "vibey_gh/templates/release/math.js"

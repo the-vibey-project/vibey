@@ -120,10 +120,12 @@ packages = ["src/vibey_skills"]
 # The plugins tree must stay at the repo root — Claude Code requires
 # .claude-plugin/marketplace.json there with `source: ./plugins/<name>`. Rather than
 # duplicating 826 skill files into src/, the wheel maps the root tree in at build time,
-# so there is exactly one source of truth on disk.
+# so there is exactly one source of truth on disk. Both land in `vibey_skills/marketplace/`,
+# laid out as a marketplace and holding nothing else, the same layout vibey-engine's wheel
+# uses (its pyproject.toml says why).
 [tool.hatch.build.targets.wheel.force-include]
-"plugins" = "vibey_skills/plugins"
-".claude-plugin/marketplace.json" = "vibey_skills/marketplace.json"
+"plugins" = "vibey_skills/marketplace/plugins"
+".claude-plugin/marketplace.json" = "vibey_skills/marketplace/.claude-plugin/marketplace.json"
 
 [tool.hatch.build.targets.sdist]
 include = [

@@ -9,13 +9,14 @@ import os
 from pathlib import Path
 
 import pytest
-from fakes import RecordingReader
+from fakes import RecordingReader, symlink_loop, unsearchable
 
 from vibey_runners.common.capabilities.git_folder_guard import GitFolderGuard
 from vibey_runners.common.capabilities.interfaces.skill_index_interface import (
     SkillIndexInterface,
 )
 from vibey_runners.common.capabilities.manifest import MarketplaceManifest
+from vibey_runners.common.capabilities.skill_catalog import SkillCatalog
 from vibey_runners.common.capabilities.skill_entry import SkillEntry
 from vibey_runners.common.capabilities.skill_index import (
     INSIDE_GIT,
@@ -380,3 +381,52 @@ def test_a_skills_folder_that_cannot_be_listed_is_skipped_not_raised(tmp_path: P
         assert path == plugin and reason.startswith("cannot be read")
     finally:
         folder.chmod(0o700)
+
+
+def test_a_plugin_folder_that_cannot_be_looked_at_is_a_named_row(tmp_path: Path) -> None:
+    plugin = _plugin(tmp_path)
+    _skill(plugin, "lint", VALID.format(name="lint"))
+    with unsearchable(plugin.parent):
+        catalog = SkillIndex().build([plugin])
+    assert catalog.skills == ()
+    ((path, reason),) = catalog.skipped
+    assert path == plugin and reason.startswith("cannot be read")
+
+
+def test_a_plugin_whose_skills_cannot_be_searched_is_a_named_row_not_silence(
+    tmp_path: Path,
+) -> None:
+    plugin = _plugin(tmp_path)
+    _skill(plugin, "lint", VALID.format(name="lint"))
+    with unsearchable(plugin):
+        catalog = SkillIndex().build([plugin])
+    assert catalog.skills == ()
+    ((path, reason),) = catalog.skipped
+    assert path == plugin and reason.startswith("cannot be read")
+
+
+# -- a symlink loop: the same answer on Python 3.12, 3.13 and 3.14 ----------------------------
+
+
+def test_a_plugin_folder_that_is_a_symlink_loop_is_one_named_row(tmp_path: Path) -> None:
+    (tmp_path / "plugins").mkdir()
+    plugin = symlink_loop(tmp_path / "plugins" / "loop")
+    catalog = SkillIndex().build([plugin])
+    assert catalog.skills == ()
+    assert catalog.skipped == ((plugin, "the plugin folder does not exist"),)
+
+
+def test_a_skills_folder_that_is_a_symlink_loop_holds_no_skills(tmp_path: Path) -> None:
+    plugin = _plugin(tmp_path)
+    symlink_loop(plugin / "skills")
+    assert SkillIndex().build([plugin]) == SkillCatalog((), ())
+
+
+def test_a_skill_file_that_is_a_symlink_loop_is_no_skill_file(tmp_path: Path) -> None:
+    plugin = _plugin(tmp_path)
+    folder = plugin / "skills" / "lint"
+    folder.mkdir(parents=True)
+    symlink_loop(folder / "SKILL.md")
+    catalog = SkillIndex().build([plugin])
+    assert catalog.skills == ()
+    assert catalog.skipped == ((folder, "has no SKILL.md"),)

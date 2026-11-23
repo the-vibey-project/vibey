@@ -68,7 +68,7 @@ retrieval quality. The full design, hardening notes, and evaluation methodology 
 
 ```bash
 vibey-skills path          # the packaged plugins/ root
-vibey-skills marketplace   # the packaged marketplace.json, for /plugin marketplace add
+vibey-skills marketplace   # the packaged marketplace folder, for /plugin marketplace add <folder>
 ```
 
 ## Programmatic use

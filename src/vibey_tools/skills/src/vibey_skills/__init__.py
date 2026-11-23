@@ -10,11 +10,15 @@ exactly one copy of every skill file.
 
 That means the data lives in two different places depending on how the code is running:
 
-* installed from a wheel  -> ``<site-packages>/vibey_skills/plugins``
-* run from a source checkout -> ``<repo-root>/plugins``
+* installed from a wheel  -> ``<site-packages>/vibey_skills/marketplace/`` (``plugins/`` and
+  ``.claude-plugin/marketplace.json``, and nothing else)
+* run from a source checkout -> ``<repo-root>/`` (the same two, beside this tenant's sources)
 
-:func:`plugins_root` and :func:`marketplace_manifest` resolve both, so the CLI works either
-way without the caller caring.
+:func:`marketplace_root` resolves both, and :func:`plugins_root` and
+:func:`marketplace_manifest_path` are inside it, so the CLI works either way without the caller
+caring. The installed folder holds no Python module on purpose: vibey locks the default
+marketplace by the content of that folder (SP-LOOPS), and an import would write
+``__pycache__`` into it.
 """
 
 from __future__ import annotations
@@ -33,12 +37,14 @@ __all__ = [
     "iter_skills",
     "marketplace_manifest",
     "marketplace_manifest_path",
+    "marketplace_root",
     "plugins_root",
 ]
 
 _PACKAGE_DIR = Path(__file__).resolve().parent
 # From src/vibey_skills/__init__.py, the repo root is three levels up.
 _REPO_ROOT = _PACKAGE_DIR.parent.parent
+_MANIFEST = Path(".claude-plugin") / "marketplace.json"
 
 
 @dataclass(frozen=True)
@@ -56,41 +62,35 @@ class Skill:
         return self.path.parent
 
 
-def plugins_root() -> Path:
-    """Return the directory holding the plugin tree.
+# Module-level, like every public name here: this package's API is functions
+# (`vibey_skills.plugins_root()`, documented in docs/usage.md), and these three share one rule.
+def marketplace_root() -> Path:
+    """Return the marketplace folder: ``.claude-plugin/marketplace.json`` beside ``plugins/``.
 
     Prefers the packaged copy (``importlib.resources`` semantics via ``__file__``, which is
     correct for a normal wheel install), and falls back to the repository root so the CLI
-    behaves identically from a source checkout.
+    behaves identically from a source checkout. Only the packaged folder is the marketplace
+    and nothing else; a checkout's root also holds this tenant's sources and tests.
     """
-    packaged = _PACKAGE_DIR / "plugins"
-    if packaged.is_dir():
-        return packaged
-
-    source = _REPO_ROOT / "plugins"
-    if source.is_dir():
-        return source
+    packaged = _PACKAGE_DIR / "marketplace"
+    for root in (packaged, _REPO_ROOT):
+        if (root / _MANIFEST).is_file() and (root / "plugins").is_dir():
+            return root
 
     raise FileNotFoundError(
-        "vibey-skills: could not locate the plugins directory in either "
-        f"{packaged} or {source}. The installation looks incomplete."
+        "vibey-skills: could not locate the marketplace (.claude-plugin/marketplace.json and "
+        f"plugins/) in either {packaged} or {_REPO_ROOT}. The installation looks incomplete."
     )
+
+
+def plugins_root() -> Path:
+    """Return the directory holding the plugin tree, inside :func:`marketplace_root`."""
+    return marketplace_root() / "plugins"
 
 
 def marketplace_manifest_path() -> Path:
     """Return the path to ``marketplace.json`` for ``/plugin marketplace add``."""
-    packaged = _PACKAGE_DIR / "marketplace.json"
-    if packaged.is_file():
-        return packaged
-
-    source = _REPO_ROOT / ".claude-plugin" / "marketplace.json"
-    if source.is_file():
-        return source
-
-    raise FileNotFoundError(
-        "vibey-skills: could not locate marketplace.json in either "
-        f"{packaged} or {source}. The installation looks incomplete."
-    )
+    return marketplace_root() / _MANIFEST
 
 
 def marketplace_manifest() -> dict[str, Any]:
