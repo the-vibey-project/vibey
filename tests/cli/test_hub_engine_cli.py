@@ -443,3 +443,16 @@ def test_start_launches_the_hub_in_the_persons_configuration_folder(tmp_path: Pa
     command, processes, *_ = _setup(tmp_path)
     command.start(15)
     assert processes.cwd == [tmp_path]  # the folder holding the vibey.toml it read
+
+
+def test_start_never_takes_a_stale_record_for_the_hub_it_launched(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """While it waits, a record whose lock nobody holds is never the new hub, said or not."""
+    command, processes, store, _ = _setup(tmp_path)
+    store.record_serving(ServingRecord("127.0.0.1", 8765, 5))
+    processes.spawn_mode = "dies"
+    assert _exit(lambda: command.start(15)) == 1
+    captured = capsys.readouterr()
+    assert captured.out.count("stale record from pid 5") == 1  # said once, before the start
+    assert "exited before it was ready" in captured.err
