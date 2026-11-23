@@ -10,6 +10,17 @@
 
 **Spec:** `docs/superpowers/specs/2026-11-22-uniform-loop-capabilities-design.md` (Goals 1 and 4, Decisions 1, 3, 5 and 6). Parent plans: `docs/superpowers/plans/2026-11-22-sp-loops-uniform-loop-capabilities.md`, `docs/superpowers/plans/2026-11-23-sp-loops-phase3-input-set.md`. Phase 3 report: `.superpowers/sdd/2026-11-23-sp-loops-phase3/task-1-6-report.md` (loops-p3 worktree), concern 2 and the N7 limit. Handoff law: `docs/plans/handoff-protocol.md` §4.1, §6 and §9; ADR-0004.
 
+## Operator rulings (approved 2026-11-23)
+
+The operator approved the recommended option for each ruling below. Tasks that waited on them are now unblocked.
+
+- **OR-1 (scope): approved.** `"seaweedfs"` is an opt-in store; `local` stays the default. ADR-0105 amends spec Decisions 5 and 6 for store reads only: a run may read its inputs over the network from an endpoint the person configured. Nothing else in the one-machine scope changes.
+- **OR-2 (canon): approved.** SeaweedFS is a sibling of Garage, not a replacement. The 8.b amendment is drafted in the ADR-0105 PR and takes effect only when the operator merges it (sub-doctrine ratification, Article II.3).
+- **OR-3 (authentication): approved.** S3 SigV4 through the family's existing signer.
+- **OR-4 (marketplace): approved.** All 157 plugins ship in every install, including the four `vibey-gh-*` plugins. The shipped manifest is renamed from `vibey-skills` to `vibey`. Changing what installed users see is accepted.
+- **OR-5 (gate rule): approved.** The input pin is a handoff check, not a gate rule. R11 waits for a WARN mode.
+- **Task 7 (ACP `/input` intake): open.** Not ruled. Choose a hub route or a local write from `vibey acp`. This plan does not depend on it.
+
 ## Global Constraints
 
 - The project's `vibey.toml` is untrusted: marketplaces, plugins and MCP servers come only from the person's own configuration (`user_config_path("vibey")/vibey.toml`); a project may only narrow.
