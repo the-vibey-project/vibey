@@ -18,7 +18,8 @@ class CapabilityResolverInterface(Protocol):
         self, bundle: BundleSpecInterface, lock: Sequence[LockEntry], roots: Mapping[str, Path]
     ) -> CapabilitySnapshot:
         """The snapshot of `bundle` for one run. `lock` is what the person's lock file holds (a
-        missing file is no entries); `roots` maps each marketplace name to its folder on disk, an
+        missing file is no entries): read it from the same file the resolver was built with,
+        which is where the shipped marketplace writes its own entry; `roots` maps each marketplace name to its folder on disk, an
         absolute path from the person's own folders -- never a project's, and never the
         bundle's `source`. Only the marketplaces the enabled plugins come from are read. Raises
         `UnlockedMarketplaceError` for a person-added marketplace with no lock entry,

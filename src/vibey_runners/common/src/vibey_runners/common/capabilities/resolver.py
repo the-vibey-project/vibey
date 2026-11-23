@@ -13,9 +13,14 @@ never fetches or locks one); an entry that pins another source or ref than `[loo
 tree whose digest differs from the entry's, raises `LockMismatchError`. The shipped marketplace
 (`DEFAULT_MARKETPLACE_NAME`, the copy in the installed wheel) locks itself the first time it is
 used: its digest is written to the person's lock file beside every other entry. It locks itself
-again only when the shipped copy is a new one -- `shipped_source` names the installed release, so
-an upgrade is a new source, while the same source with other content is a mismatch. The name is
-reserved, so a network marketplace can never take this path.
+again only when the shipped copy is a new one -- `shipped_source`, which the caller must give,
+names the installed release, so an upgrade is a new source, while the same source with other
+content is a mismatch. The name is reserved, so a network marketplace can never take this path.
+The shipped digest is scoped (`CapabilityLock.tree_records(root, within)`): the manifest and every
+plugin folder it lists, never Python bytecode, so a source checkout (whose marketplace folder also
+holds sources and tests), an installed wheel and a tree an import wrote `__pycache__` into all lock
+alike. A person-added marketplace is hashed whole, and its manifest is not read before its lock
+matches.
 
 **The copy.** Checking a tree and then loading from it leaves a window (`O_NOFOLLOW` guards only a
 path's last component), so a run never loads from a marketplace folder. The manifest and each
@@ -34,7 +39,8 @@ plugins share goes to the first in bundle order and the later one is a skipped r
 are made one safe line and capped at `description_limit` characters, and skipped reasons likewise
 (`SafeText`).
 
-On any failure the run's folder is removed. Declared by
+On any failure the run's folder is removed, and only `CapabilityResolutionError` (and its two
+subclasses) escapes: a plain `ValueError` from a collaborator is wrapped. Declared by
 `interfaces/resolver_interface.py::CapabilityResolverInterface`.
 """
 
@@ -52,10 +58,7 @@ from vibey_runners.common.capabilities.bundle_error import BundleError
 from vibey_runners.common.capabilities.capability_resolution_error import (
     CapabilityResolutionError,
 )
-from vibey_runners.common.capabilities.defaults import (
-    DEFAULT_MARKETPLACE_NAME,
-    DEFAULT_MARKETPLACE_SOURCE,
-)
+from vibey_runners.common.capabilities.defaults import DEFAULT_MARKETPLACE_NAME
 from vibey_runners.common.capabilities.interfaces.bundle_interface import BundleSpecInterface
 from vibey_runners.common.capabilities.interfaces.lock_interface import CapabilityLockInterface
 from vibey_runners.common.capabilities.interfaces.manifest_interface import (
@@ -126,7 +129,7 @@ class CapabilityResolver:
         lock_path: Path,
         snapshots: Path,
         *,
-        shipped_source: str = DEFAULT_MARKETPLACE_SOURCE,
+        shipped_source: str,
         locker: CapabilityLockInterface | None = None,
         manifest: MarketplaceManifestInterface | None = None,
         skills: SkillIndexInterface | None = None,
@@ -184,9 +187,11 @@ class CapabilityResolver:
                 links.extend(skipped)
             plugin_dirs = tuple(located[(p.marketplace, p.name)] for p in plugins)
             skills = self._catalog(self._skills.build(plugin_dirs), bundle.disabled, links)
-        except BaseException:
+        except BaseException as exc:
             if run is not None:
                 shutil.rmtree(run, ignore_errors=True)  # an unverified copy is never left behind
+            if isinstance(exc, ValueError) and not isinstance(exc, CapabilityResolutionError):
+                raise CapabilityResolutionError(f"the bundle cannot be resolved: {exc}") from exc
             raise
         servers = tuple(s for s in bundle.mcp_servers if s.name not in bundle.disabled)
         return CapabilitySnapshot(plugin_dirs, skills, servers, self._digest(bundle, used))
@@ -250,8 +255,9 @@ class CapabilityResolver:
         self, name: str, spec: MarketplaceSpec | None, root: Path, entry: LockEntry | None
     ) -> tuple[tuple[TreeRecord, ...], LockEntry]:
         """The tree's records, which hash to `entry`'s digest, and the entry they match."""
+        scope = self._shipped_scope(name, root) if spec is None else None
         if spec is None and (entry is None or entry.source != self._shipped_source):
-            records = self._records(name, root)
+            records = self._records(name, root, scope)
             entry = LockEntry(
                 name, self._shipped_source, None, self._locker.digest_records(records)
             )
@@ -265,7 +271,7 @@ class CapabilityResolver:
                 f"the lock pins {self._pin(entry.source, entry.ref)}, but [loops] names "
                 f"{self._pin(spec.source, spec.ref)}",
             )
-        records = self._records(name, root)
+        records = self._records(name, root, scope)
         if self._locker.digest_records(records) != entry.digest:
             raise LockMismatchError(name)
         return records, entry
@@ -274,9 +280,28 @@ class CapabilityResolver:
     def _pin(source: str, ref: str | None) -> str:
         return source if ref is None else f"{source} at {ref}"
 
-    def _records(self, name: str, root: Path) -> tuple[TreeRecord, ...]:
+    def _shipped_scope(self, name: str, root: Path) -> list[PurePosixPath]:
+        """What the shipped marketplace's lock covers: its manifest and every plugin folder its
+        manifest lists, relative to `root`."""
+        base = root.resolve()
+        catalog = self._read_manifest(name, root)
+        listed = [self._relative(name, entry.directory, base) for entry in catalog.plugins.values()]
+        return [MANIFEST_PATH, *listed]
+
+    @staticmethod
+    def _relative(name: str, directory: Path, base: Path) -> PurePosixPath:
         try:
-            return self._locker.tree_records(root)
+            return PurePosixPath(directory.relative_to(base).as_posix())
+        except ValueError as exc:  # e.g. a root retargeted between two reads
+            raise CapabilityResolutionError(
+                f"the marketplace {name}: a plugin folder {directory} is outside {base}"
+            ) from exc
+
+    def _records(
+        self, name: str, root: Path, within: Sequence[PurePosixPath] | None = None
+    ) -> tuple[TreeRecord, ...]:
+        try:
+            return self._locker.tree_records(root, within)
         except (LockError, OSError) as exc:
             raise CapabilityResolutionError(
                 f"the marketplace {name} cannot be read: {exc}"
@@ -322,7 +347,7 @@ class CapabilityResolver:
                     f"the marketplace {name} has no plugin {plugin.name}: "
                     f"{self._why_not(original, plugin.name)}"
                 )
-            items.append(PurePosixPath(entry.directory.relative_to(base).as_posix()))
+            items.append(self._relative(name, entry.directory, base))
         plan, left_out = self._plan(records, items)
         budget.bytes -= self._copier.copy(
             root, plan, target, max_entries=budget.entries, max_bytes=budget.bytes

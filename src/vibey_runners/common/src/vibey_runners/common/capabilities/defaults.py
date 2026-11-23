@@ -11,11 +11,5 @@ DEFAULT_MARKETPLACE_NAME: Final = "vibey"
 """The marketplace copy that ships in the wheel. The name is reserved: a person-added
 marketplace may not take it, so a network source can never stand in for the shipped one."""
 
-DEFAULT_MARKETPLACE_SOURCE: Final = "shipped"
-"""The `source` the shipped marketplace's lock entry records when the caller names no release.
-A caller that knows the installed release passes it instead (`CapabilityResolver(shipped_source=
-...)`), so an upgrade -- a new shipped copy -- locks itself again rather than reading as a
-marketplace that changed on disk."""
-
 DEFAULT_RESEARCH_PLUGINS: Final[tuple[str, ...]] = ("currency-research",)
 """The research-methodology plugins in the default bundle, all from the shipped marketplace."""

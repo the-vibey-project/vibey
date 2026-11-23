@@ -14,7 +14,7 @@ import json
 import os
 import stat
 from collections.abc import Callable, Mapping, Sequence
-from pathlib import Path
+from pathlib import Path, PurePosixPath
 
 import pytest
 
@@ -22,18 +22,18 @@ from vibey_runners.common.capabilities.bundle import BundleSpec
 from vibey_runners.common.capabilities.capability_resolution_error import (
     CapabilityResolutionError,
 )
-from vibey_runners.common.capabilities.defaults import (
-    DEFAULT_MARKETPLACE_NAME,
-    DEFAULT_MARKETPLACE_SOURCE,
-)
+from vibey_runners.common.capabilities.defaults import DEFAULT_MARKETPLACE_NAME
 from vibey_runners.common.capabilities.interfaces.resolver_interface import (
     CapabilityResolverInterface,
 )
 from vibey_runners.common.capabilities.lock import CapabilityLock
 from vibey_runners.common.capabilities.lock_entry import LockEntry
 from vibey_runners.common.capabilities.lock_mismatch_error import LockMismatchError
+from vibey_runners.common.capabilities.manifest import MANIFEST_PATH
+from vibey_runners.common.capabilities.marketplace_catalog import MarketplaceCatalog
 from vibey_runners.common.capabilities.marketplace_spec import MarketplaceSpec
 from vibey_runners.common.capabilities.mcp_server_spec import McpServerSpec
+from vibey_runners.common.capabilities.plugin_entry import PluginEntry
 from vibey_runners.common.capabilities.plugin_spec import PluginSpec
 from vibey_runners.common.capabilities.resolver import (
     DESCRIPTION_MAX_CHARS,
@@ -53,6 +53,7 @@ from vibey_runners.common.capabilities.unlocked_marketplace_error import (
 SHIPPED = Path(__file__).resolve().parents[4] / "vibey_tools" / "skills"
 ACME_SOURCE = "https://example.test/acme.git"
 RESEARCH = "currency-research"
+SHIPPED_SOURCE = "vibey-engine 0.0.0+test"
 
 
 def _skill_text(name: str, description: str | None = None) -> str:
@@ -105,6 +106,12 @@ def _acme_bundle(**extra: object) -> BundleSpec:
     )
 
 
+def _shipped_digest(root: Path) -> str:
+    """The shipped marketplace's scoped digest: its manifest and every plugin folder it lists."""
+    listed = [PurePosixPath("plugins") / plugin.name for plugin in (root / "plugins").iterdir()]
+    return CapabilityLock().digest_tree(root, [MANIFEST_PATH, *listed])
+
+
 def _locked(name: str, root: Path, source: str = ACME_SOURCE, ref: str | None = None) -> LockEntry:
     return LockEntry(name, source, ref, CapabilityLock().digest_tree(root))
 
@@ -129,8 +136,10 @@ class SwappingLock(CapabilityLock):
         super().__init__()
         self._swap: Callable[[], None] | None = swap
 
-    def tree_records(self, root: Path) -> tuple[TreeRecord, ...]:
-        records = super().tree_records(root)
+    def tree_records(
+        self, root: Path, within: Sequence[PurePosixPath] | None = None
+    ) -> tuple[TreeRecord, ...]:
+        records = super().tree_records(root, within)
         if self._swap is not None:
             swap, self._swap = self._swap, None
             swap()
@@ -149,6 +158,7 @@ class FixedSkills:
 
 def _resolver(tmp_path: Path, **options: object) -> CapabilityResolver:
     state = tmp_path / "state"
+    options.setdefault("shipped_source", SHIPPED_SOURCE)
     return CapabilityResolver(state / "loops.lock", state / "snapshots", **options)  # type: ignore[arg-type]
 
 
@@ -180,9 +190,7 @@ def test_the_shipped_marketplace_locks_itself_on_first_use_and_not_again(tmp_pat
     resolver = _resolver(tmp_path, locker=locker)
     resolver.resolve(_bundle(), CapabilityLock().read(lock_path), {"vibey": shipped})
     entries = CapabilityLock().read(lock_path)
-    assert entries == (
-        LockEntry("vibey", DEFAULT_MARKETPLACE_SOURCE, None, CapabilityLock().digest_tree(shipped)),
-    )
+    assert entries == (LockEntry("vibey", SHIPPED_SOURCE, None, _shipped_digest(shipped)),)
     assert locker.writes == 1
     before = lock_path.read_bytes()
     resolver.resolve(_bundle(), entries, {"vibey": shipped})
@@ -210,19 +218,113 @@ def test_a_new_shipped_copy_locks_itself_again(tmp_path: Path) -> None:
     second = new.resolve(_bundle(), CapabilityLock().read(lock_path), {"vibey": shipped})
     (entry,) = CapabilityLock().read(lock_path)
     assert entry.source == "vibey-engine 1.1.0"
-    assert entry.digest == CapabilityLock().digest_tree(shipped)
+    assert entry.digest == _shipped_digest(shipped)
     assert first.digest != second.digest
 
 
 def test_the_shipped_marketplace_changed_since_it_was_locked_is_refused(tmp_path: Path) -> None:
     shipped = _shipped(tmp_path)
     locker = CountingLock()
-    entry = _locked("vibey", shipped, source=DEFAULT_MARKETPLACE_SOURCE)
+    entry = LockEntry("vibey", SHIPPED_SOURCE, None, _shipped_digest(shipped))
     (shipped / "plugins" / RESEARCH / "README.md").write_text("edited\n", encoding="utf-8")
     with pytest.raises(LockMismatchError, match="vibey loops marketplace update vibey") as error:
         _resolver(tmp_path, locker=locker).resolve(_bundle(), (entry,), {"vibey": shipped})
     assert error.value.name == "vibey"
     assert locker.writes == 0
+
+
+def test_the_installed_release_must_be_named(tmp_path: Path) -> None:
+    """No default: a caller that names no release would keep a stale lock across upgrades."""
+    with pytest.raises(TypeError, match="shipped_source"):
+        CapabilityResolver(tmp_path / "loops.lock", tmp_path / "snapshots")  # type: ignore[call-arg]
+
+
+@pytest.mark.parametrize(
+    "noise",
+    [
+        f"plugins/{RESEARCH}/scripts/__pycache__/tool.cpython-312.pyc",
+        f"plugins/{RESEARCH}/scripts/tool.pyc",
+        "__pycache__/x.cpython-314.pyc",
+        "tests/test_sources.py",
+        "src/vibey_skills/__init__.py",
+        "README.md",
+    ],
+)
+def test_the_shipped_lock_ignores_bytecode_and_what_sits_beside_the_marketplace(
+    tmp_path: Path, noise: str
+) -> None:
+    """A source checkout shares the marketplace folder with sources and tests, and an import or
+    an install writes bytecode into it: neither is a change to what the lock pins."""
+    shipped = _shipped(tmp_path)
+    (shipped / "plugins" / RESEARCH / "scripts").mkdir()
+    (shipped / "plugins" / RESEARCH / "scripts" / "tool.py").write_text("print()\n")
+    lock_path = tmp_path / "state" / "loops.lock"
+    locker = CountingLock()
+    resolver = _resolver(tmp_path, locker=locker)
+    resolver.resolve(_bundle(), (), {"vibey": shipped})
+    path = shipped / noise
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_bytes(b"\0noise")
+    snapshot = resolver.resolve(_bundle(), CapabilityLock().read(lock_path), {"vibey": shipped})
+    assert locker.writes == 1
+    (plugin,) = snapshot.plugin_dirs
+    assert not any(
+        part.name == "__pycache__" or part.suffix == ".pyc" for part in plugin.rglob("*")
+    )
+
+
+@pytest.mark.parametrize(
+    "change",
+    [
+        f"plugins/{RESEARCH}/skills/audit/SKILL.md",
+        "plugins/unselected/README.md",
+        ".claude-plugin/marketplace.json",
+    ],
+)
+def test_the_shipped_lock_sees_a_change_to_the_manifest_or_any_listed_plugin(
+    tmp_path: Path, change: str
+) -> None:
+    shipped = _market(
+        tmp_path / "shipped",
+        {RESEARCH: {"audit": _skill_text("research-currency-audit-method")}, "unselected": {}},
+    )
+    lock_path = tmp_path / "state" / "loops.lock"
+    _resolver(tmp_path).resolve(_bundle(), (), {"vibey": shipped})
+    path = shipped / change
+    path.write_text(path.read_text(encoding="utf-8") + " ", encoding="utf-8")
+    with pytest.raises(LockMismatchError, match="vibey loops marketplace update vibey"):
+        _resolver(tmp_path).resolve(_bundle(), CapabilityLock().read(lock_path), {"vibey": shipped})
+
+
+def test_no_plain_value_error_escapes_resolve(tmp_path: Path) -> None:
+    """A plugin folder outside the root (a root retargeted between two reads) is a resolution
+    error, not a bare `ValueError` from `relative_to`."""
+    acme = _acme(tmp_path)
+
+    class Elsewhere:
+        def read(self, root: Path) -> MarketplaceCatalog:
+            entry = PluginEntry("linting", tmp_path / "elsewhere", "")
+            return MarketplaceCatalog({"linting": entry}, ())
+
+    with pytest.raises(CapabilityResolutionError, match="outside") as error:
+        _resolver(tmp_path, manifest=Elsewhere()).resolve(
+            _acme_bundle(), (_locked("acme", acme),), {"acme": acme}
+        )
+    assert type(error.value) is CapabilityResolutionError
+
+
+def test_a_value_error_from_a_collaborator_becomes_a_resolution_error(tmp_path: Path) -> None:
+    acme = _acme(tmp_path)
+
+    class Broken:
+        def build(self, plugin_dirs: Sequence[Path]) -> SkillCatalog:
+            raise ValueError("an index that could not be built")
+
+    with pytest.raises(CapabilityResolutionError, match="could not be built"):
+        _resolver(tmp_path, skills=Broken()).resolve(
+            _acme_bundle(), (_locked("acme", acme),), {"acme": acme}
+        )
+    assert _runs(tmp_path) == []
 
 
 def test_a_damaged_lock_file_stops_the_shipped_marketplace_locking_itself(tmp_path: Path) -> None:
@@ -236,14 +338,18 @@ def test_a_damaged_lock_file_stops_the_shipped_marketplace_locking_itself(tmp_pa
 
 def test_a_lock_folder_that_cannot_be_written_is_a_resolution_error(tmp_path: Path) -> None:
     (tmp_path / "state").write_text("a file where the lock folder should be", encoding="utf-8")
-    resolver = CapabilityResolver(tmp_path / "state" / "loops.lock", tmp_path / "snapshots")
+    resolver = CapabilityResolver(
+        tmp_path / "state" / "loops.lock", tmp_path / "snapshots", shipped_source=SHIPPED_SOURCE
+    )
     with pytest.raises(CapabilityResolutionError, match="cannot lock itself"):
         resolver.resolve(_bundle(), (), {"vibey": _shipped(tmp_path)})
 
 
 def test_a_tree_the_file_system_refuses_is_a_resolution_error(tmp_path: Path) -> None:
     class Refusing(CapabilityLock):
-        def tree_records(self, root: Path) -> tuple[TreeRecord, ...]:
+        def tree_records(
+            self, root: Path, within: Sequence[PurePosixPath] | None = None
+        ) -> tuple[TreeRecord, ...]:
             raise PermissionError(13, "Permission denied", str(root))
 
     acme = _acme(tmp_path)
@@ -569,7 +675,7 @@ def test_relative_lock_and_snapshot_folders_are_refused(tmp_path: Path, which: s
     else:
         snapshots = Path("snapshots")
     with pytest.raises(CapabilityResolutionError, match="absolute"):
-        CapabilityResolver(lock_path, snapshots)
+        CapabilityResolver(lock_path, snapshots, shipped_source=SHIPPED_SOURCE)
 
 
 @pytest.mark.parametrize("source", ["", "-oops", "bad\nsource"])

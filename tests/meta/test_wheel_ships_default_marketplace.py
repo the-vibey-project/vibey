@@ -38,6 +38,7 @@ from vibey_runners.common.capabilities.defaults import (
     DEFAULT_MARKETPLACE_NAME,
     DEFAULT_RESEARCH_PLUGINS,
 )
+from vibey_runners.common.capabilities.lock import CapabilityLock
 from vibey_runners.common.capabilities.resolver import CapabilityResolver
 
 REPO = Path(__file__).resolve().parents[2]
@@ -49,6 +50,8 @@ RESEARCH_SKILLS = {
     "research-currency-audit-method",
     "research-editing-a-reference-skill",
 }
+
+SHIPPED_SOURCE = "vibey-engine 0.0.0+meta-test"
 
 pytestmark = pytest.mark.slow
 
@@ -130,7 +133,9 @@ def test_the_default_bundle_resolves_from_the_unpacked_wheel(
     unpacked: Path, tmp_path: Path
 ) -> None:
     """A fresh install has the research skills with no network: the shipped copy locks itself."""
-    resolver = CapabilityResolver(tmp_path / "loops.lock", tmp_path / "snapshots")
+    resolver = CapabilityResolver(
+        tmp_path / "loops.lock", tmp_path / "snapshots", shipped_source=SHIPPED_SOURCE
+    )
     snapshot = resolver.resolve(
         BundleSpec.default(), (), {DEFAULT_MARKETPLACE_NAME: unpacked / ROOT}
     )
@@ -171,3 +176,17 @@ def test_code_imported_from_the_wheel_finds_the_marketplace(unpacked: Path, tmp_
     assert found["plugins"].resolve() == root / "plugins"
     assert found["manifest"].resolve() == (unpacked / MANIFEST).resolve()
     assert found["skill"].resolve().is_relative_to(root / "plugins")
+
+
+def test_a_checkout_and_the_wheel_lock_the_shipped_marketplace_alike(
+    unpacked: Path, tmp_path: Path
+) -> None:
+    """The shipped lock covers the manifest and the plugin folders it lists, never bytecode: the
+    lock a source checkout writes (its marketplace folder also holds sources and tests) is the
+    lock an installed wheel matches, so moving between them is no `LockMismatchError`."""
+    lock_path = tmp_path / "loops.lock"
+    resolver = CapabilityResolver(lock_path, tmp_path / "snapshots", shipped_source=SHIPPED_SOURCE)
+    resolver.resolve(BundleSpec.default(), (), {DEFAULT_MARKETPLACE_NAME: TENANT})
+    locked = CapabilityLock().read(lock_path)
+    resolver.resolve(BundleSpec.default(), locked, {DEFAULT_MARKETPLACE_NAME: unpacked / ROOT})
+    assert CapabilityLock().read(lock_path) == locked  # matched, so nothing was locked again
