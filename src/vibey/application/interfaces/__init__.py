@@ -223,6 +223,7 @@ from vibey.application.interfaces.review import (
     AutomatedReviewRunner,
     ReviewArtifactWriter,
 )
+from vibey.application.interfaces.run_folder_writer_interface import RunFolderWriterInterface
 from vibey.application.interfaces.run_input_ledger_interface import RunInputLedgerInterface
 from vibey.application.interfaces.run_inputs_interface import RunInputsInterface
 from vibey.application.interfaces.run_inputs_settings_interface import (
@@ -264,6 +265,7 @@ __all__ = [
     "StateStore",
     "StateSyncServiceInterface",
     "RemoteCommandServiceInterface",
+    "RunFolderWriterInterface",
     "RunInputLedgerInterface",
     "RunInputsInterface",
     "RunInputsSettingsLoaderInterface",

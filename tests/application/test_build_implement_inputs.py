@@ -39,6 +39,7 @@ from vibey.domain.run_input import InputKind, InputListing, RunInput, RunInputsS
 from vibey.infrastructure.engines.descriptors import CLAUDELOOP
 from vibey.infrastructure.engines.scripted import ScriptedEngine
 from vibey.infrastructure.inputs.hash_addressed_input_store import HashAddressedInputStore
+from vibey.infrastructure.inputs.no_follow_files import NoFollowFiles
 
 AT = datetime(2026, 11, 23, tzinfo=UTC)
 
@@ -86,11 +87,12 @@ class _World:
             updated_at=AT,
         )
         self.inputs = RunInputsService(
-            store=HashAddressedInputStore(FixedClock()),
+            store=HashAddressedInputStore(tmp_path / "state" / "inputs", FixedClock()),
             projects=_Projects(record),
             ledger=_Ledger(),
             clock=FixedClock(),
             settings=RunInputsSettings(),
+            writer=NoFollowFiles(),
         )
 
     async def add(self, kind: InputKind, name: str, data: bytes) -> None:

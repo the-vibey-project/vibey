@@ -30,6 +30,7 @@ from vibey.cli.main import app
 from vibey.domain.phase import Phase
 from vibey.domain.run_input import RunInputsSettings
 from vibey.infrastructure.inputs.hash_addressed_input_store import HashAddressedInputStore
+from vibey.infrastructure.inputs.no_follow_files import NoFollowFiles
 from vibey.infrastructure.trusted_table_reader import TomlTrustedTableReader
 
 runner = CliRunner(env={"_TYPER_FORCE_DISABLE_TERMINAL": "1"})
@@ -62,6 +63,7 @@ class _World:
         self.tmp = tmp_path
         self.repo = tmp_path / "repo"
         self.repo.mkdir()
+        self.store_root = tmp_path / "state" / "inputs"
         self.user_config = tmp_path / "config" / "vibey.toml"
         self.user_config.parent.mkdir()
         self.project_config = tmp_path / "cwd" / "vibey.toml"
@@ -85,11 +87,12 @@ class _World:
     async def open_service(self, settings: RunInputsSettings) -> AsyncIterator[RunInputsInterface]:
         self.opened_with.append(settings)
         yield RunInputsService(
-            store=HashAddressedInputStore(_Clock()),
+            store=HashAddressedInputStore(self.store_root, _Clock()),
             projects=_Projects(self.record),
             ledger=self.ledger,
             clock=_Clock(),
             settings=settings,
+            writer=NoFollowFiles(),
         )
 
     def commands(self) -> InputsCommands:
@@ -101,7 +104,7 @@ class _World:
         )
 
     def store_files(self) -> list[Path]:
-        root = self.repo / ".vibey" / "inputs"
+        root = self.store_root
         return [p for p in root.rglob("*") if p.is_file()] if root.exists() else []
 
 
@@ -255,7 +258,8 @@ def test_an_unknown_project_is_exit_1(world: _World) -> None:
 
 
 def test_a_store_that_cannot_be_made_is_exit_78(world: _World) -> None:
-    (world.repo / ".vibey").write_bytes(b"a file where the state folder belongs")
+    world.store_root.parent.mkdir()
+    world.store_root.write_bytes(b"a file where the store folder belongs")
     code, output = _run("add", str(world.project_id), "--paste", "hi")
     assert code == EXIT_CONFIG == 78
     assert output.startswith("vibey inputs: ")
@@ -263,7 +267,7 @@ def test_a_store_that_cannot_be_made_is_exit_78(world: _World) -> None:
 
 
 def test_an_unreadable_index_is_exit_78_for_list(world: _World) -> None:
-    (world.repo / ".vibey" / "inputs" / "index.jsonl").mkdir(parents=True)
+    (world.store_root / str(world.project_id) / "index.jsonl").mkdir(parents=True)
     code, output = _run("list", str(world.project_id))
     assert code == 78
     assert "cannot be read" in output
@@ -303,7 +307,7 @@ def test_the_human_list_of_nothing_says_how_to_add(world: _World) -> None:
 
 def test_the_human_list_counts_skipped_index_lines(world: _World) -> None:
     _run("add", str(world.project_id), "--paste", "hi")
-    with (world.repo / ".vibey" / "inputs" / "index.jsonl").open("ab") as handle:
+    with (world.store_root / str(world.project_id) / "index.jsonl").open("ab") as handle:
         handle.write(b"torn")
     code, output = _run("list", str(world.project_id))
     assert code == 0

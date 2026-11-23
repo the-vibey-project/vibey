@@ -735,8 +735,8 @@ fix = "Start a project (or name an existing one's `project_id`), upgrade vibey i
 code = "E0094"
 class = "vibey.domain.errors.InputStoreError"
 title = "A project's run inputs cannot be stored, read or written into a run"
-cause = "The store under the project's `.vibey/inputs` folder, or a BUILD run's `.vibey/inputs/<run>` folder in its worktree, could not be made or written (a folder that cannot be created, a full disk), something other than vibey's own folder or file is where it keeps one (a symlink is refused, never followed: a cloned repository can commit `.vibey` as one), the platform cannot open a file without following a symlink, an index line is too long to append in one write, or a stored object's bytes no longer match its digest. Nothing was added, and nothing was written outside the worktree."
-fix = "Check the path the message names: remove a symlink or stray file vibey did not put there, free space, or fix the folder's permissions, then add the input again. An object that no longer matches its digest was changed on disk; add that input again to store it afresh."
+cause = "The person's run input store (`inputs/<project id>` in their own state folder: `~/Library/Application Support/vibey` on macOS, `$XDG_STATE_HOME/vibey` elsewhere), or a BUILD run's `.vibey/inputs/<run>` folder in its worktree, could not be made, read or written (a folder that cannot be created, a full disk), something other than vibey's own folder or file is where it keeps one (a symlink is refused, never followed: a cloned repository can commit `.vibey` as one), the platform cannot open a file without following a symlink, an index line is too long to append in one write, or a stored object is not the size its index row says or its bytes no longer match its digest. Nothing was added, and nothing was written outside the store or the worktree."
+fix = "Check the path the message names: remove a symlink or stray file vibey did not put there, free space, or fix the folder's permissions, then add the input again. An object that no longer matches its digest was changed on disk; adding that input again stores it afresh."
 
 [[error]]
 code = "E0095"

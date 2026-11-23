@@ -16,9 +16,8 @@ from vibey.application.interfaces.input_store_interface import InputStoreInterfa
 
 @runtime_checkable
 class HashAddressedInputStoreInterface(InputStoreInterface, Protocol):
-    """`InputStoreInterface` on disk. Under `project_folder / "inputs"` (0700):
-    `objects/<digest[:2]>/<digest>` holds each input's bytes once (0600, written to a temporary
-    name, synced, then renamed into place), and `index.jsonl` (0600) one JSON line per add,
-    appended with a single `O_APPEND` write and synced. A symlink or other non-regular file
-    where the store keeps its own is refused, never followed. No lock and no thread: the append
-    is the commit."""
+    """`InputStoreInterface` on disk, under a root in the person's own state folder
+    (`UserStateFolder.inputs()`), one folder per project id (0700): `objects/<digest[:2]>/
+    <digest>` holds each input's bytes once (0600) and `index.jsonl` (0600) one JSON line per
+    add. Every folder, read and write goes through `NoFollowFilesInterface`: a symlink is
+    refused, never followed. No lock and no thread: the append is the commit."""

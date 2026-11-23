@@ -2,7 +2,7 @@
 """`vibey inputs`, end to end against real PostgreSQL, as the application role (SP-LOOPS Phase 3).
 
 The composition root's own service (`bootstrap.run_inputs_app`) runs: the project is read from
-the database, the input is a file under the project's `.vibey/inputs`, and the ledger holds one
+the database, the input is a file in the person's state folder (here pytest's), keyed by project id, and the ledger holds one
 `ArtifactProduced` event whose payload is exactly the digest, kind and size. Nothing of the
 input enters Postgres but that digest. The person's own `vibey.toml` is a file in pytest's
 temporary folder, never the real one.
@@ -21,6 +21,7 @@ import asyncpg
 import pytest
 from typer.testing import CliRunner
 
+import vibey.bootstrap
 import vibey.cli.inputs as inputs_module
 from tests.db_roles import TestDatabaseRoles
 from vibey.bootstrap import build_app, migrations_dir
@@ -58,6 +59,8 @@ def _an_empty_schema_the_application_role_runs_on(monkeypatch: pytest.MonkeyPatc
 def commands(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Iterator[None]:
     config = tmp_path / "config"
     config.mkdir()
+    # The person's state folder stands in under pytest's folder: never the real one.
+    monkeypatch.setattr(vibey.bootstrap, "run_inputs_root", lambda: tmp_path / "state" / "inputs")
     monkeypatch.setattr(
         inputs_module,
         "INPUTS",
@@ -89,7 +92,9 @@ def test_an_added_file_is_stored_on_disk_and_only_its_digest_reaches_the_ledger(
     result = runner.invoke(app, ["inputs", "add", str(pid), "--file", str(spec)])
     assert result.exit_code == 0, result.output
     digest = digest_of(b"# A secret spec\n")
-    assert (repo / ".vibey" / "inputs" / "objects" / digest[:2] / digest).is_file()
+    store = tmp_path / "state" / "inputs" / str(pid)
+    assert (store / "objects" / digest[:2] / digest).is_file()
+    assert not (repo / ".vibey").exists()  # never inside the checkout
 
     listed = runner.invoke(app, ["inputs", "list", str(pid), "--json"])
     assert listed.exit_code == 0, listed.output

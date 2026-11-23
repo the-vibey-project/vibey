@@ -16,7 +16,7 @@ from typing import Final
 from uuid import uuid4
 
 import asyncpg
-from platformdirs import user_cache_path, user_config_path
+from platformdirs import user_cache_path, user_config_path, user_state_path
 from vibey_runners.common.capabilities.interfaces.resolver_interface import (
     CapabilityResolverInterface,
 )
@@ -254,6 +254,7 @@ from vibey.infrastructure.git.integration_branch import IntegrationBranch
 from vibey.infrastructure.git.worktree_manager import GitWorktreeManager
 from vibey.infrastructure.hub.settings import HUB_SETTINGS, HubSettings
 from vibey.infrastructure.inputs.hash_addressed_input_store import HashAddressedInputStore
+from vibey.infrastructure.inputs.no_follow_files import NoFollowFiles
 from vibey.infrastructure.inputs.run_input_ledger import PostgresRunInputLedger
 from vibey.infrastructure.ledger.full_ledger_writer import write_full_ledger
 from vibey.infrastructure.logging import StructlogAppLogger
@@ -300,6 +301,7 @@ from vibey.infrastructure.tracker.plane import PlaneTrackerAdapter
 from vibey.infrastructure.trusted_table_reader import TomlTrustedTableReader
 from vibey.infrastructure.trusted_table_writer import TomlTrustedTableWriter
 from vibey.infrastructure.user_config_folder import UserConfigFolder
+from vibey.infrastructure.user_state_folder import UserStateFolder
 
 
 @dataclass(frozen=True, slots=True)
@@ -1568,16 +1570,25 @@ def run_inputs_settings_loader() -> RunInputsSettingsLoader:
     return RunInputsSettingsLoader(TomlTrustedTableReader())
 
 
+def run_inputs_root() -> Path:
+    """Where every project's run inputs are stored: `inputs/` in the person's own state folder,
+    one folder per project id, never inside a checkout (SP-LOOPS Phase 3, fix round 1: R-A)."""
+    return UserStateFolder(user_state_path).inputs()
+
+
 def run_inputs_service(resources: AppResources, settings: RunInputsSettings) -> RunInputsService:
-    """A project's run inputs (SP-LOOPS Phase 3): the hash-addressed store under each project's
-    `<repo_path>/.vibey`, the project records, and the ledger adapter that records each add's
+    """A project's run inputs (SP-LOOPS Phase 3): the hash-addressed store under
+    `run_inputs_root()`, the one no-follow file adapter for it and the run folders, the project
+    records, and the ledger adapter that records each add's
     digest, kind and size. Composition only."""
+    files = NoFollowFiles()
     return RunInputsService(
-        store=HashAddressedInputStore(resources.clock),
+        store=HashAddressedInputStore(run_inputs_root(), resources.clock, files=files),
         projects=resources.projects,
         ledger=PostgresRunInputLedger(resources.ledger),
         clock=resources.clock,
         settings=settings,
+        writer=files,
     )
 
 

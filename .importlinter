@@ -77,6 +77,20 @@ forbidden_modules =
 # `design` and `dto` hold the records a seam's signatures name, and both import
 # only `vibey.domain` and dependency-free family packages (`dto` names the loop
 # capability bundle from `vibey_runners.common.capabilities`).
+# The run inputs service keeps the rules and reaches the disk only through its ports
+# (`InputStoreInterface`, `RunFolderWriterInterface`; SP-LOOPS Phase 3 fix round 1, R-E): the
+# no-follow file adapter, the store and the person's state folder are infrastructure's, wired in
+# `bootstrap.py`. tests/application/test_run_inputs_service.py also checks it calls no `os` file
+# function itself.
+[importlinter:contract:run-inputs-through-ports]
+name = run inputs service reaches the disk only through its ports
+type = forbidden
+source_modules =
+    vibey.application.run_inputs_service
+forbidden_modules =
+    vibey.infrastructure
+    vibey.bootstrap
+
 [importlinter:contract:interfaces-declare-only]
 name = Interfaces declare seams, never consume them
 type = forbidden
