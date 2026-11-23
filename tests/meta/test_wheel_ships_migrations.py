@@ -22,13 +22,14 @@ from __future__ import annotations
 
 import json
 import os
-import shutil
 import subprocess
 import sys
 import zipfile
 from pathlib import Path
 
 import pytest
+
+from tests.meta.wheel_artifact import build_wheel, unpack
 
 REPO = Path(__file__).resolve().parents[2]
 PACKAGED = "vibey/infrastructure/db/migrations"
@@ -42,19 +43,10 @@ def wheel(tmp_path_factory: pytest.TempPathFactory) -> Path:
     """The wheel `uv build --offline` produces from this checkout, built once for the module.
 
     Offline: the build backend (hatchling) comes from uv's cache, which `uv sync` filled, so the
-    build never asks a package index (no test may need the network)."""
-    uv = shutil.which("uv")
-    assert uv is not None, "uv is not on PATH; the release builds the wheel with it"
-    out = tmp_path_factory.mktemp("wheel")
-    subprocess.run(  # noqa: S603 -- a fixed argv; uv's path comes from shutil.which
-        [uv, "build", "--wheel", "--offline", "--out-dir", str(out), str(REPO)],
-        check=True,
-        capture_output=True,
-        text=True,
-    )
-    built = sorted(out.glob("vibey_engine-*.whl"))
-    assert len(built) == 1, f"expected one vibey_engine wheel, found {built}"
-    return built[0]
+    build never asks a package index (no test may need the network); a cold cache skips with
+    the command that warms it, and any other failure shows uv's stderr
+    (tests/meta/wheel_artifact.py)."""
+    return build_wheel(REPO, tmp_path_factory.mktemp("wheel"))
 
 
 def _source_migrations() -> list[str]:
@@ -93,9 +85,7 @@ def test_code_imported_from_the_wheel_finds_the_packaged_migrations(
     the checkout's migrations: had the catalog walked up from its own file as
     `bootstrap.py` used to, it would land in `tmp_path`'s parents and find nothing.
     """
-    unpacked = tmp_path / "site-packages"
-    with zipfile.ZipFile(wheel) as archive:
-        archive.extractall(unpacked)
+    unpacked = unpack(wheel, tmp_path / "site-packages")
     probe = (
         "import json\n"
         "from vibey.infrastructure.db.migration_catalog import MigrationCatalog\n"

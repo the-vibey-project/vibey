@@ -28,7 +28,6 @@ from __future__ import annotations
 
 import json
 import os
-import shutil
 import subprocess
 import sys
 import zipfile
@@ -42,6 +41,8 @@ from vibey_runners.common.capabilities.defaults import (
 )
 from vibey_runners.common.capabilities.lock import CapabilityLock
 from vibey_runners.common.capabilities.resolver import CapabilityResolver
+
+from tests.meta.wheel_artifact import build_wheel, unpack
 
 REPO = Path(__file__).resolve().parents[2]
 TENANT = REPO / "src" / "vibey_tools" / "skills"
@@ -63,19 +64,10 @@ def wheel(tmp_path_factory: pytest.TempPathFactory) -> Path:
     """The wheel `uv build --offline` produces from this checkout, built once for the module.
 
     Offline: the build backend (hatchling) comes from uv's cache, which `uv sync` filled, so the
-    build never asks a package index (no test may need the network)."""
-    uv = shutil.which("uv")
-    assert uv is not None, "uv is not on PATH; the release builds the wheel with it"
-    out = tmp_path_factory.mktemp("wheel")
-    subprocess.run(  # noqa: S603 -- a fixed argv; uv's path comes from shutil.which
-        [uv, "build", "--wheel", "--offline", "--out-dir", str(out), str(REPO)],
-        check=True,
-        capture_output=True,
-        text=True,
-    )
-    built = sorted(out.glob("vibey_engine-*.whl"))
-    assert len(built) == 1, f"expected one vibey_engine wheel, found {built}"
-    return built[0]
+    build never asks a package index (no test may need the network); a cold cache skips with
+    the command that warms it, and any other failure shows uv's stderr
+    (tests/meta/wheel_artifact.py)."""
+    return build_wheel(REPO, tmp_path_factory.mktemp("wheel"))
 
 
 @pytest.fixture(scope="module")
@@ -86,10 +78,8 @@ def names(wheel: Path) -> list[str]:
 
 @pytest.fixture(scope="module")
 def unpacked(wheel: Path, tmp_path_factory: pytest.TempPathFactory) -> Path:
-    site = tmp_path_factory.mktemp("site-packages")
-    with zipfile.ZipFile(wheel) as archive:
-        archive.extractall(site)
-    return site
+    """The wheel unpacked with each file's recorded mode, as an installer leaves it."""
+    return unpack(wheel, tmp_path_factory.mktemp("site-packages"))
 
 
 def _source_plugin(name: str) -> list[str]:
