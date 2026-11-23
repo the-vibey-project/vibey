@@ -474,3 +474,15 @@ async def test_a_given_event_that_cannot_be_pinned_parks_before_anything_is_reco
     assert "cannot be pinned" in outcome.request.prompt
     assert handoffs.envelopes == []
     assert not [j for j in jobs._jobs.values() if j.state is JobState.READY]
+
+
+async def test_the_pin_is_found_by_job_even_under_another_cycle(tmp_path: Path) -> None:
+    """Review N7: the given event carries the project's cycle, which can differ from the job's;
+    the pin is matched on the job id alone, so it is never silently empty."""
+    project_id = uuid4()
+    job = _wind_down_job(project_id)
+    given = replace(_given_event(project_id, 7, job.id, [D_PASTE]), cycle=job.cycle + 1)
+    outcome, jobs, _ = await _wind_down_with(tmp_path, project_id, (given,), job)
+    assert isinstance(outcome, Success)
+    follow_up = next(j for j in jobs._jobs.values() if j.state is JobState.READY)
+    assert follow_up.payload["handoff_input_digests"] == [D_PASTE]

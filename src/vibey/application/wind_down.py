@@ -128,16 +128,17 @@ class WindDownOrchestrator:
         # carries item_id/stage, closed by human gates, not by handoff
         # closables), and earlier cycles were sealed by their own reviews
         # -- mixing them into the gate would check the wrong closures.
+        everything = await self._ledger.all_for_project(job.project_id)
         events = tuple(
-            event
-            for event in await self._ledger.all_for_project(job.project_id)
-            if event.cycle == job.cycle and event.phase is Phase.BUILD
+            event for event in everything if event.cycle == job.cycle and event.phase is Phase.BUILD
         )
         # The run inputs the outgoing run was given, pinned for the follow-up (SP-LOOPS Phase
         # 3c): a handoff check beside the gate, not a gate rule (OR-5). A pin that cannot be
         # read parks here, before anything is recorded, as a failed gate does.
         try:
-            pinned_inputs = HANDOFF_INPUTS.pinned(events, job.id) or ()
+            # Matched on the job alone, across cycles: the given event is recorded under the
+            # project's cycle, which can differ from the job's (review N7).
+            pinned_inputs = HANDOFF_INPUTS.pinned(everything, job.id) or ()
         except ValueError as exc:
             return Park(
                 HumanGateRequest(
