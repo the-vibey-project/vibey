@@ -47,7 +47,12 @@ from collections.abc import Callable, Mapping
 from pathlib import Path
 
 from vibey.application.acp.dto import DoctorResult
-from vibey.domain.host_clients import HOST_CLIENT_CATALOG, HostClientError, HostClientSpec
+from vibey.domain.host_clients import (
+    HOST_CLIENT_CATALOG,
+    ClientHomes,
+    HostClientError,
+    HostClientSpec,
+)
 from vibey.domain.interfaces.host_clients_interface import HostClientsInterface
 from vibey.infrastructure.mcp.interfaces.host_installer_interface import HostInstallerInterface
 
@@ -108,8 +113,18 @@ class HostConnector:
                 home_dir=str(self._home_dir()),
                 project_dir="",
                 platform=self._platform,
-                xdg_config_home=self._environ.get("XDG_CONFIG_HOME"),
+                homes=self._homes(),
             )
+        )
+
+    def _homes(self) -> ClientHomes:
+        """Where the person moved clients' config (`XDG_CONFIG_HOME`, `CODEX_HOME`,
+        `CLAUDE_CONFIG_DIR`, a Flatpak Zed), from this process's environment."""
+        return ClientHomes.from_environ(
+            self._environ,
+            home_dir=str(self._home_dir()),
+            platform=self._platform,
+            is_dir=os.path.isdir,
         )
 
     @staticmethod
@@ -181,7 +196,7 @@ class HostConnector:
                 home_dir=str(self._home_dir()),
                 project_dir="",
                 platform=self._platform,
-                xdg_config_home=self._environ.get("XDG_CONFIG_HOME"),
+                homes=self._homes(),
             )
         ).parent
         if not self._folder_exists(folder):

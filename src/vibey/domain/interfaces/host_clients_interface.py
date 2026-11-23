@@ -11,6 +11,7 @@ from typing import TYPE_CHECKING, Protocol, runtime_checkable
 
 if TYPE_CHECKING:
     from vibey.domain.host_clients import (
+        ClientHomes,
         ClientProtocol,
         ConnectPlanItem,
         HostClientSpec,
@@ -66,7 +67,7 @@ class HostClientsInterface(Protocol):
         platform: str,
         launch: McpLaunchCommand,
         existing_content: str | None,
-        xdg_config_home: str | None = None,
+        homes: ClientHomes = ...,
     ) -> ConnectPlanItem:
         """Compute the idempotent merge plan for one host client: `unchanged` (never
         reformatted) when the file already carries a `vibey` entry running `launch`; otherwise

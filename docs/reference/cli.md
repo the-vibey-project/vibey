@@ -168,9 +168,12 @@ install's own `vibey` -- the console script beside its Python, by absolute path 
 there is none, that Python with `-c "import sys; from vibey.cli.main import run; run(['mcp',
 *sys.argv[1:]])"` (`acp` for Zed; any flag after the code reaches the command, as it would after
 `mcp`); never a `vibey` found on `PATH`. Zed's entry is a custom agent server in
-`~/.config/zed/settings.json` on macOS, and on Linux in `$XDG_CONFIG_HOME/zed/settings.json`
-when `XDG_CONFIG_HOME` is an absolute path, else `~/.config/zed/settings.json` (a Flatpak Zed,
-which reads `~/.var/app/dev.zed.Zed/config/zed/`, is not handled yet):
+`~/.config/zed/settings.json` on macOS. On Linux it is in a Flatpak Zed's own
+`~/.var/app/dev.zed.Zed/config/zed/settings.json` when that app folder exists and no native Zed
+config folder does, else in `$XDG_CONFIG_HOME/zed/settings.json` when `XDG_CONFIG_HOME` is an
+absolute path, else `~/.config/zed/settings.json`. Codex's config is `$CODEX_HOME/config.toml`
+and Claude Code's own folder `$CLAUDE_CONFIG_DIR` when those are absolute paths (else
+`~/.codex` and `~/.claude`); `vibey doctor`'s skill and plugin checks follow them too:
 
 ```json
 "agent_servers": {"vibey": {"type": "custom", "command": "/path/to/vibey", "args": ["acp"], "env": {}}}
@@ -222,8 +225,8 @@ installed here:
 |---|---|---|---|
 | `acp-agent` | Zed | `agent_servers.vibey` runs this install's `vibey` with `acp` first (as above; your `env` and `--no-bootstrap` do not matter) | `vibey connect --client zed` (or the snippet, by hand) |
 | `mcp-server` | every other client | its `vibey` MCP entry runs this install's `vibey` with `mcp` and nothing after it; in a project's file (Claude Code, VS Code) only the exact canonical entry; for Claude Code also when the `vibey` plugin is installed and the project's `.mcp.json` holds no other `vibey` entry (the plugin's `.mcp.json` registers `vibey mcp`) | `vibey connect --client <id>` |
-| `skill` | Claude Code, Codex | the `vibey-chat-driver` skill is in the `vibey` plugin, in `~/.claude/skills/vibey-chat-driver` or the project's `.claude/skills/vibey-chat-driver` (Claude Code), or in `~/.codex/skills/vibey-chat-driver` (Codex; where Codex reads user skills -- not verified against a real Codex install) | Claude Code: the plugin; Codex: the `mkdir -p ~/.codex/skills && cp -R <the skill vibey ships> ~/.codex/skills/` line printed |
-| `plugin` | Claude Code | Claude Code records `vibey@vibey` installed (`~/.claude/plugins/installed_plugins.json`) | in Claude Code: `/plugin marketplace add the-vibey-project/vibey`, then `/plugin install vibey@vibey` |
+| `skill` | Claude Code, Codex | the `vibey-chat-driver` skill is in the `vibey` plugin, in `~/.claude/skills/vibey-chat-driver` or the project's `.claude/skills/vibey-chat-driver` (Claude Code), or in `~/.codex/skills/vibey-chat-driver` (Codex; where Codex reads user skills -- not verified against a real Codex install); `$CLAUDE_CONFIG_DIR/skills` and `$CODEX_HOME/skills` when those are set | Claude Code: the plugin; Codex: the `mkdir -p ~/.codex/skills && cp -R <the skill vibey ships> ~/.codex/skills/` line printed |
+| `plugin` | Claude Code | Claude Code records `vibey@vibey` installed (`~/.claude/plugins/installed_plugins.json`, or under `$CLAUDE_CONFIG_DIR`) | in Claude Code: `/plugin marketplace add the-vibey-project/vibey`, then `/plugin install vibey@vibey` |
 
 Each line is `PASS <client>:<surface> present: ...`, `WARN <client>:<surface> missing: ...`
 with the exact command or snippet that fixes it, or `UNKNOWN <client>:<surface>

@@ -6,6 +6,7 @@ from __future__ import annotations
 import dataclasses
 import json
 import tomllib
+from typing import Any
 
 import pytest
 
@@ -13,6 +14,7 @@ from vibey.domain.host_clients import (
     HOST_CLIENT_CATALOG,
     HOST_CLIENTS,
     PYTHON_FALLBACK_CODE,
+    ClientHomes,
     ConnectPlanItem,
     HostClientError,
     HostClients,
@@ -654,14 +656,18 @@ def test_zed_on_linux_follows_an_absolute_xdg_config_home_and_macos_never_does()
 
     def where(platform: str, xdg: str | None) -> str:
         return zed.config_path(
-            home_dir="/home/a", project_dir="/p", platform=platform, xdg_config_home=xdg
+            home_dir="/home/a",
+            project_dir="/p",
+            platform=platform,
+            homes=ClientHomes(xdg_config_home=xdg),
         )
 
     assert where("linux", "/home/a/.xdg/") == "/home/a/.xdg/zed/settings.json"
     assert where("linux", "relative/xdg") == "/home/a/.config/zed/settings.json"
     assert where("linux", None) == "/home/a/.config/zed/settings.json"
     assert where("darwin", "/home/a/.xdg") == "/home/a/.config/zed/settings.json"
-    assert zed.presence_path(home_dir="/home/a", platform="linux", xdg_config_home="/x") == "/x/zed"
+    homes = ClientHomes(xdg_config_home="/x")
+    assert zed.presence_path(home_dir="/home/a", platform="linux", homes=homes) == "/x/zed"
     item = HOST_CLIENT_CATALOG.plan_one(
         zed,
         home_dir="/home/a",
@@ -669,9 +675,72 @@ def test_zed_on_linux_follows_an_absolute_xdg_config_home_and_macos_never_does()
         platform="linux",
         launch=ZED_LAUNCH,
         existing_content=None,
-        xdg_config_home="/x",
+        homes=homes,
     )
     assert item.target_path == "/x/zed/settings.json"
+
+
+# -- SP-ACP Task 11b-ii: Flatpak Zed, CODEX_HOME and CLAUDE_CONFIG_DIR -------------------------
+
+
+def test_the_homes_are_read_from_the_environment_absolute_only() -> None:
+    environ = {
+        "XDG_CONFIG_HOME": "/x",
+        "CODEX_HOME": "/c/codex/",
+        "CLAUDE_CONFIG_DIR": "relative/claude",
+    }
+    homes = ClientHomes.from_environ(
+        environ, home_dir="/home/a", platform="linux", is_dir=lambda path: False
+    )
+    assert homes == ClientHomes(xdg_config_home="/x", codex_home="/c/codex", zed_flatpak=False)
+    assert homes.codex("/home/a") == "/c/codex"
+    assert homes.claude("/home/a") == "/home/a/.claude"  # a relative one is never honoured
+    assert ClientHomes(claude_config_dir="/cc").claude("/home/a/") == "/cc"
+    assert ClientHomes().codex("/home/a") == "/home/a/.codex"
+
+
+@pytest.mark.parametrize(
+    ("platform", "present", "flatpak"),
+    [
+        ("linux", {"/home/a/.var/app/dev.zed.Zed"}, True),
+        # A native Zed's config folder wins: it is the one already in use.
+        ("linux", {"/home/a/.var/app/dev.zed.Zed", "/home/a/.config/zed"}, False),
+        ("linux", set(), False),
+        ("darwin", {"/home/a/.var/app/dev.zed.Zed"}, False),  # no Flatpak on macOS
+    ],
+)
+def test_a_flatpak_zed_is_used_only_with_no_native_zed_config(
+    platform: str, present: set[str], flatpak: bool
+) -> None:
+    homes = ClientHomes.from_environ(
+        {}, home_dir="/home/a", platform=platform, is_dir=present.__contains__
+    )
+    assert homes.zed_flatpak is flatpak
+
+
+def test_each_client_follows_its_own_home() -> None:
+    catalog = HOST_CLIENT_CATALOG
+    zed, codex, claude = (catalog.by_id(name) for name in ("zed", "codex", "claude_code"))
+    assert zed is not None and codex is not None and claude is not None
+    homes = ClientHomes(
+        xdg_config_home="/x", codex_home="/c", claude_config_dir="/cc", zed_flatpak=True
+    )
+
+    def path(spec: Any) -> str:
+        return str(spec.config_path(home_dir="/h", project_dir="/p", platform="linux", homes=homes))
+
+    assert path(zed) == "/h/.var/app/dev.zed.Zed/config/zed/settings.json"
+    assert path(codex) == "/c/config.toml"
+    assert path(claude) == "/p/.mcp.json"  # Claude Code's servers stay the project's
+    assert claude.presence_path(home_dir="/h", platform="linux", homes=homes) == "/cc"
+    assert codex.presence_path(home_dir="/h", platform="linux", homes=homes) == "/c"
+    assert codex.skills_folder(home_dir="/h", homes=homes) == "/c/skills"
+    assert claude.skills_folder(home_dir="/h", homes=homes) == "/cc/skills"
+    assert zed.skills_folder(home_dir="/h", homes=homes) is None
+    plain = ClientHomes()
+    assert codex.config_path(home_dir="/h", project_dir="", platform="linux", homes=plain) == (
+        "/h/.codex/config.toml"
+    )
 
 
 def test_an_mcp_clients_customised_entry_keeps_its_env_too() -> None:

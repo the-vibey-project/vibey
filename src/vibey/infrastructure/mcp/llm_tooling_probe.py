@@ -36,7 +36,12 @@ from collections.abc import Callable, Mapping, Sequence
 from pathlib import Path
 from typing import Final
 
-from vibey.domain.host_clients import HOST_CLIENT_CATALOG, HostClientError, HostClientSpec
+from vibey.domain.host_clients import (
+    HOST_CLIENT_CATALOG,
+    ClientHomes,
+    HostClientError,
+    HostClientSpec,
+)
 from vibey.domain.interfaces.host_clients_interface import HostClientsInterface
 from vibey.domain.interfaces.llm_tooling_interface import LlmToolingInterface
 from vibey.domain.llm_tooling import (
@@ -48,13 +53,9 @@ from vibey.domain.llm_tooling import (
     ToolingFinding,
 )
 
-PLUGIN_RECORD: Final = Path(".claude") / "plugins" / "installed_plugins.json"
-"""Where Claude Code records the plugins it installed, under the home folder."""
-SKILL_FOLDERS: Final[dict[str, Path]] = {
-    "claude_code": Path(".claude") / "skills",
-    "codex": Path(".codex") / "skills",
-}
-"""The user-level skills folder of each client that reads one, under the home folder."""
+PLUGIN_RECORD: Final = Path("plugins") / "installed_plugins.json"
+"""Where Claude Code records the plugins it installed, under its own folder (`~/.claude`, or
+`CLAUDE_CONFIG_DIR`)."""
 PROJECT_SKILLS: Final = Path(".claude") / "skills"
 """Claude Code's skills folder inside a project, which it reads too."""
 REPOSITORY_SKILL: Final = (
@@ -93,24 +94,30 @@ class LlmToolingProbe:
 
     def detected(self) -> tuple[HostClientSpec, ...]:
         home = str(self._home_dir())
-        xdg = self._environ.get("XDG_CONFIG_HOME")
+        homes = self._homes(home)
         return tuple(
             spec
             for spec in self._catalog.all()
             if self._is(
-                Path(
-                    spec.presence_path(home_dir=home, platform=self._platform, xdg_config_home=xdg)
-                ),
+                Path(spec.presence_path(home_dir=home, platform=self._platform, homes=homes)),
                 Path.is_dir,
             )
+        )
+
+    def _homes(self, home: str) -> ClientHomes:
+        """Where the person moved clients' config (`XDG_CONFIG_HOME`, `CODEX_HOME`,
+        `CLAUDE_CONFIG_DIR`, a Flatpak Zed), from this process's environment."""
+        return ClientHomes.from_environ(
+            self._environ, home_dir=home, platform=self._platform, is_dir=os.path.isdir
         )
 
     def findings(self, client_ids: Sequence[str] | None = None) -> tuple[ToolingFinding, ...]:
         specs = self._catalog.resolve_clients(client_ids) if client_ids else self.detected()
         home, project = self._home_dir(), self._project_dir()
         launcher = self._launcher()
-        plugin = self._plugin_installed(home)
-        install = self._skill_install()
+        homes = self._homes(str(home))
+        plugin = self._plugin_installed(Path(homes.claude(str(home))))
+        install = self._skill_install(Path(homes.codex(str(home))) / "skills", home)
         found: list[ToolingFinding] = []
         for spec in specs:
             entry, detail = self._entry(spec, launcher, home, project)
@@ -118,7 +125,7 @@ class LlmToolingProbe:
                 entry,
                 detail,
                 plugin_installed=plugin and spec.client_id == "claude_code",
-                skill_at=self._skill_at(spec, home, project),
+                skill_at=self._skill_at(spec, home, project, homes),
                 skill_install=install,
             )
             found.extend(self._tooling.findings(spec, tooling))
@@ -147,7 +154,7 @@ class LlmToolingProbe:
                 home_dir=str(home),
                 project_dir=str(project),
                 platform=self._platform,
-                xdg_config_home=self._environ.get("XDG_CONFIG_HOME"),
+                homes=self._homes(str(home)),
             )
         )
         shown = self._shown(target, home)
@@ -174,7 +181,7 @@ class LlmToolingProbe:
                 platform=self._platform,
                 launch=launch,
                 existing_content=text,
-                xdg_config_home=self._environ.get("XDG_CONFIG_HOME"),
+                homes=self._homes(str(home)),
             )
         except HostClientError as exc:
             return "refused", str(exc).replace(str(target), shown)
@@ -209,10 +216,10 @@ class LlmToolingProbe:
         except UnicodeDecodeError:
             return None, f"{shown} is not UTF-8 text"
 
-    def _plugin_installed(self, home: Path) -> bool:
+    def _plugin_installed(self, claude: Path) -> bool:
         """Whether Claude Code records `vibey@vibey` (the plugin from the marketplace named
-        `vibey`, this repository's root marketplace) as installed."""
-        text, _ = self._read(home / PLUGIN_RECORD, "")
+        `vibey`, this repository's root marketplace) as installed, in its own folder."""
+        text, _ = self._read(claude / PLUGIN_RECORD, "")
         if text is None:
             return False
         try:
@@ -222,13 +229,16 @@ class LlmToolingProbe:
         plugins = record.get("plugins") if isinstance(record, dict) else None
         return isinstance(plugins, dict) and PLUGIN_ID in plugins
 
-    def _skill_at(self, spec: HostClientSpec, home: Path, project: Path) -> str | None:
-        """Where the skill is: the client's user-level skills folder, or, for Claude Code,
-        the project's own `.claude/skills` (only looked at, never read)."""
-        folder = SKILL_FOLDERS.get(spec.client_id)
+    def _skill_at(
+        self, spec: HostClientSpec, home: Path, project: Path, homes: ClientHomes
+    ) -> str | None:
+        """Where the skill is: the client's user-level skills folder (`CODEX_HOME` and
+        `CLAUDE_CONFIG_DIR` followed), or, for Claude Code, the project's own `.claude/skills`
+        (only looked at, never read)."""
+        folder = spec.skills_folder(home_dir=str(home), homes=homes)
         if folder is None:
             return None
-        places = [home / folder / SKILL_NAME]
+        places = [Path(folder) / SKILL_NAME]
         if spec.client_id == "claude_code":
             places.append(project / PROJECT_SKILLS / SKILL_NAME)
         for skill in places:
@@ -245,11 +255,14 @@ class LlmToolingProbe:
         except OSError:
             return False
 
-    def _skill_install(self) -> str:
+    def _skill_install(self, skills: Path, home: Path) -> str:
+        """How to put the skill vibey ships into Codex's skills folder (`CODEX_HOME` followed)."""
         shipped = self._shipped()
         if shipped is None:
             return REPOSITORY_SKILL
-        return f"mkdir -p ~/.codex/skills && cp -R {shlex.quote(str(shipped))} ~/.codex/skills/"
+        shown = self._shown(skills, home)
+        where = shown if shown.startswith("~/") else shlex.quote(shown)
+        return f"mkdir -p {where} && cp -R {shlex.quote(str(shipped))} {where}/"
 
     @staticmethod
     def _shown(path: Path, home: Path) -> str:

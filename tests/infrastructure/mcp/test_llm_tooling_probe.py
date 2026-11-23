@@ -28,7 +28,11 @@ ZED_ENTRY = {"type": "custom", "command": PINNED, "args": ["acp"], "env": {}}
 
 
 def probe(
-    tmp_path: Path, *, launcher: str | None = PINNED, shipped: Path | None = None
+    tmp_path: Path,
+    *,
+    launcher: str | None = PINNED,
+    shipped: Path | None = None,
+    environ: dict[str, str] | None = None,
 ) -> tuple[LlmToolingProbe, Path, Path]:
     home, project = tmp_path / "home", tmp_path / "project"
     home.mkdir(exist_ok=True)
@@ -41,7 +45,7 @@ def probe(
             platform="linux",
             python_executable="/usr/bin/python3",
             shipped_skill=lambda: shipped,
-            environ={},
+            environ=environ or {},
         ),
         home,
         project,
@@ -436,3 +440,55 @@ def test_a_config_with_no_vibey_entry_says_so(tmp_path: Path) -> None:
     finding = by_name(tooling.findings())["zed:acp-agent"]
     assert finding.state == "missing"
     assert finding.detail.startswith("no `vibey` entry in ~/.config/zed/settings.json")
+
+
+# -- SP-ACP Task 11b-ii: CODEX_HOME, CLAUDE_CONFIG_DIR and a Flatpak Zed ------------------------
+
+
+def test_codex_home_and_claude_config_dir_are_where_their_clients_are_read(
+    tmp_path: Path,
+) -> None:
+    home = tmp_path / "home"
+    codex, claude = home / "tools" / "codex", home / "tools" / "claude"
+    tooling, _, _ = probe(
+        tmp_path,
+        shipped=tmp_path / "shipped" / "vibey-chat-driver",
+        environ={"CODEX_HOME": str(codex), "CLAUDE_CONFIG_DIR": str(claude)},
+    )
+    (codex).mkdir(parents=True)
+    (codex / "config.toml").write_text(
+        f'[mcp_servers.vibey]\ncommand = "{PINNED}"\nargs = ["mcp"]\n'
+    )
+    installed = claude / "plugins" / "installed_plugins.json"
+    installed.parent.mkdir(parents=True)
+    installed.write_text(json.dumps({"plugins": {"vibey@vibey": []}}))
+    skill = codex / "skills" / "vibey-chat-driver"
+    skill.mkdir(parents=True)
+    (skill / "SKILL.md").write_text("x")
+
+    found = by_name(tooling.findings())
+
+    assert {spec.client_id for spec in tooling.detected()} >= {"codex", "claude_code"}
+    assert found["codex:mcp-server"].state == "present"
+    assert found["codex:mcp-server"].detail == "in ~/tools/codex/config.toml"
+    assert found["codex:skill"].detail == "~/tools/codex/skills/vibey-chat-driver"
+    assert found["claude_code:plugin"].state == "present"
+
+
+def test_the_skill_install_names_codex_home_when_it_is_set(tmp_path: Path) -> None:
+    shipped = tmp_path / "shipped" / "vibey-chat-driver"
+    codex = tmp_path / "home" / "c"
+    tooling, _, _ = probe(tmp_path, shipped=shipped, environ={"CODEX_HOME": str(codex)})
+    codex.mkdir(parents=True)
+    detail = by_name(tooling.findings())["codex:skill"].detail
+    assert detail == f"vibey-chat-driver: mkdir -p ~/c/skills && cp -R {shipped} ~/c/skills/"
+
+
+def test_a_flatpak_zed_is_read_in_its_own_folder(tmp_path: Path) -> None:
+    tooling, home, _ = probe(tmp_path)
+    settings = home / ".var" / "app" / "dev.zed.Zed" / "config" / "zed" / "settings.json"
+    settings.parent.mkdir(parents=True)
+    settings.write_text(json.dumps({"agent_servers": {"vibey": ZED_ENTRY}}))
+    finding = by_name(tooling.findings())["zed:acp-agent"]
+    assert finding.state == "present"
+    assert finding.detail == "in ~/.var/app/dev.zed.Zed/config/zed/settings.json"
