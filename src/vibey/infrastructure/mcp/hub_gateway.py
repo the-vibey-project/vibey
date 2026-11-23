@@ -34,6 +34,7 @@ Mirrors `cli/hub_pair.py::HubPairCommand._call`, with two deliberate differences
 from __future__ import annotations
 
 import os
+import ssl
 import subprocess  # nosec B404
 import sys
 from collections.abc import Callable, Mapping
@@ -53,7 +54,7 @@ from vibey.infrastructure.hub.interfaces.settings_interface import HubSettingsLo
 from vibey.infrastructure.hub.local_token import LocalTokenStore, ServingRecord
 from vibey.infrastructure.hub.serve_lock import ServeLock
 from vibey.infrastructure.hub.settings import HUB_SETTINGS, HubSettings
-from vibey.infrastructure.hub.tls import CERT_FILE
+from vibey.infrastructure.hub.tls import HubCertificate
 from vibey.infrastructure.mcp.interfaces.hub_gateway_interface import HubGatewayInterface
 from vibey.infrastructure.user_config_folder import UserConfigFolder
 from vibey.infrastructure.web.search import DEFAULT_TIMEOUT_SECONDS as DEFAULT_SEARCH_TIMEOUT
@@ -296,7 +297,16 @@ class HubGateway:
             )
         shown = f"[{host}]" if ":" in host else host
         scheme = "https" if record.tls else "http"
-        verify: str | bool = str(settings.state_dir / CERT_FILE) if record.tls else True
+        try:
+            # The hub's own certificate as the only authority, never the system's store, never
+            # no verification (SP-ACP Task 11b: a context, not httpx's deprecated path).
+            verify: ssl.SSLContext | bool = (
+                HubCertificate(settings.state_dir).client_context() if record.tls else True
+            )
+        except (OSError, ValueError) as exc:
+            raise HubGatewayError(
+                f"the hub's certificate could not be read ({type(exc).__name__}); nothing was sent"
+            ) from exc
         with self._client(
             base_url=f"{scheme}://{shown}:{record.port}",
             headers={"authorization": f"Bearer {token}"},

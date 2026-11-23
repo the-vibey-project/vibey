@@ -7,8 +7,10 @@ they report what comes back. The routes themselves are tested in
 tests/infrastructure/hub/test_hub_pairing.py.
 """
 
+import datetime as _dt
 import json
 import os
+import ssl
 import sys
 from pathlib import Path
 from typing import Any
@@ -23,6 +25,7 @@ from vibey.cli.hub_pair import HUB_PAIR, HubPairCommand, _render_qr
 from vibey.cli.interfaces.hub_pair_interface import HubPairCommandInterface
 from vibey.cli.main import app
 from vibey.infrastructure.hub.local_token import LocalTokenStore, ServingRecord
+from vibey.infrastructure.hub.tls import HubCertificate
 
 runner = CliRunner()
 _OWN_CONFIG = module.own_config
@@ -119,14 +122,28 @@ def test_pair_needs_known_scopes(tmp_path: Path, scopes: list[str]) -> None:
     assert caught.value.exit_code == 2
 
 
+def _certificate(state: Path) -> None:
+    """The hub's own certificate in its state folder, as `vibey serve` makes it."""
+    HubCertificate(state).ensure(frozenset(), _dt.datetime(2026, 11, 22, tzinfo=_dt.UTC))
+
+
+def _pinned(verify: object) -> None:
+    """What a TLS request trusts: a context whose only authority is the hub's own certificate
+    (`HubCertificate.client_context`), never a path httpx would read itself (Task 11b)."""
+    assert isinstance(verify, ssl.SSLContext)
+    assert verify.cert_store_stats()["x509"] == 1
+    assert verify.verify_mode is ssl.CERT_REQUIRED and verify.check_hostname
+
+
 def test_a_tls_hub_is_reached_over_https_trusting_only_its_own_certificate(
     tmp_path: Path,
 ) -> None:
     hub = Hub([])
     record = ServingRecord(host="0.0.0.0", port=9100, pid=os.getpid(), tls=True)  # nosec B104
+    _certificate(tmp_path / "state")
     _command(tmp_path, hub, record=record).devices()
     assert str(hub.requests[0].url) == "https://127.0.0.1:9100/api/v1/devices"
-    assert hub.opened["verify"] == str(tmp_path / "state" / "hub-cert.pem")
+    _pinned(hub.opened["verify"])
 
 
 def test_an_ipv6_hub_is_bracketed(tmp_path: Path) -> None:
@@ -246,7 +263,7 @@ def _lan(
     certificate (or none)."""
     _command(tmp_path, hub, record=record)
     if cert:
-        (tmp_path / "state" / "hub-cert.pem").write_text("-----BEGIN CERTIFICATE-----\n")
+        _certificate(tmp_path / "state")
     read: list[bool] = []
     real = LocalTokenStore.token
 
@@ -273,7 +290,7 @@ def test_the_person_names_a_lan_hub_with_host_over_its_own_certificate(
     command, _ = _lan(tmp_path, hub, lan, monkeypatch)
     command.pair(["view"], "192.168.1.5")
     assert str(hub.requests[0].url) == "https://192.168.1.5:8765/api/v1/pairing/offers"
-    assert hub.opened["verify"] == str(tmp_path / "state" / "hub-cert.pem")
+    _pinned(hub.opened["verify"])
     assert hub.opened["follow_redirects"] is False
     assert "code: 123456" in capsys.readouterr().out
 

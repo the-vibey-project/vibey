@@ -3,8 +3,10 @@
 
 from __future__ import annotations
 
+import datetime as _dt
 import io
 import json
+import ssl
 import subprocess
 from collections.abc import Mapping
 from pathlib import Path
@@ -22,7 +24,7 @@ from vibey.domain.host_tools import HubCall
 from vibey.domain.hub_scope import AGENT_DEFAULT_SCOPES, HubScope
 from vibey.infrastructure.hub.local_token import LocalTokenStore, ServingRecord
 from vibey.infrastructure.hub.settings import HubSettings
-from vibey.infrastructure.hub.tls import CERT_FILE
+from vibey.infrastructure.hub.tls import CERT_FILE, HubCertificate
 from vibey.infrastructure.mcp import hub_gateway as hub_gateway_module
 from vibey.infrastructure.mcp.hub_gateway import (
     HUB_GATEWAY,
@@ -173,7 +175,8 @@ def test_gateway_sends_agent_token_and_maps_wildcard_and_ipv6_hosts(
     assert sent["verify"] is True
     assert sent["params"] == [("limit", "10")]
 
-    # IPv6 + TLS path
+    # IPv6 + TLS path: the hub's own certificate, as `vibey serve` makes it
+    HubCertificate(state).ensure(frozenset(), _dt.datetime(2026, 11, 22, tzinfo=_dt.UTC))
     hub_lock.serve(state, ServingRecord(host="::1", port=9000, pid=1234, tls=True))
     res_tls = gw.call(
         HubCall(
@@ -186,7 +189,14 @@ def test_gateway_sends_agent_token_and_maps_wildcard_and_ipv6_hosts(
     assert res_tls.ok is True
     sent_tls = fake.calls[1]
     assert sent_tls["base_url"] == "https://[::1]:9000"
-    assert sent_tls["verify"] == str(state / CERT_FILE)
+    # A context whose only authority is that certificate, never a path (Task 11b).
+    assert isinstance(sent_tls["verify"], ssl.SSLContext)
+    assert sent_tls["verify"].cert_store_stats()["x509"] == 1
+    # A certificate that cannot be read is refused before anything is sent.
+    (state / CERT_FILE).chmod(0o644)
+    with pytest.raises(HubGatewayError, match="certificate could not be read"):
+        gw.call(HubCall(tool="vibey_projects", method="GET", route="/api/v1/projects"))
+    assert len(fake.calls) == 2
     assert sent_tls["json"] == {"name": "demo", "intake": "hi"}
 
 

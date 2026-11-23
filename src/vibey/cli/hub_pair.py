@@ -24,6 +24,7 @@ certificate alone, and never follows a redirect. Every check comes before the to
 anything else is refused before anything is sent.
 """
 
+import ssl
 from collections.abc import Callable
 from pathlib import Path
 from typing import Annotated, Any, Final
@@ -43,7 +44,7 @@ from vibey.infrastructure.hub.local_token import LocalTokenStore, ServingRecord
 from vibey.infrastructure.hub.serve_lock import ServeLock
 from vibey.infrastructure.hub.server import LOCAL_NAMES
 from vibey.infrastructure.hub.settings import HUB_SETTINGS
-from vibey.infrastructure.hub.tls import CERT_FILE
+from vibey.infrastructure.hub.tls import CERT_FILE, HubCertificate
 from vibey.infrastructure.user_config_folder import UserConfigFolder
 
 EXIT_NOT_RUNNING: Final = 3
@@ -179,10 +180,12 @@ class HubPairCommand:
             raise typer.Exit(2)
         shown = f"[{host}]" if ":" in host else host
         scheme = "https" if record.tls else "http"
-        # The hub's own certificate, and only it, when it serves one: a file as `verify` is the
-        # only authority trusted (never the system's store, never no verification).
-        verify: str | bool = str(cert) if record.tls else True
         try:
+            # The hub's own certificate, and only it, when it serves one: a context whose only
+            # authority it is (never the system's store, never no verification; Task 11b).
+            verify: ssl.SSLContext | bool = (
+                HubCertificate(settings.state_dir).client_context() if record.tls else True
+            )
             token = store.token()
             opened = self._client(
                 base_url=f"{scheme}://{shown}:{record.port}/api/v1",
