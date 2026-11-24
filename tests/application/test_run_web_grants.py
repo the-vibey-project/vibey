@@ -196,7 +196,7 @@ def test_a_failed_revocation_with_no_logger_is_still_swallowed(tmp_path: Path) -
     grants, _, principals = _grants()
     access = grants.open(RUN, tmp_path)
     principals.revoke_error = OSError("cannot write")
-    grants.close(access)
+    assert grants.close(access) is None
 
 
 def test_an_interrupt_during_revocation_is_not_swallowed(tmp_path: Path) -> None:
