@@ -310,6 +310,12 @@ class PostgresLocalService:
                 return found
         return None
 
+    def tool(self, name: str) -> str | None:
+        """Where a PostgreSQL client tool (`psql`, ...) is: Homebrew's versioned formula first,
+        which is keg-only and so not on PATH, then PATH. Runs `brew --prefix` at most once."""
+        self._discover_brew_prefix()
+        return self._find(name)
+
     def package_manager(self) -> str | None:
         """The package manager `install` would use (`brew`, `apt-get` or `dnf`), or None when
         the host has none of them. Looks for the binaries only; runs nothing."""

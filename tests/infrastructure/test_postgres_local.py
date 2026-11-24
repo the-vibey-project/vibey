@@ -594,3 +594,23 @@ def test_subprocess_runner_handles_success_oserror_and_timeout(
 
     monkeypatch.setattr(subprocess, "run", raise_timeout)
     assert module._run_command(("slow",)).returncode == 1
+
+
+def test_a_client_tool_is_found_in_an_unlinked_homebrew_formula_first(tmp_path: Path) -> None:
+    """`vibey install --database` runs `psql` as the administrator; Homebrew's versioned
+    formula is keg-only, so its `psql` is not on PATH and must be found where `status` finds
+    `pg_config`."""
+    prefix = tmp_path / "postgresql@18"
+    (prefix / "bin").mkdir(parents=True)
+    (prefix / "bin" / "psql").touch()
+
+    def run(argv: tuple[str, ...]) -> PostgresCommandResult:
+        return PostgresCommandResult(0, stdout=f"{prefix}\n")
+
+    service = PostgresLocalService(
+        command_runner=run,
+        which=lambda name: f"/usr/bin/{name}" if name in ("brew", "createdb") else None,
+    )
+    assert service.tool("psql") == str(prefix / "bin" / "psql")
+    assert service.tool("createdb") == "/usr/bin/createdb"
+    assert PostgresLocalService(which=lambda name: None).tool("psql") is None
