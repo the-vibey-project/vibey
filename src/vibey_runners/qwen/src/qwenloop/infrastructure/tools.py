@@ -155,9 +155,13 @@ class ShellEnvironment:
             "__CF_USER_TEXT_ENCODING",
         }
     )
-    # `WEBSEARCH_` is the non-secret web search setting vibey tells every session (its
-    # `vibey search` reads it); a Brave key is never among them, and FORBIDDEN_* still wins.
-    SYSTEM_PREFIXES: tuple[str, ...] = ("LC_", "WEBSEARCH_")
+    SYSTEM_PREFIXES: tuple[str, ...] = ("LC_",)
+    # The two names a session's `vibey search` and `vibey fetch` need to reach the hub with the
+    # session's own web-only grant (SP-LOOPS Phase 6, R1): the hub's loopback address and the
+    # path of the token file. Neither is a secret -- the token stays in its 0600 file -- so they
+    # pass, exactly these two, although `VIBEY_` and `TOKEN` are forbidden for every other name.
+    # No caller can widen this: `extra` is still checked against the forbidden rule.
+    WEB_NAMES: frozenset[str] = frozenset({"VIBEY_HUB_URL", "VIBEY_WEB_TOKEN_FILE"})
     FORBIDDEN_PREFIXES: tuple[str, ...] = ("VIBEY_", "PG")
     FORBIDDEN_MARKERS: tuple[str, ...] = (
         "KEY",
@@ -186,6 +190,8 @@ class ShellEnvironment:
         )
 
     def admits(self, name: str) -> bool:
+        if name in self.WEB_NAMES:
+            return True
         if self.forbids(name):
             return False
         return (

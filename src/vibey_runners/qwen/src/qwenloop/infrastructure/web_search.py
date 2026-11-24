@@ -1,33 +1,46 @@
 # Made with ❤️ by [Vibey](https://the-vibey-project.github.io/vibey/), Developed by [Adam Matthew Steinberger](https://vibewithadam.matthewsteinberger.com/) ([@adammatthewsteinberger](https://github.com/adammatthewsteinberger/)).
 """Polite web search and fetch operations for sovereign coding agents.
 
-Both run vibey's own `vibey search` and `vibey fetch` (`WEBSEARCH_COMMAND`), so the tool follows
-vibey's local-first rule: the local SearXNG the worker named, and never Brave from here, since a
-session is never given the Brave key (every `*KEY*` name is kept from the child, see
-`tools.ShellEnvironment`). What `vibey search` says it answered with (`backend`) and vibey's own
-backup notice, when standard error carries it, are passed on beside the content. Nothing else
-on standard error reaches the model: each notice line is cleaned of non-printable characters
-(terminal escapes) and the whole is cut to 500 characters.
+Both run vibey's own `vibey search` and `vibey fetch` (`VibeyCommand`: the `vibey` beside this
+runner's Python), which reach the hub with the session's own web-only token (SP-LOOPS Phase 6).
+A session can search only when the vibey worker that started it gave it a grant: the hub's
+loopback address (`VIBEY_HUB_URL`) and the path of its token file (`VIBEY_WEB_TOKEN_FILE`) --
+never the token, never a search backend's address and never a key. Those two names are the only
+`VIBEY_*` names that reach the command (`tools.ShellEnvironment.WEB_NAMES`). A session the worker
+marked `VIBEY_WEB_STATE=none` is told search is unavailable and that its plan says why. What
+`vibey search` says answered (`backend`) and vibey's own backup notice, when standard error
+carries it, are passed on beside the content. Nothing else on standard error reaches the model:
+each notice line is cleaned of non-printable characters (terminal escapes) and the whole is cut
+to 500 characters.
 """
 
 from __future__ import annotations
 
 import asyncio
 import json
+import os
 from collections.abc import Mapping
 from pathlib import Path
 
 from qwenloop.domain.config import ToolLimits
 from qwenloop.infrastructure.interfaces.tools_interface import ShellEnvironmentInterface
+from qwenloop.infrastructure.vibey_command import VIBEY_COMMAND
 
 _QUERY_KEYS = ("query", "pattern", "text", "q", "term", "keyword", "search")
 _LIMIT_KEYS = ("max_results", "limit", "topn", "max_matches")
 _URL_KEYS = ("url", "uri", "link", "href", "page")
 _WEB_TIMEOUT_SECONDS = 90
+_WEB_NAMES = ("VIBEY_HUB_URL", "VIBEY_WEB_TOKEN_FILE")
+"""The hub's address and the session's token file's path: both, or the session cannot search."""
+_STATE_NAME = "VIBEY_WEB_STATE"
 _WEB_NOT_CONFIGURED = (
-    "web search is not set up for this session: only a session a vibey worker started can "
-    "search (through vibey's local SearXNG). Use the repository and what you already know "
+    "web search is not set up for this session: only a session a vibey worker started while a "
+    "hub was running can search (through the hub). Use the repository and what you already know "
     "instead."
+)
+_WEB_UNAVAILABLE = (
+    "web search is unavailable in this session: the vibey worker that started it gave it no web "
+    "access, and its plan says why. Use the repository and what you already know instead."
 )
 _NOTICE_CHARS = 500
 _NOTICE_PREFIX = "local SearXNG unavailable ("
@@ -46,28 +59,37 @@ class WebSearch:
         worktree: Path,
         environment: Mapping[str, str],
         *,
+        command: str = "vibey",
+        state: str = "",
         timeout_seconds: float = _WEB_TIMEOUT_SECONDS,
         max_read_chars: int = 200_000,
     ) -> None:
         self.worktree = worktree.resolve()
         self.environment = dict(environment)
+        self.command = command
+        self.state = state
         self.timeout_seconds = timeout_seconds
         self.max_read_chars = max_read_chars
 
     @property
     def is_configured(self) -> bool:
-        """Whether web search is configured in the environment."""
-        return "WEBSEARCH_PROVIDER" in self.environment
+        """Whether the session holds a grant: the hub's address and its token file's path."""
+        return all((self.environment.get(name) or "").strip() for name in _WEB_NAMES)
+
+    @property
+    def unconfigured(self) -> str:
+        """Why the session cannot search: the worker said it has no web, or it was never told."""
+        return _WEB_UNAVAILABLE if self.state.strip() == "none" else _WEB_NOT_CONFIGURED
 
     async def search(self, query: str, limit: int = 5) -> dict[str, object]:
         """Perform a web search query."""
         if not self.is_configured:
-            return {"error": _WEB_NOT_CONFIGURED}
+            return {"error": self.unconfigured}
         cleaned = query.strip()
         if not cleaned:
             return {"error": "web_search needs a query: what to look up"}
         bounded_limit = min(max(limit, 1), 20)
-        command = self.environment.get("WEBSEARCH_COMMAND", "vibey")
+        command = self.command
         argv = [command, "search", "--json", "--limit", str(bounded_limit), "--", cleaned]
         result = await self._run_command(command, argv)
         backend = self._backend(result.get("content"))
@@ -88,11 +110,11 @@ class WebSearch:
     async def fetch(self, url: str) -> dict[str, object]:
         """Fetch the contents of a webpage."""
         if not self.is_configured:
-            return {"error": _WEB_NOT_CONFIGURED}
+            return {"error": self.unconfigured}
         cleaned = url.strip()
         if not cleaned:
             return {"error": "web_fetch needs a url: the page to read"}
-        command = self.environment.get("WEBSEARCH_COMMAND", "vibey")
+        command = self.command
         argv = [command, "fetch", "--json", "--", cleaned]
         return await self._run_command(command, argv)
 
@@ -150,7 +172,7 @@ async def web_search(
     """Search the web for `query`."""
     wt = (worktree or Path.cwd()).resolve()
     env = environment if environment is not None else {}
-    searcher = WebSearch(wt, env)
+    searcher = WebSearch(wt, env, command=VIBEY_COMMAND.resolve())
     return await searcher.search(query, limit)
 
 
@@ -164,11 +186,17 @@ class WebSearchTool:
         limits: ToolLimits,
         *,
         timeout_seconds: float = _WEB_TIMEOUT_SECONDS,
+        vibey: str | None = None,
+        source: Mapping[str, str] | None = None,
     ) -> None:
         self.worktree = worktree.resolve()
         self._shell_environment = shell_environment
         self.limits = limits
         self.timeout_seconds = timeout_seconds
+        self._vibey = vibey
+        # This runner's own environment, where the worker marks a session with no web
+        # (`VIBEY_WEB_STATE=none`); the mark itself never reaches a model's command.
+        self._source = source
 
     @staticmethod
     def _first(arguments: Mapping[str, object], keys: tuple[str, ...]) -> object:
@@ -191,14 +219,17 @@ class WebSearchTool:
     async def execute(self, name: str, arguments: Mapping[str, object]) -> dict[str, object]:
         """Dispatch web_search or web_fetch call."""
         environment = self._shell_environment.build()
+        source = os.environ if self._source is None else self._source
         searcher = WebSearch(
             self.worktree,
             environment,
+            command=self._vibey or VIBEY_COMMAND.resolve(),
+            state=source.get(_STATE_NAME, ""),
             timeout_seconds=self.timeout_seconds,
             max_read_chars=self.limits.max_read_chars,
         )
         if not searcher.is_configured:
-            return {"error": _WEB_NOT_CONFIGURED}
+            return {"error": searcher.unconfigured}
 
         if name == "web_search":
             query = self._first(arguments, _QUERY_KEYS)

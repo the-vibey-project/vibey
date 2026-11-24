@@ -15,29 +15,84 @@ from qwenloop.infrastructure.interfaces.web_search_interface import (
 from qwenloop.infrastructure.tools import ShellEnvironment
 from qwenloop.infrastructure.web_search import WebSearch, WebSearchTool, web_search
 
+HUB = {"VIBEY_HUB_URL": "http://127.0.0.1:28100", "VIBEY_WEB_TOKEN_FILE": "/runs/r/web-token"}
+"""What a vibey worker gives a session that holds its own grant (SP-LOOPS Phase 6)."""
+
 
 def _mock_web_tool(tmp_path: Path, script_body: str, **extra: str) -> WebSearchTool:
     script = tmp_path / "mock-vibey"
     script.write_text("#!/bin/sh\n" + script_body + "\n")
     script.chmod(0o755)
-    source = {
-        "PATH": "/usr/bin:/bin",
-        "WEBSEARCH_PROVIDER": "searxng",
-        "WEBSEARCH_COMMAND": str(script),
-        **extra,
-    }
+    source = {"PATH": "/usr/bin:/bin", **HUB, **extra}
     env = ShellEnvironment(source)
-    return WebSearchTool(tmp_path, env, ToolLimits())
+    return WebSearchTool(tmp_path, env, ToolLimits(), vibey=str(script), source=source)
 
 
 @pytest.mark.asyncio
 async def test_web_search_says_so_when_not_configured(tmp_path: Path) -> None:
     env = ShellEnvironment({"PATH": "/usr/bin"})
-    tool = WebSearchTool(tmp_path, env, ToolLimits())
+    tool = WebSearchTool(tmp_path, env, ToolLimits(), source={})
 
     for name, args in (("web_search", {"query": "x"}), ("web_fetch", {"url": "http://x"})):
         result = await tool.execute(name, args)
         assert "not set up" in str(result["error"])
+
+
+@pytest.mark.asyncio
+async def test_a_session_the_worker_gave_no_web_is_told_so_and_where_to_look(
+    tmp_path: Path,
+) -> None:
+    source = {"PATH": "/usr/bin", "VIBEY_WEB_STATE": "none"}
+    tool = WebSearchTool(tmp_path, ShellEnvironment(source), ToolLimits(), source=source)
+
+    for name, args in (("web_search", {"query": "x"}), ("web_fetch", {"url": "http://x"})):
+        error = str((await tool.execute(name, args))["error"])
+        assert "unavailable in this session" in error and "its plan says why" in error
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    "given", [{"VIBEY_HUB_URL": "http://127.0.0.1:1"}, {"VIBEY_WEB_TOKEN_FILE": "/f"}]
+)
+async def test_half_of_the_hubs_names_is_not_set_up(tmp_path: Path, given: dict[str, str]) -> None:
+    source = {"PATH": "/usr/bin", **given}
+    tool = WebSearchTool(
+        tmp_path, ShellEnvironment(source), ToolLimits(), vibey="/v", source=source
+    )
+    assert "not set up" in str((await tool.execute("web_search", {"query": "x"}))["error"])
+
+
+@pytest.mark.asyncio
+async def test_the_old_session_names_are_not_set_up(tmp_path: Path) -> None:
+    source = {"PATH": "/usr/bin", "WEBSEARCH_PROVIDER": "searxng", "WEBSEARCH_COMMAND": "/v"}
+    tool = WebSearchTool(tmp_path, ShellEnvironment(source), ToolLimits(), source=source)
+    assert "not set up" in str((await tool.execute("web_search", {"query": "x"}))["error"])
+
+
+@pytest.mark.asyncio
+async def test_by_default_the_tool_runs_the_vibey_beside_its_own_python_and_reads_its_state(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    from qwenloop.infrastructure import web_search as module
+
+    script = tmp_path / "bin" / "vibey"
+    script.parent.mkdir()
+    script.write_text('#!/bin/sh\necho "$0 $@"\n')
+    script.chmod(0o755)
+    monkeypatch.setattr(module.VIBEY_COMMAND, "_executable", str(tmp_path / "bin" / "python"))
+    for name, value in HUB.items():
+        monkeypatch.setenv(name, value)
+    tool = WebSearchTool(tmp_path, ShellEnvironment(), ToolLimits())
+
+    result = await tool.execute("web_search", {"query": "q"})
+
+    assert result["content"] == f"{script} search --json --limit 5 -- q\n"
+    monkeypatch.setenv("VIBEY_WEB_STATE", "none")
+    monkeypatch.delenv("VIBEY_HUB_URL")
+    off = await WebSearchTool(tmp_path, ShellEnvironment(), ToolLimits()).execute(
+        "web_search", {"query": "q"}
+    )
+    assert "unavailable in this session" in str(off["error"])
 
 
 @pytest.mark.asyncio
@@ -88,7 +143,12 @@ async def test_web_search_command_error_and_timeout(tmp_path: Path) -> None:
     assert failed["error"] == "lookup failed"
 
     tool_hang = _mock_web_tool(tmp_path, "exec sleep 5")
-    searcher = WebSearch(tmp_path, tool_hang._shell_environment.build(), timeout_seconds=0.1)
+    searcher = WebSearch(
+        tmp_path,
+        tool_hang._shell_environment.build(),
+        command=str(tmp_path / "mock-vibey"),
+        timeout_seconds=0.1,
+    )
     timeout_result = await searcher.search("hang")
     assert timeout_result == {"error": "the web request timed out"}
 
@@ -97,6 +157,7 @@ async def test_web_search_command_error_and_timeout(tmp_path: Path) -> None:
         tool_hang._shell_environment,
         ToolLimits(),
         timeout_seconds=0.1,
+        vibey=str(tmp_path / "mock-vibey"),
     )
     assert await tool_timeout.execute("web_search", {"query": "hang"}) == {
         "error": "the web request timed out"
@@ -123,7 +184,7 @@ async def test_web_search_standalone_helper(tmp_path: Path) -> None:
 async def test_web_search_class_refuses_a_blank_query_on_its_own(tmp_path: Path) -> None:
     # The tool dispatcher screens blank queries first; a direct caller of WebSearch gets
     # the same plain refusal rather than an empty `vibey search` run.
-    searcher = WebSearch(tmp_path, {"WEBSEARCH_PROVIDER": "searxng"})
+    searcher = WebSearch(tmp_path, HUB)
 
     assert await searcher.search("   ") == {"error": "web_search needs a query: what to look up"}
 
@@ -139,9 +200,16 @@ async def test_web_fetch_class_says_so_when_not_configured(tmp_path: Path) -> No
 
 @pytest.mark.asyncio
 async def test_web_fetch_class_refuses_a_blank_url_on_its_own(tmp_path: Path) -> None:
-    searcher = WebSearch(tmp_path, {"WEBSEARCH_PROVIDER": "searxng"})
+    searcher = WebSearch(tmp_path, HUB)
 
     assert await searcher.fetch("  ") == {"error": "web_fetch needs a url: the page to read"}
+
+
+@pytest.mark.asyncio
+async def test_the_class_says_unavailable_for_a_session_with_no_web(tmp_path: Path) -> None:
+    searcher = WebSearch(tmp_path, {}, state="none")
+
+    assert "unavailable in this session" in str((await searcher.search("q"))["error"])
 
 
 # -- local-first search: the tool follows vibey's policy, through `vibey search` ---------------
@@ -227,16 +295,23 @@ async def test_a_failure_carries_what_vibey_said_on_either_stream(tmp_path: Path
 
 
 @pytest.mark.asyncio
-async def test_the_brave_key_never_reaches_vibey_search_under_any_name(tmp_path: Path) -> None:
+async def test_vibey_search_is_given_the_hub_and_never_a_key_or_another_vibey_name(
+    tmp_path: Path,
+) -> None:
     keys = {
         "VIBEY_BRAVE_API_KEY": "fake-1",
         "WEBSEARCH_BRAVE_API_KEY": "fake-2",
         "BRAVE_SEARCH_API_KEY": "fake-3",
+        "VIBEY_PG_URL": "postgresql://fake-4",
+        "VIBEY_AGENT_TOKEN": "fake-5",
+        "VIBEY_SEARXNG_URL": "http://fake-6",
+        "WEBSEARCH_SEARXNG_URL": "http://fake-7",
     }
     tool = _mock_web_tool(tmp_path, "env", **keys)
 
     result = await tool.execute("web_search", {"query": "q"})
 
     content = str(result["content"])
-    assert "WEBSEARCH_PROVIDER=searxng" in content
+    assert "VIBEY_HUB_URL=http://127.0.0.1:28100" in content
+    assert "VIBEY_WEB_TOKEN_FILE=/runs/r/web-token" in content
     assert not any(name in content or value in content for name, value in keys.items())
