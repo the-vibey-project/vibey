@@ -35,6 +35,7 @@ from vibey.domain.job import FailureClass, StoredJobState
 from vibey.domain.phase import Phase, StoredPhase
 from vibey.domain.queue_reap import PolicyOutcome, ReapVerdict
 from vibey.domain.run_input import RunInputsSettings
+from vibey.domain.session_principal import SessionPrincipal
 
 
 @dataclass(frozen=True, slots=True)
@@ -524,6 +525,33 @@ class HubPrincipal:
 
     name: str
     scopes: frozenset[HubScope] = frozenset()
+
+
+@dataclass(frozen=True, slots=True)
+class SessionGrant:
+    """One engine session's web-only hub principal, as the worker holds it (SP-LOOPS Phase 6,
+    R1, R4): where its token file is, the principal it names, and the digest the hub knows it
+    by. The token itself is never a field: the session reads it from `token_file`. The digest
+    is left out of the repr as well, so neither a log line nor a traceback shows it."""
+
+    token_file: Path
+    principal: SessionPrincipal
+    digest: str = field(repr=False)
+
+    @property
+    def name(self) -> str:
+        """The principal's name, `session:<run id>`: what the hub records and budgets by."""
+        return self.principal.name
+
+    @property
+    def run_id(self) -> UUID:
+        """The engine run the session belongs to."""
+        return self.principal.run_id
+
+    @property
+    def expires_at(self) -> float:
+        """When the hub stops honouring the token, if it was not revoked first."""
+        return self.principal.expires_at
 
 
 # The hub's web tools (ADR-0102): what the search and fetch adapters hand the service.

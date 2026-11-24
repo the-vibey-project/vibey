@@ -153,6 +153,15 @@ class RunInputRefused(VibeyError):
         self.reason = reason
 
 
+class SessionGrantRefused(VibeyError):
+    """An engine session's web-only hub principal was not minted, or its token file not read:
+    the run folder is missing, a symlink, not a folder, not this account's or open to other
+    accounts; its `web-token` already exists (one grant per run folder); the token source gave
+    an unusable token; `now` is not a finite instant; or the file to read is not this account's
+    own owner-only regular file (SP-LOOPS Phase 6, R1). The message names the path, never the
+    token. Nothing was left behind."""
+
+
 class UnknownLane(VibeyError, LookupError):
     """No listed lane has the given events file. The hub reads only files it found as
     lanes, so a path that is not one is refused rather than opened (ADR-0067)."""
