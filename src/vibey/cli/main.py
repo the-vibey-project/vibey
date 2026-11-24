@@ -2197,10 +2197,12 @@ async def _sweep_loop_snapshots(logger: Logger, projects: ProjectReader) -> None
     except Exception as exc:  # the database's own errors, whatever they are: never sweep short
         logger.warning("loop_snapshot_sweep_refused", error=str(exc))
         return
-    deadline = longest_engine_run_deadline(record.config for record in known)
     try:
+        # Inside the guard: a deadline arithmetic cannot carry is a refused sweep, never a
+        # worker that cannot start.
+        deadline = longest_engine_run_deadline(record.config for record in known)
         report = loop_capabilities_service(deadline).sweep()
-    except (ConfigError, OSError, ValueError) as exc:
+    except (ArithmeticError, ConfigError, OSError, ValueError) as exc:
         logger.warning("loop_snapshot_sweep_refused", error=str(exc))
         return
     logger.info("loop_snapshot_sweep", removed=len(report.removed), refused=len(report.refused))

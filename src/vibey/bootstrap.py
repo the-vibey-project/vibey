@@ -583,6 +583,11 @@ DEFAULT_ENGINE_RUN_MINUTES = 240
 
 ENGINE_RUN_MINUTES_ENV = "VIBEY_ENGINE_MAX_RUN_MINUTES"
 
+ENGINE_RUN_MINUTES_CEILING = timedelta.max // timedelta(minutes=1) // 2
+"""The longest engine run deadline, in minutes, that arithmetic can carry: half of what a
+`timedelta` holds, so the sweep's margin added to it cannot overflow either. The arithmetic
+limit, not a policy limit -- about 1.4 million years."""
+
 
 def _engine_dispatch(
     resources: AppResources,
@@ -623,7 +628,10 @@ def _engine_run_deadline(
     alive meanwhile, so the reaper never reclaimed it and nothing said so. Precedence:
     `VIBEY_ENGINE_MAX_RUN_MINUTES`, then the project's `[engines] max_run_minutes`, then
     240. A value that is not a positive whole number is ignored, never read as "no
-    limit": there is no way to switch the limit off, only to raise it.
+    limit": there is no way to switch the limit off, only to raise it. A value beyond
+    `ENGINE_RUN_MINUTES_CEILING` is read as the ceiling, never ignored (that would silently
+    shorten the run) and never passed to `timedelta`, which would raise OverflowError and
+    crash the worker; the ceiling is the arithmetic limit, not a policy limit.
 
     Module-level, as `_independent_review_required` is, because the composition root
     builds its handlers inside closures that only run once a real job is dispatched;
@@ -639,7 +647,7 @@ def _engine_run_deadline(
         if isinstance(raw, str):
             raw = int(raw.strip()) if raw.strip().isdigit() else None
         if isinstance(raw, int) and raw > 0:
-            return timedelta(minutes=raw)
+            return timedelta(minutes=min(raw, ENGINE_RUN_MINUTES_CEILING))
     return timedelta(minutes=DEFAULT_ENGINE_RUN_MINUTES)
 
 
@@ -653,8 +661,9 @@ def longest_engine_run_deadline(
     sweep must outlast the longest of them. Each config is read by `_engine_run_deadline`, so
     `VIBEY_ENGINE_MAX_RUN_MINUTES` still beats every project's key. A project with no
     `[engines]`, or one registered after the sweep, runs to the default, so the default always
-    counts too. No upper bound is applied here: a person who sets a longer deadline gets a
-    longer-lived snapshot. Module-level, as `_engine_run_deadline` is, for the reason given
+    counts too. No policy bound is applied here, only the arithmetic ceiling
+    `_engine_run_deadline` reads every value through: a person who sets a longer deadline gets
+    a longer-lived snapshot. Module-level, as `_engine_run_deadline` is, for the reason given
     there (ADR-0016's last resort, stated).
     """
     return max(_engine_run_deadline(config, environ) for config in (*configs, {}))

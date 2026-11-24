@@ -155,6 +155,31 @@ async def test_projects_that_cannot_be_listed_mean_no_sweep_at_all(
     assert logger.lines == [("warning", "loop_snapshot_sweep_refused", {"error": str(failure)})]
 
 
+async def test_a_deadline_that_cannot_be_computed_means_no_sweep_never_a_crash(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Security finding (DoS): the deadline was computed outside the guard, so an overflow in
+    a person-set `max_run_minutes` crashed the worker at start-up. Any arithmetic failure in
+    the deadline is now a refused sweep, logged, and the worker goes on."""
+    failure = OverflowError("date value out of range")
+
+    def overflowing(*args: object, **kwargs: object) -> timedelta:
+        raise failure
+
+    def never(*args: object, **kwargs: object) -> object:
+        raise AssertionError("no service is built without a deadline")
+
+    monkeypatch.setattr(vibey.bootstrap, "longest_engine_run_deadline", overflowing)
+    monkeypatch.setattr(vibey.bootstrap, "loop_capabilities_service", never)
+    logger = _Logger()
+
+    await main._sweep_loop_snapshots(  # noqa: SLF001
+        logger, _Projects({"engines": {"max_run_minutes": 10**15}})
+    )
+
+    assert logger.lines == [("warning", "loop_snapshot_sweep_refused", {"error": str(failure)})]
+
+
 def _aged(folder: Path, hours: float) -> Path:
     folder.mkdir(parents=True)
     (folder / "plugin.json").write_text("{}", encoding="utf-8")
