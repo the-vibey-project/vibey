@@ -363,6 +363,12 @@ def _hermetic_web_search(request: pytest.FixtureRequest, monkeypatch: pytest.Mon
         "WEBSEARCH_SEARXNG_INSTANCE",
         "VIBEY_SEARCH_IDENTITY_TTL",
         "WEBSEARCH_IDENTITY_TTL",
+        # An engine session's names (SP-LOOPS Phase 6): a test run inside a session must not
+        # send `vibey search` to that session's hub, nor be refused for want of one.
+        "VIBEY_HUB_URL",
+        "VIBEY_WEB_TOKEN_FILE",
+        "VIBEY_WEB_STATE",
+        "WEBSEARCH_COMMAND",
     ):
         monkeypatch.delenv(name, raising=False)
     monkeypatch.setattr(backup_notice.PROCESS_BACKUP_NOTICE, "_said", False)

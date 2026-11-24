@@ -765,3 +765,10 @@ class = "vibey.domain.errors.SessionGrantRefused"
 title = "An engine session's web token was not made or not read"
 cause = "Before an engine session starts, the worker makes it a token that reaches only web search and fetch through the hub, and writes it to `web-token` in the run's own folder. It refused because the run folder is missing, a symlink, not a folder, not this account's or open to other accounts, already holds a `web-token` (one per run), the token source gave an unusable token, or the clock gave no finite instant; or the token file to read is not this account's own owner-only regular file. The message names the path, never the token. Nothing was left behind."
 fix = "Check the path the message names: remove a symlink or stray `web-token` vibey did not put there, or make the run folder this account's own and owner-only (`chmod 700`), then let the job retry."
+
+[[error]]
+code = "E0099"
+class = "vibey.infrastructure.web.session_hub_client.SessionHubError"
+title = "An engine session's search or fetch through the hub did not complete"
+cause = "Inside an engine session, `vibey search` and `vibey fetch` ask the hub with the session's own web token (`VIBEY_HUB_URL`, `VIBEY_WEB_TOKEN_FILE`). The address is not a hub on this computer's loopback, or the token file is missing, empty or unreadable (exit 78); the query or URL is one the hub would refuse (exit 2); the hub no longer knows the token because the session ended or the token was revoked or expired (401, exit 67); the hub does not permit it (403, exit 77); a `[web]` budget is spent (429, exit 75, the budget named); no hub answered (exit 69); or the hub could not search or read the page (exit 1). The message never holds the token."
+fix = "Start a hub with `vibey serve` if none answers; a session whose access ended or whose budget is spent searches again in its next run, or after the hour for the agent's hourly bucket (`[web] searches_per_hour`, `fetches_per_hour`, `session_searches`, `session_fetches` in your own `vibey.toml`); for a missing or unreadable token file, let the job retry so the worker makes a new one."
