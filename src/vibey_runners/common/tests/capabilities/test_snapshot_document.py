@@ -84,7 +84,7 @@ def test_a_document_round_trips_through_json(run: Path) -> None:
         run, builtin_web=True, instruction_files=["CLAUDE.md"], instruction_max_bytes=512
     )
     assert isinstance(document, SnapshotDocumentInterface)
-    assert document.version == DOCUMENT_VERSION == 1
+    assert document.version == DOCUMENT_VERSION == 2
     assert document.digest == DIGEST
     assert document.skills == ("currency-research:research-currency-audit-method", "linting:lint")
     assert document.mcp_servers == (FILES, TICKETS)
@@ -92,6 +92,28 @@ def test_a_document_round_trips_through_json(run: Path) -> None:
     assert document.instruction_max_bytes == 512
     assert document.folders == (run.parent / "in",)
     assert SnapshotDocument.from_json(document.to_json(), run) == document
+
+
+def test_a_document_round_trips_both_budgets(run: Path) -> None:
+    document = _document(run, capability_prompt_tokens=4096, capability_answer_tokens=256)
+    assert (document.capability_prompt_tokens, document.capability_answer_tokens) == (4096, 256)
+    raw = json.loads(document.to_json())
+    assert (raw["capability_prompt_tokens"], raw["capability_answer_tokens"]) == (4096, 256)
+    assert SnapshotDocument.from_json(document.to_json(), run) == document
+    default = _document(run)
+    assert (default.capability_prompt_tokens, default.capability_answer_tokens) == (3072, 3000)
+
+
+def test_a_version_1_document_is_refused(run: Path) -> None:
+    """A version-1 document carries neither budget; it is refused by its version, before a
+    missing key is looked for, and the refusal names the version this runner knows."""
+
+    def version_1(raw: dict[str, Any]) -> None:
+        raw["version"] = 1
+        del raw["capability_prompt_tokens"], raw["capability_answer_tokens"]
+
+    error = _refused(run, version_1)
+    assert "version 1 is not one this runner knows (it knows 2)" in str(error)
 
 
 def test_the_json_is_canonical_ascii_with_sorted_keys(run: Path) -> None:
@@ -181,7 +203,7 @@ def test_a_plugin_folder_that_cannot_be_checked_is_refused(run: Path) -> None:
     assert "plugin_dirs[2] cannot be checked" in str(error)
 
 
-@pytest.mark.parametrize("version", [0, 2, True, "1", None])
+@pytest.mark.parametrize("version", [0, 1, 3, True, "2", None])
 def test_an_unknown_version_is_refused(run: Path, version: object) -> None:
     error = _refused(run, lambda raw: raw.__setitem__("version", version))
     assert "version" in str(error)
@@ -232,6 +254,8 @@ def test_a_secret_named_env_allow_in_a_document_is_refused(run: Path, name: str)
         ("builtin_web", "yes"),
         ("instruction_files", ["a/CLAUDE.md"]),
         ("instruction_max_bytes", 0),
+        ("capability_prompt_tokens", 4097),
+        ("capability_answer_tokens", 255),
         ("mcp_servers", [{"name": "x", "trust": "remote", "url": "http://insecure.test/"}]),
     ],
 )
@@ -240,7 +264,18 @@ def test_the_bundle_rule_governs_the_document_too(run: Path, key: str, value: ob
     assert f"loops.{key}" in str(error)
 
 
-@pytest.mark.parametrize("key", ["version", "digest", "plugin_dirs", "folders", "skills"])
+@pytest.mark.parametrize(
+    "key",
+    [
+        "version",
+        "digest",
+        "plugin_dirs",
+        "folders",
+        "skills",
+        "capability_prompt_tokens",
+        "capability_answer_tokens",
+    ],
+)
 def test_a_missing_key_is_refused(run: Path, key: str) -> None:
     assert key in str(_refused(run, lambda raw: raw.pop(key)))
 

@@ -5,14 +5,16 @@ a runner reads back (SP-LOOPS Phase 4, Task 2; R1, R6, R13).
 The runners never import `vibey`, so a run's snapshot reaches one as this document, named by
 `--capabilities PATH`. It carries the snapshot's digest, the run's plugin copies, the skills the
 catalog enables by qualified name (`plugin:skill`, in catalog order: a skill the index skipped is
-never named, R6), the MCP servers, the person's `builtin_web`, `instruction_files` and
-`instruction_max_bytes`, and the run's input folders.
+never named, R6), the MCP servers, the person's `builtin_web`, `instruction_files`,
+`instruction_max_bytes`, `capability_prompt_tokens` and `capability_answer_tokens`, and the run's
+input folders. Version 2 added the two token budgets (SP-LOOPS Phase 5, R8); a version-1 document
+is refused by its version, before a missing key is looked for, so the refusal says what is wrong.
 
 **Written canonically.** Sorted keys, ASCII only, no spaces: the same document is the same text.
 An MCP server is written in the `[[loops.mcp_servers]]` table shape, with `env_allow` as names
 only; no environment value is ever read here, let alone written.
 
-**Read strictly.** Every key is known and present. The servers and the three settings are parsed
+**Read strictly.** Every key is known and present. The servers and the five settings are parsed
 back through `BundleSpec.from_mapping`, so one validator governs both files, the refusal of a
 secret-named `env_allow` included. Every plugin folder must resolve (symlinks followed) to a
 folder strictly inside the document's own folder that holds `.claude-plugin/plugin.json` reached
@@ -38,8 +40,8 @@ from vibey_runners.common.capabilities.path_probe import PathProbe
 from vibey_runners.common.capabilities.snapshot import CapabilitySnapshot
 from vibey_runners.common.capabilities.snapshot_document_error import SnapshotDocumentError
 
-DOCUMENT_VERSION: Final = 1
-"""The only document version this code writes and reads."""
+DOCUMENT_VERSION: Final = 2
+"""The only document version this code writes and reads: 2 since the token budgets (Phase 5)."""
 DIGEST_PATTERN: Final = re.compile(r"sha256:[0-9a-f]{64}")
 """A snapshot digest (match with `fullmatch`)."""
 SKILL_PATTERN: Final = re.compile(r"[A-Za-z0-9][A-Za-z0-9._-]*:[A-Za-z0-9][A-Za-z0-9._-]*")
@@ -56,10 +58,19 @@ _KEYS: Final = frozenset(
         "builtin_web",
         "instruction_files",
         "instruction_max_bytes",
+        "capability_prompt_tokens",
+        "capability_answer_tokens",
         "folders",
     }
 )
-_SETTINGS: Final = ("mcp_servers", "builtin_web", "instruction_files", "instruction_max_bytes")
+_SETTINGS: Final = (
+    "mcp_servers",
+    "builtin_web",
+    "instruction_files",
+    "instruction_max_bytes",
+    "capability_prompt_tokens",
+    "capability_answer_tokens",
+)
 """The keys `BundleSpec.from_mapping` reads back: the one `[loops]` rule governs them here too."""
 _WHERE: Final = "the capability document"
 _PROBE: Final = PathProbe()
@@ -78,6 +89,8 @@ class SnapshotDocument:
     builtin_web: bool
     instruction_files: tuple[str, ...]
     instruction_max_bytes: int
+    capability_prompt_tokens: int
+    capability_answer_tokens: int
     folders: tuple[Path, ...]
 
     @classmethod
@@ -96,6 +109,8 @@ class SnapshotDocument:
             builtin_web=bundle.builtin_web,
             instruction_files=bundle.instruction_files,
             instruction_max_bytes=bundle.instruction_max_bytes,
+            capability_prompt_tokens=bundle.capability_prompt_tokens,
+            capability_answer_tokens=bundle.capability_answer_tokens,
             folders=tuple(
                 cls._folder(str(folder), f"folders[{index}]")
                 for index, folder in enumerate(folders)
@@ -112,6 +127,8 @@ class SnapshotDocument:
             "builtin_web": self.builtin_web,
             "instruction_files": list(self.instruction_files),
             "instruction_max_bytes": self.instruction_max_bytes,
+            "capability_prompt_tokens": self.capability_prompt_tokens,
+            "capability_answer_tokens": self.capability_answer_tokens,
             "folders": [str(path) for path in self.folders],
         }
         return json.dumps(document, sort_keys=True, ensure_ascii=True, separators=(",", ":"))
@@ -135,12 +152,6 @@ class SnapshotDocument:
     @classmethod
     def from_json(cls, text: str, folder: Path) -> Self:
         raw = cls._object(text)
-        version = raw["version"]
-        if isinstance(version, bool) or version != DOCUMENT_VERSION:
-            raise SnapshotDocumentError(
-                f"{_WHERE}: version {ascii(version)} is not one this runner knows "
-                f"(it knows {DOCUMENT_VERSION})"
-            )
         digest = raw["digest"]
         if not isinstance(digest, str) or DIGEST_PATTERN.fullmatch(digest) is None:
             raise SnapshotDocumentError(
@@ -166,6 +177,8 @@ class SnapshotDocument:
             builtin_web=bundle.builtin_web,
             instruction_files=bundle.instruction_files,
             instruction_max_bytes=bundle.instruction_max_bytes,
+            capability_prompt_tokens=bundle.capability_prompt_tokens,
+            capability_answer_tokens=bundle.capability_answer_tokens,
             folders=tuple(
                 cls._folder(entry, f"folders[{index}]")
                 for index, entry in enumerate(cls._list(raw, "folders"))
@@ -174,7 +187,9 @@ class SnapshotDocument:
 
     @staticmethod
     def _object(text: str) -> Mapping[str, object]:
-        """The document's top-level object, with every key known and none missing."""
+        """The document's top-level object, with every key known, the version this code writes,
+        and no key missing. The version is checked before the missing keys, so a document of
+        another version is refused for its version, not for a key that version never had."""
         try:
             raw = json.loads(text)
         except (ValueError, RecursionError) as exc:  # RecursionError: nesting deeper than Python
@@ -184,6 +199,12 @@ class SnapshotDocument:
         unknown = sorted(set(raw) - _KEYS)
         if unknown:
             raise SnapshotDocumentError(f"{_WHERE}: {ascii(unknown[0])} is not a known key")
+        version = raw.get("version", DOCUMENT_VERSION)  # absent: named below, as missing
+        if isinstance(version, bool) or version != DOCUMENT_VERSION:
+            raise SnapshotDocumentError(
+                f"{_WHERE}: version {ascii(version)} is not one this runner knows "
+                f"(it knows {DOCUMENT_VERSION})"
+            )
         missing = sorted(_KEYS - set(raw))
         if missing:
             raise SnapshotDocumentError(f"{_WHERE}: {missing[0]} is missing")

@@ -1,6 +1,6 @@
 # Made with ❤️ by [Vibey](https://the-vibey-project.github.io/vibey/), Developed by [Adam Matthew Steinberger](https://vibewithadam.matthewsteinberger.com/) ([@adammatthewsteinberger](https://github.com/adammatthewsteinberger/)).
-"""Writes a real capability document, the way the conductor does, for the tests that read one
-back (SP-LOOPS Phase 4, Task 4)."""
+"""Writes a real capability document (version 2, with both token budgets), the way the conductor
+does, for the tests that read one back (SP-LOOPS Phase 4, Task 4; Phase 5, Task 2)."""
 
 from __future__ import annotations
 
@@ -31,6 +31,8 @@ class CapabilityDocumentWriter:
         mcp_servers: Sequence[McpServerSpec] = (),
         instruction_files: Sequence[str] = ("CLAUDE.md", "AGENTS.md"),
         instruction_max_bytes: int = 65536,
+        capability_prompt_tokens: int = 3072,
+        capability_answer_tokens: int = 3000,
     ) -> Path:
         self.run.mkdir(parents=True)
         self.run.chmod(0o700)
@@ -51,6 +53,8 @@ class CapabilityDocumentWriter:
             builtin_web=builtin_web,
             instruction_files=tuple(instruction_files),
             instruction_max_bytes=instruction_max_bytes,
+            capability_prompt_tokens=capability_prompt_tokens,
+            capability_answer_tokens=capability_answer_tokens,
             folders=tuple(folders),
         )
         return SnapshotDocumentStore().write(document, self.run)

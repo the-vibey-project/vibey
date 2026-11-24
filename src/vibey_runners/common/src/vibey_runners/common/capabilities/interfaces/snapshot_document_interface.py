@@ -16,7 +16,8 @@ from vibey_runners.common.capabilities.snapshot import CapabilitySnapshot
 class SnapshotDocumentInterface(Protocol):
     """What one run is given, as the conductor hands it to a runner that never imports vibey:
     the snapshot's digest, plugin copies, qualified skill names and MCP servers, the person's
-    web, instruction-file and size settings, and the run's input folders."""
+    web, instruction-file, size and capability token budget settings, and the run's input
+    folders."""
 
     @property
     def version(self) -> int: ...
@@ -45,6 +46,18 @@ class SnapshotDocumentInterface(Protocol):
     def instruction_max_bytes(self) -> int: ...
 
     @property
+    def capability_prompt_tokens(self) -> int:
+        """The most estimated tokens a loop that lists its own capabilities spends on them in its
+        standing system prompt (Phase 5, R8); claudeloop ignores it."""
+        ...
+
+    @property
+    def capability_answer_tokens(self) -> int:
+        """The most estimated tokens any one on-demand capability answer may hold (Phase 5, R8);
+        claudeloop ignores it."""
+        ...
+
+    @property
     def folders(self) -> tuple[Path, ...]:
         """The run's input folders (absolute), when it has any."""
         ...
@@ -66,7 +79,7 @@ class SnapshotDocumentInterface(Protocol):
     def from_json(cls, text: str, folder: Path) -> Self:
         """The document `text` holds, read strictly, for the document that lives in `folder`.
         Raises `SnapshotDocumentError` for anything the writer would not have written: an
-        unknown or missing key, an unknown version, a digest that is not a sha256, a plugin
+        unknown or missing key, a version other than 2 (checked before any missing key), a digest that is not a sha256, a plugin
         folder outside `folder` (through a symlink too) or without its
         `.claude-plugin/plugin.json`, an input folder that is not absolute, a skill not named
         `plugin:skill`, or a server or setting the `[loops]` rule refuses (a secret-named
