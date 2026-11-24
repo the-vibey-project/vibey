@@ -116,3 +116,25 @@ def test_a_web_action_is_permitted_exactly_before_expiry(
     p = SessionPrincipal(name="session:x", run_id=RUN, expires_at=expires_at)
     assert SESSION_PRINCIPALS.permits(p, action, now=now) == (now < expires_at)
     assert SESSION_PRINCIPALS.expired(p, now=now) == (now >= expires_at)
+
+
+@pytest.mark.parametrize(
+    ("name", "named"),
+    [
+        ("session:abc", True),
+        ("session:00000000-0000-4000-8000-000000000001", True),
+        ("session:", False),
+        ("", False),
+        ("agent", False),
+        ("host", False),
+        ("device:phone", False),
+        ("Session:abc", False),
+        (" session:abc", False),
+    ],
+)
+def test_the_policy_says_which_names_are_session_names(name: str, named: bool) -> None:
+    """What the hub asks to tell a session's principal from the agent's, the host's or a
+    device's: the same rule a session principal's name is held to, with one owner."""
+    assert SESSION_PRINCIPALS.names_session(name) is named
+    if named:
+        assert SessionPrincipal(name=name, run_id=RUN, expires_at=1.0).name == name

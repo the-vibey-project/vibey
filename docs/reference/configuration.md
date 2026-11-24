@@ -957,6 +957,8 @@ they run in), with no budget (SP-ACP Task 11a).
 |---|---|---|
 | `searches_per_hour` | `60` | How many searches one principal may make in any rolling hour (0 to 100000; `0` turns search off). Past it, a 429 naming this key. |
 | `fetches_per_hour` | `30` | How many fetches one principal may make in any rolling hour (0 to 100000; `0` turns fetch off). |
+| `session_searches` | `30` | How many searches one engine session's own principal may make in all, for as long as the session runs (0 to 100000): a cap per session, not per hour. Each also counts against the agent's `searches_per_hour`, and a session is refused when either is spent. |
+| `session_fetches` | `15` | The same for an engine session's fetches; each also counts against the agent's `fetches_per_hour`. |
 | `allow_hosts` | unset: any public host | When set, a fetch reaches only these hosts and their subdomains (`"python.org"` covers `docs.python.org`), after every redirect too. An empty list allows none. Host names only: no scheme, port, path, wildcard or address. |
 | `deny_hosts` | `[]` | Hosts a fetch never reaches, with their subdomains; wins over `allow_hosts`. |
 | `max_bytes` | `1000000` | The most bytes of a page read (1 to 50000000); a longer page is cut and says so. |

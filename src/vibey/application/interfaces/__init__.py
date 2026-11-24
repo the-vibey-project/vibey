@@ -236,6 +236,15 @@ from vibey.application.interfaces.run_inputs_settings_interface import (
 )
 from vibey.application.interfaces.sabbath import SabbathGateInterface
 from vibey.application.interfaces.secrets import SecretsPort
+from vibey.application.interfaces.session_token_lookup_interface import (
+    SessionTokenLookupInterface,
+)
+from vibey.application.interfaces.session_web_principals_interface import (
+    SessionPrincipalRegistryInterface,
+    SessionTokenFilesInterface,
+    SessionTokenSourceInterface,
+    SessionWebPrincipalsInterface,
+)
 from vibey.application.interfaces.siem import SiemPort
 from vibey.application.interfaces.sms import SmsPort
 from vibey.application.interfaces.state_sync import (
@@ -447,4 +456,9 @@ __all__ = [
     "BusPort",
     "BlobPort",
     "SiemPort",
+    "SessionPrincipalRegistryInterface",
+    "SessionTokenFilesInterface",
+    "SessionTokenLookupInterface",
+    "SessionTokenSourceInterface",
+    "SessionWebPrincipalsInterface",
 ]

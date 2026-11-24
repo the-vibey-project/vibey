@@ -53,3 +53,8 @@ class SessionPrincipalPolicyInterface(Protocol):
     def expired(self, principal: SessionPrincipalInterface, now: float) -> bool:
         """True from `expires_at` on: the complement of the time half of `permits`."""
         ...
+
+    def names_session(self, name: str) -> bool:
+        """True when `name` is a session principal's: `session:` and an id after it. Never a
+        device's (`device:`), the agent's or the host's."""
+        ...

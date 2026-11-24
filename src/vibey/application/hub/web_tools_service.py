@@ -9,7 +9,12 @@ way, in this order:
 2. **Bounded**: a query of 1 to `MAX_QUERY_CHARS` characters and a limit of 1 to 20; a URL the
    domain policy reads as a public http(s) target, inside the person's `[web]` host lists.
 3. **Budgeted** per principal and per rolling hour (`[web] searches_per_hour`,
-   `fetches_per_hour`). A principal past its budget is refused with the budget named.
+   `fetches_per_hour`). A principal past its budget is refused with the budget named. An engine
+   session's own principal (`session:<run>`, SP-LOOPS Phase 6, R2) is checked twice and charged
+   once: first against its own cap for the whole session (`session_searches`,
+   `session_fetches`), then against the agent's hourly bucket, which every session draws on, so
+   sessions can never raise the hub's total web spend. A call either check refuses spends
+   neither; one that passes both spends one of each.
 4. **Recorded**: no search or fetch is made unless the audit seam's `ready` says its record can
    be written (else 503, before anything is sent). After the act the record is written: `ok`,
    or `failed`/`refused` for any exception at all (a failure the hub did not expect is named by
@@ -46,10 +51,12 @@ from vibey.application.hub.interfaces.web_tools_service_interface import (
     WebFetchPortInterface,
     WebSearchPortInterface,
 )
-from vibey.domain.hub_scope import HUB_SCOPES, HubAction, HubForbidden
+from vibey.domain.hub_scope import AGENT_PRINCIPAL, HUB_SCOPES, HubAction, HubForbidden
 from vibey.domain.interfaces.hub_scope_interface import HubScopePolicyInterface
+from vibey.domain.interfaces.session_principal_interface import SessionPrincipalPolicyInterface
 from vibey.domain.interfaces.web_tools_interface import WebToolPolicyInterface
 from vibey.domain.ledger import EventKind
+from vibey.domain.session_principal import SESSION_PRINCIPALS
 from vibey.domain.web_tools import (
     MAX_QUERY_CHARS,
     MAX_SEARCH_LIMIT,
@@ -80,6 +87,7 @@ class WebToolsService:
         settings: WebToolSettings,
         scopes: HubScopePolicyInterface = HUB_SCOPES,
         policy: WebToolPolicyInterface = WEB_TOOL_POLICY,
+        sessions: SessionPrincipalPolicyInterface = SESSION_PRINCIPALS,
         clock: Callable[[], float] = time.monotonic,
         now: Callable[[], datetime] = lambda: datetime.now(UTC),
         nonce: Callable[[], str] = lambda: secrets.token_hex(8),
@@ -91,12 +99,15 @@ class WebToolsService:
         self._settings = settings
         self._scopes = scopes
         self._policy = policy
+        self._sessions = sessions
         self._clock = clock
         self._now = now
         self._nonce = nonce
         self._warn = warn
         self._used: dict[tuple[str, WebTool], list[float]] = {}
         """When each principal used each tool, kept for the rolling hour; this process only."""
+        self._session_used: dict[tuple[str, WebTool], int] = {}
+        """How often each engine session used each tool in all; this process only."""
 
     async def search(
         self,
@@ -112,7 +123,7 @@ class WebToolsService:
             raise WebToolRefused(f"refused: a query must have 1 to {MAX_QUERY_CHARS} characters")
         if limit is not None and not 1 <= limit <= MAX_SEARCH_LIMIT:
             raise WebToolRefused(f"refused: the limit must be from 1 to {MAX_SEARCH_LIMIT}")
-        self._spend(principal, "search", self._settings.searches_per_hour, "searches_per_hour")
+        self._spend(principal, "search")
         await self._audit.ready(project_id)
         try:
             answer = await self._search.search(asked, limit)
@@ -145,7 +156,7 @@ class WebToolsService:
         self, principal: HubPrincipal, url: str, *, project_id: UUID | None = None
     ) -> dict[str, object]:
         self._authorise(principal, HubAction.WEB_FETCH, "fetch a web page")
-        self._spend(principal, "fetch", self._settings.fetches_per_hour, "fetches_per_hour")
+        self._spend(principal, "fetch")
         await self._audit.ready(project_id)
         # Where the fetch went, as it goes: the one fact its record exists for, kept whatever
         # fails afterwards.
@@ -211,17 +222,52 @@ class WebToolsService:
         if not self._scopes.permits(principal.scopes, action):
             raise HubForbidden(f"{principal.name} may not {what}: it needs the `web` scope")
 
-    def _spend(self, principal: HubPrincipal, tool: WebTool, per_hour: int, key: str) -> None:
+    def _spend(self, principal: HubPrincipal, tool: WebTool) -> None:
+        """Checks every budget the call draws on, then spends one of each -- or raises
+        `WebBudgetExhausted` naming the spent one, having spent nothing."""
         now = self._clock()
-        used = self._used.setdefault((principal.name, tool), [])
+        settings = self._settings
+        if tool == "search":
+            per_hour, key = settings.searches_per_hour, "searches_per_hour"
+            cap, cap_key = settings.session_searches, "session_searches"
+        else:
+            per_hour, key = settings.fetches_per_hour, "fetches_per_hour"
+            cap, cap_key = settings.session_fetches, "session_fetches"
+        if not self._sessions.names_session(principal.name):
+            self._hourly(principal.name, tool, now, per_hour, key).append(now)
+            return
+        # An engine session: its own cap first, then the agent's bucket it draws on (R2).
+        spent = self._session_used.get((principal.name, tool), 0)
+        if spent >= cap:
+            raise WebBudgetExhausted(
+                f"web budget exhausted: {principal.name} has used [web] {cap_key} = {cap} for "
+                "this session"
+            )
+        shared = self._hourly(AGENT_PRINCIPAL, tool, now, per_hour, key, drawn_by=principal.name)
+        self._session_used[(principal.name, tool)] = spent + 1
+        shared.append(now)
+
+    def _hourly(
+        self,
+        name: str,
+        tool: WebTool,
+        now: float,
+        per_hour: int,
+        key: str,
+        drawn_by: str | None = None,
+    ) -> list[float]:
+        """`name`'s uses of `tool` in the rolling hour, to append the next one to; raises when
+        the hour holds `per_hour` already, naming the budget and who drew on it."""
+        used = self._used.setdefault((name, tool), [])
         used[:] = [at for at in used if now - at < 3600.0]
         wait = self._policy.budget_wait(used, now=now, per_hour=per_hour)
         if wait is not None:
+            shared = f", which {drawn_by} draws on" if drawn_by is not None else ""
             raise WebBudgetExhausted(
-                f"web budget exhausted: {principal.name} has used [web] {key} = {per_hour} for "
-                f"this hour; the next is allowed in {math.ceil(wait)} s"
+                f"web budget exhausted: {name} has used [web] {key} = {per_hour} for this "
+                f"hour{shared}; the next is allowed in {math.ceil(wait)} s"
             )
-        used.append(now)
+        return used
 
     async def _record(
         self,

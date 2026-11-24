@@ -49,9 +49,7 @@ class SessionPrincipal:
     expires_at: float
 
     def __post_init__(self) -> None:
-        if not self.name.startswith(SESSION_PRINCIPAL_PREFIX) or self.name == (
-            SESSION_PRINCIPAL_PREFIX
-        ):
+        if not SESSION_PRINCIPALS.names_session(self.name):
             raise ValueError(
                 f"a session principal's name is {SESSION_PRINCIPAL_PREFIX!r} and an id after it"
             )
@@ -77,6 +75,11 @@ class SessionPrincipalPolicy:
     def expired(self, principal: SessionPrincipalInterface, now: float) -> bool:
         """True from the expiry instant on (`now >= expires_at`)."""
         return now >= principal.expires_at
+
+    def names_session(self, name: str) -> bool:
+        """True for `session:` and an id after it: the one rule a session principal's name is
+        held to, which the hub asks to tell a session from the host, the agent or a device."""
+        return name.startswith(SESSION_PRINCIPAL_PREFIX) and name != SESSION_PRINCIPAL_PREFIX
 
 
 SESSION_PRINCIPALS: Final[SessionPrincipalPolicyInterface] = SessionPrincipalPolicy()

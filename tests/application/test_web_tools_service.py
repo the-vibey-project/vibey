@@ -272,6 +272,103 @@ async def test_a_budget_of_zero_turns_the_tool_off() -> None:
     assert search.asked == []
 
 
+# -- an engine session's two checks and one spend (SP-LOOPS Phase 6, R2) ------------------------
+
+SESSION_A = HubPrincipal("session:aaaa", frozenset({HubScope.WEB}))
+SESSION_B = HubPrincipal("session:bbbb", frozenset({HubScope.WEB}))
+
+
+async def test_a_session_is_held_to_its_own_cap_for_the_whole_session_not_per_hour() -> None:
+    clock, search = Clock(), Search()
+    service = _service(search=search, clock=clock, settings=WebToolSettings(session_searches=2))
+    await service.search(SESSION_A, "one")
+    await service.search(SESSION_A, "two")
+    clock.now += 7_200  # two hours later the session's cap is still spent
+    with pytest.raises(WebBudgetExhausted) as raised:
+        await service.search(SESSION_A, SECRET_QUERY)
+    message = str(raised.value)
+    assert "session:aaaa" in message and "[web] session_searches = 2" in message
+    assert "this session" in message and SECRET_QUERY not in message
+    assert [q for q, _ in search.asked] == ["one", "two"]
+
+
+async def test_a_sessions_fetches_have_a_cap_of_their_own() -> None:
+    service = _service(settings=WebToolSettings(session_fetches=1, session_searches=1))
+    await service.fetch(SESSION_A, "https://example.com/")
+    with pytest.raises(WebBudgetExhausted, match=r"\[web\] session_fetches = 1"):
+        await service.fetch(SESSION_A, "https://example.com/")
+    await service.search(SESSION_A, "q")  # searches are counted apart
+
+
+async def test_one_sessions_spent_cap_never_refuses_another_session() -> None:
+    service = _service(settings=WebToolSettings(session_searches=1))
+    await service.search(SESSION_A, "a")
+    with pytest.raises(WebBudgetExhausted, match="session:aaaa"):
+        await service.search(SESSION_A, "a")
+    await service.search(SESSION_B, "b")
+
+
+async def test_a_session_call_spends_the_agents_hourly_bucket_exactly_once() -> None:
+    """Two checks, one spend: the agent's bucket of three takes a session search (a session
+    fetch's bucket is apart), and the agent's own two searches then fill it."""
+    service = _service(settings=WebToolSettings(searches_per_hour=3, session_searches=10))
+    await service.search(SESSION_A, "s")
+    await service.fetch(SESSION_A, "https://example.com/")
+    await service.search(AGENT, "a1")
+    await service.search(AGENT, "a2")
+    with pytest.raises(WebBudgetExhausted, match=r"agent has used \[web\] searches_per_hour = 3"):
+        await service.search(AGENT, "a3")
+
+
+async def test_a_session_is_refused_when_the_agents_bucket_is_spent_and_spends_neither() -> None:
+    """The session's cap is checked first, then the agent's bucket; a call either check refuses
+    spends neither -- an hour on, the same session still has its whole cap of one."""
+    clock, search = Clock(), Search()
+    service = _service(
+        search=search,
+        clock=clock,
+        settings=WebToolSettings(searches_per_hour=1, session_searches=1),
+    )
+    await service.search(AGENT, "a")
+    with pytest.raises(WebBudgetExhausted) as raised:
+        await service.search(SESSION_A, SECRET_QUERY)
+    message = str(raised.value)
+    assert "agent has used [web] searches_per_hour = 1" in message
+    assert "session:aaaa" in message and SECRET_QUERY not in message
+    clock.now += 3_600
+    await service.search(SESSION_A, "s")
+    with pytest.raises(WebBudgetExhausted, match="session_searches = 1"):
+        await service.search(SESSION_A, "s")
+    assert [q for q, _ in search.asked] == ["a", "s"]
+
+
+async def test_a_session_refused_by_its_own_cap_spends_nothing_of_the_agents_bucket() -> None:
+    service = _service(settings=WebToolSettings(searches_per_hour=2, session_searches=1))
+    await service.search(SESSION_A, "s")
+    for _ in range(3):
+        with pytest.raises(WebBudgetExhausted, match="session_searches"):
+            await service.search(SESSION_A, "s")
+    await service.search(AGENT, "a")  # the bucket of two holds the one session search only
+    with pytest.raises(WebBudgetExhausted, match="searches_per_hour = 2"):
+        await service.search(AGENT, "a")
+
+
+async def test_a_session_cap_of_zero_turns_the_tool_off_for_sessions_only() -> None:
+    search = Search()
+    service = _service(search=search, settings=WebToolSettings(session_searches=0))
+    with pytest.raises(WebBudgetExhausted, match="session_searches = 0"):
+        await service.search(SESSION_A, "q")
+    await service.search(AGENT, "q")
+    assert [q for q, _ in search.asked] == ["q"]
+
+
+async def test_a_name_alone_grants_nothing() -> None:
+    """A principal named like a session but holding no `web` is refused by the scope rule
+    before any budget is asked."""
+    with pytest.raises(HubForbidden, match="web"):
+        await _service().search(HubPrincipal("session:cccc"), "q")
+
+
 # -- the ledger comes first ---------------------------------------------------------------------
 
 

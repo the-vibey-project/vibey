@@ -21,7 +21,8 @@ entry up by it leaks nothing a timing probe could use.
 
 **Revoke** forgets the digest first -- from then on the hub refuses the token -- and then removes
 the file. **Lookup** digests the presented token and returns its principal only while it is
-unexpired (`SESSION_PRINCIPALS`; expiry is exclusive).
+unexpired (`SESSION_PRINCIPALS`; expiry is exclusive). Finding is `SessionTokenLookup`'s, which
+the hub is given alone, so the digest and the expiry rule have one owner.
 
 The token is never logged, never put in an error message, and never in a repr: `SessionGrant`
 keeps only the file's path and, out of its repr, the digest. Declared by
@@ -30,11 +31,9 @@ keeps only the file's path and, out of its repr, the digest. Declared by
 
 from __future__ import annotations
 
-import hashlib
 import math
 from datetime import timedelta
 from pathlib import Path
-from typing import Final
 from uuid import UUID
 
 from vibey.application.dto import SessionGrant
@@ -45,6 +44,7 @@ from vibey.application.interfaces.session_web_principals_interface import (
     SessionTokenSourceInterface,
 )
 from vibey.application.loop_capabilities_service import DEADLINE_MARGIN
+from vibey.application.session_token_lookup import SessionTokenLookup
 from vibey.domain.errors import SessionGrantRefused
 from vibey.domain.interfaces.session_principal_interface import SessionPrincipalPolicyInterface
 from vibey.domain.session_principal import (
@@ -52,10 +52,6 @@ from vibey.domain.session_principal import (
     SESSION_PRINCIPALS,
     SessionPrincipal,
 )
-
-_PRINTABLE: Final = frozenset(chr(code) for code in range(0x21, 0x7F))
-"""What a token may be made of: printable ASCII, no space, no line break -- so it survives a
-file, a header and a `strip()` unchanged."""
 
 
 class SessionWebPrincipals:
@@ -77,14 +73,14 @@ class SessionWebPrincipals:
         self._files = files
         self._registry = registry
         self._lifetime = (run_deadline + DEADLINE_MARGIN).total_seconds()
-        self._policy = policy
+        self._lookup = SessionTokenLookup(registry, policy)
         self._logger = logger
 
     def mint(self, run_id: UUID, folder: Path, now: float) -> SessionGrant:
         if not math.isfinite(now):
             raise SessionGrantRefused(f"a session for run {run_id} needs a finite instant as now")
         token = self._tokens.token()
-        if not token or not _PRINTABLE.issuperset(token):
+        if not SessionTokenLookup.usable(token):
             # The token itself is never named, not even a bad one.
             raise SessionGrantRefused(
                 f"the token source gave an unusable token for run {run_id}: a token is "
@@ -95,7 +91,7 @@ class SessionWebPrincipals:
             run_id=run_id,
             expires_at=now + self._lifetime,
         )
-        digest = self._digest(token)
+        digest = SessionTokenLookup.digest(token)
         path = self._files.write(folder, token)
         try:
             self._registry.record(digest, principal)
@@ -116,13 +112,4 @@ class SessionWebPrincipals:
                 )
 
     def lookup(self, token: str, now: float) -> SessionPrincipal | None:
-        if not token:
-            return None
-        principal = self._registry.find(self._digest(token))
-        if principal is None or self._policy.expired(principal, now):
-            return None
-        return principal
-
-    @staticmethod
-    def _digest(token: str) -> str:
-        return hashlib.sha256(token.encode()).hexdigest()
+        return self._lookup.lookup(token, now)

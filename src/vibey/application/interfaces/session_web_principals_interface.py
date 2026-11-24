@@ -10,14 +10,12 @@ declare; they never consume.
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Protocol, runtime_checkable
+from pathlib import Path
+from typing import Protocol, runtime_checkable
+from uuid import UUID
 
-if TYPE_CHECKING:
-    from pathlib import Path
-    from uuid import UUID
-
-    from vibey.application.dto import SessionGrant
-    from vibey.domain.session_principal import SessionPrincipal
+from vibey.application.dto import SessionGrant
+from vibey.domain.session_principal import SessionPrincipal
 
 
 @runtime_checkable

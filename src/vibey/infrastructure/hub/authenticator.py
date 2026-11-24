@@ -17,7 +17,7 @@ from typing import Final
 from vibey_bootstrap.security import compare_secrets
 
 from vibey.application.dto import HubPrincipal
-from vibey.domain.hub_scope import HubScope
+from vibey.domain.hub_scope import AGENT_PRINCIPAL, HubScope
 from vibey.infrastructure.hub.interfaces.authenticator_interface import (
     HubAuthenticatorInterface,
 )
@@ -72,7 +72,7 @@ class AgentTokenAuthenticator:
         if not token:
             raise ValueError("the agent token must not be empty")
         self._token = token
-        self._principal = HubPrincipal(name="agent", scopes=scopes)
+        self._principal = HubPrincipal(name=AGENT_PRINCIPAL, scopes=scopes)
 
     async def authenticate(self, request: HubRequest) -> HubPrincipal | None:
         header = request.headers.get("authorization", "")
