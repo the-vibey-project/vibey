@@ -2,6 +2,7 @@
 import asyncio
 import io
 import json
+import signal
 import subprocess
 import urllib.error
 from pathlib import Path
@@ -1380,3 +1381,169 @@ def test_a_run_on_a_model_without_tools_says_it_is_using_the_text_protocol(
     monkeypatch.setenv("QWENLOOP_MODEL", "codellama:7b")
     result = runner.invoke(app, ["run", str(plan), "--cwd", str(tmp_path)])
     assert "codellama:7b: carrying tool calls as text" in result.stderr
+
+
+# --- the MCP session pool's lifecycle (SP-LOOPS Phase 5, R5) --------------------------------
+
+
+class RecordingGateway:
+    """Stands in for McpGateway: remembers how it was discovered and how often it was closed."""
+
+    made: list["RecordingGateway"] = []
+
+    def __init__(self, **kwargs: object) -> None:
+        self.kwargs = kwargs
+        self.closed = 0
+
+    @classmethod
+    def discover(cls, cwd: Path, **kwargs: object) -> "RecordingGateway":
+        gateway = cls(cwd=cwd, **kwargs)
+        cls.made.append(gateway)
+        return gateway
+
+    async def aclose(self) -> None:
+        self.closed += 1
+
+
+@pytest.fixture
+def recording_gateway(monkeypatch: pytest.MonkeyPatch) -> list[RecordingGateway]:
+    RecordingGateway.made = []
+    monkeypatch.setattr("qwenloop.cli.app.McpGateway", RecordingGateway)
+    return RecordingGateway.made
+
+
+class HealthyServer:
+    """An attached server that is already up, so `_run_plan` goes straight to the run."""
+
+    def inspect(self, _profile):  # type: ignore[no-untyped-def]
+        return ServerInfo(Backend.OPENAI_COMPAT, "p", "http://127.0.0.1:1/v1", False, True)
+
+    async def health(self, _info):  # type: ignore[no-untyped-def]
+        return True
+
+
+@pytest.mark.parametrize("outcome", ["completed", "failed", "wind-down", "sigterm", "raised"])
+async def test_the_pool_is_closed_when_the_run_ends_however_it_ends(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+    recording_gateway: list[RecordingGateway],
+    outcome: str,
+) -> None:
+    """Whether the run completes, fails, winds down, raises, or is stopped by SIGTERM, every MCP
+    server it started is closed. SIGTERM cancels the run task, so the `finally` runs; the handler
+    is called directly here and no signal is sent."""
+    from qwenloop.cli.app import _run_plan
+    from qwenloop.domain.config import McpLimits
+
+    loop = asyncio.get_running_loop()
+    handlers: dict[int, object] = {}
+    removed: list[int] = []
+    monkeypatch.setattr(loop, "add_signal_handler", lambda sig, cb: handlers.__setitem__(sig, cb))
+    monkeypatch.setattr(loop, "remove_signal_handler", lambda sig: removed.append(sig) or True)
+    statuses = {
+        "completed": RunStatus.COMPLETED,
+        "failed": RunStatus.FAILED,
+        "wind-down": RunStatus.WINDING_DOWN,
+    }
+
+    class Runner:
+        def __init__(self, _server, _store, tools, *_args, **_kwargs):  # type: ignore[no-untyped-def]
+            self.tools = tools
+
+        async def run(self, **kwargs):  # type: ignore[no-untyped-def]
+            assert recording_gateway[0].closed == 0
+            if outcome == "raised":
+                raise RuntimeError("the model went away")
+            if outcome == "sigterm":
+                handlers[signal.SIGTERM]()  # type: ignore[operator]
+                await asyncio.sleep(0)
+            return RunState(str(kwargs["run_id"]), status=statuses[outcome], turns=1)
+
+    monkeypatch.setattr("qwenloop.cli.app.AutonomousRunner", Runner)
+    limits = McpLimits(request_timeout_seconds=7.0)
+    task = asyncio.create_task(
+        _run_plan(
+            HealthyServer(),  # type: ignore[arg-type]
+            PORTABLE,
+            tmp_path,
+            "run-1",
+            "do it",
+            3,
+            startup_timeout_seconds=1,
+            desktop_notifications=False,
+            mcp_limits=limits,
+        )
+    )
+    if outcome == "sigterm":
+        with pytest.raises(asyncio.CancelledError):
+            await task
+    elif outcome == "raised":
+        with pytest.raises(RuntimeError, match="went away"):
+            await task
+    else:
+        assert (await task).status is statuses[outcome]
+    (gateway,) = recording_gateway
+    assert gateway.closed == 1
+    assert gateway.kwargs["limits"] == limits
+    assert gateway.kwargs["client"] == ("qwenloop", __version__)
+    assert list(handlers) == [signal.SIGTERM] and removed == [signal.SIGTERM]
+
+
+def test_a_run_stopped_by_sigterm_closes_its_servers_and_exits_143(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+    recording_gateway: list[RecordingGateway],
+) -> None:
+    """The run task is cancelled by the SIGTERM handler; the command says so and exits
+    128 + SIGTERM, for a single run and for a storm alike."""
+
+    class Stopped:
+        def __init__(self, *_args, **_kwargs):  # type: ignore[no-untyped-def]
+            pass
+
+        async def run(self, **_kwargs):  # type: ignore[no-untyped-def]
+            raise asyncio.CancelledError
+
+    monkeypatch.setattr("qwenloop.cli.app.AutonomousRunner", Stopped)
+    monkeypatch.setenv("QWENLOOP_BASE_URL", "http://127.0.0.1:11434/v1")
+    monkeypatch.setattr("urllib.request.urlopen", FakeHttp())
+    _no_managed_servers(monkeypatch)
+    monkeypatch.setattr("qwenloop.cli.app.list_open_issues", lambda _owner, _repo: None)
+    monkeypatch.setattr("qwenloop.cli.app.list_open_pull_requests", lambda _owner, _repo: None)
+    plan = tmp_path / "plan.md"
+    plan.write_text("do it")
+    single = runner.invoke(app, ["run", str(plan), "--cwd", str(tmp_path)])
+    assert single.exit_code == 143, single.output
+    assert "qwenloop stopped: SIGTERM" in single.stderr
+    (tmp_path / "a" / ".git").mkdir(parents=True)
+    storm = runner.invoke(app, ["run", "--storm", "--repos-root", str(tmp_path), "--repo", "a"])
+    assert storm.exit_code == 143, storm.output
+    assert [gateway.closed for gateway in recording_gateway] == [1, 1]
+
+
+def test_the_mcp_table_reaches_every_run_and_storm_item(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+    isolated_settings: Path,
+    recording_runner: list[dict[str, object]],
+    recording_gateway: list[RecordingGateway],
+) -> None:
+    from qwenloop.domain.config import McpLimits
+
+    isolated_settings.write_text("[mcp]\nrestarts = 0\n", encoding="utf-8")
+    monkeypatch.setenv("QWENLOOP_BASE_URL", "http://127.0.0.1:11434/v1")
+    monkeypatch.setattr("urllib.request.urlopen", FakeHttp())
+    _no_managed_servers(monkeypatch)
+    monkeypatch.setattr("qwenloop.cli.app.list_open_issues", lambda _owner, _repo: None)
+    monkeypatch.setattr("qwenloop.cli.app.list_open_pull_requests", lambda _owner, _repo: None)
+    (tmp_path / "a" / ".git").mkdir(parents=True)
+    plan = tmp_path / "plan.md"
+    plan.write_text("do it")
+    assert runner.invoke(app, ["run", str(plan), "--cwd", str(tmp_path)]).exit_code == 0
+    storm = runner.invoke(app, ["run", "--storm", "--repos-root", str(tmp_path), "--repo", "a"])
+    assert storm.exit_code == 0, storm.output
+    assert [gateway.kwargs["limits"] for gateway in recording_gateway] == [
+        McpLimits(restarts=0)
+    ] * 2
+    assert [call["tools"]._mcp for call in recording_runner] == recording_gateway  # type: ignore[attr-defined]
+    assert [gateway.closed for gateway in recording_gateway] == [1, 1]

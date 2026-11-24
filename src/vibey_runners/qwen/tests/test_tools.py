@@ -21,6 +21,7 @@ from qwenloop.domain.config import DEFAULT_MAX_TOOL_RESULT_CHARS, ToolLimits
 from qwenloop.domain.interfaces import ToolLimitsInterface
 from qwenloop.domain.model import CODING_TOOL_NAMES
 from qwenloop.infrastructure.content_scanner import ContentScanner
+from qwenloop.infrastructure.inference import _CODING_TOOLS
 from qwenloop.infrastructure.interfaces import ContentScannerInterface, SandboxToolsInterface
 from qwenloop.infrastructure.tools import ANSWER_ENVELOPE_CHARS, SandboxTools, ShellEnvironment
 
@@ -61,6 +62,19 @@ def test_the_tool_catalogue_names_every_tool_the_model_is_given() -> None:
         "skills_list",
         "skill_read",
     )
+
+
+def test_mcp_list_is_advertised_as_giving_schemas_one_tool_at_a_time() -> None:
+    """SP-LOOPS Phase 5, R7: the model is told it can page the lists and ask for one schema."""
+    functions = {tool["function"]["name"]: tool["function"] for tool in _CODING_TOOLS}
+    listing = functions["mcp_list"]["parameters"]
+    assert {key: value["type"] for key, value in listing["properties"].items()} == {
+        "server": "string",
+        "tool": "string",
+        "page": "integer",
+    }
+    assert "required" not in listing
+    assert "one tool at a time" in functions["mcp_list"]["description"]
 
 
 @pytest.mark.asyncio

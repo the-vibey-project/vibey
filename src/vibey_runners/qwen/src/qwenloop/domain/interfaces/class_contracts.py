@@ -43,6 +43,26 @@ class ToolLimitsInterface(Protocol):
 
 
 @runtime_checkable
+class McpLimitsInterface(Protocol):
+    """How the MCP client treats the servers a run reaches: the `[mcp]` table."""
+
+    @property
+    def request_timeout_seconds(self) -> float: ...
+
+    @property
+    def restarts(self) -> int: ...
+
+    @property
+    def close_grace_seconds(self) -> float: ...
+
+    @property
+    def remote_calls_per_session(self) -> int: ...
+
+    @property
+    def max_tools(self) -> int: ...
+
+
+@runtime_checkable
 class RunnerIdentityInterface(Protocol):
     """Which engine a runner process is: its name, its settings' prefix, its model."""
 
@@ -119,6 +139,9 @@ class QwenConfigInterface(Protocol):
 
     @property
     def tools(self) -> ToolLimitsInterface: ...
+
+    @property
+    def mcp(self) -> McpLimitsInterface: ...
 
     @property
     def endpoint_configured(self) -> bool: ...

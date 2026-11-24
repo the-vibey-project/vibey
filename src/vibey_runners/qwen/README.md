@@ -223,6 +223,23 @@ at `search_timeout_seconds`, because a pattern can backtrack catastrophically:
 | `search_timeout_seconds` | how long a `regex` search may run before it is killed | `10` |
 | `skip_dirs` | directory names `search` and `find` never enter | `.git`, `.venv`, `node_modules`, caches, `.qwenloop` |
 
+The model reaches MCP servers through two tools. `mcp_list` names the servers; given a server,
+it names that server's tools with one line each; given a server and a tool, it returns that one
+tool's input schema, whole, or says the schema is too large for the answer budget. Long lists
+come a page at a time (`page`), and an `mcp_call` answer longer than the budget is cut with a
+line naming both lengths. A server is started on its first use and kept for the run, and every
+server the run started is closed when the run ends, SIGTERM included (exit `143`). A server that
+will not start, dies, hangs or answers with an error is an error the model reads, never the end
+of the run. The config file's `[mcp]` table bounds it:
+
+| `[mcp]` key | Bounds | Default |
+|---|---|---|
+| `request_timeout_seconds` | how long one MCP request may take before its session is ended | `60` |
+| `restarts` | how often a server that died is started again in one run | `1` |
+| `close_grace_seconds` | how long a stdio server has to exit before its process group is killed | `2` |
+| `remote_calls_per_session` | `tools/call` requests each remote server may take in one run | `64` |
+| `max_tools` | tools read from one server's listing (the listing says when it is reached) | `1024` |
+
 Ollama must be able to hold `context_window` tokens. Set its own context length
 (`OLLAMA_CONTEXT_LENGTH`, or the model's `num_ctx`) to at least `context_window`, or
 lower `context_window` to match. Otherwise Ollama quietly drops the start of a long

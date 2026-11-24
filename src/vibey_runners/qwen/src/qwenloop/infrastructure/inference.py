@@ -746,11 +746,17 @@ _CODING_TOOLS: list[dict[str, object]] = [
             "name": "mcp_list",
             "description": (
                 "List the MCP servers this session can use. Give a server to list its tools, "
-                "each with its name, description and input schema. Use it before mcp_call."
+                "each with its name and one line on what it does. Give a server and a tool to "
+                "see that tool's input schema: schemas come one tool at a time. Long lists come "
+                "a page at a time. Use it before mcp_call."
             ),
             "parameters": {
                 "type": "object",
-                "properties": {"server": {"type": "string"}},
+                "properties": {
+                    "server": {"type": "string"},
+                    "tool": {"type": "string"},
+                    "page": {"type": "integer"},
+                },
                 "additionalProperties": False,
             },
         },

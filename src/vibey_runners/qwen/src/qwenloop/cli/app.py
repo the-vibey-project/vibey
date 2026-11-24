@@ -13,12 +13,13 @@ import json
 import os
 import platform
 import shutil
+import signal
 import subprocess  # nosec B404
 import time
 import uuid
 from dataclasses import asdict, replace
 from pathlib import Path
-from typing import Annotated
+from typing import Annotated, cast
 
 import typer
 from platformdirs import user_cache_path
@@ -42,6 +43,7 @@ from qwenloop.domain.config import (
     GPTOSSLOOP,
     QWENLOOP,
     Effort,
+    McpLimits,
     QwenConfig,
     RunnerIdentity,
     ToolLimits,
@@ -90,6 +92,8 @@ _DEFAULT_STORM_AUTHOR = "Adam Matthew Steinberger"
 _DEFAULT_REPOS_ROOT = Path.home() / "git"
 #: What `server start`/`status` print in place of an attached endpoint's API key.
 _REDACTED = "<redacted>"
+#: The status of a run SIGTERM stopped: 128 + the signal's number, as a shell reports it.
+EXIT_CODE_SIGTERM = 128 + signal.SIGTERM
 
 # The endpoint flags every command that picks a server shares. Each falls back to its
 # environment variable, then to the config file, then to the default (ADR-0018).
@@ -353,8 +357,11 @@ def _run_single(
                 empty_reply_reasoning_excerpt_chars=config.empty_reply_reasoning_excerpt_chars,
                 max_tool_result_chars=config.max_tool_result_chars,
                 dispatcher=_dispatcher_for(config),
+                mcp_limits=config.mcp,
             )
         )
+    except asyncio.CancelledError as exc:
+        raise _stopped() from exc
     except (OSError, RuntimeError) as exc:
         typer.echo(f"{_identity.name} unavailable: {exc}", err=True)
         raise typer.Exit(code=1) from exc
@@ -380,40 +387,69 @@ async def _run_plan(
     empty_reply_reasoning_excerpt_chars: int = DEFAULT_EMPTY_REPLY_REASONING_EXCERPT_CHARS,
     max_tool_result_chars: int = DEFAULT_MAX_TOOL_RESULT_CHARS,
     dispatcher: object | None = None,
+    mcp_limits: McpLimits | None = None,
 ) -> RunState:
     """Start (or, for an attached endpoint, check) the server if it is not healthy, then
-    drive one AutonomousRunner run to a verdict."""
-    info = server.inspect(profile)
-    if info is None or not await server.health(info):
-        info = await server.start(profile)
-        info = await _wait_until_ready(server, info, timeout_seconds=startup_timeout_seconds)
-    runner = AutonomousRunner(
-        server,
-        FileRunStore(cwd),
-        SandboxTools(
-            cwd,
-            limits=tool_limits,
-            mcp=McpGateway.discover(
-                cwd, home=Path.home(), environ=os.environ, base_env=ShellEnvironment().build()
-            ),
-        ),
-        DesktopNotifier(enabled=desktop_notifications),
-        clock=SystemClock(),
-        dispatcher=dispatcher,  # type: ignore[arg-type]
-        host=HostPlatform(),
+    drive one AutonomousRunner run to a verdict.
+
+    Every MCP server the run starts is closed when it ends, however it ends: completed, failed,
+    wound down, raised, or stopped (SP-LOOPS Phase 5, R5). SIGTERM, which is how vibey stops a
+    session, cancels this task so the `finally` runs; the handler is removed and the previous
+    disposition restored when the run is over."""
+    gateway = McpGateway.discover(
+        cwd,
+        home=Path.home(),
+        environ=os.environ,
+        base_env=ShellEnvironment().build(),
+        limits=mcp_limits or McpLimits(),
+        client=(_identity.name, __version__),
     )
-    return await runner.run(
-        run_id=run_id,
-        plan=plan_text,
-        cwd=cwd.resolve(),
-        profile=profile,
-        server_info=info,
-        max_turns=max_turns,
-        max_empty_reply_retries=max_empty_reply_retries,
-        max_recorded_argument_chars=max_recorded_argument_chars,
-        empty_reply_reasoning_excerpt_chars=empty_reply_reasoning_excerpt_chars,
-        max_tool_result_chars=max_tool_result_chars,
+    loop = asyncio.get_running_loop()
+    previous = signal.getsignal(signal.SIGTERM)
+    # `asyncio.run` runs this coroutine as a task, so there is always a current one.
+    run_task = cast("asyncio.Task[RunState]", asyncio.current_task())
+    loop.add_signal_handler(signal.SIGTERM, run_task.cancel)
+    try:
+        info = server.inspect(profile)
+        if info is None or not await server.health(info):
+            info = await server.start(profile)
+            info = await _wait_until_ready(server, info, timeout_seconds=startup_timeout_seconds)
+        runner = AutonomousRunner(
+            server,
+            FileRunStore(cwd),
+            SandboxTools(cwd, limits=tool_limits, mcp=gateway),
+            DesktopNotifier(enabled=desktop_notifications),
+            clock=SystemClock(),
+            dispatcher=dispatcher,  # type: ignore[arg-type]
+            host=HostPlatform(),
+        )
+        return await runner.run(
+            run_id=run_id,
+            plan=plan_text,
+            cwd=cwd.resolve(),
+            profile=profile,
+            server_info=info,
+            max_turns=max_turns,
+            max_empty_reply_retries=max_empty_reply_retries,
+            max_recorded_argument_chars=max_recorded_argument_chars,
+            empty_reply_reasoning_excerpt_chars=empty_reply_reasoning_excerpt_chars,
+            max_tool_result_chars=max_tool_result_chars,
+        )
+    finally:
+        loop.remove_signal_handler(signal.SIGTERM)
+        signal.signal(signal.SIGTERM, signal.SIG_DFL if previous is None else previous)
+        await gateway.aclose()
+
+
+def _stopped() -> typer.Exit:
+    """What a run or a storm ends with once SIGTERM has cancelled it: the reason on stderr and
+    128 + SIGTERM, the status a process stopped by that signal reports. Module-level for the
+    reason every helper here is: the typer commands share it."""
+    typer.echo(
+        f"{_identity.name} stopped: SIGTERM ended the run, and its MCP servers were closed",
+        err=True,
     )
+    return typer.Exit(code=EXIT_CODE_SIGTERM)
 
 
 def _dispatcher_for(config: QwenConfig) -> object:
@@ -556,8 +592,11 @@ def _run_storm(
                                 config.empty_reply_reasoning_excerpt_chars
                             ),
                             max_tool_result_chars=config.max_tool_result_chars,
+                            mcp_limits=config.mcp,
                         )
                     )
+                except asyncio.CancelledError as exc:
+                    raise _stopped() from exc
                 except (OSError, RuntimeError) as exc:
                     repo_success = False
                     repo_failure = str(exc)
