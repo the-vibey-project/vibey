@@ -558,6 +558,9 @@ class EventKind(StrEnum):
     # and for a fetch the hosts it reached -- never the query, never a URL. Trusted only.
     WEB_SEARCHED = "WebSearched"
     WEB_FETCHED = "WebFetched"
+    # The snapshot a BUILD run was given, recorded by vibey before the engine starts (SP-LOOPS
+    # Phase 4): run id, digest and counts only. Trusted only; withheld from publication.
+    LOOP_CAPABILITIES_SNAPSHOTTED = "LoopCapabilitiesSnapshotted"
 
 
 CLOSABLE: frozenset[EventKind] = frozenset({

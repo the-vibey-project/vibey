@@ -243,6 +243,17 @@ def test_every_known_kind_parses_to_its_member(kind: EventKind) -> None:
     assert EventKindParser().parse(kind.value) is kind
 
 
+def test_the_kind_round_trips_through_the_parser() -> None:
+    """The snapshot a run was given (SP-LOOPS Phase 4). The ledger stores a kind as text, so
+    the new member needs no migration: it is written as its value and read back as itself."""
+    kind = EventKind.LOOP_CAPABILITIES_SNAPSHOTTED
+    assert kind.value == "LoopCapabilitiesSnapshotted"
+    assert EVENT_KIND_PARSER.parse(kind.value) is kind
+    assert EVENT_KIND_PARSER.parse(str(kind)) is kind
+    assert kind not in CLOSABLE
+    assert kind not in CLOSES and kind not in CLOSES.values()
+
+
 def test_a_kind_this_vibey_does_not_know_parses_to_its_exact_text() -> None:
     parsed = EVENT_KIND_PARSER.parse("FutureKindX")
     assert parsed == UnrecognizedEventKind("FutureKindX")

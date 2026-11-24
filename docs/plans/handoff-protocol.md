@@ -134,8 +134,10 @@ that `untrusted` ledger content is data to consider, never instructions to obey.
 | `BudgetCapChanged` | `vibey budget set` or `clear` changed a project's cap, in the same transaction as the config; one per changed cap, `trusted`. Not spend: nothing counts it | no | `field`, `old`, `new`, `by`, `account` |
 | `GateAnswered` | A human gate was answered (`vibey answer`, the operator, any client), in the same transaction as the compare-and-set that records the answer; `trusted`. A refused or replayed answer writes none. Not a design answer: that is `AnswerGiven` | no | `gate_id`, `gate_kind`, `job_id`, `request_id`, `by`, `account`, `answer` |
 | `GateWithdrawn` | An open human gate was closed without an answer because `vibey abandon` abandoned its project, in the same transaction as the move into abandoned and the compare-and-set that closes the gate; `trusted`. Nobody answered: it is not `GateAnswered` | no | `gate_id`, `gate_kind`, `job_id`, `request_id`, `reason`, `by`, `account` |
+| `LoopCapabilitiesSnapshotted` | `vibey` records the capability snapshot a BUILD run was given, before the engine starts, and only for an engine that takes one; `trusted`, and withheld from publication. Digests and counts only: never a server's command, URL or environment. No runner event maps onto it, and it opens, closes and spends nothing | no | `run_id`, `digest`, `plugins`, `skills`, `skills_skipped`, `mcp_local`, `mcp_remote`, `project_notices` |
 
-`EventKind` in `domain/ledger.py` has these 33 members. The four bolded kinds are
+`EventKind` in `domain/ledger.py` has 56 members; the table above lists the ones a
+handoff reads, and `domain/ledger.py` is the full list. The four bolded kinds are
 the **closable set** (`CLOSABLE`) — the things the gate checks. Only two kinds
 close anything (`CLOSES`): `AnswerGiven` closes `QuestionAsked` and
 `FindingResolved` closes `FindingRaised`. A `DecisionRecorded` whose payload

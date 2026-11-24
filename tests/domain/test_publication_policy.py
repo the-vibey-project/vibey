@@ -31,6 +31,7 @@ from vibey.domain.publication_policy import (
     ENGINE_CHATTER,
     NEVER_PUBLISHED_FIELDS,
     NO_TRIM,
+    WITHHELD_KINDS,
     InvalidPublicationRules,
     PublicationPolicy,
     PublicationRules,
@@ -151,6 +152,31 @@ def test_the_hubs_web_audit_is_withheld_whole(value: str) -> None:
     )
     assert decision.record is None
     assert decision.withheld is WithheldReason.KIND_NOT_ALLOWLISTED
+
+
+def test_loop_capabilities_snapshotted_is_withheld_whole() -> None:
+    """The snapshot a run was given describes the operator's own plugins and MCP servers
+    (SP-LOOPS Phase 4): a digest and counts, but still the operator's configuration, so it
+    is withheld on purpose and never published, nor billed."""
+    kind = EventKind.LOOP_CAPABILITIES_SNAPSHOTTED
+    payload: dict[str, object] = {
+        "run_id": str(uuid4()),
+        "digest": "sha256:" + "0f" * 32,
+        "plugins": 2,
+        "skills": 5,
+        "skills_skipped": 0,
+        "mcp_local": 1,
+        "mcp_remote": 1,
+        "project_notices": 0,
+    }
+    event = _event(kind=kind, phase=Phase.BUILD, payload=payload)
+
+    assert kind in WITHHELD_KINDS
+    assert kind not in DEFAULT_ALLOWLIST and kind not in ENGINE_CHATTER
+    decision = DEFAULT_POLICY.decide(event)
+    assert decision.record is None
+    assert decision.withheld is WithheldReason.KIND_NOT_ALLOWLISTED
+    assert BILLING_POLICY.decide(event).withheld is WithheldReason.KIND_NOT_ALLOWLISTED
 
 
 @pytest.mark.parametrize("kind", sorted(ENGINE_CHATTER))

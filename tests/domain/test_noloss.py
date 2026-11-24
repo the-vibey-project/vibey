@@ -615,3 +615,49 @@ def test_input_events_in_the_range_never_trip_a_rule() -> None:
     )
     assert result.ok is True, result.violations
     assert result.rules_run == tuple(GateRule)
+
+
+# --- the snapshot a run was given (SP-LOOPS Phase 4, Task 7; ruling R3) ------------------------
+
+
+def test_a_capabilities_snapshotted_event_in_the_range_trips_no_rule() -> None:
+    """vibey records `LoopCapabilitiesSnapshotted` before a BUILD engine starts: a digest, the
+    run's id and counts. In the range a handoff verifies, it trips none of the ten rules under
+    STRICT. Every rule matches kinds by identity, so the new kind opens, closes and spends
+    nothing; `verify` is unchanged."""
+    import asyncio
+
+    from vibey.application.brief_producer import DeterministicBriefProducer
+
+    ledger = (
+        _event(1, EventKind.SESSION_SEEDED, {"seed_digest": "d1"}),
+        _event(
+            2,
+            EventKind.LOOP_CAPABILITIES_SNAPSHOTTED,
+            {
+                "run_id": str(uuid4()),
+                "digest": "sha256:" + "0f" * 32,
+                "plugins": 2,
+                "skills": 5,
+                "skills_skipped": 1,
+                "mcp_local": 1,
+                "mcp_remote": 1,
+                "project_notices": 0,
+            },
+        ),
+        _event(
+            3,
+            EventKind.VERDICT_RENDERED,
+            {"complete": False, "remaining_work": ["finish the relay"]},
+        ),
+    )
+    brief = asyncio.run(
+        DeterministicBriefProducer(events=ledger).produce(
+            attempt=1, mode=GateMode.STRICT, violations=()
+        )
+    )
+    result = verify(
+        ledger=ledger, brief=brief, ref=_ref_for(ledger), budget=ZERO_BUDGET, mode=GateMode.STRICT
+    )
+    assert result.ok is True, result.violations
+    assert result.rules_run == tuple(GateRule)

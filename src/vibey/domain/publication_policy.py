@@ -217,6 +217,9 @@ WITHHELD_KINDS: Final[frozenset[EventKind]] = frozenset(
         # operator's own record of what left the computer.
         EventKind.WEB_SEARCHED,
         EventKind.WEB_FETCHED,
+        # The snapshot a run was given: digests and counts, but of the operator's own
+        # plugins and MCP server configuration.
+        EventKind.LOOP_CAPABILITIES_SNAPSHOTTED,
     }
 )
 """Every kind the default rules withhold whole, named so that none is withheld -- or

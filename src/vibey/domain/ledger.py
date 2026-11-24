@@ -163,6 +163,12 @@ class EventKind(StrEnum):
     # not to keep what was asked. Written by the hub, so trusted only.
     WEB_SEARCHED = "WebSearched"
     WEB_FETCHED = "WebFetched"
+    # The snapshot a run was given (SP-LOOPS Phase 4, ruling R3): recorded by vibey before
+    # the engine starts, and only for an engine that takes one. Digests and counts only --
+    # the run's id, the snapshot's digest and how many plugins, skills and MCP servers it
+    # held -- never a server's command, URL or environment (`domain/loop_capabilities.py`).
+    # Trusted only: no runner event maps onto it. It opens, closes and spends nothing.
+    LOOP_CAPABILITIES_SNAPSHOTTED = "LoopCapabilitiesSnapshotted"
 
 
 _KNOWN_KIND_VALUES: Final = frozenset(kind.value for kind in EventKind)
