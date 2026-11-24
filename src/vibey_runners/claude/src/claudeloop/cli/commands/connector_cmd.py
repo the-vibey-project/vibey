@@ -7,6 +7,7 @@ from pathlib import Path
 import typer
 
 from claudeloop import bootstrap_ops
+from claudeloop.domain.errors import CapabilityFlagConflict
 
 app = typer.Typer(help="Manage MCP connectors for the active run")
 
@@ -33,6 +34,10 @@ def add(
             name=name,
             run_id=run_id,
         )
+    except CapabilityFlagConflict as exc:
+        # The usage error `run --connector` gives for the same clash (R12); nothing was queued.
+        typer.echo(str(exc), err=True)
+        raise typer.Exit(code=2) from exc
     except (FileNotFoundError, ValueError) as exc:
         typer.echo(str(exc), err=True)
         raise typer.Exit(code=1) from exc

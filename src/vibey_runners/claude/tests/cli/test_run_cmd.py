@@ -659,6 +659,50 @@ class TestRunWithCapabilities:
         session.assert_not_called()
         assert not (repo / ".claudeloop" / "runs").exists()
 
+    def test_a_mid_run_connector_add_named_like_a_snapshot_server_is_refused_at_once(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """R12 for the mid-run path: `claudeloop connector add NAME` while a run is going, with a
+        name the run's snapshot already gives, is refused by the command itself. Nothing is
+        queued, so the runner never sees it and its next connect is built as before; a queued
+        clash used to surface only there, as a `CapabilityFlagConflict` inside the resource
+        flush."""
+        docs = McpServerSpec(
+            name="docs",
+            trust="remote",
+            command=None,
+            url="https://example.invalid/mcp",
+            env_allow=(),
+        )
+        document = CapabilityDocumentWriter(tmp_path).write(mcp_servers=[docs])
+        result, repo, _, _ = self._invoke(tmp_path, document)
+        assert result.exit_code == 0, result.output
+        run = repo / ".claudeloop" / "runs" / "r1"
+        inbox = run / "inbox"
+        env = {**_ENV, "HOME": str(tmp_path / "home")}
+        monkeypatch.chdir(repo)
+
+        refused = runner.invoke(
+            app,
+            ["connector", "add", "docs", "https://other.invalid", "--run-id", "r1"],
+            env=env,
+        )
+
+        assert refused.exit_code == 2
+        assert "'docs'" in refused.output
+        assert "capability snapshot" in refused.output
+        assert "Queued" not in refused.output
+        assert list(inbox.iterdir()) == []
+        assert RunResourceStore(run / "resources").list_connectors() == {}
+
+        queued = runner.invoke(
+            app,
+            ["connector", "add", "notes", "https://notes.invalid", "--run-id", "r1"],
+            env=env,
+        )
+        assert queued.exit_code == 0, queued.output
+        assert len(list(inbox.iterdir())) == 1
+
     def test_the_composition_root_gives_the_gateway_servers_started_through_the_launcher(
         self, tmp_path: Path
     ) -> None:

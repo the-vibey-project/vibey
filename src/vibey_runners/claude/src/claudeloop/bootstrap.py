@@ -123,7 +123,12 @@ def build_runner(
             applied, connectors=list(connectors or {}), web_search=config.web_search
         )
     run_dir = RunDirectory.create(runs_root_for(cwd), cwd=cwd, plan_path=plan_path, run_id=run_id)
-    run_dir.update_meta(backend=str(backend_identity), profile=config.backend.name)
+    run_dir.update_meta(
+        backend=str(backend_identity),
+        profile=config.backend.name,
+        # Names only, so a mid-run `connector add` can refuse a clash before it is queued (R12).
+        snapshot_mcp_servers=list(applied.mcp_servers) if applied is not None else [],
+    )
     run_id = run_dir.read_meta().run_id
     trace_id = str(uuid.uuid4())
     profile = config.resolved_profile()

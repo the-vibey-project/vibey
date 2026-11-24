@@ -87,7 +87,8 @@ It is applied on every connect, so a mid-run `attach`, `folder`, `skill`, `plugi
 `connector` adds to it and never drops it. The `capabilities.applied` event carries the digest,
 counts and names only. A document that is refused or cannot be read exits `78`. `--connector`
 with a name the snapshot already gives, or `--web-search` beside a snapshot that switches the
-web tools off, exits `2`. Without `--capabilities` nothing changes: the session loads Claude
+web tools off, exits `2`. A mid-run `connector add` with such a name also exits `2`, before
+anything is queued, and the run continues unchanged. Without `--capabilities` nothing changes: the session loads Claude
 Code's own settings as before.
 
 

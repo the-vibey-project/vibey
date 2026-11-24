@@ -15,6 +15,7 @@ from structlog.stdlib import BoundLogger
 
 from claudeloop.application.usecases import run_control as run_control_uc
 from claudeloop.domain.backend import BackendIdentity
+from claudeloop.domain.errors import CapabilityFlagConflict
 from claudeloop.domain.snapshot import SnapshotRef
 from claudeloop.infrastructure.chat_meta import ChatMetaStore
 from claudeloop.infrastructure.control import FileRunControl
@@ -32,6 +33,9 @@ from claudeloop.infrastructure.state_bus import FileStateBus
 
 # Resource kinds that switch on Anthropic server-side tools (see resources/adapter.py).
 _SERVER_TOOL_KINDS = frozenset({"web-search", "research"})
+# Resource kinds and actions that name an MCP server for the session (see resources/adapter.py).
+_CONNECTOR_KINDS = frozenset({"connector", "mcp"})
+_CONNECTOR_SETS = frozenset({"add", "set"})
 
 
 def _logger() -> BoundLogger:
@@ -174,6 +178,22 @@ def enqueue_tool_decision(
     return result
 
 
+def _refuse_a_snapshot_server(meta: RunMeta, *, action: str, kind: str, name: str | None) -> None:
+    """Refuses, before anything is queued, a connector named like an MCP server the run's
+    capability snapshot already gives it (R12). Queued, it would reach the session's resources
+    and fail the run's next connect with this same error. Module-level like every other helper
+    in this façade."""
+    if kind.strip().lower() not in _CONNECTOR_KINDS or action not in _CONNECTOR_SETS:
+        return
+    server = name or "default"  # the name the resource adapter would store it under
+    if server in meta.snapshot_mcp_servers:
+        raise CapabilityFlagConflict(
+            f"MCP server {server!r} is given by this run's capability snapshot; a connector "
+            "cannot replace it. Nothing was queued and the run continues unchanged; rename "
+            "the connector or leave it out"
+        )
+
+
 def enqueue_resource(
     cwd: Path,
     *,
@@ -189,6 +209,7 @@ def enqueue_resource(
     backend = _run_backend(meta)
     if backend is not None and action != "rm" and kind.strip().lower() in _SERVER_TOOL_KINDS:
         backend.check_server_tools()
+    _refuse_a_snapshot_server(meta, action=action, kind=kind, name=name)
     result = run_control_uc.request_resource_mutate(
         inbox,
         action=action,

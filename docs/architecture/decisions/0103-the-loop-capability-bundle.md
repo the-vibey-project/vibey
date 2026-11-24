@@ -139,11 +139,12 @@ the first loops apply the bundle. The status above is unchanged; these are its r
 - **R14 (document size).** The reader refuses a document over 4 MiB, a parser guard sized from
   the bundle's own caps, not a policy limit.
 
+A mid-run `claudeloop connector add NAME` with a name the snapshot already gives is refused by
+the command with exit 2 before anything is queued, so the run continues unchanged: the run's
+`meta.json` records the snapshot's MCP server names (names only) for that check.
+
 Still open after Phase 4:
 
-- A mid-run `claudeloop connector add NAME` with a name the snapshot already gives is not refused
-  at the `connector` command: the next connect fails with `CapabilityFlagConflict` inside the
-  runner's resource flush.
 - The worker's start-up sweep runs before any project is known, so it uses
   `VIBEY_ENGINE_MAX_RUN_MINUTES` or 240 minutes, not a project's `[engines] max_run_minutes`.
 - None of this has run against a real `claude` binary or a real MCP server; the tests use

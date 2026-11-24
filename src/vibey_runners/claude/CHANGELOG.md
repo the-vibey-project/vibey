@@ -43,7 +43,8 @@
   on every connect, so a mid-run `attach`, `skill` or `connector` adds to it and never drops
   it. A document that is refused or cannot be read exits 78 before any run folder exists;
   `--connector` naming a server the snapshot gives, or `--web-search` beside a snapshot that
-  switches the web tools off, exits 2. The `capabilities.applied` event carries the digest,
+  switches the web tools off, exits 2, and so does a mid-run `connector add` with such a name,
+  before anything is queued. The `capabilities.applied` event carries the digest,
   counts and names only, never a path, a server's configuration or a value
 
 ### Bug Fixes

@@ -7,7 +7,7 @@ import json
 import os
 import re
 import uuid
-from dataclasses import asdict, dataclass
+from dataclasses import asdict, dataclass, field
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
@@ -57,6 +57,11 @@ class RunMeta:
     # continued against a backend that did not produce its transcript.
     backend: str | None = None
     profile: str | None = None
+    # The names of the MCP servers the run's capability snapshot gives it (SP-LOOPS
+    # Phase 4, R12), and nothing else of them: no command, URL or environment name.
+    # Read back by `connector add`, which refuses a name the snapshot already gives
+    # before anything is queued, so the run's next connect never meets the clash.
+    snapshot_mcp_servers: list[str] = field(default_factory=list)
 
     def to_dict(self) -> dict[str, Any]:
         return asdict(self)
@@ -80,6 +85,7 @@ class RunMeta:
             capacity=data.get("capacity"),
             backend=data.get("backend"),
             profile=data.get("profile"),
+            snapshot_mcp_servers=[str(name) for name in data.get("snapshot_mcp_servers") or ()],
         )
 
 
