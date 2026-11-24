@@ -35,6 +35,10 @@ class ForbiddenEnvironmentInterface(Protocol):
         """Whether vibey's own overlay may set `name` although no allow-list may admit it."""
         ...
 
+    def refusal(self, entry: str) -> str:
+        """Why a declared `entry` (`NAME`, or `PREFIX*`) is refused, naming it."""
+        ...
+
 
 @runtime_checkable
 class EnvironmentAllowListInterface(Protocol):

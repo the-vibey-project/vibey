@@ -29,7 +29,8 @@ from collections.abc import Callable, Mapping
 from dataclasses import replace
 from datetime import timedelta
 from pathlib import Path
-from typing import Final
+from types import SimpleNamespace
+from typing import Any, Final, cast
 from unittest.mock import AsyncMock
 from uuid import uuid4
 
@@ -248,6 +249,53 @@ async def test_a_worker_without_a_hub_tells_each_session_so_and_gives_it_nothing
     assert not list(tmp_path.rglob("web-token"))  # no token file anywhere
 
 
+@pytest.mark.parametrize(
+    ("engine_environment", "refused"),
+    [
+        ({"allow": ["WEBSEARCH_SEARXNG_URL", "VIBEY_SEARXNG_URL"]}, "WEBSEARCH_SEARXNG_URL"),
+        ({"allow": ["VIBEY_SEARXNG_URL", "WEBSEARCH_SEARXNG_URL"]}, "VIBEY_SEARXNG_URL"),
+        (
+            {
+                "engines": {
+                    "qwenloop": ["WEBSEARCH_SEARXNG_URL"],
+                    "claudeloop": ["VIBEY_SEARXNG_URL"],
+                }
+            },
+            "WEBSEARCH_SEARXNG_URL",
+        ),
+        ({"engines": {"gptossloop": ["VIBEY_SEARXNG_URL"]}}, "VIBEY_SEARXNG_URL"),
+        ({"allow": ["WEBSEARCH_*"]}, r"WEBSEARCH_\*"),
+    ],
+    ids=["allow", "allow-reversed", "per-engine", "per-engine-vibey", "prefix"],
+)
+def test_a_project_that_declares_the_searxng_address_for_its_sessions_gets_no_worker(
+    monkeypatch: pytest.MonkeyPatch, engine_environment: Mapping[str, object], refused: str
+) -> None:
+    """The walk above uses no project `engine_environment`; a project's own may not reopen what
+    the walk proves closed. The worker is built the way `vibey worker` builds it, from the
+    project's record, while its own environment holds the SearXNG address under both names: it
+    refuses to build, naming the first declared name, so no session ever starts to receive one."""
+    for name, value in WORKER.items():
+        monkeypatch.setenv(name, value)
+
+    def no_spawn(*argv: str, **kwargs: object) -> None:
+        raise AssertionError("a worker that refuses to build starts no session")
+
+    monkeypatch.setattr(adapter_module.asyncio, "create_subprocess_exec", no_spawn)
+    project = SimpleNamespace(config={"engine_environment": engine_environment})
+
+    with pytest.raises(ValueError, match=f"{refused} can never be passed to a child process"):
+        bootstrap.build_full_worker(
+            resources=cast(Any, SimpleNamespace(engine_adapters={})),
+            project=cast(Any, project),
+            design_provider=cast(Any, None),
+            visual_provider=cast(Any, None),
+            decomposer=cast(Any, None),
+            owner="walk-refused-worker",
+            engine_adapters={},
+        )
+
+
 async def test_with_no_hub_the_reason_is_no_hub_for_a_run_that_has_a_folder(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
@@ -293,8 +341,8 @@ async def test_the_walk_fails_when_the_workers_overlay_carries_a_forbidden_name(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch, name: str
 ) -> None:
     """The worker's own overlay for every session (`with_overlay`) gains one forbidden name: the
-    forbidden rule refuses vibey's own names as the adapter is built, and the walk catches the
-    rest (`WEBSEARCH_*`, which no rule refuses)."""
+    forbidden rule refuses vibey's own names and vibey's web search settings (`WEBSEARCH_*`, the
+    Brave key's aliases) as the adapter is built, and the walk catches anything it misses."""
 
     def polluted(policy: EngineEnvironmentPolicy) -> EngineEnvironmentPolicy:
         return policy.with_overlay({name: FORBIDDEN[name]})

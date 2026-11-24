@@ -159,17 +159,20 @@ def test_an_allow_list_that_already_holds_a_forbidden_name_cannot_be_narrowed_on
 
 
 def test_the_forbidden_rules_are_exactly_these() -> None:
-    # The Brave Search key's alias is vibey's credential under a non-`VIBEY_*` name.
+    # The Brave Search key's alias is vibey's credential under a non-`VIBEY_*` name, and every
+    # `WEBSEARCH_*` name is one of vibey's own web search settings (SP-LOOPS Phase 6).
+    web = ("WEBSEARCH_", "BRAVE_SEARCH_API_KEY", "WEBSEARCH_BRAVE_API_KEY")
     assert (
         ForbiddenEnvironment(
-            prefixes=("VIBEY_", "PG", "GIT_"),
+            prefixes=("VIBEY_", "PG", "GIT_", "WEBSEARCH_"),
             markers=("BRAVE_SEARCH_API_KEY", "WEBSEARCH_BRAVE_API_KEY"),
+            web_settings=web,
         )
         == GATE_FORBIDDEN
     )
     assert (
         ForbiddenEnvironment(
-            prefixes=("VIBEY_", "PG"),
+            prefixes=("VIBEY_", "PG", "WEBSEARCH_"),
             markers=(
                 "DSN",
                 "DATABASE_URL",
@@ -179,6 +182,7 @@ def test_the_forbidden_rules_are_exactly_these() -> None:
                 "WEBSEARCH_BRAVE_API_KEY",
             ),
             overlay_grants=("VIBEY_HUB_URL", "VIBEY_WEB_STATE", "VIBEY_WEB_TOKEN_FILE"),
+            web_settings=web,
         )
         == MODEL_SESSION_FORBIDDEN
     )

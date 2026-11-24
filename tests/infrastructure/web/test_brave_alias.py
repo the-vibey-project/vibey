@@ -194,7 +194,10 @@ def test_no_allow_list_can_pass_the_websearch_form_to_a_child(forbidden: Any) ->
     assert forbidden.forbids("WEBSEARCH_BRAVE_API_KEY")
     with pytest.raises(ValueError, match="can never be passed"):
         EnvironmentAllowList(["WEBSEARCH_BRAVE_API_KEY"], forbidden=forbidden)
-    wide = EnvironmentAllowList([], ["WEBSEARCH_"], forbidden=forbidden)
-    source = {"WEBSEARCH_BRAVE_API_KEY": FAKE, "WEBSEARCH_SEARXNG_URL": "http://h"}
-    env = ChildEnvironment(wide, source=source).build()
-    assert "WEBSEARCH_BRAVE_API_KEY" not in env and env["WEBSEARCH_SEARXNG_URL"] == "http://h"
+    # Nor can a prefix over it: every `WEBSEARCH_*` name is vibey's own web search setting, the
+    # SearXNG address among them (SP-LOOPS Phase 6), so the prefix itself is refused.
+    with pytest.raises(ValueError, match=r"WEBSEARCH_\* can never be passed"):
+        EnvironmentAllowList([], ["WEBSEARCH_"], forbidden=forbidden)
+    wide = EnvironmentAllowList(["PATH"], ["WEB_"], forbidden=forbidden)
+    source = {"WEBSEARCH_BRAVE_API_KEY": FAKE, "WEBSEARCH_SEARXNG_URL": "http://h", "PATH": "/b"}
+    assert ChildEnvironment(wide, source=source).build() == {"PATH": "/b"}
