@@ -58,3 +58,31 @@ def test_nothing_ever_uninstalls_vibey_engine() -> None:
     for text in (UNINSTALL, INSTALL):
         assert not re.search(r"uninstall[^\n]*vibey-engine", text)
         assert not re.search(r"uninstall[^\n]*\$ENGINE", text)
+
+
+FULL_STEP = re.compile(r'^\s*step (\S+) "[^"]*" vibey (\S+)((?: --?[a-z][a-z-]*)*)', re.MULTILINE)
+
+
+def test_every_full_step_is_a_command_and_option_vibey_ships() -> None:
+    """`--full` runs vibey's own commands, never a reimplementation, so each one it names
+    must exist with each option it passes: a renamed command or flag fails here, not on a
+    person's fresh machine."""
+    import typer.main
+
+    from vibey.cli.main import app
+
+    cli = typer.main.get_command(app)
+    steps = FULL_STEP.findall(INSTALL)
+    assert [name for name, _, _ in steps] == ["postgres", "migrate", "connect"]
+    for _, command, options in steps:
+        shipped = cli.commands[command]  # type: ignore[attr-defined]
+        known = {opt for param in shipped.params for opt in param.opts}
+        assert set(options.split()) <= known, (command, options)
+    connect = cli.commands["connect"]  # type: ignore[attr-defined]
+    assert "--client" in {opt for param in connect.params for opt in param.opts}
+
+
+def test_full_reads_the_owner_dsn_vibey_migrate_reads() -> None:
+    from vibey.infrastructure.db.ledger_guard import DatabaseEndpoints
+
+    assert f"${{{DatabaseEndpoints.MIGRATE_ENV}:-}}" in INSTALL

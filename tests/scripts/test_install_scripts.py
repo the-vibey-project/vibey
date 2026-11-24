@@ -34,20 +34,40 @@ class Machine:
             d.mkdir(parents=True)
         self.log.write_text("")
 
-    def stub(self, name: str, script: str = "exit 0") -> None:
-        path = self.bin / name
+    def stub(self, name: str, script: str = "exit 0", where: Path | None = None) -> None:
+        path = (where or self.bin) / name
         path.write_text(f'#!/bin/sh\necho "{name} $*" >> "{self.log}"\n{script}\n')
         path.chmod(0o755)
 
-    def run(self, script: Path, *args: str) -> subprocess.CompletedProcess[str]:
-        env = {
+    def environment(self, extra: dict[str, str] | None = None) -> dict[str, str]:
+        return {
             "HOME": str(self.home),
             "PATH": f"{self.bin}:/usr/bin:/bin",
             "KRYPTON_ROOT": str(self.root),
             "XDG_CONFIG_HOME": str(self.home / ".config"),
+            **(extra or {}),
         }
+
+    def run(
+        self, script: Path, *args: str, env: dict[str, str] | None = None
+    ) -> subprocess.CompletedProcess[str]:
         return subprocess.run(
-            ["sh", str(script), *args], env=env, capture_output=True, text=True, check=False
+            ["sh", str(script), *args],
+            env=self.environment(env),
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+
+    def piped(self, script: Path, *args: str) -> subprocess.CompletedProcess[str]:
+        """The script read from stdin, as `curl ... | sh -s -- ARGS` runs it: `$0` is no file."""
+        return subprocess.run(
+            ["sh", "-s", "--", *args],
+            input=script.read_text(encoding="utf-8"),
+            env=self.environment(),
+            capture_output=True,
+            text=True,
+            check=False,
         )
 
     def calls(self) -> list[str]:
@@ -251,3 +271,160 @@ def test_the_installer_refuses_unknown_options_and_a_bare_from_source(tmp_path: 
     m = installer_machine(tmp_path)
     assert m.run(INSTALL, "--everything").returncode == 2
     assert m.run(INSTALL, "--from-source").returncode == 2
+
+
+def test_the_closing_line_names_no_file_a_piped_install_lacks(tmp_path: Path) -> None:
+    m = installer_machine(tmp_path)
+    plain = m.run(INSTALL)
+    assert "uninstall-krypton.sh" not in plain.stdout
+    assert "krypton" not in plain.stdout  # nothing about apps that were not installed
+    with_apps = m.run(INSTALL, "--with-krypton")
+    assert "uv tool uninstall krypton-app" in with_apps.stdout
+    assert "sh scripts/uninstall-krypton.sh" not in with_apps.stdout
+
+
+# ------------------------------------------------------------------ help, piped or not
+
+
+def test_help_works_when_the_script_is_piped(tmp_path: Path) -> None:
+    m = installer_machine(tmp_path)
+    for done in (m.piped(INSTALL, "--help"), m.run(INSTALL, "--help")):
+        assert done.returncode == 0, done.stderr
+        assert "--with-krypton" in done.stdout and "--from-source" in done.stdout
+        assert "--full" in done.stdout
+    assert m.calls() == []  # help installs nothing
+
+
+# ------------------------------------------------------------------ vibey not on PATH
+
+
+def test_vibey_missing_from_path_fails_with_the_line_to_add(tmp_path: Path) -> None:
+    m = Machine(tmp_path)
+    tools = tmp_path / "uv-bin"
+    tools.mkdir()
+    m.stub("uv", f'case "$*" in "tool dir --bin") echo "{tools}";; esac')
+    done = m.run(INSTALL)
+    assert done.returncode != 0
+    assert f'export PATH="{tools}:$PATH"' in done.stderr
+    assert "vibey is installed" not in done.stdout
+    assert not any(c.startswith("vibey ") for c in m.calls())
+
+
+def test_vibey_in_uv_s_bin_dir_is_found_and_the_path_line_is_printed(tmp_path: Path) -> None:
+    m = Machine(tmp_path)
+    tools = tmp_path / "uv-bin"
+    tools.mkdir()
+    m.stub("uv", f'case "$*" in "tool dir --bin") echo "{tools}";; esac')
+    m.stub("vibey", where=tools)
+    done = m.run(INSTALL)
+    assert done.returncode == 0, done.stderr
+    assert "vibey doctor" in m.calls()
+    assert f'export PATH="{tools}:$PATH"' in done.stdout
+
+
+# ------------------------------------------------------------------ --full
+
+
+FULL_STEPS = ["vibey install --postgres", "vibey migrate", "vibey connect --yes"]
+OWNER_DSN = {"VIBEY_PG_MIGRATE_URL": "postgresql://owner@localhost:5432/vibey"}
+
+
+def full_machine(tmp: Path) -> Machine:
+    """An installer machine where PostgreSQL comes from Homebrew, so no step needs sudo."""
+    m = installer_machine(tmp)
+    m.stub("brew")
+    m.stub("sudo", "exit 1")
+    return m
+
+
+def test_full_runs_vibey_s_own_setup_commands_in_order(tmp_path: Path) -> None:
+    m = full_machine(tmp_path)
+    done = m.run(INSTALL, "--full", env=OWNER_DSN)
+    assert done.returncode == 0, done.stderr
+    assert m.calls() == ["uv tool install --reinstall vibey-engine", *FULL_STEPS, "vibey doctor"]
+    said = done.stdout
+    positions = [said.index(cmd) for cmd in FULL_STEPS]  # each step says what it will run
+    assert positions == sorted(positions)
+    never_touches_the_engine(m)
+
+
+def test_a_failing_full_step_stops_the_run_and_names_it(tmp_path: Path) -> None:
+    m = full_machine(tmp_path)
+    m.stub("vibey", 'case "$1" in migrate) exit 1;; esac')
+    done = m.run(INSTALL, "--full", env=OWNER_DSN)
+    assert done.returncode != 0
+    assert "migrate" in done.stderr and "vibey migrate" in done.stderr
+    assert "vibey connect --yes" not in m.calls() and "vibey doctor" not in m.calls()
+    assert "vibey is installed" not in done.stdout
+
+
+def test_full_is_safe_to_run_again(tmp_path: Path) -> None:
+    m = full_machine(tmp_path)
+    first = m.run(INSTALL, "--full", env=OWNER_DSN)
+    m.log.write_text("")
+    again = m.run(INSTALL, "--full", env=OWNER_DSN)
+    assert first.returncode == 0 and again.returncode == 0, again.stderr
+    assert m.calls() == ["uv tool install --reinstall vibey-engine", *FULL_STEPS, "vibey doctor"]
+
+
+def test_each_full_step_has_its_own_switch(tmp_path: Path) -> None:
+    for switch, command in zip(
+        ("VIBEY_FULL_POSTGRES", "VIBEY_FULL_MIGRATE", "VIBEY_FULL_CONNECT"), FULL_STEPS, strict=True
+    ):
+        m = full_machine(tmp_path / switch)
+        done = m.run(INSTALL, "--full", env={**OWNER_DSN, switch: "0"})
+        assert done.returncode == 0, done.stderr
+        assert command not in m.calls()
+        assert [c for c in FULL_STEPS if c != command] == [c for c in m.calls() if c in FULL_STEPS]
+
+
+def test_full_connects_only_the_clients_it_is_given(tmp_path: Path) -> None:
+    m = full_machine(tmp_path)
+    m.run(INSTALL, "--full", env={**OWNER_DSN, "VIBEY_FULL_CONNECT_CLIENTS": "codex,zed"})
+    assert "vibey connect --yes --client codex --client zed" in m.calls()
+
+
+def test_without_full_no_setup_step_runs(tmp_path: Path) -> None:
+    m = full_machine(tmp_path)
+    m.run(INSTALL, env=OWNER_DSN)
+    assert not any(c in m.calls() for c in FULL_STEPS)
+
+
+def test_full_without_an_owner_dsn_skips_the_migration_and_says_what_to_run(
+    tmp_path: Path,
+) -> None:
+    m = full_machine(tmp_path)
+    done = m.run(INSTALL, "--full")
+    assert done.returncode == 0, done.stderr
+    assert "vibey migrate" not in m.calls()
+    assert "vibey connect --yes" in m.calls()
+    assert "VIBEY_PG_MIGRATE_URL" in done.stdout and "vibey migrate" in done.stdout
+    assert "ollama pull" in done.stdout  # the model is named as the person's step, not run
+
+
+def test_full_says_before_postgres_that_sudo_may_ask_for_a_password(tmp_path: Path) -> None:
+    if os.geteuid() == 0:  # pragma: no cover -- CI runs unprivileged
+        return
+    m = installer_machine(tmp_path)
+    m.stub("apt-get")
+    m.stub("sudo", "exit 1")
+    terminal = tmp_path / "tty"
+    terminal.write_text("")
+    done = m.run(INSTALL, "--full", env={**OWNER_DSN, "VIBEY_TTY": str(terminal)})
+    assert done.returncode == 0, done.stderr
+    assert done.stdout.index("password") < done.stdout.index("vibey install --postgres")
+    assert "vibey install --postgres" in m.calls()
+    assert not any(c.startswith("apt-get") for c in m.calls())  # vibey runs it, not the script
+
+
+def test_full_refuses_a_sudo_step_with_no_terminal_to_ask_on(tmp_path: Path) -> None:
+    if os.geteuid() == 0:  # pragma: no cover -- CI runs unprivileged
+        return
+    m = installer_machine(tmp_path)
+    m.stub("apt-get")
+    m.stub("sudo", "exit 1")
+    done = m.run(INSTALL, "--full", env={**OWNER_DSN, "VIBEY_TTY": str(tmp_path / "no-tty")})
+    assert done.returncode != 0
+    assert "terminal" in done.stderr and "vibey install --postgres" in done.stderr
+    assert "VIBEY_FULL_POSTGRES=0" in done.stderr
+    assert "vibey install --postgres" not in m.calls()
