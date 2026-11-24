@@ -236,7 +236,7 @@ def test_install_is_a_reinstall_of_the_engine_and_checks_itself(tmp_path: Path) 
     m = installer_machine(tmp_path)
     done = m.run(INSTALL)
     assert done.returncode == 0, done.stderr
-    assert m.calls() == ["uv tool install --reinstall vibey-engine", "vibey doctor"]
+    assert m.calls() == ["uv tool install --reinstall vibey-engine[hub]", "vibey doctor"]
 
 
 def test_install_with_krypton_adds_the_apps(tmp_path: Path) -> None:
@@ -253,7 +253,7 @@ def test_from_source_clones_once_then_updates_the_same_copy(tmp_path: Path) -> N
         c.startswith("git clone https://github.com/the-vibey-project/vibey.git") for c in m.calls()
     )
     assert "uv sync --extra dev" in m.calls()
-    assert f"uv tool install --reinstall --editable {copy}" in m.calls()
+    assert f"uv tool install --reinstall --editable {copy}[hub]" in m.calls()
     (copy / ".git").mkdir(parents=True)
     m.log.write_text("")
     m.run(INSTALL, "--from-source", str(copy))
@@ -322,65 +322,150 @@ def test_vibey_in_uv_s_bin_dir_is_found_and_the_path_line_is_printed(tmp_path: P
     assert f'export PATH="{tools}:$PATH"' in done.stdout
 
 
+# ------------------------------------------------------------------ the engine's extras
+
+
+def test_the_engine_s_extras_are_configurable_and_empty_means_the_bare_engine(
+    tmp_path: Path,
+) -> None:
+    m = installer_machine(tmp_path)
+    m.run(INSTALL, env={"VIBEY_ENGINE_EXTRAS": ""})
+    assert "uv tool install --reinstall vibey-engine" in m.calls()
+    m.log.write_text("")
+    m.run(INSTALL, env={"VIBEY_ENGINE_EXTRAS": "hub,operator", "VIBEY_ENGINE_PACKAGE": "my-engine"})
+    assert "uv tool install --reinstall my-engine[hub,operator]" in m.calls()
+    m.log.write_text("")
+    copy = tmp_path / "copy"
+    m.run(INSTALL, "--from-source", str(copy), env={"VIBEY_ENGINE_EXTRAS": ""})
+    assert f"uv tool install --reinstall --editable {copy}" in m.calls()
+
+
 # ------------------------------------------------------------------ --full
 
 
-FULL_STEPS = ["vibey install --postgres", "vibey migrate", "vibey connect --yes"]
+PG_URL = "postgresql://vibey_app@localhost:5432/vibey"
+TAG = "hf.co/mradermacher/gpt-oss-20b-heretic-v2-GGUF:MXFP4_MOE"
+FULL_STEPS = [
+    "vibey install --postgres",
+    "vibey install --database",
+    "vibey models --default-tag",
+    "vibey install --model",
+    "vibey connect --yes",
+]
 OWNER_DSN = {"VIBEY_PG_MIGRATE_URL": "postgresql://owner@localhost:5432/vibey"}
+# What `vibey install --database` prints that the script reads, and what `vibey models
+# --default-tag` prints; the doctor stub records the VIBEY_PG_URL it was run with.
+VIBEY = f"""case "$*" in
+  "install --database") echo "created the roles vibey and vibey_app"; echo "  export VIBEY_PG_URL={PG_URL}";;
+  "models --default-tag") echo "{TAG}";;
+  doctor) echo "doctor saw ${{VIBEY_PG_URL:-nothing}}";;
+esac"""
 
 
-def full_machine(tmp: Path) -> Machine:
-    """An installer machine where PostgreSQL comes from Homebrew, so no step needs sudo."""
+def full_machine(tmp: Path, *, system: str = "Darwin", ollama: bool = True) -> Machine:
+    """An installer machine where PostgreSQL comes from Homebrew, so no step needs sudo, and
+    Ollama is already installed unless `ollama` is False."""
     m = installer_machine(tmp)
+    m.stub("vibey", VIBEY)
     m.stub("brew")
     m.stub("sudo", "exit 1")
+    m.stub("uname", f"echo {system}")
+    if ollama:
+        m.stub("ollama")
     return m
 
 
-def test_full_runs_vibey_s_own_setup_commands_in_order(tmp_path: Path) -> None:
+def setup_calls(m: Machine) -> list[str]:
+    """The setup commands --full ran, without uname's own probing."""
+    return [c for c in m.calls() if not c.startswith("uname")]
+
+
+def test_full_takes_the_machine_to_a_first_project_in_order(tmp_path: Path) -> None:
     m = full_machine(tmp_path)
-    done = m.run(INSTALL, "--full", env=OWNER_DSN)
+    done = m.run(INSTALL, "--full")
     assert done.returncode == 0, done.stderr
-    assert m.calls() == ["uv tool install --reinstall vibey-engine", *FULL_STEPS, "vibey doctor"]
+    assert setup_calls(m) == [
+        "uv tool install --reinstall vibey-engine[hub]",
+        *FULL_STEPS,
+        "vibey doctor",
+    ]
     said = done.stdout
-    positions = [said.index(cmd) for cmd in FULL_STEPS]  # each step says what it will run
-    assert positions == sorted(positions)
+    # each step says what it will run, in order, before it runs
+    for earlier, later in [
+        ("vibey install --postgres", "vibey install --database"),
+        ("vibey install --database", "Migrations: vibey install --database applied them"),
+        ("applied them", "Ollama is already installed"),
+        ("Ollama is already installed", f"Pulling {TAG}"),
+        ("roughly 12 GB", "vibey connect --yes"),
+    ]:
+        assert said.index(earlier) < said.index(later), (earlier, later)
+    # the database's settings reach the doctor and the closing lines, never a password
+    assert f"doctor saw {PG_URL}" in said
+    assert f"export VIBEY_PG_URL={PG_URL}" in said.split("Still yours to do:")[1]
+    assert "scram-sha-256" in said.split("Still yours to do:")[1]
     never_touches_the_engine(m)
 
 
 def test_a_failing_full_step_stops_the_run_and_names_it(tmp_path: Path) -> None:
     m = full_machine(tmp_path)
-    m.stub("vibey", 'case "$1" in migrate) exit 1;; esac')
-    done = m.run(INSTALL, "--full", env=OWNER_DSN)
-    assert done.returncode != 0
-    assert "migrate" in done.stderr and "vibey migrate" in done.stderr
-    assert "vibey connect --yes" not in m.calls() and "vibey doctor" not in m.calls()
+    m.stub("vibey", 'case "$*" in "install --database") echo "error: no" >&2; exit 1;; esac')
+    done = m.run(INSTALL, "--full")
+    assert done.returncode == 1
+    assert "the database step failed" in done.stderr and "vibey install --database" in done.stderr
+    assert "vibey install --model" not in m.calls() and "vibey doctor" not in m.calls()
     assert "vibey is installed" not in done.stdout
 
 
 def test_full_is_safe_to_run_again(tmp_path: Path) -> None:
     m = full_machine(tmp_path)
-    first = m.run(INSTALL, "--full", env=OWNER_DSN)
+    first = m.run(INSTALL, "--full")
     m.log.write_text("")
-    again = m.run(INSTALL, "--full", env=OWNER_DSN)
+    again = m.run(INSTALL, "--full")
     assert first.returncode == 0 and again.returncode == 0, again.stderr
-    assert m.calls() == ["uv tool install --reinstall vibey-engine", *FULL_STEPS, "vibey doctor"]
+    assert setup_calls(m) == [
+        "uv tool install --reinstall vibey-engine[hub]",
+        *FULL_STEPS,
+        "vibey doctor",
+    ]
 
 
 def test_each_full_step_has_its_own_switch(tmp_path: Path) -> None:
-    for switch, command in zip(
-        ("VIBEY_FULL_POSTGRES", "VIBEY_FULL_MIGRATE", "VIBEY_FULL_CONNECT"), FULL_STEPS, strict=True
+    for switch, commands in (
+        ("VIBEY_FULL_POSTGRES", ["vibey install --postgres"]),
+        ("VIBEY_FULL_DATABASE", ["vibey install --database"]),
+        ("VIBEY_FULL_MODEL", ["vibey models --default-tag", "vibey install --model"]),
+        ("VIBEY_FULL_CONNECT", ["vibey connect --yes"]),
     ):
         m = full_machine(tmp_path / switch)
-        done = m.run(INSTALL, "--full", env={**OWNER_DSN, switch: "0"})
+        done = m.run(INSTALL, "--full", env={switch: "0"})
         assert done.returncode == 0, done.stderr
-        assert command not in m.calls()
-        assert [c for c in FULL_STEPS if c != command] == [c for c in m.calls() if c in FULL_STEPS]
+        assert [c for c in FULL_STEPS if c not in commands] == [
+            c for c in m.calls() if c in FULL_STEPS
+        ], switch
+    m = full_machine(tmp_path / "model-later")
+    done = m.run(INSTALL, "--full", env={"VIBEY_FULL_MODEL": "0"})
+    assert "vibey install --model" in done.stdout.split("Still yours to do:")[1]
+
+
+def test_without_the_database_step_an_owner_dsn_runs_vibey_migrate(tmp_path: Path) -> None:
+    m = full_machine(tmp_path)
+    done = m.run(INSTALL, "--full", env={"VIBEY_FULL_DATABASE": "0", **OWNER_DSN})
+    assert done.returncode == 0, done.stderr
+    assert "vibey migrate" in m.calls()
+    m2 = full_machine(tmp_path / "no-dsn")
+    done = m2.run(INSTALL, "--full", env={"VIBEY_FULL_DATABASE": "0"})
+    assert "vibey migrate" not in m2.calls()
+    assert "vibey install --database" in done.stdout.split("Still yours to do:")[1]
+    m3 = full_machine(tmp_path / "no-migrate")
+    m3.run(
+        INSTALL, "--full", env={"VIBEY_FULL_DATABASE": "0", "VIBEY_FULL_MIGRATE": "0", **OWNER_DSN}
+    )
+    assert "vibey migrate" not in m3.calls()
 
 
 def test_full_connects_only_the_clients_it_is_given(tmp_path: Path) -> None:
     m = full_machine(tmp_path)
-    m.run(INSTALL, "--full", env={**OWNER_DSN, "VIBEY_FULL_CONNECT_CLIENTS": "codex,zed"})
+    m.run(INSTALL, "--full", env={"VIBEY_FULL_CONNECT_CLIENTS": "codex,zed"})
     assert "vibey connect --yes --client codex --client zed" in m.calls()
 
 
@@ -390,29 +475,95 @@ def test_without_full_no_setup_step_runs(tmp_path: Path) -> None:
     assert not any(c in m.calls() for c in FULL_STEPS)
 
 
-def test_full_without_an_owner_dsn_skips_the_migration_and_says_what_to_run(
-    tmp_path: Path,
-) -> None:
-    m = full_machine(tmp_path)
+# ------------------------------------------------------------------ --full: Ollama
+
+
+def test_on_macos_ollama_comes_from_homebrew_and_its_service_is_started(tmp_path: Path) -> None:
+    m = full_machine(tmp_path, ollama=False)
     done = m.run(INSTALL, "--full")
     assert done.returncode == 0, done.stderr
-    assert "vibey migrate" not in m.calls()
-    assert "vibey connect --yes" in m.calls()
-    assert "VIBEY_PG_MIGRATE_URL" in done.stdout and "vibey migrate" in done.stdout
-    assert "ollama pull" in done.stdout  # the model is named as the person's step, not run
+    calls = setup_calls(m)
+    assert calls.index("brew install ollama") < calls.index("brew services start ollama")
+    assert calls.index("brew services start ollama") < calls.index("vibey install --model")
+    assert done.stdout.index("brew install ollama") < done.stdout.index("Pulling")
 
 
-def test_full_says_before_postgres_that_sudo_may_ask_for_a_password(tmp_path: Path) -> None:
+def test_on_macos_without_homebrew_the_ollama_step_refuses_with_the_download(
+    tmp_path: Path,
+) -> None:
+    m = full_machine(tmp_path, ollama=False)
+    (m.bin / "brew").unlink()
+    done = m.run(INSTALL, "--full", env={"VIBEY_FULL_POSTGRES": "0", "VIBEY_FULL_DATABASE": "0"})
+    assert done.returncode == 1
+    assert "https://ollama.com/download" in done.stderr and "VIBEY_FULL_OLLAMA=0" in done.stderr
+    assert "vibey install --model" not in m.calls()
+
+
+def test_on_linux_ollama_s_own_installer_is_fetched_then_run(tmp_path: Path) -> None:
+    if os.geteuid() == 0:  # pragma: no cover -- CI runs unprivileged
+        return
+    m = full_machine(tmp_path, system="Linux", ollama=False)
+    ran = tmp_path / "installer-ran"
+    m.stub("curl", f'while [ $# -gt 1 ]; do shift; done; echo "touch {ran}" > "$1"')
+    terminal = tmp_path / "tty"
+    terminal.write_text("")
+    url = "https://example.test/ollama.sh"
+    done = m.run(INSTALL, "--full", env={"VIBEY_TTY": str(terminal), "VIBEY_OLLAMA_INSTALLER": url})
+    assert done.returncode == 0, done.stderr
+    assert any(c.startswith(f"curl -fsSL {url} -o ") for c in m.calls())
+    assert ran.exists()  # the downloaded installer ran
+    assert done.stdout.index("password") < done.stdout.index("Downloading Ollama's installer")
+
+
+def test_on_linux_a_failed_download_stops_before_anything_runs(tmp_path: Path) -> None:
+    if os.geteuid() == 0:  # pragma: no cover -- CI runs unprivileged
+        return
+    m = full_machine(tmp_path, system="Linux", ollama=False)
+    m.stub("curl", "exit 22")
+    terminal = tmp_path / "tty"
+    terminal.write_text("")
+    done = m.run(INSTALL, "--full", env={"VIBEY_TTY": str(terminal)})
+    assert done.returncode == 22
+    assert "the ollama step failed" in done.stderr
+    assert "vibey install --model" not in m.calls()
+
+
+def test_on_linux_with_no_terminal_the_ollama_installer_is_refused(tmp_path: Path) -> None:
+    if os.geteuid() == 0:  # pragma: no cover -- CI runs unprivileged
+        return
+    m = full_machine(tmp_path, system="Linux", ollama=False)
+    m.stub("curl")
+    done = m.run(INSTALL, "--full", env={"VIBEY_TTY": str(tmp_path / "no-tty")})
+    assert done.returncode == 1
+    assert "terminal" in done.stderr and "VIBEY_FULL_OLLAMA=0" in done.stderr
+    assert not any(c.startswith("curl") for c in m.calls())
+
+
+def test_ollama_already_on_path_is_left_as_it_is(tmp_path: Path) -> None:
+    m = full_machine(tmp_path)
+    m.run(INSTALL, "--full")
+    assert not any("ollama" in c for c in setup_calls(m))
+
+
+# ------------------------------------------------------------------ --full: sudo
+
+
+def test_full_says_before_postgres_and_the_database_that_sudo_may_ask(tmp_path: Path) -> None:
     if os.geteuid() == 0:  # pragma: no cover -- CI runs unprivileged
         return
     m = installer_machine(tmp_path)
+    m.stub("vibey", VIBEY)
     m.stub("apt-get")
     m.stub("sudo", "exit 1")
+    m.stub("ollama")
     terminal = tmp_path / "tty"
     terminal.write_text("")
-    done = m.run(INSTALL, "--full", env={**OWNER_DSN, "VIBEY_TTY": str(terminal)})
+    done = m.run(INSTALL, "--full", env={"VIBEY_TTY": str(terminal)})
     assert done.returncode == 0, done.stderr
-    assert done.stdout.index("password") < done.stdout.index("vibey install --postgres")
+    said = done.stdout
+    assert said.index("password") < said.index("vibey install --postgres")
+    database = said.index("vibey install --database")
+    assert said.rindex("password", 0, database) > said.index("vibey install --postgres")
     assert "vibey install --postgres" in m.calls()
     assert not any(c.startswith("apt-get") for c in m.calls())  # vibey runs it, not the script
 
@@ -423,8 +574,18 @@ def test_full_refuses_a_sudo_step_with_no_terminal_to_ask_on(tmp_path: Path) -> 
     m = installer_machine(tmp_path)
     m.stub("apt-get")
     m.stub("sudo", "exit 1")
-    done = m.run(INSTALL, "--full", env={**OWNER_DSN, "VIBEY_TTY": str(tmp_path / "no-tty")})
+    done = m.run(INSTALL, "--full", env={"VIBEY_TTY": str(tmp_path / "no-tty")})
     assert done.returncode != 0
     assert "terminal" in done.stderr and "vibey install --postgres" in done.stderr
     assert "VIBEY_FULL_POSTGRES=0" in done.stderr
     assert "vibey install --postgres" not in m.calls()
+    m2 = installer_machine(tmp_path / "database")
+    m2.stub("apt-get")
+    m2.stub("sudo", "exit 1")
+    done = m2.run(
+        INSTALL,
+        "--full",
+        env={"VIBEY_TTY": str(tmp_path / "no-tty"), "VIBEY_FULL_POSTGRES": "0"},
+    )
+    assert done.returncode == 1
+    assert "vibey install --database" in done.stderr and "VIBEY_FULL_DATABASE=0" in done.stderr
