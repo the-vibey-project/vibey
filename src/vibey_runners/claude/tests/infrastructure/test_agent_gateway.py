@@ -787,3 +787,26 @@ class TestBackendRuntime:
         assert options.cli_path == "/opt/claude"
         assert outcome.cost_usd == 0.0
         assert outcome.signals.local_backend is True
+
+
+class TestAttachmentsReachTheGateway:
+    @pytest.mark.asyncio
+    async def test_a_mid_run_attach_reaches_the_gateway(self, tmp_path) -> None:
+        from pathlib import Path
+
+        from claudeloop.infrastructure.resources.adapter import (
+            ATTACHMENTS_HEADING,
+            ResourcePortAdapter,
+        )
+        from claudeloop.infrastructure.resources.store import RunResourceStore
+
+        store = RunResourceStore(tmp_path / "run" / "resources")
+        adapter = ResourcePortAdapter(store)
+        gw = _make_gateway(**adapter.gateway_payload())
+        assert Path(store.attachments_dir) not in gw._options().add_dirs
+        source = tmp_path / "notes.md"
+        source.write_text("notes", encoding="utf-8")
+        adapter.apply_mutate(action="add", kind="attachment", value=str(source))
+        await gw.set_session_resources(**adapter.gateway_payload())
+        assert Path(store.attachments_dir) in gw._options().add_dirs
+        assert ATTACHMENTS_HEADING in gw._system_prompt_append

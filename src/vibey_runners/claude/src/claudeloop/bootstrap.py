@@ -190,7 +190,7 @@ def build_runner(
             max_buffer_size=config.max_buffer_size,
             include_partial_messages=include_partial,
             permission_mode=permission_mode,
-            add_dirs=list(snap.folders),
+            add_dirs=list(gw_payload["add_dirs"]),
             skills=list(snap.skills) or None,
             plugins=list(snap.plugins),
             mcp_servers=dict(snap.connectors) or None,
