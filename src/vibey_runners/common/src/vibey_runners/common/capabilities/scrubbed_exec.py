@@ -1,8 +1,11 @@
 # Made with ❤️ by [Vibey](https://the-vibey-project.github.io/vibey/), Developed by [Adam Matthew Steinberger](https://vibewithadam.matthewsteinberger.com/) ([@adammatthewsteinberger](https://github.com/adammatthewsteinberger/)).
 """Starts a local MCP server with only the environment variables the person allowed (R7).
 
-A runner starts a `local` server as `python -m vibey_runners.common.capabilities.scrubbed_exec
---allow NAME ... -- COMMAND ARGS...`. The launcher inherits the runner's environment, keeps only
+A runner starts a `local` server as `python -I -m vibey_runners.common.capabilities.scrubbed_exec
+--allow NAME ... -- COMMAND ARGS...` (`LAUNCHER_ARGS`). `-I` is isolated mode: the folder the
+server starts in (the run's worktree) is not on `sys.path`, and no `PYTHON*` variable is read, so
+a planted `shutil.py` or a `PYTHONSTARTUP` cannot run inside the launcher before it scrubs. The
+launcher inherits the runner's environment, keeps only
 the `--allow` names it holds, and replaces itself with the command. The values therefore travel
 only through the inherited environment and the child's: never an argv, a log or a file. A name
 that is absent is skipped. A name that carries a secret (`SECRET_ENV_NAMES`,
@@ -24,6 +27,11 @@ from vibey_runners.common.capabilities.bundle import SECRET_ENV_NAMES, SECRET_EN
 
 LAUNCHER_MODULE: Final = "vibey_runners.common.capabilities.scrubbed_exec"
 """What a runner passes to `python -m` to start a local MCP server through this launcher."""
+
+LAUNCHER_ARGS: Final = ("-I", "-m", LAUNCHER_MODULE)
+"""Everything a runner passes to the interpreter before the launcher's own arguments. `-I`
+(isolated mode) keeps the server's folder off `sys.path` and ignores every `PYTHON*` variable, so
+nothing in the worktree runs before the scrub. Every runner builds its launcher from this."""
 
 EXIT_USAGE: Final = 2
 EXIT_SECRET: Final = 78

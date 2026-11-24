@@ -717,11 +717,20 @@ class TestRunWithCapabilities:
         result, _, _, _ = self._invoke(tmp_path, document)
         assert result.exit_code == 0, result.output
         given = self.gateway.call_args.kwargs["applied"]
+        # `-I`: nothing in the worktree runs inside the launcher before it scrubs.
         assert given.mcp_servers == {
             "files": {
                 "type": "stdio",
                 "command": sys.executable,
-                "args": ["-m", LAUNCHER_MODULE, "--allow", "FILES_ROOT", "--", "files-server"],
+                "args": [
+                    "-I",
+                    "-m",
+                    LAUNCHER_MODULE,
+                    "--allow",
+                    "FILES_ROOT",
+                    "--",
+                    "files-server",
+                ],
             }
         }
 

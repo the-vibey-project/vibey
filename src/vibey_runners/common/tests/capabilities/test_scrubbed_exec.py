@@ -1,17 +1,22 @@
 # Made with ❤️ by [Vibey](https://the-vibey-project.github.io/vibey/), Developed by [Adam Matthew Steinberger](https://vibewithadam.matthewsteinberger.com/) ([@adammatthewsteinberger](https://github.com/adammatthewsteinberger/)).
 """The scrubbed launcher: a local MCP server gets only the variables the person allowed (R7).
 
-No process is started: `execve` and `which` are recording fakes, and the fake `execve` raises
-`Execed` in place of replacing the process, as the real one never returns.
+No process is started but in one test: `execve` and `which` are recording fakes, and the fake
+`execve` raises `Execed` in place of replacing the process, as the real one never returns. The one
+test that starts the launcher for real proves that `LAUNCHER_ARGS` keeps a module planted in the
+run's folder from running before the scrub.
 """
 
 from __future__ import annotations
 
 import io
+import os
 import runpy
+import subprocess
 import sys
 import warnings
 from collections.abc import Mapping, Sequence
+from pathlib import Path
 from typing import NoReturn
 
 import pytest
@@ -20,7 +25,11 @@ from vibey_runners.common.capabilities import scrubbed_exec
 from vibey_runners.common.capabilities.interfaces.scrubbed_exec_interface import (
     ScrubbedExecInterface,
 )
-from vibey_runners.common.capabilities.scrubbed_exec import LAUNCHER_MODULE, ScrubbedExec
+from vibey_runners.common.capabilities.scrubbed_exec import (
+    LAUNCHER_ARGS,
+    LAUNCHER_MODULE,
+    ScrubbedExec,
+)
 
 
 class Execed(Exception):
@@ -179,3 +188,43 @@ def test_python_dash_m_reaches_main(
         runpy.run_module(LAUNCHER_MODULE, run_name="__main__")
     assert caught.value.code == 2
     assert "usage" in capsys.readouterr().err
+
+
+def test_the_launcher_args_start_python_in_isolated_mode() -> None:
+    """`-I` keeps the run's folder off `sys.path` and ignores every `PYTHON*` variable, so
+    nothing the worktree holds runs inside the launcher before it scrubs."""
+    assert LAUNCHER_ARGS == ("-I", "-m", LAUNCHER_MODULE)
+
+
+def test_a_module_planted_in_the_runs_folder_never_runs_inside_the_launcher(
+    tmp_path: Path,
+) -> None:
+    """Claude Code starts a stdio MCP server in the session's folder, the worktree. Under a plain
+    `-m`, a `shutil.py` there runs with the whole unscrubbed environment, before `--allow`."""
+    (tmp_path / "shutil.py").write_text(
+        "import sys\nprint('PLANTED')\nsys.exit(9)\n", encoding="utf-8"
+    )
+    environ = {**os.environ, "PYTHONPATH": str(tmp_path)}
+    tail = ["--allow", "HOME", "--", "true"]
+
+    plain = subprocess.run(
+        [sys.executable, "-m", LAUNCHER_MODULE, *tail],
+        cwd=tmp_path,
+        env=environ,
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    isolated = subprocess.run(
+        [sys.executable, *LAUNCHER_ARGS, *tail],
+        cwd=tmp_path,
+        env=environ,
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+
+    # Without `-I` the plant runs, so this test is not vacuous.
+    assert (plain.returncode, plain.stdout.strip()) == (9, "PLANTED")
+    assert isolated.returncode == 0, isolated.stderr
+    assert "PLANTED" not in isolated.stdout + isolated.stderr

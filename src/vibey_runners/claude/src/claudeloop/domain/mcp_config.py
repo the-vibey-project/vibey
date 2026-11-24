@@ -5,8 +5,9 @@
 Every config names its transport, so nothing is left to the SDK's or Claude Code's default:
 
 - `local` is `{"type": "stdio"}`, and its command is the scrubbed launcher
-  (`vibey_runners.common.capabilities.scrubbed_exec`), given one `--allow NAME` for each name in
-  `env_allow`, then `--`, then the server's own argv. The launcher keeps only those names, reads
+  (`vibey_runners.common.capabilities.scrubbed_exec`, run as `python -I -m`), given one
+  `--allow NAME` for each name in `env_allow`, then `--`, then the server's own argv. The
+  launcher keeps only those names, reads
   their values from the environment it inherits, and execs the server. The config has no `env`
   key, ever: an environment value never reaches an argv, a file or a log through it.
 - `remote` is `{"type": "http"}` (streamable HTTP), never `sse`.

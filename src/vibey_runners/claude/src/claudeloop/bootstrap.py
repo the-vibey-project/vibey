@@ -16,7 +16,7 @@ from pathlib import Path
 from typing import Any
 
 import click
-from vibey_runners.common.capabilities.scrubbed_exec import LAUNCHER_MODULE
+from vibey_runners.common.capabilities.scrubbed_exec import LAUNCHER_ARGS
 from vibey_runners.common.capabilities.snapshot_document_store import SnapshotDocumentStore
 
 from claudeloop.application.interfaces import DoctorEnvironment
@@ -111,8 +111,9 @@ def build_runner(
             SnapshotDocumentStore(),
             local_backend=config.backend.is_local,
             # A local MCP server starts through the scrubbed launcher, run by this same
-            # interpreter, so it is always the launcher this install ships (R7).
-            mcp=McpConfigTranslator((sys.executable, "-m", LAUNCHER_MODULE)),
+            # interpreter, so it is always the launcher this install ships (R7). `-I` comes with
+            # it: nothing in the worktree, where the server starts, runs before the scrub.
+            mcp=McpConfigTranslator((sys.executable, *LAUNCHER_ARGS)),
             environ=os.environ,
             logger=StructlogAppLogger(component="capabilities"),
             instructions=InstructionFileReader(),

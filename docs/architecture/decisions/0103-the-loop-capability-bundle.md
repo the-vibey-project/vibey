@@ -115,7 +115,9 @@ the first loops apply the bundle. The status above is unchanged; these are its r
   index skipped is never enabled. `[loops] skills` is not applied yet (Phase 7).
 - **R7 (MCP).** `local` becomes `{"type": "stdio"}`, started through a scrubbed launcher that keeps
   only the `env_allow` names, reads their values from its own environment and execs the server;
-  an absent name is skipped and logged by name. `remote` becomes `{"type": "http"}`, never `sse`.
+  an absent name is skipped and logged by name. The launcher runs as `python -I -m`: isolated
+  mode keeps the worktree, where the server starts, off `sys.path` and ignores every `PYTHON*`
+  variable, so nothing planted there runs before the scrub. `remote` becomes `{"type": "http"}`, never `sse`.
   Which variables reach the session at all stays `[engine_environment]`'s decision.
 - **R8 (instruction files).** claudeloop reads `CLAUDE.md` and `AGENTS.md` from the run's `cwd`
   only and appends them to the system prompt, never to the plan. A file over
