@@ -37,7 +37,11 @@ A stdlib MCP client over that peer (SP-LOOPS Phase 5). `McpSession` speaks
 MCP to one server through a transport; `StdioTransport` starts a `local`
 server as a child that leads its own process group, and closing it closes
 the server's stdin, waits a grace period, then kills the whole group.
-`McpSessionPool` holds one session per server for a run: it starts each on
+`HttpTransport` reaches a `remote` server over MCP's streamable HTTP
+transport, through `HttpOpener`: https only, no redirect followed, no
+cookie, credential, environment proxy or environment value sent, and a
+bounded reply. `McpTransportFactory` picks the transport for a configured
+server. `McpSessionPool` holds one session per server for a run: it starts each on
 first use, restarts a dead one a bounded number of times, keeps each remote
 server's call budget, and closes them all when the run ends without ever
 raising. `protocol.py` holds the protocol versions, which vibey's own MCP

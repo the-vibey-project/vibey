@@ -11,8 +11,11 @@ A server that answers a request with a JSON-RPC error raises `McpToolError` and 
 carries on. Anything else that goes wrong kills the session: the transport cannot open, the
 version is unknown, `initialize` is refused, the stream ends, a request times out, or a write
 fails. A dead session closes its transport at once, with no grace (it has stopped being a
-conversation), and raises `McpUnavailable` naming the server and the method. Requests to a
-dead session are refused without a write.
+conversation), and raises `McpUnavailable` naming the server and the method. A transport may
+refuse an exchange itself by raising `McpUnavailable` from its writer (the HTTP transport does,
+for a status, a redirect or an oversize reply); that ends the session too, and its message,
+which already names the server, is passed on. Requests to a dead session are refused without a
+write.
 
 The server may ask the client things too: `ping` is answered `{}`, anything else
 `METHOD_NOT_FOUND`. `notifications/tools/list_changed` drops the cached tool list. Messages name
@@ -99,6 +102,9 @@ class McpSession:
             )
         try:
             await self._peer.notify("notifications/initialized", {})
+        except McpUnavailable:
+            await self._end()
+            raise
         except OSError as exc:
             raise await self._die(f"could not be written to: {type(exc).__name__}") from exc
 
@@ -166,14 +172,22 @@ class McpSession:
             raise await self._die(f"closed its stream during {method}") from exc
         except TimeoutError as exc:
             raise await self._die(f"did not answer {method} within {self._timeout:g}s") from exc
+        except McpUnavailable:
+            # The transport refused the exchange itself, and its message names the server.
+            await self._end()
+            raise
         except OSError as exc:
             raise await self._die(f"could not be written to: {type(exc).__name__}") from exc
 
     async def _die(self, reason: str) -> McpUnavailable:
         """End the session at once and say why, naming the server as it ended."""
+        await self._end()
+        return McpUnavailable(f"{self._transport.describe()} {reason}")
+
+    async def _end(self) -> None:
+        """End the session at once, with no grace."""
         self._alive = False
         await self._teardown(0.0)
-        return McpUnavailable(f"{self._transport.describe()} {reason}")
 
     async def _teardown(self, grace_seconds: float) -> None:
         runner, self._runner = self._runner, None

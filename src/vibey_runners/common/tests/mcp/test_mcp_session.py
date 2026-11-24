@@ -131,6 +131,35 @@ async def test_a_request_that_cannot_be_written_kills_the_session() -> None:
     assert transport.closed == [0.0]
 
 
+async def test_a_transport_that_refuses_a_request_ends_the_session_with_its_message() -> None:
+    # The HTTP transport refuses a status, a redirect or an oversize reply from its writer, and
+    # its message already names the server: the session ends and passes the message on.
+    transport = MemoryTransport()
+    session = await _started(transport)
+    transport.refuse_write = McpUnavailable("MCP server 'mem' (https h.test) answered HTTP 500")
+    with pytest.raises(McpUnavailable) as caught:
+        await session.call("echo", {})
+    assert str(caught.value) == "MCP server 'mem' (https h.test) answered HTTP 500"
+    assert not session.alive
+    assert transport.closed == [0.0]
+    with pytest.raises(McpUnavailable, match="is not running"):
+        await session.list_tools()
+
+
+async def test_a_transport_that_refuses_the_initialized_notification_ends_the_session() -> None:
+    def refuses_the_notification(message: dict[str, Any], server: MemoryTransport) -> None:
+        if message.get("method") == "notifications/initialized":
+            raise McpUnavailable("MCP server 'mem' (https h.test) answered HTTP 403")
+        standard(message, server)
+
+    transport = MemoryTransport(refuses_the_notification)
+    session = _session(transport)
+    with pytest.raises(McpUnavailable, match=r"answered HTTP 403$"):
+        await session.start()
+    assert not session.alive
+    assert transport.closed == [0.0]
+
+
 async def test_list_tools_follows_next_cursor_and_stops_at_max_tools() -> None:
     pages: dict[object, dict[str, Any]] = {
         None: {

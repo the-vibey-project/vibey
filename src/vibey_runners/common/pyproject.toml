@@ -103,14 +103,17 @@ forbidden_modules = [
 ]
 
 # The MCP client over that peer (SP-LOOPS Phase 5 R2): its seams may name the records their
-# signatures carry (`mcp_tool`, `mcp_call_result`) and the trust level, never the classes that
-# implement them.
+# signatures carry (`mcp_tool`, `mcp_call_result`, `http_reply`) and the trust level, never the
+# classes that implement them.
 [[tool.importlinter.contracts]]
 name = "MCP interfaces declare seams, never consume them"
 type = "forbidden"
 source_modules = ["vibey_runners.common.mcp.interfaces"]
 forbidden_modules = [
     "vibey_runners.common.mcp.stdio_transport",
+    "vibey_runners.common.mcp.http_transport",
+    "vibey_runners.common.mcp.http_opener",
+    "vibey_runners.common.mcp.mcp_transport_factory",
     "vibey_runners.common.mcp.mcp_session",
     "vibey_runners.common.mcp.mcp_session_pool",
 ]
