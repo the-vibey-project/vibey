@@ -4,6 +4,7 @@ import io
 import json
 import logging
 import os
+import re
 import signal
 import subprocess
 import sys
@@ -1639,15 +1640,15 @@ def test_a_refused_document_exits_78_before_the_server_starts(
 
 
 def test_capabilities_are_for_one_plan_not_a_storm(tmp_path: Path) -> None:
-    # A wide terminal: Rich wraps the usage error at the runner's width, and the CI runner is
-    # narrower than a developer's, so the sentence must not depend on where a line breaks.
+    # Rich decides the colour codes, the error box and the line breaks from the terminal,
+    # which differ between a developer's shell and CI. Strip the codes, the box drawing and
+    # every space, then compare the words.
     result = runner.invoke(
-        app,
-        ["run", "--storm", "--capabilities", str(tmp_path / "capabilities.json")],
-        env={"COLUMNS": "400", "NO_COLOR": "1"},
+        app, ["run", "--storm", "--capabilities", str(tmp_path / "capabilities.json")]
     )
     assert result.exit_code == 2
-    assert "pass --capabilities with PLAN, not with --storm" in " ".join(result.output.split())
+    plain = re.sub(r"\x1b\[[0-9;]*m", "", result.output)
+    assert "pass--capabilitieswithPLAN,notwith--storm" in re.sub(r"[\s│╭╮╰╯─]", "", plain)
 
 
 def test_capabilities_applied_is_in_the_runs_events_with_counts_only(
