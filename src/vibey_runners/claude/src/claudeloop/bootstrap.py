@@ -36,6 +36,7 @@ from claudeloop.infrastructure.agent.gateway import ClaudeAgentGateway, ClaudeCa
 from claudeloop.infrastructure.agent.scripted import resolve_test_agent_from_env
 from claudeloop.infrastructure.audit import JsonlAuditLog
 from claudeloop.infrastructure.backend import BackendEnvironmentResolver, RunBackendHistory
+from claudeloop.infrastructure.capabilities.instruction_files import InstructionFileReader
 from claudeloop.infrastructure.capabilities.snapshot_applier import CapabilitySnapshotApplier
 from claudeloop.infrastructure.chatter_log import summarize_tool
 from claudeloop.infrastructure.clock import AnyioSleeper, SystemClock
@@ -114,8 +115,10 @@ def build_runner(
             mcp=McpConfigTranslator((sys.executable, "-m", LAUNCHER_MODULE)),
             environ=os.environ,
             logger=StructlogAppLogger(component="capabilities"),
+            instructions=InstructionFileReader(),
         )
-        applied = applier.load(capabilities)
+        # The repository's CLAUDE.md and AGENTS.md come from the run's own folder (R8).
+        applied = applier.load(capabilities, cwd=cwd)
         applier.check_flags(
             applied, connectors=list(connectors or {}), web_search=config.web_search
         )

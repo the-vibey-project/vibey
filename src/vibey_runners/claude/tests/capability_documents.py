@@ -29,6 +29,8 @@ class CapabilityDocumentWriter:
         builtin_web: bool = False,
         folders: Sequence[Path] = (),
         mcp_servers: Sequence[McpServerSpec] = (),
+        instruction_files: Sequence[str] = ("CLAUDE.md", "AGENTS.md"),
+        instruction_max_bytes: int = 65536,
     ) -> Path:
         self.run.mkdir(parents=True)
         self.run.chmod(0o700)
@@ -47,8 +49,8 @@ class CapabilityDocumentWriter:
             skills=tuple(skills),
             mcp_servers=tuple(mcp_servers),
             builtin_web=builtin_web,
-            instruction_files=("CLAUDE.md", "AGENTS.md"),
-            instruction_max_bytes=65536,
+            instruction_files=tuple(instruction_files),
+            instruction_max_bytes=instruction_max_bytes,
             folders=tuple(folders),
         )
         return SnapshotDocumentStore().write(document, self.run)

@@ -20,6 +20,7 @@ from vibey_runners.common.capabilities.snapshot_document_store import SnapshotDo
 from claudeloop.domain.capabilities import CLAUDE_BUILTIN_WEB_TOOLS, AppliedCapabilities
 from claudeloop.domain.errors import CapabilityFlagConflict, CapabilitySnapshotRefused
 from claudeloop.domain.mcp_config import McpConfigTranslator
+from claudeloop.infrastructure.capabilities.instruction_files import InstructionFileReader
 from claudeloop.infrastructure.capabilities.snapshot_applier import CapabilitySnapshotApplier
 from claudeloop.infrastructure.interfaces import CapabilitySnapshotApplierInterface
 from tests.capability_documents import DIGEST, CapabilityDocumentWriter
@@ -63,6 +64,7 @@ def _applier(
         mcp=McpConfigTranslator(LAUNCHER),
         environ=environ if environ is not None else {},
         logger=logger if logger is not None else _RecordingLogger(),
+        instructions=InstructionFileReader(),
     )
 
 
@@ -94,7 +96,7 @@ def test_builtin_web_false_disallows_websearch_and_webfetch(tmp_path: Path) -> N
     writer = CapabilityDocumentWriter(tmp_path)
     inputs = Path("/inputs/one")
     path = writer.write(builtin_web=False, folders=[inputs])
-    applied = _applier().load(path)
+    applied = _applier().load(path, cwd=tmp_path)
     assert applied == AppliedCapabilities(
         digest=DIGEST,
         plugin_dirs=(str(writer.run / "plugins" / "alpha"), str(writer.run / "plugins" / "beta")),
@@ -109,7 +111,7 @@ def test_builtin_web_false_disallows_websearch_and_webfetch(tmp_path: Path) -> N
 
 def test_builtin_web_true_leaves_the_web_tools_on_an_anthropic_backend(tmp_path: Path) -> None:
     path = CapabilityDocumentWriter(tmp_path).write(builtin_web=True)
-    applied = _applier().load(path)
+    applied = _applier().load(path, cwd=tmp_path)
     assert applied.disallowed_tools == ()
     assert applied.notices == ()
 
@@ -118,7 +120,7 @@ def test_a_local_backend_disallows_them_even_when_builtin_web_is_true_and_says_s
     tmp_path: Path,
 ) -> None:
     path = CapabilityDocumentWriter(tmp_path).write(builtin_web=True)
-    applied = _applier(local_backend=True).load(path)
+    applied = _applier(local_backend=True).load(path, cwd=tmp_path)
     assert applied.disallowed_tools == CLAUDE_BUILTIN_WEB_TOOLS
     assert len(applied.notices) == 1
     assert "builtin_web" in applied.notices[0]
@@ -127,7 +129,7 @@ def test_a_local_backend_disallows_them_even_when_builtin_web_is_true_and_says_s
 
 def test_a_local_backend_with_builtin_web_false_has_nothing_to_say(tmp_path: Path) -> None:
     path = CapabilityDocumentWriter(tmp_path).write(builtin_web=False)
-    applied = _applier(local_backend=True).load(path)
+    applied = _applier(local_backend=True).load(path, cwd=tmp_path)
     assert applied.disallowed_tools == CLAUDE_BUILTIN_WEB_TOOLS
     assert applied.notices == ()
 
@@ -141,7 +143,7 @@ def test_a_refused_document_raises_capability_snapshot_refused_naming_only_the_p
     document[SENTINEL] = SENTINEL
     path.write_text(json.dumps(document), encoding="utf-8")
     with pytest.raises(CapabilitySnapshotRefused) as caught:
-        _applier().load(path)
+        _applier().load(path, cwd=tmp_path)
     message = str(caught.value)
     assert str(path) in message
     assert SENTINEL not in message
@@ -151,7 +153,7 @@ def test_a_refused_document_raises_capability_snapshot_refused_naming_only_the_p
 def test_a_missing_document_is_refused(tmp_path: Path) -> None:
     path = tmp_path / "gone" / "capabilities.json"
     with pytest.raises(CapabilitySnapshotRefused, match="refused"):
-        _applier().load(path)
+        _applier().load(path, cwd=tmp_path)
 
 
 class _UnreadableStore:
@@ -170,9 +172,10 @@ def test_an_os_error_while_reading_is_refused_without_its_text(tmp_path: Path) -
         mcp=McpConfigTranslator(LAUNCHER),
         environ={},
         logger=_RecordingLogger(),
+        instructions=InstructionFileReader(),
     )
     with pytest.raises(CapabilitySnapshotRefused) as caught:
-        applier.load(path)
+        applier.load(path, cwd=tmp_path)
     assert str(path) in str(caught.value)
     assert SENTINEL not in str(caught.value)
 
@@ -221,7 +224,7 @@ def test_flags_that_add_to_the_snapshot_are_accepted() -> None:
 
 def test_the_snapshots_servers_become_typed_sdk_configs_in_document_order(tmp_path: Path) -> None:
     path = CapabilityDocumentWriter(tmp_path).write(mcp_servers=[_files("FILES_ROOT"), _docs()])
-    applied = _applier(environ={"FILES_ROOT": SENTINEL}).load(path)
+    applied = _applier(environ={"FILES_ROOT": SENTINEL}).load(path, cwd=tmp_path)
     assert list(applied.mcp_servers) == ["files", "docs"]
     assert applied.mcp_servers["files"] == {
         "type": "stdio",
@@ -243,7 +246,7 @@ def test_an_allowed_name_absent_from_claudeloops_environment_is_logged_by_name_o
     )
     logger = _RecordingLogger()
     applier = _applier(environ={"FILES_ROOT": SENTINEL, "UNRELATED": SENTINEL}, logger=logger)
-    applier.load(path)
+    applier.load(path, cwd=tmp_path)
     assert logger.calls == [
         (
             "warning",
@@ -257,10 +260,10 @@ def test_an_allowed_name_absent_from_claudeloops_environment_is_logged_by_name_o
 def test_nothing_is_logged_when_every_allowed_name_is_set(tmp_path: Path) -> None:
     path = CapabilityDocumentWriter(tmp_path).write(mcp_servers=[_files("FILES_ROOT"), _docs()])
     logger = _RecordingLogger()
-    _applier(environ={"FILES_ROOT": SENTINEL}, logger=logger).load(path)
+    _applier(environ={"FILES_ROOT": SENTINEL}, logger=logger).load(path, cwd=tmp_path)
     assert logger.calls == []
 
 
 def test_a_document_without_servers_gives_none(tmp_path: Path) -> None:
     path = CapabilityDocumentWriter(tmp_path).write()
-    assert _applier().load(path).mcp_servers == {}
+    assert _applier().load(path, cwd=tmp_path).mcp_servers == {}

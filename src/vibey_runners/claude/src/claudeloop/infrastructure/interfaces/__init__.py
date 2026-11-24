@@ -21,6 +21,10 @@ from claudeloop.infrastructure.interfaces.class_contracts import (
     RunnerConfigInterface,
     TurnAccumulatorInterface,
 )
+from claudeloop.infrastructure.interfaces.instruction_file_reader_interface import (
+    InstructionFileReaderInterface,
+    InstructionTextInterface,
+)
 
 __all__ = [
     "BackendEnvironmentResolverInterface",
@@ -29,6 +33,8 @@ __all__ = [
     "ClaudeAgentGatewayInterface",
     "ClaudeCapacityProbeInterface",
     "BackendProfileLoaderInterface",
+    "InstructionFileReaderInterface",
+    "InstructionTextInterface",
     "RunBackendHistoryInterface",
     "RealDoctorEnvironmentInterface",
     "RunMetaInterface",

@@ -14,6 +14,8 @@ it; nothing the snapshot gave is ever removed.
   A session's `"all"` is not a name and does not widen the catalog (R6).
 - An MCP server name both give is refused, never overridden (R12).
 - Every disallowed tool is taken out of `allowed_tools`, so a tool is never both (R4).
+- The repository's instruction text goes last in the system prompt's append, after the voice
+  contract, the autonomy fragment and the session's own text, so it never outranks them (R8).
 
 Declared by `interfaces/capability_options_overlay_interface.py`.
 """
@@ -50,6 +52,11 @@ class CapabilityOptionsOverlay:
             for tool in kwargs.get("allowed_tools") or []
             if tool.partition("(")[0] not in disallowed
         ]
+        if applied.system_prompt_append:
+            # Verbatim: the repository's text is never trimmed or cut (ADR-0075).
+            prompt = dict(kwargs["system_prompt"])
+            prompt["append"] = f"{prompt['append']}\n\n{applied.system_prompt_append}"
+            merged["system_prompt"] = prompt
         return merged
 
     def _plugins(

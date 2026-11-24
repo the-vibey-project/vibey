@@ -18,7 +18,11 @@ server starts through the scrubbed launcher, which gives it only its `env_allow`
 remote one is streamable HTTP. They live on the session's record only and are never written to
 the run's resources, so `claudeloop snapshot` never exports them. An allowed name that is not
 set in claudeloop's own environment reaches the server as nothing; that name, and never a value,
-is said in claudeloop's own log. Declared by
+is said in claudeloop's own log.
+
+The repository's instruction files, which Claude Code no longer reads itself once its settings
+are off, are read from the run's `cwd` and become the session's `system_prompt_append` (Task 6,
+R8); only the names inlined reach the `capabilities.applied` event, never their text. Declared by
 `interfaces/capability_snapshot_applier_interface.py::CapabilitySnapshotApplierInterface`.
 """
 
@@ -38,6 +42,7 @@ from claudeloop.application.ports import Logger
 from claudeloop.domain.capabilities import CLAUDE_BUILTIN_WEB_TOOLS, AppliedCapabilities
 from claudeloop.domain.errors import CapabilityFlagConflict, CapabilitySnapshotRefused
 from claudeloop.domain.interfaces import AppliedCapabilitiesInterface, McpConfigTranslatorInterface
+from claudeloop.infrastructure.interfaces import InstructionFileReaderInterface
 
 LOCAL_BACKEND_WEB_NOTICE: Final = (
     "[loops] builtin_web = true is not applied on a local backend: a local backend cannot "
@@ -57,6 +62,7 @@ class CapabilitySnapshotApplier:
         mcp: McpConfigTranslatorInterface,
         environ: Mapping[str, str],
         logger: Logger,
+        instructions: InstructionFileReaderInterface,
     ) -> None:
         self._store = store
         self._local_backend = local_backend
@@ -64,8 +70,9 @@ class CapabilitySnapshotApplier:
         # Read for which names are set, never for a value: only names are ever logged.
         self._environ = environ
         self._logger = logger
+        self._instructions = instructions
 
-    def load(self, path: Path) -> AppliedCapabilities:
+    def load(self, path: Path, *, cwd: Path) -> AppliedCapabilities:
         try:
             document = self._store.read(path)
         except (SnapshotDocumentError, OSError) as exc:
@@ -79,6 +86,9 @@ class CapabilitySnapshotApplier:
         notices = (
             (LOCAL_BACKEND_WEB_NOTICE,) if document.builtin_web and self._local_backend else ()
         )
+        instructions = self._instructions.read(
+            cwd, document.instruction_files, document.instruction_max_bytes
+        )
         return AppliedCapabilities(
             digest=document.digest,
             plugin_dirs=tuple(str(folder) for folder in document.plugin_dirs),
@@ -86,8 +96,9 @@ class CapabilitySnapshotApplier:
             mcp_servers=self._servers(document.mcp_servers),
             disallowed_tools=CLAUDE_BUILTIN_WEB_TOOLS if web_off else (),
             add_dirs=tuple(str(folder) for folder in document.folders),
-            system_prompt_append="",
+            system_prompt_append=instructions.text,
             notices=notices,
+            instruction_files=instructions.inlined,
         )
 
     def _servers(self, servers: Iterable[McpServerSpec]) -> dict[str, dict[str, object]]:
