@@ -147,6 +147,9 @@ CLAUDELOOP = EngineDescriptor(
     },
     session_verb="sessions",
     launch_flags=("--web-search", "--deep-research"),
+    # `run --capabilities PATH` (claudeloop cli/commands/run.py): the run's locked snapshot
+    # document, which BUILD writes before the session starts (SP-LOOPS Phase 4, R1).
+    capabilities_flag="--capabilities",
     # --permission-mode is real (confirmed via --help), but its actual value
     # vocabulary is Literal["bypass", "manual", "accept-edits", "plan",
     # "auto"] (domain/permission.py in the claudeloop repo) -- "container"
@@ -459,6 +462,8 @@ class ClaudeloopLocalDescriptors:
             base_weight=1,
             tier=EngineTier.LOCAL,
             doctor_args=profile,
+            # The same binary takes the same snapshot document (SP-LOOPS Phase 4, R11).
+            capabilities_flag=CLAUDELOOP.capabilities_flag,
             # The same binary, so the same verbs, run directory and envelope.
             affordances=replace(
                 CLAUDELOOP.affordances,

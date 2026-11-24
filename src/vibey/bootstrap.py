@@ -27,6 +27,7 @@ from vibey_runners.common.capabilities.interfaces.sidecar_lock_interface import 
 from vibey_runners.common.capabilities.manifest import MANIFEST_PATH as LOOPS_MANIFEST
 from vibey_runners.common.capabilities.resolver import CapabilityResolver
 from vibey_runners.common.capabilities.sidecar_lock import SidecarLock
+from vibey_runners.common.capabilities.snapshot_document_store import SnapshotDocumentStore
 from vibey_skills import marketplace_root
 
 from vibey import __version__
@@ -140,6 +141,7 @@ from vibey.application.interfaces.run_inputs_interface import RunInputsInterface
 from vibey.application.interfaces.sabbath import SabbathGateInterface
 from vibey.application.interfaces.ultra_control import UltraControlServiceInterface
 from vibey.application.job_dispatcher import JobDispatcher
+from vibey.application.loop_capabilities_service import LoopCapabilitiesService
 from vibey.application.loops_bundle_settings import LoopsBundleSettings
 from vibey.application.preflight import ConductorPreflight
 from vibey.application.project_abandonment import ProjectAbandonment
@@ -772,6 +774,9 @@ def build_full_worker(
     # isolation; ADR-0018). Unset keys keep the defaults.
     gate_runner = SubprocessGateRunner.from_config(project.config)
     run_deadline = _engine_run_deadline(project.config)
+    # The person's locked capability snapshot, given to each BUILD run whose loop takes one
+    # (SP-LOOPS Phase 4): `[loops]` and the lock are read at each run, never at the worker's start.
+    loop_capabilities = loop_capabilities_service(run_deadline)
 
     def _recording(
         handler: JobHandler, adapter: EngineAdapter, meter: SpendMeteringLedger
@@ -816,6 +821,7 @@ def build_full_worker(
             checkpoint=GitCheckpoint(),
             specs=resources.design_specs,
             inputs=run_inputs,
+            capabilities=loop_capabilities,
         )
         return _recording(handler, adapter, meter)
 
@@ -1768,8 +1774,33 @@ def loops_config_lock() -> SidecarLockInterface:
 
 
 def loops_snapshot_pruner() -> SnapshotPruner:
-    """What `vibey loops snapshots prune` removes old run snapshots with."""
+    """What `vibey loops snapshots prune` removes old run snapshots with, what a BUILD run's
+    folder is removed with when it ends, and what a worker sweeps with as it starts."""
     return SnapshotPruner()
+
+
+def loop_capabilities_service(
+    run_deadline: timedelta | None = None, *, user_config: Path | None = None
+) -> LoopCapabilitiesService:
+    """A BUILD run's capability snapshot (SP-LOOPS Phase 4, Task 8): the person's own `[loops]`
+    (`user_config`, else `acp_user_config()`), the store beside it, the resolver over that
+    store's lock and snapshot folder, the document store and the pruner. `run_deadline` is the
+    engine run deadline the sweep must outlast (R10); without one, the deadline a project with no
+    `[engines]` gets (`VIBEY_ENGINE_MAX_RUN_MINUTES`, else 240 minutes). Building it reads
+    nothing; each run reads `[loops]` and the lock afresh, so a change binds the next run.
+    Composition only."""
+    person = user_config if user_config is not None else acp_user_config()
+    store = loops_marketplace_store(person)
+    return LoopCapabilitiesService(
+        settings=loops_bundle_settings(),
+        marketplaces=store,
+        resolver=loops_resolver(store),
+        documents=SnapshotDocumentStore(),
+        pruner=loops_snapshot_pruner(),
+        user_config=person,
+        run_deadline=run_deadline if run_deadline is not None else _engine_run_deadline({}),
+        logger=StructlogAppLogger(owner="loop-capabilities"),
+    )
 
 
 def acp_state_dir(config_path: Path) -> Path:

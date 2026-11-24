@@ -64,6 +64,11 @@ job parks at once: a person checks the branch, moves it aside, and answers to re
 HANDOFF_INPUTS_GATE_KIND: Final = "handoff_inputs_missing"
 """A handed-off BUILD run cannot be given exactly the run inputs the run it replaces was given
 (SP-LOOPS Phase 3c): a person decides, never a silent partial."""
+LOOP_CAPABILITIES_GATE_KIND: Final = "loop_capabilities_unresolved"
+"""A BUILD run for a loop that takes the capability snapshot cannot be given it (SP-LOOPS Phase 4,
+R9): a marketplace not locked or not what its lock says, a `[loops]` table that cannot be read, or
+a document that cannot be written. The run never starts without its snapshot; a person fixes the
+cause (`vibey loops marketplace update NAME`, or their `[loops]`) and answers to retry."""
 
 QUEUE_GATE_KINDS: Final = frozenset(
     {ATTEMPTS_EXHAUSTED_GATE_KIND, DELIVERY_EXHAUSTED_GATE_KIND, DEFECT_GATE_KIND}

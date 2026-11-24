@@ -1,24 +1,21 @@
 # Made with ❤️ by [Vibey](https://the-vibey-project.github.io/vibey/), Developed by [Adam Matthew Steinberger](https://vibewithadam.matthewsteinberger.com/) ([@adammatthewsteinberger](https://github.com/adammatthewsteinberger/)).
-"""The seam over removing finished runs' snapshots (SP-LOOPS Task 7).
+"""The seam over removing runs' snapshots (SP-LOOPS Task 7; Phase 4, Task 8).
 
-Implemented by `snapshot_pruner.py`. Interfaces declare; they never consume.
+Implemented by `snapshot_pruner.py`. Its two methods, `prune` (by age) and `remove` (one run's
+folder), are declared once, by the application's `LoopSnapshotRemoverInterface`, which BUILD's
+capability service consumes; this is the same seam under the name `vibey loops` already uses.
+Interfaces declare; they never consume.
 """
 
 from __future__ import annotations
 
-from pathlib import Path
 from typing import Protocol, runtime_checkable
 
-from vibey.infrastructure.loops.records import PruneReport
+from vibey.application.interfaces.loop_capabilities_interface import (
+    LoopSnapshotRemoverInterface,
+)
 
 
 @runtime_checkable
-class SnapshotPrunerInterface(Protocol):
-    def prune(self, snapshots: Path, *, older_than_seconds: float) -> PruneReport:
-        """Removes each `run-*` folder directly in `snapshots` with no change at its top (the
-        folder or any entry directly in it) for more than `older_than_seconds`. A `run-*` entry
-        that is a symlink or not a folder, a `snapshots` that is itself a symlink, and a folder
-        that cannot be listed are named in `refused` and never followed or removed; nothing else
-        is touched. No folder is nothing to do. Raises `ValueError` for a
-        negative age."""
-        ...
+class SnapshotPrunerInterface(LoopSnapshotRemoverInterface, Protocol):
+    """`prune` and `remove`, as `LoopSnapshotRemoverInterface` declares them."""

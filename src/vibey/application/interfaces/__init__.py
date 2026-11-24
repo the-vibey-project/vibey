@@ -153,6 +153,11 @@ from vibey.application.interfaces.local_install import (
     LocalStackFactory,
     LocalStackInstallerInterface,
 )
+from vibey.application.interfaces.loop_capabilities_interface import (
+    LoopCapabilitiesInterface,
+    LoopMarketplacesInterface,
+    LoopSnapshotRemoverInterface,
+)
 from vibey.application.interfaces.loops import LoopCatalogInterface
 from vibey.application.interfaces.loops_bundle_settings_interface import (
     LoopsBundleSettingsInterface,
@@ -370,7 +375,10 @@ __all__ = [
     "LedgerSitePlanInterface",
     "LedgerSiteWriter",
     "InputStoreInterface",
+    "LoopCapabilitiesInterface",
     "LoopCatalogInterface",
+    "LoopMarketplacesInterface",
+    "LoopSnapshotRemoverInterface",
     "LoopsBundleSettingsInterface",
     "MergeOutcome",
     "Outcome",

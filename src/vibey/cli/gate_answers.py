@@ -44,6 +44,7 @@ from vibey.domain.job import (
     ESCALATION_EXHAUSTED_GATE_KIND,
     FOREIGN_BRANCH_GATE_KIND,
     HANDOFF_INPUTS_GATE_KIND,
+    LOOP_CAPABILITIES_GATE_KIND,
 )
 from vibey.domain.repair_convergence import REPAIR_NOT_CONVERGING_GATE_KIND
 
@@ -186,6 +187,10 @@ ANSWER_RULES: Final[Mapping[str, AnswerRuleInterface]] = MappingProxyType(
         # build_implement_handler: a handed-off run cannot be given its predecessor's inputs.
         # The fix (add the input again, fix [inputs]) happens outside; answering retries.
         HANDOFF_INPUTS_GATE_KIND: FREE_FORM,
+        # build_implement_handler: a run's capability snapshot cannot be resolved (SP-LOOPS
+        # Phase 4, R9). The fix (`vibey loops marketplace update NAME`, the person's [loops])
+        # happens outside; nothing reads the answer, which retries.
+        LOOP_CAPABILITIES_GATE_KIND: FREE_FORM,
     }
 )
 """Every gate kind vibey raises today, and how it is answered."""

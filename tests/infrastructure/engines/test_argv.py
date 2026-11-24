@@ -276,3 +276,53 @@ def test_claudeloop_local_is_never_asked_for_web_search(effort) -> None:  # type
 
     argv = build_argv(CLAUDELOOP_LOCAL, _spec(effort))
     assert "--web-search" not in argv and "--deep-research" not in argv
+
+
+# -- the run's capability document (SP-LOOPS Phase 4, Task 8; R1) ------------------------------
+
+DOCUMENT = Path("/person/loops/snapshots/run-abc/capabilities.json")
+
+
+def _with_document(session_id: str | None = None) -> RunSpec:
+    return RunSpec(
+        run_id=RUN_ID,
+        worktree_path=Path(WORKTREE),
+        prompt="implement the outbox relay",
+        effort=Effort.STANDARD,
+        isolation=IsolationLevel.WORKTREE,
+        session_id=session_id,
+        capabilities_file=DOCUMENT,
+    )
+
+
+@pytest.mark.parametrize("engine", ["claudeloop", "claudeloop-local"])
+def test_a_new_run_carries_the_document_right_after_the_launch_flags(engine: str) -> None:
+    from dataclasses import replace
+
+    descriptor = next(d for d in ALL_DESCRIPTORS if d.engine_id.value == engine)
+    assert descriptor.capabilities_flag == "--capabilities"
+    argv = build_argv(descriptor, _with_document())
+    without = build_argv(descriptor, replace(_with_document(), capabilities_file=None))
+    after_flags = without.index("--run-id") + 2 + len(descriptor.launch_flags)
+    assert argv == (
+        *without[:after_flags],
+        "--capabilities",
+        str(DOCUMENT),
+        *without[after_flags:],
+    )
+
+
+@pytest.mark.parametrize("engine", ["codexloop", "gptossloop", "qwenloop"])
+def test_a_document_on_a_descriptor_without_the_flag_is_refused(engine: str) -> None:
+    descriptor = next(d for d in ALL_DESCRIPTORS if d.engine_id.value == engine)
+    assert descriptor.capabilities_flag is None
+    with pytest.raises(ValueError, match=f"{engine} takes no capability document"):
+        build_argv(descriptor, _with_document())
+
+
+@pytest.mark.parametrize("engine", ["claudeloop", "codexloop"])
+def test_a_resumed_session_never_carries_the_document(engine: str) -> None:
+    descriptor = next(d for d in ALL_DESCRIPTORS if d.engine_id.value == engine)
+    argv = build_argv(descriptor, _with_document(session_id="sess-abc123"))
+    assert "--capabilities" not in argv
+    assert str(DOCUMENT) not in argv

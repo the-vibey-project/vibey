@@ -299,6 +299,11 @@ class EngineDescriptor:
     # is checked against the runner's own `--help` by conformance, and an engine that cannot
     # serve one (claudeloop-local refuses web search) simply does not list it.
     launch_flags: tuple[str, ...] = ()
+    # The `run` flag that takes the run's capability document (SP-LOOPS Phase 4, R1): the
+    # person's locked plugins, skills and MCP servers, written by vibey into the run's own 0700
+    # snapshot folder. None for a runner that takes no document; BUILD then gives it no snapshot
+    # and records none. Checked against the runner's own `--help` by conformance.
+    capabilities_flag: str | None = None
     # Extra arguments for `<binary> doctor` in preflight. claudeloop-local
     # passes its profile, so the health check probes the local backend the
     # run will use rather than the Anthropic login a profile never touches.

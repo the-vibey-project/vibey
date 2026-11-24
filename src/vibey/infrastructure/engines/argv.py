@@ -59,6 +59,15 @@ def build_argv(descriptor: EngineDescriptor, spec: RunSpec) -> tuple[str, ...]:
         # A new session is where the lane's capabilities are set; a resumed one keeps the
         # resources its run directory already holds.
         argv.extend(descriptor.launch_flags)
+        if spec.capabilities_file is not None:
+            # The run's locked snapshot (SP-LOOPS Phase 4, R1). A runner that takes no
+            # document is refused it rather than run without it: never dropped silently.
+            if descriptor.capabilities_flag is None:
+                raise ValueError(
+                    f"{descriptor.engine_id.value} takes no capability document, but the run "
+                    f"was given {spec.capabilities_file}"
+                )
+            argv.extend([descriptor.capabilities_flag, str(spec.capabilities_file)])
 
     argv.extend(descriptor.invoke(spec.effort).argv)
     argv.extend(descriptor.isolation_flags.get(spec.isolation, ()))

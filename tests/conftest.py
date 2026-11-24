@@ -454,6 +454,27 @@ def _hermetic_web_search(request: pytest.FixtureRequest, monkeypatch: pytest.Mon
         monkeypatch.setattr(GuardedOpener, "__call__", refused)
 
 
+@pytest.fixture(autouse=True)
+def _hermetic_loop_capabilities(
+    monkeypatch: pytest.MonkeyPatch, tmp_path_factory: pytest.TempPathFactory
+) -> None:
+    """A BUILD run for claudeloop is given the person's locked capability snapshot (SP-LOOPS
+    Phase 4), resolved from their own `[loops]`, lock and store, and a worker sweeps that store
+    as it starts. No test may read or write the developer's: every service the worker composes
+    uses a person whose `vibey.toml` is in pytest's own folder (absent, so the default bundle),
+    with the store beside it. A test that passes `user_config` keeps it; one that tests the
+    composition's own default imports the function by name before this wraps it."""
+    import vibey.bootstrap
+
+    person = tmp_path_factory.getbasetemp() / "loops-person" / "vibey.toml"
+    real = vibey.bootstrap.loop_capabilities_service
+
+    def hermetic(run_deadline: Any = None, *, user_config: Path | None = None) -> Any:
+        return real(run_deadline, user_config=user_config if user_config is not None else person)
+
+    monkeypatch.setattr(vibey.bootstrap, "loop_capabilities_service", hermetic)
+
+
 _RUNTIMES = frozenset({"docker", "podman"})
 
 
