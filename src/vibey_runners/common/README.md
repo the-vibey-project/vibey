@@ -30,3 +30,17 @@ its own (`tests/meta/test_one_jsonrpc_peer.py`). Like the rest of this
 package it imports nothing outside the standard library, so vibey's
 application layer may import `errors` (ADR-0017), and the package's
 `__init__.py` is empty so that doing so pulls in no `asyncio`.
+
+## `mcp/`
+
+A stdlib MCP client over that peer (SP-LOOPS Phase 5). `McpSession` speaks
+MCP to one server through a transport; `StdioTransport` starts a `local`
+server as a child that leads its own process group, and closing it closes
+the server's stdin, waits a grace period, then kills the whole group.
+`McpSessionPool` holds one session per server for a run: it starts each on
+first use, restarts a dead one a bounded number of times, keeps each remote
+server's call budget, and closes them all when the run ends without ever
+raising. `protocol.py` holds the protocol versions, which vibey's own MCP
+server imports, so both ends speak from one list. A `local` server's argv
+comes from `capabilities/scrubbed_launch.py` (`ScrubbedLaunch`), which
+claudeloop's MCP config uses too.

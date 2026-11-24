@@ -102,6 +102,19 @@ forbidden_modules = [
     "vibey_runners.common.jsonrpc.peer",
 ]
 
+# The MCP client over that peer (SP-LOOPS Phase 5 R2): its seams may name the records their
+# signatures carry (`mcp_tool`, `mcp_call_result`) and the trust level, never the classes that
+# implement them.
+[[tool.importlinter.contracts]]
+name = "MCP interfaces declare seams, never consume them"
+type = "forbidden"
+source_modules = ["vibey_runners.common.mcp.interfaces"]
+forbidden_modules = [
+    "vibey_runners.common.mcp.stdio_transport",
+    "vibey_runners.common.mcp.mcp_session",
+    "vibey_runners.common.mcp.mcp_session_pool",
+]
+
 # The loop capability layer (SP-LOOPS): its seams may name the records their signatures
 # carry (the `*_spec`, entry and catalog modules), never the classes that implement them.
 [[tool.importlinter.contracts]]
@@ -119,6 +132,7 @@ forbidden_modules = [
     "vibey_runners.common.capabilities.resolver",
     "vibey_runners.common.capabilities.safe_text",
     "vibey_runners.common.capabilities.scrubbed_exec",
+    "vibey_runners.common.capabilities.scrubbed_launch",
     "vibey_runners.common.capabilities.skill_index",
     "vibey_runners.common.capabilities.snapshot_copier",
     "vibey_runners.common.capabilities.snapshot_document",

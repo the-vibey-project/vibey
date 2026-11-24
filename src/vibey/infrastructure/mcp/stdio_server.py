@@ -20,6 +20,8 @@ from vibey_runners.common.jsonrpc.errors import METHOD_NOT_FOUND as METHOD_NOT_F
 from vibey_runners.common.jsonrpc.errors import PARSE_ERROR as PARSE_ERROR
 from vibey_runners.common.jsonrpc.errors import RpcError
 from vibey_runners.common.jsonrpc.interfaces.codec_interface import JsonRpcCodecInterface
+from vibey_runners.common.mcp.protocol import LATEST_PROTOCOL as LATEST_PROTOCOL
+from vibey_runners.common.mcp.protocol import SUPPORTED_PROTOCOLS as SUPPORTED_PROTOCOLS
 
 from vibey import __version__
 from vibey.domain.errors import VibeyError
@@ -33,14 +35,6 @@ from vibey.domain.interfaces.host_tools_interface import HostToolsInterface
 from vibey.infrastructure.mcp.hub_gateway import HUB_GATEWAY
 from vibey.infrastructure.mcp.interfaces.hub_gateway_interface import HubGatewayInterface
 from vibey.infrastructure.mcp.interfaces.stdio_server_interface import McpStdioServerInterface
-
-SUPPORTED_PROTOCOLS: Final[tuple[str, ...]] = (
-    "2024-11-05",
-    "2025-03-26",
-    "2025-06-18",
-    "2025-11-25",
-)
-LATEST_PROTOCOL: Final = SUPPORTED_PROTOCOLS[-1]
 
 
 class McpStdioServer:
