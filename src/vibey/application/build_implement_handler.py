@@ -527,10 +527,18 @@ class BuildImplementHandler:
         # its own folder when a hub is running, or none and why. Opened and closed without an
         # await, so a cancellation can neither strand a minted grant nor slip the release in
         # ahead of the revocation; closed first, before the folder is released, on every exit.
+        # A loop whose way to the hub is an MCP server is then given its `vibey-web` connector in
+        # its snapshot, before the snapshot is recorded (Task 6, R3): also without an await.
         web: RunWebAccess | None = None
         try:
             if self._web is not None:
                 web = self._web.open(run_id, prepared.folder if prepared is not None else None)
+                if (
+                    capabilities is not None
+                    and prepared is not None
+                    and self._engine.descriptor.web_connector
+                ):
+                    prepared = capabilities.grant_web(prepared, web)
             return await self._session(
                 job,
                 RunSpec(

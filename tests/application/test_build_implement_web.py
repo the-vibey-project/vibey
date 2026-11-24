@@ -37,7 +37,7 @@ from vibey.application.worker import Failure, Success
 from vibey.domain.engine import EngineDescriptor
 from vibey.domain.session_principal import SessionPrincipal
 from vibey.domain.session_web_state import NO_HUB, NO_RUN_FOLDER
-from vibey.infrastructure.engines.descriptors import CLAUDELOOP, CODEXLOOP, QWENLOOP
+from vibey.infrastructure.engines.descriptors import CLAUDELOOP, CODEXLOOP, GPTOSSLOOP, QWENLOOP
 from vibey.infrastructure.engines.scripted import ScriptedEngine
 
 HUB = "http://127.0.0.1:28100"
@@ -132,8 +132,47 @@ async def test_with_a_hub_the_run_holds_its_own_grant_in_its_own_folder(tmp_path
     assert spec.web is not None and spec.web.state == "hub"
     assert spec.web.token_file == prepared.folder / "web-token"
     assert harness.web.closed == [spec.web]
-    assert harness.log[:4] == ["prepare", "open", f"record:{SNAPSHOTTED}", "start"]
+    assert harness.log[:5] == ["prepare", "open", "grant_web", f"record:{SNAPSHOTTED}", "start"]
     assert harness.log[-2:] == ["close", "release"]
+
+
+async def test_a_claudeloop_run_with_a_grant_is_given_its_connector_before_it_is_recorded(
+    tmp_path: Path,
+) -> None:
+    """SP-LOOPS Phase 6, Task 6 (R3): the run's `vibey-web` connector is in its snapshot before
+    the snapshot is recorded and the engine starts, so the recorded count includes it."""
+    harness = _Harness(tmp_path)
+
+    assert isinstance(await harness.run(), Success)
+
+    [spec] = harness.engine.specs  # type: ignore[attr-defined]
+    assert harness.capabilities.granted == [spec.web]
+    [recorded] = harness.ledger.of(SNAPSHOTTED)
+    assert recorded["event"].payload["mcp_local"] == 2  # the person's one, and `vibey-web`
+
+
+async def test_a_claudeloop_run_with_no_hub_is_given_no_connector(tmp_path: Path) -> None:
+    harness = _Harness(tmp_path, hub=False)
+
+    assert isinstance(await harness.run(), Success)
+
+    [recorded] = harness.ledger.of(SNAPSHOTTED)
+    assert recorded["event"].payload["mcp_local"] == 1
+    assert [web.state for web in harness.capabilities.granted] == ["none"]
+
+
+@pytest.mark.parametrize("descriptor", [QWENLOOP, GPTOSSLOOP], ids=lambda d: d.binary)
+async def test_the_local_runner_reaches_the_hub_with_its_own_tools_not_the_connector(
+    tmp_path: Path, descriptor: EngineDescriptor
+) -> None:
+    """The local runner's `web_search` and `web_fetch` run `vibey search` and `vibey fetch`; it
+    is not given a second way to the same hub."""
+    harness = _Harness(tmp_path, descriptor=descriptor)
+
+    assert isinstance(await harness.run(), Success)
+
+    assert harness.capabilities.granted == []
+    assert "grant_web" not in harness.log
 
 
 async def test_without_a_hub_the_run_is_told_none_and_why(tmp_path: Path) -> None:
@@ -245,6 +284,7 @@ async def test_the_grant_is_revoked_before_release_when_the_run_raises_or_is_can
     assert harness.log == [
         "prepare",
         "open",
+        "grant_web",
         f"record:{SNAPSHOTTED}",
         "start",
         "close",

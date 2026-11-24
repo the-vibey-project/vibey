@@ -28,6 +28,7 @@ from vibey_runners.common.capabilities.manifest import MANIFEST_PATH as LOOPS_MA
 from vibey_runners.common.capabilities.resolver import CapabilityResolver
 from vibey_runners.common.capabilities.sidecar_lock import SidecarLock
 from vibey_runners.common.capabilities.snapshot_document_store import SnapshotDocumentStore
+from vibey_runners.common.infrastructure.vibey_command import VIBEY_COMMAND
 from vibey_skills import marketplace_root
 
 from vibey import __version__
@@ -160,6 +161,7 @@ from vibey.application.run_web_grants import RunWebGrants
 from vibey.application.session_web_principals import SessionWebPrincipals
 from vibey.application.ultra_control import UltraControlService
 from vibey.application.visual_handler import VisualInventoryHandler, VisualPlanHandler
+from vibey.application.web_connector import WebConnector
 from vibey.application.wind_down import WindDownOrchestrator
 from vibey.application.worker import WorkerLoop
 from vibey.bootstrap_interface import WorkerGateSeamsInterface
@@ -1820,11 +1822,13 @@ def loop_capabilities_service(
 ) -> LoopCapabilitiesService:
     """A BUILD run's capability snapshot (SP-LOOPS Phase 4, Task 8): the person's own `[loops]`
     (`user_config`, else `acp_user_config()`), the store beside it, the resolver over that
-    store's lock and snapshot folder, the document store and the pruner. `run_deadline` is the
-    engine run deadline the sweep must outlast (R10); without one, the deadline a project with no
-    `[engines]` gets (`VIBEY_ENGINE_MAX_RUN_MINUTES`, else 240 minutes). Building it reads
-    nothing; each run reads `[loops]` and the lock afresh, so a change binds the next run.
-    Composition only."""
+    store's lock and snapshot folder, the document store, the pruner, and the `vibey-web`
+    connector a run holding a web grant is given, which runs the `vibey` beside this interpreter
+    (`VibeyCommand`, SP-LOOPS Phase 6). `run_deadline` is the engine run deadline the sweep must
+    outlast (R10); without one, the deadline a project with no `[engines]` gets
+    (`VIBEY_ENGINE_MAX_RUN_MINUTES`, else 240 minutes). Building it reads nothing but where the
+    `vibey` launcher is; each run reads `[loops]` and the lock afresh, so a change binds the next
+    run. Composition only."""
     person = user_config if user_config is not None else acp_user_config()
     store = loops_marketplace_store(person)
     return LoopCapabilitiesService(
@@ -1836,6 +1840,9 @@ def loop_capabilities_service(
         user_config=person,
         run_deadline=run_deadline if run_deadline is not None else _engine_run_deadline({}),
         logger=StructlogAppLogger(owner="loop-capabilities"),
+        # A claudeloop run's `vibey-web` connector runs the `vibey` installed beside this one,
+        # found the way the local runner finds it (SP-LOOPS Phase 6, Task 6).
+        web_connector=WebConnector(VIBEY_COMMAND.resolve()),
     )
 
 

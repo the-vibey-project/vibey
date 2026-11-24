@@ -68,14 +68,16 @@ transports, and the attachments folder `gateway_payload` gives the agent."""
 
 def test_claudeloop_and_claudeloop_local_share_every_snapshot_fact() -> None:
     """The same binary on a local profile takes the same snapshot (R11): every fact for one is a
-    fact for the other, file and needle alike, and no fact claims claudeloop's web search."""
+    fact for the other, file and needle alike, and claudeloop's web search rests on the
+    `vibey-web` connector in that snapshot (SP-LOOPS Phase 6, Task 6)."""
     claude = {(f.capability, f.source, f.needle) for f in RUNNER_FACTS if f.loop == "claudeloop"}
     local = {
         (f.capability, f.source, f.needle) for f in RUNNER_FACTS if f.loop == "claudeloop-local"
     }
     assert claude == local
     assert {needle for _, _, needle in claude} >= SNAPSHOT_NEEDLES
-    assert not _facts(EngineId.CLAUDELOOP.value, "web_search")
+    web = {needle for capability, _, needle in claude if capability == "web_search"}
+    assert {'"--capabilities"', '"type": "stdio"', 'WEB_CONNECTOR_NAME: Final = "vibey-web"'} <= web
 
 
 LOCAL_SNAPSHOT_NEEDLES = {

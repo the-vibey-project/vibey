@@ -272,6 +272,7 @@ from vibey.application.interfaces.visual import (
     VisualInventoryProducer,
     VisualInventoryRepository,
 )
+from vibey.application.interfaces.web_connector_interface import WebConnectorInterface
 from vibey.application.interfaces.worker_interface import (
     MultiProjectWorkerInterface,
     WorkerLoopInterface,
@@ -467,4 +468,5 @@ __all__ = [
     "SessionWebPrincipalsInterface",
     "HubLocatorInterface",
     "RunWebGrantsInterface",
+    "WebConnectorInterface",
 ]

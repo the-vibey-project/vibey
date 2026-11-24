@@ -93,6 +93,25 @@ _LOCAL_SKILL_TOOLS = (
     "per answer, never cut (qwenloop infrastructure/tools.py)"
 )
 
+# claudeloop's web search is the hub's (SP-LOOPS Phase 6, Task 6; R3): when a BUILD run holds
+# its own web grant, the worker adds the `vibey-web` connector to the run's snapshot
+# (`web_connector` below; vibey application/web_connector.py), and the runner, which imports
+# nothing from vibey, starts it like any other local server. What it claims is said with the
+# condition, since a run with no hub is given no connector.
+_CLAUDELOOP_WEB = (
+    "when the worker finds a hub running, BUILD mints the run its own web-only grant and adds one "
+    "MCP server to the run's snapshot, `vibey-web` (SP-LOOPS Phase 6, Task 6; vibey "
+    "application/web_connector.py, application/loop_capabilities_service.py `grant_web`): local, "
+    'so `"type": "stdio"`, started through the scrubbed launcher with only `VIBEY_HUB_URL` and '
+    "`VIBEY_WEB_TOKEN_FILE` (claudeloop domain/mcp_config.py), running `vibey mcp --scope web "
+    "--token-file <the run's token file>`, which serves exactly `vibey_search` and `vibey_fetch` "
+    "through the hub with the run's own token (vibey cli/mcp.py). With no hub, or no grant, the "
+    "snapshot carries no `vibey-web`, and the run's plan and `VIBEY_WEB_STATE` say search is off "
+    "and why. Claude Code's own `WebSearch` and `WebFetch` stay disallowed, "
+    "`CLAUDE_BUILTIN_WEB_TOOLS` (claudeloop domain/capabilities.py, "
+    "infrastructure/capabilities/snapshot_applier.py)"
+)
+
 # claudeloop's own vocabulary, shared by claudeloop-local: the same binary.
 _CLAUDELOOP_AFFORDANCES = EngineAffordances(
     files=True,
@@ -100,8 +119,7 @@ _CLAUDELOOP_AFFORDANCES = EngineAffordances(
     plugins=PluginSystem.CLAUDE_PLUGINS,
     mcp=True,
     skills=True,
-    # Off until SP-LOOPS Phase 6 gives every loop `vibey_search` (Phase 4, R4).
-    web_search=False,
+    web_search=True,
     evidence={
         "files": f"it runs in the worktree (`run --cwd`); {_CLAUDELOOP_SNAPSHOT}, whose "
         "folders become the session's `add_dirs`; and `--attach` copies reach the agent "
@@ -120,11 +138,9 @@ _CLAUDELOOP_AFFORDANCES = EngineAffordances(
         "catalog's skills by qualified name (`plugin:skill`) as the Claude Agent SDK's `skills` "
         "option (claudeloop infrastructure/agent/capability_overlay.py); `run --skill` adds to "
         "them",
-        "web_search": "`[loops] builtin_web` is false unless the person sets it, and then "
-        "claudeloop disallows Claude Code's own web tools, `CLAUDE_BUILTIN_WEB_TOOLS` "
-        "(WebSearch and WebFetch; claudeloop domain/capabilities.py, "
-        "infrastructure/capabilities/snapshot_applier.py); vibey passes neither `--web-search` "
-        "nor `--deep-research`. Every loop gets `vibey_search` in SP-LOOPS Phase 6",
+        "web_search": f"{_CLAUDELOOP_WEB} unless the person sets `[loops] builtin_web`, which "
+        "is false by default; vibey passes neither `--web-search` nor `--deep-research`; "
+        "unit-proven; real-run probe pending",
     },
 )
 # `stop` and `wind-down` take `--run-id` and `--cwd`; `prompt TEXT` needs exactly one of
@@ -188,6 +204,9 @@ CLAUDELOOP = EngineDescriptor(
     # `run --capabilities PATH` (claudeloop cli/commands/run.py): the run's locked snapshot
     # document, which BUILD writes before the session starts (SP-LOOPS Phase 4, R1).
     capabilities_flag="--capabilities",
+    # Its only way to the hub's web tools is an MCP server: BUILD adds `vibey-web` to the
+    # snapshot of a run that holds a web grant (SP-LOOPS Phase 6, Task 6; R3).
+    web_connector=True,
     # --permission-mode is real (confirmed via --help), but its actual value
     # vocabulary is Literal["bypass", "manual", "accept-edits", "plan",
     # "auto"] (domain/permission.py in the claudeloop repo) -- "container"
@@ -367,7 +386,8 @@ QWENLOOP = EngineDescriptor(
         plugins=PluginSystem.VIBEY_BUNDLE,
         mcp=True,
         skills=True,
-        # Stays until SP-LOOPS Phase 6 gives every loop `vibey_search`.
+        # Its own `web_search` and `web_fetch` tools, which reach the hub with the session's own
+        # grant (SP-LOOPS Phase 6); it is not given the `vibey-web` connector as well.
         web_search=True,
         evidence={
             "images": "its model-facing tools are read_file, write_file, edit_file, shell, "
@@ -398,8 +418,10 @@ QWENLOOP = EngineDescriptor(
             "capability_listing), and "
             f"{_LOCAL_SKILL_TOOLS}; {_LOCAL_PROBE}",
             "web_search": "`web_search` and `web_fetch` are among its model-facing tools and "
-            "run vibey's own `vibey search` and `vibey fetch` (qwenloop domain/model.py "
-            "`CODING_TOOL_NAMES`; infrastructure/tools.py). `[loops] builtin_web` does not change "
+            "run vibey's own `vibey search` and `vibey fetch`, which reach the hub with the "
+            "session's own web grant, `VIBEY_HUB_URL` and `VIBEY_WEB_TOKEN_FILE`, when the worker "
+            "found one running, and otherwise say search is off and why (qwenloop domain/model.py "
+            "`CODING_TOOL_NAMES`; infrastructure/tools.py, infrastructure/web_search.py). `[loops] builtin_web` does not change "
             "them: that key governs Claude Code's own web tools, which this runner does not have, "
             "and qwenloop does not read it",
         },
@@ -519,18 +541,19 @@ class ClaudeloopLocalDescriptors:
             doctor_args=profile,
             # The same binary takes the same snapshot document (SP-LOOPS Phase 4, R11).
             capabilities_flag=CLAUDELOOP.capabilities_flag,
+            # And so the same `vibey-web` connector: an MCP server is a client-side tool, which a
+            # local backend serves as any other (SP-LOOPS Phase 6, Task 6).
+            web_connector=CLAUDELOOP.web_connector,
             # The same binary, so the same verbs, run directory and envelope.
             affordances=replace(
                 CLAUDELOOP.affordances,
-                web_search=False,
                 evidence={
                     **CLAUDELOOP.affordances.evidence,
-                    "web_search": "a local backend cannot serve Anthropic's server-side tools, "
-                    "and claudeloop refuses `--web-search` and `--deep-research` against one "
-                    "(claudeloop domain/backend.py `check_tools`); with a snapshot it always "
-                    "disallows `CLAUDE_BUILTIN_WEB_TOOLS`, even when `[loops] builtin_web` is "
-                    "true, and says so in a notice (SP-LOOPS Phase 4, R11; claudeloop "
-                    "infrastructure/capabilities/snapshot_applier.py)",
+                    "web_search": f"{_CLAUDELOOP_WEB} always, even when `[loops] builtin_web` "
+                    "is true, which is said in a notice: a local backend cannot serve "
+                    "Anthropic's server-side tools, and claudeloop refuses `--web-search` and "
+                    "`--deep-research` against one (SP-LOOPS Phase 4, R11; claudeloop "
+                    "domain/backend.py `check_tools`); unit-proven; real-run probe pending",
                 },
             ),
             controls=CLAUDELOOP.controls,
