@@ -68,6 +68,17 @@ The stable run contract is `.qwenloop/runs/<run-id>/`, exit code `75` for a
 graceful wind-down, the `QWENLOOP_TASK_FULLY_COMPLETE` marker, and a
 `qwenloop-verdict` result fence.
 
+vibey hands a run its capability snapshot with `--capabilities PATH`: the
+`capabilities.json` it wrote into the run's own folder. With it, the run reaches
+exactly the snapshot's MCP servers (never `~/.claude.json` or
+`QWENLOOP_MCP_CONFIG`), reads the snapshot's skills and plugin commands on demand
+(`skills_list`, `skill_read`), and carries a capability block in its system
+prompt: the skill and server listing, then the repository's `CLAUDE.md` and
+`AGENTS.md`, together within `[loops] capability_prompt_tokens`. A file that does
+not fit is named with its size, never cut. The run's first event is
+`capabilities.applied` (counts and names only). A document that is refused or
+cannot be read exits `78` before any model is started or called.
+
 ## Storms use Convergence-Driven Development
 
 Storm mode applies **Convergence-Driven Development (CDD)** above
@@ -228,7 +239,7 @@ it names that server's tools with one line each; given a server and a tool, it r
 tool's input schema, whole, or says the schema is too large for the answer budget. Long lists
 come a page at a time (`page`), and an `mcp_call` answer longer than the budget is cut with a
 line naming both lengths. A server is started on its first use and kept for the run, and every
-server the run started is closed when the run ends, SIGTERM included (exit `143`). A server that
+server the run started is closed when the run ends, SIGTERM included (exit `130`). A server that
 will not start, dies, hangs or answers with an error is an error the model reads, never the end
 of the run. The config file's `[mcp]` table bounds it:
 

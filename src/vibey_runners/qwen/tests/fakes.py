@@ -3,16 +3,45 @@
 
 import asyncio
 import json
-from collections.abc import Awaitable, Callable
+import os
+import shutil
+from collections.abc import Awaitable, Callable, Mapping, Sequence
+from pathlib import Path
 from typing import Any
 
+from vibey_runners.common.capabilities.bundle import (
+    DEFAULT_CAPABILITY_ANSWER_TOKENS,
+    DEFAULT_CAPABILITY_PROMPT_TOKENS,
+    DEFAULT_INSTRUCTION_FILES,
+    DEFAULT_INSTRUCTION_MAX_BYTES,
+)
+from vibey_runners.common.capabilities.command_entry import CommandEntry
+from vibey_runners.common.capabilities.interfaces.plugin_command_index_interface import (
+    PluginCommandIndexInterface,
+)
+from vibey_runners.common.capabilities.interfaces.skill_index_interface import (
+    SkillIndexInterface,
+)
+from vibey_runners.common.capabilities.interfaces.snapshot_document_interface import (
+    SnapshotDocumentInterface,
+)
+from vibey_runners.common.capabilities.interfaces.snapshot_document_store_interface import (
+    SnapshotDocumentStoreInterface,
+)
 from vibey_runners.common.capabilities.mcp_server_spec import McpServerSpec
+from vibey_runners.common.capabilities.skill_catalog import SkillCatalog
+from vibey_runners.common.capabilities.skill_entry import SkillEntry
+from vibey_runners.common.capabilities.skill_index import SkillIndex
+from vibey_runners.common.capabilities.snapshot_document import DOCUMENT_VERSION, SnapshotDocument
+from vibey_runners.common.capabilities.snapshot_document_store import SnapshotDocumentStore
 from vibey_runners.common.mcp.interfaces.mcp_transport_factory_interface import (
     McpTransportFactoryInterface,
 )
 from vibey_runners.common.mcp.interfaces.mcp_transport_interface import McpTransportInterface
 
 from qwenloop.application.interfaces import OllamaProbeInterface
+
+MEMORY_DIGEST = "sha256:" + "5e" * 32
 
 
 class FakeOllamaModelProbe:
@@ -94,6 +123,164 @@ class MemoryTransports:
         return self.servers.setdefault(server.name, MemoryMcpServer(server.name))
 
 
+class MemoryDocumentStore:
+    """A document store that hands back one document held in memory, or raises `error`: a
+    document no real reader would accept (one at the bundle's caps) without a byte on disk."""
+
+    def __init__(
+        self, document: SnapshotDocument | None = None, error: BaseException | None = None
+    ) -> None:
+        self.document = document
+        self.error = error
+        self.read_paths: list[Path] = []
+
+    def write(self, document: SnapshotDocumentInterface, folder: Path) -> Path:
+        raise AssertionError("a runner never writes its capability document")
+
+    def read(self, path: Path) -> SnapshotDocumentInterface:
+        self.read_paths.append(path)
+        if self.error is not None:
+            raise self.error
+        assert self.document is not None
+        return self.document
+
+
+class MemorySkillIndex:
+    """`skills` per plugin folder name, `(name, description)`, as if read from SKILL.md files."""
+
+    def __init__(self, skills: Mapping[str, Sequence[tuple[str, str]]]) -> None:
+        self._skills = skills
+
+    def build(self, plugin_dirs: Sequence[Path]) -> SkillCatalog:
+        return SkillCatalog(
+            tuple(
+                SkillEntry(folder.name, name, description, folder / "skills" / name / "SKILL.md")
+                for folder in plugin_dirs
+                for name, description in self._skills.get(folder.name, ())
+            ),
+            (),
+        )
+
+
+class MemoryCommandIndex:
+    """`commands` per plugin folder name, `(name, description)`, as if read from commands/."""
+
+    def __init__(self, commands: Mapping[str, Sequence[tuple[str, str]]]) -> None:
+        self._commands = commands
+
+    def build(
+        self, plugin_dirs: Sequence[Path]
+    ) -> tuple[tuple[CommandEntry, ...], tuple[tuple[Path, str], ...]]:
+        return (
+            tuple(
+                CommandEntry(folder.name, name, description, folder / "commands" / f"{name}.md")
+                for folder in plugin_dirs
+                for name, description in self._commands.get(folder.name, ())
+            ),
+            (),
+        )
+
+
+def memory_document(
+    *,
+    plugins: Sequence[str] = (),
+    skills: Sequence[str] = (),
+    mcp_servers: Sequence[McpServerSpec] = (),
+    folders: Sequence[Path] = (),
+    instruction_files: Sequence[str] = DEFAULT_INSTRUCTION_FILES,
+    instruction_max_bytes: int = DEFAULT_INSTRUCTION_MAX_BYTES,
+    capability_prompt_tokens: int = DEFAULT_CAPABILITY_PROMPT_TOKENS,
+    capability_answer_tokens: int = DEFAULT_CAPABILITY_ANSWER_TOKENS,
+) -> SnapshotDocument:
+    """A version-2 document held in memory, its plugins under `/snapshot/plugins/`. A
+    module-level builder: test data, with no state to hold."""
+    return SnapshotDocument(
+        version=DOCUMENT_VERSION,
+        digest=MEMORY_DIGEST,
+        plugin_dirs=tuple(Path("/snapshot/plugins") / name for name in plugins),
+        skills=tuple(skills),
+        mcp_servers=tuple(mcp_servers),
+        builtin_web=False,
+        instruction_files=tuple(instruction_files),
+        instruction_max_bytes=instruction_max_bytes,
+        capability_prompt_tokens=capability_prompt_tokens,
+        capability_answer_tokens=capability_answer_tokens,
+        folders=tuple(folders),
+    )
+
+
+class CapabilityDocumentWriter:
+    """One run folder (0700) under `root`, its plugin copies, and the document beside them,
+    written the way the conductor writes it (SP-LOOPS Phase 4, Task 2)."""
+
+    def __init__(self, root: Path) -> None:
+        self.run = Path(os.path.realpath(root)) / "snapshots" / "run-1"
+        self.run.mkdir(parents=True)
+        self.run.chmod(0o700)
+        self.plugin_dirs: list[Path] = []
+
+    def plugin(
+        self,
+        name: str,
+        skills: Mapping[str, str] | None = None,
+        commands: Mapping[str, str] | None = None,
+    ) -> Path:
+        """A plugin copy named `name` with `skills` and `commands` (name: description)."""
+        folder = self.run / "plugins" / name
+        (folder / ".claude-plugin").mkdir(parents=True)
+        (folder / ".claude-plugin" / "plugin.json").write_text(
+            json.dumps({"name": name}), encoding="utf-8"
+        )
+        for skill, description in (skills or {}).items():
+            (folder / "skills" / skill).mkdir(parents=True)
+            (folder / "skills" / skill / "SKILL.md").write_text(
+                f"---\nname: {skill}\ndescription: {description}\n---\n\n# {skill}\n", "utf-8"
+            )
+        for command, description in (commands or {}).items():
+            (folder / "commands").mkdir(exist_ok=True)
+            (folder / "commands" / f"{command}.md").write_text(
+                f"---\ndescription: {description}\n---\nRun {command}.\n", "utf-8"
+            )
+        self.plugin_dirs.append(folder)
+        return folder
+
+    def copy(self, source: Path) -> Path:
+        """A copy of the plugin at `source`, as the conductor copies one into the run."""
+        folder = self.run / "plugins" / source.name
+        shutil.copytree(source, folder)
+        self.plugin_dirs.append(folder)
+        return folder
+
+    def write(
+        self,
+        *,
+        mcp_servers: Sequence[McpServerSpec] = (),
+        folders: Sequence[Path] = (),
+        instruction_files: Sequence[str] = DEFAULT_INSTRUCTION_FILES,
+        capability_prompt_tokens: int = DEFAULT_CAPABILITY_PROMPT_TOKENS,
+        capability_answer_tokens: int = DEFAULT_CAPABILITY_ANSWER_TOKENS,
+    ) -> Path:
+        """The document naming every skill the plugin copies hold, in index order."""
+        catalog = SkillIndex().build(self.plugin_dirs)
+        document = SnapshotDocument(
+            version=DOCUMENT_VERSION,
+            digest=MEMORY_DIGEST,
+            plugin_dirs=tuple(self.plugin_dirs),
+            skills=tuple(f"{entry.plugin}:{entry.name}" for entry in catalog.skills),
+            mcp_servers=tuple(mcp_servers),
+            builtin_web=False,
+            instruction_files=tuple(instruction_files),
+            instruction_max_bytes=DEFAULT_INSTRUCTION_MAX_BYTES,
+            capability_prompt_tokens=capability_prompt_tokens,
+            capability_answer_tokens=capability_answer_tokens,
+            folders=tuple(folders),
+        )
+        return SnapshotDocumentStore().write(document, self.run)
+
+
 assert isinstance(FakeOllamaProbe(), OllamaProbeInterface)
 assert isinstance(MemoryMcpServer("x"), McpTransportInterface)
 assert isinstance(MemoryTransports(), McpTransportFactoryInterface)
+assert isinstance(MemoryDocumentStore(), SnapshotDocumentStoreInterface)
+assert isinstance(MemorySkillIndex({}), SkillIndexInterface)
+assert isinstance(MemoryCommandIndex({}), PluginCommandIndexInterface)

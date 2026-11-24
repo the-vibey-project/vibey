@@ -23,6 +23,7 @@ from typing import Annotated, cast
 
 import typer
 from platformdirs import user_cache_path
+from vibey_runners.common.capabilities.bundle import DEFAULT_CAPABILITY_ANSWER_TOKENS
 
 from qwenloop import __version__
 from qwenloop.application.backend_selection import BackendSelector, Hardware
@@ -58,6 +59,7 @@ from qwenloop.domain.model import (
     ServerInfo,
     ToolProtocol,
 )
+from qwenloop.infrastructure.capability_loader import CapabilityLoader, CapabilityRefused
 from qwenloop.infrastructure.clock import SystemClock
 from qwenloop.infrastructure.desktop_notifications import DesktopNotifier
 from qwenloop.infrastructure.dispatch_benchmark import DispatchBenchmark
@@ -72,6 +74,9 @@ from qwenloop.infrastructure.inference import (
     OpenAICompatServer,
     OpenAIServer,
     VllmServer,
+)
+from qwenloop.infrastructure.interfaces.capability_loader_interface import (
+    LoadedCapabilitiesInterface,
 )
 from qwenloop.infrastructure.mcp import McpGateway
 from qwenloop.infrastructure.model_cache import ModelCache
@@ -92,8 +97,12 @@ _DEFAULT_STORM_AUTHOR = "Adam Matthew Steinberger"
 _DEFAULT_REPOS_ROOT = Path.home() / "git"
 #: What `server start`/`status` print in place of an attached endpoint's API key.
 _REDACTED = "<redacted>"
-#: The status of a run SIGTERM stopped: 128 + the signal's number, as a shell reports it.
-EXIT_CODE_SIGTERM = 128 + signal.SIGTERM
+#: The status of a run SIGTERM stopped: 130, the status claudeloop reports for a stopped run, so
+#: every loop vibey drives says "stopped" the same way (SP-LOOPS Phase 5).
+EXIT_CODE_SIGTERM = 130
+#: The status of a run whose capability document was refused (`EX_CONFIG`), as claudeloop exits:
+#: the conductor's `engine_misconfigured` gate then parks the job (SP-LOOPS Phase 5, R3).
+EXIT_CODE_CONFIG = 78
 
 # The endpoint flags every command that picks a server shares. Each falls back to its
 # environment variable, then to the config file, then to the default (ADR-0018).
@@ -192,12 +201,21 @@ def run(
         "--desktop-notifications/--no-desktop-notifications",
         help="Send lifecycle desktop alerts; macOS alerts use the Ping sound.",
     ),
+    capabilities: Path | None = typer.Option(
+        None,
+        "--capabilities",
+        help="The run's capability document (capabilities.json), written by vibey: its skills, "
+        "plugin commands, MCP servers and instruction files, and nothing else. A document that "
+        "is refused exits 78 before any model starts.",
+    ),
 ) -> None:
     del preset
     selected_effort = Effort.parse(effort)
     if storm:
         if plan is not None:
             raise typer.BadParameter("pass either PLAN or --storm, not both")
+        if capabilities is not None:
+            raise typer.BadParameter("pass --capabilities with PLAN, not with --storm")
         config = _load_config(backend=backend, max_turns=max_turns, base_url=base_url, model=model)
         if max_turns is None and selected_effort is not Effort.STANDARD:
             config = replace(config, max_turns=selected_effort.default_max_turns)
@@ -216,7 +234,14 @@ def run(
     config = _load_config(backend=backend, max_turns=max_turns, base_url=base_url, model=model)
     if max_turns is None and selected_effort is not Effort.STANDARD and config.max_turns == 40:
         config = replace(config, max_turns=selected_effort.default_max_turns)
-    _run_single(plan, run_id, cwd, config, desktop_notifications=desktop_notifications)
+    _run_single(
+        plan,
+        run_id,
+        cwd,
+        config,
+        desktop_notifications=desktop_notifications,
+        capabilities=capabilities,
+    )
 
 
 def _load_config(**overrides: object) -> QwenConfig:
@@ -336,8 +361,11 @@ def _run_single(
     config: QwenConfig,
     *,
     desktop_notifications: bool,
+    capabilities: Path | None = None,
 ) -> None:
     actual_id = run_id or str(uuid.uuid4())
+    # Read before any model server is chosen, started or asked anything (R3).
+    loaded = None if capabilities is None else _load_capabilities(capabilities, cwd)
     server, profile = _server_for(config)
     try:
         _choose_tool_protocol(server, config.tool_protocol)
@@ -358,6 +386,7 @@ def _run_single(
                 max_tool_result_chars=config.max_tool_result_chars,
                 dispatcher=_dispatcher_for(config),
                 mcp_limits=config.mcp,
+                capabilities=loaded,
             )
         )
     except asyncio.CancelledError as exc:
@@ -369,6 +398,20 @@ def _run_single(
         raise typer.Exit(code=EXIT_CODE_WIND_DOWN)
     if state.status is not RunStatus.COMPLETED:
         raise typer.Exit(code=1)
+
+
+def _load_capabilities(path: Path, cwd: Path) -> LoadedCapabilitiesInterface:
+    """The run's capability snapshot, or exit 78 naming only the document's path (R3). Each
+    notice -- an input folder this loop's tools cannot reach -- is said on stderr. Module-level
+    for the reason every helper here is: the typer commands share it."""
+    try:
+        loaded = CapabilityLoader().load(path, cwd=cwd.resolve())
+    except CapabilityRefused as exc:
+        typer.echo(f"{_identity.name} cannot start: {exc}", err=True)
+        raise typer.Exit(code=EXIT_CODE_CONFIG) from exc
+    for notice in loaded.notices:
+        typer.echo(f"{_identity.name}: {notice}", err=True)
+    return loaded
 
 
 async def _run_plan(
@@ -388,22 +431,38 @@ async def _run_plan(
     max_tool_result_chars: int = DEFAULT_MAX_TOOL_RESULT_CHARS,
     dispatcher: object | None = None,
     mcp_limits: McpLimits | None = None,
+    capabilities: LoadedCapabilitiesInterface | None = None,
 ) -> RunState:
     """Start (or, for an attached endpoint, check) the server if it is not healthy, then
     drive one AutonomousRunner run to a verdict.
+
+    With a capability snapshot (SP-LOOPS Phase 5, Task 8) the run reaches exactly the snapshot's
+    MCP servers (R4), reads its skills and plugin commands on demand, answers each of those within
+    `[loops] capability_answer_tokens` and the run's own result cut, carries the capability block
+    in its system prompt, and records `capabilities.applied` first in its events. Without one it
+    discovers the operator's own servers, as it always has.
 
     Every MCP server the run starts is closed when it ends, however it ends: completed, failed,
     wound down, raised, or stopped (SP-LOOPS Phase 5, R5). SIGTERM, which is how vibey stops a
     session, cancels this task so the `finally` runs; the handler is removed and the previous
     disposition restored when the run is over."""
-    gateway = McpGateway.discover(
-        cwd,
-        home=Path.home(),
-        environ=os.environ,
-        base_env=ShellEnvironment().build(),
-        limits=mcp_limits or McpLimits(),
-        client=(_identity.name, __version__),
-    )
+    limits = mcp_limits or McpLimits()
+    client = (_identity.name, __version__)
+    if capabilities is None:
+        gateway = McpGateway.discover(
+            cwd,
+            home=Path.home(),
+            environ=os.environ,
+            base_env=ShellEnvironment().build(),
+            limits=limits,
+            client=client,
+        )
+        answer_tokens = DEFAULT_CAPABILITY_ANSWER_TOKENS
+    else:
+        gateway = McpGateway.from_document(
+            capabilities.document, cwd=cwd, environ=os.environ, limits=limits, client=client
+        )
+        answer_tokens = capabilities.document.capability_answer_tokens
     loop = asyncio.get_running_loop()
     previous = signal.getsignal(signal.SIGTERM)
     # `asyncio.run` runs this coroutine as a task, so there is always a current one.
@@ -414,10 +473,17 @@ async def _run_plan(
         if info is None or not await server.health(info):
             info = await server.start(profile)
             info = await _wait_until_ready(server, info, timeout_seconds=startup_timeout_seconds)
+        tools = SandboxTools(
+            cwd,
+            limits=tool_limits,
+            mcp=gateway,
+            shelf=None if capabilities is None else capabilities.shelf,
+            answer_chars=SandboxTools.answer_budget(answer_tokens, max_tool_result_chars),
+        )
         runner = AutonomousRunner(
             server,
             FileRunStore(cwd),
-            SandboxTools(cwd, limits=tool_limits, mcp=gateway),
+            tools,
             DesktopNotifier(enabled=desktop_notifications),
             clock=SystemClock(),
             dispatcher=dispatcher,  # type: ignore[arg-type]
@@ -434,6 +500,8 @@ async def _run_plan(
             max_recorded_argument_chars=max_recorded_argument_chars,
             empty_reply_reasoning_excerpt_chars=empty_reply_reasoning_excerpt_chars,
             max_tool_result_chars=max_tool_result_chars,
+            capabilities="" if capabilities is None else capabilities.prompt,
+            opening_events=() if capabilities is None else (capabilities.event(),),
         )
     finally:
         loop.remove_signal_handler(signal.SIGTERM)

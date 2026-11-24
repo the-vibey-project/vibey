@@ -9,7 +9,8 @@ Modes: `ok`; `exit` (ends at once); `hang` (reads two lines, never answers); `ch
 before every answer); `paged` (60 tools over three `nextCursor` pages); `slow-schema` (also
 lists `huge`, whose input schema is far larger than any answer budget: the tool a model has to
 call from its description). The `env-names` tool answers the names of its environment, never
-the values, and `long` answers `chars` characters of text (each `fill`, when given).
+the values, `argv` answers the command line the server was started with, and `long` answers
+`chars` characters of text (each `fill`, when given).
 """
 
 import json
@@ -104,6 +105,8 @@ for raw in sys.stdin:
             )
         elif name == "env-names":
             text_result(request_id, " ".join(sorted(os.environ)))
+        elif name == "argv":
+            text_result(request_id, " ".join(sys.argv))
         else:
             content = [{"type": "text", "text": f"echo {arguments}"}, {"type": "image"}, 3]
             send({"jsonrpc": "2.0", "id": request_id, "result": {"content": content}})

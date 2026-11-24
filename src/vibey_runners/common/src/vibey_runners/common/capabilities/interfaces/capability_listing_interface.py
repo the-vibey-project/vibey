@@ -15,12 +15,20 @@ from vibey_runners.common.capabilities.shelf_entry import ShelfEntry
 @runtime_checkable
 class CapabilityListingInterface(Protocol):
     def render(
-        self, entries: Sequence[ShelfEntry], servers: Sequence[McpServerSpec], budget_tokens: int
+        self,
+        entries: Sequence[ShelfEntry],
+        servers: Sequence[McpServerSpec],
+        budget_tokens: int,
+        *,
+        reserve_tokens: int = 0,
     ) -> ListingText:
-        """The listing of `entries` and `servers` in the first form whose estimated tokens are
-        at most `budget_tokens`: `full` (skills with descriptions, commands and servers by
-        name), `names` (no descriptions, and a line saying why), or `count` (one line, saying
-        why). Skills and commands are headed as instructions, servers as data. An empty shelf
-        with no servers is `""`. `tokens <= budget_tokens` always holds. Raises `ValueError`
-        for a budget below `[loops] capability_prompt_tokens`'s floor."""
+        """The listing of `entries` and `servers` in the first form whose estimated tokens, with
+        `reserve_tokens` kept free for what follows the listing, are at most `budget_tokens`:
+        `full` (skills with descriptions, commands and servers by name), `names` (no
+        descriptions, and a line saying why), or `count` (one line, saying why). Skills and
+        commands are headed as instructions, servers as data. An empty shelf with no servers is
+        `""`, whatever the reserve. Otherwise `tokens + reserve_tokens <= budget_tokens` always
+        holds. Raises `ValueError` for a budget below `[loops] capability_prompt_tokens`'s floor
+        (the floor applies to the whole budget, not to what the reserve leaves), for a negative
+        reserve, and when not even the count can keep the reserve."""
         ...

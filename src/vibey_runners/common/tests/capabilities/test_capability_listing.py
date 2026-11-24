@@ -228,3 +228,61 @@ def test_the_listing_never_exceeds_its_budget(
     if listing.form == "count":
         assert "\n" not in listing.text
         assert "to fit this loop's context" in listing.text
+
+
+# --- room kept for what follows the listing (SP-LOOPS Phase 5, Task 8) ---------------------------
+
+
+def test_a_reserve_keeps_room_after_the_listing_within_the_full_budget() -> None:
+    """The budget is the whole standing budget, floor and all; a reserve is room the listing
+    leaves for what follows it (the instruction files' named lines), so the listing degrades to
+    keep it rather than the two together overrunning the budget."""
+    listing = CapabilityListing()
+    entries = [*_many(120), _entry("plugin9:deploy", "Deploys.", "command")]
+    full = listing.render(entries, (FILES,), 100_000)
+    assert listing.render(entries, (FILES,), full.tokens, reserve_tokens=0) == full
+    names = listing.render(entries, (FILES,), full.tokens, reserve_tokens=1)
+    assert names.form == "names"
+    assert names.tokens + 1 <= full.tokens
+    count = listing.render(entries, (FILES,), names.tokens, reserve_tokens=1)
+    assert count.form == "count"
+    floor = CAPABILITY_PROMPT_TOKENS_FLOOR
+    kept = listing.render(entries, (FILES,), floor, reserve_tokens=floor - count.tokens)
+    assert kept == count
+
+
+def test_a_reserve_the_count_cannot_leave_is_refused_never_overrun() -> None:
+    listing = CapabilityListing()
+    entries = [_entry("alpha:lint")]
+    count = listing.render(entries, (), CAPABILITY_PROMPT_TOKENS_FLOOR).tokens
+    assert count + 500 > CAPABILITY_PROMPT_TOKENS_FLOOR
+    with pytest.raises(ValueError, match="cannot hold even the one-line count and keep 500"):
+        listing.render(entries, (), CAPABILITY_PROMPT_TOKENS_FLOOR, reserve_tokens=500)
+
+
+def test_an_empty_listing_keeps_any_reserve() -> None:
+    assert CapabilityListing().render(
+        [], (), CAPABILITY_PROMPT_TOKENS_FLOOR, reserve_tokens=10_000
+    ) == ListingText("", "full", 0)
+
+
+def test_a_negative_reserve_is_refused() -> None:
+    with pytest.raises(ValueError, match="reserve must be at least 0 tokens, not -1"):
+        CapabilityListing().render([], (), CAPABILITY_PROMPT_TOKENS_FLOOR, reserve_tokens=-1)
+
+
+@settings(max_examples=200, deadline=None)
+@given(
+    entries=_ENTRIES,
+    servers=_SERVERS,
+    budget=st.integers(CAPABILITY_PROMPT_TOKENS_FLOOR, 8192),
+    reserve=st.integers(0, 400),
+)
+def test_the_listing_and_its_reserve_never_exceed_the_budget(
+    entries: list[ShelfEntry], servers: list[McpServerSpec], budget: int, reserve: int
+) -> None:
+    # The count line is at most about 70 tokens here, so even the largest reserve leaves it room.
+    listing = CapabilityListing().render(entries, servers, budget, reserve_tokens=reserve)
+    assert listing.tokens == TOKEN_ESTIMATE.tokens(listing.text)
+    if listing.text:
+        assert listing.tokens + reserve <= budget

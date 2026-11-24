@@ -14,7 +14,9 @@ forms in turn, keeping the first that fits:
 Skills and commands sit under a heading that calls them instructions; MCP servers under one that
 calls their output data, never instructions (Decisions 3 and 9). A server's command line and URL
 are never listed: the name and trust are what the model needs to call `mcp_list`. Nothing is cut:
-a form either fits whole or is not used. Instruction files take what the listing leaves.
+a form either fits whole or is not used. Instruction files take what the listing leaves; a loop
+that must name a file it cannot inline passes `reserve_tokens`, the room the listing keeps free
+for those lines within the same budget (Phase 5, Task 8), so the two together never overrun it.
 Declared by `interfaces/capability_listing_interface.py::CapabilityListingInterface`.
 """
 
@@ -54,13 +56,20 @@ class CapabilityListing:
         self._estimate = estimate
 
     def render(
-        self, entries: Sequence[ShelfEntry], servers: Sequence[McpServerSpec], budget_tokens: int
+        self,
+        entries: Sequence[ShelfEntry],
+        servers: Sequence[McpServerSpec],
+        budget_tokens: int,
+        *,
+        reserve_tokens: int = 0,
     ) -> ListingText:
         if budget_tokens < CAPABILITY_PROMPT_TOKENS_FLOOR:
             raise ValueError(
                 f"a listing budget must be at least {CAPABILITY_PROMPT_TOKENS_FLOOR} tokens, "
                 f"not {budget_tokens}"
             )
+        if reserve_tokens < 0:
+            raise ValueError(f"a listing's reserve must be at least 0 tokens, not {reserve_tokens}")
         if not entries and not servers:
             return ListingText("", "full", 0)
         forms: tuple[tuple[ListingForm, str], ...] = (
@@ -70,10 +79,11 @@ class CapabilityListing:
         )
         for form, text in forms:
             tokens = self._estimate.tokens(text)
-            if tokens <= budget_tokens:
+            if tokens + reserve_tokens <= budget_tokens:
                 return ListingText(text, form, tokens)
+        kept = f" and keep {reserve_tokens} for what follows it" if reserve_tokens else ""
         raise ValueError(
-            f"a listing budget of {budget_tokens} tokens cannot hold even the one-line count"
+            f"a listing budget of {budget_tokens} tokens cannot hold even the one-line count{kept}"
         )
 
     @staticmethod
