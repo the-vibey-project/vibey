@@ -206,10 +206,22 @@ async def test_web_fetch_class_refuses_a_blank_url_on_its_own(tmp_path: Path) ->
 
 
 @pytest.mark.asyncio
-async def test_the_class_says_unavailable_for_a_session_with_no_web(tmp_path: Path) -> None:
-    searcher = WebSearch(tmp_path, {}, state="none")
+@pytest.mark.parametrize("state", ["none", " none:no-hub ", "none:no-run-folder", "none:"])
+async def test_the_class_says_unavailable_for_a_session_with_no_web(
+    tmp_path: Path, state: str
+) -> None:
+    """`none`, or `none:<reason>` since the worker names why (SP-LOOPS Phase 6, Task 6)."""
+    searcher = WebSearch(tmp_path, {}, state=state)
 
     assert "unavailable in this session" in str((await searcher.search("q"))["error"])
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("state", ["", "nonesuch", "hub"])
+async def test_a_state_that_is_not_none_says_not_set_up(tmp_path: Path, state: str) -> None:
+    searcher = WebSearch(tmp_path, {}, state=state)
+
+    assert "not set up" in str((await searcher.search("q"))["error"])
 
 
 # -- local-first search: the tool follows vibey's policy, through `vibey search` ---------------

@@ -160,6 +160,9 @@ class _UnreadableStore:
     def write(self, document: SnapshotDocumentInterface, folder: Path) -> Path:
         raise AssertionError("never written here")
 
+    def rewrite(self, document: SnapshotDocumentInterface, folder: Path) -> Path:
+        raise AssertionError("never rewritten here")
+
     def read(self, path: Path) -> SnapshotDocumentInterface:
         raise OSError(f"cannot read {SENTINEL}")
 

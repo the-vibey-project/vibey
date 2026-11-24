@@ -22,6 +22,14 @@ import os
 from collections.abc import Mapping
 from pathlib import Path
 
+from vibey_runners.common.capabilities.web_grant_names import (
+    HUB_URL_NAME,
+    NO_WEB,
+    REASON_SEPARATOR,
+    STATE_NAME,
+    TOKEN_FILE_NAME,
+)
+
 from qwenloop.domain.config import ToolLimits
 from qwenloop.infrastructure.interfaces.tools_interface import ShellEnvironmentInterface
 from qwenloop.infrastructure.vibey_command import VIBEY_COMMAND
@@ -30,9 +38,8 @@ _QUERY_KEYS = ("query", "pattern", "text", "q", "term", "keyword", "search")
 _LIMIT_KEYS = ("max_results", "limit", "topn", "max_matches")
 _URL_KEYS = ("url", "uri", "link", "href", "page")
 _WEB_TIMEOUT_SECONDS = 90
-_WEB_NAMES = ("VIBEY_HUB_URL", "VIBEY_WEB_TOKEN_FILE")
+_WEB_NAMES = (HUB_URL_NAME, TOKEN_FILE_NAME)
 """The hub's address and the session's token file's path: both, or the session cannot search."""
-_STATE_NAME = "VIBEY_WEB_STATE"
 _WEB_NOT_CONFIGURED = (
     "web search is not set up for this session: only a session a vibey worker started while a "
     "hub was running can search (through the hub). Use the repository and what you already know "
@@ -79,7 +86,9 @@ class WebSearch:
     @property
     def unconfigured(self) -> str:
         """Why the session cannot search: the worker said it has no web, or it was never told."""
-        return _WEB_UNAVAILABLE if self.state.strip() == "none" else _WEB_NOT_CONFIGURED
+        # `none`, or `none:<reason>` since the worker names why (SP-LOOPS Phase 6, Task 6).
+        state = self.state.strip().partition(REASON_SEPARATOR)[0]
+        return _WEB_UNAVAILABLE if state == NO_WEB else _WEB_NOT_CONFIGURED
 
     async def search(self, query: str, limit: int = 5) -> dict[str, object]:
         """Perform a web search query."""
@@ -224,7 +233,7 @@ class WebSearchTool:
             self.worktree,
             environment,
             command=self._vibey or VIBEY_COMMAND.resolve(),
-            state=source.get(_STATE_NAME, ""),
+            state=source.get(STATE_NAME, ""),
             timeout_seconds=self.timeout_seconds,
             max_read_chars=self.limits.max_read_chars,
         )
