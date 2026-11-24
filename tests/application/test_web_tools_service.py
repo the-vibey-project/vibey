@@ -423,8 +423,10 @@ def _session(principal: HubPrincipal, expires_at: float = WALL + 3_600) -> Sessi
 
 
 async def test_a_revoked_sessions_counters_are_forgotten_when_another_session_spends() -> None:
-    registry = Registry(_session(SESSION_A), _session(SESSION_B))
-    service = _service(settings=WebToolSettings(session_searches=1), registry=registry)
+    registry, search = Registry(_session(SESSION_A), _session(SESSION_B)), Search()
+    service = _service(
+        search=search, settings=WebToolSettings(session_searches=1), registry=registry
+    )
     await service.search(SESSION_A, "a")
     registry.principals = [_session(SESSION_B)]  # A's worker revoked it
 
@@ -432,16 +434,22 @@ async def test_a_revoked_sessions_counters_are_forgotten_when_another_session_sp
 
     await service.search(SESSION_A, "a")  # A's count went with it
 
+    assert [q for q, _ in search.asked] == ["a", "b", "a"]
+
 
 async def test_an_expired_sessions_counters_are_forgotten_though_its_entry_remains() -> None:
-    registry = Registry(_session(SESSION_A), _session(SESSION_B))
-    service = _service(settings=WebToolSettings(session_searches=1), registry=registry)
+    registry, search = Registry(_session(SESSION_A), _session(SESSION_B)), Search()
+    service = _service(
+        search=search, settings=WebToolSettings(session_searches=1), registry=registry
+    )
     await service.search(SESSION_A, "a")
     registry.principals = [_session(SESSION_A, expires_at=WALL), _session(SESSION_B)]
 
     await service.search(SESSION_B, "b")
 
     await service.search(SESSION_A, "a")
+
+    assert [q for q, _ in search.asked] == ["a", "b", "a"]
 
 
 async def test_a_live_sessions_counters_are_never_forgotten() -> None:
