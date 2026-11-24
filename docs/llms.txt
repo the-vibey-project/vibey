@@ -188,6 +188,7 @@ This index is generated from the documentation's navigation by `scripts/llms_txt
 - [0103 — The loop capability bundle: declared by the person, locked by content, fetched only on their word](https://the-vibey-project.github.io/vibey/main/architecture/decisions/0103-the-loop-capability-bundle/)
 - [0104 — Run inputs: hash-addressed in the person's state, given to every BUILD run the same way](https://the-vibey-project.github.io/vibey/main/architecture/decisions/0104-run-inputs-hash-addressed/)
 - [0105 — Where run inputs are stored: your state folder by default, or a SeaweedFS bucket you name](https://the-vibey-project.github.io/vibey/main/architecture/decisions/0105-run-input-store-backends/)
+- [0106 — Engine sessions search through the hub, each as a principal that holds only web](https://the-vibey-project.github.io/vibey/main/architecture/decisions/0106-engine-sessions-search-through-the-hub-as-a-web-only-principal/)
 
 ## Governance
 
