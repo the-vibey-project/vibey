@@ -433,6 +433,37 @@ of making a second one. If the repository's home is ever gone, the
 Run the same install command again. It reinstalls the newest published vibey in place. With
 `--full`, every setup step is repeated, and each one leaves finished work as it is.
 
+vibey stays below 1.0 for now (`[version] max_major = 0` in `.vibey-gh.toml`), so a breaking
+change takes a minor version, not a major one. Before an upgrade:
+
+1. **The numbers restarted.** On 2026-11-13 the version was reset from the old 4.x line (4.6.0
+   was the last) to 0.3.0, and 0.4.0 followed. 0.3.0 and 0.4.0 are newer than 4.6.0, so a tool
+   that compares version numbers may not offer them as an upgrade. Run the install command
+   again instead: it reinstalls from the newest release.
+2. **`vibey -v` changed meaning.** It now prints the versions (`vibey-engine <version>`, then
+   `krypton-app <version>` or `krypton-app not installed`). Verbose output moved to `-d`
+   (`-dd`, `-ddd`) or `--verbose`, so anything that ran `vibey -v`, `-vv` or `-vvv` for logging
+   must change.
+3. **Migrate the database.** A two-role install does not migrate itself: run
+   `VIBEY_PG_MIGRATE_URL=<owner DSN> vibey migrate` after upgrading (`vibey install --database`
+   does the same on a local PostgreSQL). Only a single-DSN install migrates when it starts, and
+   that install fails `vibey doctor`'s `ledger-guard` check.
+4. **Re-run `vibey doctor --conformance --record`** afterwards: engine contracts and
+   conformance checks can gain new checks between releases.
+5. **Read the changes.** [CHANGELOG.md](https://github.com/the-vibey-project/vibey/blob/develop/CHANGELOG.md)
+   and the `changelog.d/` notes not yet folded into it, for the versions between yours and the
+   target.
+
+Where releases come from: every push to `develop` publishes a uniquely versioned dev build
+(`X.Y.Z.devN`) to TestPyPI, and every push to `main` publishes to PyPI. Two packages publish,
+each by its own workflow
+([ADR-0069](../architecture/decisions/0069-two-packages-vibey-engine-and-krypton-app.md)):
+`vibey-engine`, the engine family (`vibey-engine.yml`), and `krypton-app`, the apps and the
+`krypton` command (`krypton-app.yml`). After a successful `main` release, `github-release.yml`
+tags that exact commit (`vibey-v<version>`) and creates the matching GitHub Release. The in-tree
+`vibey-gh` owns versioning and release
+([ADR-0028](../architecture/decisions/0028-vibey-gh-owns-release-and-provenance.md)).
+
 ### Remove the krypton interfaces
 
 ```bash
@@ -468,6 +499,8 @@ It is your machine: you can still remove anything with your own tools, such as
 |---|---|---|
 | `install: unknown option --full (try --help)` | The script on `main` is older than #1978. | Use [the manual path](#without-full-the-manual-path) until the next release. |
 | `vibey: command not found` after the installer | `uv`'s tool folder is not on your `PATH` (common when `uv` was already installed elsewhere, or the terminal predates it). | `uv tool update-shell`, then open a new terminal. Or add `export PATH="$(uv tool dir --bin):$PATH"` to your profile. |
+| `vibey doctor` reports an engine `NOT INSTALLED` | The `*loop` commands ship in `vibey-engine`, so this is a `PATH` problem, not a missing package: `vibey` runs from one environment while `PATH` points at another (a venv whose `bin/` is not exported, a shadowing `uv tool` shim, a system `python` install). | In the environment that runs `vibey`, `python -c 'import shutil; print(shutil.which("claudeloop"))'`. If it prints nothing, put that environment's `bin/` on `PATH`, or `uv tool install --reinstall 'vibey-engine[hub]'`, then run `vibey doctor` again. |
+| `vibey doctor` fails `ledger-guard` | One connection string for everything: the application role could rewrite the ledger. | Split the roles ([database roles](../reference/configuration.md#database-roles)). |
 | `install: the postgres step failed ...` (or any step) | That step's command failed; the message above it says why. | Fix that, then run the command it names, or the whole installer again. |
 | `install: the ... step needs sudo ..., and there is no terminal to ask on` | The script was run where it cannot ask for your password. | Run it from a terminal, or skip that step with its `VIBEY_FULL_*=0` switch and do it by hand. |
 | `install: the ollama step uses Homebrew on macOS, and brew is not here` | No Homebrew on this Mac. | Install the Ollama app from https://ollama.com/download, open it once, and run the installer again. |

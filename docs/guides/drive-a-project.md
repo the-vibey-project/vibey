@@ -240,6 +240,10 @@ is on your disk. A project already abandoned is left as it is; a finished projec
 | `vibey new` exits 75 | The Sabbath: from sundown Friday to sundown Saturday, vibey starts no new work by default. | Wait, or add `--ignore-sabbath` to that one command ([The Sabbath](sabbath.md)). |
 | The project sits in one phase | No worker is running, the model is not pulled, or a gate is waiting. | `vibey gates`; `vibey retry PROJECT_ID --keep-workers --start-worker`; `vibey doctor`. |
 | `vibey answer` exits 3 | The gate was already answered; the first answer stands. | `vibey gates` shows what is still open. |
+| `vibey worker` logs `no recorded conformance for ...` | `vibey doctor --conformance --record` has never passed for that engine on this project, and BUILD never selects an unrecorded engine. | Run it for that engine before starting the worker. |
+| Jobs sit `leased` after a worker crash | The lease has not expired yet, or nothing has reclaimed it. | `vibey recover --project PROJECT_ID` (or `--all`) sets them back to `ready`; `vibey retry PROJECT_ID` also stops old workers and starts a new one. |
+| A budget cap trips mid-cycle | The project's `max_cycle_dollars` or `max_cycle_turns` cap was reached, by design, and a `budget_exhausted` gate is parked. | `vibey answer GATE_ID --raw '{"max_dollars": 25}'` (or `{"max_turns": N}`) grants more; or leave it parked. |
+| An error with a code such as `E0040` | A domain rule blocked the command. | `vibey explain E0040` prints the cause and what to do ([error codes](../reference/errors.md)). |
 
 ## Where next
 
