@@ -282,9 +282,9 @@ def _check_flags_against_a_web_off_snapshot(params: dict[str, object], *, local:
     false`, the default (claudeloop bootstrap.py runs it before any run folder exists)."""
     from claudeloop.domain.capabilities import CLAUDE_BUILTIN_WEB_TOOLS, AppliedCapabilities
     from claudeloop.domain.mcp_config import McpConfigTranslator
-    from claudeloop.infrastructure.capabilities.instruction_files import InstructionFileReader
     from claudeloop.infrastructure.capabilities.snapshot_applier import CapabilitySnapshotApplier
     from claudeloop.infrastructure.logging import StructlogAppLogger
+    from vibey_runners.common.capabilities.instruction_files import InstructionFileReader
     from vibey_runners.common.capabilities.snapshot_document_store import SnapshotDocumentStore
 
     web_off = AppliedCapabilities(

@@ -119,24 +119,29 @@ forbidden_modules = [
 ]
 
 # The loop capability layer (SP-LOOPS): its seams may name the records their signatures
-# carry (the `*_spec`, entry and catalog modules), never the classes that implement them.
+# carry (the `*_spec`, entry, catalog, `shelf_*` and `listing_text` modules), never the classes
+# that implement them.
 [[tool.importlinter.contracts]]
 name = "Capability interfaces declare seams, never consume them"
 type = "forbidden"
 source_modules = ["vibey_runners.common.capabilities.interfaces"]
 forbidden_modules = [
     "vibey_runners.common.capabilities.bundle",
+    "vibey_runners.common.capabilities.capability_listing",
     "vibey_runners.common.capabilities.file_reader",
     "vibey_runners.common.capabilities.frontmatter",
     "vibey_runners.common.capabilities.git_folder_guard",
+    "vibey_runners.common.capabilities.instruction_files",
     "vibey_runners.common.capabilities.lock",
     "vibey_runners.common.capabilities.manifest",
     "vibey_runners.common.capabilities.path_probe",
+    "vibey_runners.common.capabilities.plugin_command_index",
     "vibey_runners.common.capabilities.resolver",
     "vibey_runners.common.capabilities.safe_text",
     "vibey_runners.common.capabilities.scrubbed_exec",
     "vibey_runners.common.capabilities.scrubbed_launch",
     "vibey_runners.common.capabilities.skill_index",
+    "vibey_runners.common.capabilities.skill_shelf",
     "vibey_runners.common.capabilities.snapshot_copier",
     "vibey_runners.common.capabilities.snapshot_document",
     "vibey_runners.common.capabilities.snapshot_document_store",

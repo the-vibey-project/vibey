@@ -11,6 +11,7 @@ from pathlib import Path
 from typing import Any
 
 import pytest
+from vibey_runners.common.capabilities.instruction_files import InstructionFileReader
 from vibey_runners.common.capabilities.interfaces.snapshot_document_interface import (
     SnapshotDocumentInterface,
 )
@@ -20,7 +21,6 @@ from vibey_runners.common.capabilities.snapshot_document_store import SnapshotDo
 from claudeloop.domain.capabilities import CLAUDE_BUILTIN_WEB_TOOLS, AppliedCapabilities
 from claudeloop.domain.errors import CapabilityFlagConflict, CapabilitySnapshotRefused
 from claudeloop.domain.mcp_config import McpConfigTranslator
-from claudeloop.infrastructure.capabilities.instruction_files import InstructionFileReader
 from claudeloop.infrastructure.capabilities.snapshot_applier import CapabilitySnapshotApplier
 from claudeloop.infrastructure.interfaces import CapabilitySnapshotApplierInterface
 from tests.capability_documents import DIGEST, CapabilityDocumentWriter

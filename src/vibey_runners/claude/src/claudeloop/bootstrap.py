@@ -16,6 +16,7 @@ from pathlib import Path
 from typing import Any
 
 import click
+from vibey_runners.common.capabilities.instruction_files import InstructionFileReader
 from vibey_runners.common.capabilities.scrubbed_exec import LAUNCHER_ARGS
 from vibey_runners.common.capabilities.snapshot_document_store import SnapshotDocumentStore
 
@@ -36,7 +37,6 @@ from claudeloop.infrastructure.agent.gateway import ClaudeAgentGateway, ClaudeCa
 from claudeloop.infrastructure.agent.scripted import resolve_test_agent_from_env
 from claudeloop.infrastructure.audit import JsonlAuditLog
 from claudeloop.infrastructure.backend import BackendEnvironmentResolver, RunBackendHistory
-from claudeloop.infrastructure.capabilities.instruction_files import InstructionFileReader
 from claudeloop.infrastructure.capabilities.snapshot_applier import CapabilitySnapshotApplier
 from claudeloop.infrastructure.chatter_log import summarize_tool
 from claudeloop.infrastructure.clock import AnyioSleeper, SystemClock

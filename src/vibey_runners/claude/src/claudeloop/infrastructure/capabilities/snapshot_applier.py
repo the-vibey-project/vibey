@@ -32,6 +32,9 @@ from collections.abc import Iterable, Mapping
 from pathlib import Path
 from typing import Final
 
+from vibey_runners.common.capabilities.interfaces.instruction_file_reader_interface import (
+    InstructionFileReaderInterface,
+)
 from vibey_runners.common.capabilities.interfaces.snapshot_document_store_interface import (
     SnapshotDocumentStoreInterface,
 )
@@ -42,7 +45,6 @@ from claudeloop.application.ports import Logger
 from claudeloop.domain.capabilities import CLAUDE_BUILTIN_WEB_TOOLS, AppliedCapabilities
 from claudeloop.domain.errors import CapabilityFlagConflict, CapabilitySnapshotRefused
 from claudeloop.domain.interfaces import AppliedCapabilitiesInterface, McpConfigTranslatorInterface
-from claudeloop.infrastructure.interfaces import InstructionFileReaderInterface
 
 LOCAL_BACKEND_WEB_NOTICE: Final = (
     "[loops] builtin_web = true is not applied on a local backend: a local backend cannot "
