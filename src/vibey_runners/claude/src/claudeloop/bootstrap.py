@@ -14,11 +14,13 @@ from pathlib import Path
 from typing import Any
 
 import click
+from vibey_runners.common.capabilities.snapshot_document_store import SnapshotDocumentStore
 
 from claudeloop.application.interfaces import DoctorEnvironment
 from claudeloop.application.ports import AgentGateway, CapacityProbe, StreamUi
 from claudeloop.application.runner import AutonomousRunner
 from claudeloop.domain.budget import Budget
+from claudeloop.domain.capabilities import AppliedCapabilities
 from claudeloop.domain.control import SlashCommand
 from claudeloop.domain.errors import BackendProfileError
 from claudeloop.domain.permission import parse_user_permission_mode
@@ -30,6 +32,7 @@ from claudeloop.infrastructure.agent.gateway import ClaudeAgentGateway, ClaudeCa
 from claudeloop.infrastructure.agent.scripted import resolve_test_agent_from_env
 from claudeloop.infrastructure.audit import JsonlAuditLog
 from claudeloop.infrastructure.backend import BackendEnvironmentResolver, RunBackendHistory
+from claudeloop.infrastructure.capabilities.snapshot_applier import CapabilitySnapshotApplier
 from claudeloop.infrastructure.chatter_log import summarize_tool
 from claudeloop.infrastructure.clock import AnyioSleeper, SystemClock
 from claudeloop.infrastructure.config import RunnerConfig
@@ -62,6 +65,8 @@ class RunnerContext:
     run_dir: RunDirectory
     run_id: str
     trace_id: str
+    # The run's capability snapshot, when one was named with --capabilities.
+    applied: AppliedCapabilities | None = None
 
 
 def build_runner(
@@ -86,12 +91,24 @@ def build_runner(
     run_id: str | None = None,
     append_system_prompt: str | None = None,
     wind_down_at: datetime | None = None,
+    capabilities: Path | None = None,
 ) -> RunnerContext:
     # Resolve the backend before anything touches disk: a profile whose
     # auth_token_env is unset must fail as a usage error, not leave a run behind.
     resolver = build_backend_resolver()
     backend_runtime = resolver.runtime(config.backend)
     backend_identity = resolver.identity(config.backend)
+    # The run's capability snapshot, read (and checked against the flags) before anything
+    # touches disk too: a refused document or a clashing flag leaves no run behind (R9, R12).
+    applied: AppliedCapabilities | None = None
+    if capabilities is not None:
+        applier = CapabilitySnapshotApplier(
+            SnapshotDocumentStore(), local_backend=config.backend.is_local
+        )
+        applied = applier.load(capabilities)
+        applier.check_flags(
+            applied, connectors=list(connectors or {}), web_search=config.web_search
+        )
     run_dir = RunDirectory.create(runs_root_for(cwd), cwd=cwd, plan_path=plan_path, run_id=run_id)
     run_dir.update_meta(backend=str(backend_identity), profile=config.backend.name)
     run_id = run_dir.read_meta().run_id
@@ -198,6 +215,7 @@ def build_runner(
             allowed_tools=list(gw_payload.get("allowed_tools") or []) or None,
             tool_approval_timeout=config.tool_approval_timeout_seconds,
             backend=backend_runtime,
+            applied=applied,
         )
         probe = ClaudeCapacityProbe(
             cwd=str(cwd),
@@ -318,6 +336,7 @@ def build_runner(
         run_dir=run_dir,
         run_id=run_id,
         trace_id=trace_id,
+        applied=applied,
     )
 
 

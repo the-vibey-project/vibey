@@ -3,11 +3,19 @@ from __future__ import annotations
 
 from pathlib import Path
 
+import pytest
+from claude_agent_sdk import ClaudeAgentOptions
+from claude_agent_sdk._internal.transport.subprocess_cli import SubprocessCLITransport
+
+from claudeloop.domain.capabilities import CLAUDE_BUILTIN_WEB_TOOLS, AppliedCapabilities
+from claudeloop.domain.errors import CapabilityFlagConflict
 from claudeloop.infrastructure.agent.autonomy import AUTONOMY_SYSTEM_PROMPT_FRAGMENT
+from claudeloop.infrastructure.agent.capability_overlay import CapabilityOptionsOverlay
 from claudeloop.infrastructure.agent.options import (
     DEFAULT_MAX_BUFFER_SIZE,
     build_turn_options,
 )
+from claudeloop.infrastructure.interfaces import CapabilityOptionsOverlayInterface
 from claudeloop.infrastructure.state_bus import FileStateBus
 
 
@@ -236,3 +244,127 @@ def test_a_lane_with_nothing_named_is_not_narrowed() -> None:
     assert not options.allowed_tools
     assert not options.disallowed_tools
     assert options.tools is None
+
+
+# -- a locked capability snapshot (SP-LOOPS Phase 4, Task 4; R4, R5, R6, R12) ---------------------
+
+_SNAPSHOT_PLUGINS = ("/runs/r1/plugins/alpha", "/runs/r1/plugins/beta")
+
+
+def _applied(**overrides: object) -> AppliedCapabilities:
+    values: dict[str, object] = {
+        "digest": "sha256:" + "0f" * 32,
+        "plugin_dirs": _SNAPSHOT_PLUGINS,
+        "skills": ("alpha:review", "beta:ship"),
+        "mcp_servers": {"docs": {"type": "http", "url": "https://example.invalid/mcp"}},
+        "disallowed_tools": CLAUDE_BUILTIN_WEB_TOOLS,
+        "add_dirs": ("/inputs/one",),
+        "system_prompt_append": "",
+        "notices": (),
+    }
+    values.update(overrides)
+    return AppliedCapabilities(**values)  # type: ignore[arg-type]
+
+
+def _command(options: ClaudeAgentOptions) -> list[str]:
+    """The child's argv, as the SDK builds it: the last point before Claude Code starts. It reaches
+    a private SDK method on purpose (pinned by uv.lock), so a rename fails here loudly."""
+    return SubprocessCLITransport(prompt="", options=options)._build_command()
+
+
+def test_the_overlay_satisfies_its_interface() -> None:
+    assert isinstance(CapabilityOptionsOverlay(), CapabilityOptionsOverlayInterface)
+
+
+def test_snapshot_options_set_empty_setting_sources_and_strict_mcp() -> None:
+    options = build_turn_options(cwd="/tmp", applied=_applied())
+    assert options.setting_sources == []
+    assert options.strict_mcp_config is True
+
+
+def test_the_cli_command_carries_empty_setting_sources_strict_mcp_and_the_disallow_list() -> None:
+    options = build_turn_options(cwd="/tmp", applied=_applied(), cli_path="/fake/claude")
+    command = _command(options)
+    assert "--setting-sources=" in command
+    assert "--strict-mcp-config" in command
+    flag = command.index("--disallowedTools")
+    assert command[flag + 1] == "WebSearch,WebFetch"
+    plugin_dirs = [command[i + 1] for i, token in enumerate(command) if token == "--plugin-dir"]
+    assert plugin_dirs == list(_SNAPSHOT_PLUGINS)
+
+
+def test_skills_are_the_catalog_qualified_names_and_an_empty_catalog_is_skills_off() -> None:
+    options = build_turn_options(cwd="/tmp", applied=_applied(), cli_path="/fake/claude")
+    assert options.skills == ["alpha:review", "beta:ship"]
+    command = _command(options)
+    allowed = command[command.index("--allowedTools") + 1]
+    assert allowed.split(",") == ["Skill(alpha:review)", "Skill(beta:ship)"]
+
+    off = build_turn_options(cwd="/tmp", applied=_applied(skills=()), cli_path="/fake/claude")
+    assert off.skills == []
+    command = _command(off)
+    assert "--allowedTools" not in command
+    assert "--setting-sources=" in command
+
+
+def test_websearch_is_never_both_allowed_and_disallowed() -> None:
+    options = build_turn_options(
+        cwd="/tmp",
+        applied=_applied(skills=()),
+        allowed_tools=["WebSearch", "Bash", "WebFetch(domain:example.invalid)"],
+        cli_path="/fake/claude",
+    )
+    assert options.allowed_tools == ["Bash"]
+    assert options.disallowed_tools == ["WebSearch", "WebFetch"]
+    command = _command(options)
+    assert command[command.index("--allowedTools") + 1] == "Bash"
+
+
+def test_the_web_tools_stay_allowed_when_the_snapshot_leaves_them_on() -> None:
+    options = build_turn_options(
+        cwd="/tmp",
+        applied=_applied(skills=(), disallowed_tools=()),
+        allowed_tools=["WebSearch"],
+    )
+    assert options.allowed_tools == ["WebSearch"]
+    assert options.disallowed_tools == []
+
+
+def test_the_sessions_own_resources_follow_the_snapshots() -> None:
+    options = build_turn_options(
+        cwd="/tmp",
+        applied=_applied(),
+        plugins=["/mine/plugin", _SNAPSHOT_PLUGINS[0]],
+        skills=["mine:skill", "alpha:review"],
+        mcp_servers={"mine": {"type": "http", "url": "https://mine.invalid"}},
+        add_dirs=["/mine/folder", "/inputs/one"],
+    )
+    assert options.plugins == [
+        {"type": "local", "path": _SNAPSHOT_PLUGINS[0]},
+        {"type": "local", "path": _SNAPSHOT_PLUGINS[1]},
+        {"type": "local", "path": "/mine/plugin"},
+    ]
+    assert options.skills == ["alpha:review", "beta:ship", "mine:skill"]
+    assert isinstance(options.mcp_servers, dict)
+    assert list(options.mcp_servers) == ["docs", "mine"]
+    assert options.add_dirs == [Path("/inputs/one"), Path("/mine/folder")]
+
+
+def test_a_session_skills_all_does_not_widen_the_snapshots_skills() -> None:
+    kwargs = CapabilityOptionsOverlay().apply({"skills": "all"}, _applied())
+    assert kwargs["skills"] == ["alpha:review", "beta:ship"]
+
+
+def test_an_mcp_name_in_both_is_refused() -> None:
+    with pytest.raises(CapabilityFlagConflict, match="'docs'"):
+        build_turn_options(
+            cwd="/tmp",
+            applied=_applied(),
+            mcp_servers={"docs": {"type": "http", "url": "https://other.invalid"}},
+        )
+
+
+def test_the_overlay_never_changes_the_kwargs_it_was_given() -> None:
+    given: dict[str, object] = {"allowed_tools": ["WebSearch"], "plugins": []}
+    CapabilityOptionsOverlay().apply(given, _applied())
+    assert given == {"allowed_tools": ["WebSearch"], "plugins": []}

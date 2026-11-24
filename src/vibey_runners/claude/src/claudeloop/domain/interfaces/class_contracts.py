@@ -67,3 +67,11 @@ class TurnSignalsInterface(Protocol):
 class BackendProfileErrorInterface(Protocol):
     @property
     def args(self) -> tuple[object, ...]: ...
+
+
+@runtime_checkable
+class CapabilitySnapshotRefusedInterface(Protocol):
+    @property
+    def reason(self) -> str:
+        """Why the run's capability document was refused: its path, never its content."""
+        ...

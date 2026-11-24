@@ -8,10 +8,15 @@ from pathlib import Path
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
+from click.testing import Result
 from typer.testing import CliRunner
 
 from claudeloop.cli.app import app
 from claudeloop.cli.commands.run import _parse_connector
+from claudeloop.domain.capabilities import CLAUDE_BUILTIN_WEB_TOOLS, AppliedCapabilities
+from claudeloop.infrastructure.agent.gateway import ClaudeAgentGateway
+from claudeloop.infrastructure.capabilities.snapshot_applier import CapabilitySnapshotApplier
+from tests.capability_documents import DIGEST, CapabilityDocumentWriter
 
 runner = CliRunner()
 _ENV = {"NO_COLOR": "1", "TERM": "dumb"}
@@ -551,3 +556,187 @@ class TestRunSuccess:
             )
             assert result.exit_code == 130
             assert "Stop summary:" in result.output
+
+
+class TestRunWithCapabilities:
+    """`--capabilities PATH`: the run's locked capability snapshot (SP-LOOPS Phase 4, Task 4;
+    R9, R12; Review Focus 5). These go through the real composition root; only the logging setup
+    and the run itself are stubbed, so no session ever starts."""
+
+    gateway: MagicMock
+
+    def _invoke(
+        self, tmp_path: Path, document: Path, *extra: str
+    ) -> tuple[Result, Path, AsyncMock, MagicMock]:
+        repo = tmp_path / "repo"
+        repo.mkdir(exist_ok=True)
+        home = tmp_path / "home"
+        home.mkdir(exist_ok=True)
+        plan = tmp_path / "plan.md"
+        plan.write_text("# Plan\nDo something\n", encoding="utf-8")
+        done = MagicMock(success=True, reason="done")
+        with (
+            patch("claudeloop.cli.commands.run.configure_logging"),
+            patch(
+                "claudeloop.cli.commands.run.run_from_plan_file",
+                new_callable=AsyncMock,
+                return_value=done,
+            ) as session,
+            patch("claudeloop.bootstrap.resolve_test_agent_from_env") as scripted,
+            patch("claudeloop.bootstrap.ClaudeAgentGateway", wraps=ClaudeAgentGateway) as gateway,
+        ):
+            self.gateway = gateway
+            # None: the real gateway is built (it connects only on a first turn, which the stubbed
+            # run never sends), so the composition root's wiring of the snapshot is exercised.
+            scripted.return_value = None
+            result = runner.invoke(
+                app,
+                [
+                    "run",
+                    str(plan),
+                    "--cwd",
+                    str(repo),
+                    "--run-id",
+                    "r1",
+                    "--capabilities",
+                    str(document),
+                    *extra,
+                ],
+                env={**_ENV, "HOME": str(home)},
+            )
+        return result, repo, session, scripted
+
+    def test_a_refused_document_exits_78_before_any_session(self, tmp_path: Path) -> None:
+        document = CapabilityDocumentWriter(tmp_path).write()
+        raw = json.loads(document.read_text(encoding="utf-8"))
+        raw["version"] = 99
+        document.write_text(json.dumps(raw), encoding="utf-8")
+        result, repo, session, scripted = self._invoke(tmp_path, document)
+        assert result.exit_code == 78
+        assert str(document) in result.output
+        session.assert_not_called()
+        scripted.assert_not_called()
+        assert not (repo / ".claudeloop" / "runs").exists()
+
+    def test_a_missing_document_exits_78(self, tmp_path: Path) -> None:
+        result, _, session, _ = self._invoke(tmp_path, tmp_path / "nowhere" / "capabilities.json")
+        assert result.exit_code == 78
+        session.assert_not_called()
+
+    def test_web_search_with_builtin_web_off_exits_2(self, tmp_path: Path) -> None:
+        document = CapabilityDocumentWriter(tmp_path).write(builtin_web=False)
+        result, repo, session, _ = self._invoke(tmp_path, document, "--web-search")
+        assert result.exit_code == 2
+        assert "--web-search" in result.output
+        session.assert_not_called()
+        assert not (repo / ".claudeloop" / "runs").exists()
+
+    def test_a_connector_named_like_a_snapshot_server_exits_2(self, tmp_path: Path) -> None:
+        document = CapabilityDocumentWriter(tmp_path).write()
+        applied = AppliedCapabilities(
+            digest=DIGEST,
+            plugin_dirs=(),
+            skills=(),
+            mcp_servers={"docs": {"type": "http", "url": "https://example.invalid/mcp"}},
+            disallowed_tools=CLAUDE_BUILTIN_WEB_TOOLS,
+            add_dirs=(),
+            system_prompt_append="",
+            notices=(),
+        )
+        with patch.object(CapabilitySnapshotApplier, "load", return_value=applied):
+            result, _, session, _ = self._invoke(
+                tmp_path, document, "--connector", "docs=https://other.invalid"
+            )
+        assert result.exit_code == 2
+        assert "'docs'" in result.output
+        session.assert_not_called()
+
+    def test_capabilities_applied_is_in_the_runs_events_with_counts_only(
+        self, tmp_path: Path
+    ) -> None:
+        writer = CapabilityDocumentWriter(tmp_path)
+        document = writer.write(folders=[tmp_path / "inputs"])
+        result, repo, session, _ = self._invoke(tmp_path, document)
+        assert result.exit_code == 0, result.output
+        session.assert_awaited_once()
+        events = next((repo / ".claudeloop" / "runs").rglob("events.jsonl"))
+        text = events.read_text(encoding="utf-8")
+        entries = [json.loads(line) for line in text.splitlines()]
+        applied = [e for e in entries if e["event_type"] == "capabilities.applied"]
+        assert len(applied) == 1
+        assert applied[0]["run_id"] == "r1"
+        assert applied[0]["payload"] == {
+            "digest": DIGEST,
+            "plugins": 2,
+            "skills": 2,
+            "mcp_servers": 0,
+            "disallowed_tools": ["WebSearch", "WebFetch"],
+            "instruction_files": [],
+            "notices": [],
+        }
+        assert str(writer.run) not in text
+        assert str(tmp_path / "inputs") not in text
+        given = self.gateway.call_args.kwargs["applied"]
+        assert given.digest == DIGEST
+        assert given.plugin_dirs == (
+            str(writer.run / "plugins" / "alpha"),
+            str(writer.run / "plugins" / "beta"),
+        )
+
+    def test_the_document_reaches_the_composition_root_and_notices_are_said(
+        self, tmp_path: Path
+    ) -> None:
+        plan = tmp_path / "plan.md"
+        plan.write_text("# Plan\nDo something\n", encoding="utf-8")
+        document = tmp_path / "capabilities.json"
+        context = MagicMock(run_id="r1", trace_id="t1")
+        context.run_dir.events_path = tmp_path / "events.jsonl"
+        context.applied = AppliedCapabilities(
+            digest=DIGEST,
+            plugin_dirs=(),
+            skills=(),
+            mcp_servers={},
+            disallowed_tools=CLAUDE_BUILTIN_WEB_TOOLS,
+            add_dirs=(),
+            system_prompt_append="",
+            notices=("builtin_web = true is not applied on a local backend",),
+        )
+        with (
+            patch("claudeloop.cli.commands.run.configure_logging"),
+            patch("claudeloop.cli.commands.run.bootstrap") as composition,
+            patch(
+                "claudeloop.cli.commands.run.run_from_plan_file",
+                new_callable=AsyncMock,
+                return_value=MagicMock(success=True, reason="done"),
+            ),
+        ):
+            composition.build_runner.return_value = context
+            result = runner.invoke(
+                app,
+                ["run", str(plan), "--capabilities", str(document)],
+                env={**_ENV, "HOME": str(tmp_path)},
+            )
+        assert result.exit_code == 0, result.output
+        assert composition.build_runner.call_args.kwargs["capabilities"] == document
+        assert "builtin_web = true is not applied on a local backend" in result.output
+        assert "capabilities.applied" in (tmp_path / "events.jsonl").read_text(encoding="utf-8")
+
+    def test_without_capabilities_nothing_is_recorded(self, tmp_path: Path) -> None:
+        plan = tmp_path / "plan.md"
+        plan.write_text("# Plan\nDo something\n", encoding="utf-8")
+        context = MagicMock(run_id="r1", trace_id="t1")
+        context.run_dir.events_path = tmp_path / "events.jsonl"
+        with (
+            patch("claudeloop.cli.commands.run.configure_logging"),
+            patch("claudeloop.cli.commands.run.bootstrap") as composition,
+            patch(
+                "claudeloop.cli.commands.run.run_from_plan_file",
+                new_callable=AsyncMock,
+                return_value=MagicMock(success=True, reason="done"),
+            ),
+        ):
+            composition.build_runner.return_value = context
+            result = runner.invoke(app, ["run", str(plan)], env={**_ENV, "HOME": str(tmp_path)})
+        assert result.exit_code == 0, result.output
+        assert composition.build_runner.call_args.kwargs["capabilities"] is None
+        assert not (tmp_path / "events.jsonl").exists()

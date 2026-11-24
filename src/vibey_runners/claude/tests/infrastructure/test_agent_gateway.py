@@ -6,10 +6,12 @@ Uses mocked ClaudeSDKClient to test gateway logic without a live SDK connection.
 
 from __future__ import annotations
 
+from pathlib import Path
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
+from claudeloop.domain.capabilities import CLAUDE_BUILTIN_WEB_TOOLS, AppliedCapabilities
 from claudeloop.infrastructure.agent.gateway import (
     ClaudeAgentGateway,
     ClaudeCapacityProbe,
@@ -219,6 +221,43 @@ class TestSetSessionResources:
         await gw.set_session_resources(allowed_tools=["Bash", "Read"])
         assert gw._allowed_tools == ["Bash", "Read"]
         mock_client.disconnect.assert_awaited_once()
+
+    @pytest.mark.asyncio
+    async def test_a_mid_run_resource_change_keeps_every_snapshot_capability(self) -> None:
+        """`claudeloop attach`, `skill` or `connector` replaces the session's own resources
+        wholesale; the snapshot is held for the session's life and applied on every connect, so
+        nothing it gave is dropped (Review Focus 1)."""
+        applied = AppliedCapabilities(
+            digest="sha256:" + "0f" * 32,
+            plugin_dirs=("/runs/r1/plugins/alpha",),
+            skills=("alpha:review",),
+            mcp_servers={"docs": {"type": "http", "url": "https://example.invalid/mcp"}},
+            disallowed_tools=CLAUDE_BUILTIN_WEB_TOOLS,
+            add_dirs=("/inputs/one",),
+            system_prompt_append="",
+            notices=(),
+        )
+        gw = _make_gateway(
+            applied=applied,
+            plugins=["/mine/plugin"],
+            skills=["mine:skill"],
+            mcp_servers={"mine": {"type": "http", "url": "https://mine.invalid"}},
+            add_dirs=["/mine/folder"],
+        )
+        mock_client = AsyncMock()
+        gw._client = mock_client
+        await gw.set_session_resources(plugins=[], skills=None, mcp_servers={}, add_dirs=[])
+        mock_client.disconnect.assert_awaited_once()
+        options = gw._options()
+        assert options.plugins == [{"type": "local", "path": "/runs/r1/plugins/alpha"}]
+        assert options.skills == ["alpha:review", "mine:skill"]
+        assert options.mcp_servers == {
+            "docs": {"type": "http", "url": "https://example.invalid/mcp"}
+        }
+        assert options.add_dirs == [Path("/inputs/one")]
+        assert options.disallowed_tools == ["WebSearch", "WebFetch"]
+        assert options.setting_sources == []
+        assert options.strict_mcp_config is True
 
 
 class TestReconnect:

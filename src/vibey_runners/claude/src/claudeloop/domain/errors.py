@@ -35,3 +35,25 @@ class BackendProfileError(AutoclaudeError, ValueError):
     A ``ValueError`` as well, so every CLI path that already turns a bad value
     into a usage error (exit 2) handles it without a new except clause.
     """
+
+
+class CapabilitySnapshotRefused(AutoclaudeError):
+    """Raised when the run's capability document (``--capabilities PATH``) is refused or
+    cannot be read. The run never starts without it: ``claudeloop run`` exits 78, and the
+    conductor's ``engine_misconfigured`` gate parks the job (SP-LOOPS Phase 4, R9).
+
+    Deliberately not a ``ValueError``: a refused snapshot is a configuration failure, not a
+    usage error, and must not fall into the exit-2 path. ``reason`` names the document's path
+    and nothing the document holds. Declared by
+    ``interfaces/class_contracts.py::CapabilitySnapshotRefusedInterface``."""
+
+    def __init__(self, reason: str) -> None:
+        super().__init__(reason)
+        self.reason = reason
+
+
+class CapabilityFlagConflict(AutoclaudeError, ValueError):
+    """Raised when one of claudeloop's own flags clashes with the run's capability snapshot:
+    a ``--connector`` named like a snapshot MCP server, or ``--web-search`` while the snapshot
+    switches the built-in web tools off (SP-LOOPS Phase 4, R12). A refusal, never a silent
+    override; a ``ValueError`` as well, so it is a usage error (exit 2)."""
