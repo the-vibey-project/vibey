@@ -1639,11 +1639,15 @@ def test_a_refused_document_exits_78_before_the_server_starts(
 
 
 def test_capabilities_are_for_one_plan_not_a_storm(tmp_path: Path) -> None:
+    # A wide terminal: Rich wraps the usage error at the runner's width, and the CI runner is
+    # narrower than a developer's, so the sentence must not depend on where a line breaks.
     result = runner.invoke(
-        app, ["run", "--storm", "--capabilities", str(tmp_path / "capabilities.json")]
+        app,
+        ["run", "--storm", "--capabilities", str(tmp_path / "capabilities.json")],
+        env={"COLUMNS": "400", "NO_COLOR": "1"},
     )
     assert result.exit_code == 2
-    assert "pass --capabilities with PLAN, not with --storm" in result.output
+    assert "pass --capabilities with PLAN, not with --storm" in " ".join(result.output.split())
 
 
 def test_capabilities_applied_is_in_the_runs_events_with_counts_only(
