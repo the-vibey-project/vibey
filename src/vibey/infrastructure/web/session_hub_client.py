@@ -19,7 +19,8 @@ backends and the Brave key, charges the session's own `[web]` cap and the agent'
    `unconfigured`, named by its path.
 3. **Built as the hub's own tools are**: `HOST_TOOL_CATALOG.build_call` makes the request from
    the `vibey_search` and `vibey_fetch` tools the MCP clients use, so a query or a URL the hub
-   would refuse is refused here (`refused`) before anything is sent.
+   would refuse is refused here (`refused`) before anything is sent. `send` takes a call built
+   that way already: `vibey mcp --scope web` builds its calls with the same catalog (Task 6).
 4. **Sent once.** A call to the open web is never repeated: a request that may have arrived
    could spend twice. A hub that does not answer is `unreachable`, said in one line.
 5. **Refusals by kind**: 401 `ended` (the session finished, was revoked or expired), 403
@@ -48,7 +49,7 @@ from vibey.application.interfaces.session_web_principals_interface import (
 from vibey.application.session_token_lookup import SessionTokenLookup
 from vibey.domain.config import ConfigError
 from vibey.domain.errors import SessionGrantRefused, VibeyError
-from vibey.domain.host_tools import HOST_TOOL_CATALOG, HostToolError
+from vibey.domain.host_tools import HOST_TOOL_CATALOG, HostToolError, HubCall
 from vibey.domain.hub_target import HUB_TARGETS
 from vibey.domain.interfaces.host_tools_interface import HostToolsInterface
 from vibey.domain.session_web_state import HUB_URL_VARIABLE
@@ -185,6 +186,9 @@ class SessionHubClient:
             call = self._tools.build_call(tool, arguments, request_id=REQUEST_ID)
         except HostToolError as exc:
             raise SessionHubError(str(exc), kind="refused") from None
+        return self.send(call, what)
+
+    def send(self, call: HubCall, what: str) -> dict[str, Any]:
         base = self._base()
         verify: ssl.SSLContext | bool = self._verify(base)
         token = self._token()

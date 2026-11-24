@@ -7,10 +7,11 @@ never consume.
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Protocol, runtime_checkable
+from typing import TYPE_CHECKING, Any, Protocol, runtime_checkable
 
 if TYPE_CHECKING:
     from vibey.application.dto import WebSearchAnswer
+    from vibey.domain.host_tools import HubCall
     from vibey.infrastructure.web.fetch import FetchedPage
 
 
@@ -26,4 +27,11 @@ class SessionHubClientInterface(Protocol):
     def fetch(self, url: str, *, max_chars: int | None = None) -> FetchedPage:
         """The page at `url` as the hub framed it; `max_chars` cuts the page's own words inside
         the frame, never the frame. Raises `SessionHubError`."""
+        ...
+
+    def send(self, call: HubCall, what: str) -> dict[str, Any]:
+        """Sends `call`, already built from the hub's own web tool catalog, once, with the
+        session's token read from its file now, and returns the hub's JSON answer. `what` names
+        the act in a refusal ("search the web"). Raises `SessionHubError`, never with the token
+        in it."""
         ...

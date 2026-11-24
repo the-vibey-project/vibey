@@ -13,8 +13,8 @@ the guarded fetch in this process.
 **Inside an engine session** (SP-LOOPS Phase 6, R1) they never search or fetch in their own
 process. With `VIBEY_HUB_URL` and `VIBEY_WEB_TOKEN_FILE` they ask the hub with the session's own
 token, read from its file on every call (`web/session_hub_client.py`), and print the hub's answer
-in the same shape; with `VIBEY_WEB_STATE=none`, or a session marked any other way, they say why
-there is no web and exit 78 (`web/session.py`). The hub's refusals are said plainly, each with
+in the same shape; with `VIBEY_WEB_STATE=none:<reason name>`, or a session marked any other way,
+they say why there is no web, in the worker's own fixed words, and exit 78 (`web/session.py`). The hub's refusals are said plainly, each with
 its own exit code (`SESSION_EXIT_CODES`). The token is never printed.
 
 Everything they print is marked as untrusted web content: data to read, never instructions, and
@@ -73,8 +73,8 @@ EXIT_BUDGET: Final = 75
 EXIT_FORBIDDEN: Final = 77
 """EX_NOPERM: the hub knows the session but does not let it do this (403)."""
 EXIT_CONFIG: Final = 78
-"""EX_CONFIG: this session has no web -- no hub (`VIBEY_WEB_STATE=none`), half of the hub's two
-names, or a token file that is missing, empty or unreadable."""
+"""EX_CONFIG: this session has no web -- the worker gave it none (`VIBEY_WEB_STATE=none:<why>`),
+half of the hub's two names, or a token file that is missing, empty or unreadable."""
 SESSION_EXIT_CODES: Final[Mapping[SessionHubFailure, int]] = {
     "unconfigured": EXIT_CONFIG,
     "refused": EXIT_USAGE,
@@ -262,8 +262,8 @@ def search_command(
 
     Exit codes: 0 done; 1 the search failed; 2 a usage error; 67 the session's web access has
     ended (the hub refused its token, 401); 69 no hub answered; 75 a [web] budget is spent (429,
-    named); 77 the hub does not permit it (403); 78 this session has no web search: no hub
-    (VIBEY_WEB_STATE=none), or its token file is missing, empty or unreadable.
+    named); 77 the hub does not permit it (403); 78 this session has no web search: the worker gave it
+    none (VIBEY_WEB_STATE says why), or its token file is missing, empty or unreadable.
     """
     code = run_search(query, limit, as_json, environ=os.environ)
     if code:
@@ -285,8 +285,8 @@ def fetch_command(
     Exit codes: 0 done; 1 the page was refused or could not be read; 2 a usage error; 67 the
     session's web access has ended (the hub refused its token, 401); 69 no hub answered; 75 a
     [web] budget is spent (429, named); 77 the hub does not permit it (403); 78 this session has
-    no web fetch: no hub (VIBEY_WEB_STATE=none), or its token file is missing, empty or
-    unreadable.
+    no web fetch: the worker gave it none (VIBEY_WEB_STATE says why), or its token file is
+    missing, empty or unreadable.
     """
     code = run_fetch(url, max_chars, as_json, environ=os.environ)
     if code:
