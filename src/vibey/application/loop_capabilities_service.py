@@ -49,6 +49,7 @@ from vibey.application.interfaces.loops_bundle_settings_interface import (
 from vibey.application.interfaces.observability import Logger
 
 DEADLINE_MARGIN: Final = timedelta(hours=1)
+SECONDS_PER_DAY: Final = 86400.0
 """How much longer than the engine run deadline a run folder is kept by the sweep (R10)."""
 LOCAL: Final = "local"
 """An MCP server's `trust` for a stdio command; every other is remote."""
@@ -114,12 +115,13 @@ class LoopCapabilitiesService:
 
     def sweep(self) -> PruneReport:
         bundle = self._settings.load(self._user_config, None).bundle
-        age = max(
-            timedelta(days=bundle.snapshot_max_age_days), self._run_deadline + DEADLINE_MARGIN
+        # Seconds as floats, not timedelta: a very large snapshot_max_age_days overflows
+        # timedelta and would crash the worker at start-up. A float cutoff just moves far back.
+        age_seconds = max(
+            bundle.snapshot_max_age_days * SECONDS_PER_DAY,
+            (self._run_deadline + DEADLINE_MARGIN).total_seconds(),
         )
-        return self._pruner.prune(
-            self._marketplaces.snapshots, older_than_seconds=age.total_seconds()
-        )
+        return self._pruner.prune(self._marketplaces.snapshots, older_than_seconds=age_seconds)
 
     def _locked(self) -> tuple[LockEntry, ...]:
         try:
