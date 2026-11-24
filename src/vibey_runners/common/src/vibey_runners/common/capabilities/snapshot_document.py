@@ -84,6 +84,9 @@ class SnapshotDocument:
     def of(
         cls, snapshot: CapabilitySnapshot, bundle: BundleSpecInterface, folders: Sequence[Path]
     ) -> Self:
+        """The document for `snapshot`. An input folder that is not absolute is refused here,
+        by the reader's own rule and error, so a document a runner would refuse is never
+        written."""
         return cls(
             version=DOCUMENT_VERSION,
             digest=snapshot.digest,
@@ -93,7 +96,10 @@ class SnapshotDocument:
             builtin_web=bundle.builtin_web,
             instruction_files=bundle.instruction_files,
             instruction_max_bytes=bundle.instruction_max_bytes,
-            folders=tuple(folders),
+            folders=tuple(
+                cls._folder(str(folder), f"folders[{index}]")
+                for index, folder in enumerate(folders)
+            ),
         )
 
     def to_json(self) -> str:

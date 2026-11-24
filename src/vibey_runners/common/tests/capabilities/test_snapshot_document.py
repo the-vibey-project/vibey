@@ -201,6 +201,16 @@ def test_a_folder_that_is_not_absolute_is_refused(run: Path, folder: object) -> 
     assert "folders[1]" in str(error)
 
 
+@pytest.mark.parametrize("folder", [Path("relative/in"), Path("a\x00b").absolute()])
+def test_a_folder_that_is_not_absolute_is_refused_when_the_document_is_made(
+    run: Path, folder: Path
+) -> None:
+    """The writer refuses what the reader would, so a document a runner would refuse is never
+    written: the same error type, the same message."""
+    with pytest.raises(SnapshotDocumentError, match=r"folders\[1\] must be an absolute path"):
+        SnapshotDocument.of(_snapshot(run), BundleSpec.default(), [run.parent / "in", folder])
+
+
 @pytest.mark.parametrize(
     "skill", ["lint", "linting:", ":lint", "linting:lint:x", "linting:../x", "-p:s", 4]
 )
