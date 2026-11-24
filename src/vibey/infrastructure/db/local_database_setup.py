@@ -185,8 +185,10 @@ class LocalDatabaseSetup:
         """The roles of the two that exist, and the database's owner (None: no database)."""
         names = self._names
         wanted = ", ".join(self._literal(role) for role in names.roles)
+        # psql takes no bind parameters on stdin: each name is a validated plain identifier
+        # (`LocalDatabaseNames`) and is quoted as a literal all the same.
         lines = self._admin.query(
-            "SELECT 'role:' || rolname FROM pg_catalog.pg_roles "
+            "SELECT 'role:' || rolname FROM pg_catalog.pg_roles "  # nosec B608 - names validated
             f"WHERE rolname IN ({wanted}) "
             "UNION ALL SELECT 'database:' || pg_catalog.pg_get_userbyid(datdba) "
             f"FROM pg_catalog.pg_database WHERE datname = {self._literal(names.database)}",
