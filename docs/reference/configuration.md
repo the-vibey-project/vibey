@@ -998,9 +998,11 @@ a capability.
 | `[[loops.marketplaces]]` | none | A marketplace you added: `name` (a plain name; `vibey` is reserved), `source` (an `https://` or `ssh://` URL, `user@host:path`, or an absolute folder; `git://` and `http://` are refused as plaintext) and an optional `ref` (a branch, tag or commit to pin). `vibey loops marketplace update` fetches and locks it; until then a run that needs it stops and says so. |
 | `[[loops.mcp_servers]]` | none | An MCP server: `name`, `trust` and either `command` (for `trust = "local"`: a stdio server, its argv as a list, never run through a shell) or `url` (for `trust = "remote"`: `https://` with a host, no credentials). `env_allow` names the only environment variables a local server keeps, never one that carries a secret (a token, key, password or the Brave key). Trust decides egress, budget and which sessions mount a server; a server's output is always data, never instruction. |
 | `builtin_web` | `false` | Whether a loop keeps its engine's own web tools. `false`: a claudeloop run disallows Claude Code's `WebSearch` and `WebFetch`. `true` leaves them on, except on `claudeloop-local`, whose local backend cannot serve them: there they stay off and the run says so in a notice. |
-| `instruction_files` | `["CLAUDE.md", "AGENTS.md"]` | Plain file names (never paths) a claudeloop run reads from its own working folder only and appends to its system prompt as instruction text, never to the plan. A missing file is skipped; a symlink, a file that is not regular or text that is not UTF-8 is refused, never followed or read. At most 16. |
+| `instruction_files` | `["CLAUDE.md", "AGENTS.md"]` | Plain file names (never paths) a claudeloop, gptossloop or qwenloop run reads from its own working folder only and appends to its system prompt as instruction text, never to the plan (the local runner within `capability_prompt_tokens`, under a heading that says they cannot override the run's contract or tool limits). A missing file is skipped; a symlink, a file that is not regular or text that is not UTF-8 is refused, never followed or read. At most 16. |
 | `instruction_max_bytes` | `65536` | The largest instruction file inlined, from 1 to 1048576. A larger one is never cut: the run names it with its size and tells the agent to read it. |
 | `snapshot_max_age_days` | `7` | How long, at least, a run snapshot must have gone unchanged before a starting worker's sweep removes it (at least 1). The sweep always waits at least the engine run deadline plus an hour, whatever this says: the longest deadline any registered project's sessions can run to (`VIBEY_ENGINE_MAX_RUN_MINUTES`, else the longest of 240 minutes and every project's [`[engines] max_run_minutes`](#engines)). |
+| `capability_prompt_tokens` | `3072` | The most estimated tokens, from 512 to 4096, a loop that lists its own capabilities (`gptossloop`, `qwenloop`) spends on the snapshot in its standing system prompt: the skill, plugin command and MCP server listing first, then the `instruction_files`. A listing that does not fit falls back to names only, then to one line with the counts, and says why; an instruction file that does not fit is named with its size for the agent to read, never cut. Tokens are estimated as characters ÷ 4, rounded up. claudeloop ignores it: Claude Code lists skills itself. |
+| `capability_answer_tokens` | `3000` | The most estimated tokens, from 256 to 8192, any one on-demand capability answer of a `gptossloop` or `qwenloop` run may hold: a page of `skills_list` or `mcp_list`, a page of a skill or command body from `skill_read`, one MCP tool's input schema, or one `mcp_call` result. A body or a listing is paged, never cut; a schema larger than this is refused with both sizes named; a longer `mcp_call` result is cut with a line naming both lengths. The runner's own tool-result cut (its `max_tool_result_chars`) can make a page smaller still, never larger. claudeloop ignores it. |
 
 Names are letters, digits, `.`, `_` and `-`, starting with a letter or digit, at most 128
 characters. A source or ref may not start with `-`, hold control characters or run past 4096
@@ -1046,22 +1048,45 @@ names into its own snapshot, checks the copy against the lock and loads only the
 naming `vibey loops marketplace update <name>` when a marketplace is not locked or its files
 changed since.
 
-**What a run is given today (SP-LOOPS Phase 4).** Only a BUILD run on `claudeloop` or
-`claudeloop-local` applies the bundle. Before the engine starts, vibey resolves the run's
+**What a run is given today (SP-LOOPS Phases 4 and 5).** A BUILD run on `claudeloop`,
+`claudeloop-local`, `gptossloop` or `qwenloop` applies the bundle. Before the engine starts, vibey resolves the run's
 snapshot, writes its capability document into the run's own snapshot folder, records
 `LoopCapabilitiesSnapshotted` on the ledger (the digest and counts, never a path, command, URL
-or variable) and starts the run with `claudeloop run --capabilities PATH`. claudeloop then loads
+or variable) and starts the run with `run --capabilities PATH`. claudeloop then loads
 no user, project or local Claude settings: only the snapshot's plugin folders, exactly the
 catalog's skills, the run's input folders, the MCP servers above (a local one started through a
 launcher that keeps only its `env_allow` names, a remote one over streamable HTTP), the
 `instruction_files`, and the built-in web tools only as `builtin_web` says. `builtin_web`,
-`instruction_files` and `instruction_max_bytes` are part of what a run is given, so they enter
-the snapshot's digest; `snapshot_max_age_days` does not. A snapshot that cannot be resolved
+`instruction_files`, `instruction_max_bytes`, `capability_prompt_tokens` and
+`capability_answer_tokens` are part of what a run is given, so they enter the snapshot's digest;
+`snapshot_max_age_days` does not. A snapshot that cannot be resolved
 parks the job on a [`loop_capabilities_unresolved`](cli.md#vibey-gates-project_id) gate: the
 run never starts without it. The run's snapshot folder is removed when the run ends, however
 it ends, and a starting [`vibey worker`](cli.md#vibey-worker) sweeps the ones a crashed worker
-left. `codexloop`, `gptossloop` and `qwenloop`, BUILD's verify reviewer, DESIGN and DECOMPOSE
-do not apply the bundle yet: they run as before.
+left. `codexloop`, BUILD's verify reviewer, DESIGN and DECOMPOSE do not apply the bundle yet:
+they run as before.
+
+**What the local runner applies (SP-LOOPS Phase 5).** A `gptossloop` or `qwenloop` run given
+`run --capabilities PATH` takes the snapshot as the `vibey-bundle` plugin system
+([ADR-0092](../architecture/decisions/0092-large-tasks-are-sliced-into-the-cdd-layers-before-they-run.md)'s
+2026-11-25 amendment): the skills and the plugin commands (`commands/*.md`, as text), and the
+MCP servers, with no plugin hooks and no plugin agents. Its system prompt carries the skill,
+command and server listing, then the `instruction_files` from the run's own folder, all within
+`capability_prompt_tokens`; the model reads a skill or command body with `skills_list` and
+`skill_read`, as instruction text. It reaches exactly the snapshot's MCP servers, and never
+`~/.claude.json`, `QWENLOOP_MCP_CONFIG` or the worktree's `.mcp.json`, through two tools:
+`mcp_list` names the servers, a server's tools, or one tool's input schema, and `mcp_call` calls
+one; their output stays data. A server starts on its first use, over stdio through the scrubbed
+launcher for a local one and over streamable HTTP for a remote one (no redirect, no cookie, no
+credential, no environment, no proxy), keeps one session for the run and is closed when the run
+ends, however it ends. A server that will not start, dies, hangs or answers with an error is a
+tool error the model reads, never the end of the run. The runner's own `[mcp]` table bounds the
+sessions (request timeout, restarts, close grace, and `tools/call` requests per remote server,
+`64` by default); qwenloop's README (`src/vibey_runners/qwen/README.md`) lists its keys.
+A document the runner refuses exits 78 before any model is called, and an
+[`engine_misconfigured`](cli.md#vibey-gates-project_id) gate parks the job. Without
+`--capabilities` (a standalone run) the runner keeps its earlier behaviour: the stdio servers
+declared in `~/.claude.json` and `QWENLOOP_MCP_CONFIG`, and no skills.
 
 ## `[inputs]` { #inputs }
 
@@ -1742,9 +1767,10 @@ engine it is declared for. Some things need declaring:
 - claudeloop's GitHub issue import needs `GH_TOKEN` or `GITHUB_TOKEN` for a private
   repository.
 - A local MCP server's [`env_allow`](#loops) variable reaches the server only if it reaches the
-  claudeloop session first, so it must also be passed through here (or be on the session's
-  list already). `env_allow` only decides which of the session's variables the server keeps; a
-  name the session does not have is skipped, and claudeloop logs that name, never a value.
+  `claudeloop`, `claudeloop-local`, `gptossloop` or `qwenloop` session first, so it must also be
+  passed through here (or be on the session's list already). `env_allow` only decides which of
+  the session's variables the server keeps; a name the session does not have is skipped, and
+  claudeloop logs that name, never a value. A remote MCP server is sent no environment at all.
 
 Some names can never be declared, by anyone. For every engine: vibey's own `VIBEY_*`
 variables (`VIBEY_PG_URL`, the queue and ledger DSN, among them), libpq's `PG*`, any

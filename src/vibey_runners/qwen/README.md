@@ -216,6 +216,10 @@ contents, literal unless `regex` is true), `find` (file names, by glob or substr
 `open_file` (`read_file` by the name gpt-oss reaches for, with an optional line range), and
 `outline` (a source file's declarations with line numbers and no bodies; `exports_only` keeps just what
 other files can import, so an engine learns what exists without reading the file).
+It can also call `web_search` and `web_fetch`, `mcp_list` and `mcp_call` (below), and, in a
+run given `--capabilities`, `skills_list` and `skill_read`: the snapshot's skills and plugin
+commands (`plugin:skill`, `plugin:command`), listed and read a page at a time within
+`[loops] capability_answer_tokens`, as instruction text rather than untrusted data.
 Every path stays inside the run's worktree. An unknown tool name is answered with the list
 of the ones that exist. How much one call may read or return is set in the config file's
 `[tools]` table, and a limit the model asks for can only narrow these. A `search` that
@@ -238,7 +242,11 @@ The model reaches MCP servers through two tools. `mcp_list` names the servers; g
 it names that server's tools with one line each; given a server and a tool, it returns that one
 tool's input schema, whole, or says the schema is too large for the answer budget. Long lists
 come a page at a time (`page`), and an `mcp_call` answer longer than the budget is cut with a
-line naming both lengths. A server is started on its first use and kept for the run, and every
+line naming both lengths. With `--capabilities` the servers are exactly the snapshot's: a
+`local` one over stdio, started through the scrubbed launcher with only its `env_allow`
+variables, and a `remote` one over streamable HTTP, sent no environment, cookie, credential or
+proxy and never redirected. A server is started on its first use and kept for the run as one
+persistent session, and every
 server the run started is closed when the run ends, SIGTERM included (exit `130`). A server that
 will not start, dies, hangs or answers with an error is an error the model reads, never the end
 of the run. The config file's `[mcp]` table bounds it:

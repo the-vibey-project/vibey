@@ -154,6 +154,90 @@ Still open after Phase 4:
 - None of this has run against a real `claude` binary or a real MCP server; the tests use
   recorded and scripted doubles.
 
+## Phase 5: the local runner applies the snapshot
+
+SP-LOOPS Phase 5 (plan `docs/superpowers/plans/2026-11-25-sp-loops-phase5-local-runner.md`)
+makes the local runner (`gptossloop` and `qwenloop`, one package) apply the bundle, and amends
+ADR-0092 (its 2026-11-25 amendment). The status above is unchanged; these are its rulings.
+
+- **R1 (the JSON-RPC peer).** The codec, the error vocabulary, the peer and their interfaces
+  move to `vibey_runners.common.jsonrpc`; `vibey`'s own copies are deleted, with no re-export
+  shim. The MCP server and the ACP agent write the same bytes as before
+  (`tests/meta/test_one_jsonrpc_peer.py` holds vibey to one peer).
+- **R2 (the MCP client).** The client lives in `vibey_runners.common.mcp`, with the protocol
+  versions vibey's own MCP server answers (`SUPPORTED_PROTOCOLS`, `LATEST_PROTOCOL`). Only
+  qwenloop wires it in this phase.
+- **R3 (transport).** `gptossloop run --capabilities PATH` and `qwenloop run --capabilities PATH`
+  read the Phase 4 document through the same reader. A refused document exits 78 before any
+  model call, which the `engine_misconfigured` gate parks; both descriptors set
+  `capabilities_flag`, and only `build.implement` is given the snapshot (Phase 4 R2).
+- **R4 (strict servers).** With a snapshot, the runner's MCP servers are exactly the snapshot's:
+  neither `~/.claude.json` nor `QWENLOOP_MCP_CONFIG` is read. Without one, that discovery stays.
+  The worktree's `.mcp.json` is read in neither mode.
+- **R5 (sessions).** A server starts on the first `mcp_list(server)` or `mcp_call` that names it,
+  keeps one session for the run, and is closed when the run ends however it ends; SIGTERM
+  cancels the run so the close runs, and the run exits 130, as claudeloop's does. A stdio server
+  leads its own process group: its stdin is closed, `[mcp] close_grace_seconds` pass, and the
+  group is killed. An HTTP session ends with a best-effort `DELETE` carrying its
+  `Mcp-Session-Id`. The same pool serves a run without a snapshot.
+- **R6 (failure).** No MCP failure ends a run, parks a job or waits for a person: each reaches
+  the model as a tool error. Every request is bounded by `[mcp] request_timeout_seconds` (`60`);
+  a dead session is restarted at most `[mcp] restarts` times (`1`), then the server is named
+  unavailable for the rest of the run. A JSON-RPC error answer leaves the session alive.
+- **R7 (schemas on demand).** `mcp_list` and `mcp_call` stay the only MCP tools. `mcp_list`
+  names the servers, a server's tools (paged), or one tool's input schema, whole, or refused
+  with both sizes when it exceeds the answer budget: a schema is never cut. A longer
+  `mcp_call` result is cut with a line naming both lengths; the silent cuts are gone (ADR-0075).
+- **R8 (token budgets).** Two person-only `[loops]` keys: `capability_prompt_tokens` (`3072`,
+  from 512 to 4096) for the standing listing and instruction files, and
+  `capability_answer_tokens` (`3000`, from 256 to 8192) for any one on-demand answer. Both enter
+  the digest, and the document becomes version 2. Tokens are estimated as characters ÷ 4,
+  rounded up. claudeloop ignores both. At the ceiling, a snapshot at the bundle's caps leaves a
+  fixed context of 6,407 estimated tokens against the 8,768 a 32k model can spare
+  (`test_a_full_snapshot_leaves_the_conversation_its_room`), so the ceiling stays 4096.
+- **R9 (the listing degrades, and says so).** The full listing, then names only, then one line of
+  counts, each fallback saying why. Instruction files take what remains; one that does not fit
+  is named with its size for the agent to read, never cut.
+- **R10 (`VIBEY_BUNDLE`).** The plugin system `vibey-bundle` holds the snapshot's skills, its
+  plugin commands (`commands/*.md`, non-recursive, as `plugin:command` through the same two skill
+  tools) and its MCP servers. No hooks and no agents.
+- **R11 (skill text is instruction).** Skill and command bodies come back unfenced and unmarked,
+  paged within the answer budget and never cut. MCP output keeps its `untrusted` marker, and the
+  repository's own content stays untrusted: instruction files sit under a heading that says
+  they cannot override the run's contract or tool limits.
+- **R12 (instruction files).** The runner applies the document's `instruction_files` and
+  `instruction_max_bytes` as claudeloop does, through `InstructionFileReader`, moved into common.
+- **R13 (remote servers).** https only, no redirect followed, no cookie jar, and no credential,
+  environment variable or environment proxy sent; a reply over `limit_bytes` is refused. Each
+  remote server takes at most `[mcp] remote_calls_per_session` `tools/call` requests per run
+  (`64`), each reserved before its session starts, so concurrent calls cannot overspend. That key is qwenloop's own, since claudeloop's engine
+  has no hook to enforce one. Output is data whatever the trust.
+- **R14 (one launcher argv).** `ScrubbedLaunch(launcher).argv(server)` in common builds the argv
+  that starts a `local` server, and claudeloop's `McpConfigTranslator` delegates to it.
+- **R15 (protocol).** The client offers `LATEST_PROTOCOL` and accepts any version in
+  `SUPPORTED_PROTOCOLS` the server answers with; any other is refused by name. Over HTTP,
+  `MCP-Protocol-Version` is sent once the version is agreed.
+- **R16 (packaging).** qwenloop imports `vibey_runners.common` and declares it nowhere, as
+  claudeloop does: it ships inside the one `vibey-engine` wheel (ADR-0037). No runner version or
+  descriptor `min_version` changes; conformance checks `--capabilities` against each binary's
+  `--help`.
+
+`gptossloop`'s and `qwenloop`'s full-access gaps are now none (`plugins` is `vibey-bundle`,
+`skills` and `mcp` are `true`). Each of those three claims is pinned to runner code
+(`tests/meta/loop_runner_facts.py`), and its evidence ends `unit-proven; real-run probe pending`.
+
+Still open after Phase 5:
+
+- No real `gptossloop` run and no real MCP server has exercised any of this; the tests use an
+  in-memory transport, fake stdio servers and an injected HTTP opener.
+- claudeloop enforces no remote call budget (R13): only the local runner counts remote
+  `tools/call` requests.
+- The token estimate is characters ÷ 4, not the model's own tokenizer.
+- The VS Code extension does not know `vibey-bundle` yet: `clients/vscode/src/core/capabilities.ts`
+  and `@vibey/core`'s `capabilities-interface.ts` type `plugins` as `skills-context` or
+  `claude-plugins` only. Nothing breaks, since the catalogue parser accepts any string, but the
+  extension offers no plugin menu for `gptossloop` or `qwenloop`. A TypeScript follow-up.
+
 ## Alternatives considered
 
 - **Each loop's own plugin and marketplace mechanisms** (design approach B): behaviour and trust
