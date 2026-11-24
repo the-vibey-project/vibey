@@ -5,10 +5,13 @@ A session is made and started on the first `tools` or `call` for its server, the
 it dies (any `McpUnavailable`, a failed start included) it is closed and dropped, and the next
 use starts a new one, at most `restarts` times per run. After that the server answers
 `MCP server 'x' is unavailable for the rest of this run: {first reason}` and is not started
-again. A JSON-RPC error answer (`McpToolError`) leaves the session alive and costs nothing.
+again. A JSON-RPC error answer (`McpToolError`) leaves the session alive and costs nothing. A
+start that is cancelled (or fails with anything but `McpUnavailable`) closes its half-started
+session at once and is not counted as a death.
 
 A remote server may take at most `remote_calls` `tools/call` requests per run; each spends one
-before it is sent, so a call that fails still counts. Listing tools costs nothing. `aclose`
+before it is sent, so a call that fails still counts, and is given back only when no request
+was sent (no session to send on). Listing tools costs nothing. `aclose`
 closes every live session with `close_grace_seconds`, all at once, never raises, and is
 idempotent; nothing starts after it. Declared by
 `interfaces/mcp_session_pool_interface.py::McpSessionPoolInterface`.
@@ -89,8 +92,9 @@ class McpSessionPool:
             self._remote_left[name] = left - 1
         try:
             session = await self._session(name)
-        except McpUnavailable:
-            # The server never started, so no request was sent: give the reserved call back.
+        except BaseException:
+            # No session to send on: the server never started, or the call was cancelled (or
+            # failed otherwise) before a request was sent. Give the reserved call back.
             if left is not None:
                 self._remote_left[name] = self._remote_left[name] + 1
             raise
@@ -132,6 +136,14 @@ class McpSessionPool:
                 await session.start()
             except McpUnavailable as exc:
                 await self._died(name, session, exc)
+                raise
+            except BaseException:
+                # Cancelled mid-start (a SIGTERM while a slow server is in `initialize`), or
+                # failed some other way. The session never went live, so `aclose` would never
+                # see it: close it here, bounded by the grace and never raising, or a stdio
+                # server's process group outlives the run. It is not counted as a death; the
+                # server did not fail.
+                await self._close_quietly(name, session)
                 raise
             self._live[name] = session
             return session

@@ -198,6 +198,65 @@ async def test_a_server_that_never_starts_gives_its_reserved_call_back() -> None
     assert pool.remote_calls_left("docs") == 1
 
 
+class _StalledStart(FakeSession):
+    """A session whose start waits until it is released (a slow server's `initialize`), or
+    raises `error` once it has begun, for an outcome other than `McpUnavailable`."""
+
+    def __init__(self, error: BaseException | None = None) -> None:
+        super().__init__()
+        self.error = error
+        self.begun = asyncio.Event()
+
+    async def start(self) -> None:
+        self.started += 1
+        self.begun.set()
+        if self.error is not None:
+            raise self.error
+        await asyncio.Event().wait()
+
+
+async def test_a_session_cancelled_while_it_starts_is_closed_and_gives_its_call_back() -> None:
+    stalled = _StalledStart()
+    docs = _Factory(stalled)
+    pool = _pool({"docs": docs}, {"docs": "remote"}, remote_calls=1, restarts=0)
+    pending = asyncio.ensure_future(pool.call("docs", "echo", {}))
+    await stalled.begun.wait()
+    assert pool.remote_calls_left("docs") == 0
+    pending.cancel()
+    with pytest.raises(asyncio.CancelledError):
+        await pending
+    assert stalled.closed == [2.0]
+    assert pool.remote_calls_left("docs") == 1
+    # A cancelled start is not the server dying, so it costs no restart; and the half-started
+    # session was never live, so aclose has nothing left to close.
+    assert await pool.call("docs", "echo", {}) == McpCallResult("echo done", False)
+    assert len(docs.made) == 2
+    await pool.aclose()
+    assert stalled.closed == [2.0]
+
+
+async def test_a_listing_cancelled_while_its_session_starts_closes_the_session() -> None:
+    stalled = _StalledStart()
+    files = _Factory(stalled)
+    pool = _pool({"files": files})
+    pending = asyncio.ensure_future(pool.tools("files"))
+    await stalled.begun.wait()
+    pending.cancel()
+    with pytest.raises(asyncio.CancelledError):
+        await pending
+    assert stalled.closed == [2.0]
+
+
+async def test_any_other_start_failure_closes_the_session_and_gives_its_call_back() -> None:
+    broken = _StalledStart(error=RuntimeError("start blew up"))
+    docs = _Factory(broken)
+    pool = _pool({"docs": docs}, {"docs": "remote"}, remote_calls=1)
+    with pytest.raises(RuntimeError, match="^start blew up$"):
+        await pool.call("docs", "echo", {})
+    assert broken.closed == [2.0]
+    assert pool.remote_calls_left("docs") == 1
+
+
 async def test_aclose_closes_every_live_session_and_never_raises() -> None:
     broken = FakeSession(close_error=RuntimeError("close failed"))
     files, docs, idle = _Factory(broken), _Factory(), _Factory()
