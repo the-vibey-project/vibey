@@ -1,0 +1,1 @@
+The `vibey-chat-driver` skill now answers a design question with `{"accept_defaults": true}`, the key the design gate reads. It taught `{"defaults": true}`, which the gate ignored. The skill is identical in every agent tree.
