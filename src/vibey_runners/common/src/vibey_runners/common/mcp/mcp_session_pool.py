@@ -77,15 +77,23 @@ class McpSessionPool:
 
     async def call(self, name: str, tool: str, arguments: Mapping[str, object]) -> McpCallResult:
         self._known(name)
+        # Check and reserve in one step with no await between them, so two concurrent calls
+        # cannot both spend the last call of the budget (the budget is per run, not per task).
         left = self._remote_left.get(name)
-        if left == 0:
-            raise McpUnavailable(
-                f"MCP server {name!r} has used all {self._remote_calls} tools/call requests "
-                "this run allows"
-            )
-        session = await self._session(name)
         if left is not None:
+            if left <= 0:
+                raise McpUnavailable(
+                    f"MCP server {name!r} has used all {self._remote_calls} tools/call requests "
+                    "this run allows"
+                )
             self._remote_left[name] = left - 1
+        try:
+            session = await self._session(name)
+        except McpUnavailable:
+            # The server never started, so no request was sent: give the reserved call back.
+            if left is not None:
+                self._remote_left[name] = self._remote_left[name] + 1
+            raise
         try:
             return await session.call(tool, arguments)
         except McpUnavailable as exc:

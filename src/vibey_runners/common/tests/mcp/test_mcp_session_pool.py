@@ -8,6 +8,7 @@ rather than a class with an interface beside it (ADR-0016).
 
 from __future__ import annotations
 
+import asyncio
 from collections.abc import Callable
 from typing import Any
 
@@ -163,6 +164,38 @@ async def test_a_failed_remote_call_still_spends_its_budget() -> None:
     with pytest.raises(McpToolError):
         await pool.call("docs", "echo", {})
     assert pool.remote_calls_left("docs") == 0
+
+
+class _YieldingStart(FakeSession):
+    """A session whose start yields to the loop, so a concurrent call can run in between."""
+
+    async def start(self) -> None:
+        await asyncio.sleep(0)
+        await super().start()
+
+
+async def test_concurrent_calls_cannot_both_spend_the_last_remote_call() -> None:
+    docs = _Factory(_YieldingStart())
+    pool = _pool({"docs": docs}, {"docs": "remote"}, remote_calls=1)
+    results = await asyncio.gather(
+        pool.call("docs", "echo", {}),
+        pool.call("docs", "echo", {}),
+        return_exceptions=True,
+    )
+    refused = [r for r in results if isinstance(r, McpUnavailable)]
+    served = [r for r in results if isinstance(r, McpCallResult)]
+    assert len(served) == 1
+    assert len(refused) == 1
+    assert pool.remote_calls_left("docs") == 0
+    assert len(docs.made[0].calls) == 1
+
+
+async def test_a_server_that_never_starts_gives_its_reserved_call_back() -> None:
+    docs = _Factory(FakeSession(start_error="no binary"))
+    pool = _pool({"docs": docs}, {"docs": "remote"}, remote_calls=1, restarts=0)
+    with pytest.raises(McpUnavailable, match="^no binary$"):
+        await pool.call("docs", "echo", {})
+    assert pool.remote_calls_left("docs") == 1
 
 
 async def test_aclose_closes_every_live_session_and_never_raises() -> None:
