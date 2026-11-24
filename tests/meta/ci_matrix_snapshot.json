@@ -207,7 +207,7 @@
     },
     {
       "dir": "src/vibey_runners/qwen",
-      "install": "pip install -e \".[dev]\"",
+      "install": "pip install -e ../common && pip install -e \".[dev]\"",
       "package": "qwenloop",
       "python": "3.12",
       "static": "mypy --strict src/qwenloop && lint-imports && bandit -q -r src/qwenloop",
@@ -215,14 +215,14 @@
     },
     {
       "dir": "src/vibey_runners/qwen",
-      "install": "pip install -e \".[dev]\"",
+      "install": "pip install -e ../common && pip install -e \".[dev]\"",
       "package": "qwenloop",
       "python": "3.13",
       "test": "python -m pytest -q"
     },
     {
       "dir": "src/vibey_runners/qwen",
-      "install": "pip install -e \".[dev]\"",
+      "install": "pip install -e ../common && pip install -e \".[dev]\"",
       "package": "qwenloop",
       "python": "3.14",
       "test": "python -m pytest -q"

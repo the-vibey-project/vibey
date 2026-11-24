@@ -23,7 +23,15 @@ classifiers = [
   "Programming Language :: Python :: 3.14",
   "Typing :: Typed",
 ]
-dependencies = ["typer>=0.12", "platformdirs>=4.0", "aio-pika>=9.5"]
+dependencies = [
+    "typer>=0.12",
+    "platformdirs>=4.0",
+    "aio-pika>=9.5",
+    # No `vibey-runners-common` here, though qwenloop imports it (SP-LOOPS Phase 5, R16). The
+    # shared tree is not published to an index and will not be (ADR-0037) -- it ships inside
+    # the same `vibey` wheel this package ships in -- so naming it here would ask PyPI for a
+    # 404. Installed from the tree instead, ahead of this package; see ci.yml's tools matrix.
+]
 
 [project.urls]
 Homepage = "https://github.com/the-vibey-project/qwenloop"

@@ -103,7 +103,7 @@ test = "pytest -q --cov=codexloop --cov-branch --cov-report= && coverage report 
 package = "qwenloop"
 dir = "src/vibey_runners/qwen"
 python = "3.12"
-install = "pip install -e \".[dev]\""
+install = "pip install -e ../common && pip install -e \".[dev]\""
 static = "mypy --strict src/qwenloop && lint-imports && bandit -q -r src/qwenloop"
 test = "python -m pytest -q"
 
@@ -287,7 +287,7 @@ test = "pytest -q --cov=codexloop --cov-branch --cov-report= && coverage report 
 package = "qwenloop"
 dir = "src/vibey_runners/qwen"
 python = "3.12"
-install = "pip install -e \".[dev]\""
+install = "pip install -e ../common && pip install -e \".[dev]\""
 static = "mypy --strict src/qwenloop && lint-imports && bandit -q -r src/qwenloop"
 test = "python -m pytest -q"
 
@@ -295,14 +295,14 @@ test = "python -m pytest -q"
 package = "qwenloop"
 dir = "src/vibey_runners/qwen"
 python = "3.13"
-install = "pip install -e \".[dev]\""
+install = "pip install -e ../common && pip install -e \".[dev]\""
 test = "python -m pytest -q"
 
 [[tools.full]]
 package = "qwenloop"
 dir = "src/vibey_runners/qwen"
 python = "3.14"
-install = "pip install -e \".[dev]\""
+install = "pip install -e ../common && pip install -e \".[dev]\""
 test = "python -m pytest -q"
 
 [postgres-compatibility]

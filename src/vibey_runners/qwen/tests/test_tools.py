@@ -12,13 +12,17 @@ import time
 from pathlib import Path
 
 import pytest
+from vibey_runners.common.capabilities.file_reader import BoundedFileReader
+from vibey_runners.common.capabilities.shelf_entry import ShelfEntry, ShelfKind
+from vibey_runners.common.capabilities.skill_shelf import MIN_ANSWER_CHARS, SkillShelf
 
-from qwenloop.domain.config import ToolLimits
+from qwenloop.application.runner import _truncate_tool_result
+from qwenloop.domain.config import DEFAULT_MAX_TOOL_RESULT_CHARS, ToolLimits
 from qwenloop.domain.interfaces import ToolLimitsInterface
 from qwenloop.domain.model import CODING_TOOL_NAMES
 from qwenloop.infrastructure.content_scanner import ContentScanner
 from qwenloop.infrastructure.interfaces import ContentScannerInterface, SandboxToolsInterface
-from qwenloop.infrastructure.tools import SandboxTools, ShellEnvironment
+from qwenloop.infrastructure.tools import ANSWER_ENVELOPE_CHARS, SandboxTools, ShellEnvironment
 
 
 def _tree(root: Path) -> None:
@@ -54,6 +58,8 @@ def test_the_tool_catalogue_names_every_tool_the_model_is_given() -> None:
         "web_fetch",
         "mcp_list",
         "mcp_call",
+        "skills_list",
+        "skill_read",
     )
 
 
@@ -683,3 +689,199 @@ async def test_a_path_outside_the_worktree_is_an_answer_not_the_end_of_the_run(
 ) -> None:
     result = await SandboxTools(tmp_path).execute(tool, arguments)
     assert result == {"error": "path escapes the worktree"}
+
+
+# -- skills_list and skill_read (SP-LOOPS Phase 5, R10, R11) ------------------------------
+
+# Tabs, both quote kinds, backslashes and newlines all render wider than they are in the
+# runner's `str(result)`, and the long last line is split mid-line by any small page.
+_ESCAPED_BODY = (
+    "---\nname: cite\ndescription: Cite every claim.\n---\n"
+    + "".join(f'Step {n}:\tsay "it\'s" at C:\\notes\\{n}, then go on.\n' for n in range(700))
+    + "x" * 5_000
+    + "\n"
+)
+_SKILLS_NOT_CONFIGURED = (
+    "no skills are set up for this session; this run was started without a capability snapshot."
+)
+
+
+def _shelf(root: Path, *items: tuple[str, ShelfKind, str, str]) -> SkillShelf:
+    """A shelf of (name, kind, description, text) entries, each text in a file of its own."""
+    root.mkdir(parents=True, exist_ok=True)
+    entries = []
+    for number, (name, kind, description, text) in enumerate(items):
+        path = root / f"entry-{number}.md"
+        path.write_text(text, encoding="utf-8")
+        entries.append(ShelfEntry(name, kind, description, path))
+    return SkillShelf(entries, (), BoundedFileReader())
+
+
+async def _every_page(
+    tools: SandboxTools, tool: str, **arguments: object
+) -> list[dict[str, object]]:
+    first = await tools.execute(tool, {**arguments, "page": 1})
+    pages = [first]
+    for number in range(2, int(str(first["pages"])) + 1):
+        pages.append(await tools.execute(tool, {**arguments, "page": number}))
+    return pages
+
+
+@pytest.mark.asyncio
+async def test_skills_list_pages_the_shelf_within_the_answer_budget(tmp_path: Path) -> None:
+    items: list[tuple[str, ShelfKind, str, str]] = [
+        (
+            f"research:skill-{n:02}",
+            "skill",
+            f"Find, weigh and cite the sources behind claim {n} before it is written down.",
+            "body\n",
+        )
+        for n in range(40)
+    ]
+    shelf = _shelf(tmp_path / "plugins", *items, ("gh:release", "command", "Cut a release.", "x\n"))
+    tools = SandboxTools(tmp_path, shelf=shelf, answer_chars=1024)
+
+    pages = await _every_page(tools, "skills_list")
+
+    assert len(pages) > 1
+    assert [page["page"] for page in pages] == list(range(1, len(pages) + 1))
+    assert {page["pages"] for page in pages} == {len(pages)}
+    listed = [entry for page in pages for entry in page["entries"]]  # type: ignore[attr-defined]
+    assert [entry["name"] for entry in listed] == [*(item[0] for item in items), "gh:release"]
+    assert listed[0] == {"name": "research:skill-00", "kind": "skill", "description": items[0][2]}
+    assert listed[-1] == {"name": "gh:release", "kind": "command", "description": "Cut a release."}
+    for page in pages:
+        assert set(page) == {"entries", "page", "pages"}
+        assert len(json.dumps(page["entries"])) <= 1024
+    assert (await tools.execute("skills_list", {}))["page"] == 1
+
+
+@pytest.mark.asyncio
+async def test_skill_read_returns_a_page_without_an_untrusted_marker(tmp_path: Path) -> None:
+    body = "---\nname: cite\ndescription: Cite every claim.\n---\nCite every claim.\n"
+    shelf = _shelf(
+        tmp_path / "plugins",
+        ("research:cite", "skill", "Cite every claim.", body),
+        ("gh:release", "command", "Cut a release.", "Cut a release from develop.\n"),
+    )
+    tools = SandboxTools(tmp_path, shelf=shelf, answer_chars=1024)
+
+    skill = await tools.execute("skill_read", {"name": "research:cite"})
+    command = await tools.execute("skill_read", {"name": "gh:release", "page": "1"})
+
+    assert skill == {"name": "research:cite", "kind": "skill", "page": 1, "pages": 1, "text": body}
+    assert command == {
+        "name": "gh:release",
+        "kind": "command",
+        "page": 1,
+        "pages": 1,
+        "text": "Cut a release from develop.\n",
+    }
+    assert "untrusted" not in skill and "untrusted" not in command
+
+
+@pytest.mark.asyncio
+async def test_a_skill_body_read_page_by_page_is_whole(tmp_path: Path) -> None:
+    shelf = _shelf(tmp_path / "plugins", ("research:cite", "skill", "Cite.", _ESCAPED_BODY))
+    tools = SandboxTools(tmp_path, shelf=shelf, answer_chars=1024)
+
+    pages = await _every_page(tools, "skill_read", name="research:cite")
+
+    assert len(pages) > 10
+    assert "".join(str(page["text"]) for page in pages) == _ESCAPED_BODY
+    assert all(len(str(page["text"])) <= 1024 for page in pages)
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    ("tool", "arguments", "says"),
+    [
+        ("skill_read", {"name": "research:nope"}, "no skill or command 'research:nope'"),
+        ("skill_read", {"name": "research:cite", "page": 9}, "there is no page 9 of"),
+        ("skill_read", {"name": "research:cite", "page": 0}, "there is no page 0 of"),
+        ("skill_read", {}, "skill_read needs the name"),
+        ("skill_read", {"name": 7}, "skill_read needs the name"),
+        ("skill_read", {"name": "research:cite", "page": "two"}, "page must be an integer"),
+        ("skills_list", {"page": 5}, "there is no page 5 of this run's shelf of 1 entry"),
+        ("skills_list", {"page": True}, "page must be an integer"),
+    ],
+)
+async def test_an_unknown_skill_is_a_tool_error_not_an_exception(
+    tmp_path: Path, tool: str, arguments: dict[str, object], says: str
+) -> None:
+    shelf = _shelf(tmp_path / "plugins", ("research:cite", "skill", "Cite.", "Cite.\n"))
+    result = await SandboxTools(tmp_path, shelf=shelf).execute(tool, arguments)
+    assert set(result) == {"error"}
+    assert says in str(result["error"])
+
+
+@pytest.mark.asyncio
+async def test_without_a_shelf_both_tools_say_no_snapshot(tmp_path: Path) -> None:
+    tools = SandboxTools(tmp_path)
+    assert await tools.execute("skills_list", {}) == {"error": _SKILLS_NOT_CONFIGURED}
+    assert await tools.execute("skill_read", {"name": "research:cite"}) == {
+        "error": _SKILLS_NOT_CONFIGURED
+    }
+
+
+def test_the_answer_budget_never_falls_below_the_shelf_floor(tmp_path: Path) -> None:
+    # The shelf refuses a budget below MIN_ANSWER_CHARS, and max_tool_result_chars may be any
+    # positive number: the budget is clamped up to the floor, never refused.
+    assert ANSWER_ENVELOPE_CHARS == 256
+    assert SandboxTools.answer_budget(3000, DEFAULT_MAX_TOOL_RESULT_CHARS) == 12_000 - 256
+    assert SandboxTools.answer_budget(256, DEFAULT_MAX_TOOL_RESULT_CHARS) == 1024
+    assert SandboxTools.answer_budget(8192, 100_000) == 32_768
+    assert SandboxTools.answer_budget(3000, 767) == MIN_ANSWER_CHARS
+    assert SandboxTools.answer_budget(3000, 9) == MIN_ANSWER_CHARS
+    shelf = _shelf(tmp_path / "plugins", ("research:cite", "skill", "Cite.", "Cite.\n"))
+    assert SandboxTools(tmp_path, shelf=shelf).answer_chars == 12_000 - 256
+    assert SandboxTools(tmp_path, shelf=shelf, answer_chars=9).answer_chars == MIN_ANSWER_CHARS
+
+
+@pytest.mark.asyncio
+async def test_a_clamped_budget_still_answers(tmp_path: Path) -> None:
+    shelf = _shelf(tmp_path / "plugins", ("research:cite", "skill", "Cite.", "Cite.\n"))
+    tools = SandboxTools(tmp_path, shelf=shelf, answer_chars=1)
+    assert (await tools.execute("skills_list", {}))["pages"] == 1
+    assert (await tools.execute("skill_read", {"name": "research:cite"}))["text"] == "Cite.\n"
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("limit", [1024, 2000, DEFAULT_MAX_TOOL_RESULT_CHARS])
+@pytest.mark.parametrize("tokens", [256, 3000, 8192])
+async def test_a_page_never_reaches_the_result_cut(tmp_path: Path, limit: int, tokens: int) -> None:
+    # The runner shows a result as `str(result)` and cuts it at max_tool_result_chars. Every
+    # page, in that form -- escapes, keys and a long name included -- stays under the cut.
+    name = "a-plugin-with-a-rather-long-name:and-a-skill-with-a-long-name-" + "y" * 40
+    descriptions = [f'It\'s the "{n}" one: a\tlong, escaped description ' * 4 for n in range(60)]
+    shelf = _shelf(
+        tmp_path / "plugins",
+        (name, "skill", "Cite.", _ESCAPED_BODY),
+        *((f"research:s{n}", "skill", text, "x\n") for n, text in enumerate(descriptions)),
+    )
+    answer = SandboxTools.answer_budget(tokens, limit)
+    tools = SandboxTools(tmp_path, shelf=shelf, answer_chars=answer)
+
+    read = await _every_page(tools, "skill_read", name=name)
+    listed = await _every_page(tools, "skills_list")
+
+    for page in [*read, *listed]:
+        shown = str(page)
+        assert _truncate_tool_result(shown, limit) == shown
+    assert all(len(str(page["text"])) <= answer for page in read)
+    assert "".join(str(page["text"]) for page in read) == _ESCAPED_BODY
+    assert sum(len(page["entries"]) for page in listed) == 61  # type: ignore[arg-type]
+
+
+@pytest.mark.asyncio
+async def test_a_text_no_page_can_render_within_the_budget_is_still_whole(tmp_path: Path) -> None:
+    # Each control character renders as four (`\x07`): no page of it fits, even at the
+    # shelf's floor, so it is paged at the floor and the runner's named cut is the backstop.
+    body = "\x07" * 3_000
+    shelf = _shelf(tmp_path / "plugins", ("research:bell", "skill", "Ring.", body))
+    tools = SandboxTools(tmp_path, shelf=shelf, answer_chars=700)
+
+    pages = await _every_page(tools, "skill_read", name="research:bell")
+
+    assert [len(str(page["text"])) for page in pages] == [512] * 5 + [440]
+    assert "".join(str(page["text"]) for page in pages) == body
