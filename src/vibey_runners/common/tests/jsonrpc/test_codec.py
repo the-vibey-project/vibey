@@ -10,9 +10,9 @@ import json
 
 import pytest
 
-from vibey.infrastructure.jsonrpc.codec import CODEC, JsonRpcCodec
-from vibey.infrastructure.jsonrpc.errors import INVALID_REQUEST, PARSE_ERROR, RpcError
-from vibey.infrastructure.jsonrpc.interfaces.codec_interface import JsonRpcCodecInterface
+from vibey_runners.common.jsonrpc.codec import CODEC, JsonRpcCodec
+from vibey_runners.common.jsonrpc.errors import INVALID_REQUEST, PARSE_ERROR, RpcError
+from vibey_runners.common.jsonrpc.interfaces.codec_interface import JsonRpcCodecInterface
 
 
 def test_the_singleton_satisfies_the_interface() -> None:

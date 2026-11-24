@@ -16,9 +16,10 @@ from __future__ import annotations
 from collections.abc import Mapping, Sequence
 from typing import Any
 
+from vibey_runners.common.jsonrpc.errors import PeerCancelled, PeerClosed, RpcError
+from vibey_runners.common.jsonrpc.interfaces.peer_interface import JsonRpcPeerInterface
+
 from vibey.domain.acp.protocol import REQUEST_PERMISSION, SESSION_UPDATE
-from vibey.infrastructure.jsonrpc.errors import PeerCancelled, PeerClosed, RpcError
-from vibey.infrastructure.jsonrpc.interfaces.peer_interface import JsonRpcPeerInterface
 
 
 class PeerClientChannel:

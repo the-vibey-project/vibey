@@ -80,7 +80,7 @@ dir = "src/vibey_runners/common"
 python = "3.12"
 install = "pip install -e \".[dev]\""
 static = "mypy --strict src/vibey_runners/common && lint-imports"
-test = "python -m pytest -q -p no:cacheprovider --cov=vibey_runners.common.infrastructure --cov=vibey_runners.common.capabilities --cov-branch --cov-report=term-missing --cov-fail-under=100"
+test = "python -m pytest -q -p no:cacheprovider --cov=vibey_runners.common.infrastructure --cov=vibey_runners.common.capabilities --cov=vibey_runners.common.jsonrpc --cov-branch --cov-report=term-missing --cov-fail-under=100"
 
 [[tools.pr]]
 package = "claudeloop"
@@ -192,7 +192,7 @@ dir = "src/vibey_runners/common"
 python = "3.12"
 install = "pip install -e \".[dev]\""
 static = "mypy --strict src/vibey_runners/common && lint-imports"
-test = "python -m pytest -q -p no:cacheprovider --cov=vibey_runners.common.infrastructure --cov=vibey_runners.common.capabilities --cov-branch --cov-report=term-missing --cov-fail-under=100"
+test = "python -m pytest -q -p no:cacheprovider --cov=vibey_runners.common.infrastructure --cov=vibey_runners.common.capabilities --cov=vibey_runners.common.jsonrpc --cov-branch --cov-report=term-missing --cov-fail-under=100"
 
 [[tools.full]]
 package = "vibey-runners-common"
@@ -200,7 +200,7 @@ dir = "src/vibey_runners/common"
 python = "3.13"
 install = "pip install -e \".[dev]\""
 static = "mypy --strict src/vibey_runners/common && lint-imports"
-test = "python -m pytest -q -p no:cacheprovider --cov=vibey_runners.common.infrastructure --cov=vibey_runners.common.capabilities --cov-branch --cov-report=term-missing --cov-fail-under=100"
+test = "python -m pytest -q -p no:cacheprovider --cov=vibey_runners.common.infrastructure --cov=vibey_runners.common.capabilities --cov=vibey_runners.common.jsonrpc --cov-branch --cov-report=term-missing --cov-fail-under=100"
 
 [[tools.full]]
 package = "vibey-runners-common"
@@ -208,7 +208,7 @@ dir = "src/vibey_runners/common"
 python = "3.14"
 install = "pip install -e \".[dev]\""
 static = "mypy --strict src/vibey_runners/common && lint-imports"
-test = "python -m pytest -q -p no:cacheprovider --cov=vibey_runners.common.infrastructure --cov=vibey_runners.common.capabilities --cov-branch --cov-report=term-missing --cov-fail-under=100"
+test = "python -m pytest -q -p no:cacheprovider --cov=vibey_runners.common.infrastructure --cov=vibey_runners.common.capabilities --cov=vibey_runners.common.jsonrpc --cov-branch --cov-report=term-missing --cov-fail-under=100"
 
 [[tools.full]]
 package = "claudeloop"

@@ -24,6 +24,8 @@ from acp_fakes import (
     unfenced,
     until,
 )
+from vibey_runners.common.jsonrpc.codec import CODEC
+from vibey_runners.common.jsonrpc.peer import JsonRpcPeer
 
 from tests.domain.acp.acp_wire import assert_wire_exact
 from vibey.application.acp.dto import HubTurn
@@ -34,8 +36,6 @@ from vibey.domain.acp.untrusted_text import UNTRUSTED_TEXT
 from vibey.domain.host_tools import MAX_RESPONSE_CHARS
 from vibey.domain.hub_chat import ChatIntent, ChatSlashSpec, HubChat
 from vibey.domain.hub_scope import HubForbidden, HubScope
-from vibey.infrastructure.jsonrpc.codec import CODEC
-from vibey.infrastructure.jsonrpc.peer import JsonRpcPeer
 
 PROJECT = UUID("7d6c2a8e-0c41-4c1e-9d0e-2f4b8f0a1b2c")
 PROJECTS_TURN = HubTurn(

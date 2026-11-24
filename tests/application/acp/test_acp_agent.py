@@ -12,6 +12,12 @@ from typing import Any
 import pytest
 from acp.schema import InitializeResponse, NewSessionResponse, PromptResponse
 from acp_fakes import FakeChannel, FakeHub, build_agent, text, until
+from vibey_runners.common.jsonrpc.errors import (
+    INVALID_PARAMS,
+    INVALID_REQUEST,
+    METHOD_NOT_FOUND,
+    RpcError,
+)
 
 from tests.domain.acp.acp_wire import assert_wire_exact
 from vibey.application.acp.acp_agent import AcpAgent
@@ -25,7 +31,6 @@ from vibey.domain.acp.settings import AcpSettings
 from vibey.domain.acp.update_mapper import AcpUpdateMapper
 from vibey.domain.host_tools import HOST_TOOL_CATALOG
 from vibey.domain.hub_chat import HUB_CHAT
-from vibey.domain.jsonrpc_errors import INVALID_PARAMS, INVALID_REQUEST, METHOD_NOT_FOUND, RpcError
 
 INITIALIZE_RESULT = {
     "protocolVersion": 1,

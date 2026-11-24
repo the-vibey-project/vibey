@@ -13,3 +13,20 @@ those stay local to the runner that needs them. See each runner's own
 `application/interfaces/` and `application/usecases/` packages, and the
 monorepo-merge extraction notes, for what was and wasn't pulled in here
 and why.
+
+## `jsonrpc/`
+
+A stdlib JSON-RPC 2.0 implementation: the line codec (`codec.py`,
+`JsonRpcCodec` and its `CODEC` singleton), the error vocabulary
+(`errors.py`: the standard codes, `RpcError`, `PeerClosed`,
+`PeerCancelled`) and a bidirectional asyncio peer (`peer.py`,
+`JsonRpcPeer`), each with its interface under `jsonrpc/interfaces/`.
+
+It is shared because more than one speaker of the wire format lives in the
+family: vibey's MCP server (`vibey mcp`) and its Agent Client Protocol agent
+(`vibey acp`), and the local runner's MCP client (SP-LOOPS Phase 5). One
+implementation keeps their bytes from drifting apart; vibey holds no copy of
+its own (`tests/meta/test_one_jsonrpc_peer.py`). Like the rest of this
+package it imports nothing outside the standard library, so vibey's
+application layer may import `errors` (ADR-0017), and the package's
+`__init__.py` is empty so that doing so pulls in no `asyncio`.

@@ -5,8 +5,9 @@ from __future__ import annotations
 
 from typing import Protocol, runtime_checkable
 
+from vibey_runners.common.jsonrpc.interfaces.peer_interface import JsonRpcPeerInterface
+
 from vibey.application.acp.interfaces.client_channel_interface import ClientChannelInterface
-from vibey.infrastructure.jsonrpc.interfaces.peer_interface import JsonRpcPeerInterface
 
 
 @runtime_checkable

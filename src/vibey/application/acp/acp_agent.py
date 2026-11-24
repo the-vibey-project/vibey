@@ -56,6 +56,14 @@ from pathlib import PurePath
 from typing import Any, Final
 from uuid import UUID
 
+from vibey_runners.common.jsonrpc.errors import (
+    INTERNAL_ERROR,
+    INVALID_PARAMS,
+    INVALID_REQUEST,
+    METHOD_NOT_FOUND,
+    RpcError,
+)
+
 from vibey.application.acp.dto import AcpSessionContext, SessionEvent, SessionSummary
 from vibey.application.acp.interfaces.acp_bootstrap_interface import AcpBootstrapInterface
 from vibey.application.acp.interfaces.acp_hub_port_interface import AcpHubPortInterface
@@ -92,13 +100,6 @@ from vibey.domain.errors import VibeyError
 from vibey.domain.hub_scope import HubScope
 from vibey.domain.interfaces.host_tools_interface import HostToolsInterface
 from vibey.domain.interfaces.hub_chat_interface import HubChatInterface
-from vibey.domain.jsonrpc_errors import (
-    INTERNAL_ERROR,
-    INVALID_PARAMS,
-    INVALID_REQUEST,
-    METHOD_NOT_FOUND,
-    RpcError,
-)
 
 type TurnFactory = Callable[[], AcpPromptTurnInterface]
 

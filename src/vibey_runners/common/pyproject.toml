@@ -90,6 +90,18 @@ forbidden_modules = [
     "vibey_runners.common.infrastructure.memory_probe",
 ]
 
+# The JSON-RPC 2.0 codec and peer, moved here from vibey so vibey's MCP server and ACP agent and
+# the local runner's MCP client speak through one implementation (SP-LOOPS Phase 5 R1). Its
+# seams may name `errors` (the vocabulary), never the classes that implement them.
+[[tool.importlinter.contracts]]
+name = "JSON-RPC interfaces declare seams, never consume them"
+type = "forbidden"
+source_modules = ["vibey_runners.common.jsonrpc.interfaces"]
+forbidden_modules = [
+    "vibey_runners.common.jsonrpc.codec",
+    "vibey_runners.common.jsonrpc.peer",
+]
+
 # The loop capability layer (SP-LOOPS): its seams may name the records their signatures
 # carry (the `*_spec`, entry and catalog modules), never the classes that implement them.
 [[tool.importlinter.contracts]]
