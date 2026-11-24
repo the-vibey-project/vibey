@@ -50,3 +50,33 @@ the Ubuntu tarball, a macOS app), and its pairing with a hub leaves a device key
   the tarball would close that gap and is left for the release lane.
 - The phone apps cannot be removed from a computer; the uninstaller says so rather than
   pretending.
+
+## Amendment, 2026-11-24: `--full` runs vibey's own setup, and the install reports only what it saw
+
+The operator asked for a true single-command install. `scripts/install.sh --full`, after the
+install, runs the setup commands vibey already ships, in order, and stops at the first that
+fails, naming the step and the command that re-runs it alone: `vibey install --postgres`,
+then `vibey migrate` when `VIBEY_PG_MIGRATE_URL` is set, then `vibey connect --yes`. It
+implements none of them itself (10.e). Each step is idempotent, so `--full` is safe to run
+again, and each has its own switch (`VIBEY_FULL_POSTGRES`, `VIBEY_FULL_MIGRATE`,
+`VIBEY_FULL_CONNECT`, all `1` by default; `VIBEY_FULL_CONNECT_CLIENTS` narrows the clients),
+so nothing is forced (12.c). Steps run with stdin closed, because under `curl … | sh` stdin is
+the script; where PostgreSQL would come from apt-get or dnf through sudo, the script says a
+password may be asked before the step runs, and with no terminal to ask on it stops and says
+what to run instead. Without `--full` the script runs exactly what it ran before.
+
+Two steps have no vibey command, so `--full` names them for the person rather than inventing
+one in shell: creating the database and its roles (no vibey code issues `CREATE DATABASE`), and
+installing Ollama and pulling the default model (no vibey command fetches a model). Both are
+printed as one line each under "Still yours to do".
+
+Three defects found in a run of the installer are fixed with it. When uv's tool bin
+directory is not on `PATH`, the script looks there (`uv tool dir --bin`), adds it for the rest
+of the run and prints the line for the shell profile; when `vibey` still cannot be found it
+exits 1 with that line, instead of printing "vibey is installed" over a doctor that never ran
+(12.e). `--help` prints its usage from a here-document, so it works when the script is piped
+and `$0` is no file. And the closing line no longer names `scripts/uninstall-krypton.sh`, which
+a piped install does not have: it names `uv tool uninstall krypton-app` and the uninstaller's
+URL, and only when krypton was installed. The core is still never uninstalled (§3).
+`tests/meta/test_install_scripts.py` now checks that every command and option `--full` passes
+is one the `vibey` CLI ships.
