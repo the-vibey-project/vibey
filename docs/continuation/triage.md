@@ -3,6 +3,13 @@ description: The continuation prompt that keeps vibey's backlog, issue tracker a
 ---
 # Triage
 
+> [!IMPORTANT]
+> **Bottom Line Up Front (BLUF):** Use this prompt to keep the issue tracker honest. The agent
+> runs `scripts/backlog_cleanup.py --check`, classifies every untriaged issue in
+> `scripts/backlog_expectations.json` (hold, standalone or epic), proposes closing only what
+> its probes prove done, checks that `docs/estimate.md` is less than a week old, and lands the
+> change as one pull request. GitHub runs it weekly.
+
 Keep the backlog, the tracker and the roadmap truthful: every open issue triaged, every
 closed one actually done, the forecast current.
 

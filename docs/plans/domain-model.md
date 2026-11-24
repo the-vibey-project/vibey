@@ -1,13 +1,103 @@
-# Domain Model
+---
+description: "The pure core of vibey, type by type: the phase machine, the effort ladder, engines and their tiers, rotation, the ledger and the no-loss gate, as they are in src/vibey/domain/ today."
+---
 
-> **Status as of 2026-09-15 (v0.6.0):** checked against `src/vibey/domain/`
-> and current. Corrections in this revision: the import rule now follows
+# The domain model: vibey's pure core, type by type
+
+> [!IMPORTANT]
+> **Bottom Line Up Front (BLUF):** `src/vibey/domain/` holds every rule vibey must get right
+> (which phase is legal, which engine runs next, whether a handoff lost anything) as pure
+> functions over frozen values, with no I/O and a 100% branch-coverage gate. This page walks
+> the core modules member by member. Before you copy a signature from it, open the module: the
+> code is the source, and this page says where it summarises.
+
+> **How current this page is.** Sections 2–22 were checked member by member against
+> `src/vibey/domain/` on `develop` at `d91a3791e` (vibey-engine 0.4.0) on 2026-11-24. The
+> retired engine ids are gone from §4, `Effort.ULTRA` is in §3, the tier and loop model is in
+> §4 and §7, `EventKind` lists all 56 members in §8, `errors.py` lists all 44 classes in §21,
+> and the config defaults in §15 are the code's. The page covers the core modules in depth;
+> the 50-odd modules added since 2026-09 are listed with one line each in §23, with the
+> decision record that explains each. `domain/` has 82 modules plus the `acp/` and
+> `interfaces/` packages. Earlier corrections kept: the import rule follows
 > [ADR-0017](../architecture/decisions/0017-dogfood-the-family-first.md); the security
-> primitives are plain classes; `check_clear_conditions` implements three of its
-> four conditions; rotation's smoothness property, the probe backoff floors, the
-> retry-ladder bound, the command deny-list, and gate rule R7 are stated as the
-> code behaves. Every layer, not only this one, now carries a 100% branch
-> coverage gate ([ADR-0023](../architecture/decisions/0023-four-layers-four-floors.md)).
+> primitives are plain classes; `check_clear_conditions` implements three of its four
+> conditions; rotation's smoothness property, the probe backoff floors, the retry-ladder
+> bound, the command deny-list and gate rule R7 are stated as the code behaves. Every layer,
+> not only this one, carries a 100% branch coverage gate
+> ([ADR-0023](../architecture/decisions/0023-four-layers-four-floors.md)). This page lives
+> under `docs/plans/`, which the published site leaves out on purpose; it is kept current
+> because the agent instruction files point here.
+
+## The idea, in one conversation
+
+> Daniel had a printout of `phase.py` on the bench, three lines underlined in pencil.
+>
+> **Daniel:** Professor, why does the domain have no database in it? Surely the phase of a
+> project lives in the database.
+>
+> **Professor Feynman:** It does. But think of a referee's rule book. The book does not hold
+> the ball. It says: if these things are true, the goal stands. You can read the book on a
+> train, with no stadium anywhere near.
+>
+> **Daniel:** So the domain is the rule book, and the database is the stadium.
+>
+> **Professor Feynman:** Yes. `evaluate_transition` takes the state and the evidence and
+> answers "allowed" or "denied, for these reasons". Nothing else. Because it touches nothing,
+> we can throw thousands of made-up cases at it and check it never lies.
+>
+> **Daniel:** What happens when a newer vibey writes a phase the older one has never heard of?
+>
+> **Professor Feynman:** Good question, and the rule book has an answer: an unknown word is
+> kept, shown, and never acted on. That is `UnrecognizedPhase`, and every stored enum has a
+> twin like it. The picture stops working here: a referee can improvise, and our rule book
+> may not. If it is not written in the book, the answer is no.
+
+## See it on your machine
+
+1. Ask the domain which engines exist and what each effort level becomes.
+
+   ```bash
+   vibey loops --json
+   ```
+
+   You should see a JSON document with a `loops` list of two entries, `sovereignloop` and
+   `paidloop`, and inside them the five engine ids of `EngineId` with their effort
+   projections from `TRIVIAL` to `ULTRA`.
+
+2. From a checkout, ask the enums themselves.
+
+   ```bash
+   uv run python -c "from vibey.domain.effort import Effort; from vibey.domain.engine import EngineId; print([e.name for e in Effort]); print([e.value for e in EngineId])"
+   ```
+
+   You should see:
+
+   ```text
+   ['TRIVIAL', 'LOW', 'STANDARD', 'HIGH', 'MAX', 'ULTRA']
+   ['claudeloop', 'codexloop', 'gptossloop', 'qwenloop', 'claudeloop-local']
+   ```
+
+3. Ask for a retired engine, and read the refusal.
+
+   ```bash
+   uv run python -c "from vibey.domain.engine import EngineId; EngineId('cursorloop')"
+   ```
+
+   The last line you should see is:
+
+   ```text
+   ValueError: 'cursorloop' is not a valid EngineId -- cursorloop was retired by ADR-0078 (#1376) and deleted with its runner; claudeloop and codexloop are the paid engines
+   ```
+
+## Daniel's teach-back
+
+> **Daniel:** The domain is vibey's rule book. It holds the phase machine, the effort ladder,
+> the engines and their tiers, rotation, the ledger's shape and the no-loss gate, all as pure
+> functions over frozen values. It never touches a database, a clock or the network, and a test
+> walks its imports to prove it. A value it does not recognise is kept and never acted on.
+>
+> **Professor Feynman:** Right. One small fix: "never a clock" means the domain never *reads*
+> one. Times arrive as arguments, which is why the tests can choose them.
 
 > Everything in `src/vibey/domain/`. **Stdlib, itself, and any family package
 > that is itself dependency-free** (`vibey-gh`, `vibey-skills` and
@@ -74,10 +164,18 @@ both `DONE` and `REVIEW` still have edges into it. The legal edges of the
 machine live in a private `_EDGES: dict[Phase, frozenset[Phase]]` table,
 checked independently of guard evaluation.
 
+**Forward compatibility (vibey#287).** A phase is read from the database through
+`PHASE_PARSER` into a `StoredPhase = Phase | UnrecognizedPhase`. An
+`UnrecognizedPhase` is the text of a phase a newer vibey wrote during a rolling upgrade:
+it is kept and shown, and never acted on. Every stored enum in `domain/` follows the same
+pattern through `domain/stored_value.py` (`StoredValueParser`, `UnrecognizedValue`): engine
+ids, event kinds, provenance, job states and circuit states each have an `Unrecognized…`
+twin.
+
 ```python
 @dataclass(frozen=True, slots=True)
 class PhaseState:
-    phase: Phase
+    phase: StoredPhase              # Phase | UnrecognizedPhase
     cycle: int
     max_cycles: int
     entered_at: datetime
@@ -94,6 +192,9 @@ class TransitionEvidence:
     """Everything a guard needs. Assembled by application/, evaluated here."""
     acceptance_criteria: int = 0
     open_blocking_questions: int = 0
+    # DESIGN jobs of this cycle not yet succeeded, failed or cancelled: research,
+    # synthesis and the spec must have run before the design can be accepted.
+    unsettled_design_jobs: int = 0
     unmapped_criteria: tuple[str, ...] = ()
     work_items_total: int = 0
     work_items_settled: int = 0
@@ -135,9 +236,10 @@ TransitionOutcome = Allowed | Denied
 
 
 def evaluate_transition(state: PhaseState, request: TransitionRequest) -> TransitionOutcome:
-    """Checked in order: (1) the edge must exist in `_EDGES`, (2) `cycle` must
-    not exceed `max_cycles` unless routing to `ABANDONED`, (3) any per-edge
-    guard registered in `_GUARDS` must report no violations."""
+    """Checked in order: (0) a stored phase this vibey does not recognise
+    (`UnrecognizedPhase`) is always denied, (1) the edge must exist in `_EDGES`,
+    (2) `cycle` must not exceed `max_cycles` unless routing to `ABANDONED`,
+    (3) any per-edge guard registered in `_GUARDS` must report no violations."""
 
 
 def next_phase_after_design(*, visual_decision: VisualDecision, spec_is_buildable: bool) -> Phase:
@@ -178,9 +280,11 @@ guard applies — it just looks the edge up.
   `ABANDONED`, so `vibey abandon` can end a project wherever it stalled -- a
   dispatch that never reached `DESIGN` included. `DONE` has none: it is a
   different ending.
-- `DESIGN → BUILD` and `DESIGN → VISUAL_DESIGN` share a common guard: at least
-  one acceptance criterion, no open blocking question, no unmapped criterion, and
+- `DESIGN → BUILD` and `DESIGN → VISUAL_DESIGN` share a common guard
+  (`_guard_design_common`): at least one acceptance criterion, no open blocking
+  question, no DESIGN job of this cycle still unsettled, no unmapped criterion, and
   a user verdict of `ACCEPT`.
+- No transition out of an `UnrecognizedPhase` is legal.
 - `DESIGN → BUILD` additionally requires an explicit visual-design **decline**;
   opting in must route through `VISUAL_DESIGN` first. `DESIGN → VISUAL_DESIGN`
   additionally requires an explicit opt-in.
@@ -211,6 +315,9 @@ guard applies — it just looks the edge up.
 ```python
 class Effort(IntEnum):
     TRIVIAL = 0; LOW = 1; STANDARD = 2; HIGH = 3; MAX = 4
+    # Effort without a ceiling (ADR-0063): chosen, never escalated into. No ladder,
+    # triage rule or phase base reaches it; an engine runs it with no turn limit.
+    ULTRA = 5
 
 
 PHASE_BASE_EFFORT: Mapping[Phase, Effort] = {
@@ -261,13 +368,97 @@ so the item hands off to another engine instead of failing
 (handoff-protocol.md §3). A domain constant because the meaning belongs to
 the protocol, not to any one subprocess adapter."""
 
+EXIT_CODE_BACKEND_MISCONFIGURED = 78
+"""EX_CONFIG: the runner stopped because its own backend is misconfigured (an
+unreachable local server, a model not pulled, a context window too small). No retry
+fixes a configuration, so the job parks on an `engine_misconfigured` gate."""
+
+
+RETIRED_ENGINES: Mapping[str, str]   # {"cursorloop": " -- ... retired by ADR-0078 ...",
+                                     #  "agyloop":    " -- ... retired by ADR-0078 ..."}
+"""Engine ids the family once shipped and has since deleted. A configuration, flag or
+allow-list that names one is refused out loud, naming the decision. A stored row that
+names one stays valid history and reads as an `UnrecognizedEngineId`."""
+
 
 class EngineId(StrEnum):
     CLAUDELOOP = "claudeloop"; CODEXLOOP = "codexloop"
-    CURSORLOOP = "cursorloop"; AGYLOOP = "agyloop"
     GPTOSSLOOP = "gptossloop"   # the sovereign default: the local runner on GPT-OSS
     QWENLOOP = "qwenloop"       # the same runner on a Qwen model, opt-in (ADR-0064)
     CLAUDELOOP_LOCAL = "claudeloop-local"
+
+    @classmethod
+    def _missing_(cls, value): ...
+    # EngineId("cursorloop") / EngineId("agyloop") raise ValueError with the
+    # RETIRED_ENGINES clause appended; any other unknown value gets the enum's own
+    # ValueError. There is no CURSORLOOP or AGYLOOP member: code that names one
+    # fails with AttributeError (ADR-0078).
+
+
+class EngineTier(StrEnum):
+    LOCAL = "local"   # runs on hardware the operator owns; costs nothing per token
+    PAID = "paid"     # runs on a vendor's account
+
+
+TIER_PREFERENCE: tuple[EngineTier, ...] = (EngineTier.LOCAL, EngineTier.PAID)
+# 8.a: the sovereign path is the preference, not the fallback (ADR-0038).
+
+
+class Loop(StrEnum):            # the family's two loops, exactly two (8.c)
+    SOVEREIGN = "sovereignloop"
+    PAID = "paidloop"
+
+
+LOOP_BY_TIER: Mapping[EngineTier, Loop]   # LOCAL -> sovereignloop, PAID -> paidloop
+DEFAULT_LOOP = Loop.SOVEREIGN
+# States the canon. The selector does not read a paid declaration yet: it prefers
+# the local tier and falls back to paid whenever no local engine is eligible.
+PAID_DEFAULT_ENGINE = EngineId.CLAUDELOOP
+# The canon's paid default (8.b). The selector does not act on it yet: within the
+# paid tier it rotates by weight.
+REPEALED_FROM_LOOPS: frozenset[EngineId] = frozenset()   # empty since OpenCode was deleted
+RENAMED_ENGINES: Mapping[EngineId, str]
+# {QWENLOOP: "since ADR-0064 qwenloop runs a Qwen model (qwen3:14b unless
+#  QWENLOOP_MODEL names another); the gpt-oss engine it used to be is gptossloop"}
+
+
+class PluginSystem(StrEnum):    # how a loop takes extensions beyond its plan
+    SKILLS_CONTEXT = "skills-context"   # vibey-skills packets written into the plan
+    CLAUDE_PLUGINS = "claude-plugins"   # Claude Code's own plugin system
+    VIBEY_BUNDLE = "vibey-bundle"       # the locked capability snapshot, as text + MCP
+
+
+@dataclass(frozen=True, slots=True)
+class EngineAffordances:        # what a person can hand a loop besides its plan
+    images: bool | None = None; files: bool | None = None
+    paste_text: bool | None = None; paste_images: bool | None = None
+    plugins: PluginSystem | None = None; mcp: bool | None = None
+    skills: bool | None = None; web_search: bool | None = None
+    evidence: Mapping[str, str] = {}    # field -> where in the runner's code it is shown
+    def full_access_gaps(self) -> tuple[str, ...]: ...   # unknown is a gap, not a grant
+
+
+@dataclass(frozen=True, slots=True)
+class EngineControls:           # the runner's own verbs for a run in flight; None = unverified
+    stop: tuple[str, ...] | None = None
+    wind_down: tuple[str, ...] | None = None
+    prompt: tuple[str, ...] | None = None
+
+
+class EventEnvelope(StrEnum):   # how a runner shapes one line of events.jsonl
+    TYPE = "type"; EVENT_TYPE_PAYLOAD = "event_type+payload"; EVENT_TYPE = "event_type"
+
+
+@dataclass(frozen=True, slots=True)
+class EventLog:
+    path: str | None = None           # template over {cwd}, {state_dir}, {run_id}
+    envelope: EventEnvelope | None = None
+
+
+@dataclass(frozen=True, slots=True)
+class UnrecognizedEngineId(UnrecognizedValue): ...   # a stored id this vibey does not know
+type StoredEngineId = EngineId | UnrecognizedEngineId
+ENGINE_ID_PARSER: StoredValueParserInterface[EngineId, UnrecognizedEngineId]
 
 
 class Capability(StrEnum):
@@ -307,7 +498,19 @@ class EngineDescriptor:
     context_window: int
     base_weight: int = 1
     supports_cwd_flag: bool = True   # False for a binary that rejects --cwd
-    plan_flag: str | None = None     # None = bare positional; else the flag name (e.g. cursorloop's --plan)
+    plan_flag: str | None = None     # None = bare positional; else the flag name
+                                     # (one engine ADR-0078 retired took --plan; none does today)
+    resume_run_id_flag: str | None = None   # keeps vibey's run id when resuming a session
+    tier: EngineTier = EngineTier.PAID      # LOCAL for engines on the operator's hardware
+    launch_flags: tuple[str, ...] = ()      # passed to every new `run`; checked by conformance
+    capabilities_flag: str | None = None    # the `run` flag that takes the locked capability
+                                            # snapshot (ADR-0103); None = takes no snapshot
+    doctor_args: tuple[str, ...] = ()       # extra args for `<binary> doctor` in preflight
+    env_passthrough: tuple[str, ...] = ()   # env vars the engine's process may read; a
+                                            # trailing * names a prefix (CLAUDELOOP_*)
+    affordances: EngineAffordances = EngineAffordances()   # reported by `vibey loops`
+    controls: EngineControls = EngineControls()
+    events: EventLog = EventLog()
 
     def invoke(self, effort: Effort) -> EngineInvocation:
         """Falls back to the highest projection at or below `effort` — the
@@ -330,6 +533,12 @@ class JobRequirement:
 verified against its actual `--help` output, not assumed: passing a flag a
 binary doesn't have, or a positional path to a binary that wants a flag,
 fails at argument parsing before the session ever starts.
+
+The five descriptors themselves (`CLAUDELOOP`, `CODEXLOOP`, `GPTOSSLOOP`, `QWENLOOP`,
+`CLAUDELOOP_LOCAL`) live outside the domain, in
+`src/vibey/infrastructure/engines/descriptors.py`: `DEFAULT_DESCRIPTORS` holds the two paid
+ones, `LOCAL_DESCRIPTORS` the three local ones, and `ALL_DESCRIPTORS` all five.
+[rotation-and-engines.md](rotation-and-engines.md) §1 tabulates them.
 
 ---
 
@@ -401,6 +610,30 @@ def schedule_probe(capacity: CapacityState, *, now: datetime, attempt: int) -> P
     floored at 5 minutes and capped at 30, so a dead balance is never
     hammered. The exponent is capped at 2**32 to keep timedelta in range.
     AuthenticationFailed -> None; waiting cannot fix credentials."""
+
+
+ENGINE_FAILURE_THRESHOLD = 3                       # consecutive ENGINE-class failures open it
+ENGINE_FAILURE_PROBE_BASE = timedelta(minutes=5)   # first probe after the threshold
+ENGINE_FAILURE_PROBE_CAP = timedelta(minutes=30)   # longest wait between probes
+
+
+@dataclass(frozen=True, slots=True)
+class EngineFailurePolicy:
+    """When ENGINE-class failures open a circuit and when it is probed again.
+    Opening without a probe time would be a one-way door: an open engine cannot be
+    selected to prove it has recovered."""
+    threshold: int = ENGINE_FAILURE_THRESHOLD
+    probe_base: timedelta = ENGINE_FAILURE_PROBE_BASE
+    probe_cap: timedelta = ENGINE_FAILURE_PROBE_CAP
+    def trips(self, consecutive_failures: int) -> bool: ...
+    def probe_at(self, *, now: datetime, consecutive_failures: int) -> datetime: ...
+
+
+@dataclass(frozen=True, slots=True)
+class UnrecognizedCircuitState(UnrecognizedValue): ...
+# A stored circuit state a newer vibey wrote. An older selector cannot tell whether it
+# admits a run, so it does not select the engine; it never crashes on the row.
+type StoredCircuitState = CircuitState | UnrecognizedCircuitState
 ```
 
 ### The one property test that matters most
@@ -441,6 +674,7 @@ class Candidate:
     fidelity_factor: float
     cost_factor: float
     affinity_factor: float
+    tier: EngineTier = EngineTier.PAID    # which side of TIER_PREFERENCE (ADR-0038)
 
     @property
     def effective_weight(self) -> int:
@@ -469,6 +703,20 @@ def eligible(
     """Filters out engines that aren't installed, don't pass conformance,
     have invalid auth, have an OPEN circuit, are in `requirement.excluded`,
     aren't on an explicit `allow_list`, or lack a required capability."""
+
+def rejections(
+    runtimes: Sequence[EngineRuntime], *, requirement: JobRequirement,
+    allow_list: frozenset[EngineId] | None = None,
+) -> tuple[str, ...]:
+    """Why each engine `eligible` turned down, one phrase per engine ("claudeloop: its
+    circuit is open"), by exactly `eligible`'s rules -- the message a deferred job
+    carries, so each cause gets its own fix."""
+
+def preferred_tier(candidates: Sequence[Candidate]) -> tuple[Candidate, ...]:
+    """Local-first (ADR-0038, sub-doctrine 8.a): tiers are tried in TIER_PREFERENCE
+    order, and SWRR runs within the first tier holding a candidate with a positive
+    effective weight. A paid engine is chosen only when no local one can win a round.
+    When no tier qualifies, every candidate is returned and `select` raises."""
 
 def select(candidates: Sequence[Candidate]) -> Selection: ...      # smooth WRR
 def health_factor(circuit: Circuit) -> float: ...
@@ -511,7 +759,9 @@ class EventKind(StrEnum):
     TRANSCRIPT_RECORDED = "TranscriptRecorded"  # turn text; never a turn boundary
     FILE_EDITED = "FileEdited"; VERDICT_RENDERED = "VerdictRendered"
     CAPACITY_REJECTED = "CapacityRejected"
-    QUESTION_ASKED = "QuestionAsked"; ANSWER_GIVEN = "AnswerGiven"
+    QUESTION_ASKED = "QuestionAsked"
+    STAGE_SETTLED = "StageSettled"
+    ANSWER_GIVEN = "AnswerGiven"
     DECISION_RECORDED = "DecisionRecorded"; ASSUMPTION_STATED = "AssumptionStated"
     FINDING_RAISED = "FindingRaised"; FINDING_RESOLVED = "FindingResolved"
     ARTIFACT_PRODUCED = "ArtifactProduced"; SAVEPOINT_CREATED = "SavePointCreated"
@@ -522,6 +772,9 @@ class EventKind(StrEnum):
     VISUAL_DESIGN_ACCEPTED = "VisualDesignAccepted"
     VISUAL_DESIGN_WAIVED = "VisualDesignWaived"
     DEPLOYMENT_OPTED_IN = "DeploymentOptedIn"; DEPLOYMENT_DECLINED = "DeploymentDeclined"
+    # The last step of a delivered project: its work was pushed (a pull request opened,
+    # or a new repository created), or the operator chose not to. Never a deployment.
+    PUBLISH_COMPLETED = "PublishCompleted"; PUBLISH_SKIPPED = "PublishSkipped"
     DELIVERY_ESTIMATE_RECORDED = "DeliveryEstimateRecorded"
     # Queue priority (ADR-0054), in the same transaction as the job rows they describe
     JOB_PRIORITY_BUMPED = "JobPriorityBumped"
@@ -531,11 +784,20 @@ class EventKind(StrEnum):
     QUEUE_REAPED = "QueueReaped"
     # `vibey budget set`/`clear`: field, old, new, by, account; with the config write
     BUDGET_CAP_CHANGED = "BudgetCapChanged"
+    # ULTRA (ADR-0063): `vibey ultra start` / `stop` (the latest decides whether the next
+    # BUILD pass runs), one event per finished improvement pass, and the no-cap
+    # declaration changing (`vibey budget no-cap` / `cap`; trusted only)
+    ULTRA_STARTED = "UltraStarted"; ULTRA_STOPPED = "UltraStopped"
+    ULTRA_PASS_COMPLETED = "UltraPassCompleted"
+    ULTRA_NO_CAP_CHANGED = "UltraNoCapChanged"
     # A gate answered once: gate, kind, answer, request id, by, account; with the answer
     GATE_ANSWERED = "GateAnswered"
     # A gate closed by `vibey abandon`, never answered: gate, kind, job, request id,
     # reason, by, account; with the move into abandoned and the gate's own row
     GATE_WITHDRAWN = "GateWithdrawn"
+    # A device paired with the hub, or its pairing revoked (ADR-0068, ADR-0071): device
+    # id, name and granted scopes, never its key; written to every project's ledger
+    HUB_DEVICE_PAIRED = "HubDevicePaired"; HUB_DEVICE_REVOKED = "HubDeviceRevoked"
     ENGINE_FAILED_OVER = "EngineFailedOver"    # ADR-0070
     ENGINE_PROBED = "EngineProbed"
     ENGINE_HANDED_BACK = "EngineHandedBack"
@@ -561,6 +823,12 @@ class EventKind(StrEnum):
     # The snapshot a BUILD run was given, recorded by vibey before the engine starts (SP-LOOPS
     # Phase 4): run id, digest and counts only. Trusted only; withheld from publication.
     LOOP_CAPABILITIES_SNAPSHOTTED = "LoopCapabilitiesSnapshotted"
+# 56 members in all (counted 2026-11-24).
+
+
+class UnrecognizedEventKind: ...   # the text of a kind a newer vibey wrote (vibey#275)
+type LedgerEventKind = EventKind | UnrecognizedEventKind
+EVENT_KIND_PARSER: EventKindParserInterface   # a member, else an UnrecognizedEventKind
 
 
 CLOSABLE: frozenset[EventKind] = frozenset({
@@ -581,12 +849,27 @@ class Provenance(StrEnum):
 
 
 @dataclass(frozen=True, slots=True)
+class UnrecognizedProvenance(UnrecognizedValue): ...
+type StoredProvenance = Provenance | UnrecognizedProvenance
+PROVENANCE_PARSER: StoredValueParserInterface[Provenance, UnrecognizedProvenance]
+
+
+@dataclass(frozen=True, slots=True)
 class LedgerEvent:
-    event_id: UUID; project_id: UUID; cycle: int; phase: Phase
-    seq: int; kind: EventKind; engine_id: EngineId | None
+    """One event as a reader sees it. Every closed vocabulary is read
+    forward-compatibly, so an event a newer vibey wrote is kept whole; a writer's
+    draft (`LedgerEventDraft`) takes only members."""
+    event_id: UUID; project_id: UUID; cycle: int; phase: StoredPhase
+    seq: int; kind: LedgerEventKind; engine_id: StoredEngineId | None
     job_id: UUID | None; causation_id: UUID | None; correlation_id: UUID
-    provenance: Provenance; produced_at: datetime
+    provenance: StoredProvenance; produced_at: datetime
     payload: Mapping[str, object]; digest: str
+
+    @property
+    def interpretable(self) -> bool:
+        """A known phase and a known trust class. Semantic projections (and the
+        no-loss rules R1-R5 and R7) read only interpretable events; accounting and
+        lossless export keep every event."""
 
 
 def canonical_bytes(payload: Mapping[str, object]) -> bytes:
@@ -746,7 +1029,9 @@ def verify(
 ```
 
 `verify` runs ten independent checks, each producing zero or more
-`Violation`s, keyed by the `GateRule` it enforces:
+`Violation`s, keyed by the `GateRule` it enforces. R1–R5 and R7 read only the
+`interpretable` events of the range (§8); R6 and R8 read every event, so an event a newer
+vibey wrote still counts toward the digest and the spend.
 
 | Rule | Checks |
 |---|---|
@@ -779,6 +1064,24 @@ class JobState(StrEnum):
     READY="ready"; LEASED="leased"; SUCCEEDED="succeeded"; FAILED="failed"
     AWAITING_HUMAN="awaiting_human"; AWAITING_CAPACITY="awaiting_capacity"
     CANCELLED="cancelled"
+
+@dataclass(frozen=True, slots=True)
+class UnrecognizedJobState(UnrecognizedValue): ...   # never claimed; still counted
+type StoredJobState = JobState | UnrecognizedJobState
+JOB_STATE_PARSER: StoredValueParserInterface[JobState, UnrecognizedJobState]
+
+# The gates the queue, the worker and BUILD raise on a job's behalf
+ATTEMPTS_EXHAUSTED_GATE_KIND = "attempts_exhausted"       # every attempt failed (ADR-0024)
+DELIVERY_EXHAUSTED_GATE_KIND = "delivery_exhausted"       # its worker died every time (ADR-0056)
+ESCALATION_EXHAUSTED_GATE_KIND = "escalation_exhausted"   # build.implement's ladder is spent
+DEFECT_GATE_KIND = "defect"            # the last failures were identical: rerun after a fix, or abandon
+FOREIGN_BRANCH_GATE_KIND = "foreign_branch"   # a branch BUILD cannot prove is this project's
+HANDOFF_INPUTS_GATE_KIND = "handoff_inputs_missing"   # a handed-off run cannot get the same run inputs
+LOOP_CAPABILITIES_GATE_KIND = "loop_capabilities_unresolved"   # the capability snapshot cannot be given
+QUEUE_GATE_KINDS = frozenset({ATTEMPTS_EXHAUSTED_GATE_KIND, DELIVERY_EXHAUSTED_GATE_KIND,
+                              DEFECT_GATE_KIND})          # raised by the queue, read back only by it
+GRANT_EXHAUSTION_KINDS = frozenset({ATTEMPTS_EXHAUSTED_GATE_KIND,
+                                    ESCALATION_EXHAUSTED_GATE_KIND})   # offer more attempts
 
 class FailureClass(StrEnum):
     CAPACITY="capacity"   # opens the circuit
@@ -846,6 +1149,9 @@ class DesignSpec:
     criteria: tuple[AcceptanceCriterion, ...]
     nfrs: tuple[NonFunctionalRequirement, ...]
     walking_skeleton: str
+    research_gaps: tuple[ResearchGap, ...] = ()   # topics not researched
+    # (`[design.research] on_unavailable = "record_gap"`); taken from the ledger by the
+    # synthesis handler, never from a model, so the spec states every gap
 
     def is_buildable(self) -> tuple[str, ...]:
         """Returns violations; empty means the DESIGN → BUILD guard can pass."""
@@ -1107,6 +1413,12 @@ class DecompositionPlanner:  # behind domain/interfaces/plan_interface.py
 
 DECOMPOSITION_PLANNER: DecompositionPlannerInterface = DecompositionPlanner()
 
+def fold_verification_only(items: Sequence[WorkItem]) -> tuple[WorkItem, ...]:
+    """Absorbs every item that builds nothing (an empty files_touched_hint) into the
+    item it verifies: its criteria and checks move to the dependency listed last,
+    which also inherits what the folded item waited for. An item with nothing to
+    build, handed to an engine, is a session with nothing to do."""
+
 def validate_decomposition(
     items: Sequence[WorkItem], *, criteria_ids: Sequence[str], walking_skeleton_item_id: str,
 ) -> tuple[str, ...]:
@@ -1196,9 +1508,11 @@ never touches the filesystem — reading the file is an infrastructure concern.
 ```python
 VALID_ISOLATION_LEVELS = ("worktree", "container", "vm")
 VALID_EFFORTS = ("trivial", "low", "standard", "high", "max")
+# "ultra" is deliberately absent: ULTRA is chosen with `vibey ultra`, never configured
 DEFAULT_ENGINES = ("gptossloop",)   # the sovereign default, on without declaration
-KNOWN_ENGINES = ("claudeloop", "codexloop", "cursorloop", "agyloop",
-                 "gptossloop", "qwenloop", "claudeloop-local")
+KNOWN_ENGINES = ("claudeloop", "codexloop", "gptossloop", "qwenloop", "claudeloop-local")
+# "cursorloop" and "agyloop" are refused with ConfigError naming ADR-0078
+# (RETIRED_ENGINES in engine.py)
 LOCAL_ENGINE_FEATURES = {"gptossloop": "gptossloop", "qwenloop": "qwenloop",
                          "claudeloop-local": "claudeloop_local"}
 LOCAL_ENGINES_ON_BY_DEFAULT = frozenset({"gptossloop"})   # ADR-0064
@@ -1221,9 +1535,16 @@ class BudgetConfig:
     max_turns_per_item: int | None = None
 
 @dataclass(frozen=True, slots=True)
+class ClaudeloopLocalConfig:   # [engines.claudeloop_local] (ADR-0038)
+    profile: str = "local"          # a [profiles.NAME] table in claudeloop's own config
+    context_window: int = 32_768    # keep equal to the profile's and OLLAMA_CONTEXT_LENGTH
+    structured_verdict: bool = False   # claimed only once conformance proves it
+
+@dataclass(frozen=True, slots=True)
 class EnginesConfig:
     enabled: tuple[str, ...] = DEFAULT_ENGINES
     weights: dict[str, int] = field(default_factory=dict)
+    claudeloop_local: ClaudeloopLocalConfig = field(default_factory=ClaudeloopLocalConfig)
 
 @dataclass(frozen=True, slots=True)
 class PhaseConfig:
@@ -1243,7 +1564,8 @@ class ProvisionConfig:
 
 @dataclass(frozen=True, slots=True)
 class DeployConfig:
-    enabled: bool = False; target: str = "azure"; iac: str = "bicep"
+    enabled: bool = False; target: str = "openstack"; iac: str = "bicep"
+    # "openstack" is the sovereign default cloud (8.b); "azure" has the built adapter
 
 @dataclass(frozen=True, slots=True)
 class FeaturesConfig:
@@ -1269,8 +1591,23 @@ class VibeyConfig:
     phases: PhasesConfig = field(default_factory=PhasesConfig)
     provision: ProvisionConfig = field(default_factory=ProvisionConfig)
     deploy: DeployConfig = field(default_factory=DeployConfig)
+    notifications: NotificationsConfig      # desktop alerts and signed webhooks
+    telemetry: TelemetryConfig              # in-process span and sample caps
     features: FeaturesConfig = field(default_factory=FeaturesConfig)
     qwenloop: QwenloopConfig = field(default_factory=QwenloopConfig)
+    # The sovereign-default operational surfaces (ADR-0042; sub-doctrine 8.b), each a
+    # self-hosted adapter by default and a paid relay only by declaration:
+    tracker: TrackerConfig; docs: DocsConfig; secrets: SecretsConfig
+    files: FilesConfig; email: EmailConfig; sms: SmsConfig
+    messaging: MessagingConfig; config_store: ConfigStoreConfig
+    cache: CacheConfig; bus: BusConfig; blob: BlobConfig; siem: SiemConfig
+    surfaces: SurfacesConfig                # shared adapter settings (timeouts)
+    queue: QueueConfig                      # priority sources (ADR-0054), reap thresholds (ADR-0056)
+    design: DesignConfig                    # incl. [design.research] on_unavailable
+    build: BuildConfig                      # slicing into CDD layers (ADR-0092)
+    engine_dispatch: EngineDispatchConfig   # [engines] mode, slots, overflow (ADR-0079)
+    publish: PublishConfig                  # [publish] mode off | interview | auto
+    # 29 tables in all; every one has a default, so only [project] is required.
 
 def parse_toml_string(text: str) -> dict[str, Any]: ...   # stdlib tomllib.loads
 
@@ -1287,11 +1624,19 @@ def load_config_from_string(text: str) -> VibeyConfig: ...
 ```
 
 Config parsing can live in `domain/` because `tomllib` is stdlib. Reading the
-file is `infrastructure/config_loader.py::load_config_from_path`; as of
-2026-09-15 it has no runtime caller (see `docs/reference/configuration.md`). The
-`VIBEY_FEATURE_*` overrides are applied by
+file is `infrastructure/config_loader.py::load_config_from_path`, and it has a runtime
+caller: `StartupConfigResolver.resolve` parses `./vibey.toml` in full at process start
+(`bootstrap.py`) and configures the operational surfaces, telemetry and the queue from it;
+a file that fails to parse is logged and skipped. `load_runtime_config_from_path` copies the
+runtime tables (`notifications`, `telemetry`, `gates`, `engine_environment`, `design`,
+`build`, `human_gates`, `publish` and the dispatch keys of `[engines]`) into the project
+record at `vibey new`. (An earlier version of this page said the loader had no runtime
+caller; that was true on 2026-09-15 and is not now.) `[engines] enabled` and `weights`,
+`[phases]`, `[budget]`, `[provision]` and `[deploy]` are parsed but not read at runtime as of
+2026-11-24. The `VIBEY_FEATURE_*` overrides are applied by
 `infrastructure/engines/local_engines.py::LocalEngineSettings`, the one resolver
-the worker, `vibey doctor` and `vibey loops` share.
+the worker, `vibey doctor` and `vibey loops` share. The full schema is in
+[`docs/reference/configuration.md`](../reference/configuration.md).
 
 ---
 
@@ -1299,8 +1644,10 @@ the worker, `vibey doctor` and `vibey loops` share.
 
 Agent-surface provisioning content rules (task 6.3, ADR-0011): one source of
 truth for the non-negotiables/plugins/context block, materialized
-idempotently into every engine's router file (`CLAUDE.md`, `AGENTS.md`,
-`CURSOR.md`, `GEMINI.md`, `QWEN.md`). Pure content generation and the
+idempotently into five router files (`CLAUDE.md`, `AGENTS.md`, `CURSOR.md`,
+`GEMINI.md`, `QWEN.md`). `CURSOR.md` and `GEMINI.md` belonged to `cursorloop` and
+`agyloop`, which ADR-0078 retired; `RouterFile` still lists them, so they are still written,
+though no engine vibey runs reads them. Pure content generation and the
 marker-delimited merge that preserves hand-written guidance outside vibey's
 block; the actual filesystem/git I/O lives in `infrastructure/provision/`.
 
@@ -1423,13 +1770,18 @@ def parse_verbosity(*, verbose: int = 0, quiet: bool = False) -> Verbosity:
     """Raises ValueError if --quiet and --verbose are both set."""
 
 def resolve_log_plan(*, verbose: int = 0, quiet: bool = False, log_level: str | None = None) -> LogPlan:
-    """An explicit --log-level always wins over the -v count — naming a
+    """An explicit --log-level always wins over the -d count — naming a
     level and having it silently overridden by a count (possibly set in an
     alias) would be more surprising than honouring it. The count still
     widens scope independently, so `--log-level WARNING -ddd` is a
     legitimate way to ask for warnings from everything: include_third_party
     from TRACE and up, include_payloads from FIREHOSE."""
 ```
+
+**The count flag is `-d`, not `-v`.** Since #1898, `vibey -v` / `--version` prints the
+versions of `vibey-engine` and `krypton-app` and exits, and the count is `-d` /
+`--verbose` (`-d`, `-dd`, `-ddd`; `src/vibey/cli/main.py`). The `verbose` parameter above
+is that `-d` count.
 
 ---
 
@@ -1442,7 +1794,10 @@ anywhere in `bootstrap.py`**, and nothing in `application/` or
 `infrastructure/` calls them — see
 [SECURITY.md](../../SECURITY.md) for the current disclosure of what this
 means for the guarantees vibey actually provides today; do not rely on any
-of them being enforced until that changes.
+of them being enforced inside a run until that changes. One caller exists outside
+`src/vibey/`: the triaged-delivery intake, `scripts/intake_trust.py`, frames admitted issue
+text through `PromptShield` so the model reads it as data. (The ACP agent has its own
+untrusted-text handling in `domain/acp/untrusted_text.py`.)
 
 ```python
 # command_guard.py — destructive-command prevention
@@ -1675,25 +2030,42 @@ def evaluate_verification_contract(
 
 ## 21. Errors
 
+`src/vibey/domain/errors.py` defines 44 classes (counted 2026-11-24), all under
+`VibeyError`:
+
 ```python
 class VibeyError(Exception): ...
-class InvalidPhaseError(VibeyError): ...
-class IllegalTransitionError(VibeyError): ...
-class NoEligibleEngine(VibeyError): ...
+class InvalidPhaseError(VibeyError): ...       # a PhaseState with invalid fields
+class IllegalTransitionError(VibeyError): ...  # evaluate_transition denied it
+class NoEligibleEngine(VibeyError): ...        # no candidate with positive weight
 class EscalationExhausted(VibeyError):
     def __init__(self, attempt: int) -> None: ...
 class HandoffRejected(VibeyError):
     def __init__(self, result: GateResult) -> None: ...
 class InvalidSpecError(VibeyError): ...
 class BudgetExceeded(VibeyError): ...
+class InvalidBudgetChange(VibeyError): ...     # `vibey budget set` asked for a non-cap
+class InvalidActorLabel(VibeyError): ...       # a `--by` name that cannot be recorded
+class UnknownGate(VibeyError, LookupError): ...
+class GateAlreadyAnswered(VibeyError): ...     # answered once already; the first answer stands
+class ForeignBranchRefused(VibeyError): ...    # BUILD cannot prove the branch is this project's
 class UnknownProject(VibeyError):
     """No project exists with the given id."""
+class InputStoreError(VibeyError): ...         # run inputs (ADR-0104, ADR-0105)
+class InputStoreUnavailable(InputStoreError): ...   # e.g. a SeaweedFS store that did not answer
+class HandoffInputsMissing(VibeyError): ...    # a handed-off run cannot get its predecessor's inputs
+class RunInputRefused(VibeyError): ...         # not a `paste` or `file`, or a bad name
+class UnknownLane(VibeyError, LookupError): ...
 class WrongPhase(VibeyError):
     """The project is not in a phase the requested command applies to."""
+class CheckoutHeld(VibeyError): ...            # two live projects never share a checkout (0021)
+class InvalidAbandonment(VibeyError): ...      # `vibey abandon` with an unrecordable reason
+class AbandonmentRefused(VibeyError): ...      # done, or a phase it cannot be abandoned from
 class InvalidAnswer(VibeyError):
     """A human-gate answer was not in the expected QUESTION_ID=ANSWER form."""
 class UnknownProvider(VibeyError):
     """The requested engine provider is not one vibey knows how to build."""
+class SovereignResearchUnavailable(VibeyError): ...   # research refused a topic rather than invent a source
 class ReorderRefused(VibeyError): ...      # queue priority (ADR-0054): every one is recorded
 class UnknownJob(ReorderRefused): ...
 class NotReorderable(ReorderRefused): ...  # finished, or a state/phase this vibey does not know
@@ -1702,7 +2074,21 @@ class DependencyCannotFinish(ReorderRefused): ...  # a failed or cancelled depen
 class DependentsStillBumped(ReorderRefused): ...   # un-bump them first
 class ReorderConflict(ReorderRefused): ... # the database broke a lock cycle; retry
 class PriorityRefused(ReorderRefused): ... # no grant (12.j)
+class HandbackRefused(VibeyError): ...     # no successful probe since the failover (ADR-0070)
+class LeaseReapIncomplete(VibeyError): ... # some expired leases could not be reaped (ADR-0056)
+class ClassifiedFailure(VibeyError): ...   # a failure that already knows its FailureClass
+class OutputBudgetExhausted(ClassifiedFailure): ...   # a local model spent its output budget, no answer
+class ModelAnswerRejected(ClassifiedFailure, ValueError): ...   # wrong shape after one re-ask
+class LifecycleRefused(VibeyError): ...    # a hub start/pause/resume/unwind refused (ADR-0091)
+class LifecycleInvalid(LifecycleRefused): ...      # what the device sent is not acceptable
+class LifecycleConflict(LifecycleRefused): ...     # a folder or checkout is taken
+class LifecycleUnavailable(LifecycleRefused): ...  # not allowed, or the Sabbath window
+class LifecycleFailed(LifecycleRefused): ...       # the command the host ran failed
 ```
+
+`ConfigError` (§15) lives in `config.py`, and a handful of modules define errors of their
+own beside the code that raises them (for example `WebToolRefused` and its siblings in
+`web_tools.py`).
 
 ---
 
@@ -1729,3 +2115,98 @@ test.
 
 That last one is why every function here takes `now: datetime`. It is what makes
 the wait-policy and circuit-breaker tests deterministic instead of flaky.
+
+**One interface beside every class.** Since
+[ADR-0016](../architecture/decisions/0016-classes-behind-interfaces.md), each class in
+`domain/` has a declaring Protocol in `domain/interfaces/` (`sovereign_model.py` implies
+`interfaces/sovereign_model_interface.py`). Interfaces declare; they never consume.
+
+---
+
+## 23. The rest of `domain/`, one line each
+
+Sections 2–22 cover the core the original plan named. These modules were added later;
+each line is the module's own docstring, shortened, with the decision record that explains
+it. Read the module before relying on any of them.
+
+| Module | What it holds |
+|---|---|
+| `abandonment` | Abandoning a project (`vibey abandon`): the operator's clean exit |
+| `actor_label` | Who a person-made record says made it: a label the caller chose, or its account |
+| `budget_caps` | A project's cycle caps: what a change to them is, and the record of every change |
+| `correlation` | The delivery correlation id: one identifier for one delivery, end to end |
+| `defect` | Telling a defect from bad luck: when a job's failures are all the same one (the `defect` gate) |
+| `design_default_scope` | The narrowest-scope default for a DESIGN interview question |
+| `driver_brief` | The driver's handoff brief and its no-loss gate ([ADR-0070](../architecture/decisions/0070-failover-to-the-sovereign-engine-and-handback-on-a-recorded-probe.md)) |
+| `engine_dispatch` | Hybrid engine dispatch: local slots, wait, paid overflow and its daily cap ([ADR-0079](../architecture/decisions/0079-hybrid-engine-dispatch.md)) |
+| `failover` | Failover to the sovereign engine, and handback after a recorded probe (ADR-0070) |
+| `gate_answer` | A gate is answered once: what identifies one answering request |
+| `gate_auto_answer` | Which waiting gates a worker may answer for the operator who asked it to, and with what |
+| `gate_notice` | Gate notices: whether a person was told a gate is waiting, as evidence |
+| `gate_timeout` | Which gate kinds a project lets resolve to their default after waiting (`[human_gates] timeout_defaults`; only `choice`, `deploy_interview`, `deploy_failure_triage`, `deploy_acceptance`, `deploy_demo_review`) |
+| `handoff_inputs` | Which run inputs a handed-off run must be given |
+| `host_clients` | The planner and config merger for `vibey connect` ([ADR-0100](../architecture/decisions/0100-host-driven-mcp-interface-and-chat-first-surfaces.md)) |
+| `host_health` | What `vibey doctor` says about the machine's health |
+| `host_tools` | The host-LLM tool catalogue: every action a chat client drives through MCP (ADR-0100) |
+| `hub_binding` | Where the hub may listen, and which names a request may reach it by |
+| `hub_chat` | The hub's chat command parser and turn renderer (ADR-0100) |
+| `hub_pairing` | Pairing a device with the hub, and what a paired device's request must prove ([ADR-0071](../architecture/decisions/0071-hub-pairing-and-trust.md)) |
+| `hub_scope` | What a caller of the hub may do: scopes, the actions they cover, and the ones none does |
+| `hub_target` | Where a hub credential, or a probe of the hub, may be sent: this computer's loopback only |
+| `input_ledger` | The ledger, not the store, decides what a run is given |
+| `integration_evidence` | What the integration gates actually did, as REVIEW's evidence |
+| `ledger_chain` | The ledger's hash chain: tamper evidence derived from the rows, stored nowhere |
+| `ledger_query` | A ledger search, as a value that cannot be built invalid (`vibey ledger search`) |
+| `ledger_record` | A ledger event as a JSON object, written one way and read back one way |
+| `ledger_tier` | Configuration values for ledger storage tiers |
+| `llm_tooling` | Which of vibey's LLM-facing surfaces each client has, and what to do about one it lacks |
+| `local_stack` | The local dependency configuration the installer uses (`vibey install`) |
+| `loop_capabilities` | What the ledger records of the capability snapshot a run was given ([ADR-0103](../architecture/decisions/0103-the-loop-capability-bundle.md)) |
+| `marketplace_source` | Which marketplace sources vibey fetches, and how (ADR-0103) |
+| `model_families` | The local model families vibey knows by name ([ADR-0093](../architecture/decisions/0093-local-model-families-are-named-and-measured-not-assumed.md)) |
+| `phase_timing` | Phase timing: the measured history an honest estimator needs |
+| `plan_references` | A plan's verification may only run or read files something provides |
+| `publication_policy` | What of a ledger a public shard may carry (`vibey ledger site`) |
+| `publish` | What publishing a finished project proposes, and how a person's answer changes it (`review.publish`) |
+| `queue_reap` | Queue reaping by measurement, never by feel ([ADR-0056](../architecture/decisions/0056-everything-a-queue-guards-is-reaped-by-measurement.md)) |
+| `remote_command` | A vibey command run on the repository's GitHub-hosted runners (`vibey -w`, [ADR-0085](../architecture/decisions/0085-vibey-on-the-workflows.md)) |
+| `repair_convergence` | When a repair that changes nothing is a reason to stop repairing (the `repair_not_converging` gate) |
+| `research_gap` | What DESIGN research does when no evidence can be had, and the record it leaves |
+| `residency` | Residency policy for seat slugs and model selection |
+| `run_input` | A run input: one pasted text or one file given to every BUILD run of a project ([ADR-0104](../architecture/decisions/0104-run-inputs-hash-addressed.md)) |
+| `run_ownership` | Whose command a run on the workflows is: request ids the hub mints for one principal (ADR-0085) |
+| `sabbath` | The Sabbath window as the domain sees it (sub-doctrine 8.i, [ADR-0072](../architecture/decisions/0072-the-sabbath-kept-where-the-machine-stands.md)) |
+| `searxng` | The local SearXNG vibey installs and runs itself, its pure half ([ADR-0102](../architecture/decisions/0102-local-first-search-and-a-provisioned-searxng.md)) |
+| `slicing` | Multi-layer slicing of a BUILD decomposition into the CDD layers ([ADR-0092](../architecture/decisions/0092-large-tasks-are-sliced-into-the-cdd-layers-before-they-run.md)) |
+| `sovereign_model` | Which weights the local loop runs: `heretic` (the default, `hf.co/mradermacher/gpt-oss-20b-heretic-v2-GGUF:MXFP4_MOE`) or `stock` (`gpt-oss:20b`); `VIBEY_SOVEREIGN_MODEL` picks one, `VIBEY_OLLAMA_MODEL` names any tag and wins ([ADR-0099](../architecture/decisions/0099-heretic-v2-of-gpt-oss-20b-is-the-sovereign-default-model.md)) |
+| `state_sync` | One vibey database's rows, kept the same at both ends (`vibey state`, [ADR-0086](../architecture/decisions/0086-state-sync.md)) |
+| `stored_value` | Reading a closed vocabulary back out of storage, forward-compatibly (vibey#287; §2) |
+| `supervisor` | The declared supervisor: what keeps vibey's long-running processes alive (`vibey supervisor`) |
+| `ultra` | ULTRA, the pure half ([ADR-0063](../architecture/decisions/0063-ultra-effort-without-a-ceiling.md)) |
+| `web_tools` | Search and fetch served from the hub: what may be fetched, from where, how much, and what the ledger records (ADR-0102) |
+
+Two packages sit beside the modules: `domain/acp/` (the ACP agent's pure half: modes,
+protocol, session state and replay, settings and their trust, untrusted text, gate
+permission; [ADR-0101](../architecture/decisions/0101-the-acp-agent-and-self-installing-services.md))
+and `domain/interfaces/` (ADR-0016).
+
+## When it goes wrong
+
+| What you see | What it means | What to do |
+|---|---|---|
+| `AttributeError: type object 'EngineId' has no attribute 'CURSORLOOP'` (or `'AGYLOOP'`) | Code written from an old copy of §4; the members were removed by ADR-0078 | Use `EngineId.CLAUDELOOP` or `EngineId.CODEXLOOP` for a paid engine |
+| `ValueError: 'cursorloop' is not a valid EngineId -- cursorloop was retired by ADR-0078 ...` | A flag, allow-list or config named a retired engine | Remove it; see `RETIRED_ENGINES` |
+| `KeyError` on a `Mapping[EngineId, ...]` with a stored engine id | The id came back as an `UnrecognizedEngineId` | Narrow with `isinstance(engine_id, EngineId)` before using it as a key (§4) |
+| `tests/domain/test_domain_purity.py` fails after your change | A domain module now does I/O, awaits, reads the clock or imports an outer layer | Move that part to `application/` or `infrastructure/` and pass the value in (§22) |
+
+## Where next
+
+- [architecture-and-roadmap.md](architecture-and-roadmap.md), for how these types meet the
+  queue, the workers and the engines.
+- [handoff-protocol.md](handoff-protocol.md), for the full specification of §9's gate.
+- `src/vibey/domain/` itself: this page summarises, the module decides.
+
+## Say it in one line
+
+vibey's domain is a rule book with no I/O: the phase machine, effort ladder, engines, rotation
+and no-loss gate as pure functions that keep any value they do not recognise and never act on it.

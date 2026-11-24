@@ -3,6 +3,12 @@ description: The continuation prompt that keeps vibey's weekly measurements and 
 ---
 # Research and measurement
 
+> [!IMPORTANT]
+> **Bottom Line Up Front (BLUF):** Use this prompt to check that every weekly measurement
+> reached its append-only record and that every registered study under `research/` is resumed
+> by its own protocol, never redesigned. Records are corrected only by new entries, and an
+> unfinished result is labelled interim. GitHub runs it weekly.
+
 Keep every weekly measurement landing and every registered study running, without ever
 bending a protocol to fit an outcome.
 
@@ -27,15 +33,19 @@ src/vibey_tools/gh/docs/doctrines.md sub-doctrines 10.f (evidence-bounded status
    review-canary.yml (docs/architecture/evidence/review-canary/ledger.jsonl),
    minimum-specs.yml (docs/architecture/evidence/minimum-specs.json),
    host-health.yml (docs/architecture/evidence/host-health.jsonl), and
-   autonomy-scorecard.yml (docs/architecture/evidence/autonomy-scorecard.jsonl).
+   autonomy-scorecard.yml (docs/architecture/evidence/autonomy-scorecard.jsonl), and
+   first-hour.yml, which times CONTRIBUTING.md "Your first hour" each week and appends to its
+   first-hour records under docs/architecture/evidence/ (none is recorded until a run
+   completes; the guide then says "Not yet measured").
    For each: did its latest run succeed, and did its measurement reach the record through a
    merged pull request? A run that succeeded without changing its record after a fresh
    measurement is a defect: find where the handover lost it.
 2. Records are append-only. Never edit or delete a line; a correction is a new entry. A
    chained record (each line carries the previous line's digest) must still pass its
    `check` command after your change.
-3. A registered study (research/*/experiments/, with a PREREGISTRATION.md and a LOG.md)
-   is resumed, never redesigned. Read its LOG.md to the end. Every deviation is logged with
+3. A registered study is one with a PREREGISTRATION.md under research/: today
+   research/large-diff-review/experiments/ (with its LOG.md) and research/model-quality/
+   (registered, with no LOG.md yet). It is resumed, never redesigned. Read its LOG.md to the end. Every deviation is logged with
    its time and reason BEFORE the outcome it could bias is seen. A result lost to
    infrastructure (a server outage, contention) is voided by the study's own mechanism and
    re-run, never counted against the method and never silently dropped.

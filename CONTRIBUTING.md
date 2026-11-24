@@ -1,49 +1,74 @@
-# Contributing to vibey
+---
+description: "How to contribute to vibey: one command sets up a fresh clone, and every change travels from your branch to develop through local hooks, CI and the merge train."
+---
+
+# Contributing to vibey: from a fresh clone to a merged pull request
 
 > [!IMPORTANT]
-> **Work in progress — not a final product:** `vibey` is actively under development and not yet a finished product. Contributors and early testers are warmly welcomed! Folks will be notified on the [Discord server](https://discord.gg/Qvu8aYnVS) once the product is finally completed.
->
-> **Bottom Line Up Front (BLUF) — Just want to install and use vibey and the krypton apps?**
->
-> You do not need to clone the repository or write code to use vibey or any krypton interface:
-> - **One-line install (`vibey` engine + `krypton` browser launcher on macOS & Linux):**
->   ```bash
->   curl -fsSL https://raw.githubusercontent.com/the-vibey-project/vibey/main/scripts/install.sh | sh -s -- --with-krypton
->   vibey connect --yes   # plug vibey into Claude Code, Codex, Cursor, VS Code, Claude Desktop & Gemini CLI
->   ```
-> - **Every krypton app (Desktop `.dmg` for macOS Apple silicon, Flatpak & Ubuntu `.tar.gz` for Linux, VS Code `.vsix` & Open VSX extension, Web app, and Android `.apk` & iOS mobile apps):** Follow the step-by-step instructions for every skill level in [docs/guides/install.md](docs/guides/install.md) and [docs/guides/downloads.md](docs/guides/downloads.md).
+> **Bottom Line Up Front (BLUF):** For anyone changing vibey's code or docs. Fork, clone, and
+> run `uv run --extra dev vibey-gh setup` once: it installs what the gates use and the hooks
+> that guard each commit and push. Branch from `develop`, commit with a Conventional Commits
+> subject, push, and open a pull request into `develop`; the merge train lands it once it is
+> green and approved. Allow about an hour the first time, most of it installing PostgreSQL.
 
-Thank you for considering a contribution. This document is meant to be
-command-level and specific — if something here is unclear or you hit a
-situation it doesn't cover, that's a bug in this document; please open an
-issue or a PR fixing it.
+> [!NOTE]
+> **Just want to use vibey?** You do not need to clone the repository. The one-line install
+> puts the `vibey` engine (and, with `--with-krypton`, the `krypton` launcher) on macOS or Linux:
+>
+> ```bash
+> curl -fsSL https://raw.githubusercontent.com/the-vibey-project/vibey/main/scripts/install.sh | sh -s -- --with-krypton
+> ```
+>
+> To drive vibey from Claude Code, Claude Desktop, Codex, Cursor, VS Code, Gemini CLI or Zed,
+> run `vibey connect --client <id> --dry-run` and then `--yes` (with no `--client` it writes a
+> registration for all seven). Every krypton app (desktop, VS Code extension, web, Android
+> and iOS) is covered step by step in [docs/guides/install.md](docs/guides/install.md) and
+> [docs/guides/downloads.md](docs/guides/downloads.md).
+>
+> vibey is a work in progress, not a finished product. Contributors and early testers are
+> welcome, and the [Discord server](https://discord.gg/Qvu8aYnVS) hears first when it is done.
 
-New here? Start with [Your first hour](#your-first-hour): it goes from a fresh clone to
-a pull request, one command at a time. The project governs itself by written law — the
+If something here is unclear, or you hit a situation it does not cover, that is a bug in
+this page: open an issue or a pull request that fixes it.
+
+The project governs itself by written law: the
 [Constitution](src/vibey_tools/gh/docs/constitution.md) and
-[the Twelve Doctrines](src/vibey_tools/gh/docs/doctrines.md) — and every hard technical
-call is argued in a [decision record](docs/architecture/decisions/).
+[the Twelve Doctrines](src/vibey_tools/gh/docs/doctrines.md). Every hard technical call is
+argued in a [decision record](docs/architecture/decisions/).
 
-## Table of contents
+## How a change travels: a short lesson
 
-1. [Your first hour](#your-first-hour)
-2. [Environment setup](#environment-setup)
-3. [The branch model](#the-branch-model)
-4. [Conventional Commits](#conventional-commits)
-5. [The changelog](#the-changelog)
-6. [Provenance](#provenance)
-7. [Quality gates](#quality-gates)
-8. [Pushing in this repository](#pushing-in-this-repository)
-9. [The workspace tenants](#the-workspace-tenants)
-10. [The onion architecture import rule](#the-onion-architecture-import-rule)
-11. [Protected tests](#protected-tests)
-12. [Agent surfaces](#agent-surfaces)
-13. [Decisions and governing rules](#decisions-and-governing-rules)
-14. [The paper and the book](#the-paper-and-the-book)
-15. [PR checklist](#pr-checklist)
-16. [Getting help](#getting-help)
-17. [Code of Conduct](#code-of-conduct)
-18. [License of contributions](#license-of-contributions)
+The workshop was quiet except for a laptop fan. Daniel had cloned vibey that morning and
+had a one-word fix ready, and no idea what happened after he pressed Enter.
+
+**Daniel:** Professor, I want to fix one word in the docs. Why can't I just push it to `develop`?
+
+**Professor Feynman:** Think of a post office. You do not walk into the sorting room and drop
+your letter on a shelf. You stamp it, you hand it over the counter, and it goes through
+several hands before the van takes it. Each hand checks one thing.
+
+**Daniel:** So what are the hands?
+
+**Professor Feynman:** The first are on your own machine. `vibey-gh setup` installs hooks.
+When you commit, one checks that your subject reads like `docs: fix the CLI example`, and
+another stamps a `Made-With:` line on the message so the change says where it came from.
+When you push, the pre-push hook runs the whole gate suite: the tests, the type checks, the
+coverage floors.
+
+**Daniel:** And after the push?
+
+**Professor Feynman:** You open a pull request into `develop`. CI runs the same gates again on
+a clean machine, and a reviewer approves it. Then the merge train, a robot clerk, looks at
+every open pull request. If yours is green, approved and not a draft, it hands it to the
+merge queue, which squashes it onto `develop` only after proving it green against the newest
+`develop`, not the one you started from.
+
+**Daniel:** So nobody presses Merge.
+
+**Professor Feynman:** Nobody presses Merge. Later, `vibey-gh promote` carries `develop` to
+`main`, and a push to `main` publishes the release. Here the picture stops working: a post
+office delivers each letter as it comes, but the queue re-checks your letter against every
+letter that went before it.
 
 ## Your first hour
 
@@ -62,7 +87,7 @@ this guide is a bug report about this guide.
 fork and install everything the gates use. [uv](https://docs.astral.sh/uv/) is the
 Python package manager this repository uses; `brew install uv` or its
 [installer](https://docs.astral.sh/uv/getting-started/installation/) puts it on your
-machine.
+machine. Replace `<you>` with your GitHub user name.
 
 ```bash
 git clone https://github.com/<you>/vibey.git
@@ -71,13 +96,18 @@ uv run --extra dev vibey-gh setup
 uv run vibey --version
 ```
 
-`vibey-gh setup` is the whole environment in one idempotent command: it syncs the
-dependencies, installs the pre-commit framework's three hook types and then the
-provenance hooks (in the order that works), checks that the test database in step 3 can be
-reached, and finishes by running `vibey doctor`. Run it again any time; a step that has
-nothing to do says `unchanged`. `vibey-gh setup --check` reports the state and changes
-nothing, and `vibey-gh check` names a clone whose hooks are missing. See
-[Environment setup](#environment-setup) for what it does and what it will not.
+You should see `vibey-gh setup` report each step as `changed`, `unchanged` or `failed`, and
+then the version check print two lines: the vibey-engine version (for example
+`vibey-engine 0.4.0`) and `krypton-app not installed`, because the krypton apps are a
+separate package that a clone does not install.
+
+`vibey-gh setup` is the whole environment in one idempotent command: it checks that git, uv
+and Python 3.12+ are present, syncs the dependencies, installs the pre-commit framework's
+three hook types and then the provenance hooks (in the order that works), checks that the
+test database in step 3 can be reached, and finishes by running `vibey doctor`. Run it again
+any time; a step that has nothing to do says `unchanged`. `vibey-gh setup --check` reports
+the state and changes nothing, and `vibey-gh check` names a clone whose hooks are missing.
+See [Environment setup](#environment-setup) for what it does and what it will not.
 
 **2. Run your first test, no database needed (1 minute).** These are the tests of the
 book exporter, one of the tools that ships inside vibey. `--no-cov` because one file on
@@ -87,12 +117,18 @@ its own cannot meet that package's 100% coverage floor, which counts the whole p
 uv run pytest src/vibey_tools/gh/test/test_book.py -q --no-cov
 ```
 
+You should see a row of dots and a `passed` count, with no failures.
+
 **3. Run the test that matters most (about 20 minutes, most of it PostgreSQL).** The
-main suite runs against a real PostgreSQL 14+ server, never a mock. Install one
-(`brew install postgresql@17 && brew services start postgresql@17` on macOS,
-`sudo apt install postgresql` on Debian or Ubuntu), make yourself a role that can create
-databases and roles, and give it a password — the server must authenticate with
-scram-sha-256, the settings for which are in [SECURITY.md §7](SECURITY.md):
+main suite runs against a real PostgreSQL 14+ server, never a mock. Install one:
+`uv run --extra dev vibey-gh setup --postgres` installs a server through
+`vibey install --postgres` (Homebrew's `postgresql@18` on macOS; the distribution's
+`postgresql` through apt-get, or `postgresql-server` through dnf, on Linux). Installing it
+yourself also works, for example `brew install postgresql@17 && brew services start postgresql@17`
+on macOS or `sudo apt install postgresql` on Debian or Ubuntu, since CI tests every major
+from 14 to 18. Then make yourself a role that can create databases and roles,
+and give it a password. The server must authenticate with scram-sha-256; the settings are
+in [SECURITY.md §7](SECURITY.md).
 
 ```bash
 createuser --createdb --createrole --pwprompt "$USER"   # run as a PostgreSQL superuser
@@ -100,6 +136,9 @@ echo "localhost:5432:*:$USER:<the password you chose>" >> ~/.pgpass && chmod 600
 createdb vibey_test
 uv run pytest tests/infrastructure/db/test_chaos.py -q
 ```
+
+In the second line, `<the password you chose>` is the password you typed at the
+`createuser` prompt.
 
 That is the chaos test: 8 workers and 500 jobs, with each claim abandoned mid-flight
 with probability 0.2, and the test failing if any job is lost or committed twice.
@@ -128,9 +167,43 @@ git push -u origin docs/fix-cli-example
 ```
 
 The first push runs the whole gate suite, so it takes several minutes; that is the
-pre-push hook doing its job. Then open the pull request into `develop`. The
-[PR checklist](#pr-checklist) is in the template; tick what you can and say what you
-could not — a reviewer helps with the rest.
+pre-push hook doing its job. Run it in the foreground and do not edit files in that clone
+until it finishes (see [When it goes wrong](#when-it-goes-wrong)). Then open the pull request
+into `develop`. The [PR checklist](#pr-checklist) is in the template; tick what you can and
+say what you could not — a reviewer helps with the rest.
+
+### Daniel's teach-back
+
+**Daniel:** So: I clone, run `vibey-gh setup` once, and from then on the hooks check every
+commit and push on my own machine. My pull request goes into `develop`, never `main`. CI runs
+the gates again, someone approves, and the merge train hands it to the merge queue, which
+squashes it in only if it is still green on the newest `develop`. Releases are a separate
+step: `develop` is promoted to `main`.
+
+**Professor Feynman:** Exactly right, with one addition: the train merges unattended only for
+the owner and the project's own bots. Yours is green and approved and still waits for a
+person to merge it, and that is the rule working, not a fault.
+
+## Table of contents
+
+1. [Environment setup](#environment-setup)
+2. [The branch model](#the-branch-model)
+3. [Conventional Commits](#conventional-commits)
+4. [The changelog](#the-changelog)
+5. [Provenance](#provenance)
+6. [Quality gates](#quality-gates)
+7. [Pushing in this repository](#pushing-in-this-repository)
+8. [The workspace tenants](#the-workspace-tenants)
+9. [The onion architecture import rule](#the-onion-architecture-import-rule)
+10. [Protected tests](#protected-tests)
+11. [Agent surfaces](#agent-surfaces)
+12. [Decisions and governing rules](#decisions-and-governing-rules)
+13. [The paper and the book](#the-paper-and-the-book)
+14. [PR checklist](#pr-checklist)
+15. [When it goes wrong](#when-it-goes-wrong)
+16. [Getting help](#getting-help)
+17. [Code of Conduct](#code-of-conduct)
+18. [License of contributions](#license-of-contributions)
 
 ## Environment setup
 
@@ -143,22 +216,28 @@ uv run --extra dev vibey-gh setup
 `vibey-gh setup` runs, in order, and reports what it observed afterwards rather than what
 it ran:
 
-1. `uv sync --extra dev`.
-2. The framework hooks, all three stages (`pre-commit`, `commit-msg`, `pre-push`). Without
+1. The prerequisites: `git` and `uv` on `PATH`, and Python 3.12 or newer. A missing one
+   stops setup here and says which.
+2. `uv sync --extra dev`.
+3. The framework hooks, all three stages (`pre-commit`, `commit-msg`, `pre-push`). Without
    `--hook-type` the commit-msg and pre-push hooks are never installed and the suite never
    runs locally.
-3. `vibey-gh install`, the provenance hooks. This points `core.hooksPath` at `.githooks`;
+4. `vibey-gh install`, the provenance hooks. This points `core.hooksPath` at `.githooks`;
    the tracked `.githooks/*.local` shims chain back to the framework hooks above,
    resolving the common git directory to ensure they run in linked worktrees. It lists any
    tracked file it changed and commits nothing.
-4. A read-back through the same check `vibey-gh check` makes.
-5. PostgreSQL: whether the test database can be reached (`VIBEY_TEST_DATABASE_URL`, else
+5. A read-back through the same check `vibey-gh check` makes.
+6. PostgreSQL: whether the test database can be reached (`VIBEY_TEST_DATABASE_URL`, else
    `postgresql://$USER@localhost:5432/vibey_test`) and the role can create databases. It
    creates no role, password or `~/.pgpass`; when the check fails it prints the commands
-   from [step 3 of the first hour](#your-first-hour). `--postgres` installs the server only.
-6. `vibey doctor`, shown in full. It is advisory: it also checks things only an operator
+   from [step 3 of the first hour](#your-first-hour). `--postgres` installs the server only,
+   through `vibey install --postgres`.
+7. `vibey doctor`, shown in full. It is advisory: it also checks things only an operator
    has (the Sabbath location, the supervisor, host health), so its exit status does not
    decide setup's. `--skip-doctor` leaves it out.
+
+`vibey-gh install` on its own installs only step 4, the provenance hooks: commits then carry
+the `Made-With:` trailer, but no framework gate runs on commit or push. Use `setup`.
 
 It will not overwrite a `core.hooksPath` it did not set: a global, system or other
 local value is named and left alone. If you would rather run the steps yourself, they are:
@@ -170,21 +249,20 @@ uv run vibey-gh install
 ```
 
 The order matters: `pre-commit install` refuses to run while `core.hooksPath`
-is set (`setup` lifts its own `.githooks` value for the install and puts it back). The tracked shims (`.githooks/pre-commit`, `commit-msg.local` and
-`pre-push.local`) all hand over to `.githooks/framework-hook.sh`. It finds the
-framework's hooks through `git rev-parse --git-common-dir`, the same directory
-`pre-commit install` writes to. That works from a plain clone and from a linked
-worktree (`git worktree add`), where `.git` is a file rather than a directory,
-and one install covers every worktree. It also drops the `GIT_DIR` that git
-exports to a worktree's hooks, so the gate suite runs as it would from a plain
-clone and a test's scratch `git init` cannot rewrite this repository's config.
-If the framework's hook for a stage is
-not installed, the shim prints
-`warning: the pre-commit framework's <stage> hook is not installed` and lets
-the commit or push go ahead. None of that stage's gates ran, so run them by
-hand. CI runs them regardless.
+is set (`setup` lifts its own `.githooks` value for the install and puts it back). The
+tracked shims (`.githooks/pre-commit`, `commit-msg.local` and `pre-push.local`) all hand
+over to `.githooks/framework-hook.sh`. It finds the framework's hooks through
+`git rev-parse --git-common-dir`, the same directory `pre-commit install` writes to. That
+works from a plain clone and from a linked worktree (`git worktree add`), where `.git` is a
+file rather than a directory, and one install covers every worktree. It also drops the
+`GIT_DIR` that git exports to a worktree's hooks, so the gate suite runs as it would from a
+plain clone and a test's scratch `git init` cannot rewrite this repository's config.
 
-Requires **Python 3.12+**, **PostgreSQL**, and **macOS or Linux**. Windows is
+If the framework's hook for a stage is not installed, the shim prints
+`warning: the pre-commit framework's <stage> hook is not installed` and lets the commit or
+push go ahead. None of that stage's gates ran, so run them by hand. CI runs them regardless.
+
+Requires **Python 3.12+**, **PostgreSQL 14 or newer**, and **macOS or Linux**. Windows is
 not a supported target. The suite reads `VIBEY_TEST_DATABASE_URL` (default
 `postgresql://$USER@localhost:5432/vibey_test`); that role needs `CREATEDB`,
 because the session builds a migrated `vibey_test_template` and clones one
@@ -205,6 +283,9 @@ while its lock is held, or while the process its mark names is alive on this mac
 session that loses its lock mid-run still keeps its databases. `uv run python -m
 tests.db_reaper --dry-run` shows what it would drop. `VIBEY_TEST_REAP=0` turns the automatic
 reap off, and `VIBEY_TEST_REAP_LIMIT` (default 200) caps one run's drops.
+
+When you debug, `vibey -d` turns on debug output (`-dd` adds third-party libraries, `-ddd`
+full payloads to the local model). `vibey -v` is not verbose: it prints the versions and exits.
 
 ### Where your work lives, and how often it is saved
 
@@ -244,20 +325,31 @@ main         ← always releasable; every push publishes to PyPI (vibey-engine.y
   │ opened by `vibey-gh promote` (promote-to-main.yml); after a release,
   │ develop is realigned to main's tree.
 develop      ← integration branch; every push publishes dev builds to TestPyPI
-  ▲ squash merge — develop's ruleset permits only squash
+  ▲ squash merge through the merge queue — develop's ruleset permits only squash
 feature/*    ← your work
 ```
 
 1. `git checkout -b feature/short-description develop`
 2. Commit using [Conventional Commits](#conventional-commits).
 3. Open a PR **into `develop`**, never `main`.
-4. You do not press Merge. Once the PR has one approval, a green `gates`
-   check (ci.yml) and successful `PR evaluate / gate` and `PR review / gate`
-   checks (pr-evaluate.yml + pr-review.yml), the merge train (`vibey-gh merge-train`,
-   merge-train.yml) squash-merges it. A draft PR is never merged by the
-   train. To see why a PR is not moving:
-   `gh workflow run merge-train.yml -f pr=<N> -f dry_run=true`.
-5. `vibey-gh promote` opens the promotion PR from `develop` into `main`; it is
+4. You do not press Merge. The merge train (`vibey-gh merge-train`, `merge-train.yml`) runs
+   when the PR review gate completes, and weekly and by hand as a backstop. It merges only
+   what is ready: not a draft, no conflicts, checks green, and nobody has asked for changes.
+   The develop ruleset (`.vibey-gh.toml [rulesets.integration]`) requires one approval, the
+   code owner's approval for a [protected path](#protected-tests), and these checks:
+   `gates`, `Lint and static gates`, `No-loss property suite (10,000 examples)`,
+   `VS Code extension (ubuntu-latest)`, `VS Code extension (macos-latest)`, `No skip markers`
+   and `CI result`. The train also waits for the `PR evaluate / gate` and `PR review / gate`
+   checks (pr-evaluate.yml, pr-review.yml). Merges land through the merge queue, which proves
+   each merge green against the tip of `develop` it joins; nobody can bypass it
+   (`bypass_actors = []`).
+5. Who may merge unattended is limited. A PR from the owner or the project's own bots
+   (`[merge_train] trusted_authors`) merges on a green build. From anyone else it never
+   merges unattended, however green and whoever approved it: the train reports it "needs a
+   human merge" (ADR-0053, sub-doctrine 12.j), and a maintainer merges it. To see why a PR is
+   not moving: `gh workflow run merge-train.yml -f pr=<N> -f dry_run=true`, with your PR's
+   number for `<N>`.
+6. `vibey-gh promote` opens the promotion PR from `develop` into `main`; it is
    rebase-merged, `vibey-engine.yml` publishes, and `develop` is realigned.
 
 Never implement on `main`.
@@ -269,9 +361,13 @@ Every commit message follows
 `docs`, `style`, `refactor`, `perf`, `test`, `build`, `chore`, `ci`,
 `revert`. Two hooks act on the message: `conventional-pre-commit` rejects a
 bad subject, and vibey-gh's `.githooks/commit-msg` appends the `Made-With:`
-provenance trailer. The version of the next release is derived from what
-changed (`vibey-gh version`, configured by `[version]` in `.vibey-gh.toml`),
-not from the commit types (ADR-0028).
+provenance trailer.
+
+The version of the next release is derived from what changed (`vibey-gh version`,
+configured by `[version]` in `.vibey-gh.toml`), not from the commit types (ADR-0028). A change
+under `content_paths` makes a minor release and one under `code_paths` a patch. vibey is held
+below 1.0: `max_major = 0` turns a breaking-change marker into a minor release
+(`0.Y.0` to `0.(Y+1).0`), never `1.0.0`, until the operator deletes that key.
 
 A commit made in the GitHub web UI — including an accepted Copilot autofix —
 bypasses both hooks and fails the `Provenance` check. Reword it locally before
@@ -301,7 +397,8 @@ should read in that changelog, bullet included and no heading:
 ```
 
 The release commit folds every fragment in under its heading and deletes it
-(`vibey-gh promote` runs it; `uv run vibey-gh changelog assemble` performs the same fold by hand, editing both changelogs and deleting the fragments, so it is not a preview). The
+(`vibey-gh promote` runs it; `uv run vibey-gh changelog assemble` performs the same fold by
+hand, editing both changelogs and deleting the fragments, so it is not a preview). The
 `Changelog fragment` check refuses a pull request that changes shipped code
 (`[changelog] require_for`) without a fragment, adds a malformed one, or edits an
 unreleased section directly. Label it `no-changelog` when no reader of the
@@ -322,10 +419,10 @@ uv run vibey-gh check --apply    # add missing file headers
 ## Quality gates
 
 On `git commit` the hooks run only ruff (`--fix`) and ruff-format. Everything
-else runs on `git push`: first `vibey-gh check`, then the test suite, mypy
---strict, import-linter, the four 100% branch-coverage gates, bandit and
-pip-audit. CI (ci.yml, jobs `lint` and `gates`) enforces the same seven gates, of which
-Gate 4 is the four per-layer floors (ADR-0023):
+else runs on `git push`: first `vibey-gh check`, then mypy --strict, the static gates over
+the other declared trees, import-linter, the test suite with the four 100% branch-coverage
+gates, bandit and pip-audit. CI (ci.yml, jobs `lint` and `gates`) enforces the same seven
+gates, of which Gate 4 is the four per-layer floors (ADR-0023):
 
 ```bash
 uv run ruff check .
@@ -342,18 +439,31 @@ uv run coverage report --include='src/vibey/cli/*' --fail-under=100
 
 uv run lint-imports
 uv run bandit -q -r src/vibey
-uv run pip-audit
+uv run pip-audit --skip-editable
 ```
+
+`--skip-editable` matters: without it pip-audit looks up the editable `vibey-engine` itself
+on PyPI, at a version that is not published yet. The pre-push hook and CI both pass it.
 
 There is no "coverage debt" mechanism: a PR that drops any layer below 100%
 branch coverage does not merge. A `pragma: no cover`, `noqa`, `nosec` or
 `type: ignore` needs its reason written beside it. Every `None`-default
 keyword argument needs both-sides tests.
 
-CI also runs a multi-arch container build, with one `Image contract - …` step
-for each claim the Dockerfile makes, and a Helm install on minikube with four
-cluster contracts
-([Kubernetes guide](docs/guides/kubernetes.md), ADR-0025).
+CI also runs, among others:
+
+- `docs`, a strict build of this site (`properdocs build --strict`), so a broken link or a
+  nav entry for a missing page fails on the pull request;
+- a multi-arch container build, with one `Image contract - …` step for each claim the
+  Dockerfile makes, and a Helm install on minikube with its cluster contracts
+  ([Kubernetes guide](docs/guides/kubernetes.md), ADR-0025);
+- `ci-result` ("CI result"), which fails unless every other job succeeded or was skipped.
+  It is a required check on `develop`.
+
+Which jobs run is decided by the `plan` job (`vibey-gh ci-areas` over
+`.github/ci-areas.toml`): a pull request into `develop` runs only the jobs its diff can
+affect, on a small matrix; the merge queue, anything aimed at `main`, and the nightly run
+every job on the full matrix.
 
 ## Pushing in this repository
 
@@ -368,10 +478,11 @@ python3 <storm>/tools/push_gate.py run -- git push origin HEAD:<branch>
 
 `<storm>` is the storm root, the directory that holds `storm.toml`: `<home>/qwenstorm-3.0.0`
 under the storm home (see [Where your work lives](#where-your-work-lives-and-how-often-it-is-saved);
-on the operator's Mac, `~/git/vibey-storm/qwenstorm-3.0.0`). It must be on a durable path, never
-under a temporary directory such as `/tmp` or `/private/tmp`: a reboot wipes those, and on
-2026-09-24 one took the storm's lock and state with it. From a checkout with no storm, use the
-tracked copy and name the machine's shared lock, `<home>/.push-lock`:
+on the operator's Mac, `~/git/vibey-storm/qwenstorm-3.0.0`). `<branch>` is the branch you are
+pushing. The storm root must be on a durable path, never under a temporary directory such as
+`/tmp` or `/private/tmp`: a reboot wipes those, and on 2026-09-24 one took the storm's lock
+and state with it. From a checkout with no storm, use the tracked copy and name the machine's
+shared lock, `<home>/.push-lock`:
 `VIBEY_PUSH_LOCK=<home>/.push-lock python3 docs/plans/qwenstorm-3.0.0/tools/push_gate.py run -- git push …`.
 Run from a checkout without a named lock, the tool refuses. A lock derived there would be
 private to that checkout and would exclude nobody.
@@ -398,24 +509,27 @@ machine. The rules the reaper acts on are in `docs/plans/qwenstorm-3.0.0/README.
 ## The workspace tenants
 
 This repository is a uv workspace (ADR-0021). `src/vibey` is the conductor;
-`src/vibey_runners/{claude,codex,cursor,agy,qwen,common}` are the `*loop`
-runners; `src/vibey_tools/{gh,skills,bootstrap}` are vibey-gh, vibey-skills
-and vibey-bootstrap. Each was imported with its history, and each ships inside
-the `vibey-engine` package rather than under its own PyPI name (ADR-0037, ADR-0069).
+`src/vibey_runners/{claude,codex,qwen,common}` are the `*loop` runners (claudeloop,
+codexloop, and the local runner that ships as `gptossloop` and `qwenloop`) and their shared
+library; `src/vibey_tools/{gh,skills,bootstrap}` are vibey-gh, vibey-skills and
+vibey-bootstrap. The cursorloop and agyloop runners were retired and removed (ADR-0078).
+Each tenant was imported with its history, and each ships inside the `vibey-engine` package
+rather than under its own PyPI name (ADR-0037, ADR-0069).
 
 The root gates above cover `src/vibey` only. A tenant keeps every gate it was
 already held to (ADR-0022), run from its own directory with its own command,
 across the common supported Python range 3.12–3.14 — exactly as ci.yml's
-`tools` and `tools-lint` jobs do. Nothing in that matrix may reach an index for a family
-package: a tenant that needs a sibling installs it from the tree first.
+`tools` and `tools-lint` jobs do (the rows are declared in `.github/ci-matrices.toml`). Nothing
+in that matrix may reach an index for a family package: a tenant that needs a sibling installs
+it from the tree first.
 
 | Tenant | Checks |
 |---|---|
-| `src/vibey_tools/gh` | `pip install -e ".[dev]"`, `python -m pytest -q` (100% branch floor), `black --check vibey_gh test`, `isort --check-only vibey_gh test`, `mypy vibey_gh`, and the managed-automation drift check; Python 3.12–3.14 |
-| `src/vibey_tools/skills` | `python3 tools/validate_manifests.py`, `python3 tools/check_links.py`, `PYTHONPATH=src python3 -m unittest discover -s tests`; Python 3.12–3.14. On the 3.12 row, also its own strict docs build: `pip install -e ".[docs]"`, `mkdocs build --strict`, and a check that every plugin and skill produced a page |
-| `src/vibey_tools/bootstrap` | `pip install -e ../gh` (it imports `vibey_gh`), `pip install -e ".[test,all]"`, `pytest test/ -m "not integration" --cov=vibey_bootstrap` (100% line floor); Python 3.12–3.14. On the 3.12 floor row, also `.[dev]` and its own pre-commit hook's `python -m mypy vibey_bootstrap/` and `python -m bandit -r vibey_bootstrap/ -ll -q` |
-| `src/vibey_runners/common` | `pip install -e ".[dev]"`, `mypy --strict src/vibey_runners/common`, `lint-imports`; Python 3.12–3.14. It ships no suite |
-| `src/vibey_runners/*` | the suite with the four per-layer 100% branch floors (qwenloop: one whole-package floor, in its addopts) on Python 3.12, 3.13, and 3.14. On the 3.12 row, also its own `mypy --strict src/<pkg>`, `lint-imports` and `bandit -q -r src/<pkg>`, plus claudeloop's skill-frontmatter check. codexloop runs every gate on ubuntu and macOS, and also runs `properdocs build --strict` (properdocs 1.6.7) on ubuntu 3.12 |
+| `src/vibey_tools/gh` | `pip install -e ../../vibey_runners/common` (it imports the runners-common memory probe), `pip install -e ".[dev]"`, `python -m pytest -q` (100% branch floor); `mypy vibey_gh` on the 3.12 row; in `tools-lint`, `black --check vibey_gh test`, `isort --check-only vibey_gh test`, `mypy vibey_gh` and the managed-automation drift check; Python 3.12–3.14 |
+| `src/vibey_tools/skills` | `pip install -e ".[dev]"`, `python3 tools/sync_catalogue_surfaces.py --check`, `python3 tools/validate_manifests.py`, `python3 tools/check_links.py`, `PYTHONPATH=src python3 -m unittest discover -s tests`; Python 3.12–3.14. On the 3.12 row, also `mypy --strict --explicit-package-bases src` and its own strict docs build: `pip install -e ".[docs]"`, `mkdocs build --strict`, and a check that every plugin and skill produced a page |
+| `src/vibey_tools/bootstrap` | `pip install -e ../gh` (it imports `vibey_gh`), `pip install -e ".[test,all]"`, `pytest test/ -m "not integration" --cov=vibey_bootstrap` (100% line floor); Python 3.12–3.14. On the 3.12 row, it installs `.[test,all,dev]` and also runs its own pre-commit hook's `python -m mypy vibey_bootstrap/` and `python -m bandit -r vibey_bootstrap/ -ll -q` |
+| `src/vibey_runners/common` | `pip install -e ".[dev]"`, `mypy --strict src/vibey_runners/common` and `lint-imports`, and its pytest suite with a 100% branch floor over its `infrastructure`, `capabilities`, `jsonrpc` and `mcp` packages; every check on every row, Python 3.12–3.14 |
+| `src/vibey_runners/{claude,codex,qwen}` | `pip install -e ../common` first; the suite with the four per-layer 100% branch floors (qwenloop: one whole-package floor, in its addopts) on Python 3.12, 3.13, and 3.14. On the 3.12 row, also its own `mypy --strict src/<pkg>`, `lint-imports` and `bandit -q -r src/<pkg>`, plus claudeloop's skill-frontmatter check. codexloop also runs its static gates on ubuntu 3.13 and on every macOS row, and `properdocs build --strict` (properdocs 1.6.7) on ubuntu 3.12 |
 
 A tenant carries no `.github/`, `.githooks/` or `.vibey-gh.toml` of its own.
 GitHub reads only the root's workflows and templates, git runs only the root's
@@ -458,15 +572,16 @@ exception, with its reason written at the definition (ADR-0016).
 
 ## Protected tests
 
-A small set of test files encode contracts that must not drift
-(`tests/system/test_delivery_stage_set.py`, `tests/domain/test_noloss*.py`,
+A small set of files encode contracts that must not drift:
+`tests/system/test_delivery_stage_set.py`, `tests/domain/test_noloss*.py`,
 `tests/domain/test_briefing.py`, `tests/infrastructure/db/test_chaos.py`,
-and everything under `tests/live/`). Do not modify them without explicit
-maintainer sign-off in the PR description; changes to them are reviewed as
-contract changes, not test edits. The list is `[merge_train] protected_paths`
-in `.vibey-gh.toml`, mirrored by `.github/CODEOWNERS`: the owner's review is
-required, and the merge train refuses such a pull request as "needs a human
-merge", so the maintainer merges it by hand.
+everything under `tests/live/`, `.github/CODEOWNERS`, and
+`.github/advisory-exceptions.toml` (each entry there accepts a known security risk until it
+expires; see [SECURITY.md §8](SECURITY.md)). Do not modify them without explicit maintainer
+sign-off in the PR description; changes to them are reviewed as contract changes, not test
+edits. The list is `[merge_train] protected_paths` in `.vibey-gh.toml`, mirrored by
+`.github/CODEOWNERS`: the owner's review is required, and the merge train refuses such a pull
+request as "needs a human merge", so the maintainer merges it by hand.
 
 ## Agent surfaces
 
@@ -523,8 +638,8 @@ docs site beside the pages they mirror:
   `scripts/paper_figures.py` from tracked records and checked for drift with
   `--check`. The release-cadence figure counts the releases in the tracked
   `docs/paper_releases.toml`, never `git tag`; `python scripts/paper_releases.py sync` records a
-  new release once its tag exists (the daily documentation updater does it for you); every section closes with a `plainwords` box that restates it for a
-  reader outside the field.
+  new release once its tag exists (the daily documentation updater does it for you); every
+  section closes with a `plainwords` box that restates it for a reader outside the field.
 - **The book.** Every page in `properdocs.yml` nav order, exported by
   `vibey-gh book` as [PDF](https://the-vibey-project.github.io/vibey/main/book.pdf),
   [EPUB](https://the-vibey-project.github.io/vibey/main/book.epub) and
@@ -552,6 +667,20 @@ copies of everything are published under `/develop/`.
 - [ ] I agree to the [Code of Conduct](CODE_OF_CONDUCT.md) and to license
       this contribution under the MIT License
 
+## When it goes wrong
+
+| What you see | What it means | What fixes it |
+|---|---|---|
+| `warning: the pre-commit framework's <stage> hook is not installed` | The commit or push went ahead with none of that stage's gates. | `uv run --extra dev vibey-gh setup`, then `uv run vibey-gh check`. |
+| `vibey-gh setup` names a `core.hooksPath` it did not set | A global, system or other local value is in the way, and setup will not overwrite it. | Unset or change that value yourself (`git config --show-origin core.hooksPath` shows where it is), then run setup again. |
+| setup's PostgreSQL step fails and prints `createuser …` commands | The test database cannot be reached, or the role cannot create databases. | Run the printed commands (step 3 of [Your first hour](#your-first-hour)), then setup again. |
+| The `Provenance` check fails on your pull request | A commit has no `Made-With:` trailer, usually one made in the GitHub web UI. | Reword or recommit it locally with the hooks installed, and push again. |
+| A push fails with `files were modified by this hook` while the suite passed | A file in the clone changed while the pre-push hook ran: the hooks test the working tree. | Run `git commit` and `git push` in the foreground, edit nothing until they finish, and push again. |
+| `push_gate.py run` exits 124, 125 or 3 | The gate run was reaped as hung, ran past `--push-timeout`, or waited past `--wait-timeout` for the lock. | See [Pushing in this repository](#pushing-in-this-repository); `push_gate.py status` says who holds the lock. |
+| The `Changelog fragment` check fails | The PR changes shipped code with no fragment, adds a malformed one, or edits `CHANGELOG.md`. | Add `changelog.d/<slug>.<type>.md` ([The changelog](#the-changelog)), or label the PR `no-changelog`. |
+| The merge train says "needs a human merge" | The PR is not from a trusted author, touches a protected path, or GitHub refused the merge with its own reason. | Nothing is wrong with the PR; a maintainer merges it by hand. |
+| `vibey doctor` fails `local-auth` or `db-passwordless` | Your PostgreSQL lets a connection in without a scram-sha-256 password. | Replace its `pg_hba.conf` rules with the ones in [SECURITY.md §7](SECURITY.md) and reload the server. |
+
 ## Getting help
 
 See [SUPPORT.md](SUPPORT.md) for the right channel. Usage questions belong
@@ -559,6 +688,12 @@ in [Discussions](https://github.com/the-vibey-project/vibey/discussions), not
 bug reports. Contributors talk on the [Discord server](https://discord.gg/Qvu8aYnVS);
 if you want to build the autonomous-delivery stack with us, start at
 [join me](https://vibewithadam.matthewsteinberger.com/join-me).
+
+Where next:
+
+- [The CLI reference](docs/reference/cli.md), to check a command or flag before you document it.
+- [The decision records](docs/architecture/decisions/), to learn why a rule exists before you change it.
+- [SECURITY.md](SECURITY.md), to report a vulnerability privately rather than in an issue.
 
 ## Code of Conduct
 
@@ -570,3 +705,7 @@ to uphold it.
 
 By contributing, you agree that your contributions are licensed under the
 [MIT License](LICENSE).
+
+## Say it in one line
+
+Run `vibey-gh setup` once, branch from `develop`, and let the hooks, CI and the merge train carry your pull request in: nobody presses Merge.

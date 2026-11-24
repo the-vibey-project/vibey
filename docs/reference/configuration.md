@@ -1,32 +1,104 @@
+---
+description: "Every vibey.toml table and key: its type and default, which file it is read from, who may set it, the code that reads it, and the environment variables that override it."
+---
+
 # Configuration reference: `vibey.toml`
 
 > [!IMPORTANT]
-> **Work in progress — not a final product:** The `vibey.toml` configuration schema is actively evolving and not yet a final product. Folks will be notified on the [Discord server](https://discord.gg/Qvu8aYnVS) once the product is finally done.
+> **Bottom Line Up Front (BLUF):** `vibey.toml` is optional: with none, every default on this
+> page applies. Before you set a key, find its table in [Where each table is read](#what-is-read-at-runtime-today):
+> it names the file vibey reads (your own, this folder's, or the project's), who may set it, and
+> whether the key does anything today. Several keys are accepted and then ignored; the table says
+> which. Environment variables are at [Environment variables](#environment-variables).
 
-The schema below is fully implemented
-and unit-tested in
-[`src/vibey/domain/config.py`](https://github.com/the-vibey-project/vibey/blob/main/src/vibey/domain/config.py)
-(`VibeyConfig`, `parse_config`, `parse_toml_string`) and
-[`src/vibey/infrastructure/config_loader.py`](https://github.com/the-vibey-project/vibey/blob/main/src/vibey/infrastructure/config_loader.py)
-(`load_config_from_path`). `vibey new` reads the `[notifications]`,
-`[telemetry]`, [`[gates]`](#gates), [`[engine_environment]`](#engine_environment) and
-[`[design]`](#designinterview) tables from the repository's `vibey.toml` and stores them in the project record; the
-worker and lifecycle repository consume those stored tables. The other schema tables
-remain documented inputs for future wiring.
+> Daniel had two files open side by side, both called `vibey.toml`.
+>
+> **Daniel:** Professor, one is in my project and one is in my configuration folder. Which wins?
+>
+> **Professor Feynman:** Think of a house and a guest. Your own file is the house rules. A project's
+> file is a note a guest brought: for some tables it is copied once into the project's record,
+> for some it may only make the rules stricter, and for some it is never read at all.
+>
+> **Daniel:** So I look up the table before I edit anything.
+>
+> **Professor Feynman:** Yes, and you read its last column too: a few keys are read and then
+> ignored. The picture stops at the environment: where a `VIBEY_*` variable exists, it beats
+> both files.
 
-## What is read at runtime today
+> [!NOTE]
+> **Work in progress:** the schema is still changing. The project announces the finished product
+> on its [Discord server](https://discord.gg/Qvu8aYnVS).
 
-| Input | Read by | What it controls |
+## The files vibey reads
+
+vibey reads `vibey.toml` from three places, and never merges them into one document:
+
+| File | Where it is | Who it belongs to |
 |---|---|---|
-| `./vibey.toml`, keys `[features].gptossloop`, `[features].qwenloop`, `[features].claudeloop_local` | `vibey doctor` and `vibey loops` (`cli/main.py` `_local_engines_from_toml`, through `LocalEngineSettings`) | Which local engines are added to the health sweep and reported as switched on. The file is read from the current directory with `parse_toml_string`; a missing or malformed file leaves every switch at its default: `gptossloop` on, the others off (ADR-0064). |
-| `./vibey.toml`, `[notifications]`, `[telemetry]`, `[gates]`, `[engine_environment]`, `[design]` and `[human_gates]` | `vibey new` (`infrastructure/config_loader.py`) | Copies project notification channels, the telemetry switch, how gate commands run, what an engine session may see of the environment, how the DESIGN interview declares its defaults ([`[design.interview]`](#designinterview)) and which human gates may resolve to their default after waiting ([`[human_gates]`](#human_gates)) into the stored project config. `[gates]` and `[engine_environment]` are validated first: a forbidden entry stops `vibey new` before a project exists. |
-| `<repo>/vibey.toml`, `[queue.priority] sources` — the project's own repository root, never the current directory | `vibey queue bump` / `unbump`, `vibey design resume --priority`, via `QueuePriorityService` (`infrastructure/queue_priority_grant.py` `ProjectPriorityGrantReader`) | Which automations besides the operator may reorder the project's queue ([`[queue.priority]`](#queuepriority)); the file's owner is the operator. Read fresh on every request; only the `[queue]` table is parsed. A missing file declares none; a malformed one refuses every request, recorded. |
- | `./vibey.toml`, `[queue.reap]`, `[queue.defect]` and `[bus]` -- or, with no `./vibey.toml`, the environment alone (`VIBEY_QUEUE_REAP_*`, `VIBEY_QUEUE_DEFECT_*`, `VIBEY_BUS_*`) | `bootstrap.build_app` (every command that opens the queue), via `load_config_from_path` or `EnvironmentConfigLoader` | The queue reaper's thresholds and broker policy ([`[queue.reap]`](#queuereap)), when an exhausted job is a defect ([`[queue.defect]`](#queuedefect)), and the bus it inspects. A cluster pod has no `vibey.toml` in its working directory, so the chart's environment is what composes both there (ADR-0056). A malformed environment value fails the start; a `./vibey.toml` that does not parse is skipped, as `build_app` has always skipped it, and the environment alone is read. `[notifications] sweep_interval_seconds` is read from the same `./vibey.toml`, for the gate-reminder sweep every idle worker runs. |
- | `./vibey.toml`, `[queue.reap]`, `[queue.defect]` and `[bus]` -- or, with no `./vibey.toml`, the environment alone (`VIBEY_QUEUE_REAP_*`, `VIBEY_QUEUE_DEFECT_*`, `VIBEY_BUS_*`) | `bootstrap.build_app` (every command that opens the queue), via `load_config_from_path` or `EnvironmentConfigLoader` | The queue reaper's thresholds and broker policy ([`[queue.reap]`](#queuereap)), when an exhausted job is a defect ([`[queue.defect]`](#queuedefect)), and the bus it inspects. A cluster pod has no `vibey.toml` in its working directory, so the chart's environment is what composes both there (ADR-0056). A malformed environment value fails the start; a `./vibey.toml` that does not parse is skipped for the surfaces, but its `[queue.reap]` table is read strictly and malformed values fail the start rather than falling back to defaults. |
- | `./vibey.toml`, `[design.research]` -- or, with no `./vibey.toml`, the environment alone (`VIBEY_DESIGN_RESEARCH_ON_UNAVAILABLE`) | `bootstrap.build_app`, handed to every worker's `design.research` handler | What DESIGN research does when its provider can obtain no evidence ([`[design.research]`](#designresearch)): wait for a person (the default) or record the topic as not researched. A `./vibey.toml` that does not parse is skipped, and the environment alone is read, so the policy falls back to the default -- a person waits -- unless the environment declares otherwise. |
- | Your own `vibey.toml` (in your configuration folder, never `./vibey.toml`), `[inputs]` | `vibey inputs add` and `list`, `vibey doctor`'s `run-inputs` line, and each BUILD run that has run inputs to give (`bootstrap.run_inputs_limits` and the store composed on first use, through `RunInputsSettingsLoader`). The worker never reads it at start: a run of a project nothing was added to reads no `[inputs]` at all | Where a project's run inputs are stored, how much they may hold and how much pasted text a run's prompt inlines ([`[inputs]`](#inputs)). A project's `[inputs]` table is never applied; one notice says so. |
- | The project's stored record (the `project` row: `max_cycles` column and `config` JSON) | `vibey worker`, lifecycle repository, and job handlers | Cycle cap, per-cycle spend and turn caps, skills-context policy, [gate commands](#gates), [what an engine session may see of the environment](#engine_environment), notification delivery, telemetry, and (in principle) the `features` local-engine switches — see below. |
- | Environment variables | See [Environment variables](#environment-variables) | Database DSN, the migration-lock wait, the local-engine switches, the sovereign DESIGN provider's evidence directory. |
+| **Your own file** | Your configuration folder: `~/Library/Application Support/vibey/vibey.toml` on macOS, `$XDG_CONFIG_HOME/vibey/vibey.toml` (else `~/.config/vibey/vibey.toml`) elsewhere (`infrastructure/user_config_folder.py`). | You. It holds the powers: the hub's settings, web budgets, loop capabilities, run-input limits, ACP grants. |
+| **This folder's file** | `./vibey.toml`, in the folder a command runs in. | Whoever wrote that folder, which may be a cloned repository. |
+| **The project's file** | `<repo>/vibey.toml`, at the root of the checkout `vibey new --repo` names (default `.`). | The repository. `vibey new` copies some of its tables into the project's stored record, once. |
+
+A file that is not your own -- this folder's or a project's -- may only narrow what your own file
+grants ([ADR-0101](../architecture/decisions/0101-the-acp-agent-and-self-installing-services.md)):
+`[acp]`, `[hub] agent_scopes`, `[web]` and `[loops] disable` follow that rule, and `[inputs]`
+is never read from a project at all.
+
+The schema of the core tables is `VibeyConfig` and `parse_config` in
+[`src/vibey/domain/config.py`](https://github.com/the-vibey-project/vibey/blob/develop/src/vibey/domain/config.py);
+[`src/vibey/infrastructure/config_loader.py`](https://github.com/the-vibey-project/vibey/blob/develop/src/vibey/infrastructure/config_loader.py)
+loads it. The newer tables (`[hub]`, `[web]`, `[loops]`, `[inputs]`, `[acp]`, `[supervisor]`,
+`[failover]`, `[sabbath]`, `[host_health]`) have loaders of their own, named in each row below.
+
+## Where each table is read { #what-is-read-at-runtime-today }
+
+"Live" means a running vibey reads the key and acts on it. "Parsed only" means the key is
+type-checked when the file is parsed and then never read: it is **accepted and currently has no
+effect**. "Copied" means `vibey new` copies the table from the project's file into the project's
+stored record, where the worker reads it; editing the file afterwards changes nothing for that
+project.
+
+| Table | File | Who may set it | Read by | Status |
+|---|---|---|---|---|
+| [`[project]`](#project) | This folder's | Anyone | `parse_config`, through `build_app` | Parsed only, but `name` is required: a `./vibey.toml` with no `[project] name` fails the whole-file parse, and `build_app` then skips the file ([below](#how-the-whole-file-is-parsed)). `vibey new` takes the name and repo from its arguments. |
+| [`[isolation]`](#isolation) | This folder's | Anyone | `parse_config` | Parsed only. |
+| [`[budget]`](#budget) `max_*` | This folder's | Anyone | `parse_config` | Parsed only. The live caps are the project's [per-cycle caps](#per-cycle-caps-max_cycle_dollars-max_cycle_turns). |
+| [`[budget] ultra_no_cap`](#budget) | `./vibey.toml`, or `--toml` | `vibey budget no-cap` and `cap` write it | `infrastructure/budget_declaration.py` (writes) | A record only: the worker reads the `UltraNoCapChanged` ledger event, never this key. |
+| [`[engines]`](#engines) `enabled`, `weights` | This folder's | Anyone | `parse_config` | Parsed only: validated, then ignored. The pool comes from the local-engine switches and `--engines`; the weights from the engine descriptors. |
+| [`[engines]`](#engines) dispatch keys and [`[engines.slots]`](#enginesslots) | The project's | The repository | `vibey new` copies; the worker reads (`EngineDispatchConfigLoader`) | Copied. `VIBEY_ENGINES_*` overrides three of them. |
+| [`[engines]`](#engines) `max_run_minutes` | The project's record | — | The worker (`bootstrap._engine_run_deadline`) | Read from the record, which `vibey new` never writes it to: set `VIBEY_ENGINE_MAX_RUN_MINUTES`. |
+| [`[engines.claudeloop_local]`](#enginesclaudeloop_local) | This folder's | Anyone | `vibey doctor`, `vibey loops` (`LocalEngineSettings`) | Live for those two. The worker reads the record, which nothing writes it to. |
+| [`[phases.*]`](#phasesdesign-phasesbuild-phasesreview) | This folder's | Anyone | `parse_config` | Parsed only. |
+| [`[provision]`](#provision) | This folder's | Anyone | `parse_config` | Parsed only. |
+| [`[deploy]`](#deploy) | This folder's | Anyone | `parse_config` | Parsed only. The deployment opt-in is REVIEW's `choice` gate. |
+| [`[notifications]`](#notifications) | The project's; `sweep_interval_seconds` from this folder's | The repository | `vibey new` copies; `build_app` reads the sweep interval | Copied, and live. |
+| [`[telemetry]`](#telemetry) | `enabled`: the project's. `max_spans`, `max_samples`: this folder's or the environment | The repository; anyone for the caps | `vibey new` copies `enabled`; `build_app` reads the caps once per process | Live. `export_path` is parsed only. |
+| [`[features]`](#features) | This folder's | Anyone | `vibey doctor`, `vibey loops` (`LocalEngineSettings`) | Live for those two. The worker reads the record, which nothing writes it to, so use `VIBEY_FEATURE_*`. |
+| [`[qwenloop]`](#qwenloop) | This folder's | Anyone | `parse_config` | Parsed only. The runner reads its own `config.toml`. |
+| [Surface tables](#operational-surfaces-sovereign-defaults-declared-only-paid-relays) and [`[surfaces]`](#surfaces) | This folder's, or the environment | Anyone | `build_app` (`StartupConfigResolver`) | Live. |
+| [`[queue.priority]`](#queuepriority) | The project's, at its repository root | The account that owns the file | `QueuePriorityService` (`infrastructure/queue_priority_grant.py`) | Live, read fresh on every request. |
+| [`[queue.reap]`](#queuereap), [`[queue.defect]`](#queuedefect) | This folder's, or the environment | Anyone | `build_app` | Live. A malformed `[queue]` fails the start even when the rest of the file is skipped. |
+| [`[design.interview]`](#designinterview) | The project's | The repository | `vibey new` copies; the `design.interview` handler reads | Copied. `vibey new --design-default-scope` overrides it. |
+| [`[design.research]`](#designresearch) | This folder's, or the environment | Anyone | `build_app` | Live. `vibey new` also copies it, but the copy is not read. |
+| [`[build.slicing]`](#buildslicing) | The project's | The repository | `vibey new` copies; `build.decompose` reads | Copied. |
+| [`[publish]`](#publish) | The project's | The repository | `vibey new` copies; the REVIEW handler reads | Copied. |
+| [`[verify]`](#verify) | The project's record | — | The worker (`bootstrap._independent_review_required`) | Parsed only from a file: `vibey new` never copies `[verify]`, so declaring it in `vibey.toml` does nothing. |
+| [`[gates]`](#gates), [`[engine_environment]`](#engine_environment), [`[human_gates]`](#human_gates) | The project's | The repository | `vibey new` copies and validates; the worker reads | Copied. |
+| [`[hub]`](#hub) | `vibey serve`: this folder's. Every other command: your own | You; a folder may only narrow `agent_scopes` | `infrastructure/hub/settings.py` | Live. |
+| [`[web]`](#web) | Your own | You; a folder may only tighten | `infrastructure/web/web_settings_loader.py` | Live. |
+| [`[loops]`](#loops) | Your own | You; a project may only `disable` | `application/loops_bundle_settings.py` | Live. |
+| [`[inputs]`](#inputs) | Your own | You alone | `application/run_inputs_settings.py` | Live. A project's `[inputs]` is never applied. |
+| [`[acp]`](#acp) | Your own; the hub reads `sessions_max` and `session_events_max` from this folder's | You; a project may only narrow | `infrastructure/acp/acp_settings_loader.py` | Live. |
+| [`[supervisor]`](#supervisor) | `install`: the project's (or `--config`). `status`, `doctor`: this folder's. `vibey acp`: your own | Depends on the command | `infrastructure/supervisor.py` | Live. |
+| [`[failover]`](#failover) | The worktree's (or `--config`) | Anyone | `vibey driver` (`infrastructure/driver/settings_loader.py`) | Live. |
+| [`[sabbath]`](#sabbath) | This folder's (this machine's own file, never committed) | Anyone | `vibey` commands (`infrastructure/sabbath.py`) | Live. |
+| [`[host_health]`](#host_health) | This folder's | Anyone | `vibey doctor` (`cli/host_health.py`) | Live. |
+| `[local_models]` | `.vibey-gh.toml`, not `vibey.toml` | The repository | `vibey-gh slots` | See [below](#local_models). |
+| `skills_context`, `review` | The project's record only | Not a `vibey.toml` table | The worker | See [Skills context](#skills_context) and [Automated review checks](#review). |
+
+A table this page does not name is ignored by `parse_config`, and by every other loader too.
+
+## How a project record is written
 
 The project record is written once, at creation, by one of two paths:
 
@@ -34,11 +106,14 @@ The project record is written once, at creation, by one of two paths:
   in the `project.max_cycles` column; `--max-cycle-dollars`,
   `--max-cycle-turns`, `--skills-context-mode` and `--skills-context-budget`
   are stored in the `config` JSON as `max_cycle_dollars`, `max_cycle_turns`
-  and `skills_context` (the last only when the mode is not `off`). When the repo
-  contains `vibey.toml`, its `[notifications]`, `[telemetry]`, `[gates]`,
-  `[engine_environment]` and `[design]` tables, and `[engines]`'s
-  [dispatch keys](#engine-dispatch), are copied into that same JSON record;
-  `--design-default-scope` then overrides `design.interview.default_scope`.
+  and `skills_context` (the last only when the mode is not `off`). When the checkout
+  `--repo` names contains a `vibey.toml`, these tables are copied into that same JSON record
+  (`RUNTIME_CONFIG_KEYS` in `infrastructure/config_loader.py`): `[notifications]`,
+  `[telemetry]`, `[gates]`, `[engine_environment]`, `[design]`, `[build]`, `[human_gates]` and
+  `[publish]`, plus `[engines]`'s [dispatch keys](#engine-dispatch) and nothing else of
+  `[engines]`. `--design-default-scope` then overrides `design.interview.default_scope`.
+  `[verify]`, `[features]`, `[engines.claudeloop_local]` and `[engines] max_run_minutes` are
+  **not** copied.
 - **The Kubernetes operator** ([ADR-0025](../architecture/decisions/0025-kubernetes-operator-crd-keda.md)):
   a `VibeyProject` spec's `maxCycles` sets the column (default `10`);
   `repo`, `maxCycleDollars`, `maxCycleTurns` and `skillsContext` are stored in
@@ -46,15 +121,51 @@ The project record is written once, at creation, by one of two paths:
   `engine_environment` objects (validated the same way). `spec.engines` is stored as
   a flat `engines` list that nothing reads back yet.
 
-Neither path passes through `parse_config`. One command updates any of these values
-on an existing project, and only two of them: `vibey budget set` and
-`vibey budget clear` rewrite `max_cycle_dollars` and `max_cycle_turns` (see
+`vibey new` validates what it copies before the project exists: `parse_config` checks the
+copied tables (under a placeholder project name), and the gate runner, the engine-environment
+policy and the gate-timeout policy check their own tables. A schema violation stops `vibey new`
+with a `ConfigError` ([E0005](errors.md#e0005), exit 3); a file that is not valid TOML, or a
+forbidden `[gates]` or `[engine_environment]` entry, stops it with `vibey.toml: ...` and exit 2.
+The Kubernetes operator does not pass through `parse_config`.
+
+One command updates any of these values on an existing project, and only two of them:
+`vibey budget set` and `vibey budget clear` rewrite `max_cycle_dollars` and `max_cycle_turns` (see
 [Per-cycle caps](#per-cycle-caps-max_cycle_dollars-max_cycle_turns)). No command
 changes the rest after creation. The operator applies its spec at creation only,
 so later edits to a `VibeyProject`'s `maxCycleDollars` or `maxCycleTurns` change
 nothing; use `vibey budget`.
 
-### Per-cycle caps: `max_cycle_dollars`, `max_cycle_turns`
+## How the whole file is parsed { #how-the-whole-file-is-parsed }
+
+Every command that opens the queue (`bootstrap.build_app`) reads `./vibey.toml` through
+`StartupConfigResolver` (`infrastructure/config_loader.py`):
+
+1. With a `./vibey.toml`, it overlays the [environment](#operational-surface-environment-variable-overlay)
+   and the `VIBEY_FEATURE_*` switches, then runs `parse_config` over the whole document.
+2. If that fails for any reason -- a TOML error, a `ConfigError`, a missing `[project] name`, a
+   retired engine in `[engines] enabled`, or a `VIBEY_FEATURE_*` value that is not one of `1`,
+   `0`, `true`, `false`, `yes`, `no`, `on`, `off` -- it logs
+   `ignoring ./vibey.toml, which could not be used (...)` and reads the environment alone.
+3. If the environment alone cannot be used either, every surface stays in memory, and the log
+   says so. The bus, the reaper and the research policy are then read from the environment's
+   overlay variables alone, without the `VIBEY_FEATURE_*` switches; a malformed overlay
+   variable (an integer that is not one, a boolean outside the words above) fails the start,
+   naming the variable.
+
+A skipped file still decides the reaper: its `[queue]` table is read on its own, and a
+malformed `[queue.reap]` or `[queue.defect]` fails the start rather than running the reaper on
+defaults. With no `./vibey.toml` at all -- a cluster pod, whose working directory is the
+worktrees volume -- the environment alone composes the surfaces, the bus, the reaper and the
+research policy (ADR-0056).
+
+So a `./vibey.toml` meant for `build_app` needs a `[project]` table with a `name`:
+
+```toml
+[project]
+name = "my-app"
+```
+
+## Per-cycle caps: `max_cycle_dollars`, `max_cycle_turns`
 
 The budget brake's caps. They are top-level keys of the project's stored
 `config`, and that is the only place the brake reads them
@@ -79,28 +190,43 @@ The budget brake's caps. They are top-level keys of the project's stored
   `--raw '{"max_dollars": N}'` raises the cap for that one job and leaves the
   stored cap as it is.
 
-Neither path writes a `features` key either, so for projects created today the
-worker finds no stored switch and each local engine sits at its default —
-`gptossloop` on, `qwenloop` and `claudeloop-local` off (ADR-0064):
-**the `VIBEY_FEATURE_*` variables are the switches that reach the worker.**
+## The local-engine switches and the worker
+
+Neither `vibey new` nor the Kubernetes operator writes a `features` key into the project's
+record, so for projects created today the worker finds no stored switch and each local engine
+sits at its default — `gptossloop` on, `qwenloop` and `claudeloop-local` off (ADR-0064):
+**the `VIBEY_FEATURE_*` variables are the switches that reach the worker.** A `[features]`
+table in `vibey.toml` is read only by `vibey doctor` and `vibey loops`.
 
 ## Environment variables
+
+These variables configure vibey itself. Where a variable and a `vibey.toml` key both exist, the
+variable wins. Engine sessions never inherit them: each engine starts from the allow-list in
+[`[engine_environment]`](#engine_environment), and no `VIBEY_*` name can be passed to one. The
+[CLI reference](cli.md#environment-variables) lists the variables of individual commands.
 
 | Variable | Read by | Effect |
 |---|---|---|
 | `VIBEY_PG_URL` | `bootstrap.database_url()` (every command that opens the queue) | The application role's PostgreSQL DSN ([database roles](#database-roles)). Required; there is no default — `vibey` exits with `DatabaseNotConfigured` if it is unset. |
 | `VIBEY_PG_MIGRATE_URL` | `vibey migrate` only | The owner's DSN: migrations run on it, and the application role's grants are reconciled from it ([database roles](#database-roles)). Give it to that one command (`VIBEY_PG_MIGRATE_URL=… vibey migrate`); never export it, and nothing else reads it. |
 | `VIBEY_MIGRATION_LOCK_TIMEOUT_SECONDS` | `bootstrap.build_app()` via `PostgresMigrator.from_environ` (every command that opens the queue) | How long a start waits for another process's migration before failing with `MigrationLockTimeout`, which names the backend pid holding the lock. Seconds, fractions allowed and rounded up to the next millisecond; default `300`; `0` waits indefinitely. Unset or blank means the default; anything that is not a number from `0` to `2147483.647` fails the start with `InvalidMigrationLockTimeout` before the pool opens, rather than falling back. See [the migration lock](../plans/data-model.md#71-the-migration-lock). |
-| `VIBEY_FEATURE_GPTOSSLOOP` | `vibey worker`, `vibey doctor` and `vibey loops`, through `LocalEngineSettings` (`infrastructure/engines/local_engines.py`) | Overrides `features.gptossloop`. `1`, `true`, `yes`, `on` (case-insensitive, surrounding whitespace ignored) enable; any other set value — `0` included — disables. When set it wins over both the stored project record and `./vibey.toml`; when neither sets the switch, gptossloop is on (ADR-0064). For the worker, gptossloop on means a gptossloop adapter in the LOCAL tier, preferred first for BUILD ([ADR-0038](../architecture/decisions/0038-local-engines-are-preferred-first.md)). |
-| `VIBEY_FEATURE_QWENLOOP` | as `VIBEY_FEATURE_GPTOSSLOOP` | Overrides `features.qwenloop`, with the same values. Off when nothing sets it. Enabling it adds a qwenloop adapter — the same runner on a Qwen model — to the LOCAL tier beside gptossloop, and makes the worker and `vibey doctor` print a `note:` that qwenloop runs a Qwen model since ADR-0064. |
+| `VIBEY_FEATURE_GPTOSSLOOP` | `vibey worker`, `vibey doctor` and `vibey loops`, through `LocalEngineSettings` (`infrastructure/engines/local_engines.py`); also `build_app`'s whole-file parse | Overrides `features.gptossloop`. `1`, `true`, `yes`, `on` (case-insensitive, surrounding whitespace ignored) enable; for `LocalEngineSettings` any other set value — `0` included — disables. `build_app` is stricter: a value outside `1`, `0`, `true`, `false`, `yes`, `no`, `on`, `off` makes it skip `./vibey.toml` and the environment's surface settings both, so every surface stays in memory with only a warning ([how the whole file is parsed](#how-the-whole-file-is-parsed)). When set it wins over both the stored project record and `./vibey.toml`; when neither sets the switch, gptossloop is on (ADR-0064). For the worker, gptossloop on means a gptossloop adapter in the LOCAL tier, preferred first for BUILD ([ADR-0038](../architecture/decisions/0038-local-engines-are-preferred-first.md)). |
+| `VIBEY_FEATURE_QWENLOOP` | as `VIBEY_FEATURE_GPTOSSLOOP` | Overrides `features.qwenloop`, with the same values. Off when nothing sets it. Enabling it adds a qwenloop adapter — the same runner on a Qwen model (`qwen3:14b` unless `QWENLOOP_MODEL` names another) — to the LOCAL tier beside gptossloop, and makes the worker and `vibey doctor` print a `note:` that qwenloop runs a Qwen model since ADR-0064. |
+| `VIBEY_FEATURE_CLAUDELOOP_LOCAL` | as `VIBEY_FEATURE_GPTOSSLOOP` | Overrides `features.claudeloop_local`, with the same values. Off when nothing sets it. Enabling it adds the `claudeloop-local` engine (the claudeloop binary on the backend profile [`[engines.claudeloop_local]`](#enginesclaudeloop_local) names) to the LOCAL tier. |
+| `VIBEY_CLAUDELOOP_LOCAL_PROFILE` | `LocalEngineSettings` (`infrastructure/engines/local_engines.py`) | Overrides [`[engines.claudeloop_local] profile`](#enginesclaudeloop_local) when set and not empty. For the worker it is the only way to name a profile other than `local`. |
+| `VIBEY_LOCAL_MAX_TURNS` | `LocalEngineSettings` (`infrastructure/engines/local_engines.py`), for every local runner session it starts | The turn limit each gptossloop or qwenloop session starts with, in place of its per-effort limit: a whole number of at least `1`, or `unlimited` (handed to the runner as `100000`, a count no session reaches). Anything else is refused with a `ConfigError` naming the variable. `vibey worker --local-max-turns` sets it for that worker. Paid engines keep their own limits. |
+| `VIBEY_OLLAMA_URL`, `VIBEY_OLLAMA_MODEL`, `VIBEY_SOVEREIGN_MODEL` | The sovereign DESIGN and DECOMPOSE client (`OllamaChatClient.from_environment`), and the endpoint and model the worker hands gptossloop | The local model server (default `http://127.0.0.1:11434`) and the model. The model is `VIBEY_OLLAMA_MODEL`, else the variant `VIBEY_SOVEREIGN_MODEL` names (`heretic` or `stock`), else `heretic`: `hf.co/mradermacher/gpt-oss-20b-heretic-v2-GGUF:MXFP4_MOE` (`domain/sovereign_model.py`, ADR-0099). `stock` is `gpt-oss:20b`. The other `VIBEY_OLLAMA_*` tuning variables (`_TIMEOUT`, `_CONTEXT`, `_OUTPUT`, `_THINK`, `_RETRY_THINK`, `_RETRY_CONTEXT`, `_TEMPERATURE`, `_FIT`) and `VIBEY_REVISION` are in the [CLI reference](cli.md#environment-variables). |
+| `VIBEY_SABBATH_ENABLED` | Every check of the Sabbath window (`infrastructure/sabbath.py`) | `false`, `0`, `no` or `off` declares the Sabbath off for this process; `true`, `1`, `yes` or `on` declares it on. It overrides [`[sabbath] enabled`](#sabbath) either way; unset, the table decides. |
+| `VIBEY_NOTIFICATION_ICON` | The desktop notifier (`infrastructure/notify/desktop.py`) | An optional path to an icon for desktop alerts: passed to `notify-send --icon` on Linux, and to `terminal-notifier -appIcon` on macOS when `terminal-notifier` is installed (without it, macOS alerts go through `osascript` and show no custom icon). Unset, no icon is named. |
+| `VIBEY_INPUTS_ACCESS_KEY`, `VIBEY_INPUTS_SECRET_KEY` | The SeaweedFS run-input store, when a run or `vibey inputs` needs it | The two credentials of a [`[inputs] store = "seaweedfs"`](#inputs) store. These are the default names; `[inputs] access_key_env` and `secret_key_env` name others. Never written to a log, an error or `vibey doctor` output. |
 | `VIBEY_LLM_WIRE_LOG` | `vibey` with `-ddd` sets it when unset; the sovereign DESIGN and DECOMPOSE client reads it (`OllamaChatClient.from_environment`); `vibey llm tail` reads it to find the file | Path of the wire log: every request to the local model and its reply as it streams, one JSON object per line (`request`, `chunk`, `response`, `error`), redacted by the ledger's redactor and created readable by its owner alone. Set, the client asks Ollama for a streamed reply (`stream: true`) and writes each piece as it arrives; unset, it makes the one blocking request it always made. `-ddd` sets it to `~/.local/state/vibey/llm-wire.jsonl` unless it is already set, so a path you chose is never overridden. Covers the sovereign providers' traffic to Ollama; a BUILD engine's own conversation is in its run directory's `events.jsonl`. The file is never rotated: remove it when it is large. |
 | `VIBEY_CONFORMANCE_POLL_SECONDS` | `vibey doctor --conformance` (`infrastructure/engines/conformance_window.py`) | How long conformance waits for an engine's run directory (`meta.json`, `events.jsonl`, `snapshots/latest.json`) to appear before failing `run_dir_shape`, and with it `snapshot_schema`, `done_marker` and `structured_verdict`. Seconds, fractions allowed; unset or blank keeps the default of `30`. A local model on ordinary hardware needs far longer than a hosted engine: raise it for the host, not for the engine. A value that is not a finite number above zero is refused with exit 2, naming the variable, before any engine is started. |
 | `VIBEY_EVIDENCE_DIR` | `vibey work --provider gptossloop`, `vibey worker --provider gptossloop` (the default) | Directory of reading that the sovereign DESIGN provider's research stage draws from ([ADR-0027](../architecture/decisions/0027-sovereign-design-provider.md)). Unset, research refuses rather than inventing a source; what the research job does then is [`[design.research] on_unavailable`](#designresearch) — by default it parks for a person. |
 | `VIBEY_ENGINE_MAX_RUN_MINUTES` | `vibey worker`, for every `build.implement` and `build.verify` session (`bootstrap._engine_run_deadline`) | Overrides [`[engines] max_run_minutes`](#engines): the wall-clock limit on one BUILD engine session, in whole minutes. Set, it beats the project's stored config. A value that is not a positive whole number is ignored, never read as "no limit"; the default is `240`. |
 | `VIBEY_ENGINES_MODE`, `VIBEY_ENGINES_OVERFLOW_AFTER_SECONDS`, `VIBEY_ENGINES_PAID_DAILY_CAP` | `vibey worker` (`bootstrap._engine_dispatch`, through `EngineDispatchConfigLoader`), and every whole-`vibey.toml` load | Override [`[engines] mode`, `overflow_after_seconds` and `paid_daily_cap`](#engine-dispatch). Set, they beat the project's stored config; empty counts as unset; a value that is not valid for its key fails building that project's worker. No value of `VIBEY_ENGINES_PAID_DAILY_CAP` means "uncapped". |
-| `VIBEY_DESIGN_RESEARCH_ON_UNAVAILABLE` | `bootstrap.build_app` (every worker), through the environment overlay | Overrides [`[design.research] on_unavailable`](#designresearch): `gate` or `record_gap`, exactly. Set, it beats `./vibey.toml`; empty counts as unset; any other value fails the start. How an unattended driver (`scripts/triaged_delivery.py --record-research-gaps`) opts a worker in without writing a file. |
+| `VIBEY_DESIGN_RESEARCH_ON_UNAVAILABLE` | `bootstrap.build_app` (every worker), through the environment overlay | Overrides [`[design.research] on_unavailable`](#designresearch): `gate` or `record_gap`, exactly. Set, it beats `./vibey.toml`; empty counts as unset; any other value fails the start. `vibey worker --auto-record-research-gaps` and `vibey worker --autonomous` set it to `record_gap` for that worker; an unattended driver (`scripts/triaged_delivery.py --record-research-gaps`) uses it to opt a worker in without writing a file. |
 | `VIBEY_WORKFLOWS_REPOSITORY`, `VIBEY_WORKFLOWS_WORKFLOW`, `VIBEY_WORKFLOWS_REF`, `VIBEY_WORKFLOWS_POLL_SECONDS`, `VIBEY_WORKFLOWS_TIMEOUT_SECONDS` | `vibey -w` and the hub's `/api/v1/workflows/runs` routes (`RemoteWorkflowsSettingsLoader`, `infrastructure/workflows/gh_workflows.py`) | Where a command sent to the workflows runs and how long to wait for it (ADR-0085): the repository as `OWNER/NAME` (default: the working directory's git remote), the workflow file (default `vibey-remote.yml`), the branch (default: the repository's default branch), seconds between looks (default `10`) and seconds before giving up waiting (default `3600`). A wait that is not a positive number is refused with exit 2; on the hub it leaves the routes answering 503. |
-| `VIBEY_SEARXNG_URL`, `VIBEY_SEARXNG_INSTANCE`, `VIBEY_SEARCH_IDENTITY_TTL`, `VIBEY_SEARCH_TIMEOUT`, `VIBEY_SEARCH_RESULTS`, `VIBEY_SEARCH_PROVIDER`, `VIBEY_BRAVE_API_KEY` (or `BRAVE_SEARCH_API_KEY`) | `vibey search`, `vibey worker`, `vibey doctor`, the sovereign DESIGN research stage (`WebSearchSettings.from_environment`) | Web search, local first: the local SearXNG (default `http://127.0.0.1:28180`), which must prove on `/config` that it is one (and, with `VIBEY_SEARXNG_INSTANCE`, the expected one), and Brave only as a backup when it fails. Your own environment only: no `vibey.toml` key, project or user, sets any of them, so a project cannot point search elsewhere or supply a key. `VIBEY_SEARCH_PROVIDER=brave` is refused. Every value and default is in [local first search](cli.md#local-first-search). |
+| `VIBEY_SEARXNG_URL`, `VIBEY_SEARXNG_INSTANCE`, `VIBEY_SEARCH_IDENTITY_TTL`, `VIBEY_SEARCH_TIMEOUT`, `VIBEY_SEARCH_RESULTS`, `VIBEY_SEARCH_PROVIDER`, and the Brave key, read in this order: `VIBEY_BRAVE_API_KEY`, `WEBSEARCH_BRAVE_API_KEY`, `BRAVE_SEARCH_API_KEY` (`infrastructure/web/search.py`) | `vibey search`, `vibey worker`, `vibey doctor`, the sovereign DESIGN research stage (`WebSearchSettings.from_environment`) | Web search, local first: the local SearXNG (default `http://127.0.0.1:28180`), which must prove on `/config` that it is one (and, with `VIBEY_SEARXNG_INSTANCE`, the expected one), and Brave only as a backup when it fails. Your own environment only: no `vibey.toml` key, project or user, sets any of them, so a project cannot point search elsewhere or supply a key. `VIBEY_SEARCH_PROVIDER=brave` is refused. Every value and default is in [local first search](cli.md#local-first-search). |
 | `VIBEY_STATE_REPOSITORY`, `VIBEY_STATE_BRANCH`, `VIBEY_STATE_PATH`, `VIBEY_STATE_PG_URL`, `VIBEY_STATE_KEY`, `VIBEY_STATE_KEY_FILE`, `VIBEY_STATE_CONFLICTS`, `VIBEY_STATE_ATTEMPTS` | `vibey state` (`StateSyncSettingsLoader`, `infrastructure/state/settings.py`) | Where the sealed state lives, which database it syncs, the key, the conflict rules and the retries ([State sync](#state-sync), ADR-0086). |
 
 ### Database roles { #database-roles }
@@ -264,9 +390,13 @@ them may, by calling the action.
 
 ### Operational surface environment variable overlay
 
-Every operational surface setting can be configured or overridden via environment variables.
-An environment variable always takes precedence over the corresponding key in `vibey.toml`.
-An empty or whitespace-only value counts as unset.
+Every operational surface key except two can be set or overridden by an environment variable
+(`_SURFACE_ENV_VARS` in `infrastructure/config_loader.py`). `[bus] mode` and
+`[bus] hybrid_concurrency` have no variable: set them in `./vibey.toml`. An environment variable
+always takes precedence over the corresponding key in `vibey.toml`. An empty or whitespace-only
+value counts as unset. An integer variable (`VIBEY_DOCS_BOOK_ID`, `VIBEY_EMAIL_SMTP_PORT`,
+`VIBEY_SURFACES_ADAPTER_TIMEOUT_SECONDS`) that is not an integer fails the start, naming the
+variable ([how the whole file is parsed](#how-the-whole-file-is-parsed)).
 
 | Variable | Target Table & Key | Description |
 |---|---|---|
@@ -343,15 +473,27 @@ The queue reaper's keys have the same overlay, and the same precedence
 of its own (reading the file is an infrastructure concern). Every table
 below is optional; omit any of them and the listed defaults apply.
 
-Validation is partial. The Type column is the intended shape. `parse_config`
-type-checks every key except `[budget].*`, `[phases.*].engines` (not even
-checked to be a list — a bare string is split into single-character engine
-ids), `[phases.*].parallelism`, the elements of `[isolation].egress` and
-`[provision].plugins`, and the values of `[engines].weights`; those are stored
-as written. No numeric range is checked outside `[qwenloop]`
-(`idle_timeout_seconds ≥ 0`, `startup_timeout_seconds > 0`,
-`context_window > 0`), booleans pass integer checks (`max_cycles = true` is
-accepted), and `[deploy].target` / `[deploy].iac` accept any string.
+**What `parse_config` checks.** The Type column is the intended shape, and `parse_config`
+checks most of it:
+
+- **Types.** Every key is type-checked except `[budget].*`, `[phases.*].engines` (not even
+  checked to be a list: a bare string is split into single-character engine ids),
+  `[phases.*].parallelism`, the elements of `[isolation].egress` and `[provision].plugins`, and
+  the values of `[engines].weights`; those are stored as written.
+- **Ranges, and `true` refused where a number is meant.** These apply to `[notifications]`,
+  `[telemetry]` (`max_spans`, `max_samples`), `[surfaces]`, `[queue.reap]`, `[queue.defect]`,
+  `[build.slicing]`, the `[engines]` dispatch keys and `[engines.slots]`,
+  `[engines.claudeloop_local] context_window`, `[bus] hybrid_concurrency`, `[docs] book_id` and
+  `[email] smtp_port`. `[qwenloop]` checks its ranges (`idle_timeout_seconds ≥ 0`,
+  `startup_timeout_seconds > 0`, `context_window > 0`) but still accepts `true` for its
+  integers, and so does `[project] max_cycles` (`max_cycles = true` is accepted).
+- **Free strings.** `[deploy].target` and `[deploy].iac` accept any string.
+- **Unknown keys.** Refused in `[publish]`, `[queue.reap]`, `[queue.defect]`, `[design]` and its
+  two tables, and `[build]` and `[build.slicing]`. Silently ignored in every other table
+  `parse_config` reads, so a misspelt key there does nothing and says nothing.
+- **Unknown tables.** Ignored by `parse_config`. The tables other loaders read (`[hub]`, `[web]`,
+  `[loops]`, `[inputs]`, `[acp]`, `[supervisor]`, `[failover]`, `[sabbath]`, `[host_health]`)
+  refuse their own unknown keys, except `[host_health]`.
 
 Engine names: an unknown engine name in `[engines].enabled` or as a key of
 `[engines].weights` fails validation with a `ConfigError` naming the offending
@@ -364,18 +506,21 @@ engine it used to be is `gptossloop`), `claudeloop-local` before
 otherwise not validated — unknown names and engines outside
 `[engines].enabled` are accepted as written — and `[engines].weights` may name
 a local engine whose switch is off. Unknown tables (for example
-`[skills_context]`) are silently ignored. All of this applies only when
-something calls `load_config_from_path`/`parse_config`, which nothing in this
-codebase does outside tests.
+`[skills_context]`) are silently ignored. `parse_config` runs in two places: over the whole
+`./vibey.toml` in `build_app` ([how the whole file is parsed](#how-the-whole-file-is-parsed)),
+and over the tables `vibey new` copies.
 
-## `[project]`
+## `[project]` { #project }
+
+Parsed only. `build_app` needs `name` for the whole-file parse to succeed; nothing reads the
+values.
 
 | Field | Type | Default | Notes |
 |---|---|---|---|
-| `name` | string | *required* | Project name. |
-| `repo` | string | `"."` | Path to the repository this project builds against. |
-| `max_cycles` | integer | `10` | Cap on delivery cycles. Not range-checked. The live value is the `project.max_cycles` column set by `vibey new --max-cycles` or `spec.maxCycles`. |
-| `strict_loopback` | boolean | `false` | When true, tightens review-loopback routing ([ADR-0010](../architecture/decisions/0010-review-loopback-routing.md)). |
+| `name` | string | *required* | Required by `parse_config`: a `./vibey.toml` without it is skipped by `build_app`. The value is not used: `vibey new NAME` names the project. |
+| `repo` | string | `"."` | Accepted and currently without effect. `vibey new --repo` names the checkout. |
+| `max_cycles` | integer | `10` | Accepted and currently without effect. Not range-checked, and `true` passes. The live value is the `project.max_cycles` column set by `vibey new --max-cycles` or `spec.maxCycles`. |
+| `strict_loopback` | boolean | `false` | Accepted and currently without effect. Meant to tighten review-loopback routing ([ADR-0010](../architecture/decisions/0010-review-loopback-routing.md)); the REVIEW triage handler reads a `strict_loopback` job payload field that nothing sets, and never this key. |
 
 ```toml
 [project]
@@ -383,7 +528,9 @@ name = "my-app"
 repo = "~/src/my-app"
 ```
 
-## `[isolation]`
+## `[isolation]` { #isolation }
+
+Parsed only.
 
 | Field | Type | Default | Notes |
 |---|---|---|---|
@@ -410,14 +557,16 @@ or anything else outside `infrastructure/container/` and its tests, and
 [SECURITY.md](https://github.com/the-vibey-project/vibey/blob/main/SECURITY.md#1-worktree--container-isolation-runtime-adr-0008-task-91)
 for the same disclosure.
 
-## `[budget]`
+## `[budget]` { #budget }
+
+The three `max_*` keys are parsed only. `ultra_no_cap` is a record that a command writes.
 
 | Field | Type | Default | Notes |
 |---|---|---|---|
-| `max_dollars_per_cycle` | float or unset | unset (no cap) | Intended per-cycle spend cap. Not validated. |
-| `max_dollars_total` | float or unset | unset (no cap) | Intended total spend cap across the project's lifetime. Not validated. |
-| `max_turns_per_item` | integer or unset | unset (no cap) | Intended per-work-item turn cap; the implemented cap (`max_cycle_turns`) is per cycle. Not validated. |
-| `ultra_no_cap` | boolean | `false` | Written by `vibey budget no-cap` and `vibey budget cap` as the record of the no-cap declaration for ULTRA runs (ADR-0063). The worker reads the trusted `UltraNoCapChanged` ledger event, never this key: a `true` here with no event behind it declares nothing. |
+| `max_dollars_per_cycle` | float or unset | unset (no cap) | Accepted and currently without effect. Intended per-cycle spend cap. Not validated. |
+| `max_dollars_total` | float or unset | unset (no cap) | Accepted and currently without effect. Intended total spend cap across the project's lifetime. Not validated. |
+| `max_turns_per_item` | integer or unset | unset (no cap) | Accepted and currently without effect. Intended per-work-item turn cap; the implemented cap (`max_cycle_turns`) is per cycle. Not validated. |
+| `ultra_no_cap` | boolean | `false` | Written by `vibey budget no-cap` and `vibey budget cap` (into `./vibey.toml`, or the file `--toml` names) as the record of the no-cap declaration for ULTRA runs (ADR-0063). The command adds or changes this one line and leaves every other line of the file as it was. The worker reads the trusted `UltraNoCapChanged` ledger event, never this key: a `true` here with no event behind it declares nothing. |
 
 ```toml
 [budget]
@@ -438,21 +587,26 @@ never estimating it ahead of time. Tripping either cap parks a
 `vibey cost` and `vibey budget` show those stored caps and that ledger sum. A
 `budget` key in the stored project config is not read by either.
 
-## `[verify]`
+## `[verify]` { #verify }
+
+**Accepted in `vibey.toml` and currently without effect.** The worker reads
+`verify.require_independent_review` from the project's stored record
+(`bootstrap._independent_review_required`, when `build_full_worker` builds the worker), but
+`vibey new` does not copy `[verify]` into the record (`RUNTIME_CONFIG_KEYS` has no `verify`), and
+the Kubernetes operator has no field for it. So no creation path sets it today, and every project
+runs with the default.
 
 | Field | Type | Default | Notes |
 |---|---|---|---|
-| `require_independent_review` | bool | `false` | When `true`, `build.verify` always fails as `VIBEY` if the reviewing engine is the implementer, even when the configured pool has nobody else. When `false` (the default) a pool that cannot supply a second reviewer gets a self-review, recorded as a `DecisionRecorded` in the ledger so the weakened independence is visible. See [ADR-0035](../architecture/decisions/0035-independence-is-the-default-not-an-absolute.md). |
+| `require_independent_review` | bool | `false` | When `true` in the record, `build.verify` always fails as `VIBEY` if the reviewing engine is the implementer, even when the configured pool has nobody else. When `false` (the default) a pool that cannot supply a second reviewer gets a self-review, recorded as a `DecisionRecorded` in the ledger so the weakened independence is visible. See [ADR-0035](../architecture/decisions/0035-independence-is-the-default-not-an-absolute.md). |
 
 ```toml
+# Accepted, but vibey new does not copy it: this changes nothing today.
 [verify]
 require_independent_review = true
 ```
 
-Unlike `[budget]` above, this key **is** read at runtime, by
-`bootstrap.build_full_worker`.
-
-## `[publish]`
+## `[publish]` { #publish }
 
 What happens to a finished project's work after REVIEW. Nothing leaves the machine unless
 `mode` says so: the default finishes locally, as it always has. [The guide](../guides/publishing.md)
@@ -479,16 +633,22 @@ owner = "my-org"
 
 Names are checked: a `base`, `remote` or `owner` that could be read as a command-line option
 (leading `-`) or holds a space or shell character is refused, as is an unknown key (`visibilty`),
-and the project fails to start rather than publishing with a setting nobody meant. The table is
-read from the project's stored configuration, the same way `[verify]` is.
+and the project fails to start rather than publishing with a setting nobody meant. `vibey new`
+copies the table from the project's file into its stored record, where the REVIEW phase reads
+it; `vibey worker --auto-publish` answers the `publish_interview` gate for you.
 
-## `[engines]`
+## `[engines]` { #engines }
+
+`enabled` and `weights` are parsed and validated, then never read: the pool a worker runs comes
+from the local-engine switches and `vibey worker --engines`, and the round-robin weights from
+the engine descriptors (`bootstrap.py`). The dispatch keys are copied by `vibey new` and live.
+`max_run_minutes` is read from the project's record, which `vibey new` never writes it to.
 
 | Field | Type | Default | Notes |
 |---|---|---|---|
-| `enabled` | array of strings | `["gptossloop"]`, plus every other local engine whose switch is on | Must be a subset of the known engines below. `gptossloop`, the sovereign default (sub-doctrine 8.b, `DEFAULT_ENGINES`), is on without declaration: an explicit list that leaves it out is extended with it. It leaves the pool only by `features.gptossloop = false` (ADR-0064). If the list is omitted, each switched-on local engine (`qwenloop`, `claudeloop-local`) is appended too. |
-| `max_run_minutes` | positive integer | `240` | The wall-clock limit on one BUILD engine session (`build.implement` or `build.verify`). Past it the session is stopped and the job fails as `ENGINE`: three in a row open that engine's circuit so the retry rotates away, and the job's bounded attempts still end in a park, never a loop. A hung session used to keep its job's lease alive forever. There is no "off": a value that is not a positive whole number is ignored. Read by the worker from the project's stored config, into which `vibey new` copies only `[engines]`'s [dispatch keys](#engine-dispatch), so set it with `VIBEY_ENGINE_MAX_RUN_MINUTES` unless your project record was written another way. |
-| `weights` | table of string→int | `{}` | Per-engine weight for smooth weighted round robin ([ADR-0005](../architecture/decisions/0005-smooth-weighted-round-robin.md)). Keys must be known engines; values are not validated. |
+| `enabled` | array of strings | `["gptossloop"]`, plus every other local engine whose switch is on | Accepted and currently without effect; still validated, so a retired or unknown engine here is refused. Must be a subset of the known engines below. `gptossloop`, the sovereign default (sub-doctrine 8.b, `DEFAULT_ENGINES`), is on without declaration: an explicit list that leaves it out is extended with it. It leaves the pool only by `features.gptossloop = false` (ADR-0064). If the list is omitted, each switched-on local engine (`qwenloop`, `claudeloop-local`) is appended too. |
+| `max_run_minutes` | positive integer | `240` | The wall-clock limit on one BUILD engine session (`build.implement` or `build.verify`). Past it the session is stopped and the job fails as `ENGINE`: three in a row open that engine's circuit so the retry rotates away, and the job's bounded attempts still end in a park, never a loop. A hung session used to keep its job's lease alive forever. There is no "off": a value that is not a positive whole number is ignored. Read by the worker from the project's stored config, into which `vibey new` copies only `[engines]`'s [dispatch keys](#engine-dispatch), so in `vibey.toml` it is accepted and currently without effect: set it with `VIBEY_ENGINE_MAX_RUN_MINUTES`. `parse_config` does not check this key. |
+| `weights` | table of string→int | `{}` | Accepted and currently without effect. Meant as the per-engine weight for smooth weighted round robin ([ADR-0005](../architecture/decisions/0005-smooth-weighted-round-robin.md)). Keys must be known engines; values are not validated. |
 | `mode` | `"singleton"`, `"hybrid"` or `"auto"` | `"auto"` | How BUILD jobs are dispatched across the tiers ([hybrid engine dispatch](#engine-dispatch), [ADR-0079](../architecture/decisions/0079-hybrid-engine-dispatch.md)). `VIBEY_ENGINES_MODE` overrides it. |
 | `overflow_after_seconds` | integer ≥ 0 | `600` | How long a BUILD job must have been held for a local slot before a paid engine may take it as overflow. `VIBEY_ENGINES_OVERFLOW_AFTER_SECONDS` overrides it. |
 | `paid_daily_cap` | integer ≥ 0 | `10` | The most paid overflows one project may take per UTC day, counted from the ledger. `0` means no overflow; there is no value that means "uncapped" (sub-doctrine 8.b). `VIBEY_ENGINES_PAID_DAILY_CAP` overrides it. |
@@ -519,7 +679,9 @@ it is refused as an unknown engine. `cursorloop` and `agyloop` were retired by
 ADR-0078: a `vibey.toml` that names either — in `[engines]`, `[phases.*].engines` or
 `[engine_environment]` — is refused with an error that names the ADR.
 
-### `[engines.slots]`
+### `[engines.slots]` { #enginesslots }
+
+Copied by `vibey new` with the other dispatch keys, and read by the worker under `hybrid`.
 
 | Field | Type | Default | Notes |
 |---|---|---|---|
@@ -581,9 +743,10 @@ worker runs `claudeloop-local` on these defaults unless `VIBEY_CLAUDELOOP_LOCAL_
 names another profile. The [local models guide](../guides/local-models-ollama.md) shows
 a working profile.
 
-## `[phases.design]`, `[phases.build]`, `[phases.review]`
+## `[phases.design]`, `[phases.build]`, `[phases.review]` { #phases }
 
-Each phase table accepts the same three fields:
+Parsed only: every key here is accepted and currently without effect. Each phase table accepts
+the same three fields:
 
 | Field | Type | Default (per phase) | Notes |
 |---|---|---|---|
@@ -644,33 +807,40 @@ unattended is bounded only under it.
 default_scope = "narrowest"
 ```
 
-## `[provision]`
+## `[provision]` { #provision }
+
+Parsed only.
 
 | Field | Type | Default | Notes |
 |---|---|---|---|
-| `plugins` | array of strings | `[]` | Reserved for agent-surface provisioning plugins ([ADR-0011](../architecture/decisions/0011-agent-surface-provisioning.md)). Parsed and stored only; `infrastructure/provision/agent_surface.py` does not read it today. |
+| `plugins` | array of strings | `[]` | Accepted and currently without effect. Reserved for agent-surface provisioning plugins ([ADR-0011](../architecture/decisions/0011-agent-surface-provisioning.md)); `infrastructure/provision/agent_surface.py` does not read it today. |
 
 ```toml
 [provision]
 plugins = []
 ```
 
-## `[deploy]`
+## `[deploy]` { #deploy }
+
+Parsed only: nothing outside `domain/config.py` reads `VibeyConfig.deploy`. A project enters
+the deployment stage set (DEPLOY_DESIGN, DEPLOY_EXECUTE, DEPLOY_REVIEW) when someone answers
+REVIEW's deployment `choice` gate with `deploy`; declining it, or the gate's default
+`local_only`, finishes the project locally.
 
 | Field | Type | Default | Notes |
 |---|---|---|---|
-| `enabled` | boolean | `false` | Opts the project into the DEPLOY_DESIGN / DEPLOY_EXECUTE / DEPLOY_REVIEW stage set. |
-| `target` | string | `"azure"` | Deployment target. Azure is the only implemented target today; other strings are accepted by `parse_config`. |
-| `iac` | string | `"bicep"` | Infrastructure-as-code format used by the deploy adapters; other strings are accepted by `parse_config`. |
+| `enabled` | boolean | `false` | Accepted and currently without effect. Meant to opt the project into the deployment stage set. |
+| `target` | string | `"openstack"` | Accepted and currently without effect. Any string is accepted. The default names the sovereign cloud, OpenStack (sub-doctrine 8.b), though Azure is still the only implemented deployment target. |
+| `iac` | string | `"bicep"` | Accepted and currently without effect. Any string is accepted. |
 
 ```toml
 [deploy]
 enabled = true
-target = "azure"
+target = "openstack"
 iac = "bicep"
 ```
 
-## `[notifications]`
+## `[notifications]` { #notifications }
 
 Notifications are opt-in because desktop alerts and outbound webhooks are
 side effects, and no channel reaches a person with zero configuration: a worker
@@ -724,19 +894,23 @@ url = "https://ops.example/vibey"
 secret = "replace-me"
 ```
 
-## `[telemetry]`
+## `[telemetry]` { #telemetry }
 
 `build_app()` constructs the in-process tracer and metrics recorder. Workers
 record job spans, queue latency, phase duration, engine selections, engine
 turns, handoff-gate failures, and cost spend. The recorder is available to
 the running application but has no external exporter yet.
 
+The keys are read from two places. `enabled` is copied by `vibey new` into the project's record
+and read per project. `max_spans` and `max_samples` size the process's buffers, so `build_app`
+reads them once per process, from `./vibey.toml` or the environment.
+
 | Field | Type | Default | Notes |
 |---|---|---|---|
-| `enabled` | boolean | `true` | Set `false` to disable runtime tracing and metrics for this project. |
-| `export_path` | string or unset | unset | Reserved for a future file/exporter integration; it is validated and stored. |
-| `max_spans` | integer | `10000` | How many finished spans the in-process tracer keeps. Only the newest are kept; the oldest are dropped first. Must be at least 1. `VIBEY_TELEMETRY_MAX_SPANS` overrides it. |
-| `max_samples` | integer | `1000` | How many latency or duration samples the metrics recorder keeps per series (queue latency per job kind, phase duration per phase). Only the newest are kept. Must be at least 1. Counters (engine selections, handoff-gate failures, cost spend) are not capped. `VIBEY_TELEMETRY_MAX_SAMPLES` overrides it. |
+| `enabled` | boolean | `true` | Set `false` to disable runtime tracing and metrics for this project. Read from the project's record. |
+| `export_path` | string or unset | unset | Accepted and currently without effect: reserved for a future file or exporter integration. It is validated and stored. |
+| `max_spans` | integer | `10000` | How many finished spans the in-process tracer keeps. Only the newest are kept; the oldest are dropped first. Must be at least 1. Read from `./vibey.toml` by `build_app`; `VIBEY_TELEMETRY_MAX_SPANS` overrides it. |
+| `max_samples` | integer | `1000` | How many latency or duration samples the metrics recorder keeps per series (queue latency per job kind, phase duration per phase). Only the newest are kept. Must be at least 1. Counters (engine selections, handoff-gate failures, cost spend) are not capped. Read from `./vibey.toml` by `build_app`; `VIBEY_TELEMETRY_MAX_SAMPLES` overrides it. |
 
 ```toml
 [telemetry]
@@ -746,11 +920,11 @@ max_spans = 10000
 max_samples = 1000
 ```
 
-## `[features]`
+## `[features]` { #features }
 
 | Field | Type | Default | Notes |
 |---|---|---|---|
-| `gptossloop` | boolean | `true` | The sovereign default engine: the local runner on GPT-OSS 20B (ADR-0064). On unless set `false`; `false` removes it from the default pool and refuses it in `[engines].enabled` and `[phases.*].engines`. |
+| `gptossloop` | boolean | `true` | The sovereign default engine: the local runner on GPT-OSS 20B (ADR-0064), by default the Heretic v2 build `hf.co/mradermacher/gpt-oss-20b-heretic-v2-GGUF:MXFP4_MOE` (ADR-0099; see `VIBEY_OLLAMA_MODEL` under [Environment variables](#environment-variables)). On unless set `false`; `false` removes it from the default pool and refuses it in `[engines].enabled` and `[phases.*].engines`. |
 | `qwenloop` | boolean | `false` | The same runner on a Qwen model (`qwen3:14b` unless `QWENLOOP_MODEL` or its own config names another). Must be `true` before `qwenloop` can appear in `[engines].enabled` or any `[phases.*].engines` list. Before ADR-0064 this switch turned on the engine that ran `gpt-oss:20b`; that engine is now `gptossloop`, on by default. |
 | `claudeloop_local` | boolean | `false` | The claudeloop binary on a local backend profile (`[engines.claudeloop_local]`). Must be `true` before `claudeloop-local` can be requested. |
 
@@ -768,51 +942,96 @@ Runtime: `vibey doctor` and `vibey loops` read these keys from `./vibey.toml`.
 overrides both. With none set, the worker runs gptossloop and no other local
 engine.
 
-## `[qwenloop]`
+## `[qwenloop]` { #qwenloop }
 
-Describes the local runner package that both `gptossloop` and `qwenloop` run
-(the table keeps its historical name). In engine-driven BUILD rotation the local
-engines form the LOCAL tier, preferred first
+**Parsed only: every key here is accepted and currently without effect.** The table describes
+the local runner package that both `gptossloop` and `qwenloop` run (it keeps its historical
+name). `parse_config` validates it into `VibeyConfig`, but nothing passes it to the runner, and
+any key not listed below (`turn_dispatch_mode`, `max_turns`, ...) is silently ignored here. To
+configure the runner, use [its own `config.toml`](#the-local-runners-own-configtoml).
+
+In engine-driven BUILD rotation the local engines form the LOCAL tier, preferred first
 ([ADR-0038](../architecture/decisions/0038-local-engines-are-preferred-first.md),
 amending the standby of
 [ADR-0015](../architecture/decisions/0015-qwenloop-standby.md)). The sovereign
 DESIGN and DECOMPOSE providers are gptossloop's, the default for
 `vibey work` and `vibey worker`
 ([ADR-0027](../architecture/decisions/0027-sovereign-design-provider.md),
-ADR-0064). These keys mirror the runner's own `QwenConfig`
-(`src/vibey_runners/qwen/src/qwenloop/domain/config.py`, which additionally
-has `max_turns`, default `40`, must be positive); `parse_config` validates
-them into `VibeyConfig`, but nothing passes them to the runner.
+ADR-0064).
 
 | Field | Type | Default | Notes |
 |---|---|---|---|
-| `backend` | string | `"auto"` | One of `auto`, `llama.cpp`, `vllm`. |
+| `backend` | string | `"auto"` | One of `auto`, `llama.cpp`, `vllm`. (The runner itself also accepts `openai-compat`; this table refuses it.) |
 | `portable_profile` | string | `"qwen2.5-coder-14b-q5-k-m"` | Model profile used on the portable (CPU/quantized) backend path. |
 | `nvidia_profile` | string | `"qwen2.5-coder-14b-bf16"` | Model profile used when an NVIDIA GPU backend is selected. |
 | `idle_timeout_seconds` | integer | `900` | Must be non-negative; how long an idle local model stays warm. |
 | `startup_timeout_seconds` | integer | `180` | Must be positive. |
 | `context_window` | integer | `32768` | Must be positive. |
 
+### The local runner's own `config.toml` { #the-local-runners-own-configtoml }
+
+The runner reads its settings from its own file, not from `vibey.toml`
+(`src/vibey_runners/qwen/src/qwenloop/infrastructure/settings.py`):
+
+| Engine | File | Environment that overrides the file |
+|---|---|---|
+| `gptossloop` | `GPTOSSLOOP_CONFIG`, else `gptossloop/config.toml` in your user configuration folder (`~/Library/Application Support/gptossloop/config.toml` on macOS, `~/.config/gptossloop/config.toml` on Linux) | `GPTOSSLOOP_BASE_URL`, `GPTOSSLOOP_MODEL`; the key is `GPTOSSLOOP_API_KEY` (environment only) |
+| `qwenloop` | `QWENLOOP_CONFIG`, else `qwenloop/config.toml` in the same folder | `QWENLOOP_BASE_URL`, `QWENLOOP_MODEL`; the key is `QWENLOOP_API_KEY` (environment only) |
+
+A `*_CONFIG` that names a missing file is an error; with no variable and no file, the defaults
+apply. An unknown top-level key is refused. The keys (`QwenConfig` in
+`src/vibey_runners/qwen/src/qwenloop/domain/config.py`) sit at the top level of the file:
+
+| Key | Default | Meaning |
+|---|---|---|
+| `backend` | `"auto"` | `auto`, `llama.cpp`, `vllm` or `openai-compat`. |
+| `portable_profile`, `nvidia_profile` | as in `[qwenloop]` above | Model profiles for the managed backends. |
+| `idle_timeout_seconds` | `900` | At least 0. |
+| `startup_timeout_seconds` | `180` | Above 0. |
+| `context_window` | `32768` | Above 0. |
+| `max_turns` | `40` | Above 0. vibey passes its own per-effort limit, or `VIBEY_LOCAL_MAX_TURNS`, when it starts a run. |
+| `max_empty_reply_retries` | `2` | How often an empty model reply is asked again. |
+| `tool_protocol` | `"auto"` | `auto`, `native` or `text`. |
+| `max_recorded_argument_chars` | `200` | How much of a tool call's arguments is recorded. |
+| `empty_reply_reasoning_excerpt_chars` | `400` | How much of an empty reply's reasoning is recorded. |
+| `max_tool_result_chars` | `12000` | The most characters of one tool result the model is given. Above 0. |
+| `base_url` | `""` | An OpenAI-compatible endpoint, `/v1` included. Empty: none configured, so `auto` never picks `openai-compat`. |
+| `model` | gptossloop: `hf.co/mradermacher/gpt-oss-20b-heretic-v2-GGUF:MXFP4_MOE`; qwenloop: `qwen3:14b` | The model an `openai-compat` endpoint is asked for. |
+| `endpoint_timeout_seconds` | `5` | How long doctor, health and start wait for an endpoint's model list. |
+| `turn_dispatch_mode` | `"auto"` | `auto`, `direct`, `hybrid` or `rabbitmq`: how model turns reach the server (below). |
+| `hybrid_concurrency` | `2` | Under `hybrid`, the most turns in flight at once. Above 0. |
+| `turn_queue_url` | `""` | Under `rabbitmq`, the broker URL; required there. |
+| `turn_queue_name` | `"vibey.llm.turns"` | Under `rabbitmq`, the durable queue; not empty. |
+| `[tools]` | see the runner's README | What one tool call may read or return. |
+| `[mcp]` | see the runner's README | How the runner's MCP client treats the servers a run reaches (request timeout `60` s, `1` restart, `64` `tools/call` requests per remote server). |
+
+`qwenloop`'s README (`src/vibey_runners/qwen/README.md`) lists the `[tools]` and `[mcp]` keys.
+
 ### Shared model turns
 
-The runner keeps direct dispatch as the default. To let multiple lanes share one
-model server, opt in explicitly:
+The runner chooses how its model turns reach the model server with `turn_dispatch_mode`:
+
+| Mode | What it does |
+|---|---|
+| `auto` (default) | The winner of the runner's last dispatch benchmark on this machine (its `dispatch-benchmark.json` in the runner's user cache folder), else `direct`. |
+| `direct` | One turn at a time, straight to the server (`DirectTurnDispatcher`). |
+| `hybrid` | One resident server shared by up to `hybrid_concurrency` in-process lanes (`HybridTurnMultiplexer`). |
+| `rabbitmq` | Correlated requests published to a broker queue, which a turn worker serves (`RabbitMqTurnDispatcher`). |
+
+To let several lanes share one model server through a broker, put this at the top level of the
+runner's `config.toml` (not in `vibey.toml`, where it is silently ignored):
 
 ```toml
-[qwenloop]
+# ~/Library/Application Support/gptossloop/config.toml, or the file GPTOSSLOOP_CONFIG names
 turn_dispatch_mode = "rabbitmq"
 turn_queue_url = "amqp://user:password@broker/vhost"
 turn_queue_name = "vibey.llm.turns"
 ```
 
-`turn_queue_url` is sensitive connection material and should be supplied through
-operator-controlled configuration, never committed or printed in logs. Start
-`qwenloop server turn-worker` (or `gptossloop server turn-worker`) for the model
-host. `turn_queue_name` defaults to `vibey.llm.turns` and permits separate model
-pools to use distinct durable queues. `TurnDispatcherInterface` is the runner
-seam: `DirectTurnDispatcher` preserves local operation,
-`HybridTurnMultiplexer` shares one resident server among bounded in-process lanes, and
-`RabbitMqTurnDispatcher` publishes correlated requests to the worker.
+`turn_queue_url` is sensitive connection material: keep it out of any committed file and out of
+logs. Start `gptossloop server turn-worker` (or `qwenloop server turn-worker`) on the model host;
+it refuses to start unless `turn_dispatch_mode = "rabbitmq"` and `turn_queue_url` are set.
+`turn_queue_name` lets separate model pools use distinct durable queues.
 
 ## `[failover]` { #failover }
 
@@ -1390,8 +1609,12 @@ would silently set the operator's material aside.
 
 Read like [`[queue.defect]`](#queuedefect): from `./vibey.toml` by `build_app`, or from the
 environment alone (`VIBEY_DESIGN_RESEARCH_ON_UNAVAILABLE`), which beats the file when set.
-The triaged-delivery bridge opts its worker in with `--record-research-gaps`
-(`VIBEY_TRIAGED_DELIVERY_RECORD_RESEARCH_GAPS=1`); it is off by default there too.
+`vibey new` also copies `[design]`, this table included, into the project's record, but the
+research handler reads the process's policy, not the copy. `vibey worker
+--auto-record-research-gaps` (and `--autonomous`, which includes it) opts one worker in by
+setting the variable. The triaged-delivery bridge opts its worker in with
+`--record-research-gaps` (`VIBEY_TRIAGED_DELIVERY_RECORD_RESEARCH_GAPS=1`); it is off by default
+there too.
 
 | Field | Type | Default | Notes |
 |---|---|---|---|
@@ -1425,14 +1648,18 @@ model = "gpt-oss:20b"
 context_window = 65536
 ```
 
-## Operational surfaces (sovereign defaults, declared-only paid relays)
+## Operational surfaces (sovereign defaults, declared-only paid relays) { #operational-surfaces-sovereign-defaults-declared-only-paid-relays }
 
 Each table is optional: an omitted table (or an omitted key) leaves the
 surface on its in-memory default, so a project runs with no external service
 configured at all. A real endpoint declares a self-hosted sovereign service
-(or a paid relay). `parse_config` validates all eight into `VibeyConfig`;
-`bootstrap.build_app` wires the concrete adapter only when every required key
-for that surface is present, otherwise the in-memory default.
+(or a paid relay). `parse_config` validates all twelve surface tables (`[tracker]`, `[docs]`,
+`[secrets]`, `[files]`, `[email]`, `[sms]`, `[messaging]`, `[config_store]`, `[cache]`,
+`[bus]`, `[blob]`, `[siem]`) and `[surfaces]` into `VibeyConfig`. `bootstrap.build_app` reads
+them from `./vibey.toml`, or from the [environment](#operational-surface-environment-variable-overlay)
+alone when there is no file, and wires the concrete adapter only when every required key for that
+surface is present, otherwise the in-memory default. A file `build_app` skips
+([how the whole file is parsed](#how-the-whole-file-is-parsed)) configures no surface.
 
 ## `[tracker]` (sovereign default: Plane)
 
@@ -1583,8 +1810,8 @@ url = "redis://localhost:6379/0"
 | `username` | string | unset | RabbitMQ management username. |
 | `password` | string | unset | RabbitMQ management password. |
 | `vhost` | string | `/` | The vhost the bus declares its queues in and the queue reaper reads ([`[queue.reap]`](#queuereap)). |
-| `mode` | `auto`, `singleton`, `multiplexer`, or `hybrid` | `auto` | Dispatch policy. `auto` uses the durable per-machine benchmark winner and falls back to singleton when no valid result exists. |
-| `hybrid_concurrency` | positive integer | `4` | Maximum concurrent bus operations in hybrid mode. |
+| `mode` | `auto`, `singleton`, `multiplexer`, or `hybrid` | `auto` | Dispatch policy. `auto` uses the durable per-machine benchmark winner and falls back to singleton when no valid result exists. No environment variable sets it. |
+| `hybrid_concurrency` | positive integer | `4` | Maximum concurrent bus operations in hybrid mode. `true` is refused. No environment variable sets it. |
 
 ```toml
 [bus]
@@ -1638,13 +1865,13 @@ password = "REPLACE_ME"
 index = "vibey-audit"
 ```
 
-## `[surfaces]`
+## `[surfaces]` { #surfaces }
 
 Settings every sovereign surface adapter shares.
 
 | Field | Type | Default | Notes |
 |---|---|---|---|
-| `adapter_timeout_seconds` | integer, 1 to 600 | `10` | The bound on each blocking network call a surface adapter makes, so a server that accepts the connection and never answers cannot hang its caller for ever (doctrine 10). `VIBEY_SURFACES_ADAPTER_TIMEOUT_SECONDS` overrides it. A value outside 1 to 600, or one that is not an integer, is refused. The adapters ship with this default as their `timeout`; the key is declared and validated here, and nothing yet passes it to them from `vibey.toml`. |
+| `adapter_timeout_seconds` | integer, 1 to 600 | `10` | The bound on each blocking network call a surface adapter makes, so a server that accepts the connection and never answers cannot hang its caller for ever (doctrine 10). `build_app` passes it to every surface adapter as its `timeout`, from `./vibey.toml` or `VIBEY_SURFACES_ADAPTER_TIMEOUT_SECONDS`, which overrides the file. A value outside 1 to 600, or one that is not an integer, is refused. |
 
 ```toml
 [surfaces]
@@ -1667,6 +1894,7 @@ operator's `spec.skillsContext` object (copied verbatim).
 | `mode` | string | `"off"` | `off`, `shadow` (measure only, never changes prompts), or `inject` (append successful packets to BUILD prompts). Any other value raises when the worker is built. |
 | `budget` | integer | `6000` | Token budget for retrieval, 1,000–32,000 (enforced by the `vibey new` flag, the operator CRD, and `VibeySkillsContextCompiler`). |
 | `timeout_seconds` | number | `120.0` | Skills compile timeout; must be positive. Settable only through `spec.skillsContext`. |
+| `kill_grace_seconds` | number | `5.0` | How long a timed-out compile's process reap may take before it is abandoned (`DEFAULT_KILL_GRACE_SECONDS` in `infrastructure/process/reaper.py`). Must be a number (the CRD also requires it above 0). Read by `compiler_from_config`; settable only through `spec.skillsContext`. |
 | `command` | array of non-empty strings | unset (`<python> -m vibey_skills.cli`) | Override for the `vibey-skills` command. Read by `compiler_from_config` but not declared in the `VibeyProject` CRD schema, so neither creation path sets it today. |
 | `index_path` | string | `.vibey/skills-context/index` under the repo | Path to the skills index; relative paths resolve under the repo. Read by `compiler_from_config` but not declared in the CRD schema, so neither creation path sets it today. |
 
@@ -1833,8 +2061,10 @@ honoured makes the sweep answer nothing for that project and log
 Sub-doctrine 8.i: from sundown Friday to sundown Saturday nothing writes, merges, tests or
 ships code ([ADR-0072](../architecture/decisions/0072-the-sabbath-kept-where-the-machine-stands.md)).
 Sundown is computed for the machine the process runs on, with the NOAA algorithm. The same
-table is read from a local `vibey.toml` (by the engine) and from `.vibey-gh.toml` (by the
-merge train, the promotion and the heartbeat). **Never commit coordinates**: put them only
+table is read from `./vibey.toml`, in the folder a `vibey` command runs in (`cli/sabbath.py`,
+`infrastructure/sabbath.py`), and from `.vibey-gh.toml` (by the merge train, the promotion and
+the heartbeat). An unknown key is refused by name. A command that would rest takes
+`--ignore-sabbath` for that one run. **Never commit coordinates**: put them only
 in this machine's own `vibey.toml`, in `local_config`, or in `VIBEY_SABBATH_LATITUDE` and
 `VIBEY_SABBATH_LONGITUDE`.
 
@@ -1872,45 +2102,46 @@ latitude  = 34.97
 longitude = -82.44
 ```
 
+## `[host_health]` { #host_health }
+
+What `vibey doctor` says about this host's newest health record ([host health](host-health.md)).
+Read from `./vibey.toml` by `vibey doctor` (`cli/host_health.py`); nothing else reads it. Every
+key is optional, and an unknown key is ignored.
+
+| Key | Type | Default | Meaning |
+|---|---|---|---|
+| `record` | string (a path) | the host's own record, `~/.local/state/vibey/host-health/records.jsonl`, else in a vibey checkout the committed `docs/architecture/evidence/host-health.jsonl` | The record to read. `~` is expanded, and a relative path is read from the current folder. |
+| `max_age_days` | integer | `14` | How old the newest record may be before `vibey doctor` warns. |
+| `required` | boolean | `false` | `true` turns a missing or stale record from a `WARN` into a `FAIL`. |
+
+A `./vibey.toml` that is not valid TOML makes the `host-health` line a `FAIL` that says so.
+
+```toml
+[host_health]
+max_age_days = 21
+required = true
+```
+
 ## Full example
 
-This is a valid file exercising most of the schema that `parse_config`
-validates. `vibey new` also copies its `[notifications]`, `[telemetry]`,
-`[gates]` and `[engine_environment]` tables into the project's stored config (see
-the top of this page).
+Two files, because vibey reads them for different things. Both parse, and every key in them
+does something today.
+
+**A project's `vibey.toml`**, at the root of its checkout. `vibey new` copies the tables marked
+"copied" into the project's record; `build_app` reads the rest when a command runs in this
+folder, and needs `[project] name` to do so:
 
 ```toml
 [project]
-name = "my-app"
-repo = "."
-max_cycles = 15
+name = "my-app"            # required for build_app to read this file
 
-[isolation]
-level = "container"
-allow_push = false
-
-[budget]
-max_dollars_per_cycle = 15.0
-max_dollars_total = 250.0
-
+# Copied into the project's record by vibey new:
 [engines]
-enabled = ["claudeloop", "codexloop"]
-weights = { claudeloop = 3, codexloop = 1 }
+mode = "hybrid"            # the dispatch keys are the only [engines] keys copied
+paid_daily_cap = 5
 
-[phases.design]
-effort = "high"
-
-[phases.build]
-effort = "low"
-parallelism = 2
-
-[phases.review]
-effort = "high"
-
-[deploy]
-enabled = true
-target = "azure"
-iac = "bicep"
+[engines.slots]
+gptossloop = 1
 
 [notifications]
 enabled = true
@@ -1923,16 +2154,14 @@ secret = "replace-me"
 [telemetry]
 enabled = true
 
-[features]
-gptossloop = true   # the default; false switches the sovereign engine off
-qwenloop = true     # opt in to the same runner on a Qwen model
+[design.interview]
+default_scope = "narrowest"
 
-[qwenloop]
-backend = "auto"
-idle_timeout_seconds = 600
+[build.slicing]
+max_children = 6
 
-[queue.priority]
-sources = ["storm"]
+[publish]
+mode = "interview"
 
 [gates]
 env_allow = ["JAVA_HOME"]
@@ -1940,6 +2169,45 @@ env_allow = ["JAVA_HOME"]
 [engine_environment.engines]
 claudeloop = ["GH_TOKEN"]
 
+[human_gates.timeout_defaults]
+choice = 1440
+
+# Read from this folder by every command that opens the queue:
 [queue.reap]
 stale_ready_seconds = 900
+
+[design.research]
+on_unavailable = "gate"
+
+# Read from the repository root on every reorder request:
+[queue.priority]
+sources = ["storm"]
+
+# Read by vibey doctor and vibey loops in this folder:
+[features]
+gptossloop = true          # the default; false switches the sovereign engine off
+qwenloop = true            # opt in to the same runner on a Qwen model
 ```
+
+**Your own `vibey.toml`**, in your configuration folder
+(`~/Library/Application Support/vibey/vibey.toml` on macOS, `~/.config/vibey/vibey.toml` on
+Linux):
+
+```toml
+[hub]
+projects_root = "~/vibey-projects"
+
+[web]
+fetches_per_hour = 10
+
+[inputs]
+max_items = 32
+
+[acp]
+default_mode = "observe"
+```
+
+These keys are accepted by `parse_config` and currently do nothing, so the examples leave them
+out: `[project] repo`, `max_cycles` and `strict_loopback`; `[isolation]`; `[budget]` `max_*`;
+`[engines] enabled`, `weights` and `max_run_minutes`; `[phases.*]`; `[provision]`; `[deploy]`;
+`[telemetry] export_path`; `[qwenloop]`; and `[verify]`.

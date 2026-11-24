@@ -1,4 +1,16 @@
-# codexloop
+---
+description: "Reference for codexloop, the autonomous OpenAI Codex session runner inside vibey-engine: commands, flags, sandbox, exit codes and how vibey drives it."
+---
+
+# codexloop: run OpenAI Codex unattended until the task is done
+
+> [!IMPORTANT]
+> **Bottom Line Up Front (BLUF):** `codexloop` drives `codex exec` from a plan file to completion
+> without waiting on a person, and never treats `insufficient_quota` as a rate limit that will
+> reset. It ships inside `vibey-engine`. You need the Codex CLI (`codex` 0.40 or newer on `PATH`)
+> signed in with `codex login` or an `OPENAI_API_KEY`. Run `codexloop doctor`, then
+> `codexloop run plan.md`. In vibey it is one of the two paid engines; unlike claudeloop it takes
+> no capability snapshot.
 
 > [!IMPORTANT]
 > **Work in progress — not a final product:** `codexloop` and `vibey` are in active development and not a final product. Folks will be notified on the [Discord server](https://discord.gg/Qvu8aYnVS) once the product is finally done.
@@ -14,6 +26,21 @@
 generated OpenAI SDK CLI** — never blocks on a human, never treats
 `insufficient_quota` as a waitable `rate_limit_exceeded` window, and resumes
 safely across usage windows.
+
+## How to read this page
+
+Daniel knew claudeloop already, and opened this page expecting to read it all again.
+
+**Daniel:** Professor, is this just claudeloop for OpenAI?
+
+**Professor Feynman:** It is the same machine with a different engine bolted in: the same states,
+the same run folder, the same promise never to wait on a person. Read the quickstart and the
+table that says how a 429 is classified. The command tables below are for looking things up.
+
+**Daniel:** And what does it not do that claudeloop does?
+
+**Professor Feynman:** It takes no capability snapshot. That is written down below, so you are not
+surprised by it later.
 
 ## What problem this solves
 
@@ -46,9 +73,12 @@ supported target.
 
 ```bash
 pipx install vibey-engine      # or: uv tool install vibey-engine / pip install vibey-engine
-                        # the whole family; codexloop is one of its console scripts
-codexloop doctor      # reports which auth mode is active; it never guesses
+                               # the whole family; codexloop is one of its console scripts
+codexloop --version            # prints: codexloop 0.4.0 (or the version you installed)
+codexloop doctor               # reports which auth mode is active; it never guesses
 ```
+
+`vibey-engine` does not install the Codex CLI. Install it yourself, from the link above.
 
 See the [getting-started guide](https://github.com/the-vibey-project/vibey/blob/develop/src/vibey_runners/codex/docs/getting-started.md)
 for a from-source setup.
@@ -74,10 +104,12 @@ codexloop approval never                             # approval policy
 codexloop sandbox workspace-write                    # sandbox mode
 codexloop watch --follow                             # or --replay for the Textual stream UI
 codexloop stop                                       # graceful stop at the next control boundary
-codexloop wind-down --reason "capacity exhausted"    # finish the turn, write a handoff, exit
+codexloop wind-down --reason "capacity exhausted"    # finish the turn, write a handoff, exit 75
 codexloop savepoints
 codexloop unwind 1                                   # git save-point restore (refuses while live)
 ```
+
+Replace `<thread-id>` with an id from `codexloop threads`, and `<model>` with a Codex model name.
 
 `--transport app-server` opts into the experimental Codex app-server protocol
 and falls back to `exec` when it is unavailable
@@ -90,7 +122,7 @@ it per invocation with `--network-access`, per process with
 is not a localhost- or PostgreSQL-only allowlist. Use it only for trusted tasks.
 Runs record the effective `sandbox_mode` and `network_access` values in
 `.codexloop/runs/<run_id>/meta.json`. Because the app-server transport cannot
-currently express this setting, CodexLoop uses the exec transport whenever it
+currently express this setting, codexloop uses the exec transport whenever it
 is enabled.
 
 ## Why it's different from just retrying on 429
@@ -108,6 +140,48 @@ See the [architecture overview](https://github.com/the-vibey-project/vibey/blob/
 and [ADR 0003 — credits exhausted](https://github.com/the-vibey-project/vibey/blob/develop/src/vibey_runners/codex/docs/architecture/adr/0003-credits-exhausted.md)
 for the full reasoning.
 
+## Commands
+
+Every command below is in `codexloop --help` and `src/codexloop/cli/app.py`.
+
+| Command | What it does |
+|---|---|
+| `run PLAN` | Drive a new autonomous run from a markdown plan. Flags: `--run-id`, `--transport exec\|app-server` (default `exec`), `--model`, `--max-turns`, `--max-wait`, `--network-access` / `--no-network-access`, `--stream-ui`. |
+| `resume [THREAD_ID] [--last] [--transport]` | Resume by explicit thread id (the default) or the most recent catalog entry. |
+| `threads` | List this product's run registry (not vendor Codex sessions). |
+| `status [RUN_ID]`, `logs [RUN_ID]` | Persisted state, and `events.jsonl`, for a run (default: the latest). |
+| `runs` | List run directories under `.codexloop/runs/`. |
+| `prompt TEXT (--now \| --next-turn) [--run-id]` | Queue an operator prompt. Exactly one of `--now` and `--next-turn` is required. |
+| `stop [--run-id]` | Request a graceful stop at the next control boundary. |
+| `wind-down [--run-id] [--reason TEXT]` | Request a graceful wind-down at the next control boundary. |
+| `capacity` | ChatGPT plan windows when known; says so plainly when not. |
+| `doctor [--cwd PATH]` | Auth mode, probe strategies, and other pre-flight gates. |
+| `watch [RUN_ID] [--follow] [--interval S] [--replay]` | A snapshot of persisted run state, followed every `--interval` seconds (default 1.0), or the Textual stream UI. |
+| `savepoints` | List numbered git save points. |
+| `unwind TO [--backup \| --no-backup]` | Hard-reset to a save point (a number, sha prefix or label). Refuses while a run is live; keeps a backup ref by default. |
+| `reset [--label LABEL]` | Record a save point (commit if dirty, else a ref tag only). Default label `reset`. |
+| `snapshot [NAME] [--restore NAME]` | Create or restore a filesystem snapshot for the active run. |
+| `model`, `effort`, `approval`, `sandbox`, `cwd` | Queue a change for the next control boundary. |
+| `api …` | The generated 1:1 OpenAI SDK REST surface. |
+
+Global flags: `--version`, `-v`/`--verbose` (more detail: `-v` debug, `-vv` also third-party
+libraries, `-vvv` full payloads), `-q`/`--quiet`, `--log-level`, `--log-file`. These are
+codexloop's own; vibey's `-v` prints vibey's version.
+
+Exit codes: `0` success, `1` failure, `2` usage error, `75` wound down on purpose (a handoff was
+written), `130` operator stop.
+
+## How vibey drives codexloop
+
+- codexloop is one of vibey's two paid engines (tier PAID). vibey prefers local engines and falls
+  back to paid ones only when no local engine is eligible (vibey ADR-0038).
+- **No capability snapshot.** codexloop has no `--capabilities` flag, and vibey's codexloop
+  descriptor declares none (`src/vibey/infrastructure/engines/descriptors.py`). A BUILD run on
+  codexloop therefore does not get the locked plugins, skills and MCP servers that vibey's loop
+  capability bundle (ADR-0103) gives claudeloop and the local runner.
+- vibey passes `OPENAI_API_KEY` and the `CODEXLOOP_*`, `CODEX_*`, `OPENAI_*`,
+  `AZURE_OPENAI_API_KEY` and `AZURE_OPENAI_ENDPOINT` variables through to the run.
+
 ## Documentation
 
 Full docs (MkDocs Material sources) live in the
@@ -120,19 +194,21 @@ Full docs (MkDocs Material sources) live in the
 | [Generated REST surface](https://github.com/the-vibey-project/vibey/blob/develop/src/vibey_runners/codex/docs/guides/rest-api-surface.md) | `codexloop api …` — 1:1 over the `openai` SDK resource tree, `--provider openai\|azure\|custom`, drift gate |
 | [Architecture](https://github.com/the-vibey-project/vibey/blob/develop/src/vibey_runners/codex/docs/architecture/index.md) | The onion layers and the twelve [decision records](https://github.com/the-vibey-project/vibey/blob/develop/src/vibey_runners/codex/docs/architecture/adr/index.md) |
 | [CLI reference](https://github.com/the-vibey-project/vibey/blob/develop/src/vibey_runners/codex/docs/reference/cli.md) | Command index |
-| [Contributing](https://github.com/the-vibey-project/vibey/blob/develop/src/vibey_runners/codex/docs/contributing.md) / [Publishing](https://github.com/the-vibey-project/vibey/blob/develop/src/vibey_runners/codex/docs/publishing.md) | Setup, tests, coverage floors, TestPyPI → PyPI Trusted Publishing |
+| [Contributing](https://github.com/the-vibey-project/vibey/blob/develop/src/vibey_runners/codex/docs/contributing.md) / [Publishing](https://github.com/the-vibey-project/vibey/blob/develop/src/vibey_runners/codex/docs/publishing.md) | Setup, tests, coverage floors, publishing |
 | [Plans](https://github.com/the-vibey-project/vibey/tree/develop/src/vibey_runners/codex/docs/plans) | Design record, vendor research notes, and the shared transplant outline (GitHub tree; not in the site nav) |
 | [Changelog](https://github.com/the-vibey-project/vibey/blob/develop/src/vibey_runners/codex/CHANGELOG.md) | Release notes (entries up to 2026-08 were written by release-please, which vibey ADR-0028 retired) |
 
 ## Project status
 
-Pre-1.0, but functional through milestone **M5**: onion core, `codex exec`
-gateway, layered capacity probe (exec floor + optional app-server + rollout
-tail), control plane, generated OpenAI REST CLI with a drift gate, and the
-optional app-server transport with exec fallback. Later releases added the
-`-v`/`-q` verbosity ladder, `--run-id`, wind-down, and capacity forecasting
-(measurement only, off by default). Coverage floor is **100%** for the whole
-package. `pytest -m system` runs a scripted agent with no OpenAI account;
+Pre-1.0 (0.4.0, shipped inside `vibey-engine`). What runs today: the onion core, the `codex exec`
+gateway, the layered capacity probe (exec floor, optional app-server, rollout tail), the control
+plane, the generated OpenAI REST CLI with a drift gate, the optional app-server transport with
+exec fallback, the `-v`/`-q` verbosity ladder, `--run-id`, wind-down, and capacity forecasting
+(measurement only, off by default). The milestone labels in the plan records are history.
+
+CI holds `domain`, `application`, `infrastructure` and `cli` to 100% coverage each, with branch
+coverage on, on Python 3.12, 3.13 and 3.14, on Linux and on macOS (the `tools` job in
+`.github/workflows/ci.yml`). `pytest -m system` runs a scripted agent with no OpenAI account;
 `pytest -m live` is opt-in.
 
 | Item | Value |
@@ -142,6 +218,7 @@ package. `pytest -m system` runs a scripted agent with no OpenAI account;
 | Auth | `OPENAI_API_KEY` **or** `codex login` (`$CODEX_HOME/auth.json`) — never mixed |
 | Done marker | `CODEXLOOP_TASK_FULLY_COMPLETE` |
 | Effort levels | `low` / `medium` / `high` (Codex `model_reasoning_effort`) |
+| Minimum Codex CLI | 0.40 |
 
 ## Contributing
 
@@ -197,14 +274,36 @@ Both ship inside the [`vibey-engine`](https://pypi.org/project/vibey-engine/) pa
 
 Around them:
 
-- [vibey](https://github.com/the-vibey-project/vibey) — queue-based, six-phase conductor (spec interview → design → build → review → deploy) that drives these four runners as interchangeable engines, plus the local runner in [`src/vibey_runners/qwen`](https://github.com/the-vibey-project/vibey/tree/develop/src/vibey_runners/qwen) as a fifth: `gptossloop`, the sovereign default on GPT-OSS, and the opt-in `qwenloop` on Qwen (vibey ADR-0015, ADR-0064). PostgreSQL-backed. Background reading: the [vibey research paper](https://the-vibey-project.github.io/vibey/main/paper/) ([PDF](https://the-vibey-project.github.io/vibey/main/paper.pdf)) and the vibey book ([PDF](https://the-vibey-project.github.io/vibey/main/book.pdf), [EPUB](https://the-vibey-project.github.io/vibey/main/book.epub), [print HTML](https://the-vibey-project.github.io/vibey/main/book-print.html)).
+- [vibey](https://github.com/the-vibey-project/vibey) — the queue-based conductor: INTAKE, DESIGN,
+  an optional VISUAL_DESIGN stage, BUILD and REVIEW, then three opt-in deployment stages. It
+  drives five engines: `claudeloop` and `codexloop` (paid), and three local ones: `gptossloop`,
+  the sovereign default on GPT-OSS, and the opt-in `qwenloop` on Qwen (both from the local runner
+  in [`src/vibey_runners/qwen`](https://github.com/the-vibey-project/vibey/tree/develop/src/vibey_runners/qwen)),
+  and `claudeloop-local`, claudeloop on a local profile (vibey ADR-0064). Local engines are
+  preferred first. `cursorloop` and `agyloop` were retired by vibey ADR-0078. PostgreSQL-backed.
+  Background reading: the [vibey research paper](https://the-vibey-project.github.io/vibey/main/paper/) ([PDF](https://the-vibey-project.github.io/vibey/main/paper.pdf)) and the vibey book ([PDF](https://the-vibey-project.github.io/vibey/main/book.pdf), [EPUB](https://the-vibey-project.github.io/vibey/main/book.epub), [print HTML](https://the-vibey-project.github.io/vibey/main/book-print.html)).
 - [vibey-bootstrap](https://github.com/the-vibey-project/vibey/tree/develop/src/vibey_tools/bootstrap) — Azure Functions cross-cutting layer: App Config + Key Vault + App Insights bootstrap, Service Bus plumbing, scaffold CLI.
 - [vibey-skills](https://github.com/the-vibey-project/vibey/tree/develop/src/vibey_tools/skills) — versioned Agent Skills marketplace and deterministic context-packet engine.
-- [homebrew-tap](https://github.com/adammatthewsteinberger/homebrew-tap) — `brew tap adammatthewsteinberger/tap`.
+
+No Homebrew formula is published for codexloop; install it with `vibey-engine`.
 
 ## License
 
 MIT — see [LICENSE](https://github.com/the-vibey-project/vibey/blob/develop/src/vibey_runners/codex/LICENSE).
+
+## Where next
+
+- [Getting started](https://github.com/the-vibey-project/vibey/blob/develop/src/vibey_runners/codex/docs/getting-started.md):
+  preflight and a first run, step by step.
+- [The claudeloop README](https://github.com/the-vibey-project/vibey/tree/develop/src/vibey_runners/claude):
+  the same contract for Claude Code, with capability snapshots and a free local profile.
+- [ADR 0003 — credits exhausted](https://github.com/the-vibey-project/vibey/blob/develop/src/vibey_runners/codex/docs/architecture/adr/0003-credits-exhausted.md):
+  why a billing wall is never waited on.
+
+## Say it in one line
+
+codexloop drives `codex exec` from a plan to Done without a person at the keyboard, and reads a
+429's body to tell a rate limit that resets from a billing wall that never will.
 
 ---
 

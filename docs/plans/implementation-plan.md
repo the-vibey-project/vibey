@@ -1,9 +1,64 @@
-# Implementation Plan
+---
+description: "The milestone-by-milestone plan vibey was built from (M0 to M10), kept as the record of intent, with the status of every task checked against the code and a pointer to where later work is tracked."
+---
 
-> **Status as of 2026-09-15.** This plan was written 2026-08-14 and is kept as
-> the record of intent. The task text is the original except where a stale fact
-> is struck through, and each table carries a **Status** column added on
-> 2026-09-15 (**done**, **partial**, or **not started**, with evidence). Summary:
+# The implementation plan: how vibey was built, milestone by milestone
+
+> [!IMPORTANT]
+> **Bottom Line Up Front (BLUF):** this is the plan vibey was built from in August and
+> September 2026: eleven milestones, M0 to M10, each task written test-first. Every task has
+> a Status cell with evidence, re-checked on 2026-11-24. The plan stops at M10; work since
+> then is tracked in the decision records, `docs/runbooks/expansion/` and
+> `docs/continuation/`, listed in "After M10" below. Read it as history and as the map of
+> what each milestone proved; read `docs/reference/` for what vibey does today.
+
+> **How current this page is.** The task text is the original of 2026-08-14 except where a
+> stale fact is struck through. The **Status** cells were added on 2026-09-15 (**done**,
+> **partial** or **not started**, with evidence) and re-checked against `develop` at
+> `d91a3791e` (vibey-engine 0.4.0) on 2026-11-24, which corrected the engine and migration
+> counts, the release workflow name, a test name, the append-only mechanism (4.2), the ledger
+> subcommands (4.6), the review clear conditions (7.4) and the `vibey-gh` ruleset command.
+> This page lives under `docs/plans/`, which the published site leaves out on purpose.
+
+## The idea, in one conversation
+
+> The Professor had drawn eleven boxes on the whiteboard, joined by arrows, and was rubbing
+> out the date on the last one.
+>
+> **Daniel:** Professor, why keep a plan once the thing is built? The code is the truth now.
+>
+> **Professor Feynman:** Think of a builder's schedule pinned to the site hut. Foundations,
+> then walls, then roof. Each line says what test proved it was done: the slab was level, the
+> walls were plumb. When the house is finished you keep that sheet, because it tells the next
+> builder what was checked and what was only hoped.
+>
+> **Daniel:** So each Status cell is the test that proved a box, not just a tick.
+>
+> **Professor Feynman:** Yes, and a tick with no test behind it is the most dangerous mark on
+> the sheet. Look at M2: "zero lost jobs under random kills". Done, says the cell, and then,
+> honestly, "in-process abandonment, not OS-level `SIGKILL`". That second clause is worth more
+> than the tick.
+>
+> **Daniel:** And the work after M10?
+>
+> **Professor Feynman:** That has no box here. The picture stops working there: a building's
+> schedule ends at the roof, and vibey kept being built. Later work lives in the decision
+> records, and this page points you to them.
+
+## Daniel's teach-back
+
+> **Daniel:** This page is the original build plan, M0 to M10, kept as a record. Each task
+> says what test would prove it, and each Status cell says what the code actually shows,
+> including where a task was only partly done or done differently. The core promise, rotating
+> engines without losing work, was proved in M4. Anything built after the plan is not here;
+> the ADRs and the expansion runbooks track it.
+>
+> **Professor Feynman:** Good. One fix: "proved in M4" means proved by the forced-rotation
+> test in task 4.11 with engine A dead, not by a demonstration on a real paid engine.
+
+---
+
+**Summary of status (2026-09-15, re-checked 2026-11-24):**
 >
 > - **Done:** M0, M3, M6, M7, M8; M1, M2 and M4 except 1.7 (property example count
 >   below plan), 2.3 (`vibey up`, dropped) and 4.6 (`vibey ledger rebuild`, never
@@ -14,11 +69,13 @@
 >   unit-tested but are not active runtime paths — see `SECURITY.md`; 9.5 has no
 >   recorded playbook review), M10
 >   (10.8 rollback, 10.12 CLI, and the real-Azure half of 10.13).
-> - **Drift since writing:** five engines, not four (qwenloop is opt-in,
->   ADR-0015, and the sovereign DESIGN provider, ADR-0027; since ADR-0064 that
->   local runner ships as `gptossloop`, the sovereign default and DESIGN
->   provider, and `qwenloop`, opt-in on Qwen); 25 argv golden files;
->   eleven migrations in the root `migrations/` directory; no `vibey up` and no
+> - **Drift since writing:** five engines, but not the plan's four plus one: two paid
+>   (`claudeloop`, `codexloop`) and three local (`gptossloop`, the sovereign default and
+>   DESIGN provider, on by default; `qwenloop` on Qwen and `claudeloop-local`, both
+>   opt-in). `cursorloop` and `agyloop` were retired and deleted by ADR-0078 (#1376), and
+>   `qwenloop` became the Qwen twin of `gptossloop` by ADR-0064. 30 argv golden files
+>   (5 engines × 6 efforts, ULTRA included, ADR-0063); 23 migrations shipped as package
+>   data in `src/vibey/infrastructure/db/migrations/`; no `vibey up` and no
 >   `vibey ledger rebuild`; every layer — `domain/`, `application/`,
 >   `infrastructure/`, `cli/` — is gated at 100% branch coverage (ADR-0023);
 >   release-please is retired and `vibey-gh` owns release (ADR-0028); the docs
@@ -34,7 +91,9 @@
 > by dependency; milestones ship in sequence.
 >
 > The whole plan is designed to be executed *by vibey itself* once M0–M4 are done.
-> M5 onward is the bootstrap: the tool builds its own remaining phases.
+> M5 onward is the bootstrap: the tool builds its own remaining phases. *(That was the
+> intent. The repository holds no record of M5–M10 being built by vibey's own phases;
+> treat it as a goal, not a fact.)*
 
 ---
 
@@ -63,7 +122,7 @@
 | 0.3 | `domain/` purity test — AST walk asserting no I/O, no async, no `datetime.now()` | `test_domain_purity.py` | Test fails when a violation is planted | **done** — `tests/domain/test_domain_purity.py` |
 | 0.4 | CI: the 7-gate workflow + coverage floors | GitHub Actions green | A 99%-covered `domain/` fails the build | **done** — `ci.yml` `gates` job; four per-layer 100% floors (ADR-0023) |
 | 0.5 | `vibey.toml` schema + loader + validation errors | round-trip + rejection tests | Every field in the architecture doc §16 parses | **done** — `domain/config.py`, `infrastructure/config_loader.py` |
-| 0.6 | `pre-commit`, commit-msg hook, ~~`release-please` config~~ release automation (see Status) | hook rejects `fix stuff` | — | **done**, changed — `.pre-commit-config.yaml`; `.githooks/commit-msg` is installed by `vibey-gh install`; release-please is retired and release runs through `vibey-gh` (`.vibey-gh.toml`, `.github/workflows/release.yml`; ADR-0028) |
+| 0.6 | `pre-commit`, commit-msg hook, ~~`release-please` config~~ release automation (see Status) | hook rejects `fix stuff` | — | **done**, changed — `.pre-commit-config.yaml`; `.githooks/commit-msg` is installed by `vibey-gh install`; release-please is retired and release runs through `vibey-gh` (`.vibey-gh.toml`; ADR-0028). The workflow named "Release" is `.github/workflows/vibey-engine.yml` (TestPyPI from `develop`, PyPI from `main`), followed by `github-release.yml`, `release-binaries.yml` and `release-surfaces.yml`, with `krypton-app.yml` for the apps; there is no `release.yml` |
 
 **Exit:** an empty repo that cannot be built wrong.
 
@@ -77,7 +136,7 @@
 |---|---|---|---|---|
 | 1.1 | `domain/errors.py` | — | — | **done** — `domain/errors.py` |
 | 1.2 | `domain/phase.py` — `Phase`, `PhaseState`, `evaluate_transition`, `next_phase_after_review` | property: every phase reachable from `INTAKE`; terminals have no exits; guards total | 100% branch coverage | **done** — `domain/phase.py` |
-| 1.3 | `domain/effort.py` — ladder, `effort_for_attempt`, `forces_rotation` | table test over attempts 1..8; `EscalationExhausted` at 7 | — | **done** — `domain/effort.py` |
+| 1.3 | `domain/effort.py` — ladder, `effort_for_attempt`, `forces_rotation` | table test over attempts 1..8; `EscalationExhausted` at 7 | — | **done** — `domain/effort.py`; `Effort.ULTRA` (no ceiling, chosen never escalated into) added later by ADR-0063 |
 | 1.4 | `domain/capacity.py` — the 4-member ADT | type test: `CreditsExhausted` has no `resets_at` attribute | `hasattr` assertion passes | **done** — `domain/capacity.py` |
 | 1.5 | `domain/circuit.py` — `schedule_probe`, transitions | **property: `CreditsExhausted` never yields `DeadlineProbe`** | property suite green | **done** — `domain/circuit.py` |
 | 1.6 | `domain/engine.py` — descriptor, capability, `JobRequirement` | `saturates_at` truth table across all 4 projections | — | **done** — `domain/engine.py` |
@@ -99,7 +158,7 @@ stdlib. **Nothing in the repo can do I/O yet.**
 | # | Task | Test | Done when | Status |
 |---|---|---|---|---|
 | 2.1 | Migration runner + `schema_migration` checksum guard | applying an edited migration fails | — | **done** — `infrastructure/db/migrator.py` |
-| 2.2 | Migrations ~~001–008~~ `0001`–`0011`: every table in [data-model.md](data-model.md) | apply to fresh + apply over seeded fixture | — | **done** — eleven migrations in the root `migrations/` (`0009_event_produced_at`, `0010_visual_design_phase`, `0011_deployment_stage_set_phases` added later), resolved by `bootstrap.migrations_dir()` |
+| 2.2 | Migrations ~~001–008~~ `0001`–`0011`: every table in [data-model.md](data-model.md) | apply to fresh + apply over seeded fixture | — | **done** — the plan's set grew to 23 migrations, `0001_project` … `0023_acp_session` (0009–0011 during the plan; 0012–0023 since, including ledger partitioning 0013 and the append-only triggers 0016–0017), shipped as package data in `src/vibey/infrastructure/db/migrations/` and found by `bootstrap.migrations_dir()`; there is no root `migrations/` directory any more |
 | 2.3 | Local PostgreSQL install and doctor check | installer unit tests plus a live service check | `vibey install --postgres` installs/starts PostgreSQL and `vibey doctor` reports readiness | **done** — `infrastructure/postgres.py` supports Homebrew, apt, and dnf; `vibey doctor --install-postgres` is the explicit repair path; PostgreSQL 14–18 run the compatibility suite |
 | 2.4 | `application/ports.py` — every Protocol | — | — | **done** — `application/ports.py`, `application/interfaces/` |
 | 2.5 | `JobRepository`: enqueue (idempotent), claim (`SKIP LOCKED`), heartbeat, ack, nack, reap | **testcontainers Postgres, never mocked** | — | **done** — `infrastructure/db/`; tests run against a real Postgres (`VIBEY_TEST_DATABASE_URL`, `integration` marker), not testcontainers |
@@ -116,23 +175,27 @@ stdlib. **Nothing in the repo can do I/O yet.**
 ## M3 — Engine adapters
 
 *Goal: drive all four runners through one interface, and know when they drift.*
-*(Now five: the four paid runners plus opt-in qwenloop, ADR-0015.)*
+*(Now five engines over three runner packages: the paid `claudeloop` and `codexloop`, and the
+local `gptossloop`, `qwenloop` and `claudeloop-local`. The plan's `cursorloop` and `agyloop`
+were retired by ADR-0078.)*
 
 | # | Task | Test | Done when | Status |
 |---|---|---|---|---|
 | 3.1 | `EngineAdapter` Protocol + `RunHandle` | — | — | **done** |
 | 3.2 | `ScriptedEngine` — a fake runner that writes a real run-directory shape | used by every later test | offline, deterministic, no network | **done** — `infrastructure/engines/scripted.py` |
-| 3.3 | Descriptors for all four (now five), with the verified effort projections | descriptor round-trip; `invoke()` covers all 5 efforts | — | **done** — five descriptors: `ALL_DESCRIPTORS = (*DEFAULT_DESCRIPTORS, QWENLOOP)` in `infrastructure/engines/descriptors.py`; qwenloop is opt-in via `[features] qwenloop` or `VIBEY_FEATURE_QWENLOOP` |
-| 3.4 | argv builder: descriptor + effort + isolation → command line | golden-file tests per engine per effort | ~~20 golden files (4 engines × 5 efforts)~~ 25 golden files (5 engines × 5 efforts) | **done** — `tests/infrastructure/engines/test_argv.py::test_exactly_twenty_five_golden_files_exist` |
+| 3.3 | Descriptors for all four (now five), with the verified effort projections | descriptor round-trip; `invoke()` covers all ~~5~~ 6 efforts | — | **done** — five descriptors in `infrastructure/engines/descriptors.py`: `DEFAULT_DESCRIPTORS = (CLAUDELOOP, CODEXLOOP)`, `LOCAL_DESCRIPTORS = (GPTOSSLOOP, QWENLOOP, CLAUDELOOP_LOCAL)`, `ALL_DESCRIPTORS = (*DEFAULT_DESCRIPTORS, *LOCAL_DESCRIPTORS)`; `gptossloop` is on unless `[features] gptossloop = false` or `VIBEY_FEATURE_GPTOSSLOOP=0`, the other two are opt-in |
+| 3.4 | argv builder: descriptor + effort + isolation → command line | golden-file tests per engine per effort | ~~20 golden files (4 engines × 5 efforts)~~ 30 golden files (5 engines × 6 efforts) | **done** — `tests/infrastructure/engines/test_argv.py::test_one_golden_file_per_engine_and_effort_exists` asserts `len(ALL_DESCRIPTORS) * len(ALL_EFFORTS)` files in `tests/infrastructure/engines/golden/` |
 | 3.5 | Run-directory tailer: `events.jsonl` → vibey `LedgerEvent`s | replay a captured real run dir from each engine | — | **done** — `infrastructure/engines/tailer.py`, `loop_events.py` |
 | 3.6 | Capacity classifier per engine: vendor error → `CapacityState` | fixture corpus of real error payloads | credits vs window never confused | **done** — `infrastructure/engines/classify.py` |
 | 3.7 | `FailureClass` attribution (exit code + tail → capacity/engine/work/vibey) | fixture corpus | a failing `pytest` never opens a circuit | **done** |
-| 3.8 | Control-plane writer (`inbox/`) for prompt/stop/model | integration against `ScriptedEngine` + one real engine | — | **done** — inbox writer in `loop_process_adapter.py` |
+| 3.8 | Control-plane writer (`inbox/`) for prompt/stop/model | integration against `ScriptedEngine` + one real engine | — | **done** — inbox writer in `loop_process_adapter.py`; for the local runner, `stop()` writes `control/inbox/*-stop.json`, which that runner reads |
 | 3.9 | **Conformance suite** — the 9 checks in [rotation-and-engines.md](rotation-and-engines.md#82-the-conformance-suite) | runs against `ScriptedEngine` in CI, real engines locally | `vibey doctor --conformance` reports per-engine pass/fail | **done** — `application/conformance.py`; `vibey doctor --conformance` |
 | 3.10 | `engine_health` repository + circuit persistence | probe scheduling integration | — | **done** — `infrastructure/db/engine_health_repository.py`, `application/engine_health_service.py` |
 
 **Exit:** `vibey doctor --conformance` passes against all four installed runners,
-and a deliberately-broken descriptor is *detected*, not crashed on.
+and a deliberately-broken descriptor is *detected*, not crashed on. *(The summary above
+counts M3 as done for the code. The exit's first half has no recorded run against every
+real engine in the repository; see the Definition of done.)*
 
 ---
 
@@ -143,11 +206,11 @@ and a deliberately-broken descriptor is *detected*, not crashed on.
 | # | Task | Test | Done when | Status |
 |---|---|---|---|---|
 | 4.1 | `append_event` with gapless per-project seq | concurrency test: 100 parallel appends, no gaps, no dupes | — | **done** |
-| 4.2 | Append-only enforcement (`RULE … DO INSTEAD NOTHING`) | `UPDATE event` is a silent no-op; `DELETE` likewise | — | **done** — `migrations/0002_event.sql` |
+| 4.2 | Append-only enforcement (~~`RULE … DO INSTEAD NOTHING`~~ database triggers) | ~~`UPDATE event` is a silent no-op; `DELETE` likewise~~ `UPDATE`, `DELETE` and `TRUNCATE` on `event` are refused with an error | — | **done**, changed — first as rules in `src/vibey/infrastructure/db/migrations/0002_event.sql`, which silently discarded a rewrite and did not stop `TRUNCATE` or the owner. Migration `0016_ledger_append_only_guard.sql` dropped them for triggers that **raise** (`the ledger is append-only: % on % is refused`, SQLSTATE `insufficient_privilege`) and attached a `TRUNCATE` guard to every partition; `0017` pins the trigger functions' `search_path`. The application connects as a role (`VIBEY_PG_URL`) that owns nothing and holds only `SELECT` and `INSERT` on the ledger, reconciled on every migration run by `infrastructure/db/ledger_guard.py` (ADR-0055) |
 | 4.3 | Redaction on write (ported from the `*loop` family) | planted secrets never reach the column | — | **done** — `infrastructure/ledger/redact.py`, applied in `ledger_repository.py` |
 | 4.4 | Structured-verdict extraction → closable events + id minting | per-engine fixtures; dedup on restatement via `normalized` | restating a question does not mint a second id | **done** — `application/verdict_extraction.py` |
 | 4.5 | `TRIVIAL`-effort extraction fallback for engines without structured output | fixture turns → same schema | — | **done** — `application/text_verdict_fallback.py` |
-| 4.6 | Projections: `OpenItems`, `DecisionLog`, `WorkLedger`, `CostReport` | rebuild-from-replay equals materialized | ~~`vibey ledger rebuild` is a no-op on a healthy DB~~ rebuild-from-replay equals materialized | **partial** — projections in `domain/projections.py`, tested by `tests/domain/test_projections.py`; `vibey ledger rebuild` was never built — `vibey ledger show` is the only ledger subcommand |
+| 4.6 | Projections: `OpenItems`, `DecisionLog`, `WorkLedger`, `CostReport` | rebuild-from-replay equals materialized | ~~`vibey ledger rebuild` is a no-op on a healthy DB~~ rebuild-from-replay equals materialized | **partial** — projections in `domain/projections.py`, tested by `tests/domain/test_projections.py`; `vibey ledger rebuild` was never built. The ledger subcommands are `show`, `search`, `export` and `site` |
 | 4.7 | `FullLedger` writer → `<worktree>/.vibey/handoff/ledger.jsonl` | digest matches `LedgerRef` | — | **done** |
 | 4.8 | Brief producers: outgoing / incoming / neutral / **deterministic template** | the template brief **always** passes the gate, by property | the floor is provably lossless | **done** — `application/brief_producer.py`, `domain/briefing.py` |
 | 4.9 | Gate integration: `STRICT` → regenerate ×3 → `FULL_TRANSCRIPT` → `HUMAN` | each escalation path exercised | — | **done** — `application/handoff_orchestration.py` |
@@ -191,7 +254,7 @@ BUILD. Both paths are tested and lossless.
 |---|---|---|---|---|
 | 6.1 | `build.decompose` + the two structural rules (every criterion mapped; skeleton has no deps) | rejection tests | an unmapped criterion fails the job | **done** — `application/build_decompose_handler.py` |
 | 6.2 | Worktree manager: create, branch, clean up, reclaim orphans | integration on a scratch repo | `SIGKILL` mid-create leaves no orphan worktree | **done** — `infrastructure/git/worktree_manager.py` |
-| 6.3 | Agent-surface provisioning into each worktree (all 4 guidance formats + `.vibey/context/`) | digest-idempotence test | re-provisioning is a no-op | **done** — `infrastructure/provision/agent_surface.py` |
+| 6.3 | Agent-surface provisioning into each worktree (all ~~4~~ 5 guidance formats + `.vibey/context/`) | digest-idempotence test | re-provisioning is a no-op | **done** — `infrastructure/provision/agent_surface.py`; `RouterFile` writes `CLAUDE.md`, `AGENTS.md`, `CURSOR.md`, `GEMINI.md` and `QWEN.md` (the `CURSOR.md` and `GEMINI.md` engines were retired by ADR-0078) |
 | 6.4 | `build.implement` — engine selection, run, tail, savepoint | `ScriptedEngine` end-to-end | — | **done** — `application/build_implement_handler.py` |
 | 6.5 | `build.verify` — gates → criteria → rotated diff review, **must differ from implementer** | exclusion test; a failing gate is `WORK` class | — | **done** — `application/build_verify_handler.py` |
 | 6.6 | The escalation ladder (attempts 1–7 → tiers → human gate) | table test per attempt | escalation forces rotation | **done** — `domain/effort.py`; bounded ladders park with grants (ADR-0024) |
@@ -212,7 +275,7 @@ integration branch, having survived at least one capacity rejection.
 | 7.1 | `review.demo` — `DEMO.md`, `run-it.sh`, walkthrough, evidence, **`deltas.md`** | `deltas.md` generated from projections | assumptions/findings cannot be omitted | **done** — `application/review_demo_handler.py` |
 | 7.2 | `review.collect` — verdicts, free-text → `FindingRaised`, ledger-grounded Q&A | — | "why did you do X" answers from the ledger | **done** — `application/review_collect_handler.py` |
 | 7.3 | Automated findings (code review, security review) pre-triaged | — | — | **done** — `infrastructure/build/automated_review_runner.py` |
-| 7.4 | `review.triage` — severity × ambiguity, `MAX` effort on critical | classification fixtures | the 4 `clear` conditions are all checked | **done** — `application/review_triage_handler.py` |
+| 7.4 | `review.triage` — severity × ambiguity, `MAX` effort on critical | classification fixtures | the 4 `clear` conditions are all checked | **partial** — `application/review_triage_handler.py` triages and routes; `domain/review.py::check_clear_conditions` checks conditions 1, 3 and 4 only. Condition 2 (maps to an existing or obviously testable acceptance criterion) is not implemented: `spec` is accepted but unused |
 | 7.5 | `next_phase_after_review` wired; cycle increment; cycle-scoped artifacts | — | cycle 2 never overwrites cycle 1's evidence | **done** |
 | 7.6 | Re-entrant DESIGN scoped to findings (not a fresh elicitation) | — | ≤5 question batches on a typical re-design | **done** |
 | 7.7 | Deployment-choice gate after accepted review | scripted-user integration | explicit opt-out reaches `DONE` with `completion_mode = "local"` and enqueues no Azure job | **done** — `application/review_deployment_choice_handler.py` |
@@ -229,7 +292,7 @@ work end to end.
 | # | Task | Done when | Status |
 |---|---|---|---|
 | 8.1 | Textual TUI: phase, cycle, circuits, queue depth, worktrees, ledger tail | usable for an overnight run | **done** — `tui/dashboard.py`; `vibey watch` |
-| 8.2 | `vibey status --json`, `vibey engines`, `vibey cost`, `vibey ledger show` | — | **done** — `vibey status`, `vibey engines`, `vibey cost`, `vibey ledger show` |
+| 8.2 | `vibey status --json`, `vibey engines`, `vibey cost`, `vibey ledger show` | — | **done** — `vibey status`, `vibey engines`, `vibey cost`, `vibey ledger show`; later also `vibey projects`, `vibey gates`, `vibey loops`, `vibey models` (each with `--json`) and `vibey ledger search\|export\|site` |
 | 8.3 | OpenTelemetry spans + the metric set from architecture §13 | rotation fairness is *measurable in production* | **done** — `bootstrap.build_app` constructs the in-process tracer/metrics recorder; workers record job, queue, phase, selection, turn, handoff, and spend telemetry. External export remains future work. |
 | 8.4 | Notifications: desktop + webhook, on gate raised / phase change / budget | — | **done** — `build_app` wires `NotificationService`; `vibey new` copies `[notifications]` from `vibey.toml`, and workers/project transitions dispatch configured events. |
 | 8.5 | `vibey watch --replay` over a finished run | — | **done** — `vibey watch --replay` |
@@ -329,7 +392,9 @@ Two guardrails, because a tool that edits itself while running is a footgun:
   refuse such a pull request as "needs a human merge" before a run given
   `--admin-fallback` could bypass the review with `--admin`;
   `tests/meta/test_protected_paths_agree.py` keeps the two lists identical. The dormant `scripts/fleet/land.sh` check is superseded. The
-  ruleset keys take effect when the operator runs `vibey-gh reconcile`.)*
+  ruleset keys take effect when the operator runs `vibey-gh rulesets` (there is no
+  `vibey-gh reconcile`); `.github/workflows/repository-profile.yml` also runs it after each
+  successful "Release surfaces" run.)*
 
 ---
 
@@ -341,9 +406,51 @@ Checkboxes reflect status as of 2026-09-15; an entry that names a later change r
 - [ ] `pytest -m system` covers `①→(visual opt-in/opt-out)→②→③→(deployment opt-in/opt-out)→DONE`, media regeneration, and deployment loop-backs offline — *partial: `tests/system/test_delivery_stage_set.py` covers the stage set and loop-backs; media regeneration is not built (5.11)*
 - [x] Chaos test green at 8 workers with random kills — *in-process abandonment, not OS-level `SIGKILL` (2.8)*
 - [x] No-loss property suite green over 10,000 adversarial examples — *`pytest -m noloss --hypothesis-profile=noloss` runs each of the five properties to 10,000 passing examples (`--hypothesis-show-statistics` prints the count on every run); CI's `No-loss property suite (10,000 examples)` job is a required check on both branches (#213)*
-- [ ] `vibey doctor --conformance` passes on all ~~four~~ five installed runners (four paid plus opt-in qwenloop) — *no recorded run*
+- [ ] `vibey doctor --conformance` passes on all ~~four~~ five installed engines (paid `claudeloop` and `codexloop`; local `gptossloop`, `qwenloop`, `claudeloop-local`) — *no recorded run. Note also: the `claudeloop-local` descriptor requires claudeloop `min_version` 0.8.0, while the claudeloop package in this repository is 0.4.0 since the #1898 version reset, so the conformance version check would likely refuse it (inferred from the code, not run)*
 - [ ] One real project takes the explicit deployment-opt-in path to a deployed Azure dev slot — *blocked on operator Azure login; the `AzCliClientAdapter` code path exists*
 - [ ] One real project takes the visual-opt-out and deployment-opt-out paths to successful local `DONE`
-- [ ] All ADRs in `docs/architecture/decisions/` written and accurate; superseded decisions are clearly marked *(the original text said "14"; the set has grown since)*
+- [ ] All ADRs in `docs/architecture/decisions/` written and accurate; superseded decisions are clearly marked *(the original text said "14"; there are 105 on 2026-11-24, 0001–0105)*
 - [ ] Threat model reviewed; residual risks documented — *partial: `SECURITY.md`*
 - [ ] ~~`mkdocs build --strict`~~ properdocs site build (`properdocs.yml`) clean
+
+---
+
+## After M10: where later work is tracked
+
+The plan ends at M10. Everything below was built after 2026-09-15 and has no task row here;
+each line names the decision record that carries its rationale and status.
+
+| Area | What landed | Decision records |
+|---|---|---|
+| Engines | `gptossloop` as the sovereign default, `qwenloop` as its opt-in Qwen twin; local engines preferred first; `cursorloop` and `agyloop` retired; the Heretic v2 default model | [0038](../architecture/decisions/0038-local-engines-are-preferred-first.md), [0064](../architecture/decisions/0064-gptossloop-is-the-sovereign-engine.md), [0078](../architecture/decisions/0078-retire-cursorloop-and-agyloop.md), [0099](../architecture/decisions/0099-heretic-v2-of-gpt-oss-20b-is-the-sovereign-default-model.md) |
+| Effort and dispatch | ULTRA effort (`vibey ultra`); hybrid dispatch with local slots and capped paid overflow; failover and handback (built, not wired into the worker) | [0063](../architecture/decisions/0063-ultra-effort-without-a-ceiling.md), [0079](../architecture/decisions/0079-hybrid-engine-dispatch.md), [0070](../architecture/decisions/0070-failover-to-the-sovereign-engine-and-handback-on-a-recorded-probe.md) |
+| Queue and ledger | Queue priority (`vibey queue`); reaping by measurement; the database-enforced append-only ledger | [0054](../architecture/decisions/0054-a-bumped-job-runs-next.md), [0056](../architecture/decisions/0056-everything-a-queue-guards-is-reaped-by-measurement.md), [0055](../architecture/decisions/0055-the-ledger-is-append-only-by-the-database.md) |
+| Surfaces | The hub (`vibey serve`), pairing, device start/pause/unwind; the krypton clients; `vibey mcp`, `vibey connect`, `vibey acp` | [0068](../architecture/decisions/0068-the-hub.md), [0071](../architecture/decisions/0071-hub-pairing-and-trust.md), [0091](../architecture/decisions/0091-devices-may-start-pause-and-unwind-projects.md), [0067](../architecture/decisions/0067-one-typescript-core-for-every-krypton-client.md), [0073](../architecture/decisions/0073-krypton-desktop-in-c-on-gtk.md), [0100](../architecture/decisions/0100-host-driven-mcp-interface-and-chat-first-surfaces.md), [0101](../architecture/decisions/0101-the-acp-agent-and-self-installing-services.md) |
+| Loops and inputs | `vibey loops` and the loop capability bundle (`run --capabilities PATH`); run inputs (`vibey inputs add --paste/--file`) in the state folder or SeaweedFS | [0103](../architecture/decisions/0103-the-loop-capability-bundle.md), [0104](../architecture/decisions/0104-run-inputs-hash-addressed.md), [0105](../architecture/decisions/0105-run-input-store-backends.md) |
+| Research | Local-first web search through a SearXNG vibey installs (`vibey searxng`, `vibey search`, `vibey fetch`) | [0102](../architecture/decisions/0102-local-first-search-and-a-provisioned-searxng.md) |
+| Operations | `vibey supervisor`; the Sabbath; `vibey state`; `vibey -w` on GitHub runners; slicing large plans into CDD layers; `review.publish` and `[publish]` | [0072](../architecture/decisions/0072-the-sabbath-kept-where-the-machine-stands.md), [0086](../architecture/decisions/0086-state-sync.md), [0085](../architecture/decisions/0085-vibey-on-the-workflows.md), [0092](../architecture/decisions/0092-large-tasks-are-sliced-into-the-cdd-layers-before-they-run.md) |
+| Packaging | One `vibey-engine` package plus `krypton-app`; version 0.4.0, held below 1.0 | [0069](../architecture/decisions/0069-two-packages-vibey-engine-and-krypton-app.md) |
+
+The workstream runbooks are in `docs/runbooks/expansion/` (`00-master-plan.md` first), and
+the self-contained prompts for picking the project up are in `docs/continuation/`.
+
+## When it goes wrong
+
+| What you see | What it means | What to do |
+|---|---|---|
+| A test, file or command named in a Status cell does not exist | The cell predates a rename; this page was re-checked on 2026-11-24 but the code keeps moving | Search the tree for the task's subject; the code wins |
+| `vibey-gh: error: argument cmd: invalid choice: 'reconcile' (choose from ...)` | The ruleset command is `vibey-gh rulesets` (`reconcile-branches` is a different command) | Run `vibey-gh rulesets` |
+| `UPDATE event ...` fails with `the ledger is append-only: UPDATE on event is refused` | Task 4.2 as built: the triggers of migration 0016 refuse any rewrite | Write a new event that supersedes the old one |
+
+## Where next
+
+- [architecture-and-roadmap.md](architecture-and-roadmap.md), for the design each milestone
+  implements.
+- [`docs/architecture/decisions/`](../architecture/decisions/0001-orchestrate-do-not-reimplement.md),
+  starting at ADR-0001, for every hard call and what superseded it.
+- [`docs/reference/cli.md`](../reference/cli.md), for the commands as they are today.
+
+## Say it in one line
+
+vibey was built test-first in eleven milestones, M0 to M10; this page keeps the plan and the
+evidence for each box, and points to the decision records for everything built since.

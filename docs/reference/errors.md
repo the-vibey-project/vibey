@@ -1,9 +1,38 @@
-# Error codes
+---
+description: "Every error code vibey prints, what it means and the command that fixes it, generated from the error catalog that vibey explain also reads."
+---
+
+# Look up a vibey error code
 
 > [!IMPORTANT]
-> **Work in progress — not a final product:** `vibey` is an active work in progress and not a final product. Error codes and runtime behaviors are still evolving. Folks will be notified on the [Discord server](https://discord.gg/Qvu8aYnVS) once the product is finally done.
+> **Bottom Line Up Front (BLUF):** When vibey stops with a line such as
+> ``(E0040: run `vibey explain E0040`)``, run that command, or find the code in [the table](#the-codes).
+> Each row gives the cause and the command that fixes it. A code never changes meaning, and
+> `vibey explain` works with no database. The table is generated from the same catalog
+> `vibey explain` reads, so the two always agree.
 
-Every error `vibey` reports for a known problem prints a **permanent code** on its last line:
+> Daniel had an error on his screen and a coffee going cold beside it.
+>
+> **Daniel:** Professor, do I read this whole table to find my mistake?
+>
+> **Professor Feynman:** No more than you read a whole dictionary to find one word. The error
+> ends with a code. Look that code up, here or with `vibey explain`, and read two cells: what it
+> means, and what to do.
+>
+> **Daniel:** And if the advice is wrong?
+>
+> **Professor Feynman:** Then the catalog is wrong, and we fix the catalog, not this page. Two
+> hints are known to be out of date; they are listed below the reading guide.
+
+> [!NOTE]
+> **Work in progress:** vibey is not a finished product, and its error codes and behaviour are
+> still changing. The project announces the finished product on its
+> [Discord server](https://discord.gg/Qvu8aYnVS).
+
+## Reading an error
+
+Every error vibey reports for a known problem prints a **permanent code** on its last line,
+on standard error:
 
 ```text
 Error: unknown project 123
@@ -11,19 +40,77 @@ Error: unknown project 123
 (E0040: run `vibey explain E0040`)
 ```
 
-`vibey explain E0040` prints the cause and what to do about it; `vibey explain --list` prints
-every code and its title. Neither needs a database, so they work for the very first error you meet.
+That is the exact text `src/vibey/cli/errors.py` renders for an unknown project. Some errors
+print a one-line next step between the two lines.
 
-A code is **permanent**: it is assigned once, in order, and never reused or renumbered. An error
-vibey stops raising keeps its entry, marked retired, so an old log line still explains. The first
-line of the output is always `Error: <message>`, and a code line is added only after it, so
-anything that reads the first line keeps working.
+Then run the command it names:
+
+```bash
+vibey explain E0040
+```
+
+You should see:
+
+```text
+E0040  No project has that id
+Raised as vibey.domain.errors.UnknownProject
+
+Cause
+  No project exists with the given id.
+
+What to do
+  `vibey projects` lists every project with its id.
+
+All error codes: https://the-vibey-project.github.io/vibey/main/reference/errors/#e0040
+```
+
+| Command | What it prints | Exit code |
+|---|---|---|
+| `vibey explain CODE` | The code's title, the error class, the cause and what to do, then a link to its row on this page. | `0` |
+| `vibey explain --list` | Every code and its title, one per line. | `0` |
+| `vibey explain` with a code no error has | ``Error: no error has the code 'E9999'. `vibey explain --list` shows them all.`` | `2` |
+
+Neither command opens the database, so both work for the very first error you meet.
+
+## What a code promises
+
+- **Permanent.** A code is assigned once, in order, and never reused or renumbered.
+- **Kept when retired.** An error vibey stops raising keeps its entry, marked *(retired)*, so
+  an old log line still explains.
+- **Safe to parse.** The first line of the output is always `Error: <message>`, and the code line
+  comes only after it, so a script that reads the first line keeps working.
+
+## Which commands print a code
+
+A command prints a code when it runs inside `guard()` (`src/vibey/cli/errors.py`); a guarded
+command that stops on a known error exits `3`. The
+[CLI reference](cli.md#guarded-and-unguarded-commands) lists which commands are guarded. Three
+places do not carry codes yet:
+
+- the commands that run outside `guard()`;
+- `vibey state`;
+- the hub's HTTP error bodies, which carry a status and a `detail` message only
+  ([hub API refusals](hub-api.md#refusals)).
+
+## Two hints that are out of date
+
+These rows are generated from `src/vibey/cli/error_codes.toml`, so this page cannot correct them
+in place. Until the catalog is fixed, read them with these corrections:
+
+| Code | The table says | What is true |
+|---|---|---|
+| [`E0013`](#e0013) | Answer the gate with `vibey answer GATE_ID`. | An `escalation_exhausted` gate takes a number of attempts: `vibey answer GATE_ID --raw '{"max_attempts": 10}'`. The bare form is refused as an invalid answer ([E0021](#e0021)). `vibey gates` prints the exact command for each open gate. |
+| [`E0036`](#e0036) | A local model has no web access; use a provider with web access. | The model has none of its own, but the sovereign DESIGN provider searches first: your evidence file in `VIBEY_EVIDENCE_DIR`, then the local SearXNG, then Brave as a backup ([ADR-0102](../architecture/decisions/0102-local-first-search-and-a-provisioned-searxng.md)). E0036 means none of them gave a source. Set one up with `vibey searxng install`, supply the file the message names, or let DESIGN record the gap with [`[design.research] on_unavailable = "record_gap"`](configuration.md#designresearch). |
+
+## Where the table comes from
 
 The table below is **generated** from `src/vibey/cli/error_codes.toml` by
-`scripts/error_catalog.py`; do not edit between the markers. A new error type cannot merge
-without an entry there, and the page is checked against the catalog in CI. Only commands that run
-inside `guard()` print codes today (see [the CLI reference](cli.md#guarded-and-unguarded-commands));
-the other commands, `vibey state`, and the hub's HTTP error bodies do not carry them yet.
+`scripts/error_catalog.py` (its settings are in `scripts/error_catalog.toml`). Do not edit
+between the markers: run `python scripts/error_catalog.py render` after changing the catalog.
+A new error type cannot merge without a catalog entry, and CI fails when the page and the
+catalog differ (`tests/meta/test_error_catalog.py` runs `scripts/error_catalog.py check`).
+
+## The codes
 
 <!-- BEGIN GENERATED errors:catalog — regenerated by scripts/error_catalog.py -->
 | Code | Error | What it means | What to do |

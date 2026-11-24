@@ -61,6 +61,7 @@ nav:
       - VS Code extension: guides/vscode-extension.md
       - Drive vibey from Zed (ACP): guides/acp.md
       - Drive a project from anywhere: guides/drive-a-project.md
+      - Let another LLM drive vibey: guides/drive-from-an-llm.md
       - Kubernetes: guides/kubernetes.md
       - Greeter live demo: guides/greeter-live-demo.md
       - Local models on Ollama: guides/local-models-ollama.md

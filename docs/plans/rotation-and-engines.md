@@ -1,85 +1,187 @@
-# Engine Rotation and the Capability Matrix
+---
+description: "How vibey chooses the engine for each job: five engines in two tiers, local first, smooth weighted round robin within a tier, a six-level effort ladder projected onto each runner's own flags, and circuit breakers that never confuse a rate limit with empty credit."
+---
+
+# Engine rotation: how vibey picks which AI does the next job
+
+> [!IMPORTANT]
+> **Bottom Line Up Front (BLUF):** vibey has five engines in two tiers. Local
+> (`gptossloop`, on by default; `qwenloop` and `claudeloop-local`, opt-in) is always tried
+> first; paid (`claudeloop`, `codexloop`) is chosen only when no local engine is eligible.
+> Within a tier, smooth weighted round robin picks the engine, and circuit breakers keep a
+> rate-limited engine out until its window resets and an out-of-credit engine out until a
+> backoff probe. Run `vibey loops` to see the engines, their switches and what each effort
+> level becomes.
 
 > How vibey picks which AI does the next piece of work, in every phase, without
 > starving an engine, without pretending they are interchangeable, and without
 > conflating "out of tokens for five minutes" with "out of money until you pay."
 
-> **Status as of 2026-09-21.** This plan predates the implementation. It has
-> been checked against the code in `src/vibey/` (v0.6.0) and the runners in
-> `src/vibey_runners/` (the runner family now lives in this repository as a
-> uv workspace, ADR-0021). Where the code does not yet do what the plan
-> designed, the text says so and marks the design *not implemented* instead
-> of deleting it. The main differences from the original plan:
+> **How current this page is.** This plan predates the implementation. It was checked
+> against `src/vibey/domain/engine.py`, `src/vibey/domain/rotation.py`,
+> `src/vibey/infrastructure/engines/descriptors.py` and the runners in
+> `src/vibey_runners/` on `develop` at `d91a3791e` (vibey-engine 0.4.0) on 2026-11-24.
+> Where the code does not yet do what the plan designed, the text says so and marks the
+> design *not implemented* instead of deleting it. The main differences from the original
+> plan:
 >
-> - There are **seven** engine ids over five runners (an eighth, `opencode`, and
->   its runner `opencodeloop` were deleted after canon 8.b repealed OpenCode).
->   `gptossloop` (the local runner on GPT-OSS 20B, the sovereign default and on
->   unless switched off), `qwenloop` (the same runner on a Qwen model, opt-in) and
->   `claudeloop-local` (the claudeloop binary on a local backend profile, opt-in)
->   are local engines, **preferred first** (ADR-0015, ADR-0038, ADR-0064); gptossloop's
->   model is also the sovereign DESIGN/DECOMPOSE provider (ADR-0027).
+> - There are **five** engine ids over three runner packages (`src/vibey_runners/claude`,
+>   `codex`, `qwen`, plus the shared `common`). Two are paid: `claudeloop` and `codexloop`.
+>   Three are local, **preferred first** (ADR-0015, ADR-0038, ADR-0064): `gptossloop` (the
+>   local runner on GPT-OSS 20B, the sovereign default and on unless switched off),
+>   `qwenloop` (the same runner on a Qwen model, opt-in) and `claudeloop-local` (the
+>   claudeloop binary on a local backend profile, opt-in). gptossloop's model is also the
+>   sovereign DESIGN/DECOMPOSE provider (ADR-0027). `cursorloop` and `agyloop` were retired
+>   and deleted by [ADR-0078](../architecture/decisions/0078-retire-cursorloop-and-agyloop.md),
+>   and `opencode` with its runner after canon 8.b repealed it. Where this page still
+>   describes the retired engines, it says so.
+> - The effort ladder has six levels: `ULTRA` was added by
+>   [ADR-0063](../architecture/decisions/0063-ultra-effort-without-a-ceiling.md) (§3).
+> - The two tiers are also the family's two loops, `sovereignloop` and `paidloop` (§5.5).
 > - Engine selection (SWRR) runs only for `build.implement` and `build.verify`.
 >   Every other job kind runs on a single injected provider or on no engine
 >   (see [phase-protocols.md](phase-protocols.md) §8).
-> - `[engines] weights` is parsed but not applied, and cost-aware weighting is
->   implemented but not wired. Circuit probes for `CreditsExhausted` and
->   `AuthenticationFailed` are recorded but never scheduled. The metric
->   exports and a `vibey rotate` command do not exist.
+> - `[engines] weights` is parsed but not applied (selection uses each descriptor's
+>   `base_weight`), and cost-aware weighting is implemented but not wired. Circuit probes
+>   are scheduled for `WindowExhausted` with a reset time and for `CreditsExhausted`
+>   (§6.2); `AuthenticationFailed` deliberately gets no clock and half-opens on a passing
+>   preflight. The metric exports and a `vibey rotate` command do not exist.
+> - Engine failover to the sovereign engine and handback on a recorded probe
+>   ([ADR-0070](../architecture/decisions/0070-failover-to-the-sovereign-engine-and-handback-on-a-recorded-probe.md))
+>   is built but not wired into the worker (§7.1).
+>
+> This page lives under `docs/plans/`, which the published site leaves out on purpose; it is
+> kept current because the agent instruction files point here.
+
+## The idea, in one conversation
+
+> The taxi rank outside the station had three cars waiting, and Daniel had been watching
+> which one the dispatcher sent.
+>
+> **Daniel:** Professor, why not just send whichever engine is next in line?
+>
+> **Professor Feynman:** Because the cars are not the same. Suppose the rank has the
+> company's own cars, which cost nothing to run, and hired cars that charge by the mile.
+> Which do you send first?
+>
+> **Daniel:** The company's own, as long as one is free and can do the job.
+>
+> **Professor Feynman:** That is the tier rule: local first, paid only when no local car can
+> go. Now, among the company's own cars, you do not always send the newest. Each gets a fair
+> share in proportion to its size, and none is ever left at the rank all day. That is smooth
+> weighted round robin.
+>
+> **Daniel:** And a car that is out of petrol?
+>
+> **Professor Feynman:** Here is the part people get wrong. A car waiting at a red light
+> will move when the light changes; you know when. A car with an empty tank will not move
+> until somebody pays for fuel, and no clock tells you when that will be. So vibey checks the
+> first at the light change and the second only now and then, on a backoff, and never
+> pretends to know. The picture stops working in one place: a taxi carries one passenger,
+> and our engines can carry the same job from one to another, through the handoff gate.
+
+## See it on your machine
+
+1. See every engine, its tier, whether it is switched on, and its effort flags.
+
+   ```bash
+   vibey loops
+   ```
+
+   You should see `sovereignloop (tier local)` listing `gptossloop`, `qwenloop` and
+   `claudeloop-local`, then `paidloop (tier paid)` listing `claudeloop` and `codexloop`.
+   On a default install the `switched on` row reads `yes` for `gptossloop`, `claudeloop`
+   and `codexloop`, and `no` for the other two. The rows `TRIVIAL` to `ULTRA` show the flags
+   each level becomes, for example `max-turns 96` for `gptossloop` at `MAX` and
+   `(no flags) -> STANDARD` for `codexloop` at `HIGH`.
+
+2. See each engine's health and circuit on a project's database.
+
+   ```bash
+   vibey engines <project-id>
+   ```
+
+   Replace `<project-id>` with an id from `vibey projects`. You should see each engine's
+   health, its circuit (`closed`, `half_open` or `open`) and its selection counts; `--json`
+   prints the same facts `vibey status --json` carries under `circuits`.
+
+## Daniel's teach-back
+
+> **Daniel:** vibey has five engines in two tiers. It tries the local tier first and uses a
+> paid engine only when no local engine is eligible. Within a tier it uses smooth weighted
+> round robin, so every eligible engine gets its share and none starves. Effort is one
+> six-level ladder that each engine translates into its own flags, and an engine that cannot
+> reach the level asked for still runs but gets less weight. A rate limit is retried when it
+> resets; empty credit is probed on a backoff, because nobody knows when it will be topped up.
+>
+> **Professor Feynman:** Good. One fix: the round robin runs only for BUILD's implement and
+> verify jobs. DESIGN and DECOMPOSE go straight to the sovereign provider, with no rotation.
 
 ---
 
 ## 1. The verified divergence
 
-The five runners look like siblings: the same `run` / `resume` / `doctor` /
-`stop` / `prompt` verbs, a similar run-directory layout, and the same
-capacity ADT. They are *not* interchangeable at the flag level. This table
-comes from reading their sources under `src/vibey_runners/`, not their docs:
+The three runner packages, which give five engines, look like siblings: the same
+`run` / `resume` / `doctor` / `stop` / `prompt` verbs, a similar run-directory layout,
+and the same capacity ADT. They are *not* interchangeable at the flag level. This table
+comes from reading their sources under `src/vibey_runners/`, not their docs, and from
+`infrastructure/engines/descriptors.py` (checked 2026-11-24):
 
-| Concern | `claudeloop` | `codexloop` | `cursorloop` | `agyloop` | `gptossloop` / `qwenloop` (one runner) |
-|---|---|---|---|---|---|
-| Effort vocabulary | `Literal["low","medium","high","xhigh","max"]` | `StrEnum{LOW,MEDIUM,HIGH}`, no `run` flag | **none** (a model-id ladder) | `Literal["low","medium","high","xhigh","max"]` | none (a `--max-turns` budget; `--preset`/`--effort` are accepted and ignored) |
-| Preset tiers | `low/medium/high` → model aliases | none | `_PRESET_LADDER` of model ids | `low/medium/high` → model aliases | none |
-| Model ladder | sonnet → opus → fable | codex models | `composer-fast → composer → grok-4.5 → grok → grok-xhigh` | flash-lite → flash → pro | one model over an OpenAI-compatible endpoint — `gpt-oss:20b` (gptossloop) or `qwen3:14b` (qwenloop) unless configured — or the pinned qwen2.5-coder profiles (`[qwenloop] portable_profile` / `nvidia_profile`) |
-| Router models | — | — | `router-cost / router-balanced / router-intelligence` | — | — |
-| Top-level `effort` cmd | ✅ | ✅ | ❌ | ❌ | stub (prints a message) |
-| Top-level `preset` cmd | ✅ | ❌ | ❌ | ✅ | stub |
-| `savepoints` / `unwind` | ✅ | ✅ | ✅ | ✅ ¹ | stubs |
-| Session listing verb | `sessions` | `threads` | `agents` | `sessions` | `sessions` (stub) |
-| Sandbox / permission | `permission-mode` | `sandbox` + `approval` | `hooks` | `--safe` / `--yolo` | none (local process) |
-| Structured verdict | ✅ (`finished` event) | ✅ (`run.verdict` event) | ❌ ² | ✅ (`finished` event) | `completed` / `failed` events |
-| State dir | `.claudeloop/` | `.codexloop/` | `.cursorloop/` | `.agyloop/` | `.qwenloop/` |
-| Done marker | `CLAUDELOOP_TASK_FULLY_COMPLETE` | `CODEXLOOP_…` | `CURSORLOOP_…` | `AGYLOOP_…` | `QWENLOOP_TASK_FULLY_COMPLETE` |
-| Auth | `ANTHROPIC_*` | `OPENAI_API_KEY` / `CODEX_API_KEY` / login | `CURSOR_API_KEY` | `GOOGLE_API_KEY` / `GEMINI_API_KEY` / ADC | none (local Ollama, llama.cpp or vLLM server; gptossloop reads `GPTOSSLOOP_*`, qwenloop `QWENLOOP_*`) |
+| Concern | `claudeloop` | `codexloop` | `gptossloop` / `qwenloop` (one runner) | `claudeloop-local` |
+|---|---|---|---|---|
+| Tier | paid | paid | local | local |
+| Switched on by default | yes | yes | `gptossloop` yes; `qwenloop` no | no |
+| Effort vocabulary | `Literal["low","medium","high","xhigh","max"]` | `StrEnum{LOW,MEDIUM,HIGH}`, no `run` flag | none (a `--max-turns` budget; `--preset`/`--effort` are accepted and ignored) | a profile's model tier, chosen by `--preset low/medium/high` (`--effort` is not forwarded on a local profile) |
+| Preset tiers | `low/medium/high` → model aliases | none | none | `low/medium/high` → the profile's `model_low/medium/high` |
+| Model ladder | sonnet → opus → fable | codex models | one model over an OpenAI-compatible endpoint. `gptossloop`: the Heretic v2 build of GPT-OSS 20B, `hf.co/mradermacher/gpt-oss-20b-heretic-v2-GGUF:MXFP4_MOE`, by default (ADR-0099); stock `gpt-oss:20b` is the alternative; `VIBEY_OLLAMA_MODEL` names any tag. `qwenloop`: `qwen3:14b` unless `QWENLOOP_MODEL`. Or the pinned qwen2.5-coder profiles (`[qwenloop] portable_profile` / `nvidia_profile`) | whatever the claudeloop profile names, served by Ollama |
+| Top-level `effort` cmd | ✅ | ✅ | stub (prints a message) | ✅ (same binary as claudeloop) |
+| Top-level `preset` cmd | ✅ | ❌ | stub | ✅ |
+| `savepoints` / `unwind` | ✅ | ✅ | stubs | ✅ |
+| Session listing verb | `sessions` | `threads` | `sessions` (stub) | `sessions` |
+| Sandbox / permission | `permission-mode` | `sandbox` + `approval` | none (local process) | `permission-mode` |
+| Structured verdict | ✅ (`finished` event) | ✅ (`run.verdict` event) | `completed` / `failed` events | claimed only when `[engines.claudeloop_local] structured_verdict = true` and conformance proves it |
+| Capability snapshot (`run --capabilities PATH`, ADR-0103) | ✅ | ❌ | ✅ | ✅ |
+| State dir | `.claudeloop/` | `.codexloop/` | `.qwenloop/` | `.claudeloop/` |
+| Done marker | `CLAUDELOOP_TASK_FULLY_COMPLETE` | `CODEXLOOP_TASK_FULLY_COMPLETE` | `QWENLOOP_TASK_FULLY_COMPLETE` | `CLAUDELOOP_TASK_FULLY_COMPLETE` |
+| Auth | `ANTHROPIC_*` | `OPENAI_API_KEY` / `CODEX_API_KEY` / login | none (local Ollama, llama.cpp or vLLM server; gptossloop reads `GPTOSSLOOP_*`, qwenloop `QWENLOOP_*`) | none (the profile scrubs the paid key) |
+| Cost per million tokens in / out | $3 / $15 | $2 / $8 | $0 / $0 | $0 / $0 |
+| Base weight | 3 | 2 | 1 | 1 |
 
-¹ `agyloop` registers both `unwind` and a `savepoints` group, but vibey's
-`AGYLOOP` descriptor does not claim `Capability.SAVEPOINTS`. A job that
-requires savepoints is never routed to agyloop until the descriptor changes.
-
-² `cursorloop`'s `events.jsonl` carries only in-turn SDK types (`tool_call`,
-`usage`, `status`), with no session, turn, or verdict boundary event. Its
-descriptor does not claim `STRUCTURED_VERDICT`.
+**Retired.** The original table also had columns for `cursorloop` (no effort flag but a
+`composer-fast → composer → grok-4.5 → grok → grok-xhigh` model ladder, router models,
+`hooks` permissions, an `agents` session verb, no structured verdict, `--plan <path>`) and
+`agyloop` (claudeloop's argv resolved to Gemini models, `--safe` / `--yolo`). Both runners
+were deleted by [ADR-0078](../architecture/decisions/0078-retire-cursorloop-and-agyloop.md);
+`EngineId("cursorloop")` and `EngineId("agyloop")` now raise `ValueError` naming the
+decision, and a `vibey.toml` that lists either is refused.
 
 vibey's descriptors list only the primary auth variable for each engine
-(`ANTHROPIC_API_KEY`, `OPENAI_API_KEY`, `CURSOR_API_KEY`, `GOOGLE_API_KEY`,
-and none for gptossloop or qwenloop). The runners' own `doctor` commands also accept the
-alternatives shown above. vibey passes empty `isolation_flags` for every
-engine except `agyloop`, whose container and VM levels map to `--safe`. The
-other isolation flags the original plan assumed do not exist on the runners'
-`run` verbs.
+(`ANTHROPIC_API_KEY`, `OPENAI_API_KEY`, and none for the three local engines). The
+runners' own `doctor` commands also accept the alternatives shown above. Each descriptor
+also declares `env_passthrough`, the variables its process may read (`CLAUDELOOP_*` and
+Claude Code's, `CODEXLOOP_*` / `CODEX_*` / `OPENAI_*`, `GPTOSSLOOP_*`, `QWENLOOP_*`);
+nothing else from the worker's environment reaches a session unless the project declares
+it. vibey passes empty `isolation_flags` for every engine: the isolation flags the
+original plan assumed do not exist on the runners' `run` verbs (the retired `agyloop`
+mapped container and VM to `--safe`).
 
 `gptossloop` and `qwenloop` are one runner under two names (ADR-0064): the
 same verbs, run directory (`.qwenloop/runs/`), done marker and verdict fence,
 each with its own settings and default model. `gptossloop` is on unless
 `[features] gptossloop = false` or `VIBEY_FEATURE_GPTOSSLOOP=0`; `qwenloop`
 exists only when `[features] qwenloop = true` is set in `vibey.toml` or
-`VIBEY_FEATURE_QWENLOOP` is truthy. Their descriptors claim every
-`Capability`, although most of the runner's verbs other than `run` are stubs
-that only print a message (§5.5).
+`VIBEY_FEATURE_QWENLOOP` is truthy. Their descriptors claim every `Capability`
+**except** `ATTACHMENTS` and `WEB_SEARCH` (`frozenset(Capability) - {ATTACHMENTS,
+WEB_SEARCH}`), because the runner's `attach` and `web-search` verbs only echo. Several other
+claimed verbs (`savepoints`, `unwind`, `effort`, `slash`, `sandbox`) are echo-only stubs
+too (§5.5). The runner does give its model `web_search` and `web_fetch` tools, which run
+vibey's own `vibey search` and `vibey fetch` (ADR-0102); that is an affordance `vibey loops`
+reports, not the `WEB_SEARCH` capability.
 
 **The consequence:** any design that assumes `--effort high` works everywhere
-breaks the first time the rotator picks `cursorloop`. It also broke on
-`codexloop`, whose `run` verb has no `--effort` flag at all. Vibey handles
-this explicitly rather than defensively.
+breaks on `codexloop`, whose `run` verb has no `--effort` flag at all, and on
+`claudeloop-local`, whose profile never forwards it. (It also broke on the retired
+`cursorloop`.) Vibey handles this explicitly rather than defensively.
 
 ---
 
@@ -96,14 +198,24 @@ class EngineDescriptor:
     auth_env: tuple[str, ...]
     capabilities: frozenset[Capability]
     effort_projection: Mapping[Effort, EngineInvocation]
-    session_verb: str                    # "sessions" | "threads" | "agents"
+    session_verb: str                    # "sessions" | "threads"
     isolation_flags: Mapping[IsolationLevel, tuple[str, ...]]
     cost_per_mtok_in: float
     cost_per_mtok_out: float
     context_window: int
     base_weight: int = 1
     supports_cwd_flag: bool = True       # False for codexloop: `run` has no --cwd
-    plan_flag: str | None = None         # "--plan" for cursorloop; None = positional path
+    plan_flag: str | None = None         # None = positional path for every engine today
+                                         # (the retired cursorloop took "--plan")
+    resume_run_id_flag: str | None = None   # keeps vibey's run id on resume
+    tier: EngineTier = EngineTier.PAID      # LOCAL for the three local engines
+    launch_flags: tuple[str, ...] = ()      # passed to every new `run`; checked by conformance
+    capabilities_flag: str | None = None    # "--capabilities": the locked snapshot (ADR-0103)
+    doctor_args: tuple[str, ...] = ()       # claudeloop-local passes its --profile
+    env_passthrough: tuple[str, ...] = ()   # what the engine's process may read
+    affordances: EngineAffordances = EngineAffordances()   # images, files, plugins, mcp, ...
+    controls: EngineControls = EngineControls()            # stop / wind-down / prompt verbs
+    events: EventLog = EventLog()                          # where events.jsonl is, its shape
 
     def invoke(self, effort: Effort) -> EngineInvocation: ...
     def saturates_at(self, effort: Effort) -> bool: ...
@@ -137,24 +249,29 @@ missing, it falls back to the highest projection at or below it.
 live in `domain/engine.py`.
 
 All descriptors live in one module, `infrastructure/engines/descriptors.py`.
-`DEFAULT_DESCRIPTORS` holds the four paid engines, `LOCAL_DESCRIPTORS` the three
-local ones (`GPTOSSLOOP`, `QWENLOOP`, `CLAUDELOOP_LOCAL`), `ALL_DESCRIPTORS` all
-seven, and
-`BY_ENGINE_ID` indexes them. Descriptors are **data, not code
-paths**. A new engine needs a new `EngineId`, a descriptor, a capacity
+`DEFAULT_DESCRIPTORS = (CLAUDELOOP, CODEXLOOP)` holds the two paid engines,
+`LOCAL_DESCRIPTORS = (GPTOSSLOOP, QWENLOOP, CLAUDELOOP_LOCAL)` the three local ones,
+`ALL_DESCRIPTORS` all five, and `BY_ENGINE_ID` indexes them. Descriptors are **data, not
+code paths**. A new engine needs a new `EngineId`, a descriptor, a capacity
 classifier, an event-type map entry (§8.3), and an adapter configuration.
-`domain/rotation.py` does not change. The fifth, sixth and seventh engine ids,
-`opencode`, `qwenloop` and `claudeloop-local`, landed this way (`opencode` has
-since been deleted), and so did the eighth, `gptossloop` — `QWENLOOP`'s descriptor
-with its own id, binary (`gptossloop`, runner 0.3.0 or later) and `GPTOSSLOOP_*`
-passthrough. The three local ones have `tier = LOCAL`, which is what the
-selector's tier preference reads (§5.5).
+`domain/rotation.py` does not change. `qwenloop` and `claudeloop-local` landed this way,
+and so did `gptossloop` — `QWENLOOP`'s descriptor with its own id, binary (`gptossloop`,
+runner 0.3.0 or later; the runner package is 0.4.0 today) and `GPTOSSLOOP_*` passthrough.
+(`opencode` landed the same way and has since been deleted; so have `cursorloop` and
+`agyloop`.) The three local ones have `tier = LOCAL`, which is what the selector's tier
+preference reads (§5.5).
+
+**A known mismatch, not yet run.** The `claudeloop-local` descriptor declares
+`min_version = "0.8.0"` (the claudeloop release that shipped `--profile`), but the
+claudeloop package in this repository has been 0.4.0 since the #1898 version reset. The
+conformance `binary` check compares `--version` with `min_version`, so it would likely
+refuse claudeloop-local today. This is inferred from the code and has not been run.
 
 ---
 
 ## 3. The normalized effort ladder
 
-Vibey's domain speaks five levels and nothing else:
+Vibey's domain speaks six levels and nothing else:
 
 ```python
 class Effort(IntEnum):
@@ -163,18 +280,25 @@ class Effort(IntEnum):
     STANDARD = 2   # decomposition, integration, research
     HIGH     = 3   # design + review conversations — the Phase 1/3 default
     MAX      = 4   # hardest reasoning; contested specs, critical findings
+    ULTRA    = 5   # effort without a ceiling (ADR-0063): chosen with `vibey ultra`,
+                   # never escalated into; no turn limit
 ```
+
+No ladder, triage rule or phase base reaches `ULTRA`; it is chosen for a project with
+`vibey ultra start`, runs BUILD passes until `vibey ultra stop` or a budget cap, and is not
+a valid `vibey.toml` effort (`VALID_EFFORTS` stops at `max`).
 
 Each descriptor projects those onto native flags. Saturation is explicit:
 
 ```python
-# claudeloop — full 5-level range
+# claudeloop — the full range; ULTRA is the top tier with no --max-turns
 {
   Effort.TRIVIAL:  EngineInvocation(("--preset","low","--effort","low"),      Effort.TRIVIAL),
   Effort.LOW:      EngineInvocation(("--preset","low","--effort","medium"),   Effort.LOW),
   Effort.STANDARD: EngineInvocation(("--preset","medium","--effort","high"),  Effort.STANDARD),
   Effort.HIGH:     EngineInvocation(("--preset","high","--effort","high"),    Effort.HIGH),
   Effort.MAX:      EngineInvocation(("--preset","high","--effort","max"),     Effort.MAX),
+  Effort.ULTRA:    EngineInvocation(("--preset","high","--effort","max"),     Effort.ULTRA),
 }
 
 # codexloop — no CLI-level effort control; every level is served at STANDARD
@@ -185,36 +309,38 @@ Each descriptor projects those onto native flags. Saturation is explicit:
   Effort.HIGH:     EngineInvocation((), Effort.STANDARD),
   Effort.MAX:      EngineInvocation((), Effort.STANDARD,
                                     notes="codexloop has no CLI-level effort control"),
+  Effort.ULTRA:    EngineInvocation((), Effort.STANDARD,
+                                    notes="codexloop has no CLI-level effort control"),
 }
 
-# cursorloop — no effort flag at all; position on the model ladder
-{
-  Effort.TRIVIAL:  EngineInvocation(("--model","composer-fast"), Effort.TRIVIAL),
-  Effort.LOW:      EngineInvocation(("--model","composer"),      Effort.LOW),
-  Effort.STANDARD: EngineInvocation(("--model","grok-4.5"),      Effort.STANDARD),
-  Effort.HIGH:     EngineInvocation(("--model","grok"),          Effort.HIGH),
-  Effort.MAX:      EngineInvocation(("--model","grok-xhigh"),    Effort.MAX),
-}
-
-# agyloop — identical argv to claudeloop; agyloop resolves the preset to its
-# own gemini models (flash-lite → flash → pro)
-{
-  Effort.TRIVIAL:  EngineInvocation(("--preset","low","--effort","low"),      Effort.TRIVIAL),
-  Effort.LOW:      EngineInvocation(("--preset","low","--effort","medium"),   Effort.LOW),
-  Effort.STANDARD: EngineInvocation(("--preset","medium","--effort","high"),  Effort.STANDARD),
-  Effort.HIGH:     EngineInvocation(("--preset","high","--effort","high"),    Effort.HIGH),
-  Effort.MAX:      EngineInvocation(("--preset","high","--effort","max"),     Effort.MAX),
-}
-
-# gptossloop and qwenloop — effort is a turn budget
+# gptossloop and qwenloop — effort is a turn budget; ULTRA passes none, and the
+# adapter re-invokes the runner pass after pass until Stop or a cap
 {
   Effort.TRIVIAL:  EngineInvocation(("--max-turns","8"),  Effort.TRIVIAL),
   Effort.LOW:      EngineInvocation(("--max-turns","16"), Effort.LOW),
   Effort.STANDARD: EngineInvocation(("--max-turns","40"), Effort.STANDARD),
   Effort.HIGH:     EngineInvocation(("--max-turns","64"), Effort.HIGH),
   Effort.MAX:      EngineInvocation(("--max-turns","96"), Effort.MAX),
+  Effort.ULTRA:    EngineInvocation((),                   Effort.ULTRA),
+}
+
+# claudeloop-local — a profile's model tier; a local model's honest ceiling is STANDARD
+{
+  Effort.TRIVIAL:  EngineInvocation(("--profile","local","--preset","low"),    Effort.TRIVIAL),
+  Effort.LOW:      EngineInvocation(("--profile","local","--preset","low"),    Effort.LOW),
+  Effort.STANDARD: EngineInvocation(("--profile","local","--preset","medium"), Effort.STANDARD),
+  Effort.HIGH:     EngineInvocation(("--profile","local","--preset","high"),   Effort.STANDARD),
+  Effort.MAX:      EngineInvocation(("--profile","local","--preset","high"),   Effort.STANDARD),
+  Effort.ULTRA:    EngineInvocation(("--profile","local","--preset","high"),   Effort.STANDARD),
 }
 ```
+
+(`local` is the default `[engines.claudeloop_local] profile`.) The plan also projected
+effort for two engines that no longer exist: `cursorloop` by position on a model ladder
+(`--model composer-fast` … `--model grok-xhigh`) and `agyloop` with claudeloop's argv
+resolved to Gemini models. Both were retired by ADR-0078. The golden files in
+`tests/infrastructure/engines/golden/` (30: five engines × six efforts) pin every argv
+above.
 
 `codexloop run` has no `--effort` flag. Its internal effort starts at `MEDIUM`
 and changes only through a runtime `SetEffort` event. The earlier projection
@@ -381,7 +507,7 @@ during an unattended run.
 
 | Factor | Range | Meaning |
 |---|---|---|
-| `base_weight` | ≥ 1 | Descriptor default: claudeloop 3, codexloop 2, cursorloop 2, agyloop 1, gptossloop 1, qwenloop 1. `[engines] weights` in `vibey.toml` is validated but not yet applied. |
+| `base_weight` | ≥ 1 | Descriptor default: claudeloop 3, codexloop 2, gptossloop 1, qwenloop 1, claudeloop-local 1. `[engines] weights` in `vibey.toml` is validated but not yet applied. (The retired cursorloop and agyloop had 2 and 1.) |
 | `health_factor` | 0.0–1.0 | `0.0` when open, `0.25` when half-open. When closed it is `1 − ewma_failure`: each recorded capacity rejection sets `ewma = min(1, 0.9·ewma + 0.1)`, and each success sets `ewma = 0.9·ewma`. |
 | `fidelity_factor` | 0.5–1.0 | `1.0` if `achieved >= requested`; `0.7` if one tier below; `0.5` if two or more |
 | `cost_factor` | 0.5–1.5 | The eligible set's median $/Mtok divided by this engine's, clamped. It is implemented as `domain/rotation.py::cost_factor` but not wired: `EngineSelector` fixes it at 1.0, and no `cost_aware` configuration key exists. |
@@ -468,6 +594,29 @@ Separately, gptossloop's model is the sovereign DESIGN and DECOMPOSE provider
 (ADR-0027, ADR-0064): `vibey work` and `vibey worker` use it when no `--provider`
 is given (sub-doctrine 8.b, #322) or `--provider gptossloop` is; `--provider
 qwenloop` is read as gptossloop.
+
+**The two loops.** The tiers are also the family's two loops, exactly two
+(sub-doctrine 8.c; `domain/engine.py`): `Loop.SOVEREIGN = "sovereignloop"` drives every
+LOCAL engine and `Loop.PAID = "paidloop"` every PAID one (`LOOP_BY_TIER`).
+`DEFAULT_LOOP` is the sovereign loop, and `PAID_DEFAULT_ENGINE` is `claudeloop`, the paid
+engine a paid declaration reaches unless it names another. Both constants state the canon;
+the selector does not read either yet. It prefers the local tier, falls back to a paid
+engine whenever no local one is eligible, and rotates paid engines by weight.
+`RENAMED_ENGINES` carries one note, for `qwenloop` (it runs a Qwen model since ADR-0064;
+the gpt-oss engine it used to be is `gptossloop`), and `REPEALED_FROM_LOOPS` is empty
+since OpenCode was deleted.
+
+`vibey loops` reports all of this per engine: tier, switch, cost, model, the argv for
+every effort, and the descriptor's `affordances` (images, files, pasted text or images,
+plugins, MCP, skills, web search, each with the code that proves it), `controls` and
+`events`. Its sub-groups `marketplace`, `plugin`, `mcp`, `skills` and `snapshots` manage the
+person's loop capability bundle: declared by the person, locked by content, fetched only on
+their word ([ADR-0103](../architecture/decisions/0103-the-loop-capability-bundle.md)). A
+BUILD run on an engine with a `capabilities_flag` (`claudeloop`, `claudeloop-local`,
+`gptossloop`, `qwenloop`; not `codexloop`) is started with `run --capabilities PATH`, the
+locked snapshot vibey writes into the run's own folder, and vibey records
+`LoopCapabilitiesSnapshotted` first. A snapshot that cannot be resolved parks the job on a
+`loop_capabilities_unresolved` gate; the run never starts without it.
 
 ### 5.6 Hybrid dispatch: paid overflow onto a saturated local tier
 
@@ -657,6 +806,25 @@ when something *changed*.
 session; interrupting one leaves the vendor's session state and vibey's ledger
 disagreeing, which is the one inconsistency the whole design is built to avoid.
 
+### 7.1 Failover to the sovereign engine (ADR-0070): built, not wired
+
+[ADR-0070](../architecture/decisions/0070-failover-to-the-sovereign-engine-and-handback-on-a-recorded-probe.md)
+adds a row the table above does not have: when a paid engine rejects on capacity, move
+the work to the engine named by `[failover] target_engine` (the sovereign engine) at
+`target_effort` (ULTRA), through the no-loss gate, excluding the exhausted engine; record
+each probe of the paid engine (`EngineProbed`); and hand the work back, gated again, only
+after a successful probe (`EngineHandedBack`; otherwise `HandbackRefused`). The pure rules
+are `domain/failover.py` and the service is `application/engine_failover.py`, but
+`EngineFailoverService` is constructed nowhere in `src/vibey/`, so a BUILD job does not
+fail over today: a capacity rejection is still the circuit-and-defer path of the table
+above. The driver session's failover (`vibey driver`) is the one that is wired. See
+[handoff-protocol.md](handoff-protocol.md) §6.6.
+
+**Exit code 78.** A runner that stops because its own backend is misconfigured (an
+unreachable local server, a model not pulled, a context window too small) exits with
+`EXIT_CODE_BACKEND_MISCONFIGURED = 78`. No retry or rotation fixes a configuration, so the
+job parks on an `engine_misconfigured` gate instead of burning its attempts.
+
 ---
 
 ## 8. The adapter
@@ -700,7 +868,7 @@ async iterator.
 
 ### 8.1 What the adapter actually reads
 
-The files vibey depends on are common to all five runners; the rest vary:
+The files vibey depends on are common to all three runner packages; the rest vary:
 
 ```
 .<engine>loop/runs/<run_id>/
@@ -708,23 +876,30 @@ The files vibey depends on are common to all five runners; the rest vary:
 │                      # session_id, status, phase, attempt, waiting_until, model,
 │                      # effort, preset, capacity
 ├── events.jsonl       # required: the runner's own event stream  ← vibey tails this
-├── audit.jsonl        # claudeloop, cursorloop only
-├── bus.jsonl          # claudeloop, cursorloop, agyloop
-├── status.json        # claudeloop, cursorloop, agyloop
+├── audit.jsonl        # claudeloop only (and the retired cursorloop)
+├── bus.jsonl          # claudeloop (and the retired cursorloop and agyloop)
+├── status.json        # claudeloop (and the retired cursorloop and agyloop)
 ├── savepoints.jsonl   # all but gptossloop and qwenloop
-├── stop-summary.md    # claudeloop, codexloop, cursorloop
-├── inbox/             # ← vibey writes control commands here (gptossloop/qwenloop read control/inbox/)
+├── stop-summary.md    # claudeloop, codexloop (and the retired cursorloop)
+├── inbox/             # ← vibey writes prompts here; claudeloop and codexloop read it
+├── control/inbox/     # ← gptossloop and qwenloop read control messages here
 └── snapshots/
     ├── latest.json    # required: the handoff snapshot (schema_version 1)
     └── <ts>-<reason>.json
 ```
 
+`claudeloop-local` runs the claudeloop binary, so its run directory is claudeloop's,
+under `.claudeloop/`.
+
 The per-runner notes for the optional files come from which file names each
 runner's sources reference. The local runner (gptossloop and qwenloop) writes only `meta.json`, `events.jsonl`,
-and `snapshots/latest.json`, and it reads control messages from
-`control/inbox/`. `LoopProcessAdapter` writes prompts and stop signals to
-`<run>/inbox/`, so mid-run prompts and soft stops do not reach gptossloop
-or qwenloop today.
+and `snapshots/latest.json`, and it reads control messages from `control/inbox/`.
+`LoopProcessAdapter.stop()` writes a soft stop to `control/inbox/*-stop.json` for
+`gptossloop` and `qwenloop`, and to `<run>/inbox/` for the others, so soft stops reach
+every engine. `send_prompt` still writes to `<run>/inbox/` for every engine, so a mid-run
+prompt sent through the adapter does not reach the local runner today. The runner's own
+`prompt` verb (`qwenloop prompt RUN_ID TEXT --cwd DIR`, the descriptor's `controls`) does
+reach it at the next turn boundary.
 
 Vibey translates `events.jsonl` into ledger events and reads `snapshots/latest.json`
 for the runner's own handoff payload — which is a strict subset of what vibey's
@@ -751,9 +926,10 @@ per engine:
 When the result is recorded, a failing check sets `conformance_ok = false`,
 which makes the engine ineligible (§5.4): degraded, not broken.
 `vibey doctor` prints exactly which claim failed, so a descriptor can be
-corrected when a runner changes. By default the suite checks the five paid
-engines, plus each local engine that is switched on (gptossloop by default). `--engine` checks one
-engine.
+corrected when a runner changes. By default the suite checks the two paid
+engines (`DEFAULT_DESCRIPTORS`: claudeloop and codexloop), plus each local engine that is
+switched on (gptossloop by default). `--engine` checks one engine. The `flags` check also
+covers each descriptor's `launch_flags` and `capabilities_flag`.
 
 This suite is what lets vibey depend on moving targets without becoming
 brittle. It runs in CI against `ScriptedEngine` fakes
@@ -773,9 +949,13 @@ skipped, so a new runner event cannot crash vibey.
 |---|---|
 | `claudeloop` | `run.started`, `preflight` → `SESSION_SEEDED`; `turn.starting` → `TURN_REQUESTED`; `turn.completed` → `TURN_COMPLETED`; `chatter.prompt`, `chatter.assistant` → `TRANSCRIPT_RECORDED`; `chatter.tool` → `TOOL_INVOKED`; `savepoint` → `SAVEPOINT_CREATED`; `capacity.forecast` → `BUDGET_SPENT`; `finished` → `VERDICT_RENDERED` (`chatter.delta` unmapped) |
 | `codexloop` | `thread.started` → `SESSION_SEEDED`; `turn.started` → `TURN_REQUESTED`; `turn.completed`, `turn.failed` → `TURN_COMPLETED`; `item.started`, `item.completed` → `TOOL_INVOKED`; `rate_limits.updated` → `BUDGET_SPENT`; `run.verdict` → `VERDICT_RENDERED` |
-| `cursorloop` | `tool_call` → `TOOL_INVOKED`; `usage` → `BUDGET_SPENT` (no session, turn, or verdict boundary events) |
-| `agyloop` | as claudeloop, except `sdk.event` (not `chatter.tool`) → `TOOL_INVOKED`, and `savepoint`, `savepoint.created`, `savepoint.skipped` → `SAVEPOINT_CREATED` |
 | `gptossloop`, `qwenloop` | `run.started` → `SESSION_SEEDED`; `turn.completed` → `TURN_COMPLETED`; `text_delta` → `TRANSCRIPT_RECORDED`; `tool_result` → `TOOL_INVOKED`; `completed`, `failed` → `VERDICT_RENDERED` |
+| `claudeloop-local` | claudeloop's entry, shared, not copied (the same binary writes the same events) |
+
+`LOOP_EVENT_MAP` holds three entries (`CLAUDELOOP`, `CODEXLOOP`, `QWENLOOP`) and points
+`CLAUDELOOP_LOCAL` at claudeloop's and `GPTOSSLOOP` at qwenloop's. The plan's rows for the
+retired `cursorloop` (`tool_call`, `usage` only, no turn boundary) and `agyloop` (claudeloop's
+map with `sdk.event` and three savepoint kinds) were removed with the engines (ADR-0078).
 
 `capacity.forecast` and `rate_limits.updated` are headroom telemetry, emitted
 while capacity is still available. They map to `BUDGET_SPENT`, never to a
@@ -786,15 +966,14 @@ counts every `TURN_COMPLETED` in a cycle against `max_cycle_turns`, so each
 engine maps only its runner's own turn boundary to it. Text that rides
 alongside a turn maps to `TRANSCRIPT_RECORDED`: it stays in the ledger for
 replay and is never counted. That covers the `chatter.prompt` and
-`chatter.assistant` echoes that claudeloop and agyloop write every turn under
-their default `log_chatter=summary`, and the local runner's `text_delta`, one per
+`chatter.assistant` echoes that claudeloop (and so claudeloop-local) writes every turn
+under its default `log_chatter=summary`, and the local runner's `text_delta`, one per
 streamed fragment. The local runner writes its own `turn.completed` once per model
 call for exactly this reason. codexloop's `turn.failed` counts as a turn
 attempt: codex ends every turn with exactly one of `turn.completed` or
 `turn.failed`, and a run that fails turn after turn is the runaway the cap
 exists to stop. `claudeloop`'s `chatter.delta` stays unmapped, because
-`chatter.assistant` already carries the assembled text. cursorloop writes no
-turn boundary, so it contributes no `TURN_COMPLETED` at all.
+`chatter.assistant` already carries the assembled text.
 
 ---
 
@@ -846,12 +1025,40 @@ design calls for:
   practice, per engine pair.
 - `vibey_engine_cost_usd{engine,phase}`.
 
-The design also calls for a wider `vibey engines` table:
+The design also calls for a wider `vibey engines` table (planned, not built; illustrative
+values):
 
 ```
 ENGINE       WEIGHT  EFF  CIRCUIT    SELECTED  SAT   $/CYCLE  LAST CAPACITY
+gptossloop        1  1.0  closed          203   0%      0.00  Available
 claudeloop        3  3.0  closed          142   0%     18.40  Available
 codexloop         2  1.4  half_open        61   9%      6.12  WindowExhausted → 14:22
-cursorloop        2  2.0  closed           74   0%      7.80  Available
-agyloop           1  0.0  open              9   —       1.05  CreditsExhausted (probe 12m)
+claudeloop-local  1  0.0  open              9   —       0.00  AuthenticationFailed
 ```
+
+---
+
+## When it goes wrong
+
+| What you see | What it means | What to do |
+|---|---|---|
+| `ConfigError: engines.enabled: unknown engine 'cursorloop' -- cursorloop was retired by ADR-0078 ...` | `vibey.toml` names a retired engine | Remove it from `[engines] enabled` and `[engines.weights]` |
+| A job keeps being deferred with "claudeloop: its circuit is open, ..." | No engine is eligible; each reason comes from `rotation.py::rejections` | Fix the reason named: `vibey doctor --conformance --record` for "not conformant", log in again for "its login check is stale or failed", wait for a capacity window |
+| `gptossloop` never selected | Its switch is off, or Ollama is unreachable or the model is not pulled (the runner exits 78 and the job parks on `engine_misconfigured`) | `vibey loops` shows the switch; `vibey doctor` checks the local model |
+| An engine stays `open` with `AuthenticationFailed` | Waiting cannot fix a credential, so no probe is scheduled | Re-authenticate the engine, then run `vibey doctor --conformance --record` or restart the worker; a passing preflight half-opens it |
+| `claudeloop-local` fails the conformance `binary` check | Its descriptor asks for claudeloop 0.8.0; the package is 0.4.0 since the version reset (inferred, §2) | Report it; the descriptor's `min_version` needs updating |
+
+## Where next
+
+- [phase-protocols.md](phase-protocols.md) §8, for which job kinds use rotation and which use
+  a fixed provider.
+- [handoff-protocol.md](handoff-protocol.md), for what happens when an engine winds down
+  mid-item.
+- [ADR-0038](../architecture/decisions/0038-local-engines-are-preferred-first.md) and
+  [ADR-0079](../architecture/decisions/0079-hybrid-engine-dispatch.md), for why local comes
+  first and when paid engines may overflow.
+
+## Say it in one line
+
+vibey runs each job on a local engine first and a paid one only when no local engine is
+eligible, rotating fairly within a tier and never treating empty credit as a rate limit.

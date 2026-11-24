@@ -1,6 +1,32 @@
-# Continuous delivery estimate
+---
+description: "The last published delivery forecast for this repository: a generated snapshot recorded 2026-10-30, with no billing and no graded track record."
+---
 
-This page is a generated, append-only-ledger-backed forecast. Re-run `vibey-gh forecast` after changes to refresh it.
+<!-- Everything above "## Current estimate" except the two "Recorded at" and "Source
+fingerprint" lines is written by hand. `vibey-gh forecast` rewrites this whole file
+(`DeliveryEstimateLedger.write_report` in src/vibey_tools/gh/vibey_gh/estimate_ledger.py), so
+this header is lost at the next refresh unless the generator learns to emit it. -->
+
+# Read the current delivery estimate, and its date
+
+> [!IMPORTANT]
+> **Bottom Line Up Front (BLUF):** This is the last forecast `vibey-gh forecast` published for
+> this repository. It was recorded on **2026-10-30** and has not been refreshed since: the hourly
+> workflow has been switched off on GitHub since 2026-11-05. Its dollar figures are all `unknown`,
+> it measured none of its 18 conditions, and none of its 54 earlier forecasts has been graded. For
+> today's figures, run `vibey-gh forecast --no-record --no-report` yourself.
+
+**How to read this page.**
+
+**Daniel:** Professor, which line do I read first?
+
+**Professor Feynman:** The date. Then "work units remain" and the range of active days. Then the
+three lines that say how much to trust it: `materials measured`, the `track record`, and any
+`source problem`. Here they say nothing was measured, nothing has been graded, and there was no
+billing. The JSON below is the same record in full, for a program to read.
+
+How the forecast is made, every flag, and why the published copy is stale are in
+[the delivery estimate guide](guides/delivery-estimate.md).
 
 - Recorded at: `2026-10-30T23:47:12.253134Z`
 - Source fingerprint: `1669750d6f8119c6d8b1174779bc48590096ae37ee240ac5401eb4dd48835ab9`

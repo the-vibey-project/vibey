@@ -3,6 +3,14 @@ description: The continuation prompt that derives vibey's next version, promotes
 ---
 # Release
 
+> [!IMPORTANT]
+> **Bottom Line Up Front (BLUF):** Use this prompt to prepare or verify a release. The version
+> is derived from what changed, never chosen, and vibey is held below 1.0
+> (`[version] max_major = 0`). Promotion from `develop` to `main` is a person's decision; the
+> agent stops before it unless a person says go, and afterwards verifies PyPI, the GitHub
+> Release and its files, Open VSX and the site. GitHub runs it weekly as a drill that changes
+> nothing.
+
 Derive the version, promote `develop` to `main`, and verify every channel and every file a
 release publishes. Run automatically, this prompt is a **drill**: it verifies that each step
 below still holds and changes nothing.
@@ -38,8 +46,11 @@ The version is derived, never chosen.
    `gh workflow run promote-to-main.yml --ref develop -f dry_run=false` opens the
    `chore(release): X` pull request into main; a person merges it (rebase only).
 4. After the merge, verify everything, by evidence:
-   - PyPI: `pip install vibey-engine==X` in a fresh venv; `vibey --version` prints X, and every
-     console script in pyproject.toml [project.scripts] is on PATH. Same for krypton-app.
+   - PyPI: `pip install vibey-engine==X` in a fresh venv; `vibey --version` prints two lines,
+     `vibey-engine X` and then krypton-app's version (`krypton-app not installed` until it
+     is), and every console script in pyproject.toml [project.scripts] is on PATH. Then
+     `pip install krypton-app==X` in the same venv; `vibey --version` now prints
+     `krypton-app X` too.
    - The GitHub Release vibey-vX: every declared file is attached (docs/guides/downloads.md),
      every file matches SHA256SUMS (`shasum -a 256 -c SHA256SUMS`), and every file verifies
      with `gh attestation verify <file> --repo the-vibey-project/vibey`.

@@ -3,6 +3,13 @@ description: The continuation prompt that hands vibey to a new steward — what 
 ---
 # Succession
 
+> [!IMPORTANT]
+> **Bottom Line Up Front (BLUF):** Use this prompt when vibey passes to a new steward. The
+> agent produces a checklist of what the steward must hold (the law, the forge and its
+> rulesets, every secret by name only, the PyPI publishing rights, the self-hosted runner,
+> the site), each line verified against the repository or marked for a person to check. It
+> never handles a secret's value. GitHub runs it weekly as a drill that changes nothing.
+
 Hand the project to a new steward: what they must hold, where each thing is declared, and
 how to prove it works. Run automatically, this prompt is a **drill**: it checks that every
 name below still exists where it says, and changes nothing.

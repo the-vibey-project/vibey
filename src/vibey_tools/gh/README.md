@@ -1,13 +1,49 @@
-# vibey-gh
+---
+description: "Reference for vibey-gh, the repository delivery control plane inside vibey-engine: install, every command, every managed workflow, configuration defaults, and recovery."
+---
+
+# vibey-gh: carry a change from push to release through exact-head gates
+
+> [!IMPORTANT]
+> **Bottom Line Up Front (BLUF):** `vibey-gh` installs git hooks and GitHub Actions workflows
+> that take a pushed branch through scans, review, a merge train into `develop`, promotion to
+> `main`, versioning, release and documentation, and judge every step against the exact commit
+> it applies to. It ships inside `vibey-engine`: `pip install vibey-engine`, then
+> `vibey-gh install` and `vibey-gh check --ci`. A paid model key is **not** required: by default
+> a self-hosted local model reviews trusted authors' pull requests, and failing scans and
+> conflicts go to a person (`[pr_automation] paid_review`, `paid_repair` and
+> `paid_conflict_resolution` all default to `false`).
 
 > **Now part of the vibey monorepo.** `vibey-gh` lives in [the-vibey-project/vibey](https://github.com/the-vibey-project/vibey) at [`src/vibey_tools/gh`](https://github.com/the-vibey-project/vibey/tree/develop/src/vibey_tools/gh) (vibey ADR-0021). It is not published on its own any more: it ships inside the [`vibey-engine`](https://pypi.org/project/vibey-engine/) package, so `pip install vibey-engine` installs it (vibey ADR-0037).
+
+## How to read this page
+
+The page was long, and Daniel said so.
+
+**Daniel:** Professor, this is twelve hundred lines. Where do I start?
+
+**Professor Feynman:** Think of a railway. You do not learn every signal before you buy a ticket.
+Read [The mental model](#the-mental-model) and the [Quick start](#quick-start) to board the
+train. The rest is the timetable and the signal book: the [Commands](#commands) table, the
+[Configuration](#configuration) block, the [Workflows](#workflows) table and the
+[Failure and recovery model](#failure-and-recovery-model). You open those when a signal is red.
+
+**Daniel:** And the AI review? Do I need to pay for it?
+
+**Professor Feynman:** Not by default. The section on review says exactly who reviews when you
+declare nothing, and what you must switch on to pay for more.
+
+## What it is
 
 Shipping a change safely through review, merge, versioning, and release usually means
 hand-wiring a dozen GitHub Actions steps — and they drift out of sync, silently skip a
 check, or let a stale result approve code that has since changed. `vibey-gh` replaces that
 hand-wired path with one event-driven, auditable contract: push a branch, and the tooling
-carries it through review, repair, merge, release, and documentation on its own, stopping
-only when a human decision is genuinely required.
+carries it through review, merge, release, and documentation as far as your configuration
+allows, stopping when a human decision is required. How much of that runs unattended depends
+on what you declare: with the defaults, a trusted author's pull request is reviewed by the
+local sovereign lane, while a failing scan, a merge conflict, or an outside author's change
+waits for a person.
 
 Three ideas make that safe to run unattended:
 
@@ -24,8 +60,11 @@ Three ideas make that safe to run unattended:
 Around that sits provenance fingerprinting, derived version bumps, comprehensive
 documentation maintenance, and post-release branch realignment — all covered below.
 
-**No dependencies.** Everything is stdlib. This runs in every CI job of every repository
-that adopts it, so a dependency it grows is a dependency all of them grow.
+**No dependencies.** Everything is stdlib (`dependencies = []`). This runs in every CI job of
+every repository that adopts it, so a dependency it grows is a dependency all of them grow. One
+command reaches outside it: `vibey-gh fit` imports `vibey-runners-common`'s memory probe, which
+is itself stdlib-only and ships in the same `vibey-engine` package; a bare checkout of this tenant
+needs `pip install -e ../../vibey_runners/common` for it, as CI does.
 
 > **In one sentence:** install `vibey-gh` once, describe your repository in
 > `.vibey-gh.toml`, and let exact-head gates carry a change from its first push through
@@ -69,8 +108,9 @@ It is deliberately opinionated about four invariants:
 Think of `vibey-gh` as an assembly line for your repository's changes. You push code to a
 branch; the tooling then handles the parts that would otherwise mean babysitting an Actions
 tab or manually clicking "merge": it opens a pull request, waits for your tests to pass,
-has an AI reviewer look for problems, attempts one bounded automatic fix if something is
-wrong, merges the result once everything checks out, derives a new version number,
+has an AI reviewer look for problems (by default a local model on your own runner),
+attempts a bounded automatic fix if something is wrong and you have declared a repair lane,
+merges the result once everything checks out, derives a new version number,
 publishes the package, and updates the documentation site — all tied to the exact commit
 that was actually reviewed, so nothing is ever approved based on a stale result. If a step
 needs a human — a missing secret, a failing external service, a request too ambiguous to
@@ -96,10 +136,18 @@ and every transition between them to be reproducible and policy checked.
 
 - Python 3.12 or newer, Git, and the GitHub CLI (`gh`).
 - A GitHub repository with Actions enabled and Pages configured for Actions deployments.
-- `ANTHROPIC_API_KEY` for documentation upkeep — and for PR review, repair, and conflict
-  resolution only when `[pr_automation] paid_review`, `paid_repair`, or
-  `paid_conflict_resolution` declares that paid use. By default none is (sub-doctrine 8.b):
-  a self-hosted sovereign runner reviews, and failing scans or conflicts go to a person.
+- For the default review: a self-hosted runner carrying the `[pr_automation.fallback]
+  runner_label` (default `vibey-local`) with a local Ollama-compatible model, and a fresh
+  sovereign heartbeat (`vibey-gh runner install`, `vibey-gh heartbeat install`). Without one,
+  no automated review runs and the review gate says a person is needed.
+- A paid model key, the repository secret named by `[ai] auth_secret` (default
+  `ANTHROPIC_API_KEY`), only for the jobs that call the pinned Claude Code Action:
+  - documentation maintenance (`[documentation] ai_maintenance`, on by default);
+  - the issue solver (`[issue_automation] enabled`, on by default);
+  - release repair and comment conversations;
+  - PR review, repair, and conflict resolution, but only when `[pr_automation] paid_review`,
+    `paid_repair`, or `paid_conflict_resolution` declares that paid use. By default none is
+    (sub-doctrine 8.b).
 - `AUTOMERGE_TOKEN` when the default Actions token cannot merge or manage repository settings.
 - PyPI and TestPyPI trusted-publishing environments when Python publication is enabled.
 
@@ -132,8 +180,13 @@ tagging, GitHub Release creation, and repository-profile reconciliation.
 3. Author your own `CI` and `Release` workflows with those exact names; `install` does not
    render them, and the rest of this checklist assumes they exist. See
    [What gets installed](#what-gets-installed) for the required `Release` behavior.
-4. Add a repository-level `ANTHROPIC_API_KEY`; environment-only secrets are not available
-   to the PR automation jobs that perform guarded review and repair.
+4. Decide who reviews. For the default sovereign review, stand up the self-hosted runner and
+   its heartbeat (`vibey-gh runner install`, `vibey-gh heartbeat install`). If you declare a
+   paid lane (`[pr_automation] paid_review`, `paid_repair`, `paid_conflict_resolution`), or keep
+   documentation maintenance and the issue solver on, add the secret `[ai] auth_secret` names
+   (default `ANTHROPIC_API_KEY`) at repository level; environment-only secrets are not
+   available to those jobs. Turn off what you will not pay for with
+   `[documentation] ai_maintenance = false` and `[issue_automation] enabled = false`.
 5. Add `AUTOMERGE_TOKEN` when the default Actions token cannot merge through your ruleset,
    update repository settings, or create the required pull requests.
 6. In **Settings → Actions → General**, grant read/write workflow permissions and allow
@@ -157,9 +210,10 @@ changes; opt out of individual workflows with `[install].workflows` rather than 
 generated copy that the next installation will overwrite.
 
 Every managed workflow installs this tooling with `pip install vibey-engine` — the distribution
-that carries `vibey-gh` — floating on whatever the latest published release is, by
-default, so upgrading changes nothing until you ask. Set `[install].pin_version = true` to
-pin that install to the exact version that rendered the file (`vibey==X.Y.Z`) instead;
+that carries `vibey-gh`, named by `[install] fallback_package` — floating on whatever the latest
+published release is, by default. Set `[install].pin_version = true` to
+pin that install to the exact version that rendered the file (`vibey-engine==X.Y.Z`) instead,
+or add `pin = "X.Y.Z"` beside it to pin a release you name;
 `vibey-gh install` then owns bumping the pin on every future release, as one visible diff,
 rather than it moving silently underneath you.
 The self-hosting path this repository uses to install itself from source is never pinned.
@@ -227,6 +281,11 @@ automated repair on that lineage — failing scans, merge conflicts, and review 
 alike, for trusted and outside authors equally. Bot-authored repair
 commits do not reset it; a new human/contributor commit does.
 
+The diagram shows every path a repository can switch on. The AI repair and conflict-repair
+branches run only where a repair lane is declared (`paid_repair`, `paid_conflict_resolution`, or
+`[pr_automation.sovereign_repair]`); with the defaults they stop and wait for a person, and the
+review is the sovereign lane's (see [Who reviews, repairs and resolves conflicts](#who-reviews-repairs-and-resolves-conflicts)).
+
 ### Your first successful run
 
 On a healthy installation you should observe, in order:
@@ -254,6 +313,25 @@ of truth, and dogfood tests require this repository's installed copies to match 
 Every decision is tied to an exact commit SHA, and stale workflow events are ignored. See
 [Architecture](docs/architecture.md), [Workflows](docs/workflows.md), and
 [Threat model](docs/threat-model.md).
+
+### Forges
+
+The managed workflows are GitHub Actions, and most commands call `gh`. A forge abstraction sits
+beside them: adapters for Forgejo, GitHub, GitLab and Bitbucket (`vibey_gh/forge_*.py`),
+selected by `[platform] kind`. The default kind is `forgejo`, the sovereign self-hosted forge;
+`github`, `gitlab` and `bitbucket` are declared-only. Only the calls that have moved onto the
+adapter read it today — the clean-repo survey's two forge reads (`vibey-gh tidy`) — together with
+`forge-snapshot`, which takes its own `--forge`. Every other command still runs `gh` as it always
+has, which is why a kind without an adapter is refused rather than half-honoured
+(`PlatformConfig` in `vibey_gh/config.py`).
+
+```toml
+[platform]
+kind = "forgejo"           # forgejo (default), github, gitlab or bitbucket
+host = ""                  # empty: the adapter's own default (forgejo.local for forgejo)
+repository = ""            # owner/name; empty reads origin's URL
+token_env = ""             # the NAME of the environment variable holding the token
+```
 
 ## Security model
 
@@ -320,7 +398,7 @@ access of its own. See [Threat model](docs/threat-model.md) for the full boundar
 | `vibey-gh issue-automation record-solution --issue N --input JSON` | Persist the machine-readable attempt lineage a retry and its budget depend on. |
 | `vibey-gh issue-automation list-eligible` | List every open issue a recovery sweep should dispatch. |
 | `vibey-gh issue-automation ensure-labels` | Idempotently create the issue automation’s operational labels. |
-| `vibey-gh promote [--no-wait]` | Open the asynchronous `develop → main` promotion PR, or refresh the open one's title and body. |
+| `vibey-gh promote [--no-wait \| --wait] [--method rebase\|squash\|merge] [--dry-run] [--admin-fallback]` | Open the asynchronous `develop → main` promotion PR (`--no-wait`, the default), or refresh the open one's title and body. `--wait` is the legacy synchronous mode; `--admin-fallback` (with `--wait`) is for a person at the keyboard, never unattended. |
 | `vibey-gh github-release --target SHA [--version VERSION]` | Create or reuse an immutable tag and GitHub Release for an exact production SHA. |
 | `vibey-gh realign` | Align identical `develop` and `main` trees after a rebase merge without discarding work. |
 | `vibey-gh flatten [--onto REF] [--push] [--orphan-comments] [--dry-run]` | Rewrite the current branch as one commit on its base, built from the branch's existing tree so content cannot change, with the subject normalized and the trailers re-derived — the remedy for a branch the provenance or Conventional Commits gate refuses and `check --apply` cannot repair. Co-authors, breaking changes and issue-closing keywords are carried from the whole range, because nothing re-derives them. It refuses a branch whose open pull request has unresolved review threads, since the force-push detaches every one of them from the code it was about; `--orphan-comments` proceeds anyway, and a forge that cannot be asked is reported as unchecked rather than as clean. |
@@ -335,10 +413,51 @@ access of its own. See [Threat model](docs/threat-model.md) for the full boundar
 | `vibey-gh pr-automation self-heal [--pr N]` | Refill a spent repair budget, itself bounded so a permanent failure still stops. |
 | `vibey-gh conversation evaluate\|context\|reply\|record-response` | Decide, brief, answer, and budget one comment-driven interaction. |
 | `vibey-gh reconcile-branches [--dry-run]` | Rebase, close, or leave each open branch stranded by a realign rewrite. |
-| `vibey-gh rulesets [--dry-run]` | Reconcile the integration and release branch rulesets from `[rulesets]`. |
+| `vibey-gh rulesets [--dry-run] [--check]` | Reconcile the integration and release branch rulesets from `[rulesets]`; `--check` is read-only and exits 1 when any live ruleset differs from the declaration. |
 | `vibey-gh sdk|api|mcp|webhook CAPABILITY` | Invoke the same canonical capability through each supported public surface. |
 
-Run `vibey-gh --help` and read [docs/cli.md](docs/cli.md) for the full reference.
+`vibey-gh --help` lists 62 subcommands. The table above covers the delivery path; these are the
+rest, each with the one-line purpose its own `--help` gives:
+
+| Command | Purpose |
+|---|---|
+| `vibey-gh provenance-message [--file FILE]` | Normalize a commit subject and add the provenance trailer. |
+| `vibey-gh provenance-check --commits RANGE` | Verify provenance trailers in a commit range. |
+| `vibey-gh pr-automation repair-budget` | Report how many of the bounded repair attempts a pull request has left. |
+| `vibey-gh pr-automation combine` | Compose one review verdict from the lane or lanes that answered it. |
+| `vibey-gh issue-triage sweep\|bump\|unbump\|ensure-labels` | Classify and order all open issues. |
+| `vibey-gh sabbath status\|register-lane\|resume` | The Sabbath window on this host (sub-doctrine 8.i). |
+| `vibey-gh review-canary check\|show\|run\|merge\|plan\|render\|status` | Measure the sovereign review against a corpus of planted defects and controls. |
+| `vibey-gh review-outcomes [--runs N] [--json]` | Tabulate why recent PR review runs did or did not produce a verdict (read-only). |
+| `vibey-gh review-timings PATH... [--json]` | Report the model's observed rates and timeouts from local-review outcome records, and suggest deadline rates (read-only). |
+| `vibey-gh tidy [--apply] [--ci]` | Survey technical clutter (9.a); `--apply` removes the lossless classes. |
+| `vibey-gh forge-snapshot [--forge github\|gitlab\|forgejo\|bitbucket] [--out DIR]` | Read-only capture of issues, change requests, reviews, releases and more into hash-chained JSONL. |
+| `vibey-gh forge-state DIR --as-of T (--issue N \| --class C)` | Read one object's state back from a forge snapshot, as of a moment. |
+| `vibey-gh corpus-index [--check]` | Build the governance corpus index, chunked, hashed and deterministic; `--check` is CI Gate 0 in this monorepo. |
+| `vibey-gh marketplace [--check]` | Render the root Claude Code marketplace from the workspace members (ADR-0034). |
+| `vibey-gh push-scope` | Read pre-push refs on stdin; say whether a push carries only the declared heartbeat. |
+| `vibey-gh sovereign [--beat] [--host]` | Sovereign readiness (8.a): publish or read the local runner's heartbeat. |
+| `vibey-gh heartbeat install\|status\|uninstall` | Stand the sovereign heartbeat's timer up from the tree, report on it, remove it. |
+| `vibey-gh runner install\|check\|cleanup\|uninstall` | Stand the sovereign review runner up from `[runners]`, or check or remove it. |
+| `vibey-gh fit [--model M]` | The fit calculus: both sides measured, the projection stated. |
+| `vibey-gh slots corpus\|allowed\|calibrate` | How many runs of one local model fit on this device at once (8.c, 8.j), measured per device. |
+| `vibey-gh estimate --operation OP [--json]` | Before a run: feasibility along the pipeline, duration, cost, and distance from peak; unknown where unmeasured. |
+| `vibey-gh forecast [--limit N] [--json] [--strict]` | Continuously estimate remaining delivery time and all billing-system usage. |
+| `vibey-gh paper-figures (--emit DIR \| --inline FILE)` | Emit the paper's figures as standalone TeX, or inline their SVG renderings. |
+| `vibey-gh ci-areas [--base B] [--head H]` | Turn a diff into the CI areas it touches, a tier and the matrices to run. |
+| `vibey-gh ci-matrix --job JOB [--tier pr\|full]` | Print the rows of one CI matrix job from the declared map. |
+| `vibey-gh ci-nightly last-green\|report` | The nightly full CI run: its last-green watermark and its red tracking issue. |
+| `vibey-gh pin-actions [--apply \| --refresh \| --check-stale]` | Pin every GitHub Actions `uses:` to a commit SHA, keeping the tag as a comment. |
+| `vibey-gh skip-marker-check --commits BASE..HEAD` | Refuse a GitHub skip marker in a pull request's commits, title or body. |
+| `vibey-gh advisory-check` | Fail on npm advisories at `[advisories] audit_level`, less the declared exceptions. |
+| `vibey-gh changelog assemble\|ensure-label\|check` | Fold changelog fragments in, or check a pull request's. |
+| `vibey-gh branch-health --run-id ID` | Open, update or close the tracking issue for a red permanent branch. |
+| `vibey-gh tracking-issue raise\|resolve` | Open, update or close the one issue that tracks a named condition. |
+| `vibey-gh approve-check PR [--head SHA] [--approve]` | Exit 0 only if every `[unattended_approval]` condition holds for a pull request. |
+| `vibey-gh announce --channel C --branch B --sha SHA [--dry-run]` | Post a published docs channel's concise changelog to the Discord webhook. |
+
+Run `vibey-gh --help`, or `vibey-gh <command> --help`, and read [docs/cli.md](docs/cli.md) for
+every argument.
 
 `install` also declares `CHANGELOG.md merge=union` in `.gitattributes`. Every branch
 appends to the same changelog section, so without it every merge strands every other open
@@ -447,10 +566,15 @@ merge GitHub rejects (for example `REVIEW_REQUIRED`) is reported "needs a human 
 the pass continues. `--admin-fallback` retries it with `gh pr merge --admin`; that is a
 person's decision for one run, never a configuration default, and CI never passes it.
 
-Outside authors receive a fresh structured Claude review after scans pass. Findings feed
-the same bounded repair loop as failed scans. Forks are never mutated with privileged
-credentials; when a fork needs edits, automation preserves its exact head in a linked
-repository-owned replacement PR.
+Who reviews after scans pass depends on what the repository declares. With no paid review
+declared (the default), the sovereign lane reviews a trusted author's same-repository pull
+request in full, and an outside author's or a fork's pull request is told plainly that it needs a
+human review. With `[pr_automation] paid_review = true`, outside authors receive a fresh
+structured paid review. With `[pr_automation.pr_af] enabled = true`, the third-party `pr-af`
+reviewer decides the gate (see [PR review and repair automation](#pr-review-and-repair-automation)).
+Findings feed the same bounded repair loop as failed scans when a repair is declared, and wait
+for a person when it is not. Forks are never mutated with privileged credentials; when a fork
+needs edits, automation preserves its exact head in a linked repository-owned replacement PR.
 
 ### PR review and repair automation
 
@@ -485,7 +609,18 @@ outside that set, rechecks the head SHA, and publishes one ordinary non-force re
 commit. Fork conflicts continue through the repository-owned replacement-PR path. Conflict
 attempts share the three-attempt repair budget, so an ambiguous merge cannot loop forever.
 
-Review and repair use the immutable-pinned Claude Code Action with selected `vibey-skills`.
+#### Who reviews, repairs and resolves conflicts
+
+| Declared in `.vibey-gh.toml` | Default | What happens |
+|---|---|---|
+| nothing (`paid_review = false`) | yes | The sovereign lane — a local Ollama-compatible model on the self-hosted runner, via `vibey-gh local-review` — answers the whole review for a trusted author's same-repository pull request while its heartbeat is fresh. Any other pull request (an outside author, a fork, the lane off or not ready) gets no automated review, and the gate says why in words. |
+| `[pr_automation] paid_review = true` | no | The pinned Claude Code Action reviews; for a trusted author the sovereign lane carries the diff-groundable half, and for anyone else its verdict is held in reserve as the fallback. |
+| `[pr_automation] paid_repair = true` | no | Failing scans and review findings are handed to the paid model to edit the branch. Undeclared, the repair job is never scheduled and the gate says a person is needed. |
+| `[pr_automation] paid_conflict_resolution = true` | no | A merge conflict is handed to the paid model. Undeclared, a person resolves it. |
+| `[pr_automation.sovereign_repair] enabled = true` | no | A failing review is handed to `gptossloop` on a GitHub-hosted runner with a declared open-weights model (default `gpt-oss:20b`); no paid counterparty is reached. |
+| `[pr_automation.pr_af] enabled = true` | no | The third-party `pr-af` reviewer (ADR-0090), pinned to a commit SHA, decides the gate, through OpenRouter on a hosted runner or on the operator's own runner; the sovereign lane runs beside it as a second opinion. This monorepo declares it on. |
+
+The paid paths use the immutable-pinned Claude Code Action with selected `vibey-skills`.
 The privileged jobs may inspect source and CI logs but may not execute contributor package
 managers, tests, builds, scripts, or binaries. Ordinary PR CI validates every repair push.
 The agent has no Git mutation tool: one trusted publisher may push a non-empty source
@@ -494,19 +629,21 @@ permits forward updates to `develop` or `main` when either is the PR head, while
 Git deletion refspec (`:branch`) structurally impossible. Managed merges automatically
 update `develop` and `main`, but no managed command uses `--delete`, `--delete-branch`, an
 empty-source refspec, or a branch-deletion API.
-Repositories must configure `ANTHROPIC_API_KEY`; `AUTOMERGE_TOKEN` is required where the
-default Actions token cannot push or merge through the repository ruleset. Installation
-does not create either secret.
+A repository that declares a paid lane must configure the secret `[ai] auth_secret` names
+(default `ANTHROPIC_API_KEY`); `AUTOMERGE_TOKEN` is required where the default Actions token
+cannot push or merge through the repository ruleset. Installation does not create either
+secret.
 
-With `[pr_automation.fallback].enabled` (on by default) and a live local lane, a
-repository gets one more line of defense before that gate fails outright: when the
-primary review returns no verdict at
-all, a `review-fallback` job sends the diff to a local Ollama model on a self-hosted
+`[pr_automation.fallback]` (on by default) is the sovereign lane's own table. With no paid
+review declared, it is the reviewer. With a paid review declared, it is one more line of defense
+before that gate fails outright: when the paid review returns no verdict at all, a
+`review-fallback` job sends the diff to a local Ollama model on a self-hosted
 runner carrying the `[pr_automation.fallback] runner_label` label (default
 `vibey-local`; never for a fork PR unless `trusted_only = false`) and
 runs `vibey-gh local-review`. A clean local verdict passes the gate under the honestly
 weaker title `PR review: gate (local fallback)`; the local model never overrides an
-actual finding, and it holds no repository credentials at all. See
+actual finding, and it holds no repository credentials at all. The lane's model defaults to
+`gpt-oss:20b` at `http://127.0.0.1:11434` (`[pr_automation.fallback] model`, `base_url`). See
 [`[pr_automation.fallback]`](docs/configuration.md) for every field and
 [Threat model](docs/threat-model.md) for what that self-hosted runner is and is not trusted
 for.
@@ -635,11 +772,35 @@ enabled = true
 scan_workflows = ["CI", "Provenance", "CodeQL", "Docs", "Conventional Commits"]
 ignored_checks = ["PR evaluate / gate", "PR review / gate", "PR automation / gate", "gate", "Merge train / merge"]
 max_repair_attempts = 3
-model = "claude-sonnet-5"
+model = "claude-sonnet-5"                # the paid model, used only on a declared paid path
 review_untrusted_authors = true
 repair_untrusted_authors = true
 replace_fork_prs = true
 retain_schedule_backstop = true
+normalise_commit_subjects = true
+paid_review = false                      # sub-doctrine 8.b: paid is declared-only
+paid_repair = false
+paid_conflict_resolution = false
+
+[pr_automation.fallback]                 # the sovereign lane
+enabled = true
+runner_label = "vibey-local"
+model = "gpt-oss:20b"
+base_url = "http://127.0.0.1:11434"
+trusted_only = true                      # fork PRs never reach the self-hosted runner
+heartbeat_ref = "refs/vibey-gh/sovereign-heartbeat"
+heartbeat_max_age_minutes = 15
+timeout_seconds = 600
+context_paths = ["README.md", "docs/index.md"]
+
+[pr_automation.sovereign_repair]
+enabled = false
+
+[pr_automation.pr_af]
+enabled = false
+
+[ai]
+auth_secret = "ANTHROPIC_API_KEY"        # the NAME of the repository secret, never its value
 
 [pr_automation.observability]
 sanitized_progress = true
@@ -808,8 +969,8 @@ the direct PR/issue events the action supports; `workflow_run`, `workflow_dispat
 `pull_request_target` retain safe phase-level job visibility without requesting that
 unsupported mode. Raw Claude JSON is never emitted during ordinary PR or scan-triggered
 runs. A repository may opt into private diagnostics with
-`allow_private_full_output = true`, then manually dispatch `PR automation` with
-`full_claude_output = true`. The workflow fails closed unless the event is manual and the
+`allow_private_full_output = true`, then manually dispatch `PR evaluate`, `PR review` or
+`Issue automation` with `full_claude_output = true`. The workflow fails closed unless the event is manual and the
 repository visibility is private. Execution records remain 90-day artifacts when
 `archive_execution_file` is enabled.
 
@@ -851,7 +1012,11 @@ derived at build time, so adopting repositories never inherit `vibey-gh` metadat
 
 ### Five-surface capability parity
 
-Every canonical capability is exposed and tested through all five supported surfaces:
+The canonical registry, `surfaces.CAPABILITIES`, holds 15 capabilities: `check`,
+`conversation`, `estimate`, `github-release`, `install`, `issue-automation`, `merge-train`,
+`pr-automation`, `promote`, `realign`, `reconcile-branches`, `rulesets`, `trailer`,
+`trailer-key` and `version`. Every one of them is exposed and tested through all five supported
+surfaces:
 
 - Python SDK: `vibey_gh.surfaces.invoke(...)`
 - CLI: the native command and the `sdk`, `api`, `mcp`, and `webhook` projections
@@ -859,8 +1024,8 @@ Every canonical capability is exposed and tested through all five supported surf
 - MCP: `initialize`, `tools/list`, and `tools/call`
 - Webhook: HMAC-SHA256 authenticated, delivery-ID replay-safe dispatch
 
-Seven CLI commands are deliberately outside this canonical registry, each for its own
-reason documented in detail in `docs/cli.md`:
+The other subcommands are CLI-only. Eight of them are kept out of the registry deliberately,
+each for its own reason documented in detail in `docs/cli.md`:
 
 - `conventional-message` and `conventional-check` are local git-hook/CI helpers that
   consume stdin, commit-message files, or revision ranges. Exposing those host-specific
@@ -876,10 +1041,11 @@ reason documented in detail in `docs/cli.md`:
   are operator-supplied commands, and it stays disabled until the operator writes
   `enabled = true` — an engine that hands the operator seat around must never gain a
   remote surface or a default-on path.
-- `local-review` and `local-triage` are local-model fallbacks that only run when the
-  primary paid review or solver produced no verdict at all. They require a self-hosted
-  runner and a local Ollama-compatible model, and must never gain remote/API/webhook
-  exposure.
+- `local-review` and `local-triage` run a local model on the self-hosted runner: the
+  sovereign review (the default reviewer when no paid review is declared), the fallback when a
+  declared paid review returns no verdict, and issue triage when the paid solver produces
+  nothing. They require a self-hosted runner and a local Ollama-compatible model, and must
+  never gain remote/API/webhook exposure.
 - `doctor` is a purely local, read-only diagnostic: it reads files already on disk (no
   network, no credentials, no execution) to judge whether the local configuration and
   installed workflows will function. There is no remote resource for an API, MCP, or
@@ -890,8 +1056,11 @@ reason documented in detail in `docs/cli.md`:
   an API, MCP, or webhook caller to act on, and exposing it remotely would mean shipping a
   built site's bytes through a surface with no such contract today.
 
-Every other repository automation capability in `surfaces.CAPABILITIES` remains available
-through all five forms.
+The remaining subcommands outside the registry (for example `setup`, `flatten`, `sabbath`,
+`tidy`, `local-authority`, `forge-snapshot`, `paper`, `issue-triage`, `heartbeat`, `runner`,
+`slots`, `forecast`, `changelog`, `announce` and `approve-check`) are not projected onto the
+other four surfaces either. Every capability in
+`surfaces.CAPABILITIES` remains available through all five forms.
 
 The parity contract enumerates every capability from one registry, invokes every adapter,
 and fails CI if any surface is absent or divergent. Because `Docs` is a configured scan,
@@ -984,7 +1153,12 @@ trusted_authors = ["your-login", "dependabot[bot]"]
 | Conversation | Answers `@vibey` (and the legacy `@vibey-gh`, with a warning) in a comment, and may make the change when a trusted author asks on a PR. |
 | Conventional Commits | Normalizes guarded same-repository topic history and republishes it with an exact-head lease. |
 | CI\* / Provenance / CodeQL / Docs | Validate code, history, security, human docs, agent docs, plugins, and interfaces. |
-| PR automation | Aggregates exact-head scans; reviews, repairs, resolves conflicts, and gates. |
+| PR evaluate (`pr-evaluate.yml`) | Re-reads the exact head's check rollup after each configured scan completes, publishes `PR evaluate / gate`, and dispatches `PR review` when a review, repair, or conflict resolution is called for. |
+| PR review (`pr-review.yml`) | Runs the exact-head review (sovereign lane, declared paid review, or `pr-af`) and the declared repair and conflict jobs, and publishes `PR review / gate`, which dispatches the merge train. Replaces the old single `PR automation` workflow, whose `PR automation / gate` is now an ignored legacy check. |
+| Changelog (`changelog.yml`) | On pull requests into the integration branch, refuses a change to a `require_for` path that adds no changelog fragment (unless labelled to skip), a malformed fragment, or a hand edit to an unreleased section (`vibey-gh changelog check`). |
+| Skip markers (`skip-markers.yml`) | Refuses a GitHub skip marker in any commit of a pull request, or in the title and body a squash merge turns into a commit (`vibey-gh skip-marker-check`). |
+| Branch health (`branch-health.yml`) | After each CI run on a push to `develop` or `main`, keeps one tracking issue per permanent branch: opened or updated while red, closed once the tip is green (`vibey-gh branch-health`). |
+| Ruleset drift (`ruleset-drift.yml`) | Daily and on a change to the declaration, compares every live ruleset with what `.vibey-gh.toml` renders and fails on any difference (`vibey-gh rulesets --check`). Read-only; `Repository profile` reconciles. |
 | Merge train | Squash-merges into `develop` and rebase-merges promotions into `main`. |
 | Promote | Opens the `develop` → `main` promotion PR once the merge train advances `develop`, or refreshes the open one's title and body. |
 | Release\* | Publishes `develop` dev builds to TestPyPI and `main` releases to PyPI. |
@@ -1014,7 +1188,8 @@ The automation distinguishes failures by what can safely resolve them:
 | Issue too ambiguous, out of scope, or blocked on an operator decision | Return `needs_human`, change nothing, mark `vibey-gh:solve-blocked` | Answer the question in the issue, or refine and edit it to start a new lineage |
 | Solution attempt returns no result at all (turn-budget exhaustion or an infrastructure failure) | Comment once naming the cause; mark `vibey-gh:solve-blocked` | Split the issue into smaller requests, or raise `[issue_automation].max_turns` |
 | Configured unsuccessful solution attempts for one issue lineage | Mark `vibey-gh:solve-exhausted`; comment once with the reason | Edit the issue to restate the request, or take it manually |
-| Exact-head review returns no verdict (exhausted API credits, missing key, model unavailable) | If `[pr_automation.fallback].enabled` and the PR is same-repository (or `trusted_only = false`), a local Ollama model on a self-hosted runner reviews the diff; a clean local verdict publishes a passing `PR review: gate (local fallback)` gate naming the weaker reviewer. Otherwise, publish a failing `PR review: review incomplete` gate naming the operator cause; never silently infer a verdict from the primary path alone | Correct the operator condition and rerun the review, or treat a local-fallback pass as the degraded signal it is |
+| No paid review declared, and the sovereign lane cannot review this PR (an outside author, a fork, the lane off, or its heartbeat stale) | Publish no automated verdict; the gate states the reason in words. A stale heartbeat is the one reason the recovery sweep re-probes | Review the pull request yourself, or bring the sovereign runner back (`vibey-gh runner check`, `vibey-gh heartbeat status`) |
+| A declared paid review returns no verdict (exhausted API credits, missing key, model unavailable) | If `[pr_automation.fallback].enabled` and the PR is same-repository (or `trusted_only = false`), a local Ollama model on a self-hosted runner reviews the diff; a clean local verdict publishes a passing `PR review: gate (local fallback)` gate naming the weaker reviewer. Otherwise, publish a failing `PR review: review incomplete` gate naming the operator cause; never silently infer a verdict from the primary path alone | Correct the operator condition and rerun the review, or treat a local-fallback pass as the degraded signal it is |
 | Stale workflow completion | Ignore it; it cannot create a successful current-head gate | None |
 | Failed trusted post-merge release workflow | Open a repair branch and ordinary PR; never patch a permanent branch directly | Correct operator-only infrastructure failures |
 
@@ -1098,8 +1273,13 @@ control on public repositories — see [Security architecture](docs/security.md)
 
 ## Troubleshooting
 
-- Empty Anthropic key: define `ANTHROPIC_API_KEY` as a repository secret, not only an
-  environment secret, and confirm the privileged workflow can read it.
+- No review on a pull request: with no paid review declared, only a trusted author's
+  same-repository pull request is reviewed, and only while the sovereign runner's heartbeat is
+  fresh. The `PR review / gate` says which condition failed; `vibey-gh runner check` and
+  `vibey-gh heartbeat status` check the runner.
+- Empty Anthropic key (a declared paid lane, documentation maintenance, or the issue solver):
+  define the secret `[ai] auth_secret` names (default `ANTHROPIC_API_KEY`) as a repository
+  secret, not only an environment secret, and confirm the privileged workflow can read it.
 - Review-blocked promotion: verify the exact-head `PR evaluate / gate` and `PR review / gate`. A
   promotion GitHub refuses is reported "needs a human merge" and waits; nothing unattended retries
   it with `--admin`. A person may, after all independent policy checks pass, with
@@ -1151,7 +1331,7 @@ pin_version = true
 ```
 
 Rendered workflows then install the exact version that rendered them
-(`vibey==X.Y.Z`) rather than the latest one, so a release changing this tool's own
+(`vibey-engine==X.Y.Z`) rather than the latest one, so a release changing this tool's own
 behavior cannot break your CI with no warning. Upgrading is explicit: run `vibey-gh
 install` from the newer release, and the pin moves forward as one visible diff you review
 and commit like any other change. The self-hosting path this repository uses to install
@@ -1159,7 +1339,11 @@ itself from source is never pinned, since it cannot depend on a published releas
 not exist yet.
 
 The pin is the release `vibey-gh` is running from, so run it from one: `uvx --from
-vibey==X.Y.Z vibey-gh install` renders `vibey==X.Y.Z`. An editable or other source-tree
+vibey-engine==X.Y.Z vibey-gh install` renders `vibey-engine==X.Y.Z` (replace `X.Y.Z` with a
+published `vibey-engine` version, for example `0.4.0`). To pin a release other than the one you
+are running, set `pin = "X.Y.Z"` beside `pin_version = true`; `pin` alone is refused, because it
+would pin nothing. The distribution name itself is `[install] fallback_package` (default
+`vibey-engine`), and the old `vibey` name on PyPI is retired. An editable or other source-tree
 install carries the last release's number while its templates may be ahead of it, so it
 pins nothing: the install stays floating, and `install` and `check` print a `notice:`
 saying so rather than leaving the key silently inert.
@@ -1180,6 +1364,18 @@ request as an outside contribution.
 The commit trailer covers both without touching them. A naive "comment in every changed
 file" rule cannot express itself in JSON and corrupts content that is checked byte for
 byte.
+
+## Where next
+
+- [docs/configuration.md](docs/configuration.md): every configuration field and its default.
+- [docs/cli.md](docs/cli.md): every argument of every command.
+- [The sovereign review runner runbook](../../../docs/runbooks/sovereign-review-runner.md):
+  standing up the self-hosted runner the default review needs.
+
+## Say it in one line
+
+vibey-gh judges every merge, release and review against the exact commit it applies to, and by
+default reviews with a local model instead of a paid one.
 
 ## Licence
 
