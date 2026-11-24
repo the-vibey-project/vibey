@@ -7,6 +7,12 @@ from claudeloop.infrastructure.interfaces.backend_interface import (
     BackendProfileLoaderInterface,
     RunBackendHistoryInterface,
 )
+from claudeloop.infrastructure.interfaces.capability_options_overlay_interface import (
+    CapabilityOptionsOverlayInterface,
+)
+from claudeloop.infrastructure.interfaces.capability_snapshot_applier_interface import (
+    CapabilitySnapshotApplierInterface,
+)
 from claudeloop.infrastructure.interfaces.class_contracts import (
     ClaudeAgentGatewayInterface,
     ClaudeCapacityProbeInterface,
@@ -15,12 +21,20 @@ from claudeloop.infrastructure.interfaces.class_contracts import (
     RunnerConfigInterface,
     TurnAccumulatorInterface,
 )
+from claudeloop.infrastructure.interfaces.instruction_file_reader_interface import (
+    InstructionFileReaderInterface,
+    InstructionTextInterface,
+)
 
 __all__ = [
     "BackendEnvironmentResolverInterface",
+    "CapabilityOptionsOverlayInterface",
+    "CapabilitySnapshotApplierInterface",
     "ClaudeAgentGatewayInterface",
     "ClaudeCapacityProbeInterface",
     "BackendProfileLoaderInterface",
+    "InstructionFileReaderInterface",
+    "InstructionTextInterface",
     "RunBackendHistoryInterface",
     "RealDoctorEnvironmentInterface",
     "RunMetaInterface",

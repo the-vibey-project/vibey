@@ -438,12 +438,13 @@ class LoopsBundleCommands:
 
     @staticmethod
     def _discard(snapshot: CapabilitySnapshot, snapshots: Path) -> None:
-        """Removes the run folder the listing's resolve made: no run will load it."""
+        """Removes the run folder the listing's resolve made (`snapshot.folder`, which every
+        resolve makes, even with no plugin enabled): no run will load it. Only a folder directly
+        inside the snapshot folder is ever removed."""
         base = Path(os.path.realpath(snapshots))
-        for folder in snapshot.plugin_dirs:
-            real = Path(os.path.realpath(folder))
-            if real.is_relative_to(base) and real != base:
-                shutil.rmtree(base / real.relative_to(base).parts[0], ignore_errors=True)
+        real = Path(os.path.realpath(snapshot.folder))
+        if real.parent == base:
+            shutil.rmtree(real, ignore_errors=True)
 
     # -- snapshots -----------------------------------------------------------------------------
 

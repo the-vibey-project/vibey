@@ -482,6 +482,20 @@ def test_skills_list_with_no_plugins_lists_nothing(cli: Paths) -> None:
     assert "no skills" in out
 
 
+def test_skills_list_leaves_no_run_folder_behind(cli: Paths) -> None:
+    """Every resolve now makes the run's folder, even with no plugin enabled, so the listing
+    removes `snapshot.folder` itself, not a folder derived from `plugin_dirs`."""
+    snapshots = cli.store / "snapshots"
+    code, out = _run("skills", "list", "--json")
+    assert code == 0, out
+    assert list(snapshots.iterdir()) == []
+    _run("plugin", "remove", "currency-research")
+    code, out = _run("skills", "list", "--json")
+    assert code == 0, out
+    assert json.loads(out)["skills"] == []
+    assert list(snapshots.iterdir()) == []
+
+
 # -- snapshots prune -----------------------------------------------------------------------------
 
 
@@ -653,15 +667,21 @@ def test_discarding_touches_only_run_folders_inside_the_snapshots(tmp_path: Path
     from vibey_runners.common.capabilities.snapshot import CapabilitySnapshot
 
     snapshots = tmp_path / "snapshots"
-    run = snapshots / "run-1" / "vibey" / "plugins" / "p"
-    run.mkdir(parents=True)
-    outside = tmp_path / "outside" / "p"
+    run = snapshots / "run-1"
+    (run / "vibey" / "plugins" / "p").mkdir(parents=True)
+    outside = tmp_path / "outside" / "run-2"
     outside.mkdir(parents=True)
     empty = SkillCatalog((), ())
-    snapshot = CapabilitySnapshot((outside, snapshots, run), empty, (), "sha256:" + "0" * 64)
-    LoopsBundleCommands._discard(snapshot, snapshots)
-    assert outside.is_dir() and snapshots.is_dir()
-    assert not (snapshots / "run-1").exists()
+
+    def discard(folder: Path) -> None:
+        snapshot = CapabilitySnapshot((), empty, (), "sha256:" + "0" * 64, folder)
+        LoopsBundleCommands._discard(snapshot, snapshots)
+
+    discard(outside)
+    discard(snapshots)
+    assert outside.is_dir() and snapshots.is_dir() and run.is_dir()
+    discard(run)
+    assert not run.exists() and snapshots.is_dir()
 
 
 # -- review 1 -----------------------------------------------------------------------------------

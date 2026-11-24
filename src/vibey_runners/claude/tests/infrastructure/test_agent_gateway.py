@@ -6,10 +6,12 @@ Uses mocked ClaudeSDKClient to test gateway logic without a live SDK connection.
 
 from __future__ import annotations
 
+from pathlib import Path
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
+from claudeloop.domain.capabilities import CLAUDE_BUILTIN_WEB_TOOLS, AppliedCapabilities
 from claudeloop.infrastructure.agent.gateway import (
     ClaudeAgentGateway,
     ClaudeCapacityProbe,
@@ -219,6 +221,43 @@ class TestSetSessionResources:
         await gw.set_session_resources(allowed_tools=["Bash", "Read"])
         assert gw._allowed_tools == ["Bash", "Read"]
         mock_client.disconnect.assert_awaited_once()
+
+    @pytest.mark.asyncio
+    async def test_a_mid_run_resource_change_keeps_every_snapshot_capability(self) -> None:
+        """`claudeloop attach`, `skill` or `connector` replaces the session's own resources
+        wholesale; the snapshot is held for the session's life and applied on every connect, so
+        nothing it gave is dropped (Review Focus 1)."""
+        applied = AppliedCapabilities(
+            digest="sha256:" + "0f" * 32,
+            plugin_dirs=("/runs/r1/plugins/alpha",),
+            skills=("alpha:review",),
+            mcp_servers={"docs": {"type": "http", "url": "https://example.invalid/mcp"}},
+            disallowed_tools=CLAUDE_BUILTIN_WEB_TOOLS,
+            add_dirs=("/inputs/one",),
+            system_prompt_append="",
+            notices=(),
+        )
+        gw = _make_gateway(
+            applied=applied,
+            plugins=["/mine/plugin"],
+            skills=["mine:skill"],
+            mcp_servers={"mine": {"type": "http", "url": "https://mine.invalid"}},
+            add_dirs=["/mine/folder"],
+        )
+        mock_client = AsyncMock()
+        gw._client = mock_client
+        await gw.set_session_resources(plugins=[], skills=None, mcp_servers={}, add_dirs=[])
+        mock_client.disconnect.assert_awaited_once()
+        options = gw._options()
+        assert options.plugins == [{"type": "local", "path": "/runs/r1/plugins/alpha"}]
+        assert options.skills == ["alpha:review", "mine:skill"]
+        assert options.mcp_servers == {
+            "docs": {"type": "http", "url": "https://example.invalid/mcp"}
+        }
+        assert options.add_dirs == [Path("/inputs/one")]
+        assert options.disallowed_tools == ["WebSearch", "WebFetch"]
+        assert options.setting_sources == []
+        assert options.strict_mcp_config is True
 
 
 class TestReconnect:
@@ -787,3 +826,26 @@ class TestBackendRuntime:
         assert options.cli_path == "/opt/claude"
         assert outcome.cost_usd == 0.0
         assert outcome.signals.local_backend is True
+
+
+class TestAttachmentsReachTheGateway:
+    @pytest.mark.asyncio
+    async def test_a_mid_run_attach_reaches_the_gateway(self, tmp_path) -> None:
+        from pathlib import Path
+
+        from claudeloop.infrastructure.resources.adapter import (
+            ATTACHMENTS_HEADING,
+            ResourcePortAdapter,
+        )
+        from claudeloop.infrastructure.resources.store import RunResourceStore
+
+        store = RunResourceStore(tmp_path / "run" / "resources")
+        adapter = ResourcePortAdapter(store)
+        gw = _make_gateway(**adapter.gateway_payload())
+        assert Path(store.attachments_dir) not in gw._options().add_dirs
+        source = tmp_path / "notes.md"
+        source.write_text("notes", encoding="utf-8")
+        adapter.apply_mutate(action="add", kind="attachment", value=str(source))
+        await gw.set_session_resources(**adapter.gateway_payload())
+        assert Path(store.attachments_dir) in gw._options().add_dirs
+        assert ATTACHMENTS_HEADING in gw._system_prompt_append

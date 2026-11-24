@@ -14,6 +14,7 @@ claudeloop --help | --man            Manual-page overview (NAME, SYNOPSIS, …)
 claudeloop run <plan-file>           New session from a markdown plan → drive to completion
                                        --cwd --attach --add-folder --from-github --import-issue
                                        --skill --plugin --connector --web-search --deep-research
+                                       --capabilities
                                        --permission-mode --slash
                                        --max-turns --max-dollars --max-wait
                                        --model --effort --preset --auto-model/--no-auto-model
@@ -66,6 +67,31 @@ claudeloop api ...                   Generated 1:1 Anthropic SDK REST commands
 See also [`../guides/run-resources-and-chat-ops.md`](../guides/run-resources-and-chat-ops.md).
 
 
+## `run --capabilities PATH`
+
+The run's locked capability snapshot, a JSON document vibey's conductor writes into the run's
+own snapshot folder before a BUILD run starts (SP-LOOPS Phase 4). It is read strictly, before
+any run folder exists, and the session then holds it for its whole life:
+
+| What | How it is applied |
+|---|---|
+| Claude settings | None: `setting_sources=[]` and `strict_mcp_config=True`, so no user, project or local setting, and no MCP server it declares, loads. |
+| Plugins | The snapshot's plugin folders, each a local plugin (`--plugin-dir`). `--plugin` adds to them. |
+| Skills | Exactly the catalog's skills, by qualified name (`plugin:skill`). `--skill` adds to them. |
+| MCP servers | A local server is `"type": "stdio"`, started through a launcher that keeps only the variables its `env_allow` names (a name the session does not have is skipped, and that name is logged, never a value); a remote server is `"type": "http"`, never `sse`. `--connector` adds to them. |
+| Folders | The run's input folders, then `--add-folder`. |
+| Web tools | `WebSearch` and `WebFetch` are disallowed unless the snapshot's `builtin_web` is true. On a local backend they are always disallowed, and a notice says so. |
+| Instruction files | The snapshot's `instruction_files` (by default `CLAUDE.md` and `AGENTS.md`), read from `--cwd` only and appended to the system prompt, never to the plan. A file over `instruction_max_bytes` is named with its size, never cut; a symlink is refused. |
+
+It is applied on every connect, so a mid-run `attach`, `folder`, `skill`, `plugin` or
+`connector` adds to it and never drops it. The `capabilities.applied` event carries the digest,
+counts and names only. A document that is refused or cannot be read exits `78`. `--connector`
+with a name the snapshot already gives, or `--web-search` beside a snapshot that switches the
+web tools off, exits `2`. A mid-run `connector add` with such a name also exits `2`, before
+anything is queued, and the run continues unchanged. Without `--capabilities` nothing changes: the session loads Claude
+Code's own settings as before.
+
+
 ## Mid-run operator control
 
 `run` / `resume` are foreground processes. A second terminal targets the same
@@ -103,7 +129,8 @@ See [`../guides/autonomous-runs.md`](../guides/autonomous-runs.md) and
 |---|---|
 | `0` | Done verdict (run/resume), or inspection/doctor success |
 | `1` | Failed run (blocked, budget, max-wait, auth, …) or doctor check failed |
-| `2` | Usage error (e.g. `prompt` without exactly one timing flag) |
+| `2` | Usage error (e.g. `prompt` without exactly one timing flag), or a flag that clashes with the `--capabilities` snapshot |
+| `78` | The run could not start as configured: its `--capabilities` document was refused or could not be read, or the backend cannot serve it |
 | `130` | Soft-stopped by `claudeloop stop` |
 
 Full terminal-state semantics:

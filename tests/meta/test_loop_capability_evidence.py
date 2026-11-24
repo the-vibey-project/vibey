@@ -54,6 +54,30 @@ def test_a_capability_without_runner_code_is_not_claimed() -> None:
     assert BY_ENGINE_ID[EngineId.CODEXLOOP].affordances.mcp is None
 
 
+SNAPSHOT_NEEDLES = {
+    '"--capabilities"',
+    'merged["setting_sources"] = []',
+    '"type": "stdio"',
+    '"type": "http"',
+    "attachments_dir",
+}
+"""The code a claudeloop run's capability snapshot goes through (SP-LOOPS Phase 4): the flag
+that names the document, the overlay that switches Claude Code's own settings off, the MCP
+transports, and the attachments folder `gateway_payload` gives the agent."""
+
+
+def test_claudeloop_and_claudeloop_local_share_every_snapshot_fact() -> None:
+    """The same binary on a local profile takes the same snapshot (R11): every fact for one is a
+    fact for the other, file and needle alike, and no fact claims claudeloop's web search."""
+    claude = {(f.capability, f.source, f.needle) for f in RUNNER_FACTS if f.loop == "claudeloop"}
+    local = {
+        (f.capability, f.source, f.needle) for f in RUNNER_FACTS if f.loop == "claudeloop-local"
+    }
+    assert claude == local
+    assert {needle for _, _, needle in claude} >= SNAPSHOT_NEEDLES
+    assert not _facts(EngineId.CLAUDELOOP.value, "web_search")
+
+
 def test_every_fact_names_a_claim_a_descriptor_makes() -> None:
     """A fact for a capability no descriptor claims is a stale row: it would let a later
     claim pass on code read for a different one."""

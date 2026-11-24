@@ -99,7 +99,20 @@ EVERY_KIND: list[tuple[str, tuple[str, ...], str | None, str]] = [
     ("handoff_gate_failed", (), None, "--raw '<json>'"),
     ("too_many_wind_downs", (), None, "--raw '<json>'"),
     ("handoff_inputs_missing", (), None, "--raw '<json>'"),
+    ("loop_capabilities_unresolved", (), None, "--raw '<json>'"),
 ]
+
+
+def test_loop_capabilities_unresolved_takes_a_free_form_answer() -> None:
+    """A BUILD run whose capability snapshot cannot be resolved parks (SP-LOOPS Phase 4, R9).
+    The fix -- `vibey loops marketplace update NAME`, or the person's `[loops]` -- happens
+    outside vibey; nothing reads the answer, which retries the job."""
+    from vibey.domain.job import LOOP_CAPABILITIES_GATE_KIND
+
+    assert LOOP_CAPABILITIES_GATE_KIND == "loop_capabilities_unresolved"
+    assert ANSWER_RULES[LOOP_CAPABILITIES_GATE_KIND] is FREE_FORM
+    gate = _gate(LOOP_CAPABILITIES_GATE_KIND)
+    assert GATE_ANSWERS.command(gate) == f"vibey answer {GATE_ID} --raw '<json>'"
 
 
 def test_the_shared_renderer_and_every_rule_satisfy_their_interfaces() -> None:

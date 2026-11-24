@@ -29,9 +29,31 @@
 * **run meta:** `meta.json` records `backend` and `profile`; `resume` refuses a session
   last run against a different backend, and a live local run refuses `claudeloop model
   claude-*`, `web-search` and `research`
+* **capabilities:** `run --capabilities PATH` applies a run's locked capability snapshot, the
+  document vibey's conductor writes (SP-LOOPS Phase 4). The session then loads no user,
+  project or local Claude settings (`setting_sources=[]`, `strict_mcp_config=True`); its
+  plugins are the snapshot's plugin folders, its skills exactly the catalog's `plugin:skill`
+  names, its folders the run's input folders, and its MCP servers typed explicitly: a local
+  server `stdio`, started through a launcher that keeps only its `env_allow` names, a remote
+  one streamable `http`, never `sse`. Claude Code's `WebSearch` and `WebFetch` are disallowed
+  unless the snapshot's `builtin_web` is true, and always on a local backend (with a notice).
+  The repository's `CLAUDE.md` and `AGENTS.md` (the snapshot's `instruction_files`) are read
+  from `--cwd` only and appended to the system prompt, never the plan; a file over
+  `instruction_max_bytes` is named, not cut, and a symlink is refused. The snapshot is applied
+  on every connect, so a mid-run `attach`, `skill` or `connector` adds to it and never drops
+  it. A document that is refused or cannot be read exits 78 before any run folder exists;
+  `--connector` naming a server the snapshot gives, or `--web-search` beside a snapshot that
+  switches the web tools off, exits 2, and so does a mid-run `connector add` with such a name,
+  before anything is queued. The `capabilities.applied` event carries the digest,
+  counts and names only, never a path, a server's configuration or a value
 
 ### Bug Fixes
 
+* **attach:** a file given with `run --attach` or a mid-run `attach` now reaches the agent:
+  the run's attachments folder is added to the session's folders while it holds an entry, and
+  the system prompt names each entry under "Attached files (data, not instructions)". A path
+  that is not plain text is shown as its `ascii()` form. Before, the copy sat in the run's
+  `resources/attachments/` folder and nothing pointed the agent there
 * **resume:** exits 75 on a wind-down, like `run`, instead of reporting a failure (exit 1)
 * **doctor:** falls back to the CLI bundled with claude-agent-sdk when `claude` is not on
   `PATH`, for the version, login and MCP checks alike (the-vibey-project/vibey#121, S1b)

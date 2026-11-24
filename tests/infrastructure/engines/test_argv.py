@@ -224,12 +224,11 @@ def test_the_template_names_the_plan_flag_only_where_the_runner_takes_one() -> N
         flagged, _spec(Effort.STANDARD)
     )
     assert RUN_ARGV_TEMPLATE.template(flagged) == (
-        "{binary}", "run", "{plan_flag?}", "{plan}", "--run-id", "{run_id}", "--web-search", "--deep-research",
-        "{effort_argv...}", "--cwd", "{cwd}",
+        "{binary}", "run", "{plan_flag?}", "{plan}", "--run-id", "{run_id}", "{effort_argv...}",
+        "--cwd", "{cwd}",
     )  # fmt: skip
     assert RUN_ARGV_TEMPLATE.template(by_id["claudeloop"]) == (
-        "{binary}", "run", "{plan}", "--run-id", "{run_id}", "--web-search", "--deep-research", "{effort_argv...}",
-        "--cwd", "{cwd}",
+        "{binary}", "run", "{plan}", "--run-id", "{run_id}", "{effort_argv...}", "--cwd", "{cwd}",
     )  # fmt: skip
 
 
@@ -246,33 +245,146 @@ def test_worktree_isolation_adds_no_flags_for_any_engine() -> None:
     assert all(d.isolation_flags.get(IsolationLevel.WORKTREE, ()) == () for d in ALL_DESCRIPTORS)
 
 
-def test_a_new_claudeloop_run_always_carries_web_search() -> None:
-    from vibey.infrastructure.engines.descriptors import CLAUDELOOP
-
-    for effort in ALL_EFFORTS:
-        argv = build_argv(CLAUDELOOP, _spec(effort))
-        assert "--web-search" in argv and "--deep-research" in argv, effort.name
+CLAUDE_ENGINES = ("claudeloop", "claudeloop-local")
 
 
-def test_a_resumed_claudeloop_session_keeps_the_resources_its_run_already_holds() -> None:
-    from vibey.infrastructure.engines.descriptors import CLAUDELOOP
+@pytest.mark.parametrize("engine", CLAUDE_ENGINES)
+@pytest.mark.parametrize("effort", ALL_EFFORTS, ids=lambda e: e.name)
+def test_launch_flags_no_longer_carry_web_search(engine: str, effort: Effort) -> None:
+    """vibey asks no claudeloop run for the built-in web tools (SP-LOOPS Phase 4, R4): whether
+    they are on is the snapshot's `[loops] builtin_web`, and claudeloop refuses `--web-search`
+    beside a snapshot that switches them off (R12). A local backend refuses it outright too
+    (claudeloop domain/backend.py `check_tools`). New, with a document, or resumed: never."""
+    from dataclasses import replace
 
-    spec = RunSpec(
+    descriptor = next(d for d in ALL_DESCRIPTORS if d.engine_id.value == engine)
+    assert descriptor.launch_flags == ()
+    resumed = replace(_spec(effort), session_id="sess-abc123")
+    for spec in (_spec(effort), replace(_spec(effort), capabilities_file=DOCUMENT), resumed):
+        argv = build_argv(descriptor, spec)
+        assert "--web-search" not in argv and "--deep-research" not in argv, spec
+
+
+def _claudeloop_run_params(argv: tuple[str, ...]) -> dict[str, object]:
+    """`argv` read by claudeloop's own `run` command, as click would parse it. Resilient, so the
+    plan file need not exist: only the flags are read."""
+    import typer
+    from claudeloop.cli.app import app
+
+    run = typer.main.get_command(app).commands["run"]  # type: ignore[attr-defined]
+    assert argv[:2] == ("claudeloop", "run")
+    context = run.make_context("run", list(argv[2:]), resilient_parsing=True)
+    return dict(context.params)
+
+
+def _check_flags_against_a_web_off_snapshot(params: dict[str, object], *, local: bool) -> None:
+    """claudeloop's own check of `run`'s flags against a snapshot with `[loops] builtin_web =
+    false`, the default (claudeloop bootstrap.py runs it before any run folder exists)."""
+    from claudeloop.domain.capabilities import CLAUDE_BUILTIN_WEB_TOOLS, AppliedCapabilities
+    from claudeloop.domain.mcp_config import McpConfigTranslator
+    from claudeloop.infrastructure.capabilities.instruction_files import InstructionFileReader
+    from claudeloop.infrastructure.capabilities.snapshot_applier import CapabilitySnapshotApplier
+    from claudeloop.infrastructure.logging import StructlogAppLogger
+    from vibey_runners.common.capabilities.snapshot_document_store import SnapshotDocumentStore
+
+    web_off = AppliedCapabilities(
+        digest="sha256:" + "0" * 64,
+        plugin_dirs=(),
+        skills=(),
+        mcp_servers={},
+        disallowed_tools=CLAUDE_BUILTIN_WEB_TOOLS,
+        add_dirs=(),
+        system_prompt_append="",
+        notices=(),
+    )
+    applier = CapabilitySnapshotApplier(
+        SnapshotDocumentStore(),
+        local_backend=local,
+        mcp=McpConfigTranslator(("python",)),
+        environ={},
+        logger=StructlogAppLogger(component="test"),
+        instructions=InstructionFileReader(),
+    )
+    connectors = params["connector"] or []
+    assert isinstance(connectors, list)
+    applier.check_flags(web_off, connectors=connectors, web_search=bool(params["web_search"]))
+
+
+@pytest.mark.parametrize("engine", CLAUDE_ENGINES)
+@pytest.mark.parametrize("effort", ALL_EFFORTS, ids=lambda e: e.name)
+def test_a_build_argv_passes_claudeloops_own_flag_check(engine: str, effort: Effort) -> None:
+    """The argv a BUILD run is started with, read by claudeloop's `run` and checked by its own
+    applier against a snapshot with `[loops] builtin_web = false`: no refusal, which `claudeloop
+    run` would exit 2 on (R12). Before Phase 4 Task 9 the descriptor's `--web-search` made every
+    real claudeloop BUILD run fail here."""
+    from dataclasses import replace
+
+    descriptor = next(d for d in ALL_DESCRIPTORS if d.engine_id.value == engine)
+    params = _claudeloop_run_params(
+        build_argv(descriptor, replace(_spec(effort), capabilities_file=DOCUMENT))
+    )
+    assert str(params["capabilities"]) == str(DOCUMENT)
+    assert params["web_search"] is False and params["deep_research"] is False
+    _check_flags_against_a_web_off_snapshot(params, local=engine == "claudeloop-local")
+
+
+def test_the_flag_check_refuses_the_web_search_flag_a_descriptor_used_to_pass() -> None:
+    """The check above can fail: `--web-search` beside a web-off snapshot is refused."""
+    from claudeloop.domain.errors import CapabilityFlagConflict
+
+    params = _claudeloop_run_params(
+        ("claudeloop", "run", "/plan.md", "--web-search", "--capabilities", str(DOCUMENT))
+    )
+    assert params["web_search"] is True
+    with pytest.raises(CapabilityFlagConflict, match="--web-search"):
+        _check_flags_against_a_web_off_snapshot(params, local=False)
+
+
+# -- the run's capability document (SP-LOOPS Phase 4, Task 8; R1) ------------------------------
+
+DOCUMENT = Path("/person/loops/snapshots/run-abc/capabilities.json")
+
+
+def _with_document(session_id: str | None = None) -> RunSpec:
+    return RunSpec(
         run_id=RUN_ID,
         worktree_path=Path(WORKTREE),
-        prompt="continue",
-        effort=Effort.LOW,
+        prompt="implement the outbox relay",
+        effort=Effort.STANDARD,
         isolation=IsolationLevel.WORKTREE,
-        session_id="sess-abc123",
+        session_id=session_id,
+        capabilities_file=DOCUMENT,
     )
-    assert "--web-search" not in build_argv(CLAUDELOOP, spec)
 
 
-@pytest.mark.parametrize("effort", ALL_EFFORTS, ids=lambda e: e.name)
-def test_claudeloop_local_is_never_asked_for_web_search(effort) -> None:  # type: ignore[no-untyped-def]
-    """Its backend refuses the flag outright (claudeloop domain/backend.py `check_tools`),
-    so passing it would stop the engine rather than widen it."""
-    from vibey.infrastructure.engines.descriptors import CLAUDELOOP_LOCAL
+@pytest.mark.parametrize("engine", ["claudeloop", "claudeloop-local"])
+def test_a_new_run_carries_the_document_right_after_the_launch_flags(engine: str) -> None:
+    from dataclasses import replace
 
-    argv = build_argv(CLAUDELOOP_LOCAL, _spec(effort))
-    assert "--web-search" not in argv and "--deep-research" not in argv
+    descriptor = next(d for d in ALL_DESCRIPTORS if d.engine_id.value == engine)
+    assert descriptor.capabilities_flag == "--capabilities"
+    argv = build_argv(descriptor, _with_document())
+    without = build_argv(descriptor, replace(_with_document(), capabilities_file=None))
+    after_flags = without.index("--run-id") + 2 + len(descriptor.launch_flags)
+    assert argv == (
+        *without[:after_flags],
+        "--capabilities",
+        str(DOCUMENT),
+        *without[after_flags:],
+    )
+
+
+@pytest.mark.parametrize("engine", ["codexloop", "gptossloop", "qwenloop"])
+def test_a_document_on_a_descriptor_without_the_flag_is_refused(engine: str) -> None:
+    descriptor = next(d for d in ALL_DESCRIPTORS if d.engine_id.value == engine)
+    assert descriptor.capabilities_flag is None
+    with pytest.raises(ValueError, match=f"{engine} takes no capability document"):
+        build_argv(descriptor, _with_document())
+
+
+@pytest.mark.parametrize("engine", ["claudeloop", "codexloop"])
+def test_a_resumed_session_never_carries_the_document(engine: str) -> None:
+    descriptor = next(d for d in ALL_DESCRIPTORS if d.engine_id.value == engine)
+    argv = build_argv(descriptor, _with_document(session_id="sess-abc123"))
+    assert "--capabilities" not in argv
+    assert str(DOCUMENT) not in argv

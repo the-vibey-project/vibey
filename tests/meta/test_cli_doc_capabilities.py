@@ -36,3 +36,19 @@ def test_the_capabilities_row_names_every_affordance() -> None:
 
 def test_the_capabilities_row_names_its_evidence() -> None:
     assert "`evidence`" in _capabilities_row()
+
+
+def test_the_cli_doc_names_builtin_web_and_the_capabilities_flag() -> None:
+    """The per-loop row for claudeloop says what Phase 4 changed: web search is off unless
+    `[loops] builtin_web` turns it on, and plugins, skills and MCP come from the snapshot
+    `run --capabilities` names, not from a `--web-search` vibey passes."""
+    rows = [
+        line
+        for line in CLI_DOC.read_text(encoding="utf-8").splitlines()
+        if line.startswith("| `claudeloop`, `claudeloop-local` |")
+    ]
+    assert len(rows) == 1, rows
+    row = rows[0]
+    assert "`[loops] builtin_web`" in row
+    assert "`run --capabilities`" in row
+    assert "--web-search" not in row

@@ -32,6 +32,8 @@ from vibey.application.dto import GateAnswerOutcome, ProjectRecord
 from vibey.application.gate_auto_answers import GateAutoAnswerSweep
 from vibey.application.interfaces.design_auto_accept import DesignAutoAcceptInterface
 from vibey.application.interfaces.gate_auto_answers import GateAutoAnswerSweepInterface
+from vibey.application.interfaces.observability import Logger
+from vibey.application.interfaces.projects import ProjectReader
 from vibey.application.project_kickoff import accept_supplied_design, enqueue_design_interview
 from vibey.application.visual_acceptance import VisualAcceptanceService
 from vibey.bootstrap import (
@@ -2175,6 +2177,39 @@ def operator(
     run_operator(namespace=namespace)
 
 
+async def _sweep_loop_snapshots(logger: Logger, projects: ProjectReader) -> None:
+    """Removes the run snapshots a crashed worker left, once, before this worker claims a job
+    (SP-LOOPS Phase 4, R10): those older than the person's `[loops] snapshot_max_age_days` or
+    the longest engine run deadline any registered project can use and an hour, whichever is
+    longer, so no running session loses its snapshot. The snapshot folder is the person's and
+    every project's runs share it, so every project counts, not only the ones this worker
+    serves. Projects that cannot be listed mean no sweep: a shorter age could remove a live
+    run's folder. A sweep that cannot run is logged and never stops the worker: a run's own
+    folder is still removed when its run ends.
+
+    Module-level, as the `worker` command it serves is a module-level typer function; naming
+    the step keeps its refusal arms reachable from a test without a database (ADR-0016's last
+    resort, stated). The composition is looked up at call time, as `build_full_worker` is."""
+    from vibey.bootstrap import longest_engine_run_deadline, loop_capabilities_service
+
+    try:
+        known = await projects.list_all()
+    except Exception as exc:  # the database's own errors, whatever they are: never sweep short
+        logger.warning("loop_snapshot_sweep_refused", error=str(exc))
+        return
+    try:
+        # Inside the guard: a deadline arithmetic cannot carry is a refused sweep, never a
+        # worker that cannot start.
+        deadline = longest_engine_run_deadline(record.config for record in known)
+        report = loop_capabilities_service(deadline).sweep()
+    except (ArithmeticError, ConfigError, OSError, ValueError) as exc:
+        logger.warning("loop_snapshot_sweep_refused", error=str(exc))
+        return
+    logger.info("loop_snapshot_sweep", removed=len(report.removed), refused=len(report.refused))
+    for path, reason in report.refused:
+        logger.warning("loop_snapshot_left", path=str(path), reason=reason)
+
+
 @app.command("worker")
 def worker(
     engines_opt: Annotated[
@@ -2511,6 +2546,10 @@ def worker(
                     "docs/reference/configuration.md#database-roles",
                     err=True,
                 )
+
+            # SP-LOOPS Phase 4, R10: once, before any job is claimed, and here rather than
+            # before the event loop, as every registered project's run deadline is now readable.
+            await _sweep_loop_snapshots(StructlogAppLogger(owner="worker"), resources.projects)
 
             # Sovereign by default (8.b, #322); an explicit --provider still wins.
             provider = _resolve_provider(provider_opt)

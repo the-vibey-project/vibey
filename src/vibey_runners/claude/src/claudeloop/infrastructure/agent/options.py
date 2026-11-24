@@ -31,6 +31,7 @@ from claude_agent_sdk.types import (
     ToolPermissionContext,
 )
 
+from claudeloop.domain.interfaces import AppliedCapabilitiesInterface
 from claudeloop.domain.permission import (
     DEFAULT_USER_PERMISSION_MODE,
     UserPermissionMode,
@@ -40,7 +41,11 @@ from claudeloop.infrastructure.agent.autonomy import (
     AUTONOMY_SYSTEM_PROMPT_FRAGMENT,
     build_hooks,
 )
+from claudeloop.infrastructure.agent.capability_overlay import CapabilityOptionsOverlay
 from claudeloop.infrastructure.agent.translate import COMPLETION_OUTPUT_SCHEMA
+
+_OVERLAY = CapabilityOptionsOverlay()
+"""Stateless; one instance serves every connect."""
 
 # 50 MiB — large enough for typical e2e / corpus work; override via config/CLI.
 DEFAULT_MAX_BUFFER_SIZE = 50 * 1024 * 1024
@@ -76,7 +81,11 @@ def build_turn_options(
     allowed_tools: list[str] | None = None,
     env: Mapping[str, str] | None = None,
     cli_path: str | None = None,
+    applied: AppliedCapabilitiesInterface | None = None,
 ) -> ClaudeAgentOptions:
+    """``applied`` is the run's capability snapshot, laid over everything else on every
+    connect (``capability_overlay.py``). Without one nothing is narrowed: a standalone run keeps
+    what the SDK and Claude Code load by default (R5)."""
     merged_env: dict[str, str] = {"CLAUDE_CODE_MAX_RETRIES": "10"}
     if retry_watchdog:
         merged_env["CLAUDE_CODE_RETRY_WATCHDOG"] = "1"
@@ -98,13 +107,11 @@ def build_turn_options(
     if system_prompt_append.strip():
         append = f"{append}\n\n{system_prompt_append.strip()}"
 
-    sdk_plugins: list[SdkPluginConfig] = []
-    for plugin in plugins or []:
-        # Local path plugins vs marketplace names — pass as type=local when path-like.
-        if plugin.startswith("/") or plugin.startswith(".") or "/" in plugin:
-            sdk_plugins.append({"type": "local", "path": plugin})
-        else:
-            sdk_plugins.append({"type": "local", "path": plugin})
+    # Every plugin is a local folder to the SDK: a bare name is passed as a path too, and Claude
+    # Code resolves it against the session's cwd.
+    sdk_plugins: list[SdkPluginConfig] = [
+        {"type": "local", "path": plugin} for plugin in plugins or []
+    ]
 
     # ClaudeAgentOptions.session_id pins a *new* conversation id. The CLI
     # rejects combining it with --resume / --continue unless --fork-session
@@ -150,6 +157,8 @@ def build_turn_options(
         kwargs["allowed_tools"] = allowed_tools
     if cli_path:
         kwargs["cli_path"] = cli_path
+    if applied is not None:
+        kwargs = _OVERLAY.apply(kwargs, applied)
 
     return ClaudeAgentOptions(**kwargs)
 

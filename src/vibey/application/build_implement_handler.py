@@ -34,17 +34,32 @@ brake parks it at a declared cap; a run with no dollar cap waits for one unless 
 no-cap declaration stands.
 """
 
+import asyncio
 from collections.abc import Mapping
 from dataclasses import replace
 from datetime import timedelta
 from pathlib import Path
+from typing import Final
 from uuid import UUID, uuid4
+
+from vibey_runners.common.capabilities.capability_resolution_error import (
+    CapabilityResolutionError,
+)
+from vibey_runners.common.capabilities.snapshot_document_error import SnapshotDocumentError
 
 from vibey.application.build_brief import render_work_item_brief
 from vibey.application.build_dependency_wait import DEFAULT_DEPENDENCY_WAIT, DependencyWait
 from vibey.application.build_engine_run import BuildLedger, run_and_record
 from vibey.application.build_verify_handler import granted_amount, granted_limit
-from vibey.application.dto import EngineEvent, EnqueueRequest, HumanGateRequest, JobRecord, RunSpec
+from vibey.application.dto import (
+    EngineEvent,
+    EnqueueRequest,
+    HumanGateRequest,
+    JobRecord,
+    PreparedCapabilities,
+    RunInputs,
+    RunSpec,
+)
 from vibey.application.interfaces import (
     BudgetSource,
     BuildCheckpoint,
@@ -55,6 +70,7 @@ from vibey.application.interfaces import (
     TelemetryTracer,
 )
 from vibey.application.interfaces.design import DesignSpecRepository
+from vibey.application.interfaces.loop_capabilities_interface import LoopCapabilitiesInterface
 from vibey.application.interfaces.run_inputs_interface import RunInputsInterface
 from vibey.application.ports import Clock, EngineAdapter, HumanGateRepository, JobRepository
 from vibey.application.wind_down import WindDownOrchestrator
@@ -84,16 +100,21 @@ from vibey.domain.job import (
     ESCALATION_EXHAUSTED_GATE_KIND,
     FOREIGN_BRANCH_GATE_KIND,
     HANDOFF_INPUTS_GATE_KIND,
+    LOOP_CAPABILITIES_GATE_KIND,
     FailureClass,
     idempotency_key,
 )
 from vibey.domain.ledger import EventKind
+from vibey.domain.loop_capabilities import LOOP_CAPABILITIES_RECORD
 from vibey.domain.phase import Phase
 from vibey.domain.provision import ProvisionSpec
 from vibey.domain.run_input import HANDOFF_INPUTS_KEY, RUN_INPUT_RULE
 from vibey.domain.ultra import ULTRA_PAYLOAD_KEY, ULTRA_POLICY, UltraState, UltraVerdict
 
 _EMPTY_PROVISION_SPEC = ProvisionSpec((), ())
+PROJECT_CONFIG: Final = "vibey.toml"
+"""The project's file in the worktree: the only project input to a run's capability snapshot, and
+it may only narrow what the person's own `[loops]` gives (ADR-0101)."""
 
 
 class BuildImplementHandler:
@@ -121,8 +142,10 @@ class BuildImplementHandler:
         checkpoint: BuildCheckpoint | None = None,
         ultra_policy: UltraPolicyInterface = ULTRA_POLICY,
         inputs: RunInputsInterface | None = None,
+        capabilities: LoopCapabilitiesInterface | None = None,
     ) -> None:
         self._inputs = inputs
+        self._capabilities = capabilities
         self._correlation = correlation
         self._ultra_ledger = ultra_ledger
         self._checkpoint = checkpoint
@@ -410,6 +433,7 @@ class BuildImplementHandler:
         # for a person, and a store that does not answer is a retry -- never a silent partial.
         # A seed with no pin (a job enqueued before the pin existed) keeps the seed alone.
         run_id = uuid4()
+        folders: tuple[Path, ...] = ()
         if self._inputs is not None:
             handed_off = isinstance(seed, str) and bool(seed)
             pin = job.payload.get(HANDOFF_INPUTS_KEY) if handed_off else None
@@ -464,15 +488,90 @@ class BuildImplementHandler:
                     prompt = f"{seed}\n\n{given.prompt_section}"
             elif given.prompt_section:
                 prompt = f"{prompt.rstrip()}\n\n{given.prompt_section}"
-        handle = await self._engine.start(
-            RunSpec(
-                run_id=run_id,
-                worktree_path=worktree_path,
-                prompt=prompt,
-                effort=effort,
-                isolation=IsolationLevel.WORKTREE,
+            folders = self._input_folders(given)
+
+        # The run's locked capability snapshot (SP-LOOPS Phase 4, R1-R3, R9, R10), for a loop
+        # whose runner takes one: resolved and written now, recorded before the engine starts,
+        # and removed when the run ends, however it ends. A snapshot that cannot be resolved
+        # parks the job for a person -- a run never starts without it -- and an OS error while
+        # writing it is a retry.
+        capabilities = self._capabilities
+        prepared: PreparedCapabilities | None = None
+        if capabilities is not None and self._engine.descriptor.capabilities_flag is not None:
+            try:
+                prepared = await asyncio.to_thread(
+                    capabilities.prepare,
+                    project_config=worktree_path / PROJECT_CONFIG,
+                    folders=folders,
+                )
+            except (CapabilityResolutionError, ConfigError, SnapshotDocumentError) as refused:
+                return Park(
+                    HumanGateRequest(
+                        kind=LOOP_CAPABILITIES_GATE_KIND,
+                        prompt=(
+                            f"work item {item!r} was not started: its loop capability snapshot "
+                            f"cannot be resolved: {refused}. Answer once it is fixed to retry."
+                        ),
+                    )
+                )
+            except OSError as failed:
+                return Failure(
+                    FailureClass.VIBEY,
+                    f"the loop capability snapshot could not be written for the run: {failed}",
+                )
+        try:
+            return await self._session(
+                job,
+                RunSpec(
+                    run_id=run_id,
+                    worktree_path=worktree_path,
+                    prompt=prompt,
+                    effort=effort,
+                    isolation=IsolationLevel.WORKTREE,
+                    capabilities_file=prepared.document if prepared is not None else None,
+                ),
+                prepared,
+                ultra=ultra,
             )
-        )
+        finally:
+            if capabilities is not None and prepared is not None:
+                await asyncio.to_thread(capabilities.release, prepared)
+
+    async def _session(
+        self,
+        job: JobRecord,
+        spec: RunSpec,
+        prepared: PreparedCapabilities | None,
+        *,
+        ultra: bool,
+    ) -> Outcome:
+        """Records the snapshot the run is given, starts the engine, and settles the run."""
+        item = str(job.work_item_id)
+        run_id, worktree_path, effort = spec.run_id, spec.worktree_path, spec.effort
+        if prepared is not None:
+            await self._ledger.record(
+                project_id=job.project_id,
+                cycle=job.cycle,
+                job_id=job.id,
+                engine_id=self._engine.descriptor.engine_id,
+                correlation_id=self._correlation.for_project(job.project_id).value,
+                causation_id=run_id,
+                event=EngineEvent(
+                    kind=EventKind.LOOP_CAPABILITIES_SNAPSHOTTED.value,
+                    at=self._clock.now(),
+                    payload=LOOP_CAPABILITIES_RECORD.payload(
+                        run_id=run_id,
+                        digest=prepared.digest,
+                        plugins=prepared.plugins,
+                        skills=prepared.skills,
+                        skills_skipped=prepared.skills_skipped,
+                        mcp_local=prepared.mcp_local,
+                        mcp_remote=prepared.mcp_remote,
+                        notices=len(prepared.notices),
+                    ),
+                ),
+            )
+        handle = await self._engine.start(spec)
         run_outcome = await run_and_record(
             self._engine,
             self._ledger,
@@ -565,6 +664,13 @@ class BuildImplementHandler:
             result["verify_job_id"] = str(verify.id)
             result["worktree_path"] = str(worktree_path)
         return Success(result)
+
+    @staticmethod
+    def _input_folders(given: RunInputs) -> tuple[Path, ...]:
+        """The run's input folder (`.vibey/inputs/<run>/`, the one holding `attachments/` and
+        `paste.md`), absolute, for the capability document's folders; none without inputs."""
+        held = given.attachments_dir if given.attachments_dir is not None else given.paste_file
+        return () if held is None else (held.parent.absolute(),)
 
 
 # Standing constraints for every engine session. Each line traces to a

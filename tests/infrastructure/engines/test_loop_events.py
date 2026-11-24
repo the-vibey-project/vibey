@@ -275,3 +275,17 @@ def test_at_most_one_event_type_requests_a_turn(engine_id: EngineId) -> None:
         if kind is EventKind.TURN_REQUESTED
     ]
     assert len(requested) <= 1
+
+
+def test_no_loop_event_type_maps_to_capabilities_snapshotted() -> None:
+    """`LoopCapabilitiesSnapshotted` is vibey's record of what a run was given, written before
+    the engine starts (SP-LOOPS Phase 4). No runner event may translate onto it, so an engine
+    can never claim, or overwrite, the snapshot it was handed."""
+    for engine_id, table in LOOP_EVENT_MAP.items():
+        assert EventKind.LOOP_CAPABILITIES_SNAPSHOTTED not in table.values(), engine_id
+        for event_type in table:
+            assert (
+                translate_event_type(engine_id, event_type)
+                is not EventKind.LOOP_CAPABILITIES_SNAPSHOTTED
+            )
+        assert translate_event_type(engine_id, "LoopCapabilitiesSnapshotted") is None

@@ -279,3 +279,78 @@ class TestResourcePortAdapter:
         payload = adapter.gateway_payload()
         assert "Memory content" in payload["system_prompt_append"]
         assert payload["system_prompt_append"].strip() != ""
+
+
+class TestAttachmentsReachTheAgent:
+    """`claudeloop run --attach` copies a file into the run; the agent must be told."""
+
+    def test_an_attached_file_is_in_the_agents_folders(self, tmp_path: Path) -> None:
+        store = _make_store(tmp_path)
+        source = tmp_path / "notes.md"
+        source.write_text("notes", encoding="utf-8")
+        store.ensure()
+        store.add_folder("/elsewhere")
+        store.attach(source)
+        payload = ResourcePortAdapter(store).gateway_payload()
+        assert payload["add_dirs"] == ["/elsewhere", str(store.attachments_dir)]
+
+    def test_an_attached_file_is_named_in_the_system_prompt(self, tmp_path: Path) -> None:
+        from claudeloop.infrastructure.resources.adapter import ATTACHMENTS_HEADING
+
+        store = _make_store(tmp_path)
+        store.set_flag(cli_system_prompt_append="CLI append first.")
+        store.set_memory("note1", "Memory second.")
+        source = tmp_path / "notes.md"
+        source.write_text("notes", encoding="utf-8")
+        store.attach(source)
+        prompt = ResourcePortAdapter(store).gateway_payload()["system_prompt_append"]
+        line = f"- {(store.attachments_dir / 'notes.md').absolute()}"
+        assert ATTACHMENTS_HEADING in prompt
+        assert line in prompt
+        # The block follows the CLI's own append and the memories.
+        assert prompt.index("CLI append first.") < prompt.index("Memory second.")
+        assert prompt.index("Memory second.") < prompt.index(ATTACHMENTS_HEADING)
+        assert prompt.index(ATTACHMENTS_HEADING) < prompt.index(line)
+
+    def test_an_attached_folder_is_listed_as_one_entry(self, tmp_path: Path) -> None:
+        store = _make_store(tmp_path)
+        source = tmp_path / "bundle"
+        source.mkdir()
+        (source / "a.txt").write_text("a", encoding="utf-8")
+        store.attach(source)
+        payload = ResourcePortAdapter(store).gateway_payload()
+        assert payload["add_dirs"] == [str(store.attachments_dir)]
+        line = f"- {(store.attachments_dir / 'bundle').absolute()}"
+        assert line in payload["system_prompt_append"]
+
+    def test_no_attachments_add_no_folder_and_no_heading(self, tmp_path: Path) -> None:
+        from claudeloop.infrastructure.resources.adapter import ATTACHMENTS_HEADING
+
+        store = _make_store(tmp_path)
+        store.ensure()
+        store.add_folder("/elsewhere")
+        payload = ResourcePortAdapter(store).gateway_payload()
+        assert payload["add_dirs"] == ["/elsewhere"]
+        assert ATTACHMENTS_HEADING not in payload["system_prompt_append"]
+        assert payload["system_prompt_append"] == ""
+
+    def test_an_unattached_file_leaves_no_folder_behind(self, tmp_path: Path) -> None:
+        store = _make_store(tmp_path)
+        source = tmp_path / "notes.md"
+        source.write_text("notes", encoding="utf-8")
+        adapter = ResourcePortAdapter(store)
+        adapter.apply_mutate(action="add", kind="attachment", value=str(source))
+        assert str(store.attachments_dir) in adapter.gateway_payload()["add_dirs"]
+        adapter.apply_mutate(action="rm", kind="attachment", value=str(source), name="notes.md")
+        assert str(store.attachments_dir) not in adapter.gateway_payload()["add_dirs"]
+
+    def test_an_unplain_attachment_name_is_escaped_in_the_prompt(self, tmp_path: Path) -> None:
+        store = _make_store(tmp_path)
+        name = "invoice‮gpj.md"
+        source = tmp_path / name
+        source.write_text("x", encoding="utf-8")
+        store.attach(source)
+        prompt = ResourcePortAdapter(store).gateway_payload()["system_prompt_append"]
+        escaped = ascii(str((store.attachments_dir / name).absolute()))
+        assert "‮" not in prompt
+        assert f"- {escaped}" in prompt

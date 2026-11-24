@@ -108,9 +108,8 @@ class ClaudeLoopProcess:
         if reusable is not None:
             return reusable
         write_plan(spec)
-        lane = build_argv(CLAUDELOOP, spec)
         argv = (
-            *lane,
+            *build_argv(CLAUDELOOP, spec),
             "--max-turns",
             str(self._max_turns),
             "--max-dollars",
@@ -118,9 +117,10 @@ class ClaudeLoopProcess:
             "--no-auto-model",
             "--max-wait",
             "1",
-            # Every lane is given web search (CLAUDELOOP.launch_flags); a caller's request
-            # for it only adds the flag to a descriptor that did not already carry it.
-            *(("--web-search",) if web_search and "--web-search" not in lane else ()),
+            # Only a caller that asks for web search gets it (DESIGN's bounded research does):
+            # the descriptor no longer gives every run `--web-search` (SP-LOOPS Phase 4, R4).
+            # These sessions carry no capability snapshot, so claudeloop accepts the flag.
+            *(("--web-search",) if web_search else ()),
         )
         completed = await self._executor.execute(argv)
         if completed.returncode != 0:

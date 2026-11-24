@@ -10,6 +10,7 @@ Reverting either (another root, or `RunInputsSettings()` defaults) fails here.
 import asyncio
 import os
 from collections.abc import Callable
+from datetime import timedelta
 from pathlib import Path
 from typing import Any
 
@@ -71,3 +72,43 @@ async def test_the_worker_composes_run_inputs_with_the_shared_root_and_live_limi
     [(given, limits)] = calls
     assert given is resources
     assert limits is bootstrap.run_inputs_limits
+
+
+async def test_the_worker_composes_the_snapshot_beside_the_inputs_with_the_projects_deadline(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """BUILD's run inputs and its capability snapshot (SP-LOOPS Phase 4, Task 8) coexist: the
+    worker composes both, the snapshot with the deadline the project's own sessions run under,
+    so a sweep never takes a snapshot a session inside its deadline still holds (R10)."""
+    deadlines: list[Any] = []
+    inputs: list[Any] = []
+    real = bootstrap.loop_capabilities_service
+    real_inputs = bootstrap.run_inputs_service
+
+    def recording(run_deadline: Any = None, **kwargs: Any) -> Any:
+        deadlines.append(run_deadline)
+        return real(run_deadline, **kwargs)
+
+    def recording_inputs(resources: Any, limits: Any) -> RunInputsService:
+        inputs.append(resources)
+        return real_inputs(resources, limits)
+
+    monkeypatch.delenv(bootstrap.ENGINE_RUN_MINUTES_ENV, raising=False)
+    monkeypatch.setattr(bootstrap, "loop_capabilities_service", recording)
+    monkeypatch.setattr(bootstrap, "run_inputs_service", recording_inputs)
+    monkeypatch.setattr(bootstrap, "run_inputs_root", lambda: tmp_path / "state" / "inputs")
+    async with bootstrap.build_app() as resources:
+        project = await resources.projects.create(
+            "wired", tmp_path, max_cycles=3, config={"engines": {"max_run_minutes": 90}}
+        )
+        bootstrap.build_full_worker(
+            resources=resources,
+            project=project,
+            design_provider=ScriptedDesignProvider(),
+            visual_provider=ScriptedVisualProvider(),
+            decomposer=ScriptedWorkPlanProducer(),
+            owner="snapshot-wiring",
+            engine_adapters={},
+        )
+    assert inputs == [resources]
+    assert deadlines == [timedelta(minutes=90)]

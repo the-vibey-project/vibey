@@ -96,6 +96,16 @@ class TestRunMeta:
         assert meta.attempt == 3
         assert meta.model == "opus"
 
+    def test_the_snapshots_mcp_server_names_round_trip(self, tmp_path: Path) -> None:
+        directory = RunDirectory.create(tmp_path / "runs", cwd=tmp_path, run_id="r1")
+        directory.update_meta(snapshot_mcp_servers=["files", "docs"])
+        assert directory.read_meta().snapshot_mcp_servers == ["files", "docs"]
+
+    def test_a_run_without_a_snapshot_gives_no_mcp_server_names(self) -> None:
+        meta = RunMeta.from_dict({"run_id": "r1", "pid": 1, "cwd": "/", "started_at": "x"})
+        assert meta.snapshot_mcp_servers == []
+        assert meta.to_dict()["snapshot_mcp_servers"] == []
+
 
 class TestRunDirectory:
     def test_create_auto_id(self, tmp_path: Path) -> None:

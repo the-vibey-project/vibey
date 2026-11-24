@@ -39,6 +39,8 @@ plugins share goes to the first in bundle order and the later one is a skipped r
 are made one safe line and capped at `description_limit` characters, and skipped reasons likewise
 (`SafeText`).
 
+Every resolve makes the run's own folder first, even for a bundle that enables no plugin, since
+the run's capability document is written into it (SP-LOOPS Phase 4, R1); the snapshot names it.
 On any failure the run's folder is removed, and only `CapabilityResolutionError` (and its two
 subclasses) escapes: a plain `ValueError` or `RuntimeError` (a `RecursionError`, say) from a
 collaborator is wrapped. Declared by
@@ -179,29 +181,26 @@ class CapabilityResolver:
         located: dict[tuple[str, str], Path] = {}
         links: list[tuple[Path, str]] = []
         budget = _Budget(self._max_entries, self._max_bytes)
-        run: Path | None = None
+        run = self._run_folder()
         try:
             for name, wanted in by_marketplace.items():
                 spec = self._spec(name, declared)
                 root = self._root(name, roots)
                 records, used[name] = self._verified(name, spec, root, entries.get(name))
-                if run is None:
-                    run = self._run_folder()
                 folders, skipped = self._copy(name, root, records, wanted, run / name, budget)
                 located.update(((name, plugin), folder) for plugin, folder in folders.items())
                 links.extend(skipped)
             plugin_dirs = tuple(located[(p.marketplace, p.name)] for p in plugins)
             skills = self._catalog(self._skills.build(plugin_dirs), bundle.disabled, links)
+            servers = tuple(s for s in bundle.mcp_servers if s.name not in bundle.disabled)
+            return CapabilitySnapshot(plugin_dirs, skills, servers, self._digest(bundle, used), run)
         except BaseException as exc:
-            if run is not None:
-                shutil.rmtree(run, ignore_errors=True)  # an unverified copy is never left behind
+            shutil.rmtree(run, ignore_errors=True)  # an unverified copy is never left behind
             if isinstance(exc, ValueError | RuntimeError) and not isinstance(
                 exc, CapabilityResolutionError
             ):
                 raise CapabilityResolutionError(f"the bundle cannot be resolved: {exc}") from exc
             raise
-        servers = tuple(s for s in bundle.mcp_servers if s.name not in bundle.disabled)
-        return CapabilitySnapshot(plugin_dirs, skills, servers, self._digest(bundle, used))
 
     # -- the inputs ------------------------------------------------------------------------------
 
@@ -342,8 +341,15 @@ class CapabilityResolver:
     # -- the copy ---------------------------------------------------------------------------------
 
     def _run_folder(self) -> Path:
-        self._snapshots.mkdir(mode=0o700, parents=True, exist_ok=True)
-        return Path(tempfile.mkdtemp(prefix=_RUN_PREFIX, dir=self._snapshots))  # 0700
+        """A fresh 0700 folder for this run; every resolve makes one, so a folder that cannot be
+        made is a resolution error like any other, never a bare `OSError`."""
+        try:
+            self._snapshots.mkdir(mode=0o700, parents=True, exist_ok=True)
+            return Path(tempfile.mkdtemp(prefix=_RUN_PREFIX, dir=self._snapshots))  # 0700
+        except OSError as exc:
+            raise CapabilityResolutionError(
+                f"the run's snapshot folder cannot be made in {self._snapshots}: {exc}"
+            ) from exc
 
     def _copy(
         self,
@@ -464,6 +470,9 @@ class CapabilityResolver:
                 "mcp_servers": [asdict(spec) for spec in bundle.mcp_servers],
                 "skills": list(bundle.skills),
                 "disabled": sorted(bundle.disabled),
+                "builtin_web": bundle.builtin_web,
+                "instruction_files": list(bundle.instruction_files),
+                "instruction_max_bytes": bundle.instruction_max_bytes,
             },
             "lock": [asdict(used[name]) for name in sorted(used)],
         }

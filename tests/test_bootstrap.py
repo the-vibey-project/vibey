@@ -21,6 +21,7 @@ from vibey.bootstrap import (
     _independent_review_required,
     build_design_worker,
     build_visual_worker,
+    longest_engine_run_deadline,
     qwenloop_enabled,
 )
 from vibey.domain.config import ConfigError
@@ -508,6 +509,65 @@ def test_an_unusable_deadline_never_switches_the_limit_off() -> None:
         assert _engine_run_deadline(config, environ={}) == timedelta(minutes=240)
     environ = {"VIBEY_ENGINE_MAX_RUN_MINUTES": "0"}
     assert _engine_run_deadline({}, environ=environ) == timedelta(minutes=240)
+
+
+def test_a_deadline_beyond_what_a_timedelta_holds_is_read_as_the_ceiling() -> None:
+    """Security finding (DoS): `timedelta(minutes=10**15)` raises OverflowError, which crashed
+    the worker at start-up and any BUILD run reading that config. A count past the arithmetic
+    ceiling is read as the ceiling: never ignored, which would silently shorten the run."""
+    from datetime import timedelta
+
+    ceiling = timedelta(minutes=bootstrap.ENGINE_RUN_MINUTES_CEILING)
+    config = {"engines": {"max_run_minutes": 10**15}}
+    assert _engine_run_deadline(config, environ={}) == ceiling
+    assert _engine_run_deadline({}, environ={"VIBEY_ENGINE_MAX_RUN_MINUTES": str(10**15)}) == (
+        ceiling
+    )
+
+
+def test_the_deadline_ceiling_leaves_room_for_the_sweep_margin() -> None:
+    """The ceiling is the representable range halved, so the sweep's margin added to the
+    longest deadline cannot overflow either."""
+    from datetime import timedelta
+
+    from vibey.application.loop_capabilities_service import DEADLINE_MARGIN
+
+    representable = timedelta.max // timedelta(minutes=1)
+    assert representable // 2 == bootstrap.ENGINE_RUN_MINUTES_CEILING
+    configs = [{"engines": {"max_run_minutes": 10**15}}]
+    longest = longest_engine_run_deadline(configs, environ={})
+    assert longest == timedelta(minutes=bootstrap.ENGINE_RUN_MINUTES_CEILING)
+    assert (longest + DEADLINE_MARGIN).total_seconds() > longest.total_seconds()
+    exact = {"engines": {"max_run_minutes": bootstrap.ENGINE_RUN_MINUTES_CEILING}}
+    assert _engine_run_deadline(exact, environ={}) == longest
+
+
+def test_the_longest_engine_run_deadline_is_the_longest_any_project_can_use() -> None:
+    """The worker's start-up sweep must outlast every project's session (SP-LOOPS Phase 4,
+    R10), as the snapshot folder is the person's and every project's runs share it."""
+    from datetime import timedelta
+
+    configs = [{"engines": {"max_run_minutes": 90}}, {"engines": {"max_run_minutes": 2880}}, {}]
+    assert longest_engine_run_deadline(configs, environ={}) == timedelta(minutes=2880)
+
+
+def test_the_longest_engine_run_deadline_never_falls_below_the_default() -> None:
+    """A project with no `[engines]`, or one registered after the worker starts, runs to the
+    default, so a shorter project deadline never shortens the sweep's."""
+    from datetime import timedelta
+
+    configs = [{"engines": {"max_run_minutes": 30}}]
+    assert longest_engine_run_deadline(configs, environ={}) == timedelta(minutes=240)
+    assert longest_engine_run_deadline([], environ={}) == timedelta(minutes=240)
+
+
+def test_the_longest_engine_run_deadline_follows_the_environment_over_every_project() -> None:
+    """`VIBEY_ENGINE_MAX_RUN_MINUTES` beats each project's own key, so it is every session's."""
+    from datetime import timedelta
+
+    environ = {"VIBEY_ENGINE_MAX_RUN_MINUTES": "60"}
+    configs = [{"engines": {"max_run_minutes": 2880}}]
+    assert longest_engine_run_deadline(configs, environ=environ) == timedelta(minutes=60)
 
 
 def test_loops_bundle_settings_read_real_files_through_the_toml_reader(tmp_path: Path) -> None:

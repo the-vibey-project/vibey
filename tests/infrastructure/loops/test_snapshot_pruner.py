@@ -151,3 +151,62 @@ def test_a_run_folder_that_vanishes_before_it_is_looked_at_is_skipped(
     monkeypatch.setattr(module.os, "lstat", lstat)
     report = SnapshotPruner(clock=lambda: NOW).prune(snapshots, older_than_seconds=DAY)
     assert report == PruneReport((kept,), ())
+
+
+# -- one run's folder, removed when its run ends (SP-LOOPS Phase 4, Task 8; R10) ---------------
+
+
+def test_remove_removes_one_run_folder_directly_in_snapshots(tmp_path: Path) -> None:
+    snapshots = tmp_path / "snapshots"
+    run = _run(snapshots, "run-done", 0)
+    other = _run(snapshots, "run-other", 0)
+    assert SnapshotPruner().remove(run, snapshots) is True
+    assert not run.exists()
+    assert other.is_dir()
+
+
+def test_remove_refuses_a_symlink_or_a_folder_outside_snapshots(tmp_path: Path) -> None:
+    snapshots = tmp_path / "snapshots"
+    snapshots.mkdir()
+    outside = tmp_path / "outside"
+    (outside / "run-x").mkdir(parents=True)
+    (outside / "run-x" / "precious").write_text("keep", encoding="utf-8")
+    link = snapshots / "run-link"
+    link.symlink_to(outside / "run-x")
+    nested = _run(snapshots / "run-parent", "run-nested", 0)
+    not_a_run = _run(snapshots, "keep-me", 0)
+    a_file = snapshots / "run-file"
+    a_file.write_text("x", encoding="utf-8")
+    pruner = SnapshotPruner()
+
+    assert pruner.remove(link, snapshots) is False  # a symlink is never followed or removed
+    assert pruner.remove(outside / "run-x", snapshots) is False  # not in the snapshot folder
+    assert pruner.remove(nested, snapshots) is False  # not directly in it
+    assert pruner.remove(not_a_run, snapshots) is False  # not a run's folder
+    assert pruner.remove(a_file, snapshots) is False  # not a folder
+    assert pruner.remove(snapshots / "run-gone", snapshots) is False  # nothing there
+
+    assert (outside / "run-x" / "precious").read_text(encoding="utf-8") == "keep"
+    assert link.is_symlink() and nested.is_dir() and not_a_run.is_dir() and a_file.is_file()
+
+
+def test_remove_refuses_everything_in_a_snapshot_folder_that_is_a_symlink(
+    tmp_path: Path,
+) -> None:
+    real = tmp_path / "real"
+    run = _run(real, "run-x", 0)
+    link = tmp_path / "snapshots"
+    link.symlink_to(real)
+    assert SnapshotPruner().remove(link / "run-x", link) is False
+    assert run.is_dir()
+
+
+def test_remove_reports_a_folder_it_cannot_remove(tmp_path: Path) -> None:
+    snapshots = tmp_path / "snapshots"
+    run = _run(snapshots, "run-x", 0)
+
+    def refusing(path: Path) -> None:
+        raise PermissionError(13, "Permission denied", str(path))
+
+    assert SnapshotPruner(remove=refusing).remove(run, snapshots) is False
+    assert run.is_dir()

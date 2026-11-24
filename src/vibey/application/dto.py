@@ -189,6 +189,9 @@ class RunSpec:
     effort: Effort
     isolation: IsolationLevel
     session_id: str | None = None  # set to resume a warm session
+    # The run's capability document (SP-LOOPS Phase 4, R1), for an engine whose descriptor
+    # takes one (`capabilities_flag`). A new session carries it; a resumed one never does.
+    capabilities_file: Path | None = None
 
 
 @dataclass(frozen=True, slots=True)
@@ -733,6 +736,35 @@ class TrustedLoopsBundle:
 
     bundle: BundleSpec
     notices: tuple[str, ...] = ()
+
+
+@dataclass(frozen=True, slots=True)
+class PreparedCapabilities:
+    """One BUILD run's capability snapshot, resolved and written before its engine starts
+    (SP-LOOPS Phase 4, R1, R3).
+
+    ``document`` is the run's `capabilities.json`, inside ``folder``, the run's own 0700 folder
+    in the person's snapshot folder; removing ``folder`` removes everything the run was given
+    (R10). ``digest`` and the counts are what the ledger records. ``notices`` names each
+    `[loops]` key the project's file carried and that was dropped: logged, never recorded."""
+
+    document: Path
+    folder: Path
+    digest: str
+    plugins: int
+    skills: int
+    skills_skipped: int
+    mcp_local: int
+    mcp_remote: int
+    notices: tuple[str, ...]
+
+
+@dataclass(frozen=True, slots=True)
+class PruneReport:
+    """What `snapshots prune` removed, and what it would not touch and why."""
+
+    removed: tuple[Path, ...]
+    refused: tuple[tuple[Path, str], ...]
 
 
 @dataclass(frozen=True, slots=True)

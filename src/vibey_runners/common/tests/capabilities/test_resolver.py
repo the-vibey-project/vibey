@@ -691,12 +691,59 @@ def test_the_digest_covers_the_lock_entries_it_used(tmp_path: Path) -> None:
     assert third.digest == second.digest
 
 
-def test_a_bundle_with_no_plugins_makes_no_run_folder(tmp_path: Path) -> None:
+def test_a_bundle_with_no_plugins_still_gets_a_run_folder(tmp_path: Path) -> None:
+    """The run's capability document is written into the run's folder, so every resolve makes
+    one, even when the bundle enables no plugin (SP-LOOPS Phase 4, Task 2)."""
     snapshot = _resolver(tmp_path).resolve(_bundle({"plugins": []}), (), {})
     assert snapshot.plugin_dirs == ()
     assert snapshot.skills == SkillCatalog((), ())
     assert snapshot.digest.startswith("sha256:")
+    assert _runs(tmp_path) == [snapshot.folder]
+    assert stat.S_IMODE(os.stat(snapshot.folder).st_mode) == 0o700
+    assert list(snapshot.folder.iterdir()) == []
+
+
+def test_the_snapshot_names_its_run_folder_and_every_plugin_is_inside_it(tmp_path: Path) -> None:
+    acme = _acme(tmp_path)
+    snapshot = _resolver(tmp_path).resolve(_acme_bundle(), (_locked("acme", acme),), {"acme": acme})
+    assert _runs(tmp_path) == [snapshot.folder]
+    assert all(plugin.is_relative_to(snapshot.folder) for plugin in snapshot.plugin_dirs)
+
+
+def test_a_failed_resolve_leaves_no_run_folder(tmp_path: Path) -> None:
+    """The guarantee holds for the folder every resolve now makes: a refusal before any
+    marketplace is read (an undeclared marketplace, an unlocked one) leaves nothing behind."""
+    acme = _acme(tmp_path)
+    undeclared = BundleSpec((), (PluginSpec("linting", "acme"),), (), (), frozenset())
+    with pytest.raises(CapabilityResolutionError, match="does not declare"):
+        _resolver(tmp_path).resolve(undeclared, (), {"acme": acme})
     assert _runs(tmp_path) == []
+    with pytest.raises(UnlockedMarketplaceError):
+        _resolver(tmp_path).resolve(_acme_bundle(), (), {"acme": acme})
+    assert _runs(tmp_path) == []
+
+
+def test_a_snapshot_folder_that_cannot_be_made_is_a_resolution_error(tmp_path: Path) -> None:
+    (tmp_path / "state").mkdir()
+    (tmp_path / "state" / "snapshots").write_text("a file, not a folder", encoding="utf-8")
+    with pytest.raises(CapabilityResolutionError, match="snapshot folder cannot be made"):
+        _resolver(tmp_path).resolve(_bundle({"plugins": []}), (), {})
+
+
+def test_the_digest_changes_when_builtin_web_changes_and_not_when_the_max_age_does(
+    tmp_path: Path,
+) -> None:
+    resolver = _resolver(tmp_path)
+
+    def digest(**raw: object) -> str:
+        return resolver.resolve(_bundle({"plugins": [], **raw}), (), {}).digest
+
+    base = digest()
+    assert digest(builtin_web=True) != base
+    assert digest(instruction_files=["CLAUDE.md"]) != base
+    assert digest(instruction_max_bytes=1024) != base
+    assert digest(snapshot_max_age_days=30) == base
+    assert digest(builtin_web=False) == base
 
 
 # -- where things are read from: never the project -------------------------------------------------

@@ -9,6 +9,8 @@ from pathlib import Path
 
 from vibey_runners.common.capabilities.lock_entry import LockEntry
 
+from vibey.application.dto import PruneReport
+
 
 @dataclass(frozen=True, slots=True)
 class FetchResult:
@@ -29,9 +31,7 @@ class MarketplaceUpdate:
     fetched: FetchResult
 
 
-@dataclass(frozen=True, slots=True)
-class PruneReport:
-    """What `snapshots prune` removed, and what it would not touch and why."""
-
-    removed: tuple[Path, ...]
-    refused: tuple[tuple[Path, str], ...]
+# `PruneReport` moved to `application/dto.py` (SP-LOOPS Phase 4, Task 8): BUILD's capability
+# service, in the application layer, returns it from its sweep and may not import this module.
+# Re-exported so the path the pruner and `vibey loops snapshots prune` use does not break.
+__all__ = ["FetchResult", "MarketplaceUpdate", "PruneReport"]

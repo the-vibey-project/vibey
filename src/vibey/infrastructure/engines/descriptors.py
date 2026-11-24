@@ -60,6 +60,23 @@ _SKILLS_CONTEXT = (
     "application/build_implement_handler.py), whichever engine runs it"
 )
 
+# What a claudeloop BUILD run is given comes from its locked capability snapshot (SP-LOOPS
+# Phase 4): BUILD writes the document and starts the run with `run --capabilities PATH`
+# (`capabilities_flag` below; claudeloop cli/commands/run.py). Every claim that rests on it is
+# unit-proven only until the operator's real-run probe against a real `claude` is recorded (the
+# Phase 4 plan's Verification step 5); drop the caveat in the same change that records it.
+_CLAUDELOOP_SNAPSHOT = (
+    "a BUILD run is started with `run --capabilities PATH`, the run's locked snapshot document "
+    "(claudeloop cli/commands/run.py; unit-proven; real-run probe pending)"
+)
+# Applied on every connect, so a mid-run resource change keeps what the snapshot gave
+# (claudeloop infrastructure/agent/capability_overlay.py).
+_CLAUDELOOP_OVERLAY = (
+    "`CapabilityOptionsOverlay` sets `setting_sources=[]` and `strict_mcp_config=True`, so no "
+    "user, project or local Claude setting loads (claudeloop "
+    "infrastructure/agent/capability_overlay.py)"
+)
+
 # claudeloop's own vocabulary, shared by claudeloop-local: the same binary.
 _CLAUDELOOP_AFFORDANCES = EngineAffordances(
     files=True,
@@ -67,29 +84,31 @@ _CLAUDELOOP_AFFORDANCES = EngineAffordances(
     plugins=PluginSystem.CLAUDE_PLUGINS,
     mcp=True,
     skills=True,
-    web_search=True,
+    # Off until SP-LOOPS Phase 6 gives every loop `vibey_search` (Phase 4, R4).
+    web_search=False,
     evidence={
-        "files": "it runs in the worktree (`run --cwd`), and `run --add-folder` and "
-        "`--attach` take more (claudeloop cli/commands/run.py)",
+        "files": f"it runs in the worktree (`run --cwd`); {_CLAUDELOOP_SNAPSHOT}, whose "
+        "folders become the session's `add_dirs`; and `--attach` copies reach the agent "
+        "through the run's attachments folder, which `gateway_payload` adds to `add_dirs` and "
+        "names in the prompt (claudeloop infrastructure/resources/adapter.py `attachments_dir`)",
         "paste_text": "`prompt TEXT --now|--at-break` (claudeloop cli/commands/prompt.py); "
         "the plan itself is text",
-        "plugins": "`run --plugin` becomes the Claude Agent SDK's `plugins` option "
-        "(claudeloop cli/commands/run.py; infrastructure/agent/options.py); the plugins a "
-        "user's settings enable load through `setting_sources` (see `mcp`)",
-        "mcp": "`run --connector NAME=JSON|url` becomes the Claude Agent SDK's "
-        "`mcp_servers` (claudeloop cli/commands/run.py; infrastructure/agent/options.py); with "
-        "none named, `setting_sources` is left unset, which the SDK documents as loading every "
-        "user, project and local setting, and so the MCP servers they declare",
-        "skills": "`run --skill` becomes the Claude Agent SDK's `skills` option "
-        "(claudeloop cli/commands/run.py; infrastructure/agent/options.py); with none named it "
-        'stays unset, which the SDK documents as "not skills off" -- the CLI\'s own defaults '
-        "load every discovered skill -- and claudeloop's own test pins that nothing narrows it "
-        "(tests/infrastructure/test_options_and_bus.py)",
-        "web_search": '`run --web-search` ("Enable web search tools", off unless given) adds '
-        "the SDK's WebSearch tool to the session (claudeloop cli/commands/run.py; "
-        "infrastructure/resources/adapter.py `gateway_payload`); vibey always passes it, and "
-        "`--deep-research` beside it, which claudeloop only records as a flag "
-        "(infrastructure/resources/store.py) -- no tool or cost follows from it",
+        "plugins": f"{_CLAUDELOOP_SNAPSHOT}; {_CLAUDELOOP_OVERLAY}, and each of the snapshot's "
+        "plugin folders becomes a local `plugins` entry, which Claude Code loads as "
+        "`--plugin-dir`; `run --plugin` adds to them",
+        "mcp": f"{_CLAUDELOOP_SNAPSHOT}; `McpConfigTranslator` types each of its MCP servers: "
+        'a local one is `"type": "stdio"`, started through the scrubbed launcher, and a remote '
+        'one `"type": "http"`, never `sse` (claudeloop domain/mcp_config.py); '
+        f"{_CLAUDELOOP_OVERLAY}; `run --connector` adds to them",
+        "skills": f"{_CLAUDELOOP_SNAPSHOT}; `CapabilityOptionsOverlay` enables exactly the "
+        "catalog's skills by qualified name (`plugin:skill`) as the Claude Agent SDK's `skills` "
+        "option (claudeloop infrastructure/agent/capability_overlay.py); `run --skill` adds to "
+        "them",
+        "web_search": "`[loops] builtin_web` is false unless the person sets it, and then "
+        "claudeloop disallows Claude Code's own web tools, `CLAUDE_BUILTIN_WEB_TOOLS` "
+        "(WebSearch and WebFetch; claudeloop domain/capabilities.py, "
+        "infrastructure/capabilities/snapshot_applier.py); vibey passes neither `--web-search` "
+        "nor `--deep-research`. Every loop gets `vibey_search` in SP-LOOPS Phase 6",
     },
 )
 # `stop` and `wind-down` take `--run-id` and `--cwd`; `prompt TEXT` needs exactly one of
@@ -146,7 +165,13 @@ CLAUDELOOP = EngineDescriptor(
         ),
     },
     session_verb="sessions",
-    launch_flags=("--web-search", "--deep-research"),
+    # No `--web-search` or `--deep-research` (SP-LOOPS Phase 4, R4): the snapshot's
+    # `[loops] builtin_web` decides the built-in web tools, and claudeloop refuses
+    # `--web-search` beside a snapshot that switches them off (R12).
+    launch_flags=(),
+    # `run --capabilities PATH` (claudeloop cli/commands/run.py): the run's locked snapshot
+    # document, which BUILD writes before the session starts (SP-LOOPS Phase 4, R1).
+    capabilities_flag="--capabilities",
     # --permission-mode is real (confirmed via --help), but its actual value
     # vocabulary is Literal["bypass", "manual", "accept-edits", "plan",
     # "auto"] (domain/permission.py in the claudeloop repo) -- "container"
@@ -459,6 +484,8 @@ class ClaudeloopLocalDescriptors:
             base_weight=1,
             tier=EngineTier.LOCAL,
             doctor_args=profile,
+            # The same binary takes the same snapshot document (SP-LOOPS Phase 4, R11).
+            capabilities_flag=CLAUDELOOP.capabilities_flag,
             # The same binary, so the same verbs, run directory and envelope.
             affordances=replace(
                 CLAUDELOOP.affordances,
@@ -467,7 +494,10 @@ class ClaudeloopLocalDescriptors:
                     **CLAUDELOOP.affordances.evidence,
                     "web_search": "a local backend cannot serve Anthropic's server-side tools, "
                     "and claudeloop refuses `--web-search` and `--deep-research` against one "
-                    "(claudeloop domain/backend.py `check_tools`)",
+                    "(claudeloop domain/backend.py `check_tools`); with a snapshot it always "
+                    "disallows `CLAUDE_BUILTIN_WEB_TOOLS`, even when `[loops] builtin_web` is "
+                    "true, and says so in a notice (SP-LOOPS Phase 4, R11; claudeloop "
+                    "infrastructure/capabilities/snapshot_applier.py)",
                 },
             ),
             controls=CLAUDELOOP.controls,

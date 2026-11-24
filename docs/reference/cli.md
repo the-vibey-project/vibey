@@ -1210,6 +1210,7 @@ anywhere in `src/vibey` without an entry there.
 | `defect` | `vibey answer ID --choice requeue`, or `--choice abandon` | A job out of attempts whose last [`[queue.defect]`](configuration.md#queuedefect) failures were all one failure: no more attempts are offered. `requeue` runs it again once a fix has landed (a same-failure run parks here again at once); `abandon` cancels it. |
 | `verify_repair_exhausted`, `integrate_repair_exhausted` | `vibey answer ID --raw '{"max_rounds": N}'` | BUILD's verify and integrate repair loops. |
 | `delivery_exhausted`, `research_evidence`, `engine_misconfigured` | `vibey answer ID --raw '{}'` | Any answer retries, once the cause outside vibey is fixed. |
+| `loop_capabilities_unresolved` | `vibey answer ID --raw '<json>'` | BUILD could not resolve the run's [loop capability snapshot](#vibey-loops-marketplace-plugin-mcp-skills-snapshots) for a claudeloop or claudeloop-local run (a marketplace not locked or changed since, a lock that cannot be read, a `[loops]` that is refused, a snapshot document that cannot be written), so the engine never started: a run never starts without its snapshot. The prompt names the cause. Fix it outside vibey (usually `vibey loops marketplace update NAME`, or your own `[loops]`), then answer with any JSON object: nothing reads it, and the job retries. |
 | `foreign_branch` | `vibey answer ID --raw '{}'` | BUILD found a branch it cannot prove this project created and touched nothing. Check whose it is, move it aside (`git branch -m`), then answer: the retry cuts a fresh branch ([ADR-0008](../architecture/decisions/0008-worktree-isolation.md)). |
 | `handoff_gate_failed`, `too_many_wind_downs`, `handoff_inputs_missing`, and any kind not listed | `vibey answer ID --raw '<json>'` | Nothing reads a particular answer; you write it. |
 
@@ -1548,7 +1549,9 @@ they always have.
 provider's server-side web search (Anthropic's, OpenAI's) when their own configuration allows
 it. Those queries go straight to that provider, under its rules: vibey does not route them, does
 not see them, and this local-first rule does not cover them. A local claudeloop profile refuses
-that search.
+that search. A claudeloop BUILD run has Claude Code's own web tools switched off unless you set
+[`[loops] builtin_web = true`](configuration.md#loops), and vibey no longer passes
+`--web-search` to any claudeloop run; DESIGN's bounded research still asks for it.
 
 ## `vibey recover`
 
@@ -1740,7 +1743,7 @@ What the runners' own code shows today:
 
 | Engine | Capabilities shown | `stop` / `wind_down` / `prompt` | Envelope |
 |---|---|---|---|
-| `claudeloop`, `claudeloop-local` | files, pasted text, `claude-plugins` (`run --plugin`), MCP (`run --connector`), skills (`run --skill`); web search for `claudeloop` (`run --web-search`) and none for `claudeloop-local`, whose local backend cannot serve it; images and pasted images unknown | `--run-id` and `--cwd` for each; `prompt TEXT --now` | `event_type+payload` |
+| `claudeloop`, `claudeloop-local` | files, pasted text, `claude-plugins`, MCP and skills, all from the run's locked snapshot, which BUILD names with `run --capabilities` (no user, project or local Claude settings load; the snapshot's plugin folders, its skills by `plugin:skill` name, and its MCP servers typed `stdio` for a local server, started through the scrubbed launcher, or `http` for a remote one); no web search: Claude Code's own `WebSearch` and `WebFetch` are off unless you set [`[loops] builtin_web`](configuration.md#loops) to `true`, and on `claudeloop-local` they stay off even then, since a local backend cannot serve them; images and pasted images unknown | `--run-id` and `--cwd` for each; `prompt TEXT --now` | `event_type+payload` |
 | `codexloop` | files, pasted text, `skills-context`; MCP, skills, web search, images and pasted images unknown (no codexloop code passes an MCP server to Codex) | `--run-id` for each and no `--cwd`: run it in the worktree; `prompt TEXT --now` | `type` |
 | `gptossloop`, `qwenloop` | files, pasted text, `skills-context`, MCP (the `mcp_list` and `mcp_call` tools, over the stdio servers the operator declared), web search (the `web_search` and `web_fetch` tools, through `vibey search` and `vibey fetch`); no images, no pasted images, no skills (text messages and a fixed tool set) | each takes the run id positionally, with `--cwd`; `prompt RUN_ID TEXT`, which its runner adds to the conversation at the next turn boundary | `type` |
 
@@ -2619,7 +2622,20 @@ On start the worker preflights every allowed engine — including each local
 engine that is switched on, so a local engine is visible in `vibey engines`
 like every other. Engines with no passing recorded conformance produce
 ``warning: no recorded conformance for <names> -- engine-driven jobs will not select them until `vibey doctor --conformance --record` passes``.
-It then prints
+Before it claims a job, the worker sweeps the loop run snapshots a crashed worker left behind
+(SP-LOOPS Phase 4): it removes the `run-*` folders in `<your configuration folder>/loops/snapshots/`
+that have had no change for longer than your [`[loops] snapshot_max_age_days`](configuration.md#loops)
+(default 7) or the engine run deadline plus an hour, whichever is longer, so no running session
+loses its snapshot. Every project's runs share that folder, so the deadline is the longest any
+registered project's sessions can run to: `VIBEY_ENGINE_MAX_RUN_MINUTES` when it is set, else
+the longest of 240 minutes and every project's [`[engines] max_run_minutes`](configuration.md#engines).
+It logs `loop_snapshot_sweep` with the counts, and `loop_snapshot_left` for
+each folder it would not touch (the same rules as
+[`vibey loops snapshots prune`](#vibey-loops-marketplace-plugin-mcp-skills-snapshots)). A sweep
+that cannot run, including one whose projects cannot be listed (it then removes nothing), is
+logged as `loop_snapshot_sweep_refused` and never stops the worker. Each BUILD
+run's own snapshot is removed when the run ends, however it ends; a `vibey loops snapshots prune`
+you run by hand with a shorter age can still remove a running session's snapshot. It then prints
 `worker started: project=<name> engines=<list or all> parallelism=<n> provider=<p>`
 (`worker started: all projects ...` with `--all-projects`, which preflights each
 project when it is first served and prints `serving project=<name> (<id>)` then).

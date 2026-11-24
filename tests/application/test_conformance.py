@@ -149,6 +149,28 @@ async def test_a_plan_flag_is_a_claimed_flag_the_help_must_show(tmp_path: Path) 
     assert "--plan" in flags.detail
 
 
+async def test_capabilities_flag_is_checked_against_help(tmp_path: Path) -> None:
+    """The flag a runner takes its capability document by (SP-LOOPS Phase 4, R1) is a claimed
+    flag: a runner whose `run --help` lacks it fails the check naming it, before any BUILD run
+    hands it a document it would refuse at argument parsing."""
+    from dataclasses import replace
+
+    assert CLAUDELOOP.capabilities_flag == "--capabilities"
+
+    shown = await run_conformance(ScriptedEngine(descriptor=CLAUDELOOP, base_dir=tmp_path / "a"))
+    assert next(c for c in shown.checks if c.name == "flags").ok is True
+
+    unflagged = ScriptedEngine(
+        descriptor=replace(CLAUDELOOP, capabilities_flag=None), base_dir=tmp_path / "b"
+    )
+    without = ScriptedEngine(
+        descriptor=CLAUDELOOP, base_dir=tmp_path / "c", help_text=unflagged.help_text
+    )
+    flags = next(c for c in (await run_conformance(without)).checks if c.name == "flags")
+    assert flags.ok is False
+    assert "--capabilities" in flags.detail
+
+
 async def test_wrong_capacity_mapping_is_caught_by_capacity_map_check(tmp_path: Path) -> None:
     engine = ScriptedEngine(descriptor=CLAUDELOOP, base_dir=tmp_path)
     # Deliberately assert the wrong expected type for a real credits fixture.

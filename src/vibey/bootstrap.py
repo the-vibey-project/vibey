@@ -7,7 +7,7 @@ import importlib.metadata
 import os
 import platform
 import sys
-from collections.abc import AsyncIterator, Awaitable, Callable, Mapping, Sequence
+from collections.abc import AsyncIterator, Awaitable, Callable, Iterable, Mapping, Sequence
 from contextlib import asynccontextmanager, suppress
 from dataclasses import dataclass, field
 from datetime import UTC, datetime, timedelta
@@ -27,6 +27,7 @@ from vibey_runners.common.capabilities.interfaces.sidecar_lock_interface import 
 from vibey_runners.common.capabilities.manifest import MANIFEST_PATH as LOOPS_MANIFEST
 from vibey_runners.common.capabilities.resolver import CapabilityResolver
 from vibey_runners.common.capabilities.sidecar_lock import SidecarLock
+from vibey_runners.common.capabilities.snapshot_document_store import SnapshotDocumentStore
 from vibey_skills import marketplace_root
 
 from vibey import __version__
@@ -140,6 +141,7 @@ from vibey.application.interfaces.run_inputs_interface import RunInputsInterface
 from vibey.application.interfaces.sabbath import SabbathGateInterface
 from vibey.application.interfaces.ultra_control import UltraControlServiceInterface
 from vibey.application.job_dispatcher import JobDispatcher
+from vibey.application.loop_capabilities_service import LoopCapabilitiesService
 from vibey.application.loops_bundle_settings import LoopsBundleSettings
 from vibey.application.preflight import ConductorPreflight
 from vibey.application.project_abandonment import ProjectAbandonment
@@ -581,6 +583,11 @@ DEFAULT_ENGINE_RUN_MINUTES = 240
 
 ENGINE_RUN_MINUTES_ENV = "VIBEY_ENGINE_MAX_RUN_MINUTES"
 
+ENGINE_RUN_MINUTES_CEILING = timedelta.max // timedelta(minutes=1) // 2
+"""The longest engine run deadline, in minutes, that arithmetic can carry: half of what a
+`timedelta` holds, so the sweep's margin added to it cannot overflow either. The arithmetic
+limit, not a policy limit -- about 1.4 million years."""
+
 
 def _engine_dispatch(
     resources: AppResources,
@@ -621,7 +628,10 @@ def _engine_run_deadline(
     alive meanwhile, so the reaper never reclaimed it and nothing said so. Precedence:
     `VIBEY_ENGINE_MAX_RUN_MINUTES`, then the project's `[engines] max_run_minutes`, then
     240. A value that is not a positive whole number is ignored, never read as "no
-    limit": there is no way to switch the limit off, only to raise it.
+    limit": there is no way to switch the limit off, only to raise it. A value beyond
+    `ENGINE_RUN_MINUTES_CEILING` is read as the ceiling, never ignored (that would silently
+    shorten the run) and never passed to `timedelta`, which would raise OverflowError and
+    crash the worker; the ceiling is the arithmetic limit, not a policy limit.
 
     Module-level, as `_independent_review_required` is, because the composition root
     builds its handlers inside closures that only run once a real job is dispatched;
@@ -637,8 +647,26 @@ def _engine_run_deadline(
         if isinstance(raw, str):
             raw = int(raw.strip()) if raw.strip().isdigit() else None
         if isinstance(raw, int) and raw > 0:
-            return timedelta(minutes=raw)
+            return timedelta(minutes=min(raw, ENGINE_RUN_MINUTES_CEILING))
     return timedelta(minutes=DEFAULT_ENGINE_RUN_MINUTES)
+
+
+def longest_engine_run_deadline(
+    configs: Iterable[Mapping[str, object]], environ: Mapping[str, str] = os.environ
+) -> timedelta:
+    """The longest wall-clock limit any BUILD engine session can run to, across `configs`, the
+    registered projects' stored configs (SP-LOOPS Phase 4, R10).
+
+    The person's snapshot folder is shared by every project's runs, so the worker's start-up
+    sweep must outlast the longest of them. Each config is read by `_engine_run_deadline`, so
+    `VIBEY_ENGINE_MAX_RUN_MINUTES` still beats every project's key. A project with no
+    `[engines]`, or one registered after the sweep, runs to the default, so the default always
+    counts too. No policy bound is applied here, only the arithmetic ceiling
+    `_engine_run_deadline` reads every value through: a person who sets a longer deadline gets
+    a longer-lived snapshot. Module-level, as `_engine_run_deadline` is, for the reason given
+    there (ADR-0016's last resort, stated).
+    """
+    return max(_engine_run_deadline(config, environ) for config in (*configs, {}))
 
 
 def _independence_policy(
@@ -772,6 +800,9 @@ def build_full_worker(
     # isolation; ADR-0018). Unset keys keep the defaults.
     gate_runner = SubprocessGateRunner.from_config(project.config)
     run_deadline = _engine_run_deadline(project.config)
+    # The person's locked capability snapshot, given to each BUILD run whose loop takes one
+    # (SP-LOOPS Phase 4): `[loops]` and the lock are read at each run, never at the worker's start.
+    loop_capabilities = loop_capabilities_service(run_deadline)
 
     def _recording(
         handler: JobHandler, adapter: EngineAdapter, meter: SpendMeteringLedger
@@ -816,6 +847,7 @@ def build_full_worker(
             checkpoint=GitCheckpoint(),
             specs=resources.design_specs,
             inputs=run_inputs,
+            capabilities=loop_capabilities,
         )
         return _recording(handler, adapter, meter)
 
@@ -1768,8 +1800,33 @@ def loops_config_lock() -> SidecarLockInterface:
 
 
 def loops_snapshot_pruner() -> SnapshotPruner:
-    """What `vibey loops snapshots prune` removes old run snapshots with."""
+    """What `vibey loops snapshots prune` removes old run snapshots with, what a BUILD run's
+    folder is removed with when it ends, and what a worker sweeps with as it starts."""
     return SnapshotPruner()
+
+
+def loop_capabilities_service(
+    run_deadline: timedelta | None = None, *, user_config: Path | None = None
+) -> LoopCapabilitiesService:
+    """A BUILD run's capability snapshot (SP-LOOPS Phase 4, Task 8): the person's own `[loops]`
+    (`user_config`, else `acp_user_config()`), the store beside it, the resolver over that
+    store's lock and snapshot folder, the document store and the pruner. `run_deadline` is the
+    engine run deadline the sweep must outlast (R10); without one, the deadline a project with no
+    `[engines]` gets (`VIBEY_ENGINE_MAX_RUN_MINUTES`, else 240 minutes). Building it reads
+    nothing; each run reads `[loops]` and the lock afresh, so a change binds the next run.
+    Composition only."""
+    person = user_config if user_config is not None else acp_user_config()
+    store = loops_marketplace_store(person)
+    return LoopCapabilitiesService(
+        settings=loops_bundle_settings(),
+        marketplaces=store,
+        resolver=loops_resolver(store),
+        documents=SnapshotDocumentStore(),
+        pruner=loops_snapshot_pruner(),
+        user_config=person,
+        run_deadline=run_deadline if run_deadline is not None else _engine_run_deadline({}),
+        logger=StructlogAppLogger(owner="loop-capabilities"),
+    )
 
 
 def acp_state_dir(config_path: Path) -> Path:

@@ -13,6 +13,8 @@ from hypothesis import given, settings
 from hypothesis import strategies as st
 
 from vibey_runners.common.capabilities.bundle import (
+    INSTRUCTION_FILES_MAX,
+    INSTRUCTION_MAX_BYTES_CEILING,
     MAX_ENTRIES,
     MAX_TEXT,
     BundleSpec,
@@ -355,6 +357,10 @@ KEYS = [
     "command",
     "url",
     "env_allow",
+    "builtin_web",
+    "instruction_files",
+    "instruction_max_bytes",
+    "snapshot_max_age_days",
 ]
 _SCALARS = st.none() | st.booleans() | st.integers() | st.floats() | st.text(max_size=40)
 _VALUES = st.recursive(
@@ -404,3 +410,83 @@ def test_env_allow_never_hands_a_server_a_secret(name: str) -> None:
 def test_env_allow_keeps_plain_names(name: str) -> None:
     servers = [{"name": "f", "trust": "local", "command": ["x"], "env_allow": [name]}]
     assert BundleSpec.from_mapping({"mcp_servers": servers}).mcp_servers[0].env_allow == (name,)
+
+
+# -- what a loop is given besides plugins and servers (SP-LOOPS Phase 4, R4, R8, R10, R13) --------
+
+
+def test_the_default_bundle_turns_builtin_web_off_and_names_claude_md_and_agents_md() -> None:
+    bundle = BundleSpec.default()
+    assert bundle.builtin_web is False
+    assert bundle.instruction_files == ("CLAUDE.md", "AGENTS.md")
+    assert bundle.instruction_max_bytes == 65536
+    assert bundle.snapshot_max_age_days == 7
+    assert BundleSpec.from_mapping({}).builtin_web is False
+
+
+def test_the_new_keys_are_read_and_survive_narrowing() -> None:
+    bundle = BundleSpec.from_mapping(
+        {
+            "builtin_web": True,
+            "instruction_files": ["CLAUDE.md"],
+            "instruction_max_bytes": 1,
+            "snapshot_max_age_days": 1,
+        }
+    ).narrowed_by(["currency-research"])
+    assert bundle.builtin_web is True
+    assert bundle.instruction_files == ("CLAUDE.md",)
+    assert bundle.instruction_max_bytes == 1
+    assert bundle.snapshot_max_age_days == 1
+    assert BundleSpec.from_mapping({"instruction_files": []}).instruction_files == ()
+    ceiling = {"instruction_max_bytes": INSTRUCTION_MAX_BYTES_CEILING}
+    assert BundleSpec.from_mapping(ceiling).instruction_max_bytes == 1048576
+
+
+def test_a_bundle_built_by_hand_keeps_the_defaults() -> None:
+    bundle = BundleSpec((), (), (), (), frozenset())
+    assert bundle.builtin_web is False
+    assert bundle.instruction_files == ("CLAUDE.md", "AGENTS.md")
+    assert (bundle.instruction_max_bytes, bundle.snapshot_max_age_days) == (65536, 7)
+
+
+@pytest.mark.parametrize("value", [1, 0, "true", None, [True]])
+def test_builtin_web_must_be_a_bool(value: object) -> None:
+    error = _refusal({"builtin_web": value})
+    assert error.path == "loops.builtin_web"
+    assert "true or false" in error.reason
+
+
+@pytest.mark.parametrize(
+    ("files", "path"),
+    [
+        (["docs/CLAUDE.md"], "loops.instruction_files[0]"),
+        (["CLAUDE.md", "../AGENTS.md"], "loops.instruction_files[1]"),
+        (["/etc/passwd"], "loops.instruction_files[0]"),
+        (["CLAUDE.md", "CLAUDE.md"], "loops.instruction_files[1]"),
+        ("CLAUDE.md", "loops.instruction_files"),
+    ],
+)
+def test_an_instruction_file_with_a_slash_is_refused(files: object, path: str) -> None:
+    assert _refusal({"instruction_files": files}).path == path
+
+
+def test_at_most_sixteen_instruction_files_are_named() -> None:
+    names = [f"FILE{i}.md" for i in range(INSTRUCTION_FILES_MAX + 1)]
+    error = _refusal({"instruction_files": names})
+    assert error.path == "loops.instruction_files"
+    assert "at most 16" in error.reason
+    assert len(BundleSpec.from_mapping({"instruction_files": names[:16]}).instruction_files) == 16
+
+
+@pytest.mark.parametrize("value", [0, -1, 1048577, True, 1.5, "65536", None])
+def test_instruction_max_bytes_outside_1_to_1048576_is_refused(value: object) -> None:
+    error = _refusal({"instruction_max_bytes": value})
+    assert error.path == "loops.instruction_max_bytes"
+    assert "1 and 1048576" in error.reason
+
+
+@pytest.mark.parametrize("value", [0, -7, False, True, 2.0, "7", None])
+def test_snapshot_max_age_days_below_one_is_refused(value: object) -> None:
+    error = _refusal({"snapshot_max_age_days": value})
+    assert error.path == "loops.snapshot_max_age_days"
+    assert "at least 1" in error.reason

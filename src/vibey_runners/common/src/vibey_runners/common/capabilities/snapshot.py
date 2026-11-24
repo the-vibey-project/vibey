@@ -6,8 +6,11 @@
 `skills` indexes those copies, with descriptions and skipped reasons made safe for a model context
 and a terminal. `mcp_servers` are the bundle's servers, minus the disabled ones. `digest` is the
 sha256 of the bundle's canonical JSON and the lock entries the snapshot used -- the value a run
-records in the ledger; the same bundle and lock give the same digest on every run. A record with no
-behaviour, so no seam of its own.
+records in the ledger; the same bundle and lock give the same digest on every run. `folder` is the
+run's own 0700 folder: every plugin copy is inside it, the run's capability document is written
+into it (SP-LOOPS Phase 4, R1), and removing it removes everything the run was given (R10). Every
+resolve makes one, even for a bundle that enables no plugin. A record with no behaviour, so no
+seam of its own.
 """
 
 from dataclasses import dataclass
@@ -23,3 +26,4 @@ class CapabilitySnapshot:
     skills: SkillCatalog
     mcp_servers: tuple[McpServerSpec, ...]
     digest: str
+    folder: Path

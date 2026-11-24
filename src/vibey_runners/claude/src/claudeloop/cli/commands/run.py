@@ -13,9 +13,11 @@ from claudeloop.application.usecases.run_plan import parse_plan_file, run_from_p
 from claudeloop.cli.asyncio import async_command
 from claudeloop.cli.outcome import RunOutcomeReporter
 from claudeloop.cli.time_parse import parse_wind_down_at
-from claudeloop.domain.errors import InvalidPlanError
+from claudeloop.domain.capabilities import EXIT_CAPABILITIES_REFUSED
+from claudeloop.domain.errors import CapabilitySnapshotRefused, InvalidPlanError
 from claudeloop.domain.handoff_marker import HANDOFF_MARKER_FILENAME
 from claudeloop.infrastructure.config import load_config
+from claudeloop.infrastructure.events import JsonlRunEventSink
 from claudeloop.infrastructure.logging import configure_logging
 from claudeloop.infrastructure.stream_ui import BufferingStreamUi, run_textual_app
 
@@ -134,6 +136,15 @@ def run(
         "--wind-down-at",
         help="Wind down at this deadline (ISO8601 timestamp or +duration like +2h, +90m)",
     ),
+    capabilities: Path | None = typer.Option(
+        None,
+        "--capabilities",
+        help=(
+            "The run's locked capability document (written by the conductor): its plugins, "
+            "skills and folders, with no user, project or local Claude settings. Exit 78 when "
+            "it is refused"
+        ),
+    ),
 ) -> None:
     """Seed a brand-new Claude Code session from PLAN_FILE and run it
     autonomously to completion — across turns, across rate-limit windows,
@@ -171,6 +182,7 @@ def run(
         stream_ui=stream_ui,
         max_buffer_size=max_buffer_size,
         wind_down_at_spec=wind_down_at_spec,
+        capabilities=capabilities,
     )
 
 
@@ -208,6 +220,7 @@ async def _run(
     stream_ui: bool,
     max_buffer_size: int | None,
     wind_down_at_spec: str | None,
+    capabilities: Path | None = None,
 ) -> None:
     cwd = cwd_dir.resolve() if cwd_dir is not None else Path.cwd()
     wind_down_at: datetime | None = None
@@ -291,7 +304,11 @@ async def _run(
             run_id=run_id,
             append_system_prompt=combined_append,
             wind_down_at=wind_down_at,
+            capabilities=capabilities,
         )
+    except CapabilitySnapshotRefused as exc:
+        typer.echo(f"{exc}", err=True)
+        raise typer.Exit(code=EXIT_CAPABILITIES_REFUSED) from exc
     except ValueError as exc:
         typer.echo(f"{exc}", err=True)
         raise typer.Exit(code=2) from exc
@@ -303,6 +320,14 @@ async def _run(
         raise typer.Exit(code=2) from exc
     typer.echo(f"Run id: {context.run_id}", err=True)
     typer.echo(f"Trace id: {context.trace_id}", err=True)
+    # Only a run that named a document records one; `applied` is then always set.
+    applied = context.applied if capabilities is not None else None
+    if applied is not None:
+        JsonlRunEventSink(
+            context.run_dir.events_path, run_id=context.run_id, trace_id=context.trace_id
+        ).emit("capabilities.applied", applied.event_payload())
+        for notice in applied.notices:
+            typer.echo(notice, err=True)
 
     if stream_ui:
         import asyncio

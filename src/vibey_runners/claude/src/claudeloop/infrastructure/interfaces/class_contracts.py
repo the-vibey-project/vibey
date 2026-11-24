@@ -104,6 +104,9 @@ class RunMetaInterface(Protocol):
     @property
     def profile(self) -> str | None: ...
 
+    @property
+    def snapshot_mcp_servers(self) -> list[str]: ...
+
     def to_dict(self) -> Mapping[str, object]: ...
 
     @classmethod

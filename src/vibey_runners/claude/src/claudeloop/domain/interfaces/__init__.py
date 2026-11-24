@@ -2,6 +2,9 @@
 """Seams the domain layer declares (ADR-0016). Interfaces declare; they never
 consume: a module here imports the standard library and other interfaces only."""
 
+from claudeloop.domain.interfaces.applied_capabilities_interface import (
+    AppliedCapabilitiesInterface,
+)
 from claudeloop.domain.interfaces.backend_interface import (
     BackendIdentityInterface,
     BackendProfileInterface,
@@ -10,14 +13,21 @@ from claudeloop.domain.interfaces.backend_interface import (
 from claudeloop.domain.interfaces.class_contracts import (
     BackendMisconfiguredInterface,
     BackendProfileErrorInterface,
+    CapabilitySnapshotRefusedInterface,
     TurnSignalsInterface,
+)
+from claudeloop.domain.interfaces.mcp_config_translator_interface import (
+    McpConfigTranslatorInterface,
 )
 
 __all__ = [
+    "AppliedCapabilitiesInterface",
     "BackendIdentityInterface",
     "BackendMisconfiguredInterface",
     "BackendProfileInterface",
     "BackendProfileErrorInterface",
     "BackendRuntimeInterface",
+    "CapabilitySnapshotRefusedInterface",
+    "McpConfigTranslatorInterface",
     "TurnSignalsInterface",
 ]

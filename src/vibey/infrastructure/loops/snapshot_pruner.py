@@ -10,8 +10,8 @@ says otherwise): N days of inactivity is the rule, so a run still changing its s
 one that has sat untouched that long is removed even if it is still running. Removal is
 `shutil.rmtree`, which never follows a symlink inside what it removes. A `run-*` entry that is a
 symlink or not a folder, a snapshot folder that is itself a symlink, and a folder that cannot be
-listed are named and left alone. Wiring the removal to the end of each
-run, and a sweep when a worker starts, belongs to the phase that wires runs (Phase 4). Declared by
+listed are named and left alone. Phase 4 (R10) wires both: `remove` takes one run's folder away
+when its BUILD run ends, and a worker sweeps with `prune` as it starts. Declared by
 `interfaces/snapshot_pruner_interface.py::SnapshotPrunerInterface`.
 """
 
@@ -88,6 +88,28 @@ class SnapshotPruner:
                 else:
                     removed.append(path)
         return PruneReport(tuple(removed), tuple(refused))
+
+    def remove(self, folder: Path, snapshots: Path) -> bool:
+        if not folder.name.startswith(RUN_PREFIX):
+            return False
+        try:
+            if stat.S_ISLNK(os.lstat(snapshots).st_mode):
+                return False
+            # Directly in the snapshot folder, compared by where each really is: the folder's
+            # parent is resolved, never the folder itself, so a run folder that is a symlink is
+            # seen as one below and left alone.
+            if os.path.realpath(folder.parent) != os.path.realpath(snapshots):
+                return False
+            status = os.lstat(folder)
+        except OSError:  # gone already, or a path that cannot be looked at
+            return False
+        if not stat.S_ISDIR(status.st_mode):  # a symlink (lstat sees the link) or a file
+            return False
+        try:
+            self._remove(folder)
+        except OSError:
+            return False
+        return True
 
     @staticmethod
     def _newest(run: Path, own: float) -> float:

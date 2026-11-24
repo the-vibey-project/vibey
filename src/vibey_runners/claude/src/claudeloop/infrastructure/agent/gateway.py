@@ -17,7 +17,7 @@ from structlog.stdlib import BoundLogger
 
 from claudeloop.application.dto import TurnOutcome
 from claudeloop.domain.backend import BackendRuntime
-from claudeloop.domain.interfaces import BackendRuntimeInterface
+from claudeloop.domain.interfaces import AppliedCapabilitiesInterface, BackendRuntimeInterface
 from claudeloop.domain.model_profile import ModelEffortProfile
 from claudeloop.domain.permission import (
     DEFAULT_USER_PERMISSION_MODE,
@@ -64,8 +64,12 @@ class ClaudeAgentGateway:
         allowed_tools: list[str] | None = None,
         tool_approval_timeout: float = 30.0,
         backend: BackendRuntimeInterface | None = None,
+        applied: AppliedCapabilitiesInterface | None = None,
     ) -> None:
         self._cwd = cwd
+        # The run's capability snapshot, held for the session's life and laid over every
+        # connect's options, so a mid-run resource change can never drop it.
+        self._applied = applied
         # The resolved backend profile; the default is plain Anthropic.
         self._backend: BackendRuntimeInterface = backend or BackendRuntime()
         self._session_id = session_id
@@ -123,6 +127,7 @@ class ClaudeAgentGateway:
             allowed_tools=self._allowed_tools or None,
             env=self._backend.environment(),
             cli_path=self._backend.cli_path,
+            applied=self._applied,
         )
 
     async def _reconnect(self) -> None:

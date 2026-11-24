@@ -65,13 +65,20 @@ approved, and when vibey may reach the network to get it.
   network marketplace is usable only after an explicit `update`.
 - Run snapshots accumulate until removed. `vibey loops snapshots prune` removes old ones now;
   removal at the end of each run and a sweep at worker start belong to the phase that wires runs
-  (SP-LOOPS Phase 4), which must also load only from the snapshot's plugin folders.
+  (SP-LOOPS Phase 4), which must also load only from the snapshot's plugin folders. *Closed by
+  Phase 4 (below): a BUILD run's snapshot folder is removed when the run ends and a starting
+  worker sweeps the rest (R10); a snapshot run loads plugins only from the snapshot's plugin
+  folders, with no Claude settings at all (R5).*
 - The size cap on a git fetch is checked after the fetch, so a hostile remote can use disk for as
   long as git's deadline allows. Private https repositories need ssh: neither the person's
   credential helpers nor `~/.netrc` are read for https.
 - A run snapshot is aged by the newest change at its top, so `snapshots prune` removes a run that
   has been inactive that long even if it still runs; Phase 4 should mark a live run (a lease or a
-  marker the pruner honours).
+  marker the pruner honours). *Answered by Phase 4 (R10): no marker is needed, since a session is
+  bounded by its engine run deadline and the worker's sweep never removes a folder younger than
+  that deadline plus an hour. A `snapshots prune` a person runs by hand with a shorter age can
+  still remove a running session's snapshot; that is their explicit act, and the CLI reference
+  says so.*
 - The file locks are `fcntl.flock`, POSIX only, like the rest of the family today; Windows is
   backlog #1097.
 - An MCP server's `env_allow` never names a secret (a token, key, password or the Brave key):
@@ -79,6 +86,73 @@ approved, and when vibey may reach the network to get it.
 - Not yet run against a real git server or a real `/plugin marketplace add`: the git flags are
   tested against a recording runner only, and the operator-run checks the SP-LOOPS reviews list
   stay open.
+
+## Phase 4: claudeloop and claudeloop-local apply the snapshot
+
+SP-LOOPS Phase 4 (plan `docs/superpowers/plans/2026-11-24-sp-loops-phase4-claudeloop.md`) makes
+the first loops apply the bundle. The status above is unchanged; these are its rulings.
+
+- **R1 (transport).** The snapshot reaches the runner as a JSON document in the run's own 0700
+  snapshot folder, outside the worktree the model edits, named by `claudeloop run --capabilities
+  PATH`. The runners never import `vibey`.
+- **R2 (scope).** Only `build.implement` runs are given the snapshot. BUILD's verify reviewer,
+  DESIGN and DECOMPOSE keep their behaviour until a later phase.
+- **R3 (event).** `LoopCapabilitiesSnapshotted` records, before the engine starts, the digest and
+  counts a run was given, only for an engine whose descriptor takes the document
+  (`capabilities_flag`). It is withheld from ledger publication, and it opens, closes and spends
+  nothing under the no-loss rules.
+- **R4 (built-in web).** A person-only `[loops] builtin_web`, default `false`, which claudeloop
+  maps to disallowing Claude Code's `WebSearch` and `WebFetch` (`CLAUDE_BUILTIN_WEB_TOOLS`).
+  vibey no longer passes `--web-search` or `--deep-research` to a claudeloop run, which amends the
+  launch flags ADR-0092 recorded, and claudeloop's `web_search` capability is `false` until Phase 6
+  gives every loop `vibey_search`. DESIGN's bounded research still asks for web search; it carries
+  no snapshot.
+- **R5 (settings).** `setting_sources=[]` and `strict_mcp_config=True` only when a snapshot is
+  applied, so a snapshot run loads plugins only from the snapshot's plugin folders and loads no
+  user, project or local Claude setting. A standalone `claudeloop run` without `--capabilities`
+  is unchanged.
+- **R6 (skills).** Exactly the catalog's skills, by qualified name `plugin:skill`; a skill the
+  index skipped is never enabled. `[loops] skills` is not applied yet (Phase 7).
+- **R7 (MCP).** `local` becomes `{"type": "stdio"}`, started through a scrubbed launcher that keeps
+  only the `env_allow` names, reads their values from its own environment and execs the server;
+  an absent name is skipped and logged by name. The launcher runs as `python -I -m`: isolated
+  mode keeps the worktree, where the server starts, off `sys.path` and ignores every `PYTHON*`
+  variable, so nothing planted there runs before the scrub. `remote` becomes `{"type": "http"}`, never `sse`.
+  Which variables reach the session at all stays `[engine_environment]`'s decision.
+- **R8 (instruction files).** claudeloop reads `CLAUDE.md` and `AGENTS.md` from the run's `cwd`
+  only and appends them to the system prompt, never to the plan. A file over
+  `[loops] instruction_max_bytes` is named with its size, never cut (ADR-0075); a symlink is
+  refused.
+- **R9 (failure).** A snapshot that cannot be resolved parks the job on a
+  `loop_capabilities_unresolved` gate; a run never starts without it. claudeloop exits 78 on a
+  document it refuses, which the `engine_misconfigured` gate then parks.
+- **R10 (lifetime).** The run's snapshot folder is removed when the run's handler returns or
+  raises. A worker sweeps at start, with an age of the larger of
+  `[loops] snapshot_max_age_days` and the engine run deadline plus an hour. The deadline is the
+  longest any registered project's sessions can run to (`VIBEY_ENGINE_MAX_RUN_MINUTES` when set,
+  else the longest of 240 minutes and every project's `[engines] max_run_minutes`), since every
+  project's runs share the person's snapshot folder; a worker that cannot list the projects does
+  not sweep.
+- **R11 (`claudeloop-local`).** The same code path, except that `builtin_web = true` does not turn
+  the web tools back on against a local backend; claudeloop says so in a notice.
+- **R12 (merge with flags).** The snapshot and claudeloop's own `--plugin`, `--skill`,
+  `--connector` and `--add-folder` are a union, the snapshot first. An MCP name in both, or
+  `--web-search` beside `builtin_web = false`, is refused with exit 2. vibey never passes both.
+- **R13 (new person-only keys).** `builtin_web` (`false`), `instruction_files`
+  (`["CLAUDE.md", "AGENTS.md"]`, at most 16 plain names), `instruction_max_bytes` (`65536`, from 1
+  to 1048576) and `snapshot_max_age_days` (`7`, at least 1). The first three enter the snapshot's
+  digest; the last does not. A project's `[loops]` may still only `disable`.
+- **R14 (document size).** The reader refuses a document over 4 MiB, a parser guard sized from
+  the bundle's own caps, not a policy limit.
+
+A mid-run `claudeloop connector add NAME` with a name the snapshot already gives is refused by
+the command with exit 2 before anything is queued, so the run continues unchanged: the run's
+`meta.json` records the snapshot's MCP server names (names only) for that check.
+
+Still open after Phase 4:
+
+- None of this has run against a real `claude` binary or a real MCP server; the tests use
+  recorded and scripted doubles.
 
 ## Alternatives considered
 
