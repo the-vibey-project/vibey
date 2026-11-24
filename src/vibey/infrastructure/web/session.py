@@ -25,15 +25,16 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Final, Literal
 
+from vibey.domain.session_web_state import (
+    HUB_URL_VARIABLE,
+    NO_HUB,
+    STATE_VARIABLE,
+    TOKEN_FILE_VARIABLE,
+)
+
 COMMAND_VARIABLE: Final = "WEBSEARCH_COMMAND"
-HUB_URL_VARIABLE: Final = "VIBEY_HUB_URL"
-"""The hub a session reaches, on this computer's loopback (`http://127.0.0.1:<port>`)."""
-TOKEN_FILE_VARIABLE: Final = "VIBEY_WEB_TOKEN_FILE"
-"""Where the session's own token is: a path, never the token (R1)."""
-STATE_VARIABLE: Final = "VIBEY_WEB_STATE"
-"""`none` when the worker that started the session had no hub."""
-NO_HUB: Final = "no hub is running; start one with `vibey serve`"
-"""Why a session has no web search, in fixed text: the plan and the command say the same."""
+"""The name a worker told a session its `vibey` by before SP-LOOPS Phase 6. No worker sets it
+any more; it is kept only to recognise such a session (`SESSION_MARKERS`)."""
 SESSION_MARKERS: Final = ("WEBSEARCH_PROVIDER", COMMAND_VARIABLE)
 """Names only a worker ever gave a session (before Phase 6): either one marks the caller as a
 session, which never searches in its own process."""

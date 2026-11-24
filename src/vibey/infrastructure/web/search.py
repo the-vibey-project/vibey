@@ -48,12 +48,12 @@ from vibey.infrastructure.web.bounded_request import BoundedRequest, DeadlineExc
 from vibey.infrastructure.web.guarded_opener import GuardedOpener
 from vibey.infrastructure.web.untrusted_text import UntrustedText
 
-#: The `WEBSEARCH_*` form of every `VIBEY_*` search setting, read after it. Before SP-LOOPS
-#: Phase 6 a worker told every engine session the non-secret ones under these names
-#: (`session_environment`) and the session searched in its own process. No session does any
-#: more: its `vibey search` asks the hub with its own token or has no search
-#: (`infrastructure/web/session.py`), and refuses on these names alone. The Brave key is never
-#: among what a session is told.
+#: The `WEBSEARCH_*` form of every `VIBEY_*` search setting, read after it: a person's own names
+#: (and `searxng_provisioner.OWN_URL_NAMES`'s). Before SP-LOOPS Phase 6 a worker also told every
+#: engine session the non-secret ones under these names and the session searched in its own
+#: process. No worker does any more: a session is told only the hub's address and its token
+#: file's path, or that it has no web (`engines/session_web_overlay.py`), and its `vibey search`
+#: refuses on the old names alone (`infrastructure/web/session.py`).
 SESSION_PREFIX: Final = "WEBSEARCH_"
 
 SEARCH_PROVIDER_ENV: Final = "VIBEY_SEARCH_PROVIDER"
@@ -212,26 +212,6 @@ class WebSearchSettings:
             ),
             provisioned=provision is not None,
         )
-
-    def session_environment(self) -> dict[str, str]:
-        """What a worker has told an engine session about search: the local SearXNG's address,
-        the identity it must prove, and the limits. Nothing secret: a session is never given the
-        Brave key (a command the model chose could read it). The instance marker is not a
-        secret: it tells vibey's own SearXNG from another program, not from code running as you.
-
-        A session no longer searches with these (SP-LOOPS Phase 6): its `vibey search` refuses
-        on `WEBSEARCH_PROVIDER` alone and asks only the hub. The worker's overlay still carries
-        them until it names the hub instead (Phase 6, Task 5)."""
-        told = {
-            f"{SESSION_PREFIX}PROVIDER": "searxng",
-            f"{SESSION_PREFIX}SEARXNG_URL": self.searxng_url,
-            f"{SESSION_PREFIX}TIMEOUT": str(self.timeout_seconds),
-            f"{SESSION_PREFIX}RESULTS": str(self.results),
-            _alias(SEARCH_IDENTITY_TTL_ENV): str(self.identity_ttl_seconds),
-        }
-        if self.searxng_instance is not None:
-            told[_alias(SEARXNG_INSTANCE_ENV)] = self.searxng_instance
-        return told
 
 
 # The module-level functions below read the environment, check a value or shape a message for

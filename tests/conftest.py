@@ -479,6 +479,16 @@ def _hermetic_loop_capabilities(
         return real(run_deadline, user_config=user_config if user_config is not None else person)
 
     monkeypatch.setattr(vibey.bootstrap, "loop_capabilities_service", hermetic)
+    # Nor may a BUILD run find the developer's own running hub, or mint a session into its
+    # registry (SP-LOOPS Phase 6): the hub's state folder is one in pytest's own folder, where no
+    # hub has ever run, so every run is told it has no web. A test that passes `state_dir` keeps it.
+    real_web = vibey.bootstrap.run_web_grants
+    hub_state = tmp_path_factory.getbasetemp() / "loops-person" / "hub-state"
+
+    def hermetic_web(run_deadline: Any, *, state_dir: Path | None = None) -> Any:
+        return real_web(run_deadline, state_dir=state_dir if state_dir is not None else hub_state)
+
+    monkeypatch.setattr(vibey.bootstrap, "run_web_grants", hermetic_web)
 
 
 _RUNTIMES = frozenset({"docker", "podman"})

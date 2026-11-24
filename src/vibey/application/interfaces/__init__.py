@@ -234,6 +234,10 @@ from vibey.application.interfaces.run_inputs_interface import RunInputsInterface
 from vibey.application.interfaces.run_inputs_settings_interface import (
     RunInputsSettingsLoaderInterface,
 )
+from vibey.application.interfaces.run_web_grants_interface import (
+    HubLocatorInterface,
+    RunWebGrantsInterface,
+)
 from vibey.application.interfaces.sabbath import SabbathGateInterface
 from vibey.application.interfaces.secrets import SecretsPort
 from vibey.application.interfaces.session_token_lookup_interface import (
@@ -461,4 +465,6 @@ __all__ = [
     "SessionTokenLookupInterface",
     "SessionTokenSourceInterface",
     "SessionWebPrincipalsInterface",
+    "HubLocatorInterface",
+    "RunWebGrantsInterface",
 ]

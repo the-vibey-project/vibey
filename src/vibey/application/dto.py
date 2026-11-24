@@ -36,6 +36,7 @@ from vibey.domain.phase import Phase, StoredPhase
 from vibey.domain.queue_reap import PolicyOutcome, ReapVerdict
 from vibey.domain.run_input import RunInputsSettings
 from vibey.domain.session_principal import SessionPrincipal
+from vibey.domain.session_web_state import WebState
 
 
 @dataclass(frozen=True, slots=True)
@@ -193,6 +194,10 @@ class RunSpec:
     # The run's capability document (SP-LOOPS Phase 4, R1), for an engine whose descriptor
     # takes one (`capabilities_flag`). A new session carries it; a resumed one never does.
     capabilities_file: Path | None = None
+    # The run's web access (SP-LOOPS Phase 6, Task 5): its own grant from the running hub, or
+    # none and why. None when the caller does not say: the session then has no web, and its
+    # plan says nothing about it.
+    web: "RunWebAccess | None" = None
 
 
 @dataclass(frozen=True, slots=True)
@@ -552,6 +557,37 @@ class SessionGrant:
     def expires_at(self) -> float:
         """When the hub stops honouring the token, if it was not revoked first."""
         return self.principal.expires_at
+
+
+@dataclass(frozen=True, slots=True)
+class RunWebAccess:
+    """Whether one engine run can reach the web, as the worker decided when it started (SP-LOOPS
+    Phase 6, Task 5).
+
+    ``hub``: the session holds ``grant``, its own web-only principal, and reaches the hub at
+    ``hub_url`` (loopback, no path); its environment names the URL and ``grant.token_file``,
+    never the token. ``none``: the session has no web, and ``reason`` (one of the fixed reasons
+    in `domain/session_web_state.py`) says why. Anything else is refused when it is built."""
+
+    state: WebState
+    hub_url: str = ""
+    grant: SessionGrant | None = None
+    reason: str = ""
+
+    def __post_init__(self) -> None:
+        if self.state == "hub":
+            if not self.hub_url or self.grant is None or self.reason:
+                raise ValueError("web access through the hub needs its URL and grant, no reason")
+        elif self.state == "none":
+            if self.hub_url or self.grant is not None or not self.reason:
+                raise ValueError("no web access needs a reason, and no URL or grant")
+        else:
+            raise ValueError(f"unknown web state {self.state!r}")
+
+    @property
+    def token_file(self) -> Path | None:
+        """Where the session's token is, or None when it has none."""
+        return None if self.grant is None else self.grant.token_file
 
 
 # The hub's web tools (ADR-0102): what the search and fetch adapters hand the service.

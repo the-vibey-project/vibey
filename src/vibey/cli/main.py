@@ -150,11 +150,11 @@ from vibey.infrastructure.engines.ollama_chat import (
 )
 from vibey.infrastructure.engines.scripted_design import ScriptedDesignProvider
 from vibey.infrastructure.engines.scripted_visual import ScriptedVisualProvider
+from vibey.infrastructure.engines.session_web_overlay import SESSION_WEB_OVERLAY
 from vibey.infrastructure.engines.wire_log import WIRE_LOG_ENV, default_wire_log_path
 from vibey.infrastructure.logging import StructlogAppLogger, configure_logging
 from vibey.infrastructure.postgres import POSTGRES_MIN_MAJOR, PostgresLocalService, PostgresStatus
 from vibey.infrastructure.web.search import WebSearchSettings
-from vibey.infrastructure.web.session import COMMAND_VARIABLE
 from vibey.infrastructure.worker_processes import DEFAULT_GRACE_SECONDS, WorkerStopper
 
 app = typer.Typer(name="vibey", no_args_is_help=True)
@@ -2563,10 +2563,10 @@ def worker(
             except ConfigError as exc:
                 typer.echo(f"error: {exc}", err=True)
                 raise typer.Exit(EXIT_USAGE) from exc
-            # Every session is told the local SearXNG and how to run `vibey search`; never the
-            # Brave key, so a session's search has no backup (web/local_first.py).
-            search_overlay = web_settings.session_environment()
-            search_overlay[COMMAND_VARIABLE] = vibey_command(sys.argv[0])
+            # A session searches only through the hub, with its own grant, minted for each BUILD
+            # run (SP-LOOPS Phase 6): it is never told a search backend's address or a key. Its
+            # plan names this worker's own `vibey`, absolute, as the command to search with.
+            running_vibey = vibey_command(sys.argv[0])
             typer.echo(web_search_line(web_settings), err=True)
             auto_answers: GateAutoAnswerSweepInterface | None = None
             if (
@@ -2634,7 +2634,7 @@ def worker(
                     claude_process = ClaudeLoopProcess(
                         executor=AsyncSubprocessExecutor(
                             EngineEnvironmentPolicy.from_config(project.config)
-                            .with_overlay(search_overlay)
+                            .with_overlay(SESSION_WEB_OVERLAY.environment(None))
                             .environment(CLAUDELOOP)
                         ),
                         max_turns=max_turns,
@@ -2693,7 +2693,7 @@ def worker(
                 # authenticate.
                 engine_environment = EngineEnvironmentPolicy.from_config(
                     project.config
-                ).with_overlay(search_overlay)
+                ).with_vibey_command(running_vibey)
                 adapters = {
                     engine_id: engine_environment.applied_to(adapter)
                     for engine_id, adapter in adapters.items()

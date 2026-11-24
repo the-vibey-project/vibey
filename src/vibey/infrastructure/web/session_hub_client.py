@@ -51,6 +51,7 @@ from vibey.domain.errors import SessionGrantRefused, VibeyError
 from vibey.domain.host_tools import HOST_TOOL_CATALOG, HostToolError
 from vibey.domain.hub_target import HUB_TARGETS
 from vibey.domain.interfaces.host_tools_interface import HostToolsInterface
+from vibey.domain.session_web_state import HUB_URL_VARIABLE
 from vibey.domain.web_tools import WebToolSettings
 from vibey.infrastructure.hub.session_token_store import SessionTokenStore
 from vibey.infrastructure.hub.settings import HUB_SETTINGS
@@ -62,7 +63,6 @@ from vibey.infrastructure.web.interfaces.session_web_access_interface import (
 )
 from vibey.infrastructure.web.page_fetcher import own_web_settings
 from vibey.infrastructure.web.search import DEFAULT_TIMEOUT_SECONDS
-from vibey.infrastructure.web.session import HUB_URL_VARIABLE
 from vibey.infrastructure.web.untrusted_text import UntrustedText
 
 type SessionHubFailure = Literal[

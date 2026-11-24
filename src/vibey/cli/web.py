@@ -107,7 +107,8 @@ def web_search_line(settings: WebSearchSettings) -> str:
     """The worker's one-line statement of where web search reaches."""
     local = (
         f"web search: the local SearXNG at {display_url(settings.searxng_url)} first, for DESIGN"
-        " research and every engine session (vibey search, vibey fetch)"
+        " research and the hub; engine sessions search only through the hub, each with its own"
+        " token (vibey search, vibey fetch)"
     )
     if settings.brave_key_env is None:
         return (

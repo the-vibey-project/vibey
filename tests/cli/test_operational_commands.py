@@ -1580,7 +1580,7 @@ def test_worker_says_where_web_search_reaches_at_startup(tmp_path: Path) -> None
         plain = runner.invoke(app, ["worker", "--once"], env={"VIBEY_SEARXNG_URL": ""})
     assert (
         "web search: the local SearXNG at http://127.0.0.1:8081 first, for DESIGN research and"
-        " every engine session" in configured.output
+        " the hub; engine sessions search only through the hub" in configured.output
     )
     assert "Brave backup configured via BRAVE_SEARCH_API_KEY" in configured.output
     assert "fake-w" not in configured.output

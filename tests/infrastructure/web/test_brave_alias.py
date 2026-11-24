@@ -68,12 +68,12 @@ def test_vibeys_own_name_wins_when_both_are_set() -> None:
     assert (settings.brave_key, settings.brave_key_env) == (OTHER, "VIBEY_BRAVE_API_KEY")
 
 
-def test_searxng_stays_the_primary_and_the_session_is_told_nothing_of_the_key() -> None:
+def test_searxng_stays_the_primary_with_the_key_as_its_backup() -> None:
     settings = WebSearchSettings.from_environment(
         {"BRAVE_SEARCH_API_KEY": FAKE, "VIBEY_SEARXNG_URL": "http://127.0.0.1:8080"}
     )
-    assert settings.session_environment()["WEBSEARCH_PROVIDER"] == "searxng"
-    assert FAKE not in repr(settings.session_environment())
+    assert settings.searxng_url == "http://127.0.0.1:8080" and settings.has_backup
+    assert FAKE not in repr(settings)
 
 
 def test_choosing_brave_as_the_provider_is_refused_even_with_the_alias_set() -> None:
@@ -87,10 +87,9 @@ def test_a_blank_alias_is_not_a_key() -> None:
     assert not WebSearchSettings.from_environment({"BRAVE_SEARCH_API_KEY": "  "}).has_backup
 
 
-def test_the_key_is_never_in_a_repr_a_session_environment_or_the_workers_line() -> None:
+def test_the_key_is_never_in_a_repr_or_the_workers_line() -> None:
     settings = WebSearchSettings.from_environment({"BRAVE_SEARCH_API_KEY": FAKE})
     assert FAKE not in repr(settings)
-    assert FAKE not in repr(settings.session_environment())
     line = web_search_line(settings)
     assert "configured via BRAVE_SEARCH_API_KEY" in line and FAKE not in line
     vibey = WebSearchSettings.from_environment({"VIBEY_BRAVE_API_KEY": OTHER})

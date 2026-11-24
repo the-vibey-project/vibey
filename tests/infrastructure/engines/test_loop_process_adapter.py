@@ -2423,7 +2423,9 @@ async def test_every_spawn_of_every_engine_goes_through_the_one_builder(
         descriptor, overlay={"QWENLOOP_MODEL": "q"}, python_env=adapter.python_env
     ).build()
     assert len(captured) == 3  # run, --version, doctor
-    assert captured == [expected, expected, expected]
+    # The run alone is also told its web access: this one says nothing, so it has none
+    # (SP-LOOPS Phase 6). The probes are not sessions and are told nothing.
+    assert captured == [{**expected, "VIBEY_WEB_STATE": "none"}, expected, expected]
     help_env = run.call_args.kwargs["env"]
     assert help_env == {**expected, "COLUMNS": "250", "LINES": "50", "NO_COLOR": "1"}
     for env in (*captured, help_env):
@@ -2477,7 +2479,8 @@ async def test_a_real_engine_process_never_sees_the_queue_dsn(
     assert "ANTHROPIC_API_KEY" in names
     leaked = names & set(_WORKER_SECRETS)
     assert leaked == set(), f"leaked into the engine session: {sorted(leaked)}"
-    assert not any(name.startswith("VIBEY_") for name in names)
+    # The one `VIBEY_*` name is the worker's own word on the run's web access (Phase 6).
+    assert {name for name in names if name.startswith("VIBEY_")} == {"VIBEY_WEB_STATE"}
 
 
 # ── a forbidden declaration fails when the adapter is built, not on first spawn ──
@@ -2718,3 +2721,146 @@ async def test_the_default_session_log_writes_to_the_wire_log_only_when_it_is_on
     record = json.loads(line)
     assert record["kind"] == "session" and record["work_item"] == "on"
     assert record["run_id"] == str(on.run_id)
+
+
+# SP-LOOPS Phase 6, Task 5: the run's own web access reaches the run, and only the run.
+
+_SEARCH_WORKER = {
+    "VIBEY_SEARXNG_URL": "http://127.0.0.1:8080",
+    "WEBSEARCH_PROVIDER": "searxng",
+    "WEBSEARCH_SEARXNG_URL": "http://127.0.0.1:8080",
+    "WEBSEARCH_COMMAND": "/old/vibey",
+    "VIBEY_BRAVE_API_KEY": "fake-brave-1",
+    "WEBSEARCH_BRAVE_API_KEY": "fake-brave-2",
+    "BRAVE_SEARCH_API_KEY": "fake-brave-3",
+    "VIBEY_HUB_URL": "http://127.0.0.1:1",
+    "VIBEY_WEB_TOKEN_FILE": "/the/workers/own",
+}
+
+
+def _capturing_spawn(monkeypatch: pytest.MonkeyPatch) -> list[dict[str, object]]:
+    from unittest.mock import AsyncMock
+
+    from vibey.infrastructure.engines import loop_process_adapter as module
+
+    spawns: list[dict[str, object]] = []
+
+    async def fake_exec(*argv, **kwargs):  # type: ignore[no-untyped-def]
+        spawns.append({"argv": argv, **kwargs})
+        process = AsyncMock()
+        process.pid = 4243
+        process.returncode = 0
+        process.communicate.return_value = (b"claudeloop 9.9.9", b"")
+        return process
+
+    monkeypatch.setattr(module.asyncio, "create_subprocess_exec", fake_exec)
+    monkeypatch.setattr(module.shutil, "which", lambda _: "/bin/claudeloop")
+    for name, value in _SEARCH_WORKER.items():
+        monkeypatch.setenv(name, value)
+    return spawns
+
+
+def _web_spec(tmp_path: Path, web: object):  # type: ignore[no-untyped-def]
+    from vibey.application.dto import RunSpec
+    from vibey.domain.effort import Effort
+    from vibey.domain.engine import IsolationLevel
+
+    return RunSpec(
+        run_id=uuid4(),
+        worktree_path=tmp_path,
+        prompt="do the thing",
+        effort=Effort.LOW,
+        isolation=IsolationLevel.WORKTREE,
+        web=web,  # type: ignore[arg-type]
+    )
+
+
+def _no_search_backend(env: dict[str, str]) -> None:
+    assert not [
+        name
+        for name in env
+        if name.startswith("WEBSEARCH_") or "SEARXNG" in name or "BRAVE" in name
+    ]
+    assert not [value for value in env.values() if value.startswith("fake-brave")]
+
+
+@pytest.mark.parametrize("descriptor", [CLAUDELOOP, QWENLOOP], ids=lambda d: d.binary)
+async def test_a_run_with_its_own_grant_gets_the_hub_and_its_token_file_and_nothing_else(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, descriptor: EngineDescriptor
+) -> None:
+    from vibey.application.dto import RunWebAccess, SessionGrant
+    from vibey.domain.session_principal import SessionPrincipal
+    from vibey.infrastructure.engines.engine_environment import EngineEnvironmentPolicy
+
+    spawns = _capturing_spawn(monkeypatch)
+    run = uuid4()
+    grant = SessionGrant(
+        token_file=tmp_path / "run-folder" / "web-token",
+        principal=SessionPrincipal(name=f"session:{run}", run_id=run, expires_at=9e9),
+        digest="c" * 64,
+    )
+    web = RunWebAccess("hub", hub_url="http://127.0.0.1:28100", grant=grant)
+    adapter = LoopProcessAdapter(
+        descriptor=descriptor,
+        environment=EngineEnvironmentPolicy().with_vibey_command("/opt/v/bin/vibey"),
+    )
+    spec = _web_spec(tmp_path, web)
+
+    handle = await adapter.start(spec)
+    _active_processes.pop(handle.run_id, None)
+
+    env = spawns[-1]["env"]
+    assert isinstance(env, dict)
+    assert env["VIBEY_HUB_URL"] == "http://127.0.0.1:28100"
+    assert env["VIBEY_WEB_TOKEN_FILE"] == str(tmp_path / "run-folder" / "web-token")
+    assert "VIBEY_WEB_STATE" not in env
+    _no_search_backend(env)
+    plan = (tmp_path / ".vibey" / "plans" / f"{spec.run_id}.md").read_text()
+    assert "`/opt/v/bin/vibey search" in plan
+
+    # A probe is not the run: it is given no web access at all.
+    await adapter.preflight()
+    for probe in spawns[1:]:
+        probe_env = probe["env"]
+        assert isinstance(probe_env, dict)
+        assert not {"VIBEY_HUB_URL", "VIBEY_WEB_TOKEN_FILE", "VIBEY_WEB_STATE"} & set(probe_env)
+        _no_search_backend(probe_env)
+
+
+async def test_a_run_with_no_hub_is_marked_none_and_its_plan_says_why(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    from vibey.application.dto import RunWebAccess
+    from vibey.domain.session_web_state import NO_HUB
+
+    spawns = _capturing_spawn(monkeypatch)
+    spec = _web_spec(tmp_path, RunWebAccess("none", reason=NO_HUB))
+
+    handle = await LoopProcessAdapter(descriptor=QWENLOOP).start(spec)
+    _active_processes.pop(handle.run_id, None)
+
+    env = spawns[-1]["env"]
+    assert isinstance(env, dict)
+    assert env["VIBEY_WEB_STATE"] == "none"
+    assert not {"VIBEY_HUB_URL", "VIBEY_WEB_TOKEN_FILE"} & set(env)
+    _no_search_backend(env)
+    plan = (tmp_path / ".vibey" / "plans" / f"{spec.run_id}.md").read_text()
+    assert "no hub is running; start one with `vibey serve`" in plan
+    assert not list((tmp_path).rglob("web-token"))
+
+
+async def test_a_run_that_says_nothing_is_marked_none_and_its_plan_is_unchanged(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    spawns = _capturing_spawn(monkeypatch)
+    spec = _web_spec(tmp_path, None)
+
+    handle = await LoopProcessAdapter(descriptor=CODEXLOOP).start(spec)
+    _active_processes.pop(handle.run_id, None)
+
+    env = spawns[-1]["env"]
+    assert isinstance(env, dict)
+    assert env["VIBEY_WEB_STATE"] == "none"
+    _no_search_backend(env)
+    plan = (tmp_path / ".vibey" / "plans" / f"{spec.run_id}.md").read_text()
+    assert "Web access" not in plan

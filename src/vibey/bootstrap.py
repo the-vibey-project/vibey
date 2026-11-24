@@ -156,6 +156,8 @@ from vibey.application.review_triage_handler import ReviewTriageHandler
 from vibey.application.rotation_handoff import RotationHandoffService
 from vibey.application.run_inputs_service import RunInputsService
 from vibey.application.run_inputs_settings import RunInputsSettingsLoader
+from vibey.application.run_web_grants import RunWebGrants
+from vibey.application.session_web_principals import SessionWebPrincipals
 from vibey.application.ultra_control import UltraControlService
 from vibey.application.visual_handler import VisualInventoryHandler, VisualPlanHandler
 from vibey.application.wind_down import WindDownOrchestrator
@@ -258,6 +260,10 @@ from vibey.infrastructure.files.nextcloud import NextcloudFilesAdapter
 from vibey.infrastructure.git.checkpoint import GitCheckpoint
 from vibey.infrastructure.git.integration_branch import IntegrationBranch
 from vibey.infrastructure.git.worktree_manager import GitWorktreeManager
+from vibey.infrastructure.hub.running_hub import RunningHub
+from vibey.infrastructure.hub.session_registry import SessionRegistry
+from vibey.infrastructure.hub.session_token_source import SecretsSessionTokenSource
+from vibey.infrastructure.hub.session_token_store import SessionTokenStore
 from vibey.infrastructure.hub.settings import HUB_SETTINGS, HubSettings
 from vibey.infrastructure.inputs.hash_addressed_input_store import HashAddressedInputStore
 from vibey.infrastructure.inputs.lazy_input_store import LazyInputStore
@@ -803,6 +809,9 @@ def build_full_worker(
     # The person's locked capability snapshot, given to each BUILD run whose loop takes one
     # (SP-LOOPS Phase 4): `[loops]` and the lock are read at each run, never at the worker's start.
     loop_capabilities = loop_capabilities_service(run_deadline)
+    # Each BUILD run's own web-only grant from the hub running on this computer, if one is
+    # (SP-LOOPS Phase 6, Task 5): looked for at each run, never at the worker's start.
+    web_grants = run_web_grants(run_deadline)
 
     def _recording(
         handler: JobHandler, adapter: EngineAdapter, meter: SpendMeteringLedger
@@ -848,6 +857,7 @@ def build_full_worker(
             specs=resources.design_specs,
             inputs=run_inputs,
             capabilities=loop_capabilities,
+            web=web_grants,
         )
         return _recording(handler, adapter, meter)
 
@@ -1826,6 +1836,29 @@ def loop_capabilities_service(
         user_config=person,
         run_deadline=run_deadline if run_deadline is not None else _engine_run_deadline({}),
         logger=StructlogAppLogger(owner="loop-capabilities"),
+    )
+
+
+def run_web_grants(run_deadline: timedelta, *, state_dir: Path | None = None) -> RunWebGrants:
+    """Each BUILD run's web access (SP-LOOPS Phase 6, Task 5): the hub running on this computer,
+    found in `state_dir` -- else the person's own `[hub] state_dir`, read from
+    `acp_user_config()` as `vibey hub start` writes it there -- the way every client finds it,
+    and the run's own web-only principal, minted into that folder's session registry with a token
+    file in the run's own folder, expiring at `run_deadline` plus the margin (R4). Building it
+    reads `[hub]` once and touches nothing else. Composition only."""
+    if state_dir is None:
+        state_dir = acp_state_dir(acp_user_config())
+    logger = StructlogAppLogger(owner="session-web")
+    return RunWebGrants(
+        hub=RunningHub(state_dir, logger=logger),
+        principals=SessionWebPrincipals(
+            tokens=SecretsSessionTokenSource(),
+            files=SessionTokenStore(),
+            registry=SessionRegistry(state_dir),
+            run_deadline=run_deadline,
+            logger=logger,
+        ),
+        logger=logger,
     )
 
 

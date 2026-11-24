@@ -66,9 +66,6 @@ def test_the_persons_record_gives_the_url_and_the_marker(
     assert settings.searxng_instance == MINE.marker
     assert settings.provisioned
     assert settings.searxng_url_env is None
-    told = settings.session_environment()
-    assert told["WEBSEARCH_SEARXNG_URL"] == "http://127.0.0.1:28199"
-    assert told["WEBSEARCH_SEARXNG_INSTANCE"] == MINE.marker
 
 
 @pytest.mark.parametrize(

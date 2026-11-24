@@ -22,6 +22,7 @@ import re
 from collections.abc import Iterable, Mapping
 from dataclasses import dataclass
 
+from vibey.domain.session_web_state import SESSION_WEB_VARIABLES
 from vibey.infrastructure.process.interfaces.child_environment_interface import (
     EnvironmentAllowListInterface,
     ForbiddenEnvironmentInterface,
@@ -44,14 +45,22 @@ class ForbiddenEnvironment:
     """Names no allow-list may admit, whatever it declares.
 
     `prefixes` forbid every name that starts with one; `markers` forbid every name that
-    contains one. Declared by `interfaces/child_environment_interface.py`.
+    contains one. `overlay_grants` names, exactly, the forbidden names vibey itself may still lay
+    over a child's environment (`ChildEnvironment`'s overlay) -- never admitted by any allow-list,
+    so a worker's own copy is never inherited. Declared by
+    `interfaces/child_environment_interface.py`.
     """
 
     prefixes: tuple[str, ...] = ()
     markers: tuple[str, ...] = ()
+    overlay_grants: tuple[str, ...] = ()
 
     def forbids(self, name: str) -> bool:
         return name.startswith(self.prefixes) or any(marker in name for marker in self.markers)
+
+    def grants_overlay(self, name: str) -> bool:
+        """Whether vibey's own overlay may set `name` although no allow-list may admit it."""
+        return name in self.overlay_grants
 
     def forbids_prefix(self, prefix: str) -> bool:
         """Whether a declared prefix could admit a forbidden name: it lies under a
@@ -79,10 +88,14 @@ GATE_FORBIDDEN = ForbiddenEnvironment(
 
 # A model session additionally never receives anything shaped like a database
 # credential, whoever declares it. A gate may be given its project's own test DSN; an
-# engine session may not be given any.
+# engine session may not be given any. The one exception to the `VIBEY_` rule is the worker's
+# own overlay of a session's web access (SP-LOOPS Phase 6, R1): the hub's loopback address and
+# the path of the session's own token file, or that it has none -- never a token, and never by
+# an allow-list.
 MODEL_SESSION_FORBIDDEN = ForbiddenEnvironment(
     prefixes=("VIBEY_", "PG"),
     markers=("DSN", "DATABASE_URL", "PASSWORD", "PASSWD", *VIBEY_CREDENTIAL_ALIASES),
+    overlay_grants=tuple(sorted(SESSION_WEB_VARIABLES)),
 )
 
 
@@ -259,9 +272,9 @@ class ChildEnvironment:
         self._isolate_python_env = isolate_python_env
         self._overlay = dict(overlay or {})
         # The overlay is vibey's own values (a local runner's endpoint), not passthrough -- but
-        # the rule under the allow-list binds it too.
+        # the rule under the allow-list binds it too, save the names it grants an overlay alone.
         for name in self._overlay:
-            if allow.forbidden.forbids(name):
+            if allow.forbidden.forbids(name) and not allow.forbidden.grants_overlay(name):
                 raise ValueError(f"{name} can never be passed to a child process")
         self._source = source
 
