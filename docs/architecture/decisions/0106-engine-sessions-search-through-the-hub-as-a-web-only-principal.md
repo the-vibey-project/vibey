@@ -163,7 +163,7 @@ an environment; `vibey search` and `vibey fetch` say the same words the session'
 | `none:no-hub` | No hub was running when the run started | "no hub is running; start one with `vibey serve`" |
 | `none:no-run-folder` | The engine takes no capability snapshot (codexloop) | "this engine's session has no run folder of its own to hold a web token, so it was given none" |
 | `none:no-token` | A hub was running and minting failed | "a hub is running, but this session's web token could not be made; the worker's log says why" |
-| `none:not-given` | A session that is not a BUILD run: the reviewer, conformance, the worker's claudeloop DESIGN and DECOMPOSE provider | "the worker that started this session gave it no web access" |
+| `none:not-given` | A session that is not a BUILD run: the reviewer, conformance, the worker's claudeloop DESIGN and DECOMPOSE provider, the DESIGN session of `vibey work --provider claudeloop` | "the worker that started this session gave it no web access" |
 | `none`, or a name this vibey does not know | Read, never written by this vibey | "the worker that started this session did not say why" |
 
 ### 9. The one exception to the forbidden rule: three names, overlay only
@@ -172,7 +172,13 @@ an environment; `vibey search` and `vibey fetch` say the same words the session'
 `overlay_grants`, exactly `VIBEY_HUB_URL`, `VIBEY_WEB_TOKEN_FILE` and `VIBEY_WEB_STATE`: the
 worker's own overlay may set them, and nothing else may. `forbids()` is unchanged, so no
 allow-list, project or descriptor can admit them, a worker's own copy is never inherited, and
-gates (`GATE_FORBIDDEN`) are granted nothing. Two scrubs beneath a session keep exactly the two
+gates (`GATE_FORBIDDEN`) are granted nothing. Both rules also forbid every `WEBSEARCH_*` name,
+the form vibey reads each of its own web search settings under (the SearXNG address's
+`WEBSEARCH_SEARXNG_URL` among them), beside the Brave key's two aliases: a project's
+`[engine_environment]` or `[gates] env_allow` that declares one, or a prefix covering one, is
+refused when the worker is built, and the error says to give the project's own key or address
+another name in its own environment. The person's own `vibey.toml` keeps its rules, and the
+person's own environment is still read under those names. Two scrubs beneath a session keep exactly the two
 grant names (`vibey_runners.common.capabilities.web_grant_names.WEB_GRANT_NAMES`), and no third:
 the local runner's shell (`ShellEnvironment`), and a local MCP server's `env_allow`
 (`BundleSpec`), which is how `vibey-web` receives them.
@@ -187,6 +193,8 @@ pre-Phase-6 `WEBSEARCH_*` marks. It asserts that none of those names or values, 
 name and no name containing `SEARXNG` or `BRAVE` reaches any session; that the session's own
 token is in no value; and that the session's `VIBEY_*` names are exactly the grant's two or
 exactly `VIBEY_WEB_STATE`. It fails, naming the name, when any one forbidden name is let through.
+It also builds the worker from a project record whose `[engine_environment]` declares
+`WEBSEARCH_SEARXNG_URL` or `VIBEY_SEARXNG_URL`, and asserts the worker refuses to build.
 
 ### 11. Stale grants are swept
 
@@ -206,7 +214,8 @@ all when the listing fails or any entry is unreadable, since that entry may be a
 - The agent's hourly web budget is now shared with every engine session: a driver model's `429`
   can come from BUILD runs' use in the same hour.
 - Sessions outside BUILD have no web: the reviewer, conformance, the claudeloop DESIGN and
-  DECOMPOSE provider (`none:not-given`) and codexloop BUILD runs (`none:no-run-folder`). Each
+  DECOMPOSE provider and the one-shot `vibey work --provider claudeloop` DESIGN session
+  (`none:not-given`), and codexloop BUILD runs (`none:no-run-folder`). Each
   would need a run folder of its own to hold a token.
 
 ### Known limits, stated plainly
@@ -227,13 +236,17 @@ all when the listing fails or any entry is unreadable, since that entry may be a
 - **The worker and the hub must agree on `[hub] state_dir`.** Both read the person's own
   `vibey.toml`, as `serving.json` discovery already assumes.
 - **The walk covers what `LoopProcessAdapter` spawns, with no project `engine_environment`.**
-  It does not walk the one-shot `vibey work --provider claudeloop` DESIGN process (which is given
-  no web overlay at all, so `vibey search` run inside it would act as a person's), the preflight
-  probes, gate commands, or the local runner's own `ShellEnvironment` beneath the session. Nor
-  does the forbidden rule refuse every `WEBSEARCH_*` name: it refuses the Brave key's two aliases,
-  so a project's `[engine_environment]` (or `[gates] env_allow`) that declares
-  `WEBSEARCH_SEARXNG_URL` or `WEBSEARCH_*` passes that name to its sessions (or gates) whenever
-  the worker's own environment holds it. These are open, not closed by this record.
+  It does not walk the one-shot `vibey work --provider claudeloop` DESIGN process, the preflight
+  probes, gate commands, or the local runner's own `ShellEnvironment` beneath the session. The
+  one-shot DESIGN process is given `VIBEY_WEB_STATE=none:not-given`, as the worker's own DESIGN
+  session is, and a test asserts it (its `vibey search` and `vibey fetch` exit 78); a project
+  allow-list that names a `WEBSEARCH_*` setting is refused by the rule itself (§9), and the walk
+  asserts the worker refuses to build. Both were found by the review of this record and closed
+  before it was accepted.
+- **Breaking for a project that declared a `WEBSEARCH_*` name.** Its worker no longer starts; the
+  error names the entry and says to rename the project's own key or address. Accepted: a project
+  relying on those names fails at start with a clear message, rather than handing every session
+  the person's SearXNG address.
 - **A fetched page's title is empty through the hub** (`"title": ""`): the hub frames the title
   inside its nonce-marked block.
 - **Not verified:** a real hub with a real `qwenloop` and a real `claudeloop` session calling

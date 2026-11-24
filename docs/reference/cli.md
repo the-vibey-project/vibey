@@ -1584,9 +1584,12 @@ No session is given a SearXNG address, its identity marker, a `WEBSEARCH_*` name
 key: no session or gate can be given the key under any of its names (`VIBEY_BRAVE_API_KEY`,
 `WEBSEARCH_BRAVE_API_KEY`, `BRAVE_SEARCH_API_KEY`), even by a declared environment allow-list,
 and a project that declared one is refused (see
-[`[engine_environment]`](configuration.md#engine_environment)). The rule refuses only the key's
-names among the `WEBSEARCH_*` ones, though: a project that declares `WEBSEARCH_SEARXNG_URL` or
-`WEBSEARCH_*` passes whatever your worker's environment holds under those names to its sessions.
+[`[engine_environment]`](configuration.md#engine_environment)). The same rule refuses every
+`WEBSEARCH_*` name, the SearXNG address's `WEBSEARCH_SEARXNG_URL` among them, and any prefix that
+covers one (`WEBSEARCH_*`): a project's `[engine_environment]` or `[gates] env_allow` that
+declares one is refused when the worker is built, and the error names it and says to give the
+project's own key or address another name in its own environment. Your own `vibey.toml` and
+environment keep their rules: vibey still reads the `WEBSEARCH_*` forms as your own settings.
 The worker prints one line on stderr saying where web search reaches and whether a backup is
 configured, and by which variable (`configured via BRAVE_SEARCH_API_KEY`), never the key.
 
@@ -1598,7 +1601,7 @@ plan says the same, and `vibey search` and `vibey fetch` in it print the reason 
 | `none:no-hub` | No hub was running when the run started: "no hub is running; start one with `vibey serve`". |
 | `none:no-run-folder` | The engine takes no capability snapshot, so the run has no folder of its own to hold a token (codexloop). |
 | `none:no-token` | A hub was running, but the session's token could not be made; the worker's log says why. |
-| `none:not-given` | The session is not a BUILD run: the reviewer, a conformance probe, or the worker's claudeloop DESIGN and DECOMPOSE provider. |
+| `none:not-given` | The session is not a BUILD run: the reviewer, a conformance probe, the worker's claudeloop DESIGN and DECOMPOSE provider, or the DESIGN session of `vibey work --provider claudeloop`. |
 | `none`, or a reason this vibey does not know | Never written by this vibey; read as "did not say why". |
 
 How a session's `vibey search` and `vibey fetch` exit, so a loop can tell the refusals apart
@@ -2800,7 +2803,12 @@ Variables read by code under `src/vibey`:
 | `OPENAI_API_KEY` | `doctor` auth fallback; `doctor --cluster` (which also accepts `AZURE_OPENAI_API_KEY`, `CODEX_API_KEY`) | codexloop credentials. |
 | `VIRTUAL_ENV` | engine session launch | Removed, together with `VIRTUAL_ENV_PROMPT`, `PYTHONHOME`, `PYTHONPATH`, and the matching `PATH` entries, from the environment passed to engine sessions, so an engine does not install into or run vibey's own interpreter. |
 
-Engine sessions otherwise inherit the caller's environment. Build-gate and
-git subprocesses inherit it minus every `GIT_*` variable. The engine CLIs
-read further variables of their own; see each runner under
-`src/vibey_runners/`.
+Engine sessions do not inherit the caller's environment: each starts from an allow-list (the
+system basics every process needs, the engine's own declared variables, and what the project
+declares under [`[engine_environment]`](configuration.md#engine_environment)), plus vibey's own
+session web overlay: `VIBEY_HUB_URL` and `VIBEY_WEB_TOKEN_FILE` for a session that holds its own
+web grant, else `VIBEY_WEB_STATE=none:<reason>` alone
+([what engine sessions are told](#what-engine-sessions-are-told)). Build-gate commands start from
+the same system basics plus [`[gates] env_allow`](configuration.md#gates); git subprocesses
+inherit the caller's environment minus every `GIT_*` variable. The engine CLIs read further
+variables of their own; see each runner under `src/vibey_runners/`.

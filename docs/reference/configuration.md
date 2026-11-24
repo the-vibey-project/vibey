@@ -1721,7 +1721,7 @@ by hand (sub-doctrines 12.c and 12.h).
 | `timeout_seconds` | number | `1800` | Per command; one that overruns is killed and fails as exit 124. Must be finite and positive. |
 | `kill_grace_seconds` | number | `5` | How long a killed command's reap may take before it is abandoned and logged. |
 | `isolate_python_env` | bool | `true` | `false` passes vibey's own Python environment (`VIRTUAL_ENV`, `PYTHONPATH`, its venv on `PATH`) to gates that rely on tools installed beside vibey. |
-| `env_allow` | array of strings | `[]` | Environment variables a gate command may receive beyond the system basics listed under [`engine_environment`](#engine_environment). A trailing `*` names a prefix (`GRADLE_*`). A gate command is decomposer-produced argv running engine-written code, so nothing else in the worker's environment reaches it. `VIBEY_*`, `PG*` and `GIT_*` can never be declared, nor vibey's Brave Search key under its other names, `BRAVE_SEARCH_API_KEY` and `WEBSEARCH_BRAVE_API_KEY` (a breaking change for a gate that declared it: rename the project's own key in its own environment, for example `PROJECT_BRAVE_API_KEY`). A project's own test database can be (`TEST_DATABASE_URL`). |
+| `env_allow` | array of strings | `[]` | Environment variables a gate command may receive beyond the system basics listed under [`engine_environment`](#engine_environment). A trailing `*` names a prefix (`GRADLE_*`). A gate command is decomposer-produced argv running engine-written code, so nothing else in the worker's environment reaches it. `VIBEY_*`, `PG*`, `GIT_*` and `WEBSEARCH_*` (vibey's own web search settings, the SearXNG address's `WEBSEARCH_SEARXNG_URL` among them) can never be declared, nor vibey's Brave Search key under its other name, `BRAVE_SEARCH_API_KEY` (a breaking change for a gate that declared one: give the project's own key or address another name in its own environment, for example `PROJECT_BRAVE_API_KEY`). A project's own test database can be (`TEST_DATABASE_URL`). |
 
 A malformed or forbidden `gates` object is refused by `vibey new` and by the operator
 before the project is created, and raises when the worker is built.
@@ -1781,13 +1781,20 @@ engine it is declared for. Some things need declaring:
 
 Some names can never be declared, by anyone. For every engine: vibey's own `VIBEY_*`
 variables (`VIBEY_PG_URL`, the queue and ledger DSN, among them), libpq's `PG*`, any
-name containing `DSN`, `DATABASE_URL`, `PASSWORD` or `PASSWD`, and vibey's Brave Search key
+name containing `DSN`, `DATABASE_URL`, `PASSWORD` or `PASSWD`, vibey's Brave Search key
 under its other names, `BRAVE_SEARCH_API_KEY` and `WEBSEARCH_BRAVE_API_KEY` (a prefix such as
-`BRAVE_*` or `WEBSEARCH_*` is accepted, but those two names are never passed). This is a
-breaking change for a project that declared `BRAVE_SEARCH_API_KEY` so its own code could use
-Brave: `vibey new` now refuses it and the worker raises `... BRAVE_SEARCH_API_KEY can never be
-passed to a child process`. Give the project's own key another name in its own environment
-(for example `PROJECT_BRAVE_API_KEY`) and declare that. A malformed object,
+`BRAVE_*` is accepted, but those two names are never passed), and every `WEBSEARCH_*` name,
+the form vibey reads each of its own web search settings under (`WEBSEARCH_SEARXNG_URL`, the
+local SearXNG's address, among them), together with any prefix that covers one (`WEBSEARCH_*`,
+`WEB*`): no session or gate holds a SearXNG address or a Brave key. This is a breaking change
+for a project that declared one of these so its own code could use Brave or a SearXNG:
+`vibey new` now refuses it and the worker raises, for example,
+`... WEBSEARCH_SEARXNG_URL can never be passed to a child process; vibey reads it as its own web
+search setting, so give the project's own key or address another name in its own environment
+and declare that`. Give the project's own key or address another name in its own environment
+(for example `PROJECT_BRAVE_API_KEY` or `PROJECT_SEARXNG_URL`) and declare that. Your own
+`vibey.toml` keeps its rules: a local MCP server's `env_allow` may still keep such a name, and
+vibey still reads the `WEBSEARCH_*` forms from your own environment. A malformed object,
 an unknown key or engine, or a forbidden entry is refused by `vibey new` and the
 operator before the project is created, and raises when the worker is built. A
 descriptor's own `env_passthrough` is held to the same rule when its adapter is built.
