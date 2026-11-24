@@ -158,6 +158,7 @@ from vibey.application.rotation_handoff import RotationHandoffService
 from vibey.application.run_inputs_service import RunInputsService
 from vibey.application.run_inputs_settings import RunInputsSettingsLoader
 from vibey.application.run_web_grants import RunWebGrants
+from vibey.application.session_registry_sweep import SessionRegistrySweep
 from vibey.application.session_web_principals import SessionWebPrincipals
 from vibey.application.ultra_control import UltraControlService
 from vibey.application.visual_handler import VisualInventoryHandler, VisualPlanHandler
@@ -1867,6 +1868,16 @@ def run_web_grants(run_deadline: timedelta, *, state_dir: Path | None = None) ->
         ),
         logger=logger,
     )
+
+
+def session_registry_sweep(*, state_dir: Path | None = None) -> SessionRegistrySweep:
+    """The sweep of the session principals a crashed or killed worker never revoked (SP-LOOPS
+    Phase 6, Task 7; R4): the registry in `state_dir` -- else the person's own `[hub] state_dir`,
+    where `run_web_grants` mints them -- judged by the wall clock both mint and hub use. Building
+    it reads `[hub]` once and touches nothing else. Composition only."""
+    if state_dir is None:
+        state_dir = acp_state_dir(acp_user_config())
+    return SessionRegistrySweep(SessionRegistry(state_dir))
 
 
 def acp_state_dir(config_path: Path) -> Path:

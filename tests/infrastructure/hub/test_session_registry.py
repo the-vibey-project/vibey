@@ -19,6 +19,10 @@ from uuid import UUID
 
 import pytest
 
+from vibey.application.dto import SessionRegistryEntry, SessionRegistryListing
+from vibey.application.interfaces.session_registry_sweep_interface import (
+    SessionPrincipalListingInterface,
+)
 from vibey.application.interfaces.session_web_principals_interface import (
     SessionPrincipalRegistryInterface,
 )
@@ -257,3 +261,111 @@ def test_an_entry_that_cannot_be_put_in_place_leaves_no_staged_file(
         SessionRegistry(state).record(DIGEST, PRINCIPAL)
 
     assert os.listdir(state / SESSIONS_FOLDER) == []
+
+
+# -- The listing the start-up sweep and the hub's counters read (SP-LOOPS Phase 6, Task 7) --
+
+OTHER_RUN = UUID("00000000-0000-4000-8000-000000000002")
+OTHER = SessionPrincipal(name=f"session:{OTHER_RUN}", run_id=OTHER_RUN, expires_at=1.0)
+
+
+def test_the_registry_meets_the_listing_seam(tmp_path: Path) -> None:
+    assert isinstance(SessionRegistry(tmp_path), SessionPrincipalListingInterface)
+
+
+def test_a_registry_never_made_lists_nothing(tmp_path: Path) -> None:
+    listing = SessionRegistry(tmp_path / "never").entries()
+
+    assert listing == SessionRegistryListing(entries=(), unreadable=())
+
+
+def test_every_entry_is_listed_with_its_digest_in_name_order(tmp_path: Path) -> None:
+    state = _state(tmp_path)
+    registry = SessionRegistry(state)
+    registry.record(DIGEST, PRINCIPAL)
+    registry.record("0" * 64, OTHER)
+
+    listing = registry.entries()
+
+    assert listing.entries == (
+        SessionRegistryEntry(digest="0" * 64, principal=OTHER),
+        SessionRegistryEntry(digest=DIGEST, principal=PRINCIPAL),
+    )
+    assert listing.unreadable == ()
+    assert DIGEST not in repr(listing)  # the digest stays out of a log line, as in a grant
+
+
+def test_a_staged_write_and_a_stray_name_are_not_entries(tmp_path: Path) -> None:
+    """A worker killed between staging and renaming leaves `.<digest>.<id>.tmp`; it is not a
+    session, and nothing that is not `<digest>.json` is ever read as one."""
+    state = _state(tmp_path)
+    registry = SessionRegistry(state)
+    registry.record(DIGEST, PRINCIPAL)
+    folder = state / SESSIONS_FOLDER
+    for stray in (f".{DIGEST}.abc.tmp", "notes.txt", "A" * 64 + ".json"):
+        (folder / stray).write_text("{}")
+
+    listing = registry.entries()
+
+    assert listing.entries == (SessionRegistryEntry(digest=DIGEST, principal=PRINCIPAL),)
+    assert listing.unreadable == ()
+
+
+def test_an_unreadable_entry_is_reported_by_path_and_never_trusted(tmp_path: Path) -> None:
+    """Malformed, open to other accounts, a symlink, not a file: each is named, none listed as a
+    session, and the readable ones still are."""
+    state = _state(tmp_path)
+    registry = SessionRegistry(state)
+    registry.record(DIGEST, PRINCIPAL)
+    folder = state / SESSIONS_FOLDER
+    malformed, loose, linked, nested = ("1" * 64, "2" * 64, "3" * 64, "4" * 64)
+    (folder / f"{malformed}.json").write_text("not json")
+    os.chmod(folder / f"{malformed}.json", 0o600)
+    registry.record(loose, OTHER)
+    os.chmod(folder / f"{loose}.json", 0o644)
+    planted = tmp_path / "planted.json"
+    planted.write_text(json.dumps({"name": "session:x", "run_id": str(RUN), "expires_at": 9e9}))
+    os.chmod(planted, 0o600)
+    (folder / f"{linked}.json").symlink_to(planted)
+    (folder / f"{nested}.json").mkdir(mode=0o700)
+
+    listing = registry.entries()
+
+    assert listing.entries == (SessionRegistryEntry(digest=DIGEST, principal=PRINCIPAL),)
+    assert len(listing.unreadable) == 4
+    for digest in (malformed, loose, linked, nested):
+        assert any(digest in reason for reason in listing.unreadable)
+    assert TOKEN not in " ".join(listing.unreadable)
+    assert planted.exists()  # reported, never followed and never removed
+
+
+def test_an_entry_gone_between_the_listing_and_the_read_is_simply_absent(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Revoked by the worker while the hub lists: nobody, not a fault."""
+    state = _state(tmp_path)
+    registry = SessionRegistry(state)
+    registry.record(DIGEST, PRINCIPAL)
+    real = os.listdir
+
+    def listed_then_revoked(path: object) -> list[str]:
+        names = real(path)  # type: ignore[call-overload]
+        registry.forget(DIGEST)
+        return list(names)
+
+    monkeypatch.setattr(os, "listdir", listed_then_revoked)
+
+    assert registry.entries() == SessionRegistryListing(entries=(), unreadable=())
+
+
+@pytest.mark.parametrize("mode", [0o750, 0o705])
+def test_a_sessions_folder_open_to_other_accounts_is_never_listed(
+    tmp_path: Path, mode: int
+) -> None:
+    state = _state(tmp_path)
+    registry = SessionRegistry(state)
+    registry.record(DIGEST, PRINCIPAL)
+    os.chmod(state / SESSIONS_FOLDER, mode)
+
+    with pytest.raises(PermissionError, match="open to other accounts"):
+        registry.entries()

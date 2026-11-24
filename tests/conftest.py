@@ -489,6 +489,13 @@ def _hermetic_loop_capabilities(
         return real_web(run_deadline, state_dir=state_dir if state_dir is not None else hub_state)
 
     monkeypatch.setattr(vibey.bootstrap, "run_web_grants", hermetic_web)
+    # Nor may a worker's start-up sweep remove anything from the developer's registry (Task 7).
+    real_sweep = vibey.bootstrap.session_registry_sweep
+
+    def hermetic_sweep(*, state_dir: Path | None = None) -> Any:
+        return real_sweep(state_dir=state_dir if state_dir is not None else hub_state)
+
+    monkeypatch.setattr(vibey.bootstrap, "session_registry_sweep", hermetic_sweep)
 
 
 _RUNTIMES = frozenset({"docker", "podman"})

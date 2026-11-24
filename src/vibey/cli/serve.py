@@ -366,12 +366,15 @@ class ServeCommand:
         acp_settings: AcpSettingsLoaderInterface = ACP_SETTINGS,
         web_settings: WebToolSettingsLoaderInterface = WEB_SETTINGS,
         user_config: Callable[[], Path] | None = None,
-        web_tools: Callable[[asyncpg.Pool, WebToolSettings], WebToolsServiceInterface] = (
-            lambda pool, settings: WebToolsService(
+        web_tools: Callable[[asyncpg.Pool, WebToolSettings, Path], WebToolsServiceInterface] = (
+            # The hub's state folder holds the session registry the worker writes: the hub
+            # forgets an ended session's counters by it (SP-LOOPS Phase 6, Task 7).
+            lambda pool, settings, state_dir: WebToolsService(
                 search=HubWebSearch(),
                 fetch=GuardedPageFetch(),
                 audit=PostgresWebAudit(pool),
                 settings=settings,
+                session_registry=SessionRegistry(state_dir),
             )
         ),
     ) -> None:
@@ -562,7 +565,7 @@ class ServeCommand:
                 workflows=self.workflows(os.environ),
                 runs=runs,
                 acp_sessions=self._acp_sessions(resources.ledger._pool, acp),
-                web=self._web_tools(resources.ledger._pool, web),
+                web=self._web_tools(resources.ledger._pool, web, settings.state_dir),
             )
             scheme = "https" if tls is not None else "http"
             typer.echo(f"vibey hub on {scheme}://{self._shown(bound)}:{listen}/api/v1")

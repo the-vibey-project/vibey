@@ -19,7 +19,9 @@ never turned into a path. Nothing is followed through a symlink: the folder is c
 name itself. An entry or folder that is not this account's own and owner-only raises
 `PermissionError`; a malformed entry raises `ValueError` naming it -- neither is the same fact as
 no session. Expired entries are harmless here (the service refuses them) and are the start-up
-sweep's to remove. Declared by `interfaces/session_registry_interface.py::SessionRegistryInterface`.
+sweep's to remove (Task 7): `entries` lists every entry for it, and for the hub's per-session
+counters, naming each one it cannot read rather than trusting or skipping it silently. Declared by
+`interfaces/session_registry_interface.py::SessionRegistryInterface`.
 """
 
 from __future__ import annotations
@@ -34,6 +36,7 @@ from pathlib import Path
 from typing import Final
 from uuid import UUID, uuid4
 
+from vibey.application.dto import SessionRegistryEntry, SessionRegistryListing
 from vibey.domain.session_principal import SessionPrincipal
 
 SESSIONS_FOLDER: Final = "sessions"
@@ -104,6 +107,26 @@ class SessionRegistry:
         with os.fdopen(descriptor, "rb") as handle:
             raw = handle.read()
         return self._principal(raw, path)
+
+    def entries(self) -> SessionRegistryListing:
+        try:
+            self._checked_folder()
+        except FileNotFoundError:
+            return SessionRegistryListing(entries=(), unreadable=())
+        found: list[SessionRegistryEntry] = []
+        unreadable: list[str] = []
+        for name in sorted(os.listdir(self._folder)):
+            digest = name.removesuffix(ENTRY_SUFFIX)
+            if digest == name or not self._is_digest(digest):
+                continue  # a staged write (`.<digest>.<id>.tmp`), or nothing of the registry's
+            try:
+                principal = self.find(digest)
+            except (OSError, ValueError) as exc:  # a symlink is ELOOP, not PermissionError
+                unreadable.append(str(exc))
+                continue
+            if principal is not None:  # None: revoked between the listing and the read
+                found.append(SessionRegistryEntry(digest=digest, principal=principal))
+        return SessionRegistryListing(entries=tuple(found), unreadable=tuple(unreadable))
 
     def forget(self, digest: str) -> bool:
         if not self._is_digest(digest):

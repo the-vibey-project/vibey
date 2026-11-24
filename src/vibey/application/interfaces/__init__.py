@@ -240,6 +240,10 @@ from vibey.application.interfaces.run_web_grants_interface import (
 )
 from vibey.application.interfaces.sabbath import SabbathGateInterface
 from vibey.application.interfaces.secrets import SecretsPort
+from vibey.application.interfaces.session_registry_sweep_interface import (
+    SessionPrincipalListingInterface,
+    SessionRegistrySweepInterface,
+)
 from vibey.application.interfaces.session_token_lookup_interface import (
     SessionTokenLookupInterface,
 )
@@ -461,7 +465,9 @@ __all__ = [
     "BusPort",
     "BlobPort",
     "SiemPort",
+    "SessionPrincipalListingInterface",
     "SessionPrincipalRegistryInterface",
+    "SessionRegistrySweepInterface",
     "SessionTokenFilesInterface",
     "SessionTokenLookupInterface",
     "SessionTokenSourceInterface",

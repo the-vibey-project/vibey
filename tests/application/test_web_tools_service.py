@@ -12,7 +12,14 @@ from uuid import UUID
 
 import pytest
 
-from vibey.application.dto import HubPrincipal, WebHit, WebPage, WebSearchAnswer
+from vibey.application.dto import (
+    HubPrincipal,
+    SessionRegistryEntry,
+    SessionRegistryListing,
+    WebHit,
+    WebPage,
+    WebSearchAnswer,
+)
 from vibey.application.hub.interfaces.web_tools_service_interface import (
     WebToolsServiceInterface,
 )
@@ -20,6 +27,7 @@ from vibey.application.hub.web_tools_service import WebToolsService
 from vibey.domain.errors import UnknownProject
 from vibey.domain.hub_scope import HubForbidden, HubScope
 from vibey.domain.ledger import EventKind
+from vibey.domain.session_principal import SessionPrincipal
 from vibey.domain.web_tools import (
     UNTRUSTED_FRAMING,
     WebBudgetExhausted,
@@ -108,6 +116,34 @@ class Clock:
         return self.now
 
 
+class Registry:
+    """The sessions the worker minted and has not revoked, as the hub lists them."""
+
+    def __init__(
+        self,
+        *principals: SessionPrincipal,
+        unreadable: tuple[str, ...] = (),
+        fails: Exception | None = None,
+    ) -> None:
+        self.principals = list(principals)
+        self.unreadable = unreadable
+        self.fails = fails
+
+    def entries(self) -> SessionRegistryListing:
+        if self.fails is not None:
+            raise self.fails
+        return SessionRegistryListing(
+            entries=tuple(
+                SessionRegistryEntry(digest=f"{n:064x}", principal=p)
+                for n, p in enumerate(self.principals)
+            ),
+            unreadable=self.unreadable,
+        )
+
+    def forget(self, digest: str) -> bool:
+        raise AssertionError("the hub never forgets a session; only the worker does")
+
+
 def _service(
     *,
     search: Search | None = None,
@@ -116,12 +152,14 @@ def _service(
     settings: WebToolSettings | None = None,
     clock: Clock | None = None,
     warned: list[str] | None = None,
+    registry: Registry | None = None,
 ) -> WebToolsService:
     return WebToolsService(
         search=search or Search(),
         fetch=fetch or Fetch(),
         audit=audit or Audit(),
         settings=settings or WebToolSettings(),
+        session_registry=registry,
         clock=clock or Clock(),
         now=lambda: NOW,
         nonce=lambda: "n0nce",
@@ -367,6 +405,94 @@ async def test_a_name_alone_grants_nothing() -> None:
     before any budget is asked."""
     with pytest.raises(HubForbidden, match="web"):
         await _service().search(HubPrincipal("session:cccc"), "q")
+
+
+# -- an ended session's counters are forgotten (SP-LOOPS Phase 6, Task 7) ------------------------
+#
+# The hub keeps how often each session searched and fetched, in memory. A session that ended --
+# revoked by its worker, or past its expiry -- can never call again (401), so its counters are
+# forgotten the next time any session spends: on-access eviction against the registry the worker
+# writes. In these tests the service is called directly, so an ended session calling again shows
+# that its counter is gone; the hub's authenticator refuses such a call before it gets here.
+
+WALL = NOW.timestamp()
+
+
+def _session(principal: HubPrincipal, expires_at: float = WALL + 3_600) -> SessionPrincipal:
+    return SessionPrincipal(name=principal.name, run_id=UUID(int=1), expires_at=expires_at)
+
+
+async def test_a_revoked_sessions_counters_are_forgotten_when_another_session_spends() -> None:
+    registry = Registry(_session(SESSION_A), _session(SESSION_B))
+    service = _service(settings=WebToolSettings(session_searches=1), registry=registry)
+    await service.search(SESSION_A, "a")
+    registry.principals = [_session(SESSION_B)]  # A's worker revoked it
+
+    await service.search(SESSION_B, "b")
+
+    await service.search(SESSION_A, "a")  # A's count went with it
+
+
+async def test_an_expired_sessions_counters_are_forgotten_though_its_entry_remains() -> None:
+    registry = Registry(_session(SESSION_A), _session(SESSION_B))
+    service = _service(settings=WebToolSettings(session_searches=1), registry=registry)
+    await service.search(SESSION_A, "a")
+    registry.principals = [_session(SESSION_A, expires_at=WALL), _session(SESSION_B)]
+
+    await service.search(SESSION_B, "b")
+
+    await service.search(SESSION_A, "a")
+
+
+async def test_a_live_sessions_counters_are_never_forgotten() -> None:
+    registry = Registry(_session(SESSION_A), _session(SESSION_B))
+    service = _service(settings=WebToolSettings(session_searches=1), registry=registry)
+    await service.search(SESSION_A, "a")
+    await service.search(SESSION_B, "b")
+
+    with pytest.raises(WebBudgetExhausted, match="session:aaaa"):
+        await service.search(SESSION_A, "a")
+
+
+@pytest.mark.parametrize(
+    "registry",
+    [
+        Registry(unreadable=("/hub/sessions/x.json is not JSON",)),
+        Registry(fails=PermissionError("/hub/sessions is open to other accounts")),
+        Registry(fails=ValueError("unreadable")),
+    ],
+    ids=["an-entry-unreadable", "folder-refused", "malformed"],
+)
+async def test_when_the_registry_cannot_say_who_is_live_every_counter_is_kept(
+    registry: Registry,
+) -> None:
+    """An entry that cannot be read may be a live session's: forgetting its counter would give
+    it its whole cap again. So nothing is forgotten, and the call that asked still goes on."""
+    service = _service(settings=WebToolSettings(session_searches=1), registry=registry)
+    await service.search(SESSION_A, "a")
+
+    await service.search(SESSION_B, "b")
+
+    with pytest.raises(WebBudgetExhausted, match="session:aaaa"):
+        await service.search(SESSION_A, "a")
+
+
+async def test_without_a_registry_counters_are_kept_for_the_hubs_lifetime() -> None:
+    service = _service(settings=WebToolSettings(session_searches=1))
+    await service.search(SESSION_A, "a")
+    await service.search(SESSION_B, "b")
+
+    with pytest.raises(WebBudgetExhausted, match="session:aaaa"):
+        await service.search(SESSION_A, "a")
+
+
+async def test_the_agent_and_devices_never_cause_a_registry_read() -> None:
+    """Only a session's spend prunes; the agent's own calls read nothing from disk."""
+    registry = Registry(fails=AssertionError("the registry was read"))
+    service = _service(registry=registry)
+
+    await service.search(AGENT, "a")
+    await service.fetch(OTHER, "https://example.com/")
 
 
 # -- the ledger comes first ---------------------------------------------------------------------

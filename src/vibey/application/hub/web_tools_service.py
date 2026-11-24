@@ -14,7 +14,13 @@ way, in this order:
    once: first against its own cap for the whole session (`session_searches`,
    `session_fetches`), then against the agent's hourly bucket, which every session draws on, so
    sessions can never raise the hub's total web spend. A call either check refuses spends
-   neither; one that passes both spends one of each.
+   neither; one that passes both spends one of each. A session's counters are kept in this
+   process and forgotten once it has ended (Task 7): each time a session spends, the counters
+   of every session the registry the worker writes no longer holds unexpired -- revoked by its
+   worker, or past its expiry, so the hub refuses it 401 -- are dropped (on-access eviction, so
+   nothing runs on a timer). When the registry cannot say who is live (an entry it cannot read,
+   a folder it refuses) every counter is kept: an unreadable entry may be a live session's, and
+   forgetting its counter would hand it its whole cap again.
 4. **Recorded**: no search or fetch is made unless the audit seam's `ready` says its record can
    be written (else 503, before anything is sent). After the act the record is written: `ok`,
    or `failed`/`refused` for any exception at all (a failure the hub did not expect is named by
@@ -50,6 +56,9 @@ from vibey.application.hub.interfaces.web_tools_service_interface import (
     WebAuditPortInterface,
     WebFetchPortInterface,
     WebSearchPortInterface,
+)
+from vibey.application.interfaces.session_registry_sweep_interface import (
+    SessionPrincipalListingInterface,
 )
 from vibey.domain.hub_scope import AGENT_PRINCIPAL, HUB_SCOPES, HubAction, HubForbidden
 from vibey.domain.interfaces.hub_scope_interface import HubScopePolicyInterface
@@ -88,6 +97,7 @@ class WebToolsService:
         scopes: HubScopePolicyInterface = HUB_SCOPES,
         policy: WebToolPolicyInterface = WEB_TOOL_POLICY,
         sessions: SessionPrincipalPolicyInterface = SESSION_PRINCIPALS,
+        session_registry: SessionPrincipalListingInterface | None = None,
         clock: Callable[[], float] = time.monotonic,
         now: Callable[[], datetime] = lambda: datetime.now(UTC),
         nonce: Callable[[], str] = lambda: secrets.token_hex(8),
@@ -100,6 +110,7 @@ class WebToolsService:
         self._scopes = scopes
         self._policy = policy
         self._sessions = sessions
+        self._session_registry = session_registry
         self._clock = clock
         self._now = now
         self._nonce = nonce
@@ -237,6 +248,7 @@ class WebToolsService:
             self._hourly(principal.name, tool, now, per_hour, key).append(now)
             return
         # An engine session: its own cap first, then the agent's bucket it draws on (R2).
+        self._forget_ended_sessions()
         spent = self._session_used.get((principal.name, tool), 0)
         if spent >= cap:
             raise WebBudgetExhausted(
@@ -246,6 +258,26 @@ class WebToolsService:
         shared = self._hourly(AGENT_PRINCIPAL, tool, now, per_hour, key, drawn_by=principal.name)
         self._session_used[(principal.name, tool)] = spent + 1
         shared.append(now)
+
+    def _forget_ended_sessions(self) -> None:
+        """Drops the counters of every session the registry no longer holds unexpired; keeps
+        them all when there is no registry, or it cannot say who is live."""
+        if self._session_registry is None or not self._session_used:
+            return
+        try:
+            listing = self._session_registry.entries()
+        except (OSError, ValueError):
+            return
+        if listing.unreadable:
+            return
+        now = self._now().timestamp()  # the wall clock, which expiry is minted and read by
+        live = {
+            entry.principal.name
+            for entry in listing.entries
+            if not self._sessions.expired(entry.principal, now)
+        }
+        for key in [key for key in self._session_used if key[0] not in live]:
+            del self._session_used[key]
 
     def _hourly(
         self,

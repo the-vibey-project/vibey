@@ -2210,6 +2210,33 @@ async def _sweep_loop_snapshots(logger: Logger, projects: ProjectReader) -> None
         logger.warning("loop_snapshot_left", path=str(path), reason=reason)
 
 
+def _sweep_session_registry(logger: Logger) -> None:
+    """Removes the session principals a crashed or killed worker never revoked, once, before
+    this worker claims a job (SP-LOOPS Phase 6, Task 7; R4): the registry entries in the hub's
+    state folder whose expiry -- the run deadline and an hour after the mint -- has passed. The
+    hub refuses them already, so this is disk hygiene; their token files go with their run
+    folders under `_sweep_loop_snapshots`. A live entry is never removed, an unreadable one is
+    named and kept, and a sweep that cannot run is logged and never stops the worker.
+
+    Module-level, as `_sweep_loop_snapshots` is and for the same reason (ADR-0016's last
+    resort, stated)."""
+    from vibey.bootstrap import session_registry_sweep
+
+    try:
+        report = session_registry_sweep().sweep()
+    except (ConfigError, OSError, ValueError) as exc:
+        logger.warning("session_registry_sweep_refused", error=str(exc))
+        return
+    logger.info(
+        "session_registry_sweep",
+        removed=len(report.removed),
+        kept=report.kept,
+        refused=len(report.refused),
+    )
+    for reason in report.refused:
+        logger.warning("session_registry_entry_left", reason=reason)
+
+
 @app.command("worker")
 def worker(
     engines_opt: Annotated[
@@ -2550,6 +2577,8 @@ def worker(
             # SP-LOOPS Phase 4, R10: once, before any job is claimed, and here rather than
             # before the event loop, as every registered project's run deadline is now readable.
             await _sweep_loop_snapshots(StructlogAppLogger(owner="worker"), resources.projects)
+            # SP-LOOPS Phase 6, Task 7: the session principals those crashed runs never revoked.
+            _sweep_session_registry(StructlogAppLogger(owner="worker"))
 
             # Sovereign by default (8.b, #322); an explicit --provider still wins.
             provider = _resolve_provider(provider_opt)

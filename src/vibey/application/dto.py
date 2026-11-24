@@ -560,6 +560,39 @@ class SessionGrant:
 
 
 @dataclass(frozen=True, slots=True)
+class SessionRegistryEntry:
+    """One session principal in the hub's registry, under the digest of its token (SP-LOOPS
+    Phase 6, Task 7). The digest is what removing the entry needs; like a grant's, it is left out
+    of the repr."""
+
+    digest: str = field(repr=False)
+    principal: SessionPrincipal
+
+
+@dataclass(frozen=True, slots=True)
+class SessionRegistryListing:
+    """Every session principal the registry holds, and every entry it could not read.
+
+    `unreadable` names each by its path and why (malformed, not this account's own and
+    owner-only, a symlink, not a file): such an entry is never trusted, so its principal is not
+    listed, and never removed, since what it is cannot be known."""
+
+    entries: tuple[SessionRegistryEntry, ...]
+    unreadable: tuple[str, ...]
+
+
+@dataclass(frozen=True, slots=True)
+class SessionSweepReport:
+    """What a sweep of the session registry did (SP-LOOPS Phase 6, Task 7; R4): the principals
+    whose expired entries it removed, by name, how many live entries it kept, and the entries it
+    could not read and so left, each named by path and why."""
+
+    removed: tuple[str, ...]
+    kept: int
+    refused: tuple[str, ...]
+
+
+@dataclass(frozen=True, slots=True)
 class RunWebAccess:
     """Whether one engine run can reach the web, as the worker decided when it started (SP-LOOPS
     Phase 6, Task 5).
