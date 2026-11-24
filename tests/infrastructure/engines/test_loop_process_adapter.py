@@ -2425,7 +2425,7 @@ async def test_every_spawn_of_every_engine_goes_through_the_one_builder(
     assert len(captured) == 3  # run, --version, doctor
     # The run alone is also told its web access: this one says nothing, so it has none
     # (SP-LOOPS Phase 6). The probes are not sessions and are told nothing.
-    assert captured == [{**expected, "VIBEY_WEB_STATE": "none"}, expected, expected]
+    assert captured == [{**expected, "VIBEY_WEB_STATE": "none:not-given"}, expected, expected]
     help_env = run.call_args.kwargs["env"]
     assert help_env == {**expected, "COLUMNS": "250", "LINES": "50", "NO_COLOR": "1"}
     for env in (*captured, help_env):
@@ -2841,7 +2841,7 @@ async def test_a_run_with_no_hub_is_marked_none_and_its_plan_says_why(
 
     env = spawns[-1]["env"]
     assert isinstance(env, dict)
-    assert env["VIBEY_WEB_STATE"] == "none"
+    assert env["VIBEY_WEB_STATE"] == "none:no-hub"
     assert not {"VIBEY_HUB_URL", "VIBEY_WEB_TOKEN_FILE"} & set(env)
     _no_search_backend(env)
     plan = (tmp_path / ".vibey" / "plans" / f"{spec.run_id}.md").read_text()
@@ -2860,7 +2860,7 @@ async def test_a_run_that_says_nothing_is_marked_none_and_its_plan_is_unchanged(
 
     env = spawns[-1]["env"]
     assert isinstance(env, dict)
-    assert env["VIBEY_WEB_STATE"] == "none"
+    assert env["VIBEY_WEB_STATE"] == "none:not-given"
     _no_search_backend(env)
     plan = (tmp_path / ".vibey" / "plans" / f"{spec.run_id}.md").read_text()
     assert "Web access" not in plan

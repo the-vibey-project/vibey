@@ -9,8 +9,11 @@ one that has no `search` command at all.
 the hub, with its own web-only token, and never in its own process: `vibey search` and
 `vibey fetch` read `SessionWebAccess.from_environment` before anything else. With
 `VIBEY_HUB_URL` and `VIBEY_WEB_TOKEN_FILE` (the path of `<run folder>/web-token`, never the token
-itself) they call the hub; with `VIBEY_WEB_STATE=none` the worker had no hub, and they say so in
-fixed text (`NO_HUB`); a session marked any other way -- half of the hub's two names, or only
+itself) they call the hub; with `VIBEY_WEB_STATE=none:<reason name>` the worker gave the session
+no web, and they say why in the worker's own fixed words (`domain/no_web_reasons.py`): no hub,
+no run folder to hold a token, a token that could not be made, or a session never offered one;
+bare `none`, or a name this vibey does not know, says no more than that (SP-LOOPS Phase 6, Task
+6). A session marked any other way -- half of the hub's two names, or only
 the names a worker gave sessions before Phase 6 (`SESSION_MARKERS`) -- has no web, and is told
 what is missing. Only when none of these is set is the caller a person at their own terminal,
 who searches the local SearXNG as before. Declared by
@@ -25,9 +28,9 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Final, Literal
 
+from vibey.domain.no_web_reasons import NO_WEB_REASONS
 from vibey.domain.session_web_state import (
     HUB_URL_VARIABLE,
-    NO_HUB,
     STATE_VARIABLE,
     TOKEN_FILE_VARIABLE,
 )
@@ -61,8 +64,9 @@ class SessionWebAccess:
         state = (environ.get(STATE_VARIABLE) or "").strip()
         if url and token_file:
             return cls("hub", hub_url=url, token_file=Path(token_file))
-        if state == "none":
-            return cls("off", reason=NO_HUB)
+        reason = NO_WEB_REASONS.reason(state)
+        if reason is not None:
+            return cls("off", reason=reason)
         if url or token_file:
             given, missing = (
                 (HUB_URL_VARIABLE, TOKEN_FILE_VARIABLE)

@@ -46,6 +46,7 @@ from vibey.cli.web import (
     run_fetch,
     run_search,
 )
+from vibey.domain.session_web_state import NO_HUB, NO_RUN_FOLDER, NO_TOKEN, NOT_GIVEN, UNSAID
 from vibey.domain.web_tools import WebToolSettings
 from vibey.infrastructure.web.fetch import FetchedPage
 from vibey.infrastructure.web.interfaces.session_web_access_interface import (
@@ -53,7 +54,6 @@ from vibey.infrastructure.web.interfaces.session_web_access_interface import (
 )
 from vibey.infrastructure.web.session import (
     HUB_URL_VARIABLE,
-    NO_HUB,
     STATE_VARIABLE,
     TOKEN_FILE_VARIABLE,
 )
@@ -269,14 +269,27 @@ def test_the_exit_codes_are_distinct_and_documented_in_each_commands_help() -> N
         assert HUB_URL_VARIABLE in shown and TOKEN_FILE_VARIABLE in shown
 
 
-def test_with_no_hub_search_and_fetch_say_so_and_exit_78(
-    capsys: pytest.CaptureFixture[str],
+@pytest.mark.parametrize(
+    ("state", "reason"),
+    [
+        ("none:no-hub", NO_HUB),
+        ("none:no-run-folder", NO_RUN_FOLDER),
+        ("none:no-token", NO_TOKEN),
+        ("none:not-given", NOT_GIVEN),
+        ("none", UNSAID),
+        ("none:from-a-newer-vibey", UNSAID),
+    ],
+)
+def test_with_no_web_search_and_fetch_say_the_workers_own_reason_and_exit_78(
+    capsys: pytest.CaptureFixture[str], state: str, reason: str
 ) -> None:
-    environ = {STATE_VARIABLE: "none", "WEBSEARCH_PROVIDER": "searxng"}
+    """SP-LOOPS Phase 6, Task 6: the reason travels in `VIBEY_WEB_STATE`, so a codexloop BUILD
+    session (no run folder) is never told "no hub is running" while one is."""
+    environ = {STATE_VARIABLE: state, "WEBSEARCH_PROVIDER": "searxng"}
 
     assert run_search("q", None, False, environ=environ, opener=_never_opened, hub=_no_hub) == 78
     assert capsys.readouterr().out == (
-        f"error: web search is unavailable in this session: {NO_HUB}\n"
+        f"error: web search is unavailable in this session: {reason}\n"
     )
     assert (
         run_fetch(
@@ -285,8 +298,14 @@ def test_with_no_hub_search_and_fetch_say_so_and_exit_78(
         == 78
     )
     assert capsys.readouterr().out == (
-        f"error: fetching a web page is unavailable in this session: {NO_HUB}\n"
+        f"error: fetching a web page is unavailable in this session: {reason}\n"
     )
+
+
+def test_the_no_run_folder_and_no_hub_texts_are_distinct_and_neither_names_the_other() -> None:
+    assert NO_RUN_FOLDER != NO_HUB
+    assert "vibey serve" not in NO_RUN_FOLDER and "no hub" not in NO_RUN_FOLDER
+    assert "vibey serve" not in NOT_GIVEN and "no hub" not in UNSAID
 
 
 @pytest.mark.parametrize(
@@ -421,7 +440,7 @@ def test_the_commands_reach_the_hub_from_the_session_environment(
     ended = StubHub(401, {"detail": "Unauthorized"})
     monkeypatch.setattr(web, "SESSION_HUB", _through(ended))
     refused = runner.invoke(app, ["search", "q"], env=_session(path))
-    off = runner.invoke(app, ["fetch", "https://a.example/"], env={STATE_VARIABLE: "none"})
+    off = runner.invoke(app, ["fetch", "https://a.example/"], env={STATE_VARIABLE: "none:no-hub"})
 
     assert searched.exit_code == 0 and json.loads(searched.output)["backend"] == "searxng"
     assert fetched.exit_code == 0 and json.loads(fetched.output)["url"] == "https://a.example/"

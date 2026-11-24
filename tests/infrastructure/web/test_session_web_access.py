@@ -7,13 +7,13 @@ from pathlib import Path
 
 import pytest
 
+from vibey.domain.session_web_state import NO_HUB, NO_RUN_FOLDER, UNSAID
 from vibey.infrastructure.web.interfaces.session_web_access_interface import (
     SessionWebAccessInterface,
 )
 from vibey.infrastructure.web.session import (
     COMMAND_VARIABLE,
     HUB_URL_VARIABLE,
-    NO_HUB,
     SESSION_MARKERS,
     STATE_VARIABLE,
     TOKEN_FILE_VARIABLE,
@@ -61,10 +61,16 @@ def test_values_are_read_stripped() -> None:
     assert (access.hub_url, access.token_file) == ("http://127.0.0.1:1", Path("/t"))
 
 
-def test_no_hub_says_so_in_fixed_text() -> None:
-    access = SessionWebAccess.from_environment({STATE_VARIABLE: "none"})
+@pytest.mark.parametrize(
+    ("state", "reason"),
+    [("none:no-hub", NO_HUB), ("none:no-run-folder", NO_RUN_FOLDER), ("none", UNSAID)],
+)
+def test_no_web_says_the_workers_reason_in_fixed_text(state: str, reason: str) -> None:
+    """SP-LOOPS Phase 6, Task 6: the reason travels in the state's value; bare `none` claims no
+    reason, so "no hub is running" is said only when the worker said it."""
+    access = SessionWebAccess.from_environment({STATE_VARIABLE: state})
 
-    assert (access.mode, access.reason) == ("off", NO_HUB)
+    assert (access.mode, access.reason) == ("off", reason)
 
 
 @pytest.mark.parametrize(
