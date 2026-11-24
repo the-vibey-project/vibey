@@ -860,9 +860,13 @@ async def _work_once(
         if provider == "scripted":
             design_provider = ScriptedDesignProvider()
         elif provider == "claudeloop":
+            # Given no web grant, the session is told so (`none:not-given`), as the worker's own
+            # DESIGN session is: its `vibey search` then refuses rather than search as a person's.
             claude_process = ClaudeLoopProcess(
                 executor=AsyncSubprocessExecutor(
-                    EngineEnvironmentPolicy.from_config(project.config).environment(CLAUDELOOP)
+                    EngineEnvironmentPolicy.from_config(project.config)
+                    .with_overlay(SESSION_WEB_OVERLAY.environment(None))
+                    .environment(CLAUDELOOP)
                 ),
                 max_turns=max_turns,
                 max_dollars=max_dollars,
