@@ -758,3 +758,31 @@ class = "vibey.domain.errors.HandoffInputsMissing"
 title = "A handed-off run cannot be given the inputs its predecessor had"
 cause = "A BUILD run wound down and handed off to another engine. The wind-down pinned the digests of the run inputs the outgoing run was given, and the incoming run must be given exactly those, after the seed the no-loss gate verified. One of them has no row or no stored object in the store `[inputs]` names (the store was changed, emptied, or is another one), so the job was parked rather than started without it."
 fix = "Add the missing input again with `vibey inputs add` (the message names its digest), or point `[inputs]` in your own vibey.toml back at the store it was added to, then answer the gate (`vibey answer ID --raw '<json>'`) to retry the job."
+
+[[error]]
+code = "E0098"
+class = "vibey.domain.local_database.InvalidDatabaseName"
+title = "vibey install --database will not use that name"
+cause = "A database or role name given to `vibey install --database` (`--db-name`, `--owner-role`, `--app-role`) is not a plain lowercase identifier (letters a-z, digits and _, starting with a letter or _, at most 63), the owner and the application role are the same role (ADR-0055 separates them), or the host or port cannot be put in a DSN. Nothing was created."
+fix = "Choose plain lowercase names, with a different owner role and application role, and run `vibey install --database` again."
+
+[[error]]
+code = "E0099"
+class = "vibey.infrastructure.db.local_database_setup.DatabaseSetupRefused"
+title = "A role or database is already there and is not vibey's to take over"
+cause = "`vibey install --database` found a role that exists while your password file (`PGPASSFILE`, else `~/.pgpass`) has no password for it, or a database of that name owned by another role. vibey neither resets another role's password nor migrates a database it does not own. Nothing was written."
+fix = "Add the role's line (`localhost:5432:<database>:<role>:<its password>`) to your password file (mode 0600), or choose other names with `--db-name`, `--owner-role` or `--app-role`, and run `vibey install --database` again."
+
+[[error]]
+code = "E0100"
+class = "vibey.infrastructure.db.postgres_admin.PostgresAdminFailed"
+title = "psql, run as the PostgreSQL administrator, failed"
+cause = "`vibey install --database` ran `psql` as the local PostgreSQL's administrator (you with Homebrew, the postgres account through sudo with apt-get or dnf) and it failed: sudo was refused, the administrator cannot connect, or a statement failed. The message quotes psql with any password verifier redacted."
+fix = "Fix what psql said (start PostgreSQL with `vibey install --postgres`, or name the account that administers it with `--admin-user`), then run `vibey install --database` again; it keeps what it already did."
+
+[[error]]
+code = "E0101"
+class = "vibey.infrastructure.db.postgres_admin.PostgresAdminUnavailable"
+title = "There is no way to run psql as the PostgreSQL administrator"
+cause = "`vibey install --database` found no `psql` (PostgreSQL's client), or the administrator is another account and neither sudo (nor, as root, runuser) is here to act as it."
+fix = "Run `vibey install --postgres` to install PostgreSQL and its client, install sudo, or name an account that may administer PostgreSQL with `--admin-user`; then run `vibey install --database` again."

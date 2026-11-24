@@ -73,6 +73,12 @@ from vibey.cli.ledger_publication import ledger_export, ledger_site
 from vibey.cli.ledger_search import PRESENTER, ledger_search
 from vibey.cli.llm import llm_app
 from vibey.cli.llm_tooling import LLM_TOOLING_SECTION
+from vibey.cli.local_install import (
+    DEFAULT_APP_ROLE,
+    DEFAULT_DATABASE,
+    DEFAULT_OWNER_ROLE,
+    LOCAL_INSTALL,
+)
 from vibey.cli.loops import LOOPS
 from vibey.cli.loops_bundle import (
     marketplace_app,
@@ -152,6 +158,7 @@ from vibey.infrastructure.engines.scripted_design import ScriptedDesignProvider
 from vibey.infrastructure.engines.scripted_visual import ScriptedVisualProvider
 from vibey.infrastructure.engines.wire_log import WIRE_LOG_ENV, default_wire_log_path
 from vibey.infrastructure.logging import StructlogAppLogger, configure_logging
+from vibey.infrastructure.ollama_pull import DEFAULT_WAIT_SECONDS
 from vibey.infrastructure.postgres import POSTGRES_MIN_MAJOR, PostgresLocalService, PostgresStatus
 from vibey.infrastructure.web.search import WebSearchSettings
 from vibey.infrastructure.web.session import COMMAND_VARIABLE
@@ -1405,6 +1412,14 @@ def models(
         bool,
         typer.Option("--json", help="Print the same facts as JSON, for a program."),
     ] = False,
+    default_tag: Annotated[
+        bool,
+        typer.Option(
+            "--default-tag",
+            help="Print only the tag the local loop runs here (after VIBEY_OLLAMA_MODEL and "
+            "VIBEY_SOVEREIGN_MODEL): the one `vibey install --model` pulls.",
+        ),
+    ] = False,
 ) -> None:
     """List the local model families and what the Ollama here says each model can do.
 
@@ -1412,6 +1427,9 @@ def models(
     VIBEY_OLLAMA_URL, with the capabilities Ollama itself reports; no Ollama is reported,
     not fatal.
     """
+    if default_tag:
+        typer.echo(MODELS.default_tag())
+        return
     with guard():
         MODELS.run(as_json=as_json)
 
@@ -1718,22 +1736,95 @@ def install(
             ),
         ),
     ] = False,
+    database: Annotated[
+        bool,
+        typer.Option(
+            "--database",
+            help="Make the database and its owner and application roles on the local "
+            "PostgreSQL, keep their passwords in ~/.pgpass, migrate, and print the "
+            "VIBEY_PG_URL to keep",
+        ),
+    ] = False,
+    model: Annotated[
+        bool,
+        typer.Option(
+            "--model",
+            help="Pull the model the local loop runs (`vibey models --default-tag`) into the "
+            "Ollama at VIBEY_OLLAMA_URL, unless it is there",
+        ),
+    ] = False,
+    db_name: Annotated[
+        str,
+        typer.Option("--db-name", rich_help_panel="Database", help="The database's name"),
+    ] = DEFAULT_DATABASE,
+    owner_role: Annotated[
+        str,
+        typer.Option(
+            "--owner-role",
+            rich_help_panel="Database",
+            help="The role that owns the schema and runs `vibey migrate`",
+        ),
+    ] = DEFAULT_OWNER_ROLE,
+    app_role: Annotated[
+        str,
+        typer.Option(
+            "--app-role",
+            rich_help_panel="Database",
+            help="The role every other vibey command connects as (VIBEY_PG_URL)",
+        ),
+    ] = DEFAULT_APP_ROLE,
+    admin_user: Annotated[
+        str | None,
+        typer.Option(
+            "--admin-user",
+            rich_help_panel="Database",
+            help="The account that administers the local PostgreSQL (default: you with "
+            "Homebrew, postgres through sudo with apt-get or dnf)",
+        ),
+    ] = None,
+    wait_seconds: Annotated[
+        float,
+        typer.Option(
+            "--wait-seconds",
+            min=0,
+            rich_help_panel="Model",
+            help="How long to wait for Ollama to answer before giving up",
+        ),
+    ] = DEFAULT_WAIT_SECONDS,
 ) -> None:
-    """Install local dependencies that vibey can manage explicitly."""
-    if not postgres:
-        typer.echo("choose an install target with `vibey install --postgres`")
+    """Install local dependencies that vibey can manage explicitly.
+
+    Each target is safe to run again. With several, they run in the order PostgreSQL,
+    database, model, and the first that fails stops the rest (exit 1).
+    """
+    if not (postgres or database or model):
+        typer.echo(
+            "choose an install target with `vibey install --postgres`, `--database` or `--model`"
+        )
         raise typer.Exit(EXIT_USAGE)
 
-    service = PostgresLocalService()
-    result = service.install()
-    typer.echo(_postgres_status_line(result.status))
-    typer.echo(result.detail)
-    if not result.ok:
-        raise typer.Exit(1)
-    typer.echo(
-        "Set VIBEY_PG_URL to a database you own, for example "
-        "postgresql://$USER@localhost:5432/vibey"
-    )
+    if postgres:
+        service = PostgresLocalService()
+        result = service.install()
+        typer.echo(_postgres_status_line(result.status))
+        typer.echo(result.detail)
+        if not result.ok:
+            raise typer.Exit(1)
+        if not database:
+            typer.echo(
+                "Next: `vibey install --database` makes the database and its roles, and "
+                "prints the VIBEY_PG_URL to keep"
+            )
+    if database:
+        code = LOCAL_INSTALL.database(
+            db_name=db_name, owner_role=owner_role, app_role=app_role, admin_user=admin_user
+        )
+        if code:
+            raise typer.Exit(code)
+    if model:
+        code = LOCAL_INSTALL.model(wait_seconds=wait_seconds)
+        if code:
+            raise typer.Exit(code)
 
 
 @app.command("doctor")
