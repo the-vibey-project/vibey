@@ -15,7 +15,7 @@ from vibey_runners.common.capabilities.plugin_spec import PluginSpec
 class BundleSpecInterface(Protocol):
     """What every loop may be given: marketplaces, plugins, MCP servers and skills by name, the
     names the person or a project has switched off, and the person's own settings for the
-    engine's web tools, instruction files and snapshot sweep."""
+    engine's web tools, instruction files, snapshot sweep and capability token budgets."""
 
     @property
     def marketplaces(self) -> tuple[MarketplaceSpec, ...]: ...
@@ -50,6 +50,18 @@ class BundleSpecInterface(Protocol):
     @property
     def snapshot_max_age_days(self) -> int:
         """How old a run's snapshot folder may be before a worker's sweep removes it (R10)."""
+        ...
+
+    @property
+    def capability_prompt_tokens(self) -> int:
+        """The most estimated tokens a loop that lists its own capabilities spends on the
+        snapshot in its standing system prompt, from 512 to 4096 (Phase 5, R8)."""
+        ...
+
+    @property
+    def capability_answer_tokens(self) -> int:
+        """The most estimated tokens any one on-demand capability answer may hold, from 256 to
+        8192 (Phase 5, R8)."""
         ...
 
     @classmethod

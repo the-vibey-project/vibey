@@ -20,6 +20,12 @@ from acp.schema import (
     ResumeSessionResponse,
 )
 from acp_fakes import FakeChannel, FakeHub, build_agent, text, until
+from vibey_runners.common.jsonrpc.errors import (
+    INTERNAL_ERROR,
+    INVALID_PARAMS,
+    INVALID_REQUEST,
+    RpcError,
+)
 
 from tests.domain.acp.acp_wire import assert_wire_exact
 from vibey.application.acp.acp_agent import AcpAgent
@@ -29,7 +35,6 @@ from vibey.domain.acp.protocol import RESOURCE_NOT_FOUND
 from vibey.domain.acp.session_log import InvalidSessionCursor, UnknownAcpSession
 from vibey.domain.acp.settings import AcpSettings
 from vibey.domain.hub_scope import HubScope
-from vibey.domain.jsonrpc_errors import INTERNAL_ERROR, INVALID_PARAMS, INVALID_REQUEST, RpcError
 from vibey.infrastructure.mcp.hub_gateway import HubGatewayError
 
 SID = "0f6f4c1e-8d6b-4f0e-9a51-6b1f3f1f9a01"

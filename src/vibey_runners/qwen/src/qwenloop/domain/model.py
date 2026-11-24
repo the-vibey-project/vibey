@@ -13,6 +13,8 @@ DONE_MARKER = "QWENLOOP_TASK_FULLY_COMPLETE"
 #: advertised without being callable or callable without being advertised. `search`,
 #: `find` and `open_file` exist because gpt-oss:20b called them 431 times across 82 storm
 #: runs while the dispatcher answered "unknown tool" (18% of every tool call it made).
+#: `skills_list` and `skill_read` read a capability snapshot's skills and plugin commands on
+#: demand (SP-LOOPS Phase 5, R10), so their text never has to sit in a small model's context.
 CODING_TOOL_NAMES: tuple[str, ...] = (
     "read_file",
     "write_file",
@@ -26,6 +28,8 @@ CODING_TOOL_NAMES: tuple[str, ...] = (
     "web_fetch",
     "mcp_list",
     "mcp_call",
+    "skills_list",
+    "skill_read",
 )
 
 

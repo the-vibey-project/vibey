@@ -2,18 +2,35 @@
 import asyncio
 import io
 import json
+import logging
+import os
+import re
+import signal
 import subprocess
+import sys
 import urllib.error
 from pathlib import Path
 
 import pytest
-from fakes import FakeOllamaProbe
+from fakes import CapabilityDocumentWriter, FakeOllamaProbe
 from typer.testing import CliRunner
+from vibey_runners.common.capabilities.bundle import DEFAULT_CAPABILITY_ANSWER_TOKENS
+from vibey_runners.common.capabilities.capability_listing import SERVERS_HEADING, SKILLS_HEADING
+from vibey_runners.common.capabilities.instruction_files import HEADING
+from vibey_runners.common.capabilities.mcp_server_spec import McpServerSpec
 
 from qwenloop import __version__
 from qwenloop.cli.app import app
 from qwenloop.domain.config import DEFAULT_ENDPOINT_MODEL, QwenConfig, ToolLimits
-from qwenloop.domain.model import Backend, RepoItem, RunState, RunStatus, ServerInfo
+from qwenloop.domain.model import (
+    Backend,
+    ChatChunk,
+    RepoItem,
+    RunState,
+    RunStatus,
+    ServerInfo,
+)
+from qwenloop.infrastructure.capability_loader import CONVENTIONS, OUTSIDE_WORKTREE
 from qwenloop.infrastructure.dispatch_benchmark import DispatchBenchmarkResult
 from qwenloop.infrastructure.inference import LlamaCppServer, OpenAICompatServer
 from qwenloop.infrastructure.profiles import NVIDIA_BF16, PORTABLE
@@ -1380,3 +1397,385 @@ def test_a_run_on_a_model_without_tools_says_it_is_using_the_text_protocol(
     monkeypatch.setenv("QWENLOOP_MODEL", "codellama:7b")
     result = runner.invoke(app, ["run", str(plan), "--cwd", str(tmp_path)])
     assert "codellama:7b: carrying tool calls as text" in result.stderr
+
+
+# --- the MCP session pool's lifecycle (SP-LOOPS Phase 5, R5) --------------------------------
+
+
+class RecordingGateway:
+    """Stands in for McpGateway: remembers how it was discovered and how often it was closed."""
+
+    made: list["RecordingGateway"] = []
+
+    def __init__(self, how: str, **kwargs: object) -> None:
+        self.how = how
+        self.kwargs = kwargs
+        self.closed = 0
+
+    @classmethod
+    def discover(cls, cwd: Path, **kwargs: object) -> "RecordingGateway":
+        gateway = cls("discover", cwd=cwd, **kwargs)
+        cls.made.append(gateway)
+        return gateway
+
+    @classmethod
+    def from_document(cls, document: object, **kwargs: object) -> "RecordingGateway":
+        gateway = cls("document", document=document, **kwargs)
+        cls.made.append(gateway)
+        return gateway
+
+    async def aclose(self) -> None:
+        self.closed += 1
+
+
+@pytest.fixture
+def recording_gateway(monkeypatch: pytest.MonkeyPatch) -> list[RecordingGateway]:
+    RecordingGateway.made = []
+    monkeypatch.setattr("qwenloop.cli.app.McpGateway", RecordingGateway)
+    return RecordingGateway.made
+
+
+class HealthyServer:
+    """An attached server that is already up, so `_run_plan` goes straight to the run."""
+
+    def inspect(self, _profile):  # type: ignore[no-untyped-def]
+        return ServerInfo(Backend.OPENAI_COMPAT, "p", "http://127.0.0.1:1/v1", False, True)
+
+    async def health(self, _info):  # type: ignore[no-untyped-def]
+        return True
+
+
+@pytest.mark.parametrize("outcome", ["completed", "failed", "wind-down", "sigterm", "raised"])
+async def test_the_pool_is_closed_when_the_run_ends_however_it_ends(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+    recording_gateway: list[RecordingGateway],
+    outcome: str,
+) -> None:
+    """Whether the run completes, fails, winds down, raises, or is stopped by SIGTERM, every MCP
+    server it started is closed. SIGTERM cancels the run task, so the `finally` runs; the handler
+    is called directly here and no signal is sent."""
+    from qwenloop.cli.app import _run_plan
+    from qwenloop.domain.config import McpLimits
+
+    loop = asyncio.get_running_loop()
+    handlers: dict[int, object] = {}
+    removed: list[int] = []
+    monkeypatch.setattr(loop, "add_signal_handler", lambda sig, cb: handlers.__setitem__(sig, cb))
+    monkeypatch.setattr(loop, "remove_signal_handler", lambda sig: removed.append(sig) or True)
+    statuses = {
+        "completed": RunStatus.COMPLETED,
+        "failed": RunStatus.FAILED,
+        "wind-down": RunStatus.WINDING_DOWN,
+    }
+
+    class Runner:
+        def __init__(self, _server, _store, tools, *_args, **_kwargs):  # type: ignore[no-untyped-def]
+            self.tools = tools
+
+        async def run(self, **kwargs):  # type: ignore[no-untyped-def]
+            assert recording_gateway[0].closed == 0
+            if outcome == "raised":
+                raise RuntimeError("the model went away")
+            if outcome == "sigterm":
+                handlers[signal.SIGTERM]()  # type: ignore[operator]
+                await asyncio.sleep(0)
+            return RunState(str(kwargs["run_id"]), status=statuses[outcome], turns=1)
+
+    monkeypatch.setattr("qwenloop.cli.app.AutonomousRunner", Runner)
+    limits = McpLimits(request_timeout_seconds=7.0)
+    task = asyncio.create_task(
+        _run_plan(
+            HealthyServer(),  # type: ignore[arg-type]
+            PORTABLE,
+            tmp_path,
+            "run-1",
+            "do it",
+            3,
+            startup_timeout_seconds=1,
+            desktop_notifications=False,
+            mcp_limits=limits,
+        )
+    )
+    if outcome == "sigterm":
+        with pytest.raises(asyncio.CancelledError):
+            await task
+    elif outcome == "raised":
+        with pytest.raises(RuntimeError, match="went away"):
+            await task
+    else:
+        assert (await task).status is statuses[outcome]
+    (gateway,) = recording_gateway
+    assert gateway.closed == 1
+    assert gateway.kwargs["limits"] == limits
+    assert gateway.kwargs["client"] == ("qwenloop", __version__)
+    assert list(handlers) == [signal.SIGTERM] and removed == [signal.SIGTERM]
+
+
+def test_a_run_stopped_by_sigterm_closes_its_servers_and_exits_130(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+    recording_gateway: list[RecordingGateway],
+) -> None:
+    """The run task is cancelled by the SIGTERM handler; the command says so and exits 130, the
+    status claudeloop reports for a stopped run, for a single run and for a storm alike."""
+
+    class Stopped:
+        def __init__(self, *_args, **_kwargs):  # type: ignore[no-untyped-def]
+            pass
+
+        async def run(self, **_kwargs):  # type: ignore[no-untyped-def]
+            raise asyncio.CancelledError
+
+    monkeypatch.setattr("qwenloop.cli.app.AutonomousRunner", Stopped)
+    monkeypatch.setenv("QWENLOOP_BASE_URL", "http://127.0.0.1:11434/v1")
+    monkeypatch.setattr("urllib.request.urlopen", FakeHttp())
+    _no_managed_servers(monkeypatch)
+    monkeypatch.setattr("qwenloop.cli.app.list_open_issues", lambda _owner, _repo: None)
+    monkeypatch.setattr("qwenloop.cli.app.list_open_pull_requests", lambda _owner, _repo: None)
+    plan = tmp_path / "plan.md"
+    plan.write_text("do it")
+    single = runner.invoke(app, ["run", str(plan), "--cwd", str(tmp_path)])
+    assert single.exit_code == 130, single.output
+    assert "qwenloop stopped: SIGTERM" in single.stderr
+    (tmp_path / "a" / ".git").mkdir(parents=True)
+    storm = runner.invoke(app, ["run", "--storm", "--repos-root", str(tmp_path), "--repo", "a"])
+    assert storm.exit_code == 130, storm.output
+    assert [gateway.closed for gateway in recording_gateway] == [1, 1]
+
+
+def test_the_mcp_table_reaches_every_run_and_storm_item(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+    isolated_settings: Path,
+    recording_runner: list[dict[str, object]],
+    recording_gateway: list[RecordingGateway],
+) -> None:
+    from qwenloop.domain.config import McpLimits
+
+    isolated_settings.write_text("[mcp]\nrestarts = 0\n", encoding="utf-8")
+    monkeypatch.setenv("QWENLOOP_BASE_URL", "http://127.0.0.1:11434/v1")
+    monkeypatch.setattr("urllib.request.urlopen", FakeHttp())
+    _no_managed_servers(monkeypatch)
+    monkeypatch.setattr("qwenloop.cli.app.list_open_issues", lambda _owner, _repo: None)
+    monkeypatch.setattr("qwenloop.cli.app.list_open_pull_requests", lambda _owner, _repo: None)
+    (tmp_path / "a" / ".git").mkdir(parents=True)
+    plan = tmp_path / "plan.md"
+    plan.write_text("do it")
+    assert runner.invoke(app, ["run", str(plan), "--cwd", str(tmp_path)]).exit_code == 0
+    storm = runner.invoke(app, ["run", "--storm", "--repos-root", str(tmp_path), "--repo", "a"])
+    assert storm.exit_code == 0, storm.output
+    assert [gateway.kwargs["limits"] for gateway in recording_gateway] == [
+        McpLimits(restarts=0)
+    ] * 2
+    assert [call["tools"]._mcp for call in recording_runner] == recording_gateway  # type: ignore[attr-defined]
+    assert [gateway.closed for gateway in recording_gateway] == [1, 1]
+
+
+# --- the run's capability snapshot (SP-LOOPS Phase 5, Task 8; R3, R4, R8) ---------------------
+
+FAKE_MCP_SERVER = str(Path(__file__).parent / "fixtures" / "fake_mcp_server.py")
+_DONE = "```qwenloop-verdict\npass\n```\nQWENLOOP_TASK_FULLY_COMPLETE"
+_WRITE = ChatChunk(tool_call={"name": "write_file", "arguments": {"path": "a", "content": "b"}})
+
+
+class ScriptedModel:
+    """An attached model that is already up and answers each turn from a script. Starting it is
+    recorded, so a test can show a run never got that far."""
+
+    def __init__(self, turns: list[list[ChatChunk]], *, healthy: bool = True) -> None:
+        self.turns = turns
+        self.healthy = healthy
+        self.seen: list[list[object]] = []
+        self.started = 0
+
+    def inspect(self, _profile):  # type: ignore[no-untyped-def]
+        if not self.healthy:
+            return None
+        return ServerInfo(Backend.OPENAI_COMPAT, "p", "http://127.0.0.1:1/v1", False, True)
+
+    async def health(self, _info):  # type: ignore[no-untyped-def]
+        return self.healthy
+
+    async def start(self, _profile):  # type: ignore[no-untyped-def]
+        self.started += 1
+        raise AssertionError("the model server was started")
+
+    async def chat_stream(self, _info, messages):  # type: ignore[no-untyped-def]
+        self.seen.append(list(messages))
+        for chunk in self.turns[len(self.seen) - 1]:
+            yield chunk
+
+
+def _snapshot_run(tmp_path: Path) -> tuple[CapabilityDocumentWriter, Path, Path]:
+    """A run folder with one plugin (a skill and a command), a worktree, and a plan in it."""
+    writer = CapabilityDocumentWriter(tmp_path / "conductor")
+    writer.plugin("alpha", skills={"lint": "Lints the tree."}, commands={"verify": "Verifies."})
+    cwd = tmp_path / "worktree"
+    cwd.mkdir()
+    plan = cwd / "plan.md"
+    plan.write_text("do it", encoding="utf-8")
+    return writer, cwd, plan
+
+
+def test_a_refused_document_exits_78_before_the_server_starts(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    writer, cwd, plan = _snapshot_run(tmp_path)
+    path = writer.write()
+    path.chmod(0o644)
+    model = ScriptedModel([], healthy=False)
+    chosen: list[object] = []
+    monkeypatch.setattr(
+        "qwenloop.cli.app._server_for", lambda config: chosen.append(config) or (model, PORTABLE)
+    )
+    result = runner.invoke(app, ["run", str(plan), "--cwd", str(cwd), "--capabilities", str(path)])
+    assert result.exit_code == 78, result.output
+    assert (
+        f"qwenloop cannot start: the capability document {path} was refused or could not be "
+        "read; the run does not start without it"
+    ) in result.stderr
+    assert (model.started, chosen) == (0, [])
+    assert not (cwd / ".qwenloop").exists()
+
+
+def test_capabilities_are_for_one_plan_not_a_storm(tmp_path: Path) -> None:
+    # Rich decides the colour codes, the error box and the line breaks from the terminal,
+    # which differ between a developer's shell and CI. Strip the codes, the box drawing and
+    # every space, then compare the words.
+    result = runner.invoke(
+        app, ["run", "--storm", "--capabilities", str(tmp_path / "capabilities.json")]
+    )
+    assert result.exit_code == 2
+    plain = re.sub(r"\x1b\[[0-9;]*m", "", result.output)
+    assert "pass--capabilitieswithPLAN,notwith--storm" in re.sub(r"[\s│╭╮╰╯─]", "", plain)
+
+
+def test_capabilities_applied_is_in_the_runs_events_with_counts_only(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    writer, cwd, plan = _snapshot_run(tmp_path)
+    (cwd / "CLAUDE.md").write_text("Run the gates.\n", encoding="utf-8")
+    elsewhere = Path(os.path.realpath(tmp_path)) / "elsewhere"
+    server = McpServerSpec("probe", "local", (sys.executable, FAKE_MCP_SERVER), None, ())
+    path = writer.write(mcp_servers=(server,), folders=(elsewhere,))
+    model = ScriptedModel([[_WRITE, ChatChunk(text=_DONE)]])
+    monkeypatch.setattr("qwenloop.cli.app._server_for", lambda _config: (model, PORTABLE))
+    result = runner.invoke(
+        app,
+        ["run", str(plan), "--cwd", str(cwd), "--run-id", "r1", "--capabilities", str(path)],
+    )
+    assert result.exit_code == 0, result.output
+    notice = OUTSIDE_WORKTREE.format(folder=elsewhere)
+    events = (cwd / ".qwenloop" / "runs" / "r1" / "events.jsonl").read_text(encoding="utf-8")
+    assert json.loads(events.splitlines()[0]) == {
+        "type": "capabilities.applied",
+        "digest": "sha256:" + "5e" * 32,
+        "plugins": 1,
+        "skills": 1,
+        "commands": 1,
+        "mcp_servers": 1,
+        "listing": "full",
+        "instruction_files": ["CLAUDE.md"],
+        "notices": [notice],
+    }
+    assert events.count("capabilities.applied") == 1
+    assert "Run the gates." not in events
+    assert f"qwenloop: {notice}" in result.stderr
+    system = model.seen[0][0]
+    assert system.content.endswith(  # type: ignore[attr-defined]
+        f"{SKILLS_HEADING}\nRead one with skill_read; skills_list pages through them.\n"
+        "- alpha:lint - Lints the tree.\n- alpha:verify (command)\n\n"
+        f"{SERVERS_HEADING}\nCall mcp_list to see a server's tools, and mcp_call to use one.\n"
+        f"- probe (local)\n\n{CONVENTIONS}\n\n"
+        f"{HEADING.format(name='CLAUDE.md')}\n\nRun the gates.\n"
+    )
+
+
+def test_a_snapshot_run_is_given_its_shelf_its_answer_budget_and_exactly_its_servers(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+    isolated_settings: Path,
+    recording_runner: list[dict[str, object]],
+    recording_gateway: list[RecordingGateway],
+) -> None:
+    """With a snapshot: the shelf, `[loops] capability_answer_tokens` within the run's own result
+    cut, and the snapshot's servers alone (R4). Without one: no shelf, discovery, no block."""
+    from qwenloop.domain.config import McpLimits
+
+    isolated_settings.write_text(
+        "max_tool_result_chars = 5000\n[mcp]\nrestarts = 0\n", encoding="utf-8"
+    )
+    writer, cwd, plan = _snapshot_run(tmp_path)
+    path = writer.write(capability_answer_tokens=1000)
+    monkeypatch.setattr(
+        "qwenloop.cli.app._server_for", lambda _config: (ScriptedModel([]), PORTABLE)
+    )
+    argv = ["run", str(plan), "--cwd", str(cwd)]
+    assert runner.invoke(app, [*argv, "--capabilities", str(path)]).exit_code == 0
+    assert runner.invoke(app, argv).exit_code == 0
+    snapshot, plain = recording_runner
+    snapshot_gateway, plain_gateway = recording_gateway
+    tools = snapshot["tools"]
+    assert isinstance(tools, SandboxTools)
+    assert tools.answer_chars == SandboxTools.answer_budget(1000, 5000) == 4000
+    assert [entry.name for entry in tools._shelf.entries] == ["alpha:lint", "alpha:verify"]  # type: ignore[union-attr]
+    assert tools._mcp is snapshot_gateway  # type: ignore[attr-defined]
+    assert snapshot_gateway.how == "document"
+    assert snapshot_gateway.kwargs["document"].digest == "sha256:" + "5e" * 32  # type: ignore[attr-defined]
+    assert snapshot_gateway.kwargs["limits"] == McpLimits(restarts=0)
+    assert snapshot_gateway.kwargs["environ"] is os.environ
+    assert str(snapshot["capabilities"]).startswith(SKILLS_HEADING)
+    assert [event["type"] for event in snapshot["opening_events"]] == ["capabilities.applied"]  # type: ignore[attr-defined]
+    plain_tools = plain["tools"]
+    assert isinstance(plain_tools, SandboxTools)
+    assert plain_tools._shelf is None  # type: ignore[attr-defined]
+    assert plain_tools.answer_chars == SandboxTools.answer_budget(
+        DEFAULT_CAPABILITY_ANSWER_TOKENS, 5000
+    )
+    assert (plain_gateway.how, plain["capabilities"], plain["opening_events"]) == (
+        "discover",
+        "",
+        (),
+    )
+    assert [gateway.closed for gateway in recording_gateway] == [1, 1]
+
+
+def test_no_env_value_reaches_argv_events_or_logs(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+    isolated_settings: Path,
+    caplog: pytest.LogCaptureFixture,
+    capfd: pytest.CaptureFixture[str],
+) -> None:
+    """A value the snapshot lets one server keep (`env_allow`) reaches that server and nothing
+    else: not its command line, not the run's events or folder, not a log line, not stderr."""
+    caplog.set_level(logging.DEBUG)
+    sentinel = "t8-sentinel-value-that-must-never-be-written"
+    monkeypatch.setenv("QWEN_T8_PROBE", sentinel)
+    isolated_settings.write_text("[mcp]\nclose_grace_seconds = 0\n", encoding="utf-8")
+    writer, cwd, plan = _snapshot_run(tmp_path)
+    server = McpServerSpec(
+        "probe", "local", (sys.executable, FAKE_MCP_SERVER), None, ("QWEN_T8_PROBE",)
+    )
+    path = writer.write(mcp_servers=(server,))
+
+    def call(tool: str) -> list[ChatChunk]:
+        arguments = {"server": "probe", "tool": tool, "arguments": {}}
+        return [ChatChunk(tool_call={"name": "mcp_call", "arguments": arguments})]
+
+    model = ScriptedModel([call("env-names"), call("argv"), [ChatChunk(text=_DONE)]])
+    monkeypatch.setattr("qwenloop.cli.app._server_for", lambda _config: (model, PORTABLE))
+    result = runner.invoke(
+        app,
+        ["run", str(plan), "--cwd", str(cwd), "--run-id", "r2", "--capabilities", str(path)],
+    )
+    assert result.exit_code == 0, result.output
+    run_dir = cwd / ".qwenloop" / "runs" / "r2"
+    events = (run_dir / "events.jsonl").read_text(encoding="utf-8")
+    assert "QWEN_T8_PROBE" in events  # the server was given the name, so it held the value
+    assert "fake_mcp_server.py" in events  # and its command line was recorded
+    written = [file.read_text(encoding="utf-8") for file in run_dir.rglob("*") if file.is_file()]
+    captured = capfd.readouterr()
+    for text in (*written, caplog.text, result.stdout, result.stderr, captured.out, captured.err):
+        assert sentinel not in text

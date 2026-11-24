@@ -53,6 +53,7 @@ from vibey.infrastructure.engines.descriptors import (
     CLAUDELOOP_LOCAL,
     CODEXLOOP,
     GPTOSSLOOP,
+    QWENLOOP,
 )
 from vibey.infrastructure.engines.scripted import ScriptedEngine
 
@@ -277,7 +278,34 @@ async def test_a_snapshot_that_cannot_be_written_for_the_os_is_a_retry(tmp_path:
     assert "start" not in harness.log
 
 
-@pytest.mark.parametrize("descriptor", [GPTOSSLOOP, CODEXLOOP], ids=lambda d: d.binary)
+@pytest.mark.parametrize("descriptor", [GPTOSSLOOP, QWENLOOP], ids=lambda d: d.binary)
+async def test_a_local_runner_is_given_the_snapshot_and_records_it_before_it_starts(
+    tmp_path: Path, descriptor: EngineDescriptor
+) -> None:
+    """SP-LOOPS Phase 5, R3: BUILD gives the local runner the same locked snapshot claudeloop
+    takes, records it on the ledger before the engine starts, hands it over by `--capabilities`,
+    and removes it when the run ends. Until Phase 5 the local runner was given none."""
+    harness = _Harness(tmp_path, descriptor=descriptor)
+
+    outcome = await harness.run()
+
+    assert isinstance(outcome, Success)
+    assert harness.log[:3] == ["prepare", f"record:{SNAPSHOTTED}", "start"]
+    assert harness.log[-1] == "release"
+    [call] = harness.ledger.of(SNAPSHOTTED)
+    [spec] = harness.engine.specs  # type: ignore[attr-defined]
+    [argv] = harness.engine.argvs  # type: ignore[attr-defined]
+    [prepared] = harness.capabilities.prepared
+    assert call["engine_id"] == descriptor.engine_id
+    assert call["causation_id"] == spec.run_id
+    assert spec.capabilities_file == prepared.document
+    assert argv[0] == descriptor.binary
+    assert argv[argv.index("--capabilities") + 1] == str(prepared.document)
+    assert harness.capabilities.calls == [(harness.worktree / "vibey.toml", ())]
+    assert not prepared.folder.exists()
+
+
+@pytest.mark.parametrize("descriptor", [CODEXLOOP], ids=lambda d: d.binary)
 async def test_an_engine_without_the_flag_is_given_no_snapshot_and_no_event(
     tmp_path: Path, descriptor: EngineDescriptor
 ) -> None:

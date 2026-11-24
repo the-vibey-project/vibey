@@ -3,13 +3,13 @@ import * as fs from 'node:fs';
 import * as path from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { BudgetError, BudgetGuard, BudgetStore, SpendLedger } from '../../src/core/budgets';
-import { NoCapPath } from '@vibey/core';
+import { CatalogueParser, NoCapPath } from '@vibey/core';
 import { Capabilities, SkillsContext, SkillsMarketplace } from '../../src/core/capabilities';
 import type { EngineCapabilities } from '@vibey/core';
 import type { HostFacts } from '@vibey/core';
 import { JsonlJournal, JsonlTail } from '../../src/core/jsonl';
 import { LocalHost, ModelSlotLock } from '../../src/core/model-lock';
-import { FakeClock, FakeProcessRunner, SequentialIds, scratch } from './helpers';
+import { FakeClock, FakeProcessRunner, SequentialIds, fixture, scratch } from './helpers';
 
 class Host implements HostFacts {
   readonly pid: number = 100;
@@ -165,9 +165,23 @@ describe('Capabilities', () => {
   });
 
   it('offers a plugin menu only for a kind it knows, and files only when verified; pasting text always', () => {
+    // The plugin systems vibey reports (vibey domain/engine.py PluginSystem), and no other.
+    expect(Capabilities.PLUGIN_SYSTEMS).toEqual(['skills-context', 'claude-plugins', 'vibey-bundle']);
     expect(capabilities.menu(engine({ plugins: 'claude-plugins' }), 'paid', undefined).plugins).toBe('claude-plugins');
+    expect(capabilities.menu(engine({ plugins: 'vibey-bundle' }), 'local', undefined).plugins).toBe('vibey-bundle');
     expect(capabilities.menu(engine({ plugins: null, files: null }), 'paid', undefined)).toMatchObject({ attachFile: false, pasteText: true });
     expect(capabilities.menu(engine({ plugins: 'mystery' }), 'paid', undefined)).not.toHaveProperty('plugins');
+  });
+
+  it('offers a plugin menu for every engine `vibey loops --json` says takes plugins, the local runner included', () => {
+    const catalogue = new CatalogueParser().parse(JSON.parse(fixture('vibey-loops.json')));
+    const engines = catalogue.loops.flatMap((loop) => loop.engines);
+    const reported = engines.filter((each) => each.capabilities.plugins !== null);
+    expect(reported.map((each) => each.engine_id)).toEqual(expect.arrayContaining(['gptossloop', 'qwenloop', 'claudeloop']));
+    for (const each of reported) {
+      const tier = each.engine_id === 'gptossloop' || each.engine_id === 'qwenloop' ? 'local' : 'paid';
+      expect([each.engine_id, capabilities.menu(each.capabilities, tier, undefined).plugins]).toEqual([each.engine_id, each.capabilities.plugins]);
+    }
   });
 });
 

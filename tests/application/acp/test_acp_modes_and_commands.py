@@ -13,6 +13,7 @@ from uuid import UUID
 import pytest
 from acp.schema import AvailableCommandsUpdate, CurrentModeUpdate, SetSessionModeResponse
 from acp_fakes import FakeChannel, FakeHub, build_agent, event, text, until
+from vibey_runners.common.jsonrpc.errors import INVALID_PARAMS, RpcError
 
 from tests.domain.acp.acp_wire import assert_wire_exact
 from vibey.application.acp.acp_agent import AcpAgent
@@ -20,7 +21,6 @@ from vibey.application.acp.dto import HubToolResult, HubTurn
 from vibey.domain.acp.protocol import RESOURCE_NOT_FOUND
 from vibey.domain.acp.settings import AcpSettings
 from vibey.domain.hub_chat import CHAT_SLASH_COMMANDS
-from vibey.domain.jsonrpc_errors import INVALID_PARAMS, RpcError
 from vibey.infrastructure.mcp.hub_gateway import HubGatewayError
 
 PID = UUID("11111111-1111-4111-8111-111111111111")

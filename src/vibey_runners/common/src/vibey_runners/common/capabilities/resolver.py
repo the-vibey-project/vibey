@@ -473,6 +473,8 @@ class CapabilityResolver:
                 "builtin_web": bundle.builtin_web,
                 "instruction_files": list(bundle.instruction_files),
                 "instruction_max_bytes": bundle.instruction_max_bytes,
+                "capability_prompt_tokens": bundle.capability_prompt_tokens,
+                "capability_answer_tokens": bundle.capability_answer_tokens,
             },
             "lock": [asdict(used[name]) for name in sorted(used)],
         }

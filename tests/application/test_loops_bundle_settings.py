@@ -122,6 +122,20 @@ def test_a_project_may_disable_and_still_not_add() -> None:
     assert len(notices) == 1 and "[loops] 'plugins' is ignored" in notices[0]
 
 
+def test_a_project_cannot_widen_a_token_budget() -> None:
+    """The two capability budgets (SP-LOOPS Phase 5, R8) are the person's alone: a cloned
+    repository's `[loops]` is not heard on them, and the notice names each key."""
+    project = {"capability_prompt_tokens": 4096, "capability_answer_tokens": 8192}
+    bundle, notices = _load(project=project)
+    assert (bundle.capability_prompt_tokens, bundle.capability_answer_tokens) == (3072, 3000)
+    assert bundle == _load()[0]
+    assert len(notices) == 2
+    assert "[loops] 'capability_answer_tokens' is ignored" in notices[0]
+    assert "[loops] 'capability_prompt_tokens' is ignored" in notices[1]
+    mine, none = _load({**MINE, "capability_prompt_tokens": 4096}, project_path=None)
+    assert (mine.capability_prompt_tokens, none) == (4096, ())
+
+
 def test_an_absent_project_file_or_none_changes_nothing() -> None:
     assert _load(project=None) == _load(project_path=None)
 

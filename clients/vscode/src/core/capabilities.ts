@@ -20,6 +20,7 @@ import type {
   CapabilitiesInterface,
   CapabilityMenu,
   MarketplacePlugin,
+  PluginSystem,
   SkillsContextInterface,
   SkillsMarketplaceInterface,
   SkillsPacket,
@@ -28,6 +29,13 @@ import type { Environment, ProcessRunnerInterface } from '@vibey/core';
 import type { IdSourceInterface } from '@vibey/core';
 
 export class Capabilities implements CapabilitiesInterface {
+  /**
+   * Every plugin system that earns the plugin menu. Each one takes the vibey-skills context
+   * packet the menu adds, because it is text in the plan's prompt (vibey's skills_context.py,
+   * whichever engine runs); the vibey bundle is what the local runner reports for it.
+   */
+  static readonly PLUGIN_SYSTEMS: readonly PluginSystem[] = ['skills-context', 'claude-plugins', 'vibey-bundle'];
+
   menu(
     engine: EngineCapabilities,
     tier: 'local' | 'paid',
@@ -45,7 +53,7 @@ export class Capabilities implements CapabilitiesInterface {
     if (engine.images !== true) {
       notes.push(engine.images === null ? 'No image menu: whether this engine takes images is not verified.' : 'No image menu: this engine does not take images.');
     }
-    const plugins = engine.plugins === 'skills-context' || engine.plugins === 'claude-plugins' ? engine.plugins : undefined;
+    const plugins = Capabilities.PLUGIN_SYSTEMS.find((system) => system === engine.plugins);
     return {
       attachImage: engine.images === true && sees,
       pasteImage: engine.paste_images === true && sees,

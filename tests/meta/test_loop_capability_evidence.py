@@ -78,6 +78,35 @@ def test_claudeloop_and_claudeloop_local_share_every_snapshot_fact() -> None:
     assert not _facts(EngineId.CLAUDELOOP.value, "web_search")
 
 
+LOCAL_SNAPSHOT_NEEDLES = {
+    '"--capabilities"',
+    'if name in {"skills_list", "skill_read"}:',
+    'if name in {"mcp_list", "mcp_call"}:',
+    "Mcp-Session-Id",
+    "launch.argv(server)",
+}
+"""The code a local run's capability snapshot goes through (SP-LOOPS Phase 5): the flag that
+names the document, the two skill tools, the two MCP tools, the HTTP transport's session header
+and the stdio transport's scrubbed launcher argv."""
+
+
+def test_gptossloop_and_qwenloop_share_every_snapshot_fact() -> None:
+    """One runner package serves both engines (ADR-0064), so both take the same snapshot: every
+    fact for one is a fact for the other, each snapshot claim rests on the `--capabilities` flag,
+    and the plugins they claim are the snapshot's, no longer the skills-context packet in vibey's
+    own BUILD handler."""
+    gptoss = {(f.capability, f.source, f.needle) for f in RUNNER_FACTS if f.loop == "gptossloop"}
+    qwen = {(f.capability, f.source, f.needle) for f in RUNNER_FACTS if f.loop == "qwenloop"}
+    assert gptoss == qwen
+    assert {needle for _, _, needle in gptoss} >= LOCAL_SNAPSHOT_NEEDLES
+    for capability in ("plugins", "skills", "mcp"):
+        needles = {needle for cap, _, needle in gptoss if cap == capability}
+        assert '"--capabilities"' in needles, capability
+    assert all(not source.startswith("src/vibey/") for cap, source, _ in gptoss if cap == "plugins")
+    for engine in (EngineId.GPTOSSLOOP, EngineId.QWENLOOP):
+        assert BY_ENGINE_ID[engine].affordances.plugins is PluginSystem.VIBEY_BUNDLE
+
+
 def test_every_fact_names_a_claim_a_descriptor_makes() -> None:
     """A fact for a capability no descriptor claims is a stale row: it would let a later
     claim pass on code read for a different one."""

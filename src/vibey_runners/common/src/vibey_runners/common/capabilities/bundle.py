@@ -10,6 +10,8 @@ builtin_web = false                                      # the engine's own web 
 instruction_files = ["CLAUDE.md", "AGENTS.md"]           # read from the run's folder (R8)
 instruction_max_bytes = 65536                            # larger ones are named, not inlined
 snapshot_max_age_days = 7                                # when a worker sweeps old snapshots
+capability_prompt_tokens = 3072                          # a local loop's standing listing (R8)
+capability_answer_tokens = 3000                          # any one on-demand capability answer
 
 [[loops.marketplaces]]
 name = "acme"
@@ -34,8 +36,11 @@ later become folder names and lock keys), sources and refs can never be read as 
 option, lists are capped, and the marketplace name `vibey` is reserved for the copy that ships in
 the wheel. `builtin_web`, `instruction_files` and `instruction_max_bytes` are part of what a loop
 is given (SP-LOOPS Phase 4, R13), so they enter the snapshot's digest; `snapshot_max_age_days` is
-housekeeping and does not. Like every key but `disable`, they come only from the person's own
-file. Declared by `interfaces/bundle_interface.py::BundleSpecInterface`.
+housekeeping and does not. So do `capability_prompt_tokens` and `capability_answer_tokens`
+(SP-LOOPS Phase 5, R8): the most estimated tokens (`TokenEstimate`) a loop that lists its own
+capabilities spends on the snapshot in its standing system prompt, and in any one on-demand
+answer; claudeloop ignores both, since Claude Code lists skills itself. Like every key but
+`disable`, they come only from the person's own file. Declared by `interfaces/bundle_interface.py::BundleSpecInterface`.
 """
 
 from __future__ import annotations
@@ -73,6 +78,8 @@ _KEYS: Final = frozenset(
         "instruction_files",
         "instruction_max_bytes",
         "snapshot_max_age_days",
+        "capability_prompt_tokens",
+        "capability_answer_tokens",
     }
 )
 DEFAULT_INSTRUCTION_FILES: Final = ("CLAUDE.md", "AGENTS.md")
@@ -86,6 +93,20 @@ INSTRUCTION_MAX_BYTES_CEILING: Final = 1024 * 1024
 """The most `[loops] instruction_max_bytes` may be: 1 MiB."""
 DEFAULT_SNAPSHOT_MAX_AGE_DAYS: Final = 7
 """How old, in days, a run's snapshot folder may be before a worker's sweep removes it (R10)."""
+DEFAULT_CAPABILITY_PROMPT_TOKENS: Final = 3072
+"""The most estimated tokens a loop that lists its own capabilities spends on the snapshot in its
+standing system prompt: the skill and MCP listing first, then the instruction files (Phase 5, R8)."""
+CAPABILITY_PROMPT_TOKENS_FLOOR: Final = 512
+"""The least `[loops] capability_prompt_tokens` may be."""
+CAPABILITY_PROMPT_TOKENS_CEILING: Final = 4096
+"""The most `[loops] capability_prompt_tokens` may be: what a 32k-token model can spare."""
+DEFAULT_CAPABILITY_ANSWER_TOKENS: Final = 3000
+"""The most estimated tokens any one on-demand capability answer may hold: a page of a listing or
+a skill body, one tool schema, one MCP call's result (Phase 5, R8)."""
+CAPABILITY_ANSWER_TOKENS_FLOOR: Final = 256
+"""The least `[loops] capability_answer_tokens` may be."""
+CAPABILITY_ANSWER_TOKENS_CEILING: Final = 8192
+"""The most `[loops] capability_answer_tokens` may be."""
 _MARKETPLACE_KEYS: Final = frozenset({"name", "source", "ref"})
 _SERVER_KEYS: Final = frozenset({"name", "trust", "command", "url", "env_allow"})
 _TRUST: Final[tuple[McpTrust, ...]] = ("local", "remote")
@@ -119,12 +140,14 @@ class BundleSpec:
     instruction_files: tuple[str, ...] = DEFAULT_INSTRUCTION_FILES
     instruction_max_bytes: int = DEFAULT_INSTRUCTION_MAX_BYTES
     snapshot_max_age_days: int = DEFAULT_SNAPSHOT_MAX_AGE_DAYS
+    capability_prompt_tokens: int = DEFAULT_CAPABILITY_PROMPT_TOKENS
+    capability_answer_tokens: int = DEFAULT_CAPABILITY_ANSWER_TOKENS
 
     @classmethod
     def default(cls) -> BundleSpec:
         """The bundle of a person who wrote no `[loops]`: the research plugins, nothing else; the
-        engine's own web tools off, `CLAUDE.md` and `AGENTS.md` read up to 64 KiB, and snapshots
-        swept after a week."""
+        engine's own web tools off, `CLAUDE.md` and `AGENTS.md` read up to 64 KiB, snapshots
+        swept after a week, and 3072 standing and 3000 answer tokens for a capability listing."""
         return cls.from_mapping({})
 
     @classmethod
@@ -160,6 +183,18 @@ class BundleSpec:
                 f"{_ROOT}.snapshot_max_age_days",
                 1,
                 None,
+            ),
+            capability_prompt_tokens=cls._whole(
+                raw.get("capability_prompt_tokens", DEFAULT_CAPABILITY_PROMPT_TOKENS),
+                f"{_ROOT}.capability_prompt_tokens",
+                CAPABILITY_PROMPT_TOKENS_FLOOR,
+                CAPABILITY_PROMPT_TOKENS_CEILING,
+            ),
+            capability_answer_tokens=cls._whole(
+                raw.get("capability_answer_tokens", DEFAULT_CAPABILITY_ANSWER_TOKENS),
+                f"{_ROOT}.capability_answer_tokens",
+                CAPABILITY_ANSWER_TOKENS_FLOOR,
+                CAPABILITY_ANSWER_TOKENS_CEILING,
             ),
         )
         return bundle.narrowed_by(cls.disable_names(raw.get("disable", [])))

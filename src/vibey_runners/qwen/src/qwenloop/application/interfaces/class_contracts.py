@@ -3,6 +3,7 @@
 
 from __future__ import annotations
 
+from collections.abc import Mapping, Sequence
 from pathlib import Path
 from typing import Protocol, runtime_checkable
 
@@ -36,4 +37,10 @@ class AutonomousRunnerInterface(Protocol):
         context_renewal_tokens: int = DEFAULT_CONTEXT_RENEWAL_TOKENS,
         max_stalled_turns: int = DEFAULT_MAX_STALLED_TURNS,
         economy: ContextEconomy = ContextEconomy(),  # noqa: B008
-    ) -> RunState: ...
+        capabilities: str = "",
+        opening_events: Sequence[Mapping[str, object]] = (),
+    ) -> RunState:
+        """One run to a verdict. `capabilities` is the run's capability block, carried after the
+        system prompt's verdict rule; `opening_events` are recorded first in the run's events,
+        right after the run is created (SP-LOOPS Phase 5, Task 8)."""
+        ...

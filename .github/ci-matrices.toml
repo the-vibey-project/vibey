@@ -80,7 +80,7 @@ dir = "src/vibey_runners/common"
 python = "3.12"
 install = "pip install -e \".[dev]\""
 static = "mypy --strict src/vibey_runners/common && lint-imports"
-test = "python -m pytest -q -p no:cacheprovider --cov=vibey_runners.common.infrastructure --cov=vibey_runners.common.capabilities --cov-branch --cov-report=term-missing --cov-fail-under=100"
+test = "python -m pytest -q -p no:cacheprovider --cov=vibey_runners.common.infrastructure --cov=vibey_runners.common.capabilities --cov=vibey_runners.common.jsonrpc --cov=vibey_runners.common.mcp --cov-branch --cov-report=term-missing --cov-fail-under=100"
 
 [[tools.pr]]
 package = "claudeloop"
@@ -103,7 +103,7 @@ test = "pytest -q --cov=codexloop --cov-branch --cov-report= && coverage report 
 package = "qwenloop"
 dir = "src/vibey_runners/qwen"
 python = "3.12"
-install = "pip install -e \".[dev]\""
+install = "pip install -e ../common && pip install -e \".[dev]\""
 static = "mypy --strict src/qwenloop && lint-imports && bandit -q -r src/qwenloop"
 test = "python -m pytest -q"
 
@@ -192,7 +192,7 @@ dir = "src/vibey_runners/common"
 python = "3.12"
 install = "pip install -e \".[dev]\""
 static = "mypy --strict src/vibey_runners/common && lint-imports"
-test = "python -m pytest -q -p no:cacheprovider --cov=vibey_runners.common.infrastructure --cov=vibey_runners.common.capabilities --cov-branch --cov-report=term-missing --cov-fail-under=100"
+test = "python -m pytest -q -p no:cacheprovider --cov=vibey_runners.common.infrastructure --cov=vibey_runners.common.capabilities --cov=vibey_runners.common.jsonrpc --cov=vibey_runners.common.mcp --cov-branch --cov-report=term-missing --cov-fail-under=100"
 
 [[tools.full]]
 package = "vibey-runners-common"
@@ -200,7 +200,7 @@ dir = "src/vibey_runners/common"
 python = "3.13"
 install = "pip install -e \".[dev]\""
 static = "mypy --strict src/vibey_runners/common && lint-imports"
-test = "python -m pytest -q -p no:cacheprovider --cov=vibey_runners.common.infrastructure --cov=vibey_runners.common.capabilities --cov-branch --cov-report=term-missing --cov-fail-under=100"
+test = "python -m pytest -q -p no:cacheprovider --cov=vibey_runners.common.infrastructure --cov=vibey_runners.common.capabilities --cov=vibey_runners.common.jsonrpc --cov=vibey_runners.common.mcp --cov-branch --cov-report=term-missing --cov-fail-under=100"
 
 [[tools.full]]
 package = "vibey-runners-common"
@@ -208,7 +208,7 @@ dir = "src/vibey_runners/common"
 python = "3.14"
 install = "pip install -e \".[dev]\""
 static = "mypy --strict src/vibey_runners/common && lint-imports"
-test = "python -m pytest -q -p no:cacheprovider --cov=vibey_runners.common.infrastructure --cov=vibey_runners.common.capabilities --cov-branch --cov-report=term-missing --cov-fail-under=100"
+test = "python -m pytest -q -p no:cacheprovider --cov=vibey_runners.common.infrastructure --cov=vibey_runners.common.capabilities --cov=vibey_runners.common.jsonrpc --cov=vibey_runners.common.mcp --cov-branch --cov-report=term-missing --cov-fail-under=100"
 
 [[tools.full]]
 package = "claudeloop"
@@ -287,7 +287,7 @@ test = "pytest -q --cov=codexloop --cov-branch --cov-report= && coverage report 
 package = "qwenloop"
 dir = "src/vibey_runners/qwen"
 python = "3.12"
-install = "pip install -e \".[dev]\""
+install = "pip install -e ../common && pip install -e \".[dev]\""
 static = "mypy --strict src/qwenloop && lint-imports && bandit -q -r src/qwenloop"
 test = "python -m pytest -q"
 
@@ -295,14 +295,14 @@ test = "python -m pytest -q"
 package = "qwenloop"
 dir = "src/vibey_runners/qwen"
 python = "3.13"
-install = "pip install -e \".[dev]\""
+install = "pip install -e ../common && pip install -e \".[dev]\""
 test = "python -m pytest -q"
 
 [[tools.full]]
 package = "qwenloop"
 dir = "src/vibey_runners/qwen"
 python = "3.14"
-install = "pip install -e \".[dev]\""
+install = "pip install -e ../common && pip install -e \".[dev]\""
 test = "python -m pytest -q"
 
 [postgres-compatibility]

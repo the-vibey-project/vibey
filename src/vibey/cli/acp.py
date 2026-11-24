@@ -24,6 +24,8 @@ from pathlib import Path
 from typing import Annotated, Final
 
 import typer
+from vibey_runners.common.jsonrpc.codec import CODEC
+from vibey_runners.common.jsonrpc.peer import JsonRpcPeer
 
 from vibey.application.acp.interfaces.doctor_probe_interface import DoctorProbeInterface
 from vibey.bootstrap import AcpMachine, acp_machine, acp_user_config, build_acp_agent
@@ -42,8 +44,6 @@ from vibey.infrastructure.acp.interfaces.peer_client_channel_interface import (
 from vibey.infrastructure.acp.interfaces.stdio_transport_interface import StdioTransportInterface
 from vibey.infrastructure.acp.peer_client_channel import PeerClientChannel
 from vibey.infrastructure.acp.stdio_transport import StdioTransport
-from vibey.infrastructure.jsonrpc.codec import CODEC
-from vibey.infrastructure.jsonrpc.peer import JsonRpcPeer
 
 
 class AcpCommand:

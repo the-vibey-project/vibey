@@ -16,7 +16,7 @@ from collections.abc import Awaitable, Callable, Coroutine, Mapping
 from dataclasses import dataclass
 from typing import Any
 
-from vibey.infrastructure.jsonrpc.errors import (
+from vibey_runners.common.jsonrpc.errors import (
     INTERNAL_ERROR,
     INVALID_PARAMS,
     INVALID_REQUEST,
@@ -25,8 +25,8 @@ from vibey.infrastructure.jsonrpc.errors import (
     PeerClosed,
     RpcError,
 )
-from vibey.infrastructure.jsonrpc.interfaces.codec_interface import JsonRpcCodecInterface
-from vibey.infrastructure.jsonrpc.interfaces.peer_interface import (
+from vibey_runners.common.jsonrpc.interfaces.codec_interface import JsonRpcCodecInterface
+from vibey_runners.common.jsonrpc.interfaces.peer_interface import (
     NotificationHandler,
     RequestHandler,
 )

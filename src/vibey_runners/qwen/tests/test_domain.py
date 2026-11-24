@@ -1,4 +1,6 @@
 # Made with ❤️ by [Vibey](https://the-vibey-project.github.io/vibey/), Developed by [Adam Matthew Steinberger](https://vibewithadam.matthewsteinberger.com/) ([@adammatthewsteinberger](https://github.com/adammatthewsteinberger/)).
+from pathlib import Path
+
 import pytest
 
 from qwenloop.application.backend_selection import BackendChoice, BackendSelector, Hardware
@@ -21,6 +23,7 @@ from qwenloop.domain.interfaces import (
     QwenConfigParserInterface,
 )
 from qwenloop.domain.model import (
+    CODING_TOOL_NAMES,
     Backend,
     CapacityKind,
     ChatChunk,
@@ -28,6 +31,8 @@ from qwenloop.domain.model import (
     ServerInfo,
     terminal_status,
 )
+from qwenloop.infrastructure.inference import _CODING_TOOLS
+from qwenloop.infrastructure.tools import SandboxTools
 
 parser = QwenConfigParser()
 selector = BackendSelector()
@@ -39,6 +44,24 @@ HERETIC_V2_TAG = "hf.co/mradermacher/gpt-oss-20b-heretic-v2-GGUF:MXFP4_MOE"
 def test_default_config() -> None:
     assert parser.parse({}) == QwenConfig()
     assert isinstance(parser, QwenConfigParserInterface)
+
+
+@pytest.mark.asyncio
+async def test_every_coding_tool_name_has_a_schema_and_a_dispatch(tmp_path: Path) -> None:
+    # The three-way check: the catalogue, the schema the model is shown and the dispatcher
+    # agree on every name, the two skill tools (SP-LOOPS Phase 5, R10) included.
+    assert len(CODING_TOOL_NAMES) == 14
+    assert CODING_TOOL_NAMES[CODING_TOOL_NAMES.index("mcp_call") + 1 :] == (
+        "skills_list",
+        "skill_read",
+    )
+    assert tuple(tool["function"]["name"] for tool in _CODING_TOOLS) == CODING_TOOL_NAMES  # type: ignore[index]
+    (tmp_path / "a.txt").write_text("a\n")
+    tools = SandboxTools(tmp_path)
+    assert tools.tool_names == CODING_TOOL_NAMES
+    for name in CODING_TOOL_NAMES:
+        result = await tools.execute(name, {"path": "a.txt"})
+        assert "unknown tool" not in str(result.get("error", "")), name
 
 
 def test_config_validation() -> None:

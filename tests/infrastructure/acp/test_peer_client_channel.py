@@ -12,13 +12,13 @@ from typing import Any
 
 import pytest
 from acp.schema import RequestPermissionRequest, SessionNotification
+from vibey_runners.common.jsonrpc.codec import CODEC
+from vibey_runners.common.jsonrpc.errors import PeerCancelled, PeerClosed, RpcError
+from vibey_runners.common.jsonrpc.peer import JsonRpcPeer
 
 from tests.domain.acp.acp_wire import assert_wire_exact
 from vibey.application.acp.interfaces.client_channel_interface import ClientChannelInterface
 from vibey.infrastructure.acp.peer_client_channel import PeerClientChannel
-from vibey.infrastructure.jsonrpc.codec import CODEC
-from vibey.infrastructure.jsonrpc.errors import PeerCancelled, PeerClosed, RpcError
-from vibey.infrastructure.jsonrpc.peer import JsonRpcPeer
 
 TOOL_CALL = {"toolCallId": "t1-1", "title": "Answer a gate", "kind": "other", "status": "pending"}
 OPTIONS = [

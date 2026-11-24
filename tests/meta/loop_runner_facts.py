@@ -34,6 +34,13 @@ _CODEX_ARGV = "src/vibey_runners/codex/src/codexloop/infrastructure/agent/argv.p
 _CODEX_PROMPT = "src/vibey_runners/codex/src/codexloop/cli/commands/prompt.py"
 _LOCAL_TOOLS = "src/vibey_runners/qwen/src/qwenloop/infrastructure/tools.py"
 _LOCAL_RUNNER = "src/vibey_runners/qwen/src/qwenloop/application/runner.py"
+# SP-LOOPS Phase 5: the flag the local runner takes its snapshot by, and the MCP client in common
+# its servers are reached through -- the HTTP transport's session and the scrubbed launcher argv
+# a stdio server is started with.
+_LOCAL_APP = "src/vibey_runners/qwen/src/qwenloop/cli/app.py"
+_COMMON_MCP = "src/vibey_runners/common/src/vibey_runners/common/mcp"
+_COMMON_HTTP = f"{_COMMON_MCP}/http_transport.py"
+_COMMON_TRANSPORTS = f"{_COMMON_MCP}/mcp_transport_factory.py"
 # `plugins: skills-context` is vibey's own code, not a runner's: the BUILD handler appends the
 # vibey-skills context packet to the plan's text, whichever engine then runs it.
 _SKILLS_CONTEXT_SOURCE = "src/vibey/application/build_implement_handler.py"
@@ -60,13 +67,20 @@ def _claudeloop(loop: str) -> tuple[RunnerFact, ...]:
 
 
 def _local_runner(loop: str) -> tuple[RunnerFact, ...]:
-    """The local runner's facts; gptossloop and qwenloop are one package (ADR-0064)."""
+    """The local runner's facts; gptossloop and qwenloop are one package (ADR-0064) and take the
+    same snapshot as the vibey bundle (SP-LOOPS Phase 5)."""
     return (
         RunnerFact(loop, "files", _LOCAL_TOOLS, 'if name == "write_file":'),
         RunnerFact(loop, "paste_text", _LOCAL_RUNNER, 'ChatMessage("user", plan)'),
+        RunnerFact(loop, "plugins", _LOCAL_APP, '"--capabilities"'),
+        RunnerFact(loop, "plugins", _LOCAL_TOOLS, 'if name in {"skills_list", "skill_read"}:'),
+        RunnerFact(loop, "skills", _LOCAL_APP, '"--capabilities"'),
+        RunnerFact(loop, "skills", _LOCAL_TOOLS, 'if name in {"skills_list", "skill_read"}:'),
+        RunnerFact(loop, "mcp", _LOCAL_APP, '"--capabilities"'),
         RunnerFact(loop, "mcp", _LOCAL_TOOLS, 'if name in {"mcp_list", "mcp_call"}:'),
+        RunnerFact(loop, "mcp", _COMMON_HTTP, "Mcp-Session-Id"),
+        RunnerFact(loop, "mcp", _COMMON_TRANSPORTS, "launch.argv(server)"),
         RunnerFact(loop, "web_search", _LOCAL_TOOLS, 'if name in {"web_search", "web_fetch"}:'),
-        RunnerFact(loop, "plugins", _SKILLS_CONTEXT_SOURCE, _SKILLS_CONTEXT_NEEDLE),
     )
 
 

@@ -155,7 +155,6 @@ source_modules =
     vibey.infrastructure.tracker.interfaces
     vibey.infrastructure.hub.interfaces
     vibey.infrastructure.mcp.interfaces
-    vibey.infrastructure.jsonrpc.interfaces
     vibey.infrastructure.acp.interfaces
     vibey.infrastructure.loops.interfaces
     vibey.infrastructure.inputs.interfaces

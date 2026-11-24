@@ -2,13 +2,20 @@
 /** Which extra menus an engine earns (images, files, paste, plugins), and the plugins behind one. */
 import type { EngineCapabilities } from './catalogue-interface';
 
+/**
+ * The plugin systems `vibey loops --json` reports, as vibey's `PluginSystem` names them
+ * (domain/engine.py): vibey-skills context packets, Claude Code's own plugins, or the vibey
+ * bundle the local runner (gptossloop, qwenloop) takes in their place (ADR-0092, ADR-0103).
+ */
+export type PluginSystem = 'skills-context' | 'claude-plugins' | 'vibey-bundle';
+
 export interface CapabilityMenu {
   readonly attachImage: boolean;
   readonly pasteImage: boolean;
   readonly attachFile: boolean;
   readonly pasteText: boolean;
-  /** Which plugin menu, if any: vibey-skills context packets, or Claude Code's own plugins. */
-  readonly plugins?: 'skills-context' | 'claude-plugins';
+  /** Which plugin menu, if any: the engine's plugin system, when it is one vibey reports. */
+  readonly plugins?: PluginSystem;
   /** Why a menu is missing, for a person who looks for it. */
   readonly notes: readonly string[];
 }

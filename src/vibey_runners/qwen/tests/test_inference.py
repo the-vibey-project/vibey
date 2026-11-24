@@ -846,6 +846,24 @@ def test_the_tool_schema_advertises_exactly_the_tools_the_dispatcher_runs() -> N
         assert set(read["properties"]) == {"path", "line_start", "line_end"}
 
 
+def test_the_skill_tools_are_advertised_as_instructions_from_the_persons_plugins() -> None:
+    functions = {tool["function"]["name"]: tool["function"] for tool in _CODING_TOOLS}
+    listing = functions["skills_list"]["parameters"]
+    assert {key: value["type"] for key, value in listing["properties"].items()} == {
+        "page": "integer"
+    }
+    assert "required" not in listing
+    reading = functions["skill_read"]["parameters"]
+    assert reading["required"] == ["name"]
+    assert {key: value["type"] for key, value in reading["properties"].items()} == {
+        "name": "string",
+        "page": "integer",
+    }
+    for name in ("skills_list", "skill_read"):
+        assert "instructions from the plugins the person chose" in functions[name]["description"]
+    assert tuple(functions)[-2:] == ("skills_list", "skill_read")
+
+
 @pytest.mark.asyncio
 @pytest.mark.parametrize("field", ["reasoning", "reasoning_content", "thinking"])
 async def test_chat_stream_reports_how_the_reply_ended_and_its_reasoning(

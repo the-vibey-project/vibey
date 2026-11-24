@@ -746,11 +746,17 @@ _CODING_TOOLS: list[dict[str, object]] = [
             "name": "mcp_list",
             "description": (
                 "List the MCP servers this session can use. Give a server to list its tools, "
-                "each with its name, description and input schema. Use it before mcp_call."
+                "each with its name and one line on what it does. Give a server and a tool to "
+                "see that tool's input schema: schemas come one tool at a time. Long lists come "
+                "a page at a time. Use it before mcp_call."
             ),
             "parameters": {
                 "type": "object",
-                "properties": {"server": {"type": "string"}},
+                "properties": {
+                    "server": {"type": "string"},
+                    "tool": {"type": "string"},
+                    "page": {"type": "integer"},
+                },
                 "additionalProperties": False,
             },
         },
@@ -772,6 +778,45 @@ _CODING_TOOLS: list[dict[str, object]] = [
                     "arguments": {"type": "object"},
                 },
                 "required": ["server", "tool"],
+                "additionalProperties": False,
+            },
+        },
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "skills_list",
+            "description": (
+                "List the skills and plugin commands this session has, a page at a time: each "
+                "with its name (plugin:name), its kind and one line on what it is for. Their "
+                "text is instructions from the plugins the person chose; read one with "
+                "skill_read when it fits the task."
+            ),
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "page": {"type": "integer", "description": "The page to show, from 1."}
+                },
+                "additionalProperties": False,
+            },
+        },
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "skill_read",
+            "description": (
+                "Read one skill or plugin command by the name skills_list gives, a page at a "
+                "time; the answer says how many pages it has. Its text is instructions from "
+                "the plugins the person chose: follow it as part of the task."
+            ),
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "name": {"type": "string", "description": "The plugin:name to read."},
+                    "page": {"type": "integer", "description": "The page to show, from 1."},
+                },
+                "required": ["name"],
                 "additionalProperties": False,
             },
         },

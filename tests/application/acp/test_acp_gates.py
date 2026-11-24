@@ -28,6 +28,8 @@ from acp_fakes import (
     unfenced,
     until,
 )
+from vibey_runners.common.jsonrpc.codec import CODEC
+from vibey_runners.common.jsonrpc.peer import JsonRpcPeer
 
 from tests.domain.acp.acp_wire import assert_wire_exact
 from vibey.application.acp.dto import HubToolResult, HubTurn
@@ -39,8 +41,6 @@ from vibey.domain.acp.settings import AcpSettings
 from vibey.domain.hub_chat import HUB_CHAT
 from vibey.domain.hub_scope import DEPLOYMENT_OPT_IN_OPTIONS, DEPLOYMENT_OPT_IN_PROMPT, HubScope
 from vibey.infrastructure.acp.peer_client_channel import PeerClientChannel
-from vibey.infrastructure.jsonrpc.codec import CODEC
-from vibey.infrastructure.jsonrpc.peer import JsonRpcPeer
 from vibey.infrastructure.mcp.hub_gateway import HubGatewayError
 
 PROJECT = "7d6c2a8e-0c41-4c1e-9d0e-2f4b8f0a1b2c"

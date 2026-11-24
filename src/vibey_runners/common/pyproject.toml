@@ -90,24 +90,58 @@ forbidden_modules = [
     "vibey_runners.common.infrastructure.memory_probe",
 ]
 
+# The JSON-RPC 2.0 codec and peer, moved here from vibey so vibey's MCP server and ACP agent and
+# the local runner's MCP client speak through one implementation (SP-LOOPS Phase 5 R1). Its
+# seams may name `errors` (the vocabulary), never the classes that implement them.
+[[tool.importlinter.contracts]]
+name = "JSON-RPC interfaces declare seams, never consume them"
+type = "forbidden"
+source_modules = ["vibey_runners.common.jsonrpc.interfaces"]
+forbidden_modules = [
+    "vibey_runners.common.jsonrpc.codec",
+    "vibey_runners.common.jsonrpc.peer",
+]
+
+# The MCP client over that peer (SP-LOOPS Phase 5 R2): its seams may name the records their
+# signatures carry (`mcp_tool`, `mcp_call_result`, `http_reply`) and the trust level, never the
+# classes that implement them.
+[[tool.importlinter.contracts]]
+name = "MCP interfaces declare seams, never consume them"
+type = "forbidden"
+source_modules = ["vibey_runners.common.mcp.interfaces"]
+forbidden_modules = [
+    "vibey_runners.common.mcp.stdio_transport",
+    "vibey_runners.common.mcp.http_transport",
+    "vibey_runners.common.mcp.http_opener",
+    "vibey_runners.common.mcp.mcp_transport_factory",
+    "vibey_runners.common.mcp.mcp_session",
+    "vibey_runners.common.mcp.mcp_session_pool",
+]
+
 # The loop capability layer (SP-LOOPS): its seams may name the records their signatures
-# carry (the `*_spec`, entry and catalog modules), never the classes that implement them.
+# carry (the `*_spec`, entry, catalog, `shelf_*` and `listing_text` modules), never the classes
+# that implement them.
 [[tool.importlinter.contracts]]
 name = "Capability interfaces declare seams, never consume them"
 type = "forbidden"
 source_modules = ["vibey_runners.common.capabilities.interfaces"]
 forbidden_modules = [
     "vibey_runners.common.capabilities.bundle",
+    "vibey_runners.common.capabilities.capability_listing",
     "vibey_runners.common.capabilities.file_reader",
     "vibey_runners.common.capabilities.frontmatter",
     "vibey_runners.common.capabilities.git_folder_guard",
+    "vibey_runners.common.capabilities.instruction_files",
     "vibey_runners.common.capabilities.lock",
     "vibey_runners.common.capabilities.manifest",
     "vibey_runners.common.capabilities.path_probe",
+    "vibey_runners.common.capabilities.plugin_command_index",
     "vibey_runners.common.capabilities.resolver",
     "vibey_runners.common.capabilities.safe_text",
     "vibey_runners.common.capabilities.scrubbed_exec",
+    "vibey_runners.common.capabilities.scrubbed_launch",
     "vibey_runners.common.capabilities.skill_index",
+    "vibey_runners.common.capabilities.skill_shelf",
     "vibey_runners.common.capabilities.snapshot_copier",
     "vibey_runners.common.capabilities.snapshot_document",
     "vibey_runners.common.capabilities.snapshot_document_store",

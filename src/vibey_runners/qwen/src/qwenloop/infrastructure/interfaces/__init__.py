@@ -1,6 +1,10 @@
 # Made with ❤️ by [Vibey](https://the-vibey-project.github.io/vibey/), Developed by [Adam Matthew Steinberger](https://vibewithadam.matthewsteinberger.com/) ([@adammatthewsteinberger](https://github.com/adammatthewsteinberger/)).
 """Seams the infrastructure layer declares. Interfaces declare; they never consume."""
 
+from qwenloop.infrastructure.interfaces.capability_loader_interface import (
+    CapabilityLoaderInterface,
+    LoadedCapabilitiesInterface,
+)
 from qwenloop.infrastructure.interfaces.class_contracts import (
     OpenAICompatServerInterface,
     OpenAIServerInterface,
@@ -23,7 +27,9 @@ from qwenloop.infrastructure.interfaces.web_search_interface import (
 
 __all__ = [
     "AttachedServerInterface",
+    "CapabilityLoaderInterface",
     "ContentScannerInterface",
+    "LoadedCapabilitiesInterface",
     "ManagedServerInterface",
     "OpenAICompatServerInterface",
     "OpenAIServerInterface",

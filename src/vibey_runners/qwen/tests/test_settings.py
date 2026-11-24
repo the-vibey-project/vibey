@@ -3,7 +3,8 @@ from pathlib import Path
 
 import pytest
 
-from qwenloop.domain.config import DEFAULT_ENDPOINT_MODEL, QwenConfig
+from qwenloop.domain.config import DEFAULT_ENDPOINT_MODEL, McpLimits, QwenConfig
+from qwenloop.domain.interfaces import McpLimitsInterface
 from qwenloop.domain.model import Backend
 from qwenloop.infrastructure.interfaces import SettingsLoaderInterface
 from qwenloop.infrastructure.settings import SettingsLoader
@@ -84,6 +85,57 @@ def test_config_path_expands_the_home_directory(
     loader = SettingsLoader({"QWENLOOP_CONFIG": "~/qwen.toml"})
     assert loader.path == tmp_path / "qwen.toml"
     assert loader.load().model == "home-model"
+
+
+def test_mcp_limits_are_read_from_the_mcp_table_and_a_bad_value_names_its_key(
+    tmp_path: Path,
+) -> None:
+    """SP-LOOPS Phase 5, R5, R6, R13: the MCP client's bounds are declared configuration, each
+    overridable from `[mcp]` (sub-doctrine 12.c), and a value nobody meant is refused by name."""
+    default = SettingsLoader({}, default_path=tmp_path / "absent.toml").load().mcp
+    assert default == McpLimits()
+    assert isinstance(default, McpLimitsInterface)
+    assert (
+        default.request_timeout_seconds,
+        default.restarts,
+        default.close_grace_seconds,
+        default.remote_calls_per_session,
+        default.max_tools,
+    ) == (60.0, 1, 2.0, 64, 1024)
+    config = tmp_path / "config.toml"
+    config.write_text(
+        "[mcp]\nrequest_timeout_seconds = 5\nrestarts = 0\nclose_grace_seconds = 0\n"
+        "remote_calls_per_session = 3\nmax_tools = 10\n",
+        encoding="utf-8",
+    )
+    loaded = SettingsLoader({"QWENLOOP_CONFIG": str(config)}).load().mcp
+    assert loaded == McpLimits(
+        request_timeout_seconds=5.0,
+        restarts=0,
+        close_grace_seconds=0.0,
+        remote_calls_per_session=3,
+        max_tools=10,
+    )
+    refused = {
+        "mcp = 3": "mcp must be a table of MCP limits",
+        "[mcp]\nretries = 2": "unknown qwenloop mcp key\\(s\\): retries",
+        "[mcp]\nrequest_timeout_seconds = 0": "mcp.request_timeout_seconds must be a positive, "
+        "finite number of seconds",
+        "[mcp]\nrequest_timeout_seconds = inf": "mcp.request_timeout_seconds must be",
+        "[mcp]\nrequest_timeout_seconds = true": "mcp.request_timeout_seconds must be",
+        '[mcp]\nrequest_timeout_seconds = "5"': "mcp.request_timeout_seconds must be",
+        "[mcp]\nclose_grace_seconds = -1": "mcp.close_grace_seconds must be a non-negative, "
+        "finite number of seconds",
+        "[mcp]\nrestarts = -1": "mcp.restarts must be a non-negative integer, got -1",
+        "[mcp]\nrestarts = true": "mcp.restarts must be a non-negative integer, got True",
+        "[mcp]\nremote_calls_per_session = 1.5": "mcp.remote_calls_per_session must be a "
+        "non-negative integer, got 1.5",
+        "[mcp]\nmax_tools = 0": "mcp.max_tools must be a positive integer, got 0",
+    }
+    for body, message in refused.items():
+        config.write_text(body + "\n", encoding="utf-8")
+        with pytest.raises(ValueError, match=message):
+            SettingsLoader({"QWENLOOP_CONFIG": str(config)}).load()
 
 
 def test_each_engine_reads_only_its_own_settings(tmp_path: Path) -> None:

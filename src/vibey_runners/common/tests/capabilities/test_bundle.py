@@ -13,6 +13,12 @@ from hypothesis import given, settings
 from hypothesis import strategies as st
 
 from vibey_runners.common.capabilities.bundle import (
+    CAPABILITY_ANSWER_TOKENS_CEILING,
+    CAPABILITY_ANSWER_TOKENS_FLOOR,
+    CAPABILITY_PROMPT_TOKENS_CEILING,
+    CAPABILITY_PROMPT_TOKENS_FLOOR,
+    DEFAULT_CAPABILITY_ANSWER_TOKENS,
+    DEFAULT_CAPABILITY_PROMPT_TOKENS,
     INSTRUCTION_FILES_MAX,
     INSTRUCTION_MAX_BYTES_CEILING,
     MAX_ENTRIES,
@@ -361,6 +367,8 @@ KEYS = [
     "instruction_files",
     "instruction_max_bytes",
     "snapshot_max_age_days",
+    "capability_prompt_tokens",
+    "capability_answer_tokens",
 ]
 _SCALARS = st.none() | st.booleans() | st.integers() | st.floats() | st.text(max_size=40)
 _VALUES = st.recursive(
@@ -490,3 +498,37 @@ def test_snapshot_max_age_days_below_one_is_refused(value: object) -> None:
     error = _refusal({"snapshot_max_age_days": value})
     assert error.path == "loops.snapshot_max_age_days"
     assert "at least 1" in error.reason
+
+
+# -- the two token budgets of a loop that lists its own capabilities (SP-LOOPS Phase 5, R8) ------
+
+
+def test_the_default_bundle_gives_3072_prompt_tokens_and_3000_answer_tokens() -> None:
+    bundle = BundleSpec.default()
+    assert bundle.capability_prompt_tokens == DEFAULT_CAPABILITY_PROMPT_TOKENS == 3072
+    assert bundle.capability_answer_tokens == DEFAULT_CAPABILITY_ANSWER_TOKENS == 3000
+    by_hand = BundleSpec((), (), (), (), frozenset())
+    assert (by_hand.capability_prompt_tokens, by_hand.capability_answer_tokens) == (3072, 3000)
+    read = BundleSpec.from_mapping(
+        {"capability_prompt_tokens": 512, "capability_answer_tokens": 8192}
+    ).narrowed_by(["currency-research"])
+    assert (read.capability_prompt_tokens, read.capability_answer_tokens) == (512, 8192)
+    assert (CAPABILITY_PROMPT_TOKENS_FLOOR, CAPABILITY_PROMPT_TOKENS_CEILING) == (512, 4096)
+    assert (CAPABILITY_ANSWER_TOKENS_FLOOR, CAPABILITY_ANSWER_TOKENS_CEILING) == (256, 8192)
+    edges = {"capability_prompt_tokens": 4096, "capability_answer_tokens": 256}
+    edge = BundleSpec.from_mapping(edges)
+    assert (edge.capability_prompt_tokens, edge.capability_answer_tokens) == (4096, 256)
+
+
+@pytest.mark.parametrize("value", [511, 4097, 0, -1, True, False, 3072.0, "3072", None])
+def test_capability_prompt_tokens_outside_512_to_4096_is_refused(value: object) -> None:
+    error = _refusal({"capability_prompt_tokens": value})
+    assert error.path == "loops.capability_prompt_tokens"
+    assert "between 512 and 4096" in error.reason
+
+
+@pytest.mark.parametrize("value", [255, 8193, 0, -1, True, False, 3000.0, "3000", None])
+def test_capability_answer_tokens_outside_256_to_8192_is_refused(value: object) -> None:
+    error = _refusal({"capability_answer_tokens": value})
+    assert error.path == "loops.capability_answer_tokens"
+    assert "between 256 and 8192" in error.reason

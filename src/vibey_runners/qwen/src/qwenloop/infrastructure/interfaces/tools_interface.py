@@ -49,3 +49,16 @@ class SandboxToolsInterface(ToolExecutor, Protocol):
     def tool_names(self) -> tuple[str, ...]:
         """Every tool name `execute` dispatches, in the order the model is told them."""
         ...
+
+    @property
+    def answer_chars(self) -> int:
+        """The most characters one page of skills_list or skill_read holds, never below the
+        skill shelf's `MIN_ANSWER_CHARS`."""
+        ...
+
+    @staticmethod
+    def answer_budget(answer_tokens: int, max_tool_result_chars: int) -> int:
+        """`answer_chars` for `[loops] capability_answer_tokens` and the runner's result cut:
+        the smaller of the two, the cut less the page envelope, clamped up to the shelf's
+        floor."""
+        ...

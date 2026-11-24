@@ -130,6 +130,7 @@ CLOSURES = {
         "vibey-gh",
         "claudeloop",
         "codexloop",
+        "qwenloop",
         "vibey-bootstrap",
     },
     "src/vibey_tools/gh/vibey_gh/x.py": {"vibey-gh", "vibey-bootstrap"},
@@ -157,7 +158,7 @@ def test_the_derived_dependency_edges_are_exactly_the_known_set() -> None:
         "claudeloop": {"vibey-runners-common"},
         "codexloop": {"vibey-runners-common"},
         "vibey-skills": set(),
-        "qwenloop": set(),
+        "qwenloop": {"vibey-runners-common"},
         "vibey-runners-common": set(),
     }
 

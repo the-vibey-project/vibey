@@ -746,6 +746,21 @@ def test_the_digest_changes_when_builtin_web_changes_and_not_when_the_max_age_do
     assert digest(builtin_web=False) == base
 
 
+def test_the_digest_changes_with_either_token_budget(tmp_path: Path) -> None:
+    """Both budgets shape what a loop is given (R8), so each enters the digest; naming the
+    default changes nothing."""
+    resolver = _resolver(tmp_path)
+
+    def digest(**raw: object) -> str:
+        return resolver.resolve(_bundle({"plugins": [], **raw}), (), {}).digest
+
+    base = digest()
+    prompt = digest(capability_prompt_tokens=4096)
+    answer = digest(capability_answer_tokens=256)
+    assert len({base, prompt, answer}) == 3
+    assert digest(capability_prompt_tokens=3072, capability_answer_tokens=3000) == base
+
+
 # -- where things are read from: never the project -------------------------------------------------
 
 

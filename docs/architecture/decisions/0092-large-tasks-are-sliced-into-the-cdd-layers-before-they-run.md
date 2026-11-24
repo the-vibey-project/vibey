@@ -45,6 +45,7 @@ graph (`domain/slicing.py`), so validation, the queue and idempotency are unchan
 
 - `EngineAffordances` gains `skills` and `web_search`, each with the evidence for it, and
   `full_access_gaps()` names what a lane is not shown to have. Unknown is a gap, not a grant.
+  *(Amended 2026-11-25: `vibey-bundle` grants plugins too; see the second amendment at the foot.)*
 - `EngineDescriptor.launch_flags` are the flags every new `run` is given. claudeloop's is
   `--web-search`; `claudeloop-local` lists none, because its backend refuses it.
 - The gaps are pinned in a test, so one closes only because a runner's code was read and none
@@ -75,6 +76,7 @@ graph (`domain/slicing.py`), so validation, the queue and idempotency are unchan
   `QWENLOOP_MCP_CONFIG` and **never the worktree's `.mcp.json`**: a server is a command, and the
   model and any checked-out repository can write that file (a security review caught this). It starts one per call and stops it, and marks every answer untrusted.
   Servers that are not stdio are reported, not dropped. It does not load skills or plugins.
+  *(Superseded 2026-11-25 for a run given a capability snapshot: see the second amendment at the foot.)*
 - **codexloop MCP** is shown: its argv suppresses nothing of Codex's own configuration and its
   doctor checks the servers that configuration declares.
   *(Withdrawn 2026-11-22: see the amendment at the foot.)*
@@ -99,3 +101,31 @@ Every claim that a descriptor's affordance is `True`, or names a plugin system, 
 code that implements it: one `RunnerFact` in `tests/meta/loop_runner_facts.py`, checked by
 `tests/meta/test_loop_capability_evidence.py`. A claim with no fact fails that test, so a claim like
 the withdrawn one can no longer pass on prose alone.
+
+## Amendment, 2026-11-25: the local runner's plugins are the vibey bundle
+
+SP-LOOPS Phase 5 (plan `docs/superpowers/plans/2026-11-25-sp-loops-phase5-local-runner.md`;
+design Decision 8) gives the local runner (`gptossloop`, `qwenloop`) plugins it can use, and so
+changes what counts as a plugin grant.
+
+- `PluginSystem` gains `vibey-bundle` (`VIBEY_BUNDLE`): the skills, the plugin commands (as text
+  the loop retrieves) and the MCP servers of the person's locked capability snapshot, with no
+  plugin hooks and no plugin agents. A loop that cannot run Claude Code's own plugin system
+  takes plugins this way.
+- `full_access_gaps()` counts `claude-plugins` and `vibey-bundle` as granting plugins;
+  `skills-context` is still a gap. Hooks and agents are out of #1666 for every loop that is
+  not Claude Code: no runtime exists for them there.
+- The bullet "**The local runner reaches MCP**" above is superseded for a run given a snapshot
+  (`run --capabilities PATH`). Such a run reaches exactly the snapshot's servers: a `local`
+  server over stdio through the scrubbed launcher, a `remote` server over streamable HTTP, with
+  one persistent session per server for the run, closed when the run ends. `mcp_list` and
+  `mcp_call` stay its only two MCP tools, and one tool's input schema is fetched when asked
+  for, within `[loops] capability_answer_tokens`, never cut. A failing server is a tool error
+  for the model, never the end of the run. Without a snapshot the runner still reads
+  `~/.claude.json` and `QWENLOOP_MCP_CONFIG`, and never the worktree's `.mcp.json`.
+- The local runner loads skills: their names and descriptions in its system prompt, within
+  `[loops] capability_prompt_tokens`, and their bodies through `skills_list` and `skill_read`.
+- `gptossloop`'s and `qwenloop`'s full-access gaps are now none, pinned in
+  `tests/infrastructure/engines/test_descriptors.py`. Each claim is pinned to runner code by
+  `tests/meta/loop_runner_facts.py`, and its evidence says the real-run probe is pending until
+  the operator records one.

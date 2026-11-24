@@ -7,8 +7,8 @@ import json
 from collections.abc import Mapping
 from typing import Any, Final
 
-from vibey.infrastructure.jsonrpc.errors import INVALID_REQUEST, PARSE_ERROR, RpcError
-from vibey.infrastructure.jsonrpc.interfaces.codec_interface import JsonRpcCodecInterface
+from vibey_runners.common.jsonrpc.errors import INVALID_REQUEST, PARSE_ERROR, RpcError
+from vibey_runners.common.jsonrpc.interfaces.codec_interface import JsonRpcCodecInterface
 
 
 class JsonRpcCodec:

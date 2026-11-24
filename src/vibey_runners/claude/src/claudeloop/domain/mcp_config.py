@@ -19,24 +19,21 @@ by `interfaces/mcp_config_translator_interface.py::McpConfigTranslatorInterface`
 from __future__ import annotations
 
 from vibey_runners.common.capabilities.mcp_server_spec import McpServerSpec
+from vibey_runners.common.capabilities.scrubbed_launch import ScrubbedLaunch
 
 
 class McpConfigTranslator:
-    """Declared by `interfaces/mcp_config_translator_interface.py`."""
+    """Declared by `interfaces/mcp_config_translator_interface.py`. A local server's argv is
+    `ScrubbedLaunch`'s, the family's one builder of it (SP-LOOPS Phase 5, R14); it refuses an
+    empty launcher."""
 
     def __init__(self, launcher: tuple[str, ...]) -> None:
-        if not launcher:
-            raise ValueError("the MCP launcher prefix must name at least a command")
-        self._launcher = launcher
+        self._launch = ScrubbedLaunch(launcher)
 
     def translate(self, server: McpServerSpec) -> dict[str, object]:
         if server.trust == "local" and server.command:
-            allow = [token for name in server.env_allow for token in ("--allow", name)]
-            return {
-                "type": "stdio",
-                "command": self._launcher[0],
-                "args": [*self._launcher[1:], *allow, "--", *server.command],
-            }
+            command, *args = self._launch.argv(server)
+            return {"type": "stdio", "command": command, "args": args}
         if server.trust == "remote" and server.url is not None:
             return {"type": "http", "url": server.url}
         raise ValueError(

@@ -18,7 +18,10 @@ from vibey_runners.common.capabilities.interfaces.snapshot_document_store_interf
 )
 from vibey_runners.common.capabilities.skill_catalog import SkillCatalog
 from vibey_runners.common.capabilities.snapshot import CapabilitySnapshot
-from vibey_runners.common.capabilities.snapshot_document import SnapshotDocument
+from vibey_runners.common.capabilities.snapshot_document import (
+    DOCUMENT_VERSION,
+    SnapshotDocument,
+)
 from vibey_runners.common.capabilities.snapshot_document_error import SnapshotDocumentError
 from vibey_runners.common.capabilities.snapshot_document_store import (
     DOCUMENT_MAX_BYTES,
@@ -159,6 +162,8 @@ def test_a_document_that_is_not_utf8_is_refused(run: Path) -> None:
 def test_a_document_whose_content_is_refused_says_why(run: Path) -> None:
     path = run / DOCUMENT_NAME
     path.touch(mode=0o600)
-    path.write_text(_document(run).to_json().replace('"version":1', '"version":9'), "utf-8")
+    text = _document(run).to_json()
+    assert f'"version":{DOCUMENT_VERSION}' in text
+    path.write_text(text.replace(f'"version":{DOCUMENT_VERSION}', '"version":9'), "utf-8")
     with pytest.raises(SnapshotDocumentError, match="version"):
         SnapshotDocumentStore().read(path)

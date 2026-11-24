@@ -15,8 +15,8 @@ from typing import Any
 
 import pytest
 
-from vibey.infrastructure.jsonrpc.codec import CODEC
-from vibey.infrastructure.jsonrpc.errors import (
+from vibey_runners.common.jsonrpc.codec import CODEC
+from vibey_runners.common.jsonrpc.errors import (
     INTERNAL_ERROR,
     INVALID_PARAMS,
     INVALID_REQUEST,
@@ -26,8 +26,8 @@ from vibey.infrastructure.jsonrpc.errors import (
     PeerClosed,
     RpcError,
 )
-from vibey.infrastructure.jsonrpc.interfaces.peer_interface import JsonRpcPeerInterface
-from vibey.infrastructure.jsonrpc.peer import JsonRpcPeer
+from vibey_runners.common.jsonrpc.interfaces.peer_interface import JsonRpcPeerInterface
+from vibey_runners.common.jsonrpc.peer import JsonRpcPeer
 
 
 async def _until(predicate: Callable[[], bool], spins: int = 500) -> None:

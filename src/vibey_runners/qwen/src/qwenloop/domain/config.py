@@ -127,6 +127,30 @@ _TOOL_LIMIT_KEYS = frozenset(item.name for item in fields(ToolLimits))
 
 
 @dataclass(frozen=True, slots=True)
+class McpLimits:
+    """How the MCP client treats the servers a run reaches (SP-LOOPS Phase 5, R5, R6, R13).
+    Declared here with defaults and overridable from the config file's `[mcp]` table
+    (sub-doctrine 12.c)."""
+
+    # Seconds any one MCP request may take before its session is ended.
+    request_timeout_seconds: float = 60.0
+    # How many times a session that died is started again in one run; after that the server
+    # answers that it is unavailable for the rest of the run. 0 never restarts one.
+    restarts: int = 1
+    # Seconds a stdio server is given to exit once its stdin is closed, before its process
+    # group is killed.
+    close_grace_seconds: float = 2.0
+    # `tools/call` requests each remote server may take in one run. 0 calls none.
+    remote_calls_per_session: int = 64
+    # Tools read from one server's listing, `nextCursor` pages included; the listing says when
+    # a server reaches it.
+    max_tools: int = 1024
+
+
+_MCP_LIMIT_KEYS = frozenset(item.name for item in fields(McpLimits))
+
+
+@dataclass(frozen=True, slots=True)
 class RunnerIdentity:
     """Which engine this process runs as (ADR-0064).
 
@@ -201,6 +225,8 @@ class QwenConfig:
     turn_queue_name: str = "vibey.llm.turns"
     # What one tool call may read or return: the config file's `[tools]` table.
     tools: ToolLimits = ToolLimits()
+    # How the MCP client treats the servers a run reaches: the config file's `[mcp]` table.
+    mcp: McpLimits = McpLimits()
 
     @property
     def endpoint_configured(self) -> bool:
@@ -273,6 +299,7 @@ class QwenConfigParser:
             turn_queue_url=str(data.get("turn_queue_url", defaults.turn_queue_url)),
             turn_queue_name=str(data.get("turn_queue_name", defaults.turn_queue_name)),
             tools=self._tool_limits(data.get("tools", {})),
+            mcp=self._mcp_limits(data.get("mcp", {})),
         )
         if config.idle_timeout_seconds < 0:
             raise ValueError("idle_timeout_seconds must be non-negative")
@@ -331,6 +358,59 @@ class QwenConfigParser:
                 "tools.search_timeout_seconds must be a positive, finite number of seconds"
             )
         return ToolLimits(**bounds, search_timeout_seconds=seconds, skip_dirs=tuple(skip_dirs))
+
+    @classmethod
+    def _mcp_limits(cls, data: object) -> McpLimits:
+        """The `[mcp]` table: each value of its own kind, named `mcp.<key>` when it is refused.
+        An unknown key is refused for the same reason as at the top level."""
+        if not isinstance(data, Mapping):
+            raise ValueError("mcp must be a table of MCP limits")
+        unknown = sorted(set(data) - _MCP_LIMIT_KEYS)
+        if unknown:
+            raise ValueError(f"unknown qwenloop mcp key(s): {', '.join(unknown)}")
+        defaults = McpLimits()
+        return McpLimits(
+            request_timeout_seconds=cls._seconds(
+                data, "request_timeout_seconds", defaults.request_timeout_seconds, positive=True
+            ),
+            restarts=cls._count(data, "restarts", defaults.restarts, positive=False),
+            close_grace_seconds=cls._seconds(
+                data, "close_grace_seconds", defaults.close_grace_seconds, positive=False
+            ),
+            remote_calls_per_session=cls._count(
+                data, "remote_calls_per_session", defaults.remote_calls_per_session, positive=False
+            ),
+            max_tools=cls._count(data, "max_tools", defaults.max_tools, positive=True),
+        )
+
+    @staticmethod
+    def _seconds(data: Mapping[str, Any], key: str, default: float, *, positive: bool) -> float:
+        """A number of seconds in `[mcp]`: an int or a float, finite, and positive or
+        non-negative. `true` is an int to Python and is refused like any other non-number."""
+        value = data.get(key, default)
+        number = (
+            float(value)
+            if isinstance(value, int | float) and not isinstance(value, bool)
+            else math.nan
+        )
+        if not math.isfinite(number) or number < 0 or (positive and number == 0):
+            kind = "a positive" if positive else "a non-negative"
+            raise ValueError(f"mcp.{key} must be {kind}, finite number of seconds")
+        return number
+
+    @staticmethod
+    def _count(data: Mapping[str, Any], key: str, default: int, *, positive: bool) -> int:
+        """A count in `[mcp]`: an integer (never a bool or a float), positive or non-negative."""
+        value = data.get(key, default)
+        if (
+            isinstance(value, bool)
+            or not isinstance(value, int)
+            or value < 0
+            or (positive and value == 0)
+        ):
+            kind = "a positive" if positive else "a non-negative"
+            raise ValueError(f"mcp.{key} must be {kind} integer, got {value!r}")
+        return value
 
     @staticmethod
     def _bound(data: Mapping[str, Any], key: str, default: int) -> int:
